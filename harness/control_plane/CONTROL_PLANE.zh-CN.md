@@ -1,102 +1,230 @@
-# Runtime Control Plane · v7 中文版
+# Control Plane · 让跨 invocation 的工作可以可靠持久化、重试和恢复
 
-## 目的
+<p><kbd>TIER C · 契约</kbd>&nbsp;&nbsp;<kbd>EVENT</kbd>&nbsp;&nbsp;<kbd>LEASE</kbd>&nbsp;&nbsp;<kbd>CONSUME-ONCE</kbd></p>
 
-Control Plane 是 NovelForge 面向 session、event、handoff、worker lease、result hash 与 logical consume-once receipt 的 durable operational substrate。
+NovelForge Control Plane 是跨 invocation / process 工作的持久 operational substrate。它保存 session、typed event、bounded handoff、worker lease、result hash 与 logical consume-once receipt，让外部工作即使遇到重试、中断和进程重启，也不会靠猜测判断“之前到底做没做完”。
 
-它回答的是：**工作做到哪里、queued attempt 当前由谁拥有**。它不决定故事事实。
+> **边界 ✦** Control Plane 回答的是：**工作现在在哪里、哪个 attempt 正在拥有它、某个 result 是否已经被逻辑消费。** 它不判断故事事实，也不判断文学质量。
+
+## 01 · Operational graph
+
+一个 distributed work item 通常经过：
 
 ```text
-project/resource
-→ session/run/checkpoint
+project / resource
+→ manager session + checkpoint
 → typed event / bounded handoff
-→ lease / worker attempt
-→ result
-→ validation
-→ consume-once receipt
-→ resume
+→ worker claim / lease
+→ attempt executes
+→ result stored + hashed
+→ manager validates binding
+→ named consumer records receipt
+→ owning workflow resumes
 ```
 
-## Authority Boundary
+这些记录是 execution evidence，不是 Canon evidence。
 
-Control-plane data 只属于 operational evidence。它本身不能：
-- 建立 Accepted Canon；
-- settle project state mutation；
-- promote framework behavior；
-- 覆盖 durable user taste；
-- 授权 story direction。
+## 02 · Control Plane 负责什么
 
-Webhook、MCP、CI、schedule、connector、queue arrival 都不会提升 authority。
+Control Plane 可以持久保存：
 
-## Durable Semantics
-
-Reference backend 使用 stdlib SQLite。
-
-必须具备：
-- transactional writes；
-- 需要时 optimistic session version；
-- event idempotency key；
-- atomic handoff claim；
-- bounded lease + expiry recovery；
+- session 与 operational version；
+- typed internal / external event；
+- handoff / job；
+- worker attempt identity；
+- lease 与 expiry；
 - result payload hash；
-- exactly-once **logical consumption** receipt。
+- consume-once receipt；
+- timestamp 与 trace metadata；
+- retry / reclaim bookkeeping。
 
-Exactly-once 指 downstream application bookkeeping，不是假装网络 delivery 天然 exactly once。
+它不拥有：
 
-## Typed Events
+- story direction；
+- Accepted Canon；
+- Canon settlement decision；
+- literary verdict；
+- durable user taste；
+- Framework promotion authority；
+- model reasoning。
 
-允许的 event class 刻意保持窄：resume request、semantic request/result、eval request、maintenance request、research refresh、feedback observation、acceptance observation。
+## 03 · Typed event
 
-Unattended Canon write、settlement apply、自动下一章 drafting、framework promotion 不是 generic event type。
+Event class 应保持窄而无权威，例如：
 
-相同 idempotency key + 相同 payload 的重复 delivery 是安全的；同 key 不同 payload 是 hard conflict。
+- resume request；
+- semantic job / result arrival；
+- eval request / result；
+- maintenance request；
+- research refresh；
+- feedback observation；
+- acceptance observation。
 
-## Handoffs
+Generic event 不能意味着“静默写 Canon”“自动继续下一章”“自动把某条规则晋升进 Framework”。这些行为都需要独立 authority、precondition 与 user-visible workflow semantics。
 
-Handoff 只携带 bounded identity/context：
-- source session；
-- target worker/session class；
-- resource/task identity；
-- artifact refs/fingerprints；
-- bounded instructions；
-- context policy；
-- permissions；
-- return contract；
-- optional native/relay refs。
+### Idempotency
 
-默认不得复制 manager 整段 conversation。
+现实中的 event delivery 应按 at-least-once 考虑：
 
-Canon/framework-promotion/durable-taste write 等高 authority 权限在 generic worker handoff 中必须保持 false。
+- 同一 idempotency key + 同一 payload → 安全重复；
+- 同一 idempotency key + 不同 payload → hard conflict。
 
-## Leases
+不要假装网络天然提供 exactly-once delivery。
 
-Worker 原子 claim 一个 bounded lease。只有当前 lease owner 可以 complete。过期任务可以被重新 claim；旧 owner 失去 lease 后不能再覆盖新 owner 结果。
+## 04 · Bounded handoff
 
-## Result Consumption
+Handoff 只传 worker 真正需要的东西：
 
-Completion 与 application 分开：
+```yaml
+handoff_id:
+source_session_id:
+target_worker_class:
+resource_id:
+task_or_gate:
+artifact_refs: []
+input_fingerprints: []
+instructions:
+context_policy:
+permissions:
+return_contract:
+relay_or_native_refs:
+```
+
+默认规则：**不要复制整个 manager conversation。**
+
+Canon write、Framework promotion、durable-taste write 等高权威 permission 默认保持 false，除非另有明确 authority path。绝大多数 semantic / research worker 都不应该拿到这些权限。
+
+## 05 · Lease 与 Attempt
+
+Queued worker 通过原子操作 claim 一段有时限的 lease。
+
+Lease 至少建立：
+
+- current attempt identity；
+- current owner；
+- claim time；
+- expiry / recovery semantics。
+
+只有 active lease owner 可以完成当前 attempt。如果 lease 过期、任务被另一个 worker reclaim，旧 worker 之后不能再覆盖新 owner 的有效 result。
+
+Lease expiry 是 infrastructure state，不是 semantic judgment。
+
+## 06 · Completion 与 Consumption 不是同一步
+
+Worker 完成工作，不等于 result 已经被应用。
 
 ```text
 worker completes
-→ result stored + hashed
-→ manager/gate validates binding
-→ named consumer records receipt
-→ downstream side effect occurs once
+→ result payload stored
+→ deterministic payload hash recorded
+→ manager / gate validates job + fingerprint + provenance
+→ named logical consumer records receipt
+→ downstream workflow effect occurs once
 ```
 
-相同 result 重复投递返回 already-consumed；同 logical source/consumer 却出现不同 hash 时 hard stop。
+这层区别决定了 retry / resume 能不能安全。
 
-## MCP
+完全相同的 duplicate 可以返回“already consumed”；同一个 logical source / consumer 却出现不同 result hash，必须 hard stop，而不是 last-write-wins。
 
-本地 reference transport 是 stdio MCP。未来 remote service 使用 Streamable HTTP，并执行正常 auth/origin/session protection。
+## 07 · Exactly-once 指“逻辑应用一次”
 
-Control-plane MCP tools 暴露 operational capability，不暴露无条件 Canon-write tool。
+NovelForge 的 consume-once 语义针对的是**下游逻辑应用**，不是宣称 transport message 一定只送达一次。
 
-## Chat / Local / CI
+这样才能正确容忍：
 
-- Chat session 可通过 connected/relay transport 接入；
-- Local Codex/Claude 可用 CLI 或 stdio MCP；
-- GitHub/service job 可以把外部 event normalize 成同一 event/handoff contract；
-- Normal CI 只验证 infrastructure，不调用付费模型。
+- webhook / event 重复送达；
+- worker 在 acknowledgement 不确定时重试；
+- process restart；
+- manager resume；
+- lease expiry 后 queue reclaim。
 
-> 大胆持久化 execution state，保守授予 authority。
+安全条件是：一个已经验证的 logical result / side effect 不会被应用两次。
+
+## 08 · Semantic job 经过 Control Plane
+
+Semantic handoff 携带冻结的 semantic job / fingerprint。Worker 返回 typed result，manager 再验证：
+
+- job identity；
+- semantic fingerprint；
+- worker / session / attempt provenance；
+- output schema；
+- permission boundary。
+
+Control Plane 负责保存与运输这些 evidence，但不负责判断正文好不好。
+
+有效 `semantic_reject` 应作为有效 semantic result 保存，并送回 owning repair mechanism。
+
+## 09 · MCP / Service transport
+
+本地 reference MCP transport 可以使用 stdio。Remote service transport 则应正常实施 authentication、origin / session isolation 与 network-security requirement。
+
+MCP tool 暴露的是受限 operational capability。即使 MCP 里存在某个“write” tool，也不会自动制造 Canon authority。
+
+切换 transport 时，应保持相同 job / handoff / result identity，避免“换传输方式”变成“换了语义问题”。
+
+## 10 · Chat、本地 Agent、CI 与 Service
+
+不同 host 可以参与同一 operational model：
+
+- chat manager 可以打包 peer relay；
+- local Codex / Claude 可以执行 bounded job 或连接 stdio MCP；
+- GitHub / service worker 可以把外部事件归一成 typed handoff；
+- remote worker 可以 claim lease；
+- normal CI 可以测试 lifecycle / idempotency / contract，而不调用付费模型。
+
+Host 多样性不会改变 authority semantics。
+
+## 11 · Failure 与 Recovery
+
+Infrastructure failure 可能导致：
+
+- attempt failure；
+- lease expiry；
+- handoff reclaim；
+- transport fallback；
+- 没有 eligible route 时进入 `awaiting_external` / `semantic_pending`。
+
+恢复时，必须先重新验证冻结 identity / fingerprint，再消费返回结果。
+
+禁止：
+
+- 旧 lease owner 覆盖新 owner；
+- result binding 不匹配却因为“看着像正确答案”就消费；
+- 没有 precondition / receipt 证据时重复 consequential side effect；
+- 把 timeout 当 semantic reject。
+
+## 12 · Authority boundary
+
+Control-plane arrival 永远不会抬高 authority。
+
+以下内容单独到达时仍然无权威：
+
+- webhook；
+- scheduled task；
+- MCP request / result；
+- worker handoff / result；
+- GitHub / service event；
+- CI status；
+- semantic verdict；
+- learning candidate；
+- acceptance observation。
+
+观察到“用户已经 acceptance”可以触发 settlement workflow，但不会绕过项目正常 authority / precondition 自动执行 settlement。
+
+## 13 · 不变量
+
+1. Operational persistence 与 story authority 分离。
+2. Event 有类型、有 idempotency。
+3. Handoff 保持 bounded，默认不复制 manager 全部上下文。
+4. Lease 建立 attempt ownership 与安全 reclaim 语义。
+5. Completion 与 logical consumption 分离。
+6. Exactly-once 指 logical application，不指 transport delivery。
+7. Result 在消费前验证 identity / fingerprint / provenance。
+8. Control-plane data 本身绝不授予 Canon / Framework / taste-write authority。
+
+## 14 · 相关契约
+
+- [Session Runtime](../session_runtime/SESSION_RUNTIME.zh-CN.md)：session / run / checkpoint identity。
+- [Runtime Routing](../session_runtime/RUNTIME_ROUTING.zh-CN.md)：选择 eligible execution path。
+- [Semantic Worker Protocol](../semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md)：typed semantic job / result。
+- [正典与状态模型](../../core/CANON_STATE.zh-CN.md)：独立的 settlement transaction 与 authority。
