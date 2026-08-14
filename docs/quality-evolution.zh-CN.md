@@ -24,7 +24,7 @@ NovelForge 把这些问题分别处理：
 
 ## 02 · 语义智能属于 model contract
 
-[`harness/semantic_workers/model_contracts.json`](../harness/semantic_workers/model_contracts.json) 定义受限的语义任务。运行时只提供候选稿、允许使用的上下文、rubric、权限、fingerprint 与类型化输出契约。
+[`harness/semantic_workers/model_contract_catalog.json`](../harness/semantic_workers/model_contract_catalog.json) 索引按需加载的 semantic contract packs。运行时只提供候选稿、允许使用的上下文、rubric、权限、fingerprint 与类型化输出契约。
 
 当前直接服务质量系统的 contract 包括：
 
@@ -204,4 +204,4 @@ project    → Canon authority + settlement
 - [读者吸引力](../surface/READER_ENGAGEMENT.zh-CN.md)：通用正向 reader-quality model。
 - [人物与关系系统](../core/CHARACTER_SYSTEM.zh-CN.md)：Character Integrity 判断所依据的人物状态与知识边界。
 - [Semantic Worker Protocol](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md)：provider-neutral semantic job/result contract。
-- [`model_contracts.json`](../harness/semantic_workers/model_contracts.json)：当前 model-readable semantic registry。
+- [`model_contract_catalog.json`](../harness/semantic_workers/model_contract_catalog.json)：按需加载 semantic contract packs 的 model-readable catalog。
