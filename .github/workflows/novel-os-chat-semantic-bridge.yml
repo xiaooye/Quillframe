@@ -1,0 +1,141 @@
+name: Novel OS Chat Semantic Bridge
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: chat-semantic-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  build-peer-packet:
+    if: >-
+      github.event_name == 'issues' &&
+      github.actor == github.repository_owner &&
+      startsWith(github.event.issue.title, '[semantic-worker] ')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Parse and validate semantic job
+        run: |
+          python - <<'PY'
+          import json, os, pathlib
+          event=json.load(open(os.environ['GITHUB_EVENT_PATH'],encoding='utf-8'))
+          issue=event['issue']; body=issue.get('body') or ''
+          expected=issue['title'][len('[semantic-worker] '):].strip()
+          job=json.loads(body)
+          if not isinstance(job,dict): raise ValueError('issue body must be one semantic job JSON object')
+          if job.get('job_id')!=expected: raise ValueError('title/body job_id mismatch')
+          pathlib.Path('/tmp/semantic-job.json').write_text(json.dumps(job,ensure_ascii=False,indent=2),encoding='utf-8')
+          pathlib.Path('/tmp/semantic-jobs.json').write_text(json.dumps({'jobs':[job]},ensure_ascii=False,indent=2),encoding='utf-8')
+          PY
+          python harness/semantic_workers/semantic_worker_router.py validate-jobs --jobs /tmp/semantic-jobs.json
+
+      - name: Build independent peer-chat packet
+        run: |
+          python harness/semantic_workers/peer_chat_relay.py build --job /tmp/semantic-job.json --output /tmp/peer-packet.json
+          {
+            echo '<!-- novel-os-peer-packet-v1 -->'
+            echo '`semantic_status: awaiting_user`'
+            echo
+            echo 'Open a genuinely separate ordinary chat (Temporary Chat preferred when available), paste the JSON packet below, and return its typed semantic result in a new issue comment prefixed with `<!-- novel-os-peer-result-v1 -->`.'
+            echo
+            echo '```json'
+            cat /tmp/peer-packet.json
+            echo '```'
+          } > /tmp/packet-comment.md
+          gh issue comment "$ISSUE_NUMBER" --body-file /tmp/packet-comment.md
+
+  validate-peer-result:
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.actor == github.repository_owner &&
+      startsWith(github.event.issue.title, '[semantic-worker] ') &&
+      contains(github.event.comment.body, '<!-- novel-os-peer-result-v1 -->')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Recover packet and submitted result
+        run: |
+          gh api "repos/${GH_REPO}/issues/${ISSUE_NUMBER}/comments?per_page=100" > /tmp/comments.json
+          python - <<'PY'
+          import json, os, pathlib
+          event=json.load(open(os.environ['GITHUB_EVENT_PATH'],encoding='utf-8'))
+          comments=json.load(open('/tmp/comments.json',encoding='utf-8'))
+          packet_marker='<!-- novel-os-peer-packet-v1 -->'
+          result_marker='<!-- novel-os-peer-result-v1 -->'
+          def fenced_json(body,marker):
+              tail=body.split(marker,1)[1]
+              if '```json' in tail:
+                  tail=tail.split('```json',1)[1].split('```',1)[0]
+              elif '```' in tail:
+                  tail=tail.split('```',1)[1].split('```',1)[0]
+              return json.loads(tail.strip())
+          packets=[c for c in comments if packet_marker in (c.get('body') or '')]
+          if not packets: raise ValueError('no peer packet comment found')
+          packet=fenced_json(packets[-1]['body'],packet_marker)
+          result=fenced_json(event['comment']['body'],result_marker)
+          pathlib.Path('/tmp/peer-packet.json').write_text(json.dumps(packet,ensure_ascii=False,indent=2),encoding='utf-8')
+          pathlib.Path('/tmp/peer-result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+          PY
+
+      - name: Deterministically validate binding
+        id: validate
+        run: |
+          set +e
+          python harness/semantic_workers/peer_chat_relay.py validate-result --packet /tmp/peer-packet.json --result /tmp/peer-result.json > /tmp/peer-validation.json
+          code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Return validation status
+        run: |
+          if [ "${{ steps.validate.outputs.code }}" = "0" ]; then
+            {
+              echo '<!-- novel-os-peer-validation-v1 -->'
+              echo '`semantic_status: validated_result_ready`'
+              echo
+              echo 'The peer result passed fingerprint + relay binding validation. The manager may consume it once at the pending semantic gate after revalidating live project authority.'
+              echo
+              echo '```json'
+              cat /tmp/peer-validation.json
+              echo '```'
+            } > /tmp/validation-comment.md
+            gh issue comment "$ISSUE_NUMBER" --body-file /tmp/validation-comment.md
+            gh issue close "$ISSUE_NUMBER" --reason completed
+          else
+            {
+              echo '<!-- novel-os-peer-validation-v1 -->'
+              echo '`semantic_status: semantic_invalid`'
+              echo
+              echo 'The submitted peer result failed deterministic binding validation.'
+              echo
+              echo '```json'
+              cat /tmp/peer-validation.json
+              echo '```'
+            } > /tmp/validation-comment.md
+            gh issue comment "$ISSUE_NUMBER" --body-file /tmp/validation-comment.md
+            exit 1
+          fi
