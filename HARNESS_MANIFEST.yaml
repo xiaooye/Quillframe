@@ -1,0 +1,100 @@
+version: 6.6.0
+name: cn-webnovel-agent-runtime
+architecture: deterministic-shell-session-control-plane-workers
+entry: SKILL.md
+
+authority_domains:
+  runtime_harness:
+    repo: xiaooye/cn_webnovel_agent
+    branch: main
+    owns: [orchestration, sessions, control-plane, runtime-routing, semantic-transports, connectors, workflows]
+  current_story_surface_project:
+    repo: xiaooye/frostloom
+    branch: master
+    owns: [story-policy, surface-policy, reader-policy, project-adapter, novel-bible, canon]
+    migration: external-source-until-separately-gated
+
+harness:
+  manager: harness/HARNESS_AGENT.md
+  orchestration: harness/ORCHESTRATION_PROTOCOL.md
+  session_runtime: harness/session_runtime/SESSION_RUNTIME.md
+  session_schema: harness/session_runtime/session_schema.json
+  session_tool: harness/session_runtime/session_runtime.py
+  runtime_routing: harness/session_runtime/RUNTIME_ROUTING.md
+  runtime_registry: harness/session_runtime/runtime_registry.json
+  control_plane: harness/control_plane/CONTROL_PLANE.md
+  control_plane_tool: harness/control_plane/control_plane.py
+  control_plane_event_schema: harness/control_plane/event_schema.json
+  control_plane_handoff_schema: harness/control_plane/handoff_schema.json
+  control_plane_mcp_stdio: harness/control_plane/mcp_stdio.py
+  semantic_protocol: harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.md
+  semantic_execution: harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.md
+  semantic_router: harness/semantic_workers/semantic_worker_router.py
+  semantic_runner: harness/semantic_workers/semantic_worker_runner.py
+  semantic_local_adapter: harness/semantic_workers/adapters/local_agent_adapter.py
+  semantic_openai_adapter: harness/semantic_workers/adapters/openai_responses_adapter.py
+  semantic_peer_relay: harness/semantic_workers/peer_chat_relay.py
+
+session_runtime:
+  identity_model: resource-session-run-checkpoint
+  chat_session_support: required
+  durable_store: sqlite-reference
+  persistent_session_does_not_grant_authority: true
+  reviewer_default: fresh-per-fingerprint
+  resume_revalidates_live_authority: true
+
+control_plane:
+  schema: novel_os_control_plane_v1
+  event_schema: novel_os_event_v1
+  handoff_schema: novel_os_handoff_v1
+  event_idempotency: required
+  handoff_claim: transactional-bounded-lease
+  result_consumption: exactly-once-logical-receipt
+  canon_authority: false
+  os_promotion_authority: false
+  default_local_db: .novel-os/runtime.db
+  mcp:
+    protocol_version: 2025-06-18
+    local_transport: stdio
+    future_remote_transport: streamable-http
+    canon_write_tools_exposed: false
+
+runtime_transports:
+  - chatgpt_current_chat
+  - chatgpt_peer_chat
+  - codex_cli
+  - claude_code
+  - control_plane_mcp
+  - openai_responses_api
+  - github_actions_bridge
+  - remote_mcp_worker
+  - local_model
+  - human_reviewer
+
+semantic:
+  fingerprint_payload: [kind, subject_id, input, rubric, output_contract]
+  execution_lineage_excluded_from_fingerprint: true
+  lineage_fields: [source_session_id, worker_session_id, handoff_id, attempt_id]
+  hidden_gold: forbidden
+  manager_self_review_independent: false
+  semantic_reject_is_transport_failure: false
+  result_consume_once: true
+
+normal_ci:
+  model_execution: forbidden
+  required:
+    - py_compile
+    - session-self-test
+    - control-plane-self-test
+    - mcp-self-test
+    - semantic-router-self-test
+    - local-agent-adapter-self-test
+    - optional-openai-dry-run
+    - authority-drift-check
+
+write_boundary:
+  connector_event_grants_canon_authority: false
+  webhook_event_grants_canon_authority: false
+  schedule_grants_canon_authority: false
+  semantic_result_grants_canon_authority: false
+  canon_write_requires_project_settle_and_explicit_acceptance: true
