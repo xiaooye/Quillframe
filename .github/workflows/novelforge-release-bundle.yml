@@ -78,6 +78,24 @@ jobs:
           assert v['valid'] is True
           assert s['framework_bundle_contract']=='PASS'
           assert s['deterministic_bytes'] and s['tamper_detected']
+          assert s['quality_runtime_included'] is True
+          PY
+
+      - name: Smoke-test extracted bundle as runnable framework
+        run: |
+          rm -rf /tmp/novelforge-bundle-smoke
+          mkdir -p /tmp/novelforge-bundle-smoke
+          tar -xf dist/novelforge-framework-a.tar -C /tmp/novelforge-bundle-smoke
+          cd /tmp/novelforge-bundle-smoke
+          python novelforge.py doctor > /tmp/novelforge-bundle-doctor.json
+          python novelforge.py self-test > /tmp/novelforge-bundle-self-test.json
+          python - <<'PY'
+          import json
+          doctor=json.load(open('/tmp/novelforge-bundle-doctor.json',encoding='utf-8'))
+          selftest=json.load(open('/tmp/novelforge-bundle-self-test.json',encoding='utf-8'))
+          assert doctor['ok'] is True, doctor
+          assert selftest['novelforge_cli_contract']=='PASS', selftest
+          assert selftest['model_execution'] is False
           PY
 
       - name: Publish bundle fingerprint to job summary
