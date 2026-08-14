@@ -1,0 +1,79 @@
+{
+  "schema": "novelforge_model_contract_registry_v1",
+  "version": "1",
+  "principle": "Model judgment selects context and research strategy; deterministic runtime only enforces authority, data, capability, provenance and budget boundaries.",
+  "contracts": {
+    "context.select": {
+      "kind": "artifact_audit",
+      "purpose": "Select the smallest useful set of supplied memory blocks for the current bounded task. Relevance is a semantic judgment owned by the model; selection never changes source authority.",
+      "rubric": [
+        "Use only the supplied task context and candidate memory blocks.",
+        "Choose hot blocks that are directly needed for the immediate reasoning step and working blocks that are likely to matter soon; archive everything else.",
+        "Prefer sparse context. Do not select a block merely because it is generally interesting or recent.",
+        "Respect each block's authority, stage and knowledge boundary. A plan, proposal, review, research fact or derived memory never becomes accepted Canon because it was selected.",
+        "Pinned blocks are author/runtime constraints and should be treated as required unless the caller explicitly marks them unavailable.",
+        "Return ordered block ids only; do not rewrite, summarize or mutate the memory blocks."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "hot_ids", "working_ids", "archive_ids", "reasons"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "hot_ids": {"type": "array", "items": {"type": "string"}},
+          "working_ids": {"type": "array", "items": {"type": "string"}},
+          "archive_ids": {"type": "array", "items": {"type": "string"}},
+          "reasons": {"type": "array", "items": {"type": "object"}}
+        }
+      },
+      "permissions": {
+        "canon_write": false,
+        "os_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "context_selection"
+      },
+      "independent_gate": false
+    },
+    "corpus.discovery_plan": {
+      "kind": "corpus_analyze",
+      "purpose": "Plan bounded evidence searches for a supplied Corpus gap. Query design, contrast strategy and counterexample strategy are semantic work owned by the model; tool authorization and rights remain runtime responsibilities.",
+      "rubric": [
+        "Use only the supplied research gap, source constraints and declared channel vocabulary.",
+        "Design focused searches that can answer the research question with evidence, not broad topic searches.",
+        "Include meaningful contrast or counterexample searches when the gap is testing a mechanism or generalization.",
+        "Prefer primary, official, publisher, library or research sources when the source constraints request them.",
+        "Do not choose a channel outside allowed_channels and do not claim that any channel is actually available or authorized.",
+        "Do not search for material in order to imitate a named living author or to build a named-author style profile.",
+        "Return search plans only. Discovery, rights classification, ingestion and promotion happen elsewhere."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "searches", "diversity_strategy"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "searches": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["channel", "query", "purpose", "contrast_role"],
+              "properties": {
+                "channel": {"enum": ["web", "github", "user_files", "file_library", "mcp"]},
+                "query": {"type": "string", "minLength": 1},
+                "purpose": {"type": "string", "minLength": 1},
+                "contrast_role": {"enum": ["support", "counterexample", "contrast", "neutral"]}
+              }
+            }
+          },
+          "diversity_strategy": {"type": "string", "minLength": 1}
+        }
+      },
+      "permissions": {
+        "canon_write": false,
+        "os_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "corpus_discovery_plan"
+      },
+      "independent_gate": false
+    }
+  }
+}
