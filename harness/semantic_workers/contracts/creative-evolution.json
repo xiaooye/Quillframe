@@ -1,81 +1,43 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "1",
+  "version": "2",
   "principle": "Creative exploration should produce causally distinct options, while revision should be evidence-driven rather than generic self-reflection. Deterministic ledgers record branches/comparisons but never manufacture literary improvement signals.",
   "contracts": {
     "scene.diverge": {
       "kind": "artifact_audit",
       "purpose": "Propose a small set of materially different causal scene branches from the same bounded state. Diversity must come from different choices, conflicts, information, tactics, costs or consequences—not paraphrase or cosmetic style variation.",
-      "rubric": [
-        "Respect supplied Canon/current state, character knowledge boundaries and hard plan constraints.",
-        "Generate branches that diverge at the causal mechanism level: who acts, what choice is made, what information changes hands, what resistance appears, what cost is paid, or what relationship leverage shifts.",
-        "Do not create multiple versions that differ mainly in wording, tone, scenery, sentence rhythm or arbitrary surprise.",
-        "Keep important characters agentic. At least one branch should test a non-obvious but character-supported response when the evidence allows it.",
-        "For each branch, state what makes it genuinely distinct and which existing pressure or uncertainty it exploits.",
-        "Do not select a winner and do not write prose. These are non-Canon exploration proposals for Scenario Fork."
-      ],
-      "output_contract": {
-        "type": "object",
-        "required": ["confidence", "branches"],
-        "properties": {
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "branches": {
-            "type": "array",
-            "minItems": 2,
-            "items": {
-              "type": "object",
-              "required": ["branch_key", "divergence_axis", "causal_trajectory", "character_agency", "cost_or_tradeoff", "distinct_from_others"],
-              "properties": {
-                "branch_key": {"type": "string", "minLength": 1},
-                "divergence_axis": {"type": "string", "minLength": 1},
-                "causal_trajectory": {"type": "array", "items": {"type": "string"}, "minItems": 1},
-                "character_agency": {"type": "string", "minLength": 1},
-                "cost_or_tradeoff": {"type": "string"},
-                "reader_pressure_or_reward": {"type": "string"},
-                "distinct_from_others": {"type": "string", "minLength": 1}
-              }
-            }
-          }
-        }
-      },
-      "permissions": {
-        "canon_write": false,
-        "os_behavior_write": false,
-        "durable_user_taste_write": false,
-        "allowed_result_scope": "scenario_branch_proposals"
-      },
+      "rubric": ["Respect supplied Canon/current state, character knowledge boundaries and hard plan constraints.", "Generate branches that diverge at the causal mechanism level: who acts, what choice is made, what information changes hands, what resistance appears, what cost is paid, or what relationship leverage shifts.", "Do not create multiple versions that differ mainly in wording, tone, scenery, sentence rhythm or arbitrary surprise.", "Keep important characters agentic. At least one branch should test a non-obvious but character-supported response when the evidence allows it.", "For each branch, state what makes it genuinely distinct and which existing pressure or uncertainty it exploits.", "Do not select a winner and do not write prose. These are non-Canon exploration proposals for Scenario Fork."],
+      "output_contract": {"type": "object", "required": ["confidence", "branches"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "branches": {"type": "array", "minItems": 2, "items": {"type": "object", "required": ["branch_key", "divergence_axis", "causal_trajectory", "character_agency", "cost_or_tradeoff", "distinct_from_others"], "properties": {"branch_key": {"type": "string", "minLength": 1}, "divergence_axis": {"type": "string", "minLength": 1}, "causal_trajectory": {"type": "array", "items": {"type": "string"}, "minItems": 1}, "character_agency": {"type": "string", "minLength": 1}, "cost_or_tradeoff": {"type": "string"}, "reader_pressure_or_reward": {"type": "string"}, "distinct_from_others": {"type": "string", "minLength": 1}}}}}},
+      "permissions": {"canon_write": false, "os_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "scenario_branch_proposals"},
       "independent_gate": false
     },
     "quality.compare": {
       "kind": "external_review",
       "purpose": "Compare an incumbent and challenger against an explicit repair target, typed findings and preserved strengths. Determine whether the challenger actually improves the artifact rather than assuming a later revision is better.",
+      "input_contract": {
+        "type": "object",
+        "required": ["evolution_run_id", "evolution_subject_id", "comparison_id", "incumbent", "challenger", "repair_context"],
+        "properties": {
+          "evolution_run_id": {"type": "string", "minLength": 1},
+          "evolution_subject_id": {"type": "string", "minLength": 1},
+          "comparison_id": {"type": "string", "minLength": 1},
+          "incumbent": {"type": "object", "required": ["candidate_id", "content_fingerprint"], "properties": {"candidate_id": {"type": "string", "minLength": 1}, "content_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71}}, "additionalProperties": false},
+          "challenger": {"type": "object", "required": ["candidate_id", "content_fingerprint", "repair_owner"], "properties": {"candidate_id": {"type": "string", "minLength": 1}, "content_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71}, "repair_owner": {"type": "string", "minLength": 1}}, "additionalProperties": false},
+          "repair_context": {"type": "object"}
+        },
+        "additionalProperties": false
+      },
       "rubric": [
         "Judge only the supplied incumbent, challenger, repair targets/findings, relevant constraints and evidence.",
+        "Treat the candidate IDs and content fingerprints as the frozen comparison identity; never substitute a different artifact or infer a winner from orchestration metadata.",
         "First test whether the challenger resolves the targeted failure. Then check whether it introduces regressions in story causality, character integrity, reader engagement, continuity or surface realization.",
         "Preserve strengths that were not targeted for repair. A smoother or more elaborate rewrite is not an improvement if it weakens what already worked.",
         "Prefer pairwise observable evidence over absolute literary scores.",
         "Use tie when there is no clear net gain, when gains and regressions cancel, or when evidence is insufficient. Do not manufacture improvement to keep a revision loop moving.",
         "Return concise evidence and repaired/regressed finding references. This comparison does not itself grant user-visible, Canon or settlement authority."
       ],
-      "output_contract": {
-        "type": "object",
-        "required": ["confidence", "winner", "reason", "repaired_findings", "introduced_regressions", "evidence"],
-        "properties": {
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "winner": {"enum": ["incumbent", "challenger", "tie"]},
-          "reason": {"type": "string", "minLength": 1},
-          "repaired_findings": {"type": "array", "items": {"type": "string"}},
-          "introduced_regressions": {"type": "array", "items": {"type": "string"}},
-          "preserved_strengths": {"type": "array", "items": {"type": "string"}},
-          "evidence": {"type": "array", "items": {"type": "string"}}
-        }
-      },
-      "permissions": {
-        "canon_write": false,
-        "os_behavior_write": false,
-        "durable_user_taste_write": false,
-        "allowed_result_scope": "quality_pairwise_comparison"
-      },
+      "output_contract": {"type": "object", "required": ["confidence", "winner", "reason", "repaired_findings", "introduced_regressions", "evidence"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "winner": {"enum": ["incumbent", "challenger", "tie"]}, "reason": {"type": "string", "minLength": 1}, "repaired_findings": {"type": "array", "items": {"type": "string"}}, "introduced_regressions": {"type": "array", "items": {"type": "string"}}, "preserved_strengths": {"type": "array", "items": {"type": "string"}}, "evidence": {"type": "array", "items": {"type": "string"}}}},
+      "permissions": {"canon_write": false, "os_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "quality_pairwise_comparison"},
       "independent_gate": false
     }
   }
