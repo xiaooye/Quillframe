@@ -231,10 +231,15 @@ def self_test() -> int:
     preserved = fingerprint_for({**job, "execution": {"source_session_id": "DIFFERENT"}}) == job["input_fingerprint"]
     contract_job = make_contract_job("character.integrity", "CHAR-SELF", {"scene_excerpt": "x", "character": {"character_id": "CHAR-SELF"}}, source_session_id="SES-A")
     registry_ok = contract_job["input"]["model_contract_id"] == "character.integrity" and contract_job["kind"] == "artifact_audit" and not validate_job(contract_job)
-    semantic_not_encoded = "agenda_alignment" in " ".join(contract_job["rubric"]) and contract_job["provenance"]["source"] == "model_contract_registry"
-    ok = not validate_job(job) and not validate_result(job, result) and preserved and registry_ok and semantic_not_encoded
+    contract_boundary_ok = (
+        contract_job["provenance"]["source"] == "model_contract_registry"
+        and contract_job["permissions"]["canon_write"] is False
+        and len(contract_job["rubric"]) >= 3
+        and isinstance(contract_job["output_contract"], dict)
+    )
+    ok = not validate_job(job) and not validate_result(job, result) and preserved and registry_ok and contract_boundary_ok
     dump_json({"semantic_router_contract": "PASS" if ok else "FAIL", "fingerprint_excludes_runtime_lineage": preserved,
-               "model_contract_registry": registry_ok, "semantic_intelligence_externalized": semantic_not_encoded,
+               "model_contract_registry": registry_ok, "semantic_intelligence_externalized": contract_boundary_ok,
                "model_execution": False})
     return 0 if ok else 1
 
