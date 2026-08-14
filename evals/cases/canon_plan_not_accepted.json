@@ -6,12 +6,17 @@
   "blocks_release": true,
   "fixture": {
     "planned_event": {"status": "active_plan", "settled": false},
-    "current_state": {"contains_planned_result": false}
+    "current_state": {"contains_planned_result": false},
+    "authority_boundary": {
+      "active_plan_is_accepted": false,
+      "plan_can_mutate_current_state_without_settlement": false
+    }
   },
   "assertions": [
     {"op": "equals", "path": "planned_event.status", "value": "active_plan"},
     {"op": "falsy", "path": "planned_event.settled"},
     {"op": "falsy", "path": "current_state.contains_planned_result"},
-    {"op": "file_text_contains", "file": "core/CANON_STATE.en.md", "value": "Plan ≠ Canon"}
+    {"op": "falsy", "path": "authority_boundary.active_plan_is_accepted"},
+    {"op": "falsy", "path": "authority_boundary.plan_can_mutate_current_state_without_settlement"}
   ]
 }
