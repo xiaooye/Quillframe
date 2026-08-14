@@ -19,7 +19,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from quality.findings import validate_finding  # noqa:E402
+from quality.findings import fingerprint_for, validate_finding  # noqa:E402
 
 SCHEMA = "novelforge_revision_orchestrator_v1"
 PASSES: dict[str, dict[str, Any]] = {
@@ -107,6 +107,9 @@ def _merge_evidence(target: dict[str, Any], other: dict[str, Any]) -> None:
     target["confidence"] = max(float(target.get("confidence", 0)), float(other.get("confidence", 0)))
     if SEVERITY_RANK.get(other.get("severity"), 9) < SEVERITY_RANK.get(target.get("severity"), 9):
         target["severity"] = other["severity"]
+    # The normalized finding fingerprint binds evidence, severity and source refs.
+    # Any dedupe merge that changes those fields must produce a new fingerprint.
+    target["finding_fingerprint"] = fingerprint_for(target)
 
 
 def _repair_queue(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -117,10 +120,8 @@ def _repair_queue(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for owner, items in groups.items():
         categories = Counter(x["category"] for x in items)
         action = REPAIR_ACTIONS[owner]
-        # Surface clusters belong to scene regeneration rather than endless local patches.
         if owner == "surface" and len(items) >= 3:
             action = "regenerate_scene_surface_realization"
-        # Reader flatness is explicitly not a line-edit problem.
         if owner == "reader" and any(x["category"] in {"safe_but_flat", "reader_grip", "forward_pull"} for x in items):
             action = "rerun_reader_pressure_and_scene_simulation"
         queue.append({
@@ -189,8 +190,6 @@ def self_test() -> int:
         description="Fragmented prose cluster.", candidate_evidence=[{"source_ref": "cand:1", "summary": "fragment"}], source_refs=["cand:1"], confidence=0.8,
     )
     duplicate = json.loads(json.dumps(base)); duplicate["finding_id"] = "F1B"; duplicate["candidate_evidence"].append({"source_ref": "cand:2", "summary": "same pattern"})
-    # Recompute fingerprint after fixture mutation.
-    from quality.findings import fingerprint_for
     duplicate["finding_fingerprint"] = fingerprint_for(duplicate)
     s2 = make_finding(finding_id="F2", category="over_explain", severity="warning", repair_owner="surface", subject_id="SCN-1", description="Narrator repeats shown meaning.", candidate_evidence=[{"source_ref": "cand:3", "summary": "repeat"}], source_refs=["cand:3"], confidence=0.9)
     s3 = make_finding(finding_id="F3", category="process_broadcast", severity="info", repair_owner="surface", subject_id="SCN-1", description="Procedure dominates scene.", candidate_evidence=[{"source_ref": "cand:4", "summary": "procedure"}], source_refs=["cand:4"], confidence=0.7)
@@ -198,14 +197,20 @@ def self_test() -> int:
     plan = plan_passes({"candidate_text": "x", "state_before": {}, "state_after": {}, "scene_excerpt": "x", "character_snapshots": [{}]})
     report = aggregate({"surface": {"findings": [base, duplicate, s2, s3]}, "character": {"findings": [c1]}, "reader": {"status": "unsupported"}})
     surface = next(x for x in report["repair_queue"] if x["repair_owner"] == "surface")
+    fingerprints_valid = all(not validate_finding(item) for item in report["findings"])
+    merged = next(x for x in report["findings"] if x["category"] == "surface_fragmentation")
+    merged_evidence = {x["source_ref"] for x in merged["candidate_evidence"]} == {"cand:1", "cand:2"}
     ok = (
         len(plan["planned"]) == 4 and any(x["pass"] == "research_fact" for x in plan["skipped"])
         and report["total_findings"] == 4 and surface["action"] == "regenerate_scene_surface_realization"
         and report["passes_skipped"][0]["pass"] == "reader" and report["invalid_inputs"] == []
+        and fingerprints_valid and merged_evidence
     )
     dump({
         "revision_orchestrator_contract": "PASS" if ok else "FAIL", "narrow_pass_planning": True,
         "failure_isolation": True, "dedupe": report["total_findings"] == 4,
+        "merged_finding_fingerprint_valid": fingerprints_valid,
+        "merged_evidence_preserved": merged_evidence,
         "surface_cluster_regeneration": surface["action"] == "regenerate_scene_surface_realization",
         "authority": False, "model_execution": False,
     })
