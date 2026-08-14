@@ -1,89 +1,16 @@
 {
   "schema": "novelforge_model_contract_catalog_v1",
-  "version": "1",
+  "version": "2",
   "loading_policy": "progressive_disclosure",
-  "principle": "Keep this catalog small. The model/manager selects the smallest relevant contract pack from metadata, then loads only that registry. Deterministic code must not keyword-route literary intent on the model's behalf.",
-  "compatibility_registry": "model_contracts.json",
+  "principle": "Keep this catalog small. The model/manager selects the smallest relevant contract pack from metadata, then loads only that registry. Deterministic code resolves an exact contract id to exactly one pack; it must not keyword-route literary intent on the model's behalf.",
   "packs": [
-    {
-      "id": "quality",
-      "path": "contracts/quality.json",
-      "description": "Reader reaction/comparison, character integrity, and evidence-routed revision diagnosis for candidate quality work.",
-      "contracts": [
-        "reader.reaction",
-        "reader.compare",
-        "character.integrity",
-        "revision.diagnose"
-      ],
-      "load_when": "The task needs reader/character diagnostics or revision failure routing."
-    },
-    {
-      "id": "narrative-memory",
-      "path": "contracts/narrative-memory.json",
-      "description": "Source-bound long-horizon narrative interpretation, reader-expectation interpretation, and derived-memory consolidation.",
-      "contracts": [
-        "narrative.world",
-        "reader.expectations",
-        "memory.consolidate"
-      ],
-      "load_when": "The task needs long-form derived narrative state, live reader expectations, or compact rebuildable memory."
-    },
-    {
-      "id": "learning",
-      "path": "contracts/learning.json",
-      "description": "Rights-safe craft mechanism analysis and blind evaluation for adaptive learning without automatic promotion authority.",
-      "contracts": [
-        "learning.mechanism_analyze",
-        "learning.evaluate"
-      ],
-      "load_when": "The task is semantic Corpus analysis or evaluation of a learning hypothesis/candidate."
-    },
-    {
-      "id": "context-research",
-      "path": "contracts/context-research.json",
-      "description": "Sparse semantic context selection and model-owned Corpus discovery/query planning under deterministic budget, capability and rights guards.",
-      "contracts": [
-        "context.select",
-        "corpus.discovery_plan"
-      ],
-      "load_when": "The task must choose which memory/context blocks matter now or plan evidence searches for a Corpus/research gap."
-    },
-    {
-      "id": "story-simulation",
-      "path": "contracts/story-simulation.json",
-      "description": "Goal- and knowledge-bounded character action simulation followed by scene-level collision/world-state resolution and causal event trajectory proposals.",
-      "contracts": [
-        "character.action_propose",
-        "scene.resolve_actions"
-      ],
-      "load_when": "The task is pre-draft scene simulation, character agency simulation, or repair of a flat/forced scene through causal character/world interactions."
-    },
-    {
-      "id": "long-horizon",
-      "path": "contracts/long-horizon.json",
-      "description": "Dynamic active-plan reconciliation, evidence-based relationship-memory reconciliation, and explicit narrative-commitment auditing for long-horizon coherence.",
-      "contracts": [
-        "plan.reconcile",
-        "relationship.memory_reconcile",
-        "continuity.commitment_audit"
-      ],
-      "load_when": "The task must adapt a plan after causal emergence, reconcile conflicting long-lived relationship memories, or verify a candidate against explicit long-term commitments/facts."
-    },
-    {
-      "id": "creative-evolution",
-      "path": "contracts/creative-evolution.json",
-      "description": "Causally divergent scenario exploration plus evidence-driven incumbent/challenger comparison that permits ties instead of assuming repeated revision improves a subjective artifact.",
-      "contracts": [
-        "scene.diverge",
-        "quality.compare"
-      ],
-      "load_when": "The workflow needs materially distinct scenario forks before committing to a direction, or needs to verify that a repair candidate actually improves an incumbent without introducing regressions."
-    }
+    {"id":"quality","path":"contracts/quality.json","description":"Reader reaction/comparison, character integrity, and evidence-routed revision diagnosis for candidate quality work.","contracts":["reader.reaction","reader.compare","character.integrity","revision.diagnose"],"load_when":"The task needs reader/character diagnostics or revision failure routing."},
+    {"id":"narrative-memory","path":"contracts/narrative-memory.json","description":"Source-bound long-horizon narrative interpretation, reader-expectation interpretation, and derived-memory consolidation.","contracts":["narrative.world","reader.expectations","memory.consolidate"],"load_when":"The task needs long-form derived narrative state, live reader expectations, or compact rebuildable memory."},
+    {"id":"learning","path":"contracts/learning.json","description":"Rights-safe craft mechanism analysis and blind evaluation for adaptive learning without automatic promotion authority.","contracts":["learning.mechanism_analyze","learning.evaluate"],"load_when":"The task is semantic Corpus analysis or evaluation of a learning hypothesis/candidate."},
+    {"id":"context-research","path":"contracts/context-research.json","description":"Sparse semantic context selection and model-owned Corpus discovery/query planning under deterministic budget, capability and rights guards.","contracts":["context.select","corpus.discovery_plan"],"load_when":"The task must choose which memory/context blocks matter now or plan evidence searches for a Corpus/research gap."},
+    {"id":"story-simulation","path":"contracts/story-simulation.json","description":"Goal- and knowledge-bounded character action simulation followed by scene-level collision/world-state resolution and causal event trajectory proposals.","contracts":["character.action_propose","scene.resolve_actions"],"load_when":"The task is pre-draft scene simulation, character agency simulation, or repair of a flat/forced scene through causal character/world interactions."},
+    {"id":"long-horizon","path":"contracts/long-horizon.json","description":"Dynamic active-plan reconciliation, evidence-based relationship-memory reconciliation, and explicit narrative-commitment auditing for long-horizon coherence.","contracts":["plan.reconcile","relationship.memory_reconcile","continuity.commitment_audit"],"load_when":"The task must adapt a plan after causal emergence, reconcile conflicting long-lived relationship memories, or verify a candidate against explicit long-term commitments/facts."},
+    {"id":"creative-evolution","path":"contracts/creative-evolution.json","description":"Causally divergent scenario exploration plus evidence-driven incumbent/challenger comparison that permits ties instead of assuming repeated revision improves a subjective artifact.","contracts":["scene.diverge","quality.compare"],"load_when":"The workflow needs materially distinct scenario forks before committing to a direction, or needs to verify that a repair candidate actually improves an incumbent without introducing regressions."}
   ],
-  "activation": {
-    "owner": "model_or_manager",
-    "keyword_router_required": false,
-    "load_all_packs_by_default": false,
-    "contract_result_grants_authority": false
-  }
+  "activation": {"owner":"model_or_manager","exact_contract_id_resolution":"deterministic_runtime","keyword_router_required":false,"load_all_packs_by_default":false,"contract_result_grants_authority":false}
 }
