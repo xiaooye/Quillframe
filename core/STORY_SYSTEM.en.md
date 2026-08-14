@@ -1,35 +1,56 @@
-# Story System · Generic Architecture
+# Story System · Planning scale without pretending the future already happened
 
-## Purpose
+<p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>STORY HIERARCHY</kbd>&nbsp;&nbsp;<kbd>PLAN ≠ CANON</kbd></p>
 
-NovelForge models long-form fiction as a hierarchy of persistent story objects plus transient beats. The hierarchy provides planning scale without forcing every future chapter to be fully specified.
+NovelForge models long-form fiction as **persistent story objects at different planning scales** plus transient scene beats. The system exists to keep a serial coherent across chapters without requiring the distant future to be specified at scene-level detail.
 
-```mermaid
-flowchart TD
-    B[BOOK] --> V[VOLUME]
-    V --> A[ARC]
-    V --> U[UNIT]
-    U --> C[CHAPTER]
-    C --> S[SCENE]
-    S --> BT[Beat · usually transient]
+> **Boundary ✦** The Story System owns planning structure, dramatic objectives, dependencies, and expected state movement. It does **not** decide what has already happened. Current truth belongs to the consuming project's Canon/state system.
+
+## 01 · What this system owns
+
+The Story System defines generic mechanics for:
+
+- book-, volume-, arc-, unit-, chapter-, and scene-level planning;
+- rolling elaboration: high resolution near the writing frontier, lower resolution farther away;
+- scene simulation inputs such as participant agendas, knowledge, leverage, and constraints;
+- reader-pressure requirements such as active questions, consequential choices, payoff, and forward pull;
+- cross-object dependencies that invalidate future plans when their premises change.
+
+It does not own:
+
+- project-specific plot facts;
+- Accepted Canon;
+- character or relationship current state;
+- research truth;
+- runtime/session state;
+- model memory;
+- semantic-review authority.
+
+Those domains may supply inputs to planning, but they do not become Story-System authority.
+
+## 02 · Planning hierarchy
+
+```text
+BOOK
+└─ VOLUME
+   ├─ ARC      long-running dramatic line; may cross units or volumes
+   └─ UNIT     contiguous production/consumption block
+      └─ CHAPTER
+         └─ SCENE
+            └─ beat   usually transient; persist only when the project needs it
 ```
 
-`ARC` and `UNIT` are different:
-- **Arc** = a long-running dramatic/relationship/investigative/growth line that may cross units or volumes.
-- **Unit** = a contiguous production/consumption block with a concrete objective, pressure sequence, payoff, cost, and exit state.
+`ARC` and `UNIT` are intentionally different.
 
-## BOOK
+**Arc** answers: *what long-running question, relationship, investigation, struggle, or transformation is moving?*
 
-A book-level design should answer:
+**Unit** answers: *what contiguous block of chapters creates a concrete objective, pressure sequence, payoff, cost, and exit state?*
 
-- What long-form promise keeps a reader for hundreds of thousands of words?
-- What is the core fantasy/appeal?
-- How does the story expand without merely repeating the same game at a larger number?
-- What long desire drives the protagonist?
-- What relationship/world/end-state promises matter?
-- What is intentionally out of scope?
+A volume may contain several units while multiple arcs pass through them.
 
-Suggested fields:
+## 03 · BOOK contract
+
+A book-level design establishes the long-form promise and outer constraints.
 
 ```yaml
 id:
@@ -50,9 +71,20 @@ hard_limits: []
 status:
 ```
 
-## VOLUME
+A useful book design can answer:
 
-A valid volume is a **state transformation**, not a list of episodes.
+- Why should the reader stay for a very long work?
+- What kind of pleasure or fantasy is repeatedly renewed?
+- How does scope expand without repeating the same conflict with larger numbers?
+- What long desire keeps the protagonist moving?
+- What relationship/world/end-state promises must eventually be paid?
+- What is intentionally out of scope?
+
+The book design is directional. It is not a chapter-by-chapter prophecy.
+
+## 04 · VOLUME contract
+
+A volume should represent a **state transformation**, not a bag of episodes.
 
 ```yaml
 id:
@@ -81,11 +113,11 @@ exit_condition_to_next_volume:
 status:
 ```
 
-The volume should support a meaningful `start_state → end_state` diff.
+A valid volume makes the `start_state → end_state` difference legible. If the same characters, permissions, resources, relationships, world access, and unresolved questions could be copied unchanged into the next volume, the design is probably episodic rather than transformational.
 
-## ARC
+## 05 · ARC contract
 
-An Arc may belong to the protagonist, antagonist, supporting character, institution, relationship, investigation, family, romance, or social movement.
+An arc is a long-running line of pressure and change. It may belong to a protagonist, antagonist, supporting character, relationship, institution, investigation, family, romance, or social movement.
 
 ```yaml
 id:
@@ -106,9 +138,11 @@ crosslinks: []
 status:
 ```
 
-## UNIT
+An arc can cross units and volumes. Its turning points are plans until Accepted evidence establishes them.
 
-Units prevent the serial from degenerating into unrelated chapters.
+## 06 · UNIT contract
+
+A unit keeps a serial from dissolving into unrelated chapters.
 
 ```yaml
 id:
@@ -127,9 +161,11 @@ new_open_loops: []
 status:
 ```
 
-## CHAPTER
+A strong unit has a recognizable entry condition, escalating pressure, at least one meaningful choice or reorientation, and a payoff/cost that changes what the next unit can be.
 
-A chapter is a production unit with a specific dramatic task and a reader-experience contract.
+## 07 · CHAPTER contract
+
+A chapter is both a production unit and a reader-experience contract.
 
 ```yaml
 id:
@@ -154,11 +190,13 @@ state_delta_expected:
 status:
 ```
 
-A chapter plan is **future intent**, not Canon.
+The chapter plan should be specific enough to simulate and draft, but not so prescriptive that it scripts every sentence.
 
-## SCENE
+**A chapter plan is future intent. It is never evidence that the planned events occurred.**
 
-A Scene Card constrains simulation; it is not a sentence-by-sentence script.
+## 08 · SCENE contract
+
+A Scene Card constrains simulation. It is not a miniature screenplay.
 
 ```yaml
 id:
@@ -189,51 +227,120 @@ voice_constraints: []
 forbidden_forms: []
 ```
 
-## Rolling elaboration
+Before prose, a meaningful scene should make the following legible:
 
-Do not plan a thousand chapters at identical resolution.
+- what each important participant wants **now**;
+- what each participant thinks is happening;
+- what they know, suspect, misread, or cannot know;
+- what leverage and constraints are actually available;
+- what changes tactic or forces a choice;
+- what concrete state may be different at the end.
 
-Recommended resolution gradient:
+Simulation produces plausible action/response possibilities. It should not pre-write polished interior monologues or dialogue for the prose model to copy.
+
+## 09 · Rolling elaboration
+
+Do not plan a thousand chapters at one resolution.
+
+A useful default gradient is:
 
 ```text
-BOOK / end-state          = explicit
-next VOLUME / active ARC  = detailed
-next UNIT                 = production-ready
-next 1–3 CHAPTERS         = scene-ready
-far future chapters       = sparse directional placeholders
+BOOK / intended end-state        explicit but broad
+next VOLUME + active ARCS        detailed
+next UNIT                         production-ready
+next 1–3 CHAPTERS                 scene-ready
+farther chapters                  sparse directional placeholders
 ```
 
-As Accepted Canon changes the state graph, future plans are recalculated.
+The exact horizon is profile- and project-sensitive. The invariant is that **planning detail should increase near execution and remain revisable farther away**.
 
-## Reader-pressure integration
+When Accepted Canon changes an upstream assumption, dependent future plans are re-evaluated instead of being preserved merely because they were expensive to generate.
 
-Planning must track not only events but how the reader's near-term question evolves:
+## 10 · Reader pressure belongs in planning
+
+A plan must model not only event order, but the evolution of reader attention.
+
+A useful chapter/unit pattern is:
 
 ```text
-question
-→ complication changes options
-→ partial reward / new information
-→ sharper question
+live question
+→ pressure changes the available options
+→ partial reward / useful information
+→ a sharper or different question
 → consequential choice
-→ changed state + forward pull
+→ changed state
+→ reason to continue
 ```
 
-Avoid chapter structures that merely enumerate correct procedure.
+This is not a mandatory formula. It is a check against chapters that merely report correct procedure.
 
-## Dependency-aware planning
+Routine process should usually be compressed. Expand the places where action changes because of conflict, error, cost, choice, relationship, surprise, or consequence.
 
-A plan can depend on:
+## 11 · Dependency-aware planning
+
+A plan may depend on:
+
 - character state;
 - relationship state;
 - information ownership;
-- resource/permission state;
-- prior event;
-- foreshadow/reveal;
-- research claim;
-- open obligation/loop.
+- resources, permissions, or obligations;
+- a prior Accepted event;
+- foreshadow/reveal state;
+- a research claim;
+- an open loop or promise;
+- a runtime-visible project constraint.
 
-If an upstream state changes, dependent future plans must be invalidated or re-evaluated rather than silently preserved.
+Dependencies should be explicit enough that an upstream change can invalidate or re-evaluate downstream plans.
 
-## Authority rule
+**Do not repair continuity by silently rewriting current truth to fit an old plan. Repair or replace the plan.**
 
-Plans can be `proposal` or `active_plan`. They never become `accepted` merely because a writer generated prose from them. Only the consuming project's explicit acceptance/settlement process mutates Canon.
+## 12 · Inputs and outputs
+
+Typical inputs:
+
+- authoritative project/current state;
+- Accepted Canon evidence;
+- character/relationship state;
+- active plans and dependencies;
+- verified research claims;
+- project/profile constraints;
+- reader-engagement targets.
+
+Typical outputs:
+
+- proposal or `active_plan` story objects;
+- Scene Cards;
+- dependency references;
+- expected but unsettled state deltas;
+- reader questions, pressure, payoff, and open-loop expectations.
+
+Outputs remain planning artifacts until another authority class explicitly changes them.
+
+## 13 · Failure semantics
+
+Route failures to the mechanism that owns them:
+
+- no meaningful state transformation at volume/unit scale → redesign Story/Volume/Unit;
+- chapter is correct but flat → Reader Pressure + chapter/scene planning;
+- scene depends on impossible character knowledge → Character Simulation / information ownership;
+- future plan conflicts with Accepted state → invalidate or re-plan the future;
+- scene card over-scripts prose → reduce to constraints, agendas, state, and pivots;
+- distant outline becomes brittle → lower far-future resolution rather than defending it.
+
+Do not use prose revision to hide a planning failure.
+
+## 14 · Authority invariants
+
+1. `proposal` and `active_plan` are future intent, not occurrence.
+2. Review Draft is not Accepted Canon.
+3. A Scene Card never proves that a scene happened.
+4. A semantic/eval result may criticize a plan; it does not become story truth.
+5. Accepted evidence and explicit project authority may invalidate plans.
+6. Planning never writes Canon by side effect.
+
+## 15 · Related contracts
+
+- [Canon & State Model](CANON_STATE.en.md) — what is true, accepted, and settled.
+- [Character & Relationship System](CHARACTER_SYSTEM.en.md) — agenda, knowledge, voice, relationship and presence state.
+- [Reader Engagement](../surface/READER_ENGAGEMENT.en.md) — the positive reader-quality model used to pressure-test plans.
+- [Production Pipeline](../docs/production-pipeline.en.md) — where planning, simulation, drafting, and revision interact.
