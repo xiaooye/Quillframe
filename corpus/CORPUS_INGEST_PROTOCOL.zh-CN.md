@@ -1,156 +1,296 @@
-# Corpus Ingest Protocol · 语料摄取协议
+# Corpus Ingest Protocol · 只保存研究问题真正需要、rights 真正允许的证据
 
-## 目的
+Corpus ingestion 的职责，是把已经验证过的 discovery candidate 转成带 provenance 的**metadata、被允许保存的 source material、observation 与 derived evidence**。它刻意比“把来源下载下来”更窄。
 
-把 source candidate 转成带 provenance 的 corpus record 与 derived analysis，同时严格区分：能访问 ≠ 能再分发；analysis ≠ Canon。
+> **核心不变量 ✦** Ingestion 只是 storage / evidence operation。它不会因此获得 Canon authority、character knowledge、durable user preference 或 Framework behavior authority。
 
-## Pipeline
+---
 
-```mermaid
-flowchart LR
-    A[Discovery Candidate] --> B[Verify Source]
-    B --> C[Classify Rights]
-    C --> D{Allowed?}
-    D -- no / unknown --> M[Metadata Only / Block]
-    D -- redistributable --> T[Optional Text Storage]
-    D -- analysis_only --> R[Range-bounded Read]
-    T --> O[Observation]
-    R --> O
-    O --> P[Per-work Analysis]
-    P --> X[Counterexample / Contrast]
-    X --> Bm[Benchmark Candidate]
-    Bm --> E[Eval Candidate]
-```
+## 01 · 开始 Ingestion 之前
 
-## Step 1 · Discovery Candidate
+不能只拿一条 search result 就开始保存内容。
 
-Candidate 至少来自：
-- discovery request ID / corpus gap ID；
+Candidate 至少应该已经说明：
+
+- discovery request / Corpus gap ID；
 - research question；
 - proposed source identity；
-- expected contrast value；
-- genre/language/platform tags；
-- source channel。
+- source channel / tool capability；
+- 预期提供的 contrast / evidence value；
+- 适用时的 language / genre / platform metadata。
 
-Discovery 不等于 Ingestion。
+随后，在当前已授权 host 能力范围内尽量核实：
 
-## Step 2 · Source Verification
-
-当前 host 能验证多少就验证多少：
-- canonical work/source identity；
-- creator；
-- publication/source URL 或 file identity；
-- 相关 edition/version；
-- access date；
+- canonical work / source identity；
+- 相关 creator / publisher / source owner；
+- canonical URL / ref 或 local file identity；
+- 重要时的 edition / version；
+- access timestamp；
 - source type；
-- 本地/用户提供材料的 stable fingerprint。
+- 用户 / 本地文件可获得时的 fingerprint。
 
-不能只根据 search snippet 推断 quotation 或 rights。
+Search snippet 只是 discovery evidence，不是可靠的全文 quotation，也不是 rights evidence。
 
-## Step 3 · Rights Gate
+---
 
-只能赋一个：
+## 02 · 保存内容前先建立 Rights Class
+
+每个 durable Corpus candidate 只能选择一个 declared rights class：
 
 ```text
 redistributable | analysis_only | unknown
 ```
 
-`rights_gate.py` 验证“已声明的 metadata 与 storage intent”，不会假装自动完成法律分析。
+同时明确一个 requested storage intent：
 
-`unknown` 时阻止全文 storage。
-
-## Step 4 · Select Analysis Range
-
-只选择回答当前研究问题所需的最小范围。
-
-记录：
-
-```yaml
-range_type: chapter|scene|passage|work-level-metadata|user-selection
-range_ref:
-why_this_range:
-research_question:
+```text
+metadata_only | derived_only | short_excerpt | full_text
 ```
 
-## Step 5 · Observation Artifact
+持久化 source content 之前，先运行 deterministic [`rights_gate.py`](rights_gate.py)。
 
-把 source-grounded observation 与 interpretation 分开。
+参考 policy：
+
+```text
+unknown         → 只能 metadata_only
+analysis_only   → 绝不能 full_text
+short_excerpt   → 必须有 excerpt_purpose
+redistributable → 必须有非空 rights_basis
+```
+
+这个 gate 只验证 policy consistency，不做法律分析，也不会根据 title / URL 自动推断 rights。
+
+---
+
+## 03 · Rights 或 Provenance 不清楚时 Fail Closed
+
+如果 rights 是 `unknown`，只保留安全 source metadata，然后停止 content storage。
+
+如果 source identity / provenance 存在实质性不确定，也不能为了让 pipeline “走完”而猜：
+
+```text
+足以确认 metadata → 保存 metadata + unresolved status
+连 metadata 都不足 → 保留 discovery candidate / blocked state
+```
+
+Private repo、local browser session、authenticated connector 或成功 download，只能证明 access；它们不自动证明 redistribution permission。
+
+---
+
+## 04 · 选择最小 Analysis Range
+
+即使允许分析，也只选择回答当前问题真正需要的范围。
+
+建议记录：
 
 ```yaml
-observation_id:
-corpus_id:
-range_ref:
-question:
+range_type: chapter | scene | passage | work_metadata | user_selection
+range_ref: ...
+research_question: ...
+why_this_range: ...
+source_fingerprint: ...
+```
+
+不能因为 host “能拿到整本”，就默认读取或持久化整部作品。
+
+Question-bounded range 同时减少 copyright exposure、context cost、source leakage 与 imitation pressure。
+
+---
+
+## 05 · Source Material 与 Observation 分开
+
+**Observation artifact** 只记录在被允许 evidence range 中可以支持的观察，不假装这些观察已经是 universal craft rule。
+
+示例：
+
+```yaml
+observation_id: ...
+corpus_id: ...
+range_ref: ...
+question: ...
 observable_features: []
-short_evidence_refs: []
+evidence_refs: []
 metrics: {}
-confidence:
+confidence: ...
 ```
 
-不记录 private chain-of-thought。Evidence ref 要简洁、能回到 source。
+Evidence ref 要简洁、能回到 source；不保存 private chain-of-thought。
 
-## Step 6 · Per-work Analysis
+对于 `analysis_only` source，优先持久化 metadata + derived observation，而不是 raw text。
 
-Analysis 可以从 observation 推断 mechanism：
+---
+
+## 06 · Semantic Mechanism Analysis 是另一层
+
+Observation 与 interpretation 是不同 artifact。
+
+需要文学 / craft 理解时，把 bounded rights-safe evidence 交给 `learning` semantic contract pack。`learning.mechanism_analyze` 负责提炼：
+
+- mechanism candidates；
+- counterexamples；
+- applicability boundaries；
+- evidence refs；
+- uncertainty / confidence。
+
+它的 contract 明确禁止 unrestricted `full_text`、`raw_text`、`source_text` 字段。
+
+Deterministic ingestion code 不能用 heuristic literary scoring 冒充这一层。
+
+---
+
+## 07 · 单一作品不能建立 General Craft
+
+Per-work analysis 可以产生 hypothesis / observation，例如：
 
 ```yaml
-analysis_id:
-corpus_id:
-question:
+analysis_id: ...
+corpus_id: ...
+research_question: ...
 mechanism_candidates: []
-what_it_seems_to_do:
 tradeoffs: []
-profile_context:
+profile_context: ...
 uncertainties: []
-counterexample_needed:
+counterexample_needed: true
 ```
 
-单一作品不能建立 universal rule。
+但它不能直接变成 universal rule。
 
-## Step 7 · Counterexample / Contrast Search
+Generalize 前必须主动寻找：
 
-Generalize 前主动寻找：
-- 不同 surface form 达成同一效果；
-- 同 surface form 却效果更差；
-- genre/profile exception；
-- 直接反驳 mechanism 的作品。
+- 用不同 surface form 达成同一效果的例子；
+- 使用同一 surface form 却效果更差的例子；
+- profile / genre / platform exception；
+- 直接反驳 proposed mechanism 的 evidence。
 
-负向 evidence 要记录，不能因为不支持原 hypothesis 就丢掉。
+Negative evidence 必须保留，不能因为“不支持原 hypothesis”就丢掉。
 
-## Step 8 · Cross-work Benchmark
+---
 
-Benchmark 是多个 source 的 mechanism-level synthesis。
+## 08 · Cross-work Benchmark Handoff
 
-至少包含：
-- mechanism；
-- supporting observations；
-- counterexamples；
-- applicability/profile boundary；
+只有在出现多个 source-bound observation 与 counterexample 以后，才适合构建 cross-work mechanism benchmark。
+
+有效 benchmark 可以包含：
+
+- mechanism statement；
+- supporting observation refs；
+- counterexample refs；
+- applicability / profile boundary；
 - failure modes；
 - writer-safe guidance；
-- regression/capability ideas；
-- source refs。
+- capability / regression eval ideas；
+- source / provenance refs。
 
-不能生成“混合作者模仿指纹”。
+不能把多个来源的 signature 混在一起做 synthetic author-imitation fingerprint。
 
-## Step 9 · Learning / Eval Handoff
+参见 [Corpus Benchmarks](benchmarks/README.zh-CN.md)。
 
-Corpus output 可以生成：
-- user-taste evidence；
-- project benchmark；
-- general-craft candidate；
-- capability eval；
-- regression eval；
-- 新 corpus gap。
+---
 
-Promotion 仍服从 Learning Protocol。
+## 09 · Learning / Eval Handoff
 
-## Step 10 · Writer Exposure
+Corpus-derived evidence 可以创建或更新：
 
-Writer context 只拿当前任务真正需要的 benchmark/mechanism/profile evidence。
+- project-specific craft evidence；
+- user-taste evidence / hypothesis test；
+- General Craft candidate；
+- capability eval case；
+- regression eval case；
+- 新的 Corpus gap。
 
-现代版权 raw text 和 regression gold 默认不进入 first-pass generation。
+每个 downstream artifact 都必须保留 upstream evidence / provenance refs。
 
-## Removal
+Promotion 仍由 Adaptive Learning / Self-Improvement 管理。Ingestion 无权激活结果。
 
-所有 derived artifact 必须保留 upstream source refs。这样如果 rights/provenance 后来被纠正，可以 deterministic 地 invalidate downstream benchmark/eval/learning candidate。
+---
+
+## 10 · Writer Exposure 是后面更窄的一次决定
+
+Raw Writer 默认应该拿到：
+
+```text
+minimal task-relevant mechanism
++ relevant profile boundary
++ 当前场景真正需要的 project authority / context
+```
+
+而不是 bulk source text。
+
+现代版权 source text、hidden expected label、regression 坏例默认都不进入 first-pass Writer context。
+
+一条 Corpus item 被存储，不代表它自动拥有 `writer_pre_draft` visibility。
+
+---
+
+## 11 · 不同 Rights Class 能保存什么
+
+### `redistributable`
+
+如果 declared rights basis 真实支持 redistribution / storage，可以允许 `full_text`。必须保留 provenance 与 fingerprint。
+
+### `analysis_only`
+
+使用 `metadata_only`、`derived_only`，或者有明确理由的 `short_excerpt`；不得持久化全文。
+
+### `unknown`
+
+只能 `metadata_only`。Rights evidence 改变以前，content ingestion 保持 blocked。
+
+保存 short excerpt 时，必须记录为什么这一小段对当前分析不可替代。“以后可能拿来学风格”本身不是充分理由。
+
+---
+
+## 12 · Downstream Evidence 必须能失效
+
+所有 derived artifact 都要保留足够 lineage，确保之后可以 correction。
+
+如果某个 source 后来因为 rights / provenance / error 变成 invalid：
+
+```text
+invalidate source / content record
+→ 删除已经不再允许保存的 material
+→ 找到 dependent observation
+→ invalidate / rebuild analysis
+→ invalidate / rebuild benchmark / eval
+→ contest / narrow dependent learning candidate
+→ 必要时 rollback promoted behavior
+```
+
+如果一条 benchmark 唯一有效 evidence 已经被移除，不能让它继续装作有效。
+
+---
+
+## 13 · Automation Boundary
+
+Ingestion pipeline 可以自动执行 deterministic validation 与 bookkeeping，但不能伪造 external retrieval、rights evidence 或 quotation。
+
+如果 external capability 不可用：
+
+```text
+prepare request
+→ 记录 missing capability / awaiting external work
+→ 如实停止
+```
+
+如果需要 semantic interpretation：
+
+```text
+prepare bounded contract job
+→ 通过 eligible model / human runtime 执行
+→ validate fingerprint-bound result
+```
+
+Queue 不是 retrieval；Schema 不是 analysis；model result 也不是 promotion authority。
+
+---
+
+## 14 · 相关契约
+
+- [Corpus Policy](CORPUS_POLICY.zh-CN.md)：normative rights / evidence boundary。
+- [语料智能](README.zh-CN.md)：完整 research / learning flow。
+- [`rights_gate.py`](rights_gate.py)：declared-rights / storage-intent validator。
+- [`discovery_runtime.py`](discovery_runtime.py)：discovery request / result lifecycle。
+- [`harness/semantic_workers/contracts/learning.json`](../harness/semantic_workers/contracts/learning.json)：bounded mechanism-analysis / eval contracts。
+- [自适应学习](../docs/adaptive-learning.zh-CN.md)：downstream hypothesis / eval lifecycle。
+
+**只摄取当前 research question 真正需要、已建立 rights 真正允许的内容；其余尽量转成可追踪的 derived evidence。**
