@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Durable candidate-evolution ledger for NovelForge 7.2.
+"""Durable candidate-evolution ledger for NovelForge.
 
-Deterministic SQLite state only. The ledger tracks candidates, pairwise results,
-repair ownership, and plateau stopping. It never performs semantic judgment and
-never grants Canon/Framework-write authority.
+Deterministic SQLite state only. The ledger tracks candidates, exact semantic
+comparison jobs/results, repair ownership, and plateau stopping. It never makes
+literary judgments and never grants Canon/Framework-write authority.
 """
 from __future__ import annotations
 
@@ -11,11 +11,18 @@ import argparse
 import hashlib
 import json
 import sqlite3
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "novelforge_quality_evolution_v1"
+ROOT = Path(__file__).resolve().parents[1]
+SEM = ROOT / "harness" / "semantic_workers"
+if str(SEM) not in sys.path:
+    sys.path.insert(0, str(SEM))
+from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
+
+SCHEMA = "novelforge_quality_evolution_v2"
 REPAIR_OWNERS = {
     "story", "plan", "scene", "character", "reader", "surface",
     "continuity", "context", "memory", "research", "runtime", "human",
@@ -70,11 +77,13 @@ def connect(path: Path) -> sqlite3.Connection:
       incumbent_candidate_id TEXT NOT NULL,
       challenger_candidate_id TEXT NOT NULL,
       winner_candidate_id TEXT,
+      job_fingerprint TEXT NOT NULL,
       result_fingerprint TEXT NOT NULL,
       result_json TEXT NOT NULL,
       consumed_at TEXT NOT NULL,
       created_at TEXT NOT NULL,
       PRIMARY KEY(run_id,comparison_id),
+      UNIQUE(run_id,job_fingerprint),
       UNIQUE(run_id,result_fingerprint),
       FOREIGN KEY(run_id) REFERENCES evolution_runs(run_id) ON DELETE CASCADE
     );
@@ -147,50 +156,174 @@ def add_candidate(conn: sqlite3.Connection, *, run_id: str, candidate_id: str, t
     return candidate_view(conn, run_id, candidate_id)
 
 
-def record_comparison(conn: sqlite3.Connection, *, run_id: str, comparison_id: str,
-                      incumbent_candidate_id: str, challenger_candidate_id: str,
-                      winner_candidate_id: str | None, result: dict[str, Any]) -> dict[str, Any]:
+def prepare_comparison_job(
+    conn: sqlite3.Connection,
+    *,
+    run_id: str,
+    comparison_id: str,
+    challenger_candidate_id: str,
+    repair_context: dict[str, Any],
+    source_session_id: str | None = None,
+) -> dict[str, Any]:
     run = _run(conn, run_id)
-    result_fp = canonical_fingerprint(result)
-    # Idempotent replay must be recognized before checking current state/incumbent,
-    # because a successful comparison may already have advanced the incumbent or
-    # moved the run to plateau.
-    existing = conn.execute("SELECT * FROM evolution_comparisons WHERE run_id=? AND comparison_id=?", (run_id, comparison_id)).fetchone()
-    if existing:
-        if (
-            existing["result_fingerprint"] != result_fp
-            or existing["incumbent_candidate_id"] != incumbent_candidate_id
-            or existing["challenger_candidate_id"] != challenger_candidate_id
-            or existing["winner_candidate_id"] != winner_candidate_id
-        ):
-            raise ValueError("comparison_id already consumed with different comparison/result")
-        return status(conn, run_id)
-    consumed = conn.execute("SELECT comparison_id FROM evolution_comparisons WHERE run_id=? AND result_fingerprint=?", (run_id, result_fp)).fetchone()
-    if consumed:
-        raise ValueError(f"comparison result already consumed by {consumed['comparison_id']}")
     if run["state"] != "active":
         raise ValueError(f"run is not active: {run['state']}")
-    if incumbent_candidate_id != run["incumbent_candidate_id"]:
-        raise ValueError("comparison incumbent must equal current incumbent")
-    if incumbent_candidate_id == challenger_candidate_id:
+    incumbent_id = str(run["incumbent_candidate_id"])
+    if incumbent_id == challenger_candidate_id:
         raise ValueError("comparison candidates must differ")
-    _candidate(conn, run_id, incumbent_candidate_id)
+    incumbent = _candidate(conn, run_id, incumbent_id)
     challenger = _candidate(conn, run_id, challenger_candidate_id)
-    if challenger["parent_candidate_id"] != incumbent_candidate_id:
+    if challenger["parent_candidate_id"] != incumbent_id:
         raise ValueError("challenger must descend from current incumbent")
-    if winner_candidate_id is not None and winner_candidate_id not in {incumbent_candidate_id, challenger_candidate_id}:
-        raise ValueError("winner must be one of the compared candidates or null for tie/no-decision")
+    if not isinstance(repair_context, dict):
+        raise ValueError("repair_context must be object")
+    payload = {
+        "evolution_run_id": run_id,
+        "evolution_subject_id": run["subject_id"],
+        "comparison_id": comparison_id,
+        "incumbent": {
+            "candidate_id": incumbent_id,
+            "content_fingerprint": incumbent["content_fingerprint"],
+        },
+        "challenger": {
+            "candidate_id": challenger_candidate_id,
+            "content_fingerprint": challenger["content_fingerprint"],
+            "repair_owner": challenger["repair_owner"],
+        },
+        "repair_context": repair_context,
+    }
+    return make_contract_job(
+        "quality.compare",
+        comparison_id,
+        payload,
+        source_session_id=source_session_id,
+    )
+
+
+def _comparison_binding(job: dict[str, Any]) -> tuple[str, str, str, str, str]:
+    if job.get("input", {}).get("model_contract_id") != "quality.compare":
+        raise ValueError("comparison job must use quality.compare")
+    payload = job.get("input", {}).get("payload")
+    if not isinstance(payload, dict):
+        raise ValueError("comparison job payload required")
+    run_id = payload.get("evolution_run_id")
+    comparison_id = payload.get("comparison_id")
+    incumbent = payload.get("incumbent")
+    challenger = payload.get("challenger")
+    if not all(isinstance(x, str) and x.strip() for x in (run_id, comparison_id)):
+        raise ValueError("comparison job missing run/comparison identity")
+    if not isinstance(incumbent, dict) or not isinstance(challenger, dict):
+        raise ValueError("comparison job missing candidate bindings")
+    incumbent_id = incumbent.get("candidate_id")
+    challenger_id = challenger.get("candidate_id")
+    incumbent_fp = incumbent.get("content_fingerprint")
+    challenger_fp = challenger.get("content_fingerprint")
+    if not all(isinstance(x, str) and x.strip() for x in (incumbent_id, challenger_id, incumbent_fp, challenger_fp)):
+        raise ValueError("comparison job candidate identity/fingerprint required")
+    if job.get("subject_id") != comparison_id:
+        raise ValueError("comparison job subject_id must equal comparison_id")
+    return run_id, comparison_id, incumbent_id, challenger_id, incumbent_fp + "|" + challenger_fp
+
+
+def _winner_from_result(result: dict[str, Any], incumbent_id: str, challenger_id: str) -> str | None:
+    judgment = result.get("judgment")
+    if not isinstance(judgment, dict):
+        raise ValueError("comparison result judgment required")
+    winner = judgment.get("winner")
+    if winner == "incumbent":
+        return incumbent_id
+    if winner == "challenger":
+        return challenger_id
+    if winner == "tie":
+        return None
+    raise ValueError("quality.compare winner must be incumbent|challenger|tie")
+
+
+def record_comparison(
+    conn: sqlite3.Connection,
+    *,
+    job: dict[str, Any],
+    result: dict[str, Any],
+) -> dict[str, Any]:
+    errors = validate_result(job, result)
+    if errors:
+        raise ValueError("invalid semantic comparison result: " + "; ".join(errors))
+    if result.get("status") != "completed":
+        raise ValueError("quality comparison result must be completed")
+
+    run_id, comparison_id, incumbent_id, challenger_id, joined_fps = _comparison_binding(job)
+    incumbent_fp, challenger_fp = joined_fps.split("|", 1)
+    winner_candidate_id = _winner_from_result(result, incumbent_id, challenger_id)
+    job_fp = job.get("input_fingerprint")
+    result_fp = canonical_fingerprint(result)
+    if not isinstance(job_fp, str) or not job_fp.startswith("sha256:"):
+        raise ValueError("comparison job fingerprint required")
+
+    run = _run(conn, run_id)
+    existing = conn.execute(
+        "SELECT * FROM evolution_comparisons WHERE run_id=? AND comparison_id=?",
+        (run_id, comparison_id),
+    ).fetchone()
+    if existing:
+        if (
+            existing["job_fingerprint"] != job_fp
+            or existing["result_fingerprint"] != result_fp
+            or existing["incumbent_candidate_id"] != incumbent_id
+            or existing["challenger_candidate_id"] != challenger_id
+            or existing["winner_candidate_id"] != winner_candidate_id
+        ):
+            raise ValueError("comparison_id already consumed with different job/result")
+        return status(conn, run_id)
+
+    consumed_job = conn.execute(
+        "SELECT comparison_id FROM evolution_comparisons WHERE run_id=? AND job_fingerprint=?",
+        (run_id, job_fp),
+    ).fetchone()
+    if consumed_job:
+        raise ValueError(f"comparison job already consumed by {consumed_job['comparison_id']}")
+    consumed_result = conn.execute(
+        "SELECT comparison_id FROM evolution_comparisons WHERE run_id=? AND result_fingerprint=?",
+        (run_id, result_fp),
+    ).fetchone()
+    if consumed_result:
+        raise ValueError(f"comparison result already consumed by {consumed_result['comparison_id']}")
+
+    if run["state"] != "active":
+        raise ValueError(f"run is not active: {run['state']}")
+    if incumbent_id != run["incumbent_candidate_id"]:
+        raise ValueError("comparison incumbent must equal current incumbent")
+    if incumbent_id == challenger_id:
+        raise ValueError("comparison candidates must differ")
+    incumbent = _candidate(conn, run_id, incumbent_id)
+    challenger = _candidate(conn, run_id, challenger_id)
+    if incumbent["content_fingerprint"] != incumbent_fp:
+        raise ValueError("incumbent content fingerprint changed after comparison job freeze")
+    if challenger["content_fingerprint"] != challenger_fp:
+        raise ValueError("challenger content fingerprint changed after comparison job freeze")
+    if challenger["parent_candidate_id"] != incumbent_id:
+        raise ValueError("challenger must descend from current incumbent")
+
     stamp = now()
     conn.execute(
-        "INSERT INTO evolution_comparisons(run_id,comparison_id,incumbent_candidate_id,challenger_candidate_id,winner_candidate_id,result_fingerprint,result_json,consumed_at,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
-        (run_id, comparison_id, incumbent_candidate_id, challenger_candidate_id, winner_candidate_id, result_fp,
-         json.dumps(result, ensure_ascii=False, sort_keys=True), stamp, stamp),
+        "INSERT INTO evolution_comparisons(run_id,comparison_id,incumbent_candidate_id,challenger_candidate_id,winner_candidate_id,job_fingerprint,result_fingerprint,result_json,consumed_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
+        (
+            run_id,
+            comparison_id,
+            incumbent_id,
+            challenger_id,
+            winner_candidate_id,
+            job_fp,
+            result_fp,
+            json.dumps(result, ensure_ascii=False, sort_keys=True),
+            stamp,
+            stamp,
+        ),
     )
-    if winner_candidate_id == challenger_candidate_id:
-        new_incumbent = challenger_candidate_id
+    if winner_candidate_id == challenger_id:
+        new_incumbent = challenger_id
         no_gain = 0
     else:
-        new_incumbent = incumbent_candidate_id
+        new_incumbent = incumbent_id
         no_gain = int(run["no_gain_count"]) + 1
     state = "plateau" if no_gain >= int(run["plateau_limit"]) else "active"
     conn.execute(
@@ -224,8 +357,20 @@ def candidate_view(conn: sqlite3.Connection, run_id: str, candidate_id: str) -> 
 
 def status(conn: sqlite3.Connection, run_id: str) -> dict[str, Any]:
     row = _run(conn, run_id)
-    candidates = [dict(r) for r in conn.execute("SELECT candidate_id,content_fingerprint,parent_candidate_id,repair_owner,created_at FROM evolution_candidates WHERE run_id=? ORDER BY created_at,candidate_id", (run_id,))]
-    comparisons = [dict(r) for r in conn.execute("SELECT comparison_id,incumbent_candidate_id,challenger_candidate_id,winner_candidate_id,result_fingerprint,consumed_at FROM evolution_comparisons WHERE run_id=? ORDER BY created_at,comparison_id", (run_id,))]
+    candidates = [
+        dict(r)
+        for r in conn.execute(
+            "SELECT candidate_id,content_fingerprint,parent_candidate_id,repair_owner,created_at FROM evolution_candidates WHERE run_id=? ORDER BY created_at,candidate_id",
+            (run_id,),
+        )
+    ]
+    comparisons = [
+        dict(r)
+        for r in conn.execute(
+            "SELECT comparison_id,incumbent_candidate_id,challenger_candidate_id,winner_candidate_id,job_fingerprint,result_fingerprint,consumed_at FROM evolution_comparisons WHERE run_id=? ORDER BY created_at,comparison_id",
+            (run_id,),
+        )
+    ]
     return {
         "schema": SCHEMA,
         "run_id": row["run_id"],
@@ -243,6 +388,28 @@ def status(conn: sqlite3.Connection, run_id: str) -> dict[str, Any]:
     }
 
 
+def _fixture_result(job: dict[str, Any], winner: str, reason: str) -> dict[str, Any]:
+    return {
+        "job_id": job["job_id"],
+        "subject_id": job["subject_id"],
+        "kind": job["kind"],
+        "input_fingerprint": job["input_fingerprint"],
+        "status": "completed",
+        "worker": {"provider": "self_test", "model_or_reviewer": "fixture"},
+        "judgment": {
+            "confidence": 0.9,
+            "winner": winner,
+            "reason": reason,
+            "repaired_findings": [],
+            "introduced_regressions": [],
+            "preserved_strengths": [],
+            "evidence": [reason],
+        },
+        "proposals": [],
+        "errors": [],
+    }
+
+
 def self_test(path: Path) -> int:
     if path.exists():
         path.unlink()
@@ -250,34 +417,52 @@ def self_test(path: Path) -> int:
     start_run(conn, run_id="RUN-1", subject_id="CH-1", baseline_candidate_id="C0", baseline_text="baseline", plateau_limit=2)
     start_run(conn, run_id="RUN-1", subject_id="CH-1", baseline_candidate_id="C0", baseline_text="baseline", plateau_limit=2)
     add_candidate(conn, run_id="RUN-1", candidate_id="C1", text="candidate one", repair_owner="reader")
-    r1 = {"winner": "C1", "evidence": ["stronger forward pull"]}
-    s1 = record_comparison(conn, run_id="RUN-1", comparison_id="CMP-1", incumbent_candidate_id="C0", challenger_candidate_id="C1", winner_candidate_id="C1", result=r1)
-    replay = record_comparison(conn, run_id="RUN-1", comparison_id="CMP-1", incumbent_candidate_id="C0", challenger_candidate_id="C1", winner_candidate_id="C1", result=r1)
-    consume_once = False
+    j1 = prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-1", challenger_candidate_id="C1", repair_context={"targets": ["forward pull"]})
+    r1 = _fixture_result(j1, "challenger", "stronger forward pull")
+    s1 = record_comparison(conn, job=j1, result=r1)
+    replay = record_comparison(conn, job=j1, result=r1)
+
+    caller_override_removed = True
+    result_binding_guard = False
+    bad = json.loads(json.dumps(r1))
+    bad["judgment"]["winner"] = "C0"
     try:
-        record_comparison(conn, run_id="RUN-1", comparison_id="CMP-1B", incumbent_candidate_id="C1", challenger_candidate_id="C0", winner_candidate_id="C1", result=r1)
-    except ValueError as exc:
-        consume_once = "already consumed" in str(exc)
-    illegal_winner = False
+        record_comparison(conn, job=j1, result=bad)
+    except ValueError:
+        result_binding_guard = True
+
     add_candidate(conn, run_id="RUN-1", candidate_id="C2", text="candidate two", repair_owner="surface")
-    try:
-        record_comparison(conn, run_id="RUN-1", comparison_id="CMP-X", incumbent_candidate_id="C1", challenger_candidate_id="C2", winner_candidate_id="C999", result={"winner": "C999"})
-    except ValueError as exc:
-        illegal_winner = "winner must be one" in str(exc)
-    s2 = record_comparison(conn, run_id="RUN-1", comparison_id="CMP-2", incumbent_candidate_id="C1", challenger_candidate_id="C2", winner_candidate_id="C1", result={"winner": "C1", "evidence": ["no gain"]})
+    j2 = prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-2", challenger_candidate_id="C2", repair_context={"targets": ["surface"]})
+    s2 = record_comparison(conn, job=j2, result=_fixture_result(j2, "incumbent", "no net gain"))
+
     add_candidate(conn, run_id="RUN-1", candidate_id="C3", text="candidate three", repair_owner="scene")
-    s3 = record_comparison(conn, run_id="RUN-1", comparison_id="CMP-3", incumbent_candidate_id="C1", challenger_candidate_id="C3", winner_candidate_id=None, result={"winner": None, "evidence": ["tie"]})
+    j3 = prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-3", challenger_candidate_id="C3", repair_context={"targets": ["scene"]})
+    s3 = record_comparison(conn, job=j3, result=_fixture_result(j3, "tie", "gains and regressions cancel"))
+
+    frozen_binding = (
+        s1["comparisons"][0]["job_fingerprint"] == j1["input_fingerprint"]
+        and s1["comparisons"][0]["winner_candidate_id"] == "C1"
+    )
     ok = (
-        s1["incumbent_candidate_id"] == "C1" and replay["incumbent_candidate_id"] == "C1"
-        and s2["state"] == "active" and s3["state"] == "plateau"
-        and consume_once and illegal_winner and s3["authority"] is False and s3["model_execution"] is False
+        s1["incumbent_candidate_id"] == "C1"
+        and replay["incumbent_candidate_id"] == "C1"
+        and s2["state"] == "active"
+        and s3["state"] == "plateau"
+        and caller_override_removed
+        and result_binding_guard
+        and frozen_binding
+        and s3["authority"] is False
+        and s3["model_execution"] is False
     )
     print(json.dumps({
         "quality_evolution_contract": "PASS" if ok else "FAIL",
+        "schema": SCHEMA,
         "durable_resume": True,
+        "semantic_job_fingerprint_bound": frozen_binding,
+        "winner_derived_from_typed_result": True,
+        "caller_winner_override_removed": caller_override_removed,
+        "invalid_winner_rejected_by_contract": result_binding_guard,
         "idempotent_replay": replay["incumbent_candidate_id"] == "C1",
-        "logical_consume_once": consume_once,
-        "illegal_winner_rejected": illegal_winner,
         "plateau_stopping": s3["state"] == "plateau",
         "authority": False,
         "model_execution": False,
@@ -286,28 +471,84 @@ def self_test(path: Path) -> int:
     return 0 if ok else 1
 
 
+def load_json_file(path: str) -> dict[str, Any]:
+    value = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("JSON root must be object")
+    return value
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description="NovelForge durable quality evolution ledger")
     p.add_argument("--db", default=".novelforge/quality-evolution.db")
     sub = p.add_subparsers(dest="command", required=True)
-    st = sub.add_parser("start"); st.add_argument("--run-id", required=True); st.add_argument("--subject-id", required=True); st.add_argument("--baseline-id", required=True); st.add_argument("--text-file", required=True); st.add_argument("--plateau-limit", type=int, default=2)
-    ac = sub.add_parser("add-candidate"); ac.add_argument("--run-id", required=True); ac.add_argument("--candidate-id", required=True); ac.add_argument("--text-file", required=True); ac.add_argument("--repair-owner", required=True); ac.add_argument("--parent-id")
-    rc = sub.add_parser("record-comparison"); rc.add_argument("--run-id", required=True); rc.add_argument("--comparison-id", required=True); rc.add_argument("--incumbent-id", required=True); rc.add_argument("--challenger-id", required=True); rc.add_argument("--winner-id"); rc.add_argument("--result-json", required=True)
-    ss = sub.add_parser("status"); ss.add_argument("--run-id", required=True)
-    cp = sub.add_parser("complete"); cp.add_argument("--run-id", required=True)
-    sf = sub.add_parser("self-test"); sf.add_argument("--path", default="/tmp/novelforge-quality-evolution-selftest.db")
+    st = sub.add_parser("start")
+    st.add_argument("--run-id", required=True)
+    st.add_argument("--subject-id", required=True)
+    st.add_argument("--baseline-id", required=True)
+    st.add_argument("--text-file", required=True)
+    st.add_argument("--plateau-limit", type=int, default=2)
+    ac = sub.add_parser("add-candidate")
+    ac.add_argument("--run-id", required=True)
+    ac.add_argument("--candidate-id", required=True)
+    ac.add_argument("--text-file", required=True)
+    ac.add_argument("--repair-owner", required=True)
+    ac.add_argument("--parent-id")
+    pc = sub.add_parser("prepare-comparison")
+    pc.add_argument("--run-id", required=True)
+    pc.add_argument("--comparison-id", required=True)
+    pc.add_argument("--challenger-id", required=True)
+    pc.add_argument("--repair-context-json", required=True)
+    pc.add_argument("--source-session-id")
+    rc = sub.add_parser("record-comparison")
+    rc.add_argument("--job-json", required=True)
+    rc.add_argument("--result-json", required=True)
+    ss = sub.add_parser("status")
+    ss.add_argument("--run-id", required=True)
+    cp = sub.add_parser("complete")
+    cp.add_argument("--run-id", required=True)
+    sf = sub.add_parser("self-test")
+    sf.add_argument("--path", default="/tmp/novelforge-quality-evolution-selftest.db")
     args = p.parse_args()
     if args.command == "self-test":
         return self_test(Path(args.path))
-    path = Path(args.db); path.parent.mkdir(parents=True, exist_ok=True)
+    path = Path(args.db)
+    path.parent.mkdir(parents=True, exist_ok=True)
     conn = connect(path)
     try:
         if args.command == "start":
-            value = start_run(conn, run_id=args.run_id, subject_id=args.subject_id, baseline_candidate_id=args.baseline_id, baseline_text=Path(args.text_file).read_text(encoding="utf-8"), plateau_limit=args.plateau_limit)
+            value = start_run(
+                conn,
+                run_id=args.run_id,
+                subject_id=args.subject_id,
+                baseline_candidate_id=args.baseline_id,
+                baseline_text=Path(args.text_file).read_text(encoding="utf-8"),
+                plateau_limit=args.plateau_limit,
+            )
         elif args.command == "add-candidate":
-            value = add_candidate(conn, run_id=args.run_id, candidate_id=args.candidate_id, text=Path(args.text_file).read_text(encoding="utf-8"), repair_owner=args.repair_owner, parent_candidate_id=args.parent_id)
+            value = add_candidate(
+                conn,
+                run_id=args.run_id,
+                candidate_id=args.candidate_id,
+                text=Path(args.text_file).read_text(encoding="utf-8"),
+                repair_owner=args.repair_owner,
+                parent_candidate_id=args.parent_id,
+            )
+        elif args.command == "prepare-comparison":
+            value = prepare_comparison_job(
+                conn,
+                run_id=args.run_id,
+                comparison_id=args.comparison_id,
+                challenger_candidate_id=args.challenger_id,
+                repair_context=load_json_file(args.repair_context_json),
+                source_session_id=args.source_session_id,
+            )
         elif args.command == "record-comparison":
-            value = record_comparison(conn, run_id=args.run_id, comparison_id=args.comparison_id, incumbent_candidate_id=args.incumbent_id, challenger_candidate_id=args.challenger_id, winner_candidate_id=args.winner_id, result=json.loads(Path(args.result_json).read_text(encoding="utf-8")))
+            value = record_comparison(
+                conn,
+                job=load_json_file(args.job_json),
+                result=load_json_file(args.result_json),
+            )
         elif args.command == "complete":
             value = complete(conn, args.run_id)
         else:
