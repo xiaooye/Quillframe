@@ -1,216 +1,196 @@
-# NovelForge Skill Contract · 7.2 中文版
+# NovelForge Skill Contract · 7.3 中文版
 
-## 定位
+<p><kbd>TIER C · 框架契约</kbd>&nbsp;&nbsp;<kbd>AI-NATIVE</kbd>&nbsp;&nbsp;<kbd>CONTRACT-FIRST</kbd></p>
 
-NovelForge 是完全 project-agnostic 的小说生产 Framework。它拥有通用 Story/Character/Canon 机制、Surface/Reader 质量基础、capability-aware Harness/runtime orchestration、作者可检查的 Context/Memory 控制层、Reader Simulation 与 Quality Evolution、Corpus Intelligence、durable Adaptive Learning、Eval/Regression、deterministic Framework bundle、Project Engineering Contract 与 provider-neutral integrations。
+NovelForge 是一个与具体项目解耦的小说生产框架。它提供通用的故事、人物、Canon、质量、运行时、学习、Corpus、评测与项目工程机制；下游 Project 提供某一部作品的具体事实。
 
-Framework 内不得内置任何具体小说、人物、剧情、Canon 或用户私有 taste data。
+> **核心边界 ✦** 需要理解文本、人物、读者体验和创作机制的语义判断由模型负责；确定性代码负责 authority、权限、指纹、持久化、路由、硬预算、阶段隔离、类型校验、事务与可复现性。两边都不得静默越权代替另一边。
 
-## Bootstrap
+NovelForge 内不得内置任何具体小说、人物、剧情、Canon 或用户私有偏好数据。
 
-任何 NovelForge 任务：
+## 01 · 从权威状态启动，不从记忆启动
+
+任何 NovelForge 任务都按以下顺序开始：
 
 1. 读取 `HARNESS_MANIFEST.yaml`；
-2. 读取 `harness/HARNESS_AGENT.md` 及适用语言版；
-3. 确定且只确定一个 primary task_mode；
-4. 通过 `novelforge.toml + novelforge.lock.json` 或 supported adapter 解析、验证 consuming project；
-5. lock 若包含 `bundle_fingerprint`，先验证 materialized Framework bundle，再把它作为 runtime bytes；
-6. 创建/恢复 manager session + run；
-7. 需要 external/tool work 时，建立/读取 typed host capability manifest，再 resolve 所需 capability；
-8. 建立 sparse Context Manifest，并只通过 authority-aware control 检查/编辑 context overlay 或 memory view；
-9. 只加载当前任务需要的 Project object 与 Framework module；
-10. external wait / consequential write 前 checkpoint；
-11. mandatory semantic judgment 必须来自真正独立的 invocation/session；
-12. 适用 quality/authority gate 全部通过后才能 expose/write；
-13. resume 后重新验证 Project authority、lock compatibility、fingerprints、pending approval，以及 pending external/tool work 所需 capability。
+2. 读取本 Skill 契约、`harness/HARNESS_AGENT.md` 及适用语言版本；
+3. 通过 `novelforge.toml` 与 exact `novelforge.lock.json`，或受支持的 Project Adapter，解析下游 Project；
+4. 确定且只确定一个 primary `task_mode`；
+5. 创建或恢复 manager session 与当前 run；
+6. 从 Project 当前权威状态构建稀疏 Context Manifest；
+7. 外部工具或服务执行前，先解析当前 host capability；
+8. 只加载当前语义问题真正需要的 semantic contract pack；
+9. 外部等待和 consequential write 前 checkpoint；
+10. 只有通过当前 user-visible gate 与 authority gate 的产物才可展示或持久化。
 
-未声明 capability = unavailable。Provider 名字、earlier session 曾可用、network primitive 或 model 自称会做，都不是 capability proof。
+禁止使用旧聊天记忆、provider session history、历史 embedded Framework copy 或未锁定的 Framework checkout 替代当前 authority。
 
-## Task Modes
+## 02 · 恰好一个 task mode
 
 `DESIGN-BOOK | DESIGN-VOLUME | PLAN-UNIT | PLAN-CHAPTER | DRAFT | REVISE | RESEARCH | SETTLE | AUDIT | CORPUS-INGEST | LEARN | SYSTEM-IMPROVE`
 
-每次只有一个 primary mode。用户明确指定时严格服从。
+一次用户可见 run 只有一个主模式。用户明确指定的模式优先。内部可以调用受限子流程，但不得静默变成另一个用户可见任务。
 
-## Generic Quality Stack
+## 03 · Project authority 与 Canon
 
-```text
-Framework Fundamentals
-→ Genre / Platform Profile
-→ Project Profile
-→ User Taste Profile
-→ Current Request
-```
+通用 Framework 机制与具体 Project 事实必须分开。
 
-Framework anti-AI Surface fundamentals 默认启用。Profile-sensitive exception 必须显式 opt-in。Project 可以调阈值和风格目标，但不能偷偷关闭 generic failure mechanism。
+默认生命周期区分为：
 
-正文任务读取：
-- `surface/FUNDAMENTALS.zh-CN.md`
-- `surface/READER_ENGAGEMENT.zh-CN.md`
-- Context Manifest 选择出的 project profiles
-- Regression/benchmark 如需 critic isolation，只能在 Raw Draft 冻结后进入 critic/auditor context。
+`locked > accepted > active_plan > review > proposal`
 
-## Reader Simulation / Quality Evolution · 7.2
+下游 Project 可以进一步定义 precedence，但绝不能把 plan/review 合并成 Accepted Canon。
 
-7.2 新增作者可观察的质量闭环，但**不会降低独立语义审查要求**：
+以下内容**本身都不是 Canon**：
 
-- `quality/reader_panel.py` 使用阅读行为 persona 模拟读者，记录 continue intent、注意力掉点、reward、confusion，并通过 A/B 顺序互换检测 position bias；
-- `quality/revision_orchestrator.py` 规划 continuity / character / reader / surface / research 等窄 pass，单一 pass 失败不拖死其他 pass，统一去重 finding，并把修复路由回 owning mechanism；
-- `quality/quality_evolution.py` 持久化 candidate lineage 与 fingerprint-bound comparison，comparison result logical consume-once，并用 plateau stopping 阻止无限修改；
-- `quality/character_integrity.py` 打包有界的 agenda / knowledge / voice / relationship / spatial-task audit；
-- `quality/state_graph.py` 只把 graph 当 derived verification view，区分 evidence-backed transition 与 unexplained/stable-field contradiction；
-- `quality/findings.py` 提供统一 evidence-chained finding contract。
+- session 或 checkpoint 状态；
+- 模型记忆或 derived memory；
+- Context overlay；
+- Scene Card 与 plan；
+- Review Draft；
+- semantic judgment；
+- reader diagnostic；
+- scenario branch；
+- Corpus 或 research evidence；
+- learning hypothesis；
+- CI / eval 结果。
 
-即使多个 Reader Persona 由同一模型执行，Reader Panel 依然可以提供很强的 editorial diagnostic；但它**不是 mandatory independent semantic PASS**。也不允许仅凭一个 1–10 absolute score 决定保留哪个版本，优先使用 pairwise evidence + regression。
+只有 Project 的明确接受，再经过该 Project 的 settlement transaction，才能改变 Canon / current state。
 
-Failure ownership 保持明确：
-- isolated surface defect → local rewrite；
-- clustered surface defects → whole-scene regeneration；
-- SAFE-BUT-FLAT / reader-grip fail → Reader Pressure + Scene Simulation；
-- character fail → Character Simulation；
-- story fail → Story / Plan；
-- continuity fail → state/transition repair。
+## 04 · AI-native semantic contract
 
-## Context / Editable Memory · 7.2
+NovelForge 7.3 使用**按需渐进加载的 semantic contract packs**。
 
-读取/使用：
-- `harness/context_inspector.py`
-- `harness/memory_tiers.py`
-- `harness/memory_bank.py`
+Catalog：
 
-Context Inspector 直接暴露某个 context item 为什么被带入、authority、注入 stage、relevance 与 pin state。Tier allocator 将 already-derived / project-provided memory 分成 `hot | working | archival`，explicit pin 和 current-event relevance 优先于泛化 similarity。
+`harness/semantic_workers/model_contract_catalog.json`
 
-Durable Memory Bank 可以被作者编辑，但**绝不成为第二 Canon store**：
-- `locked` / `accepted` entry 只是受保护的 reference snapshot；
-- 编辑受保护 entry 时创建 `proposal` child，不修改原 entry；
-- proposal memory 默认不进入 pre-draft context；
-- derived/runtime 等可编辑 entry 必须通过 exact before-fingerprint guard；
-- derived entry 保留 source refs/fingerprints，且 `authority=false`；
-- pin/priority 只改变 retrieval，不改变故事事实。
+Contract packs：
 
-Memory Bank ≠ Canon。Context Overlay ≠ Canon。Derived Summary ≠ Canon。Proposal ≠ current state。
+`harness/semantic_workers/contracts/`
 
-## Story / Canon Stack
+确定性 semantic router 只负责：解析 exact contract ID、封装 bounded input / permissions / rubric / typed output contract、计算 semantic fingerprint、校验返回结构与 provenance，以及支持 consume-once。它**不负责文学判断**。
 
-通用机制：
+不要恢复或重新发明一个巨大的 `model_contracts.json` 兼容总表。Catalog 是唯一 registry index；具体 pack 按当前任务渐进加载。
+
+典型 semantic work 包括：
+
+- 故事、场景、人物模拟；
+- 读者反应与 A/B 成对比较；
+- 人物完整性与 revision diagnosis；
+- narrative-world 与 reader-expectation 解释；
+- memory consolidation；
+- Corpus discovery strategy 与 mechanism analysis；
+- learning / eval judgment；
+- creative-evolution comparison。
+
+模型结果只是受边界约束的证据。它本身永远不会授予 Canon write、Framework promotion 或 durable user-taste write authority。
+
+## 05 · DRAFT / REVISE 质量图
+
+需要读取：
+
 - `core/STORY_SYSTEM.zh-CN.md`
 - `core/CHARACTER_SYSTEM.zh-CN.md`
 - `core/CANON_STATE.zh-CN.md`
+- `surface/FUNDAMENTALS.zh-CN.md`
+- `surface/READER_ENGAGEMENT.zh-CN.md`
+- 下游 Project 当前选中的 profiles
 
-具体 Project 提供 BOOK/VOL/ARC/UNIT/CH/SCN 实例、人物/世界/关系状态、research、plans 与 Accepted Canon。
+通用生产图：
 
-Plan ≠ Canon。Review ≠ Accepted。Session ≠ Canon。Corpus ≠ Canon。Semantic Judgment ≠ Canon。Learning Cycle state ≠ Canon。
+`Context Freeze → Story/Canon Preflight → Scene Simulation → Character Simulation → Reader Pressure → Event-first Raw Draft → Surface Realization → 生成后 lint/regression/semantic diagnosis → 回 owning layer 修复 → Reader Engagement → Continuity → User-visible Gate`
 
-## Project Engineering
+Raw Draft 只在内部存在。Regression 坏例与 hidden expected label 不得进入 first-pass generation。
 
-每一本 consuming novel 都应该满足 Project SDK：
-- `novelforge.toml` Project manifest；
-- exact `novelforge.lock.json` Framework dependency lock；
-- release-grade consumer 可记录 `framework.bundle_fingerprint` 做 byte-level materialization verification；
-- source / plan / derived / generated 边界明确；
-- deterministic validate/build/tests；
-- 需要时 structural change 执行 `spec → plan → tasks → implementation → verification → acceptance`；
-- Canon migration 使用 exact before-state、evidence、dependency impact、post-condition、rollback/trace；
-- Project build 生成 compact indexed Project bundle，但不制造第二 Canon authority。
+失败必须回到真正拥有该问题的机制：
 
-Framework runtime materialization 单独见 `release/FRAMEWORK_BUNDLE.zh-CN.md`。
+- 单点 Surface 缺陷 → local rewrite；
+- Surface cluster → 重新生成 scene / realization；
+- SAFE-BUT-FLAT 或 reader-grip 失败 → Reader Pressure + Scene Simulation；
+- 人物失败 → Character Simulation；
+- Story / Plan 失败 → Story / Plan；
+- continuity / state 失败 → state / transition repair；
+- Context / Memory 失败 → Context / Memory layer。
 
-## Session / Runtime
+不要拿句子润色去掩盖上游机制失败。
 
-身份模型：
+## 06 · Context 与 Memory
 
-`resource/project != session/thread != run/invocation != checkpoint`
+持久存储不等于自动注入 prompt。
 
-读取：
-- `harness/session_runtime/SESSION_RUNTIME.md`
-- `harness/session_runtime/RUNTIME_ROUTING.md`
-- `harness/session_runtime/RUNTIME_CAPABILITIES.zh-CN.md`
-- `harness/control_plane/CONTROL_PLANE.md`
+NovelForge 必须区分 Project 当前 authority、derived memory、runtime state 与模型推断。Context/Memory 工具可以对 derived/context view 做预算、pin、排序、invalidate 或 rebuild，但不能静默改写受保护 Canon。
 
-Runtime/session state 只记录“工作做到哪里”，永远不是项目事实。
+`locked` / `accepted` reference 必须保持受保护状态。编辑受保护 memory reference 时，应产生 proposal 或其他明确非权威的 artifact，而不是覆盖故事事实。
 
-Capability 表示“技术上能不能尝试”；Authority 表示“允许不允许改变 durable state”。两者不得混淆。
+需要语义判断时，relevance 属于模型。确定性 Context/Memory 代码可以执行 hard budget、authority class、provenance、lifecycle constraint 与显式用户控制，但不能拿任意 scalar heuristic 冒充文学相关性。
 
-## Semantic Independence
+## 07 · Runtime、Session 与 Capability
 
-读取 `harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.md`。
+必须区分：
 
-Independent path 可以来自独立本地 Codex/Claude invocation、provider call、MCP/service worker、GitHub job、独立 peer chat、local model 或 human reviewer——但**只有当前 host capability contract 与 independence rule 证明 eligible 时才能使用**。
+`project/resource ≠ session/thread ≠ run/invocation ≠ checkpoint`
 
-Router/schema/queue ≠ worker capability。同 session manager role-play 不算独立。Reviewer 默认 fresh-per-fingerprint。
+当前 chat 可以作为 manager。独立 peer chat、本地 Codex / Claude invocation、provider call、MCP/service worker、GitHub job、local model 或 human，都可以在当前 capability evidence 支持时成为受限 worker。
 
-Infrastructure failure 可以 checkpoint + capability re-resolution 后安全 fallback；有效 `semantic_reject` 必须回 owning repair layer，禁止换 reviewer 一直审到 PASS。
+Runtime 名称本身不是 capability proof。必须从当前 host manifest 解析能力；未声明能力视为不可用。
 
-## Adaptive Learning · Durable Cycle
+Capability 回答“技术上能不能尝试”；authority 回答“允许不允许改变 durable state”。两者不可混淆。
 
-读取 `docs/adaptive-learning.zh-CN.md`。
+Mandatory independent semantic judgment 必须来自真正不同的 invocation/session，并返回 fingerprint-bound typed result。同 session 角色扮演不算独立审查。有效 `semantic_reject` 是判断结果，不是基础设施故障；禁止 reviewer-shopping。
 
-Learning state 与 runtime state、Project Canon 三者分离。
+## 08 · Corpus 与 Adaptive Learning
 
-```text
-feedback evidence / hypothesis
-→ corpus gap
-→ capability-aware discovery plan
-→ verified discovery + rights/provenance
-→ bounded fingerprinted mechanism analysis
-→ capability/regression eval evidence
-→ promotion candidate
-→ activation/promotion gate
-→ observe / revise / rollback
-```
+Corpus 是受治理的 evidence，不是 Canon，也不是模仿作者的剪贴簿。
 
-7.1 建立的 Adaptive Runtime 基础在 7.2 中继续生效：
-- `learning/learning_store.py`：evidence/hypothesis/gap/candidate；
-- `learning/learning_cycle.py`：durable cycle state、artifact hash、consume-once receipt；
-- `learning/learning_eval.py`：blind semantic analysis/eval work packet；
-- `learning/promotion_gate.py`：deterministic evidence-completeness gate。
+Discovery、access、rights classification、storage、semantic analysis、learning 与 promotion 是不同 gate。能搜索到内容，不等于可以保存全文。现代版权作品不得被默认完整镜像到 Generic Framework，也不应整体灌入 Writer context。
 
-Model inference 本身不能成为 durable user taste。Promotion Gate 结果永远不自动授予 write authority。
+Learning 永远采用证据支持的最窄 scope：
 
-General Craft 必须具备 cross-work evidence、counterexample/profile boundary、capability + regression eval、provenance、target version、rollback ref、exact-commit green Framework CI 后，才可以标记 promotable。
+`one_off | project | user_taste | general_craft`
 
-## Corpus Intelligence
+仅靠模型推断不能成为 durable user taste 或 General Craft。General Craft promotion 需要 provenance、跨作品或其他足够证据、counterexample / profile boundary、eval/regression evidence、版本/rollback，以及 green deterministic CI。
 
-读取：
-- `corpus/README.zh-CN.md`
-- `corpus/CORPUS_POLICY.zh-CN.md`
-- `corpus/CORPUS_INGEST_PROTOCOL.zh-CN.md`
+## 09 · Project Engineering
 
-Corpus 是 evidence/benchmark，不是 Canon，也不是作者模仿剪贴簿。
+下游 Project 应当能够独立 clone、自描述、测试、构建、迁移和 rollback，而不依赖聊天记忆。
 
-`corpus/corpus_scout.py` 生成 capability-aware discovery request；`corpus/discovery_runtime.py` 只 dispatch 当前 host manifest 已满足的 channel，并校验 returned source/tool provenance、evidence fingerprint、dedupe/diversity 与 rights/storage intent。
+项目身份至少由以下内容锚定：
 
-**Discovery ≠ Ingestion。** Source access、rights、quotation、tool execution 或 retrieval success 都不得伪造。
+- `novelforge.toml`；
+- exact `novelforge.lock.json`；
+- 清晰的 source / plan / derived / generated 边界；
+- deterministic validation / build / tests；
+- 配置后可验证、可复现的 Framework bundle。
 
-## Runtime Philosophy
+结构级变更在确有必要时使用：
 
-默认一个 manager。只有 capability、context isolation、真正 independence 或有价值的 parallelism 需要时才增加 bounded worker。
+`spec → plan → tasks → implementation → verification → acceptance`
 
-Deterministic code 负责 identity、persistence、state transition、capability resolution、fingerprint、provenance validation、permission、idempotency、consume-once receipt、bundle verification、Context/Memory authority controls、Quality Evolution bookkeeping 与 invariant；semantic worker 负责 deterministic test 无法替代的判断。
+普通正文 micro edit 不要人为制造软件工程仪式。
 
-## Writes
+## 10 · Writes 与 Settlement
 
-任何 side effect 都需要 least privilege、exact target、precondition/before-state、idempotency、post-condition 与适当 rollback/trace。
+任何 consequential write 都要求 least privilege、exact target、before-state / precondition、idempotency strategy、post-condition，以及必要的 trace / rollback。
 
-Connector、webhook、schedule、Corpus/discovery result、learning hypothesis、promotion-gate result、semantic result、reader-panel result、memory-bank edit、revision report、session state 都不会自动授予 Canon 或 Framework-write authority。
+Canon settlement 还必须具备：明确 Accepted artifact 或显式 Canon 指令、exact State Delta、dependency impact、authorized mutation、derived-view refresh 与 post-condition validation。
 
-## CI / Release / Self-improvement
+before-state mismatch 或 post-condition failure → `settlement_incomplete`。不得猜测，也不得把部分成功说成全部完成。
 
-Normal CI 必须 deterministic，不得静默消耗 API/Codex/Claude/model usage。
+## 11 · CI 与 Maintenance
 
-Normal CI 必须覆盖 host-capability guard、author-control/context-memory guard、reader/evolution/revision contract、durable Learning Cycle、blind learning packet、Promotion Gate prerequisite、Corpus discovery provenance/rights boundary、deterministic Framework bundle reproducibility/tamper detection。
+Normal CI 必须保持 deterministic，不得静默消耗 API、Codex、Claude 或其他 model usage。
 
-Scheduled maintenance 可以 observe / plan / queue，但不能假装执行未声明的 Web/model capability，也不能 auto-promote Framework behavior。
+CI 应验证 schema、lifecycle boundary、semantic contract catalog/packs、hidden-gold isolation、fingerprint、permissions、Context/Memory authority、session/control-plane invariant、Corpus rights/provenance、eval queue、Project SDK contract、Framework bundle reproducibility 与 documentation integrity。
 
-Material Framework behavior change 必须有：
-- demonstrated mechanism/capability gap；
-- evidence/provenance；
-- smallest sufficient change；
-- conflict/profile check；
-- capability/regression coverage；
-- version/rollback point；
-- green post-change CI。
+Scheduled maintenance 可以观察、报告、封装和排队任务。schedule 或 webhook 本身不会授予 story、Canon、taste 或 Framework promotion authority。
 
-外部 Framework 更新只生成 adopt/adapt/reject candidate，不自动成为 dependency。
+## 12 · Completion truth
 
-> 后台生产系统应越来越严格，前台小说应越来越像真实的人在真实压力中行动，而不是越来越像系统输出。
+使用真实状态，例如：
+
+`complete | review | awaiting_user | awaiting_external | semantic_pending | semantic_invalid | failed_gate | settlement_incomplete | blocked`
+
+只要 mandatory gate 仍未解决，就不能把 artifact 称为 production-ready。
+
+> NovelForge 的后台应越来越严格、可恢复、可验证；最终小说则应该越来越自然、有因果、有具体性、有意外，也更像活人写出来的故事。
