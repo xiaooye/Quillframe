@@ -1,0 +1,85 @@
+{
+  "schema": "novelforge_model_contract_registry_v1",
+  "version": "1",
+  "principle": "Long-form narrative interpretation and memory consolidation are model-owned semantic work. Derived observations remain source-bound, invalidatable and non-authoritative.",
+  "contracts": {
+    "narrative.world": {
+      "kind": "artifact_audit",
+      "purpose": "Interpret source-bound long-horizon narrative state without treating derived memory as authority.",
+      "rubric": [
+        "Use only source-bound records visible at the supplied narrative cutoff.",
+        "Keep event occurrence time distinct from narration/reveal time.",
+        "Track who knows what and when, setup/payoff state, relationship evolution, obligations and causal links when supported by evidence.",
+        "Never use future active-plan/review/proposal information as current Canon unless the caller explicitly requests planning context.",
+        "Return typed derived observations with source refs; derived observations are not Canon."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "observations"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "observations": {"type": "array"}
+        }
+      },
+      "permissions": {
+        "canon_write": false,
+        "os_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "derived_narrative_observation"
+      },
+      "independent_gate": false
+    },
+    "reader.expectations": {
+      "kind": "artifact_audit",
+      "purpose": "Interpret which reader-facing questions, promises, setups, relationship expectations, goals or mysteries are currently live and how much pressure they carry.",
+      "rubric": [
+        "Derive expectations only from supplied reader-facing evidence and accepted/locked story history unless planning context is explicitly requested.",
+        "Separate an expectation existing in the reader experience from a future planned payoff.",
+        "Identify meaningful reinforcement, partial reward, payoff, abandonment or dormancy; do not demand mechanical cliffhangers.",
+        "Prefer reader-experience language over author-process language.",
+        "Return proposals for ledger updates; the model judgment itself does not mutate Canon."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "expectation_updates"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "expectation_updates": {"type": "array"}
+        }
+      },
+      "permissions": {
+        "canon_write": false,
+        "os_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "reader_expectation_observation"
+      },
+      "independent_gate": false
+    },
+    "memory.consolidate": {
+      "kind": "artifact_audit",
+      "purpose": "Propose compact derived memory from bounded accepted/project-provided evidence without replacing source authority.",
+      "rubric": [
+        "Summarize only supplied evidence; preserve uncertainty and source references.",
+        "Prefer details likely to matter to current/future story reasoning rather than exhaustive recap.",
+        "Do not convert plans, proposals, reviews, research truth or model inference into accepted Canon.",
+        "Every derived item must remain invalidatable/rebuildable and cite its sources.",
+        "Return proposed derived-memory items only."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "memory_items"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "memory_items": {"type": "array"}
+        }
+      },
+      "permissions": {
+        "canon_write": false,
+        "os_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "derived_memory_proposal"
+      },
+      "independent_gate": false
+    }
+  }
+}
