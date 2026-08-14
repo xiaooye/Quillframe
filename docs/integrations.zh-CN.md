@@ -61,6 +61,17 @@ GitHub 可以承担：
 
 Workflow event 只是 candidate/transport message，不会提升 authority。
 
+### Operational Workflows
+
+- `novelforge-ci.yml`：默认 deterministic release gate，不执行 live model。
+- `novelforge-contracts.yml`：可复用 deterministic contracts。
+- `novelforge-event-router.yml`：typed external event ingress。
+- `novelforge-chat-semantic-bridge.yml`：用户 relay 的 independent peer-chat semantic path，不调用 API 模型。
+- `novelforge-semantic-live.yml`：可选、手工触发的 provider-backed semantic eval；必须显式配置 API secret，可能产生 provider billing。
+- `novelforge-weekly-maintenance.yml`：定时 deterministic observation / queueing；不执行 LLM，不自动 promote Framework behavior。
+
+Weekly maintenance 可以生成 Corpus discovery/eval queue，但真正 Web/GitHub/MCP discovery 仍需要 host 已授权 connector；不能伪造 source access。
+
 ## Webhooks
 
 Provider-specific webhook 应先 normalize 成 Generic typed event，再由 Harness 处理：
