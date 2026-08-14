@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic session-state runtime for Novel Production OS.
+"""Deterministic session-state runtime for NovelForge.
 
 This tool does not run an LLM. It creates/validates session records, enforces
 legal lifecycle transitions, appends operational events, and saves checkpoints.
@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "novel_os_agent_session_v1"
+SCHEMA = "novelforge_agent_session_v1"
 STATUSES = {
     "created", "running", "idle", "awaiting_user", "awaiting_external",
     "completed", "failed", "terminated", "stale",
@@ -204,7 +204,7 @@ def self_test() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Novel Production OS session runtime")
+    parser = argparse.ArgumentParser(description="NovelForge session runtime")
     sub = parser.add_subparsers(dest="command", required=True)
     p_new = sub.add_parser("new"); p_new.add_argument("--resource-id", required=True); p_new.add_argument("--project-id"); p_new.add_argument("--role", choices=sorted(ROLES), required=True); p_new.add_argument("--transport", required=True); p_new.add_argument("--backend", required=True); p_new.add_argument("--parent-session-id"); p_new.add_argument("--task-mode"); p_new.add_argument("--usage-class", choices=sorted(USAGE_CLASSES), default="unknown"); p_new.add_argument("--memory-policy", choices=sorted(MEMORY_POLICIES), default="bounded"); p_new.add_argument("--resume-policy", choices=sorted(RESUME_POLICIES), default="checkpoint_revalidate"); p_new.add_argument("--provider-session-id"); p_new.add_argument("--external-session-ref"); p_new.add_argument("--output")
     p_validate = sub.add_parser("validate"); p_validate.add_argument("--session", required=True)

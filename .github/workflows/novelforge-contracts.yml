@@ -28,12 +28,15 @@ jobs:
       - name: Repository and project contracts
         run: |
           python scripts/framework_hygiene.py
+          python scripts/machine_namespace_hygiene.py > machine-namespace-test.json
           python project_sdk.py self-test > project-sdk-test.json
           python project_adapter.py self-test > project-adapter-test.json
           python harness/runtime_capabilities.py self-test > runtime-capabilities-test.json
           python harness/runtime_capabilities.py probe-local --output local-capabilities.json
           python - <<'PY'
           import json
+          ns=json.load(open('machine-namespace-test.json',encoding='utf-8'))
+          assert ns['machine_namespace_contract']=='PASS',ns
           d=json.load(open('local-capabilities.json',encoding='utf-8'))
           assert d['schema']=='novelforge_host_capabilities_v1'
           assert d['secrets_embedded'] is False
@@ -187,6 +190,7 @@ jobs:
           python - <<'PY'
           import json
           checks={
+            'machine-namespace-test.json':('machine_namespace_contract','PASS'),
             'project-sdk-test.json':('project_sdk_contract','PASS'),'project-adapter-test.json':('project_adapter_contract','PASS'),
             'runtime-capabilities-test.json':('runtime_capabilities_contract','PASS'),'context-inspector-test.json':('context_inspector_contract','PASS'),
             'memory-tiers-test.json':('memory_tiers_contract','PASS'),'memory-bank-test.json':('memory_bank_contract','PASS'),
@@ -202,6 +206,7 @@ jobs:
             'control-plane-test.json':('control_plane_contract','PASS'),'mcp-test.json':('mcp_stdio_contract','PASS'),'cli-test.json':('novelforge_cli_contract','PASS')}
           loaded={p:json.load(open(p,encoding='utf-8')) for p in checks}
           for p,(k,v) in checks.items():assert loaded[p][k]==v,(p,loaded[p])
+          assert loaded['machine-namespace-test.json']['namespace']=='NovelForge-only'
           s=loaded['semantic-router-test.json']
           assert s['fingerprint_excludes_runtime_lineage'] is True
           assert s['catalog_exact_id_resolution'] is True
@@ -224,14 +229,16 @@ jobs:
       - name: Authority and no-fabricated-worker boundaries
         env:
           OPENAI_API_KEY: ''
-          NOVEL_OS_SEMANTIC_WORKER_CMD: ''
-          NOVEL_OS_DISABLE_LOCAL_AGENT_AUTO: '1'
+          NOVELFORGE_SEMANTIC_WORKER_CMD: ''
+          NOVELFORGE_DISABLE_LOCAL_AGENT_AUTO: '1'
         run: |
           python - <<'PY'
           import json
           event=json.load(open('harness/control_plane/event_schema.json'))
+          assert event['properties']['schema']['const']=='novelforge_event_v1'
           assert not set(event['properties']['event_type']['enum']).intersection({'draft.requested','settlement.apply','canon.write','os.promote'})
           handoff=json.load(open('harness/control_plane/handoff_schema.json'))
+          assert handoff['properties']['schema']['const']=='novelforge_handoff_v1'
           perms=handoff['properties']['permissions']['properties']
           assert all(perms[k]['const'] is False for k in ('canon_write','os_behavior_write','durable_user_taste_write'))
           PY

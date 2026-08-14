@@ -48,11 +48,7 @@ def output_schema(job: dict[str, Any]) -> dict[str, Any]:
         return declared
     if job.get("kind") == "eval_judge":
         return LEGACY_EVAL_SCHEMA
-    return {
-        "type": "object",
-        "required": ["confidence"],
-        "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}},
-    }
+    return {"type": "object", "required": ["confidence"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}}}
 
 
 def empty() -> dict[str, Any]:
@@ -60,10 +56,7 @@ def empty() -> dict[str, Any]:
 
 
 def bounded_prompt(job: dict[str, Any]) -> str:
-    payload = {k: job.get(k) for k in (
-        "kind", "subject_id", "input_fingerprint", "input", "rubric",
-        "output_contract", "permissions", "provenance",
-    )}
+    payload = {k: job.get(k) for k in ("kind", "subject_id", "input_fingerprint", "input", "rubric", "output_contract", "permissions", "provenance")}
     independent = bool((job.get("provenance") or {}).get("independent_gate", False))
     return (
         "You are a bounded semantic worker in the NovelForge fiction-production harness. "
@@ -76,24 +69,14 @@ def bounded_prompt(job: dict[str, Any]) -> str:
 
 
 def request_body(job: dict[str, Any]) -> dict[str, Any]:
-    model = os.getenv("NOVEL_OS_OPENAI_MODEL", "gpt-5.1")
-    effort = os.getenv("NOVEL_OS_OPENAI_REASONING_EFFORT", "medium")
+    model = os.getenv("NOVELFORGE_OPENAI_MODEL", "gpt-5.1")
+    effort = os.getenv("NOVELFORGE_OPENAI_REASONING_EFFORT", "medium")
     return {
         "model": model,
         "store": False,
         "reasoning": {"effort": effort},
         "input": [{"role": "user", "content": [{"type": "input_text", "text": bounded_prompt(job)}]}],
-        "text": {
-            "format": {
-                "type": "json_schema",
-                "name": "novelforge_semantic_judgment",
-                # Model contracts may intentionally use a wider JSON-Schema
-                # subset than strict Structured Outputs supports. Runtime
-                # validation below remains authoritative for the contract.
-                "strict": False,
-                "schema": output_schema(job),
-            }
-        },
+        "text": {"format": {"type": "json_schema", "name": "novelforge_semantic_judgment", "strict": False, "schema": output_schema(job)}},
     }
 
 
@@ -103,141 +86,70 @@ def typed(job: dict[str, Any], status: str, judgment: dict[str, Any] | None = No
     lineage["worker_session_id"] = lineage.get("worker_session_id") or "SES-OPENAI-" + uuid.uuid4().hex
     lineage["attempt_id"] = lineage.get("attempt_id") or "ATT-" + uuid.uuid4().hex
     return {
-        "job_id": job.get("job_id", "unknown"),
-        "subject_id": job.get("subject_id", "unknown"),
-        "kind": job.get("kind", "artifact_audit"),
-        "input_fingerprint": job.get("input_fingerprint", "sha256:" + "0" * 64),
+        "job_id": job.get("job_id", "unknown"), "subject_id": job.get("subject_id", "unknown"),
+        "kind": job.get("kind", "artifact_audit"), "input_fingerprint": job.get("input_fingerprint", "sha256:" + "0" * 64),
         "status": status,
-        "worker": {
-            "provider": "openai",
-            "model_or_reviewer": os.getenv("NOVEL_OS_OPENAI_MODEL", "gpt-5.1"),
-            "run_reference": run_ref,
-        },
-        "judgment": judgment or empty(),
-        "proposals": [],
-        "errors": errors or [],
-        "execution": lineage,
+        "worker": {"provider": "openai", "model_or_reviewer": os.getenv("NOVELFORGE_OPENAI_MODEL", "gpt-5.1"), "run_reference": run_ref},
+        "judgment": judgment or empty(), "proposals": [], "errors": errors or [], "execution": lineage,
     }
 
 
 def extract_output(response: dict[str, Any]) -> dict[str, Any]:
     if isinstance(response.get("output_text"), str):
         obj = json.loads(response["output_text"])
-        if not isinstance(obj, dict):
-            raise ValueError("output_text not object")
+        if not isinstance(obj, dict): raise ValueError("output_text not object")
         return obj
     texts = []
     for item in response.get("output", []):
-        if not isinstance(item, dict):
-            continue
+        if not isinstance(item, dict): continue
         for content in item.get("content", []):
-            if isinstance(content, dict) and isinstance(content.get("text"), str):
-                texts.append(content["text"])
-    if not texts:
-        raise ValueError("Responses payload contained no output text")
+            if isinstance(content, dict) and isinstance(content.get("text"), str): texts.append(content["text"])
+    if not texts: raise ValueError("Responses payload contained no output text")
     obj = json.loads(texts[-1])
-    if not isinstance(obj, dict):
-        raise ValueError("judgment not object")
+    if not isinstance(obj, dict): raise ValueError("judgment not object")
     return obj
 
 
 def execute(job: dict[str, Any], timeout: int) -> dict[str, Any]:
     errors = validate_job(job)
-    if errors:
-        return typed(job, "failed", errors=["invalid semantic job: " + "; ".join(errors)])
-    if job["kind"] not in ALLOWED_KINDS:
-        return typed(job, "unsupported", errors=[f"unsupported kind={job['kind']}"])
+    if errors: return typed(job, "failed", errors=["invalid semantic job: " + "; ".join(errors)])
+    if job["kind"] not in ALLOWED_KINDS: return typed(job, "unsupported", errors=[f"unsupported kind={job['kind']}"])
     key = os.getenv("OPENAI_API_KEY")
-    if not key:
-        return typed(job, "failed", errors=["OPENAI_API_KEY is not configured"])
+    if not key: return typed(job, "failed", errors=["OPENAI_API_KEY is not configured"])
     body = json.dumps(request_body(job), ensure_ascii=False).encode("utf-8")
-    req = urllib.request.Request(
-        API_URL,
-        data=body,
-        method="POST",
-        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-    )
+    req = urllib.request.Request(API_URL, data=body, method="POST", headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as response_handle:
             response = json.loads(response_handle.read().decode("utf-8"))
         judgment = extract_output(response)
         result = typed(job, "completed", judgment=judgment, run_ref=response.get("id"))
         binding = validate_result(job, result)
-        return result if not binding else typed(
-            job, "failed", run_ref=response.get("id"),
-            errors=["self-validation: " + "; ".join(binding)],
-        )
+        return result if not binding else typed(job, "failed", run_ref=response.get("id"), errors=["self-validation: " + "; ".join(binding)])
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
         return typed(job, "failed", errors=[f"OpenAI Responses execution failed: {exc}"])
 
 
 def self_test() -> int:
     from semantic_worker_router import fingerprint_for
-    job = {
-        "job_id": "SEM-T", "kind": "external_review", "subject_id": "CH-T",
-        "created_at": "fixture", "input_fingerprint": "", "input": {"candidate": "x"},
-        "rubric": ["judge reader experience"],
-        "output_contract": {
-            "type": "object", "required": ["confidence", "would_continue"],
-            "properties": {
-                "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-                "would_continue": {"type": "boolean"},
-            },
-        },
-        "permissions": {"canon_write": False, "os_behavior_write": False, "durable_user_taste_write": False},
-        "provenance": {"independent_gate": False},
-        "execution": {},
-    }
+    job = {"job_id": "SEM-T", "kind": "external_review", "subject_id": "CH-T", "created_at": "fixture", "input_fingerprint": "", "input": {"candidate": "x"}, "rubric": ["judge reader experience"], "output_contract": {"type": "object", "required": ["confidence", "would_continue"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "would_continue": {"type": "boolean"}}}, "permissions": {"canon_write": False, "os_behavior_write": False, "durable_user_taste_write": False}, "provenance": {"independent_gate": False}, "execution": {}}
     job["input_fingerprint"] = fingerprint_for(job)
-    body = request_body(job)
-    fmt = body["text"]["format"]
-    ok = (
-        not validate_job(job)
-        and job["kind"] in ALLOWED_KINDS
-        and fmt["schema"] == job["output_contract"]
-        and fmt["strict"] is False
-        and body["store"] is False
-    )
-    dump({
-        "openai_adapter_contract": "PASS" if ok else "FAIL",
-        "contract_native_output_schema": fmt["schema"] == job["output_contract"],
-        "all_semantic_kinds_supported": job["kind"] in ALLOWED_KINDS,
-        "store": False,
-        "structured_output_strict": False,
-        "model_execution": False,
-    })
+    body = request_body(job); fmt = body["text"]["format"]
+    ok = not validate_job(job) and job["kind"] in ALLOWED_KINDS and fmt["schema"] == job["output_contract"] and fmt["strict"] is False and body["store"] is False
+    dump({"openai_adapter_contract": "PASS" if ok else "FAIL", "contract_native_output_schema": fmt["schema"] == job["output_contract"], "all_semantic_kinds_supported": job["kind"] in ALLOWED_KINDS, "store": False, "structured_output_strict": False, "model_execution": False})
     return 0 if ok else 1
 
 
 def main() -> int:
-    p = argparse.ArgumentParser()
-    p.add_argument("--capabilities", action="store_true")
-    p.add_argument("--dry-run", action="store_true")
-    p.add_argument("--self-test", action="store_true")
-    p.add_argument("--timeout", type=int, default=180)
-    args = p.parse_args()
-    if args.self_test:
-        return self_test()
+    p = argparse.ArgumentParser(); p.add_argument("--capabilities", action="store_true"); p.add_argument("--dry-run", action="store_true"); p.add_argument("--self-test", action="store_true"); p.add_argument("--timeout", type=int, default=180); args = p.parse_args()
+    if args.self_test: return self_test()
     if args.capabilities:
-        dump({
-            "provider": "openai", "adapter_version": "0.3",
-            "available": bool(os.getenv("OPENAI_API_KEY")),
-            "supported_kinds": sorted(ALLOWED_KINDS),
-            "output_shape": "job.output_contract", "store": False, "api_url": API_URL,
-        })
-        return 0
-    try:
-        job = json.load(sys.stdin)
+        dump({"provider": "openai", "adapter_version": "0.3", "available": bool(os.getenv("OPENAI_API_KEY")), "supported_kinds": sorted(ALLOWED_KINDS), "output_shape": "job.output_contract", "store": False, "api_url": API_URL}); return 0
+    try: job = json.load(sys.stdin)
     except Exception as exc:
-        dump({"valid": False, "error": str(exc)})
-        return 1
+        dump({"valid": False, "error": str(exc)}); return 1
     if args.dry_run:
-        errors = validate_job(job)
-        dump({"valid": not errors, "errors": errors, "request": request_body(job), "authorization_header_included": False})
-        return 0 if not errors else 1
-    result = execute(job, args.timeout)
-    dump(result)
-    return 0 if result.get("status") in {"completed", "unsupported"} else 1
+        errors = validate_job(job); dump({"valid": not errors, "errors": errors, "request": request_body(job), "authorization_header_included": False}); return 0 if not errors else 1
+    result = execute(job, args.timeout); dump(result); return 0 if result.get("status") in {"completed", "unsupported"} else 1
 
 
 if __name__ == "__main__":

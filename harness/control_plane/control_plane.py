@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Novel Production OS v6.6 durable runtime control plane.
+"""NovelForge durable runtime control plane.
 
 Stdlib-only. This module persists operational execution state:
 sessions, events, handoffs, leases, and exactly-once consumption receipts.
 
-It does NOT run an LLM, mutate Canon, or grant OS/project authority.
+It does NOT run an LLM, mutate Canon, or grant Framework/project authority.
 """
 from __future__ import annotations
 
@@ -19,10 +19,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-CONTROL_PLANE_SCHEMA = "novel_os_control_plane_v1"
-EVENT_SCHEMA = "novel_os_event_v1"
-HANDOFF_SCHEMA = "novel_os_handoff_v1"
-DEFAULT_DB = ".novel-os/runtime.db"
+CONTROL_PLANE_SCHEMA = "novelforge_control_plane_v1"
+EVENT_SCHEMA = "novelforge_event_v1"
+HANDOFF_SCHEMA = "novelforge_handoff_v1"
+DEFAULT_DB = ".novelforge/runtime.db"
 EVENT_TYPES = {
     "session.resume_requested",
     "semantic.requested",
@@ -409,7 +409,7 @@ def self_test(db_path: str | Path) -> dict[str, Any]:
         path.unlink()
     cp = ControlPlane(path)
     cp.init()
-    session = {"schema": "novel_os_agent_session_v1", "resource_id": "BOOK-TEST", "project_id": "BOOK-TEST", "session_id": "SES-TEST-MANAGER", "role": "manager", "status": "awaiting_external"}
+    session = {"schema": "novelforge_agent_session_v1", "resource_id": "BOOK-TEST", "project_id": "BOOK-TEST", "session_id": "SES-TEST-MANAGER", "role": "manager", "status": "awaiting_external"}
     first_session = cp.put_session(session, expected_version=0)
     duplicate_session = cp.put_session(session, expected_version=1)
     event = {"schema": EVENT_SCHEMA, "event_id": "EV-TEST-1", "event_type": "semantic.requested", "source": {"kind": "self_test", "actor": "control_plane.py"}, "resource_id": "BOOK-TEST", "session_id": "SES-TEST-MANAGER", "run_id": "RUN-TEST", "handoff_id": "HO-TEST-1", "authority_scope": "request", "idempotency_key": "selftest-semantic-request", "artifact_fingerprints": ["sha256:" + "a" * 64], "created_at": now_iso(), "payload": {"job_id": "SEM-TEST"}}
@@ -436,8 +436,8 @@ def self_test(db_path: str | Path) -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="Novel Production OS v6.6 control plane")
-    p.add_argument("--db", default=os.getenv("NOVEL_OS_DB", DEFAULT_DB))
+    p = argparse.ArgumentParser(description="NovelForge durable runtime control plane")
+    p.add_argument("--db", default=os.getenv("NOVELFORGE_DB", DEFAULT_DB))
     sub = p.add_subparsers(dest="command", required=True)
     sub.add_parser("init")
     sub.add_parser("status")
