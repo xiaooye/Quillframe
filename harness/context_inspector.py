@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Authority-aware Context Manifest inspector and overlay controls.
 
-The inspector never mutates Project Canon. It can pin/unpin, reprioritize, hide,
-or invalidate derived context views. Edit requests against protected authority
-levels are downgraded to proposals.
+The inspector never mutates Project Canon and never decides semantic relevance.
+It may expose producer/model relevance as inspectable metadata, but deterministic
+ordering uses only explicit controls: pin, author/runtime priority, then stable id.
+Semantic context selection belongs to the model-facing `context.select` contract.
 """
 from __future__ import annotations
 
@@ -62,9 +63,9 @@ def normalize_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
         item_class = str(raw.get("class") or raw.get("kind") or "context")
         if item_class in SENSITIVE_CLASSES and "writer_pre_draft" in stages:
             raise ValueError(f"sensitive context leaked into writer_pre_draft: {item_id}")
-        relevance = raw.get("relevance", 0.0)
-        if isinstance(relevance, bool) or not isinstance(relevance, (int, float)) or not 0 <= float(relevance) <= 1:
-            raise ValueError(f"relevance must be 0..1 for {item_id}")
+        relevance = raw.get("relevance")
+        if relevance is not None and (isinstance(relevance, bool) or not isinstance(relevance, (int, float)) or not 0 <= float(relevance) <= 1):
+            raise ValueError(f"relevance must be 0..1 when present for {item_id}")
         priority = raw.get("priority", 0)
         if isinstance(priority, bool) or not isinstance(priority, (int, float)):
             raise ValueError(f"priority must be numeric for {item_id}")
@@ -76,7 +77,7 @@ def normalize_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
             "authority": authority,
             "inclusion_reason": raw.get("inclusion_reason") or raw.get("reason") or "unspecified",
             "stages": stages,
-            "relevance": float(relevance),
+            "relevance": None if relevance is None else float(relevance),
             "priority": float(priority),
             "pinned": bool(raw.get("pinned", False)),
             "derived": bool(raw.get("derived", authority == "derived")),
@@ -181,13 +182,16 @@ def inspect(manifest: dict[str, Any], overlay: dict[str, Any] | None = None, *, 
     for item in view["items"]:
         eligible = not item["hidden"] and not item["invalidated"] and (stage is None or stage in item["stages"])
         items.append({**item, "eligible": eligible})
-    items.sort(key=lambda x: (not x["pinned"], -x["priority"], -x["relevance"], x["id"]))
+    # Relevance is semantic evidence for inspection only. It cannot drive runtime ordering.
+    items.sort(key=lambda x: (not x["pinned"], -x["priority"], x["id"]))
     return {
         "schema": SCHEMA,
         "manifest_id": view.get("manifest_id"),
         "stage": stage,
         "items": items,
         "proposals": view.get("proposals", []),
+        "ordering_policy": "pin_then_explicit_priority_then_stable_id",
+        "semantic_relevance_used_for_ordering": False,
         "authority": False,
         "model_execution": False,
     }
@@ -197,28 +201,32 @@ def self_test() -> int:
     manifest = {
         "manifest_id": "CTX-1",
         "items": [
-            {"id": "CANON-1", "class": "canon", "authority": "accepted", "stages": ["writer_pre_draft", "independent_reviewer"], "relevance": 0.9},
-            {"id": "DER-1", "class": "summary", "authority": "derived", "derived": True, "stages": ["writer_pre_draft"], "relevance": 0.7},
+            {"id": "CANON-1", "class": "canon", "authority": "accepted", "stages": ["writer_pre_draft", "independent_reviewer"], "relevance": 1.0},
+            {"id": "DER-A", "class": "summary", "authority": "derived", "derived": True, "stages": ["writer_pre_draft"], "relevance": 0.99, "priority": 0},
+            {"id": "DER-B", "class": "summary", "authority": "derived", "derived": True, "stages": ["writer_pre_draft"], "relevance": 0.01, "priority": 5},
             {"id": "REG-1", "class": "regression", "authority": "learning", "stages": ["post_draft_critic"], "relevance": 0.6},
         ],
     }
-    overlay = update_control(None, item_id="DER-1", action="pin")
-    overlay = update_control(overlay, item_id="DER-1", action="priority", value=10)
+    overlay = update_control(None, item_id="DER-A", action="pin")
     edit = request_edit(manifest, overlay, item_id="CANON-1", patch={"text": "mutated"})
     protected = edit["proposal"]["status"] == "proposal_required" and edit["proposal"]["direct_mutation_performed"] is False
     stage_view = inspect(manifest, edit["overlay"], stage="writer_pre_draft")
     regression_hidden = next(x for x in stage_view["items"] if x["id"] == "REG-1")["eligible"] is False
+    ids = [x["id"] for x in stage_view["items"]]
+    explicit_controls_only = ids.index("DER-A") < ids.index("DER-B") < ids.index("CANON-1") and stage_view["semantic_relevance_used_for_ordering"] is False
     bad_leak_rejected = False
     try:
         normalize_manifest({"items": [{"id": "BAD", "class": "hidden_gold", "authority": "learning", "stages": ["writer_pre_draft"], "relevance": 1.0}]})
     except ValueError:
         bad_leak_rejected = True
-    ok = protected and regression_hidden and bad_leak_rejected and stage_view["authority"] is False
+    ok = protected and regression_hidden and bad_leak_rejected and explicit_controls_only and stage_view["authority"] is False
     dump({
         "context_inspector_contract": "PASS" if ok else "FAIL",
         "protected_edit_downgraded_to_proposal": protected,
         "pre_draft_regression_isolation": regression_hidden,
         "hidden_gold_leak_rejected": bad_leak_rejected,
+        "semantic_relevance_used_for_ordering": False,
+        "explicit_control_ordering": explicit_controls_only,
         "authority": False,
         "model_execution": False,
     })
