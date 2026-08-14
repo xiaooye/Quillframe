@@ -24,7 +24,7 @@ No absolute score collapses these dimensions into objective literary truth.
 
 ## 02 · Semantic intelligence lives in model contracts
 
-The registry at [`harness/semantic_workers/model_contracts.json`](../harness/semantic_workers/model_contracts.json) defines bounded semantic jobs. The runtime supplies only the candidate, allowed context, rubric, permissions, fingerprint, and typed output contract.
+The catalog at [`harness/semantic_workers/model_contract_catalog.json`](../harness/semantic_workers/model_contract_catalog.json) indexes progressively disclosed semantic contract packs. The runtime supplies only the candidate, allowed context, rubric, permissions, fingerprint, and typed output contract.
 
 Current quality-facing contracts include:
 
@@ -204,4 +204,4 @@ project    → Canon authority and settlement
 - [Reader Engagement](../surface/READER_ENGAGEMENT.en.md) — generic positive reader-quality model.
 - [Character & Relationship System](../core/CHARACTER_SYSTEM.en.md) — state and knowledge boundaries used by character integrity judgments.
 - [Semantic Worker Protocol](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md) — provider-neutral semantic job/result contract.
-- [`model_contracts.json`](../harness/semantic_workers/model_contracts.json) — current model-readable semantic registry.
+- [`model_contract_catalog.json`](../harness/semantic_workers/model_contract_catalog.json) — model-readable catalog for progressively disclosed semantic contract packs.
