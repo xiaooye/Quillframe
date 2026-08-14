@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Deterministic documentation QA for NovelForge.
 
-This checker intentionally performs no semantic/model judgment and is safe for
-normal CI. It catches objective source and layout-risk regressions; rendered
-visual inspection and native-language copy review remain mandatory per
-``docs/DOCUMENTATION_QA.*``.
+Normal CI must never spend model/API usage. This checker validates the machine-
+checkable half of the documentation contract; rendered composition and native-
+language judgment remain semantic review responsibilities.
 """
 from __future__ import annotations
 
+import json
 import re
 import unicodedata
 import xml.etree.ElementTree as ET
@@ -15,7 +15,8 @@ from pathlib import Path
 from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parents[1]
-ROOT_READMES = [ROOT / "README.md", ROOT / "README.en.md", ROOT / "README.zh-CN.md"]
+DOC_MANIFEST = ROOT / "docs" / "documentation_manifest.json"
+FRAMEWORK_MANIFEST = ROOT / "HARNESS_MANIFEST.yaml"
 UI_DIR = ROOT / "assets" / "ui"
 TARGET_GITHUB_WIDTH = 820.0
 MIN_RENDERED_TEXT_PX = 12.0
@@ -26,12 +27,36 @@ WARNINGS: list[str] = []
 
 HEX_RE = re.compile(r"^(?:#[0-9A-Fa-f]{3}|#[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{8})$")
 CSS_HEX_RE = re.compile(r"#([0-9A-Za-z]+)")
-ARROW_BLOCK_RE = re.compile(r"```text\s*\n(?:(?!```).)*(?:→|\s->\s)(?:(?!```).)*```", re.S)
+ARROW_BLOCK_RE = re.compile(r"```(?:text)?\s*\n(?:(?!```).)*(?:→|\s->\s)(?:(?!```).)*```", re.S)
 MD_LINK_RE = re.compile(r"(?:!\[[^\]]*\]|\[[^\]]*\])\(([^)]+)\)")
 HTML_LINK_RE = re.compile(r"\b(?:src|href)=[\"']([^\"']+)[\"']", re.I)
 NUM_RE = re.compile(r"^-?\d+(?:\.\d+)?$")
 FONT_SIZE_RE = re.compile(r"font-size\s*:\s*(\d+(?:\.\d+)?)px", re.I)
 FONT_SHORTHAND_RE = re.compile(r"\bfont\s*:\s*[^;{}]*?\b(\d+(?:\.\d+)?)px\b", re.I)
+H1_RE = re.compile(r"(?m)^# (?!#)")
+TABLE_SEPARATOR_RE = re.compile(r"(?m)^\s*\|?(?:\s*:?-{3,}:?\s*\|){2,}.*$")
+VERSION_RE = re.compile(r"(?m)^\s*version:\s*[\"']?([0-9]+\.[0-9]+\.[0-9]+)")
+STALE_EXAMPLE_RE = re.compile(
+    r'(?:minimum_framework_version\s*=\s*"7\.[01]\.0"|'
+    r'"version"\s*:\s*"7\.[01]\.0"|'
+    r'\bNovelForge\s+7\.[01](?:\.0)?\b)',
+    re.I,
+)
+
+CONTROLLED_DOC_ROOTS = (
+    ROOT,
+    ROOT / "assets",
+    ROOT / "core",
+    ROOT / "corpus",
+    ROOT / "docs",
+    ROOT / "evals",
+    ROOT / "harness",
+    ROOT / "knowledge",
+    ROOT / "release",
+    ROOT / "specs",
+    ROOT / "surface",
+)
+EXCLUDED_DISCOVERY_DIRS = {".git", ".novelforge", "node_modules", "dist", "__pycache__"}
 
 
 def rel(path: Path) -> str:
@@ -49,6 +74,31 @@ def warn(path: Path, message: str) -> None:
     WARNINGS.append(f"{rel(path)}: {message}")
 
 
+def load_doc_manifest() -> dict:
+    if not DOC_MANIFEST.exists():
+        error(DOC_MANIFEST, "missing documentation manifest")
+        return {}
+    try:
+        data = json.loads(DOC_MANIFEST.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        error(DOC_MANIFEST, f"invalid JSON: {exc}")
+        return {}
+    if data.get("schema") != "novelforge_documentation_manifest_v1":
+        error(DOC_MANIFEST, f"unexpected schema: {data.get('schema')!r}")
+    return data
+
+
+def framework_version() -> str | None:
+    if not FRAMEWORK_MANIFEST.exists():
+        error(FRAMEWORK_MANIFEST, "missing framework manifest")
+        return None
+    match = VERSION_RE.search(FRAMEWORK_MANIFEST.read_text(encoding="utf-8"))
+    if not match:
+        error(FRAMEWORK_MANIFEST, "cannot parse framework version")
+        return None
+    return match.group(1)
+
+
 def local_target(source: Path, raw: str) -> Path | None:
     raw = raw.strip()
     if not raw or raw.startswith(("http://", "https://", "mailto:", "#", "data:")):
@@ -61,14 +111,11 @@ def local_target(source: Path, raw: str) -> Path | None:
     return (source.parent / raw).resolve()
 
 
-def check_markdown(path: Path) -> None:
-    if not path.exists():
-        error(path, "missing required root README")
-        return
-    text = path.read_text(encoding="utf-8")
-    if ARROW_BLOCK_RE.search(text):
-        error(path, "Tier-A landing page contains a fenced arrow-process block; use a designed module or structured prose fallback")
+def markdown_table_count(text: str) -> int:
+    return len(TABLE_SEPARATOR_RE.findall(text))
 
+
+def check_links(path: Path, text: str) -> None:
     for match in list(MD_LINK_RE.finditer(text)) + list(HTML_LINK_RE.finditer(text)):
         target = local_target(path, match.group(1))
         if target is None:
@@ -81,18 +128,144 @@ def check_markdown(path: Path) -> None:
         if not target.exists():
             error(path, f"broken local link/asset: {match.group(1)}")
 
-    if path.name == "README.zh-CN.md":
-        # Advisory only. Product names and exact protocol identifiers can remain English.
-        risky = {
-            "reviewer shopping": "prefer a native Chinese explanation; preserve only an exact normative identifier when needed",
-            "semantic reject": "prefer Chinese prose with `semantic_reject` only as the exact identifier",
-            "consumer project": "prefer 下游项目",
-            "Human-facing": "prefer 人类可读 / 面向用户",
-            "Generic Framework": "prefer 通用框架 in explanatory prose",
-        }
-        for phrase, note in risky.items():
-            if phrase in text:
-                warn(path, f"Chinese copy contains '{phrase}': {note}")
+
+def check_chinese_copy(path: Path, text: str) -> None:
+    # Advisory heuristics only. Product names and exact protocol identifiers may remain English.
+    risky = {
+        "reviewer shopping": "prefer native Chinese prose; keep `reviewer shopping` only when naming the exact anti-pattern",
+        "semantic reject": "prefer Chinese prose with `semantic_reject` only as an exact identifier",
+        "consumer project": "prefer 下游项目",
+        "Human-facing": "prefer 面向用户 / 人类可读",
+        "Generic Framework": "prefer 通用框架 in explanatory prose",
+        "exactly one": "prefer 恰好一个 / 只能有一个 outside normative identifiers",
+        "must not": "prefer natural Chinese prohibition outside code/quoted identifiers",
+    }
+    for phrase, note in risky.items():
+        if phrase in text:
+            warn(path, f"Chinese copy contains {phrase!r}: {note}")
+
+
+def check_markdown(path: Path, *, tier: str, status: str, rewrite_policy: str) -> None:
+    if not path.exists():
+        error(path, "manifest-listed document is missing")
+        return
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as exc:
+        error(path, f"not valid UTF-8: {exc}")
+        return
+
+    h1_count = len(H1_RE.findall(text))
+    if h1_count != 1:
+        error(path, f"expected exactly one Markdown H1, found {h1_count}")
+
+    check_links(path, text)
+
+    strict_current = status == "reviewed_7_2" and rewrite_policy != "preserve_history"
+    if tier == "A":
+        if ARROW_BLOCK_RE.search(text):
+            msg = "Tier-A page contains a fenced arrow-process block; use a designed module or structured prose"
+            (error if strict_current else warn)(path, msg)
+        tables = markdown_table_count(text)
+        if tables:
+            msg = f"Tier-A page contains {tables} native Markdown table(s); product surfaces should use designed modules or compact prose"
+            (error if strict_current else warn)(path, msg)
+
+    if rewrite_policy != "preserve_history" and STALE_EXAMPLE_RE.search(text):
+        warn(path, "contains a 7.0/7.1 framework-version example/reference; verify whether it is intentionally historical or stale")
+
+    if path.name.endswith(".zh-CN.md"):
+        check_chinese_copy(path, text)
+
+
+def discover_bilingual_docs() -> set[str]:
+    found: set[str] = set()
+    # Root needs non-recursive handling so nested controlled roots are not duplicated.
+    for path in ROOT.glob("*.md"):
+        if path.name.endswith((".en.md", ".zh-CN.md")):
+            found.add(rel(path))
+    for base in CONTROLLED_DOC_ROOTS[1:]:
+        if not base.exists():
+            continue
+        for path in base.rglob("*.md"):
+            if any(part in EXCLUDED_DISCOVERY_DIRS for part in path.parts):
+                continue
+            if path.name.endswith((".en.md", ".zh-CN.md")):
+                found.add(rel(path))
+    return found
+
+
+def check_inventory(manifest: dict) -> list[tuple[Path, str, str, str]]:
+    docs = manifest.get("documents")
+    if not isinstance(docs, list):
+        error(DOC_MANIFEST, "documents must be a list")
+        return []
+
+    ids: set[str] = set()
+    tracked: set[str] = set()
+    checks: list[tuple[Path, str, str, str]] = []
+    allowed_tiers = {"A", "B", "C"}
+    allowed_status = {"needs_rebuild", "reviewed_7_2", "preserve"}
+
+    for entry in docs:
+        if not isinstance(entry, dict):
+            error(DOC_MANIFEST, "document entry must be an object")
+            continue
+        doc_id = entry.get("id")
+        if not isinstance(doc_id, str) or not doc_id:
+            error(DOC_MANIFEST, "document entry is missing id")
+            continue
+        if doc_id in ids:
+            error(DOC_MANIFEST, f"duplicate document id: {doc_id}")
+        ids.add(doc_id)
+
+        tier = entry.get("tier")
+        status = entry.get("status")
+        rewrite_policy = entry.get("rewrite_policy", "rebuild")
+        if tier not in allowed_tiers:
+            error(DOC_MANIFEST, f"{doc_id}: invalid tier {tier!r}")
+        if status not in allowed_status:
+            error(DOC_MANIFEST, f"{doc_id}: invalid status {status!r}")
+
+        en = entry.get("english")
+        zh = entry.get("chinese")
+        if not isinstance(en, str) or not en.endswith(".en.md"):
+            error(DOC_MANIFEST, f"{doc_id}: english path must end in .en.md")
+            continue
+        if not isinstance(zh, str) or not zh.endswith(".zh-CN.md"):
+            error(DOC_MANIFEST, f"{doc_id}: chinese path must end in .zh-CN.md")
+            continue
+
+        expected_zh = en[:-6] + ".zh-CN.md"
+        if zh != expected_zh:
+            error(DOC_MANIFEST, f"{doc_id}: bilingual pair path mismatch: expected {expected_zh}")
+
+        for raw in (en, zh):
+            if raw in tracked:
+                error(DOC_MANIFEST, f"path tracked by more than one document entry: {raw}")
+            tracked.add(raw)
+            checks.append((ROOT / raw, str(tier), str(status), str(rewrite_policy)))
+
+    discovered = discover_bilingual_docs()
+    untracked = sorted(discovered - tracked)
+    if untracked:
+        for raw in untracked:
+            error(ROOT / raw, "bilingual human-facing doc is not registered in documentation_manifest.json")
+
+    routers = manifest.get("routers", [])
+    if not isinstance(routers, list):
+        error(DOC_MANIFEST, "routers must be a list")
+    else:
+        for item in routers:
+            raw = item.get("path") if isinstance(item, dict) else None
+            if not isinstance(raw, str):
+                error(DOC_MANIFEST, "router entry missing path")
+                continue
+            path = ROOT / raw
+            if not path.exists():
+                error(path, "manifest-listed router is missing")
+
+    return checks
 
 
 def parse_viewbox(path: Path, root: ET.Element) -> tuple[float, float, float, float] | None:
@@ -220,7 +393,6 @@ def check_svg(path: Path) -> None:
         text = element_text(el)
         if not text:
             continue
-
         x = numeric_attr(el, "x")
         y = numeric_attr(el, "y")
         if x is not None and not (vx <= x <= vx + vw):
@@ -236,7 +408,6 @@ def check_svg(path: Path) -> None:
             rendered = font_size * scale
             if rendered < MIN_RENDERED_TEXT_PX:
                 error(path, f"text becomes ~{rendered:.1f}px at {TARGET_GITHUB_WIDTH:.0f}px GitHub width (< {MIN_RENDERED_TEXT_PX}px): {text[:48]!r}")
-
             if len(text) >= LONG_TEXT_CHARS:
                 budget_raw = el.attrib.get("data-max-width")
                 if not budget_raw:
@@ -255,14 +426,34 @@ def check_svg(path: Path) -> None:
 
 
 def main() -> int:
-    for path in ROOT_READMES:
-        check_markdown(path)
+    manifest = load_doc_manifest()
+    current_version = framework_version()
+    if manifest and current_version and manifest.get("framework_version") != current_version:
+        error(DOC_MANIFEST, f"framework_version={manifest.get('framework_version')!r} does not match HARNESS_MANIFEST.yaml {current_version!r}")
+
+    checks = check_inventory(manifest) if manifest else []
+    for path, tier, status, rewrite_policy in checks:
+        check_markdown(path, tier=tier, status=status, rewrite_policy=rewrite_policy)
+
+    # Root README.md is the stable product entrypoint even though bilingual authority
+    # lives in README.en.md / README.zh-CN.md.
+    root_readme = ROOT / "README.md"
+    if not root_readme.exists():
+        error(root_readme, "missing root product entrypoint")
+    else:
+        check_links(root_readme, root_readme.read_text(encoding="utf-8"))
 
     if not UI_DIR.exists():
         error(UI_DIR, "missing assets/ui directory")
     else:
         for path in sorted(UI_DIR.glob("home-*.svg")):
             check_svg(path)
+
+    if manifest:
+        states: dict[str, int] = {}
+        for entry in manifest.get("documents", []):
+            states[entry.get("status", "unknown")] = states.get(entry.get("status", "unknown"), 0) + 1
+        print("documentation-inventory:", ", ".join(f"{k}={v}" for k, v in sorted(states.items())))
 
     for item in WARNINGS:
         print(f"WARNING: {item}")
