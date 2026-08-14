@@ -1,107 +1,42 @@
-name: NovelForge Peer Chat Semantic Bridge
+name: NovelForge Project-Hosted Peer Chat Bridge
 
 on:
-  issues:
-    types: [opened]
-  issue_comment:
-    types: [created]
+  workflow_call:
+    inputs:
+      mode:
+        description: prepare or validate-result
+        required: true
+        type: string
+      project_root:
+        description: NovelForge Project root in the caller repository
+        required: true
+        type: string
+      project_id:
+        description: Expected Project ID
+        required: true
+        type: string
 
 permissions:
   contents: read
   issues: write
 
 concurrency:
-  group: novelforge-peer-${{ github.event.issue.number }}
+  group: novelforge-peer-${{ github.repository }}-${{ github.event.issue.number }}
   cancel-in-progress: false
 
 jobs:
-  prepare:
-    if: >-
-      github.event_name == 'issues' &&
-      github.actor == github.repository_owner &&
-      startsWith(github.event.issue.title, '[semantic-worker] ')
+  project-peer-bridge:
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ github.token }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout consuming Project repository
+        uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Validate issue job
-        run: |
-          python - <<'PY'
-          import json,os,pathlib
-          event=json.load(open(os.environ['GITHUB_EVENT_PATH'],encoding='utf-8'))
-          issue=event['issue']; body=issue.get('body') or ''
-          expected=issue['title'][len('[semantic-worker] '):].strip()
-          job=json.loads(body)
-          if not isinstance(job,dict) or job.get('job_id')!=expected:
-              raise SystemExit('issue body must be one semantic job matching title job_id')
-          pathlib.Path('/tmp/job.json').write_text(json.dumps(job,ensure_ascii=False,indent=2),encoding='utf-8')
-          pathlib.Path('/tmp/jobs.json').write_text(json.dumps({'jobs':[job]},ensure_ascii=False),encoding='utf-8')
-          PY
-          python harness/semantic_workers/semantic_worker_router.py validate-jobs --jobs /tmp/jobs.json
-      - name: Build peer packet
-        run: |
-          python harness/semantic_workers/peer_chat_relay.py build --job /tmp/job.json --output /tmp/packet.json
-          {
-            echo '<!-- novelforge-peer-packet-v1 -->'
-            echo '`semantic_status: awaiting_user`'
-            echo
-            echo 'Use a genuinely separate chat/reviewer session. Paste the packet below and return only its typed result in a new comment prefixed with `<!-- novelforge-peer-result-v1 -->`.'
-            echo
-            echo '```json'
-            cat /tmp/packet.json
-            echo '```'
-          } > /tmp/comment.md
-          gh issue comment "$ISSUE_NUMBER" --body-file /tmp/comment.md
-
-  validate-result:
-    if: >-
-      github.event_name == 'issue_comment' &&
-      github.actor == github.repository_owner &&
-      startsWith(github.event.issue.title, '[semantic-worker] ') &&
-      contains(github.event.comment.body, '<!-- novelforge-peer-result-v1 -->')
-    runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ github.token }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
-      GH_REPO: ${{ github.repository }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Execute exact-revision NovelForge peer bridge
+        uses: $/.github/actions/project-peer-semantic
         with:
-          python-version: '3.11'
-      - name: Recover packet and result
-        run: |
-          gh api "repos/${GH_REPO}/issues/${ISSUE_NUMBER}/comments?per_page=100" > /tmp/comments.json
-          python - <<'PY'
-          import json,os,pathlib
-          event=json.load(open(os.environ['GITHUB_EVENT_PATH'],encoding='utf-8'))
-          comments=json.load(open('/tmp/comments.json',encoding='utf-8'))
-          packet_marker='<!-- novelforge-peer-packet-v1 -->'
-          result_marker='<!-- novelforge-peer-result-v1 -->'
-          def fenced(body,marker):
-              tail=body.split(marker,1)[1]
-              if '```json' in tail: tail=tail.split('```json',1)[1].split('```',1)[0]
-              elif '```' in tail: tail=tail.split('```',1)[1].split('```',1)[0]
-              return json.loads(tail.strip())
-          packets=[c for c in comments if packet_marker in (c.get('body') or '')]
-          if not packets: raise SystemExit('no peer packet found')
-          pathlib.Path('/tmp/packet.json').write_text(json.dumps(fenced(packets[-1]['body'],packet_marker),ensure_ascii=False),encoding='utf-8')
-          pathlib.Path('/tmp/result.json').write_text(json.dumps(fenced(event['comment']['body'],result_marker),ensure_ascii=False),encoding='utf-8')
-          PY
-      - name: Validate binding
-        run: python harness/semantic_workers/peer_chat_relay.py validate-result --packet /tmp/packet.json --result /tmp/result.json > /tmp/validation.json
-      - name: Mark ready
-        run: |
-          {
-            echo '<!-- novelforge-peer-validation-v1 -->'
-            echo '`semantic_status: validated_result_ready`'
-            echo
-            echo 'Fingerprint + relay binding passed. The manager may consume this result once after revalidating project authority.'
-          } > /tmp/comment.md
-          gh issue comment "$ISSUE_NUMBER" --body-file /tmp/comment.md
-          gh issue close "$ISSUE_NUMBER" --reason completed
+          mode: ${{ inputs.mode }}
+          project-root: ${{ inputs.project_root }}
+          project-id: ${{ inputs.project_id }}
+          github-token: ${{ github.token }}
