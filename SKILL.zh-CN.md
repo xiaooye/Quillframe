@@ -1,8 +1,8 @@
-# NovelForge Skill Contract · 7.1 中文版
+# NovelForge Skill Contract · 7.2 中文版
 
 ## 定位
 
-NovelForge 是完全 project-agnostic 的小说生产 Framework。它拥有通用 Story/Character/Canon 机制、Surface/Reader 质量基础、capability-aware Harness/runtime orchestration、Corpus Intelligence、durable Adaptive Learning、Eval/Regression、deterministic Framework bundle、Project Engineering Contract 与 provider-neutral integrations。
+NovelForge 是完全 project-agnostic 的小说生产 Framework。它拥有通用 Story/Character/Canon 机制、Surface/Reader 质量基础、capability-aware Harness/runtime orchestration、作者可检查的 Context/Memory 控制层、Reader Simulation 与 Quality Evolution、Corpus Intelligence、durable Adaptive Learning、Eval/Regression、deterministic Framework bundle、Project Engineering Contract 与 provider-neutral integrations。
 
 Framework 内不得内置任何具体小说、人物、剧情、Canon 或用户私有 taste data。
 
@@ -17,7 +17,7 @@ Framework 内不得内置任何具体小说、人物、剧情、Canon 或用户�
 5. lock 若包含 `bundle_fingerprint`，先验证 materialized Framework bundle，再把它作为 runtime bytes；
 6. 创建/恢复 manager session + run；
 7. 需要 external/tool work 时，建立/读取 typed host capability manifest，再 resolve 所需 capability；
-8. 建立 sparse Context Manifest；
+8. 建立 sparse Context Manifest，并只通过 authority-aware control 检查/编辑 context overlay 或 memory view；
 9. 只加载当前任务需要的 Project object 与 Framework module；
 10. external wait / consequential write 前 checkpoint；
 11. mandatory semantic judgment 必须来自真正独立的 invocation/session；
@@ -49,6 +49,46 @@ Framework anti-AI Surface fundamentals 默认启用。Profile-sensitive exceptio
 - `surface/READER_ENGAGEMENT.zh-CN.md`
 - Context Manifest 选择出的 project profiles
 - Regression/benchmark 如需 critic isolation，只能在 Raw Draft 冻结后进入 critic/auditor context。
+
+## Reader Simulation / Quality Evolution · 7.2
+
+7.2 新增作者可观察的质量闭环，但**不会降低独立语义审查要求**：
+
+- `quality/reader_panel.py` 使用阅读行为 persona 模拟读者，记录 continue intent、注意力掉点、reward、confusion，并通过 A/B 顺序互换检测 position bias；
+- `quality/revision_orchestrator.py` 规划 continuity / character / reader / surface / research 等窄 pass，单一 pass 失败不拖死其他 pass，统一去重 finding，并把修复路由回 owning mechanism；
+- `quality/quality_evolution.py` 持久化 candidate lineage 与 fingerprint-bound comparison，comparison result logical consume-once，并用 plateau stopping 阻止无限修改；
+- `quality/character_integrity.py` 打包有界的 agenda / knowledge / voice / relationship / spatial-task audit；
+- `quality/state_graph.py` 只把 graph 当 derived verification view，区分 evidence-backed transition 与 unexplained/stable-field contradiction；
+- `quality/findings.py` 提供统一 evidence-chained finding contract。
+
+即使多个 Reader Persona 由同一模型执行，Reader Panel 依然可以提供很强的 editorial diagnostic；但它**不是 mandatory independent semantic PASS**。也不允许仅凭一个 1–10 absolute score 决定保留哪个版本，优先使用 pairwise evidence + regression。
+
+Failure ownership 保持明确：
+- isolated surface defect → local rewrite；
+- clustered surface defects → whole-scene regeneration；
+- SAFE-BUT-FLAT / reader-grip fail → Reader Pressure + Scene Simulation；
+- character fail → Character Simulation；
+- story fail → Story / Plan；
+- continuity fail → state/transition repair。
+
+## Context / Editable Memory · 7.2
+
+读取/使用：
+- `harness/context_inspector.py`
+- `harness/memory_tiers.py`
+- `harness/memory_bank.py`
+
+Context Inspector 直接暴露某个 context item 为什么被带入、authority、注入 stage、relevance 与 pin state。Tier allocator 将 already-derived / project-provided memory 分成 `hot | working | archival`，explicit pin 和 current-event relevance 优先于泛化 similarity。
+
+Durable Memory Bank 可以被作者编辑，但**绝不成为第二 Canon store**：
+- `locked` / `accepted` entry 只是受保护的 reference snapshot；
+- 编辑受保护 entry 时创建 `proposal` child，不修改原 entry；
+- proposal memory 默认不进入 pre-draft context；
+- derived/runtime 等可编辑 entry 必须通过 exact before-fingerprint guard；
+- derived entry 保留 source refs/fingerprints，且 `authority=false`；
+- pin/priority 只改变 retrieval，不改变故事事实。
+
+Memory Bank ≠ Canon。Context Overlay ≠ Canon。Derived Summary ≠ Canon。Proposal ≠ current state。
 
 ## Story / Canon Stack
 
@@ -119,7 +159,7 @@ feedback evidence / hypothesis
 → observe / revise / rollback
 ```
 
-7.1 使用：
+7.1 建立的 Adaptive Runtime 基础在 7.2 中继续生效：
 - `learning/learning_store.py`：evidence/hypothesis/gap/candidate；
 - `learning/learning_cycle.py`：durable cycle state、artifact hash、consume-once receipt；
 - `learning/learning_eval.py`：blind semantic analysis/eval work packet；
@@ -146,19 +186,19 @@ Corpus 是 evidence/benchmark，不是 Canon，也不是作者模仿剪贴簿。
 
 默认一个 manager。只有 capability、context isolation、真正 independence 或有价值的 parallelism 需要时才增加 bounded worker。
 
-Deterministic code 负责 identity、persistence、state transition、capability resolution、fingerprint、provenance validation、permission、idempotency、consume-once receipt、bundle verification 与 invariant；semantic worker 负责 deterministic test 无法替代的判断。
+Deterministic code 负责 identity、persistence、state transition、capability resolution、fingerprint、provenance validation、permission、idempotency、consume-once receipt、bundle verification、Context/Memory authority controls、Quality Evolution bookkeeping 与 invariant；semantic worker 负责 deterministic test 无法替代的判断。
 
 ## Writes
 
 任何 side effect 都需要 least privilege、exact target、precondition/before-state、idempotency、post-condition 与适当 rollback/trace。
 
-Connector、webhook、schedule、Corpus/discovery result、learning hypothesis、promotion-gate result、semantic result、session state 都不会自动授予 Canon 或 Framework-write authority。
+Connector、webhook、schedule、Corpus/discovery result、learning hypothesis、promotion-gate result、semantic result、reader-panel result、memory-bank edit、revision report、session state 都不会自动授予 Canon 或 Framework-write authority。
 
 ## CI / Release / Self-improvement
 
 Normal CI 必须 deterministic，不得静默消耗 API/Codex/Claude/model usage。
 
-Normal CI 必须覆盖 host-capability guard、durable Learning Cycle、blind learning packet、Promotion Gate prerequisite、Corpus discovery provenance/rights boundary、deterministic Framework bundle reproducibility/tamper detection。
+Normal CI 必须覆盖 host-capability guard、author-control/context-memory guard、reader/evolution/revision contract、durable Learning Cycle、blind learning packet、Promotion Gate prerequisite、Corpus discovery provenance/rights boundary、deterministic Framework bundle reproducibility/tamper detection。
 
 Scheduled maintenance 可以 observe / plan / queue，但不能假装执行未声明的 Web/model capability，也不能 auto-promote Framework behavior。
 
