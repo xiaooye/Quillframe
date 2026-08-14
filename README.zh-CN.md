@@ -1,80 +1,119 @@
-# NovelForge · 自适应小说 Agent 框架
+<div align="center">
+  <img src="assets/hero-framework.svg" alt="NovelForge 自适应小说 Agent 框架" width="100%" />
 
-<p align="center">
-  <strong>面向长篇与连载小说的、项目无关的生产级 Agent Framework。</strong>
-</p>
+  <h1>NovelForge · 自适应小说 Agent 框架</h1>
+  <p><strong>面向长篇与连载小说的、project-agnostic 的生产级 Agent Framework。</strong></p>
+  <p><code>Story State</code> · <code>Session Runtime</code> · <code>Reader Quality</code> · <code>Adaptive Learning</code> · <code>Provider Neutral</code></p>
+  <p><a href="README.en.md">English</a> · <strong>简体中文</strong></p>
+</div>
 
-<p align="center">
-  <a href="README.en.md">English</a> · 简体中文
-</p>
+> 🌸 **NovelForge 不把小说生产理解成“大纲 → Prompt → 章节”，而是一个同时包含 Story、Canon、编辑质量、长期学习与 Agent Runtime 的有状态系统。**
 
-## 为什么是 NovelForge
+## ✨ 为什么是 NovelForge
 
-多数 AI 小说工具停在 `大纲 → Prompt → 章节`。NovelForge 把小说创作视为一个同时包含软件工程、编辑流程和长期记忆的有状态生产系统：
+多数 AI 小说工具把模型调用当中心；NovelForge 把**可恢复的生产流程与明确 authority** 放在中心。模型负责真正需要语义判断的部分，确定性的状态迁移、权限、fingerprint、checkpoint、settlement 与 idempotency 则交给显式机制。
 
-- 显式 Story Architecture 与 Canon 状态；
-- session-native orchestration 与可恢复 checkpoint；
-- bounded specialist workers，而不是热闹但低效的 agent round-table；
-- fingerprint-bound 的独立语义审计；
-- Surface Quality 与 Reader Engagement 双重质量门；
-- 基于证据的用户偏好学习；
-- 自主 Corpus discovery 与 benchmark 建设；
-- 权利/来源感知的语料处理；
-- capability eval + regression eval；
-- provider-neutral runtime：普通 chat、本地 agent、MCP、API、CI job、local model 或 human reviewer 都可以接入。
+这意味着它可以同时处理：
 
-本仓库刻意**不包含任何内置小说、人物、剧情或 Canon**。具体项目只通过 Project Adapter 提供自己的 profile 与 state。
+| Domain | 能力 | 不变量 |
+|---|---|---|
+| **Story & Canon** | Story hierarchy、人物、关系、信息边界、资源、伏笔、continuity | Plan / Review / Memory ≠ Canon |
+| **Harness & Sessions** | task routing、sparse context、checkpoint、handoff、worker | Session state ≠ Project authority |
+| **Quality Runtime** | Surface Fundamentals、Reader Engagement、independent semantic review | “没犯错” ≠ “好看” |
+| **Learning & Corpus** | evidence、taste hypothesis、corpus gap、benchmark、eval | Model inference ≠ durable preference |
+| **Project Engineering** | manifest、lockfile、adapter、validation、build/release | Framework ≠ consumer project |
 
-## 总体架构
+> **Boundary ✦** 本仓库刻意**不包含任何内置小说、人物、剧情或 Canon**。具体小说只通过 Project Adapter 提供自己的 profile / state / plans；Framework 不会反向吸收 consumer project 的故事事实。
+
+## 🪄 总体架构
 
 ```mermaid
 flowchart TB
-    U[用户 / 编辑] --> M[Harness Manager]
-    PA[Project Adapter] --> M
-    M --> CTX[Context Broker]
-    M --> CP[Session & Control Plane]
-    CTX --> CORE[Story / Character / Canon Core]
-    CORE --> SIM[Scene & Character Simulation]
-    SIM --> D[Event-first Draft]
-    D --> SURF[Surface Runtime]
-    SURF --> READ[Reader Engagement]
-    READ --> SEM[Independent Semantic Review]
-    SEM --> CONT[Continuity / State Audit]
-    CONT --> GATE[User-visible Gate]
+    subgraph INPUT[Project / User]
+        U[用户 / 编辑]
+        PA[Project Adapter]
+    end
 
-    U --> PREF[Preference Evidence]
-    PREF --> HYP[Taste Hypothesis Graph]
-    HYP --> GAP[Corpus Gap Detector]
-    GAP --> SCOUT[Corpus Scout]
-    SCOUT --> RIGHTS[Rights & Provenance Gate]
-    RIGHTS --> ANALYZE[Mechanism Analysis]
-    ANALYZE --> BENCH[Benchmarks + Evals]
-    BENCH --> HYP
-    BENCH --> SURF
-    BENCH --> READ
+    subgraph RUNTIME[Harness Runtime]
+        M[Harness Manager]
+        CTX[Sparse Context]
+        CP[Sessions · Checkpoints · Control Plane]
+    end
+
+    subgraph PROD[Fiction Production]
+        CORE[Story · Character · Canon]
+        SIM[Scene + Character Simulation]
+        D[Event-first Draft]
+        SURF[Surface Fundamentals]
+        READ[Reader Engagement]
+        SEM[Independent Semantic Review]
+        CONT[Continuity / State Audit]
+        GATE[User-visible Gate]
+    end
+
+    subgraph LEARN[Learning & Evidence]
+        PREF[Preference Evidence]
+        HYP[Taste Hypotheses]
+        GAP[Corpus Gaps]
+        RIGHTS[Rights · Provenance]
+        BENCH[Benchmarks · Evals]
+    end
+
+    U --> M
+    PA --> M
+    M --> CTX
+    M --> CP
+    CTX --> CORE
+    CORE --> SIM --> D --> SURF --> READ --> SEM --> CONT --> GATE
+
+    U -. feedback .-> PREF
+    PREF --> HYP --> GAP --> RIGHTS --> BENCH
+    BENCH -. quality evidence .-> SURF
+    BENCH -. reader evidence .-> READ
+    CP -. resume / bind .-> M
+
+    classDef project fill:#DDF2FF,stroke:#5B98C4,color:#2B2433,stroke-width:1.5px;
+    classDef runtime fill:#E8DDFB,stroke:#8B7AC6,color:#2B2433,stroke-width:1.5px;
+    classDef story fill:#FFFDFB,stroke:#796D84,color:#2B2433,stroke-width:1.5px;
+    classDef quality fill:#FAD7E8,stroke:#D982A8,color:#2B2433,stroke-width:1.5px;
+    classDef evidence fill:#FFF0C7,stroke:#C9973B,color:#2B2433,stroke-width:1.5px;
+    classDef gate fill:#D9F5E5,stroke:#58A98C,color:#2B2433,stroke-width:1.5px;
+
+    class PA,CTX project;
+    class M,CP,SEM runtime;
+    class CORE,SIM,D story;
+    class SURF,READ,U quality;
+    class PREF,HYP,GAP,RIGHTS,BENCH evidence;
+    class GATE gate;
 ```
 
-## 核心子系统
+**读图方式：** 实线表示主执行 / dependency path；虚线表示 feedback、evidence 或 resume loop。颜色只是辅助分组，节点文字本身始终保留完整语义。
+
+## 📖 核心子系统
 
 ### 1. Story / Canon Core
 
-管理 BOOK/VOLUME/ARC/UNIT/CHAPTER/SCENE 层级、人物自主性、信息边界、关系、资源、义务、伏笔、证据、依赖与 Accepted Canon。Plan 不会因为存在于系统里就自动成为 Canon。
+管理 `BOOK → VOLUME → ARC → UNIT → CHAPTER → SCENE` 层级，以及人物自主性、关系、信息边界、资源、义务、伏笔、证据、依赖、Accepted Canon 与 settlement。**Plan 不会因为“系统记得它”就自动成为 Canon。**
 
 ### 2. Harness & Sessions
 
-Harness 使用 deterministic outer workflow，并默认一个 manager。Session、run、checkpoint、event、handoff、worker lease 与 exactly-once logical consumption 都是明确的 runtime state。
+Harness 采用 deterministic outer workflow，并默认一个 manager。`session / run / checkpoint / event / handoff / worker lease / result receipt` 都是明确的 runtime state；persistent session 只表示“工作做到哪里”，不自动授予故事 authority。
 
 ### 3. Surface + Reader Engagement
 
-Surface Safety 负责拦截 malformed、AI-ish、机械实现的正文；Reader Engagement 单独衡量 narrative pressure、reward、tonal contrast、curiosity evolution、scene causality 与 forward pull。文字“没犯错”仍然可能因为无聊而失败。
+Surface Fundamentals 拦截 malformed、AI-ish、机械化实现；Reader Engagement 单独衡量 narrative pressure、reward、tonal contrast、curiosity evolution、scene causality 与 forward pull。
+
+> ✨ **关键点：** clean prose 只是地板。一个章节可以完全“没有明显错误”，但依然因为 SAFE-BUT-FLAT 而 Gate Fail。
 
 ### 4. Independent Semantic Workers
 
-Mandatory independent review 必须来自真正不同的 session/invocation。可用 transport 包括本地 Codex/Claude child process、provider adapter、MCP worker、GitHub job、独立 peer chat、local model 和 human reviewer。同 session 换一个“critic 角色”永远不算独立审计。
+Mandatory independent review 必须来自真正不同的 session/invocation，并绑定 artifact fingerprint。可用 transport 包括本地 Codex/Claude、provider adapter、MCP worker、GitHub job、独立 peer chat、local model 与 human reviewer。
+
+同一个 session 里让 manager 换一个“critic 角色”不算 independent review；有效 semantic reject 也不能靠 reviewer-shopping 审到 PASS。
 
 ### 5. Adaptive Preference Learning
 
-NovelForge 不把用户口味压成一张静态 style prompt，而是维护有证据支撑、可被推翻的 hypothesis：
+NovelForge 不把用户口味压成一张永久 style prompt，而是维护有证据、有 contradiction、可 narrow / deprecate / rollback 的 hypothesis：
 
 ```text
 feedback
@@ -89,24 +128,24 @@ feedback
 → active profile / rollback
 ```
 
-系统可以自主发现**新的偏好维度**，而不只是修改预设 slider。
+系统可以发现**新的偏好维度**，而不只是修改预设 slider。模型自己“觉得用户喜欢什么”永远不能单独 promote durable taste。
 
 ### 6. Corpus Intelligence
 
-Corpus 是一等公民。系统可以自主识别证据缺口、生成 discovery plan、通过当前 host 的 Web/GitHub/MCP connector 检索合法来源、分类 rights、提炼 mechanism-level observation、主动寻找 counterexample、构建 cross-work benchmark，并用结果强化 personalized profile 或 General Craft。
+Corpus 是 evidence infrastructure，而不是小说 Canon。系统可以识别证据缺口、生成 discovery plan、通过当前 host 的 Web/GitHub/MCP connector 检索合法来源、分类 rights/provenance、提炼 mechanism-level observation、寻找 counterexample，并构建 cross-work benchmark。
 
-它不会因为现代小说“网上能看”就整章镜像，也不会生成“模仿某位在世作者”的句式指纹。
+现代版权小说不会因为“网上能读”就被整章镜像，也不会生成 named-author imitation fingerprint。
 
 ### 7. Eval & Self-improvement
 
-任何持久行为升级都必须有 mechanism evidence、counterexample/profile boundary、eval coverage、version/rollback 与 post-change regression。用户明确拒绝的模型输出可以成为 negative regression evidence，但不能成为正向风格范例。
+任何 durable Framework behavior promotion 都要求 mechanism evidence、counterexample/profile boundary、eval coverage、version/rollback 与 post-change regression。用户明确拒绝的模型输出可以成为 negative regression evidence，但不能成为正向风格 exemplar。
 
-## Runtime 模型
+## ⚙️ Runtime 模型
 
 ```text
-resource/project
-→ session/thread
-→ run/invocation
+resource / project
+→ session / thread
+→ run / invocation
 → checkpoint
 → event / handoff
 → worker lease / external wait
@@ -116,25 +155,25 @@ resource/project
 → resume
 ```
 
-Chat session 是一等 runtime。只要 host 还有其他合格的 independent worker path，framework 本身不要求必须持有 API key。
+Chat session 是一等 runtime。只要 host 仍有其他合格的 independent worker path，Framework 本身不要求必须持有 API key。
 
-## Provider-neutral execution
+### Provider-neutral execution
 
 | Runtime | Manager | Specialist | Independent review | 常见 transport |
 |---|---:|---:|---:|---|
 | 当前 Chat session | ✓ | bounded | self-review ✗ | host chat |
-| 独立 Peer Chat | — | — | ✓ | user/connector relay |
+| 独立 Peer Chat | — | — | ✓ | user / connector relay |
 | Codex CLI | ✓ | ✓ | ✓ 独立 invocation | local process / MCP |
 | Claude Code | ✓ | ✓ | ✓ 独立 invocation | local process / MCP |
 | Provider API | — | ✓ | ✓ | adapter |
-| GitHub Actions | — | ✓ | 有 worker backend 时 ✓ | workflow/event |
+| GitHub Actions | — | ✓ | 有 worker backend 时 ✓ | workflow / event |
 | Remote MCP worker | ✓ | ✓ | isolated session ✓ | Streamable HTTP |
 | Local model | optional | ✓ | isolated invocation ✓ | adapter |
 | Human reviewer | — | — | ✓ | relay |
 
-## Project Adapter 边界
+## 🧩 Project Adapter 边界
 
-具体小说只提供项目自己的信息：
+具体小说只提供 project-owned information：
 
 ```text
 project/
@@ -154,9 +193,26 @@ Project → NovelForge
 NovelForge -X→ Project-specific imports
 ```
 
-CI 会直接拒绝 framework repo 中出现 project-specific leakage。
+CI 会直接拒绝 Framework repo 中出现 consumer-project leakage。
 
-## 双语文档
+## 🗺️ Repository Map
+
+```text
+.
+├── core/                   # Story / Character / Canon primitives
+├── surface/                # prose realization + reader engagement
+├── harness/                # orchestration / sessions / control plane / workers
+├── learning/               # preference evidence + promotion / rollback
+├── corpus/                 # discovery / rights / analysis / benchmarks
+├── knowledge/              # generic craft + framework research
+├── evals/                  # capability / regression suites
+├── docs/                   # architecture / SDK / integration guides
+├── assets/                 # visual identity + documentation design system
+├── project_sdk.py          # project engineering contract
+└── project_adapter.py      # standard / mapped project resolution
+```
+
+## 🌐 双语文档
 
 所有面向人的文档都发布为中英双语成对版本：
 
@@ -165,43 +221,30 @@ name.en.md
 name.zh-CN.md
 ```
 
-`README.md`、`AGENTS.md`、`CLAUDE.md`、`SKILL.md` 等工具约定入口保持精简 bootstrap，并链接到对应的中英权威版本。CI 检查文档配对和内部链接。
+`README.md`、`AGENTS.md`、`CLAUDE.md`、`SKILL.md` 等 stable entry 保持 compact bootstrap；CI 检查文档配对和内部链接。Machine schema 继续使用单份 JSON/YAML，避免双份 schema 漂移。
 
-机器 schema 仍使用单份 JSON/YAML，避免两套 schema 漂移；其人类说明文档必须双语。
+## 🎨 Visual Documentation
 
-## Visual Documentation
+Mermaid 是 authoritative diagram format，因为它可 version-control、可 diff、可 review。`assets/` 提供统一的 **professional technical + anime-editorial** 视觉系统；Hero、sakura/lavender/mint accent、少量 `🌸 ✨ 📖 ✦` 与未来原创 editor/mascot motif 都只属于 decorative layer。
 
-架构图使用 Mermaid，使图本身可以 version-control 和 diff。`assets/` 下使用统一、原创的 manga/anime-inspired visual system 作为品牌和文档装饰，不参与任何 runtime authority。
+- [文档设计系统](assets/DESIGN_SYSTEM.zh-CN.md)
+- [Visual System](assets/README.zh-CN.md)
 
-## Repository Map
+> `(˶ᵔ ᵕ ᵔ˶)` 可以存在于 README 的微文案里；它永远不会出现在 schema、authority contract 或机器状态里。
 
-```text
-.
-├── core/                   # story / character / Canon / context primitives
-├── surface/                # prose realization + reader engagement
-├── harness/                # orchestration / sessions / control plane / workers
-├── learning/               # user taste + promotion / rollback
-├── corpus/                 # discovery / rights / analysis / benchmarks
-├── knowledge/              # general craft + framework research
-├── evals/                  # capability / regression suites
-├── integrations/           # host/runtime adapters
-├── schemas/                # stable machine contracts
-├── docs/                   # architecture and guides
-├── assets/                 # diagrams / visual identity
-└── examples/               # 只允许 project-agnostic fixtures
-```
-
-## 原则
+## ✦ 原则
 
 - 从简单开始：multi-agent 是实现选择，不是质量特性。
-- 持久化 operational state，不持久化 accidental authority。
-- Sparse retrieval；不把整本 Story Bible 塞给每一次模型调用。
-- Writer context 与 regression gold / reviewer expectation 隔离。
+- Persist operational state，不持久化 accidental authority。
+- Sparse retrieval：Storage 里“存在”不等于自动注入 prompt。
+- Writer context 与 regression gold / expected verdict 隔离。
 - 学习 mechanism，不学禁词表，也不学作者模仿模板。
-- Semantic rejection 是有效判断，不是换 reviewer 审到 PASS 的理由。
+- Semantic rejection 是有效判断，不是换 reviewer 的理由。
 - Corpus 是 evidence，不是 Canon。
 - User taste 是可修订的证据模型，不是永久神话。
 
-## 当前状态
+## 🚧 当前状态
 
-Framework 正在从早期 monorepo prototype 整理成完全自包含的 Generic Story/Surface/Corpus/Learning/Eval stack，同时补齐双语文档、project-leakage CI 与 session-native integrations。
+NovelForge v7 正在把 Generic Story / Surface / Corpus / Learning / Eval、session-native Harness、provider-neutral runtime 与 Project SDK 收敛为一个自包含 Framework。Normal CI 保持 deterministic；live semantic model execution 必须显式触发，不能静默消耗 usage。
+
+<p align="center"><sub>严谨的后台，鲜活的正文；专业的文档，再偷偷撒一点樱花。🌸</sub></p>
