@@ -1,80 +1,119 @@
-# NovelForge · Adaptive Fiction Agent Framework
+<div align="center">
+  <img src="assets/hero-framework.svg" alt="NovelForge adaptive fiction agent framework" width="100%" />
 
-<p align="center">
-  <strong>A production-grade, project-agnostic agent framework for long-form and serialized fiction.</strong>
-</p>
+  <h1>NovelForge · Adaptive Fiction Agent Framework</h1>
+  <p><strong>A production-grade, project-agnostic framework for long-form and serialized fiction.</strong></p>
+  <p><code>Story State</code> · <code>Session Runtime</code> · <code>Reader Quality</code> · <code>Adaptive Learning</code> · <code>Provider Neutral</code></p>
+  <p><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
+</div>
 
-<p align="center">
-  English · <a href="README.zh-CN.md">简体中文</a>
-</p>
+> 🌸 **NovelForge does not reduce fiction production to “outline → prompt → chapter.” It treats Story, Canon, editorial quality, long-term learning, and agent runtime as one stateful system.**
 
-## Why NovelForge
+## ✨ Why NovelForge
 
-Most AI fiction tools stop at `outline → prompt → chapter`. NovelForge treats fiction production as a stateful software-and-editorial system:
+Most AI fiction tools center the model call. NovelForge centers a **recoverable production workflow with explicit authority**. Models handle work that genuinely requires semantic judgment; deterministic mechanisms own identity, state transitions, permissions, fingerprints, checkpoints, settlement, and idempotency.
 
-- explicit story architecture and Canon state;
-- session-native orchestration and resumable checkpoints;
-- bounded specialist workers rather than noisy agent round-tables;
-- independent semantic review with fingerprint binding;
-- surface-quality and reader-engagement gates;
-- user-taste learning from evidence;
-- autonomous corpus discovery and benchmark building;
-- rights-aware source handling;
-- capability + regression evals;
-- provider-neutral execution through chat sessions, local agents, MCP, APIs, CI jobs, local models, or human review.
+At a glance:
 
-The repository intentionally contains **no built-in novel, character, plot, or Canon**. A consuming project supplies only its adapter, profile, and state.
+| Domain | What it does | Invariant |
+|---|---|---|
+| **Story & Canon** | story hierarchy, characters, relationships, information boundaries, resources, continuity | Plan / Review / Memory ≠ Canon |
+| **Harness & Sessions** | task routing, sparse context, checkpoints, handoffs, workers | Session state ≠ Project authority |
+| **Quality Runtime** | Surface Fundamentals, Reader Engagement, independent semantic review | “No obvious defect” ≠ “good to read” |
+| **Learning & Corpus** | evidence, taste hypotheses, corpus gaps, benchmarks, evals | Model inference ≠ durable preference |
+| **Project Engineering** | manifests, lockfiles, adapters, validation, build/release | Framework ≠ consumer project |
 
-## Architecture
+> **Boundary ✦** This repository intentionally contains **no built-in novel, character, plot, or Canon**. A consuming novel supplies project-owned profile/state/plans through a Project Adapter; the Framework never absorbs those story facts back into Generic source.
+
+## 🪄 Architecture
 
 ```mermaid
 flowchart TB
-    U[User / Editor] --> M[Harness Manager]
-    PA[Project Adapter] --> M
-    M --> CTX[Context Broker]
-    M --> CP[Session & Control Plane]
-    CTX --> CORE[Story / Character / Canon Core]
-    CORE --> SIM[Scene & Character Simulation]
-    SIM --> D[Event-first Draft]
-    D --> SURF[Surface Runtime]
-    SURF --> READ[Reader Engagement]
-    READ --> SEM[Independent Semantic Review]
-    SEM --> CONT[Continuity / State Audit]
-    CONT --> GATE[User-visible Gate]
+    subgraph INPUT[Project / User]
+        U[User / Editor]
+        PA[Project Adapter]
+    end
 
-    U --> PREF[Preference Evidence]
-    PREF --> HYP[Taste Hypothesis Graph]
-    HYP --> GAP[Corpus Gap Detector]
-    GAP --> SCOUT[Corpus Scout]
-    SCOUT --> RIGHTS[Rights & Provenance Gate]
-    RIGHTS --> ANALYZE[Mechanism Analysis]
-    ANALYZE --> BENCH[Benchmarks + Evals]
-    BENCH --> HYP
-    BENCH --> SURF
-    BENCH --> READ
+    subgraph RUNTIME[Harness Runtime]
+        M[Harness Manager]
+        CTX[Sparse Context]
+        CP[Sessions · Checkpoints · Control Plane]
+    end
+
+    subgraph PROD[Fiction Production]
+        CORE[Story · Character · Canon]
+        SIM[Scene + Character Simulation]
+        D[Event-first Draft]
+        SURF[Surface Fundamentals]
+        READ[Reader Engagement]
+        SEM[Independent Semantic Review]
+        CONT[Continuity / State Audit]
+        GATE[User-visible Gate]
+    end
+
+    subgraph LEARN[Learning & Evidence]
+        PREF[Preference Evidence]
+        HYP[Taste Hypotheses]
+        GAP[Corpus Gaps]
+        RIGHTS[Rights · Provenance]
+        BENCH[Benchmarks · Evals]
+    end
+
+    U --> M
+    PA --> M
+    M --> CTX
+    M --> CP
+    CTX --> CORE
+    CORE --> SIM --> D --> SURF --> READ --> SEM --> CONT --> GATE
+
+    U -. feedback .-> PREF
+    PREF --> HYP --> GAP --> RIGHTS --> BENCH
+    BENCH -. quality evidence .-> SURF
+    BENCH -. reader evidence .-> READ
+    CP -. resume / bind .-> M
+
+    classDef project fill:#DDF2FF,stroke:#5B98C4,color:#2B2433,stroke-width:1.5px;
+    classDef runtime fill:#E8DDFB,stroke:#8B7AC6,color:#2B2433,stroke-width:1.5px;
+    classDef story fill:#FFFDFB,stroke:#796D84,color:#2B2433,stroke-width:1.5px;
+    classDef quality fill:#FAD7E8,stroke:#D982A8,color:#2B2433,stroke-width:1.5px;
+    classDef evidence fill:#FFF0C7,stroke:#C9973B,color:#2B2433,stroke-width:1.5px;
+    classDef gate fill:#D9F5E5,stroke:#58A98C,color:#2B2433,stroke-width:1.5px;
+
+    class PA,CTX project;
+    class M,CP,SEM runtime;
+    class CORE,SIM,D story;
+    class SURF,READ,U quality;
+    class PREF,HYP,GAP,RIGHTS,BENCH evidence;
+    class GATE gate;
 ```
 
-## Core subsystems
+**How to read it:** solid lines are primary execution/dependency paths; dashed lines are feedback, evidence, or resume loops. Color is a grouping aid only—node labels retain the actual semantics.
+
+## 📖 Core subsystems
 
 ### 1. Story / Canon Core
 
-Models hierarchical story structure, character autonomy, information boundaries, relationships, resources, obligations, foreshadowing, evidence, dependencies, and Accepted Canon. Plans never become Canon merely because they exist.
+Models `BOOK → VOLUME → ARC → UNIT → CHAPTER → SCENE` plus character autonomy, relationships, information boundaries, resources, obligations, foreshadowing, evidence, dependencies, Accepted Canon, and settlement. **A plan never becomes Canon merely because the system remembers it.**
 
 ### 2. Harness & Sessions
 
-The Harness uses a deterministic outer workflow and one manager by default. Sessions, runs, checkpoints, events, handoffs, worker leases, and exactly-once logical result consumption are explicit runtime state.
+The Harness uses a deterministic outer workflow and one manager by default. `session / run / checkpoint / event / handoff / worker lease / result receipt` are explicit runtime states. A persistent session records where work is—not what the story has accepted as truth.
 
 ### 3. Surface + Reader Engagement
 
-Surface Safety catches malformed, AI-ish, or mechanically realized prose. Reader Engagement separately measures narrative pressure, reward, tonal contrast, curiosity evolution, scene causality, and forward pull. Clean prose can still fail if it is flat.
+Surface Fundamentals reject malformed, AI-ish, or mechanically realized prose. Reader Engagement separately evaluates narrative pressure, reward, tonal contrast, curiosity evolution, scene causality, and forward pull.
+
+> ✨ **Key idea:** clean prose is the floor. A chapter may contain no obvious surface defect and still fail because it is SAFE-BUT-FLAT.
 
 ### 4. Independent Semantic Workers
 
-Mandatory independent review must come from a genuinely separate session/invocation. Supported transports include local Codex/Claude processes, provider adapters, MCP workers, GitHub jobs, separate peer chats, local models, and human reviewers. Same-session role-play never counts as independence.
+Mandatory independent review must come from a genuinely separate session/invocation and bind to the artifact fingerprint. Eligible transports include local Codex/Claude, provider adapters, MCP workers, GitHub jobs, separate peer chats, local models, and human reviewers.
+
+Same-session “critic role-play” is not independent review. A valid semantic rejection must be repaired, not reviewer-shopped until something says PASS.
 
 ### 5. Adaptive Preference Learning
 
-NovelForge does not reduce user taste to a static style prompt. It maintains evidence-backed hypotheses:
+NovelForge does not compress user taste into a permanent style prompt. It maintains evidence-backed hypotheses that can contradict, narrow, deprecate, and roll back:
 
 ```text
 feedback
@@ -89,24 +128,24 @@ feedback
 → active profile / rollback
 ```
 
-The framework can discover *new* preference dimensions instead of only updating predefined sliders.
+The framework can discover **new preference dimensions** rather than only adjusting predefined sliders. Model inference alone cannot promote durable user taste.
 
 ### 6. Corpus Intelligence
 
-Corpus is a first-class subsystem. It can autonomously identify missing evidence, generate discovery plans, inspect lawful sources through the host runtime, classify rights, derive mechanism-level observations, search counterexamples, build cross-work benchmarks, and strengthen personalized or general craft models.
+Corpus is evidence infrastructure, not Canon. NovelForge can detect evidence gaps, create discovery plans, inspect lawful sources through the host's Web/GitHub/MCP connectors, classify rights/provenance, derive mechanism-level observations, seek counterexamples, and build cross-work benchmarks.
 
-It does **not** mirror modern copyrighted fiction wholesale or create named-author imitation fingerprints.
+It does **not** mirror modern copyrighted fiction wholesale merely because it is readable online, and it does not build named-author imitation fingerprints.
 
 ### 7. Evals & Self-improvement
 
-Every durable behavior promotion requires mechanism evidence, counterexamples/profile boundaries, evaluation coverage, version/rollback, and post-change regression checks. User-rejected model output can become negative regression evidence; it cannot become a positive style exemplar.
+Every durable Framework behavior promotion requires mechanism evidence, counterexample/profile-boundary analysis, eval coverage, version/rollback, and post-change regression. User-rejected model output may become negative regression evidence; it cannot become a positive style exemplar.
 
-## Runtime model
+## ⚙️ Runtime model
 
 ```text
-resource/project
-→ session/thread
-→ run/invocation
+resource / project
+→ session / thread
+→ run / invocation
 → checkpoint
 → event / handoff
 → worker lease / external wait
@@ -116,92 +155,96 @@ resource/project
 → resume
 ```
 
-Chat sessions are first-class runtimes. The framework does not require an API key if the selected host can provide another independent worker path.
+Chat sessions are first-class runtimes. The Framework does not require an API key when the selected host can provide another eligible independent worker path.
 
-## Provider-neutral execution
+### Provider-neutral execution
 
 | Runtime | Manager | Specialist | Independent review | Typical transport |
 |---|---:|---:|---:|---|
 | Current chat session | ✓ | bounded | self-review ✗ | host chat |
-| Separate peer chat | — | — | ✓ | user/connector relay |
+| Separate peer chat | — | — | ✓ | user / connector relay |
 | Codex CLI | ✓ | ✓ | ✓ separate invocation | local process / MCP |
 | Claude Code | ✓ | ✓ | ✓ separate invocation | local process / MCP |
 | Provider API | — | ✓ | ✓ | adapter |
-| GitHub Actions | — | ✓ | ✓ with worker backend | workflow/event |
+| GitHub Actions | — | ✓ | ✓ with worker backend | workflow / event |
 | Remote MCP worker | ✓ | ✓ | ✓ isolated session | Streamable HTTP |
 | Local model | optional | ✓ | ✓ isolated invocation | adapter |
 | Human reviewer | — | — | ✓ | relay |
 
-## Project adapter boundary
+## 🧩 Project Adapter boundary
 
-A project supplies only project-owned information:
+A consuming novel supplies only project-owned information:
 
 ```text
 project/
 ├── project.yaml            # identity + framework compatibility
-├── profile/                # genre, platform, prose/reader targets
-├── bible/                  # characters, world, relationships, research
+├── profile/                # genre / platform / prose / reader targets
+├── bible/                  # characters / world / relationships / research
 ├── state/                  # Accepted Canon + ledgers
 ├── plans/                  # active plans / scene cards
 ├── regressions/            # project-only negative cases
-└── manuscripts/            # draft/review/accepted artifacts
+└── manuscripts/            # draft / review / accepted artifacts
 ```
 
-Dependency direction is one-way:
+Dependency direction is always one-way:
 
 ```text
 Project → NovelForge
 NovelForge -X→ Project-specific imports
 ```
 
-CI rejects project-specific leakage in the framework repository.
+CI rejects consumer-project leakage inside the Framework repository.
 
-## Bilingual documentation
+## 🗺️ Repository map
 
-Every human-facing document is published in paired editions:
+```text
+.
+├── core/                   # Story / Character / Canon primitives
+├── surface/                # prose realization + reader engagement
+├── harness/                # orchestration / sessions / control plane / workers
+├── learning/               # preference evidence + promotion / rollback
+├── corpus/                 # discovery / rights / analysis / benchmarks
+├── knowledge/              # generic craft + framework research
+├── evals/                  # capability / regression suites
+├── docs/                   # architecture / SDK / integration guides
+├── assets/                 # visual identity + documentation design system
+├── project_sdk.py          # project engineering contract
+└── project_adapter.py      # standard / mapped project resolution
+```
+
+## 🌐 Bilingual documentation
+
+Every human-facing document ships as an English / Simplified Chinese pair:
 
 ```text
 name.en.md
 name.zh-CN.md
 ```
 
-Root routing files such as `README.md`, `AGENTS.md`, `CLAUDE.md`, and `SKILL.md` remain compact bilingual/bootstrap entry points and link to the paired authoritative editions. CI checks documentation pairing and internal links.
+Stable routing entries such as `README.md`, `AGENTS.md`, `CLAUDE.md`, and `SKILL.md` stay compact. CI checks pairing and internal links. Machine schemas remain single-source JSON/YAML to avoid semantic drift.
 
-Machine schemas remain single-source JSON/YAML to avoid semantic drift; user-facing schema explanations are bilingual.
+## 🎨 Visual documentation
 
-## Visual documentation
+Mermaid is the authoritative diagram format because it is version-controlled, diffable, and reviewable. `assets/` defines a shared **professional technical + anime-editorial** visual system. Hero art, sakura/lavender/mint accents, sparse `🌸 ✨ 📖 ✦`, and any future original editor/mascot motif remain strictly decorative.
 
-Mermaid diagrams are treated as executable architecture charts. Static assets under `assets/` use a consistent original manga/anime-inspired visual language for documentation and branding only.
+- [Documentation design system](assets/DESIGN_SYSTEM.en.md)
+- [Visual system](assets/README.en.md)
 
-## Repository map
+> A tiny `(˶ᵔ ᵕ ᵔ˶)` may live in README microcopy. It will never appear in a schema, authority contract, or machine state.
 
-```text
-.
-├── core/                   # story, character, Canon, context primitives
-├── surface/                # prose realization + reader engagement
-├── harness/                # orchestration, sessions, control plane, workers
-├── learning/               # user taste + promotion/rollback logic
-├── corpus/                 # discovery, rights, analysis, benchmarks
-├── knowledge/              # general craft + framework research
-├── evals/                  # capability/regression suites
-├── integrations/           # host/runtime adapters
-├── schemas/                # stable machine contracts
-├── docs/                   # architecture and guides
-├── assets/                 # diagrams / visual identity
-└── examples/               # project-agnostic fixtures only
-```
+## ✦ Principles
 
-## Principles
-
-- Start simple; multi-agent is an implementation choice, not a quality feature.
+- Start simple: multi-agent is an implementation choice, not a quality feature.
 - Persist operational state, not accidental authority.
-- Retrieve sparsely; do not dump the entire story bible into every model call.
-- Keep writer context separate from regression gold and reviewer expectations.
-- Prefer mechanism-level learning over word bans or style imitation.
-- A semantic rejection is a valid judgment, not a reason to shop reviewers.
+- Retrieve sparsely: existence in storage does not imply prompt inclusion.
+- Isolate writer context from regression gold and expected verdicts.
+- Learn mechanisms, not word-ban lists or author-imitation templates.
+- Semantic rejection is a valid judgment, not a reason to shop reviewers.
 - Corpus is evidence, not Canon.
 - User taste is revisable evidence, not permanent mythology.
 
-## Status
+## 🚧 Status
 
-The framework is under active consolidation from an earlier monorepo prototype. Current work is focused on a fully self-contained generic Story/Surface/Corpus/Learning/Eval stack, bilingual docs, project-leakage CI, and session-native integrations.
+NovelForge v7 is consolidating Generic Story / Surface / Corpus / Learning / Eval, a session-native Harness, provider-neutral runtime, and Project SDK into one self-contained Framework. Normal CI remains deterministic; live semantic model execution must be explicitly triggered and must never silently spend model usage.
+
+<p align="center"><sub>strict backstage · vivid fiction · professional docs with just a few sakura petals 🌸</sub></p>
