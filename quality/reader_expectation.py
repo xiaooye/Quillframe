@@ -113,7 +113,7 @@ def open_expectation(conn: sqlite3.Connection, *, expectation_id: str, kind: str
     salience = _salience(salience)
     stamp = now()
     conn.execute(
-        "INSERT INTO expectations VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO expectations VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (expectation_id, kind, scope, description, opened, due, opened, salience, "open",
          source_ref, source_fingerprint, 1, stamp, stamp),
     )
