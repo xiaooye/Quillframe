@@ -1,0 +1,17 @@
+{
+  "id": "CANON-PLAN-001",
+  "type": "regression",
+  "domain": "canon",
+  "judge": "deterministic",
+  "blocks_release": true,
+  "fixture": {
+    "planned_event": {"status": "active_plan", "settled": false},
+    "current_state": {"contains_planned_result": false}
+  },
+  "assertions": [
+    {"op": "equals", "path": "planned_event.status", "value": "active_plan"},
+    {"op": "falsy", "path": "planned_event.settled"},
+    {"op": "falsy", "path": "current_state.contains_planned_result"},
+    {"op": "file_text_contains", "file": "core/CANON_STATE.en.md", "value": "Plan ≠ Canon"}
+  ]
+}
