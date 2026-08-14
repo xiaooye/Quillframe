@@ -51,9 +51,11 @@ jobs:
         run: |
           python harness/context_inspector.py self-test > context-inspector-test.json
           python harness/memory_tiers.py self-test > memory-tiers-test.json
+          python harness/memory_bank.py --db /tmp/novelforge-memory-bank-ci.db self-test --path /tmp/novelforge-memory-bank-selftest-ci.db > memory-bank-test.json
           python quality/findings.py self-test > quality-finding-test.json
           python quality/reader_panel.py self-test > reader-panel-test.json
           python quality/quality_evolution.py --db /tmp/novelforge-quality-ci.db self-test --path /tmp/novelforge-quality-selftest-ci.db > quality-evolution-test.json
+          python quality/revision_orchestrator.py self-test > revision-orchestrator-test.json
           python quality/character_integrity.py self-test > character-integrity-test.json
           python quality/state_graph.py self-test > state-graph-test.json
 
@@ -151,9 +153,11 @@ jobs:
             'runtime-capabilities-test.json':('runtime_capabilities_contract','PASS'),
             'context-inspector-test.json':('context_inspector_contract','PASS'),
             'memory-tiers-test.json':('memory_tiers_contract','PASS'),
+            'memory-bank-test.json':('memory_bank_contract','PASS'),
             'quality-finding-test.json':('quality_finding_contract','PASS'),
             'reader-panel-test.json':('reader_panel_contract','PASS'),
             'quality-evolution-test.json':('quality_evolution_contract','PASS'),
+            'revision-orchestrator-test.json':('revision_orchestrator_contract','PASS'),
             'character-integrity-test.json':('character_integrity_contract','PASS'),
             'state-graph-test.json':('state_graph_contract','PASS'),
             'learning-test.json':('learning_store_contract','PASS'),
@@ -188,9 +192,17 @@ jobs:
           assert loaded['context-inspector-test.json']['pre_draft_regression_isolation'] is True
           assert loaded['memory-tiers-test.json']['hard_budget'] is True
           assert loaded['memory-tiers-test.json']['whole_item_or_skip'] is True
+          assert loaded['memory-bank-test.json']['protected_edit_to_proposal'] is True
+          assert loaded['memory-bank-test.json']['before_state_guard'] is True
+          assert loaded['memory-bank-test.json']['proposal_pre_draft_isolation'] is True
+          assert loaded['memory-bank-test.json']['canon_write'] is False
           assert loaded['quality-evolution-test.json']['logical_consume_once'] is True
           assert loaded['quality-evolution-test.json']['idempotent_replay'] is True
           assert loaded['quality-evolution-test.json']['plateau_stopping'] is True
+          assert loaded['revision-orchestrator-test.json']['failure_isolation'] is True
+          assert loaded['revision-orchestrator-test.json']['surface_cluster_regeneration'] is True
+          assert loaded['revision-orchestrator-test.json']['authority'] is False
+          assert loaded['revision-orchestrator-test.json']['model_execution'] is False
           assert loaded['character-integrity-test.json']['forbidden_context_excluded'] is True
           assert loaded['state-graph-test.json']['evidence_backed_transition_exempted'] is True
           assert loaded['cli-test.json']['model_execution'] is False
