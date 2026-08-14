@@ -1,282 +1,350 @@
 <div align="center">
   <img src="../assets/brand/novelforge-lockup.svg" alt="NovelForge — Adaptive Fiction Agent Framework" width="560" />
-  <p><strong>Production Pipeline · from bounded context to a user-visible chapter</strong></p>
-  <p><kbd>CONTEXT FREEZE</kbd>&nbsp;&nbsp;<kbd>SIMULATION</kbd>&nbsp;&nbsp;<kbd>RAW DRAFT</kbd>&nbsp;&nbsp;<kbd>QA</kbd>&nbsp;&nbsp;<kbd>CONTINUITY</kbd></p>
+  <p><strong>Production Pipeline · simulate causality, evolve candidates, release through explicit gates</strong></p>
+  <p><kbd>FREEZE</kbd>&nbsp;&nbsp;<kbd>SIMULATE</kbd>&nbsp;&nbsp;<kbd>DRAFT</kbd>&nbsp;&nbsp;<kbd>DIAGNOSE</kbd>&nbsp;&nbsp;<kbd>EVOLVE</kbd>&nbsp;&nbsp;<kbd>GATE</kbd></p>
+  <p><a href="production-pipeline.zh-CN.md">简体中文</a> · <a href="README.en.md">Docs Home</a></p>
 </div>
 
 <img src="../assets/brand/story-thread.svg" alt="" width="100%" />
 
 # Production Pipeline
 
-> 🌸 **A NovelForge chapter is produced as a gated state transition, not a single prompt completion.** Each phase owns a specific class of decision, and failures route back to the phase that can actually fix them.
+A NovelForge chapter is a **recoverable production run**, not a single completion and not a fixed chain of critic agents.
+
+The manager chooses the smallest semantic contract pack needed for each judgment. Models own story, character, reader, continuity, and revision interpretation. Deterministic runtime code owns authority, fingerprints, permissions, persistence, checkpoints, typed validation, budgets, and settlement transactions.
+
+<img src="../assets/ui/home-pipeline.en.svg" alt="NovelForge production run: freeze and simulate, create an internal candidate, diagnose and evolve, then cross the release gate" width="100%" />
 
 ---
 
-## 01 · The production graph
+## 01 · The four responsibilities
 
-```text
-Context Freeze
-→ Story / Canon Preflight
-→ Scene Simulation
-→ Character Simulation
-→ Reader Pressure
-→ Event-first Raw Draft
-→ Surface Realization
-→ Surface Lint A
-→ post-generation Regression / Independent Review
-→ Rewrite or Regenerate
-→ Surface Lint B
-→ Reader Engagement
-→ Continuity Audit
-→ User-visible Gate
-```
+Every `DRAFT` or `REVISE` run has four high-level responsibilities.
 
-Raw Draft is an internal artifact. The first text produced by the Writer is never automatically the text shown to the user.
+**Freeze + simulate** establishes the legal story state, sparse working context, character-owned action, scene causality, and reader pressure before prose generation.
+
+**Create an internal candidate** produces event-first Raw Draft material and realizes the prose surface. Raw Draft remains private to the production run.
+
+**Diagnose + evolve** uses exact semantic contracts and deterministic evidence to identify the owning failure mechanism, repair at the correct layer, and verify that a challenger candidate actually improves the incumbent.
+
+**Release gate** checks the reader experience, long-horizon commitments, state/authority integrity, and any task-specific independent judgment before exposing review-ready prose.
+
+The graph is adaptive: a failure can return upstream. It is not a conveyor belt that must always execute every possible contract.
 
 ---
 
-## 02 · Context Freeze
+## 02 · Bootstrap the run before touching prose
 
-The run first resolves the exact Framework and live Project authority, then creates a sparse Context Manifest.
+A run begins by resolving the consuming Project and its exact Framework dependency, then restoring or creating manager `session`, `run`, and checkpoint identity.
 
-The manifest includes only what the current chapter actually needs:
+Before generation, the manager must know:
 
-- relevant project/profile rules;
-- accepted Canon and current-state slices;
-- active chapter/unit plan and Scene Card;
-- required characters and relationships;
-- directly relevant research claims;
-- unresolved dependencies or continuity obligations.
+- the single active `task_mode`;
+- Project authority and Canon cutoff;
+- the exact candidate / plan / accepted-state fingerprints involved;
+- the host capabilities available for semantic or external work;
+- whether any consequential side effect requires a checkpoint first.
 
-It deliberately excludes unrelated future data, whole-project dumps, hidden eval labels, negative regression examples, and the manager's entire conversation history.
+Chat history may help the runtime continue a conversation, but it is not a substitute for Project authority or durable state.
 
-**Output:** frozen task-scoped context + artifact fingerprints.
-
-**Failure route:** context/authority repair before generation starts.
+**Failure route:** runtime / Project bootstrap. Do not begin creative generation on ambiguous authority.
 
 ---
 
-## 03 · Story / Canon Preflight
+## 03 · Freeze sparse context
 
-Before prose generation, NovelForge checks whether the planned scene is legal relative to current authority and story state.
+NovelForge treats context as a budgeted working set, not a whole-project dump.
 
-Typical questions:
+The manager loads only the current task's relevant slices, such as:
 
-- Is the scene based on an active plan rather than an already-settled event that contradicts it?
-- Does it require knowledge, resources, relationships, or locations that do not exist yet?
-- Are there unresolved dependencies that must be honored?
-- Is the proposed state change compatible with current Canon?
-- Is the requested task actually DRAFT/REVISE rather than a hidden SETTLE or PLAN operation?
+- Project profile and active prose constraints;
+- Accepted Canon and directly relevant current state;
+- the active chapter / unit plan and scene intent;
+- participating characters and relationships;
+- unresolved commitments or dependencies;
+- research claims the current scene actually needs;
+- selected derived memory when it is useful and allowed.
 
-**Output:** a valid story problem for the current run.
+When relevance itself requires interpretation, the manager may use the `context-research` pack, including `context.select`. Deterministic code still owns the hard budget, provenance, authority classes, and final packaging constraints.
 
-**Failure route:** Story/Plan or authority correction. Do not “write through” a broken state model.
+Do not inject unrelated future plans, the entire Corpus, the manager's full history, hidden eval labels, or regression bad examples by default.
 
----
-
-## 04 · Scene Simulation
-
-Scene Simulation solves the event logic before sentence generation.
-
-It determines:
-
-- who enters the scene and why;
-- what each participant is trying to achieve;
-- what pressure is active;
-- what information can move;
-- what choice/error/obstacle changes the state;
-- what cost or consequence follows;
-- what the scene must accomplish without forcing a predetermined wording.
-
-The goal is not to write prose in outline form. It is to make sure the scene has a causal engine before the Writer touches style.
-
-**Output:** event/state trajectory.
-
-**Failure route:** regenerate the scene model, not the sentences.
+**Failure route:** Context / Memory.
 
 ---
 
-## 05 · Character Simulation
+## 04 · Preflight Story and Canon
 
-Important characters are simulated as independent agents inside the story world, not as obedient functions of the outline.
+Before simulating the scene, verify that the requested work is legal relative to current Project state.
 
-Each character carries, as applicable:
+Typical questions include:
 
-- agenda;
-- voice;
-- knowledge boundary;
-- current task;
-- spatial position;
-- incentives and interests;
+- Is this event merely planned, already Accepted, or currently under review?
+- Does the scene require knowledge, resources, relationships, or locations that do not yet exist?
+- Is a proposed change compatible with current Canon and dependency obligations?
+- Is a stale plan being followed after causal emergence already invalidated it?
+- Is the user actually asking for another mode such as `PLAN-*` or `SETTLE`?
+
+If active plans must adapt to newly emerged story facts, the `long-horizon` pack can use `plan.reconcile`. Reconciliation proposes an updated plan relationship; it does not retroactively rewrite Accepted Canon.
+
+**Failure route:** Story / Plan / Project authority.
+
+---
+
+## 05 · Simulate character action, then resolve the scene
+
+NovelForge 7.3 makes the pre-draft causal step explicit through the `story-simulation` pack.
+
+`character.action_propose` asks what an important character would plausibly attempt given that character's:
+
+- agenda and immediate goal;
+- beliefs and knowledge boundary;
+- incentives and risks;
 - relationship state;
-- emotional aftermath from prior events.
+- spatial situation;
+- emotional and event aftermath.
 
-A plan can propose what a character might do. Character Simulation decides whether that behavior is actually owned by the character under current state.
+`scene.resolve_actions` then resolves collisions among those proposed actions and the world state into a causal event trajectory.
 
-**Output:** character-owned actions/reactions and information boundaries.
+This ordering matters. The framework does not first invent a convenient scene outcome and then force every character to cooperate with it.
 
-**Failure route:** Character Simulation or upstream Story/Plan if the scene requires out-of-character behavior to work.
+**Output:** character-owned action proposals + a scene-level causal trajectory.
+
+**Failure route:** Character Simulation or Scene Simulation; if the scene only works through character distortion, return to Story / Plan.
 
 ---
 
-## 06 · Reader Pressure
+## 06 · Establish reader pressure before drafting
 
-Reader Pressure asks a different question from “what happens?”: **why should the reader care about this scene now?**
+A causally legal scene can still be dull. Reader Pressure asks what makes the current unit matter **to the reader now**.
 
-It establishes the chapter's expected pressure/reward structure, such as:
+Useful pressure may come from:
 
-- an unresolved threat or desire;
-- a meaningful promise to the reader;
-- immediate uncertainty with consequences;
+- a live desire, threat, dilemma, or promise;
+- uncertainty with meaningful consequences;
 - relationship tension;
-- a decision whose cost matters;
+- a choice with cost;
 - a reveal, reversal, failure, or earned payoff;
-- tonal contrast that prevents monotonous escalation.
+- contrast that prevents monotonous escalation;
+- an explicit reader expectation that the chapter should advance or complicate.
 
-**Output:** reader-facing pressure and reward targets.
+Reader pressure is a design target, not a demand for mechanical cliffhangers.
 
-**Failure route:** if the scene is safe but flat, return here and to Scene Simulation.
-
----
-
-## 07 · Event-first Raw Draft
-
-Only after story, character, and reader pressure are resolved does the Writer generate prose.
-
-“Event-first” means the draft should realize state-changing events, choices, mistakes, reactions, consequences, and information movement before optimizing ornamental surface texture.
-
-Raw Draft is intentionally protected from post-generation regression bad-example priming. Negative regression fixtures are not loaded before this point.
-
-**Output:** internal Raw Draft.
-
-**Visibility:** never shown directly as the finished artifact.
+If a scene is later diagnosed as SAFE-BUT-FLAT, repair returns here and to scene simulation rather than decorating sentences.
 
 ---
 
-## 08 · Surface Realization + Lint A
+## 07 · Generate an event-first Raw Draft
 
-Surface Realization brings the event-first draft into the project's prose profile while enforcing generic anti-AI failure mechanisms.
+Only after the current causal problem is sufficiently resolved does prose generation begin.
 
-Lint A checks for obvious implementation problems before expensive semantic review. It may trigger local repair when the defect is isolated.
+“Event-first” means the Raw Draft prioritizes:
 
-If problems cluster, the scene should be regenerated instead of receiving dozens of cosmetic patches.
+- choices and mistakes;
+- conflict and response;
+- information movement;
+- state change;
+- consequence and cost;
+- relationship movement;
+- earned reader reward.
 
-**Output:** first surface-realized candidate.
+Routine procedure should be compressed unless it carries conflict, character, information, or consequence.
 
----
+Raw Draft is **internal**. It is not the Review Draft and is never automatically user-visible.
 
-## 09 · Regression + Independent Review
-
-Only after a Raw Draft has been frozen can post-generation regression evidence be loaded. This avoids priming the Writer with known bad examples.
-
-Post-generation checks can include:
-
-- project-specific negative regressions;
-- framework regressions;
-- independent semantic review;
-- capability/eval cases relevant to the active failure mechanisms.
-
-Mandatory independent review uses a separate invocation/session and binds the result to the candidate fingerprint.
-
-**Output:** typed defects/verdicts tied to a specific candidate.
-
-**Failure route:** owning mechanism, not generic “make it better.”
+Negative regression examples remain excluded until Raw Draft freeze. This prevents known failures from becoming first-pass stylistic priming.
 
 ---
 
-## 10 · Rewrite vs. regenerate
+## 08 · Realize the prose surface
 
-NovelForge distinguishes repair scale.
+Surface Realization converts event-first material into the Project's prose profile while respecting Framework Surface Fundamentals.
 
-**Local rewrite** is appropriate when a defect is isolated and the underlying scene mechanism remains sound.
+This stage owns prose realization problems such as recurring AI-text rhythms, narrator hype, mechanical micro-actions, voice leakage, process-report narration, fake significance, or malformed compression / expansion.
 
-**Whole-scene regeneration** is appropriate when surface defects cluster, the event logic is weak, character ownership is broken, or the reader-pressure structure is missing.
+Repair scale matters:
 
-This distinction prevents patch accumulation from hiding a fundamentally bad scene.
+- isolated surface defect → local rewrite;
+- clustered realization failures → regenerate the scene realization;
+- clean but inert prose → do **not** stay at the sentence layer.
 
----
-
-## 11 · Surface Lint B
-
-After repair, surface checks run again so the repair itself cannot reintroduce known realization failures.
-
-Lint B is not a rubber stamp. A repaired scene can still fail and route back again.
+Surface cleanliness is a floor, not the release criterion.
 
 ---
 
-## 12 · Reader Engagement gate
+## 09 · Freeze the candidate before post-generation regression
 
-Reader Engagement evaluates the repaired candidate as a reading experience rather than as a code artifact.
+Once the first realized candidate exists, freeze its artifact fingerprint before introducing post-generation regression evidence.
 
-A candidate can fail here even if it passed Surface Fundamentals. The most important special case is SAFE-BUT-FLAT: technically clean prose with insufficient pressure, payoff, contrast, causal movement, or forward pull.
+Only now should the manager load relevant negative regressions or known failure exemplars.
 
-**Failure route:** Reader Pressure + Scene Simulation, not sentence decoration.
+The purpose is twofold:
+
+1. prevent first-pass generation from being primed by bad examples;
+2. make every downstream diagnosis refer to an exact candidate rather than a moving target.
+
+Material candidate changes create a new fingerprint and invalidate review results that were bound to the old artifact.
 
 ---
 
-## 13 · Continuity Audit
+## 10 · Diagnose through exact semantic contracts
 
-Continuity evaluates whether the candidate can coexist with the current project state.
+There is no single universal critic prompt.
 
-It checks, as applicable:
+The manager chooses the smallest relevant contract pack from `model_contract_catalog.json`; deterministic runtime resolves the exact contract ID to exactly one pack.
+
+For candidate quality work, the `quality` pack currently exposes:
+
+- `reader.reaction` — reader experience evidence;
+- `reader.compare` — bounded pairwise reader comparison;
+- `character.integrity` — character-behavior integrity;
+- `revision.diagnose` — diagnosis plus repair-owner routing.
+
+Other packs may be selected when the problem requires them:
+
+- `narrative-memory` for derived narrative state or reader expectations;
+- `long-horizon` for plan, relationship, or commitment reconciliation;
+- `creative-evolution` for materially divergent scene alternatives or incumbent/challenger comparison.
+
+A semantic result is evidence. It does not gain Canon or write authority merely because a model produced it.
+
+---
+
+## 11 · Convert diagnosis into findings and repair ownership
+
+Diagnosis should become explicit evidence rather than a vague instruction to “make it better.”
+
+Quality findings record the problem and evidence in a form that can be traced across candidate evolution. `revision.diagnose` can identify which mechanism actually owns the defect.
+
+Typical routing:
+
+**Surface defect** → local rewrite or scene realization regeneration.
+
+**SAFE-BUT-FLAT / reader-grip failure** → Reader Pressure + Scene Simulation.
+
+**Character integrity failure** → Character Simulation; possibly Story / Plan if the scene premise itself requires distortion.
+
+**Story / causal failure** → Story / Plan.
+
+**Context / memory failure** → Context / Memory.
+
+**Long-horizon commitment failure** → continuity / plan / relationship reconciliation, not sentence polishing.
+
+**Valid independent semantic reject** → the owning repair layer, never reviewer-shopping.
+
+---
+
+## 12 · Evolve candidates instead of assuming every rewrite is better
+
+Revision is not automatically progress.
+
+NovelForge keeps candidate lineage and can compare an incumbent with a challenger. The `creative-evolution` pack exposes `quality.compare` for evidence-driven comparison, and `scene.diverge` when the workflow needs a genuinely different causal alternative rather than another local paraphrase.
+
+The comparison is allowed to conclude:
+
+- challenger is better;
+- incumbent remains better;
+- neither has a meaningful advantage / tie.
+
+Quality evolution therefore supports **plateau stopping**. If revision no longer creates real evidence of improvement, the system may stop instead of entering endless rewrite churn.
+
+Deep guide: [Quality Evolution](quality-evolution.en.md).
+
+---
+
+## 13 · Audit reader experience and long-horizon commitments
+
+Before release, the candidate must survive the gates relevant to the current task.
+
+Reader Engagement asks whether the chapter has pressure, causality, payoff, contrast, meaningful movement, and forward pull.
+
+Long-horizon work can use the `long-horizon` pack's `continuity.commitment_audit` to check the candidate against explicit commitments and established facts. Relationship memories can be reconciled through `relationship.memory_reconcile` when long-lived evidence conflicts.
+
+Continuity includes more than trivia. It may cover:
 
 - character knowledge and presence;
-- locations and movement;
-- relationship changes;
-- obligations/resources/injuries/deadlines;
+- location and movement;
+- promises, obligations, deadlines, resources, injuries, and debts;
+- relationship movement;
+- open loops and setup / payoff obligations;
 - chronology;
-- open threads and foreshadowing;
-- emotional/event aftermath;
-- dependencies on accepted prior chapters.
+- emotional and event aftermath.
 
-A continuity failure may require state repair, story repair, or regeneration. It cannot be solved merely by declaring the new contradiction Canon.
+A contradiction is not repaired by declaring the new version Canon.
 
 ---
 
-## 14 · User-visible Gate
+## 14 · Use independent review only when independence is required
 
-The candidate becomes user-visible only after every mandatory gate for the active task is resolved.
+Independent semantic review is a **specific gate**, not a synonym for all model judgment.
 
-Possible truthful outcomes include:
+When the active rubric or workflow requires independence, the result must come from a genuinely different invocation / session and be bound to the exact artifact fingerprint. The review packet is bounded; hidden gold and the manager's entire history are excluded.
 
-- review artifact / complete result;
-- `awaiting_user`;
-- `awaiting_external`;
-- `semantic_pending`;
-- `failed_gate`;
-- `settlement_incomplete`.
+A transport failure may justify an eligible fallback. A valid semantic rejection is a real result and must route to repair.
 
-A missing mandatory reviewer is not a PASS. An unresolved continuity failure is not “production-ready.”
+If independence is not required for a particular semantic contract, normal model-owned semantic work may execute through another eligible route without pretending to be an independent reviewer.
+
+Deep references: [Semantic Worker Protocol](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md) and [Semantic Execution Runtime](../harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.en.md).
 
 ---
 
-## 15 · Acceptance is not automatic settlement
+## 15 · Cross the user-visible gate truthfully
 
-A user-visible Review Draft still does not automatically mutate Canon. Settlement is a separate high-authority transaction triggered only by explicit acceptance or an explicit Canon-change request.
+Raw Draft never crosses this gate.
 
-That transaction freezes the accepted artifact, derives a state delta, validates exact before-state, checks dependency impact, records write intent/checkpoint, performs the authorized write, rebuilds derived views, verifies post-conditions, and records a trace.
+A candidate may be presented as review-ready only when the gates required by the active task are resolved. Honest unresolved states include:
 
-This keeps generation/review and Canon mutation deliberately separate.
+`awaiting_user` · `awaiting_external` · `semantic_pending` · `failed_gate` · `settlement_incomplete`
+
+A missing required judgment is not PASS. A stale fingerprint is not PASS. A continuity defect hidden by fluent prose is not PASS.
+
+The goal is not maximal ceremony; it is a truthful boundary between internal production candidates and user-visible artifacts.
 
 ---
 
-## 16 · Why the pipeline is this strict
+## 16 · Acceptance starts a different transaction: SETTLE
 
-The pipeline is designed around recurring long-form AI failure modes:
+User-visible Review Draft and Accepted Canon are different authority classes.
 
-- future-plan leakage into current truth;
-- characters knowing what only the manager knows;
-- polished prose hiding inert scene design;
-- writer self-review masquerading as independence;
+Only explicit acceptance or an explicit authorized Canon-change request may enter settlement. The deterministic settlement runtime does **not** infer acceptance, State Delta, Canon meaning, or literary intent.
+
+A settlement transaction requires exact accepted-artifact evidence and explicit write intent, including:
+
+- accepted artifact reference + fingerprint;
+- acceptance receipt;
+- checkpoint reference;
+- write-authorization reference;
+- exact create / update / delete operations;
+- before-state fingerprints for compare-and-swap where required;
+- required derived projections and their receipts;
+- authoritative postcondition verification.
+
+Required projection failure yields `settlement_incomplete`; completed projection receipts are not silently replayed as new work.
+
+This keeps generation, review, acceptance, and Canon mutation as four distinct events.
+
+---
+
+## 17 · What this pipeline is optimizing for
+
+The pipeline is strict backstage so the fiction can remain natural on the page.
+
+It is designed to prevent recurring long-form failure modes:
+
+- future plans leaking into current truth;
+- characters acting with manager-only knowledge;
+- flat scenes being cosmetically polished instead of causally repaired;
 - regression examples contaminating first-pass generation;
-- repeated local patches degrading scene coherence;
-- session memory silently mutating story authority;
-- accidental side-effect repetition after resume.
+- reviewers judging different candidate fingerprints;
+- repeated rewrites continuing after improvement plateaus;
+- derived memory or semantic output quietly gaining story authority;
+- resume paths repeating consequential writes;
+- user-visible approval being confused with completed settlement.
 
-The cost is more execution ceremony. The benefit is that each class of failure has a visible owner and a repair path.
+The intended result is not prose that looks engineered. It is **engineering that disappears behind fiction that feels alive**.
 
 <div align="center">
   <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom mark" width="52" />
   <br />
-  <sub>Simulate first. Draft second. Judge independently. Expose only what passed. 🌸</sub>
+  <sub>Simulate causality. Draft internally. Diagnose precisely. Evolve with evidence. Settle only after acceptance. 🌸</sub>
 </div>
