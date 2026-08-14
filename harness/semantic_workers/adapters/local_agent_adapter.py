@@ -63,8 +63,6 @@ def output_schema(job: dict[str, Any]) -> dict[str, Any]:
         return declared
     if job.get("kind") == "eval_judge":
         return LEGACY_EVAL_SCHEMA
-    # All current model contracts require confidence. Keep the fallback minimal
-    # rather than inventing a domain-specific judgment schema in Python.
     return {
         "type": "object",
         "required": ["confidence"],
@@ -89,7 +87,7 @@ def typed(job: dict[str, Any], provider: str, status: str, *, judgment: dict[str
         "status": status,
         "worker": {
             "provider": f"{provider}_cli",
-            "model_or_reviewer": os.getenv(f"NOVEL_OS_{provider.upper()}_MODEL", f"{provider} configured model"),
+            "model_or_reviewer": os.getenv(f"NOVELFORGE_{provider.upper()}_MODEL", f"{provider} configured model"),
             "run_reference": run_ref,
         },
         "judgment": judgment or empty_judgment(),
@@ -135,7 +133,7 @@ def codex_command(schema: Path, output: Path) -> list[str]:
         "--sandbox", "read-only", "--output-schema", str(schema),
         "--output-last-message", str(output),
     ]
-    model = os.getenv("NOVEL_OS_CODEX_MODEL", "").strip()
+    model = os.getenv("NOVELFORGE_CODEX_MODEL", "").strip()
     if model:
         cmd += ["--model", model]
     return cmd + ["-"]
@@ -147,7 +145,7 @@ def claude_command() -> list[str]:
         "Execute the bounded NovelForge semantic packet supplied on stdin and return only the requested JSON object.",
         "--output-format", "json", "--max-turns", "1", "--permission-mode", "plan",
     ]
-    model = os.getenv("NOVEL_OS_CLAUDE_MODEL", "").strip()
+    model = os.getenv("NOVELFORGE_CLAUDE_MODEL", "").strip()
     if model:
         cmd += ["--model", model]
     return cmd
@@ -162,7 +160,6 @@ def extract_claude(stdout: str) -> dict[str, Any]:
             return outer["result"]
         if isinstance(outer.get("result"), str):
             return parse_json_text(outer["result"])
-        # Some Claude CLI modes can return the requested object directly.
         if "confidence" in outer:
             return outer
     raise ValueError("Claude JSON has no parseable semantic judgment")
@@ -180,7 +177,7 @@ def execute(job: dict[str, Any], requested: str, timeout: int) -> dict[str, Any]
         return typed(job, label, "failed", errors=[f"local agent unavailable: {requested}"])
 
     run_ref = f"local-{provider}:{uuid.uuid4().hex}"
-    with tempfile.TemporaryDirectory(prefix="novel-os-semantic-") as td:
+    with tempfile.TemporaryDirectory(prefix="novelforge-semantic-") as td:
         wd = Path(td)
         try:
             if provider == "codex":
@@ -213,10 +210,7 @@ def execute(job: dict[str, Any], requested: str, timeout: int) -> dict[str, Any]
 
     result = typed(job, provider, "completed", judgment=judgment, run_ref=run_ref)
     binding = validate_result(job, result)
-    return result if not binding else typed(
-        job, provider, "failed", run_ref=run_ref,
-        errors=["self-validation: " + "; ".join(binding)],
-    )
+    return result if not binding else typed(job, provider, "failed", run_ref=run_ref, errors=["self-validation: " + "; ".join(binding)])
 
 
 def self_test() -> int:
@@ -224,69 +218,32 @@ def self_test() -> int:
         "job_id": "SEM-T", "kind": "external_review", "subject_id": "CH-T",
         "created_at": "fixture", "input_fingerprint": "", "input": {"candidate": "x"},
         "rubric": ["judge reader experience"],
-        "output_contract": {
-            "type": "object", "required": ["confidence", "would_continue"],
-            "properties": {
-                "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-                "would_continue": {"type": "boolean"},
-            },
-        },
+        "output_contract": {"type": "object", "required": ["confidence", "would_continue"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "would_continue": {"type": "boolean"}}},
         "permissions": {"canon_write": False, "os_behavior_write": False, "durable_user_taste_write": False},
-        "provenance": {"independent_gate": False},
-        "execution": {},
+        "provenance": {"independent_gate": False}, "execution": {},
     }
-    # Import lazily only for the fixture fingerprint.
     from semantic_worker_router import fingerprint_for
     reader_job["input_fingerprint"] = fingerprint_for(reader_job)
-    schema = output_schema(reader_job)
-    packet = prompt(reader_job)
-    cmd = codex_command(Path("/tmp/schema.json"), Path("/tmp/out.json"))
-    ok = (
-        not validate_job(reader_job)
-        and reader_job["kind"] in ALLOWED_KINDS
-        and schema == reader_job["output_contract"]
-        and "would_continue" in json.dumps(schema)
-        and "independent_gate=false" in packet
-        and "exec" in cmd and "--ephemeral" in cmd and "--output-schema" in cmd and "--sandbox" in cmd
-    )
-    dump({
-        "local_agent_adapter_contract": "PASS" if ok else "FAIL",
-        "contract_native_output_schema": schema == reader_job["output_contract"],
-        "all_semantic_kinds_supported": reader_job["kind"] in ALLOWED_KINDS,
-        "isolated_temp_workspace": True,
-        "codex_binary_detected": bool(exe("codex")),
-        "claude_binary_detected": bool(exe("claude")),
-    })
+    schema = output_schema(reader_job); packet = prompt(reader_job); cmd = codex_command(Path("/tmp/schema.json"), Path("/tmp/out.json"))
+    ok = not validate_job(reader_job) and reader_job["kind"] in ALLOWED_KINDS and schema == reader_job["output_contract"] and "would_continue" in json.dumps(schema) and "independent_gate=false" in packet and "exec" in cmd and "--ephemeral" in cmd and "--output-schema" in cmd and "--sandbox" in cmd
+    dump({"local_agent_adapter_contract": "PASS" if ok else "FAIL", "contract_native_output_schema": schema == reader_job["output_contract"], "all_semantic_kinds_supported": reader_job["kind"] in ALLOWED_KINDS, "isolated_temp_workspace": True, "codex_binary_detected": bool(exe("codex")), "claude_binary_detected": bool(exe("claude"))})
     return 0 if ok else 1
 
 
 def main() -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--provider", choices=["auto", "codex", "claude"], default=os.getenv("NOVEL_OS_LOCAL_AGENT_PROVIDER", "auto"))
-    p.add_argument("--timeout", type=int, default=180)
-    p.add_argument("--capabilities", action="store_true")
-    p.add_argument("--self-test", action="store_true")
+    p.add_argument("--provider", choices=["auto", "codex", "claude"], default=os.getenv("NOVELFORGE_LOCAL_AGENT_PROVIDER", "auto"))
+    p.add_argument("--timeout", type=int, default=180); p.add_argument("--capabilities", action="store_true"); p.add_argument("--self-test", action="store_true")
     args = p.parse_args()
-    if args.self_test:
-        return self_test()
+    if args.self_test: return self_test()
     if args.capabilities:
         selected = select(args.provider)
-        dump({
-            "adapter": "local-agent-cli", "adapter_version": "0.3",
-            "requested_provider": args.provider, "selected_provider": selected,
-            "codex_binary_available": bool(exe("codex")), "claude_binary_available": bool(exe("claude")),
-            "available": selected is not None, "supported_kinds": sorted(ALLOWED_KINDS),
-            "output_shape": "job.output_contract", "independence_boundary": "separate_local_agent_process",
-            "api_key_required_by_harness": False,
-        })
+        dump({"adapter": "local-agent-cli", "adapter_version": "0.3", "requested_provider": args.provider, "selected_provider": selected, "codex_binary_available": bool(exe("codex")), "claude_binary_available": bool(exe("claude")), "available": selected is not None, "supported_kinds": sorted(ALLOWED_KINDS), "output_shape": "job.output_contract", "independence_boundary": "separate_local_agent_process", "api_key_required_by_harness": False})
         return 0
-    try:
-        job = json.load(sys.stdin)
+    try: job = json.load(sys.stdin)
     except Exception as exc:
-        dump({"status": "failed", "errors": [f"stdin job invalid: {exc}"]})
-        return 1
-    result = execute(job, args.provider, args.timeout)
-    dump(result)
+        dump({"status": "failed", "errors": [f"stdin job invalid: {exc}"]}); return 1
+    result = execute(job, args.provider, args.timeout); dump(result)
     return 0 if result.get("status") in {"completed", "unsupported"} else 1
 
 
