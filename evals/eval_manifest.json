@@ -1,0 +1,17 @@
+{
+  "suite_version": "7.0.0",
+  "description": "NovelForge generic infrastructure, Surface, Reader, Canon, Corpus and semantic capability/regression suite.",
+  "cases": [
+    {"file": "cases/infra_framework_contract.json"},
+    {"file": "cases/canon_plan_not_accepted.json"},
+    {"file": "cases/corpus_rights_boundary.json"},
+    {"file": "cases/surface_fragmentation_reject.json"},
+    {"file": "cases/surface_process_broadcast_reject.json"},
+    {"file": "cases/character_semantic_role_reject.json"},
+    {"file": "cases/reader_safe_but_flat_reject.json"},
+    {"file": "cases/reader_pressure_ladder_accept.json"},
+    {"file": "cases/surface_embodied_dialogue_accept.json"},
+    {"file": "cases/reader_forward_pull_accept.json"},
+    {"file": "cases/surface_profile_scoped_fragment_accept.json"}
+  ]
+}
