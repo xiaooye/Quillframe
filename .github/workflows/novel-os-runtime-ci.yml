@@ -1,0 +1,158 @@
+name: Novel Production Agent Runtime CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile runtime tools
+        run: >-
+          python -m py_compile
+          novel_os.py
+          harness/session_runtime/session_runtime.py
+          harness/control_plane/control_plane.py
+          harness/control_plane/mcp_stdio.py
+          harness/semantic_workers/semantic_worker_router.py
+          harness/semantic_workers/semantic_worker_runner.py
+          harness/semantic_workers/peer_chat_relay.py
+          harness/semantic_workers/adapters/local_agent_adapter.py
+          harness/semantic_workers/adapters/openai_responses_adapter.py
+
+      - name: Session state-machine contract
+        run: python harness/session_runtime/session_runtime.py self-test > session-test.json
+
+      - name: Durable Control Plane contract
+        run: python harness/control_plane/control_plane.py --db /tmp/novel-os-control-plane-ci.db self-test > control-plane-test.json
+
+      - name: MCP stdio lifecycle contract
+        run: python harness/control_plane/mcp_stdio.py --self-test > mcp-test.json
+
+      - name: Semantic router lineage contract
+        run: python harness/semantic_workers/semantic_worker_router.py self-test > semantic-router-test.json
+
+      - name: Peer chat relay contract
+        run: python harness/semantic_workers/peer_chat_relay.py self-test > peer-chat-test.json
+
+      - name: Local agent adapter transport contract
+        run: python harness/semantic_workers/adapters/local_agent_adapter.py --self-test > local-agent-test.json
+
+      - name: Local Harness CLI contract
+        run: python novel_os.py self-test > cli-test.json
+
+      - name: Validate schemas and authority boundary
+        run: |
+          python - <<'PY'
+          import json, pathlib
+          files = [
+            'harness/session_runtime/session_schema.json',
+            'harness/control_plane/event_schema.json',
+            'harness/control_plane/handoff_schema.json',
+            'harness/semantic_workers/job_schema.json',
+            'harness/semantic_workers/result_schema.json',
+          ]
+          schemas={p:json.load(open(p,encoding='utf-8')) for p in files}
+          event_types=set(schemas['harness/control_plane/event_schema.json']['properties']['event_type']['enum'])
+          forbidden={'draft.requested','settlement.apply','canon.write','os.promote'}
+          assert not (event_types & forbidden), event_types & forbidden
+          perms=schemas['harness/control_plane/handoff_schema.json']['properties']['permissions']['properties']
+          assert perms['canon_write']['const'] is False
+          assert perms['os_behavior_write']['const'] is False
+          assert perms['durable_user_taste_write']['const'] is False
+          mcp=pathlib.Path('harness/control_plane/mcp_stdio.py').read_text(encoding='utf-8')
+          for forbidden_tool in ('canon_write','settlement_apply','os_promote'):
+              assert f'"novel_os_{forbidden_tool}"' not in mcp
+          manifest=pathlib.Path('HARNESS_MANIFEST.yaml').read_text(encoding='utf-8')
+          assert 'version: 6.6.0' in manifest
+          assert 'xiaooye/cn_webnovel_agent' in manifest
+          assert 'xiaooye/frostloom' in manifest
+          assert 'connector_event_grants_canon_authority: false' in manifest
+          PY
+
+      - name: Assert deterministic self-test results
+        run: |
+          python - <<'PY'
+          import json
+          checks={
+            'session-test.json':('session_runtime_contract','PASS'),
+            'control-plane-test.json':('control_plane_contract','PASS'),
+            'mcp-test.json':('mcp_stdio_contract','PASS'),
+            'semantic-router-test.json':('semantic_router_contract','PASS'),
+            'peer-chat-test.json':('peer_chat_relay_contract','PASS'),
+            'local-agent-test.json':('local_agent_adapter_contract','PASS'),
+            'cli-test.json':('novel_os_cli_contract','PASS'),
+          }
+          for path,(key,expected) in checks.items():
+              data=json.load(open(path,encoding='utf-8'))
+              assert data[key]==expected,(path,data)
+          cp=json.load(open('control-plane-test.json',encoding='utf-8'))
+          assert cp['idempotent_event_ingress'] is True
+          assert cp['lease_claim'] is True
+          assert cp['exactly_once_consumption'] is True
+          assert cp['authority_guard'] is True
+          sr=json.load(open('semantic-router-test.json',encoding='utf-8'))
+          assert sr['fingerprint_excludes_runtime_lineage'] is True
+          PY
+
+      - name: Verify direct layer does not fabricate a reviewer
+        env:
+          OPENAI_API_KEY: ''
+          NOVEL_OS_SEMANTIC_WORKER_CMD: ''
+          NOVEL_OS_DISABLE_LOCAL_AGENT_AUTO: '1'
+        run: |
+          python harness/semantic_workers/semantic_worker_runner.py capabilities > direct-capabilities.json
+          python - <<'PY'
+          import json
+          d=json.load(open('direct-capabilities.json',encoding='utf-8'))
+          assert d['independent_worker_available'] is False
+          assert d['fallback_without_adapter']=='semantic_pending_at_direct_layer'
+          assert 'control_plane_mcp' in d['higher_level_transports']
+          assert 'peer_chat_relay' in d['higher_level_transports']
+          PY
+
+      - name: OpenAI adapter dry-run only
+        run: |
+          python - <<'PY'
+          import json,sys
+          sys.path.insert(0,'harness/semantic_workers')
+          from semantic_worker_router import fingerprint_for
+          job={'job_id':'SEM-CI','kind':'eval_judge','subject_id':'CI','created_at':'now','input_fingerprint':'','input':{'text':'fixture'},'rubric':['judge fixture'],'output_contract':{},'permissions':{'canon_write':False,'os_behavior_write':False,'durable_user_taste_write':False,'allowed_result_scope':'observation'},'provenance':{'source':'ci'}}
+          job['input_fingerprint']=fingerprint_for(job)
+          json.dump(job,open('/tmp/semantic-ci-job.json','w',encoding='utf-8'))
+          PY
+          python harness/semantic_workers/adapters/openai_responses_adapter.py --dry-run < /tmp/semantic-ci-job.json > openai-dry-run.json
+          python - <<'PY'
+          import json
+          d=json.load(open('openai-dry-run.json',encoding='utf-8'))
+          assert d['valid'] is True
+          assert d['request']['store'] is False
+          assert d['request']['text']['format']['type']=='json_schema'
+          assert d['authorization_header_included'] is False
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: runtime-contract-artifacts
+          path: |
+            session-test.json
+            control-plane-test.json
+            mcp-test.json
+            semantic-router-test.json
+            peer-chat-test.json
+            local-agent-test.json
+            cli-test.json
+            direct-capabilities.json
+            openai-dry-run.json
+          if-no-files-found: warn
