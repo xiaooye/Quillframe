@@ -1,0 +1,52 @@
+name: NovelForge Event Router
+
+on:
+  repository_dispatch:
+    types: [novelforge-event]
+  workflow_dispatch:
+    inputs:
+      event_json:
+        description: 'One typed Control Plane event JSON object'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: novelforge-event-${{ github.event.client_payload.event.event_id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Materialize event
+        env:
+          DISPATCH_EVENT: ${{ toJson(github.event.client_payload.event) }}
+          MANUAL_EVENT: ${{ inputs.event_json }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          python - <<'PY'
+          import json,os,pathlib
+          raw=os.environ.get('DISPATCH_EVENT') if os.environ['EVENT_NAME']=='repository_dispatch' else os.environ.get('MANUAL_EVENT')
+          event=json.loads(raw or '{}')
+          if not isinstance(event,dict): raise SystemExit('event must be an object')
+          pathlib.Path('/tmp/event.json').write_text(json.dumps(event,ensure_ascii=False,indent=2),encoding='utf-8')
+          PY
+      - name: Validate event contract and authority boundary
+        run: |
+          python harness/control_plane/control_plane.py --db /tmp/event-router.db event-ingest --event /tmp/event.json > event-receipt.json
+          python - <<'PY'
+          import json
+          d=json.load(open('event-receipt.json',encoding='utf-8'))
+          assert d['accepted'] is True
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: novelforge-event-${{ github.run_id }}
+          path: event-receipt.json
