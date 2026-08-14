@@ -22,7 +22,7 @@ import tomllib
 SDK_VERSION = "1"
 PROJECT_SCHEMA = "novelforge_project_v1"
 LOCK_SCHEMA = "novelforge_lock_v1"
-DEFAULT_FRAMEWORK_VERSION = "7.1.0"
+DEFAULT_FRAMEWORK_VERSION = "7.2.0"
 
 REQUIRED_DIRS = [
     "specs",
@@ -137,6 +137,9 @@ include_bootstrap_files = true
 framework_surface_fundamentals = true
 framework_reader_engagement = true
 independent_semantic_gate_supported = true
+reader_simulation_supported = true
+quality_evolution_supported = true
+author_context_memory_controls_supported = true
 '''
 
 
@@ -168,7 +171,7 @@ This is a NovelForge fiction project repository.
 - Research claims/sources: `research/`
 - Draft/review/accepted manuscripts: `manuscripts/`
 
-Plans, drafts, runtime sessions, corpus, and semantic judgments are not Canon.
+Plans, drafts, runtime sessions, corpus, memory overlays, reader panels, revision reports, and semantic judgments are not Canon.
 
 ## Engineering workflow
 
@@ -201,7 +204,7 @@ def readme_zh(title: str) -> str:
 - Research claims / sources：`research/`
 - Draft / Review / Accepted 正文：`manuscripts/`
 
-Plan、Draft、runtime session、Corpus、semantic judgment 都不是 Canon。
+Plan、Draft、runtime session、Corpus、memory overlay、Reader Panel、revision report、semantic judgment 都不是 Canon。
 
 ## 工程流程
 
@@ -228,9 +231,10 @@ Read `novelforge.toml` and `novelforge.lock.json`, then load the pinned NovelFor
 Rules:
 - project repository owns project facts, plans, profiles, research, manuscripts and Canon;
 - framework owns generic mechanisms;
-- plan/review/session/corpus/semantic result are not Canon;
+- plan/review/session/corpus/memory overlay/reader-panel/revision-report/semantic result are not Canon;
 - determine exactly one task mode;
 - build sparse context rather than loading the entire repository;
+- author-visible memory/context controls affect retrieval or proposals, never silently mutate Canon;
 - checkpoint before external waits and consequential writes;
 - Canon mutation requires explicit acceptance + settlement transaction;
 - run project validation/tests before release or structural migration completion.
@@ -243,7 +247,7 @@ def claude_md() -> str:
 Read `AGENTS.md`, `novelforge.toml`, and `novelforge.lock.json` before project work.
 
 Use the pinned NovelForge framework as the generic runtime/quality authority and this repository as project authority.
-Do not infer Canon from chat/session history.
+Do not infer Canon from chat/session history, memory-bank views, or reader/revision diagnostics.
 Use a separate invocation/session when independent semantic review is mandatory.
 '''
 
@@ -459,8 +463,25 @@ def self_test(tmp_root: Path) -> dict[str, Any]:
     init_project(tmp_root, "PROJECT-TEST", "Fixture Novel", "en", DEFAULT_FRAMEWORK_VERSION, False)
     spec = create_spec(tmp_root, "Volume architecture change")
     validation = validate_project(tmp_root); build = build_project(tmp_root)
-    ok = validation["valid"] and Path(build["output"], "project.bundle.json").exists() and Path(spec["spec_dir"], "tasks.zh-CN.md").exists()
-    return {"project_sdk_contract": "PASS" if ok else "FAIL", "framework_default": DEFAULT_FRAMEWORK_VERSION, "scaffold": True, "validate": validation["valid"], "bilingual_specs": True, "reproducible_bundle": True, "software_project_contract": True}
+    manifest = load_manifest(tmp_root)
+    quality = manifest.get("quality", {})
+    ok = (
+        validation["valid"] and Path(build["output"], "project.bundle.json").exists()
+        and Path(spec["spec_dir"], "tasks.zh-CN.md").exists()
+        and quality.get("reader_simulation_supported") is True
+        and quality.get("quality_evolution_supported") is True
+        and quality.get("author_context_memory_controls_supported") is True
+    )
+    return {
+        "project_sdk_contract": "PASS" if ok else "FAIL",
+        "framework_default": DEFAULT_FRAMEWORK_VERSION,
+        "scaffold": True,
+        "validate": validation["valid"],
+        "bilingual_specs": True,
+        "reproducible_bundle": True,
+        "software_project_contract": True,
+        "quality_control_scaffold": True,
+    }
 
 
 def main() -> int:
