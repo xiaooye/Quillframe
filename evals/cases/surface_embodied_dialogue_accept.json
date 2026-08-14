@@ -1,0 +1,19 @@
+{
+  "id": "SURFACE-DIALOGUE-001",
+  "type": "capability",
+  "domain": "surface",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "language": "zh-CN",
+    "scene": "三个人在修理自行车。店主想尽快交车，学徒发现刹车线有问题，顾客只关心能否赶上下午的班。对白中每个人持续处理自己的任务和利益。",
+    "text": "“先别装轮子。”小林捏住那根刚穿过去的刹车线，把磨白的一截抻给老板看，“这个再骑两趟就得断。”\n\n老板还蹲在后轴旁，扳手没松手：“库里还有一根？”\n\n“有是有，”小林朝墙边料架偏了偏下巴，“但给张叔那辆留的。”\n\n顾客看了眼门外的钟，终于插进来：“我两点上班。你们要换就现在换，别等我骑到桥上再断。”\n\n老板这才把扳手放下：“行，先用。张叔那根我下午去拿货补上。”"
+  },
+  "rubric": [
+    "Accept when speaker ownership survives without ABAB turn counting because task, object, agenda, action, and response target remain visible.",
+    "Do not require mechanical speech tags on every line.",
+    "Evidence may cite avoidance of HF-11/HF-12 and positive character/task grounding."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["HF-*", "RG-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept", "codes": []}
+}
