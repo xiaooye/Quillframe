@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "novel-os-agent-session-v1",
-  "title": "Novel Production OS Agent Session",
+  "$id": "novelforge-agent-session-v1",
+  "title": "NovelForge Agent Session",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema","resource_id","session_id","role","transport","backend","usage_class","status","memory_policy","context_policy","resume_policy","runs","checkpoints","events","provenance"],
   "properties": {
-    "schema": {"const": "novel_os_agent_session_v1"},
+    "schema": {"const": "novelforge_agent_session_v1"},
     "resource_id": {"type": "string", "minLength": 1},
     "project_id": {"type": ["string", "null"]},
     "session_id": {"type": "string", "pattern": "^SES-[A-Za-z0-9._:-]+$"},
