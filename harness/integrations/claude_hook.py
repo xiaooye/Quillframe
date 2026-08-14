@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic Claude Code lifecycle hook → local Novel OS Control Plane.
+"""Deterministic Claude Code lifecycle hook → local NovelForge Control Plane.
 
 Reads one Claude hook JSON object from stdin. No model calls. No Canon writes.
 """
@@ -28,12 +28,12 @@ def main()->int:
         native=str(event.get("session_id") or "")
         if not native: return 0
         sid=os_session_id(native)
-        cp=ControlPlane(os.getenv("NOVEL_OS_DB",str(ROOT/".novel-os"/"runtime.db")));cp.init()
+        cp=ControlPlane(os.getenv("NOVELFORGE_DB",str(ROOT/".novelforge"/"runtime.db")));cp.init()
         existing=cp.get_session(sid)
         payload=(dict(existing["session"]) if existing else {
             "session_id":sid,
-            "resource_id":os.getenv("NOVEL_OS_RESOURCE_ID","RUNTIME-LOCAL"),
-            "project_id":os.getenv("NOVEL_OS_PROJECT_ID"),
+            "resource_id":os.getenv("NOVELFORGE_RESOURCE_ID","RUNTIME-LOCAL"),
+            "project_id":os.getenv("NOVELFORGE_PROJECT_ID"),
             "role":"manager",
             "status":"running",
             "transport":"local_agent_cli",
@@ -53,7 +53,7 @@ def main()->int:
         cp.put_session(payload,expected_version=existing["version"] if existing else 0)
         return 0
     except Exception as exc:
-        print(f"novel-os Claude hook warning: {type(exc).__name__}: {exc}",file=sys.stderr)
+        print(f"novelforge Claude hook warning: {type(exc).__name__}: {exc}",file=sys.stderr)
         return 0  # telemetry must not break normal Claude operation
 
 if __name__=="__main__":raise SystemExit(main())
