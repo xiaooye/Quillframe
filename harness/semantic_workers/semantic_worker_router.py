@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Provider-neutral semantic job/result packaging and validation.
 
-Deterministic only: this module never performs literary judgment. Semantic
-intelligence is supplied through model-readable contracts and executed by an
-eligible model/peer/human worker.
+Semantic intelligence lives in model-readable contracts. This module only owns
+deterministic packaging, fingerprinting, permission guards, blind-eval isolation,
+and lightweight typed-output validation. It never performs literary judgment.
 """
 from __future__ import annotations
 
@@ -15,20 +15,23 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-FORBIDDEN_BLIND_KEYS = {"expected","expected_verdict","expected_codes","blocks_release","gold","gold_label","prior_result"}
-ALLOWED_KINDS = {"eval_judge","corpus_analyze","benchmark_synthesize","external_review","preference_distill","artifact_audit"}
+FORBIDDEN_BLIND_KEYS = {"expected", "expected_verdict", "expected_codes", "blocks_release", "gold", "gold_label", "prior_result"}
+ALLOWED_KINDS = {"eval_judge", "corpus_analyze", "benchmark_synthesize", "external_review", "preference_distill", "artifact_audit"}
 DEFAULT_CONTRACT_REGISTRY = Path(__file__).with_name("model_contracts.json")
 
 
 def load_json(path: Path) -> Any:
-    with path.open("r", encoding="utf-8") as f: return json.load(f)
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
 
 
 def dump_json(obj: Any, path: Path | None = None) -> None:
     text = json.dumps(obj, ensure_ascii=False, indent=2) + "\n"
     if path:
-        path.parent.mkdir(parents=True, exist_ok=True); path.write_text(text, encoding="utf-8")
-    else: print(text, end="")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    else:
+        print(text, end="")
 
 
 def canonical_bytes(obj: Any) -> bytes:
@@ -36,9 +39,14 @@ def canonical_bytes(obj: Any) -> bytes:
 
 
 def semantic_payload(job: dict[str, Any]) -> dict[str, Any]:
-    # Execution/session lineage intentionally does not alter semantic fingerprint.
-    return {"kind": job["kind"], "subject_id": job["subject_id"], "input": job.get("input", {}),
-            "rubric": job.get("rubric", []), "output_contract": job.get("output_contract", {})}
+    # Execution/session lineage intentionally does not alter semantic identity.
+    return {
+        "kind": job["kind"],
+        "subject_id": job["subject_id"],
+        "input": job.get("input", {}),
+        "rubric": job.get("rubric", []),
+        "output_contract": job.get("output_contract", {}),
+    }
 
 
 def fingerprint_for(job: dict[str, Any]) -> str:
@@ -49,11 +57,70 @@ def find_forbidden_keys(obj: Any, path: str = "$") -> list[str]:
     hits: list[str] = []
     if isinstance(obj, dict):
         for key, value in obj.items():
-            if key in FORBIDDEN_BLIND_KEYS: hits.append(f"{path}.{key}")
+            if key in FORBIDDEN_BLIND_KEYS:
+                hits.append(f"{path}.{key}")
             hits.extend(find_forbidden_keys(value, f"{path}.{key}"))
     elif isinstance(obj, list):
-        for i, value in enumerate(obj): hits.extend(find_forbidden_keys(value, f"{path}[{i}]") )
+        for i, value in enumerate(obj):
+            hits.extend(find_forbidden_keys(value, f"{path}[{i}]"))
     return hits
+
+
+def _matches_type(value: Any, expected: str) -> bool:
+    if expected == "object": return isinstance(value, dict)
+    if expected == "array": return isinstance(value, list)
+    if expected == "string": return isinstance(value, str)
+    if expected == "boolean": return isinstance(value, bool)
+    if expected == "number": return isinstance(value, (int, float)) and not isinstance(value, bool)
+    if expected == "integer": return isinstance(value, int) and not isinstance(value, bool)
+    if expected == "null": return value is None
+    return True  # Unknown JSON-Schema keywords/types are intentionally not invented here.
+
+
+def validate_typed_value(value: Any, schema: Any, path: str = "$") -> list[str]:
+    """Validate the small JSON-Schema subset used by NovelForge model contracts."""
+    if not isinstance(schema, dict) or not schema:
+        return []
+    errors: list[str] = []
+    if "enum" in schema and value not in schema["enum"]:
+        errors.append(f"{path}: value not in enum")
+    expected = schema.get("type")
+    if expected is not None:
+        allowed = expected if isinstance(expected, list) else [expected]
+        if not any(isinstance(t, str) and _matches_type(value, t) for t in allowed):
+            return errors + [f"{path}: type mismatch; expected {allowed}"]
+    if isinstance(value, dict):
+        required = schema.get("required", [])
+        if isinstance(required, list):
+            for key in required:
+                if key not in value:
+                    errors.append(f"{path}: missing required field {key}")
+        props = schema.get("properties", {})
+        if isinstance(props, dict):
+            for key, child_schema in props.items():
+                if key in value:
+                    errors.extend(validate_typed_value(value[key], child_schema, f"{path}.{key}"))
+        if schema.get("additionalProperties") is False and isinstance(props, dict):
+            for key in sorted(set(value) - set(props)):
+                errors.append(f"{path}: unexpected field {key}")
+    elif isinstance(value, list):
+        if isinstance(schema.get("minItems"), int) and len(value) < schema["minItems"]:
+            errors.append(f"{path}: fewer than minItems")
+        if isinstance(schema.get("maxItems"), int) and len(value) > schema["maxItems"]:
+            errors.append(f"{path}: more than maxItems")
+        item_schema = schema.get("items")
+        if isinstance(item_schema, dict):
+            for i, item in enumerate(value):
+                errors.extend(validate_typed_value(item, item_schema, f"{path}[{i}]"))
+    elif isinstance(value, str):
+        if isinstance(schema.get("minLength"), int) and len(value) < schema["minLength"]:
+            errors.append(f"{path}: shorter than minLength")
+    elif isinstance(value, (int, float)) and not isinstance(value, bool):
+        if isinstance(schema.get("minimum"), (int, float)) and value < schema["minimum"]:
+            errors.append(f"{path}: below minimum")
+        if isinstance(schema.get("maximum"), (int, float)) and value > schema["maximum"]:
+            errors.append(f"{path}: above maximum")
+    return errors
 
 
 def load_contract_registry(path: Path = DEFAULT_CONTRACT_REGISTRY) -> dict[str, Any]:
@@ -68,14 +135,14 @@ def load_contract_registry(path: Path = DEFAULT_CONTRACT_REGISTRY) -> dict[str, 
             raise ValueError("invalid model contract entry")
         if contract.get("kind") not in ALLOWED_KINDS:
             raise ValueError(f"contract {contract_id}: unsupported semantic kind")
-        if not isinstance(contract.get("rubric"), list) or not all(isinstance(x, str) and x.strip() for x in contract["rubric"]):
+        if not isinstance(contract.get("rubric"), list) or not contract["rubric"] or not all(isinstance(x, str) and x.strip() for x in contract["rubric"]):
             raise ValueError(f"contract {contract_id}: rubric must be non-empty string list")
         if not isinstance(contract.get("output_contract"), dict):
             raise ValueError(f"contract {contract_id}: output_contract must be object")
         perms = contract.get("permissions")
         if not isinstance(perms, dict):
             raise ValueError(f"contract {contract_id}: permissions must be object")
-        for key in ("canon_write","os_behavior_write","durable_user_taste_write"):
+        for key in ("canon_write", "os_behavior_write", "durable_user_taste_write"):
             if perms.get(key) is not False:
                 raise ValueError(f"contract {contract_id}: permission {key} must be false")
     return registry
@@ -126,10 +193,13 @@ def make_contract_job(contract_id: str, subject_id: str, input_payload: dict[str
 
 
 def make_eval_jobs(queue: dict[str, Any], *, source_session_id: str | None = None, handoff_id: str | None = None) -> dict[str, Any]:
-    if queue.get("blind") is not True: raise ValueError("eval queue must declare blind=true")
+    if queue.get("blind") is not True:
+        raise ValueError("eval queue must declare blind=true")
     leakage = find_forbidden_keys(queue)
-    if leakage: raise ValueError("blind queue contains forbidden answer-key fields: " + ", ".join(leakage))
-    created_at = datetime.now(timezone.utc).isoformat(); jobs = []
+    if leakage:
+        raise ValueError("blind queue contains forbidden answer-key fields: " + ", ".join(leakage))
+    created_at = datetime.now(timezone.utc).isoformat()
+    jobs = []
     for case in queue.get("cases", []):
         subject_id = case["id"]
         job = {
@@ -141,83 +211,114 @@ def make_eval_jobs(queue: dict[str, Any], *, source_session_id: str | None = Non
             "provenance": {"source": "blind_eval_queue", "suite_version": queue.get("suite_version")},
             "execution": {"source_session_id": source_session_id, "worker_session_id": None, "handoff_id": handoff_id, "attempt_id": None},
         }
-        job["input_fingerprint"] = fingerprint_for(job); jobs.append(job)
+        job["input_fingerprint"] = fingerprint_for(job)
+        jobs.append(job)
     return {"semantic_worker_queue_version": "2", "source_suite_version": queue.get("suite_version"), "blind": True, "jobs": jobs}
 
 
 def validate_job(job: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    required = {"job_id","kind","subject_id","created_at","input_fingerprint","input","rubric","output_contract","permissions","provenance"}
+    required = {"job_id", "kind", "subject_id", "created_at", "input_fingerprint", "input", "rubric", "output_contract", "permissions", "provenance"}
     missing = sorted(required - set(job))
-    if missing: return ["missing fields: " + ", ".join(missing)]
-    if job["kind"] not in ALLOWED_KINDS: errors.append(f"unsupported kind: {job['kind']}")
+    if missing:
+        return ["missing fields: " + ", ".join(missing)]
+    if job["kind"] not in ALLOWED_KINDS:
+        errors.append(f"unsupported kind: {job['kind']}")
     leakage = find_forbidden_keys({"input": job.get("input"), "rubric": job.get("rubric"), "output_contract": job.get("output_contract")})
-    if job["kind"] == "eval_judge" and leakage: errors.append("answer-key leakage: " + ", ".join(leakage))
+    if job["kind"] == "eval_judge" and leakage:
+        errors.append("answer-key leakage: " + ", ".join(leakage))
     perms = job.get("permissions", {})
-    for key in ("canon_write","os_behavior_write","durable_user_taste_write"):
-        if perms.get(key) is not False: errors.append(f"permission {key} must be false")
-    if job.get("input_fingerprint") != fingerprint_for(job): errors.append("input_fingerprint mismatch")
+    for key in ("canon_write", "os_behavior_write", "durable_user_taste_write"):
+        if perms.get(key) is not False:
+            errors.append(f"permission {key} must be false")
+    if job.get("input_fingerprint") != fingerprint_for(job):
+        errors.append("input_fingerprint mismatch")
     execution = job.get("execution")
     if execution is not None:
-        if not isinstance(execution, dict): errors.append("execution must be object")
-        elif set(execution) - {"source_session_id","worker_session_id","handoff_id","attempt_id"}: errors.append("execution contains unknown lineage fields")
+        if not isinstance(execution, dict):
+            errors.append("execution must be object")
+        elif set(execution) - {"source_session_id", "worker_session_id", "handoff_id", "attempt_id"}:
+            errors.append("execution contains unknown lineage fields")
     return errors
 
 
 def validate_result(job: dict[str, Any], result: dict[str, Any]) -> list[str]:
     errors = validate_job(job)
-    required = {"job_id","subject_id","kind","input_fingerprint","status","worker","judgment","proposals","errors"}
+    required = {"job_id", "subject_id", "kind", "input_fingerprint", "status", "worker", "judgment", "proposals", "errors"}
     missing = sorted(required - set(result))
-    if missing: return errors + ["result missing fields: " + ", ".join(missing)]
-    for key in ("job_id","subject_id","kind","input_fingerprint"):
-        if result.get(key) != job.get(key): errors.append(f"result/job mismatch: {key}")
-    if result.get("status") not in {"completed","unsupported","failed"}: errors.append("invalid result status")
+    if missing:
+        return errors + ["result missing fields: " + ", ".join(missing)]
+    for key in ("job_id", "subject_id", "kind", "input_fingerprint"):
+        if result.get(key) != job.get(key):
+            errors.append(f"result/job mismatch: {key}")
+    if result.get("status") not in {"completed", "unsupported", "failed"}:
+        errors.append("invalid result status")
     worker = result.get("worker", {})
-    if not isinstance(worker, dict) or not worker.get("provider") or not worker.get("model_or_reviewer"): errors.append("worker.provider/model_or_reviewer required")
+    if not isinstance(worker, dict) or not worker.get("provider") or not worker.get("model_or_reviewer"):
+        errors.append("worker.provider/model_or_reviewer required")
     judgment = result.get("judgment", {})
     confidence = judgment.get("confidence") if isinstance(judgment, dict) else None
-    if not isinstance(confidence, (int, float)) or isinstance(confidence, bool) or not 0 <= confidence <= 1: errors.append("judgment.confidence must be 0..1")
+    if not isinstance(confidence, (int, float)) or isinstance(confidence, bool) or not 0 <= confidence <= 1:
+        errors.append("judgment.confidence must be 0..1")
+    if result.get("status") == "completed" and isinstance(job.get("output_contract"), dict) and job["output_contract"].get("type"):
+        errors.extend("output_contract " + e for e in validate_typed_value(judgment, job["output_contract"], "$.judgment"))
     if result.get("status") == "completed" and job["kind"] == "eval_judge":
-        if judgment.get("verdict") not in {"accept","reject",None}: errors.append("eval verdict must be accept|reject|null")
-        if judgment.get("result") not in {"pass","fail",None}: errors.append("eval result must be pass|fail|null")
+        if judgment.get("verdict") not in {"accept", "reject", None}: errors.append("eval verdict must be accept|reject|null")
+        if judgment.get("result") not in {"pass", "fail", None}: errors.append("eval result must be pass|fail|null")
         if judgment.get("verdict") is None and judgment.get("result") is None: errors.append("completed eval requires verdict or result")
         if not isinstance(judgment.get("codes", []), list): errors.append("judgment.codes must be list")
         if not isinstance(judgment.get("evidence", []), list): errors.append("judgment.evidence must be list")
-    forbidden_actions = {"settle_canon","promote_generic_hard_rule","overwrite_durable_user_taste","grant_permissions"}
+    forbidden_actions = {"settle_canon", "promote_generic_hard_rule", "overwrite_durable_user_taste", "grant_permissions"}
     for proposal in result.get("proposals", []):
-        if isinstance(proposal, dict) and proposal.get("action") in forbidden_actions: errors.append(f"forbidden direct proposal action: {proposal.get('action')}")
-    lineage = job.get("execution") or {}; result_lineage = result.get("execution") or {}
-    for key in ("source_session_id","handoff_id"):
-        if lineage.get(key) and result_lineage.get(key) not in {None, lineage.get(key)}: errors.append(f"execution lineage mismatch: {key}")
+        if isinstance(proposal, dict) and proposal.get("action") in forbidden_actions:
+            errors.append(f"forbidden direct proposal action: {proposal.get('action')}")
+    lineage = job.get("execution") or {}
+    result_lineage = result.get("execution") or {}
+    for key in ("source_session_id", "handoff_id"):
+        if lineage.get(key) and result_lineage.get(key) not in {None, lineage.get(key)}:
+            errors.append(f"execution lineage mismatch: {key}")
     return errors
 
 
 def load_jobs(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
     for job in payload.get("jobs", []):
-        if job["job_id"] in out: raise ValueError(f"duplicate job_id: {job['job_id']}")
+        if job["job_id"] in out:
+            raise ValueError(f"duplicate job_id: {job['job_id']}")
         out[job["job_id"]] = job
     return out
 
 
 def validate_results(jobs_payload: dict[str, Any], results_payload: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
-    jobs = load_jobs(jobs_payload); validated = []; errors: list[str] = []; seen: set[str] = set()
+    jobs = load_jobs(jobs_payload)
+    validated = []
+    errors: list[str] = []
+    seen: set[str] = set()
     for result in results_payload.get("results", []):
         job_id = result.get("job_id")
-        if job_id in seen: errors.append(f"duplicate result job_id: {job_id}"); continue
-        seen.add(job_id); job = jobs.get(job_id)
-        if not job: errors.append(f"result references unknown job_id: {job_id}"); continue
+        if job_id in seen:
+            errors.append(f"duplicate result job_id: {job_id}")
+            continue
+        seen.add(job_id)
+        job = jobs.get(job_id)
+        if not job:
+            errors.append(f"result references unknown job_id: {job_id}")
+            continue
         item_errors = validate_result(job, result)
-        if item_errors: errors.extend(f"{job_id}: {msg}" for msg in item_errors)
-        else: validated.append(result)
+        if item_errors:
+            errors.extend(f"{job_id}: {msg}" for msg in item_errors)
+        else:
+            validated.append(result)
     return validated, errors
 
 
 def eval_judgments(validated_results: list[dict[str, Any]]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for result in validated_results:
-        if result["kind"] != "eval_judge" or result["status"] != "completed": continue
-        j = result["judgment"]; payload = {"codes": j.get("codes", []), "evidence": j.get("evidence", []), "confidence": j.get("confidence"), "worker": result.get("worker"), "input_fingerprint": result.get("input_fingerprint"), "execution": result.get("execution")}
+        if result["kind"] != "eval_judge" or result["status"] != "completed":
+            continue
+        j = result["judgment"]
+        payload = {"codes": j.get("codes", []), "evidence": j.get("evidence", []), "confidence": j.get("confidence"), "worker": result.get("worker"), "input_fingerprint": result.get("input_fingerprint"), "execution": result.get("execution")}
         if j.get("verdict") is not None: payload["verdict"] = j["verdict"]
         if j.get("result") is not None: payload["result"] = j["result"]
         out[result["subject_id"]] = payload
@@ -226,21 +327,26 @@ def eval_judgments(validated_results: list[dict[str, Any]]) -> dict[str, Any]:
 
 def self_test() -> int:
     queue = {"blind": True, "suite_version": "self", "cases": [{"id": "CASE-1", "type": "regression", "domain": "reader", "fixture": {"text": "x"}, "rubric": ["judge"], "judgment_contract": {}}]}
-    jobs = make_eval_jobs(queue, source_session_id="SES-A", handoff_id="HO-A"); job = jobs["jobs"][0]
-    result = {"job_id": job["job_id"], "subject_id": job["subject_id"], "kind": job["kind"], "input_fingerprint": job["input_fingerprint"], "status": "completed", "worker": {"provider": "self_test", "model_or_reviewer": "fixture"}, "judgment": {"verdict": "accept", "result": None, "codes": [], "evidence": ["fixture"], "confidence": 1.0}, "proposals": [], "errors": [], "execution": {"source_session_id": "SES-A", "worker_session_id": "SES-B", "handoff_id": "HO-A", "attempt_id": "ATT-1"}}
-    preserved = fingerprint_for({**job, "execution": {"source_session_id": "DIFFERENT"}}) == job["input_fingerprint"]
-    contract_job = make_contract_job("character.integrity", "CHAR-SELF", {"scene_excerpt": "x", "character": {"character_id": "CHAR-SELF"}}, source_session_id="SES-A")
-    registry_ok = contract_job["input"]["model_contract_id"] == "character.integrity" and contract_job["kind"] == "artifact_audit" and not validate_job(contract_job)
-    contract_boundary_ok = (
-        contract_job["provenance"]["source"] == "model_contract_registry"
-        and contract_job["permissions"]["canon_write"] is False
-        and len(contract_job["rubric"]) >= 3
-        and isinstance(contract_job["output_contract"], dict)
-    )
-    ok = not validate_job(job) and not validate_result(job, result) and preserved and registry_ok and contract_boundary_ok
-    dump_json({"semantic_router_contract": "PASS" if ok else "FAIL", "fingerprint_excludes_runtime_lineage": preserved,
-               "model_contract_registry": registry_ok, "semantic_intelligence_externalized": contract_boundary_ok,
-               "model_execution": False})
+    jobs = make_eval_jobs(queue, source_session_id="SES-A", handoff_id="HO-A")
+    eval_job = jobs["jobs"][0]
+    eval_result = {"job_id": eval_job["job_id"], "subject_id": eval_job["subject_id"], "kind": eval_job["kind"], "input_fingerprint": eval_job["input_fingerprint"], "status": "completed", "worker": {"provider": "self_test", "model_or_reviewer": "fixture"}, "judgment": {"verdict": "accept", "result": None, "codes": [], "evidence": ["fixture"], "confidence": 1.0}, "proposals": [], "errors": [], "execution": {"source_session_id": "SES-A", "worker_session_id": "SES-B", "handoff_id": "HO-A", "attempt_id": "ATT-1"}}
+    lineage_independent = fingerprint_for({**eval_job, "execution": {"source_session_id": "DIFFERENT"}}) == eval_job["input_fingerprint"]
+
+    contract_job = make_contract_job("reader.reaction", "CH-SELF", {"candidate_text": "x", "persona_id": "binge_reader"}, source_session_id="SES-A")
+    good = {"job_id": contract_job["job_id"], "subject_id": contract_job["subject_id"], "kind": contract_job["kind"], "input_fingerprint": contract_job["input_fingerprint"], "status": "completed", "worker": {"provider": "self_test", "model_or_reviewer": "fixture"}, "judgment": {"confidence": 0.9, "would_continue": True, "continue_desire": 0.8, "reason": "momentum"}, "proposals": [], "errors": []}
+    bad = json.loads(json.dumps(good)); bad["judgment"]["continue_desire"] = 2.0
+    registry_ok = not validate_job(contract_job) and not validate_result(contract_job, good)
+    typed_reject = any("above maximum" in e for e in validate_result(contract_job, bad))
+    boundary_ok = contract_job["permissions"]["canon_write"] is False and contract_job["provenance"]["source"] == "model_contract_registry"
+    ok = not validate_job(eval_job) and not validate_result(eval_job, eval_result) and lineage_independent and registry_ok and typed_reject and boundary_ok
+    dump_json({
+        "semantic_router_contract": "PASS" if ok else "FAIL",
+        "fingerprint_excludes_runtime_lineage": lineage_independent,
+        "model_contract_registry": registry_ok,
+        "typed_output_validation": typed_reject,
+        "semantic_intelligence_externalized": boundary_ok,
+        "model_execution": False,
+    })
     return 0 if ok else 1
 
 
@@ -252,9 +358,11 @@ def main() -> int:
     lc = sub.add_parser("list-contracts"); lc.add_argument("--registry")
     vj = sub.add_parser("validate-jobs"); vj.add_argument("--jobs", required=True)
     vr = sub.add_parser("validate-results"); vr.add_argument("--jobs", required=True); vr.add_argument("--results", required=True); vr.add_argument("--judgments-output")
-    sub.add_parser("self-test"); args = p.parse_args()
+    sub.add_parser("self-test")
+    args = p.parse_args()
     if args.command == "self-test": return self_test()
-    if args.command == "prepare-evals": dump_json(make_eval_jobs(load_json(Path(args.queue)), source_session_id=args.source_session_id, handoff_id=args.handoff_id), Path(args.output) if args.output else None); return 0
+    if args.command == "prepare-evals":
+        dump_json(make_eval_jobs(load_json(Path(args.queue)), source_session_id=args.source_session_id, handoff_id=args.handoff_id), Path(args.output) if args.output else None); return 0
     if args.command == "prepare-contract":
         job = make_contract_job(args.contract, args.subject_id, load_json(Path(args.input)), registry_path=Path(args.registry) if args.registry else DEFAULT_CONTRACT_REGISTRY, job_id=args.job_id, source_session_id=args.source_session_id, handoff_id=args.handoff_id)
         dump_json(job, Path(args.output) if args.output else None); return 0
@@ -262,7 +370,8 @@ def main() -> int:
         registry = load_contract_registry(Path(args.registry) if args.registry else DEFAULT_CONTRACT_REGISTRY)
         dump_json({"schema": registry["schema"], "version": registry.get("version"), "contracts": sorted(registry["contracts"]), "model_execution": False}); return 0
     if args.command == "validate-jobs":
-        payload = load_json(Path(args.jobs)); errors = [f"{j.get('job_id')}: {e}" for j in payload.get("jobs", []) for e in validate_job(j)]
+        payload = load_json(Path(args.jobs))
+        errors = [f"{j.get('job_id')}: {e}" for j in payload.get("jobs", []) for e in validate_job(j)]
         if errors:
             for e in errors: print(e, file=sys.stderr)
             return 1
@@ -273,7 +382,9 @@ def main() -> int:
         return 1
     judgments = eval_judgments(validated)
     if args.judgments_output: dump_json(judgments, Path(args.judgments_output))
-    print(f"validated semantic results: {len(validated)}; eval judgments: {len(judgments)}"); return 0
+    print(f"validated semantic results: {len(validated)}; eval judgments: {len(judgments)}")
+    return 0
 
 
-if __name__ == "__main__": raise SystemExit(main())
+if __name__ == "__main__":
+    raise SystemExit(main())
