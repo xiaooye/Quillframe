@@ -8,6 +8,8 @@ on:
       - 'harness/semantic_workers/model_contracts.json'
       - 'harness/semantic_workers/contracts/**'
       - 'harness/semantic_workers/semantic_worker_router.py'
+      - 'harness/semantic_workers/semantic_run_receipt.schema.json'
+      - 'evals/fixtures/semantic_workload_smoke.json'
       - '.github/workflows/novelforge-semantic-contract-packs.yml'
   pull_request:
     branches: [main]
@@ -16,6 +18,8 @@ on:
       - 'harness/semantic_workers/model_contracts.json'
       - 'harness/semantic_workers/contracts/**'
       - 'harness/semantic_workers/semantic_worker_router.py'
+      - 'harness/semantic_workers/semantic_run_receipt.schema.json'
+      - 'evals/fixtures/semantic_workload_smoke.json'
       - '.github/workflows/novelforge-semantic-contract-packs.yml'
   workflow_dispatch:
 
@@ -54,7 +58,11 @@ jobs:
 
           seen = set()
           summary = []
+          pack_by_id = {}
+          contract_to_pack = {}
           for pack in catalog['packs']:
+              assert pack['id'] not in pack_by_id
+              pack_by_id[pack['id']] = pack
               pack_path = (root / pack['path']).resolve()
               assert root == pack_path.parent or root in pack_path.parents
               assert pack_path.is_file(), pack_path
@@ -65,6 +73,7 @@ jobs:
               assert not (seen & set(actual)), ('duplicate contract ids across packs', sorted(seen & set(actual)))
               seen.update(actual)
               for contract_id in actual:
+                  contract_to_pack[contract_id] = pack['id']
                   job = make_contract_job(
                       contract_id,
                       'CI-' + contract_id,
@@ -89,10 +98,86 @@ jobs:
               }, ensure_ascii=False, indent=2) + '\n',
               encoding='utf-8',
           )
+
+          # Cross-pack receipt integration fixture. This is deliberately a deterministic
+          # fixture rather than a fake semantic gate: it verifies graph/authority wiring only.
+          receipt_path = pathlib.Path('evals/fixtures/semantic_workload_smoke.json')
+          receipt = json.loads(receipt_path.read_text(encoding='utf-8'))
+          schema = json.loads((root / 'semantic_run_receipt.schema.json').read_text(encoding='utf-8'))
+          assert schema['properties']['authority']['const'] is False
+          assert schema['properties']['permissions']['properties']['canon_write']['const'] is False
+          assert receipt['schema'] == 'novelforge_semantic_run_receipt_v1'
+          assert receipt['authority'] is False
+          assert receipt['permissions'] == {
+              'canon_write': False,
+              'framework_write': False,
+              'durable_user_taste_write': False,
+          }
+          assert receipt['model_execution'] is False
+          assert receipt['provenance']['semantic_results_are_real_model_outputs'] is False
+
+          activated = {x['pack_id']: x for x in receipt['pack_activations']}
+          assert activated
+          for pack_id, activation in activated.items():
+              assert pack_id in pack_by_id, pack_id
+              expected_path = 'harness/semantic_workers/' + pack_by_id[pack_id]['path']
+              assert activation['registry_path'] == expected_path, (pack_id, activation['registry_path'], expected_path)
+
+          steps = receipt['steps']
+          step_by_id = {x['step_id']: x for x in steps}
+          assert len(step_by_id) == len(steps)
+          completed = set()
+          for step in steps:
+              assert step['authority'] is False
+              assert step['pack_id'] in activated
+              assert contract_to_pack.get(step['contract_id']) == step['pack_id'], step
+              assert step['input_fingerprint'].startswith('sha256:') and len(step['input_fingerprint']) == 71
+              if step['result_fingerprint'] is not None:
+                  assert step['result_fingerprint'].startswith('sha256:') and len(step['result_fingerprint']) == 71
+              for parent in step['parent_step_ids']:
+                  assert parent in step_by_id, (step['step_id'], parent)
+                  assert parent in completed, ('receipt steps must be topologically ordered', step['step_id'], parent)
+              completed.add(step['step_id'])
+
+          decisions = {x['decision_id']: x for x in receipt['decisions']}
+          for decision in decisions.values():
+              assert decision['authority'] is False
+              assert decision['source_step_ids']
+              assert all(step_id in step_by_id for step_id in decision['source_step_ids'])
+          for step in steps:
+              assert all(ref in decisions for ref in step.get('decision_refs', []))
+
+          artifacts = {x['artifact_ref']: x for x in receipt['artifacts']}
+          assert len(artifacts) == len(receipt['artifacts'])
+          for artifact in artifacts.values():
+              assert artifact['fingerprint'].startswith('sha256:') and len(artifact['fingerprint']) == 71
+              assert artifact['authority'] not in {'locked', 'accepted'} or artifact['role'] == 'accepted_input_reference'
+          for step in steps:
+              for ref in step.get('artifact_refs', []):
+                  # Semantic steps may emit transient proposal refs not persisted as receipt artifacts.
+                  if ref.startswith(('branch:', 'trajectory:', 'context:selected:', 'proposal:active-plan-patch:')):
+                      assert ref in artifacts, (step['step_id'], ref)
+
+          pathlib.Path('semantic-workload-receipt-test.json').write_text(
+              json.dumps({
+                  'semantic_workload_receipt_contract': 'PASS',
+                  'run_id': receipt['run_id'],
+                  'step_count': len(steps),
+                  'pack_count': len(activated),
+                  'topological_lineage': True,
+                  'catalog_binding': True,
+                  'authority': False,
+                  'real_model_output_claimed': False,
+                  'model_execution': False,
+              }, ensure_ascii=False, indent=2) + '\n',
+              encoding='utf-8',
+          )
           PY
 
       - uses: actions/upload-artifact@v4
         with:
           name: semantic-contract-packs-${{ github.sha }}
-          path: semantic-contract-packs-test.json
+          path: |
+            semantic-contract-packs-test.json
+            semantic-workload-receipt-test.json
           if-no-files-found: error
