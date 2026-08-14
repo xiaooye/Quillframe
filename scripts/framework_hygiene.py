@@ -9,13 +9,14 @@ import urllib.parse
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
-# These identify real consumer-project leakage, not generic fixture IDs.
+# Construct known consumer identifiers at runtime so the checker itself does
+# not commit those complete identifiers into the generic framework tree.
 FORBIDDEN_CONSUMER_TOKENS = {
-    "xiaooye/frostloom",
-    "chinaboy_webnovel",
-    "《从唐人街到白宫》",
-    "周叙",
-    "陈承",
+    "xiaooye/" + "frost" + "loom",
+    "china" + "boy_webnovel",
+    "《从唐" + "人街到白宫》",
+    "周" + "叙",
+    "陈" + "承",
 }
 TEXT_EXTS = {".md", ".py", ".json", ".yaml", ".yml", ".toml", ".txt"}
 STABLE_ROUTERS = {
@@ -41,7 +42,7 @@ def leakage_errors() -> list[str]:
         text = p.read_text(encoding="utf-8", errors="replace")
         for token in FORBIDDEN_CONSUMER_TOKENS:
             if token in text:
-                errors.append(f"consumer-project leakage: {relative(p)} contains {token!r}")
+                errors.append(f"consumer-project leakage: {relative(p)} contains a forbidden consumer identifier")
     return errors
 
 
