@@ -22,7 +22,7 @@ import tomllib
 SDK_VERSION = "1"
 PROJECT_SCHEMA = "novelforge_project_v1"
 LOCK_SCHEMA = "novelforge_lock_v1"
-DEFAULT_FRAMEWORK_VERSION = "7.0.0"
+DEFAULT_FRAMEWORK_VERSION = "7.1.0"
 
 REQUIRED_DIRS = [
     "specs",
@@ -370,12 +370,15 @@ def validate_project(root: Path) -> dict[str, Any]:
     for key in ("id", "title", "language", "version", "status"):
         if not project.get(key): errors.append(f"project.{key} required")
     if lock and lock.get("schema") != LOCK_SCHEMA: errors.append("lock schema must be novelforge_lock_v1")
+    framework_lock = lock.get("framework", {}) if isinstance(lock, dict) else {}
+    bundle_fingerprint = framework_lock.get("bundle_fingerprint") if isinstance(framework_lock, dict) else None
+    if bundle_fingerprint is not None and not re.fullmatch(r"sha256:[0-9a-f]{64}", str(bundle_fingerprint)):
+        errors.append("framework.bundle_fingerprint must be null or sha256:<64 lowercase hex>")
     for rel in REQUIRED_DIRS:
         if not (root / rel).is_dir(): errors.append(f"missing required directory: {rel}")
     for rel in ("README.en.md", "README.zh-CN.md", "AGENTS.md", "CLAUDE.md", ".gitignore"):
         if not (root / rel).exists(): errors.append(f"missing required file: {rel}")
     errors.extend(validate_bilingual_specs(root))
-    # Accepted manuscript names must not also exist under draft/review with the same relative path.
     accepted = root / "manuscripts" / "accepted"
     if accepted.exists():
         for path in accepted.rglob("*"):
@@ -383,12 +386,11 @@ def validate_project(root: Path) -> dict[str, Any]:
             rel = path.relative_to(accepted)
             for sibling in (root / "manuscripts" / "draft" / rel, root / "manuscripts" / "review" / rel):
                 if sibling.exists(): warnings.append(f"same manuscript path exists in multiple lifecycle dirs: {rel}")
-    # Project-specific profiles may not explicitly disable the framework fundamentals.
     for p in (root / "profiles").glob("*.yaml") if (root / "profiles").exists() else []:
         text = p.read_text(encoding="utf-8", errors="replace")
         if re.search(r"framework_surface_fundamentals\s*:\s*false", text, re.I):
             errors.append(f"profile attempts to disable framework Surface Fundamentals: {p.relative_to(root)}")
-    return {"valid": not errors, "errors": errors, "warnings": warnings, "project_id": project.get("id"), "project_version": project.get("version"), "framework_lock": lock.get("framework", {}) if isinstance(lock, dict) else {}}
+    return {"valid": not errors, "errors": errors, "warnings": warnings, "project_id": project.get("id"), "project_version": project.get("version"), "framework_lock": framework_lock}
 
 
 def build_project(root: Path) -> dict[str, Any]:
@@ -402,31 +404,19 @@ def build_project(root: Path) -> dict[str, Any]:
     bootstrap: dict[str, str] = {}
     for path, rel in iter_files(root):
         data = path.read_bytes()
-        item = {
-            "path": rel.as_posix(),
-            "class": classify(rel),
-            "size": len(data),
-            "fingerprint": sha256_bytes(data),
-        }
+        item = {"path": rel.as_posix(), "class": classify(rel), "size": len(data), "fingerprint": sha256_bytes(data)}
         files.append(item)
         if rel.as_posix() in {"novelforge.toml", "novelforge.lock.json", "README.en.md", "README.zh-CN.md", "AGENTS.md", "CLAUDE.md"}:
             bootstrap[rel.as_posix()] = data.decode("utf-8", errors="replace")
     content_index_hash = sha256_bytes(canonical_json(files).encode("utf-8"))
     payload = {
-        "schema": "novelforge_project_bundle_v1",
-        "sdk_version": SDK_VERSION,
-        "built_at": now_iso(),
-        "project": manifest.get("project", {}),
-        "framework_lock": lock.get("framework", {}),
-        "authority": manifest.get("authority", {}),
-        "paths": manifest.get("paths", {}),
-        "bootstrap": bootstrap,
-        "content_index": files,
-        "content_index_fingerprint": content_index_hash,
+        "schema": "novelforge_project_bundle_v1", "sdk_version": SDK_VERSION, "built_at": now_iso(),
+        "project": manifest.get("project", {}), "framework_lock": lock.get("framework", {}),
+        "authority": manifest.get("authority", {}), "paths": manifest.get("paths", {}), "bootstrap": bootstrap,
+        "content_index": files, "content_index_fingerprint": content_index_hash,
     }
     payload["bundle_fingerprint"] = sha256_bytes(canonical_json(payload).encode("utf-8"))
-    out = root / "dist"
-    out.mkdir(parents=True, exist_ok=True)
+    out = root / "dist"; out.mkdir(parents=True, exist_ok=True)
     write(out / "project.bundle.json", json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
     classes: dict[str, list[dict[str, Any]]] = {}
     for item in files: classes.setdefault(item["class"], []).append(item)
@@ -437,8 +427,7 @@ def build_project(root: Path) -> dict[str, Any]:
 
 
 def next_spec_number(root: Path) -> int:
-    specs = root / "specs"
-    nums = []
+    specs = root / "specs"; nums = []
     if specs.exists():
         for p in specs.iterdir():
             if p.is_dir() and re.match(r"^(\d{3})-", p.name): nums.append(int(p.name[:3]))
@@ -447,15 +436,11 @@ def next_spec_number(root: Path) -> int:
 
 def spec_template(kind: str, title: str, lang: str) -> str:
     if lang == "en":
-        if kind == "spec":
-            return f'''# Specification · {title}\n\nStatus: Draft\n\n## Problem / Context\n\n## Current-state Audit\n\n## User / Editorial Value\n\n## Requirements\n\n## Non-goals\n\n## Authority / Canon Impact\n\n## Reader / Prose Impact\n\n## Compatibility Constraints\n\n## Acceptance Scenarios\n\n## Risks\n'''
-        if kind == "plan":
-            return f'''# Implementation Plan · {title}\n\n## Chosen Architecture\n\n## Alternatives Considered\n\n## Affected Objects / Paths\n\n## Dependency Graph\n\n## Migration Strategy\n\n## Test / Eval Strategy\n\n## Phases / Checkpoints\n\n## Rollback\n'''
+        if kind == "spec": return f'''# Specification · {title}\n\nStatus: Draft\n\n## Problem / Context\n\n## Current-state Audit\n\n## User / Editorial Value\n\n## Requirements\n\n## Non-goals\n\n## Authority / Canon Impact\n\n## Reader / Prose Impact\n\n## Compatibility Constraints\n\n## Acceptance Scenarios\n\n## Risks\n'''
+        if kind == "plan": return f'''# Implementation Plan · {title}\n\n## Chosen Architecture\n\n## Alternatives Considered\n\n## Affected Objects / Paths\n\n## Dependency Graph\n\n## Migration Strategy\n\n## Test / Eval Strategy\n\n## Phases / Checkpoints\n\n## Rollback\n'''
         return f'''# Tasks · {title}\n\nFormat: `[ID] [P?] [Phase/Story] exact target + completion criterion`\n\n## Phase 1 · Foundation\n\n- [ ] T001 Define exact targets and before-state.\n\n### Checkpoint\n- [ ] Validation passes before next phase.\n'''
-    if kind == "spec":
-        return f'''# 规格说明 · {title}\n\n状态：Draft\n\n## 问题 / 背景\n\n## 当前状态审计\n\n## 用户 / 编辑价值\n\n## Requirements\n\n## Non-goals\n\n## Authority / Canon 影响\n\n## Reader / Prose 影响\n\n## 兼容性约束\n\n## 验收场景\n\n## 风险\n'''
-    if kind == "plan":
-        return f'''# 实施计划 · {title}\n\n## 选定架构\n\n## 备选方案\n\n## 影响对象 / 路径\n\n## Dependency Graph\n\n## Migration Strategy\n\n## Test / Eval Strategy\n\n## Phases / Checkpoints\n\n## Rollback\n'''
+    if kind == "spec": return f'''# 规格说明 · {title}\n\n状态：Draft\n\n## 问题 / 背景\n\n## 当前状态审计\n\n## 用户 / 编辑价值\n\n## Requirements\n\n## Non-goals\n\n## Authority / Canon 影响\n\n## Reader / Prose 影响\n\n## 兼容性约束\n\n## 验收场景\n\n## 风险\n'''
+    if kind == "plan": return f'''# 实施计划 · {title}\n\n## 选定架构\n\n## 备选方案\n\n## 影响对象 / 路径\n\n## Dependency Graph\n\n## Migration Strategy\n\n## Test / Eval Strategy\n\n## Phases / Checkpoints\n\n## Rollback\n'''
     return f'''# 任务 · {title}\n\n格式：`[ID] [P?] [Phase/Story] 精确 target + 完成标准`\n\n## Phase 1 · Foundation\n\n- [ ] T001 定义 exact targets 与 before-state。\n\n### Checkpoint\n- [ ] 进入下一阶段前 validation 必须通过。\n'''
 
 
@@ -465,8 +450,7 @@ def create_spec(root: Path, title: str) -> dict[str, Any]:
     n = next_spec_number(root); dirname = f"{n:03d}-{slugify(title)}"; target = root / "specs" / dirname
     target.mkdir(parents=True, exist_ok=False)
     for kind in ("spec", "plan", "tasks"):
-        write(target / f"{kind}.en.md", spec_template(kind, title, "en"))
-        write(target / f"{kind}.zh-CN.md", spec_template(kind, title, "zh"))
+        write(target / f"{kind}.en.md", spec_template(kind, title, "en")); write(target / f"{kind}.zh-CN.md", spec_template(kind, title, "zh"))
     return {"created": True, "spec_dir": str(target), "number": n}
 
 
@@ -474,15 +458,13 @@ def self_test(tmp_root: Path) -> dict[str, Any]:
     if tmp_root.exists(): shutil.rmtree(tmp_root)
     init_project(tmp_root, "PROJECT-TEST", "Fixture Novel", "en", DEFAULT_FRAMEWORK_VERSION, False)
     spec = create_spec(tmp_root, "Volume architecture change")
-    validation = validate_project(tmp_root)
-    build = build_project(tmp_root)
+    validation = validate_project(tmp_root); build = build_project(tmp_root)
     ok = validation["valid"] and Path(build["output"], "project.bundle.json").exists() and Path(spec["spec_dir"], "tasks.zh-CN.md").exists()
-    return {"project_sdk_contract": "PASS" if ok else "FAIL", "scaffold": True, "validate": validation["valid"], "bilingual_specs": True, "reproducible_bundle": True, "software_project_contract": True}
+    return {"project_sdk_contract": "PASS" if ok else "FAIL", "framework_default": DEFAULT_FRAMEWORK_VERSION, "scaffold": True, "validate": validation["valid"], "bilingual_specs": True, "reproducible_bundle": True, "software_project_contract": True}
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge Project SDK")
-    sub = p.add_subparsers(dest="cmd", required=True)
+    p = argparse.ArgumentParser(description="NovelForge Project SDK"); sub = p.add_subparsers(dest="cmd", required=True)
     i = sub.add_parser("init"); i.add_argument("path"); i.add_argument("--id", required=True); i.add_argument("--title", required=True); i.add_argument("--language", default="en"); i.add_argument("--framework-version", default=DEFAULT_FRAMEWORK_VERSION); i.add_argument("--force", action="store_true")
     v = sub.add_parser("validate"); v.add_argument("path")
     b = sub.add_parser("build"); b.add_argument("path")
@@ -500,8 +482,7 @@ def main() -> int:
         if args.cmd == "self-test": return 0 if result["project_sdk_contract"] == "PASS" else 1
         return 0
     except Exception as exc:
-        dump({"error": type(exc).__name__, "message": str(exc)})
-        return 1
+        dump({"error": type(exc).__name__, "message": str(exc)}); return 1
 
 
 if __name__ == "__main__":
