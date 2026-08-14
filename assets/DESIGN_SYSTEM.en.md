@@ -1,184 +1,254 @@
+<div align="center">
+  <img src="brand/novelforge-lockup.svg" alt="NovelForge — Adaptive Fiction Agent Framework" width="620" />
+</div>
+
 # NovelForge Documentation Design System
 
-> **Design target:** professional technical editorial first, anime warmth second. 🌸
+> **Brand concept: Story Loom.**
 >
-> The visual layer helps readers scan and understand NovelForge. It never changes runtime, Canon, quality, or authority semantics.
+> NovelForge does not become distinctive by painting generic technical docs pink. Its visual system treats **Project → Runtime → Story → Reader → Evidence → Validated Result** as one continuously woven story thread. Professional technical structure is the skeleton; anime-editorial warmth is the recognition layer. 🌸
 
-## 1. Personality
+**Ratio:** `70% professional technical / 30% anime-editorial warmth`.
 
-NovelForge should feel like a serious developer framework with a recognizable fiction-editorial soul—not a generic SaaS dashboard and not a pastel toy UI.
+---
 
-**Ratio:** `70% technical / 30% anime-editorial warmth`.
+## 1 · Brand DNA ✦
 
-- precise, calm, structured;
-- friendly and memorable without becoming childish;
-- visually distinctive without competing with the documentation;
-- manga/anime influence expressed through editorial composition, accent color, microcopy, and sparse decorative motifs—not fandom imagery.
+NovelForge should hold four qualities at once:
 
-A little `🌸 ✦ ✨ 📖` is welcome on landing pages. Dense reference pages stay quieter.
+| Trait | Design meaning |
+|---|---|
+| **Precise** | hierarchy, spacing, and diagram semantics stay rigorous |
+| **Editorial** | feels like a fiction-production studio, not a generic DevOps dashboard |
+| **Warm** | sakura / lavender / soft surfaces add human and anime-editorial character |
+| **Engineered** | tokens, provenance, chart grammar, and asset boundaries are inspectable |
 
-## 2. Core visual tokens
+Landing pages may naturally use `🌸 ✦ ✨ 📖`; dense contracts, schemas, and CLI docs stay quieter.
 
-| Token | Hex | Role |
-|---|---|---|
-| `ink-950` | `#2B2433` | primary text / diagram labels |
-| `ink-700` | `#5F5368` | secondary text |
-| `surface` | `#FFFDFB` | warm neutral surface |
-| `surface-soft` | `#F8F6FA` | grouped content / subtle panels |
-| `sakura` | `#D982A8` | brand accent / human-editorial lane |
-| `lavender` | `#8B7AC6` | runtime / agent orchestration lane |
-| `sky` | `#5B98C4` | project / context / engineering lane |
-| `mint` | `#58A98C` | accepted / validated / safe progress |
-| `amber` | `#C9973B` | evidence / corpus / caution |
-| `danger` | `#B65363` | rejection / invalid transition / failure |
+---
 
-### Color discipline
+## 2 · Logo System · Story Loom
 
-- Pastels are **fills and accents**, never low-contrast body text.
-- Every meaningful state needs a label, border, line style, or shape in addition to color.
-- Never use red/green alone to distinguish outcomes.
-- Keep text and primary diagram labels dark enough for comfortable GitHub light-mode reading.
+### Primary mark
 
-## 3. Typography
+<img src="brand/novelforge-mark.svg" alt="NovelForge Story Loom brand mark" width="120" />
 
-GitHub controls rendered fonts, so the system relies on hierarchy rather than custom font files.
+The mark has three ideas:
 
-- one H1 per page;
-- H2 for major concepts, H3 for bounded details;
-- short bold lead sentence before long sections when helpful;
-- keep paragraphs compact and scannable;
-- prefer concise tables for capability comparisons;
-- use monospace only for IDs, schemas, paths, commands, and state machines;
-- decorative Unicode must never replace real text labels.
+1. **Two book-page forms** — fiction, manuscript, and Canon;
+2. **Woven N / story thread** — NovelForge connects project, runtime, story, and evidence as one traceable system;
+3. **Forge spark** — validation, revision, and improvement rather than one-shot generation.
 
-## 4. Layout rhythm
+### Primary lockup
 
-Use a predictable documentation sequence:
+<img src="brand/novelforge-lockup.svg" alt="NovelForge primary horizontal lockup" width="560" />
 
-1. **Title + one-sentence value proposition**
-2. **Language / primary navigation**
-3. **Hero or key architecture visual** when useful
-4. **At-a-glance overview**
-5. **Main explanation**
-6. **Deep links / next steps**
+Usage:
+- README / docs landing pages: prefer the lockup;
+- small footer, badge, or avatar: use the mark;
+- do not rotate, glow, or arbitrarily recolor it;
+- do not use the logo as an architecture/status icon;
+- the wordmark uses system-font fallbacks only; the mark itself is vector geometry.
 
-Keep decorative material out of dense reference sections.
+---
 
-## 5. Components
+## 3 · Token Source of Truth
 
-### Hero
+Machine-readable source: [`brand/tokens.json`](brand/tokens.json).
 
-Use one static SVG/WebP hero only on major landing pages. It should contain no authority-bearing information that is unavailable in text.
+Markdown and Mermaid cannot directly import JSON, so hex values embedded in docs are **mirrors of tokens.json**. Change the token source first, then synchronize human docs and Mermaid classes.
 
-### Decorative emoji / kaomoji
+| Semantic token | Fill | Stroke | Role |
+|---|---|---|---|
+| `project` | `#DDEFF8` | `#4F8FBA` | Project / Context / SDK |
+| `runtime` | `#E7E1F8` | `#796BC4` | Harness / Session / Worker |
+| `editorial` | `#F9DDE9` | `#D6679A` | Writer / Reader / Quality |
+| `evidence` | `#F9EDCF` | `#BE892F` | Feedback / Corpus / Eval |
+| `validated` | `#DCF1E7` | `#4D9B7D` | Accepted / validated output |
+| `rejected` | `#F7DEE2` | `#B95767` | Reject / invalid / failed gate |
+| `neutral` | `#FFFDFC` | `#62556D` | Story core / neutral mechanism |
 
-Allowed on landing pages and friendly overview docs when the adjacent text remains fully meaningful without them.
+Base ink: `#241D2B`; soft surface: `#F8F5FA`; cluster border: `#E2DAE8`.
 
-Good:
-- `🌸 Why NovelForge`
-- `✨ At a glance`
-- `📖 Story & Canon`
-- a sparse `(˶ᵔ ᵕ ᵔ˶)` in non-authoritative microcopy
+### Token discipline
 
-Avoid:
-- emoji replacing status labels, navigation semantics, or architecture node names;
-- emoji in schemas, contracts, error codes, CLI output, or machine-facing docs;
-- an emoji on every bullet or paragraph.
+- Pastels are fill/accent colors, not low-contrast body text.
+- State meaning must also use labels, shapes, borders, or edge styles.
+- Do not rely on red/green alone for PASS/FAIL.
+- Spacing follows a 4/8 rhythm.
+- Node stroke defaults to about `1.75px`, primary edges to `2px`, feedback edges to dashed styling.
 
-### Chips / badges
+---
 
-Use badges for stable metadata such as version, documentation language, execution model, or CI status—not as paragraph decoration.
+## 4 · Markdown Page Chrome
 
-### Callouts
+GitHub Markdown cannot depend on arbitrary CSS, so NovelForge's page style is built from **portable native primitives**:
 
-Prefer semantic blockquotes:
+1. **Brand lockup** — top of major landing pages;
+2. **`<kbd>` metadata chips** — stable concepts only;
+3. **Story-thread SVG** — branded breathing space between major zones;
+4. **Numbered H2 rhythm** — `01 · System map`, `02 · Runtime`;
+5. **Semantic callouts** — `Boundary ✦`, `Key idea`, `Why it matters`;
+6. **Compact matrices** — capability / comparison / authority tables;
+7. **Branded Mermaid** — inspectable source diagrams;
+8. **Small mark footer** — a quiet branded close.
 
-- **Key idea** — conceptual invariant
-- **Boundary** — authority / safety constraint
-- **Why it matters** — reader-oriented explanation
-- **Example** — bounded illustration
+Recommended page skeleton:
 
-A decorative emoji may precede the visible label, but the label must carry the meaning.
-
-### Tables
-
-Use tables for comparisons and matrices, not for long prose. Keep headings noun-like and cells short.
-
-## 6. Mermaid chart language
-
-Mermaid is the authoritative architecture representation. Static illustrations are supplementary.
-
-### Visual grammar
-
-- `sky` — Project / Context / SDK
-- `lavender` — Harness / Session / Control Plane / Workers
-- `sakura` — Writer / Reader / human-facing quality flow
-- `amber` — Evidence / Corpus / Learning inputs
-- `mint` — validated result / user-visible gate
-- `danger` — rejected / forbidden / invalid state
-
-### Diagram rules
-
-1. One chart answers one question.
-2. Prefer left-to-right for pipelines; top-to-bottom for layered architecture.
-3. Separate the **production path** from **feedback/learning loops**.
-4. Use subgraphs only when they reduce cognitive load.
-5. Keep node labels short; explain nuance below the chart.
-6. Use dashed edges for feedback/reference paths, solid edges for primary execution/dependency.
-7. Avoid crossing edges when a simpler diagram can express the same concept.
-8. Do not encode meaning by fill color alone.
-9. Cute styling belongs in fill/radius/composition—not in vague node labels.
-
-### Base class pattern
-
-```mermaid
-flowchart LR
-    A[Project] --> B[Harness] --> C[Quality Gate]
-
-    classDef project fill:#DDF2FF,stroke:#5B98C4,color:#2B2433,stroke-width:1.5px;
-    classDef runtime fill:#E8DDFB,stroke:#8B7AC6,color:#2B2433,stroke-width:1.5px;
-    classDef gate fill:#D9F5E5,stroke:#58A98C,color:#2B2433,stroke-width:1.5px;
-
-    class A project;
-    class B runtime;
-    class C gate;
+```text
+Logo / lockup
+Tagline + metadata chips
+Story-thread
+One-sentence product thesis
+Hard boundary
+01 · Primary visual / architecture
+02 · Core concepts
+Story-thread
+03 · Navigation / deep links
+04 · Principles / next step
+Brand mark footer
 ```
 
-## 7. Anime-editorial budget
+Do not repeat a hero in every section. Brand identity comes from rhythm and repetition, not visual noise.
+
+---
+
+## 5 · Typography & Information Hierarchy
+
+GitHub controls final fonts, so professional quality comes mainly from hierarchy rather than committed font files.
+
+- one H1 per page;
+- numbered H2s establish navigation rhythm;
+- H3s hold bounded detail;
+- long sections may start with a short bold lead;
+- body paragraphs stay short and scannable;
+- monospace is for IDs, schemas, paths, commands, and state machines;
+- table cells do not hold essay-length prose;
+- decorative Unicode / emoji never replace real labels.
+
+---
+
+## 6 · Mermaid · Story Loom Grammar
+
+Mermaid is the **inspectable source chart**. A future AI/designer-rendered static chart may sit above it, but Mermaid remains the diffable and maintainable reference layer.
+
+### Lane grammar
+
+- **Project lane — sky**: inputs, Project SDK, Context;
+- **Forge lane — lavender**: Harness, Session, Control Plane, Workers;
+- **Story lane — neutral + sakura**: Story core, simulation, draft, reader quality;
+- **Evidence lane — amber**: feedback, learning, corpus, eval;
+- **Validated gate — mint**: user-visible / accepted / validated outcome;
+- **Reject lane — danger**: reserved for actual reject/invalid states.
+
+### Shape grammar
+
+- `([stadium])` — boundary / input / output;
+- `{{hexagon}}` — decision / manager / semantic gate;
+- `[(database)]` — durable runtime/state store;
+- `[[subroutine]]` — reusable core mechanism;
+- standard rounded node — processing step.
+
+### Edge grammar
+
+- solid = primary execution / dependency;
+- dashed = feedback / evidence / resume / reference;
+- one chart answers one core question;
+- crossing edges are avoided by default;
+- nuance belongs below the chart, not inside long node labels.
+
+### Base theme
+
+```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#FFFDFC",
+    "primaryTextColor": "#241D2B",
+    "lineColor": "#756A7D",
+    "clusterBkg": "#FFFDFC",
+    "clusterBorder": "#E2DAE8"
+  },
+  "flowchart": {"curve": "basis"}
+}}%%
+flowchart LR
+    P([Project]) --> H{{Harness}} --> Q([Reader Quality]) --> G([Validated Gate])
+    F([Feedback]) -. evidence .-> Q
+
+    classDef project fill:#DDEFF8,stroke:#4F8FBA,color:#241D2B,stroke-width:1.75px;
+    classDef runtime fill:#E7E1F8,stroke:#796BC4,color:#241D2B,stroke-width:1.75px;
+    classDef editorial fill:#F9DDE9,stroke:#D6679A,color:#241D2B,stroke-width:1.75px;
+    classDef validated fill:#DCF1E7,stroke:#4D9B7D,color:#241D2B,stroke-width:2px;
+
+    class P project;
+    class H runtime;
+    class Q editorial;
+    class G validated;
+```
+
+---
+
+## 7 · Anime-editorial Budget 🌸
 
 Welcome:
-- gentle sakura/lavender/mint accents;
-- rounded diagram nodes;
-- sparse sparkles, stars, books, petals, and tiny editorial motifs;
-- occasional decorative emoji in landing-page headings;
-- one original framework mascot/editor motif in future artwork if it remains clearly decorative;
-- subtle playful microcopy where clarity is unaffected.
+- sakura / lavender / mint accents;
+- spark / petal / book / story-thread motifs;
+- occasional `🌸 ✦ ✨ 📖` in landing headings;
+- rounded SVG geometry;
+- sparse `(˶ᵔ ᵕ ᵔ˶)` microcopy;
+- a future original Framework mascot/editor motif, strictly decorative.
 
 Avoid:
-- emoji as structural icons or status semantics;
-- kawaii mascots inside technical contracts;
-- excessive gradients/glows;
-- candy-color body text;
-- decorative dividers every few paragraphs;
-- mixing anime, glassmorphism, brutalism, terminal aesthetics, and skeuomorphism on one page.
+- emoji as the only architecture/status/navigation icon;
+- mascots inside technical contracts;
+- candy-colored body text;
+- wall-to-wall glow or gradients;
+- mixing anime, glassmorphism, brutalism, terminal styling, and skeuomorphism on one page;
+- putting authority-bearing information only inside visual assets.
 
-## 8. Accessibility and resilience
+---
 
-- meaningful images require alt text;
-- charts need nearby text explanation;
-- important information must remain understandable if SVGs fail to load;
-- color and emoji cannot be the sole semantic channels;
-- visual additions must not depend on external font files;
-- prefer lightweight SVG over large raster assets when possible.
+## 8 · Static Rendered Charts
 
-## 9. Definition of done
+Future branded AI/designer charts use a **presentation-over-source** model:
 
-A documentation change is visually ready when:
+```text
+Mermaid source chart
+      ↓ reference / semantic contract
+Rendered branded SVG/WebP
+      ↓ presentation layer
+README / architecture landing
+```
 
-- hierarchy is obvious at a glance;
-- the page can be scanned before it is read deeply;
-- visual accents are consistent with this token system;
-- diagrams use the shared visual grammar;
-- decorative art is supplementary, accessible, and lightweight;
-- the page still feels like engineering documentation after all decoration is removed;
-- the warm/anime layer makes it recognizable as NovelForge rather than another anonymous framework. ✦
+Rules:
+- the rendered chart cannot introduce semantics absent from the source chart;
+- architecture changes update the source first, then regenerate the static visual;
+- static visuals require alt text + provenance;
+- the source chart remains on-page or linked from the architecture doc;
+- AI-generated visuals never become runtime authority.
+
+---
+
+## 9 · Accessibility / Resilience
+
+- meaningful images have alt text;
+- decorative dividers use empty alt text;
+- charts have nearby textual explanation;
+- the core content remains understandable if SVG fails to load;
+- color and emoji are never the only semantic channels;
+- no external font files are required;
+- lightweight SVG is preferred;
+- logo and charts keep clear boundaries in GitHub light/dark surrounding chrome.
+
+---
+
+## 10 · Definition of Done
+
+A NovelForge page is visually complete when:
+
+- hierarchy is scannable before deep reading;
+- removing decoration still leaves rigorous engineering documentation;
+- restoring the brand layer makes the page immediately recognizable as NovelForge;
+- logo, tokens, divider, and chart grammar clearly belong to one Story Loom system;
+- Mermaid no longer feels like a default gray-box flowchart;
+- anime-editorial warmth is memorable without reducing professional credibility. ✦
