@@ -1,16 +1,87 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" role="img" aria-labelledby="title desc">
-<title id="title">NovelForge 与直接小说创作替代方案的对比</title><desc id="desc">六张对比卡片展示 Sudowrite、NovelCrafter、NovelClaw、Novel OS、AuthorAgent 和 autonovel 的主要优势，以及 NovelForge 的差异。</desc>
-<rect width="1200" height="820" rx="28" fill="#FFFDFC"/><rect x="1" y="1" width="1198" height="818" rx="27" fill="none" stroke="#E2DAE8" stroke-width="2"/>
-<text x="52" y="60" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="16" font-weight="700" fill="#796BC4" letter-spacing="2">直接小说创作替代方案</text>
-<text x="52" y="106" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="34" font-weight="750" fill="#241D2B">不同工具优化的是小说生产的不同环节</text>
-<text x="52" y="139" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="17" fill="#62556D">当真正困难的是权威边界、可恢复执行、独立 QA 与长期项目状态时，NovelForge 的优势最明显。</text>
-<text x="52" y="178" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" font-weight="750" fill="#4F8FBA" letter-spacing="1.4">作者产品</text>
-<g transform="translate(52 198)"><rect width="535" height="154" rx="20" fill="#F7FCFF" stroke="#B8D9EC"/><text x="24" y="34" font-family="ui-sans-serif,system-ui,sans-serif" font-size="22" font-weight="750" fill="#241D2B">Sudowrite</text><text x="24" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#4F8FBA">擅长</text><text x="72" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">创意起草 · Story Bible · 文本润色与扩写</text><text x="24" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#D6679A">NovelForge 差异</text><text x="133" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">显式正典生命周期 + 生产 / 运行时契约</text><text x="24" y="122" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#62556D">更适合：希望快速获得创意陪写和高频文本辅助的作者。</text></g>
-<g transform="translate(613 198)"><rect width="535" height="154" rx="20" fill="#FAF8FF" stroke="#CFC7EE"/><text x="24" y="34" font-family="ui-sans-serif,system-ui,sans-serif" font-size="22" font-weight="750" fill="#241D2B">NovelCrafter</text><text x="24" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#796BC4">擅长</text><text x="72" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">Codex · 规划 · 世界 / 系列管理 · 模型选择</text><text x="24" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#D6679A">NovelForge 差异</text><text x="133" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">事务化权威 + 类型化运行时 + 独立质量门槛</text><text x="24" y="122" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#62556D">更适合：想要成熟、结构化写作工作台的作者。</text></g>
-<text x="52" y="391" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" font-weight="750" fill="#796BC4" letter-spacing="1.4">智能体 / 框架系统</text>
-<g transform="translate(52 411)"><rect width="535" height="154" rx="20" fill="#FFFAFC" stroke="#EDC3D6"/><text x="24" y="34" font-family="ui-sans-serif,system-ui,sans-serif" font-size="22" font-weight="750" fill="#241D2B">NovelClaw</text><text x="24" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#D6679A">擅长</text><text x="72" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">可视化工作台 · 可编辑记忆 · 运行过程检查</text><text x="24" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#796BC4">NovelForge 差异</text><text x="133" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">正式权威等级 + 正典结算 + 独立语义完整性</text><text x="24" y="122" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#62556D">更适合：希望长期写作过程可见、可操作的团队。</text></g>
-<g transform="translate(613 411)"><rect width="535" height="154" rx="20" fill="#FFFCF5" stroke="#E8D2A5"/><text x="24" y="34" font-family="ui-sans-serif,system-ui,sans-serif" font-size="22" font-weight="750" fill="#241D2B">Novel OS</text><text x="24" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#BE892F">擅长</text><text x="72" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">五智能体编辑流水线 · 持久记忆 · 连贯性检查</text><text x="24" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#796BC4">NovelForge 差异</text><text x="133" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">默认单管理器 + 盲审契约 + 独立读者质量门槛</text><text x="24" y="122" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#62556D">更适合：偏好固定“编辑团队”角色分工的用户。</text></g>
-<g transform="translate(52 586)"><rect width="535" height="154" rx="20" fill="#F2FBF7" stroke="#B7DEC9"/><text x="24" y="34" font-family="ui-sans-serif,system-ui,sans-serif" font-size="22" font-weight="750" fill="#241D2B">AuthorAgent</text><text x="24" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#4D9B7D">擅长</text><text x="72" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">本地优先全书流程 · 长书记忆 · 出版工作流</text><text x="24" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#796BC4">NovelForge 差异</text><text x="133" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">更窄地聚焦小说生产完整性、权威与 QA</text><text x="24" y="122" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#62556D">更适合：想要本地端到端作者 / 出版智能体的用户。</text></g>
-<g transform="translate(613 586)"><rect width="535" height="154" rx="20" fill="#F8F5FA" stroke="#D8CFDE"/><text x="24" y="34" font-family="ui-sans-serif,system-ui,sans-serif" font-size="22" font-weight="750" fill="#241D2B">autonovel</text><text x="24" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#62556D">擅长</text><text x="72" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">自主完成种子概念 → 小说 → 修订 → 发布资产</text><text x="24" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#796BC4">NovelForge 差异</text><text x="133" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">项目无关契约 + 可恢复、带用户门槛的生产流程</text><text x="24" y="122" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#62556D">更适合：探索高度自主的一键式小说生成流程。</text></g>
-<text x="52" y="784" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">对比快照：2026-08-14 · 这是适用性对比，不是万能排名。StoryWriter、MAGNET/ATLAS 等研究系统会在研究版图中单独讨论。</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1010" role="img" aria-labelledby="title desc">
+<title id="title">NovelForge 与直接小说智能体的能力矩阵</title>
+<desc id="desc">详细比较 NovelForge、NovelClaw、Novel OS、AuthorAgent 和 autonovel 在正典权威、人物状态、可恢复运行、质量保障、模型选择、本地运行和出版体验上的差异。</desc>
+<style>
+  .h{font:750 30px ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;fill:#241D2B}.k{font:700 14px ui-sans-serif,system-ui,sans-serif;letter-spacing:1.6px;fill:#796BC4}.sub{font:15px ui-sans-serif,system-ui,sans-serif;fill:#62556D}.ph{font:750 17px ui-sans-serif,system-ui,sans-serif;fill:#241D2B}.ps{font:12.5px ui-sans-serif,system-ui,sans-serif;fill:#62556D}.rh{font:700 14px ui-sans-serif,system-ui,sans-serif;fill:#241D2B}.c{font:13.5px ui-sans-serif,system-ui,sans-serif;fill:#3C3245}.cf{font:700 13.5px ui-sans-serif,system-ui,sans-serif;fill:#241D2B}.note{font:12.5px ui-sans-serif,system-ui,sans-serif;fill:#62556D}
+</style>
+<rect width="1400" height="1010" rx="28" fill="#FFFDFC"/><rect x="1" y="1" width="1398" height="1008" rx="27" fill="none" stroke="#E2DAE8" stroke-width="2"/>
+<text class="k" x="44" y="54">直接小说智能体能力矩阵</text><text class="h" x="44" y="96">比较具体机制，而不是营销形容词</text><text class="sub" x="44" y="126">每个单元格直接写出该系统实际采用的机制或产品取向。用星级评分反而会掩盖真正重要的架构差异。</text>
+<rect x="280" y="154" width="216" height="786" rx="18" fill="#FAF8FF" stroke="#BEB3E5" stroke-width="2"/>
+<rect x="44" y="154" width="1296" height="786" rx="18" fill="none" stroke="#E2DAE8"/>
+<path d="M280 154V940M496 154V940M712 154V940M928 154V940M1144 154V940" stroke="#E8E2EC"/>
+<path d="M44 240H1340M44 310H1340M44 380H1340M44 450H1340M44 520H1340M44 590H1340M44 660H1340M44 730H1340M44 800H1340M44 870H1340M44 940H1340" stroke="#E8E2EC"/>
+<text class="rh" x="62" y="203">能力维度</text>
+<g transform="translate(280 0)"><text class="ph" x="108" y="190" text-anchor="middle">NovelForge</text><text class="ps" x="108" y="213" text-anchor="middle">治理型小说生产框架</text></g>
+<g transform="translate(496 0)"><text class="ph" x="108" y="190" text-anchor="middle">NovelClaw</text><text class="ps" x="108" y="213" text-anchor="middle">可视化长篇写作工作台</text></g>
+<g transform="translate(712 0)"><text class="ph" x="108" y="190" text-anchor="middle">Novel OS</text><text class="ps" x="108" y="213" text-anchor="middle">五智能体编辑框架</text></g>
+<g transform="translate(928 0)"><text class="ph" x="108" y="190" text-anchor="middle">AuthorAgent</text><text class="ps" x="108" y="213" text-anchor="middle">本地优先作者智能体</text></g>
+<g transform="translate(1144 0)"><text class="ph" x="98" y="190" text-anchor="middle">autonovel</text><text class="ps" x="98" y="213" text-anchor="middle">自主小说生产流水线</text></g>
+
+<text class="rh" x="62" y="278">故事事实 / 正典</text>
+<text class="cf" x="298" y="270"><tspan x="298">事务化正典</tspan><tspan class="c" x="298" dy="19">计划/审阅/记忆严格分离</tspan></text>
+<text class="c" x="514" y="270"><tspan x="514">可编辑记忆库</tspan><tspan x="514" dy="19">以工作台状态为中心</tspan></text>
+<text class="c" x="730" y="270"><tspan x="730">中央 StoryState JSON</tspan><tspan x="730" dy="19">章节批准工作流</tspan></text>
+<text class="c" x="946" y="270"><tspan x="946">实体数据库</tspan><tspan x="946" dy="19">矛盾证据检查</tspan></text>
+<text class="c" x="1162" y="270"><tspan x="1162">canon.md 硬事实</tspan><tspan x="1162" dy="19">流水线传播关系</tspan></text>
+
+<text class="rh" x="62" y="348">人物状态</text>
+<text class="cf" x="298" y="340"><tspan x="298">知识边界 + 独立目标</tspan><tspan class="c" x="298" dy="19">位置 · 利益 · 情绪余波</tspan></text>
+<text class="c" x="514" y="340"><tspan x="514">人物工作台</tspan><tspan x="514" dy="19">可编辑项目记忆</tspan></text>
+<text class="c" x="730" y="340"><tspan x="730">位置 + 情绪状态</tspan><tspan x="730" dy="19">出场记录 + 关键事件</tspan></text>
+<text class="c" x="946" y="340"><tspan x="946">人物人格审查器</tspan><tspan x="946" dy="19">声线 + 知识越界检查</tspan></text>
+<text class="c" x="1162" y="340"><tspan x="1162">人物登记表</tspan><tspan x="1162" dy="19">世界观 / 大纲上下文</tspan></text>
+
+<text class="rh" x="62" y="418">可恢复执行</text>
+<text class="cf" x="298" y="410"><tspan x="298">会话 + 检查点</tspan><tspan class="c" x="298" dy="19">租约 · 回执 · 单次消费</tspan></text>
+<text class="c" x="514" y="410"><tspan x="514">会话 + 运行检查</tspan><tspan x="514" dy="19">任务/日志持续可见</tspan></text>
+<text class="c" x="730" y="410"><tspan x="730">持久故事状态</tspan><tspan x="730" dy="19">分阶段 CLI 流水线</tspan></text>
+<text class="c" x="946" y="410"><tspan x="946">全书旅程流水线</tspan><tspan x="946" dy="19">本地自主工作流</tspan></text>
+<text class="c" x="1162" y="410"><tspan x="1162">state.json 流水线</tspan><tspan x="1162" dy="19">阶段进度 + 重试</tspan></text>
+
+<text class="rh" x="62" y="488">独立语义 QA</text>
+<text class="cf" x="298" y="480"><tspan x="298">独立会话 / 调用</tspan><tspan class="c" x="298" dy="19">指纹绑定 · 禁止挑审阅者</tspan></text>
+<text class="c" x="514" y="480"><tspan x="514">未暴露硬性独立契约</tspan><tspan x="514" dy="19">以工作台审阅为主</tspan></text>
+<text class="c" x="730" y="480"><tspan x="730">Guardian 智能体</tspan><tspan x="730" dy="19">独立编辑角色</tspan></text>
+<text class="c" x="946" y="480"><tspan x="946">Judge / Critic 循环</tspan><tspan x="946" dy="19">多类专门质量审查</tspan></text>
+<text class="c" x="1162" y="480"><tspan x="1162">独立评审模型</tspan><tspan x="1162" dy="19">Opus 评审 / Sonnet 写作</tspan></text>
+
+<text class="rh" x="62" y="558">读者质量模型</text>
+<text class="cf" x="298" y="550"><tspan x="298">读者吸引力门槛</tspan><tspan class="c" x="298" dy="19">压力 · 回报 · 因果 · 前推力</tspan></text>
+<text class="c" x="514" y="550"><tspan x="514">稿件 / 审阅工作台</tspan><tspan x="514" dy="19">人工持续介入检查</tspan></text>
+<text class="c" x="730" y="550"><tspan x="730">Editor / tension 模式</tspan><tspan x="730" dy="19">章节级质量评分</tspan></text>
+<text class="c" x="946" y="550"><tspan x="946">合成读者面板</tspan><tspan x="946" dy="19">更偏市场素材评估</tspan></text>
+<text class="c" x="1162" y="550"><tspan x="1162">四人格读者面板</tspan><tspan x="1162" dy="19">全书级评估</tspan></text>
+
+<text class="rh" x="62" y="628">确定性 QA</text>
+<text class="cf" x="298" y="620"><tspan x="298">Schema + 权威 + CI</tspan><tspan class="c" x="298" dy="19">盲评卫生 + 系统不变量</tspan></text>
+<text class="c" x="514" y="620"><tspan x="514">可检查运行 / 日志</tspan><tspan x="514" dy="19">并非文学不变量层</tspan></text>
+<text class="c" x="730" y="620"><tspan x="730">连贯性引擎</tspan><tspan x="730" dy="19">确定性预检查</tspan></text>
+<text class="c" x="946" y="620"><tspan x="946">安全测试 + 证据检查</tspan><tspan x="946" dy="19">质量循环混合多种方法</tspan></text>
+<text class="c" x="1162" y="620"><tspan x="1162">机械 AI 腔评分器</tspan><tspan x="1162" dy="19">正则 + 结构启发式</tspan></text>
+
+<text class="rh" x="62" y="698">失败回路</text>
+<text class="cf" x="298" y="690"><tspan x="298">回到问题所属机制</tspan><tspan class="c" x="298" dy="19">故事 / 人物 / 读者 / 表层</tspan></text>
+<text class="c" x="514" y="690"><tspan x="514">人工引导迭代</tspan><tspan x="514" dy="19">工作台持续续写与修订</tspan></text>
+<text class="c" x="730" y="690"><tspan x="730">固定编辑流水线</tspan><tspan x="730" dy="19">Architect→Scribe→Editor…</tspan></text>
+<text class="c" x="946" y="690"><tspan x="946">评审→反思→修订</tspan><tspan x="946" dy="19">专门修订阶段</tspan></text>
+<text class="c" x="1162" y="690"><tspan x="1162">评估→重试→修订</tspan><tspan x="1162" dy="19">评分 / 平台期驱动循环</tspan></text>
+
+<text class="rh" x="62" y="768">模型 / 运行方式</text>
+<text class="cf" x="298" y="760"><tspan x="298">聊天 · CLI · MCP · API</tspan><tspan class="c" x="298" dy="19">CI · 本地模型 · 人工</tspan></text>
+<text class="c" x="514" y="760"><tspan x="514">可配置模型提供商</tspan><tspan x="514" dy="19">本地 / Web 部署</tspan></text>
+<text class="c" x="730" y="760"><tspan x="730">13+ 提供商 + 本地</tspan><tspan x="730" dy="19">兼容 OpenAI 接口</tspan></text>
+<text class="c" x="946" y="760"><tspan x="946">Gemini · Claude · OpenAI</tspan><tspan x="946" dy="19">Ollama · OpenRouter 等</tspan></text>
+<text class="c" x="1162" y="760"><tspan x="1162">Anthropic 为核心</tspan><tspan x="1162" dy="19">fal.ai / ElevenLabs 可选</tspan></text>
+
+<text class="rh" x="62" y="838">本地 / 自托管</text>
+<text class="cf" x="298" y="830">是 · 框架优先</text><text class="c" x="514" y="830">是 · Web 工作台</text><text class="c" x="730" y="830">是 · CLI 框架</text><text class="c" x="946" y="830">是 · 本地优先 Studio</text><text class="c" x="1162" y="830">是 · 本地流水线 + API</text>
+
+<text class="rh" x="62" y="908">出版 / 作者 UX</text>
+<text class="cf" x="298" y="900"><tspan x="298">目前不是主要目标</tspan><tspan class="c" x="298" dy="19">框架端 UX 仍在完善</tspan></text>
+<text class="c" x="514" y="900"><tspan x="514">可视化稿件工作台</tspan><tspan x="514" dy="19">故事板 + 下载</tspan></text>
+<text class="c" x="730" y="900"><tspan x="730">CLI + Markdown 导出</tspan><tspan x="730" dy="19">偏框架使用方式</tspan></text>
+<text class="c" x="946" y="900"><tspan x="946">DOCX/EPUB/KDP + 音频</tspan><tspan x="946" dy="19">覆盖作者 / 出版全链路</tspan></text>
+<text class="c" x="1162" y="900"><tspan x="1162">PDF/ePub/音频/插图</tspan><tspan x="1162" dy="19">同时生成落地页</tspan></text>
+
+<text class="note" x="44" y="973">这里只比较直接小说智能体。Sudowrite / NovelCrafter 作为成熟作者产品单独比较；LangGraph 等通用 Agent 框架则放在实现思想来源中。</text>
 </svg>
