@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """Deterministic documentation QA for NovelForge.
 
-This checker intentionally does not perform semantic/model judgment and must be
-safe to run in normal CI without API/model usage. It catches objective source
-and layout-risk regressions; human/agent render + copy review remains mandatory
-per docs/DOCUMENTATION_QA.*.
+This checker intentionally performs no semantic/model judgment and is safe for
+normal CI. It catches objective source and layout-risk regressions; rendered
+visual inspection and native-language copy review remain mandatory per
+``docs/DOCUMENTATION_QA.*``.
 """
 from __future__ import annotations
 
 import re
-import sys
 import unicodedata
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -25,7 +24,7 @@ LONG_TEXT_CHARS = 24
 ERRORS: list[str] = []
 WARNINGS: list[str] = []
 
-HEX_RE = re.compile(r"^#[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?(?:[0-9A-Fa-f]{2})?$")
+HEX_RE = re.compile(r"^(?:#[0-9A-Fa-f]{3}|#[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{8})$")
 CSS_HEX_RE = re.compile(r"#([0-9A-Za-z]+)")
 ARROW_BLOCK_RE = re.compile(r"```text\s*\n(?:(?!```).)*(?:→|\s->\s)(?:(?!```).)*```", re.S)
 MD_LINK_RE = re.compile(r"(?:!\[[^\]]*\]|\[[^\]]*\])\(([^)]+)\)")
@@ -35,12 +34,19 @@ FONT_SIZE_RE = re.compile(r"font-size\s*:\s*(\d+(?:\.\d+)?)px", re.I)
 FONT_SHORTHAND_RE = re.compile(r"\bfont\s*:\s*[^;{}]*?\b(\d+(?:\.\d+)?)px\b", re.I)
 
 
+def rel(path: Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
 def error(path: Path, message: str) -> None:
-    ERRORS.append(f"{path.relative_to(ROOT)}: {message}")
+    ERRORS.append(f"{rel(path)}: {message}")
 
 
 def warn(path: Path, message: str) -> None:
-    WARNINGS.append(f"{path.relative_to(ROOT)}: {message}")
+    WARNINGS.append(f"{rel(path)}: {message}")
 
 
 def local_target(source: Path, raw: str) -> Path | None:
@@ -76,9 +82,9 @@ def check_markdown(path: Path) -> None:
             error(path, f"broken local link/asset: {match.group(1)}")
 
     if path.name == "README.zh-CN.md":
-        # Advisory only: exact protocol identifiers/product names can legitimately remain English.
+        # Advisory only. Product names and exact protocol identifiers can remain English.
         risky = {
-            "reviewer shopping": "prefer native Chinese explanation; preserve only an exact normative identifier when needed",
+            "reviewer shopping": "prefer a native Chinese explanation; preserve only an exact normative identifier when needed",
             "semantic reject": "prefer Chinese prose with `semantic_reject` only as the exact identifier",
             "consumer project": "prefer 下游项目",
             "Human-facing": "prefer 人类可读 / 面向用户",
@@ -113,6 +119,19 @@ def element_text(el: ET.Element) -> str:
     return "".join(el.itertext()).strip()
 
 
+def css_class_font_sizes(root: ET.Element) -> dict[str, float]:
+    result: dict[str, float] = {}
+    for el in root.iter():
+        if el.tag.rsplit("}", 1)[-1] != "style":
+            continue
+        css = el.text or ""
+        for selector, body in re.findall(r"\.([A-Za-z0-9_-]+)\s*\{([^}]+)\}", css):
+            match = FONT_SIZE_RE.search(body) or FONT_SHORTHAND_RE.search(body)
+            if match:
+                result[selector] = float(match.group(1))
+    return result
+
+
 def inherited_font_size(el: ET.Element, class_sizes: dict[str, float]) -> float | None:
     raw = el.attrib.get("font-size")
     if raw:
@@ -121,8 +140,7 @@ def inherited_font_size(el: ET.Element, class_sizes: dict[str, float]) -> float 
             return float(raw)
         except ValueError:
             return None
-    classes = el.attrib.get("class", "").split()
-    for cls in classes:
+    for cls in el.attrib.get("class", "").split():
         if cls in class_sizes:
             return class_sizes[cls]
     style = el.attrib.get("style", "")
@@ -130,26 +148,13 @@ def inherited_font_size(el: ET.Element, class_sizes: dict[str, float]) -> float 
     return float(match.group(1)) if match else None
 
 
-def css_class_font_sizes(root: ET.Element) -> dict[str, float]:
-    result: dict[str, float] = {}
-    for el in root.iter():
-        if el.tag.rsplit("}", 1)[-1] != "style":
-            continue
-        css = el.text or ""
-        for selector, body in re.findall(r"\.([A-Za-z0-9_-]+)\s*\{([^}]]+)\}", css):
-            match = FONT_SIZE_RE.search(body) or FONT_SHORTHAND_RE.search(body)
-            if match:
-                result[selector] = float(match.group(1))
-    return result
-
-
 def char_em_width(ch: str) -> float:
     if ch.isspace():
         return 0.34
     if unicodedata.east_asian_width(ch) in {"W", "F"}:
         return 1.0
-    cat = unicodedata.category(ch)
-    if cat.startswith("P"):
+    category = unicodedata.category(ch)
+    if category.startswith("P"):
         return 0.38
     if ch.isupper():
         return 0.66
@@ -167,19 +172,18 @@ def numeric_attr(el: ET.Element, name: str) -> float | None:
     if raw is None:
         return None
     raw = raw.split()[0]
-    return float(raw) if NUM_RE.match(raw) else None
+    return float(raw) if NUM_RE.fullmatch(raw) else None
 
 
 def check_svg(path: Path) -> None:
     raw = path.read_text(encoding="utf-8")
     try:
-        tree = ET.ElementTree(ET.fromstring(raw))
+        root = ET.fromstring(raw)
     except ET.ParseError as exc:
         error(path, f"malformed SVG/XML: {exc}")
         return
-    root = tree.getroot()
-    vb = parse_viewbox(path, root)
 
+    vb = parse_viewbox(path, root)
     title = next((el for el in root.iter() if el.tag.rsplit("}", 1)[-1] == "title"), None)
     desc = next((el for el in root.iter() if el.tag.rsplit("}", 1)[-1] == "desc"), None)
     if title is None or not element_text(title):
@@ -192,17 +196,19 @@ def check_svg(path: Path) -> None:
             value = el.attrib.get(attr)
             if value and value.startswith("#") and not HEX_RE.fullmatch(value):
                 error(path, f"invalid {attr} color {value!r}")
+
     for style_el in (el for el in root.iter() if el.tag.rsplit("}", 1)[-1] == "style"):
-        css = style_el.text or ""
-        for token in CSS_HEX_RE.findall(css):
+        for token in CSS_HEX_RE.findall(style_el.text or ""):
             color = "#" + token
             if not HEX_RE.fullmatch(color):
                 error(path, f"invalid CSS hex color {color!r}")
+
     if "@font-face" in raw or re.search(r"\.(?:woff2?|ttf|otf)\b", raw, re.I):
         error(path, "external/embedded font files are not allowed in documentation SVGs")
 
     if vb is None:
         return
+
     vx, vy, vw, vh = vb
     scale = min(1.0, TARGET_GITHUB_WIDTH / vw)
     class_sizes = css_class_font_sizes(root)
@@ -214,6 +220,7 @@ def check_svg(path: Path) -> None:
         text = element_text(el)
         if not text:
             continue
+
         x = numeric_attr(el, "x")
         y = numeric_attr(el, "y")
         if x is not None and not (vx <= x <= vx + vw):
