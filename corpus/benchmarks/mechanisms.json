@@ -1,0 +1,110 @@
+{
+  "schema": "novelforge_mechanism_benchmark_registry_v1",
+  "version": "7.0.0",
+  "benchmarks": [
+    {
+      "id": "BENCH-SURFACE-001",
+      "name": "FUNCTIONAL_MICRO_ACTION",
+      "mechanism": "A small action belongs when it changes timing, information, task progression, relationship interpretation, or the next available choice.",
+      "problem": "Models often add nods, glances, cup movements, finger motions, and silence as decorative cinematic blocking.",
+      "positive_pattern": "action -> observable consequence or changed interpretation -> next beat",
+      "failure_boundary": "If the action can be removed without changing scene timing, ownership, inference, task, relationship, or rhythm, it is probably decorative.",
+      "profiles": ["generic"],
+      "linked_codes": ["HF-08", "HF-09"],
+      "writer_guidance": "Use fewer micro-actions, but make retained actions causal and character-owned.",
+      "provenance": {"class": "migrated_generic_cross_work_mechanism", "raw_source_text_stored": false},
+      "status": "active_seed"
+    },
+    {
+      "id": "BENCH-SURFACE-002",
+      "name": "DECISION_SPECIFIC_INTERIORITY",
+      "mechanism": "Interiority becomes useful when it names the concrete judgment, risk, hypothesis, memory, or social choice currently affecting action.",
+      "problem": "Models substitute vague emotional labels or polished introspection for actual thinking.",
+      "positive_pattern": "concrete trigger -> specific judgment object -> changed choice/inference",
+      "failure_boundary": "Mood words without a decision/inference object do not count as psychological specificity.",
+      "profiles": ["generic"],
+      "linked_codes": ["HF-07", "HF-27"],
+      "writer_guidance": "Ask what the focal character is deciding, testing, fearing, rejecting, or calculating now.",
+      "provenance": {"class": "migrated_generic_cross_work_mechanism", "raw_source_text_stored": false},
+      "status": "active_seed"
+    },
+    {
+      "id": "BENCH-SURFACE-003",
+      "name": "PRESSURE_BOUND_EXPOSITION",
+      "mechanism": "Exposition is strongest when a present pressure makes the information necessary for a decision, objection, cost, or action.",
+      "problem": "Models stop scenes to explain background because the database contains it.",
+      "positive_pattern": "current problem -> information becomes necessary -> information changes action/interpretation",
+      "failure_boundary": "If the same exposition could be pasted into many scenes without changing interaction, it is probably detached.",
+      "profiles": ["generic", "commercial", "historical", "speculative"],
+      "linked_codes": ["HF-04", "HF-21", "RG-11"],
+      "writer_guidance": "Deliver background at the moment somebody needs, disputes, pays for, or acts on it.",
+      "provenance": {"class": "migrated_generic_cross_work_mechanism", "raw_source_text_stored": false},
+      "status": "active_seed"
+    },
+    {
+      "id": "BENCH-SURFACE-004",
+      "name": "EMBODIED_DIALOGUE_OBJECT",
+      "mechanism": "Dialogue stays embodied when speaker ownership is carried by task, object, agenda, position, information, and causal response—not by random gestures or ABAB turn counting.",
+      "problem": "Multi-person dialogue becomes disembodied transcript or is patched with meaningless action tags.",
+      "positive_pattern": "speaker agenda/task/object -> utterance -> other person's targeted response/action",
+      "failure_boundary": "If lines can be reassigned among participants with little change, character/task ownership is too weak.",
+      "profiles": ["generic"],
+      "linked_codes": ["HF-09", "HF-10", "HF-11", "HF-12", "HF-13"],
+      "writer_guidance": "Keep current work and objects active while people talk; let ownership arise from what each person is doing and wants.",
+      "provenance": {"class": "migrated_generic_cross_work_mechanism", "raw_source_text_stored": false},
+      "status": "active_seed"
+    },
+    {
+      "id": "BENCH-SURFACE-005",
+      "name": "HISTORICAL_INSTITUTIONAL_TEXTURE",
+      "mechanism": "Institutional or historical texture becomes vivid when rules, documents, prices, status, custom, technology, or procedure constrain what characters can actually do.",
+      "problem": "Historical/speculative setting is presented as encyclopedia exposition or decorative period nouns.",
+      "positive_pattern": "institutional fact -> concrete permission/cost/friction -> character adaptation",
+      "failure_boundary": "A period detail that changes neither behavior nor inference is texture inventory, not lived worldbuilding.",
+      "profiles": ["historical", "institutional", "speculative", "procedural"],
+      "linked_codes": ["HF-17", "RG-04", "RG-11", "RG-14"],
+      "writer_guidance": "Let the era/institution show up through constraints, access, prices, paperwork, social permission, and consequences.",
+      "provenance": {"class": "migrated_generic_cross_work_mechanism", "raw_source_text_stored": false},
+      "status": "active_seed"
+    },
+    {
+      "id": "BENCH-SURFACE-006",
+      "name": "TASK_BOUND_EXPOSITION_DIALOGUE",
+      "mechanism": "Dialogue can carry exposition naturally when participants need the information to perform, contest, negotiate, diagnose, or decide a live task.",
+      "problem": "Characters ask and answer questions only to explain setting to the reader.",
+      "positive_pattern": "different agendas/knowledge -> task problem -> information exchange with consequence",
+      "failure_boundary": "If everyone already knows the information and nobody's decision changes, the conversation is likely reader-facing exposition.",
+      "profiles": ["generic"],
+      "linked_codes": ["HF-13", "HF-21", "RG-04", "RG-11"],
+      "writer_guidance": "Tie explanation to disagreement, diagnosis, bargaining, correction, or a decision someone must make now.",
+      "provenance": {"class": "migrated_generic_cross_work_mechanism", "raw_source_text_stored": false},
+      "status": "active_seed"
+    },
+    {
+      "id": "BENCH-READER-001",
+      "name": "PRESSURE_LADDER_TO_ACTION",
+      "mechanism": "Narrative pressure grows when each meaningful beat changes viable options, costs, relationships, information, or timing and thereby forces the next action.",
+      "problem": "Models confuse countdowns, repeated warnings, or arbitrary obstacles with escalation.",
+      "positive_pattern": "problem -> partial solution reveals cost -> choice -> response -> changed option set -> consequence",
+      "failure_boundary": "Repeated statements of urgency without changed options are static pressure, not a ladder.",
+      "profiles": ["generic", "commercial", "thriller", "serial"],
+      "linked_codes": ["RG-01", "RG-02", "RG-12", "RG-14", "RG-15"],
+      "writer_guidance": "Make pressure alter choices; do not merely describe that time, money, danger, or stress exists.",
+      "provenance": {"class": "migrated_generic_cross_work_mechanism", "raw_source_text_stored": false},
+      "status": "active_seed"
+    },
+    {
+      "id": "BENCH-READER-002",
+      "name": "FORWARD_PULL_ENDING",
+      "mechanism": "A strong ending combines changed state with a concrete reason for the reader's mind to continue into what comes next.",
+      "problem": "Models either stop inertly after a state change or add abstract narrator advertising as a fake cliffhanger.",
+      "positive_pattern": "earned state change -> concrete consequence/question/incoming fact/choice -> next-state pull",
+      "failure_boundary": "Abstract claims that danger or destiny is coming do not create causal forward pull.",
+      "profiles": ["generic", "serial", "commercial"],
+      "linked_codes": ["HF-23", "RG-10"],
+      "writer_guidance": "End on a real consequence, information change, decision, obligation, person, message, object, or next-state intrusion that already belongs to the story.",
+      "provenance": {"class": "migrated_generic_cross_work_mechanism", "raw_source_text_stored": false},
+      "status": "active_seed"
+    }
+  ]
+}
