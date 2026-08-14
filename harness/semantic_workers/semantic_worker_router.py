@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Provider-neutral semantic job/result packaging and validation.
 
-Deterministic only: this module never performs literary judgment.
+Deterministic only: this module never performs literary judgment. Semantic
+intelligence is supplied through model-readable contracts and executed by an
+eligible model/peer/human worker.
 """
 from __future__ import annotations
 
@@ -15,6 +17,7 @@ from typing import Any
 
 FORBIDDEN_BLIND_KEYS = {"expected","expected_verdict","expected_codes","blocks_release","gold","gold_label","prior_result"}
 ALLOWED_KINDS = {"eval_judge","corpus_analyze","benchmark_synthesize","external_review","preference_distill","artifact_audit"}
+DEFAULT_CONTRACT_REGISTRY = Path(__file__).with_name("model_contracts.json")
 
 
 def load_json(path: Path) -> Any:
@@ -49,8 +52,77 @@ def find_forbidden_keys(obj: Any, path: str = "$") -> list[str]:
             if key in FORBIDDEN_BLIND_KEYS: hits.append(f"{path}.{key}")
             hits.extend(find_forbidden_keys(value, f"{path}.{key}"))
     elif isinstance(obj, list):
-        for i, value in enumerate(obj): hits.extend(find_forbidden_keys(value, f"{path}[{i}]"))
+        for i, value in enumerate(obj): hits.extend(find_forbidden_keys(value, f"{path}[{i}]") )
     return hits
+
+
+def load_contract_registry(path: Path = DEFAULT_CONTRACT_REGISTRY) -> dict[str, Any]:
+    registry = load_json(path)
+    if not isinstance(registry, dict) or registry.get("schema") != "novelforge_model_contract_registry_v1":
+        raise ValueError("invalid model contract registry")
+    contracts = registry.get("contracts")
+    if not isinstance(contracts, dict) or not contracts:
+        raise ValueError("model contract registry requires contracts")
+    for contract_id, contract in contracts.items():
+        if not isinstance(contract_id, str) or not contract_id.strip() or not isinstance(contract, dict):
+            raise ValueError("invalid model contract entry")
+        if contract.get("kind") not in ALLOWED_KINDS:
+            raise ValueError(f"contract {contract_id}: unsupported semantic kind")
+        if not isinstance(contract.get("rubric"), list) or not all(isinstance(x, str) and x.strip() for x in contract["rubric"]):
+            raise ValueError(f"contract {contract_id}: rubric must be non-empty string list")
+        if not isinstance(contract.get("output_contract"), dict):
+            raise ValueError(f"contract {contract_id}: output_contract must be object")
+        perms = contract.get("permissions")
+        if not isinstance(perms, dict):
+            raise ValueError(f"contract {contract_id}: permissions must be object")
+        for key in ("canon_write","os_behavior_write","durable_user_taste_write"):
+            if perms.get(key) is not False:
+                raise ValueError(f"contract {contract_id}: permission {key} must be false")
+    return registry
+
+
+def make_contract_job(contract_id: str, subject_id: str, input_payload: dict[str, Any], *,
+                      registry_path: Path = DEFAULT_CONTRACT_REGISTRY,
+                      job_id: str | None = None, source_session_id: str | None = None,
+                      handoff_id: str | None = None) -> dict[str, Any]:
+    if not isinstance(subject_id, str) or not subject_id.strip():
+        raise ValueError("subject_id required")
+    if not isinstance(input_payload, dict):
+        raise ValueError("semantic contract input must be object")
+    registry = load_contract_registry(registry_path)
+    contract = registry["contracts"].get(contract_id)
+    if not isinstance(contract, dict):
+        raise ValueError(f"unknown model contract: {contract_id}")
+    job = {
+        "job_id": job_id or ("SEM-CONTRACT-" + hashlib.sha256(f"{contract_id}:{subject_id}".encode("utf-8")).hexdigest()[:16]),
+        "kind": contract["kind"],
+        "subject_id": subject_id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "input_fingerprint": "",
+        "input": {
+            "model_contract_id": contract_id,
+            "model_contract_version": registry.get("version"),
+            "purpose": contract.get("purpose"),
+            "payload": input_payload,
+            **({"default_personas": contract["default_personas"]} if isinstance(contract.get("default_personas"), dict) else {}),
+        },
+        "rubric": list(contract["rubric"]),
+        "output_contract": contract["output_contract"],
+        "permissions": dict(contract["permissions"]),
+        "provenance": {
+            "source": "model_contract_registry",
+            "registry_schema": registry["schema"],
+            "registry_version": registry.get("version"),
+            "model_contract_id": contract_id,
+            "independent_gate": bool(contract.get("independent_gate", False)),
+        },
+        "execution": {"source_session_id": source_session_id, "worker_session_id": None, "handoff_id": handoff_id, "attempt_id": None},
+    }
+    job["input_fingerprint"] = fingerprint_for(job)
+    errors = validate_job(job)
+    if errors:
+        raise ValueError("prepared model-contract job invalid: " + "; ".join(errors))
+    return job
 
 
 def make_eval_jobs(queue: dict[str, Any], *, source_session_id: str | None = None, handoff_id: str | None = None) -> dict[str, Any]:
@@ -114,7 +186,6 @@ def validate_result(job: dict[str, Any], result: dict[str, Any]) -> list[str]:
     forbidden_actions = {"settle_canon","promote_generic_hard_rule","overwrite_durable_user_taste","grant_permissions"}
     for proposal in result.get("proposals", []):
         if isinstance(proposal, dict) and proposal.get("action") in forbidden_actions: errors.append(f"forbidden direct proposal action: {proposal.get('action')}")
-    # If a job declares a target reviewer session/handoff, a result may not contradict it.
     lineage = job.get("execution") or {}; result_lineage = result.get("execution") or {}
     for key in ("source_session_id","handoff_id"):
         if lineage.get(key) and result_lineage.get(key) not in {None, lineage.get(key)}: errors.append(f"execution lineage mismatch: {key}")
@@ -158,20 +229,33 @@ def self_test() -> int:
     jobs = make_eval_jobs(queue, source_session_id="SES-A", handoff_id="HO-A"); job = jobs["jobs"][0]
     result = {"job_id": job["job_id"], "subject_id": job["subject_id"], "kind": job["kind"], "input_fingerprint": job["input_fingerprint"], "status": "completed", "worker": {"provider": "self_test", "model_or_reviewer": "fixture"}, "judgment": {"verdict": "accept", "result": None, "codes": [], "evidence": ["fixture"], "confidence": 1.0}, "proposals": [], "errors": [], "execution": {"source_session_id": "SES-A", "worker_session_id": "SES-B", "handoff_id": "HO-A", "attempt_id": "ATT-1"}}
     preserved = fingerprint_for({**job, "execution": {"source_session_id": "DIFFERENT"}}) == job["input_fingerprint"]
-    ok = not validate_job(job) and not validate_result(job, result) and preserved
-    dump_json({"semantic_router_contract": "PASS" if ok else "FAIL", "fingerprint_excludes_runtime_lineage": preserved})
+    contract_job = make_contract_job("character.integrity", "CHAR-SELF", {"scene_excerpt": "x", "character": {"character_id": "CHAR-SELF"}}, source_session_id="SES-A")
+    registry_ok = contract_job["input"]["model_contract_id"] == "character.integrity" and contract_job["kind"] == "artifact_audit" and not validate_job(contract_job)
+    semantic_not_encoded = "agenda_alignment" in " ".join(contract_job["rubric"]) and contract_job["provenance"]["source"] == "model_contract_registry"
+    ok = not validate_job(job) and not validate_result(job, result) and preserved and registry_ok and semantic_not_encoded
+    dump_json({"semantic_router_contract": "PASS" if ok else "FAIL", "fingerprint_excludes_runtime_lineage": preserved,
+               "model_contract_registry": registry_ok, "semantic_intelligence_externalized": semantic_not_encoded,
+               "model_execution": False})
     return 0 if ok else 1
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="Novel OS Semantic Worker Router")
+    p = argparse.ArgumentParser(description="NovelForge Semantic Worker Router")
     sub = p.add_subparsers(dest="command", required=True)
     prep = sub.add_parser("prepare-evals"); prep.add_argument("--queue", required=True); prep.add_argument("--output"); prep.add_argument("--source-session-id"); prep.add_argument("--handoff-id")
+    pc = sub.add_parser("prepare-contract"); pc.add_argument("--contract", required=True); pc.add_argument("--subject-id", required=True); pc.add_argument("--input", required=True); pc.add_argument("--job-id"); pc.add_argument("--registry"); pc.add_argument("--source-session-id"); pc.add_argument("--handoff-id"); pc.add_argument("--output")
+    lc = sub.add_parser("list-contracts"); lc.add_argument("--registry")
     vj = sub.add_parser("validate-jobs"); vj.add_argument("--jobs", required=True)
     vr = sub.add_parser("validate-results"); vr.add_argument("--jobs", required=True); vr.add_argument("--results", required=True); vr.add_argument("--judgments-output")
     sub.add_parser("self-test"); args = p.parse_args()
     if args.command == "self-test": return self_test()
     if args.command == "prepare-evals": dump_json(make_eval_jobs(load_json(Path(args.queue)), source_session_id=args.source_session_id, handoff_id=args.handoff_id), Path(args.output) if args.output else None); return 0
+    if args.command == "prepare-contract":
+        job = make_contract_job(args.contract, args.subject_id, load_json(Path(args.input)), registry_path=Path(args.registry) if args.registry else DEFAULT_CONTRACT_REGISTRY, job_id=args.job_id, source_session_id=args.source_session_id, handoff_id=args.handoff_id)
+        dump_json(job, Path(args.output) if args.output else None); return 0
+    if args.command == "list-contracts":
+        registry = load_contract_registry(Path(args.registry) if args.registry else DEFAULT_CONTRACT_REGISTRY)
+        dump_json({"schema": registry["schema"], "version": registry.get("version"), "contracts": sorted(registry["contracts"]), "model_execution": False}); return 0
     if args.command == "validate-jobs":
         payload = load_json(Path(args.jobs)); errors = [f"{j.get('job_id')}: {e}" for j in payload.get("jobs", []) for e in validate_job(j)]
         if errors:
