@@ -1,0 +1,10 @@
+.novel-os/
+__pycache__/
+*.pyc
+*.sqlite
+*.sqlite3
+*.db
+.env
+.env.*
+*.log
+.DS_Store
