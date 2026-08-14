@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="../assets/brand/novelforge-lockup.svg" alt="NovelForge 自适应小说智能体框架" width="600" />
-  <p><strong>面向需要小说原生状态、质量体系与智能体执行能力的开发者。</strong></p>
-  <p><kbd>开始使用</kbd>&nbsp;&nbsp;<kbd>理解原理</kbd>&nbsp;&nbsp;<kbd>构建项目</kbd>&nbsp;&nbsp;<kbd>质量验证</kbd>&nbsp;&nbsp;<kbd>运行维护</kbd></p>
+  <img src="../assets/brand/novelforge-lockup.svg" alt="NovelForge 自适应小说智能体框架" width="580" />
+  <p><strong>先建立产品心智模型；只有在需要精确执行语义时，再深入底层契约。</strong></p>
+  <p><kbd>理解</kbd>&nbsp;&nbsp;<kbd>接入</kbd>&nbsp;&nbsp;<kbd>写作</kbd>&nbsp;&nbsp;<kbd>验证</kbd>&nbsp;&nbsp;<kbd>运行</kbd></p>
   <p><a href="README.en.md">English</a> · <strong>简体中文</strong></p>
 </div>
 
@@ -9,134 +9,168 @@
 
 # NovelForge 文档中心
 
-> 🌸 **NovelForge 不是“带几个小说示例的通用智能体 SDK”。它从小说生产本身出发，把故事状态、正典、人物、读者体验、质量门槛、长期学习和运行时一起设计。**
+NovelForge 的文档按**读者要完成的任务**组织，而不是照着源码目录逐层解释。
 
-把本页当作面向用户的总导航。需要精确实现细节时，再进入底层协议与机器契约。
+当前 7.3 实现采用 AI-native、contract-first 架构：需要理解小说的语义判断交给模型；权威、权限、内容指纹、持久化、路由、类型校验、事务、硬预算与可复现性由确定性系统负责。
 
----
-
-## 01 · 按你的目标开始 ✨
-
-| 你现在想做什么 | 从这里开始 | 然后阅读 |
-|---|---|---|
-| **先理解 NovelForge 是什么** | [为什么是 NovelForge](why-novelforge.zh-CN.md) | [总体架构](architecture.zh-CN.md) |
-| **判断技术选型是否合适** | [为什么是 NovelForge](why-novelforge.zh-CN.md) | [架构图谱](architecture-atlas.zh-CN.md) |
-| **理解一章正文如何生产出来** | [生产流水线](production-pipeline.zh-CN.md) | [质量保障与 QA](quality-assurance.zh-CN.md) |
-| **把现有小说接入框架** | [项目 SDK](project-sdk.zh-CN.md) | [项目适配器](project-adapters.zh-CN.md) |
-| **在聊天 / CLI / MCP / API 上运行** | [运行时与集成](integrations.zh-CN.md) | [会话运行时](../harness/session_runtime/SESSION_RUNTIME.zh-CN.md) |
-| **理解偏好学习和语料体系** | [自适应学习](adaptive-learning.zh-CN.md) | [语料智能](../corpus/README.zh-CN.md) |
-| **审核框架质量与发布门槛** | [质量保障与 QA](quality-assurance.zh-CN.md) | [评测参考](../evals/README.zh-CN.md) |
+文档本身也遵循同样的分层。产品页负责建立心智模型和说明取舍；指南负责告诉你怎样使用一个子系统；深层协议负责定义精确不变量与执行边界。
 
 ---
 
-## 02 · 产品逻辑 🪄
+## 01 · 如果你正在判断 NovelForge 是否适合自己 ✦
 
-### 为什么需要一个小说专用框架
+先读这四页：
 
-通用智能体框架很擅长编排、工具调用、持久工作流、多智能体协作与自动化。NovelForge 从更高一层的问题开始：**如果最终产物是一部长时间演化的小说，那么“什么是真的、人物知道什么、这一章是否好看、失败后从哪里修、用户口味如何学习”应该由谁负责？**
+**[为什么是 NovelForge](why-novelforge.zh-CN.md)** —— 产品判断、直接小说智能体 / 框架对比、成熟作者工具、真实取舍，以及哪些场景并不适合 NovelForge。
 
-[为什么是 NovelForge](why-novelforge.zh-CN.md) 会直接比较 LangGraph、CrewAI、AutoGen 和 OpenAI Agents SDK，也会明确说明哪些场景使用它们反而更简单。
+**[总体架构](architecture.zh-CN.md)** —— 项目权威、模型语义智能、确定性运行外壳、状态分离与写入边界。
 
-### 三类状态必须分开
+**[生产流水线](production-pipeline.zh-CN.md)** —— 为什么 `DRAFT` / `REVISE` 是一轮可诊断、可修复的生产运行，而不是一次模型调用。
 
-NovelForge 明确区分：
+**[质量保障](quality-assurance.zh-CN.md)** —— 确定性 QA、语义契约、独立判断、质量发现、候选稿演化与发布门槛。
 
-1. **项目状态** —— 已接受正典、当前状态、计划、研究资料；
-2. **运行状态** —— 会话、检查点、交接、租约、结果回执；
-3. **学习状态** —— 证据、偏好假设、语料缺口、升级候选。
-
-三者可以互相引用，但权威不会隐式流动。
-
-阅读 [总体架构](architecture.zh-CN.md) 获取系统视图，阅读 [架构图谱](architecture-atlas.zh-CN.md) 查看每个子系统的职责与深入入口。
+如果需要继续追到每个子系统具体负责什么，再进入 **[架构图谱](architecture-atlas.zh-CN.md)**。
 
 ---
 
-## 03 · 构建与运行 📖
+## 02 · 如果你要把一本小说接入 NovelForge ⚙️
 
-### 项目工程化
+先读 **[项目 SDK](project-sdk.zh-CN.md)**。它定义一个完整下游项目必须自己拥有的内容：项目清单、精确 Framework lock、项目自己的正典与当前状态、计划、稿件、研究资料、回归样本、测试与构建产物。
 
-NovelForge 把一本小说视为可复现的工程项目，而不是一堆提示词文件。项目锁定精确框架版本，并独立维护自己的故事事实、状态、计划、稿件、研究资料、评测和迁移。
+如果现有小说已经有成熟目录结构，不需要为了接入框架重排整个仓库。继续读 **[项目适配器](project-adapters.zh-CN.md)** 与精确的 **[项目适配器协议](../harness/PROJECT_ADAPTER_PROTOCOL.zh-CN.md)**。
 
-- [项目 SDK](project-sdk.zh-CN.md)
-- [项目适配器](project-adapters.zh-CN.md)
-- [项目适配器协议](../harness/PROJECT_ADAPTER_PROTOCOL.zh-CN.md)
-
-### 调度与运行时
-
-NovelForge 默认只使用一个管理器。只有在确实需要不同能力、上下文隔离、独立判断或有效并行时，才增加专门执行器。聊天会话、本地智能体、提供商 API、MCP、GitHub 任务、本地模型和人工审阅者都只是运行方式，不是权威来源。
-
-- [运行时与集成](integrations.zh-CN.md)
-- [调度管理器](../harness/HARNESS_AGENT.zh-CN.md)
-- [编排协议](../harness/ORCHESTRATION_PROTOCOL.zh-CN.md)
-- [运行时路由](../harness/session_runtime/RUNTIME_ROUTING.zh-CN.md)
+最重要的边界始终不变：Generic Framework 不是某一本小说的数据库；依赖方向只能是 **Project → pinned NovelForge**。
 
 ---
 
-## 04 · 小说原生系统 🌸
+## 03 · 如果你正在写作或修改正文 📖
 
-这些能力通常需要通用智能体框架的应用层自己实现，而 NovelForge 把它们作为框架的一等机制：
+小说机制层建议按这个顺序理解：
 
-| 系统 | 它回答什么问题 | 深入文档 |
-|---|---|---|
-| **故事系统** | 当前处于哪个故事层级，哪些压力发生变化，下一步必须推动什么？ | [故事系统](../core/STORY_SYSTEM.zh-CN.md) |
-| **人物系统** | 每个角色知道什么、想要什么、承担什么风险、独立追求什么？ | [人物系统](../core/CHARACTER_SYSTEM.zh-CN.md) |
-| **正典状态** | 什么只是计划，什么是审阅稿，什么已经接受或锁定？ | [正典状态](../core/CANON_STATE.zh-CN.md) |
-| **表层质量规则** | 哪些反复出现的 AI 文本失败机制必须直接拦截？ | [表层质量规则](../surface/FUNDAMENTALS.zh-CN.md) |
-| **读者吸引力** | 这一章是否真正有推进、有回报、有因果、有继续读下去的动力？ | [读者吸引力](../surface/READER_ENGAGEMENT.zh-CN.md) |
+**[故事系统](../core/STORY_SYSTEM.zh-CN.md)** —— 故事层级、压力、因果推进，以及问题应该由哪一层负责。
 
----
+**[人物与关系系统](../core/CHARACTER_SYSTEM.zh-CN.md)** —— 人物议程、信念、知识边界、独立行动与长期关系状态。
 
-## 05 · 质量保障、QA 与发布门槛 ✅
+**[正典与状态](../core/CANON_STATE.zh-CN.md)** —— 什么已经锁定或接受，什么只是计划、审阅稿或提案。
 
-NovelForge 刻意把**确定性正确性**和**文学语义判断**分开。
+**[表层质量基础](../surface/FUNDAMENTALS.zh-CN.md)** —— 常见 AI 文本失败机制，以及它们真正应该回到哪里修。
 
-- Schema、生命周期、权限、内容指纹、依赖完整性、幂等性、构建发布不变量和项目泄漏由确定性检查负责；
-- 文本质量、读者吸引力、人物与场景行为等无法诚实压缩成正则规则的问题，交给语义审查；
-- 强制独立审查必须来自不同会话或调用，并绑定候选稿内容指纹；
-- 评测中的隐藏预期值会在交给审阅者之前从盲评队列中移除；
-- 普通 CI 不会偷偷调用付费模型消耗额度。
+**[读者吸引力](../surface/READER_ENGAGEMENT.zh-CN.md)** —— 读者压力、回报、因果、继续阅读动力、预期与章节体验。
 
-阅读 [质量保障与 QA](quality-assurance.zh-CN.md) 查看完整门槛体系，[评测参考](../evals/README.zh-CN.md) 查看运行器与评测案例格式。
+把这些机制组合成一轮生产运行的完整流程，见 **[生产流水线](production-pipeline.zh-CN.md)**。
 
 ---
 
-## 06 · 学习与语料智能 🔎
+## 04 · 如果你在处理上下文或记忆 🧠
 
-NovelForge 可以从用户反馈和外部证据中学习，但不会把模型自己的猜测偷偷固化成永久规则。
+读 **[上下文与记忆](context-and-memory.zh-CN.md)**。
 
-- [自适应学习](adaptive-learning.zh-CN.md)
-- [语料智能](../corpus/README.zh-CN.md)
+核心原则很简单：**持久存储不等于自动塞进提示词，记住了也不等于是真的。** 项目权威、派生记忆、运行状态与模型推断始终是不同的东西。
+
+上下文检查器负责解释当前工作集为什么包含某些信息；记忆分层与可编辑 Memory Bank 提供作者可见的控制面。受保护的 `accepted` / `locked` 内容不能通过记忆编辑器被静默改写。
+
+真正需要理解“此刻什么相关”时，由模型作语义判断；确定性代码负责硬预算、来源、生命周期、权威等级与显式控制，而不是用伪文学分数替代阅读理解。
+
+---
+
+## 05 · 如果你在运行 NovelForge 🔌
+
+实践入口是 **[运行时与集成](integrations.zh-CN.md)**。
+
+需要精确语义时，再按问题进入对应协议：
+
+- **[Harness 管理器](../harness/HARNESS_AGENT.zh-CN.md)** —— manager 拥有什么职责；
+- **[编排协议](../harness/ORCHESTRATION_PROTOCOL.zh-CN.md)** —— 一轮任务怎样推进；
+- **[会话运行时](../harness/session_runtime/SESSION_RUNTIME.zh-CN.md)** —— session / run / checkpoint 身份与恢复；
+- **[运行时能力](../harness/session_runtime/RUNTIME_CAPABILITIES.zh-CN.md)** —— 当前宿主究竟具备什么能力；
+- **[运行时路由](../harness/session_runtime/RUNTIME_ROUTING.zh-CN.md)** —— 怎样选择符合条件的执行路径；
+- **[控制平面](../harness/control_plane/CONTROL_PLANE.zh-CN.md)** —— 外部任务、租约、结果与一次性消费；
+- **[语义执行器协议](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md)** —— 受限语义任务和类型化结果；
+- **[语义执行运行时](../harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.zh-CN.md)** —— transport、校验、回执与结果消费。
+
+一个运行时技术上“做得到”，从来不代表它因此获得故事写入权威。
+
+---
+
+## 06 · 如果你要理解 7.3 的模型语义契约 ✦
+
+NovelForge 7.3 使用**按需渐进加载**的语义契约体系。
+
+唯一的确定性目录索引是：
+
+`harness/semantic_workers/model_contract_catalog.json`
+
+具体契约包位于：
+
+`harness/semantic_workers/contracts/`
+
+管理器先选择当前任务真正需要的最小契约包，运行时再把精确 contract ID 解析到唯一 pack。任务只封装必要输入、rubric 与 output contract，计算语义指纹，并验证类型化结果。
+
+这使文学理解继续属于模型，同时又不允许模型输出绕过项目权威、权限、持久化或结算规则。
+
+---
+
+## 07 · 如果你在审核质量或组织修改 ✅
+
+从 **[质量保障](quality-assurance.zh-CN.md)** 开始，再读 **[质量演化](quality-evolution.zh-CN.md)** 与 **[评测参考](../evals/README.zh-CN.md)**。
+
+可以把这一层理解成六件不同的事：
+
+**确定性 QA** —— 证明机器可以证明的不变量。
+
+**语义契约** —— 回答真正需要理解文本的问题。
+
+**质量发现（findings）** —— 把问题、证据和归属明确记录下来。
+
+**失败路由** —— 把问题送回真正拥有它的故事、人物、场景、表层或上下文机制。
+
+**候选稿演化** —— 记录谱系、比较现稿与挑战稿，并允许在收益平台期停止修改。
+
+**独立判断** —— 当任务明确要求独立性时，必须来自真正不同的调用 / 会话，并返回绑定精确稿件指纹的类型化结果。
+
+---
+
+## 08 · 如果你在做长期学习或使用语料证据 🔎
+
+偏好 / 创作机制学习从 **[自适应学习](adaptive-learning.zh-CN.md)** 开始；外部作品与研究证据从 **[语料智能](../corpus/README.zh-CN.md)** 开始。
+
+需要精确政策时继续读：
+
 - [语料政策](../corpus/CORPUS_POLICY.zh-CN.md)
 - [语料入库协议](../corpus/CORPUS_INGEST_PROTOCOL.zh-CN.md)
 - [自我改进协议](../harness/SELF_IMPROVEMENT_PROTOCOL.zh-CN.md)
+- [持续维护](../harness/CONTINUOUS_MAINTENANCE.zh-CN.md)
+
+发现、访问、版权判断、存储、语义分析、学习与升级是不同的门槛。语料不是正典；模型推断不是持久用户口味；通用创作机制的升级必须有证据、反例或适用边界、评测覆盖、版本与回滚，以及通过确定性验证。
 
 ---
 
-## 07 · 精确参考层 ⚙️
+## 09 · 如果你在比较产品、框架或运行时 🧭
 
-下面这些文档主要用于实现、调试和审计，而不是新用户入门：
+请把两个问题分开。
 
-| 领域 | 精确参考 |
-|---|---|
-| 调度执行 | [调度管理器](../harness/HARNESS_AGENT.zh-CN.md) |
-| 会话身份与恢复 | [会话运行时](../harness/session_runtime/SESSION_RUNTIME.zh-CN.md) |
-| 运行能力路由 | [运行时能力](../harness/session_runtime/RUNTIME_CAPABILITIES.zh-CN.md) |
-| 持久控制平面 | [控制平面](../harness/control_plane/CONTROL_PLANE.zh-CN.md) |
-| 语义执行器契约 | [语义执行器协议](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md) |
-| 语义任务执行 | [语义执行运行时](../harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.zh-CN.md) |
-| 框架发布包 | [框架发布包](../release/FRAMEWORK_BUNDLE.zh-CN.md) |
-| 评测实现 | [评测参考](../evals/README.zh-CN.md) |
+**产品定位：** [为什么是 NovelForge](why-novelforge.zh-CN.md) 主要比较直接小说智能体 / 小说框架，并单独说明成熟作者产品与 NovelForge 的不同目标。
+
+**实现思想：** [智能体框架采用分析](../knowledge/AGENT_FRAMEWORK_ADOPTION.zh-CN.md) 才讨论 LangGraph、OpenAI Agents SDK、CrewAI、AutoGen、coding-agent runtime、MCP 等通用工程体系。
+
+不要把这两类比较重新塞回一张首页大表。它们回答的不是同一个问题。
 
 ---
 
-## 08 · 文档分层原则 ✦
+## 10 · 文档的三层结构 🌸
 
-面向用户的页面负责回答 **为什么、什么时候用、怎么用、有什么取舍**；底层协议负责定义 **精确不变量、状态迁移和机器契约**；机器 Schema 则继续保持单一来源。
+**Tier A · 产品入口** —— README、Docs Home、Why、Architecture、Pipeline、QA。第一次来仓库的人应该不读源码也能理解，文字与视觉都执行最严格的 QA。
 
-这样既能让第一次来到仓库的人迅速理解价值，也不会为了“好懂”而牺牲框架的工程严谨性。
+**Tier B · 使用指南** —— Project SDK、Integrations、Learning、Corpus、Evals、Context/Memory、Quality Evolution。重点是“什么时候用、怎么用、会得到什么、失败后怎么办”。
+
+**Tier C · 契约与工程记录** —— Harness、Runtime、Semantic Worker、Story / Character / Canon、Surface / Reader、Corpus Policy 以及历史 specs。这里优先保证边界和语义精确，不为了“好看”牺牲协议清晰度。
+
+历史 spec 与 changelog 保留历史语义；文档重建不能把旧设计记录偷偷改写成当前产品事实。
+
+仓库级写作规范与 QA gate 分别见 **[文档规范](DOCUMENTATION_STANDARD.zh-CN.md)** 与 **[文档质量门槛](DOCUMENTATION_QA.zh-CN.md)**。
 
 <div align="center">
   <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom 标志" width="54" />
   <br />
-  <sub>先理解产品，再深入契约；需要多深，就读多深。🌸</sub>
+  <sub>当前任务需要读多深，就只读到多深。🌸</sub>
 </div>
