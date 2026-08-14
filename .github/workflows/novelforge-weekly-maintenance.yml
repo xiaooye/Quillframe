@@ -1,0 +1,94 @@
+name: NovelForge Weekly Maintenance
+
+on:
+  schedule:
+    - cron: '37 6 * * 0'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'learning/**'
+      - 'corpus/**'
+      - 'evals/**'
+      - 'harness/SELF_IMPROVEMENT_PROTOCOL*'
+      - '.github/workflows/novelforge-weekly-maintenance.yml'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: novelforge-weekly-maintenance
+  cancel-in-progress: true
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Deterministic release and corpus contracts
+        run: |
+          python evals/run_evals.py --release --json > maintenance-release-evals.json
+          python evals/build_judge_queue.py --output maintenance-semantic-queue.json
+          python corpus/corpus_scout.py self-test > maintenance-corpus-scout.json
+          python corpus/rights_gate.py self-test > maintenance-rights-gate.json
+          python learning/learning_store.py --db /tmp/novelforge-maintenance-learning.db self-test > maintenance-learning-store.json
+
+      - name: Build maintenance inbox report
+        run: |
+          python - <<'PY'
+          import json, os, pathlib, datetime
+          evals=json.load(open('maintenance-release-evals.json',encoding='utf-8'))
+          queue=json.load(open('maintenance-semantic-queue.json',encoding='utf-8'))
+          benchmarks=json.load(open('corpus/benchmarks/mechanisms.json',encoding='utf-8'))
+          payload={
+            'schema':'novelforge_maintenance_report_v1',
+            'generated_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            'repository':os.environ.get('GITHUB_REPOSITORY'),
+            'commit':os.environ.get('GITHUB_SHA'),
+            'run_id':os.environ.get('GITHUB_RUN_ID'),
+            'deterministic_release_blockers':evals.get('release_blockers',[]),
+            'semantic_cases_waiting_for_real_judgment':len(queue.get('cases',[])),
+            'mechanism_benchmarks':len(benchmarks.get('benchmarks',[])),
+            'model_execution':False,
+            'auto_promotion':False,
+            'autonomous_boundary':'observe_and_queue_only',
+            'corpus_discovery_note':'Corpus Scout generates typed discovery requests from durable learning gaps. Actual Web/GitHub/MCP discovery requires an authorized host connector and is not fabricated by this workflow.'
+          }
+          json.dump(payload,open('weekly-maintenance-report.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          md=['# NovelForge · Weekly Maintenance','',f"- Commit: `{payload['commit']}`",f"- Release blockers: {len(payload['deterministic_release_blockers'])}",f"- Semantic cases awaiting independent judgment: {payload['semantic_cases_waiting_for_real_judgment']}",f"- Mechanism benchmarks: {payload['mechanism_benchmarks']}",'','## Autonomy boundary','','This workflow performs deterministic checks and queues work only. It does not execute an LLM, promote framework behavior, learn durable user taste without evidence, or search the web without an authorized connector.','',payload['corpus_discovery_note'],'']
+          pathlib.Path('weekly-maintenance-report.md').write_text('\n'.join(md),encoding='utf-8')
+          if payload['deterministic_release_blockers']:
+              raise SystemExit('deterministic release blockers present')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: novelforge-weekly-maintenance-${{ github.run_id }}
+          path: |
+            weekly-maintenance-report.md
+            weekly-maintenance-report.json
+            maintenance-release-evals.json
+            maintenance-semantic-queue.json
+            maintenance-corpus-scout.json
+            maintenance-rights-gate.json
+            maintenance-learning-store.json
+          if-no-files-found: warn
+
+      - name: Update maintenance inbox issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          TITLE='NovelForge · Weekly Maintenance'
+          NUMBER="$(gh issue list --state open --limit 100 --json number,title --jq '.[] | select(.title == "NovelForge · Weekly Maintenance") | .number' | head -n1)"
+          if [ -z "$NUMBER" ]; then
+            gh issue create --title "$TITLE" --body-file weekly-maintenance-report.md
+          else
+            gh issue edit "$NUMBER" --body-file weekly-maintenance-report.md
+          fi
