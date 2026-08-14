@@ -98,6 +98,8 @@ Read [Production Pipeline](docs/production-pipeline.en.md).
 
 ## 04 · Quality means diagnosis, not one score ✅
 
+<img src="assets/ui/home-quality.en.svg" alt="NovelForge quality system separating deterministic QA, semantic QA, quality evolution, and independent fingerprint-bound review" width="100%" />
+
 NovelForge deliberately separates machine-provable correctness from model-required interpretation.
 
 **Deterministic QA** catches invalid schemas, broken authority boundaries, hidden-gold leaks, stale fingerprints, duplicate result consumption, lifecycle violations, missing capabilities, project leakage, rights/provenance failures, and release invariant failures.
@@ -162,6 +164,8 @@ Read [Project SDK](docs/project-sdk.en.md), [Project Adapters](docs/project-adap
 ---
 
 ## 09 · Honest fit and tradeoffs ⚖️
+
+<img src="assets/ui/home-fit.en.svg" alt="NovelForge honest-fit guide showing strong-fit scenarios, lighter-tool scenarios, and explicit tradeoffs" width="100%" />
 
 NovelForge is strongest when a fiction project is long-lived enough that authority, continuity, context control, resumability, runtime choice, QA provenance, and learning discipline genuinely matter.
 
