@@ -1,0 +1,19 @@
+{
+  "id": "READER-FLAT-001",
+  "type": "regression",
+  "domain": "reader",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "language": "en",
+    "profile": {"reader_grip": "high"},
+    "summary": "A competent protagonist completes a required office task step by step. Every person is cooperative, dialogue only transfers necessary information, no choice changes the cost, and the chapter ends immediately after the task is sent successfully.",
+    "surface_hard_fail_hits": 0
+  },
+  "rubric": [
+    "Reject high-grip fiction that is technically clean but reads as a chronological report of correct actions with weak pressure evolution, reward, character energy, tradeoff, and forward pull.",
+    "Use RG-15 SAFE-BUT-FLAT when applicable."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["RG-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "reject", "codes": ["RG-15"]}
+}
