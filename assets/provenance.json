@@ -1,0 +1,42 @@
+{
+  "schema": "novelforge_visual_provenance_v1",
+  "updated_at": "2026-08-14",
+  "assets": [
+    {
+      "id": "brand-mark-v1",
+      "path": "assets/brand/novelforge-mark.svg",
+      "method": "hand-authored vector",
+      "intent": "Story Loom mark: woven N, book-page forms, forge spark",
+      "user_reference": false,
+      "third_party_asset": false,
+      "license_note": "Original repository asset; no third-party font or image embedded."
+    },
+    {
+      "id": "brand-lockup-v1",
+      "path": "assets/brand/novelforge-lockup.svg",
+      "method": "hand-authored vector",
+      "intent": "Primary horizontal NovelForge lockup using the Story Loom mark",
+      "user_reference": false,
+      "third_party_asset": false,
+      "license_note": "Original repository asset; wordmark uses system-font fallbacks only."
+    },
+    {
+      "id": "story-thread-v1",
+      "path": "assets/brand/story-thread.svg",
+      "method": "hand-authored vector",
+      "intent": "Decorative documentation divider derived from semantic brand tokens",
+      "user_reference": false,
+      "third_party_asset": false,
+      "license_note": "Original repository asset."
+    },
+    {
+      "id": "hero-framework-v1",
+      "path": "assets/hero-framework.svg",
+      "method": "hand-authored vector",
+      "intent": "Technical-editorial repository hero; decorative only",
+      "user_reference": false,
+      "third_party_asset": false,
+      "license_note": "Original repository asset; no authority-bearing information depends on it."
+    }
+  ]
+}
