@@ -1,8 +1,8 @@
-# NovelForge Skill Contract · 7.1
+# NovelForge Skill Contract · 7.2
 
 ## Role
 
-NovelForge is a project-agnostic fiction production framework. It owns generic Story/Character/Canon mechanisms, Surface/Reader quality fundamentals, capability-aware Harness/runtime orchestration, Corpus Intelligence, durable adaptive learning, eval/regression infrastructure, deterministic Framework bundles, Project Engineering contracts, and provider-neutral integrations.
+NovelForge is a project-agnostic fiction production framework. It owns generic Story/Character/Canon mechanisms, Surface/Reader quality fundamentals, capability-aware Harness/runtime orchestration, author-visible context and memory controls, reader simulation and quality evolution, Corpus Intelligence, durable adaptive learning, eval/regression infrastructure, deterministic Framework bundles, Project Engineering contracts, and provider-neutral integrations.
 
 It contains no built-in novel, character, plot, Canon, or private user-specific taste data.
 
@@ -17,7 +17,7 @@ For any NovelForge task:
 5. if the lock carries `bundle_fingerprint`, verify the materialized Framework bundle before using it as runtime bytes;
 6. create/resolve manager session + run;
 7. when external/tool work is required, build or load a typed host capability manifest and resolve the required capabilities;
-8. build a sparse Context Manifest;
+8. build a sparse Context Manifest and inspect author-visible overlays/memory only through authority-aware controls;
 9. load only task-relevant project objects plus required Framework modules;
 10. checkpoint before external waits and consequential writes;
 11. use a genuinely independent invocation/session for mandatory semantic judgment;
@@ -49,6 +49,46 @@ Read for prose tasks:
 - `surface/READER_ENGAGEMENT.en.md`
 - project profiles selected by Context Manifest
 - relevant regression/benchmark evidence only after Raw Draft is frozen when evaluation design requires critic isolation.
+
+## Reader simulation / quality evolution · 7.2
+
+7.2 adds a diagnostic and revision-control layer **without weakening independent semantic review**:
+
+- `quality/reader_panel.py` simulates reading-behavior personas, records continue intent / attention loss / reward / confusion, and supports swapped-order A/B comparison to expose position bias;
+- `quality/revision_orchestrator.py` plans narrow continuity / character / reader / surface / research passes, isolates pass failures, deduplicates normalized findings, and routes repair to the owning mechanism;
+- `quality/quality_evolution.py` persists candidate lineage and fingerprint-bound comparisons, consumes comparison results once, and stops repeated no-gain revisions at a plateau;
+- `quality/character_integrity.py` packages bounded agenda / knowledge / voice / relationship / spatial-task audits;
+- `quality/state_graph.py` treats graph state as a derived verification view and distinguishes evidence-backed transitions from unexplained or stable-field contradictions;
+- `quality/findings.py` provides the common evidence-chained finding contract.
+
+A Reader Panel can be extremely useful even when several personas are executed by one model, but that is **diagnostic evidence, not a mandatory-independent-review PASS**. Absolute 1–10 scores alone do not decide whether a revision survives; pairwise evidence and regression checks are preferred.
+
+Failure ownership remains explicit:
+- isolated surface defect → local rewrite;
+- clustered surface defects → scene regeneration;
+- SAFE-BUT-FLAT / reader-grip failure → Reader Pressure + Scene Simulation;
+- character failure → Character Simulation;
+- story failure → Story / Plan;
+- continuity failure → state/transition repair.
+
+## Context / editable memory · 7.2
+
+Read/use:
+- `harness/context_inspector.py`
+- `harness/memory_tiers.py`
+- `harness/memory_bank.py`
+
+The Context Inspector exposes why an item is present, its authority, stage, relevance, and pin state. The tier allocator budgets already-derived/project-provided memory as `hot | working | archival`, with explicit pin and current-event relevance ahead of generic similarity.
+
+The durable Memory Bank is author-editable **without becoming a second Canon store**:
+- `locked` / `accepted` entries are protected reference snapshots;
+- editing a protected entry creates a `proposal` child instead of mutating the protected row;
+- proposal memory is not injected into pre-draft context by default;
+- derived/runtime entries use exact before-fingerprint guards for edits;
+- derived entries retain source refs/fingerprints and `authority=false`;
+- pin/priority controls affect retrieval, not story truth.
+
+Memory bank ≠ Canon. Context overlay ≠ Canon. Derived summary ≠ Canon. Proposal ≠ current state.
 
 ## Story / Canon stack
 
@@ -119,7 +159,7 @@ feedback evidence / hypothesis
 → observe / revise / rollback
 ```
 
-7.1 uses:
+The 7.1 adaptive-runtime foundation remains active in 7.2:
 - `learning/learning_store.py` for evidence/hypotheses/gaps/candidates;
 - `learning/learning_cycle.py` for durable cycle state, artifact hashes and consume-once receipts;
 - `learning/learning_eval.py` for blind semantic analysis/eval work packets;
@@ -146,19 +186,19 @@ Corpus is evidence/benchmark, not Canon or an imitation scrapbook.
 
 Use one manager by default. Add bounded workers only for capability, context isolation, genuine independence, or useful parallelism.
 
-Deterministic code owns identity, persistence, state transitions, capability resolution, fingerprinting, provenance validation, permissions, idempotency, consume-once receipts, bundle verification, and invariant checks. Semantic workers own judgments that cannot be reduced to deterministic tests.
+Deterministic code owns identity, persistence, state transitions, capability resolution, fingerprinting, provenance validation, permissions, idempotency, consume-once receipts, bundle verification, context/memory authority controls, quality-evolution bookkeeping, and invariant checks. Semantic workers own judgments that cannot be reduced to deterministic tests.
 
 ## Writes
 
 Every side effect requires least privilege, exact target, precondition/before-state, idempotency strategy, post-condition, and appropriate rollback/trace.
 
-No connector, webhook, schedule, corpus result, discovery result, learning hypothesis, promotion-gate result, semantic result, or session state grants Canon or Framework-write authority by itself.
+No connector, webhook, schedule, corpus result, discovery result, learning hypothesis, promotion-gate result, semantic result, reader-panel result, memory-bank edit, revision report, or session state grants Canon or Framework-write authority by itself.
 
 ## CI / release / self-improvement
 
 Normal CI is deterministic and does not silently spend API/Codex/Claude/model usage.
 
-Normal CI must test host-capability guards, durable Learning Cycle semantics, blind learning packets, Promotion Gate prerequisites, Corpus discovery provenance/rights boundaries, and deterministic Framework bundle reproducibility/tamper detection.
+Normal CI must test host-capability guards, author-control/context-memory guards, reader/evolution/revision contracts, durable Learning Cycle semantics, blind learning packets, Promotion Gate prerequisites, Corpus discovery provenance/rights boundaries, and deterministic Framework bundle reproducibility/tamper detection.
 
 Scheduled maintenance may observe, plan and queue work, but cannot pretend to execute undeclared Web/model capabilities and cannot auto-promote Framework behavior.
 
