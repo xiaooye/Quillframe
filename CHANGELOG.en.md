@@ -18,6 +18,9 @@
 - Added durable SQLite Control Plane for sessions, events, handoffs, leases, result hashes, and logical consume-once receipts.
 - Added provider-neutral runtime routing across chat sessions, local Codex/Claude, MCP, provider APIs, GitHub/service jobs, local models, and humans.
 - Kept mandatory independent semantic judgment fingerprint-bound and fresh-per-fingerprint by default.
+- Added typed GitHub event ingress and a no-API peer-chat semantic bridge.
+- Added optional manually dispatched provider-backed semantic eval workflow; it requires an explicit secret and is never part of normal CI.
+- Added weekly deterministic maintenance that observes/tests/queues work without LLM execution or automatic Framework promotion.
 
 ### Adaptive Learning
 - Added durable Learning Store for preference evidence, revisable hypotheses, contradictions, Corpus gaps, promotion candidates, and rollback records.
@@ -29,6 +32,7 @@
 - Added rights classes `redistributable | analysis_only | unknown`.
 - Added question-bounded analysis, counterexample search, cross-work generalization, and named-author imitation boundaries.
 - Migrated eight generic cross-work mechanism benchmark seeds without raw source text or consumer-project facts.
+- Scheduled maintenance can generate typed Corpus discovery queues, while actual Web/GitHub/MCP discovery still requires an authorized host connector and is never fabricated.
 
 ### Evals
 - Added generic deterministic + semantic eval runner.
