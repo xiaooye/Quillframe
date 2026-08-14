@@ -1,5 +1,38 @@
 # NovelForge Changelog · 中文版
 
+## Unreleased · 面向 8.0 的开发中架构
+
+> 本节是**开发变更台账，不是 NovelForge 8.0 发布声明**。在 Core acceptance / release 流程明确晋升新版本之前，`HARNESS_MANIFEST.yaml` 仍是 Framework 的发布权威。
+
+### 发布真相
+
+- 当前 `HARNESS_MANIFEST.yaml` 的发布权威版本仍为 **7.2.0**。
+- 顶层 CLI `novelforge.py` 当前报告 **7.3.0**，而 Project SDK 默认版本仍为 **7.2.0**。这是实现状态与发布元数据之间的漂移；在 Core / Release 所属流程正式解决前，文档必须如实保留这一差异，不能替它们静默统一版本号。
+- 针对当前 `main` 重写过的文档，除非 `docs/documentation_manifest.json` 已明确将其标记为对发布权威复核完成的 `reviewed_current`，否则仍只是候选文档。
+- `main` 上出现面向 8.0 的机制或文档，**不等于 NovelForge 8.0 已经发布**。
+
+### 已合并的开发变更
+
+- 语义运行已经转向“小型 contract catalog → 渐进披露 → 精确 contract pack”。小说语义判断由模型负责；确定性代码负责权威、权限、指纹、持久化、路由、硬预算、类型校验、事务与可复现性。
+- live machine namespace 已从 `NOVEL_OS_*` / `novel_os_*` / `.novel-os/` 迁移到 `NOVELFORGE_*` / `novelforge_*` / `.novelforge/`，且不保留兼容别名。这是一次预发布 breaking migration。
+- Context selection 已支持面向当前任务的问题→证据 grounding，并在组装模型上下文之前确定性执行 perspective / visibility 过滤。不符合可见性要求而又被 pin 的证据会 fail closed，而不是先展示给模型再用提示语要求它忽略。
+- metadata-only 的 `novelforge_run_receipt_v1` 可观察性 primitive 已合并。它可以绑定 run、context、semantic job、guard 与 grounding evidence 的元数据，但不保存候选正文、不获得 Canon authority，也不成为第二套状态数据库。
+- 当前 Settlement Runtime 继续把 Accepted artifact 的持久化修改置于明确接受、精确 before→after 写入意图、checkpoint / write authorization、compare-and-swap、post-condition 与 required projection receipts 之后；派生 projection 仍然不是 Canon。
+- Documentation governance 已开始确定性跟踪 audience、tier、authority source、freshness owner、rewrite policy、lifecycle、双语配对、本地链接、发布版本漂移与可检查的视觉/文档约束。清晰度、语义真实性、母语质量和视觉质量仍需要独立的语义审查，不能由正则表达式宣称完成。
+
+### Breaking change / Migration 台账
+
+- 上述 machine namespace migration **已经发生在 live `main`**。下面的 7.0 历史说明记录的是当时状态，不应再被当作当前 machine guidance。
+- 独立的 permission schema rename：`os_behavior_write` → `framework_behavior_write` **目前尚未在 live `main` 完成**。已经关闭的 PR #14 / #15 不具备发布权威，不能把它们当作成功迁移的证据。
+- 已锁定旧 NovelForge commit 的下游项目仍受其 exact dependency 约束。不得因为 `main` 更新就静默替换现有 `novelforge.lock.json`；升级必须走显式 Framework upgrade / migration，并重新验证 Project、bundle fingerprint、相关 contracts 与受影响的 runtime state。
+- 最终 8.0 migration guide 必须从 Core 已接受的正式 contracts 与 release bundle 推导，不能根据 issue 描述或中间开发提交猜测最终接口。
+
+### Product / Publication 状态
+
+- Publication / Typesetting 是 Core workstream 的活跃开发项，由 Issue #16 跟踪。在正式 schema/runtime 进入 live release authority 之前，文档只能把它描述为计划中或开发中能力，不能写成已发布功能。
+- NovelForge Studio / observability UX 是 Product Experience workstream 的活跃开发项，由 Issue #8 / #17 跟踪。Core 已合并 Run Receipt 或 Inspector primitive，并不等于 Studio 已经交付。
+- Studio 必须消费 Core 提供的稳定状态/读取接口；UI state 永远不会因为被展示出来就成为 Canon、Memory、语义真相或写入权威。
+
 ## 7.0.0 · Adaptive Fiction Framework
 
 ### Architecture
