@@ -1,171 +1,171 @@
 <div align="center">
   <img src="../assets/brand/novelforge-lockup.svg" alt="NovelForge — Adaptive Fiction Agent Framework" width="580" />
-  <p><strong>Why NovelForge — and when you should use something else.</strong></p>
-  <p><kbd>POSITIONING</kbd>&nbsp;&nbsp;<kbd>TRADEOFFS</kbd>&nbsp;&nbsp;<kbd>FRAMEWORK COMPARISON</kbd></p>
+  <p><strong>Why NovelForge — and when a different fiction system is the better fit.</strong></p>
+  <p><kbd>DIRECT ALTERNATIVES</kbd>&nbsp;&nbsp;<kbd>TRADEOFFS</kbd>&nbsp;&nbsp;<kbd>RESEARCH LANDSCAPE</kbd></p>
 </div>
 
 <img src="../assets/brand/story-thread.svg" alt="" width="100%" />
 
 # Why NovelForge
 
-> 🌸 **NovelForge competes on fiction-production semantics, not on being the most general agent orchestrator.**
+> 🌸 **NovelForge is not trying to win “best AI writing app.” It is trying to solve a narrower engineering problem: how to run long-form fiction production with explicit story authority, resumable execution, independent quality gates, and evidence-backed learning.**
 
-If you are building customer support, data automation, a coding agent, or a generic business workflow, a mature general-purpose framework may be simpler. NovelForge becomes interesting when the artifact itself is a long-running fictional world whose truth, characters, continuity, prose, reader experience, and user preferences all need durable governance.
+The direct alternatives are therefore other fiction products and novel agents—not general orchestration SDKs.
 
-> **Comparison snapshot:** 2026-08-14. The summaries below are based on each framework's official documentation and should be revisited as upstream products evolve.
+> **Comparison snapshot:** 2026-08-14. Product capabilities change quickly; this page records a point-in-time fit comparison, not a permanent ranking.
 
----
-
-## 01 · The category difference ✨
-
-General agent frameworks typically give you primitives such as agents, tools, handoffs, graphs, teams, sessions, memory, state, guardrails, tracing, and workflow persistence. You then build application semantics on top.
-
-NovelForge includes an additional domain layer:
-
-```text
-general agent runtime
-        +
-fiction authority model
-        +
-story / character / Canon mechanics
-        +
-reader-quality runtime
-        +
-fiction-specific evals
-        +
-evidence-driven taste / corpus learning
-        +
-novel-as-engineering-project contracts
-```
-
-That specialization is its main advantage **and** its main cost.
+<img src="../assets/ui/home-comparison.en.svg" alt="Comparison of NovelForge with Sudowrite, NovelCrafter, NovelClaw, Novel OS, AuthorAgent, and autonovel" width="100%" />
 
 ---
 
-## 02 · Comparison at a glance 📊
+## 01 · The short version ✨
 
-| Dimension | NovelForge | LangGraph | CrewAI | AutoGen | OpenAI Agents SDK |
-|---|---|---|---|---|---|
-| **Primary orientation** | Long-form fiction production | General durable stateful workflows / agents | Agent teams + structured automation flows | General multi-agent applications | Lightweight agent application runtime |
-| **Workflow persistence / state** | Session + checkpoint + control plane, separated from Canon | Core strength: durable execution, state, interrupts | Flows support state, persistence, resumability | Agent/team state can be saved and loaded | Sessions, run state, tracing; runtime-oriented |
-| **Multi-agent model** | One manager + bounded specialists by default | Graph-defined orchestration | Crews and role-based collaboration are central | Teams and agent collaboration are central | Manager-as-tools or handoff patterns |
-| **Fiction Canon authority** | **First-class** | Application-defined | Application-defined | Application-defined | Application-defined |
-| **Character knowledge / agenda boundaries** | **First-class** | Application-defined | Application-defined | Application-defined | Application-defined |
-| **Reader-engagement quality model** | **First-class** | Application-defined | Application-defined | Application-defined | Application-defined |
-| **Blind independent semantic review** | **Framework-level contract with fingerprint binding** | Application-defined | Application-defined | Application-defined | Guardrails/evals exist; fiction-specific independence contract is application-defined |
-| **Corpus rights + mechanism learning** | **Built into fiction learning model** | Application-defined | Knowledge/memory available; fiction rights model is application-defined | Memory/extensions available; fiction rights model is application-defined | Tools/sessions/evals available; fiction corpus policy is application-defined |
-| **Provider/runtime neutrality** | Chat, local agents, API, MCP, CI, local model, human | Broad ecosystem | Broad model/tool ecosystem | Extensible model/tool ecosystem | Strongest fit with OpenAI; supports non-OpenAI model integrations in parts of the SDK |
-| **General ecosystem breadth** | **Narrow / early** | **Broad** | **Broad** | **Broad** | **Broad and rapidly evolving** |
-| **Managed production platform** | Not a core offering | Ecosystem/platform options exist | CrewAI AMP provides managed deployment/monitoring | Ecosystem-dependent | OpenAI platform tracing/evals integrate closely |
+**Choose Sudowrite** when you primarily want a polished creative-writing partner: fast ideation, prose assistance, rewriting, and a persistent Story Bible inside a mature author product.
 
-The table is intentionally asymmetric: NovelForge does **not** try to reproduce every capability or ecosystem surface of general-purpose frameworks.
+**Choose NovelCrafter** when you primarily want a polished structured writing workspace with strong planning, Codex/world organization, series support, collaboration, and flexible model usage.
+
+**Choose NovelClaw** when you want a visible long-form writing workspace with editable memory banks, manuscript/storyboard surfaces, run inspection, and direct human steering.
+
+**Choose Novel OS** when you like a fixed multi-agent editorial-team model with persistent memory and explicit continuity checking.
+
+**Choose AuthorAgent** when you want a local-first, broad author pipeline that extends beyond fiction production into revision, formatting, research, and publishing workflows.
+
+**Choose autonovel** when you want to experiment with a highly autonomous seed-to-novel pipeline that also revises, typesets, illustrates, narrates, and packages outputs.
+
+**Choose NovelForge** when your hardest problems are authority, continuity, failure routing, independent semantic QA, resumable multi-runtime execution, project reproducibility, and long-term preference/corpus learning.
 
 ---
 
-## 03 · Where NovelForge is stronger 🌸
+## 02 · Where NovelForge is meaningfully different 🌸
 
-### Fiction has authority, not just memory
+### Canon is a transaction, not a memory bucket
 
-In NovelForge, a plan, a reviewer result, a session memory, a corpus fact, and Accepted Canon are different authority classes. This prevents a common long-running-agent failure: something becomes “true” merely because the model saw or remembered it.
+NovelForge separates `locked > accepted > active_plan > review > proposal`. A session memory, plan, reviewer result, corpus fact, or model inference cannot silently become story truth.
 
-### Quality is routed by failure mechanism
+This is stricter than the common “Story Bible / Codex / memory bank is the source of truth” approach. That strictness costs ceremony, but it becomes valuable when a project is long-lived, multi-session, multi-model, or collaboratively edited.
 
-NovelForge distinguishes malformed/AI-ish surface failures, reader-grip failures, character failures, story failures, continuity failures, and semantic-review failures. A flat scene is not repaired by adding prettier sentences; the failure routes back to Reader Pressure / Scene Simulation.
+### Character independence is part of the state model
 
-### Independent review means independent execution
+Characters are not just prompt cards. Important characters carry independent agenda, voice, knowledge boundaries, tasks, spatial position, interests, and emotional aftermath. A character cannot know something merely because the manager knows it.
 
-Mandatory semantic review cannot be satisfied by telling the same manager to “act as a critic.” The review must come from a genuinely separate invocation/session, operate on a bounded packet, and return a typed result bound to the candidate fingerprint.
+### Quality is split into mechanisms
 
-### Canon settlement is transactional
+NovelForge does not treat “editor” as one generic role. It separates:
 
-High-authority story changes use before-state checks, evidence, exact deltas, post-conditions, and settlement traces. A tool's technical ability to write a file never grants story authority.
+- Surface Fundamentals;
+- Reader Engagement;
+- Story/character simulation;
+- continuity/state audit;
+- independent semantic review;
+- deterministic contract checks.
 
-### Learning has evidence and rollback
+A surface failure can receive a local rewrite. A cluster of surface failures regenerates the scene. A safe-but-flat failure routes back to reader pressure and scene simulation. A character failure routes to character simulation. A story failure routes to Story/Plan.
 
-User taste is represented as evidence-backed hypotheses with contradictions, applicability boundaries, evals, versions, and rollback—not a permanently growing style prompt.
+### Independent review requires independent execution
 
-### The project is reproducible
+A manager cannot satisfy a mandatory gate by changing its prompt to “now act as the critic.” Review is fresh-per-fingerprint by default, receives a bounded packet, returns a typed result, and cannot be reviewer-shopped after a valid rejection.
 
-NovelForge treats each novel as an engineering project with a manifest, exact framework lock, adapter, state, plans, manuscripts, research, tests/evals, migrations, and build validation.
+### Runtime state is not story authority
 
----
+Chat sessions, local Codex/Claude processes, MCP workers, provider APIs, GitHub jobs, local models, and humans can all execute parts of the workflow. Their session/thread IDs remain runtime metadata—not Canon.
 
-## 04 · Where NovelForge is weaker ⚠️
+### Learning is evidence-backed and reversible
 
-### It is specialized
-
-If your task is not fiction production, much of NovelForge's Canon, character, reader-quality, and corpus machinery is irrelevant overhead.
-
-### It has more ceremony
-
-Explicit authority classes, fingerprints, checkpoints, independent gates, and settlement are valuable for long-running fiction, but they are heavier than a simple `Agent + tools` loop.
-
-### Its ecosystem is smaller
-
-LangGraph, CrewAI, AutoGen, and the OpenAI Agents SDK have broader communities, examples, integrations, and general-purpose deployment experience. NovelForge should not pretend otherwise.
-
-### It is not a managed SaaS platform
-
-NovelForge is primarily a framework/project runtime. If you want a turnkey hosted operations console, deployment service, organization management, or a large marketplace of integrations, another ecosystem may provide more out of the box.
-
-### Semantic QA costs real model/human work
-
-NovelForge refuses to fake literary judgment with deterministic heuristics. High-confidence semantic gates therefore require an eligible model invocation or human reviewer, which can add latency and cost.
+NovelForge stores preference hypotheses with evidence, contradictions, applicability boundaries, evals, versions, and rollback. Corpus discovery is separated from ingestion; corpus evidence is separated from user taste; user taste is separated from general craft promotion.
 
 ---
 
-## 05 · When another framework is the better choice 🧭
+## 03 · Where direct alternatives are stronger ⚠️
 
-### Choose LangGraph when…
+### Sudowrite and NovelCrafter have much more mature author UX
 
-You primarily need a low-level, general-purpose state graph with durable execution, interrupts, human-in-the-loop control, and long-running workflow recovery. LangGraph explicitly positions itself as infrastructure for long-running, stateful workflows and does not impose a high-level application architecture.
+They are purpose-built writing products with polished editors, onboarding, integrated project interfaces, and established author communities. NovelForge is currently a framework/project system, not a finished consumer writing studio.
 
-### Choose CrewAI when…
+### NovelClaw has a stronger visible control surface
 
-You want role-based agent teams and structured automation flows with an established ecosystem around tools, memory, knowledge, observability, triggers, and managed deployment. CrewAI's documentation explicitly separates autonomous **Crews** from deterministic/event-driven **Flows**.
+NovelClaw exposes manuscript, storyboard, world, character, style, memory, run, log, and download surfaces in an integrated workspace. NovelForge currently has stronger execution/authority contracts than visual author tooling.
 
-### Choose AutoGen when…
+### Novel OS is simpler to understand if you want fixed editorial roles
 
-Your core problem is a general multi-agent application where agents, teams, memory, human-in-the-loop patterns, state save/load, and extension points are the center of the design. AutoGen's AgentChat provides high-level team patterns over its lower-level Core runtime.
+Its Architect → Scribe → Editor → Guardian → Curator metaphor is immediately legible. NovelForge intentionally avoids assuming that more agents or fixed roles always improve quality; that makes it more flexible, but less instantly theatrical.
 
-### Choose OpenAI Agents SDK when…
+### AuthorAgent and autonovel cover more of the publishing lifecycle
 
-You want a small, Python-first set of production agent primitives: agents, tools, handoffs, guardrails, sessions, human-in-the-loop, MCP integration, and built-in tracing, with especially tight integration into the OpenAI platform.
+NovelForge deliberately concentrates on story production, QA, Canon, learning, runtime, and project engineering. It does not currently try to be the best formatter, audiobook generator, marketing agent, ad optimizer, or publishing suite.
 
-### Choose NovelForge when…
+### NovelForge imposes more ceremony
 
-Your bottleneck is no longer “how do I call agents?” but rather:
-
-- how do I keep a long fictional world internally authoritative and resumable?
-- how do I prevent plan/session/research leakage into Canon?
-- how do I keep characters epistemically and behaviorally independent?
-- how do I evaluate reader grip separately from grammar and style cleanliness?
-- how do I route failures back to the mechanism that owns them?
-- how do I learn a user's taste without turning guesses into permanent rules?
-- how do I run the same production contracts across chat, local agents, APIs, MCP, CI, or human review?
+Fingerprints, checkpoints, explicit authority classes, independent gates, before/after settlement, and project locks are overhead on small/simple projects. For a short story or casual drafting session, that overhead may be unjustified.
 
 ---
 
-## 06 · NovelForge is complementary, not isolationist 🔧
+## 04 · Research systems worth watching 🔬
 
-NovelForge can sit **above or beside** general runtime technology. Its design already adopts and adapts ideas such as durable checkpoints, sessions, handoffs, guardrails, MCP, event-driven control, and typed state. The framework's distinctive value is the fiction-specific contract layered on top.
+Commercial tools and open-source products are not the whole landscape. Research systems expose useful architectural ideas that NovelForge should continuously evaluate rather than copy blindly.
 
-For the internal adopt/adapt/reject research record, see [Agent Framework Adoption Matrix](../knowledge/AGENT_FRAMEWORK_ADOPTION.en.md).
+### StoryWriter
+
+StoryWriter uses separate outline, planning, and writing agents. Its writing agent dynamically compresses prior story history around the current event, targeting long-story coherence and narrative complexity.
+
+### MAGNET + ATLAS
+
+MAGNET uses persona-grounded character agents proposing actions from shared world state and evolving goals; ATLAS verifies scene-level world representations across the story. The July 2026 paper reports substantial reductions in annotations and hallucinations versus single-model prompting and IBSEN at 100-page scale.
+
+### GOAT Storytelling Agent
+
+GOAT uses a top-down planning pipeline that moves from book specification to chapters, scenes, and scene generation, and can operate over standard text-generation backends.
+
+> **Research boundary ✦** A strong paper result is evidence about a mechanism, not proof that the system is production-ready for the same use case as NovelForge.
 
 ---
 
-## 07 · Official comparison sources 🔗
+## 05 · General agent frameworks still matter—but one layer down 🔧
 
-- [LangGraph overview](https://docs.langchain.com/oss/python/langgraph/overview)
-- [CrewAI documentation](https://docs.crewai.com/)
-- [CrewAI core concepts](https://docs.crewai.com/core-concepts/Agents)
-- [AutoGen AgentChat](https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/index.html)
-- [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/)
-- [OpenAI agent orchestration](https://openai.github.io/openai-agents-python/multi_agent/)
-- [OpenAI sessions](https://openai.github.io/openai-agents-python/sessions/)
+LangGraph, OpenAI Agents SDK, AutoGen, CrewAI, Google ADK, Claude Code, and MCP remain relevant as runtime/engineering references. NovelForge adopts or adapts ideas such as durable execution, sessions, typed handoffs, guardrails, MCP, project scaffolding, save/load state, and resumable local agents.
+
+They belong in the **implementation-influence comparison**, not the primary customer competition set. See [Agent Framework Adoption Matrix](../knowledge/AGENT_FRAMEWORK_ADOPTION.en.md).
+
+---
+
+## 06 · Decision rule 🧭
+
+NovelForge is a strong fit when several of these are simultaneously true:
+
+- the story will live for many chapters, sessions, or models;
+- plans and accepted story truth must be rigorously separated;
+- character knowledge and agenda drift are serious risks;
+- “clean prose” is insufficient—you need a reader-pressure quality model;
+- an editor/reviewer must be genuinely independent from the writer invocation;
+- failures must route upstream instead of accumulating sentence-level patches;
+- project state must survive waits, restarts, provider changes, and external workers;
+- user taste needs to evolve through evidence rather than prompt accretion;
+- the novel should be reproducible as a versioned project.
+
+If most of those are false, a lighter writing product or agent may be a better choice.
+
+---
+
+## 07 · Comparison sources 🔗
+
+### Direct author products
+- Sudowrite Story Bible: https://docs.sudowrite.com/using-sudowrite/1ow1qkGqof9rtcyGnrWUBS/what-is-story-bible/jmWepHcQdJetNrE991fjJC
+- Sudowrite overview: https://docs.sudowrite.com/getting-started/dQph1snuwbfMWG9wRjsNug/what-is-sudowrite/iwppfTjfffZTFaa7eBzJoQ
+- NovelCrafter: https://www.novelcrafter.com/
+
+### Open-source fiction systems
+- NovelClaw: https://github.com/iLearn-Lab/NovelClaw
+- Novel OS: https://github.com/mrigankad/Novel-OS
+- AuthorAgent: https://github.com/Ckokoski/AuthorAgent
+- autonovel: https://github.com/NousResearch/autonovel
+- GOAT Storytelling Agent: https://github.com/GOAT-AI-lab/GOAT-Storytelling-Agent
+- StoryWriter: https://github.com/THU-KEG/StoryWriter
+
+### Research
+- StoryWriter paper: https://arxiv.org/abs/2506.16445
+- MAGNET / ATLAS paper: https://arxiv.org/abs/2607.00918
 
 <div align="center">
   <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom mark" width="52" />
   <br />
-  <sub>Use the narrow tool when the narrow problem is the hard part. ✦</sub>
+  <sub>Specialization is only an advantage when it matches the hard part of the job. ✦</sub>
 </div>
