@@ -1,0 +1,13 @@
+name: NovelForge CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    uses: ./.github/workflows/novelforge-contracts.yml
