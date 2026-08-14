@@ -45,6 +45,7 @@ harness:
     zh_cn: harness/session_runtime/RUNTIME_CAPABILITIES.zh-CN.md
   context_inspector: harness/context_inspector.py
   memory_tiers: harness/memory_tiers.py
+  memory_bank: harness/memory_bank.py
   control_plane: harness/control_plane/CONTROL_PLANE.md
   control_plane_tool: harness/control_plane/control_plane.py
   control_plane_event_schema: harness/control_plane/event_schema.json
@@ -62,12 +63,15 @@ quality:
   finding_contract: quality/findings.py
   reader_panel: quality/reader_panel.py
   quality_evolution: quality/quality_evolution.py
+  revision_orchestrator: quality/revision_orchestrator.py
   character_integrity: quality/character_integrity.py
   state_graph: quality/state_graph.py
   reader_panel_schema: novelforge_reader_panel_v1
   quality_evolution_schema: novelforge_quality_evolution_v1
+  revision_orchestrator_schema: novelforge_revision_orchestrator_v1
   context_inspector_schema: novelforge_context_inspector_v1
   memory_tiers_schema: novelforge_memory_tiers_v1
+  memory_bank_schema: novelforge_memory_bank_v1
   finding_schema: novelforge_quality_finding_v1
   state_graph_schema: novelforge_state_graph_v1
   reader_persona_basis: reading-behavior
@@ -76,7 +80,11 @@ quality:
   absolute_score_alone_decides_keep_discard: false
   quality_evolution_result_consume_once: true
   quality_evolution_plateau_stopping: true
+  revision_pass_failure_isolated: true
+  revision_routes_to_owning_mechanism: true
   context_overlay_can_mutate_canon: false
+  memory_bank_can_mutate_protected_canon_reference: false
+  protected_memory_edit_becomes_proposal: true
   derived_memory_authority: false
   state_graph_authority: false
   character_integrity_bounded_packet: true
@@ -297,9 +305,11 @@ normal_ci:
     - runtime-capabilities-self-test
     - context-inspector-self-test
     - memory-tiers-self-test
+    - memory-bank-self-test
     - quality-finding-self-test
     - reader-panel-self-test
     - quality-evolution-self-test
+    - revision-orchestrator-self-test
     - character-integrity-self-test
     - state-graph-self-test
     - learning-store-self-test
@@ -338,7 +348,9 @@ write_boundary:
   learning_hypothesis_grants_canon_authority: false
   reader_panel_result_grants_canon_authority: false
   context_overlay_grants_canon_authority: false
+  memory_bank_grants_canon_authority: false
   state_graph_result_grants_canon_authority: false
+  revision_report_grants_canon_authority: false
   quality_evolution_result_grants_canon_authority: false
   promotion_gate_result_grants_framework_write: false
   canon_write_requires_project_acceptance_and_settlement: true
