@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Deterministic learning-input boundary for NovelForge semantic contracts.
 
-This module only converts verified corpus/eval artifacts into bounded inputs,
-removes raw source fields, protects blind packets, and delegates semantic job
-construction to the catalog-resolved generic semantic kernel. It executes no
-model and owns no literary judgment.
+This module converts already-bounded verified corpus/eval artifacts into semantic
+jobs, rejects raw or oversized evidence, protects blind packets, and delegates
+semantic job construction to the catalog-resolved generic kernel. It executes
+no model and owns no literary judgment.
 """
 from __future__ import annotations
 
@@ -17,11 +17,12 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 SEM = ROOT / "harness" / "semantic_workers"
 if str(SEM) not in sys.path: sys.path.insert(0, str(SEM))
-from semantic_worker_router import find_forbidden_keys, make_contract_job, validate_job  # noqa: E402
+from semantic_worker_router import find_forbidden_keys, find_named_keys, make_contract_job, validate_job  # noqa: E402
 
 ANALYSIS_QUEUE_SCHEMA = "novelforge_learning_analysis_jobs_v1"
 EVAL_QUEUE_SCHEMA = "novelforge_learning_eval_jobs_v1"
 FORBIDDEN_RAW = {"full_text", "raw_text", "source_text"}
+MAX_EXCERPT_CHARS = 4000
 
 def load(path: str | Path) -> dict[str, Any]:
     value=json.loads(Path(path).read_text(encoding="utf-8"))
@@ -35,10 +36,14 @@ def dump(value: Any, path: str | Path | None=None) -> None:
 
 def bounded_evidence(record: dict[str, Any]) -> dict[str, Any]:
     evidence=record.get("evidence",{})
-    if not isinstance(evidence,dict): evidence={}
-    clean={k:v for k,v in evidence.items() if k not in FORBIDDEN_RAW}
-    if clean.get("excerpt") is not None: clean["excerpt"]=str(clean["excerpt"])[:4000]
-    return clean
+    if not isinstance(evidence,dict): raise ValueError("verified evidence must be object")
+    leakage=find_named_keys(evidence,FORBIDDEN_RAW)
+    if leakage: raise ValueError("verified evidence contains forbidden raw source fields: "+", ".join(leakage))
+    excerpt=evidence.get("excerpt")
+    if excerpt is not None:
+        if not isinstance(excerpt,str): raise ValueError("evidence.excerpt must be string when present")
+        if len(excerpt)>MAX_EXCERPT_CHARS: raise ValueError(f"evidence.excerpt exceeds {MAX_EXCERPT_CHARS} characters")
+    return dict(evidence)
 
 def build_analysis_jobs(verified: dict[str, Any], *, research_question: str, hypothesis_id: str | None=None, source_session_id: str | None=None) -> dict[str, Any]:
     if verified.get("schema")!="novelforge_verified_corpus_discovery_v1": raise ValueError("verified discovery schema required")
@@ -64,17 +69,25 @@ def build_eval_jobs(request: dict[str, Any], *, source_session_id: str | None=No
     return {"schema":EVAL_QUEUE_SCHEMA,"blind":True,"scope":request.get("scope"),"hypothesis_id":request.get("hypothesis_id"),"jobs":jobs}
 
 def self_test() -> dict[str, Any]:
-    verified={"schema":"novelforge_verified_corpus_discovery_v1","verified":[{"verified":True,"corpus_id":"CORP-T","source_title":"Fixture","source_type":"book","source_locator":"fixture://work","work_id":"WORK-T","channel":"user_files","tool_or_provider":"fixture","rights_class":"analysis_only","storage_intent":"derived_only","evidence_fingerprint":"sha256:"+"1"*64,"metadata":{},"evidence":{"mechanism_hint":"pressure changes options","raw_text":"must not pass"}}]}
+    verified={"schema":"novelforge_verified_corpus_discovery_v1","verified":[{"verified":True,"corpus_id":"CORP-T","source_title":"Fixture","source_type":"book","source_locator":"fixture://work","work_id":"WORK-T","channel":"user_files","tool_or_provider":"fixture","rights_class":"analysis_only","storage_intent":"derived_only","evidence_fingerprint":"sha256:"+"1"*64,"metadata":{},"evidence":{"mechanism_hint":"pressure changes options","excerpt":"bounded fixture evidence"}}]}
     analysis=build_analysis_jobs(verified,research_question="What creates pace?",hypothesis_id="PH-T"); aj=analysis["jobs"][0]
-    raw_absent="raw_text" not in json.dumps(aj,ensure_ascii=False); analysis_contract=aj["input"].get("model_contract_id")=="learning.mechanism_analyze"; catalog_resolved=aj["provenance"].get("pack_id")=="learning"; fingerprint_valid=not validate_job(aj)
+    analysis_contract=aj["input"].get("model_contract_id")=="learning.mechanism_analyze"; catalog_resolved=aj["provenance"].get("pack_id")=="learning"; fingerprint_valid=not validate_job(aj)
+    raw_guard=False
+    bad_raw=json.loads(json.dumps(verified)); bad_raw["verified"][0]["evidence"]["raw_text"]="must reject"
+    try: build_analysis_jobs(bad_raw,research_question="What creates pace?")
+    except ValueError: raw_guard=True
+    oversize_guard=False
+    bad_long=json.loads(json.dumps(verified)); bad_long["verified"][0]["evidence"]["excerpt"]="x"*(MAX_EXCERPT_CHARS+1)
+    try: build_analysis_jobs(bad_long,research_question="What creates pace?")
+    except ValueError: oversize_guard=True
     req={"schema":"novelforge_learning_eval_request_v1","scope":"user_taste","hypothesis_id":"PH-T","mechanism":"pace comes from state change","profile_boundary":{"exceptions":["deliberate shock fragment"]},"cases":[{"id":"LE-1","purpose":"distinguish functional pace from fragmentation","fixture":{"text":"fixture"},"rubric":["judge functional pacing mechanism"]}]}
     evaluation=build_eval_jobs(req); ej=evaluation["jobs"][0]; eval_contract=ej["input"].get("model_contract_id")=="learning.evaluate" and ej["provenance"].get("pack_id")=="learning"
     leak_guard=False
     try:
         bad=dict(req); bad["expected"]={"result":"pass"}; build_eval_jobs(bad)
     except ValueError: leak_guard=True
-    ok=raw_absent and analysis_contract and catalog_resolved and eval_contract and fingerprint_valid and leak_guard
-    return {"learning_eval_contract":"PASS" if ok else "FAIL","semantic_intelligence_in_model_contracts":analysis_contract and eval_contract,"catalog_resolved_learning_pack":catalog_resolved,"analysis_jobs_fingerprint_bound":fingerprint_valid,"raw_source_text_excluded":raw_absent,"answer_key_leakage_guard":leak_guard,"model_execution":False,"write_authority":False}
+    ok=analysis_contract and catalog_resolved and eval_contract and fingerprint_valid and raw_guard and oversize_guard and leak_guard
+    return {"learning_eval_contract":"PASS" if ok else "FAIL","semantic_intelligence_in_model_contracts":analysis_contract and eval_contract,"catalog_resolved_learning_pack":catalog_resolved,"analysis_jobs_fingerprint_bound":fingerprint_valid,"raw_source_text_fail_closed":raw_guard,"oversized_excerpt_fail_closed":oversize_guard,"answer_key_leakage_guard":leak_guard,"silent_semantic_input_rewrite":False,"model_execution":False,"write_authority":False}
 
 def main() -> int:
     p=argparse.ArgumentParser(description="NovelForge deterministic learning semantic-input boundary"); sub=p.add_subparsers(dest="cmd",required=True)
