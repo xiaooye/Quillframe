@@ -1,95 +1,152 @@
 <div align="center">
-  <img src="assets/brand/novelforge-lockup.svg" alt="NovelForge — Adaptive Fiction Agent Framework" width="680" />
-  <p><strong>Fiction production, engineered without flattening fiction.</strong></p>
-  <p><kbd>CANON</kbd>&nbsp;&nbsp;<kbd>RESUMABLE SESSIONS</kbd>&nbsp;&nbsp;<kbd>READER QA</kbd>&nbsp;&nbsp;<kbd>INDEPENDENT REVIEW</kbd>&nbsp;&nbsp;<kbd>LEARNING</kbd></p>
-  <p>
-    <a href="README.en.md"><strong>English</strong></a> · <a href="README.zh-CN.md"><strong>简体中文</strong></a> · <a href="docs/README.en.md"><strong>Documentation</strong></a>
-  </p>
+  <img src="assets/brand/novelforge-lockup.svg" alt="NovelForge — Adaptive Fiction Agent Framework" width="640" />
+  <p><strong>AI-native fiction production with explicit story authority, recoverable runtime state, and model-readable semantic contracts.</strong></p>
+  <p><kbd>CANON BOUNDARIES</kbd>&nbsp;&nbsp;<kbd>CONTRACT PACKS</kbd>&nbsp;&nbsp;<kbd>RECOVERABLE RUNS</kbd>&nbsp;&nbsp;<kbd>QUALITY EVOLUTION</kbd>&nbsp;&nbsp;<kbd>EVIDENCE LEARNING</kbd></p>
+  <p><a href="README.en.md"><strong>English</strong></a> · <a href="README.zh-CN.md"><strong>简体中文</strong></a> · <a href="docs/README.en.md"><strong>Documentation</strong></a></p>
 </div>
 
 <img src="assets/brand/story-thread.svg" alt="" width="100%" />
 
-> 🌸 **NovelForge is a project-agnostic agent framework for long-form and serialized fiction.** It treats story truth, character state, reader quality, runtime recovery, independent review, and preference learning as first-class production concerns—not prompt conventions.
+# NovelForge · Adaptive Fiction Agent Framework
 
-**The hard boundary:** no built-in novel, no silent Canon promotion, no reviewer shopping. A consuming project owns its story facts; NovelForge owns generic mechanisms.
+NovelForge is a project-agnostic framework for long-form and serialized fiction. It does not try to turn literary judgment into a pile of Python heuristics, and it does not treat one model completion as a finished chapter.
 
-<p align="center">
-  <a href="docs/why-novelforge.en.md"><strong>Why NovelForge?</strong></a> ·
-  <a href="docs/architecture.en.md"><strong>Architecture</strong></a> ·
-  <a href="docs/quality-assurance.en.md"><strong>Quality & QA</strong></a> ·
-  <a href="docs/project-sdk.en.md"><strong>Project SDK</strong></a> ·
-  <a href="docs/README.en.md"><strong>Docs Home</strong></a>
-</p>
+Its architecture is deliberately split:
 
----
+> **Models own semantic fiction judgment. Deterministic code owns authority, permissions, fingerprints, persistence, routing, typed validation, hard budgets, transactions, and reproducibility.**
 
-## 01 · Why NovelForge? ✨
+A consuming Project owns the facts of its story. NovelForge owns the generic production machinery around those facts.
 
-NovelForge is not trying to be a prettier one-shot writing prompt or the most general agent orchestrator. Its strongest fit is **long-running fiction where truth, continuity, character knowledge, quality gates, and execution state must survive many chapters, sessions, models, and revisions**.
+**Current architecture: NovelForge 7.3 · AI-native · contract-first · progressively disclosed semantic packs.**
 
-<img src="assets/ui/home-comparison.en.svg" alt="Detailed mechanism comparison between NovelForge, NovelClaw, Novel OS, AuthorAgent, and autonovel" width="100%" />
-
-The matrix intentionally compares **direct novel agents/frameworks**. Mature author applications such as Sudowrite and NovelCrafter are covered separately in the [full positioning guide](docs/why-novelforge.en.md); general agent runtimes such as LangGraph and the OpenAI Agents SDK belong to the [implementation-influence layer](knowledge/AGENT_FRAMEWORK_ADOPTION.en.md), not the primary customer comparison.
-
-> **NovelForge's bet ✦** The hard part of serious long-form AI fiction is not generating more text. It is maintaining authority, causality, character independence, reader pressure, truthful QA, and recoverable state while the project evolves.
+<p align="center"><a href="docs/why-novelforge.en.md"><strong>Why NovelForge?</strong></a> · <a href="docs/production-pipeline.en.md"><strong>Production Pipeline</strong></a> · <a href="docs/quality-assurance.en.md"><strong>Quality & QA</strong></a> · <a href="docs/architecture-atlas.en.md"><strong>Architecture Atlas</strong></a></p>
 
 ---
 
-## 02 · Architecture at a glance 🪄
+## 01 · What problem is NovelForge solving? ✦
 
-<img src="assets/ui/home-architecture.en.svg" alt="NovelForge five-domain architecture: project context, harness runtime, story core, editorial quality, and evidence learning" width="100%" />
+Long-running fiction fails in ways that short prompt workflows do not:
 
-The architecture deliberately separates **project/Canon state**, **runtime/session state**, and **learning state**. They may reference one another through explicit IDs and evidence, but none can silently acquire another domain's authority.
+- a plan silently becomes “what already happened”;
+- a character suddenly knows something they were never told;
+- session memory outranks Accepted Canon;
+- the model keeps polishing sentences when the actual failure is story structure;
+- every reviewer sees a slightly different candidate;
+- “memory” becomes an uncontrolled prompt dump;
+- an eval, Corpus note, or learning hypothesis quietly acquires authority it never earned;
+- a interrupted run cannot be resumed without guessing what already happened.
 
-The branded diagram is the presentation layer. The inspectable source diagrams and exact contracts live in [Architecture](docs/architecture.en.md) and the deeper protocol documents.
+NovelForge treats those as system problems rather than prompt-writing problems.
+
+Its distinctive mechanisms are **authority separation, sparse context, independent character state, explicit semantic contracts, recoverable sessions/runs, failure routing, transactional settlement, and evidence-backed learning**.
+
+For direct novel-agent/product positioning, tradeoffs, and source-backed comparison, read [Why NovelForge](docs/why-novelforge.en.md). General agent frameworks belong in the deeper [implementation-influence guide](knowledge/AGENT_FRAMEWORK_ADOPTION.en.md).
+
+---
+
+## 02 · The 7.3 mental model 🪄
+
+NovelForge keeps four concerns separate even when they collaborate closely.
+
+### Story authority
+
+Project truth follows explicit authority classes such as `locked`, `accepted`, `active_plan`, `review`, and `proposal`. Plans, memories, semantic judgments, Corpus evidence, and runtime state do not become Canon merely because the system can see them.
+
+### Semantic intelligence
+
+Literary understanding is exposed through exact model-readable contracts. The runtime resolves a contract from `harness/semantic_workers/model_contract_catalog.json`, loads only the required pack from `harness/semantic_workers/contracts/`, packages bounded context and rubric, fingerprints the semantic job, and validates the typed result.
+
+There is no monolithic semantic registry and no deterministic “literary score engine” pretending to understand prose.
+
+### Deterministic shell
+
+Python and workflow code own the parts that should actually be deterministic: permissions, persistence, fingerprints, session/run identity, checkpointing, consume-once semantics, authority boundaries, hard budgets, rights/provenance gates, release invariants, and reproducible project/framework builds.
+
+### Project engineering
+
+A novel is a versioned project with its own manifest, exact Framework lock, profiles, bible, Accepted Canon, state, plans, manuscripts, research, regressions, tests, and build artifacts. Chat history is never the project database.
+
+Read [Architecture](docs/architecture.en.md) for the system view and [Architecture Atlas](docs/architecture-atlas.en.md) for subsystem ownership.
 
 ---
 
 ## 03 · A chapter is a production run, not one model call 📖
 
-A chapter moves through four production phases, each with a different responsibility:
+A DRAFT/REVISE run is organized around four responsibilities rather than one giant prompt.
 
-**01 · Prepare the run** — Freeze only the necessary context, preflight Story/Canon, simulate scene and character behavior, and establish reader pressure before prose is generated.
+### Prepare the run
 
-**02 · Create an internal candidate** — Produce an event-first Raw Draft, then realize the prose surface. The Raw Draft remains internal; the first completion is never treated as the finished chapter.
+Freeze only the context the current work actually needs. Reconfirm Project authority and Canon cutoff. Simulate the scene, character agendas/knowledge, and reader pressure before asking for prose.
 
-**03 · Challenge and repair** — Run post-generation regression evidence and independent semantic review, then repair the layer that actually owns the failure instead of polishing symptoms downstream.
+### Create an internal candidate
 
-**04 · Release through gates** — Reader Engagement and continuity/state auditing must resolve before the candidate crosses the user-visible gate.
+Generate event-first Raw Draft material, then realize the prose surface. Raw Draft is internal and is never automatically promoted to the user-visible chapter.
 
-Surface-clean prose is only the floor. Isolated surface defects can be rewritten locally; clustered surface failures regenerate the scene; safe-but-flat prose returns to Reader Pressure and Scene Simulation; character failures return to Character Simulation; story failures return to Story/Plan.
+### Diagnose the real failure
 
-Read the full [Production Pipeline](docs/production-pipeline.en.md).
+Post-generation checks may include Surface/Reader mechanisms, regression evidence, character integrity, reader reaction or comparison, revision diagnosis, continuity/state evidence, and other exact semantic contracts. Semantic work is bounded and fingerprinted; deterministic checks verify everything that does not require literary judgment.
 
----
+### Repair the owning mechanism, then release
 
-## 04 · Quality & QA ✅
+A sentence-level defect can be rewritten locally. A clustered realization failure may require scene regeneration. SAFE-BUT-FLAT goes back to Reader Pressure and Scene Simulation. Character failure returns to Character Simulation. Story failure returns to Story/Plan. Context failure returns to Context/Memory.
 
-<img src="assets/ui/home-quality.en.svg" alt="NovelForge quality assurance stack and failure-routing system" width="100%" />
+A candidate crosses the user-visible gate only after the applicable quality and continuity gates resolve.
 
-NovelForge separates **deterministic correctness** from **semantic literary judgment**.
-
-Deterministic checks cover schemas, authority boundaries, lifecycle, fingerprints, dependencies, idempotency, blind-queue hygiene, project leakage, and release invariants. Semantic gates cover prose realization, reader engagement, character/scene behavior, and other judgments that cannot honestly be reduced to regexes.
-
-Mandatory independent review comes from a genuinely separate invocation/session, receives bounded context, and returns a typed result bound to the artifact fingerprint. A valid semantic rejection routes repair; it does not trigger reviewer shopping.
-
-Read the detailed [Quality & QA guide](docs/quality-assurance.en.md) and [Eval reference](evals/README.en.md).
+Read [Production Pipeline](docs/production-pipeline.en.md).
 
 ---
 
-## 05 · Honest fit & tradeoffs ⚖️
+## 04 · Quality means diagnosis, not one score ✅
 
-<img src="assets/ui/home-fit.en.svg" alt="When NovelForge is a strong fit and when a lighter fiction system is more appropriate" width="100%" />
+NovelForge intentionally separates different kinds of evidence.
 
-NovelForge deliberately accepts more ceremony than lightweight writing tools: exact framework locks, explicit authority classes, checkpoints, fingerprints, independent gates, transactional settlement, and reproducible project validation. That cost is justified only when the project is complex enough to need it.
+**Deterministic QA** catches things machines can prove: invalid schema, broken authority boundaries, hidden-gold leaks, lifecycle violations, stale fingerprints, duplicate consumption, bad project mapping, rights/provenance failures, missing capabilities, and release invariant failures.
 
-For a short story, casual ideation session, or writer who mainly wants a polished consumer editor, a lighter product may be the better tool.
+**Semantic QA** asks the model questions that require understanding: does this character choice follow from the character's agenda and beliefs, what is a reader likely to feel or expect, why is a scene flat, what mechanism owns a revision problem, and which of two candidates better serves the supplied rubric.
+
+When independence is mandatory, the judgment must come from a genuinely separate invocation/session and return a typed fingerprint-bound result. A valid `semantic_reject` is evidence to repair, not an excuse to shop for another reviewer.
+
+Quality evolution tracks findings and candidate lineage so revision can stop when it plateaus instead of becoming endless rewrite churn.
+
+Read [Quality & QA](docs/quality-assurance.en.md), [Quality Evolution](docs/quality-evolution.en.md), and [Eval Reference](evals/README.en.md).
 
 ---
 
-## 06 · Project engineering ⚙️
+## 05 · Context and memory are controllable, not magical 🧠
 
-A consuming novel is a versioned project rather than a loose prompt folder. It owns its manifests, profiles, story bible, Accepted Canon, current state, plans, manuscripts, research, regressions, tests, and build artifacts while pinning an exact NovelForge dependency.
+NovelForge treats persistent memory as a governed derived view, not as automatic prompt injection.
+
+Context inspection can explain what entered the current working set and why. Memory tiers and the editable memory bank support author-visible control, but protected `accepted` / `locked` references cannot be silently rewritten through a memory editor. Editing protected truth produces a proposal or another explicitly non-authoritative artifact.
+
+Semantic relevance belongs to model judgment when genuine interpretation is required; deterministic memory code enforces hard budgets, lifecycle, provenance, authority classes, and explicit controls instead of inventing pseudo-literary scalar relevance.
+
+Read [Context & Memory](docs/context-and-memory.en.md).
+
+---
+
+## 06 · Runtime without confusing capability and authority 🔌
+
+NovelForge can operate through a current chat, separate peer chat, local Codex/Claude invocation, provider API, MCP/service worker, GitHub job, local model, or human reviewer when the current host actually exposes the required capability.
+
+A runtime name is not capability proof. A capability is not write authority.
+
+The runtime model keeps `project/resource`, `session/thread`, `run/invocation`, and `checkpoint` separate so interrupted or external work can be resumed and validated without pretending provider history is Canon.
+
+Read [Runtime & Integrations](docs/integrations.en.md), [Session Runtime](harness/session_runtime/SESSION_RUNTIME.en.md), and [Semantic Execution](harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.en.md).
+
+---
+
+## 07 · Evidence-driven learning and Corpus intelligence 🔎
+
+NovelForge can learn from direct edits, accepts/rejects, repeated correction patterns, project conventions, Corpus evidence, and evals—but learning never receives authority for free.
+
+Preference and craft hypotheses remain scoped, contradictable, versioned, and rollbackable. Corpus discovery, rights classification, storage, semantic analysis, learning, and promotion are separate gates. Search success is not permission to mirror copyrighted text, and Corpus evidence is not Canon or automatic character knowledge.
+
+Read [Adaptive Learning](docs/adaptive-learning.en.md) and [Corpus Intelligence](corpus/README.en.md).
+
+---
+
+## 08 · Project engineering ⚙️
 
 ```bash
 python project_sdk.py init <path> --id PROJECT-X --title "Novel"
@@ -98,43 +155,30 @@ python project_sdk.py build <path>
 python project_sdk.py self-test
 ```
 
-The framework can also sit behind legacy project layouts through a mapped Project Adapter. See [Project SDK](docs/project-sdk.en.md) and [Project Adapters](docs/project-adapters.en.md).
+Projects pin an exact NovelForge revision and can map legacy storage through a Project Adapter. Structural changes can use `spec → plan → tasks → implementation → verification → acceptance`; ordinary prose micro-edits do not need fake ceremony.
+
+Read [Project SDK](docs/project-sdk.en.md), [Project Adapters](docs/project-adapters.en.md), and [Framework Bundle](release/FRAMEWORK_BUNDLE.en.md).
 
 ---
 
-## 07 · Runtime without provider lock-in 🔌
+## 09 · Honest fit ⚖️
 
-The same Harness contracts can be carried by a normal chat session, local Codex/Claude process, provider API, MCP worker, GitHub job, local model, or human reviewer—provided the selected runtime actually satisfies the required capability and independence contract.
+NovelForge is strongest when a fiction project is long-lived enough that authority, continuity, context control, resumability, model/runtime choice, QA provenance, and learning discipline genuinely matter.
 
-**Capability is not authority.** A runtime that can technically write a file does not thereby gain Canon-write permission; a session that remembers a fact does not make that fact true in the story.
+It is deliberately heavier than a one-shot writing assistant. If the main goal is fast ideation, light rewriting, or a polished consumer editor, a simpler product may be the better choice.
 
-See [Runtime & Integrations](docs/integrations.en.md), [Session Runtime](harness/session_runtime/SESSION_RUNTIME.en.md), and [Semantic Workers](harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md).
+The framework also does not pretend every semantic judgment is deterministic. Model or human review adds latency and cost; the point is to make those judgments explicit, bounded, inspectable, and unable to mutate story truth by accident.
 
 ---
-
-## 08 · Evidence-driven learning 🔎
-
-NovelForge can learn from direct edits, accepts/rejects, repeated correction patterns, project conventions, corpus evidence, and evals. Preference hypotheses remain evidence-backed, scoped, contradictable, versioned, and rollbackable.
-
-Corpus is evidence—not Canon, not automatic character knowledge, and not a license to mirror copyrighted works. General-craft promotion requires cross-work evidence, counterexamples or profile boundaries, eval coverage, provenance, versioning, rollback, and green framework validation.
-
-See [Adaptive Learning](docs/adaptive-learning.en.md) and [Corpus Intelligence](corpus/README.en.md).
 
 <img src="assets/brand/story-thread.svg" alt="" width="100%" />
 
-## 09 · Go deeper 🌸
+## 10 · Documentation 🌸
 
-<p align="center">
-  <a href="docs/README.en.md"><strong>Documentation Home</strong></a> &nbsp;·&nbsp;
-  <a href="docs/why-novelforge.en.md"><strong>Full Comparison</strong></a> &nbsp;·&nbsp;
-  <a href="docs/architecture.en.md"><strong>Architecture</strong></a> &nbsp;·&nbsp;
-  <a href="docs/quality-assurance.en.md"><strong>Quality & QA</strong></a> &nbsp;·&nbsp;
-  <a href="docs/adaptive-learning.en.md"><strong>Learning</strong></a> &nbsp;·&nbsp;
-  <a href="corpus/README.en.md"><strong>Corpus</strong></a>
-</p>
+<p align="center"><a href="docs/README.en.md"><strong>Docs Home</strong></a> · <a href="docs/why-novelforge.en.md"><strong>Positioning</strong></a> · <a href="docs/architecture-atlas.en.md"><strong>Architecture Atlas</strong></a> · <a href="docs/production-pipeline.en.md"><strong>Production Pipeline</strong></a> · <a href="docs/quality-assurance.en.md"><strong>Quality & QA</strong></a> · <a href="assets/DESIGN_SYSTEM.en.md"><strong>Story Loom Design</strong></a></p>
 
 <div align="center">
   <img src="assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom mark" width="58" />
   <br />
-  <sub><strong>Story Loom</strong> · strict backstage · vivid fiction · professional engineering with a little sakura warmth 🌸</sub>
+  <sub><strong>Strict backstage. Vivid fiction.</strong> 🌸</sub>
 </div>
