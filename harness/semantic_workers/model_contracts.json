@@ -1,6 +1,6 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "1",
+  "version": "2",
   "principle": "Semantic intelligence belongs to the model. Deterministic runtime packages bounded context, permissions, fingerprints and typed output contracts only.",
   "contracts": {
     "reader.reaction": {
@@ -206,6 +206,64 @@
         "allowed_result_scope": "derived_memory_proposal"
       },
       "independent_gate": false
+    },
+    "learning.mechanism_analyze": {
+      "kind": "corpus_analyze",
+      "purpose": "Analyze bounded, rights-safe corpus evidence for a craft mechanism, counterexample and applicability boundary.",
+      "forbidden_input_keys": ["full_text", "raw_text", "source_text"],
+      "rubric": [
+        "Answer only the supplied research question using the supplied bounded evidence.",
+        "Separate observed mechanism from speculation and lower confidence when evidence is weak.",
+        "Actively identify counterevidence and a boundary where the mechanism should not generalize.",
+        "Do not imitate a named author, infer project Canon, or infer user biography.",
+        "Every substantive claim must cite supplied evidence references or fields."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "mechanisms", "counterexamples", "applicability_boundaries", "evidence_refs"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "mechanisms": {"type": "array"},
+          "counterexamples": {"type": "array"},
+          "applicability_boundaries": {"type": "array"},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}}
+        }
+      },
+      "permissions": {
+        "canon_write": false,
+        "os_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "learning_observation"
+      },
+      "independent_gate": false
+    },
+    "learning.evaluate": {
+      "kind": "eval_judge",
+      "purpose": "Evaluate a proposed learned mechanism against the supplied bounded test fixture and profile boundary without seeing hidden expected labels.",
+      "rubric": [
+        "Apply only the evaluation purpose and criteria supplied in the payload.",
+        "Judge whether the proposed mechanism works for this fixture without turning a profile-sensitive preference into a universal hard rule.",
+        "Use observable evidence and return concise failure codes when the mechanism fails.",
+        "Do not search for expected labels or hidden gold.",
+        "This judgment may support a promotion gate but never grants promotion/write authority by itself."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "result", "codes", "evidence"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "result": {"enum": ["pass", "fail"]},
+          "codes": {"type": "array", "items": {"type": "string"}},
+          "evidence": {"type": "array", "items": {"type": "string"}}
+        }
+      },
+      "permissions": {
+        "canon_write": false,
+        "os_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "learning_eval_observation"
+      },
+      "independent_gate": true
     }
   }
 }
