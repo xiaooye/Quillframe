@@ -1,0 +1,24 @@
+{
+  "id": "READER-PRESSURE-001",
+  "type": "capability",
+  "domain": "reader",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "language": "en",
+    "profile": {"reader_grip": "high"},
+    "beat_sequence": [
+      "A restaurant owner needs the refrigeration repair completed before the dinner delivery arrives.",
+      "The technician can fix the compressor, but discovers the electrical panel cannot safely support the replacement part.",
+      "The owner can either cancel dinner service or borrow power from the neighboring unit, which would violate the neighbor's lease terms.",
+      "The neighbor agrees only if the owner finally signs a disputed shared-storage agreement.",
+      "The owner accepts the agreement, service is temporarily saved, and the signature gives the neighbor leverage in tomorrow's landlord meeting."
+    ]
+  },
+  "rubric": [
+    "Accept when major beats causally narrow options, reveal or transfer costs, force choices, and create changed state rather than merely adding arbitrary obstacles.",
+    "Evidence should identify a real RG-02 PRESSURE LADDER and RG-12 CAUSAL MOMENTUM."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["RG-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept", "codes": ["RG-02", "RG-12"]}
+}
