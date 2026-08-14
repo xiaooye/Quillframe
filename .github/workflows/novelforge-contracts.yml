@@ -36,6 +36,46 @@ jobs:
           python learning/learning_store.py --db /tmp/novelforge-learning-ci.db self-test > learning-test.json
           python corpus/corpus_scout.py self-test > corpus-scout-test.json
           python corpus/rights_gate.py self-test > corpus-rights-test.json
+          python - <<'PY'
+          import json
+          d=json.load(open('corpus/benchmarks/mechanisms.json',encoding='utf-8'))
+          assert d['schema']=='novelforge_mechanism_benchmark_registry_v1'
+          ids={x['id'] for x in d['benchmarks']}
+          assert {'BENCH-SURFACE-001','BENCH-SURFACE-006','BENCH-READER-001','BENCH-READER-002'}.issubset(ids)
+          assert all(x['provenance']['raw_source_text_stored'] is False for x in d['benchmarks'])
+          PY
+
+      - name: Generic eval deterministic release gate
+        run: python evals/run_evals.py --release --json > eval-release.json
+
+      - name: Build and inspect blind semantic eval queue
+        run: |
+          python evals/build_judge_queue.py --output /tmp/blind-eval-queue.json
+          python - <<'PY'
+          import json
+          q=json.load(open('/tmp/blind-eval-queue.json',encoding='utf-8'))
+          assert q['blind'] is True
+          assert len(q['cases']) >= 8
+          forbidden={'expected','expected_verdict','expected_codes','gold','gold_label','blocks_release','prior_result'}
+          def walk(v):
+              if isinstance(v,dict):
+                  assert not forbidden.intersection(v), forbidden.intersection(v)
+                  for x in v.values(): walk(x)
+              elif isinstance(v,list):
+                  for x in v: walk(x)
+          walk(q)
+          PY
+
+      - name: Verify semantic evals remain pending without judgments
+        run: |
+          python evals/run_evals.py --json > eval-all.json
+          python - <<'PY'
+          import json
+          d=json.load(open('eval-all.json',encoding='utf-8'))
+          assert d['counts']['FAIL']==0
+          assert d['counts']['ERROR']==0
+          assert d['counts']['PENDING_MODEL'] >= 8
+          PY
 
       - name: Session and Control Plane contracts
         run: |
@@ -127,6 +167,8 @@ jobs:
           name: novelforge-contract-artifacts
           path: |
             *-test.json
+            eval-release.json
+            eval-all.json
             direct-capabilities.json
             openai-dry-run.json
           if-no-files-found: warn
