@@ -67,6 +67,8 @@ def load_contract_registry(path:Path)->dict[str,Any]:
         if c.get("kind") not in ALLOWED_KINDS:raise ValueError(f"{cid}: unsupported kind")
         rubric=c.get("rubric")
         if not isinstance(rubric,list) or not rubric or not all(isinstance(x,str) and x.strip() for x in rubric):raise ValueError(f"{cid}: invalid rubric")
+        input_contract=c.get("input_contract")
+        if input_contract is not None and not isinstance(input_contract,dict):raise ValueError(f"{cid}: invalid input_contract")
         if not isinstance(c.get("output_contract"),dict):raise ValueError(f"{cid}: invalid output_contract")
         forbidden=c.get("forbidden_input_keys",[])
         if not isinstance(forbidden,list) or not all(isinstance(x,str) and x.strip() for x in forbidden):raise ValueError(f"{cid}: invalid forbidden_input_keys")
@@ -92,6 +94,14 @@ def resolve_contract_registry(cid:str,catalog_path:Path=CATALOG)->tuple[Path,str
     if root!=path.parent and root not in path.parents:raise ValueError("contract pack escapes semantic root")
     if cid not in load_contract_registry(path)["contracts"]:raise ValueError(f"catalog/pack mismatch: {cid}")
     return path,p["id"]
+def validate_contract_input(cid:str,contract:dict[str,Any],input_payload:dict[str,Any])->list[str]:
+    e=[]
+    blocked=find_named_keys(input_payload,set(contract.get("forbidden_input_keys",[])))
+    if blocked:e.append(f"contract {cid} input contains forbidden fields: "+", ".join(blocked))
+    schema=contract.get("input_contract")
+    if isinstance(schema,dict) and schema:
+        e += [f"contract {cid} input_contract {x}" for x in validate_typed_value(input_payload,schema,"$.payload")]
+    return e
 def semantic_payload(job:dict[str,Any])->dict[str,Any]:return {k:job.get(k,{} if k in {"input","output_contract"} else []) for k in ("kind","subject_id","input","rubric","output_contract")}
 def fingerprint_for(job:dict[str,Any])->str:return "sha256:"+hashlib.sha256(canonical(semantic_payload(job))).hexdigest()
 def validate_job(job:dict[str,Any])->list[str]:
@@ -112,9 +122,9 @@ def make_contract_job(cid:str,subject_id:str,input_payload:dict[str,Any],*,regis
     if registry_path is None:registry_path,pack_id=resolve_contract_registry(cid)
     r=load_contract_registry(registry_path);c=r["contracts"].get(cid)
     if not isinstance(c,dict):raise ValueError(f"contract {cid} not in registry")
-    blocked=find_named_keys(input_payload,set(c.get("forbidden_input_keys",[])))
-    if blocked:raise ValueError(f"contract {cid} input contains forbidden fields: "+", ".join(blocked))
-    job={"job_id":job_id or "SEM-CONTRACT-"+hashlib.sha256(f"{cid}:{subject_id}".encode()).hexdigest()[:16],"kind":c["kind"],"subject_id":subject_id,"created_at":datetime.now(timezone.utc).isoformat(),"input_fingerprint":"","input":{"model_contract_id":cid,"model_contract_version":r.get("version"),"purpose":c.get("purpose"),"payload":input_payload,**({"default_personas":c["default_personas"]} if isinstance(c.get("default_personas"),dict) else {})},"rubric":list(c["rubric"]),"output_contract":c["output_contract"],"permissions":dict(c["permissions"]),"provenance":{"source":"model_contract_pack","registry_schema":r["schema"],"registry_version":r.get("version"),"registry_path":str(registry_path.relative_to(HERE)) if registry_path.is_relative_to(HERE) else str(registry_path),"pack_id":pack_id,"model_contract_id":cid,"independent_gate":bool(c.get("independent_gate",False))},"execution":{"source_session_id":source_session_id,"worker_session_id":None,"handoff_id":handoff_id,"attempt_id":None}}
+    input_errors=validate_contract_input(cid,c,input_payload)
+    if input_errors:raise ValueError("; ".join(input_errors))
+    job={"job_id":job_id or "SEM-CONTRACT-"+hashlib.sha256(f"{cid}:{subject_id}".encode()).hexdigest()[:16],"kind":c["kind"],"subject_id":subject_id,"created_at":datetime.now(timezone.utc).isoformat(),"input_fingerprint":"","input":{"model_contract_id":cid,"model_contract_version":r.get("version"),"purpose":c.get("purpose"),"payload":input_payload,**({"default_personas":c["default_personas"]} if isinstance(c.get("default_personas"),dict) else {})},"rubric":list(c["rubric"]),"output_contract":c["output_contract"],"permissions":dict(c["permissions"]),"provenance":{"source":"model_contract_pack","registry_schema":r["schema"],"registry_version":r.get("version"),"registry_path":str(registry_path.relative_to(HERE)) if registry_path.is_relative_to(HERE) else str(registry_path),"pack_id":pack_id,"model_contract_id":cid,"input_contract_validated":bool(c.get("input_contract")),"independent_gate":bool(c.get("independent_gate",False))},"execution":{"source_session_id":source_session_id,"worker_session_id":None,"handoff_id":handoff_id,"attempt_id":None}}
     job["input_fingerprint"]=fingerprint_for(job);e=validate_job(job)
     if e:raise ValueError("prepared contract job invalid: "+"; ".join(e))
     return job
@@ -187,8 +197,9 @@ def self_test()->int:
     auto=cj["provenance"].get("pack_id")=="quality" and cj["provenance"].get("registry_path")=="contracts/quality.json";typed=any("above maximum" in x for x in validate_result(cj,bad));guard=False
     try:make_contract_job("learning.mechanism_analyze","CORP",{"source":{"raw_text":"forbidden"}})
     except ValueError:guard=True
-    ok=not validate_job(ej) and not validate_result(ej,er) and lineage and not validate_job(cj) and not validate_result(cj,good) and auto and typed and guard
-    dump_json({"semantic_router_contract":"PASS" if ok else "FAIL","fingerprint_excludes_runtime_lineage":lineage,"catalog_exact_id_resolution":auto,"typed_output_validation":typed,"contract_input_guard":guard,"aggregate_registry_required":False,"semantic_intelligence_externalized":True,"model_execution":False});return 0 if ok else 1
+    typed_input_schema={"type":"object","required":["candidate_text"],"properties":{"candidate_text":{"type":"string","minLength":1}},"additionalProperties":False};typed_input_ok=not validate_contract_input("SELF",{"input_contract":typed_input_schema},{"candidate_text":"x"});typed_input_reject=bool(validate_contract_input("SELF",{"input_contract":typed_input_schema},{"candidate_text":"x","hidden":"no"}))
+    ok=not validate_job(ej) and not validate_result(ej,er) and lineage and not validate_job(cj) and not validate_result(cj,good) and auto and typed and guard and typed_input_ok and typed_input_reject
+    dump_json({"semantic_router_contract":"PASS" if ok else "FAIL","fingerprint_excludes_runtime_lineage":lineage,"catalog_exact_id_resolution":auto,"typed_input_validation":typed_input_ok and typed_input_reject,"typed_output_validation":typed,"contract_input_guard":guard,"aggregate_registry_required":False,"semantic_intelligence_externalized":True,"model_execution":False});return 0 if ok else 1
 def main()->int:
     p=argparse.ArgumentParser();s=p.add_subparsers(dest="command",required=True)
     x=s.add_parser("prepare-evals");x.add_argument("--queue",required=True);x.add_argument("--output");x.add_argument("--source-session-id");x.add_argument("--handoff-id")
