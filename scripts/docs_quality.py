@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Deterministic documentation QA for NovelForge.
 
-Normal CI must never spend model/API usage. This checker validates the machine-
-checkable half of the documentation contract; rendered composition and native-
-language judgment remain semantic review responsibilities.
+Normal CI must never spend model/API usage. This checker owns only the
+machine-checkable half of the documentation contract. Rendered composition,
+brand fit, and native-language judgment remain semantic review responsibilities.
 """
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOC_MANIFEST = ROOT / "docs" / "documentation_manifest.json"
 FRAMEWORK_MANIFEST = ROOT / "HARNESS_MANIFEST.yaml"
 UI_DIR = ROOT / "assets" / "ui"
+
 TARGET_GITHUB_WIDTH = 820.0
 MIN_RENDERED_TEXT_PX = 12.0
 LONG_TEXT_CHARS = 24
@@ -44,7 +45,6 @@ STALE_EXAMPLE_RE = re.compile(
 )
 
 CONTROLLED_DOC_ROOTS = (
-    ROOT,
     ROOT / "assets",
     ROOT / "core",
     ROOT / "corpus",
@@ -72,6 +72,11 @@ def error(path: Path, message: str) -> None:
 
 def warn(path: Path, message: str) -> None:
     WARNINGS.append(f"{rel(path)}: {message}")
+
+
+def migration_issue(path: Path, message: str, *, strict_current: bool) -> None:
+    """Block reviewed current docs; inventory debt remains visible but non-blocking."""
+    (error if strict_current else warn)(path, message)
 
 
 def load_doc_manifest() -> dict:
@@ -111,10 +116,6 @@ def local_target(source: Path, raw: str) -> Path | None:
     return (source.parent / raw).resolve()
 
 
-def markdown_table_count(text: str) -> int:
-    return len(TABLE_SEPARATOR_RE.findall(text))
-
-
 def check_links(path: Path, text: str) -> None:
     for match in list(MD_LINK_RE.finditer(text)) + list(HTML_LINK_RE.finditer(text)):
         target = local_target(path, match.group(1))
@@ -130,9 +131,8 @@ def check_links(path: Path, text: str) -> None:
 
 
 def check_chinese_copy(path: Path, text: str) -> None:
-    # Advisory heuristics only. Product names and exact protocol identifiers may remain English.
     risky = {
-        "reviewer shopping": "prefer native Chinese prose; keep `reviewer shopping` only when naming the exact anti-pattern",
+        "reviewer shopping": "prefer native Chinese prose; keep the English term only when naming the exact anti-pattern",
         "semantic reject": "prefer Chinese prose with `semantic_reject` only as an exact identifier",
         "consumer project": "prefer 下游项目",
         "Human-facing": "prefer 面向用户 / 人类可读",
@@ -155,36 +155,34 @@ def check_markdown(path: Path, *, tier: str, status: str, rewrite_policy: str) -
         error(path, f"not valid UTF-8: {exc}")
         return
 
+    strict_current = status == "reviewed_7_2" and rewrite_policy != "preserve_history"
+
     h1_count = len(H1_RE.findall(text))
     if h1_count != 1:
-        error(path, f"expected exactly one Markdown H1, found {h1_count}")
+        migration_issue(path, f"expected exactly one Markdown H1, found {h1_count}", strict_current=strict_current)
 
     check_links(path, text)
 
-    strict_current = status == "reviewed_7_2" and rewrite_policy != "preserve_history"
     if tier == "A":
         if ARROW_BLOCK_RE.search(text):
-            msg = "Tier-A page contains a fenced arrow-process block; use a designed module or structured prose"
-            (error if strict_current else warn)(path, msg)
-        tables = markdown_table_count(text)
+            migration_issue(path, "Tier-A page contains a fenced arrow-process block; use a designed module or structured prose", strict_current=strict_current)
+        tables = len(TABLE_SEPARATOR_RE.findall(text))
         if tables:
-            msg = f"Tier-A page contains {tables} native Markdown table(s); product surfaces should use designed modules or compact prose"
-            (error if strict_current else warn)(path, msg)
+            migration_issue(path, f"Tier-A page contains {tables} native Markdown table(s); product surfaces should use designed modules or compact prose", strict_current=strict_current)
 
     if rewrite_policy != "preserve_history" and STALE_EXAMPLE_RE.search(text):
         warn(path, "contains a 7.0/7.1 framework-version example/reference; verify whether it is intentionally historical or stale")
 
-    if path.name.endswith(".zh-CN.md"):
+    if path.name.endswith(".zh-CN.md") and rewrite_policy != "preserve_history":
         check_chinese_copy(path, text)
 
 
 def discover_bilingual_docs() -> set[str]:
     found: set[str] = set()
-    # Root needs non-recursive handling so nested controlled roots are not duplicated.
     for path in ROOT.glob("*.md"):
         if path.name.endswith((".en.md", ".zh-CN.md")):
             found.add(rel(path))
-    for base in CONTROLLED_DOC_ROOTS[1:]:
+    for base in CONTROLLED_DOC_ROOTS:
         if not base.exists():
             continue
         for path in base.rglob("*.md"):
@@ -246,11 +244,8 @@ def check_inventory(manifest: dict) -> list[tuple[Path, str, str, str]]:
             tracked.add(raw)
             checks.append((ROOT / raw, str(tier), str(status), str(rewrite_policy)))
 
-    discovered = discover_bilingual_docs()
-    untracked = sorted(discovered - tracked)
-    if untracked:
-        for raw in untracked:
-            error(ROOT / raw, "bilingual human-facing doc is not registered in documentation_manifest.json")
+    for raw in sorted(discover_bilingual_docs() - tracked):
+        error(ROOT / raw, "bilingual human-facing doc is not registered in documentation_manifest.json")
 
     routers = manifest.get("routers", [])
     if not isinstance(routers, list):
@@ -261,10 +256,8 @@ def check_inventory(manifest: dict) -> list[tuple[Path, str, str, str]]:
             if not isinstance(raw, str):
                 error(DOC_MANIFEST, "router entry missing path")
                 continue
-            path = ROOT / raw
-            if not path.exists():
-                error(path, "manifest-listed router is missing")
-
+            if not (ROOT / raw).exists():
+                error(ROOT / raw, "manifest-listed router is missing")
     return checks
 
 
@@ -326,8 +319,7 @@ def char_em_width(ch: str) -> float:
         return 0.34
     if unicodedata.east_asian_width(ch) in {"W", "F"}:
         return 1.0
-    category = unicodedata.category(ch)
-    if category.startswith("P"):
+    if unicodedata.category(ch).startswith("P"):
         return 0.38
     if ch.isupper():
         return 0.66
@@ -378,7 +370,6 @@ def check_svg(path: Path) -> None:
 
     if "@font-face" in raw or re.search(r"\.(?:woff2?|ttf|otf)\b", raw, re.I):
         error(path, "external/embedded font files are not allowed in documentation SVGs")
-
     if vb is None:
         return
 
@@ -435,8 +426,6 @@ def main() -> int:
     for path, tier, status, rewrite_policy in checks:
         check_markdown(path, tier=tier, status=status, rewrite_policy=rewrite_policy)
 
-    # Root README.md is the stable product entrypoint even though bilingual authority
-    # lives in README.en.md / README.zh-CN.md.
     root_readme = ROOT / "README.md"
     if not root_readme.exists():
         error(root_readme, "missing root product entrypoint")
@@ -452,7 +441,8 @@ def main() -> int:
     if manifest:
         states: dict[str, int] = {}
         for entry in manifest.get("documents", []):
-            states[entry.get("status", "unknown")] = states.get(entry.get("status", "unknown"), 0) + 1
+            state = entry.get("status", "unknown")
+            states[state] = states.get(state, 0) + 1
         print("documentation-inventory:", ", ".join(f"{k}={v}" for k, v in sorted(states.items())))
 
     for item in WARNINGS:
