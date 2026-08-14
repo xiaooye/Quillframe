@@ -10,6 +10,12 @@
     "manifest_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
     "authority_snapshot": "fixture:accepted-state@1"
   },
+  "capture_policy": {
+    "semantic_inputs": "fingerprint_only",
+    "semantic_outputs": "typed_result",
+    "private_reasoning": "forbidden",
+    "hidden_gold": "forbidden"
+  },
   "pack_activations": [
     {
       "pack_id": "context-research",
