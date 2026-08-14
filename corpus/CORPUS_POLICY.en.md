@@ -1,51 +1,89 @@
-# Corpus Policy
+# Corpus Policy · Govern evidence without turning source access into story or style authority
 
-## 1. Corpus is evidence, not authority
+NovelForge uses corpus material to study **mechanisms**, test preference/craft hypotheses, build eval evidence and identify counterexamples. Corpus is an evidence domain. It is never Project Canon, character knowledge, a hidden imitation prompt, or automatic Framework guidance.
 
-Corpus material may support:
-- project craft analysis;
+> **Core invariant ✦** Access, rights, storage, analysis, learning and promotion are separate gates. Passing one gate never implies that the next gate has passed.
+
+---
+
+## 01 · What Corpus may support
+
+Corpus evidence may support:
+
+- project-specific craft analysis;
 - user-taste hypothesis testing;
-- general craft research;
-- regression/capability benchmark construction.
+- cross-work General Craft research;
+- capability/regression eval design;
+- mechanism benchmarks;
+- counterexample/profile-boundary discovery;
+- external evidence for a bounded research question.
 
-Corpus material may not by itself:
-- create project Canon;
-- decide character knowledge;
+Corpus evidence may not by itself:
+
+- create or modify Project Canon;
+- prove that a character knows something;
 - settle relationship/resource/information state;
-- override explicit project/user authority;
-- become a hidden style-imitation prompt.
+- override explicit user/project authority;
+- activate durable user taste;
+- promote Framework behavior;
+- create a reusable named-author imitation profile.
 
-## 2. Rights classes
+---
 
-Every source candidate must be classified before ingestion.
+## 02 · Rights class and storage intent are different fields
+
+Every source candidate that may enter durable Corpus handling needs a declared `rights_class` and `storage_intent`.
+
+Reference rights classes:
 
 ### `redistributable`
-Full text may be stored when there is a clear basis such as:
-- public domain;
-- compatible open license;
-- explicit permission;
-- user-owned/user-authored material with permission to store.
 
-Store the rights basis and source provenance.
+Full-text storage may be permitted when there is a documented basis such as public-domain status, a compatible open license, explicit permission, or user-owned/user-authored material with permission to store.
+
+A non-empty rights basis and provenance are required.
 
 ### `analysis_only`
-The material may be lawfully accessed/analyzed, but repository storage must be limited to:
-- source metadata;
-- derived metrics;
-- mechanism-level observations;
-- summaries;
-- short compliant excerpts only when genuinely necessary.
 
-Do not mirror full modern copyrighted works.
+The material may be accessed/analyzed under the declared basis, but NovelForge must not store the full text as Corpus data.
+
+Allowed storage may include:
+
+- source metadata;
+- derived observations/metrics;
+- mechanism analysis;
+- summaries;
+- a short excerpt only when genuinely required for the declared analysis/eval purpose.
 
 ### `unknown`
-Metadata/source research may continue, but full-text ingestion is blocked until rights are clarified.
 
-Private-repository status does not weaken this rule.
+Rights have not been established well enough for content storage. Only metadata-level storage is permitted until the evidence changes.
 
-## 3. Source provenance
+A private repository does not turn unknown rights into redistributable rights.
 
-Each corpus item records at least:
+---
+
+## 03 · Deterministic Rights Gate is not legal analysis
+
+[`rights_gate.py`](rights_gate.py) validates whether **declared metadata and requested storage intent are internally consistent with NovelForge policy**.
+
+It enforces, for example:
+
+```text
+unknown + anything beyond metadata_only → reject
+analysis_only + full_text                → reject
+short_excerpt without excerpt_purpose   → reject
+redistributable without rights_basis     → reject
+```
+
+The validator does **not** infer copyright status from a URL, title, creator name or repository visibility. `legal_analysis_performed = false` is deliberate.
+
+Rights/source status must be established from real evidence through the authorized research process.
+
+---
+
+## 04 · Provenance is mandatory evidence
+
+A durable Corpus record should be able to answer:
 
 ```yaml
 corpus_id:
@@ -57,104 +95,178 @@ language:
 publication_date:
 rights_class:
 rights_basis:
+storage_intent:
 accessed_at:
 content_fingerprint:
 analysis_scope:
 research_question:
+source_tool_or_capability:
 ```
 
-If the host cannot verify provenance, downgrade confidence or block ingestion.
+Not every field must apply to every source class, but substantive claims must remain traceable to a real source/ref and the capability that retrieved it.
 
-## 4. Question-bounded analysis
+If provenance cannot be established, lower confidence, keep only safe metadata, or block the step. Never fabricate a quotation or source access event to complete a pipeline.
+
+---
+
+## 05 · Discovery is not ingestion
+
+A discovery result says **a candidate source was found**. It does not mean NovelForge may copy or persist the source content.
+
+```text
+discovery
+→ verify source identity + provenance
+→ establish declared rights basis
+→ choose storage intent
+→ deterministic rights gate
+→ bounded ingestion / observation
+```
+
+The Corpus Scout and discovery runtime may prepare and normalize candidate evidence, but they cannot manufacture authorization that the host/source did not provide.
+
+---
+
+## 06 · Analysis is question-bounded
 
 Do not analyze an entire work merely because it is available.
 
-Start from a declared question, for example:
-- how does a scene increase pressure without fragments?
-- how is exposition embedded in task conflict?
-- how is a supporting character kept active during protagonist-centric scenes?
-- how does a chapter end with forward pull without narrator advertising?
+Start from a concrete research question, such as:
 
-Select only the minimum range needed to answer that question.
+- how does a fast scene create pressure without pseudo-speed fragmentation?
+- how is exposition made causal through an active task or conflict?
+- how does a supporting character maintain an independent agenda inside a protagonist-centered scene?
+- how does a chapter create forward pull without narrator advertising?
 
-## 5. Counterexample requirement
+Select the **minimum sufficient range/evidence** required to answer the question.
 
-Corpus research should actively search for:
-- examples that support the hypothesis;
-- examples that violate the superficial pattern but still succeed;
-- examples where the hypothesized mechanism fails;
-- genre/profile exceptions.
+Bounded analysis reduces context waste, imitation pressure, accidental source leakage and confirmation bias.
 
-This prevents “find three things I already agree with” confirmation bias.
+---
 
-## 6. Cross-work generalization
+## 07 · Counterexamples are required for generalization
 
-A single work can create an observation, not a universal rule.
+Corpus research should actively seek:
 
-General-craft promotion normally requires:
-- multiple independent works/sources;
-- mechanism consistency across them;
-- at least one counterexample/profile-boundary check;
-- regression/capability evals;
-- no named-author imitation rule.
+- evidence supporting the candidate mechanism;
+- successful examples that violate the superficial pattern;
+- examples where the mechanism fails;
+- genre/platform/profile exceptions;
+- alternative explanations for the same observed effect.
 
-## 7. User-taste learning
+A search that only retrieves examples agreeing with the current hypothesis is not strong General Craft evidence.
 
-User-taste corpus selection begins from a preference hypothesis and a gap, not from “find works similar to what the user likes.”
+One work may create an observation. It does not create a universal rule.
 
-Corpus should help distinguish mechanisms.
+---
 
-Example:
+## 08 · Named-author imitation boundary
 
-```text
-observed rejection: sentence-per-paragraph pseudo-speed
-hypothesis: user wants fast causality, not fragmented typography
-corpus gap: compare fast scenes with coherent paragraph units vs fragment-heavy scenes
-result: strengthen/narrow/contest hypothesis
-```
+NovelForge may analyze broad, transferable craft mechanisms such as:
 
-## 8. Named-author boundary
+- scene causality and pressure sequencing;
+- information timing;
+- paragraph function;
+- dialogue embodiment;
+- character-agenda independence;
+- setup/payoff management;
+- broad genre/platform conventions.
 
-Do not create durable profiles whose goal is direct imitation of a living/modern author.
+It must not turn modern/living authors into reusable imitation fingerprints.
 
-Allowed:
-- broad genre conventions;
-- high-level structural/craft mechanisms;
-- cross-author aggregate patterns;
-- user-owned style evidence;
-- public-domain craft analysis within normal policy.
+Do not create Framework behavior whose goal is:
 
-Disallowed as framework behavior:
-- reusable “write exactly like Author X” mechanism sets;
-- signature phrase/cadence extraction intended for imitation;
-- storing extensive copyrighted excerpts as style prompts.
+- “write exactly like Author X”;
+- reproduce signature phrases/cadence from copyrighted work;
+- preserve extensive copyrighted passages as style prompts;
+- optimize writer context for source imitation rather than mechanism understanding.
 
-## 9. Writer isolation
+User-owned evidence and public-domain material remain subject to their actual rights/provenance and the same authority boundaries.
 
-Preferred writer input is:
+---
+
+## 09 · Writer isolation
+
+Raw Writer context should normally receive **task-relevant mechanism/profile guidance**, not bulk Corpus text.
+
+Preferred path:
 
 ```text
-benchmark/mechanism
-+ minimal evidence summary
-+ relevant project/user profile
+source evidence
+→ rights-safe bounded observation
+→ per-work mechanism analysis
+→ counterexample / cross-work synthesis
+→ benchmark / eval calibration
+→ minimal relevant guidance
+→ Writer
 ```
 
-not raw corpus text.
+Regression bad examples and hidden eval answers stay outside Writer pre-draft context. Corpus/learning memory defaults to post-generation use unless a higher-level contract explicitly makes a particular bounded item writer-safe.
 
-Regression bad examples remain post-generation critic context unless a test explicitly requires otherwise.
+---
 
-## 10. Removal / correction
+## 10 · Learning and promotion remain separate gates
 
-If rights, provenance, or analysis is later found invalid:
-1. mark source/item invalid;
-2. remove prohibited stored material;
-3. identify dependent analyses/benchmarks/evals;
-4. invalidate or rebuild them;
-5. downgrade learning hypotheses/promotions that relied on the source;
-6. record rollback trace.
+Corpus observations can support `project`, `user_taste` or `general_craft` learning scopes, but the Corpus layer cannot activate them.
 
-## 11. Autonomous behavior boundary
+General Craft normally requires:
 
-The Corpus Scout may autonomously create discovery plans and candidate queues. Actual external retrieval is performed only through host tools/connectors that are available and authorized.
+- multiple independent cross-work refs;
+- counterexample/profile-boundary evidence;
+- capability + regression evals;
+- provenance;
+- version/rollback evidence;
+- green Framework CI;
+- authorized promotion after prerequisites pass.
 
-The scout must never fabricate source access, rights, or quotations.
+See the [Self-Improvement Protocol](../harness/SELF_IMPROVEMENT_PROTOCOL.en.md).
+
+---
+
+## 11 · Correction and removal
+
+If rights, provenance or analysis evidence later proves invalid:
+
+```text
+mark source/item invalid
+→ remove storage that is no longer permitted
+→ identify dependent analyses / benchmarks / evals
+→ invalidate or rebuild derived evidence
+→ narrow / contest / deprecate dependent learning hypotheses
+→ roll back affected promoted behavior when required
+→ preserve correction provenance
+```
+
+Derived evidence must remain traceable enough for this dependency repair to be possible.
+
+---
+
+## 12 · Autonomous behavior boundary
+
+Corpus automation may:
+
+- detect an evidence gap;
+- prepare a discovery request;
+- normalize real returned source metadata;
+- run deterministic rights/storage checks;
+- package bounded evidence for semantic analysis;
+- record missing capability or blocked rights state.
+
+It may not:
+
+- pretend Web/GitHub/MCP retrieval occurred without an eligible authorized capability;
+- infer legal rights from weak metadata;
+- fabricate quotations;
+- promote Corpus observations into Canon, user taste or Framework behavior.
+
+---
+
+## 13 · Related contracts
+
+- [Corpus Intelligence](README.en.md) — end-to-end evidence pipeline.
+- [Corpus Ingest Protocol](CORPUS_INGEST_PROTOCOL.en.md) — bounded ingestion mechanics.
+- [`rights_gate.py`](rights_gate.py) — deterministic declared-rights/storage validator.
+- [`discovery_runtime.py`](discovery_runtime.py) — typed discovery runtime.
+- [Corpus Benchmarks](benchmarks/README.en.md) — cross-work mechanism evidence.
+- [Adaptive Learning](../docs/adaptive-learning.en.md) — learning scopes and hypotheses.
+
+**A useful Corpus system remembers enough to support evidence and rollback, but never so much that source possession becomes a shortcut around rights, authority, or craft reasoning.**
