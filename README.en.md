@@ -44,6 +44,8 @@ For source-backed positioning against direct novel agents/frameworks, mature aut
 
 ## 02 · The 7.3 mental model 🪄
 
+<img src="assets/ui/home-architecture.en.svg" alt="NovelForge Story Loom architecture separating project authority, semantic model contracts, deterministic runtime shell, and evidence evolution" width="100%" />
+
 ### Story authority
 
 Project truth follows explicit authority classes such as `locked`, `accepted`, `active_plan`, `review`, and `proposal`. A plan, memory, semantic judgment, scenario branch, Corpus result, or runtime receipt cannot become Canon merely because it exists.
@@ -67,6 +69,8 @@ Read [Architecture](docs/architecture.en.md) and [Architecture Atlas](docs/archi
 ---
 
 ## 03 · A chapter is a production run, not one model call 📖
+
+<img src="assets/ui/home-pipeline.en.svg" alt="NovelForge four-stage production run with freeze and simulation, internal candidate generation, diagnosis and evolution, release gate, and failure routing" width="100%" />
 
 A DRAFT/REVISE run is organized around four responsibilities.
 
