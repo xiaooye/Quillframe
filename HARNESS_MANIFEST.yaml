@@ -55,7 +55,8 @@ harness:
   semantic_protocol: harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.md
   semantic_execution: harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.md
   semantic_router: harness/semantic_workers/semantic_worker_router.py
-  semantic_model_contracts: harness/semantic_workers/model_contracts.json
+  semantic_model_contract_catalog: harness/semantic_workers/model_contract_catalog.json
+  semantic_contract_packs: harness/semantic_workers/contracts
   semantic_runner: harness/semantic_workers/semantic_worker_runner.py
   semantic_local_adapter: harness/semantic_workers/adapters/local_agent_adapter.py
   semantic_openai_adapter: harness/semantic_workers/adapters/openai_responses_adapter.py
@@ -67,9 +68,9 @@ quality:
   reader_expectation_ledger: quality/reader_expectation.py
   state_graph: quality/state_graph.py
   quality_evolution_schema: novelforge_quality_evolution_v1
-  reader_expectation_schema: novelforge_reader_expectation_v1
-  context_inspector_schema: novelforge_context_inspector_v1
-  memory_tiers_schema: novelforge_memory_tiers_v1
+  reader_expectation_schema: novelforge_reader_expectation_v2
+  context_inspector_schema: novelforge_context_inspector_v2
+  memory_tiers_schema: novelforge_memory_tiers_v2
   memory_bank_schema: novelforge_memory_bank_v1
   finding_schema: novelforge_quality_finding_v1
   state_graph_schema: novelforge_state_graph_v1
@@ -96,6 +97,7 @@ quality:
   state_graph_authority: false
   scenario_branch_authority: false
   reader_expectation_authority: false
+  durable_semantic_scalar_policy: forbidden_without_calibration_and_consumer_contract
 
 learning:
   architecture:
@@ -207,24 +209,7 @@ runtime_capabilities:
   network_primitive_is_not_remote_authorization: true
   secrets_embedded: false
   constraints: [permission, availability, user_interaction, model_execution, usage_class]
-  common_capabilities:
-    - filesystem_read
-    - filesystem_write
-    - subprocess
-    - git_cli
-    - github_cli
-    - codex_cli
-    - claude_cli
-    - web_search
-    - github_search
-    - user_files
-    - file_library
-    - mcp_client
-    - mcp_server
-    - provider_api
-    - semantic_model
-    - peer_chat_relay
-    - human_reviewer
+  common_capabilities: [filesystem_read, filesystem_write, subprocess, git_cli, github_cli, codex_cli, claude_cli, web_search, github_search, user_files, file_library, mcp_client, mcp_server, provider_api, semantic_model, peer_chat_relay, human_reviewer]
 
 control_plane:
   schema: novel_os_control_plane_v1
@@ -242,20 +227,14 @@ control_plane:
     remote_transport: streamable-http
     canon_write_tools_exposed: false
 
-runtime_transports:
-  - current_chat
-  - peer_chat
-  - codex_cli
-  - claude_code
-  - control_plane_mcp
-  - provider_api
-  - github_actions
-  - remote_mcp_worker
-  - local_model
-  - human_reviewer
+runtime_transports: [current_chat, peer_chat, codex_cli, claude_code, control_plane_mcp, provider_api, github_actions, remote_mcp_worker, local_model, human_reviewer]
 
 semantic:
-  model_contract_registry: harness/semantic_workers/model_contracts.json
+  model_contract_catalog: harness/semantic_workers/model_contract_catalog.json
+  contract_pack_root: harness/semantic_workers/contracts
+  loading_policy: progressive_disclosure
+  exact_contract_id_resolution: deterministic_runtime
+  aggregate_compatibility_registry: forbidden
   semantic_intelligence_owner: model
   deterministic_runtime_does_literary_judgment: false
   fingerprint_payload: [kind, subject_id, input, rubric, output_contract]
@@ -270,12 +249,7 @@ semantic:
   diagnostic_kinds: [artifact_audit, external_review]
 
 quality_layering:
-  order:
-    - framework_fundamentals
-    - genre_platform_profile
-    - project_profile
-    - user_taste_profile
-    - current_request
+  order: [framework_fundamentals, genre_platform_profile, project_profile, user_taste_profile, current_request]
   project_may_silently_disable_framework_fundamentals: false
   explicit_profile_sensitive_exceptions_supported: true
 
@@ -288,6 +262,7 @@ bilingual_docs:
 workflows:
   deterministic_ci: .github/workflows/novelforge-ci.yml
   reusable_contracts: .github/workflows/novelforge-contracts.yml
+  semantic_contract_packs: .github/workflows/novelforge-semantic-contract-packs.yml
   framework_bundle: .github/workflows/novelforge-release-bundle.yml
   typed_event_router: .github/workflows/novelforge-event-router.yml
   live_semantic_optional: .github/workflows/novelforge-semantic-live.yml
@@ -309,40 +284,7 @@ workflows:
 
 normal_ci:
   model_execution: forbidden
-  required:
-    - py_compile
-    - repository-hygiene
-    - project-sdk-self-test
-    - project-adapter-self-test
-    - runtime-capabilities-self-test
-    - context-inspector-self-test
-    - memory-tiers-self-test
-    - memory-bank-self-test
-    - scenario-fork-self-test
-    - quality-finding-self-test
-    - reader-expectation-self-test
-    - quality-evolution-self-test
-    - state-graph-self-test
-    - semantic-router-self-test
-    - model-contract-registry-self-test
-    - learning-store-self-test
-    - learning-cycle-self-test
-    - learning-eval-self-test
-    - promotion-gate-self-test
-    - corpus-scout-self-test
-    - corpus-discovery-runtime-self-test
-    - corpus-rights-gate-self-test
-    - framework-bundle-self-test
-    - deterministic-double-bundle-build
-    - generic-eval-deterministic-release
-    - generic-eval-blind-queue
-    - session-self-test
-    - control-plane-self-test
-    - mcp-self-test
-    - semantic-router-self-test
-    - local-agent-adapter-self-test
-    - project-hosted-peer-bridge-ownership
-    - optional-openai-dry-run
+  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, context-inspector-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, quality-finding-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
 
 scheduled_maintenance:
   model_execution: forbidden
