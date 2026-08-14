@@ -51,6 +51,16 @@
         "continuity.commitment_audit"
       ],
       "load_when": "The task must adapt a plan after causal emergence, reconcile conflicting long-lived relationship memories, or verify a candidate against explicit long-term commitments/facts."
+    },
+    {
+      "id": "creative-evolution",
+      "path": "contracts/creative-evolution.json",
+      "description": "Causally divergent scenario exploration plus evidence-driven incumbent/challenger comparison that permits ties instead of assuming repeated revision improves a subjective artifact.",
+      "contracts": [
+        "scene.diverge",
+        "quality.compare"
+      ],
+      "load_when": "The workflow needs materially distinct scenario forks before committing to a direction, or needs to verify that a repair candidate actually improves an incumbent without introducing regressions."
     }
   ],
   "activation": {
