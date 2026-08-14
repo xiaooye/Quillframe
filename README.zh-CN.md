@@ -38,6 +38,8 @@ NovelForge 把这些问题当成**小说生产系统的问题**，而不是靠�
 
 它的核心机制包括：**权威分层、稀疏上下文、独立人物状态、显式语义契约、可恢复运行状态、按问题归属修复、事务化结算，以及有证据约束的长期学习。**
 
+<img src="assets/ui/home-comparison.zh-CN.svg" alt="NovelForge、NovelClaw、Novel OS、AuthorAgent 与 autonovel 的公开机制证据对比，覆盖长篇状态、质量演化与出版能力" width="100%" />
+
 直接小说智能体 / 小说框架的定位、取舍与来源说明见 [为什么是 NovelForge](docs/why-novelforge.zh-CN.md)；LangGraph、OpenAI Agents SDK、CrewAI、AutoGen 等通用框架放在更深一层的 [智能体框架采用分析](knowledge/AGENT_FRAMEWORK_ADOPTION.zh-CN.md) 中讨论。
 
 ---
