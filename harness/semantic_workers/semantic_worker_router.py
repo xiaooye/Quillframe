@@ -2,8 +2,9 @@
 """Provider-neutral semantic job/result packaging and validation.
 
 Semantic intelligence lives in model-readable contracts. This module only owns
-deterministic packaging, fingerprinting, permission guards, blind-eval isolation,
-and lightweight typed-output validation. It never performs literary judgment.
+deterministic packaging, fingerprinting, permission/data guards, blind-eval
+isolation, and lightweight typed-output validation. It never performs literary
+judgment.
 """
 from __future__ import annotations
 
@@ -53,17 +54,21 @@ def fingerprint_for(job: dict[str, Any]) -> str:
     return "sha256:" + hashlib.sha256(canonical_bytes(semantic_payload(job))).hexdigest()
 
 
-def find_forbidden_keys(obj: Any, path: str = "$") -> list[str]:
+def find_named_keys(obj: Any, names: set[str], path: str = "$") -> list[str]:
     hits: list[str] = []
     if isinstance(obj, dict):
         for key, value in obj.items():
-            if key in FORBIDDEN_BLIND_KEYS:
+            if key in names:
                 hits.append(f"{path}.{key}")
-            hits.extend(find_forbidden_keys(value, f"{path}.{key}"))
+            hits.extend(find_named_keys(value, names, f"{path}.{key}"))
     elif isinstance(obj, list):
         for i, value in enumerate(obj):
-            hits.extend(find_forbidden_keys(value, f"{path}[{i}]"))
+            hits.extend(find_named_keys(value, names, f"{path}[{i}]"))
     return hits
+
+
+def find_forbidden_keys(obj: Any, path: str = "$") -> list[str]:
+    return find_named_keys(obj, FORBIDDEN_BLIND_KEYS, path)
 
 
 def _matches_type(value: Any, expected: str) -> bool:
@@ -74,7 +79,7 @@ def _matches_type(value: Any, expected: str) -> bool:
     if expected == "number": return isinstance(value, (int, float)) and not isinstance(value, bool)
     if expected == "integer": return isinstance(value, int) and not isinstance(value, bool)
     if expected == "null": return value is None
-    return True  # Unknown JSON-Schema keywords/types are intentionally not invented here.
+    return True
 
 
 def validate_typed_value(value: Any, schema: Any, path: str = "$") -> list[str]:
@@ -139,6 +144,9 @@ def load_contract_registry(path: Path = DEFAULT_CONTRACT_REGISTRY) -> dict[str, 
             raise ValueError(f"contract {contract_id}: rubric must be non-empty string list")
         if not isinstance(contract.get("output_contract"), dict):
             raise ValueError(f"contract {contract_id}: output_contract must be object")
+        forbidden = contract.get("forbidden_input_keys", [])
+        if not isinstance(forbidden, list) or not all(isinstance(x, str) and x.strip() for x in forbidden):
+            raise ValueError(f"contract {contract_id}: forbidden_input_keys must be string list")
         perms = contract.get("permissions")
         if not isinstance(perms, dict):
             raise ValueError(f"contract {contract_id}: permissions must be object")
@@ -160,6 +168,10 @@ def make_contract_job(contract_id: str, subject_id: str, input_payload: dict[str
     contract = registry["contracts"].get(contract_id)
     if not isinstance(contract, dict):
         raise ValueError(f"unknown model contract: {contract_id}")
+    forbidden = set(contract.get("forbidden_input_keys", []))
+    blocked = find_named_keys(input_payload, forbidden) if forbidden else []
+    if blocked:
+        raise ValueError(f"contract {contract_id} input contains forbidden fields: " + ", ".join(blocked))
     job = {
         "job_id": job_id or ("SEM-CONTRACT-" + hashlib.sha256(f"{contract_id}:{subject_id}".encode("utf-8")).hexdigest()[:16]),
         "kind": contract["kind"],
@@ -317,10 +329,17 @@ def eval_judgments(validated_results: list[dict[str, Any]]) -> dict[str, Any]:
     for result in validated_results:
         if result["kind"] != "eval_judge" or result["status"] != "completed":
             continue
-        j = result["judgment"]
-        payload = {"codes": j.get("codes", []), "evidence": j.get("evidence", []), "confidence": j.get("confidence"), "worker": result.get("worker"), "input_fingerprint": result.get("input_fingerprint"), "execution": result.get("execution")}
-        if j.get("verdict") is not None: payload["verdict"] = j["verdict"]
-        if j.get("result") is not None: payload["result"] = j["result"]
+        judgment = result["judgment"]
+        payload = {
+            "codes": judgment.get("codes", []),
+            "evidence": judgment.get("evidence", []),
+            "confidence": judgment.get("confidence"),
+            "worker": result.get("worker"),
+            "input_fingerprint": result.get("input_fingerprint"),
+            "execution": result.get("execution"),
+        }
+        if judgment.get("verdict") is not None: payload["verdict"] = judgment["verdict"]
+        if judgment.get("result") is not None: payload["result"] = judgment["result"]
         out[result["subject_id"]] = payload
     return out
 
@@ -338,12 +357,20 @@ def self_test() -> int:
     registry_ok = not validate_job(contract_job) and not validate_result(contract_job, good)
     typed_reject = any("above maximum" in e for e in validate_result(contract_job, bad))
     boundary_ok = contract_job["permissions"]["canon_write"] is False and contract_job["provenance"]["source"] == "model_contract_registry"
-    ok = not validate_job(eval_job) and not validate_result(eval_job, eval_result) and lineage_independent and registry_ok and typed_reject and boundary_ok
+
+    input_guard = False
+    try:
+        make_contract_job("learning.mechanism_analyze", "CORP-SELF", {"research_question": "x", "source": {"raw_text": "forbidden"}})
+    except ValueError:
+        input_guard = True
+
+    ok = not validate_job(eval_job) and not validate_result(eval_job, eval_result) and lineage_independent and registry_ok and typed_reject and boundary_ok and input_guard
     dump_json({
         "semantic_router_contract": "PASS" if ok else "FAIL",
         "fingerprint_excludes_runtime_lineage": lineage_independent,
         "model_contract_registry": registry_ok,
         "typed_output_validation": typed_reject,
+        "contract_input_guard": input_guard,
         "semantic_intelligence_externalized": boundary_ok,
         "model_execution": False,
     })
@@ -371,14 +398,15 @@ def main() -> int:
         dump_json({"schema": registry["schema"], "version": registry.get("version"), "contracts": sorted(registry["contracts"]), "model_execution": False}); return 0
     if args.command == "validate-jobs":
         payload = load_json(Path(args.jobs))
-        errors = [f"{j.get('job_id')}: {e}" for j in payload.get("jobs", []) for e in validate_job(j)]
+        errors = [f"{job.get('job_id')}: {error}" for job in payload.get("jobs", []) for error in validate_job(job)]
         if errors:
-            for e in errors: print(e, file=sys.stderr)
+            for error in errors: print(error, file=sys.stderr)
             return 1
-        print(f"validated semantic jobs: {len(payload.get('jobs', []))}"); return 0
+        print(f"validated semantic jobs: {len(payload.get('jobs', []))}")
+        return 0
     validated, errors = validate_results(load_json(Path(args.jobs)), load_json(Path(args.results)))
     if errors:
-        for e in errors: print(e, file=sys.stderr)
+        for error in errors: print(error, file=sys.stderr)
         return 1
     judgments = eval_judgments(validated)
     if args.judgments_output: dump_json(judgments, Path(args.judgments_output))
