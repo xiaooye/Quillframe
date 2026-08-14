@@ -1,325 +1,311 @@
 <div align="center">
   <img src="../assets/brand/novelforge-lockup.svg" alt="NovelForge — Adaptive Fiction Agent Framework" width="560" />
-  <p><strong>Architecture Atlas · subsystem-by-subsystem</strong></p>
-  <p><kbd>STORY</kbd>&nbsp;&nbsp;<kbd>RUNTIME</kbd>&nbsp;&nbsp;<kbd>QUALITY</kbd>&nbsp;&nbsp;<kbd>LEARNING</kbd>&nbsp;&nbsp;<kbd>PROJECT ENGINEERING</kbd></p>
+  <p><strong>Architecture Atlas · exact subsystem ownership without source-tree archaeology</strong></p>
+  <p><kbd>PROJECT</kbd>&nbsp;&nbsp;<kbd>FICTION</kbd>&nbsp;&nbsp;<kbd>SEMANTIC</kbd>&nbsp;&nbsp;<kbd>RUNTIME</kbd>&nbsp;&nbsp;<kbd>QUALITY</kbd>&nbsp;&nbsp;<kbd>EVIDENCE</kbd></p>
+  <p><a href="architecture-atlas.zh-CN.md">简体中文</a> · <a href="architecture.en.md">Architecture</a></p>
 </div>
 
 <img src="../assets/brand/story-thread.svg" alt="" width="100%" />
 
 # Architecture Atlas
 
-> 🌸 **The top-level architecture tells you how domains relate. This atlas tells you what each subsystem actually owns, what it refuses to own, and where its exact contract lives.**
+[Architecture](architecture.en.md) explains how NovelForge's major authority domains relate. This atlas answers the next question: **which subsystem owns a concrete problem, what is it forbidden to own, and where is the exact contract?**
 
-<img src="../assets/ui/home-architecture.en.svg" alt="NovelForge five-domain architecture" width="100%" />
+<img src="../assets/ui/home-architecture.en.svg" alt="NovelForge system map separating Project authority, semantic contracts, deterministic runtime, and evidence" width="100%" />
 
 ---
 
-## 01 · Project Boundary & Context Broker
+## 01 · Project SDK and Project Adapter
 
-**Purpose.** Bind one consumer project to one exact NovelForge framework revision and build task-scoped context without dumping the whole project into every model invocation.
+**Owns:** the consuming-project contract: project identity, `novelforge.toml`, exact dependency lock, standard / mapped layouts, validation, deterministic project build, and resolution of logical Project paths.
 
-**Owns.** Project manifest, exact lock resolution, adapter mapping, authority-path resolution, sparse Context Manifest construction, artifact fingerprints.
+**Refuses to own:** the Framework cannot become the database for one novel, and an adapter cannot silently change Project authority merely because it can resolve a file path.
 
-**Does not own.** Story truth itself, semantic review verdicts, user preferences, or runtime session history.
-
-```text
-Project manifest + lock
-→ Project Adapter
-→ authority/profile/state resolution
-→ task-scoped Context Manifest
-→ manager / specialist invocation
-```
-
-**Important boundary.** Storage presence ≠ prompt inclusion. Future plans, irrelevant Canon, regression gold, and manager history do not enter context unless the active task genuinely requires them.
+Use the SDK when creating / validating a Project. Use the Adapter when an existing repository should preserve its mature layout while satisfying NovelForge's logical contract.
 
 References: [Project SDK](project-sdk.en.md) · [Project Adapters](project-adapters.en.md) · [Project Adapter Protocol](../harness/PROJECT_ADAPTER_PROTOCOL.en.md)
 
 ---
 
-## 02 · Story System
+## 02 · Canon / State and Settlement Runtime
 
-**Purpose.** Model the structural hierarchy and causal progression of fiction rather than treating a novel as an undifferentiated stream of text.
+**Owns:** authority classes and the high-authority transition from explicitly accepted artifact to authorized Project writes.
 
-**Owns.** `BOOK → VOLUME → ARC → UNIT → CHAPTER → SCENE` hierarchy, structural objectives, causal movement, open loops, story dependencies, and story-level failure ownership.
+Canon / State distinguishes `locked`, `accepted`, `active_plan`, `review`, and `proposal`. The exact Project precedence remains Project-owned.
 
-**Does not own.** Character-private knowledge, final prose surface, runtime sessions, or automatic Canon settlement.
+Settlement Runtime owns transaction mechanics only: explicit acceptance receipt, accepted-artifact fingerprint, checkpoint / write authorization, exact create / update / delete intent, compare-and-swap before-state, rollback behavior, required projection receipts, idempotency, and postcondition verification.
 
-```text
-accepted prior state
-+ active plan
-+ current scene problem
-→ Story Preflight
-→ Scene Simulation
-→ state-changing event trajectory
-```
+**Refuses to own:** settlement does not infer acceptance, State Delta, Canon meaning, or literary intent. Review output, memory, semantic verdicts, Corpus evidence, and scenario branches cannot write themselves into Canon.
+
+References: [Canon State](../core/CANON_STATE.en.md) · `harness/settlement_runtime.py`
+
+---
+
+## 03 · Story System
+
+**Owns:** structural hierarchy, story-level pressure, causal movement, open loops, dependencies, and story-level repair ownership.
+
+NovelForge can represent `BOOK → VOLUME → ARC → UNIT → CHAPTER → SCENE` without pretending every project must use the same storytelling style.
+
+**Refuses to own:** character-private knowledge, final prose realization, or automatic Canon settlement.
+
+When a scene premise is causally broken, repair belongs here or in Plan—not in sentence polishing.
 
 Reference: [Story System](../core/STORY_SYSTEM.en.md)
 
 ---
 
-## 03 · Character & Relationship System
+## 04 · Character & Relationship System
 
-**Purpose.** Keep important characters behaviorally and epistemically independent instead of allowing the manager/outline to speak through everyone.
+**Owns:** agenda, beliefs, knowledge boundary, independent action, voice ownership, spatial / task state, interests, obligations, relationship position, and emotional / event aftermath.
 
-**Owns.** Character agenda, knowledge boundary, voice ownership, location/presence, interests, relationship state, obligations, tasks, emotional aftermath, and character-owned decisions.
+**Refuses to own:** manager knowledge, reader knowledge, author intent, or planned reactions merely because an outline contains them.
 
-**Does not own.** Omniscient manager knowledge or planned reactions merely because they appear in an outline.
+The system exists so important characters can resist, misunderstand, improvise, or pursue their own interests without becoming puppets of the plan.
 
-```text
-character state + relationship state + scene pressure
-→ Character Simulation
-→ plausible action / refusal / mistake / reaction
-→ scene-state update proposal
-```
-
-Reference: [Character System](../core/CHARACTER_SYSTEM.en.md)
+Reference: [Character & Relationship System](../core/CHARACTER_SYSTEM.en.md)
 
 ---
 
-## 04 · Canon State & Settlement
+## 05 · Story-Simulation semantic pack
 
-**Purpose.** Prevent plans, reviews, memories, corpus evidence, or model guesses from silently becoming story truth.
+**Owns semantic judgment for:** pre-draft character action and scene-level causal resolution.
 
-**Owns.** Authority lifecycle such as `locked > accepted > active_plan > review > proposal`, accepted-state evidence, before/after settlement, dependency impact, post-condition checks, and settlement traces.
+The pack exposes:
 
-**Does not own.** Automatic acceptance. A Review Draft is not Canon merely because it passed QA.
+- `character.action_propose` — proposes plausible character-owned action from typed character / relationship / scene evidence;
+- `scene.resolve_actions` — resolves those actions against one another and world constraints into a causal event trajectory.
 
-```text
-explicit user acceptance
-→ freeze accepted artifact
-→ state delta
-→ exact before-state validation
-→ dependency impact
-→ authorized write
-→ derived-view rebuild
-→ post-condition + trace
-```
+**Refuses to own:** deterministic routing, Project authority, or Canon mutation. The model proposes semantic outcomes; the manager / runtime package and validate the bounded job.
 
-Reference: [Canon State](../core/CANON_STATE.en.md)
+Source: `harness/semantic_workers/contracts/story-simulation.json`
 
 ---
 
-## 05 · Harness Manager
+## 06 · Context Inspector, Memory Tiers, and Memory Bank
 
-**Purpose.** Coordinate a task-aware production run without turning “multi-agent” into a goal by itself.
+**Owns deterministic control for:** context provenance, hard budgets, memory authority classes, explicit pin / reprioritize / invalidate controls, and protected-memory edit boundaries.
 
-**Owns.** Exactly one task mode, capability resolution, sparse context, checkpointing, bounded specialist dispatch, gate ordering, external wait/resume, result validation, and user-visible completion truth.
+When relevance itself requires interpretation, semantic selection belongs to the `context-research` pack's `context.select` contract.
 
-**Does not own.** Independent semantic judgment when independence is mandatory, or project-specific story facts.
+**Refuses to own:** pseudo-literary relevance scores, silent automatic prompt injection, or Canon mutation. A protected `accepted` / `locked` edit becomes a non-authoritative proposal rather than rewriting story truth.
 
-```text
-user request
-→ resolve task mode
-→ capability + authority preflight
-→ context freeze
-→ production / audit / research / learning graph
-→ required gates
-→ truthful user-visible status
-```
+Guide: [Context & Memory](context-and-memory.en.md)
 
-Reference: [Harness Agent](../harness/HARNESS_AGENT.en.md) · [Orchestration Protocol](../harness/ORCHESTRATION_PROTOCOL.en.md)
+Implementation: `harness/context_inspector.py` · `harness/memory_tiers.py` · `harness/memory_bank.py`
 
 ---
 
-## 06 · Session Runtime
+## 07 · Semantic Contract Catalog
 
-**Purpose.** Make long-running work resumable across waits, tool calls, provider changes, process restarts, and external workers.
+**Owns:** the smallest deterministic index needed to discover semantic contract packs.
 
-**Owns.** Session/run/checkpoint/event identity, workflow cursor, pending waits, handoff/result binding, resume validation, and consume-once behavior.
+`harness/semantic_workers/model_contract_catalog.json` is the **only registry index**. It describes packs, contract IDs, and load conditions. The manager / model chooses the smallest relevant pack; runtime resolves an exact contract ID to exactly one pack.
 
-**Does not own.** Canon. Provider-native conversation IDs remain metadata.
+Current pack families are:
 
-```text
-project/resource
-→ session
-→ run
-→ checkpoint
-→ event / handoff
-→ result
-→ validate / consume once
-→ resume
-```
+- quality;
+- narrative-memory;
+- learning;
+- context-research;
+- story-simulation;
+- long-horizon;
+- creative-evolution.
 
-Reference: [Session Runtime](../harness/session_runtime/SESSION_RUNTIME.en.md) · [Runtime Routing](../harness/session_runtime/RUNTIME_ROUTING.en.md)
+**Refuses to own:** keyword-routing literary intent, loading every contract by default, or deciding semantic meaning on behalf of the model.
 
----
-
-## 07 · Runtime Capability Broker
-
-**Purpose.** Route work only through capabilities that are actually available and permitted in the current host.
-
-**Owns.** Capability discovery/normalization, permission constraints, model-execution availability, usage constraints, and eligible transport selection.
-
-**Does not own.** Authority. A connector or runtime that can perform a write does not gain permission to mutate Canon.
-
-Examples of eligible transports can include current chat, separate peer chat, local Codex/Claude, provider APIs, MCP, GitHub jobs, local models, and humans.
-
-Reference: [Runtime Capabilities](../harness/session_runtime/RUNTIME_CAPABILITIES.en.md)
+Reference: [Semantic Worker Protocol](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md)
 
 ---
 
-## 08 · Durable Control Plane
+## 08 · Semantic Worker Router and Execution Runtime
 
-**Purpose.** Track external/parallel operational work without letting asynchronous infrastructure become a hidden source of story truth.
+**Owns deterministic packaging / transport:** exact contract resolution, bounded semantic job construction, permissions, semantic fingerprints, typed result validation, provider-neutral execution lineage, and consume-once result handling.
 
-**Owns.** Events, handoffs, leases, result receipts, lifecycle state, idempotency, consume-once semantics, and operational provenance.
+Adapters may route to local agents, provider APIs, peer-chat relay, MCP / service paths, or other eligible transports.
 
-**Does not own.** Semantic validity or Canon authority.
+**Refuses to own:** literary judgment. The runtime validates the contract and result shape; the model performs the interpretation.
 
-```text
-manager dispatch
-→ handoff / lease
-→ external work
-→ typed result receipt
-→ fingerprint/provenance validation
-→ consume once
-```
+It also refuses to pretend every semantic call is independent. Independence is enforced only when the active gate requires a genuinely separate invocation / session.
+
+References: [Semantic Worker Protocol](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md) · [Semantic Execution Runtime](../harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.en.md)
+
+---
+
+## 09 · Harness Manager and Orchestration
+
+**Owns:** one primary `task_mode`, Framework / Project bootstrap, sparse context, capability resolution, checkpoint timing, bounded specialist use, semantic-pack selection, external waits, failure routing, gate ordering, result validation, and truthful user-visible completion state.
+
+**Refuses to own:** Project story facts or fake independent judgment. The manager coordinates the system; it does not become a second Canon database and cannot self-certify an independent gate inside the same invocation.
+
+References: [Harness Agent](../harness/HARNESS_AGENT.en.md) · [Orchestration Protocol](../harness/ORCHESTRATION_PROTOCOL.en.md)
+
+---
+
+## 10 · Session Runtime
+
+**Owns:** durable identity and recovery semantics for `resource / project`, `session / thread`, `run / invocation`, and `checkpoint`.
+
+It records workflow cursor, waits, before-state, handoff bindings, and resume-relevant evidence so long-running work can survive process / provider boundaries.
+
+**Refuses to own:** Canon. A provider conversation ID or persistent chat session remains runtime metadata.
+
+Reference: [Session Runtime](../harness/session_runtime/SESSION_RUNTIME.en.md)
+
+---
+
+## 11 · Runtime Capabilities and Routing
+
+**Owns:** evidence of what the current host can actually do, including permission, availability, user-interaction requirements, model-execution capability, and usage constraints.
+
+Runtime Routing selects an eligible path only after those capabilities are known.
+
+**Refuses to own:** authority. Provider name is not capability proof; capability is not Canon-write permission.
+
+References: [Runtime Capabilities](../harness/session_runtime/RUNTIME_CAPABILITIES.en.md) · [Runtime Routing](../harness/session_runtime/RUNTIME_ROUTING.en.md)
+
+---
+
+## 12 · Durable Control Plane
+
+**Owns:** operational state for external / parallel work: events, handoffs, bounded leases, result receipts, idempotency, lifecycle, provenance, and logical consume-once behavior.
+
+**Refuses to own:** semantic validity, Project authority, or story direction. A worker result must still pass the semantic / authority contract that owns its use.
 
 Reference: [Control Plane](../harness/control_plane/CONTROL_PLANE.en.md)
 
 ---
 
-## 09 · Semantic Worker Runtime
+## 13 · Surface Fundamentals and Reader Engagement
 
-**Purpose.** Provide real independent judgment when a task requires semantic evaluation that the manager cannot validly self-produce.
+These are two different generic quality layers.
 
-**Owns.** Independent session/invocation identity, bounded review packets, artifact fingerprint binding, typed verdicts, reviewer freshness policy, and result validation.
+**Surface Fundamentals owns:** recurring prose-realization failure mechanisms and the distinction between isolated repair and cluster-level regeneration.
 
-**Does not own.** Automatic repair or authority promotion. A reviewer says what failed; the owning mechanism decides how to repair it.
+**Reader Engagement owns:** pressure, payoff, causal movement, contrast, reader reward, relationship movement, forward pull, and SAFE-BUT-FLAT diagnosis.
 
-```text
-frozen candidate
-→ bounded blind packet
-→ independent invocation/session
-→ typed fingerprint-bound result
-→ manager validates
-→ owning repair layer
-```
+**They refuse to own:** story authority and deterministic runtime invariants. A reader problem may route upstream into scene design; a surface-clean candidate can still be bad fiction.
 
-Reference: [Semantic Worker Protocol](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md) · [Semantic Execution Runtime](../harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.en.md)
+References: [Surface Fundamentals](../surface/FUNDAMENTALS.en.md) · [Reader Engagement](../surface/READER_ENGAGEMENT.en.md)
 
 ---
 
-## 10 · Surface Fundamentals
+## 14 · Quality semantic pack and Findings
 
-**Purpose.** Enforce generic anti-AI realization rules at the prose surface without confusing surface cleanliness with reader quality.
+The `quality` pack exposes model-owned interpretation for:
 
-**Owns.** Known malformed/AI-ish surface mechanisms and the distinction between local surface repair and cluster-level regeneration.
+- `reader.reaction`;
+- `reader.compare`;
+- `character.integrity`;
+- `revision.diagnose`.
 
-**Does not own.** Story design, character motivation, or reader pressure.
+Typed findings make semantic diagnosis traceable and attach it to an exact artifact / evidence context.
 
-Reference: [Surface Fundamentals](../surface/FUNDAMENTALS.en.md)
+**Refuses to own:** automatic repair, automatic independent-gate status, or Canon authority. Reader simulation is diagnostic evidence unless a separate workflow explicitly requires independence.
 
----
-
-## 11 · Reader Engagement
-
-**Purpose.** Judge whether the text actually creates reading pressure, payoff, causal movement, contrast, and forward pull.
-
-**Owns.** Reader-facing quality dimensions and SAFE-BUT-FLAT detection.
-
-**Does not own.** Grammar-only correctness or deterministic lifecycle invariants.
-
-```text
-surface-safe candidate
-→ reader pressure / reward / causality / contrast review
-→ PASS
-or
-→ upstream Scene Simulation + Reader Pressure repair
-```
-
-Reference: [Reader Engagement](../surface/READER_ENGAGEMENT.en.md)
+References: [Quality & QA](quality-assurance.en.md) · `harness/semantic_workers/contracts/quality.json` · `quality/findings.py`
 
 ---
 
-## 12 · Adaptive Learning
+## 15 · Quality Evolution and Creative Evolution
 
-**Purpose.** Learn from user evidence without turning model guesses into permanent preference rules.
+**Quality Evolution ledger owns deterministically:** candidate fingerprints, parent lineage, repair owner, comparison identity, result binding, current incumbent, and plateau counters.
 
-**Owns.** Evidence records, preference hypotheses, confidence/contradictions, applicability boundaries, corpus gaps, promotion candidates, versions, and rollback.
+**Creative Evolution semantic pack owns interpretation for:**
 
-**Does not own.** Automatic project Canon or automatic General Craft promotion.
+- `scene.diverge` — materially different causal scenario exploration;
+- `quality.compare` — incumbent / challenger comparison that may select either candidate or return a tie.
 
-```text
-feedback evidence
-→ hypothesis
-→ contradiction / scope analysis
-→ corpus gap
-→ evidence / eval
-→ candidate
-→ activation or rollback
-```
+**Refuses to own:** the deterministic ledger never decides literary quality, and a comparison winner never gains Canon authority.
 
-Reference: [Adaptive Learning](adaptive-learning.en.md) · [Self-improvement Protocol](../harness/SELF_IMPROVEMENT_PROTOCOL.en.md)
+Guide: [Quality Evolution](quality-evolution.en.md)
+
+Implementation: `quality/quality_evolution.py` · `harness/semantic_workers/contracts/creative-evolution.json`
 
 ---
 
-## 13 · Corpus Intelligence
+## 16 · Narrative Memory and Long-Horizon semantic packs
 
-**Purpose.** Acquire lawful evidence and extract mechanism-level observations without confusing external text with project truth or author-imitation templates.
+These packs interpret durable narrative evidence without creating a second Canon.
 
-**Owns.** Discovery requests, source/provenance checks, rights classification, ingestion boundaries, mechanism observations, counterexamples, and cross-work benchmarks.
+**Narrative Memory** can handle source-bound narrative interpretation, `reader.expectations`, and rebuildable memory consolidation.
 
-**Does not own.** Canon, character knowledge, or durable user taste merely because a source was found.
+**Long Horizon** can handle `plan.reconcile`, `relationship.memory_reconcile`, and `continuity.commitment_audit`.
 
-```text
-corpus gap
-→ discovery
-→ source verification + rights
-→ bounded ingest / observation
-→ mechanism analysis
-→ benchmark / eval evidence
-```
+**Refuses to own:** derived narrative state, reader expectations, relationship memory, scenario branches, and state-graph results remain non-authoritative unless Project rules explicitly promote a fact through an authorized boundary.
 
-Reference: [Corpus Intelligence](../corpus/README.en.md) · [Corpus Policy](../corpus/CORPUS_POLICY.en.md)
+Sources: `harness/semantic_workers/contracts/narrative-memory.json` · `harness/semantic_workers/contracts/long-horizon.json`
 
 ---
 
-## 14 · Evals
+## 17 · Adaptive Learning
 
-**Purpose.** Separate deterministic release invariants from blind semantic quality judgments.
+**Owns:** durable evidence, revisable preference hypotheses, contradictions, applicability boundaries, Corpus gaps, learning candidates, evaluation evidence, promotion history, and rollback.
 
-**Owns.** Regression/capability/infrastructure cases, deterministic/rubric/hybrid judge modes, blind queue construction, result scoring, and release-blocking logic.
+Semantic learning work lives in the `learning` pack. Deterministic learning stores / cycles own state transitions and promotion preconditions.
 
-**Does not own.** Fake semantic PASS when no reviewer ran.
+**Refuses to own:** model inference alone cannot become durable user taste; promotion evidence does not itself grant Framework-write authority.
 
-Reference: [Quality & QA](quality-assurance.en.md) · [Eval Reference](../evals/README.en.md)
-
----
-
-## 15 · Project SDK & Release Bundle
-
-**Purpose.** Make both Framework and consuming novels reproducible engineering artifacts.
-
-**Owns.** Manifests, exact locks, validation, build bundles, compatibility checks, migration workflow, release fingerprints, and deterministic build outputs.
-
-**Does not own.** A second copy of project truth. Build bundles and derived views remain rebuildable artifacts.
-
-Reference: [Project SDK](project-sdk.en.md) · [Framework Bundle](../release/FRAMEWORK_BUNDLE.en.md)
+References: [Adaptive Learning](adaptive-learning.en.md) · [Self-Improvement Protocol](../harness/SELF_IMPROVEMENT_PROTOCOL.en.md)
 
 ---
 
-## 16 · Dependency rule ✦
+## 18 · Corpus Intelligence
 
-The complete system obeys one direction:
+**Owns:** evidence discovery planning, source provenance, rights classification, bounded storage / analysis, mechanism observations, counterexamples, and cross-work benchmarks.
 
-```text
-Novel Project → pinned NovelForge Framework
-NovelForge Framework -X→ consumer-specific story facts
-```
+The `context-research` pack's `corpus.discovery_plan` can propose a semantic discovery plan; deterministic capability / rights layers decide whether and how that plan may actually execute.
 
-And one authority principle:
+**Refuses to own:** search success is not ingestion permission; Corpus is not Canon; external truth is not automatic character knowledge; named-author imitation profiles are out of bounds.
 
-```text
-capability ≠ authority
-memory ≠ Canon
-review ≠ acceptance
-corpus ≠ story truth
-learning hypothesis ≠ durable rule
-```
+References: [Corpus Intelligence](../corpus/README.en.md) · [Corpus Policy](../corpus/CORPUS_POLICY.en.md) · [Corpus Ingest Protocol](../corpus/CORPUS_INGEST_PROTOCOL.en.md)
+
+---
+
+## 19 · Evals
+
+**Owns:** deterministic, rubric, and hybrid evaluation cases; blind semantic queue construction; scoring; baseline / release logic; and the distinction between actual judgment and `PENDING_MODEL`.
+
+**Refuses to own:** normal CI may not fabricate semantic PASS and may not silently spend paid / login-bound model usage.
+
+References: [Eval Reference](../evals/README.en.md) · [Quality & QA](quality-assurance.en.md)
+
+---
+
+## 20 · Framework Bundle and Release Engineering
+
+**Owns:** deterministic Framework materialization, exact bundle fingerprint, compatibility evidence, reproducible artifacts, and downstream pinning.
+
+**Refuses to own:** a bundle does not create a second story database and does not make derived output authoritative.
+
+Reference: [Framework Bundle](../release/FRAMEWORK_BUNDLE.en.md)
+
+---
+
+## 21 · The atlas test: where should a failure go?
+
+If you cannot answer “which subsystem owns this failure?” the architecture is becoming too blurry.
+
+A few examples:
+
+**The character knows future-plan information** → Character / Context, possibly upstream Story / Plan.
+
+**The scene is polished but inert** → Reader Pressure + Scene Simulation.
+
+**The reviewer judged an old fingerprint** → Semantic Runtime / validation.
+
+**The repair candidate is merely different** → Quality Evolution / `quality.compare`.
+
+**A relationship memory conflicts with Accepted evidence** → Long Horizon reconciliation; do not overwrite Canon from memory.
+
+**A source is discoverable but rights are unclear** → Corpus rights / provenance gate.
+
+**The user accepted prose but a before-state changed before write** → Settlement Runtime → `settlement_incomplete`.
+
+That routing discipline is the architecture's real value.
 
 <div align="center">
   <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom mark" width="52" />
   <br />
-  <sub>Every subsystem gets a narrow job. Most safety comes from refusing to let those jobs blur together. ✦</sub>
+  <sub>Narrow owners. Explicit boundaries. Deep links only when you need them. ✦</sub>
 </div>
