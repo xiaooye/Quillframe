@@ -21,9 +21,9 @@ frozen subject
 
 如果这是 mandatory independent gate，真正执行 judgment 的 invocation / session 还必须额外满足 independence contract。
 
-## 02 · Model Contract Registry
+## 02 · Model Contract Catalog 与 Packs
 
-当前 semantic behavior 统一写在 [`model_contracts.json`](model_contracts.json)，而不是分散成一堆专用 Python “critic engine”。
+当前 semantic behavior 由 [`model_contract_catalog.json`](model_contract_catalog.json) 索引，并定义在按需加载的 contract packs 中，而不是分散成一堆专用 Python “critic engine”。
 
 一份 model contract 定义：
 
@@ -37,7 +37,7 @@ frozen subject
 
 当前可能包括 Reader reaction / comparison、Character Integrity、Revision diagnosis、Reader Expectations、Narrative State interpretation、Memory Consolidation、Corpus mechanism analysis、Learning eval judgment 等。
 
-新增 semantic capability 时，默认先问“它是不是应该进入这个 registry”，而不是先写新的 specialized runtime code。
+新增 semantic capability 时，默认先问“它是不是应该进入现有 contract pack”，而不是先写新的 specialized runtime code。
 
 ## 03 · Semantic job identity
 
@@ -262,4 +262,4 @@ semantic judgment
 - [Runtime Routing](../session_runtime/RUNTIME_ROUTING.zh-CN.md)：通用 route eligibility。
 - [Control Plane](../control_plane/CONTROL_PLANE.zh-CN.md)：queued handoff / lease / result consumption。
 - [质量演进](../../docs/quality-evolution.zh-CN.md)：模型负责质量语义、确定性 ledger 负责持久状态。
-- [`model_contracts.json`](model_contracts.json)：live semantic behavior registry。
+- [`model_contract_catalog.json`](model_contract_catalog.json)：按需加载 semantic contract packs 的实时目录。
