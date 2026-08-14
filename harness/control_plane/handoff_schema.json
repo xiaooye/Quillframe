@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novel-os-handoff-v1",
+  "title": "Novel Production OS Cross-Session Handoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "handoff_id",
+    "source_session_id",
+    "target_session_class",
+    "resource_id",
+    "artifact_refs",
+    "artifact_fingerprints",
+    "context_policy",
+    "permissions",
+    "return_contract"
+  ],
+  "properties": {
+    "schema": {"const": "novel_os_handoff_v1"},
+    "handoff_id": {"type": "string", "minLength": 1},
+    "source_session_id": {"type": "string", "minLength": 1},
+    "target_session_class": {
+      "enum": ["manager", "writer", "specialist", "semantic_reviewer", "human_reviewer", "other"]
+    },
+    "resource_id": {"type": "string", "minLength": 1},
+    "task_mode": {"type": ["string", "null"]},
+    "artifact_refs": {"type": "array", "items": {"type": "string"}},
+    "artifact_fingerprints": {"type": "array", "items": {"type": "string"}},
+    "instructions_ref": {"type": ["string", "null"]},
+    "context_policy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "hidden_gold": {"const": "forbidden"}
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["canon_write", "os_behavior_write", "durable_user_taste_write"],
+      "properties": {
+        "canon_write": {"const": false},
+        "os_behavior_write": {"const": false},
+        "durable_user_taste_write": {"const": false},
+        "allowed_result_scope": {"type": "string"}
+      }
+    },
+    "return_contract": {"type": "object"},
+    "relay_nonce": {"type": ["string", "null"]}
+  }
+}
