@@ -79,10 +79,22 @@ corpus:
     zh_cn: corpus/CORPUS_INGEST_PROTOCOL.zh-CN.md
   scout: corpus/corpus_scout.py
   rights_gate: corpus/rights_gate.py
+  benchmark_registry: corpus/benchmarks/mechanisms.json
   rights_classes: [redistributable, analysis_only, unknown]
   discovery_is_not_ingestion: true
   full_modern_copyright_mirroring_default: forbidden
   named_author_imitation_profile: forbidden
+
+evals:
+  overview:
+    en: evals/README.en.md
+    zh_cn: evals/README.zh-CN.md
+  manifest: evals/eval_manifest.json
+  runner: evals/run_evals.py
+  blind_queue_builder: evals/build_judge_queue.py
+  semantic_missing_state: PENDING_MODEL
+  hidden_expected_in_reviewer_queue: forbidden
+  normal_ci_live_model_execution: forbidden
 
 project_engineering:
   contract:
@@ -161,19 +173,19 @@ normal_ci:
   model_execution: forbidden
   required:
     - py_compile
+    - repository-hygiene
     - project-sdk-self-test
     - learning-store-self-test
     - corpus-scout-self-test
     - corpus-rights-gate-self-test
+    - generic-eval-deterministic-release
+    - generic-eval-blind-queue
     - session-self-test
     - control-plane-self-test
     - mcp-self-test
     - semantic-router-self-test
     - local-agent-adapter-self-test
     - optional-openai-dry-run
-    - framework-project-leakage-check
-    - bilingual-doc-pair-check
-    - manifest-link-check
 
 write_boundary:
   connector_event_grants_canon_authority: false
