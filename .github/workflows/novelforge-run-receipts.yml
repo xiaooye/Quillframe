@@ -1,0 +1,63 @@
+name: NovelForge Run Receipt Contracts
+
+on:
+  pull_request:
+    paths:
+      - 'harness/control_plane/run_receipt.py'
+      - 'harness/control_plane/run_receipt_schema.json'
+      - 'harness/control_plane/event_schema.json'
+      - '.github/workflows/novelforge-run-receipts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  run-receipt-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile receipt boundary
+        run: |
+          python -m py_compile harness/control_plane/run_receipt.py harness/control_plane/control_plane.py
+
+      - name: Run metadata-only receipt self-test
+        run: |
+          python harness/control_plane/run_receipt.py \
+            --db /tmp/novelforge-run-receipt-ci.db \
+            self-test > run-receipt-test.json
+          python - <<'PY'
+          import json
+          d=json.load(open('run-receipt-test.json',encoding='utf-8'))
+          assert d['run_receipt_contract']=='PASS',d
+          assert d['metadata_only'] is True
+          assert d['authority'] is False
+          assert d['question_evidence_partition_guard'] is True
+          assert d['idempotent_replay'] is True
+          assert d['same_receipt_id_changed_payload_conflict'] is True
+          assert d['durable_store']=='control_plane_event_log'
+          assert d['model_execution'] is False
+          PY
+
+      - name: Verify schema and event binding
+        run: |
+          python - <<'PY'
+          import json
+          schema=json.load(open('harness/control_plane/run_receipt_schema.json',encoding='utf-8'))
+          event=json.load(open('harness/control_plane/event_schema.json',encoding='utf-8'))
+          assert schema['properties']['schema']['const']=='novelforge_run_receipt_v1'
+          assert schema['properties']['authority']['const'] is False
+          assert 'candidate_text' not in schema['properties']
+          assert 'run.receipt_recorded' in event['properties']['event_type']['enum']
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: novelforge-run-receipt-contract
+          path: run-receipt-test.json
+          if-no-files-found: error
