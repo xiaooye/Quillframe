@@ -4,15 +4,6 @@ on:
   schedule:
     - cron: '37 6 * * 0'
   workflow_dispatch:
-  push:
-    paths:
-      - 'learning/**'
-      - 'corpus/**'
-      - 'evals/**'
-      - 'harness/runtime_capabilities.py'
-      - 'harness/SELF_IMPROVEMENT_PROTOCOL*'
-      - 'release/**'
-      - '.github/workflows/novelforge-weekly-maintenance.yml'
 
 permissions:
   contents: read
@@ -25,6 +16,7 @@ concurrency:
 jobs:
   maintenance:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -123,6 +115,7 @@ jobs:
             maintenance-rights-gate.json
             maintenance-framework-bundle.json
           if-no-files-found: warn
+          retention-days: 14
 
       - name: Update maintenance inbox issue
         if: always()
