@@ -10,6 +10,7 @@ scope:
   dependency_direction: project-to-framework-only
   supported_project_contract: novelforge_project_v1
   project_sdk: project_sdk.py
+  project_adapter: project_adapter.py
 
 fundamentals:
   story_system:
@@ -100,9 +101,13 @@ project_engineering:
   contract:
     en: docs/project-sdk.en.md
     zh_cn: docs/project-sdk.zh-CN.md
+  adapter_contract:
+    en: harness/PROJECT_ADAPTER_PROTOCOL.en.md
+    zh_cn: harness/PROJECT_ADAPTER_PROTOCOL.zh-CN.md
   manifest: novelforge.toml
   lockfile: novelforge.lock.json
   local_framework_materialization: .novelforge/framework
+  layouts: [standard, mapped]
   change_classes: [micro_content, chapter_unit, structural_feature, canon_migration, release]
   structural_change_flow: [spec, plan, tasks, implementation, verification, acceptance]
   deterministic_project_build: required
@@ -175,6 +180,7 @@ normal_ci:
     - py_compile
     - repository-hygiene
     - project-sdk-self-test
+    - project-adapter-self-test
     - learning-store-self-test
     - corpus-scout-self-test
     - corpus-rights-gate-self-test
