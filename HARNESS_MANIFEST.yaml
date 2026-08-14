@@ -231,15 +231,15 @@ runtime_capabilities:
   common_capabilities: [filesystem_read, filesystem_write, subprocess, git_cli, github_cli, codex_cli, claude_cli, web_search, github_search, user_files, file_library, mcp_client, mcp_server, provider_api, semantic_model, peer_chat_relay, human_reviewer]
 
 control_plane:
-  schema: novel_os_control_plane_v1
-  event_schema: novel_os_event_v1
-  handoff_schema: novel_os_handoff_v1
+  schema: novelforge_control_plane_v1
+  event_schema: novelforge_event_v1
+  handoff_schema: novelforge_handoff_v1
   event_idempotency: required
   handoff_claim: transactional-bounded-lease
   result_consumption: exactly-once-logical-receipt
   canon_authority: false
   framework_promotion_authority: false
-  default_local_db: .novel-os/runtime.db
+  default_local_db: .novelforge/runtime.db
   mcp:
     protocol_version: 2025-06-18
     local_transport: stdio
