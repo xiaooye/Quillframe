@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA = "novelforge_quality_evolution_v1"
-ACTIVE_STATES = {"active", "plateau", "complete"}
 REPAIR_OWNERS = {
     "story", "plan", "scene", "character", "reader", "surface",
     "continuity", "context", "memory", "research", "runtime", "human",
@@ -152,6 +151,23 @@ def record_comparison(conn: sqlite3.Connection, *, run_id: str, comparison_id: s
                       incumbent_candidate_id: str, challenger_candidate_id: str,
                       winner_candidate_id: str | None, result: dict[str, Any]) -> dict[str, Any]:
     run = _run(conn, run_id)
+    result_fp = canonical_fingerprint(result)
+    # Idempotent replay must be recognized before checking current state/incumbent,
+    # because a successful comparison may already have advanced the incumbent or
+    # moved the run to plateau.
+    existing = conn.execute("SELECT * FROM evolution_comparisons WHERE run_id=? AND comparison_id=?", (run_id, comparison_id)).fetchone()
+    if existing:
+        if (
+            existing["result_fingerprint"] != result_fp
+            or existing["incumbent_candidate_id"] != incumbent_candidate_id
+            or existing["challenger_candidate_id"] != challenger_candidate_id
+            or existing["winner_candidate_id"] != winner_candidate_id
+        ):
+            raise ValueError("comparison_id already consumed with different comparison/result")
+        return status(conn, run_id)
+    consumed = conn.execute("SELECT comparison_id FROM evolution_comparisons WHERE run_id=? AND result_fingerprint=?", (run_id, result_fp)).fetchone()
+    if consumed:
+        raise ValueError(f"comparison result already consumed by {consumed['comparison_id']}")
     if run["state"] != "active":
         raise ValueError(f"run is not active: {run['state']}")
     if incumbent_candidate_id != run["incumbent_candidate_id"]:
@@ -164,16 +180,7 @@ def record_comparison(conn: sqlite3.Connection, *, run_id: str, comparison_id: s
         raise ValueError("challenger must descend from current incumbent")
     if winner_candidate_id is not None and winner_candidate_id not in {incumbent_candidate_id, challenger_candidate_id}:
         raise ValueError("winner must be one of the compared candidates or null for tie/no-decision")
-    result_fp = canonical_fingerprint(result)
     stamp = now()
-    existing = conn.execute("SELECT * FROM evolution_comparisons WHERE run_id=? AND comparison_id=?", (run_id, comparison_id)).fetchone()
-    if existing:
-        if existing["result_fingerprint"] != result_fp:
-            raise ValueError("comparison_id already consumed with different result")
-        return status(conn, run_id)
-    consumed = conn.execute("SELECT comparison_id FROM evolution_comparisons WHERE run_id=? AND result_fingerprint=?", (run_id, result_fp)).fetchone()
-    if consumed:
-        raise ValueError(f"comparison result already consumed by {consumed['comparison_id']}")
     conn.execute(
         "INSERT INTO evolution_comparisons(run_id,comparison_id,incumbent_candidate_id,challenger_candidate_id,winner_candidate_id,result_fingerprint,result_json,consumed_at,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
         (run_id, comparison_id, incumbent_candidate_id, challenger_candidate_id, winner_candidate_id, result_fp,
@@ -241,35 +248,34 @@ def self_test(path: Path) -> int:
         path.unlink()
     conn = connect(path)
     start_run(conn, run_id="RUN-1", subject_id="CH-1", baseline_candidate_id="C0", baseline_text="baseline", plateau_limit=2)
-    # Idempotent resume of the exact same run is allowed.
     start_run(conn, run_id="RUN-1", subject_id="CH-1", baseline_candidate_id="C0", baseline_text="baseline", plateau_limit=2)
     add_candidate(conn, run_id="RUN-1", candidate_id="C1", text="candidate one", repair_owner="reader")
     r1 = {"winner": "C1", "evidence": ["stronger forward pull"]}
     s1 = record_comparison(conn, run_id="RUN-1", comparison_id="CMP-1", incumbent_candidate_id="C0", challenger_candidate_id="C1", winner_candidate_id="C1", result=r1)
-    # Exact replay is idempotent; same result under another comparison id is not.
-    record_comparison(conn, run_id="RUN-1", comparison_id="CMP-1", incumbent_candidate_id="C0", challenger_candidate_id="C1", winner_candidate_id="C1", result=r1)
+    replay = record_comparison(conn, run_id="RUN-1", comparison_id="CMP-1", incumbent_candidate_id="C0", challenger_candidate_id="C1", winner_candidate_id="C1", result=r1)
     consume_once = False
     try:
         record_comparison(conn, run_id="RUN-1", comparison_id="CMP-1B", incumbent_candidate_id="C1", challenger_candidate_id="C0", winner_candidate_id="C1", result=r1)
-    except ValueError:
-        consume_once = True
+    except ValueError as exc:
+        consume_once = "already consumed" in str(exc)
     illegal_winner = False
     add_candidate(conn, run_id="RUN-1", candidate_id="C2", text="candidate two", repair_owner="surface")
     try:
         record_comparison(conn, run_id="RUN-1", comparison_id="CMP-X", incumbent_candidate_id="C1", challenger_candidate_id="C2", winner_candidate_id="C999", result={"winner": "C999"})
-    except ValueError:
-        illegal_winner = True
+    except ValueError as exc:
+        illegal_winner = "winner must be one" in str(exc)
     s2 = record_comparison(conn, run_id="RUN-1", comparison_id="CMP-2", incumbent_candidate_id="C1", challenger_candidate_id="C2", winner_candidate_id="C1", result={"winner": "C1", "evidence": ["no gain"]})
     add_candidate(conn, run_id="RUN-1", candidate_id="C3", text="candidate three", repair_owner="scene")
     s3 = record_comparison(conn, run_id="RUN-1", comparison_id="CMP-3", incumbent_candidate_id="C1", challenger_candidate_id="C3", winner_candidate_id=None, result={"winner": None, "evidence": ["tie"]})
     ok = (
-        s1["incumbent_candidate_id"] == "C1" and s2["state"] == "active"
-        and s3["state"] == "plateau" and consume_once and illegal_winner
-        and s3["authority"] is False and s3["model_execution"] is False
+        s1["incumbent_candidate_id"] == "C1" and replay["incumbent_candidate_id"] == "C1"
+        and s2["state"] == "active" and s3["state"] == "plateau"
+        and consume_once and illegal_winner and s3["authority"] is False and s3["model_execution"] is False
     )
     print(json.dumps({
         "quality_evolution_contract": "PASS" if ok else "FAIL",
         "durable_resume": True,
+        "idempotent_replay": replay["incumbent_candidate_id"] == "C1",
         "logical_consume_once": consume_once,
         "illegal_winner_rejected": illegal_winner,
         "plateau_stopping": s3["state"] == "plateau",
