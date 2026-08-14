@@ -98,6 +98,21 @@ jobs:
               'required_transitions': [{'transition_id':'TR-CI','description':'Negotiation changes the parties leverage.','authority':'active_plan','source_ref':'plan:CI'}],
               'initial_facts': [{'fact_id':'FACT-CI','statement':'The parties begin with unequal leverage.','authority':'accepted','source_ref':'accepted:CI'}],
               'current_story_point':'SCN-CI'
+            },
+            'context.select': {
+              'task': {
+                'task_mode':'DRAFT',
+                'task_goal':'Choose only evidence needed to decide CHAR-CI next action.',
+                'current_story_point':'SCN-CI',
+                'perspective': {'scope':'character','perspective_id':'CHAR-CI'},
+                'active_questions': [{'question_id':'Q-CI','question':'What does CHAR-CI know about the offer?','kind':'state','as_of_story_point':'SCN-CI'}]
+              },
+              'memory_blocks': [{
+                'block_id':'M-CI','pinned':False,'authority':False,'derived':True,
+                'source_refs':['accepted:CI'],'story_point':'SCN-CI',
+                'visibility': {'scope':'character','perspective_id':'CHAR-CI'},
+                'model_view': {'label':'offer','value':'The first offer was lower.'}
+              }]
             }
           }
           jobs={}
@@ -125,7 +140,13 @@ jobs:
           except ValueError:
               transition_guard=True
           assert transition_guard
-          json.dump({'semantic_contract_catalog_contract':'PASS','contracts':sorted(expected),'fingerprints':jobs,'typed_input_contracts':['reader.reaction','character.action_propose','quality.compare','continuity.commitment_audit'],'cold_reader_hidden_plan_guard':cold_reader_blocked,'required_transition_input_guard':transition_guard,'aggregate_registry_present':False,'model_execution':False},open('semantic-contracts-test.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          context_guard=False
+          try:
+              make_contract_job('context.select','CI-CONTEXT-BLOCK',{'memory_blocks':[]})
+          except ValueError:
+              context_guard=True
+          assert context_guard
+          json.dump({'semantic_contract_catalog_contract':'PASS','contracts':sorted(expected),'fingerprints':jobs,'typed_input_contracts':['reader.reaction','character.action_propose','quality.compare','continuity.commitment_audit','context.select'],'cold_reader_hidden_plan_guard':cold_reader_blocked,'required_transition_input_guard':transition_guard,'task_aware_context_input_guard':context_guard,'aggregate_registry_present':False,'model_execution':False},open('semantic-contracts-test.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
           PY
           python harness/semantic_workers/peer_chat_relay.py self-test > peer-chat-test.json
           python harness/semantic_workers/adapters/local_agent_adapter.py --self-test > local-agent-test.json
@@ -207,6 +228,9 @@ jobs:
           loaded={p:json.load(open(p,encoding='utf-8')) for p in checks}
           for p,(k,v) in checks.items():assert loaded[p][k]==v,(p,loaded[p])
           assert loaded['machine-namespace-test.json']['namespace']=='NovelForge-only'
+          assert loaded['memory-tiers-test.json']['schema']=='novelforge_memory_tiers_v3'
+          assert loaded['memory-tiers-test.json']['perspective_incompatible_never_enters_semantic_packet'] is True
+          assert loaded['memory-tiers-test.json']['grounding_reports_budget_drop'] is True
           s=loaded['semantic-router-test.json']
           assert s['fingerprint_excludes_runtime_lineage'] is True
           assert s['catalog_exact_id_resolution'] is True
@@ -217,7 +241,8 @@ jobs:
           assert sc['aggregate_registry_present'] is False
           assert sc['cold_reader_hidden_plan_guard'] is True
           assert sc['required_transition_input_guard'] is True
-          assert set(sc['typed_input_contracts'])=={'reader.reaction','character.action_propose','quality.compare','continuity.commitment_audit'}
+          assert sc['task_aware_context_input_guard'] is True
+          assert set(sc['typed_input_contracts'])=={'reader.reaction','character.action_propose','quality.compare','continuity.commitment_audit','context.select'}
           assert loaded['quality-evolution-test.json']['plateau_stopping'] is True
           assert loaded['quality-evolution-test.json']['winner_derived_from_typed_result'] is True
           assert loaded['promotion-gate-test.json']['auto_behavior_write'] is False

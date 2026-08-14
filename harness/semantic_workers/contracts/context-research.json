@@ -1,28 +1,123 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "1",
-  "principle": "Model judgment selects context and research strategy; deterministic runtime only enforces authority, data, capability, provenance and budget boundaries.",
+  "version": "2",
+  "principle": "Model judgment selects context and research strategy; deterministic runtime enforces explicit visibility, authority, data, capability, provenance and budget boundaries before and after semantic selection.",
   "contracts": {
     "context.select": {
       "kind": "artifact_audit",
-      "purpose": "Select the smallest useful set of supplied memory blocks for the current bounded task. Relevance is a semantic judgment owned by the model; selection never changes source authority.",
+      "purpose": "Select the smallest useful set of already visibility-safe memory blocks for one bounded task, using explicit active questions and story-point/perspective context. Relevance is semantic and model-owned; selection never creates or changes story truth.",
+      "input_contract": {
+        "type": "object",
+        "required": ["task", "memory_blocks"],
+        "properties": {
+          "task": {
+            "type": "object",
+            "required": ["task_mode", "task_goal", "perspective", "active_questions"],
+            "properties": {
+              "task_mode": {"type": "string", "minLength": 1},
+              "task_goal": {"type": "string", "minLength": 1},
+              "current_story_point": {"type": ["string", "null"]},
+              "perspective": {
+                "type": "object",
+                "required": ["scope"],
+                "properties": {
+                  "scope": {"enum": ["manager", "reader", "character", "narrator", "research", "other"]},
+                  "perspective_id": {"type": ["string", "null"]}
+                },
+                "additionalProperties": false
+              },
+              "active_questions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["question_id", "question", "kind"],
+                  "properties": {
+                    "question_id": {"type": "string", "minLength": 1},
+                    "question": {"type": "string", "minLength": 1},
+                    "kind": {"enum": ["concept", "behavior", "state", "continuity", "relationship", "other"]},
+                    "as_of_story_point": {"type": ["string", "null"]}
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "memory_blocks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["block_id", "pinned", "authority", "derived", "source_refs", "visibility", "model_view"],
+              "properties": {
+                "block_id": {"type": "string", "minLength": 1},
+                "pinned": {"type": "boolean"},
+                "authority": {"type": ["string", "boolean"]},
+                "derived": {"type": "boolean"},
+                "source_refs": {"type": "array", "items": {"type": "string"}},
+                "story_point": {"type": ["string", "null"]},
+                "visibility": {
+                  "type": "object",
+                  "required": ["scope"],
+                  "properties": {
+                    "scope": {"enum": ["shared", "manager", "reader", "character", "narrator", "research", "other"]},
+                    "perspective_id": {"type": ["string", "null"]}
+                  },
+                  "additionalProperties": false
+                },
+                "model_view": {"type": "object"}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "rubric": [
-        "Use only the supplied task context and candidate memory blocks.",
+        "Use only the supplied task and memory blocks. The runtime has already removed blocks that are explicitly outside the task perspective; do not infer or reconstruct hidden blocks.",
+        "Treat each active question as a task-aware grounding query. Select blocks because they help answer the current questions or immediate task goal, not because they are generally interesting, recent or richly written.",
+        "Respect current_story_point and each question's as_of_story_point. Do not use later-story evidence to answer an earlier-story question when the supplied metadata makes that mismatch visible.",
         "Choose hot blocks that are directly needed for the immediate reasoning step and working blocks that are likely to matter soon; archive everything else.",
-        "Prefer sparse context. Do not select a block merely because it is generally interesting or recent.",
-        "Respect each block's authority, stage and knowledge boundary. A plan, proposal, review, research fact or derived memory never becomes accepted Canon because it was selected.",
-        "Pinned blocks are author/runtime constraints and should be treated as required unless the caller explicitly marks them unavailable.",
-        "Return ordered block ids only; do not rewrite, summarize or mutate the memory blocks."
+        "Prefer sparse context and evidence diversity. Reuse a block across questions when it genuinely supports multiple questions instead of duplicating context.",
+        "Respect each block's authority and derivation status. A plan, proposal, review, research fact or derived memory never becomes accepted Canon because it was selected.",
+        "Pinned blocks are runtime constraints and should remain hot unless the packet itself is invalid; do not reinterpret pinning as semantic importance.",
+        "For each active question, report which selected block ids support it and whether the supplied blocks provide sufficient, partial or no support. Mark genuinely unresolved questions instead of inventing an answer.",
+        "Return block ids and support mapping only. Do not rewrite, summarize, synchronize or mutate the memory blocks, and do not create new durable memory claims."
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "hot_ids", "working_ids", "archive_ids", "reasons"],
+        "required": ["confidence", "hot_ids", "working_ids", "archive_ids", "reasons", "question_support", "unresolved_questions"],
         "properties": {
           "confidence": {"type": "number", "minimum": 0, "maximum": 1},
           "hot_ids": {"type": "array", "items": {"type": "string"}},
           "working_ids": {"type": "array", "items": {"type": "string"}},
           "archive_ids": {"type": "array", "items": {"type": "string"}},
-          "reasons": {"type": "array", "items": {"type": "object"}}
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["block_id", "tier", "reason"],
+              "properties": {
+                "block_id": {"type": "string", "minLength": 1},
+                "tier": {"enum": ["hot", "working", "archive"]},
+                "reason": {"type": "string", "minLength": 1}
+              },
+              "additionalProperties": false
+            }
+          },
+          "question_support": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["question_id", "support", "block_ids"],
+              "properties": {
+                "question_id": {"type": "string", "minLength": 1},
+                "support": {"enum": ["sufficient", "partial", "none"]},
+                "block_ids": {"type": "array", "items": {"type": "string"}}
+              },
+              "additionalProperties": false
+            }
+          },
+          "unresolved_questions": {"type": "array", "items": {"type": "string"}}
         }
       },
       "permissions": {
