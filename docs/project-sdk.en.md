@@ -1,155 +1,83 @@
-# NovelForge Project SDK · Software-Engineering Contract for Fiction Projects
+# NovelForge Project SDK · Fiction as a Complete Software Project
 
 ## Goal
 
-Every NovelForge novel project should behave like a maintainable software project:
+Every consuming novel should be independently cloneable, self-describing, testable, buildable, migration-safe, and rollbackable without relying on chat memory.
 
-- cloneable and self-describing;
-- pinned to a known framework version;
-- structurally validated;
-- testable before release;
-- explicit about source-of-truth vs generated views;
-- migration-safe;
-- reproducibly buildable into a compact agent/context bundle;
-- auditable and rollback-friendly;
-- usable from ChatGPT, Codex, Claude Code, CI, or other hosts without redefining the project model.
-
-This idea borrows the **engineering discipline** of mature software repositories: feature specifications, implementation plans, explicit task dependencies, build/test/verify scripts, architecture boundaries, and phase checkpoints. It does not copy any one repository's domain or tech stack.
-
-## Dependency direction
+NovelForge supplies the generic engine; a project supplies one story's facts, profiles, plans, research, manuscripts, tests, and Canon.
 
 ```mermaid
 flowchart LR
-    NF[NovelForge Framework] --> SDK[Project SDK / Schemas]
+    F[NovelForge Framework] --> SDK[Project SDK]
     P[Novel Project] --> SDK
     P --> LOCK[novelforge.lock.json]
-    LOCK --> NF
-    P --> BUILD[Project Build Bundle]
-    P --> TEST[Project Tests / Evals]
-    NF -. forbidden .-> P
+    LOCK --> F
+    P --> TEST[validate / tests / evals]
+    P --> BUILD[deterministic bundle]
+    F -. forbidden .-> P
 ```
 
-A framework release never imports a consumer project.
-
-A project consumes a **versioned framework contract** and supplies only project-owned data, plans, profiles, tests, research, manuscripts, and Canon state.
-
-## Recommended repository layout
+## Standard root
 
 ```text
 my-novel/
-├── project.yaml
+├── novelforge.toml
 ├── novelforge.lock.json
 ├── README.en.md
 ├── README.zh-CN.md
 ├── AGENTS.md
 ├── CLAUDE.md
 ├── .gitignore
-├── .github/
-│   └── workflows/
-│       └── novel-project-ci.yml
+├── .github/workflows/
 ├── specs/
-│   └── 001-example-change/
-│       ├── spec.en.md
-│       ├── spec.zh-CN.md
-│       ├── plan.en.md
-│       ├── plan.zh-CN.md
-│       ├── tasks.en.md
-│       └── tasks.zh-CN.md
 ├── profiles/
-│   ├── genre.yaml
-│   ├── platform.yaml
-│   ├── prose.yaml
-│   ├── reader.yaml
-│   └── project.yaml
 ├── bible/
-│   ├── book/
-│   ├── characters/
-│   ├── relationships/
-│   ├── world/
-│   ├── organizations/
-│   └── research/
 ├── state/
-│   ├── canon/
-│   ├── ledgers/
-│   ├── information/
-│   ├── resources/
-│   ├── dependencies/
-│   └── migrations/
 ├── plans/
-│   ├── book/
-│   ├── volumes/
-│   ├── units/
-│   ├── chapters/
-│   └── scene-cards/
 ├── manuscripts/
-│   ├── draft/
-│   ├── review/
-│   └── accepted/
-├── evals/
-│   ├── capability/
-│   ├── regression/
-│   └── fixtures/
-├── tests/
-│   ├── continuity/
-│   ├── state/
-│   └── release/
 ├── research/
-│   ├── sources/
-│   ├── claims/
-│   └── notes/
 ├── corpus/
-│   ├── refs/
-│   └── project-benchmarks/
+├── evals/
+├── tests/
 ├── assets/
 ├── scripts/
-├── dist/                 # generated, usually ignored
-└── .novelforge/          # runtime/cache, ignored
+├── dist/                 # generated
+└── .novelforge/          # local dependency/runtime cache
 ```
 
-The exact physical format may be Markdown, YAML, JSON, SQLite, or another supported backend. The **logical boundaries** are the contract.
+The physical storage may use Markdown, JSON, TOML, SQLite, or adapter-backed legacy structures. The logical authority classes are the invariant.
 
-## Source vs derived vs generated
+## Project manifest
 
-Every project artifact belongs to one class:
+`novelforge.toml` is the project manifest. It declares project identity, schema compatibility, logical authority paths, profiles, and build settings.
 
-### Authoritative source
-Examples:
-- Accepted Canon;
-- current character facts;
-- relationship state;
-- resource ledger;
-- verified research claim;
-- active project profile.
+Typical sections:
 
-### Plan / proposal
-Examples:
-- volume outline;
-- chapter plan;
-- Scene Card;
-- proposed relationship progression.
+```toml
+[novelforge]
+schema = "novelforge_project_v1"
+project_schema_version = "1"
+minimum_framework_version = "7.0.0"
 
-### Derived view
-Examples:
-- date index;
-- character-presence matrix;
-- unresolved-loop dashboard;
-- dependency report.
+[project]
+id = "PROJECT-EXAMPLE"
+title = "Example Novel"
+language = "en"
+version = "0.1.0"
+status = "active"
 
-Derived views must be rebuildable from authoritative state.
+[authority]
+accepted_canon = "state/canon"
+current_state = "state"
+active_plans = "plans"
+project_profiles = "profiles"
+research = "research"
+regressions = "evals/regression"
+```
 
-### Generated artifact
-Examples:
-- Raw Draft;
-- Review Draft;
-- semantic audit;
-- release bundle;
-- temporary context manifest.
+## Framework lock
 
-Generated artifacts never become Canon merely because they were built.
-
-## Framework lockfile
-
-`novelforge.lock.json` pins the framework contract used by the project:
+`novelforge.lock.json` pins the exact framework dependency:
 
 ```json
 {
@@ -160,65 +88,62 @@ Generated artifacts never become Canon merely because they were built.
     "commit": "<sha>",
     "bundle_fingerprint": "sha256:..."
   },
-  "project_schema_version": "1",
-  "updated_at": "..."
+  "project_schema_version": "1"
 }
 ```
 
-A project task should normally read a **local synchronized framework bundle** resolved from this lockfile rather than repeatedly fetching many framework files from a remote repository.
+Ordinary production should use a verified local read-only framework materialization under `.novelforge/framework/` rather than repeatedly fetching dozens of framework files from another repository.
 
-This keeps the dependency one-way while avoiding chat/runtime ping-pong between repositories.
+## Artifact classes
 
-## Framework sync model
+### Authoritative source
+Accepted Canon, current state, character/relationship/world facts, project profiles, verified research claims.
+
+### Plan / proposal
+Book/volume/unit/chapter plans, Scene Cards, proposed future relationship or state changes.
+
+### Derived view
+Timeline index, presence matrix, dependency report, open-loop dashboard, compiled state summaries. Must be rebuildable.
+
+### Generated artifact
+Raw Draft, Review Draft, semantic audit, temporary Context Manifest, build bundle. Generation alone does not grant Canon authority.
+
+## Engineering workflow
 
 ```text
-novelforge.lock.json
-→ framework release / commit
-→ verify bundle fingerprint
-→ materialize read-only bundle into .novelforge/framework/
-→ run project task locally against project + pinned framework
+bootstrap
+→ validate
+→ classify change
+→ plan/spec when warranted
+→ implement/produce
+→ deterministic tests + semantic/eval gates as applicable
+→ explicit acceptance
+→ settlement/migration if Canon changes
+→ build/release
 ```
-
-`.novelforge/framework/` is runtime dependency material, not project Canon and normally not committed.
-
-Upgrading the framework is an explicit dependency update with compatibility tests.
 
 ## Change classes
 
-Engineering discipline should not become bureaucracy.
+### A · Micro/content edit
+Typos, local metadata clarification, small accepted correction. Normal transaction + tests; no feature spec required.
 
-### Class A · Micro/content edit
-Examples: sentence-level accepted correction, typo, local metadata clarification.
+### B · Chapter/unit production
+Use chapter/unit plans, Scene Cards, Context Manifest, prose/reader gates, continuity tests, and release/build manifest. Do not create software tickets for every paragraph.
 
-Use normal project transaction and tests. No feature spec required.
-
-### Class B · Chapter/unit production
-Use chapter plan, Scene Cards, context manifest, draft/review gates, continuity tests, and release/build manifest. A separate `specs/` feature is optional unless the change alters structure or requirements.
-
-### Class C · Structural feature/change
-Examples:
-- volume redesign;
-- new relationship architecture;
-- schema change;
-- new project-specific subsystem;
-- major research model change;
-- framework upgrade with behavior changes.
-
-Required:
+### C · Structural change
+Volume redesign, schema change, relationship architecture, major research model change, project subsystem, or behavior-changing framework upgrade:
 
 ```text
 spec → plan → tasks → implementation → verification → acceptance
 ```
 
-### Class D · Canon migration
-Any change to already-settled Canon/state uses an explicit migration/state-delta transaction with before-state, evidence, dependency impact, post-condition, and rollback/trace.
+### D · Canon migration
+Already-settled Canon/state changes require exact before-state, evidence, dependency impact, checkpoint/write intent, post-condition, trace, and rollback capability.
 
-### Class E · Release
-A release must be reproducibly buildable and testable.
+### E · Release
+Must be reproducibly buildable and validation/test status must be explicit.
 
-## Feature specification model
-
-For Class C changes:
+## Structural change specs
 
 ```text
 specs/NNN-short-name/
@@ -230,149 +155,82 @@ specs/NNN-short-name/
 └── tasks.zh-CN.md
 ```
 
-### `spec`
-Defines:
-- problem/context;
-- user/editor value;
-- current-state audit;
-- requirements;
-- non-goals;
-- compatibility constraints;
-- acceptance scenarios;
-- Canon/authority impact;
-- reader/prose impact;
-- risks.
+`spec` defines problem/current-state/requirements/non-goals/acceptance/authority impact.
 
-### `plan`
-Defines:
-- chosen architecture;
-- alternatives considered;
-- affected project objects/files;
-- dependency graph;
-- migration strategy;
-- test/eval strategy;
-- phases/checkpoints;
-- rollback.
+`plan` defines architecture/alternatives/affected objects/dependencies/migration/tests/phases/rollback.
 
-### `tasks`
-Defines:
-- exact task IDs;
-- dependencies;
-- parallelizable tasks;
-- exact target paths/objects;
-- completion criteria;
-- per-phase verification checkpoint.
+`tasks` defines exact IDs, targets, dependencies, parallelizable work, completion criteria, and phase checkpoints.
 
-The Harness may generate or maintain these files, but user-visible story changes still follow normal authority rules.
+This borrows proven software-engineering discipline without turning ordinary prose production into bureaucracy.
 
-## Project CI
+## Deterministic project checks
 
-A professional project should be able to run deterministic checks without invoking a paid model:
+A professional project should be able to validate without paid model execution:
 
-```text
-project schema validate
-→ bilingual docs / required files
-→ stable-ID uniqueness
-→ Canon/plan lifecycle checks
-→ link/reference integrity
-→ dependency graph integrity
-→ ledger arithmetic where applicable
-→ date/timeline consistency
-→ accepted-manuscript/state binding
-→ derived-view freshness
-→ regression fixture structure
-→ release bundle build
-```
+- manifest/lock compatibility;
+- required directory/file structure;
+- stable-ID uniqueness;
+- lifecycle boundaries (Plan/Review ≠ Accepted);
+- links/references/dependency integrity;
+- resource arithmetic where applicable;
+- timeline/date consistency;
+- Accepted manuscript ↔ state-ledger fingerprints;
+- derived-view freshness;
+- regression fixture structure;
+- profile attempts to disable mandatory framework fundamentals;
+- deterministic project bundle build.
 
-Live semantic/prose evals are separate opt-in jobs unless a host provides included model execution.
+Semantic prose/reader quality evals complement deterministic tests; they do not replace them.
 
 ## Build
 
-`novelforge project build` should create a compact deterministic bundle such as:
-
-```text
-dist/
-├── project.bundle.json
-├── authority.manifest.json
-├── accepted.manifest.json
-├── active-plan.manifest.json
-├── research.manifest.json
-├── profile.manifest.json
-└── fingerprints.json
-```
-
-The bundle is an **index/compiled view**, not a replacement authority.
+`project_sdk.py build` creates a compact indexed `dist/` bundle with file classes and fingerprints. It is a compiled view, not a second authority.
 
 Purpose:
-- reduce repeated remote reads;
-- let chat sessions bootstrap efficiently;
-- provide stable fingerprints;
-- allow CI/runtime compatibility checks;
-- keep sparse context selection possible.
+- fast chat/agent bootstrap;
+- stable fingerprints;
+- fewer cross-repository reads;
+- compatibility checks;
+- sparse Context selection.
 
-## Tests as fiction engineering
+## Executable SDK
 
-Tests do not decide whether prose is artistically great. They protect invariants.
-
-Examples:
-- no duplicate stable ID;
-- no future-plan fact already present in current state;
-- no character knows an unrevealed secret;
-- resource arithmetic balances;
-- relationship transition has Accepted evidence;
-- accepted chapter fingerprint matches state ledger;
-- a referenced character/location/object exists;
-- no stale derived view claims authority;
-- project profile does not disable mandatory framework anti-AI fundamentals without an explicit allowed profile exception.
-
-Semantic/reader-quality evals complement deterministic tests.
-
-## Release model
-
-Suggested project release identity:
-
-```text
-project version
-+ framework lock version
-+ accepted Canon cutoff
-+ project bundle fingerprint
-+ eval status
+```bash
+python project_sdk.py init <path> --id PROJECT-X --title "Novel"
+python project_sdk.py validate <path>
+python project_sdk.py spec-new <path> --title "Structural change"
+python project_sdk.py build <path>
+python project_sdk.py self-test
 ```
 
-A release may represent an editorial milestone rather than public publication.
+## Legacy migration
 
-## Migration model
-
-Framework or project-schema upgrades should create a migration spec when non-trivial:
+Existing mature novel repositories may keep their physical layout behind a Project Adapter. Migrate incrementally:
 
 ```text
-old schema/state
-→ migration plan
-→ backup/checkpoint
-→ transform
-→ validate
-→ rebuild derived views
-→ run tests
-→ commit new lock/schema version
+audit
+→ add manifest + lock
+→ map authority classes
+→ validate/build
+→ add deterministic CI
+→ move truly generic rules into NovelForge
+→ retain only project data/overrides
+→ remove stale embedded framework copies
 ```
 
-Never silently reinterpret old Canon under a new schema.
+Never import the concrete project's facts into NovelForge while extracting generic mechanisms.
 
-## Complete-software-project principle
+## Complete-project test
 
-A novel repository should answer, without relying on chat memory:
-
-- What project is this?
-- What framework version does it use?
-- What is authoritative?
-- What has actually happened?
-- What is only planned?
+A novel repository should answer without chat memory:
+- What project is this and what framework version does it use?
+- What is authoritative, planned, generated, accepted, and settled?
 - What is currently being produced?
-- What tests protect continuity?
-- What research supports real-world claims?
-- What user/project profiles apply?
-- How do I build a compact context bundle?
-- How do I upgrade or roll back?
-- How do I know a release is valid?
+- Which tests protect continuity/state?
+- Which research supports factual claims?
+- Which project/user profiles apply?
+- How is a compact context bundle built?
+- How is the framework upgraded or rolled back?
+- How is a valid release identified?
 
-If those answers only exist in a conversation, the novel is not yet a complete engineering project.
+If these answers live only in conversation history, the novel is not yet a complete engineering project.
