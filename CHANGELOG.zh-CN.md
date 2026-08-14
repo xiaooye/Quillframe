@@ -18,6 +18,9 @@
 - 增加 SQLite Control Plane：sessions、events、handoffs、leases、result hashes、logical consume-once receipts。
 - 增加 provider-neutral routing：普通 chat、本地 Codex/Claude、MCP、provider API、GitHub/service jobs、local model、human reviewer。
 - Mandatory independent semantic judgment 继续 fingerprint-bound，默认 fresh-per-fingerprint。
+- 增加 typed GitHub event ingress 与无需 API 的 peer-chat semantic bridge。
+- 增加可选的手工 provider-backed semantic eval workflow；必须显式配置 secret，绝不进入 normal CI。
+- 增加 weekly deterministic maintenance：只观察、测试、生成 work queue，不执行 LLM，也不自动 promote Framework behavior。
 
 ### Adaptive Learning
 - 增加 durable Learning Store，保存 preference evidence、可推翻 hypothesis、contradiction、Corpus gap、promotion candidate、rollback record。
@@ -29,6 +32,7 @@
 - Rights class：`redistributable | analysis_only | unknown`。
 - 增加 question-bounded analysis、counterexample search、cross-work generalization、named-author imitation boundary。
 - 迁移 8 个 Generic cross-work mechanism benchmark seed，不保存 raw source text 或 consumer-project fact。
+- Scheduled maintenance 可以生成 typed Corpus discovery queue；真正 Web/GitHub/MCP discovery 仍要求已授权 host connector，不能伪造 source access。
 
 ### Evals
 - 增加 deterministic + semantic generic eval runner。
