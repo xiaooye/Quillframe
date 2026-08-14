@@ -1,0 +1,19 @@
+{
+  "id": "INFRA-FRAMEWORK-001",
+  "type": "infrastructure",
+  "domain": "framework",
+  "judge": "deterministic",
+  "blocks_release": true,
+  "fixture": {"project_agnostic": true},
+  "assertions": [
+    {"op": "equals", "path": "project_agnostic", "value": true},
+    {"op": "file_exists", "file": "HARNESS_MANIFEST.yaml"},
+    {"op": "file_exists", "file": "project_sdk.py"},
+    {"op": "file_exists", "file": "learning/learning_store.py"},
+    {"op": "file_exists", "file": "corpus/corpus_scout.py"},
+    {"op": "file_exists", "file": "surface/FUNDAMENTALS.en.md"},
+    {"op": "file_exists", "file": "surface/READER_ENGAGEMENT.en.md"},
+    {"op": "file_text_contains", "file": "HARNESS_MANIFEST.yaml", "value": "project_agnostic: true"},
+    {"op": "file_text_contains", "file": "HARNESS_MANIFEST.yaml", "value": "dependency_direction: project-to-framework-only"}
+  ]
+}
