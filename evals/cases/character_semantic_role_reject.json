@@ -1,0 +1,19 @@
+{
+  "id": "CHAR-SEMANTIC-ROLE-001",
+  "type": "regression",
+  "domain": "character",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "language": "zh-CN",
+    "pov": "limited third person, junior warehouse clerk",
+    "character_context": "The focal character has never studied logistics theory and is currently frightened about losing his job.",
+    "text": "他望着堆到门口的木箱，忽然意识到，真正的问题从来不是库存本身，而是一个组织如何在资源约束下重新定义责任边界。"
+  },
+  "rubric": [
+    "Reject evaluative/interiority language whose wording belongs to an external narrator/model rather than the focal character's knowledge, voice, and current social position.",
+    "Use HF-27 SEMANTIC ROLE MISATTRIBUTION when applicable."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["HF-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "reject", "codes": ["HF-27"]}
+}
