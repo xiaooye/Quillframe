@@ -12,6 +12,7 @@
     "subject_id",
     "task_mode",
     "context",
+    "capture_policy",
     "pack_activations",
     "steps",
     "artifacts",
@@ -35,6 +36,17 @@
         "manifest_ref": {"type": "string", "minLength": 1},
         "manifest_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
         "authority_snapshot": {"type": "string", "minLength": 1}
+      }
+    },
+    "capture_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["semantic_inputs", "semantic_outputs", "private_reasoning", "hidden_gold"],
+      "properties": {
+        "semantic_inputs": {"enum": ["fingerprint_only", "bounded_payload"]},
+        "semantic_outputs": {"enum": ["fingerprint_only", "typed_result"]},
+        "private_reasoning": {"const": "forbidden"},
+        "hidden_gold": {"const": "forbidden"}
       }
     },
     "pack_activations": {
