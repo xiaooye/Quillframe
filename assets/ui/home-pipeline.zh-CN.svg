@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760" role="img" aria-labelledby="title desc">
+  <title id="title">NovelForge 单章生产流水线</title>
+  <desc id="desc">四阶段单章生产流水线：准备、候选稿生成、挑战与修复、用户可见门槛；原始草稿始终留在内部，失败回到真正拥有问题的机制。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L9,4.5 L0,9 z" fill="#796BC4"/></marker>
+    <marker id="returnArrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L9,4.5 L0,9 z" fill="#B95767"/></marker>
+  </defs>
+
+  <rect x="1" y="1" width="1398" height="758" rx="28" fill="#FFFDFC" stroke="#E2DAE8" stroke-width="2"/>
+  <text x="58" y="64" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="30" font-weight="700" fill="#241D2B">一章正文是一条生产流水线，不是一次模型调用</text>
+  <text x="58" y="98" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="17" fill="#62556D">准备阶段先建立故事压力；生成阶段只得到内部候选稿；随后由多层审查主动攻击它，通过后才允许展示。</text>
+
+  <rect x="58" y="132" width="228" height="38" rx="19" fill="#DDEFF8" stroke="#4F8FBA"/><text x="78" y="157" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#241D2B">01 · 准备生产运行</text>
+  <rect x="468" y="132" width="228" height="38" rx="19" fill="#FFFDFC" stroke="#62556D"/><text x="488" y="157" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#241D2B">02 · 生成内部候选稿</text>
+  <rect x="768" y="132" width="250" height="38" rx="19" fill="#F9DDE9" stroke="#D6679A"/><text x="788" y="157" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#241D2B">03 · 挑战、修复、复核</text>
+  <rect x="1136" y="132" width="206" height="38" rx="19" fill="#DCF1E7" stroke="#4D9B7D"/><text x="1156" y="157" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#241D2B">04 · 用户可见门槛</text>
+
+  <rect x="58" y="190" width="360" height="338" rx="22" fill="#F7FCFF" stroke="#B8D9EC"/>
+  <g font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif">
+    <rect x="82" y="216" width="312" height="50" rx="14" fill="#DDEFF8" stroke="#4F8FBA" stroke-width="1.5"/><text x="98" y="238" font-size="13" font-weight="700" fill="#4F8FBA">01</text><text x="128" y="247" font-size="18" font-weight="650" fill="#241D2B">上下文冻结</text>
+    <rect x="82" y="279" width="312" height="50" rx="14" fill="#DDEFF8" stroke="#4F8FBA" stroke-width="1.5"/><text x="98" y="301" font-size="13" font-weight="700" fill="#4F8FBA">02</text><text x="128" y="310" font-size="18" font-weight="650" fill="#241D2B">故事 / 正典预检</text>
+    <rect x="82" y="342" width="147" height="66" rx="14" fill="#FFFDFC" stroke="#62556D" stroke-width="1.5"/><text x="98" y="364" font-size="13" font-weight="700" fill="#796BC4">03</text><text x="98" y="389" font-size="17" font-weight="650" fill="#241D2B">场景模拟</text><text x="98" y="406" font-size="14" fill="#62556D">冲突与因果</text>
+    <rect x="247" y="342" width="147" height="66" rx="14" fill="#FFFDFC" stroke="#62556D" stroke-width="1.5"/><text x="263" y="364" font-size="13" font-weight="700" fill="#796BC4">04</text><text x="263" y="389" font-size="17" font-weight="650" fill="#241D2B">人物模拟</text><text x="263" y="406" font-size="14" fill="#62556D">议程与知识边界</text>
+    <rect x="82" y="421" width="312" height="78" rx="14" fill="#F9DDE9" stroke="#D6679A" stroke-width="1.5"/><text x="98" y="444" font-size="13" font-weight="700" fill="#D6679A">05</text><text x="128" y="454" font-size="18" font-weight="650" fill="#241D2B">读者压力</text><text x="98" y="480" font-size="14" fill="#62556D">先确定冲突、选择、代价、好奇与阶段性回报。</text>
+  </g>
+
+  <rect x="468" y="190" width="250" height="338" rx="22" fill="#FAF8FF" stroke="#CFC7EE"/>
+  <g font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif">
+    <rect x="492" y="229" width="202" height="86" rx="16" fill="#FFFDFC" stroke="#62556D" stroke-width="1.5"/><text x="510" y="254" font-size="13" font-weight="700" fill="#796BC4">06</text><text x="510" y="280" font-size="18" font-weight="700" fill="#241D2B">事件优先</text><text x="510" y="303" font-size="18" font-weight="700" fill="#241D2B">原始草稿</text>
+    <rect x="492" y="329" width="202" height="77" rx="16" fill="#F9DDE9" stroke="#D6679A" stroke-width="1.5"/><text x="510" y="354" font-size="13" font-weight="700" fill="#D6679A">07</text><text x="510" y="381" font-size="18" font-weight="700" fill="#241D2B">表层实现</text>
+    <rect x="492" y="426" width="202" height="74" rx="14" fill="#F0ECF4" stroke="#796BC4" stroke-dasharray="6 5"/><text x="510" y="451" font-size="14" font-weight="700" fill="#796BC4">内部边界</text><text x="510" y="475" font-size="15" fill="#3C3245">Raw Draft 永不直接展示。</text>
+  </g>
+
+  <rect x="768" y="190" width="320" height="338" rx="22" fill="#FFFAFC" stroke="#EDC3D6"/>
+  <g font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif">
+    <rect x="792" y="216" width="272" height="74" rx="14" fill="#F9EDCF" stroke="#BE892F" stroke-width="1.5"/><text x="808" y="240" font-size="13" font-weight="700" fill="#BE892F">08</text><text x="838" y="250" font-size="17" font-weight="700" fill="#241D2B">回归检查 + 独立审查</text><text x="808" y="274" font-size="13" fill="#62556D">坏例证据只在生成完成后进入检查。</text>
+    <rect x="792" y="304" width="272" height="67" rx="14" fill="#F7DEE2" stroke="#B95767" stroke-width="1.5"/><text x="808" y="328" font-size="13" font-weight="700" fill="#B95767">09</text><text x="838" y="338" font-size="17" font-weight="700" fill="#241D2B">回到问题归属机制修复</text><text x="808" y="358" font-size="13" fill="#62556D">局部改写，或回上游重新生成。</text>
+    <rect x="792" y="385" width="130" height="88" rx="14" fill="#F9DDE9" stroke="#D6679A" stroke-width="1.5"/><text x="808" y="409" font-size="13" font-weight="700" fill="#D6679A">10</text><text x="808" y="436" font-size="16" font-weight="700" fill="#241D2B">读者吸引力</text><text x="808" y="456" font-size="14" fill="#62556D">继续读的压力</text>
+    <rect x="934" y="385" width="130" height="88" rx="14" fill="#F9DDE9" stroke="#D6679A" stroke-width="1.5"/><text x="950" y="409" font-size="13" font-weight="700" fill="#D6679A">11</text><text x="950" y="436" font-size="16" font-weight="700" fill="#241D2B">连贯性审计</text><text x="950" y="456" font-size="14" fill="#62556D">状态与后果</text>
+  </g>
+
+  <rect x="1136" y="190" width="206" height="338" rx="22" fill="#F7FCFA" stroke="#B9DFCF"/>
+  <rect x="1162" y="274" width="154" height="148" rx="22" fill="#DCF1E7" stroke="#4D9B7D" stroke-width="2"/>
+  <g font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif"><text x="1182" y="305" font-size="13" font-weight="700" fill="#4D9B7D">12</text><text x="1182" y="339" font-size="18" font-weight="750" fill="#241D2B">用户可见</text><text x="1182" y="363" font-size="18" font-weight="750" fill="#241D2B">门槛</text><text x="1182" y="393" font-size="13" fill="#3C3245">所有强制质量门槛</text><text x="1182" y="411" font-size="13" fill="#3C3245">解决后才能展示。</text></g>
+
+  <path d="M418 359 H454" fill="none" stroke="#796BC4" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M718 359 H754" fill="none" stroke="#796BC4" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M1088 359 H1122" fill="none" stroke="#796BC4" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <rect x="58" y="570" width="1284" height="132" rx="22" fill="#F8F5FA" stroke="#E2DAE8"/>
+  <text x="82" y="603" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="15" font-weight="800" fill="#B95767">失败回路 · 修真正的问题归属机制，而不是只处理表面症状</text>
+  <g font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="14" fill="#241D2B">
+    <rect x="82" y="622" width="277" height="52" rx="13" fill="#FFFDFC" stroke="#D6679A"/><text x="98" y="645" font-weight="700">孤立表层缺陷</text><text x="98" y="664" fill="#62556D">局部改写</text>
+    <rect x="375" y="622" width="277" height="52" rx="13" fill="#FFFDFC" stroke="#D6679A"/><text x="391" y="645" font-weight="700">表层失败成簇</text><text x="391" y="664" fill="#62556D">整场景重新生成</text>
+    <rect x="668" y="622" width="300" height="52" rx="13" fill="#FFFDFC" stroke="#D6679A"/><text x="684" y="645" font-weight="700">SAFE-BUT-FLAT / 吸引力失败</text><text x="684" y="664" fill="#62556D">读者压力 + 场景模拟</text>
+    <rect x="984" y="622" width="334" height="52" rx="13" fill="#FFFDFC" stroke="#796BC4"/><text x="1000" y="645" font-weight="700">人物或故事层失败</text><text x="1000" y="664" fill="#62556D">人物模拟，或回故事 / 计划层</text>
+  </g>
+  <path d="M928 570 C928 546 928 534 928 514" fill="none" stroke="#B95767" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#returnArrow)"/>
+</svg>
