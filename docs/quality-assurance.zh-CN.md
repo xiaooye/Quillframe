@@ -1,287 +1,359 @@
 <div align="center">
   <img src="../assets/brand/novelforge-lockup.svg" alt="NovelForge 自适应小说智能体框架" width="560" />
-  <p><strong>质量保障与 QA · 能确定的交给代码，必须判断的交给独立语义审查</strong></p>
-  <p><kbd>CI</kbd>&nbsp;&nbsp;<kbd>盲评</kbd>&nbsp;&nbsp;<kbd>读者质量</kbd>&nbsp;&nbsp;<kbd>独立审查</kbd>&nbsp;&nbsp;<kbd>连贯性</kbd></p>
+  <p><strong>质量保障 · 能证明的交给代码，必须理解小说的交给有界模型契约</strong></p>
+  <p><kbd>确定性 QA</kbd>&nbsp;&nbsp;<kbd>语义契约</kbd>&nbsp;&nbsp;<kbd>质量发现</kbd>&nbsp;&nbsp;<kbd>候选演化</kbd>&nbsp;&nbsp;<kbd>发布门槛</kbd></p>
+  <p><a href="quality-assurance.en.md">English</a> · <a href="README.zh-CN.md">文档中心</a></p>
 </div>
 
 <img src="../assets/brand/story-thread.svg" alt="" width="100%" />
 
 # 质量保障与 QA
 
-> 🌸 **NovelForge 没有一个万能“批评家 Agent”。它把不同类型的失败交给不同机制检测，并要求修复回到真正拥有问题的那一层。**
+NovelForge 没有一个万能“批评家 Agent”，也不把文学质量伪装成确定性总分。
 
-<img src="../assets/ui/home-quality.zh-CN.svg" alt="NovelForge 质量保障栈与失败回路" width="100%" />
+它把五件事明确拆开：**代码究竟能证明什么、哪些问题必须让模型读懂文本、诊断如何形成可追踪 evidence、修复稿是否真的优于现稿，以及哪些门槛在发布前必须满足独立性要求。**
 
----
-
-## 01 · 质量不是一个总分
-
-一份小说稿件可以在某个维度完全正确，却在另一个维度严重失败。NovelForge 因此把至少五个问题分开处理：
-
-**结构和状态是否有效？** Schema、ID、生命周期、权威、内容指纹、依赖和状态迁移属于确定性问题。
-
-**文本实现是否达到最低质量？** 表层质量规则负责拦截结构破损和反复出现的 AI 文本失败机制。
-
-**这一章是否真的好读？** 读者吸引力单独评估压力、回报、因果运动、好奇心、反差和继续阅读的动力。
-
-**故事语义是否成立？** 独立语义审查负责场景、人物、故事和文本中无法诚实压缩成规则的判断。
-
-**是否与项目当前状态一致？** 连贯性检查人物知识、位置、义务、资源、关系、开放线索以及事件和情绪余波。
-
-任何一层的“通过”都不能覆盖另一层的“失败”。
+<img src="../assets/ui/home-quality.zh-CN.svg" alt="NovelForge 质量系统：确定性 QA、语义 QA、质量演化与绑定指纹的独立判断" width="100%" />
 
 ---
 
-## 02 · 确定性 QA
+## 01 · 质量是一组不同的问题，不是一个总分
 
-只要一个不变量能够被精确表达，就优先使用确定性检查。典型内容包括：
+同一份候选稿完全可能在一个维度正确、在另一个维度严重失败。
 
-- 项目清单与精确框架锁兼容性；
+因此 NovelForge 不让一个“综合评分”覆盖所有问题，而是分别问：
+
+**结构与状态是否合法？** Schema、权威、权限、指纹、生命周期、引用、幂等性和事务前置条件属于确定性问题。
+
+**正文实现是否健康？** Surface Fundamentals 负责识别反复出现的 realization 失败，但它不是文学审美总表。
+
+**读者此刻真实体验如何？** Reader contracts 只使用读者可见信息，判断推进、困惑、回报、投入与继续阅读意愿。
+
+**这个人物还是不是这个人物？** Character integrity 把场景行为与已有 typed character state 对照，而不是靠几个固定性格标签打分。
+
+**修改问题真正属于哪一层？** Revision diagnosis 区分 story、plan、scene、character、reader pressure、surface、continuity、context / memory 与 research 等不同归属。
+
+**修复稿真的变好了吗？** Candidate evolution 比较 incumbent 与 challenger，不假设“又改了一遍”就一定更好。
+
+**长期承诺有没有被破坏？** Continuity 与 reader-expectation 机制检查事实、义务、setup / payoff 与长期关系证据。
+
+任何一层的 PASS 都不能抵消另一层的 FAIL。
+
+---
+
+## 02 · 最重要的架构边界：语义理解与确定性约束分开
+
+7.3 的质量体系首先遵守整个 Framework 的 ownership 分工。
+
+**由模型负责的语义智能**包括：读者反应、故事 / 人物解释、修改诊断、关系记忆协调、长程承诺审计，以及其他必须理解上下文才能作出的判断。
+
+**由确定性运行时负责的部分**包括：权威、权限、内容指纹、持久化、路由、硬预算、阶段隔离、类型校验、一次性结果消费、版权 / 来源门槛、checkpoint 与事务。
+
+确定性外壳可以验证一个语义结果是否类型正确、是否绑定当前稿件、是否允许消费；它不能偷偷发明一个“文学相关度”或“质量分”来代替模型阅读。
+
+反过来，一个模型判断即使非常有说服力，也不会因此自动获得正典写入或 Framework 修改权威。
+
+---
+
+## 03 · 确定性 QA：只证明机器真正能证明的东西
+
+只要某个不变量可以被精确表达，就优先让代码检查。
+
+常见内容包括：
+
+- Project manifest 与精确 Framework lock 是否兼容；
 - Schema 与必填字段；
-- 稳定 ID 唯一性；
-- “计划 / 审阅稿 ≠ 已接受正典”等生命周期规则；
-- 内容指纹与结果绑定；
+- 稳定 ID 是否唯一；
+- `Plan / Review ≠ Accepted Canon` 之类的权威边界；
+- artifact 与 semantic job 的内容指纹；
+- result binding 与 consume-once；
 - 权限与写入前置条件；
+- session / run / checkpoint 生命周期；
+- handoff lease 与 resume 安全；
 - 依赖和引用完整性；
-- 幂等性、租约、单次消费回执和恢复安全；
-- 项目专属事实是否泄漏进通用框架；
-- 盲评队列是否干净；
-- 回归样本结构；
-- 项目 / 框架 bundle 是否可复现构建。
+- 项目事实是否泄漏进通用 Framework；
+- Corpus 权利与来源；
+- blind eval queue 是否泄漏 hidden gold；
+- Project / Framework bundle 是否可复现；
+- settlement 的 compare-and-swap 与 postcondition。
 
-这些检查适合普通 CI，速度快、结果可复现。但它们**不会假装自己能证明一段文字有情绪张力或一个场景足够好看**。
+这些检查适合普通 CI，因为它们结果可复现，也不需要模型调用。
 
----
-
-## 03 · 表层质量规则
-
-表层 QA 是底线，不是文学质量定义。它主要拦截反复出现的实现失败，例如：
-
-- 没有功能的碎句 / 碎段；
-- 机械插入的微动作；
-- 旁白式强行 hype；
-- 假 cliffhanger；
-- 流程播报式正文；
-- 作者总结替代场景结果；
-- 不属于当前 POV 的判断和知识；
-- 其他已明确建模的 AI 文本失败机制。
-
-关键不是“发现后修一句”，而是看失败是否成簇：
-
-- 局部表层失败 → 局部改写；
-- 表层失败成簇 → 整个场景重生；
-- 表层干净但安全平淡 → 不继续抛光句子，回到读者压力和场景模拟。
-
-这样可以避免一种常见退化：文本越修越顺，但整个场景依然没有生命力。
-
-深入参考：[表层质量规则](../surface/FUNDAMENTALS.zh-CN.md)。
+它们故意**不声称**能证明“这一场有感情”“这个人物很可信”或者“这一章够好看”。
 
 ---
 
-## 04 · 读者吸引力
+## 04 · Surface Fundamentals：正文实现的地板，不是文学神谕
 
-语法正确、表达干净，并不等于“想继续读”。读者吸引力因此是独立门槛。
+Surface Fundamentals 保护文本 realization 层，专门处理反复出现的 AI 文本失败机制。
 
-它关注的机制包括：
+例如：无功能碎句、机械微动作、旁白强行 hype、流程播报、假意义感、POV / 声线泄漏、错误压缩 / 展开，以及其他已经明确建模的表层问题。
 
-- 当前叙事压力是否真实存在；
-- 是否发生有意义的状态变化；
-- 读者是否获得阶段性回报；
-- 好奇心是否持续演化，而不是单纯藏信息；
-- 语气和情绪是否有反差；
-- 场景是否存在明确因果；
-- 选择是否有代价；
-- 关系是否发生移动；
-- 事件后果是否留下余波；
-- 下一单元是否具有自然前推力。
+真正关键的是 repair ownership：
 
-一个章节完全可能逻辑通顺、语言干净，却因为 **SAFE-BUT-FLAT / 安全但平淡** 而失败。此时应回到上游场景机制，而不是增加更多“漂亮句子”。
+- 孤立表层缺陷 → 局部改写；
+- 表层失败成簇 → 重做 scene realization / 整场景；
+- 表层已经干净但场景仍然平 → 回 Reader Pressure + Scene Simulation。
+
+这样才能避免一种典型退化：句子越来越顺，场景却依然没有因果、压力和生命力。
+
+深入参考：[表层质量基础](../surface/FUNDAMENTALS.zh-CN.md)。
+
+---
+
+## 05 · Reader diagnostics 是证据，不会自动变成 independent gate
+
+`quality` semantic pack 里包含 `reader.reaction` 与 `reader.compare`。
+
+`reader.reaction` 模拟的是**冷启动阅读行为**：它只看到候选稿和真正对读者可见的上下文。大纲、未来计划、作者意图、隐藏 payoff、尚未揭示的 Canon、writer reasoning、上一位 reviewer 的 verdict，都不能拿来替文本“解释为什么其实很好”。
+
+诊断结果可以记录：
+
+- 读者是否愿意继续；
+- 继续阅读欲望强弱；
+- 哪里困惑、注意力掉落；
+- 最喜欢 / 最卡顿的 beat；
+- 情绪反应；
+- 可能的 drop-off point；
+- 形成这些反应的理由。
+
+`reader.compare` 则比较两个候选稿，可以返回 `A`、`B` 或 `tie`。当顺序偏差值得检查时，可以交换 A/B 顺序再次判断。
+
+这些 reader simulation 是**诊断证据**。它们本身并不声称自己天然满足 mandatory independent review。
 
 深入参考：[读者吸引力](../surface/READER_ENGAGEMENT.zh-CN.md)。
 
 ---
 
-## 05 · 独立语义审查
+## 06 · 人物完整性是一个独立的语义问题
 
-“让同一个模型换个角色批评自己”不算强制独立审查。
+`character.integrity` 负责判断重要人物在当前场景中是否仍然保持因果与心理一致性。
 
-有效审阅者必须：
+它可以检查：
 
-1. 来自真正不同的调用或会话；
-2. 接收有界审阅包，而不是继承管理器整段历史；
-3. 结果绑定精确候选稿指纹；
-4. 返回类型化 verdict / result；
-5. 看不到隐藏 expected label 或 regression gold；
-6. 当候选稿指纹发生实质变化时，通常使用新的 reviewer session。
+- 当前行动是否和人物议程一致；
+- 信念与知识边界；
+- 声线；
+- 关系位置；
+- 空间位置与当前任务；
+- 人物变化是否有足够过渡证据；
+- 意外行为是否属于“可信的惊喜”，还是随机漂移。
 
-管理器可以冻结、打包、分发、等待、验证和消费结果，但不能自己写完，再在同一个上下文里“切换成审稿人”满足 mandatory gate。
+审查时不能把 manager、旁白、读者或 research truth 的知识自动算到人物头上。
 
-### 禁止 reviewer shopping
+这样可以认真诊断 character drift，同时又不把 Character System 降级成一套确定性“性格规则”。
 
-基础设施失败可以换一个同样合格的 transport；**有效的 semantic reject 不是基础设施失败**。它必须进入修复流程，不能不断换审阅者直到有人说 PASS。
+深入参考：[人物与关系系统](../core/CHARACTER_SYSTEM.zh-CN.md)。
+
+---
+
+## 07 · 先诊断，再决定怎么改
+
+`revision.diagnose` 的存在，就是为了阻止“所有问题都再润色一遍”的循环。
+
+模型只针对当前请求的质量维度进行诊断，并返回有证据支持的 findings 与 repair owner。真正开始下一轮 rewrite 之前，应先知道问题属于哪里。
+
+可能的 owner 包括：
+
+- story；
+- plan；
+- scene；
+- character；
+- reader pressure；
+- surface；
+- continuity；
+- context / memory；
+- research；
+- runtime / human escalation。
+
+`SAFE-BUT-FLAT` 明确不是 line-edit 问题；大量表层问题聚集在同一场景时，也可能应该重做整场 realization，而不是几十个局部 patch。
+
+诊断结果仍然只是 evidence，不会自己修改 Canon。
+
+---
+
+## 08 · Findings 让质量证据可以跨会话追踪
+
+一个质量问题不应该只存在于“上一轮聊天里好像说过”。
+
+NovelForge 使用 typed findings，把诊断变成可以持久追踪的 evidence。按需要，一条 finding 应能说明：
+
+- 到底哪里失败；
+- 它描述的是哪个 candidate fingerprint；
+- 证据在稿件或已建立状态的哪里；
+- 属于哪个质量维度；
+- repair owner 是谁；
+- 当前仍然 open，还是已经被某个修复处理。
+
+Finding 是证据记录，不是故事事实，因此也没有 Canon authority。
+
+---
+
+## 09 · Candidate Evolution：验证“有没有变好”，而不是假设“改了就会变好”
+
+改写可以只是不同，并不一定更好。
+
+`quality/quality_evolution.py` 因此只负责一个确定性 candidate-evolution ledger：记录候选稿指纹、父子关系、repair owner、精确 comparison job / result、当前 incumbent 与 plateau counter。
+
+真正的比较判断仍然属于模型，通过 `creative-evolution` pack 的 `quality.compare` 完成；确定性 ledger 只负责记录和验证比较生命周期。
+
+比较可以得出：
+
+- challenger 更好；
+- incumbent 仍然更好；
+- 没有足够证据证明任一方明显更好 / tie。
+
+如果连续修复没有产生真实增益，plateau stopping 可以结束这一轮演化，而不是为了“再试一次”无限重写。
+
+深入指南：[质量演化](quality-evolution.zh-CN.md)。
+
+---
+
+## 10 · 长程 QA 保护的是承诺，不只是小设定
+
+连续性远不只是“眼睛颜色有没有记错”。
+
+`long-horizon` 契约包负责很多跨章节问题：
+
+- `plan.reconcile` —— 因果自然演化后协调 active plan，但不反写 Accepted history；
+- `relationship.memory_reconcile` —— 长期关系证据或派生记忆冲突时进行协调；
+- `continuity.commitment_audit` —— 把候选稿与明确存在的叙事承诺、事实和义务对照。
+
+`narrative-memory` pack 的 `reader.expectations` 还可以解释当前读者真正已经被文本建立了哪些期待，从而区分真实 setup / payoff obligation 与管理器私下的未来意图。
+
+连续性问题可能属于 Story / Plan、Character、relationship state、Context / Memory 或 settlement，并不天然属于 prose revision。
+
+---
+
+## 11 · Semantic judgment 与 independent judgment 不是一回事
+
+这是新版 QA 最需要说清楚的一条。
+
+很多 semantic contract 都可以作为普通的 bounded model work 执行。它们仍然有明确输入、rubric、output contract 与 fingerprint，但**contract 本身并不因此宣称该调用具备独立性**。
+
+只有当某个 workflow / rubric 明确要求 independence 时，才额外要求：
+
+- 真正不同的 invocation / session；
+- 有界 packet，而不是继承 manager 全部历史；
+- 精确 candidate fingerprint binding；
+- typed result；
+- 看不到 hidden expected / gold；
+- 稿件发生实质变化后，通常需要 fresh judgment。
+
+Manager 可以 freeze、package、dispatch、validate、consume，但不能自己写完以后在同一 invocation 里换个“reviewer”标签满足门槛。
+
+### 禁止 reviewer-shopping
+
+transport failure 与 semantic rejection 是两个完全不同的状态。
+
+基础设施失败可以切换到另一条同样 eligible 的执行路径；有效的 `semantic_reject` 是真实 evidence，必须回 repair layer。不断换 reviewer 直到出现 PASS，会直接破坏独立审查的意义。
 
 深入参考：[语义执行器协议](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md) 与 [语义执行运行时](../harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.zh-CN.md)。
 
 ---
 
-## 06 · 盲评队列
+## 12 · Semantic fingerprint 与 run receipt 保护判断来源
 
-回归和能力评测可以包含隐藏预期值，用于最终计分；但审阅者不能看到这些标签。
+每个 semantic job 都把具体 contract / kind、subject、受限输入、rubric 与 output contract 绑定成精确 fingerprint。worker session、transport attempt 等执行 lineage 与“这个语义问题本身是什么”分开记录。
 
-NovelForge 会先构造**盲评语义队列**，移除 expected / gold / release label 等内容，再分发给独立 reviewer。负面回归样本也不会进入首轮 Writer 上下文，避免生成阶段被失败样本反向 priming。
+因此：
 
-流程可以概括为：
+- reviewer 不能实际审了另一份稿件却继续复用旧结果；
+- 同一个 semantic job 因 transport failure 换执行路径，不会改变原问题；
+- artifact、rubric 或 output contract 实质变化后会形成新 semantic fingerprint；
+- validator 可以拒绝 stale 或错误绑定的结果。
 
-```text
-评测案例
-→ 确定性前置条件
-→ 盲评语义任务
-→ 独立审阅者
-→ 指纹绑定类型化结果
-→ 评分 / 发布判断
-```
-
-如果必须的语义判断缺失，状态应该是 pending，而不是伪造 PASS。
+provider-neutral semantic run receipt 负责留下受限执行 provenance，但 provider history 本身仍然不是故事权威。
 
 ---
 
-## 07 · 连贯性与状态 QA
+## 13 · Blind eval 不让 reviewer 提前看到答案
 
-连贯性远不只是“人物眼睛颜色有没有记错”。它还包括故事状态是否在因果和知识边界上持续成立。
+Generic eval case 可以保存 expected outcome 用于最终评分，但这些字段不属于 reviewer context。
 
-典型检查对象：
+blind queue builder 会在 semantic dispatch 前移除 expected / gold / release-decision 等字段。负面 regression bad example 也不会在 Raw Draft 生成前进入 Writer context。
 
-- 人物位置与是否在场；
-- 某一时间点人物究竟能知道什么；
-- 关系与义务变化；
-- 资源、伤势、期限、债务、承诺和约束；
-- 未关闭线索与伏笔；
-- 时间线 / 日期一致性；
-- 事件后应该持续存在的情绪余波；
-- 必要时，已接受正文指纹与项目状态 / 台账是否一致。
+如果某个 semantic eval 当前没有 eligible judgment，状态保持 `PENDING_MODEL`；确定性 CI 不能为了绿灯伪造 PASS。
 
-连贯性失败可能属于状态修复、人物模拟、Story / Plan，或者正典结算，而不是正文润色。
+普通 CI 仍然可以完成：
 
----
+- eval manifest 与 fixture 校验；
+- deterministic release blocker；
+- blind queue hygiene；
+- schema 与 fingerprint；
+- 明确版本化的 reviewed baseline；
+- Project / Framework self-test 与可复现构建。
 
-## 08 · 失败回路
-
-NovelForge 强调 failure routing，因为“怎么修”与“发现什么错”同样重要。
-
-```text
-局部表层失败
-→ 局部改写
-
-表层失败成簇
-→ 整个场景重新生成
-
-SAFE-BUT-FLAT / 读者抓力失败
-→ 读者压力 + 场景模拟
-
-人物失败
-→ 人物模拟
-
-故事 / 因果失败
-→ Story / Plan
-
-连贯性 / 状态失败
-→ 状态修复 / settlement
-
-有效独立语义拒绝
-→ 回到拥有问题的修复层
-```
-
-这套设计明确拒绝“所有问题都再让 Editor Agent 改一遍”的单一路径。
-
----
-
-## 09 · 评测案例类型
-
-NovelForge 当前主要使用三类评测：
-
-### 回归评测
-
-保护已知失败机制。只有当该发布路径真正具备所需确定性 / 语义基线时，回归项才应成为 release blocker。
-
-### 能力评测
-
-确认框架能够识别或产生某种目标机制。
-
-### 基础设施评测
-
-确认 Schema、文件、路由、权威边界、运行时契约、项目 / 框架卫生等确定性行为。
-
-评审模式分为 `deterministic`、`rubric` 和 `hybrid`。
-
----
-
-## 10 · 普通 CI 做什么，不做什么
-
-普通 CI 应该：
-
-- 验证 eval manifest 和 fixture；
-- 运行确定性 release blocker；
-- 构造盲评语义队列；
-- 检查隐藏 expected label 是否已经移除；
-- 在明确版本化时验证已提交的 reviewed baseline；
-- 运行项目 / 框架自检与构建。
-
-普通 CI **不会静默调用付费或需要登录的模型**。语义执行是显式、能力感知的外部步骤。
-
-典型命令：
-
-```bash
-python evals/run_evals.py --release
-python evals/build_judge_queue.py --output /tmp/semantic-queue.json
-python evals/run_evals.py --judgments reviewed-results.json --json
-```
+普通 CI 不会静默消耗付费或登录态模型额度。
 
 实现参考：[NovelForge 评测](../evals/README.zh-CN.md)。
 
 ---
 
-## 11 · 发布门槛与用户可见门槛
+## 14 · 用户可见门槛按当前任务决定
 
-候选产物只有在当前 task mode 要求的门槛全部解决后，才能以完成态展示。真实的非成功状态包括：
+并不是所有任务都需要把所有 semantic contract 跑一遍。
+
+Manager 只加载当前任务、Project profile 与 rubric 真正需要的最小 contract set。
+
+对于 `DRAFT` / `REVISE`，Raw Draft 永远只在内部。要把候选稿称为 review-ready，仍然必须解决当前适用的 Surface、Reader、Character / Story、continuity 与 independent gate。
+
+真实的未完成状态包括：
 
 `awaiting_user` · `awaiting_external` · `semantic_pending` · `failed_gate` · `settlement_incomplete`
 
-框架宁可展示一个真实的“尚未通过”，也不应该为了用户体验伪造“production-ready”。
-
-对于 DRAFT / REVISE，Raw Draft 永不直接展示；适用的表层质量、读者吸引力、独立语义和连贯性门槛没有通过时，也不能把候选稿称为生产就绪。
+NovelForge 宁可明确告诉用户“现在还没有通过”，也不制造假的 production-ready。
 
 ---
 
-## 12 · 成本与限制 ⚠️
+## 15 · 用户接受与 SETTLE 不是质量 verdict 的延伸
 
-更严格的 QA 体系有真实成本：
+通过质量门槛不会自动改写 Canon。
 
-- 独立语义审查增加模型 / 人工延迟和可能的 API 成本；
-- 候选稿发生实质改写后，fresh-per-fingerprint 通常需要新的审阅调用；
-- Schema、指纹和检查点增加工程流程；
-- 上游重生可能比不断局部修补消耗更多 token；
-- 即使使用独立审阅者，文学语义判断仍然带概率性。
+用户先看到 review candidate，明确接受之后，才可能授权进入 `SETTLE`。Settlement 是另一套确定性 transaction：要求明确 acceptance evidence、精确 before→after writes、compare-and-swap precondition、checkpoint / write authorization、projection receipts 与 postcondition verification。
 
-NovelForge 接受这些成本，是因为对长篇项目来说，虚假自信、连贯性漂移和“自己写自己审”的问题往往比额外运行时更昂贵。
+同样地，semantic reviewer 也不能“审核通过，于是自动写进正典”。
+
+这四件事必须分开：
+
+**质量证据 → 用户可见审阅 → 明确接受 → 授权结算。**
 
 ---
 
-## 13 · 当前评测覆盖
+## 16 · 成本与限制 ⚠️
 
-框架当前至少覆盖：
+这套 QA 架构有真实成本：
 
-- 表层质量规则；
-- 读者吸引力；
-- 人物 / 语义归属；
-- 正典 / 计划边界；
-- 语料权利边界；
-- Project SDK / Framework 卫生；
-- 语义运行时完整性。
+- semantic diagnosis 会消耗模型或人工判断；
+- independent gate 通常意味着额外 invocation，甚至另一条 provider / human 路径；
+- 候选稿实质变化后，新 fingerprint 会让旧判断失效；
+- candidate comparison 与 scene divergence 可能比简单 line edit 更耗 token；
+- findings、receipts 与 checkpoints 增加工程流程；
+- 执行契约即使非常精确，文学判断本身仍然带概率性。
 
-评测集会随着用户拒绝证据、语料研究、框架改动和新发现的能力缺口继续增长。
+只有当这些成本换来了更少的虚假自信、更低的连续性漂移、更少的“自己写自己审”，以及更清楚的 repair ownership 时，它们才值得存在。
+
+---
+
+## 17 · NovelForge 所谓“好的 QA”是什么
+
+不是 reviewer 越多越好。
+
+真正好的 QA 是：
+
+- 代码只证明代码真正能证明的东西；
+- 模型只拿到当前判断真正需要的最小契约与证据；
+- Reader simulation 看不到创作者私有信息；
+- Character judgment 尊重知识边界与人物议程；
+- 先诊断，再 rewrite；
+- repair 回到真正 owning mechanism；
+- candidate evolution 允许 tie，也允许在 plateau 停止；
+- 只有真正需要时才要求 independence；
+- 每个结果都绑定它实际判断的 artifact；
+- 任何质量结果都不能静默升级成 Canon authority。
 
 <div align="center">
   <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom 标志" width="52" />
   <br />
-  <sub>代码证明代码能证明的；剩下的，交给真正独立的判断。✦</sub>
+  <sub>代码证明不变量；模型阅读小说；问题回到归属层；修改必须用证据证明。✦</sub>
 </div>
