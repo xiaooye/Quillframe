@@ -15,7 +15,7 @@
 5. 结构级 Framework 变更读取 `harness/SELF_IMPROVEMENT_PROTOCOL.zh-CN.md`；
 6. 项目工程化工作读取 `docs/project-sdk.zh-CN.md`；
 7. 学习 / 语料工作读取 `docs/adaptive-learning.zh-CN.md` 与 Corpus policy；
-8. **只要任务涉及 README、人类可读文档、图表、竞品比较、文档信息架构或视觉体系，编辑前必须读取并遵守 `docs/DOCUMENTATION_STANDARD.zh-CN.md` 与 `assets/DESIGN_SYSTEM.zh-CN.md`。**
+8. **只要任务涉及 README、人类可读文档、图表、竞品比较、文档信息架构或视觉体系，编辑前必须读取并遵守 `docs/DOCUMENTATION_STANDARD.zh-CN.md`、`docs/DOCUMENTATION_QA.zh-CN.md` 与 `assets/DESIGN_SYSTEM.zh-CN.md`。**
 
 ## 工程规则
 
@@ -33,13 +33,16 @@
 
 ## 文档规则
 
-仓库级人类可读文档标准是 `docs/DOCUMENTATION_STANDARD.zh-CN.md`；视觉唯一规范是 `assets/DESIGN_SYSTEM.zh-CN.md` 与 `assets/brand/tokens.json`。
+仓库级人类可读文档标准是 `docs/DOCUMENTATION_STANDARD.zh-CN.md`；视觉唯一规范是 `assets/DESIGN_SYSTEM.zh-CN.md` 与 `assets/brand/tokens.json`；强制作者自检门槛是 `docs/DOCUMENTATION_QA.zh-CN.md`。
 
 必须遵守以下摘要：
 
 - 文档是产品表面，不是源码目录的装饰。
 - 根 Landing 页必须快速回答：NovelForge 是什么、为什么不同、如何工作、为什么 QA 可信、有哪些真实取舍、如何开始。
 - A 级 Landing 页的核心产品概念必须使用统一的 Story Loom 展示模块。**不能**用原始 `A → B → C` 箭头串、默认占位 Mermaid、低信息密度卡片堆，或本应高密度比较却直接放巨型原生 Markdown 表，来承担系统架构、章节生产流水线、QA 栈或主要竞品比较。
+- **SVG 生成成功不等于资产通过。** 新建或实质修改的 A 级视觉必须先通过确定性文档检查，再实际渲染并在真实 GitHub 阅读宽度下检查；文案必须脱离视觉单独审一遍；双语资产还要做语义对齐。如果当前环境无法看到真实 render，就保持 WIP，不能接入 A 级页面。
+- 不得用“继续缩小字体直到塞进去”的方式解决 overflow；应删减 / 重构文案或修复布局。
+- 面向用户的文档工作完成前运行 `python scripts/docs_quality.py`。普通 CI 运行同一套确定性 checker，但不得调用模型 API。
 - 首页主要竞品类别是**直接小说智能体 / 小说框架**。通用 Agent runtime 放到实现思想 / 技术采用文档；作者 SaaS / 编辑器类产品在产品类别确实不同的情况下单独讨论。
 - 竞品比较描述可验证机制，不使用星级或营销分数。会随时间变化的竞品能力，在做实质性修改前必须重新核实当前资料。
 - 英文与简体中文是两套**原生专业表达、语义等价的权威版本**，不是逐句翻译。中文正文与中文图表优先使用自然中文术语，只保留真正需要精确匹配的 identifier / 产品名；英文必须读起来像专业技术英语原文。
@@ -47,7 +50,7 @@
 - A 级页面优先使用品牌化 SVG / UI 模块作为展示层；Mermaid 继续作为可检查、可差异比较的技术源图 / 参考层。
 - 静态视觉资产必须原创或有明确授权 / 来源记录，必须有可访问性处理，并由附近文字或参考文档提供语义支撑。
 - Story Loom 的目标约为 `70% 专业技术感 / 30% 二次元编辑感`；emoji 可以增加温度，但不能替代结构、状态或导航语义。
-- “看起来干净”不等于完成。信息密度、层级、双语原生质量、准确性、权威边界、链接、可访问性与诚实定位都必须通过。
+- “看起来干净”不等于完成。信息密度、层级、双语原生质量、准确性、权威边界、链接、可访问性、诚实定位和 render QA 都必须通过。
 
 Human-facing authoritative docs 必须成对发布 `.en.md / .zh-CN.md`。只有外部工具要求固定路径时，才允许保留精简的双语 router。
 
