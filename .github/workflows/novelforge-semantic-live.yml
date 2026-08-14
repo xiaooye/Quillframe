@@ -28,9 +28,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      NOVEL_OS_OPENAI_MODEL: ${{ inputs.model }}
-      NOVEL_OS_OPENAI_REASONING_EFFORT: ${{ inputs.reasoning_effort }}
-      NOVEL_OS_DISABLE_LOCAL_AGENT_AUTO: '1'
+      NOVELFORGE_OPENAI_MODEL: ${{ inputs.model }}
+      NOVELFORGE_OPENAI_REASONING_EFFORT: ${{ inputs.reasoning_effort }}
+      NOVELFORGE_DISABLE_LOCAL_AGENT_AUTO: '1'
       SEMANTIC_DOMAIN: ${{ inputs.domain }}
     steps:
       - uses: actions/checkout@v4
