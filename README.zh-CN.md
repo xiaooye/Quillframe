@@ -1,207 +1,132 @@
-# NovelForge · 自适应小说 Agent 框架
+<div align="center">
+  <img src="assets/brand/novelforge-lockup.svg" alt="NovelForge 自适应小说智能体框架" width="680" />
+  <p><strong>把小说生产做成可恢复、可审计、可学习的系统，但不把小说写成系统日志。</strong></p>
+  <p><kbd>正典</kbd>&nbsp;&nbsp;<kbd>可恢复会话</kbd>&nbsp;&nbsp;<kbd>读者 QA</kbd>&nbsp;&nbsp;<kbd>独立审查</kbd>&nbsp;&nbsp;<kbd>长期学习</kbd></p>
+  <p><a href="README.en.md">English</a> · <strong>简体中文</strong> · <a href="docs/README.zh-CN.md">文档中心</a></p>
+</div>
 
-<p align="center">
-  <strong>面向长篇与连载小说的、项目无关的生产级 Agent Framework。</strong>
-</p>
+<img src="assets/brand/story-thread.svg" alt="" width="100%" />
 
-<p align="center">
-  <a href="README.en.md">English</a> · 简体中文
-</p>
+# NovelForge · 自适应小说智能体框架
 
-## 为什么是 NovelForge
+> 🌸 **NovelForge 是面向长篇与连载小说的项目无关智能体框架。** 它把故事事实、人物状态、读者质量、运行恢复、独立审查和偏好学习都当作一等生产问题，而不是靠 Prompt 约定临时维持。
 
-多数 AI 小说工具停在 `大纲 → Prompt → 章节`。NovelForge 把小说创作视为一个同时包含软件工程、编辑流程和长期记忆的有状态生产系统：
+**项目无关 · 会话原生 · 面向读者体验 · 证据驱动 · 提供商无关**
 
-- 显式 Story Architecture 与 Canon 状态；
-- session-native orchestration 与可恢复 checkpoint；
-- bounded specialist workers，而不是热闹但低效的 agent round-table；
-- fingerprint-bound 的独立语义审计；
-- Surface Quality 与 Reader Engagement 双重质量门；
-- 基于证据的用户偏好学习；
-- 自主 Corpus discovery 与 benchmark 建设；
-- 权利/来源感知的语料处理；
-- capability eval + regression eval；
-- provider-neutral runtime：普通 chat、本地 agent、MCP、API、CI job、local model 或 human reviewer 都可以接入。
+> **边界 ✦** 不内置具体小说；不允许隐藏式正典升级；不允许 reviewer shopping。下游项目拥有自己的故事事实，NovelForge 只拥有通用机制。
 
-本仓库刻意**不包含任何内置小说、人物、剧情或 Canon**。具体项目只通过 Project Adapter 提供自己的 profile 与 state。
+<p align="center"><a href="docs/why-novelforge.zh-CN.md"><strong>为什么是 NovelForge？</strong></a> · <a href="docs/production-pipeline.zh-CN.md"><strong>生产流水线</strong></a> · <a href="docs/quality-assurance.zh-CN.md"><strong>质量保障与 QA</strong></a> · <a href="docs/architecture-atlas.zh-CN.md"><strong>架构图谱</strong></a></p>
 
-## 总体架构
+---
 
-```mermaid
-flowchart TB
-    U[用户 / 编辑] --> M[Harness Manager]
-    PA[Project Adapter] --> M
-    M --> CTX[Context Broker]
-    M --> CP[Session & Control Plane]
-    CTX --> CORE[Story / Character / Canon Core]
-    CORE --> SIM[Scene & Character Simulation]
-    SIM --> D[Event-first Draft]
-    D --> SURF[Surface Runtime]
-    SURF --> READ[Reader Engagement]
-    READ --> SEM[Independent Semantic Review]
-    SEM --> CONT[Continuity / State Audit]
-    CONT --> GATE[User-visible Gate]
+## 01 · 直接小说智能体对比 ✨
 
-    U --> PREF[Preference Evidence]
-    PREF --> HYP[Taste Hypothesis Graph]
-    HYP --> GAP[Corpus Gap Detector]
-    GAP --> SCOUT[Corpus Scout]
-    SCOUT --> RIGHTS[Rights & Provenance Gate]
-    RIGHTS --> ANALYZE[Mechanism Analysis]
-    ANALYZE --> BENCH[Benchmarks + Evals]
-    BENCH --> HYP
-    BENCH --> SURF
-    BENCH --> READ
-```
+<img src="assets/ui/home-comparison.zh-CN.svg" alt="NovelForge、NovelClaw、Novel OS、AuthorAgent 与 autonovel 的详细机制对比" width="100%" />
 
-## 核心子系统
+这里刻意只做**小说智能体 / 小说框架之间的同类比较**。Sudowrite、NovelCrafter 这类成熟作者产品会在 [为什么是 NovelForge](docs/why-novelforge.zh-CN.md) 中单独讨论；LangGraph、OpenAI Agents SDK、AutoGen、CrewAI 等通用框架属于 [实现思想来源](knowledge/AGENT_FRAMEWORK_ADOPTION.en.md)，不是首页的主要产品竞品。
 
-### 1. Story / Canon Core
+NovelForge 的核心判断是：长篇 AI 小说真正困难的地方并不是“再多几个 Agent”，而是**权威分离、人物归属、读者压力、可信 QA、可恢复运行和有证据的长期学习**。
 
-管理 BOOK/VOLUME/ARC/UNIT/CHAPTER/SCENE 层级、人物自主性、信息边界、关系、资源、义务、伏笔、证据、依赖与 Accepted Canon。Plan 不会因为存在于系统里就自动成为 Canon。
+---
 
-### 2. Harness & Sessions
+## 02 · 系统架构 🪄
 
-Harness 使用 deterministic outer workflow，并默认一个 manager。Session、run、checkpoint、event、handoff、worker lease 与 exactly-once logical consumption 都是明确的 runtime state。
+<img src="assets/ui/home-architecture.zh-CN.svg" alt="NovelForge 五领域架构：项目上下文、调度运行时、故事核心、编辑质量与证据学习" width="100%" />
 
-### 3. Surface + Reader Engagement
-
-Surface Safety 负责拦截 malformed、AI-ish、机械实现的正文；Reader Engagement 单独衡量 narrative pressure、reward、tonal contrast、curiosity evolution、scene causality 与 forward pull。文字“没犯错”仍然可能因为无聊而失败。
-
-### 4. Independent Semantic Workers
-
-Mandatory independent review 必须来自真正不同的 session/invocation。可用 transport 包括本地 Codex/Claude child process、provider adapter、MCP worker、GitHub job、独立 peer chat、local model 和 human reviewer。同 session 换一个“critic 角色”永远不算独立审计。
-
-### 5. Adaptive Preference Learning
-
-NovelForge 不把用户口味压成一张静态 style prompt，而是维护有证据支撑、可被推翻的 hypothesis：
+三类持久状态明确分离：
 
 ```text
-feedback
-→ evidence
-→ preference hypothesis
-→ confidence / contradiction
-→ style dimensions
-→ corpus gap
-→ discovery request
-→ corpus evidence
-→ personalized eval
-→ active profile / rollback
+运行 / 会话状态 ≠ 学习状态 ≠ 项目 / 正典状态
 ```
 
-系统可以自主发现**新的偏好维度**，而不只是修改预设 slider。
+因此，一条会话记忆、一份语料结果、一个审阅结论或一个学习假设，都不会因为“系统里已经有了”就自动变成故事事实。
 
-### 6. Corpus Intelligence
+阅读 [总体架构](docs/architecture.zh-CN.md) 查看系统视图，阅读 [架构图谱](docs/architecture-atlas.zh-CN.md) 查看每个子系统具体负责什么，以及对应的底层协议。
 
-Corpus 是一等公民。系统可以自主识别证据缺口、生成 discovery plan、通过当前 host 的 Web/GitHub/MCP connector 检索合法来源、分类 rights、提炼 mechanism-level observation、主动寻找 counterexample、构建 cross-work benchmark，并用结果强化 personalized profile 或 General Craft。
+---
 
-它不会因为现代小说“网上能看”就整章镜像，也不会生成“模仿某位在世作者”的句式指纹。
-
-### 7. Eval & Self-improvement
-
-任何持久行为升级都必须有 mechanism evidence、counterexample/profile boundary、eval coverage、version/rollback 与 post-change regression。用户明确拒绝的模型输出可以成为 negative regression evidence，但不能成为正向风格范例。
-
-## Runtime 模型
+## 03 · 一章正文是一条生产流水线 📖
 
 ```text
-resource/project
-→ session/thread
-→ run/invocation
-→ checkpoint
-→ event / handoff
-→ worker lease / external wait
-→ result
-→ validation
-→ consume-once receipt
-→ resume
+上下文冻结
+→ 故事 / 正典预检
+→ 场景模拟
+→ 人物模拟
+→ 读者压力预检
+→ 事件优先原始草稿
+→ 表层实现
+→ 生成后回归 / 独立审查
+→ 改写或重生
+→ 读者吸引力
+→ 连贯性审计
+→ 用户可见门槛
 ```
 
-Chat session 是一等 runtime。只要 host 还有其他合格的 independent worker path，framework 本身不要求必须持有 API key。
+**Raw Draft 永不直接展示。** 模型第一次生成出来的文字不会因为“写完了”就成为用户看到的章节。Regression 坏例只会在 Raw Draft 冻结后进入生成后检查，避免首轮写作被已知失败样本污染。
 
-## Provider-neutral execution
+失败必须回到真正拥有问题的机制：表层失败成簇 → 整场景重生；SAFE-BUT-FLAT → 读者压力 + 场景模拟；人物失败 → 人物模拟；故事失败 → Story / Plan。
 
-| Runtime | Manager | Specialist | Independent review | 常见 transport |
-|---|---:|---:|---:|---|
-| 当前 Chat session | ✓ | bounded | self-review ✗ | host chat |
-| 独立 Peer Chat | — | — | ✓ | user/connector relay |
-| Codex CLI | ✓ | ✓ | ✓ 独立 invocation | local process / MCP |
-| Claude Code | ✓ | ✓ | ✓ 独立 invocation | local process / MCP |
-| Provider API | — | ✓ | ✓ | adapter |
-| GitHub Actions | — | ✓ | 有 worker backend 时 ✓ | workflow/event |
-| Remote MCP worker | ✓ | ✓ | isolated session ✓ | Streamable HTTP |
-| Local model | optional | ✓ | isolated invocation ✓ | adapter |
-| Human reviewer | — | — | ✓ | relay |
+阅读 [生产流水线](docs/production-pipeline.zh-CN.md)。
 
-## Project Adapter 边界
+---
 
-具体小说只提供项目自己的信息：
+## 04 · 质量保障与 QA ✅
 
-```text
-project/
-├── project.yaml            # identity + framework compatibility
-├── profile/                # genre / platform / prose / reader targets
-├── bible/                  # characters / world / relationships / research
-├── state/                  # Accepted Canon + ledgers
-├── plans/                  # active plans / scene cards
-├── regressions/            # project-only negative cases
-└── manuscripts/            # draft / review / accepted artifacts
+<img src="assets/ui/home-quality.zh-CN.svg" alt="NovelForge 质量保障栈与失败回路" width="100%" />
+
+确定性代码负责 Schema、权威边界、生命周期、内容指纹、依赖、幂等性、盲评卫生和发布不变量；语义判断负责文本质量、读者吸引力、人物 / 场景行为，以及无法诚实压缩成正则规则的问题。
+
+强制独立审查必须来自真正不同的调用 / 会话，并返回绑定精确候选稿指纹的类型化结果。一个有效的 semantic reject 必须进入修复流程，不能不断换 reviewer 直到有人说 PASS。
+
+阅读 [质量保障与 QA](docs/quality-assurance.zh-CN.md) 与 [评测参考](evals/README.zh-CN.md)。
+
+---
+
+## 05 · 适用场景与真实取舍 ⚖️
+
+<img src="assets/ui/home-fit.zh-CN.svg" alt="NovelForge 的适用场景，以及什么时候更轻量的小说工具更合适" width="100%" />
+
+NovelForge 刻意比轻量写作工具多一些工程流程：精确框架锁、显式权威等级、检查点、内容指纹、独立门槛、事务化结算、可复现验证。
+
+这些成本只有在项目复杂到确实需要长期治理时才值得。如果你主要需求只是快速构思、续写、润色，或者更需要成熟的消费级编辑器，那么别的产品可能更合适。
+
+---
+
+## 06 · 项目工程化 ⚙️
+
+一本下游小说是一个有版本、有锁定、有验证的工程项目，而不是一堆 Prompt 文件。
+
+```bash
+python project_sdk.py init <path> --id PROJECT-X --title "Novel"
+python project_sdk.py validate <path>
+python project_sdk.py build <path>
+python project_sdk.py self-test
 ```
 
-依赖方向永远只有一条：
+项目锁定精确 NovelForge 版本，并独立拥有自己的 profile、bible、已接受正典、当前状态、计划、稿件、研究、回归样本、测试和构建产物。
 
-```text
-Project → NovelForge
-NovelForge -X→ Project-specific imports
-```
+阅读 [项目 SDK](docs/project-sdk.zh-CN.md) 与 [项目适配器](docs/project-adapters.zh-CN.md)。
 
-CI 会直接拒绝 framework repo 中出现 project-specific leakage。
+---
 
-## 双语文档
+## 07 · 多运行时与长期学习 🔌
 
-所有面向人的文档都发布为中英双语成对版本：
+只要满足当前任务的能力和独立性契约，Harness 可以运行在普通聊天、本地 Codex / Claude、提供商 API、MCP 执行器、GitHub 任务、本地模型或人工审阅上。
 
-```text
-name.en.md
-name.zh-CN.md
-```
+**能力 ≠ 权威。** 一个运行时技术上“能写文件”，不代表它有正典写入权限。
 
-`README.md`、`AGENTS.md`、`CLAUDE.md`、`SKILL.md` 等工具约定入口保持精简 bootstrap，并链接到对应的中英权威版本。CI 检查文档配对和内部链接。
+偏好学习必须有证据、有作用域、允许冲突、可版本化、可回滚。语料证据永远与 Canon、人物知识和持久用户口味分开。
 
-机器 schema 仍使用单份 JSON/YAML，避免两套 schema 漂移；其人类说明文档必须双语。
+阅读 [运行时与集成](docs/integrations.zh-CN.md)、[自适应学习](docs/adaptive-learning.zh-CN.md) 与 [语料智能](corpus/README.zh-CN.md)。
 
-## Visual Documentation
+<img src="assets/brand/story-thread.svg" alt="" width="100%" />
 
-架构图使用 Mermaid，使图本身可以 version-control 和 diff。`assets/` 下使用统一、原创的 manga/anime-inspired visual system 作为品牌和文档装饰，不参与任何 runtime authority。
+## 08 · 文档入口 🌸
 
-## Repository Map
+<p align="center"><a href="docs/README.zh-CN.md"><strong>文档中心</strong></a> · <a href="docs/why-novelforge.zh-CN.md"><strong>完整竞品对比</strong></a> · <a href="docs/architecture-atlas.zh-CN.md"><strong>架构图谱</strong></a> · <a href="docs/production-pipeline.zh-CN.md"><strong>生产流水线</strong></a> · <a href="docs/quality-assurance.zh-CN.md"><strong>质量保障与 QA</strong></a> · <a href="assets/DESIGN_SYSTEM.zh-CN.md"><strong>Story Loom 设计系统</strong></a></p>
 
-```text
-.
-├── core/                   # story / character / Canon / context primitives
-├── surface/                # prose realization + reader engagement
-├── harness/                # orchestration / sessions / control plane / workers
-├── learning/               # user taste + promotion / rollback
-├── corpus/                 # discovery / rights / analysis / benchmarks
-├── knowledge/              # general craft + framework research
-├── evals/                  # capability / regression suites
-├── integrations/           # host/runtime adapters
-├── schemas/                # stable machine contracts
-├── docs/                   # architecture and guides
-├── assets/                 # diagrams / visual identity
-└── examples/               # 只允许 project-agnostic fixtures
-```
-
-## 原则
-
-- 从简单开始：multi-agent 是实现选择，不是质量特性。
-- 持久化 operational state，不持久化 accidental authority。
-- Sparse retrieval；不把整本 Story Bible 塞给每一次模型调用。
-- Writer context 与 regression gold / reviewer expectation 隔离。
-- 学习 mechanism，不学禁词表，也不学作者模仿模板。
-- Semantic rejection 是有效判断，不是换 reviewer 审到 PASS 的理由。
-- Corpus 是 evidence，不是 Canon。
-- User taste 是可修订的证据模型，不是永久神话。
-
-## 当前状态
-
-Framework 正在从早期 monorepo prototype 整理成完全自包含的 Generic Story/Surface/Corpus/Learning/Eval stack，同时补齐双语文档、project-leakage CI 与 session-native integrations。
+<div align="center">
+  <img src="assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom 标志" width="58" />
+  <br />
+  <sub>后台严格，正文鲜活；工程专业，再带一点樱花温度。🌸</sub>
+</div>

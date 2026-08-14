@@ -1,76 +1,94 @@
+<div align="center">
+  <img src="../assets/brand/novelforge-lockup.svg" alt="NovelForge 自适应小说智能体框架" width="540" />
+  <p><strong>自适应学习 · 用证据学习，而不是把模型猜测变成永久规则</strong></p>
+  <p><kbd>用户证据</kbd>&nbsp;&nbsp;<kbd>偏好假设</kbd>&nbsp;&nbsp;<kbd>语料缺口</kbd>&nbsp;&nbsp;<kbd>评测</kbd>&nbsp;&nbsp;<kbd>回滚</kbd></p>
+</div>
+
+<img src="../assets/brand/story-thread.svg" alt="" width="100%" />
+
 # 自适应学习架构
 
-## 目标
+> 🌸 **NovelForge 可以持续学习，但任何持久行为变化都必须有证据、有边界、可评测、可回滚。模型自己猜出来的“用户偏好”永远不够。**
 
-NovelForge 从用户证据与 Corpus 证据中持续学习，但不会把临时模型猜测偷偷变成永久风格规则。
-
-Learning state 与 runtime/session state 必须分开：
+学习状态与运行状态、项目状态严格分离：
 
 ```text
-runtime.db  = 工作做到哪里
-learning.db = 学到了什么，以及证据与 rollback
-project DB  = 某一本小说哪些内容是 Canon
+runtime.db  = 工作进行到哪里
+learning.db = 学到了什么、证据是什么、如何回滚
+project DB  = 某一本小说哪些内容属于已接受正典
 ```
 
-## Learning Graph
+---
+
+## 01 · 学习闭环 ✨
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"background":"#FFFDFC","primaryTextColor":"#241D2B","lineColor":"#756A7D","fontFamily":"ui-sans-serif, system-ui, sans-serif"},"flowchart":{"curve":"basis","nodeSpacing":28,"rankSpacing":34}}}%%
 flowchart LR
-    F[反馈 / 编辑 / 接受 / 拒绝] --> E[Preference Evidence]
-    E --> H[Preference Hypothesis]
-    H --> C{出现反例/冲突?}
-    C -- 是 --> R[缩窄 scope / 降低 confidence / 拆分 hypothesis]
-    C -- 否 --> G[Corpus Gap Detector]
+    F([用户反馈<br/>编辑 · 接受 · 拒绝]) --> E([偏好证据]) --> H([偏好假设]) --> C{{出现反例或冲突？}}
+    C -- 是 --> R([缩窄适用范围<br/>降低置信度<br/>拆分假设])
+    C -- 否 --> G([语料缺口检测])
     R --> G
-    G --> D[Discovery Request]
-    D --> S[Corpus Scout]
-    S --> Q[Rights & Provenance Gate]
-    Q --> A[Per-work Analysis]
-    A --> X[Counterexample Search]
-    X --> B[Cross-work Benchmark]
-    B --> V[个性化 Capability + Regression Evals]
-    V --> P{Promotion Gate}
-    P -- 通过 --> AP[Active Profile / General Craft]
+    G --> D([检索请求]) --> S([语料检索器]) --> Q{{权利与来源门槛}} --> A([单作品分析]) --> X([反例检索]) --> B([跨作品基准]) --> V([个性化能力评测<br/>+ 回归评测]) --> P{{升级门槛}}
+    P -- 通过 --> AP([当前偏好配置<br/>或通用写作机制])
     P -- 未通过 --> H
-    AP --> M[观察后续结果]
-    M --> H
+    AP --> M([观察后续结果]) --> H
+
+    classDef editorial fill:#F9DDE9,stroke:#D6679A,color:#241D2B,stroke-width:1.75px;
+    classDef evidence fill:#F9EDCF,stroke:#BE892F,color:#241D2B,stroke-width:1.75px;
+    classDef runtime fill:#E7E1F8,stroke:#796BC4,color:#241D2B,stroke-width:1.75px;
+    classDef validated fill:#DCF1E7,stroke:#4D9B7D,color:#241D2B,stroke-width:2px;
+    classDef neutral fill:#FFFDFC,stroke:#62556D,color:#241D2B,stroke-width:1.75px;
+
+    class F editorial;
+    class E,H,G,D,A,X,B,V evidence;
+    class C,Q,P runtime;
+    class R,M neutral;
+    class S runtime;
+    class AP validated;
 ```
 
-## 证据等级
+这套闭环的重点不是“积累更多记忆”，而是让每个偏好结论都能回答三个问题：**证据从哪里来？什么情况下不适用？如果后来证明错了，怎么撤回？**
+
+---
+
+## 02 · 证据等级 📚
 
 由强到弱：
 
-1. 用户明确规则；
-2. 用户直接编辑；
-3. 用户带理由的明确接受/拒绝；
-4. 多次一致修正；
-5. Accepted project convention；
-6. 多作品 Corpus mechanism；
-7. 外部 framework / craft evidence；
+1. 用户明确提出的规则；
+2. 用户直接修改后的文本；
+3. 用户带理由的明确接受或拒绝；
+4. 多次一致的修正行为；
+5. 已接受的项目约定；
+6. 多作品语料中反复出现的机制证据；
+7. 外部框架或写作研究证据；
 8. 模型推断。
 
-只有第 8 层模型推断时，不得建立 durable user preference。
+只有第 8 层时，**不得建立持久用户偏好**。
 
-## Preference Hypothesis
+---
 
-Hypothesis 比静态 style slider 更有表达力，至少记录：
+## 03 · 偏好假设 🧠
 
-- dimension；
-- statement；
-- underlying mechanism；
-- scope（`one_off | project | user_taste | general_craft`）；
-- confidence；
-- positive / negative evidence；
-- contradictions；
-- applicability boundary；
-- version/state。
+偏好假设比静态“风格滑块”更有表达力。至少记录：
+
+- 偏好维度；
+- 假设陈述；
+- 底层机制；
+- 作用域：`one_off | project | user_taste | general_craft`；
+- 置信度；
+- 正向 / 负向证据；
+- 冲突证据；
+- 适用边界；
+- 版本与状态。
 
 示例：
 
 ```yaml
 dimension: paragraph_rhythm
-statement: 喜欢快节奏，但不喜欢无功能碎段
-mechanism: 节奏应该来自状态改变、压力、选择或信息移动，而不是单纯把句子切碎
+statement: 喜欢快节奏，但不喜欢没有叙事功能的碎段
+mechanism: 节奏应来自状态变化、压力、选择或信息移动，而不是单纯把句子切碎
 scope: user_taste
 confidence: 0.82
 applicability:
@@ -78,111 +96,128 @@ applicability:
   exceptions: [deliberate_shock_fragment, poetic_project_profile]
 ```
 
-这很重要。浅层系统可能会学成“短段落不好”，真正的偏好却可能是“段落切分必须承担叙事功能”。
+浅层系统很容易把这个偏好错误地概括成“用户讨厌短段落”；真正可复用的机制其实是：**段落切分必须承担叙事功能。**
 
-## 自主发现新的偏好维度
+### 自动发现新的偏好维度
 
-当既有 dimensions 无法解释重复出现的用户证据时，framework 可以提出新的 dimension。
+当既有维度无法解释重复出现的用户证据时，框架可以提出新的候选维度。但它至少需要：
 
-新 dimension 只能先成为 **candidate**，至少需要：
+- 可追溯的用户反馈证据；
+- 至少一个反例或对照问题；
+- 足够独立的重复证据，而不是一次偶发现象；
+- 一个能够区分真实机制与表面代理指标的评测。
 
-- 可追溯 feedback evidence；
-- 至少一个 contrast/counterexample 问题；
-- 足够独立的证据支持这个抽象，而不是一次偶发现象；
-- 一个能区分真实 mechanism 与 superficial proxy 的 eval。
+系统应优先拆分过宽的假设，而不是制造脆弱的“万能规则”。
 
-系统应优先拆分过宽 hypothesis，而不是制造脆弱的 universal rule。
+---
 
-## Corpus Gap Detection
+## 04 · 语料缺口检测 🔎
 
-当某个 hypothesis 因缺少对照证据而置信度有限时，可以生成 Corpus Gap。
+当某个偏好假设缺少足够对照证据时，可以生成“语料缺口”。
 
-例如：
+例如：用户反感“一句一段”的伪速度感，但又要求很高的商业网文节奏。
 
-> 用户反感 sentence-per-paragraph 的伪速度感，但又要求很高的商业网文节奏。
+**好的研究问题：**
 
-好的 Corpus Gap：
+> 寻找高节奏商业小说中仍保持完整段落单元的成功片段，比较压力、状态变化、对话、动作和信息移动如何制造速度，而不是依赖碎段。
 
-> 寻找高节奏商业小说中仍保持完整段落单元的成功片段，对比 pressure、state change、dialogue、action、information movement 如何制造速度，而不是依赖碎段。
-
-坏的 Corpus Gap：
+**差的研究问题：**
 
 > 用户喜欢长段落，所以找一些长段落小说。
 
-前者研究 mechanism，后者只是寻找确认偏见。
+前者研究机制，后者只是寻找确认偏见。
 
-## 个性化 Corpus Discovery
+---
 
-Corpus Scout 接收 typed discovery request，包含：
+## 05 · 个性化语料检索 🪄
 
-- hypothesis/gap ID；
-- research question；
-- desired contrast；
-- genre/platform/language tags；
-- style dimensions；
-- rights/source constraints；
-- target range/question；
-- diversity requirements；
-- exclusion rules。
+语料检索器（Corpus Scout）接收类型化检索请求，包含：
 
-Host runtime 可以通过 Web、GitHub、出版社/平台搜索、图书馆 metadata、用户合法文件、MCP search connector 等方式完成检索。
+- 假设 / 缺口 ID；
+- 研究问题；
+- 需要的对照类型；
+- 类型、平台、语言标签；
+- 风格维度；
+- 权利与来源限制；
+- 目标范围与问题边界；
+- 多样性要求；
+- 排除规则。
 
-**Discovery ≠ Ingestion。** 每个候选仍必须通过 source verification 与 rights classification。
+宿主运行时可以通过 Web、GitHub、出版社 / 平台搜索、图书馆元数据、用户合法文件、MCP 检索连接器等方式完成查找。
 
-## Promotion Rules
+> **边界 ✦ 检索 ≠ 入库。** 每个候选来源仍必须通过来源核验和权利分类。
 
-### Project Preference
-用户明确提出，并且不冲突 project authority 时可以激活。
+---
 
-### User Taste
-需要明确/重复证据，并经过 contradiction review。
+## 06 · 升级规则 🔒
 
-### General Craft
+### 项目偏好
+
+用户明确提出、且不与项目权威冲突时，可以在该项目内激活。
+
+### 用户口味
+
+需要明确或重复证据，并完成冲突审查。
+
+### 通用写作机制
+
 必须同时满足：
 
-1. mechanism 不依赖单一用户/项目；
-2. cross-work 或其他足够强的证据；
-3. counterexample / profile boundary；
-4. capability + regression eval；
-5. 不冲突更高优先级 profile；
-6. version + rollback reference。
+1. 机制不依赖单一用户或单一项目；
+2. 有跨作品或同等级别的强证据；
+3. 有反例或适用边界分析；
+4. 有能力评测与回归评测；
+5. 不与更高优先级配置冲突；
+6. 有版本记录和回滚依据。
 
-## “加强学习”是什么意思
+---
 
-加强某个偏好，不是重复同一个模型判断，也不是时间久了自动加权；而是因为出现了新的独立证据，使 confidence 上升或 applicability 更精准。
+## 07 · “加强学习”真正意味着什么 ⚙️
+
+加强一个偏好，不是让同一个模型重复同意自己，也不是“时间久了自动加权”；它意味着**出现了新的独立证据**，从而让置信度上升，或让适用范围变得更精确。
 
 系统可以自主：
 
-- 排队缺失 Corpus evidence；
+- 排队等待缺失的语料证据；
 - 搜索更多对照作品；
-- 自动生成新的 eval case；
-- 证据变化后重新跑 eval；
-- 把 hypothesis 从 candidate → active；
-- 标记 contested / superseded；
-- 推荐更强的 profile weight。
+- 生成新的评测案例；
+- 证据变化后重新运行相关评测；
+- 把候选假设升级为当前有效假设；
+- 标记为“有争议”或“已被替代”；
+- 建议更强或更弱的配置权重。
 
-它不能把 weak inference 静默升级成 durable truth。
+它不能把弱推断静默升级成持久真理。
 
-## Decay / Contradiction
+---
 
-偏好不是永久不变的。
+## 08 · 衰减、冲突与回滚 ↩️
 
-Hypothesis 可以变成：
+偏好不是永久不变的。假设可以进入：
 
 - `contested`：新证据与旧结论冲突；
-- `superseded`：更精确的新 hypothesis 能更好解释证据；
-- `deprecated`：用户明确改变口味，或 eval 证明该偏好造成明显副作用。
+- `superseded`：更精确的新假设能够更好解释证据；
+- `deprecated`：用户明确改变口味，或评测证明该偏好产生明显副作用。
 
-所有 provenance 都要保留，因此行为能够 rollback 或重新解释。
+所有来源记录都应保留，因此行为能够回滚，也能够在新证据出现后重新解释。
 
-## 正向与负向学习
+---
 
-用户编辑和 Accepted artifact 可以提供 positive mechanism evidence。
+## 09 · 正向与负向学习 ✦
 
-被用户拒绝的模型输出只能提供 negative regression evidence。它不能因为“已经生成过”就成为正向 style exemplar。
+用户直接编辑、以及已接受稿件，可以提供正向机制证据。
 
-## Privacy Boundary
+被用户拒绝的模型输出只能提供**负面回归证据**。它不能因为“曾经生成过”就反过来成为正向风格范例。
 
-User-taste evidence 属于用户 scope，默认不应该 commit 到通用 source repo。Framework repo 只保存 schema 与 learning mechanism；个人偏好数据应存放在 local/host-managed durable storage。
+---
 
-不得根据小说口味推断与任务无关的人口属性或个人画像。
+## 10 · 隐私边界 🔐
+
+用户口味证据属于用户作用域，默认不应提交到通用源码仓库。框架仓库只保存 Schema 与学习机制；个人偏好数据应留在本地或宿主管理的持久存储中。
+
+不得根据小说口味推断与当前任务无关的人口属性或个人画像。
+
+<div align="center">
+  <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom 标志" width="52" />
+  <br />
+  <sub>证据可以积累，假设必须可推翻。🌸</sub>
+</div>
