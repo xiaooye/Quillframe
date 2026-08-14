@@ -33,10 +33,28 @@ jobs:
           python project_sdk.py self-test > project-sdk-test.json
           python project_adapter.py self-test > project-adapter-test.json
 
-      - name: Adaptive learning and corpus contracts
+      - name: Runtime capability contract
+        run: |
+          python harness/runtime_capabilities.py self-test > runtime-capabilities-test.json
+          python harness/runtime_capabilities.py probe-local --output local-capabilities.json
+          python - <<'PY'
+          import json
+          d=json.load(open('local-capabilities.json',encoding='utf-8'))
+          assert d['schema']=='novelforge_host_capabilities_v1'
+          assert d['secrets_embedded'] is False
+          # CI network/process primitives never imply remote Web/GitHub authorization.
+          assert d['capabilities']['web_search']['available'] is False
+          assert d['capabilities']['github_search']['available'] is False
+          PY
+
+      - name: Adaptive learning and Corpus contracts
         run: |
           python learning/learning_store.py --db /tmp/novelforge-learning-ci.db self-test > learning-test.json
+          python learning/learning_cycle.py self-test --path /tmp/novelforge-learning-cycle-ci.db > learning-cycle-test.json
+          python learning/learning_eval.py self-test > learning-eval-test.json
+          python learning/promotion_gate.py self-test > promotion-gate-test.json
           python corpus/corpus_scout.py self-test > corpus-scout-test.json
+          python corpus/discovery_runtime.py self-test > discovery-runtime-test.json
           python corpus/rights_gate.py self-test > corpus-rights-test.json
           python - <<'PY'
           import json
@@ -45,6 +63,25 @@ jobs:
           ids={x['id'] for x in d['benchmarks']}
           assert {'BENCH-SURFACE-001','BENCH-SURFACE-006','BENCH-READER-001','BENCH-READER-002'}.issubset(ids)
           assert all(x['provenance']['raw_source_text_stored'] is False for x in d['benchmarks'])
+          PY
+
+      - name: Immutable Framework bundle contract
+        run: |
+          mkdir -p /tmp/novelforge-bundle-ci
+          python release/build_framework_bundle.py self-test > framework-bundle-test.json
+          python release/build_framework_bundle.py build --output /tmp/novelforge-bundle-ci/a.tar --report bundle-a.json
+          python release/build_framework_bundle.py build --output /tmp/novelforge-bundle-ci/b.tar --report bundle-b.json
+          cmp /tmp/novelforge-bundle-ci/a.tar /tmp/novelforge-bundle-ci/b.tar
+          EXPECTED="$(python -c "import json;print(json.load(open('bundle-a.json'))['bundle_fingerprint'])")"
+          python release/build_framework_bundle.py verify --bundle /tmp/novelforge-bundle-ci/a.tar --expected "$EXPECTED" --report bundle-verify.json
+          python - <<'PY'
+          import json
+          a=json.load(open('bundle-a.json',encoding='utf-8'))
+          b=json.load(open('bundle-b.json',encoding='utf-8'))
+          v=json.load(open('bundle-verify.json',encoding='utf-8'))
+          assert a['bundle_fingerprint']==b['bundle_fingerprint']
+          assert a['model_execution'] is False and v['model_execution'] is False
+          assert v['valid'] is True
           PY
 
       - name: Generic eval deterministic release gate
@@ -101,9 +138,15 @@ jobs:
           checks={
             'project-sdk-test.json':('project_sdk_contract','PASS'),
             'project-adapter-test.json':('project_adapter_contract','PASS'),
+            'runtime-capabilities-test.json':('runtime_capabilities_contract','PASS'),
             'learning-test.json':('learning_store_contract','PASS'),
+            'learning-cycle-test.json':('learning_cycle_contract','PASS'),
+            'learning-eval-test.json':('learning_eval_contract','PASS'),
+            'promotion-gate-test.json':('promotion_gate_contract','PASS'),
             'corpus-scout-test.json':('corpus_scout_contract','PASS'),
+            'discovery-runtime-test.json':('discovery_runtime_contract','PASS'),
             'corpus-rights-test.json':('rights_gate_contract','PASS'),
+            'framework-bundle-test.json':('framework_bundle_contract','PASS'),
             'session-test.json':('session_runtime_contract','PASS'),
             'control-plane-test.json':('control_plane_contract','PASS'),
             'mcp-test.json':('mcp_stdio_contract','PASS'),
@@ -117,6 +160,11 @@ jobs:
           cp=json.load(open('control-plane-test.json',encoding='utf-8'))
           assert cp['idempotent_event_ingress'] and cp['lease_claim'] and cp['exactly_once_consumption'] and cp['authority_guard']
           assert json.load(open('semantic-router-test.json',encoding='utf-8'))['fingerprint_excludes_runtime_lineage'] is True
+          assert json.load(open('learning-cycle-test.json',encoding='utf-8'))['logical_consume_once'] is True
+          assert json.load(open('promotion-gate-test.json',encoding='utf-8'))['auto_behavior_write'] is False
+          assert json.load(open('discovery-runtime-test.json',encoding='utf-8'))['network_execution_performed'] is False
+          assert json.load(open('framework-bundle-test.json',encoding='utf-8'))['tamper_detected'] is True
+          assert json.load(open('cli-test.json',encoding='utf-8'))['model_execution'] is False
           PY
 
       - name: Control-plane authority boundary
@@ -172,6 +220,10 @@ jobs:
             *-test.json
             eval-release.json
             eval-all.json
+            local-capabilities.json
+            bundle-a.json
+            bundle-b.json
+            bundle-verify.json
             direct-capabilities.json
             openai-dry-run.json
           if-no-files-found: warn
