@@ -40,6 +40,8 @@ NovelForge treats those as system problems rather than prompt-writing problems.
 
 Its distinctive mechanisms are **authority separation, sparse context, independent character state, explicit semantic contracts, recoverable sessions/runs, failure routing, transactional settlement, and evidence-backed learning**.
 
+<img src="assets/ui/home-comparison.en.svg" alt="Evidence-led comparison of NovelForge, NovelClaw, Novel OS, AuthorAgent, and autonovel across long-form state, quality evolution, and publishing mechanisms" width="100%" />
+
 For direct novel-agent/product positioning, tradeoffs, and source-backed comparison, read [Why NovelForge](docs/why-novelforge.en.md). General agent frameworks belong in the deeper [implementation-influence guide](knowledge/AGENT_FRAMEWORK_ADOPTION.en.md).
 
 ---
