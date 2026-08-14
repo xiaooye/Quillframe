@@ -1,119 +1,61 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "1",
-  "principle": "Long-horizon coherence is maintained by model reasoning over explicit evidence and commitments while deterministic runtime preserves authority, provenance and lifecycle. Plans and derived reconciliations remain revisable proposals, never silent Canon writes.",
+  "version": "2",
+  "principle": "Long-horizon coherence is maintained by model reasoning over explicit evidence, commitments and required transitions while deterministic runtime preserves authority, provenance and lifecycle. Plans and derived reconciliations remain revisable proposals, never silent Canon writes.",
   "contracts": {
     "plan.reconcile": {
       "kind": "artifact_audit",
       "purpose": "Reconcile an active plan with newly simulated or generated causal evidence. Decide whether the plan still works, needs a bounded proposal patch, or must escalate to Story/Plan redesign. Never silently mutate the active plan.",
-      "rubric": [
-        "Use the supplied active-plan bounds, accepted/current state, simulation or candidate evidence, dependencies and commitments.",
-        "Do not force a planned beat merely because it was planned. Test whether its assumptions still survive the causal events that have actually been accepted or the trajectory currently being simulated.",
-        "Prefer the smallest plan change that restores causality, character agency, continuity and reader pressure when a change is needed.",
-        "Keep accepted Canon separate from active-plan intent. A proposed plan patch does not retroactively make anything happen.",
-        "Identify downstream dependencies or commitments that a plan change would affect.",
-        "If the failure belongs to story premise/arc rather than local planning, escalate instead of patching around it."
-      ],
-      "output_contract": {
-        "type": "object",
-        "required": ["confidence", "decision", "reasons", "affected_dependencies", "preserved_commitments"],
-        "properties": {
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "decision": {"enum": ["keep_plan", "propose_plan_patch", "escalate_story_or_plan"]},
-          "reasons": {"type": "array", "items": {"type": "string"}},
-          "plan_patch_proposal": {"type": ["object", "null"]},
-          "affected_dependencies": {"type": "array", "items": {"type": "string"}},
-          "preserved_commitments": {"type": "array", "items": {"type": "string"}},
-          "at_risk_commitments": {"type": "array", "items": {"type": "string"}}
-        }
-      },
-      "permissions": {
-        "canon_write": false,
-        "os_behavior_write": false,
-        "durable_user_taste_write": false,
-        "allowed_result_scope": "plan_reconciliation_proposal"
-      },
+      "rubric": ["Use the supplied active-plan bounds, accepted/current state, simulation or candidate evidence, dependencies and commitments.", "Do not force a planned beat merely because it was planned. Test whether its assumptions still survive the causal events that have actually been accepted or the trajectory currently being simulated.", "Prefer the smallest plan change that restores causality, character agency, continuity and reader pressure when a change is needed.", "Keep accepted Canon separate from active-plan intent. A proposed plan patch does not retroactively make anything happen.", "Identify downstream dependencies or commitments that a plan change would affect.", "If the failure belongs to story premise/arc rather than local planning, escalate instead of patching around it."],
+      "output_contract": {"type": "object", "required": ["confidence", "decision", "reasons", "affected_dependencies", "preserved_commitments"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "decision": {"enum": ["keep_plan", "propose_plan_patch", "escalate_story_or_plan"]}, "reasons": {"type": "array", "items": {"type": "string"}}, "plan_patch_proposal": {"type": ["object", "null"]}, "affected_dependencies": {"type": "array", "items": {"type": "string"}}, "preserved_commitments": {"type": "array", "items": {"type": "string"}}, "at_risk_commitments": {"type": "array", "items": {"type": "string"}}}},
+      "permissions": {"canon_write": false, "os_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "plan_reconciliation_proposal"},
       "independent_gate": false
     },
     "relationship.memory_reconcile": {
       "kind": "artifact_audit",
       "purpose": "Reconcile potentially conflicting derived relationship memories against ordered source evidence so long-horizon social state does not accumulate incompatible snapshots. Produce a derived proposal only.",
-      "rubric": [
-        "Use source chronology, accepted event evidence and authority labels. Do not average incompatible relationship states into a vague compromise.",
-        "Separate what each character believes about the relationship from externally established events and from reader-visible interpretation.",
-        "When states conflict, identify whether the conflict is temporal evolution, asymmetric perception, unresolved ambiguity, or an actual derivation error.",
-        "Preserve meaningful emotional residue and obligations instead of resetting a relationship to the latest scene mood.",
-        "Every reconciled claim must cite supplied source references. If evidence is insufficient, keep the conflict unresolved rather than inventing a bridge.",
-        "The result is rebuildable derived memory and cannot overwrite accepted Canon or protected project state."
-      ],
-      "output_contract": {
-        "type": "object",
-        "required": ["confidence", "relationship_id", "reconciled_state", "source_refs", "unresolved_conflicts"],
-        "properties": {
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "relationship_id": {"type": "string", "minLength": 1},
-          "reconciled_state": {"type": "object"},
-          "source_refs": {"type": "array", "items": {"type": "string"}},
-          "unresolved_conflicts": {"type": "array", "items": {"type": "string"}},
-          "invalidated_derived_refs": {"type": "array", "items": {"type": "string"}}
-        }
-      },
-      "permissions": {
-        "canon_write": false,
-        "os_behavior_write": false,
-        "durable_user_taste_write": false,
-        "allowed_result_scope": "derived_relationship_reconciliation"
-      },
+      "rubric": ["Use source chronology, accepted event evidence and authority labels. Do not average incompatible relationship states into a vague compromise.", "Separate what each character believes about the relationship from externally established events and from reader-visible interpretation.", "When states conflict, identify whether the conflict is temporal evolution, asymmetric perception, unresolved ambiguity, or an actual derivation error.", "Preserve meaningful emotional residue and obligations instead of resetting a relationship to the latest scene mood.", "Every reconciled claim must cite supplied source references. If evidence is insufficient, keep the conflict unresolved rather than inventing a bridge.", "The result is rebuildable derived memory and cannot overwrite accepted Canon or protected project state."],
+      "output_contract": {"type": "object", "required": ["confidence", "relationship_id", "reconciled_state", "source_refs", "unresolved_conflicts"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "relationship_id": {"type": "string", "minLength": 1}, "reconciled_state": {"type": "object"}, "source_refs": {"type": "array", "items": {"type": "string"}}, "unresolved_conflicts": {"type": "array", "items": {"type": "string"}}, "invalidated_derived_refs": {"type": "array", "items": {"type": "string"}}}},
+      "permissions": {"canon_write": false, "os_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "derived_relationship_reconciliation"},
       "independent_gate": false
     },
     "continuity.commitment_audit": {
       "kind": "artifact_audit",
-      "purpose": "Audit a candidate scene/trajectory against explicitly supplied narrative commitments, initial facts and achievement constraints. The contract verifies supplied commitments; it does not invent new hard commitments or make plans into Canon.",
+      "purpose": "Audit a candidate scene/trajectory against explicitly supplied narrative commitments, initial facts and required state transitions. Report evidence-backed preservation, advancement, uncertainty or violation without inventing new hard commitments or turning plans into Canon.",
+      "input_contract": {
+        "type": "object",
+        "required": ["candidate", "commitments", "required_transitions"],
+        "properties": {
+          "candidate": {"type": "object", "required": ["source_ref", "evidence"], "properties": {"source_ref": {"type": "string", "minLength": 1}, "evidence": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false},
+          "commitments": {"type": "array", "items": {"type": "object", "required": ["commitment_id", "statement", "authority", "source_ref"], "properties": {"commitment_id": {"type": "string", "minLength": 1}, "statement": {"type": "string", "minLength": 1}, "authority": {"enum": ["locked", "accepted", "active_plan", "author_constraint"]}, "source_ref": {"type": "string", "minLength": 1}, "due_by": {"type": ["string", "null"]}}, "additionalProperties": false}},
+          "required_transitions": {"type": "array", "items": {"type": "object", "required": ["transition_id", "description", "authority", "source_ref"], "properties": {"transition_id": {"type": "string", "minLength": 1}, "description": {"type": "string", "minLength": 1}, "authority": {"enum": ["locked", "accepted", "active_plan", "author_constraint"]}, "source_ref": {"type": "string", "minLength": 1}, "due_by": {"type": ["string", "null"]}}, "additionalProperties": false}},
+          "initial_facts": {"type": "array", "items": {"type": "object", "required": ["fact_id", "statement", "authority", "source_ref"], "properties": {"fact_id": {"type": "string", "minLength": 1}, "statement": {"type": "string", "minLength": 1}, "authority": {"enum": ["locked", "accepted"]}, "source_ref": {"type": "string", "minLength": 1}}, "additionalProperties": false}},
+          "current_story_point": {"type": "string"}
+        },
+        "additionalProperties": false
+      },
       "rubric": [
-        "Treat only explicitly supplied commitments as commitments. Keep accepted facts, active-plan commitments and author constraints distinguishable by authority.",
+        "Treat only explicitly supplied commitments and transitions as requirements. Keep locked/accepted facts, active-plan intent and author constraints distinguishable by authority.",
         "Check whether the candidate contradicts, prematurely closes, makes impossible, forgets, or meaningfully advances each commitment.",
+        "For every required transition, report supported when candidate evidence establishes it, uncertain when evidence is insufficient, violated when the candidate contradicts or makes it impossible, and not_due when the supplied timing explicitly places it later.",
+        "Uncertain is not a failure verdict and must not be converted into a numeric literary risk score. It is evidence that the owning workflow may choose to validate further.",
         "A commitment may remain open without being a failure; flag only actual contradiction, impossibility, accidental abandonment or unsupported satisfaction.",
-        "Use source evidence and temporal ordering. High prose quality cannot compensate for a broken logical commitment.",
+        "Use source evidence and temporal ordering. High prose quality cannot compensate for a broken logical commitment or required transition.",
         "Do not demand mechanical callbacks in every scene and do not convert reader expectations into hard commitments unless the input explicitly classifies them that way.",
         "Return evidence-backed audit results and repair ownership only."
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "commitments", "violations", "repair_routes"],
+        "required": ["confidence", "commitments", "transitions", "violations", "repair_routes"],
         "properties": {
           "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "commitments": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": ["commitment_id", "status", "evidence"],
-              "properties": {
-                "commitment_id": {"type": "string", "minLength": 1},
-                "status": {"enum": ["preserved", "advanced", "satisfied", "at_risk", "violated", "not_applicable_here"]},
-                "evidence": {"type": "array", "items": {"type": "string"}}
-              }
-            }
-          },
+          "commitments": {"type": "array", "items": {"type": "object", "required": ["commitment_id", "status", "evidence"], "properties": {"commitment_id": {"type": "string", "minLength": 1}, "status": {"enum": ["preserved", "advanced", "satisfied", "at_risk", "violated", "not_applicable_here"]}, "evidence": {"type": "array", "items": {"type": "string"}}}}},
+          "transitions": {"type": "array", "items": {"type": "object", "required": ["transition_id", "status", "evidence", "reason"], "properties": {"transition_id": {"type": "string", "minLength": 1}, "status": {"enum": ["supported", "uncertain", "violated", "not_due"]}, "evidence": {"type": "array", "items": {"type": "string"}}, "reason": {"type": "string", "minLength": 1}}}},
           "violations": {"type": "array", "items": {"type": "string"}},
-          "repair_routes": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": ["owner", "reason"],
-              "properties": {
-                "owner": {"enum": ["story", "plan", "scene", "character", "continuity", "context", "research", "human"]},
-                "reason": {"type": "string", "minLength": 1}
-              }
-            }
-          }
+          "repair_routes": {"type": "array", "items": {"type": "object", "required": ["owner", "reason"], "properties": {"owner": {"enum": ["story", "plan", "scene", "character", "continuity", "context", "research", "human"]}, "reason": {"type": "string", "minLength": 1}}}}
         }
       },
-      "permissions": {
-        "canon_write": false,
-        "os_behavior_write": false,
-        "durable_user_taste_write": false,
-        "allowed_result_scope": "continuity_commitment_audit"
-      },
+      "permissions": {"canon_write": false, "os_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "continuity_commitment_audit"},
       "independent_gate": false
     }
   }
