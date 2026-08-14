@@ -1,0 +1,19 @@
+{
+  "id": "SURFACE-FRAGMENT-001",
+  "type": "regression",
+  "domain": "surface",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "language": "en",
+    "profile": {"fragment_style": "default_readable"},
+    "text": "He looked at the screen.\n\nA number.\n\nToo high.\n\nHis hand moved.\n\nThe cursor blinked.\n\nStill there."
+  },
+  "rubric": [
+    "Reject when paragraph/sentence fragmentation primarily simulates pace or cinematic emphasis without independent state changes.",
+    "Judge mechanism, not mere short sentence count.",
+    "Use HF-01 NON-FUNCTIONAL FRAGMENTATION when applicable."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["HF-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "reject", "codes": ["HF-01"]}
+}
