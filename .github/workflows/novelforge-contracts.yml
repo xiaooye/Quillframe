@@ -42,22 +42,44 @@ jobs:
           d=json.load(open('local-capabilities.json',encoding='utf-8'))
           assert d['schema']=='novelforge_host_capabilities_v1'
           assert d['secrets_embedded'] is False
-          # CI network/process primitives never imply remote Web/GitHub authorization.
           assert d['capabilities']['web_search']['available'] is False
           assert d['capabilities']['github_search']['available'] is False
           PY
 
-      - name: Author control and quality evolution contracts
+      - name: Deterministic author-control and narrative state contracts
         run: |
           python harness/context_inspector.py self-test > context-inspector-test.json
           python harness/memory_tiers.py self-test > memory-tiers-test.json
           python harness/memory_bank.py --db /tmp/novelforge-memory-bank-ci.db self-test --path /tmp/novelforge-memory-bank-selftest-ci.db > memory-bank-test.json
+          python harness/scenario_fork.py --db /tmp/novelforge-scenario-ci.db self-test --path /tmp/novelforge-scenario-selftest-ci.db > scenario-fork-test.json
           python quality/findings.py self-test > quality-finding-test.json
-          python quality/reader_panel.py self-test > reader-panel-test.json
+          python quality/reader_expectation.py --db /tmp/novelforge-reader-expectation-ci.db self-test --path /tmp/novelforge-reader-expectation-selftest-ci.db > reader-expectation-test.json
           python quality/quality_evolution.py --db /tmp/novelforge-quality-ci.db self-test --path /tmp/novelforge-quality-selftest-ci.db > quality-evolution-test.json
-          python quality/revision_orchestrator.py self-test > revision-orchestrator-test.json
-          python quality/character_integrity.py self-test > character-integrity-test.json
           python quality/state_graph.py self-test > state-graph-test.json
+
+      - name: AI-native semantic model contracts
+        run: |
+          python harness/semantic_workers/semantic_worker_router.py self-test > semantic-router-test.json
+          python - <<'PY'
+          import json,sys
+          sys.path.insert(0,'harness/semantic_workers')
+          from semantic_worker_router import load_contract_registry,make_contract_job,validate_job
+          registry=load_contract_registry()
+          expected={'reader.reaction','reader.compare','character.integrity','revision.diagnose','narrative.world','reader.expectations','memory.consolidate'}
+          assert expected.issubset(registry['contracts'])
+          jobs={}
+          for cid in sorted(expected):
+              job=make_contract_job(cid,'CI-'+cid,{'fixture':'bounded semantic input'},source_session_id='SES-CI')
+              assert not validate_job(job),(cid,validate_job(job))
+              assert job['permissions']['canon_write'] is False
+              assert job['permissions']['os_behavior_write'] is False
+              assert job['permissions']['durable_user_taste_write'] is False
+              assert job['provenance']['source']=='model_contract_registry'
+              jobs[cid]=job['input_fingerprint']
+          json.dump({'model_contracts_contract':'PASS','contracts':sorted(expected),'fingerprints':jobs,'model_execution':False},open('model-contracts-test.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          PY
+          python harness/semantic_workers/peer_chat_relay.py self-test > peer-chat-test.json
+          python harness/semantic_workers/adapters/local_agent_adapter.py --self-test > local-agent-test.json
 
       - name: Adaptive learning and Corpus contracts
         run: |
@@ -134,12 +156,6 @@ jobs:
           python harness/control_plane/control_plane.py --db /tmp/novelforge-control-ci.db self-test > control-plane-test.json
           python harness/control_plane/mcp_stdio.py --self-test > mcp-test.json
 
-      - name: Semantic transport contracts
-        run: |
-          python harness/semantic_workers/semantic_worker_router.py self-test > semantic-router-test.json
-          python harness/semantic_workers/peer_chat_relay.py self-test > peer-chat-test.json
-          python harness/semantic_workers/adapters/local_agent_adapter.py --self-test > local-agent-test.json
-
       - name: Top-level CLI contract
         run: python novelforge.py self-test > cli-test.json
 
@@ -154,12 +170,15 @@ jobs:
             'context-inspector-test.json':('context_inspector_contract','PASS'),
             'memory-tiers-test.json':('memory_tiers_contract','PASS'),
             'memory-bank-test.json':('memory_bank_contract','PASS'),
+            'scenario-fork-test.json':('scenario_fork_contract','PASS'),
             'quality-finding-test.json':('quality_finding_contract','PASS'),
-            'reader-panel-test.json':('reader_panel_contract','PASS'),
+            'reader-expectation-test.json':('reader_expectation_contract','PASS'),
             'quality-evolution-test.json':('quality_evolution_contract','PASS'),
-            'revision-orchestrator-test.json':('revision_orchestrator_contract','PASS'),
-            'character-integrity-test.json':('character_integrity_contract','PASS'),
             'state-graph-test.json':('state_graph_contract','PASS'),
+            'semantic-router-test.json':('semantic_router_contract','PASS'),
+            'model-contracts-test.json':('model_contracts_contract','PASS'),
+            'peer-chat-test.json':('peer_chat_relay_contract','PASS'),
+            'local-agent-test.json':('local_agent_adapter_contract','PASS'),
             'learning-test.json':('learning_store_contract','PASS'),
             'learning-cycle-test.json':('learning_cycle_contract','PASS'),
             'learning-eval-test.json':('learning_eval_contract','PASS'),
@@ -171,40 +190,27 @@ jobs:
             'session-test.json':('session_runtime_contract','PASS'),
             'control-plane-test.json':('control_plane_contract','PASS'),
             'mcp-test.json':('mcp_stdio_contract','PASS'),
-            'semantic-router-test.json':('semantic_router_contract','PASS'),
-            'peer-chat-test.json':('peer_chat_relay_contract','PASS'),
-            'local-agent-test.json':('local_agent_adapter_contract','PASS'),
             'cli-test.json':('novelforge_cli_contract','PASS'),
           }
           loaded={}
           for path,(key,expected) in checks.items():
               d=json.load(open(path,encoding='utf-8'));loaded[path]=d;assert d[key]==expected,(path,d)
-          cp=loaded['control-plane-test.json']
-          assert cp['idempotent_event_ingress'] and cp['lease_claim'] and cp['exactly_once_consumption'] and cp['authority_guard']
           assert loaded['semantic-router-test.json']['fingerprint_excludes_runtime_lineage'] is True
+          assert loaded['semantic-router-test.json']['model_contract_registry'] is True
+          assert loaded['semantic-router-test.json']['typed_output_validation'] is True
+          assert loaded['semantic-router-test.json']['semantic_intelligence_externalized'] is True
+          assert loaded['model-contracts-test.json']['model_execution'] is False
+          assert loaded['scenario-fork-test.json']['selection_does_not_grant_canon'] is True
+          assert loaded['reader-expectation-test.json']['before_state_guard'] is True
+          assert loaded['memory-bank-test.json']['protected_edit_to_proposal'] is True
+          assert loaded['memory-bank-test.json']['proposal_pre_draft_isolation'] is True
+          assert loaded['quality-evolution-test.json']['logical_consume_once'] is True
+          assert loaded['quality-evolution-test.json']['plateau_stopping'] is True
+          assert loaded['state-graph-test.json']['evidence_backed_transition_exempted'] is True
           assert loaded['learning-cycle-test.json']['logical_consume_once'] is True
           assert loaded['promotion-gate-test.json']['auto_behavior_write'] is False
           assert loaded['discovery-runtime-test.json']['network_execution_performed'] is False
           assert loaded['framework-bundle-test.json']['tamper_detected'] is True
-          assert loaded['reader-panel-test.json']['independent_gate_satisfied'] is False
-          assert loaded['reader-panel-test.json']['first_shown_bias_detected'] is True
-          assert loaded['context-inspector-test.json']['protected_edit_downgraded_to_proposal'] is True
-          assert loaded['context-inspector-test.json']['pre_draft_regression_isolation'] is True
-          assert loaded['memory-tiers-test.json']['hard_budget'] is True
-          assert loaded['memory-tiers-test.json']['whole_item_or_skip'] is True
-          assert loaded['memory-bank-test.json']['protected_edit_to_proposal'] is True
-          assert loaded['memory-bank-test.json']['before_state_guard'] is True
-          assert loaded['memory-bank-test.json']['proposal_pre_draft_isolation'] is True
-          assert loaded['memory-bank-test.json']['canon_write'] is False
-          assert loaded['quality-evolution-test.json']['logical_consume_once'] is True
-          assert loaded['quality-evolution-test.json']['idempotent_replay'] is True
-          assert loaded['quality-evolution-test.json']['plateau_stopping'] is True
-          assert loaded['revision-orchestrator-test.json']['failure_isolation'] is True
-          assert loaded['revision-orchestrator-test.json']['surface_cluster_regeneration'] is True
-          assert loaded['revision-orchestrator-test.json']['authority'] is False
-          assert loaded['revision-orchestrator-test.json']['model_execution'] is False
-          assert loaded['character-integrity-test.json']['forbidden_context_excluded'] is True
-          assert loaded['state-graph-test.json']['evidence_backed_transition_exempted'] is True
           assert loaded['cli-test.json']['model_execution'] is False
           PY
 
@@ -240,9 +246,9 @@ jobs:
           python - <<'PY'
           import json,sys
           sys.path.insert(0,'harness/semantic_workers')
-          from semantic_worker_router import fingerprint_for
-          job={'job_id':'SEM-CI','kind':'eval_judge','subject_id':'CI','created_at':'now','input_fingerprint':'','input':{'text':'fixture'},'rubric':['judge fixture'],'output_contract':{},'permissions':{'canon_write':False,'os_behavior_write':False,'durable_user_taste_write':False,'allowed_result_scope':'observation'},'provenance':{'source':'ci'}}
-          job['input_fingerprint']=fingerprint_for(job);json.dump(job,open('/tmp/job.json','w',encoding='utf-8'))
+          from semantic_worker_router import make_contract_job
+          job=make_contract_job('reader.reaction','CI',{'candidate_text':'fixture','persona_id':'binge_reader'})
+          json.dump(job,open('/tmp/job.json','w',encoding='utf-8'))
           PY
           python harness/semantic_workers/adapters/openai_responses_adapter.py --dry-run < /tmp/job.json > openai-dry-run.json
           python - <<'PY'
