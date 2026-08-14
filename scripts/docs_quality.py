@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Deterministic documentation QA for NovelForge.
 
-Normal CI must never spend model/API usage. This checker owns only the
-machine-checkable half of the documentation contract. Rendered composition,
-brand fit, and native-language judgment remain semantic review responsibilities.
+Normal CI must never spend model/API usage. This checker validates the machine-
+checkable half of the documentation contract. It also reports release-metadata
+drift without pretending documentation code can promote a Framework release.
 """
 from __future__ import annotations
 
@@ -17,8 +17,8 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parents[1]
 DOC_MANIFEST = ROOT / "docs" / "documentation_manifest.json"
 FRAMEWORK_MANIFEST = ROOT / "HARNESS_MANIFEST.yaml"
+CLI_ENTRY = ROOT / "novelforge.py"
 UI_DIR = ROOT / "assets" / "ui"
-
 TARGET_GITHUB_WIDTH = 820.0
 MIN_RENDERED_TEXT_PX = 12.0
 LONG_TEXT_CHARS = 24
@@ -37,6 +37,7 @@ FONT_SHORTHAND_RE = re.compile(r"\bfont\s*:\s*[^;{}]*?\b(\d+(?:\.\d+)?)px\b", re
 H1_RE = re.compile(r"(?m)^# (?!#)")
 TABLE_SEPARATOR_RE = re.compile(r"(?m)^\s*\|?(?:\s*:?-{3,}:?\s*\|){2,}.*$")
 VERSION_RE = re.compile(r"(?m)^\s*version:\s*[\"']?([0-9]+\.[0-9]+\.[0-9]+)")
+CLI_VERSION_RE = re.compile(r'^FRAMEWORK_VERSION\s*=\s*["\']([0-9]+\.[0-9]+\.[0-9]+)["\']', re.M)
 STALE_EXAMPLE_RE = re.compile(
     r'(?:minimum_framework_version\s*=\s*"7\.[01]\.0"|'
     r'"version"\s*:\s*"7\.[01]\.0"|'
@@ -45,6 +46,7 @@ STALE_EXAMPLE_RE = re.compile(
 )
 
 CONTROLLED_DOC_ROOTS = (
+    ROOT,
     ROOT / "assets",
     ROOT / "core",
     ROOT / "corpus",
@@ -75,7 +77,7 @@ def warn(path: Path, message: str) -> None:
 
 
 def migration_issue(path: Path, message: str, *, strict_current: bool) -> None:
-    """Block reviewed current docs; inventory debt remains visible but non-blocking."""
+    """Block reviewed-current docs; migration/candidate debt remains visible as warnings."""
     (error if strict_current else warn)(path, message)
 
 
@@ -104,6 +106,17 @@ def framework_version() -> str | None:
     return match.group(1)
 
 
+def cli_framework_version() -> str | None:
+    if not CLI_ENTRY.exists():
+        warn(CLI_ENTRY, "missing CLI entrypoint; implementation/release version drift cannot be checked")
+        return None
+    match = CLI_VERSION_RE.search(CLI_ENTRY.read_text(encoding="utf-8"))
+    if not match:
+        warn(CLI_ENTRY, "cannot parse FRAMEWORK_VERSION; implementation/release version drift cannot be checked")
+        return None
+    return match.group(1)
+
+
 def local_target(source: Path, raw: str) -> Path | None:
     raw = raw.strip()
     if not raw or raw.startswith(("http://", "https://", "mailto:", "#", "data:")):
@@ -114,6 +127,10 @@ def local_target(source: Path, raw: str) -> Path | None:
     if not raw:
         return None
     return (source.parent / raw).resolve()
+
+
+def markdown_table_count(text: str) -> int:
+    return len(TABLE_SEPARATOR_RE.findall(text))
 
 
 def check_links(path: Path, text: str) -> None:
@@ -155,7 +172,7 @@ def check_markdown(path: Path, *, tier: str, status: str, rewrite_policy: str) -
         error(path, f"not valid UTF-8: {exc}")
         return
 
-    strict_current = status == "reviewed_7_2" and rewrite_policy != "preserve_history"
+    strict_current = status in {"reviewed_7_2", "reviewed_current"} and rewrite_policy != "preserve_history"
 
     h1_count = len(H1_RE.findall(text))
     if h1_count != 1:
@@ -165,10 +182,18 @@ def check_markdown(path: Path, *, tier: str, status: str, rewrite_policy: str) -
 
     if tier == "A":
         if ARROW_BLOCK_RE.search(text):
-            migration_issue(path, "Tier-A page contains a fenced arrow-process block; use a designed module or structured prose", strict_current=strict_current)
-        tables = len(TABLE_SEPARATOR_RE.findall(text))
+            migration_issue(
+                path,
+                "Tier-A page contains a fenced arrow-process block; use a designed module or structured prose",
+                strict_current=strict_current,
+            )
+        tables = markdown_table_count(text)
         if tables:
-            migration_issue(path, f"Tier-A page contains {tables} native Markdown table(s); product surfaces should use designed modules or compact prose", strict_current=strict_current)
+            migration_issue(
+                path,
+                f"Tier-A page contains {tables} native Markdown table(s); product surfaces should use designed modules or compact prose",
+                strict_current=strict_current,
+            )
 
     if rewrite_policy != "preserve_history" and STALE_EXAMPLE_RE.search(text):
         warn(path, "contains a 7.0/7.1 framework-version example/reference; verify whether it is intentionally historical or stale")
@@ -182,7 +207,7 @@ def discover_bilingual_docs() -> set[str]:
     for path in ROOT.glob("*.md"):
         if path.name.endswith((".en.md", ".zh-CN.md")):
             found.add(rel(path))
-    for base in CONTROLLED_DOC_ROOTS:
+    for base in CONTROLLED_DOC_ROOTS[1:]:
         if not base.exists():
             continue
         for path in base.rglob("*.md"):
@@ -203,7 +228,7 @@ def check_inventory(manifest: dict) -> list[tuple[Path, str, str, str]]:
     tracked: set[str] = set()
     checks: list[tuple[Path, str, str, str]] = []
     allowed_tiers = {"A", "B", "C"}
-    allowed_status = {"needs_rebuild", "reviewed_7_2", "preserve"}
+    allowed_status = {"needs_rebuild", "candidate_review", "reviewed_current", "reviewed_7_2", "preserve"}
 
     for entry in docs:
         if not isinstance(entry, dict):
@@ -244,7 +269,8 @@ def check_inventory(manifest: dict) -> list[tuple[Path, str, str, str]]:
             tracked.add(raw)
             checks.append((ROOT / raw, str(tier), str(status), str(rewrite_policy)))
 
-    for raw in sorted(discover_bilingual_docs() - tracked):
+    discovered = discover_bilingual_docs()
+    for raw in sorted(discovered - tracked):
         error(ROOT / raw, "bilingual human-facing doc is not registered in documentation_manifest.json")
 
     routers = manifest.get("routers", [])
@@ -256,8 +282,10 @@ def check_inventory(manifest: dict) -> list[tuple[Path, str, str, str]]:
             if not isinstance(raw, str):
                 error(DOC_MANIFEST, "router entry missing path")
                 continue
-            if not (ROOT / raw).exists():
-                error(ROOT / raw, "manifest-listed router is missing")
+            path = ROOT / raw
+            if not path.exists():
+                error(path, "manifest-listed router is missing")
+
     return checks
 
 
@@ -319,7 +347,8 @@ def char_em_width(ch: str) -> float:
         return 0.34
     if unicodedata.east_asian_width(ch) in {"W", "F"}:
         return 1.0
-    if unicodedata.category(ch).startswith("P"):
+    category = unicodedata.category(ch)
+    if category.startswith("P"):
         return 0.38
     if ch.isupper():
         return 0.66
@@ -370,6 +399,7 @@ def check_svg(path: Path) -> None:
 
     if "@font-face" in raw or re.search(r"\.(?:woff2?|ttf|otf)\b", raw, re.I):
         error(path, "external/embedded font files are not allowed in documentation SVGs")
+
     if vb is None:
         return
 
@@ -418,9 +448,18 @@ def check_svg(path: Path) -> None:
 
 def main() -> int:
     manifest = load_doc_manifest()
-    current_version = framework_version()
-    if manifest and current_version and manifest.get("framework_version") != current_version:
-        error(DOC_MANIFEST, f"framework_version={manifest.get('framework_version')!r} does not match HARNESS_MANIFEST.yaml {current_version!r}")
+    release_version = framework_version()
+    implementation_version = cli_framework_version()
+    if manifest and release_version and manifest.get("framework_version") != release_version:
+        error(
+            DOC_MANIFEST,
+            f"framework_version={manifest.get('framework_version')!r} does not match release authority HARNESS_MANIFEST.yaml {release_version!r}",
+        )
+    if release_version and implementation_version and release_version != implementation_version:
+        warn(
+            FRAMEWORK_MANIFEST,
+            f"release metadata drift: HARNESS_MANIFEST.yaml={release_version} while novelforge.py implementation reports {implementation_version}; do not silently resolve this in documentation QA",
+        )
 
     checks = check_inventory(manifest) if manifest else []
     for path, tier, status, rewrite_policy in checks:
