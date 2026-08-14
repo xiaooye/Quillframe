@@ -1,0 +1,18 @@
+{
+  "id": "SURFACE-PROCESS-001",
+  "type": "regression",
+  "domain": "surface",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "language": "zh-CN",
+    "profile": {"reader_grip": "high"},
+    "text": "他打开文件，先检查第一页，又翻到第二页核对数字。确认无误后，他修改了表格，再从头检查一遍。接着他保存文件，打开邮件，把附件加上，重新看了一遍收件人，最后点击发送。"
+  },
+  "rubric": [
+    "Reject when routine operational steps are narrated at equal weight while friction, error, choice, risk transfer, relationship movement, surprise, and consequence are absent.",
+    "Use HF-21 PROCESS BROADCAST and/or HF-22 CHECKLIST CAUSALITY when applicable."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["HF-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "reject", "codes": ["HF-21"]}
+}
