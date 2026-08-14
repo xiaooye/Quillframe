@@ -21,7 +21,6 @@ if str(SEM) not in sys.path:
 from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
 
 SCHEMA = "novelforge_memory_tiers_v2"
-REGISTRY = SEM / "contracts" / "context-research.json"
 
 
 def load_json(path: Path) -> Any:
@@ -111,7 +110,6 @@ def prepare_selection_job(payload: dict[str, Any], *, subject_id: str,
         "context.select",
         subject_id,
         {"task_context": task_context, "memory_blocks": candidates},
-        registry_path=REGISTRY,
         source_session_id=source_session_id,
     )
 
@@ -239,10 +237,12 @@ def self_test() -> int:
         normalize_item({"id": "BAD", "cost": 1, "derived": True, "authority": True, "source_refs": ["x"], "source_fingerprints": ["sha256:" + "e" * 64]})
     except ValueError:
         authority_guard = True
-    ok = pin_override and hard_budget and whole_skip and invalidated_excluded and unknown_guard and authority_guard
+    catalog_resolved = job.get("provenance", {}).get("pack_id") == "context-research"
+    ok = pin_override and hard_budget and whole_skip and invalidated_excluded and unknown_guard and authority_guard and catalog_resolved
     dump({
         "memory_tiers_contract": "PASS" if ok else "FAIL",
         "semantic_relevance_owner": "model",
+        "catalog_resolved_contract_pack": catalog_resolved,
         "pin_override": pin_override,
         "hard_budget": hard_budget,
         "whole_item_or_skip": bool(whole_skip),
