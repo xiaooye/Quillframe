@@ -1,0 +1,18 @@
+{
+  "id": "READER-END-001",
+  "type": "capability",
+  "domain": "reader",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "language": "en",
+    "profile": {"serial_forward_pull": "high"},
+    "ending": "Mara finally got the clinic permit stamped. She was halfway down the courthouse steps when her phone buzzed. The photo from her contractor showed the front door hanging open and the new medicine refrigerator gone."
+  },
+  "rubric": [
+    "Accept when the ending contains a concrete causally attached changed state/new consequence that creates a near-term question without abstract narrator advertising.",
+    "Evidence should identify RG-10 FORWARD-PULL ENDING and avoid HF-23 fake cliffhanger."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["RG-*", "HF-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept", "codes": ["RG-10"]}
+}
