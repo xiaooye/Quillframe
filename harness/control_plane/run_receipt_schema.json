@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novelforge-run-receipt-v1",
+  "title": "NovelForge Run Receipt",
+  "description": "Metadata-only observability receipt. It records what a run actually loaded/executed without becoming Canon, memory, or semantic truth.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "receipt_id",
+    "resource_id",
+    "session_id",
+    "run_id",
+    "stage",
+    "subject_id",
+    "artifact_fingerprints",
+    "context",
+    "semantic_jobs",
+    "guards",
+    "created_at",
+    "authority"
+  ],
+  "properties": {
+    "schema": {"const": "novelforge_run_receipt_v1"},
+    "receipt_id": {"type": "string", "minLength": 1},
+    "resource_id": {"type": "string", "minLength": 1},
+    "session_id": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "stage": {"type": "string", "minLength": 1},
+    "subject_id": {"type": "string", "minLength": 1},
+    "artifact_fingerprints": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selection_fingerprint",
+        "loaded_block_ids",
+        "visibility_excluded_block_ids",
+        "question_grounding",
+        "unresolved_questions",
+        "grounding_incomplete_due_budget"
+      ],
+      "properties": {
+        "selection_fingerprint": {"type": ["string", "null"]},
+        "loaded_block_ids": {"type": "array", "items": {"type": "string"}},
+        "visibility_excluded_block_ids": {"type": "array", "items": {"type": "string"}},
+        "question_grounding": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "question_id",
+              "model_support",
+              "support_block_ids",
+              "loaded_support_block_ids",
+              "dropped_support_block_ids",
+              "loading_status"
+            ],
+            "properties": {
+              "question_id": {"type": "string", "minLength": 1},
+              "model_support": {"enum": ["sufficient", "partial", "none"]},
+              "support_block_ids": {"type": "array", "items": {"type": "string"}},
+              "loaded_support_block_ids": {"type": "array", "items": {"type": "string"}},
+              "dropped_support_block_ids": {"type": "array", "items": {"type": "string"}},
+              "loading_status": {"enum": ["all_loaded", "partially_loaded", "not_loaded", "no_support_identified"]}
+            }
+          }
+        },
+        "unresolved_questions": {"type": "array", "items": {"type": "string"}},
+        "grounding_incomplete_due_budget": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "semantic_jobs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["job_id", "contract_id", "input_fingerprint", "status"],
+        "properties": {
+          "job_id": {"type": "string", "minLength": 1},
+          "contract_id": {"type": "string", "minLength": 1},
+          "input_fingerprint": {"type": "string", "minLength": 1},
+          "status": {"enum": ["prepared", "pending", "completed", "semantic_reject", "invalid", "failed", "unsupported"]},
+          "result_fingerprint": {"type": ["string", "null"]},
+          "worker_ref": {"type": ["string", "null"]}
+        }
+      }
+    },
+    "guards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["guard_id", "status", "evidence_refs"],
+        "properties": {
+          "guard_id": {"type": "string", "minLength": 1},
+          "status": {"enum": ["pass", "fail", "pending"]},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "created_at": {"type": "string", "minLength": 1},
+    "authority": {"const": false}
+  }
+}
