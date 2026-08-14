@@ -124,7 +124,7 @@ Quality Evolution 只能在候选稿已经存在后开始。Regression 坏例和
 - [质量保障与 QA](quality-assurance.zh-CN.md)：完整质量栈与发布门槛。
 - [生产流水线](production-pipeline.zh-CN.md)：诊断与修订在全流程中的位置。
 - [读者吸引力](../surface/READER_ENGAGEMENT.zh-CN.md)：通用 Reader Engagement 机制。
-- [`quality/reader_panel.py`](../quality/reader_panel.py)：模拟读者诊断任务。
-- [`quality/revision_orchestrator.py`](../quality/revision_orchestrator.py)：finding 聚合与修复路由。
+- [`reader.reaction` / `reader.compare` model contracts](../harness/semantic_workers/model_contracts.json)：模拟读者诊断语义。
+- [`revision.diagnose` model contract](../harness/semantic_workers/model_contracts.json)：诊断与修复归因语义。
 - [`quality/quality_evolution.py`](../quality/quality_evolution.py)：持久候选稿演进 ledger。
-- [`quality/character_integrity.py`](../quality/character_integrity.py)：受限人物完整性审查。
+- [`character.integrity` model contract](../harness/semantic_workers/model_contracts.json)：受限人物完整性语义。
