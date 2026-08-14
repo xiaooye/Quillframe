@@ -1,278 +1,361 @@
 <div align="center">
   <img src="../assets/brand/novelforge-lockup.svg" alt="NovelForge — Adaptive Fiction Agent Framework" width="560" />
-  <p><strong>Quality & QA · deterministic where possible, semantic where necessary</strong></p>
-  <p><kbd>CI</kbd>&nbsp;&nbsp;<kbd>BLIND EVALS</kbd>&nbsp;&nbsp;<kbd>READER QUALITY</kbd>&nbsp;&nbsp;<kbd>INDEPENDENT REVIEW</kbd>&nbsp;&nbsp;<kbd>CONTINUITY</kbd></p>
+  <p><strong>Quality & QA · prove invariants with code, interpret fiction with bounded model contracts</strong></p>
+  <p><kbd>DETERMINISTIC QA</kbd>&nbsp;&nbsp;<kbd>SEMANTIC CONTRACTS</kbd>&nbsp;&nbsp;<kbd>FINDINGS</kbd>&nbsp;&nbsp;<kbd>EVOLUTION</kbd>&nbsp;&nbsp;<kbd>GATES</kbd></p>
+  <p><a href="quality-assurance.zh-CN.md">简体中文</a> · <a href="README.en.md">Docs Home</a></p>
 </div>
 
 <img src="../assets/brand/story-thread.svg" alt="" width="100%" />
 
 # Quality & QA
 
-> 🌸 **NovelForge does not have one generic “critic agent.” It has a layered quality system in which different classes of failure are detected by different mechanisms and repaired at the layer that actually owns them.**
+NovelForge does not have one universal critic, and it does not pretend literary quality can be reduced to deterministic scores.
 
-<img src="../assets/ui/home-quality.en.svg" alt="NovelForge quality assurance stack and failure-routing system" width="100%" />
+Its quality system separates **what code can prove**, **what a model must interpret**, **how findings route repair**, **whether a challenger actually improves the incumbent**, and **which judgments must be independent before release**.
 
----
-
-## 01 · Quality is not one score
-
-A fiction artifact can be correct in one dimension and fail badly in another. NovelForge therefore separates at least five questions:
-
-**Is the artifact structurally valid?** Schemas, IDs, lifecycle, authority, fingerprints, dependencies, and state transitions are deterministic concerns.
-
-**Is the prose mechanically acceptable?** Surface Fundamentals catch malformed realization and recurring AI-text failure mechanisms.
-
-**Is the chapter compelling to read?** Reader Engagement evaluates pressure, payoff, causal motion, curiosity, contrast, and forward pull.
-
-**Is the story semantically sound?** Independent review evaluates nuanced scene, character, story, and prose behavior that cannot honestly be reduced to deterministic rules.
-
-**Does it remain consistent with project state?** Continuity checks knowledge, location, obligations, resources, relationships, unresolved threads, and emotional/event aftermath.
-
-A PASS in one layer never erases a FAIL in another.
+<img src="../assets/ui/home-quality.en.svg" alt="NovelForge quality system separating deterministic QA, semantic QA, candidate evolution, and independent review" width="100%" />
 
 ---
 
-## 02 · Deterministic QA
+## 01 · Quality is a set of questions, not one number
 
-Deterministic checks are used whenever the invariant can be expressed precisely. Typical checks include:
+A candidate can pass one quality dimension and fail another.
 
-- manifest and exact framework-lock compatibility;
+NovelForge therefore asks different mechanisms to answer different questions:
+
+**Is the artifact mechanically valid?** Schema, authority, permissions, fingerprints, lifecycle, references, idempotency, and transaction preconditions are deterministic.
+
+**Is the prose realization structurally healthy?** Surface Fundamentals identify recurring realization failures without claiming to define all literary quality.
+
+**What is the reader actually experiencing?** Reader contracts judge momentum, confusion, reward, investment, and desire to continue using reader-visible evidence only.
+
+**Is an important character still behaving as that character?** Character-integrity judgment compares the scene against typed established character state.
+
+**What actually owns this revision problem?** Revision diagnosis distinguishes story, plan, scene, character, reader-pressure, surface, continuity, context/memory, and research failures.
+
+**Did the repair improve the candidate?** Candidate evolution compares incumbent and challenger rather than assuming another rewrite must be better.
+
+**Does the candidate still honor long-term commitments?** Continuity and reader-expectation mechanisms audit established facts, obligations, setups, and relationship evidence.
+
+No PASS in one dimension cancels a FAIL in another.
+
+---
+
+## 02 · The fundamental ownership split
+
+NovelForge 7.3 uses a strict architecture boundary.
+
+**Model-owned semantic intelligence** includes reading, story/character interpretation, reader reaction, revision diagnosis, relationship-memory reconciliation, long-horizon commitment auditing, and other judgments that require understanding supplied evidence.
+
+**Deterministic runtime ownership** includes authority, permission, fingerprints, persistence, routing, hard budgets, stage isolation, typed validation, consume-once behavior, rights/provenance checks, checkpointing, and transactions.
+
+The deterministic shell may validate that a semantic result has the right type and fingerprint. It must not quietly replace the model by inventing a “literary relevance” or “quality” heuristic.
+
+A model result, conversely, does not acquire Canon or Framework-write authority just because it sounds persuasive.
+
+---
+
+## 03 · Deterministic QA: prove what can actually be proved
+
+Deterministic checks are preferred whenever the invariant can be stated exactly.
+
+Typical checks include:
+
+- Project manifest and exact Framework-lock compatibility;
 - schema and required-field validation;
 - stable-ID uniqueness;
-- authority lifecycle rules such as Plan/Review ≠ Accepted Canon;
-- exact artifact fingerprints and result binding;
+- authority boundaries such as Plan / Review ≠ Accepted Canon;
+- artifact and semantic-job fingerprints;
+- result binding and consume-once semantics;
 - permission and write preconditions;
-- dependency/reference integrity;
-- idempotency, leases, consume-once receipts, and resume safety;
-- project-specific facts leaking into generic Framework source;
-- blind semantic queue hygiene;
-- regression fixture structure;
-- reproducible project/framework bundle builds.
+- session / run / checkpoint lifecycle;
+- handoff leases and resume safety;
+- dependency and reference integrity;
+- Project data leaking into generic Framework source;
+- Corpus rights and source provenance;
+- blind-eval queue hygiene;
+- deterministic bundle and project-build reproducibility;
+- settlement compare-and-swap and postcondition checks.
 
-These checks are fast, reproducible, and suitable for normal CI. They do **not** claim to validate whether a paragraph is emotionally alive or a scene is satisfying.
+These checks belong in ordinary CI because they are fast, reproducible, and do not need a model.
+
+They intentionally do **not** claim to prove that a scene is moving, a character choice is psychologically convincing, or a chapter is satisfying.
 
 ---
 
-## 03 · Surface Fundamentals
+## 04 · Surface Fundamentals: a prose floor, not a literary oracle
 
-Surface QA is a floor, not a definition of literary quality. It protects against recurring realization failures such as malformed fragment rhythms, mechanically inserted micro-actions, generic narrator hype, fake cliffhangers, process-report prose, knowledge/voice leakage, and other framework-defined anti-AI failure mechanisms.
+Surface Fundamentals protect the realization layer against recurring AI-text failure mechanisms.
 
-The important implementation rule is **cluster ownership**:
+Examples include malformed fragment rhythms, mechanical micro-actions, narrator hype, process-report narration, fake significance, voice / POV leakage, empty compression, and other framework-defined surface failures.
+
+The important rule is repair ownership:
 
 - isolated surface defect → local rewrite;
-- repeated/clustered surface defects → regenerate the scene;
-- surface-safe but flat → do not keep polishing sentences; return to Reader Pressure + Scene Simulation.
+- surface failures that cluster → regenerate the realization / scene;
+- surface-safe but flat → return to Reader Pressure + Scene Simulation.
 
-This prevents a common failure mode in iterative AI writing: hundreds of local patches gradually make the text cleaner while the underlying scene remains inert.
+This prevents iterative writing from becoming an endless pile of sentence patches over a causally dead scene.
 
 Deep reference: [Surface Fundamentals](../surface/FUNDAMENTALS.en.md).
 
 ---
 
-## 04 · Reader Engagement
+## 05 · Reader diagnostics are evidence, not an automatic independent gate
 
-Reader Engagement is evaluated separately because grammatical cleanliness does not imply page-turning fiction.
+The `quality` semantic pack exposes `reader.reaction` and `reader.compare`.
 
-The model looks for mechanisms such as:
+`reader.reaction` simulates a cold reading-behavior persona using only the candidate and reader-visible context. Creator-only information such as outlines, future plans, author intent, hidden payoff, unrevealed Canon, or prior reviewer verdicts is explicitly outside that reader's knowledge.
 
-- active narrative pressure;
-- meaningful state change;
-- reader reward and payoff;
-- curiosity that evolves instead of merely being withheld;
-- tonal and emotional contrast;
-- scene causality;
-- choices with cost;
-- relationship movement;
-- consequence and aftermath;
-- forward pull into the next unit.
+The diagnostic can report evidence such as:
 
-A chapter that is coherent, polished, and harmless may still fail as **SAFE-BUT-FLAT**. That failure routes upstream rather than receiving decorative prose edits.
+- whether the reader would continue;
+- strength of continue desire;
+- confusion or attention loss;
+- favorite / stumble beats;
+- emotional response;
+- drop-off point;
+- the reason for that reaction.
+
+`reader.compare` performs bounded pairwise comparison and can return `A`, `B`, or `tie`. When order bias matters, repeated judgments can swap candidate order.
+
+These reader simulations are **diagnostic evidence**. Their contract does not by itself make them a mandatory independent semantic gate.
 
 Deep reference: [Reader Engagement](../surface/READER_ENGAGEMENT.en.md).
 
 ---
 
-## 05 · Independent semantic review
+## 06 · Character integrity is its own semantic question
 
-Mandatory independent judgment has a stricter meaning than “ask the model to criticize itself.”
+The `character.integrity` contract asks whether an important character remains causally and psychologically coherent against typed established state.
 
-A valid reviewer must:
+The judgment can consider:
 
-1. run in a genuinely separate invocation/session;
-2. receive a bounded review packet rather than inheriting the manager's entire history;
-3. bind its result to the exact artifact fingerprint;
-4. return a typed verdict/result contract;
-5. avoid hidden expected labels or regression gold;
-6. normally be fresh when the candidate fingerprint materially changes.
+- agenda alignment;
+- beliefs and knowledge boundary;
+- voice;
+- relationship position;
+- spatial / task state;
+- evidence supporting intentional change;
+- surprise that remains consistent with the character rather than random drift.
 
-The manager may freeze, package, dispatch, wait, validate, and consume the result. It may not write the candidate and then satisfy the gate by changing role labels inside the same context.
+The reviewer cannot use manager knowledge, narrator knowledge, reader knowledge, or research truth as if the character automatically knows it.
 
-### No reviewer shopping
+This makes character drift diagnosable without turning the Character System into deterministic “personality rules.”
 
-Infrastructure failure may trigger an eligible transport fallback. A valid semantic rejection is different: it is a real judgment and must route to repair. The system may not keep selecting fresh reviewers until one happens to say PASS.
+Deep reference: [Character & Relationship System](../core/CHARACTER_SYSTEM.en.md).
+
+---
+
+## 07 · Revision diagnosis comes before rewriting
+
+The `revision.diagnose` contract exists to stop generic polish loops.
+
+It asks the model to diagnose only the requested dimensions and return evidence-backed findings plus repair ownership. A meaningful defect should be classified before another rewrite begins.
+
+Repair owners include, as applicable:
+
+- story;
+- plan;
+- scene;
+- character;
+- reader pressure;
+- surface;
+- continuity;
+- context / memory;
+- research;
+- runtime / human escalation.
+
+SAFE-BUT-FLAT is explicitly not a line-edit problem. A cluster of surface failures may also require whole-scene realization rather than local patches.
+
+The result is diagnosis evidence, not Canon mutation.
+
+---
+
+## 08 · Findings make quality evidence durable and traceable
+
+A quality problem should survive beyond one chat message.
+
+NovelForge uses typed findings so later repair and comparison can refer to explicit evidence rather than a vague memory that “the last reviewer disliked something.”
+
+A finding should make clear, when applicable:
+
+- what failed;
+- which candidate fingerprint the evidence describes;
+- where the evidence is observable;
+- which quality dimension is involved;
+- what mechanism owns repair;
+- whether the issue remains open or has been addressed.
+
+Findings are evidence records. They still have no Canon authority.
+
+---
+
+## 09 · Candidate evolution verifies improvement instead of assuming it
+
+A rewrite can be different without being better.
+
+`quality/quality_evolution.py` therefore keeps a deterministic candidate-evolution ledger containing candidate fingerprints, parent relationships, repair owners, exact comparison jobs/results, incumbent state, and plateau counters.
+
+Semantic comparison itself is model-owned through the `creative-evolution` pack's `quality.compare` contract. The deterministic ledger only records and validates the comparison lifecycle.
+
+A comparison may conclude:
+
+- challenger wins;
+- incumbent remains better;
+- no meaningful advantage / tie.
+
+When repeated repairs produce no gain, plateau stopping can end the evolution run rather than forcing another rewrite.
+
+Deep guide: [Quality Evolution](quality-evolution.en.md).
+
+---
+
+## 10 · Long-horizon QA protects promises, not just trivia
+
+Continuity is broader than remembering names or eye colors.
+
+The `long-horizon` contract pack can reconcile and audit evidence that must survive across many chapters:
+
+- `plan.reconcile` — adapt active plans after causal emergence without rewriting Accepted history;
+- `relationship.memory_reconcile` — reconcile long-lived relationship evidence when memories or derived records conflict;
+- `continuity.commitment_audit` — test a candidate against explicit narrative commitments and established facts.
+
+The `narrative-memory` pack can also interpret current `reader.expectations`, which helps distinguish a genuine setup / payoff obligation from a manager's private intent.
+
+Continuity failures may route to Story / Plan, Character, relationship state, Context / Memory, or settlement. They are not automatically prose problems.
+
+---
+
+## 11 · Independent review is a separate property
+
+**Semantic judgment** and **independent semantic judgment** are not synonyms.
+
+Many quality contracts can run as ordinary bounded model work. Their output remains typed and fingerprint-bound, but the contract itself does not claim that the invocation is independent.
+
+When a workflow or rubric explicitly requires independence, the review must additionally satisfy the independent-gate contract:
+
+- genuinely different invocation / session;
+- bounded packet rather than inherited manager history;
+- exact candidate fingerprint binding;
+- typed result;
+- no hidden expected / gold labels;
+- fresh judgment after material fingerprint change unless the contract explicitly permits reuse.
+
+The manager may package, dispatch, validate, and consume. It may not write the artifact and satisfy the gate by adopting a different role in the same invocation.
+
+### No reviewer-shopping
+
+Transport failure and semantic rejection are different states.
+
+An infrastructure failure may route to another eligible transport. A valid `semantic_reject` is real evidence and must route to repair. Repeatedly changing reviewers until one returns PASS destroys the meaning of independence.
 
 Deep references: [Semantic Worker Protocol](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md) and [Semantic Execution Runtime](../harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.en.md).
 
 ---
 
-## 06 · Blind eval queues
+## 12 · Semantic fingerprints and run receipts protect provenance
 
-Regression and capability evals can contain hidden expected outcomes for scoring. Reviewers must not see those labels.
+Every semantic job binds the kind / contract, subject, bounded input, rubric, and output contract into an exact fingerprint. Execution lineage such as worker session or transport attempt is tracked separately from the semantic identity of the job.
 
-NovelForge therefore builds a **blind semantic queue** that removes expected/gold/release-label information before reviewer dispatch. Regression bad examples are also excluded from first-pass Writer context so the generator is not primed by the very failures being tested.
+This means:
 
-The resulting flow is:
+- a reviewer cannot silently judge a different candidate and reuse the old result;
+- retrying the same semantic job through another eligible transport does not change what was asked;
+- material changes to artifact, rubric, or output contract create a new semantic fingerprint;
+- result validation can reject stale or incorrectly bound output.
 
-```text
-Eval Case
-→ deterministic preconditions
-→ blind semantic job
-→ independent reviewer
-→ fingerprint-bound typed result
-→ scorer / release decision
-```
-
-Missing semantic judgment is reported as pending—not silently converted into PASS.
+Provider-neutral semantic run receipts preserve bounded execution provenance without turning provider history into authority.
 
 ---
 
-## 07 · Continuity and state QA
+## 13 · Blind evals protect reviewer independence from expected answers
 
-Continuity is more than “did the model remember the character's eye color?” It includes whether state changes remain causally and epistemically valid.
+Generic eval cases may contain expected outcomes for scoring, but those labels are not reviewer context.
 
-Examples include:
+The blind-queue builder removes expected / gold / release-decision fields before semantic dispatch. Negative regression examples also stay out of pre-Raw-Draft generation context.
 
-- character location and presence;
-- what each character could know at that point in the story;
-- relationship and obligation changes;
-- resources, injuries, deadlines, debts, promises, and constraints;
-- open loops and foreshadowing;
-- timeline/date consistency;
-- emotional aftermath that should persist into later scenes;
-- Accepted manuscript fingerprints matching project state/ledgers where required.
+A semantic eval without an eligible judgment remains `PENDING_MODEL`; deterministic CI must not fabricate PASS.
 
-A continuity issue may belong to state repair, Character Simulation, Story/Plan, or settlement rather than prose revision.
+Normal CI can still validate:
 
----
+- eval manifests and fixtures;
+- deterministic release blockers;
+- blind-queue hygiene;
+- schemas and fingerprints;
+- committed reviewed baselines when explicitly versioned;
+- project / framework self-tests and reproducible builds.
 
-## 08 · Failure routing
-
-NovelForge uses failure routing because the repair mechanism matters as much as the diagnosis.
-
-```text
-isolated surface fail
-→ local rewrite
-
-surface failure cluster
-→ whole-scene regeneration
-
-SAFE-BUT-FLAT / reader-grip fail
-→ Reader Pressure + Scene Simulation
-
-character fail
-→ Character Simulation
-
-story / causal fail
-→ Story / Plan
-
-continuity / state fail
-→ state repair / settlement path
-
-valid independent semantic reject
-→ owning repair layer
-```
-
-This design explicitly rejects the idea that every problem can be solved by asking an “Editor Agent” to rewrite the text one more time.
-
----
-
-## 09 · Eval case types
-
-NovelForge currently uses three broad evaluation classes.
-
-### Regression
-
-Protects against a previously observed failure mechanism. A regression becomes release-blocking only when the required deterministic and/or semantic baseline is actually available for that release path.
-
-### Capability
-
-Checks that the framework can recognize or produce a desired behavior/mechanism.
-
-### Infrastructure
-
-Checks schemas, files, routing, authority boundaries, runtime contracts, project/framework hygiene, and other deterministic infrastructure behavior.
-
-Judge modes are `deterministic`, `rubric`, or `hybrid`.
-
----
-
-## 10 · What normal CI does—and does not do
-
-Normal CI should:
-
-- validate eval manifests and fixtures;
-- run deterministic release blockers;
-- build blind semantic queues;
-- verify that hidden expected labels are absent;
-- validate committed reviewed baselines when explicitly versioned;
-- run project/framework self-tests and build checks.
-
-Normal CI does **not** silently call paid or login-bound models. Semantic execution is explicit and capability-aware.
-
-Typical commands:
-
-```bash
-python evals/run_evals.py --release
-python evals/build_judge_queue.py --output /tmp/semantic-queue.json
-python evals/run_evals.py --judgments reviewed-results.json --json
-```
+Normal CI does not silently spend paid or login-bound model usage.
 
 Implementation reference: [NovelForge Evals](../evals/README.en.md).
 
 ---
 
-## 11 · Release and user-visible gates
+## 14 · User-visible quality gates are task-specific
 
-A candidate artifact may be exposed only when every gate required by the active task mode is resolved. Valid non-success states include:
+Not every task needs every possible quality contract.
+
+The manager loads the smallest relevant contract set and applies the gates required by the active task / Project profile / current rubric.
+
+For `DRAFT` / `REVISE`, Raw Draft always remains internal. A review-ready claim still requires the applicable Surface, Reader, Character / Story, continuity, and independent gates to be resolved.
+
+Honest unresolved states include:
 
 `awaiting_user` · `awaiting_external` · `semantic_pending` · `failed_gate` · `settlement_incomplete`
 
-The framework should prefer a truthful unresolved status over a false “production-ready” claim.
-
-For DRAFT/REVISE, Raw Draft remains internal. Review Draft / production-ready claims require the applicable Surface, Reader Engagement, independent semantic, and continuity gates to be satisfied.
+NovelForge prefers an accurate unresolved state over a false “production-ready” label.
 
 ---
 
-## 12 · Costs and limitations ⚠️
+## 15 · Acceptance and settlement are not quality verdicts
 
-The stricter QA model has real costs:
+Passing quality gates does not mutate Canon.
 
-- independent semantic review adds model/human latency and potentially API cost;
-- fresh-per-fingerprint review can require another invocation after material rewrites;
-- deterministic schemas and fingerprints add engineering ceremony;
-- aggressive upstream regeneration may consume more tokens than endless local edits;
-- literary judgment remains probabilistic even with independent reviewers.
+A user may review a candidate, accept it, and only then authorize `SETTLE`. Settlement is a separate deterministic transaction with explicit acceptance evidence, exact before→after writes, compare-and-swap preconditions, checkpoint / write authorization, projection receipts, and postcondition verification.
 
-NovelForge accepts those costs for projects where false confidence, continuity drift, and self-review loops are more damaging than the extra runtime overhead.
+Likewise, a semantic reviewer cannot “approve something into Canon.”
+
+This keeps four concepts separate:
+
+**quality evidence → user-visible review → explicit acceptance → authorized settlement.**
 
 ---
 
-## 13 · Quality domains covered by the eval suite
+## 16 · Costs and limitations ⚠️
 
-Current framework evaluation covers at least:
+This architecture has real costs.
 
-- Surface Fundamentals;
-- Reader Engagement;
-- character / semantic ownership;
-- Canon / Plan boundary;
-- corpus rights boundary;
-- Project SDK / Framework hygiene;
-- semantic runtime integrity.
+- Semantic diagnosis consumes model or human effort.
+- Independent gates add another invocation and potentially another provider / human workflow.
+- Fresh fingerprints can invalidate previous judgments after material rewrites.
+- Candidate comparison and scenario divergence may cost more tokens than local line edits.
+- Durable findings, receipts, and checkpoints add engineering ceremony.
+- Literary judgment remains probabilistic even when the execution contract is precise.
 
-The suite grows through user rejection evidence, corpus research, framework changes, and discovered capability gaps.
+NovelForge accepts these costs only where they buy something valuable: less false confidence, less continuity drift, less self-review theater, and clearer repair ownership in long-running fiction.
+
+---
+
+## 17 · What “good QA” means in NovelForge
+
+Good QA is not the largest number of critics.
+
+It is a system in which:
+
+- code proves only the invariants code can prove;
+- models receive the smallest contract and evidence needed for interpretation;
+- reader simulation does not secretly see creator-only knowledge;
+- character judgment respects knowledge and agenda boundaries;
+- diagnosis happens before rewrite;
+- repairs go to the owning mechanism;
+- candidate evolution can admit ties and stop at a plateau;
+- independence is used when it is actually required;
+- every result is bound to the artifact it judged;
+- no quality result silently becomes Canon authority.
 
 <div align="center">
   <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom mark" width="52" />
   <br />
-  <sub>Deterministic code proves what code can prove. Independent judgment handles the rest. ✦</sub>
+  <sub>Prove invariants. Read the fiction. Route the failure. Verify the improvement. ✦</sub>
 </div>
