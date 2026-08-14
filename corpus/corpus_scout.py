@@ -31,7 +31,6 @@ from semantic_worker_router import make_contract_job, validate_results  # noqa: 
 PLANNING_QUEUE_SCHEMA = "novelforge_corpus_planning_jobs_v1"
 DISCOVERY_QUEUE_SCHEMA = "novelforge_corpus_discovery_queue_v2"
 REQUEST_SCHEMA = "novelforge_corpus_discovery_request_v2"
-REGISTRY = SEM / "contracts" / "context-research.json"
 CHANNEL_CAPABILITIES = {
     "web": "web_search",
     "github": "github_search",
@@ -117,7 +116,6 @@ def prepare_jobs(gaps: list[dict[str, Any]], *, source_session_id: str | None = 
             "corpus.discovery_plan",
             str(gap["gap_id"]),
             payload,
-            registry_path=REGISTRY,
             source_session_id=source_session_id,
         ))
     return {
@@ -283,6 +281,7 @@ def self_test() -> dict[str, Any]:
     model_query_preserved = queries[0] == "narrative pacing state change paragraph coherence study"
     capability_map = {x["requires_capability"] for x in request["host_search_plan"]} == {"web_search", "user_files"}
     rights_preserved = request["ingest_boundary"]["rights_gate_required"] is True and request["ingest_boundary"]["named_author_imitation_profile_forbidden"] is True
+    catalog_resolved = job.get("provenance", {}).get("pack_id") == "context-research"
     disallowed_guard = False
     bad = json.loads(json.dumps(result)); bad["judgment"]["searches"][0]["channel"] = "github"
     try:
@@ -291,11 +290,12 @@ def self_test() -> dict[str, Any]:
         disallowed_guard = True
     ok = (
         job["input"].get("model_contract_id") == "corpus.discovery_plan"
-        and model_query_preserved and capability_map and rights_preserved and disallowed_guard
+        and catalog_resolved and model_query_preserved and capability_map and rights_preserved and disallowed_guard
     )
     return {
         "corpus_scout_contract": "PASS" if ok else "FAIL",
         "semantic_search_strategy_owner": "model",
+        "catalog_resolved_contract_pack": catalog_resolved,
         "model_query_preserved": model_query_preserved,
         "capability_mapping_deterministic": capability_map,
         "disallowed_channel_guard": disallowed_guard,
