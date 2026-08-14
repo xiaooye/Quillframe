@@ -17,7 +17,7 @@ HERE=Path(__file__).resolve();
 if str(HERE.parent) not in sys.path: sys.path.insert(0,str(HERE.parent))
 from semantic_worker_router import validate_job,validate_result  # noqa: E402
 
-PACKET_SCHEMA="novel_os_peer_review_packet_v1"
+PACKET_SCHEMA="novelforge_peer_review_packet_v1"
 
 def load(path:Path)->dict[str,Any]:
     v=json.loads(path.read_text(encoding="utf-8"));
@@ -38,7 +38,7 @@ def build(job:dict[str,Any])->dict[str,Any]:
         "You are a genuinely separate independent semantic reviewer. Judge only the blind job below. "
         "Do not ask for or inspect the writer conversation/project files; do not search for expected labels; do not provide private chain-of-thought. "
         "Return ONLY one JSON semantic result with the exact job_id/subject_id/kind/input_fingerprint, status=completed, worker provider=chatgpt_peer_chat (or truthful peer-chat provider), a short evidence-based judgment, empty proposals/errors, and execution.run_reference exactly equal to the relay nonce. "
-        "You have no Canon/OS/taste/write authority."
+        "You have no Canon/framework/taste/write authority."
     )
     return {"schema":PACKET_SCHEMA,"relay_nonce":nonce,"input_fingerprint":job["input_fingerprint"],"job":bounded,"reviewer_instruction":reviewer_instruction,"return_binding":{"run_reference":nonce,"fresh_conversation_required":True,"same_project_writer_chat_forbidden":True}}
 
@@ -48,7 +48,6 @@ def validate_packet(packet:dict[str,Any])->list[str]:
     if not isinstance(packet.get("relay_nonce"),str) or not packet["relay_nonce"]:e.append("relay_nonce required")
     job=packet.get("job")
     if not isinstance(job,dict):e.append("job required");return e
-    # Recreate optional execution field only if absent; fingerprint semantics ignore it.
     e.extend(validate_job(job))
     if packet.get("input_fingerprint")!=job.get("input_fingerprint"):e.append("packet/job fingerprint mismatch")
     return e
