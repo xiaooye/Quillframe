@@ -19,21 +19,21 @@ jobs:
       - name: Compile every Python module
         run: |
           python - <<'PY'
-          import pathlib, py_compile
+          import pathlib,py_compile
           files=[p for p in pathlib.Path('.').rglob('*.py') if '.git' not in p.parts]
-          for p in files:
-              py_compile.compile(str(p), doraise=True)
+          for p in files: py_compile.compile(str(p),doraise=True)
           print(f'compiled {len(files)} Python files')
           PY
+
+      - name: Repository hygiene and generic-boundary gate
+        run: python scripts/framework_hygiene.py
 
       - name: Project SDK contract
         run: python project_sdk.py self-test > project-sdk-test.json
 
-      - name: Adaptive learning contract
-        run: python learning/learning_store.py --db /tmp/novelforge-learning-ci.db self-test > learning-test.json
-
-      - name: Corpus discovery and rights contracts
+      - name: Adaptive learning and corpus contracts
         run: |
+          python learning/learning_store.py --db /tmp/novelforge-learning-ci.db self-test > learning-test.json
           python corpus/corpus_scout.py self-test > corpus-scout-test.json
           python corpus/rights_gate.py self-test > corpus-rights-test.json
 
@@ -52,128 +52,7 @@ jobs:
       - name: Top-level CLI contract
         run: python novelforge.py self-test > cli-test.json
 
-      - name: Framework project-leakage hard gate
-        run: |
-          python - <<'PY'
-          import pathlib
-          forbidden = {
-              'xiaooye/frostloom',
-              'chinaboy_webnovel',
-              '《从唐人街到白宫》',
-              '周叙',
-              '陈承',
-              'BOOK-001',
-          }
-          exts={'.md','.py','.json','.yaml','.yml','.toml','.txt'}
-          hits=[]
-          for p in pathlib.Path('.').rglob('*'):
-              if not p.is_file() or p.suffix not in exts or '.git' in p.parts:
-                  continue
-              text=p.read_text(encoding='utf-8',errors='replace')
-              for token in forbidden:
-                  if token in text:
-                      hits.append(f'{p}: {token}')
-          if hits:
-              raise SystemExit('project-specific leakage in generic framework:\n'+'\n'.join(hits))
-          print('generic framework leakage scan: PASS')
-          PY
-
-      - name: Bilingual human-document pairing gate
-        run: |
-          python - <<'PY'
-          import pathlib
-          root=pathlib.Path('.')
-          stable_routers={
-              pathlib.Path('README.md'), pathlib.Path('SKILL.md'), pathlib.Path('AGENTS.md'), pathlib.Path('CLAUDE.md'),
-              pathlib.Path('harness/HARNESS_AGENT.md'), pathlib.Path('harness/ORCHESTRATION_PROTOCOL.md'),
-              pathlib.Path('harness/SELF_IMPROVEMENT_PROTOCOL.md'), pathlib.Path('harness/CONTINUOUS_MAINTENANCE.md'),
-              pathlib.Path('harness/control_plane/CONTROL_PLANE.md'),
-              pathlib.Path('harness/session_runtime/SESSION_RUNTIME.md'), pathlib.Path('harness/session_runtime/RUNTIME_ROUTING.md'),
-              pathlib.Path('harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.md'),
-              pathlib.Path('harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.md'),
-          }
-          errors=[]
-          for p in root.rglob('*.md'):
-              if '.git' in p.parts:
-                  continue
-              rel=p.relative_to(root)
-              name=p.name
-              if name.endswith('.en.md'):
-                  peer=p.with_name(name[:-6]+'.zh-CN.md')
-                  if not peer.exists(): errors.append(f'missing zh-CN pair: {rel}')
-              elif name.endswith('.zh-CN.md'):
-                  peer=p.with_name(name[:-9]+'.en.md')
-                  if not peer.exists(): errors.append(f'missing en pair: {rel}')
-              elif rel not in stable_routers:
-                  errors.append(f'unpaired human Markdown (not stable bilingual router): {rel}')
-          for router in stable_routers:
-              if not router.exists(): errors.append(f'missing stable router: {router}')
-              else:
-                  text=router.read_text(encoding='utf-8')
-                  if not ('English' in text and ('中文' in text or '简体中文' in text)):
-                      errors.append(f'router is not bilingual: {router}')
-          if errors:
-              raise SystemExit('\n'.join(errors))
-          print('bilingual document pairing: PASS')
-          PY
-
-      - name: Markdown relative-link gate
-        run: |
-          python - <<'PY'
-          import pathlib,re,urllib.parse
-          errors=[]
-          pat=re.compile(r'\[[^\]]*\]\(([^)]+)\)')
-          for p in pathlib.Path('.').rglob('*.md'):
-              if '.git' in p.parts: continue
-              text=p.read_text(encoding='utf-8',errors='replace')
-              for raw in pat.findall(text):
-                  target=raw.strip().split()[0].strip('<>')
-                  if not target or target.startswith(('#','http://','https://','mailto:')): continue
-                  target=urllib.parse.unquote(target.split('#',1)[0])
-                  if not target: continue
-                  resolved=(p.parent/target).resolve()
-                  try: resolved.relative_to(pathlib.Path('.').resolve())
-                  except ValueError:
-                      errors.append(f'{p}: link escapes repository: {raw}'); continue
-                  if not resolved.exists(): errors.append(f'{p}: missing relative link target {raw}')
-          if errors: raise SystemExit('\n'.join(errors))
-          print('Markdown relative links: PASS')
-          PY
-
-      - name: v7 manifest and fundamental quality contracts
-        run: |
-          python - <<'PY'
-          import pathlib
-          manifest=pathlib.Path('HARNESS_MANIFEST.yaml').read_text(encoding='utf-8')
-          required=[
-              'version: 7.0.0','name: novelforge','project_agnostic: true','built_in_novel_or_canon: false',
-              'dependency_direction: project-to-framework-only','human_facing_pair_required: true',
-              'project_sdk: project_sdk.py','durable_store: learning/learning_store.py','scout: corpus/corpus_scout.py',
-          ]
-          for needle in required: assert needle in manifest,needle
-          surface=pathlib.Path('surface/FUNDAMENTALS.en.md').read_text(encoding='utf-8')
-          reader=pathlib.Path('surface/READER_ENGAGEMENT.en.md').read_text(encoding='utf-8')
-          assert 'HF-01' in surface and 'HF-29' in surface
-          assert 'RG-01' in reader and 'RG-15' in reader and 'SAFE-BUT-FLAT' in reader
-          sdk_en=pathlib.Path('docs/project-sdk.en.md').read_text(encoding='utf-8')
-          sdk_zh=pathlib.Path('docs/project-sdk.zh-CN.md').read_text(encoding='utf-8')
-          assert 'novelforge.toml' in sdk_en and 'novelforge.toml' in sdk_zh
-          assert 'project.yaml' not in sdk_en and 'project.yaml' not in sdk_zh
-          PY
-
-      - name: Control-plane authority boundaries
-        run: |
-          python - <<'PY'
-          import json,pathlib
-          event=json.load(open('harness/control_plane/event_schema.json',encoding='utf-8'))
-          types=set(event['properties']['event_type']['enum'])
-          assert not types.intersection({'draft.requested','settlement.apply','canon.write','os.promote'})
-          h=json.load(open('harness/control_plane/handoff_schema.json',encoding='utf-8'))
-          perms=h['properties']['permissions']['properties']
-          assert all(perms[k]['const'] is False for k in ('canon_write','os_behavior_write','durable_user_taste_write'))
-          PY
-
-      - name: Assert deterministic self-test results
+      - name: Assert deterministic contract results
         run: |
           python - <<'PY'
           import json
@@ -191,14 +70,25 @@ jobs:
             'cli-test.json':('novelforge_cli_contract','PASS'),
           }
           for path,(key,expected) in checks.items():
-              d=json.load(open(path,encoding='utf-8'))
-              assert d[key]==expected,(path,d)
+              d=json.load(open(path,encoding='utf-8'));assert d[key]==expected,(path,d)
           cp=json.load(open('control-plane-test.json',encoding='utf-8'))
           assert cp['idempotent_event_ingress'] and cp['lease_claim'] and cp['exactly_once_consumption'] and cp['authority_guard']
           assert json.load(open('semantic-router-test.json',encoding='utf-8'))['fingerprint_excludes_runtime_lineage'] is True
           PY
 
-      - name: Verify direct semantic layer never fabricates a worker
+      - name: Control-plane authority boundary
+        run: |
+          python - <<'PY'
+          import json
+          event=json.load(open('harness/control_plane/event_schema.json',encoding='utf-8'))
+          types=set(event['properties']['event_type']['enum'])
+          assert not types.intersection({'draft.requested','settlement.apply','canon.write','os.promote'})
+          handoff=json.load(open('harness/control_plane/handoff_schema.json',encoding='utf-8'))
+          perms=handoff['properties']['permissions']['properties']
+          assert all(perms[k]['const'] is False for k in ('canon_write','os_behavior_write','durable_user_taste_write'))
+          PY
+
+      - name: Direct semantic layer must not fabricate a worker
         env:
           OPENAI_API_KEY: ''
           NOVEL_OS_SEMANTIC_WORKER_CMD: ''
@@ -220,15 +110,13 @@ jobs:
           sys.path.insert(0,'harness/semantic_workers')
           from semantic_worker_router import fingerprint_for
           job={'job_id':'SEM-CI','kind':'eval_judge','subject_id':'CI','created_at':'now','input_fingerprint':'','input':{'text':'fixture'},'rubric':['judge fixture'],'output_contract':{},'permissions':{'canon_write':False,'os_behavior_write':False,'durable_user_taste_write':False,'allowed_result_scope':'observation'},'provenance':{'source':'ci'}}
-          job['input_fingerprint']=fingerprint_for(job)
-          json.dump(job,open('/tmp/job.json','w',encoding='utf-8'))
+          job['input_fingerprint']=fingerprint_for(job);json.dump(job,open('/tmp/job.json','w',encoding='utf-8'))
           PY
           python harness/semantic_workers/adapters/openai_responses_adapter.py --dry-run < /tmp/job.json > openai-dry-run.json
           python - <<'PY'
           import json
           d=json.load(open('openai-dry-run.json',encoding='utf-8'))
-          assert d['valid'] is True
-          assert d['request']['store'] is False
+          assert d['valid'] is True and d['request']['store'] is False
           assert d['request']['text']['format']['type']=='json_schema'
           assert d['authorization_header_included'] is False
           PY
@@ -238,17 +126,7 @@ jobs:
         with:
           name: novelforge-contract-artifacts
           path: |
-            project-sdk-test.json
-            learning-test.json
-            corpus-scout-test.json
-            corpus-rights-test.json
-            session-test.json
-            control-plane-test.json
-            mcp-test.json
-            semantic-router-test.json
-            peer-chat-test.json
-            local-agent-test.json
-            cli-test.json
+            *-test.json
             direct-capabilities.json
             openai-dry-run.json
           if-no-files-found: warn
