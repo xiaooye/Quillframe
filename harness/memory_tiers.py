@@ -1,19 +1,27 @@
 #!/usr/bin/env python3
-"""Tiered derived-memory allocation for NovelForge 7.2.
+"""Deterministic context-budget packer for NovelForge.
 
-This module allocates already-derived/project-provided memory under hard budgets.
-It does not summarize Canon or infer new story truth. Derived memory remains
-non-authoritative and rebuildable.
+The model owns semantic relevance through the `context.select` contract. This
+module never scores literary/story relevance. It only validates bounded memory
+blocks, enforces authority/pin constraints, binds a semantic result to its exact
+job fingerprint, and packs whole blocks under hard budgets.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "novelforge_memory_tiers_v1"
-TIERS = ("hot", "working", "archival")
+ROOT = Path(__file__).resolve().parents[1]
+SEM = ROOT / "harness" / "semantic_workers"
+if str(SEM) not in sys.path:
+    sys.path.insert(0, str(SEM))
+from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
+
+SCHEMA = "novelforge_memory_tiers_v2"
+REGISTRY = SEM / "contracts" / "context-research.json"
 
 
 def load_json(path: Path) -> Any:
@@ -36,12 +44,6 @@ def normalize_item(raw: dict[str, Any]) -> dict[str, Any]:
     cost = raw.get("cost")
     if isinstance(cost, bool) or not isinstance(cost, int) or cost <= 0:
         raise ValueError(f"memory cost must be positive integer: {item_id}")
-    relevance = raw.get("relevance", 0.0)
-    if isinstance(relevance, bool) or not isinstance(relevance, (int, float)) or not 0 <= float(relevance) <= 1:
-        raise ValueError(f"relevance must be 0..1: {item_id}")
-    priority = raw.get("priority", 0.0)
-    if isinstance(priority, bool) or not isinstance(priority, (int, float)):
-        raise ValueError(f"priority must be numeric: {item_id}")
     derived = bool(raw.get("derived", True))
     authority = raw.get("authority", False)
     if derived and authority is not False:
@@ -53,50 +55,74 @@ def normalize_item(raw: dict[str, Any]) -> dict[str, Any]:
             raise ValueError(f"derived memory requires source_refs: {item_id}")
         if not isinstance(source_fingerprints, list) or not source_fingerprints or not all(isinstance(x, str) and x.startswith("sha256:") for x in source_fingerprints):
             raise ValueError(f"derived memory requires source_fingerprints: {item_id}")
-    events = raw.get("event_ids", [])
-    participants = raw.get("participant_ids", [])
-    if not isinstance(events, list) or not isinstance(participants, list):
-        raise ValueError(f"event_ids/participant_ids must be lists: {item_id}")
+    model_view = raw.get("model_view", {})
+    if not isinstance(model_view, dict):
+        raise ValueError(f"model_view must be object: {item_id}")
     return {
-        "id": item_id,
+        "id": item_id.strip(),
         "cost": cost,
-        "relevance": float(relevance),
-        "priority": float(priority),
         "pinned": bool(raw.get("pinned", False)),
         "derived": derived,
         "authority": False if derived else authority,
-        "source_refs": source_refs,
-        "source_fingerprints": source_fingerprints,
-        "event_ids": [str(x) for x in events],
-        "participant_ids": [str(x) for x in participants],
+        "source_refs": list(source_refs),
+        "source_fingerprints": list(source_fingerprints),
         "invalidated": bool(raw.get("invalidated", False)),
+        "model_view": model_view,
         "payload_ref": raw.get("payload_ref"),
         "metadata": raw.get("metadata", {}),
     }
 
 
-def classify(item: dict[str, Any], *, current_event_ids: set[str], participant_ids: set[str]) -> tuple[str, tuple[Any, ...]]:
-    event_overlap = len(current_event_ids.intersection(item["event_ids"]))
-    participant_overlap = len(participant_ids.intersection(item["participant_ids"]))
-    if item["pinned"] or event_overlap or participant_overlap:
-        tier = "hot"
-    elif item["relevance"] >= 0.5 or item["priority"] > 0:
-        tier = "working"
-    else:
-        tier = "archival"
-    score = (
-        1 if item["pinned"] else 0,
-        event_overlap,
-        participant_overlap,
-        item["relevance"],
-        item["priority"],
-        -item["cost"],
-        item["id"],
+def normalized_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_items = payload.get("items", [])
+    if not isinstance(raw_items, list):
+        raise ValueError("items must be a list")
+    items = []
+    seen: set[str] = set()
+    for raw in raw_items:
+        if not isinstance(raw, dict):
+            raise ValueError("memory item must be object")
+        item = normalize_item(raw)
+        if item["id"] in seen:
+            raise ValueError(f"duplicate memory id: {item['id']}")
+        seen.add(item["id"])
+        items.append(item)
+    return items
+
+
+def prepare_selection_job(payload: dict[str, Any], *, subject_id: str,
+                          source_session_id: str | None = None) -> dict[str, Any]:
+    task_context = payload.get("task_context", {})
+    if not isinstance(task_context, dict):
+        raise ValueError("task_context must be object")
+    items = [item for item in normalized_items(payload) if not item["invalidated"]]
+    candidates = [
+        {
+            "id": item["id"],
+            "cost": item["cost"],
+            "pinned": item["pinned"],
+            "authority": item["authority"],
+            "derived": item["derived"],
+            "model_view": item["model_view"],
+        }
+        for item in items
+    ]
+    return make_contract_job(
+        "context.select",
+        subject_id,
+        {"task_context": task_context, "memory_blocks": candidates},
+        registry_path=REGISTRY,
+        source_session_id=source_session_id,
     )
-    return tier, score
 
 
-def _pack(items: list[dict[str, Any]], budget: int) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
+def _ordered_ids(value: Any, name: str) -> list[str]:
+    if not isinstance(value, list) or not all(isinstance(x, str) and x.strip() for x in value):
+        raise ValueError(f"selection.{name} must be string list")
+    return [x.strip() for x in value]
+
+
+def _pack(items: list[dict[str, Any]], budget: int, *, fail_if_over: bool = False) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
     selected: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
     used = 0
@@ -104,47 +130,74 @@ def _pack(items: list[dict[str, Any]], budget: int) -> tuple[list[dict[str, Any]
         if used + item["cost"] <= budget:
             selected.append(item)
             used += item["cost"]
+        elif fail_if_over:
+            raise ValueError("pinned memory blocks exceed hot budget")
         else:
-            skipped.append({"id": item["id"], "reason": "whole_item_exceeds_remaining_budget", "cost": item["cost"], "remaining": max(0, budget - used)})
+            skipped.append({
+                "id": item["id"],
+                "reason": "whole_item_exceeds_remaining_budget",
+                "cost": item["cost"],
+                "remaining": max(0, budget - used),
+            })
     return selected, skipped, used
 
 
-def allocate(payload: dict[str, Any], *, hot_budget: int, working_budget: int,
-             current_event_ids: list[str] | None = None, participant_ids: list[str] | None = None) -> dict[str, Any]:
+def pack_selection(payload: dict[str, Any], job: dict[str, Any], result: dict[str, Any], *,
+                   hot_budget: int, working_budget: int) -> dict[str, Any]:
     if hot_budget < 0 or working_budget < 0:
         raise ValueError("budgets must be >= 0")
-    raw_items = payload.get("items", [])
-    if not isinstance(raw_items, list):
-        raise ValueError("items must be a list")
-    current_events = set(current_event_ids or [])
-    participants = set(participant_ids or [])
-    buckets: dict[str, list[dict[str, Any]]] = {tier: [] for tier in TIERS}
-    invalidated: list[str] = []
-    for raw in raw_items:
-        if not isinstance(raw, dict):
-            raise ValueError("memory item must be object")
-        item = normalize_item(raw)
-        if item["invalidated"]:
-            invalidated.append(item["id"])
-            continue
-        tier, score = classify(item, current_event_ids=current_events, participant_ids=participants)
-        item["tier"] = tier
-        item["selection_score"] = list(score[:-1])
-        buckets[tier].append(item)
-    for tier in TIERS:
-        buckets[tier].sort(key=lambda x: classify(x, current_event_ids=current_events, participant_ids=participants)[1], reverse=True)
-    hot_selected, hot_skipped, hot_used = _pack(buckets["hot"], hot_budget)
-    working_selected, working_skipped, working_used = _pack(buckets["working"], working_budget)
+    errors = validate_result(job, result)
+    if errors:
+        raise ValueError("semantic selection result invalid: " + "; ".join(errors))
+    if job.get("input", {}).get("model_contract_id") != "context.select":
+        raise ValueError("job must use context.select contract")
+    if result.get("status") != "completed":
+        raise ValueError("context selection must be completed")
+
+    items = normalized_items(payload)
+    valid = [item for item in items if not item["invalidated"]]
+    by_id = {item["id"]: item for item in valid}
+    judgment = result.get("judgment", {})
+    hot_ids = _ordered_ids(judgment.get("hot_ids"), "hot_ids")
+    working_ids = _ordered_ids(judgment.get("working_ids"), "working_ids")
+    archive_ids = _ordered_ids(judgment.get("archive_ids"), "archive_ids")
+    proposed = hot_ids + working_ids + archive_ids
+    unknown = sorted(set(proposed) - set(by_id))
+    if unknown:
+        raise ValueError("selection references unknown/invalidated memory ids: " + ", ".join(unknown))
+    if len(proposed) != len(set(proposed)):
+        raise ValueError("selection contains duplicate memory ids across tiers")
+
+    pinned_ids = [item["id"] for item in valid if item["pinned"]]
+    ordered_hot_ids = pinned_ids + [item_id for item_id in hot_ids if item_id not in set(pinned_ids)]
+    hot_set = set(ordered_hot_ids)
+    ordered_working_ids = [item_id for item_id in working_ids if item_id not in hot_set]
+
+    pinned_items = [by_id[item_id] for item_id in pinned_ids]
+    _, _, pinned_used = _pack(pinned_items, hot_budget, fail_if_over=True)
+    nonpinned_hot = [by_id[item_id] for item_id in ordered_hot_ids if item_id not in set(pinned_ids)]
+    hot_extra, hot_skipped, hot_extra_used = _pack(nonpinned_hot, hot_budget - pinned_used)
+    hot_selected = pinned_items + hot_extra
+    hot_used = pinned_used + hot_extra_used
+
+    working_candidates = [by_id[item_id] for item_id in ordered_working_ids]
+    working_selected, working_skipped, working_used = _pack(working_candidates, working_budget)
+    loaded_ids = {item["id"] for item in hot_selected + working_selected}
+    archive = [item["id"] for item in valid if item["id"] not in loaded_ids]
+    invalidated = [item["id"] for item in items if item["invalidated"]]
+
     return {
         "schema": SCHEMA,
-        "current_event_ids": sorted(current_events),
-        "participant_ids": sorted(participants),
+        "selection_fingerprint": result.get("input_fingerprint"),
         "budgets": {"hot": hot_budget, "working": working_budget},
         "used": {"hot": hot_used, "working": working_used},
         "selected": {"hot": hot_selected, "working": working_selected},
-        "archival": [item["id"] for item in buckets["archival"]],
+        "archive": archive,
         "skipped": {"hot": hot_skipped, "working": working_skipped},
         "invalidated": invalidated,
+        "selection_owner": "model",
+        "budget_owner": "deterministic_runtime",
+        "pin_override": True,
         "whole_item_or_skip": True,
         "authority": False,
         "model_execution": False,
@@ -153,48 +206,70 @@ def allocate(payload: dict[str, Any], *, hot_budget: int, working_budget: int,
 
 def self_test() -> int:
     payload = {
+        "task_context": {"mode": "DRAFT", "scene": "SCN-9"},
         "items": [
-            {"id": "M-PIN", "cost": 4, "relevance": 0.2, "priority": 0, "pinned": True, "derived": True, "authority": False, "source_refs": ["canon:A"], "source_fingerprints": ["sha256:" + "a" * 64], "event_ids": [], "participant_ids": []},
-            {"id": "M-EVT", "cost": 5, "relevance": 0.1, "priority": 0, "derived": True, "authority": False, "source_refs": ["canon:B"], "source_fingerprints": ["sha256:" + "b" * 64], "event_ids": ["EV-9"], "participant_ids": []},
-            {"id": "M-WORK", "cost": 3, "relevance": 0.8, "priority": 0, "derived": True, "authority": False, "source_refs": ["canon:C"], "source_fingerprints": ["sha256:" + "c" * 64], "event_ids": [], "participant_ids": []},
-            {"id": "M-ARCH", "cost": 2, "relevance": 0.1, "priority": 0, "derived": True, "authority": False, "source_refs": ["canon:D"], "source_fingerprints": ["sha256:" + "d" * 64], "event_ids": [], "participant_ids": []},
-        ]
+            {"id": "M-PIN", "cost": 2, "pinned": True, "derived": True, "authority": False, "source_refs": ["canon:A"], "source_fingerprints": ["sha256:" + "a" * 64], "model_view": {"label": "current-goal", "description": "Immediate scene goal", "value": "Get out alive."}},
+            {"id": "M-B", "cost": 3, "derived": True, "authority": False, "source_refs": ["canon:B"], "source_fingerprints": ["sha256:" + "b" * 64], "model_view": {"label": "relationship", "description": "Relevant relationship state", "value": "Trust is damaged."}},
+            {"id": "M-C", "cost": 4, "derived": True, "authority": False, "source_refs": ["canon:C"], "source_fingerprints": ["sha256:" + "c" * 64], "model_view": {"label": "old-thread", "description": "Potentially irrelevant thread", "value": "Old clue."}},
+            {"id": "M-X", "cost": 1, "derived": True, "authority": False, "source_refs": ["canon:X"], "source_fingerprints": ["sha256:" + "d" * 64], "invalidated": True, "model_view": {"label": "invalid", "value": "stale"}},
+        ],
     }
-    report = allocate(payload, hot_budget=5, working_budget=3, current_event_ids=["EV-9"])
+    job = prepare_selection_job(payload, subject_id="SCN-9")
+    result = {
+        "job_id": job["job_id"], "subject_id": job["subject_id"], "kind": job["kind"],
+        "input_fingerprint": job["input_fingerprint"], "status": "completed",
+        "worker": {"provider": "self_test", "model_or_reviewer": "fixture"},
+        "judgment": {"confidence": 0.9, "hot_ids": ["M-B"], "working_ids": ["M-C"], "archive_ids": ["M-PIN"], "reasons": []},
+        "proposals": [], "errors": [],
+    }
+    report = pack_selection(payload, job, result, hot_budget=5, working_budget=3)
     hot_ids = [x["id"] for x in report["selected"]["hot"]]
-    working_ids = [x["id"] for x in report["selected"]["working"]]
-    hard_budget = report["used"]["hot"] <= 5 and report["used"]["working"] <= 3
-    pin_first = hot_ids and hot_ids[0] == "M-PIN"
-    event_relevance = any(x["id"] == "M-EVT" for x in report["skipped"]["hot"])
-    whole_skip = report["whole_item_or_skip"] and report["skipped"]["hot"][0]["reason"] == "whole_item_exceeds_remaining_budget"
-    bad_authority = False
+    pin_override = hot_ids == ["M-PIN", "M-B"]
+    hard_budget = report["used"] == {"hot": 5, "working": 0}
+    whole_skip = report["skipped"]["working"] and report["skipped"]["working"][0]["id"] == "M-C"
+    invalidated_excluded = "M-X" in report["invalidated"] and "M-X" not in report["archive"]
+    unknown_guard = False
+    bad = json.loads(json.dumps(result)); bad["judgment"]["hot_ids"] = ["UNKNOWN"]
+    try:
+        pack_selection(payload, job, bad, hot_budget=5, working_budget=3)
+    except ValueError:
+        unknown_guard = True
+    authority_guard = False
     try:
         normalize_item({"id": "BAD", "cost": 1, "derived": True, "authority": True, "source_refs": ["x"], "source_fingerprints": ["sha256:" + "e" * 64]})
     except ValueError:
-        bad_authority = True
-    ok = hard_budget and pin_first and event_relevance and whole_skip and working_ids == ["M-WORK"] and bad_authority
+        authority_guard = True
+    ok = pin_override and hard_budget and whole_skip and invalidated_excluded and unknown_guard and authority_guard
     dump({
         "memory_tiers_contract": "PASS" if ok else "FAIL",
+        "semantic_relevance_owner": "model",
+        "pin_override": pin_override,
         "hard_budget": hard_budget,
-        "whole_item_or_skip": whole_skip,
-        "event_relevance": event_relevance,
-        "pin_first": pin_first,
-        "derived_authority_false_enforced": bad_authority,
+        "whole_item_or_skip": bool(whole_skip),
+        "invalidated_excluded": invalidated_excluded,
+        "unknown_selection_guard": unknown_guard,
+        "derived_authority_false_enforced": authority_guard,
         "model_execution": False,
     })
     return 0 if ok else 1
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge tiered derived-memory allocator")
+    p = argparse.ArgumentParser(description="NovelForge model-selected deterministic context packer")
     sub = p.add_subparsers(dest="command", required=True)
-    al = sub.add_parser("allocate"); al.add_argument("--input", required=True); al.add_argument("--hot-budget", type=int, required=True); al.add_argument("--working-budget", type=int, required=True); al.add_argument("--event-id", action="append", dest="event_ids"); al.add_argument("--participant-id", action="append", dest="participant_ids"); al.add_argument("--output")
+    prep = sub.add_parser("prepare")
+    prep.add_argument("--input", required=True); prep.add_argument("--subject-id", required=True); prep.add_argument("--source-session-id"); prep.add_argument("--output")
+    pack = sub.add_parser("pack")
+    pack.add_argument("--input", required=True); pack.add_argument("--job", required=True); pack.add_argument("--result", required=True); pack.add_argument("--hot-budget", type=int, required=True); pack.add_argument("--working-budget", type=int, required=True); pack.add_argument("--output")
     sub.add_parser("self-test")
     args = p.parse_args()
     if args.command == "self-test":
         return self_test()
-    report = allocate(load_json(Path(args.input)), hot_budget=args.hot_budget, working_budget=args.working_budget, current_event_ids=args.event_ids, participant_ids=args.participant_ids)
-    dump(report, Path(args.output) if args.output else None)
+    if args.command == "prepare":
+        value = prepare_selection_job(load_json(Path(args.input)), subject_id=args.subject_id, source_session_id=args.source_session_id)
+    else:
+        value = pack_selection(load_json(Path(args.input)), load_json(Path(args.job)), load_json(Path(args.result)), hot_budget=args.hot_budget, working_budget=args.working_budget)
+    dump(value, Path(args.output) if args.output else None)
     return 0
 
 
