@@ -1,94 +1,131 @@
 <div align="center">
   <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom 标志" width="54" />
-  <p><kbd>语义判断归模型</kbd>&nbsp;&nbsp;<kbd>类型化证据</kbd>&nbsp;&nbsp;<kbd>平台期停止</kbd></p>
+  <p><kbd>语义判断归模型</kbd>&nbsp;&nbsp;<kbd>证据绑定修复</kbd>&nbsp;&nbsp;<kbd>平台期停止</kbd></p>
 </div>
 
-# 质量演进 · 模型负责文学判断，确定性代码负责让质量状态可追踪、可恢复
+# 质量演进 · 改进候选稿，但不假装“改得越多越好”
 
-NovelForge 把**文学语义判断**与**质量状态机器**明确拆开。模型通过受限、可读的 semantic contract 阅读正文并作判断；确定性代码只负责打包上下文与权限、验证类型化输出、保存证据和候选稿谱系、执行 fingerprint / consume-once 规则，以及在连续没有收益时停止修订循环。
+NovelForge 明确拆开**文学语义判断**与**质量状态机器**。模型通过受限、可读的语义契约完成需要理解正文的判断；确定性代码负责可见性、权威、指纹、预算、类型验证、持久化、单次消费与修订状态。
 
-> **核心不变量 ✦** Python 可以持久化、路由、做指纹、控制预算、验证类型和执行事务；它不会因为质量工作流需要“文学判断”就自动变成文学评论家。
+> **核心不变量 ✦** Python 可以约束、持久化、路由、验证和执行事务；它不会因为质量工作流需要判断文学效果，就自动变成文学评论家。
+
+---
 
 ## 01 · 质量是一组不同问题，不是一个总分
 
 NovelForge 把这些问题分别处理：
 
-- **确定性正确性**：Schema、生命周期、指纹、权威、权限、单次消费、幂等性；
-- **表层实现**：正文是否出现已知结构性 / 模型失败机制；
-- **读者吸引力**：注意力、压力、回报、因果、人物投入与继续阅读动力；
-- **人物完整性**：目标、知识、声线、关系位置、任务 / 空间一致性；
-- **连续性 / 状态完整性**：候选稿是否与相关权威状态一致；
-- **独立语义判断**：工作流明确要求独立门槛时，由真正不同的调用 / 会话完成。
+- **确定性正确性**：Schema、生命周期、权限、权威、指纹、幂等性；
+- **上下文落地**：当前任务是否拿到了真正相关的证据，同时没有越过视角边界；
+- **表层实现**：正文是否出现已知的结构性 / 模型失败机制；
+- **读者吸引力**：压力、回报、因果、人物投入、清晰度和继续阅读动力；
+- **人物完整性**：目标、知识、声线、关系位置、任务与空间一致性；
+- **连续性 / 长程完整性**：候选稿是否尊重权威状态与仍然活跃的承诺；
+- **独立判断**：只有工作流明确要求独立性时，才需要真正不同的调用 / 会话。
 
-一个 absolute score 不能把这些不同维度压成“客观文学真理”。
+任何单一分数都不能把这些维度压成“客观文学真理”。
 
-## 02 · 语义智能属于 model contract
+---
 
-[`harness/semantic_workers/model_contract_catalog.json`](../harness/semantic_workers/model_contract_catalog.json) 索引按需加载的 semantic contract packs。运行时只提供候选稿、允许使用的上下文、rubric、权限、fingerprint 与类型化输出契约。
+## 02 · 语义智能属于契约包
 
-当前直接服务质量系统的 contract 包括：
+[`harness/semantic_workers/model_contract_catalog.json`](../harness/semantic_workers/model_contract_catalog.json) 负责解析按需披露的语义契约包。运行时只暴露当前步骤真正需要的受限输入、rubric、权限、指纹和类型化输出契约。
 
-- `reader.reaction`：某一种阅读行为 persona 对单个候选稿的即时阅读体验；
-- `reader.compare`：两个候选稿的读者体验对比，可配合交换 A/B 顺序检查位置偏差；
-- `character.integrity`：人物目标、知识、声线、关系位置、任务 / 空间状态，以及一致性中的意外；
-- `revision.diagnose`：只在指定质量维度上诊断，并把每个失败送回真正拥有修复责任的机制；
-- `reader.expectations`：解释当前活跃的读者问题、承诺、setup、关系期待、目标与 mystery。
+直接服务质量系统的契约包括：
 
-这些 contract 都明确禁止 Canon write、framework behavior write 和 durable user-taste write。
+- `reader.reaction`：一种阅读行为 persona 对单个候选稿的即时体验；
+- `reader.compare`：两个候选稿的读者体验比较，可配合交换 A/B 顺序检查位置偏差；
+- `character.integrity`：人物目标、知识、声线、关系与任务 / 空间完整性；
+- `revision.diagnose`：带证据的失败诊断与 repair owner 归因；
+- `reader.expectations`：当前读者问题、承诺、setup 与未偿义务；
+- `context.select`：在已经通过可见性过滤的证据块中，按当前任务问题做语义选择。
 
-## 03 · Reader diagnostics 是证据，不会自己变成门槛
+语义结果只是证据。它不会因为“判断很有说服力”就获得正典写入、框架行为写入或持久用户口味写入权限。
 
-模拟读者 persona 描述的是**阅读行为**，不是人口标签。默认行为维度包括：追更 / 前推力敏感、类型熟悉度、移动端注意力、人物投入、回报敏感度。
+---
 
-一次 `reader.reaction` 判断可以报告 continue desire、tension、pacing、confusion、情绪反应、favorite / stumble beat、drop-off point，以及具体原因。
+## 03 · 上下文是否落地，本身就是质量问题
 
-一次 `reader.compare` 会比较 A/B 候选稿的整体偏好、forward pull、character investment 与 reward。需要检查位置偏差时，应交换候选稿可见顺序重复判断，而不是默认第一稿占优是“真实质量”。
+如果模型看到了错误的证据，再精细的质量判断也不可靠。当前上下文选择因此把**语义相关性**和**确定性可见性**拆开。
+
+[`harness/memory_tiers.py`](../harness/memory_tiers.py) 要求当前任务明确声明：
+
+- `task_mode` 与 `task_goal`；
+- 适用时的当前故事点；
+- 当前视角类型与视角身份；
+- 明确的活跃问题列表。
+
+模型看到候选记忆块之前，确定性代码先剔除与当前视角不兼容的材料。人物视角任务不能因为某条信息“很相关”，就拿到另一个人物的私有知识。即使某条记忆被 pin，只要违反当前视角边界，也会直接失败，而不是偷偷塞进去。
+
+只有完成这一步以后，`context.select` 才判断哪些可见证据真正支持当前问题。确定性打包器只负责硬预算与整块装载，不自行发明文学相关性分数。
+
+责任边界因此很清楚：
+
+```text
+可见性 / 权威 / 预算  → 确定性运行时
+语义相关性 / 问题支持 → 模型契约
+故事事实               → 项目权威
+```
+
+上下文支持仍然只是观察，不是正典。
+
+---
+
+## 04 · 读者诊断是证据，不会自动变成门槛
+
+Reader persona 描述的是**阅读行为**，不是人口标签。有效信号可以包括继续阅读意愿、紧张感、节奏、困惑、情绪反应、喜欢 / 卡住的 beat 与弃读原因。
+
+相比伪装成“万能总分”，`reader.compare` 更适合比较候选稿。需要检查位置偏差时，应交换 A/B 顺序再次比较。
 
 必须继续保持这些边界：
 
-- reader diagnostic 不是 Canon；
-- 单个 absolute score 不能独自决定 keep / discard；
-- persona 之间的分歧本身是有价值的证据，不是应该被平均掉的噪音；
-- Reader diagnostics 不会自动满足 mandatory independent semantic gate。
+- Reader diagnostics 不是正典；
+- 单个分数不能独自决定保留 / 丢弃；
+- persona 之间的分歧本身是有效证据，而不是应该被平均掉的噪音；
+- Reader diagnostics 不会自动满足 mandatory independent gate。
 
-## 04 · Character Integrity 必须保持受限
+---
 
-`character.integrity` contract 只能收到当前 scene excerpt 和已经建立的类型化人物状态。Rubric 明确检查：
+## 05 · 人物完整性必须受知识边界约束
 
-`目标一致性 · 知识边界 · 声线 · 关系位置 · 空间/任务状态 · 一致性中的意外`
+`character.integrity` 只接收当前候选稿与已经建立的类型化人物状态，检查目标、知识、声线、关系位置、空间 / 任务状态，以及“一致性中的意外”。
 
-它不能把 manager、narrator、reader、research 或模型本身知道的东西自动当成人物知识。
+管理器、叙述者、读者、研究材料和模型本身知道的内容，都不能自动变成人物知识。人物发生有意变化完全可以成立，但必须有足够的 transition evidence。
 
-如果候选稿提供了足够的 transition evidence，人物有意发生变化完全可以成立。任何 finding 都应同时引用候选稿侧证据与 established-state 证据。
+结果是一条 finding，不是人物状态写入。
 
-结果只是一条 observation，不会直接修改人物状态。
+---
 
-## 05 · 先诊断，再修订
+## 06 · 先诊断，再修订
 
-`revision.diagnose` 的存在就是为了阻止无目标的“整体 polish”。它先判断失败属于哪里，再指定 repair owner。
+`revision.diagnose` 的目的就是阻止无目标的“整体 polish”。它先找出真正的失败，再把问题送回拥有修复责任的机制。
 
-模型可以区分：
+典型 ownership：
 
-- story；
-- plan；
-- scene；
-- character；
-- reader pressure / engagement；
-- surface realization；
-- continuity / state；
-- context / memory；
-- research / fact support。
+- 单个 surface defect → 局部表层重写；
+- Surface failure 成簇 → 更大范围的 Surface Realization 重生成；
+- SAFE-BUT-FLAT / reader pressure 弱 → Reader Pressure + Scene Simulation；
+- character failure → Character Simulation / 人物状态推理；
+- story / plan failure → Story / Plan；
+- continuity / state failure → 连续性或权威状态修复；
+- context failure → 重建稀疏、按问题落地的上下文；
+- memory failure → invalidate / rebuild 派生记忆；
+- research failure → Research resolution；
+- runtime / capability failure → transport / capability 层；
+- 无法自动决定的艺术方向 → 用户 / 人类决定。
 
-Contract 明确规定：SAFE-BUT-FLAT 不是 line-edit 问题；Surface failure 成簇时也可能需要 scene-level regeneration，而不是继续逐句补丁。
+修原因，不要继续抛光症状。
 
-输出包含带证据链的 findings 与 repair sequence，但仍然没有 Canon mutation 权限。
+---
 
-## 06 · 类型化 finding 让不同审查使用同一种证据语言
+## 07 · 类型化 finding 提供共同证据语言
 
-[`quality/findings.py`](../quality/findings.py) 负责确定性地归一化 evidence-backed quality finding。一个有效 finding 至少应该说明：
+[`quality/findings.py`](../quality/findings.py) 负责归一化带证据的质量 finding，但它本身不做文学判断。
 
-- 问题类别与严重度；
-- 对象 / candidate；
+一条有效 finding 至少应说明：
+
+- 类别与严重度；
+- 对象与候选稿；
 - repair owner；
 - candidate-side evidence；
 - 必要时的 authority / state-side evidence；
@@ -96,53 +133,37 @@ Contract 明确规定：SAFE-BUT-FLAT 不是 line-edit 问题；Surface failure 
 - confidence；
 - 不直接修改权威状态的修复 proposal。
 
-这样 Surface、Reader、Character、Continuity、Context、Memory 和 Research diagnosis 可以共用 transport format，同时仍然保持“它们不是同一种失败”。
+Surface、Reader、Character、Continuity、Context、Memory 和 Research 可以共享传输语义，但不会因此被混成同一种失败。
 
-## 07 · 修真正拥有问题的机制
+---
 
-Quality finding 应回到真正拥有原因的最小修复层：
+## 08 · 候选稿演进是可持久、非单调的
 
-- 单个 surface issue → 局部 surface rewrite；
-- Surface issue 反复成簇 → paragraph / block 或整场景 Surface Realization；
-- SAFE-BUT-FLAT / reader-grip failure → Reader Pressure + Scene Simulation；
-- character failure → Character Simulation / character-state reasoning；
-- story / plan failure → Story / Plan；
-- continuity / state failure → 连续性或权威状态修复；
-- context failure → 重建稀疏 Context Manifest；
-- memory failure → invalidate / rebuild derived memory；
-- research failure → Research resolution；
-- runtime / capability failure → transport / capability 层；
-- 无法自动决定的艺术方向 → human / user decision。
+[`quality/quality_evolution.py`](../quality/quality_evolution.py) 负责修订状态持久化，不负责文学判断。
 
-修原因，不要继续抛光症状。
-
-## 08 · 可恢复的候选稿演进
-
-[`quality/quality_evolution.py`](../quality/quality_evolution.py) 负责确定性的 revision-state persistence，不负责文学判断。
-
-一次典型演进是：
+一次典型循环是：
 
 ```text
-baseline candidate
+incumbent
+→ 定向修复
 → challenger
-→ model / semantic comparison result
-→ validate + consume result once
-→ incumbent 更新或 no-gain
-→ 下一 challenger
-→ plateau / complete
+→ 语义比较
+→ validate + consume once
+→ challenger 晋级或记录 no-gain
+→ 只有仍然有收益时才继续
 ```
 
-每个 candidate 都有 content fingerprint 与 parent lineage；每份 comparison result 也有 fingerprint，并且只能被逻辑消费一次。完全相同的 replay 是幂等的。
+每个候选稿都有内容指纹与父级谱系；每份比较结果都绑定指纹，并且只能被逻辑消费一次。Challenger 必须从当前 incumbent 派生，被声明为 winner 的稿件也必须真的是本次实际比较的 candidate。
 
-Challenger 必须从当前 incumbent 派生。被声明为 winner 的稿件必须真的是本次参与比较的 candidate 之一，或者明确 tie / no-decision。Ledger 不能在判断完成后偷偷替换“到底比的是哪两稿”。
+真正胜出会重置 no-gain 计数；连续没有收益达到配置阈值以后，循环进入 plateau 并停止。
 
-挑战稿真正胜出时，它成为新的 incumbent，no-gain counter 清零；连续没有收益达到配置阈值以后，演进进入 plateau 并停止。
+**修订不是单调变好的。知道什么时候停，本身就是质量控制。**
 
-**修订不是单调变好的。能够主动停在平台期，本身就是质量机制。**
+---
 
-## 09 · Reader Expectation Ledger 保存长程读者状态
+## 09 · Reader Expectation Ledger 保存长程阅读压力
 
-[`quality/reader_expectation.py`](../quality/reader_expectation.py) 保存持久、无权威的 reader-facing expectation。语义解释来自 `reader.expectations` contract；确定性代码只负责 identity、persistence、state transition 和 evidence refs。
+[`quality/reader_expectation.py`](../quality/reader_expectation.py) 保存持久、无权威的读者侧 expectation。语义解释来自 `reader.expectations`，确定性代码只负责身份、持久化、状态转移与证据引用。
 
 一条 expectation 可以表示仍然活跃的：
 
@@ -153,55 +174,75 @@ Challenger 必须从当前 incumbent 派生。被声明为 winner 的稿件必�
 - 目标；
 - mystery 或其他读者侧未偿义务。
 
-语义 contract 必须区分“读者体验中现在已经存在的 expectation”和“未来 active plan 里准备安排的 payoff”。因此 ledger 不能因为计划里写了一个未来回报，就把它提前当成读者当前事实。
+未来计划里的 payoff 不代表读者现在已经拥有这个 expectation。Ledger 必须区分当前读者体验与未来意图。
 
-有证据时，expectation 可以被 reinforcement、partial reward、payoff、abandonment 或 dormancy。这个 ledger 没有 Canon authority。
+---
 
-## 10 · State Graph 让质量工作可以恢复
+## 10 · 质量工作必须既可恢复，也可观察
 
-[`quality/state_graph.py`](../quality/state_graph.py) 持久保存无权威的质量工作状态，使中断后的 run 能知道哪些分析 / 修订步骤已经完成，而不是靠聊天记忆猜。
+[`quality/state_graph.py`](../quality/state_graph.py) 保存无权威的质量工作流进度，使中断后能够知道哪些步骤已经完成，而不是靠聊天记忆猜。
 
-它记录的是工作流进度，不会获得 Canon write authority，也不能替代下游项目自己的 acceptance / settlement。
+Control Plane 还通过 [`harness/control_plane/run_receipt.py`](../harness/control_plane/run_receipt.py) 支持**仅元数据的运行回执**。一份 receipt 可以记录：
 
-## 11 · Independent review 仍然是另一份契约
+- artifact fingerprints；
+- context-selection fingerprint；
+- 哪些证据块被加载或因视角边界被排除；
+- question → evidence 的加载状态；
+- semantic job ID、contract ID 与 result fingerprint；
+- 确定性 guard 的结果。
 
-`reader.reaction`、`character.integrity`、`revision.diagnose` 之类内部 semantic contract 即使很有价值，也可能仍然运行在 manager 工作流内部。
+它明确**不保存候选正文、private reasoning 或 hidden gold**，也没有正典或记忆权威。
 
-当 Harness 明确要求 **mandatory independent semantic gate** 时，判断仍必须来自真正不同的合格 invocation / session / runtime，并返回绑定精确 artifact fingerprint 的 typed result。
+这样可以让质量工作可追踪，同时不制造第二套故事数据库，也不复制整份稿件做“监控副本”。
 
-Semantic rejection 是有效结果。它应该触发 repair，而不是成为不断换 reviewer 直到有人给 PASS 的理由。
+---
+
+## 11 · 独立审查是条件性的，而且必须真的独立
+
+内部 semantic contract 可以在 manager 工作流里运行。只有 active rubric 明确要求 independence 时，它才成为**独立门槛**。
+
+一旦 independence 是 mandatory，判断必须来自真正不同的合格 invocation / session / runtime，并返回绑定精确 artifact fingerprint 的类型化结果。
+
+有效的 `semantic_reject` 应该触发 repair。它不是 transport failure，也不是不断换 reviewer 直到有人说 PASS 的许可证。
+
+---
 
 ## 12 · 它在生产流水线中的位置
 
-Quality Evolution 只能在候选稿已经存在后开始。
+证据准备可以发生在草稿之前：解析权威、过滤可见性、定义 active questions、选择稀疏上下文，都会影响后续候选稿是否真正有根据。
 
-Regression 坏例与 critic-only evidence 继续保持生成后隔离。Semantic contract 读取受限 candidate / context packet，返回 typed judgment；确定性 infrastructure 验证并持久化结果；repair 回到 owning mechanism；candidate evolution 再记录修复稿是否真的击败当前 incumbent。
+**Candidate evolution 本身只有在候选稿已经存在以后才开始。** Regression 坏例与 critic-only evidence 继续保持生成后隔离。语义契约读取受限 packet，确定性基础设施验证并持久化结果，repair 回到 owning mechanism，随后 comparison 再判断修复稿是否真的优于 incumbent。
 
-只有必须的 Surface、Reader、Continuity 与 Independent gate 全部解决后，artifact 才能越过 user-visible gate。用户接受正文以后，Canon settlement 仍然是另一笔独立事务。
+用户可见产物仍然必须通过当前工作流要求的门槛。用户接受正文以后，正典结算依然是另一笔独立事务。
+
+---
 
 ## 13 · 为什么要这样拆
 
-把 semantic intelligence 放进 model-readable contract，可以同时避免两个常见失败：
+这套拆分同时避免两种常见失败：
 
-**Fake determinism**：Python heuristic 假装能决定其实需要文学理解的质量问题。
+**Fake determinism**：用 heuristic 假装判断其实需要文学理解的问题。
 
-**Unbounded model authority**：模型因为判断听起来很有道理，就顺手获得 durable truth 的写权限。
+**Unbounded model authority**：模型因为判断听起来很合理，就顺手获得 durable truth 写权限。
 
-NovelForge 把边界明确成：
+NovelForge 把边界固定为：
 
 ```text
-model      → semantic judgment
-runtime    → bounded packet + permissions + fingerprint
-validator  → typed-result checks
-ledgers    → durable non-authoritative state
-project    → Canon authority + settlement
+model       → 语义解释
+runtime     → 可见性 + packet + 权限 + fingerprint + budget
+validator   → 类型与绑定检查
+ledgers     → 持久、无权威的证据 / 状态
+project     → 正典权威与结算
 ```
+
+---
 
 ## 14 · 相关契约
 
-- [质量保障与 QA](quality-assurance.zh-CN.md)：完整质量栈与 release gate。
-- [生产流水线](production-pipeline.zh-CN.md)：diagnostics 与 repair 在全流程中的位置。
-- [读者吸引力](../surface/READER_ENGAGEMENT.zh-CN.md)：通用正向 reader-quality model。
-- [人物与关系系统](../core/CHARACTER_SYSTEM.zh-CN.md)：Character Integrity 判断所依据的人物状态与知识边界。
-- [Semantic Worker Protocol](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md)：provider-neutral semantic job/result contract。
-- [`model_contract_catalog.json`](../harness/semantic_workers/model_contract_catalog.json)：按需加载 semantic contract packs 的 model-readable catalog。
+- [质量保障与 QA](quality-assurance.zh-CN.md)：完整质量栈与发布门槛。
+- [生产流水线](production-pipeline.zh-CN.md)：诊断、修复与候选演进在全流程中的位置。
+- [上下文与记忆](context-and-memory.zh-CN.md)：稀疏选择、视角可见性与可编辑派生记忆。
+- [读者吸引力](../surface/READER_ENGAGEMENT.zh-CN.md)：正向读者质量模型。
+- [人物与关系系统](../core/CHARACTER_SYSTEM.zh-CN.md)：人物状态与知识边界。
+- [Semantic Worker Protocol](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md)：provider-neutral 语义 job/result 契约。
+- [Control Plane](../harness/control_plane/CONTROL_PLANE.zh-CN.md)：持久运行时协调与回执。
