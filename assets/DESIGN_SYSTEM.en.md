@@ -1,19 +1,21 @@
 # NovelForge Documentation Design System
 
-> **Design target:** professional technical editorial first, warm/cute accents second.
+> **Design target:** professional technical editorial first, anime warmth second. 🌸
 >
 > The visual layer helps readers scan and understand NovelForge. It never changes runtime, Canon, quality, or authority semantics.
 
 ## 1. Personality
 
-NovelForge should feel like a serious developer framework with an editorial-fiction identity—not a generic SaaS dashboard and not a pastel toy UI.
+NovelForge should feel like a serious developer framework with a recognizable fiction-editorial soul—not a generic SaaS dashboard and not a pastel toy UI.
 
-**Ratio:** `80% technical / 20% warm editorial`.
+**Ratio:** `70% technical / 30% anime-editorial warmth`.
 
 - precise, calm, structured;
-- friendly without being childish;
-- visually memorable without competing with the documentation;
-- manga/editorial influence expressed through composition and accents, not fandom imagery.
+- friendly and memorable without becoming childish;
+- visually distinctive without competing with the documentation;
+- manga/anime influence expressed through editorial composition, accent color, microcopy, and sparse decorative motifs—not fandom imagery.
+
+A little `🌸 ✦ ✨ 📖` is welcome on landing pages. Dense reference pages stay quieter.
 
 ## 2. Core visual tokens
 
@@ -32,8 +34,8 @@ NovelForge should feel like a serious developer framework with an editorial-fict
 
 ### Color discipline
 
-- Pastels are **fills**, not low-contrast body text.
-- Every meaningful state needs a label, border, icon, line style, or shape in addition to color.
+- Pastels are **fills and accents**, never low-contrast body text.
+- Every meaningful state needs a label, border, line style, or shape in addition to color.
 - Never use red/green alone to distinguish outcomes.
 - Keep text and primary diagram labels dark enough for comfortable GitHub light-mode reading.
 
@@ -46,18 +48,17 @@ GitHub controls rendered fonts, so the system relies on hierarchy rather than cu
 - short bold lead sentence before long sections when helpful;
 - keep paragraphs compact and scannable;
 - prefer concise tables for capability comparisons;
-- use monospace only for IDs, schemas, paths, commands, and state machines.
-
-Do not fake typography with Unicode decorative characters.
+- use monospace only for IDs, schemas, paths, commands, and state machines;
+- decorative Unicode must never replace real text labels.
 
 ## 4. Layout rhythm
 
 Use a predictable documentation sequence:
 
 1. **Title + one-sentence value proposition**
-2. **Navigation / language switch**
+2. **Language / primary navigation**
 3. **Hero or key architecture visual** when useful
-4. **At-a-glance cards/table**
+4. **At-a-glance overview**
 5. **Main explanation**
 6. **Deep links / next steps**
 
@@ -68,6 +69,21 @@ Keep decorative material out of dense reference sections.
 ### Hero
 
 Use one static SVG/WebP hero only on major landing pages. It should contain no authority-bearing information that is unavailable in text.
+
+### Decorative emoji / kaomoji
+
+Allowed on landing pages and friendly overview docs when the adjacent text remains fully meaningful without them.
+
+Good:
+- `🌸 Why NovelForge`
+- `✨ At a glance`
+- `📖 Story & Canon`
+- a sparse `(˶ᵔ ᵕ ᵔ˶)` in non-authoritative microcopy
+
+Avoid:
+- emoji replacing status labels, navigation semantics, or architecture node names;
+- emoji in schemas, contracts, error codes, CLI output, or machine-facing docs;
+- an emoji on every bullet or paragraph.
 
 ### Chips / badges
 
@@ -82,7 +98,7 @@ Prefer semantic blockquotes:
 - **Why it matters** — reader-oriented explanation
 - **Example** — bounded illustration
 
-Avoid a wall of callouts.
+A decorative emoji may precede the visible label, but the label must carry the meaning.
 
 ### Tables
 
@@ -111,6 +127,7 @@ Mermaid is the authoritative architecture representation. Static illustrations a
 6. Use dashed edges for feedback/reference paths, solid edges for primary execution/dependency.
 7. Avoid crossing edges when a simpler diagram can express the same concept.
 8. Do not encode meaning by fill color alone.
+9. Cute styling belongs in fill/radius/composition—not in vague node labels.
 
 ### Base class pattern
 
@@ -127,29 +144,30 @@ flowchart LR
     class C gate;
 ```
 
-## 7. Cute-style budget
+## 7. Anime-editorial budget
 
-Allowed:
-- gentle accent colors;
+Welcome:
+- gentle sakura/lavender/mint accents;
 - rounded diagram nodes;
-- sparse editorial sparkles in a hero illustration;
-- one small character/editorial motif in future original art;
-- subtle wordplay in section microcopy when it does not reduce clarity.
+- sparse sparkles, stars, books, petals, and tiny editorial motifs;
+- occasional decorative emoji in landing-page headings;
+- one original framework mascot/editor motif in future artwork if it remains clearly decorative;
+- subtle playful microcopy where clarity is unaffected.
 
 Avoid:
-- emoji as structural icons;
-- kawaii mascots in technical reference pages;
+- emoji as structural icons or status semantics;
+- kawaii mascots inside technical contracts;
 - excessive gradients/glows;
-- candy-color text;
+- candy-color body text;
 - decorative dividers every few paragraphs;
-- mixing anime, glassmorphism, brutalism, and terminal aesthetics on one page.
+- mixing anime, glassmorphism, brutalism, terminal aesthetics, and skeuomorphism on one page.
 
 ## 8. Accessibility and resilience
 
 - meaningful images require alt text;
 - charts need nearby text explanation;
 - important information must remain understandable if SVGs fail to load;
-- color cannot be the sole semantic channel;
+- color and emoji cannot be the sole semantic channels;
 - visual additions must not depend on external font files;
 - prefer lightweight SVG over large raster assets when possible.
 
@@ -162,4 +180,5 @@ A documentation change is visually ready when:
 - visual accents are consistent with this token system;
 - diagrams use the shared visual grammar;
 - decorative art is supplementary, accessible, and lightweight;
-- the page still feels like engineering documentation after all decoration is removed.
+- the page still feels like engineering documentation after all decoration is removed;
+- the warm/anime layer makes it recognizable as NovelForge rather than another anonymous framework. ✦
