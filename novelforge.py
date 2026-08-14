@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -16,6 +15,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent
 PROJECT_SDK = ROOT / "project_sdk.py"
+PROJECT_ADAPTER = ROOT / "project_adapter.py"
 CONTROL = ROOT / "harness" / "control_plane" / "control_plane.py"
 SESSION = ROOT / "harness" / "session_runtime" / "session_runtime.py"
 LEARNING = ROOT / "learning" / "learning_store.py"
@@ -38,17 +38,21 @@ def call(script: Path, args: list[str]) -> int:
     return subprocess.call([sys.executable, str(script), *args])
 
 
+def run_json(script: Path, args: list[str]) -> tuple[int, dict[str, Any]]:
+    proc = subprocess.run([sys.executable, str(script), *args], text=True, capture_output=True, check=False)
+    try:
+        value = json.loads(proc.stdout)
+        if not isinstance(value, dict):
+            raise ValueError("tool output must be object")
+    except Exception:
+        value = {"valid": False, "errors": [proc.stdout or proc.stderr or f"{script.name} failed"]}
+    return proc.returncode, value
+
+
 def bootstrap(project_root: Path, task_mode: str, build: bool) -> dict[str, Any]:
     project_root = project_root.resolve()
-    validate = subprocess.run(
-        [sys.executable, str(PROJECT_SDK), "validate", str(project_root)],
-        text=True, capture_output=True, check=False,
-    )
-    try:
-        validation = json.loads(validate.stdout)
-    except json.JSONDecodeError:
-        validation = {"valid": False, "errors": [validate.stdout or validate.stderr or "project validation failed"]}
-    if not validation.get("valid"):
+    code, validation = run_json(PROJECT_ADAPTER, ["validate", str(project_root)])
+    if code != 0 or not validation.get("valid"):
         return {
             "schema": "novelforge_bootstrap_v1",
             "ready": False,
@@ -58,25 +62,25 @@ def bootstrap(project_root: Path, task_mode: str, build: bool) -> dict[str, Any]
         }
     build_result = None
     if build:
-        proc = subprocess.run(
-            [sys.executable, str(PROJECT_SDK), "build", str(project_root)],
-            text=True, capture_output=True, check=False,
-        )
-        if proc.returncode != 0:
+        code, build_result = run_json(PROJECT_ADAPTER, ["build", str(project_root)])
+        if code != 0:
             return {
                 "schema": "novelforge_bootstrap_v1",
                 "ready": False,
                 "task_mode": task_mode,
                 "project_root": str(project_root),
                 "validation": validation,
-                "build_error": proc.stdout or proc.stderr,
+                "build_error": build_result,
             }
-        build_result = json.loads(proc.stdout)
+    resolution = validation.get("resolution", {})
     return {
         "schema": "novelforge_bootstrap_v1",
         "framework_version": "7.0.0",
         "framework_root": str(ROOT),
         "project_root": str(project_root),
+        "project_id": resolution.get("project_id"),
+        "project_layout": resolution.get("layout"),
+        "framework_lock": resolution.get("framework_lock"),
         "task_mode": task_mode,
         "ready": True,
         "validation": validation,
@@ -86,12 +90,12 @@ def bootstrap(project_root: Path, task_mode: str, build: bool) -> dict[str, Any]
             "SKILL.md",
             "harness/HARNESS_AGENT.md",
         ],
-        "task_specific_loading": "Resolve through Harness + sparse Context Manifest; do not load the whole project/corpus by default.",
+        "task_specific_loading": "Resolve through Project Adapter + Harness + sparse Context Manifest; never inject the whole project or corpus by default.",
     }
 
 
 def doctor() -> dict[str, Any]:
-    required = [PROJECT_SDK, CONTROL, SESSION, LEARNING, CORPUS_SCOUT, RIGHTS_GATE, MCP]
+    required = [PROJECT_SDK, PROJECT_ADAPTER, CONTROL, SESSION, LEARNING, CORPUS_SCOUT, RIGHTS_GATE, MCP]
     missing = [str(p.relative_to(ROOT)) for p in required if not p.exists()]
     return {
         "schema": "novelforge_doctor_v1",
@@ -106,6 +110,7 @@ def doctor() -> dict[str, Any]:
 def self_test() -> int:
     checks = [
         (PROJECT_SDK, ["self-test"]),
+        (PROJECT_ADAPTER, ["self-test"]),
         (SESSION, ["self-test"]),
         (CONTROL, ["--db", "/tmp/novelforge-cli-control.db", "self-test"]),
         (LEARNING, ["--db", "/tmp/novelforge-cli-learning.db", "self-test"]),
@@ -140,6 +145,9 @@ def main() -> int:
     pr = sub.add_parser("project")
     pr.add_argument("project_args", nargs=argparse.REMAINDER)
 
+    pa = sub.add_parser("adapter")
+    pa.add_argument("adapter_args", nargs=argparse.REMAINDER)
+
     rt = sub.add_parser("runtime")
     rt.add_argument("runtime_args", nargs=argparse.REMAINDER)
 
@@ -162,6 +170,11 @@ def main() -> int:
             dump({"error": "project subcommand required", "examples": ["init", "validate", "build", "spec-new"]})
             return 2
         return call(PROJECT_SDK, args.project_args)
+    if args.cmd == "adapter":
+        if not args.adapter_args:
+            dump({"error": "adapter subcommand required", "examples": ["resolve", "validate", "build"]})
+            return 2
+        return call(PROJECT_ADAPTER, args.adapter_args)
     if args.cmd == "runtime":
         return call(CONTROL, args.runtime_args)
     if args.cmd == "learning":
