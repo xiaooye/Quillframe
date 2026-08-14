@@ -1,0 +1,18 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"novel-os-semantic-result-v0.3",
+  "type":"object",
+  "required":["job_id","subject_id","kind","input_fingerprint","status","worker","judgment","proposals","errors"],
+  "properties":{
+    "job_id":{"type":"string","minLength":1},
+    "subject_id":{"type":"string","minLength":1},
+    "kind":{"type":"string","minLength":1},
+    "input_fingerprint":{"type":"string","pattern":"^sha256:[a-f0-9]{64}$"},
+    "status":{"enum":["completed","unsupported","failed"]},
+    "worker":{"type":"object","required":["provider","model_or_reviewer"],"properties":{"provider":{"type":"string","minLength":1},"model_or_reviewer":{"type":"string","minLength":1},"run_reference":{"type":["string","null"]}}},
+    "judgment":{"type":"object","required":["verdict","result","codes","evidence","confidence"],"properties":{"verdict":{"type":["string","null"]},"result":{"type":["string","null"]},"codes":{"type":"array"},"evidence":{"type":"array"},"confidence":{"type":"number","minimum":0,"maximum":1}}},
+    "proposals":{"type":"array"},
+    "errors":{"type":"array","items":{"type":"string"}},
+    "execution":{"type":"object","additionalProperties":true}
+  }
+}
