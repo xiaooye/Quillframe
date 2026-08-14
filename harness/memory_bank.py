@@ -183,6 +183,16 @@ def set_control(conn: sqlite3.Connection, *, entry_id: str, pinned: bool | None 
     return view_entry(conn, entry_id)
 
 
+def _default_stages(authority: str) -> list[str]:
+    # Proposals are future/contested intent, never current state. They must not
+    # silently prime drafting just because a protected-memory edit created one.
+    if authority == "proposal":
+        return ["never"]
+    if authority in {"learning", "corpus"}:
+        return ["post_draft_critic"]
+    return ["writer_pre_draft"]
+
+
 def export_context(conn: sqlite3.Connection) -> dict[str, Any]:
     rows = conn.execute("SELECT * FROM memory_entries WHERE status IN ('active','proposal') ORDER BY pinned DESC,priority DESC,entry_id").fetchall()
     items = []
@@ -190,7 +200,7 @@ def export_context(conn: sqlite3.Connection) -> dict[str, Any]:
         items.append({
             "id": f"MEM-{row['entry_id']}", "class": f"memory:{row['bank']}", "source": f"memory-bank:{row['entry_id']}",
             "source_fingerprint": row["entry_fingerprint"], "authority": row["authority"],
-            "inclusion_reason": "memory_bank_export", "stages": ["writer_pre_draft"] if row["authority"] not in {"learning", "corpus"} else ["post_draft_critic"],
+            "inclusion_reason": "memory_bank_export", "stages": _default_stages(row["authority"]),
             "relevance": 0.5, "priority": row["priority"], "pinned": bool(row["pinned"]),
             "derived": row["authority"] == "derived", "metadata": {"bank": row["bank"], "entry_version": row["version"]},
         })
@@ -212,14 +222,19 @@ def self_test(path: Path) -> int:
         stale_rejected = True
     set_control(conn, entry_id="DER-1", pinned=True, priority=9)
     exported = export_context(conn)
+    proposal_id = protected_edit["proposal"]["entry_id"]
+    proposal_item = next(x for x in exported["items"] if x["id"] == f"MEM-{proposal_id}")
+    proposal_isolated = proposal_item["stages"] == ["never"]
     ok = (
         protected_edit["status"] == "proposal_created" and protected_edit["protected_entry_unchanged"]
         and original_after["content"] == {"name": "A"} and editable["status"] == "updated"
         and stale_rejected and any(x["id"] == "MEM-DER-1" and x["pinned"] for x in exported["items"])
+        and proposal_isolated
     )
     print(json.dumps({
         "memory_bank_contract": "PASS" if ok else "FAIL", "protected_edit_to_proposal": protected_edit["status"] == "proposal_created",
         "before_state_guard": stale_rejected, "editable_derived_memory": editable["status"] == "updated",
+        "proposal_pre_draft_isolation": proposal_isolated,
         "context_export": True, "canon_write": False, "model_execution": False,
     }, ensure_ascii=False, indent=2))
     conn.close(); return 0 if ok else 1
