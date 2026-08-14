@@ -47,24 +47,17 @@ Read [Architecture](docs/architecture.en.md) for the system view and [Architectu
 
 ## 03 · Production pipeline 📖
 
-```text
-Context Freeze
-→ Story / Canon Preflight
-→ Scene Simulation
-→ Character Simulation
-→ Reader Pressure
-→ Event-first Raw Draft
-→ Surface Realization
-→ post-generation Regression / Independent Review
-→ Rewrite or Regenerate
-→ Reader Engagement
-→ Continuity Audit
-→ User-visible Gate
-```
+A chapter moves through four production phases, each with a distinct responsibility:
 
-**Raw Draft is internal.** The first model completion is never automatically the user-facing chapter. Regression bad examples are loaded only after the Raw Draft is frozen, so known failure samples do not prime first-pass generation.
+**01 · Prepare the run** — Freeze only the necessary context, preflight Story/Canon, simulate scene and character behavior, and establish reader pressure before prose generation.
 
-Failure routing goes back to the owning mechanism: surface cluster → scene regeneration; SAFE-BUT-FLAT → Reader Pressure + Scene Simulation; character failure → Character Simulation; story failure → Story/Plan.
+**02 · Create an internal candidate** — Produce an event-first Raw Draft and realize the prose surface. The Raw Draft stays internal; the first completion is never automatically the user-facing chapter.
+
+**03 · Challenge and repair** — Introduce regression evidence only after the Raw Draft is frozen, run independent semantic review, and repair the mechanism that actually owns the failure rather than polishing downstream symptoms.
+
+**04 · Release through gates** — Reader Engagement plus continuity/state auditing must resolve before the candidate crosses the user-visible gate.
+
+Failure routing is ownership-based: isolated surface defects are rewritten locally; clustered surface failures regenerate the scene; SAFE-BUT-FLAT returns to Reader Pressure and Scene Simulation; character failures return to Character Simulation; story failures return to Story/Plan.
 
 Read [Production Pipeline](docs/production-pipeline.en.md).
 
