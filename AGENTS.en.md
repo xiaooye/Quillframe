@@ -15,7 +15,7 @@ No consuming novel's characters, plot, Canon, repository path, or private user p
 5. For structural framework changes, read `harness/SELF_IMPROVEMENT_PROTOCOL.en.md`.
 6. For project-engineering work, read `docs/project-sdk.en.md`.
 7. For learning/corpus work, read `docs/adaptive-learning.en.md` and Corpus policy.
-8. **For any human-facing documentation, README, diagram, comparison, docs information architecture, or visual-identity work, read and follow `docs/DOCUMENTATION_STANDARD.en.md` and `assets/DESIGN_SYSTEM.en.md` before editing.**
+8. **For any human-facing documentation, README, diagram, comparison, docs information architecture, or visual-identity work, read and follow `docs/DOCUMENTATION_STANDARD.en.md`, `docs/DOCUMENTATION_QA.en.md`, and `assets/DESIGN_SYSTEM.en.md` before editing.**
 
 ## Engineering rules
 
@@ -33,13 +33,16 @@ No consuming novel's characters, plot, Canon, repository path, or private user p
 
 ## Documentation rules
 
-The repository-wide human-facing documentation contract is `docs/DOCUMENTATION_STANDARD.en.md`; the visual source of truth is `assets/DESIGN_SYSTEM.en.md` plus `assets/brand/tokens.json`.
+The repository-wide human-facing documentation contract is `docs/DOCUMENTATION_STANDARD.en.md`; the visual source of truth is `assets/DESIGN_SYSTEM.en.md` plus `assets/brand/tokens.json`; the mandatory authoring self-check is `docs/DOCUMENTATION_QA.en.md`.
 
 Mandatory summary:
 
 - Documentation is a product surface, not source-tree decoration.
 - Root landing pages must explain what NovelForge is, why it differs, how it works, why QA is credible, its tradeoffs, and how to start.
 - Tier-A landing pages use coherent Story Loom presentation modules for core product concepts. Do **not** represent a primary architecture, production pipeline, QA stack, or competitor comparison with a raw `A → B → C` arrow list, generic placeholder Mermaid, low-information card stack, or oversized native Markdown table when a branded high-density visual is more appropriate.
+- **A generated SVG is not approved by source generation alone.** New/materially changed Tier-A visuals must pass deterministic docs lint, be rendered and visually inspected at real GitHub-like widths, have copy reviewed independently of layout, and pass bilingual parity when paired. If the environment cannot inspect the render, keep the asset WIP and do not integrate it into a Tier-A page.
+- Do not solve overflow by shrinking type until it fits. Reduce/restructure copy or repair layout.
+- Run `python scripts/docs_quality.py` before completing customer-facing docs work. Normal CI runs the same deterministic checker and must not invoke model APIs.
 - The homepage's primary comparison class is **direct novel-writing agents/frameworks**. General agent runtimes belong in implementation-influence/adoption docs; author SaaS/editor products are discussed separately when category differences matter.
 - Comparisons describe verifiable mechanisms rather than star scores or marketing grades, and current competitor claims must be freshly verified before material updates.
 - English and Simplified Chinese human-facing editions are parallel **native-quality** authoritative versions, not literal translations. Chinese prose and diagrams should use natural Chinese terminology except for exact identifiers/product names; English should read as native professional technical English.
@@ -47,7 +50,7 @@ Mandatory summary:
 - Branded SVG/UI modules are the preferred Tier-A presentation layer; Mermaid remains the inspectable/diffable technical source/reference layer.
 - Static visual assets must be original or clearly licensed/provenanced, accessible, and semantically backed by nearby text/reference docs.
 - Story Loom targets roughly `70% professional technical / 30% anime-editorial warmth`; emoji may add editorial warmth but never replace structural/status semantics.
-- A page is not done merely because it is visually clean: information density, hierarchy, native bilingual quality, accuracy, authority boundaries, links, accessibility, and honest positioning must all pass.
+- A page is not done merely because it is visually clean: information density, hierarchy, native bilingual quality, accuracy, authority boundaries, links, accessibility, honest positioning, and render QA must all pass.
 
 Human-facing authoritative docs are paired `.en.md` / `.zh-CN.md`. Stable router files may remain bilingual single-page entry points only when external tooling requires a fixed path.
 
