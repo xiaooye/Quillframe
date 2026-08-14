@@ -122,7 +122,7 @@ Only after required quality/continuity/independent gates resolve may the artifac
 - [Quality & QA](quality-assurance.en.md) — the full quality stack and release gates.
 - [Production Pipeline](production-pipeline.en.md) — where diagnostics and revision occur.
 - [Reader Engagement](../surface/READER_ENGAGEMENT.en.md) — generic reader-quality mechanism.
-- [`quality/reader_panel.py`](../quality/reader_panel.py) — reader diagnostic packaging.
-- [`quality/revision_orchestrator.py`](../quality/revision_orchestrator.py) — finding aggregation and repair routing.
+- [`reader.reaction` / `reader.compare` model contracts](../harness/semantic_workers/model_contracts.json) — reader diagnostic semantics.
+- [`revision.diagnose` model contract](../harness/semantic_workers/model_contracts.json) — diagnosis and repair ownership semantics.
 - [`quality/quality_evolution.py`](../quality/quality_evolution.py) — durable candidate ledger.
-- [`quality/character_integrity.py`](../quality/character_integrity.py) — bounded character audit.
+- [`character.integrity` model contract](../harness/semantic_workers/model_contracts.json) — bounded character-integrity semantics.
