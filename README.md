@@ -47,26 +47,19 @@ The branded diagram is the presentation layer. The inspectable source diagrams a
 
 ## 03 · A chapter is a production run, not one model call 📖
 
-A NovelForge draft/revision run follows a gated production graph:
+A chapter moves through four production phases, each with a different responsibility:
 
-```text
-Context Freeze
-→ Story / Canon Preflight
-→ Scene Simulation
-→ Character Simulation
-→ Reader Pressure
-→ Event-first Raw Draft
-→ Surface Realization
-→ post-generation Regression / Independent Review
-→ Rewrite or Regenerate
-→ Reader Engagement
-→ Continuity Audit
-→ User-visible Gate
-```
+**01 · Prepare the run** — Freeze only the necessary context, preflight Story/Canon, simulate scene and character behavior, and establish reader pressure before prose is generated.
 
-**Raw Draft is internal.** Surface-clean prose is only the floor. A chapter is not presented as production-ready while a mandatory reader, continuity, or independent semantic gate remains unresolved.
+**02 · Create an internal candidate** — Produce an event-first Raw Draft, then realize the prose surface. The Raw Draft remains internal; the first completion is never treated as the finished chapter.
 
-Failure routing follows the mechanism that owns the failure: a local surface defect gets a local rewrite; clustered surface failure regenerates the scene; safe-but-flat prose returns to Reader Pressure and Scene Simulation; character failure returns to Character Simulation; story failure returns to Story/Plan.
+**03 · Challenge and repair** — Run post-generation regression evidence and independent semantic review, then repair the layer that actually owns the failure instead of polishing symptoms downstream.
+
+**04 · Release through gates** — Reader Engagement and continuity/state auditing must resolve before the candidate crosses the user-visible gate.
+
+Surface-clean prose is only the floor. Isolated surface defects can be rewritten locally; clustered surface failures regenerate the scene; safe-but-flat prose returns to Reader Pressure and Scene Simulation; character failures return to Character Simulation; story failures return to Story/Plan.
+
+Read the full [Production Pipeline](docs/production-pipeline.en.md).
 
 ---
 
