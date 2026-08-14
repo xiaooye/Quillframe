@@ -1,0 +1,22 @@
+{
+  "id": "SURFACE-PROFILE-FRAGMENT-001",
+  "type": "capability",
+  "domain": "surface",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "language": "en",
+    "profile": {
+      "fragment_style": "explicit_experimental_opt_in",
+      "purpose": "panic perception at a single irreversible interruption"
+    },
+    "context": "A previously syntactically normal scene reaches the instant the focal character recognizes an incoming train cannot stop.",
+    "text": "The signal stayed red. The brakes screamed once.\n\nToo close.\n\nNo room.\n\nThen the crossing gate vanished under the engine."
+  },
+  "rubric": [
+    "Accept deliberate fragments when an explicit profile permits them and each fragment belongs to a real perceptual/irreversible interruption rather than generic pseudo-pace.",
+    "Framework Fundamentals are mechanism rules, not a blanket ban on short sentences."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["HF-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept", "codes": []}
+}
