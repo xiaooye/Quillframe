@@ -1,114 +1,140 @@
-# Reader Engagement · Framework Positive Quality Model
+# Reader Engagement · The positive quality model after prose clears the floor
 
-## Purpose
+<p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>ATTENTION</kbd>&nbsp;&nbsp;<kbd>REWARD</kbd>&nbsp;&nbsp;<kbd>FORWARD PULL</kbd></p>
 
-Surface Fundamentals answer:
+Surface Fundamentals ask whether prose is malformed, mechanically AI-like, causally thin, or falsely polished. Reader Engagement asks the positive question: **what makes a reader want to continue, feel rewarded, care about the people, update their mental model, and experience meaningful movement?**
 
-> Is the prose malformed, mechanically AI-like, causally thin, or falsely polished?
+> **Boundary ✦** Reader Engagement is a generic quality model. It is not a single score, not a mandate for constant maximum tension, and not a substitute for genre/platform/project taste. Profiles change weighting and thresholds; they do not erase the dimensions.
 
-Reader Engagement answers:
+## 01 · Quality floor and positive quality are different
 
-> What makes the reader want to continue, feel rewarded, care about the people, and experience meaningful movement?
+A chapter can pass every Surface hard rule and still fail because it is:
 
-A chapter can pass every Surface hard rule and still fail because it is safe, procedural, predictable, emotionally inert, or weakly propulsive.
+- safe but procedural;
+- technically coherent but predictable;
+- populated by functional characters;
+- emotionally inert;
+- full of correct actions with little cost or choice;
+- structurally complete but weakly propulsive.
+
+The relationship is:
 
 ```text
-Surface Safety = quality floor
-Reader Engagement = positive quality model
-Genre / Platform Profile = threshold + weighting
-Project / User Profile = calibrated emphasis
+Surface Safety       = minimum realization floor
+Reader Engagement    = positive reading-value model
+Genre / Platform     = weighting + threshold
+Project / User       = calibrated emphasis
 ```
 
-The mechanisms below are generic. Profiles tune intensity; they do not need to reinvent the model.
+Passing Reader Engagement still does not grant Canon authority or replace continuity/independent gates.
 
-# RG Family
-
-## RG-01 · ACTIVE READER QUESTION
+## 02 · RG-01 · ACTIVE READER QUESTION
 
 Maintain at least one live near-term question appropriate to the form.
 
 Examples:
+
 - Can a concrete objective be achieved?
 - What will another person choose?
-- What hidden fact changes the current model?
+- Which hidden fact changes the current interpretation?
 - What cost will be paid?
-- Will a relationship, permission, or status change?
+- Will permission, status, trust, or access change?
 - What will the focal character do as options narrow?
 
-The question should evolve, sharpen, branch, or be replaced by a more consequential question. Repeating the same countdown is not evolution.
+The question should evolve, sharpen, branch, resolve, or be replaced by a more consequential one. Repeating the same countdown or vague threat is not evolution.
 
-Literary/quiet profiles may use subtler questions; serialized/high-grip profiles require stronger near-term pull.
+Quiet/literary profiles may use subtler reader questions. High-grip serial profiles usually require stronger near-term pull.
 
-## RG-02 · PRESSURE LADDER
+## 03 · RG-02 · PRESSURE LADDER
 
-Major beats should change the option landscape by doing at least one:
+Pressure matters when it changes the available option landscape.
 
-- narrow a viable option;
-- reveal/increase cost;
+A meaningful beat may:
+
+- remove or weaken a viable option;
+- reveal or increase cost;
 - introduce credible resistance;
 - expose an omission or mistake;
-- force an earlier choice;
+- force an earlier decision;
 - resolve one pressure while opening a more consequential one;
 - change the meaning of earlier information;
 - alter relationship permission or trust;
 - make inaction costly.
 
-Do not add arbitrary obstacles. Pressure should arise from character, institution, resource, environment, prior choice, knowledge limit, or planted state.
+Do not add arbitrary obstacles merely to “raise stakes.” Useful pressure grows from character, institution, resource, environment, prior choice, information limit, or already planted state.
 
-## RG-03 · REWARD CADENCE
+## 04 · RG-03 · REWARD CADENCE
 
-Readers need meaningful returns, not only delayed correctness.
+Readers need returns on attention, not only delayed correctness.
 
-Possible rewards:
+Possible rewards include:
+
 - competence payoff;
 - useful information or reveal;
 - emotional intimacy;
 - social reversal;
 - humor;
 - recognition/callback;
-- status/permission gain;
+- status or permission gain;
 - a satisfying objection answered;
 - a planted detail becoming functional;
 - surprising but credible character action;
-- sensory/aesthetic pleasure when the profile values it.
+- sensory or rhetorical pleasure when the profile values it.
 
-No fixed quota. Evaluate whether the reader receives something worth the attention before the chapter/scene ends.
+There is no universal reward quota. Ask whether the reader receives something worth the time **before attention debt becomes too large for the chosen form**.
 
-## RG-04 · FRICTION OVER PROCEDURE
+## 05 · RG-04 · FRICTION OVER PROCEDURE
 
-When a task contains routine operational steps, emphasize the moments where:
+When a scene contains routine process, expand the parts where process becomes story:
 
 - people disagree;
 - information is incomplete;
-- a mistake is caught;
-- responsibility/risk changes hands;
+- a mistake is discovered;
+- responsibility or risk changes hands;
 - time/resources become binding;
-- a choice among imperfect options is required;
-- a relationship changes how the task can proceed.
+- an imperfect choice must be made;
+- relationship state changes what can be asked or done;
+- expertise reveals an unexpected consequence.
 
-Compress routine procedure unless the procedure itself is the pleasure promised by the genre/profile.
+Compress routine operations unless the procedure itself is part of the promised pleasure.
 
-## RG-05 · CHARACTER-OWNED ENERGY
+Procedural fiction is not exempt: the procedure must still supply competence, uncertainty, discovery, conflict, consequence, or domain-specific satisfaction.
 
-Important characters should contribute energy through their own agenda, competence, bias, humor, fear, appetite, social strategy, information, or unexpected but credible choice.
+## 06 · RG-05 · CHARACTER-OWNED ENERGY
+
+Important characters should contribute scene energy through their own:
+
+- agenda;
+- competence;
+- bias;
+- humor;
+- fear;
+- appetite;
+- social strategy;
+- information;
+- initiative;
+- unexpected but credible choice.
 
 A scene loses energy when everyone except the protagonist becomes a delivery mechanism.
 
-## RG-06 · CHARACTER SURPRISE WITHIN CONSISTENCY
+“Character-owned” also means the energy must belong to the person's knowledge, relationship, social position, and voice—not to narrator hype.
 
-Memorable characterization often comes from choices that are surprising enough to feel alive but consistent enough to feel earned.
+## 07 · RG-06 · CHARACTER SURPRISE WITHIN CONSISTENCY
 
-Mechanism examples:
-- cautious person cuts through ritual when risk becomes practical;
-- joking person becomes precise when consequences turn real;
-- junior catches senior's mistake;
-- apparent obstacle offers the cleanest solution for self-interested reasons.
+Memorable characterization often comes from a choice that is surprising enough to feel alive but consistent enough to feel earned.
 
-Do not manufacture quirks. Surprise should emerge from goals, competence, history, relationship, information, or pressure.
+Examples of mechanism, not templates:
 
-## RG-07 · TONAL CONTRAST / TENSION WAVE
+- a cautious person cuts through ritual when risk becomes concrete;
+- a joking person becomes precise when consequences turn real;
+- a junior catches a senior's mistake;
+- an apparent obstacle offers the cleanest solution for self-interested reasons.
 
-Continuous maximum tension becomes flat. Useful lower-pressure beats may provide:
+Do not manufacture quirks. Surprise should emerge from goals, competence, history, relationship, information, pressure, or a previously underused part of the character.
+
+## 08 · RG-07 · TONAL CONTRAST / TENSION WAVE
+
+Continuous maximum tension becomes flat. Lower-pressure beats can make later pressure land harder when they provide:
 
 - relationship texture;
 - humor;
@@ -117,133 +143,145 @@ Continuous maximum tension becomes flat. Useful lower-pressure beats may provide
 - false relief;
 - setup;
 - wonder;
-- quiet moral/emotional recognition.
+- quiet moral or emotional recognition.
 
-Contrast is functional when it changes how the next high-pressure beat lands. Do not insert filler to satisfy a waveform.
+Contrast must still do work. Do not insert filler merely to satisfy a waveform.
 
-## RG-08 · CHARACTER-OWNED HUMOR / HUMANITY
+## 09 · RG-08 · CHARACTER-OWNED HUMOR / HUMANITY
 
-When humor is appropriate, prefer humor arising from:
+When humor is appropriate, prefer humor that emerges from:
 
 - relationship familiarity;
 - incompatible agendas;
 - status mismatch;
-- professional/period language in an awkward human context;
-- misunderstanding with interaction consequences;
+- professional or period language in an awkward human context;
+- misunderstanding with real consequences;
 - self-interest;
 - dark humor under pressure;
-- an earlier confident statement gaining a new meaning.
+- an earlier confident statement acquiring a new meaning.
 
-Humor should usually reveal voice/relationship, change willingness/tension, buy/lose time, plant information, or sharpen a later reversal.
+Humor is strongest when it also reveals voice/relationship, changes tension or willingness, buys/loses time, plants information, or sharpens a later reversal.
 
-Profiles may set humor low/none. The generic principle is **human texture belongs to characters and situations, not detachable narrator stand-up**.
+A profile may set humor to low or none. The generic invariant is that human texture should belong to people and situations rather than detachable narrator stand-up.
 
-## RG-09 · OPENING ORIENTATION + GRIP
+## 10 · RG-09 · OPENING ORIENTATION + GRIP
 
-Early prose should establish enough orientation to read confidently while also supplying some reason to care.
+Early prose should establish enough orientation to read confidently while giving a reason to care.
 
-Possible grip:
-- active problem;
+Possible grip mechanisms:
+
+- an active problem;
 - contradiction;
-- desire/cost;
+- desire + cost;
 - social friction;
 - deadline;
-- unusual concrete fact;
-- voice/humor;
+- an unusual concrete fact;
+- distinctive voice or humor;
 - emotionally charged relationship state;
 - mystery grounded in real information limits.
 
-Do not confuse obscurity with intrigue.
+Do not confuse obscurity with intrigue. A reader who does not know what to pay attention to is not necessarily curious.
 
-## RG-10 · FORWARD-PULL ENDING
+## 11 · RG-10 · FORWARD-PULL ENDING
 
-A chapter/scene ending should normally leave **changed state + a reason for mental continuation** appropriate to the form.
+A scene/chapter ending should usually leave **changed state + a reason for mental continuation** appropriate to the form.
 
-Valid mechanisms:
+Valid mechanisms include:
+
 - irreversible consequence;
-- concrete unresolved immediate question;
-- returning planted issue;
+- a concrete unresolved near-term question;
+- return of a planted issue;
 - recontextualization;
-- incoming person/message/object;
-- next-state sensory or voice intrusion;
-- earned callback;
-- consequential decision whose cost is deferred;
-- relationship permission/obligation that changes what comes next.
+- an incoming person/message/object;
+- a next-state sensory or voice intrusion;
+- an earned callback;
+- a consequential decision whose cost is deferred;
+- relationship permission or obligation that changes what comes next.
 
-Reject abstract narrator advertising. Do not require a twist at every ending.
+Reject abstract narrator advertising. Do not require a twist every time.
 
-## RG-11 · INFORMATION VALUE
+## 12 · RG-11 · INFORMATION VALUE
 
-Information should arrive when it changes interpretation, choice, anticipation, or emotional meaning.
+Information earns attention when its arrival changes:
 
-Avoid:
-- exposition that merely fills a database field;
-- withholding ordinary information for cheap mystery;
-- reveal timing unrelated to current action.
+- interpretation;
+- choice;
+- anticipation;
+- emotional meaning;
+- relationship position;
+- perceived risk;
+- the reader's model of what is possible.
 
-Good information has consequences in the reader's model or the character's next move.
+Avoid exposition that merely fills a database field, ordinary facts withheld for cheap mystery, or reveals scheduled independently of current action.
 
-## RG-12 · CAUSAL MOMENTUM
+Good information has consequences in the reader's model or a character's next move.
 
-A strong scene feels like each meaningful beat changes the next one.
+## 13 · RG-12 · CAUSAL MOMENTUM
+
+A strong scene feels like meaningful beats create the next meaningful beats.
 
 ```text
 cause
 → response
 → changed state
-→ new decision/problem
+→ new decision / problem
 ```
 
-Chronology alone is not momentum.
+Chronology alone is not momentum. “Then this happened, then this happened” can be perfectly clear and still feel inert.
 
-## RG-13 · RELATIONAL MOVEMENT
+## 14 · RG-13 · RELATIONAL MOVEMENT
 
 Important interactions should often leave a trace:
 
 - trust changes;
 - permission changes;
 - obligation appears;
-- attraction/aversion changes;
+- attraction/aversion shifts;
 - status is renegotiated;
 - a private fact becomes shared;
-- one person revises their model of another.
+- one person revises their model of another;
+- future expectation changes.
 
-Not every conversation must transform a relationship, but long-form fiction becomes inert if major relationships repeatedly reset to zero.
+Not every conversation must transform a relationship. Long-form fiction becomes inert when major relationships repeatedly reset to zero despite meaningful events.
 
-## RG-14 · SPECIFICITY OF STAKES
+Relationship movement remains subject to Canon/state evidence rules: a Review Draft can depict a delta, but current authoritative relationship state changes only after acceptance/settlement.
 
-Pressure works better when cost is concrete enough to affect choices.
+## 15 · RG-14 · SPECIFICITY OF STAKES
 
-Prefer:
-- money that can/cannot be paid;
-- a deadline with procedural consequence;
-- a relationship permission at risk;
-- an injury that changes what action is possible;
-- evidence that can be lost;
-- a public commitment someone must now honor.
+Pressure works better when cost is concrete enough to change a decision.
 
-Generic “everything is at stake” language is weaker than operational consequence.
+Prefer operational consequences such as:
 
-## RG-15 · SAFE-BUT-FLAT
+- money that can or cannot be paid;
+- a deadline with procedural or social consequence;
+- permission/access at risk;
+- an injury that removes options;
+- evidence that can disappear;
+- a public promise that must now be honored;
+- a relationship cost that alters future cooperation.
 
-Fail the positive quality gate when prose is technically clean but most of the following are true:
+Generic “everything is at stake” language is weaker than a specific constraint the character must act around.
 
-- chronological report of correct actions;
-- obstacles solved on first attempt without tradeoff;
+## 16 · RG-15 · SAFE-BUT-FLAT
+
+Fail the positive quality gate when prose is technically clean but many of the following are true:
+
+- the chapter reports correct actions chronologically;
+- obstacles are solved on the first attempt without tradeoff;
 - dialogue mostly transfers necessary information;
-- character voices are legible but unmemorable;
-- no meaningful tonal contrast or human texture;
+- voices are distinguishable but not characterful;
 - pressure is announced but rarely changes choices;
-- climax arrives because the outline says it is time;
-- state changes but reader desire does not;
-- procedure consumes more space than conflict/choice/consequence;
-- supporting characters remain functionally static.
+- procedure occupies more space than conflict/choice/consequence;
+- supporting characters remain functionally static;
+- the climax arrives because the outline says it is time;
+- state changes, but reader desire does not;
+- there is little useful tonal contrast, humanity, or reward.
 
-Repair upstream at Reader Pressure / Scene Simulation / Character Simulation. Do not repair by adding random one-liners, fragments, adjectives, fake twists, or narrator hype.
+Repair **upstream** at Reader Pressure, Scene Simulation, Character Simulation, or Story/Plan. Do not patch flatness with random one-liners, extra fragments, adjectives, fake twists, or narrator hype.
 
-# Profile weighting
+## 17 · Profile weighting
 
-A profile may tune:
+Profiles tune emphasis rather than redefine the model.
 
 ```yaml
 reader_grip: low|medium|high|very_high
@@ -259,17 +297,37 @@ contemplative_space: low|medium|high
 
 Examples:
 
-- high-grip serialized commercial fiction weights RG-01/02/03/04/10/12 strongly;
-- cozy fiction may reduce threat pressure while increasing relationship/reward/voice dimensions;
-- literary fiction may allow slower near-term propulsion while requiring high interpretive/emotional specificity;
-- procedural fiction may expand procedure only when the procedure itself supplies competence, uncertainty, conflict, discovery, or domain pleasure.
+- high-grip serialized commercial fiction heavily weights RG-01/02/03/04/10/12;
+- cozy fiction may lower threat pressure while increasing relationship, reward, voice, and comfort dimensions;
+- literary fiction may accept slower near-term propulsion while demanding high interpretive/emotional specificity;
+- procedural fiction may expand process when process itself supplies competence, uncertainty, conflict, discovery, or domain pleasure.
 
-Profiles alter thresholds, not the existence of quality dimensions.
+Profiles alter thresholds. They do not delete quality dimensions simply because the work is quiet or specialized.
 
-# Engagement audit artifact
+## 18 · Reader diagnostics versus Reader Engagement contract
+
+NovelForge may use a bounded Reader Simulation Panel to gather diagnostic evidence. That panel can report signals such as continue desire, pacing, confusion, emotional response, favorite/stumble beats, forward pull, character investment, reward, and drop-off points.
+
+The panel is **one evidence source** for this quality model. It is not the model itself.
+
+Important distinctions:
+
+- simulated-reader personas describe reading behavior, not demographic stereotypes;
+- panel results are diagnostic evidence, not Canon;
+- an absolute score alone does not decide keep/discard;
+- A/B order swapping can expose position bias;
+- disagreement between reader personas is useful evidence rather than noise to average away;
+- Reader Panel does not automatically satisfy a mandatory independent semantic gate.
+
+See [Quality Evolution](../docs/quality-evolution.en.md).
+
+## 19 · Engagement audit artifact
+
+A user-visible or machine-readable audit should record conclusions and observable evidence rather than private reasoning.
 
 ```yaml
 artifact_type: reader_engagement_audit
+candidate_fingerprint:
 active_reader_question:
 question_evolution: []
 pressure_ladder: []
@@ -286,6 +344,37 @@ flatness_risk:
 result: pass|rewrite
 ```
 
-This artifact records conclusions and observable evidence, not private chain-of-thought.
+The audit should be specific enough that repair can route to an owning mechanism.
 
-> A story should not merely avoid bad prose. It should generate attention, feeling, inference, and desire for what comes next in the way its chosen form promises.
+## 20 · Failure routing
+
+- weak active question / pressure → Reader Pressure + Scene/Chapter planning;
+- no meaningful reward → payoff/information/relationship/competence design;
+- procedure dominates → compress routine and restore friction/choice/consequence;
+- character energy missing → Character Simulation;
+- relationship repeatedly resets → relationship state + scene design;
+- flat but surface-clean prose → upstream regeneration, not cosmetic polish;
+- reader confusion from missing context → context/story information design;
+- reader confusion from sentence realization → Surface layer;
+- reader diagnostics disagree strongly → inspect the tradeoff; do not blindly average them into one number.
+
+## 21 · Invariants
+
+1. Reader Engagement is positive quality, not a defect blacklist.
+2. Tension is not the only engagement mechanism.
+3. Reward is not the same thing as victory.
+4. Forward pull should come from changed story state, not narrator advertising.
+5. Important characters should contribute their own energy.
+6. Profile weighting changes thresholds, not the existence of dimensions.
+7. Reader diagnostics are evidence, not Canon or automatic independent review.
+8. SAFE-BUT-FLAT routes upstream.
+
+## 22 · Related contracts
+
+- [Surface Fundamentals](FUNDAMENTALS.en.md) — the prose-quality floor.
+- [Story System](../core/STORY_SYSTEM.en.md) — active questions, pressure, payoff, causal planning.
+- [Character & Relationship System](../core/CHARACTER_SYSTEM.en.md) — character-owned energy, surprise, and relational movement.
+- [Quality Evolution](../docs/quality-evolution.en.md) — Reader Panel evidence, typed findings, revision routing, and candidate evolution.
+- [Production Pipeline](../docs/production-pipeline.en.md) — where Reader Pressure and Reader Engagement sit in the run.
+
+> A strong chapter does more than avoid bad prose. It creates attention, feeling, inference, reward, and desire for what comes next in the way its chosen form promises.

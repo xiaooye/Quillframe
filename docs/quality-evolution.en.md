@@ -1,128 +1,207 @@
 <div align="center">
   <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom mark" width="54" />
-  <p><kbd>READER EVIDENCE</kbd>&nbsp;&nbsp;<kbd>OWNING-MECHANISM REPAIR</kbd>&nbsp;&nbsp;<kbd>PLATEAU STOPPING</kbd></p>
+  <p><kbd>MODEL-OWNED SEMANTICS</kbd>&nbsp;&nbsp;<kbd>TYPED EVIDENCE</kbd>&nbsp;&nbsp;<kbd>PLATEAU STOPPING</kbd></p>
 </div>
 
-# Quality Evolution · Improve candidates without turning revision into an infinite loop
+# Quality Evolution · Semantic judgment by models, durable quality state by deterministic code
 
-NovelForge 7.2 turns revision from a loose sequence of “critic prompts” into an inspectable quality-evolution system. Diagnostics may come from different mechanisms, but findings share a typed evidence contract, repairs return to the mechanism that owns the failure, candidate comparisons are durable, and repeated no-gain can stop the loop.
+NovelForge separates **literary judgment** from **quality-state machinery**. A model reads fiction and makes semantic judgments through bounded, model-readable contracts. Deterministic code packages context and permissions, validates typed outputs, stores evidence and candidate lineage, enforces fingerprints, and stops revision loops when they stop producing gains.
 
-> **Core invariant ✦** A quality signal may diagnose or reject a candidate. It does not gain Canon authority, and it does not become “independent review” merely because it came from another persona prompt.
+> **Core invariant ✦** Python may persist, route, fingerprint, budget, validate, and transact. It does not become a literary critic merely because a quality workflow needs one.
 
 ## 01 · Quality is a stack, not one score
 
-NovelForge keeps several questions separate:
+NovelForge keeps several questions distinct:
 
-- **deterministic correctness** — schema, lifecycle, fingerprints, authority, idempotency;
-- **surface realization** — whether prose exhibits known structural/AI failure mechanisms;
-- **reader engagement** — pressure, reward, causality, investment, forward pull;
-- **character integrity** — agenda, knowledge, voice, relationship and spatial/task consistency;
-- **continuity/state integrity** — whether the candidate agrees with relevant accepted/current state;
-- **independent semantic judgment** — a genuinely separate invocation/session when the workflow requires an independent gate.
+- **deterministic correctness** — schema, lifecycle, fingerprint, authority, permission, consume-once, idempotency;
+- **surface realization** — whether prose exhibits known structural/model failure mechanisms;
+- **reader engagement** — attention, pressure, reward, causality, character investment, forward pull;
+- **character integrity** — agenda, knowledge, voice, relationship position, task/spatial coherence;
+- **continuity/state integrity** — whether the candidate agrees with relevant authoritative state;
+- **independent semantic judgment** — a genuinely separate invocation/session when the workflow explicitly requires an independent gate.
 
-No single “8.4/10” number is allowed to collapse these dimensions into a fake objective truth.
+No absolute score collapses these dimensions into objective literary truth.
 
-## 02 · Reader Simulation Panel is diagnostic evidence
+## 02 · Semantic intelligence lives in model contracts
 
-`quality/reader_panel.py` packages bounded reader-simulation jobs. Default personas describe **reading behavior**, not demographic stereotypes, for example binge, genre-native, casual-mobile, investment, and reward-sensitive readers.
+The registry at [`harness/semantic_workers/model_contracts.json`](../harness/semantic_workers/model_contracts.json) defines bounded semantic jobs. The runtime supplies only the candidate, allowed context, rubric, permissions, fingerprint, and typed output contract.
 
-The panel can inspect one candidate or compare A/B candidates. Signals include continue desire, tension, pacing, confusion, emotional response, favorite/stumble beats, forward pull, character investment, reward, and drop-off points.
+Current quality-facing contracts include:
 
-Pairwise comparison uses swapped visible order so first-position bias can be detected rather than silently rewarded.
+- `reader.reaction` — one reading-behavior persona's immediate experience of one candidate;
+- `reader.compare` — pairwise reader-experience comparison, suitable for swapped-order bias checks;
+- `character.integrity` — agenda, knowledge, voice, relationship, task/spatial state, and surprise-within-consistency;
+- `revision.diagnose` — diagnosis across requested dimensions and routing to the mechanism that owns repair;
+- `reader.expectations` — interpretation of live reader questions, promises, setups, relationship expectations, goals, and mysteries.
 
-The aggregator also looks for disagreement and suspiciously templated reasons. Consensus can be useful evidence; disagreement can be even more useful because it tells the revision system *where different reading goals diverge*.
+These contracts explicitly prohibit Canon write, framework-behavior write, and durable user-taste write.
 
-**Important:** Reader Panel results are diagnostic. They set neither Canon nor the mandatory independent semantic gate.
+## 03 · Reader diagnostics are evidence, not a gate by themselves
 
-## 03 · Typed findings create a common language
+Reader simulation personas describe **reading behavior**, not demographic stereotypes. Default behaviors include binge/forward-pull sensitivity, genre familiarity, mobile attention, character investment, and reward sensitivity.
 
-Quality mechanisms normalize their observations into evidence-chained findings. A finding identifies:
+A `reader.reaction` judgment may report continue desire, tension, pacing, confusion, emotional response, favorite/stumble beats, drop-off point, and a concrete reason.
+
+A `reader.compare` judgment compares A/B candidates across overall preference, forward pull, character investment, and reward. When bias detection matters, repeat with candidate order swapped rather than trusting first-position advantage.
+
+Important boundaries:
+
+- reader diagnostics are not Canon;
+- an absolute score alone does not decide keep/discard;
+- persona disagreement is useful evidence rather than noise to average away;
+- reader diagnostics do not automatically satisfy a mandatory independent semantic gate.
+
+## 04 · Character Integrity stays bounded
+
+The `character.integrity` contract receives only the supplied scene excerpt and typed established character state. Its rubric explicitly checks:
+
+`agenda alignment · knowledge boundary · voice · relationship position · spatial/task state · surprise within consistency`
+
+It must not assume that manager, narrator, reader, research, or model knowledge is character knowledge.
+
+Intentional character change is valid when the candidate supplies transition evidence. Findings must cite candidate-side and established-state evidence.
+
+The result is an observation. It does not mutate character state.
+
+## 05 · Revision diagnosis before rewriting
+
+The `revision.diagnose` contract exists to stop generic “polish passes.” It first identifies the failure and then assigns repair ownership.
+
+The model may distinguish failures in:
+
+- story;
+- plan;
+- scene;
+- character;
+- reader pressure / engagement;
+- surface realization;
+- continuity/state;
+- context or memory;
+- research/fact support.
+
+The contract explicitly states that SAFE-BUT-FLAT is not a line-edit problem and that a cluster of surface failures may require scene-level regeneration.
+
+Its typed output contains evidence-chained findings plus a repair sequence. It still cannot mutate Canon.
+
+## 06 · Typed findings create a common evidence language
+
+[`quality/findings.py`](../quality/findings.py) is deterministic infrastructure for normalizing evidence-backed quality findings. A useful finding identifies:
 
 - category and severity;
-- subject;
+- subject/candidate;
 - repair owner;
 - candidate-side evidence;
-- authority/state-side evidence when relevant;
+- authoritative/state-side evidence when relevant;
 - source references;
 - confidence;
-- a proposal or repair suggestion that does not directly mutate authoritative state.
+- a proposal for repair that does not directly mutate authoritative state.
 
-This shared contract means the revision layer can combine continuity, character, reader, surface, research, context, or memory problems without pretending they are the same kind of failure.
+This lets surface, reader, character, continuity, context, memory, and research diagnostics share a transport format without pretending they are the same kind of failure.
 
-## 04 · Character Integrity uses bounded context
+## 07 · Repair the owning mechanism
 
-`quality/character_integrity.py` packages only the scene excerpt and typed character state needed for the audit. It explicitly rejects private reasoning, chain-of-thought, hidden gold, writer scratchpads, and regression bad examples.
-
-The audit dimensions are:
-
-`agenda alignment · knowledge boundary · voice drift · relationship position · spatial/task state · surprise consistency`
-
-The result is evidence, not a direct character-state mutation and not automatically an independent gate.
-
-## 05 · Revision Orchestrator plans narrow passes
-
-`quality/revision_orchestrator.py` is deterministic orchestration, not a literary judge. It plans bounded passes only when the required evidence exists:
-
-`continuity · character · reader · surface · research/fact`
-
-A missing prerequisite skips that pass rather than poisoning unrelated passes.
-
-Completed findings are deduplicated and grouped by **repair owner**. That is the key failure-routing rule:
+Quality findings should route repair to the smallest layer that actually owns the cause:
 
 - isolated surface issue → local surface rewrite;
-- surface cluster → whole-scene regeneration;
-- reader-grip / SAFE-BUT-FLAT → Reader Pressure + Scene Simulation;
-- character failure → Character Simulation;
-- story/plan failure → Story or Plan layer;
-- continuity/state failure → continuity/state repair;
-- context failure → rebuild sparse context;
+- repeated surface cluster → paragraph/block or whole-scene Surface Realization;
+- SAFE-BUT-FLAT / reader-grip failure → Reader Pressure + Scene Simulation;
+- character failure → Character Simulation / character-state reasoning;
+- story or plan failure → Story / Plan layer;
+- continuity/state failure → continuity or authoritative-state repair;
+- context failure → rebuild sparse Context Manifest;
 - memory failure → invalidate/rebuild derived memory;
 - research failure → research resolution;
-- runtime failure → transport/capability repair;
-- unresolved direction → human decision.
+- runtime/capability failure → transport/capability layer;
+- unresolved artistic direction → human/user decision.
 
-The system repairs the cause rather than polishing the symptom.
+Repair the cause, not the symptom.
 
-## 06 · Durable candidate evolution
+## 08 · Durable candidate evolution
 
-`quality/quality_evolution.py` stores revision progress in a deterministic SQLite ledger:
+[`quality/quality_evolution.py`](../quality/quality_evolution.py) owns deterministic revision-state persistence, not literary judgment.
 
-**baseline candidate → challenger → comparison → incumbent → next challenger → plateau / complete**
+A typical evolution is:
 
-Every candidate has a content fingerprint and parent lineage. Every comparison result is fingerprinted and logically consume-once. Exact replay is idempotent.
+```text
+baseline candidate
+→ challenger
+→ model/semantic comparison result
+→ validate + consume result once
+→ incumbent update or no-gain
+→ next challenger
+→ plateau / complete
+```
 
-A challenger must descend from the current incumbent; a winner must be one of the compared candidates or a no-decision/tie. This prevents a quality loop from quietly changing what was compared after the fact.
+Every candidate has a content fingerprint and parent lineage. Every comparison result is fingerprinted and logically consume-once; exact replay is idempotent.
 
-When a challenger genuinely wins, it becomes the new incumbent and the no-gain counter resets. Repeated no-gain reaches the configured plateau limit and stops evolution.
+A challenger must descend from the current incumbent. A declared winner must be one of the actual compared candidates, or a tie/no-decision. The ledger cannot quietly swap candidates after judgment.
 
-Plateau stopping matters because revision is not monotonically beneficial. “Keep rewriting until the model feels done” is not a quality strategy.
+When a challenger genuinely wins, it becomes the incumbent and the no-gain counter resets. Repeated no-gain reaches the configured plateau limit and stops the loop.
 
-## 07 · Independent review remains independent
+**Revision is not monotonically beneficial. Plateau stopping is a quality feature.**
 
-Reader personas, a Character Integrity audit, and internal critic passes can all be valuable while still sharing the manager's workflow.
+## 09 · Reader Expectation Ledger preserves long-horizon reader state
 
-When the Harness requires a mandatory independent semantic gate, that judgment must still come from a genuinely separate eligible invocation/session/runtime and return a typed result bound to the exact artifact fingerprint.
+[`quality/reader_expectation.py`](../quality/reader_expectation.py) stores durable, non-authoritative reader-facing expectations. Semantic interpretation comes from the `reader.expectations` model contract; deterministic code owns identity, persistence, state transitions, and evidence references.
 
-A semantic reject is a valid result. It routes repair. It is not an excuse to switch reviewers until somebody says PASS.
+An expectation may represent a live:
 
-## 08 · State graph and resumability
+- question;
+- promise;
+- setup/payoff expectation;
+- relationship expectation;
+- goal;
+- mystery or unresolved reader-facing obligation.
 
-`quality/state_graph.py` gives the quality workflow an explicit non-authoritative state graph so interrupted work can resume without inventing what already happened.
+The semantic contract distinguishes an expectation that currently exists in the reader experience from a **future planned payoff**. The ledger therefore must not turn an active plan into a reader fact merely because the plan exists.
 
-Durable state records what analysis/revision step was completed. It does **not** grant Canon write authority and it does not substitute for the consuming project's acceptance/settlement rules.
+Expectation state may be reinforced, partially rewarded, paid off, abandoned, or made dormant when evidence supports that interpretation. The ledger has no Canon authority.
 
-## 09 · Relationship to the production pipeline
+## 10 · State graph makes quality work resumable
 
-Quality Evolution starts only after a candidate exists. Regression bad examples and critic-only evidence remain post-generation inputs. Reader diagnostics and bounded integrity checks can then produce findings; the Revision Orchestrator routes repair; candidate evolution records whether the repair actually improved the incumbent.
+[`quality/state_graph.py`](../quality/state_graph.py) persists the non-authoritative state of quality work so an interrupted run can resume without inventing which analysis or revision steps already happened.
 
-Only after required quality/continuity/independent gates resolve may the artifact cross the user-visible gate. User acceptance is still separate from Canon settlement.
+It records workflow progress. It does not grant Canon write authority and does not replace the consuming project's acceptance/settlement rules.
 
-## 10 · Related contracts
+## 11 · Independent review remains a separate contract
 
-- [Quality & QA](quality-assurance.en.md) — the full quality stack and release gates.
-- [Production Pipeline](production-pipeline.en.md) — where diagnostics and revision occur.
-- [Reader Engagement](../surface/READER_ENGAGEMENT.en.md) — generic reader-quality mechanism.
-- [`reader.reaction` / `reader.compare` model contracts](../harness/semantic_workers/model_contracts.json) — reader diagnostic semantics.
-- [`revision.diagnose` model contract](../harness/semantic_workers/model_contracts.json) — diagnosis and repair ownership semantics.
-- [`quality/quality_evolution.py`](../quality/quality_evolution.py) — durable candidate ledger.
-- [`character.integrity` model contract](../harness/semantic_workers/model_contracts.json) — bounded character-integrity semantics.
+Internal semantic contracts such as reader simulation, character integrity, and revision diagnosis can be valuable while still running inside the manager's workflow.
+
+When the Harness requires a **mandatory independent semantic gate**, the judgment must still come from a genuinely separate eligible invocation/session/runtime and return a typed result bound to the exact artifact fingerprint.
+
+A semantic rejection is a valid result. It routes repair. It is not a reason to switch reviewers until somebody says PASS.
+
+## 12 · Relationship to the production pipeline
+
+Quality Evolution begins only after a candidate exists.
+
+Regression bad examples and critic-only evidence remain post-generation inputs. Semantic contracts inspect bounded candidate/context packets and return typed judgments. Deterministic infrastructure validates and persists those results. Repair returns to the owning mechanism. Candidate evolution records whether the repair actually defeats the current incumbent.
+
+Only after required surface, reader, continuity, and independent gates resolve may the artifact cross the user-visible gate. User acceptance is still separate from Canon settlement.
+
+## 13 · Why this architecture matters
+
+Keeping semantic intelligence in model-readable contracts avoids two common failure modes:
+
+**Fake determinism** — Python heuristics pretending to decide literary quality that actually needs interpretation.
+
+**Unbounded model authority** — a model being allowed to write durable truth merely because it produced a convincing judgment.
+
+NovelForge instead makes the boundary explicit:
+
+```text
+model      → semantic judgment
+runtime    → bounded packet + permissions + fingerprint
+validator  → typed-result checks
+ledgers    → durable non-authoritative state
+project    → Canon authority and settlement
+```
+
+## 14 · Related contracts
+
+- [Quality & QA](quality-assurance.en.md) — full quality stack and release gates.
+- [Production Pipeline](production-pipeline.en.md) — where diagnostics and repair occur.
+- [Reader Engagement](../surface/READER_ENGAGEMENT.en.md) — generic positive reader-quality model.
+- [Character & Relationship System](../core/CHARACTER_SYSTEM.en.md) — state and knowledge boundaries used by character integrity judgments.
+- [Semantic Worker Protocol](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md) — provider-neutral semantic job/result contract.
+- [`model_contracts.json`](../harness/semantic_workers/model_contracts.json) — current model-readable semantic registry.

@@ -1,313 +1,350 @@
-# Surface Fundamentals · Framework Quality Contract
+# Surface Fundamentals · A quality floor for model-realized fiction
 
-## Purpose
+<p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>GENERIC FAILURE MECHANISMS</kbd>&nbsp;&nbsp;<kbd>PROFILE-SENSITIVE THRESHOLDS</kbd></p>
 
-This is NovelForge's default prose-realization safety layer. It exists because language models exhibit recurring cross-project failure mechanisms that should not be rediscovered in every novel.
+Surface Fundamentals are NovelForge's default prose-realization safeguards. They exist because language models exhibit recurring cross-project failure mechanisms: fragmented pseudo-pace, camera-like micro-actions, narrator explanation, design-language leakage, empty embodiment, procedural reporting, fake significance, and other forms of polished text that do not behave like lived fiction.
 
-These rules are **framework fundamentals**, not one project's house style.
+> **Boundary ✦** Surface Fundamentals define generic model-failure mechanisms. They are not one novel's house style, and passing them does **not** mean a chapter is engaging, emotionally effective, or production-ready.
+
+## 01 · Where Surface Fundamentals sit
+
+The rule stack is directional:
 
 ```text
 Framework Surface Fundamentals
-        ↓
-Genre / Platform Profile
-        ↓
-Project Profile
-        ↓
-User Taste Profile
-        ↓
-Current Request
+→ Genre / Platform Profile
+→ Project Profile
+→ User Taste Profile
+→ Current Request
 ```
 
-Lower layers may tune thresholds and opt into deliberate exceptions. They may not silently turn known model failure mechanisms back into defaults.
+Lower layers may tune thresholds, permit deliberate exceptions, or raise stylistic intensity. They may not silently convert a known cross-project model failure into the default behavior.
 
-> Clean prose is a floor, not a finished chapter.
+**Clean prose is a floor. Reader Engagement is a separate positive-quality model.**
 
-## Production principle
+## 02 · Realization principle: backstage design must disappear into lived fiction
 
-**Backstage design language must become lived prose.**
+Internal production concepts such as state transition, permission change, pressure, payoff, relationship delta, information advantage, resource constraint, and character arc should normally appear in prose as:
 
-Internal concepts such as state transition, permission, pressure, relationship change, foreshadowing, payoff, information advantage, resource constraint, and character arc should normally appear in fiction as people, objects, money, time, tasks, mistakes, choices, refusals, misunderstandings, physical consequences, and social consequences.
+- people pursuing tasks;
+- objects being used, lost, transferred, or misread;
+- money, time, access, and obligations becoming binding;
+- mistakes and incomplete information changing choices;
+- refusals, bargains, interruptions, and consequences;
+- relationship permissions shifting through behavior;
+- characters noticing and judging according to their own knowledge.
 
-If the narrator is merely translating the scene card into abstract prose, realization has failed.
+If the narrator merely translates a Scene Card or state model into abstract explanation, realization has failed even when every sentence is grammatical.
 
-## Mandatory realization loop
+## 03 · Production interface
 
-```mermaid
-flowchart LR
-    A[Context Freeze] --> B[Scene Simulation]
-    B --> C[Event-first Raw Draft]
-    C --> D[Surface Realization]
-    D --> E[Lint A]
-    E --> F{Cluster Fail?}
-    F -- yes --> B
-    F -- no --> G[Independent / Regression Review]
-    G --> H[Rewrite]
-    H --> I[Lint B]
-    I --> J[Reader Engagement]
-```
+Surface work begins **after** scene/story/character simulation has created something worth realizing.
 
-Raw Draft is internal. If a failure cluster comes from one mechanism, regenerate the scene rather than patching isolated sentences.
-
-# HF Family · Default Hard Fail Mechanisms
-
-The canonical IDs are stable mechanism labels. Implementations may add diagnostics, but should not redefine the mechanism casually.
-
-## HF-01 · NON-FUNCTIONAL FRAGMENTATION
-
-Fail when sentence/paragraph fragmentation is used to simulate speed, seriousness, or cinematic cutting without a real state change.
-
-High-risk pattern:
+A typical interface is:
 
 ```text
-micro-action.
-line break.
-reaction.
-line break.
-ordinary fact.
-line break.
+bounded context + scene/character simulation
+→ event-first Raw Draft
+→ Surface Realization
+→ deterministic / semantic surface checks
+→ local rewrite or upstream regeneration
+→ Reader Engagement / continuity / independent gates
 ```
 
-Fast pacing should primarily come from faster information arrival, narrowing choices, immediate opposition, deadlines, consequences, and state change—not typography.
+Raw Draft is internal. Regression bad examples belong to post-generation checking and must not prime the first draft.
 
-Deliberate fragment-heavy projects may opt in through a profile, but fragments still require narrative function.
+Surface repair must respect ownership:
 
-## HF-02 · MICRO-SHOT STORYBOARDING
+- isolated sentence-level defect → local rewrite;
+- repeated same-mechanism cluster → paragraph/block rewrite;
+- multi-mechanism scene cluster → return to Scene Simulation;
+- procedural flatness → causal scene design / Reader Pressure;
+- functional-character collapse → Character Simulation;
+- unowned interpretation → POV / semantic-ownership repair.
 
-Fail when prose decomposes a continuous action into a sequence of camera-like microshots that do not independently matter.
+Do not “fix” surface safety by deleting all energy, humor, surprise, mystery, or rhetorical pleasure.
 
-Repair by restoring the natural narrative unit, not merely joining sentences mechanically.
+## 04 · Rhythm and segmentation failures
 
-## HF-03 · NARRATOR THESIS / AUTHOR SUMMARY
+These mechanisms catch prose that simulates pace or cinematic importance through typography and shot selection rather than story movement.
 
-Fail when the narrator explains the meaning that the scene already established.
+### HF-01 · NON-FUNCTIONAL FRAGMENTATION
 
-High-risk forms:
-- “The real point was…”
-- “This meant…”
-- “Only then did he understand…”
-- “From that moment on…”
-- abstract conclusion after a concrete scene.
+Fail when sentence or paragraph fragmentation is used to imitate speed, seriousness, or cinematic cutting without a meaningful change in information, pressure, decision, ownership, or state.
 
-If deleting the summary preserves the reader's understanding, delete it. If meaning is genuinely missing, add event/choice/evidence before adding explanation.
+Fast pacing should primarily come from faster information arrival, narrowing options, immediate opposition, deadlines, consequence, and state change—not from turning ordinary actions into isolated fragments.
 
-## HF-04 · DESIGN-LANGUAGE LEAK
+A fragment-heavy project may explicitly opt in, but individual fragments still need narrative function.
 
-Fail when planning/database terminology leaks into prose without belonging to character language.
+### HF-02 · MICRO-SHOT STORYBOARDING
 
-Examples: relationship upgrade, pressure node, permission change, information advantage, payoff, arc progression used as narrator explanation.
+Fail when one continuous action is decomposed into camera-like microshots that do not independently matter.
 
-Translate design into observable consequences.
+Repair by restoring the natural narrative unit. Do not merely join sentences mechanically if the underlying scene is still being narrated as a shot list.
 
-## HF-05 · DOSSIER INTRODUCTION
+### HF-20 · SUBJECT / SENTENCE TEMPLATE REPETITION
 
-Fail when a character's first appearance reads like a profile card: age, clothing, job, history, personality, reputation, and current attitude delivered together without scene need.
+Fail when consecutive sentences repeatedly restart with the same character name/pronoun + small action, or when a fixed short-short-long rhythm continues regardless of what the scene is doing.
 
-Reveal only the identity information the current action actually uses.
+Rhythm should follow information, action, voice, and pressure—not a reusable model cadence.
 
-## HF-06 · ORNAMENTAL METAPHOR
+## 05 · Narrator overreach and abstract explanation
 
-Fail when comparison/personification exists primarily to manufacture literary texture, especially generic body/time/memory/city/fate metaphors.
+These mechanisms catch text that explains, advertises, or interprets more than the current narrative owner legitimately can.
 
-This is profile-sensitive: literary profiles may permit higher rhetoric. The fundamental rule is that the figure must improve perception, voice, or meaning—not merely decorate an ordinary fact.
+### HF-03 · NARRATOR THESIS / AUTHOR SUMMARY
 
-## HF-07 · ABSTRACT EMOTION LABEL
+Fail when the narrator explains the meaning that concrete scene evidence already established.
 
-Fail when “complex,” “indescribable,” “strange,” “confused,” “moved,” or equivalent vague interiority substitutes for a concrete judgment object.
+If deleting the summary preserves reader understanding, delete it. If the meaning is genuinely absent, repair event/choice/evidence before adding an abstract conclusion.
 
-Useful interiority names what is being tested, chosen, feared, rejected, remembered, calculated, or socially managed.
+### HF-04 · DESIGN-LANGUAGE LEAK
 
-## HF-08 · EMPTY MICRO-ACTION
+Fail when planning/database language appears in prose as narrator explanation without belonging to a character's actual vocabulary.
 
-Fail when nodding, looking, setting down a cup, rubbing fingers, silence, or similar micro-actions are inserted only to make dialogue “visual.”
+Terms such as relationship upgrade, pressure node, permission delta, payoff, information advantage, or arc progression should normally become observable consequences rather than labels.
 
-Keep an action when it changes timing, ownership, information, relationship, task progression, spatial constraint, or emotional interpretation.
+### HF-07 · ABSTRACT EMOTION LABEL
 
-## HF-09 · RANDOM EMBODIMENT PATCH
+Fail when vague labels such as “complex,” “indescribable,” “strange,” “confused,” or “moved” substitute for a concrete object of judgment, fear, desire, calculation, memory, or social management.
 
-Fail when a previously disembodied scene is “fixed” by sprinkling unrelated gestures rather than restoring task, agenda, object, and space.
+Useful interiority is specific about what is being tested or chosen.
 
-Embodiment must be causal, not decorative blocking.
+### HF-18 · ABSTRACT AGENT
 
-## HF-10 · MECHANICAL DIALOGUE TAGGING
+Default fail when abstractions such as time, memory, history, fate, city, silence, darkness, or destiny are personified mainly to manufacture literary texture.
 
-Fail when speaker ambiguity is solved by attaching `X said` to nearly every turn while voice, agenda, task, and spatial ownership remain absent.
+This is profile-sensitive. The question is whether the figure improves perception, voice, or meaning—not whether personification is globally banned.
 
-Tags are tools; ownership is the goal.
+### HF-25 · EXPLANATION AFTER EVIDENCE
 
-## HF-11 · SPEAKER DRIFT / DISEMBODIED DIALOGUE
+Fail when action/dialogue demonstrates a point and the narrator immediately restates the same point abstractly.
 
-In multi-character scenes, fail when ownership depends primarily on ABAB alternation or turn counting.
+Trust the strongest layer. Do not duplicate meaning.
 
-Reliable ownership may come from:
-- explicit address/name;
-- distinctive agenda or voice;
-- role-specific task/object;
-- unique knowledge;
-- spatial position;
-- causal action;
-- another character's response target.
+### HF-27 · SEMANTIC ROLE MISATTRIBUTION
 
-After a third speaker enters, reset alternation assumptions.
+Fail when psychology, comparison, summary, or evaluative language belongs to the model/narrator rather than the POV or character who could truthfully own that wording now.
 
-## HF-12 · DIALOGUE WORLD ERASURE
+For every interpretive sentence ask: **whose mind, knowledge, social position, and voice can legitimately produce this?**
 
-Fail when extended dialogue makes current work, objects, space, time pressure, and participant agendas disappear.
+## 06 · Decorative significance and synthetic “writerliness”
 
-Conversation happens **inside** a continuing world and task.
+These mechanisms catch prose whose main function is to look literary, cinematic, or important.
 
-## HF-13 · INTERVIEW / TRANSCRIPT DIALOGUE
+### HF-06 · ORNAMENTAL METAPHOR
 
-Fail when dialogue becomes pure information exchange with characters waiting for their assigned lines.
+Fail when comparison or personification is primarily decorative, especially generic metaphors around body, time, memory, city, fate, silence, or history.
 
-Participants should pursue objectives, withhold, misunderstand, interrupt, bargain, test, evade, or act while speaking when appropriate.
+Literary profiles may permit more rhetoric. The invariant is function: perception, voice, meaning, or emotional precision must improve.
 
-## HF-14 · CONSTRAINT LEAK / RULE DEFENSE
+### HF-15 · SIGNIFICANCE INFLATION
 
-Fail when backend rules appear in prose as negative proof that the author obeyed them.
+Fail when an ordinary object or action receives isolated emphasis, reaction pauses, contrast markers, or polished follow-up solely to make it appear meaningful.
 
-Example mechanism: narrator explicitly says nobody suspected a forbidden trope because the project rules prohibit that trope.
+Emphasis earns its space when the beat changes action, inference, risk, relationship, identity, location, resource, or another concrete state.
 
-Would the sentence exist if the backend prohibition had never been written? If not, remove or realize the scene naturally.
+### HF-16 · STAGED ROUTINE REVEAL
 
-## HF-15 · SIGNIFICANCE INFLATION
+Fail when routine identity/context information is arranged as a synthetic movie revelation: inventory, narrow focus, isolated name/date/object, decorative detail, reaction pause.
 
-Fail when an ordinary object/action receives isolated emphasis, contrast words, reaction pauses, or polished follow-up solely to appear meaningful.
+Major irreversible information may deserve ceremony. Routine facts should usually emerge through purposeful action or search.
 
-Keep emphasis when the beat changes action, inference, risk, relationship, identity, location, resource, or another concrete state.
+### HF-19 · MANNERISM CONNECTOR
 
-## HF-16 · STAGED ROUTINE REVEAL
+Words equivalent to “unexpectedly,” “instead,” “just then,” “as if,” “apparently,” or “it turned out” are not banned. Fail when they repeatedly manufacture contrast or significance that causality did not earn.
 
-Fail when routine identity/context information is arranged as synthetic movie revelation:
+### HF-29 · AI POLISH WITHOUT STORY FUNCTION
 
-```text
-inventory
-→ narrow focus
-→ isolated name/date/object
-→ decorative detail
-→ reaction pause
-```
+Catch-all cluster fail for sentences whose primary job is to sound polished, cinematic, profound, or “writerly” while adding no useful perception, voice, causality, tension, relationship, information, or rhythm.
 
-Major irreversible information may deserve emphasis. Routine facts should normally be discovered through purposeful action/search.
+Use a more specific HF code whenever one applies. `HF-29` is not a license for vague dislike.
 
-## HF-17 · PROP CATALOGUE
+## 07 · Embodiment and object-use failures
 
-Fail when concrete detail is produced by inventory rather than character purpose.
+Concrete detail is not automatically good. Embodiment must belong to task, space, agenda, and consequence.
 
-A prop earns space when someone uses, needs, loses, moves, pays for, inspects, misreads, transfers, withholds, or makes a decision because of it.
+### HF-08 · EMPTY MICRO-ACTION
 
-## HF-18 · ABSTRACT AGENT
+Fail when nodding, looking, touching a cup, rubbing fingers, pausing, or similar gestures are inserted only to make dialogue “visual.”
 
-Default fail when abstractions such as memory, time, history, fate, city, silence, darkness, or destiny are personified without a strong voice/perception reason.
+Keep an action when it changes timing, ownership, information, relationship, task progression, spatial constraint, or interpretation.
 
-Profile-sensitive exception is allowed, but generic model decoration is not.
+### HF-09 · RANDOM EMBODIMENT PATCH
 
-## HF-19 · MANNERISM CONNECTOR
+Fail when a disembodied scene is repaired by sprinkling unrelated gestures instead of restoring task, agenda, objects, space, and causal action.
 
-Words equivalent to “unexpectedly / instead / just then / as if / apparently / it turned out” are not banned. Fail when they repeatedly manufacture significance, fake contrast, or smooth missing causality.
+### HF-17 · PROP CATALOGUE
 
-Delete the polished connector/follow-up: if nothing meaningful changes, rewrite or merge.
+Fail when concrete detail is produced as inventory rather than selected by character purpose.
 
-## HF-20 · SUBJECT / SENTENCE TEMPLATE REPETITION
+A prop earns space when someone uses, needs, pays for, moves, loses, transfers, inspects, hides, misreads, withholds, or makes a decision because of it.
 
-Fail when many consecutive sentences restart with the same character name/pronoun + small action, or repeat a fixed short-short-long rhythm regardless of content.
+## 08 · Character and dialogue failures
 
-Sentence rhythm should emerge from information and action structure.
+These mechanisms protect ownership, autonomy, and the continuing world around conversation.
 
-## HF-21 · PROCESS BROADCAST
+### HF-05 · DOSSIER INTRODUCTION
 
-Fail when prose narrates routine operations at equal weight merely because the outline contains them.
+Fail when a character's first appearance dumps age, clothing, job, history, personality, reputation, and attitude together without current scene need.
 
-Compress routine procedure. Expand friction, error, disagreement, choice, risk transfer, cost, relationship movement, surprise, and consequence.
+Reveal identity information when action, relationship, or interpretation uses it.
 
-## HF-22 · CHECKLIST CAUSALITY
+### HF-10 · MECHANICAL DIALOGUE TAGGING
 
-Fail when a scene advances as a list of correct steps rather than consequences that create the next action.
+Fail when ambiguity is solved by attaching `X said` to nearly every turn while voice, agenda, task, knowledge, and spatial ownership remain absent.
 
-Bad:
+Tags are tools. Ownership is the goal.
+
+### HF-11 · SPEAKER DRIFT / DISEMBODIED DIALOGUE
+
+Fail when multi-character dialogue depends mainly on ABAB turn counting or line order.
+
+Ownership may come from explicit address, distinctive agenda/voice, role-specific task/object, unique knowledge, spatial position, causal action, or another character's response target. After a third speaker enters, reset alternation assumptions.
+
+### HF-12 · DIALOGUE WORLD ERASURE
+
+Fail when extended conversation makes current work, objects, space, deadlines, and participant agendas disappear.
+
+Dialogue happens inside a continuing world.
+
+### HF-13 · INTERVIEW / TRANSCRIPT DIALOGUE
+
+Fail when conversation becomes pure information exchange with characters waiting for assigned lines.
+
+Participants should pursue objectives, withhold, misunderstand, interrupt, bargain, test, evade, teach, refuse, or act while speaking when appropriate.
+
+### HF-26 · FUNCTIONAL-CHARACTER COLLAPSE
+
+Fail when a supporting character exists only to explain, praise, obstruct, deliver information, or trigger a scheduled beat.
+
+Important characters retain agenda, work, information limits, emotional residue, relationships, self-interest, and plausible initiative.
+
+## 09 · Constraint-defense failures
+
+These mechanisms catch prose that visibly reveals backend prohibitions or tries to defend itself against imagined criticism.
+
+### HF-14 · CONSTRAINT LEAK / RULE DEFENSE
+
+Fail when project/backend rules appear as negative proof inside prose—for example, the narrator explicitly explains why nobody suspected a forbidden trope simply because project rules prohibit it.
+
+Ask: **would this sentence exist if the backend rule had never been written?** If not, realize the scene naturally.
+
+### HF-28 · CONTEXT DEFENSE PROSE
+
+Fail when text explains why a character did not ask, notice, suspect, or behave according to an imagined trope solely to pre-empt criticism, unless that absence is itself causally relevant.
+
+## 10 · Procedure and causality failures
+
+These mechanisms are especially important in business, legal, political, technical, investigative, and competence-driven fiction where models tend to narrate correct process at equal weight.
+
+### HF-21 · PROCESS BROADCAST
+
+Fail when routine operations receive equal narrative weight merely because the outline lists them.
+
+Compress routine steps. Expand friction, error, disagreement, responsibility transfer, binding resource/time constraints, consequential choice, relationship movement, surprise, and consequence.
+
+### HF-22 · CHECKLIST CAUSALITY
+
+Fail when a scene advances as a sequence of correct steps rather than consequences that create the next action.
+
+Weak structure:
 
 ```text
 open → inspect → correct → check → send
 ```
 
-Better mechanism:
+Stronger causal structure:
 
 ```text
 problem → partial solution reveals cost → choice → reaction → changed options → consequence
 ```
 
-## HF-23 · FAKE CLIFFHANGER / NARRATOR ADVERTISEMENT
+Chronology is not causality.
 
-Fail when chapter-end propulsion is supplied by abstract authorial advertising rather than changed story state.
+## 11 · Suspense and ending failures
 
-Examples:
-- “The real crisis had only begun.”
-- “He did not yet know everything would change.”
+### HF-23 · FAKE CLIFFHANGER / NARRATOR ADVERTISEMENT
 
-Concrete incoming information, consequence, choice, voice, object, reversal, or next-state intrusion is allowed.
+Fail when chapter-end propulsion comes from abstract advertising such as “the real crisis had only begun” instead of changed story state.
 
-## HF-24 · FORCED MYSTERY
+Concrete consequence, incoming information/person/object, choice, reversal, relationship shift, voice, or next-state intrusion can provide forward pull without a mandatory twist.
 
-Fail when ordinary information is withheld or phrased vaguely solely to create cheap suspense.
+### HF-24 · FORCED MYSTERY
 
-Mystery must arise from real information boundaries, uncertainty, deception, missing evidence, or character limitation.
+Fail when ordinary information is withheld or phrased vaguely only to create cheap suspense.
 
-## HF-25 · EXPLANATION AFTER EVIDENCE
+Mystery should arise from real information boundaries, uncertainty, deception, missing evidence, or character limitation.
 
-Fail when concrete action/dialogue demonstrates a point and the narrator immediately restates the same point abstractly.
+## 12 · Paragraph, syntax, and POV fundamentals
 
-Trust the strongest layer. Do not duplicate meaning.
+### Paragraphs are narrative units
 
-## HF-26 · FUNCTIONAL-CHARACTER COLLAPSE
-
-Fail when a supporting character exists only to deliver information, praise the protagonist, obstruct on schedule, or trigger a planned beat.
-
-Important characters retain their own agenda, information limits, work, emotional residue, relationships, and plausible initiative.
-
-## HF-27 · SEMANTIC ROLE MISATTRIBUTION
-
-Fail when interiority, comparison, summary, or evaluative language belongs to the narrator/model rather than the character or focal perspective that could actually own it.
-
-For each psychological or interpretive statement ask: **whose mind/voice could truthfully generate this wording now?**
-
-## HF-28 · CONTEXT DEFENSE PROSE
-
-Fail when the text visibly protects itself from imagined criticism by explaining why a character did not ask, did not suspect, did not notice, or did not behave according to a trope—unless that absence is itself causally relevant.
-
-## HF-29 · AI POLISH WITHOUT STORY FUNCTION
-
-Catch-all cluster fail for sentences whose primary purpose is to sound polished, cinematic, profound, or “writerly” while adding no useful perception, voice, causality, tension, relationship, information, or rhythm.
-
-This label should not be used lazily; identify the more specific HF mechanism whenever possible.
-
-# Paragraph and sentence fundamentals
-
-## Paragraphs are narrative units
-
-A paragraph may combine action, observation, dialogue, response, local judgment, spatial/object change, and immediate consequence. It does not need all of them. It does need a coherent narrative reason for its boundary.
+A paragraph may combine action, observation, dialogue, response, local judgment, spatial/object change, and immediate consequence. It does not need all of them; it needs a coherent reason to end where it ends.
 
 Standalone short paragraphs are strongest when they carry real interruption, irreversible action, key information, high-pressure pause, or directional dialogue.
 
-## Complete syntax by default
+### Complete syntax by default
 
-Commercial/readable prose normally prefers clear complete sentences. Fragments are allowed when they carry genuine semantic impact, not because the model is imitating “pace.”
+Commercial/readable prose normally prefers clear complete sentences. Fragments are available when they carry real semantic impact, not because “short = fast.”
 
-## Detail follows POV task
+### Detail follows POV task
 
-Concrete detail should be selected by what the focal character is doing, needing, fearing, comparing, searching, misunderstanding, or deciding—not by an invisible camera inventory.
+Concrete detail should be selected by what the focal character is doing, needing, fearing, comparing, searching, misunderstanding, deciding, or professionally trained to notice—not by an invisible camera inventory.
 
-## Narrator distance
+### Narrator distance is purposeful
 
-The narrator should not behave like an editor standing outside the scene labeling what everyone feels or explaining how important each beat is. Use behavior, dialogue, choice, object interaction, and decision-specific interiority first.
+Narrator distance may vary by profile and POV, but the narrator should not behave like an editor outside the scene labeling significance and emotion after every beat.
 
-# Failure repair routing
+## 13 · Diagnostic output
 
-```text
-isolated lexical/sentence hit → local rewrite
-repeated same-mechanism hits → paragraph/block rewrite
-multi-mechanism scene cluster → return to Scene Simulation
-procedure/checklist flatness → return to causal scene design
-character-function collapse → Character Simulation
-semantic-role drift → POV/Character ownership repair
+A surface audit should report observable mechanism evidence rather than private reasoning.
+
+```yaml
+artifact_type: surface_audit
+candidate_fingerprint:
+findings:
+  - mechanism_id: HF-XX
+    severity: low|medium|high|cluster
+    evidence_ref:
+    scope: sentence|paragraph|block|scene
+    repair_owner: surface|scene|character|reader|story
+result: pass|rewrite|regenerate
 ```
 
-Do not fix Surface Safety by deleting all energy, emphasis, humor, mystery, or forward pull. Reader Engagement is a separate positive gate.
+A deterministic lint may flag candidate patterns. Final classification of nuanced prose mechanisms may require semantic judgment.
+
+## 14 · Failure routing
+
+Use the smallest repair layer that actually owns the defect:
+
+```text
+isolated lexical/sentence hit        → local rewrite
+repeated same-mechanism hits         → paragraph/block rewrite
+multi-mechanism scene cluster        → Scene Simulation / regenerate scene
+procedure/checklist flatness         → causal scene design + Reader Pressure
+functional-character collapse       → Character Simulation
+semantic-role drift                  → POV / character ownership repair
+story premise/state failure          → Story / Canon layer
+```
+
+Do not patch a structural failure sentence by sentence until the prose is technically safe but lifeless.
+
+## 15 · Invariants
+
+1. Surface rules target mechanisms, not banned-word lists.
+2. Profile-sensitive exceptions must remain intentional and functional.
+3. Backstage design language should normally disappear into lived consequence.
+4. Concrete detail must follow POV/task/causality rather than inventory.
+5. Surface safety cannot substitute for Reader Engagement.
+6. Regression bad examples remain post-generation evidence.
+7. Cluster failure routes upstream rather than accumulating cosmetic patches.
+8. A surface audit diagnoses prose; it never grants Canon authority.
+
+## 16 · Related contracts
+
+- [Reader Engagement](READER_ENGAGEMENT.en.md) — positive quality after the prose clears the floor.
+- [Character & Relationship System](../core/CHARACTER_SYSTEM.en.md) — semantic ownership, speaker ownership, autonomy, and knowledge boundaries.
+- [Story System](../core/STORY_SYSTEM.en.md) — causal scene design and planning responsibility.
+- [Quality Evolution](../docs/quality-evolution.en.md) — typed findings, revision routing, and candidate comparison.
+- [Production Pipeline](../docs/production-pipeline.en.md) — where Surface Realization and post-generation checking occur.
