@@ -5,7 +5,6 @@ on:
     branches: [main]
     paths:
       - 'harness/semantic_workers/model_contract_catalog.json'
-      - 'harness/semantic_workers/model_contracts.json'
       - 'harness/semantic_workers/contracts/**'
       - 'harness/semantic_workers/semantic_worker_router.py'
       - 'harness/semantic_workers/semantic_run_receipt.schema.json'
@@ -15,7 +14,6 @@ on:
     branches: [main]
     paths:
       - 'harness/semantic_workers/model_contract_catalog.json'
-      - 'harness/semantic_workers/model_contracts.json'
       - 'harness/semantic_workers/contracts/**'
       - 'harness/semantic_workers/semantic_worker_router.py'
       - 'harness/semantic_workers/semantic_run_receipt.schema.json'
@@ -51,7 +49,9 @@ jobs:
           catalog = json.loads(catalog_path.read_text(encoding='utf-8'))
           assert catalog['schema'] == 'novelforge_model_contract_catalog_v1'
           assert catalog['loading_policy'] == 'progressive_disclosure'
+          assert 'compatibility_registry' not in catalog
           assert catalog['activation']['owner'] == 'model_or_manager'
+          assert catalog['activation']['exact_contract_id_resolution'] == 'deterministic_runtime'
           assert catalog['activation']['keyword_router_required'] is False
           assert catalog['activation']['load_all_packs_by_default'] is False
           assert catalog['activation']['contract_result_grants_authority'] is False
@@ -78,20 +78,26 @@ jobs:
                       contract_id,
                       'CI-' + contract_id,
                       {'fixture': 'bounded model-facing input'},
-                      registry_path=pack_path,
                       source_session_id='SES-CI',
                   )
                   assert not validate_job(job), (contract_id, validate_job(job))
                   assert job['permissions']['canon_write'] is False
                   assert job['permissions']['os_behavior_write'] is False
                   assert job['permissions']['durable_user_taste_write'] is False
+                  assert job['provenance']['source'] == 'model_contract_pack'
+                  assert job['provenance']['pack_id'] == pack['id']
+                  assert job['provenance']['registry_path'] == pack['path']
               summary.append({'pack': pack['id'], 'contracts': actual})
+
+          assert not (root / 'model_contracts.json').exists(), 'aggregate compatibility registry must not return'
 
           pathlib.Path('semantic-contract-packs-test.json').write_text(
               json.dumps({
                   'semantic_contract_packs_contract': 'PASS',
                   'loading_policy': 'progressive_disclosure',
                   'activation_owner': 'model_or_manager',
+                  'exact_contract_id_resolution': True,
+                  'aggregate_registry_present': False,
                   'packs': summary,
                   'contract_count': len(seen),
                   'model_execution': False,
@@ -99,8 +105,6 @@ jobs:
               encoding='utf-8',
           )
 
-          # Cross-pack receipt integration fixture. This is deliberately a deterministic
-          # fixture rather than a fake semantic gate: it verifies graph/authority wiring only.
           receipt_path = pathlib.Path('evals/fixtures/semantic_workload_smoke.json')
           receipt = json.loads(receipt_path.read_text(encoding='utf-8'))
           schema = json.loads((root / 'semantic_run_receipt.schema.json').read_text(encoding='utf-8'))
@@ -154,7 +158,6 @@ jobs:
               assert artifact['authority'] not in {'locked', 'accepted'} or artifact['role'] == 'accepted_input_reference'
           for step in steps:
               for ref in step.get('artifact_refs', []):
-                  # Semantic steps may emit transient proposal refs not persisted as receipt artifacts.
                   if ref.startswith(('branch:', 'trajectory:', 'context:selected:', 'proposal:active-plan-patch:')):
                       assert ref in artifacts, (step['step_id'], ref)
 
