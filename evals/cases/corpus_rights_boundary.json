@@ -1,0 +1,19 @@
+{
+  "id": "CORPUS-RIGHTS-001",
+  "type": "regression",
+  "domain": "corpus",
+  "judge": "deterministic",
+  "blocks_release": true,
+  "fixture": {
+    "analysis_only_full_text_allowed": false,
+    "unknown_full_text_allowed": false,
+    "discovery_equals_ingestion": false
+  },
+  "assertions": [
+    {"op": "falsy", "path": "analysis_only_full_text_allowed"},
+    {"op": "falsy", "path": "unknown_full_text_allowed"},
+    {"op": "falsy", "path": "discovery_equals_ingestion"},
+    {"op": "file_text_contains", "file": "corpus/CORPUS_POLICY.en.md", "value": "analysis_only"},
+    {"op": "file_text_contains", "file": "corpus/CORPUS_POLICY.en.md", "value": "named-author imitation"}
+  ]
+}
