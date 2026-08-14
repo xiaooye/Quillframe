@@ -1,33 +1,61 @@
-# Session Runtime · v7
+# Session Runtime · Durable execution identity without confusing conversation memory for Canon
 
-## Identity
+<p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>SESSION ≠ RUN ≠ CHECKPOINT</kbd>&nbsp;&nbsp;<kbd>RESUMABLE</kbd></p>
 
-NovelForge separates:
+The Session Runtime gives NovelForge a durable execution identity across chat turns, local agents, external workers, waits, retries, and restarts. It records **where execution is**, not what is true in the novel.
 
-`project/resource != session/thread != run/invocation != checkpoint`
+> **Core invariant ✦** Session/provider history can help resume work. It never becomes Project authority merely because it persisted.
 
-A session is a resumable execution identity. A run is one invocation inside it. A checkpoint is a validated workflow cursor.
+## 01 · Identity model
 
-Provider-native chat/thread/session IDs are optional metadata and never project authority.
+Keep these identities distinct:
 
-## Session roles
+```text
+project / resource
+≠ session / thread
+≠ run / invocation
+≠ checkpoint
+≠ external attempt / handoff
+```
 
-- `manager`: coordinates one task mode and user interaction.
-- `writer`: bounded production worker when separated from manager.
-- `specialist`: task-scoped analysis/simulation/research worker.
-- `semantic_reviewer`: independent reviewer; normally fresh-per-fingerprint.
-- `human_reviewer`: human/peer relay identity.
-- `other`: explicit extension only.
+**Project/resource** identifies the durable fiction or framework resource being worked on.
 
-## Memory policies
+**Session** is a resumable execution container with a role, lifecycle, and memory policy.
+
+**Run** is one invocation/execution episode inside a session.
+
+**Checkpoint** is a validated workflow cursor plus the fingerprints/preconditions needed to resume safely.
+
+Provider-native conversation/thread/session IDs are optional execution metadata. They do not establish story truth.
+
+## 02 · Session roles
+
+Reference roles include:
+
+- `manager` — owns one primary task mode and user interaction;
+- `writer` — bounded drafting worker when separated from manager;
+- `specialist` — task-scoped simulation, research, analysis, or implementation worker;
+- `semantic_reviewer` — reviewer identity used when a separate semantic invocation/session is required;
+- `human_reviewer` — human or peer-relay reviewer;
+- `other` — explicit extension only.
+
+A role describes execution responsibility, not authority. A worker called `semantic_reviewer` does not become independent unless it is genuinely a separate eligible invocation/session with the required blind bounded job.
+
+## 03 · Memory policies
+
+Reference memory policies:
 
 `none | bounded | session | external | checkpoint_only`
 
-Persistent memory is not automatic prompt context. Every invocation still receives an explicit Context Manifest / worker context policy.
+Memory policy describes what a runtime may retain. It does not define what the next prompt automatically receives.
 
-Independent reviewers use `none|bounded`; hidden gold, writer private reasoning, prior expected verdicts, and unrelated project state stay out.
+Every invocation still follows an explicit Context Manifest / context policy.
 
-## State machine
+Independent semantic work normally uses `none` or `bounded`: exclude writer private reasoning, unrelated project state, hidden expected verdicts, previous reviewer answers, and regression answer keys unless the declared rubric explicitly requires some bounded evidence.
+
+## 04 · Lifecycle state machine
+
+Reference lifecycle:
 
 ```text
 created → running
@@ -42,42 +70,136 @@ stale → terminated
 
 Illegal transitions are deterministic errors.
 
-## Checkpoints
+`semantic_pending` is normally a workflow/gate status inside a run, not a reason to invent an impossible session transition.
 
-Checkpoint stable boundaries such as:
+## 05 · Run identity
+
+A run should record enough information to answer:
+
+- which session owns it;
+- which task mode it is executing;
+- which resource/project it targets;
+- what workflow step/cursor is current;
+- what inputs/artifacts are frozen;
+- which external results are pending;
+- what completion/failure state ended the invocation.
+
+A new invocation after an interruption may be a new run inside the same session.
+
+## 06 · Checkpoints
+
+Checkpoint at boundaries where repeating or forgetting work would be dangerous:
+
 - Context Freeze;
-- frozen candidate before independent review;
-- external/user wait;
-- before consequential write;
-- after valid external result binding;
-- before Canon settlement.
+- frozen candidate before a fingerprint-bound review;
+- user/external wait;
+- before consequential Project/Framework write;
+- after binding a valid external result;
+- before Canon settlement;
+- before long-running handoff/discovery/learning work.
 
-Checkpoint records run ID, workflow step, relevant fingerprints, pending gate/handoff, resume policy, and timestamp.
+A useful checkpoint records:
 
-## Resume
+- session ID and run ID;
+- workflow step/cursor;
+- relevant artifact IDs/fingerprints;
+- current authority/lock references;
+- pending gate/event/handoff;
+- approval/write-intent references when applicable;
+- resume policy;
+- timestamp/version.
 
-On resume:
-1. load durable session/checkpoint;
-2. validate framework/project compatibility;
-3. rebuild sparse context against current project authority;
-4. verify referenced artifact fingerprints;
-5. verify approval/write preconditions;
-6. bind pending result if any;
-7. ensure logical result/side effects are not re-applied;
-8. continue from the saved step.
+A checkpoint is not a serialized copy of the whole chat.
 
-## Chat sessions
+## 07 · Resume algorithm
 
-Ordinary chat is a first-class runtime. A current chat can be manager. A separate chat can serve as independent review only when it receives a bounded blind packet and returns typed fingerprint-bound evidence.
+Resume is a fresh validation act, not “continue where the conversation memory feels like it left off.”
 
-No subprocess or API key in the current chat does not automatically mean the overall Harness is blocked.
+```text
+load durable session + checkpoint
+→ revalidate Framework / Project compatibility
+→ revalidate current authority and exact lock/bundle
+→ rebuild sparse context against current state
+→ verify referenced artifact fingerprints
+→ verify approvals / write preconditions
+→ re-resolve capabilities needed by pending external work
+→ bind/validate returned result if present
+→ verify logical result / side effect has not already been consumed
+→ continue saved workflow cursor
+```
 
-## Local agent sessions
+If any required binding has changed materially, stop or route repair rather than silently continuing under stale assumptions.
 
-Codex/Claude/local agents may run full manager sessions or bounded workers. Independent review requires a separate invocation/session even when the same CLI/provider is used.
+## 08 · Side-effect safety
 
-## Durable persistence
+Session persistence must support at-least-once delivery realities without causing duplicate logical application.
 
-`session_runtime.py` validates session objects/lifecycle. The Control Plane persists shared operational state, events, handoffs, leases, and consumption receipts.
+Distinguish:
 
-Session state never grants Canon authority.
+```text
+worker/result delivery
+≠ result validation
+≠ logical result consumption
+≠ downstream side effect
+```
+
+A repeated identical result may be recognized as already consumed. A conflicting result for the same logical identity is a hard stop.
+
+Consequential writes require their own before-state/idempotency/post-condition semantics; session state alone cannot make a write safe.
+
+## 09 · Chat as a first-class runtime
+
+An ordinary current chat may be the manager session. A separate chat can serve as independent semantic review when it receives a bounded blind packet and returns a typed result bound to the exact semantic/artifact fingerprint.
+
+The current chat lacking subprocess/API-key capability does not prove that all Harness routes are unavailable. Runtime routing must consider actually connected/declared alternatives before declaring `semantic_pending`.
+
+A user-mediated peer-chat relay may produce `awaiting_user` while the relay is outstanding.
+
+## 10 · Local agent / service sessions
+
+Codex, Claude Code, local models, MCP workers, provider APIs, GitHub/service jobs, or other runtimes may host manager or worker sessions when their capabilities are proven.
+
+Using the same CLI family for manager and reviewer does not violate independence if the reviewer is a genuinely separate invocation/session with bounded context and no leaked verdict/gold material.
+
+Runtime family is not session identity.
+
+## 11 · Persistence boundary
+
+`session_runtime.py` owns deterministic validation of session/run/checkpoint objects and lifecycle.
+
+The Control Plane owns shared operational state such as events, handoffs, leases, result hashes, and consume-once receipts.
+
+A provider's native memory may be referenced as execution metadata but must not become the only durable record required for safe resume.
+
+## 12 · Failure semantics
+
+Stop or mark explicit failure when:
+
+- session/run/checkpoint identity cannot be reconciled;
+- an artifact fingerprint changed unexpectedly;
+- an approval/write precondition is stale;
+- pending external result cannot be bound to the frozen job;
+- a side effect may already have occurred but no receipt/precondition can prove it;
+- current capability no longer satisfies the pending work;
+- a reviewer packet cannot preserve required independence/context isolation.
+
+Do not reconstruct missing truth from remembered conversation prose.
+
+## 13 · Invariants
+
+1. `project/resource != session != run != checkpoint`.
+2. Provider-native IDs are metadata, not authority.
+3. Persistent memory is not automatic prompt injection.
+4. Resume revalidates current authority and capabilities.
+5. Completed logical effects are not repeated.
+6. Checkpoints store bounded resume state, not private reasoning transcripts.
+7. Session state never grants Canon/Framework-write authority.
+8. Independent review requires independent execution identity when the gate says so.
+
+## 14 · Related contracts
+
+- [Harness Agent](../HARNESS_AGENT.en.md) — manager execution policy.
+- [Orchestration Protocol](../ORCHESTRATION_PROTOCOL.en.md) — mode graphs and checkpoint boundaries.
+- [Runtime Routing](RUNTIME_ROUTING.en.md) — capability-based backend selection.
+- [Control Plane](../control_plane/CONTROL_PLANE.en.md) — shared events, handoffs, leases and receipts.
+- [Context & Memory](../../docs/context-and-memory.en.md) — context/memory authority boundaries.

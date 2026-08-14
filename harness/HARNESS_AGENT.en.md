@@ -1,176 +1,265 @@
-# NovelForge Harness Agent · 7.1
+# Harness Agent · The single manager that keeps fiction work bounded, resumable, and truthful
 
-## Mission
+<p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>ONE MANAGER</kbd>&nbsp;&nbsp;<kbd>EXACTLY ONE TASK MODE</kbd>&nbsp;&nbsp;<kbd>AI-NATIVE</kbd></p>
 
-The Harness is the capability-aware, session-native production coordinator for any NovelForge Project. It routes task modes, curates sparse context, resolves real host capabilities, coordinates bounded specialists, enforces authority/quality gates, checkpoints waits/writes, validates external results, advances durable learning cycles, and exposes only artifacts that satisfy the current mode's user-visible gate.
+The NovelForge Harness is the generic production coordinator that turns a validated fiction project plus a declared task into a bounded, recoverable run. It decides **what must be loaded, which semantic work belongs to models, which invariants belong to deterministic code, when external work needs a checkpoint, and what may become user-visible**.
 
-It owns Generic execution policy; the consuming Project owns concrete story facts and Canon.
+> **Boundary ✦** The Harness owns execution policy. The consuming project owns story facts, Accepted Canon, profiles, current state, plans, manuscripts, and project-specific authority.
 
-## One manager by default
+## 01 · AI-native does not mean model-authoritative
 
-Use one manager unless a separate worker provides real value through:
-- independent semantic judgment;
+NovelForge is AI-native because semantic fiction work belongs to models through model-readable contracts:
+
+- story and scene reasoning;
+- character behavior and integrity judgment;
+- reader reaction and comparison;
+- revision diagnosis;
+- research interpretation;
+- narrative/reader expectation interpretation;
+- memory consolidation proposals;
+- other judgments that cannot honestly be reduced to deterministic rules.
+
+Deterministic code owns what it can prove:
+
+- identity and stable IDs;
+- authority and permissions;
+- fingerprints;
+- lifecycle/state transitions;
+- persistence and transactions;
+- idempotency / consume-once;
+- capability resolution;
+- hard context budgets and stage isolation;
+- typed-result validation;
+- release invariants.
+
+A model result is evidence or a proposal unless a separate authority mechanism explicitly grants more.
+
+## 02 · One manager by default
+
+Use one manager unless a separate worker creates real value through:
+
+- mandatory independent semantic judgment;
 - context isolation;
 - a different proven tool/permission/runtime capability;
-- useful parallel analysis over immutable inputs.
+- useful parallel analysis over immutable inputs;
+- human review.
 
-Do not create agent round-tables merely to simulate sophistication.
+Do not create agent round-tables merely to look sophisticated. Additional workers increase context, coordination, identity, and failure-recovery cost and therefore need a concrete reason to exist.
 
-## Exactly one task mode
+## 03 · Exactly one primary task mode
+
+Every user-visible run has one primary mode:
 
 `DESIGN-BOOK | DESIGN-VOLUME | PLAN-UNIT | PLAN-CHAPTER | DRAFT | REVISE | RESEARCH | SETTLE | AUDIT | CORPUS-INGEST | LEARN | SYSTEM-IMPROVE`
 
-One primary mode per user-visible run. User-explicit mode wins.
+An explicit user-selected mode wins.
 
-## Authority model
+A mode may internally use shared subroutines, but it must not silently produce another mode's user-visible side effect. For example:
 
-Framework mechanisms come from the pinned NovelForge release. Concrete Project identity, profiles, story objects, state, research, plans, manuscripts and Canon come from the validated Project Adapter.
+- DRAFT does not automatically settle Canon;
+- AUDIT does not silently rewrite the manuscript;
+- RESEARCH does not silently adopt a fact into world state;
+- LEARN does not silently promote durable behavior.
 
-Never infer Canon from session history, Corpus, review drafts, semantic judgments, plans, CI, model memory, capability manifests, Learning Cycle state or promotion-gate results.
+## 04 · Bootstrap authority before doing semantic work
 
-## Execution identity
+A fresh manager run resolves, in order:
 
-```text
-project/resource → session → run → checkpoint → event/handoff → result → resume
-```
+1. the current/pinned Framework manifest and execution contract;
+2. the consuming project's manifest + exact framework lock;
+3. Project Adapter validation and logical paths;
+4. exactly one task mode;
+5. manager session + run identity;
+6. authority cutoff and required permissions;
+7. sparse Context Manifest;
+8. current host/runtime capabilities needed by the run.
 
-Provider-native conversation/thread IDs are metadata, not authority.
+Provider history and an old chat session are not substitutes for this bootstrap.
 
-Learning additionally uses a separate identity:
+If the consuming project pins an exact framework bundle/fingerprint, verify that materialization before relying on framework contracts.
 
-```text
-learning_cycle_id → typed learning artifacts → consume-once receipts
-```
+## 05 · Context broker: complete schema, sparse injection
 
-`learning_cycle_id` is not a session ID and never becomes Project Canon.
+Context is both expensive and dangerous: irrelevant context wastes budget; future-plan context can leak; regression examples can prime failure; global knowledge can leak into characters.
 
-## Capability broker
+For every invocation the manager should know:
 
-Before external/tool work:
-1. derive the capability requirements;
-2. load/probe/normalize `novelforge_host_capabilities_v1` through `runtime_capabilities.py`;
-3. resolve availability, permission, user-interaction, model-execution and usage constraints;
-4. route only among eligible capabilities.
+- which object is included;
+- why it is included;
+- its authority class;
+- its source/fingerprint;
+- which stage may receive it;
+- whether it is derived and invalidatable;
+- whether the worker needs the full object or only a bounded projection.
 
-Undeclared capability is unavailable. Provider name, prior-session availability, documentation, a network primitive or model self-assertion is not proof.
+The Harness may use Context Inspector, memory tiers, and editable memory controls, but persistent storage never means automatic prompt injection.
 
-Capability ≠ authority. Technical ability to write a file does not grant Canon-write or Framework-promotion authority.
+Writer-pre-draft, post-draft critic, independent reviewer, and never-inject material remain separate stages.
 
-## Context broker
+See [Context & Memory](../docs/context-and-memory.en.md).
 
-Context is expensive and potentially contaminating.
+## 06 · DRAFT / REVISE production graph
 
-For every invocation:
-1. resolve pinned Framework + live Project authority;
-2. if a bundle fingerprint is locked, verify the materialized Framework bundle;
-3. build a sparse Context Manifest;
-4. load only required story/state/profile/research objects;
-5. pass bounded context to specialists;
-6. keep hidden regression gold and writer private reasoning out of first-pass generation and independent reviewer packets.
-
-Persistent storage does not imply automatic prompt injection.
-
-## DRAFT / REVISE runtime
-
-Generic production graph:
+The generic production graph is a gated sequence, not one completion call:
 
 ```text
 Context Freeze
-→ Story/Canon Preflight
+→ Story / Canon Preflight
 → Scene Simulation
 → Character Simulation
-→ Reader Pressure Preflight
+→ Reader Pressure
 → Event-first Raw Draft
 → Surface Realization
-→ Surface Lint A
-→ post-generation Regression / Independent Review
-→ Rewrite or Regenerate
-→ Surface Lint B
+→ post-generation diagnostics / regression / semantic review
+→ repair at owning mechanism
 → Reader Engagement
-→ Continuity Audit
+→ Continuity / state audit
+→ required independent semantic gate
 → User-visible Gate
 ```
 
-Raw Draft is internal. Surface clean is only a floor; applicable Reader Engagement, independent semantic and continuity gates still matter.
+Projects may insert profile-specific checks, but they must preserve the important boundaries:
 
-Failure routing follows the owning mechanism. Cluster failures go upstream instead of receiving cosmetic sentence patches.
+- Raw Draft is internal;
+- regression bad examples are post-generation only;
+- Surface clean is a floor, not production readiness;
+- SAFE-BUT-FLAT routes upstream;
+- mandatory independent judgment remains actually independent;
+- user acceptance and Canon settlement remain separate.
 
-## Checkpoint / wait / resume
+## 07 · Model-readable semantic contracts
 
-Checkpoint before:
-- user/external waits;
-- mandatory independent review;
-- consequential Project writes;
-- Canon settlement;
-- long-running learning/discovery/semantic handoffs.
+The Harness does not need a separate Python “literary engine” for every judgment. It packages bounded semantic jobs from the registry in `semantic_workers/model_contracts.json`.
 
-Waiting states include `awaiting_user`, `awaiting_external`, and `semantic_pending`.
+A semantic job declares:
 
-On resume:
-1. reload durable session/checkpoint;
-2. revalidate Framework lock/bundle + Project authority;
-3. revalidate referenced fingerprints;
-4. revalidate approvals/write preconditions;
-5. **re-resolve capabilities required by pending tool/external work**;
-6. validate returned result provenance/binding;
-7. consume the logical result once;
-8. continue from the saved workflow cursor.
+- kind and subject;
+- bounded input/context;
+- rubric;
+- output contract;
+- permissions;
+- semantic fingerprint;
+- execution provenance requirements.
 
-Completed side effects and consumed logical results must not repeat after retry/resume.
+The model owns the judgment. Deterministic infrastructure validates identity, fingerprint, permission and typed output before the result can affect workflow state.
 
-## Independent semantic integrity
+Internal diagnostics are not automatically independent gates.
 
-Mandatory independent judgment requires a genuinely separate invocation/session and typed fingerprint-bound result.
+## 08 · Capability broker
 
-Manager may freeze/package/dispatch/await/validate/consume. Manager may not self-review under a different role label.
+Before tool/external work, derive requirements and resolve them against a typed host capability manifest.
 
-Reviewer defaults fresh-per-fingerprint. Changed semantic payload normally creates a new reviewer session. Infrastructure failure may fall back after capability re-resolution; valid semantic rejection routes repair and must not trigger reviewer-shopping.
+A capability claim should answer:
 
-## Adaptive Learning / Corpus
+- is it available now?
+- what proves that?
+- what permission class applies?
+- does it require user interaction?
+- does it execute a model?
+- what cost/usage class applies?
 
-LEARN and SYSTEM-IMPROVE use the durable Adaptive Learning graph:
+Undeclared capability is unavailable. A provider name, executable on PATH, remembered prior session, network primitive, documentation page, or model self-assertion is not sufficient proof of a remote authorization.
+
+**Capability ≠ authority.** The ability to write a file does not grant Canon-write permission.
+
+## 09 · Session, run, checkpoint, result
+
+Keep execution identities distinct:
 
 ```text
-feedback evidence / hypothesis
-→ Corpus gap
-→ capability-aware discovery request
-→ verified discovery + rights/provenance
-→ bounded semantic mechanism analysis
-→ capability/regression eval evidence
-→ promotion candidate
-→ activation/promotion gate
-→ observe / revise / rollback
+project/resource
+→ session
+→ run
+→ checkpoint
+→ event/handoff/job
+→ result
+→ validated consume-once receipt
+→ resume
 ```
 
-Mechanisms:
-- `learning_store.py`: durable evidence/hypothesis/gap/candidate data;
-- `learning_cycle.py`: resumable cycle state, artifact hashes, consume-once receipts;
-- `corpus_scout.py`: discovery requirements;
-- `discovery_runtime.py`: capability-aware dispatch + result provenance/rights validation;
-- `learning_eval.py`: blind fingerprint-bound semantic learning jobs;
-- `promotion_gate.py`: deterministic evidence completeness.
+A provider-native conversation/thread ID may be metadata. It is never story authority.
 
-Discovery ≠ ingestion. Semantic analysis ≠ promotion. Promotion-gate readiness ≠ write authority.
+Checkpoint before:
 
-Model inference alone cannot become durable user taste. General Craft cannot be `promotable` without cross-work evidence, a counterexample/profile boundary, capability + regression eval evidence, provenance, version/rollback and exact-commit green Framework CI.
+- user/external wait;
+- mandatory independent review;
+- consequential Project write;
+- Canon settlement;
+- long-running discovery/learning/semantic handoff.
 
-## Writes
+On resume, revalidate the framework/project authority, artifact fingerprints, approvals/write preconditions, and **current capabilities needed by pending external work**. Do not repeat completed side effects.
 
-Every side effect requires least privilege, exact target, precondition/before-state, idempotency strategy, post-condition, and rollback/trace as appropriate.
+## 10 · Independent semantic integrity
 
-A connector, event, webhook, schedule, Corpus/discovery result, semantic result, learning hypothesis, Learning Cycle state, promotion-gate result or session state never grants Canon authority or Framework-write authority.
+When a gate is defined as independent, the manager may:
 
-## Completion truth
+`freeze → package → checkpoint → dispatch → await → validate → consume → route repair`
 
-Valid user-visible statuses include:
-- complete/review artifact after required gates;
-- awaiting_user;
-- awaiting_external;
-- semantic_pending;
-- failed_gate;
-- settlement_incomplete;
-- blocked/failed with explicit mechanism.
+It may not perform the judgment itself under a different internal role label.
 
-For Learning work, `candidate_ready`, `ready_for_activation`, and `promotable` are internal typed states/proposals, not claims that durable behavior already changed.
+The reviewer should normally be fresh for a materially changed semantic fingerprint. Infrastructure retry may use another eligible transport without changing an unchanged semantic question.
 
-Never call an artifact production-ready when a mandatory gate remains unresolved.
+A valid semantic reject is a valid judgment. It routes repair and must not trigger reviewer shopping.
+
+## 11 · LEARN / CORPUS / SYSTEM-IMPROVE
+
+Learning follows evidence rather than model confidence.
+
+A typical graph is:
+
+```text
+feedback / hypothesis
+→ narrow scope
+→ evidence gap
+→ lawful capability-aware discovery
+→ bounded semantic analysis
+→ counterexample / profile boundary
+→ eval evidence
+→ candidate
+→ explicit activation / promotion gate
+→ observe / rollback
+```
+
+Important boundaries:
+
+- discovery ≠ ingestion;
+- corpus ≠ Canon;
+- semantic analysis ≠ promotion;
+- model inference alone ≠ durable user taste;
+- deterministic promotion readiness ≠ write authority;
+- project-specific story facts must not leak into the generic framework.
+
+## 12 · Writes and settlement
+
+Every consequential side effect should have:
+
+- least privilege;
+- exact target;
+- expected before-state / precondition;
+- idempotency strategy;
+- checkpoint/write intent when appropriate;
+- post-condition verification;
+- trace/rollback semantics.
+
+Canon settlement is only legal after explicit project acceptance and must follow the Canon/State transaction contract.
+
+Connectors, webhooks, schedules, worker results, session state, learning state, CI, corpus, or model judgments never grant write authority by arrival alone.
+
+## 13 · Truthful completion states
+
+User-visible workflow state must tell the truth. Depending on the mode, valid states may include:
+
+`complete · review · awaiting_user · awaiting_external · semantic_pending · failed_gate · blocked · settlement_incomplete`
+
+Internal learning/quality states such as candidate-ready, plateau, promotion-ready, or a passed deterministic validator do not imply that durable behavior or Canon has changed.
+
+Never call an artifact production-ready while a required gate remains unresolved.
+
+## 14 · Related contracts
+
+- [Orchestration Protocol](ORCHESTRATION_PROTOCOL.en.md) — mode graphs and shared subroutines.
+- [Session Runtime](session_runtime/SESSION_RUNTIME.en.md) — identity, lifecycle, checkpoints and resume.
+- [Runtime Routing](session_runtime/RUNTIME_ROUTING.en.md) — capability-based backend selection.
+- [Control Plane](control_plane/CONTROL_PLANE.en.md) — durable events, handoffs, leases and consume-once state.
+- [Semantic Worker Protocol](semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md) — bounded model judgment and independent-review integrity.
+- [Canon & State Model](../core/CANON_STATE.en.md) — authority and settlement.
