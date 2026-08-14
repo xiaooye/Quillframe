@@ -47,6 +47,16 @@ jobs:
           assert d['capabilities']['github_search']['available'] is False
           PY
 
+      - name: Author control and quality evolution contracts
+        run: |
+          python harness/context_inspector.py self-test > context-inspector-test.json
+          python harness/memory_tiers.py self-test > memory-tiers-test.json
+          python quality/findings.py self-test > quality-finding-test.json
+          python quality/reader_panel.py self-test > reader-panel-test.json
+          python quality/quality_evolution.py --db /tmp/novelforge-quality-ci.db self-test --path /tmp/novelforge-quality-selftest-ci.db > quality-evolution-test.json
+          python quality/character_integrity.py self-test > character-integrity-test.json
+          python quality/state_graph.py self-test > state-graph-test.json
+
       - name: Adaptive learning and Corpus contracts
         run: |
           python learning/learning_store.py --db /tmp/novelforge-learning-ci.db self-test > learning-test.json
@@ -139,6 +149,13 @@ jobs:
             'project-sdk-test.json':('project_sdk_contract','PASS'),
             'project-adapter-test.json':('project_adapter_contract','PASS'),
             'runtime-capabilities-test.json':('runtime_capabilities_contract','PASS'),
+            'context-inspector-test.json':('context_inspector_contract','PASS'),
+            'memory-tiers-test.json':('memory_tiers_contract','PASS'),
+            'quality-finding-test.json':('quality_finding_contract','PASS'),
+            'reader-panel-test.json':('reader_panel_contract','PASS'),
+            'quality-evolution-test.json':('quality_evolution_contract','PASS'),
+            'character-integrity-test.json':('character_integrity_contract','PASS'),
+            'state-graph-test.json':('state_graph_contract','PASS'),
             'learning-test.json':('learning_store_contract','PASS'),
             'learning-cycle-test.json':('learning_cycle_contract','PASS'),
             'learning-eval-test.json':('learning_eval_contract','PASS'),
@@ -155,16 +172,28 @@ jobs:
             'local-agent-test.json':('local_agent_adapter_contract','PASS'),
             'cli-test.json':('novelforge_cli_contract','PASS'),
           }
+          loaded={}
           for path,(key,expected) in checks.items():
-              d=json.load(open(path,encoding='utf-8'));assert d[key]==expected,(path,d)
-          cp=json.load(open('control-plane-test.json',encoding='utf-8'))
+              d=json.load(open(path,encoding='utf-8'));loaded[path]=d;assert d[key]==expected,(path,d)
+          cp=loaded['control-plane-test.json']
           assert cp['idempotent_event_ingress'] and cp['lease_claim'] and cp['exactly_once_consumption'] and cp['authority_guard']
-          assert json.load(open('semantic-router-test.json',encoding='utf-8'))['fingerprint_excludes_runtime_lineage'] is True
-          assert json.load(open('learning-cycle-test.json',encoding='utf-8'))['logical_consume_once'] is True
-          assert json.load(open('promotion-gate-test.json',encoding='utf-8'))['auto_behavior_write'] is False
-          assert json.load(open('discovery-runtime-test.json',encoding='utf-8'))['network_execution_performed'] is False
-          assert json.load(open('framework-bundle-test.json',encoding='utf-8'))['tamper_detected'] is True
-          assert json.load(open('cli-test.json',encoding='utf-8'))['model_execution'] is False
+          assert loaded['semantic-router-test.json']['fingerprint_excludes_runtime_lineage'] is True
+          assert loaded['learning-cycle-test.json']['logical_consume_once'] is True
+          assert loaded['promotion-gate-test.json']['auto_behavior_write'] is False
+          assert loaded['discovery-runtime-test.json']['network_execution_performed'] is False
+          assert loaded['framework-bundle-test.json']['tamper_detected'] is True
+          assert loaded['reader-panel-test.json']['independent_gate_satisfied'] is False
+          assert loaded['reader-panel-test.json']['first_shown_bias_detected'] is True
+          assert loaded['context-inspector-test.json']['protected_edit_downgraded_to_proposal'] is True
+          assert loaded['context-inspector-test.json']['pre_draft_regression_isolation'] is True
+          assert loaded['memory-tiers-test.json']['hard_budget'] is True
+          assert loaded['memory-tiers-test.json']['whole_item_or_skip'] is True
+          assert loaded['quality-evolution-test.json']['logical_consume_once'] is True
+          assert loaded['quality-evolution-test.json']['idempotent_replay'] is True
+          assert loaded['quality-evolution-test.json']['plateau_stopping'] is True
+          assert loaded['character-integrity-test.json']['forbidden_context_excluded'] is True
+          assert loaded['state-graph-test.json']['evidence_backed_transition_exempted'] is True
+          assert loaded['cli-test.json']['model_execution'] is False
           PY
 
       - name: Control-plane authority boundary
