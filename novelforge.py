@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
-FRAMEWORK_VERSION = "7.2.0"
+FRAMEWORK_VERSION = "7.3.0"
 PROJECT_SDK = ROOT / "project_sdk.py"
 PROJECT_ADAPTER = ROOT / "project_adapter.py"
 CONTROL = ROOT / "harness" / "control_plane" / "control_plane.py"
@@ -23,6 +23,8 @@ CAPABILITIES = ROOT / "harness" / "runtime_capabilities.py"
 CONTEXT_INSPECTOR = ROOT / "harness" / "context_inspector.py"
 MEMORY_TIERS = ROOT / "harness" / "memory_tiers.py"
 MEMORY_BANK = ROOT / "harness" / "memory_bank.py"
+NARRATIVE_WORLD = ROOT / "harness" / "narrative_world_model.py"
+SCENARIO_FORK = ROOT / "harness" / "scenario_fork.py"
 LEARNING = ROOT / "learning" / "learning_store.py"
 LEARNING_CYCLE = ROOT / "learning" / "learning_cycle.py"
 LEARNING_EVAL = ROOT / "learning" / "learning_eval.py"
@@ -34,6 +36,7 @@ MCP = ROOT / "harness" / "control_plane" / "mcp_stdio.py"
 BUNDLE = ROOT / "release" / "build_framework_bundle.py"
 QUALITY_FINDINGS = ROOT / "quality" / "findings.py"
 READER_PANEL = ROOT / "quality" / "reader_panel.py"
+READER_EXPECTATION = ROOT / "quality" / "reader_expectation.py"
 QUALITY_EVOLUTION = ROOT / "quality" / "quality_evolution.py"
 REVISION_ORCHESTRATOR = ROOT / "quality" / "revision_orchestrator.py"
 CHARACTER_INTEGRITY = ROOT / "quality" / "character_integrity.py"
@@ -103,15 +106,17 @@ def bootstrap(project_root: Path, task_mode: str, build: bool) -> dict[str, Any]
         "quality_policy": "Reader panels and integrity audits are bounded diagnostics; mandatory independent semantic gates remain separate and fingerprint-bound.",
         "revision_policy": "Use specialist-pass findings and owning-mechanism routing; surface clusters regenerate scenes, reader-flatness returns to Reader Pressure/Scene Simulation, and pairwise evolution decides between candidates.",
         "memory_policy": "Context/memory controls operate on overlays, derived views, or authority-aware memory-bank entries; protected Canon references can only produce proposals.",
+        "long_horizon_policy": "Narrative-world retrieval is chapter-safe and accepted/locked by default; reader expectations and scenario branches are diagnostic/exploratory state and never Canon authority.",
     }
 
 
 def doctor() -> dict[str, Any]:
     required = [
         PROJECT_SDK, PROJECT_ADAPTER, CONTROL, SESSION, CAPABILITIES,
-        CONTEXT_INSPECTOR, MEMORY_TIERS, MEMORY_BANK, LEARNING, LEARNING_CYCLE,
-        LEARNING_EVAL, PROMOTION_GATE, CORPUS_SCOUT, DISCOVERY, RIGHTS_GATE, MCP,
-        BUNDLE, QUALITY_FINDINGS, READER_PANEL, QUALITY_EVOLUTION,
+        CONTEXT_INSPECTOR, MEMORY_TIERS, MEMORY_BANK, NARRATIVE_WORLD,
+        SCENARIO_FORK, LEARNING, LEARNING_CYCLE, LEARNING_EVAL, PROMOTION_GATE,
+        CORPUS_SCOUT, DISCOVERY, RIGHTS_GATE, MCP, BUNDLE, QUALITY_FINDINGS,
+        READER_PANEL, READER_EXPECTATION, QUALITY_EVOLUTION,
         REVISION_ORCHESTRATOR, CHARACTER_INTEGRITY, STATE_GRAPH,
     ]
     missing = [str(p.relative_to(ROOT)) for p in required if not p.exists()]
@@ -135,8 +140,11 @@ def self_test() -> int:
         (CONTEXT_INSPECTOR, ["self-test"]),
         (MEMORY_TIERS, ["self-test"]),
         (MEMORY_BANK, ["--db", "/tmp/novelforge-cli-memory.db", "self-test", "--path", "/tmp/novelforge-cli-memory-selftest.db"]),
+        (NARRATIVE_WORLD, ["self-test"]),
+        (SCENARIO_FORK, ["--db", "/tmp/novelforge-cli-scenario.db", "self-test", "--path", "/tmp/novelforge-cli-scenario-selftest.db"]),
         (QUALITY_FINDINGS, ["self-test"]),
         (READER_PANEL, ["self-test"]),
+        (READER_EXPECTATION, ["--db", "/tmp/novelforge-cli-reader-expectation.db", "self-test", "--path", "/tmp/novelforge-cli-reader-expectation-selftest.db"]),
         (QUALITY_EVOLUTION, ["--db", "/tmp/novelforge-cli-quality.db", "self-test", "--path", "/tmp/novelforge-cli-quality-selftest.db"]),
         (REVISION_ORCHESTRATOR, ["self-test"]),
         (CHARACTER_INTEGRITY, ["self-test"]),
@@ -185,8 +193,11 @@ def main() -> int:
     ci = sub.add_parser("context-inspect"); ci.add_argument("context_args", nargs=argparse.REMAINDER)
     mt = sub.add_parser("memory-tiers"); mt.add_argument("memory_args", nargs=argparse.REMAINDER)
     mb = sub.add_parser("memory-bank"); mb.add_argument("memory_bank_args", nargs=argparse.REMAINDER)
+    nw = sub.add_parser("narrative-world"); nw.add_argument("narrative_world_args", nargs=argparse.REMAINDER)
+    sf = sub.add_parser("scenario-fork"); sf.add_argument("scenario_fork_args", nargs=argparse.REMAINDER)
     qf = sub.add_parser("quality-findings"); qf.add_argument("quality_finding_args", nargs=argparse.REMAINDER)
     rp = sub.add_parser("reader-panel"); rp.add_argument("reader_args", nargs=argparse.REMAINDER)
+    rexp = sub.add_parser("reader-expectation"); rexp.add_argument("reader_expectation_args", nargs=argparse.REMAINDER)
     qe = sub.add_parser("quality-evolution"); qe.add_argument("evolution_args", nargs=argparse.REMAINDER)
     ro = sub.add_parser("revision-orchestrator"); ro.add_argument("revision_args", nargs=argparse.REMAINDER)
     ch = sub.add_parser("character-integrity"); ch.add_argument("character_args", nargs=argparse.REMAINDER)
@@ -215,8 +226,11 @@ def main() -> int:
     if args.cmd == "context-inspect": return call(CONTEXT_INSPECTOR, args.context_args or ["self-test"])
     if args.cmd == "memory-tiers": return call(MEMORY_TIERS, args.memory_args or ["self-test"])
     if args.cmd == "memory-bank": return call(MEMORY_BANK, args.memory_bank_args or ["self-test"])
+    if args.cmd == "narrative-world": return call(NARRATIVE_WORLD, args.narrative_world_args or ["self-test"])
+    if args.cmd == "scenario-fork": return call(SCENARIO_FORK, args.scenario_fork_args or ["self-test"])
     if args.cmd == "quality-findings": return call(QUALITY_FINDINGS, args.quality_finding_args or ["self-test"])
     if args.cmd == "reader-panel": return call(READER_PANEL, args.reader_args or ["self-test"])
+    if args.cmd == "reader-expectation": return call(READER_EXPECTATION, args.reader_expectation_args or ["self-test"])
     if args.cmd == "quality-evolution": return call(QUALITY_EVOLUTION, args.evolution_args or ["self-test"])
     if args.cmd == "revision-orchestrator": return call(REVISION_ORCHESTRATOR, args.revision_args or ["self-test"])
     if args.cmd == "character-integrity": return call(CHARACTER_INTEGRITY, args.character_args or ["self-test"])
