@@ -1,0 +1,72 @@
+name: TEMP one-shot framework permission migration
+
+on:
+  push:
+    branches:
+      - system-improve/framework-write-permission-v2
+    paths:
+      - '.github/workflows/_temporary-framework-permission-migrate.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: system-improve/framework-write-permission-v2
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exact live-machine token migration
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          old = 'os_' + 'behavior_write'
+          new = 'framework_behavior_write'
+          allowed = {'.py', '.json', '.yml', '.yaml', '.toml'}
+          excluded_top = {'docs', 'knowledge', 'assets', 'specs'}
+          files = subprocess.check_output(['git','ls-files'], text=True).splitlines()
+          changed=[]
+          for name in files:
+              p=Path(name)
+              if p.suffix not in allowed:
+                  continue
+              if p.parts and p.parts[0] in excluded_top:
+                  continue
+              if p.name.startswith('CHANGELOG'):
+                  continue
+              text=p.read_text(encoding='utf-8')
+              if old not in text:
+                  continue
+              p.write_text(text.replace(old,new),encoding='utf-8')
+              changed.append(name)
+          if not changed:
+              raise SystemExit('expected at least one live machine permission reference')
+          print('migrated', len(changed), 'files')
+          for name in changed:
+              print(name)
+          remaining=[]
+          for name in files:
+              p=Path(name)
+              if p.suffix not in allowed or (p.parts and p.parts[0] in excluded_top):
+                  continue
+              if p.name.startswith('CHANGELOG'):
+                  continue
+              if old in p.read_text(encoding='utf-8'):
+                  remaining.append(name)
+          if remaining:
+              raise SystemExit('legacy permission key remains: '+', '.join(remaining))
+          PY
+      - name: Commit mechanical migration
+        run: |
+          git config user.name 'Wei'
+          git config user.email 'contact@wei-dev.com'
+          git add -A
+          git commit -m 'refactor: rename framework behavior write permission'
+          git push origin HEAD:system-improve/framework-write-permission-v2
