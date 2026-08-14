@@ -1,18 +1,34 @@
-version: 6.6.0
-name: cn-webnovel-agent-runtime
-architecture: deterministic-shell-session-control-plane-workers
+version: 7.0.0
+name: novelforge
+product_name: NovelForge Adaptive Fiction Agent Framework
+architecture: generic-fiction-os-session-native-adaptive-learning
 entry: SKILL.md
 
-authority_domains:
-  runtime_harness:
-    repo: xiaooye/cn_webnovel_agent
-    branch: main
-    owns: [orchestration, sessions, control-plane, runtime-routing, semantic-transports, connectors, workflows]
-  current_story_surface_project:
-    repo: xiaooye/frostloom
-    branch: master
-    owns: [story-policy, surface-policy, reader-policy, project-adapter, novel-bible, canon]
-    migration: external-source-until-separately-gated
+scope:
+  project_agnostic: true
+  built_in_novel_or_canon: false
+  dependency_direction: project-to-framework-only
+  supported_project_contract: novelforge_project_v1
+  project_sdk: project_sdk.py
+
+fundamentals:
+  story_system:
+    en: core/STORY_SYSTEM.en.md
+    zh_cn: core/STORY_SYSTEM.zh-CN.md
+  canon_state:
+    en: core/CANON_STATE.en.md
+    zh_cn: core/CANON_STATE.zh-CN.md
+  character_relationship:
+    en: core/CHARACTER_SYSTEM.en.md
+    zh_cn: core/CHARACTER_SYSTEM.zh-CN.md
+  surface:
+    en: surface/FUNDAMENTALS.en.md
+    zh_cn: surface/FUNDAMENTALS.zh-CN.md
+    mandatory_default: true
+  reader_engagement:
+    en: surface/READER_ENGAGEMENT.en.md
+    zh_cn: surface/READER_ENGAGEMENT.zh-CN.md
+    profile_weighted: true
 
 harness:
   manager: harness/HARNESS_AGENT.md
@@ -35,13 +51,58 @@ harness:
   semantic_openai_adapter: harness/semantic_workers/adapters/openai_responses_adapter.py
   semantic_peer_relay: harness/semantic_workers/peer_chat_relay.py
 
+learning:
+  architecture:
+    en: docs/adaptive-learning.en.md
+    zh_cn: docs/adaptive-learning.zh-CN.md
+  durable_store: learning/learning_store.py
+  state_domains:
+    - preference_evidence
+    - preference_hypotheses
+    - corpus_gaps
+    - learning_candidates
+    - promotion_log
+  scopes: [one_off, project, user_taste, general_craft]
+  model_inference_alone_can_promote_user_taste: false
+  general_craft_requires_counterexample_and_eval: true
+  personal_learning_data_committed_by_default: false
+
+corpus:
+  overview:
+    en: corpus/README.en.md
+    zh_cn: corpus/README.zh-CN.md
+  policy:
+    en: corpus/CORPUS_POLICY.en.md
+    zh_cn: corpus/CORPUS_POLICY.zh-CN.md
+  ingest:
+    en: corpus/CORPUS_INGEST_PROTOCOL.en.md
+    zh_cn: corpus/CORPUS_INGEST_PROTOCOL.zh-CN.md
+  scout: corpus/corpus_scout.py
+  rights_gate: corpus/rights_gate.py
+  rights_classes: [redistributable, analysis_only, unknown]
+  discovery_is_not_ingestion: true
+  full_modern_copyright_mirroring_default: forbidden
+  named_author_imitation_profile: forbidden
+
+project_engineering:
+  contract:
+    en: docs/project-sdk.en.md
+    zh_cn: docs/project-sdk.zh-CN.md
+  manifest: novelforge.toml
+  lockfile: novelforge.lock.json
+  local_framework_materialization: .novelforge/framework
+  change_classes: [micro_content, chapter_unit, structural_feature, canon_migration, release]
+  structural_change_flow: [spec, plan, tasks, implementation, verification, acceptance]
+  deterministic_project_build: required
+  deterministic_project_tests: required
+
 session_runtime:
   identity_model: resource-session-run-checkpoint
   chat_session_support: required
   durable_store: sqlite-reference
   persistent_session_does_not_grant_authority: true
   reviewer_default: fresh-per-fingerprint
-  resume_revalidates_live_authority: true
+  resume_revalidates_project_authority: true
 
 control_plane:
   schema: novel_os_control_plane_v1
@@ -51,22 +112,22 @@ control_plane:
   handoff_claim: transactional-bounded-lease
   result_consumption: exactly-once-logical-receipt
   canon_authority: false
-  os_promotion_authority: false
+  framework_promotion_authority: false
   default_local_db: .novel-os/runtime.db
   mcp:
     protocol_version: 2025-06-18
     local_transport: stdio
-    future_remote_transport: streamable-http
+    remote_transport: streamable-http
     canon_write_tools_exposed: false
 
 runtime_transports:
-  - chatgpt_current_chat
-  - chatgpt_peer_chat
+  - current_chat
+  - peer_chat
   - codex_cli
   - claude_code
   - control_plane_mcp
-  - openai_responses_api
-  - github_actions_bridge
+  - provider_api
+  - github_actions
   - remote_mcp_worker
   - local_model
   - human_reviewer
@@ -80,21 +141,45 @@ semantic:
   semantic_reject_is_transport_failure: false
   result_consume_once: true
 
+quality_layering:
+  order:
+    - framework_fundamentals
+    - genre_platform_profile
+    - project_profile
+    - user_taste_profile
+    - current_request
+  project_may_silently_disable_framework_fundamentals: false
+  explicit_profile_sensitive_exceptions_supported: true
+
+bilingual_docs:
+  languages: [en, zh-CN]
+  human_facing_pair_required: true
+  machine_schema_single_source: true
+  mermaid_diagrams: preferred
+
 normal_ci:
   model_execution: forbidden
   required:
     - py_compile
+    - project-sdk-self-test
+    - learning-store-self-test
+    - corpus-scout-self-test
+    - corpus-rights-gate-self-test
     - session-self-test
     - control-plane-self-test
     - mcp-self-test
     - semantic-router-self-test
     - local-agent-adapter-self-test
     - optional-openai-dry-run
-    - authority-drift-check
+    - framework-project-leakage-check
+    - bilingual-doc-pair-check
+    - manifest-link-check
 
 write_boundary:
   connector_event_grants_canon_authority: false
   webhook_event_grants_canon_authority: false
   schedule_grants_canon_authority: false
   semantic_result_grants_canon_authority: false
-  canon_write_requires_project_settle_and_explicit_acceptance: true
+  corpus_result_grants_canon_authority: false
+  learning_hypothesis_grants_canon_authority: false
+  canon_write_requires_project_acceptance_and_settlement: true
