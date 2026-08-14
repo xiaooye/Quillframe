@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novel-os-event-v1",
+  "title": "Novel Production OS Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "event_id",
+    "event_type",
+    "source",
+    "resource_id",
+    "authority_scope",
+    "idempotency_key",
+    "artifact_fingerprints",
+    "created_at",
+    "payload"
+  ],
+  "properties": {
+    "schema": {"const": "novel_os_event_v1"},
+    "event_id": {"type": "string", "minLength": 1},
+    "event_type": {
+      "enum": [
+        "session.resume_requested",
+        "semantic.requested",
+        "semantic.result_received",
+        "eval.requested",
+        "maintenance.requested",
+        "research.refresh_requested",
+        "feedback.observed",
+        "artifact.acceptance_observed"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["kind"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "actor": {"type": ["string", "null"]},
+        "transport": {"type": ["string", "null"]},
+        "external_ref": {"type": ["string", "null"]}
+      }
+    },
+    "resource_id": {"type": "string", "minLength": 1},
+    "session_id": {"type": ["string", "null"]},
+    "run_id": {"type": ["string", "null"]},
+    "handoff_id": {"type": ["string", "null"]},
+    "authority_scope": {"enum": ["observation", "request", "result"]},
+    "idempotency_key": {"type": "string", "minLength": 1},
+    "artifact_fingerprints": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "created_at": {"type": "string", "minLength": 1},
+    "payload": {"type": "object"}
+  }
+}
