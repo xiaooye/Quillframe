@@ -1,0 +1,133 @@
+{
+  "schema": "novelforge_model_contract_registry_v1",
+  "version": "1",
+  "principle": "Quality judgment belongs to model-readable contracts; deterministic runtime only packages bounded evidence, permissions, fingerprints and typed results.",
+  "contracts": {
+    "reader.reaction": {
+      "kind": "external_review",
+      "purpose": "Simulate a reading-behavior persona's immediate experience of one candidate without pretending to be an independent semantic gate.",
+      "rubric": [
+        "Read only the supplied candidate, context and reader persona.",
+        "Judge the actual reading experience: momentum, attention, confusion, emotional investment, reward and desire to continue.",
+        "Be specific about observable reader effects; do not invent unstated Canon.",
+        "A reader simulation is diagnostic evidence, not mandatory independent review.",
+        "Return only the declared typed judgment."
+      ],
+      "default_personas": {
+        "binge_reader": "Immediate forward pull, momentum, and whether the next chapter feels irresistible.",
+        "genre_native_reader": "Genre promises, freshness of execution, payoff timing, and familiar-pattern fatigue.",
+        "casual_mobile_reader": "Where attention slips, what gets skimmed, confusion, and small-screen reading friction.",
+        "investment_reader": "Which characters and relationships feel worth caring about, and how emotional investment changes.",
+        "reward_sensitive_reader": "Whether the text returns enough reveal, competence, reversal, intimacy, humor or consequence for the attention spent."
+      },
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "would_continue", "continue_desire", "reason"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "tension": {"type": "number", "minimum": 0, "maximum": 1},
+          "pacing": {"type": "number", "minimum": 0, "maximum": 1},
+          "would_continue": {"type": "boolean"},
+          "continue_desire": {"type": "number", "minimum": 0, "maximum": 1},
+          "confusion": {"type": "array", "items": {"type": "string"}},
+          "favorite_beat": {"type": ["string", "null"]},
+          "stumble_beat": {"type": ["string", "null"]},
+          "emotion": {"type": "array", "items": {"type": "string"}},
+          "drop_off_point": {"type": ["string", "null"]},
+          "reason": {"type": "string"}
+        }
+      },
+      "permissions": {
+        "canon_write": false,
+        "os_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "reader_diagnostic"
+      },
+      "independent_gate": false
+    },
+    "reader.compare": {
+      "kind": "external_review",
+      "purpose": "Pairwise reader-experience comparison. Candidate order should be swapped across repeated judgments when bias detection matters.",
+      "rubric": [
+        "Use only the two supplied candidates, shared context and assigned reader persona.",
+        "Prefer pairwise experiential comparison over absolute literary scoring.",
+        "Judge forward pull, character investment and reader reward separately before overall preference.",
+        "Do not infer Canon or author intent beyond supplied evidence.",
+        "Return only the declared typed judgment."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "winner", "reason"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "winner": {"enum": ["A", "B", "tie"]},
+          "reason": {"type": "string"},
+          "stronger_forward_pull": {"enum": ["A", "B", "tie"]},
+          "stronger_character_investment": {"enum": ["A", "B", "tie"]},
+          "more_rewarding": {"enum": ["A", "B", "tie"]}
+        }
+      },
+      "permissions": {
+        "canon_write": false,
+        "os_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "reader_comparison"
+      },
+      "independent_gate": false
+    },
+    "character.integrity": {
+      "kind": "artifact_audit",
+      "purpose": "Judge whether an important character remains causally and psychologically coherent inside the supplied scene and typed established state.",
+      "rubric": [
+        "Use only the supplied scene excerpt and typed character state.",
+        "Evaluate agenda alignment, knowledge boundary, voice, relationship position, spatial/task state and surprise-within-consistency.",
+        "Do not assume manager, narrator, reader or research knowledge is character knowledge.",
+        "Intentional change is valid when the scene supplies sufficient transition evidence.",
+        "Flag only evidence-supported problems and cite candidate-side plus established-state evidence."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "findings"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "findings": {"type": "array"}
+        }
+      },
+      "permissions": {
+        "canon_write": false,
+        "os_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "character_integrity_observation"
+      },
+      "independent_gate": false
+    },
+    "revision.diagnose": {
+      "kind": "artifact_audit",
+      "purpose": "Diagnose the candidate across only the requested quality dimensions, then route each meaningful failure to the mechanism that owns the repair.",
+      "rubric": [
+        "Diagnose before rewriting. Do not perform a generic polish pass.",
+        "Use the supplied requested dimensions and authority/context only.",
+        "Distinguish story, plan, scene, character, reader-pressure, surface, continuity, context/memory and research failures.",
+        "SAFE-BUT-FLAT or reader-grip failure is not a line-edit problem; route it back to Reader Pressure and Scene Simulation.",
+        "A cluster of surface failures may require whole-scene Surface Realization rather than local patches.",
+        "Return evidence-chained findings and repair owners; do not mutate Canon."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "findings", "repair_sequence"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "findings": {"type": "array"},
+          "repair_sequence": {"type": "array"}
+        }
+      },
+      "permissions": {
+        "canon_write": false,
+        "os_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "revision_diagnostic"
+      },
+      "independent_gate": false
+    }
+  }
+}
