@@ -1,16 +1,87 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" role="img" aria-labelledby="title desc">
-<title id="title">NovelForge compared with direct AI fiction alternatives</title><desc id="desc">Six comparison cards for Sudowrite, NovelCrafter, NovelClaw, Novel OS, AuthorAgent, and autonovel, highlighting what each does well and where NovelForge differs.</desc>
-<rect width="1200" height="820" rx="28" fill="#FFFDFC"/><rect x="1" y="1" width="1198" height="818" rx="27" fill="none" stroke="#E2DAE8" stroke-width="2"/>
-<text x="52" y="60" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="16" font-weight="700" fill="#796BC4" letter-spacing="2">DIRECT FICTION ALTERNATIVES</text>
-<text x="52" y="106" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="34" font-weight="750" fill="#241D2B">Different tools optimize different parts of novel production</text>
-<text x="52" y="139" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-size="17" fill="#62556D">NovelForge is strongest when authority, resumability, independent QA, and long-running project state are the hard problem.</text>
-<text x="52" y="178" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" font-weight="750" fill="#4F8FBA" letter-spacing="1.4">AUTHOR PRODUCTS</text>
-<g transform="translate(52 198)"><rect width="535" height="154" rx="20" fill="#F7FCFF" stroke="#B8D9EC"/><text x="24" y="34" font-family="ui-sans-serif,system-ui,sans-serif" font-size="22" font-weight="750" fill="#241D2B">Sudowrite</text><text x="24" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#4F8FBA">Strong at</text><text x="98" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">creative drafting · Story Bible · prose assistance</text><text x="24" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#D6679A">NovelForge differs</text><text x="139" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">explicit Canon lifecycle + production/runtime contracts</text><text x="24" y="122" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#62556D">Best fit: writers who want an integrated creative partner and fast prose help.</text></g>
-<g transform="translate(613 198)"><rect width="535" height="154" rx="20" fill="#FAF8FF" stroke="#CFC7EE"/><text x="24" y="34" font-family="ui-sans-serif,system-ui,sans-serif" font-size="22" font-weight="750" fill="#241D2B">NovelCrafter</text><text x="24" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#796BC4">Strong at</text><text x="98" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">Codex · planning · world/series organization · model choice</text><text x="24" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#D6679A">NovelForge differs</text><text x="139" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">transactional authority + typed runtime + independent gates</text><text x="24" y="122" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#62556D">Best fit: authors who want a polished structured writing workspace.</text></g>
-<text x="52" y="391" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" font-weight="750" fill="#796BC4" letter-spacing="1.4">AGENT / FRAMEWORK SYSTEMS</text>
-<g transform="translate(52 411)"><rect width="535" height="154" rx="20" fill="#FFFAFC" stroke="#EDC3D6"/><text x="24" y="34" font-family="ui-sans-serif,system-ui,sans-serif" font-size="22" font-weight="750" fill="#241D2B">NovelClaw</text><text x="24" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#D6679A">Strong at</text><text x="98" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">visual workspace · editable memory · run inspection</text><text x="24" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#796BC4">NovelForge differs</text><text x="139" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">formal authority classes + settlement + semantic integrity</text><text x="24" y="122" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#62556D">Best fit: teams wanting a visible long-form writing control surface.</text></g>
-<g transform="translate(613 411)"><rect width="535" height="154" rx="20" fill="#FFFCF5" stroke="#E8D2A5"/><text x="24" y="34" font-family="ui-sans-serif,system-ui,sans-serif" font-size="22" font-weight="750" fill="#241D2B">Novel OS</text><text x="24" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#BE892F">Strong at</text><text x="98" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">5-agent editorial pipeline · memory · continuity checks</text><text x="24" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#796BC4">NovelForge differs</text><text x="139" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">one-manager default + blind reviewer contract + reader QA</text><text x="24" y="122" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#62556D">Best fit: users who prefer a fixed editorial-team metaphor.</text></g>
-<g transform="translate(52 586)"><rect width="535" height="154" rx="20" fill="#F2FBF7" stroke="#B7DEC9"/><text x="24" y="34" font-family="ui-sans-serif,system-ui,sans-serif" font-size="22" font-weight="750" fill="#241D2B">AuthorAgent</text><text x="24" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#4D9B7D">Strong at</text><text x="98" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">local-first book pipeline · memory · publishing workflow</text><text x="24" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#796BC4">NovelForge differs</text><text x="139" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">narrower focus on fiction-production integrity and QA</text><text x="24" y="122" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#62556D">Best fit: authors who want an end-to-end local author/publishing agent.</text></g>
-<g transform="translate(613 586)"><rect width="535" height="154" rx="20" fill="#F8F5FA" stroke="#D8CFDE"/><text x="24" y="34" font-family="ui-sans-serif,system-ui,sans-serif" font-size="22" font-weight="750" fill="#241D2B">autonovel</text><text x="24" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#62556D">Strong at</text><text x="98" y="61" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">autonomous seed → novel → revise → publish assets</text><text x="24" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="700" fill="#796BC4">NovelForge differs</text><text x="139" y="95" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">project-agnostic contracts + resumable/user-gated production</text><text x="24" y="122" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#62556D">Best fit: experimentation with highly autonomous novel generation.</text></g>
-<text x="52" y="784" font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" fill="#62556D">Snapshot: 2026-08-14 · This is a fit comparison, not a universal ranking. Research systems such as StoryWriter and MAGNET/ATLAS are covered separately.</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1010" role="img" aria-labelledby="title desc">
+<title id="title">NovelForge direct novel-agent comparison matrix</title>
+<desc id="desc">A detailed comparison matrix of NovelForge, NovelClaw, Novel OS, AuthorAgent, and autonovel across story authority, character state, runtime, QA, provider choice, local operation, publishing, and user experience.</desc>
+<style>
+  .h{font:750 30px ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;fill:#241D2B}.k{font:700 14px ui-sans-serif,system-ui,sans-serif;letter-spacing:1.6px;fill:#796BC4}.sub{font:15px ui-sans-serif,system-ui,sans-serif;fill:#62556D}.ph{font:750 17px ui-sans-serif,system-ui,sans-serif;fill:#241D2B}.ps{font:12.5px ui-sans-serif,system-ui,sans-serif;fill:#62556D}.rh{font:700 14px ui-sans-serif,system-ui,sans-serif;fill:#241D2B}.c{font:13.5px ui-sans-serif,system-ui,sans-serif;fill:#3C3245}.cf{font:700 13.5px ui-sans-serif,system-ui,sans-serif;fill:#241D2B}.note{font:12.5px ui-sans-serif,system-ui,sans-serif;fill:#62556D}
+</style>
+<rect width="1400" height="1010" rx="28" fill="#FFFDFC"/><rect x="1" y="1" width="1398" height="1008" rx="27" fill="none" stroke="#E2DAE8" stroke-width="2"/>
+<text class="k" x="44" y="54">DIRECT NOVEL-AGENT MATRIX</text><text class="h" x="44" y="96">Compare mechanisms, not marketing adjectives</text><text class="sub" x="44" y="126">The cells name each system's actual mechanism or product posture. Blanketing everything with stars would hide the important architectural differences.</text>
+<rect x="280" y="154" width="216" height="786" rx="18" fill="#FAF8FF" stroke="#BEB3E5" stroke-width="2"/>
+<rect x="44" y="154" width="1296" height="786" rx="18" fill="none" stroke="#E2DAE8"/>
+<path d="M280 154V940M496 154V940M712 154V940M928 154V940M1144 154V940" stroke="#E8E2EC"/>
+<path d="M44 240H1340M44 310H1340M44 380H1340M44 450H1340M44 520H1340M44 590H1340M44 660H1340M44 730H1340M44 800H1340M44 870H1340M44 940H1340" stroke="#E8E2EC"/>
+<text class="rh" x="62" y="203">Capability</text>
+<g transform="translate(280 0)"><text class="ph" x="108" y="190" text-anchor="middle">NovelForge</text><text class="ps" x="108" y="213" text-anchor="middle">governed fiction framework</text></g>
+<g transform="translate(496 0)"><text class="ph" x="108" y="190" text-anchor="middle">NovelClaw</text><text class="ps" x="108" y="213" text-anchor="middle">visual long-form workspace</text></g>
+<g transform="translate(712 0)"><text class="ph" x="108" y="190" text-anchor="middle">Novel OS</text><text class="ps" x="108" y="213" text-anchor="middle">5-agent editorial framework</text></g>
+<g transform="translate(928 0)"><text class="ph" x="108" y="190" text-anchor="middle">AuthorAgent</text><text class="ps" x="108" y="213" text-anchor="middle">local-first author agent</text></g>
+<g transform="translate(1144 0)"><text class="ph" x="98" y="190" text-anchor="middle">autonovel</text><text class="ps" x="98" y="213" text-anchor="middle">autonomous novel pipeline</text></g>
+
+<text class="rh" x="62" y="278">Story truth / Canon</text>
+<text class="cf" x="298" y="270"><tspan x="298">Transactional Canon</tspan><tspan class="c" x="298" dy="19">plan/review/memory stay separate</tspan></text>
+<text class="c" x="514" y="270"><tspan x="514">Editable memory banks</tspan><tspan x="514" dy="19">workspace-centered state</tspan></text>
+<text class="c" x="730" y="270"><tspan x="730">Central StoryState JSON</tspan><tspan x="730" dy="19">approved chapter workflow</tspan></text>
+<text class="c" x="946" y="270"><tspan x="946">Entity database</tspan><tspan x="946" dy="19">contradiction evidence</tspan></text>
+<text class="c" x="1162" y="270"><tspan x="1162">canon.md hard facts</tspan><tspan x="1162" dy="19">pipeline propagation</tspan></text>
+
+<text class="rh" x="62" y="348">Character state</text>
+<text class="cf" x="298" y="340"><tspan x="298">Knowledge + agenda</tspan><tspan class="c" x="298" dy="19">location · interests · aftermath</tspan></text>
+<text class="c" x="514" y="340"><tspan x="514">Character surfaces</tspan><tspan x="514" dy="19">editable project memory</tspan></text>
+<text class="c" x="730" y="340"><tspan x="730">Location + emotion</tspan><tspan x="730" dy="19">last appearance + events</tspan></text>
+<text class="c" x="946" y="340"><tspan x="946">Persona critics</tspan><tspan x="946" dy="19">voice + knowledge checks</tspan></text>
+<text class="c" x="1162" y="340"><tspan x="1162">Character registry</tspan><tspan x="1162" dy="19">world/outline context</tspan></text>
+
+<text class="rh" x="62" y="418">Resumable execution</text>
+<text class="cf" x="298" y="410"><tspan x="298">Session + checkpoint</tspan><tspan class="c" x="298" dy="19">leases · receipts · consume-once</tspan></text>
+<text class="c" x="514" y="410"><tspan x="514">Sessions + run inspection</tspan><tspan x="514" dy="19">jobs/logs stay visible</tspan></text>
+<text class="c" x="730" y="410"><tspan x="730">Persistent story state</tspan><tspan x="730" dy="19">phase-by-phase CLI pipeline</tspan></text>
+<text class="c" x="946" y="410"><tspan x="946">Book journey pipeline</tspan><tspan x="946" dy="19">local autonomous workflow</tspan></text>
+<text class="c" x="1162" y="410"><tspan x="1162">state.json pipeline</tspan><tspan x="1162" dy="19">phase progress + retries</tspan></text>
+
+<text class="rh" x="62" y="488">Independent semantic QA</text>
+<text class="cf" x="298" y="480"><tspan x="298">Fresh invocation/session</tspan><tspan class="c" x="298" dy="19">fingerprint-bound · no shopping</tspan></text>
+<text class="c" x="514" y="480"><tspan x="514">No hard independence</tspan><tspan x="514" dy="19">contract exposed</tspan></text>
+<text class="c" x="730" y="480"><tspan x="730">Guardian agent</tspan><tspan x="730" dy="19">separate editorial role</tspan></text>
+<text class="c" x="946" y="480"><tspan x="946">Judge/critic loops</tspan><tspan x="946" dy="19">specialist quality passes</tspan></text>
+<text class="c" x="1162" y="480"><tspan x="1162">Separate judge model</tspan><tspan x="1162" dy="19">Opus judge vs Sonnet writer</tspan></text>
+
+<text class="rh" x="62" y="558">Reader-quality model</text>
+<text class="cf" x="298" y="550"><tspan x="298">Reader Engagement gate</tspan><tspan class="c" x="298" dy="19">pressure · reward · forward pull</tspan></text>
+<text class="c" x="514" y="550"><tspan x="514">Review/manuscript surfaces</tspan><tspan x="514" dy="19">human-steered inspection</tspan></text>
+<text class="c" x="730" y="550"><tspan x="730">Editor/tension modes</tspan><tspan x="730" dy="19">quality scores by chapter</tspan></text>
+<text class="c" x="946" y="550"><tspan x="946">Synthetic reader panels</tspan><tspan x="946" dy="19">strongest in market assets</tspan></text>
+<text class="c" x="1162" y="550"><tspan x="1162">4-persona reader panel</tspan><tspan x="1162" dy="19">novel-level evaluation</tspan></text>
+
+<text class="rh" x="62" y="628">Deterministic QA</text>
+<text class="cf" x="298" y="620"><tspan x="298">Schemas + authority + CI</tspan><tspan class="c" x="298" dy="19">blind queue hygiene + invariants</tspan></text>
+<text class="c" x="514" y="620"><tspan x="514">Inspectable runs/logs</tspan><tspan x="514" dy="19">not a literary invariant layer</tspan></text>
+<text class="c" x="730" y="620"><tspan x="730">Continuity engine</tspan><tspan x="730" dy="19">deterministic pre-checks</tspan></text>
+<text class="c" x="946" y="620"><tspan x="946">Security/tests/evidence</tspan><tspan x="946" dy="19">quality loop mixes methods</tspan></text>
+<text class="c" x="1162" y="620"><tspan x="1162">Mechanical slop scorer</tspan><tspan x="1162" dy="19">regex + structural heuristics</tspan></text>
+
+<text class="rh" x="62" y="698">Failure routing</text>
+<text class="cf" x="298" y="690"><tspan x="298">Route to owning mechanism</tspan><tspan class="c" x="298" dy="19">story/character/reader/surface</tspan></text>
+<text class="c" x="514" y="690"><tspan x="514">Human-steered iteration</tspan><tspan x="514" dy="19">workspace continuation loop</tspan></text>
+<text class="c" x="730" y="690"><tspan x="730">Fixed editorial pipeline</tspan><tspan x="730" dy="19">Architect→Scribe→Editor…</tspan></text>
+<text class="c" x="946" y="690"><tspan x="946">Judge→reflect→revise</tspan><tspan x="946" dy="19">specialist revision passes</tspan></text>
+<text class="c" x="1162" y="690"><tspan x="1162">Evaluate→retry→revise</tspan><tspan x="1162" dy="19">score/plateau-driven loops</tspan></text>
+
+<text class="rh" x="62" y="768">Provider / runtime choice</text>
+<text class="cf" x="298" y="760"><tspan x="298">Chat · CLI · MCP · API</tspan><tspan class="c" x="298" dy="19">CI · local model · human</tspan></text>
+<text class="c" x="514" y="760"><tspan x="514">Configurable providers</tspan><tspan x="514" dy="19">local/web deployment</tspan></text>
+<text class="c" x="730" y="760"><tspan x="730">13+ providers + local</tspan><tspan x="730" dy="19">OpenAI-compatible endpoints</tspan></text>
+<text class="c" x="946" y="760"><tspan x="946">Gemini · Claude · OpenAI</tspan><tspan x="946" dy="19">Ollama · OpenRouter · more</tspan></text>
+<text class="c" x="1162" y="760"><tspan x="1162">Anthropic core</tspan><tspan x="1162" dy="19">fal.ai / ElevenLabs optional</tspan></text>
+
+<text class="rh" x="62" y="838">Local / self-host</text>
+<text class="cf" x="298" y="830">Yes · framework-first</text><text class="c" x="514" y="830">Yes · web workspace</text><text class="c" x="730" y="830">Yes · CLI framework</text><text class="c" x="946" y="830">Yes · local-first Studio</text><text class="c" x="1162" y="830">Yes · local pipeline + APIs</text>
+
+<text class="rh" x="62" y="908">Publishing / author UX</text>
+<text class="cf" x="298" y="900"><tspan x="298">Not the current focus</tspan><tspan class="c" x="298" dy="19">framework UX still growing</tspan></text>
+<text class="c" x="514" y="900"><tspan x="514">Visual manuscript workspace</tspan><tspan x="514" dy="19">storyboard + downloads</tspan></text>
+<text class="c" x="730" y="900"><tspan x="730">CLI + Markdown export</tspan><tspan x="730" dy="19">framework-oriented</tspan></text>
+<text class="c" x="946" y="900"><tspan x="946">DOCX/EPUB/KDP + audio</tspan><tspan x="946" dy="19">broad author/publishing stack</tspan></text>
+<text class="c" x="1162" y="900"><tspan x="1162">PDF/ePub/audio/art</tspan><tspan x="1162" dy="19">landing page generation</tspan></text>
+
+<text class="note" x="44" y="973">Direct products only. Sudowrite and NovelCrafter are covered separately as mature author applications; general agent runtimes are covered under implementation influences.</text>
 </svg>
