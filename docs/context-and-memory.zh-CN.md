@@ -1,119 +1,250 @@
 <div align="center">
   <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom 标志" width="54" />
-  <p><kbd>作者控制</kbd>&nbsp;&nbsp;<kbd>稀疏上下文</kbd>&nbsp;&nbsp;<kbd>记忆 ≠ 正典</kbd></p>
+  <p><strong>上下文与记忆 · 让作者看得见工作集，也让“记住了”永远不会冒充“发生了”</strong></p>
+  <p><kbd>语义选择</kbd>&nbsp;&nbsp;<kbd>权威检查</kbd>&nbsp;&nbsp;<kbd>硬预算</kbd>&nbsp;&nbsp;<kbd>作者控制</kbd>&nbsp;&nbsp;<kbd>可重建记忆</kbd></p>
+  <p><a href="context-and-memory.en.md">English</a> · <a href="README.zh-CN.md">文档中心</a></p>
 </div>
 
-# 上下文与记忆 · 看清模型看到了什么，但不让“记住了”冒充“发生了”
+# 上下文与记忆
 
-NovelForge 7.2 在上下文与派生记忆外面增加了一层作者可见的控制面。它的目标不是再造一套 Story Bible，而是让**选择、压缩、来源和人工干预都可以检查**，同时继续守住原有的权威边界。
+NovelForge 明确区分四件经常被混在一起的东西：**项目里存了什么、这次运行允许看到什么、模型认为当前什么最相关、哪些内容只是可重建的派生记忆。**
 
-> **核心不变量 ✦** 上下文决定一次运行可以看到什么；记忆负责跨运行携带有用的派生信息。两者都不能自行升级成正典。
+当前实现故意把语义选择与确定性控制拆开：
 
-## 01 · 先分清三件事
+> **“什么对当前任务真正相关”由模型通过 `context.select` 判断；权威等级、阶段隔离、作者显式控制、来源绑定、硬预算、整项装载与受保护编辑规则由确定性代码负责。**
 
-**项目权威状态**回答“故事里什么是真的”。已经接受或锁定的事实仍由下游小说项目拥有。
+这样可以避免一个旧摘要、会话笔记或启发式“相关度分数”悄悄变成 prompt truth，更不会让它升级成 Canon。
 
-**Context Manifest / 上下文清单**回答“这次运行允许收到什么、在哪个阶段收到、为什么收到”。它应当稀疏、任务限定，并且可以随运行结束而重建。
+---
 
-**Memory Bank / 记忆库**保存可编辑的运行时记忆、派生记忆和提案型工作记忆。它可以展示受保护的正典引用，但这些引用只是只读快照，不是另一套可以随手修改的正典表。
+## 01 · 先分清四层
 
-把三者分开，才能避免摘要、旧会话笔记、语料观察或一次临时试验因为“系统记住了”就被误当成故事事实。
+**项目权威**回答：这本小说里什么是真的？`accepted` / `locked` 事实仍然由 Project 拥有。
 
-## 02 · Context Inspector：把上下文选择公开出来
+**Context Manifest**回答：哪些材料在当前 run、当前 stage 下具备进入上下文的资格？
 
-`harness/context_inspector.py` 把 Context Manifest 变成可检查的控制面。每一项都可以说明：
+**语义选择**回答：在这些合法候选里，哪些内容对当前任务真正有用？这属于模型解释，通过 `context.select` 完成。
+
+**Memory Bank**保存运行时、派生或 proposal 型记忆，并记录 provenance 与版本；它可以引用 Canon，却不是第二份 Canon database。
+
+最简单的心智模型是：
+
+**存储 → 合法候选 → 语义选择 → 硬预算装载 → 模型工作上下文**
+
+每一个箭头都有不同 owner。
+
+---
+
+## 02 · Context Inspector 检查权威与资格，不判断文学相关度
+
+`harness/context_inspector.py` 实现 `novelforge_context_inspector_v2`。
+
+每条 Context Manifest item 会被规范化为可检查字段，例如：
 
 - 稳定 ID 与内容类别；
-- 来源引用与来源指纹；
-- 权威等级；
-- 为什么被选中；
-- 在哪个阶段允许注入；
-- 相关度与显式优先级；
-- 是否被固定；
-- 是否属于可重建的派生视图。
+- source reference 与 source fingerprint；
+- authority class；
+- inclusion reason；
+- 允许进入的 stages；
+- 显式 numeric priority；
+- pinned 状态；
+- 是否为 derived view；
+- hidden / invalidated 状态；
+- 调用方附带的 metadata。
 
-注入阶段被明确划开：
+Inspector **明确拒绝 `relevance` 字段**。语义相关性不是一项确定性 manifest 属性。
 
-- `writer_pre_draft`：可以影响首轮正文生成；
-- `post_draft_critic`：只有候选稿出现以后才能使用的审查证据；
-- `independent_reviewer`：提供给外部 / 独立审阅者的受限材料；
-- `never`：可以保存，但绝不能被系统自动注入。
+确定性排序只遵守：
 
-正是这层阶段隔离，让回归坏例、隐藏答案、尚未接受的提案和只供审查的证据能够存在，却不会污染首轮写作。
+**pinned → explicit priority → stable ID**
 
-## 03 · 作者控制是“选择覆盖层”，不是正典写权限
+这代表作者 / runtime 的显式控制，不代表系统声称“这条信息在文学上比另一条更重要”。
 
-低权威控制可以：
+---
 
-- 固定或取消固定某条上下文；
-- 调整选择优先级；
-- 隐藏某个派生视图；
-- 将派生视图标记为失效，要求重新构建。
+## 03 · Stage isolation 防止错误证据污染 Writer
 
-这些操作改变的是**上下文选择方式**，不是故事事实。
+Context item 可以声明允许进入的 stage：
 
-如果作者通过记忆 / 控制面尝试修改 `locked` 或 `accepted` 引用，NovelForge 不会直接改原记录，而是生成一条带来源链的**提案**。
+`writer_pre_draft` —— 可以影响首轮正文生成；
 
-这使作者可以明确表达“我想改这个事实”，同时避免 UI 假装“这个事实已经改进正典了”。
+`post_draft_critic` —— 只有候选稿出现以后才合法，例如相关 regression evidence；
 
-## 04 · 分层派生记忆
+`independent_reviewer` —— 可以封装进真正独立审查的 bounded packet；
 
-`harness/memory_tiers.py` 只对**已经存在的派生记忆或项目提供的记忆项**做预算分配；它本身不擅自总结正典。
+`never` —— 可以持久保存，但不得自动注入。
 
-三层记忆分别是：
+Regression、hidden gold、expected verdict、answer key 等 sensitive class 如果被放进 `writer_pre_draft`，Inspector 会直接拒绝。
 
-**Hot / 热层**：显式固定、与当前事件重叠、与当前参与人物高度相关的内容。  
-**Working / 工作层**：仍有较高相关度或优先级，但不直接绑定当前场景的派生信息。  
-**Archival / 归档层**：保留引用，但不消耗当前活跃上下文预算。
+这是一条确定性 contamination boundary，不需要靠模型“自觉不要偷看”。
 
-预算采用“整项进入或整项跳过”。系统不会为了塞进 token 预算，就把一条有语义边界的记忆悄悄截断成残片。
+---
 
-所有派生记忆都必须保持 `authority=false`，并保存来源引用与来源指纹。已经失效的记忆在重建前不能继续参与选择。
+## 04 · 真正的语义筛选属于 `context.select`
 
-## 05 · 可编辑 Memory Bank
+当合法候选材料多于当前任务真正应该接收的内容时，NovelForge 会准备一个受限的 `context.select` semantic job。
 
-`harness/memory_bank.py` 提供以下持久记忆分区：
+`harness/memory_tiers.py` 只把 task context 与 typed memory blocks 交给模型。模型返回 hot / working / archive 的有序 ID；确定性 runtime 再用 exact semantic-job fingerprint 验证结果。
 
-`context · character · relationship · thread · style · learning · runtime · corpus · derived`
+这意味着：
 
-每条记录都保存权威等级、来源、指纹、版本、固定 / 优先级控制以及编辑历史。
+- 模型可以解释“现在什么最相关”；
+- runtime 只允许模型选择已知、未失效的候选 item；
+- stale 或错误绑定的 semantic result 会被拒绝；
+- 某条 memory 被选中，并不会因此获得更高 authority。
 
-最关键的是两条编辑路径：
+该 contract 通过 `context-research` semantic pack 按需解析。
 
-**运行时 / 派生记忆**可以编辑，但调用者必须提供准确的当前指纹；过期写入会被拒绝。
+---
 
-**`locked` / `accepted` 受保护引用**不能原地修改。任何编辑都会创建 proposal 子项，原始受保护记录保持不变。
+## 05 · 硬预算装载仍然由确定性代码负责
 
-proposal 默认处于 `never` 注入阶段。仅仅“提出想改正典”不能让这个尚未接受的未来版本提前污染下一章正文。
+语义选择完成后，`memory_tiers.py` 才执行 deterministic packing。
 
-学习和语料记忆默认只进入生成后审查阶段，而不是首轮写作阶段，除非更高层规则明确授权。
+它负责：
 
-## 06 · 记忆绝不能变成什么
+- `hot_budget` 与 `working_budget`；
+- pinned item override；
+- derived-memory `authority=false` 检查；
+- source refs / source fingerprints；
+- whole-item-or-skip 装载；
+- invalidated item 排除；
+- archive 输出。
 
-记忆不是：
+它**不会**自己总结 Canon、给故事相关性打分，也不会为了塞进预算而把一个有完整语义边界的 memory block 截成模糊残片。
 
-- 影子正典数据库；
-- 正典结算的替代品；
-- “人物已经知道这件事”的证明；
-- “这个事件已经发生”的证明；
-- 默认整库加载的理由；
-- 把隐藏评测答案偷偷带进 writer context 的容器。
+Pinned item 如果连 hot budget 都放不下，运行应该失败并暴露控制冲突，而不是悄悄丢掉作者明确固定的内容。
 
-一个真正有用的记忆系统，价值恰恰在于它可以**修改、失效、重建、丢弃**，而不会伤到故事权威状态。
+实现返回值直接写明：
 
-## 07 · 一次典型运行
+- `selection_owner = model`
+- `budget_owner = deterministic_runtime`
 
-一次 DRAFT / REVISE 会先解析项目权威，再构建稀疏 Context Manifest。Inspector 负责让这份选择可以检查；派生记忆再依据事件、人物和预算进入 hot / working 层。Writer、生成后 critic、独立 reviewer 与 `never` 材料继续由阶段边界隔离。
+---
 
-运行结束后可以产生新的派生观察或更新记忆，但任何正典变化仍然必须经过项目自己的明确接受与事务化结算。
+## 06 · 作者控制是 overlay，不是 Canon write
 
-## 08 · 继续阅读
+Context Inspector 支持的低权威控制包括：
 
-- [系统架构](architecture.zh-CN.md)：上下文与记忆在整个 NovelForge 中的位置。
-- [生产流水线](production-pipeline.zh-CN.md)：什么时候允许选上下文，什么时候才允许加载审查证据。
-- [项目 SDK](project-sdk.zh-CN.md)：项目权威与精确框架锁定。
-- [`harness/context_inspector.py`](../harness/context_inspector.py)：确定性上下文检查与覆盖层实现。
-- [`harness/memory_tiers.py`](../harness/memory_tiers.py)：分层与预算分配。
-- [`harness/memory_bank.py`](../harness/memory_bank.py)：持久可编辑记忆库。
+- pin / unpin；
+- 调整显式 priority；
+- 隐藏 derived view；
+- invalidation derived view，要求以后重建。
 
-> **设计原则：** 作者控制面应该让后台机制更透明，而不是用“更方便”换掉权威边界。
+这些操作只改变**选择和呈现行为**。
+
+Hide / invalidate 只允许作用于 derived view。调用方不能靠 overlay 让 Project authoritative fact “从现实里消失”。
+
+Overlay 本身也有 fingerprint，方便追踪控制变化。
+
+---
+
+## 07 · 修改受保护事实时，只能生成 proposal
+
+如果用户通过 Context / Memory 控制面要求修改 `locked` 或 `accepted` item，`context_inspector.py` 不会直接改 source。
+
+它会创建 proposal，并记录：
+
+- proposal ID；
+- source item ID；
+- 原 authority；
+- requested patch；
+- `proposal_required`；
+- `direct_mutation_performed = false`；
+- `canon_write = false`。
+
+这允许作者表达“我想改这个事实”，同时不会让 UI 假装“这个事实已经改进正典”。
+
+真正的 Canon mutation 仍然必须经过 Project 明确接受与 Settlement。
+
+---
+
+## 08 · Memory Bank 是持久工作记忆，不是影子正典
+
+`harness/memory_bank.py` 可以保存 context、character、relationship、thread、style、learning、runtime、corpus、derived 等不同 memory domain。
+
+记录会保留 provenance、fingerprint、version、authority metadata、显式控制与 edit history。
+
+两种编辑路径必须分开：
+
+**运行时 / 派生记忆**可以在 version / fingerprint precondition 下编辑。
+
+**受保护 Canon reference** 仍然是只读引用；修改请求只能形成 proposal，不能原地写回 authoritative source。
+
+只要条件允许，derived memory 都应该能够从 source evidence 重建。
+
+---
+
+## 09 · Memory 永远不能证明故事事实或人物知识
+
+Memory 很有用，但它不是证据终点。
+
+它不能证明：
+
+- 某个事件已经发生；
+- 某个人物已经知道某个事实；
+- 某段关系已经正式改变；
+- 某个计划已经被接受；
+- 某条 research claim 已经成为 Project truth；
+- 某个 Corpus observation 应该自动进入下一章；
+- 某个 model inference 已经成为持久用户口味。
+
+这些结论仍然属于真正拥有该状态的 Project mechanism。
+
+Memory 可以被 invalidated、重建甚至丢弃，正是因为它的 authority 应该低于 Canon。
+
+---
+
+## 10 · 一次典型 DRAFT / REVISE 怎样使用上下文
+
+**解析 Project authority。** 确认 Canon cutoff、active plan、参与人物、长程承诺与任务证据。
+
+**建立合法候选集。** 用 authority、provenance 与 stage boundary 构建稀疏 Context Manifest。
+
+**应用显式作者控制。** 处理 pin / priority / derived-view overlay，并拦截 sensitive-stage 泄漏。
+
+**必要时做语义选择。** 只有真正需要解释“此刻什么相关”时才调用 `context.select`。
+
+**在硬预算下装载。** 验证 semantic result，保留 pin，并以 whole block 方式确定性装载。
+
+**执行真正目标任务。** Writer 或其他 semantic contract 只看到这份 bounded working set，而不是整个 Project。
+
+**只持久化合适的派生观察。** 新 memory 仍然保持 source-bound、non-authoritative。
+
+任何 Canon change proposal 仍然等待用户接受与 Settlement。
+
+---
+
+## 11 · Failure routing
+
+上下文 / 记忆失败应该回本层修，不应伪装成 prose failure。
+
+**模型漏选了真正关键的合法证据** → 修正 bounded evidence / 重跑 `context.select`。
+
+**Pinned memory 超出 hard budget** → 处理作者控制与预算冲突，不能静默取消 pin。
+
+**Regression / hidden gold 进入 Writer context** → deterministic stage-isolation failure。
+
+**Derived memory 指向旧 source fingerprint** → invalidate + rebuild。
+
+**受保护 Canon fact 真正需要改** → proposal → Project acceptance → Settlement。
+
+**人物根据自己并不知道的 memory 行动** → Character / knowledge-boundary failure，而不是全局删除那条 memory。
+
+---
+
+## 12 · 精确参考
+
+- [架构总览](architecture.zh-CN.md) —— authority domain 与 semantic / deterministic ownership。
+- [生产流水线](production-pipeline.zh-CN.md) —— DRAFT / REVISE 中上下文选择出现在哪里。
+- [项目 SDK](project-sdk.zh-CN.md) —— Project authority 与精确 dependency lock。
+- [`harness/context_inspector.py`](../harness/context_inspector.py) —— deterministic inspector / overlay。
+- [`harness/memory_tiers.py`](../harness/memory_tiers.py) —— model-selected + deterministic-budget context packer。
+- [`harness/memory_bank.py`](../harness/memory_bank.py) —— durable editable memory。
+- [`harness/semantic_workers/contracts/context-research.json`](../harness/semantic_workers/contracts/context-research.json) —— `context.select` contract。
+
+<div align="center">
+  <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom 标志" width="48" />
+  <br />
+  <sub>让模型判断意义，让运行时守住边界，让 Project 决定什么是真的。🌸</sub>
+</div>
