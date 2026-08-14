@@ -61,6 +61,17 @@ GitHub may act as:
 
 Workflow events are candidates/transport messages, not authority elevation.
 
+### Operational workflows
+
+- `novelforge-ci.yml` — deterministic default release gate; no live model execution.
+- `novelforge-contracts.yml` — reusable deterministic contracts.
+- `novelforge-event-router.yml` — typed external event ingress.
+- `novelforge-chat-semantic-bridge.yml` — user-relayed independent peer-chat semantic path; no API model execution.
+- `novelforge-semantic-live.yml` — optional manually dispatched provider-backed semantic eval; requires an explicitly configured API secret and may incur provider billing.
+- `novelforge-weekly-maintenance.yml` — scheduled deterministic observation/queueing. It does not run an LLM or promote behavior automatically.
+
+The weekly maintenance job may produce corpus discovery/eval queues, but actual Web/GitHub/MCP discovery still requires an authorized host connector. It must not fabricate source access.
+
 ## Webhooks
 
 Provider-specific webhooks should normalize into the generic typed event contract before the Harness acts on them.
