@@ -1,20 +1,20 @@
-# CN Webnovel Agent · Novel Production OS
+# CN Webnovel Agent · Runtime/Harness Repository
 
-This repository is the dedicated **Generic Novel Production OS / Harness runtime** for long-form commercial fiction production.
+This repository is the dedicated **Novel Production OS Agent Runtime / Harness execution authority** for long-form commercial fiction production.
 
-## Authority
+## Authority split
 
-- Generic OS authority: `xiaooye/cn_webnovel_agent` · `main`
-- Project/Canon authority is **not stored here by default**. A book project supplies its own Project Adapter / Novel Bible.
-- The current migration source is `xiaooye/frostloom@89a91267c722c9a71ab3174b984063bc08ccc262`.
+- **Runtime/Harness execution authority:** `xiaooye/cn_webnovel_agent` · `main`
+- **Current Story/Surface policy + 《从唐人街到白宫》 Project Adapter/Canon authority:** `xiaooye/frostloom` · `master`
+- Runtime state never overrides project/policy authority.
 
-During migration, the old source remains authoritative for any Generic OS file not yet migrated. Authority cuts over only after the v6.6 migration/eval gate says `cutover_ready=true`.
+This split is intentional. The agent repo owns execution identity, sessions, control-plane state, runtime routing, semantic transports, local-agent integration and workflow infrastructure. It does **not** duplicate the book's Canon or silently vendor a second copy of Story/Surface policy.
 
-## Current target
+Current migration baseline: `xiaooye/frostloom@89a91267c722c9a71ab3174b984063bc08ccc262`.
 
-**Novel Production OS v6.6 · Runtime Control Plane**
+## Current release target
 
-The runtime model is:
+**Agent Runtime v6.6 · Runtime Control Plane**
 
 ```text
 resource/project
@@ -23,30 +23,30 @@ resource/project
 → checkpoint
 → event / handoff / interrupt
 → claim / execute / result
+→ exactly-once logical consumption
 → resume
 ```
 
-v6.6 adds a durable control plane around the existing session-native Harness:
-
-- SQLite Session/Event/Handoff store;
+v6.6 adds:
+- SQLite Session/Event/Handoff persistence;
 - lease/claim semantics for workers;
 - idempotent event ingestion;
 - exactly-once logical result consumption;
 - stdio MCP adapter for local Codex/Claude/agent runtimes;
-- CLI for status/checkpoint/handoff/event operations;
-- GitHub event ingress/reusable workflow contracts;
+- local CLI/control-plane operations;
+- GitHub event ingress + reusable workflow contracts;
 - runtime/session provenance without granting Canon authority.
 
 ## Bootstrap
 
-Read in order:
-
+For runtime/Harness work read:
 1. `SKILL.md`
 2. `harness/HARNESS_AGENT.md`
-3. mode/runtime-specific modules selected by the Harness
-4. target project's own `PROJECT.md` / `START_HERE.md` / Context protocol
+3. `harness/session_runtime/SESSION_RUNTIME.md` when session/resume/external workers are involved
+4. `harness/control_plane/CONTROL_PLANE.md` for event/handoff/persistence work
+5. target project's live policy/adapter files selected by the Harness
 
-Do not treat this README as the full runtime contract.
+For 《从唐人街到白宫》, project/policy files currently remain under `xiaooye/frostloom:master/new cards/` until a separately gated content-policy migration is performed.
 
 ## Local smoke tests
 
@@ -56,8 +56,8 @@ python harness/control_plane/control_plane.py self-test
 python harness/control_plane/mcp_stdio.py --self-test
 ```
 
-Normal deterministic tests must not invoke paid/login-bound models.
+Normal deterministic CI must not invoke paid/login-bound models.
 
 ## Design boundary
 
-The Generic OS may define schemas, workflows, quality mechanisms and runtime infrastructure. It must not absorb project-specific characters, plot outcomes, Canon facts or user-private story state.
+Execution infrastructure may record operational state and evidence. It may not create Canon, SETTLE a chapter, promote Generic behavior, or turn a connector/webhook event into write authority.
