@@ -1,0 +1,51 @@
+{
+  "schema": "novelforge_model_contract_catalog_v1",
+  "version": "1",
+  "loading_policy": "progressive_disclosure",
+  "principle": "Keep this catalog small. The model/manager selects the smallest relevant contract pack from metadata, then loads only that registry. Deterministic code must not keyword-route literary intent on the model's behalf.",
+  "packs": [
+    {
+      "id": "quality-learning-core",
+      "path": "model_contracts.json",
+      "description": "Reader reaction/comparison, character integrity, revision diagnosis, long-horizon narrative interpretation, reader expectations, memory consolidation, and adaptive-learning semantic analysis/evaluation.",
+      "contracts": [
+        "reader.reaction",
+        "reader.compare",
+        "character.integrity",
+        "revision.diagnose",
+        "narrative.world",
+        "reader.expectations",
+        "memory.consolidate",
+        "learning.mechanism_analyze",
+        "learning.evaluate"
+      ],
+      "load_when": "The task needs quality diagnosis, reader/character evaluation, derived narrative interpretation, memory consolidation, or learning evaluation."
+    },
+    {
+      "id": "context-research",
+      "path": "contracts/context-research.json",
+      "description": "Sparse semantic context selection and model-owned Corpus discovery/query planning under deterministic budget, capability and rights guards.",
+      "contracts": [
+        "context.select",
+        "corpus.discovery_plan"
+      ],
+      "load_when": "The task must choose which memory/context blocks matter now or plan evidence searches for a Corpus/research gap."
+    },
+    {
+      "id": "story-simulation",
+      "path": "contracts/story-simulation.json",
+      "description": "Goal- and knowledge-bounded character action simulation followed by scene-level collision/world-state resolution and causal event trajectory proposals.",
+      "contracts": [
+        "character.action_propose",
+        "scene.resolve_actions"
+      ],
+      "load_when": "The task is pre-draft scene simulation, character agency simulation, or repair of a flat/forced scene through causal character/world interactions."
+    }
+  ],
+  "activation": {
+    "owner": "model_or_manager",
+    "keyword_router_required": false,
+    "load_all_packs_by_default": false,
+    "contract_result_grants_authority": false
+  }
+}
