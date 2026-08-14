@@ -44,6 +44,8 @@ NovelForge 把这些问题当成**小说生产系统的问题**，而不是靠�
 
 ## 02 · 7.3 的核心心智模型 🪄
 
+<img src="assets/ui/home-architecture.zh-CN.svg" alt="NovelForge Story Loom 架构：项目权威、模型语义契约、确定性运行外壳与证据演化彼此分离" width="100%" />
+
 ### 故事权威
 
 项目事实必须保留明确的权威等级，例如 `locked`、`accepted`、`active_plan`、`review` 与 `proposal`。计划、记忆、语义判断、情景分支、语料结果或运行回执，不会因为“系统已经看见”就自动成为正典（Canon）。
@@ -67,6 +69,8 @@ Python 与工作流代码负责真正适合确定性处理的部分：权限、�
 ---
 
 ## 03 · 一章正文是一轮生产运行，不是一次模型调用 📖
+
+<img src="assets/ui/home-pipeline.zh-CN.svg" alt="NovelForge 四阶段正文生产运行：冻结与模拟、内部候选稿、诊断与演化、发布门槛，以及按问题归属返回的失败回路" width="100%" />
 
 DRAFT / REVISE 的核心不是一条巨型提示词，而是四类职责明确的工作。
 
