@@ -1,13 +1,40 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "1",
+  "version": "2",
   "principle": "Character and scene causality are semantic simulation work. Models propose actions from bounded character/world state; deterministic runtime only binds identity, permissions, provenance and typed results.",
   "contracts": {
     "character.action_propose": {
       "kind": "artifact_audit",
-      "purpose": "Simulate what one important character is most likely to try next from that character's own agenda, knowledge, relationship position, emotional residue, spatial/task state and constraints. Produce action proposals, not prose and not Canon.",
+      "purpose": "Simulate what one important character is most likely to try next from that character's own agenda, perceived state, perspective-bounded memory, relationship position, emotional residue, spatial/task state and constraints. Produce action proposals, not prose and not Canon.",
+      "forbidden_input_keys": ["narrator_omniscience", "reader_only_knowledge", "research_only_knowledge", "future_plan", "planned_outcome", "other_character_private_knowledge", "writer_reasoning"],
+      "input_contract": {
+        "type": "object",
+        "required": ["character_id", "active_agenda", "perceived_state", "immediate_situation", "perspective_memory"],
+        "properties": {
+          "character_id": {"type": "string", "minLength": 1},
+          "active_agenda": {"type": "string", "minLength": 1},
+          "perceived_state": {"type": "object", "properties": {"beliefs": {"type": "array", "items": {"type": "string"}}, "goals": {"type": "array", "items": {"type": "string"}}, "fears": {"type": "array", "items": {"type": "string"}}, "assumptions": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false},
+          "immediate_situation": {"type": "object", "properties": {"observables": {"type": "array", "items": {"type": "string"}}, "pressures": {"type": "array", "items": {"type": "string"}}, "available_options": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false},
+          "perspective_memory": {
+            "type": "object",
+            "required": ["episodic_visible_events", "visibility_tagged_facts", "situation_patterns"],
+            "properties": {
+              "episodic_visible_events": {"type": "array", "items": {"type": "object", "required": ["event_id", "story_point", "first_person_memory"], "properties": {"event_id": {"type": "string", "minLength": 1}, "story_point": {"type": "string", "minLength": 1}, "first_person_memory": {"type": "string", "minLength": 1}}, "additionalProperties": false}},
+              "visibility_tagged_facts": {"type": "array", "items": {"type": "object", "required": ["fact_id", "claim", "epistemic_status", "source_ref"], "properties": {"fact_id": {"type": "string", "minLength": 1}, "claim": {"type": "string", "minLength": 1}, "epistemic_status": {"enum": ["known", "believed", "suspected"]}, "source_ref": {"type": "string", "minLength": 1}}, "additionalProperties": false}},
+              "situation_patterns": {"type": "array", "items": {"type": "object", "required": ["situation", "behavior_pattern"], "properties": {"situation": {"type": "string", "minLength": 1}, "behavior_pattern": {"type": "string", "minLength": 1}, "evidence_ref": {"type": "string"}}, "additionalProperties": false}}
+            },
+            "additionalProperties": false
+          },
+          "relationship_state": {"type": "object"},
+          "task_state": {"type": "object"},
+          "location": {"type": "object"},
+          "constraints": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      },
       "rubric": [
-        "Use only the supplied character-visible knowledge and typed current state. Do not give the character narrator, reader, research, future-plan or other-character knowledge.",
+        "Use only the supplied character-visible knowledge, perspective memory and typed current state. Do not give the character narrator, reader, research, future-plan or other-character knowledge.",
+        "Treat episodic memories as the character's remembered experience, visibility-tagged facts as bounded epistemic claims, and situation patterns as contextual behavior evidence rather than universal personality law.",
         "Start from the character's active agenda and immediate problem, not from what would make the outline convenient.",
         "When the input supplies beliefs/perceived reality and a desired, feared or ideal state, use the tension between what the character thinks is true and what they want or fear as a causal driver of action; do not silently replace perception with objective world truth.",
         "Preserve independent agency: the character may resist, misunderstand, delay, conceal, improvise or pursue a side objective when that follows from supplied state.",
@@ -23,98 +50,28 @@
           "character_id": {"type": "string", "minLength": 1},
           "active_agenda": {"type": "string", "minLength": 1},
           "perceived_actual_vs_desired_tension": {"type": ["string", "null"]},
-          "proposals": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "type": "object",
-              "required": ["action", "tactic", "why_now", "expected_resistance", "knowledge_basis"],
-              "properties": {
-                "action": {"type": "string", "minLength": 1},
-                "tactic": {"type": "string", "minLength": 1},
-                "why_now": {"type": "string", "minLength": 1},
-                "expected_resistance": {"type": "string"},
-                "knowledge_basis": {"type": "array", "items": {"type": "string"}},
-                "risk_or_cost": {"type": "string"},
-                "relationship_effect": {"type": "string"}
-              }
-            }
-          }
+          "proposals": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["action", "tactic", "why_now", "expected_resistance", "knowledge_basis"], "properties": {"action": {"type": "string", "minLength": 1}, "tactic": {"type": "string", "minLength": 1}, "why_now": {"type": "string", "minLength": 1}, "expected_resistance": {"type": "string"}, "knowledge_basis": {"type": "array", "items": {"type": "string"}}, "risk_or_cost": {"type": "string"}, "relationship_effect": {"type": "string"}}}}
         }
       },
-      "permissions": {
-        "canon_write": false,
-        "os_behavior_write": false,
-        "durable_user_taste_write": false,
-        "allowed_result_scope": "character_action_proposal"
-      },
+      "permissions": {"canon_write": false, "os_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "character_action_proposal"},
       "independent_gate": false
     },
     "scene.resolve_actions": {
       "kind": "artifact_audit",
       "purpose": "Resolve bounded character action proposals against world constraints, current scene conditions, active-plan bounds and reader-pressure needs to propose a causal event trajectory. The result is simulation evidence, not an outline mutation or Canon.",
-      "rubric": [
-        "Treat supplied character proposals as competing agendas, not instructions that must all succeed.",
-        "Resolve collisions through world state, timing, information asymmetry, relationships, resources and consequences rather than narrator fiat.",
-        "Preserve the active plan's hard bounds when supplied, but do not force every planned beat if the simulated causal chain exposes a contradiction that should route back to planning.",
-        "Prefer events that change options, commitments, information, relationships, danger, leverage or cost. Routine procedure should remain compressed unless it creates conflict or consequence.",
-        "Reader pressure should emerge from conflict, uncertainty, choice, consequence, revelation or earned reward; do not manufacture arbitrary cliffhangers or narrator hype.",
-        "Identify where character simulation, story/plan, continuity or research needs repair instead of smoothing over an impossible trajectory.",
-        "Return a proposed causal trajectory and unresolved pressures only. Do not write final prose and do not mutate Canon."
-      ],
+      "rubric": ["Treat supplied character proposals as competing agendas, not instructions that must all succeed.", "Resolve collisions through world state, timing, information asymmetry, relationships, resources and consequences rather than narrator fiat.", "Preserve the active plan's hard bounds when supplied, but do not force every planned beat if the simulated causal chain exposes a contradiction that should route back to planning.", "Prefer events that change options, commitments, information, relationships, danger, leverage or cost. Routine procedure should remain compressed unless it creates conflict or consequence.", "Reader pressure should emerge from conflict, uncertainty, choice, consequence, revelation or earned reward; do not manufacture arbitrary cliffhangers or narrator hype.", "Identify where character simulation, story/plan, continuity or research needs repair instead of smoothing over an impossible trajectory.", "Return a proposed causal trajectory and unresolved pressures only. Do not write final prose and do not mutate Canon."],
       "output_contract": {
         "type": "object",
         "required": ["confidence", "collisions", "trajectory", "unresolved_pressures", "repair_routes"],
         "properties": {
           "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "collisions": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": ["participants", "conflict", "resolution_pressure"],
-              "properties": {
-                "participants": {"type": "array", "items": {"type": "string"}},
-                "conflict": {"type": "string", "minLength": 1},
-                "resolution_pressure": {"type": "string", "minLength": 1}
-              }
-            }
-          },
-          "trajectory": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "type": "object",
-              "required": ["event", "caused_by", "state_change"],
-              "properties": {
-                "event": {"type": "string", "minLength": 1},
-                "caused_by": {"type": "array", "items": {"type": "string"}},
-                "state_change": {"type": "string", "minLength": 1},
-                "cost_or_consequence": {"type": "string"},
-                "reader_reward": {"type": "string"},
-                "new_pressure": {"type": "string"}
-              }
-            }
-          },
+          "collisions": {"type": "array", "items": {"type": "object", "required": ["participants", "conflict", "resolution_pressure"], "properties": {"participants": {"type": "array", "items": {"type": "string"}}, "conflict": {"type": "string", "minLength": 1}, "resolution_pressure": {"type": "string", "minLength": 1}}}},
+          "trajectory": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["event", "caused_by", "state_change"], "properties": {"event": {"type": "string", "minLength": 1}, "caused_by": {"type": "array", "items": {"type": "string"}}, "state_change": {"type": "string", "minLength": 1}, "cost_or_consequence": {"type": "string"}, "reader_reward": {"type": "string"}, "new_pressure": {"type": "string"}}}},
           "unresolved_pressures": {"type": "array", "items": {"type": "string"}},
-          "repair_routes": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": ["owner", "reason"],
-              "properties": {
-                "owner": {"enum": ["story", "plan", "scene", "character", "reader", "continuity", "research", "context", "runtime", "human"]},
-                "reason": {"type": "string", "minLength": 1}
-              }
-            }
-          }
+          "repair_routes": {"type": "array", "items": {"type": "object", "required": ["owner", "reason"], "properties": {"owner": {"enum": ["story", "plan", "scene", "character", "reader", "continuity", "research", "context", "runtime", "human"]}, "reason": {"type": "string", "minLength": 1}}}}
         }
       },
-      "permissions": {
-        "canon_write": false,
-        "os_behavior_write": false,
-        "durable_user_taste_write": false,
-        "allowed_result_scope": "scene_simulation_proposal"
-      },
+      "permissions": {"canon_write": false, "os_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "scene_simulation_proposal"},
       "independent_gate": false
     }
   }
