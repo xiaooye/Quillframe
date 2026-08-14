@@ -58,6 +58,11 @@ def dump(value: Any, path: Path | None = None) -> None:
         print(text, end="")
 
 
+def _missing_value(value: Any) -> bool:
+    """Treat only absent/empty prerequisites as missing; mappings like {} are valid state snapshots."""
+    return value is None or value == "" or value == []
+
+
 def plan_passes(available: dict[str, Any], requested: list[str] | None = None) -> dict[str, Any]:
     wanted = requested or list(PASSES)
     unknown = sorted(set(wanted) - set(PASSES))
@@ -66,7 +71,7 @@ def plan_passes(available: dict[str, Any], requested: list[str] | None = None) -
     planned = []; skipped = []
     for name in wanted:
         spec = PASSES[name]
-        missing = [key for key in spec["requires"] if available.get(key) in {None, "", []}]
+        missing = [key for key in spec["requires"] if _missing_value(available.get(key))]
         if missing:
             skipped.append({"pass": name, "reason": "missing_prerequisite", "missing": missing})
         else:
