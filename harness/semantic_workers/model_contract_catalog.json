@@ -40,6 +40,17 @@
         "scene.resolve_actions"
       ],
       "load_when": "The task is pre-draft scene simulation, character agency simulation, or repair of a flat/forced scene through causal character/world interactions."
+    },
+    {
+      "id": "long-horizon",
+      "path": "contracts/long-horizon.json",
+      "description": "Dynamic active-plan reconciliation, evidence-based relationship-memory reconciliation, and explicit narrative-commitment auditing for long-horizon coherence.",
+      "contracts": [
+        "plan.reconcile",
+        "relationship.memory_reconcile",
+        "continuity.commitment_audit"
+      ],
+      "load_when": "The task must adapt a plan after causal emergence, reconcile conflicting long-lived relationship memories, or verify a candidate against explicit long-term commitments/facts."
     }
   ],
   "activation": {
