@@ -1,0 +1,243 @@
+{
+  "schema": "novelforge_semantic_run_receipt_v1",
+  "run_id": "RUN-SYNTHETIC-STORY-001",
+  "session_id": "SES-SYNTHETIC-001",
+  "workflow_name": "synthetic_pre_draft_causal_exploration",
+  "subject_id": "SCN-SYNTHETIC-001",
+  "task_mode": "DRAFT",
+  "context": {
+    "manifest_ref": "fixture:context-manifest:SCN-SYNTHETIC-001",
+    "manifest_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "authority_snapshot": "fixture:accepted-state@1"
+  },
+  "pack_activations": [
+    {
+      "pack_id": "context-research",
+      "registry_path": "harness/semantic_workers/contracts/context-research.json",
+      "reason": "Select sparse character/world evidence for bounded pre-draft simulation.",
+      "selected_by": "manager"
+    },
+    {
+      "pack_id": "story-simulation",
+      "registry_path": "harness/semantic_workers/contracts/story-simulation.json",
+      "reason": "Simulate independent character actions and resolve their collision into causal scene events.",
+      "selected_by": "model"
+    },
+    {
+      "pack_id": "creative-evolution",
+      "registry_path": "harness/semantic_workers/contracts/creative-evolution.json",
+      "reason": "Explore materially different causal branches and compare them without assuming later is better.",
+      "selected_by": "model"
+    },
+    {
+      "pack_id": "long-horizon",
+      "registry_path": "harness/semantic_workers/contracts/long-horizon.json",
+      "reason": "Check whether the preferred trajectory requires an active-plan adjustment.",
+      "selected_by": "manager"
+    }
+  ],
+  "steps": [
+    {
+      "step_id": "STEP-CTX",
+      "contract_id": "context.select",
+      "pack_id": "context-research",
+      "parent_step_ids": [],
+      "input_fingerprint": "sha256:2011111111111111111111111111111111111111111111111111111111111111",
+      "status": "completed",
+      "worker": {
+        "provider": "synthetic_fixture",
+        "model_or_reviewer": "fixture",
+        "worker_session_id": "SES-FIX-CTX",
+        "run_reference": "fixture:STEP-CTX"
+      },
+      "result_fingerprint": "sha256:3011111111111111111111111111111111111111111111111111111111111111",
+      "artifact_refs": ["context:selected:SCN-SYNTHETIC-001"],
+      "finding_refs": [],
+      "decision_refs": [],
+      "authority": false
+    },
+    {
+      "step_id": "STEP-CHAR-A",
+      "contract_id": "character.action_propose",
+      "pack_id": "story-simulation",
+      "parent_step_ids": ["STEP-CTX"],
+      "input_fingerprint": "sha256:2022222222222222222222222222222222222222222222222222222222222222",
+      "status": "completed",
+      "worker": {
+        "provider": "synthetic_fixture",
+        "model_or_reviewer": "fixture",
+        "worker_session_id": "SES-FIX-A",
+        "run_reference": "fixture:STEP-CHAR-A"
+      },
+      "result_fingerprint": "sha256:3022222222222222222222222222222222222222222222222222222222222222",
+      "artifact_refs": ["proposal:character-action:A"],
+      "finding_refs": [],
+      "decision_refs": [],
+      "authority": false
+    },
+    {
+      "step_id": "STEP-CHAR-B",
+      "contract_id": "character.action_propose",
+      "pack_id": "story-simulation",
+      "parent_step_ids": ["STEP-CTX"],
+      "input_fingerprint": "sha256:2033333333333333333333333333333333333333333333333333333333333333",
+      "status": "completed",
+      "worker": {
+        "provider": "synthetic_fixture",
+        "model_or_reviewer": "fixture",
+        "worker_session_id": "SES-FIX-B",
+        "run_reference": "fixture:STEP-CHAR-B"
+      },
+      "result_fingerprint": "sha256:3033333333333333333333333333333333333333333333333333333333333333",
+      "artifact_refs": ["proposal:character-action:B"],
+      "finding_refs": [],
+      "decision_refs": [],
+      "authority": false
+    },
+    {
+      "step_id": "STEP-RESOLVE",
+      "contract_id": "scene.resolve_actions",
+      "pack_id": "story-simulation",
+      "parent_step_ids": ["STEP-CHAR-A", "STEP-CHAR-B"],
+      "input_fingerprint": "sha256:2044444444444444444444444444444444444444444444444444444444444444",
+      "status": "completed",
+      "worker": {
+        "provider": "synthetic_fixture",
+        "model_or_reviewer": "fixture",
+        "worker_session_id": "SES-FIX-RESOLVE",
+        "run_reference": "fixture:STEP-RESOLVE"
+      },
+      "result_fingerprint": "sha256:3044444444444444444444444444444444444444444444444444444444444444",
+      "artifact_refs": ["trajectory:base"],
+      "finding_refs": [],
+      "decision_refs": [],
+      "authority": false
+    },
+    {
+      "step_id": "STEP-DIVERGE",
+      "contract_id": "scene.diverge",
+      "pack_id": "creative-evolution",
+      "parent_step_ids": ["STEP-RESOLVE"],
+      "input_fingerprint": "sha256:2055555555555555555555555555555555555555555555555555555555555555",
+      "status": "completed",
+      "worker": {
+        "provider": "synthetic_fixture",
+        "model_or_reviewer": "fixture",
+        "worker_session_id": "SES-FIX-DIVERGE",
+        "run_reference": "fixture:STEP-DIVERGE"
+      },
+      "result_fingerprint": "sha256:3055555555555555555555555555555555555555555555555555555555555555",
+      "artifact_refs": ["branch:BR-A", "branch:BR-B"],
+      "finding_refs": [],
+      "decision_refs": [],
+      "authority": false
+    },
+    {
+      "step_id": "STEP-COMPARE",
+      "contract_id": "quality.compare",
+      "pack_id": "creative-evolution",
+      "parent_step_ids": ["STEP-DIVERGE"],
+      "input_fingerprint": "sha256:2066666666666666666666666666666666666666666666666666666666666666",
+      "status": "completed",
+      "worker": {
+        "provider": "synthetic_fixture",
+        "model_or_reviewer": "fixture",
+        "worker_session_id": "SES-FIX-COMPARE",
+        "run_reference": "fixture:STEP-COMPARE"
+      },
+      "result_fingerprint": "sha256:3066666666666666666666666666666666666666666666666666666666666666",
+      "artifact_refs": ["branch:BR-A", "branch:BR-B"],
+      "finding_refs": ["finding:reader-pressure:1"],
+      "decision_refs": ["DEC-BRANCH"],
+      "authority": false
+    },
+    {
+      "step_id": "STEP-PLAN",
+      "contract_id": "plan.reconcile",
+      "pack_id": "long-horizon",
+      "parent_step_ids": ["STEP-RESOLVE", "STEP-COMPARE"],
+      "input_fingerprint": "sha256:2077777777777777777777777777777777777777777777777777777777777777",
+      "status": "completed",
+      "worker": {
+        "provider": "synthetic_fixture",
+        "model_or_reviewer": "fixture",
+        "worker_session_id": "SES-FIX-PLAN",
+        "run_reference": "fixture:STEP-PLAN"
+      },
+      "result_fingerprint": "sha256:3077777777777777777777777777777777777777777777777777777777777777",
+      "artifact_refs": ["proposal:active-plan-patch:1"],
+      "finding_refs": [],
+      "decision_refs": ["DEC-PLAN"],
+      "authority": false
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_ref": "context:selected:SCN-SYNTHETIC-001",
+      "fingerprint": "sha256:4011111111111111111111111111111111111111111111111111111111111111",
+      "role": "sparse_context_view",
+      "authority": "derived"
+    },
+    {
+      "artifact_ref": "trajectory:base",
+      "fingerprint": "sha256:4022222222222222222222222222222222222222222222222222222222222222",
+      "role": "scene_simulation_proposal",
+      "authority": "proposal"
+    },
+    {
+      "artifact_ref": "branch:BR-A",
+      "fingerprint": "sha256:4033333333333333333333333333333333333333333333333333333333333333",
+      "role": "scenario_branch",
+      "authority": "proposal"
+    },
+    {
+      "artifact_ref": "branch:BR-B",
+      "fingerprint": "sha256:4044444444444444444444444444444444444444444444444444444444444444",
+      "role": "scenario_branch",
+      "authority": "proposal"
+    },
+    {
+      "artifact_ref": "proposal:active-plan-patch:1",
+      "fingerprint": "sha256:4055555555555555555555555555555555555555555555555555555555555555",
+      "role": "plan_patch_proposal",
+      "authority": "proposal"
+    }
+  ],
+  "decisions": [
+    {
+      "decision_id": "DEC-BRANCH",
+      "kind": "scenario_preference",
+      "source_step_ids": ["STEP-COMPARE"],
+      "value": {
+        "preferred": "branch:BR-B",
+        "basis": "Fixture comparison indicates clearer causal cost without a reader-pressure regression.",
+        "canon_write": false
+      },
+      "authority": false
+    },
+    {
+      "decision_id": "DEC-PLAN",
+      "kind": "plan_reconciliation",
+      "source_step_ids": ["STEP-PLAN"],
+      "value": {
+        "decision": "propose_plan_patch",
+        "proposal_ref": "proposal:active-plan-patch:1",
+        "active_plan_mutated": false
+      },
+      "authority": false
+    }
+  ],
+  "status": "completed",
+  "authority": false,
+  "permissions": {
+    "canon_write": false,
+    "framework_write": false,
+    "durable_user_taste_write": false
+  },
+  "model_execution": false,
+  "provenance": {
+    "source": "deterministic_integration_fixture",
+    "semantic_results_are_real_model_outputs": false,
+    "purpose": "Verify cross-pack orchestration and receipt invariants without model cost."
+  }
+}
