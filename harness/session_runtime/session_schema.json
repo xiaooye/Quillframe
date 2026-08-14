@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novel-os-agent-session-v1",
+  "title": "Novel Production OS Agent Session",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","resource_id","session_id","role","transport","backend","usage_class","status","memory_policy","context_policy","resume_policy","runs","checkpoints","events","provenance"],
+  "properties": {
+    "schema": {"const": "novel_os_agent_session_v1"},
+    "resource_id": {"type": "string", "minLength": 1},
+    "project_id": {"type": ["string", "null"]},
+    "session_id": {"type": "string", "pattern": "^SES-[A-Za-z0-9._:-]+$"},
+    "provider_session_id": {"type": ["string", "null"]},
+    "external_session_ref": {"type": ["string", "null"]},
+    "parent_session_id": {"type": ["string", "null"]},
+    "role": {"enum": ["manager","writer","specialist","semantic_reviewer","human_reviewer","other"]},
+    "task_mode": {"type": ["string", "null"]},
+    "transport": {"type": "string", "minLength": 1},
+    "backend": {"type": "string", "minLength": 1},
+    "usage_class": {"enum": ["ordinary_chat","codex_agentic","claude_plan","api_metered","local_model","human","unknown"]},
+    "status": {"enum": ["created","running","idle","awaiting_user","awaiting_external","completed","failed","terminated","stale"]},
+    "memory_policy": {"enum": ["none","bounded","session","external","checkpoint_only"]},
+    "context_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed_artifact_refs","allowed_paths","forbidden_context_classes","hidden_gold"],
+      "properties": {
+        "authority_snapshot": {"type": ["string", "null"]},
+        "context_manifest_ref": {"type": ["string", "null"]},
+        "allowed_artifact_refs": {"type": "array", "items": {"type": "string"}},
+        "allowed_paths": {"type": "array", "items": {"type": "string"}},
+        "forbidden_context_classes": {"type": "array", "items": {"type": "string"}},
+        "hidden_gold": {"const": "forbidden"}
+      }
+    },
+    "resume_policy": {"enum": ["forbidden","same_session","same_fingerprint","checkpoint_revalidate"]},
+    "runs": {"type": "array", "items": {"type": "object"}},
+    "checkpoints": {"type": "array", "items": {"type": "object"}},
+    "events": {"type": "array", "items": {"type": "object"}},
+    "provenance": {"type": "object", "additionalProperties": true}
+  }
+}
