@@ -21,9 +21,9 @@ frozen subject
 
 For a mandatory independent gate, the invocation/session executing the judgment must also satisfy the required independence contract.
 
-## 02 · Model contract registry
+## 02 · Model contract catalog and packs
 
-Current semantic behavior is described in [`model_contracts.json`](model_contracts.json), not scattered across dedicated Python “critic engines.”
+Current semantic behavior is indexed by [`model_contract_catalog.json`](model_contract_catalog.json) and defined in progressively disclosed contract packs, not scattered across dedicated Python “critic engines.”
 
 A model contract defines:
 
@@ -37,7 +37,7 @@ A model contract defines:
 
 Examples may include reader reaction/comparison, character integrity, revision diagnosis, reader expectations, narrative-state interpretation, memory consolidation, corpus mechanism analysis, and learning eval judgment.
 
-Adding a semantic capability should normally start by asking whether it belongs in this registry before adding new specialized runtime code.
+Adding a semantic capability should normally start by asking whether it belongs in an existing contract pack before adding new specialized runtime code.
 
 ## 03 · Semantic job identity
 
@@ -262,4 +262,4 @@ This prevents persuasive model output from bypassing Project/Framework governanc
 - [Runtime Routing](../session_runtime/RUNTIME_ROUTING.en.md) — general route eligibility.
 - [Control Plane](../control_plane/CONTROL_PLANE.en.md) — queued handoff/lease/result consumption.
 - [Quality Evolution](../../docs/quality-evolution.en.md) — model-owned quality semantics with deterministic ledgers.
-- [`model_contracts.json`](model_contracts.json) — live semantic behavior registry.
+- [`model_contract_catalog.json`](model_contract_catalog.json) — live catalog for progressively disclosed semantic contract packs.
