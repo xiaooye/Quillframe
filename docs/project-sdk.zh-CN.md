@@ -1,155 +1,83 @@
-# NovelForge Project SDK · 小说项目软件工程契约
+# NovelForge Project SDK · 把每一本小说当成完整软件工程
 
 ## 目标
 
-每一个 NovelForge 小说项目都应该像一个可维护的软件工程：
+每个 consuming novel 都应该能独立 clone、自描述、测试、build、migration、rollback，不依赖聊天记忆才能继续生产。
 
-- 可以独立 clone，并且自描述；
-- 锁定明确的 framework 版本；
-- 目录和 schema 可验证；
-- release 前可以测试；
-- 明确区分 source-of-truth 与 generated/derived view；
-- schema / Canon migration 可控；
-- 可以 reproducibly build 出 compact agent/context bundle；
-- 所有变化可审计、可 rollback；
-- ChatGPT、Codex、Claude Code、CI 或其他 host 都能使用同一项目结构，而不是每个 runtime 重发明一套。
-
-这个设计借鉴成熟软件工程仓库的**工程纪律**：feature specification、implementation plan、显式任务依赖、build/test/verify、架构边界和 phase checkpoint；不复制任何具体项目的业务领域或技术栈。
-
-## 依赖方向
+NovelForge 提供 Generic Engine；Project 只提供这一本小说自己的 facts、profiles、plans、research、manuscripts、tests 与 Canon。
 
 ```mermaid
 flowchart LR
-    NF[NovelForge Framework] --> SDK[Project SDK / Schemas]
+    F[NovelForge Framework] --> SDK[Project SDK]
     P[Novel Project] --> SDK
     P --> LOCK[novelforge.lock.json]
-    LOCK --> NF
-    P --> BUILD[Project Build Bundle]
-    P --> TEST[Project Tests / Evals]
-    NF -. 禁止 .-> P
+    LOCK --> F
+    P --> TEST[validate / tests / evals]
+    P --> BUILD[deterministic bundle]
+    F -. 禁止 .-> P
 ```
 
-Framework release 永远不能 import 某个 consumer project。
-
-Project 只依赖一个**versioned framework contract**，然后提供自己的数据、计划、profile、tests、research、manuscripts 与 Canon state。
-
-## 推荐 Repository Layout
+## Standard Root
 
 ```text
 my-novel/
-├── project.yaml
+├── novelforge.toml
 ├── novelforge.lock.json
 ├── README.en.md
 ├── README.zh-CN.md
 ├── AGENTS.md
 ├── CLAUDE.md
 ├── .gitignore
-├── .github/
-│   └── workflows/
-│       └── novel-project-ci.yml
+├── .github/workflows/
 ├── specs/
-│   └── 001-example-change/
-│       ├── spec.en.md
-│       ├── spec.zh-CN.md
-│       ├── plan.en.md
-│       ├── plan.zh-CN.md
-│       ├── tasks.en.md
-│       └── tasks.zh-CN.md
 ├── profiles/
-│   ├── genre.yaml
-│   ├── platform.yaml
-│   ├── prose.yaml
-│   ├── reader.yaml
-│   └── project.yaml
 ├── bible/
-│   ├── book/
-│   ├── characters/
-│   ├── relationships/
-│   ├── world/
-│   ├── organizations/
-│   └── research/
 ├── state/
-│   ├── canon/
-│   ├── ledgers/
-│   ├── information/
-│   ├── resources/
-│   ├── dependencies/
-│   └── migrations/
 ├── plans/
-│   ├── book/
-│   ├── volumes/
-│   ├── units/
-│   ├── chapters/
-│   └── scene-cards/
 ├── manuscripts/
-│   ├── draft/
-│   ├── review/
-│   └── accepted/
-├── evals/
-│   ├── capability/
-│   ├── regression/
-│   └── fixtures/
-├── tests/
-│   ├── continuity/
-│   ├── state/
-│   └── release/
 ├── research/
-│   ├── sources/
-│   ├── claims/
-│   └── notes/
 ├── corpus/
-│   ├── refs/
-│   └── project-benchmarks/
+├── evals/
+├── tests/
 ├── assets/
 ├── scripts/
-├── dist/                 # generated，通常 ignore
-└── .novelforge/          # runtime/cache，ignore
+├── dist/                 # generated
+└── .novelforge/          # local dependency/runtime cache
 ```
 
-实际物理格式可以是 Markdown、YAML、JSON、SQLite 或其他支持 backend；真正重要的是**逻辑边界**。
+物理存储可以是 Markdown、JSON、TOML、SQLite，或者由 Adapter 兼容旧结构；真正稳定的是 logical authority classes。
 
-## Source / Derived / Generated
+## Project Manifest
 
-项目 artifact 必须属于明确类别。
+`novelforge.toml` 是项目 manifest，声明 project identity、schema compatibility、logical authority paths、profiles 与 build settings。
 
-### Authoritative Source
-例如：
-- Accepted Canon；
-- current character facts；
-- relationship state；
-- resource ledger；
-- verified research claim；
-- active project profile。
+典型结构：
 
-### Plan / Proposal
-例如：
-- volume outline；
-- chapter plan；
-- Scene Card；
-- proposed relationship progression。
+```toml
+[novelforge]
+schema = "novelforge_project_v1"
+project_schema_version = "1"
+minimum_framework_version = "7.0.0"
 
-### Derived View
-例如：
-- 日期索引；
-- 人物存在感矩阵；
-- unresolved-loop dashboard；
-- dependency report。
+[project]
+id = "PROJECT-EXAMPLE"
+title = "Example Novel"
+language = "zh-CN"
+version = "0.1.0"
+status = "active"
 
-Derived view 必须能从 authoritative state 重建。
+[authority]
+accepted_canon = "state/canon"
+current_state = "state"
+active_plans = "plans"
+project_profiles = "profiles"
+research = "research"
+regressions = "evals/regression"
+```
 
-### Generated Artifact
-例如：
-- Raw Draft；
-- Review Draft；
-- semantic audit；
-- release bundle；
-- temporary Context Manifest。
+## Framework Lock
 
-Generated artifact 不会因为被 build 出来就自动成为 Canon。
-
-## Framework Lockfile
-
-`novelforge.lock.json` 锁定项目实际使用的 framework contract：
+`novelforge.lock.json` 锁定精确 Framework dependency：
 
 ```json
 {
@@ -160,65 +88,62 @@ Generated artifact 不会因为被 build 出来就自动成为 Canon。
     "commit": "<sha>",
     "bundle_fingerprint": "sha256:..."
   },
-  "project_schema_version": "1",
-  "updated_at": "..."
+  "project_schema_version": "1"
 }
 ```
 
-项目运行时应优先使用由 lockfile 解析出的**本地同步 framework bundle**，而不是每次任务跨 repo 远程读取十几份 engine 文件。
+普通生产应该使用 `.novelforge/framework/` 下经过 fingerprint 验证的 read-only local framework materialization，而不是每个任务跨 repo 远程读几十个 engine 文件。
 
-这样既保持单向依赖，也解决多 repo ping-pong。
+## Artifact Classes
 
-## Framework Sync Model
+### Authoritative Source
+Accepted Canon、current state、character/relationship/world facts、project profiles、verified research claims。
+
+### Plan / Proposal
+Book/volume/unit/chapter plan、Scene Card、未来关系或状态变化候选。
+
+### Derived View
+Timeline index、presence matrix、dependency report、open-loop dashboard、compiled state summary。必须可重建。
+
+### Generated Artifact
+Raw Draft、Review Draft、semantic audit、temporary Context Manifest、build bundle。生成出来本身不会获得 Canon authority。
+
+## Engineering Workflow
 
 ```text
-novelforge.lock.json
-→ framework release / commit
-→ 验证 bundle fingerprint
-→ materialize read-only bundle 到 .novelforge/framework/
-→ 本地使用 project + pinned framework 执行 Harness
+bootstrap
+→ validate
+→ classify change
+→ 需要时 plan/spec
+→ implement/produce
+→ deterministic tests + 适用的 semantic/eval gates
+→ explicit acceptance
+→ Canon 改变时 settlement/migration
+→ build/release
 ```
-
-`.novelforge/framework/` 是 runtime dependency，不是 Project Canon，默认不 commit。
-
-Framework upgrade 是显式 dependency update，并且必须跑 compatibility tests。
 
 ## Change Classes
 
-软件工程纪律不能变成官僚主义。
+### A · Micro / Content Edit
+Typos、局部 metadata 澄清、小范围 Accepted correction。正常 transaction + tests，不要求 feature spec。
 
-### Class A · Micro / Content Edit
-例如：已接受正文的局部修正、typo、局部 metadata 澄清。
+### B · Chapter / Unit Production
+使用 chapter/unit plan、Scene Cards、Context Manifest、prose/reader gates、continuity tests 与 release/build manifest。不要把每个段落做成软件 ticket。
 
-走正常 project transaction + tests，不要求 feature spec。
-
-### Class B · Chapter / Unit Production
-使用 chapter plan、Scene Cards、Context Manifest、draft/review gates、continuity tests 与 build manifest。只有当本次生产同时改变结构/需求时，才额外建立 `specs/` feature。
-
-### Class C · Structural Feature / Change
-例如：
-- volume redesign；
-- 新 relationship architecture；
-- schema change；
-- 新 project-specific subsystem；
-- 重大 research model 变化；
-- 有行为变化的 framework upgrade。
-
-必须执行：
+### C · Structural Change
+Volume redesign、schema change、relationship architecture、重大 research model 变化、新 project subsystem、会改变行为的 framework upgrade：
 
 ```text
 spec → plan → tasks → implementation → verification → acceptance
 ```
 
-### Class D · Canon Migration
-任何 already-settled Canon/state 修改，都走明确 migration / State Delta transaction，包含 before-state、evidence、dependency impact、post-condition 与 rollback/trace。
+### D · Canon Migration
+Already-settled Canon/state 修改必须有 exact before-state、evidence、dependency impact、checkpoint/write intent、post-condition、trace 与 rollback capability。
 
-### Class E · Release
-Release 必须可重复 build、可测试。
+### E · Release
+必须可重复 build，并明确 validation/test 状态。
 
-## Feature Specification Model
-
-Class C 使用：
+## Structural Change Specs
 
 ```text
 specs/NNN-short-name/
@@ -230,149 +155,82 @@ specs/NNN-short-name/
 └── tasks.zh-CN.md
 ```
 
-### `spec`
-定义：
-- problem/context；
-- user/editor value；
-- current-state audit；
-- requirements；
-- non-goals；
-- compatibility constraints；
-- acceptance scenarios；
-- Canon/authority impact；
-- reader/prose impact；
-- risks。
+`spec`：problem/current-state/requirements/non-goals/acceptance/authority impact。
 
-### `plan`
-定义：
-- chosen architecture；
-- alternatives considered；
-- affected project objects/files；
-- dependency graph；
-- migration strategy；
-- test/eval strategy；
-- phases/checkpoints；
-- rollback。
+`plan`：architecture/alternatives/affected objects/dependencies/migration/tests/phases/rollback。
 
-### `tasks`
-定义：
-- exact task IDs；
-- dependencies；
-- parallelizable tasks；
-- exact target paths/objects；
-- completion criteria；
-- per-phase verification checkpoint。
+`tasks`：exact IDs、targets、dependencies、parallel work、completion criteria、phase checkpoints。
 
-Harness 可以生成或维护这些文件，但所有 user-visible story change 仍服从正常 authority。
+这是借用成熟软件工程纪律，而不是把普通正文生产官僚化。
 
-## Project CI
+## Deterministic Project Checks
 
-一个专业小说项目应该能在**不调用付费模型**的情况下跑 deterministic checks：
+一个专业小说项目应该能在不调用付费模型的情况下验证：
 
-```text
-project schema validate
-→ bilingual docs / required files
-→ stable-ID uniqueness
-→ Canon/plan lifecycle checks
-→ link/reference integrity
-→ dependency graph integrity
-→ ledger arithmetic（适用时）
-→ date/timeline consistency
-→ accepted manuscript/state binding
-→ derived-view freshness
-→ regression fixture structure
-→ release bundle build
-```
+- manifest/lock compatibility；
+- required directory/file structure；
+- stable-ID uniqueness；
+- lifecycle boundary（Plan/Review ≠ Accepted）；
+- link/reference/dependency integrity；
+- 适用时的 resource arithmetic；
+- timeline/date consistency；
+- Accepted manuscript ↔ state-ledger fingerprint；
+- derived-view freshness；
+- regression fixture structure；
+- Project Profile 是否试图关闭 mandatory Framework Fundamentals；
+- deterministic project bundle build。
 
-Live semantic/prose eval 是独立 opt-in job，除非 host 本身提供包含的模型执行能力。
+Semantic prose/reader eval 与 deterministic tests 互补，不能互相替代。
 
 ## Build
 
-`novelforge project build` 应生成 compact deterministic bundle，例如：
-
-```text
-dist/
-├── project.bundle.json
-├── authority.manifest.json
-├── accepted.manifest.json
-├── active-plan.manifest.json
-├── research.manifest.json
-├── profile.manifest.json
-└── fingerprints.json
-```
-
-Bundle 是**索引/compiled view**，不是替代 authority。
+`project_sdk.py build` 生成 compact indexed `dist/` bundle，包含文件分类与 fingerprints。Bundle 是 compiled view，不是第二 authority。
 
 作用：
-- 减少重复远程读取；
-- 让 chat session 快速 bootstrap；
-- 提供稳定 fingerprint；
-- 支持 CI/runtime compatibility check；
-- 仍然可以做 sparse context selection。
+- 快速 Chat/Agent bootstrap；
+- stable fingerprint；
+- 减少跨 repo 读取；
+- compatibility check；
+- sparse Context selection。
 
-## Tests as Fiction Engineering
+## Executable SDK
 
-测试不负责判定“文学上是不是伟大”，测试负责保护 invariant。
-
-例如：
-- stable ID 不重复；
-- future-plan fact 没提前进入 current state；
-- 角色不会提前知道尚未 reveal 的 secret；
-- resource arithmetic 平衡；
-- relationship transition 有 Accepted evidence；
-- accepted chapter fingerprint 与 state ledger 一致；
-- 引用人物/地点/物件真实存在；
-- stale derived view 不冒充 authority；
-- project profile 不能关闭 mandatory framework anti-AI fundamentals，除非是 framework 明确允许的 profile exception。
-
-Semantic/Reader eval 与 deterministic tests 互补。
-
-## Release Model
-
-建议项目 release identity：
-
-```text
-project version
-+ framework lock version
-+ accepted Canon cutoff
-+ project bundle fingerprint
-+ eval status
+```bash
+python project_sdk.py init <path> --id PROJECT-X --title "Novel"
+python project_sdk.py validate <path>
+python project_sdk.py spec-new <path> --title "Structural change"
+python project_sdk.py build <path>
+python project_sdk.py self-test
 ```
 
-Release 可以是内部 editorial milestone，不一定等于公开发布。
+## Legacy Migration
 
-## Migration Model
-
-Framework 或 project-schema 的非平凡升级应建立 migration spec：
+成熟旧项目可以保留物理目录，通过 Project Adapter 渐进迁移：
 
 ```text
-old schema/state
-→ migration plan
-→ backup/checkpoint
-→ transform
-→ validate
-→ rebuild derived views
-→ run tests
-→ commit new lock/schema version
+audit
+→ add manifest + lock
+→ map authority classes
+→ validate/build
+→ add deterministic CI
+→ move truly generic rules into NovelForge
+→ retain only project data/overrides
+→ remove stale embedded framework copies
 ```
 
-禁止在新 schema 下静默 reinterpret 旧 Canon。
+抽取 generic mechanism 时，绝不能把具体项目 facts 一起搬进 NovelForge。
 
-## Complete-software-project Principle
+## Complete-project Test
 
-一个小说 repo 应该在**完全不依赖聊天记忆**的情况下回答：
-
-- 这是什么项目？
-- 用哪个 framework 版本？
-- 什么是 authority？
-- 什么已经发生？
-- 什么只是计划？
-- 现在正在生产什么？
-- 哪些 tests 保护 continuity？
-- 哪些 research 支撑现实事实？
-- 哪些 user/project profiles 生效？
+一个小说 repo 在完全不依赖聊天记忆时，应该回答：
+- 这是什么项目，用哪个 Framework 版本？
+- 哪些是 authoritative、planned、generated、accepted、settled？
+- 当前正在生产什么？
+- 哪些 tests 保护 continuity/state？
+- 哪些 research 支撑 factual claim？
+- 哪些 project/user profile 生效？
 - 怎么 build compact context bundle？
-- 怎么升级 / rollback？
-- 怎么判断一个 release 有效？
+- 怎么 upgrade / rollback Framework？
+- 怎么识别 valid release？
 
-如果这些答案只存在于聊天里，这本小说还不算完整的软件工程项目。
+如果这些答案只存在聊天历史里，这本小说还不是完整软件工程项目。
