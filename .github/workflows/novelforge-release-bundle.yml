@@ -1,0 +1,99 @@
+name: NovelForge Framework Bundle
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'core/**'
+      - 'surface/**'
+      - 'harness/**'
+      - 'learning/**'
+      - 'corpus/**'
+      - 'evals/**'
+      - 'docs/**'
+      - 'knowledge_base/**'
+      - 'release/**'
+      - 'scripts/**'
+      - 'project_sdk.py'
+      - 'project_adapter.py'
+      - 'novelforge.py'
+      - 'HARNESS_MANIFEST.yaml'
+      - 'SKILL*'
+      - 'AGENTS*'
+      - 'CLAUDE*'
+      - 'README*'
+      - 'CHANGELOG*'
+      - '.github/workflows/novelforge-release-bundle.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  framework-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build deterministic bundle twice
+        run: |
+          mkdir -p dist
+          python release/build_framework_bundle.py build \
+            --output dist/novelforge-framework-a.tar \
+            --report dist/bundle-a.json
+          python release/build_framework_bundle.py build \
+            --output dist/novelforge-framework-b.tar \
+            --report dist/bundle-b.json
+          cmp dist/novelforge-framework-a.tar dist/novelforge-framework-b.tar
+          python - <<'PY'
+          import json
+          a=json.load(open('dist/bundle-a.json',encoding='utf-8'))
+          b=json.load(open('dist/bundle-b.json',encoding='utf-8'))
+          assert a['bundle_fingerprint']==b['bundle_fingerprint'],(a,b)
+          assert a['model_execution'] is False
+          print('BUNDLE_FINGERPRINT='+a['bundle_fingerprint'])
+          PY
+
+      - name: Verify exact bundle
+        run: |
+          EXPECTED="$(python -c "import json;print(json.load(open('dist/bundle-a.json'))['bundle_fingerprint'])")"
+          python release/build_framework_bundle.py verify \
+            --bundle dist/novelforge-framework-a.tar \
+            --expected "$EXPECTED" \
+            --report dist/bundle-verify.json
+          python release/build_framework_bundle.py self-test > dist/bundle-self-test.json
+          python - <<'PY'
+          import json
+          v=json.load(open('dist/bundle-verify.json',encoding='utf-8'))
+          s=json.load(open('dist/bundle-self-test.json',encoding='utf-8'))
+          assert v['valid'] is True
+          assert s['framework_bundle_contract']=='PASS'
+          assert s['deterministic_bytes'] and s['tamper_detected']
+          PY
+
+      - name: Publish bundle fingerprint to job summary
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json,os
+          d=json.load(open('dist/bundle-a.json',encoding='utf-8'))
+          print('# NovelForge Framework Bundle')
+          print()
+          print(f"- Commit: `{os.environ['GITHUB_SHA']}`")
+          print(f"- Fingerprint: `{d['bundle_fingerprint']}`")
+          print(f"- Content index: `{d['content_index_fingerprint']}`")
+          print(f"- Files: {d['files']}")
+          print('- Model execution: false')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: novelforge-framework-${{ github.sha }}
+          path: |
+            dist/novelforge-framework-a.tar
+            dist/bundle-a.json
+            dist/bundle-verify.json
+            dist/bundle-self-test.json
+          if-no-files-found: error
+          retention-days: 30
