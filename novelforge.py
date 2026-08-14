@@ -14,12 +14,14 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
-FRAMEWORK_VERSION = "7.1.0"
+FRAMEWORK_VERSION = "7.2.0"
 PROJECT_SDK = ROOT / "project_sdk.py"
 PROJECT_ADAPTER = ROOT / "project_adapter.py"
 CONTROL = ROOT / "harness" / "control_plane" / "control_plane.py"
 SESSION = ROOT / "harness" / "session_runtime" / "session_runtime.py"
 CAPABILITIES = ROOT / "harness" / "runtime_capabilities.py"
+CONTEXT_INSPECTOR = ROOT / "harness" / "context_inspector.py"
+MEMORY_TIERS = ROOT / "harness" / "memory_tiers.py"
 LEARNING = ROOT / "learning" / "learning_store.py"
 LEARNING_CYCLE = ROOT / "learning" / "learning_cycle.py"
 LEARNING_EVAL = ROOT / "learning" / "learning_eval.py"
@@ -29,6 +31,11 @@ DISCOVERY = ROOT / "corpus" / "discovery_runtime.py"
 RIGHTS_GATE = ROOT / "corpus" / "rights_gate.py"
 MCP = ROOT / "harness" / "control_plane" / "mcp_stdio.py"
 BUNDLE = ROOT / "release" / "build_framework_bundle.py"
+QUALITY_FINDINGS = ROOT / "quality" / "findings.py"
+READER_PANEL = ROOT / "quality" / "reader_panel.py"
+QUALITY_EVOLUTION = ROOT / "quality" / "quality_evolution.py"
+CHARACTER_INTEGRITY = ROOT / "quality" / "character_integrity.py"
+STATE_GRAPH = ROOT / "quality" / "state_graph.py"
 
 TASK_MODES = [
     "DESIGN-BOOK", "DESIGN-VOLUME", "PLAN-UNIT", "PLAN-CHAPTER", "DRAFT",
@@ -91,14 +98,18 @@ def bootstrap(project_root: Path, task_mode: str, build: bool) -> dict[str, Any]
         ],
         "task_specific_loading": "Resolve through Project Adapter + Harness + sparse Context Manifest; never inject the whole project or corpus by default.",
         "capability_policy": "Probe/declare host capabilities before routing external/tool work; undeclared capability is unavailable.",
+        "quality_policy": "Reader panels and integrity audits are bounded diagnostics; mandatory independent semantic gates remain separate and fingerprint-bound.",
+        "memory_policy": "Context/memory controls operate on overlays or derived views and never silently mutate Project Canon.",
     }
 
 
 def doctor() -> dict[str, Any]:
     required = [
-        PROJECT_SDK, PROJECT_ADAPTER, CONTROL, SESSION, CAPABILITIES, LEARNING,
-        LEARNING_CYCLE, LEARNING_EVAL, PROMOTION_GATE, CORPUS_SCOUT, DISCOVERY,
-        RIGHTS_GATE, MCP, BUNDLE,
+        PROJECT_SDK, PROJECT_ADAPTER, CONTROL, SESSION, CAPABILITIES,
+        CONTEXT_INSPECTOR, MEMORY_TIERS, LEARNING, LEARNING_CYCLE, LEARNING_EVAL,
+        PROMOTION_GATE, CORPUS_SCOUT, DISCOVERY, RIGHTS_GATE, MCP, BUNDLE,
+        QUALITY_FINDINGS, READER_PANEL, QUALITY_EVOLUTION, CHARACTER_INTEGRITY,
+        STATE_GRAPH,
     ]
     missing = [str(p.relative_to(ROOT)) for p in required if not p.exists()]
     return {
@@ -118,6 +129,13 @@ def self_test() -> int:
         (SESSION, ["self-test"]),
         (CONTROL, ["--db", "/tmp/novelforge-cli-control.db", "self-test"]),
         (CAPABILITIES, ["self-test"]),
+        (CONTEXT_INSPECTOR, ["self-test"]),
+        (MEMORY_TIERS, ["self-test"]),
+        (QUALITY_FINDINGS, ["self-test"]),
+        (READER_PANEL, ["self-test"]),
+        (QUALITY_EVOLUTION, ["--db", "/tmp/novelforge-cli-quality.db", "self-test", "--path", "/tmp/novelforge-cli-quality-selftest.db"]),
+        (CHARACTER_INTEGRITY, ["self-test"]),
+        (STATE_GRAPH, ["self-test"]),
         (LEARNING, ["--db", "/tmp/novelforge-cli-learning.db", "self-test"]),
         (LEARNING_CYCLE, ["self-test", "--path", "/tmp/novelforge-cli-learning-cycle.db"]),
         (LEARNING_EVAL, ["self-test"]),
@@ -159,6 +177,13 @@ def main() -> int:
     pa = sub.add_parser("adapter"); pa.add_argument("adapter_args", nargs=argparse.REMAINDER)
     rt = sub.add_parser("runtime"); rt.add_argument("runtime_args", nargs=argparse.REMAINDER)
     ca = sub.add_parser("capabilities"); ca.add_argument("capability_args", nargs=argparse.REMAINDER)
+    ci = sub.add_parser("context-inspect"); ci.add_argument("context_args", nargs=argparse.REMAINDER)
+    mt = sub.add_parser("memory-tiers"); mt.add_argument("memory_args", nargs=argparse.REMAINDER)
+    qf = sub.add_parser("quality-findings"); qf.add_argument("quality_finding_args", nargs=argparse.REMAINDER)
+    rp = sub.add_parser("reader-panel"); rp.add_argument("reader_args", nargs=argparse.REMAINDER)
+    qe = sub.add_parser("quality-evolution"); qe.add_argument("evolution_args", nargs=argparse.REMAINDER)
+    ch = sub.add_parser("character-integrity"); ch.add_argument("character_args", nargs=argparse.REMAINDER)
+    sg = sub.add_parser("state-graph"); sg.add_argument("state_graph_args", nargs=argparse.REMAINDER)
     le = sub.add_parser("learning"); le.add_argument("learning_args", nargs=argparse.REMAINDER)
     lc = sub.add_parser("learning-cycle"); lc.add_argument("cycle_args", nargs=argparse.REMAINDER)
     lg = sub.add_parser("learning-gate"); lg.add_argument("gate_args", nargs=argparse.REMAINDER)
@@ -180,6 +205,13 @@ def main() -> int:
         return call(PROJECT_ADAPTER, args.adapter_args)
     if args.cmd == "runtime": return call(CONTROL, args.runtime_args)
     if args.cmd == "capabilities": return call(CAPABILITIES, args.capability_args or ["probe-local"])
+    if args.cmd == "context-inspect": return call(CONTEXT_INSPECTOR, args.context_args or ["self-test"])
+    if args.cmd == "memory-tiers": return call(MEMORY_TIERS, args.memory_args or ["self-test"])
+    if args.cmd == "quality-findings": return call(QUALITY_FINDINGS, args.quality_finding_args or ["self-test"])
+    if args.cmd == "reader-panel": return call(READER_PANEL, args.reader_args or ["self-test"])
+    if args.cmd == "quality-evolution": return call(QUALITY_EVOLUTION, args.evolution_args or ["self-test"])
+    if args.cmd == "character-integrity": return call(CHARACTER_INTEGRITY, args.character_args or ["self-test"])
+    if args.cmd == "state-graph": return call(STATE_GRAPH, args.state_graph_args or ["self-test"])
     if args.cmd == "learning": return call(LEARNING, args.learning_args)
     if args.cmd == "learning-cycle": return call(LEARNING_CYCLE, args.cycle_args)
     if args.cmd == "learning-gate": return call(PROMOTION_GATE, args.gate_args)
