@@ -1,0 +1,29 @@
+name: NovelForge Project Peer Semantic Bridge
+description: Execute the generic peer-chat relay against a consuming Project issue while enforcing exact Framework lock binding.
+inputs:
+  mode:
+    description: prepare or validate-result
+    required: true
+  project-root:
+    description: Path to the NovelForge Project root in the caller repository
+    required: true
+  project-id:
+    description: Expected Project ID
+    required: true
+  github-token:
+    description: Caller repository token with issues write permission
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Execute project-hosted peer bridge
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        NOVELFORGE_BRIDGE_MODE: ${{ inputs.mode }}
+        NOVELFORGE_PROJECT_ROOT: ${{ inputs.project-root }}
+        NOVELFORGE_PROJECT_ID: ${{ inputs.project-id }}
+        NOVELFORGE_ACTION_PATH: ${{ github.action_path }}
+        NOVELFORGE_ACTION_REF: ${{ github.action_ref }}
+        NOVELFORGE_ACTION_REPOSITORY: ${{ github.action_repository }}
+      run: python "$NOVELFORGE_ACTION_PATH/bridge.py"

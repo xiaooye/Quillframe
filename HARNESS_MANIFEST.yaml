@@ -239,6 +239,28 @@ bilingual_docs:
   machine_schema_single_source: true
   mermaid_diagrams: preferred
 
+workflows:
+  deterministic_ci: .github/workflows/novelforge-ci.yml
+  reusable_contracts: .github/workflows/novelforge-contracts.yml
+  framework_bundle: .github/workflows/novelforge-release-bundle.yml
+  typed_event_router: .github/workflows/novelforge-event-router.yml
+  live_semantic_optional: .github/workflows/novelforge-semantic-live.yml
+  weekly_maintenance: .github/workflows/novelforge-weekly-maintenance.yml
+  peer_chat:
+    reusable_workflow: .github/workflows/novelforge-chat-semantic-bridge.yml
+    composite_action: .github/actions/project-peer-semantic/action.yml
+    bridge_runtime: .github/actions/project-peer-semantic/bridge.py
+    issue_owner: consuming-project-repository
+    framework_issue_listener: forbidden
+    caller_must_pin_exact_framework_commit: true
+    job_provenance_project_repo_binding: required
+    job_provenance_framework_commit_binding: required
+  normal_workflows_may_spend_model_usage: false
+  live_semantic_requires_explicit_dispatch_and_secret: true
+  weekly_maintenance_model_execution: false
+  weekly_maintenance_web_execution_without_declared_capability: false
+  weekly_maintenance_auto_promotion: false
+
 normal_ci:
   model_execution: forbidden
   required:
@@ -263,6 +285,7 @@ normal_ci:
     - mcp-self-test
     - semantic-router-self-test
     - local-agent-adapter-self-test
+    - project-hosted-peer-bridge-ownership
     - optional-openai-dry-run
 
 scheduled_maintenance:

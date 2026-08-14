@@ -96,11 +96,28 @@ def link_errors() -> list[str]:
     return errors
 
 
+def release_version_errors(manifest: str) -> list[str]:
+    errors: list[str] = []
+    skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+    manifest_match = re.search(r"(?m)^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\s*$", manifest)
+    skill_match = re.search(r"(?m)^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\s*$", skill)
+    if not manifest_match:
+        errors.append("HARNESS_MANIFEST.yaml missing semantic version")
+    if not skill_match:
+        errors.append("SKILL.md frontmatter missing semantic version")
+    if manifest_match and skill_match and manifest_match.group(1) != skill_match.group(1):
+        errors.append(
+            f"release version drift: manifest={manifest_match.group(1)} skill={skill_match.group(1)}"
+        )
+    return errors
+
+
 def contract_errors() -> list[str]:
     errors: list[str] = []
     manifest = (ROOT / "HARNESS_MANIFEST.yaml").read_text(encoding="utf-8")
+    errors.extend(release_version_errors(manifest))
     required = [
-        "version: 7.0.0", "name: novelforge", "project_agnostic: true",
+        "name: novelforge", "project_agnostic: true",
         "built_in_novel_or_canon: false", "dependency_direction: project-to-framework-only",
         "human_facing_pair_required: true", "project_sdk: project_sdk.py",
         "durable_store: learning/learning_store.py", "scout: corpus/corpus_scout.py",

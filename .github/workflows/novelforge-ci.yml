@@ -11,3 +11,13 @@ permissions:
 jobs:
   contracts:
     uses: ./.github/workflows/novelforge-contracts.yml
+
+  peer-bridge-ownership:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Project-hosted peer bridge ownership contract
+        run: python scripts/peer_bridge_contract.py

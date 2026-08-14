@@ -23,7 +23,7 @@ on:
       - 'CLAUDE*'
       - 'README*'
       - 'CHANGELOG*'
-      - '.github/workflows/novelforge-release-bundle.yml'
+      - '.github/**'
 
 permissions:
   contents: read
