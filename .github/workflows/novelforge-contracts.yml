@@ -28,8 +28,10 @@ jobs:
       - name: Repository hygiene and generic-boundary gate
         run: python scripts/framework_hygiene.py
 
-      - name: Project SDK contract
-        run: python project_sdk.py self-test > project-sdk-test.json
+      - name: Project SDK and mapped Adapter contracts
+        run: |
+          python project_sdk.py self-test > project-sdk-test.json
+          python project_adapter.py self-test > project-adapter-test.json
 
       - name: Adaptive learning and corpus contracts
         run: |
@@ -98,6 +100,7 @@ jobs:
           import json
           checks={
             'project-sdk-test.json':('project_sdk_contract','PASS'),
+            'project-adapter-test.json':('project_adapter_contract','PASS'),
             'learning-test.json':('learning_store_contract','PASS'),
             'corpus-scout-test.json':('corpus_scout_contract','PASS'),
             'corpus-rights-test.json':('rights_gate_contract','PASS'),
