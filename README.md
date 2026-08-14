@@ -46,6 +46,8 @@ For direct novel-agent/product positioning, tradeoffs, and source-backed compari
 
 ## 02 · The 7.3 mental model 🪄
 
+<img src="assets/ui/home-architecture.en.svg" alt="NovelForge Story Loom architecture separating project authority, semantic model contracts, deterministic runtime shell, and evidence evolution" width="100%" />
+
 NovelForge keeps four concerns separate even when they collaborate closely.
 
 ### Story authority
@@ -71,6 +73,8 @@ Read [Architecture](docs/architecture.en.md) for the system view and [Architectu
 ---
 
 ## 03 · A chapter is a production run, not one model call 📖
+
+<img src="assets/ui/home-pipeline.en.svg" alt="NovelForge four-stage production run with freeze and simulation, internal candidate generation, diagnosis and evolution, release gate, and failure routing" width="100%" />
 
 A DRAFT/REVISE run is organized around four responsibilities rather than one giant prompt.
 
