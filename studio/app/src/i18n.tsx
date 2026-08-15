@@ -9,6 +9,8 @@ const loaders: Record<Locale, () => Promise<{ default: Messages }>> = {
 };
 
 function initialLocale(): Locale {
+  const requested = new URLSearchParams(window.location.search).get("lang");
+  if (requested === "en-US" || requested === "zh-CN") return requested;
   const language = navigator.language.toLowerCase();
   return language.startsWith("zh") ? "zh-CN" : "en-US";
 }

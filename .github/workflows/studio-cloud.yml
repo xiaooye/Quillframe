@@ -29,10 +29,12 @@ env:
 jobs:
   cloud-host:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -57,6 +59,7 @@ jobs:
       - name: Verify static cloud-host contract
         run: |
           python - <<'PY'
+          import json
           from pathlib import Path
 
           root = Path('studio/app')
@@ -66,6 +69,7 @@ jobs:
           index = (dist / 'index.html').read_text(encoding='utf-8')
           bridge = (root / 'src/bridge.ts').read_text(encoding='utf-8')
           studio = (root / 'src/studio.tsx').read_text(encoding='utf-8')
+          descriptor = json.loads((dist / '.well-known/novelforge-host.json').read_text(encoding='utf-8'))
 
           for needle in (
               'Content-Security-Policy:',
@@ -79,6 +83,17 @@ jobs:
           assert '__NOVELFORGE_STUDIO_TOKEN__' in index
           assert 'value !== TOKEN_PLACEHOLDER' in bridge
           assert 'bridgeTransportAvailable()' in studio
+          assert descriptor == {
+              'schema': 'novelforge_studio_host_descriptor_v1',
+              'surface': 'cloud_ui',
+              'delivery': 'cloudflare_pages',
+              'core_host': 'unbound',
+              'authority': False,
+              'canon_authority': False,
+              'framework_write_authority': False,
+              'settlement_authority': False,
+              'direct_core_store_access': False,
+          }
           assert not (root / 'functions').exists(), 'Pages Functions are outside this slice'
           assert not list(root.glob('wrangler.*')), 'hosted shell must not introduce a Worker/Functions backend'
           assert not (dist / '404.html').exists(), 'Cloudflare Pages SPA fallback requires no top-level 404.html'
@@ -112,13 +127,159 @@ jobs:
           jq -e '.success == true' /tmp/studio-pages-project.json >/dev/null
 
       - name: Deploy Studio to Cloudflare Pages
+        id: deploy
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.123.0'
+          packageManager: pnpm
           command: pages deploy studio/app/dist --project-name=novelforge-studio --branch=${{ github.event_name == 'pull_request' && github.head_ref || 'main' }} --commit-hash=${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify deployed host over HTTPS
+        if: steps.deploy.outcome == 'success'
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          set -euo pipefail
+          test -n "${DEPLOYMENT_URL}"
+          echo "deployment_url=${DEPLOYMENT_URL}"
+
+          ready=false
+          for _ in $(seq 1 24); do
+            if curl --silent --show-error --fail "${DEPLOYMENT_URL}/" > /tmp/studio-preview-root.html; then
+              if grep -q '<title>NovelForge Studio</title>' /tmp/studio-preview-root.html; then ready=true; break; fi
+            fi
+            sleep 2
+          done
+          test "${ready}" = "true"
+
+          curl --silent --show-error --fail "${DEPLOYMENT_URL}/project?lang=en-US" > /tmp/studio-preview-project.html
+          grep -q '<title>NovelForge Studio</title>' /tmp/studio-preview-project.html
+
+          curl --silent --show-error --fail --dump-header /tmp/studio-preview-headers.txt --output /dev/null "${DEPLOYMENT_URL}/"
+          grep -qi '^content-security-policy:' /tmp/studio-preview-headers.txt
+          grep -qi '^x-content-type-options: nosniff' /tmp/studio-preview-headers.txt
+          grep -qi '^referrer-policy: no-referrer' /tmp/studio-preview-headers.txt
+          grep -qi '^x-robots-tag: noindex' /tmp/studio-preview-headers.txt
+
+          curl --silent --show-error --fail "${DEPLOYMENT_URL}/.well-known/novelforge-host.json" > /tmp/studio-host.json
+          python - <<'PY'
+          import json
+          data=json.load(open('/tmp/studio-host.json', encoding='utf-8'))
+          assert data['schema']=='novelforge_studio_host_descriptor_v1'
+          assert data['surface']=='cloud_ui'
+          assert data['core_host']=='unbound'
+          assert data['authority'] is False
+          assert data['canon_authority'] is False
+          assert data['framework_write_authority'] is False
+          assert data['settlement_authority'] is False
+          assert data['direct_core_store_access'] is False
+          print({'schema':'novelforge_studio_cloud_https_check_v1','status':'pass','url':data['surface']})
+          PY
+
+      - name: Browser runtime and visual QA
+        if: steps.deploy.outcome == 'success'
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/studio-cloud-qa
+          CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser)
+          test -n "${CHROME}"
+          echo "chrome=${CHROME}"
+
+          run_chrome() {
+            name="$1"
+            size="$2"
+            url="$3"
+            profile=$(mktemp -d)
+            "${CHROME}" \
+              --headless=new \
+              --no-sandbox \
+              --disable-gpu \
+              --disable-dev-shm-usage \
+              --disable-background-networking \
+              --window-size="${size}" \
+              --virtual-time-budget=3500 \
+              --user-data-dir="${profile}" \
+              --log-net-log="/tmp/studio-cloud-qa/${name}-netlog.json" \
+              --net-log-capture-mode=IncludeSensitive \
+              --screenshot="/tmp/studio-cloud-qa/${name}.png" \
+              "${url}" >/tmp/studio-cloud-qa/${name}-chrome.log 2>&1
+            rm -rf "${profile}"
+          }
+
+          dump_dom() {
+            name="$1"
+            size="$2"
+            url="$3"
+            profile=$(mktemp -d)
+            "${CHROME}" \
+              --headless=new \
+              --no-sandbox \
+              --disable-gpu \
+              --disable-dev-shm-usage \
+              --disable-background-networking \
+              --window-size="${size}" \
+              --virtual-time-budget=3500 \
+              --user-data-dir="${profile}" \
+              --dump-dom \
+              "${url}" > "/tmp/studio-cloud-qa/${name}-dom.html" 2>"/tmp/studio-cloud-qa/${name}-dom.log"
+            rm -rf "${profile}"
+          }
+
+          run_chrome en-desktop 1440,900 "${DEPLOYMENT_URL}/?lang=en-US"
+          run_chrome en-mobile 390,844 "${DEPLOYMENT_URL}/project?lang=en-US"
+          run_chrome zh-mobile 390,844 "${DEPLOYMENT_URL}/?lang=zh-CN"
+          dump_dom en-desktop 1440,900 "${DEPLOYMENT_URL}/?lang=en-US"
+          dump_dom en-project 390,844 "${DEPLOYMENT_URL}/project?lang=en-US"
+          dump_dom zh-mobile 390,844 "${DEPLOYMENT_URL}/?lang=zh-CN"
+
+          python - <<'PY'
+          from pathlib import Path
+
+          root=Path('/tmp/studio-cloud-qa')
+          en=(root/'en-desktop-dom.html').read_text(encoding='utf-8', errors='replace')
+          project=(root/'en-project-dom.html').read_text(encoding='utf-8', errors='replace')
+          zh=(root/'zh-mobile-dom.html').read_text(encoding='utf-8', errors='replace')
+
+          assert 'This hosted shell is not bound to a NovelForge Core host' in en
+          assert 'Cloud-hosted' in en
+          assert 'Project Hub' in project
+          assert 'This hosted shell is not bound to a NovelForge Core host' in project
+          assert '这个云端 Studio 尚未绑定 NovelForge Core 宿主' in zh
+          assert '云托管' in zh
+
+          for netlog in root.glob('*-netlog.json'):
+              text=netlog.read_text(encoding='utf-8', errors='replace')
+              assert '/api/bridge/invoke' not in text, f'unbound hosted Studio contacted Core bridge: {netlog.name}'
+
+          for image in ('en-desktop.png','en-mobile.png','zh-mobile.png'):
+              path=root/image
+              assert path.exists() and path.stat().st_size > 10_000, image
+
+          (root/'runtime-proof.txt').write_text(
+              'schema=novelforge_studio_cloud_runtime_proof_v1\n'
+              'surface=cloud_ui\n'
+              'core_host=unbound\n'
+              'bridge_requests=0\n'
+              'authority=false\n',
+              encoding='utf-8',
+          )
+          print({'schema':'novelforge_studio_cloud_browser_qa_v1','status':'pass','bridge_requests':0})
+          PY
+
+      - name: Upload cloud-host QA evidence
+        if: always() && steps.deploy.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-cloud-qa
+          path: /tmp/studio-cloud-qa
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Ensure production custom domain
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -170,9 +331,13 @@ jobs:
             sleep 5
           done
           test "${ready}" = "true"
-          curl --silent --show-error --fail --head "https://${CLOUDFLARE_CUSTOM_DOMAIN}/" > /tmp/studio-live-headers.txt
+          curl --silent --show-error --fail "https://${CLOUDFLARE_CUSTOM_DOMAIN}/project?lang=en-US" > /tmp/studio-live-project.html
+          grep -q '<title>NovelForge Studio</title>' /tmp/studio-live-project.html
+          curl --silent --show-error --fail --dump-header /tmp/studio-live-headers.txt --output /dev/null "https://${CLOUDFLARE_CUSTOM_DOMAIN}/"
           grep -qi '^content-security-policy:' /tmp/studio-live-headers.txt
           grep -qi '^x-content-type-options: nosniff' /tmp/studio-live-headers.txt
+          curl --silent --show-error --fail "https://${CLOUDFLARE_CUSTOM_DOMAIN}/.well-known/novelforge-host.json" > /tmp/studio-live-host.json
+          jq -e '.surface == "cloud_ui" and .core_host == "unbound" and .authority == false' /tmp/studio-live-host.json >/dev/null
           {
             echo '### NovelForge Studio Cloud Host'
             echo "- Production: https://${CLOUDFLARE_CUSTOM_DOMAIN}"
