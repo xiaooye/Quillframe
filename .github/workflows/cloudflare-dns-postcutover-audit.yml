@@ -22,25 +22,24 @@ jobs:
 
           zone="wei-dev.com"
           app="novelforge.wei-dev.com"
+          origin="novelforge-c73.pages.dev"
           ns1="camilo.ns.cloudflare.com"
           ns2="sofia.ns.cloudflare.com"
 
           echo "=== AUTHORITATIVE CLOUDFLARE DNS ==="
-          auth_apex_a=$(dig @"${ns1}" +short A "${zone}" | sort || true)
-          auth_app_a=$(dig @"${ns1}" +short A "${app}" | sort || true)
-          auth_app_aaaa=$(dig @"${ns1}" +short AAAA "${app}" | sort || true)
+          auth_apex_a=$(dig @"${ns1}" +short A "${zone}" | grep -E '^[0-9]+(\.[0-9]+){3}$' | sort || true)
+          auth_app_cname=$(dig @"${ns1}" +short CNAME "${app}" | sed 's/\.$//' | sort || true)
           auth_mx=$(dig @"${ns1}" +short MX "${zone}" | sort -n || true)
           auth_txt=$(dig @"${ns1}" +short TXT "${zone}" | sort || true)
           auth_caa=$(dig @"${ns1}" +short CAA "${zone}" | sort || true)
           printf 'apex A:\n%s\n' "${auth_apex_a:-<none>}"
-          printf 'app A:\n%s\n' "${auth_app_a:-<none>}"
-          printf 'app AAAA:\n%s\n' "${auth_app_aaaa:-<none>}"
+          printf 'app CNAME:\n%s\n' "${auth_app_cname:-<none>}"
           printf 'MX:\n%s\n' "${auth_mx:-<none>}"
           printf 'TXT:\n%s\n' "${auth_txt:-<none>}"
           printf 'CAA:\n%s\n' "${auth_caa:-<none>}"
 
           test -n "${auth_apex_a}"
-          test -n "${auth_app_a}${auth_app_aaaa}"
+          [ "${auth_app_cname}" = "${origin}" ]
           printf '%s\n' "${auth_mx}" | grep -Eiq '^1[[:space:]]+smtp\.google\.com\.?$'
           printf '%s\n' "${auth_txt}" | grep -Fq 'v=spf1 include:_spf.google.com ~all'
           for issuer in letsencrypt.org pki.goog sectigo.com; do
@@ -48,74 +47,73 @@ jobs:
           done
 
           echo "=== PUBLIC RESOLVERS ==="
+          expected_ns=$(printf '%s\n%s\n' "${ns1}" "${ns2}" | sort)
           ns_cf=$(dig @1.1.1.1 +short NS "${zone}" | sed 's/\.$//' | sort || true)
           ns_google=$(dig @8.8.8.8 +short NS "${zone}" | sed 's/\.$//' | sort || true)
-          app_cf=$(dig @1.1.1.1 +short A "${app}" | sort || true)
-          app_google=$(dig @8.8.8.8 +short A "${app}" | sort || true)
+          cname_cf=$(dig @1.1.1.1 +short CNAME "${app}" | sed 's/\.$//' | sort || true)
+          cname_google=$(dig @8.8.8.8 +short CNAME "${app}" | sed 's/\.$//' | sort || true)
+          a_cf=$(dig @1.1.1.1 +short A "${app}" | grep -E '^[0-9]+(\.[0-9]+){3}$' | sort || true)
+          a_google=$(dig @8.8.8.8 +short A "${app}" | grep -E '^[0-9]+(\.[0-9]+){3}$' | sort || true)
+          answer_cf=$(dig @1.1.1.1 +noall +answer A "${app}" || true)
+          answer_google=$(dig @8.8.8.8 +noall +answer A "${app}" || true)
           mx_cf=$(dig @1.1.1.1 +short MX "${zone}" | sort -n || true)
           txt_cf=$(dig @1.1.1.1 +short TXT "${zone}" | sort || true)
+
           printf '1.1.1.1 NS:\n%s\n' "${ns_cf:-<none>}"
           printf '8.8.8.8 NS:\n%s\n' "${ns_google:-<none>}"
-          printf '1.1.1.1 app A:\n%s\n' "${app_cf:-<none>}"
-          printf '8.8.8.8 app A:\n%s\n' "${app_google:-<none>}"
+          printf '1.1.1.1 CNAME:\n%s\n' "${cname_cf:-<none>}"
+          printf '8.8.8.8 CNAME:\n%s\n' "${cname_google:-<none>}"
+          printf '1.1.1.1 A:\n%s\n' "${a_cf:-<none>}"
+          printf '8.8.8.8 A:\n%s\n' "${a_google:-<none>}"
+          echo "1.1.1.1 answer/TTL:"; printf '%s\n' "${answer_cf:-<none>}"
+          echo "8.8.8.8 answer/TTL:"; printf '%s\n' "${answer_google:-<none>}"
           printf '1.1.1.1 MX:\n%s\n' "${mx_cf:-<none>}"
           printf '1.1.1.1 TXT:\n%s\n' "${txt_cf:-<none>}"
 
-          expected_ns=$(printf '%s\n%s\n' "${ns1}" "${ns2}" | sort)
           delegation_cf=false
           delegation_google=false
+          cname_ready_cf=false
+          cname_ready_google=false
           [ "${ns_cf}" = "${expected_ns}" ] && delegation_cf=true
           [ "${ns_google}" = "${expected_ns}" ] && delegation_google=true
-          resolver_app_cf=false
-          resolver_app_google=false
-          [ -n "${app_cf}" ] && resolver_app_cf=true
-          [ -n "${app_google}" ] && resolver_app_google=true
+          [ "${cname_cf}" = "${origin}" ] && cname_ready_cf=true
+          [ "${cname_google}" = "${origin}" ] && cname_ready_google=true
 
-          echo "=== EDGE TESTS BY AUTHORITATIVE IP ==="
-          app_ip=$(printf '%s\n' "${auth_app_a}" | head -n1)
-          apex_ip=$(printf '%s\n' "${auth_apex_a}" | head -n1)
-
+          echo "=== PUBLIC HTTPS ==="
+          app_status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 15 "https://${app}/" || true)
+          echo "${app}: ${app_status:-curl-failed}"
           app_https=false
-          if [ -n "${app_ip}" ]; then
-            app_status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-              --max-time 15 --resolve "${app}:443:${app_ip}" "https://${app}/" || true)
-            echo "${app} HTTPS via ${app_ip}: ${app_status:-curl-failed}"
-            case "${app_status}" in 200|204|301|302|307|308) app_https=true ;; esac
-          fi
+          case "${app_status}" in 200|204|301|302|307|308) app_https=true ;; esac
 
+          headers=$(mktemp)
+          root_status=$(curl --silent --show-error --output /dev/null --dump-header "${headers}" --write-out '%{http_code}' --max-time 15 "https://${zone}/migration-probe?x=1" || true)
+          root_location=$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,"");gsub(/\r/,"");print;exit}' "${headers}")
+          echo "${zone}: ${root_status:-curl-failed} -> ${root_location:-<none>}"
           root_redirect=false
-          root_location=""
-          root_status=""
-          if [ -n "${apex_ip}" ]; then
-            headers=$(mktemp)
-            root_status=$(curl --silent --show-error --output /dev/null --dump-header "${headers}" --write-out '%{http_code}' \
-              --max-time 15 --resolve "${zone}:443:${apex_ip}" "https://${zone}/migration-probe?x=1" || true)
-            root_location=$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); print; exit}' "${headers}")
-            echo "${zone} HTTPS via ${apex_ip}: ${root_status:-curl-failed} -> ${root_location:-<none>}"
-            if [ "${root_status}" = "301" ] && [ "${root_location}" = "https://novelforge.wei-dev.com/migration-probe?x=1" ]; then
-              root_redirect=true
-            fi
+          if [ "${root_status}" = "301" ] && [ "${root_location}" = "https://novelforge.wei-dev.com/migration-probe?x=1" ]; then
+            root_redirect=true
           fi
 
           public_ready=false
           if [ "${delegation_cf}" = true ] && [ "${delegation_google}" = true ] && \
-             [ "${resolver_app_cf}" = true ] && [ "${resolver_app_google}" = true ] && \
+             [ "${cname_ready_cf}" = true ] && [ "${cname_ready_google}" = true ] && \
              [ "${app_https}" = true ] && [ "${root_redirect}" = true ]; then
             public_ready=true
           fi
 
           {
             echo "### wei-dev.com post-cutover audit"
-            echo "- authoritative Cloudflare records: \`pass\`"
+            echo "- authoritative Cloudflare state: \`pass\`"
             echo "- 1.1.1.1 delegation: \`${delegation_cf}\`"
             echo "- 8.8.8.8 delegation: \`${delegation_google}\`"
-            echo "- 1.1.1.1 resolves novelforge hostname: \`${resolver_app_cf}\`"
-            echo "- 8.8.8.8 resolves novelforge hostname: \`${resolver_app_google}\`"
-            echo "- NovelForge HTTPS at authoritative edge: \`${app_https}\`"
+            echo "- 1.1.1.1 sees current Pages CNAME: \`${cname_ready_cf}\`"
+            echo "- 8.8.8.8 sees current Pages CNAME: \`${cname_ready_google}\`"
+            echo "- NovelForge HTTPS: \`${app_https}\` (${app_status:-curl-failed})"
             echo "- apex redirect exact path/query: \`${root_redirect}\`"
+            echo "- MX/SPF authoritative: \`pass\`"
             echo "- public_ready: \`${public_ready}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
 
-          # The audit itself is successful if authoritative state is correct.
-          # public_ready can remain false temporarily while recursive negative
-          # caches expire, and is reported rather than misclassified as a write failure.
+          # Authoritative state is the hard gate. public_ready is reported
+          # separately because recursive resolvers may temporarily retain the
+          # pre-cutover wildcard answer until its old cache expires.
