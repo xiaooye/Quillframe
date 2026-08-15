@@ -50,6 +50,8 @@ Normal CI:
 - validates that hidden expected labels are absent;
 - may validate committed reviewed baselines when explicitly versioned.
 
+A reviewed baseline is an **evidence index, not model output**. `validate_semantic_acceptance.py` rebuilds the current blind typed jobs and requires an exact case/fingerprint match against independently reviewed PASS provenance. Any rubric, fixture, or output-contract change that changes a fingerprint invalidates the old baseline and requires fresh independent review. The baseline never supplies judgments to `run_evals.py`.
+
 Normal CI does **not** silently call paid/login-bound models.
 
 ## Semantic execution
@@ -62,6 +64,7 @@ A blind queue is converted to typed semantic jobs through the Harness semantic r
 python evals/run_evals.py --release
 python evals/build_judge_queue.py --output /tmp/semantic-queue.json
 python evals/run_evals.py --judgments reviewed-results.json --json
+python evals/validate_semantic_acceptance.py validate
 ```
 
 ## Quality domains

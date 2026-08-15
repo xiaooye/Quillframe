@@ -1,0 +1,47 @@
+name: Product Site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "assets/brand/**"
+      - ".github/workflows/product-site.yml"
+  pull_request:
+    paths:
+      - "site/**"
+      - "assets/brand/**"
+      - ".github/workflows/product-site.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: product-site-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  site-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install exact direct dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Product-site contract checks
+        run: npm run quality
+
+      - name: Production build
+        run: npm run build

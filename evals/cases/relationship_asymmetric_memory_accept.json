@@ -12,8 +12,20 @@
   },
   "rubric": [
     "Accept reconciliation that preserves evidence-backed asymmetric relationship perceptions and unresolved residue.",
-    "Reject vague averaging that erases obligations, betrayal, status or character-specific interpretation."
+    "Reject vague averaging that erases obligations, betrayal, status or character-specific interpretation.",
+    "Use REL-ASYMMETRY when reconciliation correctly preserves character-specific perceptions and unresolved residue."
   ],
-  "judgment_contract": {"verdict": "accept|reject", "codes": ["REL-*"], "evidence": "short observable findings"},
-  "expected": {"verdict": "accept", "codes": ["REL-ASYMMETRY"]}
+  "judgment_contract": {
+    "verdict": "accept|reject",
+    "codes": [
+      "REL-*"
+    ],
+    "evidence": "short observable findings"
+  },
+  "expected": {
+    "verdict": "accept",
+    "codes": [
+      "REL-ASYMMETRY"
+    ]
+  }
 }
