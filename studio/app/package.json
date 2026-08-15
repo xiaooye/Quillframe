@@ -6,7 +6,7 @@
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "vite",
-    "quality": "node scripts/product-language-quality.mjs",
+    "quality": "node scripts/product-language-quality.mjs && node scripts/hardening-quality.mjs",
     "typecheck": "tsc --noEmit",
     "build": "pnpm quality && pnpm typecheck && vite build && node scripts/write-offline-shell.mjs && node scripts/write-footprint.mjs",
     "preview": "vite preview"
