@@ -51,6 +51,10 @@ jobs:
           python harness/memory_bank.py --db /tmp/novelforge-memory-bank-ci.db self-test --path /tmp/novelforge-memory-bank-selftest-ci.db > memory-bank-test.json
           python harness/scenario_fork.py --db /tmp/novelforge-scenario-ci.db self-test --path /tmp/novelforge-scenario-selftest-ci.db > scenario-fork-test.json
           python quality/findings.py self-test > quality-finding-test.json
+          python quality/quality_taxonomy.py self-test > quality-taxonomy-test.json
+          python quality/repair_policy.py self-test > repair-policy-test.json
+          python harness/semantic_workers/registered_contract_binding.py self-test > registered-contract-binding-test.json
+          python harness/semantic_workers/peer_bridge_receipt.py self-test > peer-bridge-receipt-test.json
           python quality/production_readiness.py self-test > production-readiness-test.json
           python quality/reader_expectation.py --db /tmp/novelforge-reader-expectation-ci.db self-test --path /tmp/novelforge-reader-expectation-selftest-ci.db > reader-expectation-test.json
           python quality/quality_evolution.py --db /tmp/novelforge-quality-ci.db self-test --path /tmp/novelforge-quality-selftest-ci.db > quality-evolution-test.json
@@ -64,15 +68,29 @@ jobs:
           import json, pathlib, sys
           root=pathlib.Path('harness/semantic_workers')
           sys.path.insert(0,str(root))
+          from registered_contract_binding import validate_registered_job
           from semantic_worker_router import make_contract_job, validate_job
           assert not (root/'model_contracts.json').exists()
           catalog=json.load(open(root/'model_contract_catalog.json',encoding='utf-8'))
           expected={cid for p in catalog['packs'] for cid in p['contracts']}
           assert len(expected)==sum(len(p['contracts']) for p in catalog['packs'])
+          fp='sha256:'+'a'*64
           fixtures={
             'reader.reaction': {
               'candidate_text': 'A bounded candidate.',
               'persona_id': 'binge_reader',
+              'reader_visible_context': [{'source_ref':'accepted:prior','text':'Only reader-visible prior context.'}]
+            },
+            'reader.engagement_audit': {
+              'candidate_fingerprint': fp,
+              'candidate_text': 'A bounded cold-reader production candidate.',
+              'reader_grip': 'very_high',
+              'reader_visible_context': [{'source_ref':'accepted:prior','text':'Only reader-visible prior context.'}]
+            },
+            'quality.production_review': {
+              'candidate_fingerprint': fp,
+              'candidate_text': 'A bounded independent production-review candidate.',
+              'reader_grip': 'very_high',
               'reader_visible_context': [{'source_ref':'accepted:prior','text':'Only reader-visible prior context.'}]
             },
             'character.action_propose': {
@@ -130,6 +148,7 @@ jobs:
               payload=fixtures.get(cid,{'fixture':'bounded semantic input'})
               job=make_contract_job(cid,'CI-'+cid,payload,source_session_id='SES-CI')
               assert not validate_job(job),(cid,validate_job(job))
+              assert not validate_registered_job(job),(cid,validate_registered_job(job))
               assert job['permissions']['canon_write'] is False
               assert job['permissions']['framework_behavior_write'] is False
               assert job['permissions']['durable_user_taste_write'] is False
@@ -144,6 +163,18 @@ jobs:
           except ValueError:
               cold_reader_blocked=True
           assert cold_reader_blocked
+          production_reader_hidden_context_blocked=False
+          try:
+              make_contract_job('reader.engagement_audit','CI-READER-BLOCK',{'candidate_fingerprint':fp,'candidate_text':'x','active_plan':{'future':'secret'}})
+          except ValueError:
+              production_reader_hidden_context_blocked=True
+          assert production_reader_hidden_context_blocked
+          production_review_hidden_context_blocked=False
+          try:
+              make_contract_job('quality.production_review','CI-PROD-BLOCK',{'candidate_fingerprint':fp,'candidate_text':'x','writer_reasoning':'secret'},source_session_id='SES-CI')
+          except ValueError:
+              production_review_hidden_context_blocked=True
+          assert production_review_hidden_context_blocked
           transition_guard=False
           try:
               make_contract_job('continuity.commitment_audit','CI-TR-BLOCK',{'candidate':{'source_ref':'candidate:x','evidence':['x']},'commitments':[]})
@@ -156,7 +187,8 @@ jobs:
           except ValueError:
               context_guard=True
           assert context_guard
-          json.dump({'semantic_contract_catalog_contract':'PASS','contracts':sorted(expected),'fingerprints':jobs,'typed_input_contracts':['reader.reaction','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select'],'cold_reader_hidden_plan_guard':cold_reader_blocked,'required_transition_input_guard':transition_guard,'task_aware_context_input_guard':context_guard,'aggregate_registry_present':False,'model_execution':False},open('semantic-contracts-test.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          typed=['reader.reaction','reader.engagement_audit','quality.production_review','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select']
+          json.dump({'semantic_contract_catalog_contract':'PASS','contracts':sorted(expected),'fingerprints':jobs,'typed_input_contracts':typed,'cold_reader_hidden_plan_guard':cold_reader_blocked,'production_reader_hidden_context_guard':production_reader_hidden_context_blocked,'production_review_hidden_context_guard':production_review_hidden_context_blocked,'required_transition_input_guard':transition_guard,'task_aware_context_input_guard':context_guard,'aggregate_registry_present':False,'model_execution':False},open('semantic-contracts-test.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
           PY
           python harness/semantic_workers/peer_chat_relay.py self-test > peer-chat-test.json
           python harness/semantic_workers/adapters/local_agent_adapter.py --self-test > local-agent-test.json
@@ -226,7 +258,9 @@ jobs:
             'project-sdk-test.json':('project_sdk_contract','PASS'),'project-adapter-test.json':('project_adapter_contract','PASS'),
             'runtime-capabilities-test.json':('runtime_capabilities_contract','PASS'),'context-inspector-test.json':('context_inspector_contract','PASS'),
             'memory-tiers-test.json':('memory_tiers_contract','PASS'),'memory-bank-test.json':('memory_bank_contract','PASS'),
-            'scenario-fork-test.json':('scenario_fork_contract','PASS'),'quality-finding-test.json':('quality_finding_contract','PASS'),'production-readiness-test.json':('production_readiness_contract','PASS'),
+            'scenario-fork-test.json':('scenario_fork_contract','PASS'),'quality-finding-test.json':('quality_finding_contract','PASS'),
+            'quality-taxonomy-test.json':('quality_taxonomy_contract','PASS'),'repair-policy-test.json':('repair_policy_contract','PASS'),
+            'registered-contract-binding-test.json':('registered_contract_binding_contract','PASS'),'peer-bridge-receipt-test.json':('peer_bridge_receipt_contract','PASS'),'production-readiness-test.json':('production_readiness_contract','PASS'),
             'reader-expectation-test.json':('reader_expectation_contract','PASS'),'quality-evolution-test.json':('quality_evolution_contract','PASS'),
             'state-graph-test.json':('state_graph_contract','PASS'),'semantic-router-test.json':('semantic_router_contract','PASS'),
             'semantic-contracts-test.json':('semantic_contract_catalog_contract','PASS'),'peer-chat-test.json':('peer_chat_relay_contract','PASS'),
@@ -254,12 +288,30 @@ jobs:
           sc=loaded['semantic-contracts-test.json']
           assert sc['aggregate_registry_present'] is False
           assert sc['cold_reader_hidden_plan_guard'] is True
+          assert sc['production_reader_hidden_context_guard'] is True
+          assert sc['production_review_hidden_context_guard'] is True
           assert sc['required_transition_input_guard'] is True
           assert sc['task_aware_context_input_guard'] is True
-          assert set(sc['typed_input_contracts'])=={'reader.reaction','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select'}
-          assert loaded['production-readiness-test.json']['surface_and_reader_are_conjunctive'] is True
-          assert loaded['production-readiness-test.json']['safe_but_flat_blocks'] is True
-          assert loaded['production-readiness-test.json']['numeric_quality_aggregation'] is False
+          assert set(sc['typed_input_contracts'])=={'reader.reaction','reader.engagement_audit','quality.production_review','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select'}
+          pr=loaded['production-readiness-test.json']
+          assert pr['surface_and_reader_are_conjunctive'] is True
+          assert pr['registered_reader_engagement_required'] is True
+          assert pr['registered_independent_release_contract_required'] is True
+          assert pr['registered_contract_definition_bound'] is True
+          assert pr['project_bridge_receipt_required'] is True
+          assert pr['bare_distinct_session_not_independence'] is True
+          assert pr['blocking_reader_code_cannot_pass'] is True
+          assert pr['blocking_production_code_cannot_pass'] is True
+          assert pr['blocking_flatness_cannot_pass'] is True
+          assert pr['peer_receipt_result_tamper_rejected'] is True
+          assert pr['project_owned_peer_bridge_independence'] is True
+          assert pr['numeric_quality_aggregation'] is False
+          assert loaded['registered-contract-binding-test.json']['checks']['forged_rubric_rejected'] is True
+          assert loaded['peer-bridge-receipt-test.json']['checks']['result_tamper_rejected'] is True
+          assert loaded['quality-taxonomy-test.json']['checks']['reader_semantic_drift_detected'] is True
+          assert loaded['quality-taxonomy-test.json']['checks']['surface_semantic_drift_detected'] is True
+          assert loaded['repair-policy-test.json']['checks']['scene_failure_fresh'] is True
+          assert loaded['repair-policy-test.json']['checks']['fresh_writer_cannot_see_rejected_prose'] is True
           assert loaded['quality-evolution-test.json']['plateau_stopping'] is True
           assert loaded['quality-evolution-test.json']['winner_derived_from_typed_result'] is True
           assert loaded['promotion-gate-test.json']['auto_behavior_write'] is False
