@@ -109,7 +109,7 @@ requireCheck(!actions.includes('href="/start"'), "Docs header must not reintrodu
 
 requireCheck(!main.includes("KnowledgePortal"), "legacy Knowledge Portal must not mount beside the product router");
 requireCheck(!main.includes("KnowledgeExperience"), "product entry must not import the retired custom docs renderer");
-requireCheck(main.includes('import ProductApp from "./ProductApp"') && main.includes("render(() => <ProductApp />"), "product entry must route through the shared ProductApp shell");
+requireCheck(main.includes('import ProductApp from "./ProductApp"') && main.includes("<ProductApp />") && main.includes("ProductFailureBoundary"), "product entry must route through the resilient shared ProductApp shell");
 requireCheck(productApp.includes('href={zh() ? "/docs" : "/docs/en"}'), "shared product navigation must hand off to the locale-aware Starlight docs root");
 requireCheck(productApp.includes('if (result.href.startsWith("/docs")) window.location.assign(result.href);'), "product command search must use a real document navigation for Starlight results");
 requireCheck(productApp.includes('`/docs/${encodeURIComponent(doc.id)}`') && productApp.includes('`/docs/en/${encodeURIComponent(doc.id)}`'), "product knowledge search must keep localized deep-document URLs");
@@ -149,7 +149,7 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_docs_platform_quality_v6",
+    schema: "novelforge_docs_platform_quality_v7",
     status: "pass",
     engine: "Astro Starlight",
     astro: pkg.devDependencies.astro,
@@ -165,6 +165,7 @@ if (failures.length > 0) {
     native_landing_copy: true,
     product_home_primary_entry: true,
     unified_product_shell_handoff: true,
+    resilience_boundary: true,
     product_header_navigation_parity: true,
     knowledge_namespace_active: true,
     concise_sidebar_information_architecture: true,
