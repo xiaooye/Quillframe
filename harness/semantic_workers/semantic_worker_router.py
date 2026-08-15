@@ -94,6 +94,34 @@ def resolve_contract_registry(cid:str,catalog_path:Path=CATALOG)->tuple[Path,str
     if root!=path.parent and root not in path.parents:raise ValueError("contract pack escapes semantic root")
     if cid not in load_contract_registry(path)["contracts"]:raise ValueError(f"catalog/pack mismatch: {cid}")
     return path,p["id"]
+def _character_evidence_rows(payload:dict[str,Any])->list[tuple[str,int,str|None]]:
+    rows:list[tuple[str,int,str|None]]=[]
+    situation=payload.get("immediate_situation",{}) if isinstance(payload.get("immediate_situation"),dict) else {}
+    for row in situation.get("observables",[]) if isinstance(situation.get("observables"),list) else []:
+        if isinstance(row,dict) and isinstance(row.get("observable_id"),str):
+            rows.append((row["observable_id"],row.get("available_from_story_order"),None))
+    memory=payload.get("perspective_memory",{}) if isinstance(payload.get("perspective_memory"),dict) else {}
+    for row in memory.get("episodic_visible_events",[]) if isinstance(memory.get("episodic_visible_events"),list) else []:
+        if isinstance(row,dict) and isinstance(row.get("event_id"),str):
+            rows.append((row["event_id"],row.get("available_from_story_order"),None))
+    for row in memory.get("visibility_tagged_facts",[]) if isinstance(memory.get("visibility_tagged_facts"),list) else []:
+        if isinstance(row,dict) and isinstance(row.get("fact_id"),str):
+            rows.append((row["fact_id"],row.get("available_from_story_order"),row.get("epistemic_status")))
+    for row in memory.get("situation_patterns",[]) if isinstance(memory.get("situation_patterns"),list) else []:
+        if isinstance(row,dict) and isinstance(row.get("pattern_id"),str):
+            rows.append((row["pattern_id"],row.get("available_from_story_order"),None))
+    return rows
+
+def validate_contract_input_bindings(cid:str,input_payload:dict[str,Any])->list[str]:
+    if cid!="character.action_propose":return []
+    e=[]; current=input_payload.get("current_story_order"); rows=_character_evidence_rows(input_payload); seen=set()
+    for evidence_id,available,status in rows:
+        if evidence_id in seen:e.append(f"character evidence id duplicated: {evidence_id}")
+        seen.add(evidence_id)
+        if isinstance(current,int) and not isinstance(current,bool) and isinstance(available,int) and not isinstance(available,bool) and available>current:
+            e.append(f"character evidence from future story order: {evidence_id}")
+    return e
+
 def validate_contract_input(cid:str,contract:dict[str,Any],input_payload:dict[str,Any])->list[str]:
     e=[]
     blocked=find_named_keys(input_payload,set(contract.get("forbidden_input_keys",[])))
@@ -101,6 +129,31 @@ def validate_contract_input(cid:str,contract:dict[str,Any],input_payload:dict[st
     schema=contract.get("input_contract")
     if isinstance(schema,dict) and schema:
         e += [f"contract {cid} input_contract {x}" for x in validate_typed_value(input_payload,schema,"$.payload")]
+    if not e:e += validate_contract_input_bindings(cid,input_payload)
+    return e
+
+def validate_contract_result_bindings(job:dict[str,Any],judgment:dict[str,Any])->list[str]:
+    cid=job.get("input",{}).get("model_contract_id")
+    if cid!="character.action_propose":return []
+    payload=job.get("input",{}).get("payload",{}); e=[]
+    if not isinstance(payload,dict) or not isinstance(judgment,dict):return e
+    if judgment.get("character_id")!=payload.get("character_id"):e.append("character action result mismatch: character_id")
+    if judgment.get("active_agenda")!=payload.get("active_agenda"):e.append("character action result mismatch: active_agenda")
+    evidence={eid:status for eid,_,status in _character_evidence_rows(payload)}
+    proposals=judgment.get("proposals",[])
+    if isinstance(proposals,list):
+        for i,proposal in enumerate(proposals):
+            if not isinstance(proposal,dict):continue
+            bases=proposal.get("knowledge_basis",[]); seen=set()
+            if not isinstance(bases,list):continue
+            for basis in bases:
+                if not isinstance(basis,dict):continue
+                evidence_id=basis.get("evidence_id"); use=basis.get("use")
+                if evidence_id in seen:e.append(f"proposal {i} duplicates evidence basis: {evidence_id}")
+                seen.add(evidence_id)
+                if evidence_id not in evidence:e.append(f"proposal {i} references unknown character evidence: {evidence_id}")
+                elif use=="supports" and evidence[evidence_id] in {"contradicted","unknown"}:
+                    e.append(f"proposal {i} positively relies on unusable epistemic claim: {evidence_id}")
     return e
 def semantic_payload(job:dict[str,Any])->dict[str,Any]:return {k:job.get(k,{} if k in {"input","output_contract"} else []) for k in ("kind","subject_id","input","rubric","output_contract")}
 def fingerprint_for(job:dict[str,Any])->str:return "sha256:"+hashlib.sha256(canonical(semantic_payload(job))).hexdigest()
@@ -150,6 +203,7 @@ def validate_result(job:dict[str,Any],result:dict[str,Any])->list[str]:
     j=result.get("judgment",{});conf=j.get("confidence") if isinstance(j,dict) else None
     if not isinstance(conf,(int,float)) or isinstance(conf,bool) or not 0<=conf<=1:e.append("judgment.confidence must be 0..1")
     if result.get("status")=="completed" and isinstance(job.get("output_contract"),dict) and job["output_contract"].get("type"):e += ["output_contract "+x for x in validate_typed_value(j,job["output_contract"],"$.judgment")]
+    if result.get("status")=="completed" and not any(x.startswith("output_contract ") for x in e):e += validate_contract_result_bindings(job,j)
     if result.get("status")=="completed" and job["kind"]=="eval_judge":
         if j.get("verdict") not in {"accept","reject",None}:e.append("eval verdict must be accept|reject|null")
         if j.get("result") not in {"pass","fail",None}:e.append("eval result must be pass|fail|null")
@@ -190,16 +244,47 @@ def eval_judgments(results:list[dict[str,Any]])->dict[str,Any]:
 def catalog_summary()->dict[str,Any]:
     c=load_contract_catalog();return {"schema":c["schema"],"loading_policy":c["loading_policy"],"packs":[{"id":p["id"],"description":p.get("description"),"contracts":p["contracts"],"load_when":p.get("load_when")} for p in c["packs"]],"model_execution":False}
 def self_test()->int:
-    q={"blind":True,"suite_version":"self","cases":[{"id":"CASE-1","type":"regression","domain":"reader","fixture":{"text":"x"},"rubric":["judge"],"judgment_contract":{}}]};jobs=make_eval_jobs(q,source_session_id="SES-A",handoff_id="HO-A");ej=jobs["jobs"][0]
+    q={"blind":True,"suite_version":"self","cases":[{"id":"CASE-1","type":"regression","domain":"reader","fixture":{"text":"x"},"rubric":["judge"],"judgment_contract":{}}]}
+    jobs=make_eval_jobs(q,source_session_id="SES-A",handoff_id="HO-A");ej=jobs["jobs"][0]
     er={"job_id":ej["job_id"],"subject_id":ej["subject_id"],"kind":ej["kind"],"input_fingerprint":ej["input_fingerprint"],"status":"completed","worker":{"provider":"self_test","model_or_reviewer":"fixture"},"judgment":{"verdict":"accept","result":None,"codes":[],"evidence":["fixture"],"confidence":1.0},"proposals":[],"errors":[],"execution":{"source_session_id":"SES-A","worker_session_id":"SES-B","handoff_id":"HO-A","attempt_id":"ATT-1"}}
     lineage=fingerprint_for({**ej,"execution":{"source_session_id":"OTHER"}})==ej["input_fingerprint"]
-    cj=make_contract_job("reader.reaction","CH-SELF",{"candidate_text":"x","persona_id":"binge_reader"});good={"job_id":cj["job_id"],"subject_id":cj["subject_id"],"kind":cj["kind"],"input_fingerprint":cj["input_fingerprint"],"status":"completed","worker":{"provider":"self_test","model_or_reviewer":"fixture"},"judgment":{"confidence":.9,"would_continue":True,"continue_desire":.8,"reason":"momentum"},"proposals":[],"errors":[]};bad=json.loads(json.dumps(good));bad["judgment"]["continue_desire"]=2
-    auto=cj["provenance"].get("pack_id")=="quality" and cj["provenance"].get("registry_path")=="contracts/quality.json";typed=any("above maximum" in x for x in validate_result(cj,bad));guard=False
+
+    cj=make_contract_job("reader.reaction","CH-SELF",{"candidate_text":"x","persona_id":"binge_reader"})
+    good={"job_id":cj["job_id"],"subject_id":cj["subject_id"],"kind":cj["kind"],"input_fingerprint":cj["input_fingerprint"],"status":"completed","worker":{"provider":"self_test","model_or_reviewer":"fixture"},"judgment":{"confidence":.9,"would_continue":True,"continue_desire":.8,"reason":"momentum"},"proposals":[],"errors":[]}
+    bad=json.loads(json.dumps(good));bad["judgment"]["continue_desire"]=2
+    auto=cj["provenance"].get("pack_id")=="quality" and cj["provenance"].get("registry_path")=="contracts/quality.json"
+    typed=any("above maximum" in x for x in validate_result(cj,bad));guard=False
     try:make_contract_job("learning.mechanism_analyze","CORP",{"source":{"raw_text":"forbidden"}})
     except ValueError:guard=True
-    typed_input_schema={"type":"object","required":["candidate_text"],"properties":{"candidate_text":{"type":"string","minLength":1}},"additionalProperties":False};typed_input_ok=not validate_contract_input("SELF",{"input_contract":typed_input_schema},{"candidate_text":"x"});typed_input_reject=bool(validate_contract_input("SELF",{"input_contract":typed_input_schema},{"candidate_text":"x","hidden":"no"}))
-    ok=not validate_job(ej) and not validate_result(ej,er) and lineage and not validate_job(cj) and not validate_result(cj,good) and auto and typed and guard and typed_input_ok and typed_input_reject
-    dump_json({"semantic_router_contract":"PASS" if ok else "FAIL","fingerprint_excludes_runtime_lineage":lineage,"catalog_exact_id_resolution":auto,"typed_input_validation":typed_input_ok and typed_input_reject,"typed_output_validation":typed,"contract_input_guard":guard,"aggregate_registry_required":False,"semantic_intelligence_externalized":True,"model_execution":False});return 0 if ok else 1
+    typed_input_schema={"type":"object","required":["candidate_text"],"properties":{"candidate_text":{"type":"string","minLength":1}},"additionalProperties":False}
+    typed_input_ok=not validate_contract_input("SELF",{"input_contract":typed_input_schema},{"candidate_text":"x"})
+    typed_input_reject=bool(validate_contract_input("SELF",{"input_contract":typed_input_schema},{"candidate_text":"x","hidden":"no"}))
+
+    character_payload={
+        "character_id":"CHAR-SELF","current_story_order":5,"active_agenda":"Keep leverage.",
+        "perceived_state":{"beliefs":["The offer is weak."],"goals":["Improve terms."],"fears":[],"assumptions":[]},
+        "immediate_situation":{"observables":[{"observable_id":"OBS-1","observation":"The offer changed.","source_ref":"scene:self","available_from_story_order":5}],"pressures":["Time is short."],"available_options":["counter","stall"]},
+        "perspective_memory":{"episodic_visible_events":[],"visibility_tagged_facts":[
+            {"fact_id":"FACT-1","claim":"The earlier offer was lower.","epistemic_status":"known","acquisition_mode":"directly_observed","source_ref":"accepted:self-1","available_from_story_order":3},
+            {"fact_id":"FACT-2","claim":"The other side cannot move.","epistemic_status":"contradicted","acquisition_mode":"told_by","source_ref":"accepted:self-2","available_from_story_order":4}],"situation_patterns":[]},
+        "relationship_state":{},"task_state":{},"location":{},"constraints":[]
+    }
+    char_job=make_contract_job("character.action_propose","CHAR-SELF",character_payload)
+    char_result={"job_id":char_job["job_id"],"subject_id":char_job["subject_id"],"kind":char_job["kind"],"input_fingerprint":char_job["input_fingerprint"],"status":"completed","worker":{"provider":"self_test","model_or_reviewer":"fixture"},"judgment":{"confidence":.9,"character_id":"CHAR-SELF","active_agenda":"Keep leverage.","proposals":[{"action":"Counter the offer.","tactic":"Anchor higher.","why_now":"The changed offer creates room.","expected_resistance":"Pushback.","motive_basis":"Preserve leverage.","knowledge_basis":[{"evidence_id":"FACT-1","use":"supports"}],"risk_or_cost":"Delay."}]},"proposals":[],"errors":[]}
+    character_binding_ok=not validate_result(char_job,char_result)
+    bad_ref=json.loads(json.dumps(char_result));bad_ref["judgment"]["proposals"][0]["knowledge_basis"]=[{"evidence_id":"MISSING","use":"supports"}]
+    character_unknown_ref_guard=any("unknown character evidence" in x for x in validate_result(char_job,bad_ref))
+    bad_epistemic=json.loads(json.dumps(char_result));bad_epistemic["judgment"]["proposals"][0]["knowledge_basis"]=[{"evidence_id":"FACT-2","use":"supports"}]
+    character_epistemic_guard=any("unusable epistemic claim" in x for x in validate_result(char_job,bad_epistemic))
+    future_input=json.loads(json.dumps(character_payload));future_input["immediate_situation"]["observables"][0]["available_from_story_order"]=6
+    character_future_guard=False
+    try:make_contract_job("character.action_propose","CHAR-FUTURE",future_input)
+    except ValueError as exc:character_future_guard="future story order" in str(exc)
+
+    ok=all((not validate_job(ej),not validate_result(ej,er),lineage,not validate_job(cj),not validate_result(cj,good),auto,typed,guard,typed_input_ok,typed_input_reject,character_binding_ok,character_unknown_ref_guard,character_epistemic_guard,character_future_guard))
+    dump_json({"semantic_router_contract":"PASS" if ok else "FAIL","fingerprint_excludes_runtime_lineage":lineage,"catalog_exact_id_resolution":auto,"typed_input_validation":typed_input_ok and typed_input_reject,"typed_output_validation":typed,"contract_input_guard":guard,"character_evidence_binding":character_binding_ok,"character_unknown_evidence_guard":character_unknown_ref_guard,"character_epistemic_support_guard":character_epistemic_guard,"character_future_evidence_guard":character_future_guard,"aggregate_registry_required":False,"semantic_intelligence_externalized":True,"model_execution":False})
+    return 0 if ok else 1
+
 def main()->int:
     p=argparse.ArgumentParser();s=p.add_subparsers(dest="command",required=True)
     x=s.add_parser("prepare-evals");x.add_argument("--queue",required=True);x.add_argument("--output");x.add_argument("--source-session-id");x.add_argument("--handoff-id")
