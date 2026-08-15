@@ -18,6 +18,19 @@ jobs:
   contracts:
     uses: ./.github/workflows/novelforge-contracts.yml
 
+  resume-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile resume preflight
+        run: python -m py_compile harness/session_runtime/resume_preflight.py
+      - name: Deterministic resume preflight contract
+        run: python harness/session_runtime/resume_preflight.py self-test
+
   documentation-quality:
     runs-on: ubuntu-latest
     timeout-minutes: 10
