@@ -61,9 +61,10 @@ jobs:
         run: |
           rm .github/workflows/tmp-runtime-event-registry-sync.yml
           git status --short
-          test "$(git diff --name-only | sort)" = "harness/control_plane/control_plane.py"
+          EXPECTED="$(printf '%s\n' '.github/workflows/tmp-runtime-event-registry-sync.yml' 'harness/control_plane/control_plane.py')"
+          test "$(git diff --name-only | sort)" = "$EXPECTED"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add harness/control_plane/control_plane.py .github/workflows/tmp-runtime-event-registry-sync.yml
+          git add -A
           git commit -m 'runtime: synchronize terminate event registry'
           git push origin HEAD:agent/runtime-event-registry-sync
