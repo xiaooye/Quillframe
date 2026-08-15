@@ -11,6 +11,7 @@ import "./styles/index.css";
 const Desk = lazy(() => import("./routes/Desk"));
 const Start = lazy(() => import("./routes/Start"));
 const Project = lazy(() => import("./routes/Project"));
+const Inspector = lazy(() => import("./routes/InspectorRoute"));
 const Control = lazy(() => import("./routes/Control"));
 const Architecture = lazy(() => import("./routes/Architecture"));
 const Publication = lazy(() => import("./routes/Publication"));
@@ -73,6 +74,7 @@ render(
             <Route path="/" component={Desk} />
             <Route path="/start" component={Start} />
             <Route path="/project" component={Project} />
+            <Route path="/inspect" component={Inspector} />
             <Route path="/control" component={Control} />
             <Route path="/architecture" component={Architecture} />
             <Route path="/publication" component={Publication} />
