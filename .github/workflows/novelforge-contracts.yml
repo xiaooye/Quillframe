@@ -51,6 +51,7 @@ jobs:
           python harness/memory_bank.py --db /tmp/novelforge-memory-bank-ci.db self-test --path /tmp/novelforge-memory-bank-selftest-ci.db > memory-bank-test.json
           python harness/scenario_fork.py --db /tmp/novelforge-scenario-ci.db self-test --path /tmp/novelforge-scenario-selftest-ci.db > scenario-fork-test.json
           python quality/findings.py self-test > quality-finding-test.json
+          python quality/production_readiness.py self-test > production-readiness-test.json
           python quality/reader_expectation.py --db /tmp/novelforge-reader-expectation-ci.db self-test --path /tmp/novelforge-reader-expectation-selftest-ci.db > reader-expectation-test.json
           python quality/quality_evolution.py --db /tmp/novelforge-quality-ci.db self-test --path /tmp/novelforge-quality-selftest-ci.db > quality-evolution-test.json
           python quality/state_graph.py self-test > state-graph-test.json
@@ -181,6 +182,7 @@ jobs:
       - name: Framework bundle and generic evals
         run: |
           mkdir -p /tmp/novelforge-bundle-ci
+          python publication/compiler.py self-test > publication-test.json
           python release/build_framework_bundle.py self-test > framework-bundle-test.json
           python release/build_framework_bundle.py build --output /tmp/novelforge-bundle-ci/a.tar --report bundle-a.json
           python release/build_framework_bundle.py build --output /tmp/novelforge-bundle-ci/b.tar --report bundle-b.json
@@ -224,7 +226,7 @@ jobs:
             'project-sdk-test.json':('project_sdk_contract','PASS'),'project-adapter-test.json':('project_adapter_contract','PASS'),
             'runtime-capabilities-test.json':('runtime_capabilities_contract','PASS'),'context-inspector-test.json':('context_inspector_contract','PASS'),
             'memory-tiers-test.json':('memory_tiers_contract','PASS'),'memory-bank-test.json':('memory_bank_contract','PASS'),
-            'scenario-fork-test.json':('scenario_fork_contract','PASS'),'quality-finding-test.json':('quality_finding_contract','PASS'),
+            'scenario-fork-test.json':('scenario_fork_contract','PASS'),'quality-finding-test.json':('quality_finding_contract','PASS'),'production-readiness-test.json':('production_readiness_contract','PASS'),
             'reader-expectation-test.json':('reader_expectation_contract','PASS'),'quality-evolution-test.json':('quality_evolution_contract','PASS'),
             'state-graph-test.json':('state_graph_contract','PASS'),'semantic-router-test.json':('semantic_router_contract','PASS'),
             'semantic-contracts-test.json':('semantic_contract_catalog_contract','PASS'),'peer-chat-test.json':('peer_chat_relay_contract','PASS'),
@@ -232,7 +234,7 @@ jobs:
             'learning-cycle-test.json':('learning_cycle_contract','PASS'),'learning-eval-test.json':('learning_eval_contract','PASS'),
             'promotion-gate-test.json':('promotion_gate_contract','PASS'),'corpus-scout-test.json':('corpus_scout_contract','PASS'),
             'discovery-runtime-test.json':('discovery_runtime_contract','PASS'),'corpus-rights-test.json':('rights_gate_contract','PASS'),
-            'framework-bundle-test.json':('framework_bundle_contract','PASS'),'session-test.json':('session_runtime_contract','PASS'),
+            'publication-test.json':('publication_compiler_contract','PASS'),'framework-bundle-test.json':('framework_bundle_contract','PASS'),'session-test.json':('session_runtime_contract','PASS'),
             'control-plane-test.json':('control_plane_contract','PASS'),'mcp-test.json':('mcp_stdio_contract','PASS'),'cli-test.json':('novelforge_cli_contract','PASS')}
           loaded={p:json.load(open(p,encoding='utf-8')) for p in checks}
           for p,(k,v) in checks.items():assert loaded[p][k]==v,(p,loaded[p])
@@ -255,11 +257,19 @@ jobs:
           assert sc['required_transition_input_guard'] is True
           assert sc['task_aware_context_input_guard'] is True
           assert set(sc['typed_input_contracts'])=={'reader.reaction','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select'}
+          assert loaded['production-readiness-test.json']['surface_and_reader_are_conjunctive'] is True
+          assert loaded['production-readiness-test.json']['safe_but_flat_blocks'] is True
+          assert loaded['production-readiness-test.json']['numeric_quality_aggregation'] is False
           assert loaded['quality-evolution-test.json']['plateau_stopping'] is True
           assert loaded['quality-evolution-test.json']['winner_derived_from_typed_result'] is True
           assert loaded['promotion-gate-test.json']['auto_behavior_write'] is False
           assert loaded['discovery-runtime-test.json']['network_execution_performed'] is False
+          assert loaded['publication-test.json']['accepted_text_fingerprint_guard'] is True
+          assert loaded['publication-test.json']['epub_text_roundtrip'] is True
+          assert loaded['publication-test.json']['deterministic_epub'] is True
+          assert loaded['publication-test.json']['external_epubcheck_required_for_release'] is True
           assert loaded['framework-bundle-test.json']['tamper_detected'] is True
+          assert loaded['framework-bundle-test.json']['publication_runtime_included'] is True
           assert loaded['cli-test.json']['model_execution'] is False
           PY
 

@@ -32,6 +32,7 @@ TOOLS: dict[str, Path] = {
     "settlement": ROOT / "harness" / "settlement_runtime.py",
     "semantic": SEMANTIC,
     "quality-findings": ROOT / "quality" / "findings.py",
+    "production-readiness": ROOT / "quality" / "production_readiness.py",
     "reader-expectation": ROOT / "quality" / "reader_expectation.py",
     "quality-evolution": ROOT / "quality" / "quality_evolution.py",
     "state-graph": ROOT / "quality" / "state_graph.py",
@@ -40,6 +41,7 @@ TOOLS: dict[str, Path] = {
     "learning-gate": ROOT / "learning" / "promotion_gate.py",
     "learning-work": ROOT / "learning" / "learning_eval.py",
     "bundle": ROOT / "release" / "build_framework_bundle.py",
+    "publication": ROOT / "publication" / "compiler.py",
 }
 
 CORPUS_TOOLS = {"scout": ROOT / "corpus" / "corpus_scout.py", "discovery": ROOT / "corpus" / "discovery_runtime.py", "rights": ROOT / "corpus" / "rights_gate.py"}
@@ -76,7 +78,7 @@ def doctor() -> dict[str, Any]:
     return {"schema":"novelforge_doctor_v2","framework_version":FRAMEWORK_VERSION,"framework_root":str(ROOT),"ok":not missing and not forbidden,"missing":missing,"forbidden_pre_release_compatibility":forbidden,"model_execution":False}
 
 def self_test() -> int:
-    checks=[(PROJECT_SDK,["self-test"]),(PROJECT_ADAPTER,["self-test"]),(SESSION,["self-test"]),(TOOLS["runtime"],["--db","/tmp/novelforge-cli-control.db","self-test"]),(TOOLS["capabilities"],["self-test"]),(TOOLS["context-inspect"],["self-test"]),(TOOLS["memory-tiers"],["self-test"]),(TOOLS["memory-bank"],["--db","/tmp/novelforge-cli-memory.db","self-test","--path","/tmp/novelforge-cli-memory-selftest.db"]),(TOOLS["scenario-fork"],["--db","/tmp/novelforge-cli-scenario.db","self-test","--path","/tmp/novelforge-cli-scenario-selftest.db"]),(TOOLS["settlement"],["--db","/tmp/novelforge-cli-settlement.db","self-test","--path","/tmp/novelforge-cli-settlement-selftest.db","--project-root","/tmp/novelforge-cli-settlement-project"]),(SEMANTIC,["self-test"]),(TOOLS["quality-findings"],["self-test"]),(TOOLS["reader-expectation"],["--db","/tmp/novelforge-cli-reader-expectation.db","self-test","--path","/tmp/novelforge-cli-reader-expectation-selftest.db"]),(TOOLS["quality-evolution"],["--db","/tmp/novelforge-cli-quality.db","self-test","--path","/tmp/novelforge-cli-quality-selftest.db"]),(TOOLS["state-graph"],["self-test"]),(TOOLS["learning"],["--db","/tmp/novelforge-cli-learning.db","self-test"]),(TOOLS["learning-cycle"],["self-test","--path","/tmp/novelforge-cli-learning-cycle.db"]),(TOOLS["learning-work"],["self-test"]),(TOOLS["learning-gate"],["self-test"]),(CORPUS_TOOLS["scout"],["self-test"]),(CORPUS_TOOLS["discovery"],["self-test"]),(CORPUS_TOOLS["rights"],["self-test"]),(MCP,["--self-test"]),(TOOLS["bundle"],["self-test"])]
+    checks=[(PROJECT_SDK,["self-test"]),(PROJECT_ADAPTER,["self-test"]),(SESSION,["self-test"]),(TOOLS["runtime"],["--db","/tmp/novelforge-cli-control.db","self-test"]),(TOOLS["capabilities"],["self-test"]),(TOOLS["context-inspect"],["self-test"]),(TOOLS["memory-tiers"],["self-test"]),(TOOLS["memory-bank"],["--db","/tmp/novelforge-cli-memory.db","self-test","--path","/tmp/novelforge-cli-memory-selftest.db"]),(TOOLS["scenario-fork"],["--db","/tmp/novelforge-cli-scenario.db","self-test","--path","/tmp/novelforge-cli-scenario-selftest.db"]),(TOOLS["settlement"],["--db","/tmp/novelforge-cli-settlement.db","self-test","--path","/tmp/novelforge-cli-settlement-selftest.db","--project-root","/tmp/novelforge-cli-settlement-project"]),(SEMANTIC,["self-test"]),(TOOLS["quality-findings"],["self-test"]),(TOOLS["production-readiness"],["self-test"]),(TOOLS["reader-expectation"],["--db","/tmp/novelforge-cli-reader-expectation.db","self-test","--path","/tmp/novelforge-cli-reader-expectation-selftest.db"]),(TOOLS["quality-evolution"],["--db","/tmp/novelforge-cli-quality.db","self-test","--path","/tmp/novelforge-cli-quality-selftest.db"]),(TOOLS["state-graph"],["self-test"]),(TOOLS["learning"],["--db","/tmp/novelforge-cli-learning.db","self-test"]),(TOOLS["learning-cycle"],["self-test","--path","/tmp/novelforge-cli-learning-cycle.db"]),(TOOLS["learning-work"],["self-test"]),(TOOLS["learning-gate"],["self-test"]),(CORPUS_TOOLS["scout"],["self-test"]),(CORPUS_TOOLS["discovery"],["self-test"]),(CORPUS_TOOLS["rights"],["self-test"]),(MCP,["--self-test"]),(TOOLS["publication"],["self-test"]),(TOOLS["bundle"],["self-test"])]
     results=[]; ok=True
     for script,argv in checks:
         proc=subprocess.run([sys.executable,str(script),*argv],text=True,capture_output=True,check=False); results.append({"script":str(script.relative_to(ROOT)),"returncode":proc.returncode,"stdout":proc.stdout.strip()[:4000],"stderr":proc.stderr.strip()[:2000]}); ok=ok and proc.returncode==0
@@ -106,7 +108,7 @@ def main() -> int:
         return call(CORPUS_TOOLS[target],rest)
     if args.cmd in TOOLS:
         argv=args.args
-        if not argv and args.cmd in {"semantic","context-inspect","memory-tiers","quality-findings","state-graph"}: argv=["self-test"] if args.cmd!="semantic" else ["catalog"]
+        if not argv and args.cmd in {"semantic","context-inspect","memory-tiers","quality-findings","production-readiness","state-graph"}: argv=["self-test"] if args.cmd!="semantic" else ["catalog"]
         return call(TOOLS[args.cmd],argv)
     if args.cmd=="doctor": value=doctor(); dump(value); return 0 if value["ok"] else 1
     return self_test()

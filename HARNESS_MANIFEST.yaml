@@ -65,6 +65,7 @@ harness:
 
 quality:
   finding_contract: quality/findings.py
+  production_readiness: quality/production_readiness.py
   quality_evolution: quality/quality_evolution.py
   reader_expectation_ledger: quality/reader_expectation.py
   state_graph: quality/state_graph.py
@@ -74,6 +75,7 @@ quality:
   memory_tiers_schema: novelforge_memory_tiers_v4
   memory_bank_schema: novelforge_memory_bank_v1
   finding_schema: novelforge_quality_finding_v1
+  production_readiness_schema: novelforge_production_readiness_v1
   state_graph_schema: novelforge_state_graph_v1
   semantic_contracts:
     reader_reaction: reader.reaction
@@ -174,6 +176,17 @@ corpus:
   source_tool_provenance_required: true
   full_modern_copyright_mirroring_default: forbidden
   named_author_imitation_profile: forbidden
+
+publication:
+  compiler: publication/compiler.py
+  ir_schema: publication/publication_ir.schema.json
+  ir_schema_id: novelforge_publication_ir_v1
+  profiles: [clean_text, web_reflow, print_book, epub3]
+  accepted_text_mutation: forbidden
+  deterministic_internal_validation: required
+  epub_spec_target: W3C-EPUB-3.3
+  epub_release_external_conformance_check: required
+  publication_output_grants_canon_authority: false
 
 evals:
   overview:
@@ -303,7 +316,7 @@ workflows:
 
 normal_ci:
   model_execution: forbidden
-  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, context-inspector-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, settlement-runtime-self-test, quality-finding-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
+  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, context-inspector-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, settlement-runtime-self-test, quality-finding-self-test, production-readiness-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
 
 scheduled_maintenance:
   model_execution: forbidden

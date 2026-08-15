@@ -24,7 +24,7 @@ BUNDLE_SCHEMA = "novelforge_framework_bundle_v1"
 CONTENT_MANIFEST = "BUNDLE_CONTENT_MANIFEST.json"
 DEFAULT_INCLUDE = {
     ".claude", ".github", "assets", "core", "corpus", "docs", "evals", "harness",
-    "knowledge_base", "learning", "quality", "release", "scripts", "surface",
+    "knowledge_base", "learning", "quality", "publication", "release", "scripts", "surface",
 }
 ROOT_FILES = {
     ".gitignore", "AGENTS.md", "AGENTS.en.md", "AGENTS.zh-CN.md",
@@ -173,10 +173,11 @@ def verify(bundle: Path, expected: str | None = None) -> dict[str, Any]:
 
 def self_test() -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="novelforge-bundle-test-") as td:
-        root = Path(td) / "repo"; (root / "core").mkdir(parents=True); (root / "harness").mkdir(); (root / "quality").mkdir()
+        root = Path(td) / "repo"; (root / "core").mkdir(parents=True); (root / "harness").mkdir(); (root / "quality").mkdir(); (root / "publication").mkdir()
         (root / "core" / "a.txt").write_text("alpha\n", encoding="utf-8")
         (root / "harness" / "b.py").write_text("print('beta')\n", encoding="utf-8")
         (root / "quality" / "c.py").write_text("print('quality')\n", encoding="utf-8")
+        (root / "publication" / "compiler.py").write_text("print('publication')\n", encoding="utf-8")
         (root / "specs").mkdir(); (root / "specs" / "ignore.md").write_text("ignore", encoding="utf-8")
         a = Path(td) / "a.tar"; b = Path(td) / "b.tar"
         ba = build(root, a); bb = build(root, b)
@@ -195,7 +196,8 @@ def self_test() -> dict[str, Any]:
         bad = verify(tampered)
         excluded = all(x["path"] != "specs/ignore.md" for x in manifest["files"])
         quality_included = any(x["path"] == "quality/c.py" for x in manifest["files"])
-        ok = same and good["valid"] and not bad["valid"] and excluded and quality_included
+        publication_included = any(x["path"] == "publication/compiler.py" for x in manifest["files"])
+        ok = same and good["valid"] and not bad["valid"] and excluded and quality_included and publication_included
     return {
         "framework_bundle_contract": "PASS" if ok else "FAIL",
         "deterministic_bytes": same,
@@ -203,6 +205,7 @@ def self_test() -> dict[str, Any]:
         "tamper_detected": not bad["valid"],
         "specs_excluded": excluded,
         "quality_runtime_included": quality_included,
+        "publication_runtime_included": publication_included,
         "model_execution": False,
     }
 

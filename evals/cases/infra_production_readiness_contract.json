@@ -1,0 +1,14 @@
+{
+  "id": "INFRA-PRODUCTION-READY-001",
+  "type": "contract",
+  "domain": "quality",
+  "judge": "deterministic",
+  "blocks_release": true,
+  "fixture": {},
+  "assertions": [
+    {"op": "file_exists", "file": "quality/production_readiness.py"},
+    {"op": "file_text_contains", "file": "quality/production_readiness.py", "value": "novelforge_production_readiness_v1"},
+    {"op": "file_text_contains", "file": "quality/production_readiness.py", "value": "numeric_quality_aggregation"},
+    {"op": "file_text_contains", "file": "HARNESS_MANIFEST.yaml", "value": "production_readiness_schema: novelforge_production_readiness_v1"}
+  ]
+}
