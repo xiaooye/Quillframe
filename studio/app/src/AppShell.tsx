@@ -5,17 +5,20 @@ import type { MessageKey } from "./locales/types";
 import { useStudio } from "./studio";
 import { StudioIcon, type StudioIconName } from "./StudioIcon";
 
-type NavigationLabel = MessageKey | "Runtime";
+type NavigationLabel = MessageKey | "Runtime" | "Control Plane" | "Architecture" | "Publication";
 type NavigationEntry = readonly [string, NavigationLabel, StudioIconName];
 
 const productNavigation: ReadonlyArray<NavigationEntry> = [
   ["/", "nav.desk", "home"],
   ["/project", "nav.project", "project"],
+  ["/control", "Control Plane", "capabilities"],
   ["/workspace", "nav.workspace", "workspace"],
   ["/agents", "nav.agents", "agents"],
 ];
 
 const inspectionNavigation: ReadonlyArray<NavigationEntry> = [
+  ["/architecture", "Architecture", "runtime"],
+  ["/publication", "Publication", "workspace"],
   ["/runtime", "Runtime", "runtime"],
   ["/context", "nav.context", "context"],
   ["/capabilities", "nav.capabilities", "capabilities"],
@@ -32,11 +35,13 @@ const operationRoute: Record<string, string> = {
   "capabilities.inspect": "/capabilities",
   "context.inspect": "/context",
   "semantic.catalog": "/semantic",
+  "publication.preview": "/publication",
   "runtime.sessions.list": "/runtime",
   "runtime.session.get": "/runtime",
   "runtime.events.list": "/runtime",
   "runtime.handoff.inspect": "/runtime",
   "run.receipt.get": "/runtime",
+  "session.resume.preflight": "/runtime",
 };
 
 export const AppShell: ParentComponent = (props) => {
@@ -68,7 +73,13 @@ export const AppShell: ParentComponent = (props) => {
   const deferred = createMemo(() => Object.entries(studio.bridgeDescription()?.deferred_operations ?? {}));
   const q = createMemo(() => query().trim().toLowerCase());
   const matches = (value: string) => !q() || value.toLowerCase().includes(q());
-  const navLabel = (label: NavigationLabel) => label === "Runtime" ? "Runtime" : t(label);
+  const navLabel = (label: NavigationLabel) => {
+    if (label === "Runtime") return "Runtime";
+    if (label === "Architecture") return locale() === "zh-CN" ? "架构观测" : "Architecture";
+    if (label === "Publication") return locale() === "zh-CN" ? "出版" : "Publication";
+    if (label === "Control Plane") return locale() === "zh-CN" ? "控制台" : "Control Plane";
+    return t(label);
+  };
   const coreStatus = createMemo(() => {
     if (studio.bridgeAvailable()) return locale() === "zh-CN" ? "Core 已绑定" : "Core bound";
     return locale() === "zh-CN" ? "Core 未绑定" : "Core unbound";
