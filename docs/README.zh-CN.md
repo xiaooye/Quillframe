@@ -90,6 +90,8 @@ NovelForge 的文档按**读者要完成的任务**组织，而不是照着源�
 
 一个运行时技术上“做得到”，从来不代表它因此获得故事写入权威。
 
+`main` 现在已有 **Studio 第一阶段的只读契约验证原型**：Run / Context Inspector 可以在本地读取 `novelforge_run_receipt_v1`，但不暴露写入操作。它用于验证产品与可观察性设计，并不等于 Studio 已正式发布。见 [Studio](../studio/README.zh-CN.md) 与 [Studio 产品架构](../studio/PRODUCT_ARCHITECTURE.zh-CN.md)。
+
 ---
 
 ## 06 · 如果你要理解模型语义契约 ✦
@@ -161,7 +163,7 @@ NovelForge 的文档按**读者要完成的任务**组织，而不是照着源�
 
 **Tier A · 产品入口** —— README、Docs Home、Why、Architecture、Pipeline、QA。第一次来仓库的人应该不读源码也能理解，文字与视觉都执行最严格的 QA。
 
-**Tier B · 使用指南** —— Project SDK、Integrations、Learning、Corpus、Evals、Context/Memory、Quality Evolution。重点是“什么时候用、怎么用、会得到什么、失败后怎么办”。
+**Tier B · 使用指南** —— Project SDK、Integrations、Learning、Corpus、Evals、Context/Memory、Quality Evolution、Studio 第一阶段。重点是“什么时候用、怎么用、会得到什么、失败后怎么办”。
 
 **Tier C · 契约与工程记录** —— Harness、Runtime、Semantic Worker、Story / Character / Canon、Surface / Reader、Corpus Policy 以及历史 specs。这里优先保证边界和语义精确，不为了“好看”牺牲协议清晰度。
 
