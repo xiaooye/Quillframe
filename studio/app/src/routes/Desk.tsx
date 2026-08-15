@@ -48,7 +48,11 @@ export default function Desk() {
       </Show>
 
       <Show when={hosted()}>
-        <section class="wui-card wui-card--outlined nf-inspector-surface nf-binding-surface" aria-labelledby="binding-heading">
+        <section
+          class="wui-card wui-card--outlined nf-inspector-surface nf-binding-surface"
+          aria-labelledby="binding-heading"
+          data-core-unbound={t("host.unboundTitle")}
+        >
           <header class="nf-binding-head">
             <div>
               <span class="nf-eyebrow">{t("desk.bindingEyebrow")}</span>
