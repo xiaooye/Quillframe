@@ -18,6 +18,34 @@
     gap: clamp(28px, 4vw, 54px);
   }
 
+  /* Shell chrome is quiet and neutral. */
+  .unified-product-shell .product-appbar {
+    border-inline: 0;
+    border-top: 0;
+    border-radius: 0;
+    background: color-mix(in oklab, var(--pe-surface) 94%, transparent);
+    box-shadow: 0 1px 0 color-mix(in oklab, var(--pe-border) 62%, transparent);
+  }
+
+  .unified-product-shell .brand-mark-wrap {
+    border-radius: 6px;
+    box-shadow: none;
+  }
+
+  /* Fallback policy for route-owned large cards. More specific rules below
+     restore object-like surfaces where a frame is semantically useful. */
+  .unified-route-page > .wui-card,
+  .unified-route-page > section.wui-card,
+  .unified-route-page > article.wui-card,
+  .unified-route-page > aside.wui-card,
+  .unified-route-page section > .wui-card,
+  .unified-route-page article > .wui-card,
+  .unified-route-page aside > .wui-card {
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
   /* Shared page hero ----------------------------------------------------- */
 
   .product-surface-hero,
@@ -113,6 +141,13 @@
     border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 54%, transparent);
     border-radius: 0;
     background: transparent !important;
+  }
+
+  /* A terminal is an object, but it no longer needs dashboard-card chrome. */
+  .unified-studio-terminal {
+    border-color: color-mix(in oklab, var(--pe-border) 68%, transparent);
+    border-radius: 8px;
+    box-shadow: none;
   }
 
   /* Inspector ----------------------------------------------------------- */
@@ -281,8 +316,11 @@
 
   .architecture-entry .architecture-detail-grid > section,
   .architecture-entry .architecture-trace-list li {
+    border: 0;
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 54%, transparent);
     border-radius: 0;
     background: transparent !important;
+    box-shadow: none;
   }
 
   /* Publication --------------------------------------------------------- */
@@ -326,8 +364,11 @@
   }
 
   .publication-workbench-entry .publication-profile-rail {
+    border: 0;
     border-block: 1px solid color-mix(in oklab, var(--pe-border) 62%, transparent);
+    border-radius: 0;
     background: transparent;
+    box-shadow: none;
   }
 
   .publication-workbench-entry .publication-profile-card {
@@ -384,10 +425,6 @@
 
   .unified-product-shell .wui-button:not(.wui-button--icon-only) {
     border-radius: 8px;
-  }
-
-  .unified-product-shell .product-appbar {
-    box-shadow: 0 1px 0 color-mix(in oklab, var(--pe-border) 62%, transparent);
   }
 
   .unified-product-shell .command-surface,
