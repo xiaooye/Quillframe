@@ -32,14 +32,18 @@ const markedHistory = window.history as History & { [historyMarker]?: boolean };
 
 if (!markedHistory[historyMarker]) {
   markedHistory[historyMarker] = true;
-  for (const methodName of ["pushState", "replaceState"] as const) {
-    const original = window.history[methodName].bind(window.history);
-    window.history[methodName] = ((...args: Parameters<History[typeof methodName]>) => {
-      const result = original(...args);
-      window.dispatchEvent(new Event(locationEvent));
-      return result;
-    }) as History[typeof methodName];
-  }
+
+  const originalPushState = window.history.pushState.bind(window.history);
+  window.history.pushState = ((data: unknown, unused: string, url?: string | URL | null) => {
+    originalPushState(data, unused, url);
+    window.dispatchEvent(new Event(locationEvent));
+  }) as History["pushState"];
+
+  const originalReplaceState = window.history.replaceState.bind(window.history);
+  window.history.replaceState = ((data: unknown, unused: string, url?: string | URL | null) => {
+    originalReplaceState(data, unused, url);
+    window.dispatchEvent(new Event(locationEvent));
+  }) as History["replaceState"];
 }
 
 function currentLocale(): KnowledgeLocale {
