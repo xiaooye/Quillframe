@@ -109,7 +109,7 @@ func _gui_input(event: InputEvent) -> void:
 		if not _reduced_motion and size.x > 0.0 and size.y > 0.0:
 			var center := size * 0.5
 			var strength := 7.0 if _is_phone() else 20.0
-			var target := (event.position - center) / maxf(size.x, size.y) * strength
+			var target: Vector2 = (event.position - center) / maxf(size.x, size.y) * strength
 			_parallax = _parallax.lerp(target, 0.34)
 			queue_redraw()
 	elif event is InputEventMouseButton:

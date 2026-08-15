@@ -143,7 +143,7 @@ func _install_toggle() -> void:
 	_toggle.add_theme_stylebox_override("hover", _button_style(Color(0.07, 0.10, 0.15, 0.90), Color(0.32, 0.42, 0.58, 0.65)))
 	_toggle.set_meta("novelforge_locale_hooked", true)
 	_toggle.pressed.connect(_toggle_locale)
-	var row := docs_button.get_parent()
+	var row: Node = (docs_button as Button).get_parent()
 	row.add_child(_toggle)
 	row.move_child(_toggle, docs_button.get_index())
 
