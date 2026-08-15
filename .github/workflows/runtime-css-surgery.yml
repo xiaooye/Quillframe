@@ -1,0 +1,55 @@
+name: One-time Runtime Branch CSS Surgery
+
+on:
+  push:
+    branches: [studio/runtime-observability]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: studio/runtime-observability
+          fetch-depth: 0
+      - name: Remove Studio-owned bottom-nav active chrome
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('studio/app/src/styles/atelier-workbench.css')
+          text = path.read_text(encoding='utf-8')
+          active = '''  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-bottom-nav-item[data-active="true"] {
+            color: var(--wui-color-primary);
+            background: var(--nf-workbench-accent-soft);
+            box-shadow: none;
+          }
+
+          '''.replace('          ', '')
+          forced = '''    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-nav-item[data-active="true"],
+          :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-bottom-nav-item[data-active="true"] {
+          '''.replace('          ', '')
+          replacement = '''    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-nav-item[data-active="true"] {
+          '''.replace('          ', '')
+          if text.count(active) != 1:
+              raise SystemExit(f'expected one bottom-nav active block, found {text.count(active)}')
+          if text.count(forced) != 1:
+              raise SystemExit(f'expected one forced-colors combined selector, found {text.count(forced)}')
+          text = text.replace(active, '', 1).replace(forced, replacement, 1)
+          if '.nf-bottom-nav-item[data-active' in text:
+              raise SystemExit('bottom-nav active selector still present')
+          path.write_text(text, encoding='utf-8')
+          PY
+          git diff --check
+          git diff -- studio/app/src/styles/atelier-workbench.css
+      - name: Commit exact cleanup
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add studio/app/src/styles/atelier-workbench.css
+          git diff --cached --quiet && exit 0
+          git commit -m 'studio: return bottom-nav active chrome to WeiUI'
+          git push origin HEAD:studio/runtime-observability
