@@ -3,7 +3,7 @@ import { invokeBridge } from "../bridge";
 import { CoreHostBoundary, JsonBlock, PageIntro, QueryError } from "../components";
 import { useI18n } from "../i18n";
 import { sourceBooleanStatus, stringList, type FrameworkDoctorProjection } from "../observability";
-import { ProductionProjectionPlaceholder, StatusBadge } from "../observability-ui";
+import { StatusBadge } from "../observability-ui";
 import { useStudio } from "../studio";
 
 export default function Diagnostics() {
@@ -146,8 +146,6 @@ export default function Diagnostics() {
           )}
         </Show>
       </Show>
-
-      <ProductionProjectionPlaceholder />
     </section>
   );
 }
