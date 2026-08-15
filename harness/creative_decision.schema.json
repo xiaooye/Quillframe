@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novelforge_creative_decision_contract_v1",
+  "title": "NovelForge Creative Decision Contract",
+  "$defs": {
+    "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "resolverClass": {"enum": ["user", "authorized_human", "authorized_planner"]},
+    "actor": {
+      "type": "object", "additionalProperties": false,
+      "required": ["class", "evidence_ref", "evidence_fingerprint"],
+      "properties": {
+        "class": {"enum": ["user", "authorized_human", "authorized_planner", "manager", "writer"]},
+        "evidence_ref": {"type": "string", "minLength": 1},
+        "evidence_fingerprint": {"$ref": "#/$defs/fingerprint"}
+      }
+    },
+    "resolverActor": {
+      "type": "object", "additionalProperties": false,
+      "required": ["class", "evidence_ref", "evidence_fingerprint"],
+      "properties": {
+        "class": {"$ref": "#/$defs/resolverClass"},
+        "evidence_ref": {"type": "string", "minLength": 1},
+        "evidence_fingerprint": {"$ref": "#/$defs/fingerprint"}
+      }
+    },
+    "alternative": {
+      "type": "object", "additionalProperties": false,
+      "required": ["option_id", "label", "scenario_ref"],
+      "properties": {
+        "option_id": {"type": "string", "minLength": 1, "maxLength": 120},
+        "label": {"type": "string", "minLength": 1, "maxLength": 600},
+        "scenario_ref": {"type": ["string", "null"]}
+      }
+    },
+    "decision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "decision_id", "scope_ref", "question", "resolver_classes", "alternatives", "serves_refs", "depends_on_refs", "status", "version", "history", "supersedes_decision_id", "superseded_by_decision_id", "created_by", "created_source_ref", "created_source_fingerprint", "artifact_fingerprint", "authority", "canon_authority", "project_write_authority", "framework_write_authority", "settlement_authority", "model_execution"],
+      "properties": {
+        "schema": {"const": "novelforge_creative_decision_v1"},
+        "decision_id": {"type": "string", "minLength": 1, "maxLength": 160},
+        "scope_ref": {"type": "string", "minLength": 1, "maxLength": 300},
+        "question": {"type": "string", "minLength": 1, "maxLength": 1200},
+        "resolver_classes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/resolverClass"}, "uniqueItems": true},
+        "alternatives": {"type": "array", "minItems": 2, "maxItems": 8, "items": {"$ref": "#/$defs/alternative"}},
+        "serves_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "depends_on_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+        "status": {"enum": ["open", "decided", "superseded", "dropped"]},
+        "version": {"type": "integer", "minimum": 1},
+        "history": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+        "supersedes_decision_id": {"type": ["string", "null"]},
+        "superseded_by_decision_id": {"type": ["string", "null"]},
+        "created_by": {"$ref": "#/$defs/actor"},
+        "created_source_ref": {"type": "string", "minLength": 1},
+        "created_source_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "artifact_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "authority": {"const": false}, "canon_authority": {"const": false},
+        "project_write_authority": {"const": false}, "framework_write_authority": {"const": false},
+        "settlement_authority": {"const": false}, "model_execution": {"const": false}
+      }
+    },
+    "openRequest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "decision_id", "scope_ref", "question", "resolver_classes", "alternatives", "serves_refs", "depends_on_refs", "supersedes_decision_id", "created_by", "source_ref", "source_fingerprint"],
+      "properties": {
+        "schema": {"const": "novelforge_creative_decision_open_request_v1"},
+        "decision_id": {"type": "string", "minLength": 1}, "scope_ref": {"type": "string", "minLength": 1},
+        "question": {"type": "string", "minLength": 1, "maxLength": 1200},
+        "resolver_classes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/resolverClass"}, "uniqueItems": true},
+        "alternatives": {"type": "array", "minItems": 2, "maxItems": 8, "items": {"$ref": "#/$defs/alternative"}},
+        "serves_refs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "depends_on_refs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "supersedes_decision_id": {"type": ["string", "null"]},
+        "created_by": {"$ref": "#/$defs/actor"},
+        "source_ref": {"type": "string", "minLength": 1}, "source_fingerprint": {"$ref": "#/$defs/fingerprint"}
+      }
+    },
+    "resolution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "expected_version", "expected_fingerprint", "actor", "chosen_option_id", "chosen_outcome", "rationale", "rejected_alternatives", "accepted_risks", "evidence_ref", "evidence_fingerprint"],
+      "properties": {
+        "schema": {"const": "novelforge_creative_decision_resolution_v1"},
+        "expected_version": {"type": "integer", "minimum": 1}, "expected_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "actor": {"$ref": "#/$defs/resolverActor"},
+        "chosen_option_id": {"type": ["string", "null"]}, "chosen_outcome": {"type": "string", "minLength": 1, "maxLength": 600},
+        "rationale": {"type": "string", "minLength": 1, "maxLength": 1600},
+        "rejected_alternatives": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["option_id", "reason"], "properties": {"option_id": {"type": "string", "minLength": 1}, "reason": {"type": "string", "minLength": 1, "maxLength": 800}}}},
+        "accepted_risks": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 600}, "uniqueItems": true},
+        "evidence_ref": {"type": "string", "minLength": 1}, "evidence_fingerprint": {"$ref": "#/$defs/fingerprint"}
+      }
+    },
+    "supersession": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "expected_version", "expected_fingerprint", "actor", "successor_decision_id", "successor_fingerprint", "reason", "evidence_ref", "evidence_fingerprint"],
+      "properties": {
+        "schema": {"const": "novelforge_creative_decision_supersession_v1"},
+        "expected_version": {"type": "integer", "minimum": 1}, "expected_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "actor": {"$ref": "#/$defs/resolverActor"},
+        "successor_decision_id": {"type": "string", "minLength": 1}, "successor_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "reason": {"type": "string", "minLength": 1, "maxLength": 800}, "evidence_ref": {"type": "string", "minLength": 1},
+        "evidence_fingerprint": {"$ref": "#/$defs/fingerprint"}
+      }
+    },
+    "drop": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "expected_version", "expected_fingerprint", "actor", "reason", "evidence_ref", "evidence_fingerprint"],
+      "properties": {
+        "schema": {"const": "novelforge_creative_decision_drop_v1"},
+        "expected_version": {"type": "integer", "minimum": 1}, "expected_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "actor": {"$ref": "#/$defs/resolverActor"},
+        "reason": {"type": "string", "minLength": 1, "maxLength": 800}, "evidence_ref": {"type": "string", "minLength": 1},
+        "evidence_fingerprint": {"$ref": "#/$defs/fingerprint"}
+      }
+    },
+    "transition": {
+      "type": "object",
+      "required": ["schema", "transition", "before_fingerprint", "after_fingerprint", "updated_decision", "authority", "canon_authority", "project_write_authority", "framework_write_authority", "settlement_authority", "model_execution"],
+      "properties": {
+        "schema": {"const": "novelforge_creative_decision_transition_v1"},
+        "transition": {"enum": ["resolve", "supersede", "drop"]},
+        "before_fingerprint": {"$ref": "#/$defs/fingerprint"}, "after_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "updated_decision": {"$ref": "#/$defs/decision"}, "successor_decision": {"$ref": "#/$defs/decision"},
+        "downstream_revalidation_candidates": {"type": "array", "items": {"type": "string"}},
+        "propagation_debt_created": {"const": false}, "active_plan_write_performed": {"const": false},
+        "authority": {"const": false}, "canon_authority": {"const": false}, "project_write_authority": {"const": false},
+        "framework_write_authority": {"const": false}, "settlement_authority": {"const": false}, "model_execution": {"const": false}
+      }
+    },
+    "projection": {
+      "type": "object",
+      "required": ["schema", "decision_id", "scope_ref", "status", "audience", "source_fingerprint", "visible", "authority", "canon_authority", "model_execution"],
+      "properties": {
+        "schema": {"const": "novelforge_creative_decision_projection_v1"},
+        "decision_id": {"type": "string"}, "scope_ref": {"type": "string"},
+        "status": {"enum": ["open", "decided", "superseded", "dropped"]},
+        "audience": {"enum": ["planner", "writer", "reader", "character"]},
+        "source_fingerprint": {"$ref": "#/$defs/fingerprint"}, "visible": {"type": "boolean"},
+        "authority": {"const": false}, "canon_authority": {"const": false}, "model_execution": {"const": false}
+      }
+    }
+  },
+  "oneOf": [
+    {"$ref": "#/$defs/decision"}, {"$ref": "#/$defs/openRequest"}, {"$ref": "#/$defs/resolution"},
+    {"$ref": "#/$defs/supersession"}, {"$ref": "#/$defs/drop"}, {"$ref": "#/$defs/transition"}, {"$ref": "#/$defs/projection"}
+  ]
+}

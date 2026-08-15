@@ -1,0 +1,58 @@
+name: NovelForge Creative Decision Provenance
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  creative-decision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile creative decision contract
+        run: python -m py_compile harness/creative_decision.py
+      - name: Validate creative decision schema JSON
+        run: python -m json.tool harness/creative_decision.schema.json > /dev/null
+      - name: Deterministic creative decision contract
+        run: python harness/creative_decision.py self-test > creative-decision-test.json
+      - name: Assert creative decision invariants
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('creative-decision-test.json',encoding='utf-8'))
+          assert d['creative_decision_contract']=='PASS',d
+          required=[
+            'open_decision_is_non_authoritative',
+            'writer_sees_warning_not_alternatives',
+            'reader_and_character_do_not_see_future_choice',
+            'planner_can_inspect_bounded_alternatives',
+            'writer_cannot_silently_resolve',
+            'before_state_cas_blocks_stale_resolution',
+            'authorized_resolution_records_visible_provenance',
+            'decided_choice_not_duplicated_into_writer_context',
+            'supersession_preserves_old_history',
+            'supersession_requires_explicit_successor_lineage',
+            'supersession_scope_mismatch_fails_closed',
+            'supersession_emits_revalidation_candidates_without_auto_debt',
+            'decision_transition_never_writes_active_plan',
+            'drop_preserves_artifact_history',
+            'artifact_fingerprint_detects_tamper',
+          ]
+          for key in required:
+              assert d[key] is True,(key,d)
+          assert d['model_execution'] is False
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: creative-decision-provenance
+          path: creative-decision-test.json
+          if-no-files-found: error
