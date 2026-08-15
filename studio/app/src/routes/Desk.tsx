@@ -21,40 +21,29 @@ export default function Desk() {
   return (
     <section class="nf-page nf-desk-page">
       <PageIntro eyebrow={t("desk.eyebrow")} title={t("desk.title")} body={t("desk.body")} />
-      <Show when={studio.bridgeAvailable()}>
-        <QueryError message={studio.bridgeError() ? String(studio.bridgeError()) : undefined} />
 
-        <div class="nf-metric-grid">
-          <article class="wui-card nf-card nf-card-accent">
-            <div class="wui-card__content">
-              <span class="nf-card-label">{t("desk.bridgeTitle")}</span>
-              <strong>{studio.bridgeLoading() ? t("common.loading") : studio.bridgeDescription() ? t("desk.bridgeReady") : t("desk.bridgeUnavailable")}</strong>
-              <small>{studio.bridgeDescription()?.contract_schema ?? "novelforge_studio_host_bridge_contract_v1"}</small>
-            </div>
-          </article>
-          <article class="wui-card nf-card">
-            <div class="wui-card__content">
-              <span class="nf-card-label">{t("desk.queryCount")}</span>
-              <strong>{studio.bridgeDescription()?.supported_operations.length ?? "—"}</strong>
-              <small>bridge.describe · project.inspect · …</small>
-            </div>
-          </article>
-          <article class="wui-card nf-card">
-            <div class="wui-card__content">
-              <span class="nf-card-label">{t("desk.deferredCount")}</span>
-              <strong>{studio.bridgeDescription() ? Object.keys(studio.bridgeDescription()!.deferred_operations).length : "—"}</strong>
-              <small>Core #23</small>
-            </div>
-          </article>
-          <article class="wui-card nf-card">
-            <div class="wui-card__content">
-              <span class="nf-card-label">{t("desk.authority")}</span>
-              <AuthorityBadge />
-              <small>canon=false · settlement=false · framework-write=false</small>
-            </div>
-          </article>
-        </div>
-      </Show>
+      <div class="nf-start-actions" aria-label={t("desk.title")}>
+        <A href="/workspace" class="nf-start-action" data-intent="start-novel">
+          <span class="nf-card-label">01</span>
+          <strong>{t("desk.startPlaygroundTitle")}</strong>
+          <small>{t("desk.startPlaygroundBody")}</small>
+        </A>
+        <A href="/project" class="nf-start-action" data-intent="open-project">
+          <span class="nf-card-label">02</span>
+          <strong>{t("desk.startProjectTitle")}</strong>
+          <small>{t("desk.startProjectBody")}</small>
+        </A>
+        <A href="/agents" class="nf-start-action" data-intent="agent-integration">
+          <span class="nf-card-label">03</span>
+          <strong>{t("desk.startAgentTitle")}</strong>
+          <small>{t("desk.startAgentBody")}</small>
+        </A>
+        <A href={hosted() ? "#core-binding" : "/capabilities"} class="nf-start-action" data-intent="explore-novelforge">
+          <span class="nf-card-label">04</span>
+          <strong>{t("desk.startExploreTitle")}</strong>
+          <small>{t("desk.startExploreBody")}</small>
+        </A>
+      </div>
 
       <Show when={hosted()}>
         <section
@@ -104,22 +93,42 @@ export default function Desk() {
             </article>
           </div>
         </section>
-
-        <div class="nf-start-actions">
-          <A href="/project" class="nf-start-action">
-            <span class="nf-card-label">01</span>
-            <strong>{t("desk.startProjectTitle")}</strong>
-            <small>{t("desk.startProjectBody")}</small>
-          </A>
-          <A href="/workspace" class="nf-start-action">
-            <span class="nf-card-label">02</span>
-            <strong>{t("desk.startPlaygroundTitle")}</strong>
-            <small>{t("desk.startPlaygroundBody")}</small>
-          </A>
-        </div>
       </Show>
 
       <Show when={studio.bridgeAvailable()}>
+        <QueryError message={studio.bridgeError() ? String(studio.bridgeError()) : undefined} />
+
+        <div class="nf-metric-grid">
+          <article class="wui-card nf-card nf-card-accent">
+            <div class="wui-card__content">
+              <span class="nf-card-label">{t("desk.bridgeTitle")}</span>
+              <strong>{studio.bridgeLoading() ? t("common.loading") : studio.bridgeDescription() ? t("desk.bridgeReady") : t("desk.bridgeUnavailable")}</strong>
+              <small>{studio.bridgeDescription()?.contract_schema ?? "novelforge_studio_host_bridge_contract_v1"}</small>
+            </div>
+          </article>
+          <article class="wui-card nf-card">
+            <div class="wui-card__content">
+              <span class="nf-card-label">{t("desk.queryCount")}</span>
+              <strong>{studio.bridgeDescription()?.supported_operations.length ?? "—"}</strong>
+              <small>bridge.describe · project.inspect · …</small>
+            </div>
+          </article>
+          <article class="wui-card nf-card">
+            <div class="wui-card__content">
+              <span class="nf-card-label">{t("desk.deferredCount")}</span>
+              <strong>{studio.bridgeDescription() ? Object.keys(studio.bridgeDescription()!.deferred_operations).length : "—"}</strong>
+              <small>Core #23</small>
+            </div>
+          </article>
+          <article class="wui-card nf-card">
+            <div class="wui-card__content">
+              <span class="nf-card-label">{t("desk.authority")}</span>
+              <AuthorityBadge />
+              <small>canon=false · settlement=false · framework-write=false</small>
+            </div>
+          </article>
+        </div>
+
         <div class="nf-two-column">
           <article class="wui-card nf-card">
             <div class="wui-card__header"><h2>{t("nav.project")}</h2></div>
