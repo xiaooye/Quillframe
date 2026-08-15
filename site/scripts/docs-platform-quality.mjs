@@ -53,7 +53,8 @@ requireCheck(contentConfig.includes("docsLoader()") && contentConfig.includes("d
 requireCheck(customCss.includes("--sl-content-width: 52rem"), "documentation reading width must stay deliberately bounded");
 requireCheck(customCss.includes(':lang(zh-CN) .sl-markdown-content'), "Chinese typography override must remain explicit");
 requireCheck(customCss.includes('a[aria-current="page"]'), "documentation navigation must retain a strong current-page state");
-requireCheck(customCss.includes(".nf-tier-grid") && customCss.includes(".nf-reference-callout"), "curated docs landing must retain its responsive information hierarchy");
+requireCheck(customCss.includes(".nf-link-grid") && customCss.includes(".nf-link-card"), "curated docs landing must retain stable task-path card styling");
+requireCheck(customCss.includes(".nf-tier-grid") && customCss.includes(".nf-reference-callout"), "curated docs landing must retain its layered reference hierarchy");
 requireCheck(actions.includes('english ? "Product" : "产品"'), "Product header action must remain locale-aware");
 
 requireCheck(!main.includes("KnowledgePortal"), "legacy Knowledge Portal must not mount beside the product router");
@@ -72,7 +73,9 @@ requireCheck(fs.existsSync(path.join(stagedRoot, "why-novelforge.md")), "zh-CN w
 requireCheck(fs.existsSync(path.join(stagedRoot, "en", "why-novelforge.md")), "English why-novelforge route must be staged under /en");
 
 requireCheck(landing.includes('template: "splash"'), "docs home must use Starlight's splash landing template");
-requireCheck(landing.includes("StarlightPage") && landing.includes("CardGrid") && landing.includes("LinkCard"), "docs home must compose from Starlight page and card primitives");
+requireCheck(landing.includes("StarlightPage"), "docs home must remain inside the official Starlight page shell");
+requireCheck(landing.includes('class="nf-link-grid"') && landing.includes('class="nf-link-card"'), "docs home must use stable semantic task-path cards instead of private Starlight component imports");
+requireCheck(landing.includes('link: "/inspect"') && landing.includes('"/inspect"'), "docs home must connect product-first onboarding to the live project inspector");
 requireCheck(landing.includes("data-nf-docs-home"), "docs home must expose a stable verification marker");
 requireCheck(landing.includes("按目标开始") && landing.includes("Choose a path"), "docs landing copy must remain natively localized");
 requireCheck(zhLandingRoute.includes('<DocsLanding locale="zh-CN" />'), "zh-CN docs root must render the curated Chinese landing");
@@ -102,5 +105,6 @@ if (failures.length > 0) {
     raw_html_asset_rewrite: true,
     localized_header_actions: true,
     curated_landing: true,
+    product_first_inspector_handoff: true,
   }, null, 2));
 }
