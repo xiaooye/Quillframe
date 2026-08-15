@@ -14,11 +14,13 @@ const config = read("docs-site/astro.config.mjs");
 const contentConfig = read("docs-site/src/content.config.ts");
 const customCss = read("docs-site/src/styles/custom.css");
 const actions = read("docs-site/src/components/NovelForgeActions.astro");
+const landing = read("docs-site/src/components/DocsLanding.astro");
+const zhLandingRoute = read("docs-site/src/pages/index.astro");
+const enLandingRoute = read("docs-site/src/pages/en/index.astro");
 const stagingCompiler = read("scripts/build-starlight-content.mjs");
 const verifier = read("scripts/verify-starlight-build.mjs");
 const manifest = JSON.parse(fs.readFileSync(path.resolve(siteRoot, "../docs/documentation_manifest.json"), "utf8"));
 const stagedRoot = path.join(siteRoot, "docs-site", "src", "content", "docs");
-const publicAssetRoot = path.join(siteRoot, "docs-site", "public", "repo-assets");
 
 const failures = [];
 const requireCheck = (condition, message) => {
@@ -51,6 +53,7 @@ requireCheck(contentConfig.includes("docsLoader()") && contentConfig.includes("d
 requireCheck(customCss.includes("--sl-content-width: 52rem"), "documentation reading width must stay deliberately bounded");
 requireCheck(customCss.includes(':lang(zh-CN) .sl-markdown-content'), "Chinese typography override must remain explicit");
 requireCheck(customCss.includes('a[aria-current="page"]'), "documentation navigation must retain a strong current-page state");
+requireCheck(customCss.includes(".nf-tier-grid") && customCss.includes(".nf-reference-callout"), "curated docs landing must retain its responsive information hierarchy");
 requireCheck(actions.includes('english ? "Product" : "产品"'), "Product header action must remain locale-aware");
 
 requireCheck(!main.includes("KnowledgePortal"), "legacy Knowledge Portal must not mount beside the product router");
@@ -58,26 +61,26 @@ requireCheck(!main.includes("KnowledgeExperience"), "product entry must not impo
 requireCheck(main.includes("localizedDocsTarget"), "product SPA must hand /docs navigation to Starlight with locale preservation");
 requireCheck(stagingCompiler.includes("rewriteHtmlAttributes"), "Starlight staging must rewrite raw HTML document attributes");
 requireCheck(stagingCompiler.includes("copyRelativeAsset"), "Starlight staging must copy repository-local documentation assets");
+requireCheck(stagingCompiler.includes('if (doc.id === "docs-home") continue;'), "docs home must be reserved for the curated Starlight landing routes");
 
-const expectedPages = manifest.documents.length * 2;
-requireCheck(markdownCount(stagedRoot) === expectedPages, `Starlight staging must contain ${expectedPages} localized Markdown pages`);
+const expectedLocalizedPages = manifest.documents.length * 2;
+const expectedStagedMarkdownPages = (manifest.documents.length - 1) * 2;
+requireCheck(markdownCount(stagedRoot) === expectedStagedMarkdownPages, `Starlight staging must contain ${expectedStagedMarkdownPages} localized Markdown reference pages`);
+requireCheck(!fs.existsSync(path.join(stagedRoot, "index.md")), "zh-CN docs root must not conflict with the curated Astro landing route");
+requireCheck(!fs.existsSync(path.join(stagedRoot, "en", "index.md")), "English docs root must not conflict with the curated Astro landing route");
 requireCheck(fs.existsSync(path.join(stagedRoot, "why-novelforge.md")), "zh-CN why-novelforge route must be staged at the docs root");
 requireCheck(fs.existsSync(path.join(stagedRoot, "en", "why-novelforge.md")), "English why-novelforge route must be staged under /en");
 
-const stagedHomePath = path.join(stagedRoot, "index.md");
-if (fs.existsSync(stagedHomePath)) {
-  const stagedHome = fs.readFileSync(stagedHomePath, "utf8");
-  requireCheck(!stagedHome.includes('../assets/brand/'), "docs home must not retain broken raw relative brand asset paths");
-  requireCheck(stagedHome.includes('/docs/repo-assets/assets/brand/novelforge-mark.svg'), "docs home must point its raw brand mark at the staged public asset");
-  requireCheck(stagedHome.includes('href="/docs/en/"'), "docs home raw locale link must target the Starlight English root");
-}
-
-for (const asset of ["novelforge-mark.svg", "novelforge-lockup.svg", "story-thread.svg"]) {
-  requireCheck(fs.existsSync(path.join(publicAssetRoot, "assets", "brand", asset)), `Starlight staging must copy brand asset ${asset}`);
-}
+requireCheck(landing.includes('template: "splash"'), "docs home must use Starlight's splash landing template");
+requireCheck(landing.includes("StarlightPage") && landing.includes("CardGrid") && landing.includes("LinkCard"), "docs home must compose from Starlight page and card primitives");
+requireCheck(landing.includes("data-nf-docs-home"), "docs home must expose a stable verification marker");
+requireCheck(landing.includes("按目标开始") && landing.includes("Choose a path"), "docs landing copy must remain natively localized");
+requireCheck(zhLandingRoute.includes('<DocsLanding locale="zh-CN" />'), "zh-CN docs root must render the curated Chinese landing");
+requireCheck(enLandingRoute.includes('<DocsLanding locale="en" />'), "English docs root must render the curated English landing");
 
 requireCheck(verifier.includes('path.join(outputRoot, "why-novelforge", "index.html")'), "post-build verifier must assert a concrete zh-CN deep route");
 requireCheck(verifier.includes('path.join(outputRoot, "en", "why-novelforge", "index.html")'), "post-build verifier must assert a concrete English deep route");
+requireCheck(verifier.includes("data-nf-docs-home"), "post-build verifier must assert the curated landing page marker");
 
 if (failures.length > 0) {
   for (const failure of failures) console.error(`docs-platform-quality: FAIL: ${failure}`);
@@ -89,12 +92,15 @@ if (failures.length > 0) {
     engine: "Astro Starlight",
     astro: pkg.devDependencies.astro,
     starlight: pkg.devDependencies["@astrojs/starlight"],
-    localized_pages: expectedPages,
+    localized_pages: expectedLocalizedPages,
+    staged_markdown_pages: expectedStagedMarkdownPages,
+    custom_landing_pages: 2,
     root_locale: "zh-CN",
     spa_docs_renderer: false,
     astro_project_root: "site/docs-site",
     emitted_page_verification: true,
     raw_html_asset_rewrite: true,
     localized_header_actions: true,
+    curated_landing: true,
   }, null, 2));
 }
