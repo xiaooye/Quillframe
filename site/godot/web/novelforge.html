@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#070b12">
+  <meta name="theme-color" content="#060911">
   <meta name="color-scheme" content="dark">
   <meta name="description" content="NovelForge — agentic long-form fiction production control room.">
   <title>$GODOT_PROJECT_NAME</title>
@@ -12,11 +12,11 @@
     :root {
       color-scheme: dark;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #070b12;
-      color: #e9eef7;
+      background: #060911;
+      color: #eef4fb;
     }
     * { box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #070b12; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #060911; }
     body { position: relative; }
     #canvas {
       position: absolute;
@@ -25,64 +25,130 @@
       width: 100%;
       height: 100%;
       outline: 0;
-      background: #070b12;
+      background: #060911;
     }
     #nf-loader {
       position: absolute;
       inset: 0;
       z-index: 10;
+      overflow: hidden;
       display: grid;
       place-items: center;
       background:
-        linear-gradient(rgba(115,241,209,.045) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(115,241,209,.045) 1px, transparent 1px),
-        radial-gradient(circle at 50% 43%, rgba(115,241,209,.075), transparent 34%),
-        #070b12;
-      background-size: 56px 56px, 56px 56px, auto, auto;
-      transition: opacity 420ms ease, visibility 420ms ease;
+        radial-gradient(circle at 24% 18%, rgba(115,241,209,.10), transparent 32%),
+        radial-gradient(circle at 82% 34%, rgba(139,124,255,.08), transparent 30%),
+        linear-gradient(rgba(92,131,190,.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(92,131,190,.045) 1px, transparent 1px),
+        #060911;
+      background-size: auto, auto, 48px 48px, 48px 48px, auto;
+      transition: opacity 360ms ease, visibility 360ms ease;
     }
+    #nf-loader::before,
+    #nf-loader::after {
+      content: "";
+      position: absolute;
+      width: 54vmax;
+      height: 54vmax;
+      border: 1px solid rgba(115,241,209,.055);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    #nf-loader::before { left: -29vmax; top: -30vmax; }
+    #nf-loader::after { right: -35vmax; bottom: -38vmax; border-color: rgba(139,124,255,.05); }
     #nf-loader.is-ready {
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
     }
-    .nf-loader-card {
-      width: min(560px, calc(100vw - 48px));
-      border: 1px solid #24324a;
-      border-radius: 18px;
-      background: rgba(13,20,32,.86);
-      box-shadow: 0 28px 90px rgba(0,0,0,.42);
-      backdrop-filter: blur(16px);
-      padding: 28px;
+    .nf-loader-shell {
+      position: relative;
+      width: min(980px, calc(100vw - 56px));
+      min-height: min(560px, calc(100vh - 72px));
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      border: 1px solid rgba(84,111,151,.42);
+      border-radius: 22px;
+      overflow: hidden;
+      background: rgba(8,13,23,.76);
+      box-shadow: 0 34px 120px rgba(0,0,0,.42), inset 0 1px rgba(255,255,255,.018);
+      backdrop-filter: blur(18px);
+    }
+    .nf-loader-top,
+    .nf-loader-bottom {
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 20px;
+      border-color: rgba(70,96,136,.34);
+      color: #71819b;
+      font: 650 9px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+    .nf-loader-top { border-bottom: 1px solid rgba(70,96,136,.34); }
+    .nf-loader-bottom { border-top: 1px solid rgba(70,96,136,.34); }
+    .nf-loader-brandline {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: #c7d2e3;
+    }
+    .nf-loader-mark {
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(115,241,209,.42);
+      border-radius: 7px;
+      background: rgba(115,241,209,.08);
+      color: #73f1d1;
+      font: 750 10px/1 system-ui, sans-serif;
+      letter-spacing: 0;
+    }
+    .nf-loader-live { color: #73f1d1; }
+    .nf-loader-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(240px, .55fr);
+      gap: 0;
+    }
+    .nf-loader-hero {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(32px, 6vw, 68px);
+      border-right: 1px solid rgba(70,96,136,.30);
     }
     .nf-kicker {
       color: #73f1d1;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: .18em;
+      font: 700 9px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      letter-spacing: .15em;
       text-transform: uppercase;
     }
     .nf-brand {
-      margin-top: 12px;
-      font-size: clamp(34px, 6vw, 62px);
-      line-height: .95;
-      letter-spacing: -.055em;
+      margin-top: 16px;
+      max-width: 650px;
+      font-size: clamp(44px, 8vw, 88px);
+      line-height: .88;
+      letter-spacing: -.068em;
       font-weight: 720;
     }
     .nf-subtitle {
-      margin-top: 16px;
-      max-width: 430px;
-      color: #8190aa;
+      margin-top: 20px;
+      max-width: 520px;
+      color: #93a2b9;
       font-size: 13px;
-      line-height: 1.55;
+      line-height: 1.62;
     }
     .nf-progress-track {
       position: relative;
       height: 3px;
-      margin-top: 28px;
+      margin-top: 34px;
       overflow: hidden;
       border-radius: 999px;
-      background: #182235;
+      background: #172238;
     }
     #nf-progress {
       position: absolute;
@@ -90,31 +156,78 @@
       width: 4%;
       border-radius: inherit;
       background: #73f1d1;
-      box-shadow: 0 0 22px rgba(115,241,209,.45);
+      box-shadow: 0 0 24px rgba(115,241,209,.48);
       transition: width 120ms linear;
     }
-    .nf-meta {
+    .nf-progress-meta {
       display: flex;
       justify-content: space-between;
-      gap: 16px;
+      gap: 14px;
       margin-top: 10px;
-      color: #5f6f89;
-      font: 600 9px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: #60718c;
+      font: 650 8px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       letter-spacing: .08em;
       text-transform: uppercase;
     }
-    #nf-status { color: #9aabc1; }
+    #nf-status { color: #a8b6c9; }
+    .nf-loader-telemetry {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 30px 26px;
+      background: rgba(11,18,30,.44);
+    }
+    .nf-telemetry-title {
+      margin-bottom: 16px;
+      color: #71819b;
+      font: 700 8px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .nf-telemetry-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 38px;
+      border-top: 1px solid rgba(70,96,136,.24);
+      color: #71819b;
+      font: 620 9px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      text-transform: uppercase;
+    }
+    .nf-telemetry-row:last-of-type { border-bottom: 1px solid rgba(70,96,136,.24); }
+    .nf-telemetry-row strong { color: #d9e3f0; font-weight: 650; }
+    .nf-route-chip {
+      margin-top: 22px;
+      padding: 12px;
+      border: 1px solid rgba(115,241,209,.20);
+      border-radius: 10px;
+      background: rgba(115,241,209,.045);
+      color: #8da0b8;
+      font: 600 9px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .nf-route-chip span { color: #73f1d1; }
     #nf-error {
       display: none;
       margin-top: 18px;
-      color: #ffb4b4;
-      font-size: 12px;
-      line-height: 1.5;
+      color: #ffb8b8;
+      font-size: 11px;
+      line-height: 1.55;
     }
     html[data-novelforge-runtime="error"] #nf-error { display: block; }
-    @media (max-width: 620px) {
-      .nf-loader-card { width: calc(100vw - 28px); padding: 22px; border-radius: 14px; }
-      .nf-meta { flex-direction: column; gap: 6px; }
+    @media (max-width: 760px) {
+      .nf-loader-shell {
+        width: calc(100vw - 20px);
+        min-height: calc(100vh - 20px);
+        border-radius: 15px;
+      }
+      .nf-loader-main { grid-template-columns: 1fr; }
+      .nf-loader-hero { padding: 30px 24px; border-right: 0; }
+      .nf-loader-telemetry { padding: 18px 24px 24px; border-top: 1px solid rgba(70,96,136,.30); }
+      .nf-brand { font-size: clamp(42px, 16vw, 68px); }
+      .nf-loader-top, .nf-loader-bottom { padding: 0 14px; }
+      .nf-loader-top > :last-child, .nf-loader-bottom > :last-child { display: none; }
+      .nf-route-chip { display: none; }
     }
     @media (prefers-reduced-motion: reduce) {
       #nf-loader, #nf-progress { transition: none; }
@@ -127,16 +240,39 @@
   </canvas>
 
   <div id="nf-loader" aria-live="polite">
-    <div class="nf-loader-card">
-      <div class="nf-kicker">Product Runtime · 2D / 2.5D</div>
-      <div class="nf-brand">NovelForge</div>
-      <div class="nf-subtitle">Booting the spatial production control room. Documentation remains a separate web-native surface.</div>
-      <div class="nf-progress-track"><div id="nf-progress"></div></div>
-      <div class="nf-meta">
-        <span id="nf-status">Loading runtime</span>
-        <span>Godot Web · Compatibility</span>
+    <div class="nf-loader-shell">
+      <div class="nf-loader-top">
+        <div class="nf-loader-brandline"><span class="nf-loader-mark">N</span><span>NOVELFORGE / PRODUCT RUNTIME</span></div>
+        <div class="nf-loader-live">● INITIALIZING LIVE SURFACE</div>
       </div>
-      <div id="nf-error">The interactive runtime could not start. Reload the page or open the documentation surface directly.</div>
+
+      <div class="nf-loader-main">
+        <div class="nf-loader-hero">
+          <div class="nf-kicker">Spatial production system · Web runtime</div>
+          <div class="nf-brand">NovelForge</div>
+          <div class="nf-subtitle">Booting the interactive production surface. Product routes stay inside one live Godot scene while documentation remains a separate semantic web application.</div>
+          <div class="nf-progress-track"><div id="nf-progress"></div></div>
+          <div class="nf-progress-meta">
+            <span id="nf-status">Loading runtime</span>
+            <span>WASM / WebGL 2</span>
+          </div>
+          <div id="nf-error">The interactive runtime could not start. Reload the page or open the documentation surface directly.</div>
+        </div>
+
+        <aside class="nf-loader-telemetry" aria-label="Runtime telemetry">
+          <div class="nf-telemetry-title">Boot profile</div>
+          <div class="nf-telemetry-row"><span>Engine</span><strong>Godot 4.7</strong></div>
+          <div class="nf-telemetry-row"><span>Renderer</span><strong>Compatibility</strong></div>
+          <div class="nf-telemetry-row"><span>Surface</span><strong>2D + depth</strong></div>
+          <div class="nf-telemetry-row"><span>Docs</span><strong>Astro</strong></div>
+          <div class="nf-route-chip">Current route<br><span id="nf-route">/</span></div>
+        </aside>
+      </div>
+
+      <div class="nf-loader-bottom">
+        <span>CONTROL SURFACE / ROUTED CANVAS</span>
+        <span>DOCS REMAIN WEB-NATIVE</span>
+      </div>
     </div>
   </div>
 
@@ -147,7 +283,10 @@
       const canvas = document.getElementById('canvas');
       const progress = document.getElementById('nf-progress');
       const status = document.getElementById('nf-status');
+      const route = document.getElementById('nf-route');
       const engine = new Engine($GODOT_CONFIG);
+
+      if (route) route.textContent = window.location.pathname || '/';
 
       const onProgress = (current, total) => {
         if (total > 0) {
