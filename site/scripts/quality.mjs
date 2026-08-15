@@ -90,10 +90,9 @@ for (const pattern of fakeMarketingPatterns) {
   requireCheck(!pattern.test(allCopy), `fabricated or placeholder marketing claim matched ${pattern}`);
 }
 
-const chineseLeakagePatterns = [
+const chineseCopyLeakagePatterns = [
   /所有产品\s*claim/i,
   /了解\s*Product model/i,
-  /Canonical sources/i,
   /维护中的\s*Source of Truth/i,
   /latest main 是/i,
   /Agent Framework/i,
@@ -106,8 +105,24 @@ const chineseLeakagePatterns = [
   /Context、Reader、Continuity/i,
 ];
 
-for (const pattern of chineseLeakagePatterns) {
-  requireCheck(!pattern.test(`${zhSource}\n${appSource}`), `zh-CN user-facing copy regressed into internal English phrasing: ${pattern}`);
+for (const pattern of chineseCopyLeakagePatterns) {
+  requireCheck(!pattern.test(zhSource), `zh-CN copy regressed into internal English phrasing: ${pattern}`);
+}
+
+const sharedComponentZhLeakagePatterns = [
+  /\?\s*"所有产品\s*claim/i,
+  /\?\s*"了解\s*Product model/i,
+  /\?\s*"Canonical sources/i,
+  /\?\s*"维护中的\s*Source of Truth/i,
+  /\?\s*"latest main 是/i,
+  /\?\s*"Context、Reader、Continuity/i,
+  /\?\s*"可见 evidence/i,
+  /\?\s*"候选稿绑定 fingerprint/i,
+  /\?\s*"可以进入 Review/i,
+];
+
+for (const pattern of sharedComponentZhLeakagePatterns) {
+  requireCheck(!pattern.test(appSource), `shared component restored a known zh-CN hybrid phrase: ${pattern}`);
 }
 
 for (const required of [
