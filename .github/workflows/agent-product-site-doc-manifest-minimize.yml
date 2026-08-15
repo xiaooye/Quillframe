@@ -1,0 +1,53 @@
+name: Agent Product Site Doc Manifest Minimize (temporary)
+
+on:
+  push:
+    branches: [agent/product-site-doc-manifest-fix]
+    paths:
+      - '.github/workflows/agent-product-site-doc-manifest-minimize.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  minimize-manifest-diff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Restore base formatting, insert three entries, validate
+        run: |
+          set -euo pipefail
+          git show f265cb21ad07bfe57c8c1d00a0aea54e3dd22196:docs/documentation_manifest.json > docs/documentation_manifest.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('docs/documentation_manifest.json')
+          s=p.read_text(encoding='utf-8')
+          marker='    {"id":"changelog","tier":"C"'
+          assert marker in s
+          insert='''    {"id":"004-novelforge-product-site-spec","tier":"C","english":"specs/004-novelforge-product-site/spec.en.md","chinese":"specs/004-novelforge-product-site/spec.zh-CN.md","audience":"product and framework maintainers","purpose":"active product-site requirements and acceptance contract","authority_sources":["specs/004-novelforge-product-site/","HARNESS_MANIFEST.yaml","studio/","site/"],"visual_policy":"contract","rewrite_policy":"rebuild","freshness_owner":"product-experience","status":"candidate_review"},
+    {"id":"004-novelforge-product-site-plan","tier":"C","english":"specs/004-novelforge-product-site/plan.en.md","chinese":"specs/004-novelforge-product-site/plan.zh-CN.md","audience":"product and framework maintainers","purpose":"active product-site implementation plan","authority_sources":["specs/004-novelforge-product-site/","HARNESS_MANIFEST.yaml","studio/","site/"],"visual_policy":"contract","rewrite_policy":"rebuild","freshness_owner":"product-experience","status":"candidate_review"},
+    {"id":"004-novelforge-product-site-tasks","tier":"C","english":"specs/004-novelforge-product-site/tasks.en.md","chinese":"specs/004-novelforge-product-site/tasks.zh-CN.md","audience":"product and framework maintainers","purpose":"active product-site implementation task ledger","authority_sources":["specs/004-novelforge-product-site/","HARNESS_MANIFEST.yaml","studio/","site/"],"visual_policy":"contract","rewrite_policy":"rebuild","freshness_owner":"product-experience","status":"candidate_review"},
+
+'''
+          s=s.replace(marker,insert+marker,1)
+          p.write_text(s,encoding='utf-8')
+          d=json.loads(s)
+          ids=[x['id'] for x in d['documents']]
+          for x in ('004-novelforge-product-site-spec','004-novelforge-product-site-plan','004-novelforge-product-site-tasks'):
+              assert ids.count(x)==1,(x,ids.count(x))
+          PY
+          python scripts/version_identity.py > /tmp/version-identity.json
+          python scripts/docs_quality.py > /tmp/docs-quality.txt
+          git diff --check
+          git add docs/documentation_manifest.json
+          git config user.name 'NovelForge Agent'
+          git config user.email 'actions@users.noreply.github.com'
+          git commit -m 'docs: minimize product-site manifest registration'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
