@@ -58,11 +58,8 @@ jobs:
         working-directory: site
         run: npm run content && npm run build:site
 
-      - name: Install browser font and image diff tools
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends fonts-noto-cjk python3-pil
-          fc-cache -f >/dev/null
+      - name: Install image diff library
+        run: python3 -m pip install --user --disable-pip-version-check --no-input Pillow
 
       - name: Install pinned Godot editor and official Web templates
         run: |
