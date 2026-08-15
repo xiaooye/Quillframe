@@ -14,11 +14,11 @@ import "./styles/publication-workbench.css";
 import "./styles/agent-integration.css";
 import "./styles/agent-host-profiles.css";
 import "./styles/kawaii-surfaces.css";
-import "./styles/surface-consistency.css";
 import "./styles/tool-workbench-kawaii.css";
 import "./styles/product-surface.css";
 import "./styles/unified-product-app.css";
 import "./styles/surface-audit.css";
+import "./styles/embedded-features.css";
 
 const root = document.getElementById("root");
 
