@@ -67,6 +67,14 @@
     background: color-mix(in oklab, var(--pe-runtime-soft) 52%, var(--pe-surface));
   }
 
+  .architecture-entry .architecture-node {
+    overflow: visible;
+  }
+
+  .architecture-entry .architecture-node-copy {
+    padding-inline-start: 7px;
+  }
+
   /* Publication — presentation gallery. The objects themselves carry kawaii. */
   .publication-workbench-entry .product-surface-hero__visual {
     align-content: center;
