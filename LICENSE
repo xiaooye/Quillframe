@@ -1,0 +1,170 @@
+NOVELFORGE PROPRIETARY SOURCE-AVAILABLE LICENSE
+Version 1.0 — 2026-08-15
+
+Copyright (c) 2026 xiaooye. All rights reserved.
+
+This license applies to the NovelForge project and the original copyrightable
+material in this repository that is owned by xiaooye (the “Licensor”). It is a
+proprietary, source-available license. It is NOT an open-source license, a free
+software license, or an authorization for commercial use or redistribution.
+
+1. RESERVATION OF RIGHTS
+
+Except for the narrow permissions expressly granted in Section 2, no right,
+title, or interest is granted to you. The Licensor reserves all rights under
+copyright, contract, trademark, patent, trade-secret, and other applicable law.
+No rights are granted by implication, estoppel, exhaustion, or otherwise.
+
+2. LIMITED PRIVATE NON-COMMERCIAL LICENSE
+
+Subject to your continuous compliance with this License, the Licensor grants
+you, only if you are a natural person acting solely on your own behalf, a
+limited, non-exclusive, non-transferable, non-sublicensable license to:
+
+(a) view and study the covered material;
+(b) make local copies solely as reasonably necessary for your own private,
+    personal, non-commercial evaluation or research; and
+(c) modify those local copies solely for your own private, personal,
+    non-commercial evaluation or research.
+
+These permissions do not authorize any use by or on behalf of an organization,
+employer, client, customer, business, commercial project, paid engagement, or
+other third party.
+
+3. NO REDISTRIBUTION OR THIRD-PARTY AVAILABILITY
+
+Except for the GitHub-platform rights described in Section 6, you may not,
+directly or indirectly, in source form, object form, modified form, unmodified
+form, or any other form:
+
+(a) distribute, redistribute, publish, republish, transmit, share, mirror,
+    transfer, provide, disclose, or otherwise make the covered material or any
+    derivative work available to any third party;
+(b) sell, rent, lease, license, sublicense, assign, donate, or otherwise convey
+    the covered material or any derivative work;
+(c) upload or deploy the covered material or any derivative work to a public,
+    shared, customer-accessible, or third-party-accessible environment; or
+(d) include the covered material or any derivative work in any repository,
+    package, image, archive, application, service, dataset, product, or other
+    deliverable made available to another person or entity.
+
+4. ABSOLUTE PROHIBITION ON COMMERCIAL USE
+
+Commercial use is prohibited under all circumstances unless the Licensor gives
+separate express written permission.
+
+“Commercial use” includes, without limitation, any direct or indirect use:
+
+(a) for commercial advantage, monetary compensation, revenue, profit, business
+    operations, cost reduction, or competitive benefit;
+(b) by, for, at the request of, or on behalf of a for-profit entity, employer,
+    client, customer, contractor, consultancy, or paid engagement;
+(c) in or in connection with any paid, monetized, sponsored, subscription,
+    advertising-supported, revenue-generating, or commercially supported
+    product, service, workflow, content, or activity;
+(d) to develop, test, operate, support, market, sell, license, provide, or
+    improve a commercial product or service; or
+(e) as part of internal business operations, even if the covered material is
+    not itself sold or exposed to customers.
+
+5. ADDITIONAL PROHIBITED USES
+
+Without separate express written permission from the Licensor, you may not:
+
+(a) provide the covered material or any derivative work as software-as-a-service,
+    platform-as-a-service, hosted software, an API, managed service, agent
+    service, consulting deliverable, or other service for any third party;
+(b) use the covered material, its source code, documentation, or project assets
+    to train, fine-tune, distill, benchmark for training selection, or create a
+    training dataset for a machine-learning or generative-AI model, except for
+    private non-commercial evaluation that does not create or improve a model;
+(c) remove, obscure, or alter copyright, license, attribution, provenance, or
+    other legal notices; or
+(d) use “NovelForge”, related logos, trade dress, or other project identifiers
+    in a manner that suggests sponsorship, affiliation, or endorsement.
+
+6. GITHUB PUBLIC-REPOSITORY PLATFORM RIGHTS
+
+If the repository is made public on GitHub, the GitHub Terms of Service may
+grant GitHub and GitHub users certain minimum rights necessary to operate and
+use GitHub’s service, including rights to view the repository and to reproduce
+it through GitHub’s fork functionality.
+
+Those platform-specific rights arise directly from the GitHub Terms of Service,
+not from this License. This License does not grant any additional right to
+redistribute the covered material outside the GitHub functionality that the
+Licensor has authorized by making the repository public, nor does it grant any
+commercial-use, sublicensing, deployment, service, or other exploitation right.
+To the extent a mandatory GitHub platform term conflicts with this License, that
+platform term controls only to the minimum extent necessary for use of GitHub’s
+service; all other restrictions in this License remain in effect.
+
+7. THIRD-PARTY MATERIAL
+
+This License applies only to material for which the Licensor owns the rights
+necessary to impose these terms. Third-party software, generated artifacts,
+libraries, assets, or other material included in or referenced by this
+repository remain governed by their respective licenses and notices. Nothing in
+this License restricts rights that you receive directly from a third-party
+copyright holder under a separate license, and nothing in this License attempts
+to relicense third-party material.
+
+8. CONTRIBUTIONS
+
+If you intentionally submit code, documentation, assets, patches, pull requests,
+or other material for inclusion in this repository (a “Contribution”), you
+represent that you have the right to make that Contribution and, in addition to
+any rights arising under GitHub’s terms, you grant the Licensor a perpetual,
+irrevocable, worldwide, royalty-free, fully paid-up, transferable and
+sublicensable license to use, reproduce, modify, prepare derivative works of,
+distribute, publicly display, publicly perform, sublicense, relicense, and
+commercially exploit the Contribution for any purpose.
+
+This contribution grant does not expand the rights granted to downstream users
+under Sections 2 through 6.
+
+9. NO PATENT OR TRADEMARK LICENSE
+
+No patent license and no trademark, service-mark, trade-name, logo, or trade-
+dress license is granted except to the minimum extent, if any, required by
+applicable law for the private use expressly permitted by Section 2.
+
+10. TERMINATION
+
+Your rights under this License terminate automatically and immediately upon any
+breach. Upon termination, you must cease all use authorized only by this License
+and delete all copies and derivative works in your possession or control, except
+for material you are independently entitled to retain under applicable law or a
+separate third-party license. Sections concerning ownership, restrictions,
+termination, disclaimers, liability, and third-party rights survive termination.
+
+11. NO WARRANTY
+
+THE COVERED MATERIAL IS PROVIDED “AS IS” AND “AS AVAILABLE”, WITHOUT WARRANTY OF
+ANY KIND, EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, NON-INFRINGEMENT,
+ACCURACY, SECURITY, OR RELIABILITY. YOU USE IT AT YOUR OWN RISK.
+
+12. LIMITATION OF LIABILITY
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE LICENSOR AND CONTRIBUTORS SHALL NOT
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+CONSEQUENTIAL, OR OTHER DAMAGES, OR FOR ANY LOSS OF DATA, PROFITS, REVENUE,
+GOODWILL, BUSINESS, OR OPPORTUNITY, ARISING FROM OR RELATED TO THE COVERED
+MATERIAL OR THIS LICENSE, REGARDLESS OF THE THEORY OF LIABILITY AND EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+13. SEVERABILITY AND NO WAIVER
+
+If any provision of this License is held unenforceable, it shall be enforced to
+the maximum extent permitted and the remaining provisions remain in effect.
+Failure by the Licensor to enforce any provision is not a waiver of that
+provision or any other right.
+
+14. SEPARATE LICENSES
+
+The Licensor may offer separate written licenses, including commercial licenses,
+on different terms. No such license exists unless expressly granted in writing
+by the Licensor.
+
+END OF LICENSE
