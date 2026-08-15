@@ -4,6 +4,10 @@
 Consumes novelforge_project_adapter_resolution_v1 and emits a browser/remote-safe,
 read-only Studio projection. This module is a presentation/query adapter only;
 it carries no Canon, Framework-write, settlement, or semantic authority.
+
+The projection is deliberately default-deny: arbitrary Project Adapter policy
+objects are not forwarded to remote/browser consumers merely because they are
+present in the source contract.
 """
 from __future__ import annotations
 
@@ -49,6 +53,10 @@ def _safe_paths(value: Any) -> dict[str, dict[str, Any]]:
     return result
 
 
+def _object_available(value: Any) -> bool:
+    return isinstance(value, dict) and bool(value)
+
+
 def build_projection(source: dict[str, Any], surface: str = "cloud_ui") -> dict[str, Any]:
     if source.get("schema") != SOURCE_SCHEMA:
         raise ValueError(f"expected source schema {SOURCE_SCHEMA}")
@@ -70,6 +78,7 @@ def build_projection(source: dict[str, Any], surface: str = "cloud_ui") -> dict[
             "capability_does_not_imply_authority": True,
             "direct_core_store_access": False,
             "absolute_paths_exposed": False,
+            "arbitrary_policy_passthrough": False,
         },
         "project": {
             "id": source.get("project_id"),
@@ -80,11 +89,16 @@ def build_projection(source: dict[str, Any], surface: str = "cloud_ui") -> dict[
             "project_schema_version": source.get("project_schema_version"),
         },
         "framework_lock": _safe_framework(source.get("framework_lock")),
-        "authority_policy": source.get("authority") if isinstance(source.get("authority"), dict) else {},
         "logical_paths": _safe_paths(source.get("paths")),
-        "quality_policy": source.get("quality") if isinstance(source.get("quality"), dict) else {},
-        "build_policy": source.get("build") if isinstance(source.get("build"), dict) else {},
+        "policy_availability": {
+            "authority": _object_available(source.get("authority")),
+            "quality": _object_available(source.get("quality")),
+            "build": _object_available(source.get("build")),
+        },
         "unavailable": [
+            "authority_policy_details",
+            "quality_policy_details",
+            "build_policy_details",
             "current_chapter",
             "current_scene",
             "manuscript_lifecycle",
@@ -105,13 +119,14 @@ def load_json(path: Path) -> dict[str, Any]:
 
 
 def self_test() -> dict[str, Any]:
+    private_marker = "/private/host/path/never-expose"
     source = {
         "schema": SOURCE_SCHEMA,
         "project_id": "PROJECT-SYNTHETIC",
         "project_title": "Synthetic Story Loom",
         "project_version": "0.0.0",
         "language": "en",
-        "project_root": "/private/host/path/never-expose",
+        "project_root": private_marker,
         "layout": "mapped",
         "framework_lock": {
             "name": "NovelForge",
@@ -120,17 +135,23 @@ def self_test() -> dict[str, Any]:
             "bundle_fingerprint": "sha256:" + "a" * 64,
         },
         "project_schema_version": "1",
-        "authority": {"precedence": "locked > accepted > active_plan > review > proposal"},
+        "authority": {
+            "precedence": "locked > accepted > active_plan > review > proposal",
+            "host_private_note": private_marker + "/authority",
+        },
         "paths": {
             "manuscripts": {
                 "relative": "manuscripts",
-                "absolute": "/private/host/path/never-expose/manuscripts",
+                "absolute": private_marker + "/manuscripts",
                 "exists": True,
                 "kind": "dir",
             }
         },
-        "quality": {"reader_grip": "very_high"},
-        "build": {},
+        "quality": {
+            "reader_grip": "very_high",
+            "host_private_note": private_marker + "/quality",
+        },
+        "build": {"host_private_note": private_marker + "/build"},
     }
     first = build_projection(source, "cloud_ui")
     second = build_projection(source, "cloud_ui")
@@ -146,7 +167,15 @@ def self_test() -> dict[str, Any]:
         "source_schema_rejected": wrong_schema_rejected,
         "authority_false": first["authority"] is False,
         "no_project_root": "project_root" not in serialized,
-        "no_absolute_paths": "/private/host/path/never-expose" not in serialized,
+        "no_absolute_or_private_paths": private_marker not in serialized,
+        "no_arbitrary_policy_passthrough": all(
+            key not in first for key in ("authority_policy", "quality_policy", "build_policy")
+        ),
+        "policy_presence_only": first["policy_availability"] == {
+            "authority": True,
+            "quality": True,
+            "build": True,
+        },
         "deterministic": first == second,
         "source_fingerprint_bound": first["source_fingerprint"] == fingerprint(source),
         "projection_fingerprint_present": first["projection_fingerprint"].startswith("sha256:"),
