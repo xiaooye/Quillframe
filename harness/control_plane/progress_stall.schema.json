@@ -23,7 +23,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "schema", "kind", "progress_scope_id", "checkpoint_id", "workflow_cursor",
+        "schema", "kind", "progress_scope_id", "session_binding", "checkpoint_id", "workflow_cursor",
         "operation_kind", "operation_input_fingerprint", "predecessor_event_id",
         "retry_of_event_id", "execution_state", "before_work", "after_work",
         "evidence_bindings", "authority", "canon_authority", "project_write_authority",
@@ -34,6 +34,15 @@
         "schema": {"const": "novelforge_progress_observation_v1"},
         "kind": {"const": "runtime_progress"},
         "progress_scope_id": {"$ref": "#/$defs/nonempty"},
+        "session_binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version", "payload_hash"],
+          "properties": {
+            "version": {"type": "integer", "minimum": 1},
+            "payload_hash": {"$ref": "#/$defs/sha"}
+          }
+        },
         "checkpoint_id": {"$ref": "#/$defs/nonempty"},
         "workflow_cursor": {"$ref": "#/$defs/nonempty"},
         "operation_kind": {"$ref": "#/$defs/nonempty"},

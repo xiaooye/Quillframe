@@ -40,6 +40,10 @@ jobs:
           assert d['advancing_change_is_detected'] is True
           assert d['exact_no_op_is_detected'] is True
           assert d['identical_replay_is_idempotent'] is True
+          assert d['old_duplicate_remains_idempotent_after_session_advance'] is True
+          assert d['nondeterministic_source_cannot_self_report_progress'] is True
+          assert d['stale_session_binding_fails_closed'] is True
+          assert d['stale_run_cannot_append_progress'] is True
           assert d['conflicting_replay_fails_closed'] is True
           assert d['stale_predecessor_fails_closed'] is True
           assert d['transport_retry_no_op_does_not_increment_stall'] is True

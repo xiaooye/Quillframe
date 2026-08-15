@@ -32,6 +32,7 @@ REPLAN_REQUEST_SCHEMA = "novelforge_progress_replan_request_v1"
 EXECUTION_STATES = {"executed", "awaiting_user", "awaiting_external"}
 LIFECYCLE_STATES = {"no_evidence", "advancing", "uncertain", "stalled", "replan_required"}
 CLASSIFICATIONS = {"advancing", "exact_no_op", "waiting", "transport_retry_no_op"}
+PROGRESS_SOURCE_KIND = "deterministic_runtime"
 SHA_PREFIX = "sha256:"
 
 
@@ -98,6 +99,9 @@ def validate_progress_event(event: Any) -> dict[str, Any]:
         raise ValueError("progress transport must be feedback.observed")
     if event.get("authority_scope") != "observation":
         raise ValueError("progress authority_scope must be observation")
+    source = event.get("source")
+    if not isinstance(source, dict) or source.get("kind") != PROGRESS_SOURCE_KIND:
+        raise ValueError("progress observation source must be deterministic_runtime")
     resource_id = nonempty(event.get("resource_id"), "resource_id")
     session_id = nonempty(event.get("session_id"), "session_id")
     run_id = nonempty(event.get("run_id"), "run_id")
@@ -106,7 +110,7 @@ def validate_progress_event(event: Any) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError("payload must be object")
     expected = {
-        "schema", "kind", "progress_scope_id", "checkpoint_id", "workflow_cursor",
+        "schema", "kind", "progress_scope_id", "session_binding", "checkpoint_id", "workflow_cursor",
         "operation_kind", "operation_input_fingerprint", "predecessor_event_id",
         "retry_of_event_id", "execution_state", "before_work", "after_work",
         "evidence_bindings", "authority", "canon_authority", "project_write_authority",
@@ -117,6 +121,16 @@ def validate_progress_event(event: Any) -> dict[str, Any]:
     if payload.get("schema") != OBSERVATION_SCHEMA or payload.get("kind") != PAYLOAD_KIND:
         raise ValueError("invalid progress payload identity")
     progress_scope_id = nonempty(payload.get("progress_scope_id"), "progress_scope_id")
+    session_binding = payload.get("session_binding")
+    if not isinstance(session_binding, dict):
+        raise ValueError("session_binding must be object")
+    exact_fields(session_binding, {"version", "payload_hash"}, "session_binding")
+    session_version = session_binding.get("version")
+    if not isinstance(session_version, int) or session_version < 1:
+        raise ValueError("session_binding.version must be positive integer")
+    session_payload_hash = session_binding.get("payload_hash")
+    if not is_sha(session_payload_hash):
+        raise ValueError("session_binding.payload_hash must be sha256:<64 hex>")
     checkpoint_id = nonempty(payload.get("checkpoint_id"), "checkpoint_id")
     workflow_cursor = nonempty(payload.get("workflow_cursor"), "workflow_cursor")
     operation_kind = nonempty(payload.get("operation_kind"), "operation_kind")
@@ -165,6 +179,8 @@ def validate_progress_event(event: Any) -> dict[str, Any]:
         "session_id": session_id,
         "run_id": run_id,
         "progress_scope_id": progress_scope_id,
+        "session_version": session_version,
+        "session_payload_hash": session_payload_hash,
         "checkpoint_id": checkpoint_id,
         "workflow_cursor": workflow_cursor,
         "operation_kind": operation_kind,
@@ -203,6 +219,24 @@ def _stored_event(cp: control_plane.ControlPlane, event_id: str) -> dict[str, An
         "payload_hash": row["payload_hash"],
         "received_at": row["received_at"],
     }
+
+
+def _validate_session_binding(cp: control_plane.ControlPlane, normalized: dict[str, Any]) -> None:
+    current = cp.get_session(normalized["session_id"])
+    if current is None:
+        raise ValueError("progress observation requires durable session state")
+    if current["version"] != normalized["session_version"]:
+        raise ValueError("progress session version mismatch")
+    if current["payload_hash"] != normalized["session_payload_hash"]:
+        raise ValueError("progress session payload hash mismatch")
+    session = current.get("session")
+    if not isinstance(session, dict) or session.get("resource_id") != normalized["resource_id"]:
+        raise ValueError("progress session resource mismatch")
+    runs = session.get("runs")
+    if not isinstance(runs, list) or not runs or not isinstance(runs[-1], dict):
+        raise ValueError("progress session must expose current run")
+    if runs[-1].get("run_id") != normalized["run_id"]:
+        raise ValueError("progress observation run is not current durable session run")
 
 
 def _scope_events(cp: control_plane.ControlPlane, session_id: str, progress_scope_id: str) -> list[dict[str, Any]]:
@@ -284,6 +318,7 @@ def record_observation(cp: control_plane.ControlPlane, event: dict[str, Any]) ->
             "model_execution": False,
         }
 
+    _validate_session_binding(cp, normalized)
     chain = _ordered_chain(_scope_events(cp, normalized["session_id"], normalized["progress_scope_id"]))
     latest = chain[-1]["normalized"] if chain else None
     expected_predecessor = latest["event_id"] if latest else None
@@ -412,6 +447,18 @@ def _binding(ref: str, char: str) -> dict[str, str]:
     return {"ref": ref, "fingerprint": SHA_PREFIX + char * 64}
 
 
+def fixture_session(run_ids: list[str]) -> dict[str, Any]:
+    return {
+        "session_id": "SES-P", "resource_id": "BOOK-P", "project_id": "PROJECT-P",
+        "role": "manager", "status": "running",
+        "runs": [{"run_id": run_id, "status": "running"} for run_id in run_ids],
+    }
+
+
+def fixture_binding(session: dict[str, Any], version: int) -> dict[str, Any]:
+    return {"version": version, "payload_hash": control_plane.digest(session)}
+
+
 def fixture_event(
     event_id: str,
     before: str,
@@ -424,7 +471,10 @@ def fixture_event(
     run_id: str = "RUN-P",
     checkpoint: str = "CKP-P",
     scope: str = "draft-loop",
+    session_binding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    if session_binding is None:
+        session_binding = fixture_binding(fixture_session(["RUN-P"]), 1)
     before_work = [_binding("WORK-CANDIDATE", before)]
     after_work = [_binding("WORK-CANDIDATE", after)]
     evidence = [_binding("RECEIPT-" + event_id, event_id[-1].lower() if event_id[-1].lower() in "abcdef" else "f")]
@@ -433,7 +483,7 @@ def fixture_event(
         "schema": control_plane.EVENT_SCHEMA,
         "event_id": event_id,
         "event_type": EVENT_TYPE,
-        "source": {"kind": "self_test", "actor": "progress_stall.py", "transport": "local", "external_ref": None},
+        "source": {"kind": PROGRESS_SOURCE_KIND, "actor": "progress_stall.py", "transport": "local", "external_ref": None},
         "resource_id": "BOOK-P",
         "session_id": "SES-P",
         "run_id": run_id,
@@ -446,6 +496,7 @@ def fixture_event(
             "schema": OBSERVATION_SCHEMA,
             "kind": PAYLOAD_KIND,
             "progress_scope_id": scope,
+            "session_binding": session_binding,
             "checkpoint_id": checkpoint,
             "workflow_cursor": "draft.repair",
             "operation_kind": "repair_attempt",
@@ -480,10 +531,13 @@ def self_test(path: Path) -> int:
         path.unlink()
     cp = control_plane.ControlPlane(path)
     cp.init()
+    session_v1 = fixture_session(["RUN-P"])
+    stored_v1 = cp.put_session(session_v1)
+    binding_v1 = {"version": stored_v1["version"], "payload_hash": stored_v1["payload_hash"]}
 
-    first = fixture_event("EV-P-A", "a", "b", predecessor=None, operation_input="1")
+    first = fixture_event("EV-P-A", "a", "b", predecessor=None, operation_input="1", session_binding=binding_v1)
     r1 = record_observation(cp, first)
-    no_op_1 = fixture_event("EV-P-B", "b", "b", predecessor="EV-P-A", operation_input="2")
+    no_op_1 = fixture_event("EV-P-B", "b", "b", predecessor="EV-P-A", operation_input="2", session_binding=binding_v1)
     r2 = record_observation(cp, no_op_1)
     duplicate = record_observation(cp, no_op_1)
 
@@ -491,36 +545,47 @@ def self_test(path: Path) -> int:
     conflicting["payload"]["operation_kind"] = "different_attempt"
     conflict_blocked = blocked(lambda: record_observation(cp, conflicting))
 
-    stale = fixture_event("EV-P-C", "b", "b", predecessor="EV-P-A", operation_input="3")
+    stale = fixture_event("EV-P-C", "b", "b", predecessor="EV-P-A", operation_input="3", session_binding=binding_v1)
     stale_predecessor_blocked = blocked(lambda: record_observation(cp, stale))
 
     retry = fixture_event(
-        "EV-P-D", "b", "b", predecessor="EV-P-B", operation_input="2", retry_of="EV-P-B"
+        "EV-P-D", "b", "b", predecessor="EV-P-B", operation_input="2", retry_of="EV-P-B", session_binding=binding_v1
     )
     retry_record = record_observation(cp, retry)
     waiting = fixture_event(
-        "EV-P-E", "b", "b", predecessor="EV-P-D", operation_input="4", execution_state="awaiting_user"
+        "EV-P-E", "b", "b", predecessor="EV-P-D", operation_input="4", execution_state="awaiting_user", session_binding=binding_v1
     )
     wait_record = record_observation(cp, waiting)
-    no_op_2 = fixture_event("EV-P-F", "b", "b", predecessor="EV-P-E", operation_input="5")
+    no_op_2 = fixture_event("EV-P-F", "b", "b", predecessor="EV-P-E", operation_input="5", session_binding=binding_v1)
     record_observation(cp, no_op_2)
     stalled = summarize(cp, "SES-P", "draft-loop", max_stalls=2)
     repeated_summary = summarize(cp, "SES-P", "draft-loop", max_stalls=2)
 
-    advancing = fixture_event("EV-P-A2", "b", "c", predecessor="EV-P-F", operation_input="6", run_id="RUN-P2", checkpoint="CKP-P2")
+    session_v2 = fixture_session(["RUN-P", "RUN-P2"])
+    stored_v2 = cp.put_session(session_v2, expected_version=stored_v1["version"])
+    binding_v2 = {"version": stored_v2["version"], "payload_hash": stored_v2["payload_hash"]}
+    advancing = fixture_event("EV-P-A2", "b", "c", predecessor="EV-P-F", operation_input="6", run_id="RUN-P2", checkpoint="CKP-P2", session_binding=binding_v2)
     record_observation(cp, advancing)
+    duplicate_after_resume = record_observation(cp, no_op_1)
+    stale_session = fixture_event("EV-P-S", "c", "c", predecessor="EV-P-A2", operation_input="s", run_id="RUN-P2", checkpoint="CKP-P2", session_binding=binding_v1)
+    stale_session_binding_blocked = blocked(lambda: record_observation(cp, stale_session))
+    stale_run = fixture_event("EV-P-R", "c", "c", predecessor="EV-P-A2", operation_input="r", run_id="RUN-P", checkpoint="CKP-P2", session_binding=binding_v2)
+    stale_run_blocked = blocked(lambda: record_observation(cp, stale_run))
     recovered = summarize(cp, "SES-P", "draft-loop", max_stalls=2)
-    slow_advancing = fixture_event("EV-P-A3", "c", "d", predecessor="EV-P-A2", operation_input="7", run_id="RUN-P2", checkpoint="CKP-P3")
+    slow_advancing = fixture_event("EV-P-A3", "c", "d", predecessor="EV-P-A2", operation_input="7", run_id="RUN-P2", checkpoint="CKP-P3", session_binding=binding_v2)
     record_observation(cp, slow_advancing)
     still_advancing = summarize(cp, "SES-P", "draft-loop", max_stalls=2)
 
-    wrong_retry = fixture_event("EV-P-X", "d", "d", predecessor="EV-P-A3", operation_input="9", retry_of="EV-P-A3")
+    wrong_retry = fixture_event("EV-P-X", "d", "d", predecessor="EV-P-A3", operation_input="9", retry_of="EV-P-A3", run_id="RUN-P2", session_binding=binding_v2)
     wrong_retry["payload"]["operation_input_fingerprint"] = SHA_PREFIX + "8" * 64
     wrong_retry_blocked = blocked(lambda: record_observation(cp, wrong_retry))
 
-    completion_claim = fixture_event("EV-P-Y", "d", "d", predecessor="EV-P-A3", operation_input="8")
+    completion_claim = fixture_event("EV-P-Y", "d", "d", predecessor="EV-P-A3", operation_input="8", run_id="RUN-P2", session_binding=binding_v2)
     completion_claim["payload"]["complete"] = True
     completion_claim_blocked = blocked(lambda: validate_progress_event(completion_claim))
+    bad_source = fixture_event("EV-P-Q", "d", "d", predecessor="EV-P-A3", operation_input="q", run_id="RUN-P2", session_binding=binding_v2)
+    bad_source["source"]["kind"] = "semantic_worker"
+    nondeterministic_source_blocked = blocked(lambda: validate_progress_event(bad_source))
 
     cp_restarted = control_plane.ControlPlane(path)
     restart_state = summarize(cp_restarted, "SES-P", "draft-loop", max_stalls=2)
@@ -529,6 +594,10 @@ def self_test(path: Path) -> int:
         "advancing_change_is_detected": r1["classification"] == "advancing",
         "exact_no_op_is_detected": r2["classification"] == "exact_no_op",
         "identical_replay_is_idempotent": duplicate["duplicate"] is True,
+        "old_duplicate_remains_idempotent_after_session_advance": duplicate_after_resume["duplicate"] is True,
+        "nondeterministic_source_cannot_self_report_progress": nondeterministic_source_blocked,
+        "stale_session_binding_fails_closed": stale_session_binding_blocked,
+        "stale_run_cannot_append_progress": stale_run_blocked,
         "conflicting_replay_fails_closed": conflict_blocked,
         "stale_predecessor_fails_closed": stale_predecessor_blocked,
         "transport_retry_no_op_does_not_increment_stall": retry_record["classification"] == "transport_retry_no_op",
