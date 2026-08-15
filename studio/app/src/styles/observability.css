@@ -1,84 +1,11 @@
 @layer novelforge-app {
-  .nf-evidence-boundary {
-    display: grid;
-    grid-template-columns: 42px minmax(0, 1fr);
-    gap: var(--wui-spacing-4);
-    align-items: start;
-    padding: var(--wui-spacing-4) var(--wui-spacing-5);
-    border-block: 1px solid color-mix(in oklch, var(--wui-color-warning) 36%, var(--wui-color-border));
-    background: color-mix(in oklch, var(--wui-color-warning) 5%, var(--wui-color-background));
-  }
-
-  .nf-evidence-boundary-mark {
-    inline-size: 36px;
-    block-size: 36px;
-    display: grid;
-    place-items: center;
-    border: 1px solid color-mix(in oklch, var(--wui-color-warning) 52%, var(--wui-color-border));
-    border-radius: var(--wui-shape-radius-md);
-    color: var(--wui-color-warning);
-    font-family: var(--wui-font-family-mono);
-    font-size: 1.2rem;
-    font-weight: var(--wui-font-weight-semibold);
-  }
-
-  .nf-evidence-boundary strong { display: block; font-size: var(--wui-font-size-sm); }
-  .nf-evidence-boundary p {
-    margin-block-start: var(--wui-spacing-1);
-    max-inline-size: 92ch;
-    color: var(--wui-color-muted-foreground);
-    font-size: var(--wui-font-size-sm);
-    line-height: 1.55;
-  }
-
-  .nf-status {
-    min-block-size: 28px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    inline-size: fit-content;
-    max-inline-size: 100%;
-    padding-inline: var(--wui-spacing-2);
-    border: 1px solid var(--wui-color-border);
-    border-radius: 999px;
-    background: var(--wui-surface-sunken);
-    color: var(--wui-color-muted-foreground);
-    font-size: 11px;
-    font-weight: var(--wui-font-weight-semibold);
-    letter-spacing: .035em;
-    white-space: nowrap;
-  }
-  .nf-status--pass {
-    border-color: color-mix(in oklch, var(--wui-color-success) 48%, var(--wui-color-border));
-    background: color-mix(in oklch, var(--wui-color-success) 9%, var(--wui-color-background));
-    color: var(--wui-color-success);
-  }
-  .nf-status--warn {
-    border-color: color-mix(in oklch, var(--wui-color-warning) 48%, var(--wui-color-border));
-    background: color-mix(in oklch, var(--wui-color-warning) 9%, var(--wui-color-background));
-    color: var(--wui-color-warning);
-  }
-  .nf-status--blocked {
-    border-color: color-mix(in oklch, var(--wui-color-destructive) 48%, var(--wui-color-border));
-    background: color-mix(in oklch, var(--wui-color-destructive) 8%, var(--wui-color-background));
-    color: var(--wui-color-destructive);
-  }
-  .nf-status--pending {
-    border-color: color-mix(in oklch, var(--wui-color-primary) 42%, var(--wui-color-border));
-    background: color-mix(in oklch, var(--wui-color-primary) 8%, var(--wui-color-background));
-    color: var(--wui-color-primary);
-  }
-  .nf-status--neutral { color: var(--wui-color-muted-foreground); }
+  /* WeiUI owns alert/card/badge chrome. Studio owns the information architecture. */
+  .nf-evidence-boundary { align-items: flex-start; }
+  .nf-evidence-boundary .wui-alert__description { max-inline-size: 92ch; color: var(--wui-color-muted-foreground); }
 
   .nf-catalog-workstation,
   .nf-diagnostic-workstation,
-  .nf-production-preview {
-    min-inline-size: 0;
-    border: 1px solid var(--wui-color-border);
-    border-radius: var(--wui-shape-radius-lg);
-    background: var(--wui-color-card);
-    overflow: clip;
-  }
+  .nf-production-preview { min-inline-size: 0; overflow: clip; }
 
   .nf-observe-section-head {
     min-block-size: 116px;
@@ -200,27 +127,12 @@
   .nf-validation-scope header { display: flex; align-items: center; gap: var(--wui-spacing-3); margin-block-end: var(--wui-spacing-4); }
   .nf-validation-scope h3 { font-size: var(--wui-font-size-sm); }
   .nf-validation-scope ul { display: grid; gap: var(--wui-spacing-3); margin: 0; padding-inline-start: 20px; color: var(--wui-color-muted-foreground); font-size: var(--wui-font-size-sm); line-height: 1.5; }
-  .nf-scope-mark {
-    inline-size: 26px;
-    block-size: 26px;
-    display: grid;
-    place-items: center;
-    flex: 0 0 auto;
-    border: 1px solid var(--wui-color-border);
-    border-radius: 50%;
-    color: var(--wui-color-muted-foreground);
-    font-size: 12px;
-  }
-  .nf-scope-mark--validated {
-    border-color: color-mix(in oklch, var(--wui-color-success) 48%, var(--wui-color-border));
-    color: var(--wui-color-success);
-  }
+  .nf-validation-scope li { list-style: disc; }
   .nf-diagnostic-exceptions { display: grid; gap: var(--wui-spacing-2); margin-block-start: var(--wui-spacing-4); }
-  .nf-diagnostic-exceptions > div { display: grid; gap: 4px; padding: var(--wui-spacing-3); background: var(--wui-surface-sunken); border-radius: var(--wui-shape-radius-md); }
+  .nf-diagnostic-exceptions > .wui-card { display: grid; gap: 4px; padding: var(--wui-spacing-3); }
   .nf-diagnostic-exceptions strong { font-size: var(--wui-font-size-xs); }
   .nf-diagnostic-exceptions span { color: var(--wui-color-muted-foreground); font-size: 11px; overflow-wrap: anywhere; }
 
-  .nf-production-preview { background: color-mix(in oklch, var(--wui-color-muted) 38%, var(--wui-color-card)); }
   .nf-production-lanes {
     display: grid;
     grid-template-columns: repeat(7, minmax(112px, 1fr));
@@ -251,8 +163,6 @@
   }
 
   @media (max-width: 719px) {
-    .nf-evidence-boundary { grid-template-columns: 34px minmax(0, 1fr); gap: var(--wui-spacing-3); padding: var(--wui-spacing-4); }
-    .nf-evidence-boundary-mark { inline-size: 32px; block-size: 32px; }
     .nf-observe-section-head { min-block-size: 0; display: grid; gap: var(--wui-spacing-4); padding: var(--wui-spacing-4); }
     .nf-catalog-counts { justify-content: start; }
     .nf-catalog-counts span { justify-items: start; }
@@ -260,7 +170,7 @@
     .nf-pack-load-boundary { grid-column: auto; grid-template-columns: 1fr; }
     .nf-contract-list { grid-column: auto; }
     .nf-contract-row > summary { align-items: flex-start; padding-block: var(--wui-spacing-3); }
-    .nf-contract-row > summary .nf-status { white-space: normal; text-align: center; }
+    .nf-contract-row > summary .wui-badge { white-space: normal; text-align: center; }
     .nf-contract-projection { grid-template-columns: 1fr; gap: 0; }
     .nf-observe-field { min-block-size: 52px; }
     .nf-raw-evidence > summary { padding-inline: var(--wui-spacing-4); }
