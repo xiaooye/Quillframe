@@ -79,14 +79,15 @@ const cssIndex = siteCss.indexOf('@import "../generated/weiui.generated.css"');
 const storyIndex = siteCss.indexOf('@import "../../../assets/brand/story-loom.weiui.css"');
 check(tokenIndex >= 0 && cssIndex > tokenIndex && storyIndex > cssIndex, "CSS import order must be WeiUI tokens → WeiUI CSS → Story Loom");
 check(main.includes('import "./styles/index.css"'), "main must load the single Product stylesheet entrypoint");
-for (const style of ["product-contract.css", "product-surface.css", "unified-product-app.css", "readability.css"]) {
+for (const style of ["product-contract.css", "product-surface.css", "unified-product-app.css", "readability.css", "hardening.css"]) {
   check(styleIndex.includes(`@import "./${style}"`), `Product stylesheet entrypoint missing ${style}`);
 }
 check(styleIndex.indexOf('product-contract.css') < styleIndex.indexOf('architecture-explorer.css'), "shared Product composition layers must precede route styling");
 check(styleIndex.indexOf('embedded-features.css') < styleIndex.indexOf('readability.css'), "readability hardening must load after feature composition");
+check(styleIndex.indexOf('readability.css') < styleIndex.indexOf('hardening.css'), "resilience/accessibility hardening must load after readability");
 check(productContractCss.includes("--pe-touch-target: var(--nf-touch-target-min, 44px)"), "Product semantic bridge must derive touch targets from Story Loom");
 
-check(main.includes('import ProductApp from "./ProductApp"') && main.includes("render(() => <ProductApp />, root)"), "main must mount one unified ProductApp");
+check(main.includes('import ProductApp from "./ProductApp"') && main.includes("<ProductApp />") && main.includes("ProductFailureBoundary"), "main must mount one unified ProductApp inside the resilience boundary");
 check(!main.includes("standaloneProductPaths") && !main.includes("Entry initialLocale"), "main must not retain standalone product surfaces");
 check(app.includes("<Router root={ProductShell}>"), "ProductApp must have one shared Router root shell");
 check(app.includes("const UiContext = createContext"), "ProductApp must share locale/appearance state through one context");
@@ -137,11 +138,11 @@ for (const requiredShowcase of ["@property --pe-angle", ":has(", "color-mix(in o
 check(!/animation-iteration-count\s*:\s*infinite|animation\s*:[^;]*\binfinite\b/i.test(`${showcaseCss}\n${unifiedCss}`), "Product Entry must not introduce idle infinite animation");
 check(!/setInterval\s*\(|requestAnimationFrame\s*\(/.test(runtime), "Product runtime must not add default polling or decorative frame loops");
 for (const forbidden of [/\.novelforge\/runtime\.db/, /sqlite/i]) check(!forbidden.test(runtime), `Product Entry must not couple to private runtime storage: ${forbidden}`);
-check(indexHtml.includes('name="viewport"') && indexHtml.includes('class="skip-link"'), "index.html must retain viewport and skip link contracts");
+check(indexHtml.includes('name="viewport"') && indexHtml.includes('class="skip-link nf-skip-link"') && indexHtml.includes('href="#main-content"'), "index.html must retain viewport and the single document skip-link contract");
 
 if (failures.length) {
   for (const failure of failures) console.error(`product-site-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ schema: "novelforge_product_site_quality_v4", status: "pass", identity: "unified_product_spa", stack: "SolidJS + TypeScript + Vite", shared_shell: true, css_entrypoint: "src/styles/index.css", readability_hardening: true, shared_locale_state: true, shared_appearance_state: true, shared_command_palette: true, docs_boundary: "starlight", authority: false }, null, 2));
+  console.log(JSON.stringify({ schema: "novelforge_product_site_quality_v5", status: "pass", identity: "unified_product_spa", stack: "SolidJS + TypeScript + Vite", shared_shell: true, css_entrypoint: "src/styles/index.css", readability_hardening: true, resilience_hardening: true, shared_locale_state: true, shared_appearance_state: true, shared_command_palette: true, docs_boundary: "starlight", authority: false }, null, 2));
 }
