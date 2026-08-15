@@ -102,7 +102,6 @@ export default defineConfig({
         "./src/styles/docs-home-clean.css",
         "./src/styles/surface-audit.css",
         "./src/styles/readability-audit.css",
-        "./src/styles/interaction-contract.css",
       ],
       credits: false,
     }),
