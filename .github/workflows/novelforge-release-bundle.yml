@@ -44,6 +44,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Framework version identity
+        run: python scripts/version_identity.py
+
       - name: Build deterministic bundle twice
         run: |
           mkdir -p dist
