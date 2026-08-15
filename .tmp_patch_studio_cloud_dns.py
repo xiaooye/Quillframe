@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 
+# Retriggered after the kawaii v5 documentation baseline was registered.
 path = Path('.github/workflows/studio-cloud.yml')
 text = path.read_text(encoding='utf-8')
 
