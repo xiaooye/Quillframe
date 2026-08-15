@@ -14,7 +14,9 @@ const check = (condition, message) => { if (!condition) failures.push(message); 
 const main = read("src/main.tsx");
 const index = read("src/styles/index.css");
 const editorial = read("src/styles/editorial-composition.css");
+const interaction = read("src/styles/interaction-contract.css");
 const readability = read("src/styles/readability.css");
+const hardening = read("src/styles/hardening.css");
 const sharedLanguage = read("../assets/brand/novelforge-product-language.css");
 
 const styleImports = [...main.matchAll(/import\s+["']\.\/styles\/([^"']+)["']/g)].map((match) => match[1]);
@@ -24,7 +26,9 @@ check(index.indexOf('product-surface.css') < index.indexOf('architecture-explore
 check(index.indexOf('architecture-explorer.css') < index.indexOf('kawaii-surfaces.css'), "product-language composition must load after route defaults");
 check(index.indexOf('tool-workbench-kawaii.css') < index.indexOf('editorial-composition.css'), "clean editorial composition must refine the kawaii route language");
 check(index.indexOf('editorial-composition.css') < index.indexOf('embedded-features.css'), "embedded feature ownership must remain after shared editorial composition");
-check(index.indexOf('embedded-features.css') < index.indexOf('readability.css'), "cross-cutting readability hardening must load last");
+check(index.indexOf('embedded-features.css') < index.indexOf('interaction-contract.css'), "shared interaction contract must refine route and embedded composition");
+check(index.indexOf('interaction-contract.css') < index.indexOf('readability.css'), "interaction composition must precede readability hardening");
+check(index.indexOf('readability.css') < index.indexOf('hardening.css'), "resilience/accessibility hardening must remain the final Product layer");
 check(!index.includes("surface-audit.css"), "legacy surface-audit override must not return to the cascade");
 check(!exists("src/styles/surface-audit.css"), "legacy surface-audit.css must stay deleted");
 check(!exists("src/styles/readability-audit.css"), "readability must remain a named hardening layer, not a catch-all audit override");
@@ -32,9 +36,16 @@ check(sharedLanguage.includes("--nf-product-pink") && sharedLanguage.includes("-
 check(editorial.includes("Kawaii is identity, not container chrome") && editorial.includes(".product-surface-hero") && editorial.includes(".publication-workbench-entry"), "editorial composition must explicitly encode the clean-kawaii surface policy");
 check(editorial.includes("background: transparent") && editorial.includes("border-bottom: 1px solid"), "editorial composition must use neutral surfaces and hairline hierarchy");
 check(!editorial.includes("!important"), "editorial composition must not depend on specificity escalation");
+for (const marker of [".product-appbar", ".mobile-nav", ".command-surface", ".footer-grid", ":root.dark", "@media (max-width: 980px)"]) {
+  check(interaction.includes(marker), `shared interaction contract missing ${marker}`);
+}
+check(interaction.includes("backdrop-filter: none") && interaction.includes("overscroll-behavior: contain"), "interaction contract must avoid gratuitous shell blur and keep mobile navigation contained");
+check(interaction.includes("--pe-header-h: 60px") && interaction.includes("min-block-size: 44px"), "interaction contract must retain compact shell density without losing touch ergonomics");
+check(!interaction.includes("!important"), "interaction contract must not depend on specificity escalation");
 check(readability.includes("--nf-copy-size: 14px") && readability.includes("--nf-micro-size: 11px"), "readability hardening must preserve the product copy floor");
 check(readability.includes(".unified-info-card p") && readability.includes("font-size: var(--nf-copy-size)"), "capability copy must not regress to miniature dashboard text");
 check(!readability.includes("!important"), "readability hardening must not depend on specificity escalation");
+check(hardening.includes(":focus-visible") && hardening.includes("prefers-reduced-motion: reduce"), "final hardening layer must preserve accessibility contracts");
 check(!index.includes("!important"), "the stylesheet entrypoint must not encode specificity overrides");
 
 if (failures.length) {
@@ -42,14 +53,18 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_css_architecture_v3",
+    schema: "novelforge_css_architecture_v4",
     status: "pass",
     entrypoints: 1,
     audit_override: false,
     shared_product_language: true,
     editorial_composition: true,
     kawaii_as_accent_not_container: true,
+    interaction_contract: true,
+    compact_shell_density: true,
+    responsive_navigation_contract: true,
+    dark_interaction_contract: true,
     readability_hardening: true,
-    readability_hardening_position: "last",
+    final_hardening: "hardening.css",
   }, null, 2));
 }
