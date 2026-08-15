@@ -19,28 +19,20 @@ func set_reduced_motion(_enabled: bool) -> void:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), BASE, true)
-	_draw_grid(36.0, Color(Story.BORDER.r, Story.BORDER.g, Story.BORDER.b, 0.055))
-	_draw_grid(144.0, Color(Story.RUNTIME.r, Story.RUNTIME.g, Story.RUNTIME.b, 0.065))
 	var short_side := minf(size.x, size.y)
-	_draw_soft_orb(Vector2(size.x * 0.22, size.y * 0.20), short_side * 0.46, _accent, 0.052)
-	_draw_soft_orb(Vector2(size.x * 0.83, size.y * 0.32), short_side * 0.38, SECONDARY, 0.040)
-	_draw_soft_orb(Vector2(size.x * 0.60, size.y * 0.92), short_side * 0.42, Story.RUNTIME, 0.030)
-	var horizon_y := size.y * 0.68
-	draw_line(Vector2(0, horizon_y), Vector2(size.x, horizon_y), Color(_accent.r, _accent.g, _accent.b, 0.055), 1.0)
-	draw_rect(Rect2(Vector2.ZERO, size), Color(Story.BORDER.r, Story.BORDER.g, Story.BORDER.b, 0.26), false, 1.0)
-
-func _draw_grid(step: float, color: Color) -> void:
-	if step <= 0.0: return
-	var x := 0.0
-	while x < size.x:
-		draw_line(Vector2(x, 0), Vector2(x, size.y), color, 1.0); x += step
-	var y := 0.0
+	_draw_soft_orb(Vector2(size.x * 0.10, size.y * 0.08), short_side * 0.56, Story.EDITORIAL, 0.055)
+	_draw_soft_orb(Vector2(size.x * 0.88, size.y * 0.12), short_side * 0.48, Story.RUNTIME, 0.048)
+	_draw_soft_orb(Vector2(size.x * 0.74, size.y * 0.84), short_side * 0.44, Story.PROJECT, 0.030)
+	_draw_soft_orb(Vector2(size.x * 0.18, size.y * 0.76), short_side * 0.36, Story.EVIDENCE, 0.026)
+	# Paper grain without turning the page into a HUD grid.
+	var y := 18.0
 	while y < size.y:
-		draw_line(Vector2(0, y), Vector2(size.x, y), color, 1.0); y += step
+		draw_line(Vector2(0, y), Vector2(size.x, y), Color(Story.BORDER.r, Story.BORDER.g, Story.BORDER.b, 0.020), 1.0)
+		y += 36.0
 
 func _draw_soft_orb(center: Vector2, radius: float, color: Color, alpha: float) -> void:
 	if radius <= 0.0: return
 	for index in range(12, 0, -1):
 		var ratio := float(index) / 12.0
-		var layer_alpha := alpha * (1.0 - ratio * 0.72) / 3.6
+		var layer_alpha := alpha * (1.0 - ratio * 0.72) / 3.4
 		draw_circle(center, radius * ratio, Color(color.r, color.g, color.b, layer_alpha))
