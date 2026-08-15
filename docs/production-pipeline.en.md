@@ -93,7 +93,7 @@ If active plans must adapt to newly emerged story facts, the `long-horizon` pack
 
 ## 05 · Simulate character action, then resolve the scene
 
-NovelForge 7.3 makes the pre-draft causal step explicit through the `story-simulation` pack.
+The current development architecture makes the pre-draft causal step explicit through the `story-simulation` pack.
 
 `character.action_propose` asks what an important character would plausibly attempt given that character's:
 
