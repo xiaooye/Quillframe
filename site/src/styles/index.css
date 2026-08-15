@@ -2,7 +2,7 @@
  * NovelForge Product Site stylesheet entrypoint.
  *
  * Import order is contractual: foundation first, route implementations next,
- * shared product-language polish after route defaults, and hardening last.
+ * Story Loom product-language composition after route defaults, and hardening last.
  * main.tsx must import only this file.
  */
 @import "./site.css";
@@ -25,10 +25,9 @@
 @import "./agent-integration.css";
 @import "./agent-host-profiles.css";
 
-/* Product-language composition. Keep these after route defaults. */
+/* Story Loom / kawaii product-language composition. Keep these after route defaults. */
 @import "./kawaii-surfaces.css";
 @import "./tool-workbench-kawaii.css";
-@import "./editorial-composition.css";
 @import "./home-identity.css";
 @import "./embedded-features.css";
 @import "./route-identities.css";
