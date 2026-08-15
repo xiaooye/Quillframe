@@ -29,7 +29,14 @@ export default function Agents() {
     <section class="nf-page nf-agents-page">
       <PageIntro eyebrow={t("agents.eyebrow")} title={t("agents.title")} body={t("agents.body")} />
 
-      <section class="wui-card wui-card--outlined nf-inspector-surface nf-agent-matrix" aria-labelledby="agent-matrix-heading">
+      <section
+        class="wui-card wui-card--outlined nf-inspector-surface nf-agent-matrix"
+        aria-labelledby="agent-matrix-heading"
+        style={{
+          background: "color-mix(in oklab,var(--nf-lane-validated-fill) 38%,var(--nf-studio-panel))",
+          "border-color": "color-mix(in oklab,var(--nf-lane-validated-stroke) 22%,var(--nf-studio-line-soft))",
+        }}
+      >
         <header class="nf-agent-matrix-head">
           <div>
             <span class="nf-eyebrow">{t("agents.matrixEyebrow")}</span>
@@ -52,7 +59,10 @@ export default function Agents() {
       </section>
 
       <div class="nf-agent-grid">
-        <section class="wui-card wui-card--outlined nf-inspector-surface nf-agent-capability">
+        <section
+          class="wui-card wui-card--outlined nf-inspector-surface nf-agent-capability"
+          style={{ background: "color-mix(in oklab,var(--nf-lane-editorial-fill) 42%,var(--nf-studio-panel))" }}
+        >
           <header><span class="nf-card-label">01</span><h2>{t("agents.skillTitle")}</h2></header>
           <p>{t("agents.skillBody")}</p>
           <code>agent-skills/novelforge/SKILL.md</code>
@@ -62,7 +72,10 @@ export default function Agents() {
           </div>
         </section>
 
-        <section class="wui-card wui-card--outlined nf-inspector-surface nf-agent-capability">
+        <section
+          class="wui-card wui-card--outlined nf-inspector-surface nf-agent-capability"
+          style={{ background: "color-mix(in oklab,var(--nf-lane-project-fill) 42%,var(--nf-studio-panel))" }}
+        >
           <header><span class="nf-card-label">02</span><h2>{t("agents.detectTitle")}</h2></header>
           <p>{t("agents.detectBody")}</p>
           <div class="nf-agent-detect-list">
@@ -72,7 +85,10 @@ export default function Agents() {
           </div>
         </section>
 
-        <section class="wui-card wui-card--outlined nf-inspector-surface nf-agent-capability">
+        <section
+          class="wui-card wui-card--outlined nf-inspector-surface nf-agent-capability"
+          style={{ background: "color-mix(in oklab,var(--nf-lane-runtime-fill) 42%,var(--nf-studio-panel))" }}
+        >
           <header><span class="nf-card-label">03</span><h2>{t("agents.bridgeTitle")}</h2></header>
           <p>{t("agents.bridgeBody")}</p>
           <code>python scripts/novelforge_bridge.py describe</code>
