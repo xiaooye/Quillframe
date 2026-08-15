@@ -15,13 +15,16 @@ bash "${ROOT_DIR}/scripts/fetch-godot-fonts.sh"
 rm -rf "${OUT_DIR}"
 mkdir -p "${OUT_DIR}"
 
-godot --headless --path "${GODOT_DIR}" --editor --quit-after 2
+# --import waits until imported resources are actually ready before quitting.
+# This is required because the bundled CJK font and brand SVG are runtime resources.
+godot --headless --path "${GODOT_DIR}" --import
+
 set +e
 godot --headless --path "${GODOT_DIR}" --quit-after 2 >"${SMOKE_LOG}" 2>&1
 status=$?
 set -e
 cat "${SMOKE_LOG}"
-if [ "${status}" -ne 0 ] || grep -Eq 'SCRIPT ERROR|Parse Error|Invalid call|Invalid access|Cannot open file' "${SMOKE_LOG}"; then
+if [ "${status}" -ne 0 ] || grep -Eq 'SCRIPT ERROR|Parse Error|Invalid call|Invalid access|Cannot open file|No loader found|requires the pinned' "${SMOKE_LOG}"; then
   echo "Godot parity shadow smoke test failed" >&2
   exit 1
 fi

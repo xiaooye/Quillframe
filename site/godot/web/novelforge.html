@@ -17,7 +17,11 @@
     const GODOT_CONFIG = $GODOT_CONFIG;
     const engine = new Engine(GODOT_CONFIG);
     engine.startGame({canvas: document.getElementById('canvas')}).then(() => {
-      document.documentElement.dataset.novelforgeGodotShadow = 'started';
+      document.documentElement.dataset.novelforgeGodotEngine = 'started';
+    }).catch((error) => {
+      document.documentElement.dataset.novelforgeGodotEngine = 'error';
+      document.documentElement.dataset.novelforgeGodotShadow = 'error';
+      console.error(error);
     });
     window.addEventListener('novelforge:godot-ready', () => {
       document.documentElement.dataset.novelforgeGodotShadow = 'ready';
