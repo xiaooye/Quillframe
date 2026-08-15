@@ -11,6 +11,7 @@ import "./styles/atelier.css";
 import "./styles/atelier-photos.css";
 import "./styles/atelier-clean-canvas.css";
 import "./styles/knowledge-experience.css";
+import "./styles/knowledge-portal.css";
 
 // The launcher emits a synthetic Ctrl+K event on document. Real keyboard events
 // already bubble to window; only bridge the synthetic event into the AppShell
