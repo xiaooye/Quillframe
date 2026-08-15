@@ -21,6 +21,7 @@ FORBIDDEN_CONSUMER_TOKENS = {
 TEXT_EXTS = {".md", ".py", ".json", ".yaml", ".yml", ".toml", ".txt"}
 STABLE_ROUTERS = {
     pathlib.Path("README.md"), pathlib.Path("SKILL.md"), pathlib.Path("AGENTS.md"), pathlib.Path("CLAUDE.md"),
+    pathlib.Path("agent-skills/novelforge/SKILL.md"),
     pathlib.Path("harness/HARNESS_AGENT.md"), pathlib.Path("harness/ORCHESTRATION_PROTOCOL.md"),
     pathlib.Path("harness/SELF_IMPROVEMENT_PROTOCOL.md"), pathlib.Path("harness/CONTINUOUS_MAINTENANCE.md"),
     pathlib.Path("harness/control_plane/CONTROL_PLANE.md"),
