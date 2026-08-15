@@ -9,7 +9,6 @@ const labels = english
       architecture: "Architecture",
       publication: "Publication",
       openStudio: "Open Studio",
-      productMenu: "Product",
     }
   : {
       product: "产品",
@@ -17,7 +16,6 @@ const labels = english
       architecture: "架构",
       publication: "出版",
       openStudio: "打开 Studio",
-      productMenu: "产品",
     };
 
 const aria = english
@@ -27,7 +25,6 @@ const aria = english
       architecture: "Open NovelForge architecture explorer",
       publication: "Open NovelForge publication workbench",
       openStudio: "Open NovelForge Studio in a new tab",
-      productMenu: "NovelForge product navigation",
     }
   : {
       product: "打开 NovelForge 产品概览",
@@ -35,30 +32,14 @@ const aria = english
       architecture: "打开 NovelForge 架构探索",
       publication: "打开 NovelForge 出版工作台",
       openStudio: "在新标签页打开 NovelForge Studio",
-      productMenu: "NovelForge 产品导航",
     };
 ---
 
-<nav class="nf-product-nav" aria-label={aria.productMenu}>
+<nav class="nf-product-nav" aria-label={english ? "NovelForge product navigation" : "NovelForge 产品导航"}>
   <a class="nf-product-link" href="/product" aria-label={aria.product}>{labels.product}</a>
   <a class="nf-product-link" href="/studio" aria-label={aria.studio}>{labels.studio}</a>
   <a class="nf-product-link" href="/architecture" aria-label={aria.architecture}>{labels.architecture}</a>
   <a class="nf-product-link" href="/publication" aria-label={aria.publication}>{labels.publication}</a>
 </nav>
-
-<details class="nf-product-menu">
-  <summary class="nf-product-menu__trigger" aria-label={aria.productMenu}>
-    <span aria-hidden="true">✦</span>
-    <span>{labels.productMenu}</span>
-  </summary>
-  <nav class="nf-product-menu__panel" aria-label={aria.productMenu}>
-    <a class="nf-product-menu__link" href="/product" aria-label={aria.product}>{labels.product}</a>
-    <a class="nf-product-menu__link" href="/studio" aria-label={aria.studio}>{labels.studio}</a>
-    <a class="nf-product-menu__link" href="/architecture" aria-label={aria.architecture}>{labels.architecture}</a>
-    <a class="nf-product-menu__link" href="/publication" aria-label={aria.publication}>{labels.publication}</a>
-    <a class="nf-product-menu__link nf-product-menu__link--studio" href="https://studio.novelforge.wei-dev.com" target="_blank" rel="noreferrer" aria-label={aria.openStudio}>{labels.openStudio}</a>
-  </nav>
-</details>
-
 <a class="nf-studio-link" href="https://studio.novelforge.wei-dev.com" target="_blank" rel="noreferrer" aria-label={aria.openStudio}><span aria-hidden="true">✦</span>{labels.openStudio}</a>
 <Default><slot /></Default>
