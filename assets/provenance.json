@@ -30,13 +30,31 @@
       "license_note": "Original repository asset."
     },
     {
-      "id": "brand-tokens-v1",
+      "id": "brand-tokens-v2",
       "path": "assets/brand/tokens.json",
       "method": "hand-authored machine-readable design tokens",
-      "intent": "Single source for Story Loom color, semantic lane, shape, spacing, and diagram tokens",
+      "intent": "Single Story Loom source for brand, application theme, semantic lanes, responsive, i18n, interaction, and performance presentation constraints",
       "user_reference": false,
       "third_party_asset": false,
-      "license_note": "Original repository configuration."
+      "license_note": "Original repository configuration; generic UI primitives remain WeiUI-owned."
+    },
+    {
+      "id": "weiui-integration-v1",
+      "path": "assets/brand/weiui.integration.json",
+      "method": "hand-authored integration lock",
+      "intent": "Pin the exact reviewed WeiUI generic UI foundation and define the NovelForge consumption/authority boundary",
+      "user_reference": false,
+      "third_party_asset": true,
+      "license_note": "Consumes xiaooye/weiui at commit d84d1cd365fb5f90cbbab794d2358f7a13b29b79 under MIT."
+    },
+    {
+      "id": "story-loom-weiui-theme-v1",
+      "path": "assets/brand/story-loom.weiui.css",
+      "method": "hand-authored semantic CSS theme mapping",
+      "intent": "Map Story Loom application semantics onto the pinned WeiUI wui-theme custom-property contract without copying generic component CSS",
+      "user_reference": false,
+      "third_party_asset": true,
+      "license_note": "NovelForge theme authored in this repository; consumes WeiUI public CSS-variable/cascade contract at pinned MIT-licensed commit d84d1cd365fb5f90cbbab794d2358f7a13b29b79."
     }
   ]
 }
