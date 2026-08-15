@@ -1,13 +1,22 @@
-import { Show } from "solid-js";
+import { Show, createSignal } from "solid-js";
 import { A } from "@solidjs/router";
 import { AuthorityBadge, PageIntro, QueryError } from "../components";
 import { useI18n } from "../i18n";
 import { useStudio } from "../studio";
 
+const localCoreCommand = "python studio/local_server.py";
+
 export default function Desk() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const studio = useStudio();
   const hosted = () => !studio.bridgeAvailable();
+  const [copied, setCopied] = createSignal(false);
+
+  const copyLocalCore = async () => {
+    await navigator.clipboard.writeText(localCoreCommand);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  };
 
   return (
     <section class="nf-page nf-desk-page">
@@ -49,6 +58,7 @@ export default function Desk() {
 
       <Show when={hosted()}>
         <section
+          id="core-binding"
           class="wui-card wui-card--outlined nf-inspector-surface nf-binding-surface"
           aria-labelledby="binding-heading"
           data-core-unbound={t("host.unboundTitle")}
@@ -59,7 +69,7 @@ export default function Desk() {
               <h2 id="binding-heading">{t("desk.bindingTitle")}</h2>
               <p>{t("desk.bindingBody")}</p>
             </div>
-            <span class="wui-badge wui-badge--outline">{t("host.cloud")}</span>
+            <span class="wui-badge wui-badge--outline">Core unbound</span>
           </header>
           <div class="nf-binding-options">
             <article class="nf-binding-option" data-state="available">
@@ -68,7 +78,12 @@ export default function Desk() {
                 <div><strong>{t("desk.bindingLocalTitle")}</strong><small>{t("desk.bindingLocalMeta")}</small></div>
               </div>
               <p>{t("desk.bindingLocalBody")}</p>
-              <code>python studio/local_server.py</code>
+              <div class="nf-binding-command">
+                <code>{localCoreCommand}</code>
+                <button class="wui-button wui-button--outline" type="button" onClick={() => void copyLocalCore()}>
+                  {copied() ? (locale() === "zh-CN" ? "已复制" : "Copied") : (locale() === "zh-CN" ? "复制启动命令" : "Copy command")}
+                </button>
+              </div>
               <span class="wui-badge wui-badge--success">{t("desk.bindingLocalStatus")}</span>
             </article>
             <article class="nf-binding-option" data-state="planned">
