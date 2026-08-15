@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
-FRAMEWORK_VERSION = "7.3.0"
+FRAMEWORK_VERSION = "0.8.0"
 
 PROJECT_SDK = ROOT / "project_sdk.py"
 PROJECT_ADAPTER = ROOT / "project_adapter.py"

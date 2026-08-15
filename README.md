@@ -17,7 +17,7 @@ Its architecture is deliberately split:
 
 A consuming Project owns the facts of its story. NovelForge owns the generic production machinery around those facts.
 
-**Development architecture snapshot:** `novelforge.py` currently reports **7.3.0** for the AI-native, contract-first implementation with progressively disclosed semantic packs. **Release authority remains `HARNESS_MANIFEST.yaml` (currently 7.2.0); this is not an 8.0 release declaration.** See the [Changelog](CHANGELOG.en.md) for current release truth.
+**Development version:** NovelForge now uses pre-1.0 SemVer for the active development line. The machine manifest, CLI, Project SDK default, Skill metadata, and exposed MCP server metadata are aligned on **0.8.0**. During active development, the latest `main` branch remains the working implementation baseline; `0.8.0` is a development identity, not a frozen 1.0 compatibility promise. See the [8.0 Development Change Inventory](docs/8-0-development-inventory.en.md) and [Changelog](CHANGELOG.en.md).
 
 <p align="center"><a href="docs/why-novelforge.en.md"><strong>Why NovelForge?</strong></a> · <a href="docs/production-pipeline.en.md"><strong>Production Pipeline</strong></a> · <a href="docs/quality-assurance.en.md"><strong>Quality & QA</strong></a> · <a href="docs/architecture-atlas.en.md"><strong>Architecture Atlas</strong></a></p>
 

@@ -20,7 +20,7 @@ PROTOCOL_VERSION = "2025-06-18"
 SERVER_INFO = {
     "name": "novelforge-control-plane",
     "title": "NovelForge Control Plane",
-    "version": "7.3.0",
+    "version": "0.8.0",
 }
 
 TOOLS: list[dict[str, Any]] = [

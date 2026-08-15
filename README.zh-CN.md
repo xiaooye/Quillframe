@@ -15,7 +15,7 @@ NovelForge 是面向长篇与连载小说的项目无关生产框架。它不试
 
 具体小说项目拥有自己的故事事实；NovelForge 只拥有围绕这些事实运行的通用生产机制。
 
-**开发架构快照：** `novelforge.py` 当前报告 **7.3.0**，实现采用 AI-native、contract-first、语义契约按需渐进加载。**发布权威仍是 `HARNESS_MANIFEST.yaml`（当前 7.2.0）；这不构成 NovelForge 8.0 发布声明。** 当前版本与发布真相见 [Changelog](CHANGELOG.zh-CN.md)。
+**开发版本：** NovelForge 现在用 pre-1.0 SemVer 表示仍在快速演进的开发线。machine manifest、CLI、Project SDK 默认值、Skill metadata 与对外暴露的 MCP server metadata 已统一为 **0.8.0**。开发期间仍以最新 `main` 作为工作实现基线；`0.8.0` 是开发身份，不代表已经冻结出 1.0 级兼容承诺。详见 [8.0 开发变更清单](docs/8-0-development-inventory.zh-CN.md) 与 [Changelog](CHANGELOG.zh-CN.md)。
 
 <p align="center"><a href="docs/why-novelforge.zh-CN.md"><strong>为什么是 NovelForge？</strong></a> · <a href="docs/production-pipeline.zh-CN.md"><strong>生产流水线</strong></a> · <a href="docs/quality-assurance.zh-CN.md"><strong>质量保障</strong></a> · <a href="docs/architecture-atlas.zh-CN.md"><strong>架构图谱</strong></a></p>
 

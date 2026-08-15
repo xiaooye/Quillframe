@@ -22,7 +22,7 @@ import tomllib
 SDK_VERSION = "1"
 PROJECT_SCHEMA = "novelforge_project_v1"
 LOCK_SCHEMA = "novelforge_lock_v1"
-DEFAULT_FRAMEWORK_VERSION = "7.2.0"
+DEFAULT_FRAMEWORK_VERSION = "0.8.0"
 
 REQUIRED_DIRS = [
     "specs",
