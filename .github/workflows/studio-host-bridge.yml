@@ -28,7 +28,11 @@ jobs:
 
       - name: Public runtime query self-test
         run: |
-          python harness/control_plane/runtime_query.py self-test > runtime-query-test.json
+          if ! python harness/control_plane/runtime_query.py self-test > runtime-query-test.json; then
+            cat runtime-query-test.json
+            exit 1
+          fi
+          cat runtime-query-test.json
           python - <<'PY'
           import json
           result=json.load(open('runtime-query-test.json',encoding='utf-8'))
