@@ -18,6 +18,9 @@ jobs:
   contracts:
     uses: ./.github/workflows/novelforge-contracts.yml
 
+  state-integrity:
+    uses: ./.github/workflows/novelforge-state-integrity-p0.yml
+
   resume-preflight:
     runs-on: ubuntu-latest
     timeout-minutes: 10
