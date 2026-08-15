@@ -226,6 +226,13 @@ body:has(.nf-article-title) .sl-markdown-content blockquote {
   box-shadow: none;
 }
 
+.sl-markdown-content :not(pre) > code {
+  border-color: color-mix(in oklab, var(--nf-border) 72%, transparent);
+  border-radius: .2rem;
+  color: var(--nf-ink);
+  background: color-mix(in oklab, var(--nf-surface-solid) 90%, var(--sl-color-black));
+}
+
 .sl-markdown-content pre,
 .expressive-code figure,
 body:has(.nf-article-title) .sl-markdown-content pre {
@@ -255,6 +262,14 @@ body:has(.nf-article-title) .sl-markdown-content details {
   border-block: 1px solid color-mix(in oklab, var(--nf-border) 60%, transparent);
   border-radius: 0;
   background: transparent;
+}
+
+.starlight-aside {
+  border: 0;
+  border-inline-start: 2px solid var(--sl-color-asides-border, var(--nf-border));
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .pagination-links a {
