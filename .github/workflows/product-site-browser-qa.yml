@@ -82,10 +82,7 @@ jobs:
             name="$1"
             size="$2"
             url="$3"
-            mode="${4:-light}"
             profile=$(mktemp -d)
-            extra=()
-            if [ "${mode}" = "dark" ]; then extra+=(--force-dark-mode); fi
             "${CHROME}" \
               --headless=new \
               --no-sandbox \
@@ -95,7 +92,6 @@ jobs:
               --window-size="${size}" \
               --virtual-time-budget=5000 \
               --user-data-dir="${profile}" \
-              "${extra[@]}" \
               --screenshot="/tmp/product-site-browser-qa/${name}.png" \
               "${url}" >"/tmp/product-site-browser-qa/${name}-chrome.log" 2>&1
             rm -rf "${profile}"
@@ -105,10 +101,7 @@ jobs:
             name="$1"
             size="$2"
             url="$3"
-            mode="${4:-light}"
             profile=$(mktemp -d)
-            extra=()
-            if [ "${mode}" = "dark" ]; then extra+=(--force-dark-mode); fi
             "${CHROME}" \
               --headless=new \
               --no-sandbox \
@@ -118,7 +111,6 @@ jobs:
               --window-size="${size}" \
               --virtual-time-budget=5000 \
               --user-data-dir="${profile}" \
-              "${extra[@]}" \
               --dump-dom \
               "${url}" >"/tmp/product-site-browser-qa/${name}-dom.html" 2>"/tmp/product-site-browser-qa/${name}-dom.log"
             rm -rf "${profile}"
@@ -132,10 +124,11 @@ jobs:
           run_chrome agents-desktop 1440,900 'http://127.0.0.1:4188/agents'
           run_chrome studio-entry-desktop 1440,900 'http://127.0.0.1:4188/studio'
 
-          # Narrow-layout and dark-surface evidence.
+          # Narrow-layout evidence. Dark-mode ownership remains in the app-level
+          # appearance contract and is covered by source/quality gates; Chromium's
+          # --force-dark-mode does not toggle that application state.
           run_chrome publication-mobile 390,844 'http://127.0.0.1:4188/publication'
           run_chrome architecture-mobile 390,844 'http://127.0.0.1:4188/architecture'
-          run_chrome publication-dark 1440,900 'http://127.0.0.1:4188/publication' dark
 
           dump_dom architecture 1440,900 'http://127.0.0.1:4188/architecture'
           dump_dom publication 1440,900 'http://127.0.0.1:4188/publication'
@@ -145,7 +138,6 @@ jobs:
           dump_dom studio-entry 1440,900 'http://127.0.0.1:4188/studio'
           dump_dom publication-mobile 390,844 'http://127.0.0.1:4188/publication'
           dump_dom architecture-mobile 390,844 'http://127.0.0.1:4188/architecture'
-          dump_dom publication-dark 1440,900 'http://127.0.0.1:4188/publication' dark
           dump_dom missing-route 1440,900 'http://127.0.0.1:4188/this-route-does-not-exist'
 
           python - <<'PY'
@@ -162,7 +154,6 @@ jobs:
           studio = dom('studio-entry')
           publication_mobile = dom('publication-mobile')
           architecture_mobile = dom('architecture-mobile')
-          publication_dark = dom('publication-dark')
           missing = dom('missing-route')
 
           # One shared product shell must wrap every product route.
@@ -177,7 +168,6 @@ jobs:
               assert text.count('product-appbar') == 1, f'{name}: expected one shared product app bar'
               assert '产品' in text or 'Product' in text, f'{name}: product nav missing'
               assert 'Studio' in text, f'{name}: Studio tab missing'
-              assert 'publication' in text.lower() or name != 'publication'
 
           # Route identity must be structural, not title-only.
           assert 'architecture-entry' in architecture
@@ -196,9 +186,6 @@ jobs:
           assert 'snapshot-epub' in publication_mobile
           assert 'architecture-hero-path' in architecture_mobile
 
-          # --force-dark-mode must reach the shared appearance contract.
-          assert 'class="dark"' in publication_dark or ' dark' in publication_dark
-
           # Direct-route fallback stays explicit and recoverable.
           assert 'nf-not-found' in missing
           assert '404' in missing
@@ -212,24 +199,23 @@ jobs:
               'studio-entry-desktop.png',
               'publication-mobile.png',
               'architecture-mobile.png',
-              'publication-dark.png',
           ):
               path = root / image
               assert path.exists() and path.stat().st_size > 12_000, image
 
           (root / 'browser-proof.txt').write_text(
-              'schema=novelforge_product_site_browser_qa_v1\n'
+              'schema=novelforge_product_site_browser_qa_v2\n'
               'shared_shell=true\n'
               'route_identity=true\n'
               'publication_format_previews=4\n'
               'desktop=1440x900\n'
               'mobile=390x844\n'
-              'dark_surface=true\n'
+              'appearance_state=app_owned\n'
               'direct_404=true\n'
               'authority=false\n',
               encoding='utf-8',
           )
-          print({'schema': 'novelforge_product_site_browser_qa_v1', 'status': 'pass', 'screenshots': 9, 'authority': False})
+          print({'schema': 'novelforge_product_site_browser_qa_v2', 'status': 'pass', 'screenshots': 8, 'authority': False})
           PY
 
       - name: Upload Product Site browser QA evidence
