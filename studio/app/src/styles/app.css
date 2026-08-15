@@ -130,17 +130,17 @@
   .nf-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; }
   .nf-form-action { justify-self: start; }
 
-  .nf-detail-list { display: grid; gap: 0 !important; }
+  .nf-detail-list { display: grid; gap: 0; }
   .nf-detail-list > div { min-block-size: 42px; display: grid; grid-template-columns: minmax(100px, 34%) minmax(0, 1fr); align-items: center; gap: var(--wui-spacing-3); border-block-end: 1px solid var(--wui-color-border); }
   .nf-detail-list > div:last-child { border-block-end: 0; }
   .nf-detail-list span { color: var(--wui-color-muted-foreground); font-size: var(--wui-font-size-sm); }
   .nf-detail-list strong { text-align: end; font-size: var(--wui-font-size-sm); }
-  .nf-path-grid { display: grid; gap: 0 !important; }
+  .nf-path-grid { display: grid; gap: 0; }
   .nf-path-row { min-block-size: 56px; display: flex; align-items: center; justify-content: space-between; gap: var(--wui-spacing-4); border-block-end: 1px solid var(--wui-color-border); }
   .nf-path-row:last-child { border-block-end: 0; }
   .nf-path-row > div { display: grid; gap: 2px; min-inline-size: 0; }
   .nf-path-row span.nf-mono { color: var(--wui-color-muted-foreground); font-size: var(--wui-font-size-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .nf-chip-row { display: flex !important; flex-wrap: wrap; gap: var(--wui-spacing-2) !important; }
+  .nf-chip-row { display: flex; flex-wrap: wrap; gap: var(--wui-spacing-2); }
   .nf-mono { font-family: var(--wui-font-family-mono); }
   .nf-muted { color: var(--wui-color-muted-foreground); }
 
