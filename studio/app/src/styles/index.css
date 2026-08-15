@@ -11,6 +11,7 @@
 @import "./product-surfaces.css";
 @import "./onboarding.css";
 @import "./integrations.css";
+@import "./projection-workbenches.css";
 
 /* Cross-product semantic mapping, workstation composition, then hardening. */
 @import "./product-language.css";
