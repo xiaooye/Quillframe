@@ -39,6 +39,8 @@ check(app.includes("function ProductShell"), "shared ProductShell component is m
 check(app.includes("createEffect(syncDocumentState)"), "shared shell must own document locale/theme synchronization");
 check(app.includes("function ProductSurfaceHero") === false, "shared hero implementation must live outside ProductApp");
 check(surface.includes("export function ProductSurfaceHero"), "shared ProductSurfaceHero component is missing");
+check((app.match(/<header class="wui-app-bar product-appbar"/g) ?? []).length === 1, "ProductApp must have exactly one product header owner");
+check((app.match(/<footer class="site-footer unified-product-footer"/g) ?? []).length === 1, "ProductApp must have exactly one product footer owner");
 
 for (const route of ["/", "/product", "/studio", "/architecture", "/publication", "/inspect", "/playground", "/agents", "/changelog"]) {
   check(app.includes(`path="${route}"`), `shared ProductApp missing route ${route}`);
