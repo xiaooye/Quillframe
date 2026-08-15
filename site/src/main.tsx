@@ -1,6 +1,7 @@
 import "./appearance-v5";
 import { render } from "solid-js/web";
 import App from "./App";
+import ProjectInspectorEntry from "./ProjectInspectorEntry";
 import "./styles/site.css";
 import "./styles/product-contract.css";
 import "./styles/showcase.css";
@@ -102,4 +103,10 @@ if (!root) {
   throw new Error("NovelForge Product Site root element is missing");
 }
 
-render(() => <App />, root);
+const path = window.location.pathname.replace(/\/+$/, "") || "/";
+render(
+  () => path === "/inspect"
+    ? <ProjectInspectorEntry initialLocale={preferredLocale()} />
+    : <App />,
+  root,
+);
