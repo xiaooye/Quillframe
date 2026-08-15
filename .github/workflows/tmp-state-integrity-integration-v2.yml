@@ -1,0 +1,24 @@
+name: One-shot state-integrity integration v2
+
+on:
+  push:
+    branches: [agent/state-integrity-p0-v2]
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/state-integrity-p0-v2
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply, verify, and commit P0 integration
+        run: python scripts/tmp_state_integrity_integration.py
