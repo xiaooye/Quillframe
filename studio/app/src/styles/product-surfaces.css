@@ -1,0 +1,381 @@
+@layer studio-product-surfaces {
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-inspector-surface,
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-inspector-toolbar {
+    min-inline-size: 0;
+    border: 1px solid var(--nf-studio-line-soft);
+    border-radius: var(--nf-studio-radius);
+    background: var(--nf-studio-panel);
+    box-shadow: none;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-inspector-toolbar {
+    display: grid;
+    gap: 14px;
+    padding: 16px 18px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-inspector-section {
+    min-inline-size: 0;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-inspector-section-head,
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-console-head {
+    min-block-size: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 16px;
+    border-block-end: 1px solid var(--nf-studio-line-soft);
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-inspector-section-head h2,
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-console-head h2 {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 680;
+    letter-spacing: -.01em;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-overview-grid {
+    display: grid;
+    grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+    border-block-end: 1px solid var(--nf-studio-line-soft);
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-overview-grid > .nf-inspector-section + .nf-inspector-section {
+    border-inline-start: 1px solid var(--nf-studio-line-soft);
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-inspector .nf-detail-list,
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-inspector .nf-path-grid,
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-policy-chips {
+    padding: 0 16px 14px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-inspector .nf-detail-list > div:first-child,
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-inspector .nf-path-row:first-child {
+    border-block-start: 0;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-paths-section {
+    border-block-end: 1px solid var(--nf-studio-line-soft);
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-policy-chips {
+    padding-block-start: 4px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-opener {
+    grid-template-columns: minmax(220px, .6fr) minmax(340px, 1.4fr);
+    align-items: end;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-opener-copy {
+    display: grid;
+    gap: 3px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-opener .nf-field-help {
+    margin: 0;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-core-project-section {
+    display: grid;
+    gap: 12px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-section-kicker {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-section-kicker > strong {
+    font-size: 13px;
+    font-weight: 650;
+  }
+
+  /* Browser-native project import: useful without a host, authority-free by design. */
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-import {
+    overflow: clip;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-import-intro {
+    min-block-size: 132px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 22px 24px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-import-intro > div {
+    min-inline-size: 0;
+    max-inline-size: 720px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-import-intro h2 {
+    margin: 4px 0 6px;
+    font-size: clamp(1.08rem, 1.8vw, 1.35rem);
+    letter-spacing: -.025em;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-import-intro p,
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-privacy,
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-core-note {
+    margin: 0;
+    color: var(--wui-color-muted-foreground);
+    font-size: 11.5px;
+    line-height: 1.55;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-folder-picker {
+    flex: 0 0 auto;
+    cursor: pointer;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-folder-picker input {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-privacy {
+    padding: 10px 24px;
+    border-block-start: 1px solid var(--nf-studio-line-soft);
+    background: var(--nf-studio-panel-subtle);
+    font-size: 10.5px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-result {
+    border-block-start: 1px solid var(--nf-studio-line-soft);
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 16px 20px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-summary > div:first-child {
+    min-inline-size: 0;
+    display: grid;
+    gap: 3px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-summary > div:first-child > strong {
+    overflow-wrap: anywhere;
+    font-size: 16px;
+    letter-spacing: -.02em;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-summary small {
+    color: var(--wui-color-muted-foreground);
+    font-size: 10.5px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-meta {
+    display: flex;
+    gap: 22px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-meta span {
+    display: grid;
+    justify-items: end;
+    gap: 1px;
+    color: var(--wui-color-muted-foreground);
+    font-size: 9.5px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-meta strong {
+    color: var(--wui-color-foreground);
+    font-family: var(--wui-font-family-mono);
+    font-size: 13px;
+    font-weight: 620;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-checks {
+    display: grid;
+    border-block: 1px solid var(--nf-studio-line-soft);
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row {
+    min-inline-size: 0;
+    min-block-size: 58px;
+    display: grid;
+    grid-template-columns: 10px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 20px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row + .nf-preflight-row {
+    border-block-start: 1px solid var(--nf-studio-line-soft);
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row > div {
+    min-inline-size: 0;
+    display: grid;
+    gap: 3px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row strong,
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row small {
+    overflow-wrap: anywhere;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row strong {
+    font-size: 11.5px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row small {
+    color: var(--wui-color-muted-foreground);
+    font-size: 10.5px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-indicator {
+    inline-size: 7px;
+    block-size: 7px;
+    border-radius: 999px;
+    background: var(--wui-color-warning, var(--wui-color-muted-foreground));
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row[data-status="pass"] .nf-preflight-indicator {
+    background: var(--wui-color-success, var(--wui-color-primary));
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-core-note {
+    padding: 12px 20px 14px;
+  }
+
+  /* Context behaves like a query console instead of a card form. */
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-context-toolbar {
+    grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) minmax(170px, .55fr) auto;
+    align-items: end;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-context-toolbar .nf-field-label {
+    min-inline-size: 0;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-context-result {
+    overflow: clip;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-console-head > div {
+    display: grid;
+    gap: 2px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-console-body {
+    padding: 12px;
+    background: color-mix(in oklab, var(--nf-studio-panel-subtle) 58%, var(--nf-studio-panel));
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-console-body .nf-json-block {
+    margin: 0;
+  }
+
+  /* Observability pages: denser, more console-like scanning. */
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-observe-section-head {
+    min-block-size: 92px;
+    padding: 16px 18px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-observe-section-head h2 {
+    font-size: 1.08rem;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-pack-row {
+    padding: 16px 18px;
+    column-gap: 18px;
+    row-gap: 12px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-diagnostic-facts > div {
+    min-block-size: 68px;
+    padding: 12px 14px;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-validation-scope > article {
+    padding: 16px 18px;
+  }
+
+  @media (max-width: 1040px) {
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-opener,
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-context-toolbar {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-opener-copy {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 719px) {
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-import-intro,
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-summary {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-folder-picker {
+      inline-size: 100%;
+      justify-content: center;
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-privacy,
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-core-note {
+      padding-inline: 16px;
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-meta {
+      justify-content: space-between;
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-meta span {
+      justify-items: start;
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row {
+      grid-template-columns: 10px minmax(0, 1fr);
+      padding-inline: 16px;
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row > .wui-badge {
+      grid-column: 2;
+      justify-self: start;
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-overview-grid,
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-opener,
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-context-toolbar {
+      grid-template-columns: 1fr;
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-overview-grid > .nf-inspector-section + .nf-inspector-section {
+      border-inline-start: 0;
+      border-block-start: 1px solid var(--nf-studio-line-soft);
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-opener-copy {
+      grid-column: auto;
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-inline-form {
+      grid-template-columns: 1fr;
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-context-toolbar .nf-form-action {
+      inline-size: 100%;
+    }
+  }
+}
