@@ -37,6 +37,7 @@ export default function LocalPlaygroundEntry(props: Props) {
           <a class="wui-app-bar__link" href="/">{zh() ? "产品" : "Product"}</a>
           <a class="wui-app-bar__link" href="/inspect">{zh() ? "检查项目" : "Inspect"}</a>
           <a class="wui-app-bar__link active" href="/playground" aria-current="page">Playground</a>
+          <a class="wui-app-bar__link" href="/agents">{zh() ? "Agent 集成" : "Agents"}</a>
           <a class="wui-app-bar__link" href={zh() ? "/docs/production-pipeline" : "/docs/en/production-pipeline"}>{zh() ? "生产流水线" : "Pipeline"}</a>
         </nav>
         <div class="wui-app-bar__actions header-actions">
@@ -53,7 +54,7 @@ export default function LocalPlaygroundEntry(props: Props) {
       <footer class="site-footer playground-footer">
         <div class="page-width footer-grid">
           <div class="footer-brand-block"><div class="footer-brand"><img src={brandMark} alt="" /><strong>NovelForge</strong></div><p>{zh() ? "本页是 deterministic preview，不调用模型。" : "This surface is a deterministic preview and makes no model calls."}</p></div>
-          <div class="footer-links"><a href={zh() ? "/docs/production-pipeline" : "/docs/en/production-pipeline"}>{zh() ? "生产流水线" : "Production pipeline"}</a><a href={zh() ? "/docs/framework-skill" : "/docs/en/framework-skill"}>Skill Contract</a></div>
+          <div class="footer-links"><a href={zh() ? "/docs/production-pipeline" : "/docs/en/production-pipeline"}>{zh() ? "生产流水线" : "Production pipeline"}</a><a href="/agents">{zh() ? "Agent 集成" : "Agent integration"}</a></div>
           <div class="footer-links"><a href="/inspect">{zh() ? "检查项目" : "Inspect project"}</a><a href="/">{zh() ? "返回产品站" : "Back to product"}</a></div>
         </div>
       </footer>
