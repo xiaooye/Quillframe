@@ -42,36 +42,40 @@ export default function ContextRoute() {
   };
 
   return (
-    <section class="nf-page">
+    <section class="nf-page nf-context-page">
       <PageIntro title={t("context.title")} body={t("context.body")} />
       <Show when={studio.bridgeAvailable()} fallback={<CoreHostBoundary />}>
-        <div class="wui-card nf-card">
-          <div class="wui-card__content nf-form-grid">
-            <label class="nf-field-label">
-              <span>{t("context.manifestLabel")}</span>
-              <input class="wui-input" value={manifest()} onInput={(event) => setManifest(event.currentTarget.value)} placeholder={t("context.manifestPlaceholder")} spellcheck={false} />
-            </label>
-            <label class="nf-field-label">
-              <span>{t("context.overlayLabel")}</span>
-              <input class="wui-input" value={overlay()} onInput={(event) => setOverlay(event.currentTarget.value)} placeholder={t("context.overlayPlaceholder")} spellcheck={false} />
-            </label>
-            <label class="nf-field-label">
-              <span>{t("context.stageLabel")}</span>
-              <select class="wui-input" value={stage()} onChange={(event) => setStage(event.currentTarget.value as (typeof stages)[number])}>
-                {stages.map((value) => <option value={value}>{value}</option>)}
-              </select>
-            </label>
-            <button class="wui-button wui-button--solid nf-form-action" type="button" disabled={loading() || !manifest().trim()} onClick={() => void inspect()}>
-              {loading() ? t("common.loading") : t("context.inspectAction")}
-            </button>
-          </div>
+        <div class="nf-inspector-toolbar nf-context-toolbar nf-form-grid">
+          <label class="nf-field-label">
+            <span>{t("context.manifestLabel")}</span>
+            <input class="wui-input" value={manifest()} onInput={(event) => setManifest(event.currentTarget.value)} placeholder={t("context.manifestPlaceholder")} spellcheck={false} />
+          </label>
+          <label class="nf-field-label">
+            <span>{t("context.overlayLabel")}</span>
+            <input class="wui-input" value={overlay()} onInput={(event) => setOverlay(event.currentTarget.value)} placeholder={t("context.overlayPlaceholder")} spellcheck={false} />
+          </label>
+          <label class="nf-field-label">
+            <span>{t("context.stageLabel")}</span>
+            <select class="wui-input" value={stage()} onChange={(event) => setStage(event.currentTarget.value as (typeof stages)[number])}>
+              {stages.map((value) => <option value={value}>{value}</option>)}
+            </select>
+          </label>
+          <button class="wui-button wui-button--solid nf-form-action" type="button" disabled={loading() || !manifest().trim()} onClick={() => void inspect()}>
+            {loading() ? t("common.loading") : t("context.inspectAction")}
+          </button>
         </div>
         <QueryError message={error()} />
         <Show when={result() !== undefined}>
-          <article class="wui-card nf-card">
-            <div class="wui-card__header"><h2>{t("context.resultTitle")}</h2></div>
-            <div class="wui-card__content"><JsonBlock value={result()} /></div>
-          </article>
+          <section class="wui-card wui-card--outlined nf-inspector-surface nf-context-result" aria-labelledby="context-result-heading">
+            <header class="nf-console-head">
+              <div>
+                <span class="nf-card-label">{t("context.stageLabel")}</span>
+                <h2 id="context-result-heading">{t("context.resultTitle")}</h2>
+              </div>
+              <span class="wui-badge wui-badge--outline nf-mono">{stage()}</span>
+            </header>
+            <div class="nf-console-body"><JsonBlock value={result()} /></div>
+          </section>
         </Show>
       </Show>
     </section>
