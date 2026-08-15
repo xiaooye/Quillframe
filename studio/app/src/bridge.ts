@@ -1,4 +1,4 @@
-export type BridgeStatus = "ok" | "invalid" | "unsupported" | "error";
+export type BridgeStatus = "ok" | "invalid" | "unsupported" | "failed" | "error";
 export type StudioSurface = "local_app" | "cloud_ui";
 
 const TOKEN_PLACEHOLDER = "__NOVELFORGE_STUDIO_TOKEN__";
@@ -25,14 +25,29 @@ export interface DeferredOperation {
   dependency?: string;
 }
 
+export interface OperationContract {
+  kind: "query" | "command";
+  core_basis: string;
+  required_args: string[];
+  allowed_surfaces?: StudioSurface[];
+  mutation_scope?: string;
+  model_execution?: boolean;
+  project_write?: boolean;
+  canon_write?: boolean;
+  framework_write?: boolean;
+  settlement?: boolean;
+}
+
 export interface BridgeDescription {
   schema: "novelforge_studio_host_bridge_description_v1";
   contract_schema: string;
+  contract_version?: string;
   request_schema: string;
   result_schema: string;
   product_model: "one_product_many_hosts";
   surface: string | null;
   supported_operations: string[];
+  operation_contracts?: Record<string, OperationContract>;
   deferred_operations: Record<string, DeferredOperation>;
   authority: false;
   canon_authority: false;
