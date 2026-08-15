@@ -79,12 +79,17 @@
         "kind": "query",
         "core_basis": "novelforge_run_receipts_projection_v1 via novelforge.py runtime-query",
         "required_args": ["project_root"]
+      },
+      "session.resume.preflight": {
+        "kind": "query",
+        "core_basis": "novelforge_session_resume_preflight_v1 via novelforge.py resume-preflight",
+        "required_args": ["project_root", "session_id", "checkpoint_id", "expected_session_version", "authority_evidence"]
       }
     },
     "deferred": {
       "session.resume": {
         "kind": "command",
-        "reason": "no stable public host command envelope with checkpoint revalidation, before-state preconditions, CAS/idempotency, capability evidence, and authority checks",
+        "reason": "resume preflight is public, but the mutating resume command still lacks a stable typed command envelope with before-state CAS/idempotency, explicit authorization, and command receipts",
         "dependency": "#23"
       },
       "command.invoke": {
