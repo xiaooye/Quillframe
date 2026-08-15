@@ -5,8 +5,8 @@ const { lang } = Astro.locals.starlightRoute;
 const english = lang.toLowerCase().startsWith("en");
 const docsHref = english ? "/docs/en/" : "/docs/";
 const productAria = english ? "Open NovelForge product home" : "打开 NovelForge 产品首页";
-const docsAria = english ? "Open NovelForge documentation home" : "打开 NovelForge 文档首页";
-const docsLabel = english ? "Docs" : "文档";
+const docsAria = english ? "Open NovelForge documentation home" : "打开 NovelForge 知识库首页";
+const docsLabel = english ? "Docs" : "知识库";
 ---
 
 <div class="site-title nf-site-title">
@@ -18,7 +18,7 @@ const docsLabel = english ? "Docs" : "文档";
   </a>
   <span class="nf-version-chip" aria-label="NovelForge 0.8.x">0.8.x</span>
   <span class="nf-brand-separator" aria-hidden="true"></span>
-  <a class="nf-docs-root-link" href={docsHref} aria-label={docsAria}>
+  <a class="nf-docs-root-link" href={docsHref} aria-label={docsAria} aria-current="page">
     <span class="nf-docs-dot" aria-hidden="true">✦</span>
     <span>{docsLabel}</span>
   </a>
