@@ -117,11 +117,13 @@ jobs:
             rm -rf "${profile}"
           }
 
+          run_chrome workspace-en-desktop 1440,900 'http://127.0.0.1:4177/workspace?lang=en-US'
           run_chrome semantic-en-desktop 1440,900 'http://127.0.0.1:4177/semantic?lang=en-US'
           run_chrome semantic-en-mobile 390,844 'http://127.0.0.1:4177/semantic?lang=en-US'
           run_chrome diagnostics-en-desktop 1440,900 'http://127.0.0.1:4177/diagnostics?lang=en-US'
           run_chrome diagnostics-zh-mobile 390,844 'http://127.0.0.1:4177/diagnostics?lang=zh-CN'
 
+          dump_dom workspace-en 1440,900 'http://127.0.0.1:4177/workspace?lang=en-US'
           dump_dom semantic-en 1440,900 'http://127.0.0.1:4177/semantic?lang=en-US'
           dump_dom diagnostics-en 1440,900 'http://127.0.0.1:4177/diagnostics?lang=en-US'
           dump_dom diagnostics-zh 390,844 'http://127.0.0.1:4177/diagnostics?lang=zh-CN'
@@ -130,9 +132,14 @@ jobs:
           from pathlib import Path
 
           root = Path('/tmp/studio-bound-qa')
+          workspace = (root / 'workspace-en-dom.html').read_text(encoding='utf-8', errors='replace')
           semantic = (root / 'semantic-en-dom.html').read_text(encoding='utf-8', errors='replace')
           diagnostics = (root / 'diagnostics-en-dom.html').read_text(encoding='utf-8', errors='replace')
           diagnostics_zh = (root / 'diagnostics-zh-dom.html').read_text(encoding='utf-8', errors='replace')
+
+          assert 'Local Playground' in workspace
+          assert 'Run preview' in workspace
+          assert 'Deterministic browser preview' in workspace
 
           # These workstations only render after real bridge data arrives.
           assert 'Registered model contracts' in semantic
@@ -149,6 +156,7 @@ jobs:
           assert '下面的状态只属于 framework.doctor' in diagnostics_zh
 
           for image in (
+              'workspace-en-desktop.png',
               'semantic-en-desktop.png',
               'semantic-en-mobile.png',
               'diagnostics-en-desktop.png',
@@ -158,15 +166,17 @@ jobs:
               assert path.exists() and path.stat().st_size > 10_000, image
 
           # Bound pages must use the one public typed bridge endpoint; no alternate API is allowed.
-          for name in ('semantic-en-desktop-netlog.json', 'semantic-en-mobile-netlog.json', 'diagnostics-en-desktop-netlog.json', 'diagnostics-zh-mobile-netlog.json'):
+          for name in ('workspace-en-desktop-netlog.json', 'semantic-en-desktop-netlog.json', 'semantic-en-mobile-netlog.json', 'diagnostics-en-desktop-netlog.json', 'diagnostics-zh-mobile-netlog.json'):
               text = (root / name).read_text(encoding='utf-8', errors='replace')
-              assert '/api/bridge/invoke' in text, f'expected typed bridge request in {name}'
+              if name != 'workspace-en-desktop-netlog.json':
+                  assert '/api/bridge/invoke' in text, f'expected typed bridge request in {name}'
               assert '/api/' not in text.replace('/api/bridge/invoke', ''), f'unexpected Studio API path in {name}'
 
           (root / 'runtime-proof.txt').write_text(
               'schema=novelforge_studio_bound_browser_qa_v1\n'
               'surface=local_app\n'
               'core_host=bound\n'
+              'workspace_surface=local_playground\n'
               'semantic_source=semantic.catalog\n'
               'diagnostics_source=framework.doctor\n'
               'authority=false\n',
