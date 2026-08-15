@@ -147,6 +147,7 @@ jobs:
           zh = Path('studio/app/src/locales/zh-CN.ts').read_text(encoding='utf-8')
           app_css = Path('studio/app/src/styles/app.css').read_text(encoding='utf-8')
           observe_css = Path('studio/app/src/styles/observability.css').read_text(encoding='utf-8')
+          weiui_css = Path('studio/app/src/styles/vendor/weiui.generated.css').read_text(encoding='utf-8')
           for needle in ('"en-US"', '"zh-CN"'):
               assert needle in Path('studio/app/src/i18n.tsx').read_text(encoding='utf-8')
           for key in (
@@ -160,9 +161,9 @@ jobs:
           assert '@media (max-width: 719px)' in observe_css
           assert 'nf-bottom-nav' in app_css
           assert 'nf-production-lanes' in observe_css
-          assert 'prefers-reduced-motion: reduce' in app_css
+          assert 'prefers-reduced-motion: reduce' in weiui_css
           assert '100dvh' in app_css
-          print({'status': 'pass', 'locales': ['en-US', 'zh-CN'], 'mobile_focus_first': True, 'observability_mobile': True})
+          print({'status': 'pass', 'locales': ['en-US', 'zh-CN'], 'mobile_focus_first': True, 'observability_mobile': True, 'motion_owner': 'WeiUI'})
           PY
       - name: Bundle budgets
         run: |
