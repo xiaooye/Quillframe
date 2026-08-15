@@ -13,13 +13,13 @@ const main = read("src/main.tsx");
 const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
 
-check(main.includes('import "./styles/tool-workbench-kawaii.css"'), "standalone workbench polish must load after the shared surface layer");
-check(main.indexOf('surface-consistency.css') < main.indexOf('tool-workbench-kawaii.css'), "tool polish must refine, not precede, shared surface consistency");
+check(main.includes('import "./styles/tool-workbench-kawaii.css"'), "standalone workbench refinement must be loaded");
+check(main.indexOf('surface-consistency.css') < main.indexOf('tool-workbench-kawaii.css'), "tool refinement must override the shared framed defaults");
 
 for (const selector of [
   ".project-inspector-intro",
   ".inspector-dropzone",
-  ".inspector-stat-grid",
+  ".inspector-summary-card",
   ".playground-intro",
   ".playground-input-panel textarea",
   ".playground-stage",
@@ -28,35 +28,42 @@ for (const selector of [
   ".agent-host-workbench",
   ".agent-host-tabs button",
 ]) {
-  check(css.includes(selector), `workbench design marker missing: ${selector}`);
+  check(css.includes(selector), `workbench clean-surface marker missing: ${selector}`);
 }
 
-for (const designToken of [
-  "--tool-paper",
-  "--tool-stitch",
-  "border: 1px dashed",
-  "repeating-linear-gradient",
+for (const marker of [
+  "border: 0",
+  "background: transparent",
+  "box-shadow: none",
   "color-mix(in oklab",
+  "@media (max-width: 620px)",
 ]) {
-  check(css.includes(designToken), `stationery design token/technique missing: ${designToken}`);
+  check(css.includes(marker), `home-like surface technique missing: ${marker}`);
 }
 
-check(!/animation-iteration-count\s*:\s*infinite|animation\s*:[^;]*\binfinite\b/i.test(css), "standalone workbench polish must not add infinite idle animation");
+check(css.includes(".project-inspector-intro::before") && css.includes("display: none"), "tool heroes must remove the shared inset frame");
+check(css.includes(".inspector-summary-card") && css.includes("border-radius: 0"), "inspector result sections must not return to rounded card stacks");
+check(css.includes(".playground-stage") && css.includes("border-top: 1px solid"), "playground stages should use hairline separation instead of cards");
+check(css.includes(".agent-path-card") && css.includes("border-top: 2px solid"), "agent paths should read as editorial columns instead of cards");
+check(!css.includes("--tool-stitch"), "stitched stationery framing must stay removed from the product tools");
+check(!css.includes("rotate(.25deg)") && !css.includes("rotate(-1.8deg)"), "decorative card rotation must stay removed");
+check(!/animation-iteration-count\s*:\s*infinite|animation\s*:[^;]*\binfinite\b/i.test(css), "standalone workbench refinement must not add infinite idle animation");
 check(!/requestAnimationFrame\s*\(|setInterval\s*\(/.test(css), "standalone workbench stylesheet must stay declarative and idle-safe");
-check(css.includes("@media (max-width: 620px)"), "standalone workbench polish must preserve compact mobile behavior");
 
 if (failures.length) {
   for (const failure of failures) console.error(`tool-workbench-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_tool_workbench_quality_v1",
+    schema: "novelforge_tool_workbench_quality_v2",
     status: "pass",
     inspector: true,
     playground: true,
     agent_integration: true,
-    publication_design_language: true,
-    stationery_surface_grammar: true,
+    home_like_visual_density: true,
+    near_borderless: true,
+    nested_card_grammar: false,
+    restrained_kawaii_palette: true,
     responsive: true,
     infinite_idle_animation: false,
   }, null, 2));
