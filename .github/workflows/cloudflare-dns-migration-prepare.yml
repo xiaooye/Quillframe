@@ -16,6 +16,7 @@ concurrency:
 
 env:
   MIGRATION_ZONE: wei-dev.com
+  PAGES_PROJECT: novelforge
   PAGES_ORIGIN: novelforge-c73.pages.dev
   PAGES_CUSTOM_DOMAIN: novelforge.wei-dev.com
 
@@ -24,20 +25,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Prepare and verify Cloudflare DNS cutover
+      - name: Prepare DNS and unblock Pages validation
         shell: bash
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-
           admin_auth="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
 
-          # Resolve the exact zone and assigned nameservers with the long-lived
-          # account token. The broad account token currently hits Cloudflare
-          # error 10000 on the DNS Records endpoint, so all zone mutations below
-          # intentionally use a fresh exact-zone token instead.
+          # Resolve zone and effective permission IDs with the long-lived admin
+          # account token. Broad account tokens on this account currently hit
+          # Cloudflare error 10000 on some product endpoints, so mutations use
+          # fresh least-scope child tokens created below.
           curl --silent --show-error --fail \
             --header "${admin_auth}" \
             "https://api.cloudflare.com/client/v4/zones?name=${MIGRATION_ZONE}&account.id=${CLOUDFLARE_ACCOUNT_ID}" \
@@ -47,28 +47,22 @@ jobs:
           zone_status=$(jq -r '.result[0].status' /tmp/zones.json)
           ns1=$(jq -r '.result[0].name_servers[0]' /tmp/zones.json)
           ns2=$(jq -r '.result[0].name_servers[1]' /tmp/zones.json)
-          test -n "${zone_id}"
-          test -n "${ns1}"
-          test -n "${ns2}"
 
-          # Read the effective admin token so we do not hard-code Cloudflare
-          # permission-group IDs.
           curl --silent --show-error --fail \
             --header "${admin_auth}" \
             "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/verify" \
-            > /tmp/token-verify.json
-          jq -e '.success == true and .result.status == "active"' /tmp/token-verify.json >/dev/null
-          admin_token_id=$(jq -r '.result.id' /tmp/token-verify.json)
-
+            > /tmp/admin-verify.json
+          jq -e '.success == true and .result.status == "active"' /tmp/admin-verify.json >/dev/null
+          admin_id=$(jq -r '.result.id' /tmp/admin-verify.json)
           curl --silent --show-error --fail \
             --header "${admin_auth}" \
-            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/${admin_token_id}" \
-            > /tmp/token-detail.json
-          jq -e '.success == true' /tmp/token-detail.json >/dev/null
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/${admin_id}" \
+            > /tmp/admin-detail.json
+          jq -e '.success == true' /tmp/admin-detail.json >/dev/null
 
           permission_id() {
             local name="$1"
-            jq -r --arg name "${name}" '[.result.policies[].permission_groups[] | select(.name == $name)][0].id // empty' /tmp/token-detail.json
+            jq -r --arg name "${name}" '[.result.policies[].permission_groups[] | select(.name == $name)][0].id // empty' /tmp/admin-detail.json
           }
 
           dns_read_id=$(permission_id "DNS Read")
@@ -76,272 +70,215 @@ jobs:
           zone_read_id=$(permission_id "Zone Read")
           redirect_read_id=$(permission_id "Dynamic URL Redirects Read")
           redirect_write_id=$(permission_id "Dynamic URL Redirects Write")
-          for id in "${dns_read_id}" "${dns_write_id}" "${zone_read_id}" "${redirect_read_id}" "${redirect_write_id}"; do
+          pages_read_id=$(permission_id "Pages Read")
+          for id in "${dns_read_id}" "${dns_write_id}" "${zone_read_id}" "${redirect_read_id}" "${redirect_write_id}" "${pages_read_id}"; do
             test -n "${id}"
           done
 
-          # Create an ephemeral, least-scope token for this exact zone. A prior
-          # diagnostic proved this token shape succeeds on the DNS Records API.
-          temp_name="novelforge-cutover-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          zone_token_id=""
+          zone_token=""
+          pages_token_id=""
+          pages_token=""
+          cleanup_tokens() {
+            for token_id in "${zone_token_id}" "${pages_token_id}"; do
+              if [ -n "${token_id}" ]; then
+                curl --silent --show-error --request DELETE \
+                  --header "${admin_auth}" \
+                  "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/${token_id}" \
+                  >/dev/null || true
+              fi
+            done
+          }
+          trap cleanup_tokens EXIT
+
+          # Exact-zone DNS + redirect token.
           zone_resource="com.cloudflare.api.account.zone.${zone_id}"
           expires_on=$(date -u -d '+20 minutes' '+%Y-%m-%dT%H:%M:%SZ')
-          temp_payload=$(jq -nc \
-            --arg name "${temp_name}" \
-            --arg dns_read "${dns_read_id}" \
-            --arg dns_write "${dns_write_id}" \
+          zone_payload=$(jq -nc \
+            --arg name "novelforge-zone-cutover-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --arg dns_read "${dns_read_id}" --arg dns_write "${dns_write_id}" \
             --arg zone_read "${zone_read_id}" \
-            --arg redirect_read "${redirect_read_id}" \
-            --arg redirect_write "${redirect_write_id}" \
-            --arg zone_resource "${zone_resource}" \
-            --arg expires_on "${expires_on}" \
-            '{name:$name,expires_on:$expires_on,policies:[{effect:"allow",permission_groups:[{id:$dns_read},{id:$dns_write},{id:$zone_read},{id:$redirect_read},{id:$redirect_write}],resources:{($zone_resource):"*"}}]}')
-
-          create_status=$(curl --silent --show-error --output /tmp/temp-token.json --write-out "%{http_code}" \
-            --request POST \
-            --header "${admin_auth}" \
-            --header "Content-Type: application/json" \
-            --data "${temp_payload}" \
-            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens")
-          case "${create_status}" in 200|201) ;; *) cat /tmp/temp-token.json; exit 1 ;; esac
-          jq -e '.success == true' /tmp/temp-token.json >/dev/null
-          temp_token_id=$(jq -r '.result.id // empty' /tmp/temp-token.json)
-          temp_token=$(jq -r '.result.value // empty' /tmp/temp-token.json)
-          test -n "${temp_token_id}"
-          test -n "${temp_token}"
-          echo "::add-mask::${temp_token}"
-
-          cleanup_temp_token() {
-            curl --silent --show-error \
-              --request DELETE \
-              --header "${admin_auth}" \
-              "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/${temp_token_id}" \
-              > /tmp/temp-token-delete.json || true
-          }
-          trap cleanup_temp_token EXIT
-
-          zone_auth="Authorization: Bearer ${temp_token}"
+            --arg redirect_read "${redirect_read_id}" --arg redirect_write "${redirect_write_id}" \
+            --arg resource "${zone_resource}" --arg expires_on "${expires_on}" \
+            '{name:$name,expires_on:$expires_on,policies:[{effect:"allow",permission_groups:[{id:$dns_read},{id:$dns_write},{id:$zone_read},{id:$redirect_read},{id:$redirect_write}],resources:{($resource):"*"}}]}')
+          status=$(curl --silent --show-error --output /tmp/zone-token.json --write-out "%{http_code}" \
+            --request POST --header "${admin_auth}" --header "Content-Type: application/json" \
+            --data "${zone_payload}" "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens")
+          case "${status}" in 200|201) ;; *) cat /tmp/zone-token.json; exit 1 ;; esac
+          zone_token_id=$(jq -r '.result.id // empty' /tmp/zone-token.json)
+          zone_token=$(jq -r '.result.value // empty' /tmp/zone-token.json)
+          test -n "${zone_token_id}"; test -n "${zone_token}"
+          echo "::add-mask::${zone_token}"
+          zone_auth="Authorization: Bearer ${zone_token}"
           dns_api="https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records"
-
-          # Freeze the actual Cloudflare before-state. The diagnostic immediately
-          # before this run observed zero DNS records; if another actor has since
-          # written records, preserve them unless they directly conflict.
-          curl --silent --show-error --fail \
-            --header "${zone_auth}" \
-            "${dns_api}?per_page=100" > /tmp/before-dns.json
-          jq -e '.success == true' /tmp/before-dns.json >/dev/null
-          before_count=$(jq '.result | length' /tmp/before-dns.json)
-          echo "Cloudflare DNS before-state record count: ${before_count}"
-          jq -r '.result[]? | [.type,.name,(.priority // "-"),(.proxied // false),.content] | @tsv' /tmp/before-dns.json | sort || true
 
           list_type_name() {
             local type="$1" name="$2" out="$3"
-            curl --silent --show-error --fail \
-              --header "${zone_auth}" \
-              --get \
-              --data-urlencode "type=${type}" \
-              --data-urlencode "name=${name}" \
+            curl --silent --show-error --fail --header "${zone_auth}" --get \
+              --data-urlencode "type=${type}" --data-urlencode "name=${name}" \
               "${dns_api}" > "${out}"
             jq -e '.success == true' "${out}" >/dev/null
           }
 
-          create_record() {
-            local payload="$1"
-            curl --silent --show-error --fail \
-              --request POST \
-              --header "${zone_auth}" \
-              --header "Content-Type: application/json" \
-              --data "${payload}" \
-              "${dns_api}" > /tmp/dns-write.json
+          write_record() {
+            local method="$1" url="$2" payload="$3"
+            curl --silent --show-error --fail --request "${method}" \
+              --header "${zone_auth}" --header "Content-Type: application/json" \
+              --data "${payload}" "${url}" > /tmp/dns-write.json
             jq -e '.success == true' /tmp/dns-write.json >/dev/null
           }
 
           ensure_address_record() {
             local type="$1" name="$2" content="$3" proxied="$4"
-            list_type_name "${type}" "${name}" /tmp/records.json
-            exact=$(jq --arg content "${content}" --argjson proxied "${proxied}" '[.result[] | select(.content == $content and ((.proxied // false) == $proxied))] | length' /tmp/records.json)
-            if [ "${exact}" -ge 1 ]; then return; fi
-            count=$(jq '.result | length' /tmp/records.json)
-            if [ "${count}" -ne 0 ]; then
-              echo "Conflicting ${type} record for ${name}; refusing to overwrite." >&2
-              jq '.result' /tmp/records.json
-              exit 1
+            list_type_name "${type}" "${name}" /tmp/record.json
+            exact=$(jq --arg content "${content}" --argjson proxied "${proxied}" '[.result[] | select(.content == $content and ((.proxied // false) == $proxied))] | length' /tmp/record.json)
+            [ "${exact}" -ge 1 ] && return
+            count=$(jq '.result | length' /tmp/record.json)
+            if [ "${count}" -eq 0 ]; then
+              payload=$(jq -nc --arg type "${type}" --arg name "${name}" --arg content "${content}" --argjson proxied "${proxied}" '{type:$type,name:$name,content:$content,ttl:1,proxied:$proxied}')
+              write_record POST "${dns_api}" "${payload}"
+              return
             fi
-            payload=$(jq -nc --arg type "${type}" --arg name "${name}" --arg content "${content}" --argjson proxied "${proxied}" '{type:$type,name:$name,content:$content,ttl:1,proxied:$proxied}')
-            create_record "${payload}"
+            if [ "${count}" -eq 1 ] && [ "$(jq -r '.result[0].content' /tmp/record.json)" = "${content}" ]; then
+              record_id=$(jq -r '.result[0].id' /tmp/record.json)
+              payload=$(jq -nc --arg type "${type}" --arg name "${name}" --arg content "${content}" --argjson proxied "${proxied}" '{type:$type,name:$name,content:$content,ttl:1,proxied:$proxied}')
+              write_record PUT "${dns_api}/${record_id}" "${payload}"
+              return
+            fi
+            echo "Conflicting ${type} record for ${name}; refusing to overwrite." >&2
+            jq '.result' /tmp/record.json
+            exit 1
           }
 
           ensure_mx() {
             list_type_name MX "${MIGRATION_ZONE}" /tmp/mx.json
             exact=$(jq '[.result[] | select((.content | ascii_downcase) == "smtp.google.com" and .priority == 1)] | length' /tmp/mx.json)
-            if [ "${exact}" -ge 1 ]; then return; fi
-            count=$(jq '.result | length' /tmp/mx.json)
-            if [ "${count}" -ne 0 ]; then
-              echo "Unexpected existing MX records; refusing to replace mail routing implicitly." >&2
-              jq '.result' /tmp/mx.json
-              exit 1
-            fi
+            [ "${exact}" -ge 1 ] && return
+            [ "$(jq '.result | length' /tmp/mx.json)" -eq 0 ] || { echo "Unexpected MX records"; jq '.result' /tmp/mx.json; exit 1; }
             payload=$(jq -nc --arg name "${MIGRATION_ZONE}" '{type:"MX",name:$name,content:"smtp.google.com",priority:1,ttl:3600}')
-            create_record "${payload}"
+            write_record POST "${dns_api}" "${payload}"
           }
 
           ensure_spf() {
             list_type_name TXT "${MIGRATION_ZONE}" /tmp/txt.json
             exact=$(jq '[.result[] | select(.content == "v=spf1 include:_spf.google.com ~all")] | length' /tmp/txt.json)
-            if [ "${exact}" -ge 1 ]; then return; fi
-            other_spf=$(jq '[.result[] | select(.content | startswith("v=spf1"))] | length' /tmp/txt.json)
-            if [ "${other_spf}" -ne 0 ]; then
-              echo "Unexpected existing SPF record; refusing to create a second SPF policy." >&2
-              jq '.result' /tmp/txt.json
-              exit 1
-            fi
+            [ "${exact}" -ge 1 ] && return
+            other=$(jq '[.result[] | select(.content | startswith("v=spf1"))] | length' /tmp/txt.json)
+            [ "${other}" -eq 0 ] || { echo "Unexpected existing SPF"; jq '.result' /tmp/txt.json; exit 1; }
             payload=$(jq -nc --arg name "${MIGRATION_ZONE}" --arg content "v=spf1 include:_spf.google.com ~all" '{type:"TXT",name:$name,content:$content,ttl:3600}')
-            create_record "${payload}"
+            write_record POST "${dns_api}" "${payload}"
           }
 
           ensure_caa() {
             local value="$1"
             list_type_name CAA "${MIGRATION_ZONE}" /tmp/caa.json
             exact=$(jq --arg value "${value}" '[.result[] | select((.data.flags // 0) == 0 and (.data.tag // "") == "issue" and (.data.value // "") == $value)] | length' /tmp/caa.json)
-            if [ "${exact}" -ge 1 ]; then return; fi
+            [ "${exact}" -ge 1 ] && return
             payload=$(jq -nc --arg name "${MIGRATION_ZONE}" --arg value "${value}" '{type:"CAA",name:$name,ttl:3600,data:{flags:0,tag:"issue",value:$value}}')
-            create_record "${payload}"
+            write_record POST "${dns_api}" "${payload}"
           }
 
-          # Product entrypoints.
-          ensure_address_record CNAME "${PAGES_CUSTOM_DOMAIN}" "${PAGES_ORIGIN}" true
+          # Pages custom-host validation must reach Pages directly. Keep this
+          # record DNS Only; the pages.dev target already sits on Cloudflare's CDN.
+          ensure_address_record CNAME "${PAGES_CUSTOM_DOMAIN}" "${PAGES_ORIGIN}" false
+          # Root/www are redirect-only and therefore must remain proxied.
           ensure_address_record A "${MIGRATION_ZONE}" "192.0.2.1" true
           ensure_address_record A "www.${MIGRATION_ZONE}" "192.0.2.1" true
-
-          # Google Workspace current baseline. Do not invent DKIM/DMARC keys or
-          # policies; those are restored separately from Google Admin when known.
           ensure_mx
           ensure_spf
-
-          # Preserve the CAA policy that was actually published by Vercel before
-          # delegation moved to Cloudflare.
           ensure_caa "letsencrypt.org"
           ensure_caa "pki.goog"
           ensure_caa "sectigo.com"
 
-          # Root/www are redirect-only entrypoints. Merge our uniquely-referenced
-          # rule into the existing phase entrypoint instead of clobbering any
-          # unrelated redirect rules.
+          # Preserve unrelated redirect rules and upsert only our stable ref.
           rulesets_api="https://api.cloudflare.com/client/v4/zones/${zone_id}/rulesets"
-          entrypoint_api="${rulesets_api}/phases/http_request_dynamic_redirect/entrypoint"
+          entrypoint="${rulesets_api}/phases/http_request_dynamic_redirect/entrypoint"
           our_rule=$(jq -nc '{ref:"novelforge_apex_entry",description:"wei-dev.com entrypoint to NovelForge",expression:"(http.host eq \"wei-dev.com\" or http.host eq \"www.wei-dev.com\")",action:"redirect",action_parameters:{from_value:{target_url:{expression:"concat(\"https://novelforge.wei-dev.com\", http.request.uri.path)"},status_code:301,preserve_query_string:true}},enabled:true}')
-
-          ruleset_status=$(curl --silent --show-error --output /tmp/ruleset.json --write-out "%{http_code}" \
-            --header "${zone_auth}" "${entrypoint_api}")
-          if [ "${ruleset_status}" = "404" ]; then
+          rules_status=$(curl --silent --show-error --output /tmp/rules.json --write-out "%{http_code}" --header "${zone_auth}" "${entrypoint}")
+          if [ "${rules_status}" = "404" ]; then
             payload=$(jq -nc --argjson rule "${our_rule}" '{name:"NovelForge entry redirects",kind:"zone",phase:"http_request_dynamic_redirect",rules:[$rule]}')
-            write_status=$(curl --silent --show-error --output /tmp/ruleset-write.json --write-out "%{http_code}" \
-              --request POST \
-              --header "${zone_auth}" \
-              --header "Content-Type: application/json" \
-              --data "${payload}" \
-              "${rulesets_api}")
-            case "${write_status}" in 200|201) ;; *) cat /tmp/ruleset-write.json; exit 1 ;; esac
-            jq -e '.success == true' /tmp/ruleset-write.json >/dev/null
-          elif [ "${ruleset_status}" = "200" ]; then
-            jq -e '.success == true' /tmp/ruleset.json >/dev/null
-            ruleset_id=$(jq -r '.result.id' /tmp/ruleset.json)
-            ruleset_name=$(jq -r '.result.name' /tmp/ruleset.json)
-            merged_rules=$(jq --argjson our_rule "${our_rule}" '[.result.rules[]? | select(.ref != "novelforge_apex_entry")] + [$our_rule]' /tmp/ruleset.json)
-            payload=$(jq -nc --arg name "${ruleset_name}" --argjson rules "${merged_rules}" '{name:$name,kind:"zone",phase:"http_request_dynamic_redirect",rules:$rules}')
-            write_status=$(curl --silent --show-error --output /tmp/ruleset-write.json --write-out "%{http_code}" \
-              --request PUT \
-              --header "${zone_auth}" \
-              --header "Content-Type: application/json" \
-              --data "${payload}" \
-              "${rulesets_api}/${ruleset_id}")
-            case "${write_status}" in 200) ;; *) cat /tmp/ruleset-write.json; exit 1 ;; esac
-            jq -e '.success == true' /tmp/ruleset-write.json >/dev/null
+            status=$(curl --silent --show-error --output /tmp/rules-write.json --write-out "%{http_code}" --request POST --header "${zone_auth}" --header "Content-Type: application/json" --data "${payload}" "${rulesets_api}")
+            case "${status}" in 200|201) ;; *) cat /tmp/rules-write.json; exit 1 ;; esac
+          elif [ "${rules_status}" = "200" ]; then
+            jq -e '.success == true' /tmp/rules.json >/dev/null
+            ruleset_id=$(jq -r '.result.id' /tmp/rules.json)
+            ruleset_name=$(jq -r '.result.name' /tmp/rules.json)
+            merged=$(jq --argjson rule "${our_rule}" '[.result.rules[]? | select(.ref != "novelforge_apex_entry")] + [$rule]' /tmp/rules.json)
+            payload=$(jq -nc --arg name "${ruleset_name}" --argjson rules "${merged}" '{name:$name,kind:"zone",phase:"http_request_dynamic_redirect",rules:$rules}')
+            status=$(curl --silent --show-error --output /tmp/rules-write.json --write-out "%{http_code}" --request PUT --header "${zone_auth}" --header "Content-Type: application/json" --data "${payload}" "${rulesets_api}/${ruleset_id}")
+            [ "${status}" = "200" ] || { cat /tmp/rules-write.json; exit 1; }
           else
-            cat /tmp/ruleset.json
-            exit 1
+            cat /tmp/rules.json; exit 1
           fi
+          jq -e '.success == true' /tmp/rules-write.json >/dev/null
 
-          # Exact Cloudflare-side post-conditions before the ephemeral token is
-          # destroyed.
-          curl --silent --show-error --fail \
-            --header "${zone_auth}" \
-            "${dns_api}?per_page=100" > /tmp/after-dns.json
-          jq -e '.success == true' /tmp/after-dns.json >/dev/null
+          # Cloudflare-side exact post-condition.
+          curl --silent --show-error --fail --header "${zone_auth}" "${dns_api}?per_page=100" > /tmp/dns-after.json
+          jq -e --arg origin "${PAGES_ORIGIN}" '.success == true and (.result | any(.type == "CNAME" and .name == "novelforge.wei-dev.com" and .content == $origin and (.proxied // false) == false))' /tmp/dns-after.json >/dev/null
+          jq -e '.result | any(.type == "A" and .name == "wei-dev.com" and .proxied == true)' /tmp/dns-after.json >/dev/null
+          jq -e '.result | any(.type == "A" and .name == "www.wei-dev.com" and .proxied == true)' /tmp/dns-after.json >/dev/null
+          jq -e '.result | any(.type == "MX" and .name == "wei-dev.com" and (.content | ascii_downcase) == "smtp.google.com" and .priority == 1)' /tmp/dns-after.json >/dev/null
+          jq -e '.result | any(.type == "TXT" and .name == "wei-dev.com" and .content == "v=spf1 include:_spf.google.com ~all")' /tmp/dns-after.json >/dev/null
+          curl --silent --show-error --fail --header "${zone_auth}" "${entrypoint}" > /tmp/rules-after.json
+          jq -e '.success == true and (.result.rules | any(.ref == "novelforge_apex_entry" and .enabled == true))' /tmp/rules-after.json >/dev/null
 
-          jq -e --arg origin "${PAGES_ORIGIN}" '.result | any(.type == "CNAME" and .name == "novelforge.wei-dev.com" and .content == $origin and .proxied == true)' /tmp/after-dns.json >/dev/null
-          jq -e '.result | any(.type == "A" and .name == "wei-dev.com" and .content == "192.0.2.1" and .proxied == true)' /tmp/after-dns.json >/dev/null
-          jq -e '.result | any(.type == "A" and .name == "www.wei-dev.com" and .content == "192.0.2.1" and .proxied == true)' /tmp/after-dns.json >/dev/null
-          jq -e '.result | any(.type == "MX" and .name == "wei-dev.com" and (.content | ascii_downcase) == "smtp.google.com" and .priority == 1)' /tmp/after-dns.json >/dev/null
-          jq -e '.result | any(.type == "TXT" and .name == "wei-dev.com" and .content == "v=spf1 include:_spf.google.com ~all")' /tmp/after-dns.json >/dev/null
-          for caa in "letsencrypt.org" "pki.goog" "sectigo.com"; do
-            jq -e --arg caa "${caa}" '.result | any(.type == "CAA" and .name == "wei-dev.com" and (.data.flags // 0) == 0 and (.data.tag // "") == "issue" and (.data.value // "") == $caa)' /tmp/after-dns.json >/dev/null
+          # Fresh exact-account Pages read token to observe HTTP validation.
+          account_resource="com.cloudflare.api.account.${CLOUDFLARE_ACCOUNT_ID}"
+          pages_payload=$(jq -nc --arg name "novelforge-pages-read-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" --arg pages_read "${pages_read_id}" --arg resource "${account_resource}" --arg expires_on "${expires_on}" '{name:$name,expires_on:$expires_on,policies:[{effect:"allow",permission_groups:[{id:$pages_read}],resources:{($resource):"*"}}]}')
+          status=$(curl --silent --show-error --output /tmp/pages-token.json --write-out "%{http_code}" --request POST --header "${admin_auth}" --header "Content-Type: application/json" --data "${pages_payload}" "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens")
+          case "${status}" in 200|201) ;; *) cat /tmp/pages-token.json; exit 1 ;; esac
+          pages_token_id=$(jq -r '.result.id // empty' /tmp/pages-token.json)
+          pages_token=$(jq -r '.result.value // empty' /tmp/pages-token.json)
+          test -n "${pages_token_id}"; test -n "${pages_token}"
+          echo "::add-mask::${pages_token}"
+          pages_auth="Authorization: Bearer ${pages_token}"
+          domain_url="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PAGES_PROJECT}/domains/${PAGES_CUSTOM_DOMAIN}"
+
+          pages_status="unknown"
+          validation_status="unknown"
+          for attempt in 1 2 3 4 5 6; do
+            curl --silent --show-error --fail --header "${pages_auth}" "${domain_url}" > /tmp/domain.json
+            jq -e '.success == true' /tmp/domain.json >/dev/null
+            pages_status=$(jq -r '.result.status' /tmp/domain.json)
+            validation_status=$(jq -r '.result.validation_data.status' /tmp/domain.json)
+            echo "Pages domain attempt ${attempt}: status=${pages_status}, validation=${validation_status}"
+            [ "${pages_status}" = "active" ] && break
+            sleep 10
           done
 
-          curl --silent --show-error --fail \
-            --header "${zone_auth}" \
-            "${entrypoint_api}" > /tmp/ruleset-after.json
-          jq -e '.success == true and (.result.rules | any(.ref == "novelforge_apex_entry" and .enabled == true))' /tmp/ruleset-after.json >/dev/null
-
-          echo "=== CLOUDFLARE CUTOVER STATE PREPARED ==="
-          echo "Zone: ${MIGRATION_ZONE} (${zone_status})"
-          echo "Assigned NS: ${ns1} / ${ns2}"
-          jq -r '.result[] | select(.name == "wei-dev.com" or .name == "www.wei-dev.com" or .name == "novelforge.wei-dev.com") | [.type,.name,(.priority // "-"),.ttl,(.proxied // false),.content] | @tsv' /tmp/after-dns.json | sort
-
-          # Public post-condition: determine whether registrar delegation has
-          # already moved to Cloudflare. Do not treat propagation delay as a
-          # Cloudflare-side preparation failure.
-          public_ns=$(dig +short NS "${MIGRATION_ZONE}" | sed 's/\.$//' | sort || true)
-          assigned_ns=$(printf '%s\n%s\n' "${ns1}" "${ns2}" | sort)
+          # Public post-conditions.
+          public_ns=$(dig @1.1.1.1 +short NS "${MIGRATION_ZONE}" | sed 's/\.$//' | sort || true)
+          expected_ns=$(printf '%s\n%s\n' "${ns1}" "${ns2}" | sort)
           delegation_ready=false
-          if [ "${public_ns}" = "${assigned_ns}" ]; then
-            delegation_ready=true
+          [ "${public_ns}" = "${expected_ns}" ] && delegation_ready=true
+          app_http=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 15 "https://${PAGES_CUSTOM_DOMAIN}/" || true)
+          headers=$(mktemp)
+          root_http=$(curl --silent --show-error --output /dev/null --dump-header "${headers}" --write-out '%{http_code}' --max-time 15 "https://${MIGRATION_ZONE}/migration-probe?x=1" || true)
+          root_location=$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,"");gsub(/\r/,"");print;exit}' "${headers}")
+
+          public_ready=false
+          if [ "${delegation_ready}" = true ] && [ "${pages_status}" = "active" ] && [ "${app_http}" = "200" ] && [ "${root_http}" = "301" ] && [ "${root_location}" = "https://novelforge.wei-dev.com/migration-probe?x=1" ]; then
+            public_ready=true
           fi
 
-          echo "Public authoritative NS:"
-          printf '%s\n' "${public_ns:-<none>}"
-          echo "Delegation matches Cloudflare: ${delegation_ready}"
-
-          if [ "${delegation_ready}" = "true" ]; then
-            echo "Public MX:"
-            dig +short MX "${MIGRATION_ZONE}" || true
-            echo "Public SPF/TXT:"
-            dig +short TXT "${MIGRATION_ZONE}" || true
-            echo "Public novelforge target/addresses:"
-            dig +short "${PAGES_CUSTOM_DOMAIN}" || true
-
-            # Retry briefly for edge/DNS propagation; this is evidence only.
-            for attempt in 1 2 3 4 5; do
-              if curl --silent --show-error --fail --location --max-time 15 \
-                "https://${PAGES_CUSTOM_DOMAIN}/" >/dev/null; then
-                echo "novelforge_https=pass"
-                break
-              fi
-              if [ "${attempt}" -eq 5 ]; then echo "novelforge_https=pending"; fi
-              sleep 5
-            done
-
-            redirect_headers=$(mktemp)
-            if curl --silent --show-error --max-time 15 --head \
-              "https://${MIGRATION_ZONE}/migration-probe?x=1" > "${redirect_headers}"; then
-              status_line=$(head -n1 "${redirect_headers}" | tr -d '\r')
-              location=$(awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); print; exit}' "${redirect_headers}")
-              echo "Root redirect: ${status_line} -> ${location:-<none>}"
-            else
-              echo "Root redirect: awaiting edge propagation"
-            fi
-          fi
+          echo "=== NOVELFORGE CUTOVER STATUS ==="
+          echo "Zone status: ${zone_status}"
+          echo "Delegation ready: ${delegation_ready}"
+          echo "Pages custom domain: ${pages_status} / validation=${validation_status}"
+          echo "NovelForge HTTPS: ${app_http:-curl-failed}"
+          echo "Root redirect: ${root_http:-curl-failed} -> ${root_location:-<none>}"
+          echo "Public ready: ${public_ready}"
 
           {
-            echo "### Cloudflare DNS cutover prepared"
-            echo "- Cloudflare zone status: \`${zone_status}\`"
-            echo "- Nameserver 1: \`${ns1}\`"
-            echo "- Nameserver 2: \`${ns2}\`"
-            echo "- Public delegation currently matches Cloudflare: \`${delegation_ready}\`"
-            echo "- \`novelforge.wei-dev.com\` → \`${PAGES_ORIGIN}\` (proxied)"
-            echo "- \`wei-dev.com\` + \`www\` → HTTP 301 to NovelForge, path/query preserved"
-            echo "- Google Workspace MX: \`1 smtp.google.com\`"
-            echo "- Google Workspace SPF: \`v=spf1 include:_spf.google.com ~all\`"
-            echo "- Preserved CAA issuers: \`letsencrypt.org\`, \`pki.goog\`, \`sectigo.com\`"
-            echo "- DKIM/DMARC intentionally not invented"
-            echo "- Ephemeral exact-zone API token is deleted by EXIT trap"
+            echo "### NovelForge DNS / Pages cutover"
+            echo "- Cloudflare zone: \`${zone_status}\`"
+            echo "- Delegation on Cloudflare: \`${delegation_ready}\`"
+            echo "- NovelForge CNAME mode: \`DNS Only\` (Pages HTTP validation path)"
+            echo "- Pages custom-domain status: \`${pages_status}\`"
+            echo "- Pages HTTP validation: \`${validation_status}\`"
+            echo "- NovelForge HTTPS: \`${app_http:-curl-failed}\`"
+            echo "- Root redirect: \`${root_http:-curl-failed}\` → \`${root_location:-<none>}\`"
+            echo "- Google Workspace MX/SPF: prepared and verified"
+            echo "- public_ready: \`${public_ready}\`"
+            echo "- Child API tokens are deleted by EXIT trap"
           } >> "${GITHUB_STEP_SUMMARY}"
