@@ -1,0 +1,101 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { defineConfig } from "astro/config";
+import starlight from "@astrojs/starlight";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const manifest = JSON.parse(fs.readFileSync(path.resolve(here, "../../docs/documentation_manifest.json"), "utf8"));
+const ids = new Set(manifest.documents.map((doc) => doc.id));
+
+const groups = [
+  {
+    label: "先从这里开始",
+    translations: { en: "Start here" },
+    ids: ["why-novelforge", "production-pipeline", "architecture"],
+  },
+  {
+    label: "创作、上下文与质量",
+    translations: { en: "Creation, context & quality" },
+    ids: ["context-memory", "quality-assurance", "quality-evolution", "adaptive-learning", "story-system", "character-system", "canon-state"],
+  },
+  {
+    label: "Studio 与集成",
+    translations: { en: "Studio & integrations" },
+    ids: ["studio-overview", "studio-product-architecture", "integrations", "project-sdk", "project-adapters"],
+  },
+  {
+    label: "架构、发布与版本",
+    translations: { en: "Architecture, release & publishing" },
+    ids: ["architecture-atlas", "release-bundle", "development-change-inventory"],
+  },
+];
+
+const claimed = new Set(["docs-home"]);
+for (const group of groups) {
+  group.ids = group.ids.filter((id) => ids.has(id));
+  for (const id of group.ids) claimed.add(id);
+}
+
+const referenceIds = manifest.documents
+  .map((doc) => doc.id)
+  .filter((id) => !claimed.has(id));
+
+const sidebar = [
+  ...groups.map((group, index) => ({
+    label: group.label,
+    translations: group.translations,
+    items: group.ids,
+    collapsed: index > 0,
+  })),
+  {
+    label: "完整参考",
+    translations: { en: "Full reference" },
+    items: referenceIds,
+    collapsed: true,
+  },
+];
+
+export default defineConfig({
+  site: "https://novelforge.wei-dev.com",
+  base: "/docs",
+  integrations: [
+    starlight({
+      title: "NovelForge",
+      description: "NovelForge knowledge base and framework documentation.",
+      logo: {
+        src: "./src/assets/novelforge-mark.svg",
+        alt: "NovelForge",
+      },
+      locales: {
+        root: {
+          label: "简体中文",
+          lang: "zh-CN",
+        },
+        en: {
+          label: "English",
+          lang: "en",
+        },
+      },
+      defaultLocale: "root",
+      sidebar,
+      tableOfContents: {
+        minHeadingLevel: 2,
+        maxHeadingLevel: 3,
+      },
+      social: [
+        {
+          icon: "github",
+          label: "GitHub",
+          href: "https://github.com/xiaooye/cn_webnovel_agent",
+        },
+      ],
+      components: {
+        SocialIcons: "./src/components/NovelForgeActions.astro",
+      },
+      customCss: ["./src/styles/custom.css"],
+      credits: false,
+    }),
+  ],
+  outDir: "../dist/docs",
+});
