@@ -1,5 +1,5 @@
-import { A, useParams } from "@solidjs/router";
 import { For, Show, createMemo, createResource, createSignal } from "solid-js";
+import type { JSX } from "solid-js";
 import DocumentRenderer from "./DocumentRenderer";
 import {
   loadKnowledgeIndex,
@@ -32,13 +32,10 @@ const copy = {
     clear: "清除搜索",
     empty: "没有找到相关内容，换个说法试试 (｡•́︿•̀｡)",
     docs: "篇文档",
-    open: "阅读",
     back: "返回知识库",
     toc: "本页内容",
     source: "技术来源",
     sourceLede: "这部分用于追溯仓库来源，不影响正文阅读。",
-    sourceFile: "源文件",
-    currentGuide: "当前指南",
     popular: "推荐阅读",
     searchHint: "支持标题、章节和正文搜索",
   },
@@ -55,13 +52,10 @@ const copy = {
     clear: "Clear search",
     empty: "Nothing matched that search — try another phrase (｡•́︿•̀｡)",
     docs: "docs",
-    open: "Read",
     back: "Back to Knowledge",
     toc: "On this page",
     source: "Technical source",
     sourceLede: "Repository provenance lives here so it does not interrupt the reading experience.",
-    sourceFile: "Source file",
-    currentGuide: "Current guide",
     popular: "Recommended",
     searchHint: "Searches titles, sections, and document text",
   },
@@ -75,10 +69,23 @@ function localDocs(index: Awaited<ReturnType<typeof loadKnowledgeIndex>> | undef
   return index?.documents.filter((doc) => doc.locale === locale) ?? [];
 }
 
+function navigateSpa(event: MouseEvent, href: string) {
+  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  if (window.location.pathname === href) return;
+  window.history.pushState({}, "", href);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
+function KnowledgeLink(props: { href: string; class?: string; children: JSX.Element }) {
+  return <a class={props.class} href={props.href} onClick={(event) => navigateSpa(event, props.href)}>{props.children}</a>;
+}
+
 function GuideRow(props: { doc: DocIndexEntry; locale: KnowledgeLocale; featured?: boolean }) {
   const journey = () => knowledgeJourneyDefinition(knowledgeJourneyFor(props.doc));
+  const href = () => `/docs/${encodeURIComponent(props.doc.id)}`;
   return (
-    <A class={`knowledge-guide-row ${props.featured ? "knowledge-guide-row--featured" : ""}`} href={`/docs/${encodeURIComponent(props.doc.id)}`}>
+    <KnowledgeLink class={`knowledge-guide-row ${props.featured ? "knowledge-guide-row--featured" : ""}`} href={href()}>
       <span class="knowledge-guide-icon" aria-hidden="true">{journey().icon}</span>
       <span class="knowledge-guide-copy">
         <span class="knowledge-guide-kicker">{journey().label[props.locale]} · {humanDocKind(props.doc, props.locale)}</span>
@@ -86,7 +93,7 @@ function GuideRow(props: { doc: DocIndexEntry; locale: KnowledgeLocale; featured
         <small>{readableDocSummary(props.doc, props.locale)}</small>
       </span>
       <span class="knowledge-guide-arrow" aria-hidden="true">→</span>
-    </A>
+    </KnowledgeLink>
   );
 }
 
@@ -173,12 +180,11 @@ export function KnowledgeExplorer(props: { locale: KnowledgeLocale }) {
   );
 }
 
-export function KnowledgeDocumentPage(props: { locale: KnowledgeLocale }) {
-  const params = useParams();
+export function KnowledgeDocumentPage(props: { locale: KnowledgeLocale; docId: string }) {
   const t = () => text(props.locale);
-  const [document] = createResource(() => [props.locale, params.docId] as const, ([lang, id]) => loadProductDocument(lang, id));
+  const [document] = createResource(() => [props.locale, props.docId] as const, ([lang, id]) => loadProductDocument(lang, id));
   const [index] = createResource(loadKnowledgeIndex);
-  const entry = createMemo(() => index()?.documents.find((doc) => doc.locale === props.locale && doc.id === params.docId));
+  const entry = createMemo(() => index()?.documents.find((doc) => doc.locale === props.locale && doc.id === props.docId));
   const journey = createMemo(() => entry() ? knowledgeJourneyDefinition(knowledgeJourneyFor(entry()!)) : knowledgeJourneys[0]);
   const related = createMemo(() => {
     const current = entry();
@@ -191,7 +197,7 @@ export function KnowledgeDocumentPage(props: { locale: KnowledgeLocale }) {
   return (
     <div class="knowledge-document-v2 page-width">
       <div class="knowledge-document-topbar">
-        <A class="wui-button wui-button--ghost" href="/docs">← {t().back}</A>
+        <KnowledgeLink class="wui-button wui-button--ghost" href="/docs">← {t().back}</KnowledgeLink>
         <Show when={entry()}>{(doc) => <span class="knowledge-document-kind">{journey().icon} {journey().label[props.locale]} · {humanDocKind(doc(), props.locale)}</span>}</Show>
       </div>
       <Show when={!document.loading} fallback={<div class="knowledge-v2-loading">✧ {props.locale === "zh-CN" ? "正在打开文档…" : "Opening guide…"}</div>}>
@@ -203,7 +209,7 @@ export function KnowledgeDocumentPage(props: { locale: KnowledgeLocale }) {
                 <p>{journey().description[props.locale]}</p>
                 <Show when={related().length > 0}>
                   <span class="knowledge-context-label">{props.locale === "zh-CN" ? "同主题继续阅读" : "Continue this topic"}</span>
-                  <For each={related()}>{(item) => <A href={`/docs/${encodeURIComponent(item.id)}`}>{item.title}<span>→</span></A>}</For>
+                  <For each={related()}>{(item) => <KnowledgeLink href={`/docs/${encodeURIComponent(item.id)}`}>{item.title}<span>→</span></KnowledgeLink>}</For>
                 </Show>
               </aside>
 
