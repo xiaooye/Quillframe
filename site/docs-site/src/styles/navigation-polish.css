@@ -1,0 +1,227 @@
+/* Final documentation navigation polish ----------------------------------
+   The docs keep Starlight's semantics and behavior while matching the
+   product site's navigation density, hierarchy, and quiet pastel surfaces. */
+
+/* Header product navigation */
+.nf-product-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: .08rem;
+  padding: .18rem;
+  border: 1px solid color-mix(in oklab, var(--nf-border) 78%, transparent);
+  border-radius: .82rem;
+  background: color-mix(in oklab, var(--nf-surface) 82%, transparent);
+  box-shadow: 0 8px 22px -22px color-mix(in oklab, var(--nf-lilac) 45%, transparent);
+}
+
+.nf-product-nav .nf-product-link {
+  min-height: 2rem;
+  padding-inline: .62rem;
+  border-radius: .62rem;
+  font-size: .77rem;
+  font-weight: 690;
+}
+
+.nf-product-nav .nf-product-link:hover,
+.nf-product-nav .nf-product-link:focus-visible {
+  border-color: transparent;
+  color: var(--nf-ink);
+  background: color-mix(in oklab, var(--nf-pink-soft) 62%, var(--nf-surface));
+  box-shadow: none;
+  transform: none;
+}
+
+.nf-docs-root-link[aria-current="page"] {
+  border-color: color-mix(in oklab, var(--nf-pink) 38%, var(--nf-border));
+  color: color-mix(in oklab, var(--nf-pink-strong) 84%, var(--nf-ink));
+  background: linear-gradient(135deg,
+    color-mix(in oklab, var(--nf-pink-soft) 94%, var(--nf-surface)),
+    color-mix(in oklab, var(--nf-lilac-soft) 54%, var(--nf-surface)));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, white 42%, transparent), 0 8px 20px -18px var(--nf-pink-strong);
+}
+
+/* Left navigation */
+.sidebar-pane {
+  background:
+    linear-gradient(180deg,
+      color-mix(in oklab, var(--nf-surface) 97%, transparent),
+      color-mix(in oklab, var(--nf-cream) 93%, transparent));
+}
+
+.sidebar-content {
+  padding: .72rem .68rem 1.45rem;
+}
+
+.sidebar-content summary {
+  position: relative;
+  margin-top: .34rem;
+  padding: .48rem .58rem .4rem .78rem;
+  color: color-mix(in oklab, var(--nf-ink) 82%, var(--sl-color-gray-2));
+  font-size: .735rem;
+  font-weight: 790;
+  letter-spacing: .025em;
+}
+
+.sidebar-content summary::before {
+  content: "";
+  position: absolute;
+  left: .22rem;
+  top: 50%;
+  width: .28rem;
+  height: .28rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--nf-pink), var(--nf-lilac));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--nf-pink-soft) 72%, transparent);
+  transform: translateY(-50%);
+}
+
+.sidebar-content li > a {
+  min-height: 2rem;
+  margin-block: .035rem;
+  padding-block: .34rem;
+  padding-inline: .68rem;
+  color: color-mix(in oklab, var(--sl-color-gray-2) 94%, var(--nf-ink));
+  border-radius: .58rem;
+  font-size: .82rem;
+  line-height: 1.42;
+}
+
+:lang(zh-CN) .sidebar-content li > a {
+  line-height: 1.5;
+}
+
+.sidebar-content li > a:hover {
+  border-color: transparent;
+  color: var(--nf-ink);
+  background: color-mix(in oklab, var(--nf-pink-soft) 44%, var(--nf-surface));
+}
+
+.sidebar-content li > a[aria-current="page"] {
+  border-color: color-mix(in oklab, var(--nf-pink) 22%, var(--nf-border));
+  color: color-mix(in oklab, var(--nf-pink-strong) 78%, var(--nf-ink));
+  background: linear-gradient(90deg,
+    color-mix(in oklab, var(--nf-pink-soft) 86%, var(--nf-surface)),
+    color-mix(in oklab, var(--nf-lilac-soft) 30%, var(--nf-surface)));
+  box-shadow: inset 2px 0 0 var(--nf-pink-strong);
+  font-weight: 740;
+}
+
+.sidebar-content details + details {
+  margin-top: .18rem;
+  padding-top: .18rem;
+  border-top: 1px solid color-mix(in oklab, var(--nf-border) 52%, transparent);
+}
+
+/* Right-hand table of contents */
+.right-sidebar {
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--nf-surface) 72%, transparent),
+    transparent 78%);
+}
+
+.right-sidebar h2,
+.right-sidebar strong {
+  color: color-mix(in oklab, var(--nf-ink) 84%, var(--sl-color-gray-2));
+  font-size: .72rem;
+  font-weight: 790;
+  letter-spacing: .045em;
+}
+
+.right-sidebar a {
+  position: relative;
+  display: block;
+  margin-block: .035rem;
+  padding: .31rem .55rem;
+  border-radius: .5rem;
+  color: var(--sl-color-gray-3);
+  font-size: .76rem;
+  line-height: 1.4;
+}
+
+.right-sidebar a:hover {
+  color: var(--nf-ink);
+  background: color-mix(in oklab, var(--nf-pink-soft) 36%, transparent);
+}
+
+.right-sidebar a[aria-current="true"],
+.right-sidebar a[aria-current="page"] {
+  color: color-mix(in oklab, var(--nf-pink-strong) 78%, var(--nf-ink));
+  background: color-mix(in oklab, var(--nf-pink-soft) 46%, transparent);
+  font-weight: 700;
+}
+
+.right-sidebar a[aria-current="true"]::before,
+.right-sidebar a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: .12rem;
+  top: .48rem;
+  bottom: .48rem;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--nf-pink), var(--nf-lilac));
+}
+
+/* Reading-page density */
+body:has(.nf-article-title) .main-frame {
+  --sl-content-pad-x: clamp(1rem, 2.4vw, 1.7rem);
+}
+
+body:has(.nf-article-title) .sl-markdown-content > :first-child {
+  margin-top: 0;
+}
+
+body:has(.nf-article-title) .sl-markdown-content > :last-child {
+  margin-bottom: 0;
+}
+
+/* Responsive header: keep product parity on wide screens, preserve reading
+   space on smaller screens instead of squeezing navigation into two rows. */
+@media (max-width: 78rem) {
+  .nf-product-nav .nf-product-link {
+    padding-inline: .48rem;
+    font-size: .735rem;
+  }
+}
+
+@media (max-width: 68rem) {
+  .nf-product-nav {
+    display: none;
+  }
+}
+
+@media (max-width: 50rem) {
+  .sidebar-content {
+    padding-inline: .62rem;
+  }
+
+  .sidebar-content summary {
+    min-height: 2.25rem;
+    padding-block: .56rem;
+  }
+
+  .sidebar-content li > a {
+    min-height: 2.25rem;
+    padding-block: .44rem;
+    font-size: .84rem;
+  }
+
+  .nf-docs-root-link {
+    min-height: 1.9rem;
+  }
+}
+
+@media (max-width: 38rem) {
+  .nf-docs-root-link {
+    padding-inline: .4rem;
+    font-size: .72rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nf-product-nav .nf-product-link,
+  .sidebar-content li > a,
+  .right-sidebar a {
+    transition: none;
+  }
+}
