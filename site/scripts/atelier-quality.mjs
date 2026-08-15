@@ -11,6 +11,7 @@ const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
 
 const main = read("src/main.tsx");
+const index = read("src/styles/index.css");
 const appearance = read("src/appearance-v5.ts");
 const app = read("src/ProductApp.tsx");
 const surface = read("src/ProductSurface.tsx");
@@ -20,13 +21,18 @@ const unified = read("src/styles/unified-product-app.css");
 const surfaceCss = read("src/styles/product-surface.css");
 const packageJson = JSON.parse(read("package.json"));
 
-const showcaseIndex = main.indexOf('import "./styles/showcase.css"');
-const atelierIndex = main.indexOf('import "./styles/atelier.css"');
-const surfaceIndex = main.indexOf('import "./styles/product-surface.css"');
-const unifiedIndex = main.indexOf('import "./styles/unified-product-app.css"');
+const showcaseIndex = index.indexOf('@import "./showcase.css"');
+const atelierIndex = index.indexOf('@import "./atelier.css"');
+const surfaceIndex = index.indexOf('@import "./product-surface.css"');
+const unifiedIndex = index.indexOf('@import "./unified-product-app.css"');
+const compositionIndex = index.indexOf('@import "./kawaii-surfaces.css"');
+const readabilityIndex = index.indexOf('@import "./readability.css"');
 check(main.startsWith('import "./appearance-v5"'), "v5 appearance bootstrap must evaluate before ProductApp");
-check(showcaseIndex >= 0 && atelierIndex > showcaseIndex, "Atelier composition must load after the progressive-enhancement fallback");
-check(surfaceIndex > atelierIndex && unifiedIndex > surfaceIndex, "shared product surfaces must layer after the legacy Atelier fallback");
+check(main.includes('import "./styles/index.css"'), "v5 Product entry must use the single stylesheet entrypoint");
+check(surfaceIndex >= 0 && unifiedIndex > surfaceIndex && showcaseIndex > unifiedIndex, "stable shared product primitives must load before route-owned feature styles");
+check(atelierIndex > showcaseIndex, "Atelier composition must load after the progressive-enhancement route fallback");
+check(compositionIndex > atelierIndex, "product-language composition must refine Atelier route defaults");
+check(readabilityIndex > compositionIndex, "cross-cutting readability hardening must remain last");
 check(appearance.includes('novelforge.product-entry.v5.appearance-migrated'), "v5 appearance migration key is missing");
 check(appearance.includes('localStorage.setItem("novelforge.appearance", "light")'), "v5 first-load migration must restore warm light presentation");
 check(appearance.includes('story-loom-kawaii-atelier-v5'), "v5 experience identity must be stamped on the document root");
@@ -53,11 +59,11 @@ check(app.includes("<Router root={ProductShell}>") && surface.includes("ProductS
 check(unified.includes(".unified-publication-gallery") && unified.includes(".architecture-hero-path"), "kawaii product composition must retain page-specific visual identities inside the shared frame");
 
 const qualityScript = packageJson.scripts?.quality ?? "";
-check(qualityScript.includes("atelier-quality.mjs") && qualityScript.includes("product-shell-quality.mjs"), "Product Site quality script must gate both Atelier and shared shell architecture");
+check(qualityScript.includes("atelier-quality.mjs") && qualityScript.includes("product-shell-quality.mjs") && qualityScript.includes("css-architecture-quality.mjs"), "Product Site quality script must gate Atelier, shared shell, and CSS architecture");
 
 if (failures.length) {
   for (const failure of failures) console.error(`atelier-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ schema: "novelforge_product_atelier_quality_v2", status: "pass", identity: "story_loom_kawaii_atelier_v5", unified_shell: true, weiui_foundation: true, story_loom_lane_authority: true, hosted_studio_preserved: true, premium_kawaii_composition: true, warm_first_load: true, progressive_css: true, infinite_idle_animation: false, authority: false }, null, 2));
+  console.log(JSON.stringify({ schema: "novelforge_product_atelier_quality_v3", status: "pass", identity: "story_loom_kawaii_atelier_v5", unified_shell: true, css_entrypoint: "index.css", css_cascade: "primitives_routes_composition_readability", weiui_foundation: true, story_loom_lane_authority: true, hosted_studio_preserved: true, premium_kawaii_composition: true, warm_first_load: true, progressive_css: true, infinite_idle_animation: false, authority: false }, null, 2));
 }
