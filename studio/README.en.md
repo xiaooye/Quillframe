@@ -10,12 +10,11 @@ NovelForge Studio is the product-experience layer around NovelForge Core. **Phas
 
 ## Product architecture
 
-- [Phase 1 product architecture · English](PRODUCT_ARCHITECTURE.en.md)
-- [Phase 1 product architecture · 简体中文](PRODUCT_ARCHITECTURE.zh-CN.md)
-- [Phase 2A portable product contract · English](PORTABLE_PRODUCT_CONTRACT.en.md)
-- [Phase 2A portable product contract · 简体中文](PORTABLE_PRODUCT_CONTRACT.zh-CN.md)
+- [English](PRODUCT_ARCHITECTURE.en.md)
+- [简体中文](PRODUCT_ARCHITECTURE.zh-CN.md)
+- [`portable_product_contract.json`](portable_product_contract.json) — machine-readable Phase 2A delivery-surface contract.
 
-The product architecture records both the Core interfaces Studio can consume and the unresolved Core consumer gaps Studio must not patch around locally. Phase 2A extends that principle into **one product, many hosts**: CLI, local app/local Web UI, cloud-hosted UI, and agent-skill/package adapters all consume stable NovelForge contracts rather than creating separate truth models.
+The product architecture records both the Core interfaces Studio can consume and the unresolved Core consumer gaps Studio must not patch around locally.
 
 ## Phase 1 vertical slice
 
@@ -26,13 +25,24 @@ The first interaction principle is intentionally visible in the prototype:
 
 **support identified by a semantic selection result ≠ evidence that actually entered the model context.**
 
-## Phase 2A portable vertical slice
+## Phase 2A · One product, many hosts
 
-- [`project_hub_projection.py`](project_hub_projection.py) — deterministic read-only projection from `novelforge_project_adapter_resolution_v1`; strips host absolute paths and binds exact source/projection fingerprints.
+Phase 2A treats Studio as a polished SaaS-like experience without making SaaS business infrastructure part of the product model. The same NovelForge semantics should be available through four first-class delivery surfaces:
+
+- **CLI** — scriptable native automation and inspection.
+- **Local app / local Web UI** — a creator workstation using local host capabilities through typed adapters.
+- **Cloud-hosted UI** — the same product model behind a remote query/command boundary.
+- **Agent skill / package** — a thin, versioned adapter for other agent frameworks that does not expose private NovelForge persistence or implementation internals.
+
+Different hosts may have different capabilities and transports. Those differences never change Canon, Settlement, Context, semantic-result, or receipt semantics. **Host capability does not imply NovelForge story authority.**
+
+### Portable Project Hub / Scene vertical slice
+
+- [`project_hub_projection.py`](project_hub_projection.py) — deterministic read-only projection from `novelforge_project_adapter_resolution_v1`; rejects the wrong source schema, strips host absolute paths, and binds exact source/projection fingerprints.
 - [`prototypes/project-hub-scene.html`](prototypes/project-hub-scene.html) — Project Hub + Scene workspace shell with Creator/Inspector progressive disclosure and delivery-surface switching.
-- [`fixtures/project-adapter-resolution.synthetic.json`](fixtures/project-adapter-resolution.synthetic.json) — synthetic Project Adapter resolution including host-private paths used to verify redaction.
+- [`fixtures/project-adapter-resolution.synthetic.json`](fixtures/project-adapter-resolution.synthetic.json) — synthetic Project Adapter resolution containing deliberately private absolute paths for redaction validation.
 - [`fixtures/scene-workspace.synthetic.json`](fixtures/scene-workspace.synthetic.json) — synthetic read-only Scene/Reader/Context/Runtime fixture.
 
-The portable boundary adds a second interaction principle:
+The projection explicitly carries `authority=false`, `canon_authority=false`, `framework_write_authority=false`, and `settlement_authority=false`. It never infers current chapter, manuscript lifecycle, publication status, or quality status merely because a logical path exists.
 
-**delivery surface and host capability never imply NovelForge story authority.**
+The agent-package direction is intentionally generic: future adapters should expose capability discovery, typed queries, typed commands, resume references, and typed receipts. Mutating operations remain deferred until Core provides the command, precondition, and authority semantics.

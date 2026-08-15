@@ -1,0 +1,94 @@
+{
+  "schema": "novelforge_studio_portable_product_contract_v1",
+  "authority": false,
+  "canon_authority": false,
+  "framework_write_authority": false,
+  "settlement_authority": false,
+  "invariant": "delivery_surface_is_not_source_of_truth",
+  "product_model": "one_product_many_hosts",
+  "core_contracts": [
+    "novelforge_project_adapter_resolution_v1",
+    "novelforge_run_receipt_v1",
+    "novelforge_context_inspector_v2",
+    "novelforge_host_capabilities_v1"
+  ],
+  "shared_boundary": {
+    "shape": "Core contracts -> stable query/command/projection boundary -> delivery surface",
+    "direct_core_store_access": false,
+    "delivery_surface_may_change_story_semantics": false,
+    "host_capability_implies_story_authority": false
+  },
+  "delivery_surfaces": {
+    "cli": {
+      "role": "scriptable native automation surface",
+      "transport": "typed CLI/query/command contracts",
+      "may_import_private_runtime_internals": false
+    },
+    "local_app": {
+      "role": "creator workstation",
+      "transport": "local adapter boundary",
+      "may_use_local_host_capabilities": true,
+      "direct_browser_store_access": false
+    },
+    "cloud_ui": {
+      "role": "hosted product UI",
+      "transport": "remote query/command boundary",
+      "hosting_changes_story_authority": false
+    },
+    "agent_package": {
+      "role": "adapter for external agent frameworks",
+      "transport": "versioned capability/query/command package",
+      "host_must_understand_private_persistence": false,
+      "host_must_understand_private_python_implementation": false
+    }
+  },
+  "agent_package_direction": {
+    "conceptual_operations": [
+      "inspect_capabilities",
+      "inspect_project",
+      "inspect_context",
+      "inspect_run",
+      "invoke",
+      "resume"
+    ],
+    "phase_2a_mutation_exposed": false,
+    "future_write_requirement": "typed Core command plus explicit preconditions and authority",
+    "package_metadata": [
+      "adapter_schema_version",
+      "compatible_novelforge_contract_versions",
+      "supported_operations",
+      "required_host_capabilities",
+      "authority_notes",
+      "typed_result_and_receipt_schemas"
+    ]
+  },
+  "project_hub_projection": {
+    "source_schema": "novelforge_project_adapter_resolution_v1",
+    "output_schema": "novelforge_studio_project_hub_projection_v1",
+    "reject_unknown_source_schema": true,
+    "exact_source_fingerprint_required": true,
+    "projection_fingerprint_required": true,
+    "project_root_exposed": false,
+    "absolute_paths_exposed": false,
+    "infer_story_state_from_path_existence": false
+  },
+  "scene_workspace": {
+    "modes": ["focus", "analysis", "compare", "review"],
+    "separate_axes": [
+      "manuscript_authority",
+      "runtime_execution_state",
+      "semantic_findings",
+      "provenance",
+      "host_capability"
+    ]
+  },
+  "deliberately_undecided": [
+    "frontend_framework",
+    "desktop_wrapper",
+    "cloud_provider",
+    "auth_provider",
+    "database_topology",
+    "external_agent_framework",
+    "billing_or_subscription_system"
+  ]
+}
