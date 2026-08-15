@@ -1,0 +1,60 @@
+name: NovelForge Studio Host Bridge
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portable-host-bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile Studio bridge and Agent Skill client
+        run: |
+          python -m py_compile studio/host_bridge.py studio/project_hub_projection.py agent-skills/novelforge/scripts/novelforge_bridge.py
+
+      - name: Repository hygiene
+        run: |
+          python scripts/framework_hygiene.py
+          python scripts/docs_quality.py
+
+      - name: Portable bridge self-test
+        run: |
+          python studio/host_bridge.py self-test > studio-host-bridge-test.json
+          python agent-skills/novelforge/scripts/novelforge_bridge.py self-test > agent-skill-test.json
+
+      - name: Exercise supported query through request envelope
+        run: |
+          python studio/host_bridge.py invoke --request studio/fixtures/host-bridge-request.synthetic.json > studio-host-bridge-query.json
+
+      - name: Assert Studio host contracts
+        run: |
+          python - <<'PY'
+          import json
+          bridge=json.load(open('studio-host-bridge-test.json',encoding='utf-8'))
+          skill=json.load(open('agent-skill-test.json',encoding='utf-8'))
+          query=json.load(open('studio-host-bridge-query.json',encoding='utf-8'))
+          contract=json.load(open('studio/host_bridge_contract.json',encoding='utf-8'))
+          portable=json.load(open('studio/portable_product_contract.json',encoding='utf-8'))
+          assert bridge['studio_host_bridge_contract']=='PASS',bridge
+          assert skill['novelforge_agent_skill_contract']=='PASS',skill
+          assert query['schema']=='novelforge_studio_host_bridge_result_v1',query
+          assert query['operation']=='semantic.catalog' and query['status']=='ok',query
+          assert query['authority'] is False and query['canon_authority'] is False
+          assert query['framework_write_authority'] is False and query['settlement_authority'] is False
+          assert query['request_fingerprint'].startswith('sha256:') and query['result_fingerprint'].startswith('sha256:')
+          assert contract['authority'] is False and contract['invariants']['mutation_exposed'] is False
+          assert 'command.invoke' not in contract['operations']['supported']
+          assert contract['operations']['deferred']['run.receipt.get']['dependency']=='#23'
+          assert portable['phase_2b_host_bridge']['mutation_exposed'] is False
+          assert portable['agent_package_direction']['private_runtime_imports_required'] is False
+          PY
