@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 """Deterministic conjunctive user-visible prose readiness gate.
 
-Semantic systems produce the underlying Surface, Reader Engagement, continuity
-and independent-review judgments. This module binds those receipts to one
+Semantic systems own literary judgments. This module binds their receipts to one
 candidate fingerprint and applies fail-closed release policy. It never averages
 literary scores and never grants Canon authority.
 
-A mandatory independent semantic gate is stronger than "some independent model
-returned PASS". PASS/FAIL release evidence must be a validated result of a
-registered model contract whose registry explicitly grants the corresponding
-release role. Ad-hoc ``eval_judge`` jobs remain valid for blind eval suites but
-cannot satisfy production release.
+Production Reader Engagement and mandatory independent review are release roles,
+not free-form status fields. A pass/fail claim for either role must be derived
+from a validated registered model contract. Ad-hoc ``eval_judge`` jobs remain
+valid for blind eval suites but cannot satisfy production release.
 """
 from __future__ import annotations
 
@@ -39,7 +37,9 @@ SCHEMA = "novelforge_production_readiness_v1"
 CATEGORIES = {"surface", "reader_engagement", "continuity", "semantic_independent"}
 STATUSES = {"pass", "fail", "pending"}
 READER_GRIP = {"low", "medium", "high", "very_high"}
+REGISTERED_RELEASE_CATEGORIES = {"reader_engagement", "semantic_independent"}
 SAFE_BUT_FLAT_ID = id_for_name("SAFE-BUT-FLAT")
+CHECKLIST_CAUSALITY_ID = id_for_name("CHECKLIST-CAUSALITY")
 
 
 def _fp(value: Any, name: str) -> str:
@@ -58,12 +58,7 @@ def _string_list(value: Any, name: str) -> list[str]:
     return list(value)
 
 
-def _validate_independence(
-    binding: dict[str, Any],
-    *,
-    job: dict[str, Any],
-    result: dict[str, Any],
-) -> dict[str, Any]:
+def _validate_independence(binding: dict[str, Any], *, job: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
     """Require either a validated peer-relay packet or a distinct worker session."""
     peer_packet = binding.get("peer_packet")
     if peer_packet is not None:
@@ -109,13 +104,9 @@ def _registered_semantic_gate(
     *,
     category: str,
     candidate_fingerprint: str,
+    reader_grip: str,
 ) -> dict[str, Any]:
-    """Validate a release-bearing semantic job/result and derive its verdict.
-
-    The caller is not allowed to convert a reviewer result into PASS by writing
-    a different gate status. The semantic judgment is consumed directly after
-    deterministic job/result validation and registry provenance checks.
-    """
+    """Validate one registered release-role job/result and derive its verdict."""
     binding = raw.get("semantic_binding")
     if not isinstance(binding, dict):
         raise ValueError(f"{category}.semantic_binding is required for pass/fail release evidence")
@@ -134,9 +125,9 @@ def _registered_semantic_gate(
     if not isinstance(input_obj, dict):
         raise ValueError(f"{category}.semantic job input required")
     contract_id = input_obj.get("model_contract_id")
+    payload = input_obj.get("payload")
     if not isinstance(contract_id, str) or not contract_id:
         raise ValueError(f"{category} requires registered model_contract_id")
-    payload = input_obj.get("payload")
     if not isinstance(payload, dict):
         raise ValueError(f"{category}.semantic contract payload required")
     if payload.get("candidate_fingerprint") != candidate_fingerprint:
@@ -188,6 +179,17 @@ def _registered_semantic_gate(
         raise ValueError(f"{category}.status contradicts registered semantic result")
 
     codes = _string_list(judgment.get("codes", []), f"{category}.semantic judgment.codes")
+    flatness_risk = judgment.get("flatness_risk")
+    if derived_status == "pass":
+        if SAFE_BUT_FLAT_ID in codes:
+            raise ValueError(f"{category}: {SAFE_BUT_FLAT_ID} SAFE-BUT-FLAT cannot coexist with pass")
+        if category == "semantic_independent" and CHECKLIST_CAUSALITY_ID in codes:
+            raise ValueError(f"{category}: {CHECKLIST_CAUSALITY_ID} CHECKLIST CAUSALITY cannot coexist with pass")
+        if flatness_risk in {"high", "blocking"}:
+            raise ValueError(f"{category}: high/blocking flatness_risk cannot coexist with pass")
+        if category == "reader_engagement" and reader_grip == "very_high" and flatness_risk != "low":
+            raise ValueError("reader_engagement: very_high reader_grip requires flatness_risk=low for pass")
+
     refs = _string_list(raw.get("evidence_refs", []), f"{category}.evidence_refs")
     worker = result.get("worker") if isinstance(result.get("worker"), dict) else {}
     return {
@@ -196,6 +198,7 @@ def _registered_semantic_gate(
         "candidate_fingerprint": candidate_fingerprint,
         "codes": codes,
         "evidence_refs": refs,
+        "flatness_risk": flatness_risk,
         "semantic_contract": {
             "model_contract_id": contract_id,
             "registry_schema": registry.get("schema"),
@@ -215,16 +218,14 @@ def _plain_gate(raw: dict[str, Any], *, category: str, candidate_fingerprint: st
     status = raw.get("status")
     if status not in STATUSES:
         raise ValueError(f"invalid gate status: {category}")
-    codes = _string_list(raw.get("codes", []), f"{category}.codes")
-    refs = _string_list(raw.get("evidence_refs", []), f"{category}.evidence_refs")
-    if category == "reader_engagement" and SAFE_BUT_FLAT_ID in codes and status == "pass":
-        raise ValueError(f"{SAFE_BUT_FLAT_ID} SAFE-BUT-FLAT cannot pass reader_engagement")
+    if category in REGISTERED_RELEASE_CATEGORIES and status != "pending":
+        raise ValueError(f"{category}.semantic_binding is required for pass/fail release evidence")
     return {
         "category": category,
         "status": status,
         "candidate_fingerprint": candidate_fingerprint,
-        "codes": codes,
-        "evidence_refs": refs,
+        "codes": _string_list(raw.get("codes", []), f"{category}.codes"),
+        "evidence_refs": _string_list(raw.get("evidence_refs", []), f"{category}.evidence_refs"),
     }
 
 
@@ -265,15 +266,14 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
         if gate_fp != candidate:
             raise ValueError(f"candidate fingerprint mismatch: {category}")
 
-        # Pending means no release claim has been made yet, so no completed
-        # semantic binding is required. Any pass/fail independent claim must be
-        # derived from a registered release contract.
-        if category == "semantic_independent" and raw.get("status") != "pending":
-            gate = _registered_semantic_gate(raw, category=category, candidate_fingerprint=candidate)
-        elif category == "reader_engagement" and raw.get("semantic_binding") is not None and raw.get("status") != "pending":
-            gate = _registered_semantic_gate(raw, category=category, candidate_fingerprint=candidate)
-            if SAFE_BUT_FLAT_ID in gate["codes"] and gate["status"] == "pass":
-                raise ValueError(f"{SAFE_BUT_FLAT_ID} SAFE-BUT-FLAT cannot pass reader_engagement")
+        status = raw.get("status")
+        if category in REGISTERED_RELEASE_CATEGORIES and status != "pending":
+            gate = _registered_semantic_gate(
+                raw,
+                category=category,
+                candidate_fingerprint=candidate,
+                reader_grip=grip,
+            )
         else:
             gate = _plain_gate(raw, category=category, candidate_fingerprint=candidate)
         gates[category] = gate
@@ -297,24 +297,88 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
         "ready_for_user_visible_review": ready,
         "conjunctive_gate": True,
         "numeric_quality_aggregation": False,
-        "registered_release_contract_required": require_semantic,
+        "registered_reader_engagement_required": True,
+        "registered_independent_release_contract_required": require_semantic,
         "authority": False,
         "permissions": {"canon_write": False, "framework_write": False, "durable_user_taste_write": False},
         "model_execution": False,
     }
 
 
-def _semantic_fixture(
+def _reader_binding(
     fp: str,
-    semantic_result: str = "pass",
+    result_value: str = "pass",
+    *,
+    codes: list[str] | None = None,
+    flatness_risk: str | None = None,
+) -> dict[str, Any]:
+    risk = flatness_risk or ("low" if result_value == "pass" else "blocking")
+    job = make_contract_job(
+        "reader.engagement_audit",
+        "CH-SELF",
+        {
+            "candidate_fingerprint": fp,
+            "candidate_text": "A bounded reader-engagement fixture.",
+            "reader_grip": "very_high",
+        },
+        source_session_id="SES-MANAGER",
+    )
+    judgment = {
+        "confidence": 0.95,
+        "result": result_value,
+        "active_reader_question": "Will the immediate pressure force a meaningful choice?",
+        "question_evolution": "The fixture changes the available choice and consequence.",
+        "pressure_ladder": "Pressure increases through consequence, not countdown repetition.",
+        "reader_rewards": "The reader receives a concrete state change.",
+        "character_energy": "The character owns the choice.",
+        "tonal_contrast": "The register changes with consequence.",
+        "information_value": "New information changes the next action.",
+        "causal_momentum": "Each beat changes available options.",
+        "relationship_movement": "The interaction changes leverage.",
+        "procedure_compression": "Routine procedure is compressed.",
+        "ending_forward_pull": "The ending opens a concrete next-state question.",
+        "flatness_risk": risk,
+        "codes": list(codes or []),
+        "evidence": ["fixture evidence"],
+    }
+    result = {
+        "job_id": job["job_id"],
+        "subject_id": job["subject_id"],
+        "kind": job["kind"],
+        "input_fingerprint": job["input_fingerprint"],
+        "status": "completed",
+        "worker": {"provider": "self_test", "model_or_reviewer": "cold-reader-fixture"},
+        "judgment": judgment,
+        "proposals": [],
+        "errors": [],
+        "execution": {
+            "source_session_id": "SES-MANAGER",
+            "worker_session_id": "SES-READER",
+            "handoff_id": None,
+            "attempt_id": "ATT-R",
+        },
+    }
+    return {"job": job, "result": result}
+
+
+def _production_binding(
+    fp: str,
+    result_value: str = "pass",
     *,
     same_session: bool = False,
     peer_relay: bool = False,
+    codes: list[str] | None = None,
+    flatness_risk: str | None = None,
 ) -> dict[str, Any]:
+    risk = flatness_risk or ("low" if result_value == "pass" else "blocking")
     job = make_contract_job(
         "quality.production_review",
         "CH-SELF",
-        {"candidate_fingerprint": fp, "candidate_text": "A bounded production-review fixture."},
+        {
+            "candidate_fingerprint": fp,
+            "candidate_text": "A bounded production-review fixture.",
+            "reader_grip": "very_high",
+        },
         source_session_id="SES-MANAGER",
     )
     packet = build_peer_packet(job) if peer_relay else None
@@ -327,11 +391,11 @@ def _semantic_fixture(
         "worker": {"provider": "chatgpt_peer_chat" if peer_relay else "self_test", "model_or_reviewer": "independent-fixture"},
         "judgment": {
             "confidence": 0.95,
-            "result": semantic_result,
-            "codes": [],
+            "result": result_value,
+            "codes": list(codes or []),
             "evidence": ["fixture evidence"],
             "summary": "fixture",
-            "flatness_risk": "low" if semantic_result == "pass" else "blocking",
+            "flatness_risk": risk,
         },
         "proposals": [],
         "errors": [],
@@ -343,7 +407,7 @@ def _semantic_fixture(
             "source_session_id": "SES-MANAGER",
             "worker_session_id": "SES-MANAGER" if same_session else "SES-REVIEWER",
             "handoff_id": None,
-            "attempt_id": "ATT-1",
+            "attempt_id": "ATT-P",
         }
     binding: dict[str, Any] = {"job": job, "result": result}
     if packet is not None:
@@ -355,13 +419,22 @@ def self_test() -> int:
     fp = "sha256:" + "a" * 64
 
     def packet(
+        *,
         surface: str = "pass",
         reader: str = "pass",
         continuity: str = "pass",
         semantic: str = "pass",
-        reader_codes: list[str] | None = None,
         peer_relay: bool = True,
     ) -> dict[str, Any]:
+        reader_gate: dict[str, Any] = {
+            "category": "reader_engagement",
+            "status": reader,
+            "candidate_fingerprint": fp,
+            "codes": [],
+            "evidence_refs": ["reader:self"],
+        }
+        if reader in {"pass", "fail"}:
+            reader_gate["semantic_binding"] = _reader_binding(fp, reader)
         semantic_gate: dict[str, Any] = {
             "category": "semantic_independent",
             "status": semantic,
@@ -370,51 +443,53 @@ def self_test() -> int:
             "evidence_refs": ["semantic:self"],
         }
         if semantic in {"pass", "fail"}:
-            semantic_gate["semantic_binding"] = _semantic_fixture(fp, semantic, peer_relay=peer_relay)
+            semantic_gate["semantic_binding"] = _production_binding(fp, semantic, peer_relay=peer_relay)
         return {
             "candidate_fingerprint": fp,
             "policy": {"reader_grip": "very_high", "require_continuity": True, "require_independent_semantic": True},
             "gates": [
-                {"category": "surface", "status": surface, "candidate_fingerprint": fp, "codes": [], "evidence_refs": ["surface:a"]},
-                {"category": "reader_engagement", "status": reader, "candidate_fingerprint": fp, "codes": reader_codes or [], "evidence_refs": ["reader:a"]},
-                {"category": "continuity", "status": continuity, "candidate_fingerprint": fp, "codes": [], "evidence_refs": ["continuity:a"]},
+                {"category": "surface", "status": surface, "candidate_fingerprint": fp, "codes": [], "evidence_refs": ["surface:self"]},
+                reader_gate,
+                {"category": "continuity", "status": continuity, "candidate_fingerprint": fp, "codes": [], "evidence_refs": ["continuity:self"]},
                 semantic_gate,
             ],
         }
 
     green = evaluate(packet())
     session_green = evaluate(packet(peer_relay=False))
-    semantic_green_gate = next(g for g in green["gates"] if g["category"] == "semantic_independent")
-    flat = evaluate(packet(reader="fail", reader_codes=[SAFE_BUT_FLAT_ID]))
+    reader_fail = evaluate(packet(reader="fail"))
     surface_fail = evaluate(packet(surface="fail"))
     semantic_fail = evaluate(packet(semantic="fail"))
-    pending = evaluate(packet(semantic="pending"))
+    semantic_pending = evaluate(packet(semantic="pending"))
+    reader_pending = evaluate(packet(reader="pending"))
 
-    mismatch_guard = False
+    outer_mismatch_guard = False
     bad = packet()
     bad["gates"][0]["candidate_fingerprint"] = "sha256:" + "b" * 64
     try:
         evaluate(bad)
     except ValueError:
-        mismatch_guard = True
+        outer_mismatch_guard = True
 
-    contradictory_flat_guard = False
+    adhoc_reader_guard = False
+    adhoc_reader = packet()
+    adhoc_reader["gates"][1].pop("semantic_binding", None)
     try:
-        evaluate(packet(reader="pass", reader_codes=[SAFE_BUT_FLAT_ID]))
-    except ValueError:
-        contradictory_flat_guard = True
-
-    adhoc_release_guard = False
-    adhoc = packet()
-    adhoc["gates"][-1].pop("semantic_binding", None)
-    try:
-        evaluate(adhoc)
+        evaluate(adhoc_reader)
     except ValueError as exc:
-        adhoc_release_guard = "semantic_binding" in str(exc)
+        adhoc_reader_guard = "semantic_binding" in str(exc)
+
+    adhoc_semantic_guard = False
+    adhoc_semantic = packet()
+    adhoc_semantic["gates"][-1].pop("semantic_binding", None)
+    try:
+        evaluate(adhoc_semantic)
+    except ValueError as exc:
+        adhoc_semantic_guard = "semantic_binding" in str(exc)
 
     same_session_guard = False
     same = packet(peer_relay=False)
-    same["gates"][-1]["semantic_binding"] = _semantic_fixture(fp, "pass", same_session=True, peer_relay=False)
+    same["gates"][-1]["semantic_binding"] = _production_binding(fp, "pass", same_session=True)
     try:
         evaluate(same)
     except ValueError as exc:
@@ -422,7 +497,7 @@ def self_test() -> int:
 
     candidate_contract_guard = False
     wrong_candidate = packet()
-    wrong_candidate["gates"][-1]["semantic_binding"] = _semantic_fixture("sha256:" + "b" * 64, "pass", peer_relay=True)
+    wrong_candidate["gates"][-1]["semantic_binding"] = _production_binding("sha256:" + "b" * 64, "pass", peer_relay=True)
     try:
         evaluate(wrong_candidate)
     except ValueError as exc:
@@ -430,12 +505,44 @@ def self_test() -> int:
 
     caller_status_override_guard = False
     override = packet()
-    override["gates"][-1]["semantic_binding"] = _semantic_fixture(fp, "fail", peer_relay=True)
+    override["gates"][-1]["semantic_binding"] = _production_binding(fp, "fail", peer_relay=True)
     override["gates"][-1]["status"] = "pass"
     try:
         evaluate(override)
     except ValueError as exc:
         caller_status_override_guard = "contradicts registered semantic result" in str(exc)
+
+    reader_flat_pass_guard = False
+    reader_flat = packet()
+    reader_flat["gates"][1]["semantic_binding"] = _reader_binding(fp, "pass", codes=[SAFE_BUT_FLAT_ID])
+    try:
+        evaluate(reader_flat)
+    except ValueError as exc:
+        reader_flat_pass_guard = SAFE_BUT_FLAT_ID in str(exc)
+
+    reader_medium_flatness_guard = False
+    reader_medium = packet()
+    reader_medium["gates"][1]["semantic_binding"] = _reader_binding(fp, "pass", flatness_risk="medium")
+    try:
+        evaluate(reader_medium)
+    except ValueError as exc:
+        reader_medium_flatness_guard = "very_high reader_grip" in str(exc)
+
+    production_checklist_pass_guard = False
+    checklist = packet()
+    checklist["gates"][-1]["semantic_binding"] = _production_binding(fp, "pass", peer_relay=True, codes=[CHECKLIST_CAUSALITY_ID])
+    try:
+        evaluate(checklist)
+    except ValueError as exc:
+        production_checklist_pass_guard = CHECKLIST_CAUSALITY_ID in str(exc)
+
+    production_flatness_pass_guard = False
+    blocked = packet()
+    blocked["gates"][-1]["semantic_binding"] = _production_binding(fp, "pass", peer_relay=True, flatness_risk="blocking")
+    try:
+        evaluate(blocked)
+    except ValueError as exc:
+        production_flatness_pass_guard = "flatness_risk" in str(exc)
 
     missing_text_guard = False
     missing_text = packet(peer_relay=False)
@@ -446,30 +553,35 @@ def self_test() -> int:
     except ValueError:
         missing_text_guard = True
 
-    taxonomy = taxonomy_self_test()
-    taxonomy_ok = taxonomy.get("quality_taxonomy_contract") == "PASS"
-    repair_policy = repair_policy_self_test()
-    repair_policy_ok = repair_policy.get("repair_policy_contract") == "PASS"
+    taxonomy_ok = taxonomy_self_test().get("quality_taxonomy_contract") == "PASS"
+    repair_policy_ok = repair_policy_self_test().get("repair_policy_contract") == "PASS"
+    semantic_green_gate = next(g for g in green["gates"] if g["category"] == "semantic_independent")
     independence_mode = semantic_green_gate.get("semantic_contract", {}).get("independence", {}).get("mode")
 
     ok = all((
         green["ready_for_user_visible_review"] is True,
         session_green["ready_for_user_visible_review"] is True,
-        flat["ready_for_user_visible_review"] is False and flat["blocking_gates"] == ["reader_engagement"],
-        surface_fail["ready_for_user_visible_review"] is False and surface_fail["blocking_gates"] == ["surface"],
-        semantic_fail["ready_for_user_visible_review"] is False and semantic_fail["blocking_gates"] == ["semantic_independent"],
-        pending["ready_for_user_visible_review"] is False and pending["pending_gates"] == ["semantic_independent"],
-        mismatch_guard,
-        contradictory_flat_guard,
-        adhoc_release_guard,
+        reader_fail["blocking_gates"] == ["reader_engagement"],
+        surface_fail["blocking_gates"] == ["surface"],
+        semantic_fail["blocking_gates"] == ["semantic_independent"],
+        semantic_pending["pending_gates"] == ["semantic_independent"],
+        reader_pending["pending_gates"] == ["reader_engagement"],
+        outer_mismatch_guard,
+        adhoc_reader_guard,
+        adhoc_semantic_guard,
         same_session_guard,
         candidate_contract_guard,
         caller_status_override_guard,
+        reader_flat_pass_guard,
+        reader_medium_flatness_guard,
+        production_checklist_pass_guard,
+        production_flatness_pass_guard,
         missing_text_guard,
         taxonomy_ok,
         repair_policy_ok,
+        green["registered_reader_engagement_required"] is True,
+        green["registered_independent_release_contract_required"] is True,
         green["numeric_quality_aggregation"] is False,
-        green["registered_release_contract_required"] is True,
         independence_mode == "peer_chat_relay",
     ))
     print(json.dumps({
@@ -477,13 +589,17 @@ def self_test() -> int:
         "schema": SCHEMA,
         "surface_and_reader_are_conjunctive": True,
         "safe_but_flat_id": SAFE_BUT_FLAT_ID,
-        "safe_but_flat_blocks": True,
-        "candidate_fingerprint_bound": mismatch_guard,
+        "checklist_causality_id": CHECKLIST_CAUSALITY_ID,
+        "candidate_fingerprint_bound": outer_mismatch_guard,
         "semantic_contract_candidate_bound": candidate_contract_guard,
         "candidate_text_required": missing_text_guard,
-        "pending_gate_blocks": True,
-        "registered_release_contract_required": adhoc_release_guard,
+        "registered_reader_engagement_required": adhoc_reader_guard,
+        "registered_independent_release_contract_required": adhoc_semantic_guard,
         "caller_status_cannot_override_semantic_result": caller_status_override_guard,
+        "blocking_reader_code_cannot_pass": reader_flat_pass_guard,
+        "very_high_reader_grip_flatness_guard": reader_medium_flatness_guard,
+        "blocking_production_code_cannot_pass": production_checklist_pass_guard,
+        "blocking_flatness_cannot_pass": production_flatness_pass_guard,
         "peer_relay_independence_supported": independence_mode == "peer_chat_relay",
         "distinct_session_independence_supported": session_green["ready_for_user_visible_review"] is True,
         "same_session_rejected": same_session_guard,
@@ -500,9 +616,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="NovelForge production-readiness gate")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("self-test")
-    evaluate_parser = sub.add_parser("evaluate")
-    evaluate_parser.add_argument("--input", required=True)
-    evaluate_parser.add_argument("--output")
+    ev = sub.add_parser("evaluate")
+    ev.add_argument("--input", required=True)
+    ev.add_argument("--output")
     args = parser.parse_args()
     if args.command == "self-test":
         return self_test()
