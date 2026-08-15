@@ -13,10 +13,15 @@ inputs:
   github-token:
     description: Caller repository token with issues write permission
     required: true
+outputs:
+  validation-receipt:
+    description: Machine receipt emitted only after validate-result succeeds; empty during prepare mode.
+    value: ${{ steps.bridge.outputs.validation-receipt }}
 runs:
   using: composite
   steps:
     - name: Execute project-hosted peer bridge
+      id: bridge
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}

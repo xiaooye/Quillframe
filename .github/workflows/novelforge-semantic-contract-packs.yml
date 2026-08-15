@@ -56,10 +56,23 @@ jobs:
           assert catalog['activation']['load_all_packs_by_default'] is False
           assert catalog['activation']['contract_result_grants_authority'] is False
 
+          fp = 'sha256:' + 'a' * 64
           typed_fixtures = {
               'reader.reaction': {
                   'candidate_text': 'A bounded candidate.',
                   'persona_id': 'binge_reader',
+                  'reader_visible_context': [{'source_ref': 'accepted:prior', 'text': 'Reader-visible prior context.'}],
+              },
+              'reader.engagement_audit': {
+                  'candidate_fingerprint': fp,
+                  'candidate_text': 'A bounded cold-reader production candidate.',
+                  'reader_grip': 'very_high',
+                  'reader_visible_context': [{'source_ref': 'accepted:prior', 'text': 'Reader-visible prior context.'}],
+              },
+              'quality.production_review': {
+                  'candidate_fingerprint': fp,
+                  'candidate_text': 'A bounded independent production-review candidate.',
+                  'reader_grip': 'very_high',
                   'reader_visible_context': [{'source_ref': 'accepted:prior', 'text': 'Reader-visible prior context.'}],
               },
               'character.action_propose': {

@@ -1,7 +1,7 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "2",
-  "principle": "Quality judgment belongs to model-readable contracts; deterministic runtime only packages bounded evidence, permissions, fingerprints and typed results.",
+  "version": "3",
+  "principle": "Quality judgment belongs to model-readable contracts; deterministic runtime only packages bounded evidence, permissions, fingerprints and typed results. Production release evidence must use an explicitly registered release role rather than an ad-hoc eval rubric.",
   "contracts": {
     "reader.reaction": {
       "kind": "external_review",
@@ -55,6 +55,58 @@
       "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "reader_diagnostic"},
       "independent_gate": false
     },
+    "reader.engagement_audit": {
+      "kind": "external_review",
+      "purpose": "Cold, holistic Reader Engagement audit for a production candidate. It judges the actual causal reading experience before checking named dimensions, so local checklist compliance cannot substitute for global momentum and life.",
+      "forbidden_input_keys": ["outline", "active_plan", "scene_card", "author_notes", "author_intent", "hidden_intent", "expected_payoff", "future_plan", "planned_twist", "writer_reasoning", "reviewer_verdict", "prior_review", "repair_brief", "canon_unrevealed"],
+      "input_contract": {
+        "type": "object",
+        "required": ["candidate_fingerprint", "candidate_text"],
+        "properties": {
+          "candidate_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
+          "candidate_text": {"type": "string", "minLength": 1},
+          "reader_visible_context": {"type": "array", "items": {"type": "object", "required": ["source_ref", "text"], "properties": {"source_ref": {"type": "string", "minLength": 1}, "text": {"type": "string", "minLength": 1}}, "additionalProperties": false}},
+          "chapter_position": {"type": "string"},
+          "genre_profile": {"type": "string"},
+          "platform_profile": {"type": "string"},
+          "reader_grip": {"enum": ["low", "medium", "high", "very_high"]}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Read the candidate as a cold reader before auditing dimensions. Treat omitted creator knowledge as unknowable and never rescue the text with author intent.",
+        "First state the active reader question and describe how it actually evolves through causal state changes. Chronology, countdown repetition, and correct procedure are not causal momentum by themselves.",
+        "Audit pressure ladder, reward cadence, character-owned energy, tonal contrast, information value, causal momentum, relational movement, procedure compression, and ending forward pull using observable candidate evidence.",
+        "Explicitly test for checklist-compliant synthesis: a candidate can contain one humor beat, one competence beat, one reversal, one symptom beat, and one hook yet still fail if those beats feel locally attached while the global scene topology remains procedure -> correct fix -> next procedure -> correct fix.",
+        "SAFE-BUT-FLAT (RG-15) is blocking. Do not average it away because other dimensions are technically present.",
+        "For a very-high-grip profile, flatness_risk must be low to pass. Return only the declared typed judgment."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "result", "active_reader_question", "question_evolution", "pressure_ladder", "reader_rewards", "character_energy", "tonal_contrast", "information_value", "causal_momentum", "relationship_movement", "procedure_compression", "ending_forward_pull", "flatness_risk", "codes", "evidence"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "result": {"enum": ["pass", "fail"]},
+          "active_reader_question": {"type": "string"},
+          "question_evolution": {"type": "string"},
+          "pressure_ladder": {"type": "string"},
+          "reader_rewards": {"type": "string"},
+          "character_energy": {"type": "string"},
+          "tonal_contrast": {"type": "string"},
+          "information_value": {"type": "string"},
+          "causal_momentum": {"type": "string"},
+          "relationship_movement": {"type": "string"},
+          "procedure_compression": {"type": "string"},
+          "ending_forward_pull": {"type": "string"},
+          "flatness_risk": {"enum": ["low", "medium", "high", "blocking"]},
+          "codes": {"type": "array", "items": {"type": "string"}},
+          "evidence": {"type": "array", "items": {"type": "string"}}
+        }
+      },
+      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "reader_engagement_audit"},
+      "release_roles": ["reader_engagement"],
+      "independent_gate": false
+    },
     "reader.compare": {
       "kind": "external_review",
       "purpose": "Pairwise reader-experience comparison. Candidate order should be swapped across repeated judgments when bias detection matters.",
@@ -74,10 +126,61 @@
     "revision.diagnose": {
       "kind": "artifact_audit",
       "purpose": "Diagnose the candidate across only the requested quality dimensions, then route each meaningful failure to the mechanism that owns the repair.",
-      "rubric": ["Diagnose before rewriting. Do not perform a generic polish pass.", "Use the supplied requested dimensions and authority/context only.", "Distinguish story, plan, scene, character, reader-pressure, surface, continuity, context/memory and research failures.", "SAFE-BUT-FLAT or reader-grip failure is not a line-edit problem; route it back to Reader Pressure and Scene Simulation.", "A cluster of surface failures may require whole-scene Surface Realization rather than local patches.", "Return evidence-chained findings and repair owners; do not mutate Canon."],
+      "rubric": [
+        "Diagnose before rewriting. Do not perform a generic polish pass.",
+        "Use the supplied requested dimensions and authority/context only.",
+        "Distinguish story, plan, scene, character, reader-pressure, surface, continuity, context/memory and research failures.",
+        "SAFE-BUT-FLAT or reader-grip failure is not a line-edit problem; route it back to Reader Pressure and Scene Simulation.",
+        "A cluster of surface failures may require whole-scene Surface Realization rather than local patches.",
+        "When repair ownership is story, plan, scene, character, or reader-pressure, the next generation must be a fresh realization from mechanism-level defects and unchanged authority constraints; rejected prose and concrete critic patches must not be default writer context.",
+        "Return evidence-chained findings and repair owners; do not mutate Canon."
+      ],
       "output_contract": {"type": "object", "required": ["confidence", "findings", "repair_sequence"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "findings": {"type": "array"}, "repair_sequence": {"type": "array"}}},
       "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "revision_diagnostic"},
       "independent_gate": false
+    },
+    "quality.production_review": {
+      "kind": "external_review",
+      "purpose": "Fresh independent holistic production review used only after Surface, Reader Engagement and continuity work. It tries to falsify production readiness rather than verify that a manager-authored checklist was followed.",
+      "forbidden_input_keys": ["outline", "active_plan", "scene_card", "author_notes", "author_intent", "hidden_intent", "expected_payoff", "future_plan", "planned_twist", "writer_reasoning", "reviewer_verdict", "prior_review", "repair_brief", "critic_patch", "canon_unrevealed"],
+      "input_contract": {
+        "type": "object",
+        "required": ["candidate_fingerprint", "candidate_text"],
+        "properties": {
+          "candidate_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
+          "candidate_text": {"type": "string", "minLength": 1},
+          "reader_visible_context": {"type": "array", "items": {"type": "object", "required": ["source_ref", "text"], "properties": {"source_ref": {"type": "string", "minLength": 1}, "text": {"type": "string", "minLength": 1}}, "additionalProperties": false}},
+          "chapter_position": {"type": "string"},
+          "genre_profile": {"type": "string"},
+          "platform_profile": {"type": "string"},
+          "reader_grip": {"enum": ["low", "medium", "high", "very_high"]}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Read the candidate holistically first. Do not begin by checking whether named requirements each have a matching local beat.",
+        "Try to falsify production readiness: identify material reasons a real reader would experience the chapter as synthetic, flat, over-designed, causally weak, character-functional, confusing, or unearned even if individual rules appear satisfied.",
+        "Explicitly test checklist-compliant synthesis. Local humor, competence, relationship, symptom, reversal, and hook beats do not rescue a scene whose global topology remains predictable procedure and correct repair.",
+        "Do not reconstruct author intent, hidden future payoff, scene-card goals, or previous reviewer expectations. Judge only the supplied candidate and genuinely reader-visible/project-profile context.",
+        "Do not numerically average away a material blocking defect. SAFE-BUT-FLAT (RG-15), CHECKLIST CAUSALITY (HF-22), or equivalent scene-level failure is enough to fail production review when supported by evidence.",
+        "A pass means no material unqualified production defect remains in the supplied candidate; it does not grant Canon or Settlement authority.",
+        "Return only the declared typed judgment."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "result", "codes", "evidence", "summary", "flatness_risk"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "result": {"enum": ["pass", "fail"]},
+          "codes": {"type": "array", "items": {"type": "string"}},
+          "evidence": {"type": "array", "items": {"type": "string"}},
+          "summary": {"type": "string"},
+          "flatness_risk": {"enum": ["low", "medium", "high", "blocking"]}
+        }
+      },
+      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "production_review_observation"},
+      "release_roles": ["semantic_independent"],
+      "independent_gate": true
     }
   }
 }
