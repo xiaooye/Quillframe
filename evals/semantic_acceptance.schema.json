@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novelforge_semantic_acceptance_baseline_v1",
+  "title": "NovelForge Semantic Acceptance Baseline",
+  "type": "object",
+  "required": ["schema", "framework_version", "suite_version", "acceptance_subject_commit", "status", "blind", "fingerprint_bound", "review_sources", "cases", "authority", "permissions", "model_execution"],
+  "properties": {
+    "schema": {"const": "novelforge_semantic_acceptance_baseline_v1"},
+    "framework_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "suite_version": {"type": "string", "minLength": 1},
+    "acceptance_subject_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "status": {"const": "semantic_accept"},
+    "blind": {"const": true},
+    "fingerprint_bound": {"const": true},
+    "review_sources": {"type": "array", "minItems": 1},
+    "cases": {"type": "array", "minItems": 1},
+    "authority": {"const": false},
+    "permissions": {
+      "type": "object",
+      "required": ["canon_write", "framework_behavior_write", "durable_user_taste_write"],
+      "properties": {
+        "canon_write": {"const": false},
+        "framework_behavior_write": {"const": false},
+        "durable_user_taste_write": {"const": false}
+      },
+      "additionalProperties": false
+    },
+    "model_execution": {"const": false}
+  },
+  "additionalProperties": true
+}
