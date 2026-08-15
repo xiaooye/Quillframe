@@ -18,14 +18,32 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Compile Studio bridge, runtime queries, resume preflight, and Agent Skill client
+      - name: Compile Studio bridge, projections, runtime queries, resume preflight, and Agent Skill client
         run: |
           python -m py_compile \
             studio/host_bridge.py \
             studio/project_hub_projection.py \
+            studio/publication_preview.py \
+            publication/compiler.py \
             harness/control_plane/runtime_query.py \
             harness/session_runtime/resume_preflight.py \
             agent-skills/novelforge/scripts/novelforge_bridge.py
+
+      - name: Publication preview projection self-test
+        run: |
+          python studio/publication_preview.py self-test > publication-preview-test.json
+          cat publication-preview-test.json
+          python - <<'PY'
+          import json
+          result=json.load(open('publication-preview-test.json',encoding='utf-8'))
+          assert result['publication_preview_projection_contract']=='PASS',result
+          assert result['checks']['all_profiles'] is True
+          assert result['checks']['exact_text_guard'] is True
+          assert result['checks']['artifact_fingerprints'] is True
+          assert result['checks']['epub_internal_validation'] is True
+          assert result['checks']['source_authority_not_invented'] is True
+          assert result['authority'] is False and result['model_execution'] is False
+          PY
 
       - name: Public runtime query self-test
         run: |
@@ -92,7 +110,7 @@ jobs:
           def traced_invoke(request):
               result=original_invoke(request)
               operation=request.get('operation')
-              if operation in runtime_ops:
+              if operation in runtime_ops or operation == 'publication.preview':
                   data=result.get('data') if isinstance(result.get('data'),dict) else {}
                   error=result.get('error') if isinstance(result.get('error'),dict) else {}
                   query_trace.append({
@@ -156,6 +174,7 @@ jobs:
           assert bridge['checks']['runtime_queries_supported'] is True,bridge
           assert bridge['checks']['runtime_projection_safe'] is True,bridge
           assert bridge['checks']['resume_preflight_query_safe'] is True,bridge
+          assert bridge['checks']['publication_preview_query_safe'] is True,bridge
           assert skill['novelforge_agent_skill_contract']=='PASS',skill
           assert skill['checks']['resume_preflight_supported'] is True,skill
           assert query['schema']=='novelforge_studio_host_bridge_result_v1',query
@@ -165,10 +184,13 @@ jobs:
           assert query['request_fingerprint'].startswith('sha256:') and query['result_fingerprint'].startswith('sha256:')
           assert contract['authority'] is False and contract['invariants']['mutation_exposed'] is False
           assert runtime_queries.issubset(supported)
+          assert 'publication.preview' in supported and 'publication.preview' not in deferred
           assert not (runtime_queries & deferred)
           assert 'session.resume' in deferred and 'session.resume' not in supported
           assert 'command.invoke' not in supported
           assert portable['phase_2b_host_bridge']['mutation_exposed'] is False
+          assert portable['publication_preview']['temporary_build_only'] is True
+          assert portable['publication_preview']['source_authority_invented'] is False
           assert portable['runtime_observability']['side_effect_free'] is True
           assert portable['runtime_observability']['resume_preflight_exposed'] is True
           assert portable['runtime_observability']['preflight_ready_grants_runtime_control'] is False
