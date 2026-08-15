@@ -1,6 +1,7 @@
 import { render } from "solid-js/web";
 import App from "./App";
 import "./styles/site.css";
+import "./styles/product-contract.css";
 import "./styles/showcase.css";
 
 const appearanceMigrationKey = "novelforge.product-entry.v4.appearance-migrated";
