@@ -172,6 +172,35 @@ def start_run(session: dict[str, Any], run_id: str, inputs: list[str]) -> dict[s
     return out
 
 
+def terminate_run(session: dict[str, Any], run_id: str, detail: str | None = None) -> dict[str, Any]:
+    """Terminate one active run and its owning Session as one runtime state change."""
+    errors = validate(session)
+    if errors:
+        raise ValueError("invalid session before run termination: " + "; ".join(errors))
+    if "terminated" not in ALLOWED_TRANSITIONS.get(session["status"], set()):
+        raise ValueError(f"session status {session['status']} cannot be terminated")
+    matches = [index for index, run in enumerate(session.get("runs", [])) if isinstance(run, dict) and run.get("run_id") == run_id]
+    if len(matches) != 1:
+        raise ValueError(f"run_id must resolve exactly once: {run_id}")
+    index = matches[0]
+    current = session["runs"][index]
+    if current.get("status") != "running" or current.get("ended_at") is not None:
+        raise ValueError(f"run is not active: {run_id}")
+
+    out = deepcopy(session)
+    ended_at = now()
+    run = out["runs"][index]
+    run["status"] = "terminated"
+    run["ended_at"] = ended_at
+    fingerprints = []
+    for key in ("input_artifact_fingerprints", "output_artifact_fingerprints"):
+        values = run.get(key)
+        if isinstance(values, list):
+            fingerprints.extend(value for value in values if isinstance(value, str))
+    append_event(out, "run.terminated", run_id=run_id, artifact_fingerprints=list(dict.fromkeys(fingerprints)), detail=detail)
+    return transition(out, "terminated", detail=detail)
+
+
 def checkpoint(session: dict[str, Any], run_id: str, workflow_step: str, fingerprints: list[str], *,
                pending_gate: str | None = None, pending_handoff: str | None = None) -> dict[str, Any]:
     if not any(r.get("run_id") == run_id for r in session.get("runs", [])): raise ValueError(f"unknown run_id {run_id}")
@@ -196,10 +225,23 @@ def self_test() -> int:
     except ValueError: illegal_ok = True
     bad = deepcopy(reviewer); bad["memory_policy"] = "session"
     isolation_ok = any("semantic_reviewer memory_policy" in e for e in validate(bad))
-    ok = not validate(manager) and not validate(reviewer) and illegal_ok and isolation_ok
+
+    stoppable = new_session("BOOK-STOP", "manager", "chat_session", "chatgpt", project_id="BOOK-STOP",
+                            usage_class="ordinary_chat", memory_policy="session", resume_policy="checkpoint_revalidate")
+    stoppable = start_run(stoppable, "RUN-STOP", ["sha256:" + "b" * 64])
+    stopped = terminate_run(stoppable, "RUN-STOP", detail="self-test")
+    run_termination_ok = (
+        stopped["status"] == "terminated"
+        and stopped["runs"][-1]["status"] == "terminated"
+        and isinstance(stopped["runs"][-1]["ended_at"], str)
+        and any(event.get("type") == "run.terminated" and event.get("run_id") == "RUN-STOP" for event in stopped["events"])
+        and any(event.get("type") == "session.terminated" for event in stopped["events"])
+    )
+
+    ok = not validate(manager) and not validate(reviewer) and illegal_ok and isolation_ok and run_termination_ok
     dump({"session_runtime_contract": "PASS" if ok else "FAIL", "manager_status": manager["status"],
           "illegal_transition_guard": illegal_ok, "semantic_reviewer_isolation_guard": isolation_ok,
-          "durable_store_separation": True})
+          "active_run_termination_guard": run_termination_ok, "durable_store_separation": True})
     return 0 if ok else 1
 
 

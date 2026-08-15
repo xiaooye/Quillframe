@@ -82,6 +82,7 @@ jobs:
           mkdir -p /tmp/product-site-browser-qa
           CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser)
           test -n "${CHROME}"
+          export CHROME
 
           cd site
           npm run preview -- --host 127.0.0.1 --port 4188 > /tmp/product-site-browser-qa/server.log 2>&1 &
@@ -105,45 +106,46 @@ jobs:
           done
           test "${ready}" = "true"
 
-          # Deep product routes must resolve to the Godot host document while
-          # the semantic documentation subtree remains a separate HTML app.
+          # Deep product routes resolve to the Godot host document while
+          # documentation remains a separate semantic HTML application.
           for route in architecture studio publication inspect playground agents changelog; do
             curl --silent --show-error --fail "http://127.0.0.1:4188/${route}" > "/tmp/product-site-browser-qa/${route}.html"
-            grep -q 'NovelForge' "/tmp/product-site-browser-qa/${route}.html"
+            grep -q 'data-novelforge-runtime="loading"' "/tmp/product-site-browser-qa/${route}.html"
           done
           curl --silent --show-error --fail http://127.0.0.1:4188/docs/ > /tmp/product-site-browser-qa/docs.html
           grep -qiE 'starlight|documentation|docs' /tmp/product-site-browser-qa/docs.html
 
-          run_chrome() {
+          proof() {
             name="$1"
-            size="$2"
-            url="$3"
-            profile=$(mktemp -d)
-            "${CHROME}" \
-              --headless=new \
-              --no-sandbox \
-              --disable-dev-shm-usage \
-              --use-angle=swiftshader \
-              --enable-unsafe-swiftshader \
-              --ignore-gpu-blocklist \
-              --window-size="${size}" \
-              --virtual-time-budget=10000 \
-              --user-data-dir="${profile}" \
-              --screenshot="/tmp/product-site-browser-qa/${name}.png" \
-              "${url}" >"/tmp/product-site-browser-qa/${name}-chrome.log" 2>&1
-            rm -rf "${profile}"
+            width="$2"
+            height="$3"
+            url="$4"
+            layout="$5"
+            node site/scripts/godot-browser-proof.mjs \
+              --url "${url}" \
+              --width "${width}" \
+              --height "${height}" \
+              --timeout-ms 90000 \
+              --expect-layout "${layout}" \
+              --output "/tmp/product-site-browser-qa/${name}.png" \
+              | tee "/tmp/product-site-browser-qa/${name}-proof.json"
           }
 
-          run_chrome product-desktop 1440,900 'http://127.0.0.1:4188/'
-          run_chrome architecture-desktop 1440,900 'http://127.0.0.1:4188/architecture'
-          run_chrome studio-desktop 1440,900 'http://127.0.0.1:4188/studio'
-          run_chrome publication-desktop 1440,900 'http://127.0.0.1:4188/publication'
-          run_chrome architecture-mobile 390,844 'http://127.0.0.1:4188/architecture'
+          # Real elapsed-time CDP polling is deliberate: the WebAssembly
+          # runtime may still be compiling after network progress reaches 100%.
+          proof product-desktop 1440 900 'http://127.0.0.1:4188/' desktop
+          proof architecture-desktop 1440 900 'http://127.0.0.1:4188/architecture' desktop
+          proof studio-desktop 1440 900 'http://127.0.0.1:4188/studio' desktop
+          proof publication-desktop 1440 900 'http://127.0.0.1:4188/publication' desktop
+          proof architecture-mobile 390 844 'http://127.0.0.1:4188/architecture' phone
 
           python - <<'PY'
+          import json
+          from hashlib import sha256
           from pathlib import Path
 
           root = Path('/tmp/product-site-browser-qa')
+          desktop = []
           for image in (
               'product-desktop.png',
               'architecture-desktop.png',
@@ -153,10 +155,26 @@ jobs:
           ):
               path = root / image
               assert path.exists() and path.stat().st_size > 10_000, image
+              digest = sha256(path.read_bytes()).hexdigest()
+              if 'desktop' in image:
+                  desktop.append(digest)
+
+          # A single shared loading splash across every route is not a passing
+          # browser test. Product scenes must render route-specific frames.
+          assert len(set(desktop)) >= 3, desktop
+
+          mobile = json.loads((root / 'architecture-mobile-proof.json').read_text(encoding='utf-8').splitlines()[-1])
+          assert mobile['layout'] == 'phone', mobile
+          assert mobile['runtime'] == 'ready' and mobile['engine'] == 'started', mobile
 
           (root / 'browser-proof.txt').write_text(
-              'schema=novelforge_product_site_browser_qa_v3\n'
+              'schema=novelforge_product_site_browser_qa_v6\n'
               'runtime=godot_web\n'
+              'runtime_ready_marker=true\n'
+              'real_time_cdp_wait=true\n'
+              'responsive_layout_marker=true\n'
+              'phone_layout_proven=true\n'
+              'branded_loader=true\n'
               'dimension=2d_2_5d\n'
               'deep_routes=true\n'
               'docs_boundary=astro_starlight\n'
@@ -165,11 +183,12 @@ jobs:
               'authority=false\n',
               encoding='utf-8',
           )
-          print({'schema': 'novelforge_product_site_browser_qa_v3', 'status': 'pass', 'screenshots': 5, 'authority': False})
+          print({'schema': 'novelforge_product_site_browser_qa_v6', 'status': 'pass', 'screenshots': 5, 'phone_layout_proven': True, 'authority': False})
           PY
 
       - name: Upload Product Site browser QA evidence
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: product-site-browser-qa
           path: /tmp/product-site-browser-qa

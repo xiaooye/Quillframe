@@ -4,7 +4,6 @@ const SystemMap = preload("res://scripts/system_map.gd")
 
 const COLOR_BG := Color("070b12")
 const COLOR_PANEL := Color("0d1420")
-const COLOR_PANEL_ALT := Color("111a29")
 const COLOR_BORDER := Color("24324a")
 const COLOR_ACCENT := Color("73f1d1")
 const COLOR_TEXT := Color("e9eef7")
@@ -25,7 +24,7 @@ const PAGE_DATA := {
 	"/": {
 		"eyebrow": "PRODUCT RUNTIME",
 		"title": "NovelForge",
-		"copy": "A spatial control room for agentic long-form fiction production. The product surface is now rendered as a native Godot Web application.",
+		"copy": "A spatial control room for agentic long-form fiction production. The product surface is rendered as a native Godot Web application.",
 		"metrics": ["RUNTIME  GODOT 4.7", "SURFACE  2D / 2.5D", "DOCS  ASTRO"],
 	},
 	"/start": {
@@ -37,32 +36,32 @@ const PAGE_DATA := {
 	"/product": {
 		"eyebrow": "PRODUCT",
 		"title": "One runtime, explicit boundaries",
-		"copy": "NovelForge exposes production, inspection, publication, and agent surfaces as one coherent application rather than a stack of disconnected pages.",
+		"copy": "Production, inspection, publication, and agent surfaces live inside one coherent application rather than a stack of disconnected pages.",
 		"metrics": ["SHELL  UNIFIED", "ROUTES  10", "CANVAS  LIVE"],
 	},
 	"/studio": {
 		"eyebrow": "STUDIO",
 		"title": "Production terminal",
-		"copy": "Authoring work is represented as an explicit flow: context enters a worker, candidate output reaches a gate, and only approved state can settle.",
+		"copy": "Context enters a worker, candidate output reaches a gate, and only approved state can settle. The workflow remains visible while you move through it.",
 		"metrics": ["MODE  AUTHOR", "FLOW  EXPLICIT", "SETTLE  GUARDED"],
 	},
 	"/architecture": {
 		"eyebrow": "ARCHITECTURE",
 		"title": "Live system topology",
-		"copy": "Read the framework spatially. Hover the graph to reveal depth, follow moving packets through boundaries, and select a subsystem to inspect its role.",
+		"copy": "Read the framework spatially. Follow moving packets through boundaries and select a subsystem to bind the runtime inspector.",
 		"metrics": ["GRAPH  LIVE", "DEPTH  2.5D", "STATE  ROUTED"],
 	},
 	"/publication": {
 		"eyebrow": "PUBLICATION",
 		"title": "Derived output only",
-		"copy": "Publication is downstream of accepted state. The product surface keeps that boundary visible instead of presenting export as an isolated formatter.",
+		"copy": "Publication is downstream of accepted state. The interface keeps that boundary visible instead of presenting export as an isolated formatter.",
 		"metrics": ["SOURCE  ACCEPTED", "OUTPUT  DERIVED", "FORMATS  MULTI"],
 	},
 	"/inspect": {
 		"eyebrow": "INSPECT",
 		"title": "Exact projections",
 		"copy": "Inspect runtime state, fingerprints, handoffs, and evidence without implying mutation authority. Selection in the map updates this observatory in place.",
-		"metrics": ["MODE  READ ONLY", "EVIDENCE  BOUND", "AUTHORITY  FALSE"],
+		"metrics": ["MODE  OBSERVE", "EVIDENCE  BOUND", "AUTHORITY  EXPLICIT"],
 	},
 	"/playground": {
 		"eyebrow": "PLAYGROUND",
@@ -79,7 +78,7 @@ const PAGE_DATA := {
 	"/changelog": {
 		"eyebrow": "CHANGELOG",
 		"title": "Runtime evolution",
-		"copy": "Product changes remain a first-class route inside the shared scene. Documentation continues to live in the semantic web where long-form reading belongs.",
+		"copy": "Product changes remain a first-class route inside the shared scene. Documentation stays in the semantic web where long-form reading belongs.",
 		"metrics": ["VERSION  0.8.x", "UI  GODOT FIRST", "DOCS  STARLIGHT"],
 	},
 }
@@ -95,15 +94,24 @@ var _selection_label: Label
 var _map
 var _left_panel: Control
 var _right_panel: Control
-var _popstate_callback
-var _browser_window
+var _body_margin: MarginContainer
+var _topbar: PanelContainer
+var _brand: VBoxContainer
+var _brand_title: Label
+var _brand_meta: Label
+var _docs_button: Button
+var _footer: PanelContainer
+var _footer_left: Label
+var _footer_right: Label
+var _layout_mode := "desktop"
 
 func _ready() -> void:
 	_build_interface()
-	_install_browser_bridge()
 	_navigate(_browser_path(), false)
+	_install_browser_history_guard()
 	resized.connect(_apply_responsive_layout)
 	call_deferred("_apply_responsive_layout")
+	call_deferred("_signal_web_ready")
 
 func _build_interface() -> void:
 	var background := ColorRect.new()
@@ -117,19 +125,17 @@ func _build_interface() -> void:
 	shell.add_theme_constant_override("separation", 0)
 	add_child(shell)
 
-	shell.add_child(_build_topbar())
+	_topbar = _build_topbar()
+	shell.add_child(_topbar)
 
-	var body_margin := MarginContainer.new()
-	body_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body_margin.add_theme_constant_override("margin_left", 18)
-	body_margin.add_theme_constant_override("margin_right", 18)
-	body_margin.add_theme_constant_override("margin_top", 18)
-	body_margin.add_theme_constant_override("margin_bottom", 18)
-	shell.add_child(body_margin)
+	_body_margin = MarginContainer.new()
+	_body_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_set_body_margins(18)
+	shell.add_child(_body_margin)
 
 	var body := HBoxContainer.new()
 	body.add_theme_constant_override("separation", 14)
-	body_margin.add_child(body)
+	_body_margin.add_child(body)
 
 	_left_panel = _build_page_panel()
 	body.add_child(_left_panel)
@@ -157,10 +163,10 @@ func _build_interface() -> void:
 	_right_panel = _build_runtime_panel()
 	body.add_child(_right_panel)
 
-	var footer := _build_footer()
-	shell.add_child(footer)
+	_footer = _build_footer()
+	shell.add_child(_footer)
 
-func _build_topbar() -> Control:
+func _build_topbar() -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.y = 68
 	panel.add_theme_stylebox_override("panel", _style(Color("0a101a"), COLOR_BORDER, 0, 0, false, true))
@@ -176,22 +182,22 @@ func _build_topbar() -> Control:
 	row.add_theme_constant_override("separation", 12)
 	margin.add_child(row)
 
-	var brand := VBoxContainer.new()
-	brand.custom_minimum_size.x = 180
-	brand.add_theme_constant_override("separation", -2)
-	row.add_child(brand)
+	_brand = VBoxContainer.new()
+	_brand.custom_minimum_size.x = 180
+	_brand.add_theme_constant_override("separation", -2)
+	row.add_child(_brand)
 
-	var brand_title := Label.new()
-	brand_title.text = "NOVELFORGE"
-	brand_title.add_theme_font_size_override("font_size", 18)
-	brand_title.add_theme_color_override("font_color", COLOR_TEXT)
-	brand.add_child(brand_title)
+	_brand_title = Label.new()
+	_brand_title.text = "NOVELFORGE"
+	_brand_title.add_theme_font_size_override("font_size", 18)
+	_brand_title.add_theme_color_override("font_color", COLOR_TEXT)
+	_brand.add_child(_brand_title)
 
-	var brand_meta := Label.new()
-	brand_meta.text = "CONTROL ROOM  ·  0.8.x"
-	brand_meta.add_theme_font_size_override("font_size", 9)
-	brand_meta.add_theme_color_override("font_color", COLOR_MUTED)
-	brand.add_child(brand_meta)
+	_brand_meta = Label.new()
+	_brand_meta.text = "CONTROL ROOM  ·  0.8.x"
+	_brand_meta.add_theme_font_size_override("font_size", 9)
+	_brand_meta.add_theme_color_override("font_color", COLOR_MUTED)
+	_brand.add_child(_brand_meta)
 
 	var nav_scroll := ScrollContainer.new()
 	nav_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -217,15 +223,15 @@ func _build_topbar() -> Control:
 		nav.add_child(button)
 		_nav_buttons[route] = button
 
-	var docs := Button.new()
-	docs.text = "DOCS ↗"
-	docs.custom_minimum_size = Vector2(86, 40)
-	docs.add_theme_font_size_override("font_size", 10)
-	docs.add_theme_color_override("font_color", Color("071016"))
-	docs.add_theme_stylebox_override("normal", _style(COLOR_ACCENT, COLOR_ACCENT, 10, 0))
-	docs.add_theme_stylebox_override("hover", _style(Color("9bffe8"), Color("9bffe8"), 10, 0))
-	docs.pressed.connect(_open_docs)
-	row.add_child(docs)
+	_docs_button = Button.new()
+	_docs_button.text = "DOCS ↗"
+	_docs_button.custom_minimum_size = Vector2(86, 40)
+	_docs_button.add_theme_font_size_override("font_size", 10)
+	_docs_button.add_theme_color_override("font_color", Color("071016"))
+	_docs_button.add_theme_stylebox_override("normal", _style(COLOR_ACCENT, COLOR_ACCENT, 10, 0))
+	_docs_button.add_theme_stylebox_override("hover", _style(Color("9bffe8"), Color("9bffe8"), 10, 0))
+	_docs_button.pressed.connect(_open_docs)
+	row.add_child(_docs_button)
 
 	return panel
 
@@ -367,7 +373,7 @@ func _build_runtime_panel() -> Control:
 
 	return panel
 
-func _build_footer() -> Control:
+func _build_footer() -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size.y = 38
 	panel.add_theme_stylebox_override("panel", _style(Color("090e17"), COLOR_BORDER, 0, 0, true, false))
@@ -380,21 +386,21 @@ func _build_footer() -> Control:
 	var row := HBoxContainer.new()
 	margin.add_child(row)
 
-	var left := Label.new()
-	left.text = "NOVELFORGE PRODUCT RUNTIME"
-	left.add_theme_font_size_override("font_size", 9)
-	left.add_theme_color_override("font_color", COLOR_MUTED)
-	row.add_child(left)
+	_footer_left = Label.new()
+	_footer_left.text = "NOVELFORGE PRODUCT RUNTIME"
+	_footer_left.add_theme_font_size_override("font_size", 9)
+	_footer_left.add_theme_color_override("font_color", COLOR_MUTED)
+	row.add_child(_footer_left)
 
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(spacer)
 
-	var right := Label.new()
-	right.text = "GODOT-FIRST  ·  SEMANTIC DOCS REMAIN WEB-NATIVE"
-	right.add_theme_font_size_override("font_size", 9)
-	right.add_theme_color_override("font_color", COLOR_MUTED)
-	row.add_child(right)
+	_footer_right = Label.new()
+	_footer_right.text = "GODOT-FIRST  ·  SEMANTIC DOCS REMAIN WEB-NATIVE"
+	_footer_right.add_theme_font_size_override("font_size", 9)
+	_footer_right.add_theme_color_override("font_color", COLOR_MUTED)
+	row.add_child(_footer_right)
 
 	return panel
 
@@ -459,6 +465,10 @@ func _on_map_node_selected(node_id: String) -> void:
 	match node_id:
 		"project":
 			_navigate("/", true)
+		"worker":
+			_navigate("/studio", true)
+		"context":
+			_navigate("/playground", true)
 		"publication":
 			_navigate("/publication", true)
 		"inspector":
@@ -468,30 +478,99 @@ func _on_map_node_selected(node_id: String) -> void:
 		_:
 			pass
 
+func _set_body_margins(value: int) -> void:
+	_body_margin.add_theme_constant_override("margin_left", value)
+	_body_margin.add_theme_constant_override("margin_right", value)
+	_body_margin.add_theme_constant_override("margin_top", value)
+	_body_margin.add_theme_constant_override("margin_bottom", value)
+
+func _responsive_width() -> float:
+	if OS.has_feature("web"):
+		return float(JavaScriptBridge.eval("window.innerWidth"))
+	return size.x
+
+func _responsive_height() -> float:
+	if OS.has_feature("web"):
+		return float(JavaScriptBridge.eval("window.innerHeight"))
+	return size.y
+
 func _apply_responsive_layout() -> void:
-	var compact := size.x < 1080.0
-	var phone := size.x < 720.0
+	var viewport_width := _responsive_width()
+	var viewport_height := _responsive_height()
+	var phone := viewport_width < 720.0
+	var compact := viewport_width < 1080.0
+	_layout_mode = "phone" if phone else ("compact" if compact else "desktop")
+
 	_left_panel.visible = not compact
 	_right_panel.visible = not compact
-	if phone:
-		_map.custom_minimum_size = Vector2(300, 520)
-	else:
-		_map.custom_minimum_size = Vector2(420, 520)
+	_footer_right.visible = not compact
+	_brand_meta.visible = not phone
 
-func _install_browser_bridge() -> void:
+	if phone:
+		_topbar.custom_minimum_size.y = 58
+		_brand.custom_minimum_size.x = 108
+		_brand_title.add_theme_font_size_override("font_size", 15)
+		_docs_button.custom_minimum_size = Vector2(66, 36)
+		_docs_button.text = "DOCS"
+		_footer.custom_minimum_size.y = 30
+		_footer_left.text = "NOVELFORGE  ·  GODOT"
+		_map.custom_minimum_size = Vector2(280, maxf(320.0, viewport_height - 112.0))
+		_set_body_margins(8)
+		for route in _nav_buttons:
+			var phone_button: Button = _nav_buttons[route]
+			phone_button.custom_minimum_size = Vector2(74, 36)
+			phone_button.add_theme_font_size_override("font_size", 9)
+	elif compact:
+		_topbar.custom_minimum_size.y = 64
+		_brand.custom_minimum_size.x = 154
+		_brand_title.add_theme_font_size_override("font_size", 17)
+		_docs_button.custom_minimum_size = Vector2(78, 38)
+		_docs_button.text = "DOCS ↗"
+		_footer.custom_minimum_size.y = 34
+		_footer_left.text = "NOVELFORGE PRODUCT RUNTIME"
+		_map.custom_minimum_size = Vector2(380, 460)
+		_set_body_margins(12)
+		for route in _nav_buttons:
+			var compact_button: Button = _nav_buttons[route]
+			compact_button.custom_minimum_size = Vector2(82, 38)
+			compact_button.add_theme_font_size_override("font_size", 9)
+	else:
+		_topbar.custom_minimum_size.y = 68
+		_brand.custom_minimum_size.x = 180
+		_brand_title.add_theme_font_size_override("font_size", 18)
+		_docs_button.custom_minimum_size = Vector2(86, 40)
+		_docs_button.text = "DOCS ↗"
+		_footer.custom_minimum_size.y = 38
+		_footer_left.text = "NOVELFORGE PRODUCT RUNTIME"
+		_map.custom_minimum_size = Vector2(420, 520)
+		_set_body_margins(18)
+		for route in _nav_buttons:
+			var desktop_button: Button = _nav_buttons[route]
+			desktop_button.custom_minimum_size = Vector2(92, 40)
+			desktop_button.add_theme_font_size_override("font_size", 10)
+
+	_map.set_layout_mode(_layout_mode)
+	_publish_layout_state()
+
+func _publish_layout_state() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("document.documentElement.dataset.novelforgeLayout='%s';" % _layout_mode)
+
+func _install_browser_history_guard() -> void:
 	if not OS.has_feature("web"):
 		return
-	_browser_window = JavaScriptBridge.get_interface("window")
-	_popstate_callback = JavaScriptBridge.create_callback(_on_popstate)
-	_browser_window.addEventListener("popstate", _popstate_callback)
-
-func _on_popstate(_args: Array) -> void:
-	_navigate(_browser_path(), false)
+	JavaScriptBridge.eval("if(!window.__novelforgePopstateReloadInstalled){window.__novelforgePopstateReloadInstalled=true;window.addEventListener('popstate',()=>window.location.reload());}")
 
 func _browser_path() -> String:
 	if not OS.has_feature("web"):
 		return "/"
 	return str(JavaScriptBridge.eval("window.location.pathname"))
+
+func _signal_web_ready() -> void:
+	_apply_responsive_layout()
+	if not OS.has_feature("web"):
+		return
+	JavaScriptBridge.eval("document.documentElement.dataset.novelforgeRuntime='ready';const loader=document.getElementById('nf-loader');if(loader){loader.classList.add('is-ready');}window.dispatchEvent(new CustomEvent('novelforge:ready')); ")
 
 func _open_docs() -> void:
 	if OS.has_feature("web"):

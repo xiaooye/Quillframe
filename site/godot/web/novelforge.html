@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en" data-novelforge-runtime="loading" data-novelforge-engine="loading">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#070b12">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="NovelForge — agentic long-form fiction production control room.">
+  <title>$GODOT_PROJECT_NAME</title>
+  $GODOT_HEAD_INCLUDE
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #070b12;
+      color: #e9eef7;
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #070b12; }
+    body { position: relative; }
+    #canvas {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      outline: 0;
+      background: #070b12;
+    }
+    #nf-loader {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      background:
+        linear-gradient(rgba(115,241,209,.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(115,241,209,.045) 1px, transparent 1px),
+        radial-gradient(circle at 50% 43%, rgba(115,241,209,.075), transparent 34%),
+        #070b12;
+      background-size: 56px 56px, 56px 56px, auto, auto;
+      transition: opacity 420ms ease, visibility 420ms ease;
+    }
+    #nf-loader.is-ready {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .nf-loader-card {
+      width: min(560px, calc(100vw - 48px));
+      border: 1px solid #24324a;
+      border-radius: 18px;
+      background: rgba(13,20,32,.86);
+      box-shadow: 0 28px 90px rgba(0,0,0,.42);
+      backdrop-filter: blur(16px);
+      padding: 28px;
+    }
+    .nf-kicker {
+      color: #73f1d1;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .nf-brand {
+      margin-top: 12px;
+      font-size: clamp(34px, 6vw, 62px);
+      line-height: .95;
+      letter-spacing: -.055em;
+      font-weight: 720;
+    }
+    .nf-subtitle {
+      margin-top: 16px;
+      max-width: 430px;
+      color: #8190aa;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .nf-progress-track {
+      position: relative;
+      height: 3px;
+      margin-top: 28px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #182235;
+    }
+    #nf-progress {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 4%;
+      border-radius: inherit;
+      background: #73f1d1;
+      box-shadow: 0 0 22px rgba(115,241,209,.45);
+      transition: width 120ms linear;
+    }
+    .nf-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 10px;
+      color: #5f6f89;
+      font: 600 9px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    #nf-status { color: #9aabc1; }
+    #nf-error {
+      display: none;
+      margin-top: 18px;
+      color: #ffb4b4;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    html[data-novelforge-runtime="error"] #nf-error { display: block; }
+    @media (max-width: 620px) {
+      .nf-loader-card { width: calc(100vw - 28px); padding: 22px; border-radius: 14px; }
+      .nf-meta { flex-direction: column; gap: 6px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #nf-loader, #nf-progress { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" role="application" aria-label="NovelForge product runtime">
+    Your browser does not support the canvas element required by NovelForge.
+  </canvas>
+
+  <div id="nf-loader" aria-live="polite">
+    <div class="nf-loader-card">
+      <div class="nf-kicker">Product Runtime · 2D / 2.5D</div>
+      <div class="nf-brand">NovelForge</div>
+      <div class="nf-subtitle">Booting the spatial production control room. Documentation remains a separate web-native surface.</div>
+      <div class="nf-progress-track"><div id="nf-progress"></div></div>
+      <div class="nf-meta">
+        <span id="nf-status">Loading runtime</span>
+        <span>Godot Web · Compatibility</span>
+      </div>
+      <div id="nf-error">The interactive runtime could not start. Reload the page or open the documentation surface directly.</div>
+    </div>
+  </div>
+
+  <script src="$GODOT_URL"></script>
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const canvas = document.getElementById('canvas');
+      const progress = document.getElementById('nf-progress');
+      const status = document.getElementById('nf-status');
+      const engine = new Engine($GODOT_CONFIG);
+
+      const onProgress = (current, total) => {
+        if (total > 0) {
+          const ratio = Math.max(0.04, Math.min(1, current / total));
+          progress.style.width = `${Math.round(ratio * 100)}%`;
+          status.textContent = ratio >= 0.995 ? 'Starting scene' : `Loading ${Math.round(ratio * 100)}%`;
+        } else {
+          status.textContent = 'Loading runtime';
+        }
+      };
+
+      if (!Engine.isWebGLAvailable(2)) {
+        root.dataset.novelforgeRuntime = 'error';
+        root.dataset.novelforgeEngine = 'error';
+        status.textContent = 'WebGL 2 unavailable';
+        return;
+      }
+
+      engine.startGame({ canvas, onProgress }).then(() => {
+        root.dataset.novelforgeEngine = 'started';
+        status.textContent = root.dataset.novelforgeRuntime === 'ready' ? 'Ready' : 'Scene started';
+      }).catch((error) => {
+        console.error('NovelForge Godot runtime failed to start', error);
+        root.dataset.novelforgeRuntime = 'error';
+        root.dataset.novelforgeEngine = 'error';
+        status.textContent = 'Runtime failed';
+      });
+    })();
+  </script>
+</body>
+</html>
