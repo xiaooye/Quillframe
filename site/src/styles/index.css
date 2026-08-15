@@ -31,5 +31,6 @@
 @import "./editorial-composition.css";
 @import "./embedded-features.css";
 
-/* Cross-cutting accessibility/readability hardening owns no page layout. */
+/* Cross-cutting readability, then the final resilience/accessibility contract. */
 @import "./readability.css";
+@import "./hardening.css";
