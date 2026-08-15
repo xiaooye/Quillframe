@@ -1,37 +1,43 @@
 # NovelForge Changelog · 中文版
 
-## Unreleased · 面向 8.0 的开发中架构
+## 0.8.0 · 当前 pre-1.0 开发基线
 
-> 本节是**开发变更台账，不是 NovelForge 8.0 发布声明**。在 Core acceptance / release 流程明确晋升新版本之前，`HARNESS_MANIFEST.yaml` 仍是 Framework 的发布权威。
+> `0.8.0` 是此前称作“8.0”架构开发线的当前统一版本身份。NovelForge 仍处于 1.0 之前的快速开发阶段：最新 `main` 才是工作实现基线，`0.8.0` **不代表已经冻结出 1.0 级兼容承诺**。
 
-### 发布真相
+### 版本真相
 
-- 当前 `HARNESS_MANIFEST.yaml` 的发布权威版本仍为 **7.2.0**。
-- 顶层 CLI `novelforge.py` 当前报告 **7.3.0**，而 Project SDK 默认版本仍为 **7.2.0**。这是实现状态与发布元数据之间的漂移；在 Core / Release 所属流程正式解决前，文档必须如实保留这一差异，不能替它们静默统一版本号。
-- 针对当前 `main` 重写过的文档，除非 `docs/documentation_manifest.json` 已明确将其标记为对发布权威复核完成的 `reviewed_current`，否则仍只是候选文档。
-- `main` 上出现面向 8.0 的机制或文档，**不等于 NovelForge 8.0 已经发布**。
+- 当前 machine-facing version surface 已统一为 **0.8.0**：`HARNESS_MANIFEST.yaml`、`SKILL.md`、`novelforge.py`、Project SDK 默认值、对外 MCP server metadata，以及 documentation governance metadata。
+- 这取代了之前“7.2 release metadata / 7.3 implementation metadata”并存的开发期编号。下面的 7.x 历史记录继续保持原始历史语义。
+- pre-1.0 开发期间，只要架构确有必要，`main` 仍允许经过验证的 breaking machine-contract cleanup。稳定兼容承诺应来自未来主动冻结后的 release contract。
+- 针对最新 `main` 重写的文档，只要 documentation manifest 没有明确晋升生命周期状态，就仍是 `candidate_review`；版本统一不会自动替代语义、母语或视觉审查。
 
 ### 已合并的开发变更
 
-- 语义运行已经转向“小型 contract catalog → 渐进披露 → 精确 contract pack”。小说语义判断由模型负责；确定性代码负责权威、权限、指纹、持久化、路由、硬预算、类型校验、事务与可复现性。
-- live machine namespace 已从 `NOVEL_OS_*` / `novel_os_*` / `.novel-os/` 迁移到 `NOVELFORGE_*` / `novelforge_*` / `.novelforge/`，且不保留兼容别名。这是一次预发布 breaking migration。
-- Context selection 已支持面向当前任务的问题→证据 grounding，并在组装模型上下文之前确定性执行 perspective / visibility 过滤。不符合可见性要求而又被 pin 的证据会 fail closed，而不是先展示给模型再用提示语要求它忽略。
-- metadata-only 的 `novelforge_run_receipt_v1` 可观察性 primitive 已合并。它可以绑定 run、context、semantic job、guard 与 grounding evidence 的元数据，但不保存候选正文、不获得 Canon authority，也不成为第二套状态数据库。
-- 当前 Settlement Runtime 继续把 Accepted artifact 的持久化修改置于明确接受、精确 before→after 写入意图、checkpoint / write authorization、compare-and-swap、post-condition 与 required projection receipts 之后；派生 projection 仍然不是 Canon。
-- Documentation governance 已开始确定性跟踪 audience、tier、authority source、freshness owner、rewrite policy、lifecycle、双语配对、本地链接、发布版本漂移与可检查的视觉/文档约束。清晰度、语义真实性、母语质量和视觉质量仍需要独立的语义审查，不能由正则表达式宣称完成。
+- 语义运行采用小型 model-contract catalog + 精确 contract pack 渐进加载。小说语义判断由模型负责；确定性代码负责权威、权限、指纹、持久化、路由、硬预算、类型校验、事务与可复现性。
+- PR #11 将 live machine namespace 从 `NOVEL_OS_*` / `novel_os_*` / `.novel-os/` 迁到 `NOVELFORGE_*` / `novelforge_*` / `.novelforge/`，且不保留兼容别名。
+- PR #12 加入任务感知的 question→evidence grounding，并在模型上下文组装前确定性执行 perspective / visibility 过滤。
+- PR #13 加入 metadata-only 的 `novelforge_run_receipt_v1`，不保存候选正文、不获得 Canon authority，也不成为第二套状态数据库。
+- PR #18 让 Framework bundle 真正 release-complete：包含 quality runtime，并在解包后运行 `novelforge.py doctor` 与完整 model-free self-test。
+- PR #19 合并 Studio Phase 1：由 Run Receipt 驱动的只读 Run / Context Inspector。
+- PR #21 合并 Studio Phase 2A：portable one-product/many-host contract、安全的 Project Hub projection、synthetic project/scene fixtures，以及只读 Project Hub + Scene workspace prototype。
+- PR #25 合并 Studio Phase 2B：versioned read-only host bridge + standards-compatible NovelForge Agent Skill。Bridge 只暴露 allowlisted read surface（`bridge.describe`、`framework.doctor`、`project.inspect`、`capabilities.inspect`、`context.inspect`、`semantic.catalog`），不支持的 operation fail closed，默认不泄露 host-private absolute path，并始终保持 `authority=false`。
+- PR #24 完成剩余 machine-contract rename：`os_behavior_write` → `framework_behavior_write`；semantic job/result ID 从 `novel-os-*` 迁到 `novelforge-*`；移除 live `.novel-os/` ignore surface；namespace hygiene 也会阻止这些旧 machine identifier 再次回归。没有添加兼容别名。
+- 0.8.0 normalization 让当前 machine/version identity 归一，不再同时维护“release version”和“implementation version”两套开发编号。
+- Documentation governance 已确定性跟踪 audience、tier、authority source、freshness owner、rewrite policy、lifecycle、双语配对、本地链接、版本对齐与可检查的视觉/文档约束；`studio/` 已纳入 bilingual manifest coverage QA。
 
-### Breaking change / Migration 台账
+### 当前缺口与兼容说明
 
-- 上述 machine namespace migration **已经发生在 live `main`**。下面的 7.0 历史说明记录的是当时状态，不应再被当作当前 machine guidance。
-- 独立的 permission schema rename：`os_behavior_write` → `framework_behavior_write` **目前尚未在 live `main` 完成**。已经关闭的 PR #14 / #15 不具备发布权威，不能把它们当作成功迁移的证据。
-- 已锁定旧 NovelForge commit 的下游项目仍受其 exact dependency 约束。不得因为 `main` 更新就静默替换现有 `novelforge.lock.json`；升级必须走显式 Framework upgrade / migration，并重新验证 Project、bundle fingerprint、相关 contracts 与受影响的 runtime state。
-- 最终 8.0 migration guide 必须从 Core 已接受的正式 contracts 与 release bundle 推导，不能根据 issue 描述或中间开发提交猜测最终接口。
+- Run Receipt 仍有 Core-owned consumer/read-surface 工作：稳定 manifest discoverability、`run.receipt_recorded` 的 event-schema 对齐，以及供 Studio 使用的稳定 query/projection boundary，而不是读取 persistence internals。PR #25 有意没有通过 Host Bridge 暴露不安全的 Control Plane / Run Receipt 读取。
+- 已经有意锁定旧 Framework revision 的下游项目继续受那个 revision 约束，直到显式升级；Generic Framework 自身开发则跟随 latest `main`，不维护内部开发 lock。
+- 未来真正稳定的 migration guide 必须从冻结后的 contracts 与最终 bundle 生成，不能根据 Issue 或中间开发提交猜最终接口。
 
 ### Product / Publication 状态
 
-- Publication / Typesetting 是 Core workstream 的活跃开发项，由 Issue #16 跟踪。在正式 schema/runtime 进入 live release authority 之前，文档只能把它描述为计划中或开发中能力，不能写成已发布功能。
-- NovelForge Studio / observability UX 是 Product Experience workstream 的活跃开发项，由 Issue #8 / #17 跟踪。Core 已合并 Run Receipt 或 Inspector primitive，并不等于 Studio 已经交付。
-- Studio 必须消费 Core 提供的稳定状态/读取接口；UI state 永远不会因为被展示出来就成为 Canon、Memory、语义真相或写入权威。
+- Studio 当前已经合并**只读** Phase 1、Phase 2A、Phase 2B 产品切片：observability、Project Hub、Scene workspace、portable host boundary 与 Agent Skill delivery 都已经真实存在于 `main`。
+- 这些切片**不代表** Studio 已经成为可写、多人协作、带生产认证或正式云托管的完整应用。Generic invoke/write、project mutation、resume 与更广的 Control Plane read 仍不属于当前 bridge contract。
+- Publication / Typesetting 仍是 Issue #16 跟踪的 Core 活跃 workstream。官方 IR/profile/runtime contract 合并之前，EPUB/Web/print publication 仍只能描述为计划中或开发中能力。
+- 更完整的 MCP registry/management 与后续 write-capable Studio operation 继续 deferred 给各自 owning workstream。
+- UI、Host Bridge 与 Agent Skill state 永远不会因为被展示或调用就成为 Canon、Memory、semantic truth、settlement truth 或 workflow authority。
 
 ## 7.0.0 · Adaptive Fiction Framework
 

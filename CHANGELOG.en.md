@@ -1,37 +1,43 @@
 # NovelForge Changelog
 
-## Unreleased · Development architecture toward 8.0
+## 0.8.0 · Active pre-1.0 development baseline
 
-> This section is a development ledger, **not an 8.0 release declaration**. `HARNESS_MANIFEST.yaml` remains the release authority until the Core acceptance/release workflow explicitly promotes a new release.
+> `0.8.0` is the current development identity for the architecture previously discussed as the “8.0” development line. NovelForge is still pre-1.0: latest `main` is the working implementation baseline, and this version does **not** promise a frozen 1.0 compatibility surface.
 
-### Release truth
+### Version truth
 
-- The current release authority still reports **7.2.0** in `HARNESS_MANIFEST.yaml`.
-- The top-level CLI currently reports **7.3.0** through `novelforge.py`, while the Project SDK default remains **7.2.0**. This is implementation/release metadata drift and must remain visible until the owning Core/release workflow resolves it.
-- Documentation rebuilt against current `main` remains a review candidate unless the documentation manifest explicitly marks it `reviewed_current` against the release authority.
-- NovelForge **8.0 is not released** merely because 8.0-oriented mechanisms or documentation are present on `main`.
+- Current machine-facing version surfaces are normalized to **0.8.0**: `HARNESS_MANIFEST.yaml`, `SKILL.md`, `novelforge.py`, the Project SDK default, exposed MCP server metadata, and documentation governance metadata.
+- This replaces the previous fragmented 7.2 release-metadata / 7.3 implementation-metadata convention. Historical 7.x records below remain historical and are not rewritten.
+- During active pre-1.0 development, justified breaking machine-contract cleanup may still land on `main`. Formal compatibility promises belong to a future intentionally frozen release contract.
+- Documentation rebuilt against current `main` remains `candidate_review` unless its manifest lifecycle explicitly says otherwise; version normalization does not auto-promote semantic, native-copy, or visual review status.
 
 ### Merged development changes
 
-- The semantic runtime has moved to a small model-contract catalog with progressive disclosure of exact contract packs. Semantic fiction judgment belongs to the model; deterministic code owns authority, permissions, fingerprints, persistence, routing, hard budgets, typed validation, transactions, and reproducibility.
-- The live machine namespace migrated from `NOVEL_OS_*` / `novel_os_*` / `.novel-os/` surfaces to `NOVELFORGE_*` / `novelforge_*` / `.novelforge/` without compatibility aliases. This is a pre-release breaking migration.
-- Context selection now supports task-aware grounding with explicit question-to-evidence mapping and deterministic perspective/visibility filtering before model context is assembled. Ineligible pinned evidence fails closed rather than being shown to the model with a warning.
-- A metadata-only `novelforge_run_receipt_v1` observability primitive has been merged. It binds run/context/semantic-job/guard metadata and grounding evidence without storing candidate prose, granting Canon authority, or becoming a second state database.
-- Current settlement/runtime work keeps Accepted-artifact mutation behind explicit acceptance, exact before→after intent, checkpoint/write authorization, compare-and-swap, post-condition checks, and required projection receipts. Derived projections remain non-Canon.
-- Documentation governance now tracks audience, tier, authority sources, freshness ownership, rewrite policy, lifecycle state, bilingual pairing, local-link integrity, release drift, and deterministic visual/documentation checks. Semantic documentation review remains a separate human/model judgment layer.
+- The semantic runtime uses a small model-contract catalog with progressive disclosure of exact contract packs. Semantic fiction judgment belongs to the model; deterministic code owns authority, permissions, fingerprints, persistence, routing, hard budgets, typed validation, transactions, and reproducibility.
+- PR #11 migrated the live machine namespace from `NOVEL_OS_*` / `novel_os_*` / `.novel-os/` surfaces to `NOVELFORGE_*` / `novelforge_*` / `.novelforge/` without compatibility aliases.
+- PR #12 added task-aware context grounding with explicit question→evidence mapping and deterministic perspective/visibility filtering before model context is assembled.
+- PR #13 added metadata-only `novelforge_run_receipt_v1` observability without candidate prose, Canon authority, or a second state database.
+- PR #18 made the Framework bundle release-complete by including the quality runtime and smoke-testing extracted bundles with `novelforge.py doctor` plus the model-free self-test.
+- PR #19 merged Studio Phase 1: a read-only Run / Context Inspector driven by Run Receipts.
+- PR #21 merged Studio Phase 2A: the portable one-product/many-host contract, safe Project Hub projection, synthetic project/scene fixtures, and a read-only Project Hub + Scene workspace prototype.
+- PR #25 merged Studio Phase 2B: a versioned read-only host bridge plus a standards-compatible NovelForge Agent Skill. The bridge exposes an allowlisted read surface (`bridge.describe`, `framework.doctor`, `project.inspect`, `capabilities.inspect`, `context.inspect`, `semantic.catalog`), fails closed on unsupported operations, defaults away from host-private absolute paths, and keeps `authority=false`.
+- PR #24 completed the remaining machine-contract rename: `os_behavior_write` → `framework_behavior_write`, semantic job/result IDs moved from `novel-os-*` to `novelforge-*`, the live `.novel-os/` ignore surface was removed, and namespace hygiene now blocks those legacy machine identifiers from returning. No compatibility aliases were added.
+- The 0.8.0 normalization aligns the current machine/version identity instead of maintaining parallel “release” and “implementation” development numbers.
+- Documentation governance tracks audience, tier, authority sources, freshness ownership, rewrite policy, lifecycle state, bilingual pairing, local-link integrity, version alignment, and deterministic visual/documentation checks. `studio/` is included in bilingual manifest-coverage QA.
 
-### Breaking-change and migration ledger
+### Active gaps and compatibility notes
 
-- The machine namespace migration above is **already implemented on live `main`**. Historical 7.0 notes below describe the state of that release and should not be read as current machine guidance.
-- The separate permission-schema rename `os_behavior_write` → `framework_behavior_write` is **not complete on live `main`**. Closed PRs #14/#15 are not release authority and must not be treated as a successful migration.
-- Projects pinned to an older NovelForge commit remain bound to that exact dependency. Do not silently switch an existing project lock to `main`; use an explicit framework-upgrade/migration workflow and revalidate the project, bundle fingerprint, contracts, and any affected runtime state.
-- Final 8.0 migration instructions must be generated from the accepted Core contracts and release bundle, not inferred from issue descriptions or intermediate development commits.
+- Run Receipt still has Core-owned consumer/read-surface work: stable manifest discoverability, event-schema alignment for `run.receipt_recorded`, and a stable query/projection boundary instead of persistence-internal access. PR #25 deliberately does not expose unsafe Control Plane or Run Receipt reads through the host bridge.
+- Existing projects that intentionally pin an older Framework revision remain bound to that revision until explicitly upgraded. Generic Framework development itself follows latest `main` rather than an internal development lock.
+- A future stable migration guide must be generated from frozen contracts and the final bundle, not inferred from issue descriptions or intermediate commits.
 
 ### Product / publication status
 
-- Publication / Typesetting is an active Core workstream tracked by issue #16. Until its schemas/runtime are present in live release authority, documentation must describe it as planned/in development rather than as a released capability.
-- NovelForge Studio / observability UX is an active Product Experience workstream tracked by issues #8 and #17. A merged Core receipt or inspector primitive does not by itself mean Studio is shipped.
-- Studio must consume Core state through stable read interfaces; UI state never becomes Canon, Memory, semantic truth, or write authority.
+- Studio currently has merged **read-only** Phase 1, Phase 2A, and Phase 2B product slices: observability, Project Hub, Scene workspace, portable host boundary, and Agent Skill delivery are real on `main`.
+- These slices do **not** make Studio a write-capable, collaborative, authenticated, or production-hosted application. Generic invoke/write, project mutation, resume, and broader Control Plane reads remain outside the current bridge contract.
+- Publication / Typesetting remains an active Core workstream tracked by issue #16. Until official IR/profile/runtime contracts land, EPUB/Web/print publication remains planned/in development rather than shipped.
+- Broader MCP registry/management and later write-capable Studio operations remain deferred to their owning workstreams.
+- UI, host-bridge, and Agent Skill state never become Canon, Memory, semantic truth, settlement truth, or workflow authority.
 
 ## 7.0.0 · Adaptive Fiction Framework
 
