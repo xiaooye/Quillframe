@@ -12,7 +12,7 @@
     "dev": "npm run content && vite",
     "build": "npm run content && tsc --noEmit && vite build",
     "preview": "vite preview",
-    "quality": "npm run content && node scripts/quality.mjs && node scripts/atelier-quality.mjs"
+    "quality": "npm run content && node scripts/quality.mjs && node scripts/knowledge-experience-quality.mjs && node scripts/atelier-quality.mjs"
   },
   "dependencies": {
     "@solidjs/router": "0.16.2",
