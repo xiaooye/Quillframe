@@ -5,38 +5,43 @@
     grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr);
     gap: clamp(24px, 4vw, 54px);
     align-items: center;
-    overflow: hidden;
-    padding: clamp(26px, 4vw, 48px);
-    border: 1px solid color-mix(in oklab, var(--pe-border) 76%, transparent);
-    border-radius: 28px;
-    background:
-      radial-gradient(26rem 18rem at 6% 4%, color-mix(in oklab, var(--pe-editorial-soft) 72%, transparent), transparent 74%),
-      radial-gradient(28rem 20rem at 96% 12%, color-mix(in oklab, var(--pe-runtime-soft) 68%, transparent), transparent 76%),
-      color-mix(in oklab, var(--pe-surface) 96%, transparent);
-    box-shadow: var(--pe-shadow-2);
+    overflow: visible;
+    padding: clamp(34px, 5vw, 68px) 0 clamp(24px, 3vw, 38px);
+    border: 0;
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 62%, transparent);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   .product-surface-hero::after {
-    content: "";
-    position: absolute;
-    inset: 8px;
-    border: 1px dashed color-mix(in oklab, var(--pe-editorial) 18%, transparent);
-    border-radius: 20px;
-    pointer-events: none;
+    display: none;
   }
 
-  .product-surface-hero[data-tone="project"] {
-    background:
-      radial-gradient(26rem 18rem at 4% 4%, color-mix(in oklab, var(--pe-evidence-soft) 70%, transparent), transparent 74%),
-      radial-gradient(28rem 20rem at 96% 14%, color-mix(in oklab, var(--pe-runtime-soft) 66%, transparent), transparent 76%),
-      color-mix(in oklab, var(--pe-surface) 96%, transparent);
+  /* Tone is carried by accents and the visual slot, not by a colored hero box. */
+  .product-surface-hero[data-tone="project"],
+  .product-surface-hero[data-tone="publication"],
+  .product-surface-hero[data-tone="runtime"],
+  .product-surface-hero[data-tone="evidence"],
+  .product-surface-hero[data-tone="editorial"] {
+    background: transparent;
   }
 
-  .product-surface-hero[data-tone="publication"] {
-    background:
-      radial-gradient(26rem 18rem at 4% 5%, color-mix(in oklab, var(--pe-editorial-soft) 78%, transparent), transparent 74%),
-      radial-gradient(30rem 22rem at 96% 12%, color-mix(in oklab, var(--pe-valid-soft) 54%, transparent), transparent 78%),
-      color-mix(in oklab, var(--pe-surface) 96%, transparent);
+  .product-surface-hero[data-tone="project"] .product-surface-hero__eyebrow {
+    color: color-mix(in oklab, var(--pe-project) 74%, var(--pe-fg));
+  }
+
+  .product-surface-hero[data-tone="runtime"] .product-surface-hero__eyebrow {
+    color: color-mix(in oklab, var(--pe-runtime) 76%, var(--pe-fg));
+  }
+
+  .product-surface-hero[data-tone="evidence"] .product-surface-hero__eyebrow {
+    color: color-mix(in oklab, var(--pe-evidence) 76%, var(--pe-fg));
+  }
+
+  .product-surface-hero[data-tone="publication"] .product-surface-hero__eyebrow,
+  .product-surface-hero[data-tone="editorial"] .product-surface-hero__eyebrow {
+    color: color-mix(in oklab, var(--pe-editorial) 76%, var(--pe-fg));
   }
 
   .product-surface-hero__copy,
@@ -58,10 +63,15 @@
   .product-surface-hero__eyebrow {
     margin-bottom: 10px;
     color: var(--pe-editorial);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 820;
-    letter-spacing: .08em;
+    letter-spacing: .07em;
     text-transform: uppercase;
+  }
+
+  [data-locale="zh-CN"] .product-surface-hero__eyebrow {
+    letter-spacing: .045em;
+    text-transform: none;
   }
 
   .product-surface-hero__badges {
@@ -71,7 +81,7 @@
   .product-surface-hero h1 {
     max-width: 760px;
     margin: 0;
-    font-size: clamp(34px, 4.7vw, 62px);
+    font-size: clamp(36px, 4.7vw, 62px);
     font-weight: 780;
     letter-spacing: -.052em;
     line-height: 1.03;
@@ -85,14 +95,15 @@
   }
 
   .product-surface-hero__lede {
-    max-width: 760px;
+    max-width: 68ch;
     margin-top: 16px;
     color: var(--pe-muted);
-    font-size: clamp(14px, 1.25vw, 17px);
+    font-size: clamp(15px, 1.25vw, 17px);
     line-height: 1.75;
   }
 
   [data-locale="zh-CN"] .product-surface-hero__lede {
+    max-width: 40em;
     line-height: 1.9;
   }
 
@@ -101,7 +112,7 @@
   }
 
   .product-surface-hero__actions {
-    margin-top: 18px;
+    margin-top: 20px;
   }
 
   .product-surface-hero__visual {
@@ -114,20 +125,21 @@
     align-items: end;
     justify-content: space-between;
     gap: 18px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
   }
 
   .product-section-heading small {
     color: var(--pe-muted);
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 780;
-    letter-spacing: .08em;
+    letter-spacing: .07em;
   }
 
   .product-section-heading h2 {
-    margin: 3px 0 0;
-    font-size: clamp(20px, 2.3vw, 30px);
+    margin: 4px 0 0;
+    font-size: clamp(22px, 2.3vw, 32px);
     letter-spacing: -.04em;
+    line-height: 1.18;
   }
 
   .product-section-heading__aside {
@@ -143,13 +155,7 @@
 
 @media (max-width: 620px) {
   .product-surface-hero {
-    padding: 22px 18px;
-    border-radius: 22px;
-  }
-
-  .product-surface-hero::after {
-    inset: 6px;
-    border-radius: 16px;
+    padding: 28px 0 22px;
   }
 
   .product-surface-hero h1 {
