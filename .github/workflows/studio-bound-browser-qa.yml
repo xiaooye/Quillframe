@@ -249,7 +249,7 @@ jobs:
           assert 'Story Workspace' in workspace
           assert 'Work with the story, not the runtime plumbing' in workspace
           assert 'Every view is read-only and preserves Project authority' in workspace
-          assert 'Read-only · authority=false' in workspace
+          assert 'Studio never parses a private Project database into a second Canon store' in workspace
           assert 'Local Playground' not in workspace
 
           assert 'Local Playground' in playground
@@ -429,6 +429,7 @@ jobs:
           print({'schema': 'novelforge_studio_bound_browser_qa_v4', 'status': 'pass', 'authority': False})
           PY
       - name: Upload bound browser QA evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: studio-bound-browser-qa
