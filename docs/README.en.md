@@ -11,7 +11,7 @@
 
 NovelForge documentation is organized by **reader intent**, not by source-tree shape.
 
-The current 7.3 architecture is AI-native and contract-first: models own semantic fiction judgment; deterministic code owns authority, permissions, fingerprints, persistence, routing, typed validation, transactions, hard budgets, and reproducibility.
+The current development implementation is AI-native and contract-first: models own semantic fiction judgment; deterministic code owns authority, permissions, fingerprints, persistence, routing, typed validation, transactions, hard budgets, and reproducibility. Release authority remains `HARNESS_MANIFEST.yaml`; development implementation metadata does not promote a Framework release. See the [Changelog](../CHANGELOG.en.md) for the current release-truth ledger.
 
 This documentation follows the same separation. Product pages explain the mental model and tradeoffs. Guides show how to use a subsystem. Deep contracts define exact invariants.
 
@@ -94,7 +94,7 @@ Runtime capability never grants story authority by itself.
 
 ## 06 · If you are working with semantic model contracts ✦
 
-NovelForge 7.3 uses a progressively disclosed contract system.
+The current development implementation uses a progressively disclosed contract system.
 
 The deterministic index is:
 
