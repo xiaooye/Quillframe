@@ -1,0 +1,43 @@
+@layer knowledge-portal {
+  :root[data-knowledge-experience="journey-v1"] #main-content > :is(.interactive-route, .document-page) {
+    display: none !important;
+  }
+
+  :root[data-knowledge-experience="journey-v1"] #main-content > .knowledge-v2-portal {
+    display: block;
+  }
+
+  .knowledge-v2-portal {
+    min-block-size: calc(100svh - var(--pe-header-h, 64px));
+  }
+
+  .document-human-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-block-end: 16px;
+    color: var(--wui-color-muted-foreground);
+    font-size: 12px;
+  }
+
+  .document-human-meta > span:first-child {
+    display: grid;
+    place-items: center;
+    inline-size: 28px;
+    block-size: 28px;
+    margin-inline-end: 2px;
+    border-radius: 9px;
+    color: var(--nf-lane-runtime-stroke);
+    background: color-mix(in oklab, var(--nf-lane-runtime-fill) 78%, white);
+  }
+
+  .document-human-meta strong {
+    color: var(--wui-color-foreground);
+    font-weight: 680;
+  }
+
+  :root[data-knowledge-experience="journey-v1"] .site-footer {
+    margin-block-start: 0;
+  }
+}
