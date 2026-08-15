@@ -169,9 +169,10 @@ func _build_desktop() -> void:
 
 	var title_text := "Let the story\ngrow without\nletting the\nsystem lose\nthe plot." if _locale == "en-US" else "让故事越写越长，\n系统仍然知道\n自己在做什么。"
 	var title := _label(title_text, 72 if _locale == "en-US" else 61, 800, C.ink)
-	title.position = Vector2(left_x, top + 45)
+	title.position = Vector2(left_x, top + 24)
 	title.size = Vector2(520, 356)
-	title.add_theme_constant_override("line_spacing", -9 if _locale == "en-US" else -3)
+	title.scale = Vector2(1.045 if _locale == "en-US" else 1.0, 1.0)
+	title.add_theme_constant_override("line_spacing", -33 if _locale == "en-US" else -15)
 	_stage.add_child(title)
 
 	var lede_text := "NovelForge connects creation, context, character knowledge,\nquality gates, and publication into one inspectable workflow.\nLaunch Studio, search real docs, explore architecture, or play\nwith the core boundaries from here." if _locale == "en-US" else "NovelForge 把创作、上下文、角色知识、质量审查与出版\n连成一套可检查的工作流。你可以从这里直接进入 Studio、\n搜索真实文档、探索架构，或者试试关键机制。"
@@ -200,9 +201,10 @@ func _build_compact() -> void:
 	var top := 150.0
 	_stage.add_child(_pill("Long-form fiction system · 0.8.x" if _locale == "en-US" else "长篇小说创作系统 · 0.8.x", Vector2(x, top), Vector2(208, 25), Color("f8fbff"), Color("4078a8"), 12, 500, Color("b8d8ee")))
 	var title := _label("Let the story grow\nwithout letting the\nsystem lose the plot." if _locale == "en-US" else "让故事越写越长，\n系统仍然知道自己\n在做什么。", 58 if _locale == "en-US" else 50, 800, C.ink)
-	title.position = Vector2(x, top + 46)
+	title.position = Vector2(x, top + 32)
 	title.size = Vector2(size.x - 80, 230)
-	title.add_theme_constant_override("line_spacing", -4)
+	title.scale = Vector2(1.04 if _locale == "en-US" else 1.0, 1.0)
+	title.add_theme_constant_override("line_spacing", -20 if _locale == "en-US" else -12)
 	_stage.add_child(title)
 	var lede := _label("NovelForge connects creation, context, character knowledge, quality gates, and publication into one inspectable workflow." if _locale == "en-US" else "NovelForge 把创作、上下文、角色知识、质量审查与出版连成一套可检查的工作流。", 17, 420, C.muted)
 	lede.position = Vector2(x, top + 300)
@@ -227,9 +229,10 @@ func _build_phone() -> void:
 
 	var title_text := "Let the story\ngrow without\nletting the\nsystem lose\nthe plot." if _locale == "en-US" else "让故事越写越长，\n系统仍然知道\n自己在做什么。"
 	var title := _label(title_text, 46 if _locale == "en-US" else 42, 800, C.ink)
-	title.position = Vector2(x, top + 45)
+	title.position = Vector2(x, top + 27)
 	title.size = Vector2(size.x - 32, 262)
-	title.add_theme_constant_override("line_spacing", -5 if _locale == "en-US" else 0)
+	title.scale = Vector2(1.055 if _locale == "en-US" else 1.0, 1.0)
+	title.add_theme_constant_override("line_spacing", -20 if _locale == "en-US" else -13)
 	_stage.add_child(title)
 
 	var lede_text := "NovelForge connects creation, context,\ncharacter knowledge, quality gates, and\npublication into one inspectable workflow.\nLaunch Studio, search real docs, explore\narchitecture, or play with the core\nboundaries from here." if _locale == "en-US" else "NovelForge 把创作、上下文、角色知识、\n质量审查与出版连成一套可检查的工作流。\n你可以从这里直接进入 Studio、搜索真实\n文档、探索架构，或者试试关键机制。"
