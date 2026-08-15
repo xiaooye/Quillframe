@@ -1,0 +1,8 @@
+{
+  "schema": "novelforge_studio_host_bridge_request_v1",
+  "request_id": "REQ-SYNTHETIC-SEMANTIC-CATALOG",
+  "operation": "semantic.catalog",
+  "surface": "agent_package",
+  "args": {},
+  "authority": false
+}
