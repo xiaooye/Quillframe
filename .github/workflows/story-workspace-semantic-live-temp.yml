@@ -1,0 +1,115 @@
+name: Story Workspace Independent Semantic Gate
+
+on:
+  push:
+    branches: [feature/008-story-workspace]
+    paths:
+      - '.github/workflows/story-workspace-semantic-live-temp.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  narrative-verification-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      NOVELFORGE_OPENAI_MODEL: gpt-5.1
+      NOVELFORGE_OPENAI_REASONING_EFFORT: medium
+      NOVELFORGE_DISABLE_LOCAL_AGENT_AUTO: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Require explicitly configured independent provider credential
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo 'OPENAI_API_KEY repository secret is required; no semantic evidence will be fabricated.' >&2
+            exit 2
+          fi
+
+      - name: Build blind narrative-verification queue
+        run: |
+          python evals/build_judge_queue.py --output semantic-live-queue.json
+          python - <<'PY'
+          import json
+          p='semantic-live-queue.json'
+          d=json.load(open(p,encoding='utf-8'))
+          d['cases']=[c for c in d['cases'] if c.get('domain') == 'narrative-verification']
+          ids={c['id'] for c in d['cases']}
+          expected={'NARRATIVE-KNOWLEDGE-001','NARRATIVE-CAUSAL-001','NARRATIVE-SUPPORTED-001'}
+          assert ids == expected,(ids,expected)
+          forbidden={'expected','expected_verdict','expected_codes','gold','gold_label','blocks_release','prior_result'}
+          def scan(value,path='$'):
+              hits=[]
+              if isinstance(value,dict):
+                  for key,item in value.items():
+                      if key in forbidden:hits.append(f'{path}.{key}')
+                      hits.extend(scan(item,f'{path}.{key}'))
+              elif isinstance(value,list):
+                  for i,item in enumerate(value):hits.extend(scan(item,f'{path}[{i}]'))
+              return hits
+          hits=scan(d['cases'])
+          assert not hits,hits
+          json.dump(d,open(p,'w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          PY
+
+      - name: Package fingerprint-bound jobs
+        run: |
+          python harness/semantic_workers/semantic_worker_router.py prepare-evals \
+            --queue semantic-live-queue.json --output semantic-live-jobs.json
+          python harness/semantic_workers/semantic_worker_router.py validate-jobs \
+            --jobs semantic-live-jobs.json
+
+      - name: Verify provider-backed independent capability
+        run: |
+          python harness/semantic_workers/semantic_worker_runner.py capabilities > semantic-live-capabilities.json
+          python - <<'PY'
+          import json
+          d=json.load(open('semantic-live-capabilities.json',encoding='utf-8'))
+          assert d['independent_worker_available'] is True,d
+          assert d['adapter_source'] == 'openai_env',d
+          assert d['built_in_model_provider'] is True,d
+          PY
+
+      - name: Execute independent semantic jobs
+        run: |
+          python harness/semantic_workers/semantic_worker_runner.py run \
+            --jobs semantic-live-jobs.json \
+            --output semantic-live-execution.json \
+            --require-complete
+          python - <<'PY'
+          import json
+          r=json.load(open('semantic-live-execution.json',encoding='utf-8'))
+          assert r['status'] in {'completed','semantic_reject'},r
+          json.dump({'results':r['results']},open('semantic-live-results.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          PY
+
+      - name: Validate result bindings and construct judgments
+        run: |
+          python harness/semantic_workers/semantic_worker_router.py validate-results \
+            --jobs semantic-live-jobs.json \
+            --results semantic-live-results.json \
+            --judgments-output semantic-live-judgments.json
+
+      - name: Evaluate narrative semantic judgments
+        run: |
+          python evals/run_evals.py --domain narrative-verification --judgments semantic-live-judgments.json --release
+          python evals/run_evals.py --domain narrative-verification --judgments semantic-live-judgments.json --json > semantic-live-eval-results.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: story-workspace-independent-semantic-${{ github.run_id }}
+          path: |
+            semantic-live-capabilities.json
+            semantic-live-queue.json
+            semantic-live-jobs.json
+            semantic-live-execution.json
+            semantic-live-results.json
+            semantic-live-judgments.json
+            semantic-live-eval-results.json
+          if-no-files-found: warn
