@@ -1,5 +1,5 @@
 import { createContext, createResource, createSignal, ParentComponent, useContext } from "solid-js";
-import { BridgeDescription, BridgeResult, invokeBridge } from "./bridge";
+import { BridgeDescription, BridgeResult, StudioSurface, bridgeTransportAvailable, invokeBridge, studioSurface } from "./bridge";
 
 export interface ProjectHubProjection {
   schema: "novelforge_studio_project_hub_projection_v1";
@@ -26,6 +26,8 @@ export interface ProjectInspectData {
 }
 
 interface StudioValue {
+  surface: () => StudioSurface;
+  bridgeAvailable: () => boolean;
   bridgeDescription: () => BridgeDescription | undefined;
   bridgeError: () => unknown;
   bridgeLoading: () => boolean;
@@ -41,17 +43,26 @@ interface StudioValue {
 const StudioContext = createContext<StudioValue>();
 
 export const StudioProvider: ParentComponent = (props) => {
-  const [bridge, { refetch }] = createResource(async () => {
-    const result = await invokeBridge<BridgeDescription>("bridge.describe");
-    if (result.status !== "ok" || !result.data) throw new Error("bridge.describe did not return data");
-    return result.data;
-  });
+  const surface = studioSurface();
+  const hasBridge = bridgeTransportAvailable();
+  const [bridge, { refetch }] = createResource(
+    () => (hasBridge ? "bound" : undefined),
+    async () => {
+      const result = await invokeBridge<BridgeDescription>("bridge.describe");
+      if (result.status !== "ok" || !result.data) throw new Error("bridge.describe did not return data");
+      return result.data;
+    },
+  );
   const [projectRoot, setProjectRoot] = createSignal("");
   const [projectResult, setProjectResult] = createSignal<BridgeResult<ProjectInspectData>>();
   const [projectLoading, setProjectLoading] = createSignal(false);
   const [projectError, setProjectError] = createSignal<string>();
 
   const inspectProject = async (root = projectRoot()) => {
+    if (!hasBridge) {
+      setProjectError("NovelForge Core host is not bound to this Studio surface");
+      return;
+    }
     const trimmed = root.trim();
     if (!trimmed) {
       setProjectError("project_root is required");
@@ -72,10 +83,14 @@ export const StudioProvider: ParentComponent = (props) => {
   };
 
   const value: StudioValue = {
+    surface: () => surface,
+    bridgeAvailable: () => hasBridge,
     bridgeDescription: () => bridge(),
     bridgeError: () => bridge.error,
-    bridgeLoading: () => bridge.loading,
-    refreshBridge: () => void refetch(),
+    bridgeLoading: () => hasBridge && bridge.loading,
+    refreshBridge: () => {
+      if (hasBridge) void refetch();
+    },
     projectRoot,
     setProjectRoot,
     projectResult,

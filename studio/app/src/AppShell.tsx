@@ -93,6 +93,10 @@ export const AppShell: ParentComponent = (props) => {
             </Show>
           </div>
           <div class="nf-topbar-actions">
+            <span class="wui-badge wui-badge--outline nf-host-chip" data-surface={studio.surface()}>
+              <span class="nf-host-dot" aria-hidden="true" />
+              <span>{studio.bridgeAvailable() ? t("host.local") : t("host.cloud")}</span>
+            </span>
             <button class="wui-button wui-button--outline nf-command-trigger" type="button" onClick={() => setPaletteOpen(true)} aria-label={t("top.command")}>
               <span>⌘</span><span class="nf-command-label">{t("top.command")}</span><kbd>⌘K</kbd>
             </button>

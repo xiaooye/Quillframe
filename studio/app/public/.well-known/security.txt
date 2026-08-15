@@ -1,0 +1,3 @@
+Contact: mailto:contact@wei-dev.com
+Canonical: https://studio.novelforge.wei-dev.com/.well-known/security.txt
+Preferred-Languages: en, zh

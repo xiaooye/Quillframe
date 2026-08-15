@@ -1,28 +1,32 @@
 import { Show } from "solid-js";
-import { AuthorityBadge, PageIntro, QueryError } from "../components";
+import { AuthorityBadge, CoreHostBoundary, PageIntro, QueryError } from "../components";
 import { useI18n } from "../i18n";
 import { useStudio } from "../studio";
 
 export default function Desk() {
   const { t } = useI18n();
   const studio = useStudio();
+  const hosted = () => !studio.bridgeAvailable();
+
   return (
     <section class="nf-page">
       <PageIntro eyebrow={t("desk.eyebrow")} title={t("desk.title")} body={t("desk.body")} />
-      <QueryError message={studio.bridgeError() ? String(studio.bridgeError()) : undefined} />
+      <Show when={studio.bridgeAvailable()}>
+        <QueryError message={studio.bridgeError() ? String(studio.bridgeError()) : undefined} />
+      </Show>
       <div class="nf-metric-grid">
         <article class="wui-card nf-card nf-card-accent">
           <div class="wui-card__content">
             <span class="nf-card-label">{t("desk.bridgeTitle")}</span>
-            <strong>{studio.bridgeLoading() ? t("common.loading") : studio.bridgeDescription() ? t("desk.bridgeReady") : t("desk.bridgeUnavailable")}</strong>
-            <small>{studio.bridgeDescription()?.contract_schema ?? "novelforge_studio_host_bridge_contract_v1"}</small>
+            <strong>{hosted() ? t("desk.hostedReady") : studio.bridgeLoading() ? t("common.loading") : studio.bridgeDescription() ? t("desk.bridgeReady") : t("desk.bridgeUnavailable")}</strong>
+            <small>{hosted() ? t("desk.hostedMeta") : studio.bridgeDescription()?.contract_schema ?? "novelforge_studio_host_bridge_contract_v1"}</small>
           </div>
         </article>
         <article class="wui-card nf-card">
           <div class="wui-card__content">
             <span class="nf-card-label">{t("desk.queryCount")}</span>
             <strong>{studio.bridgeDescription()?.supported_operations.length ?? "—"}</strong>
-            <small>bridge.describe · project.inspect · …</small>
+            <small>{hosted() ? t("host.cloud") : "bridge.describe · project.inspect · …"}</small>
           </div>
         </article>
         <article class="wui-card nf-card">
@@ -40,6 +44,10 @@ export default function Desk() {
           </div>
         </article>
       </div>
+
+      <Show when={hosted()}>
+        <CoreHostBoundary />
+      </Show>
 
       <div class="nf-two-column">
         <article class="wui-card nf-card">

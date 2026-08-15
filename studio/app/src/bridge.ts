@@ -1,10 +1,13 @@
 export type BridgeStatus = "ok" | "invalid" | "unsupported" | "error";
+export type StudioSurface = "local_app" | "cloud_ui";
+
+const TOKEN_PLACEHOLDER = "__NOVELFORGE_STUDIO_TOKEN__";
 
 export interface BridgeResult<T = unknown> {
   schema: "novelforge_studio_host_bridge_result_v1";
   request_id: string;
   operation: string;
-  surface: "local_app";
+  surface: StudioSurface;
   status: BridgeStatus;
   request_fingerprint: string;
   result_fingerprint: string;
@@ -39,7 +42,16 @@ export interface BridgeDescription {
 }
 
 function token(): string {
-  return document.querySelector<HTMLMetaElement>('meta[name="novelforge-studio-token"]')?.content ?? "";
+  return document.querySelector<HTMLMetaElement>('meta[name="novelforge-studio-token"]')?.content.trim() ?? "";
+}
+
+export function bridgeTransportAvailable(): boolean {
+  const value = token();
+  return value.length > 0 && value !== TOKEN_PLACEHOLDER;
+}
+
+export function studioSurface(): StudioSurface {
+  return bridgeTransportAvailable() ? "local_app" : "cloud_ui";
 }
 
 function assertEnvelope(value: unknown): asserts value is BridgeResult {
@@ -52,6 +64,10 @@ function assertEnvelope(value: unknown): asserts value is BridgeResult {
 }
 
 export async function invokeBridge<T = unknown>(operation: string, args: Record<string, unknown> = {}): Promise<BridgeResult<T>> {
+  if (!bridgeTransportAvailable()) {
+    throw new Error("NovelForge Core host is not bound to this Studio surface");
+  }
+
   const response = await fetch("/api/bridge/invoke", {
     method: "POST",
     credentials: "same-origin",
