@@ -31,8 +31,9 @@ RESUME_PREFLIGHT_SCHEMA = "novelforge_session_resume_preflight_v1"
 
 try:
     from project_hub_projection import build_projection
+    from publication_preview import build_preview as build_publication_preview
 except ImportError as exc:  # pragma: no cover - startup guard
-    raise SystemExit(f"cannot load Studio Project Hub projection: {exc}")
+    raise SystemExit(f"cannot load Studio projection adapter: {exc}")
 
 ABS_WIN_RE = re.compile(r"^[A-Za-z]:[\\/]")
 REDACT_KEYS = {"project_root", "framework_root", "absolute", "db", "database_path"}
@@ -188,6 +189,24 @@ def _semantic_catalog(_: dict[str, Any], __: str) -> dict[str, Any]:
     return sanitize(_run_cli(["semantic", "catalog"]))
 
 
+def _publication_preview(args: dict[str, Any], _: str) -> dict[str, Any]:
+    profile = args.get("profile")
+    if not isinstance(profile, str) or not profile.strip():
+        raise BridgeError("invalid_args", "profile is required")
+
+    source = args.get("source")
+    if source is None and args.get("source_manifest") is not None:
+        project_root = _project_root(args)
+        source = load_json(_scoped_path(project_root, args.get("source_manifest"), "source_manifest"))
+    if not isinstance(source, dict):
+        raise BridgeError("invalid_args", "source object or project-relative source_manifest is required")
+
+    try:
+        return sanitize(build_publication_preview(source, profile.strip()))
+    except (ValueError, OSError, json.JSONDecodeError) as exc:
+        raise BridgeError("publication_preview_invalid", str(exc)) from exc
+
+
 def _runtime_args(args: dict[str, Any], *query_args: str) -> tuple[Path, list[str]]:
     project_root = _project_root(args)
     runtime_db = project_root / ".novelforge" / "runtime.db"
@@ -261,20 +280,9 @@ def _session_resume_preflight(args: dict[str, Any], _: str) -> dict[str, Any]:
         raise BridgeError("invalid_args", "expected_session_version must be a positive integer")
     runtime_db = project_root / ".novelforge" / "runtime.db"
     argv = [
-        "resume-preflight",
-        "inspect",
-        "--db",
-        str(runtime_db),
-        "--project-root",
-        str(project_root),
-        "--session-id",
-        session_id,
-        "--checkpoint-id",
-        checkpoint_id,
-        "--expected-session-version",
-        str(expected_version),
-        "--authority-evidence",
-        str(evidence),
+        "resume-preflight", "inspect", "--db", str(runtime_db), "--project-root", str(project_root),
+        "--session-id", session_id, "--checkpoint-id", checkpoint_id,
+        "--expected-session-version", str(expected_version), "--authority-evidence", str(evidence),
     ]
     try:
         return sanitize(_run_cli(argv, cwd=project_root))
@@ -301,6 +309,7 @@ DISPATCH = {
     "capabilities.inspect": _capabilities_inspect,
     "context.inspect": _context_inspect,
     "semantic.catalog": _semantic_catalog,
+    "publication.preview": _publication_preview,
     "runtime.sessions.list": _runtime_sessions_list,
     "runtime.session.get": _runtime_session_get,
     "runtime.events.list": _runtime_events_list,
@@ -380,11 +389,7 @@ def invoke(request: dict[str, Any]) -> dict[str, Any]:
     deferred = contract["operations"]["deferred"]
     if operation in deferred:
         info = deferred[operation]
-        return _base_result(
-            request,
-            status="unsupported",
-            error={"code": "operation_deferred", "reason": info.get("reason"), "dependency": info.get("dependency"), "mutation_performed": False},
-        )
+        return _base_result(request, status="unsupported", error={"code": "operation_deferred", "reason": info.get("reason"), "dependency": info.get("dependency"), "mutation_performed": False})
     if operation not in contract["operations"]["supported"] or operation not in DISPATCH:
         return _base_result(request, status="invalid", error={"code": "unknown_operation", "mutation_performed": False})
 
@@ -428,6 +433,31 @@ def self_test() -> dict[str, Any]:
     doctor = invoke(_request("REQ-DOCTOR", "framework.doctor"))
     capabilities = invoke(_request("REQ-CAP", "capabilities.inspect"))
 
+    publication_text = "第一段。\n\nPublication preview."
+    publication_source = {
+        "book": {
+            "identifier": "urn:novelforge:bridge-preview-self-test",
+            "title": "Bridge Preview",
+            "language": "zh-CN",
+            "modified": "2026-08-15T00:00:00Z",
+        },
+        "chapters": [{
+            "chapter_id": "CH-001",
+            "title": "第一章",
+            "text": publication_text,
+            "accepted_fingerprint": "sha256:" + hashlib.sha256(publication_text.encode("utf-8")).hexdigest(),
+        }],
+    }
+    publication = invoke(_request("REQ-PUBLICATION", "publication.preview", {"profile": "epub", "source": publication_source}))
+    publication_preview_safe = (
+        publication["status"] == "ok"
+        and publication["data"].get("schema") == "novelforge_publication_preview_projection_v1"
+        and publication["data"].get("authority") is False
+        and publication["data"].get("mutation_performed") is False
+        and publication["data"].get("text_roundtrip") is True
+        and publication["data"].get("source_authority_verified") is False
+    )
+
     temp_root = Path(tempfile.mkdtemp(prefix="novelforge-host-bridge-"))
     project_ready = project_safe = context_safe = runtime_safe = False
     runtime_queries_ok = resume_preflight_safe = False
@@ -442,6 +472,11 @@ def self_test() -> dict[str, Any]:
         context_path.write_text(json.dumps({"manifest_id": "CTX-BRIDGE-SELF", "items": [{"id": "CTX-A", "class": "summary", "source": str(temp_root / "private-source.txt"), "authority": "derived", "derived": True, "stages": ["writer_pre_draft"], "priority": 1}]}), encoding="utf-8")
         context = invoke(_request("REQ-CONTEXT", "context.inspect", {"project_root": str(temp_root), "manifest": "context-manifest.json", "stage": "writer_pre_draft"}))
         context_safe = context["status"] == "ok" and str(temp_root) not in canonical(context) and context["data"]["authority"] is False
+
+        publication_manifest = temp_root / "publication-source.json"
+        publication_manifest.write_text(json.dumps(publication_source, ensure_ascii=False), encoding="utf-8")
+        publication_from_project = invoke(_request("REQ-PUBLICATION-FILE", "publication.preview", {"project_root": str(temp_root), "source_manifest": "publication-source.json", "profile": "web"}))
+        publication_preview_safe = publication_preview_safe and publication_from_project["status"] == "ok" and str(temp_root) not in canonical(publication_from_project)
 
         runtime_db = temp_root / ".novelforge" / "runtime.db"
         runtime_db.parent.mkdir(parents=True, exist_ok=True)
@@ -516,20 +551,14 @@ def self_test() -> dict[str, Any]:
         evidence_path = temp_root / "resume-authority.json"
         evidence_path.write_text("{}", encoding="utf-8")
         preflight = invoke(_request("REQ-RESUME-PREFLIGHT", "session.resume.preflight", {
-            "project_root": str(temp_root),
-            "session_id": "SES-BRIDGE",
-            "checkpoint_id": "CP-NOT-PRESENT",
-            "expected_session_version": 1,
-            "authority_evidence": "resume-authority.json",
+            "project_root": str(temp_root), "session_id": "SES-BRIDGE", "checkpoint_id": "CP-NOT-PRESENT",
+            "expected_session_version": 1, "authority_evidence": "resume-authority.json",
         }))
         resume_preflight_safe = (
-            preflight["status"] == "ok"
-            and preflight["data"].get("schema") == RESUME_PREFLIGHT_SCHEMA
-            and preflight["data"].get("status") == "BLOCKED"
-            and preflight["data"].get("ready") is False
+            preflight["status"] == "ok" and preflight["data"].get("schema") == RESUME_PREFLIGHT_SCHEMA
+            and preflight["data"].get("status") == "BLOCKED" and preflight["data"].get("ready") is False
             and "checkpoint_not_found" in preflight["data"].get("blockers", [])
-            and preflight["data"].get("mutation_performed") is False
-            and preflight["data"].get("authority") is False
+            and preflight["data"].get("mutation_performed") is False and preflight["data"].get("authority") is False
             and str(temp_root) not in canonical(preflight)
         )
     finally:
@@ -545,6 +574,7 @@ def self_test() -> dict[str, Any]:
         "request_authority_rejected": authority_rejected["status"] == "invalid",
         "doctor_query": doctor["status"] == "ok",
         "capability_query": capabilities["status"] == "ok",
+        "publication_preview_query_safe": publication_preview_safe,
         "project_fixture_ready": project_ready,
         "project_projection_safe": project_safe,
         "context_projection_safe": context_safe,
