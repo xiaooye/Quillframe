@@ -95,13 +95,11 @@ var _selection_label: Label
 var _map
 var _left_panel: Control
 var _right_panel: Control
-var _popstate_callback
-var _browser_window
 
 func _ready() -> void:
 	_build_interface()
-	_install_browser_bridge()
 	_navigate(_browser_path(), false)
+	_install_browser_history_guard()
 	resized.connect(_apply_responsive_layout)
 	call_deferred("_apply_responsive_layout")
 	call_deferred("_signal_web_ready")
@@ -479,15 +477,13 @@ func _apply_responsive_layout() -> void:
 	else:
 		_map.custom_minimum_size = Vector2(420, 520)
 
-func _install_browser_bridge() -> void:
+func _install_browser_history_guard() -> void:
 	if not OS.has_feature("web"):
 		return
-	_browser_window = JavaScriptBridge.get_interface("window")
-	_popstate_callback = JavaScriptBridge.create_callback(_on_popstate)
-	_browser_window.addEventListener("popstate", _popstate_callback)
-
-func _on_popstate(_args: Array) -> void:
-	_navigate(_browser_path(), false)
+	# Keep browser history authoritative without holding a JavaScript callback
+	# object inside the scene. A popstate performs a cheap hard reload of the
+	# current product path; the new scene restores route focus from pathname.
+	JavaScriptBridge.eval("if(!window.__novelforgePopstateReloadInstalled){window.__novelforgePopstateReloadInstalled=true;window.addEventListener('popstate',()=>window.location.reload());}")
 
 func _browser_path() -> String:
 	if not OS.has_feature("web"):

@@ -34,7 +34,9 @@ for (const route of ["/studio", "/architecture", "/publication", "/inspect", "/p
 }
 
 check(main.includes("window.history.pushState"), "Godot navigation must synchronize browser history");
-check(main.includes("addEventListener(\"popstate\""), "browser back/forward must drive the Godot scene");
+check(main.includes("window.addEventListener('popstate'"), "browser back/forward must remain bound to product routing");
+check(main.includes("window.location.reload()"), "popstate must rehydrate the current product route without a Godot-to-JS callback object");
+check(!main.includes("JavaScriptBridge.create_callback"), "product boot must not depend on JavaScript callback-object construction");
 check(main.includes("window.location.assign('/docs')"), "Docs must remain a hard cross-application navigation boundary");
 check(main.includes("novelforgeRuntime='ready'"), "main scene must publish a browser-visible readiness marker");
 check(main.includes("novelforge:ready"), "main scene must publish a runtime-ready browser event");
@@ -42,7 +44,9 @@ check(systemMap.includes("_parallax"), "system map must retain 2.5D parallax dep
 check(systemMap.includes("_draw_packet"), "system map must retain animated execution packets");
 
 check(shell.includes('$GODOT_URL') && shell.includes('$GODOT_CONFIG'), "custom Web shell must preserve required Godot export placeholders");
-check(shell.includes('data-novelforge-runtime="loading"'), "custom Web shell must expose the loading state to browser QA");
+check(shell.includes('data-novelforge-runtime="loading"'), "custom Web shell must expose the scene loading state to browser QA");
+check(shell.includes('data-novelforge-engine="loading"'), "custom Web shell must expose the engine startup state to browser QA");
+check(shell.includes("novelforgeEngine = 'started'"), "startGame resolution must be browser-observable independently from scene readiness");
 check(shell.includes('id="nf-loader"') && shell.includes('id="nf-progress"'), "custom Web shell must provide branded loading and progress UI");
 check(!shell.includes("GODOT\n") && !shell.includes("Game engine"), "custom loader must not regress to Godot default splash branding");
 

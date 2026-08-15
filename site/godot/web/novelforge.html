@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-novelforge-runtime="loading">
+<html lang="en" data-novelforge-runtime="loading" data-novelforge-engine="loading">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -161,13 +161,18 @@
 
       if (!Engine.isWebGLAvailable(2)) {
         root.dataset.novelforgeRuntime = 'error';
+        root.dataset.novelforgeEngine = 'error';
         status.textContent = 'WebGL 2 unavailable';
         return;
       }
 
-      engine.startGame({ canvas, onProgress }).catch((error) => {
+      engine.startGame({ canvas, onProgress }).then(() => {
+        root.dataset.novelforgeEngine = 'started';
+        status.textContent = root.dataset.novelforgeRuntime === 'ready' ? 'Ready' : 'Scene started';
+      }).catch((error) => {
         console.error('NovelForge Godot runtime failed to start', error);
         root.dataset.novelforgeRuntime = 'error';
+        root.dataset.novelforgeEngine = 'error';
         status.textContent = 'Runtime failed';
       });
     })();
