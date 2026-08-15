@@ -38,7 +38,8 @@ export default function ProjectInspectorEntry(props: Props) {
         <nav class="wui-app-bar__nav desktop-nav" aria-label={zh() ? "项目检查导航" : "Project inspection navigation"}>
           <a class="wui-app-bar__link" href="/">{zh() ? "产品" : "Product"}</a>
           <a class="wui-app-bar__link active" href="/inspect" aria-current="page">{zh() ? "检查项目" : "Inspect"}</a>
-          <a class="wui-app-bar__link" href={zh() ? "/docs/project-sdk" : "/docs/en/project-sdk"}>{zh() ? "Project SDK" : "Project SDK"}</a>
+          <a class="wui-app-bar__link" href="/playground">Playground</a>
+          <a class="wui-app-bar__link" href={zh() ? "/docs/project-sdk" : "/docs/en/project-sdk"}>Project SDK</a>
         </nav>
         <div class="wui-app-bar__actions header-actions">
           <a class="wui-button wui-button--solid studio-cta" href="https://studio.novelforge.wei-dev.com" target="_blank" rel="noreferrer">✦ Studio</a>
@@ -54,8 +55,8 @@ export default function ProjectInspectorEntry(props: Props) {
       <footer class="site-footer inspector-footer">
         <div class="page-width footer-grid">
           <div class="footer-brand-block"><div class="footer-brand"><img src={brandMark} alt="" /><strong>NovelForge</strong></div><p>{zh() ? "项目内容只留在你的浏览器里。" : "Your project content stays in your browser."}</p></div>
-          <div class="footer-links"><a href={zh() ? "/docs/project-sdk" : "/docs/en/project-sdk"}>Project SDK</a><a href={zh() ? "/docs/project-adapters" : "/docs/en/project-adapters"}>{zh() ? "项目适配器" : "Project adapters"}</a></div>
-          <div class="footer-links"><a href="https://github.com/xiaooye/cn_webnovel_agent" target="_blank" rel="noreferrer">GitHub ↗</a><a href="/">{zh() ? "返回产品站" : "Back to product"}</a></div>
+          <div class="footer-links"><a href="/playground">Local Playground</a><a href={zh() ? "/docs/project-sdk" : "/docs/en/project-sdk"}>Project SDK</a></div>
+          <div class="footer-links"><a href={zh() ? "/docs/project-adapters" : "/docs/en/project-adapters"}>{zh() ? "项目适配器" : "Project adapters"}</a><a href="/">{zh() ? "返回产品站" : "Back to product"}</a></div>
         </div>
       </footer>
     </div>
