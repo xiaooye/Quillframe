@@ -2,7 +2,7 @@ import type { Messages } from "./types";
 
 const messages = {
   "app.brand": "NovelForge Studio",
-  "app.readOnly": "只读产品外壳",
+  "app.readOnly": "为长篇小说而作",
   "host.local": "本地 Web",
   "host.cloud": "云托管",
   "host.unboundTitle": "这个云端 Studio 尚未绑定 NovelForge Core 宿主",
