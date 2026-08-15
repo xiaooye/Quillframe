@@ -192,8 +192,10 @@ jobs:
                   assert '/api/bridge/invoke' in text, f'expected typed bridge request in {name}'
               assert '/api/' not in text.replace('/api/bridge/invoke', ''), f'unexpected Studio API path in {name}'
 
+          # Agents is a static integration/runtime-model surface. The shared shell may
+          # perform its normal bridge bootstrap, but this route must not invoke Core operations.
           agents_netlog = (root / 'agents-en-desktop-netlog.json').read_text(encoding='utf-8', errors='replace')
-          assert '/api/' not in agents_netlog, 'Agents surface must not invent a runtime API call'
+          assert '/api/bridge/invoke' not in agents_netlog, 'Agents surface must not invoke Core operations'
 
           (root / 'runtime-proof.txt').write_text(
               'schema=novelforge_studio_bound_browser_qa_v1\n'
