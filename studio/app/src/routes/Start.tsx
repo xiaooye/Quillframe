@@ -1,12 +1,64 @@
-import { createSignal } from "solid-js";
+import { createMemo, createSignal } from "solid-js";
 import { A } from "@solidjs/router";
 import { PageIntro } from "../components";
 import { useI18n } from "../i18n";
 
 const initCommand = 'python novelforge.py project init ./my-novel --id my-novel --title "My Novel" --language en';
 
+const copy = {
+  "en-US": {
+    eyebrow: "Choose a host · keep one project model",
+    title: "Start a NovelForge project",
+    body: "Choose the surface that fits your workflow. The CLI is the current project-creation path; Hosted Studio and Agent Skill are usable now within their read-only boundaries, while a packaged Desktop app remains planned.",
+    cliMeta: "CLI · available now",
+    cliTitle: "Create the project scaffold",
+    cliBody: "From a NovelForge framework checkout, create a project with the current stdlib Project SDK through the top-level CLI.",
+    cliAction: "Copy init command",
+    cliNote: "This creates the scaffold. Pin the framework lock and required attestation before production work; scaffolding alone does not grant Canon authority.",
+    desktopMeta: "Local app · planned",
+    desktopTitle: "Desktop",
+    desktopBody: "A packaged local app can wrap the same Studio/Core boundary later. No Desktop binary is claimed or shipped by this surface today.",
+    desktopAction: "Not available yet",
+    cloudMeta: "Cloud · available now",
+    cloudTitle: "Hosted Studio",
+    cloudBody: "Use browser-local Project Preflight and Playground without an account or backend. Authoritative project/runtime projections still require a bound Core.",
+    cloudAction: "Open browser Playground",
+    agentMeta: "Agent Skill · portable pattern ready",
+    agentTitle: "Coding agent",
+    agentBody: "Bootstrap NovelForge inside Claude Code, Codex, OpenCode, Cursor, or a custom agent through the portable skill and public boundaries.",
+    agentAction: "Open Agent Integrations",
+    boundary: "These are delivery surfaces, not separate authorities. Core/project contracts remain the source of truth, and no UI or agent integration can synthesize Canon or write authority.",
+    copied: "Copied",
+  },
+  "zh-CN": {
+    eyebrow: "选择宿主 · 共用同一 Project 模型",
+    title: "开始一个 NovelForge 项目",
+    body: "选择最适合你工作流的入口。当前真正负责创建 Project 的是 CLI；Hosted Studio 与 Agent Skill 已可在各自的只读边界内使用，而打包后的 Desktop App 仍处于规划阶段。",
+    cliMeta: "CLI · 当前可用",
+    cliTitle: "创建 Project scaffold",
+    cliBody: "在 NovelForge Framework checkout 中，通过顶层 CLI 调用当前 stdlib Project SDK 创建项目骨架。",
+    cliAction: "复制 init 命令",
+    cliNote: "这一步只创建 scaffold。进入 production work 前仍需锁定 Framework lock 并满足所需 attestation；初始化本身不会授予 Canon authority。",
+    desktopMeta: "本地 App · 规划中",
+    desktopTitle: "Desktop",
+    desktopBody: "未来可以用打包后的本地 App 包住同一套 Studio/Core 边界；当前这个产品面不声称已经发布 Desktop binary。",
+    desktopAction: "暂未开放",
+    cloudMeta: "Cloud · 当前可用",
+    cloudTitle: "Hosted Studio",
+    cloudBody: "无需账号或后端即可使用浏览器本地 Project Preflight 与 Playground；权威 Project / Runtime 投影仍必须绑定 Core。",
+    cloudAction: "打开浏览器 Playground",
+    agentMeta: "Agent Skill · portable pattern ready",
+    agentTitle: "Coding agent",
+    agentBody: "通过 portable skill 与公共边界，把 NovelForge 接入 Claude Code、Codex、OpenCode、Cursor 或自定义 Agent。",
+    agentAction: "打开 Agent Integrations",
+    boundary: "这些只是不同 delivery surface，不是不同 authority。Core / Project contract 仍是事实来源，任何 UI 或 Agent integration 都不能自行合成 Canon 或写入权限。",
+    copied: "已复制",
+  },
+} as const;
+
 export default function Start() {
-  const { t } = useI18n();
+  const { locale } = useI18n();
+  const text = createMemo(() => copy[locale()]);
   const [copied, setCopied] = createSignal(false);
 
   const copyCommand = async () => {
@@ -17,54 +69,54 @@ export default function Start() {
 
   return (
     <section class="nf-page">
-      <PageIntro eyebrow={t("start.eyebrow")} title={t("start.title")} body={t("start.body")} />
+      <PageIntro eyebrow={text().eyebrow} title={text().title} body={text().body} />
 
       <div class="nf-catalog-grid">
         <article class="wui-card nf-card nf-card-accent">
           <div class="wui-card__header">
-            <span class="nf-card-label">{t("start.cliMeta")}</span>
-            <h2>{t("start.cliTitle")}</h2>
+            <span class="nf-card-label">{text().cliMeta}</span>
+            <h2>{text().cliTitle}</h2>
           </div>
           <div class="wui-card__content">
-            <p>{t("start.cliBody")}</p>
+            <p>{text().cliBody}</p>
             <pre class="wui-code-block"><code>{initCommand}</code></pre>
             <button class="wui-button wui-button--outline" type="button" onClick={() => void copyCommand()}>
-              {copied() ? t("agents.copied") : t("start.cliAction")}
+              {copied() ? text().copied : text().cliAction}
             </button>
-            <small>{t("start.cliNote")}</small>
+            <small>{text().cliNote}</small>
           </div>
         </article>
 
         <article class="wui-card nf-card">
           <div class="wui-card__header">
-            <span class="nf-card-label">{t("start.desktopMeta")}</span>
-            <h2>{t("start.desktopTitle")}</h2>
+            <span class="nf-card-label">{text().desktopMeta}</span>
+            <h2>{text().desktopTitle}</h2>
           </div>
           <div class="wui-card__content">
-            <p>{t("start.desktopBody")}</p>
-            <button class="wui-button wui-button--outline" type="button" disabled>{t("start.desktopAction")}</button>
+            <p>{text().desktopBody}</p>
+            <button class="wui-button wui-button--outline" type="button" disabled>{text().desktopAction}</button>
           </div>
         </article>
 
         <article class="wui-card nf-card">
           <div class="wui-card__header">
-            <span class="nf-card-label">{t("start.cloudMeta")}</span>
-            <h2>{t("start.cloudTitle")}</h2>
+            <span class="nf-card-label">{text().cloudMeta}</span>
+            <h2>{text().cloudTitle}</h2>
           </div>
           <div class="wui-card__content">
-            <p>{t("start.cloudBody")}</p>
-            <A class="wui-button wui-button--outline" href="/workspace">{t("start.cloudAction")}</A>
+            <p>{text().cloudBody}</p>
+            <A class="wui-button wui-button--outline" href="/workspace">{text().cloudAction}</A>
           </div>
         </article>
 
         <article class="wui-card nf-card">
           <div class="wui-card__header">
-            <span class="nf-card-label">{t("start.agentMeta")}</span>
-            <h2>{t("start.agentTitle")}</h2>
+            <span class="nf-card-label">{text().agentMeta}</span>
+            <h2>{text().agentTitle}</h2>
           </div>
           <div class="wui-card__content">
-            <p>{t("start.agentBody")}</p>
-            <A class="wui-button wui-button--outline" href="/agents">{t("start.agentAction")}</A>
+            <p>{text().agentBody}</p>
+            <A class="wui-button wui-button--outline" href="/agents">{text().agentAction}</A>
           </div>
         </article>
       </div>
@@ -72,7 +124,7 @@ export default function Start() {
       <div class="wui-alert" role="note">
         <div class="wui-alert__body">
           <strong class="wui-alert__title">authority=false</strong>
-          <span class="wui-alert__description">{t("start.boundary")}</span>
+          <span class="wui-alert__description">{text().boundary}</span>
         </div>
       </div>
     </section>
