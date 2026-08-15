@@ -8,6 +8,8 @@ on:
       - 'studio/local_server.py'
       - 'studio/host_bridge.py'
       - 'studio/host_bridge_contract.json'
+      - 'studio/publication_preview.py'
+      - 'publication/**'
       - '.github/workflows/studio-bound-browser-qa.yml'
   push:
     branches: [main]
@@ -17,6 +19,8 @@ on:
       - 'studio/local_server.py'
       - 'studio/host_bridge.py'
       - 'studio/host_bridge_contract.json'
+      - 'studio/publication_preview.py'
+      - 'publication/**'
       - '.github/workflows/studio-bound-browser-qa.yml'
 
 permissions:
@@ -77,6 +81,77 @@ jobs:
           done
           test "${ready}" = "true"
 
+          # Exercise the real deterministic publication compiler through the
+          # exact loopback Host Bridge used by the browser. This proves more
+          # than route chrome: the public transport, fingerprint guard, compiler,
+          # temporary derived build, and safe result envelope all execute.
+          python - <<'PY'
+          import hashlib
+          import json
+          import re
+          import urllib.request
+          from pathlib import Path
+
+          root = Path('/tmp/studio-bound-qa')
+          html = (root / 'root.html').read_text(encoding='utf-8')
+          match = re.search(r'<meta name="novelforge-studio-token" content="([^"]+)"', html)
+          assert match, 'Studio transport token meta missing'
+          token = match.group(1)
+          base = 'http://127.0.0.1:4177'
+          text = '第一段。\n\nBound browser publication preview.'
+          source = {
+              'book': {
+                  'identifier': 'urn:novelforge:bound-browser-preview',
+                  'title': 'Bound Browser Preview',
+                  'language': 'zh-CN',
+                  'modified': '2026-08-15T00:00:00Z',
+              },
+              'chapters': [{
+                  'chapter_id': 'CH-001',
+                  'title': '第一章',
+                  'text': text,
+                  'accepted_fingerprint': 'sha256:' + hashlib.sha256(text.encode('utf-8')).hexdigest(),
+              }],
+          }
+          request = {
+              'schema': 'novelforge_studio_host_bridge_request_v1',
+              'request_id': 'bound-browser-publication-preview',
+              'operation': 'publication.preview',
+              'surface': 'local_app',
+              'args': {'profile': 'epub', 'source': source},
+              'authority': False,
+          }
+          body = json.dumps(request, ensure_ascii=False).encode('utf-8')
+          http = urllib.request.Request(
+              base + '/api/bridge/invoke',
+              method='POST',
+              data=body,
+              headers={
+                  'Content-Type': 'application/json',
+                  'X-NovelForge-Studio-Token': token,
+                  'Origin': base,
+                  'Sec-Fetch-Site': 'same-origin',
+              },
+          )
+          result = json.loads(urllib.request.urlopen(http, timeout=20).read())
+          data = result.get('data') or {}
+          assert result['status'] == 'ok', result
+          assert data.get('schema') == 'novelforge_publication_preview_projection_v1', data
+          assert data.get('compiler') == 'publication/compiler.py'
+          assert data.get('accepted_fingerprint_guard') is True
+          assert data.get('text_roundtrip') is True
+          assert data.get('source_authority_verified') is False
+          assert data.get('query_only') is True
+          assert data.get('mutation_performed') is False
+          assert data.get('model_execution') is False
+          assert data.get('authority') is False
+          assert data.get('canon_authority') is False
+          assert data.get('settlement_authority') is False
+          assert data.get('artifact', {}).get('sha256', '').startswith('sha256:')
+          assert data.get('validation', {}).get('valid') is True
+          (root / 'publication-preview-result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
+          PY
+
           run_chrome() {
             name="$1"
             size="$2"
@@ -119,6 +194,11 @@ jobs:
 
           run_chrome workspace-en-desktop 1440,900 'http://127.0.0.1:4177/workspace?lang=en-US'
           run_chrome agents-en-desktop 1440,900 'http://127.0.0.1:4177/agents?lang=en-US'
+          run_chrome inspector-en-desktop 1440,900 'http://127.0.0.1:4177/inspect?lang=en-US'
+          run_chrome control-en-desktop 1440,900 'http://127.0.0.1:4177/control?lang=en-US'
+          run_chrome architecture-en-desktop 1440,900 'http://127.0.0.1:4177/architecture?lang=en-US'
+          run_chrome publication-en-desktop 1440,900 'http://127.0.0.1:4177/publication?lang=en-US'
+          run_chrome publication-zh-mobile 390,844 'http://127.0.0.1:4177/publication?lang=zh-CN'
           run_chrome runtime-en-desktop 1440,900 'http://127.0.0.1:4177/runtime?lang=en-US'
           run_chrome runtime-zh-mobile 390,844 'http://127.0.0.1:4177/runtime?lang=zh-CN'
           run_chrome capabilities-en-desktop 1440,900 'http://127.0.0.1:4177/capabilities?lang=en-US'
@@ -129,6 +209,11 @@ jobs:
 
           dump_dom workspace-en 1440,900 'http://127.0.0.1:4177/workspace?lang=en-US'
           dump_dom agents-en 1440,900 'http://127.0.0.1:4177/agents?lang=en-US'
+          dump_dom inspector-en 1440,900 'http://127.0.0.1:4177/inspect?lang=en-US'
+          dump_dom control-en 1440,900 'http://127.0.0.1:4177/control?lang=en-US'
+          dump_dom architecture-en 1440,900 'http://127.0.0.1:4177/architecture?lang=en-US'
+          dump_dom publication-en 1440,900 'http://127.0.0.1:4177/publication?lang=en-US'
+          dump_dom publication-zh 390,844 'http://127.0.0.1:4177/publication?lang=zh-CN'
           dump_dom runtime-en 1440,900 'http://127.0.0.1:4177/runtime?lang=en-US'
           dump_dom runtime-zh 390,844 'http://127.0.0.1:4177/runtime?lang=zh-CN'
           dump_dom capabilities-en 1440,900 'http://127.0.0.1:4177/capabilities?lang=en-US'
@@ -141,14 +226,20 @@ jobs:
           from pathlib import Path
 
           root = Path('/tmp/studio-bound-qa')
-          workspace = (root / 'workspace-en-dom.html').read_text(encoding='utf-8', errors='replace')
-          agents = (root / 'agents-en-dom.html').read_text(encoding='utf-8', errors='replace')
-          runtime = (root / 'runtime-en-dom.html').read_text(encoding='utf-8', errors='replace')
-          runtime_zh = (root / 'runtime-zh-dom.html').read_text(encoding='utf-8', errors='replace')
-          capabilities = (root / 'capabilities-en-dom.html').read_text(encoding='utf-8', errors='replace')
-          semantic = (root / 'semantic-en-dom.html').read_text(encoding='utf-8', errors='replace')
-          diagnostics = (root / 'diagnostics-en-dom.html').read_text(encoding='utf-8', errors='replace')
-          diagnostics_zh = (root / 'diagnostics-zh-dom.html').read_text(encoding='utf-8', errors='replace')
+          dom = lambda name: (root / f'{name}-dom.html').read_text(encoding='utf-8', errors='replace')
+          workspace = dom('workspace-en')
+          agents = dom('agents-en')
+          inspector = dom('inspector-en')
+          control = dom('control-en')
+          architecture = dom('architecture-en')
+          publication = dom('publication-en')
+          publication_zh = dom('publication-zh')
+          runtime = dom('runtime-en')
+          runtime_zh = dom('runtime-zh')
+          capabilities = dom('capabilities-en')
+          semantic = dom('semantic-en')
+          diagnostics = dom('diagnostics-en')
+          diagnostics_zh = dom('diagnostics-zh')
 
           assert 'Local Playground' in workspace
           assert 'Run preview' in workspace
@@ -158,6 +249,25 @@ jobs:
           assert 'Run + Trace' in agents
           assert 'Handoff + Approval' in agents
           assert 'Evidence + Receipt' in agents
+
+          # New product projection workbenches must be rendered inside the same
+          # bound shell, retain the reverted Story Loom product language, and
+          # never fall back to the unbound-host message.
+          assert 'CORE INSPECTOR · EXACT PROJECTIONS' in inspector
+          assert 'Inspect real projections' in inspector
+          assert 'READ-ONLY CONTROL PLANE' in control
+          assert 'Refresh real state' in control
+          assert 'LIVE ARCHITECTURE · CORE PROJECTION' in architecture
+          assert 'Load real run' in architecture
+          assert 'PUBLICATION COMPILER · DERIVED ONLY' in publication
+          assert 'Build EPUB preview' in publication
+          assert '用真正的 compiler' in publication_zh
+          for text in (inspector, control, architecture, publication, publication_zh):
+              assert 'This hosted shell is not bound to a NovelForge Core host' not in text
+              assert 'Inspector' in text or '检查项目' in text
+              assert 'Architecture' in text or '架构观测' in text
+              assert 'Publication' in text or '出版' in text
+              assert 'Control Plane' in text or '控制台' in text
 
           assert 'Runtime observatory' in runtime
           assert 'Sessions, checkpoints, events, and receipts' in runtime
@@ -177,9 +287,9 @@ jobs:
           assert 'runtime.handoff.inspect' in capabilities
           assert 'run.receipt.get' in capabilities
           assert 'session.resume' in capabilities
+          assert 'publication.preview' in capabilities
           assert 'This hosted shell is not bound to a NovelForge Core host' not in capabilities
 
-          # These workstations only render after real bridge data arrives.
           assert 'Registered model contracts' in semantic
           assert 'Registration is evidence of a contract boundary' in semantic
           assert 'This hosted shell is not bound to a NovelForge Core host' not in semantic
@@ -188,7 +298,6 @@ jobs:
           assert 'What this check validated' in diagnostics
           assert 'What this check did NOT validate' in diagnostics
           assert 'This hosted shell is not bound to a NovelForge Core host' not in diagnostics
-
           assert '这项检查验证了什么' in diagnostics_zh
           assert '这项检查没有验证什么' in diagnostics_zh
           assert '下面的状态只属于 framework.doctor' in diagnostics_zh
@@ -196,6 +305,11 @@ jobs:
           for image in (
               'workspace-en-desktop.png',
               'agents-en-desktop.png',
+              'inspector-en-desktop.png',
+              'control-en-desktop.png',
+              'architecture-en-desktop.png',
+              'publication-en-desktop.png',
+              'publication-zh-mobile.png',
               'runtime-en-desktop.png',
               'runtime-zh-mobile.png',
               'capabilities-en-desktop.png',
@@ -208,14 +322,28 @@ jobs:
               assert path.exists() and path.stat().st_size > 10_000, image
 
           # Bound pages must use the one public typed bridge endpoint; no alternate API is allowed.
-          for name in ('workspace-en-desktop-netlog.json', 'runtime-en-desktop-netlog.json', 'runtime-zh-mobile-netlog.json', 'capabilities-en-desktop-netlog.json', 'semantic-en-desktop-netlog.json', 'semantic-en-mobile-netlog.json', 'diagnostics-en-desktop-netlog.json', 'diagnostics-zh-mobile-netlog.json'):
+          bridge_pages = (
+              'inspector-en-desktop-netlog.json',
+              'control-en-desktop-netlog.json',
+              'architecture-en-desktop-netlog.json',
+              'publication-en-desktop-netlog.json',
+              'publication-zh-mobile-netlog.json',
+              'runtime-en-desktop-netlog.json',
+              'runtime-zh-mobile-netlog.json',
+              'capabilities-en-desktop-netlog.json',
+              'semantic-en-desktop-netlog.json',
+              'semantic-en-mobile-netlog.json',
+              'diagnostics-en-desktop-netlog.json',
+              'diagnostics-zh-mobile-netlog.json',
+          )
+          for name in bridge_pages:
               text = (root / name).read_text(encoding='utf-8', errors='replace')
-              if name != 'workspace-en-desktop-netlog.json':
-                  assert '/api/bridge/invoke' in text, f'expected typed bridge request in {name}'
+              assert '/api/bridge/invoke' in text, f'expected typed bridge request in {name}'
               assert '/api/' not in text.replace('/api/bridge/invoke', ''), f'unexpected Studio API path in {name}'
 
-          # Agents is intentionally static. Shared StudioProvider performs bridge.describe,
-          # so route attribution is enforced at the source boundary rather than guessed from URL-only netlog entries.
+          workspace_netlog = (root / 'workspace-en-desktop-netlog.json').read_text(encoding='utf-8', errors='replace')
+          assert '/api/' not in workspace_netlog.replace('/api/bridge/invoke', ''), 'Workspace route observed an unexpected API path'
+
           agents_source = Path('studio/app/src/routes/Agents.tsx').read_text(encoding='utf-8')
           assert 'invokeBridge' not in agents_source, 'Agents route must not invoke Core operations'
           assert 'fetch(' not in agents_source, 'Agents route must not open an alternate transport'
@@ -231,14 +359,30 @@ jobs:
           assert resume_call is None, 'Runtime observatory must not invoke session.resume control'
           assert 'Resume stays deferred' in runtime_source and 'Resume 仍未开放' in runtime_source, 'Runtime route must preserve the explicit resume-deferred boundary'
 
+          publication_source = Path('studio/app/src/routes/Publication.tsx').read_text(encoding='utf-8')
+          assert 'publication.preview' in publication_source
+          assert 'publication/compiler.py' in publication_source
+          assert 'source_authority_verified' in publication_source
+          for forbidden in ('project.mutate', 'command.invoke', 'session.resume'):
+              assert forbidden not in publication_source, f'Publication preview must stay query-only: {forbidden}'
+
+          inspector_source = Path('studio/app/src/routes/Inspector.tsx').read_text(encoding='utf-8')
+          assert 'loadProductProjection' in inspector_source
+          assert 'quality_score' not in inspector_source and 'release_eligibility' not in inspector_source
+
           (root / 'runtime-proof.txt').write_text(
-              'schema=novelforge_studio_bound_browser_qa_v1\n'
+              'schema=novelforge_studio_bound_browser_qa_v2\n'
               'surface=local_app\n'
               'core_host=bound\n'
               'workspace_surface=local_playground\n'
+              'inspector_surface=real_core_projection\n'
+              'architecture_surface=real_run_observatory\n'
+              'publication_surface=real_deterministic_compiler\n'
+              'control_plane=read_only_projection_bundle\n'
               'runtime_surface=side_effect_free_observatory\n'
               'runtime_control_exposed=false\n'
               'runtime_query_transport=public_host_bridge\n'
+              'publication_preview_transport=public_host_bridge\n'
               'agent_runtime_model=novelforge_native\n'
               'capability_boundary_source=bridge.describe+capabilities.inspect\n'
               'semantic_source=semantic.catalog\n'
@@ -246,7 +390,7 @@ jobs:
               'authority=false\n',
               encoding='utf-8',
           )
-          print({'schema': 'novelforge_studio_bound_browser_qa_v1', 'status': 'pass', 'authority': False})
+          print({'schema': 'novelforge_studio_bound_browser_qa_v2', 'status': 'pass', 'authority': False})
           PY
       - name: Upload bound browser QA evidence
         uses: actions/upload-artifact@v4
