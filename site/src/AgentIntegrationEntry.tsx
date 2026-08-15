@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
+import { For, createEffect, createMemo, createSignal } from "solid-js";
 import brandMark from "../../assets/brand/novelforge-mark.svg?url";
 import type { Locale } from "./content";
 
@@ -10,6 +10,16 @@ type SupportedOperation = {
   args: string[];
   labelZh: string;
   labelEn: string;
+};
+
+type HostProfile = {
+  id: string;
+  name: string;
+  glyph: string;
+  fitZh: string;
+  fitEn: string;
+  summaryZh: string;
+  summaryEn: string;
 };
 
 const supportedOperations: SupportedOperation[] = [
@@ -29,6 +39,54 @@ const deferredOperations = [
   "project.mutate",
 ];
 
+const hostProfiles: HostProfile[] = [
+  {
+    id: "claude-code",
+    name: "Claude Code",
+    glyph: "C",
+    fitZh: "通用桥接 recipe",
+    fitEn: "generic bridge recipe",
+    summaryZh: "NovelForge 当前不捆绑 Claude-specific adapter。宿主只要能读取 workspace 文件并安全执行本地 CLI，就可以按 portable skill + Host Bridge 的只读路径接入。",
+    summaryEn: "NovelForge does not currently bundle a Claude-specific adapter. If the host can read workspace files and safely run a local CLI, use the portable skill plus read-only Host Bridge path.",
+  },
+  {
+    id: "codex",
+    name: "Codex",
+    glyph: "X",
+    fitZh: "通用桥接 recipe",
+    fitEn: "generic bridge recipe",
+    summaryZh: "把 NovelForge 当成有公开边界的本地工具，而不是让 coding agent 直接读 private runtime。先读 Skill，再 self-test / describe，最后只调用 advertised operations。",
+    summaryEn: "Treat NovelForge as a local tool with a public boundary, not as permission to inspect private runtime state. Read the Skill, self-test and describe first, then invoke only advertised operations.",
+  },
+  {
+    id: "cursor",
+    name: "Cursor",
+    glyph: "↗",
+    fitZh: "通用桥接 recipe",
+    fitEn: "generic bridge recipe",
+    summaryZh: "如果当前 agent 模式能读仓库并运行本地命令，就复用同一份 Agent Skill。NovelForge 不为 UI 宿主制造第二套 Canon 或 Settlement authority。",
+    summaryEn: "When the active agent mode can read the repository and run local commands, reuse the same Agent Skill. NovelForge does not create a second Canon or Settlement authority for a UI host.",
+  },
+  {
+    id: "opencode",
+    name: "OpenCode",
+    glyph: "O",
+    fitZh: "通用桥接 recipe",
+    fitEn: "generic bridge recipe",
+    summaryZh: "接入条件不是品牌名，而是 capability：能读取 skill package、执行 Python CLI、保留结构化结果，并接受 unsupported 时 fail closed。",
+    summaryEn: "Compatibility is capability-based rather than brand-based: read the skill package, run the Python CLI, preserve structured results, and fail closed when an operation is unsupported.",
+  },
+  {
+    id: "custom",
+    name: "Custom agent",
+    glyph: "◇",
+    fitZh: "直接 Host Bridge",
+    fitEn: "direct Host Bridge",
+    summaryZh: "自定义 orchestrator 可以直接消费 versioned request/result envelope，但仍应先 describe，不导入 private Python modules，也不直接读取 Core persistence。",
+    summaryEn: "A custom orchestrator can consume the versioned request/result envelope directly, but should still describe first, avoid private Python imports, and never read Core persistence directly.",
+  },
+];
+
 function initialDark() {
   const saved = localStorage.getItem("novelforge.appearance");
   if (saved === "dark") return true;
@@ -40,9 +98,11 @@ export default function AgentIntegrationEntry(props: Props) {
   const [locale, setLocale] = createSignal<Locale>(props.initialLocale);
   const [dark, setDark] = createSignal(initialDark());
   const [selected, setSelected] = createSignal(0);
-  const [copied, setCopied] = createSignal<"self-test" | "describe" | "request" | undefined>();
+  const [selectedHost, setSelectedHost] = createSignal(0);
+  const [copied, setCopied] = createSignal<"self-test" | "describe" | "request" | "host" | undefined>();
   const zh = () => locale() === "zh-CN";
   const current = createMemo(() => supportedOperations[selected()]);
+  const currentHost = createMemo(() => hostProfiles[selectedHost()]);
 
   createEffect(() => {
     document.documentElement.lang = zh() ? "zh-CN" : "en";
@@ -70,8 +130,22 @@ export default function AgentIntegrationEntry(props: Props) {
 
   const selfTest = "python agent-skills/novelforge/scripts/novelforge_bridge.py self-test";
   const describe = "python agent-skills/novelforge/scripts/novelforge_bridge.py describe";
+  const hostInstruction = createMemo(() => `${zh() ? "NovelForge 宿主 recipe" : "NovelForge host recipe"}: ${currentHost().name}
 
-  const copyText = async (kind: "self-test" | "describe" | "request", value: string) => {
+1. Read agent-skills/novelforge/SKILL.md before invoking NovelForge.
+2. Run: ${selfTest}
+3. Run: ${describe}
+4. Treat supported_operations as the live operation vocabulary; do not guess private APIs.
+5. Every bridge request must carry authority: false and preserve request/result fingerprints.
+6. Never read .novelforge/runtime.db or import private NovelForge runtime/persistence modules as a shortcut.
+7. If an operation is unsupported, stop and report that boundary; do not manufacture a write path.
+
+provider_specific_adapter: not_bundled
+bridge_mode: generic_read_only
+canon_authority: false
+settlement_authority: false`);
+
+  const copyText = async (kind: "self-test" | "describe" | "request" | "host", value: string) => {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(kind);
@@ -146,6 +220,52 @@ export default function AgentIntegrationEntry(props: Props) {
           </article>
         </section>
 
+        <section class="agent-host-workbench" aria-labelledby="agent-host-heading">
+          <div class="agent-host-heading">
+            <div>
+              <small>{zh() ? "宿主 recipe" : "HOST RECIPES"}</small>
+              <h2 id="agent-host-heading">{zh() ? "Claude Code、Codex、Cursor、OpenCode：用同一条公开边界。" : "Claude Code, Codex, Cursor, OpenCode: one public boundary."}</h2>
+              <p>{zh() ? "这里的 profile 是接入 recipe，不是假装已经发布 provider-specific 插件。选择你的 coding agent，复制一段最小宿主说明；真正可用能力仍以 bridge.describe 返回值为准。" : "These profiles are integration recipes, not claims that provider-specific plugins already ship. Pick a coding agent and copy a minimal host instruction; bridge.describe remains the source of truth for available operations."}</p>
+            </div>
+            <span class="agent-host-safety">✓ {zh() ? "provider-specific adapter：未捆绑" : "provider-specific adapter: not bundled"}</span>
+          </div>
+
+          <div class="agent-host-tabs" role="tablist" aria-label={zh() ? "Coding Agent 宿主" : "Coding agent hosts"}>
+            <For each={hostProfiles}>{(host, index) => (
+              <button type="button" role="tab" aria-selected={selectedHost() === index()} data-active={selectedHost() === index()} onClick={() => setSelectedHost(index())}>
+                <span class="agent-host-glyph" aria-hidden="true">{host.glyph}</span>
+                <span><strong>{host.name}</strong><small>{zh() ? host.fitZh : host.fitEn}</small></span>
+              </button>
+            )}</For>
+          </div>
+
+          <div class="agent-host-detail">
+            <article class="agent-host-profile">
+              <div class="agent-host-profile-badges">
+                <span class="wui-badge wui-badge--soft">{currentHost().name}</span>
+                <span class="wui-badge wui-badge--outline">generic read-only bridge</span>
+              </div>
+              <h3>{zh() ? "能力匹配，不制造新的权威层。" : "Match capabilities without inventing another authority layer."}</h3>
+              <p>{zh() ? currentHost().summaryZh : currentHost().summaryEn}</p>
+              <ul class="agent-host-facts">
+                <li><span>{zh() ? "入口" : "Entry"}</span><strong>agent-skills/novelforge/SKILL.md</strong></li>
+                <li><span>{zh() ? "执行" : "Execution"}</span><strong>{zh() ? "本地 Python CLI" : "local Python CLI"}</strong></li>
+                <li><span>{zh() ? "能力发现" : "Discovery"}</span><strong>bridge.describe</strong></li>
+                <li><span>{zh() ? "写权限" : "Write authority"}</span><strong>0 · authority=false</strong></li>
+              </ul>
+            </article>
+
+            <article class="agent-host-instruction">
+              <div class="agent-host-instruction-head">
+                <div><small>{zh() ? "可复制宿主说明" : "COPYABLE HOST INSTRUCTION"}</small><strong>{zh() ? `交给 ${currentHost().name} 的最小边界` : `Minimal boundary for ${currentHost().name}`}</strong></div>
+                <button type="button" class="wui-button wui-button--soft" onClick={() => copyText("host", hostInstruction())}>{copied() === "host" ? "✓" : zh() ? "复制说明" : "Copy instruction"}</button>
+              </div>
+              <pre><code>{hostInstruction()}</code></pre>
+              <p class="agent-host-note"><span aria-hidden="true">♡</span><span>{zh() ? "这段说明不会赋予 Canon / Settlement 权限，也不会把 provider session memory 变成故事事实。" : "This instruction grants no Canon or Settlement authority and does not turn provider session memory into story truth."}</span></p>
+            </article>
+          </div>
+        </section>
+
         <section class="agent-onboarding-grid">
           <article class="wui-card agent-onboarding-card">
             <div class="agent-section-heading">
@@ -185,7 +305,7 @@ export default function AgentIntegrationEntry(props: Props) {
               )}</For>
             </div>
             <div class="agent-request-meta">
-              <span>{zh() ? "Core basis" : "Core basis"}</span>
+              <span>Core basis</span>
               <strong>{current().basis}</strong>
             </div>
             <pre class="agent-request-json"><code>{request()}</code></pre>
@@ -207,7 +327,7 @@ export default function AgentIntegrationEntry(props: Props) {
             <div><span>♡</span><small>AUTHORITY FIREWALL</small></div>
             <h2>{zh() ? "接得上，不等于有权写。" : "Connected does not mean authorized to write."}</h2>
             <ul>
-              <li><strong>Canon</strong><span>{zh() ? "bridge authority = false" : "bridge authority = false"}</span></li>
+              <li><strong>Canon</strong><span>bridge authority = false</span></li>
               <li><strong>Settlement</strong><span>{zh() ? "仍由 Core workflow 拥有" : "still Core-workflow owned"}</span></li>
               <li><strong>Private runtime store</strong><span>{zh() ? "禁止直接读取" : "direct access forbidden"}</span></li>
               <li><strong>Host paths</strong><span>{zh() ? "结果默认去除绝对路径" : "absolute paths are redacted"}</span></li>
