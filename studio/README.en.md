@@ -6,6 +6,8 @@ NovelForge Studio is the product surface around the NovelForge fiction operating
 
 > **Authority boundary ✦** Studio consumes NovelForge Core state. UI state is not Canon, Memory, semantic truth, or a second workflow engine.
 
+[简体中文](README.zh-CN.md)
+
 ## Product architecture
 
 - [English](PRODUCT_ARCHITECTURE.en.md)

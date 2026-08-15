@@ -17,7 +17,7 @@ Its architecture is deliberately split:
 
 A consuming Project owns the facts of its story. NovelForge owns the generic production machinery around those facts.
 
-**Current architecture: NovelForge 7.3 · AI-native · contract-first · progressively disclosed semantic packs.**
+**Development architecture snapshot:** `novelforge.py` currently reports **7.3.0** for the AI-native, contract-first implementation with progressively disclosed semantic packs. **Release authority remains `HARNESS_MANIFEST.yaml` (currently 7.2.0); this is not an 8.0 release declaration.** See the [Changelog](CHANGELOG.en.md) for current release truth.
 
 <p align="center"><a href="docs/why-novelforge.en.md"><strong>Why NovelForge?</strong></a> · <a href="docs/production-pipeline.en.md"><strong>Production Pipeline</strong></a> · <a href="docs/quality-assurance.en.md"><strong>Quality & QA</strong></a> · <a href="docs/architecture-atlas.en.md"><strong>Architecture Atlas</strong></a></p>
 
@@ -46,7 +46,7 @@ For direct novel-agent/product positioning, tradeoffs, and source-backed compari
 
 ---
 
-## 02 · The 7.3 mental model 🪄
+## 02 · The development mental model 🪄
 
 <img src="assets/ui/home-architecture.en.svg" alt="NovelForge Story Loom architecture separating project authority, semantic model contracts, deterministic runtime shell, and evidence evolution" width="100%" />
 

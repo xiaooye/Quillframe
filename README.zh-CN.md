@@ -15,7 +15,7 @@ NovelForge 是面向长篇与连载小说的项目无关生产框架。它不试
 
 具体小说项目拥有自己的故事事实；NovelForge 只拥有围绕这些事实运行的通用生产机制。
 
-**当前架构：NovelForge 7.3 · AI-native · contract-first · 语义契约按需渐进加载。**
+**开发架构快照：** `novelforge.py` 当前报告 **7.3.0**，实现采用 AI-native、contract-first、语义契约按需渐进加载。**发布权威仍是 `HARNESS_MANIFEST.yaml`（当前 7.2.0）；这不构成 NovelForge 8.0 发布声明。** 当前版本与发布真相见 [Changelog](CHANGELOG.zh-CN.md)。
 
 <p align="center"><a href="docs/why-novelforge.zh-CN.md"><strong>为什么是 NovelForge？</strong></a> · <a href="docs/production-pipeline.zh-CN.md"><strong>生产流水线</strong></a> · <a href="docs/quality-assurance.zh-CN.md"><strong>质量保障</strong></a> · <a href="docs/architecture-atlas.zh-CN.md"><strong>架构图谱</strong></a></p>
 
@@ -44,7 +44,7 @@ NovelForge 把这些问题当成**小说生产系统的问题**，而不是靠�
 
 ---
 
-## 02 · 7.3 的核心心智模型 🪄
+## 02 · 开发中的核心心智模型 🪄
 
 <img src="assets/ui/home-architecture.zh-CN.svg" alt="NovelForge Story Loom 架构：项目权威、模型语义契约、确定性运行外壳与证据演化彼此分离" width="100%" />
 
