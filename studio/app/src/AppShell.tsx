@@ -1,10 +1,13 @@
 import { For, Show, createMemo, createSignal, onCleanup, onMount, ParentComponent } from "solid-js";
 import { A, useLocation, useNavigate } from "@solidjs/router";
 import { useI18n } from "./i18n";
+import type { MessageKey } from "./locales/types";
 import { useStudio } from "./studio";
 import { StudioIcon, type StudioIconName } from "./StudioIcon";
 
-const navigation: ReadonlyArray<readonly [string, string, StudioIconName]> = [
+type NavigationEntry = readonly [string, MessageKey, StudioIconName];
+
+const navigation: ReadonlyArray<NavigationEntry> = [
   ["/", "nav.desk", "home"],
   ["/project", "nav.project", "project"],
   ["/workspace", "nav.workspace", "workspace"],
@@ -12,7 +15,7 @@ const navigation: ReadonlyArray<readonly [string, string, StudioIconName]> = [
   ["/capabilities", "nav.capabilities", "capabilities"],
   ["/semantic", "nav.semantic", "semantic"],
   ["/diagnostics", "nav.diagnostics", "diagnostics"],
-] as const;
+];
 
 const operationRoute: Record<string, string> = {
   "bridge.describe": "/",
