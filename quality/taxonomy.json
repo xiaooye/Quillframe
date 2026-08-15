@@ -1,0 +1,63 @@
+{
+  "schema": "novelforge_quality_taxonomy_v1",
+  "version": "1",
+  "principle": "Framework-owned quality identifiers are a machine contract. Human documentation and consuming-project regression/profile references must be checked against this registry so an identifier cannot silently change meaning across Framework migrations.",
+  "families": {
+    "surface": {
+      "prefix": "HF",
+      "source_docs": ["surface/FUNDAMENTALS.en.md", "surface/FUNDAMENTALS.zh-CN.md"],
+      "entries": [
+        {"id":"HF-01","name":"NON-FUNCTIONAL FRAGMENTATION","aliases":["FRAGMENT","NON-FUNCTIONAL-FRAGMENTATION"]},
+        {"id":"HF-02","name":"MICRO-SHOT STORYBOARDING","aliases":["MICROSHOT","MICRO-SHOT","MICROSHOT-STORYBOARDING"]},
+        {"id":"HF-03","name":"NARRATOR THESIS / AUTHOR SUMMARY","aliases":["NARRATOR-THESIS","AUTHOR-SUMMARY"]},
+        {"id":"HF-04","name":"DESIGN-LANGUAGE LEAK","aliases":["DESIGN-LEAK"]},
+        {"id":"HF-05","name":"DOSSIER INTRODUCTION","aliases":["DOSSIER-INTRO"]},
+        {"id":"HF-06","name":"ORNAMENTAL METAPHOR","aliases":["DECORATIVE-SIMILE","ORNAMENTAL-METAPHOR"]},
+        {"id":"HF-07","name":"ABSTRACT EMOTION LABEL","aliases":["ABSTRACT-EMOTION-LABEL"]},
+        {"id":"HF-08","name":"EMPTY MICRO-ACTION","aliases":["EMPTY-MICRO-ACTION"]},
+        {"id":"HF-09","name":"RANDOM EMBODIMENT PATCH","aliases":["RANDOM-EMBODIMENT-PATCH"]},
+        {"id":"HF-10","name":"MECHANICAL DIALOGUE TAGGING","aliases":["MECHANICAL-DIALOGUE-TAGGING"]},
+        {"id":"HF-11","name":"SPEAKER DRIFT / DISEMBODIED DIALOGUE","aliases":["SPEAKER-DRIFT","DISEMBODIED-DIALOGUE"]},
+        {"id":"HF-12","name":"DIALOGUE WORLD ERASURE","aliases":["DIALOGUE-WORLD-ERASURE"]},
+        {"id":"HF-13","name":"INTERVIEW / TRANSCRIPT DIALOGUE","aliases":["TRANSCRIPT","INTERVIEW-DIALOGUE","TRANSCRIPT-DIALOGUE"]},
+        {"id":"HF-14","name":"CONSTRAINT LEAK / RULE DEFENSE","aliases":["CONSTRAINT-LEAK","RULE-DEFENSE"]},
+        {"id":"HF-15","name":"SIGNIFICANCE INFLATION","aliases":["SIGNIFICANCE-INFLATION"]},
+        {"id":"HF-16","name":"STAGED ROUTINE REVEAL","aliases":["STAGED-REVEAL","STAGED-ROUTINE-REVEAL"]},
+        {"id":"HF-17","name":"PROP CATALOGUE","aliases":["PROP-CATALOGUE"]},
+        {"id":"HF-18","name":"ABSTRACT AGENT","aliases":["ABSTRACT-AGENT"]},
+        {"id":"HF-19","name":"MANNERISM CONNECTOR","aliases":["MANNERISM-CONNECTOR"]},
+        {"id":"HF-20","name":"SUBJECT / SENTENCE TEMPLATE REPETITION","aliases":["SUBJECT-TEMPLATE-REPETITION","SENTENCE-TEMPLATE-REPETITION"]},
+        {"id":"HF-21","name":"PROCESS BROADCAST","aliases":["PROCESS-BROADCAST"]},
+        {"id":"HF-22","name":"CHECKLIST CAUSALITY","aliases":["CHECKLIST-CAUSALITY"]},
+        {"id":"HF-23","name":"FAKE CLIFFHANGER / NARRATOR ADVERTISEMENT","aliases":["FAKE-CLIFFHANGER","NARRATOR-ADVERTISEMENT"]},
+        {"id":"HF-24","name":"FORCED MYSTERY","aliases":["FORCED-MYSTERY"]},
+        {"id":"HF-25","name":"EXPLANATION AFTER EVIDENCE","aliases":["EXPLANATION-AFTER-EVIDENCE","REDUNDANT-EXPLAIN"]},
+        {"id":"HF-26","name":"FUNCTIONAL-CHARACTER COLLAPSE","aliases":["FUNCTIONAL-CHARACTER-COLLAPSE"]},
+        {"id":"HF-27","name":"SEMANTIC ROLE MISATTRIBUTION","aliases":["SEMANTIC-ROLE-MISATTRIBUTION"]},
+        {"id":"HF-28","name":"CONTEXT DEFENSE PROSE","aliases":["CONTEXT-DEFENSE-PROSE"]},
+        {"id":"HF-29","name":"AI POLISH WITHOUT STORY FUNCTION","aliases":["AI-POLISH-WITHOUT-STORY-FUNCTION"]}
+      ]
+    },
+    "reader_engagement": {
+      "prefix": "RG",
+      "source_docs": ["surface/READER_ENGAGEMENT.en.md", "surface/READER_ENGAGEMENT.zh-CN.md"],
+      "entries": [
+        {"id":"RG-01","name":"ACTIVE READER QUESTION","aliases":["ACTIVE-READER-QUESTION"]},
+        {"id":"RG-02","name":"PRESSURE LADDER","aliases":["PRESSURE-LADDER"]},
+        {"id":"RG-03","name":"REWARD CADENCE","aliases":["REWARD-CADENCE"]},
+        {"id":"RG-04","name":"FRICTION OVER PROCEDURE","aliases":["FRICTION-OVER-PROCEDURE"]},
+        {"id":"RG-05","name":"CHARACTER-OWNED ENERGY","aliases":["CHARACTER-OWNED-ENERGY"]},
+        {"id":"RG-06","name":"CHARACTER SURPRISE WITHIN CONSISTENCY","aliases":["CHARACTER-SURPRISE","CHARACTER-SURPRISE-WITHIN-CONSISTENCY"]},
+        {"id":"RG-07","name":"TONAL CONTRAST / TENSION WAVE","aliases":["TONAL-CONTRAST","TENSION-WAVE"]},
+        {"id":"RG-08","name":"CHARACTER-OWNED HUMOR / HUMANITY","aliases":["CHARACTER-OWNED-HUMOR","HUMANITY"]},
+        {"id":"RG-09","name":"OPENING ORIENTATION + GRIP","aliases":["OPENING-ORIENTATION","OPENING-GRIP"]},
+        {"id":"RG-10","name":"FORWARD-PULL ENDING","aliases":["FORWARD-PULL-END","FORWARD-PULL-ENDING"]},
+        {"id":"RG-11","name":"INFORMATION VALUE","aliases":["INFORMATION-VALUE"]},
+        {"id":"RG-12","name":"CAUSAL MOMENTUM","aliases":["CAUSAL-MOMENTUM"]},
+        {"id":"RG-13","name":"RELATIONAL MOVEMENT","aliases":["RELATIONAL-MOVEMENT"]},
+        {"id":"RG-14","name":"SPECIFICITY OF STAKES","aliases":["SPECIFICITY-OF-STAKES"]},
+        {"id":"RG-15","name":"SAFE-BUT-FLAT","aliases":["SAFE-BUT-FLAT"]}
+      ]
+    }
+  }
+}
