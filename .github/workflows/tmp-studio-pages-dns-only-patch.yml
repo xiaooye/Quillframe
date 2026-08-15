@@ -1,0 +1,52 @@
+name: Temporary Studio Pages DNS-only patch validator
+
+on:
+  push:
+    branches: [agent/studio-pages-dns-only]
+    paths:
+      - '.tmp_patch_studio_pages_dns_only.py'
+      - '.github/workflows/tmp-studio-pages-dns-only-patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply DNS-only workflow patch
+        run: python .tmp_patch_studio_pages_dns_only.py
+      - name: Validate exact patch and repository hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('.github/workflows/studio-cloud.yml').read_text(encoding='utf-8')
+          assert text.count('proxied:false') == 1
+          assert text.count("--data '{\"proxied\":false}'") == 1
+          assert '.result[0].proxied == false' in text
+          assert 'Refusing to overwrite conflicting DNS' in text
+          assert 'Bot Fight Mode is zone-wide and cannot be' in text
+          assert 'proxied:true' not in text
+          print({'schema':'novelforge_studio_pages_dns_only_check_v1','status':'pass','scope':'exact_studio_cname'})
+          PY
+          python scripts/framework_hygiene.py
+          python scripts/docs_quality.py
+          git diff --check
+      - name: Commit only the validated cloud workflow patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only)"
+          test "$changed" = ".github/workflows/studio-cloud.yml"
+          remote_head="$(git ls-remote origin "refs/heads/${GITHUB_REF_NAME}" | cut -f1)"
+          test "$remote_head" = "$GITHUB_SHA"
+          git config user.name 'NovelForge Agent'
+          git config user.email 'actions@users.noreply.github.com'
+          git add .github/workflows/studio-cloud.yml
+          git commit -m 'studio: keep Pages custom domain DNS-only'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
