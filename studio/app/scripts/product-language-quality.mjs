@@ -20,7 +20,8 @@ const styleImports = [...main.matchAll(/import\s+["']\.\/styles\/([^"']+)["']/g)
 
 check(styleImports.length === 1 && styleImports[0] === "index.css", "Studio main.tsx must import exactly one stylesheet entrypoint");
 check(index.includes('../../../../assets/brand/novelforge-product-language.css'), "Studio must consume the repo-level product-language tokens");
-check(index.trim().endsWith('@import "./product-language.css";'), "Studio product-language mapping must load last");
+check(index.indexOf('@import "./product-language.css";') < index.indexOf('@import "./hardening.css";'), "Studio product language must load before hardening");
+check(index.trim().endsWith('@import "./hardening.css";'), "Studio hardening must be the final CSS layer");
 check(!index.includes("visual-fixes.css"), "legacy visual-fixes path must not participate in the active cascade");
 check(main.includes('dataset.productLanguage = "novelforge-kawaii-v1"'), "Studio must identify the shared product language in the document contract");
 for (const token of ["--nf-product-pink","--nf-product-lilac","--nf-product-mint","--nf-product-radius-panel"]) check(sharedLanguage.includes(token), `shared product language missing ${token}`);
@@ -33,5 +34,5 @@ if(failures.length){
   for(const failure of failures) console.error(`product-language-quality: FAIL: ${failure}`);
   process.exitCode=1;
 }else{
-  console.log(JSON.stringify({schema:"novelforge_studio_product_language_v3",status:"pass",shared_tokens:true,single_css_entrypoint:true,legacy_visual_fixes_in_cascade:false,product_language:"novelforge-kawaii-v1"},null,2));
+  console.log(JSON.stringify({schema:"novelforge_studio_product_language_v4",status:"pass",shared_tokens:true,single_css_entrypoint:true,legacy_visual_fixes_in_cascade:false,hardening_layer:"final",product_language:"novelforge-kawaii-v1"},null,2));
 }
