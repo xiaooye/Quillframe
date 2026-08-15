@@ -12,7 +12,7 @@ NovelForge Studio 是 NovelForge Core 之上的产品体验层。**第一阶段�
 
 - [English](PRODUCT_ARCHITECTURE.en.md)
 - [简体中文](PRODUCT_ARCHITECTURE.zh-CN.md)
-- [`portable_product_contract.json`](portable_product_contract.json) —— machine-readable 的 Phase 2A delivery-surface contract。
+- [`portable_product_contract.json`](portable_product_contract.json) —— machine-readable 的 portable delivery-surface contract。
 
 产品架构文档同时记录 Studio 已经可以消费的 Core interfaces，以及仍需由 Core workstream 解决、Studio 不得自行打补丁掩盖的 consumer gaps。
 
@@ -45,4 +45,28 @@ Phase 2A 把 Studio 定位为具有成熟 SaaS-like 体验的产品，但不把 
 
 Projection 明确携带 `authority=false`、`canon_authority=false`、`framework_write_authority=false` 与 `settlement_authority=false`。它不会因为 logical path 存在就推断 current chapter、manuscript lifecycle、publication status 或 quality status。
 
-Agent-package 方向保持 generic：未来 adapter 应暴露 capability discovery、typed query、typed command、resume reference 与 typed receipts。Mutation 必须等 Core 已经定义 command、precondition 与 authority semantics 后才进入公开 adapter。
+## Phase 2B · Portable read-only host bridge
+
+Phase 2B 把“一个产品，多种宿主”的边界真正做成可执行接口，同时不把 Studio 变成第二套 runtime。[`host_bridge.py`](host_bridge.py) 接收 versioned `novelforge_studio_host_bridge_request_v1` envelope，并返回绑定 fingerprint 的 `novelforge_studio_host_bridge_result_v1`。[`host_bridge_contract.json`](host_bridge_contract.json) 是 CLI、本地应用、云托管 UI 与 Agent Package 共同使用的 machine-readable allowlist。
+
+当前支持的 read operations 刻意保持很小：`bridge.describe`、`framework.doctor`、`project.inspect`、`capabilities.inspect`、`context.inspect` 与 `semantic.catalog`。结果采用 default-deny 路线清除宿主私有路径，并明确携带 `authority=false`、Canon 无权威、Framework-write 无权威和 Settlement 无权威标记。
+
+有些操作会明确返回 **unsupported**，而不是被 UI 或 Agent 偷偷模拟。Runtime session/event/handoff 查询暂缓，是因为当前 Control Plane CLI 即使执行名义上的读取命令，也会先初始化 persistence。`run.receipt.get` 继续暂缓，是因为 Core 尚未提供稳定的 Run Receipt retrieval projection，而且 event discoverability 仍不一致。通用 invoke/write 与 resume 也必须等 Core 明确定义公开 command、precondition、CAS/idempotency 与 receipt contract 后才能开放。这些 Core-owned dependency 统一记录在 #23。
+
+### Agent Skill package
+
+[`../agent-skills/novelforge/SKILL.md`](../agent-skills/novelforge/SKILL.md) 是 portable Agent Skills package。它附带的 [`novelforge_bridge.py`](../agent-skills/novelforge/scripts/novelforge_bridge.py) client 只负责发现并调用共享 Studio host bridge；不会 import 私有 Core runtime module，也不需要知道 persistence layout。
+
+在 skill 目录中，先运行 discovery：
+
+```bash
+python scripts/novelforge_bridge.py describe
+```
+
+随后可以通过 request envelope 调用：
+
+```bash
+python scripts/novelforge_bridge.py invoke --request /path/to/request.json
+```
+
+宿主必须原样保留 `unsupported` / `unavailable` 状态，不能绕过 bridge 直接读 SQLite、import 私有实现，或拿一个 mutating Core primitive 来代替缺失的公开 contract。Phase 2B 仍然是 read-only：**这里不会加入 acceptance、settlement、Canon mutation、billing、cloud-provider coupling、frontend 选择或 desktop-wrapper 选择。**
