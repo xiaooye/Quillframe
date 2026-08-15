@@ -44,7 +44,6 @@ export function StudioIcon(props: { name: StudioIconName; class?: string }) {
       stroke-linecap="round"
       stroke-linejoin="round"
       aria-hidden="true"
-      focusable={false}
     >
       {paths[props.name]}
     </svg>
