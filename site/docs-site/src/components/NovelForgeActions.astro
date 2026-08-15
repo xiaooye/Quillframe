@@ -2,13 +2,16 @@
 import Default from "@astrojs/starlight/components/SocialIcons.astro";
 
 const english = Astro.url.pathname === "/docs/en" || Astro.url.pathname.startsWith("/docs/en/");
+const startLabel = english ? "Start" : "开始";
 const productLabel = english ? "Product" : "产品";
 const agentLabel = english ? "Agents" : "Agent 集成";
+const startAria = english ? "Choose how to start with NovelForge" : "选择如何开始使用 NovelForge";
 const productAria = english ? "Open NovelForge product site" : "打开 NovelForge 产品站";
 const agentAria = english ? "Open NovelForge agent integration workbench" : "打开 NovelForge Agent 集成工作台";
 const studioAria = english ? "Open NovelForge Studio" : "打开 NovelForge Studio";
 ---
 
+<a class="nf-product-link" href="/start" aria-label={startAria}>{startLabel}</a>
 <a class="nf-product-link" href="/" aria-label={productAria}>{productLabel}</a>
 <a class="nf-product-link" href="/agents" aria-label={agentAria}>{agentLabel}</a>
 <a class="nf-studio-link" href="https://studio.novelforge.wei-dev.com" target="_blank" rel="noreferrer" aria-label={studioAria}>Studio <span aria-hidden="true">↗</span></a>
