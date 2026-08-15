@@ -66,7 +66,6 @@ export const AppShell: ParentComponent = (props) => {
     <div class="nf-app-shell">
       <aside class="wui-sidebar nf-sidebar" aria-label={t("nav.primaryLabel")}>
         <A href="/" class="wui-sidebar__header nf-brand">
-          <span class="nf-brand-mark" aria-hidden="true">N</span>
           <span class="wui-sidebar__brand-label">
             <strong>{t("app.brand")}</strong>
             <small>{t("app.readOnly")}</small>
