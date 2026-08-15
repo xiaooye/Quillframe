@@ -8,6 +8,7 @@ on:
       - 'site/scripts/fetch-godot-fonts.sh'
       - 'site/scripts/build-godot-shadow.sh'
       - 'site/scripts/godot-shadow-source-quality.mjs'
+      - 'site/scripts/godot-shadow-browser-shot.mjs'
       - 'specs/009-product-godot-parity-migration/**'
       - '.github/workflows/product-godot-shadow-qa.yml'
   pull_request:
@@ -16,6 +17,7 @@ on:
       - 'site/scripts/fetch-godot-fonts.sh'
       - 'site/scripts/build-godot-shadow.sh'
       - 'site/scripts/godot-shadow-source-quality.mjs'
+      - 'site/scripts/godot-shadow-browser-shot.mjs'
       - 'specs/009-product-godot-parity-migration/**'
       - '.github/workflows/product-godot-shadow-qa.yml'
   workflow_dispatch:
@@ -85,7 +87,7 @@ jobs:
         working-directory: site
         run: bash scripts/build-godot-shadow.sh
 
-      - name: Capture baseline and Godot candidate
+      - name: Capture scene-ready baseline and Godot candidate
         shell: bash
         run: |
           set -euo pipefail
@@ -115,21 +117,33 @@ jobs:
             test "$ready" = true
           done
 
-          shot() {
+          solid_shot() {
             name="$1"; size="$2"; url="$3"
             profile=$(mktemp -d)
             "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --disable-background-networking \
-              --window-size="$size" --virtual-time-budget=9000 --user-data-dir="$profile" \
+              --window-size="$size" --virtual-time-budget=5000 --user-data-dir="$profile" \
               --screenshot="$OUT/${name}.png" "$url" >"$OUT/${name}.log" 2>&1
             rm -rf "$profile"
             test -s "$OUT/${name}.png"
           }
 
-          shot solid-home-desktop 1440,900 'http://127.0.0.1:4188/'
-          shot godot-home-desktop 1440,900 'http://127.0.0.1:4190/'
-          shot solid-home-mobile 390,844 'http://127.0.0.1:4188/'
-          shot godot-home-mobile 390,844 'http://127.0.0.1:4190/'
-          shot godot-home-zh 390,844 'http://127.0.0.1:4190/?locale=zh-CN'
+          godot_shot() {
+            name="$1"; width="$2"; height="$3"; layout="$4"; url="$5"
+            CHROME="$CHROME" node site/scripts/godot-shadow-browser-shot.mjs \
+              --url "$url" \
+              --output "$OUT/${name}.png" \
+              --width "$width" \
+              --height "$height" \
+              --expect-layout "$layout" \
+              --timeout-ms 90000 >"$OUT/${name}.log" 2>&1
+            test -s "$OUT/${name}.png"
+          }
+
+          solid_shot solid-home-desktop 1440,900 'http://127.0.0.1:4188/'
+          godot_shot godot-home-desktop 1440 900 desktop 'http://127.0.0.1:4190/'
+          solid_shot solid-home-mobile 390,844 'http://127.0.0.1:4188/'
+          godot_shot godot-home-mobile 390 844 phone 'http://127.0.0.1:4190/'
+          godot_shot godot-home-zh 390 844 phone 'http://127.0.0.1:4190/?locale=zh-CN'
 
           python3 - <<'PY'
           from pathlib import Path
@@ -141,7 +155,7 @@ jobs:
               ('desktop', root/'solid-home-desktop.png', root/'godot-home-desktop.png'),
               ('mobile', root/'solid-home-mobile.png', root/'godot-home-mobile.png'),
           ]
-          metrics = {'schema': 'novelforge_godot_visual_parity_v1', 'blocking': False, 'pairs': {}}
+          metrics = {'schema': 'novelforge_godot_visual_parity_v1', 'blocking': False, 'scene_ready_capture': True, 'pairs': {}}
           for name, base_path, candidate_path in pairs:
               base = Image.open(base_path).convert('RGB')
               candidate = Image.open(candidate_path).convert('RGB')
@@ -154,7 +168,7 @@ jobs:
               ImageEnhance.Contrast(diff).enhance(3.0).save(root/f'diff-{name}.png')
           (root/'parity-metric.json').write_text(json.dumps(metrics, indent=2), encoding='utf-8')
           (root/'README.txt').write_text(
-              'Godot remains a shadow runtime. The diff metric is recorded but is intentionally non-blocking until human parity review sets the cutover threshold.\n',
+              'Godot remains a shadow runtime. Candidate screenshots are captured only after scene-ready. Diff metrics remain non-blocking until human parity review sets the cutover threshold.\n',
               encoding='utf-8',
           )
           print(json.dumps(metrics, indent=2))
