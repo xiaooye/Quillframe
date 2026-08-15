@@ -4,10 +4,12 @@
 - [x] Evidence/overlap review against current `state_graph`, Settlement, Canon/State, and Project Adapter.
 - [x] Define minimal mutation classes and deterministic route vocabulary.
 - [x] Implement resolver self-test locally.
-- [ ] Publish `property_write_policy.py` + schema.
-- [ ] Add Framework manifest discovery.
-- [ ] Add Project-path integration fixture in CI.
-- [ ] Run public Actions and inspect executed steps/artifacts.
+- [x] Publish `property_write_policy.py` + schema.
+- [x] Add Framework manifest discovery.
+- [x] Add Project-path integration fixture in CI.
+- [x] Run the first public Actions probe and inspect executed steps/artifact (`31891326122`, artifact `9248615828`).
+- [x] Integrate the resolver self-test into reusable release contracts.
+- [ ] Run latest-head dedicated + full NovelForge CI and inspect all relevant jobs.
 - [ ] Review compatibility and exact diff.
 
 ## Stage B · #63
