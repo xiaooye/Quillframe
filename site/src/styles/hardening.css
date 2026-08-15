@@ -2,8 +2,8 @@
   .nf-skip-link {
     position: fixed;
     z-index: 1000;
-    inset-block-start: max(10px, env(safe-area-inset-top, 0px));
-    inset-inline-start: max(10px, env(safe-area-inset-left, 0px));
+    inset-block-start: 10px;
+    inset-inline-start: 10px;
     padding: 10px 14px;
     border: 1px solid var(--nf-product-line);
     border-radius: var(--nf-product-radius-control);
@@ -21,124 +21,21 @@
     box-shadow: var(--nf-product-focus);
   }
 
-  .unified-product-shell :where(a, button, summary) {
-    touch-action: manipulation;
-  }
+  .unified-product-shell :where(pre, table, .wui-code-block) { max-inline-size: 100%; overflow-x: auto; }
+  .unified-product-shell :where(code, pre, td, th), .nf-resilience-card code { overflow-wrap: anywhere; }
+  .unified-product-shell :where(h1, h2, h3, [id]) { scroll-margin-block-start: 86px; }
 
-  .unified-product-shell :where(pre, table, .wui-code-block) {
-    max-inline-size: 100%;
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-  }
-
-  .unified-product-shell :where(code, pre, td, th),
-  .nf-resilience-card code {
-    overflow-wrap: anywhere;
-  }
-
-  .unified-product-shell :where(h1, h2, h3, [id]) {
-    scroll-margin-block-start: 86px;
-  }
-
-  .unified-product-shell dialog {
-    color: inherit;
-  }
-
-  body:has(.unified-product-shell .command-dialog[open]) {
-    overflow: hidden;
-  }
-
-  .nf-resilience-page {
-    min-block-size: 100dvh;
-    display: grid;
-    place-items: center;
-    padding-block: 64px;
-  }
-
-  .nf-resilience-card {
-    inline-size: min(100%, 720px);
-    padding: clamp(24px, 5vw, 48px);
-    border: 1px solid var(--nf-product-line);
-    border-radius: var(--nf-product-radius-panel);
-    background: color-mix(in oklab, var(--nf-product-surface) 78%, var(--nf-product-pink-soft));
-    box-shadow: var(--nf-product-shadow-soft);
-  }
-
-  .nf-resilience-mark {
-    display: block;
-    margin-block-end: 16px;
-    color: var(--nf-product-pink-strong);
-    font-size: 32px;
-    font-weight: 760;
-  }
-
-  .nf-resilience-eyebrow {
-    color: var(--nf-product-muted);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-  }
-
-  .nf-resilience-card h1 {
-    margin-block: 8px 12px;
-    font-size: clamp(28px, 5vw, 48px);
-    line-height: 1.08;
-  }
-
-  .nf-resilience-card p {
-    max-inline-size: 60ch;
-    line-height: 1.72;
-  }
-
+  .nf-resilience-page { min-block-size: 100dvh; display: grid; place-items: center; padding-block: 64px; }
+  .nf-resilience-card { inline-size: min(100%, 720px); padding: clamp(24px, 5vw, 48px); border: 1px solid var(--nf-product-line); border-radius: var(--nf-product-radius-panel); background: color-mix(in oklab, var(--nf-product-surface) 78%, var(--nf-product-pink-soft)); box-shadow: var(--nf-product-shadow-soft); }
+  .nf-resilience-mark { display: block; margin-block-end: 16px; color: var(--nf-product-pink-strong); font-size: 32px; font-weight: 760; }
+  .nf-resilience-eyebrow { color: var(--nf-product-muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .nf-resilience-card h1 { margin-block: 8px 12px; font-size: clamp(28px, 5vw, 48px); line-height: 1.08; }
+  .nf-resilience-card p { max-inline-size: 60ch; line-height: 1.72; }
   .nf-resilience-card details { margin-block-start: 20px; }
   .nf-resilience-card code { display: block; margin-block-start: 10px; font-size: 12px; }
   .nf-resilience-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-block-start: 24px; }
 
-  @media (pointer: coarse) {
-    .unified-product-shell :where(a, button, input, select, summary) {
-      min-block-size: 44px;
-    }
-  }
-
-  @media (prefers-contrast: more) {
-    .unified-product-shell {
-      --pe-border: color-mix(in oklab, var(--pe-fg) 42%, var(--pe-bg));
-      --nf-product-line: color-mix(in oklab, var(--nf-product-ink) 42%, var(--nf-product-canvas));
-    }
-
-    .unified-product-shell :where(.product-appbar, .mobile-nav, .command-surface) {
-      border-color: var(--pe-border);
-    }
-
-    .unified-product-shell .desktop-nav .wui-app-bar__link.active,
-    .unified-product-shell .mobile-nav .wui-sidebar__item.active,
-    .unified-product-shell .command-result[data-highlighted="true"] {
-      color: var(--pe-fg);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-      scroll-behavior: auto;
-      transition-duration: .01ms;
-      animation-duration: .01ms;
-      animation-iteration-count: 1;
-    }
-  }
-
-  @media (forced-colors: active) {
-    .nf-resilience-card,
-    .nf-skip-link,
-    .unified-product-shell :where(.product-appbar, .mobile-nav, .command-surface) {
-      border: 1px solid CanvasText;
-    }
-
-    .unified-product-shell .desktop-nav .wui-app-bar__link.active,
-    .unified-product-shell .mobile-nav .wui-sidebar__item.active,
-    .unified-product-shell .command-result[data-highlighted="true"] {
-      outline: 2px solid Highlight;
-      outline-offset: -2px;
-    }
-  }
+  @media (pointer: coarse) { .unified-product-shell :where(a, button, input, select, summary) { min-block-size: 44px; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto; transition-duration: .01ms; animation-duration: .01ms; animation-iteration-count: 1; } }
+  @media (forced-colors: active) { .nf-resilience-card, .nf-skip-link { border: 1px solid CanvasText; } }
 }
