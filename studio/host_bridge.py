@@ -27,6 +27,7 @@ REQUEST_SCHEMA = "novelforge_studio_host_bridge_request_v1"
 RESULT_SCHEMA = "novelforge_studio_host_bridge_result_v1"
 DESCRIPTION_SCHEMA = "novelforge_studio_host_bridge_description_v1"
 CONTRACT_SCHEMA = "novelforge_studio_host_bridge_contract_v1"
+RESUME_PREFLIGHT_SCHEMA = "novelforge_session_resume_preflight_v1"
 
 try:
     from project_hub_projection import build_projection
@@ -246,6 +247,53 @@ def _run_receipt_get(args: dict[str, Any], _: str) -> dict[str, Any]:
     return sanitize(_run_cli(argv, cwd=project_root))
 
 
+def _session_resume_preflight(args: dict[str, Any], _: str) -> dict[str, Any]:
+    project_root = _project_root(args)
+    evidence = _scoped_path(project_root, args.get("authority_evidence"), "authority_evidence")
+    session_id = args.get("session_id")
+    checkpoint_id = args.get("checkpoint_id")
+    expected_version = args.get("expected_session_version")
+    if not isinstance(session_id, str) or not session_id.strip():
+        raise BridgeError("invalid_args", "session_id is required")
+    if not isinstance(checkpoint_id, str) or not checkpoint_id.strip():
+        raise BridgeError("invalid_args", "checkpoint_id is required")
+    if isinstance(expected_version, bool) or not isinstance(expected_version, int) or expected_version < 1:
+        raise BridgeError("invalid_args", "expected_session_version must be a positive integer")
+    runtime_db = project_root / ".novelforge" / "runtime.db"
+    argv = [
+        "resume-preflight",
+        "inspect",
+        "--db",
+        str(runtime_db),
+        "--project-root",
+        str(project_root),
+        "--session-id",
+        session_id,
+        "--checkpoint-id",
+        checkpoint_id,
+        "--expected-session-version",
+        str(expected_version),
+        "--authority-evidence",
+        str(evidence),
+    ]
+    try:
+        return sanitize(_run_cli(argv, cwd=project_root))
+    except BridgeError as exc:
+        detail = exc.detail if isinstance(exc.detail, dict) else {}
+        blocked = detail.get("result")
+        if (
+            exc.code == "core_cli_failed"
+            and isinstance(blocked, dict)
+            and blocked.get("schema") == RESUME_PREFLIGHT_SCHEMA
+            and blocked.get("status") == "BLOCKED"
+            and blocked.get("ready") is False
+            and blocked.get("mutation_performed") is False
+            and blocked.get("authority") is False
+        ):
+            return sanitize(blocked)
+        raise
+
+
 DISPATCH = {
     "bridge.describe": lambda args, surface: description(surface=surface),
     "framework.doctor": _safe_doctor,
@@ -258,6 +306,7 @@ DISPATCH = {
     "runtime.events.list": _runtime_events_list,
     "runtime.handoff.inspect": _runtime_handoff_inspect,
     "run.receipt.get": _run_receipt_get,
+    "session.resume.preflight": _session_resume_preflight,
 }
 
 
@@ -381,7 +430,7 @@ def self_test() -> dict[str, Any]:
 
     temp_root = Path(tempfile.mkdtemp(prefix="novelforge-host-bridge-"))
     project_ready = project_safe = context_safe = runtime_safe = False
-    runtime_queries_ok = False
+    runtime_queries_ok = resume_preflight_safe = False
     try:
         setup = subprocess.run([sys.executable, str(ROOT / "project_adapter.py"), "self-test", "--tmp", str(temp_root)], cwd=str(ROOT), text=True, capture_output=True, check=False)
         project_ready = setup.returncode == 0
@@ -463,6 +512,26 @@ def self_test() -> dict[str, Any]:
         runtime_serialized = canonical(runtime_results)
         runtime_safe = runtime_queries_ok and str(temp_root) not in runtime_serialized and all(item["data"]["authority"] is False for item in runtime_results)
         runtime_queries_ok = runtime_queries_ok and runtime_init and session_put and event_put and handoff_put and sessions["data"]["count"] == 1 and events["data"]["count"] == 1 and receipts["data"]["count"] == 0
+
+        evidence_path = temp_root / "resume-authority.json"
+        evidence_path.write_text("{}", encoding="utf-8")
+        preflight = invoke(_request("REQ-RESUME-PREFLIGHT", "session.resume.preflight", {
+            "project_root": str(temp_root),
+            "session_id": "SES-BRIDGE",
+            "checkpoint_id": "CP-NOT-PRESENT",
+            "expected_session_version": 1,
+            "authority_evidence": "resume-authority.json",
+        }))
+        resume_preflight_safe = (
+            preflight["status"] == "ok"
+            and preflight["data"].get("schema") == RESUME_PREFLIGHT_SCHEMA
+            and preflight["data"].get("status") == "BLOCKED"
+            and preflight["data"].get("ready") is False
+            and "checkpoint_not_found" in preflight["data"].get("blockers", [])
+            and preflight["data"].get("mutation_performed") is False
+            and preflight["data"].get("authority") is False
+            and str(temp_root) not in canonical(preflight)
+        )
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
@@ -481,6 +550,7 @@ def self_test() -> dict[str, Any]:
         "context_projection_safe": context_safe,
         "runtime_queries_supported": runtime_queries_ok,
         "runtime_projection_safe": runtime_safe,
+        "resume_preflight_query_safe": resume_preflight_safe,
     }
     return {"studio_host_bridge_contract": "PASS" if all(checks.values()) else "FAIL", "schema": CONTRACT_SCHEMA, "checks": checks, "authority": False, "model_execution": False}
 
