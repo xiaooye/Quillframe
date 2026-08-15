@@ -12,6 +12,7 @@ const check = (ok, message) => { if (!ok) failures.push(message); };
 const project = read("godot/project.godot");
 const scene = read("godot/Main.tscn");
 const main = read("godot/scripts/main.gd");
+const parity = read("godot/scripts/main_parity.gd");
 const shell = read("godot/web/novelforge.html");
 const fontFetch = read("scripts/fetch-godot-fonts.sh");
 const plainFontStart = main.indexOf("func _font(weight: int)");
@@ -22,7 +23,9 @@ const mixedFontBlock = mixedFontStart >= 0 && clearStart > mixedFontStart ? main
 
 check(project.includes('run/main_scene="res://Main.tscn"'), "Godot main scene must remain explicit");
 check(project.includes('renderer/rendering_method="gl_compatibility"'), "Web migration must use Compatibility renderer");
-check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main), "migration is capped at 2.5D; 3D scene nodes are forbidden");
+check(scene.includes('path="res://scripts/main_parity.gd"'), "shadow scene must enter through the parity layout bridge");
+check(scene.includes("offset_right = -15.0"), "web page scrollbar gutter must remain reserved in the Godot layout viewport");
+check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main + parity), "migration is capped at 2.5D; 3D scene nodes are forbidden");
 check(main.includes('FONT_PATH := "res://generated/NotoSansSC-wght.ttf"'), "deterministic bundled CJK font is required");
 check(main.includes('SYMBOL_FONT_PATH := "res://generated/NotoSansSymbols2-Regular.ttf"'), "deterministic symbol fallback is required");
 check(main.includes('THAI_FONT_PATH := "res://generated/NotoSansThai-wdth-wght.ttf"'), "deterministic Thai fallback is required for baseline kaomoji");
@@ -40,6 +43,10 @@ for (const fingerprint of [
 check(main.includes("ฅ^•ﻌ•^ฅ"), "baseline kawaii status copy must remain exact");
 check(main.includes('BOOKS_ICON_PATH := "res://assets/books-stack.svg"'), "Knowledge icon must use deterministic local vector art");
 check(main.includes("Let the story\\ngrow without\\nletting the\\nsystem lose\\nthe plot."), "desktop/mobile baseline headline geometry must stay explicit");
+check(parity.includes("LAUNCHER_CONTENT_INSET := 36.0"), "Story Loom content inset must preserve the Solid material-panel content box");
+check(parity.includes("MOBILE_LEDE_LINE_SPACING := 3"), "mobile hero lede rhythm must remain calibrated to the Solid baseline");
+check(parity.includes("DESKTOP_LEDE_LINE_SPACING := 4"), "desktop hero lede rhythm must remain calibrated to the Solid baseline");
+check(parity.includes('Color("b0a8da")'), "Godot scrollbar thumb must preserve the Atelier lavender scrollbar treatment");
 check(main.includes('"phone"') && main.includes('"compact"') && main.includes('"desktop"'), "three responsive layout modes are required");
 check(main.includes("window.location.assign") && main.includes("window.history.pushState"), "browser navigation boundary must stay explicit");
 check(main.includes("novelforge:godot-ready"), "browser readiness marker is required");
@@ -51,7 +58,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_shadow_source_quality_v3",
+    schema: "novelforge_godot_shadow_source_quality_v4",
     status: "pass",
     production_cutover: false,
     visual_baseline: "Solid/Vite Story Loom Kawaii Atelier",
@@ -60,6 +67,7 @@ if (failures.length) {
     deterministic_cjk_font: true,
     deterministic_unicode_fallbacks: true,
     fallback_scope: "decorative_controls_only",
+    page_grid_contract: true,
     authority: false,
   }, null, 2));
 }
