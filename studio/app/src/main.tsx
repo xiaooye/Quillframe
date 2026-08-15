@@ -12,6 +12,7 @@ import "./styles/observability.css";
 import "./styles/host.css";
 import "./styles/atelier-workbench.css";
 import "./styles/visual-fixes.css";
+import "./styles/product-surfaces.css";
 
 const Desk = lazy(() => import("./routes/Desk"));
 const Project = lazy(() => import("./routes/Project"));
