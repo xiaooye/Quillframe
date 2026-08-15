@@ -113,13 +113,47 @@ def _character_evidence_rows(payload:dict[str,Any])->list[tuple[str,int,str|None
     return rows
 
 def validate_contract_input_bindings(cid:str,input_payload:dict[str,Any])->list[str]:
-    if cid!="character.action_propose":return []
-    e=[]; current=input_payload.get("current_story_order"); rows=_character_evidence_rows(input_payload); seen=set()
-    for evidence_id,available,status in rows:
-        if evidence_id in seen:e.append(f"character evidence id duplicated: {evidence_id}")
-        seen.add(evidence_id)
-        if isinstance(current,int) and not isinstance(current,bool) and isinstance(available,int) and not isinstance(available,bool) and available>current:
-            e.append(f"character evidence from future story order: {evidence_id}")
+    e=[]
+    if cid=="character.action_propose":
+        current=input_payload.get("current_story_order"); rows=_character_evidence_rows(input_payload); seen=set()
+        for evidence_id,available,status in rows:
+            if evidence_id in seen:e.append(f"character evidence id duplicated: {evidence_id}")
+            seen.add(evidence_id)
+            if isinstance(current,int) and not isinstance(current,bool) and isinstance(available,int) and not isinstance(available,bool) and available>current:
+                e.append(f"character evidence from future story order: {evidence_id}")
+        return e
+    if cid=="continuity.commitment_audit":
+        current=input_payload.get("current_story_order"); candidate=input_payload.get("candidate",{}); seen=set()
+        for row in candidate.get("evidence",[]) if isinstance(candidate,dict) and isinstance(candidate.get("evidence"),list) else []:
+            if not isinstance(row,dict):continue
+            eid=row.get("evidence_id"); order=row.get("story_order")
+            if eid in seen:e.append(f"continuity candidate evidence id duplicated: {eid}")
+            seen.add(eid)
+            if isinstance(current,int) and not isinstance(current,bool) and isinstance(order,int) and not isinstance(order,bool) and order>current:e.append(f"continuity candidate evidence from future story order: {eid}")
+        for field,id_key in (("commitments","commitment_id"),("required_transitions","transition_id")):
+            ids=[row.get(id_key) for row in input_payload.get(field,[]) if isinstance(row,dict)]
+            if len(ids)!=len(set(ids)):e.append(f"duplicate {id_key} in continuity input")
+        return e
+    if cid=="relationship.memory_reconcile":
+        current=input_payload.get("current_story_order"); evidence=input_payload.get("ordered_evidence",[]); seen=set(); source_refs=set()
+        participants=input_payload.get("participants",[])
+        if isinstance(participants,list) and len(participants)!=len(set(participants)):e.append("relationship participants contain duplicates")
+        for row in evidence if isinstance(evidence,list) else []:
+            if not isinstance(row,dict):continue
+            eid=row.get("evidence_id"); order=row.get("story_order"); ref=row.get("source_ref")
+            if eid in seen:e.append(f"relationship evidence id duplicated: {eid}")
+            seen.add(eid)
+            if isinstance(ref,str):source_refs.add(ref)
+            if isinstance(current,int) and not isinstance(current,bool) and isinstance(order,int) and not isinstance(order,bool) and order>current:e.append(f"relationship evidence from future story order: {eid}")
+        for snap in input_payload.get("derived_snapshots",[]) if isinstance(input_payload.get("derived_snapshots"),list) else []:
+            if not isinstance(snap,dict):continue
+            order=snap.get("as_of_story_order")
+            if isinstance(current,int) and not isinstance(current,bool) and isinstance(order,int) and not isinstance(order,bool) and order>current:e.append(f"relationship snapshot from future story order: {snap.get('snapshot_id')}")
+            refs=snap.get("source_refs",[])
+            if isinstance(refs,list):
+                unknown=sorted({x for x in refs if isinstance(x,str)}-source_refs)
+                if unknown:e.append("relationship snapshot cites unknown source refs: "+", ".join(unknown))
+        return e
     return e
 
 def validate_contract_input(cid:str,contract:dict[str,Any],input_payload:dict[str,Any])->list[str]:
@@ -133,28 +167,65 @@ def validate_contract_input(cid:str,contract:dict[str,Any],input_payload:dict[st
     return e
 
 def validate_contract_result_bindings(job:dict[str,Any],judgment:dict[str,Any])->list[str]:
-    cid=job.get("input",{}).get("model_contract_id")
-    if cid!="character.action_propose":return []
-    payload=job.get("input",{}).get("payload",{}); e=[]
+    cid=job.get("input",{}).get("model_contract_id"); payload=job.get("input",{}).get("payload",{}); e=[]
     if not isinstance(payload,dict) or not isinstance(judgment,dict):return e
-    if judgment.get("character_id")!=payload.get("character_id"):e.append("character action result mismatch: character_id")
-    if judgment.get("active_agenda")!=payload.get("active_agenda"):e.append("character action result mismatch: active_agenda")
-    evidence={eid:status for eid,_,status in _character_evidence_rows(payload)}
-    proposals=judgment.get("proposals",[])
-    if isinstance(proposals,list):
-        for i,proposal in enumerate(proposals):
-            if not isinstance(proposal,dict):continue
-            bases=proposal.get("knowledge_basis",[]); seen=set()
-            if not isinstance(bases,list):continue
-            for basis in bases:
-                if not isinstance(basis,dict):continue
-                evidence_id=basis.get("evidence_id"); use=basis.get("use")
-                if evidence_id in seen:e.append(f"proposal {i} duplicates evidence basis: {evidence_id}")
-                seen.add(evidence_id)
-                if evidence_id not in evidence:e.append(f"proposal {i} references unknown character evidence: {evidence_id}")
-                elif use=="supports" and evidence[evidence_id] in {"contradicted","unknown"}:
-                    e.append(f"proposal {i} positively relies on unusable epistemic claim: {evidence_id}")
+    if cid=="character.action_propose":
+        if judgment.get("character_id")!=payload.get("character_id"):e.append("character action result mismatch: character_id")
+        if judgment.get("active_agenda")!=payload.get("active_agenda"):e.append("character action result mismatch: active_agenda")
+        evidence={eid:status for eid,_,status in _character_evidence_rows(payload)}
+        proposals=judgment.get("proposals",[])
+        if isinstance(proposals,list):
+            for i,proposal in enumerate(proposals):
+                if not isinstance(proposal,dict):continue
+                bases=proposal.get("knowledge_basis",[]); seen=set()
+                if not isinstance(bases,list):continue
+                for basis in bases:
+                    if not isinstance(basis,dict):continue
+                    evidence_id=basis.get("evidence_id"); use=basis.get("use")
+                    if evidence_id in seen:e.append(f"proposal {i} duplicates evidence basis: {evidence_id}")
+                    seen.add(evidence_id)
+                    if evidence_id not in evidence:e.append(f"proposal {i} references unknown character evidence: {evidence_id}")
+                    elif use=="supports" and evidence[evidence_id] in {"contradicted","unknown"}:e.append(f"proposal {i} positively relies on unusable epistemic claim: {evidence_id}")
+        return e
+    if cid=="continuity.commitment_audit":
+        candidate=payload.get("candidate",{}); evidence_ids={row.get("evidence_id") for row in candidate.get("evidence",[]) if isinstance(row,dict)} if isinstance(candidate,dict) else set()
+        expected={"commitments":{row.get("commitment_id") for row in payload.get("commitments",[]) if isinstance(row,dict)},"transitions":{row.get("transition_id") for row in payload.get("required_transitions",[]) if isinstance(row,dict)}}
+        for field,id_key in (("commitments","commitment_id"),("transitions","transition_id")):
+            rows=judgment.get(field,[]); seen=set()
+            if not isinstance(rows,list):continue
+            for row in rows:
+                if not isinstance(row,dict):continue
+                rid=row.get(id_key)
+                if rid in seen:e.append(f"continuity result duplicates {id_key}: {rid}")
+                seen.add(rid)
+                if rid not in expected[field]:e.append(f"continuity result references unknown {id_key}: {rid}")
+                refs=row.get("evidence_ids",[])
+                if isinstance(refs,list):
+                    unknown=sorted(set(refs)-evidence_ids)
+                    if unknown:e.append(f"continuity {rid} cites unknown evidence ids: "+", ".join(unknown))
+                    if row.get("status") in {"advanced","satisfied","supported","violated"} and not refs:e.append(f"continuity {rid} status {row.get('status')} requires evidence ids")
+            missing=sorted(expected[field]-seen)
+            if missing:e.append(f"continuity result must cover every {id_key}: "+", ".join(missing))
+        return e
+    if cid=="relationship.memory_reconcile":
+        if judgment.get("relationship_id")!=payload.get("relationship_id"):e.append("relationship result mismatch: relationship_id")
+        evidence_rows=payload.get("ordered_evidence",[]); allowed_refs={row.get("source_ref") for row in evidence_rows if isinstance(row,dict)}
+        refs=judgment.get("source_refs",[])
+        if isinstance(refs,list):
+            unknown=sorted(set(refs)-allowed_refs)
+            if unknown:e.append("relationship result cites unknown source refs: "+", ".join(unknown))
+        for row in judgment.get("unresolved_conflicts",[]) if isinstance(judgment.get("unresolved_conflicts"),list) else []:
+            if isinstance(row,dict) and isinstance(row.get("source_refs"),list):
+                unknown=sorted(set(row["source_refs"])-allowed_refs)
+                if unknown:e.append("relationship conflict cites unknown source refs: "+", ".join(unknown))
+        snapshot_ids={row.get("snapshot_id") for row in payload.get("derived_snapshots",[]) if isinstance(row,dict)}
+        invalidated=judgment.get("invalidated_derived_refs",[])
+        if isinstance(invalidated,list):
+            unknown=sorted(set(invalidated)-snapshot_ids)
+            if unknown:e.append("relationship result invalidates unknown snapshots: "+", ".join(unknown))
+        return e
     return e
+
 def semantic_payload(job:dict[str,Any])->dict[str,Any]:return {k:job.get(k,{} if k in {"input","output_contract"} else []) for k in ("kind","subject_id","input","rubric","output_contract")}
 def fingerprint_for(job:dict[str,Any])->str:return "sha256:"+hashlib.sha256(canonical(semantic_payload(job))).hexdigest()
 def validate_job(job:dict[str,Any])->list[str]:
@@ -281,8 +352,42 @@ def self_test()->int:
     try:make_contract_job("character.action_propose","CHAR-FUTURE",future_input)
     except ValueError as exc:character_future_guard="future story order" in str(exc)
 
-    ok=all((not validate_job(ej),not validate_result(ej,er),lineage,not validate_job(cj),not validate_result(cj,good),auto,typed,guard,typed_input_ok,typed_input_reject,character_binding_ok,character_unknown_ref_guard,character_epistemic_guard,character_future_guard))
-    dump_json({"semantic_router_contract":"PASS" if ok else "FAIL","fingerprint_excludes_runtime_lineage":lineage,"catalog_exact_id_resolution":auto,"typed_input_validation":typed_input_ok and typed_input_reject,"typed_output_validation":typed,"contract_input_guard":guard,"character_evidence_binding":character_binding_ok,"character_unknown_evidence_guard":character_unknown_ref_guard,"character_epistemic_support_guard":character_epistemic_guard,"character_future_evidence_guard":character_future_guard,"aggregate_registry_required":False,"semantic_intelligence_externalized":True,"model_execution":False})
+    continuity_payload={
+        "candidate":{"source_ref":"candidate:self","evidence":[{"evidence_id":"E-1","statement":"The obligation remains active.","source_ref":"candidate:self#1","story_order":5}]},
+        "current_story_order":5,
+        "commitments":[{"commitment_id":"COM-1","statement":"Keep the obligation live.","authority":"active_plan","source_ref":"plan:self"}],
+        "required_transitions":[{"transition_id":"TR-1","description":"Leverage changes.","authority":"active_plan","source_ref":"plan:self"}],
+        "initial_facts":[],"current_story_point":"SCN-5"
+    }
+    continuity_job=make_contract_job("continuity.commitment_audit","SCN-5",continuity_payload)
+    continuity_result={"job_id":continuity_job["job_id"],"subject_id":continuity_job["subject_id"],"kind":continuity_job["kind"],"input_fingerprint":continuity_job["input_fingerprint"],"status":"completed","worker":{"provider":"self_test","model_or_reviewer":"fixture"},"judgment":{"confidence":.9,"commitments":[{"commitment_id":"COM-1","status":"preserved","evidence_ids":["E-1"],"reason":"Still live."}],"transitions":[{"transition_id":"TR-1","status":"supported","evidence_ids":["E-1"],"reason":"Evidence shows changed leverage."}],"violations":[],"repair_routes":[]},"proposals":[],"errors":[]}
+    continuity_binding_ok=not validate_result(continuity_job,continuity_result)
+    continuity_bad=json.loads(json.dumps(continuity_result));continuity_bad["judgment"]["transitions"][0]["evidence_ids"]=["E-MISSING"]
+    continuity_unknown_evidence_guard=any("unknown evidence ids" in x for x in validate_result(continuity_job,continuity_bad))
+    continuity_missing=json.loads(json.dumps(continuity_result));continuity_missing["judgment"]["commitments"]=[]
+    continuity_complete_coverage_guard=any("cover every commitment_id" in x for x in validate_result(continuity_job,continuity_missing))
+    continuity_future=json.loads(json.dumps(continuity_payload));continuity_future["candidate"]["evidence"][0]["story_order"]=6
+    continuity_future_guard=False
+    try:make_contract_job("continuity.commitment_audit","SCN-FUTURE",continuity_future)
+    except ValueError as exc:continuity_future_guard="future story order" in str(exc)
+
+    relationship_payload={
+        "relationship_id":"REL-SELF","current_story_order":5,"participants":["CHAR-A","CHAR-B"],
+        "ordered_evidence":[{"evidence_id":"RE-1","story_order":4,"source_ref":"accepted:rel-1","authority":"accepted","event":"A promise created an obligation.","effects":{"obligation":"open"}}],
+        "derived_snapshots":[{"snapshot_id":"RS-1","as_of_story_order":4,"source_refs":["accepted:rel-1"],"shared_state":{"status":"strained"},"per_character_perception":{"CHAR-A":"uneasy","CHAR-B":"guarded"},"open_obligations":["promise"],"emotional_residue":["distrust"]}]
+    }
+    relationship_job=make_contract_job("relationship.memory_reconcile","REL-SELF",relationship_payload)
+    relationship_result={"job_id":relationship_job["job_id"],"subject_id":relationship_job["subject_id"],"kind":relationship_job["kind"],"input_fingerprint":relationship_job["input_fingerprint"],"status":"completed","worker":{"provider":"self_test","model_or_reviewer":"fixture"},"judgment":{"confidence":.9,"relationship_id":"REL-SELF","reconciled_state":{"shared_external_state":{"status":"strained"},"per_character_perception":{"CHAR-A":"uneasy","CHAR-B":"guarded"},"open_obligations":["promise"],"emotional_residue":["distrust"]},"source_refs":["accepted:rel-1"],"unresolved_conflicts":[],"invalidated_derived_refs":[]},"proposals":[],"errors":[]}
+    relationship_binding_ok=not validate_result(relationship_job,relationship_result)
+    relationship_bad=json.loads(json.dumps(relationship_result));relationship_bad["judgment"]["source_refs"]=["accepted:missing"]
+    relationship_source_guard=any("unknown source refs" in x for x in validate_result(relationship_job,relationship_bad))
+    relationship_future=json.loads(json.dumps(relationship_payload));relationship_future["ordered_evidence"][0]["story_order"]=6
+    relationship_future_guard=False
+    try:make_contract_job("relationship.memory_reconcile","REL-FUTURE",relationship_future)
+    except ValueError as exc:relationship_future_guard="future story order" in str(exc)
+
+    ok=all((not validate_job(ej),not validate_result(ej,er),lineage,not validate_job(cj),not validate_result(cj,good),auto,typed,guard,typed_input_ok,typed_input_reject,character_binding_ok,character_unknown_ref_guard,character_epistemic_guard,character_future_guard,continuity_binding_ok,continuity_unknown_evidence_guard,continuity_complete_coverage_guard,continuity_future_guard,relationship_binding_ok,relationship_source_guard,relationship_future_guard))
+    dump_json({"semantic_router_contract":"PASS" if ok else "FAIL","fingerprint_excludes_runtime_lineage":lineage,"catalog_exact_id_resolution":auto,"typed_input_validation":typed_input_ok and typed_input_reject,"typed_output_validation":typed,"contract_input_guard":guard,"character_evidence_binding":character_binding_ok,"character_unknown_evidence_guard":character_unknown_ref_guard,"character_epistemic_support_guard":character_epistemic_guard,"character_future_evidence_guard":character_future_guard,"continuity_evidence_binding":continuity_binding_ok,"continuity_unknown_evidence_guard":continuity_unknown_evidence_guard,"continuity_complete_coverage_guard":continuity_complete_coverage_guard,"continuity_future_evidence_guard":continuity_future_guard,"relationship_evidence_binding":relationship_binding_ok,"relationship_source_guard":relationship_source_guard,"relationship_future_evidence_guard":relationship_future_guard,"aggregate_registry_required":False,"semantic_intelligence_externalized":True,"model_execution":False})
     return 0 if ok else 1
 
 def main()->int:
