@@ -1,0 +1,44 @@
+{
+  "id": "NARRATIVE-SUPPORTED-001",
+  "type": "capability",
+  "domain": "narrative-verification",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "character_view": {
+      "character_id": "CHAR-ELI",
+      "agenda": "Get temporary access to the archive without owing a personal favor.",
+      "visible_evidence": [
+        "The archivist can authorize one supervised visit.",
+        "A refundable deposit is an accepted institutional condition."
+      ]
+    },
+    "causal_trajectory": [
+      {
+        "event_id": "EVT-1",
+        "action": "Eli offers the standard refundable deposit instead of a personal favor.",
+        "effect": "The archivist accepts and signs a one-visit supervised access slip."
+      }
+    ],
+    "candidate": "Eli pays the refundable deposit, receives the signed one-visit access slip, and leaves knowing he can enter the archive once under supervision.",
+    "candidate_state_delta": {
+      "archive_access": {"before": "none", "after": "one supervised visit"},
+      "deposit": {"before": "not paid", "after": "paid refundable"},
+      "personal_favor_owed": {"before": false, "after": false}
+    }
+  },
+  "rubric": [
+    "Accept a candidate when the supplied character-visible evidence supports the action and the durable state changes are explicitly caused by an observable agreement or action in the trajectory.",
+    "Do not reject merely because the character solved the immediate problem efficiently; supported competence is not a continuity failure.",
+    "Use NARR-SUPPORTED when the action, knowledge, and candidate state delta all remain inside the supplied evidence and causal chain."
+  ],
+  "judgment_contract": {
+    "verdict": "accept|reject",
+    "codes": ["NARR-*"],
+    "evidence": "short observable findings"
+  },
+  "expected": {
+    "verdict": "accept",
+    "codes": ["NARR-SUPPORTED"]
+  }
+}

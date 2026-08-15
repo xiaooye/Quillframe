@@ -1,0 +1,37 @@
+{
+  "id": "NARRATIVE-CAUSAL-001",
+  "type": "regression",
+  "domain": "narrative-verification",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "character_agenda": "Keep the landlord from raising the rent this month.",
+    "causal_trajectory": [
+      {
+        "event_id": "EVT-1",
+        "action": "The tenant asks for one more week to produce missing receipts.",
+        "effect": "The landlord gives a one-week deadline but makes no promise about rent."
+      }
+    ],
+    "candidate": "The landlord leaves. By evening the rent is permanently reduced by twenty percent, and the tenant treats the dispute as settled.",
+    "candidate_state_delta": {
+      "rent": {"before": 1000, "after": 800},
+      "dispute_status": {"before": "open", "after": "settled"}
+    },
+    "available_evidence": ["A one-week document deadline was granted."]
+  },
+  "rubric": [
+    "Reject a durable consequence that is not causally supported by the supplied event trajectory or candidate evidence.",
+    "Do not treat a temporary procedural concession as evidence for a permanent resource or obligation change unless an intervening choice, agreement, payment, ruling, or other causal event supports it.",
+    "Use NARR-CAUSAL when the candidate state change appears by narrator fiat rather than the supplied causal chain."
+  ],
+  "judgment_contract": {
+    "verdict": "accept|reject",
+    "codes": ["NARR-*"],
+    "evidence": "short observable findings"
+  },
+  "expected": {
+    "verdict": "reject",
+    "codes": ["NARR-CAUSAL"]
+  }
+}

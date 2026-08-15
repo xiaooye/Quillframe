@@ -43,7 +43,9 @@
       "project.inspect": {
         "kind": "query",
         "core_basis": "Project Adapter + novelforge_studio_project_hub_projection_v1",
-        "required_args": ["project_root"]
+        "required_args": [
+          "project_root"
+        ]
       },
       "capabilities.inspect": {
         "kind": "query",
@@ -53,7 +55,10 @@
       "context.inspect": {
         "kind": "query",
         "core_basis": "novelforge_context_inspector_v2",
-        "required_args": ["project_root", "manifest"]
+        "required_args": [
+          "project_root",
+          "manifest"
+        ]
       },
       "semantic.catalog": {
         "kind": "query",
@@ -63,55 +68,126 @@
       "publication.preview": {
         "kind": "query",
         "core_basis": "publication/compiler.py + novelforge_publication_preview_projection_v1",
-        "required_args": ["profile"],
+        "required_args": [
+          "profile"
+        ],
         "source_contract": "caller supplies a publication source object or project-relative source_manifest; compiler enforces accepted text fingerprints but the bridge does not invent source authority"
       },
       "runtime.sessions.list": {
         "kind": "query",
         "core_basis": "novelforge_runtime_sessions_projection_v1 via novelforge.py runtime-query",
-        "required_args": ["project_root"]
+        "required_args": [
+          "project_root"
+        ]
       },
       "runtime.session.get": {
         "kind": "query",
         "core_basis": "novelforge_runtime_session_projection_v1 via novelforge.py runtime-query",
-        "required_args": ["project_root", "session_id"]
+        "required_args": [
+          "project_root",
+          "session_id"
+        ]
       },
       "runtime.events.list": {
         "kind": "query",
         "core_basis": "novelforge_runtime_events_projection_v1 via novelforge.py runtime-query",
-        "required_args": ["project_root"]
+        "required_args": [
+          "project_root"
+        ]
       },
       "runtime.handoff.inspect": {
         "kind": "query",
         "core_basis": "novelforge_runtime_handoff_projection_v1 via novelforge.py runtime-query",
-        "required_args": ["project_root", "handoff_id"]
+        "required_args": [
+          "project_root",
+          "handoff_id"
+        ]
       },
       "run.receipt.get": {
         "kind": "query",
         "core_basis": "novelforge_run_receipts_projection_v1 via novelforge.py runtime-query",
-        "required_args": ["project_root"]
+        "required_args": [
+          "project_root"
+        ]
       },
       "runtime.command.receipt.get": {
         "kind": "query",
         "core_basis": "novelforge_runtime_command_receipt_projection_v1 via novelforge.py runtime-command",
-        "required_args": ["project_root"]
+        "required_args": [
+          "project_root"
+        ]
       },
       "session.resume.preflight": {
         "kind": "query",
         "core_basis": "novelforge_session_resume_preflight_v1 via novelforge.py resume-preflight",
-        "required_args": ["project_root", "session_id", "checkpoint_id", "expected_session_version", "authority_evidence"]
+        "required_args": [
+          "project_root",
+          "session_id",
+          "checkpoint_id",
+          "expected_session_version",
+          "authority_evidence"
+        ]
       },
       "session.resume": {
         "kind": "command",
         "core_basis": "novelforge_session_resume_command_v1 + novelforge_runtime_command_authorization_v1 + novelforge_runtime_command_receipt_v1 via novelforge.py runtime-command",
-        "required_args": ["project_root", "session_id", "checkpoint_id", "expected_session_version", "authority_evidence", "user_authorized"],
-        "allowed_surfaces": ["local_app"],
+        "required_args": [
+          "project_root",
+          "session_id",
+          "checkpoint_id",
+          "expected_session_version",
+          "authority_evidence",
+          "user_authorized"
+        ],
+        "allowed_surfaces": [
+          "local_app"
+        ],
         "mutation_scope": "runtime_session_state_only",
         "model_execution": false,
         "project_write": false,
         "canon_write": false,
         "framework_write": false,
         "settlement": false
+      },
+      "story.workspace": {
+        "kind": "query",
+        "core_basis": "novelforge_story_workspace_v1 via novelforge.py story-workspace",
+        "required_args": [
+          "project_root",
+          "input"
+        ]
+      },
+      "context.trace": {
+        "kind": "query",
+        "core_basis": "novelforge_context_trace_v1 via novelforge.py context-trace",
+        "required_args": [
+          "project_root",
+          "inspector"
+        ]
+      },
+      "scene.simulation.inspect": {
+        "kind": "query",
+        "core_basis": "novelforge_scene_simulation_run_v1 via novelforge.py scene-simulation-run",
+        "required_args": [
+          "project_root",
+          "input"
+        ]
+      },
+      "state.candidate.inspect": {
+        "kind": "query",
+        "core_basis": "novelforge_candidate_state_delta_v1 via novelforge.py candidate-state-delta",
+        "required_args": [
+          "project_root",
+          "input"
+        ]
+      },
+      "continuity.verify": {
+        "kind": "query",
+        "core_basis": "novelforge_narrative_verification_v1 via novelforge.py narrative-verification",
+        "required_args": [
+          "project_root",
+          "input"
+        ]
       }
     },
     "deferred": {
@@ -136,5 +212,7 @@
     "runtime_mutation_allowed": false,
     "session_resume_surface": "local_app_only"
   },
-  "core_dependencies": ["#23"]
+  "core_dependencies": [
+    "#23"
+  ]
 }

@@ -191,6 +191,43 @@ def _context_inspect(args: dict[str, Any], _: str) -> dict[str, Any]:
     return sanitize(_run_cli(argv, cwd=project_root))
 
 
+def _story_workspace(args: dict[str, Any], _: str) -> dict[str, Any]:
+    project_root = _project_root(args)
+    source = _scoped_path(project_root, args.get("input"), "input")
+    return sanitize(_run_cli(["story-workspace", "build", "--input", str(source)], cwd=project_root))
+
+
+def _context_trace(args: dict[str, Any], _: str) -> dict[str, Any]:
+    project_root = _project_root(args)
+    inspector = _scoped_path(project_root, args.get("inspector"), "inspector")
+    argv = ["context-trace", "build", "--inspector", str(inspector)]
+    if args.get("memory_tiers") is not None:
+        memory_tiers = _scoped_path(project_root, args.get("memory_tiers"), "memory_tiers")
+        argv += ["--memory-tiers", str(memory_tiers)]
+    if args.get("semantic_result") is not None:
+        semantic_result = _scoped_path(project_root, args.get("semantic_result"), "semantic_result")
+        argv += ["--semantic-result", str(semantic_result)]
+    return sanitize(_run_cli(argv, cwd=project_root))
+
+
+def _scene_simulation_inspect(args: dict[str, Any], _: str) -> dict[str, Any]:
+    project_root = _project_root(args)
+    source = _scoped_path(project_root, args.get("input"), "input")
+    return sanitize(_run_cli(["scene-simulation-run", "build", "--input", str(source)], cwd=project_root))
+
+
+def _candidate_state_inspect(args: dict[str, Any], _: str) -> dict[str, Any]:
+    project_root = _project_root(args)
+    source = _scoped_path(project_root, args.get("input"), "input")
+    return sanitize(_run_cli(["candidate-state-delta", "build", "--input", str(source)], cwd=project_root))
+
+
+def _continuity_verify(args: dict[str, Any], _: str) -> dict[str, Any]:
+    project_root = _project_root(args)
+    source = _scoped_path(project_root, args.get("input"), "input")
+    return sanitize(_run_cli(["narrative-verification", "build", "--input", str(source)], cwd=project_root))
+
+
 def _semantic_catalog(_: dict[str, Any], __: str) -> dict[str, Any]:
     return sanitize(_run_cli(["semantic", "catalog"]))
 
@@ -372,6 +409,11 @@ DISPATCH = {
     "project.inspect": _project_inspect,
     "capabilities.inspect": _capabilities_inspect,
     "context.inspect": _context_inspect,
+    "story.workspace": _story_workspace,
+    "context.trace": _context_trace,
+    "scene.simulation.inspect": _scene_simulation_inspect,
+    "state.candidate.inspect": _candidate_state_inspect,
+    "continuity.verify": _continuity_verify,
     "semantic.catalog": _semantic_catalog,
     "publication.preview": _publication_preview,
     "runtime.sessions.list": _runtime_sessions_list,

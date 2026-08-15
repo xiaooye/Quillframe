@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novelforge_narrative_verification_v1",
+  "title": "NovelForge Narrative Verification",
+  "type": "object",
+  "required": ["schema", "candidate_fingerprint", "candidate_delta_fingerprint", "deterministic_report_ref", "semantic_input_fingerprint", "semantic_result_fingerprint", "semantic_verdict", "deterministic_findings", "semantic_findings", "findings", "verification_fingerprint", "status", "deterministic_finding_count", "semantic_finding_count", "semantic_reject_is_transport_failure", "authority", "canon_write", "settlement_authority", "model_execution"],
+  "properties": {
+    "schema": {"const": "novelforge_narrative_verification_v1"},
+    "candidate_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "candidate_delta_fingerprint": {"type": ["string", "null"]},
+    "deterministic_report_ref": {"type": "object"},
+    "semantic_input_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "semantic_result_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "semantic_verdict": {"enum": ["clear", "issues_found"]},
+    "deterministic_findings": {"type": "array"},
+    "semantic_findings": {"type": "array"},
+    "findings": {"type": "array"},
+    "verification_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "status": {"enum": ["clear", "issues_found"]},
+    "deterministic_finding_count": {"type": "integer", "minimum": 0},
+    "semantic_finding_count": {"type": "integer", "minimum": 0},
+    "semantic_reject_is_transport_failure": {"const": false},
+    "authority": {"const": false},
+    "canon_write": {"const": false},
+    "settlement_authority": {"const": false},
+    "model_execution": {"const": false}
+  },
+  "additionalProperties": false
+}

@@ -22,6 +22,11 @@ fundamentals:
   character_relationship:
     en: core/CHARACTER_SYSTEM.en.md
     zh_cn: core/CHARACTER_SYSTEM.zh-CN.md
+  event_ir:
+    tool: core/event_ir.py
+    schema: core/event_ir.schema.json
+    schema_id: novelforge_event_ir_v1
+    authority: false
   surface:
     en: surface/FUNDAMENTALS.en.md
     zh_cn: surface/FUNDAMENTALS.zh-CN.md
@@ -55,6 +60,15 @@ harness:
   run_receipt_schema: novelforge_run_receipt_v1
   run_receipts_projection_schema: novelforge_run_receipts_projection_v1
   context_inspector: harness/context_inspector.py
+  context_trace: harness/context_trace.py
+  context_trace_schema_file: harness/context_trace.schema.json
+  context_trace_schema: novelforge_context_trace_v1
+  story_workspace: harness/story_workspace.py
+  story_workspace_schema_file: harness/story_workspace.schema.json
+  story_workspace_schema: novelforge_story_workspace_v1
+  scene_simulation_run: harness/scene_simulation_run.py
+  scene_simulation_run_schema_file: harness/scene_simulation_run.schema.json
+  scene_simulation_run_schema: novelforge_scene_simulation_run_v1
   memory_tiers: harness/memory_tiers.py
   memory_bank: harness/memory_bank.py
   scenario_fork: harness/scenario_fork.py
@@ -80,6 +94,12 @@ quality:
   quality_evolution: quality/quality_evolution.py
   reader_expectation_ledger: quality/reader_expectation.py
   state_graph: quality/state_graph.py
+  candidate_state_delta: quality/candidate_state_delta.py
+  candidate_state_delta_schema_file: quality/candidate_state_delta.schema.json
+  candidate_state_delta_schema: novelforge_candidate_state_delta_v1
+  narrative_verification: quality/narrative_verification.py
+  narrative_verification_schema_file: quality/narrative_verification.schema.json
+  narrative_verification_schema: novelforge_narrative_verification_v1
   taxonomy_registry: quality/taxonomy.json
   taxonomy_tool: quality/quality_taxonomy.py
   repair_policy: quality/repair_policy.py
@@ -103,6 +123,7 @@ quality:
     narrative_world: narrative.world
     reader_expectations: reader.expectations
     memory_consolidation: memory.consolidate
+    narrative_verification: narrative.verify
   semantic_intelligence_owner: model
   deterministic_code_owner: [authority, permission, fingerprint, persistence, transaction, routing, hard_budget, stage_isolation, typed_validation, release_role_binding, contradiction_guard]
   reader_persona_basis: reading-behavior
@@ -125,6 +146,10 @@ quality:
   state_graph_authority: false
   scenario_branch_authority: false
   reader_expectation_authority: false
+  story_workspace_authority: false
+  event_ir_authority: false
+  candidate_state_delta_authority: false
+  narrative_verification_authority: false
   durable_semantic_scalar_policy: forbidden_without_calibration_and_consumer_contract
 
 settlement:
@@ -361,7 +386,7 @@ workflows:
 
 normal_ci:
   model_execution: forbidden
-  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, runtime-query-self-test, resume-preflight-self-test, context-inspector-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, settlement-runtime-self-test, quality-finding-self-test, quality-taxonomy-self-test, repair-policy-self-test, production-readiness-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, registered-release-role-contract-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, semantic-acceptance-baseline-self-test, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
+  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, runtime-query-self-test, resume-preflight-self-test, context-inspector-self-test, context-trace-self-test, story-workspace-self-test, scene-simulation-run-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, settlement-runtime-self-test, event-ir-self-test, quality-finding-self-test, quality-taxonomy-self-test, repair-policy-self-test, production-readiness-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, candidate-state-delta-self-test, narrative-verification-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, registered-release-role-contract-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, semantic-acceptance-baseline-self-test, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
 
 scheduled_maintenance:
   model_execution: forbidden
@@ -383,6 +408,10 @@ write_boundary:
   memory_bank_grants_canon_authority: false
   reader_expectation_ledger_grants_canon_authority: false
   scenario_branch_grants_canon_authority: false
+  story_workspace_grants_canon_authority: false
+  event_ir_grants_canon_authority: false
+  candidate_state_delta_grants_canon_authority: false
+  narrative_verification_grants_canon_authority: false
   state_graph_result_grants_canon_authority: false
   quality_evolution_result_grants_canon_authority: false
   promotion_gate_result_grants_framework_write: false

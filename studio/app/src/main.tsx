@@ -15,7 +15,8 @@ const Inspector = lazy(() => import("./routes/InspectorRoute"));
 const Control = lazy(() => import("./routes/Control"));
 const Architecture = lazy(() => import("./routes/Architecture"));
 const Publication = lazy(() => import("./routes/Publication"));
-const Workspace = lazy(() => import("./routes/Workspace"));
+const NarrativeWorkspace = lazy(() => import("./routes/NarrativeWorkspace"));
+const Playground = lazy(() => import("./routes/Workspace"));
 const Agents = lazy(() => import("./routes/Agents"));
 const RuntimeRoute = lazy(() => import("./routes/Runtime"));
 const ContextRoute = lazy(() => import("./routes/Context"));
@@ -78,7 +79,8 @@ render(
             <Route path="/control" component={Control} />
             <Route path="/architecture" component={Architecture} />
             <Route path="/publication" component={Publication} />
-            <Route path="/workspace" component={Workspace} />
+            <Route path="/workspace" component={NarrativeWorkspace} />
+            <Route path="/playground" component={Playground} />
             <Route path="/agents" component={Agents} />
             <Route path="/runtime" component={RuntimeRoute} />
             <Route path="/context" component={ContextRoute} />

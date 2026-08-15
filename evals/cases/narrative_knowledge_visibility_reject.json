@@ -1,0 +1,46 @@
+{
+  "id": "NARRATIVE-KNOWLEDGE-001",
+  "type": "regression",
+  "domain": "narrative-verification",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "candidate": "Mara tells the clerk she already knows the sealed bid is 410,000 and uses that exact figure to force a concession.",
+    "character_view": {
+      "character_id": "CHAR-MARA",
+      "current_story_order": 12,
+      "agenda": "Win a concession without exposing her source network.",
+      "visible_evidence": [
+        {
+          "id": "E-OBSERVED",
+          "available_from_story_order": 10,
+          "claim": "The rival submitted a bid above 350,000."
+        }
+      ],
+      "not_visible_evidence": [
+        {
+          "id": "E-SEALED",
+          "available_from_story_order": 14,
+          "claim": "The sealed bid is exactly 410,000."
+        }
+      ]
+    },
+    "candidate_state_delta": {
+      "knowledge_change": "CHAR-MARA acts as if E-SEALED is certain current knowledge."
+    }
+  },
+  "rubric": [
+    "Reject when a candidate lets a character use exact information that is outside the supplied character-visible evidence at the current story order.",
+    "Reader or narrator knowledge cannot silently become character knowledge. A plausible guess must remain a guess and cannot borrow an unavailable exact value.",
+    "Use NARR-KNOWLEDGE when the candidate crosses the supplied character knowledge boundary."
+  ],
+  "judgment_contract": {
+    "verdict": "accept|reject",
+    "codes": ["NARR-*"],
+    "evidence": "short observable findings"
+  },
+  "expected": {
+    "verdict": "reject",
+    "codes": ["NARR-KNOWLEDGE"]
+  }
+}

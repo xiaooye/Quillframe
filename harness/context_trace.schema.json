@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novelforge_context_trace_v1",
+  "title": "NovelForge Context Trace",
+  "type": "object",
+  "required": ["schema", "trace_fingerprint", "items", "selection_owner", "eligibility_owner", "budget_owner", "semantic_relevance_numeric_score", "authority", "canon_write", "model_execution"],
+  "properties": {
+    "schema": {"const": "novelforge_context_trace_v1"},
+    "trace_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "manifest_id": {"type": ["string", "null"]},
+    "stage": {"type": ["string", "null"]},
+    "semantic_selection_fingerprint": {"type": ["string", "null"], "pattern": "^(sha256:[0-9a-f]{64})?$"},
+    "budgets": {"type": ["object", "null"]},
+    "used": {"type": ["object", "null"]},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "stages", "priority", "pinned", "derived", "hidden", "invalidated", "eligible", "loaded", "archived", "exclusion_reasons"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "class": {},
+          "source": {},
+          "source_fingerprint": {},
+          "authority": {},
+          "inclusion_reason": {},
+          "stages": {"type": "array"},
+          "priority": {"type": "integer"},
+          "pinned": {"type": "boolean"},
+          "derived": {"type": "boolean"},
+          "hidden": {"type": "boolean"},
+          "invalidated": {"type": "boolean"},
+          "eligible": {"type": "boolean"},
+          "semantic_tier": {"type": ["string", "null"]},
+          "semantic_reason": {},
+          "loaded": {"type": "boolean"},
+          "loaded_tier": {"type": ["string", "null"]},
+          "archived": {"type": "boolean"},
+          "exclusion_reasons": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    },
+    "selection_owner": {"const": "model"},
+    "eligibility_owner": {"const": "deterministic_runtime"},
+    "budget_owner": {"const": "deterministic_runtime"},
+    "semantic_relevance_numeric_score": {"const": false},
+    "authority": {"const": false},
+    "canon_write": {"const": false},
+    "model_execution": {"const": false}
+  },
+  "additionalProperties": false
+}

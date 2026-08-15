@@ -1,0 +1,13 @@
+# Plan · Story Workspace & Narrative Runtime
+
+1. **Workspace projection**: add a Core-owned Story Workspace schema / projector that turns Project SDK / Adapter resolved objects into a read-only, source-bound, authority-preserving projection without creating a second persistent state store.
+2. **Context Trace**: add a trace builder / schema over the existing Context Inspector, `context.select`, and memory-tier packing so one record explains eligibility → semantic selection → hard-budget packing → loaded working set while preserving model/deterministic ownership.
+3. **Event IR**: add schema + deterministic validator + synthetic fixtures. Event IR represents a causal candidate only; it has no Canon authority and prose is not required to mechanically restate it.
+4. **Simulation Run**: add a scene-simulation run envelope binding the base-state fingerprint, `character.action_propose`, `scene.resolve_actions`, Event IR candidates, scenario forks, and optional `quality.compare` results by fingerprint / provenance; do not add persistent character-agent memory.
+5. **Candidate State Delta**: add a candidate extractor contract / typed schema representing state / knowledge / relationship / resource / obligation / location changes from candidate prose or Event realization as source-bound proposals.
+6. **Narrative Verification**: extend current state-graph verification. Run deterministic contradictions and semantic narrative verification as separate layers, then normalize findings through the shared finding contract with explicit repair owner / provenance.
+7. **Bridge/query surface**: add read-only Studio Host Bridge operations such as `story.workspace`, `context.trace`, `scene.simulation.get`, `state.candidate`, and `continuity.verify`; initial operations keep `canon_write=false` and `settlement=false`.
+8. **Studio slice**: implement read-only Story Workspace / Context Trace / Simulation / Verification views first. UI consumes Core projections and does not parse private Project databases directly.
+9. **Evals / CI**: add standard + mapped synthetic Project fixtures plus fingerprint mismatch, future-knowledge violation, branch-authority, Event IR drift, and semantic/deterministic ownership tests; normal CI remains free of live model usage.
+10. **Docs / bundle**: update manifest, architecture / context / production docs, documentation manifest, and bundle coverage with bilingual parity.
+11. **Release gate**: after deterministic CI and required semantic capability/regression evidence pass, produce a new version / exact commit / bundle fingerprint. Only then may a consuming Project perform an explicit dependency migration.

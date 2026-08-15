@@ -1,0 +1,175 @@
+{
+  "schema": "novelforge_model_contract_registry_v1",
+  "version": "1",
+  "principle": "Narrative verification is evidence-bound model judgment over character support, knowledge visibility, relationship change and causal consequence. It produces diagnostic findings only; deterministic runtime preserves fingerprints, authority, state transitions and transport semantics.",
+  "contracts": {
+    "narrative.verify": {
+      "kind": "artifact_audit",
+      "purpose": "Verify a bounded candidate against supplied character-visible evidence, relationship evidence, causal trajectory and candidate state delta. Report unsupported action, knowledge-boundary, relationship-evidence or causal-consequence problems without inventing Canon or rewriting the candidate.",
+      "input_contract": {
+        "type": "object",
+        "required": [
+          "candidate_fingerprint",
+          "candidate_evidence",
+          "character_views",
+          "relationship_evidence",
+          "causal_trajectory",
+          "candidate_state_delta"
+        ],
+        "properties": {
+          "candidate_fingerprint": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "candidate_evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["evidence_id", "statement", "source_ref", "story_order"],
+              "properties": {
+                "evidence_id": {"type": "string", "minLength": 1},
+                "statement": {"type": "string", "minLength": 1},
+                "source_ref": {"type": "string", "minLength": 1},
+                "story_order": {"type": "integer", "minimum": 0}
+              },
+              "additionalProperties": false
+            }
+          },
+          "character_views": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["character_id", "current_story_order", "agenda", "visible_evidence_ids"],
+              "properties": {
+                "character_id": {"type": "string", "minLength": 1},
+                "current_story_order": {"type": "integer", "minimum": 0},
+                "agenda": {"type": "string", "minLength": 1},
+                "visible_evidence_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+                "beliefs": {"type": "array", "items": {"type": "string"}},
+                "constraints": {"type": "array", "items": {"type": "string"}}
+              },
+              "additionalProperties": false
+            }
+          },
+          "relationship_evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["relationship_id", "before_state", "candidate_change", "evidence_ids"],
+              "properties": {
+                "relationship_id": {"type": "string", "minLength": 1},
+                "before_state": {"type": "object"},
+                "candidate_change": {"type": "object"},
+                "evidence_ids": {"type": "array", "items": {"type": "string", "minLength": 1}}
+              },
+              "additionalProperties": false
+            }
+          },
+          "causal_trajectory": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["event_id", "effect", "evidence_ids"],
+              "properties": {
+                "event_id": {"type": "string", "minLength": 1},
+                "caused_by": {"type": "array", "items": {"type": "string", "minLength": 1}},
+                "effect": {"type": "string", "minLength": 1},
+                "evidence_ids": {"type": "array", "items": {"type": "string", "minLength": 1}}
+              },
+              "additionalProperties": false
+            }
+          },
+          "candidate_state_delta": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Use only supplied evidence and state. Do not infer a new Canon fact merely because it would make the candidate coherent.",
+        "Check important actions against the acting character's supplied agenda, constraints, relationship position and visible evidence. Surprise is allowed when causally supported; convenience without support is a finding.",
+        "Check knowledge boundaries from the character view, not narrator or reader knowledge. A character may believe or infer something without knowing it, but the candidate must not silently upgrade inaccessible evidence into certain knowledge.",
+        "Check relationship changes against concrete candidate/authority evidence. Mood, proximity or one line of dialogue is not automatically a durable relationship transition.",
+        "Check causal consequences against the supplied event trajectory and state delta. Flag consequences that appear by narrator fiat or skip a necessary pressure, choice, cost or transition.",
+        "When a problem exists, return the smallest evidence-backed finding with the owning repair layer. Do not prescribe line edits for an upstream story/character/continuity failure.",
+        "This contract is diagnostic. It does not assign a global literary score, mutate plan/Canon, or grant production-release authority."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["candidate_fingerprint", "verdict", "findings"],
+        "properties": {
+          "candidate_fingerprint": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "verdict": {
+            "enum": ["clear", "issues_found"]
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "category",
+                "severity",
+                "repair_owner",
+                "subject_id",
+                "description",
+                "candidate_evidence",
+                "authority_evidence",
+                "source_refs",
+                "confidence"
+              ],
+              "properties": {
+                "category": {"type": "string", "minLength": 1},
+                "severity": {"enum": ["error", "warning", "info"]},
+                "repair_owner": {
+                  "enum": ["story", "plan", "scene", "character", "reader", "surface", "continuity", "context", "memory", "research", "runtime", "human"]
+                },
+                "subject_id": {"type": "string", "minLength": 1},
+                "description": {"type": "string", "minLength": 1},
+                "candidate_evidence": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["source_ref", "summary"],
+                    "properties": {
+                      "source_ref": {"type": "string", "minLength": 1},
+                      "summary": {"type": "string", "minLength": 1},
+                      "fingerprint": {"type": "string"}
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "authority_evidence": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["source_ref", "summary"],
+                    "properties": {
+                      "source_ref": {"type": "string", "minLength": 1},
+                      "summary": {"type": "string", "minLength": 1},
+                      "fingerprint": {"type": "string"}
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "source_refs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+                "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "narrative_verification_findings"
+      },
+      "independent_gate": false
+    }
+  }
+}
