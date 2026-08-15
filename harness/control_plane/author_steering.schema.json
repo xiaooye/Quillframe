@@ -47,7 +47,7 @@
         "run_lineage": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/nonempty"}},
         "checkpoint_id": {"$ref": "#/$defs/nonempty"},
         "safe_point_id": {"$ref": "#/$defs/nonempty"},
-        "safe_point_kind": {"enum": ["workflow_boundary", "before_external_dispatch", "after_external_result", "before_consequential_write", "after_consequential_write", "before_user_visible_gate"]},
+        "safe_point_kind": {"enum": ["workflow_boundary", "before_draft", "before_review", "before_external_dispatch", "after_external_result", "before_consequential_write", "after_consequential_write", "before_user_visible_gate"]},
         "workflow_cursor": {"$ref": "#/$defs/nonempty"},
         "artifact_fingerprints": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/sha"}},
         "pending_handoff_ids": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/nonempty"}},

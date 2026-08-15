@@ -45,6 +45,7 @@ jobs:
           assert d['future_note_does_not_invalidate_current_candidate'] is True
           assert d['resume_lineage_can_reinterpret_once'] is True
           assert d['handoff_cancel_is_bounded_to_pending_ids'] is True
+          assert d['consume_at_is_enforced'] is True
           assert d['unrelated_run_does_not_consume_event'] is True
           assert d['steering_never_grants_durable_authority'] is True
           assert d['model_execution'] is False

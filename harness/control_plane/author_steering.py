@@ -20,8 +20,9 @@ RECEIPT_SCHEMA = "novelforge_author_steering_receipt_v1"
 SOURCE_KINDS = {"user", "authorized_human"}
 SCOPES = {"current_run", "future_runs", "named_target"}
 CONSUME_AT = {"next_safe_point", "before_draft", "before_review", "before_user_visible_gate"}
-SAFE_KINDS = {"workflow_boundary", "before_external_dispatch", "after_external_result",
-              "before_consequential_write", "after_consequential_write", "before_user_visible_gate"}
+SAFE_KINDS = {"workflow_boundary", "before_draft", "before_review", "before_external_dispatch",
+              "after_external_result", "before_consequential_write", "after_consequential_write",
+              "before_user_visible_gate"}
 WRITE_STATES = {"none", "preflight", "in_progress", "complete"}
 ROUTES = {"continue", "rebuild_context", "replan", "regenerate",
           "cancel_handoff", "await_user", "defer_future"}
@@ -124,6 +125,11 @@ def prepare(cp: control_plane.ControlPlane, event_id: str, safe_point: Any) -> d
     if s["consequential_write_state"] == "in_progress": raise ValueError("cannot consume steering inside consequential write")
     event, event_hash = stored_event(cp, event_id)
     e = validate_event(event)
+    if e["consume_at"] != "next_safe_point" and s["safe_point_kind"] != e["consume_at"]:
+        return {"schema":DECISION_INPUT_SCHEMA,"status":"not_due","event_id":event["event_id"],
+                "event_hash":event_hash,"required_safe_point_kind":e["consume_at"],
+                "current_safe_point_kind":s["safe_point_kind"],"decision_input_fingerprint":None,
+                "authority":False,"canon_authority":False,"framework_write_authority":False,"model_execution":False}
     drift = []
     if e["resource_id"] != s["resource_id"]: drift.append("resource_id")
     if e["session_id"] != s["session_id"]: drift.append("session_id")
@@ -207,19 +213,19 @@ def consume(cp: control_plane.ControlPlane, event_id: str, safe_point: Any, deci
             "authority":False,"canon_authority":False,"project_write_authority":False,
             "framework_write_authority":False,"settlement_authority":False,"model_execution":False}
 
-def fixture_event(eid: str, instruction: str, *, scope="current_run", target=None, run="RUN-1", checkpoint="CKP-1", artifact="a", source="user"):
+def fixture_event(eid: str, instruction: str, *, scope="current_run", target=None, consume_at="next_safe_point", run="RUN-1", checkpoint="CKP-1", artifact="a", source="user"):
     return {"schema":control_plane.EVENT_SCHEMA,"event_id":eid,"event_type":EVENT_TYPE,
             "source":{"kind":source,"actor":"author","transport":"self_test","external_ref":None},
             "resource_id":"BOOK-S","session_id":"SES-S","run_id":run,"handoff_id":None,"authority_scope":"request",
             "idempotency_key":"idem-"+eid,"artifact_fingerprints":["sha256:"+artifact*64],
             "created_at":control_plane.now_iso(),"payload":{"schema":REQUEST_SCHEMA,"kind":PAYLOAD_KIND,
-            "instruction":instruction,"applicability":{"scope":scope,"target_ref":target,"consume_at":"next_safe_point"},
+            "instruction":instruction,"applicability":{"scope":scope,"target_ref":target,"consume_at":consume_at},
             "authored_against_checkpoint_id":checkpoint,"authority":False,"canon_authority":False,"framework_write_authority":False}}
 
-def fixture_safe(*, run="RUN-1", lineage=None, checkpoint="CKP-1", artifact="a", handoffs=None, write="none"):
+def fixture_safe(*, run="RUN-1", lineage=None, checkpoint="CKP-1", artifact="a", handoffs=None, write="none", kind="workflow_boundary"):
     return {"schema":SAFE_POINT_SCHEMA,"resource_id":"BOOK-S","session_id":"SES-S","run_id":run,
             "run_lineage":lineage or [run],"checkpoint_id":checkpoint,"safe_point_id":f"SAFE-{run}-{checkpoint}",
-            "safe_point_kind":"workflow_boundary","workflow_cursor":"draft.realization",
+            "safe_point_kind":kind,"workflow_cursor":"draft.realization",
             "artifact_fingerprints":["sha256:"+artifact*64],"pending_handoff_ids":handoffs or [],
             "consequential_write_state":write}
 
@@ -254,6 +260,8 @@ def self_test(path: Path) -> int:
     bad_cancel=blocked(lambda:validate_decision(fixture_decision(cp0,"cancel_handoff",cancel=["HO-X"]),cp0))
     cr=consume(cp,"EV-C",cs,fixture_decision(cp0,"cancel_handoff",cancel=["HO-A"]))
     bad_source=blocked(lambda:validate_event(fixture_event("EV-B","No impersonation",source="semantic_worker")))
+    due=fixture_event("EV-DUE","Apply this only before review.",consume_at="before_review"); cp.ingest_event(due)
+    early=prepare(cp,"EV-DUE",fixture_safe(kind="before_draft")); ontime=prepare(cp,"EV-DUE",fixture_safe(kind="before_review"))
     we=fixture_event("EV-W","Other run",run="RUN-X"); cp.ingest_event(we); na=prepare(cp,"EV-W",fixture_safe())
     checks={
       "typed_event_ingress":first["accepted"] and not first["duplicate"],
@@ -267,6 +275,7 @@ def self_test(path: Path) -> int:
       "resume_lineage_can_reinterpret_once":rp["binding_state"]=="resumed_lineage" and rr["consumed"],
       "handoff_cancel_is_bounded_to_pending_ids":bad_cancel and any(x.get("handoff_id")=="HO-A" for x in cr["required_followup_operations"]),
       "non_author_cannot_submit_author_steering":bad_source,
+      "consume_at_is_enforced":early["status"]=="not_due" and ontime["status"]=="ready",
       "unrelated_run_does_not_consume_event":na["status"]=="not_applicable",
       "no_followup_side_effects_are_executed_here":all(not x["followup_execution_performed"] for x in [r,fr,rr,cr]),
       "steering_never_grants_durable_authority":all(not x[k] for x in [r,fr,rr,cr] for k in ["authority","canon_authority","project_write_authority","framework_write_authority","settlement_authority"])
