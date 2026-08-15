@@ -1,0 +1,241 @@
+name: Product Site Browser QA
+
+on:
+  pull_request:
+    paths:
+      - 'site/**'
+      - 'assets/brand/**'
+      - '.github/workflows/product-site-browser-qa.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'assets/brand/**'
+      - '.github/workflows/product-site-browser-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: product-site-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install exact Product Site dependencies
+        working-directory: site
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Build Product SPA
+        working-directory: site
+        run: npm run content && npm run build:site
+
+      - name: Install CJK font for truthful bilingual rendering
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+          fc-cache -f >/dev/null
+
+      - name: Responsive browser and route QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/product-site-browser-qa
+          CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser)
+          test -n "${CHROME}"
+
+          cd site
+          npm run preview -- --host 127.0.0.1 --port 4188 > /tmp/product-site-browser-qa/server.log 2>&1 &
+          SERVER_PID=$!
+          cd ..
+          cleanup() {
+            kill "${SERVER_PID}" >/dev/null 2>&1 || true
+            wait "${SERVER_PID}" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          ready=false
+          for _ in $(seq 1 30); do
+            if curl --silent --show-error --fail http://127.0.0.1:4188/ > /tmp/product-site-browser-qa/root.html; then
+              if grep -q 'NovelForge' /tmp/product-site-browser-qa/root.html; then
+                ready=true
+                break
+              fi
+            fi
+            sleep 1
+          done
+          test "${ready}" = "true"
+
+          run_chrome() {
+            name="$1"
+            size="$2"
+            url="$3"
+            mode="${4:-light}"
+            profile=$(mktemp -d)
+            extra=()
+            if [ "${mode}" = "dark" ]; then extra+=(--force-dark-mode); fi
+            "${CHROME}" \
+              --headless=new \
+              --no-sandbox \
+              --disable-gpu \
+              --disable-dev-shm-usage \
+              --disable-background-networking \
+              --window-size="${size}" \
+              --virtual-time-budget=5000 \
+              --user-data-dir="${profile}" \
+              "${extra[@]}" \
+              --screenshot="/tmp/product-site-browser-qa/${name}.png" \
+              "${url}" >"/tmp/product-site-browser-qa/${name}-chrome.log" 2>&1
+            rm -rf "${profile}"
+          }
+
+          dump_dom() {
+            name="$1"
+            size="$2"
+            url="$3"
+            mode="${4:-light}"
+            profile=$(mktemp -d)
+            extra=()
+            if [ "${mode}" = "dark" ]; then extra+=(--force-dark-mode); fi
+            "${CHROME}" \
+              --headless=new \
+              --no-sandbox \
+              --disable-gpu \
+              --disable-dev-shm-usage \
+              --disable-background-networking \
+              --window-size="${size}" \
+              --virtual-time-budget=5000 \
+              --user-data-dir="${profile}" \
+              "${extra[@]}" \
+              --dump-dom \
+              "${url}" >"/tmp/product-site-browser-qa/${name}-dom.html" 2>"/tmp/product-site-browser-qa/${name}-dom.log"
+            rm -rf "${profile}"
+          }
+
+          # Desktop identity pass.
+          run_chrome architecture-desktop 1440,900 'http://127.0.0.1:4188/architecture'
+          run_chrome publication-desktop 1440,900 'http://127.0.0.1:4188/publication'
+          run_chrome inspector-desktop 1440,900 'http://127.0.0.1:4188/inspect'
+          run_chrome playground-desktop 1440,900 'http://127.0.0.1:4188/playground'
+          run_chrome agents-desktop 1440,900 'http://127.0.0.1:4188/agents'
+          run_chrome studio-entry-desktop 1440,900 'http://127.0.0.1:4188/studio'
+
+          # Narrow-layout and dark-surface evidence.
+          run_chrome publication-mobile 390,844 'http://127.0.0.1:4188/publication'
+          run_chrome architecture-mobile 390,844 'http://127.0.0.1:4188/architecture'
+          run_chrome publication-dark 1440,900 'http://127.0.0.1:4188/publication' dark
+
+          dump_dom architecture 1440,900 'http://127.0.0.1:4188/architecture'
+          dump_dom publication 1440,900 'http://127.0.0.1:4188/publication'
+          dump_dom inspector 1440,900 'http://127.0.0.1:4188/inspect'
+          dump_dom playground 1440,900 'http://127.0.0.1:4188/playground'
+          dump_dom agents 1440,900 'http://127.0.0.1:4188/agents'
+          dump_dom studio-entry 1440,900 'http://127.0.0.1:4188/studio'
+          dump_dom publication-mobile 390,844 'http://127.0.0.1:4188/publication'
+          dump_dom architecture-mobile 390,844 'http://127.0.0.1:4188/architecture'
+          dump_dom publication-dark 1440,900 'http://127.0.0.1:4188/publication' dark
+          dump_dom missing-route 1440,900 'http://127.0.0.1:4188/this-route-does-not-exist'
+
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path('/tmp/product-site-browser-qa')
+          dom = lambda name: (root / f'{name}-dom.html').read_text(encoding='utf-8', errors='replace')
+
+          architecture = dom('architecture')
+          publication = dom('publication')
+          inspector = dom('inspector')
+          playground = dom('playground')
+          agents = dom('agents')
+          studio = dom('studio-entry')
+          publication_mobile = dom('publication-mobile')
+          architecture_mobile = dom('architecture-mobile')
+          publication_dark = dom('publication-dark')
+          missing = dom('missing-route')
+
+          # One shared product shell must wrap every product route.
+          for name, text in {
+              'architecture': architecture,
+              'publication': publication,
+              'inspector': inspector,
+              'playground': playground,
+              'agents': agents,
+              'studio': studio,
+          }.items():
+              assert text.count('product-appbar') == 1, f'{name}: expected one shared product app bar'
+              assert '产品' in text or 'Product' in text, f'{name}: product nav missing'
+              assert 'Studio' in text, f'{name}: Studio tab missing'
+              assert 'publication' in text.lower() or name != 'publication'
+
+          # Route identity must be structural, not title-only.
+          assert 'architecture-entry' in architecture
+          assert 'architecture-hero-path' in architecture
+          assert 'publication-workbench-entry' in publication
+          for marker in ('snapshot-text', 'snapshot-web', 'snapshot-print', 'snapshot-epub'):
+              assert marker in publication, marker
+          assert 'inspector-entry' in inspector
+          assert 'playground-entry' in playground
+          assert 'agent-integration-entry' in agents
+          assert 'unified-studio-terminal' in studio
+
+          # Mobile DOM keeps the same semantic route objects rather than serving a second shell.
+          assert publication_mobile.count('product-appbar') == 1
+          assert architecture_mobile.count('product-appbar') == 1
+          assert 'snapshot-epub' in publication_mobile
+          assert 'architecture-hero-path' in architecture_mobile
+
+          # --force-dark-mode must reach the shared appearance contract.
+          assert 'class="dark"' in publication_dark or ' dark' in publication_dark
+
+          # Direct-route fallback stays explicit and recoverable.
+          assert 'nf-not-found' in missing
+          assert '404' in missing
+
+          for image in (
+              'architecture-desktop.png',
+              'publication-desktop.png',
+              'inspector-desktop.png',
+              'playground-desktop.png',
+              'agents-desktop.png',
+              'studio-entry-desktop.png',
+              'publication-mobile.png',
+              'architecture-mobile.png',
+              'publication-dark.png',
+          ):
+              path = root / image
+              assert path.exists() and path.stat().st_size > 12_000, image
+
+          (root / 'browser-proof.txt').write_text(
+              'schema=novelforge_product_site_browser_qa_v1\n'
+              'shared_shell=true\n'
+              'route_identity=true\n'
+              'publication_format_previews=4\n'
+              'desktop=1440x900\n'
+              'mobile=390x844\n'
+              'dark_surface=true\n'
+              'direct_404=true\n'
+              'authority=false\n',
+              encoding='utf-8',
+          )
+          print({'schema': 'novelforge_product_site_browser_qa_v1', 'status': 'pass', 'screenshots': 9, 'authority': False})
+          PY
+
+      - name: Upload Product Site browser QA evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-site-browser-qa
+          path: /tmp/product-site-browser-qa
+          if-no-files-found: error
+          retention-days: 7
