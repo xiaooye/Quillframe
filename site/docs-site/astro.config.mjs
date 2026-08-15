@@ -92,9 +92,13 @@ export default defineConfig({
       ],
       components: {
         SiteTitle: "./src/components/NovelForgeSiteTitle.astro",
+        PageTitle: "./src/components/NovelForgePageTitle.astro",
         SocialIcons: "./src/components/NovelForgeActions.astro",
       },
-      customCss: ["./src/styles/custom.css"],
+      customCss: [
+        "./src/styles/custom.css",
+        "./src/styles/article-polish.css",
+      ],
       credits: false,
     }),
   ],
