@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en" data-theme="system" data-density="comfortable">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NovelForge Studio — Run / Context Inspector</title>
+  <style>
+    /* Prototype mirror of assets/brand/tokens.json. The JSON remains the source of truth. */
+    :root {
+      color-scheme: light dark;
+      --ink-950:#241D2B; --ink-800:#3C3245; --ink-650:#62556D;
+      --surface-0:#FFFDFC; --surface-1:#F8F5FA; --surface-2:#F0ECF4;
+      --sakura-500:#D6679A; --sakura-100:#F9DDE9;
+      --lavender-500:#796BC4; --lavender-100:#E7E1F8;
+      --sky-500:#4F8FBA; --sky-100:#DDEFF8;
+      --mint-500:#4D9B7D; --mint-100:#DCF1E7;
+      --amber-500:#BE892F; --amber-100:#F9EDCF;
+      --danger-500:#B95767; --danger-100:#F7DEE2;
+      --line:#E2DAE8; --shadow:0 12px 35px rgba(36,29,43,.08);
+      --radius-sm:8px; --radius-md:14px; --radius-lg:22px;
+      --focus:#4F8FBA; --content-max:1500px;
+      --pad-card:18px; --gap:16px; --row:12px;
+    }
+    html[data-density="dense"] { --pad-card:13px; --gap:11px; --row:8px; }
+    html[data-theme="light"] { color-scheme:light; }
+    html[data-theme="dark"] { color-scheme:dark; }
+    @media (prefers-color-scheme: dark) {
+      html[data-theme="system"] {
+        --ink-950:#F9F5FB; --ink-800:#E9E1ED; --ink-650:#BDB0C6;
+        --surface-0:#1B171F; --surface-1:#241E29; --surface-2:#302838;
+        --sakura-100:#3C2733; --lavender-100:#302B49; --sky-100:#203746;
+        --mint-100:#213A31; --amber-100:#3D3320; --danger-100:#40282D;
+        --line:#44394A; --shadow:0 16px 40px rgba(0,0,0,.24);
+      }
+    }
+    html[data-theme="dark"] {
+      --ink-950:#F9F5FB; --ink-800:#E9E1ED; --ink-650:#BDB0C6;
+      --surface-0:#1B171F; --surface-1:#241E29; --surface-2:#302838;
+      --sakura-100:#3C2733; --lavender-100:#302B49; --sky-100:#203746;
+      --mint-100:#213A31; --amber-100:#3D3320; --danger-100:#40282D;
+      --line:#44394A; --shadow:0 16px 40px rgba(0,0,0,.24);
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--ink-950); background:var(--surface-1); }
+    button, input { font:inherit; }
+    button:focus-visible, input:focus-visible { outline:3px solid color-mix(in srgb, var(--focus) 40%, transparent); outline-offset:2px; }
+    .app { min-height:100vh; display:grid; grid-template-columns:230px minmax(0,1fr); }
+    .sidebar { background:var(--surface-0); border-right:1px solid var(--line); padding:20px 16px; position:sticky; top:0; height:100vh; display:flex; flex-direction:column; gap:20px; }
+    .brand { display:flex; align-items:center; gap:10px; padding:4px 6px 12px; }
+    .mark { width:34px; height:34px; border-radius:12px; background:linear-gradient(135deg,var(--sakura-100),var(--lavender-100)); border:1px solid var(--line); display:grid; place-items:center; font-weight:800; color:var(--lavender-500); }
+    .brand strong { display:block; font-size:15px; letter-spacing:.01em; }
+    .brand small { color:var(--ink-650); font-size:11px; }
+    .nav-group { display:grid; gap:4px; }
+    .nav-label { margin:8px 8px 4px; font-size:10px; text-transform:uppercase; letter-spacing:.12em; color:var(--ink-650); font-weight:750; }
+    .nav-item { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px; color:var(--ink-800); font-size:13px; }
+    .nav-item.active { background:var(--lavender-100); color:var(--ink-950); font-weight:700; }
+    .nav-dot { width:8px; height:8px; border-radius:999px; border:1.5px solid var(--lavender-500); }
+    .nav-item.active .nav-dot { background:var(--lavender-500); }
+    .sidebar-note { margin-top:auto; padding:12px; border-radius:12px; background:var(--surface-1); border:1px solid var(--line); color:var(--ink-650); font-size:11px; line-height:1.45; }
+    .main { min-width:0; }
+    .topbar { min-height:58px; background:color-mix(in srgb,var(--surface-0) 92%, transparent); backdrop-filter:blur(10px); border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 22px; position:sticky; top:0; z-index:5; }
+    .crumb { min-width:0; }
+    .crumb strong { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:13px; }
+    .crumb span { color:var(--ink-650); font-size:11px; }
+    .toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .button, .file-label { border:1px solid var(--line); background:var(--surface-0); color:var(--ink-800); border-radius:10px; padding:7px 10px; cursor:pointer; font-size:12px; font-weight:650; }
+    .button:hover, .file-label:hover { background:var(--surface-2); }
+    #file-input { position:absolute; inline-size:1px; block-size:1px; opacity:0; pointer-events:none; }
+    .content { width:min(var(--content-max),100%); margin:0 auto; padding:22px; display:grid; gap:var(--gap); }
+    .demo-banner { border:1px solid color-mix(in srgb,var(--amber-500) 48%, var(--line)); background:var(--amber-100); border-radius:var(--radius-md); padding:10px 14px; display:flex; align-items:center; gap:10px; color:var(--ink-800); font-size:12px; }
+    .demo-banner strong { color:var(--ink-950); }
+    .spark { color:var(--amber-500); font-weight:900; }
+    .run-hero { background:var(--surface-0); border:1px solid var(--line); border-radius:var(--radius-lg); padding:22px; box-shadow:var(--shadow); position:relative; overflow:hidden; }
+    .run-hero::after { content:""; position:absolute; width:170px; height:170px; right:-60px; top:-85px; background:radial-gradient(circle,var(--lavender-100),transparent 70%); pointer-events:none; }
+    .eyebrow { display:flex; gap:7px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+    .chip { display:inline-flex; align-items:center; gap:6px; min-height:25px; padding:4px 8px; border-radius:999px; border:1px solid var(--line); background:var(--surface-1); font-size:10px; font-weight:750; letter-spacing:.04em; }
+    .chip.runtime { background:var(--lavender-100); border-color:color-mix(in srgb,var(--lavender-500) 35%,var(--line)); }
+    .chip.warn { background:var(--amber-100); border-color:color-mix(in srgb,var(--amber-500) 35%,var(--line)); }
+    .chip.not-canon { background:var(--danger-100); border-color:color-mix(in srgb,var(--danger-500) 42%,var(--line)); color:var(--ink-950); }
+    .hero-line { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+    .hero-title { min-width:0; }
+    .hero-title h1 { margin:0 0 5px; font-size:clamp(22px,3vw,34px); letter-spacing:-.035em; }
+    .hero-title p { margin:0; color:var(--ink-650); font-size:12px; word-break:break-word; }
+    .authority-callout { max-width:330px; background:var(--surface-1); border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:11px; color:var(--ink-650); line-height:1.45; }
+    .authority-callout strong { color:var(--ink-950); }
+    .summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--gap); }
+    .stat { background:var(--surface-0); border:1px solid var(--line); border-radius:var(--radius-md); padding:var(--pad-card); }
+    .stat .label { color:var(--ink-650); font-size:10px; text-transform:uppercase; letter-spacing:.08em; font-weight:750; }
+    .stat .value { margin-top:5px; font-size:24px; font-weight:780; letter-spacing:-.03em; }
+    .stat .hint { margin-top:3px; color:var(--ink-650); font-size:11px; }
+    .grid-2 { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(300px,.8fr); gap:var(--gap); align-items:start; }
+    .panel { background:var(--surface-0); border:1px solid var(--line); border-radius:var(--radius-md); overflow:hidden; }
+    .panel-head { padding:14px var(--pad-card); border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .panel-head h2 { margin:0; font-size:14px; letter-spacing:-.01em; }
+    .panel-head span { color:var(--ink-650); font-size:10px; }
+    .panel-body { padding:var(--pad-card); }
+    .thread { position:relative; padding-left:24px; }
+    .thread::before { content:""; position:absolute; left:7px; top:5px; bottom:5px; width:2px; background:linear-gradient(var(--lavender-500),var(--sakura-500)); opacity:.35; border-radius:2px; }
+    .question { position:relative; padding:0 0 18px; }
+    .question:last-child { padding-bottom:0; }
+    .question::before { content:""; position:absolute; left:-21px; top:5px; width:9px; height:9px; border-radius:50%; background:var(--surface-0); border:2px solid var(--lavender-500); }
+    .q-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+    .q-id { font-size:12px; font-weight:760; overflow-wrap:anywhere; }
+    .q-meta { display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; }
+    .status { font-size:9px; font-weight:780; border-radius:999px; padding:3px 6px; border:1px solid var(--line); white-space:nowrap; }
+    .status.good { background:var(--mint-100); border-color:color-mix(in srgb,var(--mint-500) 38%,var(--line)); }
+    .status.partial { background:var(--amber-100); border-color:color-mix(in srgb,var(--amber-500) 38%,var(--line)); }
+    .status.none, .status.fail { background:var(--danger-100); border-color:color-mix(in srgb,var(--danger-500) 38%,var(--line)); }
+    .status.pending { background:var(--lavender-100); border-color:color-mix(in srgb,var(--lavender-500) 38%,var(--line)); }
+    .support-columns { margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .support-box { border:1px solid var(--line); border-radius:10px; padding:10px; min-width:0; }
+    .support-box.loaded { background:color-mix(in srgb,var(--mint-100) 60%,var(--surface-0)); }
+    .support-box.dropped { background:color-mix(in srgb,var(--amber-100) 58%,var(--surface-0)); border-style:dashed; }
+    .support-label { font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-650); font-weight:760; margin-bottom:7px; }
+    .id-list { display:flex; flex-wrap:wrap; gap:5px; }
+    .id-pill { max-width:100%; font:600 10px ui-monospace,SFMono-Regular,Consolas,monospace; border-radius:7px; padding:4px 6px; background:var(--surface-0); border:1px solid var(--line); overflow-wrap:anywhere; }
+    .empty { color:var(--ink-650); font-size:10px; font-style:italic; }
+    .missing-details { margin-top:12px; padding:10px 11px; border-radius:10px; border:1px dashed var(--sky-500); background:color-mix(in srgb,var(--sky-100) 55%,var(--surface-0)); font-size:10px; color:var(--ink-650); line-height:1.45; }
+    .missing-details strong { color:var(--ink-950); }
+    .stack { display:grid; gap:var(--gap); }
+    .list { display:grid; gap:var(--row); }
+    .list-row { display:grid; gap:5px; padding-bottom:var(--row); border-bottom:1px solid var(--line); }
+    .list-row:last-child { border-bottom:0; padding-bottom:0; }
+    .row-title { display:flex; align-items:center; justify-content:space-between; gap:9px; font-size:11px; font-weight:730; }
+    .row-title code { overflow-wrap:anywhere; }
+    .row-sub { color:var(--ink-650); font-size:10px; line-height:1.45; overflow-wrap:anywhere; }
+    code, .mono { font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace; }
+    .kv { display:grid; grid-template-columns:120px minmax(0,1fr); gap:8px; align-items:start; padding:6px 0; font-size:10px; }
+    .kv .k { color:var(--ink-650); }
+    .kv .v { overflow-wrap:anywhere; }
+    .section-note { padding:10px 12px; background:var(--surface-1); border:1px solid var(--line); border-radius:10px; color:var(--ink-650); font-size:10px; line-height:1.45; }
+    .error { display:none; background:var(--danger-100); border:1px solid var(--danger-500); color:var(--ink-950); border-radius:12px; padding:12px 14px; font-size:12px; }
+    .error.show { display:block; }
+    .footer { color:var(--ink-650); font-size:10px; text-align:center; padding:4px 0 16px; }
+    @media (max-width:1050px) {
+      .app { grid-template-columns:72px minmax(0,1fr); }
+      .sidebar { padding:16px 10px; }
+      .brand { justify-content:center; }
+      .brand-copy, .nav-label, .nav-item span:last-child, .sidebar-note { display:none; }
+      .nav-item { justify-content:center; padding:11px; }
+      .nav-dot { width:10px; height:10px; }
+      .summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .grid-2 { grid-template-columns:1fr; }
+    }
+    @media (max-width:680px) {
+      .app { display:block; }
+      .sidebar { display:none; }
+      .topbar { position:static; align-items:flex-start; padding:10px 14px; }
+      .toolbar { gap:6px; }
+      .button, .file-label { padding:7px 8px; }
+      .content { padding:14px; }
+      .hero-line { display:block; }
+      .authority-callout { max-width:none; margin-top:12px; }
+      .summary-grid { grid-template-columns:1fr 1fr; }
+      .support-columns { grid-template-columns:1fr; }
+      .kv { grid-template-columns:1fr; gap:2px; }
+    }
+    @media (max-width:420px) {
+      .summary-grid { grid-template-columns:1fr; }
+      .topbar { flex-direction:column; }
+      .toolbar { width:100%; justify-content:flex-start; }
+      .run-hero { padding:17px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior:auto !important; transition:none !important; animation:none !important; } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" aria-label="Studio navigation">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">N</div>
+      <div class="brand-copy"><strong>NovelForge Studio</strong><small>Story Loom · Phase 1</small></div>
+    </div>
+    <nav>
+      <div class="nav-group">
+        <div class="nav-label">Creator</div>
+        <div class="nav-item"><i class="nav-dot"></i><span>Desk</span></div>
+        <div class="nav-item"><i class="nav-dot"></i><span>Manuscript</span></div>
+        <div class="nav-item"><i class="nav-dot"></i><span>Story</span></div>
+        <div class="nav-item"><i class="nav-dot"></i><span>Review</span></div>
+        <div class="nav-item"><i class="nav-dot"></i><span>Publish</span></div>
+      </div>
+      <div class="nav-group" style="margin-top:10px">
+        <div class="nav-label">Inspector</div>
+        <div class="nav-item active"><i class="nav-dot"></i><span>Runs</span></div>
+        <div class="nav-item"><i class="nav-dot"></i><span>Capabilities</span></div>
+      </div>
+    </nav>
+    <div class="sidebar-note"><strong>Read-only prototype.</strong><br/>No Core write action is exposed. Studio state is not Canon.</div>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div class="crumb"><strong>Run / Context Inspector</strong><span>Execution evidence → grounding → jobs → guards</span></div>
+      <div class="toolbar">
+        <label class="file-label" for="file-input">Open receipt JSON</label>
+        <input id="file-input" type="file" accept="application/json,.json" />
+        <button class="button" id="density-button" type="button">Density: comfortable</button>
+        <button class="button" id="theme-button" type="button">Theme: system</button>
+      </div>
+    </header>
+    <div class="content">
+      <div class="demo-banner" id="demo-banner"><span class="spark">✦</span><span><strong>Synthetic demo fixture.</strong> IDs and fingerprints below are invented for UI validation and are not Project Canon or a real run.</span></div>
+      <div class="error" id="error" role="alert"></div>
+      <section class="run-hero" aria-labelledby="run-title">
+        <div class="eyebrow">
+          <span class="chip runtime">RUN RECEIPT</span>
+          <span class="chip not-canon">EXECUTION EVIDENCE · NOT CANON</span>
+          <span class="chip" id="schema-chip">novelforge_run_receipt_v1</span>
+        </div>
+        <div class="hero-line">
+          <div class="hero-title"><h1 id="run-title">—</h1><p><span id="subject-id">—</span> · <span id="stage">—</span> · <span id="created-at">—</span></p></div>
+          <div class="authority-callout"><strong>What this proves:</strong> which metadata the run recorded as loaded/executed. It does not prove story truth, acceptance, or literary correctness.</div>
+        </div>
+      </section>
+      <section class="summary-grid" aria-label="Run summary">
+        <article class="stat"><div class="label">Actually loaded</div><div class="value" id="stat-loaded">0</div><div class="hint">context blocks in the packet</div></article>
+        <article class="stat"><div class="label">Unresolved</div><div class="value" id="stat-unresolved">0</div><div class="hint">grounding questions</div></article>
+        <article class="stat"><div class="label">Semantic jobs</div><div class="value" id="stat-jobs">0</div><div class="hint" id="jobs-hint">0 completed</div></article>
+        <article class="stat"><div class="label">Guards</div><div class="value" id="stat-guards">0</div><div class="hint" id="guards-hint">0 pending</div></article>
+      </section>
+      <div class="grid-2">
+        <section class="panel">
+          <div class="panel-head"><h2>Question → evidence grounding</h2><span>support identified ≠ support loaded</span></div>
+          <div class="panel-body">
+            <div class="thread" id="question-list"></div>
+            <div class="missing-details"><strong>Data honesty:</strong> Run Receipt v1 does not contain each context block's authority, source, inclusion reason, tier, or text. This prototype does not infer them from IDs. A production Studio should join a stable <code>novelforge_context_inspector_v2</code> projection when Core exposes the read boundary.</div>
+          </div>
+        </section>
+        <div class="stack">
+          <section class="panel">
+            <div class="panel-head"><h2>Context packet</h2><span>actual load boundary</span></div>
+            <div class="panel-body list">
+              <div class="list-row"><div class="row-title">Loaded block IDs <span class="status good" id="loaded-count">0</span></div><div class="id-list" id="loaded-list"></div></div>
+              <div class="list-row"><div class="row-title">Visibility excluded <span class="status" id="excluded-count">0</span></div><div class="id-list" id="excluded-list"></div></div>
+              <div class="list-row"><div class="row-title">Budget-incomplete questions <span class="status partial" id="budget-count">0</span></div><div class="id-list" id="budget-list"></div></div>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>Receipt identity</h2><span>fingerprint-bound metadata</span></div>
+            <div class="panel-body" id="identity-list"></div>
+          </section>
+        </div>
+      </div>
+      <div class="grid-2">
+        <section class="panel"><div class="panel-head"><h2>Semantic jobs</h2><span>typed result lineage</span></div><div class="panel-body list" id="job-list"></div></section>
+        <section class="panel"><div class="panel-head"><h2>Deterministic guards</h2><span>workflow evidence</span></div><div class="panel-body list" id="guard-list"></div></section>
+      </div>
+      <div class="section-note"><strong>Phase 1 boundary:</strong> no resume, accept, settle, retry, edit-memory, or Canon-write action is exposed here. Those operations require explicit typed Core commands, permissions and preconditions before they can become Studio controls.</div>
+      <div class="footer">NovelForge Studio · Story Loom prototype · local-only JSON inspection</div>
+    </div>
+  </main>
+</div>
+<script>
+const syntheticReceipt = {
+  schema:"novelforge_run_receipt_v1", receipt_id:"RCPT-SYN-CH042-REVIEW-01",
+  resource_id:"BOOK-SYNTHETIC-DEMO", session_id:"SES-SYN-20260815-A", run_id:"RUN-SYN-CH042-REVIEW-01",
+  stage:"reader-review", subject_id:"CH-SYN-042",
+  artifact_fingerprints:["sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+  context:{
+    selection_fingerprint:"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    loaded_block_ids:["CTX-SYN-CANON-01","CTX-SYN-CHAR-07","CTX-SYN-READER-03"],
+    visibility_excluded_block_ids:["CTX-SYN-FUTURE-PLAN-09"],
+    question_grounding:[
+      {question_id:"Q-SYN-CHAR-CHOICE",model_support:"sufficient",support_block_ids:["CTX-SYN-CANON-01","CTX-SYN-CHAR-07"],loaded_support_block_ids:["CTX-SYN-CANON-01","CTX-SYN-CHAR-07"],dropped_support_block_ids:[],loading_status:"all_loaded"},
+      {question_id:"Q-SYN-OPEN-PROMISE",model_support:"partial",support_block_ids:["CTX-SYN-READER-03","CTX-SYN-READER-11"],loaded_support_block_ids:["CTX-SYN-READER-03"],dropped_support_block_ids:["CTX-SYN-READER-11"],loading_status:"partially_loaded"},
+      {question_id:"Q-SYN-WORLD-DETAIL",model_support:"none",support_block_ids:[],loaded_support_block_ids:[],dropped_support_block_ids:[],loading_status:"no_support_identified"}
+    ], unresolved_questions:["Q-SYN-OPEN-PROMISE","Q-SYN-WORLD-DETAIL"], grounding_incomplete_due_budget:["Q-SYN-OPEN-PROMISE"]
+  },
+  semantic_jobs:[
+    {job_id:"SEM-SYN-READER-01",contract_id:"reader.reaction",input_fingerprint:"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",status:"completed",result_fingerprint:"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",worker_ref:"SES-SYN-REVIEWER-01"},
+    {job_id:"SEM-SYN-CHAR-01",contract_id:"character.integrity",input_fingerprint:"sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",status:"pending",result_fingerprint:null,worker_ref:"SES-SYN-REVIEWER-02"}
+  ],
+  guards:[
+    {guard_id:"context-budget",status:"pass",evidence_refs:["RCPT-SYN-CH042-REVIEW-01:context"]},
+    {guard_id:"independent-character-review",status:"pending",evidence_refs:["SEM-SYN-CHAR-01"]}
+  ], created_at:"2026-08-15T00:00:00Z", authority:false
+};
+const $ = id => document.getElementById(id);
+const esc = value => String(value ?? "").replace(/[&<>\"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]));
+const shortFp = value => value ? (value.length > 28 ? value.slice(0,18) + "…" + value.slice(-8) : value) : "—";
+const pills = values => values && values.length ? values.map(v=>`<span class="id-pill">${esc(v)}</span>`).join("") : '<span class="empty">None recorded</span>';
+const statusClass = value => ({sufficient:"good",partial:"partial",none:"none",all_loaded:"good",partially_loaded:"partial",not_loaded:"fail",no_support_identified:"none",completed:"good",pass:"good",pending:"pending",semantic_reject:"fail",invalid:"fail",failed:"fail",unsupported:"none"}[value] || "");
+function validateReceipt(r) {
+  if (!r || typeof r !== "object" || Array.isArray(r)) throw new Error("Receipt must be a JSON object.");
+  if (r.schema !== "novelforge_run_receipt_v1") throw new Error(`Unsupported schema: ${r.schema ?? "missing"}. Expected novelforge_run_receipt_v1.`);
+  if (r.authority !== false) throw new Error("Run receipts must have authority=false. Refusing to render this payload as trusted execution evidence.");
+  for (const key of ["receipt_id","resource_id","session_id","run_id","stage","subject_id","context","semantic_jobs","guards","created_at"]) if (!(key in r)) throw new Error(`Missing required receipt field: ${key}`);
+  if (!Array.isArray(r.context.question_grounding) || !Array.isArray(r.context.loaded_block_ids)) throw new Error("Invalid context shape for Run Receipt v1.");
+  return r;
+}
+function render(receipt, synthetic=false) {
+  const r = validateReceipt(receipt), c = r.context;
+  $("error").classList.remove("show"); $("demo-banner").style.display = synthetic ? "flex" : "none";
+  $("run-title").textContent = r.run_id; $("subject-id").textContent = r.subject_id; $("stage").textContent = r.stage; $("created-at").textContent = r.created_at; $("schema-chip").textContent = r.schema;
+  $("stat-loaded").textContent = c.loaded_block_ids.length; $("stat-unresolved").textContent = c.unresolved_questions.length; $("stat-jobs").textContent = r.semantic_jobs.length; $("stat-guards").textContent = r.guards.length;
+  $("jobs-hint").textContent = `${r.semantic_jobs.filter(j=>j.status==="completed").length} completed · ${r.semantic_jobs.filter(j=>j.status==="pending").length} pending`;
+  $("guards-hint").textContent = `${r.guards.filter(g=>g.status==="pass").length} pass · ${r.guards.filter(g=>g.status==="pending").length} pending`;
+  $("question-list").innerHTML = c.question_grounding.length ? c.question_grounding.map(q => `
+    <article class="question"><div class="q-top"><div class="q-id mono">${esc(q.question_id)}</div><div class="q-meta"><span class="status ${statusClass(q.model_support)}">support: ${esc(q.model_support)}</span><span class="status ${statusClass(q.loading_status)}">${esc(q.loading_status)}</span></div></div>
+    <div class="support-columns"><div class="support-box loaded"><div class="support-label">Actually entered model context</div><div class="id-list">${pills(q.loaded_support_block_ids)}</div></div><div class="support-box dropped"><div class="support-label">Support identified but not loaded</div><div class="id-list">${pills(q.dropped_support_block_ids)}</div></div></div></article>`).join("") : '<span class="empty">No question grounding rows recorded.</span>';
+  $("loaded-count").textContent = c.loaded_block_ids.length; $("excluded-count").textContent = c.visibility_excluded_block_ids.length; $("budget-count").textContent = c.grounding_incomplete_due_budget.length;
+  $("loaded-list").innerHTML = pills(c.loaded_block_ids); $("excluded-list").innerHTML = pills(c.visibility_excluded_block_ids); $("budget-list").innerHTML = pills(c.grounding_incomplete_due_budget);
+  $("identity-list").innerHTML = [["Receipt",r.receipt_id],["Resource",r.resource_id],["Session",r.session_id],["Selection fingerprint",shortFp(c.selection_fingerprint)],["Artifact fingerprint",shortFp((r.artifact_fingerprints||[])[0])]].map(([k,v])=>`<div class="kv"><div class="k">${esc(k)}</div><div class="v mono" title="${esc(v)}">${esc(v)}</div></div>`).join("");
+  $("job-list").innerHTML = r.semantic_jobs.length ? r.semantic_jobs.map(j=>`<div class="list-row"><div class="row-title"><code>${esc(j.contract_id)}</code><span class="status ${statusClass(j.status)}">${esc(j.status)}</span></div><div class="row-sub"><strong>${esc(j.job_id)}</strong> · worker ${esc(j.worker_ref ?? "—")}</div><div class="row-sub mono">in ${esc(shortFp(j.input_fingerprint))}<br/>out ${esc(shortFp(j.result_fingerprint))}</div></div>`).join("") : '<span class="empty">No semantic jobs recorded.</span>';
+  $("guard-list").innerHTML = r.guards.length ? r.guards.map(g=>`<div class="list-row"><div class="row-title"><code>${esc(g.guard_id)}</code><span class="status ${statusClass(g.status)}">${esc(g.status)}</span></div><div class="row-sub">Evidence: ${esc((g.evidence_refs||[]).join(", ") || "—")}</div></div>`).join("") : '<span class="empty">No guards recorded.</span>';
+}
+function showError(error) { const box = $("error"); box.textContent = error instanceof Error ? error.message : String(error); box.classList.add("show"); }
+$("file-input").addEventListener("change", async event => { try { const file = event.target.files?.[0]; if (!file) return; render(JSON.parse(await file.text()), false); } catch (e) { showError(e); } });
+const themes = ["system","light","dark"];
+$("theme-button").addEventListener("click", () => { const root = document.documentElement, current = root.dataset.theme || "system", next = themes[(themes.indexOf(current)+1)%themes.length]; root.dataset.theme = next; $("theme-button").textContent = `Theme: ${next}`; });
+$("density-button").addEventListener("click", () => { const root = document.documentElement, next = root.dataset.density === "dense" ? "comfortable" : "dense"; root.dataset.density = next; $("density-button").textContent = `Density: ${next}`; });
+try { render(syntheticReceipt, true); } catch (e) { showError(e); }
+</script>
+</body>
+</html>
