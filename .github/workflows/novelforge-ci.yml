@@ -61,6 +61,23 @@ jobs:
       - name: Deterministic runtime command authorization contract
         run: python harness/session_runtime/runtime_command_authorization.py self-test
 
+  runtime-command-executor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile runtime command executor
+        run: python -m py_compile harness/session_runtime/runtime_command_executor.py
+      - name: Validate runtime command receipt schemas
+        run: |
+          python -m json.tool harness/session_runtime/runtime_command_receipt_schema.json > /dev/null
+          python -m json.tool harness/session_runtime/runtime_command_execution_result_schema.json > /dev/null
+      - name: Deterministic authorized runtime command execution contract
+        run: python harness/session_runtime/runtime_command_executor.py self-test
+
   documentation-quality:
     runs-on: ubuntu-latest
     timeout-minutes: 10
