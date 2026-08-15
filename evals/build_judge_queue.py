@@ -23,11 +23,20 @@ def find(v:Any,path='$')->list[str]:
         for i,x in enumerate(v):hits.extend(find(x,f'{path}[{i}]'))
     return hits
 
+def undiscoverable_expected_codes(case:dict[str,Any])->list[str]:
+    expected=case.get('expected',{})
+    codes=expected.get('codes',[]) if isinstance(expected,dict) else []
+    if not isinstance(codes,list):raise ValueError(f"semantic case {case.get('id')} expected.codes must be list")
+    public=json.dumps({'rubric':case.get('rubric',[]),'judgment_contract':case.get('judgment_contract',{})},ensure_ascii=False,sort_keys=True)
+    return [str(code) for code in codes if str(code) not in public]
+
 def build(manifest_path:Path)->dict[str,Any]:
     manifest=load(manifest_path);cases=[]
     for entry in manifest['cases']:
         case=load(manifest_path.parent/entry['file'])
         if case.get('judge') not in {'rubric','hybrid'}:continue
+        missing_codes=undiscoverable_expected_codes(case)
+        if missing_codes:raise ValueError(f"semantic case {case.get('id')} expected codes not discoverable in blind rubric/contract: {', '.join(missing_codes)}")
         blind=scrub(case)
         for key in ('id','type','domain','fixture','rubric','judgment_contract'):
             if key not in blind:raise ValueError(f"semantic case {case.get('id')} missing {key}")

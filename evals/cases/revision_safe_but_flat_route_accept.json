@@ -7,12 +7,28 @@
   "fixture": {
     "candidate": "Technically clean high-grip chapter; every step works, nobody meaningfully resists, and no decision changes cost or relationship.",
     "diagnosis": "SAFE-BUT-FLAT",
-    "repair_route": ["reader-pressure", "scene-simulation"]
+    "repair_route": [
+      "reader-pressure",
+      "scene-simulation"
+    ]
   },
   "rubric": [
     "Accept diagnosis that routes SAFE-BUT-FLAT upstream to Reader Pressure and Scene Simulation rather than generic line polish.",
-    "Reject fixes based mainly on sentence fragments, random micro-actions, narrator hype, adjectives or arbitrary twists."
+    "Reject fixes based mainly on sentence fragments, random micro-actions, narrator hype, adjectives or arbitrary twists.",
+    "Use RG-15 SAFE-BUT-FLAT when the diagnosis is flatness despite technical cleanliness and the repair is routed upstream."
   ],
-  "judgment_contract": {"verdict": "accept|reject", "codes": ["REV-*", "RG-*"], "evidence": "short observable findings"},
-  "expected": {"verdict": "accept", "codes": ["RG-15"]}
+  "judgment_contract": {
+    "verdict": "accept|reject",
+    "codes": [
+      "REV-*",
+      "RG-*"
+    ],
+    "evidence": "short observable findings"
+  },
+  "expected": {
+    "verdict": "accept",
+    "codes": [
+      "RG-15"
+    ]
+  }
 }

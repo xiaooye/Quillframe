@@ -8,15 +8,37 @@
     "task_story_order": 5,
     "question_as_of_story_order": 5,
     "candidate_support": [
-      {"id": "M-OLD", "available_from_story_order": 3, "claim": "A clue already observed."},
-      {"id": "M-FUTURE", "available_from_story_order": 7, "claim": "A fact learned two scenes later."}
+      {
+        "id": "M-OLD",
+        "available_from_story_order": 3,
+        "claim": "A clue already observed."
+      },
+      {
+        "id": "M-FUTURE",
+        "available_from_story_order": 7,
+        "claim": "A fact learned two scenes later."
+      }
     ],
-    "proposed_answer_uses": ["M-FUTURE"]
+    "proposed_answer_uses": [
+      "M-FUTURE"
+    ]
   },
   "rubric": [
     "Reject context selection that uses evidence not yet available at the task/question story order.",
-    "Semantic relevance cannot override deterministic temporal eligibility."
+    "Semantic relevance cannot override deterministic temporal eligibility.",
+    "Use CTX-FUTURE when proposed support comes from evidence not yet available at the task/question story order."
   ],
-  "judgment_contract": {"verdict": "accept|reject", "codes": ["CTX-*"], "evidence": "short observable findings"},
-  "expected": {"verdict": "reject", "codes": ["CTX-FUTURE"]}
+  "judgment_contract": {
+    "verdict": "accept|reject",
+    "codes": [
+      "CTX-*"
+    ],
+    "evidence": "short observable findings"
+  },
+  "expected": {
+    "verdict": "reject",
+    "codes": [
+      "CTX-FUTURE"
+    ]
+  }
 }
