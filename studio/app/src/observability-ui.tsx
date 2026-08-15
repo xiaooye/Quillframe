@@ -3,16 +3,16 @@ import { useI18n } from "./i18n";
 import type { ObservabilityDisplayStatus, ProductionLaneProjection } from "./observability";
 
 const statusClass: Record<ObservabilityDisplayStatus, string> = {
-  pass: "nf-status--pass",
-  warn: "nf-status--warn",
-  blocked: "nf-status--blocked",
-  not_applicable: "nf-status--neutral",
-  pending: "nf-status--pending",
-  unavailable: "nf-status--neutral",
+  pass: "wui-badge--success",
+  warn: "wui-badge--warning",
+  blocked: "wui-badge--destructive",
+  not_applicable: "wui-badge--outline",
+  pending: "wui-badge--soft",
+  unavailable: "wui-badge--outline",
 };
 
 export function StatusBadge(props: { status: ObservabilityDisplayStatus; label: string }) {
-  return <span class={`nf-status ${statusClass[props.status]}`}>{props.label}</span>;
+  return <span class={`wui-badge ${statusClass[props.status]}`}>{props.label}</span>;
 }
 
 export function MissingCoreField(props: { label: string }) {
@@ -28,11 +28,11 @@ export function MissingCoreField(props: { label: string }) {
 export function EvidenceBoundary() {
   const { t } = useI18n();
   return (
-    <aside class="nf-evidence-boundary" aria-labelledby="semantic-evidence-boundary-title">
-      <div class="nf-evidence-boundary-mark" aria-hidden="true">≠</div>
-      <div>
-        <strong id="semantic-evidence-boundary-title">{t("semantic.boundaryTitle")}</strong>
-        <p>{t("semantic.boundaryBody")}</p>
+    <aside class="wui-alert wui-alert--warning nf-evidence-boundary" aria-labelledby="semantic-evidence-boundary-title">
+      <span class="wui-alert__icon" aria-hidden="true">≠</span>
+      <div class="wui-alert__body">
+        <strong class="wui-alert__title" id="semantic-evidence-boundary-title">{t("semantic.boundaryTitle")}</strong>
+        <p class="wui-alert__description">{t("semantic.boundaryBody")}</p>
       </div>
     </aside>
   );
@@ -51,7 +51,7 @@ export function ProductionProjectionPlaceholder() {
   ];
 
   return (
-    <section class="nf-production-preview" aria-labelledby="production-preview-title">
+    <section class="wui-card wui-card--filled nf-production-preview" aria-labelledby="production-preview-title">
       <div class="nf-observe-section-head">
         <div>
           <span class="nf-eyebrow">{t("production.eyebrow")}</span>
