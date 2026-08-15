@@ -11,6 +11,7 @@ const navigation: ReadonlyArray<NavigationEntry> = [
   ["/", "nav.desk", "home"],
   ["/project", "nav.project", "project"],
   ["/workspace", "nav.workspace", "workspace"],
+  ["/agents", "nav.agents", "agents"],
   ["/context", "nav.context", "context"],
   ["/capabilities", "nav.capabilities", "capabilities"],
   ["/semantic", "nav.semantic", "semantic"],
