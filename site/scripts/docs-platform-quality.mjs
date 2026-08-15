@@ -14,6 +14,7 @@ const config = read("docs-site/astro.config.mjs");
 const contentConfig = read("docs-site/src/content.config.ts");
 const customCss = read("docs-site/src/styles/custom.css");
 const articleCss = read("docs-site/src/styles/article-polish.css");
+const navigationCss = read("docs-site/src/styles/navigation-polish.css");
 const siteTitle = read("docs-site/src/components/NovelForgeSiteTitle.astro");
 const pageTitle = read("docs-site/src/components/NovelForgePageTitle.astro");
 const actions = read("docs-site/src/components/NovelForgeActions.astro");
@@ -55,23 +56,43 @@ requireCheck(config.includes("starlight({"), "docs app must remain powered by St
 requireCheck(config.includes('SiteTitle: "./src/components/NovelForgeSiteTitle.astro"'), "docs header must override SiteTitle so product and docs homes remain distinct");
 requireCheck(config.includes('PageTitle: "./src/components/NovelForgePageTitle.astro"'), "deep docs must use the NovelForge article title surface");
 requireCheck(config.includes('"./src/styles/article-polish.css"'), "deep docs article polish stylesheet must stay wired into Starlight");
+requireCheck(config.includes('"./src/styles/navigation-polish.css"'), "final navigation polish stylesheet must stay wired into Starlight");
+requireCheck(config.includes('label: "入门"') && config.includes('en: "Getting started"'), "sidebar information architecture must keep concise native group labels");
+requireCheck(config.includes('label: "创作与质量"') && config.includes('label: "架构与发布"'), "sidebar must retain product-oriented Chinese grouping");
 requireCheck(contentConfig.includes("docsLoader()") && contentConfig.includes("docsSchema()"), "Starlight content collection must use official loader and schema");
+
 requireCheck(customCss.includes("--sl-content-width: 52rem"), "documentation reading width must stay deliberately bounded");
 requireCheck(customCss.includes(':lang(zh-CN) .sl-markdown-content'), "Chinese typography override must remain explicit");
 requireCheck(customCss.includes('a[aria-current="page"]'), "documentation navigation must retain a strong current-page state");
 requireCheck(customCss.includes(".nf-link-grid") && customCss.includes(".nf-link-card"), "curated docs landing must retain stable task-path card styling");
 requireCheck(customCss.includes(".nf-tier-grid") && customCss.includes(".nf-reference-callout"), "curated docs landing must retain its layered reference hierarchy");
+
 requireCheck(pageTitle.includes('class="nf-article-title"') && pageTitle.includes('id="_top"'), "custom PageTitle must keep the product surface and Starlight top anchor");
-requireCheck(pageTitle.includes('english ? "NovelForge Knowledge" : "NovelForge 知识库"'), "custom PageTitle must keep native bilingual labeling");
+requireCheck(pageTitle.includes('english ? "NovelForge Docs" : "NovelForge 知识库"'), "custom PageTitle must keep native bilingual labeling");
+requireCheck(pageTitle.includes('zh: "入门"') && pageTitle.includes('zh: "创作与质量"') && pageTitle.includes('zh: "架构与发布"'), "article titles must expose route-aware section context");
 requireCheck(articleCss.includes(".nf-article-title") && articleCss.includes(".sl-markdown-content h2"), "deep article polish must style both title and reading hierarchy");
 requireCheck(articleCss.includes(".right-sidebar") && articleCss.includes(".pagination-links"), "deep article polish must cover TOC and footer navigation");
 requireCheck(articleCss.includes("@media (max-width: 50rem)"), "deep article polish must keep an explicit mobile treatment");
+
+requireCheck(navigationCss.includes(".nf-product-nav") && navigationCss.includes(".sidebar-content summary::before"), "final navigation polish must cover product header and sidebar hierarchy");
+requireCheck(navigationCss.includes('.right-sidebar a[aria-current="true"]'), "final navigation polish must retain a visible active TOC state");
+requireCheck(navigationCss.includes("@media (max-width: 68rem)") && navigationCss.includes("@media (max-width: 50rem)"), "final navigation polish must deliberately collapse at tablet and mobile widths");
+
 requireCheck(siteTitle.includes('class="nf-brand-home" href="/"'), "NovelForge docs brand must navigate to the main product home");
 requireCheck(siteTitle.includes('english ? "/docs/en/" : "/docs/"'), "docs header must retain a locale-aware documentation-home link");
-requireCheck(siteTitle.includes('english ? "Docs" : "文档"'), "docs header must label the documentation namespace natively");
-requireCheck(actions.includes('english ? "Start" : "开始"') && actions.includes('href="/start"'), "Docs header must expose the locale-aware product-first Start hub");
-requireCheck(actions.includes('english ? "Product" : "产品"'), "Product header action must remain locale-aware");
-requireCheck(actions.includes('english ? "Agents" : "Agent 集成"') && actions.includes('href="/agents"'), "Docs header must expose the live Agent integration workbench");
+requireCheck(siteTitle.includes('english ? "Docs" : "知识库"'), "docs header must use the same knowledge namespace as the product navigation");
+requireCheck(siteTitle.includes('aria-current="page"'), "docs namespace must expose an explicit active navigation state");
+
+for (const [href, marker] of [
+  ['/product', 'product: "产品"'],
+  ['/studio', 'studio: "Studio"'],
+  ['/architecture', 'architecture: "架构"'],
+  ['/publication', 'publication: "出版"'],
+]) {
+  requireCheck(actions.includes(`href="${href}"`) && actions.includes(marker), `Docs header product navigation missing ${href}`);
+}
+requireCheck(actions.includes('openStudio: "打开 Studio"') && actions.includes('class="nf-studio-link"'), "Docs header must retain the localized primary Studio CTA");
+requireCheck(actions.includes('class="nf-product-nav"'), "Docs header product links must be grouped as semantic navigation");
 
 requireCheck(!main.includes("KnowledgePortal"), "legacy Knowledge Portal must not mount beside the product router");
 requireCheck(!main.includes("KnowledgeExperience"), "product entry must not import the retired custom docs renderer");
@@ -91,11 +112,13 @@ requireCheck(fs.existsSync(path.join(stagedRoot, "en", "why-novelforge.md")), "E
 requireCheck(landing.includes('template: "splash"'), "docs home must use Starlight's splash landing template");
 requireCheck(landing.includes("StarlightPage"), "docs home must remain inside the official Starlight page shell");
 requireCheck(landing.includes('class="nf-link-grid"') && landing.includes('class="nf-link-card"'), "docs home must use stable semantic task-path cards instead of private Starlight component imports");
-requireCheck(landing.includes('link: "/start"') && landing.includes('["开始中心"') && landing.includes('["Start hub"'), "docs home must route product-first onboarding through the live Start hub");
+requireCheck(landing.includes('link: "/start"') && landing.includes('["开始使用"') && landing.includes('["Start here"'), "docs home must route product-first onboarding through the live Start hub with native labels");
 requireCheck(landing.includes('"/inspect"'), "docs home must retain a direct path to the live Project Inspector");
 requireCheck(landing.includes('"/playground"') && landing.includes('"/agents"'), "docs home must connect to the live Playground and Agent integration workbench");
 requireCheck(landing.includes("data-nf-docs-home"), "docs home must expose a stable verification marker");
 requireCheck(landing.includes("按目标开始") && landing.includes("Choose a path"), "docs landing copy must remain natively localized");
+requireCheck(landing.includes('tierLabel: (tier: string) => `第 ${tier} 层`') && landing.includes('referenceEyebrow: "参考"'), "Chinese landing chrome must not leak English Tier or Reference labels");
+requireCheck(landing.includes("编程智能体") && landing.includes("真正负责的子系统"), "Chinese landing explanations must prefer native product language over untranslated implementation jargon");
 requireCheck(zhLandingRoute.includes('<DocsLanding locale="zh-CN" />'), "zh-CN docs root must render the curated Chinese landing");
 requireCheck(enLandingRoute.includes('<DocsLanding locale="en" />'), "English docs root must render the curated English landing");
 
@@ -108,7 +131,7 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_docs_platform_quality_v2",
+    schema: "novelforge_docs_platform_quality_v3",
     status: "pass",
     engine: "Astro Starlight",
     astro: pkg.devDependencies.astro,
@@ -121,13 +144,17 @@ if (failures.length > 0) {
     astro_project_root: "site/docs-site",
     emitted_page_verification: true,
     raw_html_asset_rewrite: true,
-    localized_header_actions: true,
+    native_landing_copy: true,
+    product_header_navigation_parity: true,
+    knowledge_namespace_active: true,
+    concise_sidebar_information_architecture: true,
+    route_aware_article_sections: true,
     curated_landing: true,
     product_style_article_title: true,
     polished_reading_hierarchy: true,
     polished_article_toc: true,
     polished_article_pagination: true,
-    product_first_start_handoff: true,
+    responsive_navigation: true,
     product_first_inspector_handoff: true,
     product_tool_handoff: true,
     product_home_brand_handoff: true,
