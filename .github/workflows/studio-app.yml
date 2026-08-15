@@ -165,6 +165,48 @@ jobs:
           assert '100dvh' in app_css
           print({'status': 'pass', 'locales': ['en-US', 'zh-CN'], 'mobile_focus_first': True, 'observability_mobile': True, 'motion_owner': 'WeiUI'})
           PY
+      - name: Modern-clean visual source invariants
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          css = Path('studio/app/src/styles/atelier-workbench.css').read_text(encoding='utf-8')
+          shell = Path('studio/app/src/AppShell.tsx').read_text(encoding='utf-8')
+          icons = Path('studio/app/src/StudioIcon.tsx').read_text(encoding='utf-8')
+
+          forbidden_css = (
+              'repeating-linear-gradient',
+              'radial-gradient(',
+              'background-attachment: fixed',
+              'border-style: dashed',
+              'transform: rotate(',
+              '--nf-atelier-paper-pink',
+              '--nf-atelier-paper-blue',
+              '--nf-atelier-paper-violet',
+              '--nf-atelier-stitch',
+          )
+          for needle in forbidden_css:
+              assert needle not in css, needle
+
+          structural_glyphs = ('✦', '◫', '✎', '◎', '◇', '∿', '⌁')
+          for glyph in structural_glyphs:
+              assert glyph not in shell, glyph
+
+          assert css.count('border: 1px') <= 8, css.count('border: 1px')
+          assert css.count('var(--nf-workbench-shadow-') <= 4, css.count('var(--nf-workbench-shadow-')
+          assert 'background: var(--nf-workbench-canvas)' in css
+          assert 'border-block-end: 1px solid var(--nf-workbench-divider-soft)' in css
+          assert '<svg' in icons and 'stroke-width="1.75"' in icons
+          assert 'width="20"' in icons and 'height="20"' in icons
+          print({
+              'status': 'pass',
+              'visual_direction': 'modern-editorial-minimal',
+              'structural_icons': 'inline-svg',
+              'decorative_grid': False,
+              'dashed_chrome': False,
+              'rotated_chrome': False,
+          })
+          PY
       - name: Bundle budgets
         run: |
           python - <<'PY'
