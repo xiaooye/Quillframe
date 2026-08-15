@@ -2,6 +2,7 @@ import { For, Show, createMemo, createSignal } from "solid-js";
 import type { Locale } from "./content";
 
 type CheckState = "pass" | "warn" | "fail";
+type InspectionStatus = "coherent" | "scaffold" | "incomplete" | "conflict";
 
 type InspectionCheck = {
   key: string;
@@ -29,20 +30,14 @@ type ProjectInspection = {
   rootName: string;
   fileCount: number;
   totalBytes: number;
-  manifestPath?: string;
-  lockPath?: string;
-  attestationPath?: string;
   project: ProjectIdentity;
   framework: FrameworkIdentity;
-  attestation: FrameworkIdentity;
-  status: "coherent" | "scaffold" | "incomplete" | "conflict";
+  status: InspectionStatus;
   checks: InspectionCheck[];
   directories: Array<{ name: string; present: boolean }>;
 };
 
-type Props = {
-  locale: Locale;
-};
+type Props = { locale: Locale };
 
 const requiredDirectories = ["profiles", "bible", "state", "plans", "manuscripts", "research"];
 const evidenceDirectories = ["evals", "tests", "regressions"];
@@ -61,14 +56,18 @@ function basename(pathname: string) {
 }
 
 function rootNameFor(files: File[]) {
-  const first = normalizePath(files[0] ?? new File([], "project"));
-  const parts = first.split("/").filter(Boolean);
+  if (!files[0]) return "NovelForge Project";
+  const parts = normalizePath(files[0]).split("/").filter(Boolean);
   return parts.length > 1 ? parts[0] : "NovelForge Project";
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function pickTomlValue(source: string, keys: string[]) {
   for (const key of keys) {
-    const expression = new RegExp(`^\\s*${key.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}\\s*=\\s*[\"']([^\"']+)[\"']\\s*(?:#.*)?$`, "mi");
+    const expression = new RegExp(`^\\s*${escapeRegExp(key)}\\s*=\\s*[\"']([^\"']+)[\"']\\s*(?:#.*)?$`, "mi");
     const match = source.match(expression);
     if (match?.[1]) return match[1].trim();
   }
@@ -101,20 +100,17 @@ function frameworkIdentity(value: unknown): FrameworkIdentity {
 }
 
 function fingerprintLooksExact(value?: string) {
-  if (!value) return false;
-  return /^(?:sha256:)?[a-f0-9]{64}$/i.test(value.trim());
+  return Boolean(value && /^(?:sha256:)?[a-f0-9]{64}$/i.test(value.trim()));
 }
 
 function sameIdentityField(a?: string, b?: string) {
-  if (!a || !b) return true;
-  return a.trim() === b.trim();
+  return !a || !b || a.trim() === b.trim();
 }
 
-async function inspectFiles(fileList: FileList | File[]): Promise<ProjectInspection> {
+async function inspectFiles(fileList: FileList | File[], zh: boolean): Promise<ProjectInspection> {
   const files = Array.from(fileList);
   const entries = files.map((file) => ({ file, path: relativeToProject(normalizePath(file)) }));
   const find = (name: string) => entries.find((entry) => basename(entry.path).toLocaleLowerCase() === name.toLocaleLowerCase());
-
   const manifestEntry = find("novelforge.toml");
   const lockEntry = find("novelforge.lock.json");
   const attestationEntry = find("framework.attestation.json");
@@ -131,21 +127,15 @@ async function inspectFiles(fileList: FileList | File[]): Promise<ProjectInspect
   let lockValue: unknown;
   let lockParseError = false;
   if (lockEntry) {
-    try {
-      lockValue = JSON.parse(await lockEntry.file.text());
-    } catch {
-      lockParseError = true;
-    }
+    try { lockValue = JSON.parse(await lockEntry.file.text()); }
+    catch { lockParseError = true; }
   }
 
   let attestationValue: unknown;
   let attestationParseError = false;
   if (attestationEntry) {
-    try {
-      attestationValue = JSON.parse(await attestationEntry.file.text());
-    } catch {
-      attestationParseError = true;
-    }
+    try { attestationValue = JSON.parse(await attestationEntry.file.text()); }
+    catch { attestationParseError = true; }
   }
 
   const framework = frameworkIdentity(lockValue);
@@ -153,79 +143,71 @@ async function inspectFiles(fileList: FileList | File[]): Promise<ProjectInspect
   const normalizedPaths = entries.map((entry) => entry.path.toLocaleLowerCase());
   const hasDirectory = (directory: string) => normalizedPaths.some((pathname) => pathname === directory || pathname.startsWith(`${directory}/`));
   const directories = [...requiredDirectories, ...evidenceDirectories].map((name) => ({ name, present: hasDirectory(name) }));
-
   const checks: InspectionCheck[] = [];
   const push = (key: string, state: CheckState, title: string, detail: string) => checks.push({ key, state, title, detail });
 
-  push(
-    "manifest",
-    manifestEntry ? "pass" : "fail",
-    "novelforge.toml",
-    manifestEntry ? manifestEntry.path : "Project manifest not found.",
-  );
-
+  push("manifest", manifestEntry ? "pass" : "fail", "novelforge.toml", manifestEntry?.path ?? (zh ? "没有找到 Project manifest。" : "Project manifest not found."));
   push(
     "lock",
     lockEntry && !lockParseError ? "pass" : "fail",
     "novelforge.lock.json",
-    lockParseError ? "Lockfile exists but is not valid JSON." : lockEntry ? lockEntry.path : "Framework lockfile not found.",
+    lockParseError
+      ? (zh ? "Lockfile 存在，但不是有效 JSON。" : "Lockfile exists but is not valid JSON.")
+      : lockEntry?.path ?? (zh ? "没有找到 Framework lockfile。" : "Framework lockfile not found."),
   );
 
   if (lockEntry && !lockParseError) {
     push(
       "commit",
       framework.commit ? "pass" : "warn",
-      "Exact framework revision",
-      framework.commit ? framework.commit : "No exact commit is resolved yet. This can be valid for a fresh scaffold, but not for governed production bootstrap.",
+      zh ? "精确 Framework revision" : "Exact framework revision",
+      framework.commit ?? (zh ? "尚未解析 exact commit；新脚手架可以暂时如此，但受治理的 production bootstrap 不可以。" : "No exact commit is resolved yet. A fresh scaffold may temporarily be in this state; governed production bootstrap may not."),
     );
     push(
       "fingerprint",
       fingerprintLooksExact(framework.fingerprint) ? "pass" : framework.fingerprint ? "fail" : "warn",
       "Bundle fingerprint",
       framework.fingerprint
-        ? fingerprintLooksExact(framework.fingerprint) ? framework.fingerprint : "Fingerprint is present but does not look like a SHA-256 identity."
-        : "No deterministic bundle fingerprint is resolved yet.",
+        ? fingerprintLooksExact(framework.fingerprint)
+          ? framework.fingerprint
+          : (zh ? "Fingerprint 已存在，但不像有效 SHA-256 identity。" : "Fingerprint is present but does not look like a SHA-256 identity.")
+        : (zh ? "尚未解析 deterministic bundle fingerprint。" : "No deterministic bundle fingerprint is resolved yet."),
     );
   }
 
-  const coreDirectoryCount = requiredDirectories.filter(hasDirectory).length;
+  const coreCount = requiredDirectories.filter(hasDirectory).length;
   push(
     "structure",
-    coreDirectoryCount === requiredDirectories.length ? "pass" : coreDirectoryCount >= 3 ? "warn" : "fail",
-    "Project authority structure",
-    `${coreDirectoryCount}/${requiredDirectories.length} core logical directories detected. Mapped adapters may intentionally use a different physical layout.`,
+    coreCount === requiredDirectories.length ? "pass" : coreCount >= 3 ? "warn" : "fail",
+    zh ? "Project authority structure" : "Project authority structure",
+    zh
+      ? `检测到 ${coreCount}/${requiredDirectories.length} 个标准逻辑目录。Mapped Adapter 可以有意使用不同的物理目录。`
+      : `${coreCount}/${requiredDirectories.length} core logical directories detected. Mapped adapters may intentionally use a different physical layout.`,
   );
 
-  const evidenceDirectoryCount = evidenceDirectories.filter(hasDirectory).length;
+  const evidenceCount = evidenceDirectories.filter(hasDirectory).length;
   push(
     "evidence",
-    evidenceDirectoryCount >= 2 ? "pass" : "warn",
-    "Quality evidence surface",
-    `${evidenceDirectoryCount}/${evidenceDirectories.length} evidence directories detected (evals / tests / regressions).`,
+    evidenceCount >= 2 ? "pass" : "warn",
+    zh ? "质量证据面" : "Quality evidence surface",
+    zh ? `检测到 ${evidenceCount}/${evidenceDirectories.length} 个 evidence 目录（evals / tests / regressions）。` : `${evidenceCount}/${evidenceDirectories.length} evidence directories detected (evals / tests / regressions).`,
   );
 
   let attestationConflict = false;
-  if (attestationEntry) {
-    if (attestationParseError) {
-      attestationConflict = true;
-      push("attestation", "fail", "Framework attestation", "framework.attestation.json exists but is not valid JSON.");
-    } else {
-      const matches = sameIdentityField(framework.version, attestation.version)
-        && sameIdentityField(framework.commit, attestation.commit)
-        && sameIdentityField(framework.fingerprint, attestation.fingerprint);
-      attestationConflict = !matches;
-      push(
-        "attestation",
-        matches ? "pass" : "fail",
-        "Framework attestation",
-        matches ? "Attestation identity is consistent with the lock fields it shares." : "Attestation and lock disagree on version, commit, or bundle fingerprint.",
-      );
-    }
+  if (!attestationEntry) {
+    push("attestation", "warn", "Framework attestation", zh ? "没有检测到 framework.attestation.json；是否必需取决于 Project contract。" : "No framework.attestation.json detected; whether it is required depends on the Project contract.");
+  } else if (attestationParseError) {
+    attestationConflict = true;
+    push("attestation", "fail", "Framework attestation", zh ? "Attestation 存在，但不是有效 JSON。" : "Attestation exists but is not valid JSON.");
   } else {
-    push("attestation", "warn", "Framework attestation", "No framework.attestation.json detected. Some project contracts require one; others do not.");
+    const matches = sameIdentityField(framework.version, attestation.version)
+      && sameIdentityField(framework.commit, attestation.commit)
+      && sameIdentityField(framework.fingerprint, attestation.fingerprint);
+    attestationConflict = !matches;
+    push("attestation", matches ? "pass" : "fail", "Framework attestation", matches ? (zh ? "与 lock 中共享的 identity 字段一致。" : "Shared identity fields agree with the lock.") : (zh ? "Attestation 与 lock 的 version、commit 或 bundle fingerprint 冲突。" : "Attestation conflicts with the lock on version, commit, or bundle fingerprint."));
   }
 
-  let status: ProjectInspection["status"] = "coherent";
+  let status: InspectionStatus = "coherent";
   if (!manifestEntry || !lockEntry || lockParseError) status = "incomplete";
   else if (attestationConflict) status = "conflict";
   else if (!framework.commit || !fingerprintLooksExact(framework.fingerprint)) status = "scaffold";
@@ -234,34 +216,22 @@ async function inspectFiles(fileList: FileList | File[]): Promise<ProjectInspect
     rootName: rootNameFor(files),
     fileCount: files.length,
     totalBytes: files.reduce((sum, file) => sum + file.size, 0),
-    manifestPath: manifestEntry?.path,
-    lockPath: lockEntry?.path,
-    attestationPath: attestationEntry?.path,
     project,
     framework,
-    attestation,
     status,
     checks,
     directories,
   };
 }
 
-function demoInspection(): ProjectInspection {
+function demoInspection(zh: boolean): ProjectInspection {
   return {
     rootName: "moonlit-archive",
     fileCount: 84,
     totalBytes: 1_842_770,
-    manifestPath: "novelforge.toml",
-    lockPath: "novelforge.lock.json",
-    attestationPath: "framework.attestation.json",
     project: { id: "MOONLIT-ARCHIVE", title: "Moonlit Archive", language: "zh-CN", version: "0.4.0", schema: "novelforge-project-v1" },
     framework: {
       repository: "xiaooye/cn_webnovel_agent",
-      version: "8.0-dev",
-      commit: "4f18d3c9d4b11cf0d282e108db9fc8f18ad9e67a",
-      fingerprint: "sha256:5f0f9e5d522fca33f05a9a00ce940fea864b554d30e70123ec60b3ea981a0ca8",
-    },
-    attestation: {
       version: "8.0-dev",
       commit: "4f18d3c9d4b11cf0d282e108db9fc8f18ad9e67a",
       fingerprint: "sha256:5f0f9e5d522fca33f05a9a00ce940fea864b554d30e70123ec60b3ea981a0ca8",
@@ -270,11 +240,11 @@ function demoInspection(): ProjectInspection {
     checks: [
       { key: "manifest", state: "pass", title: "novelforge.toml", detail: "novelforge.toml" },
       { key: "lock", state: "pass", title: "novelforge.lock.json", detail: "novelforge.lock.json" },
-      { key: "commit", state: "pass", title: "Exact framework revision", detail: "4f18d3c9d4b11cf0d282e108db9fc8f18ad9e67a" },
+      { key: "commit", state: "pass", title: zh ? "精确 Framework revision" : "Exact framework revision", detail: "4f18d3c9d4b11cf0d282e108db9fc8f18ad9e67a" },
       { key: "fingerprint", state: "pass", title: "Bundle fingerprint", detail: "SHA-256 bundle identity present." },
-      { key: "structure", state: "pass", title: "Project authority structure", detail: "6/6 core logical directories detected." },
-      { key: "evidence", state: "pass", title: "Quality evidence surface", detail: "3/3 evidence directories detected." },
-      { key: "attestation", state: "pass", title: "Framework attestation", detail: "Attestation identity is consistent with the lock." },
+      { key: "structure", state: "pass", title: "Project authority structure", detail: zh ? "6/6 标准逻辑目录已检测。" : "6/6 core logical directories detected." },
+      { key: "evidence", state: "pass", title: zh ? "质量证据面" : "Quality evidence surface", detail: "3/3 evidence directories detected." },
+      { key: "attestation", state: "pass", title: "Framework attestation", detail: zh ? "Attestation 与 lock identity 一致。" : "Attestation identity is consistent with the lock." },
     ],
     directories: [...requiredDirectories, ...evidenceDirectories].map((name) => ({ name, present: true })),
   };
@@ -345,22 +315,17 @@ export default function ProjectInspector(props: Props) {
   });
 
   const statusLabel = () => {
-    const current = inspection()?.status;
-    if (!current) return "";
-    return text()[current];
+    const status = inspection()?.status;
+    return status ? text()[status] : "";
   };
 
   const ingest = async (files: FileList | File[]) => {
     if (!files.length) return;
     setBusy(true);
     setError("");
-    try {
-      setInspection(await inspectFiles(files));
-    } catch {
-      setError(text().invalid);
-    } finally {
-      setBusy(false);
-    }
+    try { setInspection(await inspectFiles(files, zh())); }
+    catch { setError(text().invalid); }
+    finally { setBusy(false); }
   };
 
   let folderInput: HTMLInputElement | undefined;
@@ -368,33 +333,35 @@ export default function ProjectInspector(props: Props) {
   return (
     <div class="project-inspector-shell">
       <section class="project-inspector-intro">
-        <div>
-          <p class="eyebrow">{text().eyebrow}</p>
-          <h1>{text().title}</h1>
-          <p>{text().lede}</p>
-        </div>
+        <div><p class="eyebrow">{text().eyebrow}</p><h1>{text().title}</h1><p>{text().lede}</p></div>
         <span class="wui-badge wui-badge--success inspector-privacy">⌁ {text().privacy}</span>
       </section>
 
       <Show when={inspection()} fallback={
         <section
           class="wui-card inspector-dropzone"
-          onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; }}
-          onDrop={(event) => { event.preventDefault(); void ingest(event.dataTransfer.files); }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            if (event.dataTransfer) void ingest(event.dataTransfer.files);
+          }}
         >
           <div class="inspector-drop-icon" aria-hidden="true">⌂</div>
           <h2>{text().emptyTitle}</h2>
           <p>{text().emptyBody}</p>
           <div class="inspector-actions">
             <button class="wui-button wui-button--solid" type="button" disabled={busy()} onClick={() => folderInput?.click()}>{busy() ? "…" : text().select}</button>
-            <button class="wui-button wui-button--soft" type="button" onClick={() => setInspection(demoInspection())}>✦ {text().demo}</button>
+            <button class="wui-button wui-button--soft" type="button" onClick={() => setInspection(demoInspection(zh()))}>✦ {text().demo}</button>
           </div>
           <input
             ref={(element) => { folderInput = element; element.setAttribute("webkitdirectory", ""); element.setAttribute("directory", ""); }}
             class="inspector-file-input"
             type="file"
             multiple
-            onChange={(event) => void ingest(event.currentTarget.files ?? [])}
+            onChange={(event) => { const files = event.currentTarget.files; if (files) void ingest(files); }}
           />
           <Show when={error()}><p class="inspector-error" role="alert">{error()}</p></Show>
           <div class="inspector-cli">
@@ -407,11 +374,7 @@ export default function ProjectInspector(props: Props) {
           <>
             <section class="wui-card inspector-summary-card" data-status={result().status}>
               <div class="inspector-summary-heading">
-                <div>
-                  <p class="eyebrow">{text().summary}</p>
-                  <h2>{result().project.title || result().project.id || result().rootName}</h2>
-                  <p>{result().rootName}</p>
-                </div>
+                <div><p class="eyebrow">{text().summary}</p><h2>{result().project.title || result().project.id || result().rootName}</h2><p>{result().rootName}</p></div>
                 <span class="inspector-status-badge" data-state={result().status}>{statusLabel()}</span>
               </div>
               <div class="inspector-stat-grid">
@@ -453,7 +416,7 @@ export default function ProjectInspector(props: Props) {
             </div>
 
             <section class="wui-card inspector-structure-panel">
-              <div class="inspector-structure-heading"><div><p class="eyebrow">{text().structure}</p><h2>{text().structure}</h2></div><button type="button" class="wui-button wui-button--soft" onClick={() => { setInspection(undefined); queueMicrotask(() => folderInput?.focus()); }}>{text().reset}</button></div>
+              <div class="inspector-structure-heading"><div><p class="eyebrow">{text().structure}</p><h2>{text().structure}</h2></div><button type="button" class="wui-button wui-button--soft" onClick={() => setInspection(undefined)}>{text().reset}</button></div>
               <div class="inspector-directory-grid">
                 <For each={result().directories}>{(directory) => (
                   <div class="inspector-directory" data-present={directory.present}><span aria-hidden="true">{directory.present ? "●" : "○"}</span><code>{directory.name}/</code></div>
