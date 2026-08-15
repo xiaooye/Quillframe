@@ -1,0 +1,9 @@
+{
+  "name": "NovelForge Studio",
+  "short_name": "NovelForge",
+  "description": "Read-only NovelForge creator workbench shell",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdfcf9",
+  "theme_color": "#fdfcf9"
+}
