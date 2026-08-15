@@ -44,6 +44,17 @@ def canonical_repo(value: str) -> str:
     return value.strip().lower()
 
 
+def positive_env_int(name: str) -> int:
+    raw = os.environ.get(name, "")
+    try:
+        value = int(raw)
+    except ValueError:
+        fail(f"{name} must be a positive integer")
+    if value <= 0:
+        fail(f"{name} must be a positive integer")
+    return value
+
+
 def parse_fenced(body: str, marker: str) -> dict[str, Any]:
     if marker not in body:
         fail(f"marker missing: {marker}")
@@ -142,6 +153,7 @@ def verify_job_provenance(job: dict[str, Any], binding: dict[str, Any]) -> None:
     if not isinstance(provenance, dict):
         fail("semantic job provenance must be an object")
     checks = {
+        "project_id": binding["project_id"],
         "project_repo": binding["caller_repo"],
         "framework_repo": binding["framework_repo"],
         "framework_commit": binding["framework_commit"],
@@ -150,9 +162,6 @@ def verify_job_provenance(job: dict[str, Any], binding: dict[str, Any]) -> None:
         actual = canonical_repo(str(provenance.get(key) or "")) if key.endswith("repo") else str(provenance.get(key) or "")
         if actual != expected:
             fail(f"job provenance mismatch for {key}: expected {expected}, got {actual}")
-    project_id = provenance.get("project_id")
-    if project_id is not None and str(project_id) != binding["project_id"]:
-        fail("job provenance project_id mismatch")
 
 
 def validate_registered_contract_job(job_path: Path, registered: Path) -> None:
@@ -206,6 +215,9 @@ def validate_result(binding: dict[str, Any]) -> dict[str, Any]:
     comment = event.get("comment")
     if not isinstance(comment, dict) or RESULT_MARKER not in str(comment.get("body") or ""):
         fail("validate-result requires a marked peer result comment")
+    result_comment_id = int(comment.get("id") or 0)
+    if result_comment_id <= 0:
+        fail("result comment id required")
 
     comments_raw = run([
         "gh", "api", f"repos/{binding['caller_repo']}/issues/{issue_number}/comments?per_page=100"
@@ -224,16 +236,27 @@ def validate_result(binding: dict[str, Any]) -> dict[str, Any]:
         fail("packet job must be object")
     verify_job_provenance(job, binding)
 
+    runtime_trace = {
+        "github_run_id": positive_env_int("GITHUB_RUN_ID"),
+        "github_run_attempt": positive_env_int("GITHUB_RUN_ATTEMPT"),
+        "github_event_name": os.environ.get("GITHUB_EVENT_NAME", ""),
+        "result_comment_id": result_comment_id,
+        "workflow_name": os.environ.get("GITHUB_WORKFLOW", ""),
+        "framework_action_ref": os.environ.get("NOVELFORGE_ACTION_REF", ""),
+    }
+
     _router, relay, registered, receipt_tool = framework_paths()
     with tempfile.TemporaryDirectory(prefix="novelforge-peer-result-") as tmp:
         tmpdir = Path(tmp)
         packet_path = tmpdir / "packet.json"
         result_path = tmpdir / "result.json"
         job_path = tmpdir / "job.json"
+        runtime_trace_path = tmpdir / "runtime-trace.json"
         receipt_path = tmpdir / "validation-receipt.json"
         packet_path.write_text(json.dumps(packet, ensure_ascii=False), encoding="utf-8")
         result_path.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
         job_path.write_text(json.dumps(job, ensure_ascii=False), encoding="utf-8")
+        runtime_trace_path.write_text(json.dumps(runtime_trace, ensure_ascii=False), encoding="utf-8")
         run(["python", str(relay), "validate-result", "--packet", str(packet_path), "--result", str(result_path)])
         validate_registered_contract_job(job_path, registered)
         run([
@@ -245,6 +268,7 @@ def validate_result(binding: dict[str, Any]) -> dict[str, Any]:
             "--framework-repo", binding["framework_repo"],
             "--framework-commit", binding["framework_commit"],
             "--issue-number", str(issue_number),
+            "--runtime-trace", str(runtime_trace_path),
             "--output", str(receipt_path),
         ])
         receipt = read_json(receipt_path)
