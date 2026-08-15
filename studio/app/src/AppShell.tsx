@@ -60,39 +60,39 @@ export const AppShell: ParentComponent = (props) => {
 
   return (
     <div class="nf-app-shell">
-      <aside class="nf-sidebar" aria-label={t("nav.primaryLabel")}>
-        <A href="/" class="nf-brand">
+      <aside class="wui-sidebar nf-sidebar" aria-label={t("nav.primaryLabel")}>
+        <A href="/" class="wui-sidebar__header nf-brand">
           <span class="nf-brand-mark" aria-hidden="true">N</span>
-          <span>
+          <span class="wui-sidebar__brand-label">
             <strong>{t("app.brand")}</strong>
             <small>{t("app.readOnly")}</small>
           </span>
         </A>
-        <nav class="nf-nav-list">
+        <nav class="wui-sidebar__content nf-nav-list">
           <For each={navigation}>
             {([path, label, glyph]) => (
-              <A href={path} class="nf-nav-item" data-active={location.pathname === path ? "true" : undefined}>
-                <span class="nf-nav-glyph" aria-hidden="true">{glyph}</span>
-                <span>{t(label)}</span>
+              <A href={path} class="wui-sidebar__item nf-nav-item" data-active={location.pathname === path ? "true" : undefined}>
+                <span class="wui-sidebar__icon nf-nav-glyph" aria-hidden="true">{glyph}</span>
+                <span class="wui-sidebar__label">{t(label)}</span>
               </A>
             )}
           </For>
         </nav>
-        <div class="nf-sidebar-foot">
+        <div class="wui-sidebar__footer nf-sidebar-foot">
           <span class="wui-badge wui-badge--outline">authority=false</span>
           <small>{t("footer.coreTruth")}</small>
         </div>
       </aside>
 
       <div class="nf-main-column">
-        <header class="nf-topbar">
-          <div class="nf-topbar-context">
+        <header class="wui-app-bar nf-topbar" data-position="sticky">
+          <div class="wui-app-bar__brand nf-topbar-context">
             <span class="nf-mobile-brand">{t("app.brand")}</span>
             <Show when={studio.projectResult()?.data?.project.project.title} fallback={<span>{t("project.noProject")}</span>}>
               <strong>{studio.projectResult()?.data?.project.project.title}</strong>
             </Show>
           </div>
-          <div class="nf-topbar-actions">
+          <div class="wui-app-bar__actions nf-topbar-actions">
             <span class="wui-badge wui-badge--outline nf-host-chip" data-surface={studio.surface()}>
               <span class="nf-host-dot" aria-hidden="true" />
               <span>{studio.bridgeAvailable() ? t("host.local") : t("host.cloud")}</span>
@@ -118,12 +118,12 @@ export const AppShell: ParentComponent = (props) => {
         </footer>
       </div>
 
-      <nav class="nf-bottom-nav" aria-label={t("nav.mobileLabel")}>
+      <nav class="wui-bottom-nav nf-bottom-nav" aria-label={t("nav.mobileLabel")}>
         <For each={navigation.slice(0, 5)}>
           {([path, label, glyph]) => (
-            <A href={path} class="nf-bottom-nav-item" data-active={location.pathname === path ? "true" : undefined}>
-              <span aria-hidden="true">{glyph}</span>
-              <small>{t(label)}</small>
+            <A href={path} class="wui-bottom-nav__item nf-bottom-nav-item" data-active={location.pathname === path ? "true" : undefined}>
+              <span class="wui-bottom-nav__icon" aria-hidden="true">{glyph}</span>
+              <small class="wui-bottom-nav__label">{t(label)}</small>
             </A>
           )}
         </For>
