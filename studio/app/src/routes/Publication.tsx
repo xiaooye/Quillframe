@@ -3,6 +3,7 @@ import { CoreHostBoundary, PageIntro, QueryError } from "../components";
 import { invokeBridge } from "../bridge";
 import { useI18n } from "../i18n";
 import { useStudio } from "../studio";
+import "../styles/projection-workbenches.css";
 
 type Profile = "text" | "web" | "print" | "epub";
 type PublicationPreviewProjection = {
