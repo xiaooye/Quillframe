@@ -13,15 +13,16 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 import tomllib
 
 PACKET_MARKER = "<!-- novelforge-peer-packet-v1 -->"
 RESULT_MARKER = "<!-- novelforge-peer-result-v1 -->"
 VALIDATION_MARKER = "<!-- novelforge-peer-validation-v1 -->"
+RECEIPT_MARKER = "<!-- novelforge-peer-validation-receipt-v1 -->"
 
 
-def fail(message: str) -> "NoReturn":
+def fail(message: str) -> NoReturn:
     raise SystemExit(message)
 
 
@@ -116,7 +117,6 @@ def common_event(binding: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any
     owner = os.environ.get("GITHUB_REPOSITORY_OWNER", "")
     if actor != owner:
         fail("only repository owner may trigger the default peer bridge")
-
     prefix = f"[novelforge-peer][{binding['project_id']}] "
     title = str(issue.get("title") or "")
     if not title.startswith(prefix):
@@ -124,14 +124,17 @@ def common_event(binding: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any
     return event, issue, issue_number
 
 
-def framework_paths() -> tuple[Path, Path]:
+def framework_paths() -> tuple[Path, Path, Path, Path]:
     action_path = Path(os.environ["NOVELFORGE_ACTION_PATH"]).resolve()
     framework_root = action_path.parents[2]
     router = framework_root / "harness" / "semantic_workers" / "semantic_worker_router.py"
     relay = framework_root / "harness" / "semantic_workers" / "peer_chat_relay.py"
-    if not router.exists() or not relay.exists():
-        fail("Framework semantic runtime files are missing from action package")
-    return router, relay
+    registered = framework_root / "harness" / "semantic_workers" / "registered_contract_binding.py"
+    receipt = framework_root / "harness" / "semantic_workers" / "peer_bridge_receipt.py"
+    for path in (router, relay, registered, receipt):
+        if not path.exists():
+            fail(f"Framework semantic runtime file missing: {path.name}")
+    return router, relay, registered, receipt
 
 
 def verify_job_provenance(job: dict[str, Any], binding: dict[str, Any]) -> None:
@@ -152,8 +155,15 @@ def verify_job_provenance(job: dict[str, Any], binding: dict[str, Any]) -> None:
         fail("job provenance project_id mismatch")
 
 
+def validate_registered_contract_job(job_path: Path, registered: Path) -> None:
+    job = read_json(job_path)
+    input_obj = job.get("input")
+    if isinstance(input_obj, dict) and input_obj.get("model_contract_id") is not None:
+        run(["python", str(registered), "validate-job", "--job", str(job_path)])
+
+
 def prepare(binding: dict[str, Any]) -> None:
-    event, issue, issue_number = common_event(binding)
+    _event, issue, issue_number = common_event(binding)
     body = str(issue.get("body") or "")
     job = json.loads(body)
     if not isinstance(job, dict):
@@ -165,7 +175,7 @@ def prepare(binding: dict[str, Any]) -> None:
         fail("issue body job_id must match title suffix")
     verify_job_provenance(job, binding)
 
-    router, relay = framework_paths()
+    router, relay, registered, _receipt = framework_paths()
     with tempfile.TemporaryDirectory(prefix="novelforge-peer-") as tmp:
         tmpdir = Path(tmp)
         job_path = tmpdir / "job.json"
@@ -174,6 +184,7 @@ def prepare(binding: dict[str, Any]) -> None:
         job_path.write_text(json.dumps(job, ensure_ascii=False, indent=2), encoding="utf-8")
         jobs_path.write_text(json.dumps({"jobs": [job]}, ensure_ascii=False), encoding="utf-8")
         run(["python", str(router), "validate-jobs", "--jobs", str(jobs_path)])
+        validate_registered_contract_job(job_path, registered)
         run(["python", str(relay), "build", "--job", str(job_path), "--output", str(packet_path)])
         packet = packet_path.read_text(encoding="utf-8").strip()
 
@@ -190,7 +201,7 @@ def prepare(binding: dict[str, Any]) -> None:
     run(["gh", "issue", "comment", str(issue_number), "--repo", binding["caller_repo"], "--body", comment])
 
 
-def validate_result(binding: dict[str, Any]) -> None:
+def validate_result(binding: dict[str, Any]) -> dict[str, Any]:
     event, _issue, issue_number = common_event(binding)
     comment = event.get("comment")
     if not isinstance(comment, dict) or RESULT_MARKER not in str(comment.get("body") or ""):
@@ -208,29 +219,60 @@ def validate_result(binding: dict[str, Any]) -> None:
 
     packet = parse_fenced(str(packets[-1].get("body") or ""), PACKET_MARKER)
     result = parse_fenced(str(comment.get("body") or ""), RESULT_MARKER)
-
     job = packet.get("job") or {}
     if not isinstance(job, dict):
         fail("packet job must be object")
     verify_job_provenance(job, binding)
 
-    _router, relay = framework_paths()
+    _router, relay, registered, receipt_tool = framework_paths()
     with tempfile.TemporaryDirectory(prefix="novelforge-peer-result-") as tmp:
         tmpdir = Path(tmp)
         packet_path = tmpdir / "packet.json"
         result_path = tmpdir / "result.json"
+        job_path = tmpdir / "job.json"
+        receipt_path = tmpdir / "validation-receipt.json"
         packet_path.write_text(json.dumps(packet, ensure_ascii=False), encoding="utf-8")
         result_path.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
+        job_path.write_text(json.dumps(job, ensure_ascii=False), encoding="utf-8")
         run(["python", str(relay), "validate-result", "--packet", str(packet_path), "--result", str(result_path)])
+        validate_registered_contract_job(job_path, registered)
+        run([
+            "python", str(receipt_tool), "build",
+            "--packet", str(packet_path),
+            "--result", str(result_path),
+            "--project-id", binding["project_id"],
+            "--project-repo", binding["caller_repo"],
+            "--framework-repo", binding["framework_repo"],
+            "--framework-commit", binding["framework_commit"],
+            "--issue-number", str(issue_number),
+            "--output", str(receipt_path),
+        ])
+        receipt = read_json(receipt_path)
 
     ready = "\n".join([
         VALIDATION_MARKER,
+        RECEIPT_MARKER,
         "`semantic_status: validated_result_ready`",
         "",
         f"Project-owned peer result binding passed against NovelForge `{binding['framework_commit']}`. The manager may consume this logical result once after revalidating Project authority.",
+        "",
+        "```json",
+        json.dumps(receipt, ensure_ascii=False, indent=2),
+        "```",
     ])
     run(["gh", "issue", "comment", str(issue_number), "--repo", binding["caller_repo"], "--body", ready])
     run(["gh", "issue", "close", str(issue_number), "--repo", binding["caller_repo"], "--reason", "completed"])
+    return receipt
+
+
+def write_action_output(receipt: dict[str, Any]) -> None:
+    path = os.environ.get("GITHUB_OUTPUT")
+    if not path:
+        return
+    with Path(path).open("a", encoding="utf-8") as handle:
+        handle.write("validation-receipt<<NOVELFORGE_RECEIPT\n")
+        handle.write(json.dumps(receipt, ensure_ascii=False, separators=(",", ":")) + "\n")
+        handle.write("NOVELFORGE_RECEIPT\n")
 
 
 def main() -> int:
@@ -240,17 +282,20 @@ def main() -> int:
     binding = load_project_binding()
     if mode == "prepare":
         prepare(binding)
+        output = {
+            "schema": "novelforge_project_peer_bridge_receipt_v1",
+            "mode": mode,
+            "project_id": binding["project_id"],
+            "project_repo": binding["caller_repo"],
+            "framework_repo": binding["framework_repo"],
+            "framework_commit": binding["framework_commit"],
+            "project_hosted": True,
+            "authority": False,
+        }
     else:
-        validate_result(binding)
-    print(json.dumps({
-        "schema": "novelforge_project_peer_bridge_receipt_v1",
-        "mode": mode,
-        "project_id": binding["project_id"],
-        "project_repo": binding["caller_repo"],
-        "framework_repo": binding["framework_repo"],
-        "framework_commit": binding["framework_commit"],
-        "project_hosted": True,
-    }, ensure_ascii=False))
+        output = validate_result(binding)
+        write_action_output(output)
+    print(json.dumps(output, ensure_ascii=False))
     return 0
 
 
