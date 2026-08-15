@@ -2,11 +2,9 @@
 """Machine receipt for Project-owned peer semantic validation.
 
 The peer-chat relay proves job/result/nonce binding. The Project-hosted bridge
-adds consuming-Project and exact-Framework provenance. This receipt combines
-those already-validated facts into one deterministic object that a production
-release consumer can bind to the exact semantic result.
-
-It is evidence, not literary judgment or Canon authority.
+adds consuming-Project and exact-Framework provenance plus an auditable GitHub
+runtime trace. This receipt is deterministic evidence bound to the exact result;
+it is not a cryptographic signature, literary judgment, or Canon authority.
 """
 from __future__ import annotations
 
@@ -34,6 +32,39 @@ def scalar_fingerprint(value: str) -> str:
     return "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def _positive_int(value: Any, name: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        raise ValueError(f"{name} must be positive integer")
+    return value
+
+
+def _runtime_trace(value: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError("runtime_trace object required")
+    run_id = _positive_int(value.get("github_run_id"), "runtime_trace.github_run_id")
+    run_attempt = _positive_int(value.get("github_run_attempt"), "runtime_trace.github_run_attempt")
+    result_comment_id = _positive_int(value.get("result_comment_id"), "runtime_trace.result_comment_id")
+    event_name = value.get("github_event_name")
+    if event_name != "issue_comment":
+        raise ValueError("runtime_trace.github_event_name must be issue_comment")
+    action_ref = value.get("framework_action_ref")
+    if not isinstance(action_ref, str) or len(action_ref) != 40:
+        raise ValueError("runtime_trace.framework_action_ref must be exact 40-character commit")
+    workflow = value.get("workflow_name")
+    if not isinstance(workflow, str) or not workflow.strip():
+        raise ValueError("runtime_trace.workflow_name required")
+    return {
+        "source": "project_owned_github_actions_bridge",
+        "github_run_id": run_id,
+        "github_run_attempt": run_attempt,
+        "github_event_name": event_name,
+        "result_comment_id": result_comment_id,
+        "workflow_name": workflow,
+        "framework_action_ref": action_ref,
+        "cryptographic_signature": False,
+    }
+
+
 def build_receipt(
     packet: dict[str, Any],
     result: dict[str, Any],
@@ -43,6 +74,7 @@ def build_receipt(
     framework_repo: str,
     framework_commit: str,
     issue_number: int,
+    runtime_trace: dict[str, Any],
 ) -> dict[str, Any]:
     relay_errors = validate_peer_result(packet, result)
     if relay_errors:
@@ -68,11 +100,13 @@ def build_receipt(
             actual = actual.lower()
         if actual != value:
             raise ValueError(f"job/bridge provenance mismatch: {key}")
-    if not isinstance(issue_number, int) or isinstance(issue_number, bool) or issue_number <= 0:
-        raise ValueError("issue_number must be positive integer")
+    _positive_int(issue_number, "issue_number")
     nonce = packet.get("relay_nonce")
     if not isinstance(nonce, str) or not nonce:
         raise ValueError("relay nonce required")
+    trace = _runtime_trace(runtime_trace)
+    if trace["framework_action_ref"] != framework_commit:
+        raise ValueError("runtime trace framework_action_ref must equal framework_commit")
     return {
         "schema": SCHEMA,
         "mode": "validate-result",
@@ -88,6 +122,7 @@ def build_receipt(
         "result_fingerprint": fingerprint(result),
         "relay_nonce_fingerprint": scalar_fingerprint(nonce),
         "worker_provider": (result.get("worker") or {}).get("provider"),
+        "runtime_trace": trace,
         "registered_contract_validated": True,
         "peer_relay_validated": True,
         "project_hosted": True,
@@ -96,11 +131,7 @@ def build_receipt(
     }
 
 
-def validate_receipt(
-    receipt: dict[str, Any],
-    packet: dict[str, Any],
-    result: dict[str, Any],
-) -> list[str]:
+def validate_receipt(receipt: dict[str, Any], packet: dict[str, Any], result: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     if not isinstance(receipt, dict) or receipt.get("schema") != SCHEMA:
         return ["invalid peer validation receipt schema"]
@@ -119,10 +150,8 @@ def validate_receipt(
     if not isinstance(job, dict):
         errors.append("peer packet job required")
         return errors
-    relay_errors = validate_peer_result(packet, result)
-    errors += ["peer relay: " + item for item in relay_errors]
-    contract_errors = validate_registered_job(job)
-    errors += ["registered contract: " + item for item in contract_errors]
+    errors += ["peer relay: " + item for item in validate_peer_result(packet, result)]
+    errors += ["registered contract: " + item for item in validate_registered_job(job)]
 
     expected = {
         "job_id": job.get("job_id"),
@@ -150,9 +179,13 @@ def validate_receipt(
             actual = actual.lower()
         if actual != value:
             errors.append(f"peer validation receipt provenance mismatch: {key}")
-    issue_number = receipt.get("issue_number")
-    if not isinstance(issue_number, int) or isinstance(issue_number, bool) or issue_number <= 0:
-        errors.append("peer validation receipt issue_number invalid")
+    try:
+        _positive_int(receipt.get("issue_number"), "issue_number")
+        trace = _runtime_trace(receipt.get("runtime_trace"))
+        if trace["framework_action_ref"] != receipt.get("framework_commit"):
+            errors.append("peer validation receipt runtime framework ref mismatch")
+    except ValueError as exc:
+        errors.append(str(exc))
     return errors
 
 
@@ -185,6 +218,14 @@ def self_test() -> dict[str, Any]:
         "proposals": [],
         "errors": [],
     }
+    trace = {
+        "github_run_id": 123,
+        "github_run_attempt": 1,
+        "github_event_name": "issue_comment",
+        "result_comment_id": 456,
+        "workflow_name": "Project peer bridge",
+        "framework_action_ref": "f" * 40,
+    }
     receipt = build_receipt(
         packet,
         result,
@@ -193,15 +234,20 @@ def self_test() -> dict[str, Any]:
         framework_repo="owner/framework",
         framework_commit="f" * 40,
         issue_number=7,
+        runtime_trace=trace,
     )
     tampered = json.loads(json.dumps(receipt))
     tampered["result_fingerprint"] = "sha256:" + "0" * 64
+    fake_ref = json.loads(json.dumps(receipt))
+    fake_ref["runtime_trace"]["framework_action_ref"] = "e" * 40
     checks = {
         "valid_receipt_passes": not validate_receipt(receipt, packet, result),
         "result_tamper_rejected": any("result_fingerprint" in x for x in validate_receipt(tampered, packet, result)),
+        "runtime_ref_tamper_rejected": any("framework ref mismatch" in x for x in validate_receipt(fake_ref, packet, result)),
         "registered_contract_proof_present": receipt["registered_contract_validated"] is True,
         "peer_relay_proof_present": receipt["peer_relay_validated"] is True,
         "project_framework_bound": receipt["project_id"] == "PROJECT-SELF" and receipt["framework_commit"] == "f" * 40,
+        "runtime_trace_auditable": receipt["runtime_trace"]["source"] == "project_owned_github_actions_bridge" and receipt["runtime_trace"]["cryptographic_signature"] is False,
     }
     return {
         "peer_bridge_receipt_contract": "PASS" if all(checks.values()) else "FAIL",
@@ -224,6 +270,12 @@ def main() -> int:
     build.add_argument("--framework-repo", required=True)
     build.add_argument("--framework-commit", required=True)
     build.add_argument("--issue-number", required=True, type=int)
+    build.add_argument("--github-run-id", required=True, type=int)
+    build.add_argument("--github-run-attempt", required=True, type=int)
+    build.add_argument("--result-comment-id", required=True, type=int)
+    build.add_argument("--github-event-name", required=True)
+    build.add_argument("--workflow-name", required=True)
+    build.add_argument("--framework-action-ref", required=True)
     build.add_argument("--output")
     args = parser.parse_args()
     if args.command == "self-test":
@@ -240,6 +292,14 @@ def main() -> int:
         framework_repo=args.framework_repo,
         framework_commit=args.framework_commit,
         issue_number=args.issue_number,
+        runtime_trace={
+            "github_run_id": args.github_run_id,
+            "github_run_attempt": args.github_run_attempt,
+            "github_event_name": args.github_event_name,
+            "result_comment_id": args.result_comment_id,
+            "workflow_name": args.workflow_name,
+            "framework_action_ref": args.framework_action_ref,
+        },
     )
     text = json.dumps(receipt, ensure_ascii=False, indent=2) + "\n"
     if args.output:
