@@ -1,0 +1,42 @@
+{
+  "schema": "novelforge_weiui_integration_v1",
+  "source": {
+    "repository": "xiaooye/weiui",
+    "commit": "d84d1cd365fb5f90cbbab794d2358f7a13b29b79",
+    "license": "MIT",
+    "reviewed_at": "2026-08-14",
+    "packages": ["@weiui/tokens", "@weiui/css"]
+  },
+  "authority": {
+    "story_loom_visual_authority": true,
+    "weiui_generic_foundation": true,
+    "weiui_product_identity_authority": false,
+    "core_runtime_authority": false,
+    "canon_authority": false
+  },
+  "consumption": {
+    "phase_2c_framework": "SolidJS",
+    "allowed_packages": ["@weiui/tokens", "@weiui/css"],
+    "forbidden_runtime_packages": ["@weiui/headless", "@weiui/react"],
+    "theme_layer": "wui-theme",
+    "runtime_javascript_from_weiui": false,
+    "css_import_order": [
+      "@weiui/tokens/tokens.css",
+      "@weiui/css",
+      "assets/brand/story-loom.weiui.css"
+    ]
+  },
+  "upstream_contract": {
+    "cascade_order": [
+      "wui-reset",
+      "wui-tokens",
+      "wui-theme",
+      "wui-base",
+      "wui-elements",
+      "wui-utilities"
+    ],
+    "minimum_touch_target_px": 44,
+    "logical_properties": true,
+    "reduced_motion": true
+  }
+}

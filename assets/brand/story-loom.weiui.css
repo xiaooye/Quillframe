@@ -1,0 +1,72 @@
+/* Story Loom application theme for the WeiUI zero-JS foundation.
+ * Authority: assets/brand/tokens.json + assets/brand/weiui.integration.json
+ * Load after @weiui/tokens and @weiui/css. Generic component behavior remains WeiUI-owned.
+ */
+@layer wui-theme {
+  :root {
+    color-scheme: light;
+    --wui-color-background: oklch(0.9953 0.0025 48.72);
+    --wui-color-foreground: oklch(0.2453 0.0279 307.19);
+    --wui-color-muted: oklch(0.9739 0.0073 312.30);
+    --wui-color-muted-foreground: oklch(0.4712 0.0412 309.27);
+    --wui-color-card: oklch(0.9953 0.0025 48.72);
+    --wui-color-card-foreground: oklch(0.2453 0.0279 307.19);
+    --wui-color-border: oklch(0.8988 0.0207 311.07);
+    --wui-color-primary: oklch(0.5165 0.1462 289.37);
+    --wui-color-primary-foreground: oklch(0.9953 0.0025 48.72);
+    --wui-color-ring: oklch(0.5165 0.1462 289.37);
+    --wui-color-ring-soft: oklch(from var(--wui-color-ring) l c h / 0.35);
+    --wui-color-destructive: oklch(0.5031 0.1259 10.35);
+    --wui-color-destructive-foreground: oklch(0.9953 0.0025 48.72);
+    --wui-color-success: oklch(0.5076 0.0739 167.72);
+    --wui-color-success-foreground: oklch(0.9953 0.0025 48.72);
+    --wui-color-warning: oklch(0.5380 0.0995 75.80);
+    --wui-color-warning-foreground: oklch(0.9953 0.0025 48.72);
+    --wui-surface-raised: oklch(0.9953 0.0025 48.72);
+    --wui-surface-overlay: oklch(0.9953 0.0025 48.72);
+    --wui-surface-sunken: oklch(0.9739 0.0073 312.30);
+
+    --nf-lane-project-fill: #DDEFF8;
+    --nf-lane-project-stroke: #4F8FBA;
+    --nf-lane-runtime-fill: #E7E1F8;
+    --nf-lane-runtime-stroke: #796BC4;
+    --nf-lane-editorial-fill: #F9DDE9;
+    --nf-lane-editorial-stroke: #D6679A;
+    --nf-lane-evidence-fill: #F9EDCF;
+    --nf-lane-evidence-stroke: #BE892F;
+    --nf-lane-validated-fill: #DCF1E7;
+    --nf-lane-validated-stroke: #4D9B7D;
+    --nf-lane-rejected-fill: #F7DEE2;
+    --nf-lane-rejected-stroke: #B95767;
+
+    --nf-touch-target-min: 44px;
+    --nf-breakpoint-compact-max: 599px;
+    --nf-breakpoint-medium-min: 600px;
+    --nf-breakpoint-wide-min: 1024px;
+    --nf-breakpoint-ultrawide-min: 1440px;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --wui-color-background: oklch(0.1953 0.0169 307.50);
+    --wui-color-foreground: oklch(0.9739 0.0073 312.30);
+    --wui-color-muted: oklch(0.2759 0.0293 308.73);
+    --wui-color-muted-foreground: oklch(0.7733 0.0370 311.34);
+    --wui-color-card: oklch(0.2346 0.0242 307.31);
+    --wui-color-card-foreground: oklch(0.9739 0.0073 312.30);
+    --wui-color-border: oklch(0.3512 0.0349 308.50);
+    --wui-color-primary: oklch(0.7804 0.0963 290.73);
+    --wui-color-primary-foreground: oklch(0.1953 0.0169 307.50);
+    --wui-color-ring: oklch(0.7804 0.0963 290.73);
+    --wui-color-ring-soft: oklch(from var(--wui-color-ring) l c h / 0.45);
+    --wui-color-destructive: oklch(0.7623 0.0894 5.04);
+    --wui-color-destructive-foreground: oklch(0.2453 0.0279 307.19);
+    --wui-color-success: oklch(0.8285 0.0654 167.11);
+    --wui-color-success-foreground: oklch(0.1953 0.0169 307.50);
+    --wui-color-warning: oklch(0.8360 0.0984 83.53);
+    --wui-color-warning-foreground: oklch(0.2453 0.0279 307.19);
+    --wui-surface-raised: oklch(0.2346 0.0242 307.31);
+    --wui-surface-overlay: oklch(0.2759 0.0293 308.73);
+    --wui-surface-sunken: oklch(0.1953 0.0169 307.50);
+  }
+}
