@@ -2,9 +2,9 @@
 
 <p><kbd>产品体验</kbd>&nbsp;&nbsp;<kbd>创作工作台</kbd>&nbsp;&nbsp;<kbd>可检查运行</kbd></p>
 
-NovelForge Studio 是 NovelForge Core 之上的产品体验层。**只读 Phase 1、Phase 2A、Phase 2B 已经真实合并到 `main`；它们是产品契约与宿主边界实现，但还不是已经发布、可以写入项目状态的完整 Studio 应用。** 未来可安装 Shell 的方向已经选定为 **Tauri + React + WeiUI**；具体实现仍待落地，而且 Core 的权威边界不会因此改变。
+NovelForge Studio 是 NovelForge Core 之上的产品体验层。**只读 Phase 1、Phase 2A、Phase 2B 已经存在于 `main`；Story Loom v2 + exact-pinned 的 zero-JS WeiUI CSS/token foundation 也已经合并。** Phase 2C application stack 现已确定为 **SolidJS + TypeScript + Vite + `@solidjs/router`**。Local Web 保持一等产品面；Tauri 是 optional/installable host。当前仍然不是已经发布、可写项目状态的完整 Studio 应用。
 
-> **权威边界 ✦** Studio 只消费 NovelForge Core 状态。UI 状态不是正典（Canon）、记忆（Memory）、语义真相、写入权威，也不是第二套工作流引擎。
+> **权威边界 ✦** Studio 只消费 NovelForge Core 状态。UI 状态不是 Canon、Memory、semantic truth、write authority，也不是第二套 workflow engine。
 
 [English](README.en.md)
 
@@ -12,9 +12,11 @@ NovelForge Studio 是 NovelForge Core 之上的产品体验层。**只读 Phase 
 
 - [English](PRODUCT_ARCHITECTURE.en.md)
 - [简体中文](PRODUCT_ARCHITECTURE.zh-CN.md)
-- [`portable_product_contract.json`](portable_product_contract.json) —— machine-readable 的 portable delivery-surface contract。
+- [`portable_product_contract.json`](portable_product_contract.json) —— machine-readable portable delivery-surface contract。
+- [`../assets/brand/weiui.integration.json`](../assets/brand/weiui.integration.json) —— exact WeiUI pin 与 zero-JS consumption contract。
+- [`../assets/brand/story-loom.weiui.css`](../assets/brand/story-loom.weiui.css) —— 当前 live Story Loom `wui-theme` layer。
 
-产品架构文档同时记录 Studio 已经可以消费的 Core interfaces，以及仍需由 Core workstream 解决、Studio 不得自行打补丁掩盖的 consumer gaps。它也记录已经选定的 Tauri + WeiUI 可安装 Shell 方向、token ownership、性能约束、responsive/i18n 要求，以及未来应用什么时候才能从“方向”晋升为“已交付能力”的 acceptance evidence。
+产品架构文档同时记录 Studio 已经可以消费的 Core interfaces，以及仍需由 Core workstream 解决、Studio 不得自行绕过的 consumer gaps。它也记录 low-overhead Phase 2C stack、Local Web / optional Tauri host 分工、mobile/i18n/accessibility/runtime rules，以及 Core 现在真正已经暴露的 Publication / production-readiness surfaces。
 
 ## 第一阶段纵向切片
 
@@ -27,14 +29,14 @@ NovelForge Studio 是 NovelForge Core 之上的产品体验层。**只读 Phase 
 
 ## Phase 2A · 一个产品，多种宿主
 
-Phase 2A 把 Studio 定位为具有成熟 SaaS-like 体验的产品，但不把 SaaS 商业基础设施变成产品模型的一部分。同一套 NovelForge semantics 应通过四个一等交付面使用：
+同一套 NovelForge semantics 继续通过四个一等交付面使用：
 
 - **CLI** —— 可脚本化的原生自动化与 inspection。
-- **本地应用 / 本地 Web UI** —— 通过 typed adapter 使用本地 host capability 的 Creator Workstation。
+- **Local Web / 本地应用** —— low-overhead creator workstation，通过 typed adapter 使用本地 host capability。
 - **云托管 UI** —— 在远程 query/command boundary 后使用相同产品模型。
 - **Agent Skill / Package** —— 面向其他 Agent Framework 的薄、versioned adapter，不暴露 NovelForge 私有 persistence 或 implementation internals。
 
-不同宿主可以拥有不同 capability 与 transport，但这些差异不能改变 Canon、Settlement、Context、semantic-result 或 receipt semantics。**Host capability 不会推导出 NovelForge story authority。**
+不同宿主可以拥有不同 capability 与 transport，但这些差异不能改变 Canon、Settlement、Context、semantic-result、readiness、publication 或 receipt semantics。**Host capability 不会推导出 NovelForge story authority。**
 
 ### Portable Project Hub / Scene 纵向切片
 
@@ -47,38 +49,49 @@ Projection 明确携带 `authority=false`、`canon_authority=false`、`framework
 
 ## Phase 2B · Portable read-only host bridge
 
-Phase 2B 把“一个产品，多种宿主”的边界真正做成可执行接口，同时不把 Studio 变成第二套 runtime。[`host_bridge.py`](host_bridge.py) 接收 versioned `novelforge_studio_host_bridge_request_v1` envelope，并返回绑定 fingerprint 的 `novelforge_studio_host_bridge_result_v1`。[`host_bridge_contract.json`](host_bridge_contract.json) 是 CLI、本地应用、云托管 UI 与 Agent Package 共同使用的 machine-readable allowlist。
+[`host_bridge.py`](host_bridge.py) 接收 versioned `novelforge_studio_host_bridge_request_v1` envelope，并返回绑定 fingerprint 的 `novelforge_studio_host_bridge_result_v1`。[`host_bridge_contract.json`](host_bridge_contract.json) 是 CLI、Local Web/app、Hosted UI 与 Agent Package 共同使用的 machine-readable allowlist。
 
 当前支持的 read operations 刻意保持很小：`bridge.describe`、`framework.doctor`、`project.inspect`、`capabilities.inspect`、`context.inspect` 与 `semantic.catalog`。结果采用 default-deny 路线清除宿主私有路径，并明确携带 `authority=false`、Canon 无权威、Framework-write 无权威和 Settlement 无权威标记。
 
-有些操作会明确返回 **unsupported**，而不是被 UI 或 Agent 偷偷模拟。Runtime session/event/handoff 查询暂缓，是因为当前 Control Plane CLI 即使执行名义上的读取命令，也会先初始化 persistence。`run.receipt.get` 继续暂缓，是因为 Core 尚未提供稳定的 Run Receipt retrieval projection，而且 event discoverability 仍不一致。通用 invoke/write 与 resume 也必须等 Core 明确定义公开 command、precondition、CAS/idempotency 与 receipt contract 后才能开放。这些 Core-owned dependency 统一记录在 #23。
+有些操作继续明确返回 **unsupported**，而不是被 UI 或 Agent 偷偷模拟。Runtime session/event/handoff 查询与 Run Receipt retrieval 仍依赖 Core Issue #23。Generic invoke/write 与 resume 也继续等待 Core 暴露正式的 precondition/CAS/idempotency/receipt contract。
 
 ### Agent Skill package
 
 [`../agent-skills/novelforge/SKILL.md`](../agent-skills/novelforge/SKILL.md) 是 portable Agent Skills package。它附带的 [`novelforge_bridge.py`](../agent-skills/novelforge/scripts/novelforge_bridge.py) client 只负责发现并调用共享 Studio host bridge；不会 import 私有 Core runtime module，也不需要知道 persistence layout。
 
-在 skill 目录中，先运行 discovery：
+## Story Loom v2 · WeiUI zero-JS foundation
 
-```bash
-python scripts/novelforge_bridge.py describe
+Design-system integration 已经不再只是未来方向：
+
+- Story Loom token schema：`novelforge_brand_tokens_v2`；
+- exact WeiUI source pin：`d84d1cd365fb5f90cbbab794d2358f7a13b29b79`；
+- allowed WeiUI packages：`@weiui/tokens`、`@weiui/css`；
+- forbidden Phase 2C runtime packages：`@weiui/react`、`@weiui/headless`；
+- WeiUI runtime JavaScript：**不需要**；
+- Story Loom theme：`assets/brand/story-loom.weiui.css`，位于 `wui-theme`；
+- baseline locales：`en-US`、`zh-CN`；
+- mobile-first、44px minimum touch target、reduced motion、no idle decorative animation、no default polling；
+- `scripts/design_system_quality.py` 提供 deterministic design-system CI。
+
+## Phase 2C · SolidJS product shell
+
+选定的 application shape 是：
+
+```text
+Core public boundary
+→ Studio view models
+→ SolidJS + TypeScript + Vite + @solidjs/router
+→ WeiUI tokens/CSS + Story Loom theme
+→ Local Web（first-class）
+→ optional Tauri package
 ```
 
-随后可以通过 request envelope 调用：
+当前 Phase 2C 计划**不包含 React runtime**。Tauri 仍适合做 installable desktop build，但产品必须在完全不依赖 desktop-host overhead 的 Local Web 形态下保持完整一致。
 
-```bash
-python scripts/novelforge_bridge.py invoke --request /path/to/request.json
-```
+App 本身仍需要真实实现和测量。Phase 2C production-ready 前必须测量 idle CPU/RAM、first-interaction latency、route cost 与 Core-process lifetime，并继续满足 no-default-polling 与 explicit host lifecycle 规则。
 
-宿主必须原样保留 `unsupported` / `unavailable` 状态，不能绕过 bridge 直接读 SQLite、import 私有实现，或拿一个 mutating Core primitive 来代替缺失的公开 contract。Phase 2B 仍然是 read-only：**这里不会加入 acceptance、settlement、Canon mutation、通用写入 API 或隐藏的 authority shortcut。**
+## 当前与 Studio 直接相关的 Core 新能力
 
-## 未来可安装 Shell · Tauri + WeiUI
+`novelforge_production_readiness_v1` 现在让 Review 拥有真实的 same-fingerprint conjunction gate，而不是一个虚构的质量百分比。
 
-可安装版 Studio 的方向已经确定，但目前还没有 Tauri 应用实现合并到 `main`：
-
-- **Tauri** 负责桌面应用宿主；
-- **React 19** 提供 `@weiui/react` 所要求的 application shell；
-- **WeiUI** 提供可复用 components、zero-JavaScript CSS 与 W3C-style token infrastructure；
-- **NovelForge Story Loom** 继续通过确定性的 WeiUI-compatible token adapter 保持产品视觉/语义权威；
-- Tauri / React / WeiUI 不会变成 Generic Core runtime correctness、CLI、Framework bundle 或 Agent Skill 的默认依赖。
-
-Token ownership、tree-shaking、runtime overhead、responsive/i18n、accessibility、reduced motion 和 acceptance gate 的细则统一记录在 [产品架构](PRODUCT_ARCHITECTURE.zh-CN.md)。在对应实现 artifact 与测量证据真正进入 `main` 之前，Tauri + WeiUI 只是**已选定产品方向**，不能写成已经发布的 Studio capability。
+`novelforge_publication_ir_v1` + `publication/compiler.py` 现在给 Publish 提供真实的 deterministic minimum Core：Accepted text → clean text、Web HTML、print-oriented HTML/CSS、EPUB 3.3。它不表示更大的 Typesetting Toolkit 或 Studio Publish UX 已完成；Issue #16 的 richer scope 继续 open。

@@ -1,8 +1,8 @@
 # NovelForge 视觉资产 · 仓库里的 Story Loom
 
-本目录保存 NovelForge 文档与产品界面共用的 Story Loom 展示层和设计令牌基础。它刻意保持精简：一套一致的品牌系统、少量高价值产品图、机器可读的产品语义与明确来源记录，而不是 stock art 仓库，也不是第二套 UI Framework。
+本目录保存 NovelForge 文档与产品界面共用的 Story Loom 展示层和 application-token foundation。它刻意保持精简：一套一致的品牌系统、少量高价值产品图、机器可读的产品语义、精确 dependency provenance 与 deterministic design-system QA，而不是 stock art 仓库，也不是第二套 UI Framework。
 
-> **边界 ✦** 视觉资产与设计令牌负责帮助理解、建立识别度并保持展示一致性。它们永远不是 Framework 行为、系统架构、正典、Settlement、语义真相或工作流状态的第二权威来源。
+> **边界 ✦** 视觉资产与 token 负责帮助理解、建立识别度、保持交互一致性和产品主题。它们永远不是 Framework 行为、Canon、Settlement、semantic truth、production readiness 或 workflow state 的第二权威来源。
 
 ---
 
@@ -17,7 +17,9 @@ assets/
 │   ├── novelforge-mark.svg
 │   ├── novelforge-lockup.svg
 │   ├── story-thread.svg
-│   └── tokens.json
+│   ├── tokens.json
+│   ├── weiui.integration.json
+│   └── story-loom.weiui.css
 └── ui/
     ├── home-comparison.en.svg / .zh-CN.svg
     ├── home-architecture.en.svg / .zh-CN.svg
@@ -26,164 +28,141 @@ assets/
     └── home-fit.en.svg / .zh-CN.svg
 ```
 
-仓库里不存在的文件，文档不能把它写成“已经可用的资产”。特别是 WeiUI theme 在真正实现进入 `main` 之前，这里不会虚构一个 generated theme 路径。
+Machine integration QA 位于 [`../scripts/design_system_quality.py`](../scripts/design_system_quality.py)，并由 Story Loom design-system workflow 强制执行。
 
 ---
 
-## 02 · 两层维护中的视觉体系
+## 02 · 品牌与产品语义权威
 
-### 品牌与产品语义基础资产
+`brand/tokens.json` 当前 schema 已是 **`novelforge_brand_tokens_v2`**，继续作为 NovelForge 侧 product-token authority。
 
-`brand/` 保存稳定的 Story Loom 身份：
+它现在包含：
 
-- **主标志**：紧凑的 NovelForge 符号；
-- **横向组合标志**：主要品牌展示形式；
-- **故事线**：装饰性分隔与连续性母题；
-- **设计令牌**：机器可读的品牌与产品语义配色来源。
+- 稳定的 Story Loom brand/domain semantics；
+- light/dark application theme roles；
+- 44px minimum touch target、focus geometry 等 interaction budgets；
+- mobile-first responsive rules；
+- `en-US` + `zh-CN` i18n constraints；
+- reduced-motion / no-idle-animation rules；
+- no default polling、no heavy default component import 等性能约束。
 
-这一层应当低频、成体系地变化。`brand/tokens.json` 是当前 NovelForge 侧的 token authority；未来 interactive theme adapter 可以转换它，但组件库不能反过来重定义 Story Loom 语义。
-
-### 产品级 UI 图
-
-`ui/` 保存用于 README / 产品入口面的高价值静态 SVG，目前负责解释：
-
-- 直接小说系统对比；
-- 系统架构；
-- 生产流水线；
-- 质量模型；
-- 适用范围与取舍。
-
-它们只是展示层；真正可维护的 Markdown / contract 仍然拥有语义权威。
+Generic UI foundation 不能反过来重定义 NovelForge 中 Project、Runtime、Editorial、Evidence、Accepted/Validated、Rejected、Canon authority 或 execution state 的含义。
 
 ---
 
-## 03 · 交互产品桥接 · 已选方向
+## 03 · WeiUI foundation · 已合并并精确固定
 
-未来可安装 Studio Shell 已选择 Tauri + React + WeiUI。视觉依赖保持单向：
+Story Loom → WeiUI bridge 已经是仓库真实 artifact，不再只是未来方向。
+
+[`brand/weiui.integration.json`](brand/weiui.integration.json) 记录：
+
+- WeiUI repository：`xiaooye/weiui`；
+- exact commit：`d84d1cd365fb5f90cbbab794d2358f7a13b29b79`；
+- license：MIT；
+- allowed packages：`@weiui/tokens`、`@weiui/css`；
+- forbidden Phase 2C runtime packages：`@weiui/headless`、`@weiui/react`；
+- WeiUI runtime JavaScript required：`false`；
+- theme layer：`wui-theme`；
+- CSS order：WeiUI tokens → WeiUI CSS → Story Loom theme。
+
+[`brand/story-loom.weiui.css`](brand/story-loom.weiui.css) 是当前 live application theme bridge。它把 Story Loom light/dark roles 映射到 WeiUI `--wui-*` variables，同时保留独立的 NovelForge `--nf-*` product semantics。它不能 fork WeiUI `.wui-*` component selector，也不能靠 `!important` 抢 cascade。
+
+因此产品依赖保持单向：
 
 ```text
-NovelForge Story Loom tokens
-→ deterministic WeiUI-compatible W3C token representation
-→ WeiUI token / CSS / React component substrate
-→ Tauri Studio shell
+Story Loom v2 product tokens
+→ exact-pinned WeiUI tokens/CSS
+→ Story Loom wui-theme aliases
+→ SolidJS product surfaces
+→ Local Web / optional Tauri host
 ```
 
-实现目前仍待落地。在 converter / theme artifact 真正 commit、测试并锁定之前，`assets/brand/tokens.json` 仍是本仓库唯一可以被文档称作“当前存在”的 NovelForge token source。
-
-所有权必须明确：
-
-- **NovelForge** 拥有 Story Loom domain color、产品语义、authority/status/provenance grammar、typography role、density 与视觉人格；
-- **WeiUI** 拥有通用可复用 component primitive、组件 interaction/accessibility behavior、CSS mechanics 与公开 token/component contract；
-- **adapter** 拥有两层之间的确定性转换；
-- **Tauri** 负责可安装产品宿主，但不会获得 Core authority。
-
-不要在 adapter 旁边再手抄第二份 Studio palette。不要把 generic `success` styling 映射成 Accepted Canon。不要让 Tauri、React 或 WeiUI 成为 Generic Core correctness、CLI、Framework bundle 或 Agent Skill 的依赖。
-
-完整产品边界与 acceptance gate 见 [`../studio/PRODUCT_ARCHITECTURE.zh-CN.md`](../studio/PRODUCT_ARCHITECTURE.zh-CN.md)。
+WeiUI 在 Phase 2C 中是 zero-JavaScript styling/token foundation，**不是** application runtime，也不是 NovelForge product authority。
 
 ---
 
-## 04 · Story Loom 基本规则
+## 04 · Phase 2C product-stack boundary
 
-完整视觉契约见 [文档设计系统](DESIGN_SYSTEM.zh-CN.md)。
+选定的 application stack 是 SolidJS + TypeScript + Vite + `@solidjs/router`。
 
-核心规则：
+- Local Web 是一等产品面，在最小增量 CPU/RAM 优先时作为首选。
+- Tauri 是同一产品之上的 optional/installable host，不再是产品架构中心。
+- `@weiui/react` 与 `@weiui/headless` 被明确排除出 Phase 2C runtime。
+- Generic Core correctness、CLI、Framework bundle 与 Agent Skill 必须继续独立于 SolidJS/Vite/Tauri 和 WeiUI runtime JavaScript。
 
-- 先保证专业技术文档质量，再谈装饰；
-- 全仓使用一套原创视觉语言，不拼贴互不相关的风格；
-- 二次元编辑感保持克制，不把文档做成吉祥物页面；
-- 通用 Framework 资产不得包含某本消费小说的人物或正典事实；
-- 不使用版权系列角色、Logo，也不直接模仿在世艺术家的具体风格；
-- SVG 加载失败时，附近正文仍能解释核心语义；
-- 颜色和 emoji 不能成为唯一语义通道；
-- 不提交外部或嵌入式字体文件。
+完整产品边界见 [`../studio/PRODUCT_ARCHITECTURE.zh-CN.md`](../studio/PRODUCT_ARCHITECTURE.zh-CN.md)。
 
 ---
 
-## 05 · Tier-A 视觉 QA
-
-首页 / 产品级视觉比普通装饰资产要求更严格。
-
-新的或重大重设计的 Tier-A SVG 在进入 README 前必须经过：
-
-```text
-文案冻结
-→ 信息架构
-→ Story Loom 布局
-→ GitHub 类宽度真实渲染
-→ 窄屏渲染
-→ 渲染后逐字检查
-→ 中英双语等价检查
-→ 确定性文档 lint
-→ 正式接入
-```
-
-硬要求包括：
-
-- 根节点 `data-doc-tier="A"`；
-- 非空 `<title>` 与 `<desc>`；
-- 在约 820px GitHub 内容宽度下，正文投影字号不得低于 12px；
-- 可测量的长文本必须有明确宽度预算；
-- 不允许裁切、出框、碰撞，也不允许靠极小字号“解决”排版；
-- 中英文几何差异明显时必须独立排版，不能硬套同一组坐标；
-- 必须真实查看约 820px 与 420px 两种宽度的 render。
+## 05 · Machine-checkable application design contract
 
 运行：
 
 ```bash
-python scripts/docs_quality.py
+python scripts/design_system_quality.py
 ```
 
-**生成出来不等于审过；XML 合法不等于视觉正确。**
+Checker 会验证：
+
+- exact WeiUI source pin 与 MIT provenance；
+- Story Loom v2 / integration schema ID；
+- 只允许 `@weiui/tokens` + `@weiui/css`；
+- 禁止 React/headless WeiUI runtime；
+- `runtime_javascript_from_weiui=false`；
+- mobile-first 与 phone `focus-first` behavior；
+- minimum 44px touch target；
+- baseline locales 精确为 `en-US`、`zh-CN`；
+- logical properties required，且禁止 fixed-width locale assumptions；
+- reduced motion required，idle animation forbidden；
+- no default polling；
+- primary/destructive/success/warning role pair 的 required light/dark contrast ≥ 4.5:1；
+- `wui-theme`、light/dark definitions、required `--wui-*` / `--nf-*` variables；
+- 禁止 `!important`，Story Loom 也不能 fork WeiUI component selector；
+- design-system provenance IDs 完整。
+
+这套 deterministic gate 只验证 machine-checkable design contract；它不能替代真实 responsive rendering、accessibility testing、native-copy review 或 runtime CPU/RAM measurement。
 
 ---
 
-## 06 · 原子替换
+## 06 · 产品级 UI 图
 
-开始重设计一张首页图，不代表应该先把现有可用视觉删掉。
+`ui/` 保存用于 README / 产品入口面的高价值静态 SVG，解释 direct comparison、architecture、production pipeline、quality model 与 fit/tradeoffs。
 
-默认流程：
+它们只是 presentation assets；真正可维护的 Markdown/contracts 仍然拥有语义权威。
 
-```text
-旧视觉继续在线
-→ 新候选通过 render + 文案 + lint
-→ README 与新资产一起完成替换
-```
-
-只有旧图本身已经误导、损坏或严重违反当前规则时，才允许为了正确性先撤掉。
+Tier-A SVG 继续要求真实 820px + narrow render inspection、visible-copy review、bilingual parity，以及接入前运行 `python scripts/docs_quality.py`。
 
 ---
 
-## 07 · 来源记录
+## 07 · Story Loom 基本规则
 
-[`provenance.json`](provenance.json) 保存维护中视觉资产的来源信息。根据资产类型，可以记录：
+核心规则：
 
-- asset ID 与路径；
-- 创建 / 编辑方法；
-- 日期；
-- 设计意图；
-- 是否使用用户提供的参考；
-- license / use note；
-- 它所展示的语义来源或对应文档。
+- 专业技术 / 产品清晰度优先；
+- 全仓使用一套原创视觉语言，不拼贴互不相关的风格；
+- 二次元编辑感保持克制，不做 mascot noise；
+- Generic Framework asset 不包含某本消费小说的人物或 Canon；
+- 不使用版权系列角色、Logo，也不直接模仿在世艺术家的具体风格；
+- 颜色永远不能单独承载 authority 或 PASS/FAIL；
+- generic `success` styling 永远不能证明 Accepted Canon 或 production readiness；
+- documentation asset 不提交外部/嵌入字体文件；
+- 不在 token/theme contract 旁边维护第二份手抄 Studio palette。
 
-来源记录不会给视觉资产增加语义权威。它只是解释“这张图从哪里来、允许代表什么”。
-
-等 WeiUI-compatible theme / converter 真正落地后，它的 generated-vs-source 状态、source token fingerprint/version 与 ownership 都应该显式记录，而不是靠目录位置暗示。
+更完整的 static visual grammar 继续见 [文档设计系统](DESIGN_SYSTEM.zh-CN.md)。
 
 ---
 
-## 08 · 新增资产或 token-derived artifact 前先问什么
+## 08 · Provenance 与 derived artifacts
 
-准备再增加视觉材料之前，先回答：
+[`provenance.json`](provenance.json) 保存维护中 asset 的来源信息。WeiUI integration 现在已经有明确的 source commit/license，以及 Story Loom v2 token contract / application theme provenance ID。
 
-1. 它真的比纯正文 / Mermaid 更容易解释概念，或者满足真实产品展示需求吗？
-2. 这个概念属于通用 Framework / product layer，而不是某本消费小说吗？
-3. Story Loom 已经有适合它的视觉 / token pattern 吗？
-4. 哪份可维护 source 定义它的语义？
-5. 当前环境能在目标宽度下真实 render，或可确定性生成并检查吗？
-6. 它是否需要中英文成对资产或 locale-sensitive QA？
-7. 如果它是 generated artifact，是否只有一个 source of truth，并存在可复现转换路径？
+目录位置本身永远不会产生 authority。对于 generated / mapped artifact，provenance 应明确记录：
 
-如果这些问题都回答得很弱，就不要为了“看起来内容多”继续增加装饰文件或平行 token set。
+- authoritative source；
+- 适用时的 exact upstream dependency；
+- generated-vs-source status；
+- mapping contract；
+- validation mechanism；
+- artifact 只是 presentation，还是会被 product runtime 消费。
 
-**视觉系统真正成功，是让 NovelForge 一眼可识别，让产品界面复用同一套语义，同时不让展示层或组件工具变成竞争性的第二权威。**
+**视觉系统真正成功，是让 NovelForge 一眼可识别，让 Studio 复用唯一一套产品语义，同时不让展示工具或 generic UI foundation 变成竞争性的第二权威。**

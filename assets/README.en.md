@@ -1,8 +1,8 @@
 # NovelForge Visual Assets · Story Loom in the repository
 
-This directory contains the maintained Story Loom presentation and token foundation for NovelForge documentation and product surfaces. It is deliberately small: a coherent brand system, high-value product diagrams, machine-readable product semantics, and provenance—not a stock-art library or a second UI framework.
+This directory contains the maintained Story Loom presentation and application-token foundation for NovelForge documentation and product surfaces. It is deliberately small: a coherent brand system, high-value product diagrams, machine-readable product semantics, exact dependency provenance, and deterministic design-system QA—not a stock-art library or a second UI framework.
 
-> **Boundary ✦** Visual assets and tokens improve comprehension, recognition, and presentation consistency. They never become a second authority for Framework behavior, architecture, Canon, Settlement, semantic truth, or workflow state.
+> **Boundary ✦** Visual assets and tokens improve comprehension, recognition, interaction consistency, and product theming. They never become a second authority for Framework behavior, Canon, Settlement, semantic truth, production readiness, or workflow state.
 
 ---
 
@@ -17,7 +17,9 @@ assets/
 │   ├── novelforge-mark.svg
 │   ├── novelforge-lockup.svg
 │   ├── story-thread.svg
-│   └── tokens.json
+│   ├── tokens.json
+│   ├── weiui.integration.json
+│   └── story-loom.weiui.css
 └── ui/
     ├── home-comparison.en.svg / .zh-CN.svg
     ├── home-architecture.en.svg / .zh-CN.svg
@@ -26,164 +28,141 @@ assets/
     └── home-fit.en.svg / .zh-CN.svg
 ```
 
-If a file is not present in the repository, documentation must not describe it as an available asset. In particular, no generated WeiUI theme file is claimed here until the implementation actually lands on `main`.
+Machine integration QA lives at [`../scripts/design_system_quality.py`](../scripts/design_system_quality.py) and is enforced by the Story Loom design-system workflow.
 
 ---
 
-## 02 · Two maintained visual layers
+## 02 · Brand and product-semantic authority
 
-### Brand and product-semantic primitives
+`brand/tokens.json` is now schema **`novelforge_brand_tokens_v2`** and remains the NovelForge-side product-token authority.
 
-`brand/` contains the stable Story Loom identity:
+It contains:
 
-- **mark** — compact NovelForge symbol;
-- **lockup** — primary horizontal brand treatment;
-- **story thread** — decorative divider / continuity motif;
-- **tokens** — machine-readable brand and product-semantic palette.
+- stable Story Loom brand/domain semantics;
+- light/dark application theme roles;
+- interaction budgets such as 44px minimum touch targets and focus geometry;
+- mobile-first responsive rules;
+- `en-US` + `zh-CN` i18n constraints;
+- reduced-motion / no-idle-animation rules;
+- performance constraints such as no default polling and no heavy default component import.
 
-These assets should change rarely and coherently. `brand/tokens.json` is the current NovelForge-side token authority; a future interactive theme adapter may transform it, but a component library does not get to redefine Story Loom semantics.
-
-### Product UI diagrams
-
-`ui/` contains high-value static SVG modules used on product/landing surfaces. They currently explain:
-
-- direct-system comparison;
-- architecture;
-- production pipeline;
-- quality model;
-- fit and tradeoffs.
-
-They are presentation assets. The maintained Markdown/contracts remain the source of semantic truth.
+A generic UI foundation does not get to redefine what Project, Runtime, Editorial, Evidence, Accepted/Validated, Rejected, Canon authority, or execution state mean in NovelForge.
 
 ---
 
-## 03 · Interactive product bridge · selected direction
+## 03 · WeiUI foundation · merged and pinned
 
-The future installable Studio shell has selected Tauri + React + WeiUI. The intended visual dependency is one-way:
+The Story Loom → WeiUI bridge is now a real repository artifact, not only a future direction.
+
+[`brand/weiui.integration.json`](brand/weiui.integration.json) records:
+
+- WeiUI repository: `xiaooye/weiui`;
+- exact commit: `d84d1cd365fb5f90cbbab794d2358f7a13b29b79`;
+- license: MIT;
+- allowed packages: `@weiui/tokens`, `@weiui/css`;
+- forbidden Phase 2C runtime packages: `@weiui/headless`, `@weiui/react`;
+- WeiUI runtime JavaScript required: `false`;
+- theme layer: `wui-theme`;
+- CSS order: WeiUI tokens → WeiUI CSS → Story Loom theme.
+
+[`brand/story-loom.weiui.css`](brand/story-loom.weiui.css) is the live application theme bridge. It maps Story Loom light/dark roles into WeiUI `--wui-*` variables while keeping NovelForge-specific `--nf-*` product semantics separate. It must not fork WeiUI `.wui-*` component selectors or use `!important` to win the cascade.
+
+The product dependency therefore stays one-way:
 
 ```text
-NovelForge Story Loom tokens
-→ deterministic WeiUI-compatible W3C token representation
-→ WeiUI token / CSS / React component substrate
-→ Tauri Studio shell
+Story Loom v2 product tokens
+→ exact-pinned WeiUI tokens/CSS
+→ Story Loom wui-theme aliases
+→ SolidJS product surfaces
+→ Local Web / optional Tauri host
 ```
 
-The implementation is still pending. Until a converter/theme artifact is committed, tested, and pinned, `assets/brand/tokens.json` remains the only NovelForge token source documented as present in this repository.
-
-Ownership stays explicit:
-
-- **NovelForge** owns Story Loom domain colors, product semantics, authority/status/provenance grammar, typography roles, density choices, and visual personality;
-- **WeiUI** owns generic reusable component primitives, component interaction/accessibility behavior, CSS mechanics, and its public token/component contracts;
-- **the adapter** owns deterministic conversion between those two layers;
-- **Tauri** hosts the installable product and does not become Core authority.
-
-Do not hand-copy a second Studio palette beside the adapter. Do not map generic `success` styling to Accepted Canon. Do not make Tauri, React, or WeiUI dependencies of Generic Core correctness, CLI, the Framework bundle, or the Agent Skill.
-
-The full product boundary and acceptance gate live in [`../studio/PRODUCT_ARCHITECTURE.en.md`](../studio/PRODUCT_ARCHITECTURE.en.md).
+WeiUI is a zero-JavaScript styling/token foundation for Phase 2C, **not** the application runtime and not NovelForge product authority.
 
 ---
 
-## 04 · Story Loom rules
+## 04 · Phase 2C product-stack boundary
 
-The full visual contract lives in [Documentation Design System](DESIGN_SYSTEM.en.md).
+The selected application stack is SolidJS + TypeScript + Vite + `@solidjs/router`.
 
-Core rules:
+- Local Web is first-class and preferred when minimum incremental CPU/RAM matters.
+- Tauri is an optional/installable host over the same product, not the center of product architecture.
+- `@weiui/react` and `@weiui/headless` are deliberately excluded from the Phase 2C runtime.
+- Generic Core correctness, CLI, Framework bundle, and Agent Skill must remain independent of SolidJS/Vite/Tauri and WeiUI runtime JavaScript.
 
-- professional technical documentation first;
-- one coherent original identity rather than unrelated visual styles;
-- restrained anime-editorial warmth, not mascot noise;
-- no consumer-novel characters or project-specific Canon in generic Framework assets;
-- no copyrighted franchise characters, logos, or direct living-artist imitation;
-- diagrams remain understandable through nearby prose if the SVG does not load;
-- color and emoji never carry meaning alone;
-- no external/embedded font files.
+The full product boundary lives in [`../studio/PRODUCT_ARCHITECTURE.en.md`](../studio/PRODUCT_ARCHITECTURE.en.md).
 
 ---
 
-## 05 · Tier-A visual QA
-
-Homepage/product visuals are stricter than ordinary decorative assets.
-
-Before a new or materially redesigned Tier-A SVG is referenced from README, it must pass:
-
-```text
-copy freeze
-→ information architecture
-→ Story Loom layout
-→ real render at GitHub-like width
-→ narrow render
-→ visible-copy review
-→ bilingual parity review
-→ deterministic docs lint
-→ integration
-```
-
-Hard expectations include:
-
-- root `data-doc-tier="A"`;
-- non-empty `<title>` and `<desc>`;
-- projected body text at ~820px GitHub width >= 12px;
-- explicit width budgets for long measurable text;
-- no clipping, overflow, collision, or tiny-text “fixes”;
-- English and Chinese laid out independently when language geometry differs;
-- actual render inspection at roughly 820px and 420px widths.
+## 05 · Machine-checkable application design contract
 
 Run:
 
 ```bash
-python scripts/docs_quality.py
+python scripts/design_system_quality.py
 ```
 
-**Generated is not reviewed. XML-valid is not visually correct.**
+The checker verifies, among other things:
+
+- exact WeiUI source pin and MIT provenance;
+- Story Loom v2 / integration schema IDs;
+- only `@weiui/tokens` + `@weiui/css` allowed;
+- React/headless WeiUI runtimes forbidden;
+- `runtime_javascript_from_weiui=false`;
+- mobile-first and phone `focus-first` behavior;
+- minimum 44px touch target;
+- baseline locales exactly `en-US`, `zh-CN`;
+- logical properties required and fixed-width locale assumptions forbidden;
+- reduced motion required and idle animation forbidden;
+- no default polling;
+- required light/dark contrast ≥ 4.5:1 for primary/destructive/success/warning role pairs;
+- `wui-theme`, light/dark definitions, required `--wui-*` / `--nf-*` variables;
+- no `!important` and no Story Loom fork of WeiUI component selectors;
+- complete design-system provenance IDs.
+
+This deterministic gate validates machine-checkable design contracts. It does not replace real responsive rendering, accessibility testing, native-copy review, or runtime CPU/RAM measurement.
 
 ---
 
-## 06 · Atomic replacement
+## 06 · Product UI diagrams
 
-Do not remove a functioning homepage visual merely because a redesign has started.
+`ui/` contains high-value static SVG modules used on product/landing surfaces. They explain comparison, architecture, production pipeline, quality model, and fit/tradeoffs.
 
-Preferred workflow:
+They are presentation assets. Maintained Markdown/contracts remain the semantic source of truth.
 
-```text
-existing visual remains live
-→ replacement passes render + copy + lint
-→ README and asset are replaced together
-```
-
-Removing an existing asset first is reserved for cases where the old visual is actively misleading or broken.
+Tier-A SVGs still require real 820px + narrow render inspection, visible-copy review, bilingual parity, and `python scripts/docs_quality.py` before integration.
 
 ---
 
-## 07 · Provenance
+## 07 · Story Loom rules
 
-[`provenance.json`](provenance.json) records provenance for maintained visual assets. Depending on asset class, useful provenance may include:
+Core rules:
 
-- asset ID and path;
-- creation/edit method;
-- date;
-- design intent;
-- whether user-provided references were used;
-- license/use notes;
-- semantic source or documentation page the asset presents.
+- professional technical/product clarity first;
+- one coherent original identity rather than unrelated visual styles;
+- restrained anime-editorial warmth, not mascot noise;
+- no consumer-novel characters or project-specific Canon in generic Framework assets;
+- no copyrighted franchise characters, logos, or direct living-artist imitation;
+- color never carries authority or PASS/FAIL meaning alone;
+- generic `success` styling never proves Accepted Canon or production readiness;
+- no external/embedded font files in documentation assets;
+- no parallel hand-maintained Studio palette beside the token/theme contract.
 
-Provenance does not grant semantic authority. It explains where the presentation asset came from and what it is allowed to represent.
-
-When the WeiUI-compatible theme/converter lands, its generated-vs-source status, source token fingerprint/version, and ownership should be recorded explicitly rather than implied by directory placement.
+The fuller static-visual grammar remains in [Documentation Design System](DESIGN_SYSTEM.en.md).
 
 ---
 
-## 08 · Adding a new asset or token-derived artifact
+## 08 · Provenance and derived artifacts
 
-Before adding visual material, ask:
+[`provenance.json`](provenance.json) records maintained asset provenance. The WeiUI integration now has explicit source commit/license records plus IDs for the Story Loom v2 token contract and application theme.
 
-1. Does it explain something better than prose/Mermaid alone, or provide a real product-runtime presentation need?
-2. Does the concept belong to the generic Framework/product layer rather than one consumer novel?
-3. Does Story Loom already have a visual/token pattern for it?
-4. What maintained source defines its semantics?
-5. Can it be rendered or deterministically generated and reviewed at real target widths?
-6. Does it require an English/Chinese pair or locale-sensitive QA?
-7. If generated, is there exactly one source of truth and a reproducible conversion path?
+Directory placement never implies authority. For generated or mapped artifacts, provenance should state:
 
-If those answers are weak, do not add another decorative file or parallel token set merely to make the repository look busy.
+- authoritative source;
+- exact upstream dependency where applicable;
+- generated-vs-source status;
+- mapping contract;
+- validation mechanism;
+- whether the artifact is presentation-only or consumed by product runtime.
 
-**The asset system is successful when NovelForge looks distinctive, product surfaces reuse the same semantics, and neither presentation nor component tooling becomes a competing source of truth.**
+**The asset system is successful when NovelForge looks distinctive, Studio reuses one source of product semantics, and neither presentation tooling nor the generic UI foundation becomes a competing source of truth.**

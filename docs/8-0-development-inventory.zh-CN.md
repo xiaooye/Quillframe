@@ -53,9 +53,40 @@ PR #13 加入 `novelforge_run_receipt_v1` 与确定性的记录边界，用于�
 
 Run Receipt 是可观察性证据，不是第二套状态数据库。
 
+### 同一 fingerprint 的 Production Readiness gate
+
+PR #31 加入 `novelforge_production_readiness_v1`，并通过 `HARNESS_MANIFEST.yaml` 暴露出来。
+
+这不是一个 composite literary score。它把所有 required gate 绑定到**同一个精确 candidate fingerprint**，再执行 fail-closed conjunction policy：
+
+- Surface 与 Reader Engagement 必须通过；
+- Continuity 可以由 policy 设为 required；
+- independent semantic review 可以由 policy 设为 required；
+- required gate 缺失、`pending` 或 `fail` 都会阻止 `ready_for_user_visible_review`；
+- `RG-15` SAFE-BUT-FLAT 不能同时成为通过的 Reader Engagement gate；
+- readiness record 固定 `authority=false`，不会授予 Canon / Framework-write / durable-user-taste 权限。
+
+这让 user-visible readiness boundary 真正可执行，同时仍然不让确定性代码假装自己能判断文学质量。
+
+### Deterministic Publication core
+
+PR #31 也加入第一版 manifest-authoritative Publication implementation：
+
+- `publication/publication_ir.schema.json`，schema 为 `novelforge_publication_ir_v1`；
+- `publication/compiler.py`；
+- Accepted text 精确 fingerprint 检查与 `text_preservation = exact-unicode-text`；
+- derived output 固定 `authority=false`；
+- deterministic profiles：`clean_text`、`web_reflow`、`print_book`、`epub3`；
+- deterministic EPUB generation，以及内部 structural/text-roundtrip validation；
+- 目标规范为 W3C EPUB 3.3，release conformance 必须显式提供外部 EPUBCheck command。
+
+当前 `print_book` 输出的是 print-oriented HTML/CSS，**不是**完整 paged-media → PDF engine。当前 IR 也刻意保持最小，只覆盖 book metadata 与 chapter title/text/fingerprint；Issue #16 描述的更丰富 semantic structure 和 typesetting profile 还没有全部进入实现。
+
 ### 可实际运行的 Framework bundle
 
-PR #18 修复了 release-substrate 缺陷：之前 bundle 即使 byte-reproducible，也可能漏掉 `quality/` runtime。现在 bundle CI 会验证生成包，并在解包后实际执行 `novelforge.py doctor` 与完整 model-free self-test。
+PR #18 修复 release-substrate 缺陷：之前 bundle 即使 byte-reproducible，也可能漏掉 `quality/` runtime。现在 bundle CI 会验证生成包，并在解包后实际执行 `novelforge.py doctor` 与完整 model-free self-test。
+
+PR #31 进一步把新的 production-readiness 与 Publication runtime contracts 纳入 bundle surface，并在 normal deterministic CI 中验证它们，同时继续禁止伪造 semantic verdict。
 
 ### Studio Phase 1 · 只读 Run / Context Inspector
 
@@ -80,11 +111,36 @@ Bridge 当前只 allowlist：
 
 其他 operation fail closed。Browser/remote-safe projection 默认不泄露 host-private absolute path。外部 Agent Skill 通过 bridge 消费能力，而不是直接 import Core persistence 或私有实现。整个 surface 始终 `authority=false`，并明确没有 Canon / Framework-write / Settlement authority。
 
+### Story Loom v2 + exact-pinned WeiUI zero-JS foundation
+
+PR #32 把 `assets/brand/tokens.json` 升级为 `novelforge_brand_tokens_v2`，并真正落地 application design foundation。
+
+`assets/brand/weiui.integration.json` 现在记录精确的 generic UI dependency contract：
+
+- source repo：`xiaooye/weiui`；
+- exact commit：`d84d1cd365fb5f90cbbab794d2358f7a13b29b79`；
+- license：MIT；
+- allowed WeiUI packages：`@weiui/tokens`、`@weiui/css`；
+- forbidden runtime packages：`@weiui/headless`、`@weiui/react`；
+- WeiUI runtime JavaScript required：`false`；
+- theme layer：`wui-theme`；
+- import order：WeiUI tokens → WeiUI CSS → `assets/brand/story-loom.weiui.css`。
+
+`story-loom.weiui.css` 提供真正的 light/dark `--wui-*` aliases 与 NovelForge `--nf-*` product-semantic variables，同时不 fork WeiUI component selectors。
+
+machine token contract 现在也包含 application rules：mobile-first、44px minimum touch target、focus-ring geometry、`en-US` + `zh-CN`、logical properties、禁止 fixed-width locale assumptions、reduced motion、no idle animation、no default polling、no heavy default component import。`scripts/design_system_quality.py` 会在 CI 中确定性检查这些 invariant、WeiUI exact pin/provenance、required variables、CSS layer，以及 light/dark contrast。
+
+### Phase 2C application stack decision
+
+Product/runtime-overhead 决策已经选定 **SolidJS + TypeScript + Vite + `@solidjs/router`** 作为 Phase 2C application code。
+
+WeiUI 被刻意作为 **zero-JavaScript CSS/tokens foundation** 使用，而不是通过 React 或 WeiUI runtime/headless package。Local Web 保持 first-class，并在“最小增量 CPU/RAM”目标下作为优先形态；Tauri 只是 optional/installable desktop host，不再是产品架构中心。
+
+这个 stack decision 继续维持 one-product/many-host invariant：transport / host choice 不能改变 Canon、Settlement、Context、semantic-result、production-readiness 或 receipt semantics。
+
 ### 0.8.0 version normalization 与文档真相
 
 machine manifest、Skill metadata、CLI、Project SDK 默认值、对外 MCP server version 与 documentation governance metadata 现在共用一个 `0.8.0` 开发身份；文档同时登记了当前 Studio authority sources，并继续把 `studio/` 纳入 bilingual manifest coverage QA。
-
-Studio 产品文档现在已经把 **Tauri + React + WeiUI** 记录为未来可安装 Shell 的选定方向，同时继续把这个产品决定与实现状态分开。`assets/brand/tokens.json` 仍是当前 NovelForge token source；在真正有 generated WeiUI theme / converter artifact 进入 `main` 之前，文档不会把它写成已经存在。
 
 ## 仍未完成的依赖与缺口
 
@@ -101,19 +157,26 @@ Studio 仍依赖 Core-owned consumer/read-surface 工作：
 
 PR #25 有意 defer 这些不安全查询，而不是在 UI/Bridge 层创造替代 contract。Core Issue #23 负责稳定 query/command boundary。
 
-### Publication / Typesetting Toolkit
+### Publication / Typesetting Toolkit · 最小 Core 已合并，更大范围仍开放
 
-Issue #16 定义目标中的确定性 publication pipeline：`Accepted manuscript → Publication IR → Typesetting Profile → Renderer → Validator → derived outputs`。
+Publication 已经不再只是 issue-level proposal：`novelforge_publication_ir_v1` 与 deterministic compiler 都真实存在于 `main`。
 
-本文档不会假定 `novelforge_publication_ir_v1` 已经正式实现。Publication preview、EPUB/Web/print renderer 与 publication validator 必须等 owning Core implementation 真正合并后才能写成现有能力。
+Issue #16 仍然 open，因为它的最终目标比当前 compiler 更大。当前仍未完成或尚未由最小实现表达的内容包括：
 
-### 可安装 Studio Shell · 方向已选，实现待落地
+- part / section / scene break / epigraph / note / figure / front/back matter / in-world document 等更丰富 semantic IR structure；
+- 比当前 named compiler profiles 更完整、versioned 的 Typesetting Profile contract；
+- 更丰富的 CJK/Latin typography、font embedding 与 publication-style controls；
+- 通过 Vivliostyle-compatible 等 paged-media engine 生成 print PDF；
+- 更完整 accessibility / visual-regression / asset-validation hooks；
+- Studio publication preview 与 authoring UX。
 
-产品方向已经确定为 Tauri + React 19 + WeiUI。目标视觉依赖为：NovelForge Story Loom tokens → deterministic WeiUI-compatible W3C token representation → WeiUI token/CSS/React substrate → Tauri shell。
+因此文档必须精确描述当前 compiler：它是已经可用的 deterministic core，**不是整个 Typesetting Toolkit 已完成**。
 
-仅仅因为文档已经选定这个方向，并不代表 Tauri app、app lockfile、NovelForge→WeiUI converter 或 generated theme artifact 已经合并。真正实现进入 `main` 后，release truth 还需要绑定 exact dependency pin、generated/source relationship、responsive/i18n/accessibility checks、tree-shaking evidence，以及 idle CPU/memory/process-lifecycle measurements。
+### Phase 2C application implementation
 
-Tauri、React 与 WeiUI 属于 Product dependency，不得成为 Generic Core correctness、CLI、Framework bundle 或 Agent Skill 的前置条件。
+Story Loom / WeiUI foundation 与 SolidJS stack decision 都已经具体化，但这不代表 Phase 2C product application 已经完成。
+
+仍需要真实 implementation evidence 的部分包括：SolidJS route/workspace shell、host lifecycle、typed bridge consumption、optional Tauri packaging，以及实际 runtime behavior。Product acceptance 应基于真实 idle CPU/RAM 与 first-interaction measurement，而不是因为 stack 看起来轻就直接宣称轻量。
 
 ### Write-capable / production-hosted Studio
 
@@ -140,6 +203,6 @@ Issue #8 仍是 MCP registry/management 与后续 product surface 的 umbrella�
 
 `0.8.0` 表示 active pre-1.0 development identity 已经统一，**不表示所有 8.0-line product goal 都完成，也不表示 API 已冻结**。
 
-在 NovelForge 可以做更强的稳定 release claim 之前，仍需要围绕 Run Receipt/query surface、Publication 是否纳入、Studio write boundary、可安装 Shell 的实现/性能证据、exact bundle/CI evidence，以及面向客户的中英双语同步审查作出明确决定并拿到验证证据。
+Core 现在已经有可执行的 production-readiness conjunction gate 与最小 deterministic Publication compiler。Product foundation 也已经有 exact-pinned、zero-JS 的 WeiUI token/CSS layer，以及 SolidJS Phase 2C stack decision。要做更强的 stable-release claim，仍然需要围绕 Run Receipt/query surface、Issue #16 剩余 Publication scope、Studio write boundary、真实 Phase 2C application/runtime measurements、exact bundle/CI evidence，以及面向客户的中英双语同步审查作出明确决定并拿到验证证据。
 
 在此之前：**0.8.0 = latest `main` 上持续推进的 pre-1.0 开发线。**

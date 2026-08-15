@@ -22,22 +22,34 @@
 - PR #21 合并 Studio Phase 2A：portable one-product/many-host contract、安全的 Project Hub projection、synthetic project/scene fixtures，以及只读 Project Hub + Scene workspace prototype。
 - PR #25 合并 Studio Phase 2B：versioned read-only host bridge + standards-compatible NovelForge Agent Skill。Bridge 只暴露 allowlisted read surface（`bridge.describe`、`framework.doctor`、`project.inspect`、`capabilities.inspect`、`context.inspect`、`semantic.catalog`），不支持的 operation fail closed，默认不泄露 host-private absolute path，并始终保持 `authority=false`。
 - PR #24 完成剩余 machine-contract rename：`os_behavior_write` → `framework_behavior_write`；semantic job/result ID 从 `novel-os-*` 迁到 `novelforge-*`；移除 live `.novel-os/` ignore surface；namespace hygiene 也会阻止这些旧 machine identifier 再次回归。没有添加兼容别名。
+- PR #27 让 Context grounding 同时遵守故事时间顺序与逐问题 evidence eligibility：来自未来或不兼容的证据会 fail closed，包括被 pin 的 evidence；hard budget 丢失必需 support 时，grounding 会明确标记 incomplete，而不是装作依据充分。
+- PR #28 把角色的 epistemic status 与 acquisition mode 分离，并要求 proposed character action 绑定当前故事时间点下、该角色真正可见的 evidence；future / unknown / invalid evidence 不能因为存在于 Framework state 中就被拿来当正面依据。
+- PR #29 强化 long-horizon reconciliation：要求 story-ordered evidence、完整 requirement coverage，允许 uncertainty 作为合法 typed state 保留，并明确分开 shared relationship state 与各角色对这段关系的 individual perception。
+- PR #31 加入 `novelforge_production_readiness_v1`：同一 candidate fingerprint 上的 deterministic conjunction gate，覆盖 Surface、Reader Engagement、所需 Continuity 与所需 independent semantic review。required gate 缺失、pending 或 fail 都会阻止 review-ready；`RG-15` SAFE-BUT-FLAT 不能通过 Reader Engagement；系统不会引入数值化 literary-score aggregation。
+- PR #31 同时加入最小可用 deterministic Publication core：manifest 可发现的 `novelforge_publication_ir_v1`、`publication/compiler.py`、Accepted text 精确 fingerprint preservation，以及 `clean_text`、`web_reflow`、`print_book`、`epub3` 四个 build profile。Publication output 仍是 derived / non-Canon。EPUB 目标为 W3C EPUB 3.3；内部验证确定性执行，而 release conformance 必须额外提供外部 EPUBCheck command。
+- PR #32 把 Story Loom 升级为 `novelforge_brand_tokens_v2`，并正式合并 WeiUI foundation contract。`assets/brand/weiui.integration.json` 把 `xiaooye/weiui` 精确固定到 commit `d84d1cd365fb5f90cbbab794d2358f7a13b29b79`，只允许 `@weiui/tokens` + `@weiui/css`，明确禁止 `@weiui/react` / `@weiui/headless` 成为 Studio runtime dependency，并要求 WeiUI runtime JavaScript 为零。`assets/brand/story-loom.weiui.css` 提供 `wui-theme` Story Loom layer，同时禁止 fork WeiUI component selector。
+- PR #32 还把 mobile / i18n / accessibility / runtime-overhead 约束变成 machine-checkable contract：mobile-first、44px minimum touch target、`en-US` + `zh-CN`、logical properties、reduced motion、no idle decorative animation、no default polling，以及 light/dark contrast checks 都由 `scripts/design_system_quality.py` + CI 确定性验证。
+- Phase 2C 选定的 application framework 是 **SolidJS + TypeScript + Vite + `@solidjs/router`**，WeiUI 只作为 zero-JS CSS/token foundation。Local Web 保持 first-class，并因最小增量 runtime overhead 成为优先形态；Tauri 保留为 optional/installable desktop host，而不是产品架构中心。
 - 0.8.0 normalization 让当前 machine/version identity 归一，不再同时维护“release version”和“implementation version”两套开发编号。
 - Documentation governance 已确定性跟踪 audience、tier、authority source、freshness owner、rewrite policy、lifecycle、双语配对、本地链接、版本对齐与可检查的视觉/文档约束；`studio/` 已纳入 bilingual manifest coverage QA。
 
 ### 当前缺口与兼容说明
 
 - Run Receipt 仍有 Core-owned consumer/read-surface 工作：稳定 manifest discoverability、`run.receipt_recorded` 的 event-schema 对齐，以及供 Studio 使用的稳定 query/projection boundary，而不是读取 persistence internals。PR #25 有意没有通过 Host Bridge 暴露不安全的 Control Plane / Run Receipt 读取。
+- Publication core 已经真实存在，但 Issue #16 的更大范围仍未完成：更丰富的 semantic structure/profile contract、通过 paged-media engine 生成 print PDF、更完整 typesetting controls、visual-regression hooks，以及 Studio publication preview/authoring，都不能从当前最小 compiler 推定出来。
+- Story Loom / WeiUI foundation integration 已经真实落地，但这些 token/CSS artifact 不等于 Phase 2C SolidJS application 已经完成。App-shell code、route implementation、host lifecycle 与实际 idle CPU/RAM measurement 仍需要独立实现证据。
 - 已经有意锁定旧 Framework revision 的下游项目继续受那个 revision 约束，直到显式升级；Generic Framework 自身开发则跟随 latest `main`，不维护内部开发 lock。
 - 未来真正稳定的 migration guide 必须从冻结后的 contracts 与最终 bundle 生成，不能根据 Issue 或中间开发提交猜最终接口。
 
 ### Product / Publication 状态
 
 - Studio 当前已经合并**只读** Phase 1、Phase 2A、Phase 2B 产品切片：observability、Project Hub、Scene workspace、portable host boundary 与 Agent Skill delivery 都已经真实存在于 `main`。
-- 这些切片**不代表** Studio 已经成为可写、多人协作、带生产认证或正式云托管的完整应用。Generic invoke/write、project mutation、resume 与更广的 Control Plane read 仍不属于当前 bridge contract。
-- Publication / Typesetting 仍是 Issue #16 跟踪的 Core 活跃 workstream。官方 IR/profile/runtime contract 合并之前，EPUB/Web/print publication 仍只能描述为计划中或开发中能力。
+- Story Loom v2 + exact-pinned zero-JS WeiUI CSS/token foundation 也已经真实存在于 `main`。这是 product-foundation implementation，不是完整 Studio app。
+- Phase 2C 方向为 **SolidJS + TypeScript + Vite + `@solidjs/router`**；`@weiui/react` 明确不是 planned runtime dependency。Tauri 只保留 optional installable host，Local Web 继续是一等产品面。
+- 这些 Studio 切片**不代表** Studio 已经成为可写、多人协作、带生产认证或正式云托管的完整应用。Generic invoke/write、project mutation、resume 与更广的 Control Plane read 仍不属于当前 bridge contract。
+- Publication 现在已经有最小 deterministic Core implementation：exact-text Publication IR，以及 clean text、Web HTML、print-oriented HTML/CSS 与 EPUB 3.3 输出。它**不等于**完整 Typesetting Toolkit 或 Studio Publish 体验已经完成；Issue #16 继续承载更大的剩余范围。
 - 更完整的 MCP registry/management 与后续 write-capable Studio operation 继续 deferred 给各自 owning workstream。
-- UI、Host Bridge 与 Agent Skill state 永远不会因为被展示或调用就成为 Canon、Memory、semantic truth、settlement truth 或 workflow authority。
+- UI、Host Bridge、Agent Skill、production-readiness receipt 与 publication output 都不会因为存在、通过或被展示就成为 Canon、Memory、semantic truth、settlement truth 或 workflow authority。
 
 ## 7.0.0 · Adaptive Fiction Framework
 
@@ -89,7 +101,7 @@
 - Human-facing authoritative docs 采用 English + 简体中文成对版本。
 - 大量架构、Learning、Runtime、Project 图采用 Mermaid。
 - 增加 Agent Framework adopt/adapt/reject research matrix。
-- CI 现在 hard gate：consumer-project leakage、双语 pairing、relative links、manifest、Project SDK、Learning/Corpus、Runtime/MCP、Semantic transport、Evals、authority boundary。
+- CI 现在 hard gate：consumer-project leakage、双语 pairing、relative links、manifests、Project SDK、Learning/Corpus、Runtime/MCP、Semantic transport、Evals、authority boundary。
 - Normal CI 不调用付费或 login-bound model inference。
 
 ### Migration Note

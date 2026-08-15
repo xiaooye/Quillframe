@@ -2,7 +2,7 @@
 
 <p><kbd>PRODUCT EXPERIENCE</kbd>&nbsp;&nbsp;<kbd>CREATOR WORKBENCH</kbd>&nbsp;&nbsp;<kbd>INSPECTABLE RUNTIME</kbd></p>
 
-NovelForge Studio is the product-experience layer around NovelForge Core. **Read-only Phase 1, Phase 2A, and Phase 2B slices now exist on `main`; they are real product-contract and host-boundary implementations, not a released write-capable Studio application.** The future installable shell direction is now selected as **Tauri + React + WeiUI**, while implementation remains pending and Core authority boundaries remain unchanged.
+NovelForge Studio is the product-experience layer around NovelForge Core. **Read-only Phase 1, Phase 2A, and Phase 2B slices exist on `main`; Story Loom v2 plus the exact-pinned zero-JS WeiUI CSS/token foundation is also merged.** The Phase 2C application stack is **SolidJS + TypeScript + Vite + `@solidjs/router`**. Local Web remains first-class; Tauri is an optional/installable host. This is still not a released write-capable Studio application.
 
 > **Authority boundary ✦** Studio consumes NovelForge Core state. UI state is not Canon, Memory, semantic truth, write authority, or a second workflow engine.
 
@@ -13,8 +13,10 @@ NovelForge Studio is the product-experience layer around NovelForge Core. **Read
 - [English](PRODUCT_ARCHITECTURE.en.md)
 - [简体中文](PRODUCT_ARCHITECTURE.zh-CN.md)
 - [`portable_product_contract.json`](portable_product_contract.json) — machine-readable portable delivery-surface contract.
+- [`../assets/brand/weiui.integration.json`](../assets/brand/weiui.integration.json) — exact WeiUI pin and zero-JS consumption contract.
+- [`../assets/brand/story-loom.weiui.css`](../assets/brand/story-loom.weiui.css) — live Story Loom `wui-theme` layer.
 
-The product architecture records both the Core interfaces Studio can consume and the unresolved Core consumer gaps Studio must not patch around locally. It also records the selected Tauri + WeiUI installable-shell direction, token ownership, performance constraints, responsive/i18n requirements, and the acceptance evidence required before that future app can be described as shipped.
+The product architecture records both the Core interfaces Studio can consume and the unresolved Core consumer gaps Studio must not patch around locally. It also records the low-overhead Phase 2C stack, Local Web / optional Tauri host split, mobile/i18n/accessibility/runtime rules, and Publication/production-readiness surfaces that Core now actually exposes.
 
 ## Phase 1 vertical slice
 
@@ -27,14 +29,14 @@ The first interaction principle is intentionally visible in the prototype:
 
 ## Phase 2A · One product, many hosts
 
-Phase 2A treats Studio as a polished SaaS-like experience without making SaaS business infrastructure part of the product model. The same NovelForge semantics should be available through four first-class delivery surfaces:
+The same NovelForge semantics are intended to be available through four first-class delivery surfaces:
 
 - **CLI** — scriptable native automation and inspection.
-- **Local app / local Web UI** — a creator workstation using local host capabilities through typed adapters.
+- **Local Web / local app** — the low-overhead creator workstation, using local host capabilities through typed adapters.
 - **Cloud-hosted UI** — the same product model behind a remote query/command boundary.
-- **Agent skill / package** — a thin, versioned adapter for other agent frameworks that does not expose private NovelForge persistence or implementation internals.
+- **Agent Skill / package** — a thin, versioned adapter for other agent frameworks that does not expose private NovelForge persistence or implementation internals.
 
-Different hosts may have different capabilities and transports. Those differences never change Canon, Settlement, Context, semantic-result, or receipt semantics. **Host capability does not imply NovelForge story authority.**
+Different hosts may have different capabilities and transports. Those differences never change Canon, Settlement, Context, semantic-result, readiness, publication, or receipt semantics. **Host capability does not imply NovelForge story authority.**
 
 ### Portable Project Hub / Scene vertical slice
 
@@ -47,38 +49,49 @@ The projection explicitly carries `authority=false`, `canon_authority=false`, `f
 
 ## Phase 2B · Portable read-only host bridge
 
-Phase 2B makes the multi-host boundary executable without turning Studio into another runtime. [`host_bridge.py`](host_bridge.py) accepts a versioned `novelforge_studio_host_bridge_request_v1` envelope and returns a fingerprint-bound `novelforge_studio_host_bridge_result_v1`. [`host_bridge_contract.json`](host_bridge_contract.json) is the machine-readable allowlist shared by CLI, local-app, hosted-UI, and agent-package consumers.
+[`host_bridge.py`](host_bridge.py) accepts a versioned `novelforge_studio_host_bridge_request_v1` envelope and returns a fingerprint-bound `novelforge_studio_host_bridge_result_v1`. [`host_bridge_contract.json`](host_bridge_contract.json) is the machine-readable allowlist shared by CLI, Local Web/app, hosted UI, and agent-package consumers.
 
 The currently supported read operations are deliberately small: `bridge.describe`, `framework.doctor`, `project.inspect`, `capabilities.inspect`, `context.inspect`, and `semantic.catalog`. Results default-deny host-private paths and carry `authority=false` plus explicit Canon, Framework-write, and Settlement non-authority markers.
 
-Several operations are intentionally **unsupported**, not emulated. Runtime session/event/handoff queries are deferred because the current Control Plane CLI initializes persistence before dispatching even nominal read commands. `run.receipt.get` remains deferred because Core does not yet provide a stable Run Receipt retrieval projection and its event discoverability is still inconsistent. Generic invoke/write and resume commands also remain deferred until Core defines the public command/precondition/CAS/idempotency/receipt contract. These dependencies are tracked in Core issue #23.
+Several operations remain intentionally **unsupported**, not emulated. Runtime session/event/handoff queries and Run Receipt retrieval still depend on Core issue #23. Generic invoke/write and resume commands remain deferred until Core exposes the public precondition/CAS/idempotency/receipt contract.
 
 ### Agent Skill package
 
 [`../agent-skills/novelforge/SKILL.md`](../agent-skills/novelforge/SKILL.md) is the portable Agent Skills package. Its bundled [`novelforge_bridge.py`](../agent-skills/novelforge/scripts/novelforge_bridge.py) client only discovers and calls the shared Studio host bridge; it does not import private Core runtime modules or know the persistence layout.
 
-From the skill directory, discovery starts with:
+## Story Loom v2 · WeiUI zero-JS foundation
 
-```bash
-python scripts/novelforge_bridge.py describe
+The design-system integration is no longer only a future direction:
+
+- Story Loom token schema: `novelforge_brand_tokens_v2`;
+- exact WeiUI source pin: `d84d1cd365fb5f90cbbab794d2358f7a13b29b79`;
+- allowed WeiUI packages: `@weiui/tokens`, `@weiui/css`;
+- forbidden Phase 2C runtime packages: `@weiui/react`, `@weiui/headless`;
+- WeiUI runtime JavaScript: **not required**;
+- Story Loom theme: `assets/brand/story-loom.weiui.css` in `wui-theme`;
+- baseline locales: `en-US`, `zh-CN`;
+- mobile-first, 44px minimum touch target, reduced motion, no idle decorative animation, no default polling;
+- deterministic design-system CI via `scripts/design_system_quality.py`.
+
+## Phase 2C · SolidJS product shell
+
+The selected application shape is:
+
+```text
+Core public boundary
+→ Studio view models
+→ SolidJS + TypeScript + Vite + @solidjs/router
+→ WeiUI tokens/CSS + Story Loom theme
+→ Local Web (first-class)
+→ optional Tauri package
 ```
 
-Then invoke a request envelope with:
+No React runtime is part of the selected Phase 2C plan. Tauri remains useful for an installable desktop build, but the product must stay fully coherent as Local Web without requiring desktop-host overhead.
 
-```bash
-python scripts/novelforge_bridge.py invoke --request /path/to/request.json
-```
+The app itself still needs implementation and measurement. Before calling Phase 2C production-ready, measure actual idle CPU/RAM, first-interaction latency, route cost and Core-process lifetime; preserve no-default-polling and explicit host lifecycle rules.
 
-A host must preserve `unsupported` and `unavailable` states rather than bypassing the bridge through SQLite, private imports, or a mutating Core primitive. Phase 2B remains read-only: **no acceptance, settlement, Canon mutation, generic write API, or hidden authority shortcut is introduced here.**
+## Current Core additions relevant to Studio
 
-## Future installable shell · Tauri + WeiUI
+`novelforge_production_readiness_v1` now gives Review a real same-fingerprint conjunction gate instead of a made-up quality percentage.
 
-The installable Studio direction is selected, but no Tauri application has yet been merged on `main`:
-
-- **Tauri** hosts the desktop application;
-- **React 19** provides the application shell expected by `@weiui/react`;
-- **WeiUI** supplies reusable components, zero-JavaScript CSS, and W3C-style token infrastructure;
-- **NovelForge Story Loom** remains the product visual/semantic authority through a deterministic WeiUI-compatible token adapter;
-- Tauri / React / WeiUI stay outside Generic Core runtime correctness, CLI, Framework bundle, and Agent Skill dependencies.
-
-The detailed token-ownership, tree-shaking, runtime-overhead, responsive/i18n, accessibility, reduced-motion, and acceptance-gate rules live in the [Product Architecture](PRODUCT_ARCHITECTURE.en.md). Until those implementation artifacts and measurements land, Tauri + WeiUI is a **selected product direction**, not a shipped Studio capability.
+`novelforge_publication_ir_v1` + `publication/compiler.py` now gives Publish a real deterministic minimum Core for Accepted text: clean text, Web HTML, print-oriented HTML/CSS and EPUB 3.3. This does not mean the broader Typesetting Toolkit or Studio Publish UX is complete; richer Issue #16 scope remains open.

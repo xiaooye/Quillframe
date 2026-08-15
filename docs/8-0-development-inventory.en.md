@@ -53,9 +53,40 @@ PR #13 added `novelforge_run_receipt_v1` and a deterministic recording boundary 
 
 Run Receipts are observability evidence, not a second state database.
 
+### Same-fingerprint production-readiness gate
+
+PR #31 added `novelforge_production_readiness_v1` and exposes it through `HARNESS_MANIFEST.yaml`.
+
+The gate does not compute a composite literary score. It binds required gate evidence to **one exact candidate fingerprint** and applies a fail-closed conjunction policy:
+
+- Surface and Reader Engagement are required;
+- Continuity can be policy-required;
+- independent semantic review can be policy-required;
+- missing, `pending`, or `fail` required gates block `ready_for_user_visible_review`;
+- `RG-15` SAFE-BUT-FLAT cannot simultaneously be a passing Reader Engagement gate;
+- the readiness record has `authority=false` and grants no Canon / Framework-write / durable-user-taste permissions.
+
+This makes the user-visible readiness boundary executable without pretending deterministic code can judge literary quality itself.
+
+### Deterministic Publication core
+
+PR #31 also added the first manifest-authoritative Publication implementation:
+
+- `publication/publication_ir.schema.json` with schema `novelforge_publication_ir_v1`;
+- `publication/compiler.py`;
+- exact Accepted-text fingerprint checking and `text_preservation = exact-unicode-text`;
+- derived output authority fixed to `false`;
+- deterministic profiles: `clean_text`, `web_reflow`, `print_book`, `epub3`;
+- deterministic EPUB generation and internal structural/text-roundtrip validation;
+- W3C EPUB 3.3 as the target, with an explicitly supplied external EPUBCheck command required for release conformance.
+
+`print_book` currently emits print-oriented HTML/CSS. It is **not** a finished paged-media → PDF engine. The current IR is intentionally minimal: book metadata plus chapter title/text/fingerprint. It does not yet implement all of the richer semantic structures and profile controls described by Issue #16.
+
 ### Release-complete Framework bundle
 
 PR #18 fixed a release-substrate defect where a reproducible bundle could omit the `quality/` runtime. Bundle CI now checks the emitted package and runs `novelforge.py doctor` plus the model-free self-test after extraction.
+
+PR #31 extends the bundle surface to include the new production-readiness and Publication runtime contracts and tests them in normal deterministic CI without fabricating semantic verdicts.
 
 ### Studio Phase 1 · read-only Run / Context Inspector
 
@@ -80,11 +111,36 @@ The bridge currently allowlists only:
 
 Unsupported operations fail closed. Browser/remote-safe projections do not expose host-private absolute paths by default. The external Agent Skill uses the bridge rather than importing private Core persistence or implementation internals. The entire surface remains `authority=false` and explicitly has no Canon/Framework-write/Settlement authority.
 
+### Story Loom v2 + exact-pinned WeiUI zero-JS foundation
+
+PR #32 upgraded `assets/brand/tokens.json` to `novelforge_brand_tokens_v2` and made the application design foundation executable.
+
+`assets/brand/weiui.integration.json` now records the exact generic UI dependency contract:
+
+- source repo: `xiaooye/weiui`;
+- exact commit: `d84d1cd365fb5f90cbbab794d2358f7a13b29b79`;
+- license: MIT;
+- allowed WeiUI packages: `@weiui/tokens`, `@weiui/css`;
+- forbidden runtime packages: `@weiui/headless`, `@weiui/react`;
+- WeiUI runtime JavaScript required: `false`;
+- theme layer: `wui-theme`;
+- import order: WeiUI tokens → WeiUI CSS → `assets/brand/story-loom.weiui.css`.
+
+`story-loom.weiui.css` provides the actual light/dark `--wui-*` aliases plus NovelForge `--nf-*` product-semantic variables without forking WeiUI component selectors.
+
+The machine token contract now includes application rules for mobile-first responsive behavior, 44px minimum touch targets, focus-ring geometry, `en-US` + `zh-CN`, logical properties, no fixed-width locale assumptions, reduced motion, no idle animation, no default polling, and no heavy default component import. `scripts/design_system_quality.py` deterministically checks those invariants, exact WeiUI pin/provenance, required variables, CSS layering, and light/dark contrast in CI.
+
+### Phase 2C application stack decision
+
+The product/runtime-overhead decision selects **SolidJS + TypeScript + Vite + `@solidjs/router`** for Phase 2C application code.
+
+WeiUI is intentionally consumed as a **zero-JavaScript CSS/tokens foundation**, not through React or WeiUI runtime/headless packages. Local Web remains first-class and preferred where minimum incremental CPU/RAM matters. Tauri remains an optional/installable desktop host rather than the center of product architecture.
+
+This stack decision preserves the one-product/many-host invariant: transport/host choice does not alter Canon, Settlement, Context, semantic-result, production-readiness, or receipt semantics.
+
 ### 0.8.0 version normalization and documentation truth
 
 The machine manifest, Skill metadata, CLI, Project SDK default, exposed MCP server version, and documentation governance metadata now share one `0.8.0` development identity. Documentation also registers the current Studio authority sources and keeps `studio/` inside bilingual manifest-coverage QA.
-
-The Studio product documentation now records **Tauri + React + WeiUI** as the selected future installable-shell direction while keeping that decision separate from implementation status. `assets/brand/tokens.json` remains the current NovelForge token source; no generated WeiUI theme/converter artifact is claimed until one actually lands on `main`.
 
 ## Active gaps and dependencies
 
@@ -101,19 +157,26 @@ Studio still depends on Core-owned consumer/read-surface work:
 
 PR #25 deliberately defers those unsafe queries rather than inventing UI-side contracts. Core issue #23 owns the stable query/command boundary work.
 
-### Publication / Typesetting Toolkit
+### Publication / Typesetting Toolkit · minimum core merged, broader scope open
 
-Issue #16 defines the desired deterministic publication pipeline: `Accepted manuscript → Publication IR → Typesetting Profile → Renderer → Validator → derived outputs`.
+Publication is no longer merely an issue-level proposal: `novelforge_publication_ir_v1` and the deterministic compiler are real on `main`.
 
-No official `novelforge_publication_ir_v1` implementation is assumed complete by this document. Publication preview, EPUB/Web/print rendering, and publication validation remain future work until the owning Core implementation lands.
+Issue #16 remains open because its larger target is broader than the current compiler. Still outstanding or not yet represented by the minimum implementation are, among other things:
 
-### Installable Studio shell · selected, implementation pending
+- richer semantic IR structures such as parts, sections, scene breaks, epigraphs, notes, figures, front/back matter and in-world documents;
+- a fuller versioned Typesetting Profile contract rather than only the current named compiler profiles;
+- richer CJK/Latin typography, font-embedding and publication-style controls;
+- print PDF through a paged-media engine such as a Vivliostyle-compatible backend;
+- broader accessibility / visual-regression / asset-validation hooks;
+- Studio publication preview and authoring UX.
 
-The product direction is Tauri + React 19 + WeiUI. The intended visual dependency is NovelForge Story Loom tokens → deterministic WeiUI-compatible W3C token representation → WeiUI token/CSS/React substrate → Tauri shell.
+Documentation must therefore describe the current compiler precisely: useful deterministic core, **not the completion of the whole Typesetting Toolkit**.
 
-No Tauri application, app lockfile, NovelForge→WeiUI converter, or generated theme artifact is treated as merged merely because this direction is documented. When implementation lands, release truth must bind to the exact dependency pins, generated/source relationship, responsive/i18n/accessibility checks, tree-shaking evidence, and idle CPU/memory/process-lifecycle measurements.
+### Phase 2C application implementation
 
-Tauri, React, and WeiUI remain Product dependencies, not prerequisites for Generic Core correctness, CLI, the Framework bundle, or the Agent Skill.
+The Story Loom/WeiUI foundation and SolidJS stack decision are now concrete, but the Phase 2C product application is not implied to be complete.
+
+Still requiring implementation evidence are the actual SolidJS route/workspace shell, host lifecycle, typed bridge consumption, optional Tauri packaging, and measured runtime behavior. Product acceptance should include actual idle CPU/RAM and first-interaction measurements rather than assuming that a lightweight stack is automatically lightweight in practice.
 
 ### Write-capable / production-hosted Studio
 
@@ -140,6 +203,6 @@ A future stable migration guide should be generated only after a release contrac
 
 `0.8.0` means the active pre-1.0 development identity is normalized. It does **not** mean every 8.0-line product goal is finished or that APIs are frozen.
 
-Before NovelForge makes a stronger stable-release claim, the relevant scope still needs explicit decisions and evidence around the Run Receipt/query surface, Publication inclusion/exclusion, Studio write boundaries, installable-shell implementation/performance evidence, exact bundle/CI evidence, and synchronized customer-facing English/Simplified Chinese review.
+The Core now has an executable production-readiness conjunction gate and a minimum deterministic Publication compiler. The Product foundation now has an exact-pinned, zero-JS WeiUI token/CSS layer plus a SolidJS Phase 2C stack decision. Stronger stable-release claims still need explicit scope decisions and evidence around the Run Receipt/query surface, the remaining Issue #16 Publication scope, Studio write boundaries, actual Phase 2C application/runtime measurements, exact bundle/CI evidence, and synchronized customer-facing English/Simplified Chinese review.
 
 Until then: **0.8.0 = active pre-1.0 development on latest `main`.**
