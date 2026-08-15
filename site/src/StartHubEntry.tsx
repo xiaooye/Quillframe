@@ -100,12 +100,11 @@ export default function StartHubEntry(props: Props) {
           <span>NovelForge</span>
           <span class="wui-badge wui-badge--soft version-chip">0.8.x</span>
         </a>
-        <nav class="wui-app-bar__nav desktop-nav" aria-label={zh() ? "开始导航" : "Start navigation"}>
-          <a class="wui-app-bar__link active" href="/start" aria-current="page">{zh() ? "开始" : "Start"}</a>
-          <a class="wui-app-bar__link" href="/inspect">{zh() ? "检查项目" : "Inspect"}</a>
-          <a class="wui-app-bar__link" href="/playground">Playground</a>
-          <a class="wui-app-bar__link" href="/agents">{zh() ? "Agent 集成" : "Agents"}</a>
-          <a class="wui-app-bar__link" href="/docs">{zh() ? "知识库" : "Docs"}</a>
+        <nav class="wui-app-bar__nav desktop-nav" aria-label={zh() ? "产品导航" : "Product navigation"}>
+          <a class="wui-app-bar__link" href="/">{zh() ? "产品" : "Product"}</a>
+          <a class="wui-app-bar__link" href="/architecture">{zh() ? "架构" : "Architecture"}</a>
+          <a class="wui-app-bar__link" href="/publication">{zh() ? "出版" : "Publication"}</a>
+          <a class="wui-app-bar__link" href="/docs">{zh() ? "知识库" : "Knowledge"}</a>
         </nav>
         <div class="wui-app-bar__actions header-actions">
           <a class="wui-button wui-button--solid studio-cta" href={studioStartUrl} target="_blank" rel="noreferrer">✦ {zh() ? "打开 Studio" : "Open Studio"}</a>
