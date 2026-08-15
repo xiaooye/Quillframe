@@ -1,0 +1,129 @@
+name: NovelForge State Integrity P0
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  state-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile state-integrity runtimes
+        run: |
+          python -m py_compile harness/property_write_policy.py
+          python -m py_compile harness/propagation_debt.py harness/propagation_debt_selftest.py
+          python -m py_compile harness/state_integrity_cross_contract.py
+          python -m json.tool harness/property_write_policy.schema.json > /dev/null
+          python -m json.tool harness/propagation_debt.schema.json > /dev/null
+
+      - name: Property write policy deterministic contract
+        run: python harness/property_write_policy.py self-test > property-write-policy-test.json
+
+      - name: Propagation debt deterministic contract
+        run: python harness/propagation_debt.py self-test --path /tmp/novelforge-propagation-debt-ci.db > propagation-debt-test.json
+
+      - name: Runtime authorization cannot bypass Project property authority
+        run: python harness/state_integrity_cross_contract.py > state-integrity-cross-contract.json
+
+      - name: Project path integration
+        run: |
+          rm -rf /tmp/novelforge-property-policy-project
+          python project_sdk.py init /tmp/novelforge-property-policy-project \
+            --id PROJECT-POLICY-CI --title 'Property Policy Fixture' --language en --framework-version 0.8.0
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('/tmp/novelforge-property-policy-project')
+          manifest=root/'novelforge.toml'
+          text=manifest.read_text(encoding='utf-8')
+          needle='assets = "assets"\n\n[build]'
+          assert needle in text
+          text=text.replace(needle,'assets = "assets"\nproperty_write_policy = "state/property_write_policy.json"\n\n[build]',1)
+          manifest.write_text(text,encoding='utf-8')
+          policy={
+            'schema':'novelforge_property_write_policy_v1',
+            'default':{'mutation_class':'proposal_only'},
+            'object_types':{
+              'CHAR':{
+                'default':{'mutation_class':'settlement_only'},
+                'properties':{'display_name':{'mutation_class':'user_declared'}}
+              }
+            }
+          }
+          (root/'state'/'property_write_policy.json').write_text(json.dumps(policy,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+          python harness/property_write_policy.py validate --project-root /tmp/novelforge-property-policy-project > property-write-policy-project-validation.json
+          python harness/property_write_policy.py resolve --project-root /tmp/novelforge-property-policy-project --object-type CHAR --property current_location --writer-class semantic_worker > property-write-policy-semantic.json
+          python harness/property_write_policy.py resolve --project-root /tmp/novelforge-property-policy-project --object-type CHAR --property display_name --writer-class user > property-write-policy-user.json
+          python - <<'PY'
+          import json
+          validation=json.load(open('property-write-policy-project-validation.json',encoding='utf-8'))
+          semantic=json.load(open('property-write-policy-semantic.json',encoding='utf-8'))
+          user=json.load(open('property-write-policy-user.json',encoding='utf-8'))
+          assert validation['valid'] is True and validation['policy_status']=='configured'
+          assert validation['policy_fingerprint'].startswith('sha256:')
+          assert semantic['mutation_class']=='settlement_only'
+          assert semantic['decision']=='proposal_required' and semantic['direct_write_allowed'] is False
+          assert user['mutation_class']=='user_declared'
+          assert user['decision']=='allow_direct' and user['ui_direct_editable'] is True
+          assert semantic['policy_fingerprint']==user['policy_fingerprint']==validation['policy_fingerprint']
+          PY
+
+      - name: Legacy project compatibility
+        run: |
+          rm -rf /tmp/novelforge-property-policy-legacy
+          python project_sdk.py init /tmp/novelforge-property-policy-legacy \
+            --id PROJECT-LEGACY-CI --title 'Legacy Fixture' --language en --framework-version 0.8.0
+          python harness/property_write_policy.py resolve --project-root /tmp/novelforge-property-policy-legacy --object-type CHAR --property current_location --writer-class semantic_worker > property-write-policy-legacy.json
+          python - <<'PY'
+          import json
+          d=json.load(open('property-write-policy-legacy.json',encoding='utf-8'))
+          assert d['policy_status']=='absent'
+          assert d['decision']=='legacy_unmanaged'
+          assert d['direct_write_allowed'] is None
+          PY
+
+      - name: Assert state-integrity contracts
+        run: |
+          python - <<'PY'
+          import json
+          pw=json.load(open('property-write-policy-test.json',encoding='utf-8'))
+          pd=json.load(open('propagation-debt-test.json',encoding='utf-8'))
+          cross=json.load(open('state-integrity-cross-contract.json',encoding='utf-8'))
+          assert pw['property_write_policy_contract']=='PASS',pw
+          assert pw['payload_cannot_self_escalate'] is True
+          assert pw['mixed_writer_routes_to_reconcile'] is True
+          assert pw['policy_absence_preserves_legacy_behavior'] is True
+          assert pd['propagation_debt_contract']=='PASS',pd
+          assert pd['no_global_invalidation_without_dependency'] is True
+          assert pd['conflicting_replay_is_rejected'] is True
+          assert pd['discharge_binds_latest_source_fingerprint'] is True
+          assert pd['supersession_requires_contiguous_source_lineage'] is True
+          assert pd['waiver_requires_evidence'] is True
+          assert pd['restart_preserves_open_debt_without_duplicate'] is True
+          assert pd['ledger_is_non_authoritative'] is True
+          assert cross['contract']=='PASS',cross
+          assert cross['checks']['runtime_authorization_is_valid_and_granted'] is True
+          assert cross['checks']['runtime_authorization_scope_excludes_project_write'] is True
+          assert cross['checks']['runtime_writer_cannot_bypass_settlement_only_property'] is True
+          assert cross['checks']['only_settlement_writer_gets_guarded_direct_route'] is True
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: state-integrity-p0
+          path: |
+            property-write-policy-*.json
+            propagation-debt-test.json
+            state-integrity-cross-contract.json
+          if-no-files-found: error

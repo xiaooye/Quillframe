@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novelforge_propagation_debt_contract_v1",
+  "title": "NovelForge Propagation Debt Contract",
+  "oneOf": [
+    {"$ref": "#/$defs/openRequest"},
+    {"$ref": "#/$defs/debt"},
+    {"$ref": "#/$defs/discharge"},
+    {"$ref": "#/$defs/waiver"},
+    {"$ref": "#/$defs/supersede"}
+  ],
+  "$defs": {
+    "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-fA-F]{64}$"},
+    "nonempty": {"type": "string", "minLength": 1},
+    "sourceAuthority": {"enum": ["locked", "accepted", "settled", "active_plan"]},
+    "requiredAction": {"enum": ["revalidate", "rebuild", "replan", "resimulate", "human_review"]},
+    "status": {"enum": ["open", "discharged", "superseded", "waived_with_evidence"]},
+    "openRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "project_id", "source_change", "dependency"],
+      "properties": {
+        "schema": {"const": "novelforge_propagation_debt_open_v1"},
+        "project_id": {"$ref": "#/$defs/nonempty"},
+        "source_change": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source_ref", "source_authority", "before_fingerprint", "after_fingerprint", "evidence_ref", "evidence_fingerprint"],
+          "properties": {
+            "source_ref": {"$ref": "#/$defs/nonempty"},
+            "source_authority": {"$ref": "#/$defs/sourceAuthority"},
+            "before_fingerprint": {"$ref": "#/$defs/fingerprint"},
+            "after_fingerprint": {"$ref": "#/$defs/fingerprint"},
+            "evidence_ref": {"$ref": "#/$defs/nonempty"},
+            "evidence_fingerprint": {"$ref": "#/$defs/fingerprint"}
+          }
+        },
+        "dependency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dependency_ref", "dependency_fingerprint", "source_ref", "dependent_ref", "dependent_fingerprint", "required_action", "reason"],
+          "properties": {
+            "dependency_ref": {"$ref": "#/$defs/nonempty"},
+            "dependency_fingerprint": {"$ref": "#/$defs/fingerprint"},
+            "source_ref": {"$ref": "#/$defs/nonempty"},
+            "dependent_ref": {"$ref": "#/$defs/nonempty"},
+            "dependent_fingerprint": {"$ref": "#/$defs/fingerprint"},
+            "required_action": {"$ref": "#/$defs/requiredAction"},
+            "reason": {"$ref": "#/$defs/nonempty"}
+          }
+        }
+      }
+    },
+    "debt": {
+      "type": "object",
+      "required": ["schema", "debt_id", "project_id", "source_ref", "source_before_fingerprint", "source_after_fingerprint", "dependent_ref", "dependency_ref", "required_action", "status", "authority", "canon_authority", "framework_write_authority", "auto_action_performed"],
+      "properties": {
+        "schema": {"const": "novelforge_propagation_debt_v1"},
+        "debt_id": {"$ref": "#/$defs/nonempty"},
+        "project_id": {"$ref": "#/$defs/nonempty"},
+        "source_ref": {"$ref": "#/$defs/nonempty"},
+        "source_authority": {"$ref": "#/$defs/sourceAuthority"},
+        "source_before_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "source_after_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "change_evidence_ref": {"$ref": "#/$defs/nonempty"},
+        "change_evidence_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "dependent_ref": {"$ref": "#/$defs/nonempty"},
+        "dependent_before_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "dependency_ref": {"$ref": "#/$defs/nonempty"},
+        "dependency_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "required_action": {"$ref": "#/$defs/requiredAction"},
+        "status": {"$ref": "#/$defs/status"},
+        "authority": {"const": false},
+        "canon_authority": {"const": false},
+        "framework_write_authority": {"const": false},
+        "auto_action_performed": {"const": false}
+      }
+    },
+    "discharge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "debt_id", "source_after_fingerprint", "required_action", "result_ref", "result_fingerprint", "dependent_after_fingerprint"],
+      "properties": {
+        "schema": {"const": "novelforge_propagation_debt_discharge_v1"},
+        "debt_id": {"$ref": "#/$defs/nonempty"},
+        "source_after_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "required_action": {"$ref": "#/$defs/requiredAction"},
+        "result_ref": {"$ref": "#/$defs/nonempty"},
+        "result_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "dependent_after_fingerprint": {"$ref": "#/$defs/fingerprint"}
+      }
+    },
+    "waiver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "debt_id", "source_after_fingerprint", "actor_class", "evidence_ref", "evidence_fingerprint", "reason"],
+      "properties": {
+        "schema": {"const": "novelforge_propagation_debt_waiver_v1"},
+        "debt_id": {"$ref": "#/$defs/nonempty"},
+        "source_after_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "actor_class": {"enum": ["user", "authorized_human", "registered_semantic_result", "deterministic_contract"]},
+        "evidence_ref": {"$ref": "#/$defs/nonempty"},
+        "evidence_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "reason": {"$ref": "#/$defs/nonempty"}
+      }
+    },
+    "supersede": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "debt_id", "new_debt_id", "evidence_ref", "evidence_fingerprint"],
+      "properties": {
+        "schema": {"const": "novelforge_propagation_debt_supersede_v1"},
+        "debt_id": {"$ref": "#/$defs/nonempty"},
+        "new_debt_id": {"$ref": "#/$defs/nonempty"},
+        "evidence_ref": {"$ref": "#/$defs/nonempty"},
+        "evidence_fingerprint": {"$ref": "#/$defs/fingerprint"}
+      }
+    }
+  }
+}

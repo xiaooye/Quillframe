@@ -50,6 +50,9 @@ jobs:
           python harness/memory_tiers.py self-test > memory-tiers-test.json
           python harness/memory_bank.py --db /tmp/novelforge-memory-bank-ci.db self-test --path /tmp/novelforge-memory-bank-selftest-ci.db > memory-bank-test.json
           python harness/scenario_fork.py --db /tmp/novelforge-scenario-ci.db self-test --path /tmp/novelforge-scenario-selftest-ci.db > scenario-fork-test.json
+          python harness/property_write_policy.py self-test > property-write-policy-test.json
+          python harness/propagation_debt.py self-test --path /tmp/novelforge-propagation-debt-contract-ci.db > propagation-debt-test.json
+          python harness/state_integrity_cross_contract.py > state-integrity-cross-contract.json
           python quality/findings.py self-test > quality-finding-test.json
           python quality/quality_taxonomy.py self-test > quality-taxonomy-test.json
           python quality/repair_policy.py self-test > repair-policy-test.json
@@ -258,7 +261,8 @@ jobs:
             'project-sdk-test.json':('project_sdk_contract','PASS'),'project-adapter-test.json':('project_adapter_contract','PASS'),
             'runtime-capabilities-test.json':('runtime_capabilities_contract','PASS'),'context-inspector-test.json':('context_inspector_contract','PASS'),
             'memory-tiers-test.json':('memory_tiers_contract','PASS'),'memory-bank-test.json':('memory_bank_contract','PASS'),
-            'scenario-fork-test.json':('scenario_fork_contract','PASS'),'quality-finding-test.json':('quality_finding_contract','PASS'),
+            'scenario-fork-test.json':('scenario_fork_contract','PASS'),'property-write-policy-test.json':('property_write_policy_contract','PASS'),
+            'propagation-debt-test.json':('propagation_debt_contract','PASS'),'state-integrity-cross-contract.json':('contract','PASS'),'quality-finding-test.json':('quality_finding_contract','PASS'),
             'quality-taxonomy-test.json':('quality_taxonomy_contract','PASS'),'repair-policy-test.json':('repair_policy_contract','PASS'),
             'registered-contract-binding-test.json':('registered_contract_binding_contract','PASS'),'peer-bridge-receipt-test.json':('peer_bridge_receipt_contract','PASS'),'production-readiness-test.json':('production_readiness_contract','PASS'),
             'reader-expectation-test.json':('reader_expectation_contract','PASS'),'quality-evolution-test.json':('quality_evolution_contract','PASS'),
@@ -279,6 +283,21 @@ jobs:
           assert loaded['memory-tiers-test.json']['question_as_of_story_order_guard'] is True
           assert loaded['memory-tiers-test.json']['pin_temporal_conflict_fail_closed'] is True
           assert loaded['memory-tiers-test.json']['grounding_reports_budget_drop'] is True
+          pw=loaded['property-write-policy-test.json']
+          assert pw['payload_cannot_self_escalate'] is True
+          assert pw['mixed_writer_routes_to_reconcile'] is True
+          assert pw['policy_absence_preserves_legacy_behavior'] is True
+          assert pw['derived_only_is_non_authoritative'] is True
+          assert pw['route_authority_is_scoped'] is True
+          pd=loaded['propagation-debt-test.json']
+          assert pd['no_global_invalidation_without_dependency'] is True
+          assert pd['conflicting_replay_is_rejected'] is True
+          assert pd['restart_preserves_open_debt_without_duplicate'] is True
+          cross=loaded['state-integrity-cross-contract.json']
+          assert cross['checks']['runtime_authorization_is_valid_and_granted'] is True
+          assert cross['checks']['runtime_authorization_scope_excludes_project_write'] is True
+          assert cross['checks']['runtime_writer_cannot_bypass_settlement_only_property'] is True
+          assert cross['checks']['only_settlement_writer_gets_guarded_direct_route'] is True
           s=loaded['semantic-router-test.json']
           assert s['fingerprint_excludes_runtime_lineage'] is True
           assert s['catalog_exact_id_resolution'] is True
