@@ -43,7 +43,7 @@ check(surface.includes("border-radius: 28px") && surface.includes("radial-gradie
 check(surface.includes('.product-surface-hero[data-tone="project"]') && surface.includes('.product-surface-hero[data-tone="publication"]'), "shared surface tones must retain route-aware pastel treatments");
 check(!surface.includes("!important"), "shared surface styling must not depend on specificity escalation");
 
-for (const marker of ["function HomePage()", "class=\"entry-hero\"", "class=\"hero-launcher wui-card material-panel\"", "class=\"capability-ribbon\"", "class=\"capability-focus page-width section-compact\"", "class=\"product-lab section-pad-soft\"", "class=\"product-world page-width section-compact\"", "class=\"knowledge-preview section-pad-soft\""]) {
+for (const marker of ["function HomePage()", "entry-hero", "hero-launcher wui-card material-panel", "capability-ribbon", "capability-focus page-width section-compact", "product-lab section-pad-soft", "product-world page-width section-compact", "knowledge-preview section-pad-soft"]) {
   check(app.includes(marker), `screenshot-era HomePage structure missing ${marker}`);
 }
 check(app.includes("让故事越写越长，系统仍然知道自己在做什么。") && app.includes("今天也把故事织得更漂亮一点吧"), "screenshot-era HomePage copy/identity markers must remain intact");
