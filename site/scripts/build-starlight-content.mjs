@@ -57,8 +57,9 @@ function extractDescription(source, fallback) {
 }
 
 function pageHref(id, locale) {
-  const suffix = id === "docs-home" ? "" : `/${encodeURIComponent(id)}`;
-  return locale === "en-US" ? `/docs/en${suffix}` : `/docs${suffix || "/"}`;
+  if (id === "docs-home") return locale === "en-US" ? "/docs/en/" : "/docs/";
+  const suffix = `/${encodeURIComponent(id)}`;
+  return locale === "en-US" ? `/docs/en${suffix}` : `/docs${suffix}`;
 }
 
 function splitHref(href) {
