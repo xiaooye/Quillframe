@@ -33,6 +33,7 @@ from semantic_worker_router import (  # noqa: E402
     validate_result,
 )
 from quality_taxonomy import id_for_name, self_test as taxonomy_self_test  # noqa: E402
+from repair_policy import self_test as repair_policy_self_test  # noqa: E402
 
 SCHEMA = "novelforge_production_readiness_v1"
 CATEGORIES = {"surface", "reader_engagement", "continuity", "semantic_independent"}
@@ -383,6 +384,7 @@ def self_test() -> int:
 
     green = evaluate(packet())
     session_green = evaluate(packet(peer_relay=False))
+    semantic_green_gate = next(g for g in green["gates"] if g["category"] == "semantic_independent")
     flat = evaluate(packet(reader="fail", reader_codes=[SAFE_BUT_FLAT_ID]))
     surface_fail = evaluate(packet(surface="fail"))
     semantic_fail = evaluate(packet(semantic="fail"))
@@ -438,10 +440,7 @@ def self_test() -> int:
     missing_text_guard = False
     missing_text = packet(peer_relay=False)
     binding = missing_text["gates"][-1]["semantic_binding"]
-    job = binding["job"]
-    job["input"]["payload"].pop("candidate_text", None)
-    # Recompute is intentionally not performed: either fingerprint validation or
-    # the explicit candidate_text guard must reject a release claim.
+    binding["job"]["input"]["payload"].pop("candidate_text", None)
     try:
         evaluate(missing_text)
     except ValueError:
@@ -449,6 +448,9 @@ def self_test() -> int:
 
     taxonomy = taxonomy_self_test()
     taxonomy_ok = taxonomy.get("quality_taxonomy_contract") == "PASS"
+    repair_policy = repair_policy_self_test()
+    repair_policy_ok = repair_policy.get("repair_policy_contract") == "PASS"
+    independence_mode = semantic_green_gate.get("semantic_contract", {}).get("independence", {}).get("mode")
 
     ok = all((
         green["ready_for_user_visible_review"] is True,
@@ -465,9 +467,10 @@ def self_test() -> int:
         caller_status_override_guard,
         missing_text_guard,
         taxonomy_ok,
+        repair_policy_ok,
         green["numeric_quality_aggregation"] is False,
         green["registered_release_contract_required"] is True,
-        green["gates"][-1].get("semantic_contract", {}).get("independence", {}).get("mode") in {"peer_chat_relay", "distinct_worker_session"},
+        independence_mode == "peer_chat_relay",
     ))
     print(json.dumps({
         "production_readiness_contract": "PASS" if ok else "FAIL",
@@ -481,10 +484,11 @@ def self_test() -> int:
         "pending_gate_blocks": True,
         "registered_release_contract_required": adhoc_release_guard,
         "caller_status_cannot_override_semantic_result": caller_status_override_guard,
-        "peer_relay_independence_supported": green["ready_for_user_visible_review"] is True,
+        "peer_relay_independence_supported": independence_mode == "peer_chat_relay",
         "distinct_session_independence_supported": session_green["ready_for_user_visible_review"] is True,
         "same_session_rejected": same_session_guard,
         "quality_taxonomy_contract": taxonomy_ok,
+        "repair_policy_contract": repair_policy_ok,
         "numeric_quality_aggregation": False,
         "authority": False,
         "model_execution": False,
