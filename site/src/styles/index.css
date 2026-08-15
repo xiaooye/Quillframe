@@ -28,6 +28,7 @@
 /* Product-language composition. Keep these after route defaults. */
 @import "./kawaii-surfaces.css";
 @import "./tool-workbench-kawaii.css";
+@import "./editorial-composition.css";
 @import "./embedded-features.css";
 
 /* Cross-cutting accessibility/readability hardening owns no page layout. */
