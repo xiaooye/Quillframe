@@ -1,4 +1,4 @@
-# NovelForge Skill Contract · 7.3
+# NovelForge Skill Contract
 
 <p><kbd>TIER C · FRAMEWORK CONTRACT</kbd>&nbsp;&nbsp;<kbd>AI-NATIVE</kbd>&nbsp;&nbsp;<kbd>CONTRACT-FIRST</kbd></p>
 
@@ -59,7 +59,7 @@ Only explicit Project acceptance plus the Project's settlement transaction may m
 
 ## 04 · AI-native semantic contracts
 
-NovelForge 7.3 uses **progressively disclosed semantic contract packs**.
+The current development architecture uses **progressively disclosed semantic contract packs**.
 
 Catalog:
 
