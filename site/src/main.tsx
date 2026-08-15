@@ -1,14 +1,10 @@
+import "./appearance-v5";
 import { render } from "solid-js/web";
 import App from "./App";
 import "./styles/site.css";
 import "./styles/product-contract.css";
 import "./styles/showcase.css";
-
-const appearanceMigrationKey = "novelforge.product-entry.v4.appearance-migrated";
-if (!localStorage.getItem(appearanceMigrationKey)) {
-  localStorage.setItem("novelforge.appearance", "light");
-  localStorage.setItem(appearanceMigrationKey, "true");
-}
+import "./styles/atelier.css";
 
 // The launcher emits a synthetic Ctrl+K event on document. Real keyboard events
 // already bubble to window; only bridge the synthetic event into the AppShell
