@@ -1,0 +1,223 @@
+/*
+ * Story Loom identity for Starlight.
+ *
+ * Documentation stays reading-first. We borrow the product site's stationery
+ * grammar only where it helps orientation: chrome, landing hierarchy, small
+ * labels, and the article title boundary. Long-form content remains quiet.
+ */
+
+:root {
+  --nf-docs-pink: oklch(.73 .145 350);
+  --nf-docs-lilac: oklch(.75 .105 300);
+  --nf-docs-blue: oklch(.76 .105 244);
+  --nf-docs-mint: oklch(.79 .09 158);
+  --nf-docs-cream: oklch(.985 .018 78);
+}
+
+/* Product-family chrome ------------------------------------------------ */
+
+header.header {
+  position: relative;
+  margin: .55rem .7rem 0;
+  border: 1px solid color-mix(in oklab, var(--nf-docs-lilac) 16%, var(--nf-border));
+  border-radius: 1rem 1rem .7rem 1rem;
+  background:
+    linear-gradient(90deg,
+      color-mix(in oklab, var(--nf-pink-soft) 28%, var(--nf-surface-solid)),
+      color-mix(in oklab, var(--nf-surface-solid) 96%, transparent) 24% 76%,
+      color-mix(in oklab, var(--nf-purple-soft) 26%, var(--nf-surface-solid)));
+  box-shadow:
+    0 3px 0 color-mix(in oklab, var(--nf-docs-blue) 7%, transparent),
+    0 12px 28px -26px color-mix(in oklab, var(--nf-docs-lilac) 44%, transparent);
+}
+
+header.header::after {
+  content: "";
+  position: absolute;
+  inset-inline: 1rem;
+  inset-block-end: -.28rem;
+  block-size: .28rem;
+  opacity: .28;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--nf-docs-blue) 0 .65rem,
+    transparent .65rem 1rem,
+    var(--nf-docs-pink) 1rem 1.65rem,
+    transparent 1.65rem 2rem
+  );
+  mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+}
+
+.nf-brand-mark-shell {
+  border: 1px solid color-mix(in oklab, var(--nf-docs-pink) 24%, var(--nf-border));
+  border-radius: .72rem .72rem .45rem .72rem;
+  background: linear-gradient(145deg, var(--nf-pink-soft), var(--nf-purple-soft));
+  box-shadow: 3px 4px 0 color-mix(in oklab, var(--nf-docs-lilac) 9%, transparent);
+  transform: rotate(-1.5deg);
+}
+
+.nf-docs-root-link[aria-current="page"] {
+  color: color-mix(in oklab, var(--nf-docs-lilac) 76%, var(--sl-color-white));
+  background: color-mix(in oklab, var(--nf-purple-soft) 38%, transparent);
+}
+
+.nf-studio-link {
+  border-radius: .72rem .72rem .45rem .72rem;
+  background: linear-gradient(135deg, var(--nf-docs-lilac), var(--nf-docs-pink));
+  box-shadow: 0 4px 0 color-mix(in oklab, var(--nf-docs-pink) 16%, transparent);
+}
+
+header.header site-search button,
+header.header button[data-open-modal],
+header.header .search-input {
+  border-style: dashed;
+  border-color: color-mix(in oklab, var(--nf-docs-blue) 22%, var(--nf-border));
+  border-radius: .72rem;
+  background: color-mix(in oklab, var(--nf-blue-soft) 18%, var(--nf-surface-solid));
+}
+
+/* Landing: open composition, stationery accents ----------------------- */
+
+body:has([data-nf-docs-home]) .hero {
+  position: relative;
+  overflow: visible;
+  padding-block: clamp(2.5rem, 6vw, 5.5rem);
+  border-bottom: 0;
+  background:
+    radial-gradient(30rem 15rem at 4% 12%, color-mix(in oklab, var(--nf-pink-soft) 34%, transparent), transparent 72%),
+    radial-gradient(28rem 14rem at 95% 8%, color-mix(in oklab, var(--nf-purple-soft) 30%, transparent), transparent 74%);
+}
+
+body:has([data-nf-docs-home]) .hero::before {
+  content: "♡ NovelForge Docs";
+  display: block;
+  position: absolute;
+  inset: 1rem 1.1rem auto auto;
+  padding: .35rem .7rem;
+  border: 1px solid color-mix(in oklab, var(--nf-docs-pink) 20%, var(--nf-border));
+  border-radius: .55rem .55rem .3rem .55rem;
+  color: color-mix(in oklab, var(--nf-docs-pink) 72%, var(--sl-color-white));
+  background: color-mix(in oklab, var(--nf-pink-soft) 58%, var(--nf-surface-solid));
+  box-shadow: 3px 4px 0 color-mix(in oklab, var(--nf-docs-pink) 8%, transparent);
+  font-size: .68rem;
+  font-weight: 750;
+  letter-spacing: .04em;
+  transform: rotate(1deg);
+}
+
+body:has([data-nf-docs-home]) .hero::after {
+  content: "✦   ♡   ☁";
+  display: block;
+  position: absolute;
+  inset: auto 1.4rem .8rem auto;
+  color: color-mix(in oklab, var(--nf-docs-lilac) 24%, transparent);
+  letter-spacing: .5rem;
+  pointer-events: none;
+}
+
+.nf-link-card {
+  position: relative;
+  padding-inline-start: 1rem;
+  border-inline-start: 2px solid color-mix(in oklab, var(--nf-docs-blue) 30%, transparent);
+}
+
+.nf-link-card:nth-child(4n + 2) {
+  border-inline-start-color: color-mix(in oklab, var(--nf-docs-pink) 32%, transparent);
+}
+
+.nf-link-card:nth-child(4n + 3) {
+  border-inline-start-color: color-mix(in oklab, var(--nf-docs-mint) 40%, transparent);
+}
+
+.nf-link-card:nth-child(4n + 4) {
+  border-inline-start-color: color-mix(in oklab, var(--nf-docs-lilac) 34%, transparent);
+}
+
+.nf-link-card:hover,
+.nf-link-card:focus-visible {
+  background: linear-gradient(90deg, color-mix(in oklab, var(--nf-purple-soft) 18%, transparent), transparent 74%);
+}
+
+.nf-link-icon {
+  border: 1px solid color-mix(in oklab, var(--nf-docs-lilac) 18%, var(--nf-border));
+  border-radius: .62rem .62rem .36rem .62rem;
+  background: color-mix(in oklab, var(--nf-purple-soft) 36%, var(--nf-surface-solid));
+  box-shadow: 2px 3px 0 color-mix(in oklab, var(--nf-docs-lilac) 7%, transparent);
+}
+
+.nf-tier-card {
+  position: relative;
+  padding-block-start: 1rem;
+  border-top: 2px solid color-mix(in oklab, var(--nf-docs-lilac) 22%, transparent);
+}
+
+.nf-tier-card:nth-child(2) {
+  border-top-color: color-mix(in oklab, var(--nf-docs-blue) 24%, transparent);
+}
+
+.nf-tier-card:nth-child(3) {
+  border-top-color: color-mix(in oklab, var(--nf-docs-mint) 30%, transparent);
+}
+
+.nf-reference-callout {
+  position: relative;
+  padding-inline-start: 1rem;
+  border-inline-start: 3px solid color-mix(in oklab, var(--nf-docs-pink) 34%, var(--nf-border));
+  background: linear-gradient(90deg, color-mix(in oklab, var(--nf-pink-soft) 18%, transparent), transparent 68%);
+}
+
+/* Deep docs: preserve reading calm, brand the entry boundary only -------- */
+
+.nf-article-title {
+  position: relative;
+  background:
+    radial-gradient(24rem 10rem at 0% 0%, color-mix(in oklab, var(--nf-purple-soft) 18%, transparent), transparent 72%),
+    transparent;
+}
+
+.nf-article-title::before {
+  content: "";
+  display: block;
+  position: absolute;
+  inset: .7rem auto .7rem -.75rem;
+  inline-size: .22rem;
+  border-radius: 999px;
+  background: linear-gradient(var(--nf-docs-pink), var(--nf-docs-lilac), var(--nf-docs-blue));
+  opacity: .55;
+}
+
+.nf-article-title__eyebrow {
+  color: color-mix(in oklab, var(--nf-docs-lilac) 66%, var(--nf-muted));
+}
+
+.sidebar-content a[aria-current="page"] {
+  border-inline-start-color: var(--nf-docs-pink);
+  background: linear-gradient(90deg, color-mix(in oklab, var(--nf-pink-soft) 18%, transparent), transparent 78%);
+}
+
+@media (max-width: 50rem) {
+  header.header {
+    margin: .35rem .35rem 0;
+    border-radius: .85rem;
+  }
+
+  header.header::after {
+    inset-inline: .7rem;
+  }
+
+  body:has([data-nf-docs-home]) .hero::before {
+    inset: .7rem .4rem auto auto;
+  }
+
+  body:has([data-nf-docs-home]) .hero::after {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nf-brand-mark-shell,
+  body:has([data-nf-docs-home]) .hero::before {
+    transform: none;
+  }
+}
