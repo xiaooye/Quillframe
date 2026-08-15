@@ -1,7 +1,8 @@
-import { lazy } from "solid-js";
+import { Suspense, lazy, type JSX } from "solid-js";
 import { render } from "solid-js/web";
 import { Route, Router } from "@solidjs/router";
 import { AppShell } from "./AppShell";
+import { StudioFailureBoundary, StudioNotFound, StudioRouteLoading, StudioSkipLink } from "./StudioResilience";
 import { bridgeTransportAvailable } from "./bridge";
 import { I18nProvider } from "./i18n";
 import { StudioProvider } from "./studio";
@@ -22,6 +23,14 @@ if (!root) throw new Error("#app mount point is missing");
 
 document.documentElement.dataset.experience = "story-loom-kawaii-atelier-v5";
 document.documentElement.dataset.productLanguage = "novelforge-kawaii-v1";
+
+function StudioShellRoot(props: { children?: JSX.Element }) {
+  return (
+    <AppShell>
+      <Suspense fallback={<StudioRouteLoading />}>{props.children}</Suspense>
+    </AppShell>
+  );
+}
 
 async function configureOfflineShell() {
   if (!("serviceWorker" in navigator)) return;
@@ -48,23 +57,27 @@ async function configureOfflineShell() {
   );
 }
 
-void configureOfflineShell();
+void configureOfflineShell().catch(() => undefined);
 
 render(
   () => (
     <I18nProvider>
       <StudioProvider>
-        <Router root={AppShell}>
-          <Route path="/" component={Desk} />
-          <Route path="/start" component={Start} />
-          <Route path="/project" component={Project} />
-          <Route path="/workspace" component={Workspace} />
-          <Route path="/agents" component={Agents} />
-          <Route path="/context" component={ContextRoute} />
-          <Route path="/capabilities" component={Capabilities} />
-          <Route path="/semantic" component={Semantic} />
-          <Route path="/diagnostics" component={Diagnostics} />
-        </Router>
+        <StudioFailureBoundary>
+          <StudioSkipLink />
+          <Router root={StudioShellRoot}>
+            <Route path="/" component={Desk} />
+            <Route path="/start" component={Start} />
+            <Route path="/project" component={Project} />
+            <Route path="/workspace" component={Workspace} />
+            <Route path="/agents" component={Agents} />
+            <Route path="/context" component={ContextRoute} />
+            <Route path="/capabilities" component={Capabilities} />
+            <Route path="/semantic" component={Semantic} />
+            <Route path="/diagnostics" component={Diagnostics} />
+            <Route path="*404" component={StudioNotFound} />
+          </Router>
+        </StudioFailureBoundary>
       </StudioProvider>
     </I18nProvider>
   ),
