@@ -1,0 +1,202 @@
+/* Docs landing only: follow the cleaner product-home hierarchy. The article
+   reader keeps its own quiet framed navigation; this removes card stacking
+   from the splash page without forking Starlight. */
+
+body:has([data-nf-docs-home]) {
+  background:
+    radial-gradient(48rem 26rem at 8% 0%, color-mix(in oklab, var(--nf-pink-soft) 56%, transparent), transparent 74%),
+    radial-gradient(42rem 24rem at 94% 1%, color-mix(in oklab, var(--nf-lilac-soft) 46%, transparent), transparent 74%),
+    var(--sl-color-black);
+}
+
+body:has([data-nf-docs-home]) .hero {
+  margin-top: clamp(1rem, 2vw, 1.6rem);
+  padding: clamp(2rem, 4.5vw, 3.6rem) 0 clamp(1.5rem, 3vw, 2.4rem);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body:has([data-nf-docs-home]) .hero::before,
+body:has([data-nf-docs-home]) .hero::after {
+  display: none;
+}
+
+body:has([data-nf-docs-home]) .hero h1 {
+  max-width: 16ch;
+  font-size: clamp(2.5rem, 5.6vw, 4.35rem);
+  line-height: 1.01;
+}
+
+body:has([data-nf-docs-home]):lang(zh-CN) .hero h1 {
+  max-width: 17ch;
+}
+
+body:has([data-nf-docs-home]) .hero .tagline {
+  max-width: 42rem;
+}
+
+body:has([data-nf-docs-home]) .hero .actions a {
+  border-radius: .7rem;
+}
+
+.nf-docs-home {
+  width: min(100%, 72rem);
+  padding-bottom: 4rem;
+}
+
+.nf-home-section {
+  margin-top: clamp(3rem, 5vw, 4.8rem);
+}
+
+.nf-home-section--lead {
+  margin-top: clamp(1.7rem, 3vw, 2.6rem);
+}
+
+.nf-home-section-heading {
+  max-width: 52rem;
+  margin-bottom: 1.45rem;
+}
+
+.nf-link-grid {
+  gap: 0 clamp(1.8rem, 3vw, 3.2rem);
+  margin-top: 1.35rem;
+  border-top: 1px solid color-mix(in oklab, var(--nf-border) 62%, transparent);
+}
+
+.nf-link-grid--compact {
+  gap: 0 clamp(1.8rem, 3vw, 3.2rem);
+}
+
+.nf-link-card,
+.nf-link-grid--compact .nf-link-card {
+  min-height: 0;
+  padding: 1.15rem .1rem 1.25rem;
+  overflow: visible;
+  border: 0;
+  border-bottom: 1px solid color-mix(in oklab, var(--nf-border) 58%, transparent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transition: color .16s ease, background-color .16s ease, transform .16s ease;
+}
+
+.nf-link-card::after {
+  display: none;
+}
+
+.nf-link-card:hover,
+.nf-link-card:focus-visible {
+  border-color: color-mix(in oklab, var(--nf-border) 58%, transparent);
+  background: linear-gradient(90deg, color-mix(in oklab, var(--nf-card-soft) 28%, transparent), transparent 78%);
+  box-shadow: none;
+  transform: translateX(3px);
+}
+
+.nf-link-icon {
+  width: 2.15rem;
+  height: 2.15rem;
+  border: 0;
+  border-radius: .62rem;
+  background: color-mix(in oklab, var(--nf-card-soft) 54%, transparent);
+  box-shadow: none;
+}
+
+.nf-link-copy {
+  gap: .3rem;
+}
+
+.nf-link-copy strong {
+  font-size: 1rem;
+}
+
+.nf-link-copy small {
+  max-width: 52ch;
+}
+
+.nf-tier-grid {
+  gap: 0 clamp(1.8rem, 3vw, 3.2rem);
+  margin-top: 1.45rem;
+  border-top: 1px solid color-mix(in oklab, var(--nf-border) 62%, transparent);
+}
+
+.nf-tier-card {
+  min-height: 0;
+  padding: 1.3rem 0 1.5rem;
+  border: 0;
+  border-bottom: 1px solid color-mix(in oklab, var(--nf-border) 58%, transparent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.nf-tier-badge {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: .68rem;
+}
+
+.nf-tier-card h3 {
+  margin-top: .65rem;
+}
+
+.nf-reference-callout {
+  align-items: flex-end;
+  margin-top: clamp(3.2rem, 5vw, 4.8rem);
+  padding: 1.8rem 0 0;
+  overflow: visible;
+  border: 0;
+  border-top: 1px solid color-mix(in oklab, var(--nf-pink) 28%, var(--nf-border));
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.nf-reference-callout::before {
+  display: none;
+}
+
+.nf-reference-callout > a {
+  border-radius: .7rem;
+}
+
+@media (max-width: 50rem) {
+  body:has([data-nf-docs-home]) .hero {
+    padding: 1.65rem 0 1.25rem;
+  }
+
+  body:has([data-nf-docs-home]) .hero h1 {
+    font-size: clamp(2.25rem, 10vw, 3.15rem);
+  }
+
+  .nf-home-section {
+    margin-top: 3rem;
+  }
+
+  .nf-link-grid,
+  .nf-tier-grid {
+    gap: 0;
+  }
+
+  .nf-reference-callout {
+    align-items: flex-start;
+    padding-top: 1.5rem;
+  }
+}
+
+@media (max-width: 34rem) {
+  .nf-link-card {
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+    padding-inline: 0;
+  }
+
+  .nf-link-icon {
+    width: 1.95rem;
+    height: 1.95rem;
+  }
+}
