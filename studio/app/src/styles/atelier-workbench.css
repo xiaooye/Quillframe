@@ -625,14 +625,7 @@
     min-block-size: 50px;
     border-radius: 11px;
   }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-bottom-nav-item[data-active="true"] {
-    color: var(--wui-color-primary);
-    background: var(--nf-workbench-accent-soft);
-    box-shadow: none;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-bottom-nav__icon svg,
+:root[data-experience="story-loom-kawaii-atelier-v5"] .nf-bottom-nav__icon svg,
   :root[data-experience="story-loom-kawaii-atelier-v5"] .wui-bottom-nav__icon svg {
     inline-size: 19px;
     block-size: 19px;
@@ -749,8 +742,7 @@
       box-shadow: none;
     }
 
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-nav-item[data-active="true"],
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-bottom-nav-item[data-active="true"] {
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-nav-item[data-active="true"] {
       outline: 2px solid Highlight;
       outline-offset: -2px;
       background: Canvas;
