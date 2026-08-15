@@ -7,7 +7,7 @@ export default function Workspace() {
     <section class="nf-page nf-workspace-page">
       <PageIntro title={t("workspace.title")} body={t("workspace.body")} />
       <div class="nf-workspace-stage">
-        <aside class="nf-workspace-outline" aria-hidden="true">
+        <aside class="wui-card wui-card--filled nf-workspace-outline" aria-hidden="true">
           <span></span><span></span><span></span><span></span>
         </aside>
         <article class="wui-card nf-card nf-focus-placeholder">
@@ -21,7 +21,7 @@ export default function Workspace() {
             </div>
           </div>
         </article>
-        <aside class="nf-workspace-inspector" aria-hidden="true">
+        <aside class="wui-card wui-card--filled nf-workspace-inspector" aria-hidden="true">
           <span></span><span></span><span></span>
         </aside>
       </div>
