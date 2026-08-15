@@ -29,7 +29,7 @@ func _build_product_hero(pos: Vector2, hero_size: Vector2, stacked: bool) -> voi
 	title.position = Vector2(pad, title_y)
 	title.size = title_box
 	title.scale = Vector2(1.055 if not stacked and _locale == "en-US" else 1.0, 1.0)
-	title.add_theme_constant_override("line_spacing", -26 if not stacked and _locale == "en-US" else (-16 if stacked and _locale == "en-US" else -9))
+	title.add_theme_constant_override("line_spacing", -26 if not stacked and _locale == "en-US" else (-18 if stacked and _locale == "en-US" else -9))
 	hero.add_child(title)
 
 	var lede_text := ""
@@ -38,7 +38,7 @@ func _build_product_hero(pos: Vector2, hero_size: Vector2, stacked: bool) -> voi
 	else:
 		lede_text = "It separates creative judgment from deterministic control so a long-\nrunning book can accumulate evidence, revisions, and state without\nturning every previous model output into truth." if not stacked else "It separates creative judgment from\ndeterministic control so a long-running\nbook can accumulate evidence, revisions,\nand state without turning every previous\nmodel output into truth."
 	var lede := _label(lede_text, 17 if not stacked else 16, 420, C.muted)
-	lede.position = Vector2(pad, 346.0 if not stacked else (310.0 if _locale == "en-US" else 220.0))
+	lede.position = Vector2(pad, 346.0 if not stacked else (306.0 if _locale == "en-US" else 220.0))
 	lede.size = Vector2(610 if not stacked else hero_size.x - pad * 2.0, 150)
 	lede.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lede.add_theme_constant_override("line_spacing", 4 if not stacked else 3)
