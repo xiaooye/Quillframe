@@ -180,6 +180,13 @@ jobs:
           print({'schema':'novelforge_studio_cloud_https_check_v1','status':'pass','url':data['surface']})
           PY
 
+      - name: Install CJK font for browser QA
+        if: steps.deploy.outcome == 'success'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+          fc-cache -f >/dev/null
+
       - name: Browser runtime and visual QA
         if: steps.deploy.outcome == 'success'
         env:
