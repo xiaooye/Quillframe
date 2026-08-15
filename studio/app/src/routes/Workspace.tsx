@@ -11,6 +11,7 @@ type PlaygroundMode = (typeof modes)[number];
 const steps = ["context", "contracts", "execution", "evidence", "result"] as const;
 type PlaygroundStep = (typeof steps)[number];
 type ContractPreviewStatus = "candidate" | "registered" | "not_registered" | "unavailable";
+type PlaygroundEvent = { seq: number; type: string; status: string };
 
 const contractPreview: Record<PlaygroundMode, readonly string[]> = {
   DRAFT: ["context.select", "character.action_propose", "scene.resolve_actions"],
@@ -34,6 +35,8 @@ const inspectorCopy = {
     registered: "Registered",
     notRegistered: "Not registered",
     unavailable: "Registry unavailable",
+    eventTimeline: "Event timeline",
+    rawExecution: "Raw execution state",
     catalogChecked: "Contract candidates were compared with the live semantic.catalog projection. Registration is evidence of presence only; no semantic routing or quality judgment occurred.",
     catalogUnavailable: "A bound Core was present, but semantic.catalog could not be used for this preview. Contract candidates remain unverified by the registry.",
     catalogNotBound: "No Core is bound, so contract candidates come only from the explicit Playground mode mapping.",
@@ -53,6 +56,8 @@ const inspectorCopy = {
     registered: "已注册",
     notRegistered: "未注册",
     unavailable: "Registry 不可用",
+    eventTimeline: "事件时间线",
+    rawExecution: "原始执行状态",
     catalogChecked: "这些契约候选已与 live semantic.catalog 投影进行比对。注册只能证明契约存在；本次没有执行 semantic routing，也没有产生质量判断。",
     catalogUnavailable: "当前已绑定 Core，但本次预览无法使用 semantic.catalog；这些契约候选没有获得 registry 验证。",
     catalogNotBound: "当前没有绑定 Core，因此契约候选只来自显式的 Playground mode mapping。",
@@ -66,6 +71,7 @@ interface PlaygroundResult {
   manifest: Record<string, unknown>;
   contracts: { id: string; status: ContractPreviewStatus }[];
   execution: Record<string, unknown>;
+  events: PlaygroundEvent[];
   evidence: string[];
   result: Record<string, unknown>;
 }
@@ -134,6 +140,15 @@ export default function Workspace() {
       }));
       const registeredCandidates = catalogCheck === "checked" ? contractCandidates.filter((item) => item.status === "registered").map((item) => item.id) : null;
       const catalogEvidence = catalogCheck === "checked" ? copy().catalogChecked : catalogCheck === "unavailable" ? copy().catalogUnavailable : copy().catalogNotBound;
+      const events: PlaygroundEvent[] = [
+        { seq: 1, type: "input.accepted", status: "complete" },
+        { seq: 2, type: "context.manifest.previewed", status: "complete" },
+        { seq: 3, type: "semantic.catalog", status: catalogCheck },
+        { seq: 4, type: "semantic.contract_candidates.previewed", status: "complete" },
+        { seq: 5, type: "model.execution", status: "skipped" },
+        { seq: 6, type: "evidence.previewed", status: "complete" },
+        { seq: 7, type: "run.receipt", status: "not_emitted" },
+      ];
 
       setPreview({
         fingerprint,
@@ -184,16 +199,8 @@ export default function Workspace() {
           canon_write: false,
           framework_write: false,
           settlement_authority: false,
-          events: [
-            { seq: 1, type: "input.accepted", status: "complete" },
-            { seq: 2, type: "context.manifest.previewed", status: "complete" },
-            { seq: 3, type: "semantic.catalog", status: catalogCheck },
-            { seq: 4, type: "semantic.contract_candidates.previewed", status: "complete" },
-            { seq: 5, type: "model.execution", status: "skipped" },
-            { seq: 6, type: "evidence.previewed", status: "complete" },
-            { seq: 7, type: "run.receipt", status: "not_emitted" },
-          ],
         },
+        events,
         evidence: [
           catalogEvidence,
           t("playground.evidenceEphemeral"),
@@ -300,7 +307,7 @@ export default function Workspace() {
                 <section class="nf-playground-panel" role="tabpanel" aria-label={stepLabel(activeStep())}>
                   <header class="nf-inspector-section-head">
                     <div>
-                      <span class="nf-card-label">{copy().stepHint}</span>
+                      <span class="nf-card-label">{activeStep() === "execution" ? copy().eventTimeline : copy().stepHint}</span>
                       <h2>{stepLabel(activeStep())}</h2>
                     </div>
                     <span class="wui-badge wui-badge--outline">{copy().complete}</span>
@@ -317,7 +324,13 @@ export default function Workspace() {
                         <p class="nf-playground-footnote">{t("playground.footnote")}</p>
                       </Match>
                       <Match when={activeStep() === "execution"}>
-                        <JsonBlock value={currentRun().execution} />
+                        <div class="nf-playground-contract-list">
+                          <For each={currentRun().events}>{(event) => <code>{String(event.seq).padStart(2, "0")} · {event.type} · {event.status}</code>}</For>
+                        </div>
+                        <details class="nf-raw-evidence">
+                          <summary>{copy().rawExecution}</summary>
+                          <JsonBlock value={currentRun().execution} />
+                        </details>
                       </Match>
                       <Match when={activeStep() === "evidence"}>
                         <ul><For each={currentRun().evidence}>{(item) => <li>{item}</li>}</For></ul>
