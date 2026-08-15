@@ -141,6 +141,22 @@ jobs:
                 'visibility': {'scope':'character','perspective_id':'CHAR-CI'},
                 'model_view': {'label':'offer','value':'The first offer was lower.'}
               }]
+            },
+            'narrative.verify': {
+              'candidate_fingerprint': fp,
+              'candidate_evidence': [
+                {'evidence_id':'E-NARR-CI','statement':'CHAR-A acts on the offer.','source_ref':'candidate:SCN-CI#1','story_order':9}
+              ],
+              'character_views': [
+                {'character_id':'CHAR-A','current_story_order':9,'agenda':'Preserve leverage.','visible_evidence_ids':['E-NARR-CI'],'beliefs':['The offer may be a bluff.'],'constraints':['Time is short.']}
+              ],
+              'relationship_evidence': [
+                {'relationship_id':'REL-A-B','before_state':{'trust':'strained'},'candidate_change':{'trust':'worse'},'evidence_ids':['E-NARR-CI']}
+              ],
+              'causal_trajectory': [
+                {'event_id':'EVT-NARR-CI','caused_by':['E-NARR-CI'],'effect':'A condition is imposed.','evidence_ids':['E-NARR-CI']}
+              ],
+              'candidate_state_delta': {'schema':'novelforge_candidate_state_delta_v1','authority':False}
             }
           }
           jobs={}
@@ -187,7 +203,7 @@ jobs:
           except ValueError:
               context_guard=True
           assert context_guard
-          typed=['reader.reaction','reader.engagement_audit','quality.production_review','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select']
+          typed=['reader.reaction','reader.engagement_audit','quality.production_review','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select','narrative.verify']
           json.dump({'semantic_contract_catalog_contract':'PASS','contracts':sorted(expected),'fingerprints':jobs,'typed_input_contracts':typed,'cold_reader_hidden_plan_guard':cold_reader_blocked,'production_reader_hidden_context_guard':production_reader_hidden_context_blocked,'production_review_hidden_context_guard':production_review_hidden_context_blocked,'required_transition_input_guard':transition_guard,'task_aware_context_input_guard':context_guard,'aggregate_registry_present':False,'model_execution':False},open('semantic-contracts-test.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
           PY
           python harness/semantic_workers/peer_chat_relay.py self-test > peer-chat-test.json
@@ -292,7 +308,7 @@ jobs:
           assert sc['production_review_hidden_context_guard'] is True
           assert sc['required_transition_input_guard'] is True
           assert sc['task_aware_context_input_guard'] is True
-          assert set(sc['typed_input_contracts'])=={'reader.reaction','reader.engagement_audit','quality.production_review','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select'}
+          assert set(sc['typed_input_contracts'])=={'reader.reaction','reader.engagement_audit','quality.production_review','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select','narrative.verify'}
           pr=loaded['production-readiness-test.json']
           assert pr['surface_and_reader_are_conjunctive'] is True
           assert pr['registered_reader_engagement_required'] is True
