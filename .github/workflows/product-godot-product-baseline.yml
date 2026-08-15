@@ -1,0 +1,85 @@
+name: Product Godot Product Baseline
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'site/src/**'
+      - 'site/package.json'
+      - 'site/package-lock.json'
+      - '.github/workflows/product-godot-product-baseline.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: product-godot-product-baseline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  solid-product-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Product Site dependencies
+        working-directory: site
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Build Solid product site
+        working-directory: site
+        run: npm run content && npm run build:site
+
+      - name: Capture Product desktop and mobile baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=/tmp/novelforge-product-baseline
+          mkdir -p "$OUT"
+          CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser)
+          test -n "$CHROME"
+
+          cd site
+          npm run preview -- --host 127.0.0.1 --port 4188 > "$OUT/server.log" 2>&1 &
+          SERVER_PID=$!
+          cleanup() {
+            kill "$SERVER_PID" >/dev/null 2>&1 || true
+            wait "$SERVER_PID" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          ready=false
+          for _ in $(seq 1 40); do
+            if curl -fsS 'http://127.0.0.1:4188/product' >/dev/null; then ready=true; break; fi
+            sleep 1
+          done
+          test "$ready" = true
+
+          shot() {
+            name="$1"; size="$2"; url="$3"
+            profile=$(mktemp -d)
+            "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --disable-background-networking \
+              --window-size="$size" --virtual-time-budget=5000 --user-data-dir="$profile" \
+              --screenshot="$OUT/${name}.png" "$url" >"$OUT/${name}.log" 2>&1
+            rm -rf "$profile"
+            test -s "$OUT/${name}.png"
+          }
+
+          shot solid-product-desktop 1440,900 'http://127.0.0.1:4188/product'
+          shot solid-product-mobile 390,844 'http://127.0.0.1:4188/product'
+
+      - name: Upload Product baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-route-solid-baseline
+          path: /tmp/novelforge-product-baseline
+          if-no-files-found: error
+          retention-days: 7
