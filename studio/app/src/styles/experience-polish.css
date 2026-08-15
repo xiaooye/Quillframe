@@ -1,0 +1,296 @@
+@layer novelforge-product-language {
+  /*
+   * Studio parity pass.
+   *
+   * Product-language.css owns the semantic mapping. This file adds workstation
+   * composition: the same soft NovelForge atmosphere, denser editor ergonomics,
+   * and stronger route/state affordances without turning Studio into a landing
+   * page or changing any Core authority semantics.
+   */
+
+  :root[data-product-language="novelforge-kawaii-v1"] {
+    --nf-studio-glow-pink: color-mix(in oklab, var(--nf-product-pink-soft) 56%, transparent);
+    --nf-studio-glow-lilac: color-mix(in oklab, var(--nf-product-lilac-soft) 52%, transparent);
+    --nf-studio-glow-mint: color-mix(in oklab, var(--nf-product-mint-soft) 46%, transparent);
+  }
+
+  .nf-main-column {
+    min-inline-size: 0;
+    background:
+      radial-gradient(42rem 22rem at 18% -3%, var(--nf-studio-glow-pink), transparent 72%),
+      radial-gradient(38rem 20rem at 88% 3%, var(--nf-studio-glow-lilac), transparent 74%),
+      var(--nf-product-canvas);
+  }
+
+  .nf-sidebar {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .nf-sidebar::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: auto 18px 18px;
+    block-size: 110px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--nf-studio-glow-pink), transparent 70%);
+    pointer-events: none;
+  }
+
+  .nf-nav-section::before {
+    display: block;
+    margin: 5px 9px 7px;
+    color: color-mix(in oklab, var(--nf-product-muted) 72%, transparent);
+    font-size: 8px;
+    font-weight: 760;
+    letter-spacing: .11em;
+    line-height: 1;
+  }
+
+  .nf-nav-section[data-nav-tier="product"]::before { content: "WORKSPACE"; }
+  .nf-nav-section[data-nav-tier="inspect"]::before { content: "EVIDENCE"; }
+
+  .nf-nav-item {
+    transition:
+      color var(--nf-product-duration-fast) var(--nf-product-ease),
+      background-color var(--nf-product-duration-fast) var(--nf-product-ease),
+      transform var(--nf-product-duration-fast) var(--nf-product-ease);
+  }
+
+  @media (hover: hover) {
+    .nf-nav-item:hover { transform: translateX(2px); }
+  }
+
+  .nf-nav-item[data-active="true"] .nf-nav-glyph {
+    background: color-mix(in oklab, var(--nf-product-surface) 58%, var(--nf-product-pink-soft));
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--nf-product-pink) 18%, transparent);
+  }
+
+  .nf-topbar {
+    z-index: 20;
+  }
+
+  .nf-topbar-context {
+    min-inline-size: 0;
+  }
+
+  .nf-topbar-context :where(span, strong) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nf-command-trigger kbd {
+    margin-inline-start: 4px;
+    padding: 2px 5px;
+    border: 1px solid var(--nf-studio-line-soft);
+    border-radius: 5px;
+    background: color-mix(in oklab, var(--nf-studio-panel) 84%, transparent);
+    color: var(--nf-product-muted);
+    font-size: 8px;
+    font-family: var(--wui-font-family-mono, ui-monospace, monospace);
+  }
+
+  /* Page identity stays route-owned, but intros share the same product grammar. */
+  .nf-page-intro {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-block-size: 154px;
+  }
+
+  .nf-page-intro::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inline-size: 230px;
+    block-size: 230px;
+    inset-block-start: -126px;
+    inset-inline-end: -70px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--nf-studio-glow-lilac), transparent 72%);
+    pointer-events: none;
+  }
+
+  .nf-page-intro::after {
+    content: "✦";
+    position: absolute;
+    inset-block-start: 16px;
+    inset-inline-end: 20px;
+    color: color-mix(in oklab, var(--nf-product-pink-strong) 34%, transparent);
+    font-size: 18px;
+    pointer-events: none;
+  }
+
+  .nf-page-intro .wui-badge,
+  .nf-page-intro .wui-button {
+    align-self: center;
+  }
+
+  /* Data surfaces should read like tools on the same desk, not disconnected cards. */
+  .nf-card,
+  .nf-inspector-surface,
+  .nf-catalog-workstation,
+  .nf-diagnostic-workstation,
+  .nf-production-preview,
+  .nf-workspace-stage {
+    transition:
+      border-color var(--nf-product-duration-fast) var(--nf-product-ease),
+      box-shadow var(--nf-product-duration-fast) var(--nf-product-ease),
+      background-color var(--nf-product-duration-fast) var(--nf-product-ease);
+  }
+
+  .nf-card:focus-within,
+  .nf-inspector-surface:focus-within,
+  .nf-catalog-workstation:focus-within,
+  .nf-diagnostic-workstation:focus-within,
+  .nf-workspace-stage:focus-within {
+    border-color: color-mix(in oklab, var(--nf-product-lilac) 34%, var(--nf-studio-line));
+    box-shadow: 0 14px 36px -34px color-mix(in oklab, var(--nf-product-lilac) 48%, transparent);
+  }
+
+  .nf-card .wui-card__header {
+    position: relative;
+  }
+
+  .nf-card .wui-card__header::after {
+    content: "";
+    position: absolute;
+    inset-inline: 18px;
+    inset-block-end: 0;
+    block-size: 1px;
+    background: linear-gradient(90deg, color-mix(in oklab, var(--nf-studio-line) 72%, transparent), transparent 82%);
+  }
+
+  .nf-metric-grid {
+    background:
+      linear-gradient(135deg, color-mix(in oklab, var(--nf-product-pink-soft) 14%, transparent), transparent 42%),
+      var(--nf-studio-panel);
+  }
+
+  .nf-metric-grid > .nf-card:nth-child(2) { background: color-mix(in oklab, var(--nf-product-blue-soft) 13%, transparent); }
+  .nf-metric-grid > .nf-card:nth-child(3) { background: color-mix(in oklab, var(--nf-product-mint-soft) 13%, transparent); }
+  .nf-metric-grid > .nf-card:nth-child(4) { background: color-mix(in oklab, var(--nf-product-lilac-soft) 13%, transparent); }
+
+  /* Workspace feels like an editor: quiet rails, crisp focus surface. */
+  .nf-workspace-stage {
+    min-block-size: clamp(460px, 62vh, 760px);
+    overflow: clip;
+    border-color: color-mix(in oklab, var(--nf-product-lilac) 16%, var(--nf-studio-line-soft));
+    box-shadow: 0 28px 70px -58px color-mix(in oklab, var(--nf-product-lilac) 38%, transparent);
+  }
+
+  .nf-workspace-outline,
+  .nf-workspace-inspector {
+    background:
+      linear-gradient(180deg, color-mix(in oklab, var(--nf-product-lilac-soft) 13%, transparent), transparent 40%),
+      var(--nf-studio-subtle);
+  }
+
+  .nf-focus-placeholder {
+    position: relative;
+    background:
+      radial-gradient(30rem 20rem at 50% 16%, color-mix(in oklab, var(--nf-product-pink-soft) 24%, transparent), transparent 72%),
+      var(--nf-studio-panel);
+  }
+
+  .nf-focus-placeholder::after {
+    content: "♡";
+    position: absolute;
+    inset-inline-end: 24px;
+    inset-block-end: 18px;
+    color: color-mix(in oklab, var(--nf-product-pink) 22%, transparent);
+    font-size: 18px;
+    pointer-events: none;
+  }
+
+  /* Inspector / diagnostics carry an evidence tint rather than marketing chrome. */
+  .nf-inspector-surface,
+  .nf-diagnostic-workstation,
+  .nf-catalog-workstation {
+    background:
+      linear-gradient(145deg, color-mix(in oklab, var(--nf-product-blue-soft) 10%, transparent), transparent 46%),
+      var(--nf-studio-panel);
+  }
+
+  .nf-detail-list > div:hover,
+  .nf-path-row:hover,
+  .nf-pack-row:hover,
+  .nf-diagnostic-facts > div:hover {
+    background: color-mix(in oklab, var(--nf-studio-hover) 72%, transparent);
+  }
+
+  .nf-app-shell :where(input, textarea, select, .wui-input, .wui-select, .wui-textarea) {
+    transition:
+      border-color var(--nf-product-duration-fast) var(--nf-product-ease),
+      background-color var(--nf-product-duration-fast) var(--nf-product-ease),
+      box-shadow var(--nf-product-duration-fast) var(--nf-product-ease);
+  }
+
+  .nf-app-shell :where(input, textarea, select, .wui-input, .wui-select, .wui-textarea):focus {
+    border-color: color-mix(in oklab, var(--nf-product-lilac) 44%, var(--nf-studio-line));
+    background: var(--nf-studio-panel);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--nf-product-lilac-soft) 72%, transparent);
+  }
+
+  .nf-command {
+    background:
+      linear-gradient(180deg, color-mix(in oklab, var(--nf-product-lilac-soft) 20%, transparent), transparent 76px),
+      var(--nf-studio-panel);
+  }
+
+  .nf-command .wui-command__group-label {
+    color: color-mix(in oklab, var(--nf-product-muted) 78%, transparent);
+    font-size: 8px;
+    font-weight: 760;
+    letter-spacing: .1em;
+  }
+
+  .nf-command .wui-command__item {
+    transition:
+      color var(--nf-product-duration-fast) var(--nf-product-ease),
+      background-color var(--nf-product-duration-fast) var(--nf-product-ease),
+      transform var(--nf-product-duration-fast) var(--nf-product-ease);
+  }
+
+  @media (hover: hover) {
+    .nf-command .wui-command__item:hover:not([data-disabled]) { transform: translateX(2px); }
+  }
+
+  /* Dark mode receives its own atmosphere rather than a dimmed light canvas. */
+  :root.dark[data-product-language="novelforge-kawaii-v1"] .nf-main-column {
+    background:
+      radial-gradient(42rem 22rem at 18% -3%, color-mix(in oklab, var(--nf-product-pink) 8%, transparent), transparent 72%),
+      radial-gradient(38rem 20rem at 88% 3%, color-mix(in oklab, var(--nf-product-lilac) 8%, transparent), transparent 74%),
+      var(--nf-product-canvas);
+  }
+
+  :root.dark[data-product-language="novelforge-kawaii-v1"] .nf-page-intro,
+  :root.dark[data-product-language="novelforge-kawaii-v1"] .nf-card,
+  :root.dark[data-product-language="novelforge-kawaii-v1"] .nf-workspace-stage,
+  :root.dark[data-product-language="novelforge-kawaii-v1"] .nf-command {
+    background-color: var(--nf-studio-panel);
+  }
+
+  @media (max-width: 960px) {
+    .nf-page-intro { grid-template-columns: 1fr; }
+    .nf-page-intro::after { inset-inline-end: 14px; }
+    .nf-command-trigger kbd { display: none; }
+  }
+
+  @media (max-width: 719px) {
+    .nf-main-column {
+      background:
+        radial-gradient(28rem 16rem at 12% 0%, var(--nf-studio-glow-pink), transparent 74%),
+        var(--nf-product-canvas);
+    }
+
+    .nf-nav-section::before { display: none; }
+    .nf-page-intro { min-block-size: 0; padding: 18px; }
+    .nf-page-intro::before { inline-size: 170px; block-size: 170px; inset-block-start: -100px; }
+    .nf-workspace-stage { min-block-size: 62dvh; }
+    .nf-command { inline-size: calc(100vw - 18px); max-block-size: min(80dvh, 720px); }
+  }
+}
