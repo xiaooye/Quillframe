@@ -57,22 +57,22 @@ const footprintCopy = {
 const runtimeCopy = {
   "en-US": {
     eyebrow: "Runtime boundary",
-    title: "Observable state is public; runtime control is not",
-    body: "NovelForge now exposes typed, side-effect-free projections for sessions, events, handoffs, and Run Receipts. Studio reads those projections through the Host Bridge instead of reconstructing runtime state from logs or private stores.",
-    supported: "Safe public queries",
-    deferred: "Runtime control still deferred",
-    supportedBody: "These read operations are exposed by the current Host Bridge. Their projections carry authority=false and do not initialize or mutate runtime persistence.",
-    deferredBody: "Control operations stay unavailable until Core provides typed commands with checkpoint revalidation, before-state preconditions, capability evidence, CAS/idempotency, authority checks, and receipts.",
+    title: "Observable state is public; one runtime command is guarded",
+    body: "NovelForge exposes typed side-effect-free projections and one narrowly scoped local command: session.resume. The command requires a fresh preflight, explicit user authorization, exact Session CAS, and a durable receipt; it does not run a model or gain Project/Canon authority.",
+    supported: "Supported Host Bridge operations",
+    deferred: "Additional writes still deferred",
+    supportedBody: "Queries remain authority=false and side-effect-free. session.resume is local_app-only and may mutate only runtime Session state through its typed command contract.",
+    deferredBody: "Generic command dispatch and Project mutation remain unavailable. Every future write needs its own typed Core contract, preconditions, authority policy, CAS/idempotency, and durable receipt.",
     raw: "Raw capability evidence",
   },
   "zh-CN": {
     eyebrow: "Runtime 边界",
-    title: "运行状态已经可观测；Runtime Control 仍未开放",
-    body: "NovelForge 现在已经公开 session、event、handoff 与 Run Receipt 的类型化无副作用投影。Studio 只通过 Host Bridge 读取这些投影，不会从日志或私有存储反推 runtime state。",
-    supported: "安全公共查询",
-    deferred: "仍 deferred 的 Runtime Control",
-    supportedBody: "这些只读操作已经由当前 Host Bridge 公开；投影始终 authority=false，也不会初始化或修改 runtime persistence。",
-    deferredBody: "控制类操作仍然不可用，直到 Core 提供带 checkpoint 重核、before-state 前置条件、capability evidence、CAS/idempotency、authority check 与 receipt 的类型化 command。",
+    title: "运行状态公开可观测；一个 Runtime Command 已受保护开放",
+    body: "NovelForge 已公开类型化、无副作用的运行时投影，并只开放一个严格限定的本地 command：session.resume。它要求 fresh preflight、显式用户授权、精确 Session CAS 与持久 receipt；不会运行模型，也不会获得 Project/Canon authority。",
+    supported: "已支持的 Host Bridge 操作",
+    deferred: "仍 deferred 的额外写操作",
+    supportedBody: "查询仍是 authority=false 且无副作用。session.resume 仅允许 local_app 调用，并且只能通过类型化 command contract 修改 Runtime Session state。",
+    deferredBody: "通用 command dispatch 与 Project mutation 仍不可用。未来每一种写操作都必须拥有独立的 Core typed contract、前置条件、authority policy、CAS/idempotency 与持久 receipt。",
     raw: "原始 Capability 证据",
   },
 } as const;
@@ -87,7 +87,7 @@ export default function Capabilities() {
     if (!description) return undefined;
     return {
       supported: description.supported_operations,
-      deferred: Object.entries(description.deferred_operations).filter(([operation]) => /^(runtime|run|session)\./.test(operation)),
+      deferred: Object.entries(description.deferred_operations),
     };
   });
   const [footprint] = createResource(async () => {
