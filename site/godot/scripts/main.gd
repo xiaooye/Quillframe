@@ -43,7 +43,7 @@ const PAGE_DATA := {
 	"/architecture": {
 		"eyebrow": "ARCHITECTURE / STORY LOOM",
 		"title": "See one run move through the whole system.",
-		"copy": "Project → Manager → Context → Worker → Gate → Settlement → Publication. Each node keeps its own mechanism boundary while the product stays visually coherent.",
+		"copy": "Project -> Manager -> Context -> Worker -> Gate -> Settlement -> Publication. Each node keeps its own mechanism boundary while the product stays visually coherent.",
 		"primary": ["OPEN PLAYGROUND", "/playground"],
 		"secondary": ["INSPECT STATE", "/inspect"],
 	},
@@ -105,6 +105,7 @@ var _map
 var _backdrop
 var _docs_button: Button
 var _hero_grid: GridContainer
+var _hero_copy: MarginContainer
 var _hero_visual: PanelContainer
 var _action_grid: GridContainer
 var _loom_grid: GridContainer
@@ -162,10 +163,12 @@ func _build_interface() -> void:
 
 	_hero_grid = GridContainer.new()
 	_hero_grid.columns = 2
+	_hero_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_hero_grid.add_theme_constant_override("h_separation", 28)
 	_hero_grid.add_theme_constant_override("v_separation", 20)
 	page.add_child(_hero_grid)
-	_hero_grid.add_child(_build_hero_copy())
+	_hero_copy = _build_hero_copy()
+	_hero_grid.add_child(_hero_copy)
 	_hero_visual = _build_hero_visual()
 	_hero_grid.add_child(_hero_visual)
 
@@ -251,7 +254,7 @@ func _build_topbar() -> PanelContainer:
 	nav.add_child(_docs_button)
 
 	_search_button = Button.new()
-	_search_button.text = "⌕  Search NovelForge"
+	_search_button.text = "Search NovelForge"
 	_search_button.custom_minimum_size = Vector2(176, 40)
 	_search_button.add_theme_font_size_override("font_size", 9)
 	_search_button.add_theme_color_override("font_color", Story.MUTED_FOREGROUND)
@@ -261,7 +264,7 @@ func _build_topbar() -> PanelContainer:
 	row.add_child(_search_button)
 
 	_studio_button = Button.new()
-	_studio_button.text = "✦  OPEN STUDIO"
+	_studio_button.text = "OPEN STUDIO"
 	_studio_button.custom_minimum_size = Vector2(132,40)
 	_studio_button.add_theme_font_size_override("font_size", 9)
 	_studio_button.add_theme_color_override("font_color", Color.WHITE)
@@ -271,9 +274,10 @@ func _build_topbar() -> PanelContainer:
 	row.add_child(_studio_button)
 	return panel
 
-func _build_hero_copy() -> Control:
+func _build_hero_copy() -> MarginContainer:
 	var panel := MarginContainer.new()
 	panel.custom_minimum_size = Vector2(520, 470)
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel.add_theme_constant_override("margin_left", 26)
 	panel.add_theme_constant_override("margin_right", 20)
 	panel.add_theme_constant_override("margin_top", 44)
@@ -285,7 +289,7 @@ func _build_hero_copy() -> Control:
 	var badges := HBoxContainer.new()
 	badges.add_theme_constant_override("separation", 8)
 	column.add_child(badges)
-	badges.add_child(_badge("✦  local-first", Story.EDITORIAL_FILL, Story.EDITORIAL))
+	badges.add_child(_badge("local-first", Story.EDITORIAL_FILL, Story.EDITORIAL))
 	badges.add_child(_badge("authority-aware", Story.NEUTRAL_FILL, Story.MUTED_FOREGROUND))
 
 	_eyebrow = Label.new()
@@ -357,18 +361,20 @@ func _build_hero_visual() -> PanelContainer:
 func _build_story_loom_strip() -> GridContainer:
 	var grid := GridContainer.new()
 	grid.columns = 5
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.add_theme_constant_override("h_separation", 0)
 	grid.add_theme_constant_override("v_separation", 8)
 	var lanes := [
-		["◇", "PROJECT", "context + state", Story.PROJECT_FILL, Story.PROJECT],
-		["⌘", "RUNTIME", "manager + worker", Story.RUNTIME_FILL, Story.RUNTIME],
-		["✿", "EDITORIAL", "voice + scene", Story.EDITORIAL_FILL, Story.EDITORIAL],
-		["✦", "EVIDENCE", "gates + lineage", Story.EVIDENCE_FILL, Story.EVIDENCE],
-		["✓", "VALIDATED", "accepted + publish", Story.VALIDATED_FILL, Story.VALIDATED],
+		["P", "PROJECT", "context + state", Story.PROJECT_FILL, Story.PROJECT],
+		["R", "RUNTIME", "manager + worker", Story.RUNTIME_FILL, Story.RUNTIME],
+		["E", "EDITORIAL", "voice + scene", Story.EDITORIAL_FILL, Story.EDITORIAL],
+		["K", "EVIDENCE", "gates + lineage", Story.EVIDENCE_FILL, Story.EVIDENCE],
+		["V", "VALIDATED", "accepted + publish", Story.VALIDATED_FILL, Story.VALIDATED],
 	]
 	for lane in lanes:
 		var card := PanelContainer.new()
 		card.custom_minimum_size.y = 70
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.add_theme_stylebox_override("panel", _style(lane[3], Color(lane[4].r,lane[4].g,lane[4].b,0.18), 0, 1))
 		grid.add_child(card)
 		var margin := MarginContainer.new()
@@ -380,7 +386,7 @@ func _build_story_loom_strip() -> GridContainer:
 		margin.add_child(row)
 		var icon := Label.new()
 		icon.text = str(lane[0])
-		icon.add_theme_font_size_override("font_size", 18)
+		icon.add_theme_font_size_override("font_size", 13)
 		icon.add_theme_color_override("font_color", lane[4])
 		row.add_child(icon)
 		var copy := VBoxContainer.new()
@@ -401,11 +407,13 @@ func _build_story_loom_strip() -> GridContainer:
 func _build_stats() -> GridContainer:
 	var grid := GridContainer.new()
 	grid.columns = 3
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.add_theme_constant_override("h_separation", 0)
 	grid.add_theme_constant_override("v_separation", 6)
-	for item in [["One run", "Context → Settlement"], ["Zero poll", "Event-driven UI"], ["Typed", "Manager · Worker · Gate"]]:
+	for item in [["One run", "Context to Settlement"], ["Zero poll", "Event-driven UI"], ["Typed", "Manager · Worker · Gate"]]:
 		var card := PanelContainer.new()
 		card.custom_minimum_size.y = 74
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.add_theme_stylebox_override("panel", _style(Color(1,1,1,0.55), Color(Story.BORDER.r,Story.BORDER.g,Story.BORDER.b,0.50), 0, 0))
 		grid.add_child(card)
 		var margin := MarginContainer.new()
@@ -432,6 +440,7 @@ func _build_stats() -> GridContainer:
 func _build_capability_cards() -> GridContainer:
 	var grid := GridContainer.new()
 	grid.columns = 4
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 12)
 	var cards := [
@@ -443,6 +452,7 @@ func _build_capability_cards() -> GridContainer:
 	for item in cards:
 		var card := PanelContainer.new()
 		card.custom_minimum_size = Vector2(240, 150)
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.add_theme_stylebox_override("panel", _style(item[2], Color(item[3].r,item[3].g,item[3].b,0.18), 20, 1))
 		grid.add_child(card)
 		var margin := MarginContainer.new()
@@ -455,7 +465,7 @@ func _build_capability_cards() -> GridContainer:
 		col.add_theme_constant_override("separation", 10)
 		margin.add_child(col)
 		var spark := Label.new()
-		spark.text = "✦"
+		spark.text = "+"
 		spark.add_theme_font_size_override("font_size", 18)
 		spark.add_theme_color_override("font_color", item[3])
 		col.add_child(spark)
@@ -509,9 +519,9 @@ func _navigate(path: String, push_history: bool = true) -> void:
 	_copy.text = str(data["copy"])
 	var primary: Array = data["primary"]
 	var secondary: Array = data["secondary"]
-	_primary_button.text = "✦  " + str(primary[0])
+	_primary_button.text = str(primary[0])
 	_primary_target = str(primary[1])
-	_secondary_button.text = "⌘  " + str(secondary[0])
+	_secondary_button.text = str(secondary[0])
 	_secondary_target = str(secondary[1])
 	_primary_button.add_theme_stylebox_override("normal", _style(_accent, _accent, 12, 0))
 	_primary_button.add_theme_stylebox_override("hover", _style(_accent.lightened(0.08), _accent, 12, 0))
@@ -564,17 +574,23 @@ func _apply_responsive_layout() -> void:
 	_brand_meta.visible = not phone
 	if phone:
 		_topbar.custom_minimum_size.y = 58
-		_hero_visual.custom_minimum_size = Vector2(300, maxf(360.0, viewport_height * 0.54))
+		_hero_copy.custom_minimum_size = Vector2(0, 0)
+		_hero_visual.custom_minimum_size = Vector2(0, maxf(360.0, viewport_height * 0.54))
+		_map.custom_minimum_size = Vector2(0, 340)
 		_title.add_theme_font_size_override("font_size", 34)
 		_set_page_margins(12)
 	elif compact:
 		_topbar.custom_minimum_size.y = 62
-		_hero_visual.custom_minimum_size = Vector2(520, 430)
+		_hero_copy.custom_minimum_size = Vector2(0, 0)
+		_hero_visual.custom_minimum_size = Vector2(0, 430)
+		_map.custom_minimum_size = Vector2(0, 380)
 		_title.add_theme_font_size_override("font_size", 42)
 		_set_page_margins(20)
 	else:
 		_topbar.custom_minimum_size.y = 64
+		_hero_copy.custom_minimum_size = Vector2(520, 470)
 		_hero_visual.custom_minimum_size = Vector2(620, 500)
+		_map.custom_minimum_size = Vector2(520, 450)
 		_title.add_theme_font_size_override("font_size", 46)
 		_set_page_margins(28)
 	_map.set_layout_mode(_layout_mode)
