@@ -1,0 +1,136 @@
+{
+  "schema": "novelforge_semantic_acceptance_baseline_v1",
+  "framework_version": "0.8.0",
+  "suite_version": "8.0-dev.1",
+  "acceptance_subject_commit": "12dfdf5f4697e27cd5bfd975cfba9a72b627aa61",
+  "status": "semantic_accept",
+  "blind": true,
+  "fingerprint_bound": true,
+  "review_sources": [
+    {
+      "source_id": "RUN-A",
+      "github_run_id": 31857512980,
+      "artifact_name": "novelforge-8-0-semantic-acceptance-31857512980",
+      "artifact_digest": "sha256:1bc971c021e218ba08e2e557f032ae26cef6707253b372c78fbdc4788aec3bcc",
+      "transport": "github_actions_copilot_cli",
+      "independent_invocation": true,
+      "fresh_per_fingerprint": true
+    },
+    {
+      "source_id": "RUN-B",
+      "github_run_id": 31857851291,
+      "artifact_name": "novelforge-8-0-semantic-repair-31857851291",
+      "artifact_digest": "sha256:cd96a7525fb0a81864e2441f235c0d33fda6388008f7ce489417168d74a1f8d0",
+      "transport": "github_actions_copilot_cli",
+      "independent_invocation": true,
+      "fresh_per_fingerprint": true
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "CHAR-SEMANTIC-ROLE-001",
+      "input_fingerprint": "sha256:b91fd5e56334cb1cc496eee5b7068464aaf58fe8d88c37b5ff7b137dda7f128a",
+      "result": "PASS",
+      "source_id": "RUN-A"
+    },
+    {
+      "case_id": "READER-END-001",
+      "input_fingerprint": "sha256:70848e39206627bd2c7ed34b277c2cb0d5c92239168f9fbba8d3cd3c018172e2",
+      "result": "PASS",
+      "source_id": "RUN-A"
+    },
+    {
+      "case_id": "READER-FLAT-001",
+      "input_fingerprint": "sha256:f4cdd78d5b6e23f75ba816817bfc5c664ba0318f671d77261e8e64de34fcc0f7",
+      "result": "PASS",
+      "source_id": "RUN-A"
+    },
+    {
+      "case_id": "READER-PRESSURE-001",
+      "input_fingerprint": "sha256:16a946abcfd25cb9cddc66a568bd96176ec542a7049c09ebb0e2870880c15034",
+      "result": "PASS",
+      "source_id": "RUN-A"
+    },
+    {
+      "case_id": "SURFACE-DIALOGUE-001",
+      "input_fingerprint": "sha256:850ae34f1d85db5b639bbaadca982a0f5dbfe6a3f4894d1838049190465a90a2",
+      "result": "PASS",
+      "source_id": "RUN-A"
+    },
+    {
+      "case_id": "SURFACE-FRAGMENT-001",
+      "input_fingerprint": "sha256:2ba8765287fcdf9d4f6fda034d094de97e3878ecbfd4fd7134351e2d3674ed86",
+      "result": "PASS",
+      "source_id": "RUN-A"
+    },
+    {
+      "case_id": "SURFACE-PROCESS-001",
+      "input_fingerprint": "sha256:7c8e59f8906bb6c67b01c118a8edc64cdb5eac63d1dc2dced853a4526722b948",
+      "result": "PASS",
+      "source_id": "RUN-A"
+    },
+    {
+      "case_id": "SURFACE-PROFILE-FRAGMENT-001",
+      "input_fingerprint": "sha256:7d5b96596db18f893728a7ae61a1cc4f4cb56b57163cf017bce5d27093ac800e",
+      "result": "PASS",
+      "source_id": "RUN-A"
+    },
+    {
+      "case_id": "CHAR-EPISTEMIC-001",
+      "input_fingerprint": "sha256:d955bb9a820dbe924445716c28b2a86324a37ffa92afc462c2d37e7cab60090a",
+      "result": "PASS",
+      "source_id": "RUN-B",
+      "supersedes": {
+        "input_fingerprint": "sha256:a9e3cb529a27b766ca392c2e0cdc6b2f3e844678b12acb6794b6623f2f1387cd",
+        "reason": "material_rubric_fingerprint_change"
+      }
+    },
+    {
+      "case_id": "CONT-UNCERTAIN-001",
+      "input_fingerprint": "sha256:d8d3eb1491a49d4a168dc59b6ff31a048164b9d974417ea9e5830fe28f513491",
+      "result": "PASS",
+      "source_id": "RUN-B",
+      "supersedes": {
+        "input_fingerprint": "sha256:4dcdb94344bbd5310e6fe8ba10cce76929351ce5c826c3b01bdd6fac84640bb2",
+        "reason": "material_rubric_fingerprint_change"
+      }
+    },
+    {
+      "case_id": "CONTEXT-FUTURE-001",
+      "input_fingerprint": "sha256:085362c25f387733c05960dfdeb7e75c619635ddeb175a6e461936d44d76d1c0",
+      "result": "PASS",
+      "source_id": "RUN-B",
+      "supersedes": {
+        "input_fingerprint": "sha256:3f95c7a795d6588a2c0f2d3d61f76ba4d823f8b3aa13f932b6185cd7928e3f6d",
+        "reason": "material_rubric_fingerprint_change"
+      }
+    },
+    {
+      "case_id": "REL-ASYMMETRY-001",
+      "input_fingerprint": "sha256:e7742e8bad2ca7d2376ba5c17c49d77be9dd59b30cbe1ba65ed632cbd5fbf605",
+      "result": "PASS",
+      "source_id": "RUN-B",
+      "supersedes": {
+        "input_fingerprint": "sha256:ce1d31e8f9caba75438dae849481c4beb9e3a5a5575ce86582e7d52a02f6b504",
+        "reason": "material_rubric_fingerprint_change"
+      }
+    },
+    {
+      "case_id": "REVISION-FLAT-ROUTE-001",
+      "input_fingerprint": "sha256:4f48ba377a53f3550676e6b9c067ff98a2814f6f5a028e26ee40ccbed306adca",
+      "result": "PASS",
+      "source_id": "RUN-B",
+      "supersedes": {
+        "input_fingerprint": "sha256:abcdfadb1cd1fa5a26d428227dc0dd5e15e27f4fbe591ad790b84d43df01f842",
+        "reason": "material_rubric_fingerprint_change"
+      }
+    }
+  ],
+  "authority": false,
+  "permissions": {
+    "canon_write": false,
+    "framework_behavior_write": false,
+    "durable_user_taste_write": false
+  },
+  "model_execution": false
+}
