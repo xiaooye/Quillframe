@@ -18,6 +18,9 @@ const check = (condition, message) => { if (!condition) failures.push(message); 
 check(main.includes('import ProductApp from "./ProductApp"'), "main must import ProductApp");
 check(main.includes("<ProductApp />"), "main must retain the single shared ProductApp runtime");
 check(main.includes("ProductFailureBoundary"), "main must wrap ProductApp in the shared resilience boundary");
+check(main.includes("installCrossAppNavigationGuard"), "main must preserve an explicit cross-app navigation boundary");
+check(main.includes("/^\\/docs(?:\\/|$)/"), "docs cross-app boundary must match /docs and all nested docs routes");
+check(main.includes("window.location.assign(url.href)"), "docs cross-app boundary must perform a real document navigation");
 for (const forbidden of ["standaloneProductPaths", "ProjectInspectorEntry", "LocalPlaygroundEntry", "ArchitectureExplorerEntry", "PublicationWorkbenchEntry", "AgentIntegrationEntry", "history.pushState =", "history.replaceState ="]) {
   check(!main.includes(forbidden), `main must not retain legacy standalone shell logic: ${forbidden}`);
 }
@@ -65,5 +68,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`product-shell-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ schema: "novelforge_product_shell_quality_v3", status: "pass", shared_router: true, shared_header: true, shared_footer: true, shared_locale_state: true, shared_appearance_state: true, shared_command_palette: true, shared_surface_hero: true, resilience_boundary: true, standalone_product_shells: 0, duplicate_runtime_sources: 0, docs_boundary: "separate" }, null, 2));
+  console.log(JSON.stringify({ schema: "novelforge_product_shell_quality_v3", status: "pass", shared_router: true, shared_header: true, shared_footer: true, shared_locale_state: true, shared_appearance_state: true, shared_command_palette: true, shared_surface_hero: true, resilience_boundary: true, standalone_product_shells: 0, duplicate_runtime_sources: 0, docs_boundary: "hard-navigation" }, null, 2));
 }
