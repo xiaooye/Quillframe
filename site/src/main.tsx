@@ -1,6 +1,7 @@
 import "./appearance-v5";
 import { render } from "solid-js/web";
 import App from "./App";
+import ArchitectureExplorerEntry from "./ArchitectureExplorerEntry";
 import LocalPlaygroundEntry from "./LocalPlaygroundEntry";
 import ProjectInspectorEntry from "./ProjectInspectorEntry";
 import "./styles/site.css";
@@ -11,6 +12,7 @@ import "./styles/atelier-photos.css";
 import "./styles/atelier-clean-canvas.css";
 import "./styles/project-inspector.css";
 import "./styles/local-playground.css";
+import "./styles/architecture-explorer.css";
 
 // The launcher emits a synthetic Ctrl+K event on document. Real keyboard events
 // already bubble to window; only bridge the synthetic event into the AppShell
@@ -49,14 +51,27 @@ function localizedDocsTarget(url: string | URL | null | undefined): URL | undefi
   return target;
 }
 
-function handOffToDocs(target: URL) {
+const standaloneProductPaths = new Set(["/inspect", "/playground", "/architecture"]);
+
+function standaloneProductTarget(url: string | URL | null | undefined): URL | undefined {
+  if (url == null) return undefined;
+  const target = new URL(url instanceof URL ? url.href : url, window.location.href);
+  if (target.origin !== window.location.origin) return undefined;
+  const normalized = target.pathname.replace(/\/+$/, "") || "/";
+  return standaloneProductPaths.has(normalized) ? target : undefined;
+}
+
+function handoffTarget(url: string | URL | null | undefined): URL | undefined {
+  return localizedDocsTarget(url) ?? standaloneProductTarget(url);
+}
+
+function handOff(target: URL) {
   window.location.assign(target.href);
 }
 
-// @solidjs/router owns product-site navigation. Documentation is a separate,
-// static-first Starlight application under /docs, so any SPA attempt to enter
-// that namespace must become a real document navigation instead of mounting a
-// second documentation renderer inside the product app.
+// @solidjs/router owns the main product SPA. Documentation and the heavier
+// browser-native product tools are separate static entry surfaces, so any SPA
+// attempt to enter one of those namespaces becomes a real document navigation.
 document.addEventListener("click", (event) => {
   if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   const origin = event.target;
@@ -64,15 +79,15 @@ document.addEventListener("click", (event) => {
   const anchor = origin.closest("a[href]");
   if (!(anchor instanceof HTMLAnchorElement) || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
 
-  const target = localizedDocsTarget(anchor.href);
+  const target = handoffTarget(anchor.href);
   if (!target) return;
 
   event.preventDefault();
   event.stopPropagation();
-  handOffToDocs(target);
+  handOff(target);
 }, true);
 
-const historyMarker = "__novelforgeDocsHandoff";
+const historyMarker = "__novelforgeSurfaceHandoff";
 const markedHistory = window.history as History & { [historyMarker]?: boolean };
 
 if (!markedHistory[historyMarker]) {
@@ -80,9 +95,9 @@ if (!markedHistory[historyMarker]) {
 
   const originalPushState = window.history.pushState.bind(window.history);
   window.history.pushState = ((data: unknown, unused: string, url?: string | URL | null) => {
-    const docsTarget = localizedDocsTarget(url);
-    if (docsTarget) {
-      handOffToDocs(docsTarget);
+    const target = handoffTarget(url);
+    if (target) {
+      handOff(target);
       return;
     }
     originalPushState(data, unused, url);
@@ -90,9 +105,9 @@ if (!markedHistory[historyMarker]) {
 
   const originalReplaceState = window.history.replaceState.bind(window.history);
   window.history.replaceState = ((data: unknown, unused: string, url?: string | URL | null) => {
-    const docsTarget = localizedDocsTarget(url);
-    if (docsTarget) {
-      handOffToDocs(docsTarget);
+    const target = handoffTarget(url);
+    if (target) {
+      handOff(target);
       return;
     }
     originalReplaceState(data, unused, url);
@@ -111,6 +126,8 @@ render(
     ? <ProjectInspectorEntry initialLocale={preferredLocale()} />
     : path === "/playground"
       ? <LocalPlaygroundEntry initialLocale={preferredLocale()} />
-      : <App />,
+      : path === "/architecture"
+        ? <ArchitectureExplorerEntry initialLocale={preferredLocale()} />
+        : <App />,
   root,
 );
