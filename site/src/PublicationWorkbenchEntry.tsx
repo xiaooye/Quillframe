@@ -116,7 +116,7 @@ function initialDark() {
 export default function PublicationWorkbenchEntry(props: Props) {
   const [locale, setLocale] = createSignal<Locale>(props.initialLocale);
   const [dark, setDark] = createSignal(initialDark());
-  const [selected, setSelected] = createSignal(1);
+  const [selected, setSelected] = createSignal(3);
   const [fontScale, setFontScale] = createSignal(100);
   const [leading, setLeading] = createSignal(175);
   const [guides, setGuides] = createSignal(false);
@@ -137,17 +137,17 @@ export default function PublicationWorkbenchEntry(props: Props) {
     setGuides(false);
   };
 
-  const sampleTitle = () => zh() ? "第三十七章 · 灯火落在纸上" : "Chapter 37 · Light on the page";
+  const sampleTitle = () => zh() ? "第一章 · 夜幕与灯火" : "Chapter 1 · Nightfall and lights";
   const sampleParagraphs = () => zh()
     ? [
-      "夜色压到窗沿时，桌上的最后一页终于安静下来。正文没有因为换了一种载体，就变成另一份故事。",
-      "出版层只负责如何让它被阅读：屏幕有屏幕的行宽，纸面有纸面的页边，电子书把最终决定留给读者的设备。",
-      "接受正文仍然是唯一的文本事实；这里看到的字号、行距、页码与装饰，全部属于可替换的派生表现。",
+      "夜幕降临，城市的灯光一盏盏亮起，像星星坠落在河面上。",
+      "他站在桥边，手里握着一封信，纸角已经被汗水浸湿。",
+      "风从河面吹来，带着潮湿的气息，也吹散了他心里那些犹豫。",
     ]
     : [
-      "By the time night reached the window, the last page on the desk had finally gone quiet. A new medium did not turn the manuscript into a different story.",
-      "The publication layer only decides how that text is read: screens own responsive measure, paper owns page geometry, and ebooks leave final typography to the reader's device.",
-      "The accepted manuscript remains the single textual truth. Type size, leading, folios, and ornaments here are replaceable derived presentation.",
+      "Night fell and the city lights came on one by one, like stars settling on the river.",
+      "He stood by the bridge holding a letter, its corners already damp in his hand.",
+      "Wind moved across the river carrying wet air, loosening some of the hesitation he had carried with him.",
     ];
 
   return (
@@ -172,23 +172,57 @@ export default function PublicationWorkbenchEntry(props: Props) {
       </header>
 
       <main id="main-content" class="page-width section-compact publication-workbench-main">
-        <section class="publication-intro">
-          <div>
+        <section class="publication-intro kawaii-publication-hero">
+          <div class="publication-hero-copy">
             <div class="publication-badges">
-              <span class="wui-badge wui-badge--soft">PUBLICATION WORKBENCH</span>
-              <span class="wui-badge wui-badge--outline">authority=false</span>
-              <span class="wui-badge wui-badge--outline">deterministic derivative</span>
+              <span class="publication-ribbon">🎀 {zh() ? "出版工作台" : "PUBLICATION WORKBENCH"}</span>
+              <span class="wui-badge wui-badge--outline">deterministic</span>
             </div>
-            <h1>{zh() ? "同一份接受正文，换的是载体，不是事实。" : "One accepted manuscript. Different surfaces, not different truth."}</h1>
-            <p>{zh() ? "把出版页从“格式按钮”升级成真正的派生工作台：先选目标载体，再看阅读预览、profile token 与 provenance。所有控件只改变本地预览，不会改正文、Canon 或 Settlement。" : "Treat publication as a derivation workbench rather than a row of format buttons: choose a target surface, inspect the reading preview, profile tokens, and provenance. Every control changes local preview only; manuscript, Canon, and Settlement remain untouched."}</p>
+            <h1>{zh() ? <>同一份接受稿，<br />生成多种<span>确定性派生格式。</span></> : <>One accepted manuscript,<br /><span>many deterministic derivatives.</span></>}</h1>
+            <p>{zh() ? "基于唯一的 Publication IR，从一次构建生成 TXT、Web、Print、EPUB 等多种载体。版式可以不同，正文事实始终只有一份。" : "One Publication IR deterministically produces TXT, Web, Print, and EPUB surfaces. Presentation may change; manuscript truth does not."}</p>
+            <div class="publication-hero-features">
+              <div><span>▣</span><strong>{zh() ? "格式一致" : "Consistent"}</strong><small>{zh() ? "同一份 IR 渲染" : "one IR"}</small></div>
+              <div><span>✓</span><strong>{zh() ? "确定性" : "Deterministic"}</strong><small>{zh() ? "可重复构建" : "repeatable"}</small></div>
+              <div><span>◎</span><strong>{zh() ? "可追溯" : "Traceable"}</strong><small>{zh() ? "完整 provenance" : "full provenance"}</small></div>
+              <div><span>◇</span><strong>{zh() ? "可验证" : "Validated"}</strong><small>EPUBCheck</small></div>
+            </div>
           </div>
-          <div class="publication-intro-actions">
-            <a class="wui-button wui-button--soft" href="/docs">📚 {zh() ? "查看出版契约" : "Read publication contracts"}</a>
-            <a class="wui-button wui-button--ghost" href="/architecture">⌘ {zh() ? "回到架构" : "Architecture"}</a>
+
+          <div class="publication-hero-gallery" aria-label={zh() ? "出版格式示例" : "Publication format examples"}>
+            <button type="button" class="publication-hero-snapshot snapshot-text" data-active={selected() === 0} onClick={() => setSelected(0)} aria-label={zh() ? "查看纯文本示例" : "View clean text example"}>
+              <span class="snapshot-label">TXT</span>
+              <span class="snapshot-paperclip">⌇</span>
+              <span class="snapshot-line-number">1<br />2<br />3<br />4<br />5<br />6</span>
+              <span class="snapshot-text-body"><strong>{sampleTitle()}</strong><i>{sampleParagraphs()[0]}</i><i>{sampleParagraphs()[1]}</i><i>{sampleParagraphs()[2]}</i></span>
+              <span class="snapshot-sticker">✿</span>
+            </button>
+
+            <button type="button" class="publication-hero-snapshot snapshot-web" data-active={selected() === 1} onClick={() => setSelected(1)} aria-label={zh() ? "查看网页示例" : "View web example"}>
+              <span class="snapshot-label">Web</span>
+              <span class="snapshot-windowbar"><i /><i /><i /><b>novel / ch1</b></span>
+              <span class="snapshot-web-body"><strong>{sampleTitle()}</strong><i>{sampleParagraphs()[0]}</i><i>{sampleParagraphs()[1]}</i><em>☾</em></span>
+              <span class="snapshot-horizon">⌁ ✦ ⌁</span>
+            </button>
+
+            <button type="button" class="publication-hero-snapshot snapshot-print" data-active={selected() === 2} onClick={() => setSelected(2)} aria-label={zh() ? "查看印刷示例" : "View print example"}>
+              <span class="snapshot-label">Print</span>
+              <span class="snapshot-bookmark">▾</span>
+              <span class="snapshot-print-page"><strong>{sampleTitle()}</strong><i>{sampleParagraphs()[0]}</i><i>{sampleParagraphs()[1]}</i><small>— 12 —</small></span>
+              <span class="snapshot-flower">❀</span>
+            </button>
+
+            <button type="button" class="publication-hero-snapshot snapshot-epub" data-active={selected() === 3} onClick={() => setSelected(3)} aria-label={zh() ? "查看 EPUB 示例" : "View EPUB example"}>
+              <span class="snapshot-label">EPUB</span>
+              <span class="snapshot-device-top"><b>9:41</b><i>A</i><i>A</i><i>♡</i></span>
+              <span class="snapshot-epub-body"><strong>{sampleTitle()}</strong><i>{sampleParagraphs()[0]}</i><i>{sampleParagraphs()[1]}</i><i>{sampleParagraphs()[2]}</i></span>
+              <span class="snapshot-progress">12 / 523 · 3%</span>
+              <span class="snapshot-heart">♡</span>
+            </button>
           </div>
         </section>
 
         <section class="publication-profile-rail" aria-label={zh() ? "出版 profile" : "Publication profiles"}>
+          <div class="publication-rail-title"><span>🛠</span><div><strong>{zh() ? "出版工作台" : "Publication workbench"}</strong><small>{zh() ? "选择目标格式并查看预览、配置与元数据。" : "Choose a target format and inspect preview, profile, and metadata."}</small></div></div>
           <For each={profiles}>{(profile, index) => (
             <button
               type="button"
@@ -204,7 +238,7 @@ export default function PublicationWorkbenchEntry(props: Props) {
                 <strong>{zh() ? profile.titleZh : profile.title}</strong>
                 <span>{profile.artifact}</span>
               </span>
-              <span class="publication-profile-arrow" aria-hidden="true">→</span>
+              <span class="publication-profile-arrow" aria-hidden="true">{selected() === index() ? "✓" : "→"}</span>
             </button>
           )}</For>
         </section>
@@ -237,12 +271,12 @@ export default function PublicationWorkbenchEntry(props: Props) {
 
               <Show when={current().id === "web"}>
                 <div class="publication-browser-preview">
-                  <div class="publication-browser-chrome"><span /><span /><span /><strong>novel.example / chapter-37</strong></div>
+                  <div class="publication-browser-chrome"><span /><span /><span /><strong>novel.example / chapter-1</strong></div>
                   <article class="publication-reading-page">
                     <span class="publication-preview-kicker">NOVELFORGE · WEB</span>
                     <h2>{sampleTitle()}</h2>
                     <For each={sampleParagraphs()}>{(paragraph) => <p>{paragraph}</p>}</For>
-                    <div class="publication-chapter-nav"><span>← 36</span><span>37 / 64</span><span>38 →</span></div>
+                    <div class="publication-chapter-nav"><span>←</span><span>1 / 64</span><span>2 →</span></div>
                   </article>
                 </div>
               </Show>
@@ -250,14 +284,14 @@ export default function PublicationWorkbenchEntry(props: Props) {
               <Show when={current().id === "print"}>
                 <div class="publication-print-preview">
                   <article class="publication-paper-page publication-paper-left">
-                    <header><span>NovelForge</span><span>37</span></header>
-                    <div class="publication-paper-body"><span class="publication-preview-kicker">CHAPTER 37</span><h2>{sampleTitle()}</h2><p>{sampleParagraphs()[0]}</p><p>{sampleParagraphs()[1]}</p></div>
-                    <footer>184</footer>
+                    <header><span>NovelForge</span><span>01</span></header>
+                    <div class="publication-paper-body"><span class="publication-preview-kicker">CHAPTER 1</span><h2>{sampleTitle()}</h2><p>{sampleParagraphs()[0]}</p><p>{sampleParagraphs()[1]}</p></div>
+                    <footer>12</footer>
                   </article>
                   <article class="publication-paper-page publication-paper-right">
-                    <header><span>{sampleTitle()}</span><span>37</span></header>
+                    <header><span>{sampleTitle()}</span><span>01</span></header>
                     <div class="publication-paper-body"><p>{sampleParagraphs()[2]}</p><div class="publication-print-ornament">✦</div></div>
-                    <footer>185</footer>
+                    <footer>13</footer>
                   </article>
                 </div>
               </Show>
@@ -266,11 +300,11 @@ export default function PublicationWorkbenchEntry(props: Props) {
                 <div class="publication-ereader-preview">
                   <div class="publication-ereader-top"><span>‹</span><strong>NovelForge</strong><span>Aa</span></div>
                   <article class="publication-reading-page publication-ereader-page">
-                    <span class="publication-preview-kicker">37 · EPUB 3.3</span>
+                    <span class="publication-preview-kicker">01 · EPUB 3.3</span>
                     <h2>{sampleTitle()}</h2>
                     <For each={sampleParagraphs()}>{(paragraph) => <p>{paragraph}</p>}</For>
                   </article>
-                  <div class="publication-ereader-progress"><span style="width:58%" /><small>58%</small></div>
+                  <div class="publication-ereader-progress"><span style="width:3%" /><small>3%</small></div>
                 </div>
               </Show>
             </div>
@@ -287,33 +321,35 @@ export default function PublicationWorkbenchEntry(props: Props) {
             <section class="wui-card publication-profile-inspector">
               <div class="publication-inspector-head">
                 <span class="publication-inspector-icon">{current().icon}</span>
-                <div><small>{zh() ? "派生 profile" : "DERIVATION PROFILE"}</small><h2>{zh() ? current().titleZh : current().title}</h2></div>
+                <div><small>{zh() ? "格式配置与元数据" : "PROFILE & METADATA"}</small><h2>{zh() ? current().titleZh : current().title}</h2></div>
               </div>
               <p>{zh() ? current().summaryZh : current().summary}</p>
               <div class="publication-token-grid">
                 <For each={current().tokens}>{(token) => <div><span>{zh() ? token.labelZh : token.label}</span><strong>{zh() ? (token.valueZh ?? token.value) : token.value}</strong></div>}</For>
+                <div><span>{zh() ? "来源" : "source"}</span><strong>sha256 · exact</strong></div>
+                <div><span>{zh() ? "验证" : "validation"}</span><strong>{current().id === "epub" ? "EPUBCheck" : "deterministic"}</strong></div>
               </div>
-              <div class="publication-inspector-note"><span>ⓘ</span><p>{zh() ? "这些 token 描述的是展示 profile；上面的 slider 只是浏览器本地实验，不写入 manuscript，也不制造第二套 truth model。" : "These tokens describe a presentation profile. The sliders above are browser-local experiments; they do not write to the manuscript or create a second truth model."}</p></div>
+              <div class="publication-inspector-note"><span>✦</span><p>{zh() ? "这些 token 描述展示 profile；上面的预览控制只在浏览器本地生效，不写入 manuscript，也不会制造第二套 truth model。" : "These tokens describe presentation only. Preview controls are browser-local and never create a second manuscript truth model."}</p></div>
             </section>
 
             <section class="wui-card publication-artifact-card">
-              <small>{zh() ? "目标产物" : "TARGET ARTIFACT"}</small>
+              <small>{zh() ? "当前出版配置" : "CURRENT PUBLICATION PROFILE"}</small>
               <div><strong>{current().artifact}</strong><span>{zh() ? current().pipelineLabelZh : current().pipelineLabel}</span></div>
-              <code>authority=false</code>
+              <code>profile: {current().id}<br />authority: false<br />source: accepted-manuscript<br />render: deterministic</code>
             </section>
           </aside>
         </section>
 
         <section class="wui-card publication-provenance" aria-label={zh() ? "出版 provenance" : "Publication provenance"}>
-          <div class="publication-provenance-head"><div><small>PROVENANCE</small><h2>{zh() ? "每个派生物都能回答：它从哪份正文来的？" : "Every derivative should answer: which exact manuscript did it come from?"}</h2></div><span class="wui-badge wui-badge--soft">deterministic pipeline</span></div>
+          <div class="publication-provenance-head"><div><small>PROVENANCE</small><h2>{zh() ? "出版流水线：每个派生物都能回到同一份接受正文。" : "Publication pipeline: every derivative resolves back to the same accepted manuscript."}</h2></div><span class="wui-badge wui-badge--soft">deterministic pipeline</span></div>
           <div class="publication-pipeline">
-            <div class="publication-pipeline-node" data-kind="source"><span>✓</span><div><small>{zh() ? "输入" : "INPUT"}</small><strong>{zh() ? "接受正文" : "Accepted manuscript"}</strong><code>sha256 · exact</code></div></div>
+            <div class="publication-pipeline-node" data-kind="source"><span>✓</span><div><small>{zh() ? "接受正文" : "ACCEPTED"}</small><strong>{zh() ? "接稿原文" : "Accepted manuscript"}</strong><code>sha256 · exact</code></div></div>
             <span class="publication-pipeline-arrow">→</span>
-            <div class="publication-pipeline-node" data-kind="ir"><span>IR</span><div><small>{zh() ? "中间表示" : "INTERMEDIATE"}</small><strong>novelforge_publication_ir_v1</strong><code>schema-bound</code></div></div>
+            <div class="publication-pipeline-node" data-kind="ir"><span>IR</span><div><small>{zh() ? "出版 IR" : "PUBLICATION IR"}</small><strong>novelforge_publication_ir_v1</strong><code>schema-bound</code></div></div>
             <span class="publication-pipeline-arrow">→</span>
-            <div class="publication-pipeline-node" data-kind="renderer"><span>⌘</span><div><small>{zh() ? "渲染器" : "RENDERER"}</small><strong>publication/compiler.py</strong><code>deterministic</code></div></div>
+            <div class="publication-pipeline-node" data-kind="renderer"><span>⌘</span><div><small>{zh() ? "编译器" : "COMPILER"}</small><strong>publication/compiler.py</strong><code>format · layout · package · validate</code></div></div>
             <span class="publication-pipeline-arrow">→</span>
-            <div class="publication-pipeline-node" data-kind="artifact"><span>{current().icon}</span><div><small>{zh() ? "派生物" : "DERIVATIVE"}</small><strong>{zh() ? current().pipelineLabelZh : current().pipelineLabel}</strong><code>authority=false</code></div></div>
+            <div class="publication-pipeline-node" data-kind="artifact"><span>{current().icon}</span><div><small>{zh() ? "派生物" : "ARTIFACT"}</small><strong>{zh() ? current().pipelineLabelZh : current().pipelineLabel}</strong><code>authority=false</code></div></div>
           </div>
           <div class="publication-contract-strip"><span>single manuscript truth</span><span>exact accepted text</span><span>replaceable presentation</span><span>provenance retained</span></div>
         </section>
@@ -321,7 +357,7 @@ export default function PublicationWorkbenchEntry(props: Props) {
 
       <footer class="publication-footer page-width">
         <span>NovelForge · Publication Workbench</span>
-        <span>{zh() ? "展示派生物，不伪造权威。" : "Preview derivatives without manufacturing authority."}</span>
+        <span>{zh() ? "展示派生物，不伪造权威。 ✦" : "Preview derivatives without manufacturing authority. ✦"}</span>
       </footer>
     </div>
   );
