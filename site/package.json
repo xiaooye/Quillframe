@@ -3,23 +3,20 @@
   "version": "0.8.0",
   "private": true,
   "type": "module",
-  "engines": {
-    "node": ">=24 <25"
-  },
+  "engines": { "node": ">=24 <25" },
   "scripts": {
     "docs:content": "node scripts/build-starlight-content.mjs",
     "dev:docs": "npm run docs:content && astro dev --root docs-site",
+    "tokens:godot": "node scripts/generate-godot-theme.mjs",
+    "tokens:godot:check": "node scripts/generate-godot-theme.mjs --check",
     "prepare:dist": "node scripts/prepare-dist.mjs",
     "docs:build": "npm run docs:content && astro build --root docs-site && node scripts/verify-starlight-build.mjs",
-    "build": "npm run prepare:dist && npm run docs:build",
-    "godot:build": "bash scripts/build-godot-web.sh",
+    "build": "npm run tokens:godot:check && npm run prepare:dist && npm run docs:build",
+    "godot:build": "npm run tokens:godot:check && bash scripts/build-godot-web.sh",
     "dev:product": "npm run build && npm run godot:build && npm run preview",
     "preview": "node scripts/serve-dist.mjs",
-    "quality": "npm run docs:content && node scripts/docs-platform-quality.mjs && node scripts/godot-web-quality.mjs"
+    "quality": "npm run docs:content && npm run tokens:godot:check && node scripts/docs-platform-quality.mjs && node scripts/godot-web-quality.mjs"
   },
   "dependencies": {},
-  "devDependencies": {
-    "@astrojs/starlight": "0.41.5",
-    "astro": "7.1.6"
-  }
+  "devDependencies": { "@astrojs/starlight": "0.41.5", "astro": "7.1.6" }
 }
