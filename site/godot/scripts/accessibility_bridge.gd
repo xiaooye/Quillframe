@@ -1,6 +1,7 @@
 extends Node
 
 const Story = preload("res://generated/story_loom_tokens.gd")
+const Atelier = preload("res://scripts/atelier_theme.gd")
 const MIN_TARGET := Story.MIN_TOUCH_TARGET
 
 var _host: Control
@@ -48,10 +49,15 @@ func _publish_state() -> void:
 
 func _focus_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Story.SURFACE_OVERLAY
+	style.bg_color = Atelier.paper_violet()
 	style.border_color = Story.RING
 	var width := int(Story.FOCUS_RING_WIDTH)
-	style.border_width_left = width; style.border_width_right = width; style.border_width_top = width; style.border_width_bottom = width
-	style.corner_radius_top_left = int(Story.RADIUS_SM); style.corner_radius_top_right = int(Story.RADIUS_SM)
-	style.corner_radius_bottom_left = int(Story.RADIUS_SM); style.corner_radius_bottom_right = int(Story.RADIUS_SM)
+	style.border_width_left = width
+	style.border_width_right = width
+	style.border_width_top = width
+	style.border_width_bottom = width
+	style.corner_radius_top_left = int(Story.RADIUS_MD)
+	style.corner_radius_top_right = int(Story.RADIUS_MD)
+	style.corner_radius_bottom_left = int(Story.RADIUS_SM)
+	style.corner_radius_bottom_right = int(Story.RADIUS_MD)
 	return style
