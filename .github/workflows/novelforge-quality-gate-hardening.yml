@@ -28,7 +28,7 @@ jobs:
           python-version: '3.11'
       - name: Compile quality and semantic runtime
         run: |
-          python -m py_compile quality/quality_taxonomy.py quality/repair_policy.py quality/production_readiness.py
+          python -m py_compile quality/quality_taxonomy.py quality/repair_policy.py quality/production_readiness.py quality/public_peer_issue_probe.py
           python -m py_compile harness/semantic_workers/semantic_worker_router.py harness/semantic_workers/peer_chat_relay.py
           python -m py_compile harness/semantic_workers/registered_contract_binding.py harness/semantic_workers/peer_bridge_receipt.py
           python -m py_compile .github/actions/project-peer-semantic/bridge.py
@@ -73,3 +73,17 @@ jobs:
           assert registry['contracts']['quality.production_review']['release_roles']==['semantic_independent']
           print({'registered_release_role_contract':'PASS','forged_registered_rubric_rejected':True})
           PY
+      - name: Public issue peer/receipt integration probe
+        run: |
+          python quality/public_peer_issue_probe.py \
+            --issue 57 \
+            --framework-commit "$(git rev-parse HEAD)" \
+            > public-peer-issue-57.json
+          cat public-peer-issue-57.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: novelforge-public-peer-issue-57
+          path: public-peer-issue-57.json
+          if-no-files-found: warn
+          retention-days: 7
