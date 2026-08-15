@@ -75,6 +75,8 @@ harness:
   property_write_policy_schema: harness/property_write_policy.schema.json
   propagation_debt: harness/propagation_debt.py
   propagation_debt_schema: harness/propagation_debt.schema.json
+  author_steering: harness/control_plane/author_steering.py
+  author_steering_schema: harness/control_plane/author_steering.schema.json
   control_plane: harness/control_plane/CONTROL_PLANE.md
   control_plane_tool: harness/control_plane/control_plane.py
   control_plane_event_schema: harness/control_plane/event_schema.json
@@ -314,6 +316,18 @@ session_runtime:
   reviewer_default: fresh-per-fingerprint
   resume_revalidates_project_authority: true
   resume_reresolves_required_capabilities: true
+  author_steering_transport_event: feedback.observed
+  author_steering_payload_schema: novelforge_author_steering_request_v1
+  author_steering_safe_point_schema: novelforge_author_steering_safe_point_v1
+  author_steering_decision_schema: novelforge_author_steering_decision_v1
+  author_steering_receipt_schema: novelforge_author_steering_receipt_v1
+  author_steering_source_kinds: [user, authorized_human]
+  author_steering_requires_safe_point: true
+  author_steering_consume_once: true
+  author_steering_resume_lineage_revalidation: true
+  author_steering_consequential_write_interruptible: false
+  author_steering_followup_auto_execute: false
+  author_steering_model_execution: false
 
 runtime_capabilities:
   schema: novelforge_host_capabilities_v1
@@ -334,6 +348,10 @@ control_plane:
   event_idempotency: required
   runtime_command_idempotency: required
   runtime_command_before_state_compare_and_swap: required
+  author_steering_transport_event: feedback.observed
+  author_steering_typed_payload_required: true
+  author_steering_generic_feedback_auto_routes: false
+  author_steering_consumption: exactly-once-session-scoped
   handoff_claim: transactional-bounded-lease
   result_consumption: exactly-once-logical-receipt
   canon_authority: false
@@ -387,6 +405,7 @@ workflows:
   live_semantic_optional: .github/workflows/novelforge-semantic-live.yml
   weekly_maintenance: .github/workflows/novelforge-weekly-maintenance.yml
   state_integrity_p0: .github/workflows/novelforge-state-integrity-p0.yml
+  author_steering: .github/workflows/novelforge-author-steering.yml
   peer_chat:
     reusable_workflow: .github/workflows/novelforge-chat-semantic-bridge.yml
     composite_action: .github/actions/project-peer-semantic/action.yml
@@ -404,7 +423,7 @@ workflows:
 
 normal_ci:
   model_execution: forbidden
-  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, runtime-query-self-test, resume-preflight-self-test, resume-command-self-test, runtime-command-authorization-self-test, runtime-command-executor-self-test, context-inspector-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, property-write-policy-self-test, propagation-debt-self-test, state-integrity-cross-contract-self-test, settlement-runtime-self-test, quality-finding-self-test, quality-taxonomy-self-test, repair-policy-self-test, production-readiness-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, registered-release-role-contract-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, semantic-acceptance-baseline-self-test, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
+  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, runtime-query-self-test, resume-preflight-self-test, resume-command-self-test, runtime-command-authorization-self-test, runtime-command-executor-self-test, context-inspector-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, property-write-policy-self-test, propagation-debt-self-test, state-integrity-cross-contract-self-test, author-steering-self-test, settlement-runtime-self-test, quality-finding-self-test, quality-taxonomy-self-test, repair-policy-self-test, production-readiness-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, registered-release-role-contract-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, semantic-acceptance-baseline-self-test, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
 
 scheduled_maintenance:
   model_execution: forbidden
@@ -435,6 +454,13 @@ write_boundary:
   propagation_debt_grants_framework_write: false
   propagation_debt_can_auto_repair: false
   propagation_debt_requires_explicit_dependency_evidence: true
+  author_steering_request_grants_canon_authority: false
+  author_steering_decision_grants_canon_authority: false
+  author_steering_grants_project_write_authority: false
+  author_steering_grants_framework_write_authority: false
+  author_steering_grants_settlement_authority: false
+  author_steering_followup_ops_auto_execute: false
+  author_steering_consequential_write_interruptible: false
   promotion_gate_result_grants_framework_write: false
   runtime_session_resume_grants_project_write_authority: false
   runtime_session_resume_grants_canon_authority: false
