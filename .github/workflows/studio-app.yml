@@ -160,7 +160,7 @@ jobs:
           assert '@media (max-width: 719px)' in app_css
           assert '@media (max-width: 719px)' in observe_css
           assert 'nf-bottom-nav' in app_css
-          assert 'nf-production-lanes' in observe_css
+          assert 'nf-validation-scope' in observe_css
           assert 'prefers-reduced-motion: reduce' in weiui_css
           assert '100dvh' in app_css
           print({'status': 'pass', 'locales': ['en-US', 'zh-CN'], 'mobile_focus_first': True, 'observability_mobile': True, 'motion_owner': 'WeiUI'})
