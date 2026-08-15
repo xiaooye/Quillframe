@@ -22,34 +22,38 @@
   .nf-host-boundary { border-style: dashed; }
 
   .nf-host-boundary-content {
-    min-block-size: 240px;
-    max-inline-size: 760px;
+    min-block-size: 156px;
+    max-inline-size: 860px;
     justify-items: start;
     align-content: center;
-    gap: var(--wui-spacing-4);
-    padding: clamp(28px, 5vw, 56px);
+    gap: var(--wui-spacing-3);
+    padding: clamp(22px, 3vw, 32px);
   }
 
   .nf-host-boundary h2 {
     margin: 0 0 var(--wui-spacing-2);
-    font-size: clamp(1.25rem, 2.6vw, 1.8rem);
+    font-size: clamp(1.15rem, 2vw, 1.5rem);
+    line-height: 1.18;
     letter-spacing: -0.02em;
   }
 
   .nf-host-boundary p {
     margin: 0;
-    max-inline-size: 66ch;
+    max-inline-size: 72ch;
     color: var(--wui-color-muted-foreground);
+    line-height: 1.55;
   }
 
   .nf-host-boundary small {
-    max-inline-size: 72ch;
+    max-inline-size: 76ch;
     color: var(--wui-color-muted-foreground);
+    line-height: 1.5;
   }
 
   @media (max-width: 719px) {
     .nf-host-chip > span:last-child { display: none; }
     .nf-host-chip { min-inline-size: 28px; justify-content: center; padding-inline: 8px; }
-    .nf-host-boundary-content { min-block-size: 220px; padding: 26px 20px; }
+    .nf-host-boundary-content { min-block-size: 0; padding: 20px 16px; }
+    .nf-host-boundary h2 { font-size: 1.12rem; }
   }
 }
