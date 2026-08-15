@@ -35,6 +35,22 @@ export function QueryError(props: { message?: string }) {
   );
 }
 
+export function CoreHostBoundary() {
+  const { t } = useI18n();
+  return (
+    <section class="wui-card nf-card nf-host-boundary" aria-labelledby="core-host-boundary-title">
+      <div class="wui-card__content nf-host-boundary-content">
+        <span class="wui-badge wui-badge--outline">{t("host.cloud")}</span>
+        <div>
+          <h2 id="core-host-boundary-title">{t("host.unboundTitle")}</h2>
+          <p>{t("host.unboundBody")}</p>
+        </div>
+        <small>{t("host.unboundFoot")}</small>
+      </div>
+    </section>
+  );
+}
+
 export function AuthorityBadge() {
   return <span class="wui-badge wui-badge--outline">authority=false</span>;
 }

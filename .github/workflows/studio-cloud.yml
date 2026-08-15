@@ -1,0 +1,182 @@
+name: NovelForge Studio Cloud Host
+
+on:
+  pull_request:
+    paths:
+      - 'studio/app/**'
+      - 'assets/brand/**'
+      - '.github/workflows/studio-cloud.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'studio/app/**'
+      - 'assets/brand/**'
+      - '.github/workflows/studio-cloud.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: studio-cloud-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CLOUDFLARE_PROJECT_NAME: novelforge-studio
+  CLOUDFLARE_CUSTOM_DOMAIN: studio.novelforge.wei-dev.com
+
+jobs:
+  cloud-host:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: studio/app/pnpm-lock.yaml
+
+      - name: Frozen install
+        working-directory: studio/app
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck and build hosted Studio
+        working-directory: studio/app
+        run: pnpm build
+
+      - name: Verify static cloud-host contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path('studio/app')
+          dist = root / 'dist'
+          headers = (dist / '_headers').read_text(encoding='utf-8')
+          robots = (dist / 'robots.txt').read_text(encoding='utf-8')
+          index = (dist / 'index.html').read_text(encoding='utf-8')
+          bridge = (root / 'src/bridge.ts').read_text(encoding='utf-8')
+          studio = (root / 'src/studio.tsx').read_text(encoding='utf-8')
+
+          for needle in (
+              'Content-Security-Policy:',
+              "frame-ancestors 'none'",
+              'X-Content-Type-Options: nosniff',
+              'Referrer-Policy: no-referrer',
+              'X-Robots-Tag: noindex',
+          ):
+              assert needle in headers, needle
+          assert 'Disallow: /' in robots
+          assert '__NOVELFORGE_STUDIO_TOKEN__' in index
+          assert 'value !== TOKEN_PLACEHOLDER' in bridge
+          assert 'bridgeTransportAvailable()' in studio
+          assert not (root / 'functions').exists(), 'Pages Functions are outside this slice'
+          assert not list(root.glob('wrangler.*')), 'hosted shell must not introduce a Worker/Functions backend'
+          assert not (dist / '404.html').exists(), 'Cloudflare Pages SPA fallback requires no top-level 404.html'
+          print({'schema': 'novelforge_studio_cloud_host_check_v1', 'status': 'pass', 'authority': False})
+          PY
+
+      - name: Ensure Studio Pages project
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${CLOUDFLARE_PROJECT_NAME}"
+          status=$(curl --silent --show-error --output /tmp/studio-pages-project.json --write-out "%{http_code}" \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "${api}")
+          if [ "${status}" = "404" ]; then
+            payload=$(jq -nc --arg name "${CLOUDFLARE_PROJECT_NAME}" '{name:$name, production_branch:"main"}')
+            status=$(curl --silent --show-error --output /tmp/studio-pages-project.json --write-out "%{http_code}" \
+              --request POST \
+              --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              --header "Content-Type: application/json" \
+              --data "${payload}" \
+              "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects")
+            case "${status}" in 200|201) ;; *) cat /tmp/studio-pages-project.json; exit 1 ;; esac
+          elif [ "${status}" != "200" ]; then
+            cat /tmp/studio-pages-project.json
+            exit 1
+          fi
+          jq -e '.success == true' /tmp/studio-pages-project.json >/dev/null
+
+      - name: Deploy Studio to Cloudflare Pages
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy studio/app/dist --project-name=novelforge-studio --branch=${{ github.event_name == 'pull_request' && github.head_ref || 'main' }} --commit-hash=${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ensure production custom domain
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          base="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${CLOUDFLARE_PROJECT_NAME}/domains"
+          domain_api="${base}/${CLOUDFLARE_CUSTOM_DOMAIN}"
+          status=$(curl --silent --show-error --output /tmp/studio-domain.json --write-out "%{http_code}" \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "${domain_api}")
+          if [ "${status}" = "404" ]; then
+            payload=$(jq -nc --arg name "${CLOUDFLARE_CUSTOM_DOMAIN}" '{name:$name}')
+            status=$(curl --silent --show-error --output /tmp/studio-domain.json --write-out "%{http_code}" \
+              --request POST \
+              --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              --header "Content-Type: application/json" \
+              --data "${payload}" \
+              "${base}")
+            case "${status}" in 200|201) ;; *) cat /tmp/studio-domain.json; exit 1 ;; esac
+          elif [ "${status}" != "200" ]; then
+            cat /tmp/studio-domain.json
+            exit 1
+          fi
+          jq -e '.success == true' /tmp/studio-domain.json >/dev/null
+
+          active=false
+          for _ in $(seq 1 24); do
+            curl --silent --show-error --fail \
+              --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              "${domain_api}" > /tmp/studio-domain-post.json
+            domain_status=$(jq -r '.result.status // "unknown"' /tmp/studio-domain-post.json)
+            if [ "${domain_status}" = "active" ]; then active=true; break; fi
+            sleep 5
+          done
+          if [ "${active}" != "true" ]; then cat /tmp/studio-domain-post.json; exit 1; fi
+
+      - name: Verify production Studio over HTTPS
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          ready=false
+          for _ in $(seq 1 24); do
+            if curl --silent --show-error --fail "https://${CLOUDFLARE_CUSTOM_DOMAIN}/" > /tmp/studio-live.html; then
+              if grep -q '<title>NovelForge Studio</title>' /tmp/studio-live.html; then ready=true; break; fi
+            fi
+            sleep 5
+          done
+          test "${ready}" = "true"
+          curl --silent --show-error --fail --head "https://${CLOUDFLARE_CUSTOM_DOMAIN}/" > /tmp/studio-live-headers.txt
+          grep -qi '^content-security-policy:' /tmp/studio-live-headers.txt
+          grep -qi '^x-content-type-options: nosniff' /tmp/studio-live-headers.txt
+          {
+            echo '### NovelForge Studio Cloud Host'
+            echo "- Production: https://${CLOUDFLARE_CUSTOM_DOMAIN}"
+            echo '- Surface: cloud_ui'
+            echo '- Core host: unbound by design'
+            echo '- Authority: false'
+          } >> "${GITHUB_STEP_SUMMARY}"

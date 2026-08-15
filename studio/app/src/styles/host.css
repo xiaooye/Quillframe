@@ -1,0 +1,58 @@
+@layer novelforge-app {
+  .nf-host-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .nf-host-dot {
+    inline-size: 7px;
+    block-size: 7px;
+    border-radius: 999px;
+    background: var(--wui-color-success, var(--wui-color-primary));
+  }
+
+  .nf-host-chip[data-surface="cloud_ui"] .nf-host-dot {
+    background: var(--wui-color-muted-foreground);
+  }
+
+  .nf-host-boundary {
+    border-style: dashed;
+    background: color-mix(in oklch, var(--wui-surface-sunken) 72%, var(--wui-color-background));
+    box-shadow: none;
+  }
+
+  .nf-host-boundary-content {
+    min-block-size: 240px;
+    max-inline-size: 760px;
+    justify-items: start;
+    align-content: center;
+    gap: var(--wui-spacing-4) !important;
+    padding: clamp(28px, 5vw, 56px) !important;
+  }
+
+  .nf-host-boundary h2 {
+    margin: 0 0 var(--wui-spacing-2);
+    font-size: clamp(1.25rem, 2.6vw, 1.8rem);
+    letter-spacing: -0.02em;
+  }
+
+  .nf-host-boundary p {
+    margin: 0;
+    max-inline-size: 66ch;
+    color: var(--wui-color-muted-foreground);
+  }
+
+  .nf-host-boundary small {
+    max-inline-size: 72ch;
+    color: var(--wui-color-muted-foreground);
+  }
+
+  @media (max-width: 719px) {
+    .nf-host-chip > span:last-child { display: none; }
+    .nf-host-chip { min-inline-size: 28px; justify-content: center; padding-inline: 8px; }
+    .nf-host-boundary-content { min-block-size: 220px; padding: 26px 20px !important; }
+  }
+}
