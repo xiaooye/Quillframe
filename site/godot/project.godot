@@ -17,4 +17,5 @@ theme/default_font_multichannel_signed_distance_field=true
 [rendering]
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(1, 0.992157, 0.988235, 1)
 textures/default_filters/use_nearest_mipmap_filter=false
