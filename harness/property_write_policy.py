@@ -235,8 +235,9 @@ def evaluate(policy: dict[str, Any] | None, object_type: str, property_name: str
         "default": policy.get("default"),
         "object_types": policy.get("object_types", {}),
     })
+    semantic_fingerprint = policy.get("policy_fingerprint") or fingerprint_bytes(canonical(normalized))
     normalized["policy_ref"] = policy.get("policy_ref")
-    normalized["policy_fingerprint"] = policy.get("policy_fingerprint") or fingerprint_bytes(canonical(normalized))
+    normalized["policy_fingerprint"] = semantic_fingerprint
     rule, source = _resolved_rule(normalized, object_type, property_name)
     mutation_class = rule["mutation_class"]
     decision, authority_effect, requirements = _route(mutation_class, writer_class)
@@ -294,8 +295,8 @@ def _fixture_policy() -> dict[str, Any]:
 
 def self_test() -> int:
     policy = _fixture_policy()
-    policy["policy_ref"] = "fixture:property-policy"
     policy["policy_fingerprint"] = fingerprint_bytes(canonical(policy))
+    policy["policy_ref"] = "fixture:property-policy"
 
     semantic_state = evaluate(policy, "CHAR", "current_location", "semantic_worker")
     settlement_state = evaluate(policy, "CHAR", "current_location", "settlement")
@@ -308,6 +309,17 @@ def self_test() -> int:
     broad_default = evaluate(policy, "CHAR", "unlisted_state", "settlement")
     global_default = evaluate(policy, "ORG", "mission", "semantic_worker")
     legacy = evaluate(None, "CHAR", "current_location", "semantic_worker")
+
+    fallback_a = _fixture_policy()
+    fallback_a["policy_ref"] = "fixture:path-a"
+    fallback_b = _fixture_policy()
+    fallback_b["policy_ref"] = "fixture:path-b"
+    fallback_decision_a = evaluate(fallback_a, "CHAR", "current_location", "semantic_worker")
+    fallback_decision_b = evaluate(fallback_b, "CHAR", "current_location", "semantic_worker")
+    fallback_ref_independent = (
+        fallback_decision_a["policy_fingerprint"] == fallback_decision_b["policy_fingerprint"]
+        == fingerprint_bytes(canonical(_fixture_policy()))
+    )
 
     payload_escalation_blocked = False
     try:
@@ -331,6 +343,7 @@ def self_test() -> int:
         "settlement_only_allows_settlement_with_guards": settlement_state["decision"] == "allow_direct" and {"accepted_evidence", "expected_before", "settlement_receipt"}.issubset(set(settlement_state["requirements"])),
         "derived_only_is_non_authoritative": derived_direct["decision"] == "allow_direct" and derived_direct["authority_effect"] == "derived_non_authoritative" and derived_user["decision"] == "proposal_required",
         "payload_cannot_self_escalate": payload_escalation_blocked,
+        "fallback_policy_fingerprint_is_ref_independent": fallback_ref_independent,
         "ui_editability_comes_from_policy": user_direct["ui_direct_editable"] is True and settlement_state["ui_direct_editable"] is False and locked["ui_direct_editable"] is False,
         "mixed_writer_routes_to_reconcile": mixed["decision"] == "reconcile_required",
         "broad_object_default_works": broad_default["resolution_source"] == "object_default" and broad_default["decision"] == "allow_direct",
