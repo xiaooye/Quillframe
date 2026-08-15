@@ -22,7 +22,7 @@ export const knowledgeJourneys: KnowledgeJourneyDefinition[] = [
     icon: "✦",
     label: { "zh-CN": "先从这里开始", "en-US": "Start here" },
     description: {
-      "zh-CN": "先认识 NovelForge、它解决什么问题，以及最推荐的阅读顺序。",
+      "zh-CN": "第一次来？先看 NovelForge 是什么、适合谁，以及从哪里开始。",
       "en-US": "Understand NovelForge, the problems it solves, and the recommended reading path.",
     },
   },
@@ -31,7 +31,7 @@ export const knowledgeJourneys: KnowledgeJourneyDefinition[] = [
     icon: "✍",
     label: { "zh-CN": "创作与工作流", "en-US": "Writing & workflow" },
     description: {
-      "zh-CN": "从计划、场景、生成到接受与结算，理解一次创作如何完整走通。",
+      "zh-CN": "从规划、写作、审查到接受与结算，看看一章是怎么完整走完的。",
       "en-US": "Follow planning, scenes, generation, review, acceptance, and settlement end to end.",
     },
   },
@@ -40,7 +40,7 @@ export const knowledgeJourneys: KnowledgeJourneyDefinition[] = [
     icon: "🧵",
     label: { "zh-CN": "上下文、角色与正典", "en-US": "Context, character & canon" },
     description: {
-      "zh-CN": "理解系统记住什么、角色能知道什么，以及事实如何保持长期一致。",
+      "zh-CN": "系统记住什么、角色此刻知道什么，以及长期事实怎样不打架。",
       "en-US": "Learn what the system remembers, what characters may know, and how story truth stays coherent.",
     },
   },
@@ -49,16 +49,16 @@ export const knowledgeJourneys: KnowledgeJourneyDefinition[] = [
     icon: "♡",
     label: { "zh-CN": "审查与质量", "en-US": "Review & quality" },
     description: {
-      "zh-CN": "读者参与、连续性、文本表面和语义审查如何共同决定候选稿是否可审。",
+      "zh-CN": "从读者体验、连续性到语义审查，看看一份候选稿为什么能过、为什么会被打回。",
       "en-US": "See how reader engagement, continuity, surface, and semantic review determine readiness.",
     },
   },
   {
     key: "studio",
     icon: "⌘",
-    label: { "zh-CN": "Studio 与宿主", "en-US": "Studio & hosts" },
+    label: { "zh-CN": "Studio 与运行方式", "en-US": "Studio & hosts" },
     description: {
-      "zh-CN": "了解 Local Web、Hosted Studio、Agent Skill 与 Core 之间的产品边界。",
+      "zh-CN": "本地网页、云端 Studio、Agent Skill 都怎样接入同一套 Core，以及各自能做什么。",
       "en-US": "Understand Local Web, Hosted Studio, Agent Skill, and their boundaries around Core.",
     },
   },
@@ -67,7 +67,7 @@ export const knowledgeJourneys: KnowledgeJourneyDefinition[] = [
     icon: "📖",
     label: { "zh-CN": "出版与派生格式", "en-US": "Publication & formats" },
     description: {
-      "zh-CN": "从已接受正文生成网页、纯文本、印刷和 EPUB，同时保持正文权威不漂移。",
+      "zh-CN": "从已接受正文生成网页、纯文本、印刷版和 EPUB，同时不改变正文权威。",
       "en-US": "Derive web, text, print, and EPUB outputs from accepted text without moving manuscript authority.",
     },
   },
@@ -76,7 +76,7 @@ export const knowledgeJourneys: KnowledgeJourneyDefinition[] = [
     icon: "⌁",
     label: { "zh-CN": "架构与参考", "en-US": "Architecture & reference" },
     description: {
-      "zh-CN": "需要精确契约、架构图谱、运行时细节或开发清单时，从这里深入。",
+      "zh-CN": "想查精确契约、架构关系、运行时细节或开发记录时，从这里找。",
       "en-US": "Go deeper into contracts, architecture maps, runtime details, and development inventories.",
     },
   },
@@ -126,9 +126,21 @@ export function humanDocKind(doc: DocIndexEntry, locale: KnowledgeLocale): strin
   return labels[doc.tier as "A" | "B" | "C"] ?? (locale === "zh-CN" ? "文档" : "Guide");
 }
 
+function compactSummary(value: string, title: string): string {
+  let raw = value.replace(/&nbsp;|\s+/g, " ").trim();
+  if (title && raw.startsWith(title)) raw = raw.slice(title.length).trim();
+  return raw.length > 190 ? `${raw.slice(0, 187).trimEnd()}…` : raw;
+}
+
 export function readableDocSummary(doc: DocIndexEntry, locale: KnowledgeLocale): string {
-  const raw = (doc.purpose || doc.excerpt || "").replace(/&nbsp;|\s+/g, " ").trim();
-  if (raw) return raw.length > 190 ? `${raw.slice(0, 187).trimEnd()}…` : raw;
+  // The manifest purpose is intentionally repository-facing and currently English-only.
+  // Chinese cards therefore lead with the locale-specific compiled document excerpt so
+  // product UI never leaks English maintenance copy into a zh-CN reading surface.
+  const localizedSource = locale === "zh-CN"
+    ? (doc.excerpt || doc.purpose || "")
+    : (doc.purpose || doc.excerpt || "");
+  const summary = compactSummary(localizedSource, doc.title);
+  if (summary) return summary;
   return locale === "zh-CN" ? "打开这篇文档继续阅读。" : "Open this guide to continue reading.";
 }
 
