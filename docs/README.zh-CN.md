@@ -11,7 +11,7 @@
 
 NovelForge 的文档按**读者要完成的任务**组织，而不是照着源码目录逐层解释。
 
-当前开发中的实现采用 AI-native、contract-first 架构：需要理解小说的语义判断交给模型；权威、权限、内容指纹、持久化、路由、类型校验、事务、硬预算与可复现性由确定性系统负责。Framework 的发布权威仍是 `HARNESS_MANIFEST.yaml`；开发实现中的版本元数据不会自动晋升为正式发布。当前版本与发布真相见 [Changelog](../CHANGELOG.zh-CN.md)。
+当前开发中的实现采用 AI-native、contract-first 架构：需要理解小说的语义判断交给模型；权威、权限、内容指纹、持久化、路由、类型校验、事务、硬预算与可复现性由确定性系统负责。对于正式 release 的兼容性声明，`HARNESS_MANIFEST.yaml` 仍然是 release metadata authority；但在 8.0 持续开发期间，最新 `main` 才是开发工作的实现基线。已经合并的变化、仍在推进的依赖与 deferred scope 见 [8.0 开发变更清单](8-0-development-inventory.zh-CN.md)；历史 release 与当前 unreleased ledger 见 [Changelog](../CHANGELOG.zh-CN.md)。
 
 文档本身也遵循同样的分层。产品页负责建立心智模型和说明取舍；指南负责告诉你怎样使用一个子系统；深层协议负责定义精确不变量与执行边界。
 
