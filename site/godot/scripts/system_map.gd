@@ -162,7 +162,7 @@ func _draw_edge(a: Vector2, b: Vector2, from_id: String, to_id: String, hot: boo
 	if hot:
 		draw_polyline(curve, Color(_accent.r, _accent.g, _accent.b, 0.11), 7.0 if not _is_phone() else 5.0, true)
 	draw_polyline(curve, Color(line_color.r, line_color.g, line_color.b, 0.92 if hot else 0.72), 1.8 if hot else 1.0, true)
-	_draw_packets(curve, from_id, to_id, hot)
+	_draw_packet(curve, from_id, to_id, hot)
 
 func _curve_points(a: Vector2, b: Vector2) -> PackedVector2Array:
 	var points := PackedVector2Array()
@@ -176,7 +176,7 @@ func _curve_points(a: Vector2, b: Vector2) -> PackedVector2Array:
 		points.append(a * u * u * u + c1 * 3.0 * u * u * t + c2 * 3.0 * u * t * t + b * t * t * t)
 	return points
 
-func _draw_packets(curve: PackedVector2Array, from_id: String, to_id: String, hot: bool) -> void:
+func _draw_packet(curve: PackedVector2Array, from_id: String, to_id: String, hot: bool) -> void:
 	if curve.size() < 2:
 		return
 	var seed := float(abs((from_id + to_id).hash()) % 1000) / 1000.0
@@ -211,7 +211,6 @@ func _draw_node(node: Dictionary) -> void:
 	draw_rect(rect, PANEL_HOT if is_hot else PANEL, true)
 	draw_rect(rect, Color(_accent.r, _accent.g, _accent.b, 0.88) if is_hot else Color(0.27, 0.35, 0.48, 0.76), false, 1.5 if is_hot else 1.0)
 
-	# Accent rail and ports communicate direction without extra chrome.
 	var rail_x := rect.position.x + 1.0
 	draw_line(Vector2(rail_x, rect.position.y + 8), Vector2(rail_x, rect.end.y - 8), Color(_accent.r, _accent.g, _accent.b, 0.94 if is_hot else 0.26), 2.0)
 	var port := Vector2(rect.position.x + (11.0 if _is_phone() else 15.0), rect.get_center().y)
