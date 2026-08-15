@@ -100,6 +100,7 @@ export default defineConfig({
         "./src/styles/article-polish.css",
         "./src/styles/navigation-polish.css",
         "./src/styles/docs-home-clean.css",
+        "./src/styles/surface-audit.css",
       ],
       credits: false,
     }),
