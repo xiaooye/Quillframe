@@ -90,6 +90,8 @@ Then use the exact contracts as needed:
 
 Runtime capability never grants story authority by itself.
 
+NovelForge Studio now has a **Phase 1 read-only contract probe on `main`**: a Run / Context Inspector that can load `novelforge_run_receipt_v1` locally and exposes no write operation. This is a product/observability prototype, not a released Studio application. See [Studio](../studio/README.en.md) and the [Studio Product Architecture](../studio/PRODUCT_ARCHITECTURE.en.md).
+
 ---
 
 ## 06 · If you are working with semantic model contracts ✦
@@ -161,7 +163,7 @@ Do not collapse these into one homepage comparison. They answer different questi
 
 **Tier A · Product surfaces** — README, Docs Home, Why, Architecture, Pipeline, QA. These pages must be understandable without reading implementation files and must receive the strongest copy/visual QA.
 
-**Tier B · Guides** — Project SDK, integrations, learning, Corpus, evals, context/memory, quality evolution. These pages optimize for practical understanding and happy-path use.
+**Tier B · Guides** — Project SDK, integrations, learning, Corpus, evals, context/memory, quality evolution, Studio Phase 1. These pages optimize for practical understanding and happy-path use.
 
 **Tier C · Contracts and records** — Harness, runtime, semantic worker, Story/Character/Canon, Surface/Reader, Corpus policy, historical specs. These optimize for exact boundaries and stable semantics rather than decorative presentation.
 
