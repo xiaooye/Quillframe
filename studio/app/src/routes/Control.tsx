@@ -5,6 +5,12 @@ import { useI18n } from "../i18n";
 import { downloadProjection, loadProductProjection, type ProductProjectionBundle } from "../productProjection";
 import { useStudio } from "../studio";
 
+function text(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
+}
+
 export default function Control() {
   const { locale } = useI18n();
   const studio = useStudio();
@@ -41,7 +47,7 @@ export default function Control() {
       key: "project",
       label: "Project",
       value: bundle()?.project.project.project.title ?? bundle()?.project.project.project.id ?? "—",
-      meta: bundle()?.project.project.framework_lock.commit ?? "—",
+      meta: text(bundle()?.project.project.framework_lock.commit),
       href: "/project",
       state: bundle() ? "ready" : "idle",
     },
