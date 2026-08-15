@@ -1,4 +1,4 @@
-import { Show, createMemo, createResource } from "solid-js";
+import { For, Show, createMemo, createResource } from "solid-js";
 import { invokeBridge } from "../bridge";
 import { CoreHostBoundary, JsonBlock, PageIntro, QueryError } from "../components";
 import { useI18n } from "../i18n";
@@ -54,10 +54,42 @@ const footprintCopy = {
   },
 } as const;
 
+const runtimeCopy = {
+  "en-US": {
+    eyebrow: "Runtime boundary",
+    title: "What the host exposes — and what stays deferred",
+    body: "A trustworthy agent console gets session, event, handoff, and receipt state from typed runtime projections. Studio shows the live Host Bridge boundary instead of reconstructing those facts from logs or private stores.",
+    supported: "Safe public queries",
+    deferred: "Runtime continuity still deferred",
+    supportedBody: "These operations are exposed by the current read-only Host Bridge.",
+    deferredBody: "These runtime projections remain unavailable until Core provides a side-effect-free public contract.",
+    raw: "Raw capability evidence",
+  },
+  "zh-CN": {
+    eyebrow: "Runtime 边界",
+    title: "宿主现在暴露什么，哪些仍然必须保持 deferred",
+    body: "可信的 Agent console 必须从类型化 runtime projection 读取 session、event、handoff 与 receipt 状态。Studio 展示 live Host Bridge 边界，不会从日志或私有存储反推这些事实。",
+    supported: "安全公共查询",
+    deferred: "仍 deferred 的 runtime continuity",
+    supportedBody: "这些操作已经由当前只读 Host Bridge 公开。",
+    deferredBody: "这些运行时投影要等 Core 提供无副作用的公共契约后才能开放。",
+    raw: "原始 Capability 证据",
+  },
+} as const;
+
 export default function Capabilities() {
   const { t, locale } = useI18n();
   const studio = useStudio();
   const fpText = createMemo(() => footprintCopy[locale()]);
+  const runtimeText = createMemo(() => runtimeCopy[locale()]);
+  const runtimeBoundary = createMemo(() => {
+    const description = studio.bridgeDescription();
+    if (!description) return undefined;
+    return {
+      supported: description.supported_operations,
+      deferred: Object.entries(description.deferred_operations).filter(([operation]) => /^(runtime|run|session)\./.test(operation)),
+    };
+  });
   const [footprint] = createResource(async () => {
     const response = await fetch("/.well-known/novelforge-studio-footprint.json", { cache: "no-store" });
     if (!response.ok) throw new Error(`footprint manifest: ${response.status}`);
@@ -106,10 +138,46 @@ export default function Capabilities() {
         </Show>
       </section>
 
+      <Show when={runtimeBoundary()}>
+        {(boundary) => (
+          <section class="wui-card wui-card--outlined nf-inspector-surface nf-diagnostic-workstation" aria-labelledby="runtime-boundary-heading">
+            <div class="nf-observe-section-head">
+              <div>
+                <span class="nf-eyebrow">{runtimeText().eyebrow}</span>
+                <h2 id="runtime-boundary-heading">{runtimeText().title}</h2>
+                <p>{runtimeText().body}</p>
+              </div>
+              <span class="wui-badge wui-badge--outline">authority=false</span>
+            </div>
+            <div class="nf-validation-scope">
+              <article>
+                <header><span class="wui-badge wui-badge--success">{boundary().supported.length}</span><h3>{runtimeText().supported}</h3></header>
+                <p class="nf-observe-footnote">{runtimeText().supportedBody}</p>
+                <ul><For each={boundary().supported}>{(operation) => <li><code>{operation}</code></li>}</For></ul>
+              </article>
+              <article>
+                <header><span class="wui-badge wui-badge--outline">{boundary().deferred.length}</span><h3>{runtimeText().deferred}</h3></header>
+                <p class="nf-observe-footnote">{runtimeText().deferredBody}</p>
+                <ul>
+                  <For each={boundary().deferred}>
+                    {([operation, projection]) => <li><code>{operation}</code>{projection.dependency ? ` · ${projection.dependency}` : ""}<br />{projection.reason}</li>}
+                  </For>
+                </ul>
+              </article>
+            </div>
+          </section>
+        )}
+      </Show>
+
       <Show when={studio.bridgeAvailable()} fallback={<CoreHostBoundary />}>
         <QueryError message={data.error ? String(data.error) : undefined} />
         <Show when={!data.loading} fallback={<div class="nf-loading">{t("common.loading")}</div>}>
-          <article class="wui-card nf-card"><div class="wui-card__content"><JsonBlock value={data()} /></div></article>
+          <section class="wui-card wui-card--outlined nf-inspector-surface">
+            <details class="nf-raw-evidence">
+              <summary>{runtimeText().raw}</summary>
+              <JsonBlock value={data()} />
+            </details>
+          </section>
         </Show>
       </Show>
     </section>
