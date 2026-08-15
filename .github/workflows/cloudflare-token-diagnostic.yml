@@ -1,0 +1,67 @@
+name: Cloudflare Token Diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cloudflare-token-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect effective Cloudflare token policies
+        shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          auth="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+
+          verify_status=$(curl --silent --show-error --output /tmp/verify.json --write-out "%{http_code}" \
+            --header "${auth}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/verify")
+          echo "Token verify HTTP: ${verify_status}"
+          jq '{success, errors, result: (.result | {id,status,expires_on,not_before})}' /tmp/verify.json || cat /tmp/verify.json
+          [ "${verify_status}" = "200" ] || exit 1
+          token_id=$(jq -r '.result.id // empty' /tmp/verify.json)
+          test -n "${token_id}"
+
+          detail_status=$(curl --silent --show-error --output /tmp/detail.json --write-out "%{http_code}" \
+            --header "${auth}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/${token_id}")
+          echo "Token detail HTTP: ${detail_status}"
+          if [ "${detail_status}" = "200" ]; then
+            jq '{success, errors, result: {name: .result.name, status: .result.status, policies: [.result.policies[] | {effect, resources, permissions: [.permission_groups[].name]}]}}' /tmp/detail.json
+          else
+            jq '{success, errors, messages}' /tmp/detail.json || cat /tmp/detail.json
+          fi
+
+          zone_status=$(curl --silent --show-error --output /tmp/zones.json --write-out "%{http_code}" \
+            --header "${auth}" \
+            "https://api.cloudflare.com/client/v4/zones?name=wei-dev.com&account.id=${CLOUDFLARE_ACCOUNT_ID}")
+          echo "Zone lookup HTTP: ${zone_status}"
+          jq '{success, errors, result: [.result[]? | {id,name,status}]}' /tmp/zones.json || cat /tmp/zones.json
+          [ "${zone_status}" = "200" ] || exit 1
+          zone_id=$(jq -r '.result[0].id // empty' /tmp/zones.json)
+          test -n "${zone_id}"
+
+          dns_status=$(curl --silent --show-error --output /tmp/dns.json --write-out "%{http_code}" \
+            --header "${auth}" \
+            "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?per_page=5")
+          echo "DNS list HTTP: ${dns_status}"
+          jq '{success, errors, messages, result_count: (.result | length?)}' /tmp/dns.json || cat /tmp/dns.json
+
+          {
+            echo "### Cloudflare token diagnostic"
+            echo "- verify HTTP: ${verify_status}"
+            echo "- token details HTTP: ${detail_status}"
+            echo "- zone lookup HTTP: ${zone_status}"
+            echo "- DNS list HTTP: ${dns_status}"
+          } >> "${GITHUB_STEP_SUMMARY}"
