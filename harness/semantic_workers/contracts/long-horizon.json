@@ -1,61 +1,639 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "2",
+  "version": "3",
   "principle": "Long-horizon coherence is maintained by model reasoning over explicit evidence, commitments and required transitions while deterministic runtime preserves authority, provenance and lifecycle. Plans and derived reconciliations remain revisable proposals, never silent Canon writes.",
   "contracts": {
     "plan.reconcile": {
       "kind": "artifact_audit",
       "purpose": "Reconcile an active plan with newly simulated or generated causal evidence. Decide whether the plan still works, needs a bounded proposal patch, or must escalate to Story/Plan redesign. Never silently mutate the active plan.",
-      "rubric": ["Use the supplied active-plan bounds, accepted/current state, simulation or candidate evidence, dependencies and commitments.", "Do not force a planned beat merely because it was planned. Test whether its assumptions still survive the causal events that have actually been accepted or the trajectory currently being simulated.", "Prefer the smallest plan change that restores causality, character agency, continuity and reader pressure when a change is needed.", "Keep accepted Canon separate from active-plan intent. A proposed plan patch does not retroactively make anything happen.", "Identify downstream dependencies or commitments that a plan change would affect.", "If the failure belongs to story premise/arc rather than local planning, escalate instead of patching around it."],
-      "output_contract": {"type": "object", "required": ["confidence", "decision", "reasons", "affected_dependencies", "preserved_commitments"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "decision": {"enum": ["keep_plan", "propose_plan_patch", "escalate_story_or_plan"]}, "reasons": {"type": "array", "items": {"type": "string"}}, "plan_patch_proposal": {"type": ["object", "null"]}, "affected_dependencies": {"type": "array", "items": {"type": "string"}}, "preserved_commitments": {"type": "array", "items": {"type": "string"}}, "at_risk_commitments": {"type": "array", "items": {"type": "string"}}}},
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "plan_reconciliation_proposal"},
+      "rubric": [
+        "Use the supplied active-plan bounds, accepted/current state, simulation or candidate evidence, dependencies and commitments.",
+        "Do not force a planned beat merely because it was planned. Test whether its assumptions still survive the causal events that have actually been accepted or the trajectory currently being simulated.",
+        "Prefer the smallest plan change that restores causality, character agency, continuity and reader pressure when a change is needed.",
+        "Keep accepted Canon separate from active-plan intent. A proposed plan patch does not retroactively make anything happen.",
+        "Identify downstream dependencies or commitments that a plan change would affect.",
+        "If the failure belongs to story premise/arc rather than local planning, escalate instead of patching around it."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": [
+          "confidence",
+          "decision",
+          "reasons",
+          "affected_dependencies",
+          "preserved_commitments"
+        ],
+        "properties": {
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "decision": {
+            "enum": [
+              "keep_plan",
+              "propose_plan_patch",
+              "escalate_story_or_plan"
+            ]
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "plan_patch_proposal": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "affected_dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "preserved_commitments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "at_risk_commitments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "plan_reconciliation_proposal"
+      },
       "independent_gate": false
     },
     "relationship.memory_reconcile": {
       "kind": "artifact_audit",
       "purpose": "Reconcile potentially conflicting derived relationship memories against ordered source evidence so long-horizon social state does not accumulate incompatible snapshots. Produce a derived proposal only.",
-      "rubric": ["Use source chronology, accepted event evidence and authority labels. Do not average incompatible relationship states into a vague compromise.", "Separate what each character believes about the relationship from externally established events and from reader-visible interpretation.", "When states conflict, identify whether the conflict is temporal evolution, asymmetric perception, unresolved ambiguity, or an actual derivation error.", "Preserve meaningful emotional residue and obligations instead of resetting a relationship to the latest scene mood.", "Every reconciled claim must cite supplied source references. If evidence is insufficient, keep the conflict unresolved rather than inventing a bridge.", "The result is rebuildable derived memory and cannot overwrite accepted Canon or protected project state."],
-      "output_contract": {"type": "object", "required": ["confidence", "relationship_id", "reconciled_state", "source_refs", "unresolved_conflicts"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "relationship_id": {"type": "string", "minLength": 1}, "reconciled_state": {"type": "object"}, "source_refs": {"type": "array", "items": {"type": "string"}}, "unresolved_conflicts": {"type": "array", "items": {"type": "string"}}, "invalidated_derived_refs": {"type": "array", "items": {"type": "string"}}}},
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "derived_relationship_reconciliation"},
-      "independent_gate": false
+      "rubric": [
+        "Use only ordered locked/accepted relationship evidence and the supplied derived snapshots. Do not average incompatible states into a vague compromise.",
+        "Separate shared externally evidenced state from each participant perception. Asymmetric beliefs are valid and should remain asymmetric when evidence supports them.",
+        "Treat chronology as evolution: a later mood does not erase earlier obligations, permissions, betrayals, intimacy, status changes or emotional residue unless evidence actually resolves them.",
+        "When states conflict, classify the conflict as temporal evolution, asymmetric perception, unresolved ambiguity or derivation error.",
+        "Every reconciled claim must be traceable to supplied source_refs. If evidence is insufficient, keep an explicit unresolved conflict instead of inventing a bridge.",
+        "The result is rebuildable derived memory only and cannot overwrite accepted Canon or protected project state."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": [
+          "confidence",
+          "relationship_id",
+          "reconciled_state",
+          "source_refs",
+          "unresolved_conflicts"
+        ],
+        "properties": {
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "relationship_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reconciled_state": {
+            "type": "object",
+            "required": [
+              "shared_external_state",
+              "per_character_perception",
+              "open_obligations",
+              "emotional_residue"
+            ],
+            "properties": {
+              "shared_external_state": {
+                "type": "object"
+              },
+              "per_character_perception": {
+                "type": "object"
+              },
+              "open_obligations": {
+                "type": "array"
+              },
+              "emotional_residue": {
+                "type": "array"
+              }
+            },
+            "additionalProperties": false
+          },
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "unresolved_conflicts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "conflict",
+                "classification",
+                "reason",
+                "source_refs"
+              ],
+              "properties": {
+                "conflict": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "classification": {
+                  "enum": [
+                    "temporal_evolution",
+                    "asymmetric_perception",
+                    "unresolved_ambiguity",
+                    "derivation_error"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "invalidated_derived_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "derived_relationship_reconciliation"
+      },
+      "independent_gate": false,
+      "input_contract": {
+        "type": "object",
+        "required": [
+          "relationship_id",
+          "current_story_order",
+          "participants",
+          "ordered_evidence",
+          "derived_snapshots"
+        ],
+        "properties": {
+          "relationship_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "current_story_order": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "participants": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "ordered_evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "evidence_id",
+                "story_order",
+                "source_ref",
+                "authority",
+                "event"
+              ],
+              "properties": {
+                "evidence_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "story_order": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "source_ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "authority": {
+                  "enum": [
+                    "locked",
+                    "accepted"
+                  ]
+                },
+                "event": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "effects": {
+                  "type": "object"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "derived_snapshots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "snapshot_id",
+                "as_of_story_order",
+                "source_refs",
+                "shared_state",
+                "per_character_perception"
+              ],
+              "properties": {
+                "snapshot_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "as_of_story_order": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "source_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "shared_state": {
+                  "type": "object"
+                },
+                "per_character_perception": {
+                  "type": "object"
+                },
+                "open_obligations": {
+                  "type": "array"
+                },
+                "emotional_residue": {
+                  "type": "array"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
     },
     "continuity.commitment_audit": {
       "kind": "artifact_audit",
       "purpose": "Audit a candidate scene/trajectory against explicitly supplied narrative commitments, initial facts and required state transitions. Report evidence-backed preservation, advancement, uncertainty or violation without inventing new hard commitments or turning plans into Canon.",
       "input_contract": {
         "type": "object",
-        "required": ["candidate", "commitments", "required_transitions"],
+        "required": [
+          "candidate",
+          "commitments",
+          "required_transitions",
+          "current_story_order"
+        ],
         "properties": {
-          "candidate": {"type": "object", "required": ["source_ref", "evidence"], "properties": {"source_ref": {"type": "string", "minLength": 1}, "evidence": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": false},
-          "commitments": {"type": "array", "items": {"type": "object", "required": ["commitment_id", "statement", "authority", "source_ref"], "properties": {"commitment_id": {"type": "string", "minLength": 1}, "statement": {"type": "string", "minLength": 1}, "authority": {"enum": ["locked", "accepted", "active_plan", "author_constraint"]}, "source_ref": {"type": "string", "minLength": 1}, "due_by": {"type": ["string", "null"]}}, "additionalProperties": false}},
-          "required_transitions": {"type": "array", "items": {"type": "object", "required": ["transition_id", "description", "authority", "source_ref"], "properties": {"transition_id": {"type": "string", "minLength": 1}, "description": {"type": "string", "minLength": 1}, "authority": {"enum": ["locked", "accepted", "active_plan", "author_constraint"]}, "source_ref": {"type": "string", "minLength": 1}, "due_by": {"type": ["string", "null"]}}, "additionalProperties": false}},
-          "initial_facts": {"type": "array", "items": {"type": "object", "required": ["fact_id", "statement", "authority", "source_ref"], "properties": {"fact_id": {"type": "string", "minLength": 1}, "statement": {"type": "string", "minLength": 1}, "authority": {"enum": ["locked", "accepted"]}, "source_ref": {"type": "string", "minLength": 1}}, "additionalProperties": false}},
-          "current_story_point": {"type": "string"}
+          "candidate": {
+            "type": "object",
+            "required": [
+              "source_ref",
+              "evidence"
+            ],
+            "properties": {
+              "source_ref": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "evidence_id",
+                    "statement",
+                    "source_ref",
+                    "story_order"
+                  ],
+                  "properties": {
+                    "evidence_id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "statement": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "source_ref": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "story_order": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "commitments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "commitment_id",
+                "statement",
+                "authority",
+                "source_ref"
+              ],
+              "properties": {
+                "commitment_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "statement": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "authority": {
+                  "enum": [
+                    "locked",
+                    "accepted",
+                    "active_plan",
+                    "author_constraint"
+                  ]
+                },
+                "source_ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "due_by_story_order": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "required_transitions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "transition_id",
+                "description",
+                "authority",
+                "source_ref"
+              ],
+              "properties": {
+                "transition_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "authority": {
+                  "enum": [
+                    "locked",
+                    "accepted",
+                    "active_plan",
+                    "author_constraint"
+                  ]
+                },
+                "source_ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "due_by_story_order": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "initial_facts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "fact_id",
+                "statement",
+                "authority",
+                "source_ref"
+              ],
+              "properties": {
+                "fact_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "statement": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "authority": {
+                  "enum": [
+                    "locked",
+                    "accepted"
+                  ]
+                },
+                "source_ref": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "current_story_point": {
+            "type": "string"
+          },
+          "current_story_order": {
+            "type": "integer",
+            "minimum": 0
+          }
         },
         "additionalProperties": false
       },
       "rubric": [
         "Treat only explicitly supplied commitments and transitions as requirements. Keep locked/accepted facts, active-plan intent and author constraints distinguishable by authority.",
-        "Check whether the candidate contradicts, prematurely closes, makes impossible, forgets, or meaningfully advances each commitment.",
-        "For every required transition, report supported when candidate evidence establishes it, uncertain when evidence is insufficient, violated when the candidate contradicts or makes it impossible, and not_due when the supplied timing explicitly places it later.",
-        "Uncertain is not a failure verdict and must not be converted into a numeric literary risk score. It is evidence that the owning workflow may choose to validate further.",
+        "Use candidate evidence ids and story ordering. Never claim support from evidence outside the supplied candidate packet or later than current_story_order.",
+        "Check whether the candidate contradicts, prematurely closes, makes impossible, forgets, meaningfully advances or genuinely satisfies each commitment.",
+        "For every commitment and required transition, uncertainty is a first-class result when supplied evidence is insufficient. Do not convert missing evidence into success.",
         "A commitment may remain open without being a failure; flag only actual contradiction, impossibility, accidental abandonment or unsupported satisfaction.",
-        "Use source evidence and temporal ordering. High prose quality cannot compensate for a broken logical commitment or required transition.",
+        "High prose quality cannot compensate for a broken logical commitment or required transition.",
         "Do not demand mechanical callbacks in every scene and do not convert reader expectations into hard commitments unless the input explicitly classifies them that way.",
-        "Return evidence-backed audit results and repair ownership only."
+        "Return evidence-bound audit results and repair ownership only."
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "commitments", "transitions", "violations", "repair_routes"],
+        "required": [
+          "confidence",
+          "commitments",
+          "transitions",
+          "violations",
+          "repair_routes"
+        ],
         "properties": {
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "commitments": {"type": "array", "items": {"type": "object", "required": ["commitment_id", "status", "evidence"], "properties": {"commitment_id": {"type": "string", "minLength": 1}, "status": {"enum": ["preserved", "advanced", "satisfied", "at_risk", "violated", "not_applicable_here"]}, "evidence": {"type": "array", "items": {"type": "string"}}}}},
-          "transitions": {"type": "array", "items": {"type": "object", "required": ["transition_id", "status", "evidence", "reason"], "properties": {"transition_id": {"type": "string", "minLength": 1}, "status": {"enum": ["supported", "uncertain", "violated", "not_due"]}, "evidence": {"type": "array", "items": {"type": "string"}}, "reason": {"type": "string", "minLength": 1}}}},
-          "violations": {"type": "array", "items": {"type": "string"}},
-          "repair_routes": {"type": "array", "items": {"type": "object", "required": ["owner", "reason"], "properties": {"owner": {"enum": ["story", "plan", "scene", "character", "continuity", "context", "research", "human"]}, "reason": {"type": "string", "minLength": 1}}}}
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "commitments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "commitment_id",
+                "status",
+                "evidence_ids",
+                "reason"
+              ],
+              "properties": {
+                "commitment_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "enum": [
+                    "preserved",
+                    "advanced",
+                    "satisfied",
+                    "uncertain",
+                    "at_risk",
+                    "violated",
+                    "not_applicable_here"
+                  ]
+                },
+                "evidence_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "transitions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "transition_id",
+                "status",
+                "evidence_ids",
+                "reason"
+              ],
+              "properties": {
+                "transition_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "enum": [
+                    "supported",
+                    "uncertain",
+                    "violated",
+                    "not_due"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "violations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "repair_routes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "owner",
+                "reason"
+              ],
+              "properties": {
+                "owner": {
+                  "enum": [
+                    "story",
+                    "plan",
+                    "scene",
+                    "character",
+                    "continuity",
+                    "context",
+                    "research",
+                    "human"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
         }
       },
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "continuity_commitment_audit"},
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "continuity_commitment_audit"
+      },
       "independent_gate": false
     }
   }
