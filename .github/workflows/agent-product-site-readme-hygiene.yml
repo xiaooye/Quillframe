@@ -1,0 +1,33 @@
+name: Agent Product Site README Hygiene
+on:
+  push:
+    branches: [agent/product-site-doc-manifest-fix]
+    paths: ['.github/workflows/agent-product-site-readme-hygiene.yml']
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: |
+          python .agent-product-site-manifest.py
+          python scripts/version_identity.py >/tmp/version.json
+          python scripts/docs_quality.py >/tmp/docs.txt
+          python scripts/framework_hygiene.py >/tmp/hygiene.txt
+          python novelforge.py self-test >/tmp/selftest.json
+          python - <<'PY'
+          import json
+          assert json.load(open('/tmp/version.json'))['version_identity_contract']=='PASS'
+          assert json.load(open('/tmp/selftest.json'))['novelforge_cli_contract']=='PASS'
+          PY
+          git diff --check
+          rm .agent-product-site-manifest.py
+          git add -A
+          git config user.name 'NovelForge Agent'
+          git config user.email 'actions@users.noreply.github.com'
+          git commit -m 'docs: complete Product Site bilingual documentation hygiene'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
