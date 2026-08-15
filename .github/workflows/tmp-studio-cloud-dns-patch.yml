@@ -1,0 +1,50 @@
+name: Temporary Studio Cloud DNS patch
+
+on:
+  push:
+    branches: [agent/studio-cloud-domain-cname]
+    paths:
+      - '.tmp_patch_studio_cloud_dns.py'
+      - '.github/workflows/tmp-studio-cloud-dns-patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply fail-closed CNAME ensure patch
+        run: python .tmp_patch_studio_cloud_dns.py
+      - name: Validate workflow text and repository hygiene
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          text=Path('.github/workflows/studio-cloud.yml').read_text(encoding='utf-8')
+          assert text.count('dns_target="${CLOUDFLARE_PROJECT_NAME}.pages.dev"') == 1
+          assert 'Refusing to overwrite conflicting DNS' in text
+          assert '--data-urlencode "name=${CLOUDFLARE_CUSTOM_DOMAIN}"' in text
+          assert "'{type:\"CNAME\",name:$name,content:$content,ttl:1,proxied:true}'" in text
+          print({'schema':'novelforge_studio_cloud_dns_workflow_check_v1','status':'pass','overwrite_conflicts':False})
+          PY
+          python scripts/framework_hygiene.py
+          python scripts/docs_quality.py
+          git diff --check
+      - name: Commit only the cloud workflow patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only)"
+          test "$changed" = ".github/workflows/studio-cloud.yml"
+          remote_head="$(git ls-remote origin "refs/heads/${GITHUB_REF_NAME}" | cut -f1)"
+          test "$remote_head" = "$GITHUB_SHA"
+          git config user.name 'NovelForge Agent'
+          git config user.email 'actions@users.noreply.github.com'
+          git add .github/workflows/studio-cloud.yml
+          git commit -m 'studio: ensure production Pages CNAME before activation'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
