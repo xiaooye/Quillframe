@@ -12,6 +12,7 @@ const readJson = (relative) => JSON.parse(read(relative));
 const knowledgeExperience = read("src/KnowledgeExperience.tsx");
 const knowledgePresentation = read("src/knowledgePresentation.ts");
 const documentRenderer = read("src/DocumentRenderer.tsx");
+const knowledgeCss = read("src/styles/knowledge-experience.css");
 const zhCopy = read("src/content.zh-CN.ts");
 const docsIndex = readJson("public/generated/docs-index.json");
 
@@ -54,6 +55,22 @@ requireCheck(
   "zh-CN document headers must not render manifest purpose directly",
 );
 
+// The long-form Knowledge reader deliberately opts out of the generic
+// product-document content-visibility placeholder. Reserving 120px for every
+// off-screen Markdown block made short guides appear as enormous empty slabs.
+requireCheck(
+  knowledgeCss.includes("content-visibility: visible") && knowledgeCss.includes("contain-intrinsic-size: none"),
+  "Knowledge document reader must disable generic per-block intrinsic placeholders",
+);
+requireCheck(
+  knowledgeCss.includes("--nf-doc-reading: 800px") && knowledgeCss.includes("font-size: 17px"),
+  "Knowledge document reader must preserve the professional reading-width and prose-size contract",
+);
+requireCheck(
+  knowledgeCss.includes("border-inline-end") && knowledgeCss.includes("border-inline-start") && knowledgeCss.includes("knowledge-document-toc"),
+  "Knowledge document navigation must retain restrained separated side rails",
+);
+
 requireCheck(zhCopy.includes('docs: "知识库"'), "zh-CN primary navigation should call the product surface 知识库");
 requireCheck(zhCopy.includes('changelog: "版本"'), "zh-CN primary navigation should use the concise native label 版本");
 
@@ -75,5 +92,7 @@ if (failures.length > 0) {
     native_chinese_presentation: true,
     synthetic_popstate: false,
     router_context_dependency: false,
+    professional_reading_surface: true,
+    intrinsic_placeholder_reservation: false,
   }, null, 2));
 }
