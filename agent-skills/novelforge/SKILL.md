@@ -1,6 +1,6 @@
 ---
 name: novelforge
-description: Inspect a NovelForge fiction project through the portable read-only Studio host bridge. Use for NovelForge project orientation, host capability checks, runtime/session observability, Context Manifest inspection, semantic contract discovery, or when another agent framework needs a safe NovelForge integration without importing private runtime internals.
+description: Inspect a NovelForge fiction project through the portable read-only Studio host bridge. Use for NovelForge project orientation, host capability checks, runtime/session observability, deterministic resume eligibility checks, Context Manifest inspection, semantic contract discovery, or when another agent framework needs a safe NovelForge integration without importing private runtime internals.
 compatibility: Requires Python 3.11+ and a NovelForge checkout. Set NOVELFORGE_ROOT when the skill is installed outside that checkout.
 metadata:
   novelforge-host-bridge: "v1"
@@ -43,6 +43,7 @@ Typical supported uses include:
 - inspect typed runtime event metadata;
 - inspect a handoff's safe state/permission projection;
 - retrieve metadata-only Run Receipts by receipt, run, or session identity;
+- run `session.resume.preflight` to obtain a deterministic `READY` / `BLOCKED` eligibility result for one existing session + latest checkpoint;
 - inspect a project-scoped Context Manifest;
 - inspect the semantic contract catalog.
 
@@ -52,7 +53,9 @@ For project-scoped file arguments, pass paths relative to `project_root` where t
 
 Supported runtime reads are deliberately narrower than the underlying durable runtime. Their public projections omit provider session identifiers, absolute host paths, lease owners, private handoff result bodies, and other host-private material.
 
-A successful runtime query does **not** grant permission to resume, replay, fork, claim, complete, or mutate a session/handoff. `session.resume` and generic write commands remain deferred until Core exposes typed command envelopes with checkpoint revalidation, before-state preconditions, capability evidence, CAS/idempotency, authority checks, and receipts.
+`session.resume.preflight` is also read-only. It revalidates durable session version, latest-checkpoint binding, current Project/Framework identity, frozen artifact fingerprints, unresolved gate/handoff blockers, and other deterministic preconditions. `READY` means only that the session is eligible to enter a separately authorized future resume command. `BLOCKED` is a normal query result and its blockers must be preserved exactly.
+
+A successful runtime query or `READY` preflight does **not** grant permission to resume, replay, fork, claim, complete, or mutate a session/handoff. `session.resume` and generic write commands remain deferred until Core exposes typed command envelopes with before-state preconditions, capability evidence, CAS/idempotency, explicit authorization, and receipts. Older checkpoints are replay/fork territory, not ordinary resume.
 
 ## Fail closed on deferred operations
 
@@ -64,6 +67,8 @@ If the bridge returns `status: unsupported`, report that state. Do not bypass it
 - reconstructing private runtime state from unrelated files or terminal logs;
 - treating host capability as write authority.
 
+If `session.resume.preflight` returns `BLOCKED`, do not reinterpret it as permission to continue. Resolve the reported blocker through the owning NovelForge runtime contract.
+
 ## Consequential story changes
 
 This skill is read-only. It never accepts or settles manuscript text and never changes Canon. If the user asks for a consequential NovelForge write, use the owning NovelForge Core workflow available in the host rather than manufacturing a write path through this skill.
@@ -74,6 +79,6 @@ Before presenting a result:
 
 1. confirm the bridge result schema;
 2. confirm `authority` is false;
-3. preserve unsupported/unavailable states exactly;
+3. preserve unsupported/unavailable/`BLOCKED` states exactly;
 4. do not expose host absolute paths or private provider session identifiers;
 5. cite or retain the result fingerprints when provenance matters.

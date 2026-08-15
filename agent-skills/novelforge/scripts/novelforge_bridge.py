@@ -17,6 +17,7 @@ RUNTIME_QUERIES = {
     "runtime.events.list",
     "runtime.handoff.inspect",
     "run.receipt.get",
+    "session.resume.preflight",
 }
 
 
@@ -71,6 +72,7 @@ def self_test() -> dict[str, Any]:
         "authority_false": value.get("authority") is False,
         "direct_core_store_access_false": value.get("direct_core_store_access") is False,
         "runtime_queries_supported": RUNTIME_QUERIES.issubset(supported),
+        "resume_preflight_supported": "session.resume.preflight" in supported and "session.resume.preflight" not in deferred,
         "resume_still_deferred": "session.resume" in deferred and "session.resume" not in supported,
         "write_command_not_supported": "command.invoke" not in supported,
     }

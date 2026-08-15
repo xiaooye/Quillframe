@@ -18,12 +18,13 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Compile Studio bridge, runtime queries, and Agent Skill client
+      - name: Compile Studio bridge, runtime queries, resume preflight, and Agent Skill client
         run: |
           python -m py_compile \
             studio/host_bridge.py \
             studio/project_hub_projection.py \
             harness/control_plane/runtime_query.py \
+            harness/session_runtime/resume_preflight.py \
             agent-skills/novelforge/scripts/novelforge_bridge.py
 
       - name: Public runtime query self-test
@@ -44,6 +45,25 @@ jobs:
           assert result['authority'] is False and result['model_execution'] is False
           PY
 
+      - name: Resume preflight self-test
+        run: |
+          python harness/session_runtime/resume_preflight.py self-test > resume-preflight-test.json
+          cat resume-preflight-test.json
+          python - <<'PY'
+          import json
+          result=json.load(open('resume-preflight-test.json',encoding='utf-8'))
+          assert result['resume_preflight_contract']=='PASS',result
+          assert result['ready_case'] is True
+          assert result['stale_version_blocked'] is True
+          assert result['stale_artifact_blocked'] is True
+          assert result['wrong_project_blocked'] is True
+          assert result['locally_provable_capability_ready'] is True
+          assert result['unavailable_capability_blocked'] is True
+          assert result['missing_store_side_effect_free'] is True
+          assert result['mutation_performed'] is False
+          assert result['authority'] is False and result['model_execution'] is False
+          PY
+
       - name: Portable bridge self-test
         run: |
           if ! python studio/host_bridge.py self-test > studio-host-bridge-test.json; then
@@ -61,6 +81,7 @@ jobs:
               'runtime.events.list',
               'runtime.handoff.inspect',
               'run.receipt.get',
+              'session.resume.preflight',
           }
           setup_actions={'init','session-put','event-ingest','handoff-submit'}
           query_trace=[]
@@ -79,6 +100,7 @@ jobs:
                       'status': result.get('status'),
                       'error_code': error.get('code'),
                       'data_schema': data.get('schema'),
+                      'data_status': data.get('status'),
                       'count': data.get('count'),
                   })
               return result
@@ -126,13 +148,16 @@ jobs:
               'runtime.events.list',
               'runtime.handoff.inspect',
               'run.receipt.get',
+              'session.resume.preflight',
           }
           supported=set(contract['operations']['supported'])
           deferred=set(contract['operations']['deferred'])
           assert bridge['studio_host_bridge_contract']=='PASS',bridge
           assert bridge['checks']['runtime_queries_supported'] is True,bridge
           assert bridge['checks']['runtime_projection_safe'] is True,bridge
+          assert bridge['checks']['resume_preflight_query_safe'] is True,bridge
           assert skill['novelforge_agent_skill_contract']=='PASS',skill
+          assert skill['checks']['resume_preflight_supported'] is True,skill
           assert query['schema']=='novelforge_studio_host_bridge_result_v1',query
           assert query['operation']=='semantic.catalog' and query['status']=='ok',query
           assert query['authority'] is False and query['canon_authority'] is False
@@ -145,6 +170,8 @@ jobs:
           assert 'command.invoke' not in supported
           assert portable['phase_2b_host_bridge']['mutation_exposed'] is False
           assert portable['runtime_observability']['side_effect_free'] is True
+          assert portable['runtime_observability']['resume_preflight_exposed'] is True
+          assert portable['runtime_observability']['preflight_ready_grants_runtime_control'] is False
           assert portable['runtime_observability']['session_resume_exposed'] is False
           assert portable['agent_package_direction']['private_runtime_imports_required'] is False
           PY
