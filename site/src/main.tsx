@@ -7,6 +7,7 @@ import "./styles/showcase.css";
 import "./styles/atelier.css";
 import "./styles/atelier-photos.css";
 import "./styles/atelier-clean-canvas.css";
+import "./styles/project-inspector.css";
 
 // The launcher emits a synthetic Ctrl+K event on document. Real keyboard events
 // already bubble to window; only bridge the synthetic event into the AppShell
