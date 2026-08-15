@@ -18,6 +18,9 @@ jobs:
   contracts:
     uses: ./.github/workflows/novelforge-contracts.yml
 
+  story-workspace-contracts:
+    uses: ./.github/workflows/novelforge-story-workspace.yml
+
   resume-preflight:
     runs-on: ubuntu-latest
     timeout-minutes: 10
