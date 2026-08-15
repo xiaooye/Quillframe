@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build the intentionally small NovelForge Web export template. The product UI
-# uses Control/CanvasItem only, so shipping the general-purpose 3D, physics,
-# media, networking, import, XR, and advanced-editor GUI stacks is unnecessary.
-# JavaScriptBridge remains enabled because product routing/readiness uses it.
+# Build the NovelForge 2D/2.5D Web export template. We deliberately omit the
+# 3D runtime and other unused stacks, primarily so the final WebAssembly asset
+# stays below the hosting platform's per-file ceiling. First-load size itself is
+# not a product constraint. JavaScriptBridge remains enabled because product
+# routing/readiness uses it.
 
 GODOT_RELEASE="${GODOT_RELEASE:-4.7.1-stable}"
 GODOT_SOURCE_SHA256="${GODOT_SOURCE_SHA256:-0230d490846467c4fd772cc70b08dc56cb3adfedd55d039de0af74ddfdba00eb}"
@@ -87,12 +88,26 @@ scons \
   module_zip_enabled=no \
   "-j${JOBS}"
 
-BUILT_TEMPLATE="${SOURCE_DIR}/bin/godot.web.template_release.wasm32.zip"
-test -s "${BUILT_TEMPLATE}"
+# Godot 4.7 names a single-threaded Web template with the explicit
+# `.nothreads` suffix. Keep a conservative fallback for compatible upstream
+# naming changes, but fail with a directory listing instead of silently using
+# the wrong artifact.
+BUILT_TEMPLATE="${SOURCE_DIR}/bin/godot.web.template_release.wasm32.nothreads.zip"
+if [ ! -s "${BUILT_TEMPLATE}" ]; then
+  mapfile -t TEMPLATE_CANDIDATES < <(find "${SOURCE_DIR}/bin" -maxdepth 1 -type f -name 'godot.web.template_release.wasm32*.zip' -print | sort)
+  if [ "${#TEMPLATE_CANDIDATES[@]}" -ne 1 ] || [ ! -s "${TEMPLATE_CANDIDATES[0]:-}" ]; then
+    echo "Expected exactly one non-empty Godot Web release template after SCons." >&2
+    find "${SOURCE_DIR}/bin" -maxdepth 1 -type f -printf '%f\n' | sort >&2
+    exit 1
+  fi
+  BUILT_TEMPLATE="${TEMPLATE_CANDIDATES[0]}"
+fi
+
+printf 'Using compiled Godot Web template: %s\n' "${BUILT_TEMPLATE##*/}"
 cp "${BUILT_TEMPLATE}" "${OUTPUT_TEMPLATE}"
 
 # Inspect the actual engine payload inside the template. The final exported
-# index.wasm has the same engine payload plus negligible export glue, and must
+# index.wasm has the same engine payload plus negligible export glue and must
 # remain below Cloudflare Pages' 25 MiB individual-asset ceiling.
 TMP_UNPACK="${WORK_ROOT}/template-unpack"
 rm -rf "${TMP_UNPACK}"
