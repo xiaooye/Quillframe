@@ -6,7 +6,6 @@ import ArchitectureExplorerEntry from "./ArchitectureExplorerEntry";
 import PublicationWorkbenchEntry from "./PublicationWorkbenchEntry";
 import LocalPlaygroundEntry from "./LocalPlaygroundEntry";
 import ProjectInspectorEntry from "./ProjectInspectorEntry";
-import StartHubEntry from "./StartHubEntry";
 import "./styles/site.css";
 import "./styles/product-contract.css";
 import "./styles/showcase.css";
@@ -19,9 +18,7 @@ import "./styles/architecture-explorer.css";
 import "./styles/publication-workbench.css";
 import "./styles/agent-integration.css";
 import "./styles/agent-host-profiles.css";
-import "./styles/start-hub.css";
 import "./styles/kawaii-surfaces.css";
-import "./styles/start-hub-kawaii.css";
 import "./styles/surface-consistency.css";
 import "./styles/tool-workbench-kawaii.css";
 
@@ -62,7 +59,7 @@ function localizedDocsTarget(url: string | URL | null | undefined): URL | undefi
   return target;
 }
 
-const standaloneProductPaths = new Set(["/start", "/inspect", "/playground", "/agents", "/architecture", "/publication"]);
+const standaloneProductPaths = new Set(["/inspect", "/playground", "/agents", "/architecture", "/publication"]);
 
 function standaloneProductTarget(url: string | URL | null | undefined): URL | undefined {
   if (url == null) return undefined;
@@ -132,10 +129,14 @@ if (!root) {
 }
 
 const path = window.location.pathname.replace(/\/+$/, "") || "/";
-render(
-  () => path === "/start"
-    ? <StartHubEntry initialLocale={preferredLocale()} />
-    : path === "/inspect"
+
+// /start duplicated the product-home job and had no distinct authority or
+// execution semantics. Keep old deep links safe by collapsing it into home.
+if (path === "/start") {
+  window.location.replace("/");
+} else {
+  render(
+    () => path === "/inspect"
       ? <ProjectInspectorEntry initialLocale={preferredLocale()} />
       : path === "/playground"
         ? <LocalPlaygroundEntry initialLocale={preferredLocale()} />
@@ -146,5 +147,6 @@ render(
             : path === "/publication"
               ? <PublicationWorkbenchEntry initialLocale={preferredLocale()} />
               : <App />,
-  root,
-);
+    root,
+  );
+}
