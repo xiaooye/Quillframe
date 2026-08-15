@@ -2,6 +2,7 @@ import { render } from "solid-js/web";
 import App from "./App";
 import "./styles/site.css";
 import "./styles/showcase.css";
+import "./styles/chrome.css";
 
 const root = document.getElementById("root");
 

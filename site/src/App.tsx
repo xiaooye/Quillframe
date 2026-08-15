@@ -1,7 +1,7 @@
 import { A, Route, Router, useLocation } from "@solidjs/router";
 import { For, Show, createEffect, createSignal, type JSX } from "solid-js";
 import brandMark from "../../assets/brand/novelforge-mark.svg?url";
-import { githubRoot, sourceUrl, type Card, type Locale, type RouteCopy } from "./content";
+import { githubRoot, sourceUrl, type Locale, type RouteCopy } from "./content";
 import { enUS } from "./content.en-US";
 import { zhCN } from "./content.zh-CN";
 
@@ -26,7 +26,6 @@ const initialDark = (): boolean => {
 
 const [locale, setLocale] = createSignal<Locale>(initialLocale());
 const [dark, setDark] = createSignal(initialDark());
-
 const copy = () => siteCopy[locale()];
 
 function withViewTransition(update: () => void) {
@@ -48,6 +47,16 @@ function syncDocumentState() {
   localStorage.setItem("novelforge.appearance", dark() ? "dark" : "light");
 }
 
+function updatePointerLight(event: PointerEvent & { currentTarget: HTMLElement }) {
+  if (event.pointerType === "touch") return;
+  const target = event.currentTarget;
+  const rect = target.getBoundingClientRect();
+  const x = Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100));
+  const y = Math.max(0, Math.min(100, ((event.clientY - rect.top) / rect.height) * 100));
+  target.style.setProperty("--pointer-x", `${x}%`);
+  target.style.setProperty("--pointer-y", `${y}%`);
+}
+
 function AppShell(props: { children?: JSX.Element }) {
   const [menuOpen, setMenuOpen] = createSignal(false);
   const location = useLocation();
@@ -67,16 +76,16 @@ function AppShell(props: { children?: JSX.Element }) {
     ["/docs", labels().docs],
   ] as const;
 
-  const toggleLocale = () => withViewTransition(() => setLocale(locale() === "en-US" ? "zh-CN" : "en-US"));
-  const toggleDark = () => withViewTransition(() => setDark((value) => !value));
   const zh = () => locale() === "zh-CN";
+  const toggleLocale = () => withViewTransition(() => setLocale(zh() ? "en-US" : "zh-CN"));
+  const toggleDark = () => withViewTransition(() => setDark((value) => !value));
 
   return (
     <div class="site-shell">
       <header class="site-header">
         <div class="site-header-inner">
           <A href="/" class="brand-link" aria-label={zh() ? "NovelForge 首页" : "NovelForge home"}>
-            <img src={brandMark} alt="" width="34" height="34" aria-hidden="true" />
+            <span class="brand-mark-wrap"><img src={brandMark} alt="" width="34" height="34" aria-hidden="true" /></span>
             <span class="brand-wordmark">NovelForge</span>
             <span class="version-chip">0.8.x</span>
           </A>
@@ -87,15 +96,15 @@ function AppShell(props: { children?: JSX.Element }) {
 
           <div class="header-actions">
             <A href="/changelog" class="header-text-link">{labels().changelog}</A>
-            <button class="icon-button locale-button" type="button" onClick={toggleLocale} aria-label={zh() ? "切换到英文" : "Switch language"}>
+            <button class="chrome-button locale-button" type="button" onClick={toggleLocale} aria-label={zh() ? "切换到英文" : "Switch language"}>
               {copy().languageName}
             </button>
-            <button class="icon-button" type="button" onClick={toggleDark} aria-label={labels().appearance}>
+            <button class="chrome-button appearance-button" type="button" onClick={toggleDark} aria-label={labels().appearance}>
               <span aria-hidden="true">{dark() ? "☼" : "◐"}</span>
             </button>
             <a class="header-text-link github-link" href={githubRoot} target="_blank" rel="noreferrer">{labels().github}</a>
             <button
-              class="icon-button mobile-menu-button"
+              class="chrome-button mobile-menu-button"
               type="button"
               aria-expanded={menuOpen()}
               aria-controls="mobile-navigation"
@@ -111,7 +120,7 @@ function AppShell(props: { children?: JSX.Element }) {
           <nav id="mobile-navigation" class="mobile-nav" aria-label={zh() ? "移动端导航" : "Mobile navigation"}>
             <For each={nav()}>{([href, label]) => <A href={href} activeClass="active">{label}</A>}</For>
             <A href="/changelog">{labels().changelog}</A>
-            <a href={githubRoot} target="_blank" rel="noreferrer">{labels().github}</a>
+            <a href={githubRoot} target="_blank" rel="noreferrer">GitHub</a>
           </nav>
         </Show>
       </header>
@@ -119,36 +128,25 @@ function AppShell(props: { children?: JSX.Element }) {
       <main id="main-content">{props.children}</main>
 
       <footer class="site-footer">
-        <div class="footer-grid">
-          <div>
+        <div class="page-width footer-main">
+          <div class="footer-identity">
             <div class="footer-brand"><img src={brandMark} alt="" aria-hidden="true" /><strong>NovelForge</strong></div>
-            <p>{zh() ? "自适应小说智能体框架。创作判断交给模型，系统边界保持可检查。" : "Adaptive fiction agent framework. Creative judgment for models; inspectable boundaries for the system."}</p>
+            <p>{zh() ? "长篇创作需要的不只是生成能力，还需要可追溯的记忆、边界与接受流程。" : "Long-form fiction needs more than generation: it needs traceable memory, boundaries, and acceptance."}</p>
           </div>
-          <div class="footer-links">
-            <strong>{zh() ? "产品" : "Product"}</strong>
-            <A href="/studio">Studio</A>
-            <A href="/architecture">{labels().architecture}</A>
-            <A href="/publication">{labels().publication}</A>
+          <div class="footer-nav">
+            <div><small>{zh() ? "产品" : "Product"}</small><A href="/product">{labels().product}</A><A href="/studio">Studio</A><A href="/publication">{labels().publication}</A></div>
+            <div><small>{zh() ? "系统" : "System"}</small><A href="/architecture">{labels().architecture}</A><A href="/docs">{labels().docs}</A><A href="/changelog">{labels().changelog}</A></div>
+            <div><small>{zh() ? "源代码" : "Source"}</small><a href={githubRoot} target="_blank" rel="noreferrer">GitHub ↗</a><span>0.8.x · pre-1.0</span></div>
           </div>
-          <div class="footer-links">
-            <strong>{zh() ? "深入了解" : "Go deeper"}</strong>
-            <A href="/docs">{labels().docs}</A>
-            <A href="/changelog">{labels().changelog}</A>
-            <a href={githubRoot} target="_blank" rel="noreferrer">GitHub</a>
-          </div>
-        </div>
-        <div class="footer-meta">
-          <span>0.8.x · pre-1.0</span>
-          <span>{zh() ? "当前主分支是开发基线" : "latest main is the development baseline"}</span>
         </div>
       </footer>
     </div>
   );
 }
 
-function SectionHeading(props: { eyebrow: string; title: string; lede?: string; align?: "left" | "center" }) {
+function SectionIntro(props: { eyebrow: string; title: string; lede?: string; class?: string }) {
   return (
-    <div class={`section-heading ${props.align === "center" ? "center" : ""}`}>
+    <div class={`section-intro ${props.class ?? ""}`}>
       <p class="eyebrow">{props.eyebrow}</p>
       <h2>{props.title}</h2>
       <Show when={props.lede}><p class="section-lede">{props.lede}</p></Show>
@@ -156,53 +154,183 @@ function SectionHeading(props: { eyebrow: string; title: string; lede?: string; 
   );
 }
 
-function CardView(props: { card: Card; class?: string }) {
+function LoomInstrument() {
+  const zh = () => locale() === "zh-CN";
   return (
-    <article class={`info-card ${props.class ?? ""}`}>
-      <Show when={props.card.eyebrow}><p class="card-eyebrow">{props.card.eyebrow}</p></Show>
-      <h3>{props.card.title}</h3>
-      <p>{props.card.body}</p>
-      <Show when={props.card.meta}><code class="meta-code">{props.card.meta}</code></Show>
-    </article>
+    <figure class="loom-instrument" aria-label={zh() ? "NovelForge 创作与证据流程示意" : "Illustrative NovelForge creative evidence instrument"}>
+      <svg class="instrument-weave" viewBox="0 0 760 620" aria-hidden="true">
+        <defs>
+          <linearGradient id="loom-project" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="var(--nf-lane-project-stroke)" />
+            <stop offset="1" stop-color="var(--nf-lane-runtime-stroke)" />
+          </linearGradient>
+          <linearGradient id="loom-editorial" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stop-color="var(--nf-lane-editorial-stroke)" />
+            <stop offset="1" stop-color="var(--nf-lane-evidence-stroke)" />
+          </linearGradient>
+          <filter id="loom-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="7" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+        <path class="weave-path weave-path-a" d="M78 478 C184 186 290 190 386 316 S588 526 690 172" fill="none" stroke="url(#loom-project)" stroke-width="3" />
+        <path class="weave-path weave-path-b" d="M70 162 C206 526 312 466 412 280 S598 114 700 454" fill="none" stroke="url(#loom-editorial)" stroke-width="2.4" />
+        <path class="weave-path weave-path-c" d="M106 318 C242 250 300 436 430 386 S570 214 668 298" fill="none" stroke="var(--nf-lane-validated-stroke)" stroke-width="1.5" opacity=".75" />
+        <circle cx="386" cy="316" r="116" fill="none" stroke="currentColor" opacity=".08" />
+        <circle cx="386" cy="316" r="178" fill="none" stroke="currentColor" opacity=".045" />
+      </svg>
+
+      <div class="instrument-orbit orbit-one" aria-hidden="true" />
+      <div class="instrument-orbit orbit-two" aria-hidden="true" />
+
+      <div class="instrument-pane pane-manuscript">
+        <span class="pane-index">01</span>
+        <small>{zh() ? "正文" : "MANUSCRIPT"}</small>
+        <strong>{zh() ? "候选稿仍是候选稿" : "A candidate stays a candidate"}</strong>
+        <p>{zh() ? "接受之前，不把模型输出偷偷升级成事实。" : "Model output does not quietly become truth before acceptance."}</p>
+      </div>
+
+      <div class="instrument-pane pane-context">
+        <span class="pane-index">02</span>
+        <small>{zh() ? "上下文" : "CONTEXT"}</small>
+        <strong>{zh() ? "有帮助 ≠ 已载入" : "Support ≠ loaded"}</strong>
+        <div class="context-meter" aria-hidden="true"><span /><span /><span class="muted" /><span /></div>
+      </div>
+
+      <div class="instrument-pane pane-gates">
+        <span class="pane-index">03</span>
+        <small>{zh() ? "同一候选稿" : "SAME CANDIDATE"}</small>
+        <div class="gate-mini"><span>{zh() ? "文本" : "Surface"}</span><b>PASS</b></div>
+        <div class="gate-mini"><span>{zh() ? "读者" : "Reader"}</span><b>PASS</b></div>
+        <div class="gate-mini"><span>{zh() ? "连续性" : "Continuity"}</span><b>PASS</b></div>
+        <div class="gate-mini"><span>{zh() ? "语义" : "Semantic"}</span><b>PASS</b></div>
+      </div>
+
+      <div class="instrument-seal">
+        <span class="seal-dot" aria-hidden="true">✓</span>
+        <div><small>{zh() ? "进入审查" : "REVIEW-READY"}</small><strong>{zh() ? "可审查，还不是正典" : "Visible, still not Canon"}</strong></div>
+      </div>
+
+      <figcaption>{zh() ? "示意界面 · 所有状态都来自当前契约语义" : "Illustrative interface · states reflect current contract semantics"}</figcaption>
+    </figure>
   );
 }
 
-function ForgeCanvas() {
+function HeroContractRail() {
+  const zh = () => locale() === "zh-CN";
+  const items = () => zh() ? [
+    ["上下文", "有帮助 ≠ 已载入"],
+    ["角色", "只使用此刻可知证据"],
+    ["审查", "同一候选稿指纹"],
+    ["出版", "接受正文逐字保持"],
+  ] : [
+    ["Context", "support ≠ loaded"],
+    ["Character", "story-time visible evidence"],
+    ["Readiness", "one candidate fingerprint"],
+    ["Publication", "exact accepted text"],
+  ];
+  return (
+    <div class="hero-contract-rail" aria-label={zh() ? "产品契约摘要" : "Product contract summary"}>
+      <For each={items()}>{([label, value], index) => (
+        <div class="contract-rail-item"><span>0{index() + 1}</span><small>{label}</small><strong>{value}</strong></div>
+      )}</For>
+    </div>
+  );
+}
+
+function ForgeVisual(props: { steps: readonly (readonly [string, string, string])[] }) {
+  return (
+    <div class="forge-visual" aria-hidden="true">
+      <svg class="forge-visual-thread" viewBox="0 0 620 720">
+        <defs>
+          <linearGradient id="forge-thread-gradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="var(--nf-lane-project-stroke)" />
+            <stop offset=".34" stop-color="var(--nf-lane-runtime-stroke)" />
+            <stop offset=".68" stop-color="var(--nf-lane-editorial-stroke)" />
+            <stop offset="1" stop-color="var(--nf-lane-validated-stroke)" />
+          </linearGradient>
+        </defs>
+        <path class="forge-thread-track" d="M310 42 C124 130 510 206 310 288 S112 442 310 518 S492 640 310 682" fill="none" />
+        <path class="forge-thread-progress" d="M310 42 C124 130 510 206 310 288 S112 442 310 518 S492 640 310 682" fill="none" stroke="url(#forge-thread-gradient)" />
+      </svg>
+      <div class="forge-core"><img src={brandMark} alt="" /><span>NovelForge</span></div>
+      <For each={props.steps}>{([index, title]) => (
+        <div class={`forge-node forge-node-${index}`}>
+          <span>{index}</span><strong>{title}</strong>
+        </div>
+      )}</For>
+    </div>
+  );
+}
+
+function StudioScene() {
   const zh = () => locale() === "zh-CN";
   return (
-    <div class="forge-canvas" role="img" aria-label={zh() ? "NovelForge 工作流程示意图" : "Illustrative NovelForge workflow canvas"}>
-      <div class="canvas-topline">
-        <span class="canvas-kicker">{zh() ? "流程画布" : "FORGE CANVAS"}</span>
-        <span class="illustrative-chip">{zh() ? "示意界面" : "illustrative UI"}</span>
+    <div class="studio-scene" role="img" aria-label={zh() ? "NovelForge Studio 示意工作台" : "Illustrative NovelForge Studio workspace"}>
+      <div class="studio-scene-top"><span>NovelForge Studio</span><div><i /><i /><i /></div></div>
+      <div class="studio-scene-body">
+        <aside class="studio-rail">
+          <b>{zh() ? "正文" : "Manuscript"}</b><span>{zh() ? "故事" : "Story"}</span><span>{zh() ? "审查" : "Review"}</span><span>{zh() ? "出版" : "Publish"}</span>
+        </aside>
+        <div class="studio-manuscript">
+          <small>{zh() ? "当前场景 · CH-014" : "CURRENT SCENE · CH-014"}</small>
+          <h3>{zh() ? "正文占据工作台中心。" : "The manuscript owns the center."}</h3>
+          <p>{zh() ? "系统证据不抢走创作界面；只有需要追溯时，检查器才展开。" : "System evidence stays out of the way until the creator asks to inspect it."}</p>
+          <div class="manuscript-lines" aria-hidden="true"><span /><span /><span /><span /><span /></div>
+        </div>
+        <aside class="studio-inspector">
+          <div class="inspector-head"><small>{zh() ? "检查器" : "INSPECTOR"}</small><span>{zh() ? "按需展开" : "on demand"}</span></div>
+          <div class="inspector-item"><i class="lane project" /><div><small>{zh() ? "项目" : "PROJECT"}</small><strong>{zh() ? "已接受状态" : "Accepted state"}</strong></div></div>
+          <div class="inspector-item"><i class="lane runtime" /><div><small>{zh() ? "上下文" : "CONTEXT"}</small><strong>{zh() ? "7 条实际载入" : "7 blocks loaded"}</strong></div></div>
+          <div class="inspector-item"><i class="lane editorial" /><div><small>{zh() ? "审查" : "REVIEW"}</small><strong>{zh() ? "同一候选稿" : "same candidate"}</strong></div></div>
+        </aside>
       </div>
-      <div class="canvas-stage project-stage">
-        <span class="stage-dot project-dot" aria-hidden="true" />
-        <div><small>{zh() ? "项目" : "PROJECT"}</small><strong>{zh() ? "当前创作上下文" : "Current creative context"}</strong></div>
-        <span class="stage-state">{zh() ? "已接受 + 计划" : "accepted + plan"}</span>
+      <div class="studio-scene-bottom"><span>Local Web</span><span>authority=false</span><span>{zh() ? "无默认轮询" : "no default polling"}</span></div>
+    </div>
+  );
+}
+
+function PublicationPress() {
+  const zh = () => locale() === "zh-CN";
+  const profiles = ["clean_text", "web_reflow", "print_book", "epub3"];
+  return (
+    <div class="publication-press" role="img" aria-label={zh() ? "确定性出版流程示意" : "Illustrative deterministic publication press"}>
+      <div class="press-source">
+        <span class="press-stamp">ACCEPTED</span>
+        <small>{zh() ? "已接受正文" : "ACCEPTED MANUSCRIPT"}</small>
+        <strong>{zh() ? "来源指纹精确匹配" : "source fingerprint: exact"}</strong>
+        <div class="press-copy-lines" aria-hidden="true"><span /><span /><span /><span /></div>
       </div>
-      <div class="canvas-thread" aria-hidden="true" />
-      <div class="canvas-stage runtime-stage">
-        <span class="stage-dot runtime-dot" aria-hidden="true" />
-        <div><small>{zh() ? "上下文" : "CONTEXT"}</small><strong>{zh() ? "可见证据 → 实际载入" : "Visible evidence → loaded subset"}</strong></div>
-        <span class="stage-state">{zh() ? "受预算约束" : "bounded"}</span>
+      <div class="press-spine" aria-hidden="true"><span>↓</span></div>
+      <div class="press-output-grid">
+        <For each={profiles}>{(profile, index) => <div class={`press-output output-${index() + 1}`}><span>0{index() + 1}</span><code>{profile}</code><small>{zh() ? "派生输出" : "derived output"}</small></div>}</For>
       </div>
-      <div class="canvas-thread" aria-hidden="true" />
-      <div class="canvas-stage editorial-stage">
-        <span class="stage-dot editorial-dot" aria-hidden="true" />
-        <div><small>{zh() ? "候选稿" : "DRAFT"}</small><strong>{zh() ? "候选稿绑定精确指纹" : "Candidate bound to fingerprint"}</strong></div>
-        <span class="stage-state">{zh() ? "候选状态" : "candidate"}</span>
-      </div>
-      <div class="gate-panel">
-        <div class="gate-title"><span>{zh() ? "同一候选稿的必要审查" : "Same-candidate gates"}</span><code>fp: exact</code></div>
-        <div class="gate-row"><span>{zh() ? "文本表面" : "Surface"}</span><strong>PASS</strong></div>
-        <div class="gate-row"><span>{zh() ? "读者参与" : "Reader Engagement"}</span><strong>PASS</strong></div>
-        <div class="gate-row"><span>{zh() ? "连续性" : "Continuity"}</span><strong>PASS</strong></div>
-        <div class="gate-row"><span>{zh() ? "独立语义审查" : "Independent Semantic"}</span><strong>PASS</strong></div>
-      </div>
-      <div class="canvas-output">
-        <span class="output-mark" aria-hidden="true">✓</span>
-        <div><small>{zh() ? "可进入用户审查" : "USER-VISIBLE"}</small><strong>{zh() ? "可以进入审查，但还不是正典" : "Ready for review, not Canon"}</strong></div>
-      </div>
+      <div class="press-authority">authority=false</div>
+    </div>
+  );
+}
+
+function ArchitectureConstellation() {
+  const cards = () => copy().home.architecture.cards;
+  return (
+    <div class="architecture-constellation">
+      <svg class="architecture-links" viewBox="0 0 1000 620" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M160 142 C310 60 430 160 500 302" />
+        <path d="M840 136 C710 74 618 188 500 302" />
+        <path d="M168 478 C286 548 424 438 500 302" />
+        <path d="M832 486 C698 554 606 432 500 302" />
+        <path d="M500 302 C500 184 500 138 500 74" />
+        <path d="M500 302 C500 426 500 480 500 552" />
+      </svg>
+      <div class="architecture-core"><img src={brandMark} alt="" /><strong>NovelForge</strong><small>Core boundaries</small></div>
+      <For each={cards()}>{(card, index) => (
+        <article class={`architecture-node architecture-node-${index() + 1}`}>
+          <span class="node-index">0{index() + 1}</span>
+          <small>{card.eyebrow}</small>
+          <h3>{card.title}</h3>
+          <p>{card.body}</p>
+        </article>
+      )}</For>
     </div>
   );
 }
@@ -210,116 +338,150 @@ function ForgeCanvas() {
 function HomePage() {
   const c = () => copy().home;
   const zh = () => locale() === "zh-CN";
+
   return (
     <>
-      <section class="hero section-pad">
-        <div class="page-width hero-grid">
+      <section class="flagship-hero" onPointerMove={updatePointerLight}>
+        <div class="hero-mesh mesh-a" aria-hidden="true" />
+        <div class="hero-mesh mesh-b" aria-hidden="true" />
+        <div class="hero-thread-field" aria-hidden="true" />
+        <div class="page-width flagship-hero-inner">
           <div class="hero-copy">
-            <p class="eyebrow">{c().eyebrow}</p>
+            <div class="hero-kicker"><span class="kicker-signal" />{c().eyebrow}</div>
             <h1>{c().title}</h1>
             <p class="hero-lede">{c().lede}</p>
             <div class="hero-actions">
-              <a class="button primary" href="#forge">{c().primaryCta}</a>
-              <A class="button secondary" href="/architecture">{c().secondaryCta}</A>
+              <a class="button button-primary" href="#forge">{c().primaryCta}<span aria-hidden="true">↘</span></a>
+              <A class="button button-ghost" href="/architecture">{c().secondaryCta}<span aria-hidden="true">↗</span></A>
             </div>
-            <div class="hero-trustline">
-              <span class="trust-dot" aria-hidden="true" />
-              <span>{zh() ? "页面上的每项产品主张，都能追溯到当前主分支中已经存在的契约。" : "Product claims are grounded in contracts that exist on current main"}</span>
-            </div>
+            <div class="hero-proof-note"><span class="proof-note-dot" />{zh() ? "每一项产品主张都能回到当前主分支中的真实契约。" : "Every product claim resolves back to a real contract on current main."}</div>
           </div>
-          <ForgeCanvas />
+          <LoomInstrument />
+          <HeroContractRail />
+        </div>
+        <div class="hero-scroll-mark" aria-hidden="true"><span>{zh() ? "向下阅读" : "SCROLL TO READ"}</span><i /></div>
+      </section>
+
+      <section class="problem-chapter chapter-light">
+        <div class="page-width problem-layout">
+          <div class="problem-statement">
+            <p class="eyebrow">{c().problem.eyebrow}</p>
+            <h2>{c().problem.title}</h2>
+            <p class="section-lede">{c().problem.lede}</p>
+          </div>
+          <div class="problem-rails">
+            <For each={c().problem.cards}>{(card, index) => (
+              <article class="problem-rail">
+                <div class="rail-index">0{index() + 1}</div>
+                <div><h3>{card.title}</h3><p>{card.body}</p></div>
+                <span class="rail-mark" aria-hidden="true" />
+              </article>
+            )}</For>
+          </div>
         </div>
       </section>
 
-      <section class="section-pad subtle-section">
-        <div class="page-width">
-          <SectionHeading eyebrow={c().problem.eyebrow} title={c().problem.title} lede={c().problem.lede} />
-          <div class="three-grid problem-grid"><For each={c().problem.cards}>{(card) => <CardView card={card} />}</For></div>
-        </div>
-      </section>
-
-      <section id="forge" class="section-pad forge-story">
-        <div class="page-width forge-layout">
-          <div class="forge-sticky-copy">
-            <SectionHeading eyebrow={c().forge.eyebrow} title={c().forge.title} lede={c().forge.lede} />
-            <A class="text-link" href="/product">{zh() ? "了解产品模型 →" : "Explore the product model →"}</A>
+      <section id="forge" class="forge-chapter chapter-dark">
+        <div class="page-width forge-layout-v3">
+          <div class="forge-sticky-stage">
+            <p class="eyebrow">{c().forge.eyebrow}</p>
+            <h2>{c().forge.title}</h2>
+            <p class="section-lede">{c().forge.lede}</p>
+            <ForgeVisual steps={c().forge.steps} />
+            <A class="chapter-link" href="/product">{zh() ? "查看产品模型" : "Explore the product model"}<span>↗</span></A>
           </div>
-          <ol class="forge-steps">
+          <ol class="forge-step-ledger">
             <For each={c().forge.steps}>{([index, title, body]) => (
               <li>
-                <span class="step-number">{index}</span>
-                <div><h3>{title}</h3><p>{body}</p></div>
+                <span class="step-index">{index}</span>
+                <div><small>{zh() ? "阶段" : "STAGE"} {index}</small><h3>{title}</h3><p>{body}</p></div>
               </li>
             )}</For>
           </ol>
         </div>
       </section>
 
-      <section class="section-pad proof-section">
+      <section class="proof-chapter chapter-paper">
         <div class="page-width">
-          <SectionHeading eyebrow={c().proofLabel} title={zh() ? "系统会留下真正可以检查的痕迹。" : "The system leaves evidence you can inspect."} align="center" />
-          <div class="proof-grid"><For each={c().proofs}>{(card) => <CardView card={card} class="proof-card" />}</For></div>
-        </div>
-      </section>
-
-      <section class="section-pad product-band studio-band">
-        <div class="page-width split-feature">
-          <div>
-            <SectionHeading eyebrow={c().studio.eyebrow} title={c().studio.title} lede={c().studio.lede} />
-            <A class="button secondary" href="/studio">{c().studio.cta}</A>
+          <div class="proof-heading-row">
+            <SectionIntro eyebrow={c().proofLabel} title={zh() ? "不是一张漂亮的流程图，而是一串可以追溯的证据。" : "Not a pretty flowchart — a chain of evidence you can inspect."} />
+            <p>{zh() ? "我们只展示当前实现真正能证明的边界。没有虚构评分，没有假客户，没有把计划写成能力。" : "Only boundaries current implementation can actually prove. No invented scores, fake customers, or roadmap-as-capability."}</p>
           </div>
-          <div class="workbench-preview" aria-label={zh() ? "Studio 架构预览" : "Studio architecture preview"}>
-            <div class="preview-tabs"><span class="active">{zh() ? "创作" : "Creator"}</span><span>{zh() ? "检查" : "Inspector"}</span></div>
-            <div class="preview-manuscript"><small>{zh() ? "场景" : "SCENE"}</small><strong>{zh() ? "正文是主界面，不是日志的附件" : "The manuscript is the workspace, not a log attachment"}</strong><p>{zh() ? "上下文、读者反馈、连续性与运行证据都按需展开。" : "Context, Reader, Continuity, and Runtime evidence appear on demand."}</p></div>
-            <div class="preview-stack"><For each={c().studio.bullets}>{(item) => <span>{item}</span>}</For></div>
+          <div class="proof-field">
+            <For each={c().proofs}>{(card, index) => (
+              <article class={`proof-object proof-object-${index() + 1}`}>
+                <div class="proof-object-top"><span>0{index() + 1}</span><small>{card.eyebrow}</small></div>
+                <h3>{card.title}</h3>
+                <p>{card.body}</p>
+                <Show when={card.meta}><code>{card.meta}</code></Show>
+              </article>
+            )}</For>
           </div>
         </div>
       </section>
 
-      <section class="section-pad publication-band">
-        <div class="page-width split-feature publication-layout">
-          <div class="publication-preview">
-            <div class="publication-source"><small>{zh() ? "已接受正文" : "ACCEPTED MANUSCRIPT"}</small><strong>{zh() ? "来源指纹：精确匹配" : "fingerprint: exact"}</strong></div>
-            <div class="publication-arrow" aria-hidden="true">↓</div>
-            <div class="profile-grid"><For each={c().publication.profiles}>{(profile) => <code>{profile}</code>}</For></div>
-            <span class="derived-label">{zh() ? "authority=false · 派生输出" : "authority=false · derived output"}</span>
+      <section class="studio-chapter chapter-ink">
+        <div class="page-width studio-chapter-grid">
+          <div class="studio-copy">
+            <SectionIntro eyebrow={c().studio.eyebrow} title={c().studio.title} lede={c().studio.lede} />
+            <div class="studio-bullets"><For each={c().studio.bullets}>{(item, index) => <div><span>0{index() + 1}</span><p>{item}</p></div>}</For></div>
+            <A class="button button-light" href="/studio">{c().studio.cta}<span>↗</span></A>
           </div>
-          <div>
-            <SectionHeading eyebrow={c().publication.eyebrow} title={c().publication.title} lede={c().publication.lede} />
+          <StudioScene />
+        </div>
+      </section>
+
+      <section class="publication-chapter chapter-light">
+        <div class="page-width publication-chapter-grid">
+          <PublicationPress />
+          <div class="publication-copy">
+            <SectionIntro eyebrow={c().publication.eyebrow} title={c().publication.title} lede={c().publication.lede} />
             <p class="boundary-note">{c().publication.note}</p>
-            <A class="button secondary" href="/publication">{c().publication.cta}</A>
+            <A class="chapter-link dark-link" href="/publication">{c().publication.cta}<span>↗</span></A>
           </div>
         </div>
       </section>
 
-      <section class="section-pad architecture-section">
+      <section class="architecture-chapter chapter-deep">
         <div class="page-width">
-          <SectionHeading eyebrow={c().architecture.eyebrow} title={c().architecture.title} lede={c().architecture.lede} />
-          <div class="bento-grid"><For each={c().architecture.cards}>{(card, index) => <CardView card={card} class={`bento-card bento-${index() + 1}`} />}</For></div>
-          <A class="text-link section-link" href="/architecture">{c().architecture.cta} →</A>
+          <div class="architecture-heading-row">
+            <SectionIntro eyebrow={c().architecture.eyebrow} title={c().architecture.title} lede={c().architecture.lede} />
+            <A class="chapter-link" href="/architecture">{c().architecture.cta}<span>↗</span></A>
+          </div>
+          <ArchitectureConstellation />
         </div>
       </section>
 
-      <section class="section-pad delivery-section">
-        <div class="page-width delivery-layout">
-          <SectionHeading eyebrow={c().delivery.eyebrow} title={c().delivery.title} />
-          <div class="host-list"><For each={c().delivery.hosts}>{([host, body]) => <div class="host-row"><strong>{host}</strong><span>{body}</span></div>}</For></div>
+      <section class="delivery-chapter chapter-paper">
+        <div class="page-width delivery-grid-v3">
+          <div>
+            <SectionIntro eyebrow={c().delivery.eyebrow} title={c().delivery.title} />
+            <p class="delivery-note">{zh() ? "宿主决定交互方式，不决定故事事实。" : "The host changes interaction, never story truth."}</p>
+          </div>
+          <div class="host-rail-v3">
+            <For each={c().delivery.hosts}>{([host, body], index) => (
+              <div class="host-segment"><span>0{index() + 1}</span><strong>{host}</strong><p>{body}</p></div>
+            )}</For>
+          </div>
         </div>
       </section>
 
-      <section class="section-pad release-section">
-        <div class="page-width release-card">
-          <div><p class="eyebrow">{c().release.eyebrow}</p><h2>{c().release.title}</h2><p>{c().release.lede}</p></div>
-          <A class="button secondary" href="/changelog">{c().release.cta}</A>
+      <section class="release-chapter chapter-light">
+        <div class="page-width release-lockup">
+          <div class="release-seal"><span>0.8</span><small>pre-1.0</small></div>
+          <div class="release-copy"><p class="eyebrow">{c().release.eyebrow}</p><h2>{c().release.title}</h2><p>{c().release.lede}</p></div>
+          <A class="button button-ghost dark-ghost" href="/changelog">{c().release.cta}<span>↗</span></A>
         </div>
       </section>
 
-      <section class="section-pad final-cta">
-        <div class="page-width final-cta-inner">
+      <section class="final-chapter chapter-black" onPointerMove={updatePointerLight}>
+        <div class="final-glow" aria-hidden="true" />
+        <div class="page-width final-lockup">
+          <span class="final-mark"><img src={brandMark} alt="" /></span>
           <h2>{c().final.title}</h2>
-          <div class="hero-actions">
-            <A class="button primary" href="/docs">{c().final.docs}</A>
-            <a class="button secondary" href={githubRoot} target="_blank" rel="noreferrer">{c().final.github}</a>
+          <div class="final-actions">
+            <A class="button button-light" href="/docs">{c().final.docs}<span>↗</span></A>
+            <a class="button button-outline-light" href={githubRoot} target="_blank" rel="noreferrer">{c().final.github}<span>↗</span></a>
           </div>
         </div>
       </section>
@@ -350,35 +512,41 @@ function DetailPage(props: { kind: RouteKind }) {
   const data = () => copy().routes[props.kind] as RouteCopy;
   const isDocs = () => props.kind === "docs";
   const zh = () => locale() === "zh-CN";
+
   return (
     <div class="detail-page">
-      <section class="detail-hero section-pad">
-        <div class="page-width narrow-width">
-          <p class="eyebrow">{data().eyebrow}</p>
-          <h1>{data().title}</h1>
+      <section class="route-hero">
+        <div class="route-hero-glow" aria-hidden="true" />
+        <div class="page-width route-hero-grid">
+          <div><p class="eyebrow">{data().eyebrow}</p><h1>{data().title}</h1></div>
           <p class="hero-lede">{data().lede}</p>
         </div>
       </section>
-      <section class="section-pad detail-content">
-        <div class="page-width">
-          <div class="detail-grid">
-            <For each={data().cards}>{(card) => <CardView card={card} class="detail-card" />}</For>
-          </div>
-          <Show when={data().note}><p class="boundary-note detail-note">{data().note}</p></Show>
 
-          <Show when={isDocs()} fallback={
-            <div class="source-panel">
-              <p class="eyebrow">{zh() ? "权威来源" : "Canonical sources"}</p>
-              <div class="source-links"><For each={routeSources[locale()][props.kind] ?? []}>{(path) => <a href={sourceUrl(path)} target="_blank" rel="noreferrer"><code>{path}</code><span>↗</span></a>}</For></div>
-            </div>
-          }>
-            <div class="source-panel docs-panel">
-              <p class="eyebrow">{zh() ? "持续维护的权威文档" : "Maintained sources of truth"}</p>
-              <div class="source-links">
-                <For each={data().cards}>{(card) => <Show when={card.meta}><a href={sourceUrl(card.meta!)} target="_blank" rel="noreferrer"><code>{card.meta}</code><span>↗</span></a></Show>}</For>
-              </div>
-            </div>
-          </Show>
+      <section class="route-ledger-section">
+        <div class="page-width route-ledger">
+          <For each={data().cards}>{(card, index) => (
+            <article class="route-ledger-row">
+              <span class="route-index">0{index() + 1}</span>
+              <div class="route-title"><Show when={card.eyebrow}><small>{card.eyebrow}</small></Show><h2>{card.title}</h2></div>
+              <p>{card.body}</p>
+              <Show when={card.meta}><code>{card.meta}</code></Show>
+            </article>
+          )}</For>
+          <Show when={data().note}><p class="boundary-note route-note">{data().note}</p></Show>
+        </div>
+      </section>
+
+      <section class="route-sources-section">
+        <div class="page-width route-sources">
+          <div><p class="eyebrow">{isDocs() ? (zh() ? "持续维护的权威文档" : "Maintained sources of truth") : (zh() ? "权威来源" : "Canonical sources")}</p><h2>{zh() ? "继续读原始契约。" : "Continue into the source contracts."}</h2></div>
+          <div class="source-links-v3">
+            <Show when={isDocs()} fallback={
+              <For each={routeSources[locale()][props.kind] ?? []}>{(path) => <a href={sourceUrl(path)} target="_blank" rel="noreferrer"><code>{path}</code><span>↗</span></a>}</For>
+            }>
+              <For each={data().cards}>{(card) => <Show when={card.meta}><a href={sourceUrl(card.meta!)} target="_blank" rel="noreferrer"><code>{card.meta}</code><span>↗</span></a></Show>}</For>
+            </Show>
+          </div>
         </div>
       </section>
     </div>
