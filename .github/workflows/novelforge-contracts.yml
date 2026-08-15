@@ -76,12 +76,13 @@ jobs:
             },
             'character.action_propose': {
               'character_id':'CHAR-CI',
+              'current_story_order':9,
               'active_agenda':'Keep control of the immediate negotiation.',
               'perceived_state': {'beliefs':['The other party may be bluffing.'],'goals':['Preserve leverage.'],'fears':[],'assumptions':[]},
-              'immediate_situation': {'observables':['The offer changed.'],'pressures':['Time is limited.'],'available_options':['stall','counter']},
+              'immediate_situation': {'observables':[{'observable_id':'OBS-CI','observation':'The offer changed.','source_ref':'scene:CI','available_from_story_order':9}],'pressures':['Time is limited.'],'available_options':['stall','counter']},
               'perspective_memory': {
                 'episodic_visible_events': [],
-                'visibility_tagged_facts': [{'fact_id':'F-CI','claim':'The first offer was lower.','epistemic_status':'known','source_ref':'accepted:scene-1'}],
+                'visibility_tagged_facts': [{'fact_id':'F-CI','claim':'The first offer was lower.','epistemic_status':'known','acquisition_mode':'directly_observed','source_ref':'accepted:scene-1','available_from_story_order':8}],
                 'situation_patterns': []
               },
               'relationship_state': {}, 'task_state': {}, 'location': {}, 'constraints': []
