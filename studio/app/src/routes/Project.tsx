@@ -1,6 +1,6 @@
 import { For, Show, createSignal } from "solid-js";
 import { inspectBrowserProject, type BrowserProjectProjection } from "../browser-project";
-import { CoreHostBoundary, PageIntro, QueryError } from "../components";
+import { PageIntro, QueryError } from "../components";
 import { useI18n } from "../i18n";
 import { useStudio } from "../studio";
 
@@ -78,7 +78,15 @@ export default function Project() {
         </Show>
       </section>
 
-      <Show when={studio.bridgeAvailable()} fallback={<CoreHostBoundary />}>
+      <Show
+        when={studio.bridgeAvailable()}
+        fallback={
+          <aside class="nf-project-core-unbound" data-core-unbound={t("host.unboundTitle")}>
+            <span class="wui-badge wui-badge--outline">{t("host.cloud")}</span>
+            <p>{t("project.browserCoreNote")}</p>
+          </aside>
+        }
+      >
         <section class="nf-core-project-section">
           <div class="nf-section-kicker">
             <span class="nf-eyebrow">{t("project.coreEyebrow")}</span>
