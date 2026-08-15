@@ -28,7 +28,8 @@
         "maintenance.requested",
         "research.refresh_requested",
         "feedback.observed",
-        "artifact.acceptance_observed"
+        "artifact.acceptance_observed",
+        "run.receipt_recorded"
       ]
     },
     "source": {

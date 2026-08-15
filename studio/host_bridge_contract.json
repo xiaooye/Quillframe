@@ -54,37 +54,37 @@
         "kind": "query",
         "core_basis": "semantic model contract catalog CLI",
         "required_args": []
-      }
-    },
-    "deferred": {
+      },
       "runtime.sessions.list": {
         "kind": "query",
-        "reason": "current Control Plane CLI initializes persistence even on read paths; Phase 2B requires a side-effect-free public query contract",
-        "dependency": "#23"
+        "core_basis": "novelforge_runtime_sessions_projection_v1 via novelforge.py runtime-query",
+        "required_args": ["project_root"]
       },
       "runtime.session.get": {
         "kind": "query",
-        "reason": "current Control Plane CLI initializes persistence even on read paths; Phase 2B requires a side-effect-free public query contract",
-        "dependency": "#23"
+        "core_basis": "novelforge_runtime_session_projection_v1 via novelforge.py runtime-query",
+        "required_args": ["project_root", "session_id"]
       },
       "runtime.events.list": {
         "kind": "query",
-        "reason": "current Control Plane CLI initializes persistence even on read paths; Phase 2B requires a side-effect-free public query contract",
-        "dependency": "#23"
+        "core_basis": "novelforge_runtime_events_projection_v1 via novelforge.py runtime-query",
+        "required_args": ["project_root"]
       },
       "runtime.handoff.inspect": {
         "kind": "query",
-        "reason": "current Control Plane CLI initializes persistence even on read paths and handoff bodies need an explicit safe projection",
-        "dependency": "#23"
+        "core_basis": "novelforge_runtime_handoff_projection_v1 via novelforge.py runtime-query",
+        "required_args": ["project_root", "handoff_id"]
       },
       "run.receipt.get": {
         "kind": "query",
-        "reason": "Run Receipt has no stable public retrieval projection and event discoverability is inconsistent",
-        "dependency": "#23"
-      },
+        "core_basis": "novelforge_run_receipts_projection_v1 via novelforge.py runtime-query",
+        "required_args": ["project_root"]
+      }
+    },
+    "deferred": {
       "session.resume": {
         "kind": "command",
-        "reason": "no stable public host command envelope with revalidation/preconditions",
+        "reason": "no stable public host command envelope with checkpoint revalidation, before-state preconditions, CAS/idempotency, capability evidence, and authority checks",
         "dependency": "#23"
       },
       "command.invoke": {

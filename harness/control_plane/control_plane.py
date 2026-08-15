@@ -32,6 +32,7 @@ EVENT_TYPES = {
     "research.refresh_requested",
     "feedback.observed",
     "artifact.acceptance_observed",
+    "run.receipt_recorded",
 }
 TARGET_SESSION_CLASSES = {
     "manager", "writer", "specialist", "semantic_reviewer",
