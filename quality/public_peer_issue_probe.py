@@ -137,7 +137,7 @@ def main() -> int:
         "input_fingerprint": job["input_fingerprint"],
         "status": "completed",
         "worker": {
-            "provider": "github_actions_synthetic_probe",
+            "provider": "chatgpt_peer_chat",
             "model_or_reviewer": "synthetic-fixture",
             "run_reference": packet["relay_nonce"],
         },
