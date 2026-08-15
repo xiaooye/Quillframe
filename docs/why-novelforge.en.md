@@ -63,7 +63,7 @@ This is a more formal model than treating “saved memory” or “approved chap
 
 ### Semantic intelligence and deterministic runtime are deliberately separate
 
-NovelForge 7.3 makes literary interpretation model-owned through progressively disclosed semantic contract packs.
+The current development architecture makes literary interpretation model-owned through progressively disclosed semantic contract packs.
 
 The model handles questions that actually require reading: character action, scene resolution, reader reaction, character integrity, revision diagnosis, long-horizon reconciliation, and candidate comparison.
 
