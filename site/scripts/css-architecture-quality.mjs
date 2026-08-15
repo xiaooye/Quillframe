@@ -13,6 +13,7 @@ const check = (condition, message) => { if (!condition) failures.push(message); 
 
 const main = read("src/main.tsx");
 const index = read("src/styles/index.css");
+const readability = read("src/styles/readability.css");
 const sharedLanguage = read("../assets/brand/novelforge-product-language.css");
 
 const styleImports = [...main.matchAll(/import\s+["']\.\/styles\/([^"']+)["']/g)].map((match) => match[1]);
@@ -20,14 +21,27 @@ check(styleImports.length === 1 && styleImports[0] === "index.css", `main.tsx mu
 check(index.includes('@import "../../../assets/brand/novelforge-product-language.css"'), "Product Site must consume the shared product-language tokens");
 check(index.indexOf('product-surface.css') < index.indexOf('architecture-explorer.css'), "shared primitives must load before route feature styles");
 check(index.indexOf('architecture-explorer.css') < index.indexOf('kawaii-surfaces.css'), "product-language composition must load after route defaults");
+check(index.indexOf('embedded-features.css') < index.indexOf('readability.css'), "cross-cutting readability hardening must load after route and product-language composition");
 check(!index.includes("surface-audit.css"), "legacy surface-audit override must not return to the cascade");
 check(!exists("src/styles/surface-audit.css"), "legacy surface-audit.css must stay deleted");
+check(!exists("src/styles/readability-audit.css"), "readability must remain a named hardening layer, not a catch-all audit override");
 check(sharedLanguage.includes("--nf-product-pink") && sharedLanguage.includes("--nf-product-radius-panel"), "shared product-language tokens are incomplete");
+check(readability.includes("--nf-copy-size: 14px") && readability.includes("--nf-micro-size: 11px"), "readability hardening must preserve the product copy floor");
+check(readability.includes(".unified-info-card p") && readability.includes("font-size: var(--nf-copy-size)"), "capability copy must not regress to miniature dashboard text");
+check(!readability.includes("!important"), "readability hardening must not depend on specificity escalation");
 check(!index.includes("!important"), "the stylesheet entrypoint must not encode specificity overrides");
 
 if (failures.length) {
   for (const failure of failures) console.error(`css-architecture-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ schema: "novelforge_css_architecture_v1", status: "pass", entrypoints: 1, audit_override: false, shared_product_language: true }, null, 2));
+  console.log(JSON.stringify({
+    schema: "novelforge_css_architecture_v2",
+    status: "pass",
+    entrypoints: 1,
+    audit_override: false,
+    shared_product_language: true,
+    readability_hardening: true,
+    readability_hardening_position: "last",
+  }, null, 2));
 }
