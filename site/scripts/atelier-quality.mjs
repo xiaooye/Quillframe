@@ -30,9 +30,10 @@ check(appearance.includes('novelforge.product-entry.v5.appearance-migrated'), "v
 check(appearance.includes('localStorage.setItem("novelforge.appearance", "light")'), "v5 first-load migration must restore warm light presentation");
 check(appearance.includes('story-loom-kawaii-atelier-v5'), "v5 experience identity must be stamped on the document root");
 
-for (const lane of ["project", "runtime", "editorial", "evidence", "validated", "rejected"]) {
+for (const lane of ["project", "runtime", "editorial", "evidence", "validated"]) {
   check(atelier.includes(`--nf-lane-${lane}-`), `Atelier must consume Story Loom ${lane} lane tokens`);
 }
+check(site.includes("--nf-lane-rejected-stroke") || site.includes("--pe-reject"), "Rejected state must remain represented by the Story Loom-backed lower product layer");
 
 for (const marker of [
   "--atelier-paper",
