@@ -6,15 +6,41 @@ const { title, description } = route.entry.data;
 const english = route.lang.toLowerCase().startsWith("en");
 const pathname = Astro.url.pathname.replace(/\/+$/, "");
 const isDocsHome = pathname === "/docs" || pathname === "/docs/en";
-const eyebrow = english ? "NovelForge Knowledge" : "NovelForge 知识库";
-const sectionLabel = english ? "Documentation" : "文档";
+const slug = pathname.split("/").filter(Boolean).at(-1) ?? "";
+const eyebrow = english ? "NovelForge Docs" : "NovelForge 知识库";
+
+const sections = [
+  {
+    ids: new Set(["why-novelforge", "production-pipeline", "architecture"]),
+    zh: "入门",
+    en: "Getting started",
+  },
+  {
+    ids: new Set(["context-memory", "quality-assurance", "quality-evolution", "adaptive-learning", "story-system", "character-system", "canon-state"]),
+    zh: "创作与质量",
+    en: "Writing & quality",
+  },
+  {
+    ids: new Set(["studio-overview", "studio-product-architecture", "integrations", "project-sdk", "project-adapters"]),
+    zh: "Studio 与接入",
+    en: "Studio & integration",
+  },
+  {
+    ids: new Set(["architecture-atlas", "release-bundle", "development-change-inventory"]),
+    zh: "架构与发布",
+    en: "Architecture & release",
+  },
+];
+
+const section = sections.find((item) => item.ids.has(slug));
+const sectionLabel = section ? (english ? section.en : section.zh) : (english ? "Reference" : "完整参考");
 ---
 
 {
   isDocsHome ? (
     <Default><slot /></Default>
   ) : (
-    <header class="nf-article-title">
+    <header class="nf-article-title" data-doc-section={slug}>
       <div class="nf-article-title__meta">
         <span class="nf-article-title__eyebrow"><span aria-hidden="true">✦</span>{eyebrow}</span>
         <span class="nf-article-title__section">{sectionLabel}</span>
