@@ -1,8 +1,8 @@
 # NovelForge Studio · Product Architecture
 
-<p><kbd>SYSTEM-IMPROVE</kbd>&nbsp;&nbsp;<kbd>PHASE 1</kbd>&nbsp;&nbsp;<kbd>READ-ONLY FIRST</kbd></p>
+<p><kbd>SYSTEM-IMPROVE</kbd>&nbsp;&nbsp;<kbd>READ-ONLY CORE</kbd>&nbsp;&nbsp;<kbd>PRODUCT SHELL DIRECTION</kbd></p>
 
-This document freezes the first Studio product architecture against the live NovelForge Core contracts. It is a consumer specification, not a competing runtime specification.
+This document records the Studio product architecture against live NovelForge Core contracts. It is a consumer specification, not a competing runtime specification. The future installable shell direction is now selected as **Tauri + React + WeiUI**; that product choice does not make the application a shipped capability.
 
 > **Invariant ✦ `UI CONSUMES CORE STATE. UI DOES NOT INVENT CORE STATE.`**
 
@@ -61,7 +61,7 @@ Studio must not paper over these gaps locally:
 3. Studio needs a stable read/query boundary for receipts and Control Plane views rather than reading SQLite internals;
 4. Publication / Typesetting is currently an issue-level contract target; no official Publication IR/Profile implementation is assumed here.
 
-These are Core consumer requirements. Phase 1 keeps adapters thin and read-only until the owning workstream exposes the formal primitive.
+These are Core consumer requirements. Read-only Studio adapters stay thin until the owning workstream exposes the formal primitive.
 
 ---
 
@@ -190,9 +190,19 @@ Never invent calibrated-looking percentages when the Core does not define a cali
 
 ## 07 · Design-system direction
 
-**KEEP `assets/brand/tokens.json` as the brand token source.** Do not create an unrelated `studio-colors.json`.
+**KEEP `assets/brand/tokens.json` as the current NovelForge brand/product token authority.** Do not create an unrelated `studio-colors.json`.
 
-A future interactive token layer should derive from it and add only interaction concerns:
+The future interactive token layer will be converted into a **WeiUI-compatible W3C Design Tokens Community Group representation** and consumed through a deterministic theme adapter. WeiUI is the selected generic component/CSS substrate; it does not replace Story Loom as NovelForge's product visual language.
+
+The ownership split is explicit:
+
+- NovelForge owns Story Loom domain semantics, product-specific authority/status/provenance encodings, typography roles and visual personality;
+- WeiUI owns generic component primitives, reusable interaction/accessibility behavior, CSS mechanics and its public token/component contracts;
+- the adapter owns the deterministic NovelForge-token → WeiUI-compatible token mapping.
+
+WeiUI's token package uses W3C-style `$value` tokens, emits CSS/TypeScript/JSON, and its CSS generator uses the `--wui-*` custom-property namespace. The NovelForge theme should target that public shape instead of maintaining a hand-written parallel palette.
+
+The interactive token layer should add only interaction concerns:
 
 - appearance: light / dark / system;
 - density: comfortable / workstation;
@@ -203,36 +213,69 @@ A future interactive token layer should derive from it and add only interaction 
 - viewport/breakpoint semantics;
 - authority and execution-status encodings kept separate from domain colors.
 
+A generic WeiUI `success` state must never become shorthand for Accepted Canon. Product authority remains a separate labeled channel.
+
 The visual personality remains editorial, warm and precise: paper-like surfaces, soft radii, thread/bookmark/card motifs, small intentional delight. No gradient-card SaaS dashboard and no faux-skeuomorphic writing desk.
 
 ---
 
-## 08 · Technical delivery options
+## 08 · Technical delivery direction
 
-### Phase 1 — contract probe
+### Portable product boundary
 
-Zero-dependency static prototype + synthetic fixture + direct loading of real receipt JSON. This validates information architecture and data honesty without freezing a framework choice.
-
-### Phase 2 — local read-only Studio
-
-Choose a web stack only after the front-end boundary is explicit. The intended architecture is:
+Every delivery surface consumes the same product semantics through typed projections/query/command boundaries. UI frameworks and packaging do not become Core authority.
 
 ```text
-Studio UI
+Studio surface
 → Studio projection/query adapter
-→ stable NovelForge Core CLI/schema/query contracts
+→ stable NovelForge Core CLI/schema/query/command contracts
 → Core persistence
 ```
 
 The projection adapter may normalize presentation shape, but it never becomes a source of truth and never reaches into random Python internals.
 
-### Phase 3 — typed operations
+### Local / installable Studio shell
 
-Creator actions call explicit Core commands/transactions with preconditions. UI components do not mutate Canon or runtime databases directly.
+The future installable shell choice is now explicit:
 
-### Desktop decision gate
+```text
+Core public boundary
+→ Studio view models
+→ React 19 shell
+→ @weiui/react + @weiui/css + WeiUI-compatible NovelForge theme
+→ Tauri host
+```
 
-Defer Electron/Tauri/hybrid choice until we have measured needs for local filesystem access, subprocess/CLI execution, Git, MCP, offline operation, renderer processes, update strategy, sandboxing, signing and WebView consistency.
+This is a **Product implementation choice**, not a Generic Framework runtime dependency. CLI, Agent Skill, Core tests, and the Framework bundle must remain usable without Tauri, React, or WeiUI unless a product artifact explicitly requests them.
+
+WeiUI heavy surfaces should remain route/feature scoped. Its React package exposes separate editor/chart/data-table entry points and declares `sideEffects: false`; the default shell should preserve that tree-shaking boundary instead of eagerly loading everything.
+
+### Typed operations
+
+Creator actions call explicit Core commands/transactions with preconditions. UI components and Tauri commands do not mutate Canon or runtime databases directly.
+
+### Desktop shell decision
+
+**Tauri is selected for the future installable application.** The previous Electron/Tauri/hybrid decision gate is closed by product direction. Implementation must still measure filesystem, subprocess/CLI, Git, MCP, offline, updater, signing, sandbox/WebView behavior, idle CPU/memory and process lifetime before the shell is called production-ready.
+
+If implementation evidence later proves the choice cannot meet the product constraints, changing the shell requires an explicit product decision rather than silently forking delivery semantics.
+
+### UI-shell acceptance gate
+
+The shell direction becomes an implemented product capability only when applicable evidence lands on `main`:
+
+- exact Tauri / React / WeiUI dependency pins in the app lockfile;
+- deterministic NovelForge → WeiUI-compatible token conversion;
+- light / dark / system theme validation;
+- Story Loom semantic mapping preserved without collapsing authority into generic status colors;
+- desktop + narrow responsive tests and English / Simplified Chinese locale smoke tests;
+- accessibility, font scaling, keyboard, contrast and reduced-motion checks;
+- bundle/chunk inspection proving optional editor/chart/data-table surfaces are not eagerly loaded;
+- idle CPU/memory, first-interaction latency and Core-process-lifetime measurements;
+- host-bridge tests preserving `authority=false` for read-only operations;
+- no new Generic Core correctness dependency on Tauri, React or WeiUI.
+
+Until those artifacts exist, Tauri + WeiUI is the **selected product direction**, not a shipped Studio app.
 
 ---
 
@@ -251,6 +294,7 @@ Defer Electron/Tauri/hybrid choice until we have measured needs for local filesy
 - Scene/Chapter read/review surface;
 - Runs, Context and capability inspection;
 - command palette + domain-aware search;
+- portable host bridge + Agent Skill;
 - visual regression harness.
 
 **Phase 3 — Core workflow operations**
@@ -271,9 +315,14 @@ Defer Electron/Tauri/hybrid choice until we have measured needs for local filesy
 - capability-first integration browser, permission scope, health and provenance;
 - only after a stable MCP registry/manifest contract exists.
 
-**Phase 6 — Installable distribution**
+**Phase 6 — Installable Tauri distribution**
 
-- packaging decision based on measured local requirements, not framework preference.
+- Tauri + React + WeiUI app shell;
+- deterministic WeiUI-compatible Story Loom theme;
+- exact dependency pinning and updater/signing strategy;
+- responsive/i18n/accessibility regression coverage;
+- idle CPU/memory and process-lifecycle acceptance measurements;
+- no new Generic Core correctness dependency on the desktop stack.
 
 ---
 
@@ -284,38 +333,42 @@ Defer Electron/Tauri/hybrid choice until we have measured needs for local filesy
 - Story Loom brand, tokens, assets and diagram grammar;
 - existing documentation overhaul and visual QA discipline;
 - Core Run Receipt, Context Inspector, Project Adapter, capability and Control Plane substrates;
-- #8 as umbrella and Publication work as a separate dependency.
+- #8 as umbrella and Publication work as a separate dependency;
+- one product truth model across CLI, local app, hosted UI and Agent Skill.
 
 ### REFINE
 
-- extend Story Loom from documentation into an interactive product grammar;
+- extend Story Loom from documentation into an interactive product grammar through a WeiUI-compatible theme layer;
 - split creator-facing and inspector-facing density through progressive disclosure;
 - make “semantic support” vs “actually loaded” a first-class context interaction;
 - bring documentation onboarding toward task-oriented entry paths without discarding the new visual work.
 
 ### ADD
 
+- Tauri installable shell direction;
+- React + WeiUI component substrate;
+- deterministic NovelForge → WeiUI token adapter;
+- responsive/i18n/accessibility and runtime-overhead acceptance gates;
 - Studio product architecture and view-model boundary;
 - Creator Mode / Inspector Mode;
 - read-only Inspector vertical slice;
-- synthetic public demo fixtures;
-- responsive/visual regression coverage when an application shell exists.
+- synthetic public demo fixtures.
 
 ### DEFER
 
-- production React app;
-- desktop wrapper;
-- MCP marketplace/manager;
+- write-capable Studio operations until stable typed Core commands exist;
+- MCP marketplace/manager until the owning Core contracts exist;
 - Publication editor/preview implementation before Core IR/Profile;
-- write-capable Studio operations until stable typed commands exist.
+- production cloud/auth/collaboration infrastructure that is not required by the local product contract.
 
 ### REJECT
 
 - second Canon/Memory/quality/session stores;
+- second bespoke Studio component/design system that competes with WeiUI + Story Loom;
+- making Tauri/React/WeiUI prerequisites for Generic Core correctness;
 - fake engagement or consistency scores;
 - UI-authored semantic truth;
 - provider brand as capability proof;
 - chain-of-thought exposure;
 - giant everything-dashboard;
-- graph-database-first Story Loom;
-- desktop technology selection by taste.
+- graph-database-first Story Loom.

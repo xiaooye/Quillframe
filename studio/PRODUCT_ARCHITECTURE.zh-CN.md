@@ -1,8 +1,8 @@
 # NovelForge Studio · 产品架构
 
-<p><kbd>SYSTEM-IMPROVE</kbd>&nbsp;&nbsp;<kbd>PHASE 1</kbd>&nbsp;&nbsp;<kbd>READ-ONLY FIRST</kbd></p>
+<p><kbd>SYSTEM-IMPROVE</kbd>&nbsp;&nbsp;<kbd>READ-ONLY CORE</kbd>&nbsp;&nbsp;<kbd>PRODUCT SHELL DIRECTION</kbd></p>
 
-本文把第一版 Studio 产品架构冻结在当前 live NovelForge Core contracts 之上。它是一份 consumer specification，不是另一份 runtime specification。
+本文记录建立在当前 live NovelForge Core contracts 之上的 Studio 产品架构。它是一份 consumer specification，不是另一份 runtime specification。未来可安装 Shell 已经选定 **Tauri + React + WeiUI**；这个产品决策并不代表应用已经发布。
 
 > **不变量 ✦ `UI CONSUMES CORE STATE. UI DOES NOT INVENT CORE STATE.`**
 
@@ -61,7 +61,7 @@ Studio 不能在 UI 里私自补这些缺口：
 3. Studio 最终需要稳定的 receipt / Control Plane read-query boundary，不能直接读 SQLite internals；
 4. Publication / Typesetting 目前仍是 issue-level contract target，本设计不假设已经存在正式 Publication IR/Profile implementation。
 
-这些都属于 Core consumer requirement。Phase 1 只做 thin、read-only adapter，不在 Side Goal 里造替代 schema。
+这些都属于 Core consumer requirement。只读 Studio adapter 继续保持 thin，直到 owning workstream 暴露正式 primitive。
 
 ---
 
@@ -190,9 +190,19 @@ Core 没有定义 calibrated measurement 时，UI 禁止发明看起来很科学
 
 ## 07 · Design System direction
 
-**KEEP `assets/brand/tokens.json` 作为 brand token source。** 不再创建一份独立 `studio-colors.json`。
+**KEEP `assets/brand/tokens.json` 作为当前 NovelForge brand/product token authority。** 不再创建一份独立 `studio-colors.json`。
 
-未来的 interactive token layer 只能从它派生，并补充交互层真正需要的维度：
+未来 interactive token layer 将转换为 **WeiUI-compatible 的 W3C Design Tokens Community Group representation**，并通过确定性的 theme adapter 被组件消费。WeiUI 是已经选定的通用 component/CSS substrate，但不会替代 Story Loom 成为 NovelForge 的产品视觉语言。
+
+所有权明确分开：
+
+- NovelForge 拥有 Story Loom domain semantics、产品专用 authority/status/provenance encoding、typography roles 与视觉人格；
+- WeiUI 拥有通用 component primitive、可复用 interaction/accessibility behavior、CSS mechanics，以及公开 token/component contracts；
+- adapter 拥有 NovelForge token → WeiUI-compatible token surface 的确定性映射。
+
+WeiUI token package 使用带 `$value` 的 W3C-style token，可输出 CSS / TypeScript / JSON；其 CSS generator 统一使用 `--wui-*` custom-property namespace。NovelForge theme 应适配这个公开 shape，而不是继续维护一份手写平行 palette。
+
+Interactive token layer 只补交互真正需要的维度：
 
 - appearance：light / dark / system；
 - density：comfortable / workstation；
@@ -203,36 +213,69 @@ Core 没有定义 calibrated measurement 时，UI 禁止发明看起来很科学
 - viewport / breakpoint semantics；
 - authority 与 execution-status encoding，并与 domain color 分离。
 
+WeiUI 通用的 `success` state 不能被拿来暗示 Accepted Canon。产品 authority 必须继续是独立、带文字标签的表达通道。
+
 视觉人格继续保持 editorial、warm、precise：paper-like surface、柔和 radius、thread/bookmark/card motif、克制的小型 delight。不要做 purple-gradient SaaS dashboard，也不要做假的拟物写字台。
 
 ---
 
-## 08 · Technical delivery options
+## 08 · Technical delivery direction
 
-### Phase 1 — Contract probe
+### Portable product boundary
 
-Zero-dependency static prototype + synthetic fixture + 本地直接加载真实 receipt JSON。先验证 IA 与 data honesty，不冻结 framework choice。
-
-### Phase 2 — Local read-only Studio
-
-只有 front-end boundary 明确以后才选 Web stack。目标架构：
+所有 delivery surface 都通过 typed projection/query/command boundary 消费同一套产品语义。UI framework 与 packaging 不能获得 Core authority。
 
 ```text
-Studio UI
+Studio surface
 → Studio projection/query adapter
-→ stable NovelForge Core CLI/schema/query contracts
+→ stable NovelForge Core CLI/schema/query/command contracts
 → Core persistence
 ```
 
 Projection adapter 可以整理 presentation shape，但不能成为 source of truth，也不能让浏览器去 import random Python internals。
 
-### Phase 3 — Typed operations
+### Local / installable Studio shell
 
-Creator action 通过显式 Core command/transaction + precondition 执行。UI component 不直接写 Canon 或 runtime database。
+未来可安装 Shell 已经明确选择：
 
-### Desktop decision gate
+```text
+Core public boundary
+→ Studio view models
+→ React 19 shell
+→ @weiui/react + @weiui/css + WeiUI-compatible NovelForge theme
+→ Tauri host
+```
 
-等我们真正测清 local filesystem、subprocess/CLI、Git、MCP、offline、renderer process、updater、sandbox、signing 与 WebView consistency 的需求以后，再决定 Electron / Tauri / hybrid。
+这是 **Product implementation choice**，不是 Generic Framework runtime dependency。CLI、Agent Skill、Core tests 与 Framework bundle 必须继续能在完全没有 Tauri / React / WeiUI 的环境中正常工作，除非某个明确产品 artifact 主动要求这些依赖。
+
+WeiUI heavy surface 应按 route / feature 加载。它的 React package 已拆分 editor / chart / data-table entry point，并声明 `sideEffects: false`；默认 Shell 必须保留这个 tree-shaking boundary，而不是一启动就把所有功能塞进 bundle。
+
+### Typed operations
+
+Creator action 通过显式 Core command/transaction + precondition 执行。UI component 与 Tauri command 都不能直接写 Canon 或 runtime database。
+
+### Desktop shell decision
+
+**Tauri 已选为未来可安装应用的 desktop host。** 之前的 Electron / Tauri / hybrid decision gate 已由产品方向关闭。实现仍然必须实际测量 filesystem、subprocess/CLI、Git、MCP、offline、updater、signing、sandbox/WebView、idle CPU/memory 与 process lifetime，才能称为 production-ready。
+
+如果之后的实现证据证明 Tauri 无法满足这些产品约束，换 Shell 必须走显式产品决策，不能静默分叉 delivery semantics。
+
+### UI Shell acceptance gate
+
+只有下面适用的证据真正进入 `main` 后，这个方向才能晋升为已实现产品能力：
+
+- app lockfile 固定 exact Tauri / React / WeiUI dependency；
+- NovelForge → WeiUI-compatible token conversion 可确定性生成；
+- light / dark / system theme validation；
+- Story Loom semantic mapping 没有把 authority 压成普通 status color；
+- desktop + narrow responsive tests，以及 English / 简体中文 locale smoke tests；
+- accessibility、font scaling、keyboard、contrast 与 reduced-motion checks；
+- bundle/chunk inspection 证明 optional editor/chart/data-table surface 没有 eager load；
+- idle CPU/memory、first-interaction latency 与 Core-process lifetime measurement；
+- host-bridge tests 证明只读 operation 继续保持 `authority=false`；
+- Generic Core correctness 不新增对 Tauri / React / WeiUI 的依赖。
+
+在这些 artifact 真正存在之前，Tauri + WeiUI 只能称为**已选定产品方向**，不能写成已经发布的 Studio app。
 
 ---
 
@@ -251,6 +294,7 @@ Creator action 通过显式 Core command/transaction + precondition 执行。UI 
 - Scene/Chapter read/review surface；
 - Runs、Context、capability inspection；
 - command palette + domain-aware search；
+- portable host bridge + Agent Skill；
 - visual regression harness。
 
 **Phase 3 — Core Workflow Operations**
@@ -271,9 +315,14 @@ Creator action 通过显式 Core command/transaction + precondition 执行。UI 
 - capability-first integration browser、permission scope、health、provenance；
 - 等 stable MCP registry/manifest contract。
 
-**Phase 6 — Installable Distribution**
+**Phase 6 — Installable Tauri Distribution**
 
-- 依据真实 local requirements 决定 packaging，不按技术偏好下注。
+- Tauri + React + WeiUI application shell；
+- deterministic WeiUI-compatible Story Loom theme；
+- exact dependency pin + updater/signing strategy；
+- responsive / i18n / accessibility regression coverage；
+- idle CPU/memory 与 process-lifecycle acceptance measurement；
+- desktop stack 不得成为 Generic Core correctness 的新依赖。
 
 ---
 
@@ -284,38 +333,42 @@ Creator action 通过显式 Core command/transaction + precondition 执行。UI 
 - Story Loom brand、tokens、assets、diagram grammar；
 - 刚完成的 documentation overhaul 与 visual QA discipline；
 - Core Run Receipt、Context Inspector、Project Adapter、capability、Control Plane substrate；
-- #8 继续做 umbrella，Publication 继续作为独立 dependency。
+- #8 继续做 umbrella，Publication 继续作为独立 dependency；
+- CLI、本地应用、Hosted UI、Agent Skill 共用同一个产品 truth model。
 
 ### REFINE
 
-- Story Loom 从 documentation 延展为 interactive product grammar；
+- 通过 WeiUI-compatible theme layer 把 Story Loom 从 documentation 延展为 interactive product grammar；
 - 通过 progressive disclosure 分开 creator density 与 inspector density；
 - 把 “semantic support” vs “actually loaded” 变成 Context UX 的 first-class distinction；
 - 改善 newcomer/task-oriented docs entry path，但不推翻刚做完的视觉升级。
 
 ### ADD
 
+- Tauri installable shell direction；
+- React + WeiUI component substrate；
+- deterministic NovelForge → WeiUI token adapter；
+- responsive / i18n / accessibility 与 runtime-overhead acceptance gates；
 - Studio product architecture + view-model boundary；
 - Creator Mode / Inspector Mode；
 - read-only Inspector vertical slice；
-- synthetic public demo fixture；
-- application shell 成立后加入 responsive / visual regression coverage。
+- synthetic public demo fixture。
 
 ### DEFER
 
-- production React app；
-- desktop wrapper；
-- MCP marketplace / manager；
+- stable typed Core command 之前的 write-capable Studio operations；
+- owning Core contracts 出现以前的 MCP marketplace / manager；
 - Core IR/Profile 之前的 Publication editor/preview implementation；
-- stable typed command 之前的 write-capable Studio operations。
+- 本地产品契约并不需要的 production cloud/auth/collaboration infrastructure。
 
 ### REJECT
 
 - 第二套 Canon / Memory / Quality / Session store；
+- 与 WeiUI + Story Loom 竞争的第二套 bespoke Studio component/design system；
+- 把 Tauri / React / WeiUI 变成 Generic Core correctness 的前置条件；
 - fake engagement / consistency score；
 - UI 自己制造 semantic truth；
 - provider brand = capability proof；
 - chain-of-thought exposure；
 - giant everything-dashboard；
-- graph-database-first Story Loom；
-- 按个人技术喜好提前选择 desktop stack。
+- graph-database-first Story Loom。

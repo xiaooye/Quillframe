@@ -2,7 +2,7 @@
 
 <p><kbd>产品体验</kbd>&nbsp;&nbsp;<kbd>创作工作台</kbd>&nbsp;&nbsp;<kbd>可检查运行</kbd></p>
 
-NovelForge Studio 是 NovelForge Core 之上的产品体验层。**第一阶段（Phase 1）已经合并到 `main`，目前是一套契约优先、只读的产品验证原型；它不是已经发布、可以写入项目状态的完整 Studio 应用。** 开发继续采用 contract-first 路线：先基于 live Core contracts 验证产品语义和宿主边界，再决定正式 Web、Desktop、Cloud 或 Agent Framework 专用技术栈。
+NovelForge Studio 是 NovelForge Core 之上的产品体验层。**只读 Phase 1、Phase 2A、Phase 2B 已经真实合并到 `main`；它们是产品契约与宿主边界实现，但还不是已经发布、可以写入项目状态的完整 Studio 应用。** 未来可安装 Shell 的方向已经选定为 **Tauri + React + WeiUI**；具体实现仍待落地，而且 Core 的权威边界不会因此改变。
 
 > **权威边界 ✦** Studio 只消费 NovelForge Core 状态。UI 状态不是正典（Canon）、记忆（Memory）、语义真相、写入权威，也不是第二套工作流引擎。
 
@@ -14,7 +14,7 @@ NovelForge Studio 是 NovelForge Core 之上的产品体验层。**第一阶段�
 - [简体中文](PRODUCT_ARCHITECTURE.zh-CN.md)
 - [`portable_product_contract.json`](portable_product_contract.json) —— machine-readable 的 portable delivery-surface contract。
 
-产品架构文档同时记录 Studio 已经可以消费的 Core interfaces，以及仍需由 Core workstream 解决、Studio 不得自行打补丁掩盖的 consumer gaps。
+产品架构文档同时记录 Studio 已经可以消费的 Core interfaces，以及仍需由 Core workstream 解决、Studio 不得自行打补丁掩盖的 consumer gaps。它也记录已经选定的 Tauri + WeiUI 可安装 Shell 方向、token ownership、性能约束、responsive/i18n 要求，以及未来应用什么时候才能从“方向”晋升为“已交付能力”的 acceptance evidence。
 
 ## 第一阶段纵向切片
 
@@ -69,4 +69,16 @@ python scripts/novelforge_bridge.py describe
 python scripts/novelforge_bridge.py invoke --request /path/to/request.json
 ```
 
-宿主必须原样保留 `unsupported` / `unavailable` 状态，不能绕过 bridge 直接读 SQLite、import 私有实现，或拿一个 mutating Core primitive 来代替缺失的公开 contract。Phase 2B 仍然是 read-only：**这里不会加入 acceptance、settlement、Canon mutation、billing、cloud-provider coupling、frontend 选择或 desktop-wrapper 选择。**
+宿主必须原样保留 `unsupported` / `unavailable` 状态，不能绕过 bridge 直接读 SQLite、import 私有实现，或拿一个 mutating Core primitive 来代替缺失的公开 contract。Phase 2B 仍然是 read-only：**这里不会加入 acceptance、settlement、Canon mutation、通用写入 API 或隐藏的 authority shortcut。**
+
+## 未来可安装 Shell · Tauri + WeiUI
+
+可安装版 Studio 的方向已经确定，但目前还没有 Tauri 应用实现合并到 `main`：
+
+- **Tauri** 负责桌面应用宿主；
+- **React 19** 提供 `@weiui/react` 所要求的 application shell；
+- **WeiUI** 提供可复用 components、zero-JavaScript CSS 与 W3C-style token infrastructure；
+- **NovelForge Story Loom** 继续通过确定性的 WeiUI-compatible token adapter 保持产品视觉/语义权威；
+- Tauri / React / WeiUI 不会变成 Generic Core runtime correctness、CLI、Framework bundle 或 Agent Skill 的默认依赖。
+
+Token ownership、tree-shaking、runtime overhead、responsive/i18n、accessibility、reduced motion 和 acceptance gate 的细则统一记录在 [产品架构](PRODUCT_ARCHITECTURE.zh-CN.md)。在对应实现 artifact 与测量证据真正进入 `main` 之前，Tauri + WeiUI 只是**已选定产品方向**，不能写成已经发布的 Studio capability。

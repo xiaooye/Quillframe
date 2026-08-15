@@ -2,7 +2,7 @@
 
 <p><kbd>PRODUCT EXPERIENCE</kbd>&nbsp;&nbsp;<kbd>CREATOR WORKBENCH</kbd>&nbsp;&nbsp;<kbd>INSPECTABLE RUNTIME</kbd></p>
 
-NovelForge Studio is the product-experience layer around NovelForge Core. **Phase 1 now exists on `main` as a contract-first, read-only product probe; it is not a released write-capable Studio application.** Development remains contract-first: validate product semantics and host boundaries against live Core contracts before choosing web, desktop, cloud, or agent-framework-specific stacks.
+NovelForge Studio is the product-experience layer around NovelForge Core. **Read-only Phase 1, Phase 2A, and Phase 2B slices now exist on `main`; they are real product-contract and host-boundary implementations, not a released write-capable Studio application.** The future installable shell direction is now selected as **Tauri + React + WeiUI**, while implementation remains pending and Core authority boundaries remain unchanged.
 
 > **Authority boundary ✦** Studio consumes NovelForge Core state. UI state is not Canon, Memory, semantic truth, write authority, or a second workflow engine.
 
@@ -14,7 +14,7 @@ NovelForge Studio is the product-experience layer around NovelForge Core. **Phas
 - [简体中文](PRODUCT_ARCHITECTURE.zh-CN.md)
 - [`portable_product_contract.json`](portable_product_contract.json) — machine-readable portable delivery-surface contract.
 
-The product architecture records both the Core interfaces Studio can consume and the unresolved Core consumer gaps Studio must not patch around locally.
+The product architecture records both the Core interfaces Studio can consume and the unresolved Core consumer gaps Studio must not patch around locally. It also records the selected Tauri + WeiUI installable-shell direction, token ownership, performance constraints, responsive/i18n requirements, and the acceptance evidence required before that future app can be described as shipped.
 
 ## Phase 1 vertical slice
 
@@ -69,4 +69,16 @@ Then invoke a request envelope with:
 python scripts/novelforge_bridge.py invoke --request /path/to/request.json
 ```
 
-A host must preserve `unsupported` and `unavailable` states rather than bypassing the bridge through SQLite, private imports, or a mutating Core primitive. Phase 2B remains read-only: **no acceptance, settlement, Canon mutation, billing, cloud-provider coupling, frontend choice, or desktop-wrapper choice is introduced here.**
+A host must preserve `unsupported` and `unavailable` states rather than bypassing the bridge through SQLite, private imports, or a mutating Core primitive. Phase 2B remains read-only: **no acceptance, settlement, Canon mutation, generic write API, or hidden authority shortcut is introduced here.**
+
+## Future installable shell · Tauri + WeiUI
+
+The installable Studio direction is selected, but no Tauri application has yet been merged on `main`:
+
+- **Tauri** hosts the desktop application;
+- **React 19** provides the application shell expected by `@weiui/react`;
+- **WeiUI** supplies reusable components, zero-JavaScript CSS, and W3C-style token infrastructure;
+- **NovelForge Story Loom** remains the product visual/semantic authority through a deterministic WeiUI-compatible token adapter;
+- Tauri / React / WeiUI stay outside Generic Core runtime correctness, CLI, Framework bundle, and Agent Skill dependencies.
+
+The detailed token-ownership, tree-shaking, runtime-overhead, responsive/i18n, accessibility, reduced-motion, and acceptance-gate rules live in the [Product Architecture](PRODUCT_ARCHITECTURE.en.md). Until those implementation artifacts and measurements land, Tauri + WeiUI is a **selected product direction**, not a shipped Studio capability.
