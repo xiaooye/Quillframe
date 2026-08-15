@@ -13,3 +13,4 @@ studio/app/dist/
 site/node_modules/
 site/dist/
 site/public/generated/
+site/src/generated/
