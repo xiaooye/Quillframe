@@ -15,7 +15,7 @@
     "godot:build": "npm run tokens:godot:check && bash scripts/build-godot-web.sh",
     "dev:product": "npm run build && npm run godot:build && npm run preview",
     "preview": "node scripts/serve-dist.mjs",
-    "quality": "npm run docs:content && npm run tokens:godot:check && node scripts/docs-platform-quality.mjs && node scripts/godot-web-quality.mjs"
+    "quality": "npm run docs:content && npm run tokens:godot:check && node scripts/docs-platform-quality.mjs && node scripts/godot-web-quality.mjs && node scripts/atelier-godot-quality.mjs"
   },
   "dependencies": {},
   "devDependencies": {
