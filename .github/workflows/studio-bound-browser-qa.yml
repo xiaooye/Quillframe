@@ -137,6 +137,7 @@ jobs:
           dump_dom diagnostics-zh 390,844 'http://127.0.0.1:4177/diagnostics?lang=zh-CN'
 
           python - <<'PY'
+          import re
           from pathlib import Path
 
           root = Path('/tmp/studio-bound-qa')
@@ -226,7 +227,9 @@ jobs:
               assert operation in runtime_source, f'Runtime route missing public bridge operation {operation}'
           for forbidden in ('.novelforge/runtime.db', 'sqlite3', 'localStorage.', 'sessionStorage.'):
               assert forbidden not in runtime_source, f'Runtime route bypasses public projection boundary: {forbidden}'
-          assert 'session.resume' not in runtime_source, 'Runtime observatory must not expose resume control'
+          resume_call = re.search(r'invokeBridge(?:<[^>]+>)?\(\s*["\']session\.resume["\']', runtime_source)
+          assert resume_call is None, 'Runtime observatory must not invoke session.resume control'
+          assert 'Resume stays deferred' in runtime_source and 'Resume 仍未开放' in runtime_source, 'Runtime route must preserve the explicit resume-deferred boundary'
 
           (root / 'runtime-proof.txt').write_text(
               'schema=novelforge_studio_bound_browser_qa_v1\n'
