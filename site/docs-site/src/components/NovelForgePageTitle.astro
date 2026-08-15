@@ -1,0 +1,27 @@
+---
+import Default from "@astrojs/starlight/components/PageTitle.astro";
+
+const route = Astro.locals.starlightRoute;
+const { title, description } = route.entry.data;
+const english = route.lang.toLowerCase().startsWith("en");
+const pathname = Astro.url.pathname.replace(/\/+$/, "");
+const isDocsHome = pathname === "/docs" || pathname === "/docs/en";
+const eyebrow = english ? "NovelForge Knowledge" : "NovelForge 知识库";
+const sectionLabel = english ? "Documentation" : "文档";
+---
+
+{
+  isDocsHome ? (
+    <Default><slot /></Default>
+  ) : (
+    <header class="nf-article-title">
+      <div class="nf-article-title__meta">
+        <span class="nf-article-title__eyebrow"><span aria-hidden="true">✦</span>{eyebrow}</span>
+        <span class="nf-article-title__section">{sectionLabel}</span>
+      </div>
+      <h1 id="_top">{title}</h1>
+      {description && <p class="nf-article-title__lede">{description}</p>}
+      <div class="nf-article-title__rule" aria-hidden="true"><span></span><i>◇</i><span></span></div>
+    </header>
+  )
+}
