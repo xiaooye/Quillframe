@@ -31,7 +31,7 @@
   "properties": {
     "schema": {"const": "novelforge_runtime_command_receipt_v1"},
     "command_id": {"type": "string", "minLength": 1, "maxLength": 160},
-    "operation": {"const": "session.resume"},
+    "operation": {"enum": ["session.resume", "session.terminate"]},
     "session_id": {"type": "string", "minLength": 1, "maxLength": 240},
     "idempotency_key": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "command_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
@@ -69,7 +69,10 @@
         "session_version": {"type": "integer", "minimum": 1},
         "session_payload_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
         "session_status": {"type": "string", "minLength": 1},
-        "checkpoint_id": {"type": "string", "minLength": 1}
+        "checkpoint_id": {"type": ["string", "null"], "minLength": 1},
+        "run_id": {"type": ["string", "null"], "minLength": 1},
+        "run_status": {"type": ["string", "null"], "minLength": 1},
+        "run_ended_at": {"type": ["string", "null"]}
       }
     }
   }
