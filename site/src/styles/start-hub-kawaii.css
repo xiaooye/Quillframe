@@ -1,103 +1,33 @@
 @layer product-components {
+  /* Keep the Story Loom palette, but let /start read like the cleaner home
+     surface: whitespace first, decoration second. */
   .start-hub-entry {
     color: var(--kawaii-ink);
     background:
-      radial-gradient(circle at 10% 12%, oklch(.94 .045 347 / .92) 0 1.1px, transparent 1.5px),
-      radial-gradient(circle at 88% 18%, oklch(.92 .045 300 / .62) 0 1px, transparent 1.35px),
-      linear-gradient(90deg, oklch(.94 .025 340 / .34) 1px, transparent 1px),
-      linear-gradient(oklch(.94 .025 340 / .34) 1px, transparent 1px),
-      radial-gradient(48rem 28rem at 8% 8%, oklch(.96 .048 350 / .92), transparent 72%),
-      radial-gradient(44rem 30rem at 93% 10%, oklch(.96 .035 296 / .82), transparent 72%),
+      radial-gradient(46rem 24rem at 12% 0%, oklch(.97 .03 350 / .52), transparent 72%),
+      radial-gradient(40rem 22rem at 92% 2%, oklch(.97 .024 298 / .4), transparent 72%),
       var(--kawaii-cream);
-    background-size: 32px 32px, 42px 42px, 24px 24px, 24px 24px, auto, auto, auto;
   }
 
   .start-hub-entry .product-appbar {
-    border-color: oklch(.88 .052 345 / .72);
-    background: color-mix(in oklab, var(--pe-surface) 88%, oklch(.99 .02 345));
-    box-shadow: 0 12px 34px -30px oklch(.5 .1 340 / .5);
-  }
-
-  .start-hub-entry .product-appbar::after {
-    content: "";
-    position: absolute;
-    right: 0;
-    bottom: -5px;
-    left: 0;
-    height: 8px;
-    opacity: .72;
-    pointer-events: none;
-    background: radial-gradient(circle at 6px 0, transparent 5px, oklch(.91 .055 348 / .82) 5.6px 6.5px, transparent 7px) 0 0 / 12px 8px repeat-x;
+    border-color: oklch(.89 .04 345 / .68);
+    background: color-mix(in oklab, var(--pe-surface) 94%, oklch(.995 .012 345));
+    box-shadow: 0 10px 28px -28px oklch(.5 .1 340 / .42);
   }
 
   .start-hub-entry .brand-mark-wrap {
-    border-color: oklch(.86 .07 340 / .82);
-    background: linear-gradient(145deg, oklch(.99 .025 342), oklch(.97 .025 302));
-    box-shadow: 0 7px 16px -13px var(--kawaii-pink-strong);
-  }
-
-  .start-hub-entry .wui-app-bar__link.active {
-    border-radius: 12px;
-    color: var(--kawaii-pink-strong);
-    background: var(--kawaii-pink-soft);
+    border-color: oklch(.87 .06 340 / .72);
+    background: linear-gradient(145deg, oklch(.995 .018 342), oklch(.98 .02 302));
   }
 
   .start-hub-entry .studio-cta {
-    border-color: color-mix(in oklab, var(--kawaii-pink-strong) 45%, transparent);
-    background: linear-gradient(135deg, var(--kawaii-pink-strong), color-mix(in oklab, var(--kawaii-lilac) 66%, var(--kawaii-pink)));
-    box-shadow: 0 12px 28px -20px var(--kawaii-pink-strong);
+    border-color: color-mix(in oklab, var(--kawaii-pink-strong) 42%, transparent);
+    background: linear-gradient(135deg, var(--kawaii-pink-strong), color-mix(in oklab, var(--kawaii-lilac) 60%, var(--kawaii-pink)));
+    box-shadow: 0 10px 24px -20px var(--kawaii-pink-strong);
   }
 
-  .start-hub-entry :is(.start-hub-hero, .start-paths, .start-hub-flow, .start-hub-footer-callout) {
-    border-color: var(--kawaii-line);
-    outline-color: oklch(.78 .09 345 / .38);
-    background:
-      radial-gradient(circle at 12% 12%, oklch(.99 .025 78 / .82), transparent 34%),
-      radial-gradient(circle at 88% 8%, oklch(.96 .055 347 / .64), transparent 28%),
-      linear-gradient(135deg, oklch(.99 .018 72), oklch(.98 .022 348) 52%, oklch(.98 .018 300));
-    box-shadow: var(--kawaii-shadow);
-  }
-
-  .start-hub-entry .start-hub-ribbon {
-    min-height: 30px;
-    border-color: oklch(.75 .12 348 / .62);
-    border-radius: 9px 4px 9px 4px;
-    color: oklch(.46 .12 347);
-    background: linear-gradient(135deg, oklch(.96 .07 348), oklch(.93 .075 7));
-    box-shadow: 0 6px 18px -14px var(--kawaii-pink-strong);
-  }
-
-  .start-hub-entry .start-hub-copy h1 {
+  .start-hub-entry .start-hub-hero h1 {
     color: var(--kawaii-ink);
-    font-weight: 770;
-  }
-
-  .start-hub-entry .start-hub-copy > p,
-  .start-hub-entry .start-path-card p,
-  .start-hub-entry .start-flow-track small {
-    color: color-mix(in oklab, var(--kawaii-ink) 66%, var(--pe-muted));
-  }
-
-  .start-hub-entry .start-hub-book {
-    border-color: oklch(.84 .055 65 / .78);
-    background:
-      repeating-linear-gradient(to bottom, transparent 0 31px, oklch(.86 .035 245 / .38) 31px 32px),
-      oklch(.992 .014 78);
-    box-shadow:
-      14px 15px 0 oklch(.94 .04 300 / .58),
-      0 24px 44px -28px oklch(.48 .08 330 / .32);
-  }
-
-  .start-hub-entry .book-tab {
-    border-color: color-mix(in oklab, var(--kawaii-lilac) 58%, white);
-    color: color-mix(in oklab, var(--kawaii-lilac) 78%, var(--kawaii-ink));
-    background: color-mix(in oklab, white 44%, var(--kawaii-lilac));
-  }
-
-  .start-hub-entry .book-charm {
-    border-color: oklch(.84 .08 345 / .62);
-    background: linear-gradient(145deg, white, var(--kawaii-pink-soft));
-    box-shadow: 0 10px 22px -18px var(--kawaii-pink-strong);
   }
 
   .start-hub-entry .start-path-card:nth-child(1) {
@@ -121,50 +51,29 @@
   }
 
   .start-hub-entry .start-path-card {
+    border-color: color-mix(in oklab, var(--start-lane-stroke) 24%, oklch(.89 .03 345));
+    background: color-mix(in oklab, white 82%, var(--start-lane-fill));
+  }
+
+  .start-hub-entry .start-path-card:hover,
+  .start-hub-entry .start-path-card:focus-visible {
     border-color: color-mix(in oklab, var(--start-lane-stroke) 38%, oklch(.88 .04 345));
-    background:
-      radial-gradient(circle at 92% 0%, color-mix(in oklab, var(--start-lane-fill) 88%, transparent), transparent 38%),
-      color-mix(in oklab, white 72%, var(--start-lane-fill));
-    box-shadow: 0 10px 24px -22px color-mix(in oklab, var(--start-lane-stroke) 48%, transparent);
+    background: color-mix(in oklab, white 76%, var(--start-lane-fill));
   }
 
   .start-hub-entry .start-path-icon {
-    border-color: color-mix(in oklab, var(--start-lane-stroke) 42%, white);
-    background: color-mix(in oklab, white 56%, var(--start-lane-fill));
-  }
-
-  .start-hub-entry .start-hub-trust span,
-  .start-hub-entry .start-flow-track > div {
-    border-color: oklch(.88 .045 342 / .76);
-    background: color-mix(in oklab, white 68%, var(--kawaii-pink-soft));
-  }
-
-  .start-hub-entry .start-hub-trust span:nth-child(2),
-  .start-hub-entry .start-flow-track > div:nth-of-type(2) {
-    background: color-mix(in oklab, white 68%, var(--kawaii-lilac-soft));
-  }
-
-  .start-hub-entry .start-hub-trust span:nth-child(3),
-  .start-hub-entry .start-flow-track > div:nth-of-type(3) {
-    background: color-mix(in oklab, white 68%, var(--kawaii-blue-soft));
-  }
-
-  .start-hub-entry .start-flow-track > div:nth-of-type(4) {
-    background: color-mix(in oklab, white 68%, var(--kawaii-mint-soft));
+    background: color-mix(in oklab, white 58%, var(--start-lane-fill));
   }
 
   :root.dark .start-hub-entry {
     color: var(--pe-fg);
     background:
-      radial-gradient(44rem 28rem at 8% 8%, oklch(.34 .045 350 / .22), transparent 72%),
-      radial-gradient(40rem 28rem at 93% 10%, oklch(.34 .04 296 / .18), transparent 72%),
+      radial-gradient(42rem 24rem at 10% 0%, oklch(.31 .04 345 / .22), transparent 72%),
       var(--pe-bg);
   }
 
-  :root.dark .start-hub-entry :is(.start-hub-hero, .start-paths, .start-hub-flow, .start-hub-footer-callout),
-  :root.dark .start-hub-entry .start-path-card,
-  :root.dark .start-hub-entry .start-hub-book {
+  :root.dark .start-hub-entry .start-path-card {
     color: var(--pe-fg);
-    background: color-mix(in oklab, var(--pe-surface) 94%, var(--kawaii-pink-soft) 6%);
+    background: color-mix(in oklab, var(--pe-surface) 94%, var(--start-lane-fill) 6%);
   }
 }
