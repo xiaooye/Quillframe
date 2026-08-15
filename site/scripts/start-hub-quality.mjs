@@ -11,6 +11,8 @@ const read = (relative) => fs.readFileSync(path.join(siteRoot, relative), "utf8"
 const entry = read("src/StartHubEntry.tsx");
 const css = read("src/styles/start-hub.css");
 const main = read("src/main.tsx");
+const docsActions = read("docs-site/src/components/NovelForgeActions.astro");
+const docsLanding = read("docs-site/src/components/DocsLanding.astro");
 const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
 
@@ -30,6 +32,11 @@ check(main.includes('import StartHubEntry from "./StartHubEntry"'), "main entry 
 check(main.includes('"/start"'), "standalone surface handoff must include /start");
 check(main.includes('path === "/start"'), "main entry must mount StartHubEntry at /start");
 check(main.includes('import "./styles/start-hub.css"'), "start hub styles must be loaded");
+
+check(docsActions.includes('href="/start"'), "documentation header must expose the product-first start hub");
+check(docsActions.includes('english ? "Start" : "开始"'), "documentation start action must remain natively localized");
+check(docsLanding.includes('link: "/start"'), "documentation hero must route onboarding through /start");
+check(docsLanding.includes('["开始中心"') && docsLanding.includes('["Start hub"'), "documentation runtime paths must expose /start in both locales");
 
 for (const marker of [
   ".start-hub-hero",
@@ -56,6 +63,7 @@ if (failures.length) {
     local_project_inspection: true,
     agent_integration: true,
     deterministic_playground: true,
+    docs_discovery: true,
     authority_boundary_explicit: true,
     kawaii_story_loom_surface: true,
     responsive: true,
