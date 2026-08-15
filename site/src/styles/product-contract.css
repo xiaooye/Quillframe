@@ -1,0 +1,43 @@
+@layer product-base, product-layout, product-components, product-docs;
+
+/*
+ * NovelForge Product Entry semantic bridge.
+ *
+ * WeiUI owns generic control behavior and Story Loom owns NovelForge semantic
+ * tokens. This layer only maps those contracts into Product Entry composition;
+ * it must not introduce a parallel palette, spacing scale, or accessibility
+ * contract.
+ */
+@layer product-base {
+  :root {
+    --pe-touch-target: var(--nf-touch-target-min, 44px);
+  }
+}
+
+@layer product-layout {
+  .brand-link,
+  .header-search,
+  .mobile-menu-button {
+    min-block-size: var(--pe-touch-target);
+  }
+}
+
+@layer product-components {
+  .launcher-search,
+  .launcher-tile,
+  .capability-chip,
+  .evidence-row,
+  .gate-toggle,
+  .command-result,
+  .architecture-node {
+    min-block-size: var(--pe-touch-target);
+  }
+}
+
+@layer product-docs {
+  .knowledge-filter .wui-sidebar__item,
+  .document-toc a,
+  .doc-copy {
+    min-block-size: var(--pe-touch-target);
+  }
+}

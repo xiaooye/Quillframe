@@ -10,3 +10,7 @@ __pycache__/
 .DS_Store
 studio/app/node_modules/
 studio/app/dist/
+site/node_modules/
+site/dist/
+site/public/generated/
+site/src/generated/
