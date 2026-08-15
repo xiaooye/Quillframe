@@ -1,6 +1,5 @@
-import { For } from "solid-js";
 import { useI18n } from "./i18n";
-import type { ObservabilityDisplayStatus, ProductionLaneProjection } from "./observability";
+import type { ObservabilityDisplayStatus } from "./observability";
 
 const statusClass: Record<ObservabilityDisplayStatus, string> = {
   pass: "wui-badge--success",
@@ -35,43 +34,5 @@ export function EvidenceBoundary() {
         <p class="wui-alert__description">{t("semantic.boundaryBody")}</p>
       </div>
     </aside>
-  );
-}
-
-export function ProductionProjectionPlaceholder() {
-  const { t } = useI18n();
-  const lanes: ProductionLaneProjection[] = [
-    { id: "candidate", label: t("production.laneCandidate") },
-    { id: "surface", label: t("production.laneSurface") },
-    { id: "reader_engagement", label: t("production.laneReaderEngagement") },
-    { id: "independent_production_review", label: t("production.laneIndependentReview") },
-    { id: "continuity", label: t("production.laneContinuity") },
-    { id: "production_readiness", label: t("production.laneReadiness") },
-    { id: "canon", label: t("production.laneCanon") },
-  ];
-
-  return (
-    <section class="wui-card wui-card--filled nf-production-preview" aria-labelledby="production-preview-title">
-      <div class="nf-observe-section-head">
-        <div>
-          <span class="nf-eyebrow">{t("production.eyebrow")}</span>
-          <h2 id="production-preview-title">{t("production.previewTitle")}</h2>
-          <p>{t("production.previewBody")}</p>
-        </div>
-        <StatusBadge status="unavailable" label={t("production.noProjection")} />
-      </div>
-      <div class="nf-production-lanes">
-        <For each={lanes}>
-          {(lane, index) => (
-            <div class="nf-production-lane">
-              <span class="nf-production-lane-index">{String(index() + 1).padStart(2, "0")}</span>
-              <strong>{lane.label}</strong>
-              <small>{t("production.coreDependency")}</small>
-            </div>
-          )}
-        </For>
-      </div>
-      <p class="nf-observe-footnote">{t("production.scopeFootnote")}</p>
-    </section>
   );
 }
