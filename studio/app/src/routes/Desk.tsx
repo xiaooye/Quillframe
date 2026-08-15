@@ -58,7 +58,7 @@ export default function Desk() {
           <div class="wui-card__header"><h2>{t("workspace.title")}</h2></div>
           <div class="wui-card__content">
             <p>{t("workspace.unavailableBody")}</p>
-            <span class="wui-badge wui-badge--warning">Core projection required</span>
+            <span class="wui-badge wui-badge--warning">{t("workspace.projectionRequired")}</span>
           </div>
         </article>
       </div>

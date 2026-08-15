@@ -45,7 +45,7 @@ const messages = {
   "project.pathExists": "可用",
   "project.pathMissing": "缺失",
   "project.policyAvailability": "策略存在性",
-  "workspace.title": "Scene Workspace",
+  "workspace.title": "场景工作区",
   "workspace.body": "等 Core 提供可信的当前场景/正文投影后，这里会成为聚焦创作界面。",
   "workspace.unavailableTitle": "公共桥接暂未暴露当前场景",
   "workspace.unavailableBody": "Studio 不会根据计划、fixture、文件系统猜测或运行时元数据推断场景。在出现类型化 Core 投影前，此界面会明确保持不可用。",
