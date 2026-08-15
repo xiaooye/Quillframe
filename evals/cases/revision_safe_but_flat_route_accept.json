@@ -1,0 +1,18 @@
+{
+  "id": "REVISION-FLAT-ROUTE-001",
+  "type": "capability",
+  "domain": "revision",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "candidate": "Technically clean high-grip chapter; every step works, nobody meaningfully resists, and no decision changes cost or relationship.",
+    "diagnosis": "SAFE-BUT-FLAT",
+    "repair_route": ["reader-pressure", "scene-simulation"]
+  },
+  "rubric": [
+    "Accept diagnosis that routes SAFE-BUT-FLAT upstream to Reader Pressure and Scene Simulation rather than generic line polish.",
+    "Reject fixes based mainly on sentence fragments, random micro-actions, narrator hype, adjectives or arbitrary twists."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["REV-*", "RG-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept", "codes": ["RG-15"]}
+}
