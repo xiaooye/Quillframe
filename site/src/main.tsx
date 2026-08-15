@@ -1,17 +1,12 @@
 import "./appearance-v5";
-import { Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
-import { Portal, render } from "solid-js/web";
+import { render } from "solid-js/web";
 import App from "./App";
-import { KnowledgeDocumentPage, KnowledgeExplorer } from "./KnowledgeExperience";
-import type { KnowledgeLocale } from "./knowledge";
 import "./styles/site.css";
 import "./styles/product-contract.css";
 import "./styles/showcase.css";
 import "./styles/atelier.css";
 import "./styles/atelier-photos.css";
 import "./styles/atelier-clean-canvas.css";
-import "./styles/knowledge-experience.css";
-import "./styles/knowledge-portal.css";
 
 // The launcher emits a synthetic Ctrl+K event on document. Real keyboard events
 // already bubble to window; only bridge the synthetic event into the AppShell
@@ -26,27 +21,7 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-const locationEvent = "novelforge:locationchange";
-const historyMarker = "__novelforgeHistoryWrapped";
-const markedHistory = window.history as History & { [historyMarker]?: boolean };
-
-if (!markedHistory[historyMarker]) {
-  markedHistory[historyMarker] = true;
-
-  const originalPushState = window.history.pushState.bind(window.history);
-  window.history.pushState = ((data: unknown, unused: string, url?: string | URL | null) => {
-    originalPushState(data, unused, url);
-    window.dispatchEvent(new Event(locationEvent));
-  }) as History["pushState"];
-
-  const originalReplaceState = window.history.replaceState.bind(window.history);
-  window.history.replaceState = ((data: unknown, unused: string, url?: string | URL | null) => {
-    originalReplaceState(data, unused, url);
-    window.dispatchEvent(new Event(locationEvent));
-  }) as History["replaceState"];
-}
-
-function currentLocale(): KnowledgeLocale {
+function preferredLocale(): "zh-CN" | "en-US" {
   const datasetLocale = document.documentElement.dataset.locale;
   if (datasetLocale === "zh-CN" || datasetLocale === "en-US") return datasetLocale;
   const saved = localStorage.getItem("novelforge.locale");
@@ -54,59 +29,70 @@ function currentLocale(): KnowledgeLocale {
   return navigator.language.toLocaleLowerCase().startsWith("zh") ? "zh-CN" : "en-US";
 }
 
-function KnowledgePortal() {
-  const [mount, setMount] = createSignal<HTMLElement>();
-  const [path, setPath] = createSignal(window.location.pathname);
-  const [locale, setLocale] = createSignal<KnowledgeLocale>(currentLocale());
+function localizedDocsTarget(url: string | URL | null | undefined): URL | undefined {
+  if (url == null) return undefined;
 
-  const syncPath = () => setPath(window.location.pathname);
+  const target = new URL(url instanceof URL ? url.href : url, window.location.href);
+  if (target.origin !== window.location.origin) return undefined;
+  if (target.pathname !== "/docs" && !target.pathname.startsWith("/docs/")) return undefined;
 
-  onMount(() => {
-    setMount(document.getElementById("main-content") ?? undefined);
-    window.addEventListener("popstate", syncPath);
-    window.addEventListener(locationEvent, syncPath);
+  const alreadyEnglish = target.pathname === "/docs/en" || target.pathname.startsWith("/docs/en/");
+  if (preferredLocale() === "en-US" && !alreadyEnglish) {
+    const suffix = target.pathname.slice("/docs".length);
+    target.pathname = `/docs/en${suffix || "/"}`;
+  }
 
-    const observer = new MutationObserver(() => setLocale(currentLocale()));
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-locale", "lang"] });
+  return target;
+}
 
-    onCleanup(() => {
-      observer.disconnect();
-      window.removeEventListener("popstate", syncPath);
-      window.removeEventListener(locationEvent, syncPath);
-    });
-  });
+function handOffToDocs(target: URL) {
+  window.location.assign(target.href);
+}
 
-  const docsActive = () => path() === "/docs" || path().startsWith("/docs/");
-  const docId = () => {
-    if (!path().startsWith("/docs/")) return undefined;
-    const value = path().slice("/docs/".length).split("/")[0];
-    try {
-      return decodeURIComponent(value);
-    } catch {
-      return value;
+// @solidjs/router owns product-site navigation. Documentation is a separate,
+// static-first Starlight application under /docs, so any SPA attempt to enter
+// that namespace must become a real document navigation instead of mounting a
+// second documentation renderer inside the product app.
+document.addEventListener("click", (event) => {
+  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const origin = event.target;
+  if (!(origin instanceof Element)) return;
+  const anchor = origin.closest("a[href]");
+  if (!(anchor instanceof HTMLAnchorElement) || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+
+  const target = localizedDocsTarget(anchor.href);
+  if (!target) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  handOffToDocs(target);
+}, true);
+
+const historyMarker = "__novelforgeDocsHandoff";
+const markedHistory = window.history as History & { [historyMarker]?: boolean };
+
+if (!markedHistory[historyMarker]) {
+  markedHistory[historyMarker] = true;
+
+  const originalPushState = window.history.pushState.bind(window.history);
+  window.history.pushState = ((data: unknown, unused: string, url?: string | URL | null) => {
+    const docsTarget = localizedDocsTarget(url);
+    if (docsTarget) {
+      handOffToDocs(docsTarget);
+      return;
     }
-  };
+    originalPushState(data, unused, url);
+  }) as History["pushState"];
 
-  createEffect(() => {
-    if (docsActive()) document.documentElement.dataset.knowledgeExperience = "journey-v1";
-    else delete document.documentElement.dataset.knowledgeExperience;
-  });
-
-  onCleanup(() => {
-    delete document.documentElement.dataset.knowledgeExperience;
-  });
-
-  return (
-    <Show when={docsActive() && mount()}>
-      <Portal mount={mount()!}>
-        <div class="knowledge-v2-portal">
-          <Show when={docId()} fallback={<KnowledgeExplorer locale={locale()} />}>
-            {(id) => <KnowledgeDocumentPage locale={locale()} docId={id()} />}
-          </Show>
-        </div>
-      </Portal>
-    </Show>
-  );
+  const originalReplaceState = window.history.replaceState.bind(window.history);
+  window.history.replaceState = ((data: unknown, unused: string, url?: string | URL | null) => {
+    const docsTarget = localizedDocsTarget(url);
+    if (docsTarget) {
+      handOffToDocs(docsTarget);
+      return;
+    }
+    originalReplaceState(data, unused, url);
+  }) as History["replaceState"];
 }
 
 const root = document.getElementById("root");
@@ -115,4 +101,4 @@ if (!root) {
   throw new Error("NovelForge Product Site root element is missing");
 }
 
-render(() => <><App /><KnowledgePortal /></>, root);
+render(() => <App />, root);
