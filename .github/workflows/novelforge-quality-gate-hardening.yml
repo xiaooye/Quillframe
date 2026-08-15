@@ -8,6 +8,10 @@ on:
       - 'harness/semantic_workers/model_contract_catalog.json'
       - 'harness/semantic_workers/contracts/quality.json'
       - 'harness/semantic_workers/peer_chat_relay.py'
+      - 'harness/semantic_workers/registered_contract_binding.py'
+      - 'harness/semantic_workers/peer_bridge_receipt.py'
+      - '.github/actions/project-peer-semantic/**'
+      - '.github/workflows/novelforge-chat-semantic-bridge.yml'
       - '.github/workflows/novelforge-quality-gate-hardening.yml'
   workflow_dispatch:
 
@@ -26,10 +30,16 @@ jobs:
         run: |
           python -m py_compile quality/quality_taxonomy.py quality/repair_policy.py quality/production_readiness.py
           python -m py_compile harness/semantic_workers/semantic_worker_router.py harness/semantic_workers/peer_chat_relay.py
+          python -m py_compile harness/semantic_workers/registered_contract_binding.py harness/semantic_workers/peer_bridge_receipt.py
+          python -m py_compile .github/actions/project-peer-semantic/bridge.py
       - name: Taxonomy compatibility contract
         run: python quality/quality_taxonomy.py self-test
       - name: Fresh realization repair contract
         run: python quality/repair_policy.py self-test
+      - name: Registered contract definition binding
+        run: python harness/semantic_workers/registered_contract_binding.py self-test
+      - name: Project peer validation receipt
+        run: python harness/semantic_workers/peer_bridge_receipt.py self-test
       - name: Semantic contract kernel
         run: python harness/semantic_workers/semantic_worker_router.py self-test
       - name: Production readiness contract
@@ -41,10 +51,17 @@ jobs:
           from pathlib import Path
           root=Path('harness/semantic_workers')
           sys.path.insert(0,str(root))
-          from semantic_worker_router import make_contract_job
+          from registered_contract_binding import validate_registered_job
+          from semantic_worker_router import fingerprint_for, make_contract_job
           fp='sha256:'+'a'*64
           reader=make_contract_job('reader.engagement_audit','CH-CI',{'candidate_fingerprint':fp,'candidate_text':'fixture'})
           prod=make_contract_job('quality.production_review','CH-CI',{'candidate_fingerprint':fp,'candidate_text':'fixture'},source_session_id='SES-MANAGER')
+          assert not validate_registered_job(reader)
+          assert not validate_registered_job(prod)
+          forged=json.loads(json.dumps(prod))
+          forged['rubric']=['manager-authored substitute rubric']
+          forged['input_fingerprint']=fingerprint_for(forged)
+          assert any('rubric mismatch' in x for x in validate_registered_job(forged))
           assert reader['provenance']['source']=='model_contract_pack'
           assert reader['provenance']['pack_id']=='quality'
           assert reader['provenance']['independent_gate'] is False
@@ -54,5 +71,5 @@ jobs:
           registry=json.load(open(root/'contracts/quality.json',encoding='utf-8'))
           assert registry['contracts']['reader.engagement_audit']['release_roles']==['reader_engagement']
           assert registry['contracts']['quality.production_review']['release_roles']==['semantic_independent']
-          print({'registered_release_role_contract':'PASS'})
+          print({'registered_release_role_contract':'PASS','forged_registered_rubric_rejected':True})
           PY
