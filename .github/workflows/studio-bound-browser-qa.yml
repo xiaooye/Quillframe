@@ -118,12 +118,16 @@ jobs:
           }
 
           run_chrome workspace-en-desktop 1440,900 'http://127.0.0.1:4177/workspace?lang=en-US'
+          run_chrome agents-en-desktop 1440,900 'http://127.0.0.1:4177/agents?lang=en-US'
+          run_chrome capabilities-en-desktop 1440,900 'http://127.0.0.1:4177/capabilities?lang=en-US'
           run_chrome semantic-en-desktop 1440,900 'http://127.0.0.1:4177/semantic?lang=en-US'
           run_chrome semantic-en-mobile 390,844 'http://127.0.0.1:4177/semantic?lang=en-US'
           run_chrome diagnostics-en-desktop 1440,900 'http://127.0.0.1:4177/diagnostics?lang=en-US'
           run_chrome diagnostics-zh-mobile 390,844 'http://127.0.0.1:4177/diagnostics?lang=zh-CN'
 
           dump_dom workspace-en 1440,900 'http://127.0.0.1:4177/workspace?lang=en-US'
+          dump_dom agents-en 1440,900 'http://127.0.0.1:4177/agents?lang=en-US'
+          dump_dom capabilities-en 1440,900 'http://127.0.0.1:4177/capabilities?lang=en-US'
           dump_dom semantic-en 1440,900 'http://127.0.0.1:4177/semantic?lang=en-US'
           dump_dom diagnostics-en 1440,900 'http://127.0.0.1:4177/diagnostics?lang=en-US'
           dump_dom diagnostics-zh 390,844 'http://127.0.0.1:4177/diagnostics?lang=zh-CN'
@@ -133,6 +137,8 @@ jobs:
 
           root = Path('/tmp/studio-bound-qa')
           workspace = (root / 'workspace-en-dom.html').read_text(encoding='utf-8', errors='replace')
+          agents = (root / 'agents-en-dom.html').read_text(encoding='utf-8', errors='replace')
+          capabilities = (root / 'capabilities-en-dom.html').read_text(encoding='utf-8', errors='replace')
           semantic = (root / 'semantic-en-dom.html').read_text(encoding='utf-8', errors='replace')
           diagnostics = (root / 'diagnostics-en-dom.html').read_text(encoding='utf-8', errors='replace')
           diagnostics_zh = (root / 'diagnostics-zh-dom.html').read_text(encoding='utf-8', errors='replace')
@@ -140,6 +146,18 @@ jobs:
           assert 'Local Playground' in workspace
           assert 'Run preview' in workspace
           assert 'deterministic browser preview' in workspace
+
+          assert 'One run, explicit state, observable boundaries' in agents
+          assert 'Run + Trace' in agents
+          assert 'Handoff + Approval' in agents
+          assert 'Evidence + Receipt' in agents
+
+          assert 'What the host exposes' in capabilities
+          assert 'Safe public queries' in capabilities
+          assert 'Runtime continuity still deferred' in capabilities
+          assert 'runtime.sessions.list' in capabilities
+          assert 'run.receipt.get' in capabilities
+          assert 'This hosted shell is not bound to a NovelForge Core host' not in capabilities
 
           # These workstations only render after real bridge data arrives.
           assert 'Registered model contracts' in semantic
@@ -157,6 +175,8 @@ jobs:
 
           for image in (
               'workspace-en-desktop.png',
+              'agents-en-desktop.png',
+              'capabilities-en-desktop.png',
               'semantic-en-desktop.png',
               'semantic-en-mobile.png',
               'diagnostics-en-desktop.png',
@@ -166,17 +186,22 @@ jobs:
               assert path.exists() and path.stat().st_size > 10_000, image
 
           # Bound pages must use the one public typed bridge endpoint; no alternate API is allowed.
-          for name in ('workspace-en-desktop-netlog.json', 'semantic-en-desktop-netlog.json', 'semantic-en-mobile-netlog.json', 'diagnostics-en-desktop-netlog.json', 'diagnostics-zh-mobile-netlog.json'):
+          for name in ('workspace-en-desktop-netlog.json', 'capabilities-en-desktop-netlog.json', 'semantic-en-desktop-netlog.json', 'semantic-en-mobile-netlog.json', 'diagnostics-en-desktop-netlog.json', 'diagnostics-zh-mobile-netlog.json'):
               text = (root / name).read_text(encoding='utf-8', errors='replace')
               if name != 'workspace-en-desktop-netlog.json':
                   assert '/api/bridge/invoke' in text, f'expected typed bridge request in {name}'
               assert '/api/' not in text.replace('/api/bridge/invoke', ''), f'unexpected Studio API path in {name}'
+
+          agents_netlog = (root / 'agents-en-desktop-netlog.json').read_text(encoding='utf-8', errors='replace')
+          assert '/api/' not in agents_netlog, 'Agents surface must not invent a runtime API call'
 
           (root / 'runtime-proof.txt').write_text(
               'schema=novelforge_studio_bound_browser_qa_v1\n'
               'surface=local_app\n'
               'core_host=bound\n'
               'workspace_surface=local_playground\n'
+              'agent_runtime_model=novelforge_native\n'
+              'capability_boundary_source=bridge.describe+capabilities.inspect\n'
               'semantic_source=semantic.catalog\n'
               'diagnostics_source=framework.doctor\n'
               'authority=false\n',
