@@ -1,6 +1,7 @@
 import "./appearance-v5";
 import { render } from "solid-js/web";
 import App from "./App";
+import LocalPlaygroundEntry from "./LocalPlaygroundEntry";
 import ProjectInspectorEntry from "./ProjectInspectorEntry";
 import "./styles/site.css";
 import "./styles/product-contract.css";
@@ -9,6 +10,7 @@ import "./styles/atelier.css";
 import "./styles/atelier-photos.css";
 import "./styles/atelier-clean-canvas.css";
 import "./styles/project-inspector.css";
+import "./styles/local-playground.css";
 
 // The launcher emits a synthetic Ctrl+K event on document. Real keyboard events
 // already bubble to window; only bridge the synthetic event into the AppShell
@@ -107,6 +109,8 @@ const path = window.location.pathname.replace(/\/+$/, "") || "/";
 render(
   () => path === "/inspect"
     ? <ProjectInspectorEntry initialLocale={preferredLocale()} />
-    : <App />,
+    : path === "/playground"
+      ? <LocalPlaygroundEntry initialLocale={preferredLocale()} />
+      : <App />,
   root,
 );
