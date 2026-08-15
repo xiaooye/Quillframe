@@ -56,6 +56,14 @@ export const AppShell: ParentComponent = (props) => {
   const deferred = createMemo(() => Object.entries(studio.bridgeDescription()?.deferred_operations ?? {}));
   const q = createMemo(() => query().trim().toLowerCase());
   const matches = (value: string) => !q() || value.toLowerCase().includes(q());
+  const coreStatus = createMemo(() => {
+    if (studio.bridgeAvailable()) return locale() === "zh-CN" ? "Core 已绑定" : "Core bound";
+    return locale() === "zh-CN" ? "Core 未绑定" : "Core unbound";
+  });
+  const coreStatusTitle = createMemo(() => {
+    if (studio.bridgeAvailable()) return locale() === "zh-CN" ? "查看 Host Bridge 诊断" : "Open Host Bridge diagnostics";
+    return locale() === "zh-CN" ? "选择 Local Core、Remote Core 或只读 Demo" : "Choose Local Core, Remote Core, or read-only demo";
+  });
 
   const go = (path: string) => {
     setPaletteOpen(false);
@@ -102,10 +110,16 @@ export const AppShell: ParentComponent = (props) => {
             </Show>
           </div>
           <div class="wui-app-bar__actions nf-topbar-actions">
-            <span class="wui-badge wui-badge--outline nf-host-chip" data-surface={studio.surface()}>
+            <A
+              href={studio.bridgeAvailable() ? "/diagnostics" : "/"}
+              class="wui-badge wui-badge--outline nf-host-chip"
+              data-surface={studio.surface()}
+              title={coreStatusTitle()}
+              aria-label={coreStatusTitle()}
+            >
               <span class="nf-host-dot" aria-hidden="true" />
-              <span>{studio.bridgeAvailable() ? t("host.local") : t("host.cloud")}</span>
-            </span>
+              <span>{coreStatus()}</span>
+            </A>
             <button class="wui-button wui-button--outline nf-command-trigger" type="button" onClick={() => setPaletteOpen(true)} aria-label={t("top.command")}>
               <StudioIcon name="command" class="nf-control-icon" />
               <span class="nf-command-label">{t("top.command")}</span><kbd>⌘K</kbd>
