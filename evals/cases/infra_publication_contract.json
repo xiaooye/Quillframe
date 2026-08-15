@@ -1,0 +1,15 @@
+{
+  "id": "INFRA-PUBLICATION-001",
+  "type": "contract",
+  "domain": "publication",
+  "judge": "deterministic",
+  "blocks_release": true,
+  "fixture": {},
+  "assertions": [
+    {"op": "file_exists", "file": "publication/compiler.py"},
+    {"op": "file_exists", "file": "publication/publication_ir.schema.json"},
+    {"op": "file_text_contains", "file": "publication/compiler.py", "value": "W3C EPUB 3.3"},
+    {"op": "file_text_contains", "file": "publication/compiler.py", "value": "external_epubcheck_required_for_release"},
+    {"op": "file_text_contains", "file": "release/build_framework_bundle.py", "value": "publication_runtime_included"}
+  ]
+}

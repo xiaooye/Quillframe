@@ -1,0 +1,19 @@
+{
+  "id": "REL-ASYMMETRY-001",
+  "type": "capability",
+  "domain": "relationship",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "accepted_event": "A kept the promise but never apologized.",
+    "character_A_perception": "The debt is settled.",
+    "character_B_perception": "The practical debt is settled; the betrayal is not.",
+    "reconciliation": "Preserve both perceptions and the unresolved emotional residue instead of averaging them into mutual trust."
+  },
+  "rubric": [
+    "Accept reconciliation that preserves evidence-backed asymmetric relationship perceptions and unresolved residue.",
+    "Reject vague averaging that erases obligations, betrayal, status or character-specific interpretation."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["REL-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept", "codes": ["REL-ASYMMETRY"]}
+}

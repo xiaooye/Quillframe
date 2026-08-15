@@ -1,0 +1,19 @@
+{
+  "id": "CHAR-EPISTEMIC-001",
+  "type": "regression",
+  "domain": "character",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "character_agenda": "Protect the family shop.",
+    "claim": {"id": "F-2", "epistemic_status": "contradicted", "acquisition_mode": "told_by", "text": "The collector has no legal leverage."},
+    "proposal": "Act with complete certainty that the collector cannot retaliate.",
+    "knowledge_basis": [{"evidence_id": "F-2", "use": "supports"}]
+  },
+  "rubric": [
+    "Reject a character action that positively relies on a claim explicitly marked contradicted or unknown.",
+    "Do not repair the scene by giving the character narrator/objective truth; preserve bounded perception and uncertainty."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["CHAR-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "reject", "codes": ["CHAR-EPISTEMIC"]}
+}
