@@ -62,7 +62,7 @@ export default function Desk() {
             </Show>
           </div>
         </article>
-        <article class="wui-card nf-card nf-card-sunken">
+        <article class="wui-card wui-card--filled nf-card">
           <div class="wui-card__header"><h2>{t("workspace.title")}</h2></div>
           <div class="wui-card__content">
             <p>{t("workspace.unavailableBody")}</p>
