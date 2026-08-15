@@ -12,7 +12,7 @@ NovelForge Studio is the product-experience layer around NovelForge Core. **Phas
 
 - [English](PRODUCT_ARCHITECTURE.en.md)
 - [简体中文](PRODUCT_ARCHITECTURE.zh-CN.md)
-- [`portable_product_contract.json`](portable_product_contract.json) — machine-readable Phase 2A delivery-surface contract.
+- [`portable_product_contract.json`](portable_product_contract.json) — machine-readable portable delivery-surface contract.
 
 The product architecture records both the Core interfaces Studio can consume and the unresolved Core consumer gaps Studio must not patch around locally.
 
@@ -45,4 +45,28 @@ Different hosts may have different capabilities and transports. Those difference
 
 The projection explicitly carries `authority=false`, `canon_authority=false`, `framework_write_authority=false`, and `settlement_authority=false`. It never infers current chapter, manuscript lifecycle, publication status, or quality status merely because a logical path exists.
 
-The agent-package direction is intentionally generic: future adapters should expose capability discovery, typed queries, typed commands, resume references, and typed receipts. Mutating operations remain deferred until Core provides the command, precondition, and authority semantics.
+## Phase 2B · Portable read-only host bridge
+
+Phase 2B makes the multi-host boundary executable without turning Studio into another runtime. [`host_bridge.py`](host_bridge.py) accepts a versioned `novelforge_studio_host_bridge_request_v1` envelope and returns a fingerprint-bound `novelforge_studio_host_bridge_result_v1`. [`host_bridge_contract.json`](host_bridge_contract.json) is the machine-readable allowlist shared by CLI, local-app, hosted-UI, and agent-package consumers.
+
+The currently supported read operations are deliberately small: `bridge.describe`, `framework.doctor`, `project.inspect`, `capabilities.inspect`, `context.inspect`, and `semantic.catalog`. Results default-deny host-private paths and carry `authority=false` plus explicit Canon, Framework-write, and Settlement non-authority markers.
+
+Several operations are intentionally **unsupported**, not emulated. Runtime session/event/handoff queries are deferred because the current Control Plane CLI initializes persistence before dispatching even nominal read commands. `run.receipt.get` remains deferred because Core does not yet provide a stable Run Receipt retrieval projection and its event discoverability is still inconsistent. Generic invoke/write and resume commands also remain deferred until Core defines the public command/precondition/CAS/idempotency/receipt contract. These dependencies are tracked in Core issue #23.
+
+### Agent Skill package
+
+[`../agent-skills/novelforge/SKILL.md`](../agent-skills/novelforge/SKILL.md) is the portable Agent Skills package. Its bundled [`novelforge_bridge.py`](../agent-skills/novelforge/scripts/novelforge_bridge.py) client only discovers and calls the shared Studio host bridge; it does not import private Core runtime modules or know the persistence layout.
+
+From the skill directory, discovery starts with:
+
+```bash
+python scripts/novelforge_bridge.py describe
+```
+
+Then invoke a request envelope with:
+
+```bash
+python scripts/novelforge_bridge.py invoke --request /path/to/request.json
+```
+
+A host must preserve `unsupported` and `unavailable` states rather than bypassing the bridge through SQLite, private imports, or a mutating Core primitive. Phase 2B remains read-only: **no acceptance, settlement, Canon mutation, billing, cloud-provider coupling, frontend choice, or desktop-wrapper choice is introduced here.**

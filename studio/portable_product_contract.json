@@ -42,25 +42,44 @@
       "host_must_understand_private_python_implementation": false
     }
   },
-  "agent_package_direction": {
-    "conceptual_operations": [
-      "inspect_capabilities",
-      "inspect_project",
-      "inspect_context",
-      "inspect_run",
-      "invoke",
-      "resume"
+  "phase_2b_host_bridge": {
+    "exposed": true,
+    "contract": "studio/host_bridge_contract.json",
+    "implementation": "studio/host_bridge.py",
+    "request_schema": "novelforge_studio_host_bridge_request_v1",
+    "result_schema": "novelforge_studio_host_bridge_result_v1",
+    "supported_operations": [
+      "bridge.describe",
+      "framework.doctor",
+      "project.inspect",
+      "capabilities.inspect",
+      "context.inspect",
+      "semantic.catalog"
     ],
-    "phase_2a_mutation_exposed": false,
-    "future_write_requirement": "typed Core command plus explicit preconditions and authority",
-    "package_metadata": [
-      "adapter_schema_version",
-      "compatible_novelforge_contract_versions",
-      "supported_operations",
-      "required_host_capabilities",
-      "authority_notes",
-      "typed_result_and_receipt_schemas"
-    ]
+    "deferred_operations": [
+      "runtime.sessions.list",
+      "runtime.session.get",
+      "runtime.events.list",
+      "runtime.handoff.inspect",
+      "run.receipt.get",
+      "session.resume",
+      "command.invoke",
+      "project.mutate"
+    ],
+    "core_dependency": "#23",
+    "mutation_exposed": false,
+    "direct_core_store_access": false,
+    "request_result_fingerprints": true,
+    "unsupported_operation_fails_closed": true
+  },
+  "agent_package_direction": {
+    "phase_2b_read_bridge_exposed": true,
+    "agent_skill_path": "agent-skills/novelforge/SKILL.md",
+    "client_script": "agent-skills/novelforge/scripts/novelforge_bridge.py",
+    "format": "Agent Skills open standard",
+    "private_runtime_imports_required": false,
+    "private_persistence_knowledge_required": false,
+    "future_write_requirement": "typed Core command plus explicit preconditions, authority, CAS/idempotency and receipts"
   },
   "project_hub_projection": {
     "source_schema": "novelforge_project_adapter_resolution_v1",
