@@ -348,7 +348,7 @@ def get_receipts(db_path: str | Path, *, receipt_id: str | None = None, run_id: 
 
 
 def self_test() -> dict[str, Any]:
-    from control_plane import ControlPlane, EVENT_SCHEMA, HANDOFF_SCHEMA, now_iso
+    from control_plane import ControlPlane, EVENT_SCHEMA, HANDOFF_SCHEMA as CONTROL_HANDOFF_SCHEMA, now_iso
     from run_receipt import fixture as receipt_fixture, record_receipt
 
     with tempfile.TemporaryDirectory(prefix="novelforge-runtime-query-") as temp:
@@ -402,7 +402,7 @@ def self_test() -> dict[str, Any]:
             "payload": {"private": "/private/event/payload"},
         })
         handoff = {
-            "schema": HANDOFF_SCHEMA,
+            "schema": CONTROL_HANDOFF_SCHEMA,
             "handoff_id": "HO-QUERY",
             "source_session_id": "SES-QUERY",
             "target_session_class": "semantic_reviewer",
@@ -436,14 +436,14 @@ def self_test() -> dict[str, Any]:
 
         serialized = canonical({"sessions": sessions, "session": session_view, "events": events, "handoff": handoff_view, "receipts": receipts})
         safe_projection = all(secret not in serialized for secret in ("PRIVATE-PROVIDER-ID", "/private/path", "/private/detail", "PRIVATE-WORKER", "/private/result", "/private/instructions"))
-        schemas_ok = (
-            sessions["schema"] == SESSIONS_SCHEMA
-            and session_view["schema"] == SESSION_SCHEMA
-            and events["schema"] == EVENTS_SCHEMA
-            and handoff_view["schema"] == HANDOFF_SCHEMA
-            and receipts["schema"] == RECEIPTS_SCHEMA
-            and receipts["count"] == 1
-        )
+        schema_checks = {
+            "sessions": sessions["schema"] == SESSIONS_SCHEMA,
+            "session": session_view["schema"] == SESSION_SCHEMA,
+            "events": events["schema"] == EVENTS_SCHEMA,
+            "handoff": handoff_view["schema"] == HANDOFF_SCHEMA,
+            "receipts": receipts["schema"] == RECEIPTS_SCHEMA,
+        }
+        schemas_ok = all(schema_checks.values()) and receipts["count"] == 1
         no_write_on_read = before == after
 
         missing_db = root / "missing" / "runtime.db"
@@ -457,6 +457,7 @@ def self_test() -> dict[str, Any]:
     return {
         "runtime_query_contract": "PASS" if ok else "FAIL",
         "schema": QUERY_SCHEMA,
+        "projection_schema_checks": schema_checks,
         "side_effect_free_missing_store": unavailable_ok,
         "read_does_not_modify_store": no_write_on_read,
         "safe_projection": safe_projection,
