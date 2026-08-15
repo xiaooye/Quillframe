@@ -101,7 +101,8 @@ check(app.includes('id="main-content"') && app.includes('aria-expanded={menuOpen
 for (const primitive of ["wui-app-bar", "wui-button", "wui-card", "wui-command", "wui-badge"]) {
   check(runtime.includes(primitive), `unified Product runtime must consume WeiUI primitive .${primitive}`);
 }
-check(runtime.includes("wui-input-group") || runtime.includes("wui-tabs"), "feature surfaces must retain WeiUI form/navigation primitives");
+check(inspector.includes("<input") || inspector.includes("<button"), "Project Inspector must retain accessible native controls");
+check(playground.includes("<textarea") && playground.includes("<button"), "Local Playground must retain accessible native form controls");
 
 check(packageJson.scripts?.content?.includes("sync-weiui.mjs") || packageJson.scripts?.content?.includes("foundation"), "content build must sync WeiUI foundation");
 check(packageJson.scripts?.build?.includes("npm run content"), "production build must compile Product Entry content first");
