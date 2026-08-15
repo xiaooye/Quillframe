@@ -13,6 +13,8 @@ const check = (condition, message) => { if (!condition) failures.push(message); 
 
 const main = read("src/main.tsx");
 const productIndex = read("src/styles/index.css");
+const productSurface = read("src/styles/product-surface.css");
+const editorial = read("src/styles/editorial-composition.css");
 const docsConfig = read("docs-site/astro.config.mjs");
 const docsAudit = read("docs-site/src/styles/surface-audit.css");
 const docsReadability = read("docs-site/src/styles/readability-audit.css");
@@ -20,8 +22,17 @@ const docsReadability = read("docs-site/src/styles/readability-audit.css");
 check(main.includes('import "./styles/index.css"'), "product site must load the single CSS entrypoint");
 check(!productIndex.includes("surface-audit.css"), "product site must not use a final audit override layer");
 check(!exists("src/styles/surface-audit.css"), "retired product surface-audit.css must stay deleted");
-check(productIndex.includes("kawaii-surfaces.css"), "product composition layer must remain explicit");
+check(productIndex.includes("kawaii-surfaces.css") && productIndex.includes("editorial-composition.css"), "product composition layers must remain explicit");
 check(productIndex.indexOf("architecture-explorer.css") < productIndex.indexOf("kawaii-surfaces.css"), "feature defaults must precede product-language composition");
+check(productIndex.indexOf("kawaii-surfaces.css") < productIndex.indexOf("editorial-composition.css"), "clean editorial composition must refine kawaii route defaults");
+check(productSurface.includes("border-bottom: 1px solid") && productSurface.includes("border-radius: 0") && productSurface.includes("background: transparent"), "shared ProductSurfaceHero must be borderless and neutral by default");
+check(productSurface.includes('.product-surface-hero[data-tone="project"]') && productSurface.includes('.product-surface-hero[data-tone="publication"]'), "hero tones must remain accents rather than separate framed surfaces");
+for (const marker of [".unified-card-grid", ".inspector-entry", ".playground-entry", ".agent-integration-entry", ".architecture-entry", ".publication-workbench-entry"]) {
+  check(editorial.includes(marker), `editorial product composition missing ${marker}`);
+}
+check(editorial.includes("Kawaii is identity, not container chrome"), "clean-kawaii design intent must remain explicit");
+check(editorial.includes("background: transparent") && editorial.includes("border-bottom: 1px solid"), "product hierarchy must remain typography/whitespace/hairline based");
+check(!editorial.includes("!important"), "editorial surface policy must not rely on specificity escalation");
 
 check(docsConfig.includes('"./src/styles/surface-audit.css"'), "Starlight must keep its docs-specific final surface audit");
 check(docsConfig.includes('"./src/styles/readability-audit.css"'), "Starlight must load the docs readability pass");
@@ -40,9 +51,12 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_surface_audit_quality_v3",
+    schema: "novelforge_surface_audit_quality_v4",
     status: "pass",
     product_final_override: false,
+    product_editorial_composition: true,
+    product_large_surface_cards: false,
+    kawaii_as_accent_not_container: true,
     docs_surface_audit: true,
     docs_readability_audit: true,
     tight_markdown_lists: true,
