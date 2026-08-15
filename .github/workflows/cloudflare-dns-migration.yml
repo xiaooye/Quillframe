@@ -105,6 +105,26 @@ jobs:
           current_dmarc=$(dig +short TXT "_dmarc.${MIGRATION_ZONE}" | sort || true)
           current_dkim=$(dig +short TXT "google._domainkey.${MIGRATION_ZONE}" | sort || true)
 
+          echo "=== CURRENT AUTHORITATIVE DNS ==="
+          echo "NS:"
+          printf '%s\n' "${current_ns:-<none>}"
+          echo "DS:"
+          printf '%s\n' "${current_ds:-<none>}"
+          echo "MX:"
+          printf '%s\n' "${current_mx:-<none>}"
+          echo "APEX TXT:"
+          printf '%s\n' "${current_txt:-<none>}"
+          echo "CAA:"
+          printf '%s\n' "${current_caa:-<none>}"
+          echo "_dmarc TXT:"
+          printf '%s\n' "${current_dmarc:-<none>}"
+          echo "google._domainkey TXT:"
+          printf '%s\n' "${current_dkim:-<none>}"
+          echo "CLOUDFLARE ASSIGNED NS:"
+          printf '%s\n%s\n' "${CF_NS1}" "${CF_NS2}"
+          echo "=== CLOUDFLARE SCAN CANDIDATES ==="
+          jq -r '.result[] | [.type, .name, (.priority // "-"), .ttl, .content] | @tsv' /tmp/scan-review.json | sort
+
           {
             echo "### wei-dev.com → Cloudflare DNS migration preflight"
             echo ""
@@ -152,8 +172,6 @@ jobs:
             jq -r '.result[] | [.type, .name, (.priority // "-"), .ttl, .content] | @tsv' /tmp/scan-review.json | sort
             echo '```'
           } >> "${GITHUB_STEP_SUMMARY}"
-
-          jq -r '.result[] | [.type, .name, (.priority // "-"), .ttl, .content] | @tsv' /tmp/scan-review.json | sort
 
       - name: Guardrail
         shell: bash
