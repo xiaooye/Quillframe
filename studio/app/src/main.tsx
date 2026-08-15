@@ -14,10 +14,12 @@ import "./styles/atelier-workbench.css";
 import "./styles/visual-fixes.css";
 import "./styles/product-surfaces.css";
 import "./styles/onboarding.css";
+import "./styles/integrations.css";
 
 const Desk = lazy(() => import("./routes/Desk"));
 const Project = lazy(() => import("./routes/Project"));
 const Workspace = lazy(() => import("./routes/Workspace"));
+const Agents = lazy(() => import("./routes/Agents"));
 const ContextRoute = lazy(() => import("./routes/Context"));
 const Capabilities = lazy(() => import("./routes/Capabilities"));
 const Semantic = lazy(() => import("./routes/Semantic"));
@@ -36,6 +38,7 @@ render(
           <Route path="/" component={Desk} />
           <Route path="/project" component={Project} />
           <Route path="/workspace" component={Workspace} />
+          <Route path="/agents" component={Agents} />
           <Route path="/context" component={ContextRoute} />
           <Route path="/capabilities" component={Capabilities} />
           <Route path="/semantic" component={Semantic} />
