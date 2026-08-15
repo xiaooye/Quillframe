@@ -2,284 +2,250 @@
   <img src="brand/novelforge-lockup.svg" alt="NovelForge 自适应小说智能体框架" width="620" />
 </div>
 
-# NovelForge 文档设计系统
+# NovelForge Story Loom 设计系统
 
-> **品牌概念：Story Loom / 故事织机。**
+> **一套视觉语言，同时服务文档与产品 UI。**
 >
-> NovelForge 的视觉目标不是“把普通技术文档染成粉色”，而是让 **项目 → 运行时 → 故事 → 读者体验 → 证据 → 已验证结果** 像一根持续编织、校验、回接的故事线。专业技术感构成骨架，二次元编辑感负责识别度与温度。🌸
+> Story Loom 把 **项目 → 运行时 → 故事 → 读者体验 → 证据 → 已验证结果** 看成一根持续编织、校验、回接的故事线。专业技术感负责骨架，二次元编辑感负责识别度与温度。🌸
 
 **视觉配比：** `70% 专业技术 / 30% 二次元编辑感`。
 
-本文件定义视觉语言；[`../docs/DOCUMENTATION_QA.zh-CN.md`](../docs/DOCUMENTATION_QA.zh-CN.md) 定义强制审查流程。**SVG 能正常解析，不等于视觉已经合格。**
+本文解释面向人的设计契约。机器权威分别位于 [`brand/tokens.json`](brand/tokens.json)、[`brand/weiui.integration.json`](brand/weiui.integration.json)、[`brand/story-loom.weiui.css`](brand/story-loom.weiui.css) 与 [`../scripts/design_system_quality.py`](../scripts/design_system_quality.py)。文档的真实渲染与审查要求继续由 [`../docs/DOCUMENTATION_QA.zh-CN.md`](../docs/DOCUMENTATION_QA.zh-CN.md) 负责。
+
+> **权威边界 ✦** Story Loom 可以表达产品 domain、authority label、execution status、provenance、focus、hierarchy 与 interaction state，但它永远不会创造 Canon、semantic truth、production readiness 或 workflow authority。
 
 ---
 
-## 1 · 品牌气质 ✦
+## 01 · 品牌气质 ✦
 
 NovelForge 应同时具备四种气质：
 
 | 气质 | 设计含义 |
 |---|---|
-| **精确** | 层级、间距、图表语义必须严谨一致 |
-| **编辑感** | 像小说编辑与生产工作台，而不是通用运维面板 |
-| **温度** | 樱花粉、薰衣草紫、柔和底色带来人味与二次元气质 |
-| **工程化** | 设计令牌、资产来源、图表规则和使用边界都可检查、可维护 |
+| **精确** | 层级、间距、交互状态和图表语义严谨一致 |
+| **编辑感** | 像小说编辑与生产工作台，而不是通用 DevOps dashboard |
+| **温度** | 樱花粉、薰衣草紫、纸张感 surface 带来人味与二次元气质 |
+| **工程化** | token、dependency pin、provenance、accessibility rule 与 QA 都可检查 |
 
-首页和总览页可以自然使用 `🌸 ✦ ✨ 📖`；契约、Schema、命令行和机器接口文档应保持克制。
+首页和总览页可以自然使用 `🌸 ✦ ✨ 📖`；契约、Schema、命令面与 machine inspector 应保持克制。
 
----
-
-## 2 · 标志系统 · Story Loom
-
-### 主标志
+### 标志系统
 
 <img src="brand/novelforge-mark.svg" alt="NovelForge Story Loom 主标志" width="120" />
 
-标志包含三个概念：
-
-1. **两片书页**：小说、稿件与正典；
-2. **编织成 N 的故事线**：项目、运行时、故事和证据保持可追踪；
-3. **锻造火花**：强调验证、修订与反复打磨，而不是一次性生成。
-
-### 横向组合标志
-
-<img src="brand/novelforge-lockup.svg" alt="NovelForge 横向组合标志" width="560" />
-
-使用规则：
-- README、架构总览等高曝光页面优先使用横向组合标志；
-- 页脚、头像、徽记等小尺寸场景使用主标志；
-- 不旋转、不发光、不随意改色；
-- 不把品牌标志当作架构节点、状态图标或结果标识；
-- 文字标识使用系统字体回退，图形本体为纯矢量几何，不依赖外部字体文件。
+主标志结合书页、编织成 N 的 story thread 与 forge spark。高曝光入口优先使用 lockup，小尺寸位置使用 mark。不要旋转、发光、随意改色，也不要把 logo 当成 architecture/status icon。只使用系统字体回退，不提交外部字体文件。
 
 ---
 
-## 3 · 设计令牌唯一来源
+## 02 · Product Token 权威 · Story Loom v2
 
-机器可读唯一来源：[`brand/tokens.json`](brand/tokens.json)。
+机器源：[`brand/tokens.json`](brand/tokens.json)，schema 为 **`novelforge_brand_tokens_v2`**。
 
-Markdown 与 Mermaid 无法直接导入 JSON，因此文档中的颜色值只是 `tokens.json` 的镜像。修改视觉体系时，先更新令牌源，再同步人类文档与图表样式。
+当前 token contract 同时覆盖文档语义与 application constraints，是 NovelForge 侧以下内容的 source of truth：
 
-| 语义令牌 | 填充色 | 描边色 | 含义 |
-|---|---|---|---|
-| `project` | `#DDEFF8` | `#4F8FBA` | 项目、上下文、项目 SDK |
-| `runtime` | `#E7E1F8` | `#796BC4` | 调度、会话、控制平面、执行器 |
-| `editorial` | `#F9DDE9` | `#D6679A` | 写作、读者体验、质量审查 |
-| `evidence` | `#F9EDCF` | `#BE892F` | 用户反馈、语料、证据、评测 |
-| `validated` | `#DCF1E7` | `#4D9B7D` | 已验证、已通过门槛、可展示结果 |
-| `rejected` | `#F7DEE2` | `#B95767` | 拒绝、无效状态、门槛失败 |
-| `neutral` | `#FFFDFC` | `#62556D` | 中性的故事核心与通用机制 |
+- Story Loom domain families：Project、Runtime、Editorial、Evidence、Validated、Rejected、Neutral；
+- application light/dark theme roles；
+- typography 与 density roles；
+- focus geometry 与 minimum touch target；
+- mobile-first responsive behavior；
+- `en-US` + `zh-CN` i18n constraints；
+- reduced-motion behavior；
+- no default polling、no idle decorative animation、no heavy default import 等 runtime-overhead rules。
 
-基础墨色：`#241D2B`；柔和底色：`#F8F5FA`；分区边框：`#E2DAE8`。
+### Token 纪律
 
-### 令牌纪律
-
-- 柔和色只用于填充和强调，不用于低对比度正文；
-- 状态不能只靠颜色表达，还必须配合文字、形状、边框或线型；
-- “通过 / 失败”不能只靠红绿二元配色区分；
-- 间距采用 4 / 8 的统一节奏；
-- 节点描边默认约 `1.75px`，主路径约 `2px`，反馈与引用路径使用虚线。
+- 柔和色只用于 fill/accent，不做低对比度正文。
+- 颜色永远不能单独承载 PASS/FAIL 或 authority。
+- Generic `success` styling **不等于** Accepted Canon、production-ready 或有效 publication output。
+- Authority、execution state、provenance 与 domain color 必须保持正交。
+- Localized UI 中，精确 machine identifier 不翻译。
+- 间距默认遵循 4/8 rhythm，除非 machine product token 明确覆盖。
 
 ---
 
-## 4 · Markdown 页面样式
+## 03 · WeiUI 集成边界 · 已合并
 
-GitHub Markdown 不能依赖任意 CSS，因此 NovelForge 页面风格必须建立在 GitHub 原生、可移植的组合方式上：
+WeiUI 是 generic **zero-JavaScript token/CSS foundation**，不是 NovelForge product authority，也不是 Phase 2C application runtime。
 
-1. 主要入口页顶部使用品牌组合标志；
-2. `<kbd>` 标签只表达稳定概念；
-3. 故事线 SVG 用于大区块之间的品牌化留白；
+机器契约：[`brand/weiui.integration.json`](brand/weiui.integration.json)。
+
+当前 dependency truth：
+
+```text
+Story Loom v2 product tokens
+→ exact-pinned xiaooye/weiui
+→ @weiui/tokens + @weiui/css
+→ story-loom.weiui.css (`wui-theme`)
+→ SolidJS product surfaces
+→ Local Web / optional Tauri host
+```
+
+Integration contract 将 WeiUI 精确固定到 commit `d84d1cd365fb5f90cbbab794d2358f7a13b29b79`，并要求：
+
+- allowed packages：`@weiui/tokens`、`@weiui/css`；
+- prohibited Phase 2C runtime packages：`@weiui/react`、`@weiui/headless`；
+- `runtime_javascript_from_weiui=false`；
+- import order：WeiUI tokens → WeiUI CSS → Story Loom theme；
+- Story Loom 只通过 `@layer wui-theme` 覆盖；
+- 不 fork `.wui-*` component selector；
+- 不用 `!important` 逃逸 cascade。
+
+[`brand/story-loom.weiui.css`](brand/story-loom.weiui.css) 把产品 roles 映射到 `--wui-*` variables，同时把 NovelForge 专属语义保留在 `--nf-*` variables。WeiUI 升级可以改变通用实现细节，但不能静默重定义 NovelForge 概念。
+
+---
+
+## 04 · Application Visual / Runtime Contract
+
+Phase 2C product code 已确定为 **SolidJS + TypeScript + Vite + `@solidjs/router`**。Local Web 是一等产品面；Tauri 是同一产品之上的 optional installable host。
+
+设计系统刻意把职责分开：
+
+- **Story Loom** 拥有产品语义与视觉含义；
+- **WeiUI** 拥有 generic reusable CSS/token primitives；
+- **SolidJS** 拥有 application behavior 与 reactive UI composition；
+- **Studio adapters / Core** 拥有 typed product data 与 commands；
+- **Tauri** 可以承载 installable build，但不会获得 story/runtime authority。
+
+### 已由机器强制执行的 app invariants
+
+[`../scripts/design_system_quality.py`](../scripts/design_system_quality.py) 至少检查：
+
+- exact WeiUI pin 与 provenance；
+- SolidJS/TypeScript/Vite product-stack contract；
+- zero WeiUI runtime JS；
+- minimum touch target `44px`；
+- focus ring `3px` + `2px` offset；
+- mobile-first breakpoints 与 phone `focus-first` workspace；
+- baseline locales 精确为 `en-US`、`zh-CN`；
+- logical properties required，fixed-width locale assumptions forbidden；
+- reduced motion required；
+- idle decorative animation forbidden；
+- default polling forbidden；
+- heavy default component import forbidden；
+- required light/dark contrast ≥ 4.5:1；
+- required theme variables/layers，且无 forbidden selector fork。
+
+通过 deterministic design-system QA **不等于**真实 CPU/RAM 性能或视觉可用性已经证明。Phase 2C 仍需要真实 responsive、accessibility、localization、bundle/chunk、idle CPU/RAM、first-interaction 与 host-process measurement。
+
+---
+
+## 05 · Responsive、i18n、Accessibility、Motion
+
+Mobile 是一等产品约束，不是最后再把 desktop 缩小。
+
+- **Phone：** manuscript/workspace 采用 focus-first；Inspector 变成 route/overlay。
+- **Tablet：** 可以使用更丰富 split surface，但空间不足时 Inspector 仍是 overlay-or-route。
+- **Desktop：** 空间允许时才保持 persistent Inspector。
+- **Touch：** interactive target 满足 machine token 的 minimum size。
+- **i18n：** layout 必须承受中英文扩张；优先 logical CSS properties；禁止假设英文宽度。
+- **Accessibility：** focus 可见、contrast 可测、颜色不是唯一语义通道、screen-reader name 明确。
+- **Motion：** reduced-motion 必须支持；不能为了让产品“显得活着”而保留 idle decorative animation。
+
+Story Loom 可以有温度，但不需要一直动。
+
+---
+
+## 06 · Markdown 与文档页面样式
+
+GitHub Markdown 无法依赖 arbitrary product CSS，因此文档继续使用可移植 Story Loom primitives：
+
+1. 主要入口页使用品牌 lockup；
+2. `<kbd>` chips 只表达稳定概念；
+3. story-thread divider 用于大区块留白；
 4. 展示型页面使用 `01 · 系统总览` 这样的编号 H2；
-5. 使用“边界 ✦”“关键点”“为什么重要”等语义提示；
-6. 只有真正需要表格检索时才使用紧凑矩阵；
-7. Mermaid 作为可维护的源图；
-8. 小尺寸品牌标志收束页面。
+5. 使用“边界 ✦”“为什么重要”等 semantic callout；
+6. 只有真正适合 lookup 时才使用 compact matrix；
+7. Mermaid 继续作为可检查 source diagram；
+8. 小型 mark/footer 只在确实改善节奏时使用。
 
-不要在每个章节重复 Hero。品牌感来自稳定的节奏与一致性，不来自不断增加装饰。
+品牌感来自层级与一致性，不来自反复 Hero 或装饰密度。
 
 ---
 
-## 5 · 字体与信息层级
-
-GitHub 决定最终字体，因此专业感主要来自层级与尺寸，而不是提交自定义字体文件。
+## 07 · 字体与信息层级
 
 - 每页只保留一个 H1；
-- 展示型页面用编号 H2 建立阅读节奏；
-- H3 承担局部细节；
-- 长章节前可以先放一句粗体导语；
-- 正文段落保持短而可扫描；
-- 等宽字体只用于 ID、Schema、路径、命令和状态机；
-- 表格单元格不塞大段文章；
-- 装饰性 Unicode 与 emoji 不能替代正式标签；
-- **绝不能用“把字号缩小到看不清”来解决溢出。**
+- manuscript、UI 与 metadata/mono roles 保持区分；
+- heading 在装饰之前先建立 scan order；
+- 正文段落短而可读；
+- monospace 只用于 ID、schema、path、command、fingerprint 与 state machine；
+- table 不承载 essay-length prose；
+- decorative Unicode / emoji 不替代正式 label；
+- 绝不靠缩小字号到不可读来修 overflow；
+- locale expansion 需要时，中英文可以使用不同自然几何。
+
+仓库不会把 font file 作为文档资产分发。
 
 ---
 
-## 6 · Mermaid · Story Loom 图表语法
+## 08 · Mermaid · Story Loom Grammar
 
-Mermaid 是**可检查、可差异比较、可维护的源图**。静态品牌图可以承担展示，但 Mermaid 仍然是技术参照层。
+Mermaid 继续作为技术文档中可检查的 source chart。
 
-### 分区语法
+### Lane grammar
 
-- **项目区 · 天空蓝**：项目输入、项目 SDK、上下文；
-- **调度运行区 · 薰衣草紫**：调度管理器、会话、控制平面、执行器；
-- **故事生产区 · 中性墨色 + 樱花粉**：故事核心、模拟、草稿、读者质量；
-- **证据学习区 · 琥珀色**：反馈、偏好学习、语料、评测；
-- **已验证门槛 · 薄荷绿**：用户可见、已通过、可接受结果；
-- **拒绝状态 · 危险色**：只用于真实拒绝、无效或门槛失败。
+- **Project · 天空蓝**：输入、Project SDK、Context；
+- **Runtime · 薰衣草紫**：Harness、Session、Control Plane、workers；
+- **Story / Editorial · 中性 + 樱花粉**：Story core、simulation、draft、reader quality；
+- **Evidence · 琥珀色**：feedback、Corpus、learning、eval；
+- **Validated · 薄荷绿**：已验证结果，但不隐含 Canon；
+- **Reject · danger**：只用于真实 reject/invalid/failed gate。
 
-### 形状语法
+### Shape / edge grammar
 
-- `([体育场形])`：边界、输入、输出；
-- `{{六边形}}`：调度中心、决策点、语义门槛；
-- `[(数据库形)]`：持久状态；
-- `[[子程序形]]`：可复用核心机制；
-- 普通圆角节点：一般处理步骤。
+- stadium：boundary/input/output；
+- hexagon：decision/manager/semantic gate；
+- database：durable state/runtime store；
+- subroutine：reusable core mechanism；
+- rounded node：普通处理步骤；
+- solid edge：主执行/依赖；
+- dashed edge：feedback/evidence/resume/reference。
 
-### 连线语法
-
-- 实线：主执行路径或依赖；
-- 虚线：反馈、证据、恢复、引用；
-- 一张图只回答一个核心问题；
-- 默认避免交叉连线；
-- 复杂说明放在图下正文，不塞进节点名称。
+一张图只回答一个核心问题。复杂 nuance 放在附近正文，不塞进超长 node label。
 
 ---
 
-## 7 · 二次元编辑感预算 🌸
+## 09 · Tier-A 静态视觉硬契约
 
-可以：
-- 樱花粉、薰衣草紫、薄荷绿等柔和强调色；
-- 火花、花瓣、书本、故事线等小型视觉母题；
-- 首页标题偶尔使用 `🌸 ✦ ✨ 📖`；
-- 圆润但克制的 SVG 几何；
-- 少量友好微文案；
-- 未来加入原创框架吉祥物或编辑角色，但必须明确只承担装饰作用。
-
-不要：
-- 用 emoji 作为架构、状态或导航的唯一图标；
-- 在技术契约里塞吉祥物；
-- 使用糖果色正文；
-- 满屏发光和渐变；
-- 在同一页面混用互相冲突的视觉风格；
-- 把正文里没有的权威信息只放进视觉资产。
-
----
-
-## 8 · Tier-A 静态视觉硬契约
-
-首页 / 产品级 Tier-A 视觉必须遵循：
+首页 / 产品级 SVG 是 maintained semantics 上的 presentation layer：
 
 ```text
 主张与文案冻结
 → 信息架构
 → Story Loom 布局
-→ SVG 源文件
-→ 真实渲染检查
-→ 确定性 lint
-→ README 集成
+→ SVG source
+→ 真实 render inspection
+→ deterministic lint
+→ integration
 ```
 
-### 尺寸硬规则
+硬要求：
 
-标准首页视觉默认：
+- 默认以 `1200px` 级 viewBox 设计，除非有充分理由；
+- 必须检查约 **820px** GitHub 内容宽度和 **420px** narrow width；
+- 820px 下正文投影字号至少 **12px**；
+- checker 可测量的长文本需要明确 width budget；
+- 不允许 clipping、overflow、collision 或靠 tiny text “修复”；
+- English / Chinese 必须母语化撰写和独立排版；
+- root `data-doc-tier="A"`、非空 `<title>` / `<desc>`、system-font fallbacks only；
+- meaningful image 有 alt text；SVG 失效时附近 prose 仍能保留核心语义。
 
-- 原始 viewBox 以 `1200px` 级别为基准，除非构图确实需要其他尺寸；
-- 必须检查约 **820px GitHub 内容宽度**下的实际效果；
-- 还必须检查约 **420px** 的窄屏效果；
-- 在 820px 渲染下，正文投影字号**不得低于 12px**；
-- 标题缩放后仍必须保持明显层级；
-- 可测量的长文本应声明 `data-max-width` 等宽度预算；
-- 换行、裁切和对齐属于布局问题，不能靠把字号缩小到不可读来“修好”。
-
-### 文案规则
-
-- 先冻结主张与信息层级，再开始画框；
-- 中英文必须分别按母语重写和排版，不能直接拿英文坐标硬塞中文；
-- 优先删短文案，再考虑调整几何，最后才是微调字号；
-- 图中标签只命名机制、状态或决策，不写小作文；
-- 复杂说明放在图旁正文或 deep doc。
-
-### 布局规则
-
-- 任何文字都不能离开预期容器；
-- 重要标签不能与边、图标、badge 或其他文本发生碰撞；
-- 高密度矩阵必须有清晰行列节奏和扫读路径，不能退化成 card soup；
-- 留白是层级的一部分，不能为了塞更多 claim 被全部吃掉；
-- 窄屏可以更紧凑，但仍必须可读、顺序明确。
-
-### 资产元数据
-
-新的或重大重设计的 Tier-A SVG 应包含：
-
-- 根节点 `data-doc-tier="A"`；
-- 非空 `<title>` 与 `<desc>`；
-- 只使用系统字体回退；
-- 不嵌入、不外链字体文件；
-- Markdown 集成位置必须有 alt text；
-- 按仓库策略保留来源记录。
+接入前运行 `python scripts/docs_quality.py` 并真实查看 render。**生成出来不等于审过；XML 合法不等于视觉正确。**
 
 ---
 
-## 9 · 真实 Render QA 是强制步骤
+## 10 · 完成标准
 
-**生成出来不等于审过；XML 合法不等于视觉正确。**
+一个 Story Loom 文档或产品 surface 只有同时满足以下条件才算完成：
 
-新的或重大修改的 Tier-A 视觉进入 README 前必须：
+- 去掉装饰后，信息层级仍然成立；
+- domain、authority、execution state 与 provenance 没被压成同一种颜色；
+- 中英文表达相同主张，但各自自然；
+- phone/narrow behavior 是主动设计，不是偶然结果；
+- keyboard/focus/contrast/reduced-motion behavior 可信；
+- 产品使用 exact-pinned WeiUI boundary，而不是维护平行手写 palette；
+- deterministic docs/design-system QA 为绿；
+- 已经做过真实 render；application 工作还要有真实 runtime measurements；
+- presentation code 从不成为 Core 或 story truth 的第二权威。
 
-1. 用真实渲染器渲染 SVG；
-2. 检查桌面 / GitHub 类宽度；
-3. 再检查窄屏宽度；
-4. 检查溢出、裁切、换行、层级、密度、对齐和品牌一致性；
-5. 渲染后逐条读一遍所有可见文案，而不是只看源码；
-6. 做双语等价审查，同时允许两种语言使用不同的自然布局；
-7. 运行 `python scripts/docs_quality.py`；
-8. 全部通过以后才能接入 README。
-
-如果当前环境无法做真实渲染检查，这张图仍然是 **WIP**，不能替换生产中的 Tier-A 视觉。
-
-### 原子替换原则
-
-重设计视觉时，不应主动把生产首页降级成无视觉或明显更差的临时状态。
-
-推荐流程：
-
-```text
-旧视觉继续在线
-→ 新候选通过 render + 文案 + lint
-→ 同一次集成提交完成替换
-```
-
-只有旧视觉本身已经误导或破损时，才可以为了正确性先撤掉；这属于例外，不是默认工作流。
-
----
-
-## 10 · 可访问性与降级能力
-
-- 有意义的图片必须提供替代文本；
-- 纯装饰分隔符使用空替代文本；
-- 图表附近必须有文字解释；
-- 即使 SVG 加载失败，核心信息仍然可理解；
-- 颜色和 emoji 都不能成为唯一语义通道；
-- 不依赖外部字体文件；
-- 优先使用轻量 SVG；
-- 标志与图表在 GitHub 明暗界面的周边环境中都应保持清晰边界。
-
----
-
-## 11 · 完成标准
-
-一页 NovelForge 文档或一张 Tier-A 视觉只有同时满足以下条件才算完成：
-
-- 不细读正文也能迅速扫出层级；
-- 文案正确性先于装饰；
-- 去掉装饰后仍然是严谨工程文档；
-- 加回品牌层后，一眼能认出这是 NovelForge；
-- GitHub 实际渲染宽度下字体仍然清晰；
-- 没有裁切、出框、碰撞或小到不可读的文字；
-- 中英文表达同一组主张，但各自读起来自然；
-- 已经真实看过 render；
-- 确定性文档 QA 为绿；
-- 视觉资产没有变成架构或产品主张的第二权威来源。
-
-**Story Loom 成功的标准，是系统看起来足够工程化，页面又足够有编辑感，而且两者都没有牺牲对方。✦**
+**Story Loom 成功的标准，是 NovelForge 足够工程化、足够有编辑感、足够有辨识度，而且在不牺牲语义诚实的前提下尽可能轻。✦**
