@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novelforge_author_steering_contract_v1",
+  "title": "NovelForge Author Steering Contract",
+  "oneOf": [
+    {"$ref": "#/$defs/requestPayload"},
+    {"$ref": "#/$defs/safePoint"},
+    {"$ref": "#/$defs/decision"},
+    {"$ref": "#/$defs/receipt"}
+  ],
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nonempty": {"type": "string", "minLength": 1},
+    "requestPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "kind", "instruction", "applicability", "authored_against_checkpoint_id", "authority", "canon_authority", "framework_write_authority"],
+      "properties": {
+        "schema": {"const": "novelforge_author_steering_request_v1"},
+        "kind": {"const": "author_steering"},
+        "instruction": {"type": "string", "minLength": 1, "maxLength": 10000},
+        "applicability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scope", "target_ref", "consume_at"],
+          "properties": {
+            "scope": {"enum": ["current_run", "future_runs", "named_target"]},
+            "target_ref": {"type": ["string", "null"]},
+            "consume_at": {"enum": ["next_safe_point", "before_draft", "before_review", "before_user_visible_gate"]}
+          }
+        },
+        "authored_against_checkpoint_id": {"$ref": "#/$defs/nonempty"},
+        "authority": {"const": false},
+        "canon_authority": {"const": false},
+        "framework_write_authority": {"const": false}
+      }
+    },
+    "safePoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "resource_id", "session_id", "run_id", "run_lineage", "checkpoint_id", "safe_point_id", "safe_point_kind", "workflow_cursor", "artifact_fingerprints", "pending_handoff_ids", "consequential_write_state"],
+      "properties": {
+        "schema": {"const": "novelforge_author_steering_safe_point_v1"},
+        "resource_id": {"$ref": "#/$defs/nonempty"},
+        "session_id": {"$ref": "#/$defs/nonempty"},
+        "run_id": {"$ref": "#/$defs/nonempty"},
+        "run_lineage": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/nonempty"}},
+        "checkpoint_id": {"$ref": "#/$defs/nonempty"},
+        "safe_point_id": {"$ref": "#/$defs/nonempty"},
+        "safe_point_kind": {"enum": ["workflow_boundary", "before_external_dispatch", "after_external_result", "before_consequential_write", "after_consequential_write", "before_user_visible_gate"]},
+        "workflow_cursor": {"$ref": "#/$defs/nonempty"},
+        "artifact_fingerprints": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/sha"}},
+        "pending_handoff_ids": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/nonempty"}},
+        "consequential_write_state": {"enum": ["none", "preflight", "in_progress", "complete"]}
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "decision_input_fingerprint", "route", "binding_acknowledgement", "invalidate_artifact_fingerprints", "cancel_handoff_ids", "deferred_target_ref", "reason_ref", "authority", "canon_authority", "framework_write_authority", "model_execution"],
+      "properties": {
+        "schema": {"const": "novelforge_author_steering_decision_v1"},
+        "decision_input_fingerprint": {"$ref": "#/$defs/sha"},
+        "route": {"enum": ["continue", "rebuild_context", "replan", "regenerate", "cancel_handoff", "await_user", "defer_future"]},
+        "binding_acknowledgement": {"enum": ["exact", "reinterpreted_against_current_state", "await_user", "defer_future"]},
+        "invalidate_artifact_fingerprints": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/sha"}},
+        "cancel_handoff_ids": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/nonempty"}},
+        "deferred_target_ref": {"type": ["string", "null"]},
+        "reason_ref": {"$ref": "#/$defs/nonempty"},
+        "authority": {"const": false},
+        "canon_authority": {"const": false},
+        "framework_write_authority": {"const": false},
+        "model_execution": {"const": false}
+      }
+    },
+    "receipt": {
+      "type": "object",
+      "required": ["schema", "event_id", "event_hash", "decision_input_fingerprint", "decision_fingerprint", "route", "binding_state", "consumed", "already_consumed", "consumption_key", "required_followup_operations", "followup_execution_performed", "authority", "canon_authority", "project_write_authority", "framework_write_authority", "settlement_authority", "model_execution"],
+      "properties": {
+        "schema": {"const": "novelforge_author_steering_receipt_v1"},
+        "event_id": {"$ref": "#/$defs/nonempty"},
+        "event_hash": {"$ref": "#/$defs/sha"},
+        "decision_input_fingerprint": {"$ref": "#/$defs/sha"},
+        "decision_fingerprint": {"$ref": "#/$defs/sha"},
+        "route": {"enum": ["continue", "rebuild_context", "replan", "regenerate", "cancel_handoff", "await_user", "defer_future"]},
+        "binding_state": {"enum": ["exact", "resumed_lineage", "drifted"]},
+        "consumed": {"type": "boolean"},
+        "already_consumed": {"type": "boolean"},
+        "consumption_key": {"$ref": "#/$defs/nonempty"},
+        "required_followup_operations": {"type": "array", "items": {"type": "object"}},
+        "followup_execution_performed": {"const": false},
+        "authority": {"const": false},
+        "canon_authority": {"const": false},
+        "project_write_authority": {"const": false},
+        "framework_write_authority": {"const": false},
+        "settlement_authority": {"const": false},
+        "model_execution": {"const": false}
+      }
+    }
+  }
+}
