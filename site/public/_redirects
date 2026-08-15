@@ -1,4 +1,4 @@
-# Canonical Starlight roots. Cloudflare Pages must enter the docs app rather
-# than leave the product SPA sitting on a directory URL without its index.
+# Canonical Starlight roots. Product routes are served by the Godot Web host;
+# documentation remains a separate semantic HTML application under /docs/**.
 /docs /docs/ 301
 /docs/en /docs/en/ 301
