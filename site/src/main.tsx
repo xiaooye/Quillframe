@@ -17,6 +17,7 @@ import "./styles/local-playground.css";
 import "./styles/architecture-explorer.css";
 import "./styles/publication-workbench.css";
 import "./styles/agent-integration.css";
+import "./styles/agent-host-profiles.css";
 
 // The launcher emits a synthetic Ctrl+K event on document. Real keyboard events
 // already bubble to window; only bridge the synthetic event into the AppShell
