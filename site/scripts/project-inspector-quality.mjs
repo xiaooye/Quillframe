@@ -37,7 +37,10 @@ for (const marker of [
 requireCheck(inspector.includes("file.text()"), "Project Inspector must parse selected files locally with the browser File API");
 requireCheck(!/\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon|WebSocket\s*\(/.test(inspector), "Project Inspector must not upload or transmit selected project content");
 requireCheck(!/FormData\s*\(/.test(inspector), "Project Inspector must not prepare selected project content for upload");
-requireCheck(inspector.includes('status: "coherent" | "scaffold" | "incomplete" | "conflict"'), "Project Inspector must distinguish coherent, scaffold, incomplete, and conflicting states");
+requireCheck(
+  inspector.includes('type InspectionStatus = "coherent" | "scaffold" | "incomplete" | "conflict"'),
+  "Project Inspector must distinguish coherent, scaffold, incomplete, and conflicting states",
+);
 requireCheck(inspector.includes("Mapped adapters may intentionally use a different physical layout"), "structural inspection must not treat the standard folder layout as universal semantic authority");
 requireCheck(entry.includes("ProjectInspector locale={locale()}"), "standalone inspector entry must preserve bilingual product rendering");
 requireCheck(entry.includes("Your project content stays in your browser"), "inspector shell must expose the local-only privacy boundary");
