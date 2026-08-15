@@ -14,9 +14,11 @@ const project = read("godot/project.godot");
 const preset = read("godot/export_presets.cfg");
 const scene = read("godot/Main.tscn");
 const main = read("godot/scripts/main.gd");
+const browserRouteBridge = read("godot/scripts/browser_route_bridge.gd");
 const systemMap = read("godot/scripts/system_map.gd");
 const shell = read("godot/web/novelforge.html");
 const buildScript = read("scripts/build-godot-web.sh");
+const assetVerifier = read("scripts/verify-cloudflare-assets.sh");
 const browserProof = read("scripts/godot-browser-proof.mjs");
 
 check(project.includes('run/main_scene="res://Main.tscn"'), "Godot runtime must boot Main.tscn");
@@ -29,6 +31,7 @@ check(preset.includes('html/canvas_resize_policy=2'), "Web canvas must use the a
 check(preset.includes('variant/thread_support=false'), "Web export must stay single-threaded unless hosting headers are deliberately changed");
 check(preset.includes('html/custom_html_shell="res://web/novelforge.html"'), "Web export must use the branded NovelForge HTML shell");
 check(scene.includes('type="Control"'), "root scene must remain a 2D Control surface");
+check(scene.includes('path="res://scripts/browser_route_bridge.gd"'), "root scene must install the browser history bridge before parent readiness");
 
 for (const [name, source] of [["Main.tscn", scene], ["main.gd", main], ["system_map.gd", systemMap]]) {
   check(!/\b(Node3D|Camera3D|MeshInstance3D|CSGShape3D|PhysicsBody3D|WorldEnvironment)\b/.test(source), `${name} must not introduce 3D runtime nodes`);
@@ -39,15 +42,20 @@ for (const route of ["/studio", "/architecture", "/publication", "/inspect", "/p
 }
 
 check(main.includes("window.history.pushState"), "Godot navigation must synchronize browser history");
-check(main.includes("window.addEventListener('popstate'"), "browser back/forward must remain bound to product routing");
-check(main.includes("window.location.reload()"), "popstate must rehydrate the current product route without a Godot-to-JS callback object");
-check(!main.includes("JavaScriptBridge.create_callback"), "product boot must not depend on JavaScript callback-object construction");
 check(main.includes("window.location.assign('/docs')"), "Docs must remain a hard cross-application navigation boundary");
 check(main.includes("window.innerWidth") && main.includes("window.innerHeight"), "responsive layout must derive from the real browser viewport");
 check(main.includes("novelforgeLayout"), "responsive layout mode must be browser-observable");
 check(main.includes('"phone" if phone else ("compact" if compact else "desktop")'), "Product UI must preserve phone/compact/desktop layout states");
 check(main.includes("novelforgeRuntime='ready'"), "main scene must publish a browser-visible readiness marker");
 check(main.includes("novelforge:ready"), "main scene must publish a runtime-ready browser event");
+
+check(browserRouteBridge.includes("JavaScriptBridge.create_callback"), "browser back/forward must use a retained Godot callback instead of reloading the runtime");
+check(browserRouteBridge.includes('addEventListener("popstate"'), "browser history bridge must listen for popstate");
+check(browserRouteBridge.includes("__novelforgePopstateReloadInstalled = true"), "browser history bridge must preempt the defensive reload fallback before parent readiness");
+check(browserRouteBridge.includes('host.call("_navigate", path, false)'), "browser history callback must navigate the live scene without pushing another history entry");
+check(browserRouteBridge.includes("novelforgeHistory = \"live\""), "browser history bridge must publish an observable live-history marker");
+check(browserRouteBridge.includes("novelforgeRoute = path"), "browser history bridge must publish the routed scene path for browser QA");
+check(!browserRouteBridge.includes("func _process"), "browser history synchronization must be event-driven rather than polled every frame");
 
 check(systemMap.includes("_parallax"), "system map must retain 2.5D parallax depth cues");
 check(systemMap.includes("_draw_packet"), "system map must retain animated execution packets");
@@ -65,20 +73,27 @@ check(buildScript.includes('--export-release Web'), "CI export script must produ
 check(buildScript.includes('--quit-after 2'), "CI export script must instantiate the product scene before export");
 check(buildScript.includes('test -d "${DIST_DIR}/docs"'), "Godot export must preserve the already-built Docs app");
 check(buildScript.includes('data-novelforge-runtime="loading"'), "export verification must prove the branded shell was emitted");
+check(assetVerifier.includes("stat -c '%s'"), "Cloudflare asset verification must inspect file sizes without a pipefail-sensitive sort/head pipeline");
+check(assetVerifier.includes("25 MiB"), "Cloudflare asset verification must explain the hosting ceiling when it fails");
 
 check(browserProof.includes('const expectLayout = arg("expect-layout")'), "browser proof must support an expected responsive layout");
+check(browserProof.includes('const verifyHistory = arg("verify-history") === "true"'), "browser proof must support live history verification");
+check(browserProof.includes("history.pushState"), "browser proof must exercise a same-runtime route transition");
+check(browserProof.includes("history.back()"), "browser proof must exercise browser back navigation");
+check(browserProof.includes("proofToken"), "browser proof must prove popstate does not reload the document");
 check(browserProof.includes("state?.layout !== expectLayout"), "browser proof must fail on responsive layout mismatch");
 check(browserProof.includes("canvasWidth") && browserProof.includes("browser_viewport"), "browser proof must record canvas and browser dimensions");
 
 if (!process.exitCode) {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_web_quality_v2",
+    schema: "novelforge_godot_web_quality_v3",
     status: "pass",
     renderer: "gl_compatibility",
     dimension: "2d_2_5d",
     adaptive_canvas: true,
     stretch_mode: "disabled",
     responsive_layouts: ["phone", "compact", "desktop"],
+    history: "event_driven_live_scene",
     docs_boundary: "hard-navigation",
     authority: false,
   }, null, 2));

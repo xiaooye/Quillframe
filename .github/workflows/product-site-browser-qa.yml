@@ -99,13 +99,7 @@ jobs:
 
       - name: Verify Cloudflare Pages asset ceiling
         working-directory: site
-        run: |
-          set -euo pipefail
-          limit=$((25 * 1024 * 1024))
-          largest=$(find dist -type f -printf '%s %p\n' | sort -nr | head -1)
-          bytes=${largest%% *}
-          echo "Largest production asset: ${largest}"
-          test "${bytes}" -lt "${limit}"
+        run: bash scripts/verify-cloudflare-assets.sh dist
 
       - name: Install CJK font for truthful bilingual rendering
         run: |
@@ -159,12 +153,14 @@ jobs:
             height="$3"
             url="$4"
             layout="$5"
+            history="${6:-false}"
             node site/scripts/godot-browser-proof.mjs \
               --url "${url}" \
               --width "${width}" \
               --height "${height}" \
               --timeout-ms 90000 \
               --expect-layout "${layout}" \
+              --verify-history "${history}" \
               --output "/tmp/product-site-browser-qa/${name}.png" \
               | tee "/tmp/product-site-browser-qa/${name}-proof.json"
           }
@@ -172,7 +168,7 @@ jobs:
           # Real elapsed-time CDP polling is deliberate: the WebAssembly
           # runtime may still be compiling after network progress reaches 100%.
           proof product-desktop 1440 900 'http://127.0.0.1:4188/' desktop
-          proof architecture-desktop 1440 900 'http://127.0.0.1:4188/architecture' desktop
+          proof architecture-desktop 1440 900 'http://127.0.0.1:4188/architecture' desktop true
           proof studio-desktop 1440 900 'http://127.0.0.1:4188/studio' desktop
           proof publication-desktop 1440 900 'http://127.0.0.1:4188/publication' desktop
           proof architecture-mobile 390 844 'http://127.0.0.1:4188/architecture' phone
@@ -199,17 +195,22 @@ jobs:
 
           assert len(set(desktop)) >= 3, desktop
 
+          architecture = json.loads((root / 'architecture-desktop-proof.json').read_text(encoding='utf-8').splitlines()[-1])
+          assert architecture['history'] == 'live' and architecture['history_proof'] is True, architecture
+
           mobile = json.loads((root / 'architecture-mobile-proof.json').read_text(encoding='utf-8').splitlines()[-1])
           assert mobile['layout'] == 'phone', mobile
           assert mobile['runtime'] == 'ready' and mobile['engine'] == 'started', mobile
 
           (root / 'browser-proof.txt').write_text(
-              'schema=novelforge_product_site_browser_qa_v7\n'
+              'schema=novelforge_product_site_browser_qa_v8\n'
               'runtime=godot_web_custom_2d_template\n'
               'runtime_ready_marker=true\n'
               'real_time_cdp_wait=true\n'
               'responsive_layout_marker=true\n'
               'phone_layout_proven=true\n'
+              'history_live_scene=true\n'
+              'history_no_reload=true\n'
               'cloudflare_asset_ceiling=true\n'
               'branded_loader=true\n'
               'dimension=2d_2_5d\n'
@@ -220,7 +221,7 @@ jobs:
               'authority=false\n',
               encoding='utf-8',
           )
-          print({'schema': 'novelforge_product_site_browser_qa_v7', 'status': 'pass', 'screenshots': 5, 'custom_2d_template': True, 'phone_layout_proven': True, 'authority': False})
+          print({'schema': 'novelforge_product_site_browser_qa_v8', 'status': 'pass', 'screenshots': 5, 'custom_2d_template': True, 'phone_layout_proven': True, 'history_live_scene': True, 'authority': False})
           PY
 
       - name: Upload Product Site browser QA evidence
