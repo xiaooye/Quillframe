@@ -1,5 +1,6 @@
 import { invokeBridge, type BridgeResult } from "./bridge";
 import type { ProjectInspectData } from "./studio";
+import "./styles/projection-workbenches.css";
 
 export type SessionSummary = {
   session_id: string;
