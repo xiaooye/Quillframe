@@ -121,7 +121,7 @@ jobs:
               job=make_contract_job(cid,'CI-'+cid,payload,source_session_id='SES-CI')
               assert not validate_job(job),(cid,validate_job(job))
               assert job['permissions']['canon_write'] is False
-              assert job['permissions']['os_behavior_write'] is False
+              assert job['permissions']['framework_behavior_write'] is False
               assert job['permissions']['durable_user_taste_write'] is False
               assert job['provenance']['source']=='model_contract_pack'
               assert job['provenance']['pack_id']
@@ -265,7 +265,7 @@ jobs:
           handoff=json.load(open('harness/control_plane/handoff_schema.json'))
           assert handoff['properties']['schema']['const']=='novelforge_handoff_v1'
           perms=handoff['properties']['permissions']['properties']
-          assert all(perms[k]['const'] is False for k in ('canon_write','os_behavior_write','durable_user_taste_write'))
+          assert all(perms[k]['const'] is False for k in ('canon_write','framework_behavior_write','durable_user_taste_write'))
           PY
           python harness/semantic_workers/semantic_worker_runner.py capabilities > direct-capabilities.json
           python - <<'PY'

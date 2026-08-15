@@ -38,10 +38,10 @@
     "permissions": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["canon_write", "os_behavior_write", "durable_user_taste_write"],
+      "required": ["canon_write", "framework_behavior_write", "durable_user_taste_write"],
       "properties": {
         "canon_write": {"const": false},
-        "os_behavior_write": {"const": false},
+        "framework_behavior_write": {"const": false},
         "durable_user_taste_write": {"const": false},
         "allowed_result_scope": {"type": "string"}
       }

@@ -66,7 +66,7 @@ def validate_peer_result(packet:dict[str,Any],result:dict[str,Any])->list[str]:
 
 def self_test()->int:
     from semantic_worker_router import fingerprint_for
-    job={"job_id":"SEM-SELF","kind":"eval_judge","subject_id":"CASE","created_at":"now","input_fingerprint":"","input":{"text":"x"},"rubric":["judge"],"output_contract":{},"permissions":{"canon_write":False,"os_behavior_write":False,"durable_user_taste_write":False,"allowed_result_scope":"observation"},"provenance":{"source":"self"}}
+    job={"job_id":"SEM-SELF","kind":"eval_judge","subject_id":"CASE","created_at":"now","input_fingerprint":"","input":{"text":"x"},"rubric":["judge"],"output_contract":{},"permissions":{"canon_write":False,"framework_behavior_write":False,"durable_user_taste_write":False,"allowed_result_scope":"observation"},"provenance":{"source":"self"}}
     job["input_fingerprint"]=fingerprint_for(job);packet=build(job)
     result={"job_id":job["job_id"],"subject_id":job["subject_id"],"kind":job["kind"],"input_fingerprint":job["input_fingerprint"],"status":"completed","worker":{"provider":"chatgpt_peer_chat","model_or_reviewer":"independent peer","run_reference":packet["relay_nonce"]},"judgment":{"verdict":"accept","result":None,"codes":[],"evidence":["fixture"],"confidence":0.8},"proposals":[],"errors":[]}
     ok=not validate_packet(packet) and not validate_peer_result(packet,result)

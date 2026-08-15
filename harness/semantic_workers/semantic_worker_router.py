@@ -10,7 +10,7 @@ HERE=Path(__file__).resolve().parent
 CATALOG=HERE/"model_contract_catalog.json"
 FORBIDDEN_BLIND_KEYS={"expected","expected_verdict","expected_codes","blocks_release","gold","gold_label","prior_result"}
 ALLOWED_KINDS={"eval_judge","corpus_analyze","benchmark_synthesize","external_review","preference_distill","artifact_audit"}
-WRITE_KEYS=("canon_write","os_behavior_write","durable_user_taste_write")
+WRITE_KEYS=("canon_write","framework_behavior_write","durable_user_taste_write")
 
 def load_json(path:Path)->Any:return json.loads(path.read_text(encoding="utf-8"))
 def dump_json(v:Any,path:Path|None=None)->None:
@@ -134,7 +134,7 @@ def make_eval_jobs(queue:dict[str,Any],*,source_session_id:str|None=None,handoff
     if leaks:raise ValueError("blind queue leaks answer keys: "+", ".join(leaks))
     jobs=[]
     for case in queue.get("cases",[]):
-        sid=case["id"];job={"job_id":f"SEM-EVAL-{sid}","kind":"eval_judge","subject_id":sid,"created_at":datetime.now(timezone.utc).isoformat(),"input_fingerprint":"","input":{"type":case.get("type"),"domain":case.get("domain"),"fixture":case.get("fixture",{})},"rubric":case.get("rubric",[]),"output_contract":case.get("judgment_contract",{}),"permissions":{"canon_write":False,"os_behavior_write":False,"durable_user_taste_write":False,"allowed_result_scope":"observation"},"provenance":{"source":"blind_eval_queue","suite_version":queue.get("suite_version")},"execution":{"source_session_id":source_session_id,"worker_session_id":None,"handoff_id":handoff_id,"attempt_id":None}}
+        sid=case["id"];job={"job_id":f"SEM-EVAL-{sid}","kind":"eval_judge","subject_id":sid,"created_at":datetime.now(timezone.utc).isoformat(),"input_fingerprint":"","input":{"type":case.get("type"),"domain":case.get("domain"),"fixture":case.get("fixture",{})},"rubric":case.get("rubric",[]),"output_contract":case.get("judgment_contract",{}),"permissions":{"canon_write":False,"framework_behavior_write":False,"durable_user_taste_write":False,"allowed_result_scope":"observation"},"provenance":{"source":"blind_eval_queue","suite_version":queue.get("suite_version")},"execution":{"source_session_id":source_session_id,"worker_session_id":None,"handoff_id":handoff_id,"attempt_id":None}}
         job["input_fingerprint"]=fingerprint_for(job);e=validate_job(job)
         if e:raise ValueError("prepared eval job invalid: "+"; ".join(e))
         jobs.append(job)

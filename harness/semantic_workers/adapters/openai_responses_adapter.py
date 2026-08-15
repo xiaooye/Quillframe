@@ -131,7 +131,7 @@ def execute(job: dict[str, Any], timeout: int) -> dict[str, Any]:
 
 def self_test() -> int:
     from semantic_worker_router import fingerprint_for
-    job = {"job_id": "SEM-T", "kind": "external_review", "subject_id": "CH-T", "created_at": "fixture", "input_fingerprint": "", "input": {"candidate": "x"}, "rubric": ["judge reader experience"], "output_contract": {"type": "object", "required": ["confidence", "would_continue"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "would_continue": {"type": "boolean"}}}, "permissions": {"canon_write": False, "os_behavior_write": False, "durable_user_taste_write": False}, "provenance": {"independent_gate": False}, "execution": {}}
+    job = {"job_id": "SEM-T", "kind": "external_review", "subject_id": "CH-T", "created_at": "fixture", "input_fingerprint": "", "input": {"candidate": "x"}, "rubric": ["judge reader experience"], "output_contract": {"type": "object", "required": ["confidence", "would_continue"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "would_continue": {"type": "boolean"}}}, "permissions": {"canon_write": False, "framework_behavior_write": False, "durable_user_taste_write": False}, "provenance": {"independent_gate": False}, "execution": {}}
     job["input_fingerprint"] = fingerprint_for(job)
     body = request_body(job); fmt = body["text"]["format"]
     ok = not validate_job(job) and job["kind"] in ALLOWED_KINDS and fmt["schema"] == job["output_contract"] and fmt["strict"] is False and body["store"] is False

@@ -1,5 +1,4 @@
 .novelforge/
-.novel-os/
 __pycache__/
 *.pyc
 *.sqlite

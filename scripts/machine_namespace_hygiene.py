@@ -13,13 +13,17 @@ PATTERNS = {
     "legacy_schema_prefix": "novel" + "_os_",
     "legacy_runtime_dir": ".novel" + "-os/",
     "legacy_server_slug": "novel" + "-os-control-plane",
+    "legacy_machine_slug": "novel" + "-os-",
+    "legacy_behavior_permission": "os" + "_behavior_write",
 }
 
 
 def live_files() -> list[Path]:
     out: list[Path] = []
     for path in ROOT.rglob("*"):
-        if not path.is_file() or path.suffix not in EXTENSIONS:
+        if not path.is_file():
+            continue
+        if path.suffix not in EXTENSIONS and path != ROOT / ".gitignore":
             continue
         rel = path.relative_to(ROOT)
         if rel.parts and rel.parts[0] in EXCLUDED_TOP:
