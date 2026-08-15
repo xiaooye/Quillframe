@@ -7,9 +7,11 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const siteRoot = path.resolve(here, "..");
 const read = (relative) => fs.readFileSync(path.join(siteRoot, relative), "utf8");
+const exists = (relative) => fs.existsSync(path.join(siteRoot, relative));
 const main = read("src/main.tsx");
 const app = read("src/ProductApp.tsx");
 const surface = read("src/ProductSurface.tsx");
+const embedded = read("src/styles/embedded-features.css");
 const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
 
@@ -17,6 +19,18 @@ check(main.includes('import ProductApp from "./ProductApp"'), "main must import 
 check(main.includes("render(() => <ProductApp />, root)"), "main must render only the shared ProductApp");
 for (const forbidden of ["standaloneProductPaths", "ProjectInspectorEntry", "LocalPlaygroundEntry", "ArchitectureExplorerEntry", "PublicationWorkbenchEntry", "AgentIntegrationEntry", "history.pushState =", "history.replaceState ="]) {
   check(!main.includes(forbidden), `main must not retain legacy standalone shell logic: ${forbidden}`);
+}
+
+for (const retiredFile of [
+  "src/App.tsx",
+  "src/ArchitectureExplorerEntry.tsx",
+  "src/PublicationWorkbenchEntry.tsx",
+  "src/ProjectInspectorEntry.tsx",
+  "src/LocalPlaygroundEntry.tsx",
+  "src/AgentIntegrationEntry.tsx",
+  "src/styles/surface-consistency.css",
+]) {
+  check(!exists(retiredFile), `retired duplicate surface must stay deleted: ${retiredFile}`);
 }
 
 check(app.includes("<Router root={ProductShell}>"), "all product pages must share one Router root shell");
@@ -35,17 +49,18 @@ for (const nav of ["/product", "/studio", "/architecture", "/publication"]) {
 check(app.includes('href={zh() ? "/docs" : "/docs/en"}'), "Knowledge must remain an explicit documentation boundary");
 check(app.includes("header-search") && app.includes("command-dialog") && app.includes("showModal"), "shared shell must own one command palette");
 check(app.includes("aria-expanded={menuOpen()}"), "shared shell must own accessible mobile navigation state");
+check(app.includes("const [locale, setLocale] = createSignal") && app.includes("const [dark, setDark] = createSignal"), "shared ProductApp must own one locale and one appearance state");
 
-for (const pageMarker of ["function ArchitecturePage", "function PublicationPage", "function InspectorPage", "function PlaygroundPage", "function AgentsPage"]) {
+for (const pageMarker of ["function HomePage", "function ProductPage", "function StudioPage", "function ArchitecturePage", "function PublicationPage", "function InspectorPage", "function PlaygroundPage", "function AgentsPage", "function ChangelogPage"]) {
   check(app.includes(pageMarker), `shared ProductApp missing ${pageMarker}`);
 }
 const heroUses = (app.match(/<ProductSurfaceHero/g) ?? []).length;
 check(heroUses >= 8, `expected shared ProductSurfaceHero across product pages; got ${heroUses}`);
-check(!/const \[locale, setLocale\].*function ArchitecturePage/s.test(app.slice(app.indexOf("function ArchitecturePage"))), "feature pages must not create their own locale state");
+check(embedded.includes(".project-inspector-intro") && embedded.includes(".playground-intro"), "embedded feature bodies must suppress duplicate internal page heroes");
 
 if (failures.length) {
   for (const failure of failures) console.error(`product-shell-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ schema: "novelforge_product_shell_quality_v1", status: "pass", shared_router: true, shared_header: true, shared_footer: true, shared_locale_state: true, shared_appearance_state: true, shared_command_palette: true, shared_surface_hero: true, standalone_product_shells: 0, docs_boundary: "separate" }, null, 2));
+  console.log(JSON.stringify({ schema: "novelforge_product_shell_quality_v2", status: "pass", shared_router: true, shared_header: true, shared_footer: true, shared_locale_state: true, shared_appearance_state: true, shared_command_palette: true, shared_surface_hero: true, standalone_product_shells: 0, duplicate_runtime_sources: 0, docs_boundary: "separate" }, null, 2));
 }
