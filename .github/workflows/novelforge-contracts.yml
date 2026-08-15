@@ -104,12 +104,14 @@ jobs:
                 'task_mode':'DRAFT',
                 'task_goal':'Choose only evidence needed to decide CHAR-CI next action.',
                 'current_story_point':'SCN-CI',
+                'current_story_order':9,
                 'perspective': {'scope':'character','perspective_id':'CHAR-CI'},
-                'active_questions': [{'question_id':'Q-CI','question':'What does CHAR-CI know about the offer?','kind':'state','as_of_story_point':'SCN-CI'}]
+                'active_questions': [{'question_id':'Q-CI','question':'What does CHAR-CI know about the offer?','kind':'state','as_of_story_point':'SCN-CI','as_of_story_order':9}]
               },
               'memory_blocks': [{
                 'block_id':'M-CI','pinned':False,'authority':False,'derived':True,
                 'source_refs':['accepted:CI'],'story_point':'SCN-CI',
+                'available_from_story_order':9,
                 'visibility': {'scope':'character','perspective_id':'CHAR-CI'},
                 'model_view': {'label':'offer','value':'The first offer was lower.'}
               }]
@@ -228,8 +230,11 @@ jobs:
           loaded={p:json.load(open(p,encoding='utf-8')) for p in checks}
           for p,(k,v) in checks.items():assert loaded[p][k]==v,(p,loaded[p])
           assert loaded['machine-namespace-test.json']['namespace']=='NovelForge-only'
-          assert loaded['memory-tiers-test.json']['schema']=='novelforge_memory_tiers_v3'
+          assert loaded['memory-tiers-test.json']['schema']=='novelforge_memory_tiers_v4'
           assert loaded['memory-tiers-test.json']['perspective_incompatible_never_enters_semantic_packet'] is True
+          assert loaded['memory-tiers-test.json']['future_block_never_enters_semantic_packet'] is True
+          assert loaded['memory-tiers-test.json']['question_as_of_story_order_guard'] is True
+          assert loaded['memory-tiers-test.json']['pin_temporal_conflict_fail_closed'] is True
           assert loaded['memory-tiers-test.json']['grounding_reports_budget_drop'] is True
           s=loaded['semantic-router-test.json']
           assert s['fingerprint_excludes_runtime_lineage'] is True
