@@ -18,11 +18,8 @@
     background: var(--wui-color-muted-foreground);
   }
 
-  .nf-host-boundary {
-    border-style: dashed;
-    background: color-mix(in oklch, var(--wui-surface-sunken) 72%, var(--wui-color-background));
-    box-shadow: none;
-  }
+  /* WeiUI filled-card owns the boundary surface; this only adds product semantics. */
+  .nf-host-boundary { border-style: dashed; }
 
   .nf-host-boundary-content {
     min-block-size: 240px;
