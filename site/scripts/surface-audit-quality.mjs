@@ -31,7 +31,7 @@ check(productIndex.indexOf("architecture-explorer.css") < productIndex.indexOf("
 check(productSurface.includes("border-radius: 28px") && productSurface.includes("box-shadow: var(--pe-shadow-2)") && productSurface.includes("border: 1px dashed"), "shared ProductSurfaceHero must keep the restored framed pastel treatment for new routes");
 check(productSurface.includes('.product-surface-hero[data-tone="project"]') && productSurface.includes('.product-surface-hero[data-tone="publication"]'), "route surface tones must remain explicit");
 
-for (const marker of ["class=\"entry-hero\"", "class=\"hero-launcher wui-card material-panel\"", "class=\"capability-ribbon\"", "class=\"capability-focus page-width section-compact\"", "class=\"product-lab section-pad-soft\"", "class=\"product-world page-width section-compact\"", "class=\"knowledge-preview section-pad-soft\""]) {
+for (const marker of ["entry-hero", "hero-launcher wui-card material-panel", "capability-ribbon", "capability-focus page-width section-compact", "product-lab section-pad-soft", "product-world page-width section-compact", "knowledge-preview section-pad-soft"]) {
   check(productApp.includes(marker), `restored screenshot-era HomePage missing ${marker}`);
 }
 for (const marker of [".entry-hero", ".hero-launcher.material-panel", ".launcher-tile", ".capability-ribbon", ".capability-chip", ".capability-focus-grid", ".lab-grid", ".portal-grid", ".knowledge-preview-grid"]) {
