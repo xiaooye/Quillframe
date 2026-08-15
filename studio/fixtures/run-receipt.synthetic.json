@@ -1,0 +1,105 @@
+{
+  "schema": "novelforge_run_receipt_v1",
+  "receipt_id": "RCPT-SYN-CH042-REVIEW-01",
+  "resource_id": "BOOK-SYNTHETIC-DEMO",
+  "session_id": "SES-SYN-20260815-A",
+  "run_id": "RUN-SYN-CH042-REVIEW-01",
+  "stage": "reader-review",
+  "subject_id": "CH-SYN-042",
+  "artifact_fingerprints": [
+    "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  ],
+  "context": {
+    "selection_fingerprint": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "loaded_block_ids": [
+      "CTX-SYN-CANON-01",
+      "CTX-SYN-CHAR-07",
+      "CTX-SYN-READER-03"
+    ],
+    "visibility_excluded_block_ids": [
+      "CTX-SYN-FUTURE-PLAN-09"
+    ],
+    "question_grounding": [
+      {
+        "question_id": "Q-SYN-CHAR-CHOICE",
+        "model_support": "sufficient",
+        "support_block_ids": [
+          "CTX-SYN-CANON-01",
+          "CTX-SYN-CHAR-07"
+        ],
+        "loaded_support_block_ids": [
+          "CTX-SYN-CANON-01",
+          "CTX-SYN-CHAR-07"
+        ],
+        "dropped_support_block_ids": [],
+        "loading_status": "all_loaded"
+      },
+      {
+        "question_id": "Q-SYN-OPEN-PROMISE",
+        "model_support": "partial",
+        "support_block_ids": [
+          "CTX-SYN-READER-03",
+          "CTX-SYN-READER-11"
+        ],
+        "loaded_support_block_ids": [
+          "CTX-SYN-READER-03"
+        ],
+        "dropped_support_block_ids": [
+          "CTX-SYN-READER-11"
+        ],
+        "loading_status": "partially_loaded"
+      },
+      {
+        "question_id": "Q-SYN-WORLD-DETAIL",
+        "model_support": "none",
+        "support_block_ids": [],
+        "loaded_support_block_ids": [],
+        "dropped_support_block_ids": [],
+        "loading_status": "no_support_identified"
+      }
+    ],
+    "unresolved_questions": [
+      "Q-SYN-OPEN-PROMISE",
+      "Q-SYN-WORLD-DETAIL"
+    ],
+    "grounding_incomplete_due_budget": [
+      "Q-SYN-OPEN-PROMISE"
+    ]
+  },
+  "semantic_jobs": [
+    {
+      "job_id": "SEM-SYN-READER-01",
+      "contract_id": "reader.reaction",
+      "input_fingerprint": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "status": "completed",
+      "result_fingerprint": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "worker_ref": "SES-SYN-REVIEWER-01"
+    },
+    {
+      "job_id": "SEM-SYN-CHAR-01",
+      "contract_id": "character.integrity",
+      "input_fingerprint": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "status": "pending",
+      "result_fingerprint": null,
+      "worker_ref": "SES-SYN-REVIEWER-02"
+    }
+  ],
+  "guards": [
+    {
+      "guard_id": "context-budget",
+      "status": "pass",
+      "evidence_refs": [
+        "RCPT-SYN-CH042-REVIEW-01:context"
+      ]
+    },
+    {
+      "guard_id": "independent-character-review",
+      "status": "pending",
+      "evidence_refs": [
+        "SEM-SYN-CHAR-01"
+      ]
+    }
+  ],
+  "created_at": "2026-08-15T00:00:00Z",
+  "authority": false
+}
