@@ -1,0 +1,155 @@
+---
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import CardGrid from "@astrojs/starlight/components/CardGrid.astro";
+import LinkCard from "@astrojs/starlight/components/LinkCard.astro";
+
+interface Props {
+  locale: "zh-CN" | "en";
+}
+
+const { locale } = Astro.props;
+const english = locale === "en";
+
+const copy = english
+  ? {
+      title: "NovelForge Documentation",
+      description: "Task-oriented documentation for NovelForge: product fit, project integration, writing systems, runtime contracts, quality, and Studio.",
+      heroTitle: "Build long-form fiction with explicit authority, state, and quality boundaries.",
+      heroTagline: "Start with the question you need answered. Go deeper only when the task requires exact execution semantics.",
+      primaryAction: "Why NovelForge",
+      secondaryAction: "Integrate a project",
+      eyebrow: "Choose a path",
+      intro: "You do not need to read the framework from top to bottom. Pick the outcome you need, then follow the smallest useful path.",
+      paths: [
+        ["Decide whether NovelForge fits", "Compare the product model, tradeoffs, and cases where a different tool is a better fit.", "/docs/en/why-novelforge"],
+        ["Understand the architecture", "See how project authority, model reasoning, deterministic runtime, state, and writes are separated.", "/docs/en/architecture"],
+        ["Integrate an existing novel", "Define the project manifest, exact framework lock, canon, current state, plans, drafts, research, and tests.", "/docs/en/project-sdk"],
+        ["Draft or revise prose", "Follow the production pipeline from context and causality through drafting, review, repair, and acceptance.", "/docs/en/production-pipeline"],
+        ["Work with context and memory", "Understand what enters the active context, what persists, and what must never silently become canon.", "/docs/en/context-memory"],
+        ["Review quality", "Separate deterministic QA from semantic judgment, route findings to the right owner, and gate publication.", "/docs/en/quality-assurance"],
+      ],
+      runtimeTitle: "Run, extend, and inspect",
+      runtimeIntro: "When you already know the product model, these are the practical entry points for execution and tooling.",
+      runtime: [
+        ["Runtime & integrations", "Host capabilities, transport choices, and practical integration paths.", "/docs/en/integrations"],
+        ["Runtime routing", "Select an eligible execution path without turning provider assumptions into authority.", "/docs/en/runtime-routing"],
+        ["Semantic execution", "Typed semantic work across Chat, local agents, APIs, MCP, services, and human execution.", "/docs/en/semantic-execution"],
+        ["NovelForge Studio", "The product surface for inspecting projects, runs, context, readiness, and future author workflows.", "/docs/en/studio-overview"],
+      ],
+      modelTitle: "Three documentation layers",
+      modelIntro: "NovelForge keeps product explanation, usage guidance, and exact engineering contracts separate so each page can optimize for the reader it serves.",
+      tiers: [
+        ["A", "Product entry", "Mental models, positioning, architecture, pipeline, and quality. Start here when you are new."],
+        ["B", "Usage guides", "Project SDK, integrations, context, learning, corpus, evals, quality evolution, and Studio."],
+        ["C", "Contracts & engineering records", "Harness, runtime, semantic workers, story/canon mechanics, policies, and historical specs."],
+      ],
+      referenceTitle: "Need the exact contract?",
+      referenceBody: "Use the architecture atlas to find the owning subsystem, then move into the full reference only when implementation-level precision is necessary.",
+      referenceAction: "Open the architecture atlas",
+    }
+  : {
+      title: "NovelForge 文档中心",
+      description: "按任务组织的 NovelForge 文档：产品判断、项目接入、创作机制、运行时契约、质量保障与 Studio。",
+      heroTitle: "让长篇小说创作拥有明确的权威、状态与质量边界。",
+      heroTagline: "先从你要解决的问题开始；只有任务真正需要时，再进入精确的执行契约。",
+      primaryAction: "为什么是 NovelForge",
+      secondaryAction: "接入一本小说",
+      eyebrow: "按目标开始",
+      intro: "不需要从头到尾读完整个框架。先选你此刻要完成的事情，再沿着最短的阅读路径进入需要的深度。",
+      paths: [
+        ["判断 NovelForge 是否适合", "看产品定位、真实取舍，以及哪些情况更适合直接小说智能体或其他作者工具。", "/docs/why-novelforge"],
+        ["理解总体架构", "理解项目权威、模型语义判断、确定性运行外壳、状态分离与写入边界。", "/docs/architecture"],
+        ["接入现有小说项目", "定义项目清单、精确 Framework lock、正典、当前状态、计划、稿件、研究资料与测试。", "/docs/project-sdk"],
+        ["写作或修改正文", "从上下文与因果进入起草、审阅、修复与接受，理解一轮完整生产运行。", "/docs/production-pipeline"],
+        ["处理上下文与记忆", "理解什么进入当前工作集、什么会持久化，以及什么绝不能静默变成正典。", "/docs/context-memory"],
+        ["审核质量", "把确定性 QA 与语义判断分开，把问题路由给真正的 owner，并在发布前形成明确门槛。", "/docs/quality-assurance"],
+      ],
+      runtimeTitle: "运行、扩展与观察",
+      runtimeIntro: "已经建立产品心智模型后，从这些入口进入实际执行、运行时与工具层。",
+      runtime: [
+        ["运行时与集成", "宿主能力、传输方式与实际接入路径。", "/docs/integrations"],
+        ["运行时路由", "选择符合条件的执行路径，而不把 provider 假设误当成权威。", "/docs/runtime-routing"],
+        ["语义执行", "让同一个类型化语义任务跨 Chat、本地 Agent、API、MCP、Service 与人工执行保持语义不变。", "/docs/semantic-execution"],
+        ["NovelForge Studio", "面向项目、运行、上下文、就绪状态与未来作者工作流的产品界面。", "/docs/studio-overview"],
+      ],
+      modelTitle: "文档分三层",
+      modelIntro: "产品解释、使用指南和精确工程契约保持分层，让每一页只承担它真正应该承担的阅读任务。",
+      tiers: [
+        ["A", "产品入口", "心智模型、定位、总体架构、生产流水线与质量保障。第一次了解 NovelForge，从这里开始。"],
+        ["B", "使用指南", "Project SDK、集成、上下文、学习、语料、评测、质量演化与 Studio。"],
+        ["C", "契约与工程记录", "Harness、Runtime、Semantic Worker、故事与正典机制、政策以及历史 specs。"],
+      ],
+      referenceTitle: "需要精确契约？",
+      referenceBody: "先用架构图谱找到真正拥有这个问题的子系统；只有需要实现级精度时，再进入完整参考。",
+      referenceAction: "打开架构图谱",
+    };
+
+const frontmatter = {
+  title: copy.title,
+  description: copy.description,
+  template: "splash" as const,
+  editUrl: english
+    ? "https://github.com/xiaooye/cn_webnovel_agent/blob/main/docs/README.en.md"
+    : "https://github.com/xiaooye/cn_webnovel_agent/blob/main/docs/README.zh-CN.md",
+  hero: {
+    title: copy.heroTitle,
+    tagline: copy.heroTagline,
+    actions: [
+      { text: copy.primaryAction, link: english ? "/docs/en/why-novelforge" : "/docs/why-novelforge", icon: "right-arrow" as const },
+      { text: copy.secondaryAction, link: english ? "/docs/en/project-sdk" : "/docs/project-sdk", variant: "minimal" as const },
+    ],
+  },
+};
+---
+
+<StarlightPage frontmatter={frontmatter} lang={locale}>
+  <main class="nf-docs-home" data-nf-docs-home>
+    <section class="nf-home-section nf-home-section--lead" aria-labelledby="nf-home-paths">
+      <p class="nf-home-eyebrow">{copy.eyebrow}</p>
+      <h2 id="nf-home-paths">{copy.eyebrow}</h2>
+      <p class="nf-home-lead">{copy.intro}</p>
+      <CardGrid>
+        {copy.paths.map(([title, description, href]) => (
+          <LinkCard title={title} description={description} href={href} />
+        ))}
+      </CardGrid>
+    </section>
+
+    <section class="nf-home-section" aria-labelledby="nf-home-runtime">
+      <div class="nf-home-section-heading">
+        <h2 id="nf-home-runtime">{copy.runtimeTitle}</h2>
+        <p>{copy.runtimeIntro}</p>
+      </div>
+      <CardGrid>
+        {copy.runtime.map(([title, description, href]) => (
+          <LinkCard title={title} description={description} href={href} />
+        ))}
+      </CardGrid>
+    </section>
+
+    <section class="nf-home-section nf-home-model" aria-labelledby="nf-home-model">
+      <div class="nf-home-section-heading">
+        <h2 id="nf-home-model">{copy.modelTitle}</h2>
+        <p>{copy.modelIntro}</p>
+      </div>
+      <div class="nf-tier-grid">
+        {copy.tiers.map(([tier, title, body]) => (
+          <article class="nf-tier-card">
+            <span class="nf-tier-badge">Tier {tier}</span>
+            <h3>{title}</h3>
+            <p>{body}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <aside class="nf-reference-callout">
+      <div>
+        <p class="nf-home-eyebrow">Reference</p>
+        <h2>{copy.referenceTitle}</h2>
+        <p>{copy.referenceBody}</p>
+      </div>
+      <a href={english ? "/docs/en/architecture-atlas" : "/docs/architecture-atlas"}>{copy.referenceAction}<span aria-hidden="true"> →</span></a>
+    </aside>
+  </main>
+</StarlightPage>
