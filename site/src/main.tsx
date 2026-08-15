@@ -1,6 +1,7 @@
 import "./appearance-v5";
 import { render } from "solid-js/web";
 import App from "./App";
+import AgentIntegrationEntry from "./AgentIntegrationEntry";
 import ArchitectureExplorerEntry from "./ArchitectureExplorerEntry";
 import PublicationWorkbenchEntry from "./PublicationWorkbenchEntry";
 import LocalPlaygroundEntry from "./LocalPlaygroundEntry";
@@ -15,6 +16,7 @@ import "./styles/project-inspector.css";
 import "./styles/local-playground.css";
 import "./styles/architecture-explorer.css";
 import "./styles/publication-workbench.css";
+import "./styles/agent-integration.css";
 
 // The launcher emits a synthetic Ctrl+K event on document. Real keyboard events
 // already bubble to window; only bridge the synthetic event into the AppShell
@@ -53,7 +55,7 @@ function localizedDocsTarget(url: string | URL | null | undefined): URL | undefi
   return target;
 }
 
-const standaloneProductPaths = new Set(["/inspect", "/playground", "/architecture", "/publication"]);
+const standaloneProductPaths = new Set(["/inspect", "/playground", "/agents", "/architecture", "/publication"]);
 
 function standaloneProductTarget(url: string | URL | null | undefined): URL | undefined {
   if (url == null) return undefined;
@@ -128,10 +130,12 @@ render(
     ? <ProjectInspectorEntry initialLocale={preferredLocale()} />
     : path === "/playground"
       ? <LocalPlaygroundEntry initialLocale={preferredLocale()} />
-      : path === "/architecture"
-        ? <ArchitectureExplorerEntry initialLocale={preferredLocale()} />
-        : path === "/publication"
-          ? <PublicationWorkbenchEntry initialLocale={preferredLocale()} />
-          : <App />,
+      : path === "/agents"
+        ? <AgentIntegrationEntry initialLocale={preferredLocale()} />
+        : path === "/architecture"
+          ? <ArchitectureExplorerEntry initialLocale={preferredLocale()} />
+          : path === "/publication"
+            ? <PublicationWorkbenchEntry initialLocale={preferredLocale()} />
+            : <App />,
   root,
 );
