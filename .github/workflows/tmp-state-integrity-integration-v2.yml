@@ -20,5 +20,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Expand untracked files in temporary guard
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/tmp_state_integrity_integration.py')
+          t=p.read_text(encoding='utf-8')
+          old='subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True)'
+          new='subprocess.check_output(["git", "status", "--porcelain", "-uall"], cwd=ROOT, text=True)'
+          assert t.count(old)==1
+          p.write_text(t.replace(old,new,1),encoding='utf-8')
+          PY
       - name: Apply, verify, and commit P0 integration
         run: python scripts/tmp_state_integrity_integration.py
