@@ -11,16 +11,18 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import sqlite3
+import subprocess
 import sys
 import tempfile
+import tomllib
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = "novelforge_session_resume_preflight_v1"
 AUTHORITY_EVIDENCE_SCHEMA = "novelforge_resume_authority_evidence_v1"
+CAPABILITY_SCHEMA = "novelforge_host_capabilities_v1"
 RESUMABLE_STATUSES = {"idle", "awaiting_user", "awaiting_external", "failed"}
 FRAMEWORK_KEYS = ("version", "commit", "bundle_fingerprint")
 
@@ -31,6 +33,10 @@ def canonical(value: Any) -> str:
 
 def sha_bytes(data: bytes) -> str:
     return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def fingerprint(value: Any) -> str:
+    return sha_bytes(canonical(value).encode("utf-8"))
 
 
 def dump(value: Any) -> None:
@@ -82,29 +88,75 @@ def read_session_row(db_path: Path, session_id: str) -> dict[str, Any] | None:
 
 def current_project_identity(project_root: Path) -> tuple[dict[str, Any] | None, list[str]]:
     blockers: list[str] = []
+    manifest_path = project_root / "novelforge.toml"
     lock_path = project_root / "novelforge.lock.json"
     attestation_path = project_root / "framework.attestation.json"
+
+    if not manifest_path.exists():
+        return None, ["project_manifest_missing"]
+    try:
+        with manifest_path.open("rb") as handle:
+            manifest = tomllib.load(handle)
+    except Exception:
+        return None, ["project_manifest_invalid"]
+    project = manifest.get("project") if isinstance(manifest.get("project"), dict) else {}
+    project_id = project.get("id")
+    if not isinstance(project_id, str) or not project_id:
+        return None, ["project_identity_invalid"]
+    authority = manifest.get("authority") if isinstance(manifest.get("authority"), dict) else {}
+
     if not lock_path.exists():
         return None, ["project_lock_missing"]
     try:
         lock = load_object(lock_path)
     except Exception:
         return None, ["project_lock_invalid"]
+    if lock.get("schema") != "novelforge_lock_v1":
+        blockers.append("project_lock_schema_invalid")
     framework = lock.get("framework")
-    if not isinstance(framework, dict) or any(not isinstance(framework.get(k), str) or not framework.get(k) for k in FRAMEWORK_KEYS):
-        return None, ["project_framework_identity_invalid"]
-    current = {k: framework[k] for k in FRAMEWORK_KEYS}
+    if (
+        not isinstance(framework, dict)
+        or framework.get("name") != "NovelForge"
+        or any(not isinstance(framework.get(k), str) or not framework.get(k) for k in FRAMEWORK_KEYS)
+    ):
+        return None, [*blockers, "project_framework_identity_invalid"]
+    current_framework = {k: framework[k] for k in FRAMEWORK_KEYS}
+
     if not attestation_path.exists():
         blockers.append("framework_attestation_missing")
     else:
         try:
             attestation = load_object(attestation_path)
             attested_framework = attestation.get("framework") if isinstance(attestation.get("framework"), dict) else attestation
-            if any(attested_framework.get(k) != current[k] for k in FRAMEWORK_KEYS):
+            if any(attested_framework.get(k) != current_framework[k] for k in FRAMEWORK_KEYS):
                 blockers.append("framework_attestation_mismatch")
         except Exception:
             blockers.append("framework_attestation_invalid")
-    return current, blockers
+
+    return {
+        "project_id": project_id,
+        "project_authority_fingerprint": fingerprint(authority),
+        "framework": current_framework,
+    }, blockers
+
+
+def probe_local_capabilities(project_root: Path) -> dict[str, Any] | None:
+    proc = subprocess.run(
+        [sys.executable, str(ROOT / "novelforge.py"), "capabilities", "probe-local"],
+        cwd=str(project_root),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return None
+    try:
+        value = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(value, dict) or value.get("schema") != CAPABILITY_SCHEMA or not isinstance(value.get("capabilities"), dict):
+        return None
+    return value
 
 
 def inspect(
@@ -130,6 +182,10 @@ def inspect(
 
     session = row["session"]
     current_version = row["version"]
+    checks["session_payload_hash_valid"] = row.get("payload_hash") == fingerprint(session)
+    if not checks["session_payload_hash_valid"]:
+        blockers.append("session_payload_hash_mismatch")
+
     checks["session_version_matches"] = current_version == expected_session_version
     if not checks["session_version_matches"]:
         blockers.append("session_version_mismatch")
@@ -170,6 +226,14 @@ def inspect(
     if not checks["checkpoint_policy_matches"]:
         blockers.append("checkpoint_resume_policy_mismatch")
 
+    run_id = checkpoint.get("run_id")
+    runs = session.get("runs") if isinstance(session.get("runs"), list) else []
+    checks["checkpoint_run_exists"] = isinstance(run_id, str) and any(
+        isinstance(item, dict) and item.get("run_id") == run_id for item in runs
+    )
+    if not checks["checkpoint_run_exists"]:
+        blockers.append("checkpoint_run_missing")
+
     pending_gate = checkpoint.get("pending_gate")
     pending_handoff = checkpoint.get("pending_handoff")
     checks["no_pending_gate"] = not bool(pending_gate)
@@ -188,10 +252,11 @@ def inspect(
     if not checks["authority_evidence_schema"]:
         blockers.append("authority_evidence_schema_invalid")
 
-    current_framework, identity_blockers = current_project_identity(project_root)
+    current_identity, identity_blockers = current_project_identity(project_root)
     blockers.extend(identity_blockers)
-    checks["current_framework_identity_available"] = current_framework is not None
+    checks["current_project_identity_available"] = current_identity is not None
 
+    current_framework = current_identity.get("framework") if current_identity else None
     expected_framework = evidence.get("framework") if isinstance(evidence.get("framework"), dict) else None
     checks["framework_identity_matches"] = bool(
         current_framework
@@ -202,9 +267,25 @@ def inspect(
         blockers.append("framework_identity_changed_or_unproven")
 
     expected_project_id = evidence.get("project_id")
-    checks["project_identity_matches"] = isinstance(expected_project_id, str) and expected_project_id == session.get("project_id")
+    current_project_id = current_identity.get("project_id") if current_identity else None
+    checks["project_identity_matches"] = bool(
+        isinstance(expected_project_id, str)
+        and expected_project_id
+        and expected_project_id == session.get("project_id")
+        and expected_project_id == current_project_id
+    )
     if not checks["project_identity_matches"]:
         blockers.append("project_identity_mismatch")
+
+    expected_authority_fp = evidence.get("project_authority_fingerprint")
+    current_authority_fp = current_identity.get("project_authority_fingerprint") if current_identity else None
+    checks["project_authority_matches"] = bool(
+        isinstance(expected_authority_fp, str)
+        and expected_authority_fp.startswith("sha256:")
+        and expected_authority_fp == current_authority_fp
+    )
+    if not checks["project_authority_matches"]:
+        blockers.append("project_authority_changed_or_unproven")
 
     expected_fingerprints = checkpoint.get("artifact_fingerprints") if isinstance(checkpoint.get("artifact_fingerprints"), list) else []
     bindings = evidence.get("artifact_bindings") if isinstance(evidence.get("artifact_bindings"), list) else []
@@ -234,13 +315,30 @@ def inspect(
     if not checks["checkpoint_artifacts_verified"]:
         blockers.append("checkpoint_artifact_fingerprint_unverified")
 
-    required_capabilities = evidence.get("required_capabilities") if isinstance(evidence.get("required_capabilities"), list) else []
-    available_capabilities = evidence.get("available_capabilities") if isinstance(evidence.get("available_capabilities"), list) else []
-    checks["required_capabilities_available"] = all(
-        isinstance(item, str) and item in available_capabilities for item in required_capabilities
+    raw_required = evidence.get("required_capabilities", [])
+    required_capabilities = raw_required if isinstance(raw_required, list) else []
+    checks["required_capability_identifiers_valid"] = isinstance(raw_required, list) and all(
+        isinstance(item, str) and item for item in required_capabilities
     )
-    if not checks["required_capabilities_available"]:
-        blockers.append("required_capability_unavailable")
+    if not checks["required_capability_identifiers_valid"]:
+        blockers.append("required_capability_evidence_invalid")
+    if required_capabilities and checks["required_capability_identifiers_valid"]:
+        capability_manifest = probe_local_capabilities(project_root)
+        checks["local_capability_probe_available"] = capability_manifest is not None
+        if capability_manifest is None:
+            blockers.append("local_capability_probe_failed")
+        else:
+            capabilities = capability_manifest["capabilities"]
+            missing_capabilities = [
+                name for name in required_capabilities
+                if not isinstance(capabilities.get(name), dict) or capabilities[name].get("available") is not True
+            ]
+            checks["required_capabilities_available"] = not missing_capabilities
+            if missing_capabilities:
+                blockers.append("required_capability_unavailable")
+                unresolved.extend(f"capability:{name}" for name in missing_capabilities)
+    else:
+        checks["required_capabilities_available"] = not required_capabilities
 
     approval_refs = evidence.get("approval_refs") if isinstance(evidence.get("approval_refs"), list) else []
     checks["approval_evidence_well_formed"] = all(isinstance(item, str) and item for item in approval_refs)
@@ -257,8 +355,6 @@ def inspect(
     if not checks["read_did_not_modify_runtime_store"]:
         blockers.append("runtime_store_changed_during_preflight")
 
-    # A preflight only declares READY when every currently expressible check is
-    # proven. It does not imply that a future resume command has been approved.
     return _result(checks, blockers, unresolved, row, checkpoint, expected_session_version)
 
 
@@ -271,7 +367,8 @@ def _result(
     expected_session_version: int,
 ) -> dict[str, Any]:
     blockers = list(dict.fromkeys(blockers))
-    ready = not blockers and all(checks.values())
+    unresolved = list(dict.fromkeys(unresolved))
+    ready = not blockers and not unresolved and all(checks.values())
     return {
         "schema": SCHEMA,
         "status": "READY" if ready else "BLOCKED",
@@ -311,22 +408,28 @@ def self_test() -> int:
         artifact = root / "draft.txt"
         artifact.write_text("frozen candidate\n", encoding="utf-8")
         artifact_fp = sha_bytes(artifact.read_bytes())
+        authority = {"canon_write": "settlement_only", "framework_write": "forbidden"}
+        authority_fp = fingerprint(authority)
         framework = {
             "name": "NovelForge",
             "version": "0.8.0",
             "commit": "fixture-commit",
             "bundle_fingerprint": "sha256:" + "a" * 64,
         }
+        (root / "novelforge.toml").write_text(
+            '[novelforge]\nschema="novelforge_project_v1"\n[project]\nid="BOOK-SELFTEST"\ntitle="Self Test"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[authority]\ncanon_write="settlement_only"\nframework_write="forbidden"\n',
+            encoding="utf-8",
+        )
         (root / "novelforge.lock.json").write_text(json.dumps({"schema": "novelforge_lock_v1", "framework": framework}), encoding="utf-8")
         (root / "framework.attestation.json").write_text(json.dumps({"framework": framework}), encoding="utf-8")
         evidence_path = root / "resume-authority.json"
         evidence_path.write_text(json.dumps({
             "schema": AUTHORITY_EVIDENCE_SCHEMA,
             "project_id": "BOOK-SELFTEST",
+            "project_authority_fingerprint": authority_fp,
             "framework": {k: framework[k] for k in FRAMEWORK_KEYS},
             "artifact_bindings": [{"path": "draft.txt", "fingerprint": artifact_fp}],
             "required_capabilities": [],
-            "available_capabilities": [],
             "approval_refs": [],
         }), encoding="utf-8")
 
@@ -360,12 +463,33 @@ def self_test() -> int:
         stale_version = inspect(db_path=db, project_root=root, session_id="SES-PREFLIGHT", checkpoint_id="CP-PREFLIGHT", expected_session_version=999, authority_evidence_path=evidence_path)
         artifact.write_text("changed\n", encoding="utf-8")
         stale_artifact = inspect(db_path=db, project_root=root, session_id="SES-PREFLIGHT", checkpoint_id="CP-PREFLIGHT", expected_session_version=put["version"], authority_evidence_path=evidence_path)
+        artifact.write_text("frozen candidate\n", encoding="utf-8")
+        changed_manifest = root / "novelforge.toml"
+        changed_manifest.write_text(changed_manifest.read_text(encoding="utf-8").replace('id="BOOK-SELFTEST"', 'id="BOOK-OTHER"'), encoding="utf-8")
+        wrong_project = inspect(db_path=db, project_root=root, session_id="SES-PREFLIGHT", checkpoint_id="CP-PREFLIGHT", expected_session_version=put["version"], authority_evidence_path=evidence_path)
+        changed_manifest.write_text(changed_manifest.read_text(encoding="utf-8").replace('id="BOOK-OTHER"', 'id="BOOK-SELFTEST"'), encoding="utf-8")
+
+        local_capability_evidence = load_object(evidence_path)
+        local_capability_evidence["required_capabilities"] = ["subprocess"]
+        local_capability_path = root / "resume-local-capability.json"
+        local_capability_path.write_text(json.dumps(local_capability_evidence), encoding="utf-8")
+        local_capability_ready = inspect(db_path=db, project_root=root, session_id="SES-PREFLIGHT", checkpoint_id="CP-PREFLIGHT", expected_session_version=put["version"], authority_evidence_path=local_capability_path)
+
+        unavailable_capability_evidence = load_object(evidence_path)
+        unavailable_capability_evidence["required_capabilities"] = ["semantic_model"]
+        unavailable_capability_path = root / "resume-unavailable-capability.json"
+        unavailable_capability_path.write_text(json.dumps(unavailable_capability_evidence), encoding="utf-8")
+        unavailable_capability_blocked = inspect(db_path=db, project_root=root, session_id="SES-PREFLIGHT", checkpoint_id="CP-PREFLIGHT", expected_session_version=put["version"], authority_evidence_path=unavailable_capability_path)
+
         missing_db = root / "missing" / "runtime.db"
         missing = inspect(db_path=missing_db, project_root=root, session_id="SES-X", checkpoint_id="CP-X", expected_session_version=1, authority_evidence_path=evidence_path)
         ok = (
             good["ready"] is True
             and stale_version["ready"] is False and "session_version_mismatch" in stale_version["blockers"]
             and stale_artifact["ready"] is False and "checkpoint_artifact_fingerprint_unverified" in stale_artifact["blockers"]
+            and wrong_project["ready"] is False and "project_identity_mismatch" in wrong_project["blockers"]
+            and local_capability_ready["ready"] is True
+            and unavailable_capability_blocked["ready"] is False and "required_capability_unavailable" in unavailable_capability_blocked["blockers"]
             and missing["ready"] is False and not missing_db.exists() and not missing_db.parent.exists()
             and good["mutation_performed"] is False and good["authority"] is False
         )
@@ -374,6 +498,9 @@ def self_test() -> int:
             "ready_case": good["ready"],
             "stale_version_blocked": not stale_version["ready"],
             "stale_artifact_blocked": not stale_artifact["ready"],
+            "wrong_project_blocked": not wrong_project["ready"],
+            "locally_provable_capability_ready": local_capability_ready["ready"],
+            "unavailable_capability_blocked": not unavailable_capability_blocked["ready"],
             "missing_store_side_effect_free": not missing_db.exists() and not missing_db.parent.exists(),
             "mutation_performed": False,
             "authority": False,

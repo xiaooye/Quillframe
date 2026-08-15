@@ -15,6 +15,7 @@
     "novelforge_runtime_events_projection_v1",
     "novelforge_runtime_handoff_projection_v1",
     "novelforge_run_receipts_projection_v1",
+    "novelforge_session_resume_preflight_v1",
     "novelforge_context_inspector_v2",
     "novelforge_host_capabilities_v1"
   ],
@@ -65,7 +66,8 @@
       "runtime.session.get",
       "runtime.events.list",
       "runtime.handoff.inspect",
-      "run.receipt.get"
+      "run.receipt.get",
+      "session.resume.preflight"
     ],
     "deferred_operations": [
       "session.resume",
@@ -80,14 +82,17 @@
   },
   "runtime_observability": {
     "core_query_tool": "harness/control_plane/runtime_query.py",
+    "resume_preflight_tool": "harness/session_runtime/resume_preflight.py",
     "side_effect_free": true,
     "sqlite_consumer_contract": false,
     "provider_session_identifiers_exposed": false,
     "absolute_host_paths_exposed": false,
+    "resume_preflight_exposed": true,
     "session_resume_exposed": false,
     "checkpoint_replay_exposed": false,
     "handoff_mutation_exposed": false,
-    "run_receipts_are_metadata_only": true
+    "run_receipts_are_metadata_only": true,
+    "preflight_ready_grants_runtime_control": false
   },
   "agent_package_direction": {
     "phase_2b_read_bridge_exposed": true,
