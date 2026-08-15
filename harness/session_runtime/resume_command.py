@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Validate typed NovelForge session-resume command candidates.
 
-This is intentionally not an executor. It binds a proposed resume intent to one
-READY preflight, one exact durable before-state, and one authority-evidence
-fingerprint. Validation performs no runtime mutation and grants no authority.
+This validator binds a proposed resume intent to one READY preflight, one exact
+durable before-state, and one authority-evidence fingerprint. Validation itself
+performs no runtime mutation and grants no authority; the separately exposed
+runtime command executor must revalidate the candidate again at execute time.
 """
 from __future__ import annotations
 
@@ -256,7 +257,7 @@ def validate(command: dict[str, Any], preflight: dict[str, Any], project_root: P
         "framework_write_authority": False,
         "settlement_authority": False,
         "preflight_revalidation_required_at_execute": True,
-        "resume_command_executor_exposed": False,
+        "resume_command_executor_exposed": True,
         "replay_or_fork": False,
     }
 
@@ -363,6 +364,7 @@ def self_test() -> int:
             and bad_idempotency_result["valid"] is False and "idempotency_key_mismatch" in bad_idempotency_result["errors"]
             and valid["execution_authorized"] is False and valid["runtime_mutation_performed"] is False
             and valid["preflight_revalidation_required_at_execute"] is True
+            and valid["resume_command_executor_exposed"] is True
         )
         dump({
             "resume_command_candidate_contract": "PASS" if ok else "FAIL",
@@ -373,6 +375,7 @@ def self_test() -> int:
             "idempotency_mismatch_rejected": not bad_idempotency_result["valid"],
             "execution_authorized": False,
             "runtime_mutation_performed": False,
+            "resume_command_executor_exposed": True,
             "model_execution": False,
             "authority": False,
         })

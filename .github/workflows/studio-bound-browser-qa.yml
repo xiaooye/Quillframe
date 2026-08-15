@@ -9,6 +9,7 @@ on:
       - 'studio/host_bridge.py'
       - 'studio/host_bridge_contract.json'
       - 'studio/publication_preview.py'
+      - 'harness/session_runtime/**'
       - 'publication/**'
       - '.github/workflows/studio-bound-browser-qa.yml'
   push:
@@ -20,6 +21,7 @@ on:
       - 'studio/host_bridge.py'
       - 'studio/host_bridge_contract.json'
       - 'studio/publication_preview.py'
+      - 'harness/session_runtime/**'
       - 'publication/**'
       - '.github/workflows/studio-bound-browser-qa.yml'
 
@@ -250,13 +252,13 @@ jobs:
           assert 'Handoff + Approval' in agents
           assert 'Evidence + Receipt' in agents
 
-          # New product projection workbenches must be rendered inside the same
-          # bound shell, retain the reverted Story Loom product language, and
-          # never fall back to the unbound-host message.
+          # Product workbenches stay in the same bound shell and preserve the
+          # reverted Story Loom product language while displaying real Core state.
           assert 'CORE INSPECTOR · EXACT PROJECTIONS' in inspector
           assert 'Inspect real projections' in inspector
-          assert 'READ-ONLY CONTROL PLANE' in control
+          assert 'GUARDED RUNTIME CONTROL' in control
           assert 'Refresh real state' in control
+          assert 'runtime-state only' in control
           assert 'LIVE ARCHITECTURE · CORE PROJECTION' in architecture
           assert 'Load real run' in architecture
           assert 'PUBLICATION COMPILER · DERIVED ONLY' in publication
@@ -278,14 +280,15 @@ jobs:
           assert 'Studio 不会直接打开 runtime store' in runtime_zh
           assert 'This hosted shell is not bound to a NovelForge Core host' not in runtime
 
-          assert 'Observable state is public; runtime control is not' in capabilities
-          assert 'Safe public queries' in capabilities
-          assert 'Runtime control still deferred' in capabilities
+          assert 'Observable state is public; one runtime command is guarded' in capabilities
+          assert 'Supported Host Bridge operations' in capabilities
+          assert 'Additional writes still deferred' in capabilities
           assert 'runtime.sessions.list' in capabilities
           assert 'runtime.session.get' in capabilities
           assert 'runtime.events.list' in capabilities
           assert 'runtime.handoff.inspect' in capabilities
           assert 'run.receipt.get' in capabilities
+          assert 'runtime.command.receipt.get' in capabilities
           assert 'session.resume' in capabilities
           assert 'publication.preview' in capabilities
           assert 'This hosted shell is not bound to a NovelForge Core host' not in capabilities
@@ -356,8 +359,16 @@ jobs:
           for forbidden in ('.novelforge/runtime.db', 'sqlite3', 'localStorage.', 'sessionStorage.'):
               assert forbidden not in runtime_source, f'Runtime route bypasses public projection boundary: {forbidden}'
           resume_call = re.search(r'invokeBridge(?:<[^>]+>)?\(\s*["\']session\.resume["\']', runtime_source)
-          assert resume_call is None, 'Runtime observatory must not invoke session.resume control'
-          assert 'Resume stays deferred' in runtime_source and 'Resume 仍未开放' in runtime_source, 'Runtime route must preserve the explicit resume-deferred boundary'
+          assert resume_call is None, 'Runtime observatory must remain query-only; resume belongs to Control'
+
+          control_source = Path('studio/app/src/routes/Control.tsx').read_text(encoding='utf-8')
+          for operation in ('session.resume.preflight', 'session.resume', 'runtime.command.receipt.get'):
+              assert operation in control_source, f'Control route missing guarded command operation {operation}'
+          assert 'user_authorized: true' in control_source, 'Control must bind explicit user action into the resume request'
+          assert 'crypto.randomUUID()' in control_source, 'Control must issue a unique typed command id'
+          assert 'recoverReceipt' in control_source, 'Control must recover a durable receipt after an ambiguous transport failure'
+          for forbidden in ('.novelforge/runtime.db', 'sqlite3', 'localStorage.', 'sessionStorage.', 'project.mutate', 'command.invoke'):
+              assert forbidden not in control_source, f'Control bypasses declared command boundary: {forbidden}'
 
           publication_source = Path('studio/app/src/routes/Publication.tsx').read_text(encoding='utf-8')
           assert 'publication.preview' in publication_source
@@ -371,17 +382,21 @@ jobs:
           assert 'quality_score' not in inspector_source and 'release_eligibility' not in inspector_source
 
           (root / 'runtime-proof.txt').write_text(
-              'schema=novelforge_studio_bound_browser_qa_v2\n'
+              'schema=novelforge_studio_bound_browser_qa_v3\n'
               'surface=local_app\n'
               'core_host=bound\n'
               'workspace_surface=local_playground\n'
               'inspector_surface=real_core_projection\n'
               'architecture_surface=real_run_observatory\n'
               'publication_surface=real_deterministic_compiler\n'
-              'control_plane=read_only_projection_bundle\n'
+              'control_plane=guarded_runtime_command\n'
               'runtime_surface=side_effect_free_observatory\n'
-              'runtime_control_exposed=false\n'
+              'session_resume_exposed=true\n'
+              'session_resume_surface=local_app_only\n'
+              'session_resume_model_execution=false\n'
+              'generic_runtime_control_exposed=false\n'
               'runtime_query_transport=public_host_bridge\n'
+              'runtime_command_transport=public_host_bridge\n'
               'publication_preview_transport=public_host_bridge\n'
               'agent_runtime_model=novelforge_native\n'
               'capability_boundary_source=bridge.describe+capabilities.inspect\n'
@@ -390,7 +405,7 @@ jobs:
               'authority=false\n',
               encoding='utf-8',
           )
-          print({'schema': 'novelforge_studio_bound_browser_qa_v2', 'status': 'pass', 'authority': False})
+          print({'schema': 'novelforge_studio_bound_browser_qa_v3', 'status': 'pass', 'authority': False})
           PY
       - name: Upload bound browser QA evidence
         uses: actions/upload-artifact@v4
