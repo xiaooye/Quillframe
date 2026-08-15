@@ -17,7 +17,9 @@
     "novelforge_run_receipts_projection_v1",
     "novelforge_session_resume_preflight_v1",
     "novelforge_context_inspector_v2",
-    "novelforge_host_capabilities_v1"
+    "novelforge_host_capabilities_v1",
+    "novelforge_publication_ir_v1",
+    "novelforge_publication_preview_projection_v1"
   ],
   "shared_boundary": {
     "shape": "Core contracts -> stable query/command/projection boundary -> delivery surface",
@@ -62,6 +64,7 @@
       "capabilities.inspect",
       "context.inspect",
       "semantic.catalog",
+      "publication.preview",
       "runtime.sessions.list",
       "runtime.session.get",
       "runtime.events.list",
@@ -93,6 +96,19 @@
     "handoff_mutation_exposed": false,
     "run_receipts_are_metadata_only": true,
     "preflight_ready_grants_runtime_control": false
+  },
+  "publication_preview": {
+    "compiler": "publication/compiler.py",
+    "projection_schema": "novelforge_publication_preview_projection_v1",
+    "profiles": ["text", "web", "print", "epub"],
+    "accepted_fingerprint_guard": true,
+    "source_authority_invented": false,
+    "temporary_build_only": true,
+    "project_mutation": false,
+    "canon_mutation": false,
+    "settlement_mutation": false,
+    "model_execution": false,
+    "epub_external_release_validation": false
   },
   "agent_package_direction": {
     "phase_2b_read_bridge_exposed": true,
