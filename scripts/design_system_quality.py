@@ -156,14 +156,19 @@ def main() -> int:
     app_shell = (ROOT / "studio" / "app" / "src" / "AppShell.tsx").read_text(encoding="utf-8")
     components = (ROOT / "studio" / "app" / "src" / "components.tsx").read_text(encoding="utf-8")
     observability_ui = (ROOT / "studio" / "app" / "src" / "observability-ui.tsx").read_text(encoding="utf-8")
+    observability_routes = "\n".join(
+        (ROOT / "studio" / "app" / "src" / "routes" / name).read_text(encoding="utf-8")
+        for name in ("Semantic.tsx", "Diagnostics.tsx")
+    )
     for required_usage in (
         "wui-sidebar", "wui-app-bar", "wui-bottom-nav", "wui-command", "wui-button", "wui-badge",
     ):
         require(required_usage in app_shell, f"Studio shell is not based on WeiUI primitive {required_usage}")
     for required_usage in ("wui-card", "wui-alert", "wui-code-block"):
         require(required_usage in components, f"shared Studio component is not based on WeiUI primitive {required_usage}")
-    for required_usage in ("wui-card", "wui-alert", "wui-badge"):
-        require(required_usage in observability_ui, f"observability UI is not based on WeiUI primitive {required_usage}")
+    for required_usage in ("wui-alert", "wui-badge"):
+        require(required_usage in observability_ui, f"observability utility is not based on WeiUI primitive {required_usage}")
+    require("wui-card" in observability_routes, "live observability routes are not based on WeiUI primitive wui-card")
 
     app = tokens.get("app", {})
     interaction = app.get("interaction", {})
