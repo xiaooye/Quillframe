@@ -11,7 +11,7 @@
 
 NovelForge documentation is organized by **reader intent**, not by source-tree shape.
 
-The current development implementation is AI-native and contract-first: models own semantic fiction judgment; deterministic code owns authority, permissions, fingerprints, persistence, routing, typed validation, transactions, hard budgets, and reproducibility. Release authority remains `HARNESS_MANIFEST.yaml`; development implementation metadata does not promote a Framework release. See the [Changelog](../CHANGELOG.en.md) for the current release-truth ledger.
+The current development implementation is AI-native and contract-first: models own semantic fiction judgment; deterministic code owns authority, permissions, fingerprints, persistence, routing, typed validation, transactions, hard budgets, and reproducibility. For released compatibility claims, `HARNESS_MANIFEST.yaml` remains the release-metadata authority; during active 8.0 development, the latest `main` branch is the working implementation baseline. See the [8.0 Development Change Inventory](8-0-development-inventory.en.md) for merged work, active dependencies, and deferred scope, and the [Changelog](../CHANGELOG.en.md) for release history and the unreleased ledger.
 
 This documentation follows the same separation. Product pages explain the mental model and tradeoffs. Guides show how to use a subsystem. Deep contracts define exact invariants.
 
