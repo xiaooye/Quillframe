@@ -22,6 +22,7 @@
     "event_type": {
       "enum": [
         "session.resume_requested",
+        "session.terminate_requested",
         "semantic.requested",
         "semantic.result_received",
         "eval.requested",
