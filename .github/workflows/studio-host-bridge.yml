@@ -57,7 +57,8 @@ jobs:
           assert result['stale_version_blocked'] is True
           assert result['stale_artifact_blocked'] is True
           assert result['wrong_project_blocked'] is True
-          assert result['unproven_capability_blocked'] is True
+          assert result['locally_provable_capability_ready'] is True
+          assert result['unavailable_capability_blocked'] is True
           assert result['missing_store_side_effect_free'] is True
           assert result['mutation_performed'] is False
           assert result['authority'] is False and result['model_execution'] is False
