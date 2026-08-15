@@ -1,0 +1,235 @@
+name: Cloudflare DNS Migration Prepare
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cloudflare-dns-migration-prepare.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-dns-migration-prepare
+  cancel-in-progress: false
+
+env:
+  MIGRATION_ZONE: wei-dev.com
+  PAGES_PROJECT: novelforge
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Resolve Cloudflare zone and Pages project
+        id: resolve
+        shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          auth="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+
+          curl --silent --show-error --fail \
+            --header "${auth}" \
+            "https://api.cloudflare.com/client/v4/zones?name=${MIGRATION_ZONE}&account.id=${CLOUDFLARE_ACCOUNT_ID}" \
+            > /tmp/zones.json
+          jq -e '.success == true and (.result | length == 1)' /tmp/zones.json >/dev/null
+          zone_id=$(jq -r '.result[0].id' /tmp/zones.json)
+          zone_status=$(jq -r '.result[0].status' /tmp/zones.json)
+          ns1=$(jq -r '.result[0].name_servers[0]' /tmp/zones.json)
+          ns2=$(jq -r '.result[0].name_servers[1]' /tmp/zones.json)
+
+          curl --silent --show-error --fail \
+            --header "${auth}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PAGES_PROJECT}" \
+            > /tmp/pages-project.json
+          jq -e '.success == true' /tmp/pages-project.json >/dev/null
+          origin=$(jq -r '.result.subdomain // empty' /tmp/pages-project.json)
+          test -n "${origin}"
+
+          echo "zone_id=${zone_id}" >> "${GITHUB_OUTPUT}"
+          echo "zone_status=${zone_status}" >> "${GITHUB_OUTPUT}"
+          echo "ns1=${ns1}" >> "${GITHUB_OUTPUT}"
+          echo "ns2=${ns2}" >> "${GITHUB_OUTPUT}"
+          echo "origin=${origin}" >> "${GITHUB_OUTPUT}"
+
+      - name: Ensure Pages custom domains
+        shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          auth="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          base="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PAGES_PROJECT}"
+
+          ensure_domain() {
+            local domain="$1"
+            local encoded_domain
+            encoded_domain=$(printf '%s' "${domain}" | jq -sRr @uri)
+            status=$(curl --silent --show-error --output /tmp/domain.json --write-out "%{http_code}" \
+              --header "${auth}" \
+              "${base}/domains/${encoded_domain}")
+            if [ "${status}" = "404" ]; then
+              payload=$(jq -nc --arg name "${domain}" '{name:$name}')
+              status=$(curl --silent --show-error --output /tmp/domain.json --write-out "%{http_code}" \
+                --request POST \
+                --header "${auth}" \
+                --header "Content-Type: application/json" \
+                --data "${payload}" \
+                "${base}/domains")
+              case "${status}" in 200|201) ;; *) cat /tmp/domain.json; exit 1 ;; esac
+            elif [ "${status}" != "200" ]; then
+              cat /tmp/domain.json
+              exit 1
+            fi
+            jq -e '.success == true' /tmp/domain.json >/dev/null
+          }
+
+          ensure_domain "wei-dev.com"
+          ensure_domain "www.wei-dev.com"
+          ensure_domain "novelforge.wei-dev.com"
+
+      - name: Prepare deterministic DNS records in pending zone
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ZONE_ID: ${{ steps.resolve.outputs.zone_id }}
+          PAGES_ORIGIN: ${{ steps.resolve.outputs.origin }}
+        run: |
+          set -euo pipefail
+          auth="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          dns="https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records"
+
+          list_records() {
+            local type="$1" name="$2" out="$3"
+            curl --silent --show-error --fail \
+              --header "${auth}" \
+              --get \
+              --data-urlencode "type=${type}" \
+              --data-urlencode "name=${name}" \
+              "${dns}" > "${out}"
+            jq -e '.success == true' "${out}" >/dev/null
+          }
+
+          ensure_cname() {
+            local name="$1"
+            list_records CNAME "${name}" /tmp/records.json
+            count=$(jq '.result | length' /tmp/records.json)
+            if [ "${count}" -eq 0 ]; then
+              payload=$(jq -nc --arg name "${name}" --arg content "${PAGES_ORIGIN}" \
+                '{type:"CNAME",name:$name,content:$content,ttl:1,proxied:true}')
+              curl --silent --show-error --fail \
+                --request POST \
+                --header "${auth}" \
+                --header "Content-Type: application/json" \
+                --data "${payload}" \
+                "${dns}" > /tmp/write.json
+              jq -e '.success == true' /tmp/write.json >/dev/null
+            else
+              exact=$(jq --arg content "${PAGES_ORIGIN}" '[.result[] | select(.content == $content and .proxied == true)] | length' /tmp/records.json)
+              if [ "${exact}" -lt 1 ]; then
+                echo "Unexpected existing CNAME for ${name}; refusing to overwrite." >&2
+                jq '.result' /tmp/records.json
+                exit 1
+              fi
+            fi
+          }
+
+          ensure_mx() {
+            list_records MX "${MIGRATION_ZONE}" /tmp/mx.json
+            exact=$(jq '[.result[] | select(.content == "smtp.google.com" and .priority == 1)] | length' /tmp/mx.json)
+            count=$(jq '.result | length' /tmp/mx.json)
+            if [ "${exact}" -ge 1 ]; then return; fi
+            if [ "${count}" -ne 0 ]; then
+              echo "Unexpected existing MX records; refusing to replace them." >&2
+              jq '.result' /tmp/mx.json
+              exit 1
+            fi
+            payload=$(jq -nc --arg name "${MIGRATION_ZONE}" \
+              '{type:"MX",name:$name,content:"smtp.google.com",priority:1,ttl:3600,proxied:false}')
+            curl --silent --show-error --fail \
+              --request POST \
+              --header "${auth}" \
+              --header "Content-Type: application/json" \
+              --data "${payload}" \
+              "${dns}" > /tmp/write.json
+            jq -e '.success == true' /tmp/write.json >/dev/null
+          }
+
+          ensure_spf() {
+            list_records TXT "${MIGRATION_ZONE}" /tmp/txt.json
+            exact=$(jq '[.result[] | select(.content == "v=spf1 include:_spf.google.com ~all")] | length' /tmp/txt.json)
+            if [ "${exact}" -ge 1 ]; then return; fi
+            other_spf=$(jq '[.result[] | select(.content | startswith("v=spf1"))] | length' /tmp/txt.json)
+            if [ "${other_spf}" -ne 0 ]; then
+              echo "Unexpected existing SPF record; refusing to create a second SPF." >&2
+              jq '.result' /tmp/txt.json
+              exit 1
+            fi
+            payload=$(jq -nc --arg name "${MIGRATION_ZONE}" --arg content "v=spf1 include:_spf.google.com ~all" \
+              '{type:"TXT",name:$name,content:$content,ttl:3600}')
+            curl --silent --show-error --fail \
+              --request POST \
+              --header "${auth}" \
+              --header "Content-Type: application/json" \
+              --data "${payload}" \
+              "${dns}" > /tmp/write.json
+            jq -e '.success == true' /tmp/write.json >/dev/null
+          }
+
+          ensure_cname "wei-dev.com"
+          ensure_cname "www.wei-dev.com"
+          ensure_cname "novelforge.wei-dev.com"
+          ensure_mx
+          ensure_spf
+
+      - name: Verify prepared Cloudflare state
+        shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ZONE_ID: ${{ steps.resolve.outputs.zone_id }}
+          ZONE_STATUS: ${{ steps.resolve.outputs.zone_status }}
+          CF_NS1: ${{ steps.resolve.outputs.ns1 }}
+          CF_NS2: ${{ steps.resolve.outputs.ns2 }}
+          PAGES_ORIGIN: ${{ steps.resolve.outputs.origin }}
+        run: |
+          set -euo pipefail
+          auth="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+
+          curl --silent --show-error --fail \
+            --header "${auth}" \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?per_page=100" \
+            > /tmp/all-records.json
+          jq -e '.success == true' /tmp/all-records.json >/dev/null
+
+          for name in "wei-dev.com" "www.wei-dev.com" "novelforge.wei-dev.com"; do
+            jq -e --arg name "${name}" --arg origin "${PAGES_ORIGIN}" \
+              '.result | any(.type == "CNAME" and .name == $name and .content == $origin and .proxied == true)' \
+              /tmp/all-records.json >/dev/null
+          done
+          jq -e '.result | any(.type == "MX" and .name == "wei-dev.com" and .content == "smtp.google.com" and .priority == 1)' /tmp/all-records.json >/dev/null
+          jq -e '.result | any(.type == "TXT" and .name == "wei-dev.com" and .content == "v=spf1 include:_spf.google.com ~all")' /tmp/all-records.json >/dev/null
+
+          echo "=== CLOUDFLARE CUTOVER STATE READY ==="
+          echo "Zone status: ${ZONE_STATUS}"
+          echo "Pages origin: ${PAGES_ORIGIN}"
+          echo "Assigned NS: ${CF_NS1} / ${CF_NS2}"
+          jq -r '.result[] | select(.name == "wei-dev.com" or .name == "www.wei-dev.com" or .name == "novelforge.wei-dev.com") | [.type,.name,(.priority // "-"),.ttl,(.proxied // false),.content] | @tsv' /tmp/all-records.json | sort
+
+          {
+            echo "### Cloudflare DNS cutover prepared"
+            echo "- Zone status: \`${ZONE_STATUS}\`"
+            echo "- Pages origin: \`${PAGES_ORIGIN}\`"
+            echo "- Nameserver 1: \`${CF_NS1}\`"
+            echo "- Nameserver 2: \`${CF_NS2}\`"
+            echo "- Google Workspace MX: \`1 smtp.google.com\`"
+            echo "- Google Workspace SPF: \`v=spf1 include:_spf.google.com ~all\`"
+            echo "- DKIM/DMARC: not invented; current authoritative DNS had neither."
+            echo "- Registrar nameservers were NOT changed by this workflow."
+          } >> "${GITHUB_STEP_SUMMARY}"
