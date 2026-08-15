@@ -1,0 +1,151 @@
+/* Story Loom Kawaii Atelier v5 — photographic collage enhancement.
+ * Presentation-only: WeiUI + Story Loom remain the token/component authority.
+ * Photo sources (Pexels, free to use):
+ * - pastel clouds: https://www.pexels.com/photo/clouds-in-the-sky-10358405/
+ * - cosmos meadow: https://www.pexels.com/photo/colorful-flowers-on-meadow-18679019/
+ * - pastel sunset: https://www.pexels.com/photo/colorful-pastel-sunset-sky-with-soft-clouds-29279131/
+ */
+
+@layer atelier-photo-enhancement {
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    min-block-size: 480px;
+    padding-block-start: clamp(250px, 28vw, 310px);
+    background:
+      linear-gradient(
+        to bottom,
+        color-mix(in oklab, var(--atelier-paper-violet) 6%, transparent) 0%,
+        transparent 42%,
+        color-mix(in oklab, var(--wui-surface-raised) 42%, transparent) 54%,
+        color-mix(in oklab, var(--wui-surface-raised) 88%, var(--atelier-paper-violet)) 70%,
+        color-mix(in oklab, var(--wui-surface-raised) 96%, var(--atelier-paper-violet)) 100%
+      ),
+      url("https://images.pexels.com/photos/29279131/pexels-photo-29279131.jpeg?auto=compress&cs=tinysrgb&w=1200") center 34% / cover no-repeat;
+    box-shadow: var(--atelier-shadow-md);
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal > * {
+    position: relative;
+    z-index: 4;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal::before,
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal::after {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    padding: 7px;
+    border: 1px solid color-mix(in oklab, var(--wui-color-border) 68%, white);
+    border-radius: 17px 17px 8px 17px;
+    background-color: color-mix(in oklab, var(--wui-surface-raised) 92%, white);
+    background-origin: content-box;
+    background-clip: content-box;
+    background-repeat: no-repeat;
+    box-shadow:
+      0 5px 0 color-mix(in oklab, var(--nf-lane-runtime-stroke) 10%, transparent),
+      0 18px 36px oklch(.35 .035 310 / .16),
+      inset 0 1px 0 rgb(255 255 255 / .72);
+    pointer-events: none;
+    transition: transform 220ms var(--atelier-ease), box-shadow 220ms var(--atelier-ease);
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal::before {
+    inline-size: 42%;
+    aspect-ratio: 1.32;
+    inset-block-start: 30px;
+    inset-inline-start: 26px;
+    background-image: url("https://images.pexels.com/photos/18679019/pexels-photo-18679019.jpeg?auto=compress&cs=tinysrgb&w=700");
+    background-size: cover;
+    background-position: center 55%;
+    transform: rotate(-5deg);
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal::after {
+    inline-size: 38%;
+    aspect-ratio: 1.08;
+    inset-block-start: 64px;
+    inset-inline-end: 24px;
+    background-image: url("https://images.pexels.com/photos/10358405/pexels-photo-10358405.jpeg?auto=compress&cs=tinysrgb&w=650");
+    background-size: cover;
+    background-position: center 70%;
+    transform: rotate(5deg);
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal .portal-icon {
+    border-color: color-mix(in oklab, var(--nf-lane-runtime-stroke) 24%, white);
+    background: color-mix(in oklab, var(--atelier-paper-violet) 84%, white);
+    box-shadow:
+      0 5px 0 color-mix(in oklab, var(--nf-lane-runtime-stroke) 13%, transparent),
+      0 12px 28px oklch(.35 .03 310 / .12);
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal h3,
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal p,
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal small {
+    text-shadow: 0 1px 0 color-mix(in oklab, var(--wui-surface-raised) 76%, transparent);
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal:hover::before {
+    transform: translateY(-8px) rotate(-7deg) scale(1.025);
+    box-shadow:
+      0 7px 0 color-mix(in oklab, var(--nf-lane-editorial-stroke) 10%, transparent),
+      0 24px 44px oklch(.35 .04 330 / .19);
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal:hover::after {
+    transform: translateY(-5px) rotate(7deg) scale(1.02);
+    box-shadow:
+      0 7px 0 color-mix(in oklab, var(--nf-lane-project-stroke) 10%, transparent),
+      0 22px 42px oklch(.35 .04 255 / .18);
+  }
+
+  @media (max-width: 980px) {
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal {
+      min-block-size: 430px;
+      padding-block-start: 250px;
+      background-position: center 40%;
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal::before {
+      inline-size: min(42%, 250px);
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal::after {
+      inline-size: min(38%, 220px);
+    }
+  }
+
+  @media (max-width: 760px) {
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal {
+      min-block-size: 380px;
+      padding-block-start: 220px;
+      background-position: center 38%;
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal::before {
+      inline-size: 47%;
+      inset-block-start: 24px;
+      inset-inline-start: 18px;
+      padding: 5px;
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal::after {
+      inline-size: 42%;
+      inset-block-start: 52px;
+      inset-inline-end: 16px;
+      padding: 5px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal:hover::before {
+      transform: rotate(-5deg);
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal:hover::after {
+      transform: rotate(5deg);
+    }
+  }
+}

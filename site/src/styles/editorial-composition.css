@@ -1,0 +1,419 @@
+@layer product-components {
+  /*
+   * NovelForge clean-editorial product language.
+   *
+   * Kawaii is identity, not container chrome. Large information surfaces use
+   * type, whitespace and hairlines; color and shape remain on compact controls
+   * and on things that are actually represented as objects (paper, terminal,
+   * device preview). This is a product-language composition layer, not a final
+   * catch-all audit override.
+   */
+
+  .unified-product-shell {
+    background: var(--pe-bg);
+  }
+
+  .unified-route-page,
+  .unified-home {
+    gap: clamp(30px, 4vw, 56px);
+    color: var(--pe-fg);
+    background: transparent;
+  }
+
+  /* Quiet product chrome ------------------------------------------------ */
+
+  .unified-product-shell .product-appbar {
+    border-inline: 0;
+    border-top: 0;
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 64%, transparent);
+    border-radius: 0;
+    background: color-mix(in oklab, var(--pe-bg) 92%, transparent);
+    box-shadow: none;
+  }
+
+  .unified-product-shell .brand-mark-wrap {
+    border-color: color-mix(in oklab, var(--pe-border) 72%, transparent);
+    border-radius: 7px;
+    background: color-mix(in oklab, var(--pe-surface) 82%, transparent);
+    box-shadow: none;
+  }
+
+  .unified-product-shell .desktop-nav .wui-app-bar__link {
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .unified-product-shell .desktop-nav .wui-app-bar__link.active {
+    color: color-mix(in oklab, var(--pe-runtime) 78%, var(--pe-fg));
+    background: transparent;
+    box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--pe-runtime) 66%, transparent);
+  }
+
+  .unified-product-shell .header-search {
+    border-radius: 8px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .unified-product-shell .studio-cta {
+    border-radius: 8px;
+    box-shadow: none;
+  }
+
+  .unified-product-shell .site-footer {
+    border-top-color: color-mix(in oklab, var(--pe-border) 62%, transparent);
+    background: transparent;
+  }
+
+  /* Shared page heroes -------------------------------------------------- */
+
+  .unified-product-shell :where(.product-surface-hero, .product-surface-hero[data-tone], .kawaii-publication-hero) {
+    overflow: visible;
+    padding: clamp(34px, 5vw, 68px) 0 clamp(24px, 3vw, 38px);
+    border: 0;
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 62%, transparent);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .unified-product-shell :where(.product-surface-hero, .kawaii-publication-hero)::before,
+  .unified-product-shell :where(.product-surface-hero, .kawaii-publication-hero)::after {
+    display: none;
+  }
+
+  .product-surface-hero__copy,
+  .product-surface-hero__visual {
+    align-self: center;
+  }
+
+  /* Hero visuals are diagrams, not nested cards. */
+  .unified-product-shell :where(
+    .unified-home-loom,
+    .unified-stack-visual,
+    .unified-inspector-visual,
+    .unified-playground-visual,
+    .unified-agent-hosts,
+    .unified-release-badge,
+    .architecture-hero-path
+  ) {
+    overflow: visible;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .unified-product-shell :where(
+    .unified-home-loom,
+    .unified-stack-visual,
+    .unified-inspector-visual,
+    .unified-playground-visual,
+    .unified-agent-hosts
+  ) {
+    padding-block: 18px;
+    padding-inline: 0;
+    border-block: 1px solid color-mix(in oklab, var(--pe-border) 54%, transparent);
+  }
+
+  .loom-cloud {
+    opacity: .28;
+  }
+
+  .loom-book {
+    border-color: color-mix(in oklab, var(--pe-border) 70%, transparent);
+    border-radius: 8px;
+    background: color-mix(in oklab, var(--pe-surface) 96%, var(--pe-bg));
+    box-shadow: 9px 10px 0 -8px color-mix(in oklab, var(--pe-border) 60%, transparent);
+    transform: none;
+  }
+
+  /* Capability / explanatory sections --------------------------------- */
+
+  .unified-card-grid {
+    gap: 0 clamp(28px, 4vw, 56px);
+    border-top: 1px solid color-mix(in oklab, var(--pe-border) 64%, transparent);
+  }
+
+  .unified-card-grid > .unified-info-card:nth-child(n) {
+    min-height: 0;
+    padding: 26px 0 30px;
+    border: 0;
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 58%, transparent);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .unified-stack-visual {
+    gap: 0;
+  }
+
+  .unified-stack-visual span:nth-child(n) {
+    margin: 0;
+    padding: 12px 2px;
+    border: 0;
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 54%, transparent);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  /* A terminal is an object, so it keeps a restrained frame. */
+  .unified-studio-terminal {
+    border-radius: 8px;
+    box-shadow: 0 24px 54px -44px oklch(.2 .05 290 / .46);
+  }
+
+  /* Product tools ------------------------------------------------------- */
+
+  .unified-route-page.inspector-entry,
+  .unified-route-page.playground-entry,
+  .unified-route-page.agent-integration-entry {
+    background: transparent;
+  }
+
+  .inspector-entry .inspector-dropzone {
+    border: 0;
+    border-block: 1px solid color-mix(in oklab, var(--pe-border) 60%, transparent);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .inspector-entry .inspector-stat-grid > div:nth-child(n) {
+    border: 0;
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 56%, transparent);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .inspector-entry :where(.inspector-summary-card, .inspector-panel, .inspector-structure-panel) {
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .playground-entry :where(.playground-input-panel, .playground-trace-panel) {
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .playground-entry .playground-mode-tabs button[data-active="true"] {
+    background: transparent;
+  }
+
+  .playground-entry .playground-stage {
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .agent-integration-entry :where(
+    .agent-integration-summary,
+    .agent-onboarding-card,
+    .agent-request-builder,
+    .agent-contract-card,
+    .agent-host-workbench,
+    .agent-host-profile,
+    .agent-host-instruction
+  ) {
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .agent-integration-entry :where(.agent-operation-tabs, .agent-host-tabs) button[data-active="true"] {
+    background: transparent;
+  }
+
+  /* Architecture -------------------------------------------------------- */
+
+  .architecture-entry .architecture-hero-path {
+    padding: 0;
+    border-block: 1px solid color-mix(in oklab, var(--pe-border) 56%, transparent);
+  }
+
+  .architecture-entry .architecture-hero-path button {
+    min-height: 76px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .architecture-entry .architecture-hero-path button[data-active="true"] {
+    border-bottom-color: color-mix(in oklab, var(--pe-runtime) 68%, var(--pe-border));
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .architecture-entry :where(.architecture-canvas, .architecture-detail, .architecture-run-evidence) {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .architecture-entry .architecture-canvas,
+  .architecture-entry .architecture-inspector-grid {
+    border-top: 1px solid color-mix(in oklab, var(--pe-border) 62%, transparent);
+  }
+
+  .architecture-entry .architecture-canvas,
+  .architecture-entry :where(.architecture-detail, .architecture-run-evidence) {
+    padding-inline: 0;
+  }
+
+  .architecture-entry .architecture-inspector-grid {
+    gap: clamp(28px, 4vw, 56px);
+  }
+
+  .architecture-entry .architecture-node {
+    border: 0;
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 56%, transparent);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .architecture-entry .architecture-node[data-active="true"] {
+    border-bottom-color: color-mix(in oklab, var(--pe-runtime) 68%, var(--pe-border));
+    background: transparent;
+  }
+
+  .architecture-entry :where(.architecture-detail-grid > section, .architecture-trace-list li) {
+    border-radius: 0;
+    background: transparent;
+  }
+
+  /* Publication --------------------------------------------------------- */
+
+  .publication-workbench-entry .unified-publication-gallery {
+    gap: 20px;
+    border-block: 1px solid color-mix(in oklab, var(--pe-border) 56%, transparent);
+  }
+
+  .publication-workbench-entry .unified-publication-snapshot:nth-child(n) {
+    min-height: 0;
+    padding: 26px 0 14px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .publication-workbench-entry .unified-publication-snapshot:hover,
+  .publication-workbench-entry .unified-publication-snapshot[data-active="true"] {
+    border-bottom-color: color-mix(in oklab, var(--snapshot-accent) 72%, var(--pe-border));
+    background: transparent;
+    box-shadow: none;
+    transform: translateY(-2px);
+  }
+
+  .publication-workbench-entry .snapshot-label {
+    left: 0;
+    padding-inline: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  /* The mini page represents a real output object, so retain a paper edge. */
+  .publication-workbench-entry .snapshot-mini-page {
+    border-color: color-mix(in oklab, var(--pe-border) 62%, transparent);
+    border-radius: 4px;
+    background: color-mix(in oklab, var(--pe-surface) 96%, var(--pe-bg));
+    box-shadow: none;
+  }
+
+  .publication-workbench-entry .publication-profile-rail {
+    border-block: 1px solid color-mix(in oklab, var(--pe-border) 62%, transparent);
+    background: transparent;
+  }
+
+  .publication-workbench-entry .publication-profile-card {
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .publication-workbench-entry .publication-profile-card[data-active="true"] {
+    border-bottom-color: color-mix(in oklab, var(--pe-editorial) 70%, var(--pe-border));
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .publication-workbench-entry :where(.publication-preview-card, .publication-profile-inspector, .publication-provenance) {
+    border: 0;
+    border-top: 1px solid color-mix(in oklab, var(--pe-border) 62%, transparent);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview {
+    background: transparent;
+  }
+
+  /* The large reading preview is a paper/device object, not a layout card. */
+  .publication-workbench-entry .unified-large-publication-preview article,
+  .publication-workbench-entry .unified-large-publication-preview[data-profile] article {
+    border-color: color-mix(in oklab, var(--pe-border) 68%, transparent);
+    border-radius: 4px;
+    box-shadow: 10px 12px 0 -9px color-mix(in oklab, var(--pe-border) 70%, transparent);
+  }
+
+  .publication-workbench-entry :where(.publication-token-grid > div, .publication-pipeline-node) {
+    border: 0;
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 54%, transparent);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* Compact controls keep shape because shape communicates affordance. */
+  .unified-product-shell :where(.wui-button, .wui-badge, .version-chip) {
+    box-shadow: none;
+  }
+
+  .unified-product-shell .wui-button:not(.wui-button--icon-only) {
+    border-radius: 8px;
+  }
+
+  .unified-product-shell :where(.command-surface, .mobile-nav) {
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 900px) {
+  @layer product-components {
+    .unified-card-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .publication-workbench-entry .unified-publication-gallery {
+      gap: 10px;
+    }
+  }
+}
+
+@media (max-width: 620px) {
+  @layer product-components {
+    .unified-product-shell :where(.product-surface-hero, .product-surface-hero[data-tone], .kawaii-publication-hero) {
+      padding: 28px 0 22px;
+      border-radius: 0;
+    }
+
+    .unified-route-page,
+    .unified-home {
+      gap: 36px;
+    }
+  }
+}

@@ -1,0 +1,565 @@
+@layer product-components {
+  .agent-integration-main {
+    display: grid;
+    gap: clamp(26px, 3vw, 42px);
+  }
+
+  .agent-integration-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(320px, .75fr);
+    align-items: center;
+    gap: clamp(24px, 4vw, 54px);
+    padding-block: 14px 8px;
+  }
+
+  .agent-integration-hero-copy {
+    max-width: 850px;
+  }
+
+  .agent-integration-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 16px;
+  }
+
+  .agent-integration-hero h1 {
+    max-width: 860px;
+    margin: 0;
+    font-size: clamp(36px, 5.6vw, 72px);
+    font-weight: 820;
+    letter-spacing: -.055em;
+    line-height: .98;
+    text-wrap: balance;
+  }
+
+  .agent-integration-hero-copy > p {
+    max-width: 800px;
+    margin: 22px 0 0;
+    color: var(--pe-muted);
+    font-size: clamp(15px, 1.6vw, 18px);
+    line-height: 1.74;
+  }
+
+  .agent-integration-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    overflow: hidden;
+    padding: 1px;
+    border-radius: 26px 26px 14px 26px;
+    background: color-mix(in oklab, var(--pe-border) 58%, transparent);
+    box-shadow: var(--pe-shadow-2);
+    transform: rotate(.6deg);
+  }
+
+  .agent-integration-summary > div {
+    min-height: 118px;
+    padding: 20px;
+    background: color-mix(in oklab, var(--pe-surface) 96%, transparent);
+  }
+
+  .agent-integration-summary > div:first-child {
+    grid-column: 1 / -1;
+    min-height: auto;
+    background:
+      radial-gradient(circle at 94% 12%, color-mix(in oklab, var(--pe-runtime-soft) 86%, transparent), transparent 55%),
+      color-mix(in oklab, var(--pe-surface) 96%, transparent);
+  }
+
+  .agent-integration-summary small {
+    display: block;
+    color: var(--pe-muted);
+    font-size: 10px;
+    font-weight: 760;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .agent-integration-summary strong {
+    display: block;
+    margin-top: 4px;
+    font-size: 17px;
+  }
+
+  .agent-integration-summary span {
+    display: block;
+    margin-bottom: 5px;
+    color: color-mix(in oklab, var(--pe-runtime) 80%, var(--pe-fg));
+    font-size: 30px;
+    font-weight: 830;
+    letter-spacing: -.04em;
+  }
+
+  .agent-path-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .agent-path-card {
+    position: relative;
+    min-height: 290px;
+    padding: 24px;
+    overflow: hidden;
+    border: 1px solid color-mix(in oklab, var(--pe-border) 78%, transparent);
+    border-radius: 24px 24px 10px 24px;
+    background: color-mix(in oklab, var(--pe-surface) 95%, transparent);
+    box-shadow: var(--pe-shadow-1);
+  }
+
+  .agent-path-card::after {
+    content: "";
+    position: absolute;
+    inset: auto -22% -42% 38%;
+    height: 180px;
+    pointer-events: none;
+    border-radius: 50%;
+    background: color-mix(in oklab, var(--pe-runtime-soft) 70%, transparent);
+    filter: blur(34px);
+  }
+
+  .agent-path-card[data-lane="project"]::after {
+    background: color-mix(in oklab, var(--pe-project-soft) 80%, transparent);
+  }
+
+  .agent-path-card[data-lane="evidence"]::after {
+    background: color-mix(in oklab, var(--pe-evidence-soft) 80%, transparent);
+  }
+
+  .agent-path-icon {
+    display: grid;
+    place-items: center;
+    inline-size: 46px;
+    block-size: 46px;
+    margin-bottom: 20px;
+    border: 1px dashed color-mix(in oklab, var(--pe-runtime) 28%, var(--pe-border));
+    border-radius: 16px 16px 9px 16px;
+    color: color-mix(in oklab, var(--pe-runtime) 82%, var(--pe-fg));
+    background: var(--pe-runtime-soft);
+    font-size: 20px;
+    transform: rotate(-2deg);
+  }
+
+  .agent-path-card > small,
+  .agent-section-heading small,
+  .agent-contract-card > div small,
+  .agent-integration-footer-callout small {
+    color: var(--pe-muted);
+    font-size: 10px;
+    font-weight: 760;
+    letter-spacing: .08em;
+  }
+
+  .agent-path-card h2 {
+    margin: 7px 0 10px;
+    font-size: 22px;
+    letter-spacing: -.03em;
+  }
+
+  .agent-path-card p {
+    margin: 0;
+    color: var(--pe-muted);
+    font-size: 13px;
+    line-height: 1.68;
+  }
+
+  .agent-path-card > code {
+    position: absolute;
+    z-index: 1;
+    left: 24px;
+    right: 24px;
+    bottom: 22px;
+    padding: 8px 10px;
+    overflow: hidden;
+    border: 1px solid color-mix(in oklab, var(--pe-border) 68%, transparent);
+    border-radius: 10px;
+    color: color-mix(in oklab, var(--pe-runtime) 70%, var(--pe-fg));
+    background: color-mix(in oklab, var(--pe-bg) 72%, transparent);
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .agent-onboarding-grid {
+    display: grid;
+    grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr);
+    align-items: start;
+    gap: 16px;
+  }
+
+  .agent-onboarding-card,
+  .agent-request-builder {
+    padding: clamp(20px, 2.5vw, 30px);
+    border-radius: 24px;
+  }
+
+  .agent-section-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+  }
+
+  .agent-section-heading h2 {
+    max-width: 610px;
+    margin: 5px 0 0;
+    font-size: clamp(22px, 2.4vw, 30px);
+    letter-spacing: -.035em;
+    line-height: 1.08;
+  }
+
+  .agent-kawaii {
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    border: 1px dashed color-mix(in oklab, var(--pe-editorial) 28%, var(--pe-border));
+    border-radius: 999px;
+    color: color-mix(in oklab, var(--pe-editorial) 76%, var(--pe-fg));
+    background: var(--pe-editorial-soft);
+    font-size: 11px;
+    transform: rotate(2deg);
+  }
+
+  .agent-command-list {
+    display: grid;
+    gap: 9px;
+    margin-top: 22px;
+  }
+
+  .agent-command-row {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid color-mix(in oklab, var(--pe-border) 70%, transparent);
+    border-radius: 14px;
+    background: color-mix(in oklab, var(--pe-surface-soft) 58%, transparent);
+  }
+
+  .agent-command-row > span {
+    display: grid;
+    place-items: center;
+    inline-size: 30px;
+    block-size: 30px;
+    border-radius: 10px;
+    color: color-mix(in oklab, var(--pe-runtime) 76%, var(--pe-fg));
+    background: var(--pe-runtime-soft);
+    font-size: 10px;
+    font-weight: 820;
+  }
+
+  .agent-command-row strong,
+  .agent-command-row small,
+  .agent-command-row code {
+    display: block;
+  }
+
+  .agent-command-row strong {
+    font-size: 13px;
+  }
+
+  .agent-command-row small {
+    margin-top: 4px;
+    color: var(--pe-muted);
+    font-size: 11px;
+    line-height: 1.52;
+  }
+
+  .agent-command-row code {
+    margin-top: 9px;
+    padding: 7px 9px;
+    overflow-x: auto;
+    border-radius: 8px;
+    color: color-mix(in oklab, var(--pe-runtime) 68%, var(--pe-fg));
+    background: color-mix(in oklab, var(--pe-bg) 70%, transparent);
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .agent-command-row .wui-button {
+    min-block-size: 34px;
+    padding-inline: 10px;
+    font-size: 10px;
+  }
+
+  .agent-operation-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+    margin-top: 20px;
+  }
+
+  .agent-operation-tabs button {
+    min-height: 62px;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in oklab, var(--pe-border) 72%, transparent);
+    border-radius: 12px;
+    color: var(--pe-fg);
+    background: color-mix(in oklab, var(--pe-surface-soft) 58%, transparent);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
+  }
+
+  .agent-operation-tabs button:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in oklab, var(--pe-runtime) 34%, var(--pe-border));
+  }
+
+  .agent-operation-tabs button[data-active="true"] {
+    border-color: color-mix(in oklab, var(--pe-runtime) 42%, var(--pe-border));
+    background: var(--pe-runtime-soft);
+  }
+
+  .agent-operation-tabs strong,
+  .agent-operation-tabs small {
+    display: block;
+  }
+
+  .agent-operation-tabs strong {
+    overflow: hidden;
+    font-family: var(--wui-font-mono, ui-monospace, monospace);
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .agent-operation-tabs small {
+    margin-top: 4px;
+    color: var(--pe-muted);
+    font-size: 10px;
+  }
+
+  .agent-request-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+    color: var(--pe-muted);
+    font-size: 10px;
+  }
+
+  .agent-request-meta strong {
+    overflow: hidden;
+    color: var(--pe-fg);
+    font-weight: 680;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .agent-request-json {
+    min-height: 280px;
+    margin: 9px 0 0;
+    padding: 16px;
+    overflow: auto;
+    border: 1px solid color-mix(in oklab, var(--pe-border) 68%, transparent);
+    border-radius: 13px;
+    color: color-mix(in oklab, var(--pe-valid) 66%, var(--pe-fg));
+    background: color-mix(in oklab, var(--pe-bg) 80%, black 2%);
+    font-size: 11px;
+    line-height: 1.58;
+  }
+
+  .agent-contract-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .agent-contract-card {
+    padding: 22px;
+    border: 1px solid color-mix(in oklab, var(--pe-border) 74%, transparent);
+    border-radius: 20px;
+    background: color-mix(in oklab, var(--pe-surface) 94%, transparent);
+  }
+
+  .agent-contract-card--ready {
+    background: color-mix(in oklab, var(--pe-valid-soft) 30%, var(--pe-surface));
+  }
+
+  .agent-contract-card--deferred {
+    background: color-mix(in oklab, var(--pe-evidence-soft) 25%, var(--pe-surface));
+  }
+
+  .agent-contract-card--authority {
+    background: color-mix(in oklab, var(--pe-editorial-soft) 25%, var(--pe-surface));
+  }
+
+  .agent-contract-card > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .agent-contract-card > div:first-child > span {
+    display: grid;
+    place-items: center;
+    inline-size: 27px;
+    block-size: 27px;
+    border-radius: 9px;
+    background: color-mix(in oklab, var(--pe-surface) 82%, transparent);
+    font-size: 12px;
+  }
+
+  .agent-contract-card h2 {
+    margin: 13px 0 15px;
+    font-size: 18px;
+    letter-spacing: -.025em;
+  }
+
+  .agent-contract-card ul {
+    display: grid;
+    gap: 7px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .agent-contract-card li {
+    display: grid;
+    gap: 3px;
+    padding: 9px 10px;
+    border: 1px solid color-mix(in oklab, var(--pe-border) 56%, transparent);
+    border-radius: 10px;
+    background: color-mix(in oklab, var(--pe-surface) 66%, transparent);
+  }
+
+  .agent-contract-card li code,
+  .agent-contract-card li strong {
+    overflow-wrap: anywhere;
+    color: var(--pe-fg);
+    font-size: 10px;
+  }
+
+  .agent-contract-card li span {
+    color: var(--pe-muted);
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  .agent-integration-footer-callout {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: clamp(20px, 3vw, 30px);
+    border: 1px dashed color-mix(in oklab, var(--pe-runtime) 30%, var(--pe-border));
+    border-radius: 24px 24px 11px 24px;
+    background:
+      radial-gradient(circle at 8% 40%, color-mix(in oklab, var(--pe-runtime-soft) 65%, transparent), transparent 28%),
+      color-mix(in oklab, var(--pe-surface) 92%, transparent);
+  }
+
+  .agent-integration-footer-callout > div:first-child {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .agent-integration-footer-callout > div:first-child > span {
+    display: grid;
+    place-items: center;
+    inline-size: 42px;
+    block-size: 42px;
+    flex: 0 0 auto;
+    border-radius: 14px;
+    color: color-mix(in oklab, var(--pe-runtime) 82%, var(--pe-fg));
+    background: var(--pe-runtime-soft);
+  }
+
+  .agent-integration-footer-callout h2 {
+    max-width: 760px;
+    margin: 5px 0 0;
+    font-size: clamp(18px, 2vw, 25px);
+    letter-spacing: -.03em;
+    line-height: 1.14;
+  }
+
+  .agent-integration-footer-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
+  .agent-integration-footer {
+    margin-top: 22px;
+  }
+}
+
+@media (max-width: 1080px) {
+  .agent-integration-hero,
+  .agent-onboarding-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-integration-summary {
+    max-width: 700px;
+    transform: none;
+  }
+
+  .agent-path-grid,
+  .agent-contract-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .agent-path-card:last-child,
+  .agent-contract-card:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .agent-integration-hero h1 {
+    font-size: clamp(34px, 11vw, 52px);
+  }
+
+  .agent-path-grid,
+  .agent-contract-grid,
+  .agent-operation-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-path-card:last-child,
+  .agent-contract-card:last-child {
+    grid-column: auto;
+  }
+
+  .agent-command-row {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+
+  .agent-command-row .wui-button {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .agent-integration-footer-callout {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .agent-integration-footer-actions,
+  .agent-integration-footer-actions .wui-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .agent-integration-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-integration-summary > div:first-child {
+    grid-column: auto;
+  }
+
+  .agent-integration-summary > div {
+    min-height: 96px;
+  }
+
+  .agent-path-card {
+    min-height: 310px;
+  }
+}

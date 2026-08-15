@@ -1,0 +1,433 @@
+@layer product-components {
+  /* Publication is the one surface where presentation itself is the subject.
+   * Keep the shared page shell editorial, but let each derivative read as a
+   * materially different object instead of four labels on the same card. */
+
+  .publication-workbench-entry {
+    --publication-paper: color-mix(in oklab, var(--pe-surface) 96%, oklch(.99 .018 82));
+    --publication-ink: color-mix(in oklab, var(--pe-fg) 90%, oklch(.24 .025 70));
+  }
+
+  .publication-workbench-entry .unified-publication-gallery {
+    align-items: stretch;
+    padding-block: 18px 14px;
+  }
+
+  .publication-workbench-entry .unified-publication-snapshot {
+    isolation: isolate;
+    min-block-size: 232px;
+    padding-block-start: 34px;
+  }
+
+  .publication-workbench-entry .snapshot-mini-page {
+    position: relative;
+    min-block-size: 154px;
+    padding: 24px 14px 14px;
+    overflow: hidden;
+    color: var(--publication-ink);
+    background: var(--publication-paper);
+    transition:
+      transform var(--nf-product-duration-fast) var(--nf-product-ease),
+      border-color var(--nf-product-duration-fast) var(--nf-product-ease);
+  }
+
+  .publication-workbench-entry .unified-publication-snapshot:hover .snapshot-mini-page,
+  .publication-workbench-entry .unified-publication-snapshot[data-active="true"] .snapshot-mini-page {
+    transform: translateY(-2px);
+    border-color: color-mix(in oklab, var(--snapshot-accent) 34%, var(--pe-border));
+  }
+
+  .publication-workbench-entry .snapshot-mini-page strong {
+    position: relative;
+    z-index: 2;
+    display: block;
+    margin-block-end: 9px;
+    overflow: hidden;
+    font-size: 8px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .publication-workbench-entry .snapshot-mini-page i {
+    position: relative;
+    z-index: 2;
+    block-size: 4px;
+    margin-block-start: 7px;
+    background: color-mix(in oklab, var(--publication-ink) 15%, transparent);
+  }
+
+  /* TXT — editor/raw manuscript. */
+  .publication-workbench-entry .snapshot-text .snapshot-mini-page {
+    padding-inline-start: 30px;
+    border-radius: 5px;
+    background:
+      linear-gradient(90deg, color-mix(in oklab, var(--pe-valid-soft) 34%, var(--pe-surface)) 0 22px, transparent 22px),
+      color-mix(in oklab, var(--pe-surface) 97%, var(--pe-bg));
+    font-family: var(--wui-font-family-mono, ui-monospace, monospace);
+  }
+
+  .publication-workbench-entry .snapshot-text .snapshot-mini-page::before {
+    content: "01\A02\A03\A04\A05";
+    position: absolute;
+    inset-block: 25px auto;
+    inset-inline-start: 7px;
+    color: color-mix(in oklab, var(--pe-muted) 68%, transparent);
+    font: 600 6px/2.85 var(--wui-font-family-mono, ui-monospace, monospace);
+    white-space: pre;
+  }
+
+  /* WEB — a browser reading surface with actual chrome. */
+  .publication-workbench-entry .snapshot-web .snapshot-mini-page {
+    padding-block-start: 38px;
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, color-mix(in oklab, var(--pe-runtime-soft) 38%, var(--pe-surface)) 0 24px, transparent 24px),
+      color-mix(in oklab, var(--pe-surface) 98%, var(--pe-bg));
+    font-family: var(--wui-font-family-sans, system-ui, sans-serif);
+  }
+
+  .publication-workbench-entry .snapshot-web .snapshot-mini-page::before {
+    content: "●  ●  ●     novel.example/chapter-1";
+    position: absolute;
+    inset-block-start: 7px;
+    inset-inline: 9px;
+    overflow: hidden;
+    color: color-mix(in oklab, var(--pe-runtime) 42%, var(--pe-muted));
+    font: 600 5.5px/1 var(--wui-font-family-mono, ui-monospace, monospace);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* PRINT — two paper pages and a visible gutter. */
+  .publication-workbench-entry .snapshot-print .snapshot-mini-page {
+    padding: 24px 12px 16px;
+    border-radius: 2px;
+    background:
+      linear-gradient(90deg, var(--publication-paper) 0 48.5%, color-mix(in oklab, var(--pe-border) 76%, transparent) 49.4% 50.6%, var(--publication-paper) 51.5% 100%);
+    box-shadow: 5px 6px 0 -4px color-mix(in oklab, var(--pe-evidence) 16%, var(--pe-border));
+  }
+
+  .publication-workbench-entry .snapshot-print .snapshot-mini-page strong {
+    text-align: center;
+  }
+
+  .publication-workbench-entry .snapshot-print .snapshot-mini-page::before,
+  .publication-workbench-entry .snapshot-print .snapshot-mini-page::after {
+    position: absolute;
+    inset-block-end: 6px;
+    color: color-mix(in oklab, var(--publication-ink) 42%, transparent);
+    font: 600 5px/1 ui-serif, Georgia, serif;
+  }
+
+  .publication-workbench-entry .snapshot-print .snapshot-mini-page::before { content: "12"; inset-inline-start: 21%; }
+  .publication-workbench-entry .snapshot-print .snapshot-mini-page::after { content: "13"; inset-inline-end: 21%; }
+
+  /* EPUB — an e-reader, not another paper tile. */
+  .publication-workbench-entry .snapshot-epub .snapshot-mini-page {
+    margin-inline: auto;
+    inline-size: min(88%, 118px);
+    min-block-size: 164px;
+    padding: 30px 13px 18px;
+    border: 6px solid color-mix(in oklab, var(--pe-fg) 80%, oklch(.34 .035 290));
+    border-radius: 15px;
+    background: color-mix(in oklab, var(--publication-paper) 96%, var(--pe-editorial-soft));
+    box-shadow: 0 10px 20px -16px color-mix(in oklab, var(--pe-editorial) 36%, transparent);
+  }
+
+  .publication-workbench-entry .snapshot-epub .snapshot-mini-page::before {
+    content: "9:41   •••   68%";
+    position: absolute;
+    inset-block-start: 8px;
+    inset-inline: 10px;
+    color: color-mix(in oklab, var(--publication-ink) 55%, transparent);
+    font: 600 5px/1 var(--wui-font-family-sans, system-ui, sans-serif);
+    text-align: center;
+  }
+
+  .publication-workbench-entry .snapshot-epub .snapshot-mini-page::after {
+    content: "";
+    position: absolute;
+    inset-inline: 14px;
+    inset-block-end: 9px;
+    block-size: 2px;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--pe-editorial) 0 64%, color-mix(in oklab, var(--pe-border) 62%, transparent) 64%);
+  }
+
+  /* Selector rail ------------------------------------------------------ */
+
+  .publication-workbench-entry .publication-profile-rail {
+    position: relative;
+    grid-template-columns: minmax(185px, .8fr) repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+  }
+
+  .publication-workbench-entry .publication-rail-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-inline-size: 0;
+    padding: 16px 18px 16px 0;
+    border-inline-end: 1px solid color-mix(in oklab, var(--pe-border) 54%, transparent);
+  }
+
+  .publication-workbench-entry .publication-rail-title > span {
+    display: grid;
+    place-items: center;
+    inline-size: 34px;
+    block-size: 34px;
+    flex: 0 0 auto;
+    border-radius: 11px;
+    background: var(--pe-editorial-soft);
+  }
+
+  .publication-workbench-entry .publication-rail-title strong,
+  .publication-workbench-entry .publication-rail-title small { display: block; }
+  .publication-workbench-entry .publication-rail-title strong { font-size: 13px; }
+  .publication-workbench-entry .publication-rail-title small { margin-block-start: 3px; color: var(--pe-muted); font-size: 10px; line-height: 1.4; }
+
+  .publication-workbench-entry .publication-profile-card {
+    min-block-size: 98px;
+    padding-inline: 14px;
+    border-inline-end: 1px solid color-mix(in oklab, var(--pe-border) 44%, transparent);
+  }
+
+  .publication-workbench-entry .publication-profile-card:last-child { border-inline-end: 0; }
+
+  /* Main preview ------------------------------------------------------- */
+
+  .publication-workbench-entry .publication-preview-card {
+    overflow: clip;
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview {
+    --preview-object-line: color-mix(in oklab, var(--pe-border) 66%, transparent);
+    min-block-size: clamp(520px, 55vw, 690px);
+    padding: clamp(28px, 4vw, 52px);
+    overflow: hidden;
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview article,
+  .publication-workbench-entry .unified-large-publication-preview[data-profile] article {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    color: var(--publication-ink);
+    background: var(--publication-paper);
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="text"] {
+    background:
+      linear-gradient(color-mix(in oklab, var(--pe-border) 15%, transparent) 1px, transparent 1px),
+      color-mix(in oklab, var(--pe-valid-soft) 18%, var(--pe-bg));
+    background-size: 100% 28px;
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="text"] article {
+    inline-size: min(94%, 850px);
+    min-block-size: 430px;
+    padding: 48px 42px 48px 78px;
+    border-radius: 8px;
+    background:
+      linear-gradient(90deg, color-mix(in oklab, var(--pe-valid-soft) 30%, var(--pe-surface)) 0 52px, transparent 52px),
+      color-mix(in oklab, var(--pe-surface) 98%, var(--pe-bg));
+    font-family: var(--wui-font-family-mono, ui-monospace, monospace);
+    box-shadow: 0 24px 56px -44px color-mix(in oklab, var(--pe-valid) 34%, transparent);
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="text"] article::before {
+    content: "01\A02\A03\A04\A05\A06\A07\A08";
+    position: absolute;
+    inset-block-start: 50px;
+    inset-inline-start: 16px;
+    color: color-mix(in oklab, var(--pe-muted) 68%, transparent);
+    font: 600 9px/3.45 var(--wui-font-family-mono, ui-monospace, monospace);
+    white-space: pre;
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="text"] article h2 {
+    font-family: inherit;
+    font-size: clamp(22px, 2.3vw, 30px);
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="web"] {
+    background:
+      radial-gradient(30rem 20rem at 50% 18%, color-mix(in oklab, var(--pe-runtime-soft) 52%, transparent), transparent 72%),
+      color-mix(in oklab, var(--pe-runtime-soft) 15%, var(--pe-bg));
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="web"] article {
+    inline-size: min(94%, 900px);
+    min-block-size: 455px;
+    padding: 78px clamp(42px, 6vw, 86px) 54px;
+    border-radius: 12px;
+    background:
+      linear-gradient(180deg, color-mix(in oklab, var(--pe-runtime-soft) 38%, var(--pe-surface)) 0 42px, transparent 42px),
+      color-mix(in oklab, var(--pe-surface) 99%, var(--pe-bg));
+    font-family: var(--wui-font-family-sans, system-ui, sans-serif);
+    box-shadow: 0 26px 68px -42px color-mix(in oklab, var(--pe-runtime) 30%, transparent);
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="web"] article::before {
+    content: "●   ●   ●                 novel.example / chapter-1";
+    position: absolute;
+    inset-block-start: 17px;
+    inset-inline: 18px;
+    overflow: hidden;
+    color: color-mix(in oklab, var(--pe-runtime) 48%, var(--pe-muted));
+    font: 650 8px/1 var(--wui-font-family-mono, ui-monospace, monospace);
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="print"] {
+    background:
+      radial-gradient(30rem 20rem at 50% 20%, color-mix(in oklab, var(--pe-evidence-soft) 38%, transparent), transparent 74%),
+      color-mix(in oklab, var(--pe-evidence-soft) 12%, var(--pe-bg));
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="print"] article {
+    inline-size: min(98%, 940px);
+    min-block-size: 460px;
+    padding: 52px clamp(36px, 5vw, 70px) 46px;
+    columns: 2;
+    column-gap: clamp(46px, 6vw, 82px);
+    column-rule: 1px solid color-mix(in oklab, var(--pe-border) 58%, transparent);
+    border-radius: 2px;
+    background:
+      linear-gradient(90deg, transparent 0 49.8%, color-mix(in oklab, var(--pe-border) 18%, transparent) 50%, transparent 50.2%),
+      var(--publication-paper);
+    box-shadow: 12px 14px 0 -10px color-mix(in oklab, var(--pe-evidence) 24%, var(--pe-border));
+    font-family: ui-serif, "Noto Serif CJK SC", "Songti SC", Georgia, serif;
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="print"] article small,
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="print"] article h2 {
+    column-span: all;
+    text-align: center;
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="print"] article::before,
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="print"] article::after {
+    position: absolute;
+    inset-block-end: 18px;
+    color: color-mix(in oklab, var(--publication-ink) 46%, transparent);
+    font: 600 8px/1 ui-serif, Georgia, serif;
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="print"] article::before { content: "12"; inset-inline-start: 24%; }
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="print"] article::after { content: "13"; inset-inline-end: 24%; }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="epub"] {
+    background:
+      radial-gradient(26rem 22rem at 50% 28%, color-mix(in oklab, var(--pe-editorial-soft) 58%, transparent), transparent 72%),
+      color-mix(in oklab, var(--pe-editorial-soft) 18%, var(--pe-bg));
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="epub"] article {
+    inline-size: min(62%, 430px);
+    min-block-size: 520px;
+    padding: 62px 42px 46px;
+    border: 10px solid color-mix(in oklab, var(--pe-fg) 84%, oklch(.29 .028 292));
+    border-radius: 26px;
+    background: color-mix(in oklab, var(--publication-paper) 97%, var(--pe-editorial-soft));
+    box-shadow: 0 32px 70px -40px color-mix(in oklab, var(--pe-editorial) 48%, transparent);
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="epub"] article::before {
+    content: "9:41                  68%";
+    position: absolute;
+    inset-block-start: 19px;
+    inset-inline: 24px;
+    color: color-mix(in oklab, var(--publication-ink) 55%, transparent);
+    font: 600 8px/1 var(--wui-font-family-sans, system-ui, sans-serif);
+    text-align: center;
+  }
+
+  .publication-workbench-entry .unified-large-publication-preview[data-profile="epub"] article::after {
+    content: "";
+    position: absolute;
+    inset-inline: 28px;
+    inset-block-end: 20px;
+    block-size: 3px;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--pe-editorial) 0 68%, color-mix(in oklab, var(--pe-border) 70%, transparent) 68%);
+  }
+
+  /* Inspector and provenance become a compact production specification. */
+  .publication-workbench-entry .publication-profile-inspector {
+    position: sticky;
+    inset-block-start: 84px;
+    padding-block: 20px;
+  }
+
+  .publication-workbench-entry .publication-token-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin-block-start: 16px;
+    border-top: 1px solid color-mix(in oklab, var(--pe-border) 54%, transparent);
+  }
+
+  .publication-workbench-entry .publication-token-grid > div {
+    display: grid;
+    grid-template-columns: minmax(84px, .8fr) minmax(0, 1.2fr);
+    gap: 10px;
+    padding: 11px 0;
+  }
+
+  .publication-workbench-entry .publication-token-grid > div span { color: var(--pe-muted); }
+  .publication-workbench-entry .publication-token-grid > div strong { text-align: right; overflow-wrap: anywhere; }
+
+  .publication-workbench-entry .publication-pipeline-node {
+    min-inline-size: 0;
+  }
+
+  @media (max-width: 1120px) {
+    .publication-workbench-entry .publication-profile-rail {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .publication-workbench-entry .publication-rail-title {
+      grid-column: 1 / -1;
+      border-inline-end: 0;
+      border-block-end: 1px solid color-mix(in oklab, var(--pe-border) 54%, transparent);
+    }
+
+    .publication-workbench-entry .publication-profile-card:nth-of-type(2) { border-inline-start: 0; }
+  }
+
+  @media (max-width: 900px) {
+    .publication-workbench-entry .unified-publication-snapshot { min-block-size: 214px; }
+    .publication-workbench-entry .publication-profile-inspector { position: static; }
+    .publication-workbench-entry .unified-large-publication-preview[data-profile="epub"] article { inline-size: min(76%, 430px); }
+  }
+
+  @media (max-width: 680px) {
+    .publication-workbench-entry .publication-profile-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .publication-workbench-entry .publication-profile-card { border-block-end: 1px solid color-mix(in oklab, var(--pe-border) 44%, transparent); }
+    .publication-workbench-entry .unified-large-publication-preview { min-block-size: 430px; padding: 22px 10px; }
+    .publication-workbench-entry .unified-large-publication-preview[data-profile="text"] article,
+    .publication-workbench-entry .unified-large-publication-preview[data-profile="web"] article,
+    .publication-workbench-entry .unified-large-publication-preview[data-profile="print"] article,
+    .publication-workbench-entry .unified-large-publication-preview[data-profile="epub"] article {
+      inline-size: min(96%, 560px);
+      min-block-size: 390px;
+      padding-inline: 26px;
+    }
+    .publication-workbench-entry .unified-large-publication-preview[data-profile="text"] article { padding-inline-start: 66px; }
+    .publication-workbench-entry .unified-large-publication-preview[data-profile="print"] article { columns: 1; }
+    .publication-workbench-entry .unified-large-publication-preview[data-profile="print"] article h2 { column-span: none; }
+  }
+
+  @media (max-width: 440px) {
+    .publication-workbench-entry .unified-publication-snapshot { min-block-size: 188px; padding-block-start: 30px; }
+    .publication-workbench-entry .snapshot-mini-page { min-block-size: 122px; }
+    .publication-workbench-entry .snapshot-epub .snapshot-mini-page { min-block-size: 138px; }
+    .publication-workbench-entry .publication-profile-card { grid-template-columns: auto minmax(0, 1fr); }
+    .publication-workbench-entry .publication-profile-arrow { display: none; }
+  }
+}
