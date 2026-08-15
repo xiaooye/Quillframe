@@ -104,6 +104,7 @@ func _ready() -> void:
 	_navigate(_browser_path(), false)
 	resized.connect(_apply_responsive_layout)
 	call_deferred("_apply_responsive_layout")
+	call_deferred("_signal_web_ready")
 
 func _build_interface() -> void:
 	var background := ColorRect.new()
@@ -492,6 +493,11 @@ func _browser_path() -> String:
 	if not OS.has_feature("web"):
 		return "/"
 	return str(JavaScriptBridge.eval("window.location.pathname"))
+
+func _signal_web_ready() -> void:
+	if not OS.has_feature("web"):
+		return
+	JavaScriptBridge.eval("document.documentElement.dataset.novelforgeRuntime='ready';const loader=document.getElementById('nf-loader');if(loader){loader.classList.add('is-ready');}window.dispatchEvent(new CustomEvent('novelforge:ready')); ")
 
 func _open_docs() -> void:
 	if OS.has_feature("web"):
