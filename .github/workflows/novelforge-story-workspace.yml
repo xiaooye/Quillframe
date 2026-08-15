@@ -95,9 +95,9 @@ jobs:
             "suite_version": "8.0-dev.1-story-workspace",
             "description": "Feature-local blind narrative verification fixtures.",
             "cases": [
-              {"file": "cases/narrative_knowledge_visibility_reject.json"},
-              {"file": "cases/narrative_causal_consequence_reject.json"},
-              {"file": "cases/narrative_supported_change_accept.json"}
+              {"file": "evals/cases/narrative_knowledge_visibility_reject.json"},
+              {"file": "evals/cases/narrative_causal_consequence_reject.json"},
+              {"file": "evals/cases/narrative_supported_change_accept.json"}
             ]
           }
           JSON
