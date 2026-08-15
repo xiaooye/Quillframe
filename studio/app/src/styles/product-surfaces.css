@@ -17,6 +17,8 @@
   .nf-project-opener .nf-field-help{margin:0}
   .nf-section-kicker{display:flex;align-items:baseline;gap:10px}
   .nf-section-kicker>strong{font-size:13px;font-weight:650}
+  .nf-project-core-unbound{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--nf-studio-line-soft);border-radius:10px;background:var(--nf-studio-panel-subtle)}
+  .nf-project-core-unbound p{margin:0;color:var(--wui-color-muted-foreground);font-size:10.5px;line-height:1.45}
 
   .nf-browser-import,.nf-context-result,.nf-playground-shell{overflow:clip}
   .nf-browser-import-intro,.nf-browser-project-summary{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:18px 20px}
@@ -88,6 +90,7 @@
     .nf-browser-import-intro,.nf-browser-project-summary{display:grid;gap:14px;padding:16px}.nf-folder-picker{inline-size:100%;justify-content:center}.nf-browser-privacy,.nf-browser-core-note{padding-inline:16px}
     .nf-browser-project-meta{justify-content:space-between}.nf-browser-project-meta span{justify-items:start}.nf-preflight-row{grid-template-columns:10px minmax(0,1fr);padding-inline:16px}.nf-preflight-row>.wui-badge{grid-column:2;justify-self:start}
     .nf-project-overview-grid,.nf-project-opener,.nf-context-toolbar{grid-template-columns:1fr}.nf-project-overview-grid>.nf-inspector-section+.nf-inspector-section{border-inline-start:0;border-block-start:1px solid var(--nf-studio-line-soft)}.nf-project-opener-copy{grid-column:auto}.nf-inline-form{grid-template-columns:1fr}.nf-context-toolbar .nf-form-action{inline-size:100%}
+    .nf-project-core-unbound{align-items:flex-start}.nf-project-core-unbound .wui-badge{flex:0 0 auto}
     .nf-playground-modebar{grid-template-columns:repeat(2,minmax(0,1fr))}.nf-playground-trace{grid-template-columns:1fr}.nf-playground-trace>div{min-block-size:42px;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:8px;border-inline-end:0;border-block-end:1px solid var(--nf-studio-line-soft)}.nf-playground-trace>div:last-child{border-block-end:0}
   }
 }
