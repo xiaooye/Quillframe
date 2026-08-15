@@ -1,6 +1,10 @@
 /* Story Loom application theme for the WeiUI zero-JS foundation.
  * Authority: assets/brand/tokens.json + assets/brand/weiui.integration.json
  * Load after @weiui/tokens and @weiui/css. Generic component behavior remains WeiUI-owned.
+ *
+ * Atelier variables below are shared appearance primitives used by both the
+ * product site and Studio. They are deliberately derived from Story Loom lane
+ * semantics instead of introducing a second palette or component authority.
  */
 @layer wui-theme {
   :root {
@@ -39,6 +43,28 @@
     --nf-lane-rejected-fill: #F7DEE2;
     --nf-lane-rejected-stroke: #B95767;
 
+    /* Story Loom Kawaii Atelier appearance primitives. */
+    --nf-atelier-paper: color-mix(in oklab, var(--wui-color-background) 94%, var(--nf-lane-evidence-fill));
+    --nf-atelier-paper-warm: color-mix(in oklab, var(--wui-color-background) 82%, var(--nf-lane-evidence-fill));
+    --nf-atelier-paper-pink: color-mix(in oklab, var(--wui-color-background) 64%, var(--nf-lane-editorial-fill));
+    --nf-atelier-paper-blue: color-mix(in oklab, var(--wui-color-background) 64%, var(--nf-lane-project-fill));
+    --nf-atelier-paper-violet: color-mix(in oklab, var(--wui-color-background) 62%, var(--nf-lane-runtime-fill));
+    --nf-atelier-paper-mint: color-mix(in oklab, var(--wui-color-background) 62%, var(--nf-lane-validated-fill));
+    --nf-atelier-ink: var(--wui-color-foreground);
+    --nf-atelier-pencil: color-mix(in oklab, var(--wui-color-muted-foreground) 78%, var(--nf-atelier-ink));
+    --nf-atelier-line: color-mix(in oklab, var(--wui-color-border) 72%, transparent);
+    --nf-atelier-stitch: color-mix(in oklab, var(--nf-lane-runtime-stroke) 34%, var(--wui-color-border));
+    --nf-atelier-border: 1px solid color-mix(in oklab, var(--wui-color-border) 76%, var(--nf-lane-runtime-stroke));
+    --nf-atelier-shadow-sm: 0 3px 0 color-mix(in oklab, var(--nf-lane-runtime-stroke) 7%, transparent), 0 10px 24px oklch(.35 .03 310 / .08);
+    --nf-atelier-shadow-md: 0 5px 0 color-mix(in oklab, var(--nf-lane-project-stroke) 8%, transparent), 0 18px 45px oklch(.35 .035 310 / .11);
+    --nf-atelier-shadow-lg: 0 8px 0 color-mix(in oklab, var(--nf-lane-editorial-stroke) 8%, transparent), 0 30px 90px oklch(.3 .04 310 / .14);
+    --nf-atelier-radius-sm: 13px;
+    --nf-atelier-radius: 22px;
+    --nf-atelier-radius-lg: 34px;
+    --nf-atelier-grid-size: 32px;
+    --nf-atelier-ease: cubic-bezier(.2, .85, .22, 1.15);
+    --nf-atelier-ease-soft: cubic-bezier(.22, 1, .36, 1);
+
     --nf-touch-target-min: 44px;
     --nf-breakpoint-compact-max: 599px;
     --nf-breakpoint-medium-min: 600px;
@@ -68,5 +94,15 @@
     --wui-surface-raised: oklch(0.2346 0.0242 307.31);
     --wui-surface-overlay: oklch(0.2759 0.0293 308.73);
     --wui-surface-sunken: oklch(0.1953 0.0169 307.50);
+
+    --nf-atelier-paper: color-mix(in oklab, var(--wui-color-background) 88%, var(--nf-lane-runtime-fill));
+    --nf-atelier-paper-warm: color-mix(in oklab, var(--wui-color-background) 82%, var(--nf-lane-evidence-stroke));
+    --nf-atelier-paper-pink: color-mix(in oklab, var(--wui-color-background) 78%, var(--nf-lane-editorial-stroke));
+    --nf-atelier-paper-blue: color-mix(in oklab, var(--wui-color-background) 78%, var(--nf-lane-project-stroke));
+    --nf-atelier-paper-violet: color-mix(in oklab, var(--wui-color-background) 72%, var(--nf-lane-runtime-stroke));
+    --nf-atelier-paper-mint: color-mix(in oklab, var(--wui-color-background) 76%, var(--nf-lane-validated-stroke));
+    --nf-atelier-shadow-sm: 0 10px 30px oklch(.05 .02 310 / .28);
+    --nf-atelier-shadow-md: 0 20px 56px oklch(.05 .03 310 / .34);
+    --nf-atelier-shadow-lg: 0 36px 100px oklch(.04 .03 310 / .42);
   }
 }
