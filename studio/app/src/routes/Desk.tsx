@@ -23,7 +23,7 @@ export default function Desk() {
       <PageIntro eyebrow={t("desk.eyebrow")} title={t("desk.title")} body={t("desk.body")} />
 
       <div class="nf-start-actions" aria-label={t("desk.title")}>
-        <A href="/workspace" class="nf-start-action" data-intent="start-novel">
+        <A href="/start" class="nf-start-action" data-intent="start-novel">
           <span class="nf-card-label">01</span>
           <strong>{t("desk.startPlaygroundTitle")}</strong>
           <small>{t("desk.startPlaygroundBody")}</small>
