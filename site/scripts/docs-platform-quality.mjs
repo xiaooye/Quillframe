@@ -60,6 +60,7 @@ requireCheck(customCss.includes(".nf-tier-grid") && customCss.includes(".nf-refe
 requireCheck(siteTitle.includes('class="nf-brand-home" href="/"'), "NovelForge docs brand must navigate to the main product home");
 requireCheck(siteTitle.includes('english ? "/docs/en/" : "/docs/"'), "docs header must retain a locale-aware documentation-home link");
 requireCheck(siteTitle.includes('english ? "Docs" : "文档"'), "docs header must label the documentation namespace natively");
+requireCheck(actions.includes('english ? "Start" : "开始"') && actions.includes('href="/start"'), "Docs header must expose the locale-aware product-first Start hub");
 requireCheck(actions.includes('english ? "Product" : "产品"'), "Product header action must remain locale-aware");
 requireCheck(actions.includes('english ? "Agents" : "Agent 集成"') && actions.includes('href="/agents"'), "Docs header must expose the live Agent integration workbench");
 
@@ -81,7 +82,8 @@ requireCheck(fs.existsSync(path.join(stagedRoot, "en", "why-novelforge.md")), "E
 requireCheck(landing.includes('template: "splash"'), "docs home must use Starlight's splash landing template");
 requireCheck(landing.includes("StarlightPage"), "docs home must remain inside the official Starlight page shell");
 requireCheck(landing.includes('class="nf-link-grid"') && landing.includes('class="nf-link-card"'), "docs home must use stable semantic task-path cards instead of private Starlight component imports");
-requireCheck(landing.includes('link: "/inspect"') && landing.includes('"/inspect"'), "docs home must connect product-first onboarding to the live project inspector");
+requireCheck(landing.includes('link: "/start"') && landing.includes('["开始中心"') && landing.includes('["Start hub"'), "docs home must route product-first onboarding through the live Start hub");
+requireCheck(landing.includes('"/inspect"'), "docs home must retain a direct path to the live Project Inspector");
 requireCheck(landing.includes('"/playground"') && landing.includes('"/agents"'), "docs home must connect to the live Playground and Agent integration workbench");
 requireCheck(landing.includes("data-nf-docs-home"), "docs home must expose a stable verification marker");
 requireCheck(landing.includes("按目标开始") && landing.includes("Choose a path"), "docs landing copy must remain natively localized");
@@ -112,6 +114,7 @@ if (failures.length > 0) {
     raw_html_asset_rewrite: true,
     localized_header_actions: true,
     curated_landing: true,
+    product_first_start_handoff: true,
     product_first_inspector_handoff: true,
     product_tool_handoff: true,
     product_home_brand_handoff: true,
