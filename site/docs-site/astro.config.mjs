@@ -10,23 +10,23 @@ const ids = new Set(manifest.documents.map((doc) => doc.id));
 
 const groups = [
   {
-    label: "先从这里开始",
-    translations: { en: "Start here" },
-    ids: ["why-novelforge", "production-pipeline", "architecture"],
+    label: "入门",
+    translations: { en: "Getting started" },
+    ids: ["why-novelforge", "architecture", "production-pipeline"],
   },
   {
-    label: "创作、上下文与质量",
-    translations: { en: "Creation, context & quality" },
+    label: "创作与质量",
+    translations: { en: "Writing & quality" },
     ids: ["context-memory", "quality-assurance", "quality-evolution", "adaptive-learning", "story-system", "character-system", "canon-state"],
   },
   {
-    label: "Studio 与集成",
-    translations: { en: "Studio & integrations" },
+    label: "Studio 与接入",
+    translations: { en: "Studio & integration" },
     ids: ["studio-overview", "studio-product-architecture", "integrations", "project-sdk", "project-adapters"],
   },
   {
-    label: "架构、发布与版本",
-    translations: { en: "Architecture, release & publishing" },
+    label: "架构与发布",
+    translations: { en: "Architecture & release" },
     ids: ["architecture-atlas", "release-bundle", "development-change-inventory"],
   },
 ];
@@ -62,7 +62,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "NovelForge",
-      description: "NovelForge knowledge base and framework documentation.",
+      description: "NovelForge documentation for long-form fiction production, project integration, runtime contracts, quality, and publication.",
       logo: {
         src: "./src/assets/novelforge-mark.svg",
         alt: "NovelForge",
@@ -98,6 +98,7 @@ export default defineConfig({
       customCss: [
         "./src/styles/custom.css",
         "./src/styles/article-polish.css",
+        "./src/styles/navigation-polish.css",
       ],
       credits: false,
     }),
