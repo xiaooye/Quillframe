@@ -14,6 +14,8 @@ const check = (condition, message) => { if (!condition) failures.push(message); 
 const main = read("src/main.tsx");
 const index = read("src/styles/index.css");
 const editorial = read("src/styles/editorial-composition.css");
+const routeIdentity = read("src/styles/route-identities.css");
+const publicationGallery = read("src/styles/publication-gallery.css");
 const interaction = read("src/styles/interaction-contract.css");
 const readability = read("src/styles/readability.css");
 const hardening = read("src/styles/hardening.css");
@@ -26,7 +28,9 @@ check(index.indexOf('product-surface.css') < index.indexOf('architecture-explore
 check(index.indexOf('architecture-explorer.css') < index.indexOf('kawaii-surfaces.css'), "product-language composition must load after route defaults");
 check(index.indexOf('tool-workbench-kawaii.css') < index.indexOf('editorial-composition.css'), "clean editorial composition must refine the kawaii route language");
 check(index.indexOf('editorial-composition.css') < index.indexOf('embedded-features.css'), "embedded feature ownership must remain after shared editorial composition");
-check(index.indexOf('embedded-features.css') < index.indexOf('interaction-contract.css'), "shared interaction contract must refine route and embedded composition");
+check(index.indexOf('embedded-features.css') < index.indexOf('route-identities.css'), "route identity must refine shared/embedded composition rather than replace it");
+check(index.indexOf('route-identities.css') < index.indexOf('publication-gallery.css'), "publication gallery must remain a route-specific refinement of the shared identity layer");
+check(index.indexOf('publication-gallery.css') < index.indexOf('interaction-contract.css'), "shared interaction contract must remain later than visual route identity layers");
 check(index.indexOf('interaction-contract.css') < index.indexOf('readability.css'), "interaction composition must precede readability hardening");
 check(index.indexOf('readability.css') < index.indexOf('hardening.css'), "resilience/accessibility hardening must remain the final Product layer");
 check(!index.includes("surface-audit.css"), "legacy surface-audit override must not return to the cascade");
@@ -36,6 +40,16 @@ check(sharedLanguage.includes("--nf-product-pink") && sharedLanguage.includes("-
 check(editorial.includes("Kawaii is identity, not container chrome") && editorial.includes(".product-surface-hero") && editorial.includes(".publication-workbench-entry"), "editorial composition must explicitly encode the clean-kawaii surface policy");
 check(editorial.includes("background: transparent") && editorial.includes("border-bottom: 1px solid"), "editorial composition must use neutral surfaces and hairline hierarchy");
 check(!editorial.includes("!important"), "editorial composition must not depend on specificity escalation");
+for (const marker of [".architecture-entry", ".publication-workbench-entry", ".inspector-entry", ".playground-entry", ".agent-integration-entry", ":has(.unified-studio-terminal)"]) {
+  check(routeIdentity.includes(marker), `route identity layer missing ${marker}`);
+}
+check(routeIdentity.includes("Route identity layer") && routeIdentity.includes("ProductSurfaceHero owns shared typography"), "route identity must document its ownership boundary");
+check(!routeIdentity.includes("!important"), "route identity must not depend on specificity escalation");
+for (const marker of [".snapshot-text", ".snapshot-web", ".snapshot-print", ".snapshot-epub", '[data-profile="text"]', '[data-profile="web"]', '[data-profile="print"]', '[data-profile="epub"]']) {
+  check(publicationGallery.includes(marker), `publication gallery missing distinct preview treatment ${marker}`);
+}
+check(publicationGallery.includes("columns: 2") && publicationGallery.includes("novel.example / chapter-1") && publicationGallery.includes("9:41"), "publication gallery must visibly distinguish print, web, and EPUB objects");
+check(!publicationGallery.includes("!important"), "publication gallery must not depend on specificity escalation");
 for (const marker of [".product-appbar", ".mobile-nav", ".command-surface", ".footer-grid", ":root.dark", "@media (max-width: 980px)"]) {
   check(interaction.includes(marker), `shared interaction contract missing ${marker}`);
 }
@@ -53,13 +67,15 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_css_architecture_v4",
+    schema: "novelforge_css_architecture_v5",
     status: "pass",
     entrypoints: 1,
     audit_override: false,
     shared_product_language: true,
     editorial_composition: true,
     kawaii_as_accent_not_container: true,
+    route_identity_layer: true,
+    publication_format_previews: true,
     interaction_contract: true,
     compact_shell_density: true,
     responsive_navigation_contract: true,
