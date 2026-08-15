@@ -1,9 +1,25 @@
 {
+  "id": "/",
   "name": "NovelForge Studio",
   "short_name": "NovelForge",
-  "description": "Read-only NovelForge creator workbench shell",
+  "description": "Local-first NovelForge project preflight, playground, and read-only Studio shell",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#fdfcf9",
-  "theme_color": "#fdfcf9"
+  "theme_color": "#fdfcf9",
+  "icons": [
+    {
+      "src": "/novelforge-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Start a novel", "url": "/start" },
+    { "name": "Open a project", "url": "/project" },
+    { "name": "Playground", "url": "/workspace" },
+    { "name": "Agent integrations", "url": "/agents" }
+  ]
 }
