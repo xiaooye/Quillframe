@@ -8,3 +8,5 @@ __pycache__/
 .env.*
 *.log
 .DS_Store
+studio/app/node_modules/
+studio/app/dist/

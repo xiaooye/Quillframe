@@ -2,8 +2,8 @@
 """Deterministic Story Loom / WeiUI integration checks."""
 from __future__ import annotations
 
+import hashlib
 import json
-import math
 import re
 from pathlib import Path
 
@@ -13,6 +13,9 @@ TOKENS_PATH = BRAND / "tokens.json"
 INTEGRATION_PATH = BRAND / "weiui.integration.json"
 THEME_PATH = BRAND / "story-loom.weiui.css"
 PROVENANCE_PATH = ROOT / "assets" / "provenance.json"
+APP_CONFIG_PATH = ROOT / "studio" / "app" / "weiui.config.json"
+GENERATED_CSS_PATH = ROOT / "studio" / "app" / "src" / "styles" / "vendor" / "weiui.generated.css"
+GENERATED_TOKENS_PATH = ROOT / "studio" / "app" / "src" / "styles" / "vendor" / "weiui.tokens.generated.css"
 
 
 def load(path: Path) -> dict:
@@ -45,26 +48,86 @@ def contrast(a: str, b: str) -> float:
     return (hi + 0.05) / (lo + 0.05)
 
 
+def weiui_config_fingerprint(normalized: dict) -> str:
+    # Matches @weiui/css/config: JSON.stringify(normalized) with the contract's
+    # fixed insertion order and already-sorted selection arrays.
+    rendered = json.dumps(normalized, ensure_ascii=False, separators=(",", ":"))
+    return "sha256:" + hashlib.sha256(rendered.encode("utf-8")).hexdigest()
+
+
+def normalized_weiui_config(value: dict) -> dict:
+    allowed = {"schema", "foundation", "a11y", "elements", "utilities", "output"}
+    require(not (set(value) - allowed), "WeiUI config has unknown top-level keys")
+    require(value.get("schema") == "weiui_css_config_v1", "unexpected WeiUI config schema")
+    require(isinstance(value.get("foundation", True), bool), "WeiUI foundation must be boolean")
+    normalized: dict[str, object] = {
+        "schema": "weiui_css_config_v1",
+        "foundation": value.get("foundation", True),
+    }
+    for key in ("a11y", "elements", "utilities"):
+        items = value.get(key, [])
+        require(isinstance(items, list) and all(isinstance(item, str) and item.strip() for item in items), f"WeiUI {key} must be string list")
+        normalized[key] = sorted(set(item.strip() for item in items))
+    output = value.get("output", "weiui.generated.css")
+    require(isinstance(output, str) and output.strip(), "WeiUI config output must be non-empty string")
+    require(not Path(output).is_absolute() and ".." not in Path(output).parts, "WeiUI config output must remain project-relative")
+    normalized["output"] = output.strip()
+    return normalized
+
+
 def main() -> int:
     tokens = load(TOKENS_PATH)
     integration = load(INTEGRATION_PATH)
     provenance = load(PROVENANCE_PATH)
+    config = load(APP_CONFIG_PATH)
     css = THEME_PATH.read_text(encoding="utf-8")
 
     require(tokens.get("schema") == "novelforge_brand_tokens_v2", "unexpected token schema")
-    require(integration.get("schema") == "novelforge_weiui_integration_v1", "unexpected WeiUI integration schema")
+    require(integration.get("schema") == "novelforge_weiui_integration_v2", "unexpected WeiUI integration schema")
 
     source = integration.get("source", {})
     require(source.get("repository") == "xiaooye/weiui", "WeiUI source repository must be exact")
-    require(bool(re.fullmatch(r"[0-9a-f]{40}", str(source.get("commit", "")))), "WeiUI source must pin an exact commit")
+    commit = str(source.get("commit", ""))
+    require(bool(re.fullmatch(r"[0-9a-f]{40}", commit)), "WeiUI source must pin an exact commit")
     require(source.get("license") == "MIT", "WeiUI license provenance must be MIT")
 
     consumption = integration.get("consumption", {})
+    require(consumption.get("phase_2c_framework") == "SolidJS", "Phase 2C framework must remain SolidJS")
     require(consumption.get("theme_layer") == "wui-theme", "consumer theme layer must be wui-theme")
     require(consumption.get("runtime_javascript_from_weiui") is False, "Studio foundation must not require WeiUI runtime JavaScript")
     require(consumption.get("allowed_packages") == ["@weiui/tokens", "@weiui/css"], "allowed WeiUI packages drifted")
     forbidden = set(consumption.get("forbidden_runtime_packages", []))
     require({"@weiui/headless", "@weiui/react"}.issubset(forbidden), "Solid Studio must forbid React runtime packages")
+
+    delivery = consumption.get("css_delivery", {})
+    require(delivery.get("mode") == "config_generated_checked_in", "WeiUI CSS delivery must remain config-generated + checked-in")
+    require(delivery.get("config_schema") == "weiui_css_config_v1", "unexpected WeiUI config contract")
+    require(delivery.get("manifest_schema") == "weiui_css_bundle_manifest_v1", "unexpected WeiUI bundle manifest contract")
+    require(delivery.get("config_path") == APP_CONFIG_PATH.relative_to(ROOT).as_posix(), "WeiUI config path drifted")
+    require(delivery.get("generated_css") == GENERATED_CSS_PATH.relative_to(ROOT).as_posix(), "generated CSS path drifted")
+    require(delivery.get("generated_tokens") == GENERATED_TOKENS_PATH.relative_to(ROOT).as_posix(), "generated tokens path drifted")
+    require(delivery.get("tokens_remain_separate") is True, "WeiUI tokens must remain an explicit separate artifact")
+    require(delivery.get("regeneration_requires_exact_pin") is True, "WeiUI regeneration must bind exact source pin")
+
+    normalized_config = normalized_weiui_config(config)
+    require(normalized_config["foundation"] is True, "Studio WeiUI bundle must retain foundation")
+    require(set(normalized_config["a11y"]) == {"focus", "motion", "sr-only"}, "Studio WeiUI bundle must retain focus/motion/sr-only a11y fragments")
+    required_elements = {"app-bar", "badge", "bottom-nav", "button", "card", "command-palette", "input"}
+    require(required_elements.issubset(set(normalized_config["elements"])), "Studio WeiUI bundle is missing required shell elements")
+    require("*" not in normalized_config["elements"], "Studio must use an explicit on-demand element selection")
+    config_fp = weiui_config_fingerprint(normalized_config)
+
+    require(GENERATED_CSS_PATH.is_file(), "generated WeiUI CSS is missing")
+    require(GENERATED_TOKENS_PATH.is_file(), "generated WeiUI tokens CSS is missing")
+    generated_css = GENERATED_CSS_PATH.read_text(encoding="utf-8")
+    generated_tokens = GENERATED_TOKENS_PATH.read_text(encoding="utf-8")
+    require("Generated by @weiui/css config layer" in generated_css, "generated WeiUI CSS provenance header missing")
+    require(f"config-fingerprint: {config_fp}" in generated_css, "generated WeiUI CSS fingerprint does not bind current config")
+    require("manifest-schema: weiui_css_bundle_manifest_v1" in generated_css, "generated WeiUI manifest provenance missing")
+    require(".wui-button" in generated_css and ".wui-card" in generated_css, "generated WeiUI CSS missing selected shell fragments")
+    require(".wui-dialog" not in generated_css, "generated WeiUI CSS unexpectedly contains unselected dialog fragment")
+    require("@layer wui-reset, wui-tokens, wui-theme, wui-base, wui-elements, wui-utilities;" in generated_css, "generated WeiUI cascade registration missing")
+    require("--wui-color-background" in generated_tokens, "generated WeiUI token artifact looks incomplete")
 
     app = tokens.get("app", {})
     interaction = app.get("interaction", {})
@@ -72,7 +135,6 @@ def main() -> int:
     i18n = app.get("i18n", {})
     motion = app.get("motion", {})
     performance = app.get("performance", {})
-
     require(interaction.get("minimum_touch_target_px", 0) >= 44, "touch target budget must be at least 44px")
     require(interaction.get("focus_ring_width_px") == 3, "focus ring must remain 3px")
     require(interaction.get("focus_ring_offset_px") == 2, "focus ring offset must remain 2px")
@@ -83,7 +145,7 @@ def main() -> int:
     require(i18n.get("fixed_width_text_assumptions_allowed") is False, "fixed-width locale assumptions are forbidden")
     require(motion.get("idle_animation_allowed") is False, "idle decorative animation must stay disabled")
     require(motion.get("reduced_motion_required") is True, "reduced-motion support is required")
-    require(performance.get("weiui_runtime_javascript_required") is False, "WeiUI JS runtime must remain optional/absent")
+    require(performance.get("weiui_runtime_javascript_required") is False, "WeiUI JS runtime must remain absent")
     require(performance.get("polling_by_default_allowed") is False, "polling must not become a UI default")
 
     for mode in ("light", "dark"):
@@ -103,14 +165,22 @@ def main() -> int:
     ):
         require(variable in css, f"theme CSS missing {variable}")
 
-    assets = provenance.get("assets", [])
-    ids = {item.get("id") for item in assets if isinstance(item, dict)}
-    require({"brand-tokens-v2", "weiui-integration-v1", "story-loom-weiui-theme-v1"}.issubset(ids), "design-system provenance is incomplete")
+    assets = {item.get("id"): item for item in provenance.get("assets", []) if isinstance(item, dict)}
+    required_provenance = {
+        "brand-tokens-v2", "weiui-integration-v2", "story-loom-weiui-theme-v1",
+        "weiui-studio-bundle-config-v1", "weiui-studio-generated-css-v1", "weiui-studio-generated-tokens-v1",
+    }
+    require(required_provenance.issubset(assets), "design-system/generated-bundle provenance is incomplete")
+    for asset_id in ("weiui-integration-v2", "story-loom-weiui-theme-v1", "weiui-studio-generated-css-v1", "weiui-studio-generated-tokens-v1"):
+        require(commit in str(assets[asset_id].get("license_note", "")), f"{asset_id} provenance must bind exact WeiUI commit")
 
     print(json.dumps({
-        "schema": "novelforge_story_loom_design_system_check_v1",
+        "schema": "novelforge_story_loom_design_system_check_v2",
         "status": "pass",
-        "weiui_commit": source["commit"],
+        "weiui_commit": commit,
+        "weiui_config_fingerprint": config_fp,
+        "generated_css_bytes": GENERATED_CSS_PATH.stat().st_size,
+        "generated_tokens_bytes": GENERATED_TOKENS_PATH.stat().st_size,
         "theme_layer": consumption["theme_layer"],
         "runtime_javascript_from_weiui": False,
         "minimum_touch_target_px": interaction["minimum_touch_target_px"],

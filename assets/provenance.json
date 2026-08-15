@@ -1,6 +1,6 @@
 {
   "schema": "novelforge_visual_provenance_v1",
-  "updated_at": "2026-08-14",
+  "updated_at": "2026-08-15",
   "assets": [
     {
       "id": "brand-mark-v1",
@@ -39,13 +39,13 @@
       "license_note": "Original repository configuration; generic UI primitives remain WeiUI-owned."
     },
     {
-      "id": "weiui-integration-v1",
+      "id": "weiui-integration-v2",
       "path": "assets/brand/weiui.integration.json",
-      "method": "hand-authored integration lock",
-      "intent": "Pin the exact reviewed WeiUI generic UI foundation and define the NovelForge consumption/authority boundary",
+      "method": "hand-authored exact integration lock and generated-bundle contract",
+      "intent": "Pin the reviewed WeiUI generic foundation and define the config-generated, zero-runtime-JavaScript NovelForge consumption boundary",
       "user_reference": false,
       "third_party_asset": true,
-      "license_note": "Consumes xiaooye/weiui at commit d84d1cd365fb5f90cbbab794d2358f7a13b29b79 under MIT."
+      "license_note": "Consumes xiaooye/weiui at exact commit 876534000439f0c98aa39c439f7eb9276b18809d under MIT."
     },
     {
       "id": "story-loom-weiui-theme-v1",
@@ -54,7 +54,34 @@
       "intent": "Map Story Loom application semantics onto the pinned WeiUI wui-theme custom-property contract without copying generic component CSS",
       "user_reference": false,
       "third_party_asset": true,
-      "license_note": "NovelForge theme authored in this repository; consumes WeiUI public CSS-variable/cascade contract at pinned MIT-licensed commit d84d1cd365fb5f90cbbab794d2358f7a13b29b79."
+      "license_note": "NovelForge theme authored in this repository; consumes WeiUI public CSS-variable/cascade contract at exact MIT-licensed commit 876534000439f0c98aa39c439f7eb9276b18809d."
+    },
+    {
+      "id": "weiui-studio-bundle-config-v1",
+      "path": "studio/app/weiui.config.json",
+      "method": "hand-authored public-capability selection config",
+      "intent": "Declare the minimum WeiUI CSS surface required by the SolidJS Studio shell without naming WeiUI source files",
+      "user_reference": false,
+      "third_party_asset": true,
+      "license_note": "Config is original NovelForge material; its public selection vocabulary is defined by pinned MIT-licensed WeiUI."
+    },
+    {
+      "id": "weiui-studio-generated-css-v1",
+      "path": "studio/app/src/styles/vendor/weiui.generated.css",
+      "method": "deterministically generated from weiui_css_config_v1",
+      "intent": "Checked-in minimal WeiUI CSS bundle for offline/low-overhead Studio runtime",
+      "user_reference": false,
+      "third_party_asset": true,
+      "license_note": "Derived from xiaooye/weiui commit 876534000439f0c98aa39c439f7eb9276b18809d under MIT; regeneration is fingerprint-checked."
+    },
+    {
+      "id": "weiui-studio-generated-tokens-v1",
+      "path": "studio/app/src/styles/vendor/weiui.tokens.generated.css",
+      "method": "deterministically copied from pinned WeiUI token build output",
+      "intent": "Checked-in WeiUI primitive/semantic CSS custom properties for offline Studio runtime",
+      "user_reference": false,
+      "third_party_asset": true,
+      "license_note": "Derived from xiaooye/weiui commit 876534000439f0c98aa39c439f7eb9276b18809d under MIT."
     }
   ]
 }

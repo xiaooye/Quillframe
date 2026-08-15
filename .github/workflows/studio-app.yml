@@ -1,0 +1,141 @@
+name: NovelForge Studio App
+
+on:
+  pull_request:
+    paths:
+      - 'studio/app/**'
+      - 'studio/local_server.py'
+      - 'studio/sync_weiui.py'
+      - 'studio/host_bridge.py'
+      - 'studio/host_bridge_contract.json'
+      - 'assets/brand/**'
+      - 'assets/provenance.json'
+      - 'scripts/design_system_quality.py'
+      - '.github/workflows/studio-app.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'studio/app/**'
+      - 'studio/local_server.py'
+      - 'studio/sync_weiui.py'
+      - 'studio/host_bridge.py'
+      - 'studio/host_bridge_contract.json'
+      - 'assets/brand/**'
+      - 'assets/provenance.json'
+      - 'scripts/design_system_quality.py'
+      - '.github/workflows/studio-app.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  app-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read exact WeiUI pin
+        id: weiui
+        shell: bash
+        run: |
+          echo "sha=$(python - <<'PY'
+          import json
+          print(json.load(open('assets/brand/weiui.integration.json'))['source']['commit'])
+          PY
+          )" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: xiaooye/weiui
+          ref: ${{ steps.weiui.outputs.sha }}
+          path: .upstream/weiui
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: |
+            studio/app/pnpm-lock.yaml
+            .upstream/weiui/pnpm-lock.yaml
+      - name: Verify exact-pinned WeiUI artifacts
+        run: python studio/sync_weiui.py --weiui-root .upstream/weiui --check
+      - name: Install Studio dependencies
+        working-directory: studio/app
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck and build Studio
+        working-directory: studio/app
+        run: pnpm build
+      - name: Studio local transport self-test
+        run: |
+          python -m py_compile studio/local_server.py studio/sync_weiui.py
+          python studio/local_server.py --self-test
+      - name: Story Loom + WeiUI contract
+        run: python scripts/design_system_quality.py
+      - name: Low-overhead and authority source invariants
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          targets = list(Path('studio/app/src').rglob('*')) + [Path('studio/local_server.py')]
+          forbidden = (
+              'setInterval(', '@weiui/react', '@weiui/headless',
+              'from "react"', "from 'react'", 'runtime.db', '.sqlite',
+              'localStorage.', 'sessionStorage.',
+          )
+          hits = []
+          for path in targets:
+              if not path.is_file():
+                  continue
+              text = path.read_text(encoding='utf-8')
+              for needle in forbidden:
+                  if needle in text:
+                      hits.append(f'{path}: {needle}')
+          app_text = '\n'.join(p.read_text(encoding='utf-8') for p in Path('studio/app/src').rglob('*') if p.is_file())
+          if 'authority: true' in app_text or 'authority:true' in app_text:
+              hits.append('studio/app/src: authority=true')
+          if hits:
+              raise SystemExit('forbidden Studio patterns:\n' + '\n'.join(hits))
+          print({'status': 'pass', 'checked_files': sum(p.is_file() for p in targets)})
+          PY
+      - name: i18n and responsive source invariants
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          types = Path('studio/app/src/locales/types.ts').read_text(encoding='utf-8')
+          en = Path('studio/app/src/locales/en-US.ts').read_text(encoding='utf-8')
+          zh = Path('studio/app/src/locales/zh-CN.ts').read_text(encoding='utf-8')
+          css = Path('studio/app/src/styles/app.css').read_text(encoding='utf-8')
+          for needle in ('"en-US"', '"zh-CN"'):
+              assert needle in Path('studio/app/src/i18n.tsx').read_text(encoding='utf-8')
+          for key in ('nav.primaryLabel', 'project.pathPrivacy', 'workspace.projectionRequired'):
+              assert key in types and key in en and key in zh
+          assert '@media (max-width: 719px)' in css
+          assert 'nf-bottom-nav' in css
+          assert 'prefers-reduced-motion: reduce' in css
+          assert '100dvh' in css
+          print({'status': 'pass', 'locales': ['en-US', 'zh-CN'], 'mobile_focus_first': True})
+          PY
+      - name: Bundle budgets
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          dist = Path('studio/app/dist/assets')
+          js = list(dist.glob('*.js'))
+          css = list(dist.glob('*.css'))
+          total_js = sum(p.stat().st_size for p in js)
+          total_css = sum(p.stat().st_size for p in css)
+          largest_js = max((p.stat().st_size for p in js), default=0)
+          print({'js_bytes': total_js, 'css_bytes': total_css, 'largest_js_bytes': largest_js, 'js_chunks': len(js), 'css_chunks': len(css)})
+          assert total_js <= 180 * 1024, f'JS budget exceeded: {total_js}'
+          assert total_css <= 120 * 1024, f'CSS budget exceeded: {total_css}'
+          assert largest_js <= 120 * 1024, f'single JS chunk budget exceeded: {largest_js}'
+          PY
+      - name: Documentation quality
+        run: python scripts/docs_quality.py
+      - name: Upload built Studio for visual QA
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-app-dist
+          if-no-files-found: error
+          retention-days: 7
+          path: studio/app/dist/**

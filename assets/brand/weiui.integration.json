@@ -1,10 +1,10 @@
 {
-  "schema": "novelforge_weiui_integration_v1",
+  "schema": "novelforge_weiui_integration_v2",
   "source": {
     "repository": "xiaooye/weiui",
-    "commit": "d84d1cd365fb5f90cbbab794d2358f7a13b29b79",
+    "commit": "876534000439f0c98aa39c439f7eb9276b18809d",
     "license": "MIT",
-    "reviewed_at": "2026-08-14",
+    "reviewed_at": "2026-08-15",
     "packages": ["@weiui/tokens", "@weiui/css"]
   },
   "authority": {
@@ -20,9 +20,21 @@
     "forbidden_runtime_packages": ["@weiui/headless", "@weiui/react"],
     "theme_layer": "wui-theme",
     "runtime_javascript_from_weiui": false,
+    "css_delivery": {
+      "mode": "config_generated_checked_in",
+      "config_schema": "weiui_css_config_v1",
+      "config_path": "studio/app/weiui.config.json",
+      "manifest_schema": "weiui_css_bundle_manifest_v1",
+      "generator_api": "@weiui/css/config",
+      "generator_cli": "weiui-css",
+      "generated_css": "studio/app/src/styles/vendor/weiui.generated.css",
+      "generated_tokens": "studio/app/src/styles/vendor/weiui.tokens.generated.css",
+      "tokens_remain_separate": true,
+      "regeneration_requires_exact_pin": true
+    },
     "css_import_order": [
-      "@weiui/tokens/tokens.css",
-      "@weiui/css",
+      "studio/app/src/styles/vendor/weiui.tokens.generated.css",
+      "studio/app/src/styles/vendor/weiui.generated.css",
       "assets/brand/story-loom.weiui.css"
     ]
   },
@@ -37,6 +49,10 @@
     ],
     "minimum_touch_target_px": 44,
     "logical_properties": true,
-    "reduced_motion": true
+    "reduced_motion": true,
+    "config_unknown_selection_fails_closed": true,
+    "config_dependency_closure": true,
+    "config_deterministic_fingerprint": true,
+    "fragment_subpaths_are_real_outputs": true
   }
 }

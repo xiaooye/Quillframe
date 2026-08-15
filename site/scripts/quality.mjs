@@ -47,10 +47,13 @@ for (const forbidden of ["@weiui/react", "@weiui/headless", "react", "react-dom"
 }
 
 requireCheck(tokens.schema === "novelforge_brand_tokens_v2", "Story Loom token authority must be novelforge_brand_tokens_v2");
-requireCheck(weiuiIntegration.schema === "novelforge_weiui_integration_v1", "WeiUI integration contract schema drifted");
+requireCheck(weiuiIntegration.schema === "novelforge_weiui_integration_v2", "WeiUI integration contract schema drifted");
 requireCheck(weiuiIntegration.consumption?.phase_2c_framework === "SolidJS", "Phase 2C framework must remain SolidJS");
 requireCheck(weiuiIntegration.consumption?.runtime_javascript_from_weiui === false, "WeiUI runtime JavaScript must remain disabled");
 requireCheck(JSON.stringify(weiuiIntegration.consumption?.allowed_packages) === JSON.stringify(["@weiui/tokens", "@weiui/css"]), "WeiUI allowed package surface drifted");
+requireCheck(weiuiIntegration.consumption?.css_delivery?.config_schema === "weiui_css_config_v1", "WeiUI config contract must remain weiui_css_config_v1");
+requireCheck(weiuiIntegration.consumption?.css_delivery?.manifest_schema === "weiui_css_bundle_manifest_v1", "WeiUI bundle manifest contract drifted");
+requireCheck(weiuiIntegration.consumption?.css_delivery?.regeneration_requires_exact_pin === true, "WeiUI generated bundle must remain exact-pin reproducible");
 requireCheck(storyLoomTheme.includes("@layer wui-theme"), "Story Loom application theme must retain wui-theme layer");
 requireCheck(siteCss.includes('@import "../../../assets/brand/story-loom.weiui.css"'), "site must consume the maintained Story Loom application theme directly");
 
@@ -110,6 +113,7 @@ if (!process.exitCode) {
     routes: 7,
     locales: ["en-US", "zh-CN"],
     weiui_runtime_javascript: false,
+    weiui_integration: weiuiIntegration.schema,
     story_loom_tokens: tokens.schema,
   }, null, 2));
 }

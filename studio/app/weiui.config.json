@@ -1,0 +1,21 @@
+{
+  "schema": "weiui_css_config_v1",
+  "foundation": true,
+  "a11y": ["focus", "motion", "sr-only"],
+  "elements": [
+    "alert",
+    "app-bar",
+    "badge",
+    "bottom-nav",
+    "button",
+    "card",
+    "code",
+    "command-palette",
+    "empty-state",
+    "input",
+    "sidebar",
+    "tabs"
+  ],
+  "utilities": [],
+  "output": "src/styles/vendor/weiui.generated.css"
+}
