@@ -33,7 +33,7 @@ export default function Semantic() {
         <QueryError message={data.error ? String(data.error) : undefined} />
         <Show when={!data.loading} fallback={<div class="nf-loading">{t("common.loading")}</div>}>
           <Show when={packs().length > 0} fallback={<article class="wui-card nf-card"><div class="wui-card__content"><JsonBlock value={data()} /></div></article>}>
-            <section class="nf-catalog-workstation" aria-labelledby="semantic-catalog-heading">
+            <section class="wui-card wui-card--outlined nf-catalog-workstation" aria-labelledby="semantic-catalog-heading">
               <div class="nf-observe-section-head nf-catalog-summary">
                 <div>
                   <span class="nf-eyebrow">{t("semantic.currentProjection")}</span>
