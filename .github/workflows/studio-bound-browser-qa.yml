@@ -139,7 +139,7 @@ jobs:
 
           assert 'Local Playground' in workspace
           assert 'Run preview' in workspace
-          assert 'Deterministic browser preview' in workspace
+          assert 'deterministic browser preview' in workspace
 
           # These workstations only render after real bridge data arrives.
           assert 'Registered model contracts' in semantic
