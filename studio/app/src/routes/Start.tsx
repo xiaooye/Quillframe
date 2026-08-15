@@ -68,11 +68,17 @@ export default function Start() {
   };
 
   return (
-    <section class="nf-page">
+    <section class="nf-page nf-start-page">
       <PageIntro eyebrow={text().eyebrow} title={text().title} body={text().body} />
 
       <div class="nf-catalog-grid">
-        <article class="wui-card nf-card nf-card-accent">
+        <article
+          class="wui-card nf-card nf-card-accent"
+          style={{
+            background: "color-mix(in oklab,var(--nf-lane-project-fill) 58%,var(--nf-studio-panel))",
+            "border-color": "color-mix(in oklab,var(--nf-lane-project-stroke) 28%,var(--nf-studio-line-soft))",
+          }}
+        >
           <div class="wui-card__header">
             <span class="nf-card-label">{text().cliMeta}</span>
             <h2>{text().cliTitle}</h2>
@@ -87,7 +93,10 @@ export default function Start() {
           </div>
         </article>
 
-        <article class="wui-card nf-card">
+        <article
+          class="wui-card nf-card"
+          style={{ background: "color-mix(in oklab,var(--nf-studio-panel-subtle) 58%,var(--nf-studio-panel))" }}
+        >
           <div class="wui-card__header">
             <span class="nf-card-label">{text().desktopMeta}</span>
             <h2>{text().desktopTitle}</h2>
@@ -98,7 +107,13 @@ export default function Start() {
           </div>
         </article>
 
-        <article class="wui-card nf-card">
+        <article
+          class="wui-card nf-card"
+          style={{
+            background: "color-mix(in oklab,var(--nf-lane-runtime-fill) 52%,var(--nf-studio-panel))",
+            "border-color": "color-mix(in oklab,var(--nf-lane-runtime-stroke) 24%,var(--nf-studio-line-soft))",
+          }}
+        >
           <div class="wui-card__header">
             <span class="nf-card-label">{text().cloudMeta}</span>
             <h2>{text().cloudTitle}</h2>
@@ -109,7 +124,13 @@ export default function Start() {
           </div>
         </article>
 
-        <article class="wui-card nf-card">
+        <article
+          class="wui-card nf-card"
+          style={{
+            background: "color-mix(in oklab,var(--nf-lane-editorial-fill) 52%,var(--nf-studio-panel))",
+            "border-color": "color-mix(in oklab,var(--nf-lane-editorial-stroke) 24%,var(--nf-studio-line-soft))",
+          }}
+        >
           <div class="wui-card__header">
             <span class="nf-card-label">{text().agentMeta}</span>
             <h2>{text().agentTitle}</h2>
