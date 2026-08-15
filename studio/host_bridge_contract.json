@@ -1,6 +1,6 @@
 {
   "schema": "novelforge_studio_host_bridge_contract_v1",
-  "version": "1",
+  "version": "2",
   "authority": false,
   "canon_authority": false,
   "framework_write_authority": false,
@@ -21,7 +21,12 @@
     "absolute_host_paths_in_results": false,
     "capability_implies_authority": false,
     "unsupported_operation_fails_closed": true,
-    "mutation_exposed": false
+    "mutation_exposed": true,
+    "mutation_scope": "runtime_session_state_only",
+    "mutation_requires_explicit_authorization": true,
+    "mutation_requires_fresh_preflight": true,
+    "mutation_requires_compare_and_swap": true,
+    "mutation_requires_idempotent_receipt": true
   },
   "operations": {
     "supported": {
@@ -86,21 +91,33 @@
         "core_basis": "novelforge_run_receipts_projection_v1 via novelforge.py runtime-query",
         "required_args": ["project_root"]
       },
+      "runtime.command.receipt.get": {
+        "kind": "query",
+        "core_basis": "novelforge_runtime_command_receipt_projection_v1 via novelforge.py runtime-command",
+        "required_args": ["project_root"]
+      },
       "session.resume.preflight": {
         "kind": "query",
         "core_basis": "novelforge_session_resume_preflight_v1 via novelforge.py resume-preflight",
         "required_args": ["project_root", "session_id", "checkpoint_id", "expected_session_version", "authority_evidence"]
+      },
+      "session.resume": {
+        "kind": "command",
+        "core_basis": "novelforge_session_resume_command_v1 + novelforge_runtime_command_authorization_v1 + novelforge_runtime_command_receipt_v1 via novelforge.py runtime-command",
+        "required_args": ["project_root", "session_id", "checkpoint_id", "expected_session_version", "authority_evidence", "user_authorized"],
+        "allowed_surfaces": ["local_app"],
+        "mutation_scope": "runtime_session_state_only",
+        "model_execution": false,
+        "project_write": false,
+        "canon_write": false,
+        "framework_write": false,
+        "settlement": false
       }
     },
     "deferred": {
-      "session.resume": {
-        "kind": "command",
-        "reason": "resume preflight is public, but the mutating resume command still lacks a stable typed command envelope with before-state CAS/idempotency, explicit authorization, and command receipts",
-        "dependency": "#23"
-      },
       "command.invoke": {
         "kind": "command",
-        "reason": "write-capable host operations require typed Core command, authority, preconditions, CAS/idempotency, and receipts",
+        "reason": "generic write dispatch remains forbidden; every mutation needs an operation-specific typed Core command, authority policy, preconditions, CAS/idempotency, and receipt",
         "dependency": "#23"
       },
       "project.mutate": {
@@ -115,7 +132,9 @@
     "path": "agent-skills/novelforge/SKILL.md",
     "client_script": "agent-skills/novelforge/scripts/novelforge_bridge.py",
     "private_python_imports_required": false,
-    "private_persistence_layout_required": false
+    "private_persistence_layout_required": false,
+    "runtime_mutation_allowed": false,
+    "session_resume_surface": "local_app_only"
   },
   "core_dependencies": ["#23"]
 }
