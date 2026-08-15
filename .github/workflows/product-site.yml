@@ -31,11 +31,13 @@ env:
   CLOUDFLARE_CUSTOM_DOMAIN: novelforge.wei-dev.com
   GODOT_RELEASE: 4.7.1-stable
   GODOT_TEMPLATE_VERSION: 4.7.1.stable
+  GODOT_SOURCE_SHA256: 0230d490846467c4fd772cc70b08dc56cb3adfedd55d039de0af74ddfdba00eb
+  EMSDK_VERSION: 4.0.20
 
 jobs:
   site-quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: site
@@ -57,7 +59,7 @@ jobs:
       - name: Production build
         run: npm run build
 
-      - name: Install pinned Godot and Web export templates
+      - name: Install pinned Godot editor
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.local/bin"
@@ -66,18 +68,54 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp/godot
           install -m 0755 "/tmp/godot/Godot_v${GODOT_RELEASE}_linux.x86_64" "$HOME/.local/bin/godot"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-          curl -fsSL -o /tmp/godot-templates.tpz \
-            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_export_templates.tpz"
-          rm -rf /tmp/godot-templates
-          mkdir -p /tmp/godot-templates
-          unzip -q /tmp/godot-templates.tpz -d /tmp/godot-templates
-          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}"
-          cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}/"
           "$HOME/.local/bin/godot" --version
+
+      - name: Restore NovelForge Godot Web template cache
+        id: godot-template-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/novelforge-godot-template
+          key: novelforge-godot-web-${{ env.GODOT_RELEASE }}-${{ env.EMSDK_VERSION }}-ui2d-v1
+
+      - name: Compile 2D-only Godot Web template
+        if: steps.godot-template-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user 'scons>=4.4,<5'
+          export PATH="$HOME/.local/bin:$PATH"
+
+          rm -rf /tmp/emsdk
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git /tmp/emsdk
+          /tmp/emsdk/emsdk install "${EMSDK_VERSION}"
+          /tmp/emsdk/emsdk activate "${EMSDK_VERSION}"
+          source /tmp/emsdk/emsdk_env.sh
+
+          bash scripts/build-godot-web-template.sh "$HOME/.cache/novelforge-godot-template"
+
+      - name: Install NovelForge Web export template
+        run: |
+          set -euo pipefail
+          template="$HOME/.cache/novelforge-godot-template/web_nothreads_release.zip"
+          test -s "${template}"
+          template_dir="$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}"
+          mkdir -p "${template_dir}"
+          cp "${template}" "${template_dir}/web_nothreads_release.zip"
+          cat "$HOME/.cache/novelforge-godot-template/build-meta.txt"
 
       - name: Export Godot product runtime
         run: npm run godot:build
+
+      - name: Verify Cloudflare Pages asset ceiling
+        run: |
+          set -euo pipefail
+          limit=$((25 * 1024 * 1024))
+          largest=$(find dist -type f -printf '%s %p\n' | sort -nr | head -1)
+          bytes=${largest%% *}
+          echo "Largest production asset: ${largest}"
+          if [ "${bytes}" -ge "${limit}" ]; then
+            echo "Production asset exceeds Cloudflare Pages 25 MiB individual-file limit." >&2
+            exit 1
+          fi
 
       - name: Ensure Cloudflare Pages project
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -177,6 +215,7 @@ jobs:
             echo "- Origin: https://${origin}"
             echo "- Custom domain: https://${CLOUDFLARE_CUSTOM_DOMAIN} (${domain_status})"
             echo "- External DNS CNAME: novelforge -> ${origin}"
-            echo "- Product runtime: Godot ${GODOT_RELEASE} Web export"
+            echo "- Product runtime: custom 2D-only Godot ${GODOT_RELEASE} Web export"
+            echo "- Pages asset ceiling: verified below 25 MiB"
             echo "- Docs runtime: Astro/Starlight under /docs/**"
           } >> "${GITHUB_STEP_SUMMARY}"

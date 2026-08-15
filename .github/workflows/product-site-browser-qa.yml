@@ -24,11 +24,13 @@ concurrency:
 env:
   GODOT_RELEASE: 4.7.1-stable
   GODOT_TEMPLATE_VERSION: 4.7.1.stable
+  GODOT_SOURCE_SHA256: 0230d490846467c4fd772cc70b08dc56cb3adfedd55d039de0af74ddfdba00eb
+  EMSDK_VERSION: 4.0.20
 
 jobs:
   browser-qa:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,7 +48,7 @@ jobs:
         working-directory: site
         run: npm run build
 
-      - name: Install pinned Godot and Web export templates
+      - name: Install pinned Godot editor
         working-directory: site
         run: |
           set -euo pipefail
@@ -57,17 +59,53 @@ jobs:
           install -m 0755 "/tmp/godot/Godot_v${GODOT_RELEASE}_linux.x86_64" "$HOME/.local/bin/godot"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-          curl -fsSL -o /tmp/godot-templates.tpz \
-            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_export_templates.tpz"
-          rm -rf /tmp/godot-templates
-          mkdir -p /tmp/godot-templates
-          unzip -q /tmp/godot-templates.tpz -d /tmp/godot-templates
-          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}"
-          cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}/"
+      - name: Restore NovelForge Godot Web template cache
+        id: godot-template-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/novelforge-godot-template
+          key: novelforge-godot-web-${{ env.GODOT_RELEASE }}-${{ env.EMSDK_VERSION }}-ui2d-v1
+
+      - name: Compile 2D-only Godot Web template
+        if: steps.godot-template-cache.outputs.cache-hit != 'true'
+        working-directory: site
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user 'scons>=4.4,<5'
+          export PATH="$HOME/.local/bin:$PATH"
+
+          rm -rf /tmp/emsdk
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git /tmp/emsdk
+          /tmp/emsdk/emsdk install "${EMSDK_VERSION}"
+          /tmp/emsdk/emsdk activate "${EMSDK_VERSION}"
+          source /tmp/emsdk/emsdk_env.sh
+
+          bash scripts/build-godot-web-template.sh "$HOME/.cache/novelforge-godot-template"
+
+      - name: Install NovelForge Web export template
+        working-directory: site
+        run: |
+          set -euo pipefail
+          template="$HOME/.cache/novelforge-godot-template/web_nothreads_release.zip"
+          test -s "${template}"
+          template_dir="$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}"
+          mkdir -p "${template_dir}"
+          cp "${template}" "${template_dir}/web_nothreads_release.zip"
+          cat "$HOME/.cache/novelforge-godot-template/build-meta.txt"
 
       - name: Export Godot production root
         working-directory: site
         run: npm run godot:build
+
+      - name: Verify Cloudflare Pages asset ceiling
+        working-directory: site
+        run: |
+          set -euo pipefail
+          limit=$((25 * 1024 * 1024))
+          largest=$(find dist -type f -printf '%s %p\n' | sort -nr | head -1)
+          bytes=${largest%% *}
+          echo "Largest production asset: ${largest}"
+          test "${bytes}" -lt "${limit}"
 
       - name: Install CJK font for truthful bilingual rendering
         run: |
@@ -159,8 +197,6 @@ jobs:
               if 'desktop' in image:
                   desktop.append(digest)
 
-          # A single shared loading splash across every route is not a passing
-          # browser test. Product scenes must render route-specific frames.
           assert len(set(desktop)) >= 3, desktop
 
           mobile = json.loads((root / 'architecture-mobile-proof.json').read_text(encoding='utf-8').splitlines()[-1])
@@ -168,12 +204,13 @@ jobs:
           assert mobile['runtime'] == 'ready' and mobile['engine'] == 'started', mobile
 
           (root / 'browser-proof.txt').write_text(
-              'schema=novelforge_product_site_browser_qa_v6\n'
-              'runtime=godot_web\n'
+              'schema=novelforge_product_site_browser_qa_v7\n'
+              'runtime=godot_web_custom_2d_template\n'
               'runtime_ready_marker=true\n'
               'real_time_cdp_wait=true\n'
               'responsive_layout_marker=true\n'
               'phone_layout_proven=true\n'
+              'cloudflare_asset_ceiling=true\n'
               'branded_loader=true\n'
               'dimension=2d_2_5d\n'
               'deep_routes=true\n'
@@ -183,7 +220,7 @@ jobs:
               'authority=false\n',
               encoding='utf-8',
           )
-          print({'schema': 'novelforge_product_site_browser_qa_v6', 'status': 'pass', 'screenshots': 5, 'phone_layout_proven': True, 'authority': False})
+          print({'schema': 'novelforge_product_site_browser_qa_v7', 'status': 'pass', 'screenshots': 5, 'custom_2d_template': True, 'phone_layout_proven': True, 'authority': False})
           PY
 
       - name: Upload Product Site browser QA evidence
