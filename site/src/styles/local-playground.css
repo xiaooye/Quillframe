@@ -1,0 +1,404 @@
+@layer product-components {
+  .playground-shell {
+    display: grid;
+    gap: clamp(18px, 2vw, 28px);
+  }
+
+  .playground-intro {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding-block: 4px 8px;
+  }
+
+  .playground-intro > div {
+    max-width: 850px;
+  }
+
+  .playground-intro h1 {
+    max-width: 800px;
+    margin: 0;
+    font-size: clamp(30px, 4vw, 52px);
+    font-weight: 780;
+    letter-spacing: -.045em;
+    line-height: 1.05;
+  }
+
+  .playground-intro > div > p:last-child {
+    max-width: 760px;
+    margin: 16px 0 0;
+    color: var(--pe-muted);
+    font-size: clamp(15px, 1.5vw, 18px);
+    line-height: 1.72;
+  }
+
+  .playground-local-badge {
+    flex: 0 0 auto;
+    margin-top: 2px;
+  }
+
+  .playground-workspace {
+    display: grid;
+    grid-template-columns: minmax(330px, .78fr) minmax(0, 1.22fr);
+    align-items: start;
+    gap: clamp(14px, 2vw, 22px);
+  }
+
+  .playground-input-panel,
+  .playground-trace-panel {
+    padding: clamp(20px, 2.5vw, 30px);
+    border: 1px solid color-mix(in oklab, var(--pe-border) 82%, transparent);
+    border-radius: var(--pe-radius-md);
+    background: color-mix(in oklab, var(--pe-surface) 96%, transparent);
+    box-shadow: var(--pe-shadow-1);
+  }
+
+  .playground-input-panel {
+    position: sticky;
+    top: calc(var(--pe-appbar-height, 64px) + 18px);
+  }
+
+  .playground-mode-row,
+  .playground-trace-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .playground-mode-row > div:first-child strong,
+  .playground-trace-heading h2 {
+    display: block;
+    margin: 0;
+    font-size: 19px;
+    letter-spacing: -.025em;
+  }
+
+  .playground-mode-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .playground-mode-tabs button {
+    min-height: 30px;
+    padding: 0 9px;
+    border: 1px solid color-mix(in oklab, var(--pe-border) 78%, transparent);
+    border-radius: 999px;
+    color: var(--pe-muted);
+    background: color-mix(in oklab, var(--pe-surface-soft) 72%, transparent);
+    font: inherit;
+    font-size: 10px;
+    font-weight: 720;
+    letter-spacing: .02em;
+    cursor: pointer;
+  }
+
+  .playground-mode-tabs button:hover {
+    color: var(--pe-fg);
+    border-color: color-mix(in oklab, var(--pe-runtime) 30%, var(--pe-border));
+  }
+
+  .playground-mode-tabs button[data-active="true"] {
+    color: color-mix(in oklab, var(--pe-runtime) 78%, var(--pe-fg));
+    border-color: color-mix(in oklab, var(--pe-runtime) 32%, var(--pe-border));
+    background: var(--pe-runtime-soft);
+  }
+
+  .playground-purpose {
+    margin: 15px 0 20px;
+    color: var(--pe-muted);
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .playground-input-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 720;
+  }
+
+  .playground-input-panel textarea {
+    display: block;
+    width: 100%;
+    min-height: 310px;
+    resize: vertical;
+    padding: 15px 16px;
+    border: 1px solid color-mix(in oklab, var(--pe-border) 84%, transparent);
+    border-radius: 13px;
+    outline: 0;
+    color: var(--pe-fg);
+    background: color-mix(in oklab, var(--pe-surface-soft) 68%, var(--pe-bg));
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.68;
+  }
+
+  .playground-input-panel textarea:focus {
+    border-color: color-mix(in oklab, var(--pe-runtime) 48%, var(--pe-border));
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--pe-runtime-soft) 70%, transparent);
+  }
+
+  .playground-input-panel textarea::placeholder {
+    color: color-mix(in oklab, var(--pe-muted) 72%, transparent);
+  }
+
+  .playground-input-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    margin-top: 11px;
+    color: var(--pe-muted);
+    font-size: 11px;
+  }
+
+  .playground-input-meta strong,
+  .playground-input-meta code {
+    color: var(--pe-fg);
+    font-size: 11px;
+  }
+
+  .playground-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .playground-trace-panel {
+    min-height: 640px;
+  }
+
+  .playground-prepared {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding-inline: 10px;
+    border: 1px solid color-mix(in oklab, var(--pe-border) 76%, transparent);
+    border-radius: 999px;
+    color: var(--pe-muted);
+    background: color-mix(in oklab, var(--pe-surface-soft) 70%, transparent);
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .playground-prepared[data-ready="true"] {
+    color: color-mix(in oklab, var(--pe-valid) 70%, var(--pe-fg));
+    border-color: color-mix(in oklab, var(--pe-valid) 30%, var(--pe-border));
+    background: var(--pe-valid-soft);
+  }
+
+  .playground-empty-trace {
+    display: grid;
+    place-items: center;
+    min-height: 500px;
+    color: var(--pe-muted);
+    text-align: center;
+  }
+
+  .playground-empty-trace > span {
+    display: grid;
+    place-items: center;
+    inline-size: 56px;
+    block-size: 56px;
+    margin-bottom: 10px;
+    border-radius: 18px;
+    color: var(--pe-runtime);
+    background: var(--pe-runtime-soft);
+    font-size: 24px;
+  }
+
+  .playground-empty-trace p {
+    max-width: 420px;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .playground-short-note {
+    margin: 16px 0 0;
+    padding: 10px 12px;
+    border-left: 3px solid var(--pe-evidence);
+    border-radius: 0 10px 10px 0;
+    color: var(--pe-muted);
+    background: color-mix(in oklab, var(--pe-evidence-soft) 48%, transparent);
+    font-size: 12px;
+  }
+
+  .playground-trace-flow {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .playground-stage {
+    position: relative;
+    padding: 16px 16px 16px 18px;
+    border: 1px solid color-mix(in oklab, var(--pe-border) 72%, transparent);
+    border-radius: 13px;
+    background: color-mix(in oklab, var(--pe-surface-soft) 58%, transparent);
+  }
+
+  .playground-stage:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 29px;
+    bottom: -11px;
+    width: 1px;
+    height: 11px;
+    background: color-mix(in oklab, var(--pe-runtime) 28%, var(--pe-border));
+  }
+
+  .playground-stage header {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .playground-stage header > span {
+    display: grid;
+    place-items: center;
+    inline-size: 26px;
+    block-size: 26px;
+    border-radius: 9px;
+    color: color-mix(in oklab, var(--pe-runtime) 76%, var(--pe-fg));
+    background: var(--pe-runtime-soft);
+    font-size: 9px;
+    font-weight: 800;
+  }
+
+  .playground-stage header strong {
+    font-size: 13px;
+    letter-spacing: -.01em;
+  }
+
+  .playground-stage ul,
+  .playground-stage ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 11px 0 0 35px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .playground-stage li {
+    padding: 5px 8px;
+    border: 1px solid color-mix(in oklab, var(--pe-border) 64%, transparent);
+    border-radius: 8px;
+    color: var(--pe-muted);
+    background: color-mix(in oklab, var(--pe-surface) 76%, transparent);
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  .playground-contract-list code {
+    color: color-mix(in oklab, var(--pe-runtime) 68%, var(--pe-fg));
+    font-size: 10px;
+  }
+
+  .playground-stage--result {
+    border-color: color-mix(in oklab, var(--pe-valid) 24%, var(--pe-border));
+    background: color-mix(in oklab, var(--pe-valid-soft) 32%, var(--pe-surface));
+  }
+
+  .playground-stage--result p {
+    margin: 11px 0 0 35px;
+    color: var(--pe-muted);
+    font-size: 12px;
+    line-height: 1.62;
+  }
+
+  .playground-result-envelope {
+    margin: 12px 0 0 35px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    border: 1px solid color-mix(in oklab, var(--pe-border) 70%, transparent);
+    border-radius: 9px;
+    background: color-mix(in oklab, var(--pe-bg) 70%, transparent);
+  }
+
+  .playground-result-envelope code {
+    color: color-mix(in oklab, var(--pe-valid) 62%, var(--pe-fg));
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .playground-contract-boundary,
+  .playground-authority-boundary {
+    margin: 14px 0 0;
+    padding: 12px 14px;
+    border-radius: 11px;
+    color: var(--pe-muted);
+    font-size: 11px;
+    line-height: 1.58;
+  }
+
+  .playground-contract-boundary {
+    border: 1px solid color-mix(in oklab, var(--pe-runtime) 20%, var(--pe-border));
+    background: color-mix(in oklab, var(--pe-runtime-soft) 34%, transparent);
+  }
+
+  .playground-authority-boundary {
+    border: 1px solid color-mix(in oklab, var(--pe-evidence) 24%, var(--pe-border));
+    background: color-mix(in oklab, var(--pe-evidence-soft) 34%, transparent);
+  }
+}
+
+@media (max-width: 980px) {
+  .playground-intro {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .playground-local-badge {
+    width: fit-content;
+  }
+
+  .playground-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .playground-input-panel {
+    position: static;
+  }
+
+  .playground-input-panel textarea {
+    min-height: 240px;
+  }
+
+  .playground-trace-panel {
+    min-height: 520px;
+  }
+}
+
+@media (max-width: 620px) {
+  .playground-mode-row,
+  .playground-trace-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .playground-mode-tabs {
+    justify-content: flex-start;
+  }
+
+  .playground-mode-tabs button {
+    flex: 1 1 calc(50% - 4px);
+  }
+
+  .playground-actions,
+  .playground-actions .wui-button {
+    width: 100%;
+  }
+
+  .playground-stage ul,
+  .playground-stage ol,
+  .playground-stage--result p,
+  .playground-result-envelope {
+    margin-left: 0;
+  }
+}
