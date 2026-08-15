@@ -51,9 +51,39 @@
     box-shadow: 0 12px 26px -24px color-mix(in oklab, var(--pe-runtime) 34%, transparent);
   }
 
+  .architecture-entry .architecture-hero-path button strong {
+    margin-block-start: 7px;
+    overflow: visible;
+    font-size: 8px;
+    line-height: 1.12;
+    letter-spacing: -.02em;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: normal;
+  }
+
   .architecture-entry .architecture-hero-path button[data-active="true"] {
     border-color: color-mix(in oklab, var(--pe-runtime) 42%, var(--pe-border));
     background: color-mix(in oklab, var(--pe-runtime-soft) 52%, var(--pe-surface));
+  }
+
+  /* The original rail used grid tracks plus sibling margins, which made each
+   * later card spill into the next track. Use an actual grid gap so text never
+   * sits under the following card. */
+  .architecture-entry .architecture-flow {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .architecture-entry .architecture-node,
+  .architecture-entry .architecture-node + .architecture-node {
+    min-inline-size: 0;
+    margin-inline-start: 0;
+    overflow: visible;
+  }
+
+  .architecture-entry .architecture-node-copy {
+    padding-inline-start: 0;
   }
 
   /* Publication — presentation gallery. The objects themselves carry kawaii. */
@@ -253,6 +283,8 @@
   @media (max-width: 1120px) {
     .architecture-entry .architecture-hero-path { grid-template-columns: repeat(4, minmax(70px, 1fr)); }
     .architecture-entry .architecture-hero-path::before { display: none; }
+    .architecture-entry .architecture-hero-path button strong { font-size: 9px; }
+    .architecture-entry .architecture-flow { grid-template-columns: repeat(7, minmax(150px, 1fr)); overflow-x: auto; }
   }
 
   @media (max-width: 900px) {
@@ -269,6 +301,7 @@
   @media (max-width: 620px) {
     .architecture-entry .architecture-hero-path { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .architecture-entry .architecture-hero-path button { min-block-size: 74px; }
+    .architecture-entry .architecture-hero-path button strong { font-size: 10px; }
     .playground-entry .unified-playground-visual { grid-template-columns: 1fr; inline-size: min(100%, 360px); text-align: center; }
     .playground-entry .unified-playground-visual i { transform: rotate(90deg); }
     .agent-integration-entry .unified-agent-hosts { grid-template-columns: 1fr; }

@@ -11,6 +11,13 @@ from pathlib import Path
 from typing import Any
 
 EXPECTED_DESCRIPTION = "novelforge_studio_host_bridge_description_v1"
+RUNTIME_QUERIES = {
+    "runtime.sessions.list",
+    "runtime.session.get",
+    "runtime.events.list",
+    "runtime.handoff.inspect",
+    "run.receipt.get",
+}
 
 
 def candidate_roots() -> list[Path]:
@@ -56,12 +63,16 @@ def self_test() -> dict[str, Any]:
         value = json.loads(proc.stdout)
     except json.JSONDecodeError:
         value = {}
+    supported = set(value.get("supported_operations", []))
+    deferred = set(value.get("deferred_operations", {}))
     checks = {
         "bridge_found": proc.returncode == 0,
         "description_schema": value.get("schema") == EXPECTED_DESCRIPTION,
         "authority_false": value.get("authority") is False,
         "direct_core_store_access_false": value.get("direct_core_store_access") is False,
-        "write_command_not_supported": "command.invoke" not in value.get("supported_operations", []),
+        "runtime_queries_supported": RUNTIME_QUERIES.issubset(supported),
+        "resume_still_deferred": "session.resume" in deferred and "session.resume" not in supported,
+        "write_command_not_supported": "command.invoke" not in supported,
     }
     return {
         "novelforge_agent_skill_contract": "PASS" if all(checks.values()) else "FAIL",

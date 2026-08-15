@@ -117,9 +117,10 @@ def _run_cli(args: list[str], *, cwd: Path | None = None) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise BridgeError("core_cli_invalid_output", "NovelForge CLI JSON root must be an object")
     if proc.returncode != 0:
+        error_code = value.get("code") if isinstance(value.get("code"), str) else "core_cli_failed"
         raise BridgeError(
-            "core_cli_failed",
-            "NovelForge CLI query failed",
+            error_code,
+            value.get("message") if isinstance(value.get("message"), str) else "NovelForge CLI query failed",
             detail={"returncode": proc.returncode, "result": sanitize(value)},
         )
     return value
@@ -186,6 +187,65 @@ def _semantic_catalog(_: dict[str, Any], __: str) -> dict[str, Any]:
     return sanitize(_run_cli(["semantic", "catalog"]))
 
 
+def _runtime_args(args: dict[str, Any], *query_args: str) -> tuple[Path, list[str]]:
+    project_root = _project_root(args)
+    runtime_db = project_root / ".novelforge" / "runtime.db"
+    return project_root, ["runtime-query", "--db", str(runtime_db), *query_args]
+
+
+def _runtime_sessions_list(args: dict[str, Any], _: str) -> dict[str, Any]:
+    project_root, argv = _runtime_args(args, "session-list")
+    resource_id = args.get("resource_id")
+    if resource_id is not None:
+        if not isinstance(resource_id, str) or not resource_id.strip():
+            raise BridgeError("invalid_args", "resource_id must be a non-empty string")
+        argv += ["--resource-id", resource_id]
+    return sanitize(_run_cli(argv, cwd=project_root))
+
+
+def _runtime_session_get(args: dict[str, Any], _: str) -> dict[str, Any]:
+    session_id = args.get("session_id")
+    if not isinstance(session_id, str) or not session_id.strip():
+        raise BridgeError("invalid_args", "session_id is required")
+    project_root, argv = _runtime_args(args, "session-get", "--session-id", session_id)
+    return sanitize(_run_cli(argv, cwd=project_root))
+
+
+def _runtime_events_list(args: dict[str, Any], _: str) -> dict[str, Any]:
+    project_root, argv = _runtime_args(args, "event-list")
+    for field, flag in (("session_id", "--session-id"), ("run_id", "--run-id")):
+        value = args.get(field)
+        if value is not None:
+            if not isinstance(value, str) or not value.strip():
+                raise BridgeError("invalid_args", f"{field} must be a non-empty string")
+            argv += [flag, value]
+    return sanitize(_run_cli(argv, cwd=project_root))
+
+
+def _runtime_handoff_inspect(args: dict[str, Any], _: str) -> dict[str, Any]:
+    handoff_id = args.get("handoff_id")
+    if not isinstance(handoff_id, str) or not handoff_id.strip():
+        raise BridgeError("invalid_args", "handoff_id is required")
+    project_root, argv = _runtime_args(args, "handoff-get", "--handoff-id", handoff_id)
+    return sanitize(_run_cli(argv, cwd=project_root))
+
+
+def _run_receipt_get(args: dict[str, Any], _: str) -> dict[str, Any]:
+    selectors: list[tuple[str, str]] = []
+    for field, flag in (("receipt_id", "--receipt-id"), ("run_id", "--run-id"), ("session_id", "--session-id")):
+        value = args.get(field)
+        if value is not None:
+            if not isinstance(value, str) or not value.strip():
+                raise BridgeError("invalid_args", f"{field} must be a non-empty string")
+            selectors.append((flag, value))
+    if not selectors:
+        raise BridgeError("invalid_args", "receipt_id, run_id, or session_id is required")
+    project_root, argv = _runtime_args(args, "receipt-get")
+    for flag, value in selectors:
+        argv += [flag, value]
+    return sanitize(_run_cli(argv, cwd=project_root))
+
+
 DISPATCH = {
     "bridge.describe": lambda args, surface: description(surface=surface),
     "framework.doctor": _safe_doctor,
@@ -193,6 +253,11 @@ DISPATCH = {
     "capabilities.inspect": _capabilities_inspect,
     "context.inspect": _context_inspect,
     "semantic.catalog": _semantic_catalog,
+    "runtime.sessions.list": _runtime_sessions_list,
+    "runtime.session.get": _runtime_session_get,
+    "runtime.events.list": _runtime_events_list,
+    "runtime.handoff.inspect": _runtime_handoff_inspect,
+    "run.receipt.get": _run_receipt_get,
 }
 
 
@@ -292,6 +357,11 @@ def _request(request_id: str, operation: str, args: dict[str, Any] | None = None
     return {"schema": REQUEST_SCHEMA, "request_id": request_id, "operation": operation, "surface": surface, "args": args or {}, "authority": False}
 
 
+def _run_setup(argv: list[str], *, cwd: Path) -> bool:
+    proc = subprocess.run([sys.executable, str(CLI), *argv], cwd=str(cwd), text=True, capture_output=True, check=False)
+    return proc.returncode == 0
+
+
 def self_test() -> dict[str, Any]:
     contract = load_contract()
     desc_req = _request("REQ-DESC", "bridge.describe")
@@ -301,8 +371,7 @@ def self_test() -> dict[str, Any]:
     deterministic_envelope = desc_a == desc_b and desc_a["request_fingerprint"] == fingerprint(desc_req) and desc_a["result_fingerprint"] == fingerprint(desc_without_fp)
 
     unknown = invoke(_request("REQ-UNKNOWN", "project.delete"))
-    deferred_receipt = invoke(_request("REQ-RCPT", "run.receipt.get"))
-    deferred_runtime = invoke(_request("REQ-RUNTIME", "runtime.sessions.list"))
+    deferred_resume = invoke(_request("REQ-RESUME", "session.resume"))
     deferred_write = invoke(_request("REQ-WRITE", "command.invoke"))
     wrong_authority = _request("REQ-AUTH", "bridge.describe")
     wrong_authority["authority"] = True
@@ -311,7 +380,8 @@ def self_test() -> dict[str, Any]:
     capabilities = invoke(_request("REQ-CAP", "capabilities.inspect"))
 
     temp_root = Path(tempfile.mkdtemp(prefix="novelforge-host-bridge-"))
-    project_ready = project_safe = context_safe = False
+    project_ready = project_safe = context_safe = runtime_safe = False
+    runtime_queries_ok = False
     try:
         setup = subprocess.run([sys.executable, str(ROOT / "project_adapter.py"), "self-test", "--tmp", str(temp_root)], cwd=str(ROOT), text=True, capture_output=True, check=False)
         project_ready = setup.returncode == 0
@@ -323,6 +393,76 @@ def self_test() -> dict[str, Any]:
         context_path.write_text(json.dumps({"manifest_id": "CTX-BRIDGE-SELF", "items": [{"id": "CTX-A", "class": "summary", "source": str(temp_root / "private-source.txt"), "authority": "derived", "derived": True, "stages": ["writer_pre_draft"], "priority": 1}]}), encoding="utf-8")
         context = invoke(_request("REQ-CONTEXT", "context.inspect", {"project_root": str(temp_root), "manifest": "context-manifest.json", "stage": "writer_pre_draft"}))
         context_safe = context["status"] == "ok" and str(temp_root) not in canonical(context) and context["data"]["authority"] is False
+
+        runtime_db = temp_root / ".novelforge" / "runtime.db"
+        runtime_db.parent.mkdir(parents=True, exist_ok=True)
+        runtime_init = _run_setup(["runtime", "--db", str(runtime_db), "init"], cwd=temp_root)
+
+        session_path = temp_root / "session.json"
+        session_path.write_text(json.dumps({
+            "schema": "novelforge_agent_session_v1",
+            "resource_id": "BOOK-BRIDGE",
+            "project_id": "BOOK-BRIDGE",
+            "session_id": "SES-BRIDGE",
+            "role": "manager",
+            "status": "awaiting_external",
+            "transport": "chat_session",
+            "backend": "self_test",
+            "usage_class": "ordinary_chat",
+            "memory_policy": "session",
+            "resume_policy": "checkpoint_revalidate",
+            "context_policy": {"hidden_gold": "forbidden", "allowed_artifact_refs": [], "allowed_paths": [str(temp_root / "private")], "forbidden_context_classes": []},
+            "runs": [{"run_id": "RUN-BRIDGE", "started_at": "2026-01-01T00:00:00+00:00", "ended_at": None, "status": "running", "input_artifact_fingerprints": [], "output_artifact_fingerprints": [], "usage_class": "ordinary_chat"}],
+            "checkpoints": [],
+            "events": [],
+            "provenance": {"runtime": "self_test", "version": "1", "durable_store": "control_plane"},
+        }), encoding="utf-8")
+        session_put = _run_setup(["runtime", "--db", str(runtime_db), "session-put", "--session", str(session_path), "--expected-version", "0"], cwd=temp_root)
+
+        event_path = temp_root / "event.json"
+        event_path.write_text(json.dumps({
+            "schema": "novelforge_event_v1",
+            "event_id": "EV-BRIDGE",
+            "event_type": "semantic.requested",
+            "source": {"kind": "self_test", "actor": "host_bridge.py"},
+            "resource_id": "BOOK-BRIDGE",
+            "session_id": "SES-BRIDGE",
+            "run_id": "RUN-BRIDGE",
+            "handoff_id": "HO-BRIDGE",
+            "authority_scope": "request",
+            "idempotency_key": "host-bridge-runtime-self-test",
+            "artifact_fingerprints": [],
+            "created_at": "2026-01-01T00:00:01+00:00",
+            "payload": {"private_path": str(temp_root / "private-event")},
+        }), encoding="utf-8")
+        event_put = _run_setup(["runtime", "--db", str(runtime_db), "event-ingest", "--event", str(event_path)], cwd=temp_root)
+
+        handoff_path = temp_root / "handoff.json"
+        handoff_path.write_text(json.dumps({
+            "schema": "novelforge_handoff_v1",
+            "handoff_id": "HO-BRIDGE",
+            "source_session_id": "SES-BRIDGE",
+            "target_session_class": "semantic_reviewer",
+            "resource_id": "BOOK-BRIDGE",
+            "task_mode": "DRAFT",
+            "artifact_refs": [str(temp_root / "private-artifact")],
+            "artifact_fingerprints": [],
+            "context_policy": {"hidden_gold": "forbidden", "allowed_artifact_refs": []},
+            "permissions": {"canon_write": False, "framework_behavior_write": False, "durable_user_taste_write": False, "allowed_result_scope": "observation"},
+            "return_contract": {"schema": "semantic_worker_result", "fingerprint_required": True},
+        }), encoding="utf-8")
+        handoff_put = _run_setup(["runtime", "--db", str(runtime_db), "handoff-submit", "--handoff", str(handoff_path)], cwd=temp_root)
+
+        sessions = invoke(_request("REQ-SESSIONS", "runtime.sessions.list", {"project_root": str(temp_root)}))
+        session = invoke(_request("REQ-SESSION", "runtime.session.get", {"project_root": str(temp_root), "session_id": "SES-BRIDGE"}))
+        events = invoke(_request("REQ-EVENTS", "runtime.events.list", {"project_root": str(temp_root), "session_id": "SES-BRIDGE"}))
+        handoff = invoke(_request("REQ-HANDOFF", "runtime.handoff.inspect", {"project_root": str(temp_root), "handoff_id": "HO-BRIDGE"}))
+        receipts = invoke(_request("REQ-RECEIPTS", "run.receipt.get", {"project_root": str(temp_root), "run_id": "RUN-BRIDGE"}))
+        runtime_results = [sessions, session, events, handoff, receipts]
+        runtime_queries_ok = all(item["status"] == "ok" for item in runtime_results)
+        runtime_serialized = canonical(runtime_results)
+        runtime_safe = runtime_queries_ok and str(temp_root) not in runtime_serialized and all(item["data"]["authority"] is False for item in runtime_results)
+        runtime_queries_ok = runtime_queries_ok and runtime_init and session_put and event_put and handoff_put and sessions["data"]["count"] == 1 and events["data"]["count"] == 1 and receipts["data"]["count"] == 0
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
@@ -331,8 +471,7 @@ def self_test() -> dict[str, Any]:
         "authority_false": contract.get("authority") is False and desc_a.get("authority") is False,
         "deterministic_envelope": deterministic_envelope,
         "unknown_operation_fails_closed": unknown["status"] == "invalid",
-        "receipt_query_deferred": deferred_receipt["status"] == "unsupported",
-        "runtime_query_deferred": deferred_runtime["status"] == "unsupported",
+        "resume_command_deferred": deferred_resume["status"] == "unsupported",
         "write_command_deferred": deferred_write["status"] == "unsupported",
         "request_authority_rejected": authority_rejected["status"] == "invalid",
         "doctor_query": doctor["status"] == "ok",
@@ -340,6 +479,8 @@ def self_test() -> dict[str, Any]:
         "project_fixture_ready": project_ready,
         "project_projection_safe": project_safe,
         "context_projection_safe": context_safe,
+        "runtime_queries_supported": runtime_queries_ok,
+        "runtime_projection_safe": runtime_safe,
     }
     return {"studio_host_bridge_contract": "PASS" if all(checks.values()) else "FAIL", "schema": CONTRACT_SCHEMA, "checks": checks, "authority": False, "model_execution": False}
 

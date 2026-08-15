@@ -9,6 +9,12 @@
   "core_contracts": [
     "novelforge_project_adapter_resolution_v1",
     "novelforge_run_receipt_v1",
+    "novelforge_runtime_query_v1",
+    "novelforge_runtime_sessions_projection_v1",
+    "novelforge_runtime_session_projection_v1",
+    "novelforge_runtime_events_projection_v1",
+    "novelforge_runtime_handoff_projection_v1",
+    "novelforge_run_receipts_projection_v1",
     "novelforge_context_inspector_v2",
     "novelforge_host_capabilities_v1"
   ],
@@ -54,14 +60,14 @@
       "project.inspect",
       "capabilities.inspect",
       "context.inspect",
-      "semantic.catalog"
-    ],
-    "deferred_operations": [
+      "semantic.catalog",
       "runtime.sessions.list",
       "runtime.session.get",
       "runtime.events.list",
       "runtime.handoff.inspect",
-      "run.receipt.get",
+      "run.receipt.get"
+    ],
+    "deferred_operations": [
       "session.resume",
       "command.invoke",
       "project.mutate"
@@ -71,6 +77,17 @@
     "direct_core_store_access": false,
     "request_result_fingerprints": true,
     "unsupported_operation_fails_closed": true
+  },
+  "runtime_observability": {
+    "core_query_tool": "harness/control_plane/runtime_query.py",
+    "side_effect_free": true,
+    "sqlite_consumer_contract": false,
+    "provider_session_identifiers_exposed": false,
+    "absolute_host_paths_exposed": false,
+    "session_resume_exposed": false,
+    "checkpoint_replay_exposed": false,
+    "handoff_mutation_exposed": false,
+    "run_receipts_are_metadata_only": true
   },
   "agent_package_direction": {
     "phase_2b_read_bridge_exposed": true,

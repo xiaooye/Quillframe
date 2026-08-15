@@ -5,6 +5,7 @@ export type StudioIconName =
   | "project"
   | "workspace"
   | "agents"
+  | "runtime"
   | "context"
   | "capabilities"
   | "semantic"
@@ -21,6 +22,7 @@ const paths: Record<StudioIconName, JSX.Element> = {
   project: <><path d="M3.5 6.5h6l2 2H20.5v10a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M3.5 9h17"/></>,
   workspace: <><path d="M4 20h4l11-11a2.1 2.1 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/><path d="M4 20h16"/></>,
   agents: <><path d="M8 8a4 4 0 1 1 8 0"/><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M9 13h.01"/><path d="M15 13h.01"/><path d="M9 16h6"/><path d="M12 3V1.5"/></>,
+  runtime: <><path d="M7 5h10"/><path d="M7 12h10"/><path d="M7 19h10"/><circle cx="4" cy="5" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="19" r="1.5"/><path d="M19 5v14"/></>,
   context: <><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 9h8"/><path d="M8 12h5"/><path d="M8 15h7"/></>,
   capabilities: <><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></>,
   semantic: <><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="m8.2 10.9 7.6-3.8"/><path d="m8.2 13.1 7.6 3.8"/></>,

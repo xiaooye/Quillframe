@@ -13,6 +13,7 @@ const Start = lazy(() => import("./routes/Start"));
 const Project = lazy(() => import("./routes/Project"));
 const Workspace = lazy(() => import("./routes/Workspace"));
 const Agents = lazy(() => import("./routes/Agents"));
+const RuntimeRoute = lazy(() => import("./routes/Runtime"));
 const ContextRoute = lazy(() => import("./routes/Context"));
 const Capabilities = lazy(() => import("./routes/Capabilities"));
 const Semantic = lazy(() => import("./routes/Semantic"));
@@ -71,6 +72,7 @@ render(
             <Route path="/project" component={Project} />
             <Route path="/workspace" component={Workspace} />
             <Route path="/agents" component={Agents} />
+            <Route path="/runtime" component={RuntimeRoute} />
             <Route path="/context" component={ContextRoute} />
             <Route path="/capabilities" component={Capabilities} />
             <Route path="/semantic" component={Semantic} />

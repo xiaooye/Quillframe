@@ -16,15 +16,34 @@ const index = read("src/styles/index.css");
 const style = `${read("src/styles/agent-integration.css")}\n${read("src/styles/agent-host-profiles.css")}\n${read("src/styles/unified-product-app.css")}`;
 const contract = JSON.parse(read("../studio/host_bridge_contract.json"));
 const skill = read("../agent-skills/novelforge/SKILL.md");
+const supported = contract.operations?.supported ?? {};
+const deferred = contract.operations?.deferred ?? {};
+const runtimeObservability = [
+  "runtime.sessions.list",
+  "runtime.session.get",
+  "runtime.events.list",
+  "runtime.handoff.inspect",
+  "run.receipt.get",
+];
+const runtimeControl = ["session.resume", "command.invoke", "project.mutate"];
 
 check(contract.schema === "novelforge_studio_host_bridge_contract_v1", "host bridge contract schema changed");
 check(contract.authority === false, "host bridge must remain authority=false");
 check(contract.agent_skill?.path === "agent-skills/novelforge/SKILL.md", "portable Agent Skill path changed");
 check(skill.includes("read-only") && skill.includes("authority: false"), "portable skill must retain read-only authority boundary");
-check(Object.keys(contract.operations.supported).length === 6, "host bridge supported-operation count changed unexpectedly");
-for (const operation of ["run.receipt.get", "session.resume", "command.invoke", "project.mutate"]) {
-  check(Boolean(contract.operations.deferred[operation]), `expected deferred bridge operation missing from contract: ${operation}`);
+check(skill.includes("Runtime observability is not runtime control"), "portable skill must distinguish runtime observability from control");
+check(Object.values(supported).every((operation) => operation?.kind === "query"), "every supported host-bridge operation must remain query-only");
+for (const operation of ["bridge.describe", "framework.doctor", "project.inspect", "capabilities.inspect", "context.inspect", "semantic.catalog", ...runtimeObservability]) {
+  check(Boolean(supported[operation]), `expected supported bridge query missing from contract: ${operation}`);
 }
+for (const operation of runtimeObservability) {
+  check(!deferred[operation], `public runtime observability query must not remain deferred: ${operation}`);
+}
+for (const operation of runtimeControl) {
+  check(Boolean(deferred[operation]), `expected deferred runtime-control operation missing from contract: ${operation}`);
+  check(!supported[operation], `runtime-control operation must not be exposed as supported: ${operation}`);
+}
+check(skill.includes("session.resume") && skill.includes("resume, replay, fork"), "portable skill must preserve the explicit resume/replay/fork boundary");
 
 check(app.includes('<Route path="/agents" component={AgentsPage}'), "shared ProductApp must expose /agents");
 check(app.includes("ProductSurfaceHero") && app.includes("AGENT SKILL · HOST BRIDGE V1"), "Agent Integration must use the shared surface hero");
@@ -48,5 +67,20 @@ if (failures.length) {
   for (const failure of failures) console.error(`agent-integration-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ schema: "novelforge_agent_integration_quality_v4", status: "pass", route: "/agents", shell: "shared_product_app", css_entrypoint: "index.css", portable_skill: true, host_bridge_v1: true, host_profiles: 5, supported_operations: 6, write_authority: false, direct_core_store_access: false, unsupported_fails_closed: true }, null, 2));
+  console.log(JSON.stringify({
+    schema: "novelforge_agent_integration_quality_v5",
+    status: "pass",
+    route: "/agents",
+    shell: "shared_product_app",
+    css_entrypoint: "index.css",
+    portable_skill: true,
+    host_bridge_v1: true,
+    host_profiles: 5,
+    supported_operations: Object.keys(supported).length,
+    runtime_observability_operations: runtimeObservability.length,
+    runtime_control_exposed: false,
+    write_authority: false,
+    direct_core_store_access: false,
+    unsupported_fails_closed: true,
+  }, null, 2));
 }

@@ -27,6 +27,7 @@ PEER_BRIDGE_RECEIPT = SEMANTIC_ROOT / "peer_bridge_receipt.py"
 
 TOOLS: dict[str, Path] = {
     "runtime": ROOT / "harness" / "control_plane" / "control_plane.py",
+    "runtime-query": ROOT / "harness" / "control_plane" / "runtime_query.py",
     "capabilities": ROOT / "harness" / "runtime_capabilities.py",
     "context-inspect": ROOT / "harness" / "context_inspector.py",
     "memory-tiers": ROOT / "harness" / "memory_tiers.py",
@@ -84,14 +85,27 @@ def doctor() -> dict[str, Any]:
     return {"schema":"novelforge_doctor_v2","framework_version":FRAMEWORK_VERSION,"framework_root":str(ROOT),"ok":not missing and not forbidden,"missing":missing,"forbidden_pre_release_compatibility":forbidden,"model_execution":False}
 
 def self_test() -> int:
-    checks=[(PROJECT_SDK,["self-test"]),(PROJECT_ADAPTER,["self-test"]),(SESSION,["self-test"]),(TOOLS["runtime"],["--db","/tmp/novelforge-cli-control.db","self-test"]),(TOOLS["capabilities"],["self-test"]),(TOOLS["context-inspect"],["self-test"]),(TOOLS["memory-tiers"],["self-test"]),(TOOLS["memory-bank"],["--db","/tmp/novelforge-cli-memory.db","self-test","--path","/tmp/novelforge-cli-memory-selftest.db"]),(TOOLS["scenario-fork"],["--db","/tmp/novelforge-cli-scenario.db","self-test","--path","/tmp/novelforge-cli-scenario-selftest.db"]),(TOOLS["settlement"],["--db","/tmp/novelforge-cli-settlement.db","self-test","--path","/tmp/novelforge-cli-settlement-selftest.db","--project-root","/tmp/novelforge-cli-settlement-project"]),(SEMANTIC,["self-test"]),(REGISTERED_CONTRACT_BINDING,["self-test"]),(PEER_BRIDGE_RECEIPT,["self-test"]),(TOOLS["quality-findings"],["self-test"]),(TOOLS["quality-taxonomy"],["self-test"]),(TOOLS["repair-policy"],["self-test"]),(TOOLS["production-readiness"],["self-test"]),(TOOLS["reader-expectation"],["--db","/tmp/novelforge-cli-reader-expectation.db","self-test","--path","/tmp/novelforge-cli-reader-expectation-selftest.db"]),(TOOLS["quality-evolution"],["--db","/tmp/novelforge-cli-quality.db","self-test","--path","/tmp/novelforge-cli-quality-selftest.db"]),(TOOLS["state-graph"],["self-test"]),(TOOLS["learning"],["--db","/tmp/novelforge-cli-learning.db","self-test"]),(TOOLS["learning-cycle"],["self-test","--path","/tmp/novelforge-cli-learning-cycle.db"]),(TOOLS["learning-work"],["self-test"]),(TOOLS["learning-gate"],["self-test"]),(CORPUS_TOOLS["scout"],["self-test"]),(CORPUS_TOOLS["discovery"],["self-test"]),(CORPUS_TOOLS["rights"],["self-test"]),(MCP,["--self-test"]),(TOOLS["publication"],["self-test"]),(TOOLS["semantic-acceptance"],["self-test"]),(TOOLS["bundle"],["self-test"])]
+    checks=[(PROJECT_SDK,["self-test"]),(PROJECT_ADAPTER,["self-test"]),(SESSION,["self-test"]),(TOOLS["runtime"],["--db","/tmp/novelforge-cli-control.db","self-test"]),(TOOLS["runtime-query"],["self-test"]),(TOOLS["capabilities"],["self-test"]),(TOOLS["context-inspect"],["self-test"]),(TOOLS["memory-tiers"],["self-test"]),(TOOLS["memory-bank"],["--db","/tmp/novelforge-cli-memory.db","self-test","--path","/tmp/novelforge-cli-memory-selftest.db"]),(TOOLS["scenario-fork"],["--db","/tmp/novelforge-cli-scenario.db","self-test","--path","/tmp/novelforge-cli-scenario-selftest.db"]),(TOOLS["settlement"],["--db","/tmp/novelforge-cli-settlement.db","self-test","--path","/tmp/novelforge-cli-settlement-selftest.db","--project-root","/tmp/novelforge-cli-settlement-project"]),(SEMANTIC,["self-test"]),(REGISTERED_CONTRACT_BINDING,["self-test"]),(PEER_BRIDGE_RECEIPT,["self-test"]),(TOOLS["quality-findings"],["self-test"]),(TOOLS["quality-taxonomy"],["self-test"]),(TOOLS["repair-policy"],["self-test"]),(TOOLS["production-readiness"],["self-test"]),(TOOLS["reader-expectation"],["--db","/tmp/novelforge-cli-reader-expectation.db","self-test","--path","/tmp/novelforge-cli-reader-expectation-selftest.db"]),(TOOLS["quality-evolution"],["--db","/tmp/novelforge-cli-quality.db","self-test","--path","/tmp/novelforge-cli-quality-selftest.db"]),(TOOLS["state-graph"],["self-test"]),(TOOLS["learning"],["--db","/tmp/novelforge-cli-learning.db","self-test"]),(TOOLS["learning-cycle"],["self-test","--path","/tmp/novelforge-cli-learning-cycle.db"]),(TOOLS["learning-work"],["self-test"]),(TOOLS["learning-gate"],["self-test"]),(CORPUS_TOOLS["scout"],["self-test"]),(CORPUS_TOOLS["discovery"],["self-test"]),(CORPUS_TOOLS["rights"],["self-test"]),(MCP,["--self-test"]),(TOOLS["publication"],["self-test"]),(TOOLS["semantic-acceptance"],["self-test"]),(TOOLS["bundle"],["self-test"])]
     results=[]; ok=True
     for script,argv in checks:
         proc=subprocess.run([sys.executable,str(script),*argv],text=True,capture_output=True,check=False); results.append({"script":str(script.relative_to(ROOT)),"returncode":proc.returncode,"stdout":proc.stdout.strip()[:4000],"stderr":proc.stderr.strip()[:2000]}); ok=ok and proc.returncode==0
     d=doctor(); ok=ok and d["ok"]
     dump({"novelforge_cli_contract":"PASS" if ok else "FAIL","framework_version":FRAMEWORK_VERSION,"checks":results,"doctor":d,"settlement_runtime":"harness/settlement_runtime.py","ai_native_semantic_entry":"harness/semantic_workers/semantic_worker_router.py","semantic_catalog":"harness/semantic_workers/model_contract_catalog.json","registered_contract_binding":"harness/semantic_workers/registered_contract_binding.py","peer_bridge_receipt":"harness/semantic_workers/peer_bridge_receipt.py","quality_taxonomy":"quality/taxonomy.json","repair_policy":"quality/repair_policy.py","production_reader_contract":"reader.engagement_audit","production_independent_contract":"quality.production_review","production_independence_evidence":"novelforge_project_peer_validation_receipt_v1","aggregate_semantic_registry_present":False,"model_execution":False}); return 0 if ok else 1
 
+def _forward_tool(name: str, argv: list[str]) -> int:
+    """Forward tool argv verbatim so leading tool options remain tool-owned."""
+    if not argv and name in {"semantic","context-inspect","memory-tiers","quality-findings","quality-taxonomy","repair-policy","production-readiness","state-graph"}:
+        argv=["self-test"] if name!="semantic" else ["catalog"]
+    return call(TOOLS[name],argv)
+
 def main() -> int:
+    # argparse.REMAINDER does not preserve a child tool option when it is the
+    # first token after a subcommand (for example `runtime --db ...`). Route
+    # registered tools before top-level argparse so the public CLI acts as a
+    # transparent boundary instead of interpreting child-tool flags.
+    if len(sys.argv) > 1 and sys.argv[1] in TOOLS:
+        return _forward_tool(sys.argv[1],sys.argv[2:])
+
     parser=argparse.ArgumentParser(description="NovelForge AI-native Adaptive Fiction Agent Framework"); sub=parser.add_subparsers(dest="cmd",required=True)
     boot=sub.add_parser("bootstrap"); boot.add_argument("--project-root",required=True); boot.add_argument("--task-mode",required=True,choices=TASK_MODES); boot.add_argument("--no-build",action="store_true")
     project=sub.add_parser("project"); project.add_argument("args",nargs=argparse.REMAINDER)
@@ -113,9 +127,7 @@ def main() -> int:
         if target not in CORPUS_TOOLS: dump({"error":f"unknown corpus target: {target}","allowed":sorted(CORPUS_TOOLS)}); return 2
         return call(CORPUS_TOOLS[target],rest)
     if args.cmd in TOOLS:
-        argv=args.args
-        if not argv and args.cmd in {"semantic","context-inspect","memory-tiers","quality-findings","quality-taxonomy","repair-policy","production-readiness","state-graph"}: argv=["self-test"] if args.cmd!="semantic" else ["catalog"]
-        return call(TOOLS[args.cmd],argv)
+        return _forward_tool(args.cmd,args.args)
     if args.cmd=="doctor": value=doctor(); dump(value); return 0 if value["ok"] else 1
     return self_test()
 
