@@ -1,10 +1,10 @@
 {
   "schema": "novelforge_model_contract_catalog_v1",
-  "version": "2",
+  "version": "3",
   "loading_policy": "progressive_disclosure",
   "principle": "Keep this catalog small. The model/manager selects the smallest relevant contract pack from metadata, then loads only that registry. Deterministic code resolves an exact contract id to exactly one pack; it must not keyword-route literary intent on the model's behalf.",
   "packs": [
-    {"id":"quality","path":"contracts/quality.json","description":"Reader reaction/comparison, character integrity, and evidence-routed revision diagnosis for candidate quality work.","contracts":["reader.reaction","reader.compare","character.integrity","revision.diagnose"],"load_when":"The task needs reader/character diagnostics or revision failure routing."},
+    {"id":"quality","path":"contracts/quality.json","description":"Cold reader engagement, independent production review, reader comparison, character integrity, and evidence-routed revision diagnosis for candidate quality work.","contracts":["reader.reaction","reader.engagement_audit","reader.compare","character.integrity","revision.diagnose","quality.production_review"],"load_when":"The task needs cold reader/character diagnostics, revision failure routing, candidate comparison, or a registered independent production-quality gate."},
     {"id":"narrative-memory","path":"contracts/narrative-memory.json","description":"Source-bound long-horizon narrative interpretation, reader-expectation interpretation, and derived-memory consolidation.","contracts":["narrative.world","reader.expectations","memory.consolidate"],"load_when":"The task needs long-form derived narrative state, live reader expectations, or compact rebuildable memory."},
     {"id":"learning","path":"contracts/learning.json","description":"Rights-safe craft mechanism analysis and blind evaluation for adaptive learning without automatic promotion authority.","contracts":["learning.mechanism_analyze","learning.evaluate"],"load_when":"The task is semantic Corpus analysis or evaluation of a learning hypothesis/candidate."},
     {"id":"context-research","path":"contracts/context-research.json","description":"Sparse semantic context selection and model-owned Corpus discovery/query planning under deterministic budget, capability and rights guards.","contracts":["context.select","corpus.discovery_plan"],"load_when":"The task must choose which memory/context blocks matter now or plan evidence searches for a Corpus/research gap."},
