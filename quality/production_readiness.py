@@ -7,8 +7,9 @@ literary scores and never grants Canon authority.
 
 Production Reader Engagement and mandatory independent review are release roles,
 not free-form status fields. A pass/fail claim for either role must be derived
-from a validated registered model contract. Ad-hoc ``eval_judge`` jobs remain
-valid for blind eval suites but cannot satisfy production release.
+from a validated registered model contract. Mandatory independent review must
+also carry a Project-owned peer-validation receipt bound to the exact result;
+self-declared session ids are not independence proof.
 """
 from __future__ import annotations
 
@@ -23,13 +24,16 @@ SEM = ROOT / "harness" / "semantic_workers"
 if str(SEM) not in sys.path:
     sys.path.insert(0, str(SEM))
 
-from peer_chat_relay import build as build_peer_packet, validate_peer_result  # noqa: E402
-from semantic_worker_router import (  # noqa: E402
-    load_contract_registry,
-    make_contract_job,
-    resolve_contract_registry,
-    validate_result,
+from peer_bridge_receipt import (  # noqa: E402
+    build_receipt as build_peer_bridge_receipt,
+    validate_receipt as validate_peer_bridge_receipt,
 )
+from peer_chat_relay import build as build_peer_packet, validate_peer_result  # noqa: E402
+from registered_contract_binding import (  # noqa: E402
+    self_test as registered_binding_self_test,
+    validate_registered_job,
+)
+from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
 from quality_taxonomy import id_for_name, self_test as taxonomy_self_test  # noqa: E402
 from repair_policy import self_test as repair_policy_self_test  # noqa: E402
 
@@ -59,43 +63,36 @@ def _string_list(value: Any, name: str) -> list[str]:
 
 
 def _validate_independence(binding: dict[str, Any], *, job: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
-    """Require either a validated peer-relay packet or a distinct worker session."""
+    """Require Project-owned peer bridge proof; self-declared sessions never qualify."""
     peer_packet = binding.get("peer_packet")
-    if peer_packet is not None:
-        if not isinstance(peer_packet, dict):
-            raise ValueError("semantic_independent.peer_packet must be object")
-        errors = validate_peer_result(peer_packet, result)
-        if errors:
-            raise ValueError("semantic_independent peer relay invalid: " + "; ".join(errors))
-        packet_job = peer_packet.get("job") or {}
-        for key in ("job_id", "subject_id", "kind", "input_fingerprint"):
-            if packet_job.get(key) != job.get(key):
-                raise ValueError(f"semantic_independent peer packet/job mismatch: {key}")
-        worker = result.get("worker") or {}
-        return {
-            "mode": "peer_chat_relay",
-            "relay_nonce": peer_packet.get("relay_nonce"),
-            "run_reference": worker.get("run_reference") or (result.get("execution") or {}).get("run_reference"),
-            "source_session_id": (job.get("execution") or {}).get("source_session_id"),
-            "worker_session_id": (result.get("execution") or {}).get("worker_session_id"),
-        }
+    bridge_receipt = binding.get("bridge_receipt")
+    if not isinstance(peer_packet, dict):
+        raise ValueError("semantic_independent requires validated peer_packet")
+    if not isinstance(bridge_receipt, dict):
+        raise ValueError("semantic_independent requires project bridge_receipt")
 
-    execution = job.get("execution") or {}
-    result_execution = result.get("execution") or {}
-    source_session = execution.get("source_session_id") if isinstance(execution, dict) else None
-    worker_session = result_execution.get("worker_session_id") if isinstance(result_execution, dict) else None
-    if not isinstance(source_session, str) or not source_session:
-        raise ValueError("semantic_independent requires source_session_id or validated peer_packet")
-    if not isinstance(worker_session, str) or not worker_session:
-        raise ValueError("semantic_independent requires worker_session_id or validated peer_packet")
-    if source_session == worker_session:
-        raise ValueError("semantic_independent reviewer session must differ from manager/source session")
+    relay_errors = validate_peer_result(peer_packet, result)
+    if relay_errors:
+        raise ValueError("semantic_independent peer relay invalid: " + "; ".join(relay_errors))
+    packet_job = peer_packet.get("job")
+    if not isinstance(packet_job, dict):
+        raise ValueError("semantic_independent peer packet job required")
+    for key in ("job_id", "subject_id", "kind", "input_fingerprint"):
+        if packet_job.get(key) != job.get(key):
+            raise ValueError(f"semantic_independent peer packet/job mismatch: {key}")
+
+    receipt_errors = validate_peer_bridge_receipt(bridge_receipt, peer_packet, result)
+    if receipt_errors:
+        raise ValueError("semantic_independent project bridge receipt invalid: " + "; ".join(receipt_errors))
     return {
-        "mode": "distinct_worker_session",
-        "relay_nonce": None,
-        "run_reference": result_execution.get("run_reference"),
-        "source_session_id": source_session,
-        "worker_session_id": worker_session,
+        "mode": "project_owned_peer_bridge",
+        "project_id": bridge_receipt.get("project_id"),
+        "project_repo": bridge_receipt.get("project_repo"),
+        "framework_repo": bridge_receipt.get("framework_repo"),
+        "framework_commit": bridge_receipt.get("framework_commit"),
+        "issue_number": bridge_receipt.get("issue_number"),
+        "result_fingerprint": bridge_receipt.get("result_fingerprint"),
+        "relay_nonce_fingerprint": bridge_receipt.get("relay_nonce_fingerprint"),
     }
 
 
@@ -115,9 +112,12 @@ def _registered_semantic_gate(
     if not isinstance(job, dict) or not isinstance(result, dict):
         raise ValueError(f"{category}.semantic_binding requires job and result objects")
 
-    errors = validate_result(job, result)
-    if errors:
-        raise ValueError(f"{category}.semantic_binding invalid: " + "; ".join(errors))
+    contract_errors = validate_registered_job(job)
+    if contract_errors:
+        raise ValueError(f"{category}.registered contract binding invalid: " + "; ".join(contract_errors))
+    result_errors = validate_result(job, result)
+    if result_errors:
+        raise ValueError(f"{category}.semantic result invalid: " + "; ".join(result_errors))
     if result.get("status") != "completed":
         raise ValueError(f"{category}.semantic result must be completed")
 
@@ -139,30 +139,12 @@ def _registered_semantic_gate(
     provenance = job.get("provenance")
     if not isinstance(provenance, dict) or provenance.get("source") != "model_contract_pack":
         raise ValueError(f"{category} release evidence must come from model_contract_pack")
-
-    registry_path, pack_id = resolve_contract_registry(contract_id)
-    registry = load_contract_registry(registry_path)
-    contract = registry["contracts"].get(contract_id)
-    if not isinstance(contract, dict):
-        raise ValueError(f"{category}: registered contract unavailable: {contract_id}")
-    roles = contract.get("release_roles", [])
-    if not isinstance(roles, list) or category not in roles:
-        raise ValueError(f"{category}: contract {contract_id} is not registered for release role {category}")
-    if category == "semantic_independent" and contract.get("independent_gate") is not True:
-        raise ValueError(f"{category}: contract {contract_id} is not an independent gate")
-
-    expected_registry_path = str(registry_path.relative_to(SEM)) if registry_path.is_relative_to(SEM) else str(registry_path)
-    expected = {
-        "registry_schema": registry.get("schema"),
-        "registry_version": registry.get("version"),
-        "registry_path": expected_registry_path,
-        "pack_id": pack_id,
-        "model_contract_id": contract_id,
-        "independent_gate": bool(contract.get("independent_gate", False)),
-    }
-    for key, value in expected.items():
-        if provenance.get(key) != value:
-            raise ValueError(f"{category}.semantic provenance mismatch: {key}")
+    if category == "reader_engagement" and contract_id != "reader.engagement_audit":
+        raise ValueError("reader_engagement requires reader.engagement_audit")
+    if category == "semantic_independent" and contract_id != "quality.production_review":
+        raise ValueError("semantic_independent requires quality.production_review")
+    if category == "semantic_independent" and provenance.get("independent_gate") is not True:
+        raise ValueError("semantic_independent contract must declare independent_gate=true")
 
     independence: dict[str, Any] | None = None
     if category == "semantic_independent":
@@ -201,11 +183,11 @@ def _registered_semantic_gate(
         "flatness_risk": flatness_risk,
         "semantic_contract": {
             "model_contract_id": contract_id,
-            "registry_schema": registry.get("schema"),
-            "registry_version": registry.get("version"),
-            "pack_id": pack_id,
+            "registry_schema": provenance.get("registry_schema"),
+            "registry_version": provenance.get("registry_version"),
+            "pack_id": provenance.get("pack_id"),
             "release_role": category,
-            "independent_gate": bool(contract.get("independent_gate", False)),
+            "independent_gate": bool(provenance.get("independent_gate", False)),
             "job_fingerprint": job.get("input_fingerprint"),
             "worker_provider": worker.get("provider"),
             "model_or_reviewer": worker.get("model_or_reviewer"),
@@ -268,12 +250,7 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
 
         status = raw.get("status")
         if category in REGISTERED_RELEASE_CATEGORIES and status != "pending":
-            gate = _registered_semantic_gate(
-                raw,
-                category=category,
-                candidate_fingerprint=candidate,
-                reader_grip=grip,
-            )
+            gate = _registered_semantic_gate(raw, category=category, candidate_fingerprint=candidate, reader_grip=grip)
         else:
             gate = _plain_gate(raw, category=category, candidate_fingerprint=candidate)
         gates[category] = gate
@@ -299,6 +276,7 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
         "numeric_quality_aggregation": False,
         "registered_reader_engagement_required": True,
         "registered_independent_release_contract_required": require_semantic,
+        "project_bridge_receipt_required_for_independence": require_semantic,
         "authority": False,
         "permissions": {"canon_write": False, "framework_write": False, "durable_user_taste_write": False},
         "model_execution": False,
@@ -316,11 +294,7 @@ def _reader_binding(
     job = make_contract_job(
         "reader.engagement_audit",
         "CH-SELF",
-        {
-            "candidate_fingerprint": fp,
-            "candidate_text": "A bounded reader-engagement fixture.",
-            "reader_grip": "very_high",
-        },
+        {"candidate_fingerprint": fp, "candidate_text": "A bounded reader-engagement fixture.", "reader_grip": "very_high"},
         source_session_id="SES-MANAGER",
     )
     judgment = {
@@ -351,12 +325,6 @@ def _reader_binding(
         "judgment": judgment,
         "proposals": [],
         "errors": [],
-        "execution": {
-            "source_session_id": "SES-MANAGER",
-            "worker_session_id": "SES-READER",
-            "handoff_id": None,
-            "attempt_id": "ATT-R",
-        },
     }
     return {"job": job, "result": result}
 
@@ -365,8 +333,6 @@ def _production_binding(
     fp: str,
     result_value: str = "pass",
     *,
-    same_session: bool = False,
-    peer_relay: bool = False,
     codes: list[str] | None = None,
     flatness_risk: str | None = None,
 ) -> dict[str, Any]:
@@ -374,21 +340,23 @@ def _production_binding(
     job = make_contract_job(
         "quality.production_review",
         "CH-SELF",
-        {
-            "candidate_fingerprint": fp,
-            "candidate_text": "A bounded production-review fixture.",
-            "reader_grip": "very_high",
-        },
+        {"candidate_fingerprint": fp, "candidate_text": "A bounded production-review fixture.", "reader_grip": "very_high"},
         source_session_id="SES-MANAGER",
     )
-    packet = build_peer_packet(job) if peer_relay else None
-    result: dict[str, Any] = {
+    job["provenance"].update({
+        "project_id": "PROJECT-SELF",
+        "project_repo": "owner/project",
+        "framework_repo": "owner/framework",
+        "framework_commit": "f" * 40,
+    })
+    packet = build_peer_packet(job)
+    result = {
         "job_id": job["job_id"],
         "subject_id": job["subject_id"],
         "kind": job["kind"],
         "input_fingerprint": job["input_fingerprint"],
         "status": "completed",
-        "worker": {"provider": "chatgpt_peer_chat" if peer_relay else "self_test", "model_or_reviewer": "independent-fixture"},
+        "worker": {"provider": "chatgpt_peer_chat", "model_or_reviewer": "independent-fixture", "run_reference": packet["relay_nonce"]},
         "judgment": {
             "confidence": 0.95,
             "result": result_value,
@@ -400,19 +368,16 @@ def _production_binding(
         "proposals": [],
         "errors": [],
     }
-    if peer_relay and packet is not None:
-        result["worker"]["run_reference"] = packet["relay_nonce"]
-    else:
-        result["execution"] = {
-            "source_session_id": "SES-MANAGER",
-            "worker_session_id": "SES-MANAGER" if same_session else "SES-REVIEWER",
-            "handoff_id": None,
-            "attempt_id": "ATT-P",
-        }
-    binding: dict[str, Any] = {"job": job, "result": result}
-    if packet is not None:
-        binding["peer_packet"] = packet
-    return binding
+    receipt = build_peer_bridge_receipt(
+        packet,
+        result,
+        project_id="PROJECT-SELF",
+        project_repo="owner/project",
+        framework_repo="owner/framework",
+        framework_commit="f" * 40,
+        issue_number=7,
+    )
+    return {"job": job, "result": result, "peer_packet": packet, "bridge_receipt": receipt}
 
 
 def self_test() -> int:
@@ -424,7 +389,6 @@ def self_test() -> int:
         reader: str = "pass",
         continuity: str = "pass",
         semantic: str = "pass",
-        peer_relay: bool = True,
     ) -> dict[str, Any]:
         reader_gate: dict[str, Any] = {
             "category": "reader_engagement",
@@ -443,7 +407,7 @@ def self_test() -> int:
             "evidence_refs": ["semantic:self"],
         }
         if semantic in {"pass", "fail"}:
-            semantic_gate["semantic_binding"] = _production_binding(fp, semantic, peer_relay=peer_relay)
+            semantic_gate["semantic_binding"] = _production_binding(fp, semantic)
         return {
             "candidate_fingerprint": fp,
             "policy": {"reader_grip": "very_high", "require_continuity": True, "require_independent_semantic": True},
@@ -456,7 +420,6 @@ def self_test() -> int:
         }
 
     green = evaluate(packet())
-    session_green = evaluate(packet(peer_relay=False))
     reader_fail = evaluate(packet(reader="fail"))
     surface_fail = evaluate(packet(surface="fail"))
     semantic_fail = evaluate(packet(semantic="fail"))
@@ -487,25 +450,36 @@ def self_test() -> int:
     except ValueError as exc:
         adhoc_semantic_guard = "semantic_binding" in str(exc)
 
-    same_session_guard = False
-    same = packet(peer_relay=False)
-    same["gates"][-1]["semantic_binding"] = _production_binding(fp, "pass", same_session=True)
+    bridge_receipt_guard = False
+    no_receipt = packet()
+    no_receipt["gates"][-1]["semantic_binding"].pop("bridge_receipt", None)
     try:
-        evaluate(same)
+        evaluate(no_receipt)
     except ValueError as exc:
-        same_session_guard = "must differ" in str(exc)
+        bridge_receipt_guard = "bridge_receipt" in str(exc)
+
+    bare_session_guard = False
+    bare_session = packet()
+    binding = bare_session["gates"][-1]["semantic_binding"]
+    binding.pop("peer_packet", None)
+    binding.pop("bridge_receipt", None)
+    binding["result"]["execution"] = {"source_session_id": "SES-A", "worker_session_id": "SES-B"}
+    try:
+        evaluate(bare_session)
+    except ValueError as exc:
+        bare_session_guard = "peer_packet" in str(exc) or "bridge_receipt" in str(exc)
 
     candidate_contract_guard = False
     wrong_candidate = packet()
-    wrong_candidate["gates"][-1]["semantic_binding"] = _production_binding("sha256:" + "b" * 64, "pass", peer_relay=True)
+    wrong_candidate["gates"][-1]["semantic_binding"] = _production_binding("sha256:" + "b" * 64, "pass")
     try:
         evaluate(wrong_candidate)
     except ValueError as exc:
-        candidate_contract_guard = "contract candidate fingerprint mismatch" in str(exc)
+        candidate_contract_guard = "candidate fingerprint mismatch" in str(exc)
 
     caller_status_override_guard = False
     override = packet()
-    override["gates"][-1]["semantic_binding"] = _production_binding(fp, "fail", peer_relay=True)
+    override["gates"][-1]["semantic_binding"] = _production_binding(fp, "fail")
     override["gates"][-1]["status"] = "pass"
     try:
         evaluate(override)
@@ -530,7 +504,7 @@ def self_test() -> int:
 
     production_checklist_pass_guard = False
     checklist = packet()
-    checklist["gates"][-1]["semantic_binding"] = _production_binding(fp, "pass", peer_relay=True, codes=[CHECKLIST_CAUSALITY_ID])
+    checklist["gates"][-1]["semantic_binding"] = _production_binding(fp, "pass", codes=[CHECKLIST_CAUSALITY_ID])
     try:
         evaluate(checklist)
     except ValueError as exc:
@@ -538,29 +512,29 @@ def self_test() -> int:
 
     production_flatness_pass_guard = False
     blocked = packet()
-    blocked["gates"][-1]["semantic_binding"] = _production_binding(fp, "pass", peer_relay=True, flatness_risk="blocking")
+    blocked["gates"][-1]["semantic_binding"] = _production_binding(fp, "pass", flatness_risk="blocking")
     try:
         evaluate(blocked)
     except ValueError as exc:
         production_flatness_pass_guard = "flatness_risk" in str(exc)
 
-    missing_text_guard = False
-    missing_text = packet(peer_relay=False)
-    binding = missing_text["gates"][-1]["semantic_binding"]
-    binding["job"]["input"]["payload"].pop("candidate_text", None)
+    receipt_tamper_guard = False
+    tampered = packet()
+    tampered["gates"][-1]["semantic_binding"]["bridge_receipt"]["result_fingerprint"] = "sha256:" + "0" * 64
     try:
-        evaluate(missing_text)
-    except ValueError:
-        missing_text_guard = True
+        evaluate(tampered)
+    except ValueError as exc:
+        receipt_tamper_guard = "result_fingerprint" in str(exc)
 
     taxonomy_ok = taxonomy_self_test().get("quality_taxonomy_contract") == "PASS"
     repair_policy_ok = repair_policy_self_test().get("repair_policy_contract") == "PASS"
+    binding_test = registered_binding_self_test()
+    registered_binding_ok = binding_test.get("registered_contract_binding_contract") == "PASS"
     semantic_green_gate = next(g for g in green["gates"] if g["category"] == "semantic_independent")
     independence_mode = semantic_green_gate.get("semantic_contract", {}).get("independence", {}).get("mode")
 
     ok = all((
         green["ready_for_user_visible_review"] is True,
-        session_green["ready_for_user_visible_review"] is True,
         reader_fail["blocking_gates"] == ["reader_engagement"],
         surface_fail["blocking_gates"] == ["surface"],
         semantic_fail["blocking_gates"] == ["semantic_independent"],
@@ -569,20 +543,23 @@ def self_test() -> int:
         outer_mismatch_guard,
         adhoc_reader_guard,
         adhoc_semantic_guard,
-        same_session_guard,
+        bridge_receipt_guard,
+        bare_session_guard,
         candidate_contract_guard,
         caller_status_override_guard,
         reader_flat_pass_guard,
         reader_medium_flatness_guard,
         production_checklist_pass_guard,
         production_flatness_pass_guard,
-        missing_text_guard,
+        receipt_tamper_guard,
         taxonomy_ok,
         repair_policy_ok,
+        registered_binding_ok,
         green["registered_reader_engagement_required"] is True,
         green["registered_independent_release_contract_required"] is True,
+        green["project_bridge_receipt_required_for_independence"] is True,
         green["numeric_quality_aggregation"] is False,
-        independence_mode == "peer_chat_relay",
+        independence_mode == "project_owned_peer_bridge",
     ))
     print(json.dumps({
         "production_readiness_contract": "PASS" if ok else "FAIL",
@@ -592,17 +569,18 @@ def self_test() -> int:
         "checklist_causality_id": CHECKLIST_CAUSALITY_ID,
         "candidate_fingerprint_bound": outer_mismatch_guard,
         "semantic_contract_candidate_bound": candidate_contract_guard,
-        "candidate_text_required": missing_text_guard,
         "registered_reader_engagement_required": adhoc_reader_guard,
         "registered_independent_release_contract_required": adhoc_semantic_guard,
+        "registered_contract_definition_bound": registered_binding_ok,
+        "project_bridge_receipt_required": bridge_receipt_guard,
+        "bare_distinct_session_not_independence": bare_session_guard,
         "caller_status_cannot_override_semantic_result": caller_status_override_guard,
         "blocking_reader_code_cannot_pass": reader_flat_pass_guard,
         "very_high_reader_grip_flatness_guard": reader_medium_flatness_guard,
         "blocking_production_code_cannot_pass": production_checklist_pass_guard,
         "blocking_flatness_cannot_pass": production_flatness_pass_guard,
-        "peer_relay_independence_supported": independence_mode == "peer_chat_relay",
-        "distinct_session_independence_supported": session_green["ready_for_user_visible_review"] is True,
-        "same_session_rejected": same_session_guard,
+        "peer_receipt_result_tamper_rejected": receipt_tamper_guard,
+        "project_owned_peer_bridge_independence": independence_mode == "project_owned_peer_bridge",
         "quality_taxonomy_contract": taxonomy_ok,
         "repair_policy_contract": repair_policy_ok,
         "numeric_quality_aggregation": False,
