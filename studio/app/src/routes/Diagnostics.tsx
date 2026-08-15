@@ -67,7 +67,7 @@ export default function Diagnostics() {
         <QueryError message={error()} />
         <Show when={result()}>
           {(doctor) => (
-            <section class="nf-diagnostic-workstation" aria-labelledby="diagnostics-result-heading">
+            <section class="wui-card wui-card--outlined nf-diagnostic-workstation" aria-labelledby="diagnostics-result-heading">
               <div class="nf-observe-section-head">
                 <div>
                   <span class="nf-eyebrow">{t("diagnostics.currentCheck")}</span>
