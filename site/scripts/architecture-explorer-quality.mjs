@@ -32,7 +32,9 @@ check(explorer.includes("authority=false"), "architecture preview must state its
 check(explorer.includes("This is not a real Core execution") && explorer.includes("不调用模型"), "architecture simulation must be explicitly identified as a deterministic preview");
 check(!/setInterval\s*\(|requestAnimationFrame\s*\(/.test(explorer), "architecture explorer must not add idle timers or frame loops");
 check(main.includes('path === "/architecture"') && main.includes("ArchitectureExplorerEntry"), "main entry must route /architecture to the standalone explorer");
-check(main.includes('"/inspect", "/playground", "/architecture"'), "SPA handoff must cover standalone browser-native product surfaces");
+for (const route of ["/inspect", "/playground", "/architecture"]) {
+  check(main.includes(`"${route}"`), `SPA handoff must cover standalone browser-native product surface ${route}`);
+}
 check(main.includes('import "./styles/architecture-explorer.css"'), "architecture explorer styles must be loaded by the product entry");
 check(css.includes(".architecture-flow") && css.includes(".architecture-detail-grid") && css.includes(".architecture-trace-list"), "architecture explorer must retain flow, inspector, and trace surfaces");
 check(css.includes("@media (max-width: 760px)"), "architecture explorer must retain a mobile responsive contract");
@@ -50,5 +52,6 @@ if (failures.length) {
     authority: false,
     public_contract_grounded: true,
     responsive: true,
+    composable_handoff_gate: true,
   }, null, 2));
 }
