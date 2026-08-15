@@ -46,8 +46,16 @@ jobs:
 
       - name: Portable bridge self-test
         run: |
-          python studio/host_bridge.py self-test > studio-host-bridge-test.json
-          python agent-skills/novelforge/scripts/novelforge_bridge.py self-test > agent-skill-test.json
+          if ! python studio/host_bridge.py self-test > studio-host-bridge-test.json; then
+            cat studio-host-bridge-test.json
+            exit 1
+          fi
+          cat studio-host-bridge-test.json
+          if ! python agent-skills/novelforge/scripts/novelforge_bridge.py self-test > agent-skill-test.json; then
+            cat agent-skill-test.json
+            exit 1
+          fi
+          cat agent-skill-test.json
 
       - name: Exercise supported query through request envelope
         run: |
