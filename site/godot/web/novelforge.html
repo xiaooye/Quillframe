@@ -1,103 +1,28 @@
 <!doctype html>
-<html lang="en" data-novelforge-runtime="loading" data-novelforge-engine="loading">
+<html lang="en" data-novelforge-godot-shadow="loading">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#fffdfc">
-  <meta name="color-scheme" content="light">
-  <meta name="description" content="NovelForge — Story Loom fiction production workspace.">
-  <title>$GODOT_PROJECT_NAME</title>
-  $GODOT_HEAD_INCLUDE
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#fffdfc" />
+  <title>NovelForge · Godot parity shadow</title>
   <style>
-    :root {
-      color-scheme: light;
-      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #fffdfc;
-      color: #241d2b;
-    }
-    * { box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #fffdfc; }
-    body { position: relative; }
-    #canvas { position:absolute; inset:0; width:100%; height:100%; display:block; outline:0; background:#fffdfc; }
-    #nf-loader {
-      position:absolute; inset:0; z-index:10; display:grid; place-items:center; overflow:hidden;
-      background:
-        radial-gradient(circle at 12% 8%, rgba(214,103,154,.12), transparent 34%),
-        radial-gradient(circle at 86% 18%, rgba(121,107,196,.10), transparent 32%),
-        radial-gradient(circle at 74% 88%, rgba(79,143,186,.08), transparent 34%),
-        #fffdfc;
-      transition: opacity 300ms ease, visibility 300ms ease;
-    }
-    #nf-loader.is-ready { opacity:0; visibility:hidden; pointer-events:none; }
-    .nf-card {
-      width:min(760px, calc(100vw - 40px)); padding:clamp(28px,6vw,54px);
-      border:1px solid #e2dae8; border-radius:32px;
-      background:linear-gradient(145deg, rgba(255,255,255,.96), rgba(255,244,249,.92));
-      box-shadow:0 20px 60px rgba(68,48,78,.10), inset 0 1px rgba(255,255,255,.9);
-      position:relative; overflow:hidden;
-    }
-    .nf-card::after { content:"✦   ♡   ✧"; position:absolute; right:24px; bottom:18px; color:rgba(214,103,154,.26); letter-spacing:8px; }
-    .nf-badges { display:flex; gap:8px; flex-wrap:wrap; }
-    .nf-badge { padding:6px 10px; border-radius:999px; font-size:11px; font-weight:700; }
-    .nf-badge:first-child { color:#d6679a; background:#f9dde9; }
-    .nf-badge:last-child { color:#62556d; border:1px solid #e2dae8; background:#fffdfc; }
-    .nf-kicker { margin-top:22px; color:#d6679a; font-size:10px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
-    .nf-brand { margin-top:12px; font-size:clamp(42px,8vw,76px); line-height:.94; letter-spacing:-.055em; font-weight:780; }
-    .nf-subtitle { margin-top:18px; max-width:560px; color:#62556d; font-size:14px; line-height:1.6; }
-    .nf-progress-track { position:relative; height:6px; margin-top:30px; overflow:hidden; border-radius:999px; background:#f0ecf4; }
-    #nf-progress { position:absolute; inset:0 auto 0 0; width:4%; border-radius:inherit; background:linear-gradient(90deg,#d6679a,#796bc4); transition:width 120ms linear; }
-    .nf-meta { display:flex; justify-content:space-between; gap:16px; margin-top:10px; color:#796bc4; font-size:10px; font-weight:700; }
-    #nf-status { color:#62556d; }
-    #nf-error { display:none; margin-top:18px; color:#9e4053; font-size:12px; }
-    html[data-novelforge-runtime="error"] #nf-error { display:block; }
-    @media (max-width:620px) { .nf-card { width:calc(100vw - 22px); padding:26px 22px; border-radius:24px; } .nf-meta { flex-direction:column; gap:5px; } }
-    @media (prefers-reduced-motion: reduce) { #nf-loader, #nf-progress { transition:none; } }
+    *{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#fffdfc}body{font-family:system-ui,sans-serif}#canvas{display:block;width:100%;height:100%;outline:0;background:#fffdfc}.nf-loader{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(circle at 72% 18%,rgba(249,221,233,.46),transparent 38%),radial-gradient(circle at 18% 26%,rgba(221,238,248,.55),transparent 35%),#fffdfc;color:#2d2636;transition:opacity .22s ease}.nf-loader[data-hidden="true"]{opacity:0;pointer-events:none}.nf-loader-inner{display:grid;gap:12px;text-align:center}.nf-mark{font-weight:800;letter-spacing:-.03em;font-size:22px}.nf-note{font-size:12px;color:#746b7d}.nf-progress{width:min(280px,70vw);height:6px;border-radius:999px;background:#eee8f1;overflow:hidden}.nf-progress>i{display:block;width:14%;height:100%;background:#796bc4;border-radius:inherit;animation:load 1.15s ease-in-out infinite alternate}@keyframes load{to{width:92%}}@media(prefers-reduced-motion:reduce){.nf-progress>i{animation:none;width:72%}}
   </style>
 </head>
 <body>
-  <canvas id="canvas" role="application" aria-label="NovelForge product runtime">Your browser does not support the canvas element required by NovelForge.</canvas>
-  <div id="nf-loader" aria-live="polite">
-    <div class="nf-card">
-      <div class="nf-badges"><span class="nf-badge">✦ local-first</span><span class="nf-badge">authority-aware</span></div>
-      <div class="nf-kicker">Story Loom · Product Experience</div>
-      <div class="nf-brand">NovelForge</div>
-      <div class="nf-subtitle">Weave boldly. Settle carefully. Publish exactly. Loading the Godot Web workspace while documentation remains a separate semantic web surface.</div>
-      <div class="nf-progress-track"><div id="nf-progress"></div></div>
-      <div class="nf-meta"><span id="nf-status">Loading runtime</span><span>Godot Web · Compatibility</span></div>
-      <div id="nf-error">The interactive runtime could not start. Reload the page or open the documentation surface directly.</div>
-    </div>
-  </div>
+  <canvas id="canvas">Your browser does not support canvas.</canvas>
+  <div id="nf-loader" class="nf-loader"><div class="nf-loader-inner"><div class="nf-mark">NovelForge</div><div class="nf-note">Godot parity shadow · production remains Solid until visual gate passes</div><div class="nf-progress"><i></i></div></div></div>
   <script src="$GODOT_URL"></script>
   <script>
-    (() => {
-      const root = document.documentElement;
-      const canvas = document.getElementById('canvas');
-      const progress = document.getElementById('nf-progress');
-      const status = document.getElementById('nf-status');
-      const engine = new Engine($GODOT_CONFIG);
-      const onProgress = (current, total) => {
-        if (total > 0) {
-          const ratio = Math.max(.04, Math.min(1, current / total));
-          progress.style.width = `${Math.round(ratio * 100)}%`;
-          status.textContent = ratio >= .995 ? 'Starting scene' : `Loading ${Math.round(ratio * 100)}%`;
-        } else status.textContent = 'Loading runtime';
-      };
-      if (!Engine.isWebGLAvailable(2)) {
-        root.dataset.novelforgeRuntime = 'error';
-        root.dataset.novelforgeEngine = 'error';
-        status.textContent = 'WebGL 2 unavailable';
-        return;
-      }
-      engine.startGame({ canvas, onProgress }).then(() => {
-        root.dataset.novelforgeEngine = 'started';
-        status.textContent = root.dataset.novelforgeRuntime === 'ready' ? 'Ready' : 'Scene started';
-      }).catch((error) => {
-        console.error('NovelForge Godot runtime failed to start', error);
-        root.dataset.novelforgeRuntime = 'error';
-        root.dataset.novelforgeEngine = 'error';
-        status.textContent = 'Runtime failed';
-      });
-    })();
+    const GODOT_CONFIG = $GODOT_CONFIG;
+    const engine = new Engine(GODOT_CONFIG);
+    engine.startGame({canvas: document.getElementById('canvas')}).then(() => {
+      document.documentElement.dataset.novelforgeGodotShadow = 'started';
+    });
+    window.addEventListener('novelforge:godot-ready', () => {
+      document.documentElement.dataset.novelforgeGodotShadow = 'ready';
+      document.getElementById('nf-loader')?.setAttribute('data-hidden','true');
+    }, {once:true});
   </script>
 </body>
 </html>

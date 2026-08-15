@@ -1,0 +1,170 @@
+name: Product Godot Shadow QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/godot/**'
+      - 'site/scripts/fetch-godot-fonts.sh'
+      - 'site/scripts/build-godot-shadow.sh'
+      - 'site/scripts/godot-shadow-source-quality.mjs'
+      - 'specs/009-product-godot-parity-migration/**'
+      - '.github/workflows/product-godot-shadow-qa.yml'
+  pull_request:
+    paths:
+      - 'site/godot/**'
+      - 'site/scripts/fetch-godot-fonts.sh'
+      - 'site/scripts/build-godot-shadow.sh'
+      - 'site/scripts/godot-shadow-source-quality.mjs'
+      - 'specs/009-product-godot-parity-migration/**'
+      - '.github/workflows/product-godot-shadow-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: product-godot-shadow-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_RELEASE: 4.7.1-stable
+  GODOT_TEMPLATE_VERSION: 4.7.1.stable
+
+jobs:
+  parity-shadow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install Product Site dependencies
+        working-directory: site
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Godot migration source contract
+        working-directory: site
+        run: node scripts/godot-shadow-source-quality.mjs
+
+      - name: Build Solid visual baseline
+        working-directory: site
+        run: npm run content && npm run build:site
+
+      - name: Install browser font and image diff tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk python3-pil
+          fc-cache -f >/dev/null
+
+      - name: Install pinned Godot editor and official Web templates
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          install -m 0755 "/tmp/godot/Godot_v${GODOT_RELEASE}_linux.x86_64" "$HOME/.local/bin/godot"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+          curl -fsSL -o /tmp/templates.tpz \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_export_templates.tpz"
+          rm -rf /tmp/godot-templates
+          mkdir -p /tmp/godot-templates "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}"
+          unzip -q /tmp/templates.tpz -d /tmp/godot-templates
+          cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}/"
+          "$HOME/.local/bin/godot" --version
+          test -s "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}/web_nothreads_release.zip"
+
+      - name: Build Godot parity shadow
+        working-directory: site
+        run: bash scripts/build-godot-shadow.sh
+
+      - name: Capture baseline and Godot candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=/tmp/novelforge-godot-parity
+          mkdir -p "$OUT"
+          CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser)
+          test -n "$CHROME"
+
+          cd site
+          npm run preview -- --host 127.0.0.1 --port 4188 > "$OUT/solid-server.log" 2>&1 &
+          SOLID_PID=$!
+          cd ..
+          python3 -m http.server 4190 --bind 127.0.0.1 --directory site/dist-godot-shadow > "$OUT/godot-server.log" 2>&1 &
+          GODOT_PID=$!
+          cleanup() {
+            kill "$SOLID_PID" "$GODOT_PID" >/dev/null 2>&1 || true
+            wait "$SOLID_PID" "$GODOT_PID" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          for port in 4188 4190; do
+            ready=false
+            for _ in $(seq 1 40); do
+              if curl -fsS "http://127.0.0.1:${port}/" >/dev/null; then ready=true; break; fi
+              sleep 1
+            done
+            test "$ready" = true
+          done
+
+          shot() {
+            name="$1"; size="$2"; url="$3"
+            profile=$(mktemp -d)
+            "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --disable-background-networking \
+              --window-size="$size" --virtual-time-budget=9000 --user-data-dir="$profile" \
+              --screenshot="$OUT/${name}.png" "$url" >"$OUT/${name}.log" 2>&1
+            rm -rf "$profile"
+            test -s "$OUT/${name}.png"
+          }
+
+          shot solid-home-desktop 1440,900 'http://127.0.0.1:4188/'
+          shot godot-home-desktop 1440,900 'http://127.0.0.1:4190/'
+          shot solid-home-mobile 390,844 'http://127.0.0.1:4188/'
+          shot godot-home-mobile 390,844 'http://127.0.0.1:4190/'
+          shot godot-home-zh 390,844 'http://127.0.0.1:4190/?locale=zh-CN'
+
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageChops, ImageStat, ImageEnhance
+          import json, math
+
+          root = Path('/tmp/novelforge-godot-parity')
+          pairs = [
+              ('desktop', root/'solid-home-desktop.png', root/'godot-home-desktop.png'),
+              ('mobile', root/'solid-home-mobile.png', root/'godot-home-mobile.png'),
+          ]
+          metrics = {'schema': 'novelforge_godot_visual_parity_v1', 'blocking': False, 'pairs': {}}
+          for name, base_path, candidate_path in pairs:
+              base = Image.open(base_path).convert('RGB')
+              candidate = Image.open(candidate_path).convert('RGB')
+              assert base.size == candidate.size, (name, base.size, candidate.size)
+              diff = ImageChops.difference(base, candidate)
+              stat = ImageStat.Stat(diff)
+              rmse = math.sqrt(sum(v*v for v in stat.rms) / 3.0) / 255.0
+              mean = sum(stat.mean) / (3.0 * 255.0)
+              metrics['pairs'][name] = {'rmse': round(rmse, 6), 'mean_abs': round(mean, 6), 'size': base.size}
+              ImageEnhance.Contrast(diff).enhance(3.0).save(root/f'diff-{name}.png')
+          (root/'parity-metric.json').write_text(json.dumps(metrics, indent=2), encoding='utf-8')
+          (root/'README.txt').write_text(
+              'Godot remains a shadow runtime. The diff metric is recorded but is intentionally non-blocking until human parity review sets the cutover threshold.\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(metrics, indent=2))
+          PY
+
+      - name: Upload Godot parity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-godot-shadow-parity
+          path: /tmp/novelforge-godot-parity
+          if-no-files-found: error
+          retention-days: 7
