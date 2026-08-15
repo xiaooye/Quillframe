@@ -56,6 +56,7 @@ CONTROLLED_DOC_ROOTS = (
     ROOT / "knowledge",
     ROOT / "release",
     ROOT / "specs",
+    ROOT / "studio",
     ROOT / "surface",
 )
 EXCLUDED_DISCOVERY_DIRS = {".git", ".novelforge", "node_modules", "dist", "__pycache__"}
