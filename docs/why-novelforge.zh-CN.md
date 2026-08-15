@@ -63,7 +63,7 @@ Session memory、model inference、review result、Corpus evidence、scenario br
 
 ### 语义智能与确定性运行时故意分开
 
-7.3 把文学 / 叙事理解明确交给 model-readable semantic contracts，并按需渐进加载。
+当前开发架构把文学 / 叙事理解明确交给 model-readable semantic contracts，并按需渐进加载。
 
 模型负责真正需要阅读理解的问题：人物行动、scene resolution、reader reaction、character integrity、revision diagnosis、long-horizon reconciliation、candidate comparison。
 
