@@ -207,20 +207,44 @@ jobs:
               'rotated_chrome': False,
           })
           PY
-      - name: Bundle budgets
+      - name: Route-aware bundle budgets
         run: |
           python - <<'PY'
+          import gzip
           from pathlib import Path
+
           dist = Path('studio/app/dist/assets')
-          js = list(dist.glob('*.js'))
-          css = list(dist.glob('*.css'))
-          total_js = sum(p.stat().st_size for p in js)
-          total_css = sum(p.stat().st_size for p in css)
-          largest_js = max((p.stat().st_size for p in js), default=0)
-          print({'js_bytes': total_js, 'css_bytes': total_css, 'largest_js_bytes': largest_js, 'js_chunks': len(js), 'css_chunks': len(css)})
-          assert total_js <= 180 * 1024, f'JS budget exceeded: {total_js}'
-          assert total_css <= 120 * 1024, f'CSS budget exceeded: {total_css}'
-          assert largest_js <= 120 * 1024, f'single JS chunk budget exceeded: {largest_js}'
+          js = sorted(dist.glob('*.js'))
+          css = sorted(dist.glob('*.css'))
+          entry_js = next((p for p in js if p.name.startswith('index-')), None)
+          entry_css = next((p for p in css if p.name.startswith('index-')), None)
+          assert entry_js is not None, 'entry JS chunk missing'
+          assert entry_css is not None, 'entry CSS chunk missing'
+
+          lazy_js = [p for p in js if p != entry_js]
+          lazy_css = [p for p in css if p != entry_css]
+          gzip_size = lambda path: len(gzip.compress(path.read_bytes(), compresslevel=9))
+
+          metrics = {
+              'entry_js_bytes': entry_js.stat().st_size,
+              'largest_lazy_js_bytes': max((p.stat().st_size for p in lazy_js), default=0),
+              'total_js_gzip_bytes': sum(gzip_size(p) for p in js),
+              'entry_css_bytes': entry_css.stat().st_size,
+              'largest_lazy_css_bytes': max((p.stat().st_size for p in lazy_css), default=0),
+              'total_css_gzip_bytes': sum(gzip_size(p) for p in css),
+              'js_chunks': len(js),
+              'css_chunks': len(css),
+          }
+          print(metrics)
+
+          # These budgets model what a user downloads rather than summing raw,
+          # route-lazy source that is never loaded all at once.
+          assert metrics['entry_js_bytes'] <= 80 * 1024, f"entry JS budget exceeded: {metrics['entry_js_bytes']}"
+          assert metrics['largest_lazy_js_bytes'] <= 32 * 1024, f"lazy JS chunk budget exceeded: {metrics['largest_lazy_js_bytes']}"
+          assert metrics['total_js_gzip_bytes'] <= 90 * 1024, f"total JS transfer budget exceeded: {metrics['total_js_gzip_bytes']}"
+          assert metrics['entry_css_bytes'] <= 128 * 1024, f"entry CSS budget exceeded: {metrics['entry_css_bytes']}"
+          assert metrics['largest_lazy_css_bytes'] <= 32 * 1024, f"lazy CSS chunk budget exceeded: {metrics['largest_lazy_css_bytes']}"
+          assert metrics['total_css_gzip_bytes'] <= 28 * 1024, f"total CSS transfer budget exceeded: {metrics['total_css_gzip_bytes']}"
           PY
       - name: Documentation quality
         run: python scripts/docs_quality.py
