@@ -13,9 +13,12 @@ const main = read("src/main.tsx");
 const config = read("docs-site/astro.config.mjs");
 const contentConfig = read("docs-site/src/content.config.ts");
 const customCss = read("docs-site/src/styles/custom.css");
+const actions = read("docs-site/src/components/NovelForgeActions.astro");
+const stagingCompiler = read("scripts/build-starlight-content.mjs");
 const verifier = read("scripts/verify-starlight-build.mjs");
 const manifest = JSON.parse(fs.readFileSync(path.resolve(siteRoot, "../docs/documentation_manifest.json"), "utf8"));
 const stagedRoot = path.join(siteRoot, "docs-site", "src", "content", "docs");
+const publicAssetRoot = path.join(siteRoot, "docs-site", "public", "repo-assets");
 
 const failures = [];
 const requireCheck = (condition, message) => {
@@ -45,17 +48,34 @@ requireCheck(config.includes('outDir: "../dist/docs"'), "Starlight output must c
 requireCheck(config.includes('lang: "zh-CN"') && config.includes('lang: "en"'), "Starlight must keep zh-CN and English locales");
 requireCheck(config.includes("starlight({"), "docs app must remain powered by Starlight");
 requireCheck(contentConfig.includes("docsLoader()") && contentConfig.includes("docsSchema()"), "Starlight content collection must use official loader and schema");
-requireCheck(customCss.includes("--sl-content-width: 50rem"), "documentation reading width must stay bounded");
+requireCheck(customCss.includes("--sl-content-width: 52rem"), "documentation reading width must stay deliberately bounded");
 requireCheck(customCss.includes(':lang(zh-CN) .sl-markdown-content'), "Chinese typography override must remain explicit");
+requireCheck(customCss.includes('a[aria-current="page"]'), "documentation navigation must retain a strong current-page state");
+requireCheck(actions.includes('english ? "Product" : "产品"'), "Product header action must remain locale-aware");
 
 requireCheck(!main.includes("KnowledgePortal"), "legacy Knowledge Portal must not mount beside the product router");
 requireCheck(!main.includes("KnowledgeExperience"), "product entry must not import the retired custom docs renderer");
 requireCheck(main.includes("localizedDocsTarget"), "product SPA must hand /docs navigation to Starlight with locale preservation");
+requireCheck(stagingCompiler.includes("rewriteHtmlAttributes"), "Starlight staging must rewrite raw HTML document attributes");
+requireCheck(stagingCompiler.includes("copyRelativeAsset"), "Starlight staging must copy repository-local documentation assets");
 
 const expectedPages = manifest.documents.length * 2;
 requireCheck(markdownCount(stagedRoot) === expectedPages, `Starlight staging must contain ${expectedPages} localized Markdown pages`);
 requireCheck(fs.existsSync(path.join(stagedRoot, "why-novelforge.md")), "zh-CN why-novelforge route must be staged at the docs root");
 requireCheck(fs.existsSync(path.join(stagedRoot, "en", "why-novelforge.md")), "English why-novelforge route must be staged under /en");
+
+const stagedHomePath = path.join(stagedRoot, "index.md");
+if (fs.existsSync(stagedHomePath)) {
+  const stagedHome = fs.readFileSync(stagedHomePath, "utf8");
+  requireCheck(!stagedHome.includes('../assets/brand/'), "docs home must not retain broken raw relative brand asset paths");
+  requireCheck(stagedHome.includes('/docs/repo-assets/assets/brand/novelforge-mark.svg'), "docs home must point its raw brand mark at the staged public asset");
+  requireCheck(stagedHome.includes('href="/docs/en/"'), "docs home raw locale link must target the Starlight English root");
+}
+
+for (const asset of ["novelforge-mark.svg", "novelforge-lockup.svg", "story-thread.svg"]) {
+  requireCheck(fs.existsSync(path.join(publicAssetRoot, "assets", "brand", asset)), `Starlight staging must copy brand asset ${asset}`);
+}
+
 requireCheck(verifier.includes('path.join(outputRoot, "why-novelforge", "index.html")'), "post-build verifier must assert a concrete zh-CN deep route");
 requireCheck(verifier.includes('path.join(outputRoot, "en", "why-novelforge", "index.html")'), "post-build verifier must assert a concrete English deep route");
 
@@ -74,5 +94,7 @@ if (failures.length > 0) {
     spa_docs_renderer: false,
     astro_project_root: "site/docs-site",
     emitted_page_verification: true,
+    raw_html_asset_rewrite: true,
+    localized_header_actions: true,
   }, null, 2));
 }
