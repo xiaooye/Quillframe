@@ -153,6 +153,26 @@ const nodes: ArchitectureNode[] = [
   },
 ];
 
+const railCopyZh: Record<string, string> = {
+  project: "身份 · Framework lock",
+  manager: "Session · Run",
+  context: "稀疏上下文",
+  worker: "typed semantic I/O",
+  gate: "candidate 指纹校验",
+  settlement: "语义提交",
+  publication: "文本物化",
+};
+
+const railCopyEn: Record<string, string> = {
+  project: "identity · framework lock",
+  manager: "session · run",
+  context: "sparse context",
+  worker: "typed semantic I/O",
+  gate: "candidate fingerprint",
+  settlement: "semantic commit",
+  publication: "text materialization",
+};
+
 function initialDark() {
   const saved = localStorage.getItem("novelforge.appearance");
   if (saved === "dark") return true;
@@ -208,12 +228,11 @@ export default function ArchitectureExplorerEntry(props: Props) {
           <span>NovelForge</span>
           <span class="wui-badge wui-badge--soft version-chip">0.8.x</span>
         </a>
-        <nav class="wui-app-bar__nav desktop-nav" aria-label={zh() ? "架构导航" : "Architecture navigation"}>
+        <nav class="wui-app-bar__nav desktop-nav" aria-label={zh() ? "产品导航" : "Product navigation"}>
           <a class="wui-app-bar__link" href="/">{zh() ? "产品" : "Product"}</a>
-          <a class="wui-app-bar__link" href="/inspect">{zh() ? "检查项目" : "Inspect"}</a>
-          <a class="wui-app-bar__link" href="/playground">Playground</a>
           <a class="wui-app-bar__link active" href="/architecture" aria-current="page">{zh() ? "架构" : "Architecture"}</a>
-          <a class="wui-app-bar__link" href={zh() ? "/docs/architecture" : "/docs/en/architecture"}>{zh() ? "精确文档" : "Exact docs"}</a>
+          <a class="wui-app-bar__link" href="/publication">{zh() ? "出版" : "Publication"}</a>
+          <a class="wui-app-bar__link" href="/docs">{zh() ? "知识库" : "Knowledge"}</a>
         </nav>
         <div class="wui-app-bar__actions header-actions">
           <a class="wui-button wui-button--solid studio-cta" href="https://studio.novelforge.wei-dev.com" target="_blank" rel="noreferrer">✦ Studio</a>
@@ -261,7 +280,7 @@ export default function ArchitectureExplorerEntry(props: Props) {
               >
                 <span class="architecture-node-step">{String(index() + 1).padStart(2, "0")}</span>
                 <span class="architecture-node-icon" aria-hidden="true">{node.icon}</span>
-                <span class="architecture-node-copy"><strong>{zh() ? node.titleZh : node.title}</strong><small>{zh() ? node.summaryZh : node.summary}</small></span>
+                <span class="architecture-node-copy"><strong>{zh() ? node.titleZh : node.title}</strong><small>{zh() ? railCopyZh[node.id] : railCopyEn[node.id]}</small></span>
                 <span class="architecture-node-status" aria-hidden="true">{runState(index()) === "complete" ? "✓" : runState(index()) === "current" ? "●" : "→"}</span>
               </button>
             )}</For>
