@@ -5,6 +5,7 @@ import { useI18n } from "../i18n";
 import { useStudio } from "../studio";
 
 const localCoreCommand = "python studio/local_server.py";
+const architectureUrl = "https://novelforge.wei-dev.com/architecture";
 
 export default function Desk() {
   const { t, locale } = useI18n();
@@ -38,11 +39,11 @@ export default function Desk() {
           <strong>{t("desk.startAgentTitle")}</strong>
           <small>{t("desk.startAgentBody")}</small>
         </A>
-        <A href={hosted() ? "#core-binding" : "/capabilities"} class="nf-start-action" data-intent="explore-novelforge">
+        <a href={architectureUrl} target="_blank" rel="noreferrer" class="nf-start-action" data-intent="explore-novelforge">
           <span class="nf-card-label">04</span>
           <strong>{t("desk.startExploreTitle")}</strong>
           <small>{t("desk.startExploreBody")}</small>
-        </A>
+        </a>
       </div>
 
       <Show when={hosted()}>
