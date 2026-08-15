@@ -2,7 +2,7 @@
 
 <p><kbd>PRODUCT EXPERIENCE</kbd>&nbsp;&nbsp;<kbd>CREATOR WORKBENCH</kbd>&nbsp;&nbsp;<kbd>INSPECTABLE RUNTIME</kbd></p>
 
-NovelForge Studio is the product surface around the NovelForge fiction operating substrate. Phase 1 is deliberately contract-first and read-only: validate the product architecture and observability UX before choosing an application or desktop stack.
+NovelForge Studio is the product surface around the NovelForge fiction operating substrate. Development is deliberately contract-first: validate product semantics and host boundaries before choosing application, desktop, cloud, or agent-framework-specific stacks.
 
 > **Authority boundary ✦** Studio consumes NovelForge Core state. UI state is not Canon, Memory, semantic truth, or a second workflow engine.
 
@@ -10,10 +10,14 @@ NovelForge Studio is the product surface around the NovelForge fiction operating
 
 ## Product architecture
 
-- [English](PRODUCT_ARCHITECTURE.en.md)
-- [简体中文](PRODUCT_ARCHITECTURE.zh-CN.md)
+- [Phase 1 product architecture · English](PRODUCT_ARCHITECTURE.en.md)
+- [Phase 1 product architecture · 简体中文](PRODUCT_ARCHITECTURE.zh-CN.md)
+- [Phase 2A portable product contract · English](PORTABLE_PRODUCT_CONTRACT.en.md)
+- [Phase 2A portable product contract · 简体中文](PORTABLE_PRODUCT_CONTRACT.zh-CN.md)
 
-## Phase 1 vertical slice
+The Phase 2A direction is **one product, many hosts**: CLI, local app/local Web UI, cloud-hosted UI, and agent-skill/package adapters all consume stable NovelForge contracts rather than creating separate truth models.
+
+## Phase 1 · Run / Context Inspector
 
 - [`prototypes/run-context-inspector.html`](prototypes/run-context-inspector.html) — zero-dependency Run / Context Inspector; loads `novelforge_run_receipt_v1` JSON locally and exposes no write operation.
 - [`fixtures/run-receipt.synthetic.json`](fixtures/run-receipt.synthetic.json) — clearly synthetic demo receipt for visual/interaction QA.
@@ -21,3 +25,14 @@ NovelForge Studio is the product surface around the NovelForge fiction operating
 The first interaction principle is intentionally visible in the prototype:
 
 **support identified by a semantic selection result ≠ evidence that actually entered the model context.**
+
+## Phase 2A · Portable Project Hub / Scene workspace
+
+- [`project_hub_projection.py`](project_hub_projection.py) — deterministic read-only projection from `novelforge_project_adapter_resolution_v1`; strips host absolute paths and binds exact source/projection fingerprints.
+- [`prototypes/project-hub-scene.html`](prototypes/project-hub-scene.html) — Project Hub + Scene workspace shell with Creator/Inspector progressive disclosure and delivery-surface switching.
+- [`fixtures/project-adapter-resolution.synthetic.json`](fixtures/project-adapter-resolution.synthetic.json) — synthetic Project Adapter resolution including host-private paths used to verify redaction.
+- [`fixtures/scene-workspace.synthetic.json`](fixtures/scene-workspace.synthetic.json) — synthetic read-only Scene/Reader/Context/Runtime fixture.
+
+The portable boundary preserves a second interaction principle:
+
+**delivery surface and host capability never imply NovelForge story authority.**

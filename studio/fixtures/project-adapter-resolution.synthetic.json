@@ -1,0 +1,65 @@
+{
+  "schema": "novelforge_project_adapter_resolution_v1",
+  "project_id": "PROJECT-SYNTHETIC-STORY-LOOM",
+  "project_title": "Synthetic Story Loom",
+  "project_version": "0.0.0-fixture",
+  "language": "en",
+  "project_root": "/private/synthetic-host/novelforge-project",
+  "layout": "mapped",
+  "framework_lock": {
+    "name": "NovelForge",
+    "version": "8.0.0-dev",
+    "commit": "synthetic-fixture",
+    "bundle_fingerprint": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "project_schema_version": "1",
+  "authority": {
+    "precedence": "locked > accepted > active_plan > review > proposal"
+  },
+  "paths": {
+    "project_entry": {
+      "relative": "novel_bible/PROJECT.md",
+      "absolute": "/private/synthetic-host/novelforge-project/novel_bible/PROJECT.md",
+      "exists": true,
+      "kind": "file"
+    },
+    "story_bible": {
+      "relative": "novel_bible",
+      "absolute": "/private/synthetic-host/novelforge-project/novel_bible",
+      "exists": true,
+      "kind": "dir"
+    },
+    "current_state": {
+      "relative": "novel_bible/shared/database",
+      "absolute": "/private/synthetic-host/novelforge-project/novel_bible/shared/database",
+      "exists": true,
+      "kind": "dir"
+    },
+    "active_plans": {
+      "relative": "plans",
+      "absolute": "/private/synthetic-host/novelforge-project/plans",
+      "exists": true,
+      "kind": "dir"
+    },
+    "manuscripts": {
+      "relative": "manuscripts",
+      "absolute": "/private/synthetic-host/novelforge-project/manuscripts",
+      "exists": true,
+      "kind": "dir"
+    },
+    "profiles": {
+      "relative": "profiles",
+      "absolute": "/private/synthetic-host/novelforge-project/profiles",
+      "exists": true,
+      "kind": "dir"
+    }
+  },
+  "quality": {
+    "reader_grip": "very_high",
+    "framework_surface_fundamentals": true,
+    "framework_reader_engagement": true
+  },
+  "build": {
+    "publication": "unavailable-in-fixture"
+  }
+}

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en" data-theme="light" data-density="comfortable">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NovelForge Studio — Project Hub / Scene Workspace</title>
+  <style>
+    /* Prototype mirror of assets/brand/tokens.json. The JSON token source remains authoritative. */
+    :root{color-scheme:light;--ink:#241D2B;--muted:#62556D;--surface:#FFFDFC;--surface-1:#F8F5FA;--surface-2:#F0ECF4;--line:#E2DAE8;--lav:#796BC4;--lav-soft:#E7E1F8;--sakura:#D6679A;--sakura-soft:#F9DDE9;--sky:#4F8FBA;--sky-soft:#DDEFF8;--mint:#4D9B7D;--mint-soft:#DCF1E7;--amber:#BE892F;--amber-soft:#F9EDCF;--danger:#B95767;--danger-soft:#F7DEE2;--shadow:0 14px 36px rgba(36,29,43,.08);--radius:16px;--pad:18px;--gap:16px}
+    html[data-theme="dark"]{color-scheme:dark;--ink:#F9F5FB;--muted:#BDB0C6;--surface:#1B171F;--surface-1:#241E29;--surface-2:#302838;--line:#44394A;--lav-soft:#302B49;--sakura-soft:#3C2733;--sky-soft:#203746;--mint-soft:#213A31;--amber-soft:#3D3320;--danger-soft:#40282D;--shadow:0 18px 44px rgba(0,0,0,.25)}
+    html[data-density="dense"]{--pad:13px;--gap:11px}
+    *{box-sizing:border-box}body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--surface-1);color:var(--ink)}button,select{font:inherit}.app{min-height:100vh;display:grid;grid-template-columns:230px minmax(0,1fr)}
+    .side{height:100vh;position:sticky;top:0;background:var(--surface);border-right:1px solid var(--line);padding:18px 14px;display:flex;flex-direction:column;gap:18px}.brand{display:flex;gap:10px;align-items:center;padding:3px 6px 10px}.mark{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;border:1px solid var(--line);background:linear-gradient(135deg,var(--sakura-soft),var(--lav-soft));color:var(--lav);font-weight:850}.brand strong{display:block;font-size:14px}.brand small{color:var(--muted);font-size:10px}.nav-label{margin:6px 8px 4px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:800}.nav{display:grid;gap:4px}.nav button{border:0;background:transparent;color:var(--muted);text-align:left;padding:9px 10px;border-radius:10px;cursor:pointer}.nav button.active{background:var(--lav-soft);color:var(--ink);font-weight:760}.side-foot{margin-top:auto;border:1px solid var(--line);background:var(--surface-1);border-radius:12px;padding:11px;font-size:10px;line-height:1.45;color:var(--muted)}
+    .main{min-width:0}.top{position:sticky;top:0;z-index:4;min-height:58px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 20px}.crumb strong{display:block;font-size:13px}.crumb span{font-size:10px;color:var(--muted)}.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.control{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:7px 9px;font-size:11px}.content{padding:20px;display:grid;gap:var(--gap);max-width:1500px;margin:0 auto}.banner{border:1px solid color-mix(in srgb,var(--amber) 45%,var(--line));background:var(--amber-soft);border-radius:13px;padding:10px 13px;font-size:11px;color:var(--muted)}.banner strong{color:var(--ink)}
+    .hero{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:var(--shadow);display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.eyebrow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:4px 7px;font-size:9px;font-weight:800;letter-spacing:.04em}.chip.review{background:var(--sakura-soft)}.chip.runtime{background:var(--lav-soft)}.chip.safe{background:var(--mint-soft)}.chip.missing{background:var(--amber-soft)}.hero h1{margin:0 0 5px;font-size:clamp(24px,4vw,38px);letter-spacing:-.04em}.hero p{margin:0;color:var(--muted);font-size:11px}.authority{max-width:330px;border:1px solid var(--line);background:var(--surface-1);border-radius:12px;padding:10px 12px;font-size:10px;line-height:1.5;color:var(--muted)}.authority strong{color:var(--ink)}
+    .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap)}.card,.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}.card{padding:var(--pad)}.label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:800}.value{margin-top:5px;font-size:19px;font-weight:800}.hint{margin-top:4px;font-size:10px;color:var(--muted)}
+    .workspace{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(310px,.75fr);gap:var(--gap);align-items:start}.panel-head{padding:13px var(--pad);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}.panel-head h2{margin:0;font-size:13px}.panel-body{padding:var(--pad)}.modebar{display:flex;gap:5px;flex-wrap:wrap}.modebar button{border:1px solid var(--line);background:var(--surface-1);color:var(--muted);border-radius:8px;padding:5px 8px;font-size:10px;cursor:pointer}.modebar button.active{background:var(--lav-soft);color:var(--ink);border-color:color-mix(in srgb,var(--lav) 40%,var(--line))}.manuscript{font-family:Georgia,"Times New Roman",serif;font-size:17px;line-height:1.75;max-width:760px;margin:0 auto;padding:12px 4px}.manuscript h3{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 18px}.stack{display:grid;gap:var(--gap)}.finding{border:1px solid var(--line);border-radius:11px;padding:10px 11px}.finding strong{display:block;font-size:10px;margin-bottom:4px}.finding p{margin:0;color:var(--muted);font-size:10px;line-height:1.45}.finding.reader{background:color-mix(in srgb,var(--sakura-soft) 55%,var(--surface))}.finding.context{background:color-mix(in srgb,var(--sky-soft) 55%,var(--surface))}.finding.runtime{background:color-mix(in srgb,var(--lav-soft) 55%,var(--surface))}.finding.missing{background:color-mix(in srgb,var(--amber-soft) 55%,var(--surface));border-style:dashed}
+    .path-list{display:grid;gap:7px}.path{display:grid;grid-template-columns:120px minmax(0,1fr);gap:9px;padding:7px 0;border-bottom:1px solid var(--line);font-size:10px}.path:last-child{border-bottom:0}.path .k{color:var(--muted)}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}.notice{border:1px dashed var(--sky);background:color-mix(in srgb,var(--sky-soft) 55%,var(--surface));border-radius:10px;padding:9px 10px;color:var(--muted);font-size:10px;line-height:1.45}.hidden{display:none!important}
+    @media(max-width:980px){.summary{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace{grid-template-columns:1fr}.hero{display:block}.authority{margin-top:14px;max-width:none}}
+    @media(max-width:700px){.app{grid-template-columns:1fr}.side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}.nav{grid-template-columns:repeat(3,minmax(0,1fr))}.side-foot{display:none}.top{position:static;padding:9px 12px}.content{padding:12px}.summary{grid-template-columns:1fr}.hero{padding:17px}.path{grid-template-columns:1fr}.toolbar{justify-content:flex-start}.crumb{display:none}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><div class="mark">✦</div><div><strong>NovelForge Studio</strong><small>portable creator workbench</small></div></div>
+    <div><div class="nav-label">Creator</div><div class="nav"><button class="active">Desk</button><button>Manuscript</button><button>Story</button><button>Review</button><button>Publish</button><button>Library</button></div></div>
+    <div><div class="nav-label">Inspector</div><div class="nav"><button>Runs</button><button>Context</button><button>Capabilities</button></div></div>
+    <div class="side-foot"><strong>Delivery surface ≠ source of truth.</strong><br/>CLI, local app, cloud UI and agent packages consume the same NovelForge contracts.</div>
+  </aside>
+  <main class="main">
+    <header class="top">
+      <div class="crumb"><strong>Synthetic Story Loom · CH-012</strong><span>SCN-012-03 · read-only prototype</span></div>
+      <div class="toolbar">
+        <select id="surface" class="control" aria-label="delivery surface"><option value="local_app">Local app</option><option value="cloud_ui">Cloud UI</option><option value="cli">CLI projection</option><option value="agent_package">Agent package</option></select>
+        <select id="theme" class="control" aria-label="theme"><option value="light">Light</option><option value="dark">Dark</option></select>
+        <select id="density" class="control" aria-label="density"><option value="comfortable">Comfortable</option><option value="dense">Dense</option></select>
+      </div>
+    </header>
+    <section class="content">
+      <div class="banner"><strong>Synthetic fixture.</strong> This screen demonstrates portable Studio semantics only. No action here mutates Canon, Runtime, Memory, or Settlement state.</div>
+      <section class="hero">
+        <div><div class="eyebrow"><span class="chip review">MANUSCRIPT · REVIEW</span><span class="chip runtime">RUN · COMPLETE</span><span class="chip safe">READ ONLY</span></div><h1>Service Corridor</h1><p>Chapter 12 · The Borrowed Key · Scene SCN-012-03</p></div>
+        <div class="authority"><strong>Authority boundary</strong><br/>Manuscript authority is <code>review</code>. Runtime evidence is non-Canon. Host capability never upgrades story authority.</div>
+      </section>
+      <section class="summary">
+        <div class="card"><div class="label">Project</div><div class="value">Synthetic Story Loom</div><div class="hint">mapped layout · NovelForge lock visible</div></div>
+        <div class="card"><div class="label">Manuscript</div><div class="value">Review</div><div class="hint">accepted_canon = false</div></div>
+        <div class="card"><div class="label">Context</div><div class="value">Partial</div><div class="hint">2 loaded · 1 support not loaded</div></div>
+        <div class="card"><div class="label">Host surface</div><div class="value" id="surface-value">Local app</div><div class="hint">capability ≠ authority</div></div>
+      </section>
+      <section class="workspace">
+        <div class="panel">
+          <div class="panel-head"><h2>Scene workspace</h2><div class="modebar"><button data-mode="focus">Focus</button><button data-mode="analysis" class="active">Analysis</button><button data-mode="compare">Compare</button><button data-mode="review">Review</button></div></div>
+          <div class="panel-body">
+            <article class="manuscript"><h3>Review manuscript · synthetic excerpt</h3><p>Mira reaches the service corridor before the elevator returns. The key in her hand belongs to someone who has not yet admitted losing it.</p><p>The corridor lights blink once. She can hear the lift cables moving behind the wall.</p></article>
+            <div id="compare-note" class="notice hidden">Compare mode would show incumbent/challenger evidence here. Candidate prose is intentionally absent from this observability prototype.</div>
+            <div id="review-note" class="notice hidden">Review mode surfaces unresolved findings and a user-visible gate. Write-capable Accept/Reject controls remain deferred until typed Core commands exist.</div>
+          </div>
+        </div>
+        <div class="stack" id="analysis-stack">
+          <div class="panel"><div class="panel-head"><h2>Reader / Context</h2><span class="chip missing">2 unresolved</span></div><div class="panel-body stack">
+            <div class="finding reader"><strong>Reader pressure</strong><p>The immediate objective is clear, but the cost of being caught is not yet concrete.</p></div>
+            <div class="finding context"><strong>Context grounding</strong><p><code>CHAR-MIRA</code> and <code>LOC-SERVICE-CORRIDOR</code> loaded. <code>REL-MIRA-ELIAS</code> was identified as support but did not enter context.</p></div>
+            <div class="finding missing"><strong>Authority detail unavailable</strong><p>The scene fixture does not contain exact Context Inspector authority metadata. The UI does not infer it.</p></div>
+          </div></div>
+          <div class="panel"><div class="panel-head"><h2>Runtime</h2><span class="chip runtime">NOT CANON</span></div><div class="panel-body"><div class="finding runtime"><strong>RUN-SYNTHETIC-012</strong><p>complete · 2 semantic jobs · execution evidence only</p></div></div></div>
+          <div class="panel"><div class="panel-head"><h2>Project Hub · safe projection</h2><span class="chip safe">NO ABSOLUTE PATHS</span></div><div class="panel-body"><div class="path-list"><div class="path"><div class="k">manuscripts</div><code>manuscripts · dir</code></div><div class="path"><div class="k">story_bible</div><code>novel_bible · dir</code></div><div class="path"><div class="k">current_state</div><code>novel_bible/shared/database · dir</code></div></div><div class="notice" style="margin-top:10px">Host-local <code>project_root</code> and every <code>paths.*.absolute</code> value are omitted from the browser/remote projection.</div></div></div>
+        </div>
+      </section>
+    </section>
+  </main>
+</div>
+<script>
+  const root=document.documentElement;
+  const labels={local_app:'Local app',cloud_ui:'Cloud UI',cli:'CLI projection',agent_package:'Agent package'};
+  document.querySelector('#surface').addEventListener('change',e=>document.querySelector('#surface-value').textContent=labels[e.target.value]);
+  document.querySelector('#theme').addEventListener('change',e=>root.dataset.theme=e.target.value);
+  document.querySelector('#density').addEventListener('change',e=>root.dataset.density=e.target.value);
+  document.querySelectorAll('[data-mode]').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));btn.classList.add('active');
+    const mode=btn.dataset.mode;
+    document.querySelector('#analysis-stack').classList.toggle('hidden',mode==='focus');
+    document.querySelector('#compare-note').classList.toggle('hidden',mode!=='compare');
+    document.querySelector('#review-note').classList.toggle('hidden',mode!=='review');
+  }));
+</script>
+</body>
+</html>
