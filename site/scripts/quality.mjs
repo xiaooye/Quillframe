@@ -20,12 +20,18 @@ const requireCheck = (condition, message) => {
 
 const packageJson = JSON.parse(read("package.json"));
 const appSource = read("src/App.tsx");
-const contentSource = read("src/content.ts");
+const contentTypesSource = read("src/content.ts");
+const enSource = read("src/content.en-US.ts");
+const zhSource = read("src/content.zh-CN.ts");
 const siteCss = read("src/styles/site.css");
+const showcaseCss = read("src/styles/showcase.css");
+const mainSource = read("src/main.tsx");
 const indexHtml = read("index.html");
 const tokens = JSON.parse(readRepo("assets/brand/tokens.json"));
 const weiuiIntegration = JSON.parse(readRepo("assets/brand/weiui.integration.json"));
 const storyLoomTheme = readRepo("assets/brand/story-loom.weiui.css");
+const allCopy = `${enSource}\n${zhSource}`;
+const productRuntimeSource = `${appSource}\n${contentTypesSource}\n${allCopy}`;
 
 const exactVersions = {
   "solid-js": "1.9.14",
@@ -56,16 +62,18 @@ requireCheck(weiuiIntegration.consumption?.css_delivery?.manifest_schema === "we
 requireCheck(weiuiIntegration.consumption?.css_delivery?.regeneration_requires_exact_pin === true, "WeiUI generated bundle must remain exact-pin reproducible");
 requireCheck(storyLoomTheme.includes("@layer wui-theme"), "Story Loom application theme must retain wui-theme layer");
 requireCheck(siteCss.includes('@import "../../../assets/brand/story-loom.weiui.css"'), "site must consume the maintained Story Loom application theme directly");
+requireCheck(mainSource.includes('import "./styles/showcase.css"'), "site must load the Product Site visual-showcase layer after base styles");
 
 for (const route of ["/", "/product", "/studio", "/architecture", "/publication", "/docs", "/changelog"]) {
   const needle = route === "/" ? 'path="/"' : `path="${route}"`;
   requireCheck(appSource.includes(needle), `missing required SPA route ${route}`);
 }
 
-requireCheck(contentSource.includes('"en-US"'), "missing en-US locale content");
-requireCheck(contentSource.includes('"zh-CN"'), "missing zh-CN locale content");
-requireCheck(contentSource.includes("Proof, not promises"), "home must retain evidence-first product framing");
-requireCheck(contentSource.includes("不是承诺，是证据"), "Chinese home must retain native evidence-first product framing");
+requireCheck(enSource.includes('proofLabel: "Proof, not promises"'), "home must retain evidence-first product framing");
+requireCheck(zhSource.includes('proofLabel: "不是承诺，是证据"'), "Chinese home must retain native evidence-first product framing");
+requireCheck(zhSource.includes('title: "让长篇创作有记忆，也有边界。"'), "Chinese hero must retain concise native headline geometry");
+requireCheck(zhSource.includes('title: "真实 SolidJS 产品壳"'), "Chinese Studio route must describe merged Phase 2C truth");
+requireCheck(enSource.includes('title: "Real SolidJS product shell"'), "English Studio route must describe merged Phase 2C truth");
 
 const fakeMarketingPatterns = [
   /10K\+/i,
@@ -79,7 +87,27 @@ const fakeMarketingPatterns = [
 ];
 
 for (const pattern of fakeMarketingPatterns) {
-  requireCheck(!pattern.test(contentSource), `fabricated or placeholder marketing claim matched ${pattern}`);
+  requireCheck(!pattern.test(allCopy), `fabricated or placeholder marketing claim matched ${pattern}`);
+}
+
+const chineseLeakagePatterns = [
+  /所有产品\s*claim/i,
+  /了解\s*Product model/i,
+  /Canonical sources/i,
+  /维护中的\s*Source of Truth/i,
+  /latest main 是/i,
+  /Agent Framework/i,
+  /Prompt Wrapper/i,
+  /current gaps/i,
+  /active pre-1\.0 development/i,
+  /read-oriented/i,
+  /product proof/i,
+  /Runtime Inspector/i,
+  /Context、Reader、Continuity/i,
+];
+
+for (const pattern of chineseLeakagePatterns) {
+  requireCheck(!pattern.test(`${zhSource}\n${appSource}`), `zh-CN user-facing copy regressed into internal English phrasing: ${pattern}`);
 }
 
 for (const required of [
@@ -91,8 +119,25 @@ for (const required of [
   requireCheck(siteCss.includes(required), `site CSS missing required UX contract: ${required}`);
 }
 
+for (const requiredShowcase of [
+  "color-mix(in oklab",
+  "backdrop-filter: blur",
+  "animation-timeline: view()",
+  "animation-timeline: scroll(root block)",
+  "::view-transition-old(root)",
+  '[data-locale="zh-CN"] .hero-copy h1',
+  "@media (prefers-reduced-motion: reduce)",
+]) {
+  requireCheck(showcaseCss.includes(requiredShowcase), `visual showcase missing modern progressive-enhancement contract: ${requiredShowcase}`);
+}
+
+requireCheck(!/animation-iteration-count\s*:\s*infinite|animation\s*:[^;]*\binfinite\b/i.test(showcaseCss), "Product Site showcase must not introduce idle infinite animation");
+requireCheck(!/setInterval\s*\(|requestAnimationFrame\s*\(/.test(appSource), "Product Site must not add polling or frame loops for decorative effects");
+requireCheck(appSource.includes("startViewTransition"), "locale/theme changes should progressively enhance with same-document View Transitions");
+requireCheck(appSource.includes('document.documentElement.dataset.locale = lang'), "locale-specific typography must be driven by a document locale attribute");
+
 for (const forbiddenRuntimePattern of [/setInterval\s*\(/, /requestAnimationFrame\s*\(/, /\.novelforge\/runtime\.db/, /sqlite/i]) {
-  requireCheck(!forbiddenRuntimePattern.test(appSource + contentSource), `site must not add polling/private-runtime coupling: ${forbiddenRuntimePattern}`);
+  requireCheck(!forbiddenRuntimePattern.test(productRuntimeSource), `site must not add polling/private-runtime coupling: ${forbiddenRuntimePattern}`);
 }
 
 for (const privateCorePath of ["harness/", "quality/", "core/", "publication/compiler.py", "control_plane"]) {
@@ -112,6 +157,9 @@ if (!process.exitCode) {
     stack: "SolidJS + TypeScript + Vite",
     routes: 7,
     locales: ["en-US", "zh-CN"],
+    native_chinese_copy_gate: true,
+    modern_css_progressive_enhancement: true,
+    idle_animation: false,
     weiui_runtime_javascript: false,
     weiui_integration: weiuiIntegration.schema,
     story_loom_tokens: tokens.schema,
