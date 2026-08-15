@@ -376,6 +376,14 @@ def _production_binding(
         framework_repo="owner/framework",
         framework_commit="f" * 40,
         issue_number=7,
+        runtime_trace={
+            "github_run_id": 1,
+            "github_run_attempt": 1,
+            "github_event_name": "issue_comment",
+            "result_comment_id": 1,
+            "workflow_name": "self-test",
+            "framework_action_ref": "f" * 40,
+        },
     )
     return {"job": job, "result": result, "peer_packet": packet, "bridge_receipt": receipt}
 
