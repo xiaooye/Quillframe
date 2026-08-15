@@ -1,4 +1,4 @@
-import { For, createSignal } from "solid-js";
+import { For, createMemo, createSignal } from "solid-js";
 import { PageIntro } from "../components";
 import { useI18n } from "../i18n";
 
@@ -11,13 +11,45 @@ const agentBootstrap = `# NovelForge project bootstrap
 5. Treat chat/session history as runtime context, never as Project or Canon authority.
 6. Use agent-skills/novelforge/SKILL.md for the public read-only Host Bridge when a portable agent integration is needed.
 7. Fail closed on unsupported bridge operations; do not bypass public boundaries through private runtime stores.
+8. Default to one manager run. Add external workers, handoffs, or independent gates only through the pinned runtime-routing and control-plane contracts.
+9. Treat session, event, handoff, and run-receipt state as Core-owned. If a safe public projection is unavailable, keep it unavailable rather than inferring it.
 `;
 
 const targets = ["Claude Code", "Codex", "OpenCode", "Cursor", "Custom agent"] as const;
 
+const runtimeCopy = {
+  "en-US": {
+    eyebrow: "Execution model",
+    title: "One run, explicit state, observable boundaries",
+    body: "NovelForge uses the useful common denominator of modern agent runtimes without adopting their private storage or orchestration vocabulary. Deterministic control stays outside the model; agency enters only where the task actually needs judgment.",
+    status: "NOVELFORGE-NATIVE",
+    patterns: [
+      ["Run + Trace", "A run owns an ordered observable chain. Studio inspects steps instead of scraping terminal logs.", "run → events"],
+      ["Context + State", "Context is explicit, stage-scoped, and fingerprintable. Chat history never becomes hidden authority.", "manifest → state"],
+      ["Contracts + Tools", "Semantic contracts describe allowed reasoning boundaries; registration alone is never a quality verdict.", "contracts → execution"],
+      ["Handoff + Approval", "Workers and independent gates are typed transitions, not invisible agent swaps or implicit delegation.", "handoff → gate"],
+      ["Evidence + Receipt", "Outputs carry evidence and run receipts. Settlement and Canon remain separate authority operations.", "evidence → receipt"],
+    ],
+  },
+  "zh-CN": {
+    eyebrow: "执行模型",
+    title: "一次 Run，显式状态，可观察边界",
+    body: "NovelForge 吸收现代 Agent runtime 已经验证过的共同模式，但不复制它们的私有存储或编排词汇。确定性控制留在模型之外；只有任务确实需要判断时，才引入 agency。",
+    status: "NOVELFORGE 原生",
+    patterns: [
+      ["Run + Trace", "一次 Run 拥有有序、可观察的执行链。Studio 检查步骤，不靠抓终端日志猜运行过程。", "run → events"],
+      ["Context + State", "上下文保持显式、分阶段、可指纹绑定；聊天历史不会悄悄变成 authority。", "manifest → state"],
+      ["Contracts + Tools", "Semantic contract 描述允许的推理边界；契约已注册本身绝不等于质量结论。", "contracts → execution"],
+      ["Handoff + Approval", "Worker 与独立 Gate 都是类型化转移，不允许隐形换 Agent 或暗中委派。", "handoff → gate"],
+      ["Evidence + Receipt", "输出携带 evidence 与 run receipt；Settlement / Canon 继续是独立 authority 操作。", "evidence → receipt"],
+    ],
+  },
+} as const;
+
 export default function Agents() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [copied, setCopied] = createSignal(false);
+  const runtime = createMemo(() => runtimeCopy[locale()]);
 
   const copyBootstrap = async () => {
     await navigator.clipboard.writeText(agentBootstrap);
@@ -52,6 +84,32 @@ export default function Agents() {
                 <strong>{target}</strong>
                 <span>{target === "Custom agent" ? t("agents.targetBridge") : t("agents.targetBootstrap")}</span>
                 <span class="wui-badge wui-badge--outline">{t("agents.targetPortable")}</span>
+              </div>
+            )}
+          </For>
+        </div>
+      </section>
+
+      <section
+        class="wui-card wui-card--outlined nf-inspector-surface nf-agent-matrix"
+        aria-labelledby="agent-runtime-heading"
+        style={{ background: "color-mix(in oklab,var(--nf-lane-runtime-fill) 28%,var(--nf-studio-panel))" }}
+      >
+        <header class="nf-agent-matrix-head">
+          <div>
+            <span class="nf-eyebrow">{runtime().eyebrow}</span>
+            <h2 id="agent-runtime-heading">{runtime().title}</h2>
+            <p>{runtime().body}</p>
+          </div>
+          <span class="wui-badge wui-badge--outline">{runtime().status}</span>
+        </header>
+        <div class="nf-agent-targets">
+          <For each={runtime().patterns}>
+            {(pattern) => (
+              <div class="nf-agent-target">
+                <strong>{pattern[0]}</strong>
+                <span>{pattern[1]}</span>
+                <span class="wui-badge wui-badge--outline nf-mono">{pattern[2]}</span>
               </div>
             )}
           </For>
