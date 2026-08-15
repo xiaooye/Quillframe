@@ -1,8 +1,30 @@
 import { A } from "@solidjs/router";
-import { For, Match, Show, Switch, createSignal } from "solid-js";
+import { For, Match, Show, Switch, createMemo, createSignal } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import type { DocumentBlock, InlineNode, ProductDocument } from "./knowledge";
 import { humanDocKind, knowledgeJourneyDefinition, knowledgeJourneyFor } from "./knowledgePresentation";
+
+function inlinePlainText(nodes: InlineNode[]): string {
+  return nodes.map((node) => {
+    if (node.type === "text" || node.type === "code") return node.text;
+    if (node.type === "br") return " ";
+    if (node.type === "image") return node.alt;
+    if ("children" in node) return inlinePlainText(node.children);
+    return "";
+  }).join("").replace(/\s+/g, " ").trim();
+}
+
+function localizedDocumentSummary(document: ProductDocument, locale: "en-US" | "zh-CN"): string {
+  if (locale === "en-US") return document.purpose;
+
+  const paragraphs = document.blocks
+    .filter((block): block is Extract<DocumentBlock, { type: "paragraph" }> => block.type === "paragraph")
+    .map((block) => inlinePlainText(block.inlines))
+    .filter(Boolean);
+
+  const naturalChineseLead = paragraphs.find((paragraph) => /[\u3400-\u9fff]/u.test(paragraph) && paragraph.length >= 28);
+  return naturalChineseLead || paragraphs[0] || "打开正文继续阅读。";
+}
 
 function InlineView(props: { nodes: InlineNode[] }) {
   return (
@@ -121,15 +143,25 @@ export default function DocumentRenderer(props: { document: ProductDocument; loc
     searchText: "",
   });
   const journey = () => knowledgeJourneyDefinition(knowledgeJourneyFor(docIndexShape()));
+  const summary = createMemo(() => localizedDocumentSummary(props.document, props.locale));
+  const bodyBlocks = createMemo(() => {
+    const blocks = props.document.blocks;
+    const first = blocks[0];
+    if (first?.type === "heading" && first.level === 1 && inlinePlainText(first.inlines) === props.document.title) {
+      return blocks.slice(1);
+    }
+    return blocks;
+  });
+
   return (
     <article class="product-document">
       <header class="document-header">
         <div class="document-human-meta"><span>{journey().icon}</span><strong>{journey().label[props.locale]}</strong><span>·</span><span>{humanDocKind(docIndexShape(), props.locale)}</span></div>
         <h1>{props.document.title}</h1>
-        <p>{props.document.purpose}</p>
+        <p>{summary()}</p>
       </header>
       <div class="document-body">
-        <For each={props.document.blocks}>{(block) => <BlockView block={block} copyLabel={zh() ? "复制" : "Copy"} copiedLabel={zh() ? "复制好啦 (｡•̀ᴗ-)✧" : "Copied ✨"} />}</For>
+        <For each={bodyBlocks()}>{(block) => <BlockView block={block} copyLabel={zh() ? "复制" : "Copy"} copiedLabel={zh() ? "复制好啦 (｡•̀ᴗ-)✧" : "Copied ✨"} />}</For>
       </div>
     </article>
   );
