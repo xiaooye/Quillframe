@@ -5,17 +5,7 @@ import { AppShell } from "./AppShell";
 import { bridgeTransportAvailable } from "./bridge";
 import { I18nProvider } from "./i18n";
 import { StudioProvider } from "./studio";
-import "./styles/vendor/weiui.tokens.generated.css";
-import "./styles/vendor/weiui.generated.css";
-import "../../../assets/brand/story-loom.weiui.css";
-import "./styles/app.css";
-import "./styles/observability.css";
-import "./styles/host.css";
-import "./styles/atelier-workbench.css";
-import "./styles/visual-fixes.css";
-import "./styles/product-surfaces.css";
-import "./styles/onboarding.css";
-import "./styles/integrations.css";
+import "./styles/index.css";
 
 const Desk = lazy(() => import("./routes/Desk"));
 const Start = lazy(() => import("./routes/Start"));
@@ -31,6 +21,7 @@ const root = document.getElementById("app");
 if (!root) throw new Error("#app mount point is missing");
 
 document.documentElement.dataset.experience = "story-loom-kawaii-atelier-v5";
+document.documentElement.dataset.productLanguage = "novelforge-kawaii-v1";
 
 async function configureOfflineShell() {
   if (!("serviceWorker" in navigator)) return;

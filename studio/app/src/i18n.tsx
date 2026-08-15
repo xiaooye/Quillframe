@@ -23,16 +23,21 @@ interface I18nValue {
 
 const I18nContext = createContext<I18nValue>();
 
+function syncLocale(next: Locale) {
+  document.documentElement.lang = next;
+  document.documentElement.dataset.locale = next;
+}
+
 export const I18nProvider: ParentComponent = (props) => {
   const [locale, setLocaleSignal] = createSignal<Locale>(initialLocale());
   const [messages] = createResource(locale, async (next) => (await loaders[next]()).default);
 
   const setLocale = (next: Locale) => {
     setLocaleSignal(next);
-    document.documentElement.lang = next;
+    syncLocale(next);
   };
 
-  document.documentElement.lang = locale();
+  syncLocale(locale());
 
   const value: I18nValue = {
     locale,
