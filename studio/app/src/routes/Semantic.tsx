@@ -72,7 +72,7 @@ export default function Semantic() {
                                   <span class="nf-card-label">{t("semantic.contractId")}</span>
                                   <strong class="nf-mono">{contractId}</strong>
                                 </div>
-                                <StatusBadge status="pass" label={t("semantic.registeredContract")} />
+                                <StatusBadge status="not_applicable" label={t("semantic.registeredContract")} />
                               </summary>
                               <div class="nf-contract-projection">
                                 <div class="nf-observe-field">
