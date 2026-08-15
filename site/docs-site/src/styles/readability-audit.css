@@ -1,0 +1,170 @@
+/* Final docs readability pass.
+   The docs surface is intentionally borderless; this layer makes sure the
+   resulting hierarchy remains comfortable to read instead of becoming tiny
+   or overly sparse. */
+
+:root {
+  --nf-doc-copy: 1rem;
+  --nf-doc-small: .86rem;
+  --nf-doc-micro: .76rem;
+}
+
+/* Header and navigation -------------------------------------------------- */
+
+.sidebar-content a,
+.sidebar-content summary {
+  font-size: var(--nf-doc-small);
+  line-height: 1.5;
+}
+
+.right-sidebar,
+.right-sidebar a,
+body:has(.nf-article-title) .right-sidebar a {
+  font-size: .82rem;
+  line-height: 1.45;
+}
+
+.nf-version-chip {
+  font-size: .7rem;
+}
+
+.nf-docs-root-link,
+.nf-product-link,
+.nf-studio-link {
+  font-size: .8rem;
+}
+
+/* Article title ---------------------------------------------------------- */
+
+.nf-article-title__eyebrow,
+.nf-article-title__section {
+  font-size: var(--nf-doc-micro);
+  letter-spacing: .045em;
+}
+
+.nf-article-title__lede {
+  max-width: 64ch;
+  font-size: 1rem;
+  line-height: 1.74;
+}
+
+:lang(zh-CN) .nf-article-title__lede {
+  max-width: 38em;
+  line-height: 1.88;
+}
+
+/* Long-form body --------------------------------------------------------- */
+
+body:has(.nf-article-title) .sl-markdown-content {
+  font-size: var(--nf-doc-copy);
+  line-height: 1.78;
+}
+
+:lang(zh-CN) body:has(.nf-article-title) .sl-markdown-content {
+  font-size: 1.035rem;
+  line-height: 1.9;
+}
+
+body:has(.nf-article-title) .sl-markdown-content > :where(p, ul, ol, blockquote, table, details) {
+  max-width: 68ch;
+}
+
+:lang(zh-CN) body:has(.nf-article-title) .sl-markdown-content > :where(p, ul, ol, blockquote, table, details) {
+  max-width: 42em;
+}
+
+body:has(.nf-article-title) .sl-markdown-content p {
+  margin-block: .9rem;
+}
+
+/* Markdown tight lists should look tight. Generated list-item paragraphs
+   previously inherited full paragraph margins, making every bullet look like
+   a separate section. */
+body:has(.nf-article-title) .sl-markdown-content li > p {
+  margin-block: .18rem;
+}
+
+body:has(.nf-article-title) .sl-markdown-content li + li {
+  margin-top: .42rem;
+}
+
+body:has(.nf-article-title) .sl-markdown-content :where(ul, ol) :where(ul, ol) {
+  margin-block: .4rem;
+}
+
+body:has(.nf-article-title) .sl-markdown-content h2 {
+  margin-top: 2.15em;
+  margin-bottom: .75em;
+  font-size: clamp(1.4rem, 2vw, 1.72rem);
+  line-height: 1.25;
+}
+
+body:has(.nf-article-title) .sl-markdown-content h3 {
+  margin-top: 1.75em;
+  margin-bottom: .55em;
+  font-size: 1.14rem;
+  line-height: 1.35;
+}
+
+body:has(.nf-article-title) .sl-markdown-content :where(code, kbd, samp) {
+  font-size: .9em;
+}
+
+body:has(.nf-article-title) .sl-markdown-content pre,
+body:has(.nf-article-title) .expressive-code {
+  font-size: .9rem;
+  line-height: 1.65;
+}
+
+body:has(.nf-article-title) .sl-markdown-content table {
+  font-size: .9rem;
+  line-height: 1.55;
+}
+
+body:has(.nf-article-title) .sl-markdown-content th,
+body:has(.nf-article-title) .sl-markdown-content td {
+  padding: .66rem .72rem;
+}
+
+body:has(.nf-article-title) .sl-markdown-content blockquote {
+  color: var(--sl-color-gray-2);
+  font-size: .96rem;
+  line-height: 1.72;
+}
+
+/* Landing page ----------------------------------------------------------- */
+
+body:has([data-nf-docs-home]) .sl-markdown-content,
+body:has([data-nf-docs-home]) main {
+  line-height: 1.72;
+}
+
+.nf-link-card p,
+.nf-tier-card p,
+.nf-reference-callout p {
+  font-size: .92rem;
+  line-height: 1.65;
+}
+
+.nf-link-card small,
+.nf-tier-card small,
+.nf-tier-badge,
+.nf-home-eyebrow {
+  font-size: var(--nf-doc-micro);
+}
+
+@media (max-width: 50rem) {
+  :root {
+    --nf-doc-copy: 1rem;
+  }
+
+  body:has(.nf-article-title) .sl-markdown-content,
+  :lang(zh-CN) body:has(.nf-article-title) .sl-markdown-content {
+    font-size: 1rem;
+  }
+
+  body:has(.nf-article-title) .sl-markdown-content > :where(p, ul, ol, blockquote, table, details),
+  :lang(zh-CN) body:has(.nf-article-title) .sl-markdown-content > :where(p, ul, ol, blockquote, table, details) {
+    max-width: none;
+  }
+}
