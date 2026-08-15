@@ -5,6 +5,22 @@
     gap: 6px;
     flex: 0 0 auto;
     white-space: nowrap;
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color .14s ease, background-color .14s ease, color .14s ease;
+  }
+
+  .nf-host-chip:hover,
+  .nf-host-chip:focus-visible {
+    border-color: color-mix(in oklch, var(--wui-color-primary) 34%, var(--wui-color-border));
+    color: var(--wui-color-foreground);
+    background: color-mix(in oklch, var(--wui-color-primary) 7%, transparent);
+  }
+
+  .nf-host-chip:focus-visible {
+    outline: 2px solid color-mix(in oklch, var(--wui-color-primary) 52%, transparent);
+    outline-offset: 2px;
   }
 
   .nf-host-dot {
