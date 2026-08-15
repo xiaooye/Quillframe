@@ -26,6 +26,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Framework version identity
+        run: python scripts/version_identity.py
       - name: Deterministic documentation quality
         run: python scripts/docs_quality.py
 
