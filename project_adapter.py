@@ -122,10 +122,12 @@ def self_test(tmp:Path)->dict[str,Any]:
     (tmp/"legacy"/"bible"/"CHAR-TEST.md").write_text("fixture",encoding="utf-8")
     manifest='''[novelforge]\nschema="novelforge_project_v1"\nproject_schema_version="1"\nminimum_framework_version="7.0.0"\n[project]\nid="PROJECT-TEST"\ntitle="Fixture"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[adapter]\nlayout="mapped"\n[paths]\nproject_entry="legacy/PROJECT.md"\nstart_here="legacy/START_HERE.md"\ncontext_protocol="legacy/CONTEXT.md"\nstory_bible="legacy/bible"\ncurrent_state="legacy/state"\nactive_plans="legacy/plans"\nmanuscripts="legacy/drafts"\nprofiles="legacy/profiles"\n[quality]\nframework_surface_fundamentals=true\nframework_reader_engagement=true\n'''
     (tmp/"novelforge.toml").write_text(manifest,encoding="utf-8")
-    (tmp/"novelforge.lock.json").write_text(json.dumps({"schema":LOCK_SCHEMA,"framework":{"name":"NovelForge","version":"7.0.0","commit":"fixture","bundle_fingerprint":"sha256:"+"a"*64},"project_schema_version":"1"}),encoding="utf-8")
+    framework={"name":"NovelForge","version":"7.0.0","commit":"fixture","bundle_fingerprint":"sha256:"+"a"*64}
+    (tmp/"novelforge.lock.json").write_text(json.dumps({"schema":LOCK_SCHEMA,"framework":framework,"project_schema_version":"1"}),encoding="utf-8")
+    (tmp/"framework.attestation.json").write_text(json.dumps({"framework":framework}),encoding="utf-8")
     v=validate(tmp);b=build(tmp)
     ok=v["valid"] and b["file_count"]>=4
-    return {"project_adapter_contract":"PASS" if ok else "FAIL","mapped_layout":True,"path_escape_guard":True,"bundle":b}
+    return {"project_adapter_contract":"PASS" if ok else "FAIL","mapped_layout":True,"path_escape_guard":True,"attestation_fixture":True,"bundle":b}
 
 def main()->int:
     p=argparse.ArgumentParser(description="NovelForge Project Adapter");sub=p.add_subparsers(dest="cmd",required=True)
