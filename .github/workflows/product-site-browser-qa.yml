@@ -120,26 +120,27 @@ jobs:
             width="$2"
             height="$3"
             url="$4"
+            layout="$5"
             node site/scripts/godot-browser-proof.mjs \
               --url "${url}" \
               --width "${width}" \
               --height "${height}" \
               --timeout-ms 90000 \
+              --expect-layout "${layout}" \
               --output "/tmp/product-site-browser-qa/${name}.png" \
               | tee "/tmp/product-site-browser-qa/${name}-proof.json"
           }
 
-          # Real elapsed-time CDP polling is deliberate: a 40 MB WebAssembly
+          # Real elapsed-time CDP polling is deliberate: the WebAssembly
           # runtime may still be compiling after network progress reaches 100%.
-          # Virtual-time screenshots can therefore capture only a completed
-          # loader and falsely report the scene as broken.
-          proof product-desktop 1440 900 'http://127.0.0.1:4188/'
-          proof architecture-desktop 1440 900 'http://127.0.0.1:4188/architecture'
-          proof studio-desktop 1440 900 'http://127.0.0.1:4188/studio'
-          proof publication-desktop 1440 900 'http://127.0.0.1:4188/publication'
-          proof architecture-mobile 390 844 'http://127.0.0.1:4188/architecture'
+          proof product-desktop 1440 900 'http://127.0.0.1:4188/' desktop
+          proof architecture-desktop 1440 900 'http://127.0.0.1:4188/architecture' desktop
+          proof studio-desktop 1440 900 'http://127.0.0.1:4188/studio' desktop
+          proof publication-desktop 1440 900 'http://127.0.0.1:4188/publication' desktop
+          proof architecture-mobile 390 844 'http://127.0.0.1:4188/architecture' phone
 
           python - <<'PY'
+          import json
           from hashlib import sha256
           from pathlib import Path
 
@@ -162,11 +163,17 @@ jobs:
           # browser test. Product scenes must render route-specific frames.
           assert len(set(desktop)) >= 3, desktop
 
+          mobile = json.loads((root / 'architecture-mobile-proof.json').read_text(encoding='utf-8').splitlines()[-1])
+          assert mobile['layout'] == 'phone', mobile
+          assert mobile['runtime'] == 'ready' and mobile['engine'] == 'started', mobile
+
           (root / 'browser-proof.txt').write_text(
-              'schema=novelforge_product_site_browser_qa_v5\n'
+              'schema=novelforge_product_site_browser_qa_v6\n'
               'runtime=godot_web\n'
               'runtime_ready_marker=true\n'
               'real_time_cdp_wait=true\n'
+              'responsive_layout_marker=true\n'
+              'phone_layout_proven=true\n'
               'branded_loader=true\n'
               'dimension=2d_2_5d\n'
               'deep_routes=true\n'
@@ -176,7 +183,7 @@ jobs:
               'authority=false\n',
               encoding='utf-8',
           )
-          print({'schema': 'novelforge_product_site_browser_qa_v5', 'status': 'pass', 'screenshots': 5, 'real_time_cdp_wait': True, 'authority': False})
+          print({'schema': 'novelforge_product_site_browser_qa_v6', 'status': 'pass', 'screenshots': 5, 'phone_layout_proven': True, 'authority': False})
           PY
 
       - name: Upload Product Site browser QA evidence
