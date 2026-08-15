@@ -16,6 +16,8 @@
   .unified-route-page,
   .unified-home {
     gap: clamp(30px, 4vw, 56px);
+    color: var(--pe-fg);
+    background: transparent;
   }
 
   /* Quiet product chrome ------------------------------------------------ */
