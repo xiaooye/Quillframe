@@ -1,0 +1,282 @@
+/* Final documentation visual audit.
+   Starlight keeps the information architecture; this layer removes the
+   rounded-card / colorful-surface habit from both the docs landing and deep
+   reading pages. Color remains an accent, not a container. */
+
+body,
+body:has([data-nf-docs-home]),
+body:has(.nf-article-title) .main-pane {
+  background: var(--sl-color-black);
+}
+
+/* Product chrome --------------------------------------------------------- */
+
+header.header {
+  border-bottom: 1px solid color-mix(in oklab, var(--nf-border) 68%, transparent);
+  background: color-mix(in oklab, var(--nf-surface-solid) 94%, transparent);
+  box-shadow: none;
+}
+
+.nf-brand-mark-shell {
+  border-color: color-mix(in oklab, var(--nf-border) 76%, transparent);
+  border-radius: .42rem;
+  background: transparent;
+  box-shadow: none;
+}
+
+.nf-version-chip {
+  border-color: transparent;
+  background: transparent;
+}
+
+.nf-docs-root-link,
+.nf-product-link {
+  border: 0;
+  border-radius: .35rem;
+  background: transparent;
+}
+
+.nf-docs-root-link:hover,
+.nf-docs-root-link:focus-visible,
+.nf-product-link:hover,
+.nf-product-link:focus-visible {
+  border-color: transparent;
+  background: color-mix(in oklab, var(--nf-pink-soft) 28%, transparent);
+}
+
+.nf-studio-link {
+  border-radius: .48rem;
+  box-shadow: none;
+}
+
+header.header site-search button,
+header.header button[data-open-modal],
+header.header .search-input {
+  border-color: color-mix(in oklab, var(--nf-border) 72%, transparent);
+  border-radius: .45rem;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Navigation ------------------------------------------------------------ */
+
+.sidebar-pane,
+.right-sidebar,
+body:has(.nf-article-title) .right-sidebar {
+  background: transparent;
+  box-shadow: none;
+}
+
+.sidebar-content a,
+.sidebar-content summary,
+.right-sidebar a,
+body:has(.nf-article-title) .right-sidebar a {
+  border-radius: 0;
+}
+
+.sidebar-content a {
+  border: 0;
+  border-inline-start: 2px solid transparent;
+  background: transparent;
+}
+
+.sidebar-content a:hover {
+  border-color: color-mix(in oklab, var(--nf-border) 70%, transparent);
+  background: transparent;
+}
+
+.sidebar-content a[aria-current="page"] {
+  border: 0;
+  border-inline-start: 2px solid var(--nf-pink-strong);
+  background: transparent;
+  box-shadow: none;
+}
+
+.right-sidebar a:hover,
+.right-sidebar a[aria-current="true"],
+.right-sidebar a[aria-current="page"],
+body:has(.nf-article-title) .right-sidebar a:hover,
+body:has(.nf-article-title) .right-sidebar a[aria-current="true"],
+body:has(.nf-article-title) .right-sidebar a[aria-current="page"] {
+  background: transparent;
+}
+
+/* Landing --------------------------------------------------------------- */
+
+body:has([data-nf-docs-home]) .hero {
+  border: 0;
+  border-bottom: 1px solid color-mix(in oklab, var(--nf-border) 62%, transparent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body:has([data-nf-docs-home]) .hero::before,
+body:has([data-nf-docs-home]) .hero::after {
+  display: none;
+}
+
+.nf-link-card,
+.nf-link-grid--compact .nf-link-card,
+.nf-tier-card,
+.nf-reference-callout {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.nf-link-card:hover,
+.nf-link-card:focus-visible {
+  background: transparent;
+  box-shadow: none;
+}
+
+.nf-link-icon,
+.nf-tier-badge,
+.nf-home-eyebrow {
+  box-shadow: none;
+}
+
+.nf-link-icon {
+  border: 0;
+  border-radius: .35rem;
+  background: transparent;
+}
+
+.nf-tier-badge,
+.nf-home-eyebrow {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding-inline: 0;
+}
+
+.nf-reference-callout {
+  border-inline: 0;
+  border-bottom: 0;
+}
+
+.nf-reference-callout::before {
+  display: none;
+}
+
+.nf-reference-callout > a,
+.hero .actions a {
+  border-radius: .48rem;
+  box-shadow: none;
+}
+
+/* Article title --------------------------------------------------------- */
+
+.nf-article-title {
+  overflow: visible;
+  padding: clamp(1.5rem, 3vw, 2.35rem) 0 clamp(1.2rem, 2.4vw, 1.8rem);
+  border: 0;
+  border-bottom: 1px solid color-mix(in oklab, var(--nf-border) 62%, transparent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.nf-article-title::before,
+.nf-article-title::after {
+  display: none;
+}
+
+.nf-article-title__eyebrow,
+.nf-article-title__section {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.nf-article-title__meta {
+  gap: 1rem;
+}
+
+.nf-article-title__rule {
+  color: color-mix(in oklab, var(--nf-pink) 48%, var(--nf-muted));
+}
+
+/* Markdown reading surface -------------------------------------------- */
+
+.sl-markdown-content h2,
+body:has(.nf-article-title) .sl-markdown-content h2 {
+  border-top-style: solid;
+  border-top-color: color-mix(in oklab, var(--nf-border) 62%, transparent);
+}
+
+body:has(.nf-article-title) .sl-markdown-content h2 {
+  padding-left: 0;
+}
+
+body:has(.nf-article-title) .sl-markdown-content h2::before {
+  display: none;
+}
+
+.sl-markdown-content blockquote,
+body:has(.nf-article-title) .sl-markdown-content blockquote {
+  padding: .7rem 0 .7rem 1rem;
+  border: 0;
+  border-inline-start: 2px solid color-mix(in oklab, var(--nf-pink) 58%, var(--nf-border));
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sl-markdown-content pre,
+.expressive-code figure,
+body:has(.nf-article-title) .sl-markdown-content pre {
+  border-color: color-mix(in oklab, var(--nf-border) 76%, transparent);
+  border-radius: .45rem;
+  box-shadow: none;
+}
+
+.sl-markdown-content table,
+body:has(.nf-article-title) .sl-markdown-content table {
+  border: 0;
+  border-block: 1px solid color-mix(in oklab, var(--nf-border) 72%, transparent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sl-markdown-content th,
+body:has(.nf-article-title) .sl-markdown-content th,
+body:has(.nf-article-title) .sl-markdown-content tr:nth-child(even) td {
+  background: transparent;
+}
+
+body:has(.nf-article-title) .sl-markdown-content details {
+  padding: .8rem 0;
+  border: 0;
+  border-block: 1px solid color-mix(in oklab, var(--nf-border) 60%, transparent);
+  border-radius: 0;
+  background: transparent;
+}
+
+.pagination-links a {
+  border: 0;
+  border-top: 1px solid color-mix(in oklab, var(--nf-border) 62%, transparent);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.pagination-links a:hover {
+  border-color: color-mix(in oklab, var(--nf-pink) 42%, var(--nf-border));
+  background: transparent;
+}
+
+@media (max-width: 50rem) {
+  .nf-article-title {
+    padding-inline: 0;
+    border-radius: 0;
+  }
+
+  body:has([data-nf-docs-home]) .hero {
+    border-radius: 0;
+  }
+}
