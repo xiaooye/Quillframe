@@ -1,86 +1,20 @@
-# Plan · Product Site Visual Rewrite v3
+# Product Site Visual Rewrite v3 Plan — Superseded
 
-## Phase V0 · Freeze the rewrite contract
+**Status:** historical implementation plan; superseded by `plan.en.md`.
 
-- Keep existing Product Site routes, authority boundaries, i18n model, Story Loom/WeiUI source authority, and deployment pipeline.
-- Treat the current Visual v2 homepage as replaceable presentation, not implementation authority.
-- Commit this spec/plan/tasks pair before rewriting application structure.
+The original v3 plan targeted the former browser DOM/CSS/Vite Product shell. The public Product runtime is now Godot Web, so those implementation steps must not be resumed.
 
-## Phase V1 · Clean-slate homepage composition
+## Carried-forward design work
 
-Rewrite `site/src/App.tsx` homepage composition from scratch while preserving shared route shell and truthful content sources.
+The surviving visual work is executed inside the current Godot architecture:
 
-Target chapters:
+1. project Story Loom tokens into generated GDScript;
+2. build the Product stage with `Control`/Canvas surfaces;
+3. represent system relationships as connected topology and inspector surfaces;
+4. use semantic route accents for Product, Studio, Architecture, Publication, Inspect, Playground, and Agents;
+5. use bounded 2.5D motion and input-driven parallax without an idle frame loop;
+6. provide a dedicated portrait topology for phone layouts;
+7. preserve bilingual and accessibility contracts;
+8. validate the actual exported WebAssembly runtime with screenshot/browser evidence.
 
-1. cinematic full-width hero;
-2. editorial problem chapter;
-3. sticky Forge scroll story;
-4. asymmetric proof field;
-5. immersive Studio chapter;
-6. publication material chapter;
-7. architecture constellation;
-8. host/release close;
-9. final navigation CTA.
-
-The rewrite must not retain the old three-card problem wall, generic proof grid, ordinary architecture bento, or detached dashboard-card hero as the dominant composition.
-
-## Phase V2 · Rebuild the CSS architecture
-
-Rewrite `site/src/styles/site.css` as the base/reset/layout/accessibility layer and `site/src/styles/showcase.css` as the premium material/motion layer.
-
-Use:
-
-- CSS Grid named/asymmetric layouts;
-- `color-mix()` derived Story Loom colors;
-- radial/conic gradients and masks;
-- SVG/CSS loom/thread visuals;
-- restrained backdrop blur for chrome/instrument surfaces;
-- perspective and layered transforms where meaningful;
-- `animation-timeline: view()` / `scroll()` progressive enhancement;
-- View Transition styling;
-- pointer-driven CSS variables with event-only updates;
-- mobile/reduced-motion fallbacks.
-
-Do not introduce an animation framework for this slice.
-
-## Phase V3 · Native bilingual geometry
-
-- Keep Chinese hero and chapter headings independently tuned from English.
-- Do not force English display line lengths onto Chinese.
-- Keep machine IDs/contract names visible only where they function as proof/provenance.
-- Preserve the current native-copy quality gate.
-
-## Phase V4 · Destination route coherence
-
-Destination routes may remain structurally quieter than Home, but must inherit the new material system, typography, header, transitions, and dark/light chapter identity so navigation does not feel like entering a different product.
-
-## Phase V5 · Deterministic verification
-
-Run current Product Site quality and production build. Extend checks only where necessary to ensure:
-
-- premium rewrite still contains required progressive-enhancement primitives;
-- no idle infinite animation;
-- no `requestAnimationFrame`/polling decorative loop;
-- locale-specific typography remains explicit;
-- Story Loom theme remains the source authority;
-- routes and host-neutral build remain unchanged.
-
-## Phase V6 · Visual acceptance
-
-Acceptance requires visual review at:
-
-- large desktop;
-- ordinary laptop/desktop;
-- phone/narrow width;
-- `zh-CN` and `en-US`;
-- normal and reduced motion.
-
-Review specifically for: first-impression premium quality, section rhythm, excessive card repetition, text readability over gradients, motion coherence, and mobile simplification.
-
-## Phase V7 · Deploy
-
-Use the existing Product Site workflow. Deployment is accepted only after quality/build pass. Cloudflare remains replaceable static infrastructure and does not enter Product Site semantics.
-
-## Rollback
-
-The rewrite implementation should be one independently revertible presentation commit (plus narrowly scoped verification fixes if necessary). Reverting it must restore the previous visual implementation without changing Core, Studio Host Bridge, Publication, or production-readiness contracts.
+Current execution and acceptance are defined by `plan.en.md` and `tasks.en.md`.
