@@ -290,7 +290,7 @@ class ControlPlane:
         p = handoff["permissions"]
         if not isinstance(p, dict):
             raise ValueError("permissions must be object")
-        for forbidden in ("canon_write", "os_behavior_write", "durable_user_taste_write"):
+        for forbidden in ("canon_write", "framework_behavior_write", "durable_user_taste_write"):
             if p.get(forbidden) is not False:
                 raise ValueError(f"handoff permission {forbidden} must be false")
         if not isinstance(handoff["return_contract"], dict):
@@ -415,7 +415,7 @@ def self_test(db_path: str | Path) -> dict[str, Any]:
     event = {"schema": EVENT_SCHEMA, "event_id": "EV-TEST-1", "event_type": "semantic.requested", "source": {"kind": "self_test", "actor": "control_plane.py"}, "resource_id": "BOOK-TEST", "session_id": "SES-TEST-MANAGER", "run_id": "RUN-TEST", "handoff_id": "HO-TEST-1", "authority_scope": "request", "idempotency_key": "selftest-semantic-request", "artifact_fingerprints": ["sha256:" + "a" * 64], "created_at": now_iso(), "payload": {"job_id": "SEM-TEST"}}
     first_event = cp.ingest_event(event)
     duplicate_event = cp.ingest_event(event)
-    handoff = {"schema": HANDOFF_SCHEMA, "handoff_id": "HO-TEST-1", "source_session_id": "SES-TEST-MANAGER", "target_session_class": "semantic_reviewer", "resource_id": "BOOK-TEST", "task_mode": "DRAFT", "artifact_refs": ["ART-TEST"], "artifact_fingerprints": ["sha256:" + "a" * 64], "instructions_ref": "SEM-TEST", "context_policy": {"hidden_gold": "forbidden", "allowed_artifact_refs": ["ART-TEST"]}, "permissions": {"canon_write": False, "os_behavior_write": False, "durable_user_taste_write": False, "allowed_result_scope": "observation"}, "return_contract": {"schema": "semantic_worker_result", "fingerprint_required": True}, "relay_nonce": None}
+    handoff = {"schema": HANDOFF_SCHEMA, "handoff_id": "HO-TEST-1", "source_session_id": "SES-TEST-MANAGER", "target_session_class": "semantic_reviewer", "resource_id": "BOOK-TEST", "task_mode": "DRAFT", "artifact_refs": ["ART-TEST"], "artifact_fingerprints": ["sha256:" + "a" * 64], "instructions_ref": "SEM-TEST", "context_policy": {"hidden_gold": "forbidden", "allowed_artifact_refs": ["ART-TEST"]}, "permissions": {"canon_write": False, "framework_behavior_write": False, "durable_user_taste_write": False, "allowed_result_scope": "observation"}, "return_contract": {"schema": "semantic_worker_result", "fingerprint_required": True}, "relay_nonce": None}
     submitted = cp.submit_handoff(handoff)
     claimed = cp.claim_handoff("WORKER-1", target_session_class="semantic_reviewer", lease_seconds=60)
     result = {"job_id": "SEM-TEST", "input_fingerprint": "sha256:" + "a" * 64, "status": "completed", "judgment": {"verdict": "accept"}}

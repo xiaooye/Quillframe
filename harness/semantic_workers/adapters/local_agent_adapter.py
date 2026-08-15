@@ -219,7 +219,7 @@ def self_test() -> int:
         "created_at": "fixture", "input_fingerprint": "", "input": {"candidate": "x"},
         "rubric": ["judge reader experience"],
         "output_contract": {"type": "object", "required": ["confidence", "would_continue"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "would_continue": {"type": "boolean"}}},
-        "permissions": {"canon_write": False, "os_behavior_write": False, "durable_user_taste_write": False},
+        "permissions": {"canon_write": False, "framework_behavior_write": False, "durable_user_taste_write": False},
         "provenance": {"independent_gate": False}, "execution": {},
     }
     from semantic_worker_router import fingerprint_for

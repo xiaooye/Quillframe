@@ -82,7 +82,7 @@ jobs:
                   )
                   assert not validate_job(job), (contract_id, validate_job(job))
                   assert job['permissions']['canon_write'] is False
-                  assert job['permissions']['os_behavior_write'] is False
+                  assert job['permissions']['framework_behavior_write'] is False
                   assert job['permissions']['durable_user_taste_write'] is False
                   assert job['provenance']['source'] == 'model_contract_pack'
                   assert job['provenance']['pack_id'] == pack['id']

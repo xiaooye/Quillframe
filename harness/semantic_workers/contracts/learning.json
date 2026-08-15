@@ -27,7 +27,7 @@
       },
       "permissions": {
         "canon_write": false,
-        "os_behavior_write": false,
+        "framework_behavior_write": false,
         "durable_user_taste_write": false,
         "allowed_result_scope": "learning_observation"
       },
@@ -55,7 +55,7 @@
       },
       "permissions": {
         "canon_write": false,
-        "os_behavior_write": false,
+        "framework_behavior_write": false,
         "durable_user_taste_write": false,
         "allowed_result_scope": "learning_eval_observation"
       },
