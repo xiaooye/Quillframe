@@ -7,7 +7,8 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "content": "node scripts/build-content.mjs",
+    "foundation": "node scripts/sync-weiui.mjs",
+    "content": "npm run foundation && node scripts/build-content.mjs",
     "dev": "npm run content && vite",
     "build": "npm run content && tsc --noEmit && vite build",
     "preview": "vite preview",
