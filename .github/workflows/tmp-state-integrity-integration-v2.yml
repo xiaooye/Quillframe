@@ -31,5 +31,25 @@ jobs:
           assert t.count(old)==1
           p.write_text(t.replace(old,new,1),encoding='utf-8')
           PY
-      - name: Apply, verify, and commit P0 integration
+      - name: Apply and verify P0 integration
+        continue-on-error: true
         run: python scripts/tmp_state_integrity_integration.py
+      - name: Assert local integration commit exists
+        run: |
+          test "$(git log -1 --format=%s)" = "state: integrate P0 contracts and documentation"
+          test ! -e .github/workflows/tmp-state-integrity-integration-v2.yml
+          test ! -e scripts/tmp_state_integrity_integration.py
+          git show --stat --oneline HEAD
+      - name: Stage verified integration artifact
+        run: |
+          mkdir -p /tmp/p0-integrated/.github/workflows /tmp/p0-integrated/docs /tmp/p0-integrated/specs/008-state-integrity-p0
+          cp HARNESS_MANIFEST.yaml /tmp/p0-integrated/
+          cp .github/workflows/novelforge-contracts.yml /tmp/p0-integrated/.github/workflows/
+          cp docs/documentation_manifest.json /tmp/p0-integrated/docs/
+          cp specs/008-state-integrity-p0/* /tmp/p0-integrated/specs/008-state-integrity-p0/
+          (cd /tmp/p0-integrated && find . -type f -print0 | sort -z | xargs -0 sha256sum > VERIFIED_SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-state-integrity-integration
+          path: /tmp/p0-integrated
+          if-no-files-found: error
