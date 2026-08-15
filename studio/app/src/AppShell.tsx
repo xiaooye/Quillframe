@@ -5,7 +5,8 @@ import type { MessageKey } from "./locales/types";
 import { useStudio } from "./studio";
 import { StudioIcon, type StudioIconName } from "./StudioIcon";
 
-type NavigationEntry = readonly [string, MessageKey, StudioIconName];
+type NavigationLabel = MessageKey | "Runtime";
+type NavigationEntry = readonly [string, NavigationLabel, StudioIconName];
 
 const productNavigation: ReadonlyArray<NavigationEntry> = [
   ["/", "nav.desk", "home"],
@@ -15,6 +16,7 @@ const productNavigation: ReadonlyArray<NavigationEntry> = [
 ];
 
 const inspectionNavigation: ReadonlyArray<NavigationEntry> = [
+  ["/runtime", "Runtime", "runtime"],
   ["/context", "nav.context", "context"],
   ["/capabilities", "nav.capabilities", "capabilities"],
   ["/semantic", "nav.semantic", "semantic"],
@@ -30,6 +32,11 @@ const operationRoute: Record<string, string> = {
   "capabilities.inspect": "/capabilities",
   "context.inspect": "/context",
   "semantic.catalog": "/semantic",
+  "runtime.sessions.list": "/runtime",
+  "runtime.session.get": "/runtime",
+  "runtime.events.list": "/runtime",
+  "runtime.handoff.inspect": "/runtime",
+  "run.receipt.get": "/runtime",
 };
 
 export const AppShell: ParentComponent = (props) => {
@@ -61,6 +68,7 @@ export const AppShell: ParentComponent = (props) => {
   const deferred = createMemo(() => Object.entries(studio.bridgeDescription()?.deferred_operations ?? {}));
   const q = createMemo(() => query().trim().toLowerCase());
   const matches = (value: string) => !q() || value.toLowerCase().includes(q());
+  const navLabel = (label: NavigationLabel) => label === "Runtime" ? "Runtime" : t(label);
   const coreStatus = createMemo(() => {
     if (studio.bridgeAvailable()) return locale() === "zh-CN" ? "Core 已绑定" : "Core bound";
     return locale() === "zh-CN" ? "Core 未绑定" : "Core unbound";
@@ -86,7 +94,7 @@ export const AppShell: ParentComponent = (props) => {
           aria-current={location.pathname === path ? "page" : undefined}
         >
           <span class="wui-sidebar__icon nf-nav-glyph" aria-hidden="true"><StudioIcon name={icon} /></span>
-          <span class="wui-sidebar__label">{t(label)}</span>
+          <span class="wui-sidebar__label">{navLabel(label)}</span>
         </A>
       )}
     </For>
@@ -164,7 +172,7 @@ export const AppShell: ParentComponent = (props) => {
               aria-current={location.pathname === path ? "page" : undefined}
             >
               <span class="wui-bottom-nav__icon" aria-hidden="true"><StudioIcon name={icon} /></span>
-              <small class="wui-bottom-nav__label">{t(label)}</small>
+              <small class="wui-bottom-nav__label">{navLabel(label)}</small>
             </A>
           )}
         </For>
@@ -185,11 +193,11 @@ export const AppShell: ParentComponent = (props) => {
             </div>
             <div class="wui-command__list">
               <div class="wui-command__group-label">{t("command.navigation")}</div>
-              <For each={navigation.filter(([path, label]) => matches(`${path} ${t(label)}`))}>
+              <For each={navigation.filter(([path, label]) => matches(`${path} ${navLabel(label)}`))}>
                 {([path, label, icon]) => (
                   <button type="button" class="wui-command__item" onClick={() => go(path)}>
                     <span class="wui-command__item-icon" aria-hidden="true"><StudioIcon name={icon} /></span>
-                    <span class="wui-command__item-label">{t(label)}</span>
+                    <span class="wui-command__item-label">{navLabel(label)}</span>
                   </button>
                 )}
               </For>
@@ -214,7 +222,7 @@ export const AppShell: ParentComponent = (props) => {
                   </div>
                 )}
               </For>
-              <Show when={q() && !navigation.some(([path, label]) => matches(`${path} ${t(label)}`)) && !supported().some(matches) && !deferred().some(([operation]) => matches(operation))}>
+              <Show when={q() && !navigation.some(([path, label]) => matches(`${path} ${navLabel(label)}`)) && !supported().some(matches) && !deferred().some(([operation]) => matches(operation))}>
                 <div class="wui-command__empty">{t("command.noMatches")}</div>
               </Show>
             </div>

@@ -14,14 +14,14 @@ INTEGRATION_PATH = BRAND / "weiui.integration.json"
 THEME_PATH = BRAND / "story-loom.weiui.css"
 PROVENANCE_PATH = ROOT / "assets" / "provenance.json"
 APP_CONFIG_PATH = ROOT / "studio" / "app" / "weiui.config.json"
-GENERATED_CSS_PATH = ROOT / "studio" / "app" / "src" / "styles" / "vendor" / "weiui.generated.css"
-GENERATED_TOKENS_PATH = ROOT / "studio" / "app" / "src" / "styles" / "vendor" / "weiui.tokens.generated.css"
-STUDIO_CUSTOM_CSS_PATHS = [
-    ROOT / "studio" / "app" / "src" / "styles" / "app.css",
-    ROOT / "studio" / "app" / "src" / "styles" / "observability.css",
-    ROOT / "studio" / "app" / "src" / "styles" / "host.css",
-    ROOT / "studio" / "app" / "src" / "styles" / "visual-fixes.css",
-]
+STUDIO_STYLE_ROOT = ROOT / "studio" / "app" / "src" / "styles"
+GENERATED_CSS_PATH = STUDIO_STYLE_ROOT / "vendor" / "weiui.generated.css"
+GENERATED_TOKENS_PATH = STUDIO_STYLE_ROOT / "vendor" / "weiui.tokens.generated.css"
+# The Studio now has one CSS entrypoint. Treat every top-level stylesheet it
+# composes as custom product CSS instead of pinning a stale filename list.
+STUDIO_CUSTOM_CSS_PATHS = sorted(
+    path for path in STUDIO_STYLE_ROOT.glob("*.css") if path.name != "index.css"
+)
 
 
 def load(path: Path) -> dict:

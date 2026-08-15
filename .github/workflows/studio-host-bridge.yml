@@ -18,14 +18,31 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Compile Studio bridge and Agent Skill client
+      - name: Compile Studio bridge, runtime queries, and Agent Skill client
         run: |
-          python -m py_compile studio/host_bridge.py studio/project_hub_projection.py agent-skills/novelforge/scripts/novelforge_bridge.py
+          python -m py_compile \
+            studio/host_bridge.py \
+            studio/project_hub_projection.py \
+            harness/control_plane/runtime_query.py \
+            agent-skills/novelforge/scripts/novelforge_bridge.py
 
-      - name: Repository hygiene
+      - name: Public runtime query self-test
         run: |
-          python scripts/framework_hygiene.py
-          python scripts/docs_quality.py
+          if ! python harness/control_plane/runtime_query.py self-test > runtime-query-test.json; then
+            cat runtime-query-test.json
+            exit 1
+          fi
+          cat runtime-query-test.json
+          python - <<'PY'
+          import json
+          result=json.load(open('runtime-query-test.json',encoding='utf-8'))
+          assert result['runtime_query_contract']=='PASS',result
+          assert result['side_effect_free_missing_store'] is True
+          assert result['read_does_not_modify_store'] is True
+          assert result['safe_projection'] is True
+          assert result['receipt_retrieval'] is True
+          assert result['authority'] is False and result['model_execution'] is False
+          PY
 
       - name: Portable bridge self-test
         run: |
@@ -45,7 +62,18 @@ jobs:
           query=json.load(open('studio-host-bridge-query.json',encoding='utf-8'))
           contract=json.load(open('studio/host_bridge_contract.json',encoding='utf-8'))
           portable=json.load(open('studio/portable_product_contract.json',encoding='utf-8'))
+          runtime_queries={
+              'runtime.sessions.list',
+              'runtime.session.get',
+              'runtime.events.list',
+              'runtime.handoff.inspect',
+              'run.receipt.get',
+          }
+          supported=set(contract['operations']['supported'])
+          deferred=set(contract['operations']['deferred'])
           assert bridge['studio_host_bridge_contract']=='PASS',bridge
+          assert bridge['checks']['runtime_queries_supported'] is True,bridge
+          assert bridge['checks']['runtime_projection_safe'] is True,bridge
           assert skill['novelforge_agent_skill_contract']=='PASS',skill
           assert query['schema']=='novelforge_studio_host_bridge_result_v1',query
           assert query['operation']=='semantic.catalog' and query['status']=='ok',query
@@ -53,8 +81,19 @@ jobs:
           assert query['framework_write_authority'] is False and query['settlement_authority'] is False
           assert query['request_fingerprint'].startswith('sha256:') and query['result_fingerprint'].startswith('sha256:')
           assert contract['authority'] is False and contract['invariants']['mutation_exposed'] is False
-          assert 'command.invoke' not in contract['operations']['supported']
-          assert contract['operations']['deferred']['run.receipt.get']['dependency']=='#23'
+          assert runtime_queries.issubset(supported)
+          assert not (runtime_queries & deferred)
+          assert 'session.resume' in deferred and 'session.resume' not in supported
+          assert 'command.invoke' not in supported
           assert portable['phase_2b_host_bridge']['mutation_exposed'] is False
+          assert portable['runtime_observability']['side_effect_free'] is True
+          assert portable['runtime_observability']['session_resume_exposed'] is False
           assert portable['agent_package_direction']['private_runtime_imports_required'] is False
           PY
+
+      # Repository-wide hygiene remains a gate, but it must not prevent the
+      # runtime/bridge contracts above from producing direct failure evidence.
+      - name: Repository hygiene
+        run: |
+          python scripts/framework_hygiene.py
+          python scripts/docs_quality.py
