@@ -1,4 +1,4 @@
-/* NovelForge Studio CSS entrypoint: framework → routes → shared product language. */
+/* NovelForge Studio CSS entrypoint: framework → routes → shared product language → hardening. */
 @import "./vendor/weiui.tokens.generated.css";
 @import "./vendor/weiui.generated.css";
 @import "../../../../assets/brand/story-loom.weiui.css";
@@ -12,5 +12,6 @@
 @import "./onboarding.css";
 @import "./integrations.css";
 
-/* Final cross-product composition owner; replaces the retired visual-fixes layer. */
+/* Cross-product composition, then the final resilience/accessibility contract. */
 @import "./product-language.css";
+@import "./hardening.css";
