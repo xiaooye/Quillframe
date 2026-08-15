@@ -9,9 +9,9 @@ import "./styles/vendor/weiui.generated.css";
 import "../../../assets/brand/story-loom.weiui.css";
 import "./styles/app.css";
 import "./styles/observability.css";
-import "./styles/visual-fixes.css";
 import "./styles/host.css";
 import "./styles/atelier-workbench.css";
+import "./styles/visual-fixes.css";
 
 const Desk = lazy(() => import("./routes/Desk"));
 const Project = lazy(() => import("./routes/Project"));
