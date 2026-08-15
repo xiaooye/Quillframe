@@ -24,28 +24,41 @@ const runtimeObservability = [
   "runtime.events.list",
   "runtime.handoff.inspect",
   "run.receipt.get",
+  "runtime.command.receipt.get",
 ];
-const runtimeSafetyQueries = ["session.resume.preflight"];
-const runtimeControl = ["session.resume", "command.invoke", "project.mutate"];
+const runtimeSafetyQueries = ["session.resume.preflight", "session.terminate.preflight"];
+const localAppCommands = ["session.resume", "session.terminate"];
+const deferredCommands = ["command.invoke", "project.mutate", "publication.build"];
 
 check(contract.schema === "novelforge_studio_host_bridge_contract_v1", "host bridge contract schema changed");
 check(contract.authority === false, "host bridge must remain authority=false");
 check(contract.agent_skill?.path === "agent-skills/novelforge/SKILL.md", "portable Agent Skill path changed");
+check(contract.agent_skill?.runtime_mutation_allowed === false, "portable Agent Skill must remain runtime-mutation=false");
 check(skill.includes("read-only") && skill.includes("authority: false"), "portable skill must retain read-only authority boundary");
 check(skill.includes("Runtime observability is not runtime control"), "portable skill must distinguish runtime observability from control");
-check(skill.includes("session.resume.preflight") && skill.includes("READY") && skill.includes("BLOCKED"), "portable skill must explain deterministic resume eligibility without exposing resume control");
-check(Object.values(supported).every((operation) => operation?.kind === "query"), "every supported host-bridge operation must remain query-only");
-for (const operation of ["bridge.describe", "framework.doctor", "project.inspect", "capabilities.inspect", "context.inspect", "semantic.catalog", ...runtimeObservability, ...runtimeSafetyQueries]) {
+check(skill.includes("session.resume.preflight") && skill.includes("READY") && skill.includes("BLOCKED"), "portable skill must explain deterministic resume eligibility");
+check(skill.includes("not portable Agent Skills capabilities") && skill.includes("local_app"), "portable skill must preserve local-app-only runtime command boundary");
+
+for (const operation of ["bridge.describe", "framework.doctor", "project.inspect", "capabilities.inspect", "context.inspect", "semantic.catalog", "publication.preview", ...runtimeObservability, ...runtimeSafetyQueries]) {
   check(Boolean(supported[operation]), `expected supported bridge query missing from contract: ${operation}`);
+  check(supported[operation]?.kind === "query", `supported read operation must remain query kind: ${operation}`);
+  check(!deferred[operation], `public read/safety query must not remain deferred: ${operation}`);
 }
-for (const operation of [...runtimeObservability, ...runtimeSafetyQueries]) {
-  check(!deferred[operation], `public runtime read/safety query must not remain deferred: ${operation}`);
+
+for (const operation of localAppCommands) {
+  const entry = supported[operation];
+  check(Boolean(entry), `expected typed local-app runtime command missing from contract: ${operation}`);
+  check(entry?.kind === "command", `typed local-app runtime operation must remain command kind: ${operation}`);
+  check(Array.isArray(entry?.allowed_surfaces) && entry.allowed_surfaces.includes("local_app"), `runtime command must remain local_app scoped: ${operation}`);
+  check(entry?.model_execution === false, `runtime command must not gain model execution: ${operation}`);
+  check(entry?.project_write === false && entry?.canon_write === false && entry?.framework_write === false, `runtime command must not gain Project/Canon/Framework write authority: ${operation}`);
+  check(!deferred[operation], `typed local-app runtime command must not also remain deferred: ${operation}`);
 }
-for (const operation of runtimeControl) {
-  check(Boolean(deferred[operation]), `expected deferred runtime-control operation missing from contract: ${operation}`);
-  check(!supported[operation], `runtime-control operation must not be exposed as supported: ${operation}`);
+
+for (const operation of deferredCommands) {
+  check(Boolean(deferred[operation]), `expected deferred generic/persistent command missing from contract: ${operation}`);
+  check(!supported[operation], `deferred command must not be exposed as supported: ${operation}`);
 }
-check(skill.includes("session.resume") && skill.includes("resume, replay, fork"), "portable skill must preserve the explicit resume/replay/fork boundary");
 
 check(app.includes('<Route path="/agents" component={AgentsPage}'), "shared ProductApp must expose /agents");
 check(app.includes("ProductSurfaceHero") && app.includes("AGENT SKILL · HOST BRIDGE V1"), "Agent Integration must use the shared surface hero");
@@ -70,7 +83,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_agent_integration_quality_v6",
+    schema: "novelforge_agent_integration_quality_v7",
     status: "pass",
     route: "/agents",
     shell: "shared_product_app",
@@ -81,7 +94,8 @@ if (failures.length) {
     supported_operations: Object.keys(supported).length,
     runtime_observability_operations: runtimeObservability.length,
     runtime_safety_queries: runtimeSafetyQueries.length,
-    runtime_control_exposed: false,
+    local_app_runtime_commands: localAppCommands.length,
+    agent_package_runtime_control: false,
     write_authority: false,
     direct_core_store_access: false,
     unsupported_fails_closed: true,
