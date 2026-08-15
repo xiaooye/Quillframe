@@ -1,0 +1,73 @@
+name: Studio App Bootstrap
+
+on:
+  push:
+    branches:
+      - 'agent/studio-phase2c-solid-shell'
+    paths:
+      - 'studio/app/**'
+      - 'studio/local_server.py'
+      - '.github/workflows/studio-app-bootstrap.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: xiaooye/weiui
+          ref: 876534000439f0c98aa39c439f7eb9276b18809d
+          path: .upstream/weiui
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build pinned WeiUI bundle tooling
+        working-directory: .upstream/weiui
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @weiui/a11y build
+          pnpm --filter @weiui/tokens build
+          pnpm --filter @weiui/css build
+          pnpm --filter @weiui/css test
+      - name: Generate Studio WeiUI subset
+        run: |
+          node .upstream/weiui/packages/css/dist/config-cli.mjs bundle "$GITHUB_WORKSPACE/studio/app/weiui.config.json"
+          cp .upstream/weiui/packages/tokens/dist/tokens.css studio/app/src/styles/vendor/weiui.tokens.generated.css
+      - name: Install Studio and create lockfile
+        working-directory: studio/app
+        run: pnpm install --no-frozen-lockfile
+      - name: Typecheck and build
+        working-directory: studio/app
+        run: pnpm build
+      - name: Local server self-test
+        run: |
+          python -m py_compile studio/local_server.py
+          python studio/local_server.py --self-test
+      - name: Low-overhead source guard
+        run: |
+          ! grep -R -n -E 'setInterval\(|@weiui/react|@weiui/headless|from ["'"']react["'"']|sqlite|runtime\.db' studio/app/src studio/local_server.py
+      - name: Report bundle size
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          dist = Path('studio/app/dist/assets')
+          print({'js': sum(p.stat().st_size for p in dist.glob('*.js')), 'css': sum(p.stat().st_size for p in dist.glob('*.css'))})
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: studio-app-bootstrap
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            studio/app/pnpm-lock.yaml
+            studio/app/src/styles/vendor/weiui.generated.css
+            studio/app/src/styles/vendor/weiui.tokens.generated.css
+            studio/app/dist/**
