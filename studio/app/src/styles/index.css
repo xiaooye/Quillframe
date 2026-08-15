@@ -12,6 +12,7 @@
 @import "./onboarding.css";
 @import "./integrations.css";
 
-/* Cross-product composition, then the final resilience/accessibility contract. */
+/* Cross-product semantic mapping, workstation composition, then hardening. */
 @import "./product-language.css";
+@import "./experience-polish.css";
 @import "./hardening.css";
