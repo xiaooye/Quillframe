@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify, apply, test, and self-remove
+      - name: Verify, apply, test, and stage workflow blobs
         shell: bash
         run: |
           set -euo pipefail
@@ -30,7 +30,11 @@ jobs:
           base64 -d /tmp/b3.b64 | gzip -d > /tmp/b3.patch
           git apply --check /tmp/b3.patch
           git apply /tmp/b3.patch
-          rm -rf .agent-batch .github/workflows/agent-apply-batch3.yml
+          mkdir -p .agent-batch-output
+          cp .github/workflows/novelforge-contracts.yml .agent-batch-output/novelforge-contracts.yml
+          cp .github/workflows/novelforge-semantic-contract-packs.yml .agent-batch-output/novelforge-semantic-contract-packs.yml
+          git checkout HEAD -- .github/workflows/novelforge-contracts.yml .github/workflows/novelforge-semantic-contract-packs.yml
+          rm -rf .agent-batch
           python harness/memory_tiers.py self-test > /tmp/memory-tiers.json
           python harness/semantic_workers/semantic_worker_router.py self-test > /tmp/semantic-router.json
           python scripts/version_identity.py > /tmp/version-identity.json
