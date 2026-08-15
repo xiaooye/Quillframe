@@ -16,7 +16,6 @@ const index = read("src/styles/index.css");
 const editorial = read("src/styles/editorial-composition.css");
 const routeIdentity = read("src/styles/route-identities.css");
 const publicationGallery = read("src/styles/publication-gallery.css");
-const interaction = read("src/styles/interaction-contract.css");
 const readability = read("src/styles/readability.css");
 const hardening = read("src/styles/hardening.css");
 const sharedLanguage = read("../assets/brand/novelforge-product-language.css");
@@ -30,8 +29,7 @@ check(index.indexOf('tool-workbench-kawaii.css') < index.indexOf('editorial-comp
 check(index.indexOf('editorial-composition.css') < index.indexOf('embedded-features.css'), "embedded feature ownership must remain after shared editorial composition");
 check(index.indexOf('embedded-features.css') < index.indexOf('route-identities.css'), "route identity must refine shared/embedded composition rather than replace it");
 check(index.indexOf('route-identities.css') < index.indexOf('publication-gallery.css'), "publication gallery must remain a route-specific refinement of the shared identity layer");
-check(index.indexOf('publication-gallery.css') < index.indexOf('interaction-contract.css'), "shared interaction contract must remain later than visual route identity layers");
-check(index.indexOf('interaction-contract.css') < index.indexOf('readability.css'), "interaction composition must precede readability hardening");
+check(index.indexOf('publication-gallery.css') < index.indexOf('readability.css'), "route-specific composition must precede readability hardening");
 check(index.indexOf('readability.css') < index.indexOf('hardening.css'), "resilience/accessibility hardening must remain the final Product layer");
 check(!index.includes("surface-audit.css"), "legacy surface-audit override must not return to the cascade");
 check(!exists("src/styles/surface-audit.css"), "legacy surface-audit.css must stay deleted");
@@ -50,12 +48,6 @@ for (const marker of [".snapshot-text", ".snapshot-web", ".snapshot-print", ".sn
 }
 check(publicationGallery.includes("columns: 2") && publicationGallery.includes("novel.example / chapter-1") && publicationGallery.includes("9:41"), "publication gallery must visibly distinguish print, web, and EPUB objects");
 check(!publicationGallery.includes("!important"), "publication gallery must not depend on specificity escalation");
-for (const marker of [".product-appbar", ".mobile-nav", ".command-surface", ".footer-grid", ":root.dark", "@media (max-width: 980px)"]) {
-  check(interaction.includes(marker), `shared interaction contract missing ${marker}`);
-}
-check(interaction.includes("backdrop-filter: none") && interaction.includes("overscroll-behavior: contain"), "interaction contract must avoid gratuitous shell blur and keep mobile navigation contained");
-check(interaction.includes("--pe-header-h: 60px") && interaction.includes("min-block-size: 44px"), "interaction contract must retain compact shell density without losing touch ergonomics");
-check(!interaction.includes("!important"), "interaction contract must not depend on specificity escalation");
 check(readability.includes("--nf-copy-size: 14px") && readability.includes("--nf-micro-size: 11px"), "readability hardening must preserve the product copy floor");
 check(readability.includes(".unified-info-card p") && readability.includes("font-size: var(--nf-copy-size)"), "capability copy must not regress to miniature dashboard text");
 check(!readability.includes("!important"), "readability hardening must not depend on specificity escalation");
@@ -76,10 +68,6 @@ if (failures.length) {
     kawaii_as_accent_not_container: true,
     route_identity_layer: true,
     publication_format_previews: true,
-    interaction_contract: true,
-    compact_shell_density: true,
-    responsive_navigation_contract: true,
-    dark_interaction_contract: true,
     readability_hardening: true,
     final_hardening: "hardening.css",
   }, null, 2));
