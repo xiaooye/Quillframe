@@ -1,204 +1,87 @@
-# Specification · NovelForge Product Site
+# NovelForge 产品站 — Godot Web 规范
 
-## Baseline
+**状态：** 当前实现契约  
+**范围：** 公开产品站 `site/**`。独立的本地 Studio 应用 `studio/app/**` 不属于本次替换范围。
 
-- Framework 开发基线：latest `main`。
-- Tracking issue：#34。
-- Change class：Product Web surface / structural feature。
-- Primary mode：`SYSTEM-IMPROVE`。
-- Rollback：Product Site implementation 的 parent commit。
+## 1. 产品边界
 
-## 问题
+NovelForge 在浏览器中明确分成两个应用：
 
-NovelForge 现在已经拥有足够多真实的 Product、Runtime、Publication、Design System 与 Documentation surface，仅靠 GitHub README 已经无法形成清晰的公开产品入口。
+- **Product surfaces：** `/`、`/product`、`/studio`、`/architecture`、`/publication`、`/inspect`、`/playground`、`/agents`、`/changelog`。
+- **Documentation：** `/docs/**`。
 
-新用户目前必须先从架构文档里反推产品价值，导致：
+Product surfaces 由同一个持续存活的 **Godot 4.7.1 Web** runtime 渲染；Documentation 由 **Astro 7.1.6 + Starlight 0.41.5** 输出 semantic HTML。`site/**` 下原 SolidJS/Vite Product implementation 已退役，不得重新作为 fallback Product runtime 引入。
 
-1. 价值主张晚于实现细节出现；
-2. 产品 proof 分散在 Core、Studio、Publication、Quality 与 Release 文档中；
-3. Story Loom 只能作为静态文档装饰，而没有一等交互产品展示面。
+## 2. Runtime 契约
 
-Product Site 的目标是一套独立、SaaS-like 的 SPA，第一职责是**让人理解产品并进入正确下一步**，而不是把 Markdown 换一个壳。
+### G1 — Godot-first Product UI
 
-## 产品角色
+Product runtime 必须使用 GDScript、Compatibility renderer、自适应 Web canvas，以及 single-thread Web export（除非未来明确改变 hosting contract）。Product UI 使用 Godot `Control` / Canvas primitives。
 
-网站按下面顺序沟通：
+### G2 — 2D + 有控制的 2.5D
 
-`value → problem → mechanism → proof → product surfaces → deep documentation`。
+公开 Product runtime 不得引入 `Node3D`、`Camera3D`、mesh、3D physics 或 3D scene stack。空间感来自分层 topology、elevation、parallax、glow、route accent 与短时 execution packet motion。
 
-它永远只是 presentation/navigation layer，不成为 Canon、Memory、semantic truth、production-readiness truth、Publication truth、Settlement authority、Framework-write authority 或第二套 runtime。
+禁止持续 decorative idle animation。动画只能围绕 route transition 或用户交互短时运行。浏览器启用 `prefers-reduced-motion: reduce` 时，decorative motion 必须冻结，同时保留清晰最终状态。
 
-## Design evidence
+### G3 — 真实 browser route，不重启 Product
 
-UI/UX Pro Max 作为 external design evidence 使用，不获得 repository authority。适用模式是有边界的组合：
+每个 Product route 必须可以直接访问。Product 内部导航必须同步 `history.pushState`。浏览器前进/后退必须通过保留引用的 `JavaScriptBridge.create_callback` 驱动当前 Godot scene，不应故意 reload document。
 
-- Hero-Centric Design；
-- Scroll-Triggered Storytelling；
-- Product Demo + Features；
-- Bento Grid Showcase；
-- Trust & Authority。
+进入 `/docs/**` 必须使用 hard document navigation；缺失的 Docs path 不得回退成 Product canvas。
 
-Generic skill 的 palette/style 建议不能覆盖 Story Loom v2 token 与 Product contracts。
+### G4 — Responsive scene composition
 
-## Goals
+Runtime 必须从真实 browser viewport 推导布局，并明确提供 `desktop`、`compact`、`phone` 三种状态。Phone topology 必须是独立 portrait composition，而不是缩小 desktop graph。
 
-### G1 · SaaS-like Product Home
+## 3. 视觉 authority
 
-首页首先是产品叙事，不是 docs index。
+### G5 — Story Loom token projection
 
-必须包含：
+`assets/brand/tokens.json` 是视觉 token authority。Product build 必须通过 `site/scripts/generate-godot-theme.mjs` 确定性生成 `site/godot/generated/story_loom_tokens.gd`。
 
-1. Hero：一句清楚的 NovelForge thesis + primary CTA + secondary proof/navigation CTA。
-2. Problem：为什么 prompt-only / one-shot fiction generation 会丢失 authority、continuity、context discipline、evidence 与 repeatability。
-3. The Forge：可视化 Project → Context → Simulation → Draft → Reader/Continuity/Semantic gates → User-visible candidate。
-4. Proof, not promises：展示 `main` 上真实 machine-backed distinctions。
-5. Studio：Creator/Inspector 与 portable delivery story。
-6. Publication：Accepted-text deterministic publication core 及其当前边界。
-7. Architecture：subsystem bento + deep links。
-8. Delivery：CLI / Local Web / hosted / Agent Skill；host capability != story authority。
-9. Release truth：当前 pre-1.0 identity 与开发状态。
-10. CTA：Docs / Architecture / Studio / GitHub。
+Runtime 必须提供可被 Browser QA 验证的 `Story Loom v2` 与 `novelforge_brand_tokens_v2` 标记。Route accent 必须来自 semantic token family，不得另建互相冲突的品牌色系统。
 
-禁止 fake testimonial、customer logo、usage metric、pricing、uptime、rating、scarcity。
+## 4. 语言与可访问性
 
-### G2 · 长期 Route Model
+### G6 — 双语 Product 契约
 
-初始 routes：
+Product 支持 `en-US` 与 `zh-CN`，提供 scene 内显式语言切换，使用 browser storage 持久化选择，并在首次访问时尊重中文 browser locale。进入 Docs 时跟随当前 Product locale：英文进入 `/docs/en/`，中文进入 `/docs/`。
 
-- `/`
-- `/product`
-- `/studio`
-- `/architecture`
-- `/publication`
-- `/docs`
-- `/changelog`
+### G7 — 交互可访问性
 
-SPA 必须支持 deep link；hosting 是可替换的 static infrastructure。
+Product 可交互控件必须至少 44px，支持 keyboard focus，并显示来自 Story Loom interaction tokens 的可见 focus ring。Browser QA 必须验证相应 accessibility markers。
 
-### G3 · One Content Truth
+## 5. Documentation 契约
 
-Product Site 不建立第二套 CMS 或 Framework contract 副本。
+`/docs/**` 保持 web-native，以保留长文阅读、semantic link、文本选择、索引、accessibility 与 localization。Starlight 独占 Docs routing/output；Godot 不得接管 Docs path。
 
-- Marketing copy 可以总结 maintained contracts；
-- technical claim 必须链接或来源于 repository maintained source；
-- Docs route 第一阶段可以是 curated navigation；未来 Markdown renderer/search 必须 build-time 消费 repository source；
-- static site 不能伪造 dynamic runtime truth。
+## 6. 构建与部署契约
 
-### G4 · Story Loom / WeiUI Foundation
+组合构建顺序：
 
-- `assets/brand/tokens.json` 继续是 NovelForge product-token authority；
-- `assets/brand/weiui.integration.json` 继续是 exact WeiUI consumption contract；
-- `assets/brand/story-loom.weiui.css` 继续是 live mapping/theme surface；
-- 不维护第二套手写 palette；
-- 不引入 `@weiui/react` / `@weiui/headless` runtime；
-- WeiUI 跨 repo distribution 尚未稳定前，Site 可以直接消费已合并的 Story Loom application theme，但不能虚构不存在的 npm import。
+1. staging 并构建 Starlight Docs 到 `site/dist/docs/`；
+2. Godot Web 导出到 `site/dist/index.html` 及 WebAssembly/resource artifacts；
+3. 保留 `_redirects` 等 root static files；
+4. 验证每一个 production asset 都低于 hosting platform individual-file ceiling；
+5. 将组合目录部署到 Cloudflare Pages。
 
-### G5 · Low-overhead SolidJS Surface
+Product bundle size 不是 UX 优化目标。只有 hard hosting/deployment constraint 才构成压缩体积的理由。
 
-Application stack：SolidJS、TypeScript、Vite、`@solidjs/router`。
+## 7. Browser acceptance evidence
 
-Local Web 是主要公开形态，本 Product Site 不需要 Tauri dependency。
+最终 current-HEAD Browser QA 必须证明：
 
-Site 不得给 Generic Core、CLI、Framework bundle、Agent Skill 或 Studio host bridge 增加 runtime dependency。
+- Godot engine 启动且 scene 达到 `ready`；
+- root 与 deep Product URL 都解析为 Godot host；
+- `/docs/` 仍为 Starlight HTML；
+- desktop/phone responsive states 正常；
+- Story Loom token/theme marker 存在；
+- `en-US` / `zh-CN` 都能在 live runtime 内应用；
+- 44px/accessibility 与 motion marker 存在；
+- 浏览器历史能切换 live Product scene 且 document 不 reload；
+- 代表性的 desktop route screenshot 有实质差异。
 
-### G6 · 双语架构
+## 8. Authority 边界
 
-Baseline locales：`en-US`、`zh-CN`。
-
-- Locale 显式可切换；
-- layout 不依赖固定英文宽度；
-- 中文使用自然产品文案，不逐句硬翻；
-- exact machine identifiers 不翻译。
-
-### G7 · Accessibility / Responsive / Motion
-
-硬要求：
-
-- mobile-first；
-- interactive target ≥44×44px；
-- visible focus；
-- keyboard-operable navigation/controls；
-- 不依赖横向滚动；
-- semantic headings/landmarks；
-- contrast 遵守 Story Loom QA；
-- reduced-motion 保留完整内容与最终状态；
-- no idle animation loop；
-- no default polling；
-- 没有 JS animation 时仍可完整理解页面。
-
-### G8 · Product Proof Modules
-
-Proof 必须来自真实 current contracts，例如：
-
-- semantic support vs actually loaded Context；
-- story-order / perspective-safe evidence；
-- same-candidate-fingerprint production-readiness conjunction；
-- character-visible evidence discipline；
-- exact Accepted-text Publication fingerprint preservation；
-- portable Host Bridge `authority=false`；
-- deterministic Story Loom/WeiUI design-system checks。
-
-允许简化展示，不允许发明 metric、score、customer outcome 或 authority claim。
-
-### G9 · Static Hosting
-
-Build 输出 host-neutral `dist/`。
-
-Cloudflare Pages 是优先 deployment target，但不属于产品 authority；站点必须仍可部署到其他 static CDN/host。
-
-第一阶段不需要 database、Pages Function、analytics SDK、auth 或 server runtime。
-
-### G10 · Deterministic Quality Gate
-
-Normal CI 至少验证：
-
-- dependency/version contract；
-- TypeScript/Vite production build；
-- required routes/source；
-- forbidden WeiUI runtime package absence；
-- 无明显 fake social-proof placeholder；
-- locale structure；
-- Story Loom theme/source references；
-- reduced-motion/focus/mobile contracts；
-- Site 不 import Core runtime。
-
-CI 不执行模型。
-
-## Information Architecture
-
-Primary nav：Product、Studio、Architecture、Publication、Docs。
-Secondary：Changelog、GitHub、locale、appearance。
-
-首页采用 editorial pacing，不做等尺寸 feature-card 墙。Narrative、proof、diagram/product preview 与 bento 交替出现。
-
-Docs 是重要目的地，但不是首页身份。第一阶段可直接 curated deep-link 到 canonical source。
-
-## UX / visual constraints
-
-- Story Loom：precise、editorial、warm、engineered；
-- 避免 generic purple-gradient SaaS；
-- 避免 glass-card soup 与 giant everything-dashboard；
-- 避免纯装饰 fake terminal；
-- provenance/fingerprint 只在真正解释产品时出现；
-- motion 用于说明 continuity/state transition，否则保持克制；
-- no scroll-jacking；
-- 不允许只有 hover/drag 才能完成的交互。
-
-## Non-goals · first slice
-
-user accounts/auth、billing/pricing、analytics/tracking、collaboration、server DB、write-capable Studio、Tauri packaging、完整 Markdown 全文搜索，以及没有真实证据的 customer case study。
-
-## Acceptance criteria
-
-1. `site/` 可独立 build 成 static `dist/`。
-2. 首页是完成度足够的产品叙事，没有 lorem ipsum/placeholder。
-3. 初始 routes 全部存在并适合 SPA deep link。
-4. `en-US` / `zh-CN` 有显式 locale architecture。
-5. 视觉语义复用 Story Loom v2，不创建平行 token palette。
-6. 不引入 forbidden WeiUI runtime package。
-7. mobile/narrow reading order 连贯，交互 target 符合 44px contract。
-8. keyboard focus 与 reduced-motion 已实现。
-9. Product proof 来自当前 repository contracts，无 fabricated social proof。
-10. Site build/quality CI deterministic、model-free。
-11. Generic Core 与 site stack 保持独立。
-12. 无需 hosting account 就能 review 第一阶段成品。
+公开 Product Site 与 Docs 都只是 presentation/navigation surface，不拥有 Canon、Memory、Settlement、Framework-write、production-readiness 或 Publication authority。任何 visualization/browser projection 都不会成为第二 source of truth。

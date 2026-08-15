@@ -1,106 +1,59 @@
-# Tasks · NovelForge Product Site
+# NovelForge Product Site — Godot Replacement Tasks
 
-## T0 · Structural contract
+**Scope:** public site `site/**`. The separate `studio/app/**` remains outside this migration.
 
-- [x] Open tracking issue #34.
-- [x] Define bilingual Product Site specification.
-- [x] Define bilingual implementation plan.
-- [ ] Commit spec / plan / tasks as one structural-intent checkpoint.
+Implementation status is recorded here; final release truth comes from the current-HEAD GitHub Actions and deployed site, not from manually copied CI status.
 
-## T1 · Application scaffold
+## Runtime replacement
 
-- [ ] Create `site/package.json` with exact SolidJS/Vite/router/TypeScript versions.
-- [ ] Create TypeScript and Vite configuration.
-- [ ] Create semantic `index.html` metadata shell.
-- [ ] Add `src/main.tsx` and router/AppShell.
-- [ ] Add host-neutral static build output to `site/dist/`.
+- [x] Make Godot Web the sole public Product runtime.
+- [x] Preserve Astro/Starlight as the exclusive `/docs/**` application.
+- [x] Remove the legacy `site/src` Solid Product tree and Product Vite entry/config.
+- [x] Remove Product browser-framework runtime dependencies and Vite preview from `site/package.json`.
+- [x] Preserve Product deep-link fallback without allowing missing Docs paths to become Product routes.
+- [x] Keep Product visuals 2D + controlled 2.5D with no 3D nodes.
 
-## T2 · Story Loom application foundation
+## Browser/runtime integration
 
-- [ ] Consume the repository Story Loom application theme without copying the product palette.
-- [ ] Keep `assets/brand/tokens.json` as source authority.
-- [ ] Keep `assets/brand/weiui.integration.json` as exact WeiUI upstream contract.
-- [ ] Do not introduce `@weiui/react` or `@weiui/headless`.
-- [ ] Add site-only layout/marketing CSS that references semantic variables rather than redefining product colors.
+- [x] Synchronize Product navigation through browser `pushState`.
+- [x] Bind `popstate` into the live Godot scene through a retained JavaScriptBridge callback.
+- [x] Keep Docs navigation as a hard document boundary.
+- [x] Publish scene/runtime/layout/history markers for browser QA.
+- [x] Provide explicit desktop, compact, and phone layouts.
 
-## T3 · Global UX shell
+## Product contract preservation
 
-- [ ] Responsive top navigation with Product / Studio / Architecture / Publication / Docs.
-- [ ] Secondary Changelog / GitHub / locale / appearance controls.
-- [ ] Mobile navigation with >=44px controls and keyboard operation.
-- [ ] Visible focus states.
-- [ ] Footer with product/status/deep-document links.
-- [ ] `en-US` / `zh-CN` locale architecture.
+- [x] Add `en-US` / `zh-CN` Product localization.
+- [x] Persist locale and honor browser locale on first run.
+- [x] Route English Product users to `/docs/en/` and Chinese users to `/docs/`.
+- [x] Enforce canonical 44px touch targets.
+- [x] Add keyboard focusability and visible focus styling.
+- [x] Honor reduced-motion preferences.
 
-## T4 · Product Home
+## Story Loom integration
 
-- [ ] Hero-Centric section with one primary thesis and two honest next-step CTAs.
-- [ ] Problem section explaining prompt-only failure modes without competitor FUD.
-- [ ] “The Forge” story section showing Project → Context → Simulation → Draft → quality/semantic gates → candidate.
-- [ ] “Proof, not promises” modules backed by current machine contracts.
-- [ ] Studio product section.
-- [ ] Publication section with exact current scope boundary.
-- [ ] Architecture bento with one message per card.
-- [ ] Delivery / one-product-many-hosts section.
-- [ ] 0.8.x release-truth section.
-- [ ] Final CTA to Docs / Architecture / GitHub.
+- [x] Treat `assets/brand/tokens.json` as Product visual authority.
+- [x] Generate a deterministic Godot token projection and reject stale generated output.
+- [x] Derive Product semantic route accents and interaction styling from Story Loom tokens.
+- [x] Remove perpetual decorative idle processing.
+- [x] Retain 2.5D depth/parallax and bounded route/interaction packet motion.
+- [x] Expose applied theme/token schema to browser QA.
 
-## T5 · Destination routes
+## Build/deploy evidence required for completion
 
-- [ ] `/product` — product model / why NovelForge.
-- [ ] `/studio` — Creator/Inspector/portable-host product story.
-- [ ] `/architecture` — subsystem map and deep links.
-- [ ] `/publication` — current deterministic compiler and remaining #16 scope.
-- [ ] `/docs` — curated canonical documentation portal.
-- [ ] `/changelog` — release truth and canonical changelog links.
+A release is complete only when the **same current HEAD** proves all of the following:
 
-No route may be a blank placeholder or duplicate the home page verbatim.
+- Product-site quality and Story Loom token checks pass.
+- Starlight Docs build passes.
+- Pinned Godot editor/template setup passes.
+- Godot scene instantiation and release Web export pass.
+- All Cloudflare Pages production assets satisfy the hard individual-file ceiling.
+- Production deployment and custom-domain post-condition pass.
+- Browser QA proves root/deep Product routes and the Docs boundary.
+- Browser QA proves desktop/phone layouts, both locales, accessibility markers, Story Loom theme markers, and no-reload browser history.
+- Browser QA screenshots provide representative visual evidence.
+- The live custom domain serves the Godot Product runtime and Starlight Docs split.
 
-## T6 · Accessibility / responsive / motion
+## Cleanup condition
 
-- [ ] Mobile-first layout with no required horizontal scroll.
-- [ ] Minimum interactive target 44×44px.
-- [ ] Semantic landmarks/headings.
-- [ ] Focus-visible state for every interactive control.
-- [ ] `prefers-reduced-motion` fallback preserving complete content/final state.
-- [ ] No idle animation loop.
-- [ ] No default polling.
-- [ ] No hover-only or drag-only interaction.
-- [ ] English and Chinese layouts reviewed independently.
-
-## T7 · Deterministic site quality
-
-- [ ] Add `site/scripts/quality.mjs`.
-- [ ] Reject forbidden WeiUI runtime dependencies.
-- [ ] Check required routes/locales/source references.
-- [ ] Check known fake-marketing placeholders (`10K+`, fake SLA, fake logos/testimonials/trial/pricing copy).
-- [ ] Check required reduced-motion/focus/touch source contract.
-- [ ] Check no Core private-runtime import from `site/`.
-- [ ] Add dedicated model-free GitHub Actions workflow for install/build/quality.
-
-## T8 · Product review
-
-- [ ] Desktop render inspection.
-- [ ] Narrow/phone render inspection.
-- [ ] English copy/product-flow review.
-- [ ] Simplified Chinese native-copy/product-flow review.
-- [ ] Keyboard/focus review.
-- [ ] Reduced-motion review.
-- [ ] Verify every machine/product claim against latest `main`.
-
-## T9 · Deployment
-
-- [ ] Keep Vite output host-neutral.
-- [ ] Document Cloudflare Pages root/build/output configuration.
-- [ ] Connect/deploy only when an authorized hosting account/tool is available.
-- [ ] Do not put Cloudflare-specific product logic in the SPA.
-
-## T10 · Later extensions
-
-- [ ] Build-time Markdown renderer from maintained repository docs.
-- [ ] Documentation-manifest-driven navigation/freshness metadata.
-- [ ] Build-time full-text search.
-- [ ] Interactive architecture explorer.
-- [ ] Publication sample previews.
-- [ ] Social/OpenGraph assets.
-- [ ] Analytics only after a separate privacy/product decision.
+The public Product migration must not leave a tracked lockfile or build artifact that falsely declares the retired Solid/Vite Product implementation as a current `site/**` dependency. If a lockfile is retained, it must be regenerated from the final Godot + Starlight package manifest.

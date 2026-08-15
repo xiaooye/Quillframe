@@ -1,223 +1,87 @@
-# Specification · NovelForge Product Site
+# NovelForge Product Site — Godot Web Specification
 
-## Baseline
+**Status:** current implementation contract  
+**Scope:** public Product Site under `site/**`. The separate local Studio application under `studio/app/**` is out of scope.
 
-- Framework development baseline: latest `main`.
-- Tracking issue: #34.
-- Change class: Product Web surface / structural feature.
-- Primary mode: `SYSTEM-IMPROVE`.
-- Rollback: parent commit of the Product Site implementation.
+## 1. Product boundary
 
-## Problem
+NovelForge exposes two deliberately different browser applications:
 
-NovelForge now has enough real product, runtime, publication, design-system, and documentation surface that GitHub README pages alone no longer provide a coherent public introduction.
+- **Product surfaces:** `/`, `/product`, `/studio`, `/architecture`, `/publication`, `/inspect`, `/playground`, `/agents`, `/changelog`.
+- **Documentation:** `/docs/**`.
 
-A newcomer currently has to infer the product from architecture-heavy documentation. That creates three problems:
+Product surfaces are rendered by one live **Godot 4.7.1 Web** runtime. Documentation is rendered by **Astro 7.1.6 + Starlight 0.41.5** as semantic HTML. The former SolidJS/Vite implementation under `site/**` is retired and must not be reintroduced as a fallback Product runtime.
 
-1. the value proposition appears after implementation detail;
-2. product proof is scattered across Core, Studio, Publication, quality, and release documents;
-3. the repository has no first-class public surface where Story Loom can operate as an interactive product language rather than static documentation decoration.
+## 2. Runtime contract
 
-The Product Site solves this with a standalone SaaS-like SPA whose primary job is **product understanding and trustworthy navigation**, not documentation rendering.
+### G1 — Godot-first Product UI
 
-## Product role
+The Product runtime MUST use GDScript, the Compatibility renderer, an adaptive Web canvas, and a single-threaded Web export unless hosting requirements are intentionally changed. Product UI uses Godot `Control`/Canvas primitives.
 
-The site must communicate in this order:
+### G2 — 2D + controlled 2.5D
 
-`value → problem → mechanism → proof → product surfaces → deep documentation`.
+The public Product runtime MUST NOT introduce `Node3D`, `Camera3D`, meshes, 3D physics, or a 3D scene stack. Spatial character comes from layered topology, elevation, parallax, glow, route accents, and bounded execution-packet motion.
 
-It is presentation-only. It never becomes Canon, Memory, semantic truth, production-readiness truth, Publication truth, Settlement authority, Framework-write authority, or another runtime.
+Continuous decorative idle animation is not allowed. Motion may run briefly in response to route changes or user interaction. `prefers-reduced-motion: reduce` MUST freeze decorative motion while keeping the final state legible.
 
-## Design evidence
+### G3 — Real browser routes without Product reloads
 
-UI/UX Pro Max is used as external design evidence, not repository authority. The applicable pattern is a bounded hybrid of:
+Each Product route MUST be directly addressable. Internal Product navigation MUST synchronize `history.pushState`. Browser back/forward MUST route the existing Godot scene through a retained `JavaScriptBridge.create_callback` instead of intentionally reloading the document.
 
-- Hero-Centric Design;
-- Scroll-Triggered Storytelling;
-- Product Demo + Features;
-- Bento Grid Showcase;
-- Trust & Authority.
+Crossing into `/docs/**` MUST be a hard document navigation. Missing Docs pages MUST NOT fall through into the Product canvas.
 
-Repository Story Loom v2 tokens and Product contracts always override generic palette/style recommendations.
+### G4 — Responsive scene composition
 
-## Goals
+The runtime MUST derive layout from the real browser viewport. It MUST provide explicit `desktop`, `compact`, and `phone` states. Phone topology is a dedicated portrait composition, not a scaled desktop graph.
 
-### G1 · SaaS-like Product Home
+## 3. Visual authority
 
-The home page is a product narrative, not a docs index.
+### G5 — Story Loom token projection
 
-Required narrative:
+`assets/brand/tokens.json` is the visual token authority. The Product build MUST deterministically project it into Godot through `site/scripts/generate-godot-theme.mjs` and `site/godot/generated/story_loom_tokens.gd`.
 
-1. Hero: concise NovelForge thesis, primary CTA, secondary proof/navigation CTA.
-2. Problem: explain why prompt-only/one-shot fiction generation loses authority, continuity, context discipline, evidence, and repeatability.
-3. The Forge: visually explain Project → Context → Simulation → Draft → Reader/Continuity/Semantic gates → User-visible candidate.
-4. Proof, not promises: show real machine-backed distinctions from `main`.
-5. Studio: Creator/Inspector and portable delivery story.
-6. Publication: deterministic Accepted-text publication core and its current boundary.
-7. Architecture: subsystem bento with deep links.
-8. Delivery: CLI / Local Web / hosted / Agent Skill; host capability != story authority.
-9. Release truth: current pre-1.0 identity and development status.
-10. CTA: Docs / Architecture / Studio / GitHub.
+The runtime MUST expose browser evidence that `Story Loom v2` and token schema `novelforge_brand_tokens_v2` are applied. Route accents MUST come from semantic token families rather than independent hard-coded brand systems.
 
-No fake testimonials, customer logos, usage metrics, prices, uptime, ratings, or scarcity.
+## 4. Language and accessibility
 
-### G2 · Long-lived Route Model
+### G6 — Bilingual Product contract
 
-Initial routes:
+Product supports `en-US` and `zh-CN`, provides an explicit in-scene locale toggle, persists the choice in browser storage, and honors a Chinese browser locale on first run. Docs handoff follows Product locale: English to `/docs/en/`, Chinese to `/docs/`.
 
-- `/`
-- `/product`
-- `/studio`
-- `/architecture`
-- `/publication`
-- `/docs`
-- `/changelog`
+### G7 — Interaction accessibility
 
-The site is an SPA with deep links. Hosting must remain replaceable static infrastructure.
+Interactive Product controls MUST have at least a 44px target, keyboard focusability, and a visible focus ring derived from canonical Story Loom interaction tokens. Browser QA MUST expose and verify the accessibility markers.
 
-### G3 · One Content Truth
+## 5. Documentation contract
 
-The Product Site must not create a second CMS or semantic copy of Framework contracts.
+`/docs/**` remains web-native for long-form reading, semantic links, selection, indexing, accessibility, and localization. Starlight owns Docs routing and output. Godot MUST NOT claim Docs paths.
 
-- Product marketing copy may summarize maintained contracts.
-- Technical claims link to or are generated from maintained repository sources.
-- Docs route initially provides curated navigation; future Markdown rendering/search must consume repository source files at build time.
-- Dynamic runtime truth is not fabricated from static site state.
+## 6. Build and deployment contract
 
-### G4 · Story Loom / WeiUI Foundation
+The composed build is:
 
-- `assets/brand/tokens.json` remains NovelForge product-token authority.
-- `assets/brand/weiui.integration.json` remains the exact upstream WeiUI consumption contract.
-- `assets/brand/story-loom.weiui.css` remains the live mapping/theme surface.
-- No parallel hand-maintained product palette.
-- No `@weiui/react` or `@weiui/headless` runtime dependency.
-- Until WeiUI packages have a stable cross-repository distribution surface, the Product Site may consume the merged Story Loom application theme directly without claiming an unavailable npm package import.
+1. stage and build Starlight Docs into `site/dist/docs/`;
+2. export Godot Web into `site/dist/index.html` plus WebAssembly/resource artifacts;
+3. preserve root static files such as `_redirects`;
+4. verify each production asset is below the hosting platform's individual-file ceiling;
+5. deploy the composed directory to Cloudflare Pages.
 
-### G5 · Low-overhead SolidJS Surface
+Product bundle size is not a UX optimization objective. Size work is justified only where necessary to satisfy a hard hosting/deployment constraint.
 
-Application stack:
+## 7. Browser acceptance evidence
 
-- SolidJS;
-- TypeScript;
-- Vite;
-- `@solidjs/router`.
+Current-HEAD Browser QA MUST prove:
 
-Local Web is the primary public form. No Tauri dependency is needed for this public site.
+- Godot engine starts and the scene reaches `ready`;
+- root and deep Product URLs resolve to the Godot host;
+- `/docs/` remains Starlight HTML;
+- desktop and phone responsive states render;
+- Story Loom token/theme markers are present;
+- both Product locales apply in the live runtime;
+- 44px/accessibility and motion markers are present;
+- browser history changes the live Product scene without a document reload;
+- representative desktop screenshots are materially distinct across Product routes.
 
-The Product Site must not add runtime dependencies to Generic Core, CLI, Framework bundle, Agent Skill, or Studio host bridge.
+## 8. Authority boundary
 
-### G6 · Bilingual Architecture
-
-Baseline locales are `en-US` and `zh-CN`.
-
-- Locale is explicit and switchable.
-- Layout cannot depend on fixed English label widths.
-- Simplified Chinese copy is native product copy, not literal sentence-by-sentence translation.
-- Exact machine identifiers remain untranslated.
-
-### G7 · Accessibility / Responsive / Motion
-
-Hard requirements:
-
-- mobile-first;
-- minimum 44×44px interactive targets;
-- visible focus states;
-- keyboard-accessible navigation and controls;
-- no horizontal-scroll requirement;
-- semantic headings and landmarks;
-- contrast aligned with Story Loom design QA;
-- reduced-motion preserves complete content and final state;
-- no idle animation loop;
-- no default polling;
-- content remains understandable without JS-driven animation.
-
-### G8 · Product Proof Modules
-
-Proof surfaces must come from real current contracts, for example:
-
-- semantic support vs actually loaded Context;
-- story-order/perspective-safe evidence;
-- same-candidate-fingerprint production-readiness conjunction;
-- Character visible-evidence discipline;
-- exact Accepted-text Publication fingerprint preservation;
-- portable Host Bridge `authority=false` boundary;
-- deterministic Story Loom/WeiUI design-system checks.
-
-A proof module may simplify presentation, but may not invent a metric, score, customer result, or authority claim.
-
-### G9 · Static Hosting
-
-The build output is a host-neutral `dist/` directory.
-
-Cloudflare Pages is a preferred deployment target because it can serve a Vite SPA directly, but Cloudflare is not product authority and the site must remain deployable to another static CDN/host.
-
-No database, Pages Function, analytics SDK, authentication, or server runtime is required for the first slice.
-
-### G10 · Deterministic Quality Gate
-
-Normal CI must verify at least:
-
-- dependency/version contract;
-- TypeScript/Vite production build;
-- required route/source presence;
-- no forbidden WeiUI runtime package;
-- no obvious fabricated social-proof placeholders;
-- locale structure;
-- Story Loom theme/source references;
-- required reduced-motion/focus/mobile contracts in source;
-- no Core runtime import from the site.
-
-CI performs no model execution.
-
-## Information Architecture
-
-### Global navigation
-
-Primary: Product, Studio, Architecture, Publication, Docs.
-Secondary: Changelog, GitHub, locale, appearance.
-
-### Home composition
-
-The home page should use editorial pacing rather than equal-sized feature-card repetition. Alternate narrative, proof, diagram/product-preview, and bento sections.
-
-### Docs
-
-Docs remain a major destination but not the home-page identity. The first slice can provide curated deep links to canonical source documents while the build-time renderer/search layer is developed separately.
-
-## UX / visual constraints
-
-- Story Loom: precise, editorial, warm, engineered.
-- Avoid generic purple-gradient SaaS treatment.
-- Avoid glass-card soup and giant everything-dashboard layouts.
-- Avoid fake terminal windows used only as decoration.
-- Use diagrams/provenance/fingerprints only where they explain product behavior.
-- Motion must explain continuity/state transition or stay subtle.
-- No scroll-jacking.
-- No interaction whose only accessible path is hover or drag.
-
-## Non-goals · first slice
-
-- user accounts / auth;
-- billing / pricing;
-- analytics / tracking;
-- collaboration;
-- server database;
-- write-capable Studio;
-- Tauri packaging;
-- complete Markdown full-text search;
-- customer case studies without real customer evidence.
-
-## Acceptance criteria
-
-1. `site/` is independently buildable to static `dist/`.
-2. The home page is a finished product narrative with real NovelForge claims, not placeholder/lorem ipsum content.
-3. All initial routes exist and can be deep-linked through an SPA host.
-4. `en-US` and `zh-CN` are represented by an explicit locale architecture.
-5. Product visual semantics reuse Story Loom v2; no parallel token palette is created.
-6. No forbidden WeiUI runtime package is introduced.
-7. Mobile/narrow reading order is coherent and interactive targets respect the 44px contract.
-8. Keyboard focus and reduced-motion behavior are present.
-9. Product proof uses current repository contracts and contains no fabricated social proof.
-10. Site build/quality CI is deterministic and model-free.
-11. Generic Core remains independent of the site stack.
-12. The first slice is visually/product-reviewable before any hosting account is required.
+The public Product Site and Docs are presentation/navigation surfaces only. They do not gain Canon, Memory, Settlement, Framework-write, production-readiness, or Publication authority. A visualization or browser projection never becomes a second source of truth.

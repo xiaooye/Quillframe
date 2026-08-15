@@ -1,105 +1,82 @@
-# Plan · NovelForge Product Site
+# NovelForge 产品站 — Godot Replacement 计划
 
-## Phase 0 · Contract freeze
+**范围：** 仅公开 Product Site `site/**`。`studio/app/**` 继续作为独立本地 Studio application，不属于本次替换。
 
-- Work tracked in issue #34。
-- latest `main` 作为实现基线。
-- 复用 Story Loom v2 / WeiUI zero-JS contracts，不 fork。
-- Product Site 与 Generic Core runtime dependency 隔离。
+## 目标架构
 
-## Phase 1 · Site foundation
+```text
+Browser
+├─ Product routes
+│  └─ Godot 4.7.1 Web / GDScript / Compatibility renderer
+│     ├─ Main Control scene
+│     ├─ live BrowserRouteBridge
+│     ├─ Story Loom ThemeBridge
+│     ├─ LocaleBridge
+│     ├─ AccessibilityBridge
+│     └─ 2D/2.5D responsive topology
+└─ /docs/**
+   └─ Astro 7.1.6 + Starlight 0.41.5 semantic HTML
+```
 
-创建 `site/`：
+两个应用组合到同一个 `site/dist/` 部署目录。Product → Docs 有意保持 document boundary。
 
-- exact frontend versions；
-- SolidJS + TypeScript + Vite + `@solidjs/router`；
-- host-neutral static `dist/`；
-- global AppShell / responsive navigation / footer；
-- 显式 `en-US` / `zh-CN` locale state；
-- 从 repository authority 直接消费 Story Loom application theme；
-- base accessibility、focus、touch、responsive、reduced-motion rules。
+## Phase 1 — 替换 Product runtime
 
-首阶段不加入 analytics、backend、auth、CMS 或 Tauri runtime。
+- 在 `site/godot/Main.tscn` 建立 Godot Web project。
+- 所有 Product route 在同一个 live Godot runtime 中实现。
+- 用 `pushState` 保留真实 browser URL，并通过 bridge 把 `popstate` 路由回当前 scene。
+- `/docs/**` 保持独立 Starlight application。
+- 加入品牌化 custom Web shell 与 runtime-ready browser marker。
+- 编译固定版本、single-thread、适合 2D Product feature set 的 Web export template。
 
-## Phase 2 · Product Home vertical slice
+## Phase 2 — 退役旧公开 SPA
 
-首页完成一条完整产品叙事：
+- 删除 `site/src`、Product Vite entry/config 与 Product-only Solid/Vite quality scripts。
+- 从 `site/package.json` 移除 Product browser-framework runtime dependency。
+- 用轻量 static dist server 替代 Vite preview：Product deep route 回退到 Godot host，但 Docs path 永远不回退到 Product。
+- 不修改 `studio/app/**`，因为它不是公开 Product Site runtime。
 
-1. Hero + product thesis；
-2. prompt-only failure model；
-3. Forge pipeline story；
-4. 来自真实 contracts 的 proof modules；
-5. Studio；
-6. Publication；
-7. subsystem bento；
-8. one-product/many-host delivery；
-9. release truth；
-10. final CTA。
+## Phase 3 — 在 Godot 内保留产品契约
 
-禁止 fake social proof。Product proof 必须来自 current machine contracts / observable architecture。
+- 实现明确的 `desktop`、`compact`、`phone` scene layout。
+- 保留 Product deep link 与 no-reload browser back/forward。
+- 实现 `en-US` / `zh-CN`、locale persistence、scene 内显式 toggle 与 locale-aware Docs handoff。
+- 强制 44px target、keyboard focus、可见 focus ring 与 reduced-motion 行为。
+- 视觉严格限制为 2D + controlled 2.5D，不引入 3D scene stack。
 
-## Phase 3 · Destination routes
+## Phase 4 — Story Loom 成为视觉 authority
 
-增加真实、非 placeholder 页面：Product、Studio、Architecture、Publication、Docs、Changelog。
+- 以 `assets/brand/tokens.json` 作为视觉 token authority。
+- 在 Godot export 前确定性投影为 generated GDScript。
+- Route accent、focus styling、surface 与 semantic state color 都从该 projection 派生。
+- 删除持续 decorative idle loop，只保留 transition/interaction 的 bounded motion 与输入驱动 parallax。
+- 输出 browser-visible theme/token markers 供 acceptance test 使用。
 
-第一版可以简洁，但每个 route 必须回答一个独立用户问题，并 deep-link 到 canonical repository sources。
+## Phase 5 — Production evidence
 
-## Phase 4 · Documentation portal
+最终 current HEAD 必须同时通过 deployment 与 browser evidence：
 
-先做 curated documentation cards，映射 authoritative source。
+- Starlight Docs staging/build；
+- Godot scene instantiation + release Web export；
+- Cloudflare individual-file ceiling check；
+- Cloudflare Pages production deploy + custom-domain post-condition；
+- 浏览器验证 root/deep routes、Docs boundary、desktop/phone、Story Loom theme、双语、accessibility marker 与 no-reload history；
+- 保存代表性 screenshot 作为 visual regression evidence。
 
-后续 structural extension：
+## Repository responsibilities
 
-- build-time Markdown ingestion；
-- 由 documentation manifest 生成 nav；
-- build-time search index；
-- source/freshness badges；
-- 浏览器运行时不依赖 GitHub API。
+- `site/godot/**`：唯一公开 Product runtime。
+- `site/docs-site/**`：Docs application。
+- `site/scripts/generate-godot-theme.mjs`：brand-token projection。
+- `site/scripts/godot-web-quality.mjs`：静态 Product runtime contract。
+- `site/scripts/godot-browser-proof.mjs`：真实浏览器 runtime evidence。
+- `.github/workflows/product-site.yml`：组合 build/deploy。
+- `.github/workflows/product-site-browser-qa.yml`：visual/runtime acceptance evidence。
 
-不得创建第二套内容 store。
+## 非目标
 
-## Phase 5 · Deterministic quality
-
-新增 model-free Site CI：
-
-- install exact dependencies；
-- production build；
-- 运行 `site/scripts/quality.mjs`；
-- 阻止 forbidden WeiUI runtime packages；
-- 检查 required routes/locales/Story Loom references；
-- 检查基础 a11y/responsive/motion source invariants；
-- 拒绝已知 fake marketing placeholders。
-
-后续可以加入 browser rendering / Lighthouse-style checks，但 normal CI 保持 deterministic / low-cost。
-
-## Phase 6 · Visual review
-
-第一阶段 product-ready 前：
-
-- render desktop + phone；
-- 中英文独立 inspection；
-- no horizontal overflow；
-- keyboard navigation/focus；
-- reduced-motion final state；
-- section hierarchy / CTA clarity；
-- marketing claims 对齐 current `main`。
-
-## Phase 7 · Hosting
-
-优先 deployment target：Cloudflare Pages。
-
-Build contract：
-
-- root：`site`；
-- build command：`npm run build`；
-- output：`dist`。
-
-Cloudflare 可替换；SPA 不加入 Cloudflare-specific product logic。
-
-## Phase 8 · Future growth
-
-基础稳定后：interactive architecture explorer、真实 Studio demo、Publication sample preview、build-time docs search、manifest-driven release/status、OpenGraph generation，以及只有经过明确 privacy/product 决策后才考虑匿名 analytics。
-
-## Rollback
-
-所有 site implementation 都必须可单独 revert。删除 `site/` 与 dedicated workflow 后，Framework/Studio runtime behavior 不发生变化。
+- 不同时维护 Unity/Unreal UI。
+- 不建立 3D Product scene stack。
+- 除 hard hosting constraint 外，不以 tiny bundle/first-load 为优化目标。
+- 不把独立 `studio/app/**` local application 纳入公开站点迁移范围。
+- Presentation layer 不获得 Canon、Memory、Settlement 或 Framework authority。

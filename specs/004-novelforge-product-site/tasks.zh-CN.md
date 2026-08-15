@@ -1,106 +1,59 @@
-# Tasks · NovelForge Product Site
+# NovelForge 产品站 — Godot Replacement Tasks
 
-## T0 · Structural contract
+**范围：** 公开站点 `site/**`。独立 `studio/app/**` 不属于本次迁移。
 
-- [x] 创建 tracking issue #34。
-- [x] 定义双语 Product Site specification。
-- [x] 定义双语 implementation plan。
-- [ ] 以单一 structural-intent checkpoint 提交 spec / plan / tasks。
+这里记录 implementation status；最终 release truth 来自 **current HEAD** 的 GitHub Actions 与 deployed site，而不是手工抄写的 CI 状态。
 
-## T1 · Application scaffold
+## Runtime replacement
 
-- [ ] 创建 `site/package.json`，固定 SolidJS/Vite/router/TypeScript exact versions。
-- [ ] 创建 TypeScript / Vite config。
-- [ ] 创建语义完整的 `index.html` metadata shell。
-- [ ] 增加 `src/main.tsx` 与 router/AppShell。
-- [ ] 输出 host-neutral static `site/dist/`。
+- [x] 让 Godot Web 成为唯一公开 Product runtime。
+- [x] 保留 Astro/Starlight 作为 `/docs/**` 唯一 application。
+- [x] 删除旧 `site/src` Solid Product tree 与 Product Vite entry/config。
+- [x] 从 `site/package.json` 移除 Product browser-framework runtime dependency 与 Vite preview。
+- [x] 保留 Product deep-link fallback，同时禁止缺失 Docs path 回退成 Product route。
+- [x] Product 视觉保持 2D + controlled 2.5D，不使用 3D nodes。
 
-## T2 · Story Loom application foundation
+## Browser/runtime integration
 
-- [ ] 直接消费 repository Story Loom application theme，不复制 product palette。
-- [ ] `assets/brand/tokens.json` 继续作为 source authority。
-- [ ] `assets/brand/weiui.integration.json` 继续作为 exact WeiUI upstream contract。
-- [ ] 不引入 `@weiui/react` / `@weiui/headless`。
-- [ ] Site-only layout/marketing CSS 只引用 semantic variables，不重新定义产品颜色。
+- [x] Product navigation 同步 browser `pushState`。
+- [x] 用保留引用的 JavaScriptBridge callback 把 `popstate` 路由回 live Godot scene。
+- [x] Docs navigation 保持 hard document boundary。
+- [x] 输出 scene/runtime/layout/history markers 供 Browser QA 使用。
+- [x] 提供明确的 desktop、compact、phone layouts。
 
-## T3 · Global UX shell
+## Product contract preservation
 
-- [ ] Responsive top nav：Product / Studio / Architecture / Publication / Docs。
-- [ ] Secondary：Changelog / GitHub / locale / appearance。
-- [ ] Mobile nav control >=44px 且 keyboard-operable。
-- [ ] visible focus。
-- [ ] Footer 提供 product/status/deep-doc links。
-- [ ] `en-US` / `zh-CN` locale architecture。
+- [x] 加入 `en-US` / `zh-CN` Product localization。
+- [x] 持久化 locale，并在首次访问时尊重 browser locale。
+- [x] 英文 Product 进入 `/docs/en/`，中文 Product 进入 `/docs/`。
+- [x] 强制 canonical 44px touch target。
+- [x] 加入 keyboard focusability 与可见 focus styling。
+- [x] 尊重 reduced-motion preference。
 
-## T4 · Product Home
+## Story Loom integration
 
-- [ ] Hero-Centric：一个 primary thesis + 两个诚实 next-step CTA。
-- [ ] Problem：说明 prompt-only failure modes，不做 competitor FUD。
-- [ ] “The Forge”：Project → Context → Simulation → Draft → quality/semantic gates → candidate。
-- [ ] “Proof, not promises”：所有 module 来自 current machine contracts。
-- [ ] Studio section。
-- [ ] Publication section，准确标出 current scope。
-- [ ] Architecture bento，每卡一个 message。
-- [ ] one-product-many-hosts delivery section。
-- [ ] 0.8.x release-truth section。
-- [ ] Final CTA：Docs / Architecture / GitHub。
+- [x] 以 `assets/brand/tokens.json` 作为 Product visual authority。
+- [x] 生成确定性的 Godot token projection，并拒绝 stale generated output。
+- [x] Product semantic route accent 与 interaction styling 从 Story Loom tokens 派生。
+- [x] 删除持续 decorative idle processing。
+- [x] 保留 2.5D depth/parallax 与 bounded route/interaction packet motion。
+- [x] 向 Browser QA 暴露 theme/token schema。
 
-## T5 · Destination routes
+## 完成所需 build/deploy evidence
 
-- [ ] `/product` —— product model / why NovelForge。
-- [ ] `/studio` —— Creator/Inspector/portable-host product story。
-- [ ] `/architecture` —— subsystem map + deep links。
-- [ ] `/publication` —— current deterministic compiler + #16 remaining scope。
-- [ ] `/docs` —— curated canonical documentation portal。
-- [ ] `/changelog` —— release truth + canonical changelog links。
+只有**同一个 current HEAD** 同时证明以下条件，release 才算完成：
 
-Route 不能是空白 placeholder，也不能原样复制 Home。
+- Product-site quality 与 Story Loom token checks 通过。
+- Starlight Docs build 通过。
+- 固定版本 Godot editor/template setup 通过。
+- Godot scene instantiation 与 release Web export 通过。
+- Cloudflare Pages production assets 全部满足 hard individual-file ceiling。
+- Production deploy 与 custom-domain post-condition 通过。
+- Browser QA 证明 root/deep Product routes 与 Docs boundary。
+- Browser QA 证明 desktop/phone、双语、accessibility markers、Story Loom theme markers 与 no-reload browser history。
+- Browser QA screenshots 提供代表性 visual evidence。
+- Live custom domain 实际提供 Godot Product runtime + Starlight Docs split。
 
-## T6 · Accessibility / responsive / motion
+## Cleanup condition
 
-- [ ] Mobile-first，无 required horizontal scroll。
-- [ ] Interactive target >=44×44px。
-- [ ] Semantic landmarks/headings。
-- [ ] 所有 interactive control 有 focus-visible。
-- [ ] `prefers-reduced-motion` 保留完整内容与最终状态。
-- [ ] No idle animation loop。
-- [ ] No default polling。
-- [ ] No hover-only / drag-only interaction。
-- [ ] English / Chinese layout 独立 review。
-
-## T7 · Deterministic site quality
-
-- [ ] 增加 `site/scripts/quality.mjs`。
-- [ ] Reject forbidden WeiUI runtime dependencies。
-- [ ] 检查 required routes/locales/source refs。
-- [ ] 检查 fake marketing placeholders（`10K+`、fake SLA、fake logo/testimonial/trial/pricing copy）。
-- [ ] 检查 reduced-motion/focus/touch source contract。
-- [ ] 检查 `site/` 不 import Core private runtime。
-- [ ] 新增 dedicated model-free GitHub Actions install/build/quality workflow。
-
-## T8 · Product review
-
-- [ ] Desktop render inspection。
-- [ ] Narrow/phone render inspection。
-- [ ] English copy/product-flow review。
-- [ ] 简中 native-copy/product-flow review。
-- [ ] Keyboard/focus review。
-- [ ] Reduced-motion review。
-- [ ] 所有 machine/product claim 对齐 latest `main`。
-
-## T9 · Deployment
-
-- [ ] Vite output 保持 host-neutral。
-- [ ] 文档记录 Cloudflare Pages root/build/output config。
-- [ ] 只有获得 authorized hosting account/tool 后才真正 connect/deploy。
-- [ ] SPA 不加入 Cloudflare-specific product logic。
-
-## T10 · Later extensions
-
-- [ ] build-time Markdown renderer。
-- [ ] documentation-manifest-driven nav/freshness metadata。
-- [ ] build-time full-text search。
-- [ ] interactive architecture explorer。
-- [ ] publication sample previews。
-- [ ] Social/OpenGraph assets。
-- [ ] analytics 仅在单独 privacy/product decision 后加入。
+公开 Product migration 不得留下一个 tracked lockfile/build artifact，继续把已退役 Solid/Vite Product implementation 声明为现役 `site/**` dependency。若保留 lockfile，必须从最终 Godot + Starlight package manifest 重新生成。
