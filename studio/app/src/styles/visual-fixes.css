@@ -1,5 +1,5 @@
 @layer novelforge-app {
-  /* Visual QA refinements: keep metric text readable without changing WeiUI primitives. */
+  /* Visual QA refinements: composition only; WeiUI still owns component chrome. */
   .nf-card .wui-card__content > .wui-badge {
     justify-self: start;
   }
@@ -8,8 +8,8 @@
     overflow-wrap: anywhere;
   }
 
-  .nf-card-accent strong {
-    font-size: clamp(1rem, 1.5vw, 1.2rem) !important;
+  .nf-metric-grid .nf-card-accent strong {
+    font-size: clamp(1rem, 1.5vw, 1.2rem);
     line-height: 1.25;
   }
 

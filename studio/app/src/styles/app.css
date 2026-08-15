@@ -12,34 +12,26 @@
     min-block-size: 100dvh;
     display: grid;
     grid-template-columns: 248px minmax(0, 1fr);
-    background: var(--wui-color-background);
   }
 
+  /* WeiUI owns sidebar chrome/interaction. Studio only owns product composition. */
   .nf-sidebar {
-    position: sticky;
-    inset-block-start: 0;
+    inline-size: 248px;
     block-size: 100vh;
     block-size: 100dvh;
-    display: flex;
-    flex-direction: column;
-    padding: var(--wui-spacing-4);
-    border-inline-end: 1px solid var(--wui-color-border);
-    background: color-mix(in oklch, var(--wui-color-muted) 58%, var(--wui-color-background));
+    box-shadow: none;
   }
 
   .nf-brand {
-    min-block-size: 56px;
-    display: flex;
-    align-items: center;
+    min-block-size: 64px;
     gap: var(--wui-spacing-3);
-    padding-inline: var(--wui-spacing-2);
-    border-radius: var(--wui-shape-radius-lg);
   }
   .nf-brand-mark {
     inline-size: 38px;
     block-size: 38px;
     display: grid;
     place-items: center;
+    flex: 0 0 auto;
     border-radius: 13px 7px 13px 7px;
     background: var(--wui-color-primary);
     color: var(--wui-color-primary-foreground);
@@ -50,20 +42,7 @@
   .nf-brand strong { font-size: var(--wui-font-size-sm); }
   .nf-brand small { margin-block-start: 4px; color: var(--wui-color-muted-foreground); font-size: var(--wui-font-size-xs); }
 
-  .nf-nav-list { display: grid; gap: 4px; margin-block-start: var(--wui-spacing-6); }
-  .nf-nav-item {
-    min-block-size: var(--nf-touch-target-min, 44px);
-    display: flex;
-    align-items: center;
-    gap: var(--wui-spacing-3);
-    padding-inline: var(--wui-spacing-3);
-    border-radius: var(--wui-shape-radius-md);
-    color: var(--wui-color-muted-foreground);
-    font-size: var(--wui-font-size-sm);
-    font-weight: var(--wui-font-weight-medium);
-  }
-  .nf-nav-item:hover { color: var(--wui-color-foreground); background: color-mix(in oklch, var(--wui-color-primary) 7%, transparent); }
-  .nf-nav-item[data-active="true"] { color: var(--wui-color-primary); background: color-mix(in oklch, var(--wui-color-primary) 11%, transparent); }
+  .nf-nav-list { display: grid; align-content: start; gap: 4px; }
   .nf-nav-glyph {
     inline-size: 26px;
     block-size: 26px;
@@ -73,34 +52,56 @@
     border-radius: var(--wui-shape-radius-sm);
     font-size: 11px;
   }
-  .nf-sidebar-foot { margin-block-start: auto; display: grid; gap: var(--wui-spacing-2); padding: var(--wui-spacing-2); color: var(--wui-color-muted-foreground); }
+  .nf-sidebar-foot { display: grid; gap: var(--wui-spacing-2); color: var(--wui-color-muted-foreground); }
   .nf-sidebar-foot small { font-size: 11px; }
 
-  .nf-main-column { min-inline-size: 0; display: flex; flex-direction: column; min-block-size: 100vh; min-block-size: 100dvh; }
-  .nf-topbar {
-    position: sticky;
-    inset-block-start: 0;
-    z-index: 20;
-    min-block-size: 64px;
+  .nf-main-column {
+    min-inline-size: 0;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    min-block-size: 100vh;
+    min-block-size: 100dvh;
+  }
+
+  /* WeiUI owns app-bar chrome; Studio only adjusts density and content flow. */
+  .nf-topbar {
     justify-content: space-between;
     gap: var(--wui-spacing-4);
+    min-block-size: 64px;
     padding-inline: clamp(16px, 3vw, 40px);
-    border-block-end: 1px solid color-mix(in oklch, var(--wui-color-border) 76%, transparent);
-    background: color-mix(in oklch, var(--wui-color-background) 92%, transparent);
-    backdrop-filter: blur(10px);
+    box-shadow: none;
   }
-  .nf-topbar-context { min-inline-size: 0; color: var(--wui-color-muted-foreground); font-size: var(--wui-font-size-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nf-topbar-context {
+    min-inline-size: 0;
+    max-inline-size: min(48vw, 680px);
+    margin-inline-end: 0;
+    color: var(--wui-color-muted-foreground);
+    font-size: var(--wui-font-size-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .nf-topbar-context strong { color: var(--wui-color-foreground); }
-  .nf-topbar-actions { display: flex; align-items: center; gap: var(--wui-spacing-1); }
+  .nf-topbar-actions { gap: var(--wui-spacing-1); }
   .nf-command-trigger { gap: var(--wui-spacing-2); }
   .nf-command-trigger kbd { color: var(--wui-color-muted-foreground); font-size: 11px; }
   .nf-mobile-brand { display: none; }
 
-  .nf-content { inline-size: 100%; max-inline-size: 1440px; margin-inline: auto; padding: clamp(20px, 4vw, 48px); flex: 1; }
+  .nf-content {
+    inline-size: 100%;
+    max-inline-size: 1440px;
+    margin-inline: auto;
+    padding: clamp(20px, 4vw, 48px);
+    flex: 1;
+  }
   .nf-page { display: grid; gap: var(--wui-spacing-6); }
-  .nf-page-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--wui-spacing-6); padding-block-end: var(--wui-spacing-2); }
+  .nf-page-intro {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--wui-spacing-6);
+    padding-block-end: var(--wui-spacing-2);
+  }
   .nf-page-intro > div:first-child { max-inline-size: 760px; }
   .nf-page-intro h1 { margin-block: var(--wui-spacing-2); font-size: clamp(1.8rem, 4vw, 3.25rem); letter-spacing: -0.035em; }
   .nf-page-intro p { max-inline-size: 70ch; color: var(--wui-color-muted-foreground); font-size: clamp(0.95rem, 1.4vw, 1.08rem); }
@@ -111,7 +112,6 @@
   .nf-card .wui-card__header h2 { font-size: var(--wui-font-size-lg); }
   .nf-card .wui-card__content { display: grid; gap: var(--wui-spacing-3); }
   .nf-card-accent { border-color: color-mix(in oklch, var(--wui-color-primary) 34%, var(--wui-color-border)); }
-  .nf-card-sunken { background: var(--wui-surface-sunken); box-shadow: none; }
   .nf-card-label { color: var(--wui-color-muted-foreground); font-size: var(--wui-font-size-xs); text-transform: uppercase; letter-spacing: .06em; }
   .nf-card strong { overflow-wrap: anywhere; }
   .nf-card small { color: var(--wui-color-muted-foreground); }
@@ -130,23 +130,28 @@
   .nf-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; }
   .nf-form-action { justify-self: start; }
 
-  .nf-detail-list { display: grid; gap: 0 !important; }
+  .nf-detail-list { display: grid; gap: 0; }
   .nf-detail-list > div { min-block-size: 42px; display: grid; grid-template-columns: minmax(100px, 34%) minmax(0, 1fr); align-items: center; gap: var(--wui-spacing-3); border-block-end: 1px solid var(--wui-color-border); }
   .nf-detail-list > div:last-child { border-block-end: 0; }
   .nf-detail-list span { color: var(--wui-color-muted-foreground); font-size: var(--wui-font-size-sm); }
   .nf-detail-list strong { text-align: end; font-size: var(--wui-font-size-sm); }
-  .nf-path-grid { display: grid; gap: 0 !important; }
+  .nf-path-grid { display: grid; gap: 0; }
   .nf-path-row { min-block-size: 56px; display: flex; align-items: center; justify-content: space-between; gap: var(--wui-spacing-4); border-block-end: 1px solid var(--wui-color-border); }
   .nf-path-row:last-child { border-block-end: 0; }
   .nf-path-row > div { display: grid; gap: 2px; min-inline-size: 0; }
   .nf-path-row span.nf-mono { color: var(--wui-color-muted-foreground); font-size: var(--wui-font-size-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .nf-chip-row { display: flex !important; flex-wrap: wrap; gap: var(--wui-spacing-2) !important; }
+  .nf-chip-row { display: flex; flex-wrap: wrap; gap: var(--wui-spacing-2); }
   .nf-mono { font-family: var(--wui-font-family-mono); }
   .nf-muted { color: var(--wui-color-muted-foreground); }
 
   .nf-workspace-page { min-block-size: calc(100dvh - 160px); }
   .nf-workspace-stage { min-block-size: 520px; display: grid; grid-template-columns: 180px minmax(0, 1fr) 220px; gap: var(--wui-spacing-4); }
-  .nf-workspace-outline, .nf-workspace-inspector { border: 1px solid var(--wui-color-border); border-radius: var(--wui-shape-radius-lg); background: var(--wui-surface-sunken); padding: var(--wui-spacing-4); display: grid; align-content: start; gap: var(--wui-spacing-3); }
+  .nf-workspace-outline, .nf-workspace-inspector {
+    padding: var(--wui-spacing-4);
+    display: grid;
+    align-content: start;
+    gap: var(--wui-spacing-3);
+  }
   .nf-workspace-outline span, .nf-workspace-inspector span { display: block; block-size: 10px; border-radius: 99px; background: color-mix(in oklch, var(--wui-color-muted-foreground) 16%, transparent); }
   .nf-workspace-outline span:nth-child(2) { inline-size: 68%; }
   .nf-workspace-outline span:nth-child(4) { inline-size: 80%; }
@@ -156,11 +161,11 @@
   .nf-focus-placeholder p { color: var(--wui-color-muted-foreground); }
   .nf-unavailable-mark { inline-size: 54px; block-size: 54px; display: grid; place-items: center; border-radius: 50%; background: var(--wui-color-muted); color: var(--wui-color-muted-foreground); font-size: 24px; }
 
-  .nf-json-block { min-inline-size: 0; border: 1px solid var(--wui-color-border); border-radius: var(--wui-shape-radius-md); background: var(--wui-surface-sunken); overflow: hidden; }
-  .nf-json-label { padding: var(--wui-spacing-2) var(--wui-spacing-3); border-block-end: 1px solid var(--wui-color-border); color: var(--wui-color-muted-foreground); font-size: var(--wui-font-size-xs); }
-  .nf-json-block pre { max-block-size: 62vh; overflow: auto; padding: var(--wui-spacing-4); font-size: 12px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .nf-alert { display: flex; align-items: flex-start; gap: var(--wui-spacing-3); padding: var(--wui-spacing-4); border: 1px solid var(--wui-color-destructive); border-radius: var(--wui-shape-radius-md); background: color-mix(in oklch, var(--wui-color-destructive) 7%, transparent); }
-  .nf-alert span { color: var(--wui-color-muted-foreground); overflow-wrap: anywhere; }
+  /* WeiUI code/alert primitives own chrome. These wrappers only control product sizing. */
+  .nf-json-block { min-inline-size: 0; display: grid; gap: var(--wui-spacing-2); }
+  .nf-json-label { color: var(--wui-color-muted-foreground); font-size: var(--wui-font-size-xs); }
+  .nf-json-block .wui-code-block { max-block-size: 62vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .nf-query-error .wui-alert__description { overflow-wrap: anywhere; }
   .nf-loading, .nf-empty { min-block-size: 180px; display: grid; place-items: center; color: var(--wui-color-muted-foreground); }
 
   .nf-command { margin-inline: var(--wui-spacing-4); }
@@ -171,6 +176,7 @@
 
   @media (max-width: 1100px) {
     .nf-app-shell { grid-template-columns: 208px minmax(0, 1fr); }
+    .nf-sidebar { inline-size: 208px; }
     .nf-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .nf-workspace-stage { grid-template-columns: 150px minmax(0, 1fr); }
     .nf-workspace-inspector { display: none; }
@@ -181,6 +187,7 @@
     .nf-sidebar { display: none; }
     .nf-main-column { min-block-size: calc(100dvh - 70px); }
     .nf-topbar { min-block-size: 58px; padding-inline: 12px; }
+    .nf-topbar-context { max-inline-size: none; }
     .nf-topbar-context > span:not(.nf-mobile-brand), .nf-topbar-context > strong { display: none; }
     .nf-mobile-brand { display: inline; color: var(--wui-color-foreground); font-weight: var(--wui-font-weight-semibold); }
     .nf-command-label, .nf-command-trigger kbd { display: none; }
@@ -202,27 +209,10 @@
     .nf-focus-placeholder { min-block-size: 400px; }
     .nf-focus-placeholder .wui-card__content { padding: 36px 20px; }
     .nf-footer { display: none; }
-    .nf-bottom-nav {
-      position: fixed;
-      z-index: 40;
-      inset-inline: 0;
-      inset-block-end: 0;
-      block-size: calc(64px + env(safe-area-inset-bottom));
-      padding-block-end: env(safe-area-inset-bottom);
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      border-block-start: 1px solid var(--wui-color-border);
-      background: color-mix(in oklch, var(--wui-color-background) 95%, transparent);
-      backdrop-filter: blur(12px);
-    }
-    .nf-bottom-nav-item { min-inline-size: 0; min-block-size: 58px; display: grid; place-items: center; align-content: center; gap: 2px; color: var(--wui-color-muted-foreground); }
-    .nf-bottom-nav-item[data-active="true"] { color: var(--wui-color-primary); }
+    .nf-bottom-nav { display: flex; }
+    .nf-bottom-nav-item { min-inline-size: 0; }
     .nf-bottom-nav-item small { max-inline-size: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
     .wui-command-overlay { padding-block-start: 7vh; }
     .nf-command { margin-inline: 10px; max-block-size: 84vh; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
   }
 }

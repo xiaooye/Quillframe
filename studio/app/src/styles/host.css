@@ -18,19 +18,16 @@
     background: var(--wui-color-muted-foreground);
   }
 
-  .nf-host-boundary {
-    border-style: dashed;
-    background: color-mix(in oklch, var(--wui-surface-sunken) 72%, var(--wui-color-background));
-    box-shadow: none;
-  }
+  /* WeiUI filled-card owns the boundary surface; this only adds product semantics. */
+  .nf-host-boundary { border-style: dashed; }
 
   .nf-host-boundary-content {
     min-block-size: 240px;
     max-inline-size: 760px;
     justify-items: start;
     align-content: center;
-    gap: var(--wui-spacing-4) !important;
-    padding: clamp(28px, 5vw, 56px) !important;
+    gap: var(--wui-spacing-4);
+    padding: clamp(28px, 5vw, 56px);
   }
 
   .nf-host-boundary h2 {
@@ -53,6 +50,6 @@
   @media (max-width: 719px) {
     .nf-host-chip > span:last-child { display: none; }
     .nf-host-chip { min-inline-size: 28px; justify-content: center; padding-inline: 8px; }
-    .nf-host-boundary-content { min-block-size: 220px; padding: 26px 20px !important; }
+    .nf-host-boundary-content { min-block-size: 220px; padding: 26px 20px; }
   }
 }

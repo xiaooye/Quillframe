@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'studio/app/**'
+      - 'studio/observability_contract.json'
       - 'studio/local_server.py'
       - 'studio/sync_weiui.py'
       - 'studio/host_bridge.py'
@@ -16,6 +17,7 @@ on:
     branches: [main]
     paths:
       - 'studio/app/**'
+      - 'studio/observability_contract.json'
       - 'studio/local_server.py'
       - 'studio/sync_weiui.py'
       - 'studio/host_bridge.py'
@@ -72,6 +74,45 @@ jobs:
           python studio/local_server.py --self-test
       - name: Story Loom + WeiUI contract
         run: python scripts/design_system_quality.py
+      - name: Quality observability presentation contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          contract = json.loads(Path('studio/observability_contract.json').read_text(encoding='utf-8'))
+          assert contract['schema'] == 'novelforge_studio_observability_contract_v1'
+          assert contract['version'] == '1'
+          for key in (
+              'authority', 'canon_authority', 'framework_write_authority',
+              'settlement_authority', 'quality_judgment_authority',
+              'release_eligibility_authority',
+          ):
+              assert contract[key] is False, key
+          source = contract['source_requirements']
+          assert source['status_owner'] == 'core_or_source_projection'
+          assert source['source_schema_required'] is True
+          assert source['source_fingerprint_required_for_candidate_state'] is True
+          assert source['missing_field_policy'] == 'unavailable_not_inferred'
+          assert source['code_to_quality_inference_allowed'] is False
+          assert source['code_to_release_eligibility_inference_allowed'] is False
+          assert source['capability_implies_authority'] is False
+          assert source['contract_registration_implies_quality'] is False
+          assert source['contract_registration_implies_release_eligibility'] is False
+          assert contract['production_lanes'] == [
+              'candidate', 'surface', 'reader_engagement',
+              'independent_production_review', 'continuity',
+              'production_readiness', 'canon',
+          ]
+
+          routes = '\n'.join(
+              path.read_text(encoding='utf-8')
+              for path in Path('studio/app/src/routes').glob('*.tsx')
+          )
+          for forbidden in ('blocks_release', 'quality_score', 'taxonomy_map', 'inferReleaseEligibility'):
+              assert forbidden not in routes, forbidden
+          print({'status': 'pass', 'schema': contract['schema'], 'authority': False})
+          PY
       - name: Low-overhead and authority source invariants
         run: |
           python - <<'PY'
@@ -104,16 +145,25 @@ jobs:
           types = Path('studio/app/src/locales/types.ts').read_text(encoding='utf-8')
           en = Path('studio/app/src/locales/en-US.ts').read_text(encoding='utf-8')
           zh = Path('studio/app/src/locales/zh-CN.ts').read_text(encoding='utf-8')
-          css = Path('studio/app/src/styles/app.css').read_text(encoding='utf-8')
+          app_css = Path('studio/app/src/styles/app.css').read_text(encoding='utf-8')
+          observe_css = Path('studio/app/src/styles/observability.css').read_text(encoding='utf-8')
+          weiui_css = Path('studio/app/src/styles/vendor/weiui.generated.css').read_text(encoding='utf-8')
           for needle in ('"en-US"', '"zh-CN"'):
               assert needle in Path('studio/app/src/i18n.tsx').read_text(encoding='utf-8')
-          for key in ('nav.primaryLabel', 'project.pathPrivacy', 'workspace.projectionRequired'):
-              assert key in types and key in en and key in zh
-          assert '@media (max-width: 719px)' in css
-          assert 'nf-bottom-nav' in css
-          assert 'prefers-reduced-motion: reduce' in css
-          assert '100dvh' in css
-          print({'status': 'pass', 'locales': ['en-US', 'zh-CN'], 'mobile_focus_first': True})
+          for key in (
+              'nav.primaryLabel', 'project.pathPrivacy', 'workspace.projectionRequired',
+              'semantic.boundaryTitle', 'semantic.independentGate',
+              'diagnostics.notValidatedLiteraryQuality', 'diagnostics.notValidatedReadiness',
+              'production.laneReaderEngagement', 'production.laneCanon',
+          ):
+              assert key in types and key in en and key in zh, key
+          assert '@media (max-width: 719px)' in app_css
+          assert '@media (max-width: 719px)' in observe_css
+          assert 'nf-bottom-nav' in app_css
+          assert 'nf-production-lanes' in observe_css
+          assert 'prefers-reduced-motion: reduce' in weiui_css
+          assert '100dvh' in app_css
+          print({'status': 'pass', 'locales': ['en-US', 'zh-CN'], 'mobile_focus_first': True, 'observability_mobile': True, 'motion_owner': 'WeiUI'})
           PY
       - name: Bundle budgets
         run: |

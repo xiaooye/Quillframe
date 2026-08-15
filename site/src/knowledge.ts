@@ -28,7 +28,9 @@ export type DocIndex = {
 export type InlineNode =
   | { type: "text"; text: string }
   | { type: "code"; text: string }
-  | { type: "strong" | "em" | "del"; children: InlineNode[] }
+  | { type: "strong"; children: InlineNode[] }
+  | { type: "em"; children: InlineNode[] }
+  | { type: "del"; children: InlineNode[] }
   | { type: "link"; href: string; title?: string | null; children: InlineNode[] }
   | { type: "image"; href?: string | null; alt: string; title?: string | null }
   | { type: "br" };
@@ -75,7 +77,8 @@ export function loadKnowledgeIndex(): Promise<DocIndex> {
   return indexPromise;
 }
 
-export async function loadProductDocument(locale: KnowledgeLocale, id: string): Promise<ProductDocument> {
+export async function loadProductDocument(locale: KnowledgeLocale, id: string | undefined): Promise<ProductDocument> {
+  if (!id) throw new Error("Document id is required");
   const response = await fetch(`/generated/docs/${locale}/${encodeURIComponent(id)}.json`, { cache: "force-cache" });
   if (!response.ok) throw new Error(`Document failed: ${response.status}`);
   const payload = await response.json() as ProductDocument;
