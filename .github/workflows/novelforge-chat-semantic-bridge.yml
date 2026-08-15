@@ -39,9 +39,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Execute exact-revision NovelForge peer bridge
+      - name: Execute same-commit NovelForge peer bridge
         id: bridge
-        uses: ./.github/actions/project-peer-semantic
+        uses: $/.github/actions/project-peer-semantic
         with:
           mode: ${{ inputs.mode }}
           project-root: ${{ inputs.project_root }}
