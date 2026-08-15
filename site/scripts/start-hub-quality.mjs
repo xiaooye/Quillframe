@@ -26,14 +26,14 @@ check(entry.includes('href: "/inspect"'), "existing-project intent must use Proj
 check(entry.includes('href: "/agents"'), "coding-agent intent must use Agent Integration");
 check(entry.includes('href: "/playground"'), "explore intent must use Local Playground");
 check(entry.includes("不伪装未实现能力") && entry.includes("No fake capabilities"), "truthful product-boundary messaging is missing");
-check(entry.includes("authority ≠ capability"), "start flow must preserve authority/capability distinction");
+check(entry.includes("authority ≠ capability"), "start surface must preserve authority/capability distinction");
 check(!/setInterval\s*\(|requestAnimationFrame\s*\(/.test(entry), "start hub must not add idle animation or polling loops");
 
 check(main.includes('import StartHubEntry from "./StartHubEntry"'), "main entry must import StartHubEntry");
 check(main.includes('"/start"'), "standalone surface handoff must include /start");
 check(main.includes('path === "/start"'), "main entry must mount StartHubEntry at /start");
 check(main.includes('import "./styles/start-hub.css"'), "start hub styles must be loaded");
-check(main.includes('import "./styles/start-hub-kawaii.css"'), "start hub kawaii parity layer must be loaded");
+check(main.includes('import "./styles/start-hub-kawaii.css"'), "start hub kawaii palette layer must be loaded");
 
 check(docsActions.includes('href="/start"'), "documentation header must expose the product-first start hub");
 check(docsActions.includes('english ? "Start" : "开始"'), "documentation start action must remain natively localized");
@@ -42,32 +42,43 @@ check(docsLanding.includes('["开始中心"') && docsLanding.includes('["Start h
 
 for (const marker of [
   ".start-hub-hero",
-  ".start-hub-ribbon",
   ".start-path-grid",
-  ".start-hub-book",
-  ".start-flow-track",
-  "outline: 1px dashed",
-  "@media (max-width: 680px)",
+  ".start-path-card",
+  ".start-hub-boundary",
+  "grid-template-columns: repeat(2, minmax(0, 1fr))",
+  "@media (max-width: 760px)",
 ]) {
-  check(css.includes(marker), `start hub design marker missing: ${marker}`);
+  check(css.includes(marker), `start hub clean-layout marker missing: ${marker}`);
+}
+
+for (const removedMarker of [
+  "start-hub-ribbon",
+  "start-hub-book",
+  "start-hub-cloud",
+  "start-flow-track",
+  "start-hub-footer-callout",
+]) {
+  check(!entry.includes(removedMarker), `start hub should not restore decorative block ${removedMarker}`);
 }
 
 for (const marker of [
   "--kawaii-pink-strong",
-  ".start-hub-entry .product-appbar::after",
   ".start-hub-entry .studio-cta",
   ".start-hub-entry .start-path-card:nth-child(4)",
-  "var(--kawaii-shadow)",
+  "var(--kawaii-cream)",
 ]) {
-  check(kawaiiCss.includes(marker), `start hub kawaii parity marker missing: ${marker}`);
+  check(kawaiiCss.includes(marker), `start hub restrained kawaii marker missing: ${marker}`);
 }
+
+check(!kawaiiCss.includes("background-size: 32px 32px"), "start hub must not restore dense decorative grid texture");
+check(!kawaiiCss.includes("var(--kawaii-shadow)"), "start hub must not restore heavy framed-surface shadow treatment");
 
 if (failures.length) {
   for (const failure of failures) console.error(`start-hub-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_start_hub_quality_v1",
+    schema: "novelforge_start_hub_quality_v2",
     status: "pass",
     route: "/start",
     goal_first_paths: 4,
@@ -77,8 +88,9 @@ if (failures.length) {
     deterministic_playground: true,
     docs_discovery: true,
     authority_boundary_explicit: true,
-    publication_kawaii_language_aligned: true,
-    kawaii_story_loom_surface: true,
+    home_like_visual_density: true,
+    decorative_preview_removed: true,
+    restrained_kawaii_palette: true,
     responsive: true,
   }, null, 2));
 }
