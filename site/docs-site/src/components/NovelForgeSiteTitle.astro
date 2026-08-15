@@ -11,91 +11,15 @@ const docsLabel = english ? "Docs" : "文档";
 
 <div class="site-title nf-site-title">
   <a class="nf-brand-home" href="/" aria-label={productAria}>
-    <img src={brandMark} alt="" width="32" height="32" aria-hidden="true" />
+    <span class="nf-brand-mark-shell">
+      <img src={brandMark} alt="" width="32" height="32" aria-hidden="true" />
+    </span>
     <span class="nf-brand-name">NovelForge</span>
   </a>
+  <span class="nf-version-chip" aria-label="NovelForge 0.8.x">0.8.x</span>
   <span class="nf-brand-separator" aria-hidden="true"></span>
-  <a class="nf-docs-root-link" href={docsHref} aria-label={docsAria}>{docsLabel}</a>
+  <a class="nf-docs-root-link" href={docsHref} aria-label={docsAria}>
+    <span class="nf-docs-dot" aria-hidden="true">✦</span>
+    <span>{docsLabel}</span>
+  </a>
 </div>
-
-<style>
-  .nf-site-title {
-    display: inline-flex;
-    align-items: center;
-    gap: .58rem;
-    min-width: 0;
-  }
-
-  .nf-brand-home,
-  .nf-docs-root-link {
-    display: inline-flex;
-    align-items: center;
-    min-height: 2.5rem;
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .nf-brand-home {
-    gap: .62rem;
-    min-width: 0;
-  }
-
-  .nf-brand-home img {
-    width: 2rem;
-    height: 2rem;
-    flex: 0 0 auto;
-  }
-
-  .nf-brand-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .nf-brand-separator {
-    width: 1px;
-    height: 1.18rem;
-    flex: 0 0 auto;
-    background: color-mix(in srgb, var(--sl-color-gray-4) 72%, transparent);
-  }
-
-  .nf-docs-root-link {
-    padding: 0 .42rem;
-    border-radius: .5rem;
-    color: var(--sl-color-gray-2);
-    font-size: .8rem;
-    font-weight: 680;
-    letter-spacing: .01em;
-  }
-
-  .nf-brand-home:hover,
-  .nf-brand-home:focus-visible {
-    color: var(--sl-color-accent-high);
-  }
-
-  .nf-docs-root-link:hover,
-  .nf-docs-root-link:focus-visible {
-    color: var(--sl-color-white);
-    background: var(--nf-soft);
-  }
-
-  .nf-brand-home:focus-visible,
-  .nf-docs-root-link:focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--sl-color-accent) 68%, transparent);
-    outline-offset: 2px;
-  }
-
-  @media (max-width: 520px) {
-    .nf-brand-name {
-      display: none;
-    }
-
-    .nf-site-title {
-      gap: .38rem;
-    }
-
-    .nf-brand-separator {
-      height: 1rem;
-    }
-  }
-</style>
