@@ -10,6 +10,31 @@
     --atelier-canvas-wash-pink: color-mix(in oklab, var(--nf-lane-editorial-fill) 14%, transparent);
   }
 
+  /* Accessible skip link: visually absent until a keyboard user asks for it. */
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .skip-link {
+    position: fixed;
+    z-index: 1000;
+    inset-block-start: 12px;
+    inset-inline-start: 12px;
+    min-block-size: var(--nf-touch-target-min, 44px);
+    padding: 10px 14px;
+    border: 1px solid color-mix(in oklab, var(--wui-color-border) 78%, var(--nf-lane-runtime-stroke));
+    border-radius: 10px;
+    color: var(--wui-color-foreground);
+    background: color-mix(in oklab, var(--wui-surface-overlay) 94%, var(--atelier-canvas));
+    box-shadow: var(--atelier-shadow-sm);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(calc(-100% - 28px));
+    transition: opacity 120ms ease, transform 160ms var(--atelier-ease-soft);
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .skip-link:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
   :root[data-experience="story-loom-kawaii-atelier-v5"] body {
     background:
       radial-gradient(54rem 30rem at -8% -4%, var(--atelier-canvas-wash-blue), transparent 72%),
@@ -63,9 +88,40 @@
     background: transparent;
   }
 
-  /* Footer is a quiet endpoint; the actual card keeps its atelier personality. */
+  /* Never blur readable UI during scroll-driven reveal. */
+  @keyframes pe-reveal {
+    from { opacity: 0; transform: translateY(18px) scale(.994); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* View transitions also keep text rasterization crisp. */
+  @keyframes pe-view-old {
+    to { opacity: 0; transform: scale(.996); }
+  }
+
+  @keyframes pe-view-new {
+    from { opacity: 0; transform: scale(1.004); }
+  }
+
+  /* Footer belongs to the page canvas, not inside another rounded card. */
   :root[data-experience="story-loom-kawaii-atelier-v5"] .site-footer {
+    margin-block-start: clamp(42px, 6vw, 76px);
+    border-block-start: 0;
     background: transparent;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .footer-grid {
+    margin-block-end: 0;
+    padding-block: 30px 44px;
+    border: 0;
+    border-block-start: 1px solid color-mix(in oklab, var(--wui-color-border) 70%, transparent);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .footer-brand img {
+    filter: none;
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"].dark {
@@ -84,6 +140,10 @@
 
     :root[data-experience="story-loom-kawaii-atelier-v5"] body::before {
       opacity: .08;
+    }
+
+    :root[data-experience="story-loom-kawaii-atelier-v5"] .footer-grid {
+      padding-block: 24px 32px;
     }
   }
 
