@@ -97,8 +97,9 @@ jobs:
                       'task_mode': 'DRAFT',
                       'task_goal': 'Choose only evidence needed for the next action.',
                       'current_story_point': 'SCN-CI',
+                      'current_story_order': 9,
                       'perspective': {'scope': 'character', 'perspective_id': 'CHAR-CI'},
-                      'active_questions': [{'question_id': 'Q-CI', 'question': 'What does CHAR-CI know about the offer?', 'kind': 'state', 'as_of_story_point': 'SCN-CI'}],
+                      'active_questions': [{'question_id': 'Q-CI', 'question': 'What does CHAR-CI know about the offer?', 'kind': 'state', 'as_of_story_point': 'SCN-CI', 'as_of_story_order': 9}],
                   },
                   'memory_blocks': [{
                       'block_id': 'M-CI',
@@ -107,6 +108,7 @@ jobs:
                       'derived': True,
                       'source_refs': ['accepted:CI'],
                       'story_point': 'SCN-CI',
+                      'available_from_story_order': 9,
                       'visibility': {'scope': 'character', 'perspective_id': 'CHAR-CI'},
                       'model_view': {'label': 'offer', 'value': 'The first offer was lower.'},
                   }],
