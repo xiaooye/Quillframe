@@ -5,7 +5,7 @@ import type { MessageKey } from "./locales/types";
 import { useStudio } from "./studio";
 import { StudioIcon, type StudioIconName } from "./StudioIcon";
 
-type NavigationLabel = MessageKey | "Runtime" | "Control Plane" | "Architecture" | "Publication";
+type NavigationLabel = MessageKey | "Runtime" | "Control Plane" | "Inspector" | "Architecture" | "Publication";
 type NavigationEntry = readonly [string, NavigationLabel, StudioIconName];
 
 const productNavigation: ReadonlyArray<NavigationEntry> = [
@@ -17,6 +17,7 @@ const productNavigation: ReadonlyArray<NavigationEntry> = [
 ];
 
 const inspectionNavigation: ReadonlyArray<NavigationEntry> = [
+  ["/inspect", "Inspector", "diagnostics"],
   ["/architecture", "Architecture", "runtime"],
   ["/publication", "Publication", "workspace"],
   ["/runtime", "Runtime", "runtime"],
@@ -75,6 +76,7 @@ export const AppShell: ParentComponent = (props) => {
   const matches = (value: string) => !q() || value.toLowerCase().includes(q());
   const navLabel = (label: NavigationLabel) => {
     if (label === "Runtime") return "Runtime";
+    if (label === "Inspector") return locale() === "zh-CN" ? "检查项目" : "Inspector";
     if (label === "Architecture") return locale() === "zh-CN" ? "架构观测" : "Architecture";
     if (label === "Publication") return locale() === "zh-CN" ? "出版" : "Publication";
     if (label === "Control Plane") return locale() === "zh-CN" ? "控制台" : "Control Plane";
