@@ -1,0 +1,36 @@
+name: Progress stall one-shot integration
+
+on:
+  push:
+    branches: [agent/progress-stall-runtime]
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: ${{ !contains(github.event.head_commit.message, '[progress-stall-integrated]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/progress-stall-runtime
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply fail-closed progress/stall release integration
+        run: python scripts/_tmp_integrate_progress_stall.py
+      - name: Remove one-shot integration helpers
+        run: |
+          rm scripts/_tmp_integrate_progress_stall.py
+          rm .github/workflows/_tmp-progress-stall-integrate.yml
+      - name: Attempt branch-only commit
+        run: |
+          git config user.name 'novelforge-runtime-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'runtime: integrate progress stall release contract [progress-stall-integrated]'
+          git push origin HEAD:agent/progress-stall-runtime
