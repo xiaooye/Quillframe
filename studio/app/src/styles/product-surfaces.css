@@ -1,632 +1,93 @@
 @layer studio-product-surfaces {
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-inspector-surface,
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-inspector-toolbar {
-    min-inline-size: 0;
-    border: 1px solid var(--nf-studio-line-soft);
-    border-radius: var(--nf-studio-radius);
-    background: var(--nf-studio-panel);
-    box-shadow: none;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-inspector-toolbar {
-    display: grid;
-    gap: 14px;
-    padding: 16px 18px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-inspector-section {
-    min-inline-size: 0;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-inspector-section-head,
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-console-head {
-    min-block-size: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 12px 16px;
-    border-block-end: 1px solid var(--nf-studio-line-soft);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-inspector-section-head h2,
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-console-head h2 {
-    margin: 0;
-    font-size: 12.5px;
-    font-weight: 680;
-    letter-spacing: -.01em;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-overview-grid {
-    display: grid;
-    grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
-    border-block-end: 1px solid var(--nf-studio-line-soft);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-overview-grid > .nf-inspector-section + .nf-inspector-section {
-    border-inline-start: 1px solid var(--nf-studio-line-soft);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-inspector .nf-detail-list,
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-inspector .nf-path-grid,
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-policy-chips {
-    padding: 0 16px 14px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-inspector .nf-detail-list > div:first-child,
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-inspector .nf-path-row:first-child {
-    border-block-start: 0;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-paths-section {
-    border-block-end: 1px solid var(--nf-studio-line-soft);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-policy-chips {
-    padding-block-start: 4px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-opener {
-    grid-template-columns: minmax(220px, .6fr) minmax(340px, 1.4fr);
-    align-items: end;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-opener-copy {
-    display: grid;
-    gap: 3px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-opener .nf-field-help {
-    margin: 0;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-core-project-section {
-    display: grid;
-    gap: 12px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-section-kicker {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-section-kicker > strong {
-    font-size: 13px;
-    font-weight: 650;
-  }
-
-  /* Browser-native project import: useful without a host, authority-free by design. */
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-import {
-    overflow: clip;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-import-intro {
-    min-block-size: 132px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    padding: 22px 24px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-import-intro > div {
-    min-inline-size: 0;
-    max-inline-size: 720px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-import-intro h2 {
-    margin: 4px 0 6px;
-    font-size: clamp(1.08rem, 1.8vw, 1.35rem);
-    letter-spacing: -.025em;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-import-intro p,
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-privacy,
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-core-note {
-    margin: 0;
-    color: var(--wui-color-muted-foreground);
-    font-size: 11.5px;
-    line-height: 1.55;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-folder-picker {
-    flex: 0 0 auto;
-    cursor: pointer;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-folder-picker input {
-    position: absolute;
-    inline-size: 1px;
-    block-size: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-privacy {
-    padding: 10px 24px;
-    border-block-start: 1px solid var(--nf-studio-line-soft);
-    background: var(--nf-studio-panel-subtle);
-    font-size: 10.5px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-result {
-    border-block-start: 1px solid var(--nf-studio-line-soft);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    padding: 16px 20px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-summary > div:first-child {
-    min-inline-size: 0;
-    display: grid;
-    gap: 3px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-summary > div:first-child > strong {
-    overflow-wrap: anywhere;
-    font-size: 16px;
-    letter-spacing: -.02em;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-summary small {
-    color: var(--wui-color-muted-foreground);
-    font-size: 10.5px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-meta {
-    display: flex;
-    gap: 22px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-meta span {
-    display: grid;
-    justify-items: end;
-    gap: 1px;
-    color: var(--wui-color-muted-foreground);
-    font-size: 9.5px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-meta strong {
-    color: var(--wui-color-foreground);
-    font-family: var(--wui-font-family-mono);
-    font-size: 13px;
-    font-weight: 620;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-checks {
-    display: grid;
-    border-block: 1px solid var(--nf-studio-line-soft);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row {
-    min-inline-size: 0;
-    min-block-size: 58px;
-    display: grid;
-    grid-template-columns: 10px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 12px;
-    padding: 9px 20px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row + .nf-preflight-row {
-    border-block-start: 1px solid var(--nf-studio-line-soft);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row > div {
-    min-inline-size: 0;
-    display: grid;
-    gap: 3px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row strong,
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row small {
-    overflow-wrap: anywhere;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row strong {
-    font-size: 11.5px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row small {
-    color: var(--wui-color-muted-foreground);
-    font-size: 10.5px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-indicator {
-    inline-size: 7px;
-    block-size: 7px;
-    border-radius: 999px;
-    background: var(--wui-color-warning, var(--wui-color-muted-foreground));
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row[data-status="pass"] .nf-preflight-indicator {
-    background: var(--wui-color-success, var(--wui-color-primary));
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-core-note {
-    padding: 12px 20px 14px;
-  }
-
-  /* Local Playground: one continuous work surface with an inspectable trace. */
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-shell {
-    display: grid;
-    grid-template-columns: minmax(320px, .78fr) minmax(420px, 1.22fr);
-    overflow: clip;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-input-pane {
-    min-inline-size: 0;
-    display: grid;
-    align-content: start;
-    gap: 14px;
-    padding: 16px;
-    border-inline-end: 1px solid var(--nf-studio-line-soft);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-modebar {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 3px;
-    padding: 3px;
-    border: 1px solid var(--nf-studio-line-soft);
-    border-radius: 10px;
-    background: var(--nf-studio-panel-subtle);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-modebar .wui-button {
-    min-block-size: 34px;
-    padding-inline: 7px;
-    font-family: var(--wui-font-family-mono);
-    font-size: 10px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-modebar .wui-button[data-active="true"] {
-    border-color: var(--nf-studio-line-soft);
-    background: var(--nf-studio-panel);
-    color: var(--wui-color-foreground);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-editor {
-    display: grid;
-    gap: 7px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-editor .wui-textarea {
-    min-block-size: 300px;
-    resize: vertical;
-    padding: 13px 14px;
-    font-family: var(--wui-font-family-mono);
-    font-size: 12px;
-    line-height: 1.6;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-runbar {
-    display: grid;
-    gap: 12px;
-    padding-block-start: 2px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-runbar > div {
-    display: grid;
-    gap: 7px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-runbar > .wui-button {
-    inline-size: 100%;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-output-pane {
-    min-inline-size: 0;
-    display: grid;
-    align-content: start;
-    background: color-mix(in oklab, var(--nf-studio-panel-subtle) 42%, var(--nf-studio-panel));
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-trace {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    border-block-end: 1px solid var(--nf-studio-line-soft);
-    background: var(--nf-studio-panel);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-trace > div {
-    min-inline-size: 0;
-    min-block-size: 62px;
-    display: grid;
-    align-content: center;
-    gap: 3px;
-    padding: 10px 12px;
-    border-inline-end: 1px solid var(--nf-studio-line-soft);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-trace > div:last-child {
-    border-inline-end: 0;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-trace span {
-    color: var(--wui-color-muted-foreground);
-    font-family: var(--wui-font-family-mono);
-    font-size: 9px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-trace strong {
-    overflow-wrap: anywhere;
-    font-size: 10px;
-    font-weight: 620;
-    line-height: 1.35;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-panels {
-    display: grid;
-    padding: 10px 12px 14px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-panel {
-    min-inline-size: 0;
-    border-block-end: 1px solid var(--nf-studio-line-soft);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-panel:last-child {
-    border-block-end: 0;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-panel > summary {
-    min-block-size: 42px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    cursor: pointer;
-    list-style: none;
-    font-size: 11px;
-    font-weight: 620;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-panel > summary::-webkit-details-marker {
-    display: none;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-panel > summary::after {
-    content: "+";
-    color: var(--wui-color-muted-foreground);
-    font-family: var(--wui-font-family-mono);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-panel[open] > summary::after {
-    content: "−";
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-panel .nf-json-block {
-    margin: 0 0 12px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-contract-list {
-    display: grid;
-    gap: 1px;
-    margin-block-end: 12px;
-    overflow: clip;
-    border: 1px solid var(--nf-studio-line-soft);
-    border-radius: 9px;
-    background: var(--nf-studio-line-soft);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-contract-list code {
-    display: block;
-    padding: 9px 11px;
-    background: var(--nf-studio-panel);
-    font-size: 10.5px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-panel ul {
-    display: grid;
-    gap: 7px;
-    margin: 0 0 12px;
-    padding-inline-start: 18px;
-    color: var(--wui-color-muted-foreground);
-    font-size: 11px;
-    line-height: 1.5;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-empty {
-    min-block-size: 520px;
-    display: grid;
-    place-content: center;
-    justify-items: center;
-    gap: 6px;
-    padding: 32px;
-    text-align: center;
-    background: var(--nf-studio-panel-subtle);
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-empty strong {
-    font-size: 13px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-empty p,
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-footnote {
-    margin: 0;
-    color: var(--wui-color-muted-foreground);
-    font-size: 10.5px;
-    line-height: 1.55;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-empty p {
-    max-inline-size: 42ch;
-  }
-
-  /* Context behaves like a query console instead of a card form. */
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-context-toolbar {
-    grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) minmax(170px, .55fr) auto;
-    align-items: end;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-context-toolbar .nf-field-label {
-    min-inline-size: 0;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-context-result {
-    overflow: clip;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-console-head > div {
-    display: grid;
-    gap: 2px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-console-body {
-    padding: 12px;
-    background: color-mix(in oklab, var(--nf-studio-panel-subtle) 58%, var(--nf-studio-panel));
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-console-body .nf-json-block {
-    margin: 0;
-  }
-
-  /* Observability pages: denser, more console-like scanning. */
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-observe-section-head {
-    min-block-size: 92px;
-    padding: 16px 18px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-observe-section-head h2 {
-    font-size: 1.08rem;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-pack-row {
-    padding: 16px 18px;
-    column-gap: 18px;
-    row-gap: 12px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-diagnostic-facts > div {
-    min-block-size: 68px;
-    padding: 12px 14px;
-  }
-
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-validation-scope > article {
-    padding: 16px 18px;
-  }
-
-  @media (max-width: 1040px) {
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-opener,
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-context-toolbar {
-      grid-template-columns: 1fr 1fr;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-opener-copy {
-      grid-column: 1 / -1;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-shell {
-      grid-template-columns: minmax(280px, .72fr) minmax(380px, 1.28fr);
-    }
-  }
-
-  @media (max-width: 840px) {
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-shell {
-      grid-template-columns: 1fr;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-input-pane {
-      border-inline-end: 0;
-      border-block-end: 1px solid var(--nf-studio-line-soft);
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-editor .wui-textarea {
-      min-block-size: 220px;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-empty {
-      min-block-size: 260px;
-    }
-  }
-
-  @media (max-width: 719px) {
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-import-intro,
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-summary {
-      display: grid;
-      gap: 14px;
-      padding: 16px;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-folder-picker {
-      inline-size: 100%;
-      justify-content: center;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-privacy,
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-core-note {
-      padding-inline: 16px;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-meta {
-      justify-content: space-between;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-browser-project-meta span {
-      justify-items: start;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row {
-      grid-template-columns: 10px minmax(0, 1fr);
-      padding-inline: 16px;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-preflight-row > .wui-badge {
-      grid-column: 2;
-      justify-self: start;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-overview-grid,
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-opener,
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-context-toolbar {
-      grid-template-columns: 1fr;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-overview-grid > .nf-inspector-section + .nf-inspector-section {
-      border-inline-start: 0;
-      border-block-start: 1px solid var(--nf-studio-line-soft);
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-project-opener-copy {
-      grid-column: auto;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-inline-form {
-      grid-template-columns: 1fr;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-context-toolbar .nf-form-action {
-      inline-size: 100%;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-modebar {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-trace {
-      grid-template-columns: 1fr;
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-trace > div {
-      min-block-size: 44px;
-      grid-template-columns: 28px minmax(0, 1fr);
-      align-items: center;
-      gap: 8px;
-      border-inline-end: 0;
-      border-block-end: 1px solid var(--nf-studio-line-soft);
-    }
-
-    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-playground-trace > div:last-child {
-      border-block-end: 0;
-    }
+  .nf-inspector-surface,.nf-inspector-toolbar{min-inline-size:0;border:1px solid var(--nf-studio-line-soft);border-radius:var(--nf-studio-radius);background:var(--nf-studio-panel);box-shadow:none}
+  .nf-inspector-toolbar{display:grid;gap:14px;padding:16px 18px}
+  .nf-inspector-section{min-inline-size:0}
+  .nf-inspector-section-head,.nf-console-head{min-block-size:44px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;border-block-end:1px solid var(--nf-studio-line-soft)}
+  .nf-inspector-section-head h2,.nf-console-head h2{margin:0;font-size:12.5px;font-weight:680;letter-spacing:-.01em}
+
+  .nf-project-overview-grid{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);border-block-end:1px solid var(--nf-studio-line-soft)}
+  .nf-project-overview-grid>.nf-inspector-section+.nf-inspector-section{border-inline-start:1px solid var(--nf-studio-line-soft)}
+  .nf-project-inspector .nf-detail-list,.nf-project-inspector .nf-path-grid,.nf-policy-chips{padding:0 16px 14px}
+  .nf-project-inspector .nf-detail-list>div:first-child,.nf-project-inspector .nf-path-row:first-child{border-block-start:0}
+  .nf-project-paths-section{border-block-end:1px solid var(--nf-studio-line-soft)}
+  .nf-policy-chips{padding-block-start:4px}
+  .nf-project-opener{grid-template-columns:minmax(220px,.6fr) minmax(340px,1.4fr);align-items:end}
+  .nf-project-opener-copy,.nf-core-project-section{display:grid;gap:3px}
+  .nf-core-project-section{gap:12px}
+  .nf-project-opener .nf-field-help{margin:0}
+  .nf-section-kicker{display:flex;align-items:baseline;gap:10px}
+  .nf-section-kicker>strong{font-size:13px;font-weight:650}
+
+  .nf-browser-import,.nf-context-result,.nf-playground-shell{overflow:clip}
+  .nf-browser-import-intro,.nf-browser-project-summary{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:18px 20px}
+  .nf-browser-import-intro{min-block-size:118px}
+  .nf-browser-import-intro>div{min-inline-size:0;max-inline-size:720px}
+  .nf-browser-import-intro h2{margin:4px 0 6px;font-size:clamp(1.08rem,1.8vw,1.35rem);letter-spacing:-.025em}
+  .nf-browser-import-intro p,.nf-browser-privacy,.nf-browser-core-note,.nf-playground-footnote{margin:0;color:var(--wui-color-muted-foreground);font-size:11px;line-height:1.55}
+  .nf-folder-picker{flex:0 0 auto;cursor:pointer}
+  .nf-folder-picker input{position:absolute;inline-size:1px;block-size:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .nf-browser-privacy{padding:9px 20px;border-block-start:1px solid var(--nf-studio-line-soft);background:var(--nf-studio-panel-subtle);font-size:10px}
+  .nf-browser-project-result{border-block-start:1px solid var(--nf-studio-line-soft)}
+  .nf-browser-project-summary>div:first-child{min-inline-size:0;display:grid;gap:3px}
+  .nf-browser-project-summary>div:first-child>strong{overflow-wrap:anywhere;font-size:16px;letter-spacing:-.02em}
+  .nf-browser-project-summary small,.nf-preflight-row small{color:var(--wui-color-muted-foreground);font-size:10px}
+  .nf-browser-project-meta{display:flex;gap:22px}
+  .nf-browser-project-meta span{display:grid;justify-items:end;gap:1px;color:var(--wui-color-muted-foreground);font-size:9.5px}
+  .nf-browser-project-meta strong{color:var(--wui-color-foreground);font-family:var(--wui-font-family-mono);font-size:13px;font-weight:620}
+  .nf-preflight-checks{display:grid;border-block:1px solid var(--nf-studio-line-soft)}
+  .nf-preflight-row{min-inline-size:0;min-block-size:54px;display:grid;grid-template-columns:10px minmax(0,1fr) auto;align-items:center;gap:12px;padding:8px 20px}
+  .nf-preflight-row+.nf-preflight-row{border-block-start:1px solid var(--nf-studio-line-soft)}
+  .nf-preflight-row>div{min-inline-size:0;display:grid;gap:2px}
+  .nf-preflight-row strong,.nf-preflight-row small{overflow-wrap:anywhere}
+  .nf-preflight-row strong{font-size:11px}
+  .nf-preflight-indicator{inline-size:7px;block-size:7px;border-radius:50%;background:var(--wui-color-warning,var(--wui-color-muted-foreground))}
+  .nf-preflight-row[data-status="pass"] .nf-preflight-indicator{background:var(--wui-color-success,var(--wui-color-primary))}
+  .nf-browser-core-note{padding:11px 20px 13px}
+
+  .nf-playground-shell{display:grid;grid-template-columns:minmax(300px,.78fr) minmax(400px,1.22fr)}
+  .nf-playground-input-pane{min-inline-size:0;display:grid;align-content:start;gap:14px;padding:16px;border-inline-end:1px solid var(--nf-studio-line-soft)}
+  .nf-playground-modebar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:3px;border:1px solid var(--nf-studio-line-soft);border-radius:10px;background:var(--nf-studio-panel-subtle)}
+  .nf-playground-modebar .wui-button{min-block-size:34px;padding-inline:7px;font-family:var(--wui-font-family-mono);font-size:10px}
+  .nf-playground-modebar .wui-button[data-active="true"]{border-color:var(--nf-studio-line-soft);background:var(--nf-studio-panel);color:var(--wui-color-foreground)}
+  .nf-playground-editor,.nf-playground-runbar,.nf-playground-runbar>div{display:grid;gap:7px}
+  .nf-playground-editor .wui-textarea{min-block-size:280px;resize:vertical;padding:13px 14px;font-family:var(--wui-font-family-mono);font-size:12px;line-height:1.6}
+  .nf-playground-runbar{gap:12px}.nf-playground-runbar>.wui-button{inline-size:100%}
+  .nf-playground-output-pane{min-inline-size:0;display:grid;align-content:start;background:color-mix(in oklab,var(--nf-studio-panel-subtle) 42%,var(--nf-studio-panel))}
+  .nf-playground-trace{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-block-end:1px solid var(--nf-studio-line-soft);background:var(--nf-studio-panel)}
+  .nf-playground-trace>div{min-inline-size:0;min-block-size:58px;display:grid;align-content:center;gap:3px;padding:9px 11px;border-inline-end:1px solid var(--nf-studio-line-soft)}
+  .nf-playground-trace>div:last-child{border-inline-end:0}
+  .nf-playground-trace span{color:var(--wui-color-muted-foreground);font-family:var(--wui-font-family-mono);font-size:9px}
+  .nf-playground-trace strong{overflow-wrap:anywhere;font-size:10px;font-weight:620;line-height:1.35}
+  .nf-playground-panels{display:grid;padding:9px 12px 13px}
+  .nf-playground-panel{min-inline-size:0;border-block-end:1px solid var(--nf-studio-line-soft)}
+  .nf-playground-panel:last-child{border-block-end:0}
+  .nf-playground-panel>summary{min-block-size:40px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none;font-size:11px;font-weight:620}
+  .nf-playground-panel>summary::-webkit-details-marker{display:none}
+  .nf-playground-panel>summary::after{content:"+";color:var(--wui-color-muted-foreground);font-family:var(--wui-font-family-mono)}
+  .nf-playground-panel[open]>summary::after{content:"−"}
+  .nf-playground-panel .nf-json-block{margin:0 0 10px}
+  .nf-playground-contract-list{display:grid;gap:1px;margin-block-end:10px;overflow:clip;border:1px solid var(--nf-studio-line-soft);border-radius:8px;background:var(--nf-studio-line-soft)}
+  .nf-playground-contract-list code{display:block;padding:8px 10px;background:var(--nf-studio-panel);font-size:10.5px}
+  .nf-playground-panel ul{display:grid;gap:6px;margin:0 0 10px;padding-inline-start:18px;color:var(--wui-color-muted-foreground);font-size:11px;line-height:1.5}
+  .nf-playground-empty{min-block-size:480px;display:grid;place-content:center;justify-items:center;gap:6px;padding:28px;text-align:center;background:var(--nf-studio-panel-subtle)}
+  .nf-playground-empty strong{font-size:13px}.nf-playground-empty p{max-inline-size:42ch;margin:0;color:var(--wui-color-muted-foreground);font-size:10.5px;line-height:1.55}
+
+  .nf-context-toolbar{grid-template-columns:minmax(220px,1fr) minmax(220px,1fr) minmax(170px,.55fr) auto;align-items:end}
+  .nf-context-toolbar .nf-field-label{min-inline-size:0}
+  .nf-console-head>div{display:grid;gap:2px}
+  .nf-console-body{padding:12px;background:color-mix(in oklab,var(--nf-studio-panel-subtle) 58%,var(--nf-studio-panel))}
+  .nf-console-body .nf-json-block{margin:0}
+
+  .nf-observe-section-head{min-block-size:92px;padding:16px 18px}.nf-observe-section-head h2{font-size:1.08rem}
+  .nf-pack-row{padding:16px 18px;column-gap:18px;row-gap:12px}
+  .nf-diagnostic-facts>div{min-block-size:68px;padding:12px 14px}.nf-validation-scope>article{padding:16px 18px}
+
+  @media(max-width:1040px){.nf-project-opener,.nf-context-toolbar{grid-template-columns:1fr 1fr}.nf-project-opener-copy{grid-column:1/-1}}
+  @media(max-width:840px){.nf-playground-shell{grid-template-columns:1fr}.nf-playground-input-pane{border-inline-end:0;border-block-end:1px solid var(--nf-studio-line-soft)}.nf-playground-editor .wui-textarea{min-block-size:210px}.nf-playground-empty{min-block-size:240px}}
+  @media(max-width:719px){
+    .nf-browser-import-intro,.nf-browser-project-summary{display:grid;gap:14px;padding:16px}.nf-folder-picker{inline-size:100%;justify-content:center}.nf-browser-privacy,.nf-browser-core-note{padding-inline:16px}
+    .nf-browser-project-meta{justify-content:space-between}.nf-browser-project-meta span{justify-items:start}.nf-preflight-row{grid-template-columns:10px minmax(0,1fr);padding-inline:16px}.nf-preflight-row>.wui-badge{grid-column:2;justify-self:start}
+    .nf-project-overview-grid,.nf-project-opener,.nf-context-toolbar{grid-template-columns:1fr}.nf-project-overview-grid>.nf-inspector-section+.nf-inspector-section{border-inline-start:0;border-block-start:1px solid var(--nf-studio-line-soft)}.nf-project-opener-copy{grid-column:auto}.nf-inline-form{grid-template-columns:1fr}.nf-context-toolbar .nf-form-action{inline-size:100%}
+    .nf-playground-modebar{grid-template-columns:repeat(2,minmax(0,1fr))}.nf-playground-trace{grid-template-columns:1fr}.nf-playground-trace>div{min-block-size:42px;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:8px;border-inline-end:0;border-block-end:1px solid var(--nf-studio-line-soft)}.nf-playground-trace>div:last-child{border-block-end:0}
   }
 }
