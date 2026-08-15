@@ -106,16 +106,7 @@ jobs:
         run: npm run godot:build
 
       - name: Verify Cloudflare Pages asset ceiling
-        run: |
-          set -euo pipefail
-          limit=$((25 * 1024 * 1024))
-          largest=$(find dist -type f -printf '%s %p\n' | sort -nr | head -1)
-          bytes=${largest%% *}
-          echo "Largest production asset: ${largest}"
-          if [ "${bytes}" -ge "${limit}" ]; then
-            echo "Production asset exceeds Cloudflare Pages 25 MiB individual-file limit." >&2
-            exit 1
-          fi
+        run: bash scripts/verify-cloudflare-assets.sh dist
 
       - name: Ensure Cloudflare Pages project
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

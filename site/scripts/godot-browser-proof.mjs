@@ -16,9 +16,10 @@ const width = Number(arg("width", "1440"));
 const height = Number(arg("height", "900"));
 const timeoutMs = Number(arg("timeout-ms", "90000"));
 const expectLayout = arg("expect-layout");
+const verifyHistory = arg("verify-history") === "true";
 
 if (!chrome || !url || !output) {
-  console.error("usage: CHROME=/path/to/chrome node godot-browser-proof.mjs --url URL --output screenshot.png [--width 1440 --height 900 --timeout-ms 90000 --expect-layout desktop|compact|phone]");
+  console.error("usage: CHROME=/path/to/chrome node godot-browser-proof.mjs --url URL --output screenshot.png [--width 1440 --height 900 --timeout-ms 90000 --expect-layout desktop|compact|phone --verify-history true]");
   process.exit(2);
 }
 
@@ -104,13 +105,25 @@ function command(method, params = {}) {
   });
 }
 
+async function evaluate(expression) {
+  return command("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
+}
+
 async function runtimeState() {
-  const response = await command("Runtime.evaluate", {
-    expression: `JSON.stringify({runtime:document.documentElement.dataset.novelforgeRuntime||null,engine:document.documentElement.dataset.novelforgeEngine||null,layout:document.documentElement.dataset.novelforgeLayout||null,status:document.getElementById('nf-status')?.textContent||null,loader:document.getElementById('nf-loader')?.className||null,path:location.pathname,innerWidth:window.innerWidth,innerHeight:window.innerHeight,dpr:window.devicePixelRatio,canvasWidth:document.getElementById('canvas')?.width||0,canvasHeight:document.getElementById('canvas')?.height||0})`,
-    returnByValue: true,
-  });
+  const response = await evaluate(`JSON.stringify({runtime:document.documentElement.dataset.novelforgeRuntime||null,engine:document.documentElement.dataset.novelforgeEngine||null,layout:document.documentElement.dataset.novelforgeLayout||null,history:document.documentElement.dataset.novelforgeHistory||null,route:document.documentElement.dataset.novelforgeRoute||null,status:document.getElementById('nf-status')?.textContent||null,loader:document.getElementById('nf-loader')?.className||null,path:location.pathname,proofToken:window.__novelforgeHistoryProof||null,innerWidth:window.innerWidth,innerHeight:window.innerHeight,dpr:window.devicePixelRatio,canvasWidth:document.getElementById('canvas')?.width||0,canvasHeight:document.getElementById('canvas')?.height||0})`);
   const value = response?.result?.value;
   return value ? JSON.parse(value) : null;
+}
+
+async function waitForState(predicate, description, deadlineMs = 8000) {
+  const deadline = Date.now() + deadlineMs;
+  let state = null;
+  while (Date.now() < deadline) {
+    state = await runtimeState();
+    if (predicate(state)) return state;
+    await sleep(100);
+  }
+  throw new Error(`${description}: ${JSON.stringify(state)}`);
 }
 
 try {
@@ -157,6 +170,26 @@ try {
     throw new Error(`Godot Web responsive layout mismatch: expected ${expectLayout}, got ${state?.layout ?? "unset"}; ${JSON.stringify(state)}`);
   }
 
+  let historyProof = false;
+  if (verifyHistory) {
+    if (state?.history !== "live") {
+      throw new Error(`Godot Web history bridge is not live: ${JSON.stringify(state)}`);
+    }
+    const originalPath = state.path || "/";
+    const alternatePath = originalPath === "/studio" ? "/architecture" : "/studio";
+    await evaluate(`window.__novelforgeHistoryProof='alive'; history.pushState({}, '', ${JSON.stringify(alternatePath)}); window.dispatchEvent(new PopStateEvent('popstate'));`);
+    state = await waitForState(
+      (candidate) => candidate?.path === alternatePath && candidate?.route === alternatePath && candidate?.proofToken === "alive",
+      "Godot Web did not route the live scene after a history event",
+    );
+    await evaluate("history.back()");
+    state = await waitForState(
+      (candidate) => candidate?.path === originalPath && candidate?.route === originalPath && candidate?.proofToken === "alive",
+      "Godot Web browser back did not restore the live scene without a reload",
+    );
+    historyProof = true;
+  }
+
   const capture = await command("Page.captureScreenshot", {
     format: "png",
     fromSurface: true,
@@ -166,7 +199,7 @@ try {
   fs.writeFileSync(output, Buffer.from(capture.data, "base64"));
 
   const proof = {
-    schema: "novelforge_godot_browser_proof_v2",
+    schema: "novelforge_godot_browser_proof_v3",
     status: "pass",
     url,
     requested_viewport: `${width}x${height}`,
@@ -174,6 +207,8 @@ try {
     runtime: state.runtime,
     engine: state.engine,
     layout: state.layout,
+    history: state.history,
+    history_proof: historyProof,
     path: state.path,
     canvas: `${state.canvasWidth}x${state.canvasHeight}`,
     screenshot_bytes: fs.statSync(output).size,
