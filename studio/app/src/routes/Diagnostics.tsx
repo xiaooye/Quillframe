@@ -31,7 +31,7 @@ export default function Diagnostics() {
         setError(JSON.stringify(response.error));
         return;
       }
-      setResult(response.data);
+      setResult(response.data ?? undefined);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
