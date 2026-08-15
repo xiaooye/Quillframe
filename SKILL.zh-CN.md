@@ -1,4 +1,4 @@
-# NovelForge Skill Contract · 7.3 中文版
+# NovelForge Skill Contract · 中文版
 
 <p><kbd>TIER C · 框架契约</kbd>&nbsp;&nbsp;<kbd>AI-NATIVE</kbd>&nbsp;&nbsp;<kbd>CONTRACT-FIRST</kbd></p>
 
@@ -59,7 +59,7 @@ NovelForge 内不得内置任何具体小说、人物、剧情、Canon 或用户
 
 ## 04 · AI-native semantic contract
 
-NovelForge 7.3 使用**按需渐进加载的 semantic contract packs**。
+当前开发架构使用**按需渐进加载的 semantic contract packs**。
 
 Catalog：
 
