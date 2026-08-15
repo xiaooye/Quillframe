@@ -195,6 +195,7 @@ jobs:
           }
 
           run_chrome workspace-en-desktop 1440,900 'http://127.0.0.1:4177/workspace?lang=en-US'
+          run_chrome playground-en-desktop 1440,900 'http://127.0.0.1:4177/playground?lang=en-US'
           run_chrome agents-en-desktop 1440,900 'http://127.0.0.1:4177/agents?lang=en-US'
           run_chrome inspector-en-desktop 1440,900 'http://127.0.0.1:4177/inspect?lang=en-US'
           run_chrome control-en-desktop 1440,900 'http://127.0.0.1:4177/control?lang=en-US'
@@ -210,6 +211,7 @@ jobs:
           run_chrome diagnostics-zh-mobile 390,844 'http://127.0.0.1:4177/diagnostics?lang=zh-CN'
 
           dump_dom workspace-en 1440,900 'http://127.0.0.1:4177/workspace?lang=en-US'
+          dump_dom playground-en 1440,900 'http://127.0.0.1:4177/playground?lang=en-US'
           dump_dom agents-en 1440,900 'http://127.0.0.1:4177/agents?lang=en-US'
           dump_dom inspector-en 1440,900 'http://127.0.0.1:4177/inspect?lang=en-US'
           dump_dom control-en 1440,900 'http://127.0.0.1:4177/control?lang=en-US'
@@ -230,6 +232,7 @@ jobs:
           root = Path('/tmp/studio-bound-qa')
           dom = lambda name: (root / f'{name}-dom.html').read_text(encoding='utf-8', errors='replace')
           workspace = dom('workspace-en')
+          playground = dom('playground-en')
           agents = dom('agents-en')
           inspector = dom('inspector-en')
           control = dom('control-en')
@@ -243,9 +246,15 @@ jobs:
           diagnostics = dom('diagnostics-en')
           diagnostics_zh = dom('diagnostics-zh')
 
-          assert 'Local Playground' in workspace
-          assert 'Run preview' in workspace
-          assert 'deterministic browser preview' in workspace
+          assert 'Story Workspace' in workspace
+          assert 'Work with the story, not the runtime plumbing' in workspace
+          assert 'Every view is read-only and preserves Project authority' in workspace
+          assert 'Read-only · authority=false' in workspace
+          assert 'Local Playground' not in workspace
+
+          assert 'Local Playground' in playground
+          assert 'Run preview' in playground
+          assert 'deterministic browser preview' in playground
 
           assert 'One run, explicit state, observable boundaries' in agents
           assert 'Run + Trace' in agents
@@ -307,6 +316,7 @@ jobs:
 
           for image in (
               'workspace-en-desktop.png',
+              'playground-en-desktop.png',
               'agents-en-desktop.png',
               'inspector-en-desktop.png',
               'control-en-desktop.png',
@@ -346,6 +356,14 @@ jobs:
 
           workspace_netlog = (root / 'workspace-en-desktop-netlog.json').read_text(encoding='utf-8', errors='replace')
           assert '/api/' not in workspace_netlog.replace('/api/bridge/invoke', ''), 'Workspace route observed an unexpected API path'
+          playground_netlog = (root / 'playground-en-desktop-netlog.json').read_text(encoding='utf-8', errors='replace')
+          assert '/api/' not in playground_netlog.replace('/api/bridge/invoke', ''), 'Playground route observed an unexpected API path'
+
+          workspace_source = Path('studio/app/src/routes/NarrativeWorkspace.tsx').read_text(encoding='utf-8')
+          for operation in ('story.workspace', 'context.trace', 'scene.simulation.inspect', 'state.candidate.inspect', 'continuity.verify'):
+              assert operation in workspace_source, f'Story Workspace missing public bridge operation {operation}'
+          for forbidden in ('.novelforge/runtime.db', 'sqlite3', 'localStorage.', 'sessionStorage.', 'project.mutate', 'command.invoke', 'session.resume'):
+              assert forbidden not in workspace_source, f'Story Workspace bypasses read-only projection boundary: {forbidden}'
 
           agents_source = Path('studio/app/src/routes/Agents.tsx').read_text(encoding='utf-8')
           assert 'invokeBridge' not in agents_source, 'Agents route must not invoke Core operations'
@@ -382,10 +400,11 @@ jobs:
           assert 'quality_score' not in inspector_source and 'release_eligibility' not in inspector_source
 
           (root / 'runtime-proof.txt').write_text(
-              'schema=novelforge_studio_bound_browser_qa_v3\n'
+              'schema=novelforge_studio_bound_browser_qa_v4\n'
               'surface=local_app\n'
               'core_host=bound\n'
-              'workspace_surface=local_playground\n'
+              'workspace_surface=story_workspace_read_only\n'
+              'playground_surface=deterministic_browser_preview\n'
               'inspector_surface=real_core_projection\n'
               'architecture_surface=real_run_observatory\n'
               'publication_surface=real_deterministic_compiler\n'
@@ -398,6 +417,8 @@ jobs:
               'runtime_query_transport=public_host_bridge\n'
               'runtime_command_transport=public_host_bridge\n'
               'publication_preview_transport=public_host_bridge\n'
+              'story_workspace_transport=public_host_bridge\n'
+              'story_workspace_authority=false\n'
               'agent_runtime_model=novelforge_native\n'
               'capability_boundary_source=bridge.describe+capabilities.inspect\n'
               'semantic_source=semantic.catalog\n'
@@ -405,7 +426,7 @@ jobs:
               'authority=false\n',
               encoding='utf-8',
           )
-          print({'schema': 'novelforge_studio_bound_browser_qa_v3', 'status': 'pass', 'authority': False})
+          print({'schema': 'novelforge_studio_bound_browser_qa_v4', 'status': 'pass', 'authority': False})
           PY
       - name: Upload bound browser QA evidence
         uses: actions/upload-artifact@v4
