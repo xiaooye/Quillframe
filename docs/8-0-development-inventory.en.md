@@ -31,11 +31,21 @@ PR #11 migrated live machine-facing names away from the old Novel OS namespace w
 
 PR #24 completed the remaining machine-contract cleanup: `os_behavior_write` → `framework_behavior_write`, semantic job/result IDs moved from `novel-os-*` to `novelforge-*`, the live `.novel-os/` ignore surface was removed, and namespace hygiene prevents those old machine identifiers from returning. No compatibility aliases were added.
 
-### Task-aware, perspective-safe context grounding
+### Task-aware, perspective-safe, story-ordered context grounding
 
 PR #12 upgraded context selection so active grounding questions are explicit, visibility is enforced before semantic selection, perspective-incompatible evidence cannot enter the model packet, and selected support can be distinguished from support later dropped by the hard budget.
 
-The model owns semantic relevance; deterministic code owns visibility, budgets, provenance, authority class, and packet construction.
+PR #27 tightened that contract with deterministic temporal story-order eligibility and per-question evidence checks. Future/incompatible pinned context now fails closed, and the grounding result explicitly reports when hard budgets prevent required evidence from entering the packet.
+
+The model owns semantic relevance; deterministic code owns visibility, story-order eligibility, budgets, provenance, authority class, and packet construction.
+
+### Evidence-bound character and long-horizon reasoning
+
+PR #28 separates a character's epistemic status from acquisition mode and binds proposed actions to story-ordered, character-visible evidence. Future, unknown, or otherwise invalid evidence cannot be cited as positive support for an action merely because it exists somewhere in Framework state.
+
+PR #29 requires story-ordered evidence and complete requirement coverage for long-horizon continuity reconciliation, preserves uncertainty as a legitimate typed state, and separates shared relationship state from each character's individual perception of that relationship.
+
+These changes strengthen evidence discipline inside the existing semantic-contract architecture; they do not add another agent or create a new authority layer.
 
 ### Metadata-only Run Receipts
 
@@ -74,6 +84,8 @@ Unsupported operations fail closed. Browser/remote-safe projections do not expos
 
 The machine manifest, Skill metadata, CLI, Project SDK default, exposed MCP server version, and documentation governance metadata now share one `0.8.0` development identity. Documentation also registers the current Studio authority sources and keeps `studio/` inside bilingual manifest-coverage QA.
 
+The Studio product documentation now records **Tauri + React + WeiUI** as the selected future installable-shell direction while keeping that decision separate from implementation status. `assets/brand/tokens.json` remains the current NovelForge token source; no generated WeiUI theme/converter artifact is claimed until one actually lands on `main`.
+
 ## Active gaps and dependencies
 
 These items are **not complete** and must not be described as shipped stable capabilities.
@@ -95,6 +107,14 @@ Issue #16 defines the desired deterministic publication pipeline: `Accepted manu
 
 No official `novelforge_publication_ir_v1` implementation is assumed complete by this document. Publication preview, EPUB/Web/print rendering, and publication validation remain future work until the owning Core implementation lands.
 
+### Installable Studio shell · selected, implementation pending
+
+The product direction is Tauri + React 19 + WeiUI. The intended visual dependency is NovelForge Story Loom tokens → deterministic WeiUI-compatible W3C token representation → WeiUI token/CSS/React substrate → Tauri shell.
+
+No Tauri application, app lockfile, NovelForge→WeiUI converter, or generated theme artifact is treated as merged merely because this direction is documented. When implementation lands, release truth must bind to the exact dependency pins, generated/source relationship, responsive/i18n/accessibility checks, tree-shaking evidence, and idle CPU/memory/process-lifecycle measurements.
+
+Tauri, React, and WeiUI remain Product dependencies, not prerequisites for Generic Core correctness, CLI, the Framework bundle, or the Agent Skill.
+
 ### Write-capable / production-hosted Studio
 
 The merged Studio slices remain read-only. Generic invoke/write, project mutation, settlement commands, production cloud hosting, authentication, collaboration, and vendor-specific write adapters are not part of the current product contract.
@@ -110,7 +130,7 @@ Issue #8 remains the umbrella for MCP registry/management and later product surf
 - compatibility aliases are not added automatically;
 - historical changelog/spec records preserve their original meaning;
 - project/user data never becomes Generic Framework source;
-- documentation must distinguish merged implementation, active dependency, and proposal;
+- documentation must distinguish merged implementation, selected product direction, active dependency, and proposal;
 - no issue, design document, prototype, or candidate schema becomes authority merely by existing;
 - current machine version surfaces should stay aligned rather than accumulating parallel development version labels.
 
@@ -120,6 +140,6 @@ A future stable migration guide should be generated only after a release contrac
 
 `0.8.0` means the active pre-1.0 development identity is normalized. It does **not** mean every 8.0-line product goal is finished or that APIs are frozen.
 
-Before NovelForge makes a stronger stable-release claim, the relevant scope still needs explicit decisions and evidence around the Run Receipt/query surface, Publication inclusion/exclusion, Studio write boundaries, exact bundle/CI evidence, and synchronized customer-facing English/Simplified Chinese review.
+Before NovelForge makes a stronger stable-release claim, the relevant scope still needs explicit decisions and evidence around the Run Receipt/query surface, Publication inclusion/exclusion, Studio write boundaries, installable-shell implementation/performance evidence, exact bundle/CI evidence, and synchronized customer-facing English/Simplified Chinese review.
 
 Until then: **0.8.0 = active pre-1.0 development on latest `main`.**
