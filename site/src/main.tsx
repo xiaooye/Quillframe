@@ -1,7 +1,7 @@
 import "./appearance-v5";
 import { render } from "solid-js/web";
 import ProductApp from "./ProductApp";
-import { ProductFailureBoundary, ProductNotFound, ProductSkipLink } from "./ProductResilience";
+import { ProductFailureBoundary, ProductNotFound } from "./ProductResilience";
 import "./styles/index.css";
 
 const root = document.getElementById("root");
@@ -30,7 +30,6 @@ function normalizedPath() {
 
 render(() => (
   <ProductFailureBoundary>
-    <ProductSkipLink />
     {productRoutes.has(normalizedPath()) ? <ProductApp /> : <ProductNotFound />}
   </ProductFailureBoundary>
 ), root);
