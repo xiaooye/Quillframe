@@ -13,6 +13,7 @@ const main = read("src/main.tsx");
 const config = read("docs-site/astro.config.mjs");
 const contentConfig = read("docs-site/src/content.config.ts");
 const customCss = read("docs-site/src/styles/custom.css");
+const siteTitle = read("docs-site/src/components/NovelForgeSiteTitle.astro");
 const actions = read("docs-site/src/components/NovelForgeActions.astro");
 const landing = read("docs-site/src/components/DocsLanding.astro");
 const zhLandingRoute = read("docs-site/src/pages/index.astro");
@@ -49,12 +50,16 @@ requireCheck(config.includes('base: "/docs"'), "Starlight must own the /docs sur
 requireCheck(config.includes('outDir: "../dist/docs"'), "Starlight output must compose into site/dist/docs");
 requireCheck(config.includes('lang: "zh-CN"') && config.includes('lang: "en"'), "Starlight must keep zh-CN and English locales");
 requireCheck(config.includes("starlight({"), "docs app must remain powered by Starlight");
+requireCheck(config.includes('SiteTitle: "./src/components/NovelForgeSiteTitle.astro"'), "docs header must override SiteTitle so product and docs homes remain distinct");
 requireCheck(contentConfig.includes("docsLoader()") && contentConfig.includes("docsSchema()"), "Starlight content collection must use official loader and schema");
 requireCheck(customCss.includes("--sl-content-width: 52rem"), "documentation reading width must stay deliberately bounded");
 requireCheck(customCss.includes(':lang(zh-CN) .sl-markdown-content'), "Chinese typography override must remain explicit");
 requireCheck(customCss.includes('a[aria-current="page"]'), "documentation navigation must retain a strong current-page state");
 requireCheck(customCss.includes(".nf-link-grid") && customCss.includes(".nf-link-card"), "curated docs landing must retain stable task-path card styling");
 requireCheck(customCss.includes(".nf-tier-grid") && customCss.includes(".nf-reference-callout"), "curated docs landing must retain its layered reference hierarchy");
+requireCheck(siteTitle.includes('class="nf-brand-home" href="/"'), "NovelForge docs brand must navigate to the main product home");
+requireCheck(siteTitle.includes('english ? "/docs/en/" : "/docs/"'), "docs header must retain a locale-aware documentation-home link");
+requireCheck(siteTitle.includes('english ? "Docs" : "文档"'), "docs header must label the documentation namespace natively");
 requireCheck(actions.includes('english ? "Product" : "产品"'), "Product header action must remain locale-aware");
 
 requireCheck(!main.includes("KnowledgePortal"), "legacy Knowledge Portal must not mount beside the product router");
@@ -106,5 +111,6 @@ if (failures.length > 0) {
     localized_header_actions: true,
     curated_landing: true,
     product_first_inspector_handoff: true,
+    product_home_brand_handoff: true,
   }, null, 2));
 }
