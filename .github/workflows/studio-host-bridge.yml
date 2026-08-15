@@ -48,6 +48,53 @@ jobs:
         run: |
           if ! python studio/host_bridge.py self-test > studio-host-bridge-test.json; then
             cat studio-host-bridge-test.json
+            python - <<'PY'
+          import json
+          import studio.host_bridge as bridge
+
+          runtime_ops={
+              'runtime.sessions.list',
+              'runtime.session.get',
+              'runtime.events.list',
+              'runtime.handoff.inspect',
+              'run.receipt.get',
+          }
+          setup_actions={'init','session-put','event-ingest','handoff-submit'}
+          query_trace=[]
+          setup_trace=[]
+          original_invoke=bridge.invoke
+          original_setup=bridge._run_setup
+
+          def traced_invoke(request):
+              result=original_invoke(request)
+              operation=request.get('operation')
+              if operation in runtime_ops:
+                  data=result.get('data') if isinstance(result.get('data'),dict) else {}
+                  error=result.get('error') if isinstance(result.get('error'),dict) else {}
+                  query_trace.append({
+                      'operation': operation,
+                      'status': result.get('status'),
+                      'error_code': error.get('code'),
+                      'data_schema': data.get('schema'),
+                      'count': data.get('count'),
+                  })
+              return result
+
+          def traced_setup(argv, *, cwd):
+              ok=original_setup(argv,cwd=cwd)
+              action=next((item for item in argv if item in setup_actions),'unknown')
+              setup_trace.append({'action':action,'ok':ok})
+              return ok
+
+          bridge.invoke=traced_invoke
+          bridge._run_setup=traced_setup
+          aggregate=bridge.self_test()
+          print(json.dumps({
+              'runtime_setup_trace': setup_trace,
+              'runtime_query_trace': query_trace,
+              'aggregate_checks': aggregate.get('checks',{}),
+          },ensure_ascii=False,indent=2))
+          PY
             exit 1
           fi
           cat studio-host-bridge-test.json
