@@ -44,10 +44,22 @@ if (!sample.includes("NovelForge") || !sample.includes("starlight")) {
   process.exit(1);
 }
 
+for (const [label, file] of [
+  ["zh-CN", path.join(outputRoot, "index.html")],
+  ["English", path.join(outputRoot, "en", "index.html")],
+]) {
+  const landing = fs.readFileSync(file, "utf8");
+  if (!landing.includes("data-nf-docs-home")) {
+    console.error(`verify-starlight-build: ${label} docs root is not the curated landing page`);
+    process.exit(1);
+  }
+}
+
 console.log(JSON.stringify({
   schema: "novelforge_starlight_build_verification_v1",
   status: "pass",
   output: "site/dist/docs",
   html_pages: htmlPages,
   expected_localized_pages: expectedMinimum,
+  curated_landing_pages: 2,
 }, null, 2));
