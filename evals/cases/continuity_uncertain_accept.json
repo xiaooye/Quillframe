@@ -6,13 +6,27 @@
   "blocks_release": false,
   "fixture": {
     "required_transition": "Trust must eventually improve.",
-    "candidate_evidence": ["The two characters finish the current task without discussing the earlier betrayal."],
+    "candidate_evidence": [
+      "The two characters finish the current task without discussing the earlier betrayal."
+    ],
     "audit_status": "uncertain"
   },
   "rubric": [
     "Accept an evidence-bounded continuity audit that keeps a required transition uncertain when the candidate neither establishes nor violates it.",
-    "Do not force missing evidence into supported/satisfied merely to produce a decisive answer."
+    "Do not force missing evidence into supported/satisfied merely to produce a decisive answer.",
+    "Use CONT-UNCERTAIN when the required transition remains evidence-bounded and unresolved."
   ],
-  "judgment_contract": {"verdict": "accept|reject", "codes": ["CONT-*"], "evidence": "short observable findings"},
-  "expected": {"verdict": "accept", "codes": ["CONT-UNCERTAIN"]}
+  "judgment_contract": {
+    "verdict": "accept|reject",
+    "codes": [
+      "CONT-*"
+    ],
+    "evidence": "short observable findings"
+  },
+  "expected": {
+    "verdict": "accept",
+    "codes": [
+      "CONT-UNCERTAIN"
+    ]
+  }
 }
