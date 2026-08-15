@@ -22,6 +22,7 @@ import "./styles/agent-host-profiles.css";
 import "./styles/start-hub.css";
 import "./styles/kawaii-surfaces.css";
 import "./styles/start-hub-kawaii.css";
+import "./styles/surface-consistency.css";
 
 // The launcher emits a synthetic Ctrl+K event on document. Real keyboard events
 // already bubble to window; only bridge the synthetic event into the AppShell
