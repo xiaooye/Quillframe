@@ -1,0 +1,42 @@
+name: Temporary Product Site documentation manifest repair
+
+on:
+  push:
+    branches: [agent/docs-manifest-v3-v4]
+    paths:
+      - '.tmp_register_product_site_docs.py'
+      - '.github/workflows/tmp-doc-manifest-v3-v4.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Register existing Product Site v3/v4 bilingual docs
+        run: python .tmp_register_product_site_docs.py
+      - name: Validate documentation governance
+        run: |
+          python scripts/docs_quality.py
+          python scripts/framework_hygiene.py
+          git diff --check
+      - name: Commit only the manifest repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only)"
+          test "$changed" = "docs/documentation_manifest.json"
+          remote_head="$(git ls-remote origin "refs/heads/${GITHUB_REF_NAME}" | cut -f1)"
+          test "$remote_head" = "$GITHUB_SHA"
+          git config user.name 'NovelForge Agent'
+          git config user.email 'actions@users.noreply.github.com'
+          git add docs/documentation_manifest.json
+          git commit -m 'docs: register Product Site v3/v4 spec records'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
