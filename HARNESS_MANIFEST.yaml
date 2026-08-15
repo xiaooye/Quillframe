@@ -71,6 +71,10 @@ harness:
   memory_bank: harness/memory_bank.py
   scenario_fork: harness/scenario_fork.py
   settlement_runtime: harness/settlement_runtime.py
+  property_write_policy: harness/property_write_policy.py
+  property_write_policy_schema: harness/property_write_policy.schema.json
+  propagation_debt: harness/propagation_debt.py
+  propagation_debt_schema: harness/propagation_debt.schema.json
   control_plane: harness/control_plane/CONTROL_PLANE.md
   control_plane_tool: harness/control_plane/control_plane.py
   control_plane_event_schema: harness/control_plane/event_schema.json
@@ -251,6 +255,8 @@ project_engineering:
   manifest: novelforge.toml
   lockfile: novelforge.lock.json
   local_framework_materialization: .novelforge/framework
+  optional_property_write_policy_path_key: property_write_policy
+  property_write_policy_absent_behavior: legacy_unmanaged
   layouts: [standard, mapped]
   change_classes: [micro_content, chapter_unit, structural_feature, canon_migration, release]
   structural_change_flow: [spec, plan, tasks, implementation, verification, acceptance]
@@ -380,6 +386,7 @@ workflows:
   typed_event_router: .github/workflows/novelforge-event-router.yml
   live_semantic_optional: .github/workflows/novelforge-semantic-live.yml
   weekly_maintenance: .github/workflows/novelforge-weekly-maintenance.yml
+  state_integrity_p0: .github/workflows/novelforge-state-integrity-p0.yml
   peer_chat:
     reusable_workflow: .github/workflows/novelforge-chat-semantic-bridge.yml
     composite_action: .github/actions/project-peer-semantic/action.yml
@@ -397,7 +404,7 @@ workflows:
 
 normal_ci:
   model_execution: forbidden
-  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, runtime-query-self-test, resume-preflight-self-test, resume-command-self-test, runtime-command-authorization-self-test, runtime-command-executor-self-test, context-inspector-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, settlement-runtime-self-test, quality-finding-self-test, quality-taxonomy-self-test, repair-policy-self-test, production-readiness-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, registered-release-role-contract-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, semantic-acceptance-baseline-self-test, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
+  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, runtime-query-self-test, resume-preflight-self-test, resume-command-self-test, runtime-command-authorization-self-test, runtime-command-executor-self-test, context-inspector-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, property-write-policy-self-test, propagation-debt-self-test, state-integrity-cross-contract-self-test, settlement-runtime-self-test, quality-finding-self-test, quality-taxonomy-self-test, repair-policy-self-test, production-readiness-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, registered-release-role-contract-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, semantic-acceptance-baseline-self-test, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
 
 scheduled_maintenance:
   model_execution: forbidden
@@ -421,6 +428,13 @@ write_boundary:
   scenario_branch_grants_canon_authority: false
   state_graph_result_grants_canon_authority: false
   quality_evolution_result_grants_canon_authority: false
+  property_write_policy_grants_canon_authority: false
+  property_write_policy_grants_framework_write: false
+  property_write_policy_resolves_write_route_only: true
+  propagation_debt_grants_canon_authority: false
+  propagation_debt_grants_framework_write: false
+  propagation_debt_can_auto_repair: false
+  propagation_debt_requires_explicit_dependency_evidence: true
   promotion_gate_result_grants_framework_write: false
   runtime_session_resume_grants_project_write_authority: false
   runtime_session_resume_grants_canon_authority: false
