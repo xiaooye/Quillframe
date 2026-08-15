@@ -10,13 +10,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
 
-import resume_preflight
-import session_runtime
-from harness.control_plane.control_plane import ControlPlane
+HERE = Path(__file__).resolve().parent
+CONTROL_ROOT = HERE.parent / "control_plane"
+for candidate in (HERE, CONTROL_ROOT):
+    if str(candidate) not in sys.path:
+        sys.path.insert(0, str(candidate))
+
+import resume_preflight  # noqa: E402
+import session_runtime  # noqa: E402
+from control_plane import ControlPlane  # noqa: E402
 
 SCHEMA = "novelforge_session_terminate_preflight_v1"
 TERMINABLE_STATUSES = {
