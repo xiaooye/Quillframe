@@ -1,0 +1,277 @@
+@layer product-components {
+  /*
+   * Route identity layer.
+   *
+   * ProductSurfaceHero owns shared typography and spacing. This file owns only
+   * the visual slot language for each route so pages feel related without
+   * becoming the same hero with a different heading.
+   */
+
+  .product-surface-hero__visual {
+    min-block-size: 230px;
+  }
+
+  /* Architecture — execution map / observable system path. */
+  .architecture-entry .product-surface-hero__visual {
+    align-content: center;
+    padding: 20px;
+    border: 1px solid color-mix(in oklab, var(--pe-runtime) 18%, var(--pe-border));
+    border-radius: 18px;
+    background:
+      linear-gradient(color-mix(in oklab, var(--pe-runtime) 8%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in oklab, var(--pe-runtime) 8%, transparent) 1px, transparent 1px),
+      color-mix(in oklab, var(--pe-runtime-soft) 18%, var(--pe-surface));
+    background-size: 22px 22px;
+  }
+
+  .architecture-entry .architecture-hero-path {
+    position: relative;
+    grid-template-columns: repeat(7, minmax(56px, 1fr));
+    gap: 6px;
+    padding-block: 10px;
+    border: 0;
+  }
+
+  .architecture-entry .architecture-hero-path::before {
+    content: "";
+    position: absolute;
+    inset-inline: 5%;
+    inset-block-start: 50%;
+    block-size: 1px;
+    background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--pe-runtime) 48%, var(--pe-border)) 10% 90%, transparent);
+  }
+
+  .architecture-entry .architecture-hero-path button {
+    z-index: 1;
+    min-block-size: 92px;
+    padding: 9px 5px;
+    border: 1px solid color-mix(in oklab, var(--pe-border) 72%, transparent);
+    border-radius: 13px;
+    background: color-mix(in oklab, var(--pe-surface) 94%, transparent);
+    box-shadow: 0 12px 26px -24px color-mix(in oklab, var(--pe-runtime) 34%, transparent);
+  }
+
+  .architecture-entry .architecture-hero-path button[data-active="true"] {
+    border-color: color-mix(in oklab, var(--pe-runtime) 42%, var(--pe-border));
+    background: color-mix(in oklab, var(--pe-runtime-soft) 52%, var(--pe-surface));
+  }
+
+  /* Publication — presentation gallery. The objects themselves carry kawaii. */
+  .publication-workbench-entry .product-surface-hero__visual {
+    align-content: center;
+    padding: 18px;
+    border-radius: 22px;
+    background:
+      radial-gradient(circle at 12% 18%, color-mix(in oklab, var(--pe-valid-soft) 68%, transparent), transparent 24%),
+      radial-gradient(circle at 86% 16%, color-mix(in oklab, var(--pe-editorial-soft) 72%, transparent), transparent 26%),
+      radial-gradient(circle at 82% 88%, color-mix(in oklab, var(--pe-runtime-soft) 58%, transparent), transparent 27%),
+      linear-gradient(145deg, color-mix(in oklab, var(--pe-surface) 88%, var(--pe-bg)), color-mix(in oklab, var(--pe-editorial-soft) 18%, var(--pe-bg)));
+  }
+
+  .publication-workbench-entry .product-surface-hero__visual::before,
+  .publication-workbench-entry .product-surface-hero__visual::after {
+    position: absolute;
+    z-index: 0;
+    color: color-mix(in oklab, var(--pe-editorial) 42%, transparent);
+    pointer-events: none;
+  }
+
+  .publication-workbench-entry .product-surface-hero__visual::before {
+    content: "✦";
+    inset-block-start: 4px;
+    inset-inline-end: 8px;
+    font-size: 22px;
+  }
+
+  .publication-workbench-entry .product-surface-hero__visual::after {
+    content: "♡";
+    inset-block-end: 7px;
+    inset-inline-start: 10px;
+    font-size: 18px;
+  }
+
+  .publication-workbench-entry .unified-publication-gallery { position: relative; z-index: 1; }
+
+  /* Inspector — evidence folder / exact file identity. */
+  .inspector-entry .product-surface-hero__visual {
+    align-content: center;
+    padding: 26px 28px;
+    border-inline-start: 3px solid color-mix(in oklab, var(--pe-valid) 54%, var(--pe-border));
+    background:
+      linear-gradient(90deg, color-mix(in oklab, var(--pe-valid-soft) 26%, transparent), transparent 54%),
+      transparent;
+  }
+
+  .inspector-entry .unified-inspector-visual {
+    gap: 0;
+    padding: 0;
+    border-block: 0;
+  }
+
+  .inspector-entry .unified-inspector-visual span {
+    position: relative;
+    padding: 14px 14px 14px 42px;
+    border: 0;
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 58%, transparent);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .inspector-entry .unified-inspector-visual span::before {
+    content: "▤";
+    position: absolute;
+    inset-inline-start: 8px;
+    color: color-mix(in oklab, var(--pe-valid) 70%, var(--pe-fg));
+    font-size: 16px;
+  }
+
+  .inspector-entry .unified-inspector-visual strong {
+    justify-self: start;
+    margin-block-start: 12px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--pe-valid-soft);
+  }
+
+  /* Playground — executable trace / sandbox timeline. */
+  .playground-entry .product-surface-hero__visual {
+    place-items: center;
+    padding: 26px;
+    border-radius: 18px;
+    background:
+      radial-gradient(circle, color-mix(in oklab, var(--pe-evidence) 18%, transparent) 1px, transparent 1.5px) 0 0 / 18px 18px,
+      color-mix(in oklab, var(--pe-evidence-soft) 20%, var(--pe-surface));
+  }
+
+  .playground-entry .unified-playground-visual {
+    grid-template-columns: repeat(7, auto);
+    gap: 9px;
+    padding: 16px 18px;
+    border: 1px solid color-mix(in oklab, var(--pe-evidence) 24%, var(--pe-border));
+    border-radius: 14px;
+    background: color-mix(in oklab, var(--pe-surface) 94%, transparent);
+    box-shadow: 0 18px 36px -30px color-mix(in oklab, var(--pe-evidence) 46%, transparent);
+  }
+
+  .playground-entry .unified-playground-visual :where(span, strong) {
+    border: 0;
+    border-radius: 8px;
+    background: var(--pe-evidence-soft);
+  }
+
+  /* Agent integration — host bridge constellation. */
+  .agent-integration-entry .product-surface-hero__visual {
+    align-content: center;
+    padding: 20px;
+    border-radius: 18px;
+    background:
+      radial-gradient(circle at 50% 50%, color-mix(in oklab, var(--pe-runtime-soft) 52%, transparent), transparent 48%),
+      transparent;
+  }
+
+  .agent-integration-entry .unified-agent-hosts {
+    position: relative;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 16px;
+    border: 1px solid color-mix(in oklab, var(--pe-runtime) 22%, var(--pe-border));
+    border-radius: 16px;
+    background: color-mix(in oklab, var(--pe-surface) 92%, transparent);
+  }
+
+  .agent-integration-entry .unified-agent-hosts::after {
+    content: "Host Bridge · authority=false";
+    grid-column: 1 / -1;
+    padding-block-start: 8px;
+    border-top: 1px solid color-mix(in oklab, var(--pe-border) 54%, transparent);
+    color: var(--pe-muted);
+    font: 650 8px/1.4 var(--wui-font-family-mono, ui-monospace, monospace);
+    text-align: center;
+  }
+
+  .agent-integration-entry .unified-agent-hosts button {
+    border-radius: 10px;
+  }
+
+  /* Studio route — a workstation window, not a marketing card. */
+  .product-surface-hero:has(.unified-studio-terminal) .product-surface-hero__visual {
+    align-content: center;
+    padding: 18px;
+    border-radius: 18px;
+    background:
+      linear-gradient(135deg, color-mix(in oklab, var(--pe-runtime-soft) 24%, transparent), color-mix(in oklab, var(--pe-editorial-soft) 18%, transparent)),
+      transparent;
+  }
+
+  .product-surface-hero:has(.unified-studio-terminal) .unified-studio-terminal {
+    transform: translateY(2px);
+  }
+
+  /* Product route — layered truth stack. */
+  .product-surface-hero:has(.unified-stack-visual) .product-surface-hero__visual {
+    align-content: center;
+    padding-inline-start: clamp(20px, 4vw, 48px);
+  }
+
+  .product-surface-hero:has(.unified-stack-visual) .unified-stack-visual {
+    padding: 0;
+    border-block: 0;
+  }
+
+  .product-surface-hero:has(.unified-stack-visual) .unified-stack-visual span:nth-child(n) {
+    position: relative;
+    padding-inline-start: 18px;
+  }
+
+  .product-surface-hero:has(.unified-stack-visual) .unified-stack-visual span:nth-child(n)::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 50%;
+    inline-size: 7px;
+    block-size: 7px;
+    border-radius: 50%;
+    background: var(--pe-editorial);
+  }
+
+  /* Changelog — release stamp. */
+  .product-surface-hero:has(.unified-release-badge) .product-surface-hero__visual {
+    place-items: center;
+    padding: 26px;
+  }
+
+  .product-surface-hero:has(.unified-release-badge) .unified-release-badge {
+    min-inline-size: min(100%, 320px);
+    min-block-size: 180px;
+    padding: 24px;
+    border: 1px solid color-mix(in oklab, var(--pe-valid) 24%, var(--pe-border));
+    border-radius: 50% 45% 52% 48% / 48% 52% 46% 54%;
+    background: color-mix(in oklab, var(--pe-valid-soft) 42%, var(--pe-surface));
+    transform: rotate(-2deg);
+  }
+
+  @media (max-width: 1120px) {
+    .architecture-entry .architecture-hero-path { grid-template-columns: repeat(4, minmax(70px, 1fr)); }
+    .architecture-entry .architecture-hero-path::before { display: none; }
+  }
+
+  @media (max-width: 900px) {
+    .product-surface-hero__visual { min-block-size: 0; }
+    .architecture-entry .product-surface-hero__visual,
+    .publication-workbench-entry .product-surface-hero__visual,
+    .playground-entry .product-surface-hero__visual,
+    .agent-integration-entry .product-surface-hero__visual,
+    .product-surface-hero:has(.unified-studio-terminal) .product-surface-hero__visual {
+      padding: 14px;
+    }
+  }
+
+  @media (max-width: 620px) {
+    .architecture-entry .architecture-hero-path { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .architecture-entry .architecture-hero-path button { min-block-size: 74px; }
+    .playground-entry .unified-playground-visual { grid-template-columns: 1fr; inline-size: min(100%, 360px); text-align: center; }
+    .playground-entry .unified-playground-visual i { transform: rotate(90deg); }
+    .agent-integration-entry .unified-agent-hosts { grid-template-columns: 1fr; }
+    .inspector-entry .product-surface-hero__visual { padding-inline: 16px; }
+  }
+}
