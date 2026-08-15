@@ -14,8 +14,8 @@
 - [x] T10 · 在 current-main Studio Host Bridge 上增量加入 read-only `story.workspace` / `context.trace` / `scene.simulation.inspect` / `state.candidate.inspect` / `continuity.verify`，并保留 Publication/runtime operations 与 authorized local runtime-command surface。
 - [x] T11 · 将 `NarrativeWorkspace.tsx` 接入 current-main Studio route / product shell，保留 Inspector / Control / Architecture / Publication 与原 execution playground；未建立 parallel Canon store。
 - [x] T12 · 将双语 `docs/story-workspace.*` 与 008 spec/plan/tasks 登记到 current-main documentation manifest，并更新相关 architecture / context / pipeline / Studio references。
-- [ ] T13 · 跑 deterministic contract / syntax / schema / bundle / Studio typecheck/build / documentation quality tests并修复 feature regressions；与 008 无关的 current-main hygiene blocker 必须单独标识。
-- [ ] T14 · 使用 blind narrative fixtures 获得独立 semantic capability / regression evidence；fixture 存在与 hidden-label isolation 本身不等于 semantic acceptance。
+- [x] T13 · 完成 deterministic contract / syntax / schema / bundle / Studio typecheck-build / documentation quality 验证并修复 feature regression。Integrated branch 上 Story Workspace reusable CI、semantic contract packs、quality gate、Studio App、generic semantic kernel、bundle 与 eval stages 均通过；剩余 `session-terminate-command` 与 aggregate Host Bridge dispatch failure 在 current `main` 同样可复现，作为 upstream blocker 记录，不计为 008 regression。
+- [ ] T14 · 使用 blind narrative fixtures 获得独立 semantic capability / regression evidence；fixture 存在与 hidden-label isolation 本身不等于 semantic acceptance。当前 live gate 因 repository 未配置 `OPENAI_API_KEY` provider credential，在任何模型执行前 fail closed。
 - [ ] T15 · Review Draft PR #81 的 exact diff、authority boundary、rollback path、base drift 与最终 CI status；旧 PR #80 保持关闭，不作为 acceptance target。
 - [ ] T16 · 合并后生成新的 exact Framework commit + deterministic bundle fingerprint / attestation evidence。
 - [ ] T17 · 仅在 release evidence 完整后，由 consuming Project 单独执行 `novelforge.lock.json` / attestation dependency migration；旧 production session 不普通 resume。
