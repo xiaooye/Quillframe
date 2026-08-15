@@ -93,6 +93,7 @@ for (const [href, marker] of [
 }
 requireCheck(actions.includes('openStudio: "打开 Studio"') && actions.includes('class="nf-studio-link"'), "Docs header must retain the localized primary Studio CTA");
 requireCheck(actions.includes('class="nf-product-nav"'), "Docs header product links must be grouped as semantic navigation");
+requireCheck(!actions.includes('href="/start"'), "Docs header must not reintroduce the retired standalone start surface");
 
 requireCheck(!main.includes("KnowledgePortal"), "legacy Knowledge Portal must not mount beside the product router");
 requireCheck(!main.includes("KnowledgeExperience"), "product entry must not import the retired custom docs renderer");
@@ -112,7 +113,9 @@ requireCheck(fs.existsSync(path.join(stagedRoot, "en", "why-novelforge.md")), "E
 requireCheck(landing.includes('template: "splash"'), "docs home must use Starlight's splash landing template");
 requireCheck(landing.includes("StarlightPage"), "docs home must remain inside the official Starlight page shell");
 requireCheck(landing.includes('class="nf-link-grid"') && landing.includes('class="nf-link-card"'), "docs home must use stable semantic task-path cards instead of private Starlight component imports");
-requireCheck(landing.includes('link: "/start"') && landing.includes('["开始使用"') && landing.includes('["Start here"'), "docs home must route product-first onboarding through the live Start hub with native labels");
+requireCheck(!landing.includes('"/start"'), "docs home must not route users through the retired standalone start page");
+requireCheck(landing.includes('secondaryAction: "进入产品首页"') && landing.includes('secondaryAction: "Explore the product"'), "docs hero must hand onboarding directly to the main product entry");
+requireCheck(landing.includes('["产品首页"') && landing.includes('["Product home"'), "docs runtime paths must expose the consolidated product home in both locales");
 requireCheck(landing.includes('"/inspect"'), "docs home must retain a direct path to the live Project Inspector");
 requireCheck(landing.includes('"/playground"') && landing.includes('"/agents"'), "docs home must connect to the live Playground and Agent integration workbench");
 requireCheck(landing.includes("data-nf-docs-home"), "docs home must expose a stable verification marker");
@@ -131,7 +134,7 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_docs_platform_quality_v3",
+    schema: "novelforge_docs_platform_quality_v4",
     status: "pass",
     engine: "Astro Starlight",
     astro: pkg.devDependencies.astro,
@@ -145,6 +148,7 @@ if (failures.length > 0) {
     emitted_page_verification: true,
     raw_html_asset_rewrite: true,
     native_landing_copy: true,
+    product_home_primary_entry: true,
     product_header_navigation_parity: true,
     knowledge_namespace_active: true,
     concise_sidebar_information_architecture: true,
