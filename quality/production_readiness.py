@@ -471,7 +471,7 @@ def self_test() -> int:
     binding = bare_session["gates"][-1]["semantic_binding"]
     binding.pop("peer_packet", None)
     binding.pop("bridge_receipt", None)
-    binding["result"]["execution"] = {"source_session_id": "SES-A", "worker_session_id": "SES-B"}
+    binding["result"]["execution"] = {"source_session_id": "SES-MANAGER", "worker_session_id": "SES-B"}
     try:
         evaluate(bare_session)
     except ValueError as exc:
