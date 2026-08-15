@@ -1,6 +1,7 @@
 name: NovelForge Creative Decision Provenance
 
 on:
+  workflow_call:
   pull_request:
     branches: [main]
   workflow_dispatch:
