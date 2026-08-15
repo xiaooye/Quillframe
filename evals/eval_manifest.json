@@ -58,6 +58,15 @@
     },
     {
       "file": "cases/infra_publication_contract.json"
+    },
+    {
+      "file": "cases/narrative_knowledge_visibility_reject.json"
+    },
+    {
+      "file": "cases/narrative_causal_consequence_reject.json"
+    },
+    {
+      "file": "cases/narrative_supported_change_accept.json"
     }
   ]
 }
