@@ -16,8 +16,8 @@ export default function Workspace() {
             <h2>{t("workspace.unavailableTitle")}</h2>
             <p>{t("workspace.unavailableBody")}</p>
             <div class="nf-chip-row">
-              <span class="wui-badge wui-badge--warning">unavailable</span>
-              <span class="wui-badge wui-badge--outline">Core public projection required</span>
+              <span class="wui-badge wui-badge--warning">{t("common.unavailable")}</span>
+              <span class="wui-badge wui-badge--outline">{t("workspace.projectionRequired")}</span>
             </div>
           </div>
         </article>

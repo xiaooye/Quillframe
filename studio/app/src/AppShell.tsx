@@ -60,7 +60,7 @@ export const AppShell: ParentComponent = (props) => {
 
   return (
     <div class="nf-app-shell">
-      <aside class="nf-sidebar" aria-label="Primary navigation">
+      <aside class="nf-sidebar" aria-label={t("nav.primaryLabel")}>
         <A href="/" class="nf-brand">
           <span class="nf-brand-mark" aria-hidden="true">N</span>
           <span>
@@ -114,7 +114,7 @@ export const AppShell: ParentComponent = (props) => {
         </footer>
       </div>
 
-      <nav class="nf-bottom-nav" aria-label="Mobile navigation">
+      <nav class="nf-bottom-nav" aria-label={t("nav.mobileLabel")}>
         <For each={navigation.slice(0, 5)}>
           {([path, label, glyph]) => (
             <A href={path} class="nf-bottom-nav-item" data-active={location.pathname === path ? "true" : undefined}>

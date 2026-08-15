@@ -28,7 +28,7 @@ export default function Project() {
               {studio.projectLoading() ? t("common.loading") : t("project.openAction")}
             </button>
           </div>
-          <p class="nf-field-help">The folder path is sent only to the loopback Studio transport and is not returned in the safe Project Hub projection.</p>
+          <p class="nf-field-help">{t("project.pathPrivacy")}</p>
         </div>
       </form>
       <QueryError message={studio.projectError()} />
@@ -43,7 +43,7 @@ export default function Project() {
                   <div><span>ID</span><strong>{project().project.id ?? "—"}</strong></div>
                   <div><span>{t("project.version")}</span><strong>{project().project.version ?? "—"}</strong></div>
                   <div><span>{t("project.layout")}</span><strong>{project().project.layout ?? "—"}</strong></div>
-                  <div><span>Language</span><strong>{project().project.language ?? "—"}</strong></div>
+                  <div><span>{t("project.language")}</span><strong>{project().project.language ?? "—"}</strong></div>
                 </div>
               </article>
               <article class="wui-card nf-card">
