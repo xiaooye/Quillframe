@@ -11,9 +11,9 @@
     "content": "npm run foundation && node scripts/build-content.mjs",
     "docs:content": "node scripts/build-starlight-content.mjs",
     "dev": "npm run content && vite",
-    "dev:docs": "npm run docs:content && astro dev docs-site",
+    "dev:docs": "npm run docs:content && astro dev --root docs-site",
     "build:site": "tsc --noEmit && vite build",
-    "docs:build": "npm run docs:content && astro build docs-site",
+    "docs:build": "npm run docs:content && astro build --root docs-site && node scripts/verify-starlight-build.mjs",
     "build": "npm run content && npm run build:site && npm run docs:build",
     "preview": "vite preview",
     "quality": "npm run content && npm run docs:content && node scripts/quality.mjs && node scripts/docs-platform-quality.mjs && node scripts/atelier-quality.mjs"
