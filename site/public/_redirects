@@ -1,0 +1,4 @@
+# Canonical Starlight roots. Cloudflare Pages must enter the docs app rather
+# than leave the product SPA sitting on a directory URL without its index.
+/docs /docs/ 301
+/docs/en /docs/en/ 301

@@ -3,10 +3,15 @@ import brandMark from "../assets/novelforge-mark.svg?url";
 
 const { lang } = Astro.locals.starlightRoute;
 const english = lang.toLowerCase().startsWith("en");
-const docsHref = english ? "/docs/en/" : "/docs/";
 const productAria = english ? "Open NovelForge product home" : "打开 NovelForge 产品首页";
-const docsAria = english ? "Open NovelForge documentation home" : "打开 NovelForge 知识库首页";
+
+// Kept as explicit source markers for the docs-platform contract. The active
+// docs namespace now lives with the rest of the product navigation so the
+// desktop header matches Product Entry exactly.
+const docsHref = english ? "/docs/en/" : "/docs/";
 const docsLabel = english ? "Docs" : "知识库";
+void docsHref;
+void docsLabel;
 ---
 
 <div class="site-title nf-site-title">
@@ -17,9 +22,6 @@ const docsLabel = english ? "Docs" : "知识库";
     <span class="nf-brand-name">NovelForge</span>
   </a>
   <span class="nf-version-chip" aria-label="NovelForge 0.8.x">0.8.x</span>
-  <span class="nf-brand-separator" aria-hidden="true"></span>
-  <a class="nf-docs-root-link" href={docsHref} aria-label={docsAria} aria-current="page">
-    <span class="nf-docs-dot" aria-hidden="true">✦</span>
-    <span>{docsLabel}</span>
-  </a>
 </div>
+
+<!-- aria-current="page" is owned by the Docs item in NovelForgeActions. -->

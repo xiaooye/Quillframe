@@ -103,6 +103,7 @@ export default defineConfig({
         "./src/styles/surface-audit.css",
         "./src/styles/story-loom-docs.css",
         "./src/styles/readability-audit.css",
+        "./src/styles/product-header-parity.css",
       ],
       credits: false,
     }),

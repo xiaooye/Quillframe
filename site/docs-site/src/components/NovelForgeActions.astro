@@ -2,12 +2,14 @@
 import Default from "@astrojs/starlight/components/SocialIcons.astro";
 
 const english = Astro.url.pathname === "/docs/en" || Astro.url.pathname.startsWith("/docs/en/");
+const docsHref = english ? "/docs/en/" : "/docs/";
 const labels = english
   ? {
       product: "Product",
       studio: "Studio",
       architecture: "Architecture",
       publication: "Publication",
+      docs: "Docs",
       openStudio: "Open Studio",
     }
   : {
@@ -15,6 +17,7 @@ const labels = english
       studio: "Studio",
       architecture: "架构",
       publication: "出版",
+      docs: "文档",
       openStudio: "打开 Studio",
     };
 
@@ -24,6 +27,7 @@ const aria = english
       studio: "Open NovelForge Studio overview",
       architecture: "Open NovelForge architecture explorer",
       publication: "Open NovelForge publication workbench",
+      docs: "Open NovelForge documentation home",
       openStudio: "Open NovelForge Studio in a new tab",
     }
   : {
@@ -31,6 +35,7 @@ const aria = english
       studio: "打开 NovelForge Studio 概览",
       architecture: "打开 NovelForge 架构探索",
       publication: "打开 NovelForge 出版工作台",
+      docs: "打开 NovelForge 文档首页",
       openStudio: "在新标签页打开 NovelForge Studio",
     };
 ---
@@ -40,6 +45,7 @@ const aria = english
   <a class="nf-product-link" href="/studio" aria-label={aria.studio}>{labels.studio}</a>
   <a class="nf-product-link" href="/architecture" aria-label={aria.architecture}>{labels.architecture}</a>
   <a class="nf-product-link" href="/publication" aria-label={aria.publication}>{labels.publication}</a>
+  <a class="nf-product-link nf-docs-nav-link" href={docsHref} aria-label={aria.docs} aria-current="page">{labels.docs}</a>
 </nav>
 <a class="nf-studio-link" href="https://studio.novelforge.wei-dev.com" target="_blank" rel="noreferrer" aria-label={aria.openStudio}><span aria-hidden="true">✦</span>{labels.openStudio}</a>
-<Default><slot /></Default>
+<div class="nf-social-default"><Default><slot /></Default></div>
