@@ -1,7 +1,8 @@
 import { A } from "@solidjs/router";
-import { For, Match, Show, Switch, createSignal, type JSX } from "solid-js";
+import { For, Match, Show, Switch, createSignal } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import type { DocumentBlock, InlineNode, ProductDocument } from "./knowledge";
+import { humanDocKind, knowledgeJourneyDefinition, knowledgeJourneyFor } from "./knowledgePresentation";
 
 function InlineView(props: { nodes: InlineNode[] }) {
   return (
@@ -104,21 +105,28 @@ function BlockView(props: { block: DocumentBlock; copyLabel: string; copiedLabel
 
 export default function DocumentRenderer(props: { document: ProductDocument; locale: "en-US" | "zh-CN" }) {
   const zh = () => props.locale === "zh-CN";
+  const docIndexShape = () => ({
+    id: props.document.id,
+    locale: props.document.locale,
+    tier: props.document.tier,
+    status: props.document.status,
+    title: props.document.title,
+    purpose: props.document.purpose,
+    audience: props.document.audience,
+    sourcePath: props.document.sourcePath,
+    sourceFingerprint: props.document.sourceFingerprint,
+    freshnessOwner: props.document.freshnessOwner,
+    excerpt: props.document.purpose,
+    headings: props.document.toc.map((item) => item.text),
+    searchText: "",
+  });
+  const journey = () => knowledgeJourneyDefinition(knowledgeJourneyFor(docIndexShape()));
   return (
     <article class="product-document">
       <header class="document-header">
-        <div class="document-badges">
-          <span class="wui-badge wui-badge--soft">Tier {props.document.tier}</span>
-          <span class="wui-badge wui-badge--outline">{props.document.status}</span>
-          <span class="wui-badge wui-badge--success">authority=false</span>
-        </div>
+        <div class="document-human-meta"><span>{journey().icon}</span><strong>{journey().label[props.locale]}</strong><span>·</span><span>{humanDocKind(docIndexShape(), props.locale)}</span></div>
         <h1>{props.document.title}</h1>
         <p>{props.document.purpose}</p>
-        <div class="document-source-strip">
-          <span>📚 {props.document.sourcePath}</span>
-          <span>sha256:{props.document.sourceFingerprint.slice(0, 12)}…</span>
-          <span>{zh() ? "来源于仓库权威文档" : "Derived from repository source"}</span>
-        </div>
       </header>
       <div class="document-body">
         <For each={props.document.blocks}>{(block) => <BlockView block={block} copyLabel={zh() ? "复制" : "Copy"} copiedLabel={zh() ? "复制好啦 (｡•̀ᴗ-)✧" : "Copied ✨"} />}</For>
