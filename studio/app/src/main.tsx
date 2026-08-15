@@ -17,6 +17,7 @@ import "./styles/onboarding.css";
 import "./styles/integrations.css";
 
 const Desk = lazy(() => import("./routes/Desk"));
+const Start = lazy(() => import("./routes/Start"));
 const Project = lazy(() => import("./routes/Project"));
 const Workspace = lazy(() => import("./routes/Workspace"));
 const Agents = lazy(() => import("./routes/Agents"));
@@ -36,6 +37,7 @@ render(
       <StudioProvider>
         <Router root={AppShell}>
           <Route path="/" component={Desk} />
+          <Route path="/start" component={Start} />
           <Route path="/project" component={Project} />
           <Route path="/workspace" component={Workspace} />
           <Route path="/agents" component={Agents} />
