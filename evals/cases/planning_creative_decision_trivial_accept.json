@@ -1,0 +1,21 @@
+{
+  "id": "PLANNING-DECISION-002",
+  "type": "regression",
+  "domain": "planning_decision",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "task_mode": "DRAFT",
+    "worker_role": "writer",
+    "author_state": "No user preference or open story question is attached to the sentence. The active plan, Canon, commitments, relationships, and later beats are unchanged by the wording choice.",
+    "local_choice": "Choose between 'she crossed the room' and 'she walked to the window' while realizing the same beat.",
+    "proposed_policy": "Let the writer make the local prose choice normally. Do not create a durable creative-decision artifact, request author clarification, or stall the run."
+  },
+  "rubric": [
+    "Accept when the proposed policy correctly keeps a low-cost local prose realization out of the durable creative-decision lifecycle.",
+    "A creative-decision artifact is not justified merely because more than one wording is possible; there must be meaningful resolver ownership or downstream story/plan cost.",
+    "Reject if the policy would bureaucratize ordinary drafting by demanding clarification or durable decision provenance for this local wording choice."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": [], "evidence": "short observable reasoning about why the durable decision boundary should or should not apply"},
+  "expected": {"verdict": "accept", "codes": []}
+}

@@ -1,0 +1,114 @@
+name: NovelForge Creative Decision Semantic Eval
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'harness/creative_decision.py'
+      - 'harness/creative_decision.schema.json'
+      - 'evals/eval_manifest.json'
+      - 'evals/cases/planning_creative_decision_*.json'
+      - '.github/workflows/novelforge-creative-decision-semantic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      NOVELFORGE_OPENAI_MODEL: gpt-5.1
+      NOVELFORGE_OPENAI_REASONING_EFFORT: medium
+      NOVELFORGE_DISABLE_LOCAL_AGENT_AUTO: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Require provider-backed independent evaluator
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo 'OPENAI_API_KEY repository secret is required for this feature-scoped semantic eval.' >&2
+            exit 2
+          fi
+
+      - name: Build blind planning-decision queue
+        run: |
+          python evals/build_judge_queue.py --output creative-decision-queue.json
+          python - <<'PY'
+          import json
+          p='creative-decision-queue.json'
+          d=json.load(open(p,encoding='utf-8'))
+          d['cases']=[c for c in d['cases'] if c.get('domain') == 'planning_decision']
+          ids={c['id'] for c in d['cases']}
+          assert ids == {'PLANNING-DECISION-001','PLANNING-DECISION-002'}, d
+          json.dump(d,open(p,'w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          PY
+
+      - name: Package fingerprint-bound jobs
+        run: |
+          python harness/semantic_workers/semantic_worker_router.py prepare-evals \
+            --queue creative-decision-queue.json --output creative-decision-jobs.json
+          python harness/semantic_workers/semantic_worker_router.py validate-jobs \
+            --jobs creative-decision-jobs.json
+
+      - name: Verify independent provider capability
+        run: |
+          python harness/semantic_workers/semantic_worker_runner.py capabilities > creative-decision-capabilities.json
+          python - <<'PY'
+          import json
+          d=json.load(open('creative-decision-capabilities.json',encoding='utf-8'))
+          assert d['independent_worker_available'] is True,d
+          assert d['adapter_source'] == 'openai_env',d
+          assert d['built_in_model_provider'] is True,d
+          PY
+
+      - name: Execute blind semantic jobs
+        run: |
+          python harness/semantic_workers/semantic_worker_runner.py run \
+            --jobs creative-decision-jobs.json \
+            --output creative-decision-execution.json \
+            --require-complete
+          python - <<'PY'
+          import json
+          r=json.load(open('creative-decision-execution.json',encoding='utf-8'))
+          assert r['status'] in {'completed','semantic_reject'},r
+          json.dump({'results':r['results']},open('creative-decision-results.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          PY
+
+      - name: Validate bindings and judgments
+        run: |
+          python harness/semantic_workers/semantic_worker_router.py validate-results \
+            --jobs creative-decision-jobs.json \
+            --results creative-decision-results.json \
+            --judgments-output creative-decision-judgments.json
+
+      - name: Evaluate capability and counterexample
+        run: |
+          python evals/run_evals.py --domain planning_decision \
+            --judgments creative-decision-judgments.json --json > creative-decision-eval.json
+          python - <<'PY'
+          import json
+          d=json.load(open('creative-decision-eval.json',encoding='utf-8'))
+          assert d['counts']['PASS'] == 2,d
+          assert d['counts']['FAIL'] == 0 and d['counts']['ERROR'] == 0 and d['counts']['PENDING_MODEL'] == 0,d
+          assert {r['case_id'] for r in d['results']} == {'PLANNING-DECISION-001','PLANNING-DECISION-002'},d
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: creative-decision-semantic-${{ github.run_id }}
+          path: |
+            creative-decision-capabilities.json
+            creative-decision-queue.json
+            creative-decision-jobs.json
+            creative-decision-execution.json
+            creative-decision-results.json
+            creative-decision-judgments.json
+            creative-decision-eval.json
+          if-no-files-found: warn

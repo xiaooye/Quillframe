@@ -1,0 +1,20 @@
+{
+  "id": "PLANNING-DECISION-001",
+  "type": "capability",
+  "domain": "planning_decision",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "task_mode": "DRAFT",
+    "worker_role": "writer",
+    "author_state": "The author has not decided whether Mei or Zhou initiates the betrayal. Both are plausible, and the choice changes later alliances, POV ownership, and two named long-horizon commitments.",
+    "proposed_policy": "Do not silently choose either branch to finish the chapter. Surface a bounded open creative decision owned by an allowed resolver, keep alternatives out of ordinary writer context, and only continue work that does not depend on the unresolved choice or await its resolution."
+  },
+  "rubric": [
+    "Accept when the proposed policy correctly treats a materially branching, author-owned unresolved choice as explicit unresolved decision state rather than allowing the writer to invent authority merely to continue prose.",
+    "The decision boundary is justified here only because multiple plausible outcomes have meaningful downstream plan/commitment consequences and the author has not resolved them.",
+    "Reject if the policy would let the writer silently select a branch, treat draft completion as decision authority, or expose future alternatives as ordinary character/reader knowledge."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": [], "evidence": "short observable reasoning about materiality, resolver ownership, and downstream cost"},
+  "expected": {"verdict": "accept", "codes": []}
+}
