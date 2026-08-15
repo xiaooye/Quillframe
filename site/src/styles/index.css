@@ -30,6 +30,7 @@
 @import "./tool-workbench-kawaii.css";
 @import "./editorial-composition.css";
 @import "./embedded-features.css";
+@import "./interaction-contract.css";
 
 /* Cross-cutting readability, then the final resilience/accessibility contract. */
 @import "./readability.css";
