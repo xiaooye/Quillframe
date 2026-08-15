@@ -10,12 +10,13 @@
   --sl-color-gray-5: #ddd8e2;
   --sl-color-gray-6: #f1eef3;
   --sl-color-black: #fffdfc;
-  --sl-content-width: 50rem;
-  --sl-sidebar-width: 18rem;
-  --sl-nav-height: 4rem;
+  --sl-content-width: 52rem;
+  --sl-sidebar-width: 17rem;
+  --sl-nav-height: 4.125rem;
   --nf-border: #e5dee9;
   --nf-surface: #fffdfc;
   --nf-soft: #faf7fb;
+  --nf-soft-accent: #f5f1ff;
 }
 
 :root[data-theme="dark"] {
@@ -33,28 +34,32 @@
   --nf-border: #3b3342;
   --nf-surface: #1c1820;
   --nf-soft: #221d27;
+  --nf-soft-accent: #29213a;
 }
 
 html {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  text-rendering: optimizeLegibility;
 }
 
 body {
   background:
-    radial-gradient(54rem 30rem at 8% -8%, color-mix(in srgb, var(--sl-color-accent-low) 60%, transparent), transparent 72%),
+    radial-gradient(54rem 30rem at 8% -8%, color-mix(in srgb, var(--sl-color-accent-low) 58%, transparent), transparent 72%),
     var(--sl-color-black);
 }
 
 header.header {
   border-bottom: 1px solid color-mix(in srgb, var(--nf-border) 82%, transparent);
-  background: color-mix(in srgb, var(--nf-surface) 92%, transparent);
+  background: color-mix(in srgb, var(--nf-surface) 94%, transparent);
+  box-shadow: 0 10px 26px -24px rgb(64 45 86 / .42);
   backdrop-filter: blur(18px) saturate(135%);
 }
 
 .site-title {
   gap: .65rem;
-  font-weight: 750;
-  letter-spacing: -.02em;
+  font-size: 1.04rem;
+  font-weight: 760;
+  letter-spacing: -.025em;
 }
 
 .site-title img {
@@ -66,25 +71,33 @@ header.header {
 .nf-studio-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 2.25rem;
   padding: 0 .75rem;
-  border-radius: .65rem;
-  color: var(--sl-color-gray-2);
+  border: 1px solid transparent;
+  border-radius: .68rem;
   font-size: .82rem;
-  font-weight: 650;
+  font-weight: 680;
+  line-height: 1;
   text-decoration: none;
   white-space: nowrap;
 }
 
+.nf-product-link {
+  color: var(--sl-color-gray-2);
+}
+
 .nf-product-link:hover {
+  border-color: var(--nf-border);
   color: var(--sl-color-white);
   background: var(--nf-soft);
 }
 
 .nf-studio-link {
+  gap: .22rem;
   color: white;
   background: #735fc6;
-  box-shadow: 0 .4rem 1.1rem rgb(83 66 150 / .18);
+  box-shadow: 0 .4rem 1.05rem rgb(83 66 150 / .16);
 }
 
 .nf-studio-link:hover {
@@ -93,58 +106,150 @@ header.header {
 
 .sidebar-pane {
   border-inline-end-color: color-mix(in srgb, var(--nf-border) 82%, transparent);
+  background: color-mix(in srgb, var(--nf-surface) 96%, transparent);
+}
+
+.sidebar-content {
+  padding-block: .55rem 1.35rem;
 }
 
 .sidebar-content a,
 .sidebar-content summary {
+  border-radius: .58rem;
   font-size: .875rem;
-  line-height: 1.45;
+  line-height: 1.42;
+}
+
+.sidebar-content a:hover {
+  background: var(--nf-soft);
+}
+
+.sidebar-content a[aria-current="page"] {
+  color: var(--sl-color-accent-high);
+  background: var(--nf-soft-accent);
+  box-shadow: inset 3px 0 0 var(--sl-color-accent);
+  font-weight: 720;
 }
 
 .sidebar-content summary {
-  font-weight: 700;
+  margin-top: .2rem;
+  padding-block: .44rem;
+  color: var(--sl-color-white);
+  font-weight: 730;
+  letter-spacing: -.012em;
 }
 
 .right-sidebar {
-  border-inline-start-color: color-mix(in srgb, var(--nf-border) 78%, transparent);
+  border-inline-start-color: color-mix(in srgb, var(--nf-border) 76%, transparent);
+  background: color-mix(in srgb, var(--nf-surface) 92%, transparent);
+}
+
+.right-sidebar a {
+  font-size: .79rem;
+  line-height: 1.4;
+  text-decoration: none;
 }
 
 .sl-markdown-content {
+  color: var(--sl-color-gray-2);
   font-size: 1rem;
   line-height: 1.76;
 }
 
 :lang(zh-CN) .sl-markdown-content {
   font-size: 1.0625rem;
-  line-height: 1.86;
+  line-height: 1.84;
 }
 
-.sl-markdown-content > :where(h2, h3) {
-  letter-spacing: -.025em;
+.sl-markdown-content > :where(p, ul, ol, blockquote, table) {
+  max-width: 74ch;
+}
+
+.sl-markdown-content > :where(h2, h3, h4) {
+  color: var(--sl-color-white);
+  letter-spacing: -.027em;
 }
 
 .sl-markdown-content h2 {
-  margin-top: 2.35em;
+  margin-top: 2.15em;
+  margin-bottom: .72em;
 }
 
 .sl-markdown-content h3 {
-  margin-top: 1.8em;
+  margin-top: 1.72em;
+  margin-bottom: .58em;
 }
 
 .sl-markdown-content :where(ul, ol) {
-  padding-inline-start: 1.45em;
+  padding-inline-start: 1.42em;
 }
 
 .sl-markdown-content :where(li + li) {
-  margin-top: .28rem;
+  margin-top: .24rem;
 }
 
 .sl-markdown-content :where(p) {
-  margin-block: .82rem;
+  margin-block: .78rem;
+}
+
+.sl-markdown-content strong {
+  color: var(--sl-color-white);
+  font-weight: 720;
+}
+
+.sl-markdown-content a:not([class]) {
+  text-decoration-thickness: .08em;
+  text-underline-offset: .17em;
+}
+
+.sl-markdown-content hr {
+  margin-block: 2.05rem;
+  border-color: color-mix(in srgb, var(--nf-border) 82%, transparent);
+}
+
+.sl-markdown-content :not(pre) > code {
+  padding: .08em .32em;
+  border: 1px solid color-mix(in srgb, var(--nf-border) 84%, transparent);
+  border-radius: .34rem;
+  background: var(--nf-soft);
+  font-size: .9em;
+}
+
+.sl-markdown-content blockquote {
+  margin-inline: 0;
+  padding: .72rem 1rem;
+  border-inline-start: 3px solid var(--sl-color-accent);
+  border-radius: 0 .68rem .68rem 0;
+  background: var(--nf-soft-accent);
+}
+
+.sl-markdown-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.sl-markdown-content div[align="center"] {
+  margin-block: 1.15rem 1.75rem;
+}
+
+.sl-markdown-content div[align="center"] img[width="580"] {
+  width: min(34rem, 92%);
+}
+
+.sl-markdown-content div[align="center"] img[width="54"] {
+  width: 3.375rem;
+  height: 3.375rem;
 }
 
 .content-panel {
-  padding-top: clamp(2rem, 4vw, 3.25rem);
+  padding-top: clamp(2rem, 3.4vw, 3rem);
+}
+
+@media (max-width: 72rem) {
+  :root {
+    --sl-content-width: 49rem;
+    --sl-sidebar-width: 16rem;
+  }
 }
 
 @media (max-width: 50rem) {
@@ -153,12 +258,21 @@ header.header {
   }
 
   .nf-studio-link {
-    padding-inline: .6rem;
+    min-height: 2.1rem;
+    padding-inline: .58rem;
     font-size: .78rem;
+  }
+
+  .content-panel {
+    padding-top: 1.5rem;
   }
 
   :lang(zh-CN) .sl-markdown-content {
     font-size: 1rem;
-    line-height: 1.82;
+    line-height: 1.8;
+  }
+
+  .sl-markdown-content > :where(p, ul, ol, blockquote, table) {
+    max-width: none;
   }
 }
