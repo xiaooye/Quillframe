@@ -21,7 +21,7 @@ if str(SEM) not in sys.path:
     sys.path.insert(0, str(SEM))
 from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
 
-SCHEMA = "novelforge_memory_tiers_v3"
+SCHEMA = "novelforge_memory_tiers_v4"
 PERSPECTIVE_SCOPES = {"manager", "reader", "character", "narrator", "research", "other"}
 VISIBILITY_SCOPES = {"shared", *PERSPECTIVE_SCOPES}
 QUESTION_KINDS = {"concept", "behavior", "state", "continuity", "relationship", "other"}
@@ -48,6 +48,12 @@ def _optional_text(value: Any, name: str) -> str | None:
     return value.strip()
 
 
+def _nonnegative_int(value: Any, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{name} must be non-negative integer")
+    return value
+
+
 def normalize_task(payload: dict[str, Any]) -> dict[str, Any]:
     raw = payload.get("task")
     if not isinstance(raw, dict):
@@ -67,6 +73,8 @@ def normalize_task(payload: dict[str, Any]) -> dict[str, Any]:
     perspective_id = _optional_text(perspective.get("perspective_id"), "task.perspective.perspective_id")
     if scope == "character" and not perspective_id:
         raise ValueError("character task perspective requires perspective_id")
+
+    current_story_order = _nonnegative_int(raw.get("current_story_order"), "task.current_story_order")
 
     raw_questions = raw.get("active_questions")
     if not isinstance(raw_questions, list):
@@ -89,16 +97,22 @@ def normalize_task(payload: dict[str, Any]) -> dict[str, Any]:
             raise ValueError(f"active question {qid} requires question")
         if kind not in QUESTION_KINDS:
             raise ValueError(f"active question {qid} has invalid kind")
+        as_of_order_raw = q.get("as_of_story_order", current_story_order)
+        as_of_story_order = _nonnegative_int(as_of_order_raw, f"{qid}.as_of_story_order")
+        if as_of_story_order > current_story_order:
+            raise ValueError(f"active question {qid} cannot be later than task.current_story_order")
         questions.append({
             "question_id": qid,
             "question": text.strip(),
             "kind": kind,
             "as_of_story_point": _optional_text(q.get("as_of_story_point"), f"{qid}.as_of_story_point"),
+            "as_of_story_order": as_of_story_order,
         })
     return {
         "task_mode": task_mode.strip(),
         "task_goal": task_goal.strip(),
         "current_story_point": _optional_text(raw.get("current_story_point"), "task.current_story_point"),
+        "current_story_order": current_story_order,
         "perspective": {"scope": scope, "perspective_id": perspective_id},
         "active_questions": questions,
     }
@@ -156,6 +170,7 @@ def normalize_item(raw: dict[str, Any]) -> dict[str, Any]:
         "source_refs": [x.strip() for x in source_refs],
         "source_fingerprints": list(source_fingerprints),
         "story_point": _optional_text(raw.get("story_point"), f"{item_id}.story_point"),
+        "available_from_story_order": _nonnegative_int(raw.get("available_from_story_order"), f"{item_id}.available_from_story_order"),
         "visibility": normalize_visibility(raw.get("visibility"), item_id),
         "invalidated": bool(raw.get("invalidated", False)),
         "model_view": model_view,
@@ -192,26 +207,33 @@ def visible_to_task(item: dict[str, Any], task: dict[str, Any]) -> bool:
     return required_id is None or required_id == perspective.get("perspective_id")
 
 
-def partition_visibility(items: list[dict[str, Any]], task: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def partition_eligibility(items: list[dict[str, Any]], task: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     visible: list[dict[str, Any]] = []
-    excluded: list[dict[str, Any]] = []
+    perspective_excluded: list[dict[str, Any]] = []
+    temporal_excluded: list[dict[str, Any]] = []
+    current_order = task["current_story_order"]
     for item in items:
         if item["invalidated"]:
             continue
-        if visible_to_task(item, task):
-            visible.append(item)
-        else:
+        if item["available_from_story_order"] > current_order:
+            if item["pinned"]:
+                raise ValueError(f"pinned memory violates task story-order boundary: {item['id']}")
+            temporal_excluded.append(item)
+            continue
+        if not visible_to_task(item, task):
             if item["pinned"]:
                 raise ValueError(f"pinned memory violates task perspective boundary: {item['id']}")
-            excluded.append(item)
-    return visible, excluded
+            perspective_excluded.append(item)
+            continue
+        visible.append(item)
+    return visible, perspective_excluded, temporal_excluded
 
 
 def prepare_selection_job(payload: dict[str, Any], *, subject_id: str,
                           source_session_id: str | None = None) -> dict[str, Any]:
     task = normalize_task(payload)
     items = normalized_items(payload)
-    visible, _ = partition_visibility(items, task)
+    visible, _, _ = partition_eligibility(items, task)
     candidates = [
         {
             "block_id": item["id"],
@@ -220,6 +242,7 @@ def prepare_selection_job(payload: dict[str, Any], *, subject_id: str,
             "derived": item["derived"],
             "source_refs": item["source_refs"],
             "story_point": item["story_point"],
+            "available_from_story_order": item["available_from_story_order"],
             "visibility": item["visibility"],
             "model_view": item["model_view"],
         }
@@ -259,9 +282,10 @@ def _pack(items: list[dict[str, Any]], budget: int, *, fail_if_over: bool = Fals
     return selected, skipped, used
 
 
-def _validate_question_support(task: dict[str, Any], judgment: dict[str, Any], visible_ids: set[str], selected_ids: set[str]) -> tuple[list[dict[str, Any]], list[str]]:
+def _validate_question_support(task: dict[str, Any], judgment: dict[str, Any], visible_by_id: dict[str, dict[str, Any]], selected_ids: set[str]) -> tuple[list[dict[str, Any]], list[str]]:
     active_ids = [q["question_id"] for q in task["active_questions"]]
     active_set = set(active_ids)
+    questions_by_id = {q["question_id"]: q for q in task["active_questions"]}
     support = judgment.get("question_support")
     unresolved = judgment.get("unresolved_questions")
     if not isinstance(support, list):
@@ -290,12 +314,16 @@ def _validate_question_support(task: dict[str, Any], judgment: dict[str, Any], v
             raise ValueError(f"invalid question support state: {qid}")
         if len(block_ids) != len(set(block_ids)):
             raise ValueError(f"duplicate support block ids: {qid}")
-        unknown_blocks = sorted(set(block_ids) - visible_ids)
+        unknown_blocks = sorted(set(block_ids) - set(visible_by_id))
         if unknown_blocks:
             raise ValueError(f"question {qid} references invisible/unknown blocks: " + ", ".join(unknown_blocks))
         unselected_blocks = sorted(set(block_ids) - selected_ids)
         if unselected_blocks:
             raise ValueError(f"question {qid} support blocks must be hot|working selections: " + ", ".join(unselected_blocks))
+        question_order = questions_by_id[qid]["as_of_story_order"]
+        late_blocks = sorted(item_id for item_id in block_ids if visible_by_id[item_id]["available_from_story_order"] > question_order)
+        if late_blocks:
+            raise ValueError(f"question {qid} support uses later-story evidence: " + ", ".join(late_blocks))
         if state == "none" and block_ids:
             raise ValueError(f"question {qid} support=none requires empty block_ids")
         if state in {"sufficient", "partial"} and not block_ids:
@@ -324,7 +352,7 @@ def pack_selection(payload: dict[str, Any], job: dict[str, Any], result: dict[st
 
     task = normalize_task(payload)
     items = normalized_items(payload)
-    visible, excluded = partition_visibility(items, task)
+    visible, perspective_excluded, temporal_excluded = partition_eligibility(items, task)
     by_id = {item["id"]: item for item in visible}
     judgment = result.get("judgment", {})
     hot_ids = _ordered_ids(judgment.get("hot_ids"), "hot_ids")
@@ -341,7 +369,7 @@ def pack_selection(payload: dict[str, Any], job: dict[str, Any], result: dict[st
         raise ValueError("selection must classify every visible memory block: " + ", ".join(missing))
 
     semantic_loaded_ids = set(hot_ids + working_ids)
-    question_support, unresolved_questions = _validate_question_support(task, judgment, set(by_id), semantic_loaded_ids)
+    question_support, unresolved_questions = _validate_question_support(task, judgment, by_id, semantic_loaded_ids)
 
     pinned_ids = [item["id"] for item in visible if item["pinned"]]
     ordered_hot_ids = pinned_ids + [item_id for item_id in hot_ids if item_id not in set(pinned_ids)]
@@ -394,12 +422,15 @@ def pack_selection(payload: dict[str, Any], job: dict[str, Any], result: dict[st
         "used": {"hot": hot_used, "working": working_used},
         "selected": {"hot": hot_selected, "working": working_selected},
         "archive": archive,
-        "visibility_excluded": [item["id"] for item in excluded],
+        "visibility_excluded": [item["id"] for item in perspective_excluded],
+        "temporal_excluded": [item["id"] for item in temporal_excluded],
         "skipped": {"hot": hot_skipped, "working": working_skipped},
         "invalidated": invalidated,
         "question_grounding": grounding,
         "model_unresolved_questions": unresolved_questions,
         "grounding_incomplete_due_budget": sorted(set(budget_incomplete)),
+        "grounding_incomplete_questions": sorted(set(unresolved_questions) | set(budget_incomplete)),
+        "grounding_incomplete": bool(set(unresolved_questions) | set(budget_incomplete)),
         "selection_owner": "model",
         "visibility_owner": "deterministic_runtime",
         "budget_owner": "deterministic_runtime",
@@ -416,23 +447,26 @@ def self_test() -> int:
             "task_mode": "DRAFT",
             "task_goal": "Resolve the negotiation from CHAR-A's current knowledge without leaking CHAR-B's private facts.",
             "current_story_point": "SCN-9",
+            "current_story_order": 9,
             "perspective": {"scope": "character", "perspective_id": "CHAR-A"},
             "active_questions": [
-                {"question_id": "Q-REL", "question": "What does CHAR-A currently believe about the relationship?", "kind": "relationship", "as_of_story_point": "SCN-9"},
-                {"question_id": "Q-CLUE", "question": "Which old clue might affect the immediate tactic?", "kind": "continuity", "as_of_story_point": "SCN-9"},
+                {"question_id": "Q-REL", "question": "What does CHAR-A currently believe about the relationship?", "kind": "relationship", "as_of_story_point": "SCN-9", "as_of_story_order": 9},
+                {"question_id": "Q-CLUE", "question": "Which old clue might affect the immediate tactic?", "kind": "continuity", "as_of_story_point": "SCN-3", "as_of_story_order": 3},
             ],
         },
         "items": [
-            {"id": "M-PIN", "cost": 2, "pinned": True, "derived": True, "authority": False, "source_refs": ["accepted:A"], "source_fingerprints": ["sha256:" + "a" * 64], "story_point": "SCN-9", "visibility": {"scope": "shared"}, "model_view": {"label": "current-goal", "description": "Immediate scene goal", "value": "Get out alive."}},
-            {"id": "M-B", "cost": 3, "derived": True, "authority": False, "source_refs": ["accepted:B"], "source_fingerprints": ["sha256:" + "b" * 64], "story_point": "SCN-8", "visibility": {"scope": "character", "perspective_id": "CHAR-A"}, "model_view": {"label": "relationship", "description": "CHAR-A's relationship state", "value": "Trust is damaged."}},
-            {"id": "M-C", "cost": 4, "derived": True, "authority": False, "source_refs": ["accepted:C"], "source_fingerprints": ["sha256:" + "c" * 64], "story_point": "SCN-3", "visibility": {"scope": "character", "perspective_id": "CHAR-A"}, "model_view": {"label": "old-clue", "description": "A clue CHAR-A observed earlier", "value": "The seal was replaced."}},
-            {"id": "M-HIDDEN", "cost": 1, "derived": True, "authority": False, "source_refs": ["accepted:H"], "source_fingerprints": ["sha256:" + "d" * 64], "story_point": "SCN-8", "visibility": {"scope": "character", "perspective_id": "CHAR-B"}, "model_view": {"label": "private", "value": "CHAR-B's private motive."}},
-            {"id": "M-X", "cost": 1, "derived": True, "authority": False, "source_refs": ["accepted:X"], "source_fingerprints": ["sha256:" + "e" * 64], "invalidated": True, "visibility": {"scope": "shared"}, "model_view": {"label": "invalid", "value": "stale"}},
+            {"id": "M-PIN", "cost": 2, "pinned": True, "derived": True, "authority": False, "source_refs": ["accepted:A"], "source_fingerprints": ["sha256:" + "a" * 64], "story_point": "SCN-9", "available_from_story_order": 9, "visibility": {"scope": "shared"}, "model_view": {"label": "current-goal", "description": "Immediate scene goal", "value": "Get out alive."}},
+            {"id": "M-B", "cost": 3, "derived": True, "authority": False, "source_refs": ["accepted:B"], "source_fingerprints": ["sha256:" + "b" * 64], "story_point": "SCN-8", "available_from_story_order": 8, "visibility": {"scope": "character", "perspective_id": "CHAR-A"}, "model_view": {"label": "relationship", "description": "CHAR-A's relationship state", "value": "Trust is damaged."}},
+            {"id": "M-C", "cost": 4, "derived": True, "authority": False, "source_refs": ["accepted:C"], "source_fingerprints": ["sha256:" + "c" * 64], "story_point": "SCN-3", "available_from_story_order": 3, "visibility": {"scope": "character", "perspective_id": "CHAR-A"}, "model_view": {"label": "old-clue", "description": "A clue CHAR-A observed earlier", "value": "The seal was replaced."}},
+            {"id": "M-HIDDEN", "cost": 1, "derived": True, "authority": False, "source_refs": ["accepted:H"], "source_fingerprints": ["sha256:" + "d" * 64], "story_point": "SCN-8", "available_from_story_order": 8, "visibility": {"scope": "character", "perspective_id": "CHAR-B"}, "model_view": {"label": "private", "value": "CHAR-B's private motive."}},
+            {"id": "M-LATE", "cost": 1, "derived": True, "authority": False, "source_refs": ["accepted:L"], "source_fingerprints": ["sha256:" + "e" * 64], "story_point": "SCN-8", "available_from_story_order": 8, "visibility": {"scope": "character", "perspective_id": "CHAR-A"}, "model_view": {"label": "late-clue", "value": "Learned only much later."}},
+            {"id": "M-FUTURE", "cost": 1, "derived": True, "authority": False, "source_refs": ["accepted:F"], "source_fingerprints": ["sha256:" + "f" * 64], "story_point": "SCN-10", "available_from_story_order": 10, "visibility": {"scope": "shared"}, "model_view": {"label": "future", "value": "Must never enter the current packet."}},
+            {"id": "M-X", "cost": 1, "derived": True, "authority": False, "source_refs": ["accepted:X"], "source_fingerprints": ["sha256:" + "0" * 64], "available_from_story_order": 0, "invalidated": True, "visibility": {"scope": "shared"}, "model_view": {"label": "invalid", "value": "stale"}},
         ],
     }
     job = prepare_selection_job(payload, subject_id="SCN-9")
     packet_ids = [x["block_id"] for x in job["input"]["payload"]["memory_blocks"]]
-    hidden_never_in_packet = "M-HIDDEN" not in packet_ids and "M-X" not in packet_ids
+    hidden_never_in_packet = all(x not in packet_ids for x in ("M-HIDDEN", "M-FUTURE", "M-X"))
     result = {
         "job_id": job["job_id"], "subject_id": job["subject_id"], "kind": job["kind"],
         "input_fingerprint": job["input_fingerprint"], "status": "completed",
@@ -441,11 +475,12 @@ def self_test() -> int:
             "confidence": 0.9,
             "hot_ids": ["M-B"],
             "working_ids": ["M-C"],
-            "archive_ids": ["M-PIN"],
+            "archive_ids": ["M-PIN", "M-LATE"],
             "reasons": [
                 {"block_id": "M-B", "tier": "hot", "reason": "Directly answers Q-REL."},
                 {"block_id": "M-C", "tier": "working", "reason": "Potential tactic evidence for Q-CLUE."},
                 {"block_id": "M-PIN", "tier": "archive", "reason": "Runtime pin will still force it hot."},
+                {"block_id": "M-LATE", "tier": "archive", "reason": "Visible now but too late for the historical question."},
             ],
             "question_support": [
                 {"question_id": "Q-REL", "support": "sufficient", "block_ids": ["M-B"]},
@@ -461,8 +496,9 @@ def self_test() -> int:
     hard_budget = report["used"] == {"hot": 5, "working": 0}
     whole_skip = report["skipped"]["working"] and report["skipped"]["working"][0]["id"] == "M-C"
     visibility_excluded = report["visibility_excluded"] == ["M-HIDDEN"]
+    temporal_excluded = report["temporal_excluded"] == ["M-FUTURE"]
     invalidated_excluded = "M-X" in report["invalidated"] and "M-X" not in report["archive"]
-    grounding_budget_truthful = report["grounding_incomplete_due_budget"] == ["Q-CLUE"] and report["question_grounding"][1]["loading_status"] == "not_loaded"
+    grounding_budget_truthful = report["grounding_incomplete_due_budget"] == ["Q-CLUE"] and report["question_grounding"][1]["loading_status"] == "not_loaded" and report["grounding_incomplete"] is True
 
     unknown_guard = False
     bad = json.loads(json.dumps(result)); bad["judgment"]["hot_ids"] = ["UNKNOWN"]
@@ -476,23 +512,39 @@ def self_test() -> int:
         pack_selection(payload, job, bad_q, hot_budget=5, working_budget=3)
     except ValueError:
         question_guard = True
+    as_of_guard = False
+    bad_asof = json.loads(json.dumps(result))
+    bad_asof["judgment"]["working_ids"] = ["M-C", "M-LATE"]
+    bad_asof["judgment"]["archive_ids"] = ["M-PIN"]
+    bad_asof["judgment"]["question_support"][1] = {"question_id": "Q-CLUE", "support": "partial", "block_ids": ["M-C", "M-LATE"]}
+    try:
+        pack_selection(payload, job, bad_asof, hot_budget=5, working_budget=10)
+    except ValueError:
+        as_of_guard = True
     authority_guard = False
     try:
-        normalize_item({"id": "BAD", "cost": 1, "derived": True, "authority": True, "source_refs": ["x"], "source_fingerprints": ["sha256:" + "f" * 64], "visibility": {"scope": "shared"}})
+        normalize_item({"id": "BAD", "cost": 1, "derived": True, "authority": True, "source_refs": ["x"], "source_fingerprints": ["sha256:" + "f" * 64], "available_from_story_order": 0, "visibility": {"scope": "shared"}})
     except ValueError:
         authority_guard = True
     pin_visibility_guard = False
     conflict = json.loads(json.dumps(payload))
-    conflict["items"].append({"id": "M-BAD-PIN", "cost": 1, "pinned": True, "derived": True, "authority": False, "source_refs": ["accepted:Z"], "source_fingerprints": ["sha256:" + "1" * 64], "visibility": {"scope": "character", "perspective_id": "CHAR-B"}, "model_view": {"label": "private"}})
+    conflict["items"].append({"id": "M-BAD-PIN", "cost": 1, "pinned": True, "derived": True, "authority": False, "source_refs": ["accepted:Z"], "source_fingerprints": ["sha256:" + "1" * 64], "available_from_story_order": 9, "visibility": {"scope": "character", "perspective_id": "CHAR-B"}, "model_view": {"label": "private"}})
     try:
         prepare_selection_job(conflict, subject_id="SCN-9")
     except ValueError:
         pin_visibility_guard = True
+    pin_temporal_guard = False
+    future_pin = json.loads(json.dumps(payload))
+    future_pin["items"].append({"id": "M-FUTURE-PIN", "cost": 1, "pinned": True, "derived": True, "authority": False, "source_refs": ["accepted:FP"], "source_fingerprints": ["sha256:" + "2" * 64], "available_from_story_order": 10, "visibility": {"scope": "shared"}, "model_view": {"label": "future-pin"}})
+    try:
+        prepare_selection_job(future_pin, subject_id="SCN-9")
+    except ValueError:
+        pin_temporal_guard = True
     catalog_resolved = job.get("provenance", {}).get("pack_id") == "context-research"
     typed_input = job.get("provenance", {}).get("input_contract_validated") is True
     ok = all((catalog_resolved, typed_input, hidden_never_in_packet, pin_override, hard_budget, whole_skip,
-              visibility_excluded, invalidated_excluded, grounding_budget_truthful, unknown_guard,
-              question_guard, authority_guard, pin_visibility_guard))
+              visibility_excluded, temporal_excluded, invalidated_excluded, grounding_budget_truthful, unknown_guard,
+              question_guard, as_of_guard, authority_guard, pin_visibility_guard, pin_temporal_guard))
     dump({
         "memory_tiers_contract": "PASS" if ok else "FAIL",
         "schema": SCHEMA,
@@ -501,7 +553,10 @@ def self_test() -> int:
         "catalog_resolved_contract_pack": catalog_resolved,
         "typed_input_contract": typed_input,
         "perspective_incompatible_never_enters_semantic_packet": hidden_never_in_packet,
+        "future_block_never_enters_semantic_packet": temporal_excluded,
+        "question_as_of_story_order_guard": as_of_guard,
         "pin_visibility_conflict_fail_closed": pin_visibility_guard,
+        "pin_temporal_conflict_fail_closed": pin_temporal_guard,
         "pin_override": pin_override,
         "hard_budget": hard_budget,
         "whole_item_or_skip": bool(whole_skip),

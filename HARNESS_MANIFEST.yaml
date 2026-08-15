@@ -71,7 +71,7 @@ quality:
   quality_evolution_schema: novelforge_quality_evolution_v2
   reader_expectation_schema: novelforge_reader_expectation_v2
   context_inspector_schema: novelforge_context_inspector_v2
-  memory_tiers_schema: novelforge_memory_tiers_v2
+  memory_tiers_schema: novelforge_memory_tiers_v4
   memory_bank_schema: novelforge_memory_bank_v1
   finding_schema: novelforge_quality_finding_v1
   state_graph_schema: novelforge_state_graph_v1
