@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novelforge_progress_stall_contract_v1",
+  "title": "NovelForge Progress / Stall Contract",
+  "oneOf": [
+    {"$ref": "#/$defs/observationPayload"},
+    {"$ref": "#/$defs/progressState"},
+    {"$ref": "#/$defs/replanRequest"}
+  ],
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nonempty": {"type": "string", "minLength": 1},
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "fingerprint"],
+      "properties": {
+        "ref": {"$ref": "#/$defs/nonempty"},
+        "fingerprint": {"$ref": "#/$defs/sha"}
+      }
+    },
+    "observationPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "kind", "progress_scope_id", "checkpoint_id", "workflow_cursor",
+        "operation_kind", "operation_input_fingerprint", "predecessor_event_id",
+        "retry_of_event_id", "execution_state", "before_work", "after_work",
+        "evidence_bindings", "authority", "canon_authority", "project_write_authority",
+        "framework_write_authority", "settlement_authority",
+        "production_readiness_authority", "model_execution"
+      ],
+      "properties": {
+        "schema": {"const": "novelforge_progress_observation_v1"},
+        "kind": {"const": "runtime_progress"},
+        "progress_scope_id": {"$ref": "#/$defs/nonempty"},
+        "checkpoint_id": {"$ref": "#/$defs/nonempty"},
+        "workflow_cursor": {"$ref": "#/$defs/nonempty"},
+        "operation_kind": {"$ref": "#/$defs/nonempty"},
+        "operation_input_fingerprint": {"$ref": "#/$defs/sha"},
+        "predecessor_event_id": {"type": ["string", "null"]},
+        "retry_of_event_id": {"type": ["string", "null"]},
+        "execution_state": {"enum": ["executed", "awaiting_user", "awaiting_external"]},
+        "before_work": {"type": "array", "items": {"$ref": "#/$defs/binding"}},
+        "after_work": {"type": "array", "items": {"$ref": "#/$defs/binding"}},
+        "evidence_bindings": {"type": "array", "items": {"$ref": "#/$defs/binding"}},
+        "authority": {"const": false},
+        "canon_authority": {"const": false},
+        "project_write_authority": {"const": false},
+        "framework_write_authority": {"const": false},
+        "settlement_authority": {"const": false},
+        "production_readiness_authority": {"const": false},
+        "model_execution": {"const": false}
+      }
+    },
+    "progressState": {
+      "type": "object",
+      "required": [
+        "schema", "session_id", "progress_scope_id", "max_stalls", "lifecycle_state",
+        "stall_count", "stall_evidence_event_ids", "observation_count",
+        "required_followup_operations", "followup_execution_performed", "authority",
+        "canon_authority", "project_write_authority", "framework_write_authority",
+        "settlement_authority", "production_readiness_authority", "acceptance_authority",
+        "completion_authority", "model_execution"
+      ],
+      "properties": {
+        "schema": {"const": "novelforge_progress_state_v1"},
+        "session_id": {"$ref": "#/$defs/nonempty"},
+        "run_id": {"type": ["string", "null"]},
+        "progress_scope_id": {"$ref": "#/$defs/nonempty"},
+        "max_stalls": {"type": "integer", "minimum": 2, "maximum": 20},
+        "lifecycle_state": {"enum": ["no_evidence", "advancing", "uncertain", "stalled", "replan_required"]},
+        "stall_count": {"type": "integer", "minimum": 0},
+        "stall_evidence_event_ids": {"type": "array", "items": {"$ref": "#/$defs/nonempty"}},
+        "current_work_fingerprint": {"type": ["string", "null"]},
+        "observation_count": {"type": "integer", "minimum": 0},
+        "observations": {"type": "array", "items": {"type": "object"}},
+        "replan_request": {"type": ["object", "null"]},
+        "required_followup_operations": {"type": "array", "items": {"type": "object"}},
+        "followup_execution_performed": {"const": false},
+        "authority": {"const": false},
+        "canon_authority": {"const": false},
+        "project_write_authority": {"const": false},
+        "framework_write_authority": {"const": false},
+        "settlement_authority": {"const": false},
+        "production_readiness_authority": {"const": false},
+        "acceptance_authority": {"const": false},
+        "completion_authority": {"const": false},
+        "model_execution": {"const": false}
+      }
+    },
+    "replanRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "session_id", "run_id", "progress_scope_id", "current_work_fingerprint",
+        "stall_evidence_event_ids", "max_stalls", "authority", "plan_mutation_performed",
+        "request_fingerprint"
+      ],
+      "properties": {
+        "schema": {"const": "novelforge_progress_replan_request_v1"},
+        "session_id": {"$ref": "#/$defs/nonempty"},
+        "run_id": {"type": ["string", "null"]},
+        "progress_scope_id": {"$ref": "#/$defs/nonempty"},
+        "current_work_fingerprint": {"type": ["string", "null"]},
+        "stall_evidence_event_ids": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/nonempty"}},
+        "max_stalls": {"type": "integer", "minimum": 2, "maximum": 20},
+        "authority": {"const": false},
+        "plan_mutation_performed": {"const": false},
+        "request_fingerprint": {"$ref": "#/$defs/sha"}
+      }
+    }
+  }
+}

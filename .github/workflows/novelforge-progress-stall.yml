@@ -1,0 +1,64 @@
+name: NovelForge Progress Stall
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  progress-stall:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile progress/stall runtime
+        run: |
+          python -m py_compile harness/control_plane/control_plane.py
+          python -m py_compile harness/control_plane/progress_stall.py
+
+      - name: Validate progress/stall schema
+        run: python -m json.tool harness/control_plane/progress_stall.schema.json > /dev/null
+
+      - name: Deterministic progress/stall contract
+        run: |
+          python harness/control_plane/progress_stall.py self-test --path /tmp/novelforge-progress-stall-ci.db > progress-stall-test.json
+
+      - name: Assert progress, replay, and authority invariants
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('progress-stall-test.json',encoding='utf-8'))
+          assert d['progress_stall_contract']=='PASS',d
+          assert d['advancing_change_is_detected'] is True
+          assert d['exact_no_op_is_detected'] is True
+          assert d['identical_replay_is_idempotent'] is True
+          assert d['conflicting_replay_fails_closed'] is True
+          assert d['stale_predecessor_fails_closed'] is True
+          assert d['transport_retry_no_op_does_not_increment_stall'] is True
+          assert d['awaiting_user_does_not_increment_stall'] is True
+          assert d['bounded_no_op_triggers_replan_request'] is True
+          assert d['replan_request_identity_is_stable'] is True
+          assert d['new_work_state_resets_stall'] is True
+          assert d['slow_but_changing_work_is_not_stalled'] is True
+          assert d['retry_must_preserve_operation_input'] is True
+          assert d['completion_claim_is_not_in_contract'] is True
+          assert d['restart_reduces_same_durable_evidence'] is True
+          assert d['progress_never_grants_release_or_write_authority'] is True
+          assert d['no_followup_is_auto_executed'] is True
+          assert d['model_execution'] is False
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: progress-stall-contract
+          path: progress-stall-test.json
+          if-no-files-found: error
