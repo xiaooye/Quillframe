@@ -1,61 +1,63 @@
 # 008 · State Integrity P0 — Property Ownership and Propagation Debt
 
 ## Status
-Draft implementation spec for Generic NovelForge. This work is **not** authority for any downstream Project until released and explicitly pinned.
+Draft Generic NovelForge implementation. Nothing here is downstream Project authority until a release is merged, bundled, attested, and explicitly pinned by that Project.
 
-## Evidence
-- #69: external Codex systems expose a useful editable/derived field boundary, but also demonstrate dual-writer last-write-wins failures when one property is both human-editable and agent-derived.
-- #63: external long-form systems track downstream propagation debt after upstream changes; current NovelForge documents dependency impact but has no durable debt lifecycle.
+## Evidence and overlap
+- #69: external editable-Codex systems expose useful field ownership but also dual-writer last-write-wins failures.
+- #63: external long-form systems track downstream propagation debt after upstream changes.
+- Current NovelForge already owns object/fact authority, Settlement, derived memory invalidation, state-graph contradiction detection, quality-evolution ledgers, and resume preflight. P0 must extend those boundaries, not duplicate them.
 
-## Problem
-NovelForge already separates Canon, Accepted artifacts, Settlement, derived memory, runtime state, plans, and proposals. Two deterministic gaps remain:
+## Stage A · Property write-source policy (#69)
+Projects may opt in through `paths.property_write_policy` using `novelforge_property_write_policy_v1`.
 
-1. A Project cannot machine-declare, at property granularity, which writer class may mutate a value directly versus requiring proposal, Settlement, or reconciliation.
-2. After an authoritative upstream change, dependency impact has no generic durable `open → discharged` lifecycle.
-
-## Invariants
-- No model inference grants write authority.
-- Capability/tool availability is not authority.
-- Policy resolution is deterministic. A configured Project policy may authoritatively resolve the **write route**, but the resolver never grants Canon or Framework-write authority and never establishes the truth of a value.
-- Existing Projects without a property policy retain current object-level behavior.
-- One property must not silently acquire two authoritative writers.
-- Settlement remains the authority mechanism for `settlement_only` state.
-- Derived state remains `authority=false` and source-bound.
-- Propagation debt, when implemented, is a derived work ledger, never Canon.
-- No global invalidation or automatic prose regeneration.
-
-## Stage A — #69 Property write-source policy
-Projects may opt in by mapping `paths.property_write_policy` to a UTF-8 JSON policy using `novelforge_property_write_policy_v1`.
-
-Resolution precedence:
-
+Resolution:
 `global default → object-type default → exact property override`
 
 Mutation classes:
-- `user_declared`
-- `settlement_only`
-- `derived_only`
-- `proposal_only`
-- `runtime_only`
-- `locked`
-- `mixed_reconcile`
+`user_declared | settlement_only | derived_only | proposal_only | runtime_only | locked | mixed_reconcile`
 
-The deterministic resolver returns only a route:
-
+Routes:
 `allow_direct | proposal_required | settlement_required | reconcile_required | deny | legacy_unmanaged`
 
-It does not decide whether a proposed value is true.
+The resolver may authoritatively resolve a write route, but it never establishes story truth or grants Canon/Framework-write authority. Projects without the optional policy preserve legacy object-level behavior.
 
-## Stage B — #63 Propagation debt
-After Stage A is stable, add a non-authoritative ledger binding an upstream before/after fingerprint to explicit dependent artifacts and a required action (`revalidate|rebuild|replan|resimulate|human_review`). Debt is opened only from explicit dependency evidence and is discharged only by bound result evidence/fingerprint.
+## Stage B · Propagation debt (#63)
+`harness/propagation_debt.py` is a deterministic SQLite work ledger with schema `novelforge_propagation_debt_v1`.
 
-## Compatibility
-No Project schema-version bump in Stage A. Absence of `paths.property_write_policy` yields `legacy_unmanaged`, preserving current behavior. A configured but missing/invalid policy fails closed for the policy resolver.
+A debt may open only when the caller supplies:
+- a changed upstream source with exact before/after fingerprints;
+- source-change evidence ref + fingerprint;
+- source authority (`locked|accepted|settled|active_plan`);
+- one explicit dependency edge ref + fingerprint;
+- dependent artifact ref + current fingerprint;
+- one required action: `revalidate|rebuild|replan|resimulate|human_review`;
+- a bounded reason.
+
+No dependency edge means no debt. Unchanged source fingerprint means no debt. The runtime never scans the whole Project to invent dependents and never performs the required action itself.
+
+Debt identity is deterministic from source change + exact dependency/dependent fingerprint + required action. Reopening the same identity is idempotent; replay with conflicting evidence fails closed.
+
+Lifecycle:
+`open → discharged | superseded | waived_with_evidence`
+
+Discharge requires the debt's latest source fingerprint, exact required action, result ref/fingerprint, and resulting dependent fingerprint. Supersession is explicit and only allowed when the new debt continues the same source/dependent/dependency lineage from the prior source-after fingerprint. Waiver requires evidence; no silent dismissal.
+
+The ledger is `authority=false`, never Canon, never a second dependency graph, and never a repair executor. Open debt is not a universal resume blocker. A workflow that requires debt-free state must declare that precondition explicitly; ordinary resume remains owned by `resume_preflight.py`.
+
+## Relationship between Stage A and B
+After an authorized state/plan mutation, callers may use the Project's explicit dependency evidence to open downstream debt. Property policy answers **who/which route may write**; propagation debt answers **what known dependent work became stale**. Neither grants the other authority and neither bypasses Settlement.
+
+## Compatibility / rollback
+- No Project schema-version bump.
+- No policy path → `legacy_unmanaged` as before.
+- Propagation debt is a new derived runtime DB (`.novelforge/propagation-debt.db` by default); deleting/rebuilding it never rewrites Canon.
+- Reverting P0 leaves existing Project files and Settlement data intact.
 
 ## Acceptance
-- deterministic self-tests and public CI green;
-- schema/tool discoverable in Framework manifest;
-- host payload cannot self-escalate write permission;
-- broad defaults avoid per-field ACL forests;
-- exact policy fingerprint is observable;
-- #63 is not implemented until #69 semantics are stable.
+- deterministic public CI and full NovelForge CI green;
+- exact schemas/tools discoverable in the Framework manifest before promotion;
+- no global invalidation, no automatic prose regeneration;
+- restart/retry remains idempotent;
+- exact diff contains no unrelated Studio/site changes;
+- downstream Projects remain on their prior lock until an explicit future migration.

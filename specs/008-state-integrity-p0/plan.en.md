@@ -1,11 +1,12 @@
 # 008 Plan · State Integrity P0
 
-1. Freeze current Framework `main` exact base; do not change downstream Project locks.
-2. Implement #69 as a stdlib-only deterministic resolver plus JSON schema.
-3. Discover optional Project policy only through the existing safe `paths` map.
-4. Add regression fixtures for writer escalation, Settlement routing, derived authority, mixed reconciliation, UI editability, and legacy compatibility.
-5. Advertise the contract in `HARNESS_MANIFEST.yaml` and add public CI.
-6. Review exact diff and merge only with green deterministic CI.
-7. Only then implement #63 propagation debt against the settled #69 boundary.
+1. Freeze/synchronize an exact current Framework main; never mutate downstream Project locks during development.
+2. Stabilize #69 property write-source policy with deterministic route semantics and legacy compatibility.
+3. Re-read current-main state graph, Settlement, memory invalidation, quality-evolution, dependency and resume mechanisms.
+4. Implement #63 as a non-authoritative durable ledger that opens only from explicit fingerprint-bound dependency evidence.
+5. Make open/discharge/supersede/waive idempotent and evidence-bound; prove restart does not duplicate work.
+6. Keep open debt advisory by default; workflow-specific debt-free preconditions must be explicit rather than global resume locks.
+7. Wire state-integrity tests into normal full CI, then add Framework manifest discovery after executable semantics are green.
+8. Re-synchronize concurrent main without overwriting Studio/runtime work; review exact diff and public CI before promotion.
 
-Rollback: remove the optional path/tool and revert the Framework commit; Projects without the path are behaviorally unchanged.
+Rollback: revert P0 and remove/rebuild the derived debt DB. Existing Canon, Settlement transactions, Project files and locks remain unchanged.

@@ -1,20 +1,19 @@
 # 008 Tasks · State Integrity P0
 
 ## Stage A · #69
-- [x] 对 current `state_graph`、Settlement、Canon/State、Project Adapter 做 evidence/overlap review。
+- [x] 对 state graph、Settlement、Canon/State、Project Adapter 完成 evidence/overlap review。
 - [x] 定义最小 mutation classes 与 deterministic route vocabulary。
-- [x] resolver self-test 已在本地通过。
-- [x] 发布 `property_write_policy.py` + schema。
-- [x] 加入 Framework manifest discovery。
-- [x] CI 增加 Project-path integration fixture。
-- [x] 已跑首轮 public Actions 并检查实际执行 steps/artifact（`31891326122`，artifact `9248615828`）。
-- [x] 将 resolver self-test 纳入 reusable release contracts。
-- [ ] 跑 latest-head dedicated + full NovelForge CI，并检查所有相关 jobs。
-- [ ] 做 compatibility + exact diff review。
+- [x] 发布 resolver/schema + Project-path integration。
+- [x] 加入 Framework manifest discovery 与 release/full-CI coverage。
+- [x] Public dedicated run `31891941126` 全绿；artifact `9248769203`。
+- [x] Full NovelForge CI `31891941404` 全绿；Studio Host Bridge / Product Site 同样 green。
+- [x] 与同步后的 main 比较，exact diff 只有 P0 Core/spec/docs/workflow 文件。
 
 ## Stage B · #63
-- [ ] Stage A 落地后重新读取 current-main dependency/state mechanisms。
-- [ ] 定义 derived debt identity、lifecycle、required-action enum、discharge receipt。
-- [ ] 证明只有 explicit dependency 才开 debt，并支持 idempotent resume。
-- [ ] 增加 no-global-invalidation、supersession、discharge、waiver-with-evidence regressions。
-- [ ] 跑 CI/evals并审 exact diff。
+- [x] 重新读取 current-main state graph、Settlement、memory invalidation、quality evolution 与新 resume preflight。
+- [x] 定义 debt identity、lifecycle、required-action enum、explicit dependency evidence 与 closure receipts。
+- [x] Local deterministic self-test 已覆盖 no-global-invalidation、open/discharge/supersede 幂等、evidence-bound waiver 与 restart。
+- [x] 发布 propagation-debt runtime/schema/self-test，并把 state-integrity workflow 接进 full CI。
+- [ ] 跑 latest-head full NovelForge CI 并检查 state-integrity artifact/jobs。
+- [ ] Executable latest-head CI green 后补 Framework manifest discovery + normal-ci declaration。
+- [ ] 再同步 latest main，做最终 exact diff / compatibility review。
