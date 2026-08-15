@@ -15,9 +15,10 @@ const output = arg("output");
 const width = Number(arg("width", "1440"));
 const height = Number(arg("height", "900"));
 const timeoutMs = Number(arg("timeout-ms", "90000"));
+const expectLayout = arg("expect-layout");
 
 if (!chrome || !url || !output) {
-  console.error("usage: CHROME=/path/to/chrome node godot-browser-proof.mjs --url URL --output screenshot.png [--width 1440 --height 900 --timeout-ms 90000]");
+  console.error("usage: CHROME=/path/to/chrome node godot-browser-proof.mjs --url URL --output screenshot.png [--width 1440 --height 900 --timeout-ms 90000 --expect-layout desktop|compact|phone]");
   process.exit(2);
 }
 
@@ -105,7 +106,7 @@ function command(method, params = {}) {
 
 async function runtimeState() {
   const response = await command("Runtime.evaluate", {
-    expression: `JSON.stringify({runtime:document.documentElement.dataset.novelforgeRuntime||null,engine:document.documentElement.dataset.novelforgeEngine||null,status:document.getElementById('nf-status')?.textContent||null,loader:document.getElementById('nf-loader')?.className||null,path:location.pathname})`,
+    expression: `JSON.stringify({runtime:document.documentElement.dataset.novelforgeRuntime||null,engine:document.documentElement.dataset.novelforgeEngine||null,layout:document.documentElement.dataset.novelforgeLayout||null,status:document.getElementById('nf-status')?.textContent||null,loader:document.getElementById('nf-loader')?.className||null,path:location.pathname,innerWidth:window.innerWidth,innerHeight:window.innerHeight,dpr:window.devicePixelRatio,canvasWidth:document.getElementById('canvas')?.width||0,canvasHeight:document.getElementById('canvas')?.height||0})`,
     returnByValue: true,
   });
   const value = response?.result?.value;
@@ -152,6 +153,9 @@ try {
   if (state?.runtime !== "ready") {
     throw new Error(`Godot Web did not become scene-ready within ${timeoutMs}ms: ${JSON.stringify(state)}`);
   }
+  if (expectLayout && state?.layout !== expectLayout) {
+    throw new Error(`Godot Web responsive layout mismatch: expected ${expectLayout}, got ${state?.layout ?? "unset"}; ${JSON.stringify(state)}`);
+  }
 
   const capture = await command("Page.captureScreenshot", {
     format: "png",
@@ -162,13 +166,16 @@ try {
   fs.writeFileSync(output, Buffer.from(capture.data, "base64"));
 
   const proof = {
-    schema: "novelforge_godot_browser_proof_v1",
+    schema: "novelforge_godot_browser_proof_v2",
     status: "pass",
     url,
-    viewport: `${width}x${height}`,
+    requested_viewport: `${width}x${height}`,
+    browser_viewport: `${state.innerWidth}x${state.innerHeight}`,
     runtime: state.runtime,
     engine: state.engine,
+    layout: state.layout,
     path: state.path,
+    canvas: `${state.canvasWidth}x${state.canvasHeight}`,
     screenshot_bytes: fs.statSync(output).size,
   };
   console.log(JSON.stringify(proof));
