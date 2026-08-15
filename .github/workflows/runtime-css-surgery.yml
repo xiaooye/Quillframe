@@ -19,26 +19,33 @@ jobs:
       - name: Remove Studio-owned bottom-nav active chrome
         run: |
           python - <<'PY'
+          import re
           from pathlib import Path
+
           path = Path('studio/app/src/styles/atelier-workbench.css')
           text = path.read_text(encoding='utf-8')
-          active = '''  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-bottom-nav-item[data-active="true"] {
-            color: var(--wui-color-primary);
-            background: var(--nf-workbench-accent-soft);
-            box-shadow: none;
-          }
 
-          '''.replace('          ', '')
-          forced = '''    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-nav-item[data-active="true"],
-          :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-bottom-nav-item[data-active="true"] {
-          '''.replace('          ', '')
-          replacement = '''    :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-nav-item[data-active="true"] {
-          '''.replace('          ', '')
-          if text.count(active) != 1:
-              raise SystemExit(f'expected one bottom-nav active block, found {text.count(active)}')
-          if text.count(forced) != 1:
-              raise SystemExit(f'expected one forced-colors combined selector, found {text.count(forced)}')
-          text = text.replace(active, '', 1).replace(forced, replacement, 1)
+          active_pattern = re.compile(
+              r'\n\s*:root\[data-experience="story-loom-kawaii-atelier-v5"\] '
+              r'\.nf-bottom-nav-item\[data-active="true"\]\s*\{\s*'
+              r'color:\s*var\(--wui-color-primary\);\s*'
+              r'background:\s*var\(--nf-workbench-accent-soft\);\s*'
+              r'box-shadow:\s*none;\s*\}\s*',
+              re.MULTILINE,
+          )
+          forced_pattern = re.compile(
+              r'(:root\[data-experience="story-loom-kawaii-atelier-v5"\] '
+              r'\.nf-nav-item\[data-active="true"\]),\s*\n\s*'
+              r':root\[data-experience="story-loom-kawaii-atelier-v5"\] '
+              r'\.nf-bottom-nav-item\[data-active="true"\]\s*\{'
+          )
+
+          text, active_count = active_pattern.subn('\n', text, count=1)
+          text, forced_count = forced_pattern.subn(r'\1 {', text, count=1)
+          if active_count != 1:
+              raise SystemExit(f'expected one bottom-nav active block, found {active_count}')
+          if forced_count != 1:
+              raise SystemExit(f'expected one forced-colors combined selector, found {forced_count}')
           if '.nf-bottom-nav-item[data-active' in text:
               raise SystemExit('bottom-nav active selector still present')
           path.write_text(text, encoding='utf-8')
