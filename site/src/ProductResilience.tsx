@@ -7,10 +7,6 @@ function prefersChinese() {
   return navigator.language.toLowerCase().startsWith("zh");
 }
 
-export function ProductSkipLink() {
-  return <a class="nf-skip-link" href="#main-content">{prefersChinese() ? "跳到主要内容" : "Skip to main content"}</a>;
-}
-
 export function ProductFailureBoundary(props: { children: JSX.Element }) {
   return (
     <ErrorBoundary fallback={(error, reset) => (
