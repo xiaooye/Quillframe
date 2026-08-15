@@ -13,6 +13,7 @@ on:
       - '.github/actions/project-peer-semantic/**'
       - '.github/workflows/novelforge-chat-semantic-bridge.yml'
       - '.github/workflows/novelforge-quality-gate-hardening.yml'
+      - 'quality/public_peer_issue_probe.py'
   workflow_dispatch:
 
 permissions:
@@ -28,7 +29,7 @@ jobs:
           python-version: '3.11'
       - name: Compile quality and semantic runtime
         run: |
-          python -m py_compile quality/quality_taxonomy.py quality/repair_policy.py quality/production_readiness.py
+          python -m py_compile quality/quality_taxonomy.py quality/repair_policy.py quality/production_readiness.py quality/public_peer_issue_probe.py
           python -m py_compile harness/semantic_workers/semantic_worker_router.py harness/semantic_workers/peer_chat_relay.py
           python -m py_compile harness/semantic_workers/registered_contract_binding.py harness/semantic_workers/peer_bridge_receipt.py
           python -m py_compile .github/actions/project-peer-semantic/bridge.py
@@ -73,3 +74,28 @@ jobs:
           assert registry['contracts']['quality.production_review']['release_roles']==['semantic_independent']
           print({'registered_release_role_contract':'PASS','forged_registered_rubric_rejected':True})
           PY
+      - name: Exact 5554 public issue peer/receipt integration probe
+        env:
+          EXPECTED_FRAMEWORK_COMMIT: 5554b464c6bc00ead8ac3eb2a818ad0e07d70caa
+        run: |
+          python quality/public_peer_issue_probe.py \
+            --issue 59 \
+            --framework-commit "$EXPECTED_FRAMEWORK_COMMIT" \
+            > public-exact-peer-issue-59.json
+          cat public-exact-peer-issue-59.json
+          python - <<'PY'
+          import json
+          d=json.load(open('public-exact-peer-issue-59.json',encoding='utf-8'))
+          assert d['result']=='PASS',d
+          assert d['framework_commit_under_test']=='5554b464c6bc00ead8ac3eb2a818ad0e07d70caa',d
+          assert d['production_project_receipt'] is False,d
+          assert d['authority'] is False,d
+          assert all(d['checks'].values()),d
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: novelforge-public-exact-peer-issue-59
+          path: public-exact-peer-issue-59.json
+          if-no-files-found: warn
+          retention-days: 7
