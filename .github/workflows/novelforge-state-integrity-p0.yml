@@ -1,0 +1,114 @@
+name: NovelForge State Integrity P0
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'harness/property_write_policy.py'
+      - 'harness/property_write_policy.schema.json'
+      - 'specs/008-state-integrity-p0/**'
+      - '.github/workflows/novelforge-state-integrity-p0.yml'
+      - 'HARNESS_MANIFEST.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'harness/property_write_policy.py'
+      - 'harness/property_write_policy.schema.json'
+      - 'specs/008-state-integrity-p0/**'
+      - '.github/workflows/novelforge-state-integrity-p0.yml'
+      - 'HARNESS_MANIFEST.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  state-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile property write policy
+        run: python -m py_compile harness/property_write_policy.py
+
+      - name: Property write policy deterministic contract
+        run: python harness/property_write_policy.py self-test > property-write-policy-test.json
+
+      - name: Project path integration
+        run: |
+          rm -rf /tmp/novelforge-property-policy-project
+          python project_sdk.py init /tmp/novelforge-property-policy-project \
+            --id PROJECT-POLICY-CI --title 'Property Policy Fixture' --language en --framework-version 0.8.0
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('/tmp/novelforge-property-policy-project')
+          manifest=root/'novelforge.toml'
+          text=manifest.read_text(encoding='utf-8')
+          needle='assets = "assets"\n\n[build]'
+          assert needle in text
+          text=text.replace(needle,'assets = "assets"\nproperty_write_policy = "state/property_write_policy.json"\n\n[build]',1)
+          manifest.write_text(text,encoding='utf-8')
+          policy={
+            'schema':'novelforge_property_write_policy_v1',
+            'default':{'mutation_class':'proposal_only'},
+            'object_types':{
+              'CHAR':{
+                'default':{'mutation_class':'settlement_only'},
+                'properties':{'display_name':{'mutation_class':'user_declared'}}
+              }
+            }
+          }
+          (root/'state'/'property_write_policy.json').write_text(json.dumps(policy,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+          python harness/property_write_policy.py validate --project-root /tmp/novelforge-property-policy-project > property-write-policy-project-validation.json
+          python harness/property_write_policy.py resolve --project-root /tmp/novelforge-property-policy-project --object-type CHAR --property current_location --writer-class semantic_worker > property-write-policy-semantic.json
+          python harness/property_write_policy.py resolve --project-root /tmp/novelforge-property-policy-project --object-type CHAR --property display_name --writer-class user > property-write-policy-user.json
+          python - <<'PY'
+          import json
+          validation=json.load(open('property-write-policy-project-validation.json',encoding='utf-8'))
+          semantic=json.load(open('property-write-policy-semantic.json',encoding='utf-8'))
+          user=json.load(open('property-write-policy-user.json',encoding='utf-8'))
+          assert validation['valid'] is True and validation['policy_status']=='configured'
+          assert validation['policy_fingerprint'].startswith('sha256:')
+          assert semantic['mutation_class']=='settlement_only'
+          assert semantic['decision']=='proposal_required' and semantic['direct_write_allowed'] is False
+          assert user['mutation_class']=='user_declared'
+          assert user['decision']=='allow_direct' and user['ui_direct_editable'] is True
+          assert semantic['policy_fingerprint']==user['policy_fingerprint']==validation['policy_fingerprint']
+          PY
+
+      - name: Legacy project compatibility
+        run: |
+          rm -rf /tmp/novelforge-property-policy-legacy
+          python project_sdk.py init /tmp/novelforge-property-policy-legacy \
+            --id PROJECT-LEGACY-CI --title 'Legacy Fixture' --language en --framework-version 0.8.0
+          python harness/property_write_policy.py resolve --project-root /tmp/novelforge-property-policy-legacy --object-type CHAR --property current_location --writer-class semantic_worker > property-write-policy-legacy.json
+          python - <<'PY'
+          import json
+          d=json.load(open('property-write-policy-legacy.json',encoding='utf-8'))
+          assert d['policy_status']=='absent'
+          assert d['decision']=='legacy_unmanaged'
+          assert d['direct_write_allowed'] is None
+          PY
+
+      - name: Assert deterministic contract
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('property-write-policy-test.json',encoding='utf-8'))
+          assert d['property_write_policy_contract']=='PASS',d
+          assert d['payload_cannot_self_escalate'] is True
+          assert d['mixed_writer_routes_to_reconcile'] is True
+          assert d['policy_absence_preserves_legacy_behavior'] is True
+          assert d['derived_only_is_non_authoritative'] is True
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: state-integrity-p0
+          path: property-write-policy-*.json
