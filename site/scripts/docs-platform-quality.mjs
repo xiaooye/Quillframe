@@ -61,6 +61,7 @@ requireCheck(siteTitle.includes('class="nf-brand-home" href="/"'), "NovelForge d
 requireCheck(siteTitle.includes('english ? "/docs/en/" : "/docs/"'), "docs header must retain a locale-aware documentation-home link");
 requireCheck(siteTitle.includes('english ? "Docs" : "文档"'), "docs header must label the documentation namespace natively");
 requireCheck(actions.includes('english ? "Product" : "产品"'), "Product header action must remain locale-aware");
+requireCheck(actions.includes('english ? "Agents" : "Agent 集成"') && actions.includes('href="/agents"'), "Docs header must expose the live Agent integration workbench");
 
 requireCheck(!main.includes("KnowledgePortal"), "legacy Knowledge Portal must not mount beside the product router");
 requireCheck(!main.includes("KnowledgeExperience"), "product entry must not import the retired custom docs renderer");
@@ -81,6 +82,7 @@ requireCheck(landing.includes('template: "splash"'), "docs home must use Starlig
 requireCheck(landing.includes("StarlightPage"), "docs home must remain inside the official Starlight page shell");
 requireCheck(landing.includes('class="nf-link-grid"') && landing.includes('class="nf-link-card"'), "docs home must use stable semantic task-path cards instead of private Starlight component imports");
 requireCheck(landing.includes('link: "/inspect"') && landing.includes('"/inspect"'), "docs home must connect product-first onboarding to the live project inspector");
+requireCheck(landing.includes('"/playground"') && landing.includes('"/agents"'), "docs home must connect to the live Playground and Agent integration workbench");
 requireCheck(landing.includes("data-nf-docs-home"), "docs home must expose a stable verification marker");
 requireCheck(landing.includes("按目标开始") && landing.includes("Choose a path"), "docs landing copy must remain natively localized");
 requireCheck(zhLandingRoute.includes('<DocsLanding locale="zh-CN" />'), "zh-CN docs root must render the curated Chinese landing");
@@ -111,6 +113,7 @@ if (failures.length > 0) {
     localized_header_actions: true,
     curated_landing: true,
     product_first_inspector_handoff: true,
+    product_tool_handoff: true,
     product_home_brand_handoff: true,
   }, null, 2));
 }
