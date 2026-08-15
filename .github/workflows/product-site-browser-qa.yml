@@ -82,6 +82,7 @@ jobs:
           mkdir -p /tmp/product-site-browser-qa
           CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser)
           test -n "${CHROME}"
+          export CHROME
 
           cd site
           npm run preview -- --host 127.0.0.1 --port 4188 > /tmp/product-site-browser-qa/server.log 2>&1 &
@@ -105,8 +106,8 @@ jobs:
           done
           test "${ready}" = "true"
 
-          # Deep product routes must resolve to the Godot host document while
-          # the semantic documentation subtree remains a separate HTML app.
+          # Deep product routes resolve to the Godot host document while
+          # documentation remains a separate semantic HTML application.
           for route in architecture studio publication inspect playground agents changelog; do
             curl --silent --show-error --fail "http://127.0.0.1:4188/${route}" > "/tmp/product-site-browser-qa/${route}.html"
             grep -q 'data-novelforge-runtime="loading"' "/tmp/product-site-browser-qa/${route}.html"
@@ -114,54 +115,29 @@ jobs:
           curl --silent --show-error --fail http://127.0.0.1:4188/docs/ > /tmp/product-site-browser-qa/docs.html
           grep -qiE 'starlight|documentation|docs' /tmp/product-site-browser-qa/docs.html
 
-          chrome_base=(
-            --headless=new
-            --no-sandbox
-            --disable-dev-shm-usage
-            --use-angle=swiftshader
-            --enable-unsafe-swiftshader
-            --ignore-gpu-blocklist
-            --virtual-time-budget=30000
-          )
-
-          assert_runtime_ready() {
+          proof() {
             name="$1"
-            size="$2"
-            url="$3"
-            profile=$(mktemp -d)
-            "${CHROME}" \
-              "${chrome_base[@]}" \
-              --window-size="${size}" \
-              --user-data-dir="${profile}" \
-              --dump-dom \
-              "${url}" >"/tmp/product-site-browser-qa/${name}-dom.html" 2>"/tmp/product-site-browser-qa/${name}-dom.log"
-            rm -rf "${profile}"
-            grep -q 'data-novelforge-runtime="ready"' "/tmp/product-site-browser-qa/${name}-dom.html"
+            width="$2"
+            height="$3"
+            url="$4"
+            node site/scripts/godot-browser-proof.mjs \
+              --url "${url}" \
+              --width "${width}" \
+              --height "${height}" \
+              --timeout-ms 90000 \
+              --output "/tmp/product-site-browser-qa/${name}.png" \
+              | tee "/tmp/product-site-browser-qa/${name}-proof.json"
           }
 
-          run_chrome() {
-            name="$1"
-            size="$2"
-            url="$3"
-            profile=$(mktemp -d)
-            "${CHROME}" \
-              "${chrome_base[@]}" \
-              --window-size="${size}" \
-              --user-data-dir="${profile}" \
-              --screenshot="/tmp/product-site-browser-qa/${name}.png" \
-              "${url}" >"/tmp/product-site-browser-qa/${name}-chrome.log" 2>&1
-            rm -rf "${profile}"
-          }
-
-          assert_runtime_ready product-ready 1440,900 'http://127.0.0.1:4188/'
-          assert_runtime_ready architecture-ready 1440,900 'http://127.0.0.1:4188/architecture'
-          assert_runtime_ready architecture-mobile-ready 390,844 'http://127.0.0.1:4188/architecture'
-
-          run_chrome product-desktop 1440,900 'http://127.0.0.1:4188/'
-          run_chrome architecture-desktop 1440,900 'http://127.0.0.1:4188/architecture'
-          run_chrome studio-desktop 1440,900 'http://127.0.0.1:4188/studio'
-          run_chrome publication-desktop 1440,900 'http://127.0.0.1:4188/publication'
-          run_chrome architecture-mobile 390,844 'http://127.0.0.1:4188/architecture'
+          # Real elapsed-time CDP polling is deliberate: a 40 MB WebAssembly
+          # runtime may still be compiling after network progress reaches 100%.
+          # Virtual-time screenshots can therefore capture only a completed
+          # loader and falsely report the scene as broken.
+          proof product-desktop 1440 900 'http://127.0.0.1:4188/'
+          proof architecture-desktop 1440 900 'http://127.0.0.1:4188/architecture'
+          proof studio-desktop 1440 900 'http://127.0.0.1:4188/studio'
+          proof publication-desktop 1440 900 'http://127.0.0.1:4188/publication'
+          proof architecture-mobile 390 844 'http://127.0.0.1:4188/architecture'
 
           python - <<'PY'
           from hashlib import sha256
@@ -187,9 +163,10 @@ jobs:
           assert len(set(desktop)) >= 3, desktop
 
           (root / 'browser-proof.txt').write_text(
-              'schema=novelforge_product_site_browser_qa_v4\n'
+              'schema=novelforge_product_site_browser_qa_v5\n'
               'runtime=godot_web\n'
               'runtime_ready_marker=true\n'
+              'real_time_cdp_wait=true\n'
               'branded_loader=true\n'
               'dimension=2d_2_5d\n'
               'deep_routes=true\n'
@@ -199,7 +176,7 @@ jobs:
               'authority=false\n',
               encoding='utf-8',
           )
-          print({'schema': 'novelforge_product_site_browser_qa_v4', 'status': 'pass', 'screenshots': 5, 'runtime_ready_marker': True, 'authority': False})
+          print({'schema': 'novelforge_product_site_browser_qa_v5', 'status': 'pass', 'screenshots': 5, 'real_time_cdp_wait': True, 'authority': False})
           PY
 
       - name: Upload Product Site browser QA evidence
