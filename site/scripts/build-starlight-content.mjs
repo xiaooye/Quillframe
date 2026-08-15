@@ -12,10 +12,10 @@ const publicAssetRoot = path.join(docsRoot, "public", "repo-assets");
 const manifestPath = path.join(repoRoot, "docs", "documentation_manifest.json");
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 
-const sourceToId = new Map();
+const sourceToTarget = new Map();
 for (const doc of manifest.documents) {
-  sourceToId.set(doc.english.replaceAll("\\", "/"), doc.id);
-  sourceToId.set(doc.chinese.replaceAll("\\", "/"), doc.id);
+  sourceToTarget.set(doc.english.replaceAll("\\", "/"), { id: doc.id, locale: "en-US" });
+  sourceToTarget.set(doc.chinese.replaceAll("\\", "/"), { id: doc.id, locale: "zh-CN" });
 }
 
 function stripFrontmatter(source) {
@@ -95,18 +95,18 @@ function copyRelativeAsset(href, sourceDir) {
   return `${publicHref}${query}${hash}`;
 }
 
-function rewriteDocHref(href, sourceDir, locale) {
+function rewriteDocHref(href, sourceDir) {
   if (/^(?:https?:|mailto:|tel:|#|\/)/i.test(href)) return null;
   const { pathname, query, hash } = splitHref(href);
   if (!/\.md$/i.test(pathname)) return null;
 
   const resolved = resolveSourcePath(sourceDir, pathname);
-  const targetId = sourceToId.get(resolved);
-  if (!targetId) return null;
-  return `${pageHref(targetId, locale)}${query}${hash}`;
+  const target = sourceToTarget.get(resolved);
+  if (!target) return null;
+  return `${pageHref(target.id, target.locale)}${query}${hash}`;
 }
 
-function rewriteHtmlAttributes(source, sourceDir, locale) {
+function rewriteHtmlAttributes(source, sourceDir) {
   const withImages = source.replace(/<img\b[^>]*>/gi, (tag) => tag.replace(
     /\bsrc\s*=\s*(["'])([^"']+)\1/i,
     (attribute, quote, href) => {
@@ -118,13 +118,13 @@ function rewriteHtmlAttributes(source, sourceDir, locale) {
   return withImages.replace(/<a\b[^>]*>/gi, (tag) => tag.replace(
     /\bhref\s*=\s*(["'])([^"']+)\1/i,
     (attribute, quote, href) => {
-      const rewritten = rewriteDocHref(href, sourceDir, locale);
+      const rewritten = rewriteDocHref(href, sourceDir);
       return rewritten ? `href=${quote}${rewritten}${quote}` : attribute;
     },
   ));
 }
 
-function rewriteLinks(source, sourcePath, locale) {
+function rewriteLinks(source, sourcePath) {
   const sourceDir = path.posix.dirname(sourcePath.replaceAll("\\", "/"));
 
   const rewrittenImages = source.replace(
@@ -136,11 +136,11 @@ function rewriteLinks(source, sourcePath, locale) {
   );
 
   const rewrittenLinks = rewrittenImages.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g, (full, label, href) => {
-    const rewritten = rewriteDocHref(href, sourceDir, locale);
+    const rewritten = rewriteDocHref(href, sourceDir);
     return rewritten ? `[${label}](${rewritten})` : full;
   });
 
-  return rewriteHtmlAttributes(rewrittenLinks, sourceDir, locale);
+  return rewriteHtmlAttributes(rewrittenLinks, sourceDir);
 }
 
 function destinationFor(id, locale) {
@@ -163,7 +163,7 @@ function renderDocument(doc, sourcePath, locale) {
   let body = stripFrontmatter(fs.readFileSync(absolute, "utf8"));
   const title = extractTitle(body, doc.id);
   body = stripFirstH1(body);
-  body = rewriteLinks(body, sourcePath, locale).trim();
+  body = rewriteLinks(body, sourcePath).trim();
   const description = extractDescription(body, locale === "zh-CN" ? "NovelForge 文档。" : "NovelForge documentation.");
   const editUrl = `https://github.com/xiaooye/cn_webnovel_agent/blob/main/${sourcePath}`;
 
