@@ -103,7 +103,7 @@ export default function Diagnostics() {
               <div class="nf-validation-scope">
                 <article>
                   <header>
-                    <span class="nf-scope-mark nf-scope-mark--validated" aria-hidden="true">✓</span>
+                    <span class="wui-badge wui-badge--success" aria-hidden="true">✓</span>
                     <h3>{t("diagnostics.validatedTitle")}</h3>
                   </header>
                   <ul>
@@ -112,17 +112,17 @@ export default function Diagnostics() {
                   <Show when={missing().length > 0 || forbidden().length > 0}>
                     <div class="nf-diagnostic-exceptions">
                       <Show when={missing().length > 0}>
-                        <div><strong>{t("diagnostics.missing")}</strong><span class="nf-mono">{missing().join(", ")}</span></div>
+                        <div class="wui-card wui-card--filled"><strong>{t("diagnostics.missing")}</strong><span class="nf-mono">{missing().join(", ")}</span></div>
                       </Show>
                       <Show when={forbidden().length > 0}>
-                        <div><strong>{t("diagnostics.forbidden")}</strong><span class="nf-mono">{forbidden().join(", ")}</span></div>
+                        <div class="wui-card wui-card--filled"><strong>{t("diagnostics.forbidden")}</strong><span class="nf-mono">{forbidden().join(", ")}</span></div>
                       </Show>
                     </div>
                   </Show>
                 </article>
                 <article>
                   <header>
-                    <span class="nf-scope-mark" aria-hidden="true">—</span>
+                    <span class="wui-badge wui-badge--outline" aria-hidden="true">—</span>
                     <h3>{t("diagnostics.notValidatedTitle")}</h3>
                   </header>
                   <ul>
