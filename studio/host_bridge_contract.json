@@ -1,0 +1,110 @@
+{
+  "schema": "novelforge_studio_host_bridge_contract_v1",
+  "version": "1",
+  "authority": false,
+  "canon_authority": false,
+  "framework_write_authority": false,
+  "settlement_authority": false,
+  "model_execution": false,
+  "product_model": "one_product_many_hosts",
+  "request_schema": "novelforge_studio_host_bridge_request_v1",
+  "result_schema": "novelforge_studio_host_bridge_result_v1",
+  "surfaces": [
+    "cli",
+    "local_app",
+    "cloud_ui",
+    "agent_package"
+  ],
+  "invariants": {
+    "delivery_surface_is_not_source_of_truth": true,
+    "direct_core_store_access": false,
+    "absolute_host_paths_in_results": false,
+    "capability_implies_authority": false,
+    "unsupported_operation_fails_closed": true,
+    "mutation_exposed": false
+  },
+  "operations": {
+    "supported": {
+      "bridge.describe": {
+        "kind": "query",
+        "core_basis": "Studio machine contract",
+        "required_args": []
+      },
+      "framework.doctor": {
+        "kind": "query",
+        "core_basis": "novelforge.py doctor",
+        "required_args": []
+      },
+      "project.inspect": {
+        "kind": "query",
+        "core_basis": "Project Adapter + novelforge_studio_project_hub_projection_v1",
+        "required_args": ["project_root"]
+      },
+      "capabilities.inspect": {
+        "kind": "query",
+        "core_basis": "novelforge_host_capabilities_v1",
+        "required_args": []
+      },
+      "context.inspect": {
+        "kind": "query",
+        "core_basis": "novelforge_context_inspector_v2",
+        "required_args": ["project_root", "manifest"]
+      },
+      "semantic.catalog": {
+        "kind": "query",
+        "core_basis": "semantic model contract catalog CLI",
+        "required_args": []
+      }
+    },
+    "deferred": {
+      "runtime.sessions.list": {
+        "kind": "query",
+        "reason": "current Control Plane CLI initializes persistence even on read paths; Phase 2B requires a side-effect-free public query contract",
+        "dependency": "#23"
+      },
+      "runtime.session.get": {
+        "kind": "query",
+        "reason": "current Control Plane CLI initializes persistence even on read paths; Phase 2B requires a side-effect-free public query contract",
+        "dependency": "#23"
+      },
+      "runtime.events.list": {
+        "kind": "query",
+        "reason": "current Control Plane CLI initializes persistence even on read paths; Phase 2B requires a side-effect-free public query contract",
+        "dependency": "#23"
+      },
+      "runtime.handoff.inspect": {
+        "kind": "query",
+        "reason": "current Control Plane CLI initializes persistence even on read paths and handoff bodies need an explicit safe projection",
+        "dependency": "#23"
+      },
+      "run.receipt.get": {
+        "kind": "query",
+        "reason": "Run Receipt has no stable public retrieval projection and event discoverability is inconsistent",
+        "dependency": "#23"
+      },
+      "session.resume": {
+        "kind": "command",
+        "reason": "no stable public host command envelope with revalidation/preconditions",
+        "dependency": "#23"
+      },
+      "command.invoke": {
+        "kind": "command",
+        "reason": "write-capable host operations require typed Core command, authority, preconditions, CAS/idempotency, and receipts",
+        "dependency": "#23"
+      },
+      "project.mutate": {
+        "kind": "command",
+        "reason": "Project mutation remains behind explicit Core authority/settlement operations",
+        "dependency": "#23"
+      }
+    }
+  },
+  "agent_skill": {
+    "format": "Agent Skills open standard",
+    "path": "agent-skills/novelforge/SKILL.md",
+    "client_script": "agent-skills/novelforge/scripts/novelforge_bridge.py",
+    "private_python_imports_required": false,
+    "private_persistence_layout_required": false
+  },
+  "core_dependencies": ["#23"]
+}
