@@ -25,6 +25,7 @@ HANDOFF_SCHEMA = "novelforge_handoff_v1"
 DEFAULT_DB = ".novelforge/runtime.db"
 EVENT_TYPES = {
     "session.resume_requested",
+    "session.terminate_requested",
     "semantic.requested",
     "semantic.result_received",
     "eval.requested",
@@ -410,6 +411,9 @@ def self_test(db_path: str | Path) -> dict[str, Any]:
         path.unlink()
     cp = ControlPlane(path)
     cp.init()
+    event_schema = json.loads(Path(__file__).with_name("event_schema.json").read_text(encoding="utf-8"))
+    schema_event_types = set(event_schema["properties"]["event_type"]["enum"])
+    event_registry_aligned = EVENT_TYPES == schema_event_types
     session = {"schema": "novelforge_agent_session_v1", "resource_id": "BOOK-TEST", "project_id": "BOOK-TEST", "session_id": "SES-TEST-MANAGER", "role": "manager", "status": "awaiting_external"}
     first_session = cp.put_session(session, expected_version=0)
     duplicate_session = cp.put_session(session, expected_version=1)
@@ -432,8 +436,8 @@ def self_test(db_path: str | Path) -> dict[str, Any]:
         cp.submit_handoff(bad)
     except ValueError:
         bad_handoff_blocked = True
-    ok = all([first_session["version"] == 1, duplicate_session["duplicate"] is True, first_event["duplicate"] is False, duplicate_event["duplicate"] is True, submitted["state"] == "queued", claimed is not None and claimed["lease_owner"] == "WORKER-1", completed["state"] == "completed", consumed["consumed"] is True, consumed_again["already_consumed"] is True, bad_handoff_blocked])
-    return {"control_plane_contract": "PASS" if ok else "FAIL", "sqlite_durable_store": True, "idempotent_event_ingress": duplicate_event["duplicate"], "lease_claim": claimed is not None, "exactly_once_consumption": consumed_again["already_consumed"], "authority_guard": bad_handoff_blocked, "status": cp.status()}
+    ok = all([event_registry_aligned, first_session["version"] == 1, duplicate_session["duplicate"] is True, first_event["duplicate"] is False, duplicate_event["duplicate"] is True, submitted["state"] == "queued", claimed is not None and claimed["lease_owner"] == "WORKER-1", completed["state"] == "completed", consumed["consumed"] is True, consumed_again["already_consumed"] is True, bad_handoff_blocked])
+    return {"control_plane_contract": "PASS" if ok else "FAIL", "event_schema_registry_aligned": event_registry_aligned, "sqlite_durable_store": True, "idempotent_event_ingress": duplicate_event["duplicate"], "lease_claim": claimed is not None, "exactly_once_consumption": consumed_again["already_consumed"], "authority_guard": bad_handoff_blocked, "status": cp.status()}
 
 
 def main() -> int:
