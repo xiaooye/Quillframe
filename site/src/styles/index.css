@@ -29,3 +29,6 @@
 @import "./kawaii-surfaces.css";
 @import "./tool-workbench-kawaii.css";
 @import "./embedded-features.css";
+
+/* Cross-cutting accessibility/readability hardening owns no page layout. */
+@import "./readability.css";
