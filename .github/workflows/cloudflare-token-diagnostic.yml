@@ -15,103 +15,97 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Inspect effective Cloudflare token policies
+      - name: Inspect NovelForge Pages binding with ephemeral token
         shell: bash
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-          auth="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          admin_auth="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
 
-          verify_status=$(curl --silent --show-error --output /tmp/verify.json --write-out "%{http_code}" \
-            --header "${auth}" \
-            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/verify")
-          echo "Token verify HTTP: ${verify_status}"
-          jq '{success, errors, result: (.result | {id,status,expires_on,not_before})}' /tmp/verify.json || cat /tmp/verify.json
-          [ "${verify_status}" = "200" ] || exit 1
-          token_id=$(jq -r '.result.id // empty' /tmp/verify.json)
-          test -n "${token_id}"
+          curl --silent --show-error --fail \
+            --header "${admin_auth}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/verify" \
+            > /tmp/verify.json
+          jq -e '.success == true and .result.status == "active"' /tmp/verify.json >/dev/null
+          admin_id=$(jq -r '.result.id' /tmp/verify.json)
 
-          detail_status=$(curl --silent --show-error --output /tmp/detail.json --write-out "%{http_code}" \
-            --header "${auth}" \
-            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/${token_id}")
-          echo "Token detail HTTP: ${detail_status}"
-          [ "${detail_status}" = "200" ] || { jq '{success, errors, messages}' /tmp/detail.json; exit 1; }
-          jq '{success, errors, result: {name: .result.name, status: .result.status, policies: [.result.policies[] | {effect, resources, permissions: [.permission_groups[].name]}]}}' /tmp/detail.json
+          curl --silent --show-error --fail \
+            --header "${admin_auth}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/${admin_id}" \
+            > /tmp/detail.json
+          jq -e '.success == true' /tmp/detail.json >/dev/null
+          pages_read_id=$(jq -r '[.result.policies[].permission_groups[] | select(.name == "Pages Read")][0].id // empty' /tmp/detail.json)
+          pages_write_id=$(jq -r '[.result.policies[].permission_groups[] | select(.name == "Pages Write")][0].id // empty' /tmp/detail.json)
+          test -n "${pages_read_id}"
+          test -n "${pages_write_id}"
 
-          zone_status=$(curl --silent --show-error --output /tmp/zones.json --write-out "%{http_code}" \
-            --header "${auth}" \
-            "https://api.cloudflare.com/client/v4/zones?name=wei-dev.com&account.id=${CLOUDFLARE_ACCOUNT_ID}")
-          echo "Zone lookup HTTP: ${zone_status}"
-          jq '{success, errors, result: [.result[]? | {id,name,status}]}' /tmp/zones.json || cat /tmp/zones.json
-          [ "${zone_status}" = "200" ] || exit 1
-          zone_id=$(jq -r '.result[0].id // empty' /tmp/zones.json)
-          test -n "${zone_id}"
+          resource="com.cloudflare.api.account.${CLOUDFLARE_ACCOUNT_ID}"
+          expires_on=$(date -u -d '+15 minutes' '+%Y-%m-%dT%H:%M:%SZ')
+          payload=$(jq -nc \
+            --arg name "novelforge-pages-probe-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --arg pages_read "${pages_read_id}" \
+            --arg pages_write "${pages_write_id}" \
+            --arg resource "${resource}" \
+            --arg expires_on "${expires_on}" \
+            '{name:$name,expires_on:$expires_on,policies:[{effect:"allow",permission_groups:[{id:$pages_read},{id:$pages_write}],resources:{($resource):"*"}}]}')
 
-          dns_status=$(curl --silent --show-error --output /tmp/dns.json --write-out "%{http_code}" \
-            --header "${auth}" \
-            "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?per_page=5")
-          echo "Existing admin token DNS list HTTP: ${dns_status}"
-          jq '{success, errors, messages, result_count: (.result | length?)}' /tmp/dns.json || cat /tmp/dns.json
-
-          dns_read_id=$(jq -r '[.result.policies[].permission_groups[] | select(.name == "DNS Read")][0].id // empty' /tmp/detail.json)
-          dns_write_id=$(jq -r '[.result.policies[].permission_groups[] | select(.name == "DNS Write")][0].id // empty' /tmp/detail.json)
-          zone_read_id=$(jq -r '[.result.policies[].permission_groups[] | select(.name == "Zone Read")][0].id // empty' /tmp/detail.json)
-          test -n "${dns_read_id}"
-          test -n "${dns_write_id}"
-          test -n "${zone_read_id}"
-
-          probe_name="novelforge-dns-probe-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          zone_resource="com.cloudflare.api.account.zone.${zone_id}"
-          probe_payload=$(jq -nc \
-            --arg name "${probe_name}" \
-            --arg dns_read "${dns_read_id}" \
-            --arg dns_write "${dns_write_id}" \
-            --arg zone_read "${zone_read_id}" \
-            --arg zone_resource "${zone_resource}" \
-            '{name:$name, policies:[{effect:"allow", permission_groups:[{id:$dns_read},{id:$dns_write},{id:$zone_read}], resources:{($zone_resource):"*"}}]}')
-
-          create_status=$(curl --silent --show-error --output /tmp/probe-create.json --write-out "%{http_code}" \
+          create_status=$(curl --silent --show-error --output /tmp/temp.json --write-out "%{http_code}" \
             --request POST \
-            --header "${auth}" \
+            --header "${admin_auth}" \
             --header "Content-Type: application/json" \
-            --data "${probe_payload}" \
+            --data "${payload}" \
             "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens")
-          echo "Dedicated DNS probe token create HTTP: ${create_status}"
-          if [ "${create_status}" != "200" ] && [ "${create_status}" != "201" ]; then
-            jq '{success, errors, messages}' /tmp/probe-create.json || cat /tmp/probe-create.json
-            exit 1
-          fi
-          jq -e '.success == true' /tmp/probe-create.json >/dev/null
-          probe_id=$(jq -r '.result.id // empty' /tmp/probe-create.json)
-          probe_value=$(jq -r '.result.value // empty' /tmp/probe-create.json)
-          test -n "${probe_id}"
-          test -n "${probe_value}"
-          echo "::add-mask::${probe_value}"
+          echo "Pages probe token create HTTP: ${create_status}"
+          case "${create_status}" in 200|201) ;; *) jq '{success,errors,messages}' /tmp/temp.json; exit 1 ;; esac
+          temp_id=$(jq -r '.result.id // empty' /tmp/temp.json)
+          temp_value=$(jq -r '.result.value // empty' /tmp/temp.json)
+          test -n "${temp_id}"
+          test -n "${temp_value}"
+          echo "::add-mask::${temp_value}"
 
           cleanup() {
-            curl --silent --show-error \
-              --request DELETE \
-              --header "${auth}" \
-              "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/${probe_id}" \
-              >/tmp/probe-delete.json || true
+            curl --silent --show-error --request DELETE \
+              --header "${admin_auth}" \
+              "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/${temp_id}" \
+              >/tmp/delete.json || true
           }
           trap cleanup EXIT
+          pages_auth="Authorization: Bearer ${temp_value}"
+          base="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/novelforge"
 
-          probe_status=$(curl --silent --show-error --output /tmp/probe-dns.json --write-out "%{http_code}" \
-            --header "Authorization: Bearer ${probe_value}" \
-            "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?per_page=5")
-          echo "Dedicated DNS probe token list HTTP: ${probe_status}"
-          jq '{success, errors, messages, result_count: (.result | length?)}' /tmp/probe-dns.json || cat /tmp/probe-dns.json
+          project_status=$(curl --silent --show-error --output /tmp/project.json --write-out "%{http_code}" \
+            --header "${pages_auth}" "${base}")
+          echo "Project GET HTTP: ${project_status}"
+          jq '{success,errors,result:(.result | {name,subdomain,production_branch,latest_deployment:(.latest_deployment | {id,url,environment,created_on})})}' /tmp/project.json || cat /tmp/project.json
+
+          domains_status=$(curl --silent --show-error --output /tmp/domains.json --write-out "%{http_code}" \
+            --header "${pages_auth}" "${base}/domains")
+          echo "Domains LIST HTTP: ${domains_status}"
+          jq '{success,errors,result:[.result[]? | {name,status,verification_data,validation_data,created_on}]}' /tmp/domains.json || cat /tmp/domains.json
+
+          for domain in novelforge.wei-dev.com wei-dev.com www.wei-dev.com; do
+            encoded=$(printf '%s' "${domain}" | jq -sRr @uri)
+            status=$(curl --silent --show-error --output "/tmp/domain-${domain//./_}.json" --write-out "%{http_code}" \
+              --header "${pages_auth}" "${base}/domains/${encoded}")
+            echo "Domain ${domain} GET HTTP: ${status}"
+            jq '{success,errors,result:(.result | {name,status,verification_data,validation_data,created_on})}' "/tmp/domain-${domain//./_}.json" || true
+          done
+
+          origin_status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 15 \
+            "https://novelforge-c73.pages.dev/" || true)
+          custom_status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 15 \
+            "https://novelforge.wei-dev.com/" || true)
+          echo "pages.dev origin HTTP: ${origin_status:-curl-failed}"
+          echo "novelforge custom host HTTP: ${custom_status:-curl-failed}"
 
           {
-            echo "### Cloudflare token diagnostic"
-            echo "- admin token verify HTTP: ${verify_status}"
-            echo "- admin token details HTTP: ${detail_status}"
-            echo "- zone lookup HTTP: ${zone_status}"
-            echo "- admin token DNS list HTTP: ${dns_status}"
-            echo "- dedicated DNS probe token create HTTP: ${create_status}"
-            echo "- dedicated DNS probe token DNS list HTTP: ${probe_status}"
-            echo "- dedicated probe token is deleted by EXIT trap"
+            echo "### NovelForge Pages binding diagnostic"
+            echo "- dedicated Pages token create: \`${create_status}\`"
+            echo "- project GET: \`${project_status}\`"
+            echo "- domains LIST: \`${domains_status}\`"
+            echo "- pages.dev origin HTTP: \`${origin_status:-curl-failed}\`"
+            echo "- novelforge custom host HTTP: \`${custom_status:-curl-failed}\`"
+            echo "- ephemeral Pages token deleted by EXIT trap"
           } >> "${GITHUB_STEP_SUMMARY}"
