@@ -13,6 +13,7 @@ const main = read("src/main.tsx");
 const config = read("docs-site/astro.config.mjs");
 const contentConfig = read("docs-site/src/content.config.ts");
 const customCss = read("docs-site/src/styles/custom.css");
+const verifier = read("scripts/verify-starlight-build.mjs");
 const manifest = JSON.parse(fs.readFileSync(path.resolve(siteRoot, "../docs/documentation_manifest.json"), "utf8"));
 const stagedRoot = path.join(siteRoot, "docs-site", "src", "content", "docs");
 
@@ -34,10 +35,13 @@ function markdownCount(directory) {
 
 requireCheck(pkg.devDependencies?.astro === "7.1.6", "Astro must remain exact-pinned at 7.1.6");
 requireCheck(pkg.devDependencies?.["@astrojs/starlight"] === "0.41.5", "Starlight must remain exact-pinned at 0.41.5");
-requireCheck(pkg.scripts?.["docs:build"]?.includes("astro build docs-site"), "docs:build must build the Starlight app");
+requireCheck(pkg.scripts?.["docs:build"]?.includes("astro build --root docs-site"), "docs:build must execute Astro with docs-site as the real project root");
+requireCheck(pkg.scripts?.["dev:docs"]?.includes("astro dev --root docs-site"), "dev:docs must execute Astro with docs-site as the real project root");
+requireCheck(pkg.scripts?.["docs:build"]?.includes("verify-starlight-build.mjs"), "docs:build must verify emitted Starlight pages");
 requireCheck(pkg.scripts?.build?.includes("docs:build"), "production build must include Starlight output");
 
 requireCheck(config.includes('base: "/docs"'), "Starlight must own the /docs surface");
+requireCheck(config.includes('outDir: "../dist/docs"'), "Starlight output must compose into site/dist/docs");
 requireCheck(config.includes('lang: "zh-CN"') && config.includes('lang: "en"'), "Starlight must keep zh-CN and English locales");
 requireCheck(config.includes("starlight({"), "docs app must remain powered by Starlight");
 requireCheck(contentConfig.includes("docsLoader()") && contentConfig.includes("docsSchema()"), "Starlight content collection must use official loader and schema");
@@ -52,6 +56,8 @@ const expectedPages = manifest.documents.length * 2;
 requireCheck(markdownCount(stagedRoot) === expectedPages, `Starlight staging must contain ${expectedPages} localized Markdown pages`);
 requireCheck(fs.existsSync(path.join(stagedRoot, "why-novelforge.md")), "zh-CN why-novelforge route must be staged at the docs root");
 requireCheck(fs.existsSync(path.join(stagedRoot, "en", "why-novelforge.md")), "English why-novelforge route must be staged under /en");
+requireCheck(verifier.includes('path.join(outputRoot, "why-novelforge", "index.html")'), "post-build verifier must assert a concrete zh-CN deep route");
+requireCheck(verifier.includes('path.join(outputRoot, "en", "why-novelforge", "index.html")'), "post-build verifier must assert a concrete English deep route");
 
 if (failures.length > 0) {
   for (const failure of failures) console.error(`docs-platform-quality: FAIL: ${failure}`);
@@ -66,5 +72,7 @@ if (failures.length > 0) {
     localized_pages: expectedPages,
     root_locale: "zh-CN",
     spa_docs_renderer: false,
+    astro_project_root: "site/docs-site",
+    emitted_page_verification: true,
   }, null, 2));
 }
