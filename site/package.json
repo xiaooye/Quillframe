@@ -1,0 +1,24 @@
+{
+  "name": "@novelforge/product-site",
+  "version": "0.8.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "quality": "node scripts/quality.mjs"
+  },
+  "dependencies": {
+    "@solidjs/router": "0.16.2",
+    "solid-js": "1.9.14"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vite": "8.1.5",
+    "vite-plugin-solid": "2.11.14"
+  }
+}
