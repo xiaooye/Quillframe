@@ -18,6 +18,7 @@ import "./styles/surface-consistency.css";
 import "./styles/tool-workbench-kawaii.css";
 import "./styles/product-surface.css";
 import "./styles/unified-product-app.css";
+import "./styles/surface-audit.css";
 
 const root = document.getElementById("root");
 
