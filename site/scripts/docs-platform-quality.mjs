@@ -13,7 +13,9 @@ const main = read("src/main.tsx");
 const config = read("docs-site/astro.config.mjs");
 const contentConfig = read("docs-site/src/content.config.ts");
 const customCss = read("docs-site/src/styles/custom.css");
+const articleCss = read("docs-site/src/styles/article-polish.css");
 const siteTitle = read("docs-site/src/components/NovelForgeSiteTitle.astro");
+const pageTitle = read("docs-site/src/components/NovelForgePageTitle.astro");
 const actions = read("docs-site/src/components/NovelForgeActions.astro");
 const landing = read("docs-site/src/components/DocsLanding.astro");
 const zhLandingRoute = read("docs-site/src/pages/index.astro");
@@ -51,12 +53,19 @@ requireCheck(config.includes('outDir: "../dist/docs"'), "Starlight output must c
 requireCheck(config.includes('lang: "zh-CN"') && config.includes('lang: "en"'), "Starlight must keep zh-CN and English locales");
 requireCheck(config.includes("starlight({"), "docs app must remain powered by Starlight");
 requireCheck(config.includes('SiteTitle: "./src/components/NovelForgeSiteTitle.astro"'), "docs header must override SiteTitle so product and docs homes remain distinct");
+requireCheck(config.includes('PageTitle: "./src/components/NovelForgePageTitle.astro"'), "deep docs must use the NovelForge article title surface");
+requireCheck(config.includes('"./src/styles/article-polish.css"'), "deep docs article polish stylesheet must stay wired into Starlight");
 requireCheck(contentConfig.includes("docsLoader()") && contentConfig.includes("docsSchema()"), "Starlight content collection must use official loader and schema");
 requireCheck(customCss.includes("--sl-content-width: 52rem"), "documentation reading width must stay deliberately bounded");
 requireCheck(customCss.includes(':lang(zh-CN) .sl-markdown-content'), "Chinese typography override must remain explicit");
 requireCheck(customCss.includes('a[aria-current="page"]'), "documentation navigation must retain a strong current-page state");
 requireCheck(customCss.includes(".nf-link-grid") && customCss.includes(".nf-link-card"), "curated docs landing must retain stable task-path card styling");
 requireCheck(customCss.includes(".nf-tier-grid") && customCss.includes(".nf-reference-callout"), "curated docs landing must retain its layered reference hierarchy");
+requireCheck(pageTitle.includes('class="nf-article-title"') && pageTitle.includes('id="_top"'), "custom PageTitle must keep the product surface and Starlight top anchor");
+requireCheck(pageTitle.includes('english ? "NovelForge Knowledge" : "NovelForge 知识库"'), "custom PageTitle must keep native bilingual labeling");
+requireCheck(articleCss.includes(".nf-article-title") && articleCss.includes(".sl-markdown-content h2"), "deep article polish must style both title and reading hierarchy");
+requireCheck(articleCss.includes(".right-sidebar") && articleCss.includes(".pagination-links"), "deep article polish must cover TOC and footer navigation");
+requireCheck(articleCss.includes("@media (max-width: 50rem)"), "deep article polish must keep an explicit mobile treatment");
 requireCheck(siteTitle.includes('class="nf-brand-home" href="/"'), "NovelForge docs brand must navigate to the main product home");
 requireCheck(siteTitle.includes('english ? "/docs/en/" : "/docs/"'), "docs header must retain a locale-aware documentation-home link");
 requireCheck(siteTitle.includes('english ? "Docs" : "文档"'), "docs header must label the documentation namespace natively");
@@ -99,7 +108,7 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_docs_platform_quality_v1",
+    schema: "novelforge_docs_platform_quality_v2",
     status: "pass",
     engine: "Astro Starlight",
     astro: pkg.devDependencies.astro,
@@ -114,6 +123,10 @@ if (failures.length > 0) {
     raw_html_asset_rewrite: true,
     localized_header_actions: true,
     curated_landing: true,
+    product_style_article_title: true,
+    polished_reading_hierarchy: true,
+    polished_article_toc: true,
+    polished_article_pagination: true,
     product_first_start_handoff: true,
     product_first_inspector_handoff: true,
     product_tool_handoff: true,
