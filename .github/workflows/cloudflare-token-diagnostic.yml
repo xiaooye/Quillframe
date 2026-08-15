@@ -37,11 +37,8 @@ jobs:
             --header "${auth}" \
             "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/${token_id}")
           echo "Token detail HTTP: ${detail_status}"
-          if [ "${detail_status}" = "200" ]; then
-            jq '{success, errors, result: {name: .result.name, status: .result.status, policies: [.result.policies[] | {effect, resources, permissions: [.permission_groups[].name]}]}}' /tmp/detail.json
-          else
-            jq '{success, errors, messages}' /tmp/detail.json || cat /tmp/detail.json
-          fi
+          [ "${detail_status}" = "200" ] || { jq '{success, errors, messages}' /tmp/detail.json; exit 1; }
+          jq '{success, errors, result: {name: .result.name, status: .result.status, policies: [.result.policies[] | {effect, resources, permissions: [.permission_groups[].name]}]}}' /tmp/detail.json
 
           zone_status=$(curl --silent --show-error --output /tmp/zones.json --write-out "%{http_code}" \
             --header "${auth}" \
@@ -55,13 +52,66 @@ jobs:
           dns_status=$(curl --silent --show-error --output /tmp/dns.json --write-out "%{http_code}" \
             --header "${auth}" \
             "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?per_page=5")
-          echo "DNS list HTTP: ${dns_status}"
+          echo "Existing admin token DNS list HTTP: ${dns_status}"
           jq '{success, errors, messages, result_count: (.result | length?)}' /tmp/dns.json || cat /tmp/dns.json
+
+          dns_read_id=$(jq -r '[.result.policies[].permission_groups[] | select(.name == "DNS Read")][0].id // empty' /tmp/detail.json)
+          dns_write_id=$(jq -r '[.result.policies[].permission_groups[] | select(.name == "DNS Write")][0].id // empty' /tmp/detail.json)
+          zone_read_id=$(jq -r '[.result.policies[].permission_groups[] | select(.name == "Zone Read")][0].id // empty' /tmp/detail.json)
+          test -n "${dns_read_id}"
+          test -n "${dns_write_id}"
+          test -n "${zone_read_id}"
+
+          probe_name="novelforge-dns-probe-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          zone_resource="com.cloudflare.api.account.zone.${zone_id}"
+          probe_payload=$(jq -nc \
+            --arg name "${probe_name}" \
+            --arg dns_read "${dns_read_id}" \
+            --arg dns_write "${dns_write_id}" \
+            --arg zone_read "${zone_read_id}" \
+            --arg zone_resource "${zone_resource}" \
+            '{name:$name, policies:[{effect:"allow", permission_groups:[{id:$dns_read},{id:$dns_write},{id:$zone_read}], resources:{($zone_resource):"*"}}]}')
+
+          create_status=$(curl --silent --show-error --output /tmp/probe-create.json --write-out "%{http_code}" \
+            --request POST \
+            --header "${auth}" \
+            --header "Content-Type: application/json" \
+            --data "${probe_payload}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens")
+          echo "Dedicated DNS probe token create HTTP: ${create_status}"
+          if [ "${create_status}" != "200" ] && [ "${create_status}" != "201" ]; then
+            jq '{success, errors, messages}' /tmp/probe-create.json || cat /tmp/probe-create.json
+            exit 1
+          fi
+          jq -e '.success == true' /tmp/probe-create.json >/dev/null
+          probe_id=$(jq -r '.result.id // empty' /tmp/probe-create.json)
+          probe_value=$(jq -r '.result.value // empty' /tmp/probe-create.json)
+          test -n "${probe_id}"
+          test -n "${probe_value}"
+          echo "::add-mask::${probe_value}"
+
+          cleanup() {
+            curl --silent --show-error \
+              --request DELETE \
+              --header "${auth}" \
+              "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/${probe_id}" \
+              >/tmp/probe-delete.json || true
+          }
+          trap cleanup EXIT
+
+          probe_status=$(curl --silent --show-error --output /tmp/probe-dns.json --write-out "%{http_code}" \
+            --header "Authorization: Bearer ${probe_value}" \
+            "https://api.cloudflare.com/client/v4/zones/${zone_id}/dns_records?per_page=5")
+          echo "Dedicated DNS probe token list HTTP: ${probe_status}"
+          jq '{success, errors, messages, result_count: (.result | length?)}' /tmp/probe-dns.json || cat /tmp/probe-dns.json
 
           {
             echo "### Cloudflare token diagnostic"
-            echo "- verify HTTP: ${verify_status}"
-            echo "- token details HTTP: ${detail_status}"
+            echo "- admin token verify HTTP: ${verify_status}"
+            echo "- admin token details HTTP: ${detail_status}"
             echo "- zone lookup HTTP: ${zone_status}"
-            echo "- DNS list HTTP: ${dns_status}"
+            echo "- admin token DNS list HTTP: ${dns_status}"
+            echo "- dedicated DNS probe token create HTTP: ${create_status}"
+            echo "- dedicated DNS probe token DNS list HTTP: ${probe_status}"
+            echo "- dedicated probe token is deleted by EXIT trap"
           } >> "${GITHUB_STEP_SUMMARY}"
