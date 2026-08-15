@@ -4,13 +4,13 @@ import { useI18n } from "./i18n";
 import { useStudio } from "./studio";
 
 const navigation = [
-  ["/", "nav.desk", "⌂"],
-  ["/project", "nav.project", "P"],
-  ["/workspace", "nav.workspace", "W"],
-  ["/context", "nav.context", "C"],
-  ["/capabilities", "nav.capabilities", "H"],
-  ["/semantic", "nav.semantic", "S"],
-  ["/diagnostics", "nav.diagnostics", "D"],
+  ["/", "nav.desk", "✦"],
+  ["/project", "nav.project", "◫"],
+  ["/workspace", "nav.workspace", "✎"],
+  ["/context", "nav.context", "◎"],
+  ["/capabilities", "nav.capabilities", "◇"],
+  ["/semantic", "nav.semantic", "∿"],
+  ["/diagnostics", "nav.diagnostics", "⌁"],
 ] as const;
 
 const operationRoute: Record<string, string> = {
@@ -71,7 +71,12 @@ export const AppShell: ParentComponent = (props) => {
         <nav class="wui-sidebar__content nf-nav-list">
           <For each={navigation}>
             {([path, label, glyph]) => (
-              <A href={path} class="wui-sidebar__item nf-nav-item" data-active={location.pathname === path ? "true" : undefined}>
+              <A
+                href={path}
+                class="wui-sidebar__item nf-nav-item"
+                data-active={location.pathname === path ? "true" : undefined}
+                aria-current={location.pathname === path ? "page" : undefined}
+              >
                 <span class="wui-sidebar__icon nf-nav-glyph" aria-hidden="true">{glyph}</span>
                 <span class="wui-sidebar__label">{t(label)}</span>
               </A>
@@ -98,10 +103,10 @@ export const AppShell: ParentComponent = (props) => {
               <span>{studio.bridgeAvailable() ? t("host.local") : t("host.cloud")}</span>
             </span>
             <button class="wui-button wui-button--outline nf-command-trigger" type="button" onClick={() => setPaletteOpen(true)} aria-label={t("top.command")}>
-              <span>⌘</span><span class="nf-command-label">{t("top.command")}</span><kbd>⌘K</kbd>
+              <span aria-hidden="true">⌘</span><span class="nf-command-label">{t("top.command")}</span><kbd>⌘K</kbd>
             </button>
             <button class="wui-button wui-button--ghost wui-button--icon" type="button" onClick={() => setTheme(!dark())} aria-label={t("top.theme")}>
-              {dark() ? "☀" : "☾"}
+              <span aria-hidden="true">{dark() ? "☀" : "☾"}</span>
             </button>
             <button class="wui-button wui-button--ghost" type="button" onClick={() => setLocale(locale() === "en-US" ? "zh-CN" : "en-US")} aria-label={t("top.language")}>
               {locale() === "en-US" ? "中文" : "EN"}
@@ -113,7 +118,7 @@ export const AppShell: ParentComponent = (props) => {
 
         <footer class="nf-footer">
           <span>{t("footer.readOnly")}</span>
-          <span>·</span>
+          <span aria-hidden="true">·</span>
           <span>{t("footer.coreTruth")}</span>
         </footer>
       </div>
@@ -121,7 +126,12 @@ export const AppShell: ParentComponent = (props) => {
       <nav class="wui-bottom-nav nf-bottom-nav" aria-label={t("nav.mobileLabel")}>
         <For each={navigation.slice(0, 5)}>
           {([path, label, glyph]) => (
-            <A href={path} class="wui-bottom-nav__item nf-bottom-nav-item" data-active={location.pathname === path ? "true" : undefined}>
+            <A
+              href={path}
+              class="wui-bottom-nav__item nf-bottom-nav-item"
+              data-active={location.pathname === path ? "true" : undefined}
+              aria-current={location.pathname === path ? "page" : undefined}
+            >
               <span class="wui-bottom-nav__icon" aria-hidden="true">{glyph}</span>
               <small class="wui-bottom-nav__label">{t(label)}</small>
             </A>
@@ -147,7 +157,7 @@ export const AppShell: ParentComponent = (props) => {
               <For each={navigation.filter(([path, label]) => matches(`${path} ${t(label)}`))}>
                 {([path, label, glyph]) => (
                   <button type="button" class="wui-command__item" onClick={() => go(path)}>
-                    <span class="wui-command__item-icon">{glyph}</span>
+                    <span class="wui-command__item-icon" aria-hidden="true">{glyph}</span>
                     <span class="wui-command__item-label">{t(label)}</span>
                   </button>
                 )}
@@ -157,7 +167,7 @@ export const AppShell: ParentComponent = (props) => {
               <For each={supported().filter(matches)}>
                 {(operation) => (
                   <button type="button" class="wui-command__item" onClick={() => go(operationRoute[operation] ?? "/") }>
-                    <span class="wui-command__item-icon">✓</span>
+                    <span class="wui-command__item-icon" aria-hidden="true">✓</span>
                     <span class="wui-command__item-label">{operation}</span>
                   </button>
                 )}
@@ -167,7 +177,7 @@ export const AppShell: ParentComponent = (props) => {
               <For each={deferred().filter(([operation]) => matches(operation))}>
                 {([operation, info]) => (
                   <div class="wui-command__item" data-disabled title={info.reason}>
-                    <span class="wui-command__item-icon">—</span>
+                    <span class="wui-command__item-icon" aria-hidden="true">—</span>
                     <span class="wui-command__item-label">{operation}</span>
                     <span class="wui-command__item-shortcut">{info.dependency ?? "Core"}</span>
                   </div>
