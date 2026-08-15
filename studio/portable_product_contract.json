@@ -16,6 +16,11 @@
     "novelforge_runtime_handoff_projection_v1",
     "novelforge_run_receipts_projection_v1",
     "novelforge_session_resume_preflight_v1",
+    "novelforge_session_resume_command_v1",
+    "novelforge_runtime_command_authorization_v1",
+    "novelforge_runtime_command_receipt_v1",
+    "novelforge_runtime_command_execution_result_v1",
+    "novelforge_runtime_command_receipt_projection_v1",
     "novelforge_context_inspector_v2",
     "novelforge_host_capabilities_v1",
     "novelforge_publication_ir_v1",
@@ -25,7 +30,8 @@
     "shape": "Core contracts -> stable query/command/projection boundary -> delivery surface",
     "direct_core_store_access": false,
     "delivery_surface_may_change_story_semantics": false,
-    "host_capability_implies_story_authority": false
+    "host_capability_implies_story_authority": false,
+    "mutation_capability_implies_project_or_canon_authority": false
   },
   "delivery_surfaces": {
     "cli": {
@@ -35,20 +41,24 @@
     },
     "local_app": {
       "role": "creator workstation",
-      "transport": "local adapter boundary",
+      "transport": "loopback token-bound local adapter boundary",
       "may_use_local_host_capabilities": true,
-      "direct_browser_store_access": false
+      "direct_browser_store_access": false,
+      "session_resume_allowed": true,
+      "session_resume_requires_explicit_user_action": true
     },
     "cloud_ui": {
       "role": "hosted product UI",
       "transport": "remote query/command boundary",
-      "hosting_changes_story_authority": false
+      "hosting_changes_story_authority": false,
+      "session_resume_allowed": false
     },
     "agent_package": {
-      "role": "adapter for external agent frameworks",
-      "transport": "versioned capability/query/command package",
+      "role": "read-only adapter for external agent frameworks",
+      "transport": "versioned capability/query package",
       "host_must_understand_private_persistence": false,
-      "host_must_understand_private_python_implementation": false
+      "host_must_understand_private_python_implementation": false,
+      "runtime_mutation_allowed": false
     }
   },
   "phase_2b_host_bridge": {
@@ -70,15 +80,27 @@
       "runtime.events.list",
       "runtime.handoff.inspect",
       "run.receipt.get",
-      "session.resume.preflight"
+      "runtime.command.receipt.get",
+      "session.resume.preflight",
+      "session.resume"
     ],
     "deferred_operations": [
-      "session.resume",
       "command.invoke",
       "project.mutate"
     ],
     "core_dependency": "#23",
-    "mutation_exposed": false,
+    "mutation_exposed": true,
+    "mutation_scope": "runtime_session_state_only",
+    "mutation_surface": "local_app_only",
+    "mutation_requires_explicit_authorization": true,
+    "mutation_requires_fresh_preflight": true,
+    "mutation_requires_compare_and_swap": true,
+    "mutation_requires_idempotent_receipt": true,
+    "mutation_runs_model": false,
+    "mutation_writes_project": false,
+    "mutation_writes_canon": false,
+    "mutation_writes_framework": false,
+    "mutation_performs_settlement": false,
     "direct_core_store_access": false,
     "request_result_fingerprints": true,
     "unsupported_operation_fails_closed": true
@@ -86,16 +108,30 @@
   "runtime_observability": {
     "core_query_tool": "harness/control_plane/runtime_query.py",
     "resume_preflight_tool": "harness/session_runtime/resume_preflight.py",
-    "side_effect_free": true,
+    "resume_command_tool": "harness/session_runtime/resume_command.py",
+    "command_authorization_tool": "harness/session_runtime/runtime_command_authorization.py",
+    "command_executor_tool": "harness/session_runtime/runtime_command_executor.py",
+    "query_side_effect_free": true,
     "sqlite_consumer_contract": false,
     "provider_session_identifiers_exposed": false,
     "absolute_host_paths_exposed": false,
     "resume_preflight_exposed": true,
-    "session_resume_exposed": false,
+    "session_resume_exposed": true,
+    "session_resume_surface": "local_app_only",
+    "session_resume_requires_explicit_user_authorization": true,
+    "session_resume_requires_fresh_preflight": true,
+    "session_resume_requires_exact_before_state_cas": true,
+    "session_resume_requires_idempotent_durable_receipt": true,
+    "session_resume_model_execution": false,
+    "session_resume_project_write": false,
+    "session_resume_canon_write": false,
+    "session_resume_framework_write": false,
+    "session_resume_settlement": false,
     "checkpoint_replay_exposed": false,
     "handoff_mutation_exposed": false,
     "run_receipts_are_metadata_only": true,
-    "preflight_ready_grants_runtime_control": false
+    "preflight_ready_grants_runtime_control": false,
+    "preflight_ready_plus_authorization_grants_only_declared_command_scope": true
   },
   "publication_preview": {
     "compiler": "publication/compiler.py",
@@ -117,7 +153,9 @@
     "format": "Agent Skills open standard",
     "private_runtime_imports_required": false,
     "private_persistence_knowledge_required": false,
-    "future_write_requirement": "typed Core command plus explicit preconditions, authority, CAS/idempotency and receipts"
+    "runtime_mutation_allowed": false,
+    "session_resume_is_local_app_only": true,
+    "future_write_requirement": "each additional mutation needs its own typed Core command plus explicit preconditions, authority policy, CAS/idempotency and durable receipts"
   },
   "project_hub_projection": {
     "source_schema": "novelforge_project_adapter_resolution_v1",
