@@ -21,23 +21,25 @@ import {
 const copy = {
   "zh-CN": {
     eyebrow: "NovelForge 知识库",
-    title: "先找到你要解决的问题，再决定要读多深。",
-    lede: "这里按创作旅程组织，而不是按内部工程分类。可以从推荐路径开始，也可以直接搜索一个问题。",
+    title: "先说你想做什么，再决定要不要往深处读。",
+    lede: "这里按实际使用场景来组织内容，不要求你先记住框架里的术语。可以从推荐路线开始，也可以直接搜一个问题。",
     search: "搜索文档、概念或问题…",
     start: "从这里开始",
-    startLede: "第一次了解 NovelForge，推荐按这个顺序看。",
-    browse: "按你的目标浏览",
-    browseLede: "不需要先知道框架内部叫什么；选择你现在正在做的事。",
+    startLede: "第一次了解 NovelForge，建议先看这几篇。",
+    browse: "按你现在要做的事来找",
+    browseLede: "不用先知道内部模块叫什么。选中你正在做的事，就能看到相关内容。",
     results: "搜索结果",
     clear: "清除搜索",
-    empty: "没有找到相关内容，换个说法试试 (｡•́︿•̀｡)",
-    docs: "篇文档",
+    empty: "没找到相关内容。换个说法再试试 (｡•́︿•̀｡)",
+    docs: "篇",
     back: "返回知识库",
     toc: "本页内容",
-    source: "技术来源",
-    sourceLede: "这部分用于追溯仓库来源，不影响正文阅读。",
-    popular: "推荐阅读",
-    searchHint: "支持标题、章节和正文搜索",
+    source: "来源与版本",
+    sourceLede: "需要核对仓库来源时再展开；平时阅读不用管它。",
+    popular: "建议先读",
+    searchHint: "会搜索标题、章节和正文",
+    openError: "这篇文档刚才没有打开。",
+    retry: "再试一次",
   },
   "en-US": {
     eyebrow: "NovelForge Knowledge",
@@ -58,6 +60,8 @@ const copy = {
     sourceLede: "Repository provenance lives here so it does not interrupt the reading experience.",
     popular: "Recommended",
     searchHint: "Searches titles, sections, and document text",
+    openError: "This guide did not open.",
+    retry: "Try again",
   },
 } as const;
 
@@ -73,8 +77,12 @@ function navigateSpa(event: MouseEvent, href: string) {
   if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   event.preventDefault();
   if (window.location.pathname === href) return;
+
+  // main.tsx wraps pushState and emits novelforge:locationchange for this
+  // replacement surface. Do not also synthesize popstate: @solidjs/router owns
+  // that event and would re-render the legacy route under our portal mid-click.
   window.history.pushState({}, "", href);
-  window.dispatchEvent(new PopStateEvent("popstate"));
+  window.scrollTo(0, 0);
 }
 
 function KnowledgeLink(props: { href: string; class?: string; children: JSX.Element }) {
@@ -182,7 +190,7 @@ export function KnowledgeExplorer(props: { locale: KnowledgeLocale }) {
 
 export function KnowledgeDocumentPage(props: { locale: KnowledgeLocale; docId: string }) {
   const t = () => text(props.locale);
-  const [document] = createResource(() => [props.locale, props.docId] as const, ([lang, id]) => loadProductDocument(lang, id));
+  const [document, { refetch }] = createResource(() => [props.locale, props.docId] as const, ([lang, id]) => loadProductDocument(lang, id));
   const [index] = createResource(loadKnowledgeIndex);
   const entry = createMemo(() => index()?.documents.find((doc) => doc.locale === props.locale && doc.id === props.docId));
   const journey = createMemo(() => entry() ? knowledgeJourneyDefinition(knowledgeJourneyFor(entry()!)) : knowledgeJourneys[0]);
@@ -201,7 +209,13 @@ export function KnowledgeDocumentPage(props: { locale: KnowledgeLocale; docId: s
         <Show when={entry()}>{(doc) => <span class="knowledge-document-kind">{journey().icon} {journey().label[props.locale]} · {humanDocKind(doc(), props.locale)}</span>}</Show>
       </div>
       <Show when={!document.loading} fallback={<div class="knowledge-v2-loading">✧ {props.locale === "zh-CN" ? "正在打开文档…" : "Opening guide…"}</div>}>
-        <Show when={document()} fallback={<div class="knowledge-v2-empty"><h3>{props.locale === "zh-CN" ? "这篇文档暂时打不开。" : "This guide could not be opened."}</h3></div>}>
+        <Show when={document()} fallback={
+          <div class="knowledge-v2-empty">
+            <span>₍^. .^₎⟆</span>
+            <h3>{t().openError}</h3>
+            <button type="button" class="wui-button wui-button--soft" onClick={() => refetch()}>{t().retry}</button>
+          </div>
+        }>
           {(doc) => (
             <div class="knowledge-document-layout">
               <aside class="knowledge-document-context">
