@@ -155,7 +155,7 @@ export default function Inspector() {
                 </Show>
 
                 <Show when={section() === "context"}>
-                  <header><div><span class="nf-eyebrow">CONTEXT INSPECTOR</span><h2>{projection().context ? printable(projection().context.schema) : "unavailable"}</h2></div></header>
+                  <header><div><span class="nf-eyebrow">CONTEXT INSPECTOR</span><h2>{projection().context ? printable(projection().context?.schema) : "unavailable"}</h2></div></header>
                   <Show when={projection().context} fallback={<p class="nf-inspector-empty-copy">{zh() ? "没有提供 Context Manifest，因此没有请求 Context projection。" : "No Context Manifest was supplied, so no Context projection was requested."}</p>}>
                     <pre class="nf-inspector-json">{JSON.stringify(projection().context, null, 2)}</pre>
                   </Show>
