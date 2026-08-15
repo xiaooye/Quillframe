@@ -1,102 +1,69 @@
 # NovelForge Product Site
 
-Standalone public Product / Intro SPA for NovelForge.
+NovelForge's public Product surface is a **Godot Web control room** with a separate Astro/Starlight documentation application.
 
-This is **not** the Studio application and **not** a replacement content store for the repository documentation. It is the public product narrative and navigation surface around NovelForge Core, Studio, Publication, Architecture, Docs, and release truth.
+## Runtime boundary
+
+- Product routes (`/`, `/product`, `/studio`, `/architecture`, `/publication`, `/inspect`, `/playground`, `/agents`, `/changelog`) run inside one Godot Web scene.
+- `/docs/**` is owned exclusively by Astro/Starlight and remains semantic HTML.
+- Crossing into Docs is a real document navigation.
+- Browser back/forward is bridged into the live Godot scene; Product history does not intentionally reboot the runtime.
+- The Product runtime is 2D-first with controlled 2.5D depth cues. It does not use Godot 3D nodes.
+
+The former SolidJS/Vite Product SPA has been retired. It is no longer built, previewed, or kept as a fallback Product implementation.
 
 ## Stack
 
-- SolidJS `1.9.14`
-- `@solidjs/router` `0.16.2`
-- Vite `8.1.5`
-- vite-plugin-solid `2.11.14`
-- TypeScript `7.0.2`
-- Node.js 24.x for CI/build
+- Godot `4.7.1` / GDScript / Compatibility renderer for Product Web runtime
+- Astro `7.1.6` + Starlight `0.41.5` for `/docs/**`
+- Node.js 24.x for static staging, verification, and local dist serving
+- Cloudflare Pages for the composed deployment
 
-All direct frontend versions are exact pins. `@weiui/react` and `@weiui/headless` are intentionally absent.
+There is no browser-framework runtime dependency in `site/package.json` for Product.
 
-## Story Loom / WeiUI boundary
+## Build
 
-The site does not own a second palette.
-
-It consumes:
-
-- `../assets/brand/tokens.json` — NovelForge Story Loom v2 product-token authority;
-- `../assets/brand/weiui.integration.json` — exact WeiUI upstream pin/consumption contract;
-- `../assets/brand/story-loom.weiui.css` — live `wui-theme` application mapping.
-
-The current WeiUI source contract permits `@weiui/tokens` + `@weiui/css` and requires zero WeiUI runtime JavaScript. The WeiUI repository packages do not yet have a stable cross-repository npm distribution contract assumed by this site, so the first public slice consumes the maintained Story Loom theme directly rather than inventing an unavailable package install.
-
-## Local development
+Install Node dependencies:
 
 ```bash
 cd site
 npm install
 npm run quality
-npm run dev
-```
-
-Production build:
-
-```bash
 npm run build
 ```
 
-Output: `site/dist/`.
-
-## Routes
-
-- `/` — SaaS-like Product Home
-- `/product` — product model / boundaries
-- `/studio` — Studio phases and product stack
-- `/architecture` — subsystem map
-- `/publication` — deterministic Publication core
-- `/docs` — curated canonical documentation portal
-- `/changelog` — release truth
-
-The Docs route links to maintained repository sources; it is not a second CMS.
-
-## Product design contract
-
-The public site follows issue #34 and `specs/004-novelforge-product-site/`.
-
-Key rules:
-
-- Hero-first product value, not architecture-first onboarding;
-- real contract evidence instead of fake testimonials / logos / user counts / SLA / pricing;
-- mobile-first with >=44px interaction targets;
-- visible focus and keyboard-operable navigation;
-- `en-US` + `zh-CN` product copy;
-- no default polling;
-- no idle animation loop;
-- reduced-motion preserves complete content;
-- no Generic Core runtime dependency on this SPA.
-
-Run:
+`npm run build` prepares `site/dist/` and builds Starlight Docs. Product is then exported with Godot:
 
 ```bash
-npm run quality
+npm run godot:build
+npm run preview -- --host 127.0.0.1 --port 4188
 ```
 
-The quality script verifies stack pins, Story Loom/WeiUI contracts, routes/locales, basic UX invariants, forbidden runtime dependencies, fake-marketing placeholders, and private-Core coupling.
-
-## Cloudflare Pages
-
-The build stays host-neutral. For Cloudflare Pages, configure:
+The composed output is:
 
 ```text
-Root directory: site
-Build command: npm run build
-Build output directory: dist
-Production branch: main
+site/dist/
+  index.html       # Godot Web host shell
+  index*.wasm      # Godot Web runtime
+  index*.pck       # Product resources
+  docs/            # Astro/Starlight semantic HTML app
+  _redirects       # canonical Docs roots
 ```
 
-Do not add a top-level `404.html` unless the hosting strategy changes: Cloudflare Pages treats a site without that file as a single-page application and routes incoming paths to the SPA root.
+The repository CI compiles a pinned, single-threaded, 2D-specific Godot Web export template and verifies every Cloudflare Pages asset remains below the platform's individual-file deployment ceiling.
 
-No Pages Function, database, authentication, analytics SDK, or Cloudflare-specific product logic is required for the first slice.
+## Product routing
+
+Product routes are browser-addressable but rendered by the same live Godot runtime. The browser bridge synchronizes `pushState` and `popstate` with scene navigation. Local QA proves that back navigation changes the scene without a document reload.
+
+Missing `/docs/**` paths never fall through to the Product canvas. Product deep links do fall back to the Godot host document, matching the Cloudflare Pages deployment model.
+
+## Design contract
+
+The Product surface uses 2D UI plus limited 2.5D spatial language: layered topology, parallax, animated packets, glow, elevation, and camera-like composition without a 3D scene stack. Mobile uses a dedicated portrait topology rather than a scaled desktop graph.
+
+Docs deliberately stay web-native for long-form reading, link semantics, indexing, selection, and accessibility.
 
 ## Authority boundary
 
-The Product Site is presentation/navigation only.
-
-It has no Canon, Memory, semantic, Settlement, Framework-write, production-readiness, or Publication authority. Product diagrams and UI projections may explain Core state; they never become a second source of truth.
+The public Product surface and Docs are presentation/navigation layers. They have no Canon, Memory, Settlement, Framework-write, production-readiness, or Publication authority. Visual projections can explain runtime state; they never become a second source of truth.

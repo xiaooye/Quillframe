@@ -1,7 +1,9 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/browser_route_bridge.gd" id="2_browser_route_bridge"]
+[ext_resource type="Script" path="res://scripts/locale_bridge.gd" id="3_locale_bridge"]
+[ext_resource type="Script" path="res://scripts/accessibility_bridge.gd" id="4_accessibility_bridge"]
 
 [node name="NovelForge" type="Control"]
 layout_mode = 3
@@ -14,3 +16,9 @@ script = ExtResource("1_main")
 
 [node name="BrowserRouteBridge" type="Node" parent="."]
 script = ExtResource("2_browser_route_bridge")
+
+[node name="LocaleBridge" type="Node" parent="."]
+script = ExtResource("3_locale_bridge")
+
+[node name="AccessibilityBridge" type="Node" parent="."]
+script = ExtResource("4_accessibility_bridge")
