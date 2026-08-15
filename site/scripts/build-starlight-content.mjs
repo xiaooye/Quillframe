@@ -144,13 +144,8 @@ function rewriteLinks(source, sourcePath) {
 }
 
 function destinationFor(id, locale) {
-  if (locale === "zh-CN") {
-    return id === "docs-home"
-      ? path.join(contentRoot, "index.md")
-      : path.join(contentRoot, `${id}.md`);
-  }
-  return id === "docs-home"
-    ? path.join(contentRoot, "en", "index.md")
+  return locale === "zh-CN"
+    ? path.join(contentRoot, `${id}.md`)
     : path.join(contentRoot, "en", `${id}.md`);
 }
 
@@ -184,6 +179,8 @@ fs.mkdirSync(publicAssetRoot, { recursive: true });
 
 let generated = 0;
 for (const doc of manifest.documents) {
+  if (doc.id === "docs-home") continue;
+
   for (const [locale, sourcePath] of [["zh-CN", doc.chinese], ["en-US", doc.english]]) {
     const destination = destinationFor(doc.id, locale);
     fs.mkdirSync(path.dirname(destination), { recursive: true });
@@ -192,16 +189,19 @@ for (const doc of manifest.documents) {
   }
 }
 
-const expected = manifest.documents.length * 2;
-if (generated !== expected) {
-  throw new Error(`Starlight staging mismatch: generated ${generated}, expected ${expected}`);
+const landingPages = 2;
+const expectedStagedDocuments = (manifest.documents.length - 1) * 2;
+if (generated !== expectedStagedDocuments) {
+  throw new Error(`Starlight staging mismatch: generated ${generated}, expected ${expectedStagedDocuments}`);
 }
 
 console.log(JSON.stringify({
   schema: "novelforge_starlight_content_v1",
   status: "pass",
   documents: manifest.documents.length,
-  localized_pages: generated,
+  staged_markdown_pages: generated,
+  custom_landing_pages: landingPages,
+  localized_pages: generated + landingPages,
   root_locale: "zh-CN",
   secondary_locale: "en-US",
 }, null, 2));
