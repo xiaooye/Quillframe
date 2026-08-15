@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novelforge_runtime_command_receipt_v1",
+  "title": "NovelForge Runtime Command Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "command_id",
+    "operation",
+    "session_id",
+    "idempotency_key",
+    "command_fingerprint",
+    "intent_fingerprint",
+    "authorization_fingerprint",
+    "authorization_source_kind",
+    "preflight_fingerprint",
+    "before_state",
+    "after_state",
+    "event",
+    "applied_at",
+    "runtime_mutation_performed",
+    "model_execution",
+    "authority",
+    "project_write_authority",
+    "canon_authority",
+    "framework_write_authority",
+    "settlement_authority",
+    "receipt_fingerprint"
+  ],
+  "properties": {
+    "schema": {"const": "novelforge_runtime_command_receipt_v1"},
+    "command_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "operation": {"const": "session.resume"},
+    "session_id": {"type": "string", "minLength": 1, "maxLength": 240},
+    "idempotency_key": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "command_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "intent_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "authorization_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "authorization_source_kind": {"enum": ["user", "authorized_human", "manager_runtime_policy"]},
+    "preflight_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "before_state": {"$ref": "#/$defs/sessionState"},
+    "after_state": {"$ref": "#/$defs/sessionState"},
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "event_fingerprint"],
+      "properties": {
+        "event_id": {"type": "string", "minLength": 1},
+        "event_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    },
+    "applied_at": {"type": "string", "format": "date-time"},
+    "runtime_mutation_performed": {"const": true},
+    "model_execution": {"const": false},
+    "authority": {"const": false},
+    "project_write_authority": {"const": false},
+    "canon_authority": {"const": false},
+    "framework_write_authority": {"const": false},
+    "settlement_authority": {"const": false},
+    "receipt_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "sessionState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_version", "session_payload_hash", "session_status", "checkpoint_id"],
+      "properties": {
+        "session_version": {"type": "integer", "minimum": 1},
+        "session_payload_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "session_status": {"type": "string", "minLength": 1},
+        "checkpoint_id": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}
