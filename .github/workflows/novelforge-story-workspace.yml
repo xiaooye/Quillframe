@@ -1,0 +1,275 @@
+name: NovelForge Story Workspace Contracts
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  story-workspace-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile narrative runtime
+        run: |
+          python -m py_compile core/event_ir.py
+          python -m py_compile harness/story_workspace.py harness/context_trace.py harness/scene_simulation_run.py
+          python -m py_compile quality/candidate_state_delta.py quality/narrative_verification.py
+          python -m py_compile studio/host_bridge.py
+
+      - name: Validate narrative runtime schemas
+        run: |
+          python -m json.tool core/event_ir.schema.json > /dev/null
+          python -m json.tool harness/story_workspace.schema.json > /dev/null
+          python -m json.tool harness/context_trace.schema.json > /dev/null
+          python -m json.tool harness/scene_simulation_run.schema.json > /dev/null
+          python -m json.tool quality/candidate_state_delta.schema.json > /dev/null
+          python -m json.tool quality/narrative_verification.schema.json > /dev/null
+          python -m json.tool harness/semantic_workers/contracts/narrative-verification.json > /dev/null
+          python -m json.tool studio/host_bridge_contract.json > /dev/null
+          python -m json.tool evals/cases/narrative_knowledge_visibility_reject.json > /dev/null
+          python -m json.tool evals/cases/narrative_causal_consequence_reject.json > /dev/null
+          python -m json.tool evals/cases/narrative_supported_change_accept.json > /dev/null
+
+      - name: Deterministic narrative runtime self-tests
+        run: |
+          python harness/story_workspace.py self-test > story-workspace-test.json
+          python harness/context_trace.py self-test > context-trace-test.json
+          python core/event_ir.py self-test > event-ir-test.json
+          python harness/scene_simulation_run.py self-test > scene-simulation-run-test.json
+          python quality/candidate_state_delta.py self-test > candidate-state-delta-test.json
+          python quality/narrative_verification.py self-test > narrative-verification-test.json
+          python studio/host_bridge.py self-test > studio-host-bridge-test.json
+
+      - name: Narrative verification semantic contract
+        run: |
+          python - <<'PY'
+          import json, sys
+          from pathlib import Path
+          root=Path('harness/semantic_workers')
+          sys.path.insert(0,str(root))
+          from registered_contract_binding import validate_registered_job
+          from semantic_worker_router import make_contract_job, validate_job
+
+          fp='sha256:'+'a'*64
+          payload={
+            'candidate_fingerprint': fp,
+            'candidate_evidence': [
+              {'evidence_id':'E-CAND','statement':'CHAR-A acts on the offer.','source_ref':'candidate:SCN-1#1','story_order':9}
+            ],
+            'character_views': [
+              {'character_id':'CHAR-A','current_story_order':9,'agenda':'Preserve leverage.','visible_evidence_ids':['E-CAND'],'beliefs':['The offer may be a bluff.'],'constraints':['Time is short.']}
+            ],
+            'relationship_evidence': [
+              {'relationship_id':'REL-A-B','before_state':{'trust':'strained'},'candidate_change':{'trust':'worse'},'evidence_ids':['E-CAND']}
+            ],
+            'causal_trajectory': [
+              {'event_id':'EVT-1','caused_by':['E-CAND'],'effect':'A condition is imposed.','evidence_ids':['E-CAND']}
+            ],
+            'candidate_state_delta': {'schema':'novelforge_candidate_state_delta_v1','authority':False}
+          }
+          job=make_contract_job('narrative.verify','SCN-CI',payload,source_session_id='SES-CI')
+          assert not validate_job(job), validate_job(job)
+          assert not validate_registered_job(job), validate_registered_job(job)
+          assert job['provenance']['pack_id']=='narrative-verification'
+          assert job['provenance']['input_contract_validated'] is True
+          assert job['permissions']['canon_write'] is False
+          assert job['permissions']['framework_behavior_write'] is False
+          assert job['permissions']['durable_user_taste_write'] is False
+          registry=json.load(open(root/'contracts/narrative-verification.json',encoding='utf-8'))
+          assert registry['contracts']['narrative.verify']['independent_gate'] is False
+          print(json.dumps({'narrative_verify_registered_contract':'PASS','input_contract_validated':True,'authority':False}))
+          PY
+
+      - name: Build isolated blind narrative eval queue
+        run: |
+          cat > narrative-eval-manifest.json <<'JSON'
+          {
+            "suite_version": "8.0-dev.1-story-workspace",
+            "description": "Feature-local blind narrative verification fixtures.",
+            "cases": [
+              {"file": "cases/narrative_knowledge_visibility_reject.json"},
+              {"file": "cases/narrative_causal_consequence_reject.json"},
+              {"file": "cases/narrative_supported_change_accept.json"}
+            ]
+          }
+          JSON
+          python evals/build_judge_queue.py --manifest narrative-eval-manifest.json --output blind-eval-queue.json
+          python - <<'PY'
+          import json
+          q=json.load(open('blind-eval-queue.json',encoding='utf-8'))
+          cases={case['id']:case for case in q['cases']}
+          expected={
+            'NARRATIVE-KNOWLEDGE-001',
+            'NARRATIVE-CAUSAL-001',
+            'NARRATIVE-SUPPORTED-001',
+          }
+          assert expected == set(cases), sorted(set(cases)^expected)
+          forbidden={'expected','expected_verdict','expected_codes','gold','gold_label','blocks_release','prior_result'}
+          def scan(value,path='$'):
+              hits=[]
+              if isinstance(value,dict):
+                  for key,item in value.items():
+                      if key in forbidden:hits.append(f'{path}.{key}')
+                      hits.extend(scan(item,f'{path}.{key}'))
+              elif isinstance(value,list):
+                  for i,item in enumerate(value):hits.extend(scan(item,f'{path}[{i}]'))
+              return hits
+          hits=scan(list(cases.values()))
+          assert not hits,hits
+          for case in cases.values():
+              assert case['domain']=='narrative-verification'
+              assert case['judge']=='rubric'
+          print(json.dumps({'narrative_verification_blind_fixtures':'PASS','cases':sorted(expected),'hidden_expected_leak':False}))
+          PY
+
+      - name: Read-only Studio bridge narrative E2E
+        run: |
+          python - <<'PY'
+          import hashlib, json, shutil, subprocess, sys, tempfile
+          from pathlib import Path
+
+          sys.path.insert(0, 'studio')
+          import host_bridge
+
+          root=Path(tempfile.mkdtemp(prefix='novelforge-story-workspace-bridge-'))
+          try:
+              setup=subprocess.run([sys.executable,'project_adapter.py','self-test','--tmp',str(root)],text=True,capture_output=True,check=False)
+              assert setup.returncode==0,(setup.stdout,setup.stderr)
+              base='sha256:'+'a'*64
+              candidate='sha256:'+'b'*64
+
+              def write(name,value):
+                  (root/name).write_text(json.dumps(value,ensure_ascii=False),encoding='utf-8')
+
+              write('workspace.json',{
+                  'schema':'novelforge_story_workspace_input_v1',
+                  'project':{'project_id':'P','project_title':'Fixture','project_version':'0.1','layout':'mapped','framework_lock':{'name':'NovelForge','version':'0.8.0','commit':'fixture','bundle_fingerprint':'sha256:'+'1'*64}},
+                  'objects':[{'id':'CHAR-A','section':'characters','kind':'character','source_ref':'bible/CHAR-A.md','source_fingerprint':'sha256:'+'2'*64,'authority_class':'locked','lifecycle':'locked','story_order':0}],
+              })
+              write('inspector.json',{
+                  'schema':'novelforge_context_inspector_v2','manifest_id':'M1','stage':'writer_pre_draft',
+                  'items':[{'id':'CTX-A','class':'character','source':'canon:CHAR-A','source_fingerprint':'sha256:'+'3'*64,'authority':'locked','inclusion_reason':'scene participant','stages':['writer_pre_draft'],'priority':1,'pinned':False,'derived':False,'hidden':False,'invalidated':False,'eligible':True}],
+              })
+              write('simulation.json',{
+                  'run_id':'SIM-1','scene_id':'SCN-1','base_checkpoint_id':'CP-1','base_state_fingerprint':base,
+                  'character_results':[{'character_id':'CHAR-A','contract_id':'character.action_propose','status':'completed','input_fingerprint':'sha256:'+'4'*64,'result':{'proposals':[{'action':'counter'}]}}],
+                  'scene_resolution':{'contract_id':'scene.resolve_actions','status':'completed','input_fingerprint':'sha256:'+'5'*64,'result':{'trajectory':[{'event':'condition added'}]}},
+                  'event_ir_candidates':[{'schema':'novelforge_event_ir_v1','event_id':'EVT-1','story_order':1,'subject_fingerprint':base,'event_fingerprint':'sha256:'+'6'*64,'authority':False,'canon_write':False}],
+                  'branches':[{'branch_id':'BR-1','branch_fingerprint':'sha256:'+'7'*64,'base_state_fingerprint':base,'selected':True}],
+              })
+              write('candidate.json',{
+                  'artifact_ref':'candidate:SCN-1','base_state_fingerprint':base,'candidate_fingerprint':candidate,
+                  'events':[{'schema':'novelforge_event_ir_v1','event_id':'EVT-1','story_order':1,'subject_fingerprint':base,'state_delta':[{'subject_id':'CHAR-A','field':'location','before':'hall','after':'street','evidence_refs':['candidate:p1']}],'knowledge_delta':[],'relationship_delta':[],'resource_delta':[]}],
+              })
+              write('verification.json',{
+                  'candidate_fingerprint':candidate,
+                  'candidate_state_delta':{'schema':'novelforge_candidate_state_delta_v1','candidate_fingerprint':candidate,'delta_fingerprint':'sha256:'+'8'*64},
+                  'deterministic_report':{'schema':'novelforge_state_graph_diff_v1','before_snapshot_id':'S1','after_snapshot_id':'S2','findings':[]},
+                  'expected_semantic_input_fingerprint':'sha256:'+'9'*64,
+                  'semantic_result':{'contract_id':'narrative.verify','status':'completed','input_fingerprint':'sha256:'+'9'*64,'result':{'candidate_fingerprint':candidate,'verdict':'clear','findings':[]}},
+              })
+
+              def request(request_id,operation,args):
+                  return host_bridge.invoke({'schema':host_bridge.REQUEST_SCHEMA,'request_id':request_id,'operation':operation,'surface':'local_app','args':{'project_root':str(root),**args},'authority':False})
+
+              results=[
+                  request('R1','story.workspace',{'input':'workspace.json'}),
+                  request('R2','context.trace',{'inspector':'inspector.json'}),
+                  request('R3','scene.simulation.inspect',{'input':'simulation.json'}),
+                  request('R4','state.candidate.inspect',{'input':'candidate.json'}),
+                  request('R5','continuity.verify',{'input':'verification.json'}),
+              ]
+              assert all(item['status']=='ok' for item in results),results
+              assert all(item['data'].get('authority') is False for item in results),results
+              assert str(root) not in json.dumps(results,ensure_ascii=False),results
+              contract=host_bridge.load_contract()
+              assert set(['story.workspace','context.trace','scene.simulation.inspect','state.candidate.inspect','continuity.verify']).issubset(contract['operations']['supported'])
+              assert 'publication.preview' in contract['operations']['supported']
+              print(json.dumps({'studio_narrative_bridge_e2e':'PASS','operations':5,'authority':False,'path_leak':False}))
+          finally:
+              shutil.rmtree(root,ignore_errors=True)
+          PY
+
+      - name: Manifest and authority boundaries
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          manifest=Path('HARNESS_MANIFEST.yaml').read_text(encoding='utf-8')
+          required=[
+            'novelforge_event_ir_v1',
+            'novelforge_story_workspace_v1',
+            'novelforge_context_trace_v1',
+            'novelforge_scene_simulation_run_v1',
+            'novelforge_candidate_state_delta_v1',
+            'novelforge_narrative_verification_v1',
+            'narrative_verification: narrative.verify',
+            'story_workspace_grants_canon_authority: false',
+            'event_ir_grants_canon_authority: false',
+            'candidate_state_delta_grants_canon_authority: false',
+            'narrative_verification_grants_canon_authority: false',
+          ]
+          missing=[item for item in required if item not in manifest]
+          assert not missing,missing
+          PY
+
+      - name: Assert narrative runtime results
+        run: |
+          python - <<'PY'
+          import json
+          checks={
+            'story-workspace-test.json':('story_workspace_contract','PASS'),
+            'context-trace-test.json':('context_trace_contract','PASS'),
+            'event-ir-test.json':('event_ir_contract','PASS'),
+            'scene-simulation-run-test.json':('scene_simulation_run_contract','PASS'),
+            'candidate-state-delta-test.json':('candidate_state_delta_contract','PASS'),
+            'narrative-verification-test.json':('narrative_verification_contract','PASS'),
+            'studio-host-bridge-test.json':('studio_host_bridge_contract','PASS'),
+          }
+          loaded={path:json.load(open(path,encoding='utf-8')) for path in checks}
+          for path,(key,value) in checks.items():
+              assert loaded[path][key]==value,(path,loaded[path])
+          assert loaded['story-workspace-test.json']['authority_escalation_guard'] is True
+          assert loaded['context-trace-test.json']['fingerprint_guard'] is True
+          assert loaded['event-ir-test.json']['authority_guard'] is True
+          assert loaded['scene-simulation-run-test.json']['stale_fingerprint_guard'] is True
+          assert loaded['scene-simulation-run-test.json']['non_authoritative'] is True
+          assert loaded['candidate-state-delta-test.json']['before_state_chain_guard'] is True
+          assert loaded['narrative-verification-test.json']['candidate_fingerprint_guard'] is True
+          assert loaded['narrative-verification-test.json']['semantic_reject_is_transport_failure'] is False
+          bridge=loaded['studio-host-bridge-test.json']['checks']
+          assert bridge['contract_dispatch_match'] is True
+          assert bridge['publication_preview_query_safe'] is True
+          PY
+
+      - name: Top-level CLI exposes narrative runtime
+        run: |
+          python novelforge.py story-workspace self-test > /dev/null
+          python novelforge.py context-trace self-test > /dev/null
+          python novelforge.py event-ir self-test > /dev/null
+          python novelforge.py scene-simulation-run self-test > /dev/null
+          python novelforge.py candidate-state-delta self-test > /dev/null
+          python novelforge.py narrative-verification self-test > /dev/null
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: novelforge-story-workspace-contract-artifacts
+          path: |
+            story-workspace-test.json
+            context-trace-test.json
+            event-ir-test.json
+            scene-simulation-run-test.json
+            candidate-state-delta-test.json
+            narrative-verification-test.json
+            studio-host-bridge-test.json
+            narrative-eval-manifest.json
+            blind-eval-queue.json
+          if-no-files-found: warn

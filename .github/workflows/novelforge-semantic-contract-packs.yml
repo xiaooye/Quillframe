@@ -133,6 +133,42 @@ jobs:
                       'model_view': {'label': 'offer', 'value': 'The first offer was lower.'},
                   }],
               },
+              'narrative.verify': {
+                  'candidate_fingerprint': fp,
+                  'candidate_evidence': [
+                      {'evidence_id': 'E-NARR-CI', 'statement': 'CHAR-A acts on the offer.', 'source_ref': 'candidate:SCN-CI#1', 'story_order': 9},
+                  ],
+                  'character_views': [
+                      {
+                          'character_id': 'CHAR-A',
+                          'current_story_order': 9,
+                          'agenda': 'Preserve leverage.',
+                          'visible_evidence_ids': ['E-NARR-CI'],
+                          'beliefs': ['The offer may be a bluff.'],
+                          'constraints': ['Time is short.'],
+                      },
+                  ],
+                  'relationship_evidence': [
+                      {
+                          'relationship_id': 'REL-A-B',
+                          'before_state': {'trust': 'strained'},
+                          'candidate_change': {'trust': 'worse'},
+                          'evidence_ids': ['E-NARR-CI'],
+                      },
+                  ],
+                  'causal_trajectory': [
+                      {
+                          'event_id': 'EVT-NARR-CI',
+                          'caused_by': ['E-NARR-CI'],
+                          'effect': 'A condition is imposed.',
+                          'evidence_ids': ['E-NARR-CI'],
+                      },
+                  ],
+                  'candidate_state_delta': {
+                      'schema': 'novelforge_candidate_state_delta_v1',
+                      'authority': False,
+                  },
+              },
           }
 
           seen = set()
