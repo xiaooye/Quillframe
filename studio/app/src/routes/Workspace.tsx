@@ -1,12 +1,16 @@
 import { For, Match, Show, Switch, createMemo, createSignal } from "solid-js";
+import { invokeBridge } from "../bridge";
 import { JsonBlock, PageIntro } from "../components";
 import { useI18n } from "../i18n";
+import { asSemanticPacks, type SemanticCatalogProjection } from "../observability";
+import { useStudio } from "../studio";
 
 const modes = ["DRAFT", "REVISE", "AUDIT", "PLAN-CHAPTER"] as const;
 type PlaygroundMode = (typeof modes)[number];
 
 const steps = ["context", "contracts", "execution", "evidence", "result"] as const;
 type PlaygroundStep = (typeof steps)[number];
+type ContractPreviewStatus = "candidate" | "registered" | "not_registered" | "unavailable";
 
 const contractPreview: Record<PlaygroundMode, readonly string[]> = {
   DRAFT: ["context.select", "character.action_propose", "scene.resolve_actions"],
@@ -27,6 +31,12 @@ const inspectorCopy = {
     authority: "Authority",
     none: "None",
     candidate: "Candidate only",
+    registered: "Registered",
+    notRegistered: "Not registered",
+    unavailable: "Registry unavailable",
+    catalogChecked: "Contract candidates were compared with the live semantic.catalog projection. Registration is evidence of presence only; no semantic routing or quality judgment occurred.",
+    catalogUnavailable: "A bound Core was present, but semantic.catalog could not be used for this preview. Contract candidates remain unverified by the registry.",
+    catalogNotBound: "No Core is bound, so contract candidates come only from the explicit Playground mode mapping.",
     stepHint: "Select a step to inspect the state, routing evidence, and result boundary produced by this preview.",
   },
   "zh-CN": {
@@ -40,6 +50,12 @@ const inspectorCopy = {
     authority: "Authority",
     none: "无",
     candidate: "仅候选",
+    registered: "已注册",
+    notRegistered: "未注册",
+    unavailable: "Registry 不可用",
+    catalogChecked: "这些契约候选已与 live semantic.catalog 投影进行比对。注册只能证明契约存在；本次没有执行 semantic routing，也没有产生质量判断。",
+    catalogUnavailable: "当前已绑定 Core，但本次预览无法使用 semantic.catalog；这些契约候选没有获得 registry 验证。",
+    catalogNotBound: "当前没有绑定 Core，因此契约候选只来自显式的 Playground mode mapping。",
     stepHint: "选择一个步骤，检查这次预览产生的状态、路由证据与结果边界。",
   },
 } as const;
@@ -48,7 +64,7 @@ interface PlaygroundResult {
   fingerprint: string;
   run: Record<string, unknown>;
   manifest: Record<string, unknown>;
-  contracts: { id: string; status: "candidate" }[];
+  contracts: { id: string; status: ContractPreviewStatus }[];
   execution: Record<string, unknown>;
   evidence: string[];
   result: Record<string, unknown>;
@@ -62,6 +78,7 @@ async function sha256(value: string): Promise<string> {
 
 export default function Workspace() {
   const { t, locale } = useI18n();
+  const studio = useStudio();
   const [mode, setMode] = createSignal<PlaygroundMode>("DRAFT");
   const [input, setInput] = createSignal("");
   const [running, setRunning] = createSignal(false);
@@ -78,6 +95,13 @@ export default function Workspace() {
     return t("playground.resultStep");
   };
 
+  const contractStatusLabel = (status: ContractPreviewStatus) => {
+    if (status === "registered") return copy().registered;
+    if (status === "not_registered") return copy().notRegistered;
+    if (status === "unavailable") return copy().unavailable;
+    return copy().candidate;
+  };
+
   const runPreview = async () => {
     const source = input().trim();
     if (!source) return;
@@ -86,7 +110,31 @@ export default function Workspace() {
       const fingerprint = await sha256(`${mode()}\n${source}`);
       const runId = `preview-${fingerprint.slice(7, 19)}`;
       const bytes = new TextEncoder().encode(source).length;
-      const contractCandidates = contracts().map((id) => ({ id, status: "candidate" as const }));
+      let catalogCheck: "not_bound" | "checked" | "unavailable" = studio.bridgeAvailable() ? "unavailable" : "not_bound";
+      let catalogSchema: string | null = null;
+      let registeredContracts: Set<string> | undefined;
+
+      if (studio.bridgeAvailable()) {
+        try {
+          const response = await invokeBridge<SemanticCatalogProjection>("semantic.catalog");
+          if (response.status === "ok" && response.data) {
+            const packs = asSemanticPacks(response.data);
+            registeredContracts = new Set(packs.flatMap((pack) => pack.contracts));
+            catalogSchema = typeof response.data.schema === "string" ? response.data.schema : "semantic.catalog";
+            catalogCheck = "checked";
+          }
+        } catch {
+          catalogCheck = "unavailable";
+        }
+      }
+
+      const contractCandidates = contracts().map((id) => ({
+        id,
+        status: registeredContracts ? (registeredContracts.has(id) ? "registered" as const : "not_registered" as const) : (catalogCheck === "unavailable" ? "unavailable" as const : "candidate" as const),
+      }));
+      const registeredCandidates = catalogCheck === "checked" ? contractCandidates.filter((item) => item.status === "registered").map((item) => item.id) : null;
+      const catalogEvidence = catalogCheck === "checked" ? copy().catalogChecked : catalogCheck === "unavailable" ? copy().catalogUnavailable : copy().catalogNotBound;
+
       setPreview({
         fingerprint,
         run: {
@@ -94,7 +142,7 @@ export default function Workspace() {
           run_id: runId,
           task_mode: mode(),
           status: "preview_complete",
-          runtime: "browser_ephemeral",
+          runtime: studio.bridgeAvailable() ? "browser_with_read_only_core" : "browser_ephemeral",
           model_execution: false,
           persistence: false,
           resumable: false,
@@ -122,11 +170,13 @@ export default function Workspace() {
           model_execution: false,
           semantic_routing: false,
           contract_selection: "illustrative_mode_preview",
+          contract_registry_check: catalogCheck,
+          contract_registry_schema: catalogSchema,
           tool_calls: 0,
           handoffs: 0,
           approvals: 0,
           guardrails: 0,
-          network_required: false,
+          core_queries: catalogCheck === "checked" ? ["semantic.catalog"] : [],
           persistence: false,
           resumable: false,
           run_receipt_emitted: false,
@@ -137,13 +187,15 @@ export default function Workspace() {
           events: [
             { seq: 1, type: "input.accepted", status: "complete" },
             { seq: 2, type: "context.manifest.previewed", status: "complete" },
-            { seq: 3, type: "semantic.contract_candidates.previewed", status: "complete" },
-            { seq: 4, type: "model.execution", status: "skipped" },
-            { seq: 5, type: "evidence.previewed", status: "complete" },
-            { seq: 6, type: "run.receipt", status: "not_emitted" },
+            { seq: 3, type: "semantic.catalog", status: catalogCheck },
+            { seq: 4, type: "semantic.contract_candidates.previewed", status: "complete" },
+            { seq: 5, type: "model.execution", status: "skipped" },
+            { seq: 6, type: "evidence.previewed", status: "complete" },
+            { seq: 7, type: "run.receipt", status: "not_emitted" },
           ],
         },
         evidence: [
+          catalogEvidence,
           t("playground.evidenceEphemeral"),
           t("playground.evidenceNoModel"),
           t("playground.evidenceNoAuthority"),
@@ -154,6 +206,7 @@ export default function Workspace() {
           status: "preview_complete",
           mode: mode(),
           contract_candidates: contractCandidates.map((item) => item.id),
+          registered_contract_candidates: registeredCandidates,
           selected_contracts: null,
           subject_fingerprint: fingerprint,
           semantic_routing_performed: false,
@@ -259,7 +312,7 @@ export default function Workspace() {
                       </Match>
                       <Match when={activeStep() === "contracts"}>
                         <div class="nf-playground-contract-list">
-                          <For each={currentRun().contracts}>{(contract) => <code>{contract.id} · {copy().candidate}</code>}</For>
+                          <For each={currentRun().contracts}>{(contract) => <code>{contract.id} · {contractStatusLabel(contract.status)}</code>}</For>
                         </div>
                         <p class="nf-playground-footnote">{t("playground.footnote")}</p>
                       </Match>
