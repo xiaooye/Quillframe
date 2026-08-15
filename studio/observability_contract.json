@@ -1,0 +1,81 @@
+{
+  "schema": "novelforge_studio_observability_contract_v1",
+  "version": "1",
+  "authority": false,
+  "canon_authority": false,
+  "framework_write_authority": false,
+  "settlement_authority": false,
+  "quality_judgment_authority": false,
+  "release_eligibility_authority": false,
+  "principle": "Provenance validity, semantic quality, production readiness, and Canon authority are separate evidence layers and must never be collapsed into one PASS state.",
+  "source_requirements": {
+    "status_owner": "core_or_source_projection",
+    "source_schema_required": true,
+    "source_fingerprint_required_for_candidate_state": true,
+    "missing_field_policy": "unavailable_not_inferred",
+    "code_to_quality_inference_allowed": false,
+    "code_to_release_eligibility_inference_allowed": false,
+    "capability_implies_authority": false,
+    "contract_registration_implies_quality": false,
+    "contract_registration_implies_release_eligibility": false
+  },
+  "display_status_vocabulary": [
+    "pass",
+    "warn",
+    "blocked",
+    "not_applicable",
+    "pending",
+    "unavailable"
+  ],
+  "semantic_contract_surface": {
+    "current_catalog_fields": [
+      "pack_id",
+      "pack_description",
+      "contract_id",
+      "load_when"
+    ],
+    "future_core_fields": [
+      "registry_version",
+      "schema_version",
+      "purpose",
+      "independent_gate",
+      "input_visibility_policy",
+      "output_contract_summary",
+      "permission_scope",
+      "production_evidence_eligibility"
+    ],
+    "future_field_policy": "render only when supplied by a typed Core projection"
+  },
+  "diagnostic_surface": {
+    "required_scope_fields": [
+      "what_validated",
+      "what_not_validated"
+    ],
+    "future_groups": [
+      "framework_identity",
+      "project_compatibility",
+      "taxonomy_compatibility",
+      "semantic_contract_health",
+      "runtime_capability_status",
+      "production_gate_health"
+    ]
+  },
+  "production_lanes": [
+    "candidate",
+    "surface",
+    "reader_engagement",
+    "independent_production_review",
+    "continuity",
+    "production_readiness",
+    "canon"
+  ],
+  "production_projection_optional_fields": [
+    "blocking_gate",
+    "blocking_codes",
+    "repair_owner",
+    "evidence_refs",
+    "reviewer_provenance",
+    "fresh_realization_required"
+  ],
+  "host_invariant": "Local Web and cloud-hosted Studio share the same product semantics; an unbound cloud host must not fabricate Core-backed observability state."
+}

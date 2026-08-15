@@ -73,7 +73,7 @@ export default function Project() {
                 </div>
               </article>
 
-              <article class="wui-card nf-card nf-card-sunken">
+              <article class="wui-card wui-card--filled nf-card">
                 <div class="wui-card__header"><h2>{t("project.policyAvailability")}</h2></div>
                 <div class="wui-card__content nf-chip-row">
                   <For each={Object.entries(project().policy_availability)}>

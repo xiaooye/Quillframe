@@ -8,6 +8,7 @@ import "./styles/vendor/weiui.tokens.generated.css";
 import "./styles/vendor/weiui.generated.css";
 import "../../../assets/brand/story-loom.weiui.css";
 import "./styles/app.css";
+import "./styles/observability.css";
 import "./styles/visual-fixes.css";
 import "./styles/host.css";
 

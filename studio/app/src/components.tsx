@@ -18,7 +18,7 @@ export function JsonBlock(props: { value: unknown; label?: string }) {
   return (
     <div class="nf-json-block">
       <Show when={props.label}><div class="nf-json-label">{props.label}</div></Show>
-      <pre><code>{JSON.stringify(props.value, null, 2)}</code></pre>
+      <pre class="wui-code-block"><code>{JSON.stringify(props.value, null, 2)}</code></pre>
     </div>
   );
 }
@@ -27,9 +27,12 @@ export function QueryError(props: { message?: string }) {
   const { t } = useI18n();
   return (
     <Show when={props.message}>
-      <div class="wui-alert nf-alert" role="alert">
-        <strong>{t("common.error")}</strong>
-        <span>{props.message}</span>
+      <div class="wui-alert wui-alert--destructive nf-query-error" role="alert">
+        <span class="wui-alert__icon" aria-hidden="true">!</span>
+        <div class="wui-alert__body">
+          <strong class="wui-alert__title">{t("common.error")}</strong>
+          <span class="wui-alert__description">{props.message}</span>
+        </div>
       </div>
     </Show>
   );
@@ -38,7 +41,7 @@ export function QueryError(props: { message?: string }) {
 export function CoreHostBoundary() {
   const { t } = useI18n();
   return (
-    <section class="wui-card nf-card nf-host-boundary" aria-labelledby="core-host-boundary-title">
+    <section class="wui-card wui-card--filled nf-card nf-host-boundary" aria-labelledby="core-host-boundary-title">
       <div class="wui-card__content nf-host-boundary-content">
         <span class="wui-badge wui-badge--outline">{t("host.cloud")}</span>
         <div>

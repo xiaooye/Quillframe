@@ -1,0 +1,183 @@
+name: NovelForge Studio Bound Browser QA
+
+on:
+  pull_request:
+    paths:
+      - 'studio/app/**'
+      - 'studio/observability_contract.json'
+      - 'studio/local_server.py'
+      - 'studio/host_bridge.py'
+      - 'studio/host_bridge_contract.json'
+      - '.github/workflows/studio-bound-browser-qa.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'studio/app/**'
+      - 'studio/observability_contract.json'
+      - 'studio/local_server.py'
+      - 'studio/host_bridge.py'
+      - 'studio/host_bridge_contract.json'
+      - '.github/workflows/studio-bound-browser-qa.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  bound-browser-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: studio/app/pnpm-lock.yaml
+      - name: Frozen install
+        working-directory: studio/app
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck and build Studio
+        working-directory: studio/app
+        run: pnpm build
+      - name: Install CJK font for truthful zh-CN rendering
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+          fc-cache -f >/dev/null
+      - name: Bound browser runtime and visual QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/studio-bound-qa
+          CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser)
+          test -n "${CHROME}"
+
+          python studio/local_server.py --port 4177 > /tmp/studio-bound-qa/server.log 2>&1 &
+          SERVER_PID=$!
+          cleanup() {
+            kill "${SERVER_PID}" >/dev/null 2>&1 || true
+            wait "${SERVER_PID}" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          ready=false
+          for _ in $(seq 1 30); do
+            if curl --silent --show-error --fail http://127.0.0.1:4177/ > /tmp/studio-bound-qa/root.html; then
+              if grep -q '<title>NovelForge Studio</title>' /tmp/studio-bound-qa/root.html; then
+                ready=true
+                break
+              fi
+            fi
+            sleep 1
+          done
+          test "${ready}" = "true"
+
+          run_chrome() {
+            name="$1"
+            size="$2"
+            url="$3"
+            profile=$(mktemp -d)
+            "${CHROME}" \
+              --headless=new \
+              --no-sandbox \
+              --disable-gpu \
+              --disable-dev-shm-usage \
+              --disable-background-networking \
+              --window-size="${size}" \
+              --virtual-time-budget=6000 \
+              --user-data-dir="${profile}" \
+              --log-net-log="/tmp/studio-bound-qa/${name}-netlog.json" \
+              --net-log-capture-mode=IncludeSensitive \
+              --screenshot="/tmp/studio-bound-qa/${name}.png" \
+              "${url}" >"/tmp/studio-bound-qa/${name}-chrome.log" 2>&1
+            rm -rf "${profile}"
+          }
+
+          dump_dom() {
+            name="$1"
+            size="$2"
+            url="$3"
+            profile=$(mktemp -d)
+            "${CHROME}" \
+              --headless=new \
+              --no-sandbox \
+              --disable-gpu \
+              --disable-dev-shm-usage \
+              --disable-background-networking \
+              --window-size="${size}" \
+              --virtual-time-budget=6000 \
+              --user-data-dir="${profile}" \
+              --dump-dom \
+              "${url}" >"/tmp/studio-bound-qa/${name}-dom.html" 2>"/tmp/studio-bound-qa/${name}-dom.log"
+            rm -rf "${profile}"
+          }
+
+          run_chrome semantic-en-desktop 1440,900 'http://127.0.0.1:4177/semantic?lang=en-US'
+          run_chrome semantic-en-mobile 390,844 'http://127.0.0.1:4177/semantic?lang=en-US'
+          run_chrome diagnostics-en-desktop 1440,900 'http://127.0.0.1:4177/diagnostics?lang=en-US'
+          run_chrome diagnostics-zh-mobile 390,844 'http://127.0.0.1:4177/diagnostics?lang=zh-CN'
+
+          dump_dom semantic-en 1440,900 'http://127.0.0.1:4177/semantic?lang=en-US'
+          dump_dom diagnostics-en 1440,900 'http://127.0.0.1:4177/diagnostics?lang=en-US'
+          dump_dom diagnostics-zh 390,844 'http://127.0.0.1:4177/diagnostics?lang=zh-CN'
+
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path('/tmp/studio-bound-qa')
+          semantic = (root / 'semantic-en-dom.html').read_text(encoding='utf-8', errors='replace')
+          diagnostics = (root / 'diagnostics-en-dom.html').read_text(encoding='utf-8', errors='replace')
+          diagnostics_zh = (root / 'diagnostics-zh-dom.html').read_text(encoding='utf-8', errors='replace')
+
+          # These workstations only render after real bridge data arrives.
+          assert 'Registered model contracts' in semantic
+          assert 'Registration is evidence of a contract boundary' in semantic
+          assert 'This hosted shell is not bound to a NovelForge Core host' not in semantic
+
+          assert 'Framework doctor' in diagnostics
+          assert 'What this check validated' in diagnostics
+          assert 'What this check did NOT validate' in diagnostics
+          assert 'This hosted shell is not bound to a NovelForge Core host' not in diagnostics
+
+          assert '这项检查验证了什么' in diagnostics_zh
+          assert '这项检查没有验证什么' in diagnostics_zh
+          assert '下面的状态只属于 framework.doctor' in diagnostics_zh
+
+          for image in (
+              'semantic-en-desktop.png',
+              'semantic-en-mobile.png',
+              'diagnostics-en-desktop.png',
+              'diagnostics-zh-mobile.png',
+          ):
+              path = root / image
+              assert path.exists() and path.stat().st_size > 10_000, image
+
+          # Bound pages must use the one public typed bridge endpoint; no alternate API is allowed.
+          for name in ('semantic-en-desktop-netlog.json', 'semantic-en-mobile-netlog.json', 'diagnostics-en-desktop-netlog.json', 'diagnostics-zh-mobile-netlog.json'):
+              text = (root / name).read_text(encoding='utf-8', errors='replace')
+              assert '/api/bridge/invoke' in text, f'expected typed bridge request in {name}'
+              assert '/api/' not in text.replace('/api/bridge/invoke', ''), f'unexpected Studio API path in {name}'
+
+          (root / 'runtime-proof.txt').write_text(
+              'schema=novelforge_studio_bound_browser_qa_v1\n'
+              'surface=local_app\n'
+              'core_host=bound\n'
+              'semantic_source=semantic.catalog\n'
+              'diagnostics_source=framework.doctor\n'
+              'authority=false\n',
+              encoding='utf-8',
+          )
+          print({'schema': 'novelforge_studio_bound_browser_qa_v1', 'status': 'pass', 'authority': False})
+          PY
+      - name: Upload bound browser QA evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-bound-browser-qa
+          path: /tmp/studio-bound-qa
+          if-no-files-found: error
+          retention-days: 7

@@ -20,6 +20,23 @@
     "forbidden_runtime_packages": ["@weiui/headless", "@weiui/react"],
     "theme_layer": "wui-theme",
     "runtime_javascript_from_weiui": false,
+    "generic_component_css_owner": "@weiui/css",
+    "story_loom_css_scope": "theme_tokens_and_product_identity",
+    "studio_custom_css_scope": "composition_layout_and_novelforge_specific_information_architecture",
+    "custom_generic_component_chrome_allowed": false,
+    "required_generic_primitives": [
+      "alert",
+      "app-bar",
+      "badge",
+      "bottom-nav",
+      "button",
+      "card",
+      "code",
+      "command-palette",
+      "empty-state",
+      "input",
+      "sidebar"
+    ],
     "css_delivery": {
       "mode": "config_generated_checked_in",
       "config_schema": "weiui_css_config_v1",
