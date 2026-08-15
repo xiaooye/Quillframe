@@ -52,13 +52,27 @@ def _clip(value: str) -> tuple[str, bool]:
     return value[:MAX_PREVIEW_CHARS], True
 
 
-def _artifact_sha(report: dict[str, Any]) -> str | None:
-    detail = report.get("detail")
-    files = detail.get("files") if isinstance(detail, dict) else None
-    if not isinstance(files, list) or not files or not isinstance(files[0], dict):
-        return None
-    value = files[0].get("sha256")
-    return value if isinstance(value, str) else None
+def _derived_artifact_sha(output: Path) -> str:
+    """Fingerprint the complete derived output, including multi-file profiles."""
+    if output.is_file():
+        return "sha256:" + hashlib.sha256(output.read_bytes()).hexdigest()
+    if not output.is_dir():
+        raise ValueError("publication compiler did not create the expected output")
+    digest = hashlib.sha256()
+    for path in sorted(item for item in output.rglob("*") if item.is_file()):
+        relative = path.relative_to(output).as_posix().encode("utf-8")
+        data = path.read_bytes()
+        digest.update(len(relative).to_bytes(8, "big"))
+        digest.update(relative)
+        digest.update(len(data).to_bytes(8, "big"))
+        digest.update(data)
+    return "sha256:" + digest.hexdigest()
+
+
+def _inline_epub_css(content: str, css: str) -> str:
+    style = "<style data-novelforge-preview=\"epub-inline\">" + css + "</style>"
+    marker = "</head>"
+    return content.replace(marker, style + marker, 1) if marker in content else style + content
 
 
 def _preview_from_build(profile: str, output: Path, ir: dict[str, Any]) -> dict[str, Any]:
@@ -84,12 +98,15 @@ def _preview_from_build(profile: str, output: Path, ir: dict[str, Any]) -> dict[
             if name.startswith("EPUB/chapter-") and name.endswith(".xhtml")
         )
         content = zf.read(chapter_names[0]).decode("utf-8") if chapter_names else ""
+        css = zf.read("EPUB/style.css").decode("utf-8") if "EPUB/style.css" in zf.namelist() else ""
+        content = _inline_epub_css(content, css) if content and css else content
         content, truncated = _clip(content)
         return {
             "kind": "xhtml",
             "content": content,
             "truncated": truncated,
             "entry": chapter_names[0] if chapter_names else None,
+            "stylesheet_inlined": bool(css),
         }
 
 
@@ -108,6 +125,7 @@ def build_preview(source: dict[str, Any], profile: str) -> dict[str, Any]:
         output = root / ("book.epub" if compiler_profile == "epub3" else compiler_profile)
         report = compiler.build(ir, compiler_profile, output)
         preview = _preview_from_build(compiler_profile, output, ir)
+        artifact_sha = _derived_artifact_sha(output)
         validation = None
         if compiler_profile == "epub3":
             validation = compiler.validate_epub(output, ir=ir)
@@ -132,8 +150,9 @@ def build_preview(source: dict[str, Any], profile: str) -> dict[str, Any]:
         "text_preservation": report.get("text_preservation"),
         "text_roundtrip": bool(report.get("detail", {}).get("text_roundtrip")),
         "artifact": {
-            "sha256": _artifact_sha(report),
-            "kind": "epub" if compiler_profile == "epub3" else ("html" if compiler_profile in {"web_reflow", "print_book"} else "text"),
+            "sha256": artifact_sha,
+            "fingerprint_scope": "complete-derived-output",
+            "kind": "epub" if compiler_profile == "epub3" else ("html" if compiler_profile in {"web_reflow", "print_book"} else "text-directory"),
             "derived": True,
         },
         "preview": preview,
@@ -165,14 +184,17 @@ def self_test() -> dict[str, Any]:
         }],
     }
     previews = {profile: build_preview(source, profile) for profile in ("text", "web", "print", "epub")}
+    repeated = {profile: build_preview(source, profile) for profile in ("text", "web", "print", "epub")}
     checks = {
         "all_profiles": all(value["schema"] == SCHEMA for value in previews.values()),
         "authority_false": all(value["authority"] is False for value in previews.values()),
         "no_mutation": all(value["mutation_performed"] is False for value in previews.values()),
         "no_model": all(value["model_execution"] is False for value in previews.values()),
         "exact_text_guard": all(value["accepted_fingerprint_guard"] is True and value["text_roundtrip"] is True for value in previews.values()),
-        "artifact_fingerprints": all(isinstance(value["artifact"]["sha256"], str) and value["artifact"]["sha256"].startswith("sha256:") for value in previews.values()),
+        "artifact_fingerprints": all(isinstance(value["artifact"]["sha256"], str) and value["artifact"]["sha256"].startswith("sha256:") and value["artifact"]["fingerprint_scope"] == "complete-derived-output" for value in previews.values()),
+        "artifact_determinism": all(previews[profile]["artifact"]["sha256"] == repeated[profile]["artifact"]["sha256"] for profile in previews),
         "epub_internal_validation": previews["epub"]["validation"]["valid"] is True,
+        "epub_stylesheet_inlined": previews["epub"]["preview"].get("stylesheet_inlined") is True,
         "source_authority_not_invented": all(value["source_authority_verified"] is False for value in previews.values()),
     }
     return {
