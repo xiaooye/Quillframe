@@ -114,6 +114,7 @@ export const AppShell: ParentComponent = (props) => {
               href={studio.bridgeAvailable() ? "/diagnostics" : "/"}
               class="wui-badge wui-badge--outline nf-host-chip"
               data-surface={studio.surface()}
+              data-host-label={t("host.cloud")}
               title={coreStatusTitle()}
               aria-label={coreStatusTitle()}
             >
