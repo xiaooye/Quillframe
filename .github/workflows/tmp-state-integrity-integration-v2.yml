@@ -42,14 +42,15 @@ jobs:
           git show --stat --oneline HEAD
       - name: Stage verified integration artifact
         run: |
-          mkdir -p /tmp/p0-integrated/.github/workflows /tmp/p0-integrated/docs /tmp/p0-integrated/specs/008-state-integrity-p0
+          rm -rf /tmp/p0-integrated
+          mkdir -p /tmp/p0-integrated/docs /tmp/p0-integrated/specs/008-state-integrity-p0
           cp HARNESS_MANIFEST.yaml /tmp/p0-integrated/
-          cp .github/workflows/novelforge-contracts.yml /tmp/p0-integrated/.github/workflows/
+          cp .github/workflows/novelforge-contracts.yml /tmp/p0-integrated/novelforge-contracts.yml
           cp docs/documentation_manifest.json /tmp/p0-integrated/docs/
           cp specs/008-state-integrity-p0/* /tmp/p0-integrated/specs/008-state-integrity-p0/
-          (cd /tmp/p0-integrated && find . -type f -print0 | sort -z | xargs -0 sha256sum > VERIFIED_SHA256SUMS.txt)
+          (cd /tmp/p0-integrated && find . -type f ! -name VERIFIED_SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > VERIFIED_SHA256SUMS.txt)
       - uses: actions/upload-artifact@v4
         with:
-          name: verified-state-integrity-integration
+          name: verified-state-integrity-integration-v2
           path: /tmp/p0-integrated
           if-no-files-found: error
