@@ -2,14 +2,14 @@ import { For, Show, createMemo, createSignal } from "solid-js";
 import { JsonBlock, PageIntro } from "../components";
 import { useI18n } from "../i18n";
 
-const modes = ["DRAFT", "REVISE", "REVIEW", "PLAN"] as const;
+const modes = ["DRAFT", "REVISE", "AUDIT", "PLAN-CHAPTER"] as const;
 type PlaygroundMode = (typeof modes)[number];
 
 const contractPreview: Record<PlaygroundMode, readonly string[]> = {
   DRAFT: ["context.select", "character.action_propose", "scene.resolve_actions"],
-  REVISE: ["revision.diagnose", "quality.compare"],
-  REVIEW: ["reader.engagement_audit", "quality.production_review", "continuity.commitment_audit"],
-  PLAN: ["scene.diverge", "plan.reconcile"],
+  REVISE: ["revision.diagnose", "reader.engagement_audit", "character.integrity", "quality.compare"],
+  AUDIT: ["quality.production_review", "reader.engagement_audit", "continuity.commitment_audit"],
+  "PLAN-CHAPTER": ["context.select", "plan.reconcile", "scene.diverge"],
 };
 
 interface PlaygroundResult {
@@ -60,11 +60,14 @@ export default function Workspace() {
         execution: {
           executor: "deterministic_browser_mock",
           model_execution: false,
+          semantic_routing: false,
+          contract_selection: "illustrative_mode_preview",
           network_required: false,
           persistence: false,
           authority: false,
           canon_write: false,
           framework_write: false,
+          settlement_authority: false,
         },
         evidence: [
           t("playground.evidenceEphemeral"),
@@ -74,8 +77,11 @@ export default function Workspace() {
         result: {
           status: "preview_complete",
           mode: mode(),
-          selected_contracts: [...contracts()],
+          contract_candidates: [...contracts()],
+          selected_contracts: null,
           subject_fingerprint: fingerprint,
+          semantic_routing_performed: false,
+          authority: false,
           note: t("playground.mockResult"),
         },
       });
@@ -93,7 +99,7 @@ export default function Workspace() {
           <div class="nf-playground-modebar" role="group" aria-label={t("playground.modeLabel")}>
             <For each={modes}>
               {(value) => (
-                <button class="wui-button wui-button--ghost" data-active={mode() === value ? "true" : undefined} type="button" onClick={() => setMode(value)}>
+                <button class="wui-button wui-button--ghost" data-active={mode() === value ? "true" : undefined} type="button" onClick={() => { setMode(value); setPreview(undefined); }}>
                   {value}
                 </button>
               )}
@@ -104,7 +110,7 @@ export default function Workspace() {
             <textarea
               class="wui-textarea"
               value={input()}
-              onInput={(event) => setInput(event.currentTarget.value)}
+              onInput={(event) => { setInput(event.currentTarget.value); setPreview(undefined); }}
               placeholder={t("playground.inputPlaceholder")}
               spellcheck={false}
             />
