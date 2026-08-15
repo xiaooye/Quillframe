@@ -1,0 +1,73 @@
+name: Product Godot Route Baselines
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'site/src/**'
+      - 'site/package.json'
+      - 'site/package-lock.json'
+      - '.github/workflows/product-godot-route-baselines.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: product-godot-route-baselines-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Product Site dependencies
+        working-directory: site
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Build Solid product site
+        working-directory: site
+        run: npm run content && npm run build:site
+      - name: Capture route baselines
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=/tmp/novelforge-route-baselines
+          mkdir -p "$OUT"
+          CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser)
+          test -n "$CHROME"
+          cd site
+          npm run preview -- --host 127.0.0.1 --port 4188 > "$OUT/server.log" 2>&1 &
+          SERVER_PID=$!
+          cleanup() { kill "$SERVER_PID" >/dev/null 2>&1 || true; wait "$SERVER_PID" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          ready=false
+          for _ in $(seq 1 40); do
+            if curl -fsS 'http://127.0.0.1:4188/' >/dev/null; then ready=true; break; fi
+            sleep 1
+          done
+          test "$ready" = true
+          shot() {
+            route="$1"; name="$2"; size="$3"
+            profile=$(mktemp -d)
+            "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --disable-background-networking \
+              --window-size="$size" --virtual-time-budget=5000 --user-data-dir="$profile" \
+              --screenshot="$OUT/${name}.png" "http://127.0.0.1:4188/${route}" >"$OUT/${name}.log" 2>&1
+            rm -rf "$profile"
+            test -s "$OUT/${name}.png"
+          }
+          for route in studio architecture publication inspect playground agents changelog; do
+            shot "$route" "solid-${route}-desktop" 1440,900
+            shot "$route" "solid-${route}-mobile" 390,844
+          done
+      - name: Upload route baselines
+        uses: actions/upload-artifact@v4
+        with:
+          name: remaining-solid-route-baselines
+          path: /tmp/novelforge-route-baselines
+          if-no-files-found: error
+          retention-days: 7
