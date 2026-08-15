@@ -1,0 +1,61 @@
+{
+  "schema": "novelforge_studio_scene_workspace_fixture_v1",
+  "synthetic": true,
+  "authority": false,
+  "project": {
+    "id": "PROJECT-SYNTHETIC-STORY-LOOM",
+    "title": "Synthetic Story Loom"
+  },
+  "chapter": {
+    "id": "CH-012",
+    "title": "The Borrowed Key",
+    "lifecycle": "review",
+    "authority_class": "review",
+    "word_count": 2840
+  },
+  "scene": {
+    "id": "SCN-012-03",
+    "title": "Service Corridor",
+    "mode": "analysis",
+    "manuscript_excerpt": "Synthetic fixture prose. Mira reaches the service corridor before the elevator returns. The key in her hand belongs to someone who has not yet admitted losing it.",
+    "manuscript_authority": "review",
+    "accepted_canon": false
+  },
+  "reader": {
+    "status": "needs_attention",
+    "findings": [
+      {
+        "id": "RF-01",
+        "kind": "reader_pressure",
+        "summary": "The immediate objective is clear, but the cost of being caught is not yet concrete."
+      },
+      {
+        "id": "RF-02",
+        "kind": "continuity",
+        "summary": "Key ownership requires confirmation from project evidence."
+      }
+    ]
+  },
+  "context": {
+    "status": "partial",
+    "loaded_block_ids": ["CHAR-MIRA", "LOC-SERVICE-CORRIDOR"],
+    "support_not_loaded_block_ids": ["REL-MIRA-ELIAS"],
+    "authority_details_available": false
+  },
+  "runtime": {
+    "latest_run_id": "RUN-SYNTHETIC-012",
+    "status": "complete",
+    "semantic_jobs": 2,
+    "execution_evidence_is_canon": false
+  },
+  "host": {
+    "surface": "local_app",
+    "capabilities": ["filesystem", "git"],
+    "capability_is_authority": false
+  },
+  "unavailable": [
+    "settlement_eligibility",
+    "publication_status",
+    "exact_context_authority_projection"
+  ]
+}
