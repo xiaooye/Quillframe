@@ -11,6 +11,7 @@ import "./styles/app.css";
 import "./styles/observability.css";
 import "./styles/visual-fixes.css";
 import "./styles/host.css";
+import "./styles/atelier-workbench.css";
 
 const Desk = lazy(() => import("./routes/Desk"));
 const Project = lazy(() => import("./routes/Project"));
@@ -22,6 +23,8 @@ const Diagnostics = lazy(() => import("./routes/Diagnostics"));
 
 const root = document.getElementById("app");
 if (!root) throw new Error("#app mount point is missing");
+
+document.documentElement.dataset.experience = "story-loom-kawaii-atelier-v5";
 
 render(
   () => (
