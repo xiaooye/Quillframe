@@ -1,6 +1,6 @@
 {
   "schema": "novelforge_studio_host_bridge_contract_v1",
-  "version": "2",
+  "version": "3",
   "authority": false,
   "canon_authority": false,
   "framework_write_authority": false,
@@ -22,7 +22,8 @@
     "capability_implies_authority": false,
     "unsupported_operation_fails_closed": true,
     "mutation_exposed": true,
-    "mutation_scope": "runtime_session_state_only",
+    "mutation_scopes": ["runtime_session_state", "runtime_active_run_state"],
+    "mutation_requires_operation_specific_contract": true,
     "mutation_requires_explicit_authorization": true,
     "mutation_requires_fresh_preflight": true,
     "mutation_requires_compare_and_swap": true,
@@ -93,7 +94,7 @@
       },
       "runtime.command.receipt.get": {
         "kind": "query",
-        "core_basis": "novelforge_runtime_command_receipt_projection_v1 via novelforge.py runtime-command",
+        "core_basis": "novelforge_runtime_command_receipt_projection_v1 via operation-specific runtime command executors",
         "required_args": ["project_root"]
       },
       "session.resume.preflight": {
@@ -112,6 +113,24 @@
         "canon_write": false,
         "framework_write": false,
         "settlement": false
+      },
+      "session.terminate.preflight": {
+        "kind": "query",
+        "core_basis": "novelforge_session_terminate_preflight_v1 via novelforge.py terminate-preflight",
+        "required_args": ["project_root", "session_id", "expected_session_version"]
+      },
+      "session.terminate": {
+        "kind": "command",
+        "core_basis": "novelforge_session_terminate_command_v1 + novelforge_session_terminate_authorization_v1 + novelforge_runtime_command_receipt_v1 via novelforge.py terminate-executor",
+        "required_args": ["project_root", "session_id", "expected_session_version", "user_authorized"],
+        "allowed_surfaces": ["local_app"],
+        "authorization_sources": ["user", "authorized_human"],
+        "mutation_scope": "runtime_session_and_active_run_state_only",
+        "model_execution": false,
+        "project_write": false,
+        "canon_write": false,
+        "framework_write": false,
+        "settlement": false
       }
     },
     "deferred": {
@@ -124,6 +143,11 @@
         "kind": "command",
         "reason": "Project mutation remains behind explicit Core authority/settlement operations",
         "dependency": "#23"
+      },
+      "publication.build": {
+        "kind": "command",
+        "reason": "persistent publication output still needs an operation-specific destination/write contract and release-validation policy; preview remains query-only",
+        "dependency": "#23"
       }
     }
   },
@@ -134,7 +158,8 @@
     "private_python_imports_required": false,
     "private_persistence_layout_required": false,
     "runtime_mutation_allowed": false,
-    "session_resume_surface": "local_app_only"
+    "session_resume_surface": "local_app_only",
+    "session_terminate_surface": "local_app_only"
   },
   "core_dependencies": ["#23"]
 }
