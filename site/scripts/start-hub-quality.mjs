@@ -10,6 +10,7 @@ const read = (relative) => fs.readFileSync(path.join(siteRoot, relative), "utf8"
 
 const entry = read("src/StartHubEntry.tsx");
 const css = read("src/styles/start-hub.css");
+const kawaiiCss = read("src/styles/start-hub-kawaii.css");
 const main = read("src/main.tsx");
 const docsActions = read("docs-site/src/components/NovelForgeActions.astro");
 const docsLanding = read("docs-site/src/components/DocsLanding.astro");
@@ -32,6 +33,7 @@ check(main.includes('import StartHubEntry from "./StartHubEntry"'), "main entry 
 check(main.includes('"/start"'), "standalone surface handoff must include /start");
 check(main.includes('path === "/start"'), "main entry must mount StartHubEntry at /start");
 check(main.includes('import "./styles/start-hub.css"'), "start hub styles must be loaded");
+check(main.includes('import "./styles/start-hub-kawaii.css"'), "start hub kawaii parity layer must be loaded");
 
 check(docsActions.includes('href="/start"'), "documentation header must expose the product-first start hub");
 check(docsActions.includes('english ? "Start" : "开始"'), "documentation start action must remain natively localized");
@@ -50,6 +52,16 @@ for (const marker of [
   check(css.includes(marker), `start hub design marker missing: ${marker}`);
 }
 
+for (const marker of [
+  "--kawaii-pink-strong",
+  ".start-hub-entry .product-appbar::after",
+  ".start-hub-entry .studio-cta",
+  ".start-hub-entry .start-path-card:nth-child(4)",
+  "var(--kawaii-shadow)",
+]) {
+  check(kawaiiCss.includes(marker), `start hub kawaii parity marker missing: ${marker}`);
+}
+
 if (failures.length) {
   for (const failure of failures) console.error(`start-hub-quality: FAIL: ${failure}`);
   process.exitCode = 1;
@@ -65,6 +77,7 @@ if (failures.length) {
     deterministic_playground: true,
     docs_discovery: true,
     authority_boundary_explicit: true,
+    publication_kawaii_language_aligned: true,
     kawaii_story_loom_surface: true,
     responsive: true,
   }, null, 2));
