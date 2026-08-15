@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novelforge_runtime_command_authorization_v1",
+  "title": "NovelForge Runtime Command Authorization",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "authorization_id",
+    "operation",
+    "command_fingerprint",
+    "intent_fingerprint",
+    "decision",
+    "source",
+    "scope",
+    "issued_at",
+    "authority"
+  ],
+  "properties": {
+    "schema": {"const": "novelforge_runtime_command_authorization_v1"},
+    "authorization_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "operation": {"const": "session.resume"},
+    "command_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "intent_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "decision": {"enum": ["allow", "deny"]},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "evidence_ref"],
+      "properties": {
+        "kind": {"enum": ["user", "authorized_human", "manager_runtime_policy"]},
+        "evidence_ref": {"type": "string", "minLength": 1, "maxLength": 512}
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime_state_mutation",
+        "model_execution",
+        "project_write",
+        "canon_write",
+        "framework_write",
+        "settlement"
+      ],
+      "properties": {
+        "runtime_state_mutation": {"const": true},
+        "model_execution": {"const": false},
+        "project_write": {"const": false},
+        "canon_write": {"const": false},
+        "framework_write": {"const": false},
+        "settlement": {"const": false}
+      }
+    },
+    "issued_at": {"type": "string", "format": "date-time"},
+    "authority": {"const": false}
+  }
+}
