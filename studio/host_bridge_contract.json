@@ -55,6 +55,12 @@
         "core_basis": "semantic model contract catalog CLI",
         "required_args": []
       },
+      "publication.preview": {
+        "kind": "query",
+        "core_basis": "publication/compiler.py + novelforge_publication_preview_projection_v1",
+        "required_args": ["profile"],
+        "source_contract": "caller supplies a publication source object or project-relative source_manifest; compiler enforces accepted text fingerprints but the bridge does not invent source authority"
+      },
       "runtime.sessions.list": {
         "kind": "query",
         "core_basis": "novelforge_runtime_sessions_projection_v1 via novelforge.py runtime-query",
