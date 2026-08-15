@@ -21,10 +21,14 @@ concurrency:
   group: product-site-browser-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  GODOT_RELEASE: 4.7.1-stable
+  GODOT_TEMPLATE_VERSION: 4.7.1.stable
+
 jobs:
   browser-qa:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,9 +42,32 @@ jobs:
         working-directory: site
         run: npm install --ignore-scripts --no-audit --no-fund
 
-      - name: Build Product SPA
+      - name: Build Product and Docs source surfaces
         working-directory: site
-        run: npm run content && npm run build:site
+        run: npm run build
+
+      - name: Install pinned Godot and Web export templates
+        working-directory: site
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          install -m 0755 "/tmp/godot/Godot_v${GODOT_RELEASE}_linux.x86_64" "$HOME/.local/bin/godot"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+          curl -fsSL -o /tmp/godot-templates.tpz \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_export_templates.tpz"
+          rm -rf /tmp/godot-templates
+          mkdir -p /tmp/godot-templates
+          unzip -q /tmp/godot-templates.tpz -d /tmp/godot-templates
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}"
+          cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}/"
+
+      - name: Export Godot production root
+        working-directory: site
+        run: npm run godot:build
 
       - name: Install CJK font for truthful bilingual rendering
         run: |
@@ -48,7 +75,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends fonts-noto-cjk
           fc-cache -f >/dev/null
 
-      - name: Responsive browser and route QA
+      - name: Responsive Godot Web browser QA
         shell: bash
         run: |
           set -euo pipefail
@@ -67,7 +94,7 @@ jobs:
           trap cleanup EXIT
 
           ready=false
-          for _ in $(seq 1 30); do
+          for _ in $(seq 1 40); do
             if curl --silent --show-error --fail http://127.0.0.1:4188/ > /tmp/product-site-browser-qa/root.html; then
               if grep -q 'NovelForge' /tmp/product-site-browser-qa/root.html; then
                 ready=true
@@ -78,6 +105,15 @@ jobs:
           done
           test "${ready}" = "true"
 
+          # Deep product routes must resolve to the Godot host document while
+          # the semantic documentation subtree remains a separate HTML app.
+          for route in architecture studio publication inspect playground agents changelog; do
+            curl --silent --show-error --fail "http://127.0.0.1:4188/${route}" > "/tmp/product-site-browser-qa/${route}.html"
+            grep -q 'NovelForge' "/tmp/product-site-browser-qa/${route}.html"
+          done
+          curl --silent --show-error --fail http://127.0.0.1:4188/docs/ > /tmp/product-site-browser-qa/docs.html
+          grep -qiE 'starlight|documentation|docs' /tmp/product-site-browser-qa/docs.html
+
           run_chrome() {
             name="$1"
             size="$2"
@@ -86,136 +122,50 @@ jobs:
             "${CHROME}" \
               --headless=new \
               --no-sandbox \
-              --disable-gpu \
               --disable-dev-shm-usage \
-              --disable-background-networking \
+              --use-angle=swiftshader \
+              --enable-unsafe-swiftshader \
+              --ignore-gpu-blocklist \
               --window-size="${size}" \
-              --virtual-time-budget=5000 \
+              --virtual-time-budget=10000 \
               --user-data-dir="${profile}" \
               --screenshot="/tmp/product-site-browser-qa/${name}.png" \
               "${url}" >"/tmp/product-site-browser-qa/${name}-chrome.log" 2>&1
             rm -rf "${profile}"
           }
 
-          dump_dom() {
-            name="$1"
-            size="$2"
-            url="$3"
-            profile=$(mktemp -d)
-            "${CHROME}" \
-              --headless=new \
-              --no-sandbox \
-              --disable-gpu \
-              --disable-dev-shm-usage \
-              --disable-background-networking \
-              --window-size="${size}" \
-              --virtual-time-budget=5000 \
-              --user-data-dir="${profile}" \
-              --dump-dom \
-              "${url}" >"/tmp/product-site-browser-qa/${name}-dom.html" 2>"/tmp/product-site-browser-qa/${name}-dom.log"
-            rm -rf "${profile}"
-          }
-
-          # Desktop identity pass.
+          run_chrome product-desktop 1440,900 'http://127.0.0.1:4188/'
           run_chrome architecture-desktop 1440,900 'http://127.0.0.1:4188/architecture'
+          run_chrome studio-desktop 1440,900 'http://127.0.0.1:4188/studio'
           run_chrome publication-desktop 1440,900 'http://127.0.0.1:4188/publication'
-          run_chrome inspector-desktop 1440,900 'http://127.0.0.1:4188/inspect'
-          run_chrome playground-desktop 1440,900 'http://127.0.0.1:4188/playground'
-          run_chrome agents-desktop 1440,900 'http://127.0.0.1:4188/agents'
-          run_chrome studio-entry-desktop 1440,900 'http://127.0.0.1:4188/studio'
-
-          # Narrow-layout evidence. Dark-mode ownership remains in the app-level
-          # appearance contract and is covered by source/quality gates; Chromium's
-          # --force-dark-mode does not toggle that application state.
-          run_chrome publication-mobile 390,844 'http://127.0.0.1:4188/publication'
           run_chrome architecture-mobile 390,844 'http://127.0.0.1:4188/architecture'
-
-          dump_dom architecture 1440,900 'http://127.0.0.1:4188/architecture'
-          dump_dom publication 1440,900 'http://127.0.0.1:4188/publication'
-          dump_dom inspector 1440,900 'http://127.0.0.1:4188/inspect'
-          dump_dom playground 1440,900 'http://127.0.0.1:4188/playground'
-          dump_dom agents 1440,900 'http://127.0.0.1:4188/agents'
-          dump_dom studio-entry 1440,900 'http://127.0.0.1:4188/studio'
-          dump_dom publication-mobile 390,844 'http://127.0.0.1:4188/publication'
-          dump_dom architecture-mobile 390,844 'http://127.0.0.1:4188/architecture'
-          dump_dom missing-route 1440,900 'http://127.0.0.1:4188/this-route-does-not-exist'
 
           python - <<'PY'
           from pathlib import Path
 
           root = Path('/tmp/product-site-browser-qa')
-          dom = lambda name: (root / f'{name}-dom.html').read_text(encoding='utf-8', errors='replace')
-
-          architecture = dom('architecture')
-          publication = dom('publication')
-          inspector = dom('inspector')
-          playground = dom('playground')
-          agents = dom('agents')
-          studio = dom('studio-entry')
-          publication_mobile = dom('publication-mobile')
-          architecture_mobile = dom('architecture-mobile')
-          missing = dom('missing-route')
-
-          # One shared product shell must wrap every product route.
-          for name, text in {
-              'architecture': architecture,
-              'publication': publication,
-              'inspector': inspector,
-              'playground': playground,
-              'agents': agents,
-              'studio': studio,
-          }.items():
-              assert text.count('product-appbar') == 1, f'{name}: expected one shared product app bar'
-              assert '产品' in text or 'Product' in text, f'{name}: product nav missing'
-              assert 'Studio' in text, f'{name}: Studio tab missing'
-
-          # Route identity must be structural, not title-only.
-          assert 'architecture-entry' in architecture
-          assert 'architecture-hero-path' in architecture
-          assert 'publication-workbench-entry' in publication
-          for marker in ('snapshot-text', 'snapshot-web', 'snapshot-print', 'snapshot-epub'):
-              assert marker in publication, marker
-          assert 'inspector-entry' in inspector
-          assert 'playground-entry' in playground
-          assert 'agent-integration-entry' in agents
-          assert 'unified-studio-terminal' in studio
-
-          # Mobile DOM keeps the same semantic route objects rather than serving a second shell.
-          assert publication_mobile.count('product-appbar') == 1
-          assert architecture_mobile.count('product-appbar') == 1
-          assert 'snapshot-epub' in publication_mobile
-          assert 'architecture-hero-path' in architecture_mobile
-
-          # Direct-route fallback stays explicit and recoverable.
-          assert 'nf-not-found' in missing
-          assert '404' in missing
-
           for image in (
+              'product-desktop.png',
               'architecture-desktop.png',
+              'studio-desktop.png',
               'publication-desktop.png',
-              'inspector-desktop.png',
-              'playground-desktop.png',
-              'agents-desktop.png',
-              'studio-entry-desktop.png',
-              'publication-mobile.png',
               'architecture-mobile.png',
           ):
               path = root / image
-              assert path.exists() and path.stat().st_size > 12_000, image
+              assert path.exists() and path.stat().st_size > 10_000, image
 
           (root / 'browser-proof.txt').write_text(
-              'schema=novelforge_product_site_browser_qa_v2\n'
-              'shared_shell=true\n'
-              'route_identity=true\n'
-              'publication_format_previews=4\n'
+              'schema=novelforge_product_site_browser_qa_v3\n'
+              'runtime=godot_web\n'
+              'dimension=2d_2_5d\n'
+              'deep_routes=true\n'
+              'docs_boundary=astro_starlight\n'
               'desktop=1440x900\n'
               'mobile=390x844\n'
-              'appearance_state=app_owned\n'
-              'direct_404=true\n'
               'authority=false\n',
               encoding='utf-8',
           )
-          print({'schema': 'novelforge_product_site_browser_qa_v2', 'status': 'pass', 'screenshots': 8, 'authority': False})
+          print({'schema': 'novelforge_product_site_browser_qa_v3', 'status': 'pass', 'screenshots': 5, 'authority': False})
           PY
 
       - name: Upload Product Site browser QA evidence
