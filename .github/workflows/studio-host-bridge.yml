@@ -50,7 +50,10 @@ jobs:
             cat studio-host-bridge-test.json
             python - <<'PY'
           import json
-          import studio.host_bridge as bridge
+          import sys
+          from pathlib import Path
+          sys.path.insert(0,str(Path('studio').resolve()))
+          import host_bridge as bridge
 
           runtime_ops={
               'runtime.sessions.list',
