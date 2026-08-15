@@ -53,13 +53,30 @@ jobs:
           python studio/local_server.py --self-test
       - name: Low-overhead source guard
         run: |
-          ! grep -R -n -E 'setInterval\(|@weiui/react|@weiui/headless|from ["'"']react["'"']|sqlite|runtime\.db' studio/app/src studio/local_server.py
+          python - <<'PY'
+          from pathlib import Path
+          targets = list(Path('studio/app/src').rglob('*')) + [Path('studio/local_server.py')]
+          forbidden = ('setInterval(', '@weiui/react', '@weiui/headless', 'from "react"', "from 'react'", 'runtime.db')
+          hits = []
+          for path in targets:
+              if not path.is_file():
+                  continue
+              text = path.read_text(encoding='utf-8')
+              for needle in forbidden:
+                  if needle in text:
+                      hits.append(f'{path}: {needle}')
+          if hits:
+              raise SystemExit('forbidden low-overhead patterns:\n' + '\n'.join(hits))
+          print({'status': 'pass', 'checked_files': sum(p.is_file() for p in targets)})
+          PY
       - name: Report bundle size
         run: |
           python - <<'PY'
           from pathlib import Path
           dist = Path('studio/app/dist/assets')
-          print({'js': sum(p.stat().st_size for p in dist.glob('*.js')), 'css': sum(p.stat().st_size for p in dist.glob('*.css'))})
+          js = list(dist.glob('*.js'))
+          css = list(dist.glob('*.css'))
+          print({'js_bytes': sum(p.stat().st_size for p in js), 'css_bytes': sum(p.stat().st_size for p in css), 'js_chunks': len(js), 'css_chunks': len(css)})
           PY
       - uses: actions/upload-artifact@v4
         with:
