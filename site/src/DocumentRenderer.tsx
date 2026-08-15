@@ -1,4 +1,3 @@
-import { A } from "@solidjs/router";
 import { For, Match, Show, Switch, createMemo, createSignal } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import type { DocumentBlock, InlineNode, ProductDocument } from "./knowledge";
@@ -39,10 +38,16 @@ function InlineView(props: { nodes: InlineNode[] }) {
         <Match when={node.type === "link"}>
           {(() => {
             const link = node as Extract<InlineNode, { type: "link" }>;
-            return link.href.startsWith("/") ? (
-              <A href={link.href} title={link.title ?? undefined}><InlineView nodes={link.children} /></A>
-            ) : (
-              <a href={link.href} title={link.title ?? undefined} target={link.href.startsWith("#") ? undefined : "_blank"} rel={link.href.startsWith("#") ? undefined : "noreferrer"}><InlineView nodes={link.children} /></a>
+            const internal = link.href.startsWith("/") || link.href.startsWith("#");
+            return (
+              <a
+                href={link.href}
+                title={link.title ?? undefined}
+                target={internal ? undefined : "_blank"}
+                rel={internal ? undefined : "noreferrer"}
+              >
+                <InlineView nodes={link.children} />
+              </a>
             );
           })()}
         </Match>
