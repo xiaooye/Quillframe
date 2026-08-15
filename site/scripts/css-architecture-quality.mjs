@@ -13,6 +13,7 @@ const check = (condition, message) => { if (!condition) failures.push(message); 
 
 const main = read("src/main.tsx");
 const index = read("src/styles/index.css");
+const editorial = read("src/styles/editorial-composition.css");
 const readability = read("src/styles/readability.css");
 const sharedLanguage = read("../assets/brand/novelforge-product-language.css");
 
@@ -21,11 +22,16 @@ check(styleImports.length === 1 && styleImports[0] === "index.css", `main.tsx mu
 check(index.includes('@import "../../../assets/brand/novelforge-product-language.css"'), "Product Site must consume the shared product-language tokens");
 check(index.indexOf('product-surface.css') < index.indexOf('architecture-explorer.css'), "shared primitives must load before route feature styles");
 check(index.indexOf('architecture-explorer.css') < index.indexOf('kawaii-surfaces.css'), "product-language composition must load after route defaults");
-check(index.indexOf('embedded-features.css') < index.indexOf('readability.css'), "cross-cutting readability hardening must load after route and product-language composition");
+check(index.indexOf('tool-workbench-kawaii.css') < index.indexOf('editorial-composition.css'), "clean editorial composition must refine the kawaii route language");
+check(index.indexOf('editorial-composition.css') < index.indexOf('embedded-features.css'), "embedded feature ownership must remain after shared editorial composition");
+check(index.indexOf('embedded-features.css') < index.indexOf('readability.css'), "cross-cutting readability hardening must load last");
 check(!index.includes("surface-audit.css"), "legacy surface-audit override must not return to the cascade");
 check(!exists("src/styles/surface-audit.css"), "legacy surface-audit.css must stay deleted");
 check(!exists("src/styles/readability-audit.css"), "readability must remain a named hardening layer, not a catch-all audit override");
 check(sharedLanguage.includes("--nf-product-pink") && sharedLanguage.includes("--nf-product-radius-panel"), "shared product-language tokens are incomplete");
+check(editorial.includes("Kawaii is identity, not container chrome") && editorial.includes(".product-surface-hero") && editorial.includes(".publication-workbench-entry"), "editorial composition must explicitly encode the clean-kawaii surface policy");
+check(editorial.includes("background: transparent") && editorial.includes("border-bottom: 1px solid"), "editorial composition must use neutral surfaces and hairline hierarchy");
+check(!editorial.includes("!important"), "editorial composition must not depend on specificity escalation");
 check(readability.includes("--nf-copy-size: 14px") && readability.includes("--nf-micro-size: 11px"), "readability hardening must preserve the product copy floor");
 check(readability.includes(".unified-info-card p") && readability.includes("font-size: var(--nf-copy-size)"), "capability copy must not regress to miniature dashboard text");
 check(!readability.includes("!important"), "readability hardening must not depend on specificity escalation");
@@ -36,11 +42,13 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_css_architecture_v2",
+    schema: "novelforge_css_architecture_v3",
     status: "pass",
     entrypoints: 1,
     audit_override: false,
     shared_product_language: true,
+    editorial_composition: true,
+    kawaii_as_accent_not_container: true,
     readability_hardening: true,
     readability_hardening_position: "last",
   }, null, 2));
