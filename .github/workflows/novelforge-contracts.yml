@@ -93,8 +93,14 @@ jobs:
               'challenger': {'candidate_id':'C1','content_fingerprint':'sha256:'+'1'*64,'repair_owner':'scene'},
               'repair_context': {'targets':['reader pressure']}
             },
+            'relationship.memory_reconcile': {
+              'relationship_id':'REL-CI','current_story_order':9,'participants':['CHAR-A','CHAR-B'],
+              'ordered_evidence':[{'evidence_id':'RE-CI','story_order':8,'source_ref':'accepted:REL-CI','authority':'accepted','event':'A promise created an obligation.','effects':{'obligation':'open'}}],
+              'derived_snapshots':[{'snapshot_id':'RS-CI','as_of_story_order':8,'source_refs':['accepted:REL-CI'],'shared_state':{'status':'strained'},'per_character_perception':{'CHAR-A':'uneasy','CHAR-B':'guarded'},'open_obligations':['promise'],'emotional_residue':['distrust']}]
+            },
             'continuity.commitment_audit': {
-              'candidate': {'source_ref':'candidate:CI','evidence':['The negotiation ends with a new obligation.']},
+              'candidate': {'source_ref':'candidate:CI','evidence':[{'evidence_id':'E-CI','statement':'The negotiation ends with a new obligation.','source_ref':'candidate:CI#e1','story_order':9}]},
+              'current_story_order':9,
               'commitments': [{'commitment_id':'COM-CI','statement':'The obligation must remain live.','authority':'active_plan','source_ref':'plan:CI'}],
               'required_transitions': [{'transition_id':'TR-CI','description':'Negotiation changes the parties leverage.','authority':'active_plan','source_ref':'plan:CI'}],
               'initial_facts': [{'fact_id':'FACT-CI','statement':'The parties begin with unequal leverage.','authority':'accepted','source_ref':'accepted:CI'}],
@@ -149,7 +155,7 @@ jobs:
           except ValueError:
               context_guard=True
           assert context_guard
-          json.dump({'semantic_contract_catalog_contract':'PASS','contracts':sorted(expected),'fingerprints':jobs,'typed_input_contracts':['reader.reaction','character.action_propose','quality.compare','continuity.commitment_audit','context.select'],'cold_reader_hidden_plan_guard':cold_reader_blocked,'required_transition_input_guard':transition_guard,'task_aware_context_input_guard':context_guard,'aggregate_registry_present':False,'model_execution':False},open('semantic-contracts-test.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          json.dump({'semantic_contract_catalog_contract':'PASS','contracts':sorted(expected),'fingerprints':jobs,'typed_input_contracts':['reader.reaction','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select'],'cold_reader_hidden_plan_guard':cold_reader_blocked,'required_transition_input_guard':transition_guard,'task_aware_context_input_guard':context_guard,'aggregate_registry_present':False,'model_execution':False},open('semantic-contracts-test.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
           PY
           python harness/semantic_workers/peer_chat_relay.py self-test > peer-chat-test.json
           python harness/semantic_workers/adapters/local_agent_adapter.py --self-test > local-agent-test.json
@@ -248,7 +254,7 @@ jobs:
           assert sc['cold_reader_hidden_plan_guard'] is True
           assert sc['required_transition_input_guard'] is True
           assert sc['task_aware_context_input_guard'] is True
-          assert set(sc['typed_input_contracts'])=={'reader.reaction','character.action_propose','quality.compare','continuity.commitment_audit','context.select'}
+          assert set(sc['typed_input_contracts'])=={'reader.reaction','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select'}
           assert loaded['quality-evolution-test.json']['plateau_stopping'] is True
           assert loaded['quality-evolution-test.json']['winner_derived_from_typed_result'] is True
           assert loaded['promotion-gate-test.json']['auto_behavior_write'] is False

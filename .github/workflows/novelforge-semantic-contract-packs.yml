@@ -86,8 +86,14 @@ jobs:
                   'challenger': {'candidate_id': 'C1', 'content_fingerprint': 'sha256:' + '1' * 64, 'repair_owner': 'scene'},
                   'repair_context': {'targets': ['reader pressure']},
               },
+              'relationship.memory_reconcile': {
+                  'relationship_id': 'REL-CI', 'current_story_order': 9, 'participants': ['CHAR-A', 'CHAR-B'],
+                  'ordered_evidence': [{'evidence_id': 'RE-CI', 'story_order': 8, 'source_ref': 'accepted:REL-CI', 'authority': 'accepted', 'event': 'A promise created an obligation.', 'effects': {'obligation': 'open'}}],
+                  'derived_snapshots': [{'snapshot_id': 'RS-CI', 'as_of_story_order': 8, 'source_refs': ['accepted:REL-CI'], 'shared_state': {'status': 'strained'}, 'per_character_perception': {'CHAR-A': 'uneasy', 'CHAR-B': 'guarded'}, 'open_obligations': ['promise'], 'emotional_residue': ['distrust']}],
+              },
               'continuity.commitment_audit': {
-                  'candidate': {'source_ref': 'candidate:CI', 'evidence': ['The negotiation ends with a new obligation.']},
+                  'candidate': {'source_ref': 'candidate:CI', 'evidence': [{'evidence_id': 'E-CI', 'statement': 'The negotiation ends with a new obligation.', 'source_ref': 'candidate:CI#e1', 'story_order': 9}]},
+                  'current_story_order': 9,
                   'commitments': [{'commitment_id': 'COM-CI', 'statement': 'The obligation remains live.', 'authority': 'active_plan', 'source_ref': 'plan:CI'}],
                   'required_transitions': [{'transition_id': 'TR-CI', 'description': 'Negotiation changes leverage.', 'authority': 'active_plan', 'source_ref': 'plan:CI'}],
                   'initial_facts': [{'fact_id': 'FACT-CI', 'statement': 'The parties begin with unequal leverage.', 'authority': 'accepted', 'source_ref': 'accepted:CI'}],
