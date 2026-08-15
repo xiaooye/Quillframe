@@ -43,7 +43,7 @@ No PASS in one dimension cancels a FAIL in another.
 
 ## 02 · The fundamental ownership split
 
-NovelForge 7.3 uses a strict architecture boundary.
+The current development architecture uses a strict ownership boundary.
 
 **Model-owned semantic intelligence** includes reading, story/character interpretation, reader reaction, revision diagnosis, relationship-memory reconciliation, long-horizon commitment auditing, and other judgments that require understanding supplied evidence.
 
