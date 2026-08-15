@@ -14,6 +14,11 @@ const scene = read("godot/Main.tscn");
 const main = read("godot/scripts/main.gd");
 const shell = read("godot/web/novelforge.html");
 const fontFetch = read("scripts/fetch-godot-fonts.sh");
+const plainFontStart = main.indexOf("func _font(weight: int)");
+const mixedFontStart = main.indexOf("func _mixed_font(weight: int)");
+const clearStart = main.indexOf("func _clear()", mixedFontStart);
+const plainFontBlock = plainFontStart >= 0 && mixedFontStart > plainFontStart ? main.slice(plainFontStart, mixedFontStart) : "";
+const mixedFontBlock = mixedFontStart >= 0 && clearStart > mixedFontStart ? main.slice(mixedFontStart, clearStart) : "";
 
 check(project.includes('run/main_scene="res://Main.tscn"'), "Godot main scene must remain explicit");
 check(project.includes('renderer/rendering_method="gl_compatibility"'), "Web migration must use Compatibility renderer");
@@ -23,6 +28,9 @@ check(main.includes('SYMBOL_FONT_PATH := "res://generated/NotoSansSymbols2-Regul
 check(main.includes('THAI_FONT_PATH := "res://generated/NotoSansThai-wdth-wght.ttf"'), "deterministic Thai fallback is required for baseline kaomoji");
 check(main.includes('ARABIC_FONT_PATH := "res://generated/NotoSansArabic-wdth-wght.ttf"'), "deterministic Arabic fallback is required for baseline kaomoji");
 check(main.includes('text_server.name_to_tag("wght")'), "variable font weight must use a TextServer OpenType tag");
+check(plainFontBlock && !plainFontBlock.includes("fallbacks"), "primary typography font must not inherit Unicode fallback line metrics");
+check(mixedFontBlock.includes("variation.fallbacks = _fallback_fonts"), "Unicode fallbacks must be scoped through the decorative mixed font");
+check(main.includes("_mixed_pill") && main.includes("_mixed_label") && main.includes("_mixed_text_button"), "decorative controls must use the scoped mixed-font helpers");
 for (const fingerprint of [
   "fb0637bafbcd804fe32152370a1225990745b4bc",
   "caf89dd0e60e23ac39ce18da823095959d409437",
@@ -43,7 +51,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_shadow_source_quality_v2",
+    schema: "novelforge_godot_shadow_source_quality_v3",
     status: "pass",
     production_cutover: false,
     visual_baseline: "Solid/Vite Story Loom Kawaii Atelier",
@@ -51,6 +59,7 @@ if (failures.length) {
     max_dimension: "2.5D",
     deterministic_cjk_font: true,
     deterministic_unicode_fallbacks: true,
+    fallback_scope: "decorative_controls_only",
     authority: false,
   }, null, 2));
 }

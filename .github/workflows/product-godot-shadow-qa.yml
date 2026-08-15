@@ -93,6 +93,31 @@ jobs:
           CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser)
           test -n "$CHROME"
 
+          # CI system fonts are not a truthful bilingual baseline. Reuse the same
+          # content-pinned fallback files as Godot, but keep system-ui before them
+          # so Latin metrics remain those of the production browser shell.
+          mkdir -p site/dist/parity-fonts
+          cp site/godot/generated/NotoSansSC-wght.ttf site/dist/parity-fonts/
+          cp site/godot/generated/NotoSansSymbols2-Regular.ttf site/dist/parity-fonts/
+          cp site/godot/generated/NotoSansThai-wdth-wght.ttf site/dist/parity-fonts/
+          cp site/godot/generated/NotoSansArabic-wdth-wght.ttf site/dist/parity-fonts/
+          python3 - <<'PY'
+          from pathlib import Path
+
+          index = Path('site/dist/index.html')
+          text = index.read_text(encoding='utf-8')
+          style = r'''<style data-novelforge-parity-fonts>
+          @font-face{font-family:"NF Parity CJK";src:url("/parity-fonts/NotoSansSC-wght.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:block}
+          @font-face{font-family:"NF Parity Symbols";src:url("/parity-fonts/NotoSansSymbols2-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:block}
+          @font-face{font-family:"NF Parity Thai";src:url("/parity-fonts/NotoSansThai-wdth-wght.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:block}
+          @font-face{font-family:"NF Parity Arabic";src:url("/parity-fonts/NotoSansArabic-wdth-wght.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:block}
+          :root{--wui-font-family-sans:'Inter',system-ui,'NF Parity CJK','NF Parity Symbols','NF Parity Thai','NF Parity Arabic',sans-serif!important}
+          </style>'''
+          if 'data-novelforge-parity-fonts' not in text:
+              text = text.replace('</head>', style + '</head>')
+              index.write_text(text, encoding='utf-8')
+          PY
+
           cd site
           npm run preview -- --host 127.0.0.1 --port 4188 > "$OUT/solid-server.log" 2>&1 &
           SOLID_PID=$!
@@ -152,7 +177,7 @@ jobs:
               ('desktop', root/'solid-home-desktop.png', root/'godot-home-desktop.png'),
               ('mobile', root/'solid-home-mobile.png', root/'godot-home-mobile.png'),
           ]
-          metrics = {'schema': 'novelforge_godot_visual_parity_v1', 'blocking': False, 'scene_ready_capture': True, 'pairs': {}}
+          metrics = {'schema': 'novelforge_godot_visual_parity_v1', 'blocking': False, 'scene_ready_capture': True, 'truthful_browser_fallbacks': True, 'pairs': {}}
           for name, base_path, candidate_path in pairs:
               base = Image.open(base_path).convert('RGB')
               candidate = Image.open(candidate_path).convert('RGB')
@@ -165,7 +190,7 @@ jobs:
               ImageEnhance.Contrast(diff).enhance(3.0).save(root/f'diff-{name}.png')
           (root/'parity-metric.json').write_text(json.dumps(metrics, indent=2), encoding='utf-8')
           (root/'README.txt').write_text(
-              'Godot remains a shadow runtime. Candidate screenshots are captured only after scene-ready. Diff metrics remain non-blocking until human parity review sets the cutover threshold.\n',
+              'Godot remains a shadow runtime. Candidate screenshots are captured only after scene-ready. Solid baseline uses content-pinned fallback fonts only for glyphs missing from the production system stack. Diff metrics remain non-blocking until human parity review sets the cutover threshold.\n',
               encoding='utf-8',
           )
           print(json.dumps(metrics, indent=2))
