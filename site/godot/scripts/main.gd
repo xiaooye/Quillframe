@@ -1,7 +1,11 @@
 extends Control
 
 const FONT_PATH := "res://generated/NotoSansSC-wght.ttf"
+const SYMBOL_FONT_PATH := "res://generated/NotoSansSymbols2-Regular.ttf"
+const THAI_FONT_PATH := "res://generated/NotoSansThai-wdth-wght.ttf"
+const ARABIC_FONT_PATH := "res://generated/NotoSansArabic-wdth-wght.ttf"
 const MARK_PATH := "res://assets/novelforge-mark.svg"
+const BOOKS_ICON_PATH := "res://assets/books-stack.svg"
 const STUDIO_URL := "https://studio.novelforge.wei-dev.com"
 
 const C := {
@@ -24,18 +28,29 @@ const C := {
 }
 
 var _base_font: Font
+var _fallback_fonts: Array[Font] = []
 var _font_cache := {}
 var _locale := "en-US"
 var _layout := "desktop"
 var _scroll: ScrollContainer
 var _stage: Control
 var _mark: Texture2D
+var _books_icon: Texture2D
 
 func _ready() -> void:
-	_base_font = load(FONT_PATH)
-	_mark = load(MARK_PATH)
+	_base_font = load(FONT_PATH) as Font
+	_mark = load(MARK_PATH) as Texture2D
+	_books_icon = load(BOOKS_ICON_PATH) as Texture2D
 	if _base_font == null:
 		push_error("NovelForge Godot parity shadow requires the pinned Noto Sans SC font")
+	for fallback_path in [SYMBOL_FONT_PATH, THAI_FONT_PATH, ARABIC_FONT_PATH]:
+		var fallback := load(fallback_path) as Font
+		if fallback == null:
+			push_error("NovelForge Godot parity shadow missing fallback font: %s" % fallback_path)
+		else:
+			_fallback_fonts.append(fallback)
+	if _mark == null or _books_icon == null:
+		push_error("NovelForge Godot parity shadow requires local vector UI assets")
 	get_viewport().size_changed.connect(_on_viewport_changed)
 	_locale = _initial_locale()
 	_build()
@@ -67,6 +82,7 @@ func _font(weight: int) -> Font:
 		return _font_cache[weight]
 	var variation := FontVariation.new()
 	variation.base_font = _base_font
+	variation.fallbacks = _fallback_fonts
 	var text_server := TextServerManager.get_primary_interface()
 	variation.variation_opentype = {text_server.name_to_tag("wght"): weight}
 	_font_cache[weight] = variation
@@ -165,7 +181,7 @@ func _build_desktop() -> void:
 	var top := 166.0
 	var badge_text := "Long-form fiction system · 0.8.x" if _locale == "en-US" else "长篇小说创作系统 · 0.8.x"
 	_stage.add_child(_pill(badge_text, Vector2(left_x, top), Vector2(208 if _locale == "en-US" else 194, 25), Color("f8fbff"), Color("4078a8"), 12, 500, Color("b8d8ee")))
-	_stage.add_child(_pill("⌒^•ﻌ•^⌒", Vector2(left_x + 219, top), Vector2(82, 25), C.editorial_soft, C.editorial, 12, 550, Color("f0c9da")))
+	_stage.add_child(_pill("ฅ^•ﻌ•^ฅ", Vector2(left_x + 219, top), Vector2(82, 25), C.editorial_soft, C.editorial, 12, 550, Color("f0c9da")))
 
 	var title_text := "Let the story\ngrow without\nletting the\nsystem lose\nthe plot." if _locale == "en-US" else "让故事越写越长，\n系统仍然知道\n自己在做什么。"
 	var title := _label(title_text, 72 if _locale == "en-US" else 61, 800, C.ink)
@@ -185,7 +201,8 @@ func _build_desktop() -> void:
 	var studio := _text_button("✦ Open Studio" if _locale == "en-US" else "✦ 打开 Studio", Vector2(left_x, top + 552), Vector2(200, 56), C.runtime, Color.WHITE, 18, 600, 13)
 	studio.pressed.connect(_open_external.bind(STUDIO_URL))
 	_stage.add_child(studio)
-	var knowledge := _text_button("▤ Knowledge" if _locale == "en-US" else "▤ 知识库", Vector2(left_x + 210, top + 552), Vector2(194, 56), C.surface_soft, C.runtime, 18, 560, 13)
+	var knowledge := _text_button("Knowledge" if _locale == "en-US" else "知识库", Vector2(left_x + 210, top + 552), Vector2(194, 56), C.surface_soft, C.runtime, 18, 560, 13)
+	knowledge.icon = _books_icon
 	knowledge.pressed.connect(_navigate.bind("/docs"))
 	_stage.add_child(knowledge)
 	var architecture := _text_button("⌘ Architecture" if _locale == "en-US" else "⌘ 架构探索", Vector2(left_x + 14, top + 625), Vector2(190, 42), Color(0,0,0,0), C.runtime, 18, 520, 10)
@@ -214,7 +231,8 @@ func _build_compact() -> void:
 	var studio := _text_button("✦ Open Studio" if _locale == "en-US" else "✦ 打开 Studio", Vector2(x, top + 414), Vector2(210, 56), C.runtime, Color.WHITE, 18, 600, 13)
 	studio.pressed.connect(_open_external.bind(STUDIO_URL))
 	_stage.add_child(studio)
-	var knowledge := _text_button("▤ Knowledge" if _locale == "en-US" else "▤ 知识库", Vector2(x + 222, top + 414), Vector2(190, 56), C.surface_soft, C.runtime, 18, 560, 13)
+	var knowledge := _text_button("Knowledge" if _locale == "en-US" else "知识库", Vector2(x + 222, top + 414), Vector2(190, 56), C.surface_soft, C.runtime, 18, 560, 13)
+	knowledge.icon = _books_icon
 	knowledge.pressed.connect(_navigate.bind("/docs"))
 	_stage.add_child(knowledge)
 	_stage.add_child(_trust_pill(Vector2(x, top + 486), Vector2(398, 37)))
@@ -225,7 +243,7 @@ func _build_phone() -> void:
 	var x := 16.0
 	var top := 101.0
 	_stage.add_child(_pill("Long-form fiction system · 0.8.x" if _locale == "en-US" else "长篇小说创作系统 · 0.8.x", Vector2(x, top), Vector2(212 if _locale == "en-US" else 200, 25), Color("f8fbff"), Color("4078a8"), 12, 500, Color("b8d8ee")))
-	_stage.add_child(_pill("⌒^•ﻌ•^⌒", Vector2(x + 220, top), Vector2(88, 25), C.editorial_soft, C.editorial, 12, 550, Color("f0c9da")))
+	_stage.add_child(_pill("ฅ^•ﻌ•^ฅ", Vector2(x + 220, top), Vector2(88, 25), C.editorial_soft, C.editorial, 12, 550, Color("f0c9da")))
 
 	var title_text := "Let the story\ngrow without\nletting the\nsystem lose\nthe plot." if _locale == "en-US" else "让故事越写越长，\n系统仍然知道\n自己在做什么。"
 	var title := _label(title_text, 46 if _locale == "en-US" else 42, 800, C.ink)
@@ -245,7 +263,8 @@ func _build_phone() -> void:
 	var studio := _text_button("✦ Open Studio" if _locale == "en-US" else "✦ 打开 Studio", Vector2(x, top + 482), Vector2(size.x - 32, 56), C.runtime, Color.WHITE, 18, 600, 13)
 	studio.pressed.connect(_open_external.bind(STUDIO_URL))
 	_stage.add_child(studio)
-	var knowledge := _text_button("▤ Knowledge" if _locale == "en-US" else "▤ 知识库", Vector2(x, top + 548), Vector2(size.x - 32, 56), C.surface_soft, C.runtime, 18, 560, 13)
+	var knowledge := _text_button("Knowledge" if _locale == "en-US" else "知识库", Vector2(x, top + 548), Vector2(size.x - 32, 56), C.surface_soft, C.runtime, 18, 560, 13)
+	knowledge.icon = _books_icon
 	knowledge.pressed.connect(_navigate.bind("/docs"))
 	_stage.add_child(knowledge)
 	var architecture := _text_button("⌘ Architecture" if _locale == "en-US" else "⌘ 架构探索", Vector2(x + 82, top + 622), Vector2(size.x - 196, 42), Color(0,0,0,0), C.runtime, 18, 520, 10)
@@ -295,7 +314,7 @@ func _build_launcher(pos: Vector2, launcher_size: Vector2) -> void:
 	var tile_y := 162.0
 	card.add_child(_launcher_tile(Vector2(15, tile_y), Vector2(tile_w, tile_h), "✦", "Studio", "Start operating" if _locale == "en-US" else "真正开始操作", C.runtime_soft, Color("cfc3ee"), true))
 	card.add_child(_launcher_tile(Vector2(15 + tile_w + gap, tile_y), Vector2(tile_w, tile_h), "♡", "Product" if _locale == "en-US" else "产品能力", "See what it solves" if _locale == "en-US" else "看它解决什么", C.editorial_soft, Color("f0cedd"), false))
-	card.add_child(_launcher_tile(Vector2(15, tile_y + tile_h + gap), Vector2(tile_w, tile_h), "▤", "Knowledge" if _locale == "en-US" else "知识库", "Search real docs" if _locale == "en-US" else "搜索真实文档", C.evidence_soft, Color("eddcbb"), false))
+	card.add_child(_launcher_tile(Vector2(15, tile_y + tile_h + gap), Vector2(tile_w, tile_h), "📚", "Knowledge" if _locale == "en-US" else "知识库", "Search real docs" if _locale == "en-US" else "搜索真实文档", C.evidence_soft, Color("eddcbb"), false))
 	card.add_child(_launcher_tile(Vector2(15 + tile_w + gap, tile_y + tile_h + gap), Vector2(tile_w, tile_h), "✧", "Publication" if _locale == "en-US" else "出版", "Accepted text to formats" if _locale == "en-US" else "从接受稿到派生格式", C.valid_soft, Color("cde7dd"), false))
 	var footer := _label("0.8.x                                      pre-1.0 · actively evolving                                      authority=false" if _locale == "en-US" else "0.8.x                                      pre-1.0 · 快速演进                                      authority=false", 10, 480, Color("857c8b"))
 	footer.position = Vector2(15, launcher_size.y - 51)
@@ -305,11 +324,21 @@ func _build_launcher(pos: Vector2, launcher_size: Vector2) -> void:
 func _launcher_tile(pos: Vector2, tile_size: Vector2, icon: String, title: String, note: String, bg: Color, border: Color, external: bool) -> Panel:
 	var tile := _panel(pos, tile_size, bg, 16, border, 1, Color(0.18, 0.12, 0.24, 0.05), 5)
 	var icon_box := _panel(Vector2(12, 18), Vector2(42, 42), Color(1,1,1,0.56), 12)
-	var icon_label := _label(icon, 20, 650, C.runtime if title == "Studio" else C.editorial)
-	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	icon_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	icon_box.add_child(icon_label)
+	if icon == "📚":
+		var books := TextureRect.new()
+		books.texture = _books_icon
+		books.position = Vector2(11, 11)
+		books.size = Vector2(20, 20)
+		books.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		books.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		books.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon_box.add_child(books)
+	else:
+		var icon_label := _label(icon, 20, 650, C.runtime if title == "Studio" else C.editorial)
+		icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		icon_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		icon_box.add_child(icon_label)
 	tile.add_child(icon_box)
 	var title_label := _label(title, 16, 720, C.ink)
 	title_label.position = Vector2(66, 18)
