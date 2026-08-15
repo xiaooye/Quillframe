@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import sqlite3
+import subprocess
 import sys
 import tempfile
 import tomllib
@@ -21,6 +22,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = "novelforge_session_resume_preflight_v1"
 AUTHORITY_EVIDENCE_SCHEMA = "novelforge_resume_authority_evidence_v1"
+CAPABILITY_SCHEMA = "novelforge_host_capabilities_v1"
 RESUMABLE_STATUSES = {"idle", "awaiting_user", "awaiting_external", "failed"}
 FRAMEWORK_KEYS = ("version", "commit", "bundle_fingerprint")
 
@@ -136,6 +138,25 @@ def current_project_identity(project_root: Path) -> tuple[dict[str, Any] | None,
         "project_authority_fingerprint": fingerprint(authority),
         "framework": current_framework,
     }, blockers
+
+
+def probe_local_capabilities(project_root: Path) -> dict[str, Any] | None:
+    proc = subprocess.run(
+        [sys.executable, str(ROOT / "novelforge.py"), "capabilities", "probe-local"],
+        cwd=str(project_root),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return None
+    try:
+        value = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(value, dict) or value.get("schema") != CAPABILITY_SCHEMA or not isinstance(value.get("capabilities"), dict):
+        return None
+    return value
 
 
 def inspect(
@@ -294,11 +315,30 @@ def inspect(
     if not checks["checkpoint_artifacts_verified"]:
         blockers.append("checkpoint_artifact_fingerprint_unverified")
 
-    required_capabilities = evidence.get("required_capabilities") if isinstance(evidence.get("required_capabilities"), list) else []
-    checks["capability_revalidation_not_fabricated"] = not required_capabilities
-    if required_capabilities:
-        blockers.append("required_capability_revalidation_requires_host_binding")
-        unresolved.append("required_capabilities")
+    raw_required = evidence.get("required_capabilities", [])
+    required_capabilities = raw_required if isinstance(raw_required, list) else []
+    checks["required_capability_identifiers_valid"] = isinstance(raw_required, list) and all(
+        isinstance(item, str) and item for item in required_capabilities
+    )
+    if not checks["required_capability_identifiers_valid"]:
+        blockers.append("required_capability_evidence_invalid")
+    if required_capabilities and checks["required_capability_identifiers_valid"]:
+        capability_manifest = probe_local_capabilities(project_root)
+        checks["local_capability_probe_available"] = capability_manifest is not None
+        if capability_manifest is None:
+            blockers.append("local_capability_probe_failed")
+        else:
+            capabilities = capability_manifest["capabilities"]
+            missing_capabilities = [
+                name for name in required_capabilities
+                if not isinstance(capabilities.get(name), dict) or capabilities[name].get("available") is not True
+            ]
+            checks["required_capabilities_available"] = not missing_capabilities
+            if missing_capabilities:
+                blockers.append("required_capability_unavailable")
+                unresolved.extend(f"capability:{name}" for name in missing_capabilities)
+    else:
+        checks["required_capabilities_available"] = not required_capabilities
 
     approval_refs = evidence.get("approval_refs") if isinstance(evidence.get("approval_refs"), list) else []
     checks["approval_evidence_well_formed"] = all(isinstance(item, str) and item for item in approval_refs)
@@ -428,11 +468,19 @@ def self_test() -> int:
         changed_manifest.write_text(changed_manifest.read_text(encoding="utf-8").replace('id="BOOK-SELFTEST"', 'id="BOOK-OTHER"'), encoding="utf-8")
         wrong_project = inspect(db_path=db, project_root=root, session_id="SES-PREFLIGHT", checkpoint_id="CP-PREFLIGHT", expected_session_version=put["version"], authority_evidence_path=evidence_path)
         changed_manifest.write_text(changed_manifest.read_text(encoding="utf-8").replace('id="BOOK-OTHER"', 'id="BOOK-SELFTEST"'), encoding="utf-8")
-        capability_evidence = load_object(evidence_path)
-        capability_evidence["required_capabilities"] = ["semantic_model"]
-        capability_path = root / "resume-capability.json"
-        capability_path.write_text(json.dumps(capability_evidence), encoding="utf-8")
-        capability_blocked = inspect(db_path=db, project_root=root, session_id="SES-PREFLIGHT", checkpoint_id="CP-PREFLIGHT", expected_session_version=put["version"], authority_evidence_path=capability_path)
+
+        local_capability_evidence = load_object(evidence_path)
+        local_capability_evidence["required_capabilities"] = ["subprocess"]
+        local_capability_path = root / "resume-local-capability.json"
+        local_capability_path.write_text(json.dumps(local_capability_evidence), encoding="utf-8")
+        local_capability_ready = inspect(db_path=db, project_root=root, session_id="SES-PREFLIGHT", checkpoint_id="CP-PREFLIGHT", expected_session_version=put["version"], authority_evidence_path=local_capability_path)
+
+        unavailable_capability_evidence = load_object(evidence_path)
+        unavailable_capability_evidence["required_capabilities"] = ["semantic_model"]
+        unavailable_capability_path = root / "resume-unavailable-capability.json"
+        unavailable_capability_path.write_text(json.dumps(unavailable_capability_evidence), encoding="utf-8")
+        unavailable_capability_blocked = inspect(db_path=db, project_root=root, session_id="SES-PREFLIGHT", checkpoint_id="CP-PREFLIGHT", expected_session_version=put["version"], authority_evidence_path=unavailable_capability_path)
+
         missing_db = root / "missing" / "runtime.db"
         missing = inspect(db_path=missing_db, project_root=root, session_id="SES-X", checkpoint_id="CP-X", expected_session_version=1, authority_evidence_path=evidence_path)
         ok = (
@@ -440,7 +488,8 @@ def self_test() -> int:
             and stale_version["ready"] is False and "session_version_mismatch" in stale_version["blockers"]
             and stale_artifact["ready"] is False and "checkpoint_artifact_fingerprint_unverified" in stale_artifact["blockers"]
             and wrong_project["ready"] is False and "project_identity_mismatch" in wrong_project["blockers"]
-            and capability_blocked["ready"] is False and "required_capability_revalidation_requires_host_binding" in capability_blocked["blockers"]
+            and local_capability_ready["ready"] is True
+            and unavailable_capability_blocked["ready"] is False and "required_capability_unavailable" in unavailable_capability_blocked["blockers"]
             and missing["ready"] is False and not missing_db.exists() and not missing_db.parent.exists()
             and good["mutation_performed"] is False and good["authority"] is False
         )
@@ -450,7 +499,8 @@ def self_test() -> int:
             "stale_version_blocked": not stale_version["ready"],
             "stale_artifact_blocked": not stale_artifact["ready"],
             "wrong_project_blocked": not wrong_project["ready"],
-            "unproven_capability_blocked": not capability_blocked["ready"],
+            "locally_provable_capability_ready": local_capability_ready["ready"],
+            "unavailable_capability_blocked": not unavailable_capability_blocked["ready"],
             "missing_store_side_effect_free": not missing_db.exists() and not missing_db.parent.exists(),
             "mutation_performed": False,
             "authority": False,
