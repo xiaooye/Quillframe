@@ -7,16 +7,21 @@ import { StudioIcon, type StudioIconName } from "./StudioIcon";
 
 type NavigationEntry = readonly [string, MessageKey, StudioIconName];
 
-const navigation: ReadonlyArray<NavigationEntry> = [
+const productNavigation: ReadonlyArray<NavigationEntry> = [
   ["/", "nav.desk", "home"],
   ["/project", "nav.project", "project"],
   ["/workspace", "nav.workspace", "workspace"],
   ["/agents", "nav.agents", "agents"],
+];
+
+const inspectionNavigation: ReadonlyArray<NavigationEntry> = [
   ["/context", "nav.context", "context"],
   ["/capabilities", "nav.capabilities", "capabilities"],
   ["/semantic", "nav.semantic", "semantic"],
   ["/diagnostics", "nav.diagnostics", "diagnostics"],
 ];
+
+const navigation = [...productNavigation, ...inspectionNavigation];
 
 const operationRoute: Record<string, string> = {
   "bridge.describe": "/",
@@ -71,6 +76,22 @@ export const AppShell: ParentComponent = (props) => {
     navigate(path);
   };
 
+  const renderNavigation = (items: ReadonlyArray<NavigationEntry>) => (
+    <For each={items}>
+      {([path, label, icon]) => (
+        <A
+          href={path}
+          class="wui-sidebar__item nf-nav-item"
+          data-active={location.pathname === path ? "true" : undefined}
+          aria-current={location.pathname === path ? "page" : undefined}
+        >
+          <span class="wui-sidebar__icon nf-nav-glyph" aria-hidden="true"><StudioIcon name={icon} /></span>
+          <span class="wui-sidebar__label">{t(label)}</span>
+        </A>
+      )}
+    </For>
+  );
+
   return (
     <div class="nf-app-shell">
       <aside class="wui-sidebar nf-sidebar" aria-label={t("nav.primaryLabel")}>
@@ -81,19 +102,8 @@ export const AppShell: ParentComponent = (props) => {
           </span>
         </A>
         <nav class="wui-sidebar__content nf-nav-list">
-          <For each={navigation}>
-            {([path, label, icon]) => (
-              <A
-                href={path}
-                class="wui-sidebar__item nf-nav-item"
-                data-active={location.pathname === path ? "true" : undefined}
-                aria-current={location.pathname === path ? "page" : undefined}
-              >
-                <span class="wui-sidebar__icon nf-nav-glyph" aria-hidden="true"><StudioIcon name={icon} /></span>
-                <span class="wui-sidebar__label">{t(label)}</span>
-              </A>
-            )}
-          </For>
+          <div class="nf-nav-section" data-nav-tier="product">{renderNavigation(productNavigation)}</div>
+          <div class="nf-nav-section" data-nav-tier="inspect">{renderNavigation(inspectionNavigation)}</div>
         </nav>
         <div class="wui-sidebar__footer nf-sidebar-foot">
           <span class="wui-badge wui-badge--outline">authority=false</span>
@@ -144,7 +154,7 @@ export const AppShell: ParentComponent = (props) => {
       </div>
 
       <nav class="wui-bottom-nav nf-bottom-nav" aria-label={t("nav.mobileLabel")}>
-        <For each={navigation.slice(0, 5)}>
+        <For each={productNavigation}>
           {([path, label, icon]) => (
             <A
               href={path}
