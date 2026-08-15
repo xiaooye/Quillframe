@@ -6,6 +6,7 @@ import ArchitectureExplorerEntry from "./ArchitectureExplorerEntry";
 import PublicationWorkbenchEntry from "./PublicationWorkbenchEntry";
 import LocalPlaygroundEntry from "./LocalPlaygroundEntry";
 import ProjectInspectorEntry from "./ProjectInspectorEntry";
+import StartHubEntry from "./StartHubEntry";
 import "./styles/site.css";
 import "./styles/product-contract.css";
 import "./styles/showcase.css";
@@ -18,6 +19,7 @@ import "./styles/architecture-explorer.css";
 import "./styles/publication-workbench.css";
 import "./styles/agent-integration.css";
 import "./styles/agent-host-profiles.css";
+import "./styles/start-hub.css";
 import "./styles/kawaii-surfaces.css";
 
 // The launcher emits a synthetic Ctrl+K event on document. Real keyboard events
@@ -57,7 +59,7 @@ function localizedDocsTarget(url: string | URL | null | undefined): URL | undefi
   return target;
 }
 
-const standaloneProductPaths = new Set(["/inspect", "/playground", "/agents", "/architecture", "/publication"]);
+const standaloneProductPaths = new Set(["/start", "/inspect", "/playground", "/agents", "/architecture", "/publication"]);
 
 function standaloneProductTarget(url: string | URL | null | undefined): URL | undefined {
   if (url == null) return undefined;
@@ -128,16 +130,18 @@ if (!root) {
 
 const path = window.location.pathname.replace(/\/+$/, "") || "/";
 render(
-  () => path === "/inspect"
-    ? <ProjectInspectorEntry initialLocale={preferredLocale()} />
-    : path === "/playground"
-      ? <LocalPlaygroundEntry initialLocale={preferredLocale()} />
-      : path === "/agents"
-        ? <AgentIntegrationEntry initialLocale={preferredLocale()} />
-        : path === "/architecture"
-          ? <ArchitectureExplorerEntry initialLocale={preferredLocale()} />
-          : path === "/publication"
-            ? <PublicationWorkbenchEntry initialLocale={preferredLocale()} />
-            : <App />,
+  () => path === "/start"
+    ? <StartHubEntry initialLocale={preferredLocale()} />
+    : path === "/inspect"
+      ? <ProjectInspectorEntry initialLocale={preferredLocale()} />
+      : path === "/playground"
+        ? <LocalPlaygroundEntry initialLocale={preferredLocale()} />
+        : path === "/agents"
+          ? <AgentIntegrationEntry initialLocale={preferredLocale()} />
+          : path === "/architecture"
+            ? <ArchitectureExplorerEntry initialLocale={preferredLocale()} />
+            : path === "/publication"
+              ? <PublicationWorkbenchEntry initialLocale={preferredLocale()} />
+              : <App />,
   root,
 );
