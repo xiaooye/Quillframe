@@ -34,7 +34,6 @@ function markdownCount(directory) {
   return count;
 }
 
-check(pkg.version === "0.9.0", "Godot replacement package milestone must be 0.9.0");
 check(pkg.devDependencies?.astro === "7.1.6", "Astro must remain exact-pinned at 7.1.6");
 check(pkg.devDependencies?.["@astrojs/starlight"] === "0.41.5", "Starlight must remain exact-pinned at 0.41.5");
 check(Object.keys(pkg.dependencies ?? {}).length === 0, "Product root must not retain browser-framework runtime dependencies");

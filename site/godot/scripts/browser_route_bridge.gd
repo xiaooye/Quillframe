@@ -33,6 +33,9 @@ func _on_popstate(_args: Array) -> void:
 	var host := get_parent()
 	if is_instance_valid(host) and host.has_method("_navigate"):
 		host.call("_navigate", path, false)
+		var locale_bridge = host.get_node_or_null("LocaleBridge")
+		if locale_bridge != null and locale_bridge.has_method("apply_current_locale"):
+			locale_bridge.call_deferred("apply_current_locale")
 	_publish_route(path)
 
 func _browser_path() -> String:

@@ -15,11 +15,14 @@ const preset = read("godot/export_presets.cfg");
 const scene = read("godot/Main.tscn");
 const main = read("godot/scripts/main.gd");
 const browserRouteBridge = read("godot/scripts/browser_route_bridge.gd");
+const localeBridge = read("godot/scripts/locale_bridge.gd");
+const accessibilityBridge = read("godot/scripts/accessibility_bridge.gd");
 const systemMap = read("godot/scripts/system_map.gd");
 const shell = read("godot/web/novelforge.html");
 const buildScript = read("scripts/build-godot-web.sh");
 const assetVerifier = read("scripts/verify-cloudflare-assets.sh");
 const browserProof = read("scripts/godot-browser-proof.mjs");
+const pkg = JSON.parse(read("package.json"));
 
 check(project.includes('run/main_scene="res://Main.tscn"'), "Godot runtime must boot Main.tscn");
 check(project.includes('renderer/rendering_method="gl_compatibility"'), "Web runtime must use Compatibility rendering");
@@ -32,6 +35,9 @@ check(preset.includes('variant/thread_support=false'), "Web export must stay sin
 check(preset.includes('html/custom_html_shell="res://web/novelforge.html"'), "Web export must use the branded NovelForge HTML shell");
 check(scene.includes('type="Control"'), "root scene must remain a 2D Control surface");
 check(scene.includes('path="res://scripts/browser_route_bridge.gd"'), "root scene must install the browser history bridge before parent readiness");
+check(scene.includes('path="res://scripts/locale_bridge.gd"'), "root scene must install the bilingual locale bridge");
+check(scene.includes('path="res://scripts/accessibility_bridge.gd"'), "root scene must install the accessibility bridge");
+check(Object.keys(pkg.dependencies ?? {}).length === 0, "Godot Product runtime must not depend on a browser UI framework");
 
 for (const [name, source] of [["Main.tscn", scene], ["main.gd", main], ["system_map.gd", systemMap]]) {
   check(!/\b(Node3D|Camera3D|MeshInstance3D|CSGShape3D|PhysicsBody3D|WorldEnvironment)\b/.test(source), `${name} must not introduce 3D runtime nodes`);
@@ -42,7 +48,7 @@ for (const route of ["/studio", "/architecture", "/publication", "/inspect", "/p
 }
 
 check(main.includes("window.history.pushState"), "Godot navigation must synchronize browser history");
-check(main.includes("window.location.assign('/docs')"), "Docs must remain a hard cross-application navigation boundary");
+check(main.includes("window.location.assign('/docs')"), "main scene must retain a defensive Docs hard-navigation fallback");
 check(main.includes("window.innerWidth") && main.includes("window.innerHeight"), "responsive layout must derive from the real browser viewport");
 check(main.includes("novelforgeLayout"), "responsive layout mode must be browser-observable");
 check(main.includes('"phone" if phone else ("compact" if compact else "desktop")'), "Product UI must preserve phone/compact/desktop layout states");
@@ -53,12 +59,30 @@ check(browserRouteBridge.includes("JavaScriptBridge.create_callback"), "browser 
 check(browserRouteBridge.includes('addEventListener("popstate"'), "browser history bridge must listen for popstate");
 check(browserRouteBridge.includes("__novelforgePopstateReloadInstalled = true"), "browser history bridge must preempt the defensive reload fallback before parent readiness");
 check(browserRouteBridge.includes('host.call("_navigate", path, false)'), "browser history callback must navigate the live scene without pushing another history entry");
+check(browserRouteBridge.includes('get_node_or_null("LocaleBridge")'), "browser history must re-apply locale after live scene navigation");
 check(browserRouteBridge.includes("novelforgeHistory = \"live\""), "browser history bridge must publish an observable live-history marker");
 check(browserRouteBridge.includes("novelforgeRoute = path"), "browser history bridge must publish the routed scene path for browser QA");
 check(!browserRouteBridge.includes("func _process"), "browser history synchronization must be event-driven rather than polled every frame");
 
-check(systemMap.includes("_parallax"), "system map must retain 2.5D parallax depth cues");
-check(systemMap.includes("_draw_packet"), "system map must retain animated execution packets");
+check(localeBridge.includes('LOCALE_EN := "en-US"') && localeBridge.includes('LOCALE_ZH := "zh-CN"'), "Product locale bridge must explicitly support en-US and zh-CN");
+check(localeBridge.includes("localStorage.getItem") && localeBridge.includes("localStorage.setItem"), "Product locale must persist explicitly in browser storage");
+check(localeBridge.includes("navigator.language") && localeBridge.includes('begins_with("zh")'), "first-run Product locale must honor the browser language");
+check(localeBridge.includes("LocaleToggle") && localeBridge.includes("中文"), "Godot Product chrome must expose an explicit locale toggle");
+check(localeBridge.includes('"/docs/en/" if _locale == LOCALE_EN else "/docs/"'), "Docs handoff must follow the active Product locale");
+check(localeBridge.includes("JavaScriptBridge.create_callback(_set_locale_from_browser)"), "locale state must be browser-observable/testable without DOM ownership of Product UI");
+check(localeBridge.includes("novelforgeLocaleApplied"), "locale bridge must publish application evidence to browser QA");
+check(localeBridge.includes('has_meta("novelforge_locale_hooked")'), "locale bridge must guard dynamic signal hooks against duplicate connections");
+check(!localeBridge.includes("func _process"), "locale synchronization must remain event-driven");
+
+check(accessibilityBridge.includes("MIN_TARGET := 44.0"), "interactive Product targets must retain the 44px minimum contract");
+check(accessibilityBridge.includes("Control.FOCUS_ALL") && accessibilityBridge.includes('add_theme_stylebox_override("focus"'), "Godot Product controls must expose keyboard focus with a visible focus style");
+check(accessibilityBridge.includes("prefers-reduced-motion: reduce"), "Godot Product motion must honor the browser reduced-motion preference");
+check(accessibilityBridge.includes("set_process(not _reduced_motion)"), "reduced motion must freeze decorative continuous animation while preserving the final scene");
+check(accessibilityBridge.includes('novelforgeA11y = "ready"'), "accessibility bridge must publish a browser-observable readiness marker");
+check(!accessibilityBridge.includes("func _process"), "accessibility bridge itself must not poll");
+
+check(systemMap.includes("_parallax"), "system map must retain 2.5D parallax depth cues when motion is allowed");
+check(systemMap.includes("_draw_packet"), "system map must retain animated execution packets when motion is allowed");
 check(systemMap.includes('"phone":'), "system map must provide a portrait topology instead of shrinking the desktop graph");
 check(systemMap.includes("set_layout_mode"), "system map must respond to the shared responsive layout state");
 
@@ -81,20 +105,26 @@ check(browserProof.includes('const verifyHistory = arg("verify-history") === "tr
 check(browserProof.includes("history.pushState"), "browser proof must exercise a same-runtime route transition");
 check(browserProof.includes("history.back()"), "browser proof must exercise browser back navigation");
 check(browserProof.includes("proofToken"), "browser proof must prove popstate does not reload the document");
+check(browserProof.includes("window.__novelforgeSetLocale('zh-CN')") && browserProof.includes("window.__novelforgeSetLocale('en-US')"), "browser proof must exercise both Product locales in the live Godot runtime");
+check(browserProof.includes('state?.a11y !== "ready"') && browserProof.includes('state?.target !== "44"'), "browser proof must fail when the accessibility contract is absent");
+check(browserProof.includes("locale_proof: localeProof"), "browser proof must emit explicit bilingual runtime evidence");
 check(browserProof.includes("state?.layout !== expectLayout"), "browser proof must fail on responsive layout mismatch");
 check(browserProof.includes("canvasWidth") && browserProof.includes("browser_viewport"), "browser proof must record canvas and browser dimensions");
 
 if (!process.exitCode) {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_web_quality_v3",
+    schema: "novelforge_godot_web_quality_v4",
     status: "pass",
     renderer: "gl_compatibility",
     dimension: "2d_2_5d",
     adaptive_canvas: true,
-    stretch_mode: "disabled",
     responsive_layouts: ["phone", "compact", "desktop"],
+    locales: ["en-US", "zh-CN"],
+    min_target_px: 44,
+    reduced_motion: true,
     history: "event_driven_live_scene",
-    docs_boundary: "hard-navigation",
-    authority: false,
+    docs_boundary: "locale_aware_hard_navigation",
+    legacy_product_spa: false,
+    authority: false
   }, null, 2));
 }

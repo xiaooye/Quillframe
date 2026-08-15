@@ -77,7 +77,6 @@ async function connectDevTools() {
       else resolve(message.result ?? {});
       return;
     }
-
     if (message.method === "Runtime.exceptionThrown") {
       const detail = message.params?.exceptionDetails;
       diagnostics.push(`exception: ${detail?.text ?? "unknown"} ${detail?.exception?.description ?? ""}`.trim());
@@ -110,7 +109,7 @@ async function evaluate(expression) {
 }
 
 async function runtimeState() {
-  const response = await evaluate(`JSON.stringify({runtime:document.documentElement.dataset.novelforgeRuntime||null,engine:document.documentElement.dataset.novelforgeEngine||null,layout:document.documentElement.dataset.novelforgeLayout||null,history:document.documentElement.dataset.novelforgeHistory||null,route:document.documentElement.dataset.novelforgeRoute||null,status:document.getElementById('nf-status')?.textContent||null,loader:document.getElementById('nf-loader')?.className||null,path:location.pathname,proofToken:window.__novelforgeHistoryProof||null,innerWidth:window.innerWidth,innerHeight:window.innerHeight,dpr:window.devicePixelRatio,canvasWidth:document.getElementById('canvas')?.width||0,canvasHeight:document.getElementById('canvas')?.height||0})`);
+  const response = await evaluate(`JSON.stringify({runtime:document.documentElement.dataset.novelforgeRuntime||null,engine:document.documentElement.dataset.novelforgeEngine||null,layout:document.documentElement.dataset.novelforgeLayout||null,history:document.documentElement.dataset.novelforgeHistory||null,route:document.documentElement.dataset.novelforgeRoute||null,a11y:document.documentElement.dataset.novelforgeA11y||null,target:document.documentElement.dataset.novelforgeTarget||null,motion:document.documentElement.dataset.novelforgeMotion||null,locale:document.documentElement.dataset.novelforgeLocale||null,localeApplied:document.documentElement.dataset.novelforgeLocaleApplied||null,docsRoot:document.documentElement.dataset.novelforgeDocsRoot||null,localeSetter:typeof window.__novelforgeSetLocale==='function',status:document.getElementById('nf-status')?.textContent||null,loader:document.getElementById('nf-loader')?.className||null,path:location.pathname,proofToken:window.__novelforgeHistoryProof||null,innerWidth:window.innerWidth,innerHeight:window.innerHeight,dpr:window.devicePixelRatio,canvasWidth:document.getElementById('canvas')?.width||0,canvasHeight:document.getElementById('canvas')?.height||0})`);
   const value = response?.result?.value;
   return value ? JSON.parse(value) : null;
 }
@@ -169,6 +168,24 @@ try {
   if (expectLayout && state?.layout !== expectLayout) {
     throw new Error(`Godot Web responsive layout mismatch: expected ${expectLayout}, got ${state?.layout ?? "unset"}; ${JSON.stringify(state)}`);
   }
+  if (state?.a11y !== "ready" || state?.target !== "44") {
+    throw new Error(`Godot Web accessibility contract is not ready: ${JSON.stringify(state)}`);
+  }
+  if (!state?.localeSetter || !["en-US", "zh-CN"].includes(state?.locale) || Number(state?.localeApplied ?? 0) < 10) {
+    throw new Error(`Godot Web locale bridge is not ready: ${JSON.stringify(state)}`);
+  }
+
+  await evaluate("window.__novelforgeSetLocale('zh-CN')");
+  state = await waitForState(
+    (candidate) => candidate?.locale === "zh-CN" && candidate?.docsRoot === "/docs/" && Number(candidate?.localeApplied ?? 0) >= 10,
+    "Godot Web did not apply the zh-CN Product locale",
+  );
+  await evaluate("window.__novelforgeSetLocale('en-US')");
+  state = await waitForState(
+    (candidate) => candidate?.locale === "en-US" && candidate?.docsRoot === "/docs/en/" && Number(candidate?.localeApplied ?? 0) >= 10,
+    "Godot Web did not restore the en-US Product locale",
+  );
+  const localeProof = true;
 
   let historyProof = false;
   if (verifyHistory) {
@@ -179,12 +196,12 @@ try {
     const alternatePath = originalPath === "/studio" ? "/architecture" : "/studio";
     await evaluate(`window.__novelforgeHistoryProof='alive'; history.pushState({}, '', ${JSON.stringify(alternatePath)}); window.dispatchEvent(new PopStateEvent('popstate'));`);
     state = await waitForState(
-      (candidate) => candidate?.path === alternatePath && candidate?.route === alternatePath && candidate?.proofToken === "alive",
+      (candidate) => candidate?.path === alternatePath && candidate?.route === alternatePath && candidate?.proofToken === "alive" && candidate?.locale === "en-US",
       "Godot Web did not route the live scene after a history event",
     );
     await evaluate("history.back()");
     state = await waitForState(
-      (candidate) => candidate?.path === originalPath && candidate?.route === originalPath && candidate?.proofToken === "alive",
+      (candidate) => candidate?.path === originalPath && candidate?.route === originalPath && candidate?.proofToken === "alive" && candidate?.locale === "en-US",
       "Godot Web browser back did not restore the live scene without a reload",
     );
     historyProof = true;
@@ -199,7 +216,7 @@ try {
   fs.writeFileSync(output, Buffer.from(capture.data, "base64"));
 
   const proof = {
-    schema: "novelforge_godot_browser_proof_v3",
+    schema: "novelforge_godot_browser_proof_v4",
     status: "pass",
     url,
     requested_viewport: `${width}x${height}`,
@@ -207,6 +224,12 @@ try {
     runtime: state.runtime,
     engine: state.engine,
     layout: state.layout,
+    a11y: state.a11y,
+    target_px: Number(state.target),
+    motion: state.motion,
+    locale: state.locale,
+    locale_proof: localeProof,
+    docs_root: state.docsRoot,
     history: state.history,
     history_proof: historyProof,
     path: state.path,
