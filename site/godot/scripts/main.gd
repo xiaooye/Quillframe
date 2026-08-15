@@ -67,7 +67,8 @@ func _font(weight: int) -> Font:
 		return _font_cache[weight]
 	var variation := FontVariation.new()
 	variation.base_font = _base_font
-	variation.variation_opentype = {"wght": weight}
+	var text_server := TextServerManager.get_primary_interface()
+	variation.variation_opentype = {text_server.name_to_tag("wght"): weight}
 	_font_cache[weight] = variation
 	return variation
 
