@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novelforge_session_resume_command_v1",
+  "title": "NovelForge Session Resume Command Candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "command_id",
+    "action",
+    "mode",
+    "session_id",
+    "expected_before_state",
+    "preflight",
+    "idempotency_key",
+    "authority"
+  ],
+  "properties": {
+    "schema": {"const": "novelforge_session_resume_command_v1"},
+    "command_id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "action": {"const": "session.resume"},
+    "mode": {"const": "resume_latest_checkpoint"},
+    "session_id": {"type": "string", "minLength": 1, "maxLength": 240},
+    "expected_before_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_version", "session_payload_hash", "checkpoint_id"],
+      "properties": {
+        "session_version": {"type": "integer", "minimum": 1},
+        "session_payload_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "checkpoint_id": {"type": "string", "minLength": 1, "maxLength": 240}
+      }
+    },
+    "preflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["result_fingerprint", "authority_evidence_ref", "authority_evidence_fingerprint"],
+      "properties": {
+        "result_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "authority_evidence_ref": {"type": "string", "minLength": 1, "maxLength": 512},
+        "authority_evidence_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    },
+    "idempotency_key": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "authority": {"const": false}
+  }
+}
