@@ -1,0 +1,375 @@
+@layer product-components {
+  /* Inspector, Playground, and Agent Integration now share the same stationery
+     grammar as Publication without collapsing their distinct interaction models. */
+  .inspector-entry,
+  .playground-entry,
+  .agent-integration-entry {
+    --tool-paper: color-mix(in oklab, var(--pe-surface) 94%, #fff8f1);
+    --tool-stitch: oklch(.78 .085 345 / .38);
+    --tool-pink: oklch(.7 .15 350);
+    --tool-lilac: oklch(.73 .105 300);
+    --tool-blue: oklch(.72 .105 248);
+    --tool-mint: oklch(.75 .09 158);
+    --tool-peach: oklch(.83 .085 72);
+  }
+
+  .inspector-main,
+  .playground-main,
+  .agent-integration-main {
+    gap: clamp(14px, 1.8vw, 22px);
+  }
+
+  .project-inspector-intro,
+  .playground-intro,
+  .agent-integration-hero {
+    box-shadow: 0 22px 48px -36px oklch(.48 .12 342 / .36), 0 7px 18px -14px oklch(.42 .08 300 / .17);
+  }
+
+  .project-inspector-intro::after,
+  .playground-intro::after,
+  .agent-integration-hero::after {
+    position: absolute;
+    z-index: -1;
+    right: 24px;
+    bottom: 15px;
+    color: oklch(.73 .1 330 / .27);
+    font-size: 17px;
+    letter-spacing: 12px;
+    pointer-events: none;
+  }
+
+  .project-inspector-intro::after { content: "✦  ⌂  ♡"; }
+  .playground-intro::after { content: "✦  ▷  ✧"; }
+  .agent-integration-hero::after { content: "✦  ◈  ☁"; }
+
+  .project-inspector-intro .eyebrow,
+  .playground-intro .eyebrow,
+  .agent-integration-badges > .wui-badge:first-child {
+    position: relative;
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    min-height: 30px;
+    padding: 5px 13px;
+    border: 1px solid color-mix(in oklab, var(--tool-pink) 52%, var(--pe-border));
+    border-radius: 9px 5px 9px 5px;
+    color: color-mix(in oklab, var(--tool-pink) 80%, var(--pe-fg));
+    background: linear-gradient(135deg, color-mix(in oklab, white 52%, var(--surface-pink-soft)), color-mix(in oklab, white 28%, var(--nf-lane-editorial-fill)));
+    box-shadow: 0 7px 18px -15px var(--tool-pink);
+    font-size: 10px;
+    font-weight: 840;
+    letter-spacing: .055em;
+  }
+
+  .project-inspector-intro .eyebrow::before,
+  .playground-intro .eyebrow::before {
+    content: "🎀";
+    margin-right: 6px;
+    font-size: 12px;
+  }
+
+  .inspector-privacy,
+  .playground-local-badge,
+  .agent-host-safety {
+    border-radius: 11px 11px 7px 11px;
+    box-shadow: 0 8px 18px -17px color-mix(in oklab, var(--tool-mint) 58%, transparent);
+  }
+
+  /* Project Inspector: a local project folder on a stitched work mat. */
+  .inspector-dropzone {
+    min-height: 360px;
+    border-color: color-mix(in oklab, var(--tool-blue) 34%, var(--surface-line));
+    border-style: solid;
+    border-radius: 24px 24px 14px 24px;
+    background:
+      linear-gradient(90deg, transparent 0 48px, color-mix(in oklab, var(--tool-pink) 11%, transparent) 48px 49px, transparent 49px),
+      repeating-linear-gradient(to bottom, transparent 0 31px, color-mix(in oklab, var(--tool-blue) 10%, transparent) 31px 32px),
+      radial-gradient(32rem 18rem at 94% 0%, color-mix(in oklab, var(--surface-blue-soft) 82%, transparent), transparent 66%),
+      var(--tool-paper);
+  }
+
+  .inspector-dropzone::before {
+    inset: 8px;
+    border: 1px dashed var(--tool-stitch);
+    border-radius: 18px 18px 10px 18px;
+  }
+
+  .inspector-drop-icon {
+    width: 70px;
+    height: 62px;
+    margin-bottom: 14px;
+    border-color: color-mix(in oklab, var(--tool-blue) 38%, var(--pe-border));
+    border-radius: 13px 13px 8px 13px;
+    color: color-mix(in oklab, var(--tool-blue) 82%, var(--pe-fg));
+    background: linear-gradient(145deg, white, color-mix(in oklab, white 44%, var(--surface-blue-soft)));
+    box-shadow: 9px 9px 0 color-mix(in oklab, var(--surface-blue-soft) 70%, transparent);
+    transform: rotate(-1.8deg);
+  }
+
+  .inspector-actions .wui-button--solid {
+    background: linear-gradient(135deg, var(--tool-blue), color-mix(in oklab, var(--tool-lilac) 58%, var(--tool-blue)));
+  }
+
+  .inspector-cli {
+    width: min(100%, 820px);
+    border-top-style: dashed;
+  }
+
+  .inspector-cli code {
+    border-style: dashed;
+    background: color-mix(in oklab, white 58%, var(--surface-lilac-soft));
+  }
+
+  .inspector-summary-card,
+  .inspector-panel,
+  .inspector-structure-panel {
+    position: relative;
+    overflow: hidden;
+    border-radius: 21px 21px 12px 21px;
+    background: color-mix(in oklab, var(--pe-surface) 93%, #fffaf5);
+  }
+
+  .inspector-summary-card::before,
+  .inspector-panel::before,
+  .inspector-structure-panel::before,
+  .playground-input-panel::before,
+  .playground-trace-panel::before,
+  .agent-host-workbench::before {
+    content: "";
+    position: absolute;
+    inset: 7px;
+    pointer-events: none;
+    border: 1px dashed color-mix(in oklab, var(--tool-pink) 26%, transparent);
+    border-radius: 15px 15px 8px 15px;
+  }
+
+  .inspector-stat-grid > div:nth-child(1) { background: color-mix(in oklab, white 64%, var(--surface-blue-soft)); }
+  .inspector-stat-grid > div:nth-child(2) { background: color-mix(in oklab, white 64%, var(--surface-mint-soft)); }
+  .inspector-stat-grid > div:nth-child(3) { background: color-mix(in oklab, white 64%, var(--surface-lilac-soft)); }
+  .inspector-stat-grid > div:nth-child(4) { background: color-mix(in oklab, white 64%, var(--nf-lane-editorial-fill)); }
+
+  .inspector-panel-heading > span {
+    border: 1px dashed color-mix(in oklab, var(--tool-lilac) 30%, var(--pe-border));
+    background: color-mix(in oklab, white 54%, var(--surface-lilac-soft));
+    transform: rotate(-2deg);
+  }
+
+  .inspector-directory {
+    border-style: dashed;
+    border-radius: 12px 12px 7px 12px;
+  }
+
+  /* Local Playground: source sheet on the left, deterministic trace cards on the right. */
+  .playground-workspace {
+    gap: 14px;
+  }
+
+  .playground-input-panel,
+  .playground-trace-panel {
+    position: relative;
+    overflow: hidden;
+    border-radius: 22px 22px 12px 22px;
+    background: color-mix(in oklab, var(--pe-surface) 93%, #fffaf4);
+  }
+
+  .playground-input-panel {
+    background:
+      radial-gradient(28rem 14rem at 0% 0%, color-mix(in oklab, var(--surface-lilac-soft) 72%, transparent), transparent 72%),
+      color-mix(in oklab, var(--pe-surface) 94%, #fffaf4);
+  }
+
+  .playground-trace-panel {
+    background:
+      radial-gradient(30rem 16rem at 100% 0%, color-mix(in oklab, var(--surface-blue-soft) 72%, transparent), transparent 72%),
+      color-mix(in oklab, var(--pe-surface) 94%, #fffaf4);
+  }
+
+  .playground-mode-tabs button {
+    border-style: dashed;
+    border-radius: 11px 11px 6px 11px;
+    background: color-mix(in oklab, white 60%, var(--surface-lilac-soft));
+  }
+
+  .playground-mode-tabs button:nth-child(2) { background: color-mix(in oklab, white 62%, var(--surface-blue-soft)); }
+  .playground-mode-tabs button:nth-child(3) { background: color-mix(in oklab, white 62%, var(--surface-mint-soft)); }
+  .playground-mode-tabs button:nth-child(4) { background: color-mix(in oklab, white 62%, var(--nf-lane-editorial-fill)); }
+
+  .playground-mode-tabs button[data-active="true"] {
+    border-color: color-mix(in oklab, var(--tool-pink) 50%, var(--pe-border));
+    box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--tool-pink) 50%, transparent), 0 8px 18px -16px var(--tool-pink);
+    transform: translateY(-1px);
+  }
+
+  .playground-input-panel textarea {
+    min-height: 250px;
+    border-style: solid;
+    border-color: color-mix(in oklab, var(--tool-lilac) 25%, var(--pe-border));
+    border-radius: 15px;
+    background:
+      linear-gradient(90deg, transparent 0 36px, color-mix(in oklab, var(--tool-pink) 12%, transparent) 36px 37px, transparent 37px),
+      repeating-linear-gradient(to bottom, color-mix(in oklab, white 86%, var(--pe-surface)) 0 28px, color-mix(in oklab, var(--tool-blue) 10%, white) 28px 29px);
+    line-height: 29px;
+  }
+
+  .playground-input-meta {
+    border-top: 1px dashed color-mix(in oklab, var(--tool-pink) 24%, var(--pe-border));
+    border-bottom: 1px dashed color-mix(in oklab, var(--tool-pink) 24%, var(--pe-border));
+  }
+
+  .playground-stage {
+    position: relative;
+    border-style: dashed;
+    border-radius: 15px 15px 8px 15px;
+    background: color-mix(in oklab, white 64%, var(--surface-lilac-soft));
+    box-shadow: 0 9px 20px -19px color-mix(in oklab, var(--tool-lilac) 60%, transparent);
+  }
+
+  .playground-stage:nth-child(2) { background: color-mix(in oklab, white 64%, var(--surface-blue-soft)); }
+  .playground-stage:nth-child(3) { background: color-mix(in oklab, white 64%, var(--nf-lane-editorial-fill)); }
+  .playground-stage:nth-child(4) { background: color-mix(in oklab, white 64%, var(--surface-mint-soft)); }
+  .playground-stage:nth-child(5) { background: color-mix(in oklab, white 64%, #fff1df); }
+
+  .playground-stage header > span {
+    border-radius: 9px 9px 4px 9px;
+    background: white;
+    box-shadow: 0 5px 12px -10px color-mix(in oklab, var(--tool-pink) 65%, transparent);
+  }
+
+  .playground-result-envelope {
+    border-style: dashed;
+    background: color-mix(in oklab, white 58%, var(--surface-mint-soft));
+  }
+
+  .playground-authority-boundary,
+  .playground-contract-boundary {
+    border-radius: 12px 12px 7px 12px;
+  }
+
+  /* Agent Integration: adapters are cards and recipes, not a second dashboard skin. */
+  .agent-integration-summary {
+    transform: rotate(.25deg);
+    background: color-mix(in oklab, white 48%, var(--surface-lilac-soft));
+  }
+
+  .agent-integration-summary > div {
+    background: color-mix(in oklab, white 68%, var(--surface-lilac-soft));
+  }
+
+  .agent-integration-summary > div:nth-child(2) { background: color-mix(in oklab, white 66%, var(--surface-blue-soft)); }
+  .agent-integration-summary > div:nth-child(3) { background: color-mix(in oklab, white 66%, var(--surface-mint-soft)); }
+  .agent-integration-summary > div:nth-child(4) { background: color-mix(in oklab, white 66%, #fff1df); }
+
+  .agent-path-card {
+    min-height: 278px;
+    border-style: solid;
+    border-radius: 20px 20px 11px 20px;
+    background: color-mix(in oklab, white 58%, var(--surface-lilac-soft));
+  }
+
+  .agent-path-card[data-lane="runtime"] { background: color-mix(in oklab, white 58%, var(--surface-blue-soft)); }
+  .agent-path-card[data-lane="evidence"] { background: color-mix(in oklab, white 58%, var(--surface-mint-soft)); }
+
+  .agent-path-card::before {
+    content: "";
+    position: absolute;
+    inset: 7px;
+    pointer-events: none;
+    border: 1px dashed color-mix(in oklab, var(--tool-pink) 24%, transparent);
+    border-radius: 14px 14px 7px 14px;
+  }
+
+  .agent-path-card > small {
+    display: inline-flex;
+    width: fit-content;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: color-mix(in oklab, white 62%, transparent);
+  }
+
+  .agent-path-icon,
+  .agent-host-glyph {
+    border-radius: 13px 13px 7px 13px;
+    background: white;
+    box-shadow: 0 7px 16px -14px color-mix(in oklab, var(--tool-lilac) 70%, transparent);
+  }
+
+  .agent-host-workbench {
+    position: relative;
+    overflow: hidden;
+    border-style: solid;
+    border-radius: 23px 23px 13px 23px;
+    background:
+      radial-gradient(30rem 16rem at 100% 0%, color-mix(in oklab, var(--surface-lilac-soft) 76%, transparent), transparent 74%),
+      color-mix(in oklab, var(--pe-surface) 94%, #fff9f4);
+  }
+
+  .agent-host-tabs button {
+    border-style: dashed;
+    border-radius: 12px 12px 7px 12px;
+    background: color-mix(in oklab, white 64%, var(--surface-blue-soft));
+  }
+
+  .agent-host-tabs button:nth-child(2n) { background: color-mix(in oklab, white 64%, var(--surface-lilac-soft)); }
+  .agent-host-tabs button:nth-child(3n) { background: color-mix(in oklab, white 64%, var(--surface-mint-soft)); }
+
+  .agent-host-tabs button[data-active="true"] {
+    border-color: color-mix(in oklab, var(--tool-pink) 46%, var(--pe-border));
+    box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--tool-pink) 42%, transparent);
+  }
+
+  .agent-host-profile,
+  .agent-host-instruction,
+  .agent-onboarding-card,
+  .agent-request-builder,
+  .agent-contract-card {
+    border-style: dashed;
+    border-radius: 17px 17px 9px 17px;
+  }
+
+  .agent-host-instruction pre,
+  .agent-request-json {
+    border-color: color-mix(in oklab, var(--tool-lilac) 24%, var(--pe-border));
+    background: color-mix(in oklab, var(--pe-bg) 86%, #1d1720 2%);
+  }
+
+  .agent-command-row,
+  .agent-operation-tabs button,
+  .agent-host-facts li {
+    border-style: dashed;
+  }
+
+  .agent-contract-card--ready { background: color-mix(in oklab, white 60%, var(--surface-mint-soft)); }
+  .agent-contract-card--deferred { background: color-mix(in oklab, white 62%, #fff1df); }
+  .agent-contract-card--authority { background: color-mix(in oklab, white 60%, var(--surface-pink-soft)); }
+
+  .dark .inspector-dropzone,
+  .dark .inspector-summary-card,
+  .dark .inspector-panel,
+  .dark .inspector-structure-panel,
+  .dark .playground-input-panel,
+  .dark .playground-trace-panel,
+  .dark .agent-path-card,
+  .dark .agent-host-workbench,
+  .dark .agent-host-profile,
+  .dark .agent-host-instruction {
+    background: color-mix(in oklab, var(--pe-surface) 92%, var(--pe-bg));
+  }
+}
+
+@media (max-width: 900px) {
+  @layer product-components {
+    .inspector-dropzone { min-height: 330px; }
+    .playground-input-panel textarea { min-height: 220px; }
+  }
+}
+
+@media (max-width: 620px) {
+  @layer product-components {
+    .project-inspector-intro::after,
+    .playground-intro::after,
+    .agent-integration-hero::after { display: none; }
+
+    .inspector-dropzone { min-height: 300px; }
+    .agent-path-card { min-height: 250px; }
+  }
+}
