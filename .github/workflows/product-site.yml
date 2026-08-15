@@ -6,11 +6,15 @@ on:
     paths:
       - "site/**"
       - "assets/brand/**"
+      - "docs/documentation_manifest.json"
+      - "**/*.md"
       - ".github/workflows/product-site.yml"
   pull_request:
     paths:
       - "site/**"
       - "assets/brand/**"
+      - "docs/documentation_manifest.json"
+      - "**/*.md"
       - ".github/workflows/product-site.yml"
   workflow_dispatch:
 
