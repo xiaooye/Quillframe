@@ -1,4 +1,4 @@
-import { For, Show, createMemo, createSignal } from "solid-js";
+import { For, Show, createMemo, createSignal, onMount } from "solid-js";
 import { invokeBridge } from "../bridge";
 import { CoreHostBoundary, JsonBlock, PageIntro, QueryError } from "../components";
 import { useI18n } from "../i18n";
@@ -38,6 +38,13 @@ export default function Diagnostics() {
       setLoading(false);
     }
   };
+
+  // Bound local hosts perform one deterministic read when this route is entered.
+  // There is no interval, focus loop, or hosted-unbound request: subsequent reads
+  // remain explicitly user-triggered through the action above.
+  onMount(() => {
+    if (studio.bridgeAvailable()) void runDoctor();
+  });
 
   const validated = () => [
     t("diagnostics.validatedIdentity"),
