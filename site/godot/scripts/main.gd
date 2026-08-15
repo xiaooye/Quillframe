@@ -30,6 +30,7 @@ const C := {
 var _base_font: Font
 var _fallback_fonts: Array[Font] = []
 var _font_cache := {}
+var _mixed_font_cache := {}
 var _locale := "en-US"
 var _layout := "desktop"
 var _scroll: ScrollContainer
@@ -82,10 +83,20 @@ func _font(weight: int) -> Font:
 		return _font_cache[weight]
 	var variation := FontVariation.new()
 	variation.base_font = _base_font
-	variation.fallbacks = _fallback_fonts
 	var text_server := TextServerManager.get_primary_interface()
 	variation.variation_opentype = {text_server.name_to_tag("wght"): weight}
 	_font_cache[weight] = variation
+	return variation
+
+func _mixed_font(weight: int) -> Font:
+	if _mixed_font_cache.has(weight):
+		return _mixed_font_cache[weight]
+	var variation := FontVariation.new()
+	variation.base_font = _base_font
+	variation.fallbacks = _fallback_fonts
+	var text_server := TextServerManager.get_primary_interface()
+	variation.variation_opentype = {text_server.name_to_tag("wght"): weight}
+	_mixed_font_cache[weight] = variation
 	return variation
 
 func _clear() -> void:
@@ -158,7 +169,7 @@ func _build_header() -> void:
 			var key := _pill("⌘K / Ctrl+K", Vector2(174, 7), Vector2(82, 24), C.surface_soft, C.muted, 10, 600)
 			search.add_child(key)
 			header.add_child(search)
-			var studio := _text_button("✦ Open Studio", Vector2(header_width - 238, 4), Vector2(126, 46), C.runtime, Color.WHITE, 13, 650, 14)
+			var studio := _mixed_text_button("✦ Open Studio", Vector2(header_width - 238, 4), Vector2(126, 46), C.runtime, Color.WHITE, 13, 650, 14)
 			studio.pressed.connect(_open_external.bind(STUDIO_URL))
 			header.add_child(studio)
 			var lang := _text_button("中文" if _locale == "en-US" else "EN", Vector2(header_width - 108, 8), Vector2(58, 38), Color(0,0,0,0), C.runtime, 13, 620, 10)
@@ -181,7 +192,7 @@ func _build_desktop() -> void:
 	var top := 166.0
 	var badge_text := "Long-form fiction system · 0.8.x" if _locale == "en-US" else "长篇小说创作系统 · 0.8.x"
 	_stage.add_child(_pill(badge_text, Vector2(left_x, top), Vector2(208 if _locale == "en-US" else 194, 25), Color("f8fbff"), Color("4078a8"), 12, 500, Color("b8d8ee")))
-	_stage.add_child(_pill("ฅ^•ﻌ•^ฅ", Vector2(left_x + 219, top), Vector2(82, 25), C.editorial_soft, C.editorial, 12, 550, Color("f0c9da")))
+	_stage.add_child(_mixed_pill("ฅ^•ﻌ•^ฅ", Vector2(left_x + 219, top), Vector2(82, 25), C.editorial_soft, C.editorial, 12, 550, Color("f0c9da")))
 
 	var title_text := "Let the story\ngrow without\nletting the\nsystem lose\nthe plot." if _locale == "en-US" else "让故事越写越长，\n系统仍然知道\n自己在做什么。"
 	var title := _label(title_text, 72 if _locale == "en-US" else 61, 800, C.ink)
@@ -198,7 +209,7 @@ func _build_desktop() -> void:
 	lede.add_theme_constant_override("line_spacing", 7)
 	_stage.add_child(lede)
 
-	var studio := _text_button("✦ Open Studio" if _locale == "en-US" else "✦ 打开 Studio", Vector2(left_x, top + 552), Vector2(200, 56), C.runtime, Color.WHITE, 18, 600, 13)
+	var studio := _mixed_text_button("✦ Open Studio" if _locale == "en-US" else "✦ 打开 Studio", Vector2(left_x, top + 552), Vector2(200, 56), C.runtime, Color.WHITE, 18, 600, 13)
 	studio.pressed.connect(_open_external.bind(STUDIO_URL))
 	_stage.add_child(studio)
 	var knowledge := _text_button("Knowledge" if _locale == "en-US" else "知识库", Vector2(left_x + 210, top + 552), Vector2(194, 56), C.surface_soft, C.runtime, 18, 560, 13)
@@ -228,7 +239,7 @@ func _build_compact() -> void:
 	lede.size = Vector2(size.x - 80, 92)
 	lede.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_stage.add_child(lede)
-	var studio := _text_button("✦ Open Studio" if _locale == "en-US" else "✦ 打开 Studio", Vector2(x, top + 414), Vector2(210, 56), C.runtime, Color.WHITE, 18, 600, 13)
+	var studio := _mixed_text_button("✦ Open Studio" if _locale == "en-US" else "✦ 打开 Studio", Vector2(x, top + 414), Vector2(210, 56), C.runtime, Color.WHITE, 18, 600, 13)
 	studio.pressed.connect(_open_external.bind(STUDIO_URL))
 	_stage.add_child(studio)
 	var knowledge := _text_button("Knowledge" if _locale == "en-US" else "知识库", Vector2(x + 222, top + 414), Vector2(190, 56), C.surface_soft, C.runtime, 18, 560, 13)
@@ -243,7 +254,7 @@ func _build_phone() -> void:
 	var x := 16.0
 	var top := 101.0
 	_stage.add_child(_pill("Long-form fiction system · 0.8.x" if _locale == "en-US" else "长篇小说创作系统 · 0.8.x", Vector2(x, top), Vector2(212 if _locale == "en-US" else 200, 25), Color("f8fbff"), Color("4078a8"), 12, 500, Color("b8d8ee")))
-	_stage.add_child(_pill("ฅ^•ﻌ•^ฅ", Vector2(x + 220, top), Vector2(88, 25), C.editorial_soft, C.editorial, 12, 550, Color("f0c9da")))
+	_stage.add_child(_mixed_pill("ฅ^•ﻌ•^ฅ", Vector2(x + 220, top), Vector2(88, 25), C.editorial_soft, C.editorial, 12, 550, Color("f0c9da")))
 
 	var title_text := "Let the story\ngrow without\nletting the\nsystem lose\nthe plot." if _locale == "en-US" else "让故事越写越长，\n系统仍然知道\n自己在做什么。"
 	var title := _label(title_text, 46 if _locale == "en-US" else 42, 800, C.ink)
@@ -260,7 +271,7 @@ func _build_phone() -> void:
 	lede.add_theme_constant_override("line_spacing", 8)
 	_stage.add_child(lede)
 
-	var studio := _text_button("✦ Open Studio" if _locale == "en-US" else "✦ 打开 Studio", Vector2(x, top + 482), Vector2(size.x - 32, 56), C.runtime, Color.WHITE, 18, 600, 13)
+	var studio := _mixed_text_button("✦ Open Studio" if _locale == "en-US" else "✦ 打开 Studio", Vector2(x, top + 482), Vector2(size.x - 32, 56), C.runtime, Color.WHITE, 18, 600, 13)
 	studio.pressed.connect(_open_external.bind(STUDIO_URL))
 	_stage.add_child(studio)
 	var knowledge := _text_button("Knowledge" if _locale == "en-US" else "知识库", Vector2(x, top + 548), Vector2(size.x - 32, 56), C.surface_soft, C.runtime, 18, 560, 13)
@@ -282,7 +293,7 @@ func _build_launcher(pos: Vector2, launcher_size: Vector2) -> void:
 	card.move_child(back, 0)
 
 	var hint := _panel(Vector2(15, 32), Vector2(250, 56), C.editorial_soft, 14, Color("efc6d8"), 1)
-	var hint_text := _label("Let’s weave something lovely today (｡•̀ᴗ-)✧" if _locale == "en-US" else "今天也把故事织得更漂亮一点吧 (｡•̀ᴗ-)✧", 12, 480, C.editorial)
+	var hint_text := _mixed_label("Let’s weave something lovely today (｡•̀ᴗ-)✧" if _locale == "en-US" else "今天也把故事织得更漂亮一点吧 (｡•̀ᴗ-)✧", 12, 480, C.editorial)
 	hint_text.position = Vector2(13, 9)
 	hint_text.size = Vector2(220, 40)
 	hint_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -334,7 +345,7 @@ func _launcher_tile(pos: Vector2, tile_size: Vector2, icon: String, title: Strin
 		books.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		icon_box.add_child(books)
 	else:
-		var icon_label := _label(icon, 20, 650, C.runtime if title == "Studio" else C.editorial)
+		var icon_label := _mixed_label(icon, 20, 650, C.runtime if title == "Studio" else C.editorial)
 		icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		icon_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -355,7 +366,7 @@ func _launcher_tile(pos: Vector2, tile_size: Vector2, icon: String, title: Strin
 	return tile
 
 func _build_lower_sections(y: float, x: float, width: float, phone: bool) -> void:
-	var kicker := _label("✦  Six real product capabilities" if _locale == "en-US" else "✦  六条真实产品能力", 12, 720, C.runtime)
+	var kicker := _mixed_label("✦  Six real product capabilities" if _locale == "en-US" else "✦  六条真实产品能力", 12, 720, C.runtime)
 	kicker.position = Vector2(x, y)
 	kicker.size = Vector2(width, 26)
 	_stage.add_child(kicker)
@@ -440,6 +451,15 @@ func _pill(text: String, pos: Vector2, pill_size: Vector2, bg: Color, fg: Color,
 	panel.add_child(label)
 	return panel
 
+func _mixed_pill(text: String, pos: Vector2, pill_size: Vector2, bg: Color, fg: Color, font_size: int, weight: int, border: Color = Color(0,0,0,0)) -> Panel:
+	var panel := _panel(pos, pill_size, bg, int(pill_size.y / 2.0), border, 1 if border.a > 0.0 else 0)
+	var label := _mixed_label(text, font_size, weight, fg)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	panel.add_child(label)
+	return panel
+
 func _label(text: String, font_size: int, weight: int, color: Color) -> Label:
 	var label := Label.new()
 	label.text = text
@@ -449,13 +469,28 @@ func _label(text: String, font_size: int, weight: int, color: Color) -> Label:
 	label.add_theme_color_override("font_color", color)
 	return label
 
+func _mixed_label(text: String, font_size: int, weight: int, color: Color) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_override("font", _mixed_font(weight))
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	return label
+
 func _text_button(text: String, pos: Vector2, button_size: Vector2, bg: Color, fg: Color, font_size: int, weight: int, radius: int) -> Button:
+	return _make_text_button(text, pos, button_size, bg, fg, font_size, weight, radius, false)
+
+func _mixed_text_button(text: String, pos: Vector2, button_size: Vector2, bg: Color, fg: Color, font_size: int, weight: int, radius: int) -> Button:
+	return _make_text_button(text, pos, button_size, bg, fg, font_size, weight, radius, true)
+
+func _make_text_button(text: String, pos: Vector2, button_size: Vector2, bg: Color, fg: Color, font_size: int, weight: int, radius: int, mixed: bool) -> Button:
 	var button := Button.new()
 	button.text = text
 	button.position = pos
 	button.size = button_size
 	button.focus_mode = Control.FOCUS_ALL
-	button.add_theme_font_override("font", _font(weight))
+	button.add_theme_font_override("font", _mixed_font(weight) if mixed else _font(weight))
 	button.add_theme_font_size_override("font_size", font_size)
 	button.add_theme_color_override("font_color", fg)
 	button.add_theme_color_override("font_hover_color", fg)
