@@ -17,6 +17,8 @@ def insert_after(text: str, anchor: str, addition: str) -> str:
     return text.replace(anchor, anchor + addition, 1)
 
 
+run('config', 'user.name', 'github-actions[bot]')
+run('config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
 run('fetch', 'origin', 'main')
 feature_before = run('rev-parse', 'HEAD').stdout.strip()
 main_head = run('rev-parse', 'origin/main').stdout.strip()
@@ -59,7 +61,6 @@ text = insert_after(
     '  story_workspace_authority: false\n  event_ir_authority: false\n  candidate_state_delta_authority: false\n  narrative_verification_authority: false\n',
 )
 
-# Preserve the current-main one-line required CI registry while adding the 008 deterministic checks.
 repls = [
     ('context-inspector-self-test,', 'context-inspector-self-test, context-trace-self-test, story-workspace-self-test, scene-simulation-run-self-test,'),
     ('settlement-runtime-self-test,', 'settlement-runtime-self-test, event-ir-self-test,'),
@@ -80,13 +81,10 @@ text = insert_after(
 
 path.write_text(text, encoding='utf-8')
 run('add', 'HARNESS_MANIFEST.yaml')
-# Remove any conflict stages and verify no unresolved files remain.
 unmerged = [x for x in run('diff', '--name-only', '--diff-filter=U').stdout.splitlines() if x]
 if unmerged:
     raise SystemExit(f'unresolved conflicts remain: {unmerged}')
 run('diff', '--cached', '--check')
-run('config', 'user.name', 'github-actions[bot]')
-run('config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
 run('commit', '-m', 'merge: current main into Story Workspace')
 head = run('rev-parse', 'HEAD').stdout.strip()
 print(f'merged_head={head}')
