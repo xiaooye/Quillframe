@@ -10,11 +10,12 @@ run/main_scene="res://Main.tscn"
 
 [display]
 
-window/size/viewport_width=1440
-window/size/viewport_height=900
-window/size/window_width_override=1440
-window/size/window_height_override=900
-window/stretch/mode="canvas_items"
+; The product UI is a non-game application. The base size is deliberately the
+; smallest supported surface; Web export uses an adaptive canvas and disabled
+; content stretching so one scene unit tracks one browser pixel.
+window/size/viewport_width=390
+window/size/viewport_height=700
+window/stretch/mode="disabled"
 
 [rendering]
 
