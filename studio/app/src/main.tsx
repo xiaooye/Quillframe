@@ -2,6 +2,7 @@ import { lazy } from "solid-js";
 import { render } from "solid-js/web";
 import { Route, Router } from "@solidjs/router";
 import { AppShell } from "./AppShell";
+import { bridgeTransportAvailable } from "./bridge";
 import { I18nProvider } from "./i18n";
 import { StudioProvider } from "./studio";
 import "./styles/vendor/weiui.tokens.generated.css";
@@ -30,6 +31,33 @@ const root = document.getElementById("app");
 if (!root) throw new Error("#app mount point is missing");
 
 document.documentElement.dataset.experience = "story-loom-kawaii-atelier-v5";
+
+async function configureOfflineShell() {
+  if (!("serviceWorker" in navigator)) return;
+
+  if (bridgeTransportAvailable()) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(
+      registrations
+        .filter((registration) => {
+          const scriptUrl = registration.active?.scriptURL ?? registration.waiting?.scriptURL ?? registration.installing?.scriptURL;
+          return scriptUrl ? new URL(scriptUrl).pathname === "/sw.js" : false;
+        })
+        .map((registration) => registration.unregister()),
+    );
+    return;
+  }
+
+  window.addEventListener(
+    "load",
+    () => {
+      void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch(() => undefined);
+    },
+    { once: true },
+  );
+}
+
+void configureOfflineShell();
 
 render(
   () => (
