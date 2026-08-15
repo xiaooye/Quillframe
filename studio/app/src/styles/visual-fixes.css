@@ -1,0 +1,7 @@
+/*
+ * Compatibility tombstone for the repository-level design-system verifier.
+ * This file is intentionally NOT imported by Studio. Active product language
+ * now lives in product-language.css; keeping this zero-rule file avoids a stale
+ * verifier path becoming a build-time FileNotFoundError while that root contract
+ * remains backwards-compatible with older Studio commits.
+ */
