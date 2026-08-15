@@ -24,6 +24,76 @@ import { ProductSectionHeading, ProductSurfaceHero } from "./ProductSurface";
 const siteCopy = { "en-US": enUS, "zh-CN": zhCN } as const;
 const studioUrl = "https://studio.novelforge.wei-dev.com";
 
+const homeEntryCopy = {
+  "zh-CN": {
+    searchPlaceholder: "搜索产品、文档、架构、出版…",
+    openStudio: "打开 Studio",
+    launch: "开始探索",
+    heroEyebrow: "长篇小说创作系统 · 0.8.x",
+    heroTitle: "让故事越写越长，系统仍然知道自己在做什么。",
+    heroLede: "NovelForge 把创作、上下文、角色知识、质量审查与出版连成一套可检查的工作流。你可以从这里直接进入 Studio、搜索真实文档、探索架构，或者试试关键机制。",
+    cuteHint: "今天也把故事织得更漂亮一点吧 (｡•̀ᴗ-)✧",
+    capabilityTitle: "六条真实产品能力",
+    capabilityLede: "不是 feature list；每一项都对应当前主分支里的真实契约。点开看看它解决什么问题。",
+    labEyebrow: "可以直接玩",
+    labTitle: "别只读介绍，动一下系统边界。",
+    contextTitle: "上下文预算实验",
+    contextNote: "示意推演 · authority=false",
+    gateTitle: "候选稿就绪实验",
+    gateNote: "同一候选稿的必要条件必须全部通过",
+    ready: "可以进入审查 ✨",
+    notReady: "还差一点点 (´• ω •`)ﾉ",
+    productWorld: "从一个入口进入整个产品",
+    knowledgeTitle: "真实文档已经进入产品本身",
+    knowledgeLede: "文档在构建时从仓库权威源编译进站点。可以搜索、阅读、深链，不需要先跳去 GitHub。",
+    docs: "知识库",
+    architecture: "架构探索",
+    publication: "出版",
+    product: "产品能力",
+    hostedStudio: "Hosted Studio",
+    hostedNote: "当前云端 Studio 是真实的只读产品壳，但不会假装已经绑定你的 Core。",
+    architectureTitle: "点一个子系统，看它真正负责什么。",
+    publicationTitle: "同一份接受稿，可以确定地生成不同派生格式。",
+    openDocument: "打开文档",
+    commandHint: "⌘K / Ctrl+K",
+  },
+  "en-US": {
+    searchPlaceholder: "Search product, docs, architecture, publication…",
+    openStudio: "Open Studio",
+    launch: "Explore",
+    heroEyebrow: "Long-form fiction system · 0.8.x",
+    heroTitle: "Let the story grow without letting the system lose the plot.",
+    heroLede: "NovelForge connects creation, context, character knowledge, quality gates, and publication into one inspectable workflow. Launch Studio, search real docs, explore architecture, or play with the core boundaries from here.",
+    cuteHint: "Let’s weave something lovely today (｡•̀ᴗ-)✧",
+    capabilityTitle: "Six real product capabilities",
+    capabilityLede: "Not a feature wall. Every item maps to a contract that exists on current main. Pick one to inspect the problem it owns.",
+    labEyebrow: "Try it",
+    labTitle: "Don’t just read the pitch. Touch the boundaries.",
+    contextTitle: "Context budget lab",
+    contextNote: "illustrative derivation · authority=false",
+    gateTitle: "Candidate readiness lab",
+    gateNote: "all required evidence for the same candidate must pass",
+    ready: "Ready for review ✨",
+    notReady: "Not quite yet (´• ω •`)ﾉ",
+    productWorld: "One entry point into the whole product",
+    knowledgeTitle: "Real documentation now lives inside the product",
+    knowledgeLede: "Docs are compiled at build time from repository authority into the site. Search, read, and deep-link without leaving for GitHub first.",
+    docs: "Knowledge",
+    architecture: "Architecture",
+    publication: "Publication",
+    product: "Product",
+    hostedStudio: "Hosted Studio",
+    hostedNote: "The hosted Studio is a real read-only product shell. It does not pretend a Core host is already bound.",
+    architectureTitle: "Pick a subsystem and inspect what it actually owns.",
+    publicationTitle: "One accepted manuscript can deterministically produce several derived formats.",
+    openDocument: "Open document",
+    commandHint: "⌘K / Ctrl+K",
+  },
+} as const;
+
+const capabilityIcons = ["🧵", "🫧", "🧠", "♡", "✓", "📖"];
+const capabilityLanes = ["project", "runtime", "editorial", "evidence", "validated", "publication"];
+
 type UiContextValue = {
   locale: Accessor<Locale>;
   dark: Accessor<boolean>;
@@ -51,6 +121,7 @@ const [locale, setLocale] = createSignal<Locale>(initialLocale());
 const [dark, setDark] = createSignal(initialDark());
 const copy = () => siteCopy[locale()];
 const zh = () => locale() === "zh-CN";
+const homeUi = () => homeEntryCopy[locale()];
 
 function useUi() {
   const value = useContext(UiContext);
@@ -64,6 +135,15 @@ function syncDocumentState() {
   document.documentElement.classList.toggle("dark", dark());
   localStorage.setItem("novelforge.locale", locale());
   localStorage.setItem("novelforge.appearance", dark() ? "dark" : "light");
+}
+
+function updatePointerLight(event: PointerEvent & { currentTarget: HTMLElement }) {
+  if (event.pointerType === "touch") return;
+  const rect = event.currentTarget.getBoundingClientRect();
+  const x = Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100));
+  const y = Math.max(0, Math.min(100, ((event.clientY - rect.top) / rect.height) * 100));
+  event.currentTarget.style.setProperty("--pointer-x", `${x}%`);
+  event.currentTarget.style.setProperty("--pointer-y", `${y}%`);
 }
 
 type CommandResult = {
@@ -223,25 +303,127 @@ function ProductShell(props: { children?: JSX.Element }) {
 }
 
 function HomePage() {
-  const { zh } = useUi();
-  const capabilities = () => siteCopy[locale()].home.proofs;
+  const c = () => copy().home;
+  const [activeCapability, setActiveCapability] = createSignal(0);
+  const [budget, setBudget] = createSignal(3);
+  const [gates, setGates] = createSignal([true, true, false, true]);
+  const [knowledge] = createResource(loadKnowledgeIndex);
+  const isZh = () => locale() === "zh-CN";
+  const docsRoot = () => isZh() ? "/docs" : "/docs/en";
+  const docHref = (id: string) => `${docsRoot()}/${encodeURIComponent(id)}`;
+
+  const evidence = () => isZh() ? [
+    "当前场景计划",
+    "角色此刻已知事实",
+    "上章连续性摘要",
+    "远期世界观资料",
+    "未来章节伏笔",
+  ] : [
+    "Current scene plan",
+    "Character-visible facts",
+    "Previous chapter continuity",
+    "Long-horizon world research",
+    "Future chapter setup",
+  ];
+
+  const gateNames = () => isZh() ? ["文本表面", "读者参与", "连续性", "独立语义"] : ["Surface", "Reader", "Continuity", "Independent semantic"];
+  const readiness = () => gates().every(Boolean);
+  const tierADocs = createMemo(() => knowledge()?.documents.filter((doc) => doc.locale === locale() && doc.tier === "A").slice(0, 5) ?? []);
+
   return (
-    <div class="unified-home page-width section-compact">
-      <ProductSurfaceHero
-        class="unified-home-hero"
-        tone="editorial"
-        eyebrow={<span>{siteCopy[locale()].home.eyebrow}</span>}
-        badges={<><span class="wui-badge wui-badge--soft">local-first</span><span class="wui-badge wui-badge--outline">authority-aware</span></>}
-        title={siteCopy[locale()].home.title}
-        lede={<p>{siteCopy[locale()].home.lede}</p>}
-        actions={<><A class="wui-button wui-button--solid wui-button--xl" href="/product">✦ {siteCopy[locale()].home.primaryCta}</A><A class="wui-button wui-button--soft wui-button--xl" href="/architecture">⌘ {siteCopy[locale()].home.secondaryCta}</A></>}
-        visual={<div class="unified-home-loom" aria-hidden="true"><div class="loom-cloud">☁</div><div class="loom-thread">Project · · Context · · Worker · · Gate · · Publication</div><div class="loom-book"><span>PROJECT</span><strong>NovelForge</strong><small>Canon · Context · Evidence · Publication</small><b>♡</b></div></div>}
-      />
-      <section class="unified-proof-section">
-        <ProductSectionHeading eyebrow={siteCopy[locale()].home.proofLabel} title={zh() ? "真实能力，不靠同一张万能卡片解释。" : "Real capabilities, not one generic card repeated everywhere."} />
-        <div class="unified-card-grid"><For each={capabilities()}>{(item) => <article class="wui-card unified-info-card"><small>{item.eyebrow}</small><h3>{item.title}</h3><p>{item.body}</p><code>{item.meta}</code></article>}</For></div>
+    <>
+      <section class="entry-hero" onPointerMove={updatePointerLight}>
+        <div class="hero-aurora" aria-hidden="true" />
+        <div class="hero-sparkles" aria-hidden="true"><i>✦</i><i>♡</i><i>✧</i><i>⋆</i></div>
+        <div class="page-width entry-hero-grid">
+          <div class="entry-hero-copy">
+            <div class="hero-status-row"><span class="wui-badge wui-badge--soft">{homeUi().heroEyebrow}</span><span class="tiny-kawaii">ฅ^•ﻌ•^ฅ</span></div>
+            <h1>{homeUi().heroTitle}</h1>
+            <p>{homeUi().heroLede}</p>
+            <div class="hero-actions">
+              <a class="wui-button wui-button--solid wui-button--xl hero-primary" href={studioUrl} target="_blank" rel="noreferrer">✦ {homeUi().openStudio}</a>
+              <a class="wui-button wui-button--soft wui-button--xl" href={docsRoot()}>📚 {homeUi().docs}</a>
+              <A class="wui-button wui-button--ghost wui-button--xl" href="/architecture">⌘ {homeUi().architecture}</A>
+            </div>
+            <div class="hero-trust"><span class="status-pulse" /><span>{isZh() ? "产品主张来自 current main 已存在的契约" : "Product claims map to contracts that exist on current main"}</span></div>
+          </div>
+
+          <div class="hero-launcher wui-card material-panel" data-lane="runtime">
+            <div class="launcher-topbar">
+              <div><small>{isZh() ? "产品入口" : "PRODUCT ENTRY"}</small><strong>{homeUi().launch}</strong></div>
+              <span class="kawaii-bubble">{homeUi().cuteHint}</span>
+            </div>
+            <button type="button" class="wui-input-group launcher-search" onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }))}>
+              <span class="wui-input-group__prefix">⌕</span><span class="launcher-search-label">{homeUi().searchPlaceholder}</span><span class="wui-input-group__suffix">{homeUi().commandHint}</span>
+            </button>
+            <div class="launcher-grid">
+              <a class="launcher-tile lane-project" href={studioUrl} target="_blank" rel="noreferrer"><span>✦</span><div><strong>Studio</strong><small>{isZh() ? "真正开始操作" : "Start operating"}</small></div><b>↗</b></a>
+              <A class="launcher-tile lane-editorial" href="/product"><span>♡</span><div><strong>{homeUi().product}</strong><small>{isZh() ? "看它解决什么" : "See what it solves"}</small></div><b>→</b></A>
+              <a class="launcher-tile lane-evidence" href={docsRoot()}><span>📚</span><div><strong>{homeUi().docs}</strong><small>{isZh() ? "搜索真实文档" : "Search real docs"}</small></div><b>→</b></a>
+              <A class="launcher-tile lane-validated" href="/publication"><span>✧</span><div><strong>{homeUi().publication}</strong><small>{isZh() ? "从接受稿到派生格式" : "Accepted text to formats"}</small></div><b>→</b></A>
+            </div>
+            <div class="launcher-footer"><span>0.8.x</span><span>{isZh() ? "pre-1.0 · 快速演进" : "pre-1.0 · actively evolving"}</span><span>authority=false</span></div>
+          </div>
+        </div>
+
+        <div class="page-width capability-ribbon" aria-label={homeUi().capabilityTitle}>
+          <For each={c().proofs}>{(card, index) => (
+            <button type="button" class="capability-chip" data-lane={capabilityLanes[index()] ?? "runtime"} data-active={activeCapability() === index()} onClick={() => setActiveCapability(index())}>
+              <span>{capabilityIcons[index()] ?? "✦"}</span><div><small>{card.eyebrow}</small><strong>{card.title}</strong></div>
+            </button>
+          )}</For>
+        </div>
       </section>
-    </div>
+
+      <section class="capability-focus page-width section-compact">
+        <div class="section-kicker"><span>✦</span><div><small>{homeUi().capabilityTitle}</small><strong>{homeUi().capabilityLede}</strong></div></div>
+        <div class="capability-focus-grid" data-lane={capabilityLanes[activeCapability()] ?? "runtime"}>
+          <div class="capability-orb" aria-hidden="true"><span>{capabilityIcons[activeCapability()]}</span></div>
+          <div><p class="eyebrow">{c().proofs[activeCapability()].eyebrow}</p><h2>{c().proofs[activeCapability()].title}</h2><p>{c().proofs[activeCapability()].body}</p><code>{c().proofs[activeCapability()].meta}</code></div>
+          <div class="capability-actions"><A class="wui-button wui-button--soft" href="/product">{homeUi().product} →</A><a class="wui-button wui-button--ghost" href={docsRoot()}>{homeUi().docs} →</a></div>
+        </div>
+      </section>
+
+      <section class="product-lab section-pad-soft">
+        <div class="page-width">
+          <div class="section-heading compact-heading"><p class="eyebrow">{homeUi().labEyebrow}</p><h2>{homeUi().labTitle}</h2></div>
+          <div class="lab-grid">
+            <article class="wui-card lab-card context-lab" data-lane="runtime">
+              <div class="lab-card-header"><div><span class="lab-icon">🫧</span><small>{homeUi().contextNote}</small><h3>{homeUi().contextTitle}</h3></div><span class="wui-badge wui-badge--soft">{budget()}/5</span></div>
+              <input class="budget-slider" type="range" min="1" max="5" step="1" value={budget()} onInput={(event) => setBudget(Number(event.currentTarget.value))} aria-label={homeUi().contextTitle} />
+              <div class="evidence-stack"><For each={evidence()}>{(item, index) => <div class="evidence-row" data-loaded={index() < budget()}><span>{index() < budget() ? "✓" : "·"}</span><strong>{item}</strong><small>{index() < budget() ? (isZh() ? "进入上下文" : "loaded") : (isZh() ? "预算外" : "outside budget")}</small></div>}</For></div>
+              <p class="lab-caption">{isZh() ? "“系统里有”不等于“这次模型看到了”。" : "Stored by the system does not mean loaded for this call."}</p>
+            </article>
+
+            <article class="wui-card lab-card readiness-lab" data-lane={readiness() ? "validated" : "editorial"}>
+              <div class="lab-card-header"><div><span class="lab-icon">♡</span><small>{homeUi().gateNote}</small><h3>{homeUi().gateTitle}</h3></div><span class={`wui-badge ${readiness() ? "wui-badge--success" : "wui-badge--warning"}`}>{readiness() ? "PASS" : "PENDING"}</span></div>
+              <div class="gate-buttons"><For each={gateNames()}>{(name, index) => <button type="button" class="gate-toggle" aria-pressed={gates()[index()]} onClick={() => setGates((current) => current.map((value, i) => i === index() ? !value : value))}><span>{gates()[index()] ? "✓" : "○"}</span><strong>{name}</strong><small>{gates()[index()] ? "PASS" : "PENDING"}</small></button>}</For></div>
+              <div class="readiness-result" data-ready={readiness()}><span aria-hidden="true">{readiness() ? "✦" : "♡"}</span><strong>{readiness() ? homeUi().ready : homeUi().notReady}</strong><code>fp: exact-candidate</code></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="product-world page-width section-compact">
+        <div class="section-heading compact-heading"><p class="eyebrow">{homeUi().productWorld}</p><h2>{isZh() ? "真正的产品入口，不是“继续阅读”。" : "Real product doors, not another ‘read more’."}</h2></div>
+        <div class="portal-grid">
+          <a class="portal-card studio-portal" href={studioUrl} target="_blank" rel="noreferrer"><div class="portal-icon">✦</div><div><small>{homeUi().hostedStudio}</small><h3>NovelForge Studio</h3><p>{homeUi().hostedNote}</p></div><span>↗</span></a>
+          <a class="portal-card docs-portal" href={docsRoot()}><div class="portal-icon">📚</div><div><small>{homeUi().docs}</small><h3>{homeUi().knowledgeTitle}</h3><p>{homeUi().knowledgeLede}</p></div><span>→</span></a>
+          <A class="portal-card architecture-portal" href="/architecture"><div class="portal-icon">⌘</div><div><small>{homeUi().architecture}</small><h3>{homeUi().architectureTitle}</h3><p>{copy().routes.architecture.lede}</p></div><span>→</span></A>
+          <A class="portal-card publication-portal" href="/publication"><div class="portal-icon">✧</div><div><small>{homeUi().publication}</small><h3>{homeUi().publicationTitle}</h3><p>{copy().routes.publication.lede}</p></div><span>→</span></A>
+        </div>
+      </section>
+
+      <section class="knowledge-preview section-pad-soft">
+        <div class="page-width knowledge-preview-grid">
+          <div class="knowledge-preview-copy"><span class="kawaii-sticker">📚✨</span><p class="eyebrow">{homeUi().docs}</p><h2>{homeUi().knowledgeTitle}</h2><p>{homeUi().knowledgeLede}</p><a class="wui-button wui-button--solid" href={docsRoot()}>{homeUi().openDocument} →</a></div>
+          <div class="knowledge-preview-list wui-card">
+            <div class="knowledge-preview-meta"><span>{knowledge()?.documentCount ?? "…"} docs</span><span>build-time · authority=false</span></div>
+            <For each={tierADocs()}>{(doc) => <a class="knowledge-preview-row" href={docHref(doc.id)}><span class="wui-badge wui-badge--soft">Tier {doc.tier}</span><div><strong>{doc.title}</strong><small>{doc.excerpt}</small></div><span>→</span></a>}</For>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
 

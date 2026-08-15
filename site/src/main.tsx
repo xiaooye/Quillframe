@@ -28,6 +28,42 @@ function normalizedPath() {
   return path || "/";
 }
 
+function installCrossAppNavigationGuard() {
+  document.addEventListener("click", (event) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.shiftKey
+    ) {
+      return;
+    }
+
+    const target = event.target;
+    const anchor = target instanceof Element ? target.closest("a[href]") : null;
+    if (!(anchor instanceof HTMLAnchorElement) || anchor.target || anchor.hasAttribute("download")) {
+      return;
+    }
+
+    const url = new URL(anchor.href, window.location.href);
+    const isDocsApp = url.origin === window.location.origin && /^\/docs(?:\/|$)/.test(url.pathname);
+    if (!isDocsApp) {
+      return;
+    }
+
+    // @solidjs/router intercepts same-origin anchors by default. Docs are a
+    // separate Astro/Starlight application, so crossing this boundary must be
+    // a real document navigation instead of an in-SPA history.pushState().
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    window.location.assign(url.href);
+  }, true);
+}
+
+installCrossAppNavigationGuard();
+
 render(() => (
   <ProductFailureBoundary>
     {productRoutes.has(normalizedPath()) ? <ProductApp /> : <ProductNotFound />}

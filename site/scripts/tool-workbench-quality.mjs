@@ -24,38 +24,49 @@ for (const style of ["project-inspector.css", "local-playground.css", "agent-int
 check(index.indexOf('local-playground.css') < index.indexOf('tool-workbench-kawaii.css'), "workbench composition must load after route defaults");
 check(index.indexOf('tool-workbench-kawaii.css') < index.indexOf('embedded-features.css'), "embedded feature ownership must refine workbench composition");
 check(index.indexOf('embedded-features.css') < index.indexOf('readability.css'), "readability hardening must remain the final cross-cutting layer");
-check(!index.includes("surface-consistency.css") && !index.includes("surface-audit.css"), "retired catch-all visual override layers must stay out of the Product cascade");
+check(!index.includes("surface-consistency.css") && !index.includes("surface-audit.css") && !index.includes("editorial-composition.css"), "rejected flattening layers must stay out of the Product cascade");
 
-for (const route of ["/inspect", "/playground", "/agents"]) {
+for (const route of ["/product", "/studio", "/inspect", "/playground", "/agents"]) {
   check(app.includes(`path="${route}"`), `shared ProductApp must retain ${route}`);
 }
-for (const page of ["InspectorPage", "PlaygroundPage", "AgentsPage"]) {
+for (const page of ["ProductPage", "StudioPage", "InspectorPage", "PlaygroundPage", "AgentsPage"]) {
   check(app.includes(`function ${page}`), `shared ProductApp missing ${page}`);
 }
 
 for (const selector of [
-  ".project-inspector-intro",
   ".inspector-dropzone",
   ".inspector-summary-card",
-  ".playground-intro",
+  ".playground-workspace",
   ".playground-input-panel textarea",
   ".playground-stage",
   ".agent-host-workbench",
+  ".agent-path-card",
+  ":has(.unified-stack-visual)",
+  ":has(.unified-studio-terminal)",
 ]) {
-  check(css.includes(selector), `workbench clean-surface marker missing: ${selector}`);
+  check(css.includes(selector), `Story Loom workstation marker missing: ${selector}`);
 }
 
-for (const marker of ["border: 0", "background: transparent", "box-shadow: none", "color-mix(in oklab", "@media (max-width: 620px)"]) {
-  check(css.includes(marker), `home-like surface technique missing: ${marker}`);
+for (const marker of [
+  "Story Loom workstation language",
+  "repeating-linear-gradient",
+  "border: 1px dashed",
+  "border-radius: 28px 28px 18px 28px",
+  "box-shadow:",
+  "color-mix(in oklab",
+  "@media (max-width: 620px)",
+]) {
+  check(css.includes(marker), `Story Loom workstation technique missing: ${marker}`);
 }
 
-check(embedded.includes(".project-inspector-intro") && embedded.includes(".playground-intro") && embedded.includes("display: none"), "embedded Inspector and Playground must suppress their legacy internal page heroes");
+check(embedded.includes(".project-inspector-intro") && embedded.includes(".playground-intro") && embedded.includes("display: none"), "embedded Inspector and Playground must suppress their duplicate internal page heroes");
 check(embedded.includes(".unified-route-page.inspector-entry") && embedded.includes(".unified-route-page.playground-entry"), "embedded overrides must be scoped to routed product pages");
-check(css.includes(".inspector-summary-card") && css.includes("border-radius: 0"), "inspector result sections must not return to rounded card stacks");
-check(css.includes(".playground-stage") && css.includes("border-top: 1px solid"), "playground stages should use hairline separation instead of cards");
+check(css.includes('content: "PROJECT FILES"'), "Inspector must preserve the project-folder/stationery object cue");
+check(css.includes("open notebook + execution sheet") && css.includes("linear-gradient(90deg"), "Playground must preserve the two-page notebook/workbench composition");
+check(css.includes("host rail + wiring desk"), "Agent integration must preserve its host-workbench composition");
+check(css.includes("Product / Studio: keep the same brand grammar"), "Product and Studio must participate in the shared Story Loom visual language");
 check(readability.includes("--nf-copy-size: 14px") && readability.includes("--nf-micro-size: 11px"), "workbench readability floor must stay active");
-check(!css.includes("--tool-stitch"), "stitched stationery framing must stay removed from tool workbenches");
-check(!css.includes("rotate(.25deg)") && !css.includes("rotate(-1.8deg)"), "decorative card rotation must stay removed from tool workbenches");
+check(!css.includes("!important"), "Story Loom workstation composition must not rely on specificity escalation");
 check(!/animation-iteration-count\s*:\s*infinite|animation\s*:[^;]*\binfinite\b/i.test(`${css}\n${embedded}\n${readability}`), "tool workbench layers must not add infinite idle animation");
 
 if (failures.length) {
@@ -63,16 +74,18 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_tool_workbench_quality_v4",
+    schema: "novelforge_tool_workbench_quality_v5",
     status: "pass",
     shell: "shared_product_app",
     css_entrypoint: "index.css",
-    inspector: "embedded_feature_body",
-    playground: "embedded_feature_body",
-    agent_integration: "shared_route",
+    inspector: "project_folder_evidence_desk",
+    playground: "open_notebook_execution_sheet",
+    agent_integration: "host_rail_wiring_desk",
+    product_and_studio_story_loom: true,
     duplicate_page_heroes: false,
-    near_borderless: true,
-    restrained_kawaii_palette: true,
+    story_loom_workstation_language: true,
+    pastel_object_surfaces: true,
+    generic_saas_flattening: false,
     readability_hardening: true,
     responsive: true,
     infinite_idle_animation: false,
