@@ -16,6 +16,7 @@ const check = (condition, message) => { if (!condition) failures.push(message); 
 
 const packageJson = readJson("package.json");
 const main = read("src/main.tsx");
+const styleIndex = read("src/styles/index.css");
 const app = read("src/ProductApp.tsx");
 const surface = read("src/ProductSurface.tsx");
 const inspector = read("src/ProjectInspector.tsx");
@@ -77,8 +78,12 @@ const tokenIndex = siteCss.indexOf('@import "../generated/weiui.tokens.generated
 const cssIndex = siteCss.indexOf('@import "../generated/weiui.generated.css"');
 const storyIndex = siteCss.indexOf('@import "../../../assets/brand/story-loom.weiui.css"');
 check(tokenIndex >= 0 && cssIndex > tokenIndex && storyIndex > cssIndex, "CSS import order must be WeiUI tokens → WeiUI CSS → Story Loom");
-check(main.includes('import "./styles/product-contract.css"'), "main must load the Product composition semantic bridge");
-check(main.includes('import "./styles/product-surface.css"') && main.includes('import "./styles/unified-product-app.css"'), "main must load the shared product surface layers");
+check(main.includes('import "./styles/index.css"'), "main must load the single Product stylesheet entrypoint");
+for (const style of ["product-contract.css", "product-surface.css", "unified-product-app.css", "readability.css"]) {
+  check(styleIndex.includes(`@import "./${style}"`), `Product stylesheet entrypoint missing ${style}`);
+}
+check(styleIndex.indexOf('product-contract.css') < styleIndex.indexOf('architecture-explorer.css'), "shared Product composition layers must precede route styling");
+check(styleIndex.indexOf('embedded-features.css') < styleIndex.indexOf('readability.css'), "readability hardening must load after feature composition");
 check(productContractCss.includes("--pe-touch-target: var(--nf-touch-target-min, 44px)"), "Product semantic bridge must derive touch targets from Story Loom");
 
 check(main.includes('import ProductApp from "./ProductApp"') && main.includes("render(() => <ProductApp />, root)"), "main must mount one unified ProductApp");
@@ -138,5 +143,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`product-site-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ schema: "novelforge_product_site_quality_v3", status: "pass", identity: "unified_product_spa", stack: "SolidJS + TypeScript + Vite", shared_shell: true, shared_locale_state: true, shared_appearance_state: true, shared_command_palette: true, docs_boundary: "starlight", authority: false }, null, 2));
+  console.log(JSON.stringify({ schema: "novelforge_product_site_quality_v4", status: "pass", identity: "unified_product_spa", stack: "SolidJS + TypeScript + Vite", shared_shell: true, css_entrypoint: "src/styles/index.css", readability_hardening: true, shared_locale_state: true, shared_appearance_state: true, shared_command_palette: true, docs_boundary: "starlight", authority: false }, null, 2));
 }
