@@ -10,6 +10,7 @@ const read = (relative) => fs.readFileSync(path.join(siteRoot, relative), "utf8"
 const main = read("src/main.tsx");
 const app = read("src/ProductApp.tsx");
 const surface = read("src/ProductSurface.tsx");
+const index = read("src/styles/index.css");
 const css = `${read("src/styles/architecture-explorer.css")}\n${read("src/styles/unified-product-app.css")}`;
 const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
@@ -29,7 +30,9 @@ check(app.includes("authority=false"), "architecture preview must state its non-
 check(app.includes("This is not a real Core execution") && app.includes("不调用模型"), "architecture simulation must be explicitly identified as a deterministic preview");
 check(!/setInterval\s*\(|requestAnimationFrame\s*\(/.test(app), "product app must not add idle timers or frame loops");
 check(main.includes('import ProductApp from "./ProductApp"') && !main.includes("standaloneProductPaths"), "main must mount one shared ProductApp without standalone architecture handoff");
-check(main.includes('import "./styles/architecture-explorer.css"') && main.includes('import "./styles/unified-product-app.css"'), "architecture shared and feature styles must be loaded by the product entry");
+check(main.includes('import "./styles/index.css"'), "main must load the single Product stylesheet entrypoint");
+check(index.includes('@import "./architecture-explorer.css"') && index.includes('@import "./unified-product-app.css"'), "architecture shared and feature styles must load through the Product CSS entrypoint");
+check(index.indexOf('architecture-explorer.css') < index.indexOf('readability.css'), "architecture route styling must precede cross-cutting readability hardening");
 check(surface.includes("product-surface-hero"), "shared ProductSurfaceHero primitive must remain present");
 check(css.includes(".architecture-flow") && css.includes(".architecture-detail-grid") && css.includes(".architecture-trace-list"), "architecture explorer must retain flow, inspector, and trace surfaces");
 check(css.includes("minmax(174px, 1fr)") && css.includes("overflow-x: auto"), "architecture node rail must preserve readable card width instead of crushing typography");
@@ -39,5 +42,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`architecture-explorer-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ schema: "novelforge_architecture_explorer_quality_v2", status: "pass", shell: "shared_product_app", shared_surface_hero: true, nodes: 7, deterministic_preview: true, model_execution: false, authority: false, public_contract_grounded: true, responsive: true }, null, 2));
+  console.log(JSON.stringify({ schema: "novelforge_architecture_explorer_quality_v3", status: "pass", shell: "shared_product_app", css_entrypoint: "index.css", shared_surface_hero: true, nodes: 7, deterministic_preview: true, model_execution: false, authority: false, public_contract_grounded: true, responsive: true }, null, 2));
 }
