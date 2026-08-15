@@ -8,6 +8,7 @@ import "./styles/vendor/weiui.tokens.generated.css";
 import "./styles/vendor/weiui.generated.css";
 import "../../../assets/brand/story-loom.weiui.css";
 import "./styles/app.css";
+import "./styles/visual-fixes.css";
 
 const Desk = lazy(() => import("./routes/Desk"));
 const Project = lazy(() => import("./routes/Project"));
