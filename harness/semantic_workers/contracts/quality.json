@@ -59,6 +59,20 @@
       "kind": "external_review",
       "purpose": "Cold, holistic Reader Engagement audit for a production candidate. It judges the actual causal reading experience before checking named dimensions, so local checklist compliance cannot substitute for global momentum and life.",
       "forbidden_input_keys": ["outline", "active_plan", "scene_card", "author_notes", "author_intent", "hidden_intent", "expected_payoff", "future_plan", "planned_twist", "writer_reasoning", "reviewer_verdict", "prior_review", "repair_brief", "canon_unrevealed"],
+      "input_contract": {
+        "type": "object",
+        "required": ["candidate_fingerprint", "candidate_text"],
+        "properties": {
+          "candidate_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
+          "candidate_text": {"type": "string", "minLength": 1},
+          "reader_visible_context": {"type": "array", "items": {"type": "object", "required": ["source_ref", "text"], "properties": {"source_ref": {"type": "string", "minLength": 1}, "text": {"type": "string", "minLength": 1}}, "additionalProperties": false}},
+          "chapter_position": {"type": "string"},
+          "genre_profile": {"type": "string"},
+          "platform_profile": {"type": "string"},
+          "reader_grip": {"enum": ["low", "medium", "high", "very_high"]}
+        },
+        "additionalProperties": false
+      },
       "rubric": [
         "Read the candidate as a cold reader before auditing dimensions. Treat omitted creator knowledge as unknowable and never rescue the text with author intent.",
         "First state the active reader question and describe how it actually evolves through causal state changes. Chronology, countdown repetition, and correct procedure are not causal momentum by themselves.",
@@ -129,6 +143,20 @@
       "kind": "external_review",
       "purpose": "Fresh independent holistic production review used only after Surface, Reader Engagement and continuity work. It tries to falsify production readiness rather than verify that a manager-authored checklist was followed.",
       "forbidden_input_keys": ["outline", "active_plan", "scene_card", "author_notes", "author_intent", "hidden_intent", "expected_payoff", "future_plan", "planned_twist", "writer_reasoning", "reviewer_verdict", "prior_review", "repair_brief", "critic_patch", "canon_unrevealed"],
+      "input_contract": {
+        "type": "object",
+        "required": ["candidate_fingerprint", "candidate_text"],
+        "properties": {
+          "candidate_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
+          "candidate_text": {"type": "string", "minLength": 1},
+          "reader_visible_context": {"type": "array", "items": {"type": "object", "required": ["source_ref", "text"], "properties": {"source_ref": {"type": "string", "minLength": 1}, "text": {"type": "string", "minLength": 1}}, "additionalProperties": false}},
+          "chapter_position": {"type": "string"},
+          "genre_profile": {"type": "string"},
+          "platform_profile": {"type": "string"},
+          "reader_grip": {"enum": ["low", "medium", "high", "very_high"]}
+        },
+        "additionalProperties": false
+      },
       "rubric": [
         "Read the candidate holistically first. Do not begin by checking whether named requirements each have a matching local beat.",
         "Try to falsify production readiness: identify material reasons a real reader would experience the chapter as synthetic, flat, over-designed, causally weak, character-functional, confusing, or unearned even if individual rules appear satisfied.",
