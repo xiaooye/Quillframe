@@ -15,7 +15,7 @@ const copy = english
       heroTitle: "Keep authority, state, and quality gates explicit as a long-form story grows.",
       heroTagline: "Start with what you need to do. Drop into the exact contracts only when implementation details matter.",
       primaryAction: "Why NovelForge",
-      secondaryAction: "Choose how to start",
+      secondaryAction: "Explore the product",
       eyebrow: "Choose a path",
       intro: "You do not need to read the framework from top to bottom. Pick the outcome you need and follow the shortest useful path.",
       paths: [
@@ -29,7 +29,7 @@ const copy = english
       runtimeTitle: "Run, extend, and inspect",
       runtimeIntro: "Once the product model is clear, these are the practical entry points for execution, inspection, and integration.",
       runtime: [
-        ["Start here", "Choose whether to begin a novel, open an existing project, connect a coding agent, or explore the system first.", "/start", "✦"],
+        ["Product home", "Start from the main product entry, then move into inspection, architecture, publication, or Studio as the task becomes clear.", "/", "✦"],
         ["Project Inspector", "Inspect a real project locally in the browser before deciding what should run next.", "/inspect", "⌂"],
         ["Local Playground", "Try the deterministic DRAFT / REVISE / AUDIT / PLAN-CHAPTER flow without model calls or write authority.", "/playground", "▷"],
         ["Agent integration", "Connect a CLI-capable coding agent through the portable read-only Skill and versioned Host Bridge.", "/agents", "◈"],
@@ -57,7 +57,7 @@ const copy = english
       heroTitle: "长篇故事不断增长，权威、状态和质量门槛仍然清清楚楚。",
       heroTagline: "先从你现在要完成的事情开始；只有真正需要实现细节时，再进入精确契约。",
       primaryAction: "为什么选择 NovelForge",
-      secondaryAction: "选择开始方式",
+      secondaryAction: "进入产品首页",
       eyebrow: "按目标开始",
       intro: "不需要从头到尾读完整个框架。先选你此刻要完成的事情，再沿着最短的阅读路径进入需要的深度。",
       paths: [
@@ -71,7 +71,7 @@ const copy = english
       runtimeTitle: "运行、扩展与检查",
       runtimeIntro: "建立产品心智模型后，可以从这些入口进入实际执行、检查与集成。",
       runtime: [
-        ["开始使用", "先选：开始一本小说、打开现有项目、接入编程智能体，还是先体验 NovelForge 的工作方式。", "/start", "✦"],
+        ["产品首页", "从主产品入口开始，再根据任务进入项目检查、架构、出版或 Studio。", "/", "✦"],
         ["项目检查器", "先在浏览器本地检查一个真实项目，再决定下一步应该运行什么。", "/inspect", "⌂"],
         ["本地演练场", "不调用模型，也不获得写入权威，直接试运行 DRAFT / REVISE / AUDIT / PLAN-CHAPTER 的确定性流程。", "/playground", "▷"],
         ["Agent 集成", "让能够运行本地 CLI 的编程智能体通过可移植只读 Skill 与版本化 Host Bridge 接入。", "/agents", "◈"],
@@ -106,7 +106,7 @@ const frontmatter = {
     tagline: copy.heroTagline,
     actions: [
       { text: copy.primaryAction, link: english ? "/docs/en/why-novelforge" : "/docs/why-novelforge", icon: "right-arrow" as const },
-      { text: copy.secondaryAction, link: "/start", variant: "minimal" as const },
+      { text: copy.secondaryAction, link: "/", variant: "minimal" as const },
     ],
   },
 };
