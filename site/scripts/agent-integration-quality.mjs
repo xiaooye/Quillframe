@@ -12,6 +12,7 @@ const check = (condition, message) => { if (!condition) failures.push(message); 
 
 const app = read("src/ProductApp.tsx");
 const main = read("src/main.tsx");
+const index = read("src/styles/index.css");
 const style = `${read("src/styles/agent-integration.css")}\n${read("src/styles/agent-host-profiles.css")}\n${read("src/styles/unified-product-app.css")}`;
 const contract = JSON.parse(read("../studio/host_bridge_contract.json"));
 const skill = read("../agent-skills/novelforge/SKILL.md");
@@ -35,7 +36,9 @@ for (const host of ["Claude Code", "Codex", "Cursor", "OpenCode", "Custom agent"
   check(app.includes(host), `host recipe missing ${host}`);
 }
 check(main.includes('import ProductApp from "./ProductApp"') && !main.includes("AgentIntegrationEntry"), "main must use the shared ProductApp instead of a standalone Agent shell");
-check(main.includes('import "./styles/agent-integration.css"') && main.includes('import "./styles/agent-host-profiles.css"'), "agent integration styles must remain loaded");
+check(main.includes('import "./styles/index.css"'), "main must load the single Product stylesheet entrypoint");
+check(index.includes('@import "./agent-integration.css"') && index.includes('@import "./agent-host-profiles.css"'), "agent integration styles must remain loaded through the Product CSS entrypoint");
+check(index.indexOf('agent-host-profiles.css') < index.indexOf('readability.css'), "agent route styling must precede cross-cutting readability hardening");
 check(!/setInterval\s*\(|requestAnimationFrame\s*\(/.test(app), "ProductApp must not poll or run decorative frame loops");
 for (const marker of [".agent-host-workbench", ".agent-host-detail", ".agent-host-instruction", ".unified-agent-hosts", "@media (max-width: 520px)"]) {
   check(style.includes(marker), `Agent integration styling marker missing: ${marker}`);
@@ -45,5 +48,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`agent-integration-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ schema: "novelforge_agent_integration_quality_v3", status: "pass", route: "/agents", shell: "shared_product_app", portable_skill: true, host_bridge_v1: true, host_profiles: 5, supported_operations: 6, write_authority: false, direct_core_store_access: false, unsupported_fails_closed: true }, null, 2));
+  console.log(JSON.stringify({ schema: "novelforge_agent_integration_quality_v4", status: "pass", route: "/agents", shell: "shared_product_app", css_entrypoint: "index.css", portable_skill: true, host_bridge_v1: true, host_profiles: 5, supported_operations: 6, write_authority: false, direct_core_store_access: false, unsupported_fails_closed: true }, null, 2));
 }
