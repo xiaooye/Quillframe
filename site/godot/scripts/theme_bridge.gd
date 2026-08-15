@@ -1,6 +1,7 @@
 extends Node
 
 const Story = preload("res://generated/story_loom_tokens.gd")
+const Atelier = preload("res://scripts/atelier_theme.gd")
 
 const OLD_TEXT := Color("eef4fb")
 const OLD_MUTED := Color("73839d")
@@ -68,22 +69,47 @@ func _recolor_control(control: Control, accent: Color) -> void:
 			var style: StyleBoxFlat = source.duplicate()
 			style.bg_color = _map_color(style.bg_color, accent)
 			style.border_color = _map_color(style.border_color, accent)
+			_apply_atelier_shape(style, control)
 			control.add_theme_stylebox_override(style_name, style)
+
+func _apply_atelier_shape(style: StyleBoxFlat, control: Control) -> void:
+	if control is Button:
+		style.corner_radius_top_left = maxi(style.corner_radius_top_left, 14)
+		style.corner_radius_top_right = maxi(style.corner_radius_top_right, 14)
+		style.corner_radius_bottom_left = maxi(style.corner_radius_bottom_left, 8)
+		style.corner_radius_bottom_right = maxi(style.corner_radius_bottom_right, 14)
+	elif control is PanelContainer:
+		style.corner_radius_top_left = maxi(style.corner_radius_top_left, 20)
+		style.corner_radius_top_right = maxi(style.corner_radius_top_right, 20)
+		style.corner_radius_bottom_left = maxi(style.corner_radius_bottom_left, 12)
+		style.corner_radius_bottom_right = maxi(style.corner_radius_bottom_right, 20)
+		if style.bg_color.a > 0.12 and style.shadow_size == 0:
+			style.shadow_color = Atelier.shadow(0.085)
+			style.shadow_size = 2
+			style.shadow_offset = Vector2(0, 3)
 
 func _map_color(value: Color, accent: Color) -> Color:
 	if value.a <= 0.001: return value
-	for story_color in [Story.BACKGROUND, Story.FOREGROUND, Story.MUTED, Story.MUTED_FOREGROUND, Story.CARD, Story.BORDER, Story.PRIMARY, Story.PRIMARY_FOREGROUND, Story.RING, Story.PROJECT, Story.RUNTIME, Story.EDITORIAL, Story.EVIDENCE, Story.VALIDATED, Story.REJECTED, Story.NEUTRAL]:
+	if _same_rgb(value, Story.BACKGROUND) or _same_rgb(value, Story.SURFACE_SUNKEN): return _with_alpha(Atelier.paper(), value.a)
+	if _same_rgb(value, Story.CARD) or _same_rgb(value, Story.SURFACE_RAISED): return _with_alpha(Atelier.paper(), value.a)
+	if _same_rgb(value, Story.MUTED) or _same_rgb(value, Story.SURFACE_OVERLAY): return _with_alpha(Atelier.paper_warm(), value.a)
+	if _same_rgb(value, Story.FOREGROUND) or _same_rgb(value, Story.CARD_FOREGROUND): return _with_alpha(Atelier.ink(), value.a)
+	if _same_rgb(value, Story.MUTED_FOREGROUND): return _with_alpha(Atelier.pencil(), value.a)
+	if _same_rgb(value, Story.BORDER): return _with_alpha(Atelier.line(value.a), value.a)
+	if _same_rgb(value, Story.PRIMARY) or _same_rgb(value, Story.RING): return _with_alpha(Story.RUNTIME, value.a)
+	if _same_rgb(value, Story.PRIMARY_FOREGROUND): return _with_alpha(Atelier.ink(), value.a)
+	for story_color in [Story.PROJECT, Story.RUNTIME, Story.EDITORIAL, Story.EVIDENCE, Story.VALIDATED, Story.REJECTED, Story.NEUTRAL]:
 		if _same_rgb(value, story_color): return _with_alpha(story_color, value.a)
-	if _same_rgb(value, OLD_TEXT): return _with_alpha(Story.FOREGROUND, value.a)
-	if _same_rgb(value, OLD_MUTED) or _same_rgb(value, OLD_SOFT): return _with_alpha(Story.MUTED_FOREGROUND, value.a)
-	if _same_rgb(value, OLD_BORDER) or _same_rgb(value, OLD_BORDER_SOFT): return _with_alpha(Story.BORDER, value.a)
+	if _same_rgb(value, OLD_TEXT): return _with_alpha(Atelier.ink(), value.a)
+	if _same_rgb(value, OLD_MUTED) or _same_rgb(value, OLD_SOFT): return _with_alpha(Atelier.pencil(), value.a)
+	if _same_rgb(value, OLD_BORDER) or _same_rgb(value, OLD_BORDER_SOFT): return _with_alpha(Atelier.line(value.a), value.a)
 	var key := value.to_html(false).substr(0, 6).to_lower()
 	if OLD_ACCENTS.has(key): return _with_alpha(_semantic_color(str(OLD_ACCENTS[key])), value.a)
 	if _same_rgb(value, accent): return _with_alpha(accent, value.a)
 	var luma := value.get_luminance()
-	if luma < 0.065: return _with_alpha(Story.BACKGROUND, value.a)
-	if luma < 0.13: return _with_alpha(Story.CARD, value.a)
-	if luma < 0.22: return _with_alpha(Story.MUTED, value.a)
+	if luma < 0.065: return _with_alpha(Atelier.paper(), value.a)
+	if luma < 0.13: return _with_alpha(Atelier.paper_warm(), value.a)
+	if luma < 0.22: return _with_alpha(Atelier.paper_violet(), value.a)
 	return value
 
 func _same_rgb(a: Color, b: Color) -> bool:
@@ -99,7 +125,7 @@ func _semantic_color(name: String) -> Color:
 		"evidence": return Story.EVIDENCE
 		"validated": return Story.VALIDATED
 		"rejected": return Story.REJECTED
-		_: return Story.MUTED_FOREGROUND
+		_: return Story.NEUTRAL
 
 func _accent_for_route(route: String) -> Color:
 	match route:
@@ -109,10 +135,11 @@ func _accent_for_route(route: String) -> Color:
 		"/inspect": return Story.PROJECT
 		"/playground": return Story.EDITORIAL
 		"/agents": return Story.VALIDATED
-		"/changelog": return Story.MUTED_FOREGROUND
+		"/changelog": return Story.NEUTRAL
 		_: return Story.PROJECT
 
 func _publish_theme() -> void:
 	if _document == null: return
 	_document.documentElement.dataset.novelforgeTheme = "story-loom-v2"
+	_document.documentElement.dataset.novelforgeExperience = Atelier.EXPERIENCE
 	_document.documentElement.dataset.novelforgeTokenSchema = Story.TOKEN_SCHEMA
