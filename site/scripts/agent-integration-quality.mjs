@@ -25,6 +25,7 @@ const runtimeObservability = [
   "runtime.handoff.inspect",
   "run.receipt.get",
 ];
+const runtimeSafetyQueries = ["session.resume.preflight"];
 const runtimeControl = ["session.resume", "command.invoke", "project.mutate"];
 
 check(contract.schema === "novelforge_studio_host_bridge_contract_v1", "host bridge contract schema changed");
@@ -32,12 +33,13 @@ check(contract.authority === false, "host bridge must remain authority=false");
 check(contract.agent_skill?.path === "agent-skills/novelforge/SKILL.md", "portable Agent Skill path changed");
 check(skill.includes("read-only") && skill.includes("authority: false"), "portable skill must retain read-only authority boundary");
 check(skill.includes("Runtime observability is not runtime control"), "portable skill must distinguish runtime observability from control");
+check(skill.includes("session.resume.preflight") && skill.includes("READY") && skill.includes("BLOCKED"), "portable skill must explain deterministic resume eligibility without exposing resume control");
 check(Object.values(supported).every((operation) => operation?.kind === "query"), "every supported host-bridge operation must remain query-only");
-for (const operation of ["bridge.describe", "framework.doctor", "project.inspect", "capabilities.inspect", "context.inspect", "semantic.catalog", ...runtimeObservability]) {
+for (const operation of ["bridge.describe", "framework.doctor", "project.inspect", "capabilities.inspect", "context.inspect", "semantic.catalog", ...runtimeObservability, ...runtimeSafetyQueries]) {
   check(Boolean(supported[operation]), `expected supported bridge query missing from contract: ${operation}`);
 }
-for (const operation of runtimeObservability) {
-  check(!deferred[operation], `public runtime observability query must not remain deferred: ${operation}`);
+for (const operation of [...runtimeObservability, ...runtimeSafetyQueries]) {
+  check(!deferred[operation], `public runtime read/safety query must not remain deferred: ${operation}`);
 }
 for (const operation of runtimeControl) {
   check(Boolean(deferred[operation]), `expected deferred runtime-control operation missing from contract: ${operation}`);
@@ -68,7 +70,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_agent_integration_quality_v5",
+    schema: "novelforge_agent_integration_quality_v6",
     status: "pass",
     route: "/agents",
     shell: "shared_product_app",
@@ -78,6 +80,7 @@ if (failures.length) {
     host_profiles: 5,
     supported_operations: Object.keys(supported).length,
     runtime_observability_operations: runtimeObservability.length,
+    runtime_safety_queries: runtimeSafetyQueries.length,
     runtime_control_exposed: false,
     write_authority: false,
     direct_core_store_access: false,
