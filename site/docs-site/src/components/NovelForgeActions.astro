@@ -2,17 +2,44 @@
 import Default from "@astrojs/starlight/components/SocialIcons.astro";
 
 const english = Astro.url.pathname === "/docs/en" || Astro.url.pathname.startsWith("/docs/en/");
-const startLabel = english ? "Start" : "开始";
-const productLabel = english ? "Product" : "产品";
-const agentLabel = english ? "Agents" : "Agent 集成";
-const startAria = english ? "Choose how to start with NovelForge" : "选择如何开始使用 NovelForge";
-const productAria = english ? "Open NovelForge product site" : "打开 NovelForge 产品站";
-const agentAria = english ? "Open NovelForge agent integration workbench" : "打开 NovelForge Agent 集成工作台";
-const studioAria = english ? "Open NovelForge Studio" : "打开 NovelForge Studio";
+const labels = english
+  ? {
+      product: "Product",
+      studio: "Studio",
+      architecture: "Architecture",
+      publication: "Publication",
+      openStudio: "Open Studio",
+    }
+  : {
+      product: "产品",
+      studio: "Studio",
+      architecture: "架构",
+      publication: "出版",
+      openStudio: "打开 Studio",
+    };
+
+const aria = english
+  ? {
+      product: "Open NovelForge product overview",
+      studio: "Open NovelForge Studio overview",
+      architecture: "Open NovelForge architecture explorer",
+      publication: "Open NovelForge publication workbench",
+      openStudio: "Open NovelForge Studio in a new tab",
+    }
+  : {
+      product: "打开 NovelForge 产品概览",
+      studio: "打开 NovelForge Studio 概览",
+      architecture: "打开 NovelForge 架构探索",
+      publication: "打开 NovelForge 出版工作台",
+      openStudio: "在新标签页打开 NovelForge Studio",
+    };
 ---
 
-<a class="nf-product-link" href="/start" aria-label={startAria}>{startLabel}</a>
-<a class="nf-product-link" href="/" aria-label={productAria}>{productLabel}</a>
-<a class="nf-product-link" href="/agents" aria-label={agentAria}>{agentLabel}</a>
-<a class="nf-studio-link" href="https://studio.novelforge.wei-dev.com" target="_blank" rel="noreferrer" aria-label={studioAria}>Studio <span aria-hidden="true">↗</span></a>
+<nav class="nf-product-nav" aria-label={english ? "NovelForge product navigation" : "NovelForge 产品导航"}>
+  <a class="nf-product-link" href="/product" aria-label={aria.product}>{labels.product}</a>
+  <a class="nf-product-link" href="/studio" aria-label={aria.studio}>{labels.studio}</a>
+  <a class="nf-product-link" href="/architecture" aria-label={aria.architecture}>{labels.architecture}</a>
+  <a class="nf-product-link" href="/publication" aria-label={aria.publication}>{labels.publication}</a>
+</nav>
+<a class="nf-studio-link" href="https://studio.novelforge.wei-dev.com" target="_blank" rel="noreferrer" aria-label={aria.openStudio}><span aria-hidden="true">✦</span>{labels.openStudio}</a>
 <Default><slot /></Default>
