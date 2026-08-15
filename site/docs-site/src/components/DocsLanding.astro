@@ -11,82 +11,86 @@ const english = locale === "en";
 const copy = english
   ? {
       title: "NovelForge Documentation",
-      description: "Task-oriented documentation for NovelForge: product fit, project integration, writing systems, runtime contracts, quality, and Studio.",
-      heroTitle: "Build long-form fiction with explicit authority, state, and quality boundaries.",
-      heroTagline: "Start with the question you need answered. Go deeper only when the task requires exact execution semantics.",
+      description: "Task-oriented NovelForge documentation for product fit, project integration, writing systems, runtime contracts, quality, publication, and Studio.",
+      heroTitle: "Keep authority, state, and quality gates explicit as a long-form story grows.",
+      heroTagline: "Start with what you need to do. Drop into the exact contracts only when implementation details matter.",
       primaryAction: "Why NovelForge",
       secondaryAction: "Choose how to start",
       eyebrow: "Choose a path",
-      intro: "You do not need to read the framework from top to bottom. Pick the outcome you need, then follow the smallest useful path.",
+      intro: "You do not need to read the framework from top to bottom. Pick the outcome you need and follow the shortest useful path.",
       paths: [
-        ["Inspect an existing project", "Open a NovelForge project folder locally and check its manifest, exact framework lock, attestation, and structural evidence without uploading it.", "/inspect", "⌂"],
-        ["Decide whether NovelForge fits", "Compare the product model, tradeoffs, and cases where a different tool is a better fit.", "/docs/en/why-novelforge", "✦"],
-        ["Understand the architecture", "See how project authority, model reasoning, deterministic runtime, state, and writes are separated.", "/docs/en/architecture", "⌘"],
+        ["Inspect an existing project", "Open a NovelForge project folder locally and verify its manifest, exact framework lock, attestation, and structural evidence without uploading the project.", "/inspect", "⌂"],
+        ["Decide whether NovelForge fits", "Compare the product model, its tradeoffs, and the cases where a simpler writing agent or another authoring tool is a better fit.", "/docs/en/why-novelforge", "✦"],
+        ["Understand the architecture", "See how project authority, model judgment, deterministic runtime behavior, state, and writes are kept separate.", "/docs/en/architecture", "⌘"],
         ["Integrate a novel project", "Define the project manifest, exact framework lock, canon, current state, plans, drafts, research, and tests.", "/docs/en/project-sdk", "◇"],
-        ["Draft or revise prose", "Follow the production pipeline from context and causality through drafting, review, repair, and acceptance.", "/docs/en/production-pipeline", "✎"],
-        ["Review quality", "Separate deterministic QA from semantic judgment, route findings to the right owner, and gate publication.", "/docs/en/quality-assurance", "✓"],
+        ["Draft or revise prose", "Follow a production run from context and causality through drafting, review, repair, and acceptance.", "/docs/en/production-pipeline", "✎"],
+        ["Review and gate quality", "Separate deterministic checks from semantic judgment, route findings to the owning subsystem, and gate publication explicitly.", "/docs/en/quality-assurance", "✓"],
       ],
       runtimeTitle: "Run, extend, and inspect",
-      runtimeIntro: "When you already know the product model, these are the practical entry points for execution and tooling.",
+      runtimeIntro: "Once the product model is clear, these are the practical entry points for execution, inspection, and integration.",
       runtime: [
-        ["Start hub", "Choose whether you want to start a novel, open a project, connect a coding agent, or explore the system first.", "/start", "✦"],
-        ["Project Inspector", "Inspect a real project locally in the browser before deciding what to run next.", "/inspect", "⌂"],
+        ["Start here", "Choose whether to begin a novel, open an existing project, connect a coding agent, or explore the system first.", "/start", "✦"],
+        ["Project Inspector", "Inspect a real project locally in the browser before deciding what should run next.", "/inspect", "⌂"],
         ["Local Playground", "Try the deterministic DRAFT / REVISE / AUDIT / PLAN-CHAPTER flow without model calls or write authority.", "/playground", "▷"],
         ["Agent integration", "Connect a CLI-capable coding agent through the portable read-only Skill and versioned Host Bridge.", "/agents", "◈"],
-        ["Runtime & integrations", "Host capabilities, transport choices, and practical integration paths.", "/docs/en/integrations", "↗"],
-        ["Context & memory", "Understand what enters active context, what persists, and what must never silently become canon.", "/docs/en/context-memory", "◌"],
-        ["Semantic execution", "Typed semantic work across Chat, local agents, APIs, MCP, services, and human execution.", "/docs/en/semantic-execution", "⌁"],
-        ["NovelForge Studio", "The product surface for inspecting projects, runs, context, readiness, and future author workflows.", "/docs/en/studio-overview", "✧"],
+        ["Runtime & integrations", "Understand host capabilities, transport choices, and practical integration paths.", "/docs/en/integrations", "↗"],
+        ["Context & memory", "See what enters the active context, what persists, and what must never silently become canon.", "/docs/en/context-memory", "◌"],
+        ["Semantic execution", "Keep typed semantic work consistent across Chat, local agents, APIs, MCP, services, and human execution.", "/docs/en/semantic-execution", "⌁"],
+        ["NovelForge Studio", "Inspect projects, runs, context, readiness, and the author-facing workflow surface.", "/docs/en/studio-overview", "✧"],
       ],
       modelTitle: "Three documentation layers",
-      modelIntro: "NovelForge keeps product explanation, usage guidance, and exact engineering contracts separate so each page can optimize for the reader it serves.",
+      modelIntro: "Product concepts, usage guidance, and exact engineering contracts stay separate so each page can serve the reader who actually needs it.",
       tiers: [
-        ["A", "Product entry", "Mental models, positioning, architecture, pipeline, and quality. Start here when you are new."],
-        ["B", "Usage guides", "Project SDK, integrations, context, learning, corpus, evals, quality evolution, and Studio."],
-        ["C", "Contracts & engineering records", "Harness, runtime, semantic workers, story/canon mechanics, policies, and historical specs."],
+        ["A", "Product concepts", "Mental models, positioning, architecture, production flow, and quality. Start here if NovelForge is new to you."],
+        ["B", "Usage guides", "Project SDK, integrations, context, learning, corpus, evaluations, quality evolution, and Studio."],
+        ["C", "Contracts & engineering records", "Harness, runtime, semantic workers, story and canon mechanics, policies, and historical specifications."],
       ],
+      tierLabel: (tier: string) => `Tier ${tier}`,
+      referenceEyebrow: "Reference",
       referenceTitle: "Need the exact contract?",
-      referenceBody: "Use the architecture atlas to find the owning subsystem, then move into the full reference only when implementation-level precision is necessary.",
+      referenceBody: "Use the architecture atlas to find the subsystem that owns the behavior, then open the full reference only when implementation-level precision is necessary.",
       referenceAction: "Open the architecture atlas",
     }
   : {
       title: "NovelForge 文档中心",
-      description: "按任务组织的 NovelForge 文档：产品判断、项目接入、创作机制、运行时契约、质量保障与 Studio。",
-      heroTitle: "让长篇小说创作拥有明确的权威、状态与质量边界。",
-      heroTagline: "先从你要解决的问题开始；只有任务真正需要时，再进入精确的执行契约。",
-      primaryAction: "为什么是 NovelForge",
-      secondaryAction: "从这里开始",
+      description: "按任务组织的 NovelForge 文档：产品判断、项目接入、创作机制、运行时契约、质量保障、出版与 Studio。",
+      heroTitle: "长篇故事不断增长，权威、状态和质量门槛仍然清清楚楚。",
+      heroTagline: "先从你现在要完成的事情开始；只有真正需要实现细节时，再进入精确契约。",
+      primaryAction: "为什么选择 NovelForge",
+      secondaryAction: "选择开始方式",
       eyebrow: "按目标开始",
       intro: "不需要从头到尾读完整个框架。先选你此刻要完成的事情，再沿着最短的阅读路径进入需要的深度。",
       paths: [
-        ["检查现有 NovelForge 项目", "直接在浏览器本地打开项目文件夹，检查 manifest、精确 Framework lock、attestation 与结构证据；项目内容不会上传。", "/inspect", "⌂"],
-        ["判断 NovelForge 是否适合", "看产品定位、真实取舍，以及哪些情况更适合直接小说智能体或其他作者工具。", "/docs/why-novelforge", "✦"],
-        ["理解总体架构", "理解项目权威、模型语义判断、确定性运行外壳、状态分离与写入边界。", "/docs/architecture", "⌘"],
-        ["接入一本小说", "定义项目清单、精确 Framework lock、正典、当前状态、计划、稿件、研究资料与测试。", "/docs/project-sdk", "◇"],
-        ["写作或修改正文", "从上下文与因果进入起草、审阅、修复与接受，理解一轮完整生产运行。", "/docs/production-pipeline", "✎"],
-        ["审核质量", "把确定性 QA 与语义判断分开，把问题路由给真正的 owner，并在发布前形成明确门槛。", "/docs/quality-assurance", "✓"],
+        ["检查现有 NovelForge 项目", "直接在浏览器本地打开项目文件夹，检查项目清单、精确框架锁定、框架证明和结构证据；项目内容不会上传。", "/inspect", "⌂"],
+        ["判断 NovelForge 是否适合", "了解产品定位、实际取舍，以及哪些场景用更简单的写作智能体或其他作者工具反而更合适。", "/docs/why-novelforge", "✦"],
+        ["理解总体架构", "看清项目权威、模型语义判断、确定性运行时、状态与写入边界如何彼此分离。", "/docs/architecture", "⌘"],
+        ["接入一本小说", "定义项目清单、精确框架锁定、正典、当前状态、计划、稿件、研究资料与测试。", "/docs/project-sdk", "◇"],
+        ["写作或修改正文", "从上下文与因果进入起草、审阅、修复与接受，理解一轮完整的正文生产运行。", "/docs/production-pipeline", "✎"],
+        ["审核并把住质量门槛", "把确定性检查与语义判断分开，把问题交给真正负责的子系统，并明确决定能否进入出版。", "/docs/quality-assurance", "✓"],
       ],
-      runtimeTitle: "运行、扩展与观察",
-      runtimeIntro: "已经建立产品心智模型后，从这些入口进入实际执行、运行时与工具层。",
+      runtimeTitle: "运行、扩展与检查",
+      runtimeIntro: "建立产品心智模型后，可以从这些入口进入实际执行、检查与集成。",
       runtime: [
-        ["开始中心", "先选：开始一本小说、打开现有项目、接入 coding agent，还是先体验 NovelForge 的工作方式。", "/start", "✦"],
-        ["Project Inspector", "先在浏览器本地检查一个真实项目，再决定下一步要运行什么。", "/inspect", "⌂"],
-        ["Local Playground", "不调用模型、不获得写权限，直接试 DRAFT / REVISE / AUDIT / PLAN-CHAPTER 的确定性流程。", "/playground", "▷"],
-        ["Agent 集成", "让能运行本地 CLI 的 coding agent 通过 portable read-only Skill 与 versioned Host Bridge 接入。", "/agents", "◈"],
-        ["运行时与集成", "宿主能力、传输方式与实际接入路径。", "/docs/integrations", "↗"],
-        ["上下文与记忆", "理解什么进入当前工作集、什么会持久化，以及什么绝不能静默变成正典。", "/docs/context-memory", "◌"],
-        ["语义执行", "让同一个类型化语义任务跨 Chat、本地 Agent、API、MCP、Service 与人工执行保持语义不变。", "/docs/semantic-execution", "⌁"],
-        ["NovelForge Studio", "面向项目、运行、上下文、就绪状态与未来作者工作流的产品界面。", "/docs/studio-overview", "✧"],
+        ["开始使用", "先选：开始一本小说、打开现有项目、接入编程智能体，还是先体验 NovelForge 的工作方式。", "/start", "✦"],
+        ["项目检查器", "先在浏览器本地检查一个真实项目，再决定下一步应该运行什么。", "/inspect", "⌂"],
+        ["本地演练场", "不调用模型，也不获得写入权威，直接试运行 DRAFT / REVISE / AUDIT / PLAN-CHAPTER 的确定性流程。", "/playground", "▷"],
+        ["Agent 集成", "让能够运行本地 CLI 的编程智能体通过可移植只读 Skill 与版本化 Host Bridge 接入。", "/agents", "◈"],
+        ["运行时与集成", "理解宿主能力、传输方式与实际接入路径。", "/docs/integrations", "↗"],
+        ["上下文与记忆", "理解什么会进入当前上下文、什么会持久化，以及什么绝不能悄悄变成正典。", "/docs/context-memory", "◌"],
+        ["语义执行", "让同一个类型化语义任务在聊天界面、本地 Agent、API、MCP、服务与人工执行之间保持同一语义。", "/docs/semantic-execution", "⌁"],
+        ["NovelForge Studio", "查看项目、运行、上下文、就绪状态以及面向作者的工作界面。", "/docs/studio-overview", "✧"],
       ],
       modelTitle: "文档分三层",
-      modelIntro: "产品解释、使用指南和精确工程契约保持分层，让每一页只承担它真正应该承担的阅读任务。",
+      modelIntro: "产品概念、使用指南和精确工程契约彼此分层，让每一页只服务真正需要这一级细节的读者。",
       tiers: [
-        ["A", "产品入口", "心智模型、定位、总体架构、生产流水线与质量保障。第一次了解 NovelForge，从这里开始。"],
+        ["A", "产品概念", "心智模型、产品定位、总体架构、生产流程与质量保障。第一次了解 NovelForge，从这里开始。"],
         ["B", "使用指南", "Project SDK、集成、上下文、学习、语料、评测、质量演化与 Studio。"],
-        ["C", "契约与工程记录", "Harness、Runtime、Semantic Worker、故事与正典机制、政策以及历史 specs。"],
+        ["C", "契约与工程记录", "Harness、Runtime、Semantic Worker、故事与正典机制、政策以及历史规范。"],
       ],
+      tierLabel: (tier: string) => `第 ${tier} 层`,
+      referenceEyebrow: "参考",
       referenceTitle: "需要精确契约？",
-      referenceBody: "先用架构图谱找到真正拥有这个问题的子系统；只有需要实现级精度时，再进入完整参考。",
+      referenceBody: "先用架构图谱找到真正负责这个行为的子系统；只有需要实现级精度时，再进入完整参考。",
       referenceAction: "打开架构图谱",
     };
 
@@ -149,7 +153,7 @@ const frontmatter = {
       <div class="nf-tier-grid">
         {copy.tiers.map(([tier, title, body]) => (
           <article class="nf-tier-card">
-            <span class="nf-tier-badge">Tier {tier}</span>
+            <span class="nf-tier-badge">{copy.tierLabel(tier)}</span>
             <h3>{title}</h3>
             <p>{body}</p>
           </article>
@@ -159,7 +163,7 @@ const frontmatter = {
 
     <aside class="nf-reference-callout">
       <div>
-        <p class="nf-home-eyebrow">Reference</p>
+        <p class="nf-home-eyebrow">{copy.referenceEyebrow}</p>
         <h2>{copy.referenceTitle}</h2>
         <p>{copy.referenceBody}</p>
       </div>
