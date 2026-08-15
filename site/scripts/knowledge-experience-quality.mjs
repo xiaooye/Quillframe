@@ -20,6 +20,16 @@ const requireCheck = (condition, message) => {
   if (!condition) failures.push(message);
 };
 
+// The replacement Knowledge Portal is mounted beside the legacy Router rather
+// than as one of its Route descendants. Nothing rendered by that portal may
+// depend on router-context primitives such as <A> or useNavigate/useParams.
+for (const [name, source] of [["KnowledgeExperience", knowledgeExperience], ["DocumentRenderer", documentRenderer]]) {
+  requireCheck(
+    !source.includes('from "@solidjs/router"') && !/<A\b/.test(source) && !/\buse(?:Navigate|Location|Params)\b/.test(source),
+    `${name} must remain independent of @solidjs/router context`,
+  );
+}
+
 // Knowledge links are owned by the replacement portal. pushState already emits
 // novelforge:locationchange in main.tsx; a synthetic popstate also wakes the
 // legacy @solidjs/router route and previously made document navigation brittle.
@@ -64,5 +74,6 @@ if (failures.length > 0) {
     zh_documents: chineseDocs.length,
     native_chinese_presentation: true,
     synthetic_popstate: false,
+    router_context_dependency: false,
   }, null, 2));
 }
