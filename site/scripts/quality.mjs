@@ -28,6 +28,7 @@ const contentTypesSource = read("src/content.ts");
 const enSource = read("src/content.en-US.ts");
 const zhSource = read("src/content.zh-CN.ts");
 const siteCss = read("src/styles/site.css");
+const productContractCss = read("src/styles/product-contract.css");
 const showcaseCss = read("src/styles/showcase.css");
 const mainSource = read("src/main.tsx");
 const indexHtml = read("index.html");
@@ -38,6 +39,7 @@ const weiuiIntegration = JSON.parse(readRepo("assets/brand/weiui.integration.jso
 const storyLoomTheme = readRepo("assets/brand/story-loom.weiui.css");
 const allCopy = `${enSource}\n${zhSource}\n${appSource}`;
 const productRuntimeSource = `${appSource}\n${knowledgeSource}\n${rendererSource}\n${contentTypesSource}\n${enSource}\n${zhSource}`;
+const productCompositionCss = `${siteCss}\n${productContractCss}`;
 
 const exactVersions = {
   "solid-js": "1.9.14",
@@ -67,6 +69,7 @@ requireCheck(JSON.stringify(weiuiIntegration.consumption?.allowed_packages) === 
 requireCheck(weiuiIntegration.consumption?.css_delivery?.mode === "config_generated_checked_in", "Product Entry requires generated WeiUI CSS foundation");
 requireCheck(weiuiIntegration.consumption?.css_delivery?.regeneration_requires_exact_pin === true, "WeiUI generated bundle must remain exact-pin reproducible");
 requireCheck(storyLoomTheme.includes("@layer wui-theme"), "Story Loom application theme must retain wui-theme layer");
+requireCheck(storyLoomTheme.includes("--nf-touch-target-min: 44px"), "Story Loom must retain the NovelForge minimum touch-target authority token");
 
 requireCheck(exists("src/generated/weiui.tokens.generated.css"), "Product Entry must generate WeiUI token foundation before QA");
 requireCheck(exists("src/generated/weiui.generated.css"), "Product Entry must generate WeiUI CSS primitives before QA");
@@ -84,6 +87,8 @@ const tokenIndex = siteCss.indexOf(tokenImport);
 const cssIndex = siteCss.indexOf(cssImport);
 const storyIndex = siteCss.indexOf(storyImport);
 requireCheck(tokenIndex >= 0 && cssIndex > tokenIndex && storyIndex > cssIndex, "Product Entry CSS import order must be WeiUI tokens → WeiUI CSS → Story Loom theme");
+requireCheck(mainSource.includes('import "./styles/product-contract.css"'), "Product Entry must load the Story Loom → Product composition semantic bridge");
+requireCheck(productContractCss.includes("--pe-touch-target: var(--nf-touch-target-min, 44px)"), "Product Entry semantic bridge must derive touch targets from Story Loom authority");
 
 for (const primitive of [
   "wui-app-bar",
@@ -183,8 +188,8 @@ for (const required of [
   "overflow-wrap: break-word",
 ]) {
   const inFoundation = read("src/generated/weiui.generated.css").includes(required) || read("src/generated/weiui.tokens.generated.css").includes(required);
-  const inSite = siteCss.includes(required);
-  requireCheck(inFoundation || inSite, `WeiUI/Product Entry foundation missing UX contract: ${required}`);
+  const inComposition = productCompositionCss.includes(required);
+  requireCheck(inFoundation || inComposition, `WeiUI/Product Entry foundation missing UX contract: ${required}`);
 }
 requireCheck(siteCss.includes("@media (max-width: 760px)"), "Product Entry must preserve mobile layout contract");
 
