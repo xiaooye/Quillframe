@@ -3,12 +3,57 @@ extends "res://scripts/main.gd"
 const LAUNCHER_CONTENT_INSET := 36.0
 const LAUNCHER_CONTENT_GAP := 12.0
 const MOBILE_LEDE_LINE_SPACING := 3
+const DESKTOP_LEDE_LINE_SPACING := 4
+
+func _build() -> void:
+	super._build()
+	_style_scrollbar()
 
 func _label(text: String, font_size: int, weight: int, color: Color) -> Label:
 	var label := super._label(text, font_size, weight, color)
-	if _layout == "phone" and (text.begins_with("NovelForge connects") or text.begins_with("NovelForge 把创作")):
-		label.add_theme_constant_override("line_spacing", MOBILE_LEDE_LINE_SPACING)
+	if text.begins_with("NovelForge connects") or text.begins_with("NovelForge 把创作"):
+		if _layout == "phone":
+			label.add_theme_constant_override("line_spacing", MOBILE_LEDE_LINE_SPACING)
+		elif _layout == "desktop":
+			label.add_theme_constant_override("line_spacing", DESKTOP_LEDE_LINE_SPACING)
 	return label
+
+func _build_header() -> void:
+	super._build_header()
+	if _layout != "phone" or get_child_count() == 0:
+		return
+	var header := get_child(get_child_count() - 1)
+	if not header is Panel:
+		return
+	for child in header.get_children():
+		if child is Button:
+			var button := child as Button
+			if button.text == "中文" or button.text == "EN":
+				button.position.x -= 10.0
+				button.add_theme_font_size_override("font_size", 13)
+			elif button.text == "◐":
+				button.position.x -= 8.0
+			elif button.text == "≡":
+				button.position.x -= 4.0
+
+func _style_scrollbar() -> void:
+	if _scroll == null:
+		return
+	var bar := _scroll.get_v_scroll_bar()
+	if bar == null:
+		return
+	var track := StyleBoxEmpty.new()
+	bar.add_theme_stylebox_override("scroll", track)
+	bar.add_theme_stylebox_override("scroll_focus", track)
+	var grabber := StyleBoxFlat.new()
+	grabber.bg_color = Color("b0a8da")
+	grabber.corner_radius_top_left = 4
+	grabber.corner_radius_top_right = 4
+	grabber.corner_radius_bottom_left = 4
+	grabber.corner_radius_bottom_right = 4
+	bar.add_theme_stylebox_override("grabber", grabber)
+	bar.add_theme_stylebox_override("grabber_highlight", grabber)
+	bar.add_theme_stylebox_override("grabber_pressed", grabber)
 
 func _build_launcher(pos: Vector2, launcher_size: Vector2) -> void:
 	var card := _panel(pos, launcher_size, Color("f4f8fb"), 22, Color("cbd7e7"), 1, Color(0.18, 0.12, 0.24, 0.10), 16)
