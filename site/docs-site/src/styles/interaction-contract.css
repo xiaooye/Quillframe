@@ -1,0 +1,369 @@
+/* Documentation interaction contract --------------------------------------
+   Starlight owns semantics and responsive behavior. This layer aligns the
+   product/docs shell density, mobile product handoff, focus states, dark-mode
+   interaction surfaces, and transient UI without rebuilding Starlight. */
+
+:root {
+  --sl-nav-height: 3.75rem;
+  --nf-doc-interaction-fast: 140ms;
+  --nf-doc-interaction-ease: cubic-bezier(.22, 1, .36, 1);
+}
+
+/* Header ----------------------------------------------------------------- */
+
+header.header {
+  min-height: var(--sl-nav-height);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.nf-site-title {
+  gap: .42rem;
+}
+
+.nf-brand-home {
+  gap: .46rem;
+  min-height: 2.65rem;
+}
+
+.nf-brand-mark-shell {
+  width: 2.05rem;
+  height: 2.05rem;
+}
+
+.nf-brand-home img {
+  width: 1.48rem;
+  height: 1.48rem;
+}
+
+.nf-brand-name {
+  font-size: .9rem;
+  font-weight: 760;
+}
+
+.nf-version-chip {
+  min-height: 1.3rem;
+  padding-inline: .36rem;
+  border-radius: .3rem;
+}
+
+.nf-brand-separator {
+  height: .95rem;
+}
+
+.nf-docs-root-link {
+  position: relative;
+  min-height: 2.1rem;
+  padding-inline: .46rem;
+  border-radius: .35rem;
+}
+
+.nf-docs-root-link[aria-current="page"] {
+  color: var(--nf-ink);
+  background: transparent;
+  box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--nf-pink-strong) 70%, var(--nf-border));
+}
+
+.nf-product-nav {
+  gap: .06rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.nf-product-nav .nf-product-link {
+  min-height: 2.35rem;
+  padding-inline: .58rem;
+  border-radius: .35rem;
+  transition:
+    color var(--nf-doc-interaction-fast) var(--nf-doc-interaction-ease),
+    background-color var(--nf-doc-interaction-fast) var(--nf-doc-interaction-ease);
+}
+
+.nf-product-nav .nf-product-link:hover,
+.nf-product-nav .nf-product-link:focus-visible {
+  color: var(--nf-ink);
+  background: color-mix(in oklab, var(--nf-surface-solid) 78%, var(--nf-pink-soft));
+}
+
+.nf-studio-link {
+  min-height: 2.35rem;
+  padding-inline: .68rem;
+  border-radius: .45rem;
+  box-shadow: none;
+}
+
+.nf-studio-link:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+header.header site-search button,
+header.header button[data-open-modal],
+header.header .search-input {
+  min-height: 2.35rem;
+  border-radius: .42rem;
+  transition:
+    color var(--nf-doc-interaction-fast) var(--nf-doc-interaction-ease),
+    border-color var(--nf-doc-interaction-fast) var(--nf-doc-interaction-ease),
+    background-color var(--nf-doc-interaction-fast) var(--nf-doc-interaction-ease);
+}
+
+header.header site-search button:hover,
+header.header button[data-open-modal]:hover {
+  color: var(--nf-ink);
+  border-color: color-mix(in oklab, var(--nf-pink) 28%, var(--nf-border));
+  background: color-mix(in oklab, var(--nf-surface-solid) 86%, var(--nf-pink-soft));
+}
+
+/* Tablet/mobile product handoff ----------------------------------------- */
+
+.nf-product-menu {
+  position: relative;
+  display: none;
+  margin: 0;
+}
+
+.nf-product-menu > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  min-height: 2.35rem;
+  padding-inline: .62rem;
+  border: 1px solid color-mix(in oklab, var(--nf-border) 72%, transparent);
+  border-radius: .42rem;
+  color: var(--sl-color-gray-2);
+  background: transparent;
+  cursor: pointer;
+  font-size: .78rem;
+  font-weight: 720;
+  list-style: none;
+  user-select: none;
+}
+
+.nf-product-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.nf-product-menu > summary::after {
+  content: "⌄";
+  color: var(--nf-muted);
+  font-size: .78rem;
+  transform-origin: center;
+  transition: transform var(--nf-doc-interaction-fast) var(--nf-doc-interaction-ease);
+}
+
+.nf-product-menu[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.nf-product-menu__panel {
+  position: fixed;
+  z-index: 80;
+  inset-block-start: calc(var(--sl-nav-height) + .5rem);
+  inset-inline-end: max(.7rem, env(safe-area-inset-right, 0px));
+  width: min(18rem, calc(100vw - 1.4rem));
+  max-height: calc(100dvh - var(--sl-nav-height) - 1.3rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: .35rem .75rem .55rem;
+  border: 1px solid color-mix(in oklab, var(--nf-border) 76%, transparent);
+  border-radius: .65rem;
+  background: color-mix(in oklab, var(--nf-surface-solid) 98%, var(--sl-color-black));
+  box-shadow: 0 24px 64px -42px oklch(.24 .035 315 / .42);
+}
+
+.nf-product-menu__link {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding-inline: .48rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--nf-border) 48%, transparent);
+  color: var(--sl-color-gray-2);
+  font-size: .84rem;
+  font-weight: 680;
+  text-decoration: none;
+}
+
+.nf-product-menu__link:last-child {
+  border-bottom: 0;
+}
+
+.nf-product-menu__link:hover,
+.nf-product-menu__link:focus-visible {
+  color: var(--nf-ink);
+  background: color-mix(in oklab, var(--nf-pink-soft) 30%, transparent);
+}
+
+.nf-product-menu__link--studio {
+  color: color-mix(in oklab, var(--nf-pink-strong) 78%, var(--nf-ink));
+}
+
+/* Sidebar and TOC ------------------------------------------------------- */
+
+.sidebar-content li > a,
+.right-sidebar a,
+.pagination-links a {
+  transition:
+    color var(--nf-doc-interaction-fast) var(--nf-doc-interaction-ease),
+    border-color var(--nf-doc-interaction-fast) var(--nf-doc-interaction-ease),
+    background-color var(--nf-doc-interaction-fast) var(--nf-doc-interaction-ease);
+}
+
+.sidebar-content li > a:hover {
+  color: var(--nf-ink);
+  border-inline-start-color: color-mix(in oklab, var(--nf-pink) 34%, var(--nf-border));
+}
+
+.sidebar-content li > a[aria-current="page"] {
+  color: var(--nf-ink);
+  border-inline-start-color: var(--nf-pink-strong);
+}
+
+.right-sidebar a:hover {
+  color: var(--nf-ink);
+}
+
+.right-sidebar a[aria-current="true"],
+.right-sidebar a[aria-current="page"] {
+  color: var(--nf-ink);
+  font-weight: 700;
+}
+
+.pagination-links a:hover,
+.pagination-links a:focus-visible {
+  color: var(--nf-ink);
+  border-top-color: color-mix(in oklab, var(--nf-pink) 44%, var(--nf-border));
+}
+
+/* Keyboard and contrast ------------------------------------------------ */
+
+:where(
+  .nf-brand-home,
+  .nf-docs-root-link,
+  .nf-product-link,
+  .nf-studio-link,
+  .nf-product-menu > summary,
+  .nf-product-menu__link,
+  .sidebar-content a,
+  .right-sidebar a,
+  .pagination-links a,
+  header.header button,
+  header.header select
+):focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--nf-pink-strong) 78%, transparent);
+  outline-offset: 2px;
+}
+
+:root[data-theme="dark"] header.header,
+:root[data-theme="dark"] .nf-product-menu__panel {
+  background: color-mix(in oklab, var(--nf-surface-solid) 97%, var(--sl-color-black));
+}
+
+:root[data-theme="dark"] .nf-product-nav .nf-product-link:hover,
+:root[data-theme="dark"] .nf-product-nav .nf-product-link:focus-visible,
+:root[data-theme="dark"] header.header site-search button:hover,
+:root[data-theme="dark"] header.header button[data-open-modal]:hover,
+:root[data-theme="dark"] .nf-product-menu__link:hover,
+:root[data-theme="dark"] .nf-product-menu__link:focus-visible {
+  background: color-mix(in oklab, var(--nf-soft) 72%, transparent);
+}
+
+@media (max-width: 68rem) {
+  .nf-product-nav,
+  .nf-studio-link {
+    display: none;
+  }
+
+  .nf-product-menu {
+    display: block;
+  }
+}
+
+@media (max-width: 50rem) {
+  :root {
+    --sl-nav-height: 3.6rem;
+  }
+
+  .nf-version-chip,
+  .nf-brand-separator {
+    display: none;
+  }
+
+  .nf-site-title,
+  .nf-brand-home {
+    gap: .35rem;
+  }
+
+  .nf-docs-root-link {
+    padding-inline: .36rem;
+  }
+
+  .nf-product-menu > summary {
+    padding-inline: .5rem;
+  }
+}
+
+@media (max-width: 30rem) {
+  .nf-brand-name {
+    display: none;
+  }
+
+  .nf-docs-root-link {
+    font-size: .74rem;
+  }
+
+  .nf-product-menu > summary span:first-child {
+    display: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .nf-product-menu > summary,
+  .nf-product-menu__link,
+  .sidebar-content li > a,
+  .right-sidebar a {
+    min-height: 2.75rem;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .sidebar-content li > a[aria-current="page"],
+  .right-sidebar a[aria-current="true"],
+  .right-sidebar a[aria-current="page"] {
+    color: var(--nf-ink);
+  }
+
+  .nf-product-menu__panel,
+  header.header site-search button,
+  header.header button[data-open-modal] {
+    border-color: var(--sl-color-gray-2);
+  }
+}
+
+@media (forced-colors: active) {
+  header.header,
+  .nf-product-menu__panel,
+  .nf-product-menu > summary {
+    border: 1px solid CanvasText;
+  }
+
+  .sidebar-content li > a[aria-current="page"],
+  .right-sidebar a[aria-current="true"],
+  .right-sidebar a[aria-current="page"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nf-product-menu > summary::after,
+  .nf-product-nav .nf-product-link,
+  .sidebar-content li > a,
+  .right-sidebar a,
+  .pagination-links a {
+    transition: none;
+  }
+}
