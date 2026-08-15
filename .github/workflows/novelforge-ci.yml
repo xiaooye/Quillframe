@@ -81,6 +81,36 @@ jobs:
       - name: Deterministic authorized runtime command execution contract
         run: python harness/session_runtime/runtime_command_executor.py self-test
 
+  session-terminate-command:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile session terminate toolchain
+        run: |
+          python -m py_compile \
+            harness/session_runtime/session_runtime.py \
+            harness/session_runtime/terminate_preflight.py \
+            harness/session_runtime/terminate_command.py \
+            harness/session_runtime/terminate_authorization.py \
+            harness/session_runtime/terminate_executor.py
+      - name: Validate terminate and shared receipt schemas
+        run: |
+          python -m json.tool harness/session_runtime/terminate_command_schema.json > /dev/null
+          python -m json.tool harness/session_runtime/terminate_authorization_schema.json > /dev/null
+          python -m json.tool harness/session_runtime/runtime_command_receipt_schema.json > /dev/null
+          python -m json.tool harness/control_plane/event_schema.json > /dev/null
+      - name: Deterministic session terminate contracts
+        run: |
+          python harness/session_runtime/session_runtime.py self-test
+          python harness/session_runtime/terminate_preflight.py self-test
+          python harness/session_runtime/terminate_command.py self-test
+          python harness/session_runtime/terminate_authorization.py self-test
+          python harness/session_runtime/terminate_executor.py self-test
+
   documentation-quality:
     runs-on: ubuntu-latest
     timeout-minutes: 10
