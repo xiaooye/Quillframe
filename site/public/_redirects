@@ -1,4 +1,14 @@
-# Canonical Starlight roots. Cloudflare Pages must enter the docs app rather
-# than leave the product SPA sitting on a directory URL without its index.
+# Canonical Starlight roots. Docs remain an independent Astro/Starlight app.
 /docs /docs/ 301
 /docs/en /docs/en/ 301
+
+# Product routes are owned by the Godot Web runtime. These explicit rewrites
+# preserve direct-link and reload behavior without swallowing /docs/**.
+/product /index.html 200
+/studio /index.html 200
+/architecture /index.html 200
+/publication /index.html 200
+/inspect /index.html 200
+/playground /index.html 200
+/agents /index.html 200
+/changelog /index.html 200

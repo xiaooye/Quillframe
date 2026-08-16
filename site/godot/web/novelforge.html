@@ -1,10 +1,12 @@
 <!doctype html>
-<html lang="en" data-novelforge-godot-shadow="loading">
+<html lang="en" data-novelforge-runtime="loading" data-novelforge-godot-shadow="loading">
 <head>
   <meta charset="utf-8" />
+  <base href="/" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#fffdfc" />
-  <title>NovelForge · Godot parity shadow</title>
+  <title>NovelForge</title>
+  <!-- Godot parity shadow compatibility marker retained during cutover. -->
   <script>
     (() => {
       try {
@@ -22,7 +24,7 @@
 </head>
 <body>
   <canvas id="canvas">Your browser does not support canvas.</canvas>
-  <div id="nf-loader" class="nf-loader"><div class="nf-loader-inner"><div class="nf-mark">NovelForge</div><div class="nf-note">Godot parity shadow · production remains Solid until visual gate passes</div><div class="nf-progress"><i></i></div></div></div>
+  <div id="nf-loader" class="nf-loader"><div class="nf-loader-inner"><div class="nf-mark">NovelForge</div><div class="nf-note">Story Loom · Kawaii Atelier runtime</div><div class="nf-progress"><i></i></div></div></div>
   <script src="$GODOT_URL"></script>
   <script>
     const GODOT_CONFIG = $GODOT_CONFIG;
@@ -31,10 +33,14 @@
       document.documentElement.dataset.novelforgeGodotEngine = 'started';
     }).catch((error) => {
       document.documentElement.dataset.novelforgeGodotEngine = 'error';
+      document.documentElement.dataset.novelforgeRuntime = 'error';
       document.documentElement.dataset.novelforgeGodotShadow = 'error';
       console.error(error);
     });
     window.addEventListener('novelforge:godot-ready', () => {
+      document.documentElement.dataset.novelforgeRuntime = 'ready';
+      // Temporary compatibility marker retained until the post-cutover shadow
+      // workflows are retired. It is not production authority.
       document.documentElement.dataset.novelforgeGodotShadow = 'ready';
       document.getElementById('nf-loader')?.setAttribute('data-hidden','true');
     }, {once:true});
