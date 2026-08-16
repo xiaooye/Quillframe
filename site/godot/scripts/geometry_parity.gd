@@ -413,12 +413,17 @@ func _resize_architecture_grid(grid: Control) -> void:
 				(nested as Label).size.x = cell_w
 
 func _resize_hero(hero: Control, target_height: float, inset: float) -> void:
+	# Capture the pre-resize frame height before changing the parent. Expansion
+	# previously compared the inset border against the *new* height, so the frame
+	# never grew and stacked compact evidence visually fell out of its card.
+	var previous_height := hero.size.y
+	var previous_inner_height := maxf(previous_height - inset * 2.0, 0.0)
 	hero.size.y = target_height
 	for child in hero.get_children():
 		if child is Control:
 			var control := child as Control
-			if abs(control.position.x - inset) < 1.0 and abs(control.position.y - inset) < 1.0 and control.size.y > target_height - 60.0:
-				control.size.y = target_height - inset * 2.0
+			if abs(control.position.x - inset) < 1.0 and abs(control.position.y - inset) < 1.0 and control.size.y >= previous_inner_height - 60.0:
+				control.size.y = maxf(target_height - inset * 2.0, 0.0)
 				break
 
 func _shift_stage_controls(min_y: float, delta: float, except_control: Control) -> void:
