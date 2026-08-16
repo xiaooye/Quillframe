@@ -84,91 +84,18 @@ jobs:
           assert len(expected)==sum(len(p['contracts']) for p in catalog['packs'])
           fp='sha256:'+'a'*64
           fixtures={
-            'reader.reaction': {
-              'candidate_text': 'A bounded candidate.',
-              'persona_id': 'binge_reader',
-              'reader_visible_context': [{'source_ref':'accepted:prior','text':'Only reader-visible prior context.'}]
-            },
-            'reader.engagement_audit': {
-              'candidate_fingerprint': fp,
-              'candidate_text': 'A bounded cold-reader production candidate.',
-              'reader_grip': 'very_high',
-              'reader_visible_context': [{'source_ref':'accepted:prior','text':'Only reader-visible prior context.'}]
-            },
-            'quality.production_review': {
-              'candidate_fingerprint': fp,
-              'candidate_text': 'A bounded independent production-review candidate.',
-              'reader_grip': 'very_high',
-              'reader_visible_context': [{'source_ref':'accepted:prior','text':'Only reader-visible prior context.'}]
-            },
-            'character.action_propose': {
-              'character_id':'CHAR-CI',
-              'current_story_order':9,
-              'active_agenda':'Keep control of the immediate negotiation.',
-              'perceived_state': {'beliefs':['The other party may be bluffing.'],'goals':['Preserve leverage.'],'fears':[],'assumptions':[]},
-              'immediate_situation': {'observables':[{'observable_id':'OBS-CI','observation':'The offer changed.','source_ref':'scene:CI','available_from_story_order':9}],'pressures':['Time is limited.'],'available_options':['stall','counter']},
-              'perspective_memory': {
-                'episodic_visible_events': [],
-                'visibility_tagged_facts': [{'fact_id':'F-CI','claim':'The first offer was lower.','epistemic_status':'known','acquisition_mode':'directly_observed','source_ref':'accepted:scene-1','available_from_story_order':8}],
-                'situation_patterns': []
-              },
-              'relationship_state': {}, 'task_state': {}, 'location': {}, 'constraints': []
-            },
-            'quality.compare': {
-              'evolution_run_id':'RUN-CI', 'evolution_subject_id':'CH-CI', 'comparison_id':'CMP-CI',
-              'incumbent': {'candidate_id':'C0','content_fingerprint':'sha256:'+'0'*64},
-              'challenger': {'candidate_id':'C1','content_fingerprint':'sha256:'+'1'*64,'repair_owner':'scene'},
-              'repair_context': {'targets':['reader pressure']}
-            },
-            'relationship.memory_reconcile': {
-              'relationship_id':'REL-CI','current_story_order':9,'participants':['CHAR-A','CHAR-B'],
-              'ordered_evidence':[{'evidence_id':'RE-CI','story_order':8,'source_ref':'accepted:REL-CI','authority':'accepted','event':'A promise created an obligation.','effects':{'obligation':'open'}}],
-              'derived_snapshots':[{'snapshot_id':'RS-CI','as_of_story_order':8,'source_refs':['accepted:REL-CI'],'shared_state':{'status':'strained'},'per_character_perception':{'CHAR-A':'uneasy','CHAR-B':'guarded'},'open_obligations':['promise'],'emotional_residue':['distrust']}]
-            },
-            'continuity.commitment_audit': {
-              'candidate': {'source_ref':'candidate:CI','evidence':[{'evidence_id':'E-CI','statement':'The negotiation ends with a new obligation.','source_ref':'candidate:CI#e1','story_order':9}]},
-              'current_story_order':9,
-              'commitments': [{'commitment_id':'COM-CI','statement':'The obligation must remain live.','authority':'active_plan','source_ref':'plan:CI'}],
-              'required_transitions': [{'transition_id':'TR-CI','description':'Negotiation changes the parties leverage.','authority':'active_plan','source_ref':'plan:CI'}],
-              'initial_facts': [{'fact_id':'FACT-CI','statement':'The parties begin with unequal leverage.','authority':'accepted','source_ref':'accepted:CI'}],
-              'current_story_point':'SCN-CI'
-            },
-            'context.select': {
-              'task': {
-                'task_mode':'DRAFT',
-                'task_goal':'Choose only evidence needed to decide CHAR-CI next action.',
-                'current_story_point':'SCN-CI',
-                'current_story_order':9,
-                'perspective': {'scope':'character','perspective_id':'CHAR-CI'},
-                'active_questions': [{'question_id':'Q-CI','question':'What does CHAR-CI know about the offer?','kind':'state','as_of_story_point':'SCN-CI','as_of_story_order':9}]
-              },
-              'memory_blocks': [{
-                'block_id':'M-CI','pinned':False,'authority':False,'derived':True,
-                'source_refs':['accepted:CI'],'story_point':'SCN-CI',
-                'available_from_story_order':9,
-                'visibility': {'scope':'character','perspective_id':'CHAR-CI'},
-                'model_view': {'label':'offer','value':'The first offer was lower.'}
-              }]
-            },
-            'learning.preference_interpret': {
-              'feedback_ref':'review:CI',
-              'feedback_text':'Keep the dialogue less explanatory in this exchange.',
-              'current_task': {'task_mode':'REVISE','artifact_ref':'draft:CI'}
-            },
-            'scene.realization_project': {
-              'scene_id':'SCN-CI',
-              'resolved_trajectory': {'state':'negotiation_continues'},
-              'character_action_evidence': [{'character_id':'CHAR-CI','action':'withhold full rationale and counter'}],
-              'pov_boundary': {'perspective_id':'CHAR-CI','allowed_inner_state':True}
-            },
-            'reader.production_audit': {
-              'candidate_fingerprint': fp,
-              'candidate_text':'A bounded production candidate with observable dialogue and action.'
-            },
-            'editor.repair_spec': {
-              'candidate_fingerprint': fp,
-              'reader_assessment': {'result':'fail','codes':['HF-30'],'evidence':['Dialogue over-explains role and risk.']}
-            }
+            'reader.reaction': {'candidate_text':'A bounded candidate.','persona_id':'binge_reader','reader_visible_context':[{'source_ref':'accepted:prior','text':'Only reader-visible prior context.'}]},
+            'reader.engagement_audit': {'candidate_fingerprint':fp,'candidate_text':'A bounded cold-reader production candidate.','reader_grip':'very_high','reader_visible_context':[{'source_ref':'accepted:prior','text':'Only reader-visible prior context.'}]},
+            'quality.production_review': {'candidate_fingerprint':fp,'candidate_text':'A bounded independent production-review candidate.','reader_grip':'very_high','reader_visible_context':[{'source_ref':'accepted:prior','text':'Only reader-visible prior context.'}]},
+            'character.action_propose': {'character_id':'CHAR-CI','current_story_order':9,'active_agenda':'Keep control of the immediate negotiation.','perceived_state':{'beliefs':['The other party may be bluffing.'],'goals':['Preserve leverage.'],'fears':[],'assumptions':[]},'immediate_situation':{'observables':[{'observable_id':'OBS-CI','observation':'The offer changed.','source_ref':'scene:CI','available_from_story_order':9}],'pressures':['Time is limited.'],'available_options':['stall','counter']},'perspective_memory':{'episodic_visible_events':[],'visibility_tagged_facts':[{'fact_id':'F-CI','claim':'The first offer was lower.','epistemic_status':'known','acquisition_mode':'directly_observed','source_ref':'accepted:scene-1','available_from_story_order':8}],'situation_patterns':[]},'relationship_state':{},'task_state':{},'location':{},'constraints':[]},
+            'quality.compare': {'evolution_run_id':'RUN-CI','evolution_subject_id':'CH-CI','comparison_id':'CMP-CI','incumbent':{'candidate_id':'C0','content_fingerprint':'sha256:'+'0'*64},'challenger':{'candidate_id':'C1','content_fingerprint':'sha256:'+'1'*64,'repair_owner':'scene'},'repair_context':{'targets':['reader pressure']}},
+            'relationship.memory_reconcile': {'relationship_id':'REL-CI','current_story_order':9,'participants':['CHAR-A','CHAR-B'],'ordered_evidence':[{'evidence_id':'RE-CI','story_order':8,'source_ref':'accepted:REL-CI','authority':'accepted','event':'A promise created an obligation.','effects':{'obligation':'open'}}],'derived_snapshots':[{'snapshot_id':'RS-CI','as_of_story_order':8,'source_refs':['accepted:REL-CI'],'shared_state':{'status':'strained'},'per_character_perception':{'CHAR-A':'uneasy','CHAR-B':'guarded'},'open_obligations':['promise'],'emotional_residue':['distrust']}]},
+            'continuity.commitment_audit': {'candidate':{'source_ref':'candidate:CI','evidence':[{'evidence_id':'E-CI','statement':'The negotiation ends with a new obligation.','source_ref':'candidate:CI#e1','story_order':9}]},'current_story_order':9,'commitments':[{'commitment_id':'COM-CI','statement':'The obligation must remain live.','authority':'active_plan','source_ref':'plan:CI'}],'required_transitions':[{'transition_id':'TR-CI','description':'Negotiation changes the parties leverage.','authority':'active_plan','source_ref':'plan:CI'}],'initial_facts':[{'fact_id':'FACT-CI','statement':'The parties begin with unequal leverage.','authority':'accepted','source_ref':'accepted:CI'}],'current_story_point':'SCN-CI'},
+            'context.select': {'task':{'task_mode':'DRAFT','task_goal':'Choose only evidence needed to decide CHAR-CI next action.','current_story_point':'SCN-CI','current_story_order':9,'perspective':{'scope':'character','perspective_id':'CHAR-CI'},'active_questions':[{'question_id':'Q-CI','question':'What does CHAR-CI know about the offer?','kind':'state','as_of_story_point':'SCN-CI','as_of_story_order':9}]},'memory_blocks':[{'block_id':'M-CI','pinned':False,'authority':False,'derived':True,'source_refs':['accepted:CI'],'story_point':'SCN-CI','available_from_story_order':9,'visibility':{'scope':'character','perspective_id':'CHAR-CI'},'model_view':{'label':'offer','value':'The first offer was lower.'}}]},
+            'learning.preference_interpret': {'feedback_ref':'review:CI','feedback_text':'Keep the dialogue less explanatory in this exchange.','current_task':{'task_mode':'REVISE','artifact_ref':'draft:CI'}},
+            'scene.realization_project': {'scene_id':'SCN-CI','resolved_trajectory':{'state':'negotiation_continues'},'character_action_evidence':[{'character_id':'CHAR-CI','action':'withhold full rationale and counter'}],'pov_boundary':{'perspective_id':'CHAR-CI','allowed_inner_state':True}},
+            'reader.production_audit': {'candidate_fingerprint':fp,'candidate_text':'A bounded production candidate with observable dialogue and action.'},
+            'editor.repair_spec': {'candidate_fingerprint':fp,'reader_assessment':{'result':'fail','codes':['HF-30'],'evidence':['Dialogue over-explains role and risk.']}}
           }
           jobs={}
           for cid in sorted(expected):
@@ -181,38 +108,27 @@ jobs:
               assert job['permissions']['durable_user_taste_write'] is False
               assert job['provenance']['source']=='model_contract_pack'
               assert job['provenance']['pack_id']
-              if cid in fixtures:
-                  assert job['provenance']['input_contract_validated'] is True
+              if cid in fixtures: assert job['provenance']['input_contract_validated'] is True
               jobs[cid]=job['input_fingerprint']
           cold_reader_blocked=False
-          try:
-              make_contract_job('reader.reaction','CI-BLOCK',{'candidate_text':'x','persona_id':'binge_reader','active_plan':{'future':'secret'}})
-          except ValueError:
-              cold_reader_blocked=True
+          try: make_contract_job('reader.reaction','CI-BLOCK',{'candidate_text':'x','persona_id':'binge_reader','active_plan':{'future':'secret'}})
+          except ValueError: cold_reader_blocked=True
           assert cold_reader_blocked
           production_reader_hidden_context_blocked=False
-          try:
-              make_contract_job('reader.engagement_audit','CI-READER-BLOCK',{'candidate_fingerprint':fp,'candidate_text':'x','active_plan':{'future':'secret'}})
-          except ValueError:
-              production_reader_hidden_context_blocked=True
+          try: make_contract_job('reader.engagement_audit','CI-READER-BLOCK',{'candidate_fingerprint':fp,'candidate_text':'x','active_plan':{'future':'secret'}})
+          except ValueError: production_reader_hidden_context_blocked=True
           assert production_reader_hidden_context_blocked
           production_review_hidden_context_blocked=False
-          try:
-              make_contract_job('quality.production_review','CI-PROD-BLOCK',{'candidate_fingerprint':fp,'candidate_text':'x','writer_reasoning':'secret'},source_session_id='SES-CI')
-          except ValueError:
-              production_review_hidden_context_blocked=True
+          try: make_contract_job('quality.production_review','CI-PROD-BLOCK',{'candidate_fingerprint':fp,'candidate_text':'x','writer_reasoning':'secret'},source_session_id='SES-CI')
+          except ValueError: production_review_hidden_context_blocked=True
           assert production_review_hidden_context_blocked
           transition_guard=False
-          try:
-              make_contract_job('continuity.commitment_audit','CI-TR-BLOCK',{'candidate':{'source_ref':'candidate:x','evidence':['x']},'commitments':[]})
-          except ValueError:
-              transition_guard=True
+          try: make_contract_job('continuity.commitment_audit','CI-TR-BLOCK',{'candidate':{'source_ref':'candidate:x','evidence':['x']},'commitments':[]})
+          except ValueError: transition_guard=True
           assert transition_guard
           context_guard=False
-          try:
-              make_contract_job('context.select','CI-CONTEXT-BLOCK',{'memory_blocks':[]})
-          except ValueError:
-              context_guard=True
+          try: make_contract_job('context.select','CI-CONTEXT-BLOCK',{'memory_blocks':[]})
+          except ValueError: context_guard=True
           assert context_guard
           typed=['reader.reaction','reader.engagement_audit','quality.production_review','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select','learning.preference_interpret','scene.realization_project','reader.production_audit','editor.repair_spec']
           json.dump({'semantic_contract_catalog_contract':'PASS','contracts':sorted(expected),'fingerprints':jobs,'typed_input_contracts':typed,'cold_reader_hidden_plan_guard':cold_reader_blocked,'production_reader_hidden_context_guard':production_reader_hidden_context_blocked,'production_review_hidden_context_guard':production_review_hidden_context_blocked,'required_transition_input_guard':transition_guard,'task_aware_context_input_guard':context_guard,'aggregate_registry_present':False,'model_execution':False},open('semantic-contracts-test.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
@@ -282,103 +198,54 @@ jobs:
           python - <<'PY'
           import json
           checks={
-            'machine-namespace-test.json':('machine_namespace_contract','PASS'),
-            'project-sdk-test.json':('project_sdk_contract','PASS'),'project-adapter-test.json':('project_adapter_contract','PASS'),
-            'runtime-capabilities-test.json':('runtime_capabilities_contract','PASS'),'context-inspector-test.json':('context_inspector_contract','PASS'),
-            'context-assembly-test.json':('context_assembly_contract','PASS'),
-            'memory-tiers-test.json':('memory_tiers_contract','PASS'),'memory-bank-test.json':('memory_bank_contract','PASS'),
-            'scenario-fork-test.json':('scenario_fork_contract','PASS'),'property-write-policy-test.json':('property_write_policy_contract','PASS'),
-            'propagation-debt-test.json':('propagation_debt_contract','PASS'),'state-integrity-cross-contract.json':('contract','PASS'),
-            'write-intent-guard-test.json':('write_intent_guard_contract','PASS'),
+            'machine-namespace-test.json':('machine_namespace_contract','PASS'),'project-sdk-test.json':('project_sdk_contract','PASS'),'project-adapter-test.json':('project_adapter_contract','PASS'),
+            'runtime-capabilities-test.json':('runtime_capabilities_contract','PASS'),'context-inspector-test.json':('context_inspector_contract','PASS'),'context-assembly-test.json':('context_assembly_contract','PASS'),
+            'memory-tiers-test.json':('memory_tiers_contract','PASS'),'memory-bank-test.json':('memory_bank_contract','PASS'),'scenario-fork-test.json':('scenario_fork_contract','PASS'),'property-write-policy-test.json':('property_write_policy_contract','PASS'),
+            'propagation-debt-test.json':('propagation_debt_contract','PASS'),'state-integrity-cross-contract.json':('contract','PASS'),'write-intent-guard-test.json':('write_intent_guard_contract','PASS'),
             'quality-finding-test.json':('quality_finding_contract','PASS'),'quality-taxonomy-test.json':('quality_taxonomy_contract','PASS'),'repair-policy-test.json':('repair_policy_contract','PASS'),
             'registered-contract-binding-test.json':('registered_contract_binding_contract','PASS'),'peer-bridge-receipt-test.json':('peer_bridge_receipt_contract','PASS'),'production-readiness-test.json':('production_readiness_contract','PASS'),
-            'production-release-test.json':('production_release_contract','PASS'),'prose-telemetry-test.json':('prose_telemetry_contract','PASS'),
-            'reader-expectation-test.json':('reader_expectation_contract','PASS'),'quality-evolution-test.json':('quality_evolution_contract','PASS'),
-            'state-graph-test.json':('state_graph_contract','PASS'),'semantic-reference-integrity-test.json':('semantic_reference_integrity','PASS'),
-            'semantic-router-test.json':('semantic_router_contract','PASS'),'semantic-contracts-test.json':('semantic_contract_catalog_contract','PASS'),'peer-chat-test.json':('peer_chat_relay_contract','PASS'),
-            'local-agent-test.json':('local_agent_adapter_contract','PASS'),'learning-test.json':('learning_store_contract','PASS'),
-            'learning-cycle-test.json':('learning_cycle_contract','PASS'),'learning-eval-test.json':('learning_eval_contract','PASS'),
-            'promotion-gate-test.json':('promotion_gate_contract','PASS'),'author-model-test.json':('author_model_contract','PASS'),
+            'production-release-test.json':('production_release_contract','PASS'),'prose-telemetry-test.json':('prose_telemetry_contract','PASS'),'reader-expectation-test.json':('reader_expectation_contract','PASS'),'quality-evolution-test.json':('quality_evolution_contract','PASS'),
+            'state-graph-test.json':('state_graph_contract','PASS'),'semantic-reference-integrity-test.json':('semantic_reference_integrity','PASS'),'semantic-router-test.json':('semantic_router_contract','PASS'),
+            'semantic-contracts-test.json':('semantic_contract_catalog_contract','PASS'),'peer-chat-test.json':('peer_chat_relay_contract','PASS'),'local-agent-test.json':('local_agent_adapter_contract','PASS'),
+            'learning-test.json':('learning_store_contract','PASS'),'learning-cycle-test.json':('learning_cycle_contract','PASS'),'learning-eval-test.json':('learning_eval_contract','PASS'),'promotion-gate-test.json':('promotion_gate_contract','PASS'),'author-model-test.json':('author_model_contract','PASS'),
             'corpus-scout-test.json':('corpus_scout_contract','PASS'),'discovery-runtime-test.json':('discovery_runtime_contract','PASS'),'corpus-rights-test.json':('rights_gate_contract','PASS'),
-            'publication-test.json':('publication_compiler_contract','PASS'),'framework-bundle-test.json':('framework_bundle_contract','PASS'),'session-test.json':('session_runtime_contract','PASS'),
-            'control-plane-test.json':('control_plane_contract','PASS'),'mcp-test.json':('mcp_stdio_contract','PASS'),'cli-test.json':('novelforge_cli_contract','PASS')}
+            'publication-test.json':('publication_compiler_contract','PASS'),'framework-bundle-test.json':('framework_bundle_contract','PASS'),'session-test.json':('session_runtime_contract','PASS'),'control-plane-test.json':('control_plane_contract','PASS'),'mcp-test.json':('mcp_stdio_contract','PASS'),'cli-test.json':('novelforge_cli_contract','PASS')}
           loaded={p:json.load(open(p,encoding='utf-8')) for p in checks}
-          for p,(k,v) in checks.items():assert loaded[p][k]==v,(p,loaded[p])
+          for p,(k,v) in checks.items(): assert loaded[p][k]==v,(p,loaded[p])
           assert loaded['machine-namespace-test.json']['namespace']=='NovelForge-only'
+          assert loaded['context-assembly-test.json']['required_missing_blocks'] is True
+          assert loaded['context-assembly-test.json']['private_writer_selection_blocks'] is True
+          assert loaded['write-intent-guard-test.json']['resource_action_mismatch_blocked'] is True
+          assert loaded['write-intent-guard-test.json']['stale_before_state_blocked'] is True
+          assert loaded['production-release-test.json']['reviewer_pass_missing_structural_receipt_blocks'] is True
+          assert loaded['production-release-test.json']['all_required_receipts_pass'] is True
+          assert loaded['production-release-test.json']['base_quality_failure_still_blocks'] is True
+          assert loaded['prose-telemetry-test.json']['signals_only'] is True
+          assert loaded['prose-telemetry-test.json']['short_paragraphs_auto_fail'] is False
+          assert loaded['author-model-test.json']['user_taste_write_authority_alone_not_enough'] is True
+          assert loaded['author-model-test.json']['user_taste_requires_promotion_prerequisite_and_write_authority'] is True
           assert loaded['memory-tiers-test.json']['schema']=='novelforge_memory_tiers_v4'
           assert loaded['memory-tiers-test.json']['perspective_incompatible_never_enters_semantic_packet'] is True
           assert loaded['memory-tiers-test.json']['future_block_never_enters_semantic_packet'] is True
           assert loaded['memory-tiers-test.json']['question_as_of_story_order_guard'] is True
           assert loaded['memory-tiers-test.json']['pin_temporal_conflict_fail_closed'] is True
           assert loaded['memory-tiers-test.json']['grounding_reports_budget_drop'] is True
-          assert loaded['context-assembly-test.json']['private_simulation_hidden_from_writer'] is True
-          assert loaded['context-assembly-test.json']['missing_required_context_blocks'] is True
-          assert loaded['write-intent-guard-test.json']['mismatched_action_blocked'] is True
-          assert loaded['write-intent-guard-test.json']['mismatched_resource_blocked'] is True
-          assert loaded['write-intent-guard-test.json']['stale_before_state_blocked'] is True
-          assert loaded['production-release-test.json']['structural_receipts_conjunctive'] is True
-          assert loaded['production-release-test.json']['semantic_readiness_not_replaced'] is True
-          assert loaded['prose-telemetry-test.json']['signals_are_non_authoritative'] is True
-          assert loaded['author-model-test.json']['user_taste_write_authority_alone_not_enough'] is True
-          assert loaded['author-model-test.json']['user_taste_requires_promotion_prerequisite_and_write_authority'] is True
-          pw=loaded['property-write-policy-test.json']
-          assert pw['payload_cannot_self_escalate'] is True
-          assert pw['mixed_writer_routes_to_reconcile'] is True
-          assert pw['policy_absence_preserves_legacy_behavior'] is True
-          assert pw['derived_only_is_non_authoritative'] is True
-          assert pw['route_authority_is_scoped'] is True
-          pd=loaded['propagation-debt-test.json']
-          assert pd['no_global_invalidation_without_dependency'] is True
-          assert pd['conflicting_replay_is_rejected'] is True
-          assert pd['restart_preserves_open_debt_without_duplicate'] is True
-          cross=loaded['state-integrity-cross-contract.json']
-          assert cross['checks']['runtime_authorization_is_valid_and_granted'] is True
-          assert cross['checks']['runtime_authorization_scope_excludes_project_write'] is True
-          assert cross['checks']['runtime_writer_cannot_bypass_settlement_only_property'] is True
-          assert cross['checks']['only_settlement_writer_gets_guarded_direct_route'] is True
-          s=loaded['semantic-router-test.json']
-          assert s['fingerprint_excludes_runtime_lineage'] is True
-          assert s['catalog_exact_id_resolution'] is True
-          assert s['aggregate_registry_required'] is False
-          assert s['typed_input_validation'] is True
-          assert s['typed_output_validation'] is True and s['semantic_intelligence_externalized'] is True
-          sc=loaded['semantic-contracts-test.json']
-          assert sc['aggregate_registry_present'] is False
-          assert sc['cold_reader_hidden_plan_guard'] is True
-          assert sc['production_reader_hidden_context_guard'] is True
-          assert sc['production_review_hidden_context_guard'] is True
-          assert sc['required_transition_input_guard'] is True
-          assert sc['task_aware_context_input_guard'] is True
+          pw=loaded['property-write-policy-test.json']; assert pw['payload_cannot_self_escalate'] is True and pw['mixed_writer_routes_to_reconcile'] is True and pw['policy_absence_preserves_legacy_behavior'] is True and pw['derived_only_is_non_authoritative'] is True and pw['route_authority_is_scoped'] is True
+          pd=loaded['propagation-debt-test.json']; assert pd['no_global_invalidation_without_dependency'] is True and pd['conflicting_replay_is_rejected'] is True and pd['restart_preserves_open_debt_without_duplicate'] is True
+          cross=loaded['state-integrity-cross-contract.json']; assert cross['checks']['runtime_authorization_is_valid_and_granted'] is True and cross['checks']['runtime_authorization_scope_excludes_project_write'] is True and cross['checks']['runtime_writer_cannot_bypass_settlement_only_property'] is True and cross['checks']['only_settlement_writer_gets_guarded_direct_route'] is True
+          s=loaded['semantic-router-test.json']; assert s['fingerprint_excludes_runtime_lineage'] is True and s['catalog_exact_id_resolution'] is True and s['aggregate_registry_required'] is False and s['typed_input_validation'] is True and s['typed_output_validation'] is True and s['semantic_intelligence_externalized'] is True
+          sc=loaded['semantic-contracts-test.json']; assert sc['aggregate_registry_present'] is False and sc['cold_reader_hidden_plan_guard'] is True and sc['production_reader_hidden_context_guard'] is True and sc['production_review_hidden_context_guard'] is True and sc['required_transition_input_guard'] is True and sc['task_aware_context_input_guard'] is True
           assert set(sc['typed_input_contracts'])=={'reader.reaction','reader.engagement_audit','quality.production_review','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select','learning.preference_interpret','scene.realization_project','reader.production_audit','editor.repair_spec'}
-          pr=loaded['production-readiness-test.json']
-          assert pr['surface_and_reader_are_conjunctive'] is True
-          assert pr['registered_reader_engagement_required'] is True
-          assert pr['registered_independent_release_contract_required'] is True
-          assert pr['registered_contract_definition_bound'] is True
-          assert pr['project_bridge_receipt_required'] is True
-          assert pr['bare_distinct_session_not_independence'] is True
-          assert pr['blocking_reader_code_cannot_pass'] is True
-          assert pr['blocking_production_code_cannot_pass'] is True
-          assert pr['blocking_flatness_cannot_pass'] is True
-          assert pr['peer_receipt_result_tamper_rejected'] is True
-          assert pr['project_owned_peer_bridge_independence'] is True
-          assert pr['numeric_quality_aggregation'] is False
+          pr=loaded['production-readiness-test.json']; assert pr['surface_and_reader_are_conjunctive'] is True and pr['registered_reader_engagement_required'] is True and pr['registered_independent_release_contract_required'] is True and pr['registered_contract_definition_bound'] is True and pr['project_bridge_receipt_required'] is True and pr['bare_distinct_session_not_independence'] is True and pr['blocking_reader_code_cannot_pass'] is True and pr['blocking_production_code_cannot_pass'] is True and pr['blocking_flatness_cannot_pass'] is True and pr['peer_receipt_result_tamper_rejected'] is True and pr['project_owned_peer_bridge_independence'] is True and pr['numeric_quality_aggregation'] is False
           assert loaded['registered-contract-binding-test.json']['checks']['forged_rubric_rejected'] is True
           assert loaded['peer-bridge-receipt-test.json']['checks']['result_tamper_rejected'] is True
-          assert loaded['quality-taxonomy-test.json']['checks']['reader_semantic_drift_detected'] is True
-          assert loaded['quality-taxonomy-test.json']['checks']['surface_semantic_drift_detected'] is True
-          assert loaded['repair-policy-test.json']['checks']['scene_failure_fresh'] is True
-          assert loaded['repair-policy-test.json']['checks']['fresh_writer_cannot_see_rejected_prose'] is True
-          assert loaded['quality-evolution-test.json']['plateau_stopping'] is True
-          assert loaded['quality-evolution-test.json']['winner_derived_from_typed_result'] is True
+          assert loaded['quality-taxonomy-test.json']['checks']['reader_semantic_drift_detected'] is True and loaded['quality-taxonomy-test.json']['checks']['surface_semantic_drift_detected'] is True
+          assert loaded['repair-policy-test.json']['checks']['scene_failure_fresh'] is True and loaded['repair-policy-test.json']['checks']['fresh_writer_cannot_see_rejected_prose'] is True
+          assert loaded['quality-evolution-test.json']['plateau_stopping'] is True and loaded['quality-evolution-test.json']['winner_derived_from_typed_result'] is True
           assert loaded['promotion-gate-test.json']['auto_behavior_write'] is False
           assert loaded['discovery-runtime-test.json']['network_execution_performed'] is False
-          assert loaded['publication-test.json']['accepted_text_fingerprint_guard'] is True
-          assert loaded['publication-test.json']['epub_text_roundtrip'] is True
-          assert loaded['publication-test.json']['deterministic_epub'] is True
-          assert loaded['publication-test.json']['external_epubcheck_required_for_release'] is True
-          assert loaded['framework-bundle-test.json']['tamper_detected'] is True
-          assert loaded['framework-bundle-test.json']['publication_runtime_included'] is True
+          assert loaded['publication-test.json']['accepted_text_fingerprint_guard'] is True and loaded['publication-test.json']['epub_text_roundtrip'] is True and loaded['publication-test.json']['deterministic_epub'] is True and loaded['publication-test.json']['external_epubcheck_required_for_release'] is True
+          assert loaded['framework-bundle-test.json']['tamper_detected'] is True and loaded['framework-bundle-test.json']['publication_runtime_included'] is True
           assert loaded['cli-test.json']['model_execution'] is False
           PY
 
