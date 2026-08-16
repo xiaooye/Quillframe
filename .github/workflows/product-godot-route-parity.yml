@@ -175,6 +175,10 @@ jobs:
             fi
             solid_shot "solid-${route}-desktop" 1440,900 "http://127.0.0.1:4188${SOLID_PATH}"
             godot_shot "godot-${route}-desktop" 1440 900 desktop "http://127.0.0.1:4190${GODOT_PATH}"
+            solid_shot "solid-${route}-compact-wide" 1024,768 "http://127.0.0.1:4188${SOLID_PATH}"
+            godot_shot "godot-${route}-compact-wide" 1024 768 compact "http://127.0.0.1:4190${GODOT_PATH}"
+            solid_shot "solid-${route}-compact-narrow" 768,1024 "http://127.0.0.1:4188${SOLID_PATH}"
+            godot_shot "godot-${route}-compact-narrow" 768 1024 compact "http://127.0.0.1:4190${GODOT_PATH}"
             solid_shot "solid-${route}-mobile" 390,844 "http://127.0.0.1:4188${SOLID_PATH}"
             godot_shot "godot-${route}-mobile" 390 844 phone "http://127.0.0.1:4190${GODOT_PATH}"
           done
@@ -191,9 +195,10 @@ jobs:
           import json, math
           root = Path('/tmp/novelforge-route-parity')
           routes = ['home','product','studio','architecture','publication','inspect','playground','agents','changelog']
-          metrics = {'schema':'novelforge_godot_route_parity_v5','blocking':False,'solid_role':'golden_visual_behavior_fixture','solid_typography':'pinned WeiUI Inter + Noto fallbacks','godot_role':'production_slim_runtime','interaction_qa':'blocking','pairs':{}}
+          layouts = ['desktop','compact-wide','compact-narrow','mobile']
+          metrics = {'schema':'novelforge_godot_route_parity_v6','blocking':False,'solid_role':'golden_visual_behavior_fixture','solid_typography':'pinned WeiUI Inter + Noto fallbacks','godot_role':'production_slim_runtime','interaction_qa':'blocking','representative_layouts':layouts,'pairs':{}}
           for route in routes:
-              for layout in ['desktop','mobile']:
+              for layout in layouts:
                   name = f'{route}-{layout}'
                   base = Image.open(root/f'solid-{name}.png').convert('RGB')
                   candidate = Image.open(root/f'godot-{name}.png').convert('RGB')
