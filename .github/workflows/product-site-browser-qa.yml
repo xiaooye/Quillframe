@@ -6,14 +6,18 @@ on:
       - 'site/**'
       - 'assets/brand/**'
       - 'specs/004-novelforge-product-site/**'
+      - '.github/workflows/product-site.yml'
       - '.github/workflows/product-site-browser-qa.yml'
+      - '.github/workflows/product-godot-route-parity.yml'
   push:
     branches: [main]
     paths:
       - 'site/**'
       - 'assets/brand/**'
       - 'specs/004-novelforge-product-site/**'
+      - '.github/workflows/product-site.yml'
       - '.github/workflows/product-site-browser-qa.yml'
+      - '.github/workflows/product-godot-route-parity.yml'
   workflow_dispatch:
 
 permissions:

@@ -7,15 +7,21 @@ on:
       - "site/**"
       - "assets/brand/**"
       - "docs/documentation_manifest.json"
+      - "specs/004-novelforge-product-site/**"
       - "**/*.md"
       - ".github/workflows/product-site.yml"
+      - ".github/workflows/product-site-browser-qa.yml"
+      - ".github/workflows/product-godot-route-parity.yml"
   pull_request:
     paths:
       - "site/**"
       - "assets/brand/**"
       - "docs/documentation_manifest.json"
+      - "specs/004-novelforge-product-site/**"
       - "**/*.md"
       - ".github/workflows/product-site.yml"
+      - ".github/workflows/product-site-browser-qa.yml"
+      - ".github/workflows/product-godot-route-parity.yml"
   workflow_dispatch:
 
 permissions:
