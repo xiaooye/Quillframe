@@ -21,30 +21,34 @@ const typography = read("godot/scripts/typography_parity.gd");
 const mobileGeometry = read("godot/scripts/mobile_geometry_parity.gd");
 const geometry = read("godot/scripts/geometry_parity.gd");
 const interaction = read("godot/scripts/interaction_parity.gd");
+const completionCore = read("godot/scripts/visual_completion_core.gd");
 const completion = read("godot/scripts/visual_completion.gd");
+const completionAll = `${completionCore}\n${completion}`;
 const shell = read("godot/web/novelforge.html");
 const fontFetch = read("scripts/fetch-godot-fonts.sh");
 
 check(project.includes('run/main_scene="res://Main.tscn"'), "Godot main scene must remain explicit");
 check(project.includes('renderer/rendering_method="gl_compatibility"'), "Web runtime must use Compatibility renderer");
 check(scene.includes('path="res://scripts/visual_completion.gd"'), "Godot production scene must enter through the visual-completion layer");
-check(completion.includes('extends "res://scripts/interaction_parity.gd"'), "visual completion must remain a thin layer above validated browser interaction parity");
+check(completion.includes('extends "res://scripts/visual_completion_core.gd"'), "visual polish must remain a thin layer above complete product surfaces");
+check(completionCore.includes('extends "res://scripts/interaction_parity.gd"'), "visual completion core must remain above validated browser interaction parity");
 check(interaction.includes('extends "res://scripts/geometry_parity.gd"'), "interaction parity must remain a thin layer above geometry parity");
 check(geometry.includes('extends "res://scripts/mobile_geometry_parity.gd"'), "cross-viewport geometry parity must remain a thin layer above mobile parity");
 check(mobileGeometry.includes('extends "res://scripts/typography_parity.gd"'), "mobile geometry parity must remain a thin layer above deterministic typography");
 check(scene.includes("offset_right = -15.0"), "web page scrollbar gutter must remain reserved in the Godot layout viewport");
-check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main + parity + routes + catalog + systems + editorial + typography + mobileGeometry + geometry + interaction + completion), "Product runtime is capped at 2.5D; 3D scene nodes are forbidden");
+check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main + parity + routes + catalog + systems + editorial + typography + mobileGeometry + geometry + interaction + completionAll), "Product runtime is capped at 2.5D; 3D scene nodes are forbidden");
 
 check(typography.includes('INTER_FONT_PATH := "res://generated/Inter-opsz-wght.ttf"'), "WeiUI Latin typography must be pinned to Inter");
 check(typography.includes("_contains_cjk"), "Latin/CJK font selection must remain text-aware");
 check(typography.includes("_cjk_font") && typography.includes("_latin_base_font"), "Latin and CJK typography metrics must stay isolated");
 check(typography.includes("fallbacks.append(_base_font)"), "decorative mixed font must retain CJK fallback");
 check(typography.includes("_reset_label_scale"), "legacy Noto width compensation must be neutralized under Inter");
+check(typography.includes("func _heading_font(glyph_spacing: int, optical_size: int = 62)"), "optical-size heading helper must remain backward compatible with calibrated geometry call sites");
 
 check(main.includes('FONT_PATH := "res://generated/NotoSansSC-wght.ttf"'), "deterministic bundled CJK font is required");
 check(main.includes('SYMBOL_FONT_PATH := "res://generated/NotoSansSymbols2-Regular.ttf"'), "deterministic symbol fallback is required");
-check(main.includes('THAI_FONT_PATH := "res://generated/NotoSansThai-wdth-wght.ttf"'), "deterministic Thai fallback is required for baseline kaomoji");
-check(main.includes('ARABIC_FONT_PATH := "res://generated/NotoSansArabic-wdth-wght.ttf"'), "deterministic Arabic fallback is required for baseline kaomoji");
+check(main.includes('THAI_FONT_PATH := "res://generated/NotoSansThai-wdth-wght.ttf"'), "deterministic Thai fallback asset must remain pinned");
+check(main.includes('ARABIC_FONT_PATH := "res://generated/NotoSansArabic-wdth-wght.ttf"'), "deterministic Arabic fallback asset must remain pinned");
 for (const fingerprint of [
   "047c92f6e2212473dc436020afed689527076d44",
   "fb0637bafbcd804fe32152370a1225990745b4bc",
@@ -53,7 +57,8 @@ for (const fingerprint of [
   "f1d01edce4ebaedcbe9a06fc75fec07b304ec3df"
 ]) check(fontFetch.includes(fingerprint), `pinned font fingerprint missing: ${fingerprint}`);
 
-check(main.includes("ฅ^•ﻌ•^ฅ"), "baseline kawaii status copy must remain exact");
+check(completion.includes('cat.text = "♡ Loom"'), "browser-visible decorative status copy must avoid unstable mixed-script shaping");
+check(completion.includes("Let’s weave something lovely today ♡") && completion.includes("今天也把故事织得更漂亮一点吧 ♡"), "launcher decorative copy must use deterministic glyph coverage");
 check(main.includes('BOOKS_ICON_PATH := "res://assets/books-stack.svg"'), "Knowledge icon must use deterministic local vector art");
 check(main.includes("Let the story\\ngrow without\\nletting the\\nsystem lose\\nthe plot."), "desktop/mobile baseline headline geometry must stay explicit");
 check(parity.includes("LAUNCHER_CONTENT_INSET := 36.0"), "Story Loom content inset must preserve the Solid material-panel content box");
@@ -91,17 +96,20 @@ check(interaction.includes('target = "/docs/en"'), "English Docs handoff must pr
 check(interaction.includes("novelforgeInteraction"), "browser interaction readiness marker is required");
 check(!interaction.includes("set_interval") && !interaction.includes("setInterval") && !interaction.includes("Timer.new"), "interaction parity must not introduce default polling");
 
-check(completion.includes("func _build_lower_sections"), "Home must own a complete post-hero surface rather than a three-card placeholder");
-check(completion.includes("_build_home_labs") && completion.includes("_build_home_portals") && completion.includes("_build_home_knowledge"), "Home capability, lab, portal, and knowledge sections are required");
-check(completion.includes("func _repair_localized_control_fonts"), "localized controls must repair CJK font fallback after text mutation");
-check(completion.includes("func _patch_architecture_copy_geometry"), "Architecture CJK heading/lede geometry repair is required");
-check(completion.includes("func _append_architecture_inspector"), "Architecture must render the selected-node inspector below the execution path");
-check(completion.includes("func _build_reading_preview"), "Publication must render a real reading preview body");
-check(completion.includes("_build_publication_metadata") && completion.includes("_build_publication_provenance"), "Publication preview must include metadata and provenance surfaces");
-check(completion.includes('novelforgeVisualCompletion", "ready"'), "browser QA visual-completion readiness marker is required");
-check(completion.includes('novelforgeHomeSections", "complete"'), "Home completeness marker is required");
-check(completion.includes('novelforgePublicationPreview", "ready"'), "Publication preview marker is required");
-check(!completion.includes("Timer.new") && !completion.includes("setInterval"), "visual completion must remain event-driven with no default polling");
+check(completionCore.includes("func _build_lower_sections"), "Home must own a complete post-hero surface rather than a three-card placeholder");
+check(completionCore.includes("_build_home_labs") && completionCore.includes("_build_home_portals") && completionCore.includes("_build_home_knowledge"), "Home capability, lab, portal, and knowledge sections are required");
+check(completionCore.includes("func _repair_localized_control_fonts"), "localized controls must repair CJK font fallback after text mutation");
+check(completionCore.includes("func _patch_architecture_copy_geometry"), "Architecture CJK heading/lede geometry repair is required");
+check(completionCore.includes("func _append_architecture_inspector"), "Architecture must render the selected-node inspector below the execution path");
+check(completionCore.includes("func _build_reading_preview"), "Publication must render a real reading preview body");
+check(completionCore.includes("_build_publication_metadata") && completionCore.includes("_build_publication_provenance"), "Publication preview must include metadata and provenance surfaces");
+check(completionCore.includes('novelforgeVisualCompletion", "ready"'), "browser QA visual-completion readiness marker is required");
+check(completionCore.includes('novelforgeHomeSections", "complete"'), "Home completeness marker is required");
+check(completionCore.includes('novelforgePublicationPreview", "ready"'), "Publication preview marker is required");
+check(completion.includes('novelforgeVisualPolish", "ready"'), "screenshot-driven visual polish readiness marker is required");
+check(completion.includes("看一次 NovelForge\\n如何穿过整个系统。"), "Architecture Chinese hero must use collision-free two-line geometry");
+check(completion.includes("Every derivative resolves back\\nto the same accepted manuscript."), "Publication phone provenance title must use an explicit safe wrap");
+check(!completionAll.includes("Timer.new") && !completionAll.includes("setInterval"), "visual completion must remain event-driven with no default polling");
 
 check(main.includes('"phone"') && main.includes('"compact"') && main.includes('"desktop"'), "three responsive layout modes are required");
 check(main.includes("window.location.assign") && parity.includes("window.history.pushState"), "browser navigation boundary must stay explicit");
@@ -116,16 +124,18 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_production_source_quality_v14",
+    schema: "novelforge_godot_production_source_quality_v15",
     status: "pass",
     production_cutover: true,
     runtime_role: "production",
     visual_baseline: "Solid/Vite Story Loom Kawaii Atelier golden fixture",
     visual_completion_layer: true,
+    screenshot_driven_polish: true,
     home_full_surface: true,
     architecture_inspector: true,
     publication_rendered_preview: true,
     cjk_localized_controls: true,
+    stable_decorative_glyphs: true,
     typography_authority: "WeiUI Inter + Noto Sans SC",
     renderer: "gl_compatibility",
     max_dimension: "2.5D",
