@@ -7,6 +7,7 @@ on:
       - 'site/godot/**'
       - 'site/package.json'
       - 'site/scripts/godot-workbench-behavior-qa.mjs'
+      - 'site/scripts/run-godot-workbench-behavior-qa.mjs'
       - 'site/scripts/godot-shadow-source-quality-v19.mjs'
       - 'site/scripts/godot-glyph-policy-qa.mjs'
       - 'site/scripts/build-godot-shadow.sh'
@@ -17,6 +18,7 @@ on:
       - 'site/godot/**'
       - 'site/package.json'
       - 'site/scripts/godot-workbench-behavior-qa.mjs'
+      - 'site/scripts/run-godot-workbench-behavior-qa.mjs'
       - 'site/scripts/godot-shadow-source-quality-v19.mjs'
       - 'site/scripts/godot-glyph-policy-qa.mjs'
       - 'site/scripts/build-godot-shadow.sh'
@@ -95,7 +97,7 @@ jobs:
             sleep 1
           done
           test "$ready" = true
-          CHROME="$CHROME" node site/scripts/godot-workbench-behavior-qa.mjs \
+          CHROME="$CHROME" node site/scripts/run-godot-workbench-behavior-qa.mjs \
             --url 'http://127.0.0.1:4190/' \
             --output "$OUT/workbench-behavior.json" \
             --timeout-ms 90000 > "$OUT/workbench-behavior.log" 2>&1
