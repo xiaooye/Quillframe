@@ -59,7 +59,14 @@ check(app.includes("<Router root={ProductShell}>") && surface.includes("ProductS
 check(unified.includes(".unified-publication-gallery") && unified.includes(".architecture-hero-path"), "kawaii product composition must retain page-specific visual identities inside the shared frame");
 
 const qualityScript = packageJson.scripts?.quality ?? "";
-check(qualityScript.includes("atelier-quality.mjs") && qualityScript.includes("product-shell-quality.mjs") && qualityScript.includes("css-architecture-quality.mjs"), "Product Site quality script must gate Atelier, shared shell, and CSS architecture");
+const baselineQualityScript = packageJson.scripts?.["baseline:quality"] ?? "";
+check(qualityScript.includes("baseline:quality"), "Product Site aggregate quality must execute the golden-baseline quality chain");
+check(
+  baselineQualityScript.includes("atelier-quality.mjs") &&
+    baselineQualityScript.includes("product-shell-quality.mjs") &&
+    baselineQualityScript.includes("css-architecture-quality.mjs"),
+  "Golden baseline quality chain must gate Atelier, shared shell, and CSS architecture",
+);
 
 if (failures.length) {
   for (const failure of failures) console.error(`atelier-quality: FAIL: ${failure}`);
