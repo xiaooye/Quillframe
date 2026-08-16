@@ -35,12 +35,7 @@ func _patch_studio_compact() -> void:
 	if hero == null:
 		return
 	var visual_x := hero.size.x * 0.56
-	_fit_wide_compact_title(
-		hero,
-		["The creative\nworkbench", "把创作放在前台"],
-		visual_x,
-		28.0
-	)
+	_fit_wide_compact_title(hero, ["The creative\nworkbench", "把创作放在前台"], visual_x, 28.0)
 	_fit_wide_compact_lede(hero, ["Phase 2C now ships", "第二阶段 C"], visual_x, 28.0, 150.0)
 
 func _patch_architecture_compact() -> void:
@@ -51,12 +46,7 @@ func _patch_architecture_compact() -> void:
 	if hero == null:
 		return
 	var visual_x := hero.size.x * 0.59
-	_fit_wide_compact_title(
-		hero,
-		["See how one\nNovelForge run", "看一次 NovelForge"],
-		visual_x,
-		28.0
-	)
+	_fit_wide_compact_title(hero, ["See how one\nNovelForge run", "看一次 NovelForge"], visual_x, 28.0)
 	_fit_wide_compact_lede(hero, ["Project → Manager"], visual_x, 28.0, 115.0)
 
 func _patch_publication_compact() -> void:
@@ -79,12 +69,7 @@ func _patch_inspect_compact() -> void:
 	if hero == null:
 		return
 	var visual_x := hero.size.x * 0.57
-	_fit_wide_compact_title(
-		hero,
-		["Resolve the\nproject before", "任何工具动手之前"],
-		visual_x,
-		28.0
-	)
+	_fit_wide_compact_title(hero, ["Resolve the\nproject before", "任何工具动手之前"], visual_x, 28.0)
 	_fit_wide_compact_lede(hero, ["Inspect the manifest", "在浏览器本地检查"], visual_x, 28.0, 125.0)
 
 func _patch_playground_compact() -> void:
@@ -95,12 +80,7 @@ func _patch_playground_compact() -> void:
 	if hero == null:
 		return
 	var visual_x := hero.size.x * 0.59
-	_fit_wide_compact_title(
-		hero,
-		["Make the\nexecution path", "把执行路径变成"],
-		visual_x,
-		28.0
-	)
+	_fit_wide_compact_title(hero, ["Make the\nexecution path", "把执行路径变成"], visual_x, 28.0)
 	_fit_wide_compact_lede(hero, ["Paste working text", "粘贴工作文本"], visual_x, 28.0, 105.0)
 
 func _patch_agents_compact() -> void:
@@ -119,12 +99,7 @@ func _patch_agents_compact() -> void:
 	if hero == null:
 		return
 	var visual_x := hero.size.x * 0.57
-	_fit_wide_compact_title(
-		hero,
-		["Let your agent\nuse NovelForge", "让 Agent 使用"],
-		visual_x,
-		28.0
-	)
+	_fit_wide_compact_title(hero, ["Let your agent\nuse NovelForge", "让 Agent 使用"], visual_x, 28.0)
 	_fit_wide_compact_lede(hero, ["The portable Agent Skill", "便携 Agent Skill"], visual_x, 28.0, 125.0)
 
 func _patch_changelog_compact() -> void:
@@ -135,12 +110,7 @@ func _patch_changelog_compact() -> void:
 	if hero == null:
 		return
 	var visual_x := hero.size.x * 0.63
-	_fit_wide_compact_title(
-		hero,
-		["A changelog\nthat separates", "版本记录只写"],
-		visual_x,
-		28.0
-	)
+	_fit_wide_compact_title(hero, ["A changelog\nthat separates", "版本记录只写"], visual_x, 28.0)
 	_fit_wide_compact_lede(hero, ["NovelForge is pre-1.0", "NovelForge 仍处于"], visual_x, 28.0, 125.0)
 
 func _fit_wide_compact_title(hero: Control, prefixes: Array, visual_x: float, gap: float) -> void:
@@ -148,15 +118,17 @@ func _fit_wide_compact_title(hero: Control, prefixes: Array, visual_x: float, ga
 	if title == null:
 		return
 	var available := maxf(visual_x - title.position.x - gap, 260.0)
-	# The Solid authority has no hard <br> at this width; its two-column grid
-	# lets the heading wrap against the available copy column. Desktop and <=900
-	# retain their separately calibrated explicit wraps in lower layers.
+	# Godot 4.7 Label autowrap requires an explicit maximum width. Set the wrap
+	# contract before setting size so the internal one-line minimum cannot clamp
+	# the Control back across the evidence column.
 	title.text = title.text.replace("\n", " ")
-	title.size.x = minf(title.size.x, available)
 	title.scale = Vector2.ONE
+	title.custom_minimum_size.x = 0.0
+	title.custom_maximum_size = Vector2(available, -1.0)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title.add_theme_font_size_override("font_size", WIDE_COMPACT_H1_SIZE_EN if _locale == "en-US" else WIDE_COMPACT_H1_SIZE_ZH)
 	title.add_theme_constant_override("line_spacing", -17 if _locale == "en-US" else -7)
+	title.size.x = available
 
 func _fit_wide_compact_lede(hero: Control, prefixes: Array, visual_x: float, gap: float, min_height: float) -> void:
 	var lede := _find_first_label_prefix(hero, prefixes)
@@ -164,9 +136,11 @@ func _fit_wide_compact_lede(hero: Control, prefixes: Array, visual_x: float, gap
 		return
 	var available := maxf(visual_x - lede.position.x - gap, 260.0)
 	lede.text = lede.text.replace("\n", " ")
-	lede.size.x = minf(lede.size.x, available)
-	lede.size.y = maxf(lede.size.y, min_height)
+	lede.custom_minimum_size.x = 0.0
+	lede.custom_maximum_size = Vector2(available, -1.0)
 	lede.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lede.size.x = available
+	lede.size.y = maxf(lede.size.y, min_height)
 	lede.add_theme_constant_override("line_spacing", 4 if _locale == "en-US" else 5)
 
 func _find_first_label_prefix(parent: Node, prefixes: Array) -> Label:
