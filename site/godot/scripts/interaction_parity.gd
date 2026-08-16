@@ -102,10 +102,10 @@ func _localize_header() -> void:
 		"Docs": "知识库",
 		"✦ Open Studio": "✦ 打开 Studio",
 	}
-	for from in replacements.keys():
-		var button := _find_button_exact(self, str(from))
+	for source_label in replacements.keys():
+		var button := _find_button_exact(self, str(source_label))
 		if button != null:
-			button.text = str(replacements[from])
+			button.text = str(replacements[source_label])
 	var search := _find_label_prefix(self, "⌕  Search NovelForge")
 	if search != null:
 		search.text = "⌕  搜索 NovelForge"
@@ -231,11 +231,11 @@ func _render_command_palette() -> void:
 	shade.mouse_filter = Control.MOUSE_FILTER_STOP
 	shade.gui_input.connect(_on_command_shade_input)
 	_command_overlay.add_child(shade)
-	var phone := _layout == "phone"
-	var surface_width := min(size.x - (24.0 if phone else 80.0), 680.0)
-	var surface_height := min(size.y - (40.0 if phone else 100.0), 620.0)
-	var surface_x := (size.x - surface_width) / 2.0
-	var surface_y := 18.0 if phone else 70.0
+	var phone: bool = _layout == "phone"
+	var surface_width: float = minf(size.x - (24.0 if phone else 80.0), 680.0)
+	var surface_height: float = minf(size.y - (40.0 if phone else 100.0), 620.0)
+	var surface_x: float = (size.x - surface_width) / 2.0
+	var surface_y: float = 18.0 if phone else 70.0
 	var surface := _panel(Vector2(surface_x, surface_y), Vector2(surface_width, surface_height), Color("fffdfc"), 22, Color("d8cae8"), 1, Color(0.18,0.12,0.24,0.18), 18)
 	_command_overlay.add_child(surface)
 	var cute := _mixed_label("✦  Search NovelForge    Weave something lovely today (｡•̀ᴗ-)✧", 12, 650, C.editorial)
@@ -304,7 +304,7 @@ func _toggle_mobile_menu() -> void:
 	_mobile_menu.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_mobile_menu)
 	_set_dataset("novelforgeMobileMenu", "open")
-	var width := min(size.x - 24.0, 360.0)
+	var width: float = minf(size.x - 24.0, 360.0)
 	var surface := _panel(Vector2(size.x - width - 12.0, 72.0), Vector2(width, 506.0), Color("fffdfc"), 18, Color("d8cae8"), 1, Color(0.18,0.12,0.24,0.16), 16)
 	_mobile_menu.add_child(surface)
 	var search_text := "⌕  搜索 NovelForge" if _locale == "zh-CN" else "⌕  Search NovelForge"
