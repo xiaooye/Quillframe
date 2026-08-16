@@ -17,7 +17,7 @@ NovelForge 把一章正文视为一轮**可恢复的语义生产运行**，而�
 
 - current/pinned Framework identity；
 - consuming Project 与 exact lock/fingerprint；
-- exactly one `task_mode`；
+- 只能有一个 `task_mode`；
 - manager session/run/checkpoint identity；
 - 当前 Canon/plan/candidate fingerprint 与 authority cutoff；
 - 当前真实 host capabilities / permissions。
@@ -48,15 +48,7 @@ Manager 判断当前工作相对于 Project state 是否合法。Plan 继续与 
 
 ## 04 · 先解决人物因果，再写 prose
 
-Pre-draft causal path：
-
-```text
-private character/world state
-→ character.action_propose
-→ scene.resolve_actions
-→ compact writer-safe realization projection
-→ Writer
-```
+Pre-draft causal path 是：**private character/world state → `character.action_propose` → `scene.resolve_actions` → compact writer-safe realization projection → Writer**。
 
 人物 private state 是 causal evidence，不是 prose payload。Runtime 可以执行 evidence identity、authorized visibility 与 story-time eligibility；motivation、plausible inference、integrity、knowledge use 等语义问题由模型判断。
 
@@ -139,7 +131,7 @@ Independence 是 semantic judgment 之外的独立属性。
 
 Gate 真正要求 independence 时，必须使用 genuinely separate invocation/session/worker、bounded packet 与 exact candidate fingerprint。Manager 可以 package/dispatch/validate/consume，但不能换一个 internal role label 就给自己盖 independent PASS。
 
-Transport failure 可以切换 eligible transport；valid semantic reject 不是 transport failure，必须进入 repair，禁止 reviewer shopping。
+Transport failure 可以切换 eligible transport；有效的语义拒绝不是 transport failure，必须进入 repair，也不能反复更换评审直到有人接受 candidate。
 
 ## 12 · Acceptance 与 Settlement 仍然分离
 
@@ -151,22 +143,21 @@ Quality evidence 不能把自己批准进 Canon。
 
 ## 13 · 默认 adaptive graph
 
-```text
-authority + session bootstrap
-→ agent-owned search/context selection
-→ deterministic exact-set/stage/fingerprint verification
-→ story/planning preflight
-→ character action → scene collision → compact realization
-→ Writer Raw Draft → Surface realization → freeze fingerprint
-→ Blind Reader
-→ Semantic Rule Auditor when required
-→ Editor repair spec
-→ repair / challenger comparison as warranted
-→ continuity/state checks
-→ required independent semantic gate
-→ user-visible Review Draft
-→ explicit acceptance → SETTLE（独立 mode / transaction）
-```
+默认生产图按以下阶段顺序执行：
+
+1. authority/session bootstrap；
+2. agent-owned search/context selection；
+3. deterministic exact-set/stage/fingerprint verification；
+4. story/planning preflight；
+5. character action、scene collision，再生成 compact realization；
+6. Writer Raw Draft、Surface realization，然后冻结 candidate fingerprint；
+7. Blind Reader；
+8. 必要时 Semantic Rule Auditor；
+9. Editor repair specification，以及必要的 repair/challenger comparison；
+10. continuity/state checks；
+11. required independent semantic gate；
+12. user-visible Review Draft；
+13. explicit acceptance，随后由独立 `SETTLE` mode/transaction 完成 settlement。
 
 Manager 只加载当前 failure 真正需要的最小 semantic contract set。默认优先一个能力足够强的 agent；只有 information isolation、independent evaluation、private state 或真正 specialist benefit 能证明收益时才拆分。
 
