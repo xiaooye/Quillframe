@@ -2,26 +2,30 @@ extends "res://scripts/visual_completion.gd"
 
 # Solid is the visual authority. Home and the shared route hero intentionally
 # use different breakpoints: Home stacks at 980px while product surfaces stay
-# two-column until 900px. Godot's broader `compact` topology spans both ranges,
-# so this final layer preserves the compact app shell while matching those
-# independent Solid layout and typography contracts.
+# two-column until 900px. Godot's root reserves a 15px scrollbar gutter, so
+# breakpoint decisions must use the equivalent browser/CSS viewport width rather
+# than the narrower Control width.
 
 const SOLID_HOME_STACK_MAX_WIDTH := 980.0
 const SOLID_HERO_STACK_MAX_WIDTH := 900.0
+const WEB_SCROLLBAR_GUTTER := 15.0
 const WIDE_COMPACT_H1_SIZE_EN := 48
 const WIDE_COMPACT_H1_SIZE_ZH := 46
 const NARROW_COMPACT_H1_SIZE := 36
+
+func _solid_viewport_width() -> float:
+	return size.x + WEB_SCROLLBAR_GUTTER
 
 func _build() -> void:
 	super._build()
 	# Lower geometry layers deliberately preserve desktop/mobile calibrated wraps.
 	# Apply the Solid clamp-equivalent tablet type scale last so those lower fixes
 	# cannot re-inflate 768px route headings after their stacked layout is built.
-	if _layout == "compact" and size.x <= SOLID_HERO_STACK_MAX_WIDTH:
+	if _layout == "compact" and _solid_viewport_width() <= SOLID_HERO_STACK_MAX_WIDTH:
 		_polish_narrow_compact_copy()
 
 func _build_compact() -> void:
-	if size.x <= SOLID_HOME_STACK_MAX_WIDTH:
+	if _solid_viewport_width() <= SOLID_HOME_STACK_MAX_WIDTH:
 		super._build_compact()
 		return
 	# Home remains copy + launcher columns at 1024px in the Solid authority. Reuse
@@ -60,7 +64,7 @@ func _build_compact() -> void:
 	_build_lower_sections(top + 690.0, x, size.x - 80.0, false)
 
 func _build_product_compact() -> void:
-	if size.x <= SOLID_HERO_STACK_MAX_WIDTH:
+	if _solid_viewport_width() <= SOLID_HERO_STACK_MAX_WIDTH:
 		super._build_product_compact()
 		return
 	var page_x := 40.0
@@ -76,7 +80,7 @@ func _build_product_compact() -> void:
 	_build_product_cards(Vector2(page_x, hero_y + hero_h + 32.0), page_width, false)
 
 func _patch_studio_compact() -> void:
-	if size.x <= SOLID_HERO_STACK_MAX_WIDTH:
+	if _solid_viewport_width() <= SOLID_HERO_STACK_MAX_WIDTH:
 		super._patch_studio_compact()
 		return
 	var hero := _find_stage_panel(110.0, 700.0)
@@ -87,7 +91,7 @@ func _patch_studio_compact() -> void:
 	_fit_wide_compact_lede(hero, ["Phase 2C now ships", "第二阶段 C"], visual_x, 28.0, 150.0)
 
 func _patch_architecture_compact() -> void:
-	if size.x <= SOLID_HERO_STACK_MAX_WIDTH:
+	if _solid_viewport_width() <= SOLID_HERO_STACK_MAX_WIDTH:
 		super._patch_architecture_compact()
 		return
 	var hero := _find_stage_panel(110.0, 500.0)
@@ -98,7 +102,7 @@ func _patch_architecture_compact() -> void:
 	_fit_wide_compact_lede(hero, ["Project → Manager"], visual_x, 28.0, 115.0)
 
 func _patch_publication_compact() -> void:
-	if size.x <= SOLID_HERO_STACK_MAX_WIDTH:
+	if _solid_viewport_width() <= SOLID_HERO_STACK_MAX_WIDTH:
 		super._patch_publication_compact()
 		return
 	var hero := _find_stage_panel(110.0, 500.0)
@@ -110,7 +114,7 @@ func _patch_publication_compact() -> void:
 	_fit_wide_compact_lede(hero, ["One Publication IR produces", "一份 Publication IR"], visual_x, 24.0, 115.0)
 
 func _patch_inspect_compact() -> void:
-	if size.x <= SOLID_HERO_STACK_MAX_WIDTH:
+	if _solid_viewport_width() <= SOLID_HERO_STACK_MAX_WIDTH:
 		super._patch_inspect_compact()
 		return
 	var hero := _find_stage_panel(110.0, 400.0)
@@ -121,7 +125,7 @@ func _patch_inspect_compact() -> void:
 	_fit_wide_compact_lede(hero, ["Inspect the manifest", "在浏览器本地检查"], visual_x, 28.0, 125.0)
 
 func _patch_playground_compact() -> void:
-	if size.x <= SOLID_HERO_STACK_MAX_WIDTH:
+	if _solid_viewport_width() <= SOLID_HERO_STACK_MAX_WIDTH:
 		super._patch_playground_compact()
 		return
 	var hero := _find_stage_panel(110.0, 500.0)
@@ -132,7 +136,7 @@ func _patch_playground_compact() -> void:
 	_fit_wide_compact_lede(hero, ["Paste working text", "粘贴工作文本"], visual_x, 28.0, 105.0)
 
 func _patch_agents_compact() -> void:
-	if size.x <= SOLID_HERO_STACK_MAX_WIDTH:
+	if _solid_viewport_width() <= SOLID_HERO_STACK_MAX_WIDTH:
 		super._patch_agents_compact()
 		return
 	var hero := _find_stage_panel(110.0, 500.0)
@@ -143,7 +147,7 @@ func _patch_agents_compact() -> void:
 	_fit_wide_compact_lede(hero, ["The portable Agent Skill", "便携 Agent Skill"], visual_x, 28.0, 125.0)
 
 func _patch_changelog_compact() -> void:
-	if size.x <= SOLID_HERO_STACK_MAX_WIDTH:
+	if _solid_viewport_width() <= SOLID_HERO_STACK_MAX_WIDTH:
 		super._patch_changelog_compact()
 		return
 	var hero := _find_stage_panel(110.0, 450.0)
@@ -170,8 +174,6 @@ func _polish_narrow_compact_copy() -> void:
 				home_title.size.x = size.x - 80.0
 		"/product":
 			# Product uses the 112px route origin; all other route heroes use 110px.
-			# Using 110 here silently skipped the final wrap pass and left the old
-			# desktop-calibrated narrow title box visible at 768px.
 			_polish_narrow_surface(["NovelForge\nis a fiction", "NovelForge 是小说"], ["It separates creative judgment", "它把创作判断与确定性控制分开"], 112.0)
 		"/studio":
 			_polish_narrow_surface(["The creative\nworkbench", "把创作放在前台"], ["Phase 2C now ships", "第二阶段 C"])
