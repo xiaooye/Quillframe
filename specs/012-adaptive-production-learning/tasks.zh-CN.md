@@ -1,68 +1,97 @@
-# Tasks 012 · 自适应生产学习与 Realization 边界
+# Tasks 012 · AI-Native 自适应生产架构重构
 
-## Design
+## Authority / reconciliation
 
-- [x] 冻结真实 production failure evidence，并严格区分 historical pinned authority 与当前 engineering target。
-- [x] Benchmark 成熟写作/agent system，依据 persistent intent、sparse context、simulation-before-prose、evaluator/editor loop、bounded learning 重构设计。
-- [x] 复用现有 Author Steering、Learning Store、Context Inspector、story simulation、readiness、quality evolution owner，不重复造 subsystem。
+- [x] 重新 bootstrap live `main`、PR #90 branch/base/HEAD、changed files、workflows。
+- [x] 重新读取 live Framework manager/session/routing/semantic-execution/self-improvement authority。
+- [x] 冻结本 synchronization slice 前 rollback point：`b6f13ac97a105221f8ee78d862c4e6f02e4cf9ab`。
+- [x] PR #95 Godot/UI work 与本 `SYSTEM-IMPROVE` review unit 严格分离。
+- [x] 当前 Product/Godot/Studio base/unrelated CI debt 单独分类。
 
-## Author Model / feedback
+## Deterministic-overreach removal
 
-- [ ] 增加 `learning.preference_interpret` semantic contract。
-- [ ] 基于现有 Learning Store 增加 deterministic Author Model projection/runtime。
-- [ ] 强制 one_off、project、user_taste、general_craft 的 scope/authority boundary。
-- [ ] 增加 contradiction / supersession tests。
-- [ ] 把实质性 Review feedback 接成 typed evidence / proposed preference delta，不改变 primary task mode。
+- [x] 从 Context Assembly 删除 deterministic literary class/purpose obligation；保留 exact-ref/stage/fingerprint safety。
+- [x] Context relevance/search/sufficiency 通过 `context.select` 保持 model-owned。
+- [x] 删除 default Reader taxonomy/HF/telemetry priming。
+- [x] 分离 Blind Reader、Semantic Rule Auditor、Editor。
+- [x] 删除 deterministic owner/scope → repair-depth mapping；generation mode 由 Editor 选择。
+- [x] 删除 runtime 对 character epistemic label 的 semantic reinterpretation；只保留 evidence identity/story-time guard。
+- [x] 删除 numeric evidence-count promotion threshold；改为 bound semantic promotion review。
+- [x] Author Model active preference 改成显式选择，不自动注入。
+- [x] Thin character/scene/realization semantic schema。
+- [x] Prose telemetry 保持 optional/default-off。
 
-## Context assembly
+## Retained deterministic execution owners
 
-- [ ] 增加 simulation/private-state stage 与 pre-draft isolation。
-- [ ] 增加 required context obligation 与 satisfaction receipt。
-- [ ] 增加 deterministic Context Assembly validator/self-test。
-- [ ] 保持 semantic relevance selection 归模型所有。
+- [x] Session/checkpoint persistence 与 resume preflight。
+- [x] Capability/credential boundary。
+- [x] Project/authority/write-intent isolation。
+- [x] Fingerprint、exact-source、receipt、registered-contract binding。
+- [x] Before-state/CAS/idempotency/transaction constraint。
+- [x] Stage/private-context isolation 与 hard budget。
+- [x] Structural readiness/release aggregation，不重新判断文学内容。
 
-## Simulation / realization
+## Architecture / documentation
 
-- [ ] 增加 writer-safe `scene.realization_project` semantic contract。
-- [ ] 保证 private character state 只做 causal state，不直接成为 prose payload。
-- [ ] 增加 formal-completeness counterexample boundary。
+- [x] 用当前 thin-kernel / semantic-runtime owner map 替换 stale Spec 012 architecture。
+- [x] 记录 current ADOPT / ADAPT / REJECT / DEFER research ledger。
+- [x] 记录 deterministic-overreach audit 与 explicit non-goals。
+- [x] Context & Memory docs 同步 Context Assembly v2 semantics。
+- [x] `HARNESS_MANIFEST.yaml` 同步 schema ID / semantic contract ownership。
+- [x] 删除 zombie `reader.production_audit` authority reference。
+- [x] 记录适用于 SYSTEM-IMPROVE 的 anti-stall / stale-state execution discipline。
 
-## Reader / Editor / quality
+## Semantic regression / ablation packets
 
-- [ ] 在 quality taxonomy 注册 HF-30。
-- [ ] 增加 profile-sensitive prose telemetry，明确只是 non-authoritative signal。
-- [ ] Reader production assessment 增加 paragraph/profile/dialogue realization 的结构化维度。
-- [ ] 增加 `editor.repair_spec` contract。
-- [ ] material repair 复用 pairwise incumbent/challenger comparison。
-- [ ] 只在确有 deterministic structural receipt 时扩展 readiness。
+- [ ] 增加 blind remote-context case。
+- [ ] 增加 irrelevant-match case。
+- [ ] 增加 search-continuation case。
+- [ ] 增加 search-stopping case。
+- [ ] 增加不暴露 HF label 的 agenda-to-dialogue Blind Reader case。
+- [x] 保留 legitimate formal-completeness counterexample。
+- [x] 保留 inaccessible-knowledge semantic case。
+- [ ] 增加 plausible-inference counterexample。
+- [x] 保留 dynamic-planning profile cases。
+- [ ] 增加 character-embodiment case。
+- [ ] 增加 Reader-contamination paired ablation。
+- [ ] 增加 holistic-vs-decomposed Rule Auditor paired ablation。
+- [ ] 增加 telemetry-anchoring paired ablation。
+- [x] 保留 deterministic unauthorized-state guard。
+- [x] 保留 deterministic stale-candidate/fingerprint guard。
+- [x] 保留 session resume stale/wrong-authority guard。
+- [ ] 在 CI 验证 ablation packet construction。
 
-## Safety / integrity
+## Evaluator freshness
 
-- [ ] 增加 typed write-intent/action mismatch guard。
-- [ ] 修复 stale semantic registry reference。
-- [ ] 增加 semantic-reference integrity self-test/CI。
-- [ ] 保持 semantic reject 与 transport/configuration/result-validation failure 的类型区分。
+- [x] 重新 research current official OpenAI model guidance。
+- [ ] 把 stale independent evaluator `gpt-5.1` pin 更新为 current `gpt-5.6` alias。
+- [ ] Model migration 本身不算 semantic quality proof；仍要求 representative semantic execution。
 
-## Integration
+## Deterministic verification
 
-- [ ] 在 manifest/catalog 注册新 tool/contract。
-- [ ] 双语更新 Harness/Orchestration 与 production/context/learning 用户文档。
-- [ ] 把本 spec 注册到 documentation governance。
-- [ ] 把 deterministic tests 接入 normal reusable contracts CI。
-- [ ] 增加 hidden-gold isolation 的 semantic/regression eval fixture。
+- [ ] Final HEAD compile 全部 Python module。
+- [ ] Final HEAD 跑 candidate-owned context/semantic/quality/learning/planning self-test。
+- [ ] Final HEAD 构建 blind semantic queue 并检查 hidden-gold isolation。
+- [ ] Final HEAD 验证 Framework bundle/version identity。
+- [ ] 跑 exact-head workflows 并分类全部 failure。
+- [ ] 确认 candidate-owned deterministic workflow green。
+- [ ] 确认没有 accidental downstream Project/Canon/Settlement/lock mutation。
 
-## Verification
+## Independent semantic gate
 
-- [ ] Compile 所有 Python module。
-- [ ] 跑完所有新增 deterministic self-test。
-- [ ] 跑与本改动相关的 existing deterministic regression。
-- [ ] 构建/验证 semantic contract catalog。
-- [ ] 构建 blind semantic judge queue。
-- [ ] 最终文件集合确定后验证 Framework bundle reproducibility。
-- [ ] 跑 exact-head CI，并区分 pre-existing 与 introduced failure。
-- [ ] 若存在 eligible transport，为 exact candidate 获取 independent semantic capability/counterexample evidence。
-- [ ] 形成 rollback point 与 human-review handoff summary。
+- [ ] 用 genuinely independent model invocation 执行 required blind semantic regression/ablation，并绑定 exact final candidate。
+- [ ] 验证 independent worker identity/provenance/fingerprint receipt。
+- [ ] 若 provider credential 仍不可用，明确保持 `PENDING_MODEL`；绝不能把 workflow green 转成 semantic PASS。
 
 ## Release boundary
 
-- [ ] 本 SYSTEM-IMPROVE run 不 merge PR #90、不 promote Framework behavior、不迁移 consuming Project lock；除非之后另有单独 authority。
+- [x] 不 merge PR #90。
+- [x] 不 promote/release Framework behavior。
+- [x] 不修改 downstream Project lock/manuscript/Canon/Settlement。
+- [x] 不从 manager inference 激活 durable user taste。
+
+## Human-review readiness
+
+- [ ] 更新 PR title/body，使其准确描述 final review unit 与 exact evidence。
+- [ ] 形成 final exact Git/CI/security/compatibility handoff。
+- [ ] Required independent semantic evidence 不再是 `PENDING_MODEL` 之后，才允许 `READY_FOR_HUMAN_REVIEW`。

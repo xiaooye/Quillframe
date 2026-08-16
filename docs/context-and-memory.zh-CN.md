@@ -1,303 +1,157 @@
 <div align="center">
   <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom 标志" width="54" />
-  <p><strong>上下文与记忆 · 让作者看得见稀疏工作集，也让“记住了”永远不会冒充“发生了”</strong></p>
-  <p><kbd>语义选择</kbd>&nbsp;&nbsp;<kbd>权威检查</kbd>&nbsp;&nbsp;<kbd>确定性组装</kbd>&nbsp;&nbsp;<kbd>硬预算</kbd>&nbsp;&nbsp;<kbd>作者控制</kbd>&nbsp;&nbsp;<kbd>可重建记忆</kbd></p>
+  <p><strong>上下文与记忆 · 在确定性权威边界内让 agent 自己决定语义选择</strong></p>
+  <p><kbd>SEARCH</kbd>&nbsp;&nbsp;<kbd>SELECT</kbd>&nbsp;&nbsp;<kbd>VERIFY</kbd>&nbsp;&nbsp;<kbd>PACK</kbd>&nbsp;&nbsp;<kbd>RESUME</kbd></p>
   <p><a href="context-and-memory.en.md">English</a> · <a href="README.zh-CN.md">文档中心</a></p>
 </div>
 
 # 上下文与记忆
 
-NovelForge 明确区分：**项目里存了什么、这次运行哪些内容有资格进入上下文、模型认为当前哪些最相关、确定性边界是否允许这组选择进入目标 stage、哪些内容只是可重建的派生记忆，以及什么才是故事事实。**
+NovelForge 明确区分：**存储的信息、机械 eligibility、semantic relevance、working context、durable session history、Project truth**。
 
-当前实现故意把语义选择与确定性控制拆开：
+> **模型决定自己缺什么、搜什么、什么真正相关、是否继续搜、什么时候证据已经够了；deterministic runtime 只决定模型允许访问什么、item/result 是否真实且 current、是否允许进入目标 stage，以及 hard budget / authority constraint 是否满足。**
 
-> **“什么对当前任务真正相关”由模型通过 `context.select` 判断；权威等级、stage eligibility、required-context obligation、作者显式控制、来源绑定、硬预算、整项装载与受保护编辑规则由确定性代码负责。**
+## 1. Ownership model
 
-这样可以避免一个旧摘要、会话笔记、启发式“相关度分数”或人物私有 simulation record 悄悄变成 prompt truth，更不会让它升级成 Canon。
+**Project authority** 拥有 Canon / accepted facts 与 Project-level truth。
 
----
+**Session Runtime** 拥有 durable run/checkpoint/event identity。Model context window 不是 durable session。
 
-## 01 · 先分清五层
+**Context Inspector** 拥有 mechanical eligibility、stage visibility、显式 pin/priority control、protected edit 与 invalidation。它拒绝 `relevance` 字段，因为 relevance 是 semantic judgment。
 
-**项目权威**回答：这本小说里什么是真的？`accepted` / `locked` 事实仍然由 Project 拥有。
+**`context.select`** 拥有 semantic context/search decision。
 
-**Context Manifest**回答：哪些材料在当前 run、当前 stage 下具备进入上下文的资格？
+**Context Assembly v2** 对模型已选好的 exact set 执行 deterministic verification。
 
-**语义选择**回答：在这些合法候选里，哪些内容对当前任务真正有用？这属于模型解释，通过 `context.select` 完成。
+**Memory tiers / hard-budget packing** 在客观预算下装载已选择的 whole item。
 
-**Context Assembly**回答：模型选择出的这组 item 是否真的满足当前 invocation 的 stage、authority、provenance、invalidation 与 required-context contract？这一步属于确定性验证。
+**Memory Bank** 保存 source-bound runtime/derived memory，不是 shadow Canon。
 
-**Memory Bank**保存运行时、派生或 proposal 型记忆，并记录 provenance 与版本；它可以引用 Canon，却不是第二份 Canon database。
-
-最简单的心智模型是：
-
-**存储 → 合法候选 → 语义选择 → 确定性组装 → 硬预算装载 → 模型工作上下文**
-
-每一个箭头都有不同 owner。
-
----
-
-## 02 · Context Inspector 检查权威与资格，不判断文学相关度
+## 2. Context Inspector：只看 eligibility，不看 relevance
 
 `harness/context_inspector.py` 实现 `novelforge_context_inspector_v3`。
 
-每条 Context Manifest item 会被规范化为可检查字段，例如：
+它可以规范化/检查：
 
-- 稳定 ID 与内容类别；
-- source reference 与 source fingerprint；
+- item/source identity 与 source fingerprint；
 - authority class；
-- inclusion reason；
-- 允许进入的 stages；
-- 显式 numeric priority；
-- pinned 状态；
-- 是否为 derived view；
-- hidden / invalidated 状态；
-- 调用方附带的 metadata。
+- allowed stage；
+- explicit numeric priority / pin；
+- derived/hidden/invalidated state；
+- protected-edit proposal behavior。
 
-Inspector **明确拒绝 `relevance` 字段**。语义相关性不是一项确定性 manifest 属性。
+稳定排序（`pinned → explicit priority → stable id`）代表显式作者/runtime control，不代表文学重要性。
 
-确定性排序只遵守：
+`accepted` / `locked` source 不能通过 Context overlay 直接修改；修改请求只能成为 proposal，不会 mutate Canon。
 
-**pinned → explicit priority → stable ID**
+## 3. Stage isolation 属于 deterministic boundary
 
-这代表作者 / runtime 的显式控制，不代表系统声称“这条信息在文学上比另一条更重要”。
-
----
-
-## 03 · Stage isolation 防止错误证据进入错误 worker
-
-Context item 会声明它允许进入哪些 stage。当前 production 既有 Writer、post-draft、reviewer，也有 simulation-oriented view；一条 item 必须对**精确接收 stage**合法，才有资格被组装进去。
-
-这里真正的不变量不是“必须永远只有四个 stage 名字”，而是：**私有状态、答案型证据或生成后证据不能仅仅因为被存储了，就跨 stage 自动泄漏。**
+Private 或 answer-key-like information 不能仅仅因为“存储里有”就跨 stage 泄漏。
 
 例如：
 
-- regression、hidden gold、expected verdict、answer key 不得进入 `writer_pre_draft`；
-- 人物私有 / scene simulation state 可以给 simulation 使用，却不能自动变成 Writer 的解释材料；
-- private state 经过 `scene.realization_project` 得到的 writer-safe projection 可以给 Writer，而产生它的私有状态不一定可以；
-- independent reviewer 只收到它被授权的 bounded context，不默认继承 manager-private reasoning。
+- hidden gold / expected verdict / regression answer key 不得进入 Writer context；
+- private character / scene simulation state 可以给 simulation，但不能自动给 Writer；
+- compact writer-safe realization trace 可以给 Writer，而生成它的 private state 可以继续隐藏；
+- Blind Reader 默认不能继承 manager/author/private-character reasoning。
 
-这是一条确定性 contamination boundary，不需要靠模型“自觉不要偷看”。
+这是 information-security boundary，因此 deterministic enforcement 是合理的。
 
----
+## 4. `context.select`：Search 是 capability
 
-## 04 · 真正的语义筛选属于 `context.select`
+`context.select` semantic contract 接收 bounded task、mechanically eligible candidate blocks，以及 allowed search capabilities/resource budget。
 
-当合法候选材料多于当前任务真正应该接收的内容时，NovelForge 会准备一个受限的 `context.select` semantic job。
+模型自己决定：
 
-`harness/memory_tiers.py` 只把 task context 与 typed memory blocks 交给模型。模型返回 hot / working / archive 的有序 ID；确定性 runtime 再用 exact semantic-job fingerprint 验证结果。
+1. 当前任务还缺什么；
+2. supplied blocks 中哪些真正有用；
+3. 现有 evidence 是否已经足够；
+4. 下一条 focused query 是什么；
+5. 看完结果后是否 broaden / narrow / reformulate；
+6. 什么值得进入 working context；
+7. 什么时候应该停止搜索。
 
-这意味着：
+Runtime 不把 recency、vector similarity、fixed top-k、item class 或 task-mode mapping 变成 narrative truth。这些机制最多只能产生候选，不是 authoritative relevance judgment。
 
-- 模型可以解释“现在什么最相关”；
-- runtime 只允许模型选择已知、未失效的候选 item；
-- stale 或错误绑定的 semantic result 会被拒绝；
-- 某条 memory 被选中，并不会因此获得更高 authority。
+Pinned item 是 explicit execution constraint，也不是 semantic importance 的证明。
 
-该 contract 通过 `context-research` semantic pack 按需解析。
+## 5. Context Assembly v2：只验证 exact set
 
----
+`harness/context_assembly.py` 实现 `novelforge_context_assembly_v2`。
 
-## 05 · Context Assembly 验证“选出来的集合”，不替模型打相关度分
+它在 model/manager 完成 selection **之后**，只验证 deterministic property：
 
-`harness/context_assembly.py` 实现 `novelforge_context_assembly_v1`。
+- selected IDs 真实存在于 inspected eligible set；
+- exact receiving stage 合法；
+- hidden/invalidated/private-state restriction 没被破坏；
+- mechanically required 时 source fingerprint / exact higher-authority ref 匹配；
+- selected projection 没跨 privacy/stage boundary。
 
-它从**已经建立 eligibility，并在需要时完成 semantic selection** 的结果开始，确定性验证具体 selected IDs 是否满足：
+它明确**不判断**：
 
-- 精确 receiving stage；
-- 允许的 authority class；
-- hidden / invalidated 状态；
-- 必要的 source ref / source fingerprint；
-- required context class / purpose obligation；
-- 这条 item 是否允许进入当前 projection；
-- private simulation material 是否被直接送进 Writer stage。
+- 某个 literary context class 是否“required”；
+- selected item 是否 narratively relevant；
+- 当前 selection 在语义上是否 sufficient；
+- 是否应该继续 search。
 
-输出是一份 typed satisfaction receipt 加上 bounded worker-safe / writer-safe projection。它保持 `authority=false`，也不执行模型推理。
+这些都属于模型/Manager。若某个 authoritative artifact 对操作来说是机械 mandatory，caller 传入的是它的 **exact required ref/fingerprint**，而不是用 semantic class/purpose 代替。
 
-### Required 与 optional context
+## 6. Hard-budget packing 继续 deterministic
 
-Required context 是 contract，不是建议。
+使用 tiered packing 时，`harness/memory_tiers.py` 可以执行 hot/working budget、whole-item packing、invalidated exclusion 与 explicit pin。
 
-如果某个 operation 声明了一类 context / purpose 为 required，而当前没有任何合法 selected item 能满足它，Assembly 必须返回 blocking result。Manager 应进入 `BLOCK / PENDING` 或补齐缺失证据；不能静默把 required 降成 optional，然后在 context starvation 下继续生成。
+它不能因为自称“文学相关”就自行 summary/rank/truncate。Explicit pinned item 连 hard budget 都放不下时，应暴露 conflict，而不是悄悄取消 pin。
 
-Optional context 可以缺失而不阻断。
+## 7. Character knowledge：visibility 是机械的，inference 是语义的
 
-### 人物私有 simulation state
+Runtime 可以证明某条 evidence 在 story-time boundary 尚未 available，或者不在 authorized perspective packet 中；但不能仅凭 label 就断言人物“语义上不可能推断”某事。
 
-Private character state 可以合法驱动：
+Character knowledge / inference / consistency 属于 semantic character/rule-audit contract。Evidence identity 与 temporal/visibility eligibility 仍作为 deterministic 输入边界。
+
+## 8. Author Model context 使用同一原则
+
+Active Author Model hypothesis 表示**durably eligible preference evidence**，不表示每个任务都 relevant。
+
+`learning/author_model.py` 暴露 compact active index；manager/model 显式选择当前有用的 hypothesis IDs，deterministic code 只验证它们确实 active 且 Project-compatible，然后才暴露细节。
+
+## 9. 典型 adaptive context loop
 
 ```text
-private state
-→ action / tactic proposal
-→ scene collision / world resolution
-→ writer-safe realization projection
+resolve Project/session authority
+→ build mechanically eligible candidates
+→ model inspects task and current evidence
+→ model selects or requests search
+→ runtime executes allowed search/fetch primitive
+→ model inspects results and may reformulate
+→ model stops when sufficiently grounded
+→ Context Assembly v2 verifies exact refs/stage/fingerprints
+→ hard-budget packing if needed
+→ execute target semantic/writing contract
+→ persist only source-bound, non-authoritative derived memory
 ```
 
-但不能自动变成：
-
-```text
-private state
-→ Writer prompt 里的解释材料
-→ 把角色表改写成对白
-```
-
-这条接口边界正是防止 Agenda-to-Dialogue Leakage / HF-30 的结构性机制之一。
-
----
-
-## 06 · 硬预算装载仍然由确定性代码负责
-
-完成 semantic selection 与 stage-safe assembly 之后，需要 tiered memory packing 时才由 `memory_tiers.py` 执行 deterministic packing。
-
-它负责：
-
-- `hot_budget` 与 `working_budget`；
-- pinned item override；
-- derived-memory authority 检查；
-- source refs / source fingerprints；
-- whole-item-or-skip 装载；
-- invalidated item 排除；
-- archive 输出。
-
-它**不会**自己总结 Canon、给故事相关性打分，也不会为了塞进预算而把一个有完整语义边界的 memory block 截成模糊残片。
-
-Pinned item 如果连 hot budget 都放不下，运行应该失败并暴露控制冲突，而不是悄悄丢掉作者明确固定的内容。
-
-实现返回值直接写明：
-
-- `selection_owner = model`
-- `budget_owner = deterministic_runtime`
-
----
-
-## 07 · 作者控制是 overlay，不是 Canon write
-
-Context Inspector 支持的低权威控制包括：
-
-- pin / unpin；
-- 调整显式 priority；
-- 隐藏 derived view；
-- invalidation derived view，要求以后重建。
-
-这些操作只改变**选择和呈现行为**。
-
-Hide / invalidate 只允许作用于 derived view。调用方不能靠 overlay 让 Project authoritative fact “从现实里消失”。
-
-Overlay 本身也有 fingerprint，方便追踪控制变化。
-
----
-
-## 08 · 修改受保护事实时，只能生成 proposal
-
-如果用户通过 Context / Memory 控制面要求修改 `locked` 或 `accepted` item，`context_inspector.py` 不会直接改 source。
-
-它会创建 proposal，并记录：
-
-- proposal ID；
-- source item ID；
-- 原 authority；
-- requested patch；
-- `proposal_required`；
-- `direct_mutation_performed = false`；
-- `canon_write = false`。
-
-这允许作者表达“我想改这个事实”，同时不会让 UI 假装“这个事实已经改进正典”。
-
-真正的 Canon mutation 仍然必须经过 Project 明确接受与 Settlement。
-
----
-
-## 09 · Memory Bank 是持久工作记忆，不是影子正典
-
-`harness/memory_bank.py` 可以保存 context、character、relationship、thread、style、learning、runtime、corpus、derived 等不同 memory domain。
-
-记录会保留 provenance、fingerprint、version、authority metadata、显式控制与 edit history。
-
-两种编辑路径必须分开：
-
-**运行时 / 派生记忆**可以在 version / fingerprint precondition 下编辑。
-
-**受保护 Canon reference** 仍然是只读引用；修改请求只能形成 proposal，不能原地写回 authoritative source。
-
-只要条件允许，derived memory 都应该能够从 source evidence 重建。
-
----
-
-## 10 · Memory 永远不能证明故事事实或人物知识
-
-Memory 很有用，但它不是证据终点。
-
-它不能证明：
-
-- 某个事件已经发生；
-- 某个人物已经知道某个事实；
-- 某段关系已经正式改变；
-- 某个计划已经被接受；
-- 某条 research claim 已经成为 Project truth；
-- 某个 Corpus observation 应该自动进入下一章；
-- 某个 model inference 已经成为持久用户口味。
-
-这些结论仍然属于真正拥有该状态的 Project mechanism。
-
-Memory 可以被 invalidated、重建甚至丢弃，正是因为它的 authority 应该低于 Canon。
-
----
-
-## 11 · 一次典型 DRAFT / REVISE 怎样使用上下文
-
-**解析 Project authority。** 确认 Canon cutoff、active plan、参与人物、长程承诺与任务证据。
-
-**建立合法候选集。** 用 authority、provenance 与 stage boundary 构建稀疏 Context Manifest。
-
-**应用显式作者控制。** 处理 pin / priority / derived-view overlay，并拦截 sensitive-stage 泄漏。
-
-**必要时做语义选择。** 只有真正需要解释“此刻什么相关”时才调用 `context.select`。
-
-**为精确 stage 做 Assembly。** 用 `context_assembly.py` 验证 selected IDs、required class / purpose、provenance、invalidation 与 private-state boundary。
-
-**在硬预算下装载。** 需要 tiered budget 时保留显式控制，以 whole block 方式确定性装载。
-
-**执行真正目标任务。** Writer 或其他 semantic contract 只看到这份 bounded working set，而不是整个 Project 或全部 private simulation state。
-
-**只持久化合适的派生观察。** 新 memory 仍然保持 source-bound、non-authoritative。
-
-任何 Canon change proposal 仍然等待用户接受与 Settlement。
-
----
-
-## 12 · Failure routing
-
-上下文 / 记忆失败应该回本层修，不应伪装成 prose failure。
-
-**模型漏选了真正关键的合法证据** → 修正 bounded evidence / 重跑 `context.select`。
-
-**Required context class 没有任何合法 item** → `BLOCK / PENDING`；补证据或明确修改 requirement，不能 context-poor 继续。
-
-**Pinned memory 超出 hard budget** → 处理作者控制与预算冲突，不能静默取消 pin。
-
-**Regression / hidden gold / private simulation state 进入 Writer context** → deterministic stage / assembly failure。
-
-**Derived memory 指向旧 source fingerprint** → invalidate + rebuild。
-
-**受保护 Canon fact 真正需要改** → proposal → Project acceptance → Settlement。
-
-**人物根据自己并不知道的 memory 行动** → Character / knowledge-boundary failure，而不是全局删除那条 memory。
-
----
-
-## 13 · 精确参考
-
-- [架构总览](architecture.zh-CN.md) —— authority domain 与 semantic / deterministic ownership。
-- [生产流水线](production-pipeline.zh-CN.md) —— DRAFT / REVISE 中上下文选择出现在哪里。
-- [项目 SDK](project-sdk.zh-CN.md) —— Project authority 与精确 dependency lock。
-- [`harness/context_inspector.py`](../harness/context_inspector.py) —— deterministic inspector / overlay（`novelforge_context_inspector_v3`）。
-- [`harness/context_assembly.py`](../harness/context_assembly.py) —— required-context 与 stage-safe assembly（`novelforge_context_assembly_v1`）。
-- [`harness/memory_tiers.py`](../harness/memory_tiers.py) —— model-selected + deterministic-budget context packer。
-- [`harness/memory_bank.py`](../harness/memory_bank.py) —— durable editable memory。
-- [`harness/semantic_workers/contracts/context-research.json`](../harness/semantic_workers/contracts/context-research.json) —— `context.select` contract。
-
-<div align="center">
-  <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom 标志" width="48" />
-  <br />
-  <sub>让模型判断意义，让运行时守住边界，让 Project 决定什么是真的。🌸</sub>
-</div>
+Context-window transcript 永远不是 resume authority。Context loss/reset 之后，Session Runtime 重新解析 current Project/Framework authority，并从 durable events/artifacts/checkpoints 重建 working set。
+
+## 10. Failure routing
+
+- 真正相关的 evidence 被漏选 → 修 semantic selection/search，不新增 Python relevance rule；
+- selected ref stale/missing/wrong fingerprint → deterministic assembly failure；
+- private state 进入 forbidden stage → deterministic isolation failure；
+- 第一次 search 不够 → 模型在 allowed capability 内继续/reformulate；
+- evidence 已经足够 → 模型应该 stop，runtime 不强制继续检索；
+- hard budget 无法满足 explicit pin → deterministic control conflict；
+- 人物看起来知道得太多 → semantic knowledge/rule audit，基于 authorized evidence 判断；
+- protected Canon 真要修改 → proposal → Project acceptance/Settlement，绝不由 Context overlay 直接 mutate。
+
+## 11. 精确参考
+
+- [架构总览](architecture.zh-CN.md)
+- [生产流水线](production-pipeline.zh-CN.md)
+- [项目 SDK](project-sdk.zh-CN.md)
+- [`harness/context_inspector.py`](../harness/context_inspector.py)
+- [`harness/context_assembly.py`](../harness/context_assembly.py)
+- [`harness/memory_tiers.py`](../harness/memory_tiers.py)
+- [`harness/memory_bank.py`](../harness/memory_bank.py)
+- [`harness/semantic_workers/contracts/context-research.json`](../harness/semantic_workers/contracts/context-research.json)
+
+<div align="center"><sub>模型判断意义，runtime 限制权力，Project 决定真相。🌸</sub></div>

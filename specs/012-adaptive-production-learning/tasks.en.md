@@ -1,68 +1,97 @@
-# Tasks 012 · Adaptive Production Learning and Realization Boundary
+# Tasks 012 · AI-Native Adaptive Production Refoundation
 
-## Design
+## Authority / reconciliation
 
-- [x] Freeze real production failure evidence and separate historical pinned authority from current engineering target.
-- [x] Benchmark mature writing/agent systems and revise the architecture around persistent intent, sparse context, simulation-before-prose, evaluator/editor loops, and bounded learning.
-- [x] Reuse existing Author Steering, Learning Store, Context Inspector, story simulation, readiness, and quality-evolution owners rather than duplicating them.
+- [x] Re-bootstrap live `main`, PR #90 branch/base/HEAD, changed files and workflows.
+- [x] Re-read live Framework manager, session, routing, semantic-execution and self-improvement authority.
+- [x] Freeze rollback point before this synchronization slice: `b6f13ac97a105221f8ee78d862c4e6f02e4cf9ab`.
+- [x] Separate PR #95 Godot/UI work from this `SYSTEM-IMPROVE` review unit.
+- [x] Classify current base/unrelated Product/Godot/Studio CI debt separately.
 
-## Author Model / feedback
+## Deterministic-overreach removal
 
-- [ ] Add `learning.preference_interpret` semantic contract.
-- [ ] Add deterministic Author Model projection/runtime backed by existing Learning Store.
-- [ ] Enforce scope/authority boundaries for one_off, project, user_taste, and general_craft.
-- [ ] Add contradiction/supersession tests.
-- [ ] Connect material Review feedback to typed evidence/proposed preference delta without changing primary task mode.
+- [x] Remove deterministic literary class/purpose obligations from Context Assembly; retain exact-ref/stage/fingerprint safety.
+- [x] Keep context relevance/search/sufficiency model-owned through `context.select`.
+- [x] Remove default Reader taxonomy/HF/telemetry priming.
+- [x] Separate Blind Reader, Semantic Rule Auditor and Editor.
+- [x] Remove deterministic owner/scope → repair-depth mapping; Editor selects generation mode.
+- [x] Remove deterministic reinterpretation of character epistemic labels; retain evidence identity/story-time guards.
+- [x] Remove numeric evidence-count promotion thresholds; bind semantic promotion review instead.
+- [x] Make Author Model active preferences explicitly selected rather than automatically injected.
+- [x] Thin character/scene/realization semantic schemas.
+- [x] Keep prose telemetry optional/default-off.
 
-## Context assembly
+## Deterministic execution owners retained
 
-- [ ] Add simulation/private-state stages and pre-draft isolation.
-- [ ] Add required context obligations and satisfaction receipt.
-- [ ] Add deterministic Context Assembly validator/self-test.
-- [ ] Preserve model-owned semantic relevance selection.
+- [x] Session/checkpoint persistence and resume preflight.
+- [x] Capability/credential boundaries.
+- [x] Project/authority/write-intent isolation.
+- [x] Fingerprint, exact-source, receipt and registered-contract binding.
+- [x] Before-state/CAS/idempotency/transaction constraints.
+- [x] Stage/private-context isolation and hard budgets.
+- [x] Structural readiness/release aggregation without literary re-judgment.
 
-## Simulation / realization
+## Architecture / documentation
 
-- [ ] Add writer-safe `scene.realization_project` semantic contract.
-- [ ] Require private character state to remain causal state, not prose payload.
-- [ ] Add formal-completeness counterexample boundary.
+- [x] Replace stale Spec 012 architecture with current thin-kernel / semantic-runtime owner map.
+- [x] Record current ADOPT / ADAPT / REJECT / DEFER research ledger.
+- [x] Record deterministic-overreach audit and explicit non-goals.
+- [x] Synchronize Context & Memory docs to Context Assembly v2 semantics.
+- [x] Synchronize `HARNESS_MANIFEST.yaml` schema IDs/semantic contract ownership.
+- [x] Remove zombie `reader.production_audit` authority reference.
+- [x] Document anti-stall / stale-state execution discipline for SYSTEM-IMPROVE.
 
-## Reader / Editor / quality
+## Semantic regression / ablation packets
 
-- [ ] Register HF-30 in quality taxonomy.
-- [ ] Add profile-sensitive prose telemetry as non-authoritative signals.
-- [ ] Add structured Reader production assessment dimensions for paragraph/profile/dialogue realization.
-- [ ] Add `editor.repair_spec` contract.
-- [ ] Reuse pairwise incumbent/challenger comparison for material repairs.
-- [ ] Extend structural readiness only where deterministic receipts are required.
+- [ ] Add blind remote-context case.
+- [ ] Add irrelevant-match case.
+- [ ] Add search-continuation case.
+- [ ] Add search-stopping case.
+- [ ] Add unprimed agenda-to-dialogue Reader case.
+- [x] Preserve legitimate formal-completeness counterexample.
+- [x] Preserve inaccessible-knowledge semantic case.
+- [ ] Add plausible-inference counterexample.
+- [x] Preserve dynamic-planning profile cases.
+- [ ] Add character-embodiment case.
+- [ ] Add Reader-contamination paired ablation.
+- [ ] Add holistic-vs-decomposed Rule Auditor paired ablation.
+- [ ] Add telemetry-anchoring paired ablation.
+- [x] Preserve deterministic unauthorized-state guards.
+- [x] Preserve deterministic stale-candidate/fingerprint guards.
+- [x] Preserve session resume stale/wrong-authority guards.
+- [ ] Validate ablation packet construction in CI.
 
-## Safety / integrity
+## Evaluator freshness
 
-- [ ] Add typed write-intent/action mismatch guard.
-- [ ] Fix stale semantic registry references.
-- [ ] Add semantic-reference integrity self-test/CI.
-- [ ] Preserve semantic reject vs transport/configuration/result-validation failure distinctions.
+- [x] Re-research current official OpenAI model guidance.
+- [ ] Replace stale independent-evaluator `gpt-5.1` pin with current `gpt-5.6` alias.
+- [ ] Do not claim model migration itself proves semantic quality; require representative semantic execution.
 
-## Integration
+## Deterministic verification
 
-- [ ] Register tools/contracts in manifest/catalog.
-- [ ] Update Harness/Orchestration and user-facing production/context/learning docs in EN/ZH.
-- [ ] Register this spec in documentation governance.
-- [ ] Integrate deterministic tests into normal reusable contracts CI.
-- [ ] Add semantic/regression eval fixtures with hidden-gold isolation.
+- [ ] Compile all Python modules at final HEAD.
+- [ ] Run candidate-owned context/semantic/quality/learning/planning self-tests at final HEAD.
+- [ ] Build blind semantic queue with hidden-gold isolation at final HEAD.
+- [ ] Validate Framework bundle/version identity at final HEAD.
+- [ ] Run exact-head workflows and classify every failure.
+- [ ] Confirm candidate-owned deterministic workflows are green.
+- [ ] Confirm no accidental downstream Project/Canon/Settlement/lock mutation.
 
-## Verification
+## Independent semantic gate
 
-- [ ] Compile all Python modules.
-- [ ] Run all new deterministic self-tests.
-- [ ] Run existing deterministic regressions touched by the change.
-- [ ] Build/validate semantic contract catalog.
-- [ ] Build blind semantic judge queue.
-- [ ] Verify framework bundle reproducibility after final file set.
-- [ ] Run exact-head CI and classify pre-existing versus introduced failures.
-- [ ] Obtain exact-candidate independent semantic capability/counterexample evidence if transport is eligible.
-- [ ] Produce rollback points and human-review handoff summary.
+- [ ] Execute required blind semantic regressions/ablations with a genuinely independent model invocation bound to exact final candidate.
+- [ ] Validate independent worker identity/provenance/fingerprint receipt.
+- [ ] If provider credential remains unavailable, retain explicit `PENDING_MODEL`; never convert workflow green into semantic PASS.
 
 ## Release boundary
 
-- [ ] Do not merge PR #90, promote Framework behavior, or migrate the consuming Project lock in this SYSTEM-IMPROVE run without separate authority.
+- [x] Do not merge PR #90.
+- [x] Do not promote/release Framework behavior.
+- [x] Do not modify downstream Project locks/manuscripts/Canon/Settlement.
+- [x] Do not activate durable user taste from manager inference.
+
+## Human-review readiness
+
+- [ ] Update PR title/body to describe the actual final review unit and exact evidence.
+- [ ] Produce final exact Git/CI/security/compatibility handoff.
+- [ ] `READY_FOR_HUMAN_REVIEW` only when required independent semantic evidence is no longer `PENDING_MODEL`.
