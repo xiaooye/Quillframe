@@ -61,15 +61,21 @@ The default production graph is:
 
 ```text
 Context Freeze
+→ Adaptive Context Assembly
 → Story / Canon Preflight
-→ Scene Simulation
-→ Character Simulation
+→ Planning Commitment State
+→ Character Private State
+→ Character Action / Tactic Simulation
+→ Scene Action Collision / World Resolution
+→ Writer-safe Realization Projection
 → Reader Pressure
 → Event-first Raw Draft
 → Surface Realization
 → freeze candidate
 → post-generation diagnostics / regression
-→ repair at owning mechanism
+→ Reader Production Audit
+→ Editor Repair Spec
+→ repair at owning mechanism / re-realize
 → Reader Engagement
 → Continuity / state audit
 → required independent semantic gate
@@ -80,8 +86,12 @@ Important ordering rules:
 
 - Raw Draft is not user-visible.
 - Regression bad examples and answer-key-like evidence remain post-generation.
+- `context.select` may decide semantic relevance, but `context_assembly.py` deterministically validates stage eligibility, authority, required context classes, provenance, invalidation state, and hard failure when a required context class is unavailable.
+- Private character/simulation state is not a Writer exposition payload. Character state drives `character.action_propose`; `scene.resolve_actions` resolves collisions; `scene.realization_project` exposes only a writer-safe event/interaction projection.
+- `reader.production_audit` judges reading experience from the frozen candidate; `editor.repair_spec` assigns preserve/change goals and repair ownership. Neither receipt acquires release or Canon authority.
 - Scene/Character/Reader simulation may be model-semantic work; durable invariants around them remain deterministic.
 - Surface-clean prose can still fail Reader Engagement.
+- Agenda-to-dialogue leakage / HF-30 routes to interaction/realization or Character/Scene simulation when structural; it is not repaired by mechanically shortening every line.
 - SAFE-BUT-FLAT routes upstream, not to generic line polishing.
 - A changed repaired candidate receives a new content fingerprint before a fingerprint-bound gate.
 
@@ -94,11 +104,12 @@ The orchestrator should diagnose before choosing repair depth.
 ```text
 isolated surface defect         → local rewrite
 surface failure cluster         → block / whole-scene realization
+agenda-dialogue serialization   → realization / Character / Scene simulation
 reader-grip / SAFE-BUT-FLAT     → Reader Pressure + Scene Simulation
 character integrity failure     → Character Simulation / state reasoning
 story / plan failure            → Story / Plan
 continuity/state mismatch       → continuity / state owner
-context contamination/staleness → rebuild Context Manifest
+context contamination/staleness → rebuild Context Manifest / Context Assembly
 memory-derived error            → invalidate / rebuild derived memory
 research uncertainty            → Research
 runtime/tool failure            → capability / transport layer
@@ -124,7 +135,7 @@ They may not:
 - settle current Canon;
 - give characters future knowledge as current knowledge.
 
-Use rolling elaboration: high resolution near the production frontier, lower resolution farther away.
+Use rolling elaboration: high resolution near the production frontier, lower resolution farther away. Commitment horizons and bounded rebalance restrict how much future detail can become committed at once; they do not create a second plan authority.
 
 ## 06 · RESEARCH
 
@@ -175,15 +186,20 @@ A generic graph is:
 
 ```text
 feedback / evidence
-→ scope classification
-→ hypothesis
+→ semantic preference interpretation when needed
+→ scoped evidence in the existing Learning Store
+→ revisable hypothesis
 → contradiction / counterexample search
 → corpus or eval gap
 → bounded semantic analysis
 → candidate
-→ deterministic evidence-completeness gate
+→ deterministic evidence-completeness / promotion gate
 → explicit activation / promotion / rollback
 ```
+
+`learning.preference_interpret` may propose the mechanism and narrowest plausible scope; `learning/author_model.py` persists evidence/hypotheses through the existing Learning Store and projects only active applicable preferences into future production.
+
+Project preference activation still requires its explicit project write authority. Durable `user_taste` activation requires **both** a current passing `promotion_gate` prerequisite evaluation and explicit durable-user-taste write authorization. A caller boolean alone cannot activate the hypothesis. `general_craft` never auto-promotes through the Author Model path.
 
 Model repetition is not new evidence. General Craft requires stronger cross-work evidence than project/local learning.
 
@@ -259,4 +275,6 @@ A run must end in a truthful explicit state such as:
 - [Session Runtime](session_runtime/SESSION_RUNTIME.en.md) — lifecycle, checkpoints and resume.
 - [Semantic Worker Protocol](semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md) — semantic identity/fingerprint/result boundary.
 - [Production Pipeline](../docs/production-pipeline.en.md) — customer-facing explanation of DRAFT/REVISE.
+- [Context & Memory](../docs/context-and-memory.en.md) — Context Inspector, Assembly, selection, and memory boundaries.
+- [Adaptive Learning](../docs/adaptive-learning.en.md) — Learning Store, Author Model, promotion, and rollback.
 - [Canon & State Model](../core/CANON_STATE.en.md) — settlement authority.
