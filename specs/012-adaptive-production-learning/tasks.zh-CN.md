@@ -4,9 +4,9 @@
 
 - [x] 重新 bootstrap live `main`、PR #90 branch/base/HEAD、changed files、workflows。
 - [x] 重新读取 live Framework manager/session/routing/semantic-execution/self-improvement authority。
-- [x] 冻结本 synchronization slice 前 rollback point：`b6f13ac97a105221f8ee78d862c4e6f02e4cf9ab`。
+- [x] 冻结本 refoundation continuation slice 前 rollback point：`b6f13ac97a105221f8ee78d862c4e6f02e4cf9ab`。
 - [x] PR #95 Godot/UI work 与本 `SYSTEM-IMPROVE` review unit 严格分离。
-- [x] 当前 Product/Godot/Studio base/unrelated CI debt 单独分类。
+- [x] Product/Godot/Studio/base documentation CI debt 与 candidate-owned failure 分开分类。
 
 ## Deterministic-overreach removal
 
@@ -37,51 +37,69 @@
 - [x] 记录 current ADOPT / ADAPT / REJECT / DEFER research ledger。
 - [x] 记录 deterministic-overreach audit 与 explicit non-goals。
 - [x] Context & Memory docs 同步 Context Assembly v2 semantics。
+- [x] Production Pipeline、Adaptive Learning、Harness Agent、Orchestration docs 与 live AI-native ownership 同步。
 - [x] `HARNESS_MANIFEST.yaml` 同步 schema ID / semantic contract ownership。
 - [x] 删除 zombie `reader.production_audit` authority reference。
+- [x] 恢复 source-integrity check 要求的 exact `harness/semantic_workers/model_contract_catalog.json` authority reference。
 - [x] 记录适用于 SYSTEM-IMPROVE 的 anti-stall / stale-state execution discipline。
 
 ## Semantic regression / ablation packets
 
-- [ ] 增加 blind remote-context case。
-- [ ] 增加 irrelevant-match case。
-- [ ] 增加 search-continuation case。
-- [ ] 增加 search-stopping case。
-- [ ] 增加不暴露 HF label 的 agenda-to-dialogue Blind Reader case。
+- [x] 增加 blind remote-context case（`CONTEXT-REMOTE-001`）。
+- [x] 增加 irrelevant-match case（`CONTEXT-IRRELEVANT-001`）。
+- [x] 增加 search-continuation case（`CONTEXT-CONTINUE-001`）。
+- [x] 增加 search-stopping case（`CONTEXT-STOP-001`）。
+- [x] 增加不暴露 HF label 的 agenda-to-dialogue Blind Reader case（`READER-AGENDA-NATURAL-001`）。
 - [x] 保留 legitimate formal-completeness counterexample。
 - [x] 保留 inaccessible-knowledge semantic case。
-- [ ] 增加 plausible-inference counterexample。
+- [x] 增加 plausible-inference counterexample（`CHAR-INFERENCE-001`）。
 - [x] 保留 dynamic-planning profile cases。
-- [ ] 增加 character-embodiment case。
-- [ ] 增加 Reader-contamination paired ablation。
-- [ ] 增加 holistic-vs-decomposed Rule Auditor paired ablation。
-- [ ] 增加 telemetry-anchoring paired ablation。
+- [x] 增加 character-embodiment case（`CHAR-EMBODIMENT-001`）。
+- [x] 增加 Reader-contamination same-candidate paired ablation。
+- [x] 增加 holistic-vs-decomposed Rule Auditor same-candidate paired ablation。
+- [x] 增加 telemetry-anchoring same-candidate paired ablation。
 - [x] 保留 deterministic unauthorized-state guard。
 - [x] 保留 deterministic stale-candidate/fingerprint guard。
 - [x] 保留 session resume stale/wrong-authority guard。
-- [ ] 在 CI 验证 ablation packet construction。
+- [x] Exact-head CI 已验证 23-case blind queue、hidden-gold isolation、3 组 same-candidate ablation binding、fingerprint-bound job construction。
+- [ ] 用 eligible independent model 真正执行新增 regression/ablation 的 semantic outcome；当前仍为 `PENDING_MODEL`。
 
 ## Evaluator freshness
 
 - [x] 重新 research current official OpenAI model guidance。
-- [ ] 把 stale independent evaluator `gpt-5.1` pin 更新为 current `gpt-5.6` alias。
-- [ ] Model migration 本身不算 semantic quality proof；仍要求 representative semantic execution。
+- [x] 把 stale independent evaluator `gpt-5.1` pin 更新为 current `gpt-5.6` alias。
+- [x] Model migration 与 semantic proof 严格分开：workflow 必须真正执行 representative semantic eval 才能产生 semantic PASS。
 
 ## Deterministic verification
 
-- [ ] Final HEAD compile 全部 Python module。
-- [ ] Final HEAD 跑 candidate-owned context/semantic/quality/learning/planning self-test。
-- [ ] Final HEAD 构建 blind semantic queue 并检查 hidden-gold isolation。
-- [ ] Final HEAD 验证 Framework bundle/version identity。
-- [ ] 跑 exact-head workflows 并分类全部 failure。
-- [ ] 确认 candidate-owned deterministic workflow green。
-- [ ] 确认没有 accidental downstream Project/Canon/Settlement/lock mutation。
+Evidence checkpoint `f25b66749d342910bf168d27cb41cf7f66efd848`（本 ledger-only synchronization 之前）：
+
+- [x] Compile 全部 75 个 Python module。
+- [x] 跑完 candidate-owned context/semantic/quality/learning/planning self-test。
+- [x] 构建 23-case blind semantic queue 并验证 hidden-gold isolation。
+- [x] 在 Adaptive Production Contracts 验证 Framework version `0.8.0`、compatibility、source-bundle identity。
+- [x] 确认 Semantic Contract Packs、Adaptive Production Contracts、Quality Gate Hardening、Planning Commitment Horizon workflow green。
+- [x] 确认 AI-native semantic workflow packet preparation green，同时 model execution 明确保持 `PENDING_MODEL`。
+- [x] 再次确认 `NovelForge CI` hard failure 仅为 pre-existing Spec 009 bilingual/documentation-manifest debt；此前 Python compile / version identity PASS。
+- [x] 再次确认 Product Site 与 Studio Host Bridge 在 base `main` SHA `e08eb7c8cf95295221c03c55ce3e246cd07797ea` 本身就失败；不得把 UI/Studio failure 吸收到 PR #90。
+- [x] 确认没有 downstream Project/Canon/Settlement/lock mutation，也没有 Framework release/promotion。
+- [ ] 本 ledger-only synchronization 后再跑一次 exact-head CI；结果写入最终 handoff，不再为了自引用修改 ledger。
+
+## Security / compatibility
+
+- [x] Search/tool access 继续 capability-scoped；model-owned search 不授予 credential / authority。
+- [x] Private character/creator/Reader stage boundary 继续 deterministic。
+- [x] External/tool source text 不能授予 Project/Canon/Framework/user-taste authority。
+- [x] Semantic result 不能自授 write authority。
+- [x] Stale candidate/receipt/session state 通过 exact fingerprint、before-state/CAS、resume revalidation fail closed。
+- [x] Framework version 保持 `0.8.0`；本 candidate 不要求 downstream lock migration。
+- [x] 已记录 Context Assembly v2 migration：semantic class/purpose obligation 迁到 model-owned selection；机械 mandatory source 使用 exact refs/fingerprints。
 
 ## Independent semantic gate
 
 - [ ] 用 genuinely independent model invocation 执行 required blind semantic regression/ablation，并绑定 exact final candidate。
-- [ ] 验证 independent worker identity/provenance/fingerprint receipt。
-- [ ] 若 provider credential 仍不可用，明确保持 `PENDING_MODEL`；绝不能把 workflow green 转成 semantic PASS。
+- [ ] 验证 independent worker identity/provenance/fingerprint result receipt。
+- [x] 当前 missing provider credential 被诚实记录为 `PENDING_MODEL / independent_provider_credential_unavailable / model_execution:false`；workflow success 不会被转换成 semantic PASS。
 
 ## Release boundary
 
@@ -92,6 +110,5 @@
 
 ## Human-review readiness
 
-- [ ] 更新 PR title/body，使其准确描述 final review unit 与 exact evidence。
-- [ ] 形成 final exact Git/CI/security/compatibility handoff。
-- [ ] Required independent semantic evidence 不再是 `PENDING_MODEL` 之后，才允许 `READY_FOR_HUMAN_REVIEW`。
+- [ ] Final exact-head CI observation 完成后再更新 PR title/body，使 metadata 准确描述当前 review unit 与 evidence。
+- [ ] Required independent semantic evidence 仍为 `PENDING_MODEL`，因此 `READY_FOR_HUMAN_REVIEW` 必须保持 **NO**。
