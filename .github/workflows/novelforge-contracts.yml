@@ -47,21 +47,26 @@ jobs:
       - name: Deterministic author and narrative state
         run: |
           python harness/context_inspector.py self-test > context-inspector-test.json
+          python harness/context_assembly.py self-test > context-assembly-test.json
           python harness/memory_tiers.py self-test > memory-tiers-test.json
           python harness/memory_bank.py --db /tmp/novelforge-memory-bank-ci.db self-test --path /tmp/novelforge-memory-bank-selftest-ci.db > memory-bank-test.json
           python harness/scenario_fork.py --db /tmp/novelforge-scenario-ci.db self-test --path /tmp/novelforge-scenario-selftest-ci.db > scenario-fork-test.json
           python harness/property_write_policy.py self-test > property-write-policy-test.json
           python harness/propagation_debt.py self-test --path /tmp/novelforge-propagation-debt-contract-ci.db > propagation-debt-test.json
           python harness/state_integrity_cross_contract.py > state-integrity-cross-contract.json
+          python harness/control_plane/write_intent_guard.py self-test > write-intent-guard-test.json
           python quality/findings.py self-test > quality-finding-test.json
           python quality/quality_taxonomy.py self-test > quality-taxonomy-test.json
           python quality/repair_policy.py self-test > repair-policy-test.json
           python harness/semantic_workers/registered_contract_binding.py self-test > registered-contract-binding-test.json
           python harness/semantic_workers/peer_bridge_receipt.py self-test > peer-bridge-receipt-test.json
           python quality/production_readiness.py self-test > production-readiness-test.json
+          python quality/production_release.py self-test > production-release-test.json
+          python quality/prose_telemetry.py self-test > prose-telemetry-test.json
           python quality/reader_expectation.py --db /tmp/novelforge-reader-expectation-ci.db self-test --path /tmp/novelforge-reader-expectation-selftest-ci.db > reader-expectation-test.json
           python quality/quality_evolution.py --db /tmp/novelforge-quality-ci.db self-test --path /tmp/novelforge-quality-selftest-ci.db > quality-evolution-test.json
           python quality/state_graph.py self-test > state-graph-test.json
+          python scripts/semantic_reference_integrity.py > semantic-reference-integrity-test.json
 
       - name: AI-native semantic contract kernel
         run: |
@@ -144,6 +149,25 @@ jobs:
                 'visibility': {'scope':'character','perspective_id':'CHAR-CI'},
                 'model_view': {'label':'offer','value':'The first offer was lower.'}
               }]
+            },
+            'learning.preference_interpret': {
+              'feedback_ref':'review:CI',
+              'feedback_text':'Keep the dialogue less explanatory in this exchange.',
+              'current_task': {'task_mode':'REVISE','artifact_ref':'draft:CI'}
+            },
+            'scene.realization_project': {
+              'scene_id':'SCN-CI',
+              'resolved_trajectory': {'state':'negotiation_continues'},
+              'character_action_evidence': [{'character_id':'CHAR-CI','action':'withhold full rationale and counter'}],
+              'pov_boundary': {'perspective_id':'CHAR-CI','allowed_inner_state':True}
+            },
+            'reader.production_audit': {
+              'candidate_fingerprint': fp,
+              'candidate_text':'A bounded production candidate with observable dialogue and action.'
+            },
+            'editor.repair_spec': {
+              'candidate_fingerprint': fp,
+              'reader_assessment': {'result':'fail','codes':['HF-30'],'evidence':['Dialogue over-explains role and risk.']}
             }
           }
           jobs={}
@@ -190,7 +214,7 @@ jobs:
           except ValueError:
               context_guard=True
           assert context_guard
-          typed=['reader.reaction','reader.engagement_audit','quality.production_review','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select']
+          typed=['reader.reaction','reader.engagement_audit','quality.production_review','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select','learning.preference_interpret','scene.realization_project','reader.production_audit','editor.repair_spec']
           json.dump({'semantic_contract_catalog_contract':'PASS','contracts':sorted(expected),'fingerprints':jobs,'typed_input_contracts':typed,'cold_reader_hidden_plan_guard':cold_reader_blocked,'production_reader_hidden_context_guard':production_reader_hidden_context_blocked,'production_review_hidden_context_guard':production_review_hidden_context_blocked,'required_transition_input_guard':transition_guard,'task_aware_context_input_guard':context_guard,'aggregate_registry_present':False,'model_execution':False},open('semantic-contracts-test.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
           PY
           python harness/semantic_workers/peer_chat_relay.py self-test > peer-chat-test.json
@@ -202,6 +226,7 @@ jobs:
           python learning/learning_cycle.py self-test --path /tmp/novelforge-learning-cycle-ci.db > learning-cycle-test.json
           python learning/learning_eval.py self-test > learning-eval-test.json
           python learning/promotion_gate.py self-test > promotion-gate-test.json
+          python learning/author_model.py self-test > author-model-test.json
           python corpus/corpus_scout.py self-test > corpus-scout-test.json
           python corpus/discovery_runtime.py self-test > discovery-runtime-test.json
           python corpus/rights_gate.py self-test > corpus-rights-test.json
@@ -260,18 +285,21 @@ jobs:
             'machine-namespace-test.json':('machine_namespace_contract','PASS'),
             'project-sdk-test.json':('project_sdk_contract','PASS'),'project-adapter-test.json':('project_adapter_contract','PASS'),
             'runtime-capabilities-test.json':('runtime_capabilities_contract','PASS'),'context-inspector-test.json':('context_inspector_contract','PASS'),
+            'context-assembly-test.json':('context_assembly_contract','PASS'),
             'memory-tiers-test.json':('memory_tiers_contract','PASS'),'memory-bank-test.json':('memory_bank_contract','PASS'),
             'scenario-fork-test.json':('scenario_fork_contract','PASS'),'property-write-policy-test.json':('property_write_policy_contract','PASS'),
-            'propagation-debt-test.json':('propagation_debt_contract','PASS'),'state-integrity-cross-contract.json':('contract','PASS'),'quality-finding-test.json':('quality_finding_contract','PASS'),
-            'quality-taxonomy-test.json':('quality_taxonomy_contract','PASS'),'repair-policy-test.json':('repair_policy_contract','PASS'),
+            'propagation-debt-test.json':('propagation_debt_contract','PASS'),'state-integrity-cross-contract.json':('contract','PASS'),
+            'write-intent-guard-test.json':('write_intent_guard_contract','PASS'),
+            'quality-finding-test.json':('quality_finding_contract','PASS'),'quality-taxonomy-test.json':('quality_taxonomy_contract','PASS'),'repair-policy-test.json':('repair_policy_contract','PASS'),
             'registered-contract-binding-test.json':('registered_contract_binding_contract','PASS'),'peer-bridge-receipt-test.json':('peer_bridge_receipt_contract','PASS'),'production-readiness-test.json':('production_readiness_contract','PASS'),
+            'production-release-test.json':('production_release_contract','PASS'),'prose-telemetry-test.json':('prose_telemetry_contract','PASS'),
             'reader-expectation-test.json':('reader_expectation_contract','PASS'),'quality-evolution-test.json':('quality_evolution_contract','PASS'),
-            'state-graph-test.json':('state_graph_contract','PASS'),'semantic-router-test.json':('semantic_router_contract','PASS'),
-            'semantic-contracts-test.json':('semantic_contract_catalog_contract','PASS'),'peer-chat-test.json':('peer_chat_relay_contract','PASS'),
+            'state-graph-test.json':('state_graph_contract','PASS'),'semantic-reference-integrity-test.json':('semantic_reference_integrity','PASS'),
+            'semantic-router-test.json':('semantic_router_contract','PASS'),'semantic-contracts-test.json':('semantic_contract_catalog_contract','PASS'),'peer-chat-test.json':('peer_chat_relay_contract','PASS'),
             'local-agent-test.json':('local_agent_adapter_contract','PASS'),'learning-test.json':('learning_store_contract','PASS'),
             'learning-cycle-test.json':('learning_cycle_contract','PASS'),'learning-eval-test.json':('learning_eval_contract','PASS'),
-            'promotion-gate-test.json':('promotion_gate_contract','PASS'),'corpus-scout-test.json':('corpus_scout_contract','PASS'),
-            'discovery-runtime-test.json':('discovery_runtime_contract','PASS'),'corpus-rights-test.json':('rights_gate_contract','PASS'),
+            'promotion-gate-test.json':('promotion_gate_contract','PASS'),'author-model-test.json':('author_model_contract','PASS'),
+            'corpus-scout-test.json':('corpus_scout_contract','PASS'),'discovery-runtime-test.json':('discovery_runtime_contract','PASS'),'corpus-rights-test.json':('rights_gate_contract','PASS'),
             'publication-test.json':('publication_compiler_contract','PASS'),'framework-bundle-test.json':('framework_bundle_contract','PASS'),'session-test.json':('session_runtime_contract','PASS'),
             'control-plane-test.json':('control_plane_contract','PASS'),'mcp-test.json':('mcp_stdio_contract','PASS'),'cli-test.json':('novelforge_cli_contract','PASS')}
           loaded={p:json.load(open(p,encoding='utf-8')) for p in checks}
@@ -283,6 +311,16 @@ jobs:
           assert loaded['memory-tiers-test.json']['question_as_of_story_order_guard'] is True
           assert loaded['memory-tiers-test.json']['pin_temporal_conflict_fail_closed'] is True
           assert loaded['memory-tiers-test.json']['grounding_reports_budget_drop'] is True
+          assert loaded['context-assembly-test.json']['private_simulation_hidden_from_writer'] is True
+          assert loaded['context-assembly-test.json']['missing_required_context_blocks'] is True
+          assert loaded['write-intent-guard-test.json']['mismatched_action_blocked'] is True
+          assert loaded['write-intent-guard-test.json']['mismatched_resource_blocked'] is True
+          assert loaded['write-intent-guard-test.json']['stale_before_state_blocked'] is True
+          assert loaded['production-release-test.json']['structural_receipts_conjunctive'] is True
+          assert loaded['production-release-test.json']['semantic_readiness_not_replaced'] is True
+          assert loaded['prose-telemetry-test.json']['signals_are_non_authoritative'] is True
+          assert loaded['author-model-test.json']['user_taste_write_authority_alone_not_enough'] is True
+          assert loaded['author-model-test.json']['user_taste_requires_promotion_prerequisite_and_write_authority'] is True
           pw=loaded['property-write-policy-test.json']
           assert pw['payload_cannot_self_escalate'] is True
           assert pw['mixed_writer_routes_to_reconcile'] is True
@@ -311,7 +349,7 @@ jobs:
           assert sc['production_review_hidden_context_guard'] is True
           assert sc['required_transition_input_guard'] is True
           assert sc['task_aware_context_input_guard'] is True
-          assert set(sc['typed_input_contracts'])=={'reader.reaction','reader.engagement_audit','quality.production_review','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select'}
+          assert set(sc['typed_input_contracts'])=={'reader.reaction','reader.engagement_audit','quality.production_review','character.action_propose','quality.compare','continuity.commitment_audit','relationship.memory_reconcile','context.select','learning.preference_interpret','scene.realization_project','reader.production_audit','editor.repair_spec'}
           pr=loaded['production-readiness-test.json']
           assert pr['surface_and_reader_are_conjunctive'] is True
           assert pr['registered_reader_engagement_required'] is True
