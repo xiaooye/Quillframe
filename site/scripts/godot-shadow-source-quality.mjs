@@ -19,15 +19,17 @@ const systems = read("godot/scripts/system_surfaces.gd");
 const editorial = read("godot/scripts/editorial_surfaces.gd");
 const typography = read("godot/scripts/typography_parity.gd");
 const mobileGeometry = read("godot/scripts/mobile_geometry_parity.gd");
+const geometry = read("godot/scripts/geometry_parity.gd");
 const shell = read("godot/web/novelforge.html");
 const fontFetch = read("scripts/fetch-godot-fonts.sh");
 
 check(project.includes('run/main_scene="res://Main.tscn"'), "Godot main scene must remain explicit");
 check(project.includes('renderer/rendering_method="gl_compatibility"'), "Web migration must use Compatibility renderer");
-check(scene.includes('path="res://scripts/mobile_geometry_parity.gd"'), "shadow scene must enter through the final mobile geometry parity layer");
+check(scene.includes('path="res://scripts/geometry_parity.gd"'), "shadow scene must enter through the final cross-viewport geometry parity layer");
+check(geometry.includes('extends "res://scripts/mobile_geometry_parity.gd"'), "cross-viewport geometry parity must remain a thin layer above mobile parity");
 check(mobileGeometry.includes('extends "res://scripts/typography_parity.gd"'), "mobile geometry parity must remain a thin layer above deterministic typography");
 check(scene.includes("offset_right = -15.0"), "web page scrollbar gutter must remain reserved in the Godot layout viewport");
-check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main + parity + routes + catalog + systems + editorial + typography + mobileGeometry), "migration is capped at 2.5D; 3D scene nodes are forbidden");
+check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main + parity + routes + catalog + systems + editorial + typography + mobileGeometry + geometry), "migration is capped at 2.5D; 3D scene nodes are forbidden");
 
 check(typography.includes('INTER_FONT_PATH := "res://generated/Inter-opsz-wght.ttf"'), "WeiUI Latin typography must be pinned to Inter");
 check(typography.includes("_contains_cjk"), "Latin/CJK font selection must remain text-aware");
@@ -68,6 +70,13 @@ check(mobileGeometry.includes("with progressive\\ndisclosure instead\\nof dashbo
 check(mobileGeometry.includes('pink.text = "many"') && mobileGeometry.includes('"deterministic\\nderivatives."'), "Publication phone heading must keep inline pink continuation geometry");
 check(mobileGeometry.includes("_fix_epub_card_position"), "Publication phone format cards must retain deterministic grid placement");
 
+check(geometry.includes("NovelForge is a fiction\\nproduction system,\\nnot a prompt wrapper."), "Product desktop heading must preserve the three-line Solid wrap");
+check(geometry.includes("disclosure instead of\\ndashboard overload."), "Studio desktop heading must preserve the six-line Solid wrap");
+check(geometry.includes("See how one NovelForge run\\nmoves through the system."), "Architecture desktop heading must preserve the two-line Solid wrap");
+check(geometry.includes("_home_heading_font") && geometry.includes('variation_opentype = {text_server.name_to_tag("wght"): 810}'), "Home identity heading must preserve the Atelier 810 weight authority");
+check(geometry.includes("lede.add_theme_constant_override(\"line_spacing\", 7)"), "Home mobile lede must preserve browser-like vertical rhythm");
+check(geometry.includes("docs.text = \"Read architecture docs\""), "Architecture Docs CTA must not duplicate the books icon");
+
 check(main.includes('"phone"') && main.includes('"compact"') && main.includes('"desktop"'), "three responsive layout modes are required");
 check(main.includes("window.location.assign") && parity.includes("window.history.pushState"), "browser navigation boundary must stay explicit");
 check(main.includes("novelforge:godot-ready"), "browser readiness marker is required");
@@ -79,7 +88,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_shadow_source_quality_v10",
+    schema: "novelforge_godot_shadow_source_quality_v11",
     status: "pass",
     production_cutover: false,
     visual_baseline: "Solid/Vite Story Loom Kawaii Atelier",
@@ -96,6 +105,7 @@ if (failures.length) {
     system_surface_contract: true,
     editorial_surface_contract: true,
     mobile_geometry_contract: true,
+    cross_viewport_geometry_contract: true,
     authority: false,
   }, null, 2));
 }
