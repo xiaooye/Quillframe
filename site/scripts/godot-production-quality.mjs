@@ -23,7 +23,10 @@ const docsConfig = read("docs-site/astro.config.mjs");
 
 check(scene.includes('path="res://scripts/wide_compact_parity.gd"'), "production scene must enter through the final wide-compact parity layer");
 check(wideCompact.includes('extends "res://scripts/visual_completion.gd"'), "wide-compact parity must remain a thin layer above visual completion");
+check(wideCompact.includes("SOLID_HOME_STACK_MAX_WIDTH := 980.0"), "final responsive layer must preserve Solid's independent 980px Home stack breakpoint");
 check(wideCompact.includes("SOLID_HERO_STACK_MAX_WIDTH := 900.0"), "final responsive layer must preserve Solid's 900px product-hero stack breakpoint");
+check(wideCompact.includes("NARROW_COMPACT_H1_SIZE := 36"), "768px route typography must preserve the Solid 4.7vw clamp equivalent");
+check(wideCompact.includes("custom_maximum_size") && wideCompact.includes("AUTOWRAP_WORD_SMART"), "compact labels must bind wrapping to the Solid copy column rather than intrinsic one-line width");
 check(completion.includes('extends "res://scripts/visual_completion_core.gd"'), "production polish layer must preserve the complete product surface beneath it");
 check(completionCore.includes('extends "res://scripts/interaction_parity.gd"'), "visual-completion core must preserve the validated interaction runtime beneath it");
 check(shell.includes('data-novelforge-runtime="loading"'), "production shell runtime marker missing");
@@ -75,7 +78,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_production_quality_v8",
+    schema: "novelforge_godot_production_quality_v9",
     status: "pass",
     production_cutover: true,
     product_runtime: "godot_web",
@@ -84,7 +87,10 @@ if (failures.length) {
     golden_baseline: "solidjs_vite_story_loom_fixture",
     visual_completion: true,
     final_wide_compact_parity: true,
+    solid_home_stack_breakpoint: 980,
     solid_hero_stack_breakpoint: 900,
+    narrow_compact_h1_px: 36,
+    compact_wrap_contract: "godot_4_7_custom_maximum_size",
     screenshot_driven_polish: true,
     complete_home_body: true,
     rendered_publication_preview: true,
