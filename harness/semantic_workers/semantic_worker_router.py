@@ -94,29 +94,29 @@ def resolve_contract_registry(cid:str,catalog_path:Path=CATALOG)->tuple[Path,str
     if root!=path.parent and root not in path.parents:raise ValueError("contract pack escapes semantic root")
     if cid not in load_contract_registry(path)["contracts"]:raise ValueError(f"catalog/pack mismatch: {cid}")
     return path,p["id"]
-def _character_evidence_rows(payload:dict[str,Any])->list[tuple[str,int,str|None]]:
-    rows:list[tuple[str,int,str|None]]=[]
+def _character_evidence_rows(payload:dict[str,Any])->list[tuple[str,int]]:
+    rows:list[tuple[str,int]]=[]
     situation=payload.get("immediate_situation",{}) if isinstance(payload.get("immediate_situation"),dict) else {}
     for row in situation.get("observables",[]) if isinstance(situation.get("observables"),list) else []:
         if isinstance(row,dict) and isinstance(row.get("observable_id"),str):
-            rows.append((row["observable_id"],row.get("available_from_story_order"),None))
+            rows.append((row["observable_id"],row.get("available_from_story_order")))
     memory=payload.get("perspective_memory",{}) if isinstance(payload.get("perspective_memory"),dict) else {}
     for row in memory.get("episodic_visible_events",[]) if isinstance(memory.get("episodic_visible_events"),list) else []:
         if isinstance(row,dict) and isinstance(row.get("event_id"),str):
-            rows.append((row["event_id"],row.get("available_from_story_order"),None))
+            rows.append((row["event_id"],row.get("available_from_story_order")))
     for row in memory.get("visibility_tagged_facts",[]) if isinstance(memory.get("visibility_tagged_facts"),list) else []:
         if isinstance(row,dict) and isinstance(row.get("fact_id"),str):
-            rows.append((row["fact_id"],row.get("available_from_story_order"),row.get("epistemic_status")))
+            rows.append((row["fact_id"],row.get("available_from_story_order")))
     for row in memory.get("situation_patterns",[]) if isinstance(memory.get("situation_patterns"),list) else []:
         if isinstance(row,dict) and isinstance(row.get("pattern_id"),str):
-            rows.append((row["pattern_id"],row.get("available_from_story_order"),None))
+            rows.append((row["pattern_id"],row.get("available_from_story_order")))
     return rows
 
 def validate_contract_input_bindings(cid:str,input_payload:dict[str,Any])->list[str]:
     e=[]
     if cid=="character.action_propose":
         current=input_payload.get("current_story_order"); rows=_character_evidence_rows(input_payload); seen=set()
-        for evidence_id,available,status in rows:
+        for evidence_id,available in rows:
             if evidence_id in seen:e.append(f"character evidence id duplicated: {evidence_id}")
             seen.add(evidence_id)
             if isinstance(current,int) and not isinstance(current,bool) and isinstance(available,int) and not isinstance(available,bool) and available>current:
@@ -172,7 +172,7 @@ def validate_contract_result_bindings(job:dict[str,Any],judgment:dict[str,Any])-
     if cid=="character.action_propose":
         if judgment.get("character_id")!=payload.get("character_id"):e.append("character action result mismatch: character_id")
         if judgment.get("active_agenda")!=payload.get("active_agenda"):e.append("character action result mismatch: active_agenda")
-        evidence={eid:status for eid,_,status in _character_evidence_rows(payload)}
+        evidence={eid for eid,_ in _character_evidence_rows(payload)}
         proposals=judgment.get("proposals",[])
         if isinstance(proposals,list):
             for i,proposal in enumerate(proposals):
@@ -181,11 +181,10 @@ def validate_contract_result_bindings(job:dict[str,Any],judgment:dict[str,Any])-
                 if not isinstance(bases,list):continue
                 for basis in bases:
                     if not isinstance(basis,dict):continue
-                    evidence_id=basis.get("evidence_id"); use=basis.get("use")
+                    evidence_id=basis.get("evidence_id")
                     if evidence_id in seen:e.append(f"proposal {i} duplicates evidence basis: {evidence_id}")
                     seen.add(evidence_id)
                     if evidence_id not in evidence:e.append(f"proposal {i} references unknown character evidence: {evidence_id}")
-                    elif use=="supports" and evidence[evidence_id] in {"contradicted","unknown"}:e.append(f"proposal {i} positively relies on unusable epistemic claim: {evidence_id}")
         return e
     if cid=="continuity.commitment_audit":
         candidate=payload.get("candidate",{}); evidence_ids={row.get("evidence_id") for row in candidate.get("evidence",[]) if isinstance(row,dict)} if isinstance(candidate,dict) else set()
@@ -345,8 +344,8 @@ def self_test()->int:
     character_binding_ok=not validate_result(char_job,char_result)
     bad_ref=json.loads(json.dumps(char_result));bad_ref["judgment"]["proposals"][0]["knowledge_basis"]=[{"evidence_id":"MISSING","use":"supports"}]
     character_unknown_ref_guard=any("unknown character evidence" in x for x in validate_result(char_job,bad_ref))
-    bad_epistemic=json.loads(json.dumps(char_result));bad_epistemic["judgment"]["proposals"][0]["knowledge_basis"]=[{"evidence_id":"FACT-2","use":"supports"}]
-    character_epistemic_guard=any("unusable epistemic claim" in x for x in validate_result(char_job,bad_epistemic))
+    semantic_epistemic=json.loads(json.dumps(char_result));semantic_epistemic["judgment"]["proposals"][0]["knowledge_basis"]=[{"evidence_id":"FACT-2","use":"supports"}]
+    character_epistemic_semantics_not_reinterpreted=not validate_result(char_job,semantic_epistemic)
     future_input=json.loads(json.dumps(character_payload));future_input["immediate_situation"]["observables"][0]["available_from_story_order"]=6
     character_future_guard=False
     try:make_contract_job("character.action_propose","CHAR-FUTURE",future_input)
@@ -386,8 +385,8 @@ def self_test()->int:
     try:make_contract_job("relationship.memory_reconcile","REL-FUTURE",relationship_future)
     except ValueError as exc:relationship_future_guard="future story order" in str(exc)
 
-    ok=all((not validate_job(ej),not validate_result(ej,er),lineage,not validate_job(cj),not validate_result(cj,good),auto,typed,guard,typed_input_ok,typed_input_reject,character_binding_ok,character_unknown_ref_guard,character_epistemic_guard,character_future_guard,continuity_binding_ok,continuity_unknown_evidence_guard,continuity_complete_coverage_guard,continuity_future_guard,relationship_binding_ok,relationship_source_guard,relationship_future_guard))
-    dump_json({"semantic_router_contract":"PASS" if ok else "FAIL","fingerprint_excludes_runtime_lineage":lineage,"catalog_exact_id_resolution":auto,"typed_input_validation":typed_input_ok and typed_input_reject,"typed_output_validation":typed,"contract_input_guard":guard,"character_evidence_binding":character_binding_ok,"character_unknown_evidence_guard":character_unknown_ref_guard,"character_epistemic_support_guard":character_epistemic_guard,"character_future_evidence_guard":character_future_guard,"continuity_evidence_binding":continuity_binding_ok,"continuity_unknown_evidence_guard":continuity_unknown_evidence_guard,"continuity_complete_coverage_guard":continuity_complete_coverage_guard,"continuity_future_evidence_guard":continuity_future_guard,"relationship_evidence_binding":relationship_binding_ok,"relationship_source_guard":relationship_source_guard,"relationship_future_evidence_guard":relationship_future_guard,"aggregate_registry_required":False,"semantic_intelligence_externalized":True,"model_execution":False})
+    ok=all((not validate_job(ej),not validate_result(ej,er),lineage,not validate_job(cj),not validate_result(cj,good),auto,typed,guard,typed_input_ok,typed_input_reject,character_binding_ok,character_unknown_ref_guard,character_epistemic_semantics_not_reinterpreted,character_future_guard,continuity_binding_ok,continuity_unknown_evidence_guard,continuity_complete_coverage_guard,continuity_future_guard,relationship_binding_ok,relationship_source_guard,relationship_future_guard))
+    dump_json({"semantic_router_contract":"PASS" if ok else "FAIL","fingerprint_excludes_runtime_lineage":lineage,"catalog_exact_id_resolution":auto,"typed_input_validation":typed_input_ok and typed_input_reject,"typed_output_validation":typed,"contract_input_guard":guard,"character_evidence_binding":character_binding_ok,"character_unknown_evidence_guard":character_unknown_ref_guard,"character_epistemic_semantics_not_reinterpreted":character_epistemic_semantics_not_reinterpreted,"character_future_evidence_guard":character_future_guard,"continuity_evidence_binding":continuity_binding_ok,"continuity_unknown_evidence_guard":continuity_unknown_evidence_guard,"continuity_complete_coverage_guard":continuity_complete_coverage_guard,"continuity_future_evidence_guard":continuity_future_guard,"relationship_evidence_binding":relationship_binding_ok,"relationship_source_guard":relationship_source_guard,"relationship_future_evidence_guard":relationship_future_guard,"aggregate_registry_required":False,"semantic_intelligence_externalized":True,"model_execution":False})
     return 0 if ok else 1
 
 def main()->int:
