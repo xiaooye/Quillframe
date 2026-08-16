@@ -31,7 +31,7 @@ test -s "${STAGE_DIR}/index.html"
 compgen -G "${STAGE_DIR}/index*.wasm" >/dev/null
 compgen -G "${STAGE_DIR}/index*.pck" >/dev/null
 grep -q 'data-novelforge-runtime="loading"' "${STAGE_DIR}/index.html"
-grep -q '<base href="/">' "${STAGE_DIR}/index.html"
+grep -q '<base href="/"' "${STAGE_DIR}/index.html"
 
 # Replace only the Product root. /docs/** remains the independently built
 # Astro/Starlight application.
@@ -45,7 +45,7 @@ test -s "${OUT_DIR}/_redirects"
 compgen -G "${OUT_DIR}/index*.wasm" >/dev/null
 compgen -G "${OUT_DIR}/index*.pck" >/dev/null
 grep -q 'data-novelforge-runtime="loading"' "${OUT_DIR}/index.html"
-grep -q '<base href="/">' "${OUT_DIR}/index.html"
+grep -q '<base href="/"' "${OUT_DIR}/index.html"
 for route in product studio architecture publication inspect playground agents changelog; do
   grep -q "^/${route} /index.html 200$" "${OUT_DIR}/_redirects"
 done
