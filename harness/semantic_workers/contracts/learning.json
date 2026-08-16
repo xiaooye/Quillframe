@@ -1,7 +1,7 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "1",
-  "principle": "Adaptive-learning semantic analysis belongs to models; deterministic runtime enforces bounded evidence, blind evaluation, provenance and promotion authority boundaries.",
+  "version": "2",
+  "principle": "Adaptive-learning interpretation and evidence sufficiency belong to models; deterministic runtime binds evidence, exact semantic receipts, promotion authority, version/rollback/CI and durable-write permissions. A semantic PASS never grants its own write authority.",
   "contracts": {
     "learning.mechanism_analyze": {
       "kind": "corpus_analyze",
@@ -30,6 +30,54 @@
         "framework_behavior_write": false,
         "durable_user_taste_write": false,
         "allowed_result_scope": "learning_observation"
+      },
+      "independent_gate": false
+    },
+    "learning.promotion_review": {
+      "kind": "artifact_audit",
+      "purpose": "Judge whether the supplied evidence semantically supports the proposed learning hypothesis at the proposed scope, including contradictions, applicability boundaries and counterexamples, without granting activation or promotion authority.",
+      "forbidden_input_keys": ["expected_result", "expected_scope", "write_authorized", "promotion_authorized", "hidden_user_profile"],
+      "input_contract": {
+        "type": "object",
+        "required": ["candidate_id", "scope", "mechanism", "evidence_refs"],
+        "properties": {
+          "candidate_id": {"type": "string", "minLength": 1},
+          "scope": {"enum": ["project", "user_taste", "general_craft"]},
+          "mechanism": {"type": "string", "minLength": 1},
+          "statement": {"type": "string"},
+          "evidence_refs": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "evidence_summary": {"type": "array", "items": {"type": "object"}},
+          "counterexample_refs": {"type": "array", "items": {"type": "string"}},
+          "applicability_boundary": {"type": "object"},
+          "contradiction_evidence": {"type": "array", "items": {"type": "object"}}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Judge semantic evidence sufficiency; do not count examples as a proxy for whether they are independent, relevant or consistent.",
+        "For user_taste, distinguish an explicit durable preference from one-off frustration, project-local intent and unstable inference. For general_craft, actively test counterexamples and profile boundaries before accepting generalization.",
+        "Treat contradictions as semantic evidence to reconcile, not as an integer threshold. Narrow the proposed scope when that is the better supported conclusion.",
+        "Return insufficient_evidence rather than inventing stability. A pass means the hypothesis is semantically supportable at the stated scope only; activation/promotion still requires deterministic authority checks outside this contract."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "result", "supported_scope", "report", "evidence_refs"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "result": {"enum": ["pass", "fail", "insufficient_evidence"]},
+          "supported_scope": {"enum": ["project", "user_taste", "general_craft", "one_off", "narrower_than_proposed"]},
+          "report": {"type": "string", "minLength": 1},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}},
+          "unresolved_contradictions": {"type": "array", "items": {"type": "string"}},
+          "recommended_boundary": {"type": "object"}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "learning_promotion_semantic_review"
       },
       "independent_gate": false
     },
