@@ -201,6 +201,7 @@ def self_test() -> dict[str, Any]:
         "schema": SCHEMA,
         "context_assembly_contract": "PASS" if passed else "FAIL",
         "exact_required_ref_missing_blocks": not missing["proceed"],
+        "required_missing_blocks": not missing["proceed"],
         "private_writer_selection_blocks": not private["proceed"],
         "source_fingerprint_mismatch_blocks": not mismatch["proceed"],
         "legacy_semantic_obligation_rejected": legacy_semantic_obligation_rejected,
