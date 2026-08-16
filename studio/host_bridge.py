@@ -3,9 +3,10 @@
 
 The bridge exposes versioned public Core queries plus a deliberately narrow
 runtime command boundary. Delivery surfaces never gain Canon, Settlement,
-Framework-write, Project-write, or semantic authority. The only V2 mutation is
-an explicitly user-authorized local ``session.resume`` command backed by fresh
-preflight, typed authorization, exact CAS, idempotency, and a durable receipt.
+Framework-write, Project-write, or semantic authority. V3 exposes only the
+operation-specific, explicitly user-authorized local ``session.resume`` and
+``session.terminate`` runtime mutations. Both remain backed by fresh preflight,
+typed authorization, exact CAS, idempotency, and durable receipts.
 """
 from __future__ import annotations
 
@@ -31,6 +32,7 @@ RESULT_SCHEMA = "novelforge_studio_host_bridge_result_v1"
 DESCRIPTION_SCHEMA = "novelforge_studio_host_bridge_description_v1"
 CONTRACT_SCHEMA = "novelforge_studio_host_bridge_contract_v1"
 RESUME_PREFLIGHT_SCHEMA = "novelforge_session_resume_preflight_v1"
+TERMINATE_PREFLIGHT_SCHEMA = "novelforge_session_terminate_preflight_v1"
 RUNTIME_COMMAND_RESULT_SCHEMA = "novelforge_runtime_command_execution_result_v1"
 RUNTIME_COMMAND_RECEIPT_SCHEMA = "novelforge_runtime_command_receipt_v1"
 RUNTIME_COMMAND_RECEIPT_PROJECTION_SCHEMA = "novelforge_runtime_command_receipt_projection_v1"
@@ -366,6 +368,70 @@ def _session_resume(args: dict[str, Any], surface: str) -> dict[str, Any]:
     return sanitize(result)
 
 
+def _terminate_inputs(args: dict[str, Any]) -> tuple[Path, str, int]:
+    project_root = _project_root(args)
+    session_id = args.get("session_id")
+    expected_version = args.get("expected_session_version")
+    if not isinstance(session_id, str) or not session_id.strip():
+        raise BridgeError("invalid_args", "session_id is required")
+    if isinstance(expected_version, bool) or not isinstance(expected_version, int) or expected_version < 1:
+        raise BridgeError("invalid_args", "expected_session_version must be a positive integer")
+    return project_root, session_id, expected_version
+
+
+def _session_terminate_preflight(args: dict[str, Any], _: str) -> dict[str, Any]:
+    project_root, session_id, expected_version = _terminate_inputs(args)
+    runtime_db = project_root / ".novelforge" / "runtime.db"
+    argv = [
+        "terminate-preflight", "--db", str(runtime_db), "inspect",
+        "--project-root", str(project_root),
+        "--session-id", session_id,
+        "--expected-session-version", str(expected_version),
+    ]
+    try:
+        return sanitize(_run_cli(argv, cwd=project_root))
+    except BridgeError as exc:
+        detail = exc.detail if isinstance(exc.detail, dict) else {}
+        blocked = detail.get("result")
+        if (
+            exc.code == "core_cli_failed"
+            and isinstance(blocked, dict)
+            and blocked.get("schema") == TERMINATE_PREFLIGHT_SCHEMA
+            and blocked.get("status") == "BLOCKED"
+            and blocked.get("ready") is False
+            and blocked.get("mutation_performed") is False
+            and blocked.get("authority") is False
+        ):
+            return sanitize(blocked)
+        raise
+
+
+def _session_terminate(args: dict[str, Any], surface: str) -> dict[str, Any]:
+    if surface != "local_app":
+        raise BridgeError("mutation_surface_not_authorized", "session.terminate is restricted to the loopback-bound local_app surface")
+    if args.get("user_authorized") is not True:
+        raise BridgeError("authorization_required", "session.terminate requires an explicit user authorization action")
+    project_root, session_id, expected_version = _terminate_inputs(args)
+    command_id = args.get("command_id")
+    if command_id is not None and (not isinstance(command_id, str) or not command_id.strip() or len(command_id) > 160):
+        raise BridgeError("invalid_args", "command_id must be a non-empty string up to 160 characters")
+    runtime_db = project_root / ".novelforge" / "runtime.db"
+    authorization_ref = f"urn:novelforge:studio:user-action:{session_id}:terminate"
+    argv = [
+        "terminate-executor", "--db", str(runtime_db), "execute-terminate",
+        "--project-root", str(project_root),
+        "--session-id", session_id,
+        "--expected-session-version", str(expected_version),
+        "--authorization-ref", authorization_ref,
+    ]
+    if command_id is not None:
+        argv += ["--command-id", command_id]
+    result = _run_cli(argv, cwd=project_root)
+    if result.get("schema") != RUNTIME_COMMAND_RESULT_SCHEMA or result.get("status") not in {"applied", "duplicate"}:
+        raise BridgeError("runtime_command_invalid_result", "terminate executor returned an unexpected success envelope", detail=sanitize(result))
+    return sanitize(result)
+
+
 DISPATCH = {
     "bridge.describe": lambda args, surface: description(surface=surface),
     "framework.doctor": _safe_doctor,
@@ -382,6 +448,8 @@ DISPATCH = {
     "runtime.command.receipt.get": _runtime_command_receipt_get,
     "session.resume.preflight": _session_resume_preflight,
     "session.resume": _session_resume,
+    "session.terminate.preflight": _session_terminate_preflight,
+    "session.terminate": _session_terminate,
 }
 
 
@@ -502,6 +570,12 @@ def self_test() -> dict[str, Any]:
         "authority_evidence": "README.md",
         "user_authorized": True,
     }))
+    nonlocal_terminate = invoke(_request("REQ-REMOTE-TERMINATE", "session.terminate", {
+        "project_root": str(ROOT),
+        "session_id": "SES-NOT-USED",
+        "expected_session_version": 1,
+        "user_authorized": True,
+    }))
     wrong_authority = _request("REQ-AUTH", "bridge.describe")
     wrong_authority["authority"] = True
     authority_rejected = invoke(wrong_authority)
@@ -535,8 +609,8 @@ def self_test() -> dict[str, Any]:
 
     temp_root = Path(tempfile.mkdtemp(prefix="novelforge-host-bridge-"))
     project_ready = project_safe = context_safe = runtime_safe = False
-    runtime_queries_ok = resume_preflight_safe = False
-    resume_command_safe = command_receipt_safe = False
+    runtime_queries_ok = resume_preflight_safe = terminate_preflight_safe = False
+    resume_command_safe = command_receipt_safe = terminate_command_safe = False
     try:
         setup = subprocess.run([sys.executable, str(ROOT / "project_adapter.py"), "self-test", "--tmp", str(temp_root)], cwd=str(ROOT), text=True, capture_output=True, check=False)
         project_ready = setup.returncode == 0
@@ -725,6 +799,58 @@ def self_test() -> dict[str, Any]:
             and receipt_query["data"].get("authority") is False
             and str(temp_root) not in canonical(receipt_query)
         )
+
+        terminate_args = {
+            "project_root": str(temp_root),
+            "session_id": "SES-BRIDGE-RESUME",
+            "expected_session_version": 2,
+        }
+        terminate_preflight = invoke(_request("REQ-TERMINATE-PREFLIGHT", "session.terminate.preflight", terminate_args, surface="local_app"))
+        terminate = invoke(_request("REQ-TERMINATE-APPLY", "session.terminate", {
+            **terminate_args,
+            "user_authorized": True,
+            "command_id": "CMD-BRIDGE-TERMINATE",
+        }, surface="local_app"))
+        terminate_receipt = invoke(_request("REQ-TERMINATE-RECEIPT", "runtime.command.receipt.get", {
+            "project_root": str(temp_root),
+            "command_id": "CMD-BRIDGE-TERMINATE",
+        }, surface="local_app"))
+        terminated_session = invoke(_request("REQ-TERMINATED-SESSION", "runtime.session.get", {
+            "project_root": str(temp_root),
+            "session_id": "SES-BRIDGE-RESUME",
+        }, surface="local_app"))
+        stopped_run = (
+            terminated_session["data"]["session"]["runs"][-1]
+            if terminated_session["status"] == "ok" and terminated_session["data"]["session"].get("runs")
+            else {}
+        )
+        terminate_preflight_safe = (
+            terminate_preflight["status"] == "ok"
+            and terminate_preflight["data"].get("schema") == TERMINATE_PREFLIGHT_SCHEMA
+            and terminate_preflight["data"].get("status") == "READY"
+            and terminate_preflight["data"].get("ready") is True
+            and terminate_preflight["data"].get("mutation_performed") is False
+            and terminate_preflight["data"].get("authority") is False
+            and str(temp_root) not in canonical(terminate_preflight)
+        )
+        terminate_command_safe = (
+            terminate["status"] == "ok" and terminate["data"].get("schema") == RUNTIME_COMMAND_RESULT_SCHEMA
+            and terminate["data"].get("status") == "applied" and terminate["data"].get("runtime_mutation_performed") is True
+            and terminate["data"].get("model_execution") is False and terminate["data"].get("authority") is False
+            and isinstance(terminate["data"].get("receipt"), dict)
+            and terminate["data"]["receipt"].get("schema") == RUNTIME_COMMAND_RECEIPT_SCHEMA
+            and terminate["data"]["receipt"].get("operation") == "session.terminate"
+            and terminate["data"]["receipt"].get("after_state", {}).get("session_status") == "terminated"
+            and terminate["data"]["receipt"].get("after_state", {}).get("run_status") == "terminated"
+            and terminate_receipt["status"] == "ok"
+            and terminate_receipt["data"].get("schema") == RUNTIME_COMMAND_RECEIPT_PROJECTION_SCHEMA
+            and terminate_receipt["data"].get("count") == 1
+            and terminated_session["status"] == "ok"
+            and terminated_session["data"]["session"]["status"] == "terminated"
+            and terminated_session["data"]["session"]["version"] == 3
+            and stopped_run.get("status") == "terminated" and isinstance(stopped_run.get("ended_at"), str)
+            and str(temp_root) not in canonical([terminate, terminate_receipt, terminated_session])
+        )
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
@@ -734,6 +860,7 @@ def self_test() -> dict[str, Any]:
         "deterministic_envelope": deterministic_envelope,
         "unknown_operation_fails_closed": unknown["status"] == "invalid",
         "resume_nonlocal_surface_rejected": nonlocal_resume["status"] == "failed" and nonlocal_resume.get("error", {}).get("code") == "mutation_surface_not_authorized",
+        "terminate_nonlocal_surface_rejected": nonlocal_terminate["status"] == "failed" and nonlocal_terminate.get("error", {}).get("code") == "mutation_surface_not_authorized",
         "write_command_deferred": deferred_write["status"] == "unsupported",
         "request_authority_rejected": authority_rejected["status"] == "invalid",
         "doctor_query": doctor["status"] == "ok",
@@ -747,6 +874,8 @@ def self_test() -> dict[str, Any]:
         "resume_preflight_query_safe": resume_preflight_safe,
         "resume_command_safe": resume_command_safe,
         "runtime_command_receipt_safe": command_receipt_safe,
+        "terminate_preflight_query_safe": terminate_preflight_safe,
+        "terminate_command_safe": terminate_command_safe,
     }
     return {"studio_host_bridge_contract": "PASS" if all(checks.values()) else "FAIL", "schema": CONTRACT_SCHEMA, "checks": checks, "authority": False, "model_execution": False}
 
