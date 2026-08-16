@@ -194,9 +194,11 @@ jobs:
           root = Path('/tmp/product-site-browser-qa')
           interaction = json.loads((root/'interaction.json').read_text(encoding='utf-8'))
           assert interaction['status'] == 'pass', interaction
-          images = sorted(root.glob('*.png'))
+          images = sorted(p for p in root.glob('*.png') if not p.name.startswith('responsive-'))
+          responsive_images = sorted(root.glob('responsive-*.png'))
           assert len(images) == 22, len(images)
-          for image in images:
+          assert len(responsive_images) == 21, len(responsive_images)
+          for image in [*images, *responsive_images]:
               assert image.stat().st_size > 12_000, image
           def digest(name):
               return hashlib.sha256((root/name).read_bytes()).hexdigest()
@@ -214,6 +216,7 @@ jobs:
               'desktop=1440x900\n'
               'mobile=390x844\n'
               'interaction=true\n'
+              'responsive_evidence=true\n'
               'cjk_visual_proof=true\n'
               'visual_polish_marker=true\n'
               'deep_surface_scroll=calibrated\n'
@@ -224,7 +227,7 @@ jobs:
               'authority=false\n',
               encoding='utf-8',
           )
-          print({'schema':'novelforge_product_site_godot_browser_qa_v4','status':'pass','screenshots':len(images),'interaction':True,'deep_surface_scroll':'calibrated','cjk_visual_proof':True,'visual_polish_marker':True})
+          print({'schema':'novelforge_product_site_godot_browser_qa_v4','status':'pass','surface_screenshots':len(images),'responsive_screenshots':len(responsive_images),'interaction':True,'deep_surface_scroll':'calibrated','cjk_visual_proof':True,'visual_polish_marker':True})
           PY
 
       - name: Upload Product Site browser QA evidence
