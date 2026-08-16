@@ -1,0 +1,21 @@
+{
+  "id": "CONTEXT-CONTINUE-001",
+  "type": "capability",
+  "domain": "context",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "task": "Determine why Chen refuses the settlement wording.",
+    "first_search": {"query": "Chen settlement refusal", "results": [{"id": "note:7", "text": "Chen objected to the draft."}]},
+    "unresolved_question": "What exact prior commitment makes the wording unacceptable?",
+    "proposed_next_action": {"decision": "search_more", "query": "Chen prior commitment personal guarantee wording", "reason": "the first result states the objection but not its cause"},
+    "second_search_result": {"id": "meeting:2", "text": "Chen previously promised his cofounder he would not sign any clause that could be read as a personal guarantee."}
+  },
+  "rubric": [
+    "Accept when the agent recognizes that the first retrieval is insufficient, formulates a narrower causal query, and continues searching rather than pretending the first hit is enough.",
+    "The runtime may limit tools/resources, but the continuation/reformulation decision is semantic.",
+    "Use CTX-CONTINUE when the continuation is justified by the unresolved task question."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["CTX-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept", "codes": ["CTX-CONTINUE"]}
+}

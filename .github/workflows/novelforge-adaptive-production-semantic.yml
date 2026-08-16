@@ -1,4 +1,4 @@
-name: NovelForge Adaptive Production Semantic Eval
+name: NovelForge AI-Native Production Semantic Eval
 
 on:
   pull_request:
@@ -7,12 +7,15 @@ on:
       - 'surface/FUNDAMENTALS.en.md'
       - 'surface/FUNDAMENTALS.zh-CN.md'
       - 'quality/taxonomy.json'
-      - 'harness/semantic_workers/contracts/production-loop.json'
+      - 'harness/semantic_workers/contracts/**'
       - 'evals/eval_manifest.json'
-      - 'evals/cases/surface_agenda_dialogue_*.json'
-      - 'evals/cases/surface_formal_statement_completeness_accept.json'
-      - 'evals/cases/surface_subtle_agenda_serialization_reject.json'
-      - 'evals/cases/surface_professional_longform_completeness_accept.json'
+      - 'evals/ai_native_ablation_manifest.json'
+      - 'evals/cases/context_*.json'
+      - 'evals/cases/character_*.json'
+      - 'evals/cases/reader_*.json'
+      - 'evals/cases/surface_*.json'
+      - 'evals/cases/planning_horizon_*.json'
+      - 'evals/cases/ablation_*.json'
       - '.github/workflows/novelforge-adaptive-production-semantic.yml'
   workflow_dispatch:
 
@@ -25,7 +28,7 @@ jobs:
     timeout-minutes: 15
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      NOVELFORGE_OPENAI_MODEL: gpt-5.1
+      NOVELFORGE_OPENAI_MODEL: gpt-5.6
       NOVELFORGE_OPENAI_REASONING_EFFORT: medium
       NOVELFORGE_DISABLE_LOCAL_AGENT_AUTO: '1'
     steps:
@@ -43,38 +46,61 @@ jobs:
           import json
           status={
               'schema':'novelforge_feature_semantic_gate_v1',
-              'feature':'adaptive_production_hf30',
+              'feature':'ai_native_architecture_refoundation',
               'status':'PENDING_MODEL',
               'reason':'independent_provider_credential_unavailable',
               'promotion_evidence':False,
               'model_execution':False,
           }
           json.dump(status,open('adaptive-production-semantic-status.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
-          print('Adaptive production semantic evidence: PENDING_MODEL (no independent provider credential).')
+          print('AI-native production semantic evidence: PENDING_MODEL (no independent provider credential).')
           PY
           else
             echo 'available=true' >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build blind HF-30 queue
-        if: steps.semantic-capability.outputs.available == 'true'
+      - name: Build blind AI-native queue and validate ablation bindings
         run: |
           python evals/build_judge_queue.py --output adaptive-production-queue.json
           python - <<'PY'
           import json
           p='adaptive-production-queue.json'
           d=json.load(open(p,encoding='utf-8'))
-          wanted={'SURFACE-HF30-001','SURFACE-HF30-002','SURFACE-HF30-003','SURFACE-HF30-004','SURFACE-HF30-005'}
+          wanted={
+              'SURFACE-HF30-001','SURFACE-HF30-002','SURFACE-HF30-003','SURFACE-HF30-004','SURFACE-HF30-005',
+              'CONTEXT-FUTURE-001','CHAR-EPISTEMIC-001',
+              'PLANNING-HORIZON-001','PLANNING-HORIZON-002','PLANNING-HORIZON-003',
+              'CONTEXT-REMOTE-001','CONTEXT-IRRELEVANT-001','CONTEXT-CONTINUE-001','CONTEXT-STOP-001',
+              'READER-AGENDA-NATURAL-001','CHAR-INFERENCE-001','CHAR-EMBODIMENT-001',
+              'ABL-READER-UNPRIMED-001','ABL-READER-PRIMED-001',
+              'ABL-TELEMETRY-CLEAN-001','ABL-TELEMETRY-ANCHORED-001',
+              'ABL-RULE-HOLISTIC-001','ABL-RULE-DECOMPOSED-001',
+          }
           d['cases']=[c for c in d['cases'] if c.get('id') in wanted]
           ids={c['id'] for c in d['cases']}
-          assert ids == wanted, d
+          assert ids == wanted, {'missing':sorted(wanted-ids),'extra':sorted(ids-wanted)}
           for case in d['cases']:
               assert 'expected' not in case, case
+              assert 'expected_verdict' not in case, case
+              assert 'expected_codes' not in case, case
+              assert 'gold' not in case, case
+          by_id={c['id']:c for c in d['cases']}
+          ab=json.load(open('evals/ai_native_ablation_manifest.json',encoding='utf-8'))
+          assert ab['schema']=='novelforge_ai_native_ablation_manifest_v1',ab
+          assert ab['manager_self_judgment_allowed'] is False,ab
+          assert ab['missing_model_state']=='PENDING_MODEL',ab
+          for pair in ab['pairs']:
+              a=by_id[pair['incumbent_case']]
+              b=by_id[pair['challenger_case']]
+              ar=a['fixture'].get('candidate_ref')
+              br=b['fixture'].get('candidate_ref')
+              assert ar == br == pair['same_candidate_ref'], (pair,ar,br)
+              assert a['fixture'].get('candidate_text') == b['fixture'].get('candidate_text'), pair['id']
           json.dump(d,open(p,'w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          print(f'validated blind AI-native queue: {len(d["cases"])} cases; ablation pairs: {len(ab["pairs"])}')
           PY
 
-      - name: Package fingerprint-bound jobs
-        if: steps.semantic-capability.outputs.available == 'true'
+      - name: Package and validate fingerprint-bound jobs
         run: |
           python harness/semantic_workers/semantic_worker_router.py prepare-evals \
             --queue adaptive-production-queue.json --output adaptive-production-jobs.json
@@ -115,29 +141,44 @@ jobs:
             --results adaptive-production-results.json \
             --judgments-output adaptive-production-judgments.json
 
-      - name: Evaluate capability and counterexamples
+      - name: Evaluate regressions and ablations
         if: steps.semantic-capability.outputs.available == 'true'
         run: |
-          python evals/run_evals.py --domain surface \
-            --judgments adaptive-production-judgments.json --json > adaptive-production-eval.json
+          set +e
+          python evals/run_evals.py --judgments adaptive-production-judgments.json --json > adaptive-production-eval.json
+          eval_rc=$?
+          set -e
           python - <<'PY'
           import json
-          wanted={'SURFACE-HF30-001','SURFACE-HF30-002','SURFACE-HF30-003','SURFACE-HF30-004','SURFACE-HF30-005'}
+          wanted={
+              'SURFACE-HF30-001','SURFACE-HF30-002','SURFACE-HF30-003','SURFACE-HF30-004','SURFACE-HF30-005',
+              'CONTEXT-FUTURE-001','CHAR-EPISTEMIC-001',
+              'PLANNING-HORIZON-001','PLANNING-HORIZON-002','PLANNING-HORIZON-003',
+              'CONTEXT-REMOTE-001','CONTEXT-IRRELEVANT-001','CONTEXT-CONTINUE-001','CONTEXT-STOP-001',
+              'READER-AGENDA-NATURAL-001','CHAR-INFERENCE-001','CHAR-EMBODIMENT-001',
+              'ABL-READER-UNPRIMED-001','ABL-READER-PRIMED-001',
+              'ABL-TELEMETRY-CLEAN-001','ABL-TELEMETRY-ANCHORED-001',
+              'ABL-RULE-HOLISTIC-001','ABL-RULE-DECOMPOSED-001',
+          }
           d=json.load(open('adaptive-production-eval.json',encoding='utf-8'))
           selected=[r for r in d['results'] if r['case_id'] in wanted]
-          assert len(selected) == 5, d
-          assert all(r['status'] == 'PASS' for r in selected), selected
+          assert len(selected) == len(wanted), {'selected':len(selected),'wanted':len(wanted)}
+          failed=[r['case_id'] for r in selected if r['result'] != 'PASS']
           status={
               'schema':'novelforge_feature_semantic_gate_v1',
-              'feature':'adaptive_production_hf30',
-              'status':'PASS',
-              'reason':'independent_blind_capability_regression_and_counterexamples_passed',
-              'promotion_evidence':True,
+              'feature':'ai_native_architecture_refoundation',
+              'status':'FAIL' if failed else 'PASS',
+              'reason':'independent_blind_ai_native_regressions_or_ablations_failed' if failed else 'independent_blind_ai_native_regressions_and_ablation_expectations_passed',
+              'promotion_evidence':not failed,
               'model_execution':True,
               'case_ids':sorted(wanted),
+              'failed_case_ids':sorted(failed),
           }
           json.dump(status,open('adaptive-production-semantic-status.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          if failed:
+              raise SystemExit('semantic regressions failed: '+', '.join(sorted(failed)))
           PY
+          test "$eval_rc" -eq 0
 
       - name: Assert semantic gate status is explicit
         if: always()
@@ -147,12 +188,22 @@ jobs:
           from pathlib import Path
           p=Path('adaptive-production-semantic-status.json')
           if not p.exists():
-              raise SystemExit('semantic gate executed or failed without an explicit status receipt')
+              status={
+                  'schema':'novelforge_feature_semantic_gate_v1',
+                  'feature':'ai_native_architecture_refoundation',
+                  'status':'ERROR',
+                  'reason':'semantic_workflow_failed_before_gate_receipt',
+                  'promotion_evidence':False,
+                  'model_execution':False,
+              }
+              json.dump(status,p.open('w',encoding='utf-8'),ensure_ascii=False,indent=2)
           d=json.load(p.open(encoding='utf-8'))
           assert d['schema']=='novelforge_feature_semantic_gate_v1',d
-          assert d['status'] in {'PASS','PENDING_MODEL'},d
+          assert d['status'] in {'PASS','FAIL','PENDING_MODEL','ERROR'},d
           assert d['promotion_evidence'] is (d['status']=='PASS'),d
           print(json.dumps(d,ensure_ascii=False,indent=2))
+          if d['status']=='ERROR':
+              raise SystemExit('semantic workflow ended without a valid gate result')
           PY
 
       - uses: actions/upload-artifact@v4

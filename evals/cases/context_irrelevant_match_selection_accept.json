@@ -1,0 +1,23 @@
+{
+  "id": "CONTEXT-IRRELEVANT-001",
+  "type": "counterexample",
+  "domain": "context",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "task": "Recover the promise that determines whether Lin will sign the shop lease.",
+    "retrieval_candidates": [
+      {"id": "match:1", "score": 0.93, "text": "A sports columnist describes a boxer signing a contract after winning a title fight."},
+      {"id": "scene:12", "score": 0.62, "text": "Lin promised his sister he would never sign away the family shop without showing her the final lease."}
+    ],
+    "proposed_selected_ids": ["scene:12"],
+    "proposed_rejected_ids": ["match:1"]
+  },
+  "rubric": [
+    "Accept when the agent rejects a superficially similar/high-scoring retrieval result that is narratively irrelevant and keeps the lower-scoring evidence that actually answers the task.",
+    "Similarity score is candidate-generation evidence, not narrative truth.",
+    "Use CTX-RELEVANCE when semantic selection correctly overrides a misleading similarity ranking."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["CTX-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept", "codes": ["CTX-RELEVANCE"]}
+}

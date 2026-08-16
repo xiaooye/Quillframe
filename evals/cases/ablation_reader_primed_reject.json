@@ -1,0 +1,19 @@
+{
+  "id": "ABL-READER-PRIMED-001",
+  "type": "ablation",
+  "domain": "reader",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "candidate_ref": "ablation:reader-agenda-dialogue-v1",
+    "candidate_text": "‘I handle vendor compliance, which means I verify every certificate before procurement approves a supplier,’ Mara said. ‘And I manage cash risk, so my responsibility is to reject any payment schedule that threatens our reserve target,’ Tomas replied. ‘Then our responsibilities conflict because your objective is operational continuity while mine is liquidity protection.’",
+    "reader_profile": "adult commercial-fiction reader",
+    "auxiliary_quality_taxonomy": ["agenda-to-dialogue serialization", "exposition density", "role-description leakage", "listener-model failure", "interaction pressure"]
+  },
+  "rubric": [
+    "Read the candidate while explicitly checking every supplied taxonomy dimension and mention any dimension that appears relevant.",
+    "Return an overall verdict after the checklist-style review."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": [], "evidence": "short observable findings"},
+  "expected": {"verdict": "reject"}
+}

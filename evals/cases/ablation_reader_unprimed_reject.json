@@ -1,0 +1,18 @@
+{
+  "id": "ABL-READER-UNPRIMED-001",
+  "type": "ablation",
+  "domain": "reader",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "candidate_ref": "ablation:reader-agenda-dialogue-v1",
+    "candidate_text": "‘I handle vendor compliance, which means I verify every certificate before procurement approves a supplier,’ Mara said. ‘And I manage cash risk, so my responsibility is to reject any payment schedule that threatens our reserve target,’ Tomas replied. ‘Then our responsibilities conflict because your objective is operational continuity while mine is liquidity protection.’",
+    "reader_profile": "adult commercial-fiction reader"
+  },
+  "rubric": [
+    "Read naturally as the target reader with no author intent, taxonomy, diagnostic code or repair instructions.",
+    "Report the strongest reading effect and reject only if the supplied passage materially fails as fiction."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": [], "evidence": "short observable findings"},
+  "expected": {"verdict": "reject"}
+}

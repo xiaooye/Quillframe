@@ -1,6 +1,6 @@
 {
-  "suite_version": "8.0-dev.1",
-  "description": "NovelForge 8.0-development generic architecture, context, character, long-horizon, Surface, Reader, Canon, Corpus, revision and semantic capability/regression suite.",
+  "suite_version": "8.0-dev.2",
+  "description": "NovelForge 8.0-development generic architecture, context, character, long-horizon, Surface, Reader, Canon, Corpus, revision, AI-native ablation and semantic capability/regression suite.",
   "cases": [
     {"file": "cases/infra_framework_contract.json"},
     {"file": "cases/canon_plan_not_accepted.json"},
@@ -28,6 +28,19 @@
     {"file": "cases/infra_publication_contract.json"},
     {"file": "cases/planning_horizon_overconcretization_accept.json"},
     {"file": "cases/planning_horizon_tight_short_accept.json"},
-    {"file": "cases/planning_horizon_discovery_soft_accept.json"}
+    {"file": "cases/planning_horizon_discovery_soft_accept.json"},
+    {"file": "cases/context_remote_retrieval_accept.json"},
+    {"file": "cases/context_irrelevant_match_selection_accept.json"},
+    {"file": "cases/context_search_continue_accept.json"},
+    {"file": "cases/context_search_stop_accept.json"},
+    {"file": "cases/reader_agenda_dialogue_unprimed_reject.json"},
+    {"file": "cases/character_plausible_inference_accept.json"},
+    {"file": "cases/character_embodiment_accept.json"},
+    {"file": "cases/ablation_reader_unprimed_reject.json"},
+    {"file": "cases/ablation_reader_primed_reject.json"},
+    {"file": "cases/ablation_telemetry_clean_accept.json"},
+    {"file": "cases/ablation_telemetry_anchored_accept.json"},
+    {"file": "cases/ablation_rule_holistic_accept.json"},
+    {"file": "cases/ablation_rule_decomposed_accept.json"}
   ]
 }
