@@ -169,7 +169,10 @@ func _polish_narrow_compact_copy() -> void:
 				home_title.add_theme_constant_override("line_spacing", -12 if _locale == "en-US" else -8)
 				home_title.size.x = size.x - 80.0
 		"/product":
-			_polish_narrow_surface(["NovelForge\nis a fiction", "NovelForge 是小说"], ["It separates creative judgment", "它把创作判断与确定性控制分开"])
+			# Product uses the 112px route origin; all other route heroes use 110px.
+			# Using 110 here silently skipped the final wrap pass and left the old
+			# desktop-calibrated narrow title box visible at 768px.
+			_polish_narrow_surface(["NovelForge\nis a fiction", "NovelForge 是小说"], ["It separates creative judgment", "它把创作判断与确定性控制分开"], 112.0)
 		"/studio":
 			_polish_narrow_surface(["The creative\nworkbench", "把创作放在前台"], ["Phase 2C now ships", "第二阶段 C"])
 		"/architecture":
@@ -185,8 +188,8 @@ func _polish_narrow_compact_copy() -> void:
 		"/publication":
 			_polish_narrow_publication()
 
-func _polish_narrow_surface(title_prefixes: Array, lede_prefixes: Array) -> void:
-	var hero := _find_stage_panel(110.0, 400.0)
+func _polish_narrow_surface(title_prefixes: Array, lede_prefixes: Array, hero_y: float = 110.0) -> void:
+	var hero := _find_stage_panel(hero_y, 400.0)
 	if hero == null:
 		return
 	var title := _find_first_label_prefix(hero, title_prefixes)
