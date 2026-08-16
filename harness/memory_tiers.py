@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Deterministic context-budget packer for NovelForge.
 
-The model owns semantic relevance through the `context.select` contract. This
-module owns explicit visibility boundaries, authority/pin constraints,
-fingerprint binding and hard whole-block budgets. Perspective-incompatible
-blocks never enter the semantic packet; task-aware support remains observation,
-not story truth or Canon.
+The model owns semantic relevance and sufficiency through the `context.select`
+contract. This module owns only mechanical execution truth: visibility,
+story-time eligibility, pin constraints, authorized search capabilities,
+fingerprint-bound semantic-result validation, and hard whole-block budgets.
+
+A model-selected block that cannot fit a hard budget is reported as budget
+loss, never silently reclassified as semantically irrelevant. Likewise, an
+unselected eligible block is only model-rejected for the current bounded task;
+that decision does not alter Canon, authority, or durable memory state.
 """
 from __future__ import annotations
 
@@ -21,10 +25,11 @@ if str(SEM) not in sys.path:
     sys.path.insert(0, str(SEM))
 from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
 
-SCHEMA = "novelforge_memory_tiers_v4"
+SCHEMA = "novelforge_memory_tiers_v5"
 PERSPECTIVE_SCOPES = {"manager", "reader", "character", "narrator", "research", "other"}
 VISIBILITY_SCOPES = {"shared", *PERSPECTIVE_SCOPES}
 QUESTION_KINDS = {"concept", "behavior", "state", "continuity", "relationship", "other"}
+SEARCH_CAPABILITIES = {"project_search", "web_search", "github_search", "user_files", "file_library", "mcp_client"}
 
 
 def load_json(path: Path) -> Any:
@@ -64,6 +69,7 @@ def normalize_task(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("task.task_mode required")
     if not isinstance(task_goal, str) or not task_goal.strip():
         raise ValueError("task.task_goal required")
+
     perspective = raw.get("perspective")
     if not isinstance(perspective, dict):
         raise ValueError("task.perspective object required")
@@ -75,7 +81,6 @@ def normalize_task(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("character task perspective requires perspective_id")
 
     current_story_order = _nonnegative_int(raw.get("current_story_order"), "task.current_story_order")
-
     raw_questions = raw.get("active_questions")
     if not isinstance(raw_questions, list):
         raise ValueError("task.active_questions must be list")
@@ -97,8 +102,10 @@ def normalize_task(payload: dict[str, Any]) -> dict[str, Any]:
             raise ValueError(f"active question {qid} requires question")
         if kind not in QUESTION_KINDS:
             raise ValueError(f"active question {qid} has invalid kind")
-        as_of_order_raw = q.get("as_of_story_order", current_story_order)
-        as_of_story_order = _nonnegative_int(as_of_order_raw, f"{qid}.as_of_story_order")
+        as_of_story_order = _nonnegative_int(
+            q.get("as_of_story_order", current_story_order),
+            f"{qid}.as_of_story_order",
+        )
         if as_of_story_order > current_story_order:
             raise ValueError(f"active question {qid} cannot be later than task.current_story_order")
         questions.append({
@@ -108,6 +115,7 @@ def normalize_task(payload: dict[str, Any]) -> dict[str, Any]:
             "as_of_story_point": _optional_text(q.get("as_of_story_point"), f"{qid}.as_of_story_point"),
             "as_of_story_order": as_of_story_order,
         })
+
     return {
         "task_mode": task_mode.strip(),
         "task_goal": task_goal.strip(),
@@ -144,6 +152,7 @@ def normalize_item(raw: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(f"derived memory must have authority=false: {item_id}")
     if not derived and not isinstance(authority, (str, bool)):
         raise ValueError(f"non-derived authority must be string|boolean: {item_id}")
+
     source_refs = raw.get("source_refs", [])
     source_fingerprints = raw.get("source_fingerprints", [])
     if not isinstance(source_refs, list) or not all(isinstance(x, str) and x.strip() for x in source_refs):
@@ -151,10 +160,15 @@ def normalize_item(raw: dict[str, Any]) -> dict[str, Any]:
     if derived:
         if not source_refs:
             raise ValueError(f"derived memory requires source_refs: {item_id}")
-        if not isinstance(source_fingerprints, list) or not source_fingerprints or not all(isinstance(x, str) and x.startswith("sha256:") for x in source_fingerprints):
+        if (
+            not isinstance(source_fingerprints, list)
+            or not source_fingerprints
+            or not all(isinstance(x, str) and x.startswith("sha256:") for x in source_fingerprints)
+        ):
             raise ValueError(f"derived memory requires source_fingerprints: {item_id}")
     elif not isinstance(source_fingerprints, list):
         raise ValueError(f"source_fingerprints must be list: {item_id}")
+
     model_view = raw.get("model_view", {})
     if not isinstance(model_view, dict):
         raise ValueError(f"model_view must be object: {item_id}")
@@ -183,7 +197,7 @@ def normalized_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
     raw_items = payload.get("items", [])
     if not isinstance(raw_items, list):
         raise ValueError("items must be a list")
-    items = []
+    items: list[dict[str, Any]] = []
     seen: set[str] = set()
     for raw in raw_items:
         if not isinstance(raw, dict):
@@ -207,7 +221,10 @@ def visible_to_task(item: dict[str, Any], task: dict[str, Any]) -> bool:
     return required_id is None or required_id == perspective.get("perspective_id")
 
 
-def partition_eligibility(items: list[dict[str, Any]], task: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+def partition_eligibility(
+    items: list[dict[str, Any]],
+    task: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     visible: list[dict[str, Any]] = []
     perspective_excluded: list[dict[str, Any]] = []
     temporal_excluded: list[dict[str, Any]] = []
@@ -229,8 +246,34 @@ def partition_eligibility(items: list[dict[str, Any]], task: dict[str, Any]) -> 
     return visible, perspective_excluded, temporal_excluded
 
 
-def prepare_selection_job(payload: dict[str, Any], *, subject_id: str,
-                          source_session_id: str | None = None) -> dict[str, Any]:
+def _normalize_context_controls(payload: dict[str, Any]) -> dict[str, Any]:
+    controls: dict[str, Any] = {}
+    if "allowed_search_capabilities" in payload:
+        caps = payload["allowed_search_capabilities"]
+        if not isinstance(caps, list) or not all(isinstance(x, str) and x in SEARCH_CAPABILITIES for x in caps):
+            raise ValueError("allowed_search_capabilities contains invalid capability")
+        if len(caps) != len(set(caps)):
+            raise ValueError("allowed_search_capabilities contains duplicates")
+        controls["allowed_search_capabilities"] = list(caps)
+    if "search_history" in payload:
+        history = payload["search_history"]
+        if not isinstance(history, list) or not all(isinstance(x, dict) for x in history):
+            raise ValueError("search_history must be object list")
+        controls["search_history"] = history
+    if "resource_budget" in payload:
+        budget = payload["resource_budget"]
+        if not isinstance(budget, dict):
+            raise ValueError("resource_budget must be object")
+        controls["resource_budget"] = budget
+    return controls
+
+
+def prepare_selection_job(
+    payload: dict[str, Any],
+    *,
+    subject_id: str,
+    source_session_id: str | None = None,
+) -> dict[str, Any]:
     task = normalize_task(payload)
     items = normalized_items(payload)
     visible, _, _ = partition_eligibility(items, task)
@@ -248,10 +291,12 @@ def prepare_selection_job(payload: dict[str, Any], *, subject_id: str,
         }
         for item in visible
     ]
+    semantic_payload = {"task": task, "memory_blocks": candidates}
+    semantic_payload.update(_normalize_context_controls(payload))
     return make_contract_job(
         "context.select",
         subject_id,
-        {"task": task, "memory_blocks": candidates},
+        semantic_payload,
         source_session_id=source_session_id,
     )
 
@@ -262,84 +307,104 @@ def _ordered_ids(value: Any, name: str) -> list[str]:
     return [x.strip() for x in value]
 
 
-def _pack(items: list[dict[str, Any]], budget: int, *, fail_if_over: bool = False) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
-    selected: list[dict[str, Any]] = []
-    skipped: list[dict[str, Any]] = []
-    used = 0
-    for item in items:
-        if used + item["cost"] <= budget:
-            selected.append(item)
-            used += item["cost"]
-        elif fail_if_over:
-            raise ValueError("pinned memory blocks exceed hot budget")
-        else:
-            skipped.append({
-                "id": item["id"],
-                "reason": "whole_item_exceeds_remaining_budget",
-                "cost": item["cost"],
-                "remaining": max(0, budget - used),
-            })
-    return selected, skipped, used
+def _validate_semantic_selection(
+    task: dict[str, Any],
+    judgment: dict[str, Any],
+    visible_by_id: dict[str, dict[str, Any]],
+    allowed_search_capabilities: set[str],
+) -> tuple[list[str], list[str], list[dict[str, Any]]]:
+    selected_ids = _ordered_ids(judgment.get("selected_ids"), "selected_ids")
+    if len(selected_ids) != len(set(selected_ids)):
+        raise ValueError("selection.selected_ids contains duplicates")
+    unknown = sorted(set(selected_ids) - set(visible_by_id))
+    if unknown:
+        raise ValueError("selection references unknown/invisible memory ids: " + ", ".join(unknown))
 
+    pinned_ids = {item_id for item_id, item in visible_by_id.items() if item["pinned"]}
+    missing_pins = sorted(pinned_ids - set(selected_ids))
+    if missing_pins:
+        raise ValueError("context.select omitted runtime-pinned memory ids: " + ", ".join(missing_pins))
 
-def _validate_question_support(task: dict[str, Any], judgment: dict[str, Any], visible_by_id: dict[str, dict[str, Any]], selected_ids: set[str]) -> tuple[list[dict[str, Any]], list[str]]:
-    active_ids = [q["question_id"] for q in task["active_questions"]]
-    active_set = set(active_ids)
-    questions_by_id = {q["question_id"]: q for q in task["active_questions"]}
-    support = judgment.get("question_support")
-    unresolved = judgment.get("unresolved_questions")
-    if not isinstance(support, list):
-        raise ValueError("selection.question_support must be list")
-    unresolved_ids = _ordered_ids(unresolved, "unresolved_questions")
-    if len(unresolved_ids) != len(set(unresolved_ids)):
+    active_question_ids = {q["question_id"] for q in task["active_questions"]}
+    unresolved = _ordered_ids(judgment.get("unresolved_questions"), "unresolved_questions")
+    if len(unresolved) != len(set(unresolved)):
         raise ValueError("selection.unresolved_questions contains duplicates")
-    unknown_unresolved = sorted(set(unresolved_ids) - active_set)
-    if unknown_unresolved:
-        raise ValueError("unresolved_questions references unknown question ids: " + ", ".join(unknown_unresolved))
+    unknown_questions = sorted(set(unresolved) - active_question_ids)
+    if unknown_questions:
+        raise ValueError("unresolved_questions references unknown question ids: " + ", ".join(unknown_questions))
 
-    normalized: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for row in support:
-        if not isinstance(row, dict):
-            raise ValueError("question_support item must be object")
-        qid = row.get("question_id")
-        state = row.get("support")
-        block_ids = _ordered_ids(row.get("block_ids"), "question_support.block_ids")
-        if qid not in active_set:
-            raise ValueError(f"question_support references unknown question_id: {qid}")
-        if qid in seen:
-            raise ValueError(f"duplicate question_support question_id: {qid}")
-        seen.add(qid)
-        if state not in {"sufficient", "partial", "none"}:
-            raise ValueError(f"invalid question support state: {qid}")
-        if len(block_ids) != len(set(block_ids)):
-            raise ValueError(f"duplicate support block ids: {qid}")
-        unknown_blocks = sorted(set(block_ids) - set(visible_by_id))
-        if unknown_blocks:
-            raise ValueError(f"question {qid} references invisible/unknown blocks: " + ", ".join(unknown_blocks))
-        unselected_blocks = sorted(set(block_ids) - selected_ids)
-        if unselected_blocks:
-            raise ValueError(f"question {qid} support blocks must be hot|working selections: " + ", ".join(unselected_blocks))
-        question_order = questions_by_id[qid]["as_of_story_order"]
-        late_blocks = sorted(item_id for item_id in block_ids if visible_by_id[item_id]["available_from_story_order"] > question_order)
-        if late_blocks:
-            raise ValueError(f"question {qid} support uses later-story evidence: " + ", ".join(late_blocks))
-        if state == "none" and block_ids:
-            raise ValueError(f"question {qid} support=none requires empty block_ids")
-        if state in {"sufficient", "partial"} and not block_ids:
-            raise ValueError(f"question {qid} support={state} requires block_ids")
-        normalized.append({"question_id": qid, "support": state, "block_ids": block_ids})
-    if seen != active_set:
-        missing = sorted(active_set - seen)
-        raise ValueError("question_support must cover every active question: " + ", ".join(missing))
-    expected_unresolved = {row["question_id"] for row in normalized if row["support"] != "sufficient"}
-    if set(unresolved_ids) != expected_unresolved:
-        raise ValueError("unresolved_questions must exactly match partial|none question_support states")
-    return normalized, unresolved_ids
+    decision = judgment.get("decision")
+    search_requests = judgment.get("search_requests")
+    if not isinstance(search_requests, list):
+        raise ValueError("selection.search_requests must be list")
+    if decision == "enough" and search_requests:
+        raise ValueError("decision=enough requires no search_requests")
+    if decision == "search_more" and not search_requests:
+        raise ValueError("decision=search_more requires at least one search_request")
+    for request in search_requests:
+        capability = request.get("capability") if isinstance(request, dict) else None
+        if capability not in allowed_search_capabilities:
+            raise ValueError(f"semantic search request uses unavailable capability: {capability}")
+    return selected_ids, unresolved, search_requests
 
 
-def pack_selection(payload: dict[str, Any], job: dict[str, Any], result: dict[str, Any], *,
-                   hot_budget: int, working_budget: int) -> dict[str, Any]:
+def _budget_pack(
+    selected_ids: list[str],
+    visible_by_id: dict[str, dict[str, Any]],
+    *,
+    hot_budget: int,
+    working_budget: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], int, int]:
+    pinned = [visible_by_id[item_id] for item_id in selected_ids if visible_by_id[item_id]["pinned"]]
+    hot: list[dict[str, Any]] = []
+    working: list[dict[str, Any]] = []
+    deferred: list[dict[str, Any]] = []
+    dropped: list[dict[str, Any]] = []
+    hot_used = 0
+    working_used = 0
+
+    for item in pinned:
+        if hot_used + item["cost"] > hot_budget:
+            raise ValueError("pinned memory blocks exceed hot budget")
+        hot.append(item)
+        hot_used += item["cost"]
+
+    pinned_ids = {item["id"] for item in pinned}
+    for item_id in selected_ids:
+        if item_id in pinned_ids:
+            continue
+        item = visible_by_id[item_id]
+        if hot_used + item["cost"] <= hot_budget:
+            hot.append(item)
+            hot_used += item["cost"]
+        else:
+            deferred.append({
+                "id": item_id,
+                "reason": "deferred_to_working_tier",
+                "cost": item["cost"],
+                "remaining": max(0, hot_budget - hot_used),
+            })
+            if working_used + item["cost"] <= working_budget:
+                working.append(item)
+                working_used += item["cost"]
+            else:
+                dropped.append({
+                    "id": item_id,
+                    "reason": "whole_item_exceeds_remaining_budget",
+                    "cost": item["cost"],
+                    "remaining": max(0, working_budget - working_used),
+                })
+    return hot, working, deferred, dropped, hot_used, working_used
+
+
+def pack_selection(
+    payload: dict[str, Any],
+    job: dict[str, Any],
+    result: dict[str, Any],
+    *,
+    hot_budget: int,
+    working_budget: int,
+) -> dict[str, Any]:
     if hot_budget < 0 or working_budget < 0:
         raise ValueError("budgets must be >= 0")
     errors = validate_result(job, result)
@@ -353,66 +418,30 @@ def pack_selection(payload: dict[str, Any], job: dict[str, Any], result: dict[st
     task = normalize_task(payload)
     items = normalized_items(payload)
     visible, perspective_excluded, temporal_excluded = partition_eligibility(items, task)
-    by_id = {item["id"]: item for item in visible}
+    visible_by_id = {item["id"]: item for item in visible}
     judgment = result.get("judgment", {})
-    hot_ids = _ordered_ids(judgment.get("hot_ids"), "hot_ids")
-    working_ids = _ordered_ids(judgment.get("working_ids"), "working_ids")
-    archive_ids = _ordered_ids(judgment.get("archive_ids"), "archive_ids")
-    proposed = hot_ids + working_ids + archive_ids
-    unknown = sorted(set(proposed) - set(by_id))
-    if unknown:
-        raise ValueError("selection references unknown/invisible memory ids: " + ", ".join(unknown))
-    if len(proposed) != len(set(proposed)):
-        raise ValueError("selection contains duplicate memory ids across tiers")
-    if set(proposed) != set(by_id):
-        missing = sorted(set(by_id) - set(proposed))
-        raise ValueError("selection must classify every visible memory block: " + ", ".join(missing))
+    allowed_caps = set(_normalize_context_controls(payload).get("allowed_search_capabilities", []))
+    selected_ids, unresolved_questions, search_requests = _validate_semantic_selection(
+        task,
+        judgment,
+        visible_by_id,
+        allowed_caps,
+    )
 
-    semantic_loaded_ids = set(hot_ids + working_ids)
-    question_support, unresolved_questions = _validate_question_support(task, judgment, by_id, semantic_loaded_ids)
-
-    pinned_ids = [item["id"] for item in visible if item["pinned"]]
-    ordered_hot_ids = pinned_ids + [item_id for item_id in hot_ids if item_id not in set(pinned_ids)]
-    hot_set = set(ordered_hot_ids)
-    ordered_working_ids = [item_id for item_id in working_ids if item_id not in hot_set]
-
-    pinned_items = [by_id[item_id] for item_id in pinned_ids]
-    _, _, pinned_used = _pack(pinned_items, hot_budget, fail_if_over=True)
-    nonpinned_hot = [by_id[item_id] for item_id in ordered_hot_ids if item_id not in set(pinned_ids)]
-    hot_extra, hot_skipped, hot_extra_used = _pack(nonpinned_hot, hot_budget - pinned_used)
-    hot_selected = pinned_items + hot_extra
-    hot_used = pinned_used + hot_extra_used
-
-    working_candidates = [by_id[item_id] for item_id in ordered_working_ids]
-    working_selected, working_skipped, working_used = _pack(working_candidates, working_budget)
-    loaded_ids = {item["id"] for item in hot_selected + working_selected}
+    hot, working, hot_deferred, working_dropped, hot_used, working_used = _budget_pack(
+        selected_ids,
+        visible_by_id,
+        hot_budget=hot_budget,
+        working_budget=working_budget,
+    )
+    loaded_ids = {item["id"] for item in hot + working}
+    model_selected = set(selected_ids)
     archive = [item["id"] for item in visible if item["id"] not in loaded_ids]
+    model_rejected = [item["id"] for item in visible if item["id"] not in model_selected]
+    budget_dropped = [row["id"] for row in working_dropped]
     invalidated = [item["id"] for item in items if item["invalidated"]]
-
-    grounding: list[dict[str, Any]] = []
-    budget_incomplete: list[str] = []
-    for row in question_support:
-        support_ids = row["block_ids"]
-        loaded_support = [item_id for item_id in support_ids if item_id in loaded_ids]
-        dropped_support = [item_id for item_id in support_ids if item_id not in loaded_ids]
-        if not support_ids:
-            loading_status = "no_support_identified"
-        elif not dropped_support:
-            loading_status = "all_loaded"
-        elif loaded_support:
-            loading_status = "partially_loaded"
-        else:
-            loading_status = "not_loaded"
-        if dropped_support:
-            budget_incomplete.append(row["question_id"])
-        grounding.append({
-            "question_id": row["question_id"],
-            "model_support": row["support"],
-            "support_block_ids": support_ids,
-            "loaded_support_block_ids": loaded_support,
-            "dropped_support_block_ids": dropped_support,
-            "loading_status": loading_status,
-        })
+    decision = judgment["decision"]
+    incomplete = bool(unresolved_questions or budget_dropped or decision == "search_more")
 
     return {
         "schema": SCHEMA,
@@ -420,24 +449,55 @@ def pack_selection(payload: dict[str, Any], job: dict[str, Any], result: dict[st
         "task": task,
         "budgets": {"hot": hot_budget, "working": working_budget},
         "used": {"hot": hot_used, "working": working_used},
-        "selected": {"hot": hot_selected, "working": working_selected},
+        "selected": {"hot": hot, "working": working},
         "archive": archive,
         "visibility_excluded": [item["id"] for item in perspective_excluded],
         "temporal_excluded": [item["id"] for item in temporal_excluded],
-        "skipped": {"hot": hot_skipped, "working": working_skipped},
+        "skipped": {"hot": hot_deferred, "working": working_dropped},
         "invalidated": invalidated,
-        "question_grounding": grounding,
+        "model_selected_ids": selected_ids,
+        "model_rejected_ids": model_rejected,
+        "budget_dropped_selected_ids": budget_dropped,
+        "semantic_sufficiency_decision": decision,
+        "semantic_report": judgment["report"],
+        "search_requests": search_requests,
         "model_unresolved_questions": unresolved_questions,
-        "grounding_incomplete_due_budget": sorted(set(budget_incomplete)),
-        "grounding_incomplete_questions": sorted(set(unresolved_questions) | set(budget_incomplete)),
-        "grounding_incomplete": bool(set(unresolved_questions) | set(budget_incomplete)),
+        "selection_incomplete_due_budget": bool(budget_dropped),
+        "grounding_incomplete_due_budget": [],
+        "grounding_incomplete_questions": unresolved_questions,
+        "grounding_incomplete": incomplete,
+        "question_grounding": [],
         "selection_owner": "model",
+        "sufficiency_owner": "model",
+        "search_intent_owner": "model",
         "visibility_owner": "deterministic_runtime",
         "budget_owner": "deterministic_runtime",
-        "pin_override": True,
+        "pin_owner": "deterministic_runtime",
+        "search_authorization_owner": "deterministic_runtime",
         "whole_item_or_skip": True,
         "authority": False,
         "model_execution": False,
+    }
+
+
+def _fixture_result(job: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "job_id": job["job_id"],
+        "subject_id": job["subject_id"],
+        "kind": job["kind"],
+        "input_fingerprint": job["input_fingerprint"],
+        "status": "completed",
+        "worker": {"provider": "self_test", "model_or_reviewer": "fixture"},
+        "judgment": {
+            "confidence": 0.9,
+            "decision": "enough",
+            "selected_ids": ["M-PIN", "M-B", "M-C"],
+            "report": "The pinned current goal and two character-visible facts are useful; no additional search is needed for this fixture.",
+            "search_requests": [],
+            "unresolved_questions": ["Q-CLUE"],
+        },
+        "proposals": [],
+        "errors": [],
     }
 
 
@@ -454,12 +514,13 @@ def self_test() -> int:
                 {"question_id": "Q-CLUE", "question": "Which old clue might affect the immediate tactic?", "kind": "continuity", "as_of_story_point": "SCN-3", "as_of_story_order": 3},
             ],
         },
+        "allowed_search_capabilities": ["project_search"],
         "items": [
             {"id": "M-PIN", "cost": 2, "pinned": True, "derived": True, "authority": False, "source_refs": ["accepted:A"], "source_fingerprints": ["sha256:" + "a" * 64], "story_point": "SCN-9", "available_from_story_order": 9, "visibility": {"scope": "shared"}, "model_view": {"label": "current-goal", "description": "Immediate scene goal", "value": "Get out alive."}},
             {"id": "M-B", "cost": 3, "derived": True, "authority": False, "source_refs": ["accepted:B"], "source_fingerprints": ["sha256:" + "b" * 64], "story_point": "SCN-8", "available_from_story_order": 8, "visibility": {"scope": "character", "perspective_id": "CHAR-A"}, "model_view": {"label": "relationship", "description": "CHAR-A's relationship state", "value": "Trust is damaged."}},
             {"id": "M-C", "cost": 4, "derived": True, "authority": False, "source_refs": ["accepted:C"], "source_fingerprints": ["sha256:" + "c" * 64], "story_point": "SCN-3", "available_from_story_order": 3, "visibility": {"scope": "character", "perspective_id": "CHAR-A"}, "model_view": {"label": "old-clue", "description": "A clue CHAR-A observed earlier", "value": "The seal was replaced."}},
             {"id": "M-HIDDEN", "cost": 1, "derived": True, "authority": False, "source_refs": ["accepted:H"], "source_fingerprints": ["sha256:" + "d" * 64], "story_point": "SCN-8", "available_from_story_order": 8, "visibility": {"scope": "character", "perspective_id": "CHAR-B"}, "model_view": {"label": "private", "value": "CHAR-B's private motive."}},
-            {"id": "M-LATE", "cost": 1, "derived": True, "authority": False, "source_refs": ["accepted:L"], "source_fingerprints": ["sha256:" + "e" * 64], "story_point": "SCN-8", "available_from_story_order": 8, "visibility": {"scope": "character", "perspective_id": "CHAR-A"}, "model_view": {"label": "late-clue", "value": "Learned only much later."}},
+            {"id": "M-LATE", "cost": 1, "derived": True, "authority": False, "source_refs": ["accepted:L"], "source_fingerprints": ["sha256:" + "e" * 64], "story_point": "SCN-8", "available_from_story_order": 8, "visibility": {"scope": "character", "perspective_id": "CHAR-A"}, "model_view": {"label": "late-clue", "value": "Visible now but not selected by the model."}},
             {"id": "M-FUTURE", "cost": 1, "derived": True, "authority": False, "source_refs": ["accepted:F"], "source_fingerprints": ["sha256:" + "f" * 64], "story_point": "SCN-10", "available_from_story_order": 10, "visibility": {"scope": "shared"}, "model_view": {"label": "future", "value": "Must never enter the current packet."}},
             {"id": "M-X", "cost": 1, "derived": True, "authority": False, "source_refs": ["accepted:X"], "source_fingerprints": ["sha256:" + "0" * 64], "available_from_story_order": 0, "invalidated": True, "visibility": {"scope": "shared"}, "model_view": {"label": "invalid", "value": "stale"}},
         ],
@@ -467,65 +528,80 @@ def self_test() -> int:
     job = prepare_selection_job(payload, subject_id="SCN-9")
     packet_ids = [x["block_id"] for x in job["input"]["payload"]["memory_blocks"]]
     hidden_never_in_packet = all(x not in packet_ids for x in ("M-HIDDEN", "M-FUTURE", "M-X"))
-    result = {
-        "job_id": job["job_id"], "subject_id": job["subject_id"], "kind": job["kind"],
-        "input_fingerprint": job["input_fingerprint"], "status": "completed",
-        "worker": {"provider": "self_test", "model_or_reviewer": "fixture"},
-        "judgment": {
-            "confidence": 0.9,
-            "hot_ids": ["M-B"],
-            "working_ids": ["M-C"],
-            "archive_ids": ["M-PIN", "M-LATE"],
-            "reasons": [
-                {"block_id": "M-B", "tier": "hot", "reason": "Directly answers Q-REL."},
-                {"block_id": "M-C", "tier": "working", "reason": "Potential tactic evidence for Q-CLUE."},
-                {"block_id": "M-PIN", "tier": "archive", "reason": "Runtime pin will still force it hot."},
-                {"block_id": "M-LATE", "tier": "archive", "reason": "Visible now but too late for the historical question."},
-            ],
-            "question_support": [
-                {"question_id": "Q-REL", "support": "sufficient", "block_ids": ["M-B"]},
-                {"question_id": "Q-CLUE", "support": "partial", "block_ids": ["M-C"]},
-            ],
-            "unresolved_questions": ["Q-CLUE"],
-        },
-        "proposals": [], "errors": [],
-    }
+    result = _fixture_result(job)
     report = pack_selection(payload, job, result, hot_budget=5, working_budget=3)
+
     hot_ids = [x["id"] for x in report["selected"]["hot"]]
-    pin_override = hot_ids == ["M-PIN", "M-B"]
+    pin_and_order = hot_ids == ["M-PIN", "M-B"]
     hard_budget = report["used"] == {"hot": 5, "working": 0}
     whole_skip = report["skipped"]["working"] and report["skipped"]["working"][0]["id"] == "M-C"
+    semantic_vs_budget_truth = (
+        report["model_selected_ids"] == ["M-PIN", "M-B", "M-C"]
+        and report["model_rejected_ids"] == ["M-LATE"]
+        and report["budget_dropped_selected_ids"] == ["M-C"]
+        and report["selection_incomplete_due_budget"] is True
+    )
     visibility_excluded = report["visibility_excluded"] == ["M-HIDDEN"]
     temporal_excluded = report["temporal_excluded"] == ["M-FUTURE"]
     invalidated_excluded = "M-X" in report["invalidated"] and "M-X" not in report["archive"]
-    grounding_budget_truthful = report["grounding_incomplete_due_budget"] == ["Q-CLUE"] and report["question_grounding"][1]["loading_status"] == "not_loaded" and report["grounding_incomplete"] is True
 
     unknown_guard = False
-    bad = json.loads(json.dumps(result)); bad["judgment"]["hot_ids"] = ["UNKNOWN"]
+    bad = json.loads(json.dumps(result))
+    bad["judgment"]["selected_ids"] = ["M-PIN", "UNKNOWN"]
     try:
         pack_selection(payload, job, bad, hot_budget=5, working_budget=3)
     except ValueError:
         unknown_guard = True
+
+    pin_omission_guard = False
+    bad_pin = json.loads(json.dumps(result))
+    bad_pin["judgment"]["selected_ids"] = ["M-B", "M-C"]
+    try:
+        pack_selection(payload, job, bad_pin, hot_budget=5, working_budget=3)
+    except ValueError:
+        pin_omission_guard = True
+
     question_guard = False
-    bad_q = json.loads(json.dumps(result)); bad_q["judgment"]["question_support"][0]["question_id"] = "Q-UNKNOWN"
+    bad_q = json.loads(json.dumps(result))
+    bad_q["judgment"]["unresolved_questions"] = ["Q-UNKNOWN"]
     try:
         pack_selection(payload, job, bad_q, hot_budget=5, working_budget=3)
     except ValueError:
         question_guard = True
-    as_of_guard = False
-    bad_asof = json.loads(json.dumps(result))
-    bad_asof["judgment"]["working_ids"] = ["M-C", "M-LATE"]
-    bad_asof["judgment"]["archive_ids"] = ["M-PIN"]
-    bad_asof["judgment"]["question_support"][1] = {"question_id": "Q-CLUE", "support": "partial", "block_ids": ["M-C", "M-LATE"]}
+
+    search_authorization_guard = False
+    bad_search = json.loads(json.dumps(result))
+    bad_search["judgment"].update({
+        "decision": "search_more",
+        "search_requests": [{"capability": "web_search", "query": "missing clue", "reason": "Need outside evidence."}],
+    })
     try:
-        pack_selection(payload, job, bad_asof, hot_budget=5, working_budget=10)
+        pack_selection(payload, job, bad_search, hot_budget=5, working_budget=3)
     except ValueError:
-        as_of_guard = True
+        search_authorization_guard = True
+
+    search_more_supported = False
+    good_search = json.loads(json.dumps(result))
+    good_search["judgment"].update({
+        "decision": "search_more",
+        "search_requests": [{"capability": "project_search", "query": "SCN-3 seal clue", "reason": "Need project evidence before stopping."}],
+    })
+    try:
+        search_report = pack_selection(payload, job, good_search, hot_budget=5, working_budget=10)
+        search_more_supported = (
+            search_report["semantic_sufficiency_decision"] == "search_more"
+            and search_report["search_requests"][0]["capability"] == "project_search"
+            and search_report["grounding_incomplete"] is True
+        )
+    except ValueError:
+        search_more_supported = False
+
     authority_guard = False
     try:
         normalize_item({"id": "BAD", "cost": 1, "derived": True, "authority": True, "source_refs": ["x"], "source_fingerprints": ["sha256:" + "f" * 64], "available_from_story_order": 0, "visibility": {"scope": "shared"}})
     except ValueError:
         authority_guard = True
+
     pin_visibility_guard = False
     conflict = json.loads(json.dumps(payload))
     conflict["items"].append({"id": "M-BAD-PIN", "cost": 1, "pinned": True, "derived": True, "authority": False, "source_refs": ["accepted:Z"], "source_fingerprints": ["sha256:" + "1" * 64], "available_from_story_order": 9, "visibility": {"scope": "character", "perspective_id": "CHAR-B"}, "model_view": {"label": "private"}})
@@ -533,6 +609,7 @@ def self_test() -> int:
         prepare_selection_job(conflict, subject_id="SCN-9")
     except ValueError:
         pin_visibility_guard = True
+
     pin_temporal_guard = False
     future_pin = json.loads(json.dumps(payload))
     future_pin["items"].append({"id": "M-FUTURE-PIN", "cost": 1, "pinned": True, "derived": True, "authority": False, "source_refs": ["accepted:FP"], "source_fingerprints": ["sha256:" + "2" * 64], "available_from_story_order": 10, "visibility": {"scope": "shared"}, "model_view": {"label": "future-pin"}})
@@ -540,31 +617,51 @@ def self_test() -> int:
         prepare_selection_job(future_pin, subject_id="SCN-9")
     except ValueError:
         pin_temporal_guard = True
+
     catalog_resolved = job.get("provenance", {}).get("pack_id") == "context-research"
     typed_input = job.get("provenance", {}).get("input_contract_validated") is True
-    ok = all((catalog_resolved, typed_input, hidden_never_in_packet, pin_override, hard_budget, whole_skip,
-              visibility_excluded, temporal_excluded, invalidated_excluded, grounding_budget_truthful, unknown_guard,
-              question_guard, as_of_guard, authority_guard, pin_visibility_guard, pin_temporal_guard))
+    ok = all((
+        catalog_resolved,
+        typed_input,
+        hidden_never_in_packet,
+        pin_and_order,
+        hard_budget,
+        bool(whole_skip),
+        semantic_vs_budget_truth,
+        visibility_excluded,
+        temporal_excluded,
+        invalidated_excluded,
+        unknown_guard,
+        pin_omission_guard,
+        question_guard,
+        search_authorization_guard,
+        search_more_supported,
+        authority_guard,
+        pin_visibility_guard,
+        pin_temporal_guard,
+    ))
     dump({
         "memory_tiers_contract": "PASS" if ok else "FAIL",
         "schema": SCHEMA,
         "semantic_relevance_owner": "model",
-        "task_aware_questions": True,
+        "semantic_sufficiency_owner": "model",
+        "semantic_search_intent_owner": "model",
         "catalog_resolved_contract_pack": catalog_resolved,
         "typed_input_contract": typed_input,
         "perspective_incompatible_never_enters_semantic_packet": hidden_never_in_packet,
         "future_block_never_enters_semantic_packet": temporal_excluded,
-        "question_as_of_story_order_guard": as_of_guard,
         "pin_visibility_conflict_fail_closed": pin_visibility_guard,
         "pin_temporal_conflict_fail_closed": pin_temporal_guard,
-        "pin_override": pin_override,
+        "pin_omission_fail_closed": pin_omission_guard,
         "hard_budget": hard_budget,
         "whole_item_or_skip": bool(whole_skip),
+        "semantic_vs_budget_drop_distinguished": semantic_vs_budget_truth,
         "visibility_excluded": visibility_excluded,
         "invalidated_excluded": invalidated_excluded,
-        "grounding_reports_budget_drop": grounding_budget_truthful,
         "unknown_selection_guard": unknown_guard,
-        "question_identity_guard": question_guard,
+        "unresolved_question_identity_guard": question_guard,
+        "search_capability_authorization_guard": search_authorization_guard,
+        "authorized_search_more_supported": search_more_supported,
         "derived_authority_false_enforced": authority_guard,
         "model_execution": False,
     })
@@ -575,17 +672,35 @@ def main() -> int:
     p = argparse.ArgumentParser(description="NovelForge perspective-safe model-selected context packer")
     sub = p.add_subparsers(dest="command", required=True)
     prep = sub.add_parser("prepare")
-    prep.add_argument("--input", required=True); prep.add_argument("--subject-id", required=True); prep.add_argument("--source-session-id"); prep.add_argument("--output")
+    prep.add_argument("--input", required=True)
+    prep.add_argument("--subject-id", required=True)
+    prep.add_argument("--source-session-id")
+    prep.add_argument("--output")
     pack = sub.add_parser("pack")
-    pack.add_argument("--input", required=True); pack.add_argument("--job", required=True); pack.add_argument("--result", required=True); pack.add_argument("--hot-budget", type=int, required=True); pack.add_argument("--working-budget", type=int, required=True); pack.add_argument("--output")
+    pack.add_argument("--input", required=True)
+    pack.add_argument("--job", required=True)
+    pack.add_argument("--result", required=True)
+    pack.add_argument("--hot-budget", type=int, required=True)
+    pack.add_argument("--working-budget", type=int, required=True)
+    pack.add_argument("--output")
     sub.add_parser("self-test")
     args = p.parse_args()
     if args.command == "self-test":
         return self_test()
     if args.command == "prepare":
-        value = prepare_selection_job(load_json(Path(args.input)), subject_id=args.subject_id, source_session_id=args.source_session_id)
+        value = prepare_selection_job(
+            load_json(Path(args.input)),
+            subject_id=args.subject_id,
+            source_session_id=args.source_session_id,
+        )
     else:
-        value = pack_selection(load_json(Path(args.input)), load_json(Path(args.job)), load_json(Path(args.result)), hot_budget=args.hot_budget, working_budget=args.working_budget)
+        value = pack_selection(
+            load_json(Path(args.input)),
+            load_json(Path(args.job)),
+            load_json(Path(args.result)),
+            hot_budget=args.hot_budget,
+            working_budget=args.working_budget,
+        )
     dump(value, Path(args.output) if args.output else None)
     return 0
 
