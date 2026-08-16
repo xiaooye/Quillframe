@@ -215,6 +215,29 @@ Tag 是工具，ownership 才是目标。
 
 角色应该在需要时追求目标、隐瞒、误解、打断、讨价还价、试探、回避、教学、拒绝，或边说边做真正有因果作用的事。
 
+### HF-30 · AGENDA-TO-DIALOGUE LEAKAGE / CHARACTER-SHEET-TO-DIALOGUE SERIALIZATION / 议程泄漏与角色表对白序列化
+
+**Agenda 驱动说话；Agenda 不是对白本身。** 当对白只是把人物私有目标、职位、风险、责任、知识边界、恐惧、信念、不可接受代价或策略理由近乎一一对应地翻译成自然语言，而没有先经过“对谁说、此刻要达到什么、关系成本是什么”的变形时，判失败。
+
+理想的实现边界是：
+
+```text
+人物私有状态
+→ 当下 tactic
+→ listener model + shared context
+→ 社会 / 关系成本
+→ 省略 / 压缩 / 扭曲
+→ 任务 / 物件互动
+→ 说话 / 行动
+→ 打断 / 回应
+```
+
+人物可以专业、理性、善于表达，也可以说很长。真正的语义问题是：**为什么这个人要对这个听者，在这个时刻，以这个成本，说得这么完整？** 刚参加完同一场会议、共享相同历史或明显利害关系的人，通常不需要彼此重新完整复述自己的 character sheet。
+
+不得用行长、连接词数量、碎句、ellipsis、打断次数、口语化程度或其他 lexical proxy 直接判 HF-30。只要“完整”本身就是当前 speech act / interaction requirement，完整陈述完全合法，例如 deposition / testimony、incident debrief、board / military briefing、medical risk explanation、instruction / teaching、formal refusal rationale、clause negotiation、record-making，以及本身要求完整说明的 confession / apology。
+
+HF-30 首先是 interaction / realization interface failure。若它成簇或覆盖整场，repair owner 应回到 Character / Scene Simulation 或 writer-safe realization projection，而不是把每一句对白机械缩短。
+
 ### HF-26 · FUNCTIONAL-CHARACTER COLLAPSE / 功能型人物塌缩
 
 配角只负责解释、夸赞、阻挡、送信息或按计划触发一个 beat，判失败。
