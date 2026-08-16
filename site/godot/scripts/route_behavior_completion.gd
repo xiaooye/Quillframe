@@ -13,6 +13,8 @@ var _playground_source := ""
 var _playground_ran := false
 var _playground_buttons: Array[Button] = []
 var _playground_editor: TextEdit
+var _playground_run_button: Button
+var _playground_clear_button: Button
 
 const PLAYGROUND_MODES := ["DRAFT", "REVISE", "AUDIT", "PLAN-CHAPTER"]
 const PLAYGROUND_PURPOSES_EN := {
@@ -32,6 +34,8 @@ func _build() -> void:
 	_inspect_buttons.clear()
 	_playground_buttons.clear()
 	_playground_editor = null
+	_playground_run_button = null
+	_playground_clear_button = null
 	super._build()
 
 # -----------------------------------------------------------------------------
@@ -219,22 +223,21 @@ func _build_execution_board(pos: Vector2, board_size: Vector2, phone: bool) -> v
 	_playground_editor.focus_entered.connect(_record_focus.bind(_playground_editor.name))
 	board.add_child(_playground_editor)
 
-	var run := _text_button("Generate demo trace" if _locale == "en-US" else "生成演示 trace", Vector2(28, 422), Vector2(160, 42), Color("80b7ec") if _playground_source.strip_edges() != "" else Color("e7e2ea"), Color.WHITE if _playground_source.strip_edges() != "" else C.muted, 12, 650, 8)
-	run.name = "PlaygroundRun"
-	run.accessibility_name = "Generate demo trace"
-	run.disabled = _playground_source.strip_edges() == ""
-	run.pressed.connect(_playground_run)
-	run.focus_entered.connect(_record_focus.bind(run.name))
-	board.add_child(run)
-	_playground_buttons.append(run)
-	var clear := _text_button("Clear" if _locale == "en-US" else "清空", Vector2(196, 422), Vector2(92, 42), C.runtime_soft, C.runtime, 12, 620, 8)
-	clear.name = "PlaygroundClear"
-	clear.accessibility_name = "Clear playground input"
-	clear.disabled = _playground_source == ""
-	clear.pressed.connect(_playground_clear)
-	clear.focus_entered.connect(_record_focus.bind(clear.name))
-	board.add_child(clear)
-	_playground_buttons.append(clear)
+	_playground_run_button = _text_button("Generate demo trace" if _locale == "en-US" else "生成演示 trace", Vector2(28, 422), Vector2(160, 42), Color("80b7ec") if _playground_source.strip_edges() != "" else Color("e7e2ea"), Color.WHITE if _playground_source.strip_edges() != "" else C.muted, 12, 650, 8)
+	_playground_run_button.name = "PlaygroundRun"
+	_playground_run_button.accessibility_name = "Generate demo trace"
+	_playground_run_button.pressed.connect(_playground_run)
+	_playground_run_button.focus_entered.connect(_record_focus.bind(_playground_run_button.name))
+	board.add_child(_playground_run_button)
+	_playground_buttons.append(_playground_run_button)
+	_playground_clear_button = _text_button("Clear" if _locale == "en-US" else "清空", Vector2(196, 422), Vector2(92, 42), C.runtime_soft, C.runtime, 12, 620, 8)
+	_playground_clear_button.name = "PlaygroundClear"
+	_playground_clear_button.accessibility_name = "Clear playground input"
+	_playground_clear_button.pressed.connect(_playground_clear)
+	_playground_clear_button.focus_entered.connect(_record_focus.bind(_playground_clear_button.name))
+	board.add_child(_playground_clear_button)
+	_playground_buttons.append(_playground_clear_button)
+	_sync_playground_action_controls()
 
 	var trace_pos := Vector2(320 if not phone else 28, 24 if not phone else 500)
 	var trace_size := Vector2(board_size.x - (350 if not phone else 56), board_size.y - (48 if not phone else 530))
@@ -259,7 +262,20 @@ func _playground_source_changed(editor: TextEdit) -> void:
 	_playground_source = editor.text
 	_playground_ran = false
 	_interaction_revision += 1
+	_sync_playground_action_controls()
 	_publish_behavior_state()
+
+func _sync_playground_action_controls() -> void:
+	var has_source := _playground_source.strip_edges() != ""
+	if _playground_run_button != null and is_instance_valid(_playground_run_button):
+		_playground_run_button.disabled = not has_source
+		_playground_run_button.add_theme_color_override("font_color", Color.WHITE if has_source else C.muted)
+		_playground_run_button.add_theme_color_override("font_disabled_color", C.muted)
+		_playground_run_button.add_theme_stylebox_override("normal", _button_box(Color("80b7ec") if has_source else Color("e7e2ea"), 8))
+		_playground_run_button.add_theme_stylebox_override("hover", _button_box(Color("6faee6") if has_source else Color("e7e2ea"), 8))
+		_playground_run_button.add_theme_stylebox_override("pressed", _button_box(Color("5e9bd2") if has_source else Color("e7e2ea"), 8))
+	if _playground_clear_button != null and is_instance_valid(_playground_clear_button):
+		_playground_clear_button.disabled = not has_source
 
 func _playground_run() -> void:
 	if _playground_source.strip_edges() == "":
