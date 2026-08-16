@@ -5,18 +5,24 @@ on:
     branches: [main]
     paths:
       - 'site/godot/**'
+      - 'site/package.json'
       - 'site/scripts/fetch-godot-fonts.sh'
       - 'site/scripts/build-godot-shadow.sh'
       - 'site/scripts/godot-shadow-source-quality.mjs'
+      - 'site/scripts/godot-shadow-source-quality-v19.mjs'
+      - 'site/scripts/godot-glyph-policy-qa.mjs'
       - 'site/scripts/godot-shadow-browser-shot.mjs'
       - 'specs/009-product-godot-parity-migration/**'
       - '.github/workflows/product-godot-shadow-qa.yml'
   pull_request:
     paths:
       - 'site/godot/**'
+      - 'site/package.json'
       - 'site/scripts/fetch-godot-fonts.sh'
       - 'site/scripts/build-godot-shadow.sh'
       - 'site/scripts/godot-shadow-source-quality.mjs'
+      - 'site/scripts/godot-shadow-source-quality-v19.mjs'
+      - 'site/scripts/godot-glyph-policy-qa.mjs'
       - 'site/scripts/godot-shadow-browser-shot.mjs'
       - 'specs/009-product-godot-parity-migration/**'
       - '.github/workflows/product-godot-shadow-qa.yml'
@@ -52,7 +58,7 @@ jobs:
 
       - name: Godot migration source contract
         working-directory: site
-        run: node scripts/godot-shadow-source-quality.mjs
+        run: npm run godot:quality
 
       - name: Build Solid visual baseline
         working-directory: site
