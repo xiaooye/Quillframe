@@ -24,6 +24,7 @@ var _agent_host_index := 1
 var _publication_hero_buttons: Array[Button] = []
 var _publication_rail_buttons: Array[Button] = []
 var _agent_host_buttons: Array[Button] = []
+var _home_capability_buttons: Array[Button] = []
 
 var _resize_generation := 0
 
@@ -42,9 +43,11 @@ func _build() -> void:
 	_publication_hero_buttons.clear()
 	_publication_rail_buttons.clear()
 	_agent_host_buttons.clear()
+	_home_capability_buttons.clear()
 	super._build()
 	_apply_deterministic_decorations(self)
 	_apply_solid_wide_page_contract()
+	_wire_scroll_evidence()
 	_publish_behavior_state()
 
 # Resize storms from browser/CDP can emit several viewport sizes before the
@@ -237,6 +240,18 @@ func _select_agent_host(index: int) -> void:
 	_interaction_revision += 1
 	_queue_rebuild_preserve_scroll()
 
+
+func _home_capability_chip(pos: Vector2, chip_size: Vector2, index: int, item: Dictionary) -> Panel:
+	var card := super._home_capability_chip(pos, chip_size, index, item)
+	for child in card.get_children():
+		if child is Button:
+			var hit := child as Button
+			hit.name = "HomeCapability%d" % index
+			hit.accessibility_name = ("选择能力 %s" if _locale == "zh-CN" else "Select capability %s") % str(item["eyebrow"])
+			_home_capability_buttons.append(hit)
+			break
+	return card
+
 # Keep behavior evidence in one revision counter. Lower layers own the actual
 # state transitions; these overrides only record that a user-visible transition
 # occurred before the same state-preserving rebuild.
@@ -414,6 +429,66 @@ func _map_bounded_coordinate(value: float, old_width: float, new_width: float) -
 # expose state/real control rectangles rather than source-code implementation.
 # -----------------------------------------------------------------------------
 
+
+func _wire_scroll_evidence() -> void:
+	if _scroll == null:
+		return
+	var bar := _scroll.get_v_scroll_bar()
+	if bar != null and not bar.value_changed.is_connected(_on_scroll_evidence_changed):
+		bar.value_changed.connect(_on_scroll_evidence_changed)
+	_on_scroll_evidence_changed(float(_scroll.scroll_vertical))
+
+func _on_scroll_evidence_changed(value: float) -> void:
+	_set_dataset("novelforgeScrollY", str(roundi(value)))
+	call_deferred("_publish_interaction_targets")
+
+func _publish_interaction_targets() -> void:
+	_publish_control_targets("novelforgePublicationHeroTargets", _publication_hero_buttons)
+	_publish_control_targets("novelforgePublicationRailTargets", _publication_rail_buttons)
+	_publish_control_targets("novelforgeAgentTargets", _agent_host_buttons)
+	_publish_control_targets("novelforgeHomeTargets", _home_behavior_buttons())
+	_publish_control_targets("novelforgeArchitectureTargets", _architecture_behavior_buttons())
+
+func _home_behavior_buttons() -> Array[Button]:
+	var result: Array[Button] = []
+	for button in _home_capability_buttons:
+		if button != null and is_instance_valid(button):
+			result.append(button)
+	for exact in ["−", "+"]:
+		var button := _find_button_exact(self, exact)
+		if button != null:
+			button.name = "HomeBudgetMinus" if exact == "−" else "HomeBudgetPlus"
+			result.append(button)
+	for gate in ["Surface", "Reader", "Continuity", "Semantic"]:
+		var button := _find_button_contains(self, gate)
+		if button != null:
+			button.name = "HomeGate%s" % gate
+			result.append(button)
+	return result
+
+func _architecture_behavior_buttons() -> Array[Button]:
+	var result: Array[Button] = []
+	var nodes := _architecture_nodes()
+	for i in range(nodes.size()):
+		var button := _find_button_contains(self, str(nodes[i]["title"]))
+		if button != null:
+			button.name = "ArchitectureNode%d" % i
+			result.append(button)
+	for label in ["Simulate a run", "Next step", "模拟一次 run", "下一步"]:
+		var next := _find_button_exact(self, label)
+		if next != null:
+			next.name = "ArchitectureNext"
+			if not result.has(next):
+				result.append(next)
+			break
+	for label in ["Reset", "重置"]:
+		var reset := _find_button_exact(self, label)
+		if reset != null:
+			reset.name = "ArchitectureReset"
+			result.append(reset)
+			break
+	return result
+
 func _publish_behavior_state() -> void:
 	_set_dataset("novelforgeInteractionRevision", str(_interaction_revision))
 	_set_dataset("novelforgePublicationProfile", str(_publication_profiles()[_publication_profile]["id"]))
@@ -429,9 +504,7 @@ func _publish_behavior_state() -> void:
 	_set_dataset("novelforgeArchitectureRunStep", str(_architecture_run_step))
 	_set_dataset("novelforgeAgentHost", str(AGENT_HOSTS[_agent_host_index]))
 	_set_dataset("novelforgeGlyphAudit", "pass" if not _tree_contains_forbidden_decorative_text(self) else "fail")
-	_publish_control_targets("novelforgePublicationHeroTargets", _publication_hero_buttons)
-	_publish_control_targets("novelforgePublicationRailTargets", _publication_rail_buttons)
-	_publish_control_targets("novelforgeAgentTargets", _agent_host_buttons)
+	_publish_interaction_targets()
 
 func _publish_control_targets(key: String, buttons: Array[Button]) -> void:
 	var parts: Array[String] = []
@@ -459,6 +532,16 @@ func _has_forbidden_decorative_text(text: String) -> bool:
 		if text.contains(glyph):
 			return true
 	return false
+
+
+func _find_button_contains(node: Node, needle: String) -> Button:
+	for child in node.get_children():
+		if child is Button and (child as Button).text.contains(needle):
+			return child as Button
+		var nested := _find_button_contains(child, needle)
+		if nested != null:
+			return nested
+	return null
 
 func _find_button_prefix(node: Node, prefix: String) -> Button:
 	for child in node.get_children():
