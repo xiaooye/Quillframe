@@ -1,0 +1,34 @@
+name: NovelForge Memory Lifecycle
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  memory-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile memory runtime
+        run: |
+          python -m py_compile harness/memory_bank.py harness/memory_lifecycle.py
+      - name: Existing memory-bank contract
+        run: |
+          python harness/memory_bank.py --db /tmp/novelforge-memory-bank-ci.db self-test \
+            --path /tmp/novelforge-memory-bank-selftest-ci.db
+      - name: Non-destructive memory lifecycle contract
+        run: |
+          python harness/memory_lifecycle.py --db /tmp/novelforge-memory-lifecycle-ci.db self-test \
+            --path /tmp/novelforge-memory-lifecycle-selftest-ci.db
