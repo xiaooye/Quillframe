@@ -1,19 +1,19 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "3",
-  "principle": "Quality judgment belongs to model-readable contracts; deterministic runtime only packages bounded evidence, permissions, fingerprints and typed results. Production release evidence must use an explicitly registered release role rather than an ad-hoc eval rubric.",
+  "version": "4",
+  "principle": "Literary and narrative judgment belongs to model-readable contracts. Deterministic runtime binds exact contracts, candidates, provenance, permissions and execution identity; it does not reinterpret literary findings. Blind Reader, Semantic Rule Auditor and independent production review are distinct roles with distinct information boundaries.",
   "contracts": {
     "reader.reaction": {
       "kind": "external_review",
-      "purpose": "Simulate a cold reading-behavior persona's immediate experience of one candidate using only reader-visible information, without pretending to be an independent semantic gate.",
-      "forbidden_input_keys": ["outline", "active_plan", "scene_card", "author_notes", "author_intent", "hidden_intent", "expected_payoff", "future_plan", "planned_twist", "writer_reasoning", "reviewer_verdict", "canon_unrevealed"],
+      "purpose": "Simulate one bounded target reader's immediate experience using reader-visible information only.",
+      "forbidden_input_keys": ["outline", "active_plan", "scene_card", "author_notes", "author_intent", "hidden_intent", "expected_payoff", "future_plan", "planned_twist", "writer_reasoning", "reviewer_verdict", "canon_unrevealed", "quality_taxonomy", "hf_codes", "telemetry", "semantic_rules"],
       "input_contract": {
         "type": "object",
         "required": ["candidate_text", "persona_id"],
         "properties": {
           "candidate_text": {"type": "string", "minLength": 1},
           "persona_id": {"type": "string", "minLength": 1},
-          "reader_visible_context": {"type": "array", "items": {"type": "object", "required": ["source_ref", "text"], "properties": {"source_ref": {"type": "string", "minLength": 1}, "text": {"type": "string", "minLength": 1}}, "additionalProperties": false}},
+          "reader_visible_context": {"type": "array", "items": {"type": "object"}},
           "chapter_position": {"type": "string"},
           "genre_profile": {"type": "string"},
           "platform_profile": {"type": "string"}
@@ -21,51 +21,38 @@
         "additionalProperties": false
       },
       "rubric": [
-        "Read only the supplied candidate, reader-visible context and reader persona. Treat omitted creator knowledge as unknowable.",
-        "Judge the actual reading experience: momentum, attention, confusion, emotional investment, reward and desire to continue.",
-        "Do not reconstruct author intent, future plan, hidden payoff or unrevealed Canon in order to excuse or praise the candidate.",
-        "Be specific about observable reader effects; do not invent unstated Canon.",
-        "A reader simulation is diagnostic evidence, not mandatory independent review.",
-        "Return only the declared typed judgment."
+        "Read naturally as the assigned target reader. Treat omitted creator-private information as unknowable.",
+        "Report only effects you actually experienced in the supplied text: pull, boredom, confusion, emotional response, disbelief, artificiality, attachment, anticipation or other salient reader effects.",
+        "Do not turn the reading into a hidden craft checklist and do not infer author intent or future payoff to rescue the text.",
+        "A reader simulation is diagnostic evidence, not Canon authority or an independent semantic gate."
       ],
-      "default_personas": {
-        "binge_reader": "Immediate forward pull, momentum, and whether the next chapter feels irresistible.",
-        "genre_native_reader": "Genre promises, freshness of execution, payoff timing, and familiar-pattern fatigue.",
-        "casual_mobile_reader": "Where attention slips, what gets skimmed, confusion, and small-screen reading friction.",
-        "investment_reader": "Which characters and relationships feel worth caring about, and how emotional investment changes.",
-        "reward_sensitive_reader": "Whether the text returns enough reveal, competence, reversal, intimacy, humor or consequence for the attention spent."
-      },
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "would_continue", "continue_desire", "reason"],
+        "required": ["confidence", "report"],
         "properties": {
           "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "tension": {"type": "number", "minimum": 0, "maximum": 1},
-          "pacing": {"type": "number", "minimum": 0, "maximum": 1},
-          "would_continue": {"type": "boolean"},
-          "continue_desire": {"type": "number", "minimum": 0, "maximum": 1},
-          "confusion": {"type": "array", "items": {"type": "string"}},
-          "favorite_beat": {"type": ["string", "null"]},
-          "stumble_beat": {"type": ["string", "null"]},
-          "emotion": {"type": "array", "items": {"type": "string"}},
-          "drop_off_point": {"type": ["string", "null"]},
-          "reason": {"type": "string"}
-        }
+          "report": {"type": "string", "minLength": 1},
+          "would_continue": {"type": ["boolean", "null"]},
+          "strongest_positive": {"type": ["string", "null"]},
+          "strongest_problem": {"type": ["string", "null"]},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
       },
       "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "reader_diagnostic"},
       "independent_gate": false
     },
     "reader.engagement_audit": {
       "kind": "external_review",
-      "purpose": "Cold, holistic Reader Engagement audit for a production candidate. It judges the actual causal reading experience before checking named dimensions, so local checklist compliance cannot substitute for global momentum and life.",
-      "forbidden_input_keys": ["outline", "active_plan", "scene_card", "author_notes", "author_intent", "hidden_intent", "expected_payoff", "future_plan", "planned_twist", "writer_reasoning", "reviewer_verdict", "prior_review", "repair_brief", "canon_unrevealed"],
+      "purpose": "Blind production Reader: read the frozen candidate like a target reader and return the salient reading experience without creator-private state, taxonomy priming or mechanical prose telemetry.",
+      "forbidden_input_keys": ["outline", "active_plan", "scene_card", "author_notes", "author_intent", "hidden_intent", "expected_payoff", "future_plan", "planned_twist", "writer_reasoning", "reviewer_verdict", "prior_review", "repair_brief", "canon_unrevealed", "private_character_state", "character_action_evidence", "quality_taxonomy", "hf_codes", "expected_failure_code", "telemetry", "semantic_rules", "rule_index"],
       "input_contract": {
         "type": "object",
         "required": ["candidate_fingerprint", "candidate_text"],
         "properties": {
           "candidate_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
           "candidate_text": {"type": "string", "minLength": 1},
-          "reader_visible_context": {"type": "array", "items": {"type": "object", "required": ["source_ref", "text"], "properties": {"source_ref": {"type": "string", "minLength": 1}, "text": {"type": "string", "minLength": 1}}, "additionalProperties": false}},
+          "reader_visible_context": {"type": "array", "items": {"type": "object"}},
           "chapter_position": {"type": "string"},
           "genre_profile": {"type": "string"},
           "platform_profile": {"type": "string"},
@@ -74,34 +61,24 @@
         "additionalProperties": false
       },
       "rubric": [
-        "Read the candidate as a cold reader before auditing dimensions. Treat omitted creator knowledge as unknowable and never rescue the text with author intent.",
-        "First state the active reader question and describe how it actually evolves through causal state changes. Chronology, countdown repetition, and correct procedure are not causal momentum by themselves.",
-        "Audit pressure ladder, reward cadence, character-owned energy, tonal contrast, information value, causal momentum, relational movement, procedure compression, and ending forward pull using observable candidate evidence.",
-        "Explicitly test for checklist-compliant synthesis: a candidate can contain one humor beat, one competence beat, one reversal, one symptom beat, and one hook yet still fail if those beats feel locally attached while the global scene topology remains procedure -> correct fix -> next procedure -> correct fix.",
-        "SAFE-BUT-FLAT (RG-15) is blocking. Do not average it away because other dimensions are technically present.",
-        "For a very-high-grip profile, flatness_risk must be low to pass. Return only the declared typed judgment."
+        "Read the whole candidate naturally before deciding whether it works for the supplied reader/profile boundary.",
+        "Do not reconstruct creator intent, hidden plans, private character state or future payoff. Do not search for named HF codes or fill a quality taxonomy.",
+        "Report only the strongest effects that materially changed the reading experience. A dimension that did not matter need not be manufactured.",
+        "Use observable candidate evidence. Formal, complete or long speech is not a defect merely because it is explicit; short paragraphs or fragments are not defects merely because they are short.",
+        "Return an overall pass/fail only after the natural reading report. The runtime will bind this result but must not reinterpret the literary content."
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "result", "active_reader_question", "question_evolution", "pressure_ladder", "reader_rewards", "character_energy", "tonal_contrast", "information_value", "causal_momentum", "relationship_movement", "procedure_compression", "ending_forward_pull", "flatness_risk", "codes", "evidence"],
+        "required": ["confidence", "result", "report", "evidence_refs"],
         "properties": {
           "confidence": {"type": "number", "minimum": 0, "maximum": 1},
           "result": {"enum": ["pass", "fail"]},
-          "active_reader_question": {"type": "string"},
-          "question_evolution": {"type": "string"},
-          "pressure_ladder": {"type": "string"},
-          "reader_rewards": {"type": "string"},
-          "character_energy": {"type": "string"},
-          "tonal_contrast": {"type": "string"},
-          "information_value": {"type": "string"},
-          "causal_momentum": {"type": "string"},
-          "relationship_movement": {"type": "string"},
-          "procedure_compression": {"type": "string"},
-          "ending_forward_pull": {"type": "string"},
-          "flatness_risk": {"enum": ["low", "medium", "high", "blocking"]},
-          "codes": {"type": "array", "items": {"type": "string"}},
-          "evidence": {"type": "array", "items": {"type": "string"}}
-        }
+          "report": {"type": "string", "minLength": 1},
+          "strongest_positive": {"type": ["string", "null"]},
+          "strongest_problem": {"type": ["string", "null"]},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
       },
       "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "reader_engagement_audit"},
       "release_roles": ["reader_engagement"],
@@ -109,47 +86,150 @@
     },
     "reader.compare": {
       "kind": "external_review",
-      "purpose": "Pairwise reader-experience comparison. Candidate order should be swapped across repeated judgments when bias detection matters.",
-      "rubric": ["Use only the two supplied candidates, shared context and assigned reader persona.", "Prefer pairwise experiential comparison over absolute literary scoring.", "Judge forward pull, character investment and reader reward separately before overall preference.", "Do not infer Canon or author intent beyond supplied evidence.", "Return only the declared typed judgment."],
-      "output_contract": {"type": "object", "required": ["confidence", "winner", "reason"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "winner": {"enum": ["A", "B", "tie"]}, "reason": {"type": "string"}, "stronger_forward_pull": {"enum": ["A", "B", "tie"]}, "stronger_character_investment": {"enum": ["A", "B", "tie"]}, "more_rewarding": {"enum": ["A", "B", "tie"]}}},
+      "purpose": "Pairwise reader-experience comparison. Swap candidate order across repeated judgments when order bias matters.",
+      "rubric": [
+        "Use only the two supplied candidates, shared reader-visible context and assigned reader persona.",
+        "Prefer direct pairwise experiential comparison over absolute literary scoring.",
+        "Do not infer Canon or author intent beyond supplied evidence. Ties are valid."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "winner", "reason"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "winner": {"enum": ["A", "B", "tie"]},
+          "reason": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      },
       "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "reader_comparison"},
       "independent_gate": false
     },
     "character.integrity": {
       "kind": "artifact_audit",
-      "purpose": "Judge whether an important character remains causally and psychologically coherent inside the supplied scene and typed established state.",
-      "rubric": ["Use only the supplied scene excerpt and typed character state.", "Evaluate agenda alignment, knowledge boundary, voice, relationship position, spatial/task state and surprise-within-consistency.", "Do not assume manager, narrator, reader or research knowledge is character knowledge.", "Intentional change is valid when the scene supplies sufficient transition evidence.", "Flag only evidence-supported problems and cite candidate-side plus established-state evidence."],
-      "output_contract": {"type": "object", "required": ["confidence", "findings"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "findings": {"type": "array"}}},
+      "purpose": "Judge whether an important character remains causally and psychologically coherent inside the supplied scene and established evidence.",
+      "rubric": [
+        "Use supplied scene and established character evidence only.",
+        "Judge knowledge, motivation, relationships and behavior semantically. Do not substitute timestamp arithmetic or field equality for plausible inference.",
+        "Intentional change is valid when the scene supplies a credible cause or transition.",
+        "Return evidence-supported findings only."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "report", "findings"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "report": {"type": "string"},
+          "findings": {"type": "array"}
+        }
+      },
       "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "character_integrity_observation"},
       "independent_gate": false
     },
     "revision.diagnose": {
       "kind": "artifact_audit",
-      "purpose": "Diagnose the candidate across only the requested quality dimensions, then route each meaningful failure to the mechanism that owns the repair.",
+      "purpose": "Diagnose a candidate using requested evidence and identify the semantic mechanism that owns repair without performing the rewrite.",
       "rubric": [
         "Diagnose before rewriting. Do not perform a generic polish pass.",
-        "Use the supplied requested dimensions and authority/context only.",
-        "Distinguish story, plan, scene, character, reader-pressure, surface, continuity, context/memory and research failures.",
-        "SAFE-BUT-FLAT or reader-grip failure is not a line-edit problem; route it back to Reader Pressure and Scene Simulation.",
-        "A cluster of surface failures may require whole-scene Surface Realization rather than local patches.",
-        "When repair ownership is story, plan, scene, character, or reader-pressure, the next generation must be a fresh realization from mechanism-level defects and unchanged authority constraints; rejected prose and concrete critic patches must not be default writer context.",
-        "Return evidence-chained findings and repair owners; do not mutate Canon."
+        "Use supplied authority/context only and explain the smallest mechanism-level repair that addresses the observed problem.",
+        "Do not infer repair depth from fixed Python rules; describe it semantically and identify an execution owner only when routing is useful.",
+        "Do not mutate Canon, planning authority or durable preference state."
       ],
-      "output_contract": {"type": "object", "required": ["confidence", "findings", "repair_sequence"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "findings": {"type": "array"}, "repair_sequence": {"type": "array"}}},
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "report", "repair_owner"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "report": {"type": "string", "minLength": 1},
+          "repair_owner": {"type": "string", "minLength": 1},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}},
+          "comparison_recommended": {"type": "boolean"}
+        },
+        "additionalProperties": false
+      },
       "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "revision_diagnostic"},
+      "independent_gate": false
+    },
+    "quality.semantic_rule_audit": {
+      "kind": "external_review",
+      "purpose": "Semantic Rule Auditor: apply the authoritative semantic hard-rule index to an exact candidate using model judgment, with traceable applicability and evidence. Hard means confirmed failure blocks; it does not mean deterministic code decides literary truth.",
+      "forbidden_input_keys": ["expected_verdict", "expected_failure_code", "gold", "repair_plan", "prior_reviewer_verdict"],
+      "input_contract": {
+        "type": "object",
+        "required": ["candidate_fingerprint", "candidate_text", "rule_index"],
+        "properties": {
+          "candidate_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
+          "candidate_text": {"type": "string", "minLength": 1},
+          "rule_index": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "severity", "authority", "statement"],
+              "properties": {
+                "id": {"type": "string", "minLength": 1},
+                "severity": {"type": "string", "minLength": 1},
+                "authority": {"type": "string", "minLength": 1},
+                "statement": {"type": "string", "minLength": 1},
+                "rationale": {"type": "string"},
+                "exceptions": {"type": "array", "items": {"type": "string"}},
+                "evidence_expectations": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          },
+          "authorized_evidence": {"type": "array", "items": {"type": "object"}},
+          "project_constraints": {"type": "array", "items": {"type": "object"}}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "For each supplied semantic hard rule, decide semantic applicability yourself from the candidate and authorized evidence.",
+        "Use PASS, FAIL, NOT_APPLICABLE or INSUFFICIENT_EVIDENCE. A rule is not failed merely because a lexical pattern or structural field matches.",
+        "For knowledge, continuity, characterization, POV and dialogue rules, reason about meaning, plausible inference, narrative cause, genre/speech-act context and stated exceptions.",
+        "A confirmed FAIL must cite evidence. If required evidence is missing, request it rather than guessing.",
+        "Return overall fail when any applicable blocking rule is confirmed FAIL; return insufficient_evidence when a mandatory judgment cannot be grounded; otherwise pass."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "result", "report", "findings"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "result": {"enum": ["pass", "fail", "insufficient_evidence"]},
+          "report": {"type": "string", "minLength": 1},
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["rule_id", "status", "report", "evidence_refs"],
+              "properties": {
+                "rule_id": {"type": "string", "minLength": 1},
+                "status": {"enum": ["PASS", "FAIL", "NOT_APPLICABLE", "INSUFFICIENT_EVIDENCE"]},
+                "report": {"type": "string", "minLength": 1},
+                "evidence_refs": {"type": "array", "items": {"type": "string"}}
+              },
+              "additionalProperties": false
+            }
+          },
+          "evidence_requests": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "semantic_rule_audit"},
+      "release_roles": ["semantic_rules"],
       "independent_gate": false
     },
     "quality.production_review": {
       "kind": "external_review",
-      "purpose": "Fresh independent holistic production review used only after Surface, Reader Engagement and continuity work. It tries to falsify production readiness rather than verify that a manager-authored checklist was followed.",
-      "forbidden_input_keys": ["outline", "active_plan", "scene_card", "author_notes", "author_intent", "hidden_intent", "expected_payoff", "future_plan", "planned_twist", "writer_reasoning", "reviewer_verdict", "prior_review", "repair_brief", "critic_patch", "canon_unrevealed"],
+      "purpose": "Fresh independent holistic production review of the exact candidate, isolated from manager/private creator state. It tries to falsify readiness without being turned into the Blind Reader or Semantic Rule Auditor.",
+      "forbidden_input_keys": ["outline", "active_plan", "scene_card", "author_notes", "author_intent", "hidden_intent", "expected_payoff", "future_plan", "planned_twist", "writer_reasoning", "reviewer_verdict", "prior_review", "repair_brief", "critic_patch", "canon_unrevealed", "expected_failure_code"],
       "input_contract": {
         "type": "object",
         "required": ["candidate_fingerprint", "candidate_text"],
         "properties": {
           "candidate_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
           "candidate_text": {"type": "string", "minLength": 1},
-          "reader_visible_context": {"type": "array", "items": {"type": "object", "required": ["source_ref", "text"], "properties": {"source_ref": {"type": "string", "minLength": 1}, "text": {"type": "string", "minLength": 1}}, "additionalProperties": false}},
+          "reader_visible_context": {"type": "array", "items": {"type": "object"}},
           "chapter_position": {"type": "string"},
           "genre_profile": {"type": "string"},
           "platform_profile": {"type": "string"},
@@ -158,27 +238,23 @@
         "additionalProperties": false
       },
       "rubric": [
-        "Read the candidate holistically first. Do not begin by checking whether named requirements each have a matching local beat.",
-        "Try to falsify production readiness: identify material reasons a real reader would experience the chapter as synthetic, flat, over-designed, causally weak, character-functional, confusing, or unearned even if individual rules appear satisfied.",
-        "Explicitly test checklist-compliant synthesis. Local humor, competence, relationship, symptom, reversal, and hook beats do not rescue a scene whose global topology remains predictable procedure and correct repair.",
-        "Do not reconstruct author intent, hidden future payoff, scene-card goals, or previous reviewer expectations. Judge only the supplied candidate and genuinely reader-visible/project-profile context.",
-        "Do not numerically average away a material blocking defect. SAFE-BUT-FLAT (RG-15), CHECKLIST CAUSALITY (HF-22), or equivalent scene-level failure is enough to fail production review when supported by evidence.",
-        "A pass means no material unqualified production defect remains in the supplied candidate; it does not grant Canon or Settlement authority.",
-        "Return only the declared typed judgment."
+        "Read the candidate holistically first and try to falsify production readiness using only supplied, reviewer-eligible evidence.",
+        "Do not reconstruct hidden creator intent or future payoff. Do not mechanically verify a manager-authored checklist.",
+        "Report material production defects in natural semantic language. Named diagnostic vocabulary may be used when genuinely useful, but a code is not the judgment itself.",
+        "A pass means no material defect was found in this bounded independent review; it grants no Canon, Settlement or write authority."
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "result", "codes", "evidence", "summary", "flatness_risk"],
+        "required": ["confidence", "result", "report", "evidence_refs"],
         "properties": {
           "confidence": {"type": "number", "minimum": 0, "maximum": 1},
           "result": {"enum": ["pass", "fail"]},
-          "codes": {"type": "array", "items": {"type": "string"}},
-          "evidence": {"type": "array", "items": {"type": "string"}},
-          "summary": {"type": "string"},
-          "flatness_risk": {"enum": ["low", "medium", "high", "blocking"]}
-        }
+          "report": {"type": "string", "minLength": 1},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
       },
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "production_review_observation"},
+      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "production_quality_review"},
       "release_roles": ["semantic_independent"],
       "independent_gate": true
     }

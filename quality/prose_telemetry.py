@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Profile-neutral prose telemetry for NovelForge.
+"""Optional mechanical prose instrumentation for NovelForge.
 
-These metrics are diagnostic signals only. This module intentionally does not
-turn paragraph length, sentence length, fragments, or dialogue density into a
-literary pass/fail verdict. A consuming Project may separately declare explicit
-hard thresholds, but Generic NovelForge does not invent them.
+This module is not a default Reader input and never produces literary truth.
+Agents may call it on demand when mechanical measurements would help investigate
+a semantic observation.  Generic NovelForge does not preload these numbers into
+Blind Reader, Rule Auditor, Writer, or Editor context.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from pathlib import Path
 from statistics import mean, median
 from typing import Any
 
-SCHEMA = "novelforge_prose_telemetry_v1"
+SCHEMA = "novelforge_prose_telemetry_v2"
 SENTENCE_END = re.compile(r"(?<=[。！？!?])|(?<=[.!?])(?=\s|$)")
 DIALOGUE_PREFIX = tuple("\"'“‘「『")
 
@@ -31,20 +31,12 @@ def _sentences(paragraph: str) -> list[str]:
 
 def _is_dialogue_only(paragraph: str) -> bool:
     stripped = paragraph.strip()
-    if not stripped or not stripped.startswith(DIALOGUE_PREFIX):
-        return False
-    # A deliberately conservative signal: opening quote plus closing dialogue
-    # punctuation/quote and no obvious narration after the closing quote.
-    return stripped.endswith(tuple("\"'”’」』"))
+    return bool(stripped and stripped.startswith(DIALOGUE_PREFIX) and stripped.endswith(tuple("\"'”’」』")))
 
 
 def _looks_fragment(sentence: str) -> bool:
     s = sentence.strip().strip("\"'“”‘’「」『』")
-    if not s:
-        return False
-    # Signal only. Short units without terminal punctuation are candidates for
-    # semantic inspection, not deterministic literary failures.
-    return len(s) <= 12 and s[-1:] not in "。！？!?.,;；：:"
+    return bool(s and len(s) <= 12 and s[-1:] not in "。！？!?.,;；：:")
 
 
 def analyze(text: str) -> dict[str, Any]:
@@ -55,7 +47,6 @@ def analyze(text: str) -> dict[str, Any]:
     sentences = [s for group in sentence_lists for s in group]
     sentence_lengths = [len(re.sub(r"\s+", "", s)) for s in sentences]
     spp = [len(group) for group in sentence_lists]
-    one_sentence = [n == 1 for n in spp]
     dialogue_only = [_is_dialogue_only(p) for p in paragraphs]
     fragments = [_looks_fragment(s) for s in sentences]
 
@@ -72,7 +63,7 @@ def analyze(text: str) -> dict[str, Any]:
         "schema": SCHEMA,
         "paragraph_count": n_p,
         "sentence_count": n_s,
-        "one_sentence_paragraph_ratio": sum(one_sentence) / n_p if n_p else 0.0,
+        "one_sentence_paragraph_ratio": sum(n == 1 for n in spp) / n_p if n_p else 0.0,
         "dialogue_only_paragraph_ratio": sum(dialogue_only) / n_p if n_p else 0.0,
         "sentences_per_paragraph": {
             "min": min(spp) if spp else 0,
@@ -91,6 +82,9 @@ def analyze(text: str) -> dict[str, Any]:
         "fragment_signal_ratio": sum(fragments) / n_s if n_s else 0.0,
         "max_consecutive_short_paragraph_run": max_short_run,
         "literary_verdict": None,
+        "optional_diagnostic_tool": True,
+        "default_production_context": False,
+        "default_blind_reader_input": False,
         "metric_thresholds_are_generic_truth": False,
         "semantic_interpretation_required": True,
         "authority": False,
@@ -101,19 +95,25 @@ def analyze(text: str) -> dict[str, Any]:
 def self_test() -> dict[str, Any]:
     mixed = "第一段有两句。第二句继续推进。\n\n“停。”\n\n第三段重新展开，动作改变了局面。随后人物才回答。"
     short = "跑。\n\n停。\n\n看。\n\n门开了。"
-    a = analyze(mixed); b = analyze(short)
+    a = analyze(mixed)
+    b = analyze(short)
     ok = all([
         a["paragraph_count"] == 3,
         a["sentences_per_paragraph"]["max"] >= 2,
         b["one_sentence_paragraph_ratio"] == 1.0,
         b["max_consecutive_short_paragraph_run"] == 4,
         a["literary_verdict"] is None and b["literary_verdict"] is None,
+        a["optional_diagnostic_tool"] is True,
+        a["default_blind_reader_input"] is False,
         a["metric_thresholds_are_generic_truth"] is False,
     ])
     return {
         "schema": SCHEMA,
         "prose_telemetry_contract": "PASS" if ok else "FAIL",
         "signals_only": True,
+        "optional_diagnostic_tool": True,
+        "default_production_context": False,
+        "default_blind_reader_input": False,
         "short_paragraphs_auto_fail": False,
         "semantic_interpretation_required": True,
         "authority": False,
@@ -122,9 +122,11 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge prose telemetry")
+    p = argparse.ArgumentParser(description="NovelForge optional prose telemetry")
     sub = p.add_subparsers(dest="cmd", required=True)
-    a = sub.add_parser("analyze"); a.add_argument("--text"); a.add_argument("--file")
+    a = sub.add_parser("analyze")
+    a.add_argument("--text")
+    a.add_argument("--file")
     sub.add_parser("self-test")
     ns = p.parse_args()
     if ns.cmd == "self-test":
