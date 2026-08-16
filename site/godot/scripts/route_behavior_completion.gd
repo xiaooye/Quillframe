@@ -39,6 +39,16 @@ func _build() -> void:
 	super._build()
 	_repair_architecture_wide_geometry()
 
+# A rebuilt ScrollContainer cannot accept its old scroll value reliably until
+# the new child minimum sizes have completed one deferred layout turn. The
+# lower helper restores synchronously and can be clamped to zero; override it at
+# the production entrypoint and use the same deferred restore path as viewport
+# resize stabilization.
+func _rebuild_at_scroll(scroll_y: int) -> void:
+	_build()
+	_publish_ready()
+	call_deferred("_restore_scroll_position", scroll_y)
+
 # The generic wide-page clamp preserves most routes, but Architecture has a
 # mixed geometry contract: a fixed-width copy column plus a diagram and action
 # controls whose source coordinates were derived from the pre-clamp page width.
