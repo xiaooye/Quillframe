@@ -14,6 +14,7 @@ const url = arg("url", "http://127.0.0.1:4188/?route=/studio");
 const output = arg("output", "/tmp/product-site-browser-qa/studio-handoff.json");
 const timeoutMs = Number(arg("timeout-ms", "30000"));
 const expectedUrl = "https://studio.novelforge.wei-dev.com/";
+const uniqueCommandQuery = "studio.novelforge.wei-dev.com";
 if (!chrome) {
   console.error("CHROME is required");
   process.exit(2);
@@ -135,9 +136,10 @@ try {
   await command("Page.navigate", { url });
   await waitFor("Studio runtime", (s) => s.runtime === "ready" && s.interaction === "ready" && s.route === "/studio" && s.layout === "desktop");
 
-  // Intercept the handoff at the browser boundary so QA never depends on the
-  // external Studio host or network. Godot still executes its real command and
-  // JavaScriptBridge window.open path.
+  // Intercept the handoff at the real browser boundary so QA never depends on
+  // the external Studio host. The exact hostname query is deliberate: "hosted"
+  // also matches the ordinary Studio route description, which previously made
+  // Enter select /studio instead of the external command.
   await evaluate(`(() => {
     window.__novelforgeStudioHandoff = [];
     window.open = (...args) => {
@@ -149,8 +151,8 @@ try {
 
   await key("k", 2);
   await waitFor("command palette", (s) => s.command === "open");
-  for (const ch of "hosted") await key(ch);
-  await waitFor("Hosted Studio query", (s) => s.query === "hosted");
+  for (const ch of uniqueCommandQuery) await key(ch);
+  await waitFor("Hosted Studio unique query", (s) => s.query === uniqueCommandQuery);
   await key("Enter");
 
   const deadline = Date.now() + timeoutMs;
@@ -162,7 +164,8 @@ try {
   }
   if (opens.length !== 1) throw new Error(`expected one Hosted Studio handoff, got ${JSON.stringify(opens)}`);
   const [handoffUrl, target, features] = opens[0];
-  if (handoffUrl !== expectedUrl) throw new Error(`Hosted Studio URL mismatch: ${handoffUrl}`);
+  const normalizedUrl = new URL(handoffUrl).href;
+  if (normalizedUrl !== expectedUrl) throw new Error(`Hosted Studio URL mismatch: ${handoffUrl}`);
   if (target !== "_blank") throw new Error(`Hosted Studio target mismatch: ${target}`);
   if (!String(features).includes("noopener") || !String(features).includes("noreferrer")) {
     throw new Error(`Hosted Studio window features missing isolation: ${features}`);
@@ -172,11 +175,12 @@ try {
   }
 
   const report = {
-    schema: "novelforge_studio_handoff_browser_qa_v1",
+    schema: "novelforge_studio_handoff_browser_qa_v2",
     status: "pass",
     route: "/studio",
     command: "Hosted Studio",
-    url: handoffUrl,
+    query: uniqueCommandQuery,
+    url: normalizedUrl,
     target,
     noopener: true,
     noreferrer: true,
