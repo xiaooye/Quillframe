@@ -32,16 +32,20 @@ func _font(weight: int) -> Font:
 	_latin_font_cache[weight] = variation
 	return variation
 
-func _heading_font(glyph_spacing: int) -> Font:
-	if _heading_font_cache.has(glyph_spacing):
-		return _heading_font_cache[glyph_spacing]
+func _heading_font(glyph_spacing: int, optical_size: int) -> Font:
+	var key := "%d:%d" % [glyph_spacing, optical_size]
+	if _heading_font_cache.has(key):
+		return _heading_font_cache[key]
 	var variation := FontVariation.new()
 	variation.base_font = _latin_base_font
 	variation.spacing_glyph = glyph_spacing
 	variation.spacing_space = glyph_spacing
 	var text_server := TextServerManager.get_primary_interface()
-	variation.variation_opentype = {text_server.name_to_tag("wght"): 780}
-	_heading_font_cache[glyph_spacing] = variation
+	variation.variation_opentype = {
+		text_server.name_to_tag("wght"): 780,
+		text_server.name_to_tag("opsz"): optical_size,
+	}
+	_heading_font_cache[key] = variation
 	return variation
 
 func _cjk_font(weight: int) -> Font:
@@ -134,12 +138,12 @@ func _calibrate_inter_heading_rhythm(node: Node) -> void:
 					delta = 15
 				var current := label.get_theme_constant("line_spacing")
 				label.add_theme_constant_override("line_spacing", current + delta)
-				# ProductSurface CSS uses letter-spacing:-.052em for route h1.
-				# At our baseline sizes this resolves to roughly -2px on phone
-				# and -3px on desktop. Keep Home on its separately calibrated
-				# identity typography.
+				# ProductSurface CSS uses letter-spacing:-.052em and browsers
+				# resolve Inter's optical-size axis from the rendered h1 size.
+				# Mirror both instead of compensating with layout width or font size.
 				if route != "/":
-					label.add_theme_font_override("font", _heading_font(-2 if _layout == "phone" else -3))
+					var optical_size := 39 if _layout == "phone" else 62
+					label.add_theme_font_override("font", _heading_font(-2 if _layout == "phone" else -3, optical_size))
 		_calibrate_inter_heading_rhythm(child)
 
 func _is_english_heading(text: String) -> bool:
