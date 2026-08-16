@@ -16,6 +16,7 @@ const parity = read("godot/scripts/main_parity.gd");
 const routes = read("godot/scripts/route_surfaces.gd");
 const catalog = read("godot/scripts/route_catalog.gd");
 const systems = read("godot/scripts/system_surfaces.gd");
+const editorial = read("godot/scripts/editorial_surfaces.gd");
 const shell = read("godot/web/novelforge.html");
 const fontFetch = read("scripts/fetch-godot-fonts.sh");
 const plainFontStart = main.indexOf("func _font(weight: int)");
@@ -26,9 +27,9 @@ const mixedFontBlock = mixedFontStart >= 0 && clearStart > mixedFontStart ? main
 
 check(project.includes('run/main_scene="res://Main.tscn"'), "Godot main scene must remain explicit");
 check(project.includes('renderer/rendering_method="gl_compatibility"'), "Web migration must use Compatibility renderer");
-check(scene.includes('path="res://scripts/system_surfaces.gd"'), "shadow scene must enter through the system-surface parity layer");
+check(scene.includes('path="res://scripts/editorial_surfaces.gd"'), "shadow scene must enter through the editorial-surface parity layer");
 check(scene.includes("offset_right = -15.0"), "web page scrollbar gutter must remain reserved in the Godot layout viewport");
-check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main + parity + routes + catalog + systems), "migration is capped at 2.5D; 3D scene nodes are forbidden");
+check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main + parity + routes + catalog + systems + editorial), "migration is capped at 2.5D; 3D scene nodes are forbidden");
 check(main.includes('FONT_PATH := "res://generated/NotoSansSC-wght.ttf"'), "deterministic bundled CJK font is required");
 check(main.includes('SYMBOL_FONT_PATH := "res://generated/NotoSansSymbols2-Regular.ttf"'), "deterministic symbol fallback is required");
 check(main.includes('THAI_FONT_PATH := "res://generated/NotoSansThai-wdth-wght.ttf"'), "deterministic Thai fallback is required for baseline kaomoji");
@@ -55,7 +56,9 @@ check(routes.includes('title_size = 62 if not stacked else 39'), "Product typogr
 check(routes.includes('stack_size.x - (130.0 if not phone else 68.0)'), "Product stack geometry must stay baseline-calibrated");
 check(catalog.includes('"/studio"') && catalog.includes('"/changelog"'), "Studio and Changelog must remain explicit Godot shadow surfaces");
 for (const route of ["/inspect", "/playground", "/agents"]) check(systems.includes(`"${route}"`), `${route} must remain an explicit Godot shadow surface`);
+for (const route of ["/architecture", "/publication"]) check(editorial.includes(`"${route}"`), `${route} must remain an explicit Godot shadow surface`);
 check(systems.includes("PROJECT INSPECTOR") && systems.includes("LOCAL PLAYGROUND") && systems.includes("AGENT PATCH BAY"), "system route identity surfaces must remain explicit");
+check(editorial.includes("INTERACTIVE ARCHITECTURE") && editorial.includes("PUBLICATION WORKBENCH"), "editorial route identity surfaces must remain explicit");
 check(main.includes('"phone"') && main.includes('"compact"') && main.includes('"desktop"'), "three responsive layout modes are required");
 check(main.includes("window.location.assign") && parity.includes("window.history.pushState"), "browser navigation boundary must stay explicit");
 check(main.includes("novelforge:godot-ready"), "browser readiness marker is required");
@@ -67,7 +70,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_shadow_source_quality_v7",
+    schema: "novelforge_godot_shadow_source_quality_v8",
     status: "pass",
     production_cutover: false,
     visual_baseline: "Solid/Vite Story Loom Kawaii Atelier",
@@ -80,6 +83,7 @@ if (failures.length) {
     route_surface_contract: true,
     route_catalog_contract: true,
     system_surface_contract: true,
+    editorial_surface_contract: true,
     authority: false,
   }, null, 2));
 }
