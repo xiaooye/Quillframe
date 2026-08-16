@@ -1,6 +1,6 @@
 {
   "schema": "novelforge_godot_glyph_policy_v1",
-  "text_symbols": ["✦", "♡", "✓", "◇", "→", "↗", "⌘", "◐", "☼", "○", "▤", "⌕", "▷", "◈", "⌂", "◉", "●", "✧", "−"],
+  "text_symbols": ["✦", "♡", "✓", "◇", "→", "↗", "⌘", "◐", "☼", "☁", "○", "▤", "⌕", "▷", "◈", "⌂", "◉", "●", "✧", "−"],
   "asset_backed_source_emoji": {
     "🎀": "res://assets/ribbon.svg",
     "🫧": "res://assets/context-bubbles.svg",
