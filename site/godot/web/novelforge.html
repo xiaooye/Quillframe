@@ -5,8 +5,19 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#fffdfc" />
   <title>NovelForge · Godot parity shadow</title>
+  <script>
+    (() => {
+      try {
+        const saved = localStorage.getItem('novelforge.appearance');
+        const dark = saved === 'dark' || (saved !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.novelforgeAppearance = dark ? 'dark' : 'light';
+      } catch (_) {
+        document.documentElement.dataset.novelforgeAppearance = 'light';
+      }
+    })();
+  </script>
   <style>
-    *{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#fffdfc}body{font-family:system-ui,sans-serif}#canvas{display:block;width:100%;height:100%;outline:0;background:#fffdfc}.nf-loader{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(circle at 72% 18%,rgba(249,221,233,.46),transparent 38%),radial-gradient(circle at 18% 26%,rgba(221,238,248,.55),transparent 35%),#fffdfc;color:#2d2636;transition:opacity .22s ease}.nf-loader[data-hidden="true"]{opacity:0;pointer-events:none}.nf-loader-inner{display:grid;gap:12px;text-align:center}.nf-mark{font-weight:800;letter-spacing:-.03em;font-size:22px}.nf-note{font-size:12px;color:#746b7d}.nf-progress{width:min(280px,70vw);height:6px;border-radius:999px;background:#eee8f1;overflow:hidden}.nf-progress>i{display:block;width:14%;height:100%;background:#796bc4;border-radius:inherit;animation:load 1.15s ease-in-out infinite alternate}@keyframes load{to{width:92%}}@media(prefers-reduced-motion:reduce){.nf-progress>i{animation:none;width:72%}}
+    *{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#fffdfc}body{font-family:system-ui,sans-serif}#canvas{display:block;width:100%;height:100%;outline:0;background:#fffdfc;transition:filter .16s ease}html[data-novelforge-appearance="dark"],html[data-novelforge-appearance="dark"] body{background:#17131b}html[data-novelforge-appearance="dark"] #canvas{filter:invert(.88) hue-rotate(180deg) brightness(.88) saturate(.9);background:#f7f4f8}.nf-loader{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(circle at 72% 18%,rgba(249,221,233,.46),transparent 38%),radial-gradient(circle at 18% 26%,rgba(221,238,248,.55),transparent 35%),#fffdfc;color:#2d2636;transition:opacity .22s ease}.nf-loader[data-hidden="true"]{opacity:0;pointer-events:none}.nf-loader-inner{display:grid;gap:12px;text-align:center}.nf-mark{font-weight:800;letter-spacing:-.03em;font-size:22px}.nf-note{font-size:12px;color:#746b7d}.nf-progress{width:min(280px,70vw);height:6px;border-radius:999px;background:#eee8f1;overflow:hidden}.nf-progress>i{display:block;width:14%;height:100%;background:#796bc4;border-radius:inherit;animation:load 1.15s ease-in-out infinite alternate}@keyframes load{to{width:92%}}@media(prefers-reduced-motion:reduce){#canvas{transition:none}.nf-progress>i{animation:none;width:72%}}
   </style>
 </head>
 <body>

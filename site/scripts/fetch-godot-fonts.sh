@@ -24,7 +24,17 @@ fetch_and_verify() {
   fi
 }
 
-# Primary bilingual UI font.
+# WeiUI typography authority for Latin UI text.
+fetch_and_verify \
+  "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf" \
+  "${FONT_DIR}/Inter-opsz-wght.ttf" \
+  "047c92f6e2212473dc436020afed689527076d44"
+fetch_and_verify \
+  "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/OFL.txt" \
+  "${FONT_DIR}/Inter-OFL.txt" \
+  "21f6aff961064c2e429f570995e446bcdd555422"
+
+# Primary CJK UI font.
 fetch_and_verify \
   "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf" \
   "${FONT_DIR}/NotoSansSC-wght.ttf" \
@@ -64,6 +74,7 @@ fetch_and_verify \
 
 printf 'Pinned Godot font set ready:'
 for asset in \
+  Inter-opsz-wght.ttf \
   NotoSansSC-wght.ttf \
   NotoSansSymbols2-Regular.ttf \
   NotoSansThai-wdth-wght.ttf \

@@ -1,0 +1,192 @@
+name: Product Godot Route Parity
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'site/godot/**'
+      - 'site/src/**'
+      - 'site/scripts/fetch-godot-fonts.sh'
+      - 'site/scripts/build-godot-shadow.sh'
+      - 'site/scripts/godot-shadow-browser-shot.mjs'
+      - 'site/scripts/godot-interaction-qa.mjs'
+      - 'site/scripts/godot-shadow-source-quality.mjs'
+      - '.github/workflows/product-godot-route-parity.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: product-godot-route-parity-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_RELEASE: 4.7.1-stable
+  GODOT_TEMPLATE_VERSION: 4.7.1.stable
+
+jobs:
+  route-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Product Site dependencies
+        working-directory: site
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Godot migration source contract
+        working-directory: site
+        run: npm run godot:shadow:quality
+      - name: Build Solid baseline
+        working-directory: site
+        run: npm run content && npm run build:site
+      - name: Install image diff library
+        run: python3 -m pip install --user --disable-pip-version-check --no-input Pillow
+      - name: Install pinned Godot editor and Web templates
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL -o /tmp/godot.zip "https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          install -m 0755 "/tmp/godot/Godot_v${GODOT_RELEASE}_linux.x86_64" "$HOME/.local/bin/godot"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          curl -fsSL -o /tmp/templates.tpz "https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_export_templates.tpz"
+          rm -rf /tmp/godot-templates
+          mkdir -p /tmp/godot-templates "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}"
+          unzip -q /tmp/templates.tpz -d /tmp/godot-templates
+          cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}/"
+      - name: Build Godot shadow
+        working-directory: site
+        run: bash scripts/build-godot-shadow.sh
+      - name: Capture all route pairs and interaction proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=/tmp/novelforge-route-parity
+          mkdir -p "$OUT"
+          CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser)
+          test -n "$CHROME"
+
+          # Make the browser baseline deterministic too. WeiUI's checked-in
+          # Latin typography authority is Inter; CJK and decorative fallbacks
+          # use the exact same pinned files as the Godot candidate.
+          mkdir -p site/dist/parity-fonts
+          cp site/godot/generated/Inter-opsz-wght.ttf site/dist/parity-fonts/
+          cp site/godot/generated/NotoSansSC-wght.ttf site/dist/parity-fonts/
+          cp site/godot/generated/NotoSansSymbols2-Regular.ttf site/dist/parity-fonts/
+          cp site/godot/generated/NotoSansThai-wdth-wght.ttf site/dist/parity-fonts/
+          cp site/godot/generated/NotoSansArabic-wdth-wght.ttf site/dist/parity-fonts/
+          python3 - <<'PY'
+          from pathlib import Path
+          index = Path('site/dist/index.html')
+          text = index.read_text(encoding='utf-8')
+          style = r'''<style data-novelforge-parity-fonts>
+          @font-face{font-family:"NF Parity Inter";src:url("/parity-fonts/Inter-opsz-wght.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:block}
+          @font-face{font-family:"NF Parity CJK";src:url("/parity-fonts/NotoSansSC-wght.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:block}
+          @font-face{font-family:"NF Parity Symbols";src:url("/parity-fonts/NotoSansSymbols2-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:block}
+          @font-face{font-family:"NF Parity Thai";src:url("/parity-fonts/NotoSansThai-wdth-wght.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:block}
+          @font-face{font-family:"NF Parity Arabic";src:url("/parity-fonts/NotoSansArabic-wdth-wght.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:block}
+          :root{--wui-font-family-sans:"NF Parity Inter","NF Parity CJK","NF Parity Symbols","NF Parity Thai","NF Parity Arabic",sans-serif!important}
+          body{font-family:var(--wui-font-family-sans)!important}
+          </style>'''
+          if 'data-novelforge-parity-fonts' not in text:
+              index.write_text(text.replace('</head>', style + '</head>'), encoding='utf-8')
+          PY
+
+          cd site
+          npm run preview -- --host 127.0.0.1 --port 4188 > "$OUT/solid-server.log" 2>&1 &
+          SOLID_PID=$!
+          cd ..
+          python3 -m http.server 4190 --bind 127.0.0.1 --directory site/dist-godot-shadow > "$OUT/godot-server.log" 2>&1 &
+          GODOT_PID=$!
+          cleanup() {
+            kill "$SOLID_PID" "$GODOT_PID" >/dev/null 2>&1 || true
+            wait "$SOLID_PID" "$GODOT_PID" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          for port in 4188 4190; do
+            ready=false
+            for _ in $(seq 1 40); do
+              if curl -fsS "http://127.0.0.1:${port}/" >/dev/null; then ready=true; break; fi
+              sleep 1
+            done
+            test "$ready" = true
+          done
+
+          solid_shot() {
+            local name="$1" size="$2" url="$3"
+            local profile
+            profile=$(mktemp -d)
+            "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --disable-background-networking \
+              --window-size="$size" --virtual-time-budget=4500 --user-data-dir="$profile" \
+              --screenshot="$OUT/${name}.png" "$url" >"$OUT/${name}.log" 2>&1
+            rm -rf "$profile"
+            test -s "$OUT/${name}.png"
+          }
+          godot_shot() {
+            local name="$1" width="$2" height="$3" layout="$4" url="$5"
+            CHROME="$CHROME" node site/scripts/godot-shadow-browser-shot.mjs \
+              --url "$url" --output "$OUT/${name}.png" --width "$width" --height "$height" \
+              --expect-layout "$layout" --timeout-ms 90000 >"$OUT/${name}.log" 2>&1
+            test -s "$OUT/${name}.png"
+          }
+
+          ROUTES=(home product studio architecture publication inspect playground agents changelog)
+          for route in "${ROUTES[@]}"; do
+            if [ "$route" = home ]; then
+              SOLID_PATH=/
+              GODOT_PATH=/
+            else
+              SOLID_PATH="/${route}"
+              GODOT_PATH="/?route=/${route}"
+            fi
+            solid_shot "solid-${route}-desktop" 1440,900 "http://127.0.0.1:4188${SOLID_PATH}"
+            godot_shot "godot-${route}-desktop" 1440 900 desktop "http://127.0.0.1:4190${GODOT_PATH}"
+            solid_shot "solid-${route}-mobile" 390,844 "http://127.0.0.1:4188${SOLID_PATH}"
+            godot_shot "godot-${route}-mobile" 390 844 phone "http://127.0.0.1:4190${GODOT_PATH}"
+          done
+
+          CHROME="$CHROME" node site/scripts/godot-interaction-qa.mjs \
+            --url "http://127.0.0.1:4190/" \
+            --output "$OUT/interaction.json" \
+            --timeout-ms 90000 >"$OUT/interaction.log" 2>&1
+          test -s "$OUT/interaction.json"
+
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageChops, ImageStat, ImageEnhance
+          import json, math
+          root = Path('/tmp/novelforge-route-parity')
+          routes = ['home','product','studio','architecture','publication','inspect','playground','agents','changelog']
+          metrics = {'schema':'novelforge_godot_route_parity_v3','blocking':False,'solid_typography':'pinned WeiUI Inter + Noto fallbacks','interaction_qa':'blocking','pairs':{}}
+          for route in routes:
+              for layout in ['desktop','mobile']:
+                  name = f'{route}-{layout}'
+                  base = Image.open(root/f'solid-{name}.png').convert('RGB')
+                  candidate = Image.open(root/f'godot-{name}.png').convert('RGB')
+                  assert base.size == candidate.size, (name, base.size, candidate.size)
+                  diff = ImageChops.difference(base, candidate)
+                  stat = ImageStat.Stat(diff)
+                  rmse = math.sqrt(sum(v*v for v in stat.rms) / 3.0) / 255.0
+                  mean = sum(stat.mean) / (3.0 * 255.0)
+                  metrics['pairs'][name] = {'rmse':round(rmse,6),'mean_abs':round(mean,6),'size':base.size}
+                  ImageEnhance.Contrast(diff).enhance(3.0).save(root/f'diff-{name}.png')
+          interaction = json.loads((root/'interaction.json').read_text(encoding='utf-8'))
+          assert interaction.get('status') == 'pass', interaction
+          ordered = sorted(metrics['pairs'].items(), key=lambda kv: kv[1]['rmse'], reverse=True)
+          metrics['worst_first'] = [name for name,_ in ordered]
+          metrics['interaction'] = interaction
+          (root/'parity-metric.json').write_text(json.dumps(metrics,indent=2),encoding='utf-8')
+          print(json.dumps(metrics,indent=2))
+          PY
+      - name: Upload full route parity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-godot-route-parity
+          path: /tmp/novelforge-route-parity
+          if-no-files-found: error
+          retention-days: 7
