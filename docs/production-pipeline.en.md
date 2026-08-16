@@ -11,7 +11,7 @@
 
 A NovelForge chapter is a **recoverable production run**, not a single completion and not a fixed chain of critic agents.
 
-The manager chooses the smallest semantic contract pack needed for each judgment. Models own story, character, reader, continuity, and revision interpretation. Deterministic runtime code owns authority, fingerprints, permissions, persistence, checkpoints, typed validation, budgets, and settlement transactions.
+The manager chooses the smallest semantic contract pack needed for each judgment. Models own story, character, reader, continuity, and revision interpretation. Deterministic runtime code owns authority, fingerprints, permissions, persistence, checkpoints, typed validation, stage eligibility, required-context obligations, budgets, and settlement transactions.
 
 <img src="../assets/ui/home-pipeline.en.svg" alt="NovelForge production run: freeze and simulate, create an internal candidate, diagnose and evolve, then cross the release gate" width="100%" />
 
@@ -21,11 +21,11 @@ The manager chooses the smallest semantic contract pack needed for each judgment
 
 Every `DRAFT` or `REVISE` run has four high-level responsibilities.
 
-**Freeze + simulate** establishes the legal story state, sparse working context, character-owned action, scene causality, and reader pressure before prose generation.
+**Freeze + simulate** establishes the legal story state, sparse working context, planning commitment state, character-owned action, scene causality, a writer-safe realization projection, and reader pressure before prose generation.
 
 **Create an internal candidate** produces event-first Raw Draft material and realizes the prose surface. Raw Draft remains private to the production run.
 
-**Diagnose + evolve** uses exact semantic contracts and deterministic evidence to identify the owning failure mechanism, repair at the correct layer, and verify that a challenger candidate actually improves the incumbent.
+**Diagnose + evolve** uses exact semantic contracts and deterministic evidence to judge the frozen candidate, assign repair ownership, repair at the correct layer, and verify that a challenger candidate actually improves the incumbent when comparison is warranted.
 
 **Release gate** checks the reader experience, long-horizon commitments, state/authority integrity, and any task-specific independent judgment before exposing review-ready prose.
 
@@ -51,25 +51,40 @@ Chat history may help the runtime continue a conversation, but it is not a subst
 
 ---
 
-## 03 · Freeze sparse context
+## 03 · Freeze sparse context, then assemble the exact stage view
 
 NovelForge treats context as a budgeted working set, not a whole-project dump.
 
-The manager loads only the current task's relevant slices, such as:
+The manager first establishes eligible material for the current task, such as:
 
 - Project profile and active prose constraints;
 - Accepted Canon and directly relevant current state;
-- the active chapter / unit plan and scene intent;
+- the active chapter / unit plan and planning commitment state;
 - participating characters and relationships;
 - unresolved commitments or dependencies;
 - research claims the current scene actually needs;
 - selected derived memory when it is useful and allowed.
 
-When relevance itself requires interpretation, the manager may use the `context-research` pack, including `context.select`. Deterministic code still owns the hard budget, provenance, authority classes, and final packaging constraints.
+When relevance itself requires interpretation, the manager may use the `context-research` pack, including `context.select`. **Semantic relevance belongs to the model.**
 
-Do not inject unrelated future plans, the entire Corpus, the manager's full history, hidden eval labels, or regression bad examples by default.
+After selection, `harness/context_assembly.py` performs the deterministic boundary. It validates selected IDs against:
 
-**Failure route:** Context / Memory.
+- exact receiving stage;
+- authority class;
+- hidden / invalidated state;
+- required context class / purpose obligations;
+- source references / fingerprints when required;
+- private-state restrictions.
+
+Required context is not a soft hint. If a declared required class has no eligible selected item, the run must block / remain pending rather than silently generating with context starvation.
+
+Private character / simulation state can be legal for simulation while illegal for `writer_pre_draft`. The Writer receives a writer-safe projection, not a raw dump of every agenda, fear, risk, belief, or strategy rationale.
+
+Hard budget packing remains deterministic after semantic selection and stage-safe assembly.
+
+Do not inject unrelated future plans, the entire Corpus, the manager's full history, hidden eval labels, private simulation state, or regression bad examples by default.
+
+**Failure route:** Context / Memory / Context Assembly.
 
 ---
 
@@ -87,13 +102,15 @@ Typical questions include:
 
 If active plans must adapt to newly emerged story facts, the `long-horizon` pack can use `plan.reconcile`. Reconciliation proposes an updated plan relationship; it does not retroactively rewrite Accepted Canon.
 
+Planning commitment horizons constrain how much future detail may become committed at once; they do not make planned state into occurred state.
+
 **Failure route:** Story / Plan / Project authority.
 
 ---
 
-## 05 · Simulate character action, then resolve the scene
+## 05 · Simulate character action, resolve the scene, then project writer-safe realization
 
-The current development architecture makes the pre-draft causal step explicit through the `story-simulation` pack.
+The current development architecture makes the pre-draft causal boundary explicit.
 
 `character.action_propose` asks what an important character would plausibly attempt given that character's:
 
@@ -108,9 +125,29 @@ The current development architecture makes the pre-draft causal step explicit th
 
 This ordering matters. The framework does not first invent a convenient scene outcome and then force every character to cooperate with it.
 
-**Output:** character-owned action proposals + a scene-level causal trajectory.
+The production-loop contract `scene.realization_project` then converts the resolved trajectory plus bounded action evidence into a **writer-safe realization projection**. It may expose things the prose can realize—actions, tactics, visible behavior, spoken moves, withheld/compressed information, listener pressure, interruptions, task/object interaction, and resulting state change—without automatically exposing the full private character state.
 
-**Failure route:** Character Simulation or Scene Simulation; if the scene only works through character distortion, return to Story / Plan.
+The interface is therefore:
+
+```text
+private character state
+→ action / tactic proposal
+→ scene collision / world resolution
+→ writer-safe realization projection
+→ prose
+```
+
+not:
+
+```text
+character sheet
+→ natural-language paraphrase
+→ dialogue
+```
+
+**Output:** character-owned action proposals + scene-level causal trajectory + writer-safe realization projection.
+
+**Failure route:** Character Simulation, Scene Simulation, or Realization Projection; if the scene only works through character distortion, return to Story / Plan.
 
 ---
 
@@ -148,6 +185,8 @@ Only after the current causal problem is sufficiently resolved does prose genera
 - relationship movement;
 - earned reader reward.
 
+The Writer realizes the bounded projection produced by the simulation / realization boundary. Private character state drives behavior but is not a command to explain itself in narration or dialogue.
+
 Routine procedure should be compressed unless it carries conflict, character, information, or consequence.
 
 Raw Draft is **internal**. It is not the Review Draft and is never automatically user-visible.
@@ -162,10 +201,13 @@ Surface Realization converts event-first material into the Project's prose profi
 
 This stage owns prose realization problems such as recurring AI-text rhythms, narrator hype, mechanical micro-actions, voice leakage, process-report narration, fake significance, or malformed compression / expansion.
 
+HF-30 — Agenda-to-Dialogue Leakage / Character-Sheet-to-Dialogue Serialization — is special because repeated scene-level failure usually indicates that the interaction/realization boundary leaked private character structure into prose. The repair is not “make every line shorter.”
+
 Repair scale matters:
 
 - isolated surface defect → local rewrite;
 - clustered realization failures → regenerate the scene realization;
+- agenda serialization cluster → Realization Projection / Character / Scene Simulation;
 - clean but inert prose → do **not** stay at the sentence layer.
 
 Surface cleanliness is a floor, not the release criterion.
@@ -193,12 +235,19 @@ There is no single universal critic prompt.
 
 The manager chooses the smallest relevant contract pack from `model_contract_catalog.json`; deterministic runtime resolves the exact contract ID to exactly one pack.
 
-For candidate quality work, the `quality` pack currently exposes:
+For candidate quality work, the `quality` pack exposes contracts such as:
 
 - `reader.reaction` — reader experience evidence;
 - `reader.compare` — bounded pairwise reader comparison;
 - `character.integrity` — character-behavior integrity;
 - `revision.diagnose` — diagnosis plus repair-owner routing.
+
+The adaptive production `production-loop` pack adds:
+
+- `reader.production_audit` — frozen-candidate reading-experience evidence, including dialogue realization / profile / rhythm concerns without creator-private context;
+- `editor.repair_spec` — preserve/change priorities and owning repair layer;
+- `scene.realization_project` — the pre-draft writer-safe realization boundary;
+- `learning.preference_interpret` — bounded interpretation of explicit feedback when a future preference hypothesis is being considered.
 
 Other packs may be selected when the problem requires them:
 
@@ -206,19 +255,33 @@ Other packs may be selected when the problem requires them:
 - `long-horizon` for plan, relationship, or commitment reconciliation;
 - `creative-evolution` for materially divergent scene alternatives or incumbent/challenger comparison.
 
-A semantic result is evidence. It does not gain Canon or write authority merely because a model produced it.
+A semantic result is evidence. It does not gain Canon, release, preference-write, or Framework-write authority merely because a model produced it.
 
 ---
 
-## 11 · Convert diagnosis into findings and repair ownership
+## 11 · Reader evidence becomes an Editor repair specification, not an automatic patch
 
-Diagnosis should become explicit evidence rather than a vague instruction to “make it better.”
+After candidate freeze, `reader.production_audit` judges what it is actually like to read the candidate. Evidence can include forward pull, information value, character energy, relationship movement, paragraph rhythm, procedural drag, synthetic design feeling, SAFE-BUT-FLAT, or agenda-to-dialogue leakage.
 
-Quality findings record the problem and evidence in a form that can be traced across candidate evolution. `revision.diagnose` can identify which mechanism actually owns the defect.
+The Reader identifies evidence; it does not rewrite the prose.
+
+`editor.repair_spec` consumes that bounded Reader evidence and produces:
+
+```text
+preserve
+change
+repair owner
+repair depth
+evidence
+```
+
+The Editor does not patch a line merely because the Reader disliked it. Repair routes to the mechanism that owns the problem.
 
 Typical routing:
 
 **Surface defect** → local rewrite or scene realization regeneration.
+
+**HF-30 / agenda serialization** → Realization Projection / Character / Scene Simulation.
 
 **SAFE-BUT-FLAT / reader-grip failure** → Reader Pressure + Scene Simulation.
 
@@ -226,7 +289,7 @@ Typical routing:
 
 **Story / causal failure** → Story / Plan.
 
-**Context / memory failure** → Context / Memory.
+**Context / memory starvation or leakage** → Context / Memory / Context Assembly.
 
 **Long-horizon commitment failure** → continuity / plan / relationship reconciliation, not sentence polishing.
 
@@ -256,7 +319,7 @@ Deep guide: [Quality Evolution](quality-evolution.en.md).
 
 Before release, the candidate must survive the gates relevant to the current task.
 
-Reader Engagement asks whether the chapter has pressure, causality, payoff, contrast, meaningful movement, and forward pull.
+Reader Engagement asks whether the chapter has pressure, causality, payoff, contrast, meaningful movement, and forward pull. `reader.production_audit` provides candidate-specific reading evidence; structural production receipts remain conjunctive evidence and never replace semantic readiness.
 
 Long-horizon work can use the `long-horizon` pack's `continuity.commitment_audit` to check the candidate against explicit commitments and established facts. Relationship memories can be reconciled through `relationship.memory_reconcile` when long-lived evidence conflicts.
 
@@ -296,7 +359,7 @@ A candidate may be presented as review-ready only when the gates required by the
 
 `awaiting_user` · `awaiting_external` · `semantic_pending` · `failed_gate` · `settlement_incomplete`
 
-A missing required judgment is not PASS. A stale fingerprint is not PASS. A continuity defect hidden by fluent prose is not PASS.
+A missing required judgment is not PASS. A stale fingerprint is not PASS. A continuity defect hidden by fluent prose is not PASS. A structural receipt does not replace a required semantic gate.
 
 The goal is not maximal ceremony; it is a truthful boundary between internal production candidates and user-visible artifacts.
 
@@ -333,7 +396,9 @@ It is designed to prevent recurring long-form failure modes:
 
 - future plans leaking into current truth;
 - characters acting with manager-only knowledge;
+- private character agendas being serialized directly into dialogue;
 - flat scenes being cosmetically polished instead of causally repaired;
+- required context silently missing while generation continues;
 - regression examples contaminating first-pass generation;
 - reviewers judging different candidate fingerprints;
 - repeated rewrites continuing after improvement plateaus;
@@ -346,5 +411,5 @@ The intended result is not prose that looks engineered. It is **engineering that
 <div align="center">
   <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom mark" width="52" />
   <br />
-  <sub>Simulate causality. Draft internally. Diagnose precisely. Evolve with evidence. Settle only after acceptance. 🌸</sub>
+  <sub>Simulate causality. Project only writer-safe state. Draft internally. Diagnose precisely. Evolve with evidence. Settle only after acceptance. 🌸</sub>
 </div>
