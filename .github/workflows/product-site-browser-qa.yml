@@ -194,10 +194,11 @@ jobs:
           root = Path('/tmp/product-site-browser-qa')
           interaction = json.loads((root/'interaction.json').read_text(encoding='utf-8'))
           assert interaction['status'] == 'pass', interaction
+          assert interaction['compact_locale_evidence'] == ['en-US', 'zh-CN'], interaction
           images = sorted(p for p in root.glob('*.png') if not p.name.startswith('responsive-'))
           responsive_images = sorted(root.glob('responsive-*.png'))
           assert len(images) == 22, len(images)
-          assert len(responsive_images) == 21, len(responsive_images)
+          assert len(responsive_images) == 49, len(responsive_images)
           for image in [*images, *responsive_images]:
               assert image.stat().st_size > 12_000, image
           def digest(name):
@@ -210,13 +211,15 @@ jobs:
           assert digest('publication-desktop.png') != digest('publication-preview-desktop.png')
           assert digest('publication-preview-mobile.png') != digest('publication-provenance-mobile.png')
           (root/'browser-proof.txt').write_text(
-              'schema=novelforge_product_site_godot_browser_qa_v4\n'
+              'schema=novelforge_product_site_godot_browser_qa_v5\n'
               'product_runtime=godot_web\n'
               'docs_runtime=astro_starlight\n'
               'desktop=1440x900\n'
               'mobile=390x844\n'
               'interaction=true\n'
               'responsive_evidence=true\n'
+              'compact_routes=all_major_routes\n'
+              'compact_locales=en-US,zh-CN\n'
               'cjk_visual_proof=true\n'
               'visual_polish_marker=true\n'
               'deep_surface_scroll=calibrated\n'
@@ -227,7 +230,7 @@ jobs:
               'authority=false\n',
               encoding='utf-8',
           )
-          print({'schema':'novelforge_product_site_godot_browser_qa_v4','status':'pass','surface_screenshots':len(images),'responsive_screenshots':len(responsive_images),'interaction':True,'deep_surface_scroll':'calibrated','cjk_visual_proof':True,'visual_polish_marker':True})
+          print({'schema':'novelforge_product_site_godot_browser_qa_v5','status':'pass','surface_screenshots':len(images),'responsive_screenshots':len(responsive_images),'compact_locales':['en-US','zh-CN'],'interaction':True,'deep_surface_scroll':'calibrated','cjk_visual_proof':True,'visual_polish_marker':True})
           PY
 
       - name: Upload Product Site browser QA evidence
