@@ -101,6 +101,14 @@ func _patch_playground_compact() -> void:
 func _patch_agents_compact() -> void:
 	if size.x <= SOLID_HERO_STACK_MAX_WIDTH:
 		super._patch_agents_compact()
+		if _locale == "zh-CN":
+			var hero_narrow := _find_stage_panel(110.0, 700.0)
+			if hero_narrow != null:
+				var title_narrow := _find_label_prefix(hero_narrow, "让 Agent 使用")
+				if title_narrow != null:
+					title_narrow.add_theme_font_size_override("font_size", 44)
+					title_narrow.add_theme_constant_override("line_spacing", -10)
+					title_narrow.size.y = minf(title_narrow.size.y, 230.0)
 		return
 	var hero := _find_stage_panel(110.0, 500.0)
 	if hero == null:
