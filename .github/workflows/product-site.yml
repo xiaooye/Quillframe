@@ -83,7 +83,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/novelforge-godot-template
-          key: novelforge-godot-web-${{ env.GODOT_RELEASE }}-${{ env.EMSDK_VERSION }}-kawaii2d-v2
+          key: novelforge-godot-web-${{ env.GODOT_RELEASE }}-${{ env.EMSDK_VERSION }}-kawaii2d-textedit-v3
 
       - name: Compile slim 2D-only Web template
         if: steps.template-cache.outputs.cache-hit != 'true'
@@ -102,11 +102,14 @@ jobs:
         run: |
           set -euo pipefail
           template="$HOME/.cache/novelforge-godot-template/web_nothreads_release.zip"
+          meta="$HOME/.cache/novelforge-godot-template/build-meta.txt"
           test -s "$template"
+          grep -qx 'disable_advanced_gui=false' "$meta"
+          grep -qx 'text_edit=true' "$meta"
           template_dir="$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}"
           mkdir -p "$template_dir"
           cp "$template" "$template_dir/web_nothreads_release.zip"
-          cat "$HOME/.cache/novelforge-godot-template/build-meta.txt"
+          cat "$meta"
 
       - name: Build Godot Product root preserving Docs
         run: bash scripts/build-godot-web.sh
