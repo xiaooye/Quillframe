@@ -100,7 +100,7 @@ jobs:
         working-directory: site
         run: bash scripts/build-godot-web.sh
 
-      - name: Godot runtime, routes, interactions, and Docs QA
+      - name: Godot runtime, full surfaces, interactions, and Docs QA
         shell: bash
         run: |
           set -euo pipefail
@@ -127,28 +127,63 @@ jobs:
           done
           test "$ready" = true
 
-          godot_shot() {
-            local name="$1" width="$2" height="$3" layout="$4" route="$5"
-            CHROME="$CHROME" node site/scripts/godot-shadow-browser-shot.mjs \
-              --url "http://127.0.0.1:4188/?route=${route}" \
-              --output "$OUT/${name}.png" --width "$width" --height "$height" \
-              --expect-layout "$layout" --timeout-ms 90000 >"$OUT/${name}.log" 2>&1
-            test -s "$OUT/${name}.png"
-          }
-
-          godot_shot home-desktop 1440 900 desktop /
-          godot_shot architecture-desktop 1440 900 desktop /architecture
-          godot_shot studio-desktop 1440 900 desktop /studio
-          godot_shot publication-desktop 1440 900 desktop /publication
-          godot_shot inspect-desktop 1440 900 desktop /inspect
-          godot_shot agents-desktop 1440 900 desktop /agents
-          godot_shot home-mobile 390 844 phone /
-          godot_shot architecture-mobile 390 844 phone /architecture
-          godot_shot publication-mobile 390 844 phone /publication
-
+          # Interaction proof runs before the screenshot fan-out so a long
+          # visual sweep cannot starve the DevTools connection used by the
+          # blocking command/history/locale/mobile checks.
           CHROME="$CHROME" node site/scripts/godot-interaction-qa.mjs \
             --url "http://127.0.0.1:4188/" \
             --output "$OUT/interaction.json" --timeout-ms 90000 >"$OUT/interaction.log" 2>&1
+
+          godot_shot() {
+            local name="$1" width="$2" height="$3" layout="$4" route="$5"
+            local locale="${6:-}" wheel="${7:-0}" markers="${8:-}"
+            local url="http://127.0.0.1:4188/?route=${route}"
+            if [ -n "$locale" ]; then
+              url="${url}&locale=${locale}"
+            fi
+            local -a extra=()
+            if [ "$wheel" != "0" ]; then extra+=(--wheel-y "$wheel"); fi
+            if [ -n "$markers" ]; then extra+=(--expect-marker "$markers"); fi
+            CHROME="$CHROME" node site/scripts/godot-shadow-browser-shot.mjs \
+              --url "$url" \
+              --output "$OUT/${name}.png" --width "$width" --height "$height" \
+              --expect-layout "$layout" --timeout-ms 90000 "${extra[@]}" >"$OUT/${name}.log" 2>&1
+            test -s "$OUT/${name}.png"
+          }
+
+          COMPLETE='novelforgeVisualCompletion=ready,novelforgeTypographyCjk=ready'
+          HOME_COMPLETE="${COMPLETE},novelforgeHomeSections=complete"
+          ARCH_COMPLETE="${COMPLETE},novelforgeArchitectureInspector=ready"
+          PUB_COMPLETE="${COMPLETE},novelforgePublicationPreview=ready"
+
+          # First-viewport route coverage.
+          godot_shot home-desktop 1440 900 desktop / '' 0 "$HOME_COMPLETE"
+          godot_shot architecture-desktop 1440 900 desktop /architecture '' 0 "$ARCH_COMPLETE"
+          godot_shot studio-desktop 1440 900 desktop /studio '' 0 "$COMPLETE"
+          godot_shot publication-desktop 1440 900 desktop /publication '' 0 "$PUB_COMPLETE"
+          godot_shot inspect-desktop 1440 900 desktop /inspect '' 0 "$COMPLETE"
+          godot_shot agents-desktop 1440 900 desktop /agents '' 0 "$COMPLETE"
+          godot_shot home-mobile 390 844 phone / '' 0 "$HOME_COMPLETE"
+          godot_shot architecture-mobile 390 844 phone /architecture '' 0 "$ARCH_COMPLETE"
+          godot_shot publication-mobile 390 844 phone /publication '' 0 "$PUB_COMPLETE"
+
+          # Chinese first-viewport proof catches post-creation font mutation and
+          # CJK line-box collisions that English-only screenshots cannot see.
+          godot_shot home-zh-desktop 1440 900 desktop / zh-CN 0 "${HOME_COMPLETE},locale=zh-CN"
+          godot_shot architecture-zh-desktop 1440 900 desktop /architecture zh-CN 0 "${ARCH_COMPLETE},locale=zh-CN"
+          godot_shot publication-zh-desktop 1440 900 desktop /publication zh-CN 0 "${PUB_COMPLETE},locale=zh-CN"
+
+          # Deep-surface proof scrolls the Godot ScrollContainer itself through
+          # real browser wheel input. These screenshots make missing post-hero
+          # sections and empty workbench panels blocking regressions.
+          godot_shot home-capabilities-desktop 1440 900 desktop / '' 1050 "$HOME_COMPLETE"
+          godot_shot home-product-world-desktop 1440 900 desktop / '' 1900 "$HOME_COMPLETE"
+          godot_shot architecture-inspector-desktop 1440 900 desktop /architecture '' 760 "$ARCH_COMPLETE"
+          godot_shot publication-preview-desktop 1440 900 desktop /publication '' 720 "$PUB_COMPLETE"
+          godot_shot publication-provenance-desktop 1440 900 desktop /publication '' 1180 "$PUB_COMPLETE"
+          godot_shot home-capabilities-mobile 390 844 phone / '' 1050 "$HOME_COMPLETE"
+          godot_shot architecture-inspector-mobile 390 844 phone /architecture '' 1450 "$ARCH_COMPLETE"
+          godot_shot publication-preview-mobile 390 844 phone /publication '' 1550 "$PUB_COMPLETE"
 
           test -s site/dist/docs/index.html
           grep -q '^/architecture /index.html 200$' site/dist/_redirects
@@ -157,26 +192,38 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
-          import json
+          import hashlib, json
           root = Path('/tmp/product-site-browser-qa')
           interaction = json.loads((root/'interaction.json').read_text(encoding='utf-8'))
           assert interaction['status'] == 'pass', interaction
           images = sorted(root.glob('*.png'))
-          assert len(images) == 9, len(images)
+          assert len(images) == 20, len(images)
           for image in images:
               assert image.stat().st_size > 12_000, image
+          def digest(name):
+              return hashlib.sha256((root/name).read_bytes()).hexdigest()
+          # No idle animation exists, so a changed same-route frame proves that
+          # wheel input reached the internal Godot scroll surface.
+          assert digest('home-desktop.png') != digest('home-capabilities-desktop.png')
+          assert digest('architecture-desktop.png') != digest('architecture-inspector-desktop.png')
+          assert digest('publication-desktop.png') != digest('publication-preview-desktop.png')
           (root/'browser-proof.txt').write_text(
-              'schema=novelforge_product_site_godot_browser_qa_v2\n'
+              'schema=novelforge_product_site_godot_browser_qa_v3\n'
               'product_runtime=godot_web\n'
               'docs_runtime=astro_starlight\n'
               'desktop=1440x900\n'
               'mobile=390x844\n'
               'interaction=true\n'
+              'cjk_visual_proof=true\n'
+              'deep_surface_scroll=true\n'
+              'home_full_body=true\n'
+              'architecture_inspector=true\n'
+              'publication_preview_and_provenance=true\n'
               'direct_route_rewrites=true\n'
               'authority=false\n',
               encoding='utf-8',
           )
-          print({'schema':'novelforge_product_site_godot_browser_qa_v2','status':'pass','screenshots':len(images),'interaction':True})
+          print({'schema':'novelforge_product_site_godot_browser_qa_v3','status':'pass','screenshots':len(images),'interaction':True,'deep_surface_scroll':True,'cjk_visual_proof':True})
           PY
 
       - name: Upload Product Site browser QA evidence

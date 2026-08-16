@@ -15,10 +15,12 @@ const output = arg("output");
 const width = Number(arg("width", "1440"));
 const height = Number(arg("height", "900"));
 const expectLayout = arg("expect-layout");
+const expectMarker = arg("expect-marker");
+const wheelY = Number(arg("wheel-y", "0"));
 const timeoutMs = Number(arg("timeout-ms", "90000"));
 
 if (!chrome || !url || !output) {
-  console.error("usage: CHROME=/path/to/chrome node godot-shadow-browser-shot.mjs --url URL --output shot.png --width 1440 --height 900");
+  console.error("usage: CHROME=/path/to/chrome node godot-shadow-browser-shot.mjs --url URL --output shot.png --width 1440 --height 900 [--wheel-y 1200] [--expect-marker novelforgeVisualCompletion=ready]");
   process.exit(2);
 }
 
@@ -115,9 +117,41 @@ async function state() {
     canvasWidth: document.getElementById('canvas')?.width || 0,
     canvasHeight: document.getElementById('canvas')?.height || 0,
     path: location.pathname,
-    href: location.href
+    href: location.href,
+    dataset: {...document.documentElement.dataset}
   })`);
   return raw ? JSON.parse(raw) : null;
+}
+
+function assertMarkers(current) {
+  if (!expectMarker) return;
+  for (const contract of expectMarker.split(",").map((v) => v.trim()).filter(Boolean)) {
+    const [key, expected] = contract.split("=", 2);
+    const actual = current?.dataset?.[key] ?? null;
+    if (actual !== expected) throw new Error(`Godot browser marker mismatch: ${key} expected ${expected}, got ${actual}; ${JSON.stringify(current?.dataset ?? {})}`);
+  }
+}
+
+async function scrollGodot(delta) {
+  if (!delta) return;
+  const sign = Math.sign(delta);
+  let remaining = Math.abs(delta);
+  const x = Math.round(width * 0.5);
+  const y = Math.round(height * 0.55);
+  await command("Input.dispatchMouseEvent", { type: "mouseMoved", x, y });
+  while (remaining > 0) {
+    const step = Math.min(420, remaining);
+    await command("Input.dispatchMouseEvent", {
+      type: "mouseWheel",
+      x,
+      y,
+      deltaX: 0,
+      deltaY: step * sign,
+    });
+    remaining -= step;
+    await sleep(90);
+  }
+  await sleep(500);
 }
 
 try {
@@ -143,6 +177,7 @@ try {
   await command("Runtime.enable");
   await command("Page.enable");
   await command("Log.enable");
+  await command("Input.setIgnoreInputEvents", { ignore: false });
   await command("Emulation.setDeviceMetricsOverride", {
     width,
     height,
@@ -173,8 +208,13 @@ try {
   if (current.innerWidth !== width || current.innerHeight !== height) {
     throw new Error(`Godot shadow viewport mismatch: expected ${width}x${height}, got ${current.innerWidth}x${current.innerHeight}`);
   }
+  assertMarkers(current);
 
-  // Let the loader opacity transition finish after the scene-ready signal.
+  await scrollGodot(wheelY);
+  current = await state();
+  assertMarkers(current);
+
+  // Let the loader/scroll visual state settle before capture.
   await sleep(400);
   const capture = await command("Page.captureScreenshot", {
     format: "png",
@@ -185,12 +225,14 @@ try {
   fs.writeFileSync(output, Buffer.from(capture.data, "base64"));
 
   console.log(JSON.stringify({
-    schema: "novelforge_godot_shadow_browser_shot_v1",
+    schema: "novelforge_godot_shadow_browser_shot_v2",
     status: "pass",
     ready: true,
     layout: current.layout,
     viewport: `${current.innerWidth}x${current.innerHeight}`,
     canvas: `${current.canvasWidth}x${current.canvasHeight}`,
+    wheel_y: wheelY,
+    markers: expectMarker || null,
     screenshot_bytes: fs.statSync(output).size,
     output,
   }));
