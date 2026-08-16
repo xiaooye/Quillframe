@@ -58,6 +58,10 @@ Normal CI **不会**静默调用付费或 login-bound model。
 
 Blind queue 先通过 Harness semantic router 变成 typed semantic jobs，再交给 eligible independent runtime。Result 做 fingerprint binding，最后由 `run_evals.py` 评分。
 
+每次 live semantic run 还会在 reviewer 执行**之前**生成 `semantic-live-execution-identity.json`。这个 content-addressed envelope 会把 candidate commit / Framework version 与 reviewer provider、model/config、blind queue、typed jobs、capability snapshot、semantic harness source fingerprint、runner/Python environment、显式 resource-budget 状态和 GitHub run provenance 绑定起来。Provider-managed revision 或未配置 budget 如果无法精确确定，就保留为明确的 unpinned/null 事实，而不是猜测 metadata。任何已绑定字段变化都会改变 `identity_fingerprint`。
+
+这个 envelope 是 deterministic provenance，本身不是 semantic evidence。历史 run 如果当时没有 execution identity，不会被追溯伪造；有 identity 也不会把 deterministic CI 自动变成 semantic quality claim。
+
 ## Commands
 
 ```bash
@@ -65,6 +69,8 @@ python evals/run_evals.py --release
 python evals/build_judge_queue.py --output /tmp/semantic-queue.json
 python evals/run_evals.py --judgments reviewed-results.json --json
 python evals/validate_semantic_acceptance.py validate
+python evals/evaluation_execution_identity.py self-test
+python evals/evaluation_execution_identity.py validate semantic-live-execution-identity.json
 ```
 
 ## Quality Domains
