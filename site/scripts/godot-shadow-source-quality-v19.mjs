@@ -15,6 +15,7 @@ const scene = read("godot/Main.tscn");
 const behavior = read("godot/scripts/route_behavior_completion.gd");
 const stabilization = read("godot/scripts/post_merge_stabilization.gd");
 const responsive = read("godot/scripts/responsive_completion.gd");
+const templateBuilder = read("scripts/build-godot-web-template.sh");
 
 check(scene.includes('path="res://scripts/route_behavior_completion.gd"'), "production scene must enter through final route behavior completion");
 check(behavior.includes('extends "res://scripts/post_merge_stabilization.gd"'), "route behavior completion must extend post-merge stabilization");
@@ -28,6 +29,9 @@ check(stabilization.includes("_resize_generation") && stabilization.includes("_s
 check(stabilization.includes("novelforgeGlyphAudit"), "runtime glyph coverage marker is required");
 check(behavior.includes("InspectorLoadDemo") && behavior.includes("InspectorReset") && behavior.includes("novelforgeInspectorState"), "Inspector must expose a real deterministic demo/reset interaction");
 check(behavior.includes("PlaygroundMode") && behavior.includes("TextEdit.new") && behavior.includes("PlaygroundRun") && behavior.includes("PlaygroundClear") && behavior.includes("novelforgePlaygroundMode"), "Playground must expose real mode/input/run/clear interactions");
+check(behavior.includes("_sync_playground_action_controls") && behavior.includes("_playground_run_button.disabled = not has_source"), "Playground action availability must react to typed working text without a rebuild");
+check(!templateBuilder.includes("disable_advanced_gui=yes"), "production slim Web template must keep advanced GUI enabled because the Product uses TextEdit");
+check(templateBuilder.includes("disable_advanced_gui=false") && templateBuilder.includes("text_edit=true"), "production slim Web template metadata must declare the TextEdit capability used by the Product");
 check(!/Node3D|Camera3D|MeshInstance3D/.test(stabilization + behavior), "final Godot Product layers must remain within the 2.5D Product cap");
 check(!stabilization.includes("Timer.new") && !behavior.includes("Timer.new") && !stabilization.includes("setInterval") && !behavior.includes("setInterval"), "final Godot Product layers must remain event-driven with no polling");
 check(!stabilization.includes("SystemFont.new") && !behavior.includes("SystemFont.new"), "Godot Web completion must not depend on host system fonts");
@@ -62,7 +66,9 @@ if (failures.length) {
     agent_behavior_contract: true,
     inspector_behavior_contract: true,
     playground_behavior_contract: true,
+    playground_action_state_sync: true,
     deterministic_glyph_runtime: true,
+    production_text_edit_capability: true,
     resize_coalescing: "two-deferred-turn latest-generation",
     solid_page_max_px: 1480,
     default_polling: false,
