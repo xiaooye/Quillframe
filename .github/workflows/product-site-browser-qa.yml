@@ -5,12 +5,14 @@ on:
     paths:
       - 'site/**'
       - 'assets/brand/**'
+      - 'specs/004-novelforge-product-site/**'
       - '.github/workflows/product-site-browser-qa.yml'
   push:
     branches: [main]
     paths:
       - 'site/**'
       - 'assets/brand/**'
+      - 'specs/004-novelforge-product-site/**'
       - '.github/workflows/product-site-browser-qa.yml'
   workflow_dispatch:
 

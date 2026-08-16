@@ -14,6 +14,7 @@ on:
       - 'site/scripts/godot-shadow-browser-shot.mjs'
       - 'site/scripts/godot-interaction-qa.mjs'
       - 'site/scripts/godot-shadow-source-quality.mjs'
+      - 'specs/004-novelforge-product-site/**'
       - '.github/workflows/product-godot-route-parity.yml'
 
 permissions:
