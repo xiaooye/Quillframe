@@ -47,7 +47,7 @@ Semantic result 默认只是 evidence / proposal，除非另外的 authority mec
 
 不要为了模仿软件组织架构而制造 multi-agent round-table。
 
-## 03 · Exactly one primary task mode
+## 03 · 恰好一个 primary task mode
 
 每个 user-visible run 只能有一个 primary mode：
 
@@ -62,7 +62,7 @@ Fresh manager 依次解析：
 1. current/pinned Framework manifest / identity；
 2. consuming Project manifest + exact lock/fingerprint；
 3. Project Adapter / logical paths；
-4. exactly one task mode；
+4. 只能有一个 task mode；
 5. manager session/run identity；
 6. authority cutoff + permissions；
 7. sparse Context Manifest / candidate set；
@@ -172,7 +172,7 @@ Gate 真正要求 independence 时，manager 可以：
 
 但不能换个 internal role label 就自己完成 judgment。
 
-Materially changed candidate 默认需要新的 bound review，除非合同显式允许 reuse。Transport failure 可切换 eligible transport；valid semantic reject 必须进入 repair，不能 reviewer shopping。
+Materially changed candidate 默认需要新的 bound review，除非合同显式允许 reuse。Transport failure 可切换 eligible transport；有效的语义拒绝必须进入 repair，也不能反复更换评审直到有人接受 candidate。
 
 没有 eligible independent provider/model 时必须 `PENDING_MODEL`，绝不能 PASS。
 
