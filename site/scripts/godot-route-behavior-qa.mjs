@@ -320,8 +320,10 @@ async function runHome() {
   const budget = { before: before.homeBudget, after: after.homeBudget };
 
   before = after;
-  await activateTarget("homeTargets", "HomeGateSemantic");
-  after = await waitFor("home gate", (s) => s.homeReady !== before.homeReady && Number(s.interactionRevision) > Number(before.interactionRevision));
+  // Continuity starts false in the current Product fixture. Turning it on is
+  // the state transition that makes all four same-candidate requirements true.
+  await activateTarget("homeTargets", "HomeGateContinuity");
+  after = await waitFor("home readiness", (s) => s.homeReady === "true" && s.homeReady !== before.homeReady && Number(s.interactionRevision) > Number(before.interactionRevision));
   const ready = { before: before.homeReady, after: after.homeReady };
   await screenshot("behavior-home-updated");
   results.routes.home = { status: "pass", capability, budget, ready };
