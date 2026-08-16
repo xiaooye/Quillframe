@@ -34,11 +34,13 @@ concurrency:
 env:
   GODOT_RELEASE: 4.7.1-stable
   GODOT_TEMPLATE_VERSION: 4.7.1.stable
+  GODOT_SOURCE_SHA256: 0230d490846467c4fd772cc70b08dc56cb3adfedd55d039de0af74ddfdba00eb
+  EMSDK_VERSION: 4.0.20
 
 jobs:
   route-parity:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -55,7 +57,7 @@ jobs:
         run: npm run content && npm run baseline:build
       - name: Install image diff library
         run: python3 -m pip install --user --disable-pip-version-check --no-input Pillow
-      - name: Install pinned Godot editor and Web templates
+      - name: Install pinned Godot editor
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.local/bin"
@@ -63,11 +65,32 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp/godot
           install -m 0755 "/tmp/godot/Godot_v${GODOT_RELEASE}_linux.x86_64" "$HOME/.local/bin/godot"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          curl -fsSL -o /tmp/templates.tpz "https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_export_templates.tpz"
-          rm -rf /tmp/godot-templates
-          mkdir -p /tmp/godot-templates "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}"
-          unzip -q /tmp/templates.tpz -d /tmp/godot-templates
-          cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}/"
+      - name: Restore production slim Web template cache
+        id: template-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/novelforge-godot-template
+          key: novelforge-godot-web-${{ env.GODOT_RELEASE }}-${{ env.EMSDK_VERSION }}-kawaii2d-v2
+      - name: Compile production slim 2D-only Web template
+        if: steps.template-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user 'scons>=4.4,<5'
+          export PATH="$HOME/.local/bin:$PATH"
+          rm -rf /tmp/emsdk
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git /tmp/emsdk
+          /tmp/emsdk/emsdk install "${EMSDK_VERSION}"
+          /tmp/emsdk/emsdk activate "${EMSDK_VERSION}"
+          source /tmp/emsdk/emsdk_env.sh
+          bash site/scripts/build-godot-web-template.sh "$HOME/.cache/novelforge-godot-template"
+      - name: Install production slim Web export template
+        run: |
+          set -euo pipefail
+          template="$HOME/.cache/novelforge-godot-template/web_nothreads_release.zip"
+          test -s "$template"
+          template_dir="$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}"
+          mkdir -p "$template_dir"
+          cp "$template" "$template_dir/web_nothreads_release.zip"
       - name: Build Godot parity artifact
         working-directory: site
         run: npm run godot:export
@@ -168,7 +191,7 @@ jobs:
           import json, math
           root = Path('/tmp/novelforge-route-parity')
           routes = ['home','product','studio','architecture','publication','inspect','playground','agents','changelog']
-          metrics = {'schema':'novelforge_godot_route_parity_v4','blocking':False,'solid_role':'golden_visual_behavior_fixture','solid_typography':'pinned WeiUI Inter + Noto fallbacks','godot_role':'production_runtime','interaction_qa':'blocking','pairs':{}}
+          metrics = {'schema':'novelforge_godot_route_parity_v5','blocking':False,'solid_role':'golden_visual_behavior_fixture','solid_typography':'pinned WeiUI Inter + Noto fallbacks','godot_role':'production_slim_runtime','interaction_qa':'blocking','pairs':{}}
           for route in routes:
               for layout in ['desktop','mobile']:
                   name = f'{route}-{layout}'
