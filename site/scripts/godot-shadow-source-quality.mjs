@@ -23,13 +23,17 @@ const geometry = read("godot/scripts/geometry_parity.gd");
 const interaction = read("godot/scripts/interaction_parity.gd");
 const completionCore = read("godot/scripts/visual_completion_core.gd");
 const completion = read("godot/scripts/visual_completion.gd");
-const completionAll = `${completionCore}\n${completion}`;
+const wideCompact = read("godot/scripts/wide_compact_parity.gd");
+const completionAll = `${completionCore}\n${completion}\n${wideCompact}`;
 const shell = read("godot/web/novelforge.html");
 const fontFetch = read("scripts/fetch-godot-fonts.sh");
 
 check(project.includes('run/main_scene="res://Main.tscn"'), "Godot main scene must remain explicit");
 check(project.includes('renderer/rendering_method="gl_compatibility"'), "Web runtime must use Compatibility renderer");
-check(scene.includes('path="res://scripts/visual_completion.gd"'), "Godot production scene must enter through the visual-completion layer");
+check(scene.includes('path="res://scripts/wide_compact_parity.gd"'), "Godot production scene must enter through the final wide-compact parity layer");
+check(wideCompact.includes('extends "res://scripts/visual_completion.gd"'), "wide-compact parity must remain a thin layer above screenshot-driven visual completion");
+check(wideCompact.includes("SOLID_HERO_STACK_MAX_WIDTH := 900.0"), "final route geometry must preserve Solid's 900px hero stack breakpoint");
+check(wideCompact.includes("_build_product_hero") && wideCompact.includes("false"), "Product wide compact must preserve the Solid two-column hero topology");
 check(completion.includes('extends "res://scripts/visual_completion_core.gd"'), "visual polish must remain a thin layer above complete product surfaces");
 check(completionCore.includes('extends "res://scripts/interaction_parity.gd"'), "visual completion core must remain above validated browser interaction parity");
 check(interaction.includes('extends "res://scripts/geometry_parity.gd"'), "interaction parity must remain a thin layer above geometry parity");
@@ -86,6 +90,8 @@ check(geometry.includes("_home_heading_font") && geometry.includes('name_to_tag(
 check(geometry.includes("_spaced_latin_font(420, -1)"), "Home mobile lede must preserve browser-like width and vertical rhythm");
 check(geometry.includes("docs.text = \"Read architecture docs\""), "Architecture Docs CTA must not duplicate the books icon");
 check(geometry.includes("_patch_inspect_phone") && geometry.includes("_patch_playground_phone"), "remaining phone flow parity corrections must remain explicit");
+check(wideCompact.includes("WIDE_COMPACT_H1_SIZE_EN := 48"), "wide compact H1 must track the Solid clamp near 1024px rather than desktop 62px geometry");
+check(wideCompact.includes("_fit_wide_compact_lede") && wideCompact.includes("AUTOWRAP_WORD_SMART"), "wide compact copy must reflow without crossing the evidence column");
 
 check(interaction.includes("JavaScriptBridge.create_callback"), "browser-originated interaction must use retained JavaScriptBridge callbacks");
 check(interaction.includes('addEventListener("keydown"') && interaction.includes('addEventListener("popstate"'), "keyboard and browser history events must remain explicit");
@@ -124,12 +130,14 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_production_source_quality_v15",
+    schema: "novelforge_godot_production_source_quality_v16",
     status: "pass",
     production_cutover: true,
     runtime_role: "production",
     visual_baseline: "Solid/Vite Story Loom Kawaii Atelier golden fixture",
     visual_completion_layer: true,
+    final_wide_compact_parity: true,
+    solid_hero_stack_breakpoint: 900,
     screenshot_driven_polish: true,
     home_full_surface: true,
     architecture_inspector: true,
