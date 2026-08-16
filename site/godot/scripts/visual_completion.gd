@@ -61,7 +61,49 @@ func _build() -> void:
 			_polish_architecture_surface()
 		"/publication":
 			_polish_publication_surface()
+	_apply_accessibility_metadata(self)
+	_set_dataset("novelforgeAccessibility", "ready")
 	_set_dataset("novelforgeVisualPolish", "ready")
+
+func _apply_accessibility_metadata(node: Node) -> void:
+	# Godot 4.7 exposes native Control accessibility metadata. Populate it even
+	# though the Web shell also carries a DOM semantic companion, so native
+	# exports and future Web accessibility drivers inherit useful names without a
+	# second route implementation. Keep the Story Loom 44px mobile block target.
+	if node == self:
+		accessibility_name = "NovelForge"
+		accessibility_description = "Story Loom creative fiction production interface"
+	if node is Button:
+		var button := node as Button
+		if _layout == "phone" and button.size.y < 44.0:
+			button.custom_minimum_size.y = 44.0
+		if button.accessibility_name.is_empty():
+			button.accessibility_name = _accessible_button_name(button)
+	for child in node.get_children():
+		_apply_accessibility_metadata(child)
+
+func _accessible_button_name(button: Button) -> String:
+	var text := button.text.strip_edges()
+	match text:
+		"◐", "☼":
+			return "切换外观" if _locale == "zh-CN" else "Toggle appearance"
+		"≡":
+			return "打开导航菜单" if _locale == "zh-CN" else "Open navigation menu"
+		"中文":
+			return "切换到中文"
+		"EN":
+			return "Switch to English"
+		_:
+			if not text.is_empty():
+				return text
+	var parent := button.get_parent()
+	if parent != null:
+		for sibling in parent.get_children():
+			if sibling is Label:
+				var label_text := (sibling as Label).text.strip_edges()
+				if not label_text.is_empty():
+					return label_text
+	return "NovelForge action" if _locale == "en-US" else "NovelForge 操作"
 
 func _polish_decorative_copy() -> void:
 	# Mixed-script kaomoji crossed Arabic/Thai/Symbol fallback boundaries in the
