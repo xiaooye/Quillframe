@@ -10,6 +10,8 @@ on:
       - 'site/scripts/fetch-godot-fonts.sh'
       - 'site/scripts/build-godot-shadow.sh'
       - 'site/scripts/godot-shadow-browser-shot.mjs'
+      - 'site/scripts/godot-interaction-qa.mjs'
+      - 'site/scripts/godot-shadow-source-quality.mjs'
       - '.github/workflows/product-godot-route-parity.yml'
 
 permissions:
@@ -35,6 +37,9 @@ jobs:
       - name: Install Product Site dependencies
         working-directory: site
         run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Godot migration source contract
+        working-directory: site
+        run: npm run godot:shadow:quality
       - name: Build Solid baseline
         working-directory: site
         run: npm run content && npm run build:site
@@ -56,7 +61,7 @@ jobs:
       - name: Build Godot shadow
         working-directory: site
         run: bash scripts/build-godot-shadow.sh
-      - name: Capture all route pairs
+      - name: Capture all route pairs and interaction proof
         shell: bash
         run: |
           set -euo pipefail
@@ -144,13 +149,19 @@ jobs:
             godot_shot "godot-${route}-mobile" 390 844 phone "http://127.0.0.1:4190${GODOT_PATH}"
           done
 
+          CHROME="$CHROME" node site/scripts/godot-interaction-qa.mjs \
+            --url "http://127.0.0.1:4190/" \
+            --output "$OUT/interaction.json" \
+            --timeout-ms 90000 >"$OUT/interaction.log" 2>&1
+          test -s "$OUT/interaction.json"
+
           python3 - <<'PY'
           from pathlib import Path
           from PIL import Image, ImageChops, ImageStat, ImageEnhance
           import json, math
           root = Path('/tmp/novelforge-route-parity')
           routes = ['home','product','studio','architecture','publication','inspect','playground','agents','changelog']
-          metrics = {'schema':'novelforge_godot_route_parity_v2','blocking':False,'solid_typography':'pinned WeiUI Inter + Noto fallbacks','pairs':{}}
+          metrics = {'schema':'novelforge_godot_route_parity_v3','blocking':False,'solid_typography':'pinned WeiUI Inter + Noto fallbacks','interaction_qa':'blocking','pairs':{}}
           for route in routes:
               for layout in ['desktop','mobile']:
                   name = f'{route}-{layout}'
@@ -163,8 +174,11 @@ jobs:
                   mean = sum(stat.mean) / (3.0 * 255.0)
                   metrics['pairs'][name] = {'rmse':round(rmse,6),'mean_abs':round(mean,6),'size':base.size}
                   ImageEnhance.Contrast(diff).enhance(3.0).save(root/f'diff-{name}.png')
+          interaction = json.loads((root/'interaction.json').read_text(encoding='utf-8'))
+          assert interaction.get('status') == 'pass', interaction
           ordered = sorted(metrics['pairs'].items(), key=lambda kv: kv[1]['rmse'], reverse=True)
           metrics['worst_first'] = [name for name,_ in ordered]
+          metrics['interaction'] = interaction
           (root/'parity-metric.json').write_text(json.dumps(metrics,indent=2),encoding='utf-8')
           print(json.dumps(metrics,indent=2))
           PY

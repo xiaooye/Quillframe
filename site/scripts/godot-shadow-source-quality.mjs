@@ -20,16 +20,18 @@ const editorial = read("godot/scripts/editorial_surfaces.gd");
 const typography = read("godot/scripts/typography_parity.gd");
 const mobileGeometry = read("godot/scripts/mobile_geometry_parity.gd");
 const geometry = read("godot/scripts/geometry_parity.gd");
+const interaction = read("godot/scripts/interaction_parity.gd");
 const shell = read("godot/web/novelforge.html");
 const fontFetch = read("scripts/fetch-godot-fonts.sh");
 
 check(project.includes('run/main_scene="res://Main.tscn"'), "Godot main scene must remain explicit");
 check(project.includes('renderer/rendering_method="gl_compatibility"'), "Web migration must use Compatibility renderer");
-check(scene.includes('path="res://scripts/geometry_parity.gd"'), "shadow scene must enter through the final cross-viewport geometry parity layer");
+check(scene.includes('path="res://scripts/interaction_parity.gd"'), "shadow scene must enter through the browser interaction parity layer");
+check(interaction.includes('extends "res://scripts/geometry_parity.gd"'), "interaction parity must remain a thin layer above geometry parity");
 check(geometry.includes('extends "res://scripts/mobile_geometry_parity.gd"'), "cross-viewport geometry parity must remain a thin layer above mobile parity");
 check(mobileGeometry.includes('extends "res://scripts/typography_parity.gd"'), "mobile geometry parity must remain a thin layer above deterministic typography");
 check(scene.includes("offset_right = -15.0"), "web page scrollbar gutter must remain reserved in the Godot layout viewport");
-check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main + parity + routes + catalog + systems + editorial + typography + mobileGeometry + geometry), "migration is capped at 2.5D; 3D scene nodes are forbidden");
+check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main + parity + routes + catalog + systems + editorial + typography + mobileGeometry + geometry + interaction), "migration is capped at 2.5D; 3D scene nodes are forbidden");
 
 check(typography.includes('INTER_FONT_PATH := "res://generated/Inter-opsz-wght.ttf"'), "WeiUI Latin typography must be pinned to Inter");
 check(typography.includes("_contains_cjk"), "Latin/CJK font selection must remain text-aware");
@@ -73,22 +75,34 @@ check(mobileGeometry.includes("_fix_epub_card_position"), "Publication phone for
 check(geometry.includes("NovelForge is a fiction\\nproduction system,\\nnot a prompt wrapper."), "Product desktop heading must preserve the three-line Solid wrap");
 check(geometry.includes("disclosure instead of\\ndashboard overload."), "Studio desktop heading must preserve the six-line Solid wrap");
 check(geometry.includes("See how one NovelForge run\\nmoves through the system."), "Architecture desktop heading must preserve the two-line Solid wrap");
-check(geometry.includes("_home_heading_font") && geometry.includes('variation_opentype = {text_server.name_to_tag("wght"): 810}'), "Home identity heading must preserve the Atelier 810 weight authority");
-check(geometry.includes("lede.add_theme_constant_override(\"line_spacing\", 7)"), "Home mobile lede must preserve browser-like vertical rhythm");
+check(geometry.includes("_home_heading_font") && geometry.includes('name_to_tag("wght"): 810'), "Home identity heading must preserve the Atelier 810 weight authority");
+check(geometry.includes("_spaced_latin_font(420, -1)"), "Home mobile lede must preserve browser-like width and vertical rhythm");
 check(geometry.includes("docs.text = \"Read architecture docs\""), "Architecture Docs CTA must not duplicate the books icon");
+check(geometry.includes("_patch_inspect_phone") && geometry.includes("_patch_playground_phone"), "remaining phone flow parity corrections must remain explicit");
+
+check(interaction.includes("JavaScriptBridge.create_callback"), "browser-originated interaction must use retained JavaScriptBridge callbacks");
+check(interaction.includes('addEventListener("keydown"') && interaction.includes('addEventListener("popstate"'), "keyboard and browser history events must remain explicit");
+check(interaction.includes('key.to_lower() == "k"'), "Ctrl/Cmd+K command palette shortcut is required");
+check(interaction.includes("_toggle_mobile_menu"), "mobile navigation menu must remain functional");
+check(interaction.includes("novelforge.appearance") && interaction.includes("novelforgeAppearance"), "appearance preference must persist and expose a browser QA marker");
+check(interaction.includes('target = "/docs/en"'), "English Docs handoff must preserve the locale boundary");
+check(interaction.includes("novelforgeInteraction"), "browser interaction readiness marker is required");
+check(!interaction.includes("set_interval") && !interaction.includes("setInterval") && !interaction.includes("Timer.new"), "interaction parity must not introduce default polling");
 
 check(main.includes('"phone"') && main.includes('"compact"') && main.includes('"desktop"'), "three responsive layout modes are required");
 check(main.includes("window.location.assign") && parity.includes("window.history.pushState"), "browser navigation boundary must stay explicit");
 check(main.includes("novelforge:godot-ready"), "browser readiness marker is required");
 check(shell.includes('$GODOT_URL') && shell.includes('$GODOT_CONFIG'), "custom Web shell must retain Godot placeholders");
 check(shell.includes('data-novelforge-godot-shadow="loading"'), "shadow runtime marker missing");
+check(shell.includes("prefers-color-scheme: dark") && shell.includes("novelforgeAppearance"), "Web shell must initialize persisted/system appearance before the scene is visible");
+check(shell.includes("prefers-reduced-motion:reduce"), "Web shell must honor reduced motion");
 
 if (failures.length) {
   failures.forEach((failure) => console.error(`godot-shadow-source-quality: FAIL: ${failure}`));
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_shadow_source_quality_v11",
+    schema: "novelforge_godot_shadow_source_quality_v12",
     status: "pass",
     production_cutover: false,
     visual_baseline: "Solid/Vite Story Loom Kawaii Atelier",
@@ -106,6 +120,9 @@ if (failures.length) {
     editorial_surface_contract: true,
     mobile_geometry_contract: true,
     cross_viewport_geometry_contract: true,
+    interaction_contract: true,
+    browser_event_callbacks: true,
+    default_polling: false,
     authority: false,
   }, null, 2));
 }
