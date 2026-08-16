@@ -13,6 +13,7 @@ const scene = read("godot/Main.tscn");
 const shell = read("godot/web/novelforge.html");
 const interaction = read("godot/scripts/interaction_parity.gd");
 const build = read("scripts/build-godot-web.sh");
+const exporter = read("scripts/build-godot-shadow.sh");
 const redirects = read("public/_redirects");
 const docsConfig = read("docs-site/astro.config.mjs");
 
@@ -23,11 +24,13 @@ check(shell.includes("Story Loom · Kawaii Atelier runtime"), "production loader
 check(interaction.includes("JavaScriptBridge.create_callback"), "production browser event bridge missing");
 check(interaction.includes("novelforgeInteraction"), "production interaction readiness marker missing");
 check(build.includes('DOCS_DIR="${OUT_DIR}/docs"'), "production build must preserve the Starlight docs boundary");
-check(build.includes('STAGE_DIR="${ROOT_DIR}/dist-godot-production"'), "production build must use an isolated Godot staging directory");
-check(build.includes('rm -rf "${STAGE_DIR}"') && build.includes('mkdir -p "${STAGE_DIR}"'), "production staging directory must be recreated cleanly");
-check(build.includes('--export-release Web "${STAGE_DIR}/index.html"'), "production build must export Godot into the isolated staging directory");
+check(build.includes('STAGE_DIR="${ROOT_DIR}/dist-godot-shadow"'), "production build must consume the proven Godot export artifact");
+check(build.includes('bash "${ROOT_DIR}/scripts/build-godot-shadow.sh"'), "production build must reuse the parity/size-gated Godot exporter");
+check(!build.includes("--export-release"), "production assembly must not define a second Godot export path");
+check(exporter.includes('OUT_DIR="${ROOT_DIR}/dist-godot-shadow"'), "shared Godot exporter output contract changed");
+check(exporter.includes('--export-release Web "${OUT_DIR}/index.html"'), "shared Godot exporter must own the Web export command");
 check(build.includes('! -name docs'), "production root replacement must not delete /docs/**");
-check(build.includes('cp -a "${STAGE_DIR}/." "${OUT_DIR}/"'), "validated Godot staging output must be merged into the site root");
+check(build.includes('cp -a "${STAGE_DIR}/." "${OUT_DIR}/"'), "validated Godot output must be merged into the site root");
 check(build.includes('MAX_PAGE_ASSET_BYTES'), "production build must enforce the Pages asset ceiling");
 check(docsConfig.includes('base: "/docs"'), "Astro/Starlight must remain rooted at /docs");
 for (const route of ["product","studio","architecture","publication","inspect","playground","agents","changelog"]) {
@@ -40,13 +43,14 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_production_quality_v2",
+    schema: "novelforge_godot_production_quality_v3",
     status: "pass",
     production_cutover: true,
     product_runtime: "godot_web",
     docs_runtime: "astro_starlight",
     docs_root: "/docs/**",
-    export_strategy: "clean_stage_then_root_merge",
+    export_strategy: "proven_shadow_export_then_root_merge",
+    single_godot_exporter: true,
     renderer: "gl_compatibility",
     max_dimension: "2.5D",
     direct_route_rewrites: true,

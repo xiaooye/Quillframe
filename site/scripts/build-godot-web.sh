@@ -7,42 +7,25 @@ if ! command -v godot >/dev/null 2>&1; then
 fi
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-GODOT_DIR="${ROOT_DIR}/godot"
 OUT_DIR="${ROOT_DIR}/dist"
 DOCS_DIR="${OUT_DIR}/docs"
-STAGE_DIR="${ROOT_DIR}/dist-godot-production"
-SMOKE_LOG="${TMPDIR:-/tmp}/novelforge-godot-production-smoke.log"
+STAGE_DIR="${ROOT_DIR}/dist-godot-shadow"
 MAX_PAGE_ASSET_BYTES="${MAX_PAGE_ASSET_BYTES:-26214400}"
 
 node "${ROOT_DIR}/scripts/godot-production-quality.mjs"
-bash "${ROOT_DIR}/scripts/fetch-godot-fonts.sh"
 
 # Docs are a permanent Astro/Starlight ownership boundary and must already have
-# been built before the Godot root export starts.
+# been built before the Godot Product root is assembled.
 test -s "${DOCS_DIR}/index.html" || {
   echo "Expected Starlight output at ${DOCS_DIR}/index.html before Godot cutover build" >&2
   exit 1
 }
 
-# Godot's Web exporter is kept on the same clean-directory contract that passed
-# every shadow/size gate. Export first, validate it, then merge it into dist/
-# without ever placing Godot's exporter inside the populated Starlight tree.
-rm -rf "${STAGE_DIR}"
-mkdir -p "${STAGE_DIR}"
-
-godot --headless --path "${GODOT_DIR}" --import
-
-set +e
-godot --headless --path "${GODOT_DIR}" --quit-after 2 >"${SMOKE_LOG}" 2>&1
-status=$?
-set -e
-cat "${SMOKE_LOG}"
-if [ "${status}" -ne 0 ] || grep -Eq 'SCRIPT ERROR|Parse Error|Invalid call|Invalid access|Cannot open file|No loader found|requires the pinned' "${SMOKE_LOG}"; then
-  echo "Godot production smoke test failed" >&2
-  exit 1
-fi
-
-godot --headless --path "${GODOT_DIR}" --export-release Web "${STAGE_DIR}/index.html"
+# There is exactly one Godot Web exporter in the Product build graph.
+# build-godot-shadow.sh is the path already proven by route parity and by the
+# slim-template asset ceiling gate. Production consumes that exact artifact
+# instead of maintaining a second export path with subtly different behavior.
+bash "${ROOT_DIR}/scripts/build-godot-shadow.sh"
 
 test -s "${STAGE_DIR}/index.html"
 compgen -G "${STAGE_DIR}/index*.wasm" >/dev/null
@@ -90,4 +73,4 @@ print(f"Cloudflare Pages asset ceiling: PASS (< {limit} bytes per file)")
 PY
 
 rm -rf "${STAGE_DIR}"
-echo "NovelForge Godot production root exported to ${OUT_DIR}; Starlight docs preserved at ${DOCS_DIR}"
+echo "NovelForge Godot Product root assembled at ${OUT_DIR}; Starlight docs preserved at ${DOCS_DIR}"
