@@ -8,7 +8,9 @@ revisable hypotheses, and exposes only active applicable preferences to future
 production runs.
 
 It never grants Canon, Framework, Project-profile, or durable user-taste write
-authority by itself.
+authority by itself. Durable user-taste activation requires BOTH an explicit
+write-authority signal and a current passing prerequisite evaluation from the
+existing learning promotion gate.
 """
 from __future__ import annotations
 
@@ -19,6 +21,8 @@ from pathlib import Path
 from typing import Any
 
 from learning_store import LearningStore
+from promotion_gate import SCHEMA as PROMOTION_CANDIDATE_SCHEMA
+from promotion_gate import evaluate as evaluate_promotion_candidate
 
 SCHEMA = "novelforge_author_model_v1"
 CAPTURE_SCHEMA = "novelforge_feedback_capture_v1"
@@ -135,6 +139,50 @@ def _supersede(store: LearningStore, old_id: str, *, contradiction_ref: str) -> 
     }, expected_version=old["version"])
 
 
+def _user_taste_prerequisite(activation: dict[str, Any], interpretation: dict[str, Any]) -> dict[str, Any]:
+    """Evaluate and bind the existing promotion gate without granting authority.
+
+    Callers provide the promotion *candidate evidence packet*, not a pre-baked
+    PASS receipt. This function runs the current deterministic gate and then
+    binds its scope/mechanism back to the interpretation being captured.
+    """
+    candidate = activation.get("user_taste_promotion_candidate")
+    if candidate is None:
+        return {
+            "provided": False,
+            "status": "missing",
+            "ready": False,
+            "blockers": ["durable user_taste activation requires promotion-gate prerequisite evidence"],
+        }
+    if not isinstance(candidate, dict):
+        raise ValueError("activation.user_taste_promotion_candidate must be object")
+    if candidate.get("schema") != PROMOTION_CANDIDATE_SCHEMA:
+        # Let the canonical gate report the schema blocker as well, but keep an
+        # explicit binding error for callers inspecting Author Model output.
+        schema_mismatch = True
+    else:
+        schema_mismatch = False
+    report = evaluate_promotion_candidate(candidate)
+    binding_blockers: list[str] = []
+    if schema_mismatch:
+        binding_blockers.append("promotion candidate schema mismatch")
+    if report.get("scope") != "user_taste":
+        binding_blockers.append("promotion candidate scope must be user_taste")
+    if report.get("mechanism") != interpretation["mechanism"]:
+        binding_blockers.append("promotion candidate mechanism must match interpreted mechanism")
+    blockers = list(report.get("blockers") or []) + binding_blockers
+    ready = report.get("status") == "ready_for_activation" and not blockers
+    return {
+        "provided": True,
+        "status": report.get("status"),
+        "ready": ready,
+        "candidate_id": report.get("candidate_id"),
+        "blockers": blockers,
+        "behavior_write_authority": False,
+        "durable_user_taste_write_authority": False,
+    }
+
+
 def capture_feedback(store: LearningStore, request: Any) -> dict[str, Any]:
     if not isinstance(request, dict):
         raise ValueError("capture request must be object")
@@ -154,6 +202,15 @@ def capture_feedback(store: LearningStore, request: Any) -> dict[str, Any]:
     taste_write = activation.get("durable_user_taste_write_authorized", False)
     if not isinstance(project_write, bool) or not isinstance(taste_write, bool):
         raise ValueError("activation flags must be boolean")
+
+    taste_prerequisite = {
+        "provided": False,
+        "status": "not_applicable",
+        "ready": False,
+        "blockers": [],
+    }
+    if interpretation["scope_candidate"] == "user_taste" and taste_write:
+        taste_prerequisite = _user_taste_prerequisite(activation, interpretation)
 
     source_ref = _nonempty(request.get("feedback_ref"), "feedback_ref")
     evidence_payload = {
@@ -177,7 +234,7 @@ def capture_feedback(store: LearningStore, request: Any) -> dict[str, Any]:
     state = "candidate"
     if scope == "project" and project_write:
         state = "active"
-    elif scope == "user_taste" and taste_write:
+    elif scope == "user_taste" and taste_write and taste_prerequisite["ready"]:
         state = "active"
     # one_off is deliberately not durable production behavior; general_craft
     # never becomes active through this production-side capture path.
@@ -214,6 +271,7 @@ def capture_feedback(store: LearningStore, request: Any) -> dict[str, Any]:
         "scope": scope,
         "hypothesis_state": state,
         "active_for_future_production": state == "active" and scope in {"project", "user_taste"},
+        "user_taste_activation_prerequisite": taste_prerequisite,
         "superseded_hypothesis_ids": [x["hypothesis_id"] for x in superseded],
         "general_craft_auto_promoted": False,
         "authority": False,
@@ -306,13 +364,64 @@ def self_test(path: Path | None = None) -> dict[str, Any]:
     }})
     nonproject_not_autoactive = r3["hypothesis_state"] == "candidate" and r4["hypothesis_state"] == "candidate" and not r4["general_craft_auto_promoted"]
 
+    r5 = capture_feedback(store, {**base, "feedback_ref": "review:5", "activation": {
+        "project_preference_write_authorized": False, "durable_user_taste_write_authorized": True
+    }, "interpretation": {
+        "scope_candidate": "user_taste", "dimension": "narration", "mechanism": "low narrator commentary",
+        "statement": "Prefer lower narrator commentary when scene action can carry the implication.", "polarity": "negative", "confidence": 0.9,
+        "evidence_source": "explicit_rule", "applicability": {"scene_types": ["dramatic"]}
+    }})
+    write_authority_alone_not_enough = (
+        r5["hypothesis_state"] == "candidate"
+        and r5["user_taste_activation_prerequisite"]["status"] == "missing"
+    )
+
+    promotion_candidate = {
+        "schema": PROMOTION_CANDIDATE_SCHEMA,
+        "candidate_id": "UT-GOOD",
+        "scope": "user_taste",
+        "mechanism": "low narrator commentary",
+        "evidence": {
+            "explicit_user_evidence": 1,
+            "independent_consistent_corrections": 0,
+            "personalized_eval": {"result": "pass", "ref": "EVAL-UT-1"},
+            "evidence_refs": ["review:5", "EVAL-UT-1"],
+            "applicability_boundary": {"scene_types": ["dramatic"]},
+            "open_contradictions": 0,
+        },
+    }
+    r6 = capture_feedback(store, {**base, "feedback_ref": "review:6", "activation": {
+        "project_preference_write_authorized": False,
+        "durable_user_taste_write_authorized": True,
+        "user_taste_promotion_candidate": promotion_candidate,
+    }, "interpretation": {
+        "scope_candidate": "user_taste", "dimension": "narration", "mechanism": "low narrator commentary",
+        "statement": "Prefer lower narrator commentary when scene action can carry the implication.", "polarity": "negative", "confidence": 0.9,
+        "evidence_source": "explicit_rule", "applicability": {"scene_types": ["dramatic"]}
+    }})
+    user_taste_gate_and_write_required = (
+        r6["hypothesis_state"] == "active"
+        and r6["active_for_future_production"]
+        and r6["user_taste_activation_prerequisite"]["ready"] is True
+        and r6["user_taste_activation_prerequisite"]["durable_user_taste_write_authority"] is False
+    )
+
     result = {
         "schema": SCHEMA,
-        "author_model_contract": "PASS" if all([unauthorized_project_inactive, project_active, contradiction_supersedes, nonproject_not_autoactive]) else "FAIL",
+        "author_model_contract": "PASS" if all([
+            unauthorized_project_inactive,
+            project_active,
+            contradiction_supersedes,
+            nonproject_not_autoactive,
+            write_authority_alone_not_enough,
+            user_taste_gate_and_write_required,
+        ]) else "FAIL",
         "unauthorized_project_feedback_not_activated": unauthorized_project_inactive,
         "authorized_project_feedback_activated": project_active,
         "contradiction_supersedes": contradiction_supersedes,
         "user_taste_and_general_craft_not_autoactivated": nonproject_not_autoactive,
+        "user_taste_write_authority_alone_not_enough": write_authority_alone_not_enough,
+        "user_taste_requires_promotion_prerequisite_and_write_authority": user_taste_gate_and_write_required,
         "candidate_hypotheses_excluded_from_projection": p1["candidate_hypotheses_included"] is False,
         "authority": False,
         "model_execution": False,
