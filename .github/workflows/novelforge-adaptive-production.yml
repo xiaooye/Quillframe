@@ -45,18 +45,15 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Compile candidate-owned runtimes
+      - name: Compile full Python surface
         run: |
-          python -m py_compile \
-            learning/author_model.py \
-            learning/promotion_gate.py \
-            harness/context_assembly.py \
-            harness/context_inspector.py \
-            harness/control_plane/write_intent_guard.py \
-            quality/production_release.py \
-            quality/prose_telemetry.py \
-            quality/quality_taxonomy.py \
-            scripts/semantic_reference_integrity.py
+          python - <<'PY'
+          import pathlib, py_compile
+          files=[p for p in pathlib.Path('.').rglob('*.py') if '.git' not in p.parts]
+          for p in files:
+              py_compile.compile(str(p), doraise=True)
+          print(f'compiled {len(files)} Python files')
+          PY
 
       - name: Run deterministic adaptive-production contracts
         run: |
