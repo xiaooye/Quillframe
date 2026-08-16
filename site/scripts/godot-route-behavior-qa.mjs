@@ -25,7 +25,13 @@ const evidenceDir = path.dirname(output);
 fs.mkdirSync(evidenceDir, { recursive: true });
 const pending = new Map();
 const diagnostics = [];
-const results = { schema: "novelforge_godot_route_behavior_v1", status: "fail", routes: {}, responsive: [], diagnostics: [] };
+const results = {
+  schema: "novelforge_godot_route_behavior_v2",
+  status: "fail",
+  routes: {},
+  responsive: [],
+  diagnostics: [],
+};
 let browser;
 let socket;
 let nextId = 1;
@@ -61,7 +67,8 @@ async function connect() {
     if (message.id && pending.has(message.id)) {
       const item = pending.get(message.id);
       pending.delete(message.id);
-      if (message.error) item.reject(new Error(message.error.message)); else item.resolve(message.result ?? {});
+      if (message.error) item.reject(new Error(message.error.message));
+      else item.resolve(message.result ?? {});
       return;
     }
     if (message.method === "Runtime.exceptionThrown") {
@@ -73,7 +80,10 @@ async function connect() {
 function command(method, params = {}) {
   const id = nextId++;
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => { pending.delete(id); reject(new Error(`timeout: ${method}`)); }, 20000);
+    const timer = setTimeout(() => {
+      pending.delete(id);
+      reject(new Error(`timeout: ${method}`));
+    }, 20000);
     pending.set(id, {
       resolve: (value) => { clearTimeout(timer); resolve(value); },
       reject: (error) => { clearTimeout(timer); reject(error); },
@@ -119,6 +129,10 @@ async function snapshot() {
     scrollY: document.documentElement.dataset.novelforgeScrollY || '0',
     wideDesktop: document.documentElement.dataset.novelforgeWideDesktop || null,
     wideDesktopInner: document.documentElement.dataset.novelforgeWideDesktopInner || null,
+    innerWidth: window.innerWidth,
+    innerHeight: window.innerHeight,
+    canvasWidth: Math.round(document.querySelector('#canvas')?.getBoundingClientRect().width || 0),
+    canvasHeight: Math.round(document.querySelector('#canvas')?.getBoundingClientRect().height || 0),
     path: location.pathname
   })`);
   return JSON.parse(raw);
@@ -182,18 +196,38 @@ async function navigateRoute(route) {
 }
 
 async function resizeAndWait(width, height, expectedLayout) {
-  const before = Number((await snapshot()).responsiveRevision || 0);
-  await command("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false, screenWidth: width, screenHeight: height });
+  const initial = await snapshot();
+  const beforeRevision = Number(initial.responsiveRevision || 0);
+  const beforeCanvasWidth = Number(initial.canvasWidth || 0);
+  const beforeCanvasHeight = Number(initial.canvasHeight || 0);
+
+  await command("Emulation.setDeviceMetricsOverride", {
+    width,
+    height,
+    deviceScaleFactor: 1,
+    mobile: false,
+    screenWidth: width,
+    screenHeight: height,
+  });
+
   return waitFor(`responsive ${width}x${height}`, (s) => {
     const runtimeWidth = Number(s.responsiveWidth || NaN);
+    const canvasWidth = Number(s.canvasWidth || NaN);
+    const canvasHeight = Number(s.canvasHeight || NaN);
+    const geometryChanged = canvasWidth !== beforeCanvasWidth || canvasHeight !== beforeCanvasHeight;
+    const revisionSettled = !geometryChanged || Number(s.responsiveRevision || 0) > beforeRevision;
     return s.ready === "ready"
       && s.interaction === "ready"
       && s.responsive === "ready"
       && s.accessibility === "ready"
       && s.layout === expectedLayout
-      && Number(s.responsiveRevision || 0) > before
+      && Number(s.innerWidth) === width
+      && Number(s.innerHeight) === height
       && Number.isFinite(runtimeWidth)
-      && Math.abs(runtimeWidth - (width - 15)) <= 1;
+      && Number.isFinite(canvasWidth)
+      && canvasWidth > 0
+      && Math.abs(runtimeWidth - canvasWidth) <= 1
+      && revisionSettled;
   }, 25000);
 }
 
@@ -216,7 +250,8 @@ async function activateTarget(datasetKey, name, kind = "mouse") {
   const { target } = await scrollToTarget(datasetKey, name);
   const x = target.x + target.w / 2;
   const y = target.y + target.h / 2;
-  if (kind === "touch") await touchClick(x, y); else await mouseClick(x, y);
+  if (kind === "touch") await touchClick(x, y);
+  else await mouseClick(x, y);
 }
 
 async function scrollTop() {
@@ -252,8 +287,7 @@ async function runPublication() {
   await resizeAndWait(1440, 900, "desktop");
   const baseline = await waitFor("publication EPUB default", (s) => s.publicationProfile === "EPUB" && s.glyphAudit === "pass");
   const invariant = { locale: baseline.locale, appearance: baseline.appearance, path: baseline.path };
-  const hashes = [];
-  hashes.push(await screenshot("behavior-publication-epub-default"));
+  const hashes = [await screenshot("behavior-publication-epub-default")];
 
   let before = baseline;
   await activateTarget("publicationHeroTargets", "PublicationHeroHitTXT", "mouse");
@@ -291,7 +325,9 @@ async function runPublication() {
   if (after.locale !== invariant.locale || after.appearance !== invariant.appearance || after.path !== invariant.path) {
     throw new Error(`Publication rebuild lost shell state: ${JSON.stringify({ invariant, after })}`);
   }
-  if (new Set(hashes).size !== hashes.length) throw new Error(`Publication rendered evidence did not change for every profile: ${JSON.stringify(hashes)}`);
+  if (new Set(hashes).size !== hashes.length) {
+    throw new Error(`Publication rendered evidence did not change for every profile: ${JSON.stringify(hashes)}`);
+  }
   results.routes.publication = {
     status: "pass",
     sequence: ["EPUB", "TXT", "WEB", "PRINT", "EPUB"],
@@ -320,8 +356,6 @@ async function runHome() {
   const budget = { before: before.homeBudget, after: after.homeBudget };
 
   before = after;
-  // Continuity starts false in the current Product fixture. Turning it on is
-  // the state transition that makes all four same-candidate requirements true.
   await activateTarget("homeTargets", "HomeGateContinuity");
   after = await waitFor("home readiness", (s) => s.homeReady === "true" && s.homeReady !== before.homeReady && Number(s.interactionRevision) > Number(before.interactionRevision));
   const ready = { before: before.homeReady, after: after.homeReady };
@@ -385,7 +419,17 @@ async function runResponsiveMatrix() {
       throw new Error(`wide desktop contract missing at ${width}x${height}: ${JSON.stringify(state)}`);
     }
     const hash = await screenshot(`behavior-publication-${width}x${height}`);
-    results.responsive.push({ width, height, layout, responsiveWidth: Number(state.responsiveWidth), wideDesktop: state.wideDesktop, glyphAudit: state.glyphAudit, screenshotHash: hash });
+    results.responsive.push({
+      width,
+      height,
+      layout,
+      innerWidth: Number(state.innerWidth),
+      canvasWidth: Number(state.canvasWidth),
+      responsiveWidth: Number(state.responsiveWidth),
+      wideDesktop: state.wideDesktop,
+      glyphAudit: state.glyphAudit,
+      screenshotHash: hash,
+    });
   }
 }
 
