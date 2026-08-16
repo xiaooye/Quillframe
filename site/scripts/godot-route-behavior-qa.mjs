@@ -311,7 +311,8 @@ async function runPublication() {
   after = await waitFor("publication PRINT rail", (s) => s.publicationProfile === "PRINT"
     && Number(s.interactionRevision) > Number(beforeRail.interactionRevision)
     && Math.abs(Number(s.scrollY) - railScrollBefore) <= 2);
-  if (Number(after.scrollY) <= 0) throw new Error(`Publication rail rebuild lost scroll: ${JSON.stringify({ railScrollBefore, after })}`);
+  const railScrollAfter = Number(after.scrollY);
+  if (railScrollAfter <= 0) throw new Error(`Publication rail rebuild lost scroll: ${JSON.stringify({ railScrollBefore, railScrollAfter, after })}`);
   assertChanged("PRINT artifact", beforeRail.publicationArtifact, after.publicationArtifact);
   hashes.push(await screenshot("behavior-publication-print-rail"));
 
@@ -344,7 +345,7 @@ async function runPublication() {
     keyboardSpace: true,
     scrollPreserved: true,
     scrollBeforeRail: railScrollBefore,
-    scrollAfterRail: Number(after.scrollY),
+    scrollAfterRail: railScrollAfter,
     shellStatePreserved: true,
     screenshotHashes: hashes,
   };
