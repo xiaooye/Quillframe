@@ -8,6 +8,7 @@ on:
       - 'harness/planning_horizon.schema.json'
       - '.github/workflows/novelforge-planning-horizon.yml'
       - 'specs/011-planning-commitment-horizon/**'
+  workflow_call:
   workflow_dispatch:
 
 permissions:

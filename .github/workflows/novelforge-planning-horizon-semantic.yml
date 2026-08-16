@@ -1,0 +1,162 @@
+name: NovelForge Planning Horizon Semantic Eval
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'harness/planning_horizon.py'
+      - 'harness/planning_horizon.schema.json'
+      - 'evals/eval_manifest.json'
+      - 'evals/cases/planning_horizon_*.json'
+      - '.github/workflows/novelforge-planning-horizon-semantic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      NOVELFORGE_OPENAI_MODEL: gpt-5.1
+      NOVELFORGE_OPENAI_REASONING_EFFORT: medium
+      NOVELFORGE_DISABLE_LOCAL_AGENT_AUTO: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Resolve independent evaluator capability
+        id: semantic-capability
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            python - <<'PY'
+          import json
+          status={
+              'schema':'novelforge_feature_semantic_gate_v1',
+              'feature':'planning_commitment_horizon',
+              'status':'PENDING_MODEL',
+              'reason':'independent_provider_credential_unavailable',
+              'promotion_evidence':False,
+              'model_execution':False,
+          }
+          json.dump(status,open('planning-horizon-semantic-status.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          print('Planning horizon semantic promotion evidence: PENDING_MODEL (no independent provider credential).')
+          PY
+          else
+            echo 'available=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build blind planning-horizon queue
+        if: steps.semantic-capability.outputs.available == 'true'
+        run: |
+          python evals/build_judge_queue.py --output planning-horizon-queue.json
+          python - <<'PY'
+          import json
+          p='planning-horizon-queue.json'
+          d=json.load(open(p,encoding='utf-8'))
+          d['cases']=[c for c in d['cases'] if c.get('domain') == 'planning_horizon']
+          ids={c['id'] for c in d['cases']}
+          assert ids == {'PLANNING-HORIZON-001','PLANNING-HORIZON-002','PLANNING-HORIZON-003'}, d
+          json.dump(d,open(p,'w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          PY
+
+      - name: Package fingerprint-bound jobs
+        if: steps.semantic-capability.outputs.available == 'true'
+        run: |
+          python harness/semantic_workers/semantic_worker_router.py prepare-evals \
+            --queue planning-horizon-queue.json --output planning-horizon-jobs.json
+          python harness/semantic_workers/semantic_worker_router.py validate-jobs \
+            --jobs planning-horizon-jobs.json
+
+      - name: Verify independent provider capability
+        if: steps.semantic-capability.outputs.available == 'true'
+        run: |
+          python harness/semantic_workers/semantic_worker_runner.py capabilities > planning-horizon-capabilities.json
+          python - <<'PY'
+          import json
+          d=json.load(open('planning-horizon-capabilities.json',encoding='utf-8'))
+          assert d['independent_worker_available'] is True,d
+          assert d['adapter_source'] == 'openai_env',d
+          assert d['built_in_model_provider'] is True,d
+          PY
+
+      - name: Execute blind semantic jobs
+        if: steps.semantic-capability.outputs.available == 'true'
+        run: |
+          python harness/semantic_workers/semantic_worker_runner.py run \
+            --jobs planning-horizon-jobs.json \
+            --output planning-horizon-execution.json \
+            --require-complete
+          python - <<'PY'
+          import json
+          r=json.load(open('planning-horizon-execution.json',encoding='utf-8'))
+          assert r['status'] in {'completed','semantic_reject'},r
+          json.dump({'results':r['results']},open('planning-horizon-results.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          PY
+
+      - name: Validate bindings and judgments
+        if: steps.semantic-capability.outputs.available == 'true'
+        run: |
+          python harness/semantic_workers/semantic_worker_router.py validate-results \
+            --jobs planning-horizon-jobs.json \
+            --results planning-horizon-results.json \
+            --judgments-output planning-horizon-judgments.json
+
+      - name: Evaluate capability and counterexamples
+        if: steps.semantic-capability.outputs.available == 'true'
+        run: |
+          python evals/run_evals.py --domain planning_horizon \
+            --judgments planning-horizon-judgments.json --json > planning-horizon-eval.json
+          python - <<'PY'
+          import json
+          d=json.load(open('planning-horizon-eval.json',encoding='utf-8'))
+          assert d['counts']['PASS'] == 3,d
+          assert d['counts']['FAIL'] == 0 and d['counts']['ERROR'] == 0 and d['counts']['PENDING_MODEL'] == 0,d
+          assert {r['case_id'] for r in d['results']} == {'PLANNING-HORIZON-001','PLANNING-HORIZON-002','PLANNING-HORIZON-003'},d
+          status={
+              'schema':'novelforge_feature_semantic_gate_v1',
+              'feature':'planning_commitment_horizon',
+              'status':'PASS',
+              'reason':'independent_blind_capability_and_counterexamples_passed',
+              'promotion_evidence':True,
+              'model_execution':True,
+              'case_ids':['PLANNING-HORIZON-001','PLANNING-HORIZON-002','PLANNING-HORIZON-003'],
+          }
+          json.dump(status,open('planning-horizon-semantic-status.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          PY
+
+      - name: Assert semantic gate status is explicit
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('planning-horizon-semantic-status.json')
+          if not p.exists():
+              raise SystemExit('semantic gate executed or failed without an explicit status receipt')
+          d=json.load(p.open(encoding='utf-8'))
+          assert d['schema']=='novelforge_feature_semantic_gate_v1',d
+          assert d['status'] in {'PASS','PENDING_MODEL'},d
+          assert d['promotion_evidence'] is (d['status']=='PASS'),d
+          print(json.dumps(d,ensure_ascii=False,indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: planning-horizon-semantic-${{ github.run_id }}
+          path: |
+            planning-horizon-semantic-status.json
+            planning-horizon-capabilities.json
+            planning-horizon-queue.json
+            planning-horizon-jobs.json
+            planning-horizon-execution.json
+            planning-horizon-results.json
+            planning-horizon-judgments.json
+            planning-horizon-eval.json
+          if-no-files-found: warn

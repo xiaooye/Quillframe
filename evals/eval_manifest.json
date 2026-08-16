@@ -2,62 +2,27 @@
   "suite_version": "8.0-dev.1",
   "description": "NovelForge 8.0-development generic architecture, context, character, long-horizon, Surface, Reader, Canon, Corpus, revision and semantic capability/regression suite.",
   "cases": [
-    {
-      "file": "cases/infra_framework_contract.json"
-    },
-    {
-      "file": "cases/canon_plan_not_accepted.json"
-    },
-    {
-      "file": "cases/corpus_rights_boundary.json"
-    },
-    {
-      "file": "cases/surface_fragmentation_reject.json"
-    },
-    {
-      "file": "cases/surface_process_broadcast_reject.json"
-    },
-    {
-      "file": "cases/character_semantic_role_reject.json"
-    },
-    {
-      "file": "cases/reader_safe_but_flat_reject.json"
-    },
-    {
-      "file": "cases/reader_pressure_ladder_accept.json"
-    },
-    {
-      "file": "cases/surface_embodied_dialogue_accept.json"
-    },
-    {
-      "file": "cases/reader_forward_pull_accept.json"
-    },
-    {
-      "file": "cases/surface_profile_scoped_fragment_accept.json"
-    },
-    {
-      "file": "cases/infra_temporal_grounding_contract.json"
-    },
-    {
-      "file": "cases/infra_production_readiness_contract.json"
-    },
-    {
-      "file": "cases/context_future_knowledge_reject.json"
-    },
-    {
-      "file": "cases/character_epistemic_contradiction_reject.json"
-    },
-    {
-      "file": "cases/continuity_uncertain_accept.json"
-    },
-    {
-      "file": "cases/relationship_asymmetric_memory_accept.json"
-    },
-    {
-      "file": "cases/revision_safe_but_flat_route_accept.json"
-    },
-    {
-      "file": "cases/infra_publication_contract.json"
-    }
+    {"file": "cases/infra_framework_contract.json"},
+    {"file": "cases/canon_plan_not_accepted.json"},
+    {"file": "cases/corpus_rights_boundary.json"},
+    {"file": "cases/surface_fragmentation_reject.json"},
+    {"file": "cases/surface_process_broadcast_reject.json"},
+    {"file": "cases/character_semantic_role_reject.json"},
+    {"file": "cases/reader_safe_but_flat_reject.json"},
+    {"file": "cases/reader_pressure_ladder_accept.json"},
+    {"file": "cases/surface_embodied_dialogue_accept.json"},
+    {"file": "cases/reader_forward_pull_accept.json"},
+    {"file": "cases/surface_profile_scoped_fragment_accept.json"},
+    {"file": "cases/infra_temporal_grounding_contract.json"},
+    {"file": "cases/infra_production_readiness_contract.json"},
+    {"file": "cases/context_future_knowledge_reject.json"},
+    {"file": "cases/character_epistemic_contradiction_reject.json"},
+    {"file": "cases/continuity_uncertain_accept.json"},
+    {"file": "cases/relationship_asymmetric_memory_accept.json"},
+    {"file": "cases/revision_safe_but_flat_route_accept.json"},
+    {"file": "cases/infra_publication_contract.json"},
+    {"file": "cases/planning_horizon_overconcretization_accept.json"},
+    {"file": "cases/planning_horizon_tight_short_accept.json"},
+    {"file": "cases/planning_horizon_discovery_soft_accept.json"}
   ]
 }

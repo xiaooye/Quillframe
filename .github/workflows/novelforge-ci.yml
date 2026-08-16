@@ -21,6 +21,9 @@ jobs:
   state-integrity:
     uses: ./.github/workflows/novelforge-state-integrity-p0.yml
 
+  planning-horizon:
+    uses: ./.github/workflows/novelforge-planning-horizon.yml
+
   resume-preflight:
     runs-on: ubuntu-latest
     timeout-minutes: 10
