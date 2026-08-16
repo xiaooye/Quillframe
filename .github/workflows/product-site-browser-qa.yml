@@ -131,6 +131,10 @@ jobs:
             --url "http://127.0.0.1:4188/" \
             --output "$OUT/interaction.json" --timeout-ms 90000 >"$OUT/interaction.log" 2>&1
 
+          CHROME="$CHROME" node site/scripts/godot-studio-handoff-qa.mjs \
+            --url "http://127.0.0.1:4188/?route=/studio" \
+            --output "$OUT/studio-handoff.json" --timeout-ms 30000 >"$OUT/studio-handoff.log" 2>&1
+
           godot_shot() {
             local name="$1" width="$2" height="$3" layout="$4" route="$5"
             local locale="${6:-}" wheel="${7:-0}" markers="${8:-}"
@@ -178,10 +182,16 @@ jobs:
           godot_shot home-capabilities-mobile 390 844 phone / '' 280 "$HOME_COMPLETE"
           godot_shot home-knowledge-mobile 390 844 phone / '' 1050 "$HOME_COMPLETE"
           godot_shot architecture-inspector-mobile 390 844 phone /architecture '' 1450 "$ARCH_COMPLETE"
-          # Mobile Publication reaches max scroll before 1050; keep the preview
-          # checkpoint in the reading-body range and use max-scroll for provenance.
-          godot_shot publication-preview-mobile 390 844 phone /publication '' 650 "$PUB_COMPLETE"
+          # Keep the preview checkpoint before max-scroll. A 650px wheel delta
+          # clamps to the same provenance frame as 1050px on this phone height.
+          godot_shot publication-preview-mobile 390 844 phone /publication '' 350 "$PUB_COMPLETE"
           godot_shot publication-provenance-mobile 390 844 phone /publication '' 1050 "$PUB_COMPLETE"
+
+          # The compact hero surfaces now stack evidence vertically. Capture max
+          # scroll checkpoints as blocking evidence that later deep surfaces are
+          # not clipped by the expanded hero or stale stage-height constants.
+          godot_shot architecture-inspector-compact 768 1024 compact /architecture '' 1800 "$ARCH_COMPLETE"
+          godot_shot publication-provenance-compact 768 1024 compact /publication '' 1800 "$PUB_COMPLETE"
 
           test -s site/dist/docs/index.html
           grep -q '^/architecture /index.html 200$' site/dist/_redirects
@@ -193,11 +203,16 @@ jobs:
           import hashlib, json
           root = Path('/tmp/product-site-browser-qa')
           interaction = json.loads((root/'interaction.json').read_text(encoding='utf-8'))
+          handoff = json.loads((root/'studio-handoff.json').read_text(encoding='utf-8'))
           assert interaction['status'] == 'pass', interaction
           assert interaction['compact_locale_evidence'] == ['en-US', 'zh-CN'], interaction
+          assert handoff['status'] == 'pass', handoff
+          assert handoff['url'] == 'https://studio.novelforge.wei-dev.com/', handoff
+          assert handoff['target'] == '_blank', handoff
+          assert handoff['noopener'] and handoff['noreferrer'], handoff
           images = sorted(p for p in root.glob('*.png') if not p.name.startswith('responsive-'))
           responsive_images = sorted(root.glob('responsive-*.png'))
-          assert len(images) == 22, len(images)
+          assert len(images) == 24, len(images)
           assert len(responsive_images) == 49, len(responsive_images)
           for image in [*images, *responsive_images]:
               assert image.stat().st_size > 12_000, image
@@ -210,16 +225,20 @@ jobs:
           assert digest('architecture-desktop.png') != digest('architecture-inspector-desktop.png')
           assert digest('publication-desktop.png') != digest('publication-preview-desktop.png')
           assert digest('publication-preview-mobile.png') != digest('publication-provenance-mobile.png')
+          assert digest('responsive-en-architecture-768x1024.png') != digest('architecture-inspector-compact.png')
+          assert digest('responsive-en-publication-768x1024.png') != digest('publication-provenance-compact.png')
           (root/'browser-proof.txt').write_text(
-              'schema=novelforge_product_site_godot_browser_qa_v5\n'
+              'schema=novelforge_product_site_godot_browser_qa_v6\n'
               'product_runtime=godot_web\n'
               'docs_runtime=astro_starlight\n'
               'desktop=1440x900\n'
               'mobile=390x844\n'
               'interaction=true\n'
+              'studio_handoff=true\n'
               'responsive_evidence=true\n'
               'compact_routes=all_major_routes\n'
               'compact_locales=en-US,zh-CN\n'
+              'compact_deep_surfaces=true\n'
               'cjk_visual_proof=true\n'
               'visual_polish_marker=true\n'
               'deep_surface_scroll=calibrated\n'
@@ -230,7 +249,7 @@ jobs:
               'authority=false\n',
               encoding='utf-8',
           )
-          print({'schema':'novelforge_product_site_godot_browser_qa_v5','status':'pass','surface_screenshots':len(images),'responsive_screenshots':len(responsive_images),'compact_locales':['en-US','zh-CN'],'interaction':True,'deep_surface_scroll':'calibrated','cjk_visual_proof':True,'visual_polish_marker':True})
+          print({'schema':'novelforge_product_site_godot_browser_qa_v6','status':'pass','surface_screenshots':len(images),'responsive_screenshots':len(responsive_images),'compact_locales':['en-US','zh-CN'],'compact_deep_surfaces':True,'studio_handoff':True,'interaction':True,'deep_surface_scroll':'calibrated','cjk_visual_proof':True,'visual_polish_marker':True})
           PY
 
       - name: Upload Product Site browser QA evidence
