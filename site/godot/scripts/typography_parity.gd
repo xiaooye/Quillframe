@@ -19,6 +19,7 @@ func _ready() -> void:
 func _build() -> void:
 	super._build()
 	_reset_label_scale(self)
+	_calibrate_inter_heading_rhythm(self)
 
 func _font(weight: int) -> Font:
 	if _latin_font_cache.has(weight):
@@ -108,3 +109,27 @@ func _reset_label_scale(node: Node) -> void:
 		if child is Label:
 			(child as Label).scale = Vector2.ONE
 		_reset_label_scale(child)
+
+func _calibrate_inter_heading_rhythm(node: Node) -> void:
+	for child in node.get_children():
+		if child is Label:
+			var label := child as Label
+			if _is_english_heading(label.text):
+				var delta := 10
+				if _current_route() == "/" and _layout == "desktop" and label.text.begins_with("Let the story"):
+					delta = 15
+				var current := label.get_theme_constant("line_spacing")
+				label.add_theme_constant_override("line_spacing", current + delta)
+		_calibrate_inter_heading_rhythm(child)
+
+func _is_english_heading(text: String) -> bool:
+	return text.begins_with("Let the story") \
+		or text.begins_with("NovelForge is a") \
+		or text.begins_with("The creative") \
+		or text.begins_with("A changelog") \
+		or text.begins_with("Resolve the") \
+		or text.begins_with("Make the") \
+		or text.begins_with("Let your") \
+		or text.begins_with("See how one") \
+		or text.begins_with("One accepted") \
+		or text.begins_with("many\n")
