@@ -9,6 +9,7 @@ on:
       - 'site/godot/**'
       - 'site/scripts/fetch-godot-fonts.sh'
       - 'site/scripts/build-godot-shadow.sh'
+      - 'site/scripts/build-godot-web-template.sh'
 
 permissions:
   contents: read
@@ -20,15 +21,17 @@ concurrency:
 env:
   GODOT_RELEASE: 4.7.1-stable
   GODOT_TEMPLATE_VERSION: 4.7.1.stable
+  GODOT_SOURCE_SHA256: 0230d490846467c4fd772cc70b08dc56cb3adfedd55d039de0af74ddfdba00eb
+  EMSDK_VERSION: 4.0.20
   MAX_PAGE_ASSET_BYTES: 26214400
 
 jobs:
   asset-ceiling:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
-      - name: Install pinned Godot editor and Web templates
+      - name: Install pinned Godot editor
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.local/bin"
@@ -36,11 +39,33 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp/godot
           install -m 0755 "/tmp/godot/Godot_v${GODOT_RELEASE}_linux.x86_64" "$HOME/.local/bin/godot"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          curl -fsSL -o /tmp/templates.tpz "https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_export_templates.tpz"
-          rm -rf /tmp/godot-templates
-          mkdir -p /tmp/godot-templates "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}"
-          unzip -q /tmp/templates.tpz -d /tmp/godot-templates
-          cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}/"
+      - name: Restore slim Web template cache
+        id: template-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/novelforge-godot-template
+          key: novelforge-godot-web-${{ env.GODOT_RELEASE }}-${{ env.EMSDK_VERSION }}-kawaii2d-v2
+      - name: Compile slim 2D-only Web template
+        if: steps.template-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user 'scons>=4.4,<5'
+          export PATH="$HOME/.local/bin:$PATH"
+          rm -rf /tmp/emsdk
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git /tmp/emsdk
+          /tmp/emsdk/emsdk install "${EMSDK_VERSION}"
+          /tmp/emsdk/emsdk activate "${EMSDK_VERSION}"
+          source /tmp/emsdk/emsdk_env.sh
+          bash site/scripts/build-godot-web-template.sh "$HOME/.cache/novelforge-godot-template"
+      - name: Install slim Web export template
+        run: |
+          set -euo pipefail
+          template="$HOME/.cache/novelforge-godot-template/web_nothreads_release.zip"
+          test -s "$template"
+          template_dir="$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}"
+          mkdir -p "$template_dir"
+          cp "$template" "$template_dir/web_nothreads_release.zip"
+          cat "$HOME/.cache/novelforge-godot-template/build-meta.txt"
       - name: Build current Godot shadow export
         working-directory: site
         run: bash scripts/build-godot-shadow.sh
@@ -50,6 +75,7 @@ jobs:
           set -euo pipefail
           OUT=/tmp/novelforge-godot-size
           mkdir -p "$OUT"
+          cp "$HOME/.cache/novelforge-godot-template/build-meta.txt" "$OUT/template-build-meta.txt"
           python3 - <<'PY'
           from pathlib import Path
           import json, os
@@ -59,9 +85,10 @@ jobs:
           for p in sorted(root.rglob('*')):
               if p.is_file():
                   size = p.stat().st_size
-                  files.append({'path': str(p.relative_to(root)), 'bytes': size, 'mib': round(size / 1048576, 3), 'over_limit': size > limit})
+                  files.append({'path': str(p.relative_to(root)), 'bytes': size, 'mib': round(size / 1048576, 3), 'over_limit': size >= limit})
           report = {
-              'schema': 'novelforge_godot_asset_ceiling_v1',
+              'schema': 'novelforge_godot_asset_ceiling_v2',
+              'template': 'slim_2d_only',
               'cloudflare_pages_single_asset_limit_bytes': limit,
               'cloudflare_pages_single_asset_limit_mib': 25,
               'largest_first': sorted(files, key=lambda x: x['bytes'], reverse=True),
