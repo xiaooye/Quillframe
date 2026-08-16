@@ -21,17 +21,19 @@ const typography = read("godot/scripts/typography_parity.gd");
 const mobileGeometry = read("godot/scripts/mobile_geometry_parity.gd");
 const geometry = read("godot/scripts/geometry_parity.gd");
 const interaction = read("godot/scripts/interaction_parity.gd");
+const completion = read("godot/scripts/visual_completion.gd");
 const shell = read("godot/web/novelforge.html");
 const fontFetch = read("scripts/fetch-godot-fonts.sh");
 
 check(project.includes('run/main_scene="res://Main.tscn"'), "Godot main scene must remain explicit");
 check(project.includes('renderer/rendering_method="gl_compatibility"'), "Web runtime must use Compatibility renderer");
-check(scene.includes('path="res://scripts/interaction_parity.gd"'), "Godot production scene must enter through the browser interaction parity layer");
+check(scene.includes('path="res://scripts/visual_completion.gd"'), "Godot production scene must enter through the visual-completion layer");
+check(completion.includes('extends "res://scripts/interaction_parity.gd"'), "visual completion must remain a thin layer above validated browser interaction parity");
 check(interaction.includes('extends "res://scripts/geometry_parity.gd"'), "interaction parity must remain a thin layer above geometry parity");
 check(geometry.includes('extends "res://scripts/mobile_geometry_parity.gd"'), "cross-viewport geometry parity must remain a thin layer above mobile parity");
 check(mobileGeometry.includes('extends "res://scripts/typography_parity.gd"'), "mobile geometry parity must remain a thin layer above deterministic typography");
 check(scene.includes("offset_right = -15.0"), "web page scrollbar gutter must remain reserved in the Godot layout viewport");
-check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main + parity + routes + catalog + systems + editorial + typography + mobileGeometry + geometry + interaction), "Product runtime is capped at 2.5D; 3D scene nodes are forbidden");
+check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main + parity + routes + catalog + systems + editorial + typography + mobileGeometry + geometry + interaction + completion), "Product runtime is capped at 2.5D; 3D scene nodes are forbidden");
 
 check(typography.includes('INTER_FONT_PATH := "res://generated/Inter-opsz-wght.ttf"'), "WeiUI Latin typography must be pinned to Inter");
 check(typography.includes("_contains_cjk"), "Latin/CJK font selection must remain text-aware");
@@ -89,6 +91,18 @@ check(interaction.includes('target = "/docs/en"'), "English Docs handoff must pr
 check(interaction.includes("novelforgeInteraction"), "browser interaction readiness marker is required");
 check(!interaction.includes("set_interval") && !interaction.includes("setInterval") && !interaction.includes("Timer.new"), "interaction parity must not introduce default polling");
 
+check(completion.includes("func _build_lower_sections"), "Home must own a complete post-hero surface rather than a three-card placeholder");
+check(completion.includes("_build_home_labs") && completion.includes("_build_home_portals") && completion.includes("_build_home_knowledge"), "Home capability, lab, portal, and knowledge sections are required");
+check(completion.includes("func _repair_localized_control_fonts"), "localized controls must repair CJK font fallback after text mutation");
+check(completion.includes("func _patch_architecture_copy_geometry"), "Architecture CJK heading/lede geometry repair is required");
+check(completion.includes("func _append_architecture_inspector"), "Architecture must render the selected-node inspector below the execution path");
+check(completion.includes("func _build_reading_preview"), "Publication must render a real reading preview body");
+check(completion.includes("_build_publication_metadata") && completion.includes("_build_publication_provenance"), "Publication preview must include metadata and provenance surfaces");
+check(completion.includes('novelforgeVisualCompletion", "ready"'), "browser QA visual-completion readiness marker is required");
+check(completion.includes('novelforgeHomeSections", "complete"'), "Home completeness marker is required");
+check(completion.includes('novelforgePublicationPreview", "ready"'), "Publication preview marker is required");
+check(!completion.includes("Timer.new") && !completion.includes("setInterval"), "visual completion must remain event-driven with no default polling");
+
 check(main.includes('"phone"') && main.includes('"compact"') && main.includes('"desktop"'), "three responsive layout modes are required");
 check(main.includes("window.location.assign") && parity.includes("window.history.pushState"), "browser navigation boundary must stay explicit");
 check(main.includes("novelforge:godot-ready"), "browser readiness marker is required");
@@ -102,25 +116,24 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_production_source_quality_v13",
+    schema: "novelforge_godot_production_source_quality_v14",
     status: "pass",
     production_cutover: true,
     runtime_role: "production",
     visual_baseline: "Solid/Vite Story Loom Kawaii Atelier golden fixture",
+    visual_completion_layer: true,
+    home_full_surface: true,
+    architecture_inspector: true,
+    publication_rendered_preview: true,
+    cjk_localized_controls: true,
     typography_authority: "WeiUI Inter + Noto Sans SC",
     renderer: "gl_compatibility",
     max_dimension: "2.5D",
     deterministic_latin_font: true,
     deterministic_cjk_font: true,
     deterministic_unicode_fallbacks: true,
-    fallback_scope: "decorative_controls_only",
     page_grid_contract: true,
     route_surface_contract: true,
-    route_catalog_contract: true,
-    system_surface_contract: true,
-    editorial_surface_contract: true,
-    mobile_geometry_contract: true,
-    cross_viewport_geometry_contract: true,
     interaction_contract: true,
     browser_event_callbacks: true,
     default_polling: false,
