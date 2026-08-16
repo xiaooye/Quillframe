@@ -2,8 +2,9 @@
 """Thin read-only Agent Skills client for the NovelForge Studio host bridge.
 
 The shared bridge may advertise host-specific commands, but the portable Agent
-Skills surface remains query-only. In particular, ``session.resume`` is a
-loopback ``local_app`` command and is never invoked by this client.
+Skills surface remains query-only. In particular, ``session.resume`` and
+``session.terminate`` are loopback ``local_app`` commands and are never invoked
+by this client.
 """
 from __future__ import annotations
 
@@ -24,6 +25,7 @@ RUNTIME_QUERIES = {
     "run.receipt.get",
     "runtime.command.receipt.get",
     "session.resume.preflight",
+    "session.terminate.preflight",
 }
 
 
@@ -74,6 +76,7 @@ def self_test() -> dict[str, Any]:
     deferred = set(value.get("deferred_operations", {}))
     operation_contracts = value.get("operation_contracts") if isinstance(value.get("operation_contracts"), dict) else {}
     resume_contract = operation_contracts.get("session.resume") if isinstance(operation_contracts.get("session.resume"), dict) else {}
+    terminate_contract = operation_contracts.get("session.terminate") if isinstance(operation_contracts.get("session.terminate"), dict) else {}
     checks = {
         "bridge_found": proc.returncode == 0,
         "description_schema": value.get("schema") == EXPECTED_DESCRIPTION,
@@ -83,7 +86,15 @@ def self_test() -> dict[str, Any]:
         "resume_preflight_supported": "session.resume.preflight" in supported and "session.resume.preflight" not in deferred,
         "resume_command_advertised": "session.resume" in supported and "session.resume" not in deferred,
         "resume_local_app_only": resume_contract.get("allowed_surfaces") == ["local_app"] and resume_contract.get("mutation_scope") == "runtime_session_state_only",
-        "agent_package_remains_read_only": resume_contract.get("allowed_surfaces") == ["local_app"] and "agent_package" not in resume_contract.get("allowed_surfaces", []),
+        "terminate_preflight_supported": "session.terminate.preflight" in supported and "session.terminate.preflight" not in deferred,
+        "terminate_command_advertised": "session.terminate" in supported and "session.terminate" not in deferred,
+        "terminate_local_app_only": terminate_contract.get("allowed_surfaces") == ["local_app"] and terminate_contract.get("mutation_scope") == "runtime_session_and_active_run_state_only",
+        "agent_package_remains_read_only": (
+            resume_contract.get("allowed_surfaces") == ["local_app"]
+            and terminate_contract.get("allowed_surfaces") == ["local_app"]
+            and "agent_package" not in resume_contract.get("allowed_surfaces", [])
+            and "agent_package" not in terminate_contract.get("allowed_surfaces", [])
+        ),
         "write_command_not_supported": "command.invoke" not in supported and "command.invoke" in deferred,
     }
     return {
