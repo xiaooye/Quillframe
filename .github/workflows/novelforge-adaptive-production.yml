@@ -4,6 +4,11 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'HARNESS_MANIFEST.yaml'
+      - 'harness/HARNESS_AGENT.en.md'
+      - 'harness/HARNESS_AGENT.zh-CN.md'
+      - 'docs/documentation_manifest.json'
+      - 'specs/012-adaptive-production-learning/**'
       - 'learning/author_model.py'
       - 'learning/promotion_gate.py'
       - 'harness/context_assembly.py'
