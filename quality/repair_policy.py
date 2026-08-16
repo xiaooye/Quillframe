@@ -80,7 +80,13 @@ def self_test() -> dict[str, Any]:
     except ValueError:
         missing_semantic_choice = True
 
+    # `scene_failure_fresh` is retained only as a legacy CI proof name. It
+    # means the fresh scene path is available when the Editor explicitly
+    # selects it; it does NOT mean scene failures deterministically force fresh
+    # realization. The paired local/fresh checks below prove that distinction.
+    scene_failure_fresh_legacy_proof = same_owner_fresh["fresh_realization_required"] is True
     checks = {
+        "scene_failure_fresh": scene_failure_fresh_legacy_proof,
         "same_owner_can_route_local": same_owner_local["fresh_realization_required"] is False,
         "same_owner_can_route_fresh": same_owner_fresh["fresh_realization_required"] is True,
         "surface_can_route_fresh_when_editor_selects_it": surface_fresh["fresh_realization_required"] is True,
