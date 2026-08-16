@@ -6,18 +6,35 @@ extends "res://scripts/typography_parity.gd"
 
 const PRODUCT_PHONE_HERO_HEIGHT := 690.0
 const PRODUCT_PHONE_FLOW_SHIFT := 96.0
+const CHANGELOG_PHONE_FLOW_SHIFT := 42.0
 
 func _build() -> void:
 	super._build()
 	if _layout != "phone":
 		return
 	match _current_route():
+		"/":
+			_patch_home_phone()
 		"/product":
 			_patch_product_phone()
 		"/studio":
 			_patch_studio_phone()
 		"/publication":
 			_patch_publication_phone()
+		"/agents":
+			_patch_agents_phone()
+		"/changelog":
+			_patch_changelog_phone()
+
+func _patch_home_phone() -> void:
+	var title := _find_label_prefix(self, "Let the story\ngrow without")
+	if title != null:
+		title.position.y = 134.0
+		title.add_theme_constant_override("line_spacing", -8)
+
+	var lede := _find_label_prefix(self, "NovelForge connects creation")
+	if lede != null:
+		lede.add_theme_constant_override("line_spacing", 2)
 
 func _patch_product_phone() -> void:
 	var title := _find_label_prefix(self, "NovelForge\nis a fiction")
@@ -25,7 +42,7 @@ func _patch_product_phone() -> void:
 		title.text = "NovelForge is a\nfiction production\nsystem, not a\nprompt wrapper."
 		title.position.y = 46.0
 		title.size.y = 190.0
-		title.add_theme_constant_override("line_spacing", -2)
+		title.add_theme_constant_override("line_spacing", -7)
 		title.add_theme_font_override("font", _heading_font(-2))
 
 	var lede := _find_label_prefix(self, "It separates creative judgment")
@@ -67,17 +84,21 @@ func _patch_studio_phone() -> void:
 		terminal.position.y = 573.0
 
 func _patch_publication_phone() -> void:
+	var black := _find_label_prefix(self, "One accepted\nmanuscript,")
+	if black != null:
+		black.position.y = 81.0
+
 	var pink := _find_label_prefix(self, "many\ndeterministic\nderivatives.")
 	if pink != null and pink.get_parent() is Control:
 		var hero := pink.get_parent() as Control
 		pink.text = "many"
-		pink.position = Vector2(218.0, 124.0)
+		pink.position = Vector2(229.0, 121.0)
 		pink.size = Vector2(125.0, 56.0)
 		pink.add_theme_constant_override("line_spacing", -8)
 		pink.add_theme_font_override("font", _heading_font(-2))
 
 		var continuation := _label("deterministic\nderivatives.", 39, 780, Color("e94c9a"))
-		continuation.position = Vector2(18.0, 166.0)
+		continuation.position = Vector2(18.0, 163.0)
 		continuation.size = Vector2(max(hero.size.x - 36.0, 200.0), 108.0)
 		continuation.add_theme_constant_override("line_spacing", -8)
 		continuation.add_theme_font_override("font", _heading_font(-2))
@@ -93,6 +114,49 @@ func _patch_publication_phone() -> void:
 		if showcase != null:
 			showcase.position.y = 388.0
 			_fix_epub_card_position(showcase)
+
+func _patch_agents_phone() -> void:
+	var title := _find_label_prefix(self, "Let your\nagent use\nNovelForge")
+	if title != null:
+		title.text = "Let your agent\nuse NovelForge\nwithout\nbypassing\nNovelForge."
+		title.position.y = 82.0
+		title.size.y = 220.0
+
+	var lede := _find_label_prefix(self, "The portable Agent Skill uses the public")
+	if lede != null:
+		lede.position.y = 303.0
+
+	var bay_label := _find_label_exact(self, "AGENT PATCH BAY")
+	if bay_label != null and bay_label.get_parent() is Control:
+		var bay := bay_label.get_parent() as Control
+		bay.position.y = 438.0
+
+func _patch_changelog_phone() -> void:
+	var title := _find_label_prefix(self, "A changelog\nthat separates\nimplementation\nfrom\naspiration.")
+	if title != null:
+		title.text = "A changelog\nthat separates\nimplementation\nfrom aspiration."
+		title.position.y = 47.0
+		title.size.y = 190.0
+
+	var lede := _find_label_prefix(self, "NovelForge is pre-1.0. The current ledger")
+	if lede != null:
+		lede.position.y = 227.0
+
+	var version := _find_label_exact(self, "0.8.x")
+	if version != null and version.get_parent() is Control:
+		var oval := version.get_parent() as Control
+		if oval.position.y > 300.0:
+			oval.position.y = 398.0
+
+	if _stage != null:
+		for child in _stage.get_children():
+			if child is Control:
+				var control := child as Control
+				if abs(control.position.y - 89.0) < 1.0 and control.size.y > 640.0:
+					control.size.y -= CHANGELOG_PHONE_FLOW_SHIFT
+				elif control.position.y >= 777.0:
+					control.position.y -= CHANGELOG_PHONE_FLOW_SHIFT
+		_stage.custom_minimum_size.y = max(_stage.custom_minimum_size.y - CHANGELOG_PHONE_FLOW_SHIFT, 1400.0)
 
 func _fix_epub_card_position(showcase: Control) -> void:
 	var epub_tag := _find_negative_y_label(showcase, "EPUB")
