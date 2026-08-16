@@ -1,6 +1,6 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "2",
+  "version": "3",
   "principle": "Production-loop semantic artifacts stay thin. Models interpret feedback, causal scene state and repair strategy; machines consume only the small fields needed for authority-safe persistence or routing. Private character state may drive semantic decisions but is not prose payload, and this pack does not duplicate the Blind Reader owned by the quality pack.",
   "contracts": {
     "learning.preference_interpret": {
@@ -91,7 +91,7 @@
     },
     "editor.repair_spec": {
       "kind": "artifact_audit",
-      "purpose": "Editor integrates bounded Reader findings, semantic-rule findings and authorized story evidence, then describes the smallest effective repair without encoding literary repair depth in Python.",
+      "purpose": "Editor integrates bounded Reader findings, semantic-rule findings and authorized story evidence, then chooses the smallest effective repair and whether the next Writer should locally repair or perform a fresh realization. Python may enforce that chosen information boundary but does not infer repair depth from literary labels.",
       "input_contract": {
         "type": "object",
         "required": ["candidate_fingerprint", "reader_assessment"],
@@ -108,17 +108,19 @@
       },
       "rubric": [
         "Integrate the evidence before prescribing repair. Preserve what already works and address the mechanism that actually owns the problem.",
-        "Choose repair scope semantically. Do not map a Reader label to a predetermined line/paragraph/scene/chapter depth table.",
+        "Choose repair depth and generation mode semantically. Do not map a Reader label, HF code, owner, scope, paragraph count or metric to a predetermined local/fresh decision table.",
+        "Choose fresh_realization only when withholding rejected prose/patches is likely to break anchoring on the failed realization; otherwise prefer local_or_bounded_repair when the existing text is useful repair evidence.",
         "Use an execution owner only to route work to an existing subsystem; explain the actual repair in model-native language.",
         "For material subjective changes, state whether incumbent/challenger comparison is warranted and why. Do not assume revision is improvement.",
         "Do not perform the rewrite, mutate Canon, or activate Author Model preferences."
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "repair_owner", "repair_plan", "comparison_required"],
+        "required": ["confidence", "repair_owner", "generation_mode", "repair_plan", "comparison_required"],
         "properties": {
           "confidence": {"type": "number", "minimum": 0, "maximum": 1},
           "repair_owner": {"enum": ["story", "plan", "scene", "character", "reader_pressure", "surface", "continuity", "context", "research", "runtime", "human"]},
+          "generation_mode": {"enum": ["local_or_bounded_repair", "fresh_realization"]},
           "repair_plan": {"type": "string", "minLength": 1},
           "preserve": {"type": "array", "items": {"type": "string"}},
           "evidence_refs": {"type": "array", "items": {"type": "string"}},
