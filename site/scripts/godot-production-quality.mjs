@@ -15,12 +15,15 @@ const shell = read("godot/web/novelforge.html");
 const interaction = read("godot/scripts/interaction_parity.gd");
 const completionCore = read("godot/scripts/visual_completion_core.gd");
 const completion = read("godot/scripts/visual_completion.gd");
+const wideCompact = read("godot/scripts/wide_compact_parity.gd");
 const build = read("scripts/build-godot-web.sh");
 const exporter = read("scripts/build-godot-shadow.sh");
 const redirects = read("public/_redirects");
 const docsConfig = read("docs-site/astro.config.mjs");
 
-check(scene.includes('path="res://scripts/visual_completion.gd"'), "production scene must enter through the visual-completion layer");
+check(scene.includes('path="res://scripts/wide_compact_parity.gd"'), "production scene must enter through the final wide-compact parity layer");
+check(wideCompact.includes('extends "res://scripts/visual_completion.gd"'), "wide-compact parity must remain a thin layer above visual completion");
+check(wideCompact.includes("SOLID_HERO_STACK_MAX_WIDTH := 900.0"), "final responsive layer must preserve Solid's 900px product-hero stack breakpoint");
 check(completion.includes('extends "res://scripts/visual_completion_core.gd"'), "production polish layer must preserve the complete product surface beneath it");
 check(completionCore.includes('extends "res://scripts/interaction_parity.gd"'), "visual-completion core must preserve the validated interaction runtime beneath it");
 check(shell.includes('data-novelforge-runtime="loading"'), "production shell runtime marker missing");
@@ -45,7 +48,7 @@ check(shell.includes('class="nf-skip"'), "visible-on-focus skip link missing");
 check(shell.includes("@media(prefers-reduced-motion:reduce)"), "Web reduced-motion fallback missing");
 check(shell.includes("@media(forced-colors:active)"), "Web forced-colors focus fallback missing");
 check(shell.includes("MutationObserver") && !shell.includes("setInterval("), "Web accessibility synchronization must remain event-driven without polling");
-check(completion.includes("custom_minimum_size") && completion.includes("44.0"), "Story Loom 44px mobile target contract missing from final Godot layer");
+check(completion.includes("custom_minimum_size") && completion.includes("44.0"), "Story Loom 44px mobile target contract missing from final Godot completion layer");
 
 check(packageJson.scripts?.build?.includes("build-godot-web.sh"), "default npm build must assemble the Godot Product runtime");
 check(packageJson.scripts?.dev?.includes("godot --path godot"), "default npm dev must enter the Godot project rather than the Solid baseline");
@@ -72,7 +75,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_production_quality_v7",
+    schema: "novelforge_godot_production_quality_v8",
     status: "pass",
     production_cutover: true,
     product_runtime: "godot_web",
@@ -80,6 +83,8 @@ if (failures.length) {
     docs_root: "/docs/**",
     golden_baseline: "solidjs_vite_story_loom_fixture",
     visual_completion: true,
+    final_wide_compact_parity: true,
+    solid_hero_stack_breakpoint: 900,
     screenshot_driven_polish: true,
     complete_home_body: true,
     rendered_publication_preview: true,
