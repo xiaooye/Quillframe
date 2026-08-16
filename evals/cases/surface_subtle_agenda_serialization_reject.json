@@ -1,0 +1,18 @@
+{
+  "id": "SURFACE-HF30-004",
+  "type": "regression",
+  "domain": "surface",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "language": "zh-CN",
+    "profile": {"dialogue_realization": "high"},
+    "text": "两人刚从同一场项目会出来。电梯门一关，许闻笑了一下。\n\n\"我不是非要卡你们。只是我现在坐这个位置，采购流程出了问题最后都会落到我这里。你们想赶月底上线，我能理解，可我要考虑审计追责，也要保证供应商之间看起来公平。对我来说，最稳妥的办法还是先把比价材料补齐，再谈特批；不然今天我给你开口子，明天别人拿这个来问，我没有办法解释。\"\n\n林岑说：\"我也不是要你违规。我的压力是上线窗口只有这一次，错过去销售端会少一个月，而且我已经答应业务负责人按这个日期交付。所以我希望你能在合规范围里给我一个最快的路径。\""
+  },
+  "rubric": [
+    "Reject with HF-30 when apparently natural professional dialogue still serializes each participant's full institutional role, motivation, risk model, constraints, and preferred solution for a listener who just shared the same meeting and has no demonstrated need for that recap.",
+    "Professional vocabulary and plausible reasoning do not excuse character-sheet-to-dialogue serialization. Look for tactical purpose, selective emphasis, resistance, assumption of shared knowledge, and response to the listener rather than complete explanatory symmetry."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["HF-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "reject", "codes": ["HF-30"]}
+}

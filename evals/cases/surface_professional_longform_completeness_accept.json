@@ -1,0 +1,18 @@
+{
+  "id": "SURFACE-HF30-005",
+  "type": "counterexample",
+  "domain": "surface",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "language": "zh-CN",
+    "profile": {"scene_type": "medical_risk_explanation"},
+    "text": "病人把同意书放回桌上。\n\n\"医生，你别跟我说大概。这个手术最坏会怎么样？我想一次听全。\"\n\n医生把纸转回来，没有催他签：\"好。最常见的是术后疼痛、出血和感染，这些通常可以处理。比较少见但更严重的是神经损伤，可能造成持续麻木或者力量下降；再低概率的是麻醉相关并发症，包括严重过敏和心肺问题。你的影像上神经离病灶比较近，所以神经损伤的风险比一般病例高一点。我们会用术中监测降低风险，但不能把风险降到零。你也可以不做，代价是病灶可能继续压迫神经，症状有机会加重。你不用现在签，先问你最担心哪一项。\""
+  },
+  "rubric": [
+    "Accept professional long-form completeness when the listener explicitly asks for a complete risk explanation and informed consent makes omission itself costly or inappropriate.",
+    "HF-30 is not a ban on complete speech. Medical risk explanation, instruction, formal refusal rationale, clause negotiation, briefing, confession/apology, and other speech acts can legitimately require completeness when the scene establishes that function."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["HF-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept", "codes": []}
+}

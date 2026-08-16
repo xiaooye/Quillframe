@@ -1,0 +1,171 @@
+name: NovelForge Adaptive Production Semantic Eval
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'surface/FUNDAMENTALS.en.md'
+      - 'surface/FUNDAMENTALS.zh-CN.md'
+      - 'quality/taxonomy.json'
+      - 'harness/semantic_workers/contracts/production-loop.json'
+      - 'evals/eval_manifest.json'
+      - 'evals/cases/surface_agenda_dialogue_*.json'
+      - 'evals/cases/surface_formal_statement_completeness_accept.json'
+      - 'evals/cases/surface_subtle_agenda_serialization_reject.json'
+      - 'evals/cases/surface_professional_longform_completeness_accept.json'
+      - '.github/workflows/novelforge-adaptive-production-semantic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      NOVELFORGE_OPENAI_MODEL: gpt-5.1
+      NOVELFORGE_OPENAI_REASONING_EFFORT: medium
+      NOVELFORGE_DISABLE_LOCAL_AGENT_AUTO: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Resolve independent evaluator capability
+        id: semantic-capability
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            python - <<'PY'
+          import json
+          status={
+              'schema':'novelforge_feature_semantic_gate_v1',
+              'feature':'adaptive_production_hf30',
+              'status':'PENDING_MODEL',
+              'reason':'independent_provider_credential_unavailable',
+              'promotion_evidence':False,
+              'model_execution':False,
+          }
+          json.dump(status,open('adaptive-production-semantic-status.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          print('Adaptive production semantic evidence: PENDING_MODEL (no independent provider credential).')
+          PY
+          else
+            echo 'available=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build blind HF-30 queue
+        if: steps.semantic-capability.outputs.available == 'true'
+        run: |
+          python evals/build_judge_queue.py --output adaptive-production-queue.json
+          python - <<'PY'
+          import json
+          p='adaptive-production-queue.json'
+          d=json.load(open(p,encoding='utf-8'))
+          wanted={'SURFACE-HF30-001','SURFACE-HF30-002','SURFACE-HF30-003','SURFACE-HF30-004','SURFACE-HF30-005'}
+          d['cases']=[c for c in d['cases'] if c.get('id') in wanted]
+          ids={c['id'] for c in d['cases']}
+          assert ids == wanted, d
+          for case in d['cases']:
+              assert 'expected' not in case, case
+          json.dump(d,open(p,'w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          PY
+
+      - name: Package fingerprint-bound jobs
+        if: steps.semantic-capability.outputs.available == 'true'
+        run: |
+          python harness/semantic_workers/semantic_worker_router.py prepare-evals \
+            --queue adaptive-production-queue.json --output adaptive-production-jobs.json
+          python harness/semantic_workers/semantic_worker_router.py validate-jobs \
+            --jobs adaptive-production-jobs.json
+
+      - name: Verify independent provider capability
+        if: steps.semantic-capability.outputs.available == 'true'
+        run: |
+          python harness/semantic_workers/semantic_worker_runner.py capabilities > adaptive-production-capabilities.json
+          python - <<'PY'
+          import json
+          d=json.load(open('adaptive-production-capabilities.json',encoding='utf-8'))
+          assert d['independent_worker_available'] is True,d
+          assert d['adapter_source'] == 'openai_env',d
+          assert d['built_in_model_provider'] is True,d
+          PY
+
+      - name: Execute blind semantic jobs
+        if: steps.semantic-capability.outputs.available == 'true'
+        run: |
+          python harness/semantic_workers/semantic_worker_runner.py run \
+            --jobs adaptive-production-jobs.json \
+            --output adaptive-production-execution.json \
+            --require-complete
+          python - <<'PY'
+          import json
+          r=json.load(open('adaptive-production-execution.json',encoding='utf-8'))
+          assert r['status'] in {'completed','semantic_reject'},r
+          json.dump({'results':r['results']},open('adaptive-production-results.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          PY
+
+      - name: Validate bindings and judgments
+        if: steps.semantic-capability.outputs.available == 'true'
+        run: |
+          python harness/semantic_workers/semantic_worker_router.py validate-results \
+            --jobs adaptive-production-jobs.json \
+            --results adaptive-production-results.json \
+            --judgments-output adaptive-production-judgments.json
+
+      - name: Evaluate capability and counterexamples
+        if: steps.semantic-capability.outputs.available == 'true'
+        run: |
+          python evals/run_evals.py --domain surface \
+            --judgments adaptive-production-judgments.json --json > adaptive-production-eval.json
+          python - <<'PY'
+          import json
+          wanted={'SURFACE-HF30-001','SURFACE-HF30-002','SURFACE-HF30-003','SURFACE-HF30-004','SURFACE-HF30-005'}
+          d=json.load(open('adaptive-production-eval.json',encoding='utf-8'))
+          selected=[r for r in d['results'] if r['case_id'] in wanted]
+          assert len(selected) == 5, d
+          assert all(r['status'] == 'PASS' for r in selected), selected
+          status={
+              'schema':'novelforge_feature_semantic_gate_v1',
+              'feature':'adaptive_production_hf30',
+              'status':'PASS',
+              'reason':'independent_blind_capability_regression_and_counterexamples_passed',
+              'promotion_evidence':True,
+              'model_execution':True,
+              'case_ids':sorted(wanted),
+          }
+          json.dump(status,open('adaptive-production-semantic-status.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          PY
+
+      - name: Assert semantic gate status is explicit
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('adaptive-production-semantic-status.json')
+          if not p.exists():
+              raise SystemExit('semantic gate executed or failed without an explicit status receipt')
+          d=json.load(p.open(encoding='utf-8'))
+          assert d['schema']=='novelforge_feature_semantic_gate_v1',d
+          assert d['status'] in {'PASS','PENDING_MODEL'},d
+          assert d['promotion_evidence'] is (d['status']=='PASS'),d
+          print(json.dumps(d,ensure_ascii=False,indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: adaptive-production-semantic-${{ github.run_id }}
+          path: |
+            adaptive-production-semantic-status.json
+            adaptive-production-capabilities.json
+            adaptive-production-queue.json
+            adaptive-production-jobs.json
+            adaptive-production-execution.json
+            adaptive-production-results.json
+            adaptive-production-judgments.json
+            adaptive-production-eval.json
+          if-no-files-found: warn

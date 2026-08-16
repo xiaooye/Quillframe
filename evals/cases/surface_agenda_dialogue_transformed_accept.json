@@ -1,0 +1,18 @@
+{
+  "id": "SURFACE-HF30-002",
+  "type": "capability",
+  "domain": "surface",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "language": "zh-CN",
+    "profile": {"dialogue_realization": "high"},
+    "text": "会议室里只剩他们两个。赵琳把明早的董事会版本推到陈屿面前。\n\n\"第三页还是旧数。\"\n\n陈屿没接文件：\"源表没复核。\"\n\n\"我知道。十点半给我。\"\n\n\"你拿什么上会是你的事。\"\n\n赵琳看了他一眼，把红笔扣上：\"行。那你名字别挂第三页。\"\n\n陈屿伸手把文件拿了回来。\"十点四十。\"\n\n\"十点半。\"\n\n\"十点三十五。\"\n\n赵琳已经起身：\"发我。\""
+  },
+  "rubric": [
+    "Accept when underlying agendas clearly drive tactics and choices but are transformed through shared context, pressure, omission, bargaining, task/object interaction, and turn-by-turn response rather than paraphrased as character-sheet fields.",
+    "Agenda may be inferable; it does not need to be explicitly named. Short speech is not automatically better, and the verdict must rest on interaction function rather than lexical proxies."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["HF-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept", "codes": []}
+}

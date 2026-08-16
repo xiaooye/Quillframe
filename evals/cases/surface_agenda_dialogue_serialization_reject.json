@@ -1,0 +1,19 @@
+{
+  "id": "SURFACE-HF30-001",
+  "type": "regression",
+  "domain": "surface",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "language": "zh-CN",
+    "profile": {"dialogue_realization": "high"},
+    "text": "会议室里只剩他们两个。陈屿把门关上。\n\n赵琳说：\"我之所以坚持今晚把预算改完，是因为我负责明早向董事会汇报这个项目。如果数字还是旧的，我会承担汇报错误的责任，也会影响财务部对我们团队的信任。我的目标是确保董事会看到的是已经确认的版本，所以我需要你现在配合我完成修改。\"\n\n陈屿点头：\"我理解你的责任和风险。作为数据负责人，我的主要顾虑是源表还没有完成复核，如果现在修改，我可能会把未经验证的数据带进最终版。\""
+  },
+  "rubric": [
+    "Reject with HF-30 when dialogue is effectively a complete natural-language serialization of each speaker's role, goal, risk, responsibility, rationale, and requested cooperation rather than a listener-shaped move in the immediate interaction.",
+    "Ask why this person is this complete, to this listener, at this moment, at this cost. Shared context, pressure, interruption, omission, tactical distortion, task interaction, and relationship history should normally transform private agenda before it becomes speech.",
+    "Do not use line length, conjunction count, formality, fragments, or interruption count as the literary verdict."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["HF-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "reject", "codes": ["HF-30"]}
+}
