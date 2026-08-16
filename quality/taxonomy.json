@@ -1,13 +1,13 @@
 {
   "schema": "novelforge_quality_taxonomy_v1",
-  "version": "1",
+  "version": "2",
   "principle": "Framework-owned quality identifiers are a machine contract. Human documentation and consuming-project regression/profile references must be checked against this registry so an identifier cannot silently change meaning across Framework migrations.",
   "families": {
     "surface": {
       "prefix": "HF",
       "source_docs": ["surface/FUNDAMENTALS.en.md", "surface/FUNDAMENTALS.zh-CN.md"],
       "entries": [
-        {"id":"HF-01","name":"NON-FUNCTIONAL FRAGMENTATION","aliases":["FRAGMENT","NON-FUNCTIONAL-FRAGMENTATION"]},
+        {"id":"HF-01","name":"NON-FUNCTIONAL FRAGMENTATION","aliases":["FRAGMENT","NON-FUNCTIONAL-FRAGMENTATION","PSEUDO-SPEED-FRAGMENTATION"]},
         {"id":"HF-02","name":"MICRO-SHOT STORYBOARDING","aliases":["MICROSHOT","MICRO-SHOT","MICROSHOT-STORYBOARDING"]},
         {"id":"HF-03","name":"NARRATOR THESIS / AUTHOR SUMMARY","aliases":["NARRATOR-THESIS","AUTHOR-SUMMARY"]},
         {"id":"HF-04","name":"DESIGN-LANGUAGE LEAK","aliases":["DESIGN-LEAK"]},
@@ -26,7 +26,7 @@
         {"id":"HF-17","name":"PROP CATALOGUE","aliases":["PROP-CATALOGUE"]},
         {"id":"HF-18","name":"ABSTRACT AGENT","aliases":["ABSTRACT-AGENT"]},
         {"id":"HF-19","name":"MANNERISM CONNECTOR","aliases":["MANNERISM-CONNECTOR"]},
-        {"id":"HF-20","name":"SUBJECT / SENTENCE TEMPLATE REPETITION","aliases":["SUBJECT-TEMPLATE-REPETITION","SENTENCE-TEMPLATE-REPETITION"]},
+        {"id":"HF-20","name":"SUBJECT / SENTENCE TEMPLATE REPETITION","aliases":["SUBJECT-TEMPLATE-REPETITION","SENTENCE-TEMPLATE-REPETITION","SENTENCE-LENGTH-FLATTENING"]},
         {"id":"HF-21","name":"PROCESS BROADCAST","aliases":["PROCESS-BROADCAST"]},
         {"id":"HF-22","name":"CHECKLIST CAUSALITY","aliases":["CHECKLIST-CAUSALITY"]},
         {"id":"HF-23","name":"FAKE CLIFFHANGER / NARRATOR ADVERTISEMENT","aliases":["FAKE-CLIFFHANGER","NARRATOR-ADVERTISEMENT"]},
@@ -35,7 +35,8 @@
         {"id":"HF-26","name":"FUNCTIONAL-CHARACTER COLLAPSE","aliases":["FUNCTIONAL-CHARACTER-COLLAPSE"]},
         {"id":"HF-27","name":"SEMANTIC ROLE MISATTRIBUTION","aliases":["SEMANTIC-ROLE-MISATTRIBUTION"]},
         {"id":"HF-28","name":"CONTEXT DEFENSE PROSE","aliases":["CONTEXT-DEFENSE-PROSE"]},
-        {"id":"HF-29","name":"AI POLISH WITHOUT STORY FUNCTION","aliases":["AI-POLISH-WITHOUT-STORY-FUNCTION"]}
+        {"id":"HF-29","name":"AI POLISH WITHOUT STORY FUNCTION","aliases":["AI-POLISH-WITHOUT-STORY-FUNCTION"]},
+        {"id":"HF-30","name":"AGENDA-TO-DIALOGUE LEAKAGE / CHARACTER-SHEET-TO-DIALOGUE SERIALIZATION","aliases":["AGENDA-TO-DIALOGUE-LEAKAGE","CHARACTER-SHEET-TO-DIALOGUE-SERIALIZATION","AGENDA-DIALOGUE-SERIALIZATION"]}
       ]
     },
     "reader_engagement": {
