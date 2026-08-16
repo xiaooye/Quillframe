@@ -20,7 +20,7 @@
     "docs:build": "npm run docs:content && astro build --root docs-site && node scripts/verify-starlight-build.mjs",
     "build": "npm run content && npm run docs:build && bash scripts/build-godot-web.sh",
     "preview": "vite preview",
-    "godot:quality": "node scripts/godot-shadow-source-quality.mjs",
+    "godot:quality": "node scripts/godot-shadow-source-quality-v19.mjs && node scripts/godot-glyph-policy-qa.mjs",
     "godot:font": "bash scripts/fetch-godot-fonts.sh",
     "godot:export": "npm run godot:quality && bash scripts/build-godot-shadow.sh",
     "godot:shadow:quality": "npm run godot:quality",
