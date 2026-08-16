@@ -129,7 +129,7 @@ Context Freeze
 
 ## 07 · Model-readable semantic contract
 
-Harness 不需要为每一种文学判断写一个 Python “critic engine”。它从 `semantic_workers/model_contracts.json` 打包受限 semantic job。
+Harness 不需要为每一种文学判断写一个 Python “critic engine”。它从 `semantic_workers/model_contract_catalog.json` 的 progressive-disclosure catalog 打包受限 semantic job，并且只加载当前任务所需的 exact registered contract pack。
 
 Job 至少声明：
 
