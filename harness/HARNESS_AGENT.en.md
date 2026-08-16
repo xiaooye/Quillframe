@@ -129,7 +129,7 @@ Projects may insert profile-specific checks, but they must preserve the importan
 
 ## 07 · Model-readable semantic contracts
 
-The Harness does not need a separate Python “literary engine” for every judgment. It packages bounded semantic jobs from the registry in `semantic_workers/model_contracts.json`.
+The Harness does not need a separate Python “literary engine” for every judgment. It packages bounded semantic jobs from the progressive-disclosure catalog in `semantic_workers/model_contract_catalog.json` and loads the exact registered contract pack needed for the current semantic job.
 
 A semantic job declares:
 
