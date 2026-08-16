@@ -48,15 +48,7 @@ The manager checks whether the requested work is legal relative to current Proje
 
 ## 04 · Character causality before prose
 
-The pre-draft causal path is:
-
-```text
-private character/world state
-→ character.action_propose
-→ scene.resolve_actions
-→ compact writer-safe realization projection
-→ Writer
-```
+The pre-draft causal sequence is **private character/world state → `character.action_propose` → `scene.resolve_actions` → compact writer-safe realization projection → Writer**.
 
 Character private state is causal evidence. It is not a prose payload. Runtime may enforce evidence identity, authorized visibility and story-time eligibility, but semantic questions such as motivation, plausible inference, integrity and knowledge use belong to models.
 
@@ -139,7 +131,7 @@ Independence is a separate property from semantic judgment.
 
 When the active gate requires it, use a genuinely separate invocation/session/worker with a bounded packet and exact candidate fingerprint. The manager may package, dispatch, validate and consume; it may not satisfy the independent gate by changing its internal role label.
 
-Transport failure may use another eligible transport. A valid semantic reject is not a transport failure and must route repair—no reviewer shopping.
+Transport failure may use another eligible transport. A valid semantic rejection is not a transport failure and must route repair; do not keep changing reviewers until one accepts the candidate.
 
 ## 12 · Acceptance and settlement remain separate
 
@@ -151,22 +143,21 @@ Quality evidence cannot approve itself into Canon.
 
 ## 13 · Default adaptive graph
 
-```text
-authority + session bootstrap
-→ agent-owned search/context selection
-→ deterministic exact-set/stage/fingerprint verification
-→ story/planning preflight
-→ character action → scene collision → compact realization
-→ Writer Raw Draft → Surface realization → freeze fingerprint
-→ Blind Reader
-→ Semantic Rule Auditor when required
-→ Editor repair spec
-→ repair / challenger comparison as warranted
-→ continuity/state checks
-→ required independent semantic gate
-→ user-visible Review Draft
-→ explicit acceptance → SETTLE (separate mode/transaction)
-```
+The default production graph is structured as these ordered stages:
+
+1. authority/session bootstrap;
+2. agent-owned search/context selection;
+3. deterministic exact-set/stage/fingerprint verification;
+4. story/planning preflight;
+5. character action, scene collision, then compact realization;
+6. Writer Raw Draft, Surface realization, then candidate fingerprint freeze;
+7. Blind Reader;
+8. Semantic Rule Auditor when required;
+9. Editor repair specification and repair/challenger comparison when warranted;
+10. continuity/state checks;
+11. required independent semantic gate;
+12. user-visible Review Draft;
+13. explicit acceptance, followed by `SETTLE` as a separate mode/transaction.
 
 The manager loads the smallest semantic contract set needed by the current failure. One capable agent remains preferable unless information isolation, independent evaluation, private state, or genuine specialist benefit justifies separation.
 
