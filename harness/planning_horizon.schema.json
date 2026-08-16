@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://novelforge.local/schemas/planning_horizon.schema.json",
+  "title": "NovelForge Planning Commitment Horizon",
+  "oneOf": [
+    {"$ref": "#/$defs/policy"},
+    {"$ref": "#/$defs/region_request"},
+    {"$ref": "#/$defs/region"},
+    {"$ref": "#/$defs/admission_request"},
+    {"$ref": "#/$defs/transition_request"},
+    {"$ref": "#/$defs/rebalance_request"}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-fA-F]{64}$"},
+    "nonempty": {"type": "string", "minLength": 1},
+    "string_list": {"type": "array", "items": {"$ref": "#/$defs/nonempty"}, "uniqueItems": true},
+    "depth": {"enum": ["arc_boundary", "beat", "scene_intent", "chapter_detail"]},
+    "strength": {"enum": ["open", "soft", "hard"]},
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "profile_id", "strength_depth_ceiling", "allowed_promoter_actor_classes"],
+      "properties": {
+        "schema": {"const": "novelforge_planning_horizon_policy_v1"},
+        "profile_id": {"$ref": "#/$defs/nonempty"},
+        "strength_depth_ceiling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["open", "soft", "hard"],
+          "properties": {
+            "open": {"$ref": "#/$defs/depth"},
+            "soft": {"$ref": "#/$defs/depth"},
+            "hard": {"$ref": "#/$defs/depth"}
+          }
+        },
+        "allowed_promoter_actor_classes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["user", "authorized_human", "authorized_planner", "manager"]}
+        }
+      }
+    },
+    "story_order": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "start": {"type": ["integer", "null"], "minimum": 0},
+        "end": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "region_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "project_id", "region_id", "plan_ref", "commitment_strength", "max_planning_depth"],
+      "properties": {
+        "schema": {"const": "novelforge_planning_horizon_region_request_v1"},
+        "project_id": {"$ref": "#/$defs/nonempty"},
+        "region_id": {"$ref": "#/$defs/nonempty"},
+        "plan_ref": {"$ref": "#/$defs/nonempty"},
+        "semantic_scope": {"type": ["string", "null"], "minLength": 1},
+        "story_order": {"$ref": "#/$defs/story_order"},
+        "commitment_strength": {"$ref": "#/$defs/strength"},
+        "max_planning_depth": {"$ref": "#/$defs/depth"},
+        "assumption_refs": {"$ref": "#/$defs/string_list"},
+        "dependency_refs": {"$ref": "#/$defs/string_list"},
+        "unresolved_decision_refs": {"$ref": "#/$defs/string_list"}
+      }
+    },
+    "region": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "schema", "project_id", "region_id", "plan_ref", "commitment_strength", "max_planning_depth",
+        "assumption_refs", "dependency_refs", "unresolved_decision_refs", "policy_fingerprint", "version",
+        "artifact_fingerprint", "authority", "canon_authority", "project_write_authority",
+        "framework_write_authority", "settlement_authority", "model_execution"
+      ],
+      "properties": {
+        "schema": {"const": "novelforge_planning_horizon_region_v1"},
+        "project_id": {"$ref": "#/$defs/nonempty"},
+        "region_id": {"$ref": "#/$defs/nonempty"},
+        "plan_ref": {"$ref": "#/$defs/nonempty"},
+        "semantic_scope": {"type": ["string", "null"], "minLength": 1},
+        "story_order": {"$ref": "#/$defs/story_order"},
+        "commitment_strength": {"$ref": "#/$defs/strength"},
+        "max_planning_depth": {"$ref": "#/$defs/depth"},
+        "assumption_refs": {"$ref": "#/$defs/string_list"},
+        "dependency_refs": {"$ref": "#/$defs/string_list"},
+        "unresolved_decision_refs": {"$ref": "#/$defs/string_list"},
+        "policy_fingerprint": {"$ref": "#/$defs/sha256"},
+        "version": {"type": "integer", "minimum": 1},
+        "artifact_fingerprint": {"$ref": "#/$defs/sha256"},
+        "authority": {"const": false},
+        "canon_authority": {"const": false},
+        "project_write_authority": {"const": false},
+        "framework_write_authority": {"const": false},
+        "settlement_authority": {"const": false},
+        "model_execution": {"const": false}
+      }
+    },
+    "admission_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "region_id", "expected_version", "expected_fingerprint", "artifact_kind"],
+      "properties": {
+        "schema": {"const": "novelforge_planning_horizon_admission_request_v1"},
+        "region_id": {"$ref": "#/$defs/nonempty"},
+        "expected_version": {"type": "integer", "minimum": 1},
+        "expected_fingerprint": {"$ref": "#/$defs/sha256"},
+        "artifact_kind": {"enum": ["arc_role", "beat_sheet", "scene_card", "chapter_plan"]}
+      }
+    },
+    "transition_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "region_id", "actor_class", "expected_version", "expected_fingerprint",
+        "target_commitment_strength", "target_max_planning_depth", "reason", "evidence_refs"
+      ],
+      "properties": {
+        "schema": {"const": "novelforge_planning_horizon_transition_request_v1"},
+        "region_id": {"$ref": "#/$defs/nonempty"},
+        "actor_class": {"enum": ["user", "authorized_human", "authorized_planner", "manager", "writer", "semantic_worker"]},
+        "expected_version": {"type": "integer", "minimum": 1},
+        "expected_fingerprint": {"$ref": "#/$defs/sha256"},
+        "target_commitment_strength": {"$ref": "#/$defs/strength"},
+        "target_max_planning_depth": {"$ref": "#/$defs/depth"},
+        "reason": {"$ref": "#/$defs/nonempty"},
+        "evidence_refs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/nonempty"}, "uniqueItems": true}
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dependency_ref", "dependency_fingerprint", "source_ref", "dependent_ref",
+        "dependent_fingerprint", "scope", "required_action"
+      ],
+      "properties": {
+        "dependency_ref": {"$ref": "#/$defs/nonempty"},
+        "dependency_fingerprint": {"$ref": "#/$defs/sha256"},
+        "source_ref": {"$ref": "#/$defs/nonempty"},
+        "dependent_ref": {"$ref": "#/$defs/nonempty"},
+        "dependent_fingerprint": {"$ref": "#/$defs/sha256"},
+        "scope": {"enum": ["all_source_changes", "assumptions"]},
+        "assumption_refs": {"$ref": "#/$defs/string_list"},
+        "required_action": {"const": "replan"},
+        "propagation_debt_ref": {"type": ["string", "null"], "minLength": 1}
+      }
+    },
+    "rebalance_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "project_id", "source_change", "dependencies"],
+      "properties": {
+        "schema": {"const": "novelforge_planning_rebalance_frontier_request_v1"},
+        "project_id": {"$ref": "#/$defs/nonempty"},
+        "source_change": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source_ref", "before_fingerprint", "after_fingerprint", "changed_assumption_refs",
+            "evidence_ref", "evidence_fingerprint"
+          ],
+          "properties": {
+            "source_ref": {"$ref": "#/$defs/nonempty"},
+            "before_fingerprint": {"$ref": "#/$defs/sha256"},
+            "after_fingerprint": {"$ref": "#/$defs/sha256"},
+            "changed_assumption_refs": {"$ref": "#/$defs/string_list"},
+            "evidence_ref": {"$ref": "#/$defs/nonempty"},
+            "evidence_fingerprint": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "dependencies": {"type": "array", "items": {"$ref": "#/$defs/dependency"}}
+      }
+    }
+  }
+}
