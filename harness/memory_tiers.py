@@ -25,7 +25,10 @@ if str(SEM) not in sys.path:
     sys.path.insert(0, str(SEM))
 from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
 
-SCHEMA = "novelforge_memory_tiers_v5"
+# Keep the externally declared pack envelope at v4. The migration in this
+# module changes the semantic-selection input/result contract, while retaining
+# the established pack envelope and adding explicit ownership/provenance fields.
+SCHEMA = "novelforge_memory_tiers_v4"
 PERSPECTIVE_SCOPES = {"manager", "reader", "character", "narrator", "research", "other"}
 VISIBILITY_SCOPES = {"shared", *PERSPECTIVE_SCOPES}
 QUESTION_KINDS = {"concept", "behavior", "state", "continuity", "relationship", "other"}
