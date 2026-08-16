@@ -48,7 +48,7 @@ jobs:
       - name: Source contracts and permanent Docs build
         working-directory: site
         run: |
-          npm run godot:shadow:quality
+          npm run godot:quality
           npm run content
           npm run docs:build
 
@@ -160,7 +160,7 @@ jobs:
           for image in images:
               assert image.stat().st_size > 12_000, image
           (root/'browser-proof.txt').write_text(
-              'schema=novelforge_product_site_godot_browser_qa_v1\n'
+              'schema=novelforge_product_site_godot_browser_qa_v2\n'
               'product_runtime=godot_web\n'
               'docs_runtime=astro_starlight\n'
               'desktop=1440x900\n'
@@ -170,7 +170,7 @@ jobs:
               'authority=false\n',
               encoding='utf-8',
           )
-          print({'schema':'novelforge_product_site_godot_browser_qa_v1','status':'pass','screenshots':len(images),'interaction':True})
+          print({'schema':'novelforge_product_site_godot_browser_qa_v2','status':'pass','screenshots':len(images),'interaction':True})
           PY
 
       - name: Upload Product Site browser QA evidence

@@ -7,6 +7,8 @@ on:
     paths:
       - 'site/godot/**'
       - 'site/src/**'
+      - 'site/package.json'
+      - 'site/scripts/quality.mjs'
       - 'site/scripts/fetch-godot-fonts.sh'
       - 'site/scripts/build-godot-shadow.sh'
       - 'site/scripts/godot-shadow-browser-shot.mjs'
@@ -37,12 +39,12 @@ jobs:
       - name: Install Product Site dependencies
         working-directory: site
         run: npm install --ignore-scripts --no-audit --no-fund
-      - name: Godot migration source contract
+      - name: Godot production source contract
         working-directory: site
-        run: npm run godot:shadow:quality
-      - name: Build Solid baseline
+        run: npm run godot:quality
+      - name: Build Solid golden baseline fixture
         working-directory: site
-        run: npm run content && npm run build:site
+        run: npm run content && npm run baseline:build
       - name: Install image diff library
         run: python3 -m pip install --user --disable-pip-version-check --no-input Pillow
       - name: Install pinned Godot editor and Web templates
@@ -58,9 +60,9 @@ jobs:
           mkdir -p /tmp/godot-templates "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}"
           unzip -q /tmp/templates.tpz -d /tmp/godot-templates
           cp -a /tmp/godot-templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_TEMPLATE_VERSION}/"
-      - name: Build Godot shadow
+      - name: Build Godot parity artifact
         working-directory: site
-        run: bash scripts/build-godot-shadow.sh
+        run: npm run godot:export
       - name: Capture all route pairs and interaction proof
         shell: bash
         run: |
@@ -72,7 +74,7 @@ jobs:
 
           # Make the browser baseline deterministic too. WeiUI's checked-in
           # Latin typography authority is Inter; CJK and decorative fallbacks
-          # use the exact same pinned files as the Godot candidate.
+          # use the exact same pinned files as the Godot production runtime.
           mkdir -p site/dist/parity-fonts
           cp site/godot/generated/Inter-opsz-wght.ttf site/dist/parity-fonts/
           cp site/godot/generated/NotoSansSC-wght.ttf site/dist/parity-fonts/
@@ -97,7 +99,7 @@ jobs:
           PY
 
           cd site
-          npm run preview -- --host 127.0.0.1 --port 4188 > "$OUT/solid-server.log" 2>&1 &
+          npm run baseline:preview -- --host 127.0.0.1 --port 4188 > "$OUT/solid-server.log" 2>&1 &
           SOLID_PID=$!
           cd ..
           python3 -m http.server 4190 --bind 127.0.0.1 --directory site/dist-godot-shadow > "$OUT/godot-server.log" 2>&1 &
@@ -161,7 +163,7 @@ jobs:
           import json, math
           root = Path('/tmp/novelforge-route-parity')
           routes = ['home','product','studio','architecture','publication','inspect','playground','agents','changelog']
-          metrics = {'schema':'novelforge_godot_route_parity_v3','blocking':False,'solid_typography':'pinned WeiUI Inter + Noto fallbacks','interaction_qa':'blocking','pairs':{}}
+          metrics = {'schema':'novelforge_godot_route_parity_v4','blocking':False,'solid_role':'golden_visual_behavior_fixture','solid_typography':'pinned WeiUI Inter + Noto fallbacks','godot_role':'production_runtime','interaction_qa':'blocking','pairs':{}}
           for route in routes:
               for layout in ['desktop','mobile']:
                   name = f'{route}-{layout}'

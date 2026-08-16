@@ -54,10 +54,8 @@ jobs:
       - name: Install exact direct dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
 
-      - name: Product and Docs source contracts
-        run: |
-          npm run quality
-          npm run godot:shadow:quality
+      - name: Product, baseline, and Docs source contracts
+        run: npm run quality
 
       - name: Build permanent Starlight Docs surface
         run: |
@@ -215,4 +213,46 @@ jobs:
             echo "- Origin: https://${origin}"
             echo "- Custom domain: https://${CLOUDFLARE_CUSTOM_DOMAIN} (${domain_status})"
             echo "- External DNS CNAME: novelforge -> ${origin}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Verify live Godot Product and Starlight Docs
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          base="https://${CLOUDFLARE_CUSTOM_DOMAIN}"
+
+          verify_live() {
+            local path="$1"
+            local marker="$2"
+            local reject="${3:-}"
+            local output
+            output=$(mktemp)
+            local ok=false
+            for attempt in $(seq 1 24); do
+              if curl --silent --show-error --fail --location --connect-timeout 10 --max-time 30 \
+                "${base}${path}?nf_verify=${GITHUB_SHA}-${attempt}" --output "${output}" \
+                && grep -Fq "${marker}" "${output}" \
+                && { [ -z "${reject}" ] || ! grep -Fq "${reject}" "${output}"; }; then
+                ok=true
+                break
+              fi
+              sleep 5
+            done
+            if [ "${ok}" != true ]; then
+              echo "Live verification failed for ${base}${path}" >&2
+              head -c 1200 "${output}" >&2 || true
+              exit 1
+            fi
+            rm -f "${output}"
+          }
+
+          verify_live "/" 'data-novelforge-runtime="loading"'
+          verify_live "/architecture" 'data-novelforge-runtime="loading"'
+          verify_live "/docs/" 'NovelForge 文档中心' 'data-novelforge-runtime="loading"'
+
+          {
+            echo "### Live HTTP verification"
+            echo "- / → Godot Web marker: PASS"
+            echo "- /architecture → Godot direct-route marker: PASS"
+            echo "- /docs/ → Astro/Starlight marker, no Godot shell: PASS"
           } >> "${GITHUB_STEP_SUMMARY}"

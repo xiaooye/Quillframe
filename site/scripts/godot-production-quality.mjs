@@ -9,6 +9,7 @@ const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
 const failures = [];
 const check = (ok, message) => { if (!ok) failures.push(message); };
 
+const packageJson = JSON.parse(read("package.json"));
 const scene = read("godot/Main.tscn");
 const shell = read("godot/web/novelforge.html");
 const interaction = read("godot/scripts/interaction_parity.gd");
@@ -23,6 +24,11 @@ check(shell.includes('<base href="/"'), "production shell must resolve Godot ass
 check(shell.includes("Story Loom · Kawaii Atelier runtime"), "production loader must retain the Kawaii Atelier identity");
 check(interaction.includes("JavaScriptBridge.create_callback"), "production browser event bridge missing");
 check(interaction.includes("novelforgeInteraction"), "production interaction readiness marker missing");
+check(packageJson.scripts?.build?.includes("build-godot-web.sh"), "default npm build must assemble the Godot Product runtime");
+check(packageJson.scripts?.dev?.includes("godot --path godot"), "default npm dev must enter the Godot project rather than the Solid baseline");
+check(packageJson.scripts?.["baseline:build"]?.includes("vite build"), "Solid/Vite must remain available only as an explicit golden baseline build");
+check(packageJson.scripts?.["baseline:quality"]?.includes("scripts/quality.mjs"), "golden baseline quality contract must remain explicit");
+check(packageJson.scripts?.quality?.includes("godot:quality") && packageJson.scripts?.quality?.includes("godot-production-quality.mjs"), "aggregate quality must include Godot source and production contracts");
 check(build.includes('DOCS_DIR="${OUT_DIR}/docs"'), "production build must preserve the Starlight docs boundary");
 check(build.includes('STAGE_DIR="${ROOT_DIR}/dist-godot-shadow"'), "production build must consume the proven Godot export artifact");
 check(build.includes('bash "${ROOT_DIR}/scripts/build-godot-shadow.sh"'), "production build must reuse the parity/size-gated Godot exporter");
@@ -43,18 +49,20 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_production_quality_v3",
+    schema: "novelforge_godot_production_quality_v4",
     status: "pass",
     production_cutover: true,
     product_runtime: "godot_web",
     docs_runtime: "astro_starlight",
     docs_root: "/docs/**",
-    export_strategy: "proven_shadow_export_then_root_merge",
+    golden_baseline: "solidjs_vite_story_loom_fixture",
+    default_build: "godot_web",
+    export_strategy: "single_parity_proven_exporter_then_root_merge",
     single_godot_exporter: true,
     renderer: "gl_compatibility",
     max_dimension: "2.5D",
     direct_route_rewrites: true,
     cloudflare_asset_ceiling: true,
-    authority: false,
+    authority: false
   }, null, 2));
 }
