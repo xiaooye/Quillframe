@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""NovelForge Author Model projection and review-feedback capture.
+"""NovelForge Author Model evidence persistence and selective projection.
 
-This module deliberately reuses LearningStore rather than creating a second
-preference database. Semantic interpretation arrives as a bounded proposal;
-this deterministic layer validates scope/authority, persists evidence, updates
-revisable hypotheses, and exposes only active applicable preferences to future
-production runs.
+This module reuses LearningStore rather than creating a second preference
+system. Models interpret review feedback; deterministic code validates scope and
+write authority, persists evidence, applies CAS-backed hypothesis updates, and
+exposes an active-preference index. A manager/model must explicitly select which
+active hypotheses enter a production context; active does not mean universally
+relevant.
 
 It never grants Canon, Framework, Project-profile, or durable user-taste write
 authority by itself. Durable user-taste activation requires BOTH an explicit
-write-authority signal and a current passing prerequisite evaluation from the
-existing learning promotion gate.
+write-authority signal and a current passing promotion prerequisite whose
+semantic evidence review is bound to the same candidate.
 """
 from __future__ import annotations
 
@@ -22,11 +23,12 @@ from typing import Any
 
 from learning_store import LearningStore
 from promotion_gate import SCHEMA as PROMOTION_CANDIDATE_SCHEMA
+from promotion_gate import _semantic_binding as _promotion_semantic_binding
 from promotion_gate import evaluate as evaluate_promotion_candidate
 
 SCHEMA = "novelforge_author_model_v1"
 CAPTURE_SCHEMA = "novelforge_feedback_capture_v1"
-PROJECTION_SCHEMA = "novelforge_author_model_projection_v1"
+PROJECTION_SCHEMA = "novelforge_author_model_projection_v2"
 SCOPES = {"one_off", "project", "user_taste", "general_craft"}
 POLARITIES = {"positive", "negative", "mixed"}
 SOURCE_MAP = {
@@ -140,12 +142,6 @@ def _supersede(store: LearningStore, old_id: str, *, contradiction_ref: str) -> 
 
 
 def _user_taste_prerequisite(activation: dict[str, Any], interpretation: dict[str, Any]) -> dict[str, Any]:
-    """Evaluate and bind the existing promotion gate without granting authority.
-
-    Callers provide the promotion *candidate evidence packet*, not a pre-baked
-    PASS receipt. This function runs the current deterministic gate and then
-    binds its scope/mechanism back to the interpretation being captured.
-    """
     candidate = activation.get("user_taste_promotion_candidate")
     if candidate is None:
         return {
@@ -156,12 +152,7 @@ def _user_taste_prerequisite(activation: dict[str, Any], interpretation: dict[st
         }
     if not isinstance(candidate, dict):
         raise ValueError("activation.user_taste_promotion_candidate must be object")
-    if candidate.get("schema") != PROMOTION_CANDIDATE_SCHEMA:
-        # Let the canonical gate report the schema blocker as well, but keep an
-        # explicit binding error for callers inspecting Author Model output.
-        schema_mismatch = True
-    else:
-        schema_mismatch = False
+    schema_mismatch = candidate.get("schema") != PROMOTION_CANDIDATE_SCHEMA
     report = evaluate_promotion_candidate(candidate)
     binding_blockers: list[str] = []
     if schema_mismatch:
@@ -178,6 +169,7 @@ def _user_taste_prerequisite(activation: dict[str, Any], interpretation: dict[st
         "ready": ready,
         "candidate_id": report.get("candidate_id"),
         "blockers": blockers,
+        "semantic_evidence_count_threshold_used": report.get("semantic_evidence_count_threshold_used"),
         "behavior_write_authority": False,
         "durable_user_taste_write_authority": False,
     }
@@ -280,36 +272,76 @@ def capture_feedback(store: LearningStore, request: Any) -> dict[str, Any]:
     }
 
 
-def project_author_model(store: LearningStore, *, project_id: str | None, explicit_intent: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+def _projection_row(row: Any) -> dict[str, Any]:
+    return {
+        "hypothesis_id": row["hypothesis_id"],
+        "scope": row["subject_scope"],
+        "project_id": row["project_id"],
+        "dimension": row["dimension"],
+        "statement": row["statement"],
+        "mechanism": row["mechanism"],
+        "confidence": row["confidence"],
+        "applicability": json.loads(row["applicability_json"]),
+        "evidence_ids": json.loads(row["evidence_ids_json"]),
+        "version": row["version"],
+    }
+
+
+def project_author_model(
+    store: LearningStore,
+    *,
+    project_id: str | None,
+    explicit_intent: list[dict[str, Any]] | None = None,
+    selected_hypothesis_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    """Project only manager/model-selected active hypotheses into working context.
+
+    `active` is durable eligibility, not semantic relevance. The runtime exposes
+    a compact index and exact IDs; the semantic caller chooses which active
+    hypotheses are useful for the current task. Deterministic code then verifies
+    the selected IDs are active and Project-compatible before exposing details.
+    """
     explicit_intent = explicit_intent or []
     if not isinstance(explicit_intent, list) or any(not isinstance(x, dict) for x in explicit_intent):
         raise ValueError("explicit_intent must be object array")
+    selected = _string_list(selected_hypothesis_ids or [], "selected_hypothesis_ids")
+
     with store.connect() as conn:
         rows = conn.execute(
             "SELECT * FROM preference_hypotheses WHERE state='active' AND subject_scope IN ('project','user_taste') ORDER BY updated_at ASC, hypothesis_id ASC"
         ).fetchall()
-    active = []
+    eligible = []
     for row in rows:
         if row["subject_scope"] == "project" and row["project_id"] != project_id:
             continue
-        active.append({
-            "hypothesis_id": row["hypothesis_id"],
-            "scope": row["subject_scope"],
-            "project_id": row["project_id"],
-            "dimension": row["dimension"],
-            "statement": row["statement"],
-            "mechanism": row["mechanism"],
-            "confidence": row["confidence"],
-            "applicability": json.loads(row["applicability_json"]),
-            "evidence_ids": json.loads(row["evidence_ids_json"]),
-            "version": row["version"],
-        })
+        eligible.append(row)
+    by_id = {row["hypothesis_id"]: row for row in eligible}
+    unknown = [hypothesis_id for hypothesis_id in selected if hypothesis_id not in by_id]
+    if unknown:
+        raise ValueError("selected hypothesis is not active/eligible for this Project: " + ", ".join(unknown))
+
+    index = [{
+        "hypothesis_id": row["hypothesis_id"],
+        "scope": row["subject_scope"],
+        "project_id": row["project_id"],
+        "dimension": row["dimension"],
+        "mechanism": row["mechanism"],
+        "applicability": json.loads(row["applicability_json"]),
+        "version": row["version"],
+    } for row in eligible]
+    projected = [_projection_row(by_id[hypothesis_id]) for hypothesis_id in selected]
+
     return {
         "schema": PROJECTION_SCHEMA,
         "project_id": project_id,
-        "priority_order": ["current_explicit_request", "project_active", "user_taste_active"],
+        "priority_order": ["current_explicit_request", "selected_project_active", "selected_user_taste_active"],
         "explicit_intent": explicit_intent,
-        "active_preferences": active,
+        "available_active_hypothesis_ids": [row["hypothesis_id"] for row in eligible],
+        "active_preference_index": index,
+        "selected_hypothesis_ids": selected,
+        "active_preferences": projected,
+        "all_active_preferences_auto_included": False,
+        "semantic_relevance_judged_by_runtime": False,
         "candidate_hypotheses_included": False,
         "one_off_history_included": False,
         "general_craft_candidates_included": False,
@@ -340,7 +372,7 @@ def self_test(path: Path | None = None) -> dict[str, Any]:
         "confidence": 1.0, "evidence_source": "human_review", "avoid_behavior": ["mechanical one-sentence paragraph default"]
     }})
     p0 = project_author_model(store, project_id="P1")
-    unauthorized_project_inactive = r1["hypothesis_state"] == "candidate" and not p0["active_preferences"]
+    unauthorized_project_inactive = r1["hypothesis_state"] == "candidate" and not p0["available_active_hypothesis_ids"]
 
     r2 = capture_feedback(store, {**base, "feedback_ref": "review:2", "activation": {"project_preference_write_authorized": True, "durable_user_taste_write_authorized": False}, "interpretation": {
         "scope_candidate": "project", "dimension": "paragraph_rhythm", "mechanism": "functional paragraphing",
@@ -349,8 +381,16 @@ def self_test(path: Path | None = None) -> dict[str, Any]:
         "avoid_behavior": ["mechanical fragmentation"], "contradicts_hypothesis_ids": [r1["hypothesis_id"]]
     }})
     p1 = project_author_model(store, project_id="P1", explicit_intent=[{"dimension":"current_request","statement":"Keep this scene terse."}])
+    p1_selected = project_author_model(store, project_id="P1", selected_hypothesis_ids=[r2["hypothesis_id"]])
     old = _load_hypothesis(store, r1["hypothesis_id"])
-    project_active = r2["active_for_future_production"] and any(x["hypothesis_id"] == r2["hypothesis_id"] for x in p1["active_preferences"])
+    project_active = r2["active_for_future_production"] and r2["hypothesis_id"] in p1["available_active_hypothesis_ids"]
+    active_not_auto_injected = project_active and not p1["active_preferences"] and p1["all_active_preferences_auto_included"] is False
+    explicit_selection_projects = any(x["hypothesis_id"] == r2["hypothesis_id"] for x in p1_selected["active_preferences"])
+    unknown_selection_blocked = False
+    try:
+        project_author_model(store, project_id="P1", selected_hypothesis_ids=["HYP-NOT-ACTIVE"])
+    except ValueError:
+        unknown_selection_blocked = True
     contradiction_supersedes = old is not None and old["state"] == "superseded"
 
     r3 = capture_feedback(store, {**base, "feedback_ref": "review:3", "interpretation": {
@@ -376,20 +416,17 @@ def self_test(path: Path | None = None) -> dict[str, Any]:
         and r5["user_taste_activation_prerequisite"]["status"] == "missing"
     )
 
+    refs = ["review:5", "EVAL-UT-1"]
     promotion_candidate = {
         "schema": PROMOTION_CANDIDATE_SCHEMA,
         "candidate_id": "UT-GOOD",
         "scope": "user_taste",
         "mechanism": "low narrator commentary",
-        "evidence": {
-            "explicit_user_evidence": 1,
-            "independent_consistent_corrections": 0,
-            "personalized_eval": {"result": "pass", "ref": "EVAL-UT-1"},
-            "evidence_refs": ["review:5", "EVAL-UT-1"],
-            "applicability_boundary": {"scene_types": ["dramatic"]},
-            "open_contradictions": 0,
-        },
+        "evidence": {"evidence_refs": refs},
     }
+    promotion_candidate["semantic_review_binding"] = _promotion_semantic_binding(
+        "UT-GOOD", "user_taste", "low narrator commentary", refs
+    )
     r6 = capture_feedback(store, {**base, "feedback_ref": "review:6", "activation": {
         "project_preference_write_authorized": False,
         "durable_user_taste_write_authorized": True,
@@ -403,6 +440,7 @@ def self_test(path: Path | None = None) -> dict[str, Any]:
         r6["hypothesis_state"] == "active"
         and r6["active_for_future_production"]
         and r6["user_taste_activation_prerequisite"]["ready"] is True
+        and r6["user_taste_activation_prerequisite"]["semantic_evidence_count_threshold_used"] is False
         and r6["user_taste_activation_prerequisite"]["durable_user_taste_write_authority"] is False
     )
 
@@ -411,6 +449,9 @@ def self_test(path: Path | None = None) -> dict[str, Any]:
         "author_model_contract": "PASS" if all([
             unauthorized_project_inactive,
             project_active,
+            active_not_auto_injected,
+            explicit_selection_projects,
+            unknown_selection_blocked,
             contradiction_supersedes,
             nonproject_not_autoactive,
             write_authority_alone_not_enough,
@@ -418,6 +459,10 @@ def self_test(path: Path | None = None) -> dict[str, Any]:
         ]) else "FAIL",
         "unauthorized_project_feedback_not_activated": unauthorized_project_inactive,
         "authorized_project_feedback_activated": project_active,
+        "all_active_preferences_auto_included": False,
+        "agent_selected_active_preferences_only": active_not_auto_injected and explicit_selection_projects,
+        "unknown_or_cross_project_selection_blocked": unknown_selection_blocked,
+        "semantic_relevance_judged_by_runtime": False,
         "contradiction_supersedes": contradiction_supersedes,
         "user_taste_and_general_craft_not_autoactivated": nonproject_not_autoactive,
         "user_taste_write_authority_alone_not_enough": write_authority_alone_not_enough,
@@ -440,7 +485,7 @@ def main() -> int:
     p.add_argument("--db", default=".novelforge/learning.db")
     sub = p.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("capture"); c.add_argument("--request", required=True)
-    r = sub.add_parser("project"); r.add_argument("--project-id"); r.add_argument("--explicit-intent")
+    r = sub.add_parser("project"); r.add_argument("--project-id"); r.add_argument("--explicit-intent"); r.add_argument("--selected-hypothesis-ids")
     s = sub.add_parser("self-test"); s.add_argument("--path")
     a = p.parse_args()
     if a.cmd == "self-test":
@@ -451,7 +496,8 @@ def main() -> int:
             out = capture_feedback(store, _load(a.request))
         else:
             explicit = _load(a.explicit_intent) if a.explicit_intent else []
-            out = project_author_model(store, project_id=a.project_id, explicit_intent=explicit)
+            selected = _load(a.selected_hypothesis_ids) if a.selected_hypothesis_ids else []
+            out = project_author_model(store, project_id=a.project_id, explicit_intent=explicit, selected_hypothesis_ids=selected)
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0 if out.get("author_model_contract", "PASS") == "PASS" else 1
 
