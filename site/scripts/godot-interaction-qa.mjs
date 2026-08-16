@@ -236,6 +236,30 @@ try {
   await evaluate("history.back()");
   await waitFor("popstate navigation", (s) => s.path === "/" && s.ready === "ready" && s.accessibilityRoute === "/");
 
+  // Before theme/locale mutation, prove every product route at both compact
+  // widths in the default English locale. This catches fixed desktop columns
+  // that only fail inside the tablet topology.
+  const compactSizes = [
+    [1024, 768, "compact"],
+    [768, 1024, "compact"],
+  ];
+  const compactRoutes = [
+    ["home", "/"],
+    ["product", "/product"],
+    ["studio", "/studio"],
+    ["architecture", "/architecture"],
+    ["publication", "/publication"],
+    ["inspect", "/inspect"],
+    ["playground", "/playground"],
+    ["agents", "/agents"],
+    ["changelog", "/changelog"],
+  ];
+  for (const [routeName, route] of compactRoutes) {
+    await captureResponsiveRoute(`en-${routeName}`, route, compactSizes);
+  }
+  await navigateRoute("/");
+  await resizeAndWait(1440, 900, "desktop");
+
   const appearanceBefore = (await snapshot()).appearance;
   await click(1364, 37);
   const themed = await waitFor("appearance toggle", (s) => s.appearance && s.appearance !== appearanceBefore);
@@ -265,8 +289,8 @@ try {
   const mobile = await waitFor("mobile menu", (s) => s.mobileMenu === "open");
   await screenshot("responsive-home-390x844-mobile-menu");
 
-  // Highest-risk workstation/editorial routes receive intermediate rendered
-  // evidence in addition to the blocking continuous-resize receipt above.
+  // Highest-risk workstation/editorial routes keep full desktop/compact/phone
+  // evidence after the locale switch.
   const evidenceSizes = [
     [1280, 800, "desktop"],
     [1024, 768, "compact"],
@@ -283,13 +307,24 @@ try {
     [360, 800, "phone"],
   ]);
 
+  // Complete the Chinese compact matrix for the remaining route surfaces.
+  for (const [routeName, route] of [
+    ["product", "/product"],
+    ["architecture", "/architecture"],
+    ["playground", "/playground"],
+    ["agents", "/agents"],
+    ["changelog", "/changelog"],
+  ]) {
+    await captureResponsiveRoute(`zh-${routeName}`, route, compactSizes);
+  }
+
   const finalState = await snapshot();
   if (diagnostics.some((line) => /SCRIPT ERROR|Parse Error|Invalid call|Invalid access/i.test(line))) {
     throw new Error(`browser diagnostics contain Godot runtime errors: ${diagnostics.join(" | ")}`);
   }
 
   const report = {
-    schema: "novelforge_godot_interaction_qa_v3",
+    schema: "novelforge_godot_interaction_qa_v4",
     status: "pass",
     command_palette: true,
     ctrl_k: true,
@@ -302,7 +337,8 @@ try {
     responsive_reflow: true,
     same_topology_reflow: true,
     responsive_widths: ["1440x900", "1280x800", "1024x768", "768x1024", "430x932", "390x844", "360x800"],
-    responsive_evidence_routes: ["home", "studio", "publication", "inspect"],
+    responsive_evidence_routes: ["home", "product", "studio", "architecture", "publication", "inspect", "playground", "agents", "changelog"],
+    compact_locale_evidence: ["en-US", "zh-CN"],
     final_responsive_revision: Number(finalState.responsiveRevision || mobileReady.responsiveRevision || initial.responsiveRevision || 0),
     accessibility_dom: true,
     accessibility_tree: true,
