@@ -4,6 +4,60 @@
 
 Connect existing NovelForge primitives into a stateful co-creative production loop without creating duplicate subsystems or weakening authority boundaries.
 
+## Live candidate reconciliation · 2026-08-16
+
+This plan was re-audited against PR #90 at exact pre-write HEAD `0a1679b315366c4a42bda17eff9dffd04ad76db0`. The branch already contains a partial adaptive-production candidate, so this work extends existing owners rather than creating parallel stores, registries, routers, simulators, or release authorities.
+
+| Existing mechanism | Current owner / files | Coverage before stabilization | Decision | Reason / migration risk |
+|---|---|---|---|---|
+| planning commitment horizon | `harness/planning_horizon.py`, schema, dedicated CI/evals | deterministic + independent semantic workflow PASS on pre-write HEAD | KEEP | mechanism is bounded, non-authoritative and already proven; do not entangle later runtime work with its semantics |
+| durable preference evidence / hypotheses | `learning/learning_store.py` | existing self-test + normal contracts CI | KEEP | already owns durable learning state; a second Author Model database would create duplicate truth |
+| promotion prerequisites | `learning/promotion_gate.py` | existing self-test + normal contracts CI | KEEP + BIND | the new Author Model must consume this prerequisite result before durable user-taste activation; a caller boolean alone is insufficient |
+| Author Model projection | `learning/author_model.py` | local self-test only; not yet normal-CI/manifest integrated | REFACTOR | preserve Learning Store ownership, but close the activation-authority gap and register the runtime |
+| context stage isolation | `harness/context_inspector.py` | existing self-test, but manifest schema metadata drifted | EXTEND | current owner already separates stage visibility; keep semantic relevance outside deterministic code |
+| required context assembly | `harness/context_assembly.py` | local self-test only | EXTEND | typed satisfaction receipt belongs beside existing context owner; no second relevance engine |
+| character / scene simulation | `character.action_propose`, `scene.resolve_actions` contracts | registered semantic contracts | KEEP | existing action→collision boundary is the correct simulation owner; do not build a parallel simulator |
+| writer-safe realization | `scene.realization_project` in `production-loop.json` | registered contract; typed CI fixtures incomplete | EXTEND | projection is the needed privacy boundary between private simulation state and prose |
+| Reader / Editor loop | `reader.production_audit`, `editor.repair_spec` | registered contracts; typed CI fixtures incomplete | EXTEND | reuse existing quality/readiness/compare owners instead of proliferating literary agents |
+| structural release composition | `quality/production_release.py` + existing `production_readiness.py` | local self-test only | EXTEND | structural receipts are conjunctive evidence only; no alternate release authority |
+| prose telemetry | `quality/prose_telemetry.py` | local self-test only | KEEP + INTEGRATE | signals-only design is compatible; it must remain non-verdict-bearing |
+| HF-30 taxonomy | `quality/taxonomy.json` | registry entry exists; Surface docs + semantic regression family missing | EXTEND | synchronize human contract and add semantic counterexamples; never replace semantics with lexical heuristics |
+| write-intent guard | `harness/control_plane/write_intent_guard.py` | local self-test only | EXTEND | belongs in existing Control Plane; exact action/resource/target/before-state match remains non-authoritative |
+| semantic registry integrity | `scripts/semantic_reference_integrity.py` | local tool only | EXTEND | add normal-CI coverage rather than creating a new registry |
+
+### Candidate-owned failures found during reconciliation
+
+- Spec 012 bilingual docs were not registered in `docs/documentation_manifest.json`.
+- The four new `production-loop` contracts were registered, but generic semantic-contract workflow fixtures were not migrated with the registry.
+- HF-30 existed in `quality/taxonomy.json` without the canonical bilingual Surface heading/name.
+- `HARNESS_MANIFEST.yaml` did not yet register the new Author Model / context assembly / write guard / telemetry / structural release runtimes, and still declared the old Context Inspector schema id.
+- The generic eval manifest did not yet contain the required HF-30 capability/counterexample family.
+- `learning/author_model.py` allowed `durable_user_taste_write_authorized=true` to activate a user-taste hypothesis without binding the existing `promotion_gate` prerequisite result.
+
+Pre-existing Product/Godot documentation and Studio/Product CI debt are tracked separately and are not evidence against this candidate.
+
+## Branch / PR architecture decision
+
+PR #90 remains the only active general/agent branch and must first become a coherent planning + adaptive-production review unit. Repository branch-budget guidance prefers at most one active general/agent branch; the Master execution prompt also forbids hiding a future polyglot rewrite inside an unrelated planning PR. Therefore:
+
+1. **Current review unit:** stabilize only the adaptive-production work that is already present on PR #90, including authority, registry, docs, deterministic CI, HF-30 semantic evidence, and rollback completeness.
+2. **No history rewrite / no force push / no merge:** preserve the current nine-commit history and use `0a1679b3…` as the rollback checkpoint for this stabilization slice.
+3. **Polyglot implementation:** DEFER from this PR. A Rust/Go/WASM/Starlark implementation requires a separate review unit after PR #90 is closed/merged/superseded or an explicit branch-budget exception exists. The architecture research may be recorded now; production source in new languages must not be added decoratively to PR #90.
+4. **No second Core:** any later polyglot slice must begin with a fingerprint/canonicalization authority audit and golden vectors from the existing Python behavior before moving an implementation boundary.
+
+This is a reviewability constraint, not a rejection of the long-term polyglot direction.
+
+## Research adoption snapshot
+
+Primary-source revalidation for this stabilization produced the following mechanism decisions:
+
+- **ADAPT — LangGraph / OpenAI Agents SDK / AutoGen / CrewAI / PydanticAI:** retain explicit session/run state, typed handoffs, bounded specialist context, interrupts/resume, and inspectable graph state as runtime mechanisms; reject provider/session memory as Project authority and reject multi-agent role proliferation.
+- **ADAPT — Temporal / Dapr durable execution:** retain replay-aware checkpoint thinking, deterministic workflow-side decisions, idempotent side-effect boundaries, typed failure/retry classes, and upgrade caution; do not introduce Temporal or Dapr as a NovelForge dependency for this candidate because existing Session Runtime + Control Plane already own these semantics.
+- **ADAPT — SQLite:** formalize the existing embedded WAL-backed Learning/Control Plane stores and their migration/backup semantics; do not create a second operational database. WAL remains a same-host substrate, not a distributed authority plane.
+- **ADAPT — Sudowrite / Novelcrafter:** explicit editable project state, selective AI context, prompt/context visibility, revision history, and project/series scoping validate NovelForge's explicit Project state + sparse Context Assembly direction. NovelForge keeps stronger authority separation between evidence, derived state and Canon.
+- **ADAPT — MAGNET / StoryBox / StoryWriter / Generative Agents:** preserve `private state → action proposal → shared-world collision → event trajectory → writer-safe realization`; keep dynamic history selection and bounded planning. Reject `character sheet → prose/dialogue paraphrase` and reject simulation state as automatic story truth.
+- **DEFER — Rust / Go / WASM / Starlark / Zig / C/C++ production ownership in PR #90:** no current performance or packaging evidence justifies crossing the reviewability boundary. Rust remains the preferred future deterministic-kernel candidate only after existing fingerprint semantics and golden vectors are mapped. Go remains a future execution-fabric candidate only if it does not duplicate the Python Control Plane. Starlark remains a future restricted extension candidate under deny-by-default capabilities. Zig/C/C++ remain interop/portability-only candidates with no current production owner.
+
 ## Workstream 1 · Author Model and review feedback
 
 1. Add a deterministic Author Model projection runtime backed by the existing Learning Store.
