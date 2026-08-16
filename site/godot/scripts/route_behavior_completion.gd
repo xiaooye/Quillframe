@@ -37,6 +37,68 @@ func _build() -> void:
 	_playground_run_button = null
 	_playground_clear_button = null
 	super._build()
+	_repair_architecture_wide_geometry()
+
+# The generic wide-page clamp preserves most routes, but Architecture has a
+# mixed geometry contract: a fixed-width copy column plus a diagram and action
+# controls whose source coordinates were derived from the pre-clamp page width.
+# Rebuild the diagram from the final bounded hero width and restore the two
+# action clusters from their container-relative formulas. This runs only above
+# the Solid page max; 1440/compact/phone remain untouched.
+func _repair_architecture_wide_geometry() -> void:
+	if _current_route() != "/architecture" or _layout != "desktop" or _stage == null:
+		return
+	if _solid_viewport_width() <= SOLID_PAGE_MAX:
+		return
+	var hero: Panel = null
+	var execution: Panel = null
+	for child in _stage.get_children():
+		if not child is Panel:
+			continue
+		var panel := child as Panel
+		if absf(panel.size.x - SOLID_INNER_MAX) > 8.0:
+			continue
+		if absf(panel.position.y - 122.0) <= 8.0:
+			hero = panel
+		elif panel.position.y > 560.0 and panel.position.y < 760.0:
+			execution = panel
+	if hero != null:
+		var old_grid: Control = null
+		for child in hero.get_children():
+			if child is Panel and child.get_child_count() >= 20:
+				old_grid = child as Control
+				break
+		if old_grid != null:
+			hero.remove_child(old_grid)
+			old_grid.queue_free()
+		_build_architecture_grid(
+			hero,
+			Vector2(hero.size.x * 0.59, 43.0),
+			Vector2(hero.size.x * 0.38, maxf(hero.size.y - 86.0, 240.0)),
+			false
+		)
+		var docs := _find_button_contains(hero, "architecture docs")
+		if docs != null:
+			docs.position = Vector2(44.0, 382.0 if _locale == "en-US" else 345.0)
+			docs.size = Vector2(220.0, 44.0)
+		var play := _find_button_exact(hero, "▷ Playground")
+		if play != null:
+			play.position = Vector2(280.0, 382.0 if _locale == "en-US" else 345.0)
+			play.size = Vector2(150.0, 44.0)
+	if execution != null:
+		var simulate := _find_button_contains(execution, "Simulate")
+		if simulate == null:
+			simulate = _find_button_contains(execution, "模拟")
+		if simulate != null:
+			simulate.position = Vector2(execution.size.x - 260.0, 17.0)
+			simulate.size = Vector2(155.0, 44.0)
+		var reset := _find_button_exact(execution, "Reset")
+		if reset == null:
+			reset = _find_button_exact(execution, "重置")
+		if reset != null:
+			reset.position = Vector2(execution.size.x - 95.0, 17.0)
+			reset.size = Vector2(75.0, 44.0)
+	_set_dataset("novelforgeArchitectureWideHero", "bounded-two-column")
 
 # -----------------------------------------------------------------------------
 # Inspector: the existing demo/reset path is fully deterministic and mirrors
