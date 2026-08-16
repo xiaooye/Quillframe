@@ -17,6 +17,12 @@ func _build() -> void:
 			"/inspect": _patch_inspect_phone()
 			"/playground": _patch_playground_phone()
 		return
+	if _layout == "compact":
+		match _current_route():
+			"/studio": _patch_studio_compact()
+			"/publication": _patch_publication_compact()
+			"/inspect": _patch_inspect_compact()
+		return
 	if _layout != "desktop":
 		return
 	match _current_route():
@@ -138,6 +144,70 @@ func _patch_studio_desktop() -> void:
 		signature.position.y = 603.0
 	_shift_stage_controls(880.0, -65.0, hero)
 	_stage.custom_minimum_size.y = max(_stage.custom_minimum_size.y - 65.0, 1080.0)
+
+func _patch_studio_compact() -> void:
+	var hero := _find_stage_panel(110.0, 700.0)
+	if hero == null:
+		return
+	var target_height := 1040.0 if _locale == "en-US" else 930.0
+	var delta := target_height - hero.size.y
+	_resize_hero(hero, target_height, 8.0)
+	var host := _find_label_exact(hero, "studio.novelforge.wei-dev.com")
+	if host != null and host.get_parent() != null and host.get_parent().get_parent() is Control:
+		var terminal := host.get_parent().get_parent() as Control
+		var parent := terminal.get_parent()
+		parent.remove_child(terminal)
+		terminal.free()
+		var terminal_y := 710.0 if _locale == "en-US" else 625.0
+		_build_studio_terminal(hero, Vector2(40.0, terminal_y), Vector2(hero.size.x - 80.0, 227.0))
+	var signature := _find_label_exact(hero, "✦ Studio ♡")
+	if signature != null:
+		signature.position = Vector2(hero.size.x - 140.0, target_height - 52.0)
+	_shift_stage_controls(900.0, delta, hero)
+	_stage.custom_minimum_size.y += delta
+
+func _patch_publication_compact() -> void:
+	# The wide compact composition remains clean around 1024 px. Below 900 px,
+	# preserve the tablet header but switch only the visual evidence block to the
+	# same two-column card primitive used by the phone surface.
+	if size.x >= 900.0:
+		return
+	var hero := _find_stage_panel(110.0, 500.0)
+	if hero == null:
+		return
+	var target_height := 1210.0 if _locale == "en-US" else 1120.0
+	var delta := target_height - hero.size.y
+	_resize_hero(hero, target_height, 8.0)
+	var epub_tag := _find_negative_y_label(hero, "EPUB")
+	if epub_tag != null and epub_tag.get_parent() != null and epub_tag.get_parent().get_parent() is Control:
+		var epub_card := epub_tag.get_parent().get_parent() as Control
+		if epub_card.get_parent() is Control:
+			var showcase := epub_card.get_parent() as Control
+			var parent := showcase.get_parent()
+			parent.remove_child(showcase)
+			showcase.free()
+			var showcase_y := 535.0 if _locale == "en-US" else 445.0
+			_build_format_showcase(hero, Vector2(44.0, showcase_y), Vector2(hero.size.x - 88.0, 620.0), true)
+	_shift_stage_controls(700.0, delta, hero)
+	_stage.custom_minimum_size.y += delta
+
+func _patch_inspect_compact() -> void:
+	var hero := _find_stage_panel(110.0, 400.0)
+	if hero == null:
+		return
+	var target_height := 730.0 if _locale == "en-US" else 665.0
+	var delta := target_height - hero.size.y
+	_resize_hero(hero, target_height, 8.0)
+	var file_name := _find_label_exact(hero, "novelforge.toml")
+	if file_name != null and file_name.get_parent() != null and file_name.get_parent().get_parent() is Control:
+		var stack := file_name.get_parent().get_parent() as Control
+		var parent := stack.get_parent()
+		parent.remove_child(stack)
+		stack.free()
+		var stack_y := 410.0 if _locale == "en-US" else 345.0
+		_build_manifest_stack(hero, Vector2(48.0, stack_y), Vector2(hero.size.x - 96.0, 250.0), true)
+	_shift_stage_controls(580.0, delta, hero)
+	_stage.custom_minimum_size.y += delta
 
 func _patch_architecture_desktop() -> void:
 	var hero := _find_stage_panel(122.0, 430.0)
