@@ -1,280 +1,219 @@
-# Orchestration Protocol · 一个任务模式、显式门槛、失败回到真正拥有问题的机制
+# 编排协议 · 一个 task mode，模型做语义决策，runtime 执行精确门槛
 
-<p><kbd>TIER C · 契约</kbd>&nbsp;&nbsp;<kbd>MODE GRAPH</kbd>&nbsp;&nbsp;<kbd>副作用前 CHECKPOINT</kbd></p>
+<p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>MODE GRAPHS</kbd>&nbsp;&nbsp;<kbd>CHECKPOINTED SIDE EFFECTS</kbd></p>
 
-本协议规定 NovelForge manager 如何把一个已经验证的 task mode 变成可执行 run graph。它自己不判断文学意义；semantic node 通过 model-readable contract 交给模型，identity、permission、fingerprint、persistence、routing 和 transaction 则保持确定性。
+本协议定义 manager 如何把一个已验证的 task mode 变成可恢复 run graph。Orchestration 控制**顺序、capability 与 gate**，不判断文学意义。
 
-> **边界 ✦** Orchestration 负责“顺序与门槛”。故事事实仍属于 Project authority；语义判断仍属于受限 contract 中的模型 worker。
+## 01 · Common prefix
 
-## 01 · 所有模式共享的前缀
-
-每种模式都从同一条执行主干开始：
+每个 mode 都先执行：
 
 ```text
-解析 Framework authority
-→ 验证 Project + exact lock
-→ 选择恰好一个 task_mode
-→ 创建 / 恢复 manager session + run
-→ 解析 authority cutoff + permission
-→ 构建 sparse Context Manifest
-→ 解析本次真正需要的 capability
-→ 执行当前 mode graph
+resolve current/pinned Framework authority
+→ validate Project + exact lock/fingerprint
+→ choose exactly one task_mode
+→ create/resume manager session + run
+→ resolve authority cutoff + permissions
+→ establish sparse mechanically eligible context candidates
+→ resolve current capabilities
+→ execute the selected mode graph
 ```
 
-Resume 不能假设昨天的环境今天仍然一样：
+Resume 永远不能信任 stale environment / transcript。继续 workflow cursor 前必须重新验证 Framework/Project compatibility、relevant fingerprints、approval/write intent 与 pending capabilities。
+
+## 02 · Shared semantic subroutine
+
+任何 semantic task 都走同一个边界：
 
 ```text
-加载 checkpoint
-→ 重新验证 Framework / Project compatibility
-→ 重新验证 artifact fingerprint
-→ 按当前 authority 重建允许注入的 sparse context
-→ 重新验证 approval / write intent
-→ 重新解析 pending external capability
-→ 验证并 consume pending result once
-→ 从保存的 workflow cursor 继续
+freeze semantic subject
+→ choose exact model contract / rule set / reader profile
+→ package bounded authorized evidence
+→ compute semantic fingerprint
+→ checkpoint if work may leave the current invocation
+→ execute through an eligible model/runtime
+→ receive typed result
+→ validate identity + fingerprint + provenance + output envelope
+→ consume once at the named workflow step
 ```
 
-## 02 · 共享 semantic subroutine
+模型负责 interpretation，runtime 负责 exact execution binding。
 
-任何语义任务——Reader reaction、Character Integrity、Revision diagnosis、Research interpretation 或 mandatory independent gate——都走同一种通用边界：
-
-```text
-冻结 semantic subject
-→ 选择 model contract / rubric
-→ 打包 bounded context + permission
-→ 计算 semantic fingerprint
-→ 如果工作会离开当前 invocation，则 checkpoint
-→ 路由 eligible runtime
-→ execute / handoff / relay / await
-→ 收到 typed result
-→ 验证 identity + fingerprint + provenance + output contract
-→ 在命名 workflow step consume once
-```
-
-Input、rubric 或 output contract 发生实质变化，就必须产生新 semantic fingerprint。仅 infrastructure retry、而冻结的语义问题完全相同时，可以保持原 fingerprint。
-
-有效 semantic reject 是语义结果，不是基础设施失败。
+Valid semantic reject 是结果，不是 infrastructure failure。
 
 ## 03 · DRAFT / REVISE
 
-默认生产图：
+默认 adaptive graph：
 
 ```text
-Context Freeze
-→ Adaptive Context Assembly
+authority/session bootstrap
+→ model-owned search/context selection（必要时 `context.select`）
+→ Context Inspector / Context Assembly exact boundary
 → Story / Canon Preflight
 → Planning Commitment State
 → Character Private State
 → Character Action / Tactic Simulation
-→ Scene Action Collision / World Resolution
-→ Writer-safe Realization Projection
+→ Scene Collision / World Resolution
+→ compact Writer-safe Realization Projection
 → Reader Pressure
 → Event-first Raw Draft
 → Surface Realization
-→ freeze candidate
-→ 生成后 diagnostics / regression
-→ Reader Production Audit
-→ Editor Repair Spec
-→ 回 owning mechanism 修复 / re-realize
-→ Reader Engagement
-→ Continuity / State Audit
-→ 必要的 Independent Semantic Gate
+→ freeze exact candidate fingerprint
+→ Blind Reader (`reader.engagement_audit`)
+→ Semantic Rule Auditor when required (`quality.semantic_rule_audit`)
+→ Editor Repair Spec (`editor.repair_spec`)
+→ repair / fresh realization / incumbent-challenger comparison as warranted
+→ Continuity / state audit
+→ required independent semantic gate
 → User-visible Gate
 ```
 
-关键顺序规则：
+### Context rule
 
-- Raw Draft 不对用户展示；
-- Regression 坏例和类似 answer key 的证据只能生成后加载；
-- `context.select` 可以判断 semantic relevance，但 `context_assembly.py` 只负责确定性验证 stage eligibility、authority、required context class、provenance、invalidation state，并在 required context 缺失时 fail closed；
-- 人物私有 / simulation state 不是给 Writer 做说明文的 prose payload。人物状态驱动 `character.action_propose`，`scene.resolve_actions` 负责碰撞求解，`scene.realization_project` 只暴露 writer-safe event / interaction projection；
-- `reader.production_audit` 针对冻结 candidate 判断真实 reading experience；`editor.repair_spec` 再给出 preserve/change 目标与 repair ownership。两者都不会因此取得 release 或 Canon authority；
-- Scene / Character / Reader simulation 可以是模型语义工作，但外围 durable invariant 仍由确定性代码维护；
-- Surface clean 仍然可能 Reader Engagement fail；
-- Agenda-to-dialogue leakage / HF-30 如果是结构性问题，应回 interaction / realization 或 Character / Scene Simulation，而不是机械缩短每一句对白；
-- SAFE-BUT-FLAT 回上游，不做泛化 line polish；
-- repair 后的 candidate 内容变了，就要在 fingerprint-bound gate 前产生新 content fingerprint。
+`context.select` 判断 semantic relevance、search/reformulation 与 sufficiency。`context_inspector.py`、`context_assembly.py` v2、memory packing 只验证 mechanical eligibility、exact refs/fingerprints、stage/private boundary、explicit pin 与 hard budget。
 
-REVISE 从冻结 candidate + 明确 repair goal / evidence 开始，不预设所有维度都必须重写。
+不存在 deterministic “required literary context class” gate。某个 operation 在机械意义上必须拿到特定 authoritative artifact 时，caller 传 exact required ref/fingerprint。
 
-## 04 · Failure routing
+### Reader / Rule Auditor / Editor rule
 
-Orchestrator 应先诊断，再决定修复深度。
+Blind Reader 只看 reader-visible evidence，不接收 creator-private intent、taxonomy/HF/telemetry priming 或 rule-audit instruction。
 
-```text
-孤立 Surface 缺陷              → 局部 rewrite
-Surface failure 成簇           → block / whole-scene realization
-agenda-dialogue serialization   → realization / Character / Scene simulation
-reader-grip / SAFE-BUT-FLAT     → Reader Pressure + Scene Simulation
-人物完整性失败                 → Character Simulation / state reasoning
-story / plan failure            → Story / Plan
-continuity / state mismatch     → Continuity / State owner
-context 污染 / stale            → 重建 Context Manifest / Context Assembly
-derived memory 错误             → invalidate / rebuild memory
-research uncertainty            → RESEARCH
-runtime / tool failure          → capability / transport 层
-艺术方向无法自动决定            → user / human decision
-```
+Rule Auditor 获取 Reader 不该看到的 authoritative hard rules，并判断 semantic applicability / violation。
 
-不要拿高层失败的文字症状做表层抛光。
+Editor 综合这些 finding 与 authorized story evidence，**语义上**选择 repair owner、repair plan、comparison need，以及 `local_or_bounded_repair | fresh_realization`。Runtime 不把 failure code/owner/scope 映射成 literary depth。
 
-## 05 · DESIGN / PLAN
+### Repair routing
 
-`DESIGN-BOOK`、`DESIGN-VOLUME`、`PLAN-UNIT`、`PLAN-CHAPTER` 只创建 `proposal` / `active_plan` 等规划 artifact。
+Diagnosis 可以指出 story、plan、scene、character、reader pressure、surface、continuity、context、research、runtime、human owner，但**当前 candidate 的 mechanism / depth 由 Editor/model 决定**。Deterministic orchestration 只路由已做出的 decision，并执行 chosen information boundary。
 
-它们可以：
+例如 HF-30 可能需要 interaction/character/realization repair，而 legitimate formal completeness 可能完全正确。Python 不能根据 dialogue length 或固定 code table 推断这两者。
 
-- 检查当前 authority；
-- 比较多个未来方案；
-- 在授权后更新 future plan；
-- 建立 dependency 与 expected state delta。
+REVISE 从 frozen candidate + explicit goals/evidence 开始，并优先保留已经有效的内容。
 
-它们不能：
+## 04 · DESIGN / PLAN
 
-- 把 planned event 当成已经发生；
-- 结算 current Canon；
-- 把人物未来才会知道的事提前写进当前 knowledge state。
+`DESIGN-BOOK`、`DESIGN-VOLUME`、`PLAN-UNIT`、`PLAN-CHAPTER` 在 Project authority 下创建/更新 planning artifact。
 
-采用 rolling elaboration：越靠近 production frontier 越详细，越远越保持低分辨率与可修改性。Commitment horizon 与 bounded rebalance 只约束未来细节一次能承诺到多深、多远；它们不会成为第二套 Plan authority。
+Planner semantic intelligence 决定：
 
-## 06 · RESEARCH
+- 现在需要规划什么；
+- 什么 detail depth 有价值；
+- 哪些部分保留 open / uncertain；
+- 是否需要 research；
+- 是否应调整 near future。
 
-Research 输出 source-bound evidence，而不会因为“查到了现实事实”就自动写进故事。
+Deterministic planning-horizon infrastructure 可以执行 declared commitment/depth、promoter class、evidence refs、exact before-state 与 fingerprints，但不能把 universal chapter/volume/time horizon 冒充 planning quality truth。
 
-通用 graph：
+Planned event 继续与 occurred/Accepted state 分离。
+
+## 05 · RESEARCH
+
+Research graph：
 
 ```text
-research question
-→ capability / source selection
-→ 尽量检索 authoritative / primary source
-→ 保存 source / provenance
-→ 必要时做 bounded semantic interpretation
-→ REF / CLAIM 等价 evidence
-→ 交给用户 / plan 消费
+question
+→ resolve allowed search/fetch capabilities
+→ model formulates/selects queries and sources
+→ runtime executes authorized retrieval with provenance
+→ model decides relevance / continuation / stopping
+→ exact source-bound evidence
+→ bounded interpretation
+→ Project/plan consumption
 ```
 
-严格区分：
+`real-world fact ≠ fictionalization ≠ character knowledge ≠ Canon`。
 
-`现实事实 ≠ 项目虚构化选择 ≠ 人物知识 ≠ current Canon`
+External source text 不能重定义 runtime authority。
 
-Search capability 从来不授予 project write authority。
+## 06 · CORPUS-INGEST
 
-## 07 · CORPUS-INGEST
+Corpus work 明确分开：
 
-Corpus 工作把 discovery、rights、analysis 与 durable storage 分开：
+`discovery → source verification/provenance → rights gate → bounded ingestion/analysis → benchmark/eval evidence`
+
+Discovery ≠ ingestion；Corpus ≠ Canon；analysis ≠ automatic Writer context / Framework promotion。
+
+## 07 · LEARN
+
+Learning graph：
 
 ```text
-craft / learning question
-→ corpus gap
-→ discovery request
-→ capability-aware source discovery
-→ source verification + provenance
-→ rights gate
-→ bounded ingestion / analysis
-→ benchmark / eval evidence
+explicit feedback/evidence
+→ model-owned preference interpretation
+→ scoped durable evidence/hypothesis
+→ contradiction/counterexample/eval work
+→ durable activation 被提出时运行 semantic promotion review
+→ deterministic binding + authority prerequisites
+→ active eligibility
+→ model 为未来任务选择 relevant active hypothesis IDs
 ```
 
-Discovery 不等于 ingestion。Corpus 内容不会变成 Canon，也不能默认注入 writer context。
+Numeric evidence-count threshold 不能代替 semantic evidence sufficiency。Promotion Gate 不授予 write authority。`general_craft` 继续属于 Framework `SYSTEM-IMPROVE`。
 
-## 08 · LEARN
+## 08 · AUDIT
 
-Learning 必须使用证据支持的最窄 scope：
+AUDIT 只检查并报告 deterministic violation / semantic finding，不偷偷修改 manuscript、Canon 或 durable preference。
 
-`one_off | project | user_taste | general_craft`
+Audit 后需要 repair 时，进入对应的 authorized mode/run boundary。
 
-通用 graph：
+## 09 · SETTLE
+
+只有 explicit acceptance / authorized Canon intent 才允许 settlement：
 
 ```text
-feedback / evidence
-→ 必要时做 semantic preference interpretation
-→ 写入既有 Learning Store 的 scoped evidence
-→ 可修订 hypothesis
-→ contradiction / counterexample search
-→ corpus / eval gap
-→ bounded semantic analysis
-→ candidate
-→ deterministic evidence-completeness / promotion gate
-→ explicit activation / promotion / rollback
+freeze accepted artifact + fingerprint
+→ derive exact State Delta
+→ validate target + before-state/CAS
+→ checkpoint / write intent / authorization
+→ authorized transaction
+→ required projections + receipts
+→ postcondition verification
 ```
 
-`learning.preference_interpret` 可以提出机制与最窄合理 scope；`learning/author_model.py` 继续通过既有 Learning Store 保存 evidence / hypothesis，并且只把 active、当前适用的 preference 投影进后续 production。
+Settlement runtime 不推断 acceptance / literary meaning。
 
-Project preference 激活仍需要明确 project write authority。持久 `user_taste` 激活必须**同时**满足：既有 `promotion_gate` 当前重新计算为 ready，以及明确的 durable-user-taste write authorization。调用方自己给一个 boolean 不能绕过 prerequisite。`general_craft` 永远不能通过 Author Model production path 自动晋升。
+## 10 · SYSTEM-IMPROVE
 
-模型重复同一个看法不是新证据。General Craft 比项目内 / 局部学习需要更强的 cross-work evidence。
-
-## 09 · AUDIT
-
-AUDIT 负责检查，不静默修复。
-
-它可以产出：
-
-- deterministic violation；
-- semantic finding；
-- continuity / state discrepancy；
-- stale derived view；
-- broken dependency / documentation reference；
-- 明确的 proposed repair owner。
-
-如果用户还要求修复，那应成为单独授权的 mode / run，而不是藏在 AUDIT 里的副作用。
-
-## 10 · SETTLE
-
-只有明确 acceptance / Canon instruction 才允许 settlement。
+Material Framework change 按以下链路执行：
 
 ```text
-freeze Accepted artifact + fingerprint
-→ 推导 exact State Delta
-→ 验证 target + before-state
-→ 计算 dependency impact
-→ checkpoint / write intent
-→ authorized mutation
-→ rebuild derived views
-→ verify post-condition
-→ trace / receipt
+live bootstrap
+→ current-candidate reconciliation / owner map / rollback point
+→ current external research
+→ ADOPT / ADAPT / REJECT / DEFER decisions
+→ deterministic-overreach audit
+→ architecture decision
+→ spec / plan / tasks
+→ incremental implementation
+→ ablations + deterministic tests
+→ blind semantic eval / independent gate when required
+→ CI / security / compatibility
+→ docs / manifest synchronization
+→ human-review readiness
 ```
 
-任何 mismatch 都返回 `settlement_incomplete`。禁止猜、禁止部分成功却宣称全部成功、禁止 resume 后重复已经执行的 side effect。
+每次 consequential write 前重新验证 current branch/HEAD/before-state。Long operation 必须 bounded，禁止 blind waiting。Pre-existing unrelated failure 与 candidate-owned failure 分开报告。
 
-## 11 · SYSTEM-IMPROVE
+## 11 · Parallelism / multi-agent discipline
 
-Material Framework change 应走工程流程，而不是“改一下 prompt”：
+只有 immutable work 真有收益时才 parallelize。Agent 拆分要有真实 information boundary、independent evaluation、private state 或 proven specialist benefit。
 
-```text
-evidence / problem
-→ mechanism analysis
-→ alternatives + conflict review
-→ structural 时进入 spec / plan / tasks
-→ implementation
-→ deterministic tests + 必要的 semantic eval evidence
-→ rollback point / versioning
-→ acceptance
-```
+不要为了制造 consensus theater 而让多个 agent 重复同一 judgment。
 
-Project-specific character、plot fact 或 Canon 不能进入 Generic Framework default。
+## 12 · Completion states
 
-## 12 · Parallelism
-
-只有当 worker 可以基于 immutable / frozen input 独立工作，而且结果能够分别验证时，parallel 才真正有价值。
-
-没有显式 transaction / version protocol 时，不要并发修改共享 Project / Canon state。
-
-也不要为了“多 agent”重复做同一种判断。
-
-## 13 · Completion state
-
-Run 必须结束在真实明确的状态，例如：
+Truthful state 包括：
 
 `complete | review | awaiting_user | awaiting_external | semantic_pending | semantic_invalid | failed_gate | blocked | settlement_incomplete`
 
-`semantic_reject` 通常应作为 gate outcome 被消费并进入 repair，而不是被误标为 infrastructure failure。
+Required semantic result 没真正执行就是 pending。Green workflow 只记录 `PENDING_MODEL` 时，也不是 semantic PASS。
 
-## 14 · 相关契约
+## 相关合同
 
-- [Harness Agent](HARNESS_AGENT.zh-CN.md)：manager 职责与权威边界。
-- [Session Runtime](session_runtime/SESSION_RUNTIME.zh-CN.md)：生命周期、checkpoint 与 resume。
-- [Semantic Worker Protocol](semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md)：semantic identity / fingerprint / result boundary。
-- [生产流水线](../docs/production-pipeline.zh-CN.md)：面向用户解释 DRAFT / REVISE。
-- [上下文与记忆](../docs/context-and-memory.zh-CN.md)：Context Inspector、Assembly、selection 与 memory boundary。
-- [自适应学习](../docs/adaptive-learning.zh-CN.md)：Learning Store、Author Model、promotion 与 rollback。
-- [正典与状态模型](../core/CANON_STATE.zh-CN.md)：settlement authority。
+- [Harness Agent](HARNESS_AGENT.zh-CN.md)
+- [Session Runtime](session_runtime/SESSION_RUNTIME.zh-CN.md)
+- [Semantic Worker Protocol](semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md)
+- [生产流水线](../docs/production-pipeline.zh-CN.md)
+- [上下文与记忆](../docs/context-and-memory.zh-CN.md)
+- [自适应学习](../docs/adaptive-learning.zh-CN.md)
+- [正典与状态模型](../core/CANON_STATE.zh-CN.md)

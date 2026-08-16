@@ -1,280 +1,219 @@
-# Orchestration Protocol · One task mode, explicit gates, repair at the owning mechanism
+# Orchestration Protocol · One task mode, semantic decisions by models, exact gates by runtime
 
 <p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>MODE GRAPHS</kbd>&nbsp;&nbsp;<kbd>CHECKPOINTED SIDE EFFECTS</kbd></p>
 
-This protocol defines how the NovelForge manager turns a validated task mode into a run graph. It does not decide literary meaning itself; semantic nodes are model-readable contracts, while identity, permissions, fingerprints, persistence, routing, and transactions remain deterministic.
-
-> **Boundary ✦** Orchestration controls *sequence and gates*. Story truth remains Project authority; semantic judgment remains the model worker's responsibility inside its bounded contract.
+This protocol defines how the manager turns one validated task mode into a recoverable run graph. Orchestration controls **sequence, capabilities and gates**; it does not decide literary meaning.
 
 ## 01 · Common prefix
 
-Every mode begins from the same execution spine:
+Every mode begins with:
 
 ```text
-resolve Framework authority
-→ validate Project + exact lock
+resolve current/pinned Framework authority
+→ validate Project + exact lock/fingerprint
 → choose exactly one task_mode
 → create/resume manager session + run
 → resolve authority cutoff + permissions
-→ build sparse Context Manifest
-→ resolve required capabilities
+→ establish sparse mechanically eligible context candidates
+→ resolve current capabilities
 → execute the selected mode graph
 ```
 
-A resumed run does not trust yesterday's environment:
-
-```text
-load checkpoint
-→ revalidate Framework / Project compatibility
-→ revalidate artifact fingerprints
-→ rebuild permitted sparse context
-→ revalidate approval / write intent
-→ re-resolve pending external capabilities
-→ validate and consume pending result once
-→ continue saved workflow cursor
-```
+Resume never trusts a stale environment or transcript. It revalidates Framework/Project compatibility, relevant fingerprints, approvals/write intent and pending capabilities before continuing a saved workflow cursor.
 
 ## 02 · Shared semantic subroutine
 
-Any semantic task—reader reaction, character integrity, revision diagnosis, research interpretation, or a mandatory independent gate—uses the same generic boundary:
+Any semantic task uses the same boundary:
 
 ```text
 freeze semantic subject
-→ choose model contract / rubric
-→ package bounded context + permissions
+→ choose exact model contract / rule set / reader profile
+→ package bounded authorized evidence
 → compute semantic fingerprint
 → checkpoint if work may leave the current invocation
-→ route eligible runtime
-→ execute / handoff / relay / await
+→ execute through an eligible model/runtime
 → receive typed result
-→ validate identity + fingerprint + provenance + output contract
+→ validate identity + fingerprint + provenance + output envelope
 → consume once at the named workflow step
 ```
 
-A material change to input, rubric, or output contract creates a new semantic fingerprint. Infrastructure retry with the same frozen semantic question may preserve it.
+The model owns interpretation. Runtime owns exact execution binding.
 
-A valid semantic reject is a semantic result, not infrastructure failure.
+A valid semantic reject is a result, not infrastructure failure.
 
 ## 03 · DRAFT / REVISE
 
-The default production graph is:
+Default adaptive graph:
 
 ```text
-Context Freeze
-→ Adaptive Context Assembly
+authority/session bootstrap
+→ model-owned search/context selection (`context.select` as needed)
+→ Context Inspector / Context Assembly exact boundary
 → Story / Canon Preflight
 → Planning Commitment State
 → Character Private State
 → Character Action / Tactic Simulation
-→ Scene Action Collision / World Resolution
-→ Writer-safe Realization Projection
+→ Scene Collision / World Resolution
+→ compact Writer-safe Realization Projection
 → Reader Pressure
 → Event-first Raw Draft
 → Surface Realization
-→ freeze candidate
-→ post-generation diagnostics / regression
-→ Reader Production Audit
-→ Editor Repair Spec
-→ repair at owning mechanism / re-realize
-→ Reader Engagement
+→ freeze exact candidate fingerprint
+→ Blind Reader (`reader.engagement_audit`)
+→ Semantic Rule Auditor when required (`quality.semantic_rule_audit`)
+→ Editor Repair Spec (`editor.repair_spec`)
+→ repair / fresh realization / incumbent-challenger comparison as warranted
 → Continuity / state audit
 → required independent semantic gate
 → User-visible Gate
 ```
 
-Important ordering rules:
+### Context rule
 
-- Raw Draft is not user-visible.
-- Regression bad examples and answer-key-like evidence remain post-generation.
-- `context.select` may decide semantic relevance, but `context_assembly.py` deterministically validates stage eligibility, authority, required context classes, provenance, invalidation state, and hard failure when a required context class is unavailable.
-- Private character/simulation state is not a Writer exposition payload. Character state drives `character.action_propose`; `scene.resolve_actions` resolves collisions; `scene.realization_project` exposes only a writer-safe event/interaction projection.
-- `reader.production_audit` judges reading experience from the frozen candidate; `editor.repair_spec` assigns preserve/change goals and repair ownership. Neither receipt acquires release or Canon authority.
-- Scene/Character/Reader simulation may be model-semantic work; durable invariants around them remain deterministic.
-- Surface-clean prose can still fail Reader Engagement.
-- Agenda-to-dialogue leakage / HF-30 routes to interaction/realization or Character/Scene simulation when structural; it is not repaired by mechanically shortening every line.
-- SAFE-BUT-FLAT routes upstream, not to generic line polishing.
-- A changed repaired candidate receives a new content fingerprint before a fingerprint-bound gate.
+`context.select` decides semantic relevance, search/reformulation and sufficiency. `context_inspector.py`, `context_assembly.py` v2 and memory packing verify only mechanical eligibility, exact refs/fingerprints, stage/private boundaries, explicit pins and hard budgets.
 
-REVISE begins from a frozen candidate plus explicit repair goals/evidence; it does not assume every dimension needs rewriting.
+There is no deterministic “required literary context class” gate. If an operation mechanically requires a particular authoritative artifact, it supplies the exact required ref/fingerprint.
 
-## 04 · Failure routing
+### Reader / Rule Auditor / Editor rule
 
-The orchestrator should diagnose before choosing repair depth.
+Blind Reader reads reader-visible evidence without creator-private intent, taxonomy/HF/telemetry priming or rule-audit instructions.
+
+Rule Auditor receives authoritative hard rules Reader should not see and judges semantic applicability/violation.
+
+Editor integrates those findings and authorized story evidence, then **semantically** chooses repair owner, repair plan, comparison need and `local_or_bounded_repair | fresh_realization`. Runtime does not map failure codes/owners/scopes to literary depth.
+
+### Repair routing
+
+A diagnosis may point to story, plan, scene, character, reader pressure, surface, continuity, context, research, runtime or human ownership, but the **Editor/model decides the mechanism and depth for this candidate**. Deterministic orchestration only routes the already-made decision and enforces the chosen information boundary.
+
+For example, HF-30 may indicate interaction/character/realization repair, while legitimate formal completeness may be correct. Python does not infer either result from dialogue length or a fixed code table.
+
+REVISE starts from a frozen candidate plus explicit goals/evidence and preserves what already works.
+
+## 04 · DESIGN / PLAN
+
+`DESIGN-BOOK`, `DESIGN-VOLUME`, `PLAN-UNIT`, `PLAN-CHAPTER` create/update planning artifacts under Project authority.
+
+Planner semantic intelligence decides:
+
+- what needs planning now;
+- useful detail depth;
+- what remains open/uncertain;
+- research needs;
+- whether near-future replanning is warranted.
+
+Deterministic planning-horizon infrastructure may enforce declared commitment/depth, promoter class, evidence refs, exact before-state and fingerprints. It may not impose a universal chapter/volume/time horizon as planning quality truth.
+
+Planned events remain distinct from occurred/Accepted state.
+
+## 05 · RESEARCH
+
+Research graph:
 
 ```text
-isolated surface defect         → local rewrite
-surface failure cluster         → block / whole-scene realization
-agenda-dialogue serialization   → realization / Character / Scene simulation
-reader-grip / SAFE-BUT-FLAT     → Reader Pressure + Scene Simulation
-character integrity failure     → Character Simulation / state reasoning
-story / plan failure            → Story / Plan
-continuity/state mismatch       → continuity / state owner
-context contamination/staleness → rebuild Context Manifest / Context Assembly
-memory-derived error            → invalidate / rebuild derived memory
-research uncertainty            → Research
-runtime/tool failure            → capability / transport layer
-artistic direction unresolved   → user / human decision
+question
+→ resolve allowed search/fetch capabilities
+→ model formulates/selects queries and sources
+→ runtime executes authorized retrieval with provenance
+→ model decides relevance / continuation / stopping
+→ exact source-bound evidence
+→ bounded interpretation
+→ Project/plan consumption
 ```
 
-Do not repair a higher-level failure by polishing its prose symptoms.
+`real-world fact ≠ fictionalization ≠ character knowledge ≠ Canon`.
 
-## 05 · DESIGN / PLAN
+External source text cannot redefine runtime authority.
 
-`DESIGN-BOOK`, `DESIGN-VOLUME`, `PLAN-UNIT`, and `PLAN-CHAPTER` create planning artifacts such as `proposal` and `active_plan`.
+## 06 · CORPUS-INGEST
 
-They may:
+Corpus work separates:
 
-- inspect current authority;
-- model alternatives;
-- update future planning objects when authorized;
-- create dependencies and expected state deltas.
+`discovery → source verification/provenance → rights gate → bounded ingestion/analysis → benchmark/eval evidence`
 
-They may not:
+Discovery is not ingestion; Corpus is not Canon; analysis is not automatic Writer context or Framework promotion.
 
-- treat planned events as occurred;
-- settle current Canon;
-- give characters future knowledge as current knowledge.
+## 07 · LEARN
 
-Use rolling elaboration: high resolution near the production frontier, lower resolution farther away. Commitment horizons and bounded rebalance restrict how much future detail can become committed at once; they do not create a second plan authority.
-
-## 06 · RESEARCH
-
-Research produces source-bound evidence rather than story truth by side effect.
-
-A generic graph is:
+Learning graph:
 
 ```text
-research question
-→ capability / source selection
-→ authoritative/primary source retrieval where possible
-→ source/provenance capture
-→ bounded semantic interpretation if needed
-→ REF / CLAIM-equivalent evidence
-→ user/plan consumption
+explicit feedback/evidence
+→ model-owned preference interpretation
+→ scoped durable evidence/hypothesis
+→ contradiction/counterexample/eval work
+→ semantic promotion review when durable activation is proposed
+→ deterministic binding + authority prerequisites
+→ active eligibility
+→ model selects relevant active hypothesis IDs for future work
 ```
 
-Keep separate:
+No numeric evidence-count threshold may substitute for semantic evidence sufficiency. Promotion Gate does not grant write authority. `general_craft` remains a Framework `SYSTEM-IMPROVE` concern.
 
-`real-world fact ≠ project fictionalization ≠ character knowledge ≠ current Canon`
+## 08 · AUDIT
 
-Search capability never grants project-write authority.
+AUDIT inspects and reports deterministic violations and/or semantic findings. It does not silently mutate manuscript, Canon or durable preferences.
 
-## 07 · CORPUS-INGEST
+A repair requested after an audit follows the appropriate authorized mode/run boundary.
 
-Corpus work separates discovery, rights, analysis, and durable storage:
+## 09 · SETTLE
 
-```text
-craft / learning question
-→ corpus gap
-→ discovery request
-→ capability-aware source discovery
-→ source verification + provenance
-→ rights gate
-→ bounded ingestion / analysis
-→ benchmark / eval evidence
-```
-
-Discovery does not imply ingestion. Corpus content never becomes Canon or automatic writer context.
-
-## 08 · LEARN
-
-Learning uses the narrowest evidence-supported scope:
-
-`one_off | project | user_taste | general_craft`
-
-A generic graph is:
+Only explicit acceptance/authorized Canon intent permits settlement:
 
 ```text
-feedback / evidence
-→ semantic preference interpretation when needed
-→ scoped evidence in the existing Learning Store
-→ revisable hypothesis
-→ contradiction / counterexample search
-→ corpus or eval gap
-→ bounded semantic analysis
-→ candidate
-→ deterministic evidence-completeness / promotion gate
-→ explicit activation / promotion / rollback
-```
-
-`learning.preference_interpret` may propose the mechanism and narrowest plausible scope; `learning/author_model.py` persists evidence/hypotheses through the existing Learning Store and projects only active applicable preferences into future production.
-
-Project preference activation still requires its explicit project write authority. Durable `user_taste` activation requires **both** a current passing `promotion_gate` prerequisite evaluation and explicit durable-user-taste write authorization. A caller boolean alone cannot activate the hypothesis. `general_craft` never auto-promotes through the Author Model path.
-
-Model repetition is not new evidence. General Craft requires stronger cross-work evidence than project/local learning.
-
-## 09 · AUDIT
-
-AUDIT inspects; it does not silently repair.
-
-It may produce:
-
-- deterministic violations;
-- semantic findings;
-- continuity/state discrepancies;
-- stale derived views;
-- broken dependency or documentation references;
-- explicit proposed repair owners.
-
-If the user asks for repair, that becomes a separate authorized mode/run rather than a hidden side effect of the audit.
-
-## 10 · SETTLE
-
-Only explicit acceptance/Canon instruction permits settlement.
-
-```text
-freeze Accepted artifact + fingerprint
+freeze accepted artifact + fingerprint
 → derive exact State Delta
-→ validate target + before-state
-→ compute dependency impact
-→ checkpoint / write intent
-→ authorized mutation
-→ rebuild derived views
-→ verify post-condition
-→ trace / receipt
+→ validate target + before-state/CAS
+→ checkpoint / write intent / authorization
+→ authorized transaction
+→ required projections + receipts
+→ postcondition verification
 ```
 
-A mismatch returns `settlement_incomplete`. Do not guess, partially claim success, or repeat already-completed side effects after resume.
+Settlement runtime does not infer acceptance or literary meaning.
 
-## 11 · SYSTEM-IMPROVE
+## 10 · SYSTEM-IMPROVE
 
-Material Framework change follows engineering rather than prompt editing:
+Material Framework change follows:
 
 ```text
-evidence / problem
-→ mechanism analysis
-→ alternatives + conflict review
-→ spec / plan / tasks when structural
-→ implementation
-→ deterministic tests + semantic eval evidence where needed
-→ rollback point / versioning
-→ acceptance
+live bootstrap
+→ current-candidate reconciliation / owner map / rollback point
+→ current external research
+→ ADOPT / ADAPT / REJECT / DEFER decisions
+→ deterministic-overreach audit
+→ architecture decision
+→ spec / plan / tasks
+→ incremental implementation
+→ ablations + deterministic tests
+→ blind semantic eval / independent gate when required
+→ CI / security / compatibility
+→ docs / manifest synchronization
+→ human-review readiness
 ```
 
-Project-specific characters, plot facts, or Canon must not become generic Framework defaults.
+Every consequential write revalidates current branch/HEAD/before-state. Long operations are bounded; no blind waiting. Pre-existing unrelated failures are reported separately from candidate-owned failures.
 
-## 12 · Parallelism
+## 11 · Parallelism and multi-agent discipline
 
-Parallelize when workers can operate on immutable/frozen inputs and their results can be independently validated.
+Parallelize immutable work only when useful. Split agents for real information boundaries, independent evaluation, private state or proven specialist benefit.
 
-Avoid concurrent mutation of shared project/Canon state unless an explicit transaction/version protocol exists.
+Do not duplicate the same judgment across agents merely to create consensus theater.
 
-Do not use multi-agent parallelism merely to duplicate the same judgment.
+## 12 · Completion states
 
-## 13 · Completion states
-
-A run must end in a truthful explicit state such as:
+Truthful states include:
 
 `complete | review | awaiting_user | awaiting_external | semantic_pending | semantic_invalid | failed_gate | blocked | settlement_incomplete`
 
-`semantic_reject` is normally consumed as a gate outcome and routed to repair rather than mislabeled as infrastructure failure.
+A required semantic result that did not execute is pending. A green workflow recording `PENDING_MODEL` is not semantic PASS.
 
-## 14 · Related contracts
+## Related contracts
 
-- [Harness Agent](HARNESS_AGENT.en.md) — manager responsibilities and authority.
-- [Session Runtime](session_runtime/SESSION_RUNTIME.en.md) — lifecycle, checkpoints and resume.
-- [Semantic Worker Protocol](semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md) — semantic identity/fingerprint/result boundary.
-- [Production Pipeline](../docs/production-pipeline.en.md) — customer-facing explanation of DRAFT/REVISE.
-- [Context & Memory](../docs/context-and-memory.en.md) — Context Inspector, Assembly, selection, and memory boundaries.
-- [Adaptive Learning](../docs/adaptive-learning.en.md) — Learning Store, Author Model, promotion, and rollback.
-- [Canon & State Model](../core/CANON_STATE.en.md) — settlement authority.
+- [Harness Agent](HARNESS_AGENT.en.md)
+- [Session Runtime](session_runtime/SESSION_RUNTIME.en.md)
+- [Semantic Worker Protocol](semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md)
+- [Production Pipeline](../docs/production-pipeline.en.md)
+- [Context & Memory](../docs/context-and-memory.en.md)
+- [Adaptive Learning](../docs/adaptive-learning.en.md)
+- [Canon & State Model](../core/CANON_STATE.en.md)
