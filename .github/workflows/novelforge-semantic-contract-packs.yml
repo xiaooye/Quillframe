@@ -133,6 +133,25 @@ jobs:
                       'model_view': {'label': 'offer', 'value': 'The first offer was lower.'},
                   }],
               },
+              'learning.preference_interpret': {
+                  'feedback_ref': 'review:CI',
+                  'feedback_text': 'Keep the dialogue less explanatory in this exchange.',
+                  'current_task': {'task_mode': 'REVISE', 'artifact_ref': 'draft:CI'},
+              },
+              'scene.realization_project': {
+                  'scene_id': 'SCN-CI',
+                  'resolved_trajectory': {'state': 'negotiation_continues'},
+                  'character_action_evidence': [{'character_id': 'CHAR-CI', 'action': 'withhold full rationale and counter'}],
+                  'pov_boundary': {'perspective_id': 'CHAR-CI', 'allowed_inner_state': True},
+              },
+              'reader.production_audit': {
+                  'candidate_fingerprint': fp,
+                  'candidate_text': 'A bounded production candidate with observable dialogue and action.',
+              },
+              'editor.repair_spec': {
+                  'candidate_fingerprint': fp,
+                  'reader_assessment': {'result': 'fail', 'codes': ['HF-30'], 'evidence': ['Dialogue over-explains role and risk.']},
+              },
           }
 
           seen = set()
