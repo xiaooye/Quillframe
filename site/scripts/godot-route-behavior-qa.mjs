@@ -14,6 +14,7 @@ const chrome = process.env.CHROME || arg("chrome");
 const url = arg("url", "http://127.0.0.1:4190/");
 const output = arg("output", "/tmp/novelforge-route-parity/behavior.json");
 const timeoutMs = Number(arg("timeout-ms", "90000"));
+const GODOT_RESERVED_SCROLLBAR_GUTTER = 15;
 if (!chrome) {
   console.error("CHROME is required");
   process.exit(2);
@@ -216,6 +217,7 @@ async function resizeAndWait(width, height, expectedLayout) {
     const canvasHeight = Number(s.canvasHeight || NaN);
     const geometryChanged = canvasWidth !== beforeCanvasWidth || canvasHeight !== beforeCanvasHeight;
     const revisionSettled = !geometryChanged || Number(s.responsiveRevision || 0) > beforeRevision;
+    const cssEquivalentWidth = runtimeWidth + GODOT_RESERVED_SCROLLBAR_GUTTER;
     return s.ready === "ready"
       && s.interaction === "ready"
       && s.responsive === "ready"
@@ -226,7 +228,8 @@ async function resizeAndWait(width, height, expectedLayout) {
       && Number.isFinite(runtimeWidth)
       && Number.isFinite(canvasWidth)
       && canvasWidth > 0
-      && Math.abs(runtimeWidth - canvasWidth) <= 1
+      && Math.abs(canvasWidth - width) <= 1
+      && Math.abs(cssEquivalentWidth - canvasWidth) <= 1
       && revisionSettled;
   }, 25000);
 }
@@ -426,6 +429,8 @@ async function runResponsiveMatrix() {
       innerWidth: Number(state.innerWidth),
       canvasWidth: Number(state.canvasWidth),
       responsiveWidth: Number(state.responsiveWidth),
+      cssEquivalentWidth: Number(state.responsiveWidth) + GODOT_RESERVED_SCROLLBAR_GUTTER,
+      reservedScrollbarGutter: GODOT_RESERVED_SCROLLBAR_GUTTER,
       wideDesktop: state.wideDesktop,
       glyphAudit: state.glyphAudit,
       screenshotHash: hash,
