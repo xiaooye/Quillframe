@@ -148,8 +148,13 @@ func _fit_wide_compact_title(hero: Control, prefixes: Array, visual_x: float, ga
 	if title == null:
 		return
 	var available := maxf(visual_x - title.position.x - gap, 260.0)
+	# The Solid authority has no hard <br> at this width; its two-column grid
+	# lets the heading wrap against the available copy column. Desktop and <=900
+	# retain their separately calibrated explicit wraps in lower layers.
+	title.text = title.text.replace("\n", " ")
 	title.size.x = minf(title.size.x, available)
 	title.scale = Vector2.ONE
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title.add_theme_font_size_override("font_size", WIDE_COMPACT_H1_SIZE_EN if _locale == "en-US" else WIDE_COMPACT_H1_SIZE_ZH)
 	title.add_theme_constant_override("line_spacing", -17 if _locale == "en-US" else -7)
 
