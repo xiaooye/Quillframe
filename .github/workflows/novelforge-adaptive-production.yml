@@ -64,6 +64,45 @@ jobs:
           python quality/quality_taxonomy.py self-test > quality-taxonomy-test.json
           python scripts/semantic_reference_integrity.py > semantic-reference-integrity-test.json
 
+      - name: Verify compatibility and source bundle identity
+        run: |
+          python scripts/version_identity.py > version-identity-test.json
+          python project_sdk.py self-test > project-sdk-test.json
+          python project_adapter.py self-test > project-adapter-test.json
+          python release/build_framework_bundle.py self-test > framework-bundle-test.json
+          mkdir -p /tmp/novelforge-adaptive-bundle
+          python release/build_framework_bundle.py build \
+            --output /tmp/novelforge-adaptive-bundle/a.tar \
+            --report bundle-a.json
+          python release/build_framework_bundle.py build \
+            --output /tmp/novelforge-adaptive-bundle/b.tar \
+            --report bundle-b.json
+          cmp /tmp/novelforge-adaptive-bundle/a.tar /tmp/novelforge-adaptive-bundle/b.tar
+          EXPECTED="$(python -c "import json;print(json.load(open('bundle-a.json'))['bundle_fingerprint'])")"
+          python release/build_framework_bundle.py verify \
+            --bundle /tmp/novelforge-adaptive-bundle/a.tar \
+            --expected "$EXPECTED" \
+            --report bundle-verify.json
+          python - <<'PY'
+          import json
+          version=json.load(open('version-identity-test.json',encoding='utf-8'))
+          sdk=json.load(open('project-sdk-test.json',encoding='utf-8'))
+          adapter=json.load(open('project-adapter-test.json',encoding='utf-8'))
+          bundle_test=json.load(open('framework-bundle-test.json',encoding='utf-8'))
+          a=json.load(open('bundle-a.json',encoding='utf-8'))
+          b=json.load(open('bundle-b.json',encoding='utf-8'))
+          verify=json.load(open('bundle-verify.json',encoding='utf-8'))
+          assert version['version_identity_contract']=='PASS',version
+          assert version['framework_version']=='0.8.0',version
+          assert version['release_promotion_performed'] is False,version
+          assert sdk['project_sdk_contract']=='PASS',sdk
+          assert adapter['project_adapter_contract']=='PASS',adapter
+          assert bundle_test['framework_bundle_contract']=='PASS',bundle_test
+          assert bundle_test['tamper_detected'] is True,bundle_test
+          assert a['bundle_fingerprint']==b['bundle_fingerprint'],(a,b)
+          assert verify['valid'] is True,verify
+          PY
+
       - name: Assert authority, privacy, release, and HF-30 invariants
         run: |
           python - <<'PY'
@@ -144,7 +183,9 @@ jobs:
                   'structural_release_receipts_conjunctive': True,
                   'telemetry_signals_non_authoritative': True,
                   'hf30_taxonomy_and_surface_contract_aligned': True,
-                  'semantic_registry_references_integral': True
+                  'semantic_registry_references_integral': True,
+                  'source_bundle_reproducibility_verified': True,
+                  'project_sdk_and_adapter_compatibility_verified': True
               }
           }, indent=2))
           PY
@@ -153,5 +194,9 @@ jobs:
         if: always()
         with:
           name: adaptive-production-contracts-${{ github.run_id }}
-          path: '*-test.json'
+          path: |
+            *-test.json
+            bundle-a.json
+            bundle-b.json
+            bundle-verify.json
           if-no-files-found: error
