@@ -61,9 +61,64 @@ func _build() -> void:
 			_polish_architecture_surface()
 		"/publication":
 			_polish_publication_surface()
+	_finalize_compact_surface()
 	_apply_accessibility_metadata(self)
 	_set_dataset("novelforgeAccessibility", "ready")
 	_set_dataset("novelforgeVisualPolish", "ready")
+
+func _append_architecture_inspector() -> void:
+	# The core appends the inspector after the route geometry has been built. On
+	# compact widths the main execution canvas is deliberately stacked lower, so
+	# move only the controls appended by this call rather than shifting unrelated
+	# stage children by a magic y-threshold.
+	var first_new_child := -1
+	if _stage != null:
+		first_new_child = _stage.get_child_count()
+	super._append_architecture_inspector()
+	if _layout != "compact" or _stage == null or first_new_child < 0:
+		return
+	var inspector_shift := 580.0
+	for i in range(first_new_child, _stage.get_child_count()):
+		var child := _stage.get_child(i)
+		if child is Control:
+			(child as Control).position.y += inspector_shift
+
+func _finalize_compact_surface() -> void:
+	if _layout != "compact" or _stage == null:
+		return
+	if _current_route() == "/architecture":
+		var hero := _find_stage_panel(110.0, 900.0)
+		if hero != null:
+			var copy_width := max(hero.size.x - 88.0, 320.0)
+			var title := _find_label_prefix(hero, "See how one\nNovelForge run")
+			if title == null:
+				title = _find_label_prefix(hero, "看一次 NovelForge")
+			if title != null:
+				title.size.x = min(title.size.x, copy_width)
+				if _locale == "en-US" and size.x < 900.0:
+					title.add_theme_font_size_override("font_size", 54)
+					title.add_theme_constant_override("line_spacing", -18)
+			var lede := _find_label_prefix(hero, "Project → Manager")
+			if lede != null:
+				lede.size.x = min(lede.size.x, copy_width)
+			var project_label := _find_label_exact(hero, "Project")
+			if project_label != null and project_label.get_parent() != null and project_label.get_parent().get_parent() is Control:
+				var grid := project_label.get_parent().get_parent() as Control
+				grid.position.y = max(grid.position.y, 450.0)
+	_ensure_compact_stage_contains_children()
+
+func _ensure_compact_stage_contains_children() -> void:
+	# Completion layers can append deep route surfaces after lower-level geometry
+	# has already chosen a stage height. Derive the final scroll extent from the
+	# rendered root controls so stacked compact layouts cannot be clipped by a
+	# stale fixed stage constant.
+	var bottom := 0.0
+	for child in _stage.get_children():
+		if child is Control:
+			var control := child as Control
+			if control.visible:
+				bottom = max(bottom, control.position.y + control.size.y)
+	_stage.custom_minimum_size.y = max(_stage.custom_minimum_size.y, bottom + 80.0)
 
 func _toggle_mobile_menu() -> void:
 	# The mobile menu is created after the route build, so apply the same native
