@@ -1,0 +1,146 @@
+name: NovelForge Adaptive Production Contracts
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'learning/author_model.py'
+      - 'learning/promotion_gate.py'
+      - 'harness/context_assembly.py'
+      - 'harness/context_inspector.py'
+      - 'harness/control_plane/write_intent_guard.py'
+      - 'harness/semantic_workers/model_contract_catalog.json'
+      - 'harness/semantic_workers/contracts/production-loop.json'
+      - 'quality/production_release.py'
+      - 'quality/prose_telemetry.py'
+      - 'quality/quality_taxonomy.py'
+      - 'quality/taxonomy.json'
+      - 'surface/FUNDAMENTALS.en.md'
+      - 'surface/FUNDAMENTALS.zh-CN.md'
+      - 'scripts/semantic_reference_integrity.py'
+      - '.github/workflows/novelforge-adaptive-production.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  adaptive-production-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile candidate-owned runtimes
+        run: |
+          python -m py_compile \
+            learning/author_model.py \
+            learning/promotion_gate.py \
+            harness/context_assembly.py \
+            harness/context_inspector.py \
+            harness/control_plane/write_intent_guard.py \
+            quality/production_release.py \
+            quality/prose_telemetry.py \
+            quality/quality_taxonomy.py \
+            scripts/semantic_reference_integrity.py
+
+      - name: Run deterministic adaptive-production contracts
+        run: |
+          python harness/context_inspector.py self-test > context-inspector-test.json
+          python harness/context_assembly.py self-test > context-assembly-test.json
+          python learning/promotion_gate.py self-test > promotion-gate-test.json
+          python learning/author_model.py self-test > author-model-test.json
+          python harness/control_plane/write_intent_guard.py self-test > write-intent-guard-test.json
+          python quality/production_release.py self-test > production-release-test.json
+          python quality/prose_telemetry.py self-test > prose-telemetry-test.json
+          python quality/quality_taxonomy.py self-test > quality-taxonomy-test.json
+          python scripts/semantic_reference_integrity.py > semantic-reference-integrity-test.json
+
+      - name: Assert authority, privacy, release, and HF-30 invariants
+        run: |
+          python - <<'PY'
+          import json
+
+          def load(path):
+              return json.load(open(path, encoding='utf-8'))
+
+          inspector = load('context-inspector-test.json')
+          assembly = load('context-assembly-test.json')
+          promotion = load('promotion-gate-test.json')
+          author = load('author-model-test.json')
+          write_guard = load('write-intent-guard-test.json')
+          release = load('production-release-test.json')
+          telemetry = load('prose-telemetry-test.json')
+          taxonomy = load('quality-taxonomy-test.json')
+          integrity = load('semantic-reference-integrity-test.json')
+
+          assert inspector['context_inspector_contract'] == 'PASS', inspector
+          assert assembly['context_assembly_contract'] == 'PASS', assembly
+          assert promotion['promotion_gate_contract'] == 'PASS', promotion
+          assert author['author_model_contract'] == 'PASS', author
+          assert write_guard['write_intent_guard_contract'] == 'PASS', write_guard
+          assert release['production_release_contract'] == 'PASS', release
+          assert telemetry['prose_telemetry_contract'] == 'PASS', telemetry
+          assert taxonomy['quality_taxonomy_contract'] == 'PASS', taxonomy
+          assert integrity['semantic_reference_integrity'] == 'PASS', integrity
+
+          assert assembly['required_missing_blocks'] is True
+          assert assembly['private_writer_selection_blocks'] is True
+          assert assembly['semantic_relevance_judged_by_runtime'] is False
+
+          assert promotion['auto_behavior_write'] is False
+          assert author['user_taste_write_authority_alone_not_enough'] is True
+          assert author['user_taste_requires_promotion_prerequisite_and_write_authority'] is True
+          assert author['candidate_hypotheses_excluded_from_projection'] is True
+
+          assert write_guard['resource_action_mismatch_blocked'] is True
+          assert write_guard['stale_before_state_blocked'] is True
+          assert write_guard['missing_authority_blocked'] is True
+          assert write_guard['write_executed'] is False
+          assert write_guard['authority_granted'] is False
+
+          assert release['reviewer_pass_missing_structural_receipt_blocks'] is True
+          assert release['all_required_receipts_pass'] is True
+          assert release['base_quality_failure_still_blocks'] is True
+
+          assert telemetry['signals_only'] is True
+          assert telemetry['short_paragraphs_auto_fail'] is False
+          assert telemetry['semantic_interpretation_required'] is True
+
+          assert taxonomy['checks']['registry_entries'] is True
+          assert taxonomy['checks']['human_docs_match_registry'] is True
+          assert taxonomy['checks']['surface_semantic_drift_detected'] is True
+          assert taxonomy['checks']['reader_semantic_drift_detected'] is True
+
+          for receipt in (inspector, assembly, promotion, author, write_guard, release, telemetry, taxonomy, integrity):
+              assert receipt.get('model_execution') is False, receipt
+          for receipt in (assembly, author, release, telemetry, taxonomy, integrity):
+              assert receipt.get('authority') is False, receipt
+
+          print(json.dumps({
+              'schema': 'novelforge_adaptive_production_contract_gate_v1',
+              'contract': 'PASS',
+              'authority': False,
+              'model_execution': False,
+              'checks': {
+                  'private_simulation_state_blocked_from_writer': True,
+                  'required_context_fail_closed': True,
+                  'user_taste_activation_bound_to_existing_promotion_gate': True,
+                  'write_intent_mismatch_fail_closed': True,
+                  'structural_release_receipts_conjunctive': True,
+                  'telemetry_signals_non_authoritative': True,
+                  'hf30_taxonomy_and_surface_contract_aligned': True,
+                  'semantic_registry_references_integral': True
+              }
+          }, indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: adaptive-production-contracts-${{ github.run_id }}
+          path: '*-test.json'
+          if-no-files-found: error
