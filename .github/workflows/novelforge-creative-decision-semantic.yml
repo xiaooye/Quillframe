@@ -29,14 +29,30 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Require provider-backed independent evaluator
+      - name: Resolve independent evaluator capability
+        id: semantic-capability
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
-            echo 'OPENAI_API_KEY repository secret is required for this feature-scoped semantic eval.' >&2
-            exit 2
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            python - <<'PY'
+          import json
+          status={
+              'schema':'novelforge_feature_semantic_gate_v1',
+              'feature':'creative_decision_provenance',
+              'status':'PENDING_MODEL',
+              'reason':'independent_provider_credential_unavailable',
+              'promotion_evidence':False,
+              'model_execution':False,
+          }
+          json.dump(status,open('creative-decision-semantic-status.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          print('Creative Decision semantic promotion evidence: PENDING_MODEL (no independent provider credential).')
+          PY
+          else
+            echo 'available=true' >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build blind planning-decision queue
+        if: steps.semantic-capability.outputs.available == 'true'
         run: |
           python evals/build_judge_queue.py --output creative-decision-queue.json
           python - <<'PY'
@@ -50,6 +66,7 @@ jobs:
           PY
 
       - name: Package fingerprint-bound jobs
+        if: steps.semantic-capability.outputs.available == 'true'
         run: |
           python harness/semantic_workers/semantic_worker_router.py prepare-evals \
             --queue creative-decision-queue.json --output creative-decision-jobs.json
@@ -57,6 +74,7 @@ jobs:
             --jobs creative-decision-jobs.json
 
       - name: Verify independent provider capability
+        if: steps.semantic-capability.outputs.available == 'true'
         run: |
           python harness/semantic_workers/semantic_worker_runner.py capabilities > creative-decision-capabilities.json
           python - <<'PY'
@@ -68,6 +86,7 @@ jobs:
           PY
 
       - name: Execute blind semantic jobs
+        if: steps.semantic-capability.outputs.available == 'true'
         run: |
           python harness/semantic_workers/semantic_worker_runner.py run \
             --jobs creative-decision-jobs.json \
@@ -81,6 +100,7 @@ jobs:
           PY
 
       - name: Validate bindings and judgments
+        if: steps.semantic-capability.outputs.available == 'true'
         run: |
           python harness/semantic_workers/semantic_worker_router.py validate-results \
             --jobs creative-decision-jobs.json \
@@ -88,6 +108,7 @@ jobs:
             --judgments-output creative-decision-judgments.json
 
       - name: Evaluate capability and counterexample
+        if: steps.semantic-capability.outputs.available == 'true'
         run: |
           python evals/run_evals.py --domain planning_decision \
             --judgments creative-decision-judgments.json --json > creative-decision-eval.json
@@ -97,6 +118,32 @@ jobs:
           assert d['counts']['PASS'] == 2,d
           assert d['counts']['FAIL'] == 0 and d['counts']['ERROR'] == 0 and d['counts']['PENDING_MODEL'] == 0,d
           assert {r['case_id'] for r in d['results']} == {'PLANNING-DECISION-001','PLANNING-DECISION-002'},d
+          status={
+              'schema':'novelforge_feature_semantic_gate_v1',
+              'feature':'creative_decision_provenance',
+              'status':'PASS',
+              'reason':'independent_blind_capability_and_counterexample_passed',
+              'promotion_evidence':True,
+              'model_execution':True,
+              'case_ids':['PLANNING-DECISION-001','PLANNING-DECISION-002'],
+          }
+          json.dump(status,open('creative-decision-semantic-status.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          PY
+
+      - name: Assert semantic gate status is explicit
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('creative-decision-semantic-status.json')
+          if not p.exists():
+              raise SystemExit('semantic gate executed or failed without an explicit status receipt')
+          d=json.load(p.open(encoding='utf-8'))
+          assert d['schema']=='novelforge_feature_semantic_gate_v1',d
+          assert d['status'] in {'PASS','PENDING_MODEL'},d
+          assert d['promotion_evidence'] is (d['status']=='PASS'),d
+          print(json.dumps(d,ensure_ascii=False,indent=2))
           PY
 
       - uses: actions/upload-artifact@v4
@@ -104,6 +151,7 @@ jobs:
         with:
           name: creative-decision-semantic-${{ github.run_id }}
           path: |
+            creative-decision-semantic-status.json
             creative-decision-capabilities.json
             creative-decision-queue.json
             creative-decision-jobs.json
