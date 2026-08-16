@@ -32,7 +32,10 @@ check(project.includes('run/main_scene="res://Main.tscn"'), "Godot main scene mu
 check(project.includes('renderer/rendering_method="gl_compatibility"'), "Web runtime must use Compatibility renderer");
 check(scene.includes('path="res://scripts/wide_compact_parity.gd"'), "Godot production scene must enter through the final wide-compact parity layer");
 check(wideCompact.includes('extends "res://scripts/visual_completion.gd"'), "wide-compact parity must remain a thin layer above screenshot-driven visual completion");
+check(wideCompact.includes("SOLID_HOME_STACK_MAX_WIDTH := 980.0"), "final route geometry must preserve Solid's independent 980px Home stack breakpoint");
 check(wideCompact.includes("SOLID_HERO_STACK_MAX_WIDTH := 900.0"), "final route geometry must preserve Solid's 900px hero stack breakpoint");
+check(wideCompact.includes("NARROW_COMPACT_H1_SIZE := 36"), "768px route headings must track the Solid clamp rather than desktop typography");
+check(wideCompact.includes("custom_maximum_size") && wideCompact.includes("AUTOWRAP_WORD_SMART"), "compact copy must force wrap against the Solid column width");
 check(wideCompact.includes("_build_product_hero") && wideCompact.includes("false"), "Product wide compact must preserve the Solid two-column hero topology");
 check(completion.includes('extends "res://scripts/visual_completion_core.gd"'), "visual polish must remain a thin layer above complete product surfaces");
 check(completionCore.includes('extends "res://scripts/interaction_parity.gd"'), "visual completion core must remain above validated browser interaction parity");
@@ -91,6 +94,8 @@ check(geometry.includes("_spaced_latin_font(420, -1)"), "Home mobile lede must p
 check(geometry.includes("docs.text = \"Read architecture docs\""), "Architecture Docs CTA must not duplicate the books icon");
 check(geometry.includes("_patch_inspect_phone") && geometry.includes("_patch_playground_phone"), "remaining phone flow parity corrections must remain explicit");
 check(wideCompact.includes("WIDE_COMPACT_H1_SIZE_EN := 48"), "wide compact H1 must track the Solid clamp near 1024px rather than desktop 62px geometry");
+check(wideCompact.includes("NARROW_COMPACT_H1_SIZE := 36"), "narrow compact H1 must track the Solid clamp near 768px");
+check(wideCompact.includes("SOLID_HOME_STACK_MAX_WIDTH := 980.0"), "Home must keep its separate Solid 980px responsive breakpoint");
 check(wideCompact.includes("_fit_wide_compact_lede") && wideCompact.includes("AUTOWRAP_WORD_SMART"), "wide compact copy must reflow without crossing the evidence column");
 
 check(interaction.includes("JavaScriptBridge.create_callback"), "browser-originated interaction must use retained JavaScriptBridge callbacks");
@@ -130,14 +135,17 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_production_source_quality_v16",
+    schema: "novelforge_godot_production_source_quality_v17",
     status: "pass",
     production_cutover: true,
     runtime_role: "production",
     visual_baseline: "Solid/Vite Story Loom Kawaii Atelier golden fixture",
     visual_completion_layer: true,
     final_wide_compact_parity: true,
+    solid_home_stack_breakpoint: 980,
     solid_hero_stack_breakpoint: 900,
+    narrow_compact_h1_px: 36,
+    compact_wrap_contract: "godot_4_7_custom_maximum_size",
     screenshot_driven_polish: true,
     home_full_surface: true,
     architecture_inspector: true,
