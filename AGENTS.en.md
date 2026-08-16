@@ -20,6 +20,10 @@ No consuming novel's characters, plot, Canon, repository path, or private user p
 ## Engineering rules
 
 - **Work directly on `main` for user-authorized routine maintenance by default. Do not create a branch merely because the task is large.** Use a branch/PR only when the user requests it, repository protection requires it, the change genuinely needs isolated review/migration, multiple contributors need a coordination boundary, or an external workflow specifically depends on a PR.
+- **Branch budget:** outside `main`, keep the normal active working set to **at most one general/agent branch and at most one UI/product/visual branch**. Zero branches is preferred when direct `main` work is appropriate. This is a repository-hygiene target, not permission to bypass required isolation or review.
+- Before creating any branch, inspect current branches and open PRs. Reuse the existing branch for that category when its scope is compatible; do not create one branch per task, per coding agent, or per chat/session.
+- A new coding-agent/session should normally continue on `main` or the existing category working branch. If a genuinely incompatible change needs a new branch while that category slot is occupied, first merge/close/delete or explicitly supersede the old branch. Keep parallel branches in the same category only when the user explicitly authorizes the exception or an external workflow requires it.
+- Branches are working state, not archives. Preserve historical context in commits, merged/closed PRs, issues, release artifacts, or tags; delete stale/superseded branch refs after their useful work is preserved.
 - Before consequential writes, re-read current `main` when another session/contributor may be active and preserve unrelated concurrent work.
 - Temporary branches created exceptionally should be merged/closed and deleted when no longer needed.
 - Keep Generic Framework and consumer projects strictly one-way: Project → Framework.
