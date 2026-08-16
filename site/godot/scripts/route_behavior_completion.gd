@@ -120,13 +120,22 @@ func _build_inspector_demo_summary(pos: Vector2, picker_size: Vector2, phone: bo
 		"✓ novelforge.lock.json",
 		"✓ framework.attestation.json",
 	]
-	var columns := 1 if phone else 2
-	var cell_w := picker_size.x - 56 if phone else (picker_size.x - 68) / 2.0
+	if phone:
+		facts = [
+			"84 files · 1.8 MB",
+			"ID · MOONLIT-ARCHIVE",
+			"Framework · 8.0-dev",
+			"✓ novelforge.toml",
+			"✓ novelforge.lock.json",
+			"✓ attestation",
+		]
+	var columns := 2
+	var cell_w := (picker_size.x - 68) / 2.0
 	for i in range(facts.size()):
 		var row := _panel(Vector2(28 + (i % columns) * (cell_w + 12), 148 + (i / columns) * 48), Vector2(cell_w, 38), Color("fbf9fc"), 10, Color("e7deea"), 1)
-		var text := _label(str(facts[i]), 12, 580, C.ink)
-		text.position = Vector2(12, 8)
-		text.size = Vector2(cell_w - 24, 22)
+		var text := _label(str(facts[i]), 10 if phone else 12, 580, C.ink)
+		text.position = Vector2(10, 8)
+		text.size = Vector2(cell_w - 20, 22)
 		row.add_child(text)
 		panel.add_child(row)
 	var reset := _text_button("Inspect another project" if _locale == "en-US" else "检查另一个 Project", Vector2(28, picker_size.y - 58), Vector2(190, 42), C.runtime_soft, C.runtime, 13, 620, 8)
@@ -199,7 +208,7 @@ func _build_execution_board(pos: Vector2, board_size: Vector2, phone: bool) -> v
 	_playground_editor.size = Vector2(260, 132 if not phone else 120)
 	_playground_editor.custom_minimum_size = Vector2(44, 44)
 	_playground_editor.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
-	_playground_editor.add_theme_font_override("font", _font_regular)
+	_playground_editor.add_theme_font_override("font", _font(400))
 	_playground_editor.add_theme_font_size_override("font_size", 12)
 	_playground_editor.add_theme_color_override("font_color", C.ink)
 	_playground_editor.add_theme_color_override("font_placeholder_color", C.muted)
