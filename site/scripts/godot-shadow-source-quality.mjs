@@ -18,14 +18,16 @@ const catalog = read("godot/scripts/route_catalog.gd");
 const systems = read("godot/scripts/system_surfaces.gd");
 const editorial = read("godot/scripts/editorial_surfaces.gd");
 const typography = read("godot/scripts/typography_parity.gd");
+const mobileGeometry = read("godot/scripts/mobile_geometry_parity.gd");
 const shell = read("godot/web/novelforge.html");
 const fontFetch = read("scripts/fetch-godot-fonts.sh");
 
 check(project.includes('run/main_scene="res://Main.tscn"'), "Godot main scene must remain explicit");
 check(project.includes('renderer/rendering_method="gl_compatibility"'), "Web migration must use Compatibility renderer");
-check(scene.includes('path="res://scripts/typography_parity.gd"'), "shadow scene must enter through deterministic typography parity");
+check(scene.includes('path="res://scripts/mobile_geometry_parity.gd"'), "shadow scene must enter through the final mobile geometry parity layer");
+check(mobileGeometry.includes('extends "res://scripts/typography_parity.gd"'), "mobile geometry parity must remain a thin layer above deterministic typography");
 check(scene.includes("offset_right = -15.0"), "web page scrollbar gutter must remain reserved in the Godot layout viewport");
-check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main + parity + routes + catalog + systems + editorial + typography), "migration is capped at 2.5D; 3D scene nodes are forbidden");
+check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main + parity + routes + catalog + systems + editorial + typography + mobileGeometry), "migration is capped at 2.5D; 3D scene nodes are forbidden");
 
 check(typography.includes('INTER_FONT_PATH := "res://generated/Inter-opsz-wght.ttf"'), "WeiUI Latin typography must be pinned to Inter");
 check(typography.includes("_contains_cjk"), "Latin/CJK font selection must remain text-aware");
@@ -60,6 +62,12 @@ for (const route of ["/inspect", "/playground", "/agents"]) check(systems.includ
 for (const route of ["/architecture", "/publication"]) check(editorial.includes(`"${route}"`), `${route} must remain an explicit Godot shadow surface`);
 check(systems.includes("PROJECT INSPECTOR") && systems.includes("LOCAL PLAYGROUND") && systems.includes("AGENT PATCH BAY"), "system route identity surfaces must remain explicit");
 check(editorial.includes("INTERACTIVE ARCHITECTURE") && editorial.includes("PUBLICATION WORKBENCH"), "editorial route identity surfaces must remain explicit");
+
+check(mobileGeometry.includes("NovelForge is a\\nfiction production\\nsystem, not a\\nprompt wrapper."), "Product phone heading must preserve the four-line Solid wrap");
+check(mobileGeometry.includes("with progressive\\ndisclosure instead\\nof dashboard\\noverload."), "Studio phone heading must preserve the seven-line Solid wrap");
+check(mobileGeometry.includes('pink.text = "many"') && mobileGeometry.includes('"deterministic\\nderivatives."'), "Publication phone heading must keep inline pink continuation geometry");
+check(mobileGeometry.includes("_fix_epub_card_position"), "Publication phone format cards must retain deterministic grid placement");
+
 check(main.includes('"phone"') && main.includes('"compact"') && main.includes('"desktop"'), "three responsive layout modes are required");
 check(main.includes("window.location.assign") && parity.includes("window.history.pushState"), "browser navigation boundary must stay explicit");
 check(main.includes("novelforge:godot-ready"), "browser readiness marker is required");
@@ -71,7 +79,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_shadow_source_quality_v9",
+    schema: "novelforge_godot_shadow_source_quality_v10",
     status: "pass",
     production_cutover: false,
     visual_baseline: "Solid/Vite Story Loom Kawaii Atelier",
@@ -87,6 +95,7 @@ if (failures.length) {
     route_catalog_contract: true,
     system_surface_contract: true,
     editorial_surface_contract: true,
+    mobile_geometry_contract: true,
     authority: false,
   }, null, 2));
 }
