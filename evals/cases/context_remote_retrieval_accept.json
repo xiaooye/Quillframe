@@ -1,0 +1,24 @@
+{
+  "id": "CONTEXT-REMOTE-001",
+  "type": "capability",
+  "domain": "context",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "task": "Decide whether Mara can recognize the red ledger as a danger signal in chapter 42.",
+    "recent_window": ["chapter:40", "chapter:41"],
+    "initial_candidates": [{"id": "chapter:41", "text": "Mara notices an ordinary account book on the desk."}],
+    "allowed_search_capability": "project_search",
+    "search_history": [{"query": "Mara red ledger warning", "results": ["chapter:3"]}],
+    "remote_result": {"id": "chapter:3", "text": "As a child, Mara learned that her father left a red ledger open only when the family should leave the shop immediately."},
+    "proposed_context": ["chapter:3"],
+    "proposed_decision": "enough"
+  },
+  "rubric": [
+    "Accept when the agent discovers and keeps causally relevant evidence outside the recent-window boundary through an authorized search instead of treating recency as narrative truth.",
+    "The remote result directly explains the current recognition question and the recent candidate does not.",
+    "Use CTX-REMOTE when remote evidence is correctly discovered and selected."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["CTX-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept", "codes": ["CTX-REMOTE"]}
+}

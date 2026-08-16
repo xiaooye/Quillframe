@@ -1,256 +1,157 @@
 <div align="center">
   <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom mark" width="54" />
-  <p><strong>Context & Memory · author-visible controls around a sparse, authority-aware working set</strong></p>
-  <p><kbd>SELECT</kbd>&nbsp;&nbsp;<kbd>INSPECT</kbd>&nbsp;&nbsp;<kbd>PACK</kbd>&nbsp;&nbsp;<kbd>EDIT</kbd>&nbsp;&nbsp;<kbd>REBUILD</kbd></p>
+  <p><strong>Context & Memory · agent-owned semantic selection inside deterministic authority boundaries</strong></p>
+  <p><kbd>SEARCH</kbd>&nbsp;&nbsp;<kbd>SELECT</kbd>&nbsp;&nbsp;<kbd>VERIFY</kbd>&nbsp;&nbsp;<kbd>PACK</kbd>&nbsp;&nbsp;<kbd>RESUME</kbd></p>
   <p><a href="context-and-memory.zh-CN.md">简体中文</a> · <a href="README.en.md">Docs Home</a></p>
 </div>
 
 # Context & Memory
 
-NovelForge does not equate **stored information**, **currently selected context**, **derived memory**, and **story truth**.
+NovelForge deliberately separates **stored information**, **mechanical eligibility**, **semantic relevance**, **working context**, **durable session history**, and **Project truth**.
 
-The current architecture deliberately splits semantic selection from deterministic control:
+> **The model decides what it needs, what to search, what matters, whether to search again, and when it has enough evidence. Deterministic runtime decides only what the model may access, whether an item/result is authentic and current, whether it is legal for the receiving stage, and whether hard execution budgets/authority constraints are satisfied.**
 
-> **The model decides semantic relevance through the `context.select` contract. Deterministic context / memory code owns authority classes, stages, explicit author controls, source binding, hard budgets, whole-item packing, and protected-edit rules.**
+## 1. Ownership model
 
-This prevents a heuristic relevance score, stale session note, or convenient summary from silently becoming either prompt truth or Canon.
+**Project authority** owns Canon/accepted facts and Project-level truth.
 
----
+**Session Runtime** owns durable run/checkpoint/event identity. The model context window is not the durable session.
 
-## 01 · Four things that must stay different
+**Context Inspector** owns mechanical eligibility, stage visibility, explicit pin/priority controls, protected edits and invalidation. It rejects a `relevance` field because relevance is semantic.
 
-**Project authority** answers: *what is true for this fiction project?* Accepted / locked facts remain Project-owned.
+**`context.select`** owns semantic context/search decisions.
 
-**Context Manifest** answers: *what material is eligible for this run, under which authority class and stage?*
+**Context Assembly v2** validates the exact selected set against deterministic boundaries.
 
-**Semantic selection** answers: *which eligible material is actually useful for the current task?* That interpretation belongs to the model through `context.select`.
+**Memory tiers / hard-budget packing** packs selected whole items under objective budgets.
 
-**Memory Bank** stores editable runtime / derived / proposal-oriented memory with provenance and versions. It can reference protected Canon, but it is not another Canon database.
+**Memory Bank** stores source-bound runtime/derived memory. It is not shadow Canon.
 
-A useful mental model is:
+## 2. Context Inspector: eligibility, never relevance
 
-**storage → eligibility → semantic selection → budget packing → model context**
+`harness/context_inspector.py` implements `novelforge_context_inspector_v3`.
 
-Each arrow has a different owner.
+It may normalize or verify:
 
----
-
-## 02 · Context Inspector: inspect authority and eligibility, not literary relevance
-
-`harness/context_inspector.py` implements `novelforge_context_inspector_v2`.
-
-For each manifest item it normalizes and exposes fields such as:
-
-- stable item ID and class;
-- source reference and source fingerprint;
+- item/source identity and source fingerprint;
 - authority class;
-- inclusion reason;
 - allowed stages;
-- explicit numeric priority;
-- pin state;
-- whether the view is derived;
-- hidden / invalidated state;
-- caller-supplied metadata.
+- explicit numeric priority and pin state;
+- derived/hidden/invalidated state;
+- protected-edit proposal behavior.
 
-The Inspector explicitly **rejects a `relevance` field**. Semantic relevance is not a deterministic manifest property.
+Its stable ordering (`pinned → explicit priority → stable id`) represents explicit control, not literary importance.
 
-Its ordering policy is intentionally mechanical:
+A protected `accepted`/`locked` source cannot be changed through the context overlay. A requested protected edit becomes a proposal; it does not mutate Canon.
 
-**pinned → explicit priority → stable ID**
+## 3. Stage isolation is deterministic
 
-That ordering is author/runtime control, not a claim about literary importance.
-
----
-
-## 03 · Stage isolation protects the writer from the wrong evidence
-
-Context items declare one or more allowed stages:
-
-`writer_pre_draft` — material that may influence first-pass drafting.
-
-`post_draft_critic` — material legal only after a candidate exists, including relevant regression evidence.
-
-`independent_reviewer` — bounded material that may be packaged for a genuinely independent gate.
-
-`never` — stored / proposed material that must not be injected automatically.
-
-Sensitive classes such as regression evidence, hidden gold, expected verdicts, and answer keys are rejected if placed in `writer_pre_draft`.
-
-This is a deterministic contamination boundary. It does not require a model to remember “please don't peek.”
-
----
-
-## 04 · Semantic selection belongs to `context.select`
-
-When a working set contains more eligible material than the current task should receive, NovelForge prepares a bounded `context.select` semantic job.
-
-`harness/memory_tiers.py` sends the model only a task context plus typed candidate memory blocks. The model returns ordered IDs for hot, working, and archive tiers.
-
-The deterministic runtime then validates that result against the exact semantic job fingerprint before using it.
-
-This split is important:
-
-- the model may interpret which evidence matters now;
-- deterministic code verifies that the model selected only known, non-invalidated items;
-- a stale or misbound semantic result is rejected;
-- selection still does not grant authority to the selected memory.
-
-The contract is resolved through the progressive `context-research` semantic pack.
-
----
-
-## 05 · Hard-budget packing stays deterministic
-
-After semantic selection, `memory_tiers.py` performs deterministic budget packing.
-
-It owns:
-
-- `hot_budget` and `working_budget` enforcement;
-- pinned-item override;
-- derived-memory authority checks;
-- source-reference / source-fingerprint requirements;
-- whole-item-or-skip packing;
-- invalidated-item exclusion;
-- stable archive output.
-
-It does **not** summarize Canon, score story relevance, or truncate a semantic memory block into an ambiguous fragment just to squeeze under budget.
-
-Pinned items must fit the hot budget; if they do not, the run fails instead of silently discarding the author's explicit control.
-
-The output records both owners explicitly:
-
-- `selection_owner = model`
-- `budget_owner = deterministic_runtime`
-
----
-
-## 06 · Author controls are overlays, not Canon writes
-
-The Context Inspector supports low-authority controls such as:
-
-- pin / unpin;
-- explicit priority change;
-- hide a derived view;
-- invalidate a derived view so it must be rebuilt.
-
-These controls alter **selection and presentation behavior** only.
-
-Hiding or invalidating is restricted to derived views. A caller cannot use the overlay mechanism to make authoritative Project facts disappear from reality.
-
-The overlay itself receives a fingerprint so changes remain traceable.
-
----
-
-## 07 · Protected edits become proposals
-
-If a caller requests an edit to a context item whose authority is `locked` or `accepted`, `context_inspector.py` does not mutate the protected source.
-
-It creates a proposal record with:
-
-- proposal ID;
-- source item ID;
-- original authority;
-- requested patch;
-- `proposal_required` status;
-- `direct_mutation_performed = false`;
-- `canon_write = false`.
-
-This lets an author say “I want this fact changed” without a context UI pretending the fact has already changed.
-
-Actual Canon mutation still belongs to explicit Project acceptance and Settlement.
-
----
-
-## 08 · Memory Bank is durable working memory, not shadow Canon
-
-`harness/memory_bank.py` provides durable banks for domains such as context, character, relationship, thread, style, learning, runtime, corpus, and derived memory.
-
-The bank keeps provenance, fingerprints, versions, authority metadata, explicit controls, and edit history.
-
-Two paths remain distinct:
-
-**Editable runtime / derived memory** may be changed under the bank's version / fingerprint preconditions.
-
-**Protected Canon references** remain read-only references. Requested changes become proposals rather than in-place mutations.
-
-Derived memory should remain rebuildable from its source evidence wherever practical.
-
----
-
-## 09 · Memory never proves story facts or character knowledge
-
-Memory can be useful without being authoritative.
-
-It is not proof that:
-
-- an event happened;
-- a character knows a fact;
-- a relationship has officially changed;
-- a plan has been accepted;
-- a research claim became Project truth;
-- a Corpus observation belongs in the next draft;
-- a model inference is now durable user taste.
-
-Those conclusions belong to the Project mechanisms that own them.
-
-The ability to invalidate and rebuild memory is a feature, not a weakness: derived state should be easier to throw away than Canon.
-
----
-
-## 10 · A typical draft / revision context flow
-
-A normal production run follows this ownership sequence:
-
-**Resolve Project authority.** Determine Canon cutoff, active plan, participating characters, commitments, and task-specific evidence.
-
-**Build eligible context.** Create a sparse Context Manifest with authority, provenance, and stage boundaries.
-
-**Inspect explicit controls.** Apply pin / priority / derived-view controls and reject illegal sensitive-stage placement.
-
-**Select semantically when needed.** Use `context.select` only when interpretation is actually required.
-
-**Pack under hard budgets.** Validate the semantic result, preserve pinned items, and pack whole blocks deterministically.
-
-**Execute the target semantic / writing contract.** The receiving model sees the bounded working set, not the whole project.
-
-**Persist only appropriate derived observations.** New memory remains non-authoritative and source-bound.
-
-Any proposed Canon change still waits for explicit acceptance and Settlement.
-
----
-
-## 11 · Failure routing
-
-A context / memory failure should return to this layer rather than being disguised as a prose problem.
+Private or answer-key-like information must not leak merely because it exists in storage.
 
 Examples:
 
-**Relevant evidence omitted because the semantic selection was wrong** → rerun / repair `context.select` with correct bounded evidence.
+- hidden gold / expected verdict / regression answer keys may not enter Writer context;
+- private character/scene simulation state may be visible to simulation but not automatically to Writer;
+- a compact writer-safe realization trace may be visible to Writer even when the private state that produced it is not;
+- Blind Reader must not inherit manager/author/private-character reasoning.
 
-**Pinned memory exceeds hard budget** → resolve the explicit control / budget conflict; do not silently drop the pin.
+This is an information-security boundary, so deterministic enforcement is appropriate.
 
-**Regression or hidden gold appears in writer context** → deterministic stage-isolation failure.
+## 4. `context.select`: search is a capability
 
-**Derived memory points to stale source fingerprints** → invalidate and rebuild.
+The `context.select` semantic contract receives a bounded task description plus mechanically eligible candidate blocks and the allowed search capabilities/resource budget.
 
-**Protected Canon fact needs to change** → create a proposal and route through Project acceptance / Settlement.
+The model decides:
 
-**A character acts on memory they do not know** → Character / knowledge-boundary failure, not proof that the memory should be removed globally.
+1. what the task actually lacks;
+2. which supplied blocks matter;
+3. whether current evidence is sufficient;
+4. what focused query to issue next;
+5. whether to broaden, narrow or reformulate after seeing results;
+6. what to retain in working context;
+7. when to stop searching.
 
----
+The runtime does not convert recency, vector similarity, fixed top-k, item class, or task-mode mapping into narrative truth. Such mechanisms may generate candidates, but they are not authoritative relevance judgments.
 
-## 12 · Exact references
+Pinned items are explicit execution constraints, not proof of semantic importance.
 
-- [Architecture](architecture.en.md) — authority domains and semantic / deterministic ownership.
-- [Production Pipeline](production-pipeline.en.md) — where context selection occurs in DRAFT / REVISE.
-- [Project SDK](project-sdk.en.md) — Project authority and exact dependency locks.
-- [`harness/context_inspector.py`](../harness/context_inspector.py) — deterministic inspector / overlay contract.
-- [`harness/memory_tiers.py`](../harness/memory_tiers.py) — model-selected, deterministic-budget context packer.
-- [`harness/memory_bank.py`](../harness/memory_bank.py) — durable editable memory implementation.
-- [`harness/semantic_workers/contracts/context-research.json`](../harness/semantic_workers/contracts/context-research.json) — `context.select` semantic contract.
+## 5. Context Assembly v2: exact-set verification only
 
-<div align="center">
-  <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom mark" width="48" />
-  <br />
-  <sub>Let the model decide meaning. Let the runtime enforce boundaries. Let the Project decide truth. 🌸</sub>
-</div>
+`harness/context_assembly.py` implements `novelforge_context_assembly_v2`.
+
+It runs **after** model/manager selection and verifies only deterministic properties such as:
+
+- selected IDs exist in the inspected eligible set;
+- the exact receiving stage is allowed;
+- hidden/invalidated/private-state restrictions hold;
+- source fingerprints and exact higher-authority refs match when mechanically required;
+- a selected projection does not cross a privacy/stage boundary.
+
+It explicitly does **not** judge:
+
+- whether a literary context class is “required”;
+- whether a selected item is narratively relevant;
+- whether the selection is semantically sufficient;
+- whether another search should be performed.
+
+Those decisions belong to the model/Manager. If a specific authoritative artifact is mechanically mandatory for an operation, the caller passes its **exact required ref/fingerprint**, not a semantic class/purpose proxy.
+
+## 6. Hard-budget packing remains deterministic
+
+When tiered packing is used, `harness/memory_tiers.py` may enforce hot/working budgets, whole-item packing, invalidated exclusion and explicit pins.
+
+It must not summarize, rank or truncate content based on a claim of literary relevance. If an explicit pinned item cannot fit a hard budget, expose the conflict rather than silently dropping the pin.
+
+## 7. Character knowledge is semantic, visibility is mechanical
+
+Runtime may prove that an evidence item was not yet available at a story-time boundary or was outside an authorized perspective packet. It may not conclude that a character *semantically could or could not infer* a fact merely from labels.
+
+Character knowledge/inference/consistency belongs to semantic character/rule-audit contracts. Evidence identity and temporal/visibility eligibility remain deterministic inputs to those judgments.
+
+## 8. Author Model context follows the same rule
+
+An active Author Model hypothesis is **eligible durable preference evidence**, not automatically relevant context.
+
+`learning/author_model.py` exposes a compact active index. The manager/model explicitly selects the active hypothesis IDs useful for the current task; deterministic code checks that those IDs are active and Project-compatible before exposing details.
+
+## 9. Typical adaptive context loop
+
+```text
+resolve Project/session authority
+→ build mechanically eligible candidates
+→ model inspects task and current evidence
+→ model selects or requests search
+→ runtime executes allowed search/fetch primitive
+→ model inspects results and may reformulate
+→ model stops when sufficiently grounded
+→ Context Assembly v2 verifies exact refs/stage/fingerprints
+→ hard-budget packing if needed
+→ execute target semantic/writing contract
+→ persist only source-bound, non-authoritative derived memory
+```
+
+A context-window transcript is never the source of truth for resume. After context loss/reset, Session Runtime re-resolves the current Project/Framework authority and reconstructs the working set from durable events/artifacts/checkpoints.
+
+## 10. Failure routing
+
+- relevant evidence omitted → semantic selection/search repair, not a new Python relevance rule;
+- selected ref is stale/missing/wrong fingerprint → deterministic assembly failure;
+- private state enters a forbidden stage → deterministic isolation failure;
+- first search insufficient → model continues/reformulates within allowed capabilities;
+- evidence is already sufficient → model should stop; runtime does not force extra retrieval;
+- hard budget cannot honor an explicit pin → deterministic control conflict;
+- character appears to know too much → semantic knowledge/rule audit using authorized evidence;
+- protected Canon needs change → proposal → Project acceptance/Settlement, never context overlay mutation.
+
+## 11. Exact references
+
+- [Architecture](architecture.en.md)
+- [Production Pipeline](production-pipeline.en.md)
+- [Project SDK](project-sdk.en.md)
+- [`harness/context_inspector.py`](../harness/context_inspector.py)
+- [`harness/context_assembly.py`](../harness/context_assembly.py)
+- [`harness/memory_tiers.py`](../harness/memory_tiers.py)
+- [`harness/memory_bank.py`](../harness/memory_bank.py)
+- [`harness/semantic_workers/contracts/context-research.json`](../harness/semantic_workers/contracts/context-research.json)
+
+<div align="center"><sub>Models decide meaning. Runtime constrains power. Projects decide truth. 🌸</sub></div>

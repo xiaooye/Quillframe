@@ -1,0 +1,18 @@
+{
+  "id": "READER-AGENDA-NATURAL-001",
+  "type": "regression",
+  "domain": "reader",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "candidate_text": "‘I handle vendor compliance, which means I verify every certificate before procurement approves a supplier,’ Mara said. ‘And I manage cash risk, so my responsibility is to reject any payment schedule that threatens our reserve target,’ Tomas replied. ‘Then our responsibilities conflict because your objective is operational continuity while mine is liquidity protection.’",
+    "reader_profile": "adult commercial-fiction reader with no access to author notes or character sheets"
+  },
+  "rubric": [
+    "Read naturally as the supplied target reader. Do not infer private author intent or consult a hidden quality taxonomy.",
+    "Reject if the interaction feels conspicuously artificial because the characters explain their own roles/objectives to each other instead of behaving like people with shared context.",
+    "Do not require a named diagnostic label; report the reading effect in ordinary language."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": [], "evidence": "short observable findings"},
+  "expected": {"verdict": "reject"}
+}

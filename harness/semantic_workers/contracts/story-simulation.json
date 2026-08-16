@@ -1,11 +1,11 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "3",
-  "principle": "Character and scene causality are semantic simulation work. Models propose actions from bounded character/world state; deterministic runtime only binds identity, permissions, provenance and typed results.",
+  "version": "4",
+  "principle": "Character and scene causality are semantic simulation work. Private character state may justify a separate semantic role, but schemas stay thin: deterministic runtime binds identity, visibility, story-time eligibility, provenance and evidence references; models decide motivation, action, causal collision and dramatic usefulness.",
   "contracts": {
     "character.action_propose": {
       "kind": "artifact_audit",
-      "purpose": "Simulate what one important character is most likely to try next from that character own agenda, perceived state, temporally eligible perspective evidence, relationship position, emotional residue, spatial/task state and constraints. Produce evidence-bound action proposals, not prose and not Canon.",
+      "purpose": "Simulate what one important character is likely to try next from bounded private state and authorized perspective evidence. Character state is causal evidence, not prose payload or a field-by-field serialization obligation.",
       "forbidden_input_keys": [
         "narrator_omniscience",
         "reader_only_knowledge",
@@ -17,53 +17,12 @@
       ],
       "input_contract": {
         "type": "object",
-        "required": [
-          "character_id",
-          "current_story_order",
-          "active_agenda",
-          "perceived_state",
-          "immediate_situation",
-          "perspective_memory"
-        ],
+        "required": ["character_id", "current_story_order", "active_agenda", "perceived_state", "immediate_situation", "perspective_memory"],
         "properties": {
-          "character_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "active_agenda": {
-            "type": "string",
-            "minLength": 1
-          },
-          "perceived_state": {
-            "type": "object",
-            "properties": {
-              "beliefs": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "goals": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "fears": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "assumptions": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            },
-            "additionalProperties": false
-          },
+          "character_id": {"type": "string", "minLength": 1},
+          "current_story_order": {"type": "integer", "minimum": 0},
+          "active_agenda": {"type": "string", "minLength": 1},
+          "perceived_state": {"type": "object"},
           "immediate_situation": {
             "type": "object",
             "properties": {
@@ -71,323 +30,124 @@
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "required": [
-                    "observable_id",
-                    "observation",
-                    "source_ref",
-                    "available_from_story_order"
-                  ],
+                  "required": ["observable_id", "observation", "source_ref", "available_from_story_order"],
                   "properties": {
-                    "observable_id": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "observation": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "source_ref": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "available_from_story_order": {
-                      "type": "integer",
-                      "minimum": 0
-                    }
+                    "observable_id": {"type": "string", "minLength": 1},
+                    "observation": {"type": "string", "minLength": 1},
+                    "source_ref": {"type": "string", "minLength": 1},
+                    "available_from_story_order": {"type": "integer", "minimum": 0}
                   },
-                  "additionalProperties": false
-                }
-              },
-              "pressures": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "available_options": {
-                "type": "array",
-                "items": {
-                  "type": "string"
+                  "additionalProperties": true
                 }
               }
             },
-            "additionalProperties": false
+            "additionalProperties": true
           },
           "perspective_memory": {
             "type": "object",
-            "required": [
-              "episodic_visible_events",
-              "visibility_tagged_facts",
-              "situation_patterns"
-            ],
             "properties": {
               "episodic_visible_events": {
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "required": [
-                    "event_id",
-                    "story_point",
-                    "first_person_memory",
-                    "source_ref",
-                    "available_from_story_order"
-                  ],
+                  "required": ["event_id", "source_ref", "available_from_story_order"],
                   "properties": {
-                    "event_id": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "story_point": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "first_person_memory": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "source_ref": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "available_from_story_order": {
-                      "type": "integer",
-                      "minimum": 0
-                    },
-                    "memory_confidence": {
-                      "enum": [
-                        "clear",
-                        "uncertain",
-                        "contested"
-                      ]
-                    }
+                    "event_id": {"type": "string", "minLength": 1},
+                    "source_ref": {"type": "string", "minLength": 1},
+                    "available_from_story_order": {"type": "integer", "minimum": 0}
                   },
-                  "additionalProperties": false
+                  "additionalProperties": true
                 }
               },
               "visibility_tagged_facts": {
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "required": [
-                    "fact_id",
-                    "claim",
-                    "epistemic_status",
-                    "acquisition_mode",
-                    "source_ref",
-                    "available_from_story_order"
-                  ],
+                  "required": ["fact_id", "claim", "source_ref", "available_from_story_order"],
                   "properties": {
-                    "fact_id": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "claim": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "epistemic_status": {
-                      "enum": [
-                        "known",
-                        "believed",
-                        "suspected",
-                        "contradicted",
-                        "unknown"
-                      ]
-                    },
-                    "acquisition_mode": {
-                      "enum": [
-                        "directly_observed",
-                        "told_by",
-                        "inferred",
-                        "remembered",
-                        "rumor_or_hearsay"
-                      ]
-                    },
-                    "source_ref": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "available_from_story_order": {
-                      "type": "integer",
-                      "minimum": 0
-                    }
+                    "fact_id": {"type": "string", "minLength": 1},
+                    "claim": {"type": "string", "minLength": 1},
+                    "source_ref": {"type": "string", "minLength": 1},
+                    "available_from_story_order": {"type": "integer", "minimum": 0},
+                    "epistemic_status": {"type": "string"},
+                    "acquisition_mode": {"type": "string"}
                   },
-                  "additionalProperties": false
+                  "additionalProperties": true
                 }
               },
               "situation_patterns": {
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "required": [
-                    "pattern_id",
-                    "situation",
-                    "behavior_pattern",
-                    "evidence_ref",
-                    "available_from_story_order"
-                  ],
+                  "required": ["pattern_id", "evidence_ref", "available_from_story_order"],
                   "properties": {
-                    "pattern_id": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "situation": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "behavior_pattern": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "evidence_ref": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "available_from_story_order": {
-                      "type": "integer",
-                      "minimum": 0
-                    }
+                    "pattern_id": {"type": "string", "minLength": 1},
+                    "evidence_ref": {"type": "string", "minLength": 1},
+                    "available_from_story_order": {"type": "integer", "minimum": 0}
                   },
-                  "additionalProperties": false
+                  "additionalProperties": true
                 }
               }
             },
-            "additionalProperties": false
+            "additionalProperties": true
           },
-          "relationship_state": {
-            "type": "object"
-          },
-          "task_state": {
-            "type": "object"
-          },
-          "location": {
-            "type": "object"
-          },
-          "constraints": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "current_story_order": {
-            "type": "integer",
-            "minimum": 0
-          }
+          "relationship_state": {"type": "object"},
+          "task_state": {"type": "object"},
+          "location": {"type": "object"},
+          "constraints": {"type": "array", "items": {"type": "string"}}
         },
         "additionalProperties": false
       },
       "rubric": [
         "Use only supplied character-visible state and evidence whose available_from_story_order is not later than current_story_order. Do not give the character narrator, reader, research, future-plan or other-character knowledge.",
-        "Keep epistemic confidence separate from acquisition mode: known/believed/suspected/contradicted/unknown says how the character currently treats a claim; directly_observed/told_by/inferred/remembered/rumor_or_hearsay says how it entered the character model.",
-        "Start from the character active agenda and immediate problem, not from what would make the outline convenient.",
-        "Use the tension between perceived reality and goals/fears as a causal driver. Do not silently replace character perception with objective world truth.",
-        "Preserve independent agency: the character may resist, misunderstand, delay, conceal, improvise or pursue a side objective when supplied state supports it.",
-        "Prefer concrete actions, choices and tactics that can cause observable scene consequences over abstract emotional summaries.",
-        "Allow surprise when causally supported by motive, relationship, pressure or newly visible information; consistency does not mean predictability.",
-        "When a proposal relies on a supplied observable/event/fact/pattern, cite its evidence id and say whether it supports, challenges or represents uncertainty. Contradicted/unknown claims must not be used as positive support.",
-        "Return several plausible proposals when state genuinely supports alternatives. Do not choose the final scene trajectory."
+        "Treat beliefs, goals, fears, assumptions, relationships, memories and labels as semantic evidence, not mandatory slots that must each appear in the decision. Reason about plausible inference rather than applying a field-equality story engine.",
+        "Start from the character's current private agenda and immediate situation, not from what would make an outline convenient. Preserve independent agency, including resistance, misunderstanding, delay, concealment or side objectives when causally supported.",
+        "Prefer concrete actions or tactics that can create observable consequences. Character consistency does not mean predictability, and a contradicted or uncertain fact may still matter as something the character believes, fears, doubts or reacts against.",
+        "Cite the supplied evidence actually used. The runtime may verify that cited references exist and are temporally eligible; it must not decide whether that evidence semantically justifies the action.",
+        "Keep the answer compact. Do not serialize a Character Sheet into a proposal record and do not draft final dialogue or narration."
       ],
       "output_contract": {
         "type": "object",
-        "required": [
-          "confidence",
-          "character_id",
-          "active_agenda",
-          "proposals"
-        ],
+        "required": ["confidence", "character_id", "active_agenda", "proposals"],
         "properties": {
-          "confidence": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "character_id": {
-            "type": "string",
-            "minLength": 1
-          },
-          "active_agenda": {
-            "type": "string",
-            "minLength": 1
-          },
-          "perceived_actual_vs_desired_tension": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "character_id": {"type": "string", "minLength": 1},
+          "active_agenda": {"type": "string", "minLength": 1},
+          "report": {"type": "string"},
           "proposals": {
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "object",
-              "required": [
-                "action",
-                "tactic",
-                "why_now",
-                "expected_resistance",
-                "motive_basis",
-                "knowledge_basis"
-              ],
+              "required": ["action", "knowledge_basis"],
               "properties": {
-                "action": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "tactic": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "why_now": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "expected_resistance": {
-                  "type": "string"
-                },
+                "action": {"type": "string", "minLength": 1},
                 "knowledge_basis": {
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "required": [
-                      "evidence_id",
-                      "use"
-                    ],
+                    "required": ["evidence_id", "use"],
                     "properties": {
-                      "evidence_id": {
-                        "type": "string",
-                        "minLength": 1
-                      },
-                      "use": {
-                        "enum": [
-                          "supports",
-                          "challenges",
-                          "uncertainty"
-                        ]
-                      }
+                      "evidence_id": {"type": "string", "minLength": 1},
+                      "use": {"enum": ["supports", "challenges", "uncertainty"]}
                     },
                     "additionalProperties": false
                   }
                 },
-                "risk_or_cost": {
-                  "type": "string"
-                },
-                "relationship_effect": {
-                  "type": "string"
-                },
-                "motive_basis": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "location_or_task_effect": {
-                  "type": "string"
-                },
-                "uncertainty": {
-                  "type": "string"
-                }
-              }
+                "tactic": {"type": "string"},
+                "why_now": {"type": "string"},
+                "expected_resistance": {"type": "string"},
+                "risk_or_cost": {"type": "string"},
+                "relationship_effect": {"type": "string"},
+                "motive_basis": {"type": "string"},
+                "location_or_task_effect": {"type": "string"},
+                "uncertainty": {"type": "string"}
+              },
+              "additionalProperties": false
             }
           }
-        }
+        },
+        "additionalProperties": false
       },
       "permissions": {
         "canon_write": false,
@@ -399,132 +159,37 @@
     },
     "scene.resolve_actions": {
       "kind": "artifact_audit",
-      "purpose": "Resolve bounded character action proposals against world constraints, current scene conditions, active-plan bounds and reader-pressure needs to propose a causal event trajectory. The result is simulation evidence, not an outline mutation or Canon.",
+      "purpose": "Resolve competing character actions against the bounded scene/world situation and return a compact causal interaction trace. This is simulation evidence, not an outline mutation, Realization Sheet or Canon.",
       "rubric": [
         "Treat supplied character proposals as competing agendas, not instructions that must all succeed.",
-        "Resolve collisions through world state, timing, information asymmetry, relationships, resources and consequences rather than narrator fiat.",
-        "Preserve the active plan's hard bounds when supplied, but do not force every planned beat if the simulated causal chain exposes a contradiction that should route back to planning.",
-        "Prefer events that change options, commitments, information, relationships, danger, leverage or cost. Routine procedure should remain compressed unless it creates conflict or consequence.",
-        "Reader pressure should emerge from conflict, uncertainty, choice, consequence, revelation or earned reward; do not manufacture arbitrary cliffhangers or narrator hype.",
-        "Identify where character simulation, story/plan, continuity or research needs repair instead of smoothing over an impossible trajectory.",
-        "Return a proposed causal trajectory and unresolved pressures only. Do not write final prose and do not mutate Canon."
+        "Resolve collisions through the supplied world state, timing, information asymmetry, relationships, resources and consequences rather than narrator fiat.",
+        "Preserve active-plan hard bounds when supplied, but route impossible or newly contradicted assumptions back to the appropriate semantic owner instead of smoothing them over.",
+        "Prefer events that change options, commitments, information, relationships, danger, leverage or cost. Reader pressure should emerge from causal interaction rather than a mandatory beat checklist.",
+        "Return the minimum causal interaction trace a capable Writer or Planner needs. Do not force every collision, pressure, reward and state change into a separate JSON slot, and do not write final prose."
       ],
       "output_contract": {
         "type": "object",
-        "required": [
-          "confidence",
-          "collisions",
-          "trajectory",
-          "unresolved_pressures",
-          "repair_routes"
-        ],
+        "required": ["confidence", "interaction_trace", "observable_trajectory", "unresolved_pressures", "repair_routes"],
         "properties": {
-          "confidence": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "collisions": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": [
-                "participants",
-                "conflict",
-                "resolution_pressure"
-              ],
-              "properties": {
-                "participants": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "conflict": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "resolution_pressure": {
-                  "type": "string",
-                  "minLength": 1
-                }
-              }
-            }
-          },
-          "trajectory": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "type": "object",
-              "required": [
-                "event",
-                "caused_by",
-                "state_change"
-              ],
-              "properties": {
-                "event": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "caused_by": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "state_change": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "cost_or_consequence": {
-                  "type": "string"
-                },
-                "reader_reward": {
-                  "type": "string"
-                },
-                "new_pressure": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "unresolved_pressures": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "interaction_trace": {"type": "string", "minLength": 1},
+          "observable_trajectory": {"type": "string", "minLength": 1},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}},
+          "unresolved_pressures": {"type": "array", "items": {"type": "string"}},
           "repair_routes": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "owner",
-                "reason"
-              ],
+              "required": ["owner", "reason"],
               "properties": {
-                "owner": {
-                  "enum": [
-                    "story",
-                    "plan",
-                    "scene",
-                    "character",
-                    "reader",
-                    "continuity",
-                    "research",
-                    "context",
-                    "runtime",
-                    "human"
-                  ]
-                },
-                "reason": {
-                  "type": "string",
-                  "minLength": 1
-                }
-              }
+                "owner": {"enum": ["story", "plan", "scene", "character", "reader", "continuity", "research", "context", "runtime", "human"]},
+                "reason": {"type": "string", "minLength": 1}
+              },
+              "additionalProperties": false
             }
           }
-        }
+        },
+        "additionalProperties": false
       },
       "permissions": {
         "canon_write": false,

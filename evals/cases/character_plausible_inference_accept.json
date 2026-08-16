@@ -1,0 +1,24 @@
+{
+  "id": "CHAR-INFERENCE-001",
+  "type": "counterexample",
+  "domain": "character",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "character": "Nora",
+    "known_evidence": [
+      "Only Eli and Nora know the storage-room combination.",
+      "Nora sees fresh red clay on the storage-room floor.",
+      "Earlier today Nora saw Eli return from the red-clay construction site with mud on his boots."
+    ],
+    "not_directly_observed": "Nora did not see Eli enter the storage room.",
+    "proposed_character_action": "Nora confronts Eli and says she thinks he entered the storage room, while leaving room for denial."
+  },
+  "rubric": [
+    "Accept when the character makes a plausible inference from supplied visible evidence even though the inferred event was not directly observed.",
+    "A knowledge boundary must not collapse plausible inference into omniscience merely because there is no explicit fact field saying 'Eli entered'.",
+    "Use CHAR-INFERENCE when the proposed belief/action is reasonably inferable from the supplied evidence and remains appropriately uncertain."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["CHAR-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept", "codes": ["CHAR-INFERENCE"]}
+}

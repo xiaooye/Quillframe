@@ -1,0 +1,20 @@
+{
+  "id": "ABL-RULE-DECOMPOSED-001",
+  "type": "ablation",
+  "domain": "semantic_rules",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "candidate_ref": "ablation:rule-inference-v1",
+    "candidate_text": "Nora saw red clay on the storage-room floor and looked at Eli's mud-caked boots. Only the two of them knew the combination. ‘You went in there,’ she said, then added, ‘Or you want me to think you didn't.’",
+    "authoritative_context": ["Nora did not directly see Eli enter the room.", "Eli had just returned from the red-clay construction site.", "Only Nora and Eli know the combination."],
+    "rule_check": {"id": "KNOWLEDGE-BOUNDARY", "statement": "A character must not use knowledge unavailable to them without a plausible narrative basis.", "required_statuses": ["PASS", "FAIL", "NOT_APPLICABLE", "INSUFFICIENT_EVIDENCE"]}
+  },
+  "rubric": [
+    "First decide whether the knowledge-boundary rule is applicable; then decide whether the character's claim is direct knowledge, plausible inference, or unsupported omniscience.",
+    "A plausible inference from visible evidence must not be failed merely because the inferred event was not directly observed.",
+    "Accept when the candidate has a sufficient narrative basis and preserves uncertainty."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": [], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept"}
+}

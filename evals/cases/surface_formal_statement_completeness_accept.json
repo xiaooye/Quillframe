@@ -1,0 +1,18 @@
+{
+  "id": "SURFACE-HF30-003",
+  "type": "counterexample",
+  "domain": "surface",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "language": "zh-CN",
+    "profile": {"scene_type": "deposition"},
+    "text": "律师把录音笔往前推了一点。\n\n\"请你完整说明，你在五月十二日的职责，以及为什么拒绝在那份验收单上签字。\"\n\n周衡看了一眼记录员：\"当天我是现场质量负责人，职责是确认压力测试和泄漏测试都达到合同要求。下午四点收到的版本只有压力测试记录，没有泄漏测试原始数据。我向承包方要过两次，对方都没有提供。按照验收程序，在两项记录都齐全以前我没有权限确认合格，所以我拒绝签字。我当时也把这个理由写进了交接记录。\"\n\n律师问：\"这是你拒签的全部理由？\"\n\n\"是。\""
+  },
+  "rubric": [
+    "Accept complete, explicit speech when completeness itself is the required speech act: testimony, deposition, record-making, incident debrief, formal explanation, or another context where the listener explicitly requests a full account.",
+    "Do not flag HF-30 merely because the speaker states role, procedure, reason, and risk completely; evaluate whether the interaction gives a concrete reason for that completeness."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["HF-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept", "codes": []}
+}

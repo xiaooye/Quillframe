@@ -1,0 +1,19 @@
+{
+  "id": "ABL-RULE-HOLISTIC-001",
+  "type": "ablation",
+  "domain": "semantic_rules",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "candidate_ref": "ablation:rule-inference-v1",
+    "candidate_text": "Nora saw red clay on the storage-room floor and looked at Eli's mud-caked boots. Only the two of them knew the combination. ‘You went in there,’ she said, then added, ‘Or you want me to think you didn't.’",
+    "authoritative_context": ["Nora did not directly see Eli enter the room.", "Eli had just returned from the red-clay construction site.", "Only Nora and Eli know the combination."],
+    "hard_rules": ["A character must not use knowledge unavailable to them without a plausible narrative basis."]
+  },
+  "rubric": [
+    "Audit the supplied hard rules holistically and return whether the candidate violates any of them.",
+    "Use the supplied authoritative context; do not invent hidden evidence."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": [], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept"}
+}

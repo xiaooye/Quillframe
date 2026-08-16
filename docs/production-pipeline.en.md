@@ -1,350 +1,174 @@
 <div align="center">
   <img src="../assets/brand/novelforge-lockup.svg" alt="NovelForge — Adaptive Fiction Agent Framework" width="560" />
-  <p><strong>Production Pipeline · simulate causality, evolve candidates, release through explicit gates</strong></p>
-  <p><kbd>FREEZE</kbd>&nbsp;&nbsp;<kbd>SIMULATE</kbd>&nbsp;&nbsp;<kbd>DRAFT</kbd>&nbsp;&nbsp;<kbd>DIAGNOSE</kbd>&nbsp;&nbsp;<kbd>EVOLVE</kbd>&nbsp;&nbsp;<kbd>GATE</kbd></p>
+  <p><strong>Production Pipeline · model-owned narrative judgment inside exact execution boundaries</strong></p>
+  <p><kbd>GROUND</kbd>&nbsp;&nbsp;<kbd>SEARCH</kbd>&nbsp;&nbsp;<kbd>SIMULATE</kbd>&nbsp;&nbsp;<kbd>DRAFT</kbd>&nbsp;&nbsp;<kbd>READ</kbd>&nbsp;&nbsp;<kbd>AUDIT</kbd>&nbsp;&nbsp;<kbd>EDIT</kbd>&nbsp;&nbsp;<kbd>GATE</kbd></p>
   <p><a href="production-pipeline.zh-CN.md">简体中文</a> · <a href="README.en.md">Docs Home</a></p>
 </div>
 
-<img src="../assets/brand/story-thread.svg" alt="" width="100%" />
-
 # Production Pipeline
 
-A NovelForge chapter is a **recoverable production run**, not a single completion and not a fixed chain of critic agents.
+NovelForge treats a chapter as a **recoverable semantic production run**, not a fixed chain of critic agents and not a deterministic story engine.
 
-The manager chooses the smallest semantic contract pack needed for each judgment. Models own story, character, reader, continuity, and revision interpretation. Deterministic runtime code owns authority, fingerprints, permissions, persistence, checkpoints, typed validation, budgets, and settlement transactions.
+> **Models decide narrative meaning. Runtime enforces execution truth. Project authority decides what is Canon.**
 
-<img src="../assets/ui/home-pipeline.en.svg" alt="NovelForge production run: freeze and simulate, create an internal candidate, diagnose and evolve, then cross the release gate" width="100%" />
+## 01 · Establish authority before prose
 
----
+A `DRAFT` or `REVISE` run first resolves:
 
-## 01 · The four responsibilities
+- the current/pinned Framework identity;
+- the consuming Project and exact lock/fingerprint;
+- exactly one `task_mode`;
+- manager session/run/checkpoint identity;
+- current Canon/plan/candidate fingerprints and authority cutoff;
+- real host capabilities and permissions.
 
-Every `DRAFT` or `REVISE` run has four high-level responsibilities.
+Old chat history and provider-native sessions are context, not authority. Resume revalidates current Project/Framework authority and pending capabilities before work continues.
 
-**Freeze + simulate** establishes the legal story state, sparse working context, character-owned action, scene causality, and reader pressure before prose generation.
+## 02 · Agent-owned search, deterministic context boundaries
 
-**Create an internal candidate** produces event-first Raw Draft material and realizes the prose surface. Raw Draft remains private to the production run.
+The manager/model determines what knowledge is missing. When necessary it invokes `context.select`, formulates its own query, inspects results, rejects irrelevant matches, reformulates or continues, and stops when sufficiently grounded.
 
-**Diagnose + evolve** uses exact semantic contracts and deterministic evidence to identify the owning failure mechanism, repair at the correct layer, and verify that a challenger candidate actually improves the incumbent.
+Retrieval primitives may use lexical/vector/top-k mechanics to return candidates. They do **not** make those candidates narratively relevant by fiat.
 
-**Release gate** checks the reader experience, long-horizon commitments, state/authority integrity, and any task-specific independent judgment before exposing review-ready prose.
+After semantic selection, deterministic context infrastructure verifies only objective boundaries:
 
-The graph is adaptive: a failure can return upstream. It is not a conveyor belt that must always execute every possible contract.
+- exact selected/source IDs and fingerprints;
+- stage and private-state visibility;
+- temporal eligibility where the runtime can prove it;
+- exact higher-authority required refs when an operation mechanically requires them;
+- hard context/resource budgets.
 
----
+`context_assembly.py` v2 does not require literary context classes or declare semantic sufficiency. Missing meaning is repaired by search/selection, not by adding another Python relevance rule.
 
-## 02 · Bootstrap the run before touching prose
+## 03 · Story and planning preflight
 
-A run begins by resolving the consuming Project and its exact Framework dependency, then restoring or creating manager `session`, `run`, and checkpoint identity.
+The manager checks whether the requested work is legal relative to current Project state. Planning artifacts remain distinct from Accepted Canon.
 
-Before generation, the manager must know:
+`planning_horizon.py` may enforce declared commitment strength/depth, promoter class, exact before-state and fingerprints. The **Planner** decides how much detail is useful now, what should remain uncertain, and whether more research or replanning is needed. NovelForge has no universal N-chapter/N-volume horizon.
 
-- the single active `task_mode`;
-- Project authority and Canon cutoff;
-- the exact candidate / plan / accepted-state fingerprints involved;
-- the host capabilities available for semantic or external work;
-- whether any consequential side effect requires a checkpoint first.
+## 04 · Character causality before prose
 
-Chat history may help the runtime continue a conversation, but it is not a substitute for Project authority or durable state.
+The pre-draft causal sequence is **private character/world state → `character.action_propose` → `scene.resolve_actions` → compact writer-safe realization projection → Writer**.
 
-**Failure route:** runtime / Project bootstrap. Do not begin creative generation on ambiguous authority.
+Character private state is causal evidence. It is not a prose payload. Runtime may enforce evidence identity, authorized visibility and story-time eligibility, but semantic questions such as motivation, plausible inference, integrity and knowledge use belong to models.
 
----
+`scene.realization_project` should stay compact. Its purpose is to preserve the observable interaction/event trace and privacy boundary, not to serialize a second Character Sheet or a giant Realization Sheet.
 
-## 03 · Freeze sparse context
+## 05 · Raw Draft and Surface realization
 
-NovelForge treats context as a budgeted working set, not a whole-project dump.
+Writer produces event-first Raw Draft only after the current causal problem is sufficiently grounded. Raw Draft is internal.
 
-The manager loads only the current task's relevant slices, such as:
+Negative regression examples remain out of first-pass Writer context until the candidate is frozen. Once frozen, the exact candidate fingerprint becomes the binding subject for downstream review.
 
-- Project profile and active prose constraints;
-- Accepted Canon and directly relevant current state;
-- the active chapter / unit plan and scene intent;
-- participating characters and relationships;
-- unresolved commitments or dependencies;
-- research claims the current scene actually needs;
-- selected derived memory when it is useful and allowed.
+Surface Fundamentals remain craft knowledge and regression vocabulary. Mechanical metrics such as paragraph or dialogue ratios are available through optional prose telemetry, **default-off** and never a generic literary verdict.
 
-When relevance itself requires interpretation, the manager may use the `context-research` pack, including `context.select`. Deterministic code still owns the hard budget, provenance, authority classes, and final packaging constraints.
+## 06 · Blind Reader
 
-Do not inject unrelated future plans, the entire Corpus, the manager's full history, hidden eval labels, or regression bad examples by default.
+The production Reader is `reader.engagement_audit`.
 
-**Failure route:** Context / Memory.
+It receives the candidate plus reader-visible evidence and the minimal target-reader behavior profile. It does **not** normally receive:
 
----
+- author intent or future plan;
+- private character state;
+- Writer reasoning;
+- the full quality taxonomy or expected HF code;
+- prose telemetry;
+- hard-rule audit instructions;
+- prior reviewer verdicts or repair plan.
 
-## 04 · Preflight Story and Canon
+Its job is to read naturally and report the reading experience that actually matters: pull, boredom, confusion, disbelief, emotional response, artificiality, interest, anticipation, irritation, attachment, or another salient effect. It is not required to fill every literary dimension.
 
-Before simulating the scene, verify that the requested work is legal relative to current Project state.
+## 07 · Semantic Rule Auditor
 
-Typical questions include:
+Hard narrative rules are not Python literary rules.
 
-- Is this event merely planned, already Accepted, or currently under review?
-- Does the scene require knowledge, resources, relationships, or locations that do not yet exist?
-- Is a proposed change compatible with current Canon and dependency obligations?
-- Is a stale plan being followed after causal emergence already invalidated it?
-- Is the user actually asking for another mode such as `PLAN-*` or `SETTLE`?
+`quality.semantic_rule_audit` receives an authoritative semantic-rule index and authorized evidence. It decides rule applicability and returns traceable judgments such as `PASS`, `FAIL`, `NOT_APPLICABLE`, or `INSUFFICIENT_EVIDENCE`.
 
-If active plans must adapt to newly emerged story facts, the `long-horizon` pack can use `plan.reconcile`. Reconciliation proposes an updated plan relationship; it does not retroactively rewrite Accepted Canon.
+The runtime verifies that the correct rule authority was available, the audit ran against the exact candidate, and any required independent identity/receipt is valid. It does not decide whether the prose semantically violated the rule.
 
-**Failure route:** Story / Plan / Project authority.
+A confirmed blocking semantic-rule FAIL routes repair. A missing required audit remains unresolved.
 
----
+## 08 · Editor owns repair mechanism and depth
 
-## 05 · Simulate character action, then resolve the scene
+`editor.repair_spec` integrates:
 
-The current development architecture makes the pre-draft causal step explicit through the `story-simulation` pack.
+- Blind Reader findings;
+- Semantic Rule Auditor findings;
+- authorized story/Canon evidence;
+- Project/style constraints;
+- current repair goal and relevant active preference evidence when explicitly selected.
 
-`character.action_propose` asks what an important character would plausibly attempt given that character's:
+The Editor decides the mechanism, repair owner, and whether the next generation should be `local_or_bounded_repair` or `fresh_realization`.
 
-- agenda and immediate goal;
-- beliefs and knowledge boundary;
-- incentives and risks;
-- relationship state;
-- spatial situation;
-- emotional and event aftermath.
+`quality/repair_policy.py` v2 does **not** infer literary repair depth from owner/scope/cluster. It only enforces the information boundary implied by the Editor-selected mode. When fresh realization is selected, rejected prose/concrete patch instructions can be hidden from the Writer to avoid patch-loop anchoring.
 
-`scene.resolve_actions` then resolves collisions among those proposed actions and the world state into a causal event trajectory.
+HF/RG taxonomy remains diagnostic vocabulary and regression labels. A Blind Reader may describe “these people sound like they are explaining their job descriptions”; Rule Auditor/Editor may map that evidence to HF-30 where useful.
 
-This ordering matters. The framework does not first invent a convenient scene outcome and then force every character to cooperate with it.
+## 09 · Challenger comparison and plateau
 
-**Output:** character-owned action proposals + a scene-level causal trajectory.
+Revision is not automatically improvement.
 
-**Failure route:** Character Simulation or Scene Simulation; if the scene only works through character distortion, return to Story / Plan.
+When a material repair warrants comparison, `quality.compare` semantically evaluates incumbent versus challenger. `quality_evolution.py` persists candidate fingerprints, comparison receipts, consume-once state and a configurable workflow plateau limit; it does not choose the literary winner itself.
 
----
+A tie or incumbent win is valid evidence. The system may stop rather than rewriting forever.
 
-## 06 · Establish reader pressure before drafting
+## 10 · Release gates
 
-A causally legal scene can still be dull. Reader Pressure asks what makes the current unit matter **to the reader now**.
+`production_readiness.py` and `production_release.py` validate exact binding and conjunctive gate state. They may check:
 
-Useful pressure may come from:
+- required registered Reader / semantic-rule / independent results exist;
+- exact candidate/subject/fingerprint match;
+- worker/provenance/independence requirements are satisfied;
+- deterministic structural receipts and authority invariants are valid.
 
-- a live desire, threat, dilemma, or promise;
-- uncertainty with meaningful consequences;
-- relationship tension;
-- a choice with cost;
-- a reveal, reversal, failure, or earned payoff;
-- contrast that prevents monotonous escalation;
-- an explicit reader expectation that the chapter should advance or complicate.
+They do not re-judge whether the chapter is good.
 
-Reader pressure is a design target, not a demand for mechanical cliffhangers.
+A missing required semantic judgment is `PENDING_MODEL`/pending, not PASS. A workflow that merely records missing model capability is functioning honestly but does not provide semantic evidence.
 
-If a scene is later diagnosed as SAFE-BUT-FLAT, repair returns here and to scene simulation rather than decorating sentences.
+## 11 · Independent semantic review
 
----
+Independence is a separate property from semantic judgment.
 
-## 07 · Generate an event-first Raw Draft
+When the active gate requires it, use a genuinely separate invocation/session/worker with a bounded packet and exact candidate fingerprint. The manager may package, dispatch, validate and consume; it may not satisfy the independent gate by changing its internal role label.
 
-Only after the current causal problem is sufficiently resolved does prose generation begin.
+Transport failure may use another eligible transport. A valid semantic rejection is not a transport failure and must route repair; do not keep changing reviewers until one accepts the candidate.
 
-“Event-first” means the Raw Draft prioritizes:
+## 12 · Acceptance and settlement remain separate
 
-- choices and mistakes;
-- conflict and response;
-- information movement;
-- state change;
-- consequence and cost;
-- relationship movement;
-- earned reader reward.
+Review-ready prose is still not Accepted Canon.
 
-Routine procedure should be compressed unless it carries conflict, character, information, or consequence.
+Explicit user acceptance/authorized Canon-change intent is required before `SETTLE`. Settlement remains a deterministic transaction with exact acceptance evidence, checkpoint/write authorization, before-state/CAS, projection receipts and postcondition verification.
 
-Raw Draft is **internal**. It is not the Review Draft and is never automatically user-visible.
+Quality evidence cannot approve itself into Canon.
 
-Negative regression examples remain excluded until Raw Draft freeze. This prevents known failures from becoming first-pass stylistic priming.
+## 13 · Default adaptive graph
 
----
+The default production graph is structured as these ordered stages:
 
-## 08 · Realize the prose surface
+1. authority/session bootstrap;
+2. agent-owned search/context selection;
+3. deterministic exact-set/stage/fingerprint verification;
+4. story/planning preflight;
+5. character action, scene collision, then compact realization;
+6. Writer Raw Draft, Surface realization, then candidate fingerprint freeze;
+7. Blind Reader;
+8. Semantic Rule Auditor when required;
+9. Editor repair specification and repair/challenger comparison when warranted;
+10. continuity/state checks;
+11. required independent semantic gate;
+12. user-visible Review Draft;
+13. explicit acceptance, followed by `SETTLE` as a separate mode/transaction.
 
-Surface Realization converts event-first material into the Project's prose profile while respecting Framework Surface Fundamentals.
+The manager loads the smallest semantic contract set needed by the current failure. One capable agent remains preferable unless information isolation, independent evaluation, private state, or genuine specialist benefit justifies separation.
 
-This stage owns prose realization problems such as recurring AI-text rhythms, narrator hype, mechanical micro-actions, voice leakage, process-report narration, fake significance, or malformed compression / expansion.
+## Exact references
 
-Repair scale matters:
+- [Context & Memory](context-and-memory.en.md)
+- [Quality & QA](quality-assurance.en.md)
+- [Adaptive Learning](adaptive-learning.en.md)
+- [Orchestration Protocol](../harness/ORCHESTRATION_PROTOCOL.en.md)
+- [`harness/semantic_workers/model_contract_catalog.json`](../harness/semantic_workers/model_contract_catalog.json)
+- [`quality/repair_policy.py`](../quality/repair_policy.py)
+- [`quality/production_readiness.py`](../quality/production_readiness.py)
 
-- isolated surface defect → local rewrite;
-- clustered realization failures → regenerate the scene realization;
-- clean but inert prose → do **not** stay at the sentence layer.
-
-Surface cleanliness is a floor, not the release criterion.
-
----
-
-## 09 · Freeze the candidate before post-generation regression
-
-Once the first realized candidate exists, freeze its artifact fingerprint before introducing post-generation regression evidence.
-
-Only now should the manager load relevant negative regressions or known failure exemplars.
-
-The purpose is twofold:
-
-1. prevent first-pass generation from being primed by bad examples;
-2. make every downstream diagnosis refer to an exact candidate rather than a moving target.
-
-Material candidate changes create a new fingerprint and invalidate review results that were bound to the old artifact.
-
----
-
-## 10 · Diagnose through exact semantic contracts
-
-There is no single universal critic prompt.
-
-The manager chooses the smallest relevant contract pack from `model_contract_catalog.json`; deterministic runtime resolves the exact contract ID to exactly one pack.
-
-For candidate quality work, the `quality` pack currently exposes:
-
-- `reader.reaction` — reader experience evidence;
-- `reader.compare` — bounded pairwise reader comparison;
-- `character.integrity` — character-behavior integrity;
-- `revision.diagnose` — diagnosis plus repair-owner routing.
-
-Other packs may be selected when the problem requires them:
-
-- `narrative-memory` for derived narrative state or reader expectations;
-- `long-horizon` for plan, relationship, or commitment reconciliation;
-- `creative-evolution` for materially divergent scene alternatives or incumbent/challenger comparison.
-
-A semantic result is evidence. It does not gain Canon or write authority merely because a model produced it.
-
----
-
-## 11 · Convert diagnosis into findings and repair ownership
-
-Diagnosis should become explicit evidence rather than a vague instruction to “make it better.”
-
-Quality findings record the problem and evidence in a form that can be traced across candidate evolution. `revision.diagnose` can identify which mechanism actually owns the defect.
-
-Typical routing:
-
-**Surface defect** → local rewrite or scene realization regeneration.
-
-**SAFE-BUT-FLAT / reader-grip failure** → Reader Pressure + Scene Simulation.
-
-**Character integrity failure** → Character Simulation; possibly Story / Plan if the scene premise itself requires distortion.
-
-**Story / causal failure** → Story / Plan.
-
-**Context / memory failure** → Context / Memory.
-
-**Long-horizon commitment failure** → continuity / plan / relationship reconciliation, not sentence polishing.
-
-**Valid independent semantic reject** → the owning repair layer, never reviewer-shopping.
-
----
-
-## 12 · Evolve candidates instead of assuming every rewrite is better
-
-Revision is not automatically progress.
-
-NovelForge keeps candidate lineage and can compare an incumbent with a challenger. The `creative-evolution` pack exposes `quality.compare` for evidence-driven comparison, and `scene.diverge` when the workflow needs a genuinely different causal alternative rather than another local paraphrase.
-
-The comparison is allowed to conclude:
-
-- challenger is better;
-- incumbent remains better;
-- neither has a meaningful advantage / tie.
-
-Quality evolution therefore supports **plateau stopping**. If revision no longer creates real evidence of improvement, the system may stop instead of entering endless rewrite churn.
-
-Deep guide: [Quality Evolution](quality-evolution.en.md).
-
----
-
-## 13 · Audit reader experience and long-horizon commitments
-
-Before release, the candidate must survive the gates relevant to the current task.
-
-Reader Engagement asks whether the chapter has pressure, causality, payoff, contrast, meaningful movement, and forward pull.
-
-Long-horizon work can use the `long-horizon` pack's `continuity.commitment_audit` to check the candidate against explicit commitments and established facts. Relationship memories can be reconciled through `relationship.memory_reconcile` when long-lived evidence conflicts.
-
-Continuity includes more than trivia. It may cover:
-
-- character knowledge and presence;
-- location and movement;
-- promises, obligations, deadlines, resources, injuries, and debts;
-- relationship movement;
-- open loops and setup / payoff obligations;
-- chronology;
-- emotional and event aftermath.
-
-A contradiction is not repaired by declaring the new version Canon.
-
----
-
-## 14 · Use independent review only when independence is required
-
-Independent semantic review is a **specific gate**, not a synonym for all model judgment.
-
-When the active rubric or workflow requires independence, the result must come from a genuinely different invocation / session and be bound to the exact artifact fingerprint. The review packet is bounded; hidden gold and the manager's entire history are excluded.
-
-A transport failure may justify an eligible fallback. A valid semantic rejection is a real result and must route to repair.
-
-If independence is not required for a particular semantic contract, normal model-owned semantic work may execute through another eligible route without pretending to be an independent reviewer.
-
-Deep references: [Semantic Worker Protocol](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md) and [Semantic Execution Runtime](../harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.en.md).
-
----
-
-## 15 · Cross the user-visible gate truthfully
-
-Raw Draft never crosses this gate.
-
-A candidate may be presented as review-ready only when the gates required by the active task are resolved. Honest unresolved states include:
-
-`awaiting_user` · `awaiting_external` · `semantic_pending` · `failed_gate` · `settlement_incomplete`
-
-A missing required judgment is not PASS. A stale fingerprint is not PASS. A continuity defect hidden by fluent prose is not PASS.
-
-The goal is not maximal ceremony; it is a truthful boundary between internal production candidates and user-visible artifacts.
-
----
-
-## 16 · Acceptance starts a different transaction: SETTLE
-
-User-visible Review Draft and Accepted Canon are different authority classes.
-
-Only explicit acceptance or an explicit authorized Canon-change request may enter settlement. The deterministic settlement runtime does **not** infer acceptance, State Delta, Canon meaning, or literary intent.
-
-A settlement transaction requires exact accepted-artifact evidence and explicit write intent, including:
-
-- accepted artifact reference + fingerprint;
-- acceptance receipt;
-- checkpoint reference;
-- write-authorization reference;
-- exact create / update / delete operations;
-- before-state fingerprints for compare-and-swap where required;
-- required derived projections and their receipts;
-- authoritative postcondition verification.
-
-Required projection failure yields `settlement_incomplete`; completed projection receipts are not silently replayed as new work.
-
-This keeps generation, review, acceptance, and Canon mutation as four distinct events.
-
----
-
-## 17 · What this pipeline is optimizing for
-
-The pipeline is strict backstage so the fiction can remain natural on the page.
-
-It is designed to prevent recurring long-form failure modes:
-
-- future plans leaking into current truth;
-- characters acting with manager-only knowledge;
-- flat scenes being cosmetically polished instead of causally repaired;
-- regression examples contaminating first-pass generation;
-- reviewers judging different candidate fingerprints;
-- repeated rewrites continuing after improvement plateaus;
-- derived memory or semantic output quietly gaining story authority;
-- resume paths repeating consequential writes;
-- user-visible approval being confused with completed settlement.
-
-The intended result is not prose that looks engineered. It is **engineering that disappears behind fiction that feels alive**.
-
-<div align="center">
-  <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom mark" width="52" />
-  <br />
-  <sub>Simulate causality. Draft internally. Diagnose precisely. Evolve with evidence. Settle only after acceptance. 🌸</sub>
-</div>
+<div align="center"><sub>Constrain power. Let models understand the fiction. Bind every consequential result to exact state. 🌸</sub></div>

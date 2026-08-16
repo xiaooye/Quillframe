@@ -1,265 +1,242 @@
-# Harness Agent · 用一个管理器把小说生产做成受限、可恢复、可信的运行
+# Harness Agent · 一个 manager，模型判断意义，确定性系统保证执行真相
 
-<p><kbd>TIER C · 契约</kbd>&nbsp;&nbsp;<kbd>单管理器</kbd>&nbsp;&nbsp;<kbd>恰好一个 TASK MODE</kbd>&nbsp;&nbsp;<kbd>AI-NATIVE</kbd></p>
+<p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>ONE MANAGER</kbd>&nbsp;&nbsp;<kbd>ONE PRIMARY MODE</kbd>&nbsp;&nbsp;<kbd>AI-NATIVE</kbd></p>
 
-NovelForge Harness 是通用生产协调器：它把“一个已经验证的小说项目 + 一个明确任务”组织成受边界约束、可以中断恢复的 run。它决定**该加载什么、哪些语义工作属于模型、哪些不变量必须交给确定性代码、什么时候外部等待必须 checkpoint，以及什么东西才有资格进入用户可见层**。
+NovelForge Harness 把经过验证的小说 Project 与明确任务组织成一轮 bounded、resumable run。它拥有 execution policy，不拥有 story truth。
 
-> **边界 ✦** Harness 拥有执行策略；下游项目拥有具体故事事实、Accepted Canon、profile、当前状态、计划、稿件和项目自己的权威规则。
+> **Project authority 拥有 Canon 与项目专属事实；模型拥有 semantic fiction judgment；deterministic runtime 拥有 identity、power、persistence 与 exact execution state。**
 
-## 01 · AI-native 不等于“模型天然有权威”
+## 01 · AI-native 不等于 model-authoritative
 
-NovelForge 之所以 AI-native，是因为真正需要理解小说的语义工作通过 model-readable contract 交给模型，例如：
+需要理解意义的工作默认由模型承担，例如：
 
-- 故事与场景推理；
-- 人物行为与完整性判断；
-- Reader reaction / comparison；
-- Revision diagnosis；
-- Research interpretation；
-- 长程叙事 / 读者 expectation 的解释；
-- Memory consolidation proposal；
-- 其他无法诚实压成确定性规则的判断。
+- search intent、query formulation、relevance、continuation / stopping；
+- story / scene / planning interpretation；
+- character action、motivation、plausible inference、integrity；
+- Reader experience；
+- semantic hard-rule applicability / violation；
+- repair mechanism / depth；
+- research interpretation；
+- feedback / preference interpretation。
 
-确定性代码只负责它真正能证明的部分：
+Deterministic code 只保留可机械证明的不变量：
 
-- identity 与稳定 ID；
-- authority 与 permission；
-- fingerprint；
-- lifecycle / state transition；
-- persistence 与 transaction；
-- idempotency / consume-once；
-- capability resolution；
-- hard context budget 与 stage isolation；
-- typed-result validation；
-- release invariant。
+- Project/resource/session/run/checkpoint identity；
+- permissions / capability boundaries；
+- exact artifacts、hashes、fingerprints；
+- provenance / exact-source binding；
+- stage / private-state visibility；
+- persistence、CAS、transaction、idempotency；
+- hard budgets / resource limits；
+- typed envelope/result/receipt validation；
+- required semantic execution 是否真实发生，以及是否绑定 exact candidate；
+- settlement / release-role invariant。
 
-模型输出默认只是 evidence 或 proposal，除非另一个明确的权威机制赋予它更高权限。
+Semantic result 默认只是 evidence / proposal，除非另外的 authority mechanism 明确授予更多权力。
 
-## 02 · 默认只有一个 manager
+## 02 · 默认只用一个 manager
 
-只有在独立 worker 真正提供额外价值时才拆出去，例如：
+优先一个能力足够强的 manager/agent。只有以下情况能证明收益时才拆分：
 
-- 强制独立语义判断；
-- 上下文隔离；
-- 另一种已经证明可用的工具 / 权限 / runtime capability；
-- 对 immutable input 做有价值的并行分析；
-- 人工审阅。
+- mandatory independent evaluation；
+- information/context isolation；
+- per-character private state；
+- genuinely different permission/tool/runtime；
+- immutable input 上真正有价值的 parallel work；
+- human review。
 
-不要为了“看起来像多智能体系统”制造 agent round-table。每多一个 worker，就增加上下文、身份、协调、失败恢复和结果绑定成本，因此必须有明确理由。
+不要为了模仿软件组织架构而制造 multi-agent round-table。
 
-## 03 · 每个用户可见 run 恰好一个 primary task mode
+## 03 · 恰好一个 primary task mode
 
-合法模式：
+每个 user-visible run 只能有一个 primary mode：
 
 `DESIGN-BOOK | DESIGN-VOLUME | PLAN-UNIT | PLAN-CHAPTER | DRAFT | REVISE | RESEARCH | SETTLE | AUDIT | CORPUS-INGEST | LEARN | SYSTEM-IMPROVE`
 
-用户明确指定时严格服从。
+Mode 可以内部调用共享 subroutine，但不能悄悄执行另一个 mode 的 user-visible side effect。DRAFT 不自动 SETTLE；AUDIT 不偷改 manuscript；LEARN 不自授 durable behavior。
 
-一个模式内部可以调用共享 subroutine，但不能静默制造另一个模式的用户可见副作用。例如：
+## 04 · Semantic work 前先 bootstrap live authority
 
-- DRAFT 不会自动 SETTLE；
-- AUDIT 不会顺手重写稿件；
-- RESEARCH 不会自动把现实事实采用进世界状态；
-- LEARN 不会自动把候选规则晋升成 durable behavior。
+Fresh manager 依次解析：
 
-## 04 · 做语义工作前先建立 authority
+1. current/pinned Framework manifest / identity；
+2. consuming Project manifest + exact lock/fingerprint；
+3. Project Adapter / logical paths；
+4. 只能有一个 task mode；
+5. manager session/run identity；
+6. authority cutoff + permissions；
+7. sparse Context Manifest / candidate set；
+8. current host capabilities。
 
-一次新的 manager run 按顺序解析：
+旧聊天 / provider session 不能替代 bootstrap authority。Resume 必须重新验证 Framework/Project compatibility、current fingerprints、approval/write precondition 与 pending capabilities。
 
-1. 当前 / pinned Framework manifest 与 execution contract；
-2. 下游项目 manifest + exact framework lock；
-3. Project Adapter validation 与 logical paths；
-4. 恰好一个 task mode；
-5. manager session + run identity；
-6. authority cutoff 与所需 permission；
-7. sparse Context Manifest；
-8. 当前 run 真正需要的 host/runtime capabilities。
+## 05 · Search / Context：语义选择，确定性边界
 
-Provider history 或旧聊天 session 不能代替 bootstrap。
+Manager/model 自己判断缺什么、搜什么、query 怎么写、哪个结果真正相关、是否 reformulate / continue、什么保留、什么时候 evidence 足够。
 
-如果项目锁定了 framework bundle / fingerprint，必须先验证 materialized Framework，再依赖其中 contract。
+Runtime 可以提供 search/fetch/extract/index primitive 与 candidate generation，但 recency、fixed last-N、vector similarity、top-k、item class 都不能冒充 narrative truth。
 
-## 05 · Context broker：Schema 完整，注入稀疏
+`context_inspector.py` 只检查 mechanical eligibility / stage / protected-edit state，并明确拒绝 `relevance` 字段。
 
-Context 既昂贵，也会污染。无关信息浪费预算；future-plan 会泄漏；regression 坏例会 priming；全局知识会越界进人物。
+`context_assembly.py` v2 在 semantic selection **之后**运行，只验证 exact selected/source refs、receiving stage、hidden/private/invalidated state、fingerprints，以及操作在机械意义上确实要求时的 exact higher-authority refs。它不再执行 literary class/purpose obligation，也不宣称 semantic sufficiency。
 
-每次 invocation，manager 都应该知道：
+Hard-budget packing 可以在 selection 后执行 whole-item resource limit。Persistent storage 不代表 automatic prompt injection。
 
-- 哪个对象被放进来了；
-- 为什么要放；
-- authority class；
-- source / fingerprint；
-- 哪个 stage 可以看到；
-- 是否属于 derived / 可失效视图；
-- worker 需要完整对象还是受限 projection。
+## 06 · DRAFT / REVISE production responsibilities
 
-Harness 可以使用 Context Inspector、memory tiers 和 editable memory control，但“被持久化”永远不等于“自动进入 prompt”。
-
-Writer pre-draft、post-draft critic、independent reviewer 与 never-inject 材料必须继续分层。
-
-详见 [上下文与记忆](../docs/context-and-memory.zh-CN.md)。
-
-## 06 · DRAFT / REVISE 生产图
-
-通用生产图是一条 gated sequence，不是一次 completion call：
+默认 adaptive path 大致是：
 
 ```text
-Context Freeze
-→ Story / Canon Preflight
-→ Scene Simulation
-→ Character Simulation
+authority/session bootstrap
+→ agent-owned context/search
+→ deterministic exact-set/stage/fingerprint verification
+→ Story / Canon + planning preflight
+→ private character state
+→ character.action_propose
+→ scene.resolve_actions
+→ compact writer-safe realization
 → Reader Pressure
-→ Event-first Raw Draft
-→ Surface Realization
-→ 生成后诊断 / Regression / Semantic Review
-→ 回到 owning mechanism 修复
-→ Reader Engagement
-→ Continuity / State Audit
-→ 必要的 Independent Semantic Gate
-→ User-visible Gate
+→ event-first Raw Draft
+→ Surface realization
+→ freeze candidate fingerprint
+→ Blind Reader (`reader.engagement_audit`)
+→ Semantic Rule Auditor when required (`quality.semantic_rule_audit`)
+→ Editor repair spec (`editor.repair_spec`)
+→ repair / challenger comparison as warranted
+→ continuity/state checks
+→ required independent semantic gate
+→ user-visible Review Draft
 ```
 
-项目可以增加 profile-specific 检查，但不能破坏这些关键边界：
+必须保留这些边界：
 
-- Raw Draft 永远只在内部；
-- Regression 坏例只能生成后加载；
-- Surface clean 只是质量地板；
-- SAFE-BUT-FLAT 必须回上游；
-- 强制 independent judgment 必须真的独立；
-- 用户 acceptance 与 Canon settlement 永远是两件事。
+- Raw Draft 是内部产物；
+- regression bad examples 在 Raw Draft/candidate freeze 前不得进入 Writer context；
+- private character state 是 causal evidence，不是 Writer exposition payload；
+- Surface clean 只是地板，不是 production readiness；
+- Blind Reader 不是 hard-rule checklist executor；
+- Rule Auditor 获得 Reader 不该看到的 authoritative rule material；
+- Editor 语义上选择 repair owner 与 generation mode；
+- `repair_policy.py` 只执行所选 mode 对 writer-context 的信息边界；
+- material candidate change 会使旧 fingerprint-bound review result 失效；
+- explicit acceptance 与 SETTLE 继续分离。
 
-## 07 · Model-readable semantic contract
+## 07 · Model-readable semantic contracts
 
-Harness 不需要为每一种文学判断写一个 Python “critic engine”。它从 `semantic_workers/model_contracts.json` 打包受限 semantic job。
+Catalog authority：`harness/semantic_workers/model_contract_catalog.json`。
 
-Job 至少声明：
+Semantic work 通过这个 progressive-disclosure catalog 精确解析 contract ID。Job 绑定：
 
-- kind 与 subject；
-- bounded input / context；
+- kind / subject / exact contract version；
+- bounded input/context；
 - rubric；
 - output contract；
-- permission；
+- permissions；
 - semantic fingerprint；
-- execution provenance 要求。
+- execution provenance requirement。
 
-模型负责 judgment。确定性 infrastructure 只在 result 影响 workflow state 之前验证 identity、fingerprint、permission 和 typed output。
-
-内部 diagnostic 不会因为用了模型就自动变成 independent gate。
+模型负责 judgment。Runtime 只验证 identity/fingerprint/permission/type/provenance，并 consume-once。内部 semantic work 不自动获得 independent 属性。
 
 ## 08 · Capability broker
 
-做 tool / external work 前，先推导需求，再对 typed host capability manifest 做解析。
+任何 tool / external action 都必须针对 current host capabilities 重新解析。Undeclared capability 视为 unavailable。
 
-一条 capability claim 应回答：
+Provider name、PATH 上的 executable、旧 session 记忆、network primitive、documentation page、model self-assertion 都不是 authorization proof。
 
-- 现在真的 available 吗？
-- 证据是什么？
-- permission class 是什么？
-- 是否需要用户交互？
-- 是否执行模型推理？
-- usage / cost class 是什么？
+Capability 也不等于 authority：filesystem write capability 不代表 Canon write permission。
 
-没有声明的 capability 就按 unavailable 处理。Provider 名字、PATH 上存在 executable、旧 session 曾经可用、存在 network primitive、文档写着支持，或者模型自己说“我能做”，都不足以证明远端授权现在成立。
+Credential / authority token 不进入普通 semantic context。
 
-**Capability ≠ authority。** 技术上能写文件，不代表有 Canon write 权限。
+## 09 · Durable session != model context
 
-## 09 · Session、Run、Checkpoint、Result
-
-执行身份必须分开：
+Execution identity 保持分层：
 
 ```text
-project/resource
+Project/resource
 → session
 → run
 → checkpoint
-→ event / handoff / job
+→ event/handoff/job
 → result
 → validated consume-once receipt
 → resume
 ```
 
-Provider-native conversation / thread ID 可以作为 metadata，但不是 story authority。
-
-以下时点应 checkpoint：
-
-- 等待用户 / external；
-- 强制 independent review；
-- consequential Project write；
-- Canon settlement；
-- 长时间 discovery / learning / semantic handoff。
-
-Resume 时重新验证 Framework / Project authority、artifact fingerprint、approval / write precondition，以及**pending external work 当前仍需要的 capability**。已经完成的 side effect 绝不能重复。
+External wait、required independent review、consequential write 前按合同 checkpoint。Context-window 丢失可以恢复，因为 authority state 存在 durable artifacts/events/checkpoints，而不是聊天 transcript。
 
 ## 10 · Independent semantic integrity
 
-当一个 gate 被定义为 independent，manager 可以做：
+Gate 真正要求 independence 时，manager 可以：
 
 `freeze → package → checkpoint → dispatch → await → validate → consume → route repair`
 
-但不能自己换一个内部 role label 就代替 reviewer 判断。
+但不能换个 internal role label 就自己完成 judgment。
 
-Semantic fingerprint 发生实质变化后，reviewer 通常应 fresh。仅 infrastructure retry、而语义问题完全没变时，可以换 eligible transport 保持同一 fingerprint。
+Materially changed candidate 默认需要新的 bound review，除非合同显式允许 reuse。Transport failure 可切换 eligible transport；有效的语义拒绝必须进入 repair，也不能反复更换评审直到有人接受 candidate。
 
-有效 semantic reject 就是有效判断。它应该进入 repair，不允许 reviewer shopping。
+没有 eligible independent provider/model 时必须 `PENDING_MODEL`，绝不能 PASS。
 
 ## 11 · LEARN / CORPUS / SYSTEM-IMPROVE
 
-学习服从证据，而不是模型自信度。
-
-典型 graph：
+Learning 必须分开：
 
 ```text
-feedback / hypothesis
-→ 最窄 scope
-→ evidence gap
-→ 合法、capability-aware discovery
-→ bounded semantic analysis
-→ counterexample / profile boundary
-→ eval evidence
-→ candidate
-→ explicit activation / promotion gate
-→ observe / rollback
+semantic interpretation
+!= evidence
+!= hypothesis
+!= promotion review
+!= write authority
+!= active eligibility
+!= current relevance
 ```
 
-必须保持：
+`learning.preference_interpret` 解释 feedback；LearningStore / Author Model 在 authority/CAS 下持久化 evidence/hypothesis。Promotion Gate 验证 exact bound semantic review 与客观 prerequisite，不用 arbitrary evidence-count threshold 冒充 semantic truth，也不能授予 write authority。
 
-- discovery ≠ ingestion；
-- corpus ≠ Canon；
-- semantic analysis ≠ promotion；
-- model inference alone ≠ durable user taste；
-- deterministic promotion readiness ≠ write authority；
-- project-specific story fact 不得泄漏进 Generic Framework。
+Active preference 不会自动注入；manager/model 为当前任务显式选择 relevant active hypothesis IDs。
 
-## 12 · Writes 与 Settlement
+General Craft change 继续属于 `SYSTEM-IMPROVE`，必须有 current research、counterexamples/evals、compatibility、rollback 与 explicit promotion authority。
 
-每个 consequential side effect 都应具备：
+## 12 · Writes / Settlement
 
-- least privilege；
-- exact target；
-- expected before-state / precondition；
-- idempotency strategy；
-- 必要时的 checkpoint / write intent；
-- post-condition verification；
-- trace / rollback semantics。
+每个 consequential side effect 都需要 least privilege、exact target、before-state/precondition、idempotency、必要时 checkpoint/write intent、postcondition verification、trace/rollback semantics。
 
-Canon settlement 只有在项目明确 acceptance 之后才合法，并且必须遵守 Canon / State transaction contract。
+Canon settlement 只有在 explicit Project acceptance / authorized Canon intent 后才合法。Connector、schedule、webhook、model result、learning state、CI、corpus evidence 都不会因为“到达系统”就自动授予 write authority。
 
-Connector、webhook、schedule、worker result、session state、learning state、CI、corpus 或 model judgment 都不会因为“已经到达系统”就自动获得写权限。
+## 13 · Truthful states
 
-## 13 · Completion state 必须说真话
+合法状态包括：
 
-面向用户的 workflow state 必须准确。视模式不同，可以包括：
+`complete · review · awaiting_user · awaiting_external · semantic_pending · semantic_invalid · failed_gate · blocked · settlement_incomplete`
 
-`complete · review · awaiting_user · awaiting_external · semantic_pending · failed_gate · blocked · settlement_incomplete`
+Green deterministic workflow 不能替代 required semantic judgment；没有真正执行的 semantic job 继续 pending。Required gate 未解决时不得声称 production-ready。
 
-内部的 candidate-ready、plateau、promotion-ready，或者某个 deterministic validator 通过，并不等于 durable behavior 或 Canon 已经改变。
+## 14 · SYSTEM-IMPROVE execution discipline
 
-Mandatory gate 还没解决时，绝不能把 artifact 称为 production-ready。
+Material Framework work 按以下链路执行：
 
-## 14 · 相关契约
+```text
+live bootstrap
+→ candidate/owner reconciliation
+→ current research
+→ overreach audit
+→ spec/plan/tasks
+→ incremental implementation
+→ ablations + deterministic tests
+→ independent semantic evidence when required
+→ CI/security/compatibility/docs synchronization
+→ human-review readiness
+```
 
-- [Orchestration Protocol](ORCHESTRATION_PROTOCOL.zh-CN.md)：不同 task mode 的运行图与共享 subroutine。
-- [Session Runtime](session_runtime/SESSION_RUNTIME.zh-CN.md)：身份、生命周期、checkpoint 与 resume。
-- [Runtime Routing](session_runtime/RUNTIME_ROUTING.zh-CN.md)：基于 capability 的执行路径选择。
-- [Control Plane](control_plane/CONTROL_PLANE.zh-CN.md)：持久 event、handoff、lease 与 consume-once 状态。
-- [Semantic Worker Protocol](semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md)：受限模型判断与独立审查完整性。
-- [正典与状态模型](../core/CANON_STATE.zh-CN.md)：权威与结算。
+每次 consequential write 前重新验证 current branch/HEAD/before-state。Long operation 必须 bounded；同一 pending 状态没有新 evidence 时转入 jobs/logs diagnosis，而不是 blind waiting。Candidate-owned failure 与 pre-existing unrelated repository debt 必须区分。
+
+## 相关合同
+
+- [编排协议](ORCHESTRATION_PROTOCOL.zh-CN.md)
+- [Session Runtime](session_runtime/SESSION_RUNTIME.zh-CN.md)
+- [Runtime Routing](session_runtime/RUNTIME_ROUTING.zh-CN.md)
+- [Control Plane](control_plane/CONTROL_PLANE.zh-CN.md)
+- [Semantic Worker Protocol](semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md)
+- [上下文与记忆](../docs/context-and-memory.zh-CN.md)
+- [生产流水线](../docs/production-pipeline.zh-CN.md)
+- [自适应学习](../docs/adaptive-learning.zh-CN.md)
+- [正典与状态模型](../core/CANON_STATE.zh-CN.md)

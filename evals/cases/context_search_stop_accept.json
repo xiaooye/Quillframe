@@ -1,0 +1,21 @@
+{
+  "id": "CONTEXT-STOP-001",
+  "type": "counterexample",
+  "domain": "context",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "task": "Identify who currently owns the warehouse key.",
+    "current_evidence": [{"id": "accepted:warehouse-key", "text": "After the inspection, Mei handed the only warehouse key to Tomas, who kept it."}],
+    "allowed_search_capability": "project_search",
+    "proposed_decision": "enough",
+    "proposed_search_requests": []
+  },
+  "rubric": [
+    "Accept when the agent stops retrieval because the authoritative current evidence directly answers the bounded question.",
+    "Do not search merely because a search capability exists; unnecessary retrieval increases context cost and contamination risk.",
+    "Use CTX-STOP when the evidence is sufficient and no additional search is warranted."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["CTX-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept", "codes": ["CTX-STOP"]}
+}

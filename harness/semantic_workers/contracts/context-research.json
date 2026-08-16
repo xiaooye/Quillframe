@@ -1,64 +1,29 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "3",
-  "principle": "Model judgment selects context and research strategy; deterministic runtime enforces explicit visibility, authority, data, capability, provenance and budget boundaries before and after semantic selection.",
+  "version": "4",
+  "principle": "Search and context selection are agent decisions. Deterministic runtime exposes authorized search/fetch primitives, candidate blocks, provenance, visibility and resource limits; the model decides what is missing, what query to issue, which evidence matters, whether to reformulate, what to retain and when to stop.",
   "contracts": {
     "context.select": {
       "kind": "artifact_audit",
-      "purpose": "Select the smallest useful set of already perspective- and story-time-safe memory blocks for one bounded task, using explicit active questions and numeric story-order cutoffs. Relevance is semantic and model-owned; selection never creates or changes story truth.",
+      "purpose": "Choose useful context for one bounded task and, when supplied candidates are insufficient, request the next authorized search instead of pretending a precomputed context window is semantically complete.",
       "input_contract": {
         "type": "object",
-        "required": [
-          "task",
-          "memory_blocks"
-        ],
+        "required": ["task", "memory_blocks"],
         "properties": {
           "task": {
             "type": "object",
-            "required": [
-              "task_mode",
-              "task_goal",
-              "current_story_order",
-              "perspective",
-              "active_questions"
-            ],
+            "required": ["task_mode", "task_goal", "current_story_order", "perspective", "active_questions"],
             "properties": {
-              "task_mode": {
-                "type": "string",
-                "minLength": 1
-              },
-              "task_goal": {
-                "type": "string",
-                "minLength": 1
-              },
-              "current_story_point": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
+              "task_mode": {"type": "string", "minLength": 1},
+              "task_goal": {"type": "string", "minLength": 1},
+              "current_story_point": {"type": ["string", "null"]},
+              "current_story_order": {"type": "integer", "minimum": 0},
               "perspective": {
                 "type": "object",
-                "required": [
-                  "scope"
-                ],
+                "required": ["scope"],
                 "properties": {
-                  "scope": {
-                    "enum": [
-                      "manager",
-                      "reader",
-                      "character",
-                      "narrator",
-                      "research",
-                      "other"
-                    ]
-                  },
-                  "perspective_id": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
+                  "scope": {"enum": ["manager", "reader", "character", "narrator", "research", "other"]},
+                  "perspective_id": {"type": ["string", "null"]}
                 },
                 "additionalProperties": false
               },
@@ -66,48 +31,16 @@
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "required": [
-                    "question_id",
-                    "question",
-                    "kind",
-                    "as_of_story_order"
-                  ],
+                  "required": ["question_id", "question", "kind", "as_of_story_point", "as_of_story_order"],
                   "properties": {
-                    "question_id": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "question": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "kind": {
-                      "enum": [
-                        "concept",
-                        "behavior",
-                        "state",
-                        "continuity",
-                        "relationship",
-                        "other"
-                      ]
-                    },
-                    "as_of_story_point": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    },
-                    "as_of_story_order": {
-                      "type": "integer",
-                      "minimum": 0
-                    }
+                    "question_id": {"type": "string", "minLength": 1},
+                    "question": {"type": "string", "minLength": 1},
+                    "kind": {"enum": ["concept", "behavior", "state", "continuity", "relationship", "other"]},
+                    "as_of_story_point": {"type": ["string", "null"]},
+                    "as_of_story_order": {"type": "integer", "minimum": 0}
                   },
                   "additionalProperties": false
                 }
-              },
-              "current_story_order": {
-                "type": "integer",
-                "minimum": 0
               }
             },
             "additionalProperties": false
@@ -116,284 +49,101 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "block_id",
-                "pinned",
-                "authority",
-                "derived",
-                "source_refs",
-                "available_from_story_order",
-                "visibility",
-                "model_view"
-              ],
+              "required": ["block_id", "pinned", "authority", "derived", "source_refs", "available_from_story_order", "visibility", "model_view"],
               "properties": {
-                "block_id": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "pinned": {
-                  "type": "boolean"
-                },
-                "authority": {
-                  "type": [
-                    "string",
-                    "boolean"
-                  ]
-                },
-                "derived": {
-                  "type": "boolean"
-                },
-                "source_refs": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "story_point": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "visibility": {
-                  "type": "object",
-                  "required": [
-                    "scope"
-                  ],
-                  "properties": {
-                    "scope": {
-                      "enum": [
-                        "shared",
-                        "manager",
-                        "reader",
-                        "character",
-                        "narrator",
-                        "research",
-                        "other"
-                      ]
-                    },
-                    "perspective_id": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
-                    }
-                  },
-                  "additionalProperties": false
-                },
-                "model_view": {
-                  "type": "object"
-                },
-                "available_from_story_order": {
-                  "type": "integer",
-                  "minimum": 0
-                }
+                "block_id": {"type": "string", "minLength": 1},
+                "pinned": {"type": "boolean"},
+                "authority": {"type": ["string", "boolean"]},
+                "derived": {"type": "boolean"},
+                "source_refs": {"type": "array", "items": {"type": "string"}},
+                "story_point": {"type": ["string", "null"]},
+                "available_from_story_order": {"type": "integer", "minimum": 0},
+                "visibility": {"type": "object"},
+                "model_view": {"type": "object"}
               },
               "additionalProperties": false
             }
-          }
+          },
+          "allowed_search_capabilities": {
+            "type": "array",
+            "items": {"enum": ["project_search", "web_search", "github_search", "user_files", "file_library", "mcp_client"]}
+          },
+          "search_history": {"type": "array", "items": {"type": "object"}},
+          "resource_budget": {"type": "object"}
         },
         "additionalProperties": false
       },
       "rubric": [
-        "Use only the supplied task and memory blocks. The runtime has already removed blocks outside the task perspective or later than task.current_story_order; do not infer or reconstruct hidden/future blocks.",
-        "Treat each active question as a task-aware grounding query. Select blocks because they help answer the current questions or immediate task goal, not because they are generally interesting, recent or richly written.",
-        "Respect numeric story time: a block may support a question only when available_from_story_order <= that question as_of_story_order. Never use later-story evidence to answer an earlier-story question.",
-        "Choose hot blocks that are directly needed for the immediate reasoning step and working blocks that are likely to matter soon; archive everything else.",
-        "Prefer sparse context and evidence diversity. Reuse a block across questions when it genuinely supports multiple questions instead of duplicating context.",
-        "Respect each block authority and derivation status. A plan, proposal, review, research fact or derived memory never becomes accepted Canon because it was selected.",
-        "Pinned blocks are runtime constraints and should remain hot unless the packet itself is invalid; do not reinterpret pinning as semantic importance.",
-        "For each active question, report which selected block ids support it and whether the supplied blocks provide sufficient, partial or no support. Mark genuinely unresolved questions instead of inventing an answer.",
-        "Return block ids and support mapping only. Do not rewrite, summarize, synchronize or mutate the memory blocks, and do not create new durable memory claims."
+        "Treat the supplied memory blocks as mechanically eligible candidates, not as a claim that they are narratively relevant or sufficient.",
+        "Decide what the current task actually needs. Select only evidence that helps the immediate reasoning, even when a superficially similar or recent block is available.",
+        "If evidence is insufficient and an allowed search capability is supplied, formulate the next focused query yourself. You may broaden, narrow or reformulate based on search_history; do not search merely because a tool exists.",
+        "Stop when the current task is sufficiently grounded. Do not compulsively retrieve more context after the evidence is adequate.",
+        "Respect story-time and perspective visibility already encoded in the packet. Selection never upgrades plan, proposal, review, research or derived memory into Accepted Canon.",
+        "Pinned blocks are execution constraints, not proof of semantic importance. Preserve them in selected_ids unless the packet itself is invalid, but do not infer meaning from pinning.",
+        "Return selected ids plus either enough or search_more. The runtime may enforce capability/resource bounds but must not rewrite your semantic relevance decision."
       ],
       "output_contract": {
         "type": "object",
-        "required": [
-          "confidence",
-          "hot_ids",
-          "working_ids",
-          "archive_ids",
-          "reasons",
-          "question_support",
-          "unresolved_questions"
-        ],
+        "required": ["confidence", "decision", "selected_ids", "report", "search_requests", "unresolved_questions"],
         "properties": {
-          "confidence": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "hot_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "working_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "archive_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "reasons": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "decision": {"enum": ["enough", "search_more"]},
+          "selected_ids": {"type": "array", "items": {"type": "string"}},
+          "report": {"type": "string", "minLength": 1},
+          "search_requests": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "block_id",
-                "tier",
-                "reason"
-              ],
+              "required": ["capability", "query", "reason"],
               "properties": {
-                "block_id": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "tier": {
-                  "enum": [
-                    "hot",
-                    "working",
-                    "archive"
-                  ]
-                },
-                "reason": {
-                  "type": "string",
-                  "minLength": 1
-                }
+                "capability": {"enum": ["project_search", "web_search", "github_search", "user_files", "file_library", "mcp_client"]},
+                "query": {"type": "string", "minLength": 1},
+                "reason": {"type": "string", "minLength": 1}
               },
               "additionalProperties": false
             }
           },
-          "question_support": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "required": [
-                "question_id",
-                "support",
-                "block_ids"
-              ],
-              "properties": {
-                "question_id": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "support": {
-                  "enum": [
-                    "sufficient",
-                    "partial",
-                    "none"
-                  ]
-                },
-                "block_ids": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                }
-              },
-              "additionalProperties": false
-            }
-          },
-          "unresolved_questions": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
+          "unresolved_questions": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
       },
-      "permissions": {
-        "canon_write": false,
-        "framework_behavior_write": false,
-        "durable_user_taste_write": false,
-        "allowed_result_scope": "context_selection"
-      },
+      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "context_selection_or_search_intent"},
       "independent_gate": false
     },
     "corpus.discovery_plan": {
       "kind": "corpus_analyze",
-      "purpose": "Plan bounded evidence searches for a supplied Corpus gap. Query design, contrast strategy and counterexample strategy are semantic work owned by the model; tool authorization and rights remain runtime responsibilities.",
+      "purpose": "Plan bounded evidence searches for a supplied Corpus/research gap. Query design, contrast strategy and stopping logic are semantic work; authorization and rights remain runtime responsibilities.",
       "rubric": [
-        "Use only the supplied research gap, source constraints and declared channel vocabulary.",
-        "Design focused searches that can answer the research question with evidence, not broad topic searches.",
-        "Include meaningful contrast or counterexample searches when the gap is testing a mechanism or generalization.",
+        "Use the supplied research gap, source constraints and declared capability vocabulary.",
+        "Design focused searches that can answer the research question with evidence and meaningful counterexamples or contrasts when useful.",
         "Prefer primary, official, publisher, library or research sources when the source constraints request them.",
-        "Do not choose a channel outside allowed_channels and do not claim that any channel is actually available or authorized.",
-        "Do not search for material in order to imitate a named living author or to build a named-author style profile.",
-        "Return search plans only. Discovery, rights classification, ingestion and promotion happen elsewhere."
+        "Do not select an unavailable/unauthorized channel and do not claim channel availability merely because you named it.",
+        "Do not search in order to imitate a named living author or build a named-author style profile.",
+        "Return search intent only. Discovery, rights classification, ingestion and promotion happen through their own authority paths."
       ],
       "output_contract": {
         "type": "object",
-        "required": [
-          "confidence",
-          "searches",
-          "diversity_strategy"
-        ],
+        "required": ["confidence", "searches", "diversity_strategy"],
         "properties": {
-          "confidence": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
           "searches": {
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "object",
-              "required": [
-                "channel",
-                "query",
-                "purpose",
-                "contrast_role"
-              ],
+              "required": ["channel", "query", "purpose", "contrast_role"],
               "properties": {
-                "channel": {
-                  "enum": [
-                    "web",
-                    "github",
-                    "user_files",
-                    "file_library",
-                    "mcp"
-                  ]
-                },
-                "query": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "purpose": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "contrast_role": {
-                  "enum": [
-                    "support",
-                    "counterexample",
-                    "contrast",
-                    "neutral"
-                  ]
-                }
+                "channel": {"enum": ["web", "github", "user_files", "file_library", "mcp"]},
+                "query": {"type": "string", "minLength": 1},
+                "purpose": {"type": "string", "minLength": 1},
+                "contrast_role": {"enum": ["support", "counterexample", "contrast", "neutral"]}
               }
             }
           },
-          "diversity_strategy": {
-            "type": "string",
-            "minLength": 1
-          }
+          "diversity_strategy": {"type": "string", "minLength": 1}
         }
       },
-      "permissions": {
-        "canon_write": false,
-        "framework_behavior_write": false,
-        "durable_user_taste_write": false,
-        "allowed_result_scope": "corpus_discovery_plan"
-      },
+      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "corpus_discovery_plan"},
       "independent_gate": false
     }
   }

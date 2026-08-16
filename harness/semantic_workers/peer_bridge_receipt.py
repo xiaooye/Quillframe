@@ -214,7 +214,7 @@ def self_test() -> dict[str, Any]:
         "input_fingerprint": job["input_fingerprint"],
         "status": "completed",
         "worker": {"provider": "chatgpt_peer_chat", "model_or_reviewer": "fixture", "run_reference": packet["relay_nonce"]},
-        "judgment": {"confidence": 0.9, "result": "pass", "codes": [], "evidence": ["fixture"], "summary": "fixture", "flatness_risk": "low"},
+        "judgment": {"confidence": 0.9, "result": "pass", "report": "fixture", "evidence_refs": ["fixture"]},
         "proposals": [],
         "errors": [],
     }

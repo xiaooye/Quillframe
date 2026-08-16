@@ -1,0 +1,26 @@
+{
+  "id": "PLANNING-HORIZON-002",
+  "type": "counterexample",
+  "domain": "planning_horizon",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "project_profile": "tight 12-chapter mystery intended to be completely plotted before prose drafting",
+    "user_instruction": "I want the full 12-chapter structure and clue placement planned in detail before drafting begins.",
+    "region": {
+      "scope": "whole work",
+      "commitment_strength": "hard",
+      "max_planning_depth": "chapter_detail"
+    },
+    "request": "Generate detailed chapter plans across the whole work.",
+    "proposed_route": "allow chapter-detail planning under this explicit profile and author instruction; retain plan-vs-Canon separation"
+  },
+  "rubric": [
+    "Accept when the proposed route respects the explicit author request and profile instead of imposing artificial softness merely because the material is far from the current drafting point.",
+    "A commitment horizon is profile-sensitive admission control, not a doctrine that all distant planning must remain vague.",
+    "The detailed plan still must not become Accepted Canon or current story state by virtue of being hard-planned.",
+    "Reject if the route blocks detailed whole-work planning solely because the chapters are future material."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": [], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept"}
+}

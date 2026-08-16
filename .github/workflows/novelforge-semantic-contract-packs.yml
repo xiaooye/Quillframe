@@ -69,11 +69,22 @@ jobs:
                   'reader_grip': 'very_high',
                   'reader_visible_context': [{'source_ref': 'accepted:prior', 'text': 'Reader-visible prior context.'}],
               },
+              'quality.semantic_rule_audit': {
+                  'candidate_fingerprint': fp,
+                  'candidate_text': 'A bounded candidate for semantic hard-rule audit.',
+                  'rule_index': [{'id': 'RULE-CI', 'severity': 'blocking', 'authority': 'framework', 'statement': 'Do not contradict supplied accepted evidence.'}],
+              },
               'quality.production_review': {
                   'candidate_fingerprint': fp,
                   'candidate_text': 'A bounded independent production-review candidate.',
                   'reader_grip': 'very_high',
                   'reader_visible_context': [{'source_ref': 'accepted:prior', 'text': 'Reader-visible prior context.'}],
+              },
+              'learning.promotion_review': {
+                  'candidate_id': 'LEARN-CI',
+                  'scope': 'user_taste',
+                  'mechanism': 'bounded preference mechanism',
+                  'evidence_refs': ['review:CI'],
               },
               'character.action_propose': {
                   'character_id': 'CHAR-CI',
@@ -132,6 +143,21 @@ jobs:
                       'visibility': {'scope': 'character', 'perspective_id': 'CHAR-CI'},
                       'model_view': {'label': 'offer', 'value': 'The first offer was lower.'},
                   }],
+              },
+              'learning.preference_interpret': {
+                  'feedback_ref': 'review:CI',
+                  'feedback_text': 'Keep the dialogue less explanatory in this exchange.',
+                  'current_task': {'task_mode': 'REVISE', 'artifact_ref': 'draft:CI'},
+              },
+              'scene.realization_project': {
+                  'scene_id': 'SCN-CI',
+                  'resolved_trajectory': {'state': 'negotiation_continues'},
+                  'character_action_evidence': [{'character_id': 'CHAR-CI', 'action': 'withhold full rationale and counter'}],
+                  'pov_boundary': {'perspective_id': 'CHAR-CI', 'allowed_inner_state': True},
+              },
+              'editor.repair_spec': {
+                  'candidate_fingerprint': fp,
+                  'reader_assessment': {'result': 'fail', 'report': 'Dialogue over-explains role and risk.', 'evidence_refs': ['candidate:1']},
               },
           }
 

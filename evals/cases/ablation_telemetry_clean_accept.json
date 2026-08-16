@@ -1,0 +1,17 @@
+{
+  "id": "ABL-TELEMETRY-CLEAN-001",
+  "type": "ablation",
+  "domain": "reader",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "candidate_ref": "ablation:telemetry-rhythm-v1",
+    "candidate_text": "The elevator stopped.\n\nNobody moved.\n\nThen the fire door opened on twelve and Lena saw her brother standing there with the missing envelope. He looked at the floor instead of at her.\n\n‘You had it.’\n\nHe nodded once. The silence after that was worse than an explanation."
+  },
+  "rubric": [
+    "Read naturally without mechanical prose statistics. Judge whether the short paragraphs are functioning as deliberate pacing and pressure rather than treating shortness itself as a defect.",
+    "Accept if the passage is coherent and the rhythm serves the moment."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": [], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept"}
+}

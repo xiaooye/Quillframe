@@ -1,0 +1,25 @@
+{
+  "id": "PLANNING-HORIZON-003",
+  "type": "counterexample",
+  "domain": "planning_horizon",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "project_profile": "discovery-writing novel; the author wants only enough near-term structure to create pressure without pre-solving later scene outcomes",
+    "region": {
+      "story_position": "next chapter",
+      "commitment_strength": "soft",
+      "max_planning_depth": "scene_intent"
+    },
+    "request": "Prepare the next scene intent, but do not lock the chapter's later outcomes yet.",
+    "proposed_route": "preserve the region as soft, allow scene-intent planning, and do not auto-promote it to hard merely because it is near-term"
+  },
+  "rubric": [
+    "Accept when the proposed route allows useful near-term scene planning while preserving the author's explicit discovery-writing preference.",
+    "Near-term position alone does not justify automatic hard commitment or chapter-detail planning.",
+    "The route should not force an unnecessary horizon transition when the requested scene-intent depth is already permitted.",
+    "Reject if the route automatically promotes the region to hard or insists on detailed chapter planning because the chapter is next."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": [], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept"}
+}

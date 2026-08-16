@@ -1,188 +1,141 @@
-# Adaptive Learning Architecture
+<div align="center">
+  <img src="../assets/brand/novelforge-lockup.svg" alt="NovelForge — Adaptive Fiction Agent Framework" width="540" />
+  <p><strong>Adaptive Learning · models interpret feedback; deterministic state controls durable authority</strong></p>
+  <p><kbd>INTERPRET</kbd>&nbsp;&nbsp;<kbd>EVIDENCE</kbd>&nbsp;&nbsp;<kbd>HYPOTHESIS</kbd>&nbsp;&nbsp;<kbd>EVAL</kbd>&nbsp;&nbsp;<kbd>AUTHORIZE</kbd>&nbsp;&nbsp;<kbd>ROLLBACK</kbd></p>
+  <p><a href="adaptive-learning.zh-CN.md">简体中文</a> · <a href="README.en.md">Docs Home</a></p>
+</div>
 
-## Goal
+# Adaptive Learning
 
-NovelForge learns from user evidence and corpus evidence without turning transient model guesses into permanent style rules.
-
-The learning system is intentionally separate from runtime/session state:
+NovelForge learns from explicit user/project evidence without letting a model turn an interpretation into durable authority.
 
 ```text
-runtime.db  = where work is
-learning.db = what has been learned, with evidence and rollback
-project DB  = what is Canon for one novel
+runtime/session state != learning evidence != Project Canon
+semantic interpretation != promotion judgment != write authorization
 ```
 
-## Learning graph
+`learning/author_model.py` remains a projection/capture layer over the existing Learning Store. It is not a second preference database.
 
-```mermaid
-flowchart LR
-    F[Feedback / Edit / Acceptance / Rejection] --> E[Preference Evidence]
-    E --> H[Preference Hypothesis]
-    H --> C{Contradiction?}
-    C -- yes --> R[Refine scope / lower confidence / split hypothesis]
-    C -- no --> G[Corpus Gap Detector]
-    R --> G
-    G --> D[Discovery Request]
-    D --> S[Corpus Scout]
-    S --> Q[Rights & Provenance Gate]
-    Q --> A[Per-work Analysis]
-    A --> X[Counterexample Search]
-    X --> B[Cross-work Benchmark]
-    B --> V[Personalized Capability + Regression Evals]
-    V --> P{Promotion Gate}
-    P -- pass --> AP[Active Profile / General Craft]
-    P -- fail --> H
-    AP --> M[Observe future outcomes]
-    M --> H
-```
+## 1. Semantic interpretation belongs to the model
 
-## Evidence hierarchy
+`learning.preference_interpret` interprets supplied feedback and proposes the narrowest plausible scope:
 
-From strongest to weakest:
+`one_off | project | user_taste | general_craft`
 
-1. explicit user rule;
-2. direct user edit;
-3. explicit acceptance/rejection with reason;
-4. repeated consistent correction;
-5. accepted project convention;
-6. multi-work corpus mechanism;
-7. external framework/craft evidence;
-8. model inference.
+It may explain the underlying mechanism, desired/avoid behavior, exceptions, uncertainty and conflicts with prior hypotheses. It does not grant durability or activation.
 
-Model inference alone never creates a durable user preference.
+The model, not Python thresholds, decides whether evidence semantically supports a stable scope/mechanism.
 
-## Preference hypotheses
+## 2. Learning Store owns durability, not meaning
 
-A hypothesis is more expressive than a style slider. It contains:
+The deterministic store owns:
 
-- dimension;
-- statement;
-- underlying mechanism;
-- scope (`one_off | project | user_taste | general_craft`);
-- confidence;
-- positive and negative evidence;
-- contradictions;
-- applicability boundaries;
-- version/state.
+- evidence/hypothesis IDs and provenance;
+- versioned state and contradiction/supersession records;
+- exact source references;
+- persistence and rollback history;
+- consume-once result handling;
+- Project/user scope isolation.
 
-Example:
+A durable record can still be tentative/contested. Persistence does not make an inference true.
 
-```yaml
-dimension: paragraph_rhythm
-statement: prefers fast pacing without non-functional fragmentation
-mechanism: pace should come from state change, pressure, choice, or information movement—not isolated sentence cuts
-scope: user_taste
-confidence: 0.82
-applicability:
-  genres: [commercial_fiction]
-  exceptions: [deliberate shock_fragment, poetic_project_profile]
-```
+## 3. Promotion Gate binds semantic review to authority
 
-This matters because a shallow system might learn “short paragraphs are bad,” while the actual preference could be “paragraph breaks should carry narrative function.”
+`learning/promotion_gate.py` no longer tries to prove semantic sufficiency with arbitrary evidence-count thresholds.
 
-## Autonomous dimension discovery
+The semantic promotion review decides whether the supplied evidence actually supports the proposed scope/mechanism and whether important contradictions/counterexamples remain unresolved.
 
-The framework may propose new dimensions when existing dimensions cannot explain repeated evidence.
+The deterministic gate then verifies objective prerequisites around that review, such as:
 
-A new dimension is only a **candidate** until it has:
+- exact contract/result/evidence binding;
+- candidate scope and identity;
+- required eval/counterexample artifacts where policy requires them;
+- version/rollback/CI references for General Craft;
+- explicit write authorization supplied by the surrounding authority mechanism.
 
-- traceable feedback evidence;
-- at least one contrast/counterexample question;
-- enough distinct evidence to justify the new abstraction;
-- an eval that can separate the mechanism from a superficial proxy.
+A passing promotion review is a prerequisite. It is **not** permission to write.
 
-The system should prefer splitting a broad hypothesis over creating a brittle universal rule.
+## 4. Active != relevant
 
-## Corpus gap detection
+An `active` Author Model hypothesis means it is durably eligible for future use. It does not mean every production invocation should receive it.
 
-A hypothesis can create a corpus gap when confidence is limited by missing contrast evidence.
+The Author Model exposes a compact active index. The manager/model explicitly selects the active hypothesis IDs relevant to the current task. Deterministic code verifies that selected IDs are active and scope-compatible before returning details.
 
-Example:
+This prevents context pollution from automatically injecting every learned preference.
 
-> User rejects sentence-per-paragraph pseudo-speed, but also wants very high pacing.
+Current explicit user instruction remains stronger than an inferred or durable preference when they conflict.
 
-Useful corpus gap:
+## 5. Scope-specific authority
 
-> Find successful high-tempo commercial passages that preserve coherent paragraph units; compare how pressure, state change, dialogue, action, and information movement produce pace without fragment dependence.
+### One-off
 
-Bad corpus gap:
-
-> Find novels with long paragraphs because the user likes long paragraphs.
-
-The first asks for mechanism evidence; the second merely confirms a surface preference.
-
-## Personalized corpus discovery
-
-The Corpus Scout receives typed discovery requests containing:
-
-- hypothesis/gap ID;
-- research question;
-- desired contrast;
-- genre/platform/language tags;
-- style dimensions;
-- rights/source constraints;
-- target range/question;
-- diversity requirements;
-- exclusion rules.
-
-The host runtime may satisfy discovery through Web search, GitHub, publisher/platform search, library metadata, user-provided lawful files, or an MCP search connector.
-
-Discovery is not ingestion. Every candidate still passes source verification and rights classification.
-
-## Promotion rules
+Used for the current repair/task only unless new evidence is captured separately.
 
 ### Project preference
-May activate when explicitly stated by the user and consistent with project authority.
 
-### User taste
-Requires explicit/repeated evidence and contradiction review.
+May activate only under the Project's explicit preference-write authority. It never changes Framework behavior.
 
-### General craft
-Requires:
+### Durable user taste
 
-1. mechanism independent of one user/project;
-2. cross-work or otherwise strong evidence;
-3. counterexample/profile boundary;
-4. capability + regression evals;
-5. no conflict with higher-priority profiles;
-6. version and rollback reference.
+Requires both:
 
-## Strengthening
+1. a current bound promotion prerequisite result for the same mechanism/scope; and
+2. explicit durable-user-taste write authorization.
 
-“Strengthening a preference” means increasing confidence or narrowing applicability based on new independent evidence—not repeating the same model output or waiting longer.
+Neither the model nor Promotion Gate can self-grant this permission.
 
-The system may autonomously:
+### General Craft
 
-- queue missing corpus evidence;
-- search additional contrast works;
-- generate new eval cases;
-- re-run evals after evidence changes;
-- move a hypothesis from candidate → active;
-- mark a hypothesis contested or superseded;
-- recommend stronger profile weights.
+General Craft remains a Framework `SYSTEM-IMPROVE` concern. It requires stronger counterexample/eval/compatibility/version/rollback evidence and explicit Framework promotion authority. Production feedback cannot auto-promote it.
 
-It may not silently convert weak inference into durable truth.
+## 6. Corpus/research is evidence gathering, not truth by ingestion
 
-## Decay and contradiction
+A semantic learning agent may identify an evidence gap and search for lawful contrast/counterexample material. Search/retrieval strategy remains model-owned inside allowed capabilities.
 
-Preferences are not immortal.
+Corpus discovery does not imply ingestion; ingestion does not imply Canon; corpus analysis does not imply promotion.
 
-A hypothesis can become:
+Rights, provenance, source identity and Project/user isolation remain deterministic boundaries.
 
-- `contested` when new evidence conflicts;
-- `superseded` when a more precise hypothesis explains the evidence better;
-- `deprecated` when the user explicitly changes preference or evals show harm.
+## 7. Contradiction and rollback are first-class
 
-The store preserves provenance so behavior can be rolled back or reinterpreted.
+New feedback may:
 
-## Positive and negative learning
+- strengthen a hypothesis;
+- narrow its applicability;
+- mark it `contested`;
+- split an over-broad mechanism;
+- supersede an older hypothesis;
+- deprecate a behavior when evidence changes.
 
-User edits and accepted artifacts may provide positive mechanism evidence.
+“Strengthening” means new independent evidence, not repeated model agreement or elapsed time.
 
-Rejected model output may provide negative regression evidence only. It is never a positive style exemplar merely because it existed.
+## 8. Production use
 
-## Privacy boundary
+```text
+explicit feedback
+→ semantic preference interpretation
+→ source-bound evidence
+→ revisable hypothesis
+→ semantic promotion review when durable activation is proposed
+→ deterministic authority/prerequisite validation
+→ active eligibility
+→ model selects relevant active hypothesis IDs for a future task
+→ production observes outcomes
+→ new evidence may revise/supersede the hypothesis
+```
 
-User-taste evidence belongs to the user scope, not source control by default. The generic repository stores schemas and learning mechanisms; personal preference data belongs in local/host-managed durable storage.
+The Writer/Editor never receive a hidden global style profile simply because records exist in `learning.db`.
 
-Do not infer unrelated demographic/profile data from fiction preferences.
+## 9. Privacy
+
+Personal preference evidence is user-scoped and is not committed to the generic Framework repository by default. NovelForge must not infer unrelated demographic/profile attributes from fiction preferences.
+
+## Exact implementation boundaries
+
+- `learning/learning_store.py` — durable evidence/hypothesis/candidate/promotion history.
+- `learning/promotion_gate.py` — deterministic binding/authority checks around model-owned promotion review.
+- `learning/author_model.py` — bounded feedback capture, contradiction/supersession, scope-aware activation binding, active index and explicit selected projection.
+- `harness/semantic_workers/contracts/production-loop.json` — `learning.preference_interpret`.
+- Framework self-improvement protocol — General Craft promotion authority.
+
+<div align="center"><sub>Interpret semantically. Persist cautiously. Activate only with evidence and authority. 🌸</sub></div>

@@ -204,7 +204,7 @@ def self_test() -> dict[str, Any]:
     wrong_range = scan_text("runtime: HF-01..HF-29 + RG-01..RG-10", registry=registry)
     old_runtime = scan_text("runtime: Generic Surface v6.3", registry=registry)
     checks = {
-        "registry_entries": len(by_id) == 44,
+        "registry_entries": len(by_id) == 45,
         "safe_but_flat_is_rg15": id_for_name("SAFE-BUT-FLAT", registry) == "RG-15",
         "forward_pull_is_rg10": id_for_name("FORWARD-PULL-END", registry) == "RG-10",
         "significance_is_hf15": id_for_name("SIGNIFICANCE-INFLATION", registry) == "HF-15",

@@ -1,0 +1,19 @@
+{
+  "id": "CHAR-EMBODIMENT-001",
+  "type": "counterexample",
+  "domain": "character",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "private_state": "Leah wants to learn whether Amir has already sold the family camera, but she does not want him to know she suspects him.",
+    "candidate_text": "Leah set the old camera strap beside Amir's coffee instead of asking about the camera. ‘You still have the case somewhere?’ she said, looking past him at the closet. Amir stopped stirring. ‘Why?’ ‘No reason. I found the strap.’ She folded it once and left it between them.",
+    "shared_context": "Both siblings know the camera belonged to their father."
+  },
+  "rubric": [
+    "Accept when private goals visibly shape tactic, action, omission and pressure without being recited as a character sheet or explicit agenda statement.",
+    "The dialogue may be indirect because the character is concealing intent; judge whether the scene still makes the motive causally legible through behavior.",
+    "Use CHAR-EMBODIMENT when private state is embodied rather than serialized."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": ["CHAR-*"], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept", "codes": ["CHAR-EMBODIMENT"]}
+}

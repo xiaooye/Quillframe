@@ -1,0 +1,27 @@
+{
+  "id": "PLANNING-HORIZON-001",
+  "type": "capability",
+  "domain": "planning_horizon",
+  "judge": "rubric",
+  "blocks_release": false,
+  "fixture": {
+    "project_profile": "serialized adaptive web novel; distant arcs should remain revisable unless explicitly promoted",
+    "region": {
+      "story_position": "several arcs beyond the currently drafted material",
+      "commitment_strength": "soft",
+      "max_planning_depth": "beat",
+      "known_content": "broad arc role, escalation target, and two causal beats"
+    },
+    "request": "Generate detailed chapter-by-chapter plans for this distant arc now.",
+    "user_instruction": "No explicit request to fully lock distant chapters.",
+    "proposed_route": "block detailed realization at the current horizon and request an explicit evidence-bound horizon promotion before chapter-detail planning"
+  },
+  "rubric": [
+    "Accept when the proposed route preserves useful broad future planning while refusing to silently turn a soft distant region into detailed committed chapter plans.",
+    "Do not require a universal numeric distance such as N chapters or N volumes; judge the declared profile and commitment/depth boundary.",
+    "The route must not treat the soft plan as Canon or invoke Settlement merely to deepen planning.",
+    "Reject if the agent should simply generate the detailed distant chapter plan despite the declared soft/beat horizon."
+  ],
+  "judgment_contract": {"verdict": "accept|reject", "codes": [], "evidence": "short observable findings"},
+  "expected": {"verdict": "accept"}
+}

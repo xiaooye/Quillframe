@@ -1,0 +1,58 @@
+{
+  "schema": "novelforge_ai_native_ablation_manifest_v1",
+  "version": "1",
+  "purpose": "Bind same-candidate AI-native semantic ablations and map the required refoundation regression families without converting model judgment into deterministic truth.",
+  "model_execution_required_for_semantic_outcomes": true,
+  "manager_self_judgment_allowed": false,
+  "missing_model_state": "PENDING_MODEL",
+  "pairs": [
+    {
+      "id": "reader_contamination",
+      "incumbent_case": "ABL-READER-PRIMED-001",
+      "challenger_case": "ABL-READER-UNPRIMED-001",
+      "same_candidate_ref": "ablation:reader-agenda-dialogue-v1",
+      "change": "remove taxonomy/diagnostic priming from natural Reader",
+      "observe": ["verdict stability", "forced checklist findings", "salient natural-language reading effect", "report breadth"]
+    },
+    {
+      "id": "telemetry_anchoring",
+      "incumbent_case": "ABL-TELEMETRY-ANCHORED-001",
+      "challenger_case": "ABL-TELEMETRY-CLEAN-001",
+      "same_candidate_ref": "ablation:telemetry-rhythm-v1",
+      "change": "remove prose telemetry from default Reader input",
+      "observe": ["false-positive rejection", "metric anchoring", "reading-experience evidence"]
+    },
+    {
+      "id": "rule_audit_decomposition",
+      "incumbent_case": "ABL-RULE-HOLISTIC-001",
+      "challenger_case": "ABL-RULE-DECOMPOSED-001",
+      "same_candidate_ref": "ablation:rule-inference-v1",
+      "change": "decompose mandatory semantic hard-rule applicability/evidence judgment",
+      "observe": ["false-positive knowledge failure", "evidence traceability", "applicability reasoning"]
+    }
+  ],
+  "required_families": [
+    {"id": 1, "name": "remote_context", "evidence": "CONTEXT-REMOTE-001", "kind": "semantic"},
+    {"id": 2, "name": "irrelevant_semantic_match", "evidence": "CONTEXT-IRRELEVANT-001", "kind": "semantic"},
+    {"id": 3, "name": "search_continuation", "evidence": "CONTEXT-CONTINUE-001", "kind": "semantic"},
+    {"id": 4, "name": "search_stopping", "evidence": "CONTEXT-STOP-001", "kind": "semantic"},
+    {"id": 5, "name": "agenda_to_dialogue_serialization", "evidence": "READER-AGENDA-NATURAL-001 + SURFACE-HF30-001..005", "kind": "semantic"},
+    {"id": 6, "name": "legitimate_formal_completeness", "evidence": "SURFACE-HF30-003", "kind": "semantic"},
+    {"id": 7, "name": "character_knowledge_boundary", "evidence": "CHAR-EPISTEMIC-001", "kind": "semantic"},
+    {"id": 8, "name": "plausible_inference", "evidence": "CHAR-INFERENCE-001", "kind": "semantic"},
+    {"id": 9, "name": "dynamic_planning", "evidence": "PLANNING-HORIZON-001..003", "kind": "semantic"},
+    {"id": 10, "name": "character_embodiment", "evidence": "CHAR-EMBODIMENT-001", "kind": "semantic"},
+    {"id": 11, "name": "reader_contamination", "evidence": "reader_contamination pair", "kind": "semantic_ablation"},
+    {"id": 12, "name": "rule_audit_reliability", "evidence": "rule_audit_decomposition pair", "kind": "semantic_ablation"},
+    {"id": 13, "name": "telemetry_anchoring", "evidence": "telemetry_anchoring pair", "kind": "semantic_ablation"},
+    {"id": 14, "name": "unauthorized_state", "evidence": "write-intent/control-plane/runtime-command deterministic self-tests", "kind": "deterministic"},
+    {"id": 15, "name": "stale_candidate", "evidence": "production-readiness/semantic binding fingerprint self-tests", "kind": "deterministic"},
+    {"id": 16, "name": "long_horizon_resume", "evidence": "resume-preflight/session-runtime stale/wrong-authority self-tests", "kind": "deterministic"}
+  ],
+  "interpretation": {
+    "semantic_pair_pass_condition": "requires real model outputs; no deterministic script may infer literary superiority",
+    "simplicity_win_allowed": true,
+    "safety_regression_allowed": false,
+    "no_model_behavior": "validate packet identity only and report PENDING_MODEL"
+  }
+}

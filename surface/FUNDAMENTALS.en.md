@@ -214,6 +214,29 @@ Fail when conversation becomes pure information exchange with characters waiting
 
 Participants should pursue objectives, withhold, misunderstand, interrupt, bargain, test, evade, teach, refuse, or act while speaking when appropriate.
 
+### HF-30 · AGENDA-TO-DIALOGUE LEAKAGE / CHARACTER-SHEET-TO-DIALOGUE SERIALIZATION
+
+**Agenda drives speech; agenda is not speech.** Fail when dialogue is a near-isomorphic natural-language serialization of a character's private goal, role, risk, responsibility, knowledge boundary, fear, belief, unacceptable cost, or strategy rationale instead of a move shaped for the listener and the immediate situation.
+
+The desired realization boundary is:
+
+```text
+private character state
+→ immediate tactic
+→ listener model + shared context
+→ social / relational cost
+→ omission / compression / distortion
+→ task or object interaction
+→ utterance / action
+→ interruption / response
+```
+
+Characters may be articulate, professional, rational, or long-winded. The semantic question is: **Why is this person this complete, to this listener, at this moment, at this cost?** A listener who already shares the meeting, history, role context, or obvious stakes usually does not need each speaker to restate a complete character sheet.
+
+Do **not** diagnose HF-30 from line length, conjunction count, sentence fragments, ellipses, interruption count, colloquialness, or another lexical proxy. Complete speech is legitimate when completeness is itself the speech act or interaction requirement—for example testimony/deposition, incident debrief, board or military briefing, medical risk explanation, instruction/teaching, formal refusal rationale, clause negotiation, record-making, or an explicit confession/apology whose purpose requires a full account.
+
+HF-30 is primarily an interaction/realization interface failure. Repeated or scene-level failure should route upstream to Character/Scene Simulation or writer-safe realization projection rather than be “fixed” by mechanically shortening every line.
+
 ### HF-26 · FUNCTIONAL-CHARACTER COLLAPSE
 
 Fail when a supporting character exists only to explain, praise, obstruct, deliver information, or trigger a scheduled beat.
