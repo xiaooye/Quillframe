@@ -89,6 +89,10 @@ async function snapshot() {
     appearance: document.documentElement.dataset.novelforgeAppearance || null,
     locale: document.documentElement.dataset.locale || null,
     layout: document.documentElement.dataset.novelforgeLayout || null,
+    responsive: document.documentElement.dataset.novelforgeResponsive || null,
+    responsiveRevision: document.documentElement.dataset.novelforgeResponsiveRevision || '0',
+    responsiveLayout: document.documentElement.dataset.novelforgeResponsiveLayout || null,
+    responsiveWidth: document.documentElement.dataset.novelforgeResponsiveWidth || null,
     path: location.pathname,
     href: location.href
   })`);
@@ -117,6 +121,21 @@ async function click(x, y) {
   await command("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
 }
 
+async function resizeAndWait(width, height, expectedLayout) {
+  const before = Number((await snapshot()).responsiveRevision || 0);
+  await command("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false, screenWidth: width, screenHeight: height });
+  return waitFor(
+    `responsive ${width}x${height}`,
+    (s) => s.ready === "ready"
+      && s.interaction === "ready"
+      && s.responsive === "ready"
+      && s.layout === expectedLayout
+      && s.responsiveLayout === expectedLayout
+      && Number(s.responsiveRevision || 0) > before,
+    20000,
+  );
+}
+
 try {
   browser = spawn(chrome, [
     "--headless=new", "--no-sandbox", "--disable-dev-shm-usage", "--disable-background-networking",
@@ -132,7 +151,7 @@ try {
   await command("Input.setIgnoreInputEvents", { ignore: false });
   await command("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false, screenWidth: 1440, screenHeight: 900 });
   await command("Page.navigate", { url });
-  const initial = await waitFor("interaction ready", (s) => s.ready === "ready" && s.shadow === "ready" && s.interaction === "ready" && s.layout === "desktop");
+  const initial = await waitFor("interaction ready", (s) => s.ready === "ready" && s.shadow === "ready" && s.interaction === "ready" && s.responsive === "ready" && s.layout === "desktop");
 
   await key("k", 2);
   await waitFor("command palette open", (s) => s.command === "open");
@@ -151,9 +170,18 @@ try {
   await click(1314, 37);
   await waitFor("locale toggle", (s) => s.locale && s.locale !== localeBefore);
 
-  await command("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: false, screenWidth: 390, screenHeight: 844 });
-  await command("Page.reload", { ignoreCache: true });
-  await waitFor("phone layout", (s) => s.ready === "ready" && s.interaction === "ready" && s.layout === "phone");
+  // Prove continuous reflow across all required representative widths. The
+  // 1440->1280, 1024->768, and 430->390->360 transitions deliberately remain
+  // inside one topology for at least one step, so a breakpoint-only rebuild
+  // implementation cannot pass this check.
+  await resizeAndWait(1280, 800, "desktop");
+  await resizeAndWait(1024, 768, "compact");
+  await resizeAndWait(768, 1024, "compact");
+  await resizeAndWait(430, 932, "phone");
+  await resizeAndWait(390, 844, "phone");
+  await resizeAndWait(360, 800, "phone");
+  const mobileReady = await resizeAndWait(390, 844, "phone");
+
   await click(340, 37);
   const mobile = await waitFor("mobile menu", (s) => s.mobileMenu === "open");
 
@@ -162,7 +190,7 @@ try {
   }
 
   const report = {
-    schema: "novelforge_godot_interaction_qa_v1",
+    schema: "novelforge_godot_interaction_qa_v2",
     status: "pass",
     command_palette: true,
     ctrl_k: true,
@@ -172,6 +200,10 @@ try {
     appearance_toggle: true,
     locale_toggle: true,
     mobile_menu: mobile.mobileMenu === "open",
+    responsive_reflow: true,
+    same_topology_reflow: true,
+    responsive_widths: ["1440x900", "1280x800", "1024x768", "768x1024", "430x932", "390x844", "360x800"],
+    final_responsive_revision: Number(mobileReady.responsiveRevision || initial.responsiveRevision || 0),
     no_default_polling: true,
   };
   fs.mkdirSync(path.dirname(output), { recursive: true });
