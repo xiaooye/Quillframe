@@ -61,15 +61,21 @@ Input、rubric 或 output contract 发生实质变化，就必须产生新 seman
 
 ```text
 Context Freeze
+→ Adaptive Context Assembly
 → Story / Canon Preflight
-→ Scene Simulation
-→ Character Simulation
+→ Planning Commitment State
+→ Character Private State
+→ Character Action / Tactic Simulation
+→ Scene Action Collision / World Resolution
+→ Writer-safe Realization Projection
 → Reader Pressure
 → Event-first Raw Draft
 → Surface Realization
 → freeze candidate
 → 生成后 diagnostics / regression
-→ 回 owning mechanism 修复
+→ Reader Production Audit
+→ Editor Repair Spec
+→ 回 owning mechanism 修复 / re-realize
 → Reader Engagement
 → Continuity / State Audit
 → 必要的 Independent Semantic Gate
@@ -80,8 +86,12 @@ Context Freeze
 
 - Raw Draft 不对用户展示；
 - Regression 坏例和类似 answer key 的证据只能生成后加载；
+- `context.select` 可以判断 semantic relevance，但 `context_assembly.py` 只负责确定性验证 stage eligibility、authority、required context class、provenance、invalidation state，并在 required context 缺失时 fail closed；
+- 人物私有 / simulation state 不是给 Writer 做说明文的 prose payload。人物状态驱动 `character.action_propose`，`scene.resolve_actions` 负责碰撞求解，`scene.realization_project` 只暴露 writer-safe event / interaction projection；
+- `reader.production_audit` 针对冻结 candidate 判断真实 reading experience；`editor.repair_spec` 再给出 preserve/change 目标与 repair ownership。两者都不会因此取得 release 或 Canon authority；
 - Scene / Character / Reader simulation 可以是模型语义工作，但外围 durable invariant 仍由确定性代码维护；
 - Surface clean 仍然可能 Reader Engagement fail；
+- Agenda-to-dialogue leakage / HF-30 如果是结构性问题，应回 interaction / realization 或 Character / Scene Simulation，而不是机械缩短每一句对白；
 - SAFE-BUT-FLAT 回上游，不做泛化 line polish；
 - repair 后的 candidate 内容变了，就要在 fingerprint-bound gate 前产生新 content fingerprint。
 
@@ -94,11 +104,12 @@ Orchestrator 应先诊断，再决定修复深度。
 ```text
 孤立 Surface 缺陷              → 局部 rewrite
 Surface failure 成簇           → block / whole-scene realization
+agenda-dialogue serialization   → realization / Character / Scene simulation
 reader-grip / SAFE-BUT-FLAT     → Reader Pressure + Scene Simulation
 人物完整性失败                 → Character Simulation / state reasoning
 story / plan failure            → Story / Plan
 continuity / state mismatch     → Continuity / State owner
-context 污染 / stale            → 重建 Context Manifest
+context 污染 / stale            → 重建 Context Manifest / Context Assembly
 derived memory 错误             → invalidate / rebuild memory
 research uncertainty            → RESEARCH
 runtime / tool failure          → capability / transport 层
@@ -124,7 +135,7 @@ runtime / tool failure          → capability / transport 层
 - 结算 current Canon；
 - 把人物未来才会知道的事提前写进当前 knowledge state。
 
-采用 rolling elaboration：越靠近 production frontier 越详细，越远越保持低分辨率与可修改性。
+采用 rolling elaboration：越靠近 production frontier 越详细，越远越保持低分辨率与可修改性。Commitment horizon 与 bounded rebalance 只约束未来细节一次能承诺到多深、多远；它们不会成为第二套 Plan authority。
 
 ## 06 · RESEARCH
 
@@ -175,15 +186,20 @@ Learning 必须使用证据支持的最窄 scope：
 
 ```text
 feedback / evidence
-→ scope classification
-→ hypothesis
+→ 必要时做 semantic preference interpretation
+→ 写入既有 Learning Store 的 scoped evidence
+→ 可修订 hypothesis
 → contradiction / counterexample search
 → corpus / eval gap
 → bounded semantic analysis
 → candidate
-→ deterministic evidence-completeness gate
+→ deterministic evidence-completeness / promotion gate
 → explicit activation / promotion / rollback
 ```
+
+`learning.preference_interpret` 可以提出机制与最窄合理 scope；`learning/author_model.py` 继续通过既有 Learning Store 保存 evidence / hypothesis，并且只把 active、当前适用的 preference 投影进后续 production。
+
+Project preference 激活仍需要明确 project write authority。持久 `user_taste` 激活必须**同时**满足：既有 `promotion_gate` 当前重新计算为 ready，以及明确的 durable-user-taste write authorization。调用方自己给一个 boolean 不能绕过 prerequisite。`general_craft` 永远不能通过 Author Model production path 自动晋升。
 
 模型重复同一个看法不是新证据。General Craft 比项目内 / 局部学习需要更强的 cross-work evidence。
 
@@ -259,4 +275,6 @@ Run 必须结束在真实明确的状态，例如：
 - [Session Runtime](session_runtime/SESSION_RUNTIME.zh-CN.md)：生命周期、checkpoint 与 resume。
 - [Semantic Worker Protocol](semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md)：semantic identity / fingerprint / result boundary。
 - [生产流水线](../docs/production-pipeline.zh-CN.md)：面向用户解释 DRAFT / REVISE。
+- [上下文与记忆](../docs/context-and-memory.zh-CN.md)：Context Inspector、Assembly、selection 与 memory boundary。
+- [自适应学习](../docs/adaptive-learning.zh-CN.md)：Learning Store、Author Model、promotion 与 rollback。
 - [正典与状态模型](../core/CANON_STATE.zh-CN.md)：settlement authority。
