@@ -89,22 +89,22 @@ func _finalize_compact_surface() -> void:
 	if _current_route() == "/architecture":
 		var hero := _find_stage_panel(110.0, 900.0)
 		if hero != null:
-			var copy_width := max(hero.size.x - 88.0, 320.0)
+			var copy_width: float = maxf(hero.size.x - 88.0, 320.0)
 			var title := _find_label_prefix(hero, "See how one\nNovelForge run")
 			if title == null:
 				title = _find_label_prefix(hero, "看一次 NovelForge")
 			if title != null:
-				title.size.x = min(title.size.x, copy_width)
+				title.size.x = minf(title.size.x, copy_width)
 				if _locale == "en-US" and size.x < 900.0:
 					title.add_theme_font_size_override("font_size", 54)
 					title.add_theme_constant_override("line_spacing", -18)
 			var lede := _find_label_prefix(hero, "Project → Manager")
 			if lede != null:
-				lede.size.x = min(lede.size.x, copy_width)
+				lede.size.x = minf(lede.size.x, copy_width)
 			var project_label := _find_label_exact(hero, "Project")
 			if project_label != null and project_label.get_parent() != null and project_label.get_parent().get_parent() is Control:
 				var grid := project_label.get_parent().get_parent() as Control
-				grid.position.y = max(grid.position.y, 450.0)
+				grid.position.y = maxf(grid.position.y, 450.0)
 	_ensure_compact_stage_contains_children()
 
 func _ensure_compact_stage_contains_children() -> void:
@@ -117,8 +117,8 @@ func _ensure_compact_stage_contains_children() -> void:
 		if child is Control:
 			var control := child as Control
 			if control.visible:
-				bottom = max(bottom, control.position.y + control.size.y)
-	_stage.custom_minimum_size.y = max(_stage.custom_minimum_size.y, bottom + 80.0)
+				bottom = maxf(bottom, control.position.y + control.size.y)
+	_stage.custom_minimum_size.y = maxf(_stage.custom_minimum_size.y, bottom + 80.0)
 
 func _toggle_mobile_menu() -> void:
 	# The mobile menu is created after the route build, so apply the same native
@@ -257,7 +257,7 @@ func _polish_architecture_cjk_hero() -> void:
 			play.position.y = 329.0
 	elif _layout == "phone":
 		title.position.y = 84.0
-		title.size = Vector2(max(size.x - 68.0, 250.0), 120.0)
+		title.size = Vector2(maxf(size.x - 68.0, 250.0), 120.0)
 		title.add_theme_font_size_override("font_size", 36)
 		title.add_theme_constant_override("line_spacing", -5)
 		var lede_phone := _find_label_prefix(self, "Project → Manager")
