@@ -80,6 +80,12 @@ jobs:
                   'reader_grip': 'very_high',
                   'reader_visible_context': [{'source_ref': 'accepted:prior', 'text': 'Reader-visible prior context.'}],
               },
+              'learning.promotion_review': {
+                  'candidate_id': 'LEARN-CI',
+                  'scope': 'user_taste',
+                  'mechanism': 'bounded preference mechanism',
+                  'evidence_refs': ['review:CI'],
+              },
               'character.action_propose': {
                   'character_id': 'CHAR-CI',
                   'current_story_order': 9,
