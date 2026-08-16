@@ -32,7 +32,7 @@ func _font(weight: int) -> Font:
 	_latin_font_cache[weight] = variation
 	return variation
 
-func _heading_font(glyph_spacing: int, optical_size: int) -> Font:
+func _heading_font(glyph_spacing: int, optical_size: int = 62) -> Font:
 	var key := "%d:%d" % [glyph_spacing, optical_size]
 	if _heading_font_cache.has(key):
 		return _heading_font_cache[key]
