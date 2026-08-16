@@ -544,6 +544,11 @@ def self_test() -> int:
         and report["budget_dropped_selected_ids"] == ["M-C"]
         and report["selection_incomplete_due_budget"] is True
     )
+    grounding_reports_budget_drop = (
+        report["budget_dropped_selected_ids"] == ["M-C"]
+        and report["selection_incomplete_due_budget"] is True
+        and report["grounding_incomplete"] is True
+    )
     visibility_excluded = report["visibility_excluded"] == ["M-HIDDEN"]
     temporal_excluded = report["temporal_excluded"] == ["M-FUTURE"]
     invalidated_excluded = "M-X" in report["invalidated"] and "M-X" not in report["archive"]
@@ -571,6 +576,14 @@ def self_test() -> int:
         pack_selection(payload, job, bad_q, hot_budget=5, working_budget=3)
     except ValueError:
         question_guard = True
+
+    question_as_of_story_order_guard = False
+    future_q = json.loads(json.dumps(payload))
+    future_q["task"]["active_questions"][0]["as_of_story_order"] = 10
+    try:
+        prepare_selection_job(future_q, subject_id="SCN-9")
+    except ValueError:
+        question_as_of_story_order_guard = True
 
     search_authorization_guard = False
     bad_search = json.loads(json.dumps(result))
@@ -631,12 +644,14 @@ def self_test() -> int:
         hard_budget,
         bool(whole_skip),
         semantic_vs_budget_truth,
+        grounding_reports_budget_drop,
         visibility_excluded,
         temporal_excluded,
         invalidated_excluded,
         unknown_guard,
         pin_omission_guard,
         question_guard,
+        question_as_of_story_order_guard,
         search_authorization_guard,
         search_more_supported,
         authority_guard,
@@ -653,12 +668,14 @@ def self_test() -> int:
         "typed_input_contract": typed_input,
         "perspective_incompatible_never_enters_semantic_packet": hidden_never_in_packet,
         "future_block_never_enters_semantic_packet": temporal_excluded,
+        "question_as_of_story_order_guard": question_as_of_story_order_guard,
         "pin_visibility_conflict_fail_closed": pin_visibility_guard,
         "pin_temporal_conflict_fail_closed": pin_temporal_guard,
         "pin_omission_fail_closed": pin_omission_guard,
         "hard_budget": hard_budget,
         "whole_item_or_skip": bool(whole_skip),
         "semantic_vs_budget_drop_distinguished": semantic_vs_budget_truth,
+        "grounding_reports_budget_drop": grounding_reports_budget_drop,
         "visibility_excluded": visibility_excluded,
         "invalidated_excluded": invalidated_excluded,
         "unknown_selection_guard": unknown_guard,
