@@ -40,6 +40,7 @@ func _ready() -> void:
 	_publish_behavior_state()
 
 func _build() -> void:
+	_set_dataset("novelforgeFocusedControl", "")
 	_publication_hero_buttons.clear()
 	_publication_rail_buttons.clear()
 	_agent_host_buttons.clear()
@@ -143,6 +144,7 @@ func _build_format_showcase(parent: Control, pos: Vector2, showcase_size: Vector
 		hit.add_theme_stylebox_override("pressed", _button_box(Color(0.48,0.42,0.77,0.08), 18))
 		hit.add_theme_stylebox_override("focus", _focus_box(18))
 		hit.pressed.connect(_select_publication_profile.bind(i))
+		hit.focus_entered.connect(_record_focus.bind(hit.name))
 		card.add_child(hit)
 		_publication_hero_buttons.append(hit)
 		showcase.add_child(card)
@@ -159,6 +161,7 @@ func _build_format_strip(pos: Vector2, strip_size: Vector2, phone: bool) -> void
 			continue
 		button.name = "PublicationRail%s" % str(profile["id"])
 		button.accessibility_name = ("选择 %s 出版格式" if _locale == "zh-CN" else "Select %s publication profile") % str(profile["id"])
+		button.focus_entered.connect(_record_focus.bind(button.name))
 		_publication_rail_buttons.append(button)
 
 func _select_publication_profile(index: int) -> void:
@@ -217,6 +220,7 @@ func _build_agent_patch_bay(parent: Control, pos: Vector2, bay_size: Vector2, ph
 		hit.add_theme_stylebox_override("pressed", _button_box(Color(0.48,0.42,0.77,0.08), 10))
 		hit.add_theme_stylebox_override("focus", _focus_box(10))
 		hit.pressed.connect(_select_agent_host.bind(i))
+		hit.focus_entered.connect(_record_focus.bind(hit.name))
 		cell.add_child(hit)
 		_agent_host_buttons.append(hit)
 		bay.add_child(cell)
@@ -240,7 +244,6 @@ func _select_agent_host(index: int) -> void:
 	_interaction_revision += 1
 	_queue_rebuild_preserve_scroll()
 
-
 func _home_capability_chip(pos: Vector2, chip_size: Vector2, index: int, item: Dictionary) -> Panel:
 	var card := super._home_capability_chip(pos, chip_size, index, item)
 	for child in card.get_children():
@@ -248,6 +251,7 @@ func _home_capability_chip(pos: Vector2, chip_size: Vector2, index: int, item: D
 			var hit := child as Button
 			hit.name = "HomeCapability%d" % index
 			hit.accessibility_name = ("选择能力 %s" if _locale == "zh-CN" else "Select capability %s") % str(item["eyebrow"])
+			hit.focus_entered.connect(_record_focus.bind(hit.name))
 			_home_capability_buttons.append(hit)
 			break
 	return card
@@ -424,11 +428,13 @@ func _map_bounded_coordinate(value: float, old_width: float, new_width: float) -
 	var new_inner := maxf(new_width - edge * 2.0, 1.0)
 	return edge + (value - edge) * new_inner / old_inner
 
+func _record_focus(control_name: String) -> void:
+	_set_dataset("novelforgeFocusedControl", control_name)
+
 # -----------------------------------------------------------------------------
 # Browser QA evidence. These markers are non-authoritative and intentionally
 # expose state/real control rectangles rather than source-code implementation.
 # -----------------------------------------------------------------------------
-
 
 func _wire_scroll_evidence() -> void:
 	if _scroll == null:
@@ -532,7 +538,6 @@ func _has_forbidden_decorative_text(text: String) -> bool:
 		if text.contains(glyph):
 			return true
 	return false
-
 
 func _find_button_contains(node: Node, needle: String) -> Button:
 	for child in node.get_children():
