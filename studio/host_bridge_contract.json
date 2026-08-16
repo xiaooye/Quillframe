@@ -53,7 +53,7 @@
       },
       "context.inspect": {
         "kind": "query",
-        "core_basis": "novelforge_context_inspector_v2",
+        "core_basis": "novelforge_context_inspector_v3",
         "required_args": ["project_root", "manifest"]
       },
       "semantic.catalog": {
