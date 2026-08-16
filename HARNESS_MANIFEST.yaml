@@ -110,30 +110,30 @@ quality:
   quality_evolution_schema: novelforge_quality_evolution_v2
   reader_expectation_schema: novelforge_reader_expectation_v2
   context_inspector_schema: novelforge_context_inspector_v3
-  context_assembly_schema: novelforge_context_assembly_v1
+  context_assembly_schema: novelforge_context_assembly_v2
   memory_tiers_schema: novelforge_memory_tiers_v4
   memory_bank_schema: novelforge_memory_bank_v1
   finding_schema: novelforge_quality_finding_v1
   production_readiness_schema: novelforge_production_readiness_v1
   production_release_schema: novelforge_production_release_v1
-  prose_telemetry_schema: novelforge_prose_telemetry_v1
+  prose_telemetry_schema: novelforge_prose_telemetry_v2
   write_intent_guard_schema: novelforge_write_intent_guard_v1
   state_graph_schema: novelforge_state_graph_v1
   taxonomy_schema: novelforge_quality_taxonomy_v1
-  repair_policy_schema: novelforge_repair_policy_v1
+  repair_policy_schema: novelforge_repair_policy_v2
   semantic_contracts:
     reader_reaction: reader.reaction
     reader_engagement_audit: reader.engagement_audit
     reader_compare: reader.compare
     character_integrity: character.integrity
     revision_diagnosis: revision.diagnose
+    semantic_rule_audit: quality.semantic_rule_audit
     production_review: quality.production_review
     narrative_world: narrative.world
     reader_expectations: reader.expectations
     memory_consolidation: memory.consolidate
     preference_interpret: learning.preference_interpret
     realization_project: scene.realization_project
-    production_audit: reader.production_audit
     editor_repair_spec: editor.repair_spec
   semantic_intelligence_owner: model
   deterministic_code_owner: [authority, permission, fingerprint, persistence, transaction, routing, hard_budget, stage_isolation, typed_validation, release_role_binding, contradiction_guard]
@@ -144,8 +144,9 @@ quality:
   production_release_ad_hoc_eval_judge_allowed: false
   production_reader_contract: reader.engagement_audit
   production_independent_contract: quality.production_review
-  upstream_repair_requires_fresh_realization: true
-  rejected_prose_default_writer_context_after_upstream_failure: false
+  editor_selects_repair_generation_mode: true
+  repair_depth_judged_by_runtime: false
+  fresh_realization_hides_rejected_prose: true
   pairwise_order_swap_supported: true
   absolute_score_alone_decides_keep_discard: false
   quality_evolution_result_consume_once: true
@@ -188,7 +189,7 @@ learning:
   author_model: learning/author_model.py
   author_model_schema: novelforge_author_model_v1
   feedback_capture_schema: novelforge_feedback_capture_v1
-  author_model_projection_schema: novelforge_author_model_projection_v1
+  author_model_projection_schema: novelforge_author_model_projection_v2
   state_domains:
     - preference_evidence
     - preference_hypotheses
@@ -258,6 +259,7 @@ evals:
   manifest: evals/eval_manifest.json
   runner: evals/run_evals.py
   blind_queue_builder: evals/build_judge_queue.py
+  ai_native_ablation_manifest: evals/ai_native_ablation_manifest.json
   semantic_acceptance_schema: evals/semantic_acceptance.schema.json
   semantic_acceptance_baseline: evals/baselines/semantic-8.0-dev.1.json
   semantic_acceptance_validator: evals/validate_semantic_acceptance.py
