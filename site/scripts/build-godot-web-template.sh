@@ -20,6 +20,9 @@ tar -xJf "${SOURCE_ARCHIVE}" -C "${WORK_ROOT}"
 cd "${SOURCE_DIR}"
 JOBS="${NOVELFORGE_GODOT_BUILD_JOBS:-$(nproc)}"
 
+# Keep advanced GUI enabled. The production Product uses TextEdit for the
+# Local Playground working-text surface, mirroring the Solid textarea baseline.
+# The hard <24 MiB gate below remains the deployment-size authority.
 scons \
   platform=web \
   target=template_release \
@@ -27,7 +30,6 @@ scons \
   optimize=size_extra \
   debug_symbols=no \
   disable_3d=yes \
-  disable_advanced_gui=yes \
   disable_physics_2d=yes \
   disable_physics_3d=yes \
   module_astcenc_enabled=no \
@@ -101,12 +103,13 @@ if [ "${WASM_BYTES}" -ge "${TARGET_LIMIT}" ]; then
 fi
 
 cat > "${OUTPUT_DIR}/build-meta.txt" <<EOF
-schema=novelforge_godot_web_template_v1
+schema=novelforge_godot_web_template_v2
 godot_release=${GODOT_RELEASE}
 threads=false
 optimize=size_extra
 disable_3d=true
-disable_advanced_gui=true
+disable_advanced_gui=false
+text_edit=true
 disable_physics_2d=true
 disable_physics_3d=true
 wasm_bytes=${WASM_BYTES}
