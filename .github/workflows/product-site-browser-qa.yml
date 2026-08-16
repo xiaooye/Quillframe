@@ -178,8 +178,10 @@ jobs:
           godot_shot home-capabilities-mobile 390 844 phone / '' 280 "$HOME_COMPLETE"
           godot_shot home-knowledge-mobile 390 844 phone / '' 1050 "$HOME_COMPLETE"
           godot_shot architecture-inspector-mobile 390 844 phone /architecture '' 1450 "$ARCH_COMPLETE"
-          godot_shot publication-preview-mobile 390 844 phone /publication '' 1050 "$PUB_COMPLETE"
-          godot_shot publication-provenance-mobile 390 844 phone /publication '' 1550 "$PUB_COMPLETE"
+          # Mobile Publication reaches max scroll before 1050; keep the preview
+          # checkpoint in the reading-body range and use max-scroll for provenance.
+          godot_shot publication-preview-mobile 390 844 phone /publication '' 650 "$PUB_COMPLETE"
+          godot_shot publication-provenance-mobile 390 844 phone /publication '' 1050 "$PUB_COMPLETE"
 
           test -s site/dist/docs/index.html
           grep -q '^/architecture /index.html 200$' site/dist/_redirects
