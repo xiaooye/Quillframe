@@ -20,6 +20,10 @@
 ## 工程规则
 
 - **用户已授权的日常维护默认直接修改 `main`。不要因为任务较大就习惯性新建 branch。** 只有用户明确要求、仓库保护规则强制、改动确实需要隔离审查 / 迁移、多贡献者需要协调边界，或外部流程必须依赖 PR 时，才使用 branch / PR。
+- **Branch budget：** 除 `main` 外，正常 active working set 尽量保持为 **最多 1 条 general / agent branch + 最多 1 条 UI / product / visual branch**。适合直接修改 `main` 时，0 条 working branch 更优。这个约束是 repo hygiene 目标，不得用来绕过确实需要的隔离或审查。
+- 新建任何 branch 前，先检查当前 branches 与 open PRs。若同类别已有 scope 兼容的 working branch，应继续复用；不要按 task、coding agent、chat / session 一项一条 branch。
+- 新 coding-agent / session 默认应继续使用 `main` 或当前同类别 working branch。如果确有不兼容工作需要新 branch，而该类别已有 working branch，先 merge / close / delete 或明确 supersede 旧 branch。只有用户明确批准例外，或外部 workflow 确实要求并行 branch 时，才允许同类别临时并行。
+- Branch 是工作状态，不是档案库。历史上下文应保存在 commits、merged / closed PR、issues、release artifacts 或 tags 中；有效工作已保留后，应删除 stale / superseded branch ref。
 - 如果可能存在其他 session / contributor 并行工作，重要写入前先读取最新 `main`，确认目标路径没有发生冲突，并保留所有无关并行修改。
 - 特殊情况下创建的临时 branch，完成后应及时 merge / close 并删除，不长期堆积。
 - Generic Framework 与下游项目永远单向依赖：Project → Framework；
