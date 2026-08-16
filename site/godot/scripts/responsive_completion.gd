@@ -8,6 +8,10 @@ extends "res://scripts/wide_compact_parity.gd"
 const SOLID_SHELL_COMPACT_MAX_WIDTH := 980.0
 const SOLID_CARD_TWO_COLUMN_MAX_WIDTH := 1120.0
 const SOLID_CARD_SINGLE_COLUMN_MAX_WIDTH := 760.0
+const PRODUCT_WIDE_COMPACT_HERO_HEIGHT := 400.0
+const PRODUCT_NARROW_COMPACT_HERO_HEIGHT := 570.0
+const PRODUCT_NARROW_STACK_Y := 260.0
+const PRODUCT_WIDE_LEDE_Y := 278.0
 
 func _build_header() -> void:
 	super._build_header()
@@ -46,17 +50,28 @@ func _build_product_compact() -> void:
 	var page_width: float = size.x - page_x * 2.0
 	var hero_y: float = 112.0
 	var stacked: bool = _solid_viewport_width() <= SOLID_HERO_STACK_MAX_WIDTH
-	var hero_h: float = 720.0 if stacked else 570.0
+	var hero_h: float = PRODUCT_NARROW_COMPACT_HERO_HEIGHT if stacked else PRODUCT_WIDE_COMPACT_HERO_HEIGHT
 	_build_product_hero(Vector2(page_x, hero_y), Vector2(page_width, hero_h), stacked)
+	var hero: Control = _find_stage_panel(hero_y, 350.0)
 
-	# Wide compact keeps the Solid two-column hero and needs the same Godot text
-	# width compensation already proven in the preceding completion layer.
-	if not stacked:
-		var hero: Control = _find_stage_panel(hero_y, 500.0)
+	if stacked:
+		# Solid keeps the stacked Story State close to the lede rather than at the
+		# bottom of a desktop-height hero. Move the existing art-directed stack as a
+		# single object; its internal stationery geometry remains unchanged.
+		var story_state: Label = _find_label_exact(hero, "♡ STORY STATE") if hero != null else null
+		if story_state != null and story_state.get_parent() != null and story_state.get_parent().get_parent() is Control:
+			var stack: Control = story_state.get_parent().get_parent() as Control
+			stack.position.y = PRODUCT_NARROW_STACK_Y
+	else:
+		# Wide compact keeps the Solid two-column hero. The shorter hero naturally
+		# reduces Story State height; only the lede needs its Solid-equivalent y.
 		if hero != null:
 			var visual_x: float = hero.size.x * 0.55
 			_fit_wide_compact_title(hero, ["NovelForge is a\nfiction production", "NovelForge 是小说生产系统"], visual_x, 28.0)
-			_fit_wide_compact_lede(hero, ["It separates creative judgment", "它把创作判断与确定性控制分开"], visual_x, 28.0, 150.0)
+			var lede: Label = _find_first_label_prefix(hero, ["It separates creative judgment", "它把创作判断与确定性控制分开"])
+			if lede != null:
+				lede.position.y = PRODUCT_WIDE_LEDE_Y
+			_fit_wide_compact_lede(hero, ["It separates creative judgment", "它把创作判断与确定性控制分开"], visual_x, 28.0, 100.0)
 
 	_build_product_cards_adaptive(Vector2(page_x, hero_y + hero_h + 28.0), page_width)
 
