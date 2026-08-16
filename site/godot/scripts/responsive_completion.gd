@@ -3,14 +3,15 @@ extends "res://scripts/wide_compact_parity.gd"
 # Final responsive topology alignment against the active Solid product CSS.
 # The app shell collapses desktop navigation at 980px, while Product proof cards
 # use two columns through 1120px and one column at 760px and below. These
-# content-driven breakpoints are independent from Godot's coarse topology names.
+# content-driven breakpoints are evaluated in browser/CSS viewport coordinates
+# through _solid_viewport_width(), independent from Godot's reserved gutter.
 const SOLID_SHELL_COMPACT_MAX_WIDTH := 980.0
 const SOLID_CARD_TWO_COLUMN_MAX_WIDTH := 1120.0
 const SOLID_CARD_SINGLE_COLUMN_MAX_WIDTH := 760.0
 
 func _build_header() -> void:
 	super._build_header()
-	if _layout != "compact" or size.x > SOLID_SHELL_COMPACT_MAX_WIDTH:
+	if _layout != "compact" or _solid_viewport_width() > SOLID_SHELL_COMPACT_MAX_WIDTH:
 		return
 	if get_child_count() == 0:
 		return
@@ -44,7 +45,7 @@ func _build_product_compact() -> void:
 	var page_x: float = 40.0
 	var page_width: float = size.x - page_x * 2.0
 	var hero_y: float = 112.0
-	var stacked: bool = size.x <= SOLID_HERO_STACK_MAX_WIDTH
+	var stacked: bool = _solid_viewport_width() <= SOLID_HERO_STACK_MAX_WIDTH
 	var hero_h: float = 720.0 if stacked else 570.0
 	_build_product_hero(Vector2(page_x, hero_y), Vector2(page_width, hero_h), stacked)
 
@@ -62,7 +63,8 @@ func _build_product_compact() -> void:
 func _build_product_cards_adaptive(pos: Vector2, width: float) -> void:
 	var cards: Array = PRODUCT_CARDS_ZH if _locale == "zh-CN" else PRODUCT_CARDS_EN
 	var fills: Array = [Color("fffafd"), Color("fffaf9"), Color("fbfdfb"), Color("fffdf9")]
-	if size.x <= SOLID_CARD_SINGLE_COLUMN_MAX_WIDTH:
+	var viewport_width: float = _solid_viewport_width()
+	if viewport_width <= SOLID_CARD_SINGLE_COLUMN_MAX_WIDTH:
 		var y: float = pos.y
 		for i in range(cards.size()):
 			_stage.add_child(_product_card(Vector2(pos.x, y), Vector2(width, 190.0), i, str(cards[i][0]), str(cards[i][1]), fills[i]))
@@ -73,7 +75,7 @@ func _build_product_cards_adaptive(pos: Vector2, width: float) -> void:
 	# Solid .unified-card-grid is two columns at <=1120px. Product compact always
 	# falls inside that range, but keep the authority explicit for future topology
 	# changes rather than coupling it to the word `compact`.
-	if size.x <= SOLID_CARD_TWO_COLUMN_MAX_WIDTH:
+	if viewport_width <= SOLID_CARD_TWO_COLUMN_MAX_WIDTH:
 		var gap: float = 13.0
 		var card_w: float = (width - gap) / 2.0
 		for i in range(cards.size()):
