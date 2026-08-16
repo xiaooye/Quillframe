@@ -1,4 +1,4 @@
-extends "res://scripts/geometry_parity.gd"
+extends "res://scripts/visual_completion.gd"
 
 # Solid is the visual authority for product surfaces. Its shared
 # .product-surface-hero remains two-column above 900px and stacks only at
