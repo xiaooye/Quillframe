@@ -11,6 +11,7 @@ const SOLID_CARD_SINGLE_COLUMN_MAX_WIDTH := 760.0
 const PRODUCT_WIDE_COMPACT_HERO_HEIGHT := 400.0
 const PRODUCT_NARROW_COMPACT_HERO_HEIGHT := 570.0
 const PRODUCT_NARROW_STACK_Y := 260.0
+const PRODUCT_WIDE_STACK_HEIGHT := 334.0
 const PRODUCT_WIDE_LEDE_Y := 278.0
 
 func _build_header() -> void:
@@ -63,9 +64,14 @@ func _build_product_compact() -> void:
 			var stack: Control = story_state.get_parent().get_parent() as Control
 			stack.position.y = PRODUCT_NARROW_STACK_Y
 	else:
-		# Wide compact keeps the Solid two-column hero. The shorter hero naturally
-		# reduces Story State height; only the lede needs its Solid-equivalent y.
+		# Wide compact keeps the Solid two-column hero. The shorter hero restores
+		# vertical rhythm; preserve enough Story State backdrop for Godot's existing
+		# calibrated 47px rows so Settlement stays contained.
 		if hero != null:
+			var story_state_wide: Label = _find_label_exact(hero, "♡ STORY STATE")
+			if story_state_wide != null and story_state_wide.get_parent() != null and story_state_wide.get_parent().get_parent() is Control:
+				var stack_wide: Control = story_state_wide.get_parent().get_parent() as Control
+				stack_wide.size.y = PRODUCT_WIDE_STACK_HEIGHT
 			var visual_x: float = hero.size.x * 0.55
 			_fit_wide_compact_title(hero, ["NovelForge is a\nfiction production", "NovelForge 是小说生产系统"], visual_x, 28.0)
 			var lede: Label = _find_first_label_prefix(hero, ["It separates creative judgment", "它把创作判断与确定性控制分开"])
