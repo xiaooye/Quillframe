@@ -65,6 +65,32 @@ jobs:
           CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser)
           test -n "$CHROME"
 
+          # Make the browser baseline deterministic too. WeiUI's checked-in
+          # Latin typography authority is Inter; CJK and decorative fallbacks
+          # use the exact same pinned files as the Godot candidate.
+          mkdir -p site/dist/parity-fonts
+          cp site/godot/generated/Inter-opsz-wght.ttf site/dist/parity-fonts/
+          cp site/godot/generated/NotoSansSC-wght.ttf site/dist/parity-fonts/
+          cp site/godot/generated/NotoSansSymbols2-Regular.ttf site/dist/parity-fonts/
+          cp site/godot/generated/NotoSansThai-wdth-wght.ttf site/dist/parity-fonts/
+          cp site/godot/generated/NotoSansArabic-wdth-wght.ttf site/dist/parity-fonts/
+          python3 - <<'PY'
+          from pathlib import Path
+          index = Path('site/dist/index.html')
+          text = index.read_text(encoding='utf-8')
+          style = r'''<style data-novelforge-parity-fonts>
+          @font-face{font-family:"NF Parity Inter";src:url("/parity-fonts/Inter-opsz-wght.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:block}
+          @font-face{font-family:"NF Parity CJK";src:url("/parity-fonts/NotoSansSC-wght.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:block}
+          @font-face{font-family:"NF Parity Symbols";src:url("/parity-fonts/NotoSansSymbols2-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:block}
+          @font-face{font-family:"NF Parity Thai";src:url("/parity-fonts/NotoSansThai-wdth-wght.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:block}
+          @font-face{font-family:"NF Parity Arabic";src:url("/parity-fonts/NotoSansArabic-wdth-wght.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:block}
+          :root{--wui-font-family-sans:"NF Parity Inter","NF Parity CJK","NF Parity Symbols","NF Parity Thai","NF Parity Arabic",sans-serif!important}
+          body{font-family:var(--wui-font-family-sans)!important}
+          </style>'''
+          if 'data-novelforge-parity-fonts' not in text:
+              index.write_text(text.replace('</head>', style + '</head>'), encoding='utf-8')
+          PY
+
           cd site
           npm run preview -- --host 127.0.0.1 --port 4188 > "$OUT/solid-server.log" 2>&1 &
           SOLID_PID=$!
@@ -124,7 +150,7 @@ jobs:
           import json, math
           root = Path('/tmp/novelforge-route-parity')
           routes = ['home','product','studio','architecture','publication','inspect','playground','agents','changelog']
-          metrics = {'schema':'novelforge_godot_route_parity_v1','blocking':False,'pairs':{}}
+          metrics = {'schema':'novelforge_godot_route_parity_v2','blocking':False,'solid_typography':'pinned WeiUI Inter + Noto fallbacks','pairs':{}}
           for route in routes:
               for layout in ['desktop','mobile']:
                   name = f'{route}-{layout}'
