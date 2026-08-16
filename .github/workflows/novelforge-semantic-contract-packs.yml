@@ -69,6 +69,11 @@ jobs:
                   'reader_grip': 'very_high',
                   'reader_visible_context': [{'source_ref': 'accepted:prior', 'text': 'Reader-visible prior context.'}],
               },
+              'quality.semantic_rule_audit': {
+                  'candidate_fingerprint': fp,
+                  'candidate_text': 'A bounded candidate for semantic hard-rule audit.',
+                  'rule_index': [{'id': 'RULE-CI', 'severity': 'blocking', 'authority': 'framework', 'statement': 'Do not contradict supplied accepted evidence.'}],
+              },
               'quality.production_review': {
                   'candidate_fingerprint': fp,
                   'candidate_text': 'A bounded independent production-review candidate.',
@@ -144,13 +149,9 @@ jobs:
                   'character_action_evidence': [{'character_id': 'CHAR-CI', 'action': 'withhold full rationale and counter'}],
                   'pov_boundary': {'perspective_id': 'CHAR-CI', 'allowed_inner_state': True},
               },
-              'reader.production_audit': {
-                  'candidate_fingerprint': fp,
-                  'candidate_text': 'A bounded production candidate with observable dialogue and action.',
-              },
               'editor.repair_spec': {
                   'candidate_fingerprint': fp,
-                  'reader_assessment': {'result': 'fail', 'codes': ['HF-30'], 'evidence': ['Dialogue over-explains role and risk.']},
+                  'reader_assessment': {'result': 'fail', 'report': 'Dialogue over-explains role and risk.', 'evidence_refs': ['candidate:1']},
               },
           }
 
