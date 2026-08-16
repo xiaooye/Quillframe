@@ -17,33 +17,34 @@ const routes = read("godot/scripts/route_surfaces.gd");
 const catalog = read("godot/scripts/route_catalog.gd");
 const systems = read("godot/scripts/system_surfaces.gd");
 const editorial = read("godot/scripts/editorial_surfaces.gd");
+const typography = read("godot/scripts/typography_parity.gd");
 const shell = read("godot/web/novelforge.html");
 const fontFetch = read("scripts/fetch-godot-fonts.sh");
-const plainFontStart = main.indexOf("func _font(weight: int)");
-const mixedFontStart = main.indexOf("func _mixed_font(weight: int)");
-const clearStart = main.indexOf("func _clear()", mixedFontStart);
-const plainFontBlock = plainFontStart >= 0 && mixedFontStart > plainFontStart ? main.slice(plainFontStart, mixedFontStart) : "";
-const mixedFontBlock = mixedFontStart >= 0 && clearStart > mixedFontStart ? main.slice(mixedFontStart, clearStart) : "";
 
 check(project.includes('run/main_scene="res://Main.tscn"'), "Godot main scene must remain explicit");
 check(project.includes('renderer/rendering_method="gl_compatibility"'), "Web migration must use Compatibility renderer");
-check(scene.includes('path="res://scripts/editorial_surfaces.gd"'), "shadow scene must enter through the editorial-surface parity layer");
+check(scene.includes('path="res://scripts/typography_parity.gd"'), "shadow scene must enter through deterministic typography parity");
 check(scene.includes("offset_right = -15.0"), "web page scrollbar gutter must remain reserved in the Godot layout viewport");
-check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main + parity + routes + catalog + systems + editorial), "migration is capped at 2.5D; 3D scene nodes are forbidden");
+check(!/Node3D|Camera3D|MeshInstance3D/.test(scene + main + parity + routes + catalog + systems + editorial + typography), "migration is capped at 2.5D; 3D scene nodes are forbidden");
+
+check(typography.includes('INTER_FONT_PATH := "res://generated/Inter-opsz-wght.ttf"'), "WeiUI Latin typography must be pinned to Inter");
+check(typography.includes("_contains_cjk"), "Latin/CJK font selection must remain text-aware");
+check(typography.includes("_cjk_font") && typography.includes("_latin_base_font"), "Latin and CJK typography metrics must stay isolated");
+check(typography.includes("fallbacks.append(_base_font)"), "decorative mixed font must retain CJK fallback");
+check(typography.includes("_reset_label_scale"), "legacy Noto width compensation must be neutralized under Inter");
+
 check(main.includes('FONT_PATH := "res://generated/NotoSansSC-wght.ttf"'), "deterministic bundled CJK font is required");
 check(main.includes('SYMBOL_FONT_PATH := "res://generated/NotoSansSymbols2-Regular.ttf"'), "deterministic symbol fallback is required");
 check(main.includes('THAI_FONT_PATH := "res://generated/NotoSansThai-wdth-wght.ttf"'), "deterministic Thai fallback is required for baseline kaomoji");
 check(main.includes('ARABIC_FONT_PATH := "res://generated/NotoSansArabic-wdth-wght.ttf"'), "deterministic Arabic fallback is required for baseline kaomoji");
-check(main.includes('text_server.name_to_tag("wght")'), "variable font weight must use a TextServer OpenType tag");
-check(plainFontBlock && !plainFontBlock.includes("fallbacks"), "primary typography font must not inherit Unicode fallback line metrics");
-check(mixedFontBlock.includes("variation.fallbacks = _fallback_fonts"), "Unicode fallbacks must be scoped through the decorative mixed font");
-check(main.includes("_mixed_pill") && main.includes("_mixed_label") && main.includes("_mixed_text_button"), "decorative controls must use the scoped mixed-font helpers");
 for (const fingerprint of [
+  "047c92f6e2212473dc436020afed689527076d44",
   "fb0637bafbcd804fe32152370a1225990745b4bc",
   "caf89dd0e60e23ac39ce18da823095959d409437",
   "34b48ab6f74867dbfce19410a2f452abef34e3ff",
   "f1d01edce4ebaedcbe9a06fc75fec07b304ec3df",
 ]) check(fontFetch.includes(fingerprint), `pinned font fingerprint missing: ${fingerprint}`);
+
 check(main.includes("ฅ^•ﻌ•^ฅ"), "baseline kawaii status copy must remain exact");
 check(main.includes('BOOKS_ICON_PATH := "res://assets/books-stack.svg"'), "Knowledge icon must use deterministic local vector art");
 check(main.includes("Let the story\\ngrow without\\nletting the\\nsystem lose\\nthe plot."), "desktop/mobile baseline headline geometry must stay explicit");
@@ -70,12 +71,14 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_shadow_source_quality_v8",
+    schema: "novelforge_godot_shadow_source_quality_v9",
     status: "pass",
     production_cutover: false,
     visual_baseline: "Solid/Vite Story Loom Kawaii Atelier",
+    typography_authority: "WeiUI Inter + Noto Sans SC",
     renderer: "gl_compatibility",
     max_dimension: "2.5D",
+    deterministic_latin_font: true,
     deterministic_cjk_font: true,
     deterministic_unicode_fallbacks: true,
     fallback_scope: "decorative_controls_only",
