@@ -67,6 +67,7 @@ harness:
   run_receipt_schema: novelforge_run_receipt_v1
   run_receipts_projection_schema: novelforge_run_receipts_projection_v1
   context_inspector: harness/context_inspector.py
+  context_assembly: harness/context_assembly.py
   memory_tiers: harness/memory_tiers.py
   memory_bank: harness/memory_bank.py
   scenario_fork: harness/scenario_fork.py
@@ -79,6 +80,7 @@ harness:
   propagation_debt_schema: harness/propagation_debt.schema.json
   author_steering: harness/control_plane/author_steering.py
   author_steering_schema: harness/control_plane/author_steering.schema.json
+  write_intent_guard: harness/control_plane/write_intent_guard.py
   control_plane: harness/control_plane/CONTROL_PLANE.md
   control_plane_tool: harness/control_plane/control_plane.py
   control_plane_event_schema: harness/control_plane/event_schema.json
@@ -97,6 +99,8 @@ harness:
 quality:
   finding_contract: quality/findings.py
   production_readiness: quality/production_readiness.py
+  production_release: quality/production_release.py
+  prose_telemetry: quality/prose_telemetry.py
   quality_evolution: quality/quality_evolution.py
   reader_expectation_ledger: quality/reader_expectation.py
   state_graph: quality/state_graph.py
@@ -105,11 +109,15 @@ quality:
   repair_policy: quality/repair_policy.py
   quality_evolution_schema: novelforge_quality_evolution_v2
   reader_expectation_schema: novelforge_reader_expectation_v2
-  context_inspector_schema: novelforge_context_inspector_v2
+  context_inspector_schema: novelforge_context_inspector_v3
+  context_assembly_schema: novelforge_context_assembly_v1
   memory_tiers_schema: novelforge_memory_tiers_v4
   memory_bank_schema: novelforge_memory_bank_v1
   finding_schema: novelforge_quality_finding_v1
   production_readiness_schema: novelforge_production_readiness_v1
+  production_release_schema: novelforge_production_release_v1
+  prose_telemetry_schema: novelforge_prose_telemetry_v1
+  write_intent_guard_schema: novelforge_write_intent_guard_v1
   state_graph_schema: novelforge_state_graph_v1
   taxonomy_schema: novelforge_quality_taxonomy_v1
   repair_policy_schema: novelforge_repair_policy_v1
@@ -123,6 +131,10 @@ quality:
     narrative_world: narrative.world
     reader_expectations: reader.expectations
     memory_consolidation: memory.consolidate
+    preference_interpret: learning.preference_interpret
+    realization_project: scene.realization_project
+    production_audit: reader.production_audit
+    editor_repair_spec: editor.repair_spec
   semantic_intelligence_owner: model
   deterministic_code_owner: [authority, permission, fingerprint, persistence, transaction, routing, hard_budget, stage_isolation, typed_validation, release_role_binding, contradiction_guard]
   reader_persona_basis: reading-behavior
@@ -173,6 +185,10 @@ learning:
   durable_cycle: learning/learning_cycle.py
   semantic_work_packager: learning/learning_eval.py
   promotion_gate: learning/promotion_gate.py
+  author_model: learning/author_model.py
+  author_model_schema: novelforge_author_model_v1
+  feedback_capture_schema: novelforge_feedback_capture_v1
+  author_model_projection_schema: novelforge_author_model_projection_v1
   state_domains:
     - preference_evidence
     - preference_hypotheses
@@ -196,6 +212,8 @@ learning:
   general_craft_requires_counterexample_and_eval: true
   general_craft_requires_cross_work_evidence: true
   promotion_gate_grants_write_authority: false
+  author_model_write_authority_alone_can_activate_user_taste: false
+  author_model_requires_promotion_prerequisite_for_user_taste: true
   learning_result_consume_once: true
   personal_learning_data_committed_by_default: false
 
@@ -359,6 +377,11 @@ control_plane:
   canon_authority: false
   framework_promotion_authority: false
   default_local_db: .novelforge/runtime.db
+  write_intent_guard: harness/control_plane/write_intent_guard.py
+  write_intent_guard_schema: novelforge_write_intent_guard_v1
+  write_intent_requires_exact_resource_action_target: true
+  write_intent_requires_exact_before_state: true
+  write_intent_does_not_grant_authority: true
   mcp:
     protocol_version: 2025-06-18
     local_transport: stdio
@@ -410,6 +433,8 @@ workflows:
   author_steering: .github/workflows/novelforge-author-steering.yml
   planning_horizon: .github/workflows/novelforge-planning-horizon.yml
   planning_horizon_semantic: .github/workflows/novelforge-planning-horizon-semantic.yml
+  adaptive_production: .github/workflows/novelforge-adaptive-production.yml
+  adaptive_production_semantic: .github/workflows/novelforge-adaptive-production-semantic.yml
   peer_chat:
     reusable_workflow: .github/workflows/novelforge-chat-semantic-bridge.yml
     composite_action: .github/actions/project-peer-semantic/action.yml
@@ -427,7 +452,7 @@ workflows:
 
 normal_ci:
   model_execution: forbidden
-  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, runtime-query-self-test, resume-preflight-self-test, resume-command-self-test, runtime-command-authorization-self-test, runtime-command-executor-self-test, context-inspector-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, planning-horizon-self-test, property-write-policy-self-test, propagation-debt-self-test, state-integrity-cross-contract-self-test, author-steering-self-test, settlement-runtime-self-test, quality-finding-self-test, quality-taxonomy-self-test, repair-policy-self-test, production-readiness-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, registered-release-role-contract-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, semantic-acceptance-baseline-self-test, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
+  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, runtime-query-self-test, resume-preflight-self-test, resume-command-self-test, runtime-command-authorization-self-test, runtime-command-executor-self-test, context-inspector-self-test, context-assembly-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, planning-horizon-self-test, property-write-policy-self-test, propagation-debt-self-test, state-integrity-cross-contract-self-test, author-steering-self-test, write-intent-guard-self-test, settlement-runtime-self-test, quality-finding-self-test, quality-taxonomy-self-test, repair-policy-self-test, production-readiness-self-test, production-release-self-test, prose-telemetry-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, semantic-reference-integrity-self-test, registered-release-role-contract-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, author-model-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, semantic-acceptance-baseline-self-test, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
 
 scheduled_maintenance:
   model_execution: forbidden
@@ -445,12 +470,20 @@ write_boundary:
   semantic_model_contract_result_grants_canon_authority: false
   corpus_result_grants_canon_authority: false
   learning_hypothesis_grants_canon_authority: false
+  author_model_result_grants_canon_authority: false
+  author_model_result_grants_framework_write: false
+  author_model_result_grants_durable_user_taste_write: false
   context_overlay_grants_canon_authority: false
+  context_assembly_result_grants_canon_authority: false
+  context_assembly_result_grants_project_write_authority: false
   memory_bank_grants_canon_authority: false
   reader_expectation_ledger_grants_canon_authority: false
   scenario_branch_grants_canon_authority: false
   state_graph_result_grants_canon_authority: false
   quality_evolution_result_grants_canon_authority: false
+  production_release_result_grants_canon_authority: false
+  production_release_result_replaces_semantic_readiness: false
+  prose_telemetry_grants_literary_verdict: false
   property_write_policy_grants_canon_authority: false
   property_write_policy_grants_framework_write: false
   property_write_policy_resolves_write_route_only: true
@@ -465,6 +498,7 @@ write_boundary:
   author_steering_grants_settlement_authority: false
   author_steering_followup_ops_auto_execute: false
   author_steering_consequential_write_interruptible: false
+  write_intent_guard_grants_write_authority: false
   planning_horizon_result_grants_canon_authority: false
   planning_horizon_result_grants_project_write_authority: false
   planning_horizon_result_grants_framework_write_authority: false
