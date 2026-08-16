@@ -1,11 +1,11 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "4",
+  "version": "5",
   "principle": "Literary and narrative judgment belongs to model-readable contracts. Deterministic runtime binds exact contracts, candidates, provenance, permissions and execution identity; it does not reinterpret literary findings. Blind Reader, Semantic Rule Auditor and independent production review are distinct roles with distinct information boundaries.",
   "contracts": {
     "reader.reaction": {
       "kind": "external_review",
-      "purpose": "Simulate one bounded target reader's immediate experience using reader-visible information only.",
+      "purpose": "Simulate one bounded target reader's immediate experience using reader-visible information only. This lightweight legacy reaction contract is not the production Blind Reader gate.",
       "forbidden_input_keys": ["outline", "active_plan", "scene_card", "author_notes", "author_intent", "hidden_intent", "expected_payoff", "future_plan", "planned_twist", "writer_reasoning", "reviewer_verdict", "canon_unrevealed", "quality_taxonomy", "hf_codes", "telemetry", "semantic_rules"],
       "input_contract": {
         "type": "object",
@@ -22,17 +22,19 @@
       },
       "rubric": [
         "Read naturally as the assigned target reader. Treat omitted creator-private information as unknowable.",
-        "Report only effects you actually experienced in the supplied text: pull, boredom, confusion, emotional response, disbelief, artificiality, attachment, anticipation or other salient reader effects.",
-        "Do not turn the reading into a hidden craft checklist and do not infer author intent or future payoff to rescue the text.",
+        "Report only effects you actually experienced in the supplied text; do not fill a quality taxonomy.",
+        "Do not infer author intent or future payoff to rescue the text.",
         "A reader simulation is diagnostic evidence, not Canon authority or an independent semantic gate."
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "report"],
+        "required": ["confidence"],
         "properties": {
           "confidence": {"type": "number", "minimum": 0, "maximum": 1},
           "report": {"type": "string", "minLength": 1},
           "would_continue": {"type": ["boolean", "null"]},
+          "continue_desire": {"type": "number", "minimum": 0, "maximum": 1},
+          "reason": {"type": "string", "minLength": 1},
           "strongest_positive": {"type": ["string", "null"]},
           "strongest_problem": {"type": ["string", "null"]},
           "evidence_refs": {"type": "array", "items": {"type": "string"}}
