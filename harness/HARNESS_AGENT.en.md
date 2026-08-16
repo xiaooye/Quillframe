@@ -123,7 +123,9 @@ Important boundaries:
 
 ## 07 · Model-readable semantic contracts
 
-Semantic work resolves exact contract IDs through the progressive-disclosure catalog. A job binds:
+Catalog authority: `harness/semantic_workers/model_contract_catalog.json`.
+
+Semantic work resolves exact contract IDs through that progressive-disclosure catalog. A job binds:
 
 - kind / subject / exact contract version;
 - bounded input/context;

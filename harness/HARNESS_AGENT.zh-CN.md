@@ -123,7 +123,9 @@ authority/session bootstrap
 
 ## 07 · Model-readable semantic contracts
 
-Semantic work 通过 progressive-disclosure catalog 精确解析 contract ID。Job 绑定：
+Catalog authority：`harness/semantic_workers/model_contract_catalog.json`。
+
+Semantic work 通过这个 progressive-disclosure catalog 精确解析 contract ID。Job 绑定：
 
 - kind / subject / exact contract version；
 - bounded input/context；
