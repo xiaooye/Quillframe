@@ -70,6 +70,8 @@ harness:
   memory_tiers: harness/memory_tiers.py
   memory_bank: harness/memory_bank.py
   scenario_fork: harness/scenario_fork.py
+  planning_horizon: harness/planning_horizon.py
+  planning_horizon_schema: harness/planning_horizon.schema.json
   settlement_runtime: harness/settlement_runtime.py
   property_write_policy: harness/property_write_policy.py
   property_write_policy_schema: harness/property_write_policy.schema.json
@@ -406,6 +408,8 @@ workflows:
   weekly_maintenance: .github/workflows/novelforge-weekly-maintenance.yml
   state_integrity_p0: .github/workflows/novelforge-state-integrity-p0.yml
   author_steering: .github/workflows/novelforge-author-steering.yml
+  planning_horizon: .github/workflows/novelforge-planning-horizon.yml
+  planning_horizon_semantic: .github/workflows/novelforge-planning-horizon-semantic.yml
   peer_chat:
     reusable_workflow: .github/workflows/novelforge-chat-semantic-bridge.yml
     composite_action: .github/actions/project-peer-semantic/action.yml
@@ -423,7 +427,7 @@ workflows:
 
 normal_ci:
   model_execution: forbidden
-  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, runtime-query-self-test, resume-preflight-self-test, resume-command-self-test, runtime-command-authorization-self-test, runtime-command-executor-self-test, context-inspector-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, property-write-policy-self-test, propagation-debt-self-test, state-integrity-cross-contract-self-test, author-steering-self-test, settlement-runtime-self-test, quality-finding-self-test, quality-taxonomy-self-test, repair-policy-self-test, production-readiness-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, registered-release-role-contract-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, semantic-acceptance-baseline-self-test, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
+  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, runtime-query-self-test, resume-preflight-self-test, resume-command-self-test, runtime-command-authorization-self-test, runtime-command-executor-self-test, context-inspector-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, planning-horizon-self-test, property-write-policy-self-test, propagation-debt-self-test, state-integrity-cross-contract-self-test, author-steering-self-test, settlement-runtime-self-test, quality-finding-self-test, quality-taxonomy-self-test, repair-policy-self-test, production-readiness-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, registered-release-role-contract-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, semantic-acceptance-baseline-self-test, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
 
 scheduled_maintenance:
   model_execution: forbidden
@@ -461,6 +465,13 @@ write_boundary:
   author_steering_grants_settlement_authority: false
   author_steering_followup_ops_auto_execute: false
   author_steering_consequential_write_interruptible: false
+  planning_horizon_result_grants_canon_authority: false
+  planning_horizon_result_grants_project_write_authority: false
+  planning_horizon_result_grants_framework_write_authority: false
+  planning_horizon_result_grants_settlement_authority: false
+  planning_horizon_transition_mutates_active_plan: false
+  planning_rebalance_frontier_auto_executes_reconcile: false
+  planning_rebalance_frontier_auto_creates_propagation_debt: false
   promotion_gate_result_grants_framework_write: false
   runtime_session_resume_grants_project_write_authority: false
   runtime_session_resume_grants_canon_authority: false
