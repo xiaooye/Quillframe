@@ -2,6 +2,16 @@ name: Product Godot Route Parity
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'site/godot/**'
+      - 'site/src/**'
+      - 'site/package.json'
+      - 'site/scripts/**'
+      - 'specs/004-novelforge-product-site/**'
+      - '.github/workflows/product-site.yml'
+      - '.github/workflows/product-site-browser-qa.yml'
+      - '.github/workflows/product-godot-route-parity.yml'
   push:
     branches: [main]
     paths:
@@ -70,9 +80,6 @@ jobs:
           CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser)
           test -n "$CHROME"
 
-          # Make the browser baseline deterministic too. WeiUI's checked-in
-          # Latin typography authority is Inter; CJK and decorative fallbacks
-          # use the exact same pinned files as the Godot production runtime.
           mkdir -p site/dist/parity-fonts
           cp site/godot/generated/Inter-opsz-wght.ttf site/dist/parity-fonts/
           cp site/godot/generated/NotoSansSC-wght.ttf site/dist/parity-fonts/
