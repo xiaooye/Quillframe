@@ -304,10 +304,14 @@ async function runPublication() {
   assertChanged("WEB artifact", before.publicationArtifact, after.publicationArtifact);
   hashes.push(await screenshot("behavior-publication-web-touch"));
 
-  const beforeRail = after;
+  await wheel(220);
+  const beforeRail = await waitFor("publication rail scroll setup", (s) => s.publicationProfile === "WEB" && Number(s.scrollY) > 0);
+  const railScrollBefore = Number(beforeRail.scrollY);
   await activateTarget("publicationRailTargets", "PublicationRailPRINT", "mouse");
-  after = await waitFor("publication PRINT rail", (s) => s.publicationProfile === "PRINT" && Number(s.interactionRevision) > Number(beforeRail.interactionRevision));
-  if (Number(after.scrollY) <= 0) throw new Error(`Publication rail rebuild lost scroll: ${JSON.stringify(after)}`);
+  after = await waitFor("publication PRINT rail", (s) => s.publicationProfile === "PRINT"
+    && Number(s.interactionRevision) > Number(beforeRail.interactionRevision)
+    && Math.abs(Number(s.scrollY) - railScrollBefore) <= 2);
+  if (Number(after.scrollY) <= 0) throw new Error(`Publication rail rebuild lost scroll: ${JSON.stringify({ railScrollBefore, after })}`);
   assertChanged("PRINT artifact", beforeRail.publicationArtifact, after.publicationArtifact);
   hashes.push(await screenshot("behavior-publication-print-rail"));
 
@@ -339,6 +343,8 @@ async function runPublication() {
     keyboardEnter: true,
     keyboardSpace: true,
     scrollPreserved: true,
+    scrollBeforeRail: railScrollBefore,
+    scrollAfterRail: Number(after.scrollY),
     shellStatePreserved: true,
     screenshotHashes: hashes,
   };
