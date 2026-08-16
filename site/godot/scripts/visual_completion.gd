@@ -65,6 +65,20 @@ func _build() -> void:
 	_set_dataset("novelforgeAccessibility", "ready")
 	_set_dataset("novelforgeVisualPolish", "ready")
 
+func _toggle_mobile_menu() -> void:
+	# The mobile menu is created after the route build, so apply the same native
+	# accessibility metadata and 44px target contract to its dynamic controls.
+	super._toggle_mobile_menu()
+	if _mobile_menu != null and is_instance_valid(_mobile_menu):
+		_apply_accessibility_metadata(_mobile_menu)
+
+func _render_command_palette() -> void:
+	# Command results are recreated as the query changes. Re-apply native names
+	# after every render without introducing polling or a parallel component tree.
+	super._render_command_palette()
+	if _command_overlay != null and is_instance_valid(_command_overlay):
+		_apply_accessibility_metadata(_command_overlay)
+
 func _apply_accessibility_metadata(node: Node) -> void:
 	# Godot 4.7 exposes native Control accessibility metadata. Populate it even
 	# though the Web shell also carries a DOM semantic companion, so native
@@ -76,7 +90,7 @@ func _apply_accessibility_metadata(node: Node) -> void:
 	if node is Button:
 		var button := node as Button
 		if _layout == "phone" and button.size.y < 44.0:
-			button.custom_minimum_size.y = 44.0
+			button.custom_minimum_size = Vector2(button.custom_minimum_size.x, 44.0)
 		if button.accessibility_name.is_empty():
 			button.accessibility_name = _accessible_button_name(button)
 	for child in node.get_children():
