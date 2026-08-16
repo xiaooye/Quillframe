@@ -11,7 +11,7 @@
 ```text
 resolve current/pinned Framework authority
 → validate Project + exact lock/fingerprint
-→ choose exactly one task_mode
+→ choose single task_mode
 → create/resume manager session + run
 → resolve authority cutoff + permissions
 → establish sparse mechanically eligible context candidates
@@ -39,7 +39,7 @@ freeze semantic subject
 
 模型负责 interpretation，runtime 负责 exact execution binding。
 
-Valid semantic reject 是结果，不是 infrastructure failure。
+有效的语义拒绝是结果，不是 infrastructure failure。
 
 ## 03 · DRAFT / REVISE
 
