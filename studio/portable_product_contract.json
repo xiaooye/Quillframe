@@ -18,10 +18,13 @@
     "novelforge_session_resume_preflight_v1",
     "novelforge_session_resume_command_v1",
     "novelforge_runtime_command_authorization_v1",
+    "novelforge_session_terminate_preflight_v1",
+    "novelforge_session_terminate_command_v1",
+    "novelforge_session_terminate_authorization_v1",
     "novelforge_runtime_command_receipt_v1",
     "novelforge_runtime_command_execution_result_v1",
     "novelforge_runtime_command_receipt_projection_v1",
-    "novelforge_context_inspector_v2",
+    "novelforge_context_inspector_v3",
     "novelforge_host_capabilities_v1",
     "novelforge_publication_ir_v1",
     "novelforge_publication_preview_projection_v1"
@@ -45,13 +48,16 @@
       "may_use_local_host_capabilities": true,
       "direct_browser_store_access": false,
       "session_resume_allowed": true,
-      "session_resume_requires_explicit_user_action": true
+      "session_resume_requires_explicit_user_action": true,
+      "session_terminate_allowed": true,
+      "session_terminate_requires_explicit_user_action": true
     },
     "cloud_ui": {
       "role": "hosted product UI",
       "transport": "remote query/command boundary",
       "hosting_changes_story_authority": false,
-      "session_resume_allowed": false
+      "session_resume_allowed": false,
+      "session_terminate_allowed": false
     },
     "agent_package": {
       "role": "read-only adapter for external agent frameworks",
@@ -82,16 +88,20 @@
       "run.receipt.get",
       "runtime.command.receipt.get",
       "session.resume.preflight",
-      "session.resume"
+      "session.resume",
+      "session.terminate.preflight",
+      "session.terminate"
     ],
     "deferred_operations": [
       "command.invoke",
-      "project.mutate"
+      "project.mutate",
+      "publication.build"
     ],
     "core_dependency": "#23",
     "mutation_exposed": true,
-    "mutation_scope": "runtime_session_state_only",
+    "mutation_scopes": ["runtime_session_state", "runtime_active_run_state"],
     "mutation_surface": "local_app_only",
+    "mutation_requires_operation_specific_contract": true,
     "mutation_requires_explicit_authorization": true,
     "mutation_requires_fresh_preflight": true,
     "mutation_requires_compare_and_swap": true,
@@ -111,6 +121,10 @@
     "resume_command_tool": "harness/session_runtime/resume_command.py",
     "command_authorization_tool": "harness/session_runtime/runtime_command_authorization.py",
     "command_executor_tool": "harness/session_runtime/runtime_command_executor.py",
+    "terminate_preflight_tool": "harness/session_runtime/terminate_preflight.py",
+    "terminate_command_tool": "harness/session_runtime/terminate_command.py",
+    "terminate_authorization_tool": "harness/session_runtime/terminate_authorization.py",
+    "terminate_executor_tool": "harness/session_runtime/terminate_executor.py",
     "query_side_effect_free": true,
     "sqlite_consumer_contract": false,
     "provider_session_identifiers_exposed": false,
@@ -127,6 +141,19 @@
     "session_resume_canon_write": false,
     "session_resume_framework_write": false,
     "session_resume_settlement": false,
+    "terminate_preflight_exposed": true,
+    "session_terminate_exposed": true,
+    "session_terminate_surface": "local_app_only",
+    "session_terminate_requires_explicit_user_authorization": true,
+    "session_terminate_requires_fresh_preflight": true,
+    "session_terminate_requires_exact_before_state_cas": true,
+    "session_terminate_requires_idempotent_durable_receipt": true,
+    "session_terminate_closes_active_run": true,
+    "session_terminate_model_execution": false,
+    "session_terminate_project_write": false,
+    "session_terminate_canon_write": false,
+    "session_terminate_framework_write": false,
+    "session_terminate_settlement": false,
     "checkpoint_replay_exposed": false,
     "handoff_mutation_exposed": false,
     "run_receipts_are_metadata_only": true,
@@ -155,6 +182,7 @@
     "private_persistence_knowledge_required": false,
     "runtime_mutation_allowed": false,
     "session_resume_is_local_app_only": true,
+    "session_terminate_is_local_app_only": true,
     "future_write_requirement": "each additional mutation needs its own typed Core command plus explicit preconditions, authority policy, CAS/idempotency and durable receipts"
   },
   "project_hub_projection": {

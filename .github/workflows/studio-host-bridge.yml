@@ -30,6 +30,10 @@ jobs:
             harness/session_runtime/resume_command.py \
             harness/session_runtime/runtime_command_authorization.py \
             harness/session_runtime/runtime_command_executor.py \
+            harness/session_runtime/terminate_preflight.py \
+            harness/session_runtime/terminate_command.py \
+            harness/session_runtime/terminate_authorization.py \
+            harness/session_runtime/terminate_executor.py \
             agent-skills/novelforge/scripts/novelforge_bridge.py
 
       - name: Publication preview projection self-test
@@ -85,6 +89,21 @@ jobs:
           assert result['authority'] is False and result['model_execution'] is False
           PY
 
+      - name: Terminate preflight self-test
+        run: |
+          python harness/session_runtime/terminate_preflight.py self-test > terminate-preflight-test.json
+          cat terminate-preflight-test.json
+          python - <<'PY'
+          import json
+          result=json.load(open('terminate-preflight-test.json',encoding='utf-8'))
+          assert result['session_terminate_preflight_contract']=='PASS',result
+          assert result['ready_case'] is True
+          assert result['stale_version_blocked'] is True
+          assert result['terminal_session_blocked'] is True
+          assert result['mutation_performed'] is False
+          assert result['authority'] is False and result['model_execution'] is False
+          PY
+
       - name: Runtime command executor self-test
         run: |
           python harness/session_runtime/runtime_command_executor.py self-test > runtime-command-test.json
@@ -94,6 +113,24 @@ jobs:
           result=json.load(open('runtime-command-test.json',encoding='utf-8'))
           assert result['runtime_command_executor_contract']=='PASS',result
           assert result['resume_applied'] is True
+          assert result['cas_version_advanced_once'] is True
+          assert result['denied_did_not_mutate'] is True
+          assert result['idempotent_retry_replayed_receipt'] is True
+          assert result['conflicting_retry_rejected'] is True
+          assert result['durable_receipt_query'] is True
+          assert result['authority'] is False and result['model_execution'] is False
+          PY
+
+      - name: Session terminate executor self-test
+        run: |
+          python harness/session_runtime/terminate_executor.py self-test > terminate-executor-test.json
+          cat terminate-executor-test.json
+          python - <<'PY'
+          import json
+          result=json.load(open('terminate-executor-test.json',encoding='utf-8'))
+          assert result['session_terminate_executor_contract']=='PASS',result
+          assert result['terminate_applied'] is True
+          assert result['active_run_closed'] is True
           assert result['cas_version_advanced_once'] is True
           assert result['denied_did_not_mutate'] is True
           assert result['idempotent_retry_replayed_receipt'] is True
@@ -122,6 +159,8 @@ jobs:
               'runtime.command.receipt.get',
               'session.resume.preflight',
               'session.resume',
+              'session.terminate.preflight',
+              'session.terminate',
           }
           setup_actions={'init','session-put','event-ingest','handoff-submit'}
           query_trace=[]
@@ -190,21 +229,29 @@ jobs:
               'run.receipt.get',
               'runtime.command.receipt.get',
               'session.resume.preflight',
+              'session.terminate.preflight',
           }
           supported=set(contract['operations']['supported'])
           deferred=set(contract['operations']['deferred'])
           resume=contract['operations']['supported']['session.resume']
+          terminate=contract['operations']['supported']['session.terminate']
           assert bridge['studio_host_bridge_contract']=='PASS',bridge
           assert bridge['checks']['runtime_queries_supported'] is True,bridge
           assert bridge['checks']['runtime_projection_safe'] is True,bridge
           assert bridge['checks']['resume_preflight_query_safe'] is True,bridge
           assert bridge['checks']['resume_command_safe'] is True,bridge
+          assert bridge['checks']['terminate_preflight_query_safe'] is True,bridge
+          assert bridge['checks']['terminate_command_safe'] is True,bridge
           assert bridge['checks']['runtime_command_receipt_safe'] is True,bridge
           assert bridge['checks']['publication_preview_query_safe'] is True,bridge
           assert skill['novelforge_agent_skill_contract']=='PASS',skill
           assert skill['checks']['resume_preflight_supported'] is True,skill
           assert skill['checks']['resume_command_advertised'] is True,skill
           assert skill['checks']['resume_local_app_only'] is True,skill
+          assert skill['checks']['terminate_preflight_supported'] is True,skill
+          assert skill['checks']['terminate_command_advertised'] is True,skill
+          assert skill['checks']['terminate_local_app_only'] is True,skill
+          assert skill['checks']['agent_package_remains_read_only'] is True,skill
           assert skill['runtime_mutation_allowed'] is False,skill
           assert query['schema']=='novelforge_studio_host_bridge_result_v1',query
           assert query['operation']=='semantic.catalog' and query['status']=='ok',query
@@ -212,7 +259,8 @@ jobs:
           assert query['framework_write_authority'] is False and query['settlement_authority'] is False
           assert query['request_fingerprint'].startswith('sha256:') and query['result_fingerprint'].startswith('sha256:')
           assert contract['authority'] is False and contract['invariants']['mutation_exposed'] is True
-          assert contract['invariants']['mutation_scope']=='runtime_session_state_only'
+          assert set(contract['invariants']['mutation_scopes'])=={'runtime_session_state','runtime_active_run_state'}
+          assert contract['invariants']['mutation_requires_operation_specific_contract'] is True
           assert contract['invariants']['mutation_requires_explicit_authorization'] is True
           assert contract['invariants']['mutation_requires_fresh_preflight'] is True
           assert contract['invariants']['mutation_requires_compare_and_swap'] is True
@@ -225,10 +273,18 @@ jobs:
           assert resume['mutation_scope']=='runtime_session_state_only'
           assert resume['model_execution'] is False and resume['project_write'] is False
           assert resume['canon_write'] is False and resume['framework_write'] is False and resume['settlement'] is False
+          assert 'session.terminate' in supported and 'session.terminate' not in deferred
+          assert terminate['kind']=='command' and terminate['allowed_surfaces']==['local_app']
+          assert terminate['mutation_scope']=='runtime_session_and_active_run_state_only'
+          assert terminate['model_execution'] is False and terminate['project_write'] is False
+          assert terminate['canon_write'] is False and terminate['framework_write'] is False and terminate['settlement'] is False
           assert 'command.invoke' not in supported and 'command.invoke' in deferred
+          assert set(portable['phase_2b_host_bridge']['supported_operations'])==supported
+          assert set(portable['phase_2b_host_bridge']['deferred_operations'])==deferred
           assert portable['phase_2b_host_bridge']['mutation_exposed'] is True
-          assert portable['phase_2b_host_bridge']['mutation_scope']=='runtime_session_state_only'
+          assert set(portable['phase_2b_host_bridge']['mutation_scopes'])=={'runtime_session_state','runtime_active_run_state'}
           assert portable['phase_2b_host_bridge']['mutation_surface']=='local_app_only'
+          assert portable['phase_2b_host_bridge']['mutation_requires_operation_specific_contract'] is True
           assert portable['publication_preview']['temporary_build_only'] is True
           assert portable['publication_preview']['source_authority_invented'] is False
           assert portable['runtime_observability']['query_side_effect_free'] is True
@@ -241,8 +297,19 @@ jobs:
           assert portable['runtime_observability']['session_resume_requires_exact_before_state_cas'] is True
           assert portable['runtime_observability']['session_resume_requires_idempotent_durable_receipt'] is True
           assert portable['runtime_observability']['session_resume_model_execution'] is False
+          assert portable['runtime_observability']['terminate_preflight_exposed'] is True
+          assert portable['runtime_observability']['session_terminate_exposed'] is True
+          assert portable['runtime_observability']['session_terminate_surface']=='local_app_only'
+          assert portable['runtime_observability']['session_terminate_requires_explicit_user_authorization'] is True
+          assert portable['runtime_observability']['session_terminate_requires_fresh_preflight'] is True
+          assert portable['runtime_observability']['session_terminate_requires_exact_before_state_cas'] is True
+          assert portable['runtime_observability']['session_terminate_requires_idempotent_durable_receipt'] is True
+          assert portable['runtime_observability']['session_terminate_closes_active_run'] is True
+          assert portable['runtime_observability']['session_terminate_model_execution'] is False
           assert portable['agent_package_direction']['private_runtime_imports_required'] is False
           assert portable['agent_package_direction']['runtime_mutation_allowed'] is False
+          assert portable['agent_package_direction']['session_resume_is_local_app_only'] is True
+          assert portable['agent_package_direction']['session_terminate_is_local_app_only'] is True
           PY
 
       # Repository-wide hygiene remains a gate, but it must not prevent the
