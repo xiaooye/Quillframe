@@ -1,0 +1,203 @@
+{
+  "schema": "novelforge_model_contract_registry_v1",
+  "version": "1",
+  "principle": "Production-loop semantics belong to bounded model contracts. Private character state may drive simulation but must be projected into writer-safe realization state before prose; user feedback may propose scoped learning but never grants durable authority by model inference alone.",
+  "contracts": {
+    "learning.preference_interpret": {
+      "kind": "artifact_audit",
+      "purpose": "Interpret explicit user review feedback into the narrowest evidence-backed preference/repair hypothesis without silently turning one comment into durable taste or General Craft.",
+      "forbidden_input_keys": ["user_biography", "private_profile", "hidden_memory", "framework_promotion_target", "expected_scope"],
+      "input_contract": {
+        "type": "object",
+        "required": ["feedback_ref", "feedback_text", "current_task"],
+        "properties": {
+          "feedback_ref": {"type": "string", "minLength": 1},
+          "feedback_text": {"type": "string", "minLength": 1, "maxLength": 12000},
+          "current_task": {"type": "object"},
+          "project_profile": {"type": "object"},
+          "active_author_model": {"type": "object"},
+          "candidate_excerpt": {"type": "string", "maxLength": 12000}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Treat the supplied user feedback as primary evidence. Do not infer biography, identity, stable taste, or a universal craft rule beyond what the feedback supports.",
+        "Separate the immediate repair request from any proposed future preference. Choose the narrowest plausible scope: one_off, project, user_taste, or general_craft.",
+        "Prefer mechanism descriptions over literal surface commands. For example, repeated rejection of one-sentence paragraph defaultization may support functional paragraphing rather than a universal long-paragraph rule.",
+        "Identify desired behavior, avoided behavior, and exceptions/boundaries when the feedback supports them. Lower confidence when persistence across future work is ambiguous.",
+        "If the new feedback contradicts an active hypothesis supplied in active_author_model, name that hypothesis id; do not silently accumulate incompatible rules.",
+        "This contract proposes evidence only. It cannot activate Project preference, durable user taste, or General Craft."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["scope_candidate", "dimension", "mechanism", "statement", "polarity", "confidence", "evidence_source", "desired_behavior", "avoid_behavior", "exceptions", "contradicts_hypothesis_ids"],
+        "properties": {
+          "scope_candidate": {"enum": ["one_off", "project", "user_taste", "general_craft"]},
+          "dimension": {"type": "string", "minLength": 1},
+          "mechanism": {"type": "string", "minLength": 1},
+          "statement": {"type": "string", "minLength": 1},
+          "observed_problem": {"type": ["string", "null"]},
+          "polarity": {"enum": ["positive", "negative", "mixed"]},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "evidence_source": {"enum": ["explicit_rule", "user_edit", "rejection", "acceptance", "repeated_pattern", "human_review"]},
+          "desired_behavior": {"type": "array", "items": {"type": "string"}},
+          "avoid_behavior": {"type": "array", "items": {"type": "string"}},
+          "exceptions": {"type": "array", "items": {"type": "string"}},
+          "applicability": {"type": "object"},
+          "contradicts_hypothesis_ids": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "preference_observation_proposal"},
+      "independent_gate": false
+    },
+    "scene.realization_project": {
+      "kind": "artifact_audit",
+      "purpose": "Project private character/action and resolved scene simulation into writer-safe observable interaction state before prose realization, preventing character-sheet fields from becoming prose payload.",
+      "input_contract": {
+        "type": "object",
+        "required": ["scene_id", "resolved_trajectory", "character_action_evidence", "pov_boundary"],
+        "properties": {
+          "scene_id": {"type": "string", "minLength": 1},
+          "resolved_trajectory": {"type": "object"},
+          "character_action_evidence": {"type": "array", "items": {"type": "object"}},
+          "pov_boundary": {"type": "object"},
+          "relationship_context": {"type": "object"},
+          "task_context": {"type": "object"},
+          "project_profile": {"type": "object"}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Use private character state only as causal control evidence. Do not copy active agenda, goals, fears, unacceptable costs, knowledge inventories, or scene-design explanation into writer-facing payload fields.",
+        "For each event/turn opportunity, project what can actually be realized: observable action, immediate tactic, addressee/listener, assumed shared context, what is costly to say plainly, what is withheld/compressed, task/object carrier, turn pressure, and any POV-permitted inner state.",
+        "Agenda drives behavior; agenda is not dialogue. Do not draft final dialogue lines or narrator exposition.",
+        "Represent formal completeness only when the speech act itself requires it: testimony, briefing, instruction, risk explanation, record-making, explicit full-account request, or equivalent supplied task pressure.",
+        "Preserve interaction emergence: another character may interrupt, misunderstand, refuse, redirect, act, or impose cost. A projection should expose those pressures rather than pre-solving the exchange.",
+        "Return writer-safe realization state only. No Canon write and no final prose."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "scene_id", "events"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "scene_id": {"type": "string", "minLength": 1},
+          "events": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["event_ref", "observable_action", "immediate_tactic", "assumed_shared_context", "costly_to_say_plainly", "withheld_or_compressed", "turn_pressure"],
+              "properties": {
+                "event_ref": {"type": "string", "minLength": 1},
+                "observable_action": {"type": "string", "minLength": 1},
+                "addressee": {"type": ["string", "null"]},
+                "immediate_tactic": {"type": "string", "minLength": 1},
+                "assumed_shared_context": {"type": "array", "items": {"type": "string"}},
+                "costly_to_say_plainly": {"type": "array", "items": {"type": "string"}},
+                "withheld_or_compressed": {"type": "array", "items": {"type": "string"}},
+                "task_or_object_carrier": {"type": ["string", "null"]},
+                "turn_pressure": {"type": "string"},
+                "formal_completeness_reason": {"type": ["string", "null"]},
+                "permitted_inner_state": {"type": ["string", "null"]},
+                "dialogue_function": {"type": ["string", "null"]}
+              },
+              "additionalProperties": false
+            }
+          },
+          "unresolved_interaction_pressures": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "writer_safe_realization_projection"},
+      "independent_gate": false
+    },
+    "reader.production_audit": {
+      "kind": "external_review",
+      "purpose": "Holistic production-loop Reader assessment covering actual reading experience, profile fit, prose rhythm and dialogue realization before an Editor chooses repair depth.",
+      "forbidden_input_keys": ["outline", "active_plan", "scene_card", "author_notes", "author_intent", "hidden_intent", "future_plan", "writer_reasoning", "private_character_state", "character_action_evidence", "reviewer_verdict", "prior_review"],
+      "input_contract": {
+        "type": "object",
+        "required": ["candidate_fingerprint", "candidate_text"],
+        "properties": {
+          "candidate_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
+          "candidate_text": {"type": "string", "minLength": 1},
+          "reader_visible_context": {"type": "array", "items": {"type": "object"}},
+          "genre_profile": {"type": "string"},
+          "platform_profile": {"type": "string"},
+          "prose_profile": {"type": "object"},
+          "telemetry": {"type": "object"}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Read the candidate holistically before checking dimensions. Do not rescue it with creator-private intent or future payoff.",
+        "Judge reader pull, reward, relationship/character energy, information movement, procedural drag, human voice, paragraph rhythm, platform/profile fit, and dialogue liveness from observable text.",
+        "Telemetry is suspicion evidence only. One-sentence paragraphs, fragments, long sentences, short sentences, or dialogue density are not universal failures; judge whether the pattern serves local paragraph function and the supplied profile.",
+        "Test Agenda-to-Dialogue Leakage (HF-30): can major dialogue be near-losslessly reverse-mapped to private-looking goals/risks/responsibilities/context, with repeated over-completeness across speakers and weak interaction-conditioned omission? Flag only from candidate evidence.",
+        "Do not flag complete formal speech merely because it is long or explicit. Ask whether audience need, speech-act mandate, or omission cost motivates completeness.",
+        "SAFE-BUT-FLAT remains blocking when the chapter is technically clean but lacks meaningful causal/reward/relationship energy."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "result", "reader_pull", "paragraph_rhythm", "platform_fit", "commercial_pull", "dialogue_liveness", "agenda_serialization_risk", "flatness_risk", "codes", "evidence"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "result": {"enum": ["pass", "fail"]},
+          "reader_pull": {"type": "string"},
+          "paragraph_rhythm": {"type": "string"},
+          "platform_fit": {"type": "string"},
+          "commercial_pull": {"type": "string"},
+          "dialogue_liveness": {"type": "string"},
+          "agenda_serialization_risk": {"enum": ["low", "medium", "high", "blocking"]},
+          "flatness_risk": {"enum": ["low", "medium", "high", "blocking"]},
+          "codes": {"type": "array", "items": {"type": "string"}},
+          "evidence": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "production_reader_observation"},
+      "independent_gate": false
+    },
+    "editor.repair_spec": {
+      "kind": "artifact_audit",
+      "purpose": "Convert a bounded Reader/quality assessment into a repair specification without drafting replacement prose or assuming every revision is an improvement.",
+      "input_contract": {
+        "type": "object",
+        "required": ["candidate_fingerprint", "reader_assessment"],
+        "properties": {
+          "candidate_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
+          "reader_assessment": {"type": "object"},
+          "current_repair_goal": {"type": ["string", "null"]},
+          "project_profile": {"type": "object"},
+          "author_model_projection": {"type": "object"}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Translate evidence into the smallest repair that addresses the owning mechanism. Do not perform the rewrite.",
+        "Separate preserve constraints from change targets so a repair does not destroy already-working story/voice/relationship effects.",
+        "Route scene/character/reader-pressure failures upstream rather than prescribing surface patches. Route isolated surface defects locally.",
+        "If the repair is broad enough to change whole-scene realization, reader grip, commercial voice, paragraph rhythm, or dialogue embodiment, require incumbent/challenger comparison unless supplied policy explicitly exempts it.",
+        "Do not activate Author Model preferences or mutate Canon."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "preserve", "change", "repair_owner", "repair_depth", "comparison_required", "reason"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "preserve": {"type": "array", "items": {"type": "string"}},
+          "change": {"type": "array", "items": {"type": "string"}},
+          "repair_owner": {"enum": ["story", "plan", "scene", "character", "reader_pressure", "surface", "continuity", "context", "research", "runtime", "human"]},
+          "repair_depth": {"enum": ["local", "paragraph", "exchange", "scene", "chapter", "upstream"]},
+          "comparison_required": {"type": "boolean"},
+          "invalidate_artifact_classes": {"type": "array", "items": {"type": "string"}},
+          "reason": {"type": "string"}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "repair_specification"},
+      "independent_gate": false
+    }
+  }
+}
