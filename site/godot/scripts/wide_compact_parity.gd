@@ -20,6 +20,11 @@ func _build_product_compact() -> void:
 	var hero_y := 112.0
 	var hero_h := 570.0
 	_build_product_hero(Vector2(page_x, hero_y), Vector2(page_width, hero_h), false)
+	var hero := _find_stage_panel(hero_y, 500.0)
+	if hero != null:
+		var visual_x := hero.size.x * 0.55
+		_fit_wide_compact_title(hero, ["NovelForge is a\nfiction production", "NovelForge 是小说生产系统"], visual_x, 28.0)
+		_fit_wide_compact_lede(hero, ["It separates creative judgment", "它把创作判断与确定性控制分开"], visual_x, 28.0, 150.0)
 	_build_product_cards(Vector2(page_x, hero_y + hero_h + 32.0), page_width, false)
 
 func _patch_studio_compact() -> void:
@@ -144,6 +149,7 @@ func _fit_wide_compact_title(hero: Control, prefixes: Array, visual_x: float, ga
 		return
 	var available := maxf(visual_x - title.position.x - gap, 260.0)
 	title.size.x = minf(title.size.x, available)
+	title.scale = Vector2.ONE
 	title.add_theme_font_size_override("font_size", WIDE_COMPACT_H1_SIZE_EN if _locale == "en-US" else WIDE_COMPACT_H1_SIZE_ZH)
 	title.add_theme_constant_override("line_spacing", -17 if _locale == "en-US" else -7)
 
