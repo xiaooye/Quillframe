@@ -1,0 +1,19 @@
+{
+  "schema": "novelforge_godot_glyph_policy_v1",
+  "text_symbols": ["✦", "♡", "✓", "◇", "→", "↗", "⌘", "◐", "☼", "○", "▤", "⌕", "▷", "◈", "⌂", "◉", "●", "✧", "−"],
+  "asset_backed_source_emoji": {
+    "🎀": "res://assets/ribbon.svg",
+    "🫧": "res://assets/context-bubbles.svg",
+    "🧠": "res://assets/character-brain.svg",
+    "📖": "res://assets/publication-book.svg",
+    "📚": "res://assets/books-stack.svg"
+  },
+  "symbol_sanitized_source_emoji": {
+    "✨": "✦",
+    "🧵": "✦",
+    "🌸": "✦",
+    "🛠": "⌘"
+  },
+  "web_system_emoji_fallback": false,
+  "runtime_marker": "novelforgeGlyphAudit"
+}
