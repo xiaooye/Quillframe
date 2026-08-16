@@ -114,6 +114,19 @@ jobs:
           python harness/session_runtime/terminate_authorization.py self-test
           python harness/session_runtime/terminate_executor.py self-test
 
+  semantic-eval-execution-identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile semantic eval execution identity
+        run: python -m py_compile evals/evaluation_execution_identity.py
+      - name: Deterministic semantic eval execution identity contract
+        run: python evals/evaluation_execution_identity.py self-test
+
   documentation-quality:
     runs-on: ubuntu-latest
     timeout-minutes: 10
