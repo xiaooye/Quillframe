@@ -1,0 +1,138 @@
+name: Temporary prune stale non-Godot branches
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/tmp-prune-stale-non-godot-branches.yml
+
+permissions:
+  contents: write
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete audited stale refs only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          repo = os.environ['REPO']
+          token = os.environ['GH_TOKEN']
+
+          keep = {
+              'main',
+              'agent/planning-commitment-horizon',
+              'godot-visual-next',
+              'ui/kawaii-godot-restore',
+          }
+
+          stale = [
+              'agent/author-steering-runtime',
+              'agent/author-steering-runtime-v2',
+              'agent/creative-decision-provenance',
+              'agent/docs-manifest-v3-v4',
+              'agent/docs-rebuild-7-3',
+              'agent/product-site-doc-manifest-fix',
+              'agent/progress-stall-runtime',
+              'agent/proprietary-license',
+              'agent/state-integrity-p0',
+              'agent/studio-live-403-probe',
+              'agent/studio-phase1-inspector',
+              'agent/studio-phase2a-saas-hub',
+              'agent/studio-phase2b-host-bridge',
+              'agent/studio-phase2c-solid-shell',
+              'agent/studio-phase2d-cloud-host',
+              'agent/studio-phase2d-postmerge-fix',
+              'agent/studio-solid-doc-reconcile',
+              'agent/studio-weiui-story-loom-v2',
+              'agent/8-0-batch2-machine-contract',
+              'agent/8-0-batch3-temporal-grounding',
+              'agent/8-0-batch4-character-epistemic',
+              'agent/8-0-batch5-long-horizon',
+              'agent/8-0-batch67-quality-publication',
+              'agent/8-0-bundle-completeness',
+              'agent/8-0-semantic-acceptance',
+              'agent/8-0-semantic-acceptance-freeze',
+              'agent/8-0-semantic-contract-repair',
+              'backup/008-story-workspace-pre-rebase',
+              'backup/008-story-workspace-pre-second-rebase',
+              'backup/008-story-workspace-pre-third-rebase',
+              'feature/008-story-workspace',
+              'runtime/resume-executor',
+              'system-improve/framework-write-permission',
+              'system-improve/framework-write-permission-v2',
+              'system-improve/framework-write-permission-v3',
+              'system-improve/novelforge-machine-namespace',
+              'system-improve/run-receipts',
+              'system-improve/task-aware-grounding',
+              'system-improve/temporal-context-visibility',
+              'test/base-novelforge-5554',
+              'test/exact-5554-peer-runtime',
+              'test/public-peer-runtime-issue-57',
+          ]
+
+          assert len(stale) == 42, len(stale)
+          assert not (keep & set(stale)), keep & set(stale)
+
+          headers = {
+              'Authorization': f'Bearer {token}',
+              'Accept': 'application/vnd.github+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'novelforge-branch-cleanup',
+          }
+
+          def request(url, method='GET'):
+              req = urllib.request.Request(url, headers=headers, method=method)
+              try:
+                  with urllib.request.urlopen(req) as resp:
+                      body = resp.read()
+                      return resp.status, json.loads(body) if body else None
+              except urllib.error.HTTPError as exc:
+                  body = exc.read().decode('utf-8', 'replace')
+                  if exc.code == 404:
+                      return 404, None
+                  raise RuntimeError(f'{method} {url} -> {exc.code}: {body}') from exc
+
+          def list_branches():
+              status, data = request(f'https://api.github.com/repos/{repo}/branches?per_page=100')
+              assert status == 200
+              return {item['name'] for item in data}
+
+          before = list_branches()
+          missing_keep = keep - before
+          if missing_keep:
+              raise SystemExit(f'protected keep refs unexpectedly missing before cleanup: {sorted(missing_keep)}')
+
+          for branch in stale:
+              if branch not in before:
+                  print(f'ALREADY_ABSENT {branch}')
+                  continue
+              encoded = urllib.parse.quote(branch, safe='')
+              status, _ = request(
+                  f'https://api.github.com/repos/{repo}/git/refs/heads/{encoded}',
+                  method='DELETE',
+              )
+              if status not in (204, 404):
+                  raise SystemExit(f'unexpected delete status {status} for {branch}')
+              print(f'DELETED {branch}')
+
+          after = list_branches()
+          survivors = sorted(set(stale) & after)
+          if survivors:
+              raise SystemExit(f'stale refs survived cleanup: {survivors}')
+          missing_keep = keep - after
+          if missing_keep:
+              raise SystemExit(f'protected keep refs missing after cleanup: {sorted(missing_keep)}')
+
+          print('BRANCH_CLEANUP_PASS')
+          print('remaining protected refs:', sorted(keep))
+          PY
