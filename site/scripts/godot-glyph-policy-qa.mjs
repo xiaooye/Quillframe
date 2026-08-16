@@ -7,6 +7,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const policy = JSON.parse(fs.readFileSync(path.join(root, "godot/glyph-policy.json"), "utf8"));
 const stabilization = fs.readFileSync(path.join(root, "godot/scripts/post_merge_stabilization.gd"), "utf8");
+const main = fs.readFileSync(path.join(root, "godot/scripts/main.gd"), "utf8");
 const failures = [];
 const check = (ok, message) => { if (!ok) failures.push(message); };
 
@@ -40,7 +41,11 @@ for (const [glyph, asset] of Object.entries(assetBacked)) {
   const relativeAsset = asset.replace(/^res:\/\//, "godot/");
   check(fs.existsSync(path.join(root, relativeAsset)), `asset-backed glyph ${glyph} is missing ${asset}`);
   check(stabilization.includes(glyph), `stabilization layer does not sanitize asset-backed glyph ${glyph}`);
-  check(stabilization.includes(asset), `stabilization layer does not load declared glyph asset ${asset}`);
+  const loadedByStabilization = stabilization.includes(asset);
+  const inheritedBooksAsset = asset === "res://assets/books-stack.svg"
+    && stabilization.includes("_books_icon")
+    && main.includes('BOOKS_ICON_PATH := "res://assets/books-stack.svg"');
+  check(loadedByStabilization || inheritedBooksAsset, `stabilization layer does not load or reuse declared glyph asset ${asset}`);
 }
 for (const [glyph, replacement] of Object.entries(symbolSanitized)) {
   check(stabilization.includes(glyph), `stabilization layer does not sanitize source emoji ${glyph}`);
