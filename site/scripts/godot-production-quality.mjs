@@ -17,12 +17,17 @@ const completionCore = read("godot/scripts/visual_completion_core.gd");
 const completion = read("godot/scripts/visual_completion.gd");
 const wideCompact = read("godot/scripts/wide_compact_parity.gd");
 const responsiveCompletion = read("godot/scripts/responsive_completion.gd");
+const stabilization = read("godot/scripts/post_merge_stabilization.gd");
+const routeBehavior = read("godot/scripts/route_behavior_completion.gd");
+const templateBuilder = read("scripts/build-godot-web-template.sh");
 const build = read("scripts/build-godot-web.sh");
 const exporter = read("scripts/build-godot-shadow.sh");
 const redirects = read("public/_redirects");
 const docsConfig = read("docs-site/astro.config.mjs");
 
-check(scene.includes('path="res://scripts/responsive_completion.gd"'), "production scene must enter through the final responsive completion layer");
+check(scene.includes('path="res://scripts/route_behavior_completion.gd"'), "production scene must enter through the final route behavior completion layer");
+check(routeBehavior.includes('extends "res://scripts/post_merge_stabilization.gd"'), "route behavior completion must remain a thin layer above post-merge stabilization");
+check(stabilization.includes('extends "res://scripts/responsive_completion.gd"'), "post-merge stabilization must remain a thin layer above responsive completion");
 check(responsiveCompletion.includes('extends "res://scripts/wide_compact_parity.gd"'), "responsive completion must remain a thin layer above wide-compact parity");
 check(wideCompact.includes('extends "res://scripts/visual_completion.gd"'), "wide-compact parity must remain a thin layer above visual completion");
 check(wideCompact.includes("SOLID_HOME_STACK_MAX_WIDTH := 980.0"), "final responsive layer must preserve Solid's independent 980px Home stack breakpoint");
@@ -33,6 +38,9 @@ check(responsiveCompletion.includes("SOLID_SHELL_COMPACT_MAX_WIDTH := 980.0"), "
 check(responsiveCompletion.includes("SOLID_CARD_TWO_COLUMN_MAX_WIDTH := 1120.0"), "Product compact proof cards must preserve Solid's 1120px two-column breakpoint");
 check(responsiveCompletion.includes("SOLID_CARD_SINGLE_COLUMN_MAX_WIDTH := 760.0"), "Product proof cards must preserve Solid's 760px single-column breakpoint");
 check(responsiveCompletion.includes("_build_product_cards_adaptive") && responsiveCompletion.includes("_build_header"), "final responsive layer must own adaptive Product cards and compact shell topology");
+check(stabilization.includes("SOLID_PAGE_MAX := 1480.0") && stabilization.includes("_apply_solid_wide_page_contract"), "post-merge stabilization must preserve Solid's bounded 1480px wide-desktop page contract");
+check(routeBehavior.includes("TextEdit.new") && routeBehavior.includes("_sync_playground_action_controls"), "final route layer must preserve reactive Local Playground working-text controls");
+check(!templateBuilder.includes("disable_advanced_gui=yes") && templateBuilder.includes("text_edit=true"), "production slim Web template must support the TextEdit control used by the final route layer");
 check(completion.includes('extends "res://scripts/visual_completion_core.gd"'), "production polish layer must preserve the complete product surface beneath it");
 check(completionCore.includes('extends "res://scripts/interaction_parity.gd"'), "visual-completion core must preserve the validated interaction runtime beneath it");
 check(shell.includes('data-novelforge-runtime="loading"'), "production shell runtime marker missing");
@@ -84,7 +92,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_production_quality_v10",
+    schema: "novelforge_godot_production_quality_v11",
     status: "pass",
     production_cutover: true,
     product_runtime: "godot_web",
@@ -94,11 +102,15 @@ if (failures.length) {
     visual_completion: true,
     final_wide_compact_parity: true,
     final_responsive_completion: true,
+    post_merge_stabilization: true,
+    final_route_behavior_completion: true,
+    production_text_edit_capability: true,
     solid_home_stack_breakpoint: 980,
     solid_shell_compact_breakpoint: 980,
     solid_hero_stack_breakpoint: 900,
     solid_product_card_two_column_breakpoint: 1120,
     solid_product_card_single_column_breakpoint: 760,
+    solid_wide_page_max_px: 1480,
     narrow_compact_h1_px: 36,
     compact_wrap_contract: "godot_4_7_custom_maximum_size",
     screenshot_driven_polish: true,
