@@ -10,7 +10,9 @@ fetch_and_verify() {
   local output="$2"
   local expected="$3"
   if [ ! -s "${output}" ]; then
-    curl --fail --location --silent --show-error "${url}" --output "${output}.tmp"
+    curl --fail --location --silent --show-error \
+      --retry 4 --retry-all-errors --retry-delay 1 \
+      "${url}" --output "${output}.tmp"
     mv "${output}.tmp" "${output}"
   fi
   local actual
