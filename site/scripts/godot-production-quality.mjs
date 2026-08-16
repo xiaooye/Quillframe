@@ -31,6 +31,22 @@ check(interaction.includes("novelforgeInteraction"), "production interaction rea
 check(completionCore.includes("novelforgeVisualCompletion"), "production visual-completion readiness marker missing");
 check(completion.includes("novelforgeVisualPolish"), "production screenshot-polish readiness marker missing");
 check(completionCore.includes("novelforgeHomeSections") && completionCore.includes("novelforgePublicationPreview") && completionCore.includes("novelforgeArchitectureInspector"), "production must publish route-body completeness markers");
+
+// Godot Web does not expose the native desktop screen-reader bridge, so the
+// shell must carry a semantic companion while native Control metadata remains
+// populated for supported exports. These checks intentionally validate product
+// behavior rather than a particular DOM hierarchy.
+check(completion.includes("accessibility_name") && completion.includes("accessibility_description"), "native Godot accessibility metadata missing");
+check(completion.includes("novelforgeAccessibility"), "Godot accessibility readiness marker missing");
+check(shell.includes('aria-label="NovelForge primary navigation"'), "Web semantic primary navigation missing");
+check(shell.includes('id="nf-a11y-main"'), "Web semantic main region missing");
+check(shell.includes('aria-label="NovelForge Story Loom product interface"'), "canvas accessible name missing");
+check(shell.includes('class="nf-skip"'), "visible-on-focus skip link missing");
+check(shell.includes("@media(prefers-reduced-motion:reduce)"), "Web reduced-motion fallback missing");
+check(shell.includes("@media(forced-colors:active)"), "Web forced-colors focus fallback missing");
+check(shell.includes("MutationObserver") && !shell.includes("setInterval("), "Web accessibility synchronization must remain event-driven without polling");
+check(completion.includes("custom_minimum_size") && completion.includes("44.0"), "Story Loom 44px mobile target contract missing from final Godot layer");
+
 check(packageJson.scripts?.build?.includes("build-godot-web.sh"), "default npm build must assemble the Godot Product runtime");
 check(packageJson.scripts?.dev?.includes("godot --path godot"), "default npm dev must enter the Godot project rather than the Solid baseline");
 check(packageJson.scripts?.["baseline:build"]?.includes("vite build"), "Solid/Vite must remain available only as an explicit golden baseline build");
@@ -56,7 +72,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_godot_production_quality_v6",
+    schema: "novelforge_godot_production_quality_v7",
     status: "pass",
     production_cutover: true,
     product_runtime: "godot_web",
@@ -70,6 +86,12 @@ if (failures.length) {
     architecture_detail_surface: true,
     cjk_control_fallback: true,
     stable_decorative_glyphs: true,
+    web_semantic_companion: true,
+    native_accessibility_metadata: true,
+    reduced_motion: true,
+    forced_colors_focus: true,
+    mobile_target_44px: true,
+    accessibility_sync: "event_driven",
     default_build: "godot_web",
     export_strategy: "single_parity_proven_exporter_then_root_merge",
     single_godot_exporter: true,
