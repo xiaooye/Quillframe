@@ -9,6 +9,7 @@ var _latin_base_font: Font
 var _latin_font_cache := {}
 var _cjk_font_cache := {}
 var _latin_mixed_font_cache := {}
+var _heading_font_cache := {}
 
 func _ready() -> void:
 	_latin_base_font = load(INTER_FONT_PATH) as Font
@@ -29,6 +30,18 @@ func _font(weight: int) -> Font:
 	var text_server := TextServerManager.get_primary_interface()
 	variation.variation_opentype = {text_server.name_to_tag("wght"): weight}
 	_latin_font_cache[weight] = variation
+	return variation
+
+func _heading_font(glyph_spacing: int) -> Font:
+	if _heading_font_cache.has(glyph_spacing):
+		return _heading_font_cache[glyph_spacing]
+	var variation := FontVariation.new()
+	variation.base_font = _latin_base_font
+	variation.spacing_glyph = glyph_spacing
+	variation.spacing_space = glyph_spacing
+	var text_server := TextServerManager.get_primary_interface()
+	variation.variation_opentype = {text_server.name_to_tag("wght"): 780}
+	_heading_font_cache[glyph_spacing] = variation
 	return variation
 
 func _cjk_font(weight: int) -> Font:
@@ -115,11 +128,18 @@ func _calibrate_inter_heading_rhythm(node: Node) -> void:
 		if child is Label:
 			var label := child as Label
 			if _is_english_heading(label.text):
+				var route := _current_route()
 				var delta := 10
-				if _current_route() == "/" and _layout == "desktop" and label.text.begins_with("Let the story"):
+				if route == "/" and _layout == "desktop" and label.text.begins_with("Let the story"):
 					delta = 15
 				var current := label.get_theme_constant("line_spacing")
 				label.add_theme_constant_override("line_spacing", current + delta)
+				# ProductSurface CSS uses letter-spacing:-.052em for route h1.
+				# At our baseline sizes this resolves to roughly -2px on phone
+				# and -3px on desktop. Keep Home on its separately calibrated
+				# identity typography.
+				if route != "/":
+					label.add_theme_font_override("font", _heading_font(-2 if _layout == "phone" else -3))
 		_calibrate_inter_heading_rhythm(child)
 
 func _is_english_heading(text: String) -> bool:
