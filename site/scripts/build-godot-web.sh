@@ -10,6 +10,7 @@ ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 GODOT_DIR="${ROOT_DIR}/godot"
 OUT_DIR="${ROOT_DIR}/dist"
 DOCS_DIR="${OUT_DIR}/docs"
+STAGE_DIR="${ROOT_DIR}/dist-godot-production"
 SMOKE_LOG="${TMPDIR:-/tmp}/novelforge-godot-production-smoke.log"
 MAX_PAGE_ASSET_BYTES="${MAX_PAGE_ASSET_BYTES:-26214400}"
 
@@ -23,8 +24,11 @@ test -s "${DOCS_DIR}/index.html" || {
   exit 1
 }
 
-# Replace the Product SPA root while preserving the independently built docs app.
-find "${OUT_DIR}" -mindepth 1 -maxdepth 1 ! -name docs -exec rm -rf {} +
+# Godot's Web exporter is kept on the same clean-directory contract that passed
+# every shadow/size gate. Export first, validate it, then merge it into dist/
+# without ever placing Godot's exporter inside the populated Starlight tree.
+rm -rf "${STAGE_DIR}"
+mkdir -p "${STAGE_DIR}"
 
 godot --headless --path "${GODOT_DIR}" --import
 
@@ -38,7 +42,18 @@ if [ "${status}" -ne 0 ] || grep -Eq 'SCRIPT ERROR|Parse Error|Invalid call|Inva
   exit 1
 fi
 
-godot --headless --path "${GODOT_DIR}" --export-release Web "${OUT_DIR}/index.html"
+godot --headless --path "${GODOT_DIR}" --export-release Web "${STAGE_DIR}/index.html"
+
+test -s "${STAGE_DIR}/index.html"
+compgen -G "${STAGE_DIR}/index*.wasm" >/dev/null
+compgen -G "${STAGE_DIR}/index*.pck" >/dev/null
+grep -q 'data-novelforge-runtime="loading"' "${STAGE_DIR}/index.html"
+grep -q '<base href="/">' "${STAGE_DIR}/index.html"
+
+# Replace only the Product root. /docs/** remains the independently built
+# Astro/Starlight application.
+find "${OUT_DIR}" -mindepth 1 -maxdepth 1 ! -name docs -exec rm -rf {} +
+cp -a "${STAGE_DIR}/." "${OUT_DIR}/"
 cp "${ROOT_DIR}/public/_redirects" "${OUT_DIR}/_redirects"
 
 test -s "${OUT_DIR}/index.html"
@@ -74,4 +89,5 @@ if offenders:
 print(f"Cloudflare Pages asset ceiling: PASS (< {limit} bytes per file)")
 PY
 
+rm -rf "${STAGE_DIR}"
 echo "NovelForge Godot production root exported to ${OUT_DIR}; Starlight docs preserved at ${DOCS_DIR}"
