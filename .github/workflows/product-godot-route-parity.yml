@@ -40,7 +40,7 @@ env:
 jobs:
   route-parity:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -94,7 +94,7 @@ jobs:
       - name: Build Godot parity artifact
         working-directory: site
         run: npm run godot:export
-      - name: Capture all route pairs and interaction proof
+      - name: Capture all route pairs, wide matrix, and interaction proof
         shell: bash
         run: |
           set -euo pipefail
@@ -183,11 +183,34 @@ jobs:
             godot_shot "godot-${route}-mobile" 390 844 phone "http://127.0.0.1:4190${GODOT_PATH}"
           done
 
+          WIDE_ROUTES=(home product architecture publication)
+          WIDE_SIZES=("1280 800" "1440 900" "1600 900" "1920 1080" "2560 1440")
+          for route in "${WIDE_ROUTES[@]}"; do
+            if [ "$route" = home ]; then
+              SOLID_PATH=/
+              GODOT_PATH=/
+            else
+              SOLID_PATH="/${route}"
+              GODOT_PATH="/?route=/${route}"
+            fi
+            for spec in "${WIDE_SIZES[@]}"; do
+              read -r width height <<< "$spec"
+              solid_shot "solid-${route}-wide-${width}x${height}" "${width},${height}" "http://127.0.0.1:4188${SOLID_PATH}"
+              godot_shot "godot-${route}-wide-${width}x${height}" "$width" "$height" desktop "http://127.0.0.1:4190${GODOT_PATH}"
+            done
+          done
+
           CHROME="$CHROME" node site/scripts/godot-interaction-qa.mjs \
             --url "http://127.0.0.1:4190/" \
             --output "$OUT/interaction.json" \
             --timeout-ms 90000 >"$OUT/interaction.log" 2>&1
           test -s "$OUT/interaction.json"
+
+          CHROME="$CHROME" node site/scripts/godot-route-behavior-qa.mjs \
+            --url "http://127.0.0.1:4190/" \
+            --output "$OUT/behavior.json" \
+            --timeout-ms 90000 >"$OUT/behavior.log" 2>&1
+          test -s "$OUT/behavior.json"
 
           python3 - <<'PY'
           from pathlib import Path
@@ -196,24 +219,46 @@ jobs:
           root = Path('/tmp/novelforge-route-parity')
           routes = ['home','product','studio','architecture','publication','inspect','playground','agents','changelog']
           layouts = ['desktop','compact-wide','compact-narrow','mobile']
-          metrics = {'schema':'novelforge_godot_route_parity_v6','blocking':False,'solid_role':'golden_visual_behavior_fixture','solid_typography':'pinned WeiUI Inter + Noto fallbacks','godot_role':'production_slim_runtime','interaction_qa':'blocking','representative_layouts':layouts,'pairs':{}}
+          wide_routes = ['home','product','architecture','publication']
+          wide_sizes = ['1280x800','1440x900','1600x900','1920x1080','2560x1440']
+          metrics = {
+              'schema':'novelforge_godot_route_parity_v7',
+              'blocking':False,
+              'solid_role':'golden_visual_behavior_fixture',
+              'solid_typography':'pinned WeiUI Inter + Noto fallbacks',
+              'godot_role':'production_slim_runtime',
+              'interaction_qa':'blocking',
+              'behavior_qa':'blocking',
+              'representative_layouts':layouts,
+              'wide_matrix':wide_sizes,
+              'pairs':{}
+          }
+          def measure(name, base_path, candidate_path):
+              base = Image.open(base_path).convert('RGB')
+              candidate = Image.open(candidate_path).convert('RGB')
+              assert base.size == candidate.size, (name, base.size, candidate.size)
+              diff = ImageChops.difference(base, candidate)
+              stat = ImageStat.Stat(diff)
+              rmse = math.sqrt(sum(v*v for v in stat.rms) / 3.0) / 255.0
+              mean = sum(stat.mean) / (3.0 * 255.0)
+              metrics['pairs'][name] = {'rmse':round(rmse,6),'mean_abs':round(mean,6),'size':base.size}
+              ImageEnhance.Contrast(diff).enhance(3.0).save(root/f'diff-{name}.png')
           for route in routes:
               for layout in layouts:
                   name = f'{route}-{layout}'
-                  base = Image.open(root/f'solid-{name}.png').convert('RGB')
-                  candidate = Image.open(root/f'godot-{name}.png').convert('RGB')
-                  assert base.size == candidate.size, (name, base.size, candidate.size)
-                  diff = ImageChops.difference(base, candidate)
-                  stat = ImageStat.Stat(diff)
-                  rmse = math.sqrt(sum(v*v for v in stat.rms) / 3.0) / 255.0
-                  mean = sum(stat.mean) / (3.0 * 255.0)
-                  metrics['pairs'][name] = {'rmse':round(rmse,6),'mean_abs':round(mean,6),'size':base.size}
-                  ImageEnhance.Contrast(diff).enhance(3.0).save(root/f'diff-{name}.png')
+                  measure(name, root/f'solid-{name}.png', root/f'godot-{name}.png')
+          for route in wide_routes:
+              for size in wide_sizes:
+                  name = f'{route}-wide-{size}'
+                  measure(name, root/f'solid-{name}.png', root/f'godot-{name}.png')
           interaction = json.loads((root/'interaction.json').read_text(encoding='utf-8'))
+          behavior = json.loads((root/'behavior.json').read_text(encoding='utf-8'))
           assert interaction.get('status') == 'pass', interaction
+          assert behavior.get('status') == 'pass', behavior
           ordered = sorted(metrics['pairs'].items(), key=lambda kv: kv[1]['rmse'], reverse=True)
           metrics['worst_first'] = [name for name,_ in ordered]
           metrics['interaction'] = interaction
+          metrics['behavior'] = behavior
           (root/'parity-metric.json').write_text(json.dumps(metrics,indent=2),encoding='utf-8')
           print(json.dumps(metrics,indent=2))
           PY
