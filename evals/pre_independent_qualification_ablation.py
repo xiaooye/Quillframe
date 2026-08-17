@@ -113,7 +113,8 @@ def self_test()->dict[str,Any]:
     for job in jobs:
         assert not validate_job(job),validate_job(job)
         fixture=job['input']['fixture'];by_pair.setdefault(fixture['pair_id'],set()).add(fixture['condition'])
-    hidden=all('observation' not in json.dumps(job,ensure_ascii=False) for job in jobs)
+    serialized_jobs=json.dumps(jobs,ensure_ascii=False)
+    hidden=all(pair['observation'] not in serialized_jobs for pair in PAIRS)
     unique=len({j['input_fingerprint'] for j in jobs})==len(jobs)
     checks={
         'five_pairs':len(by_pair)==5,
