@@ -17,8 +17,11 @@ def git_json(ref: str, path: str):
 def write(path: str, obj):
     (ROOT / path).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
-p1 = subprocess.check_output(['git', 'rev-parse', 'HEAD^1'], cwd=ROOT, text=True).strip()
-p2 = subprocess.check_output(['git', 'rev-parse', 'HEAD^2'], cwd=ROOT, text=True).strip()
+merge = subprocess.check_output(['git', 'rev-list', '--merges', '--max-count=1', 'HEAD'], cwd=ROOT, text=True).strip()
+if not merge:
+    raise SystemExit('no merge ancestor found')
+p1 = subprocess.check_output(['git', 'rev-parse', f'{merge}^1'], cwd=ROOT, text=True).strip()
+p2 = subprocess.check_output(['git', 'rev-parse', f'{merge}^2'], cwd=ROOT, text=True).strip()
 # The feature parent contains quality.candidate_self_audit in its catalog; main contains the
 # automatic feedback capture/skip form of learning.preference_interpret.
 a = git_json(p1, CAT); b = git_json(p2, CAT)
@@ -76,7 +79,7 @@ assert '014-pre-independent-candidate-qualification-spec' in ids
 write(DOC, merged_doc)
 
 print(json.dumps({
-    'reconciliation': 'PASS', 'feature_parent': feature, 'main_parent': main,
+    'reconciliation': 'PASS', 'merge_commit': merge, 'feature_parent': feature, 'main_parent': main,
     'production_loop_version': merged_prod['version'], 'catalog_version': merged_cat['version'],
     'feedback_capture_preserved': True, 'qualification_contract_preserved': True,
     'docs_013_and_014': True, 'model_execution': False
