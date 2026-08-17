@@ -75,7 +75,7 @@ def validate_obs(o:dict[str,Any],pair:dict[str,Any],cs:dict[str,dict[str,Any]])-
     else:e += [f"{pid}: pair review identity: {x}" for x in validate_identity(review)]
     if o.get("presentation_order") not in ORD:e.append(f"{pid}: invalid presentation_order")
     if o.get("semantic_relation") not in REL:e.append(f"{pid}: invalid semantic_relation")
-    if not isinstance(o.get("safety_regression"),bool):e.append(f"{pid}: safety_regression must be boolean")
+    if not isinstance(o.get("simpler_arm_safety_regression"),bool):e.append(f"{pid}: simpler_arm_safety_regression must be boolean")
     if not isinstance(o.get("semantic_evidence"),str) or not o["semantic_evidence"].strip():e.append(f"{pid}: semantic_evidence required")
     if o.get("semantic_source")!="independent_model":e.append(f"{pid}: semantic_source must be independent_model")
     return e
@@ -91,7 +91,7 @@ def decide(pair:dict[str,Any],obs:list[dict[str,Any]],protocol:dict[str,Any])->d
     if len(obs)<need:return {**base,"status":"PENDING_MODEL","reason":f"need at least {need} comparable observations"}
     if protocol["require_counterbalanced_presentation_order"] and {x["presentation_order"] for x in obs}!=ORD:
         return {**base,"status":"PENDING_MODEL","reason":"presentation order is not counterbalanced"}
-    if any(x["safety_regression"] for x in obs):
+    if any(x["simpler_arm_safety_regression"] for x in obs):
         return {"status":"KEEP","recommendation":"KEEP_CURRENT","reason":"safety regression veto","simpler_arm_noninferior":False}
     rel=[x["semantic_relation"] for x in obs]; counts=dict(Counter(rel))
     if "INCONCLUSIVE" in counts:return {**base,"status":"INCONCLUSIVE","reason":"reviewer reported INCONCLUSIVE","relations":counts}
@@ -124,6 +124,11 @@ def evaluate(packet:dict[str,Any],m:dict[str,Any],cs:dict[str,dict[str,Any]])->d
                      "comparability":{"observation_count":len(o),"minimum_required":m["decision_protocol"]["minimum_comparable_observations"],
                                       "counterbalanced_order":bool(o) and {x["presentation_order"] for x in o}==ORD},
                      "semantic_evidence":{"complete":d["status"] not in {"PENDING_MODEL"},"source":"independent_model" if o else None},
+                     "provenance":{"observation_fingerprints":[fingerprint(x) for x in o],
+                                   "condition_execution_identities":[x["condition_execution_identity"]["identity_fingerprint"] for x in o],
+                                   "pair_review_execution_identities":[x["pair_review_execution_identity"]["identity_fingerprint"] for x in o],
+                                   "incumbent_result_fingerprints":[x["incumbent_result_fingerprint"] for x in o],
+                                   "challenger_result_fingerprints":[x["challenger_result_fingerprint"] for x in o]},
                      "decision":d})
     out={"schema":EVIDENCE_SCHEMA,"manifest_fingerprint":fingerprint(m),"packet_fingerprint":fingerprint(packet),"pairs":rows}
     out["evidence_fingerprint"]=fingerprint(out); return out
@@ -153,10 +158,10 @@ def self_test()->int:
                     "incumbent_result_fingerprint":"sha256:"+"5"*64,"challenger_result_fingerprint":"sha256:"+"6"*64,
                     "incumbent_execution_identity_fingerprint":arm["identity_fingerprint"],"challenger_execution_identity_fingerprint":arm["identity_fingerprint"],
                     "pair_review_execution_identity":rev,"presentation_order":order,"semantic_source":"independent_model",
-                    "semantic_relation":"NO_MATERIAL_DIFFERENCE","safety_regression":False,"semantic_evidence":"synthetic protocol evidence"})
+                    "semantic_relation":"NO_MATERIAL_DIFFERENCE","simpler_arm_safety_regression":False,"semantic_evidence":"synthetic protocol evidence"})
     packet={"schema":PACKET_SCHEMA,"observations":obs}
     simp=next(x for x in evaluate(packet,m,cs)["pairs"] if x["pair_id"]==pair["id"])["decision"]["status"]=="SIMPLIFY"
-    safe=json.loads(json.dumps(packet)); safe["observations"][0]["safety_regression"]=True
+    safe=json.loads(json.dumps(packet)); safe["observations"][0]["simpler_arm_safety_regression"]=True
     veto=next(x for x in evaluate(safe,m,cs)["pairs"] if x["pair_id"]==pair["id"])["decision"]["status"]=="KEEP"
     bad=json.loads(json.dumps(packet)); bad["observations"][0]["candidate_fingerprint"]="sha256:"+"0"*64
     try:evaluate(bad,m,cs); cand_reject=False
@@ -167,10 +172,13 @@ def self_test()->int:
     drift=json.loads(json.dumps(packet)); i=drift["observations"][1]["condition_execution_identity"]; i["reviewer"]["model_id"]="drift"; i["identity_fingerprint"]=fingerprint(identity_payload(i))
     drift["observations"][1]["incumbent_execution_identity_fingerprint"]=i["identity_fingerprint"]; drift["observations"][1]["challenger_execution_identity_fingerprint"]=i["identity_fingerprint"]
     drift_pending=next(x for x in evaluate(drift,m,cs)["pairs"] if x["pair_id"]==pair["id"])["decision"]["status"]=="PENDING_MODEL"
-    ok=all((ok_manifest,pending,simp,veto,cand_reject,id_reject,drift_pending))
+    malformed=json.loads(json.dumps(m)); malformed["pairs"][0]["simpler_arm"]="neither"; malformed_reject=bool(validate_manifest(malformed,cs))
+    deterministic=evaluate(packet,m,cs)==evaluate(packet,m,cs)
+    ok=all((ok_manifest,pending,simp,veto,cand_reject,id_reject,drift_pending,malformed_reject,deterministic))
     print(json.dumps({"paired_ablation_contract":"PASS" if ok else "FAIL","manifest_valid":ok_manifest,"missing_semantic_judgment_pending":pending,
                       "safety_regression_veto":veto,"mismatched_candidate_rejected":cand_reject,"mismatched_execution_identity_rejected":id_reject,
-                      "configuration_drift_pending":drift_pending,"semantic_superiority_inferred_by_python":False,"model_execution":False},indent=2))
+                      "configuration_drift_pending":drift_pending,"malformed_pair_rejected":malformed_reject,"deterministic_output":deterministic,
+                      "semantic_superiority_inferred_by_python":False,"model_execution":False},indent=2))
     return 0 if ok else 1
 
 def main()->int:
