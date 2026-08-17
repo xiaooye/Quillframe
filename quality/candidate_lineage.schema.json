@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novelforge_candidate_lineage_v1",
+  "title": "NovelForge Candidate Lineage v1",
+  "description": "Non-authoritative candidate derivation, review-binding, and external acceptance-evidence projection over quality_evolution.",
+  "$defs": {
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "nullableCandidateId": {
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "lineage": {
+      "type": ["object", "null"],
+      "required": [
+        "run_id",
+        "candidate_id",
+        "origin",
+        "comparison_parent_candidate_id",
+        "prose_parent_candidate_id",
+        "created_by_run_id",
+        "created_by_session_id",
+        "authority_snapshot_fingerprint",
+        "diff_fingerprint",
+        "created_at",
+        "authority"
+      ],
+      "properties": {
+        "run_id": {"type": "string", "minLength": 1},
+        "candidate_id": {"type": "string", "minLength": 1},
+        "origin": {"enum": ["draft", "repair", "fresh_regeneration", "user_edit"]},
+        "comparison_parent_candidate_id": {"$ref": "#/$defs/nullableCandidateId"},
+        "prose_parent_candidate_id": {"$ref": "#/$defs/nullableCandidateId"},
+        "created_by_run_id": {"type": "string", "minLength": 1},
+        "created_by_session_id": {"type": ["string", "null"]},
+        "authority_snapshot_fingerprint": {
+          "oneOf": [{"$ref": "#/$defs/fingerprint"}, {"type": "null"}]
+        },
+        "diff_fingerprint": {
+          "oneOf": [{"$ref": "#/$defs/fingerprint"}, {"type": "null"}]
+        },
+        "created_at": {"type": "string", "minLength": 1},
+        "authority": {"const": 0}
+      },
+      "additionalProperties": false
+    },
+    "reviewReceipt": {
+      "type": "object",
+      "required": [
+        "review_id",
+        "contract_id",
+        "candidate_fingerprint",
+        "job_fingerprint",
+        "result_fingerprint",
+        "result_status",
+        "created_at",
+        "authority"
+      ],
+      "properties": {
+        "review_id": {"type": "string", "minLength": 1},
+        "contract_id": {"type": "string", "minLength": 1},
+        "candidate_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "job_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "result_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "result_status": {"type": "string", "minLength": 1},
+        "created_at": {"type": "string", "minLength": 1},
+        "authority": {"const": 0}
+      },
+      "additionalProperties": false
+    },
+    "acceptanceEvidence": {
+      "type": "object",
+      "required": [
+        "acceptance_evidence_id",
+        "candidate_fingerprint",
+        "authority_source_ref",
+        "authority_receipt_fingerprint",
+        "accepted_artifact_fingerprint",
+        "accepted_at",
+        "created_at",
+        "authority",
+        "authority_verified",
+        "settlement_authorized"
+      ],
+      "properties": {
+        "acceptance_evidence_id": {"type": "string", "minLength": 1},
+        "candidate_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "authority_source_ref": {"type": "string", "minLength": 1},
+        "authority_receipt_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "accepted_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "accepted_at": {"type": "string", "minLength": 1},
+        "created_at": {"type": "string", "minLength": 1},
+        "authority": {"const": 0},
+        "authority_verified": {"const": false},
+        "settlement_authorized": {"const": false}
+      },
+      "additionalProperties": false
+    },
+    "permissions": {
+      "type": "object",
+      "required": ["canon_write", "settlement_write", "framework_write"],
+      "properties": {
+        "canon_write": {"const": false},
+        "settlement_write": {"const": false},
+        "framework_write": {"const": false}
+      },
+      "additionalProperties": false
+    },
+    "candidateView": {
+      "type": "object",
+      "required": [
+        "schema",
+        "candidate_id",
+        "content_fingerprint",
+        "parent_candidate_id",
+        "repair_owner",
+        "metadata",
+        "created_at",
+        "lineage",
+        "review_receipts",
+        "acceptance_evidence",
+        "authority",
+        "permissions"
+      ],
+      "properties": {
+        "schema": {"const": "novelforge_candidate_lineage_v1"},
+        "candidate_id": {"type": "string", "minLength": 1},
+        "content_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "parent_candidate_id": {"$ref": "#/$defs/nullableCandidateId"},
+        "repair_owner": {"type": ["string", "null"]},
+        "metadata": {"type": "object"},
+        "created_at": {"type": "string", "minLength": 1},
+        "lineage": {"$ref": "#/$defs/lineage"},
+        "review_receipts": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/reviewReceipt"}
+        },
+        "acceptance_evidence": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/acceptanceEvidence"}
+        },
+        "authority": {"const": false},
+        "permissions": {"$ref": "#/$defs/permissions"}
+      },
+      "additionalProperties": false
+    },
+    "comparison": {
+      "type": "object",
+      "required": [
+        "comparison_id",
+        "incumbent_candidate_id",
+        "challenger_candidate_id",
+        "winner_candidate_id",
+        "job_fingerprint",
+        "result_fingerprint",
+        "consumed_at"
+      ],
+      "properties": {
+        "comparison_id": {"type": "string", "minLength": 1},
+        "incumbent_candidate_id": {"type": "string", "minLength": 1},
+        "challenger_candidate_id": {"type": "string", "minLength": 1},
+        "winner_candidate_id": {"$ref": "#/$defs/nullableCandidateId"},
+        "job_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "result_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "consumed_at": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "graph": {
+      "type": "object",
+      "required": [
+        "schema",
+        "run_id",
+        "subject_id",
+        "state",
+        "incumbent_candidate_id",
+        "candidates",
+        "comparisons",
+        "authority",
+        "model_execution"
+      ],
+      "properties": {
+        "schema": {"const": "novelforge_candidate_lineage_v1"},
+        "run_id": {"type": "string", "minLength": 1},
+        "subject_id": {"type": "string", "minLength": 1},
+        "state": {"enum": ["active", "plateau", "complete"]},
+        "incumbent_candidate_id": {"type": "string", "minLength": 1},
+        "candidates": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/candidateView"}
+        },
+        "comparisons": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/comparison"}
+        },
+        "authority": {"const": false},
+        "model_execution": {"const": false}
+      },
+      "additionalProperties": false
+    },
+    "settlementReference": {
+      "type": "object",
+      "required": [
+        "schema",
+        "result",
+        "run_id",
+        "acceptance_evidence_id",
+        "candidate_id",
+        "candidate_fingerprint",
+        "requested_accepted_artifact_fingerprint",
+        "authority",
+        "authority_verified",
+        "settlement_authorized",
+        "settlement_write",
+        "requires_external_authority_verification"
+      ],
+      "properties": {
+        "schema": {"const": "novelforge_candidate_lineage_v1"},
+        "result": {"enum": ["REFERENCE_MATCH", "REFERENCE_MISMATCH"]},
+        "run_id": {"type": "string", "minLength": 1},
+        "acceptance_evidence_id": {"type": "string", "minLength": 1},
+        "candidate_id": {"type": "string", "minLength": 1},
+        "candidate_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "requested_accepted_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "authority": {"const": false},
+        "authority_verified": {"const": false},
+        "settlement_authorized": {"const": false},
+        "settlement_write": {"const": false},
+        "requires_external_authority_verification": {"const": true}
+      },
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {"$ref": "#/$defs/candidateView"},
+    {"$ref": "#/$defs/graph"},
+    {"$ref": "#/$defs/settlementReference"}
+  ]
+}
