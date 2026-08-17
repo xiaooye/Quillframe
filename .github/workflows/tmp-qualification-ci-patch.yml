@@ -22,7 +22,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: python tmp/patch_qualification_ci.py
+      - name: Apply CI wiring patch after corrected deterministic assertions
+        run: python tmp/patch_qualification_ci.py
       - name: Validate YAML text and targeted Python controls
         run: |
           python -m py_compile evals/pre_independent_qualification.py evals/pre_independent_qualification_ablation.py evals/qualification_test_fixtures.py
