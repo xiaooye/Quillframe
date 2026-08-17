@@ -104,5 +104,8 @@ jobs:
             promotion-gate-feedback-test.json
             control-plane-feedback-test.json
             steering-feedback-test.json
+            learning/feedback_intake.py
+            HARNESS_MANIFEST.yaml
+            docs/documentation_manifest.json
           if-no-files-found: error
           retention-days: 7
