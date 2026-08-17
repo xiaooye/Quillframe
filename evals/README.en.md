@@ -62,6 +62,14 @@ Every live semantic run also emits `semantic-live-execution-identity.json` **bef
 
 This envelope is deterministic provenance, not semantic evidence by itself. Historical runs without it are not retroactively assigned identities, and its presence does not convert CI into a semantic quality claim.
 
+## Paired AI-native ablations
+
+Simplification decisions declared in `ai_native_ablation_manifest.json` use the registered independent `quality.ablation_compare` contract rather than manager-supplied semantic verdict fields. The reviewer receives only anonymous A/B condition results, exact input/result fingerprints, and neutral observation criteria. It does not receive `simpler_arm`, incumbent/challenger role names, removal intent, or hidden expected labels.
+
+The evidence floor for simplifying one pair is **3 independent condition replicates × 2 swapped-order reviews per replicate = 6 pair reviews**. All three replicates must preserve the same blind queue, model/config, relevant harness, capability snapshot, and resource-budget conditions. The two reviews inside one replicate reuse the exact same arm outputs while swapping A/B order. Any material regression in the declared simpler arm vetoes simplification; conflicting directions or unclear regression evidence become `INCONCLUSIVE`; absent real independent model results remain `PENDING_MODEL`.
+
+The deterministic evaluator validates registered-contract binding, candidate/queue/result/execution fingerprints, independent invocation lineage, exact 3:3 presentation counterbalance, and the predeclared decision protocol. It does not make literary judgments, and synthetic self-tests are never semantic evidence.
+
 ## Commands
 
 ```bash
@@ -71,6 +79,17 @@ python evals/run_evals.py --judgments reviewed-results.json --json
 python evals/validate_semantic_acceptance.py validate
 python evals/evaluation_execution_identity.py self-test
 python evals/evaluation_execution_identity.py validate semantic-live-execution-identity.json
+
+python evals/evaluate_ai_native_ablation.py self-test
+python evals/evaluate_ai_native_ablation.py prepare --output /tmp/ablation-observations.json
+python evals/evaluate_ai_native_ablation.py review-job \
+  --pair reader_contamination --replicate R1 --order INCUMBENT_FIRST \
+  --incumbent-result /tmp/incumbent-result.json \
+  --challenger-result /tmp/challenger-result.json \
+  --output /tmp/ablation-review-job.json
+python evals/evaluate_ai_native_ablation.py evaluate \
+  --observations /tmp/ablation-observations.json \
+  --output /tmp/ablation-evidence.json
 ```
 
 ## Quality domains
