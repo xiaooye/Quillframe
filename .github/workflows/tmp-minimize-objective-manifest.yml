@@ -1,0 +1,38 @@
+name: Temporary Minimize Objective Manifest
+
+on:
+  push:
+    branches: [agent/pre-independent-candidate-qualification]
+    paths:
+      - 'tmp/minimize_objective_manifest.py'
+      - '.github/workflows/tmp-minimize-objective-manifest.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  minimize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/pre-independent-candidate-qualification
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Restore compact manifest and add only required entries
+        run: python tmp/minimize_objective_manifest.py
+      - name: Validate documentation governance
+        run: |
+          python -m json.tool docs/documentation_manifest.json > /dev/null
+          python scripts/docs_quality.py
+      - name: Commit minimal manifest and remove patch script
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/documentation_manifest.json
+          git rm tmp/minimize_objective_manifest.py
+          git commit -m 'docs: minimize qualification manifest registration'
+          git push origin HEAD:agent/pre-independent-candidate-qualification
