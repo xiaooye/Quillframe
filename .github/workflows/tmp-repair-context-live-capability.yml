@@ -15,34 +15,36 @@ jobs:
     timeout-minutes: 5
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      NOVELFORGE_DISABLE_LOCAL_AGENT_AUTO: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Resolve provider capability without model execution
+      - name: Resolve all provider capabilities without model execution
         run: |
-          if [ -z "$OPENAI_API_KEY" ]; then
-            echo '{"schema":"novelforge_repair_context_live_capability_v1","status":"PENDING_MODEL","reason":"OPENAI_API_KEY_unavailable","model_execution":false}' > repair-context-live-capability.json
-          else
-            python harness/semantic_workers/semantic_worker_runner.py capabilities > runner-capabilities.json
-            python - <<'PY'
-          import json
+          python harness/semantic_workers/semantic_worker_runner.py capabilities > runner-capabilities.json
+          python - <<'PY'
+          import json,os,shutil
           d=json.load(open('runner-capabilities.json',encoding='utf-8'))
           out={
               'schema':'novelforge_repair_context_live_capability_v1',
               'status':'AVAILABLE' if d.get('independent_worker_available') is True else 'PENDING_MODEL',
               'adapter_source':d.get('adapter_source'),
               'built_in_model_provider':d.get('built_in_model_provider'),
+              'openai_env_present':bool(os.environ.get('OPENAI_API_KEY')),
+              'codex_on_path':bool(shutil.which('codex')),
+              'claude_on_path':bool(shutil.which('claude')),
               'model_execution':False,
           }
+          if out['status']!='AVAILABLE':
+              out['reason']='no_eligible_independent_provider_detected'
           json.dump(out,open('repair-context-live-capability.json','w',encoding='utf-8'),ensure_ascii=False,indent=2)
           print(out)
           PY
-          fi
       - uses: actions/upload-artifact@v4
         with:
           name: repair-context-live-capability
-          path: repair-context-live-capability.json
+          path: |
+            repair-context-live-capability.json
+            runner-capabilities.json
           if-no-files-found: error
