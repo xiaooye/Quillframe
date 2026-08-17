@@ -17,6 +17,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Prepare exact diagnostic source snapshot
+        run: tar --exclude='.git' --exclude='framework-source-snapshot.tgz' -czf framework-source-snapshot.tgz .
+
       - name: Compile feedback learning runtime
         run: |
           python -m py_compile \
@@ -104,6 +107,7 @@ jobs:
             promotion-gate-feedback-test.json
             control-plane-feedback-test.json
             steering-feedback-test.json
+            framework-source-snapshot.tgz
             learning/feedback_intake.py
             HARNESS_MANIFEST.yaml
             docs/documentation_manifest.json
