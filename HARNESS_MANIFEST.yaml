@@ -338,7 +338,7 @@ session_runtime:
   ordinary_resume_requires_latest_checkpoint: true
   older_checkpoint_requires_replay_or_fork_contract: true
   resume_command: harness/session_runtime/resume_command.py
-  resume_command_schema: novelforge_session_runtime_resume_command_v1
+  resume_command_schema: novelforge_session_resume_command_v1
   resume_command_exposed: true
   runtime_command_authorization: harness/session_runtime/runtime_command_authorization.py
   runtime_command_authorization_schema: novelforge_runtime_command_authorization_v1

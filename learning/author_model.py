@@ -547,6 +547,14 @@ def self_test(path: Path | None = None) -> dict[str, Any]:
         "polarity": "negative", "confidence": 0.8, "evidence_source": "human_review", "hypothesis_action": "create",
     }})
 
+    user_write_only = capture_feedback(store, {**base, "feedback_ref": "review:user-write-only", "evidence_id": "PE-USER-WRITE-ONLY", "activation": {
+        "project_preference_write_authorized": False, "durable_user_taste_write_authorized": True,
+    }, "interpretation": {
+        "scope_candidate": "user_taste", "dimension": "language", "mechanism": "avoid dense code switching",
+        "statement": "Prefer less dense code switching.", "polarity": "negative", "confidence": 0.9,
+        "evidence_source": "explicit_rule", "hypothesis_action": "create",
+    }})
+
     promotion_refs = ["review:gate", "EVAL:gate"]
     candidate = {"schema": PROMOTION_CANDIDATE_SCHEMA, "candidate_id": "UT-GOOD", "scope": "user_taste", "mechanism": "low narrator commentary", "evidence": {"evidence_refs": promotion_refs}}
     candidate["semantic_review_binding"] = _promotion_semantic_binding("UT-GOOD", "user_taste", "low narrator commentary", promotion_refs)
@@ -563,8 +571,9 @@ def self_test(path: Path | None = None) -> dict[str, Any]:
     explicit_priority = projection["priority_order"][0] == "current_explicit_request" and projection["active_preferences"] == []
     active_selective = selected["selected_hypothesis_ids"] == [manual_active["hypothesis_id"]] and len(selected["active_preferences"]) == 1
     authority_safe = user_candidate["hypothesis_state"] == "candidate" and general_candidate["hypothesis_state"] == "candidate" and not general_candidate["general_craft_auto_promoted"]
+    write_authority_alone_not_enough = user_write_only["hypothesis_state"] == "candidate" and user_write_only["user_taste_activation_prerequisite"]["ready"] is False
     gated_user_taste = gated["hypothesis_state"] == "active" and gated["user_taste_activation_prerequisite"]["ready"] is True
-    ok = all([crash_idempotent, two_turns_one_hypothesis, contradiction_first_class, explicit_priority, active_selective, authority_safe, gated_user_taste])
+    ok = all([crash_idempotent, two_turns_one_hypothesis, contradiction_first_class, explicit_priority, active_selective, authority_safe, write_authority_alone_not_enough, gated_user_taste])
     result = {
         "schema": SCHEMA, "author_model_contract": "PASS" if ok else "FAIL",
         "stable_event_evidence_idempotent": crash_idempotent,
@@ -574,6 +583,7 @@ def self_test(path: Path | None = None) -> dict[str, Any]:
         "current_explicit_request_priority": explicit_priority,
         "active_preferences_require_explicit_selection": active_selective,
         "automatic_candidate_does_not_activate_user_taste_or_general_craft": authority_safe,
+        "user_taste_write_authority_alone_not_enough": write_authority_alone_not_enough,
         "user_taste_requires_promotion_prerequisite_and_write_authority": gated_user_taste,
         "all_active_preferences_auto_included": False, "semantic_relevance_judged_by_runtime": False,
         "authority": False, "model_execution": False,

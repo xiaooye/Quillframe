@@ -143,6 +143,8 @@ Mandatory independent semantic judgment requires a genuinely separate invocation
 
 Corpus is governed evidence, never Canon and never an imitation scrapbook.
 
+Meaningful user/authorized-human feedback is automatically eligible for bounded Learning intake inside any primary mode: `feedback.observed → semantic capture|skip → narrowest-scope evidence/candidate`. The current explicit instruction applies immediately; automatic intake does **not** auto-write Project Profile, activate durable user taste, promote General Craft, mutate Framework behavior, or write Canon. LEARN remains the dedicated mode for deeper learning/corpus/eval/promotion work.
+
 Discovery, access, rights classification, storage, semantic analysis, learning, and promotion are separate gates. Search success does not imply permission to store full text. Raw modern copyrighted works should not be mirrored into the generic Framework or injected wholesale into Writer context.
 
 Learning uses the narrowest evidence-supported scope:

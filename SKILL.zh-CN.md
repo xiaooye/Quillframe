@@ -143,6 +143,8 @@ Mandatory independent semantic judgment 必须来自真正不同的 invocation/s
 
 Corpus 是受治理的 evidence，不是 Canon，也不是模仿作者的剪贴簿。
 
+User / authorized human 对既有产物或工作方式给出的有意义反馈，在任何 primary mode 中都自动具备 bounded Learning intake 资格：`feedback.observed → semantic capture|skip → 最窄 scope evidence/candidate`。当前显式指令立即生效；automatic intake **不会**自动改 Project Profile、激活 durable user taste、promote General Craft、修改 Framework behavior 或写 Canon。LEARN 仍用于更深的 learning/corpus/eval/promotion 工作。
+
 Discovery、access、rights classification、storage、semantic analysis、learning 与 promotion 是不同 gate。能搜索到内容，不等于可以保存全文。现代版权作品不得被默认完整镜像到 Generic Framework，也不应整体灌入 Writer context。
 
 Learning 永远采用证据支持的最窄 scope：

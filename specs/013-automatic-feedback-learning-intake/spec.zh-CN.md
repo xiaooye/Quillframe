@@ -8,7 +8,7 @@ NovelForge 0.8 已经分别具备 `feedback.observed`、Author Steering、`learn
 
 ## 2. Goal
 
-在保持 exactly one primary task mode 的前提下，让 user / authorized human 对既有模型产物、工作方式或行为给出的明确 semantic feedback 自动进入 bounded Learning intake：
+在保持恰好一个 primary task mode 的前提下，让 user / authorized human 对既有模型产物、工作方式或行为给出的明确 semantic feedback 自动进入 bounded Learning intake：
 
 ```text
 user turn
@@ -31,7 +31,7 @@ user turn
 4. Project / user_taste / general_craft activation continues through existing authority gates.
 5. Canon acceptance and learning acceptance are separate domains even if sourced from the same user turn.
 6. Rejected AI artifacts are negative evidence only: never Canon, positive exemplar, or Writer pre-draft corpus.
-7. Personal learning data is runtime/user storage and is not committed to Generic Framework by default.
+7. Personal learning data 属于 runtime/user storage，默认不提交到通用框架 repo。
 8. Active preferences remain an eligibility index; semantic relevance is selected per future task.
 
 ## 4. Semantic vs deterministic boundary
@@ -164,7 +164,7 @@ For rejection, intake stores only bounded metadata:
 
 - artifact ref/fingerprint;
 - feedback event/ref;
-- semantic rejection meaning/mechanism;
+- `semantic_reject` 对应的拒绝含义 / mechanism；
 - `artifact_disposition=rejected_negative_only`.
 
 The failed prose body is not copied into Learning Store and is not injected into Writer pre-draft context.
@@ -181,7 +181,7 @@ Read-only query surface returns recent feedback intake records with:
 - contradiction target refs;
 - timestamps/version.
 
-It must not expose secrets, private chain-of-thought, hidden eval gold, or whole conversation history.
+查询不得暴露 secrets、private chain-of-thought、hidden eval gold 或完整 conversation history。
 
 ## 13. Cost model
 
@@ -193,7 +193,7 @@ If no eligible semantic execution exists, intake persists `awaiting_semantic` fo
 
 ## 14. Privacy
 
-Persist minimum sufficient evidence only. Generic Framework tests/evals use synthetic/anonymized fixtures. Project-specific content and user-specific preference records do not enter Generic Framework source.
+只持久化最小充分 evidence。通用框架 tests/evals 使用 synthetic/anonymized fixtures；Project-specific content 与 user-specific preference records 不进入通用框架 source。
 
 ## 15. Backward compatibility
 

@@ -115,6 +115,8 @@ Checkpoint 不是把整段聊天序列化一份存起来。
 
 Resume 是一次新的验证动作，不是“凭聊天记忆继续写”。
 
+Automatic feedback Learning 本身也可能成为 pending runtime work。semantic capability 不可用时，durable feedback event/intake 保持 `awaiting_semantic`；后续 run 必须重新验证 event hash、registered semantic-job fingerprint、当前 Project/Framework authority/capability，以及 Learning consumer receipt，再 exactly-once 应用。Provider/chat history 永远不是 preference authority。
+
 ```text
 加载 durable session + checkpoint
 → 重新验证 Framework / Project compatibility

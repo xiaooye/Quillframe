@@ -95,7 +95,7 @@ If existing Framework ablation policy requires registered independent semantic c
 - Compile all changed Python and JSON.
 - Run new self-tests plus existing Author Model, Control Plane, semantic contract, Learning Store/cycle/promotion tests.
 - Run generic evals and deterministic framework bundle reproducibility if CI infrastructure is available.
-- Record bundle fingerprint implication: any Framework source change produces a new bundle fingerprint; consumer Project must not repin until Framework acceptance/CI/bundle attestation exists.
+- Record bundle fingerprint implication: any Framework source change produces a new bundle fingerprint; 在 Framework acceptance / CI / bundle attestation 完成前，不得 repin consumer Project。
 - Open draft PR from `agent/automatic-feedback-learning-intake` to `main`.
 
 ## Rollback

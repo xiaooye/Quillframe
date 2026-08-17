@@ -115,6 +115,8 @@ A checkpoint is not a serialized copy of the whole chat.
 
 Resume is a fresh validation act, not “continue where the conversation memory feels like it left off.”
 
+Automatic feedback Learning may itself be pending runtime work. If semantic capability is unavailable, the durable feedback event/intake remains `awaiting_semantic`; a later run revalidates the event hash, registered semantic-job fingerprint, current Project/Framework authority/capability, and the Learning consumer receipt before applying it exactly once. Provider/chat history is never preference authority.
+
 ```text
 load durable session + checkpoint
 → revalidate Framework / Project compatibility

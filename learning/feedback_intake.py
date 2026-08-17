@@ -589,7 +589,7 @@ def self_test(path: str | Path | None = None) -> dict[str, Any]:
     steering_receipt = cp.consume_once("event", "FB-12", "author_steering:SES-FIXTURE", ing["payload_hash"])
     p12 = prepare_intake(runtime_db=runtime_db, learning_db=learning_db, event=dual_event, project_id="P1", current_task={"task_mode":"REVISE"})
     r12 = apply_semantic_result(runtime_db=runtime_db, learning_db=learning_db, event_id="FB-12", result=_semantic_result(p12["semantic_job"], _capture_judgment("project", "less bookish dialogue")))
-    dual_ok = steering_receipt["already_consumed"] is False and r12["consume_receipt"]["already_consumed"] is False and steering_receipt["consumer"] != r12["consume_receipt"]["consumer"]
+    dual_ok = steering_receipt["already_consumed"] is False and r12["consume_receipt"]["already_consumed"] is False and steering_receipt["consumption_key"] != r12["consume_receipt"]["consumption_key"]
 
     # 13/14 missing semantic capability persists; later resume applies once.
     p13 = prepare_intake(runtime_db=runtime_db, learning_db=learning_db, event=_event("FB-13","这个人物太像工具人。"), project_id="P1", semantic_available=False)

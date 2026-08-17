@@ -130,6 +130,8 @@ An identical duplicate can return “already consumed.” A conflicting result h
 
 NovelForge uses consume-once semantics for **logical downstream application**, not a claim that every transport message is delivered exactly once.
 
+`feedback.observed` is intentionally multi-consumer. Author Steering and automatic Learning Intake use distinct logical consumer names (for example `author_steering:<session>` and `learning_feedback:<project-or-resource>`), so one receipt cannot globally consume or delete the event for the other path. Each consumer binds the same exact event hash independently. Read-only feedback observability does not consume the event. Arrival or consumption never grants Project Profile, user-taste, Framework, or Canon authority.
+
 This lets the system tolerate:
 
 - duplicate webhook/event delivery;
