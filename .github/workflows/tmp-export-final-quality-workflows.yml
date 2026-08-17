@@ -6,6 +6,7 @@ on:
     paths:
       - 'tmp/patch_qualification_ci.py'
       - 'tmp/patch_objective_ci.py'
+      - 'tmp/patch_objective_ci_assertion.py'
       - '.github/workflows/tmp-export-final-quality-workflows.yml'
 
 permissions:
@@ -26,6 +27,7 @@ jobs:
         run: |
           python tmp/patch_qualification_ci.py
           python tmp/patch_objective_ci.py
+          python tmp/patch_objective_ci_assertion.py
       - name: Run permanent-workflow embedded deterministic checks
         run: |
           python - <<'PY'
@@ -35,6 +37,8 @@ jobs:
           hardening=Path('.github/workflows/novelforge-quality-gate-hardening.yml').read_text(encoding='utf-8')
           assert 'repair_objective_preservation.py self-test' in contracts
           assert 'objective_envelope' in contracts
+          assert 'quality.candidate_self_audit' in contracts
+          assert "assert set(sc['typed_input_contracts'])=={'reader.reaction','reader.engagement_audit','quality.candidate_self_audit'" in contracts
           assert 'quality.production_review' in contracts and 'qualification_receipt' in contracts
           assert 'objective_envelope' in packs
           assert 'quality.production_review' in packs and 'qualification_receipt' in packs
