@@ -17,6 +17,7 @@ Make prose-candidate derivation inspectable and fingerprint-bound without replac
 9. Add no Writer context and no mandatory semantic call.
 10. Keep all lineage/evidence records `authority=false`.
 11. Expose machine-readable projections through `quality/candidate_lineage.schema.json`, versioned as `novelforge_candidate_lineage_v1` using JSON Schema draft 2020-12.
+12. Route new lineage-aware evolution through `quality/candidate_lineage_runtime.py`, which must fail closed before comparison/consumption when any candidate lacks valid explicit lineage. Legacy `quality_evolution.py` remains available for compatibility but cannot silently satisfy the lineage-aware runtime contract.
 
 ## Non-goals
 
@@ -26,6 +27,7 @@ Make prose-candidate derivation inspectable and fingerprint-bound without replac
 - No Canon or settlement write.
 - No second objective-preservation system.
 - No second ColdRead agent.
+- No guessed lineage for a legacy or crash-partial candidate.
 
 ## Compatibility
 
@@ -33,6 +35,8 @@ Migration is additive in the existing quality-evolution SQLite database. Existin
 
 The machine-readable schema is additive and describes the lineage candidate view, durable graph projection, and SETTLE reference-consistency receipt. It does not grant those projections authority.
 
+The lineage-aware runtime is a facade over the same core ledger/comparator. If a legacy caller creates a candidate without lineage, the core row remains compatible, while the lineage-aware runtime reports `MISSING_LINEAGE` and refuses comparison until the exact provenance is supplied. This provides compatibility without weakening fail-closed provenance semantics.
+
 ## Acceptance criteria
 
-Required deterministic tests A-H in `docs/CANDIDATE_LINEAGE_V1.en.md` pass; the legacy-vs-lineage ablation demonstrates the representation gap is closed without changing incumbent selection; `quality/candidate_lineage.schema.json` parses with identity `novelforge_candidate_lineage_v1`; repository hygiene and relevant CI pass; no authority boundary is weakened.
+Required deterministic tests A-H in `docs/CANDIDATE_LINEAGE_V1.en.md` pass; the legacy-vs-lineage ablation demonstrates the representation gap is closed without changing incumbent selection; the lineage-aware runtime test proves direct legacy/bypass insertion is detected and blocks comparison until explicit recovery; `quality/candidate_lineage.schema.json` parses with identity `novelforge_candidate_lineage_v1`; repository hygiene and relevant CI pass; no authority boundary is weakened.
