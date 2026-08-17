@@ -122,10 +122,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Compile semantic eval execution identity
-        run: python -m py_compile evals/evaluation_execution_identity.py
-      - name: Deterministic semantic eval execution identity contract
-        run: python evals/evaluation_execution_identity.py self-test
+      - name: Compile semantic eval provenance and paired ablation gate
+        run: python -m py_compile evals/evaluation_execution_identity.py evals/evaluate_ai_native_ablation.py
+      - name: Deterministic semantic eval provenance contracts
+        run: |
+          python evals/evaluation_execution_identity.py self-test
+          python evals/evaluate_ai_native_ablation.py self-test
 
   documentation-quality:
     runs-on: ubuntu-latest
