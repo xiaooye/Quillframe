@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 288" role="img" aria-labelledby="t d">
+<title id="t">Independent semantic review</title>
+<desc id="d">Manager and reviewer invocations are separate and exchange only an exact fingerprint-bound candidate package.</desc>
+<style>
+text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;fill:#24212A}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:1.5px;fill:#716A74}
+.title{font-size:28px;font-weight:760}
+.label{font-size:17px;font-weight:700}
+.body{font-size:14px;fill:#716A74}
+.micro{font-size:12px;fill:#716A74}
+.line{stroke:#D9D1C6;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.dash{stroke:#716A74;stroke-width:1.3;stroke-dasharray:6 7;fill:none}
+</style>
+<rect width="920" height="288" fill="#FFF9F0"/>
+<text x="48" y="38" class="eyebrow">INDEPENDENT SEMANTIC REVIEW</text><text x="48" y="72" class="title">Separate invocation. Exact artifact.</text><rect x="54" y="126" width="250" height="92" rx="22" fill="#F1ECFF"/><text x="77" y="151" class="eyebrow">MANAGER INVOCATION</text><text x="77" y="183" class="label">freeze · package</text><rect x="615" y="126" width="250" height="92" rx="22" fill="#EAF5FF"/><text x="638" y="151" class="eyebrow">REVIEWER INVOCATION</text><text x="638" y="183" class="label">judge · return</text><path d="M304 172 L405 172" class="line"/><path d="M515 172 L615 172" class="line"/><rect x="407" y="143" width="106" height="58" rx="12" fill="#FFF3CF"/><text x="460" y="164" class="micro" text-anchor="middle">candidate</text><text x="460" y="185" class="micro" text-anchor="middle">sha256:…</text><text x="48" y="260" class="body">Same-session roleplay is not independence.</text>
+</svg>

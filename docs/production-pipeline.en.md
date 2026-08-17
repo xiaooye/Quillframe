@@ -1,178 +1,45 @@
-<div align="center">
-  <img src="../assets/brand/novelforge-lockup.svg" alt="NovelForge — Adaptive Fiction Agent Framework" width="560" />
-  <p><strong>Production Pipeline · model-owned narrative judgment inside exact execution boundaries</strong></p>
-  <p><kbd>GROUND</kbd>&nbsp;&nbsp;<kbd>SEARCH</kbd>&nbsp;&nbsp;<kbd>SIMULATE</kbd>&nbsp;&nbsp;<kbd>DRAFT</kbd>&nbsp;&nbsp;<kbd>READ</kbd>&nbsp;&nbsp;<kbd>AUDIT</kbd>&nbsp;&nbsp;<kbd>EDIT</kbd>&nbsp;&nbsp;<kbd>GATE</kbd></p>
-  <p><a href="production-pipeline.zh-CN.md">简体中文</a> · <a href="README.en.md">Docs Home</a></p>
-</div>
-
 # Production Pipeline
 
-NovelForge treats a chapter as a **recoverable semantic production run**, not a fixed chain of critic agents and not a deterministic story engine.
+A Quillframe DRAFT or REVISE run is an adaptive production graph. The graph has hard boundaries, but it does not force every chapter through the same number of model calls.
 
-> **Models decide narrative meaning. Runtime enforces execution truth. Project authority decides what is Canon.**
+<img src="assets/architecture/production-graph.en.svg" alt="Production graph from sparse context and simulation through internal candidate, qualification, repair loops, independent review, and the user-visible gate" width="100%" />
 
-## 01 · Establish authority before prose
+## 1. Freeze authority and sparse context
 
-A `DRAFT` or `REVISE` run first resolves:
+Resolve the exact framework/project authority for the run, establish session/run identity, select only task-relevant context, and verify stage/fingerprint boundaries. Future Plan outcomes cannot leak into current state. Regression bad examples and hidden expected labels stay out of first-pass generation.
 
-- the current/pinned Framework identity;
-- the consuming Project and exact lock/fingerprint;
-- exactly one `task_mode`;
-- manager session/run/checkpoint identity;
-- current Canon/plan/candidate fingerprints and authority cutoff;
-- real host capabilities and permissions.
+## 2. Simulate before prose
 
-Old chat history and provider-native sessions are context, not authority. Resume revalidates current Project/Framework authority and pending capabilities before work continues.
+Story/Canon preflight, scene simulation, private character state, character action proposals, scene action resolution, and Reader Pressure establish causes, agendas, knowledge boundaries, pressure, reward, and forward pull before surface realization.
 
-## 02 · Agent-owned search, deterministic context boundaries
+## 3. Generate an internal candidate
 
-The manager/model determines what knowledge is missing. When necessary it invokes `context.select`, formulates its own query, inspects results, rejects irrelevant matches, reformulates or continues, and stops when sufficiently grounded.
+Event-first Raw Draft material is private. Surface realization turns the simulated event structure into prose. The candidate is then frozen and fingerprinted. Raw Draft is never the user-visible artifact.
 
-Retrieval primitives may use lexical/vector/top-k mechanics to return candidates. They do **not** make those candidates narratively relevant by fiat.
+## 4. Qualify before spending independent review
 
-After semantic selection, deterministic context infrastructure verifies only objective boundaries:
+`quality/candidate_qualification.py` expects registered non-independent semantic evidence for candidate self-audit and reader engagement, plus continuity evidence. A repair-cycle candidate also needs a `quality.compare` preservation check against its objective envelope.
 
-- exact selected/source IDs and fingerprints;
-- stage and private-state visibility;
-- temporal eligibility where the runtime can prove it;
-- exact higher-authority required refs when an operation mechanically requires them;
-- hard context/resource budgets.
+The result is one of `awaiting_semantic`, `repair_required`, or `qualified_for_independent`. Qualification is not independent review and cannot replace it.
 
-`context_assembly.py` v2 does not require literary context classes or declare semantic sufficiency. Missing meaning is repaired by search/selection, not by adding another Python relevance rule.
+## 5. Repair the owning mechanism
 
-## 03 · Story and planning preflight
+Local surface defects can receive local rewrite. A surface cluster can require scene realization again. SAFE-BUT-FLAT returns to Reader Pressure and Scene Simulation. Character failure returns to Character Simulation. Story/plan failure returns upstream. Context failure returns to Context/Memory.
 
-The manager checks whether the requested work is legal relative to current Project state. Planning artifacts remain distinct from Accepted Canon.
+Every repair cycle follows FIX + PRESERVE. A successful local repair that damages the objective envelope, reader value, or relationship energy is not a successful overall repair.
 
-`planning_horizon.py` may enforce declared commitment strength/depth, promoter class, exact before-state and fingerprints. The **Planner** decides how much detail is useful now, what should remain uncertain, and whether more research or replanning is needed. NovelForge has no universal N-chapter/N-volume horizon.
+<img src="assets/concepts/objective-preserving-repair.en.svg" alt="Objective-preserving repair: target defect improves while the objective envelope stays intact" width="100%" />
 
-## 04 · Character causality before prose
+## 6. Evolve candidates without contaminating fresh regeneration
 
-The pre-draft causal sequence is **private character/world state → `character.action_propose` → `scene.resolve_actions` → compact writer-safe realization projection → Writer**.
+Quality Evolution compares an incumbent with a challenger through registered semantic comparison. Candidate Lineage records whether the challenger is a repair, fresh regeneration, or user edit. A repair derives prose from its comparison parent; a fresh regeneration keeps a comparison parent but has no prose parent.
 
-Character private state is causal evidence. It is not a prose payload. Runtime may enforce evidence identity, authorized visibility and story-time eligibility, but semantic questions such as motivation, plausible inference, integrity and knowledge use belong to models.
+## 7. Run independent review on the exact candidate
 
-`scene.realization_project` should stay compact. Its purpose is to preserve the observable interaction/event trace and privacy boundary, not to serialize a second Character Sheet or a giant Realization Sheet.
+When required, freeze and package the qualified candidate, checkpoint, dispatch to a genuinely separate eligible invocation/session, validate the returned typed result against the exact candidate fingerprint, consume it once, and route any valid rejection back to repair.
 
-## 05 · Raw Draft and Surface realization
+<img src="assets/concepts/independent-semantic-review.en.svg" alt="Separate manager and reviewer invocations connected only by a fingerprint-bound candidate artifact" width="100%" />
 
-Writer produces event-first Raw Draft only after the current causal problem is sufficiently grounded. Raw Draft is internal.
+## 8. Cross the user-visible gate
 
-Negative regression examples remain out of first-pass Writer context until the candidate is frozen. Once frozen, the exact candidate fingerprint becomes the binding subject for downstream review.
-
-Surface Fundamentals remain craft knowledge and regression vocabulary. Mechanical metrics such as paragraph or dialogue ratios are available through optional prose telemetry, **default-off** and never a generic literary verdict.
-
-## 06 · Blind Reader
-
-The production Reader is `reader.engagement_audit`.
-
-It receives the candidate plus reader-visible evidence and the minimal target-reader behavior profile. It does **not** normally receive:
-
-- author intent or future plan;
-- private character state;
-- Writer reasoning;
-- the full quality taxonomy or expected HF code;
-- prose telemetry;
-- hard-rule audit instructions;
-- prior reviewer verdicts or repair plan.
-
-Its job is to read naturally and report the reading experience that actually matters: pull, boredom, confusion, disbelief, emotional response, artificiality, interest, anticipation, irritation, attachment, or another salient effect. It is not required to fill every literary dimension.
-
-## 07 · Semantic Rule Auditor
-
-Hard narrative rules are not Python literary rules.
-
-`quality.semantic_rule_audit` receives an authoritative semantic-rule index and authorized evidence. It decides rule applicability and returns traceable judgments such as `PASS`, `FAIL`, `NOT_APPLICABLE`, or `INSUFFICIENT_EVIDENCE`.
-
-The runtime verifies that the correct rule authority was available, the audit ran against the exact candidate, and any required independent identity/receipt is valid. It does not decide whether the prose semantically violated the rule.
-
-A confirmed blocking semantic-rule FAIL routes repair. A missing required audit remains unresolved.
-
-## 08 · Editor owns repair mechanism and depth
-
-`editor.repair_spec` integrates:
-
-- Blind Reader findings;
-- Semantic Rule Auditor findings;
-- authorized story/Canon evidence;
-- Project/style constraints;
-- current repair goal and relevant active preference evidence when explicitly selected.
-
-The Editor decides the mechanism, repair owner, and whether the next generation should be `local_or_bounded_repair` or `fresh_realization`.
-
-`quality/repair_policy.py` v2 does **not** infer literary repair depth from owner/scope/cluster. It only enforces the information boundary implied by the Editor-selected mode. When fresh realization is selected, rejected prose/concrete patch instructions can be hidden from the Writer to avoid patch-loop anchoring.
-
-HF/RG taxonomy remains diagnostic vocabulary and regression labels. A Blind Reader may describe “these people sound like they are explaining their job descriptions”; Rule Auditor/Editor may map that evidence to HF-30 where useful.
-
-## 09 · Challenger comparison and plateau
-
-Revision is not automatically improvement.
-
-When a material repair warrants comparison, `quality.compare` semantically evaluates incumbent versus challenger. `quality_evolution.py` persists candidate fingerprints, comparison receipts, consume-once state and a configurable workflow plateau limit; it does not choose the literary winner itself.
-
-A tie or incumbent win is valid evidence. The system may stop rather than rewriting forever.
-
-## 10 · Release gates
-
-`production_readiness.py` and `production_release.py` validate exact binding and conjunctive gate state. They may check:
-
-- required registered Reader / semantic-rule / independent results exist;
-- exact candidate/subject/fingerprint match;
-- worker/provenance/independence requirements are satisfied;
-- deterministic structural receipts and authority invariants are valid.
-
-They do not re-judge whether the chapter is good.
-
-A missing required semantic judgment is `PENDING_MODEL`/pending, not PASS. A workflow that merely records missing model capability is functioning honestly but does not provide semantic evidence.
-
-## 11 · Independent semantic review
-
-Independence is a separate property from semantic judgment.
-
-When the active gate requires it, use a genuinely separate invocation/session/worker with a bounded packet and exact candidate fingerprint. The manager may package, dispatch, validate and consume; it may not satisfy the independent gate by changing its internal role label.
-
-Transport failure may use another eligible transport. A valid semantic rejection is not a transport failure and must route repair; do not keep changing reviewers until one accepts the candidate.
-
-## 12 · Acceptance and settlement remain separate
-
-Review-ready prose is still not Accepted Canon.
-
-Explicit user acceptance/authorized Canon-change intent is required before `SETTLE`. Settlement remains a deterministic transaction with exact acceptance evidence, checkpoint/write authorization, before-state/CAS, projection receipts and postcondition verification.
-
-Quality evidence cannot approve itself into Canon.
-
-## 13 · Default adaptive graph
-
-The default production graph is structured as these ordered stages:
-
-1. authority/session bootstrap;
-2. agent-owned search/context selection;
-3. deterministic exact-set/stage/fingerprint verification;
-4. story/planning preflight;
-5. character action, scene collision, then compact realization;
-6. Writer Raw Draft, Surface realization, then candidate fingerprint freeze;
-7. Blind Reader;
-8. Semantic Rule Auditor when required;
-9. Editor repair specification and repair/challenger comparison when warranted;
-10. continuity/state checks;
-11. required independent semantic gate;
-12. user-visible Review Draft;
-13. explicit acceptance, followed by `SETTLE` as a separate mode/transaction.
-
-The manager loads the smallest semantic contract set needed by the current failure. One capable agent remains preferable unless information isolation, independent evaluation, private state, or genuine specialist benefit justifies separation.
-
-## Exact references
-
-- [Context & Memory](context-and-memory.en.md)
-- [Quality & QA](quality-assurance.en.md)
-- [Adaptive Learning](adaptive-learning.en.md)
-- [Orchestration Protocol](../harness/ORCHESTRATION_PROTOCOL.en.md)
-- [`harness/semantic_workers/model_contract_catalog.json`](../harness/semantic_workers/model_contract_catalog.json)
-- [`quality/repair_policy.py`](../quality/repair_policy.py)
-- [`quality/production_readiness.py`](../quality/production_readiness.py)
-
-<div align="center"><sub>Constrain power. Let models understand the fiction. Bind every consequential result to exact state. 🌸</sub></div>
-
-## Objective-preserving repair context
-
-Repair loops preserve a compact current `objective_envelope` across candidate lineage. Editor output is FIX + PRESERVE. When fresh realization is selected, Writer context is reconstructed from current authoritative state, the objective envelope and a distilled repair packet; rejected realization, full critique trajectory and regression bad examples remain outside Writer context. Material repaired candidates must pass objective-preservation comparison before independent dispatch.
+Only a candidate whose applicable semantic, continuity, lineage, and independence gates resolve may be called a Review Draft or production-ready according to the current contract. Acceptance remains a separate user/editorial decision; settlement remains a separate authorized state mutation.

@@ -1,0 +1,19 @@
+{
+  "schema": "quillframe_documentation_inventory_v1",
+  "authority": "current implementation + schema + tests + current manifest outrank explanatory prose",
+  "target_commit": "84ec25e182b7d9e1e655dede75324dacd6aca752",
+  "categories": [
+    {"scope":"README*.md","status":"REWRITE","action":"public-brand migration + editorial reconstruction"},
+    {"scope":"docs/README + architecture + pipeline + quality","status":"REWRITE","action":"new mental models, current #103/#104 mechanisms, open-canvas diagrams"},
+    {"scope":"docs/context-and-memory + integrations + project-sdk + adaptive-learning","status":"REWRITE","action":"current authority/runtime/learning boundaries"},
+    {"scope":"docs/CANDIDATE_LINEAGE_V1","status":"REWRITE","action":"comparison parent vs prose parent + exact binding + authority=false"},
+    {"scope":"docs/DOCUMENTATION_STANDARD + DOCUMENTATION_QA","status":"REWRITE","action":"canvas-first visual language + selective brand policy"},
+    {"scope":"SKILL* + HARNESS_AGENT*","status":"KEEP","action":"operational technical contract; legacy technical namespace intentionally preserved"},
+    {"scope":"core/** + surface/**","status":"KEEP","action":"normative generic craft/Canon contracts remain implementation-adjacent authority"},
+    {"scope":"specs/**","status":"HISTORICAL","action":"preserve historical wording; no rebrand rewrite"},
+    {"scope":"studio/** + site/** product docs","status":"PARTIAL_STALE","action":"do not modify in docs-only rebrand; UI_REBRAND_FOLLOWUP"},
+    {"scope":"assets/brand/** + assets/ui/**","status":"PARTIAL_STALE","action":"shared Product assets remain untouched; docs stop depending on stale brand visuals"},
+    {"scope":"CHANGELOG*","status":"HISTORICAL","action":"preserve version history"}
+  ],
+  "duplicate_policy": {"README":"orientation","SKILL":"operational contract","HARNESS_AGENT":"runtime execution authority","docs":"human explanation","spec":"historical design record","schema":"machine truth"}
+}

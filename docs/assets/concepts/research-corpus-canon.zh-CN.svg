@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 292" role="img" aria-labelledby="t d">
+<title id="t">Research / Corpus / Canon 边界</title>
+<desc id="d">Research truth、Corpus craft evidence 与 Canon 保持不同 authority class。</desc>
+<style>
+text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;fill:#24212A}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:1.5px;fill:#716A74}
+.title{font-size:28px;font-weight:760}
+.label{font-size:17px;font-weight:700}
+.body{font-size:14px;fill:#716A74}
+.micro{font-size:12px;fill:#716A74}
+.line{stroke:#D9D1C6;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.dash{stroke:#716A74;stroke-width:1.3;stroke-dasharray:6 7;fill:none}
+</style>
+<rect width="920" height="292" fill="#FFF9F0"/>
+<text x="48" y="38" class="eyebrow">RESEARCH / CORPUS / CANON</text><text x="48" y="72" class="title">Evidence 有边界。</text><rect x="54" y="126" width="220" height="90" rx="22" fill="#FFF3CF"/><text x="78" y="151" class="eyebrow">RESEARCH</text><text x="78" y="183" class="label">现实 / 世界事实</text><rect x="350" y="126" width="220" height="90" rx="22" fill="#F1ECFF"/><text x="374" y="151" class="eyebrow">CORPUS</text><text x="374" y="183" class="label">Craft Evidence</text><rect x="646" y="126" width="220" height="90" rx="22" fill="#E7F7EE"/><text x="670" y="151" class="eyebrow">CANON</text><text x="670" y="183" class="label">Accepted Story Truth</text><text x="54" y="255" class="label">Research ≠ Character Knowledge</text><text x="350" y="255" class="label">Corpus ≠ Canon</text>
+</svg>

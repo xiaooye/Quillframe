@@ -1,0 +1,14 @@
+{
+  "schema": "quillframe_image_inventory_v1",
+  "existing": [
+    {"image":"assets/brand/novelforge-lockup.svg","purpose":"legacy public lockup","accuracy":"brand-stale","visual_family":"Story Loom/shared Product","brand_text":"NovelForge","stale":true,"semantic_necessity":"low","action":"REPLACE_IN_DOCS","ui_rebrand_followup":true},
+    {"image":"assets/brand/novelforge-mark.svg","purpose":"legacy public mark","accuracy":"brand-stale","visual_family":"Story Loom/shared Product","brand_text":"NovelForge","stale":true,"semantic_necessity":"low","action":"REPLACE_IN_DOCS","ui_rebrand_followup":true},
+    {"image":"assets/brand/story-thread.svg","purpose":"decorative divider","accuracy":"semantically neutral","visual_family":"Story Loom/shared Product","brand_text":"none","stale":true,"semantic_necessity":"none","action":"DELETE_FROM_DOC_COMPOSITION","ui_rebrand_followup":false},
+    {"image":"assets/ui/home-architecture.*.svg","purpose":"old homepage architecture","accuracy":"partial-stale","visual_family":"dashboard/card","brand_text":"legacy/shared","stale":true,"semantic_necessity":"high","action":"REDRAW_AS_docs/assets/architecture/framework-mental-model","ui_rebrand_followup":true},
+    {"image":"assets/ui/home-pipeline.*.svg","purpose":"old production pipeline","accuracy":"partial-stale","visual_family":"dashboard/card","brand_text":"legacy/shared","stale":true,"semantic_necessity":"high","action":"REDRAW_AS_docs/assets/architecture/production-graph","ui_rebrand_followup":true},
+    {"image":"assets/ui/home-quality.*.svg","purpose":"old quality overview","accuracy":"stale-after-103-104","visual_family":"dashboard/card","brand_text":"legacy/shared","stale":true,"semantic_necessity":"high","action":"SPLIT_INTO_objective-repair+lineage+independent-review","ui_rebrand_followup":true},
+    {"image":"assets/ui/home-comparison.*.svg","purpose":"competitor comparison","accuracy":"time-sensitive","visual_family":"large component grid","brand_text":"legacy/shared","stale":true,"semantic_necessity":"low","action":"REMOVE_FROM_README","ui_rebrand_followup":true},
+    {"image":"assets/ui/home-fit.*.svg","purpose":"product fit guide","accuracy":"usable prose concept","visual_family":"card composition","brand_text":"legacy/shared","stale":true,"semantic_necessity":"low","action":"REPLACE_WITH_PROSE","ui_rebrand_followup":true}
+  ],
+  "new_family": {"root":"docs/assets","format":"SVG first","composition":"open editorial canvas","border_budget":"spacing/typography/tint before border","kawaii":"0-3 micro accents per diagram"}
+}

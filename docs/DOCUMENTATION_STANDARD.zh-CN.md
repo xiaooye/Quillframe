@@ -1,247 +1,45 @@
-# NovelForge 文档标准
+# Documentation Standard
 
-> **状态：** 本仓库面向用户与开发者的人类可读文档统一遵守本标准。
->
-> **视觉系统：** [`assets/DESIGN_SYSTEM.zh-CN.md`](../assets/DESIGN_SYSTEM.zh-CN.md)
->
-> **Agent 入口：** [`AGENTS.zh-CN.md`](../AGENTS.zh-CN.md)
+Quillframe 文档只遵守一个最重要的视觉与信息原则：**THE PAGE IS THE CANVAS。** 结构先由 typography、spacing、alignment 与 semantic sequence 建立，再考虑 container。
 
-NovelForge 的文档本身就是产品的一部分。它既要准确解释一个复杂的小说生产框架，也必须保持统一、可识别的 **Story Loom / 故事织机** 品牌语言：技术结构足够专业严谨，同时保留克制的二次元编辑感与温度。
+## Information Architecture
 
-本标准适用于根 README、文档首页、产品说明、架构介绍、竞品比较、质量保障、生产流程、发布说明以及各主要子系统入口。底层协议、Schema 和机器接口可以更克制，但仍必须遵守语言质量、权威边界、准确性与可访问性要求。
+主要文档先用一段话给 mental model；只有空间关系真的能帮助理解时，才加入一张 canonical diagram；随后进入详细解释，contract/schema/reference 放在后面，不要一开页就倒 schema dump。
 
----
+Docs Home 的信息架构固定为 Start Here、Core Concepts、Writing、Quality、Canon & Settlement、Context & Memory、Learning、Semantic Execution、Session & Control Plane、Corpus & Research、Project Integration、Development、Reference。
 
-## 1 · 产品文档要解决什么问题
+## Canvas First, Cards Second
 
-第一次进入仓库的读者，应当能够在主 README 的约 60–90 秒阅读时间内回答：
+默认状态：no container。
 
-1. NovelForge 是什么；
-2. 它解决长篇 / 连载 AI 小说中的什么核心问题；
-3. 它与直接小说智能体 / 小说框架相比有什么不同；
-4. 它的架构与章节生产流程如何工作；
-5. 为什么它的质量保障与“独立审查”值得信任；
-6. 它增加了哪些工程成本、在哪些场景下反而不适合；
-7. 如何开始，以及更深入的文档在哪里。
+Spacing 能建立 group，就不要画 border；极淡 semantic wash 能建立 group，就不要画 border；typography 能建立 hierarchy，就不要画 border。
 
-不能要求用户先理解整个源码目录，才能拼出“这个产品到底做什么”。
+只有真实 artifact、state、comparison 或明确 conceptual boundary 才使用边界。禁止 framed section 里再塞 framed card 的嵌套结构。
 
-面向用户的文档必须同时讲能力与局限。NovelForge 不能被写成“在所有场景都更好”的万能方案。适当场合应明确说明：它比轻量写作工具多流程、生态仍较小、语义审查增加延迟与模型 / 人工成本、产品化 UI 仍在成熟、出版与导出体验不是当前最强项等真实取舍。
+## Visual Language
 
----
+Base canvas 使用 warm ivory / soft off-white，正文用 graphite ink；大字号 display type 建立 editorial hierarchy；technical label 小、精确、安静。Kawaii personality 只是克制 accent——全页大约 5%，高密度 technical diagram 甚至更少。
 
-## 2 · 文档分层
+允许极少量 spark、tape fragment、ribbon marker、soft index tab；一张图通常 0–3 个 decorative detail 就够了。
 
-### A 级 · 产品入口 / Landing
+## Semantic Color
 
-例如：`README.md`、`README.en.md`、`README.zh-CN.md`、文档中心首页。
+Project = soft blue；Runtime = violet；Editorial = soft pink；Evidence = warm cream/gold；Validated = mint；Rejected/Stale = soft rose；Neutral = warm paper + graphite。颜色负责 signal，不能成为唯一的信息载体。
 
-目标：让读者快速建立产品认知、判断适配度，并知道下一步去哪看。
+## Diagram Rules
 
-要求：
-- 信息密度高，但层级清楚；
-- 架构、生产流水线、QA、适用场景、主要竞品比较优先使用品牌化展示模块；
-- 不用一整面原生 Markdown 表格、默认 Mermaid 或箭头流程串承担核心产品叙事；
-- 即使图片加载失败，旁边的文字仍足以理解核心含义；
-- 必须能进入更深层的可检查技术文档。
+Technical architecture 默认 SVG：diffable、inspectable、scalable、accessible。优先 open group、text-only node、thin connector、short rule、small semantic marker，而不是重复 rounded rectangle。
 
-### B 级 · 解释型指南
+所有 documentation SVG 必须有 meaningful `<title>` / `<desc>`、可读 label、足够 contrast；结构复杂时文档正文还要有 textual explanation。禁止 AI-generated raster 代替 technical diagram。
 
-例如：为什么是 NovelForge、生产流水线、质量保障、架构图谱、自适应学习、语料智能、集成、项目 SDK。
+## Public Brand 与 Technical Namespace
 
-目标：讲清机制、边界、流程、失败模式和取舍。
+Quillframe 是 current public brand。旧品牌只在 historical record 或 compatibility identifier 中保留。Repository name、schema ID、`novelforge.toml`、`novelforge.lock.json`、workflow name 与 stable contract ID 属于 technical namespace，禁止 global replace。
 
-要求：
-- 可以使用更完整的技术说明；
-- Mermaid 作为可检查源图是合适的；
-- 原生 Markdown 表格在确实更适合参考对照时可以使用；
-- 页面仍要保持 Story Loom 的节奏、页头和信息层级。
+## Bilingual Parity
 
-### C 级 · 协议 / 参考
+English / 简体中文是 semantic parity 的 native edition，不做逐行硬翻。Canon、SETTLE、Candidate Lineage、Context Manifest 等正式 term 在能提升 contract precision 时可以保留英文。
 
-例如：Harness 协议、会话运行时契约、Schema、机器接口说明。
+## Source Hierarchy
 
-目标：精确、可实现、可验证。
-
-要求：
-- 正确性优先于装饰；
-- 不为了“可爱”在技术契约里塞吉祥物或多余视觉元素；
-- 精确保留状态名、Schema、ID、字段与规范性语言；
-- 只要有人类可读双语版本，仍需满足语言与可访问性要求。
-
----
-
-## 3 · Story Loom 视觉契约
-
-完整视觉规范见 [`assets/DESIGN_SYSTEM.zh-CN.md`](../assets/DESIGN_SYSTEM.zh-CN.md)，机器可读设计令牌见 [`assets/brand/tokens.json`](../assets/brand/tokens.json)。
-
-整体目标约为 **70% 专业技术感 / 30% 二次元编辑感**。
-
-必须保持：
-- 使用 NovelForge 自己的品牌系统，而不是普通 GitHub 技术文档模板；
-- 以暖白、墨色为技术骨架，用樱花粉、薰衣草紫、天空蓝、薄荷绿、琥珀色表达语义；
-- 通过编号标题、稳定留白、故事线分隔符、语义提示块、紧凑视觉模块建立节奏；
-- `🌸 ✦ ✨ 📖` 等 emoji 可以在 Landing 页增加编辑感，但绝不能成为唯一的结构、状态或导航图标；
-- 不提交外部字体文件，统一使用系统字体回退；
-- 不在一页里混杂玻璃拟态、终端风、粗野主义、拟物等互相冲突的视觉语言。
-
-### A 级页面禁止退化成的样式
-
-以下形式不能作为重要概念的主要展示方式：
-- fenced `text` 代码块里的 `A → B → C → D`；
-- 长箭头流程列表；
-- 默认灰色 Mermaid 当首页 Hero 级主视觉；
-- 本应高密度比较却直接摆一张巨大的原生 Markdown 表；
-- 一堆内容极少、必须逐个扫描才能发现差异的卡片；
-- 看起来像 UI、实际上没有信息密度的装饰盒；
-- 没有层级的长 bullet wall。
-
-生产流水线、系统架构、QA 栈、竞品能力矩阵都属于首页核心产品叙事，应使用专门设计的展示模块。
-
----
-
-## 4 · 图表与视觉源规则
-
-NovelForge 采用 **“展示层覆盖源图，源图保留可检查性”** 的模式。
-
-- A 级页面优先使用品牌化 SVG / UI 模块作为展示层；
-- Mermaid 继续作为技术图的可差异比较、可维护源图 / 参考图；
-- 品牌化展示图不能凭空加入权威文档中没有的新语义；
-- 架构、流程语义变化时，先更新权威文字 / 源图，再更新展示资产；
-- 有意义的图片必须有替代文本，并在附近提供文字解释；
-- 颜色不能成为唯一语义通道；
-- 静态资产必须原创，或明确记录授权与来源。
-
-竞品比较优先使用高密度自定义矩阵，展示真实机制，不使用星级、模糊评分或营销式“几颗星”。
-
----
-
-## 5 · 竞品比较标准
-
-根 README 的主要比较对象必须是 **直接小说智能体 / 小说框架**，而不是通用 Agent Framework。
-
-当仍然相关且可验证时，可比较 NovelClaw、Novel OS、AuthorAgent、autonovel 等同类系统。
-
-Sudowrite、NovelCrafter 这类成熟作者产品应单独讨论，因为它们在产品形态、编辑体验、出版流程上和工程框架不是完全同类。
-
-LangGraph、OpenAI Agents SDK、AutoGen、CrewAI 等通用运行时应放到实现思想 / 技术采用文档中，而不是首页主要竞品表。
-
-比较必须遵守：
-- 比机制，不比“感觉”；
-- 优先比较正典 / 事实模型、人物知识与状态、长程状态、可恢复运行、独立语义 QA、读者 QA、确定性 QA、失败回路、运行时 / 模型选择、本地运行、出版导出等明确能力；
-- 如果只是不知道对方有没有某能力，写“不明确 / 未在当前文档中确认”，不能直接推断“没有”；
-- 会随时间变化的竞品能力要保留快照时间与来源；
-- 做实质性更新前必须重新核实当前资料；
-- 不歪曲竞品来突出 NovelForge。
-
----
-
-## 6 · 双语质量标准
-
-英文与简体中文是**两套原生表达、语义等价的权威版本**，不是逐句镜像翻译。
-
-### 英文版
-
-使用自然、专业的技术英语。不要照搬中文句法。软件工程、编辑、Agent 系统等领域优先采用行业自然表达。
-
-### 简体中文版
-
-使用自然的专业中文。能清楚翻译的概念，不要把一串英文名词直接粘进中文句子里。
-
-只有以下情况保留英文：
-- 协议 / Schema 的精确值；
-- 代码标识符、命令、路径；
-- 产品名；
-- 行业内已经约定俗成、强行翻译反而降低精度的术语。
-
-例如：
-- 解释性正文优先写“运行时状态”“独立语义审查”“内容指纹”“项目适配器”；
-- `semantic_reject`、`task_mode`、`SAFE-BUT-FLAT`、文件路径、CLI、Schema key 等规范性标识保持原样；
-- 中文图表默认使用中文节点与分区标签，只保留真正需要精确匹配的标识符和产品名。
-
-两种语言不要求句子结构完全一致，但必须在含义、权威等级、覆盖范围、链接与视觉层级上保持一致。
-
----
-
-## 7 · 内容准确性与权威边界
-
-文档必须持续保持以下 NovelForge 基本边界：
-
-- Framework 机制 ≠ 下游项目正典；
-- 计划 / 审阅 / 提案 ≠ 已接受正典；
-- 运行 / 会话状态 ≠ 项目状态 ≠ 学习状态；
-- 语料 / 研究 / 评测证据 ≠ 正典，也不自动成为人物知识；
-- 能力 ≠ 权威；
-- Semantic Worker 的结果不会因为“模型给出了答案”就自动获得写入权限。
-
-不能把计划中的功能写成已经实现。必须明确区分当前能力、提案、路线图和实验。
-
-行为发生实质变化时，应在同一改动中同步更新文档，除非该页面明确写的是未来设计提案。
-
----
-
-## 8 · 首页视觉模块要求
-
-根 README 应当是一组统一的 Story Loom 产品模块，而不是“前面精美 SVG，到了某一节突然退回文字流程图”。
-
-当前首页的核心模块至少包括：
-- 直接小说智能体能力对比；
-- 系统架构；
-- 章节生产流水线；
-- 质量保障 / QA 与失败回路；
-- 适用场景与真实取舍。
-
-这些模块应共享设计令牌、间距、字体、圆角语言与信息密度。
-
-核心模块不得在没有明确设计理由的情况下，从品牌化展示退化回箭头列表、默认 Mermaid 或原生大表格。
-
----
-
-## 9 · Markdown 与文案质量
-
-- 每页一个 H1；
-- 产品 / 指南页适合时用编号 H2 建立阅读节奏；
-- 段落长度适配 GitHub 阅读宽度；
-- 重要章节先给读者一句明确主张，再进入细节；
-- 避免“本系统提供……本系统还提供……”式功能目录腔；
-- 对一个机制至少讲清：为什么存在、它负责什么、不负责什么、防止什么失败；
-- 压缩 routine procedure，展开关键边界、真实取舍、失败模式和用户决策；
-- 表格用于真正需要多维对照的内容，而不是因为 Markdown 写表格方便；
-- 代码块只用于代码、命令、Schema、状态机或确实是文本表示的内容，不能拿它冒充产品级视觉模块。
-
----
-
-## 10 · 文档工作流与分支规则
-
-用户已经授权的日常文档维护、视觉升级、文案修复，**默认直接修改 `main`**。
-
-不要因为任务“看起来比较大”就自动新建分支。只有以下情况才使用 branch / PR：
-- 用户明确要求；
-- 仓库保护规则强制要求；
-- 改动存在较高风险，需要隔离审查或迁移；
-- 多名贡献者确实需要一个协调边界；
-- 外部检查 / 审阅流程本身依赖 PR。
-
-如果可能存在其他 session / contributor 同时写仓库，重要写入前先读取最新 `main`，确认目标路径没有被并行修改，并保留所有无关并行工作。
-
-特殊情况下创建的临时分支，在完成后应及时合并 / 关闭并删除，不长期堆积。
-
----
-
-## 11 · 文档完成标准
-
-一项面向用户的文档改动只有同时满足以下条件才算完成：
-
-- 页面在讲完整产品故事，而不是让用户自己读源码目录；
-- 主视觉层级明显属于 NovelForge / Story Loom；
-- A 级页面的核心概念没有退化成箭头列表或默认占位图；
-- 英文和中文都达到原生专业表达，且语义一致；
-- 图表、竞品结论有对应来源或技术参照；
-- 没有隐藏产品局限与真实取舍；
-- 链接和资产路径有效；
-- 图片有替代文本和文字降级说明；
-- Framework repo 没有泄露私有数据、具体项目正典、凭据或 chain-of-thought；
-- 文档与当前实现、权威边界一致；
-- 没有覆盖其他并行 session 的无关 `main` 改动。
-
-**“看起来干净”但信息稀薄、定位模糊、误导、中文翻译腔严重或导航困难，都不算完成。**
+Current implementation、schema、tests、current manifest 高于 explanatory docs。Historical spec 保留当时设计记录与当时名称；current docs 可以链接，但不能重写历史。

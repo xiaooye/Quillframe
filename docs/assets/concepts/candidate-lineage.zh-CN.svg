@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 290" role="img" aria-labelledby="t d">
+<title id="t">Candidate Lineage</title>
+<desc id="d">Lineage tree 区分 comparison parent 与 prose parent；fresh regeneration 没有 prose parent，authority=false。</desc>
+<style>
+text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;fill:#24212A}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:1.5px;fill:#716A74}
+.title{font-size:28px;font-weight:760}
+.label{font-size:17px;font-weight:700}
+.body{font-size:14px;fill:#716A74}
+.micro{font-size:12px;fill:#716A74}
+.line{stroke:#D9D1C6;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.dash{stroke:#716A74;stroke-width:1.3;stroke-dasharray:6 7;fill:none}
+</style>
+<rect width="920" height="290" fill="#FFF9F0"/>
+<text x="48" y="38" class="eyebrow">CANDIDATE LINEAGE</text><text x="48" y="72" class="title">Comparison Ancestry ≠ Prose Derivation。</text><circle cx="110" cy="142" r="6" fill="#24212A"/><text x="128" y="147" class="label">A · draft</text><text x="128" y="167" class="micro">fp:a…</text><path d="M116 142 L300 142" class="line"/><circle cx="306" cy="142" r="6" fill="#C985A4"/><text x="324" y="147" class="label">A1 · repair</text><text x="324" y="167" class="micro">prose parent: A</text><path d="M312 142 L500 142" class="line"/><circle cx="506" cy="142" r="6" fill="#C985A4"/><text x="524" y="147" class="label">A2 · repair</text><path d="M116 151 C190 225 248 225 306 208" class="line"/><circle cx="306" cy="208" r="6" fill="#7AAED6"/><text x="324" y="213" class="label">B1 · fresh regeneration</text><text x="324" y="233" class="micro">comparison parent: A</text><text x="324" y="250" class="micro">prose parent: —</text><text x="648" y="134" class="micro">solid</text><path d="M695 130 L765 130" class="line"/><text x="780" y="134" class="micro">Comparison</text><text x="648" y="167" class="micro">dashed</text><path d="M695 163 L765 163" class="dash"/><text x="780" y="167" class="micro">Prose Derivation</text><path d="M116 128 L300 128" class="dash"/><path d="M312 128 L500 128" class="dash"/><text x="650" y="235" class="label">authority=false</text>
+</svg>

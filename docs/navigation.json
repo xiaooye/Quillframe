@@ -1,0 +1,19 @@
+{
+  "schema": "quillframe_docs_navigation_v1",
+  "public_brand": "Quillframe",
+  "sections": [
+    {"id":"start_here","title":"START HERE","items":["README.en.md","why-novelforge.en.md","architecture.en.md"]},
+    {"id":"core_concepts","title":"CORE CONCEPTS","items":["architecture.en.md","architecture-atlas.en.md","../core/CANON_STATE.en.md"]},
+    {"id":"writing","title":"WRITING","items":["production-pipeline.en.md","../surface/FUNDAMENTALS.en.md","../surface/READER_ENGAGEMENT.en.md"]},
+    {"id":"quality","title":"QUALITY","items":["quality-assurance.en.md","quality-evolution.en.md","CANDIDATE_LINEAGE_V1.en.md"]},
+    {"id":"canon_settlement","title":"CANON & SETTLEMENT","items":["../core/CANON_STATE.en.md","architecture.en.md"]},
+    {"id":"context_memory","title":"CONTEXT & MEMORY","items":["context-and-memory.en.md"]},
+    {"id":"learning","title":"LEARNING","items":["adaptive-learning.en.md","../corpus/README.en.md"]},
+    {"id":"semantic_execution","title":"SEMANTIC EXECUTION","items":["../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md","../harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.en.md"]},
+    {"id":"session_control","title":"SESSION & CONTROL PLANE","items":["integrations.en.md","../harness/session_runtime/SESSION_RUNTIME.en.md","../harness/control_plane/CONTROL_PLANE.en.md"]},
+    {"id":"corpus_research","title":"CORPUS & RESEARCH","items":["../corpus/README.en.md","../corpus/CORPUS_POLICY.en.md","../corpus/CORPUS_INGEST_PROTOCOL.en.md"]},
+    {"id":"project_integration","title":"PROJECT INTEGRATION","items":["project-sdk.en.md","project-adapters.en.md","../release/FRAMEWORK_BUNDLE.en.md"]},
+    {"id":"development","title":"DEVELOPMENT","items":["8-0-development-inventory.en.md","../knowledge/AGENT_FRAMEWORK_ADOPTION.en.md","../CHANGELOG.en.md"]},
+    {"id":"reference","title":"REFERENCE","items":["../SKILL.en.md","../harness/HARNESS_AGENT.en.md","DOCUMENTATION_STANDARD.en.md","DOCUMENTATION_QA.en.md"]}
+  ]
+}

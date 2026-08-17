@@ -1,0 +1,34 @@
+{
+  "schema": "quillframe_public_documentation_manifest_v1",
+  "framework_version": "0.8.0",
+  "target_main": "84ec25e182b7d9e1e655dede75324dacd6aca752",
+  "public_brand": "Quillframe",
+  "legacy_technical_namespace": "novelforge",
+  "visual_system": {
+    "principle": "THE PAGE IS THE CANVAS",
+    "containers": "exceptional",
+    "border_budget": "spacing > tint > border",
+    "semantic_colors": ["project_blue", "runtime_violet", "editorial_pink", "evidence_gold", "validated_mint", "rejected_rose"],
+    "kawaii": "accent_not_layout"
+  },
+  "current_pairs": [
+    ["README.en.md", "README.zh-CN.md"],
+    ["docs/README.en.md", "docs/README.zh-CN.md"],
+    ["docs/why-novelforge.en.md", "docs/why-novelforge.zh-CN.md"],
+    ["docs/architecture.en.md", "docs/architecture.zh-CN.md"],
+    ["docs/architecture-atlas.en.md", "docs/architecture-atlas.zh-CN.md"],
+    ["docs/production-pipeline.en.md", "docs/production-pipeline.zh-CN.md"],
+    ["docs/quality-assurance.en.md", "docs/quality-assurance.zh-CN.md"],
+    ["docs/context-and-memory.en.md", "docs/context-and-memory.zh-CN.md"],
+    ["docs/quality-evolution.en.md", "docs/quality-evolution.zh-CN.md"],
+    ["docs/CANDIDATE_LINEAGE_V1.en.md", "docs/CANDIDATE_LINEAGE_V1.zh-CN.md"],
+    ["docs/project-sdk.en.md", "docs/project-sdk.zh-CN.md"],
+    ["docs/integrations.en.md", "docs/integrations.zh-CN.md"],
+    ["docs/adaptive-learning.en.md", "docs/adaptive-learning.zh-CN.md"],
+    ["docs/DOCUMENTATION_STANDARD.en.md", "docs/DOCUMENTATION_STANDARD.zh-CN.md"],
+    ["docs/DOCUMENTATION_QA.en.md", "docs/DOCUMENTATION_QA.zh-CN.md"]
+  ],
+  "canonical_diagrams": ["framework-mental-model", "framework-vs-project", "production-graph", "authority-ladder", "sparse-context-manifest", "objective-preserving-repair", "candidate-lineage", "independent-semantic-review", "settlement", "automatic-learning-intake", "session-run-checkpoint", "research-corpus-canon"],
+  "compatibility_registry": "docs/documentation_manifest.json",
+  "audit_files": ["docs/brand_migration.json", "docs/documentation_inventory.json", "docs/image_inventory.json", "docs/followups.json", "docs/navigation.json"]
+}
