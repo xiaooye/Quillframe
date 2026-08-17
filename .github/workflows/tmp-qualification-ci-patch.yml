@@ -22,7 +22,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Apply CI wiring patch after corrected deterministic assertions
+      - name: Apply CI wiring patch after deterministic ablation correction
         run: python tmp/patch_qualification_ci.py
       - name: Validate YAML text and targeted Python controls
         run: |
