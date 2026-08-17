@@ -58,6 +58,10 @@ Normal CI does **not** silently call paid/login-bound models.
 
 A blind queue is converted to typed semantic jobs through the Harness semantic router, then dispatched through an eligible independent runtime. Results are fingerprint-bound and can be scored by `run_evals.py`.
 
+Every live semantic run also emits `semantic-live-execution-identity.json` **before reviewer execution**. The content-addressed envelope binds the candidate commit and Framework version to the reviewer provider/model/config, blind queue and typed jobs, capability snapshot, semantic-harness source fingerprints, runner/Python environment, explicit resource-budget state, and GitHub run provenance. Unknown provider-managed revisions or unset budgets remain explicit unpinned/null facts rather than guessed metadata. Any bound field change changes `identity_fingerprint`.
+
+This envelope is deterministic provenance, not semantic evidence by itself. Historical runs without it are not retroactively assigned identities, and its presence does not convert CI into a semantic quality claim.
+
 ## Commands
 
 ```bash
@@ -65,6 +69,8 @@ python evals/run_evals.py --release
 python evals/build_judge_queue.py --output /tmp/semantic-queue.json
 python evals/run_evals.py --judgments reviewed-results.json --json
 python evals/validate_semantic_acceptance.py validate
+python evals/evaluation_execution_identity.py self-test
+python evals/evaluation_execution_identity.py validate semantic-live-execution-identity.json
 ```
 
 ## Quality domains

@@ -78,6 +78,19 @@ jobs:
           assert d['built_in_model_provider'] is True, d
           PY
 
+      - name: Capture content-addressed execution identity
+        run: |
+          python evals/evaluation_execution_identity.py capture \
+            --queue semantic-live-queue.json \
+            --jobs semantic-live-jobs.json \
+            --capabilities semantic-live-capabilities.json \
+            --candidate-commit "$GITHUB_SHA" \
+            --model "$NOVELFORGE_OPENAI_MODEL" \
+            --reasoning-effort "$NOVELFORGE_OPENAI_REASONING_EFFORT" \
+            --domain "$SEMANTIC_DOMAIN" \
+            --output semantic-live-execution-identity.json
+          python evals/evaluation_execution_identity.py validate semantic-live-execution-identity.json
+
       - name: Execute independent semantic jobs
         run: |
           python harness/semantic_workers/semantic_worker_runner.py run \
@@ -117,6 +130,7 @@ jobs:
             semantic-live-capabilities.json
             semantic-live-queue.json
             semantic-live-jobs.json
+            semantic-live-execution-identity.json
             semantic-live-execution.json
             semantic-live-results.json
             semantic-live-judgments.json
