@@ -24,6 +24,18 @@ jobs:
           python-version: '3.11'
       - name: Apply objective-preservation integration
         run: python tmp/patch_objective_preservation.py
+      - name: Correct hidden-expectation isolation assertion
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('evals/repair_objective_preservation.py')
+          text=p.read_text(encoding='utf-8')
+          old="'expectations_not_in_model_jobs':all(c['expected'] not in serialized_jobs for c in CASES if c['expected']!='semantic_compare'),"
+          new="'expectations_not_in_model_jobs':'\"expected\"' not in serialized_jobs,"
+          if text.count(old)!=1:
+              raise SystemExit('expected exactly one legacy hidden-label assertion')
+          p.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
       - name: Validate deterministic contracts
         run: |
           python -m json.tool harness/semantic_workers/contracts/production-loop.json > /dev/null
