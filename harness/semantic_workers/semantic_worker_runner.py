@@ -11,7 +11,7 @@ import argparse,json,os,shlex,shutil,subprocess,sys
 from pathlib import Path
 from typing import Any
 
-from semantic_worker_router import load_json,validate_job,validate_result
+from semantic_worker_router import load_json,validate_dispatchable_job,validate_result,worker_job_view
 
 
 def dump(v:Any,path:Path|None=None)->None:
@@ -51,7 +51,7 @@ def capabilities(cmd:str|None,src:str|None)->dict[str,Any]:
 def invoke(job:dict[str,Any],cmd:str,timeout:int)->tuple[dict[str,Any]|None,dict[str,Any]]:
     argv=shlex.split(cmd)
     if not argv:return None,{"state":"worker_failed","error":"empty adapter command"}
-    try:proc=subprocess.run(argv,input=json.dumps(job,ensure_ascii=False),text=True,capture_output=True,timeout=timeout,check=False)
+    try:proc=subprocess.run(argv,input=json.dumps(worker_job_view(job),ensure_ascii=False),text=True,capture_output=True,timeout=timeout,check=False)
     except subprocess.TimeoutExpired:return None,{"state":"worker_failed","error":f"adapter timeout after {timeout}s"}
     except OSError as exc:return None,{"state":"worker_failed","error":f"adapter launch failed: {exc}"}
     if proc.returncode!=0:return None,{"state":"worker_failed","error":f"adapter exited {proc.returncode}"+(f": {proc.stderr.strip()[:2000]}" if proc.stderr.strip() else "")}
@@ -69,11 +69,11 @@ def run_jobs(payload:dict[str,Any],cmd:str|None,src:str|None,timeout:int)->dict[
     jobs=payload.get("jobs",[]); executions=[];results=[]
     if not cmd:
         for j in jobs:
-            errors=validate_job(j);executions.append({"job_id":j.get("job_id"),"subject_id":j.get("subject_id"),"input_fingerprint":j.get("input_fingerprint"),"state":"semantic_invalid" if errors else "semantic_pending","error":"; ".join(errors) if errors else None})
+            errors=validate_dispatchable_job(j);executions.append({"job_id":j.get("job_id"),"subject_id":j.get("subject_id"),"input_fingerprint":j.get("input_fingerprint"),"state":"semantic_invalid" if errors else "semantic_pending","error":"; ".join(errors) if errors else None})
         overall="semantic_invalid" if any(x["state"]=="semantic_invalid" for x in executions) else "semantic_pending"
         return {"semantic_execution_version":"4","status":overall,"adapter":None,"direct_layer_only":True,"higher_level_transports":["control_plane_mcp","github_bridge","peer_chat_relay","human"],"results":[],"executions":executions}
     for j in jobs:
-        errors=validate_job(j)
+        errors=validate_dispatchable_job(j)
         if errors:executions.append({"job_id":j.get("job_id"),"subject_id":j.get("subject_id"),"input_fingerprint":j.get("input_fingerprint"),"state":"semantic_invalid","error":"; ".join(errors)});continue
         result,ex=invoke(j,cmd,timeout);ex.update({"job_id":j["job_id"],"subject_id":j["subject_id"],"input_fingerprint":j["input_fingerprint"]});executions.append(ex)
         if result is not None:results.append(result)

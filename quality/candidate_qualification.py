@@ -141,7 +141,26 @@ def _semantic_gate(raw: Any, *, gate: str, candidate: str, subject_id: str) -> d
         raise ValueError(f"{gate}.status contradicts semantic result")
 
     blockers: list[dict[str, Any]] = []
+    dimensions: dict[str, str] | None = None
     if gate == "self_audit":
+        raw_dimensions = judgment.get("dimensions")
+        if not isinstance(raw_dimensions, dict):
+            raise ValueError("self_audit dimensions must be object")
+        dimension_keys = {"surface", "regression", "character_or_ownership", "natural_realization", "cluster"}
+        if set(raw_dimensions) != dimension_keys:
+            raise ValueError("self_audit dimensions must cover exact required dimension set")
+        allowed_dimension_statuses = {"pass", "fail", "insufficient_evidence", "not_applicable"}
+        if any(value not in allowed_dimension_statuses for value in raw_dimensions.values()):
+            raise ValueError("self_audit dimension status invalid")
+        dimensions = {key: str(raw_dimensions[key]) for key in sorted(raw_dimensions)}
+        failed_dimensions = [key for key, value in dimensions.items() if value == "fail"]
+        insufficient_dimensions = [key for key, value in dimensions.items() if value == "insufficient_evidence"]
+        if derived == "pass" and (failed_dimensions or insufficient_dimensions):
+            raise ValueError("self_audit pass contradicts failed/insufficient dimension")
+        if derived == "fail" and not failed_dimensions:
+            raise ValueError("self_audit fail requires at least one failed dimension")
+        if derived == "pending" and not insufficient_dimensions:
+            raise ValueError("self_audit insufficient_evidence requires at least one insufficient dimension")
         findings = judgment.get("findings", [])
         if not isinstance(findings, list):
             raise ValueError("self_audit findings must be array")
@@ -169,6 +188,7 @@ def _semantic_gate(raw: Any, *, gate: str, candidate: str, subject_id: str) -> d
         "result_fingerprint": _result_fingerprint(result),
         "evidence_refs": _string_list(judgment.get("evidence_refs", raw.get("evidence_refs", [])), f"{gate}.evidence_refs"),
         "blocking_findings": blockers,
+        "dimensions": dimensions,
     }
 
 
@@ -233,6 +253,13 @@ def evaluate(payload: Any) -> dict[str, Any]:
         "pending_gates": pending,
         "failed_gates": failed,
         "blocking_findings": blockers,
+        "surface_audit_status": (self_audit.get("dimensions") or {}).get("surface", self_audit["status"]),
+        "regression_audit_status": (self_audit.get("dimensions") or {}).get("regression", self_audit["status"]),
+        "character_or_ownership_status": (self_audit.get("dimensions") or {}).get("character_or_ownership", self_audit["status"]),
+        "natural_realization_status": (self_audit.get("dimensions") or {}).get("natural_realization", self_audit["status"]),
+        "cluster_audit_status": (self_audit.get("dimensions") or {}).get("cluster", self_audit["status"]),
+        "reader_engagement_status": reader["status"],
+        "continuity_status": continuity["status"],
         "qualified_for_independent": status == "qualified_for_independent",
         "independent": False,
         "semantic_content_reinterpreted_by_runtime": False,
@@ -287,6 +314,9 @@ def validate_qualification_receipt(
         errors.append("qualification pending_gates/failed_gates must be arrays")
         pending = pending if isinstance(pending, list) else []
         failed = failed if isinstance(failed, list) else []
+    for field in ("surface_audit_status", "regression_audit_status", "character_or_ownership_status", "natural_realization_status", "cluster_audit_status", "reader_engagement_status", "continuity_status"):
+        if receipt.get(field) not in {"pass", "fail", "pending", "insufficient_evidence", "not_applicable"}:
+            errors.append(f"qualification {field} invalid")
     if receipt.get("independent") is not False:
         errors.append("qualification must be independent=false")
     if receipt.get("authority") is not False:
@@ -350,6 +380,7 @@ def self_test() -> dict[str, Any]:
         "confidence": 0.9,
         "result": "pass",
         "report": "No material blocking realization defect remains.",
+        "dimensions": {"surface":"pass","regression":"pass","character_or_ownership":"pass","natural_realization":"pass","cluster":"pass"},
         "findings": [],
         "evidence_refs": ["candidate:whole"],
     })
@@ -357,6 +388,7 @@ def self_test() -> dict[str, Any]:
         "confidence": 0.9,
         "result": "fail",
         "report": "A clustered over-authored dialogue rhythm remains.",
+        "dimensions": {"surface":"fail","regression":"fail","character_or_ownership":"fail","natural_realization":"fail","cluster":"fail"},
         "findings": [{
             "finding_id": "SELF-F-1",
             "mechanism_id": "HF-29",
@@ -365,6 +397,9 @@ def self_test() -> dict[str, Any]:
             "repair_owner": "character",
             "blocking": True,
             "report": "Purpose is valid but realization is punchline-first and stacked.",
+            "function_assessment": "pass",
+            "ownership_assessment": "fail",
+            "natural_realization_assessment": "fail",
             "evidence_refs": ["candidate:block-1"],
         }],
         "evidence_refs": ["candidate:block-1"],

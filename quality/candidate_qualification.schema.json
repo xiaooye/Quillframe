@@ -13,6 +13,13 @@
     "pending_gates",
     "failed_gates",
     "blocking_findings",
+    "surface_audit_status",
+    "regression_audit_status",
+    "character_or_ownership_status",
+    "natural_realization_status",
+    "cluster_audit_status",
+    "reader_engagement_status",
+    "continuity_status",
     "qualified_for_independent",
     "independent",
     "semantic_content_reinterpreted_by_runtime",
@@ -23,55 +30,210 @@
     "receipt_fingerprint"
   ],
   "properties": {
-    "schema": {"const": "novelforge_candidate_qualification_v1"},
-    "subject_id": {"type": "string", "minLength": 1},
-    "candidate_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-    "repair_cycle": {"type": "integer", "minimum": 0},
-    "qualification_status": {"enum": ["awaiting_semantic", "repair_required", "qualified_for_independent"]},
-    "gates": {"type": "array", "minItems": 3, "items": {"type": "object"}},
-    "pending_gates": {"type": "array", "items": {"type": "string", "minLength": 1}},
-    "failed_gates": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "schema": {
+      "const": "novelforge_candidate_qualification_v1"
+    },
+    "subject_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "candidate_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "repair_cycle": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "qualification_status": {
+      "enum": [
+        "awaiting_semantic",
+        "repair_required",
+        "qualified_for_independent"
+      ]
+    },
+    "gates": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object"
+      }
+    },
+    "pending_gates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "failed_gates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "blocking_findings": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["finding_id", "mechanism_id", "scope", "repair_owner", "evidence_refs"],
+        "required": [
+          "finding_id",
+          "mechanism_id",
+          "scope",
+          "repair_owner",
+          "evidence_refs"
+        ],
         "properties": {
-          "finding_id": {"type": "string", "minLength": 1},
-          "mechanism_id": {"type": "string", "minLength": 1},
-          "scope": {"type": "string", "minLength": 1},
-          "repair_owner": {"type": "string", "minLength": 1},
-          "evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}}
+          "finding_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mechanism_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          },
+          "repair_owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
         },
         "additionalProperties": false
       }
     },
-    "qualified_for_independent": {"type": "boolean"},
-    "independent": {"const": false},
-    "semantic_content_reinterpreted_by_runtime": {"const": false},
+    "qualified_for_independent": {
+      "type": "boolean"
+    },
+    "independent": {
+      "const": false
+    },
+    "semantic_content_reinterpreted_by_runtime": {
+      "const": false
+    },
     "provenance": {
       "type": "object",
-      "required": ["source", "exact_candidate_binding", "registered_semantic_results_required"],
+      "required": [
+        "source",
+        "exact_candidate_binding",
+        "registered_semantic_results_required"
+      ],
       "properties": {
-        "source": {"const": "candidate_qualification_runtime"},
-        "exact_candidate_binding": {"const": true},
-        "registered_semantic_results_required": {"const": true}
+        "source": {
+          "const": "candidate_qualification_runtime"
+        },
+        "exact_candidate_binding": {
+          "const": true
+        },
+        "registered_semantic_results_required": {
+          "const": true
+        }
       },
       "additionalProperties": false
     },
-    "authority": {"const": false},
+    "authority": {
+      "const": false
+    },
     "permissions": {
       "type": "object",
-      "required": ["canon_write", "framework_write", "durable_user_taste_write"],
+      "required": [
+        "canon_write",
+        "framework_write",
+        "durable_user_taste_write"
+      ],
       "properties": {
-        "canon_write": {"const": false},
-        "framework_write": {"const": false},
-        "durable_user_taste_write": {"const": false}
+        "canon_write": {
+          "const": false
+        },
+        "framework_write": {
+          "const": false
+        },
+        "durable_user_taste_write": {
+          "const": false
+        }
       },
       "additionalProperties": false
     },
-    "model_execution": {"const": false},
-    "receipt_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+    "model_execution": {
+      "const": false
+    },
+    "receipt_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "surface_audit_status": {
+      "enum": [
+        "pass",
+        "fail",
+        "pending",
+        "insufficient_evidence",
+        "not_applicable"
+      ]
+    },
+    "regression_audit_status": {
+      "enum": [
+        "pass",
+        "fail",
+        "pending",
+        "insufficient_evidence",
+        "not_applicable"
+      ]
+    },
+    "character_or_ownership_status": {
+      "enum": [
+        "pass",
+        "fail",
+        "pending",
+        "insufficient_evidence",
+        "not_applicable"
+      ]
+    },
+    "natural_realization_status": {
+      "enum": [
+        "pass",
+        "fail",
+        "pending",
+        "insufficient_evidence",
+        "not_applicable"
+      ]
+    },
+    "cluster_audit_status": {
+      "enum": [
+        "pass",
+        "fail",
+        "pending",
+        "insufficient_evidence",
+        "not_applicable"
+      ]
+    },
+    "reader_engagement_status": {
+      "enum": [
+        "pass",
+        "fail",
+        "pending",
+        "insufficient_evidence",
+        "not_applicable"
+      ]
+    },
+    "continuity_status": {
+      "enum": [
+        "pass",
+        "fail",
+        "pending",
+        "insufficient_evidence",
+        "not_applicable"
+      ]
+    }
   },
   "additionalProperties": false
 }
