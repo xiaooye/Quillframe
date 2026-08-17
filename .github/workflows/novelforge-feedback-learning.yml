@@ -107,5 +107,15 @@ jobs:
             learning/feedback_intake.py
             HARNESS_MANIFEST.yaml
             docs/documentation_manifest.json
+            SKILL.en.md
+            SKILL.zh-CN.md
+            harness/control_plane/CONTROL_PLANE.en.md
+            harness/control_plane/CONTROL_PLANE.zh-CN.md
+            harness/session_runtime/SESSION_RUNTIME.en.md
+            harness/session_runtime/SESSION_RUNTIME.zh-CN.md
+            harness/SELF_IMPROVEMENT_PROTOCOL.en.md
+            harness/SELF_IMPROVEMENT_PROTOCOL.zh-CN.md
+            specs/013-automatic-feedback-learning-intake/tasks.en.md
+            specs/013-automatic-feedback-learning-intake/tasks.zh-CN.md
           if-no-files-found: error
           retention-days: 7
