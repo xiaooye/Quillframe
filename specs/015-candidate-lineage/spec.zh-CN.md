@@ -16,6 +16,7 @@
 8. Resume 必须从 durable state 精确重建 lineage。
 9. 不新增 Writer context，不新增 mandatory semantic call。
 10. 所有 lineage/evidence 记录保持 `authority=false`。
+11. 通过 `quality/candidate_lineage.schema.json` 暴露 machine-readable projection；schema 使用 JSON Schema draft 2020-12，版本 identity 为 `novelforge_candidate_lineage_v1`。
 
 ## 非目标
 
@@ -30,6 +31,8 @@
 
 Migration 对现有 quality-evolution SQLite DB 只做 additive extension。现有 caller 保持有效；历史 provenance 不猜测。Consumer 不自动 repin，也无需被静默迁移。
 
+Machine-readable schema 只描述 lineage candidate view、durable graph projection 与 SETTLE reference-consistency receipt；它本身不授予任何 authority。
+
 ## 验收标准
 
-`docs/CANDIDATE_LINEAGE_V1.zh-CN.md` 中 A-H deterministic tests 通过；legacy-vs-lineage ablation 证明 representation gap 被消除且 incumbent selection 不变；repository hygiene 与相关 CI 通过；任何 authority boundary 均不得变弱。
+`docs/CANDIDATE_LINEAGE_V1.zh-CN.md` 中 A-H deterministic tests 通过；legacy-vs-lineage ablation 证明 representation gap 被消除且 incumbent selection 不变；`quality/candidate_lineage.schema.json` 可解析且 identity 为 `novelforge_candidate_lineage_v1`；repository hygiene 与相关 CI 通过；任何 authority boundary 均不得变弱。
