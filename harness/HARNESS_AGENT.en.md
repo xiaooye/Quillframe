@@ -17,7 +17,7 @@ Model-owned work includes, when needed:
 - semantic hard-rule applicability/violation;
 - repair mechanism/depth;
 - research interpretation;
-- feedback/preference interpretation.
+- whether a turn is learnable feedback, plus feedback meaning, scope, contradiction and hypothesis reconciliation.
 
 Deterministic code owns only what can be proved mechanically:
 
@@ -54,6 +54,8 @@ Every user-visible run has exactly one primary mode:
 `DESIGN-BOOK | DESIGN-VOLUME | PLAN-UNIT | PLAN-CHAPTER | DRAFT | REVISE | RESEARCH | SETTLE | AUDIT | CORPUS-INGEST | LEARN | SYSTEM-IMPROVE`
 
 A mode may invoke shared internal subroutines, but it may not silently perform another mode's user-visible side effect. DRAFT does not SETTLE; AUDIT does not rewrite by surprise; LEARN does not self-promote durable behavior.
+
+**Basic feedback Learning intake is a bounded internal subroutine, not a second primary mode.** Feedback in REVISE/DRAFT/PLAN/etc. can become Learning evidence without requiring an explicit LEARN mode switch. LEARN remains the dedicated mode for deeper learning analysis, Corpus expansion, hypothesis evaluation and promotion work.
 
 ## 04 · Bootstrap live authority before semantic work
 
@@ -121,21 +123,17 @@ Important boundaries:
 - Any material candidate change invalidates stale fingerprint-bound review results.
 - Explicit acceptance and SETTLE remain separate.
 
+When the user gives feedback during production, the current explicit instruction constrains the current run immediately; the same turn may independently enter automatic Learning intake. Current compliance never waits for durable promotion.
+
 ## 07 · Model-readable semantic contracts
 
 Catalog authority: `harness/semantic_workers/model_contract_catalog.json`.
 
-Semantic work resolves exact contract IDs through that progressive-disclosure catalog. A job binds:
-
-- kind / subject / exact contract version;
-- bounded input/context;
-- rubric;
-- output contract;
-- permissions;
-- semantic fingerprint;
-- execution provenance requirements.
+Semantic work resolves exact contract IDs through that progressive-disclosure catalog. A job binds kind/subject/version, bounded input/context, rubric, output contract, permissions, semantic fingerprint and execution provenance.
 
 The model owns judgment. Runtime validates identity/fingerprint/permissions/type/provenance and consumes results once. Internal semantic work is not automatically independent.
+
+`learning.preference_interpret` first decides semantic `capture | skip`; capture then determines the narrowest scope, mechanism and exact hypothesis relation. Never replace this with keyword/regex feedback classification. The contract is `independent_gate=false`, so Learning does not automatically require another costly reviewer.
 
 ## 08 · Capability broker
 
@@ -164,6 +162,8 @@ Project/resource
 
 Checkpoint before external waits, required independent review and consequential writes. Context-window loss is recoverable because authoritative state lives in durable artifacts/events/checkpoints, not in the transcript.
 
+`feedback.observed` follows the same model: Author Steering and Learning Intake consume the same durable event under distinct logical consumers. Missing semantic capability leaves Learning in durable `awaiting_semantic`; resume revalidates event/hash/job fingerprint before continuing.
+
 ## 10 · Independent semantic integrity
 
 When a gate requires independence, the manager may:
@@ -181,7 +181,8 @@ No eligible independent provider/model means `PENDING_MODEL`, never PASS.
 Learning separates:
 
 ```text
-semantic interpretation
+feedback observation
+!= semantic interpretation
 != evidence
 != hypothesis
 != promotion review
@@ -190,23 +191,51 @@ semantic interpretation
 != current relevance
 ```
 
-`learning.preference_interpret` interprets feedback. LearningStore/Author Model persist evidence/hypotheses under authority/CAS. Promotion Gate validates exact bound semantic review plus objective prerequisites; it does not use arbitrary evidence-count thresholds as semantic truth and cannot grant write authority.
+### Automatic feedback intake
 
-Active preferences are not automatically injected: the manager/model selects relevant active hypothesis IDs for the current task.
+For user/authorized-human semantic feedback about existing outputs or working behavior:
 
-General Craft changes remain `SYSTEM-IMPROVE` work with research, counterexamples/evals, compatibility, rollback and explicit promotion authority.
+```text
+feedback.observed
+├→ Author Steering for the current run when applicable
+└→ learning/feedback_intake.py
+   → learning.preference_interpret
+   → capture | skip
+   → Author Model evidence/hypothesis candidate
+   → consumer-specific receipt
+```
+
+The consumers are independent. Steering consumption never starves Learning; Learning retry cannot duplicate the same evidence.
+
+Automatic intake always keeps activation/write authority false. It does not auto-edit Project Profile, activate durable user taste, promote General Craft, mutate Framework behavior, or write Canon.
+
+Same-event retry uses stable evidence identity. Distinct user turns may supply independent evidence; the model decides whether to strengthen, contest, supersede or split a supplied hypothesis. Python does not infer semantic merge from string/embedding similarity.
+
+Rejected output stores only bounded refs/fingerprint plus negative meaning; rejected prose is not a positive exemplar and is not fed into Writer pre-draft context.
+
+`learning/feedback_query.py` is the side-effect-free observability surface and does not expose whole conversation/private reasoning/hidden gold.
+
+### Durable activation and General Craft
+
+LearningStore/Author Model persist evidence/hypotheses under authority/CAS. Promotion Gate validates exact bound semantic review plus objective prerequisites; it does not use arbitrary evidence-count thresholds as semantic truth and cannot grant write authority.
+
+Active preferences are not automatically injected: the manager/model selects relevant active hypothesis IDs for the current task. Current explicit request outranks older active preference.
+
+General Craft changes remain `SYSTEM-IMPROVE` work with current research, counterexamples/evals, compatibility, rollback and explicit promotion authority. A universal claim in ordinary production feedback is candidate evidence only.
 
 ## 12 · Writes and settlement
 
 Every consequential side effect needs least privilege, exact target, before-state/precondition, idempotency, checkpoint/write intent where required, postcondition verification and trace/rollback semantics.
 
-Canon settlement is legal only after explicit Project acceptance/authorized Canon intent. Connectors, schedules, webhooks, model results, learning state, CI or corpus evidence do not grant write authority by arrival alone.
+Canon settlement is legal only after explicit Project acceptance/authorized Canon intent. Connectors, schedules, webhooks, model results, learning state, feedback intake, CI or corpus evidence do not grant write authority by arrival alone.
 
 ## 13 · Truthful states
 
 Valid workflow states include:
 
 `complete · review · awaiting_user · awaiting_external · semantic_pending · semantic_invalid · failed_gate · blocked · settlement_incomplete`
+
+Feedback intake may internally record `observed | awaiting_semantic | skipped | persisted | blocked | failed`; these are not primary task modes.
 
 A green deterministic workflow cannot replace a required semantic judgment. A semantic job that did not execute remains pending. Never label an artifact production-ready while a required gate is unresolved.
 
