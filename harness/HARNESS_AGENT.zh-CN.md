@@ -17,7 +17,7 @@ NovelForge Harness 把经过验证的小说 Project 与明确任务组织成一�
 - semantic hard-rule applicability / violation；
 - repair mechanism / depth；
 - research interpretation；
-- feedback / preference interpretation。
+- feedback 是否 learnable、feedback / preference interpretation、scope / contradiction / reconciliation。
 
 Deterministic code 只保留可机械证明的不变量：
 
@@ -54,6 +54,8 @@ Semantic result 默认只是 evidence / proposal，除非另外的 authority mec
 `DESIGN-BOOK | DESIGN-VOLUME | PLAN-UNIT | PLAN-CHAPTER | DRAFT | REVISE | RESEARCH | SETTLE | AUDIT | CORPUS-INGEST | LEARN | SYSTEM-IMPROVE`
 
 Mode 可以内部调用共享 subroutine，但不能悄悄执行另一个 mode 的 user-visible side effect。DRAFT 不自动 SETTLE；AUDIT 不偷改 manuscript；LEARN 不自授 durable behavior。
+
+**Basic feedback Learning intake 是 bounded internal subroutine，不是第二个 primary mode。** 用户在 REVISE/DRAFT/PLAN 等 mode 对既有产物给出明确评价时，不需要额外切换 LEARN 才能保存 evidence candidate。LEARN 继续用于 dedicated learning analysis、Corpus expansion、hypothesis evaluation 与 promotion work。
 
 ## 04 · Semantic work 前先 bootstrap live authority
 
@@ -121,6 +123,8 @@ authority/session bootstrap
 - material candidate change 会使旧 fingerprint-bound review result 失效；
 - explicit acceptance 与 SETTLE 继续分离。
 
+如果用户在 production loop 中给出 feedback，当前明确指令立即约束当前 run；同一 turn 也可以独立进入 automatic Learning intake。Learning capture 不需要等 durable promotion 才让当前指令生效。
+
 ## 07 · Model-readable semantic contracts
 
 Catalog authority：`harness/semantic_workers/model_contract_catalog.json`。
@@ -136,6 +140,8 @@ Semantic work 通过这个 progressive-disclosure catalog 精确解析 contract 
 - execution provenance requirement。
 
 模型负责 judgment。Runtime 只验证 identity/fingerprint/permission/type/provenance，并 consume-once。内部 semantic work 不自动获得 independent 属性。
+
+`learning.preference_interpret` 先语义判断 `capture | skip`；capture 时再判断最窄 scope、mechanism 与 exact hypothesis relation。不要用关键词/regex 判断“是不是反馈”。该 contract 默认 `independent_gate=false`，不因名字里有 Learning 就强制启动昂贵独立 reviewer。
 
 ## 08 · Capability broker
 
@@ -164,6 +170,8 @@ Project/resource
 
 External wait、required independent review、consequential write 前按合同 checkpoint。Context-window 丢失可以恢复，因为 authority state 存在 durable artifacts/events/checkpoints，而不是聊天 transcript。
 
+`feedback.observed` 也遵守这个模型：同一 durable event 可以被 Author Steering 与 Learning Intake 以不同 consumer identity 分别 consume。若 semantic capability 暂不可用，Learning 状态保持 `awaiting_semantic`，后续 resume 重核 event/hash/job fingerprint 后继续，不丢反馈、不 heuristic 猜测。
+
 ## 10 · Independent semantic integrity
 
 Gate 真正要求 independence 时，manager 可以：
@@ -181,7 +189,8 @@ Materially changed candidate 默认需要新的 bound review，除非合同显�
 Learning 必须分开：
 
 ```text
-semantic interpretation
+feedback observation
+!= semantic interpretation
 != evidence
 != hypothesis
 != promotion review
@@ -190,23 +199,51 @@ semantic interpretation
 != current relevance
 ```
 
+### Automatic feedback intake
+
+对 user / authorized human 针对已有模型产物、创作结果或工作方式的 semantic feedback：
+
+```text
+feedback.observed
+├→ current-run Author Steering（适用时）
+└→ learning/feedback_intake.py
+   → learning.preference_interpret
+   → capture | skip
+   → Author Model evidence/hypothesis candidate
+   → consumer-specific receipt
+```
+
+两个 consumer 相互独立。Steering consume 不会让 Learning 看不到 event；Learning retry 也不能重复写同一 evidence。
+
+Automatic intake 默认所有 activation/write authority 为 false。它不会自动修改 Project Profile、durable user taste、General Craft、Framework behavior 或 Canon。
+
+同一个 event retry 使用 stable evidence identity；真正不同的 user turns 可以提供独立 evidence，由模型决定 strengthen/contest/supersede/split。Contradiction 是一等 semantic operation，不由 Python 的字符串/embedding similarity 决定。
+
+Rejected output 只可保存 ref/fingerprint + negative meaning，不把 rejected prose 当 positive exemplar，也不反向注入 Writer pre-draft context。
+
+`learning/feedback_query.py` 是 side-effect-free read-only observability surface；不创建表、不 consume、不执行 model，也不暴露 whole conversation / private reasoning / hidden gold。
+
+### Durable activation and General Craft
+
 `learning.preference_interpret` 解释 feedback；LearningStore / Author Model 在 authority/CAS 下持久化 evidence/hypothesis。Promotion Gate 验证 exact bound semantic review 与客观 prerequisite，不用 arbitrary evidence-count threshold 冒充 semantic truth，也不能授予 write authority。
 
-Active preference 不会自动注入；manager/model 为当前任务显式选择 relevant active hypothesis IDs。
+Active preference 不会自动注入；manager/model 为当前任务显式选择 relevant active hypothesis IDs。Current explicit request 始终高于旧 active preference。
 
-General Craft change 继续属于 `SYSTEM-IMPROVE`，必须有 current research、counterexamples/evals、compatibility、rollback 与 explicit promotion authority。
+General Craft change 继续属于 `SYSTEM-IMPROVE`，必须有 current research、counterexamples/evals、compatibility、rollback 与 explicit promotion authority。Production feedback 中的 universal claim 只能成为 candidate evidence，不能自己升级成 Framework rule。
 
 ## 12 · Writes / Settlement
 
 每个 consequential side effect 都需要 least privilege、exact target、before-state/precondition、idempotency、必要时 checkpoint/write intent、postcondition verification、trace/rollback semantics。
 
-Canon settlement 只有在 explicit Project acceptance / authorized Canon intent 后才合法。Connector、schedule、webhook、model result、learning state、CI、corpus evidence 都不会因为“到达系统”就自动授予 write authority。
+Canon settlement 只有在 explicit Project acceptance / authorized Canon intent 后才合法。Connector、schedule、webhook、model result、learning state、feedback intake、CI、corpus evidence 都不会因为“到达系统”就自动授予 write authority。
 
 ## 13 · Truthful states
 
 合法状态包括：
 
 `complete · review · awaiting_user · awaiting_external · semantic_pending · semantic_invalid · failed_gate · blocked · settlement_incomplete`
+
+Learning intake 内部可以更细地记录 `observed | awaiting_semantic | skipped | persisted | blocked | failed`；这不是新的 primary task mode。
 
 Green deterministic workflow 不能替代 required semantic judgment；没有真正执行的 semantic job 继续 pending。Required gate 未解决时不得声称 production-ready。
 
