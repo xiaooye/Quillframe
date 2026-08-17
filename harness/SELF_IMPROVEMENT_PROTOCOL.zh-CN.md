@@ -21,6 +21,8 @@ NovelForge 可以从用户反馈、项目结果、语料证据、评测和外部
 
 ## 02 · 先有证据，再有假设
 
+Production feedback intake 自动的是 evidence capture，不是 promotion。模型先判断 `capture | skip`；同一个 durable feedback event 的 retry 不是新 evidence，真正独立的新 user turn 才可能成为新的 evidence ref。用户的 universal claim 可以成为 candidate，但不能跳过下面的 research/counterexample/eval/authority 路径直接成立为 General Craft。Project/user 内容默认留在 Project/runtime 私有层，只有之后抽象成 rights-safe、anonymized Generic evidence 才可能进入 Framework。
+
 有效 evidence 可以包括：
 
 1. 用户明确规则；

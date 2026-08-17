@@ -1,12 +1,12 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "3",
-  "principle": "Production-loop semantic artifacts stay thin. Models interpret feedback, causal scene state and repair strategy; machines consume only the small fields needed for authority-safe persistence or routing. Private character state may drive semantic decisions but is not prose payload, and this pack does not duplicate the Blind Reader owned by the quality pack.",
+  "version": "4",
+  "principle": "Production-loop semantic artifacts stay thin. Models interpret whether a feedback candidate is learnable, causal scene state and repair strategy; machines consume only the small fields needed for authority-safe persistence or routing. Private character state may drive semantic decisions but is not prose payload, and this pack does not duplicate the Blind Reader owned by the quality pack.",
   "contracts": {
     "learning.preference_interpret": {
       "kind": "artifact_audit",
-      "purpose": "Interpret explicit user review feedback into the narrowest evidence-backed preference/repair hypothesis without granting durable preference authority.",
-      "forbidden_input_keys": ["user_biography", "private_profile", "hidden_memory", "framework_promotion_target", "expected_scope"],
+      "purpose": "Judge whether a bounded user/authorized-human feedback candidate contains learnable evidence; when it does, interpret the narrowest evidence-backed preference/repair hypothesis and relationship to existing hypotheses without granting durable preference authority.",
+      "forbidden_input_keys": ["user_biography", "private_profile", "hidden_memory", "framework_promotion_target", "expected_scope", "expected_capture_decision", "whole_conversation"],
       "input_contract": {
         "type": "object",
         "required": ["feedback_ref", "feedback_text", "current_task"],
@@ -14,22 +14,30 @@
           "feedback_ref": {"type": "string", "minLength": 1},
           "feedback_text": {"type": "string", "minLength": 1, "maxLength": 12000},
           "current_task": {"type": "object"},
+          "target": {"type": "object"},
           "project_profile": {"type": "object"},
           "active_author_model": {"type": "object"},
+          "hypothesis_index": {"type": "array", "items": {"type": "object"}, "maxItems": 64},
           "candidate_excerpt": {"type": "string", "maxLength": 12000}
         },
         "additionalProperties": false
       },
       "rubric": [
-        "Treat the user's supplied feedback as primary evidence. Do not infer biography, identity, stable taste or universal craft law beyond the evidence.",
-        "Separate immediate repair from any future preference hypothesis and choose the narrowest plausible scope.",
-        "Describe the semantic mechanism in natural language; preserve exceptions and uncertainty rather than manufacturing a complete preference record.",
-        "If supplied active hypotheses materially conflict with this evidence, identify them. This is evidence only and grants no durable authority."
+        "First decide whether the supplied turn actually contains semantic feedback about an existing output, behavior, workflow, preference or correction. Operational commands, acknowledgements, ordinary factual questions and silence are not learning evidence merely because they are user messages.",
+        "Return capture_decision=skip when the evidence is too weak or non-evaluative. A skip must not invent scope, mechanism, preference statement or hypothesis relation.",
+        "For capture, treat the user's supplied feedback as primary evidence. Separate the immediately binding current instruction from any future learning candidate and choose the narrowest plausible scope: one_off before project before user_taste before general_craft unless the words support broader scope.",
+        "A user's universal claim does not by itself establish General Craft. It may be recorded as evidence/candidate only; General Craft promotion remains a separate research/counterexample/eval/authority process.",
+        "Compare only against the supplied compact hypothesis_index. Semantically choose create, strengthen, contest, supersede or split; do not merge because wording is superficially similar and do not manufacture a target ID.",
+        "A plain acceptance is low signal. Use reasoned_acceptance only when the user's acceptance identifies a meaningful reason/mechanism or comparison; Canon acceptance authority is outside this contract.",
+        "For rejection, preserve the rejection mechanism and target reference/fingerprint but do not treat rejected prose as a positive exemplar.",
+        "Preserve applicability, exceptions, uncertainty and temporal/context boundaries. This result is evidence only and grants no Project Profile, user-taste, Framework or Canon write authority."
       ],
       "output_contract": {
         "type": "object",
-        "required": ["scope_candidate", "dimension", "mechanism", "statement", "polarity", "confidence", "evidence_source", "desired_behavior", "avoid_behavior", "exceptions", "contradicts_hypothesis_ids"],
+        "required": ["capture_decision", "skip_reason", "confidence"],
         "properties": {
+          "capture_decision": {"enum": ["capture", "skip"]},
+          "skip_reason": {"type": ["string", "null"]},
           "scope_candidate": {"enum": ["one_off", "project", "user_taste", "general_craft"]},
           "dimension": {"type": "string", "minLength": 1},
           "mechanism": {"type": "string", "minLength": 1},
@@ -37,11 +45,13 @@
           "observed_problem": {"type": ["string", "null"]},
           "polarity": {"enum": ["positive", "negative", "mixed"]},
           "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "evidence_source": {"enum": ["explicit_rule", "user_edit", "rejection", "acceptance", "repeated_pattern", "human_review"]},
+          "evidence_source": {"enum": ["explicit_rule", "user_edit", "rejection", "reasoned_acceptance", "comparison", "repeated_pattern", "correction", "human_review"]},
           "desired_behavior": {"type": "array", "items": {"type": "string"}},
           "avoid_behavior": {"type": "array", "items": {"type": "string"}},
           "exceptions": {"type": "array", "items": {"type": "string"}},
           "applicability": {"type": "object"},
+          "hypothesis_action": {"enum": ["create", "strengthen", "contest", "supersede", "split"]},
+          "target_hypothesis_id": {"type": ["string", "null"]},
           "contradicts_hypothesis_ids": {"type": "array", "items": {"type": "string"}}
         },
         "additionalProperties": false

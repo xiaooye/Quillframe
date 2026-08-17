@@ -190,7 +190,28 @@ learning:
   author_model_schema: novelforge_author_model_v1
   feedback_capture_schema: novelforge_feedback_capture_v1
   author_model_projection_schema: novelforge_author_model_projection_v2
+  feedback_intake: learning/feedback_intake.py
+  feedback_intake_schema: learning/feedback_intake.schema.json
+  feedback_intake_schema_id: novelforge_feedback_intake_v1
+  feedback_intake_projection_schema: novelforge_feedback_intake_projection_v1
+  feedback_query: learning/feedback_query.py
+  feedback_query_side_effect_free: true
+  feedback_transport_event: feedback.observed
+  feedback_semantic_contract: learning.preference_interpret
+  feedback_semantic_independence_required: false
+  feedback_auto_capture_candidate: true
+  feedback_capture_requires_learn_mode: false
+  feedback_learning_consumer_scoped: true
+  feedback_missing_semantic_state: awaiting_semantic
+  feedback_same_event_retry_counts_as_new_evidence: false
+  feedback_distinct_user_turn_may_strengthen_existing_hypothesis: true
+  feedback_hypothesis_reconciliation_owner: model
+  feedback_auto_project_profile_write: false
+  feedback_auto_activation: false
+  feedback_auto_framework_write: false
+  feedback_auto_canon_write: false
   state_domains:
+    - feedback_intake
     - preference_evidence
     - preference_hypotheses
     - corpus_gaps
@@ -200,6 +221,8 @@ learning:
     - learning_cycle_artifacts
     - learning_cycle_receipts
   cycle_graph:
+    - feedback_observation_or_existing_evidence
+    - semantic_capture_or_skip
     - evidence_or_hypothesis
     - corpus_gap
     - discovery_plan
@@ -260,6 +283,10 @@ evals:
   runner: evals/run_evals.py
   blind_queue_builder: evals/build_judge_queue.py
   ai_native_ablation_manifest: evals/ai_native_ablation_manifest.json
+  feedback_learning_ablation_manifest: evals/feedback_learning_ablation_manifest.json
+  feedback_learning_ablation_tool: evals/feedback_learning_ablation.py
+  feedback_learning_ablation_contract: quality.ablation_compare
+  feedback_learning_ablation_requires_independent_model: true
   semantic_acceptance_schema: evals/semantic_acceptance.schema.json
   semantic_acceptance_baseline: evals/baselines/semantic-8.0-dev.1.json
   semantic_acceptance_validator: evals/validate_semantic_acceptance.py
@@ -315,7 +342,7 @@ session_runtime:
   resume_command_exposed: true
   runtime_command_authorization: harness/session_runtime/runtime_command_authorization.py
   runtime_command_authorization_schema: novelforge_runtime_command_authorization_v1
-  runtime_command_executor: harness/session_runtime/runtime_command_executor.py
+  runtime_command_executor_tool: harness/session_runtime/runtime_command_executor.py
   runtime_command_executor_exposed: true
   runtime_command_receipt_schema: novelforge_runtime_command_receipt_v1
   runtime_command_execution_result_schema: novelforge_runtime_command_execution_result_v1
@@ -350,6 +377,13 @@ session_runtime:
   author_steering_consequential_write_interruptible: false
   author_steering_followup_auto_execute: false
   author_steering_model_execution: false
+  feedback_learning_transport_event: feedback.observed
+  feedback_learning_payloads: [novelforge_author_steering_request_v1, novelforge_feedback_observation_v1]
+  feedback_learning_source_kinds: [user, authorized_human]
+  feedback_learning_consumer_scoped: true
+  feedback_learning_pending_is_resumable: true
+  feedback_learning_resume_revalidates_event_and_semantic_fingerprint: true
+  feedback_learning_model_execution_required_in_normal_ci: false
 
 runtime_capabilities:
   schema: novelforge_host_capabilities_v1
@@ -374,6 +408,11 @@ control_plane:
   author_steering_typed_payload_required: true
   author_steering_generic_feedback_auto_routes: false
   author_steering_consumption: exactly-once-session-scoped
+  feedback_learning_transport_event: feedback.observed
+  feedback_learning_consumption: exactly-once-logical-consumer-scoped
+  feedback_event_multi_consumer_fanout: true
+  steering_consumption_can_starve_learning: false
+  learning_consumption_can_starve_steering: false
   handoff_claim: transactional-bounded-lease
   result_consumption: exactly-once-logical-receipt
   canon_authority: false
@@ -425,6 +464,7 @@ bilingual_docs:
 workflows:
   deterministic_ci: .github/workflows/novelforge-ci.yml
   reusable_contracts: .github/workflows/novelforge-contracts.yml
+  feedback_learning: .github/workflows/novelforge-feedback-learning.yml
   semantic_contract_packs: .github/workflows/novelforge-semantic-contract-packs.yml
   quality_gate_hardening: .github/workflows/novelforge-quality-gate-hardening.yml
   framework_bundle: .github/workflows/novelforge-release-bundle.yml
@@ -454,7 +494,7 @@ workflows:
 
 normal_ci:
   model_execution: forbidden
-  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, runtime-query-self-test, resume-preflight-self-test, resume-command-self-test, runtime-command-authorization-self-test, runtime-command-executor-self-test, context-inspector-self-test, context-assembly-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, planning-horizon-self-test, property-write-policy-self-test, propagation-debt-self-test, state-integrity-cross-contract-self-test, author-steering-self-test, write-intent-guard-self-test, settlement-runtime-self-test, quality-finding-self-test, quality-taxonomy-self-test, repair-policy-self-test, production-readiness-self-test, production-release-self-test, prose-telemetry-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, semantic-reference-integrity-self-test, registered-release-role-contract-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, author-model-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, semantic-acceptance-baseline-self-test, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
+  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, runtime-query-self-test, resume-preflight-self-test, resume-command-self-test, runtime-command-authorization-self-test, runtime-command-executor-self-test, context-inspector-self-test, context-assembly-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, planning-horizon-self-test, property-write-policy-self-test, propagation-debt-self-test, state-integrity-cross-contract-self-test, author-steering-self-test, feedback-intake-self-test, feedback-learning-ablation-self-test, write-intent-guard-self-test, settlement-runtime-self-test, quality-finding-self-test, quality-taxonomy-self-test, repair-policy-self-test, production-readiness-self-test, production-release-self-test, prose-telemetry-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, semantic-reference-integrity-self-test, registered-release-role-contract-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, author-model-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, semantic-acceptance-baseline-self-test, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
 
 scheduled_maintenance:
   model_execution: forbidden
@@ -472,6 +512,10 @@ write_boundary:
   semantic_model_contract_result_grants_canon_authority: false
   corpus_result_grants_canon_authority: false
   learning_hypothesis_grants_canon_authority: false
+  feedback_intake_result_grants_canon_authority: false
+  feedback_intake_result_grants_project_profile_write: false
+  feedback_intake_result_grants_framework_write: false
+  feedback_intake_result_grants_durable_user_taste_write: false
   author_model_result_grants_canon_authority: false
   author_model_result_grants_framework_write: false
   author_model_result_grants_durable_user_taste_write: false

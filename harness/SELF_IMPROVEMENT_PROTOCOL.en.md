@@ -21,6 +21,8 @@ Always select the narrowest scope justified by evidence. A project preference do
 
 ## 02 · Evidence before hypothesis
 
+Production feedback intake is automatic evidence capture, not automatic promotion. A model first decides `capture | skip`; retrying the same durable feedback event is not new evidence, while a genuinely distinct user turn may become a new evidence ref. A user universal claim may be recorded as a candidate but cannot establish General Craft without the research/counterexample/eval/authority path below. Project/user content stays project/runtime-private unless it is later abstracted into rights-safe, anonymized Generic evidence.
+
 Useful evidence may include:
 
 1. explicit user instruction;

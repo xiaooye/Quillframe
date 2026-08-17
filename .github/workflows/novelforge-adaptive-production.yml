@@ -142,7 +142,14 @@ jobs:
           assert promotion['auto_canon_write'] is False
           assert author['user_taste_write_authority_alone_not_enough'] is True
           assert author['user_taste_requires_promotion_prerequisite_and_write_authority'] is True
-          assert author['candidate_hypotheses_excluded_from_projection'] is True
+          # Author Model v1 no longer emits the legacy
+          # candidate_hypotheses_excluded_from_projection receipt field. Bind
+          # the same safety boundary through the current additive invariants:
+          # automatic candidates do not activate, and even active preferences
+          # require explicit semantic selection before entering production.
+          assert author['automatic_candidate_does_not_activate_user_taste_or_general_craft'] is True
+          assert author['active_preferences_require_explicit_selection'] is True
+          assert author['all_active_preferences_auto_included'] is False
 
           assert write_guard['resource_action_mismatch_blocked'] is True
           assert write_guard['stale_before_state_blocked'] is True
