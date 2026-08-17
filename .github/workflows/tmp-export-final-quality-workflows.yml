@@ -1,0 +1,59 @@
+name: Temporary Export Final Quality Workflows
+
+on:
+  push:
+    branches: [agent/pre-independent-candidate-qualification]
+    paths:
+      - 'tmp/patch_qualification_ci.py'
+      - 'tmp/patch_objective_ci.py'
+      - '.github/workflows/tmp-export-final-quality-workflows.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/pre-independent-candidate-qualification
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generate final permanent workflow candidates
+        run: |
+          python tmp/patch_qualification_ci.py
+          python tmp/patch_objective_ci.py
+      - name: Run permanent-workflow embedded deterministic checks
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          for path in [
+            Path('.github/workflows/novelforge-contracts.yml'),
+            Path('.github/workflows/novelforge-semantic-contract-packs.yml'),
+            Path('.github/workflows/novelforge-quality-gate-hardening.yml'),
+          ]:
+              text=path.read_text(encoding='utf-8')
+              assert 'repair_objective_preservation.py self-test' in text
+              assert 'objective_envelope' in text
+              assert 'quality.production_review' in text
+              assert 'qualification_receipt' in text
+          print('permanent quality workflow wiring text checks PASS')
+          PY
+          python quality/objective_envelope.py self-test
+          python quality/repair_objective_regression.py self-test
+          python quality/candidate_qualification.py self-test
+          python quality/quality_evolution.py self-test
+          python evals/pre_independent_qualification.py self-test
+          python evals/pre_independent_qualification_ablation.py self-test
+          python evals/repair_objective_preservation.py self-test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: final-quality-workflows
+          path: |
+            .github/workflows/novelforge-contracts.yml
+            .github/workflows/novelforge-semantic-contract-packs.yml
+            .github/workflows/novelforge-quality-gate-hardening.yml
+          if-no-files-found: error
