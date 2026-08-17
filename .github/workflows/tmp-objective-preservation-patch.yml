@@ -1,0 +1,57 @@
+name: Temporary Objective Preservation Patch
+
+on:
+  push:
+    branches: [agent/pre-independent-candidate-qualification]
+    paths:
+      - 'tmp/patch_objective_preservation.py'
+      - '.github/workflows/tmp-objective-preservation-patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/pre-independent-candidate-qualification
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply objective-preservation integration
+        run: python tmp/patch_objective_preservation.py
+      - name: Validate deterministic contracts
+        run: |
+          python -m json.tool harness/semantic_workers/contracts/production-loop.json > /dev/null
+          python -m json.tool harness/semantic_workers/contracts/creative-evolution.json > /dev/null
+          python -m json.tool harness/semantic_workers/model_contract_catalog.json > /dev/null
+          python -m py_compile quality/objective_envelope.py quality/repair_objective_regression.py quality/candidate_qualification.py quality/repair_policy.py quality/quality_evolution.py
+          python -m py_compile harness/semantic_workers/semantic_worker_router.py evals/pre_independent_qualification.py evals/repair_objective_preservation.py
+          python quality/objective_envelope.py self-test
+          python quality/repair_objective_regression.py self-test
+          python quality/repair_policy.py self-test
+          python quality/quality_evolution.py self-test
+          python quality/candidate_qualification.py self-test
+          python harness/semantic_workers/semantic_worker_router.py self-test
+          python evals/pre_independent_qualification.py self-test
+          python evals/repair_objective_preservation.py self-test
+          python scripts/docs_quality.py
+      - name: Commit validated source and docs
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add quality/objective_envelope.py quality/repair_objective_regression.py quality/candidate_qualification.py quality/repair_policy.py quality/quality_evolution.py \
+            harness/semantic_workers/semantic_worker_router.py harness/semantic_workers/model_contract_catalog.json \
+            harness/semantic_workers/contracts/production-loop.json harness/semantic_workers/contracts/creative-evolution.json \
+            evals/pre_independent_qualification.py evals/repair_objective_preservation.py \
+            specs/014-pre-independent-candidate-qualification/ docs/quality-assurance.en.md docs/quality-assurance.zh-CN.md \
+            docs/production-pipeline.en.md docs/production-pipeline.zh-CN.md \
+            harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md
+          git rm tmp/patch_objective_preservation.py
+          if [ -f tmp/patch_qualification_docs.py ]; then git rm tmp/patch_qualification_docs.py; fi
+          git commit -m 'quality: preserve creative objectives across repair'
+          git push origin HEAD:agent/pre-independent-candidate-qualification
