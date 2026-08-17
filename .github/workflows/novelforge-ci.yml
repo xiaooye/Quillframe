@@ -18,6 +18,9 @@ jobs:
   contracts:
     uses: ./.github/workflows/novelforge-contracts.yml
 
+  feedback-learning:
+    uses: ./.github/workflows/novelforge-feedback-learning.yml
+
   state-integrity:
     uses: ./.github/workflows/novelforge-state-integrity-p0.yml
 
@@ -58,8 +61,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
       - name: Compile runtime command authorization validator
         run: python -m py_compile harness/session_runtime/runtime_command_authorization.py
       - name: Validate authorization schema JSON
@@ -73,8 +74,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
       - name: Compile runtime command executor
         run: python -m py_compile harness/session_runtime/runtime_command_executor.py
       - name: Validate runtime command receipt schemas
@@ -90,8 +89,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
       - name: Compile session terminate toolchain
         run: |
           python -m py_compile \
@@ -120,8 +117,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
       - name: Compile semantic eval provenance and paired ablation gate
         run: python -m py_compile evals/evaluation_execution_identity.py evals/evaluate_ai_native_ablation.py
       - name: Deterministic semantic eval provenance contracts
@@ -135,8 +130,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
       - name: Framework version identity
         run: python scripts/version_identity.py
       - name: Deterministic documentation quality
@@ -148,7 +141,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
       - name: Project-hosted peer bridge ownership contract
         run: python scripts/peer_bridge_contract.py
