@@ -8,7 +8,7 @@ on:
       - '.github/workflows/tmp-qualification-docs-patch.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   patch:
@@ -28,16 +28,22 @@ jobs:
         run: |
           python -m json.tool docs/documentation_manifest.json > /dev/null
           python scripts/docs_quality.py
-      - name: Commit docs and remove temporary machinery
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add HARNESS_MANIFEST.yaml SKILL.en.md SKILL.zh-CN.md \
-            harness/HARNESS_AGENT.en.md harness/HARNESS_AGENT.zh-CN.md \
-            docs/production-pipeline.en.md docs/production-pipeline.zh-CN.md \
-            docs/quality-assurance.en.md docs/quality-assurance.zh-CN.md \
-            harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md \
-            docs/documentation_manifest.json specs/014-pre-independent-candidate-qualification/
-          git rm tmp/patch_qualification_docs.py .github/workflows/tmp-qualification-docs-patch.yml
-          git commit -m 'docs: align pre-independent qualification order'
-          git push origin HEAD:agent/pre-independent-candidate-qualification
+      - name: Upload exact patched docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: qualification-docs-patch
+          path: |
+            HARNESS_MANIFEST.yaml
+            SKILL.en.md
+            SKILL.zh-CN.md
+            harness/HARNESS_AGENT.en.md
+            harness/HARNESS_AGENT.zh-CN.md
+            docs/production-pipeline.en.md
+            docs/production-pipeline.zh-CN.md
+            docs/quality-assurance.en.md
+            docs/quality-assurance.zh-CN.md
+            harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md
+            harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md
+            docs/documentation_manifest.json
+            specs/014-pre-independent-candidate-qualification/
+          if-no-files-found: error
