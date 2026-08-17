@@ -146,6 +146,60 @@
       },
       "additionalProperties": false
     },
+    "comparison": {
+      "type": "object",
+      "required": [
+        "comparison_id",
+        "incumbent_candidate_id",
+        "challenger_candidate_id",
+        "winner_candidate_id",
+        "job_fingerprint",
+        "result_fingerprint",
+        "consumed_at"
+      ],
+      "properties": {
+        "comparison_id": {"type": "string", "minLength": 1},
+        "incumbent_candidate_id": {"type": "string", "minLength": 1},
+        "challenger_candidate_id": {"type": "string", "minLength": 1},
+        "winner_candidate_id": {"$ref": "#/$defs/nullableCandidateId"},
+        "job_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "result_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "consumed_at": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "graph": {
+      "type": "object",
+      "required": [
+        "schema",
+        "run_id",
+        "subject_id",
+        "state",
+        "incumbent_candidate_id",
+        "candidates",
+        "comparisons",
+        "authority",
+        "model_execution"
+      ],
+      "properties": {
+        "schema": {"const": "novelforge_candidate_lineage_v1"},
+        "run_id": {"type": "string", "minLength": 1},
+        "subject_id": {"type": "string", "minLength": 1},
+        "state": {"enum": ["active", "plateau", "complete"]},
+        "incumbent_candidate_id": {"type": "string", "minLength": 1},
+        "candidates": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/candidateView"}
+        },
+        "comparisons": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/comparison"}
+        },
+        "authority": {"const": false},
+        "model_execution": {"const": false}
+      },
+      "additionalProperties": false
+    },
     "settlementReference": {
       "type": "object",
       "required": [
@@ -181,6 +235,7 @@
   },
   "oneOf": [
     {"$ref": "#/$defs/candidateView"},
+    {"$ref": "#/$defs/graph"},
     {"$ref": "#/$defs/settlementReference"}
   ]
 }
