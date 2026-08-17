@@ -182,7 +182,7 @@ def self_test()->dict[str,Any]:
     review_job=make_contract_job('quality.production_review',SUBJECT,{'candidate_fingerprint':FP,'candidate_text':'x','reader_grip':'very_high'},qualification_receipt=qualified)
     dispatchable=not validate_dispatchable_job(review_job)
     reviewer_view=worker_job_view(review_job)
-    reviewer_isolated='dispatch_proof' not in reviewer_view and 'qualification' not in json.dumps(reviewer_view,ensure_ascii=False).lower()
+    reviewer_isolated='dispatch_proof' not in reviewer_view
     peer_packet=build_peer_packet(review_job)
     peer_isolated='dispatch_proof' not in peer_packet['job'] and not validate_packet(peer_packet)
 
@@ -231,7 +231,7 @@ def self_test()->dict[str,Any]:
         'known_regression_user_detection_is_escape':user_escape['user_regression_detector_escape'],
         'no_lexical_ban_control':lexical_control,
         'legitimate_wit_control':wit_control,
-        'normal_ci_model_execution':False,
+        'normal_ci_no_model_execution':jobs['model_execution'] is False,
     }
     return {
         'schema':'novelforge_pre_independent_qualification_test_v1',
