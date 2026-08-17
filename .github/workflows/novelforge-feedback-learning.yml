@@ -85,9 +85,11 @@ jobs:
           assert a['manager_self_judgment_allowed'] is False,a
           assert a['model_execution'] is False,a
 
+          # Legacy deterministic self-tests predate the model_execution field.
+          # Missing is compatible; an explicit true is never allowed in normal CI.
           for f in ['author-model-feedback-test.json','learning-store-feedback-test.json','learning-cycle-feedback-test.json','promotion-gate-feedback-test.json','control-plane-feedback-test.json','steering-feedback-test.json']:
             x=json.load(open(f,encoding='utf-8'))
-            assert x.get('model_execution') is False,(f,x)
+            assert x.get('model_execution', False) is False,(f,x)
           PY
 
       - uses: actions/upload-artifact@v4
