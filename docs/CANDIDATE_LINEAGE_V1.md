@@ -4,7 +4,7 @@ Status: Framework structural extension; derived authority only.
 
 ## Problem
 
-`quality/quality_evolution.py` already models an incumbent/challenger evolution graph and exact fingerprint-bound `quality.compare` jobs. Its legacy `parent_candidate_id` has one necessary meaning: the challenger must descend from the **current comparison incumbent**. After objective-preserving repair landed, that field is insufficient to answer a different question: **did this candidate actually reuse the parent's prose?**
+`quality/quality_evolution.py` already models an incumbent/challenger evolution graph and exact fingerprint-bound `quality.compare` jobs. Its legacy `parent_candidate_id` has one necessary meaning: the challenger descends from the **current comparison incumbent**. After objective-preserving repair landed, that field is insufficient to answer a different question: **did this candidate actually reuse the parent's prose?**
 
 A repair normally does. A fresh regeneration deliberately must not consume the rejected/incumbent prose even though it competes against that incumbent. Treating one `parent_candidate_id` as both relationships makes runtime/debugging ambiguous and makes review/acceptance provenance harder to audit.
 
@@ -20,8 +20,8 @@ The existing `evolution_candidates.parent_candidate_id` remains **comparison anc
 - `created_by_run_id`, optional `created_by_session_id`
 - optional `authority_snapshot_fingerprint` and `diff_fingerprint`
 - exact semantic-review receipts bound to candidate fingerprint
-- exact mirrors of externally authoritative explicit acceptance receipts
-- a read-only SETTLE preflight that verifies the exact Accepted fingerprint
+- opaque external acceptance-evidence references bound to candidate fingerprint
+- a read-only SETTLE reference-consistency check
 
 All records remain `authority=false`.
 
@@ -30,13 +30,16 @@ All records remain `authority=false`.
 Candidate Lineage cannot:
 
 - Accept a candidate.
+- Authenticate that an external event was an authoritative user acceptance.
 - Promote a semantic result into Canon.
 - Write Canon or settlement state.
 - Infer acceptance from incumbent status, latest-candidate status, review pass, user silence, or comparison victory.
 - Change `quality.compare` winner semantics.
 - Treat a fresh regeneration as inheriting rejected prose.
 
-`bind_external_acceptance()` only mirrors an explicit acceptance receipt produced by the existing authority/user gate. `validate_settlement_binding()` only proves exact fingerprint identity for a later SETTLE preflight; it performs no settlement write.
+`bind_acceptance_evidence()` stores an **opaque external evidence reference**. It requires the exact candidate fingerprint, an authority source reference, and an opaque `authority_receipt_fingerprint`, but deliberately returns/retains `authority_verified=false` and `settlement_authorized=false`. The Project/User Gate must independently authenticate the referenced receipt.
+
+`check_settlement_reference_consistency()` only answers whether the requested candidate/fingerprint matches the stored evidence reference. Its result is `REFERENCE_MATCH` or `REFERENCE_MISMATCH`; it always returns `settlement_authorized=false` and `requires_external_authority_verification=true`. It performs no SETTLE write.
 
 ## Schema and migration
 
@@ -44,13 +47,15 @@ The migration is additive and lazy. Three companion SQLite tables are created in
 
 1. `evolution_candidate_lineage`
 2. `evolution_review_receipts`
-3. `evolution_acceptance_bindings`
+3. `evolution_acceptance_evidence`
 
-No existing `evolution_runs`, `evolution_candidates`, or `evolution_comparisons` row is rewritten. Existing databases remain valid. Existing callers can continue using `quality_evolution` without Candidate Lineage; migrated callers register lineage immediately after creating a candidate.
+No existing `evolution_runs`, `evolution_candidates`, or `evolution_comparisons` row is rewritten. Existing databases remain valid. Existing callers can continue using `quality_evolution` without Candidate Lineage; lineage-aware callers register lineage immediately after creating a candidate.
 
 ### Backfill policy
 
 Do not guess prose derivation for historical candidates. A migration tool may backfill only when provenance is explicit. Unknown historical derivation remains unregistered rather than inferred.
+
+Likewise, historical Accepted/Canon state must not be reverse-inferred from candidate status. Acceptance evidence may be linked only when an externally authoritative receipt already exists and can be referenced exactly.
 
 ## Runtime contract
 
@@ -103,10 +108,10 @@ A UI may render:
 - prose parent
 - high-level diff reference/digest
 - reviews bound to this exact fingerprint
-- explicit acceptance binding, if any
-- settlement binding status
+- external acceptance evidence reference, if any
+- whether settlement references are consistent
 
-The UI should not require the author to understand validator caches, SQLite tables, or semantic routing.
+The UI must not label a lineage evidence row itself as `Accepted` unless the authoritative Project/User Gate separately verifies that state. The author should not need to understand validator caches, SQLite tables, or semantic routing.
 
 ## Required verification
 
@@ -116,7 +121,7 @@ B. A1 -> fresh regeneration A2: comparison ancestry remains valid but prose pare
 
 C. Review for A cannot validate A1.
 
-D. Accepted A1 does not imply A2 Accepted.
+D. Acceptance evidence referencing A1 does not imply A2 Accepted and does not authenticate A1 by itself.
 
 E. Stale review is invalidated.
 
@@ -124,7 +129,7 @@ F. Incumbent remains A1 when A2 loses the existing semantic comparison.
 
 G. Resume reconstructs the exact graph from durable SQLite state.
 
-H. SETTLE preflight requires the exact externally Accepted fingerprint.
+H. SETTLE reference preflight requires the exact externally referenced fingerprint while explicitly refusing to authorize SETTLE.
 
 The deterministic self-test in `quality/candidate_lineage.py` exercises A-H. `evals/candidate_lineage_ablation.py` compares legacy representation with the extension and verifies that the ambiguity is removed with zero added semantic calls and no change to winner selection.
 
