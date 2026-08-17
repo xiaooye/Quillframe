@@ -17,3 +17,13 @@
 - [ ] T15 Run PR CI and inspect exact failures/green state.
 - [ ] T16 Inspect privacy, authority, compatibility, and bundle implications.
 - [ ] T17 Open draft PR; do not merge or repin the consumer Project.
+
+## Objective-preservation tasks
+
+- [x] Add fingerprint-bound objective-envelope deterministic contract.
+- [x] Add repair-induced-objective-regression QA receipt.
+- [x] Extend Editor to FIX+PRESERVE and fresh reconstructed context.
+- [x] Extend `quality.compare` with target/preservation/reader/character axes and A/B/C outcome classification.
+- [x] Bind repaired-candidate qualification to exact preservation evidence.
+- [x] Add 10+ synthetic repair-preservation fixtures and four multi-turn context strategies.
+- [ ] Execute independent writer/evaluator multi-turn ablation when an eligible model capability is available; do not substitute manager self-judgment.

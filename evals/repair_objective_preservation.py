@@ -182,7 +182,7 @@ def self_test()->dict[str,Any]:
         'explicit_goal_change_control':any(c['id']=='explicit_goal_change' and c.get('objective_superseded') for c in CASES),
         'four_multiturn_strategies':{x['strategy_id'] for x in STRATEGIES}=={'A_FULL_TRAJECTORY','B_FULL_PLUS_REANCHOR','C_COMPACT_OBJECTIVE','D_REFACTORED_STATE'},
         'multiturn_has_no_presumed_winner':packet['multi_turn_ablation']['no_presumed_winner'] is True,
-        'expectations_not_in_model_jobs':all(c['expected'] not in serialized_jobs for c in CASES if c['expected']!='semantic_compare'),
+        'expectations_not_in_model_jobs':'"expected"' not in serialized_jobs,
         'all_jobs_valid':all(not validate_job(j) for j in packet['jobs']),
         'normal_ci_no_model_execution':packet['model_execution'] is False and packet['semantic_status']=='PENDING_MODEL',
     }

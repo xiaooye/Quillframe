@@ -38,10 +38,10 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
 
     fresh = generation_mode == "fresh_realization"
     excluded = []
-    required = ["authority_constraints", "editor_repair_plan"]
+    required = ["authority_constraints", "objective_envelope", "editor_fix_and_preserve_plan"]
     if fresh:
-        excluded = ["rejected_prose", "concrete_critic_surface_patches", "prior_reviewer_verdict"]
-        required += ["current_story_state"]
+        excluded = ["rejected_prose", "concrete_critic_surface_patches", "prior_reviewer_verdict", "full_repair_trajectory", "raw_user_complaint_chain", "regression_bad_examples"]
+        required += ["reconstructed_current_story_state"]
     else:
         required += ["bounded_repair_evidence"]
 
@@ -56,7 +56,13 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
         "required_writer_context_classes": required,
         "excluded_writer_context_classes": excluded,
         "post_generation_fresh_review_required": fresh,
-        "incumbent_comparison_may_happen_after_generation": True,
+        "objective_envelope_required": True,
+        "fix_and_preserve_required": True,
+        "full_repair_trajectory_visible_to_fresh_writer": not fresh,
+        "raw_user_complaint_chain_visible_to_fresh_writer": not fresh,
+        "regression_bad_examples_visible_to_fresh_writer": not fresh,
+        "context_reset_trigger_judged_semantically": True,
+        "incumbent_comparison_required_for_material_repair": True,
         "repair_depth_judged_by_runtime": False,
         "literary_owner_to_depth_mapping_used": False,
         "authority": False,
@@ -92,6 +98,11 @@ def self_test() -> dict[str, Any]:
         "surface_can_route_fresh_when_editor_selects_it": surface_fresh["fresh_realization_required"] is True,
         "fresh_writer_cannot_see_rejected_prose": same_owner_fresh["rejected_prose_visible_to_writer"] is False,
         "fresh_writer_cannot_see_concrete_patches": same_owner_fresh["concrete_critic_surface_patches_visible_to_writer"] is False,
+        "fresh_writer_cannot_see_full_repair_trajectory": same_owner_fresh["full_repair_trajectory_visible_to_fresh_writer"] is False,
+        "fresh_writer_cannot_see_raw_user_complaint_chain": same_owner_fresh["raw_user_complaint_chain_visible_to_fresh_writer"] is False,
+        "fresh_writer_requires_objective_envelope": same_owner_fresh["objective_envelope_required"] is True and "objective_envelope" in same_owner_fresh["required_writer_context_classes"],
+        "fresh_writer_requires_fix_and_preserve": same_owner_fresh["fix_and_preserve_required"] is True,
+        "context_reset_not_cycle_count_rule": same_owner_fresh["context_reset_trigger_judged_semantically"] is True,
         "local_writer_can_see_bounded_repair_evidence": scene_local["rejected_prose_visible_to_writer"] is True,
         "fresh_on_accepted_candidate_rejected": invalid_fresh_accepted,
         "missing_editor_generation_mode_rejected": missing_semantic_choice,

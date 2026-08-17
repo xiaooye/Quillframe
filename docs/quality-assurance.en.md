@@ -359,3 +359,7 @@ It is a system in which:
   <br />
   <sub>Prove invariants. Read the fiction. Route the failure. Verify the improvement. ✦</sub>
 </div>
+
+## Repair objective preservation
+
+A repair has two independent semantic questions: **did the targeted defect improve?** and **did the current higher-order objective survive?** Surface-clean is therefore never a substitute for story/reader quality. Material repair comparison binds incumbent, challenger, repair target and a compact objective envelope. A target fix that materially degrades required reader question, pressure, reward, character/relationship energy or forward pull is `repair_induced_objective_regression`; the incumbent stays protected and another repair is required. No weighted literary score is computed.

@@ -33,3 +33,12 @@ Synchronize HARNESS_MANIFEST, Skill/Harness, production pipeline, semantic catal
 
 ## Phase 7 · Verification
 Run PR deterministic CI, inspect exact diff/privacy/bundle-fingerprint implications and semantic-ablation state, open a draft PR, and do not merge or repin automatically.
+
+## Objective-preservation extension
+
+1. Bind a compact current objective envelope before material repair.
+2. Make Editor repair plans carry FIX and PRESERVE.
+3. Isolate fresh realization from rejected trajectories while retaining authoritative current state.
+4. Upgrade incumbent/challenger comparison to classify target-not-fixed vs objective-regression vs successful-repair.
+5. Require repair-preservation evidence before independent dispatch for repaired candidates.
+6. Run deterministic synthetic controls in normal CI; keep multi-turn/negative-context semantic ablations `PENDING_MODEL` until separate writer/evaluator execution is available.

@@ -126,3 +126,15 @@ Old runtimes that do not produce a qualification receipt fail closed after upgra
 ## Acceptance criterion
 
 A candidate with known Surface / Project-regression / AI-explanation / Reader-Grip / functional-but-over-authored defects cannot be packaged or dispatched to mandatory `quality.production_review` until the manager repairs it and the exact new fingerprint receives a valid qualification receipt. Clean or legitimately witty prose is not rejected by deterministic keyword logic.
+
+## Repair objective preservation addendum
+
+A repaired candidate is not qualified merely because a targeted Surface/AI-realization failure disappears. Material repair uses a compact, fingerprint-bound `objective_envelope` selected semantically from current authorized request/plan/profile/state evidence. Rejected prose is not an objective source.
+
+`quality.compare` is the single repair-outcome comparator. It distinguishes `target_not_fixed`, `objective_regression`, `successful_repair`, and `inconclusive` using separate target, objective-preservation, reader-value, and character/relationship-energy axes. Runtime validates binding and internal consistency; it does not score literature. Only a semantically successful repair can normally advance as challenger.
+
+`editor.repair_spec` emits **FIX + PRESERVE**. Fresh realization receives reconstructed current state + objective envelope + distilled repair plan and hides rejected prose, full critique trajectory, raw complaint chain and regression bad examples. Context reconstruction is selected semantically when warranted; there is no fixed repair-cycle reset threshold.
+
+For `repair_cycle > 0`, pre-independent qualification requires exact passing repair-preservation evidence in addition to self-audit, Reader and continuity. `repair_induced_objective_regression` is QA observability, not Canon or a deterministic literary verdict.
+
+Research basis and inference boundaries: [research-objective-preservation.en.md](research-objective-preservation.en.md).

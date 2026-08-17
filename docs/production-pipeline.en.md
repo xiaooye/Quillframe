@@ -172,3 +172,7 @@ The manager loads the smallest semantic contract set needed by the current failu
 - [`quality/production_readiness.py`](../quality/production_readiness.py)
 
 <div align="center"><sub>Constrain power. Let models understand the fiction. Bind every consequential result to exact state. 🌸</sub></div>
+
+## Objective-preserving repair context
+
+Repair loops preserve a compact current `objective_envelope` across candidate lineage. Editor output is FIX + PRESERVE. When fresh realization is selected, Writer context is reconstructed from current authoritative state, the objective envelope and a distilled repair packet; rejected realization, full critique trajectory and regression bad examples remain outside Writer context. Material repaired candidates must pass objective-preservation comparison before independent dispatch.

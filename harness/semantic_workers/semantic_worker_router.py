@@ -154,6 +154,15 @@ def validate_contract_input_bindings(cid:str,input_payload:dict[str,Any])->list[
                 unknown=sorted({x for x in refs if isinstance(x,str)}-source_refs)
                 if unknown:e.append("relationship snapshot cites unknown source refs: "+", ".join(unknown))
         return e
+    if cid=="quality.compare":
+        repair_context=input_payload.get("repair_context",{})
+        envelope=repair_context.get("objective_envelope") if isinstance(repair_context,dict) else None
+        if isinstance(envelope,dict):
+            quality_root=HERE.parents[1]/"quality"
+            if str(quality_root) not in sys.path:sys.path.insert(0,str(quality_root))
+            from objective_envelope import validate as validate_objective_envelope
+            e += ["quality.compare objective envelope: "+x for x in validate_objective_envelope(envelope,subject_id=input_payload.get("evolution_subject_id"),run_id=input_payload.get("evolution_run_id"))]
+        return e
     return e
 
 def validate_contract_input(cid:str,contract:dict[str,Any],input_payload:dict[str,Any])->list[str]:
@@ -222,6 +231,23 @@ def validate_contract_result_bindings(job:dict[str,Any],judgment:dict[str,Any])-
         if isinstance(invalidated,list):
             unknown=sorted(set(invalidated)-snapshot_ids)
             if unknown:e.append("relationship result invalidates unknown snapshots: "+", ".join(unknown))
+        return e
+    if cid=="quality.compare":
+        winner=judgment.get("winner"); target=judgment.get("target_outcome"); preservation=judgment.get("objective_preservation")
+        reader=judgment.get("reader_value"); energy=judgment.get("character_relationship_energy"); outcome=judgment.get("outcome_class")
+        regressed=judgment.get("regressed_dimensions",[])
+        if outcome=="successful_repair":
+            if target!="improved" or preservation!="preserved" or reader not in {"improved","unchanged"} or energy not in {"preserved","not_applicable"}:e.append("quality.compare successful_repair contradicts repair axes")
+            if winner!="challenger":e.append("quality.compare successful_repair must select challenger")
+        elif outcome=="objective_regression":
+            if target!="improved" or preservation not in {"degraded","materially_degraded"}:e.append("quality.compare objective_regression contradicts repair axes")
+            if winner=="challenger":e.append("quality.compare objective_regression cannot select challenger")
+            if not isinstance(regressed,list) or not regressed:e.append("quality.compare objective_regression requires regressed_dimensions")
+        elif outcome=="target_not_fixed":
+            if target=="improved":e.append("quality.compare target_not_fixed contradicts target improvement")
+            if winner=="challenger":e.append("quality.compare target_not_fixed cannot select challenger")
+        elif outcome=="inconclusive":
+            if winner!="tie":e.append("quality.compare inconclusive must use tie")
         return e
     return e
 

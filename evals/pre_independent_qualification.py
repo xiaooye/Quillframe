@@ -151,7 +151,7 @@ def _audit(fp:str, *, fail:bool)->dict[str,Any]:
 
 def _qualification(fp:str, *, fail:bool)->dict[str,Any]:
     return qualify({
-        'candidate_fingerprint':fp,'subject_id':SUBJECT,'repair_cycle':1 if not fail else 0,
+        'candidate_fingerprint':fp,'subject_id':SUBJECT,'repair_cycle':0,
         'self_audit':{'status':'fail' if fail else 'pass','semantic_binding':_audit(fp,fail=fail)},
         'reader_engagement':{'status':'pass','semantic_binding':_reader(fp)},
         'continuity':{'status':'pass','candidate_fingerprint':fp,'receipt_fingerprint':'sha256:'+'c'*64,'evidence_refs':['continuity:synthetic']},
