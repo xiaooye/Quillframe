@@ -1,0 +1,43 @@
+name: Temporary Qualification Docs Patch
+
+on:
+  push:
+    branches: [agent/pre-independent-candidate-qualification]
+    paths:
+      - 'tmp/patch_qualification_docs.py'
+      - '.github/workflows/tmp-qualification-docs-patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/pre-independent-candidate-qualification
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply docs/manifest/spec reconciliation
+        run: python tmp/patch_qualification_docs.py
+      - name: Validate docs and manifest structure
+        run: |
+          python -m json.tool docs/documentation_manifest.json > /dev/null
+          python scripts/docs_quality.py
+      - name: Commit docs and remove temporary machinery
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add HARNESS_MANIFEST.yaml SKILL.en.md SKILL.zh-CN.md \
+            harness/HARNESS_AGENT.en.md harness/HARNESS_AGENT.zh-CN.md \
+            docs/production-pipeline.en.md docs/production-pipeline.zh-CN.md \
+            docs/quality-assurance.en.md docs/quality-assurance.zh-CN.md \
+            harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.zh-CN.md \
+            docs/documentation_manifest.json specs/014-pre-independent-candidate-qualification/
+          git rm tmp/patch_qualification_docs.py .github/workflows/tmp-qualification-docs-patch.yml
+          git commit -m 'docs: align pre-independent qualification order'
+          git push origin HEAD:agent/pre-independent-candidate-qualification
