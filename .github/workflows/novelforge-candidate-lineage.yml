@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'quality/candidate_lineage.py'
+      - 'quality/candidate_lineage_runtime.py'
       - 'quality/candidate_lineage.schema.json'
       - 'quality/quality_evolution.py'
       - 'evals/candidate_lineage_ablation.py'
@@ -15,6 +16,7 @@ on:
     branches: [main]
     paths:
       - 'quality/candidate_lineage.py'
+      - 'quality/candidate_lineage_runtime.py'
       - 'quality/candidate_lineage.schema.json'
       - 'quality/quality_evolution.py'
       - 'evals/candidate_lineage_ablation.py'
@@ -38,6 +40,8 @@ jobs:
         run: python quality/quality_evolution.py self-test
       - name: Candidate lineage A-H contract
         run: python quality/candidate_lineage.py self-test
+      - name: Lineage-aware runtime integration
+        run: python quality/candidate_lineage_runtime.py self-test
       - name: Legacy-vs-lineage architecture ablation
         run: python evals/candidate_lineage_ablation.py self-test
       - name: Typed schema parse and identity
@@ -53,4 +57,4 @@ jobs:
       - name: Framework hygiene
         run: python scripts/framework_hygiene.py
       - name: Compile changed Python
-        run: python -m py_compile quality/candidate_lineage.py evals/candidate_lineage_ablation.py
+        run: python -m py_compile quality/candidate_lineage.py quality/candidate_lineage_runtime.py evals/candidate_lineage_ablation.py
