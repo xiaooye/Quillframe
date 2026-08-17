@@ -297,8 +297,8 @@ def self_test() -> dict[str, Any]:
         "no_write_authority": not any(receipt["permissions"].values()),
     }
     return {
+        "peer_bridge_receipt_contract": "PASS" if all(checks.values()) else "FAIL",
         "schema": SCHEMA,
-        "project_peer_validation_receipt_contract": "PASS" if all(checks.values()) else "FAIL",
         "checks": checks,
         "authority": False,
         "model_execution": False,
@@ -312,7 +312,7 @@ def main() -> int:
     if args.command == "self-test":
         value = self_test()
         print(json.dumps(value, ensure_ascii=False, indent=2))
-        return 0 if value["project_peer_validation_receipt_contract"] == "PASS" else 1
+        return 0 if value["peer_bridge_receipt_contract"] == "PASS" else 1
     return 1
 
 
