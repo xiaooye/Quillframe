@@ -21,6 +21,23 @@ It records:
 
 All rows remain `authority=false`.
 
+Machine-readable projections are versioned by `quality/candidate_lineage.schema.json` with schema identity `novelforge_candidate_lineage_v1`.
+
+## Runtime ownership
+
+`quality/quality_evolution.py` remains the **single low-level ledger and comparator owner**. It is retained for compatibility with existing v2 callers.
+
+New lineage-aware execution uses `quality/candidate_lineage_runtime.py`. That facade does not copy literary judgment. It:
+
+- registers the baseline as `origin=draft`;
+- requires explicit origin/prose-parent provenance for challengers;
+- checks that every candidate in the run has valid lineage before comparison or completion;
+- fails closed if a legacy/direct caller created a candidate without lineage;
+- allows recovery only when the missing provenance is supplied explicitly;
+- delegates all incumbent/challenger comparison to the existing `quality.compare` path.
+
+Thus legacy compatibility does not silently turn into a lineage bypass. Missing provenance becomes a visible runtime defect rather than a guessed fact.
+
 ## Authority boundary
 
 Candidate Lineage cannot accept a candidate, authenticate that an external event was an authoritative user acceptance, write Canon or settlement state, infer acceptance from comparison victory/latest status/review pass/user silence, or change `quality.compare` winner semantics.
@@ -36,7 +53,11 @@ Migration is additive and lazy in the same quality-evolution SQLite database:
 2. `evolution_review_receipts`
 3. `evolution_acceptance_evidence`
 
-Existing core tables are not rewritten. Historical derivation or Accepted state must never be guessed during backfill. Rollback is to stop invoking this projection and optionally drop the three companion tables; core candidate/comparison state and Canon are untouched.
+Existing core tables are not rewritten. Historical derivation or Accepted state must never be guessed during backfill.
+
+Existing callers of `quality_evolution.py` continue to work. When a run is brought under the lineage-aware facade, any candidate lacking explicit lineage is surfaced as `MISSING_LINEAGE` and comparison fails closed until provenance is explicitly registered.
+
+Rollback is to stop invoking the lineage-aware facade and optionally drop the three companion tables; core candidate/comparison state and Canon are untouched.
 
 ## Runtime semantics
 
@@ -60,7 +81,7 @@ F. Existing incumbent remains when challenger loses `quality.compare`.
 G. Resume reconstructs exact durable lineage.  
 H. Settlement reference must match the exact externally referenced fingerprint while never authorizing SETTLE.
 
-`quality/candidate_lineage.py self-test` exercises A-H. `evals/candidate_lineage_ablation.py` proves the legacy representation ambiguity is removed with zero new semantic calls and no change to incumbent selection. This is an architecture/provenance ablation, not proof of literary-quality gain.
+`quality/candidate_lineage.py self-test` exercises A-H. `evals/candidate_lineage_ablation.py` proves the legacy representation ambiguity is removed with zero new semantic calls and no change to incumbent selection. `quality/candidate_lineage_runtime.py self-test` additionally proves a direct legacy candidate insert is detected, blocks comparison, and can be recovered only with explicit lineage. These are architecture/provenance tests, not proof of literary-quality gain.
 
 ## Cold-read decision from the same study
 
