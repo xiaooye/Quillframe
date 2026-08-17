@@ -263,3 +263,7 @@ semantic judgment
 - [Control Plane](../control_plane/CONTROL_PLANE.zh-CN.md)：queued handoff / lease / result consumption。
 - [质量演进](../../docs/quality-evolution.zh-CN.md)：模型负责质量语义、确定性 ledger 负责持久状态。
 - [`model_contract_catalog.json`](model_contract_catalog.json)：按需加载 semantic contract packs 的实时目录。
+
+## Repair-preservation evidence
+
+`quality.compare` 可以把 repair challenger 与 `objective_envelope` 精确绑定。Semantic worker 分开判断 target improvement 与 higher-order preservation。Runtime 可以拒绝内部自相矛盾的 typed result（例如 `objective_regression` 却同时把 challenger 判为 winner），但不能自己推断文学分类。

@@ -1,22 +1,59 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "5",
-  "principle": "Literary and narrative judgment belongs to model-readable contracts. Deterministic runtime binds exact contracts, candidates, provenance, permissions and execution identity; it does not reinterpret literary findings. Blind Reader, Semantic Rule Auditor and independent production review are distinct roles with distinct information boundaries.",
+  "version": "6",
+  "principle": "Literary and narrative judgment belongs to model-readable contracts. Deterministic runtime binds exact contracts, candidates, provenance, permissions and execution identity; it does not reinterpret literary findings. Manager self-audit, Blind Reader, Semantic Rule Auditor and independent production review are distinct roles with distinct information boundaries.",
   "contracts": {
     "reader.reaction": {
       "kind": "external_review",
       "purpose": "Simulate one bounded target reader's immediate experience using reader-visible information only. This lightweight legacy reaction contract is not the production Blind Reader gate.",
-      "forbidden_input_keys": ["outline", "active_plan", "scene_card", "author_notes", "author_intent", "hidden_intent", "expected_payoff", "future_plan", "planned_twist", "writer_reasoning", "reviewer_verdict", "canon_unrevealed", "quality_taxonomy", "hf_codes", "telemetry", "semantic_rules"],
+      "forbidden_input_keys": [
+        "outline",
+        "active_plan",
+        "scene_card",
+        "author_notes",
+        "author_intent",
+        "hidden_intent",
+        "expected_payoff",
+        "future_plan",
+        "planned_twist",
+        "writer_reasoning",
+        "reviewer_verdict",
+        "canon_unrevealed",
+        "quality_taxonomy",
+        "hf_codes",
+        "telemetry",
+        "semantic_rules"
+      ],
       "input_contract": {
         "type": "object",
-        "required": ["candidate_text", "persona_id"],
+        "required": [
+          "candidate_text",
+          "persona_id"
+        ],
         "properties": {
-          "candidate_text": {"type": "string", "minLength": 1},
-          "persona_id": {"type": "string", "minLength": 1},
-          "reader_visible_context": {"type": "array", "items": {"type": "object"}},
-          "chapter_position": {"type": "string"},
-          "genre_profile": {"type": "string"},
-          "platform_profile": {"type": "string"}
+          "candidate_text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "persona_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reader_visible_context": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "chapter_position": {
+            "type": "string"
+          },
+          "genre_profile": {
+            "type": "string"
+          },
+          "platform_profile": {
+            "type": "string"
+          }
         },
         "additionalProperties": false
       },
@@ -28,37 +65,129 @@
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence"],
+        "required": [
+          "confidence"
+        ],
         "properties": {
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "report": {"type": "string", "minLength": 1},
-          "would_continue": {"type": ["boolean", "null"]},
-          "continue_desire": {"type": "number", "minimum": 0, "maximum": 1},
-          "reason": {"type": "string", "minLength": 1},
-          "strongest_positive": {"type": ["string", "null"]},
-          "strongest_problem": {"type": ["string", "null"]},
-          "evidence_refs": {"type": "array", "items": {"type": "string"}}
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "report": {
+            "type": "string",
+            "minLength": 1
+          },
+          "would_continue": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "continue_desire": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "strongest_positive": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "strongest_problem": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         },
         "additionalProperties": false
       },
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "reader_diagnostic"},
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "reader_diagnostic"
+      },
       "independent_gate": false
     },
     "reader.engagement_audit": {
       "kind": "external_review",
       "purpose": "Blind production Reader: read the frozen candidate like a target reader and return the salient reading experience without creator-private state, taxonomy priming or mechanical prose telemetry.",
-      "forbidden_input_keys": ["outline", "active_plan", "scene_card", "author_notes", "author_intent", "hidden_intent", "expected_payoff", "future_plan", "planned_twist", "writer_reasoning", "reviewer_verdict", "prior_review", "repair_brief", "canon_unrevealed", "private_character_state", "character_action_evidence", "quality_taxonomy", "hf_codes", "expected_failure_code", "telemetry", "semantic_rules", "rule_index"],
+      "forbidden_input_keys": [
+        "outline",
+        "active_plan",
+        "scene_card",
+        "author_notes",
+        "author_intent",
+        "hidden_intent",
+        "expected_payoff",
+        "future_plan",
+        "planned_twist",
+        "writer_reasoning",
+        "reviewer_verdict",
+        "prior_review",
+        "repair_brief",
+        "canon_unrevealed",
+        "private_character_state",
+        "character_action_evidence",
+        "quality_taxonomy",
+        "hf_codes",
+        "expected_failure_code",
+        "telemetry",
+        "semantic_rules",
+        "rule_index"
+      ],
       "input_contract": {
         "type": "object",
-        "required": ["candidate_fingerprint", "candidate_text"],
+        "required": [
+          "candidate_fingerprint",
+          "candidate_text"
+        ],
         "properties": {
-          "candidate_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
-          "candidate_text": {"type": "string", "minLength": 1},
-          "reader_visible_context": {"type": "array", "items": {"type": "object"}},
-          "chapter_position": {"type": "string"},
-          "genre_profile": {"type": "string"},
-          "platform_profile": {"type": "string"},
-          "reader_grip": {"enum": ["low", "medium", "high", "very_high"]}
+          "candidate_fingerprint": {
+            "type": "string",
+            "minLength": 71,
+            "maxLength": 71
+          },
+          "candidate_text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reader_visible_context": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "chapter_position": {
+            "type": "string"
+          },
+          "genre_profile": {
+            "type": "string"
+          },
+          "platform_profile": {
+            "type": "string"
+          },
+          "reader_grip": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "very_high"
+            ]
+          }
         },
         "additionalProperties": false
       },
@@ -71,19 +200,58 @@
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "result", "report", "evidence_refs"],
+        "required": [
+          "confidence",
+          "result",
+          "report",
+          "evidence_refs"
+        ],
         "properties": {
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "result": {"enum": ["pass", "fail"]},
-          "report": {"type": "string", "minLength": 1},
-          "strongest_positive": {"type": ["string", "null"]},
-          "strongest_problem": {"type": ["string", "null"]},
-          "evidence_refs": {"type": "array", "items": {"type": "string"}}
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "result": {
+            "enum": [
+              "pass",
+              "fail"
+            ]
+          },
+          "report": {
+            "type": "string",
+            "minLength": 1
+          },
+          "strongest_positive": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "strongest_problem": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         },
         "additionalProperties": false
       },
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "reader_engagement_audit"},
-      "release_roles": ["reader_engagement"],
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "reader_engagement_audit"
+      },
+      "release_roles": [
+        "reader_engagement"
+      ],
       "independent_gate": false
     },
     "reader.compare": {
@@ -96,15 +264,37 @@
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "winner", "reason"],
+        "required": [
+          "confidence",
+          "winner",
+          "reason"
+        ],
         "properties": {
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "winner": {"enum": ["A", "B", "tie"]},
-          "reason": {"type": "string", "minLength": 1}
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "winner": {
+            "enum": [
+              "A",
+              "B",
+              "tie"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "additionalProperties": false
       },
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "reader_comparison"},
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "reader_comparison"
+      },
       "independent_gate": false
     },
     "character.integrity": {
@@ -118,14 +308,31 @@
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "report", "findings"],
+        "required": [
+          "confidence",
+          "report",
+          "findings"
+        ],
         "properties": {
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "report": {"type": "string"},
-          "findings": {"type": "array"}
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "report": {
+            "type": "string"
+          },
+          "findings": {
+            "type": "array"
+          }
         }
       },
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "character_integrity_observation"},
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "character_integrity_observation"
+      },
       "independent_gate": false
     },
     "revision.diagnose": {
@@ -139,49 +346,436 @@
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "report", "repair_owner"],
+        "required": [
+          "confidence",
+          "report",
+          "repair_owner"
+        ],
         "properties": {
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "report": {"type": "string", "minLength": 1},
-          "repair_owner": {"type": "string", "minLength": 1},
-          "evidence_refs": {"type": "array", "items": {"type": "string"}},
-          "comparison_recommended": {"type": "boolean"}
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "report": {
+            "type": "string",
+            "minLength": 1
+          },
+          "repair_owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "comparison_recommended": {
+            "type": "boolean"
+          }
         },
         "additionalProperties": false
       },
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "revision_diagnostic"},
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "revision_diagnostic"
+      },
+      "independent_gate": false
+    },
+    "quality.candidate_self_audit": {
+      "kind": "artifact_audit",
+      "purpose": "Manager/internal post-generation semantic qualification audit of an exact frozen candidate before independent production review. It detects material Surface, regression, semantic-ownership, AI-realization and cluster defects without claiming independence or performing the rewrite.",
+      "forbidden_input_keys": [
+        "expected_verdict",
+        "gold",
+        "prior_independent_review",
+        "independent_reviewer_verdict",
+        "writer_reasoning"
+      ],
+      "input_contract": {
+        "type": "object",
+        "required": [
+          "candidate_fingerprint",
+          "candidate_text",
+          "rule_material"
+        ],
+        "properties": {
+          "candidate_fingerprint": {
+            "type": "string",
+            "minLength": 71,
+            "maxLength": 71
+          },
+          "candidate_text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rule_material": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "authority",
+                "statement"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "authority": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "statement": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "exceptions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "regression_evidence": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "profile_constraints": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "voice_constraints": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "reader_grip": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "very_high"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Audit the whole frozen candidate at sentence/utterance, local-block, and scene/cluster scales. Do not spot-check only a few lines.",
+        "Use supplied rule/regression/profile/voice evidence semantically. Do not diagnose from banned words, line length, punctuation, or the mere presence of looking, smiling, fragments, contrast forms, complete sentences, metaphors, punchlines, or witty dialogue.",
+        "For salient prose units use a Delete Test: if deletion loses essentially no action, information, relationship, character, pressure, humor, timing, or voice, suspect redundant Surface realization. This is a semantic diagnostic, not a deterministic deletion rule.",
+        "For micro-actions and action tags, ask what they concretely change: information acquisition, object manipulation, interruption, refusal, delay, injury exposure, spatial state, speaker ownership, relationship permission, task progression, or another real state. Mere reaction display is weak evidence.",
+        "Detect explanation-after-evidence, narrator thesis, random embodiment, staged routine reveal, synthetic coolness, AI polish without story function, agenda-to-dialogue serialization, and model-explanation rhythm where prose explains a motive/goal before the character simply acts on it.",
+        "FUNCTIONAL does not imply NATURAL or CHARACTER-OWNED. For salient narrator sentences and dialogue turns explicitly assess three layers: FUNCTION (what would deletion lose), OWNERSHIP (does the wording/understanding belong to this POV/narrator/speaker), and NATURAL REALIZATION (would this person at this age, education, relationship distance, status, pressure level, historical setting, voice and social purpose plausibly phrase it with this completeness, symmetry, cleverness or quote-readiness now).",
+        "Distinguish character-owned humor from author-optimized wit. Good humor still functions as a plausible purpose-first social move if the label 'funny' is removed; synthetic wit is punchline-first, audience-optimized, or visibly designed to make a character look charming rather than to pursue the current agenda.",
+        "Check clusters even when individual lines are locally plausible: setup → clever answer → clever comeback → narrator witty gloss → another punchline may form synthetic banter/punchline stacking. Cluster failure should route to Character/Scene/Realization rather than synonym-level repair.",
+        "Do not punish legitimately witty, charismatic, rhetorical, formal, terse, or metaphorical characters when the expression is owned, situation-appropriate, purpose-first and consequential. Use supplied profile/voice boundaries.",
+        "If a material defect exists, identify the smallest owning repair layer and whether it is sentence, paragraph, block, or scene/cluster scope. If required evidence is missing, return insufficient_evidence rather than inventing a verdict.",
+        "When supplied regression_evidence identifies an already-known mechanism, explicitly check whether the current candidate repeats that mechanism. A known recurrence that remains material is a quality-loop escape risk, not a new preference discovery; judge applicability semantically and do not ban literal phrases.",
+        "This audit is manager/internal evidence only: independent=false. It may block dispatch and guide repair but cannot satisfy the independent production-review requirement or grant Canon/Framework/taste authority."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": [
+          "confidence",
+          "result",
+          "report",
+          "dimensions",
+          "findings",
+          "evidence_refs"
+        ],
+        "properties": {
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "result": {
+            "enum": [
+              "pass",
+              "fail",
+              "insufficient_evidence"
+            ]
+          },
+          "report": {
+            "type": "string",
+            "minLength": 1
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "finding_id",
+                "mechanism_id",
+                "severity",
+                "scope",
+                "repair_owner",
+                "blocking",
+                "report",
+                "function_assessment",
+                "ownership_assessment",
+                "natural_realization_assessment",
+                "evidence_refs"
+              ],
+              "properties": {
+                "finding_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "mechanism_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "severity": {
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high",
+                    "cluster"
+                  ]
+                },
+                "scope": {
+                  "enum": [
+                    "sentence",
+                    "paragraph",
+                    "block",
+                    "scene"
+                  ]
+                },
+                "repair_owner": {
+                  "enum": [
+                    "surface",
+                    "scene",
+                    "character",
+                    "reader_pressure",
+                    "story",
+                    "plan",
+                    "continuity",
+                    "context",
+                    "human"
+                  ]
+                },
+                "blocking": {
+                  "type": "boolean"
+                },
+                "report": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "function_assessment": {
+                  "enum": [
+                    "pass",
+                    "fail",
+                    "not_applicable",
+                    "uncertain"
+                  ]
+                },
+                "ownership_assessment": {
+                  "enum": [
+                    "pass",
+                    "fail",
+                    "not_applicable",
+                    "uncertain"
+                  ]
+                },
+                "natural_realization_assessment": {
+                  "enum": [
+                    "pass",
+                    "fail",
+                    "not_applicable",
+                    "uncertain"
+                  ]
+                },
+                "evidence_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "evidence_requests": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "dimensions": {
+            "type": "object",
+            "required": [
+              "surface",
+              "regression",
+              "character_or_ownership",
+              "natural_realization",
+              "cluster"
+            ],
+            "properties": {
+              "surface": {
+                "enum": [
+                  "pass",
+                  "fail",
+                  "insufficient_evidence",
+                  "not_applicable"
+                ]
+              },
+              "regression": {
+                "enum": [
+                  "pass",
+                  "fail",
+                  "insufficient_evidence",
+                  "not_applicable"
+                ]
+              },
+              "character_or_ownership": {
+                "enum": [
+                  "pass",
+                  "fail",
+                  "insufficient_evidence",
+                  "not_applicable"
+                ]
+              },
+              "natural_realization": {
+                "enum": [
+                  "pass",
+                  "fail",
+                  "insufficient_evidence",
+                  "not_applicable"
+                ]
+              },
+              "cluster": {
+                "enum": [
+                  "pass",
+                  "fail",
+                  "insufficient_evidence",
+                  "not_applicable"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "candidate_self_audit"
+      },
+      "release_roles": [
+        "pre_independent_self_audit"
+      ],
       "independent_gate": false
     },
     "quality.semantic_rule_audit": {
       "kind": "external_review",
       "purpose": "Semantic Rule Auditor: apply the authoritative semantic hard-rule index to an exact candidate using model judgment, with traceable applicability and evidence. Hard means confirmed failure blocks; it does not mean deterministic code decides literary truth.",
-      "forbidden_input_keys": ["expected_verdict", "expected_failure_code", "gold", "repair_plan", "prior_reviewer_verdict"],
+      "forbidden_input_keys": [
+        "expected_verdict",
+        "expected_failure_code",
+        "gold",
+        "repair_plan",
+        "prior_reviewer_verdict"
+      ],
       "input_contract": {
         "type": "object",
-        "required": ["candidate_fingerprint", "candidate_text", "rule_index"],
+        "required": [
+          "candidate_fingerprint",
+          "candidate_text",
+          "rule_index"
+        ],
         "properties": {
-          "candidate_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
-          "candidate_text": {"type": "string", "minLength": 1},
+          "candidate_fingerprint": {
+            "type": "string",
+            "minLength": 71,
+            "maxLength": 71
+          },
+          "candidate_text": {
+            "type": "string",
+            "minLength": 1
+          },
           "rule_index": {
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "object",
-              "required": ["id", "severity", "authority", "statement"],
+              "required": [
+                "id",
+                "severity",
+                "authority",
+                "statement"
+              ],
               "properties": {
-                "id": {"type": "string", "minLength": 1},
-                "severity": {"type": "string", "minLength": 1},
-                "authority": {"type": "string", "minLength": 1},
-                "statement": {"type": "string", "minLength": 1},
-                "rationale": {"type": "string"},
-                "exceptions": {"type": "array", "items": {"type": "string"}},
-                "evidence_expectations": {"type": "string"}
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "severity": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "authority": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "statement": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "rationale": {
+                  "type": "string"
+                },
+                "exceptions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "evidence_expectations": {
+                  "type": "string"
+                }
               },
               "additionalProperties": false
             }
           },
-          "authorized_evidence": {"type": "array", "items": {"type": "object"}},
-          "project_constraints": {"type": "array", "items": {"type": "object"}}
+          "authorized_evidence": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "project_constraints": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
         },
         "additionalProperties": false
       },
@@ -194,70 +788,200 @@
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "result", "report", "findings"],
+        "required": [
+          "confidence",
+          "result",
+          "report",
+          "findings"
+        ],
         "properties": {
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "result": {"enum": ["pass", "fail", "insufficient_evidence"]},
-          "report": {"type": "string", "minLength": 1},
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "result": {
+            "enum": [
+              "pass",
+              "fail",
+              "insufficient_evidence"
+            ]
+          },
+          "report": {
+            "type": "string",
+            "minLength": 1
+          },
           "findings": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["rule_id", "status", "report", "evidence_refs"],
+              "required": [
+                "rule_id",
+                "status",
+                "report",
+                "evidence_refs"
+              ],
               "properties": {
-                "rule_id": {"type": "string", "minLength": 1},
-                "status": {"enum": ["PASS", "FAIL", "NOT_APPLICABLE", "INSUFFICIENT_EVIDENCE"]},
-                "report": {"type": "string", "minLength": 1},
-                "evidence_refs": {"type": "array", "items": {"type": "string"}}
+                "rule_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "NOT_APPLICABLE",
+                    "INSUFFICIENT_EVIDENCE"
+                  ]
+                },
+                "report": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
               },
               "additionalProperties": false
             }
           },
-          "evidence_requests": {"type": "array", "items": {"type": "string"}}
+          "evidence_requests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         },
         "additionalProperties": false
       },
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "semantic_rule_audit"},
-      "release_roles": ["semantic_rules"],
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "semantic_rule_audit"
+      },
+      "release_roles": [
+        "semantic_rules"
+      ],
       "independent_gate": false
     },
     "quality.production_review": {
       "kind": "external_review",
       "purpose": "Fresh independent holistic production review of the exact candidate, isolated from manager/private creator state. It tries to falsify readiness without being turned into the Blind Reader or Semantic Rule Auditor.",
-      "forbidden_input_keys": ["outline", "active_plan", "scene_card", "author_notes", "author_intent", "hidden_intent", "expected_payoff", "future_plan", "planned_twist", "writer_reasoning", "reviewer_verdict", "prior_review", "repair_brief", "critic_patch", "canon_unrevealed", "expected_failure_code"],
+      "forbidden_input_keys": [
+        "outline",
+        "active_plan",
+        "scene_card",
+        "author_notes",
+        "author_intent",
+        "hidden_intent",
+        "expected_payoff",
+        "future_plan",
+        "planned_twist",
+        "writer_reasoning",
+        "reviewer_verdict",
+        "prior_review",
+        "repair_brief",
+        "critic_patch",
+        "canon_unrevealed",
+        "expected_failure_code",
+        "qualification_receipt",
+        "self_audit",
+        "blocking_findings"
+      ],
       "input_contract": {
         "type": "object",
-        "required": ["candidate_fingerprint", "candidate_text"],
+        "required": [
+          "candidate_fingerprint",
+          "candidate_text"
+        ],
         "properties": {
-          "candidate_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
-          "candidate_text": {"type": "string", "minLength": 1},
-          "reader_visible_context": {"type": "array", "items": {"type": "object"}},
-          "chapter_position": {"type": "string"},
-          "genre_profile": {"type": "string"},
-          "platform_profile": {"type": "string"},
-          "reader_grip": {"enum": ["low", "medium", "high", "very_high"]}
+          "candidate_fingerprint": {
+            "type": "string",
+            "minLength": 71,
+            "maxLength": 71
+          },
+          "candidate_text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reader_visible_context": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "chapter_position": {
+            "type": "string"
+          },
+          "genre_profile": {
+            "type": "string"
+          },
+          "platform_profile": {
+            "type": "string"
+          },
+          "reader_grip": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "very_high"
+            ]
+          }
         },
         "additionalProperties": false
       },
       "rubric": [
         "Read the candidate holistically first and try to falsify production readiness using only supplied, reviewer-eligible evidence.",
-        "Do not reconstruct hidden creator intent or future payoff. Do not mechanically verify a manager-authored checklist.",
+        "Do not reconstruct hidden creator intent or future payoff. Do not mechanically verify a manager-authored checklist or qualification receipt.",
         "Report material production defects in natural semantic language. Named diagnostic vocabulary may be used when genuinely useful, but a code is not the judgment itself.",
         "A pass means no material defect was found in this bounded independent review; it grants no Canon, Settlement or write authority."
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "result", "report", "evidence_refs"],
+        "required": [
+          "confidence",
+          "result",
+          "report",
+          "evidence_refs"
+        ],
         "properties": {
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "result": {"enum": ["pass", "fail"]},
-          "report": {"type": "string", "minLength": 1},
-          "evidence_refs": {"type": "array", "items": {"type": "string"}}
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "result": {
+            "enum": [
+              "pass",
+              "fail"
+            ]
+          },
+          "report": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         },
         "additionalProperties": false
       },
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "production_quality_review"},
-      "release_roles": ["semantic_independent"],
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "production_quality_review"
+      },
+      "release_roles": [
+        "semantic_independent"
+      ],
       "independent_gate": true
     }
   }

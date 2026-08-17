@@ -357,3 +357,7 @@ NovelForge 宁可明确告诉用户“现在还没有通过”，也不制造假
   <br />
   <sub>代码证明不变量；模型阅读小说；问题回到归属层；修改必须用证据证明。✦</sub>
 </div>
+
+## 修复中的目标保持
+
+一次修复有两个彼此独立的语义问题：**目标缺陷是否改善**，以及**当前更高阶创作目标是否仍然成立**。Surface clean 不能替代 Story / Reader 质量。Material repair comparison 绑定 incumbent、challenger、repair target 与紧凑 `objective_envelope`；如果缺陷修掉了但 reader question、pressure、reward、人物/关系能量或 forward pull 等当前必保目标发生实质退化，记录为 `repair_induced_objective_regression`，保护 incumbent，并继续寻找新的 repair。系统不计算加权文学总分。

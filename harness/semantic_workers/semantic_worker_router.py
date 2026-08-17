@@ -154,6 +154,15 @@ def validate_contract_input_bindings(cid:str,input_payload:dict[str,Any])->list[
                 unknown=sorted({x for x in refs if isinstance(x,str)}-source_refs)
                 if unknown:e.append("relationship snapshot cites unknown source refs: "+", ".join(unknown))
         return e
+    if cid=="quality.compare":
+        repair_context=input_payload.get("repair_context",{})
+        envelope=repair_context.get("objective_envelope") if isinstance(repair_context,dict) else None
+        if isinstance(envelope,dict):
+            quality_root=HERE.parents[1]/"quality"
+            if str(quality_root) not in sys.path:sys.path.insert(0,str(quality_root))
+            from objective_envelope import validate as validate_objective_envelope
+            e += ["quality.compare objective envelope: "+x for x in validate_objective_envelope(envelope,subject_id=input_payload.get("evolution_subject_id"),run_id=input_payload.get("evolution_run_id"))]
+        return e
     return e
 
 def validate_contract_input(cid:str,contract:dict[str,Any],input_payload:dict[str,Any])->list[str]:
@@ -223,10 +232,43 @@ def validate_contract_result_bindings(job:dict[str,Any],judgment:dict[str,Any])-
             unknown=sorted(set(invalidated)-snapshot_ids)
             if unknown:e.append("relationship result invalidates unknown snapshots: "+", ".join(unknown))
         return e
+    if cid=="quality.compare":
+        winner=judgment.get("winner"); target=judgment.get("target_outcome"); preservation=judgment.get("objective_preservation")
+        reader=judgment.get("reader_value"); energy=judgment.get("character_relationship_energy"); outcome=judgment.get("outcome_class")
+        regressed=judgment.get("regressed_dimensions",[])
+        if outcome=="successful_repair":
+            if target!="improved" or preservation!="preserved" or reader not in {"improved","unchanged"} or energy not in {"preserved","not_applicable"}:e.append("quality.compare successful_repair contradicts repair axes")
+            if winner!="challenger":e.append("quality.compare successful_repair must select challenger")
+        elif outcome=="objective_regression":
+            if target!="improved" or preservation not in {"degraded","materially_degraded"}:e.append("quality.compare objective_regression contradicts repair axes")
+            if winner=="challenger":e.append("quality.compare objective_regression cannot select challenger")
+            if not isinstance(regressed,list) or not regressed:e.append("quality.compare objective_regression requires regressed_dimensions")
+        elif outcome=="target_not_fixed":
+            if target=="improved":e.append("quality.compare target_not_fixed contradicts target improvement")
+            if winner=="challenger":e.append("quality.compare target_not_fixed cannot select challenger")
+        elif outcome=="inconclusive":
+            if winner!="tie":e.append("quality.compare inconclusive must use tie")
+        return e
     return e
 
 def semantic_payload(job:dict[str,Any])->dict[str,Any]:return {k:job.get(k,{} if k in {"input","output_contract"} else []) for k in ("kind","subject_id","input","rubric","output_contract")}
 def fingerprint_for(job:dict[str,Any])->str:return "sha256:"+hashlib.sha256(canonical(semantic_payload(job))).hexdigest()
+def worker_job_view(job:dict[str,Any])->dict[str,Any]:
+    """Return only reviewer-visible semantic job fields; runtime dispatch proof stays private."""
+    return {k:json.loads(json.dumps(job[k])) for k in ("job_id","kind","subject_id","created_at","input_fingerprint","input","rubric","output_contract","permissions","provenance","execution") if k in job}
+def _production_review_qualification_errors(job:dict[str,Any])->list[str]:
+    input_obj=job.get("input")
+    if not isinstance(input_obj,dict) or input_obj.get("model_contract_id")!="quality.production_review":return []
+    proof=job.get("dispatch_proof")
+    if not isinstance(proof,dict):return ["quality.production_review dispatch requires pre-independent qualification receipt"]
+    payload=input_obj.get("payload")
+    if not isinstance(payload,dict):return ["quality.production_review payload required"]
+    quality_root=HERE.parents[1]/"quality"
+    if str(quality_root) not in sys.path:sys.path.insert(0,str(quality_root))
+    from candidate_qualification import validate_qualification_receipt
+    return ["production review qualification: "+x for x in validate_qualification_receipt(proof,candidate_fingerprint=payload.get("candidate_fingerprint"),subject_id=job.get("subject_id"),require_qualified=True)]
+def validate_dispatchable_job(job:dict[str,Any])->list[str]:
+    return validate_job(job)+_production_review_qualification_errors(job)
 def validate_job(job:dict[str,Any])->list[str]:
     e=[];required={"job_id","kind","subject_id","created_at","input_fingerprint","input","rubric","output_contract","permissions","provenance"};missing=sorted(required-set(job))
     if missing:return ["missing fields: "+", ".join(missing)]
@@ -238,7 +280,7 @@ def validate_job(job:dict[str,Any])->list[str]:
     x=job.get("execution")
     if x is not None and (not isinstance(x,dict) or set(x)-{"source_session_id","worker_session_id","handoff_id","attempt_id"}):e.append("invalid execution lineage")
     return e
-def make_contract_job(cid:str,subject_id:str,input_payload:dict[str,Any],*,registry_path:Path|None=None,job_id:str|None=None,source_session_id:str|None=None,handoff_id:str|None=None)->dict[str,Any]:
+def make_contract_job(cid:str,subject_id:str,input_payload:dict[str,Any],*,registry_path:Path|None=None,job_id:str|None=None,source_session_id:str|None=None,handoff_id:str|None=None,qualification_receipt:dict[str,Any]|None=None)->dict[str,Any]:
     if not isinstance(subject_id,str) or not subject_id.strip():raise ValueError("subject_id required")
     if not isinstance(input_payload,dict):raise ValueError("semantic contract input must be object")
     pack_id=None
@@ -248,7 +290,12 @@ def make_contract_job(cid:str,subject_id:str,input_payload:dict[str,Any],*,regis
     input_errors=validate_contract_input(cid,c,input_payload)
     if input_errors:raise ValueError("; ".join(input_errors))
     job={"job_id":job_id or "SEM-CONTRACT-"+hashlib.sha256(f"{cid}:{subject_id}".encode()).hexdigest()[:16],"kind":c["kind"],"subject_id":subject_id,"created_at":datetime.now(timezone.utc).isoformat(),"input_fingerprint":"","input":{"model_contract_id":cid,"model_contract_version":r.get("version"),"purpose":c.get("purpose"),"payload":input_payload,**({"default_personas":c["default_personas"]} if isinstance(c.get("default_personas"),dict) else {})},"rubric":list(c["rubric"]),"output_contract":c["output_contract"],"permissions":dict(c["permissions"]),"provenance":{"source":"model_contract_pack","registry_schema":r["schema"],"registry_version":r.get("version"),"registry_path":str(registry_path.relative_to(HERE)) if registry_path.is_relative_to(HERE) else str(registry_path),"pack_id":pack_id,"model_contract_id":cid,"input_contract_validated":bool(c.get("input_contract")),"independent_gate":bool(c.get("independent_gate",False))},"execution":{"source_session_id":source_session_id,"worker_session_id":None,"handoff_id":handoff_id,"attempt_id":None}}
-    job["input_fingerprint"]=fingerprint_for(job);e=validate_job(job)
+    job["input_fingerprint"]=fingerprint_for(job)
+    if cid=="quality.production_review":
+        if qualification_receipt is None:raise ValueError("quality.production_review requires pre-independent qualification receipt")
+        job["dispatch_proof"]=json.loads(json.dumps(qualification_receipt))
+        e=validate_dispatchable_job(job)
+    else:e=validate_job(job)
     if e:raise ValueError("prepared contract job invalid: "+"; ".join(e))
     return job
 def make_eval_jobs(queue:dict[str,Any],*,source_session_id:str|None=None,handoff_id:str|None=None)->dict[str,Any]:
@@ -392,22 +439,23 @@ def self_test()->int:
 def main()->int:
     p=argparse.ArgumentParser();s=p.add_subparsers(dest="command",required=True)
     x=s.add_parser("prepare-evals");x.add_argument("--queue",required=True);x.add_argument("--output");x.add_argument("--source-session-id");x.add_argument("--handoff-id")
-    x=s.add_parser("prepare-contract");x.add_argument("--contract",required=True);x.add_argument("--subject-id",required=True);x.add_argument("--input",required=True);x.add_argument("--job-id");x.add_argument("--registry");x.add_argument("--source-session-id");x.add_argument("--handoff-id");x.add_argument("--output")
+    x=s.add_parser("prepare-contract");x.add_argument("--contract",required=True);x.add_argument("--subject-id",required=True);x.add_argument("--input",required=True);x.add_argument("--job-id");x.add_argument("--registry");x.add_argument("--source-session-id");x.add_argument("--handoff-id");x.add_argument("--qualification-receipt");x.add_argument("--output")
     x=s.add_parser("list-contracts");x.add_argument("--registry");s.add_parser("catalog")
     x=s.add_parser("validate-jobs");x.add_argument("--jobs",required=True)
+    x=s.add_parser("validate-dispatchable-jobs");x.add_argument("--jobs",required=True)
     x=s.add_parser("validate-results");x.add_argument("--jobs",required=True);x.add_argument("--results",required=True);x.add_argument("--judgments-output")
     s.add_parser("self-test");a=p.parse_args()
     if a.command=="self-test":return self_test()
     if a.command=="catalog":dump_json(catalog_summary());return 0
     if a.command=="prepare-evals":dump_json(make_eval_jobs(load_json(Path(a.queue)),source_session_id=a.source_session_id,handoff_id=a.handoff_id),Path(a.output) if a.output else None);return 0
-    if a.command=="prepare-contract":dump_json(make_contract_job(a.contract,a.subject_id,load_json(Path(a.input)),registry_path=Path(a.registry).resolve() if a.registry else None,job_id=a.job_id,source_session_id=a.source_session_id,handoff_id=a.handoff_id),Path(a.output) if a.output else None);return 0
+    if a.command=="prepare-contract":dump_json(make_contract_job(a.contract,a.subject_id,load_json(Path(a.input)),registry_path=Path(a.registry).resolve() if a.registry else None,job_id=a.job_id,source_session_id=a.source_session_id,handoff_id=a.handoff_id,qualification_receipt=load_json(Path(a.qualification_receipt)) if a.qualification_receipt else None),Path(a.output) if a.output else None);return 0
     if a.command=="list-contracts":
         if a.registry:
             r=load_contract_registry(Path(a.registry));dump_json({"schema":r["schema"],"version":r.get("version"),"contracts":sorted(r["contracts"]),"model_execution":False})
         else:dump_json(catalog_summary())
         return 0
-    if a.command=="validate-jobs":
-        payload=load_json(Path(a.jobs));e=[f"{j.get('job_id')}: {x}" for j in payload.get("jobs",[]) for x in validate_job(j)]
+    if a.command in {"validate-jobs","validate-dispatchable-jobs"}:
+        payload=load_json(Path(a.jobs));validator=validate_dispatchable_job if a.command=="validate-dispatchable-jobs" else validate_job;e=[f"{j.get('job_id')}: {x}" for j in payload.get("jobs",[]) for x in validator(j)]
         if e:
             for x in e:print(x,file=sys.stderr)
             return 1

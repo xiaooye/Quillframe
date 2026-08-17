@@ -263,3 +263,7 @@ This prevents persuasive model output from bypassing Project/Framework governanc
 - [Control Plane](../control_plane/CONTROL_PLANE.en.md) — queued handoff/lease/result consumption.
 - [Quality Evolution](../../docs/quality-evolution.en.md) — model-owned quality semantics with deterministic ledgers.
 - [`model_contract_catalog.json`](model_contract_catalog.json) — live catalog for progressively disclosed semantic contract packs.
+
+## Repair-preservation evidence
+
+`quality.compare` may bind a repair challenger to an `objective_envelope`. The semantic worker separately judges target improvement and higher-order preservation. Runtime may reject an internally contradictory typed result (for example, `objective_regression` that also names the challenger as winner) but may not infer the literary classification itself.

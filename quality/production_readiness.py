@@ -24,6 +24,7 @@ from peer_bridge_receipt import validate_receipt as validate_peer_bridge_receipt
 from peer_chat_relay import validate_peer_result  # noqa: E402
 from registered_contract_binding import validate_registered_job  # noqa: E402
 from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
+from candidate_qualification import validate_qualification_receipt  # noqa: E402
 
 SCHEMA = "novelforge_production_readiness_v1"
 CATEGORIES = {"surface", "reader_engagement", "continuity", "semantic_rules", "semantic_independent"}
@@ -201,6 +202,19 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
     if not all(isinstance(x, bool) for x in (require_continuity, require_semantic_rules, require_independent)):
         raise ValueError("policy requirement flags must be boolean")
 
+    qualification = payload.get("pre_independent_qualification")
+    qualification_summary = None
+    if require_independent:
+        errors = validate_qualification_receipt(qualification, candidate_fingerprint=candidate, require_qualified=True)
+        if errors:
+            raise ValueError("pre_independent_qualification invalid: " + "; ".join(errors))
+        qualification_summary = {
+            "receipt_fingerprint": qualification.get("receipt_fingerprint"),
+            "qualification_status": qualification.get("qualification_status"),
+            "candidate_fingerprint": qualification.get("candidate_fingerprint"),
+            "independent": qualification.get("independent"),
+        }
+
     required = ["surface", "reader_engagement"]
     if require_continuity:
         required.append("continuity")
@@ -254,6 +268,9 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
         "registered_semantic_rule_audit_required": require_semantic_rules,
         "registered_independent_release_contract_required": require_independent,
         "project_bridge_receipt_required_for_independence": require_independent,
+        "pre_independent_qualification_required": require_independent,
+        "pre_independent_qualification": qualification_summary,
+        "independent_pass_can_override_qualification_failure": False,
         "semantic_content_reinterpreted_by_runtime": False,
         "authority": False,
         "permissions": {"canon_write": False, "framework_write": False, "durable_user_taste_write": False},
@@ -352,6 +369,8 @@ def self_test() -> dict[str, Any]:
         "registered_reader_engagement_required": True,
         "registered_independent_release_contract_required": True,
         "project_bridge_receipt_required_for_independence": True,
+        "pre_independent_qualification_required": True,
+        "independent_pass_can_override_qualification_failure": False,
         "numeric_quality_aggregation": False,
         "authority": False,
         "model_execution": False,

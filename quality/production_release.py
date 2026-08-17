@@ -14,6 +14,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from candidate_qualification import validate_qualification_receipt
+
 SCHEMA = "novelforge_production_release_v1"
 READINESS_SCHEMA = "novelforge_production_readiness_v1"
 STATUSES = {"pass", "fail", "pending"}
@@ -44,6 +46,15 @@ def aggregate(payload: Any) -> dict[str, Any]:
     base_ready = readiness.get("ready_for_user_visible_review")
     if not isinstance(base_ready, bool):
         raise ValueError("production_readiness ready flag required")
+    readiness_policy = readiness.get("policy", {}) if isinstance(readiness.get("policy"), dict) else {}
+    require_independent = readiness_policy.get("require_independent_semantic") is True
+    qualification = payload.get("pre_independent_qualification")
+    qualification_fp = None
+    if require_independent:
+        errors = validate_qualification_receipt(qualification, candidate_fingerprint=candidate, require_qualified=True)
+        if errors:
+            raise ValueError("pre_independent_qualification invalid at release: " + "; ".join(errors))
+        qualification_fp = qualification.get("receipt_fingerprint")
 
     policy = payload.get("structural_policy", {})
     if not isinstance(policy, dict):
@@ -95,6 +106,9 @@ def aggregate(payload: Any) -> dict[str, Any]:
         "candidate_fingerprint": candidate,
         "production_readiness_fingerprint": _fp_value(readiness),
         "base_production_readiness": base_ready,
+        "pre_independent_qualification_required": require_independent,
+        "pre_independent_qualification_fingerprint": qualification_fp,
+        "independent_pass_can_override_qualification_failure": False,
         "required_structural_receipts": required,
         "structural_receipts": [receipts[k] for k in sorted(receipts)],
         "missing_structural_receipts": missing,

@@ -109,7 +109,7 @@ def self_test() -> dict[str, Any]:
 
     fp = "sha256:" + "a" * 64
     good = make_contract_job(
-        "quality.production_review",
+        "reader.engagement_audit",
         "CH-SELF",
         {"candidate_fingerprint": fp, "candidate_text": "fixture", "reader_grip": "very_high"},
         source_session_id="SES-MANAGER",

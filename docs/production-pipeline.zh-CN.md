@@ -172,3 +172,7 @@ Manager 只加载当前 failure 真正需要的最小 semantic contract set。�
 - [`quality/production_readiness.py`](../quality/production_readiness.py)
 
 <div align="center"><sub>限制权力，让模型理解小说，把每个 consequential result 绑定到 exact state。🌸</sub></div>
+
+## 目标保持式修复上下文
+
+Repair loop 在 candidate lineage 中保持一个紧凑的 current `objective_envelope`。Editor 输出 FIX + PRESERVE。选择 fresh realization 时，Writer context 从 current authoritative state、objective envelope 与 distilled repair packet 重建；rejected realization、完整 critique trajectory 与 regression 坏例不进入 Writer。Material repaired candidate 在 independent dispatch 前必须通过 objective-preservation comparison。

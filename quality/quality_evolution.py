@@ -177,6 +177,15 @@ def prepare_comparison_job(
         raise ValueError("challenger must descend from current incumbent")
     if not isinstance(repair_context, dict):
         raise ValueError("repair_context must be object")
+    if not isinstance(repair_context.get("repair_target"),str) or not repair_context["repair_target"].strip():
+        raise ValueError("repair_context.repair_target required")
+    envelope=repair_context.get("objective_envelope")
+    if not isinstance(envelope,dict): raise ValueError("repair_context.objective_envelope required")
+    quality_root=ROOT/"quality"
+    if str(quality_root) not in sys.path:sys.path.insert(0,str(quality_root))
+    from objective_envelope import validate as validate_objective_envelope
+    envelope_errors=validate_objective_envelope(envelope,subject_id=run["subject_id"],run_id=run_id)
+    if envelope_errors: raise ValueError("invalid objective envelope: "+"; ".join(envelope_errors))
     payload = {
         "evolution_run_id": run_id,
         "evolution_subject_id": run["subject_id"],
@@ -388,7 +397,13 @@ def status(conn: sqlite3.Connection, run_id: str) -> dict[str, Any]:
     }
 
 
-def _fixture_result(job: dict[str, Any], winner: str, reason: str) -> dict[str, Any]:
+def _fixture_result(job: dict[str, Any], winner: str, reason: str, *, objective_regression: bool=False) -> dict[str, Any]:
+    if winner=="challenger":
+        axes={"target_outcome":"improved","objective_preservation":"preserved","reader_value":"unchanged","character_relationship_energy":"preserved","outcome_class":"successful_repair","regressed_dimensions":[]}
+    elif objective_regression:
+        axes={"target_outcome":"improved","objective_preservation":"materially_degraded","reader_value":"degraded","character_relationship_energy":"preserved","outcome_class":"objective_regression","regressed_dimensions":["reader_pressure"]}
+    else:
+        axes={"target_outcome":"unchanged","objective_preservation":"preserved","reader_value":"unchanged","character_relationship_energy":"preserved","outcome_class":"target_not_fixed","regressed_dimensions":[]}
     return {
         "job_id": job["job_id"],
         "subject_id": job["subject_id"],
@@ -402,8 +417,9 @@ def _fixture_result(job: dict[str, Any], winner: str, reason: str) -> dict[str, 
             "reason": reason,
             "repaired_findings": [],
             "introduced_regressions": [],
-            "preserved_strengths": [],
+            "preserved_strengths": ["reader pressure"],
             "evidence": [reason],
+            **axes,
         },
         "proposals": [],
         "errors": [],
@@ -416,8 +432,11 @@ def self_test(path: Path) -> int:
     conn = connect(path)
     start_run(conn, run_id="RUN-1", subject_id="CH-1", baseline_candidate_id="C0", baseline_text="baseline", plateau_limit=2)
     start_run(conn, run_id="RUN-1", subject_id="CH-1", baseline_candidate_id="C0", baseline_text="baseline", plateau_limit=2)
+    from objective_envelope import build as build_objective_envelope
+    envelope=build_objective_envelope({"subject_id":"CH-1","run_id":"RUN-1","authority_cutoff":"synthetic","objective_items":[{"id":"OBJ-1","category":"reader","statement":"Preserve reader pressure.","source_refs":["plan:self"]}],"must_preserve":["reader pressure"],"derived_from_rejected_realization":False})
+    def rc(target:str)->dict[str,Any]: return {"repair_target":target,"objective_envelope":envelope}
     add_candidate(conn, run_id="RUN-1", candidate_id="C1", text="candidate one", repair_owner="reader")
-    j1 = prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-1", challenger_candidate_id="C1", repair_context={"targets": ["forward pull"]})
+    j1 = prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-1", challenger_candidate_id="C1", repair_context=rc("forward pull"))
     r1 = _fixture_result(j1, "challenger", "stronger forward pull")
     s1 = record_comparison(conn, job=j1, result=r1)
     replay = record_comparison(conn, job=j1, result=r1)
@@ -432,12 +451,18 @@ def self_test(path: Path) -> int:
         result_binding_guard = True
 
     add_candidate(conn, run_id="RUN-1", candidate_id="C2", text="candidate two", repair_owner="surface")
-    j2 = prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-2", challenger_candidate_id="C2", repair_context={"targets": ["surface"]})
+    j2 = prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-2", challenger_candidate_id="C2", repair_context=rc("surface"))
     s2 = record_comparison(conn, job=j2, result=_fixture_result(j2, "incumbent", "no net gain"))
 
     add_candidate(conn, run_id="RUN-1", candidate_id="C3", text="candidate three", repair_owner="scene")
-    j3 = prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-3", challenger_candidate_id="C3", repair_context={"targets": ["scene"]})
+    j3 = prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-3", challenger_candidate_id="C3", repair_context=rc("scene"))
     s3 = record_comparison(conn, job=j3, result=_fixture_result(j3, "tie", "gains and regressions cancel"))
+
+    objective_regression_guard=False
+    contradictory=_fixture_result(j1,"challenger","surface fixed but pressure collapsed")
+    contradictory["judgment"].update({"objective_preservation":"materially_degraded","reader_value":"degraded","outcome_class":"objective_regression","regressed_dimensions":["reader_pressure"]})
+    try: record_comparison(conn,job=j1,result=contradictory)
+    except ValueError: objective_regression_guard=True
 
     frozen_binding = (
         s1["comparisons"][0]["job_fingerprint"] == j1["input_fingerprint"]
@@ -451,6 +476,7 @@ def self_test(path: Path) -> int:
         and caller_override_removed
         and result_binding_guard
         and frozen_binding
+        and objective_regression_guard
         and s3["authority"] is False
         and s3["model_execution"] is False
     )
@@ -462,6 +488,8 @@ def self_test(path: Path) -> int:
         "winner_derived_from_typed_result": True,
         "caller_winner_override_removed": caller_override_removed,
         "invalid_winner_rejected_by_contract": result_binding_guard,
+        "objective_regression_cannot_promote_challenger": objective_regression_guard,
+        "objective_envelope_bound_to_comparison": j1["input"]["payload"]["repair_context"]["objective_envelope"]["fingerprint"]==envelope["fingerprint"],
         "idempotent_replay": replay["incumbent_candidate_id"] == "C1",
         "plateau_stopping": s3["state"] == "plateau",
         "authority": False,

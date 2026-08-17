@@ -1,78 +1,493 @@
 {
   "schema": "novelforge_model_contract_registry_v1",
-  "version": "3",
-  "principle": "Creative exploration should produce causally distinct options, while revision and framework ablation comparison should be evidence-driven rather than generic self-reflection. Deterministic ledgers record branches/comparisons but never manufacture literary improvement signals.",
+  "version": "4",
+  "principle": "Creative exploration should produce causally distinct options, while repair comparison must verify both targeted improvement and preservation of the current creative objective. Deterministic ledgers bind candidates, envelopes and results but never manufacture literary improvement signals or weighted quality scores.",
   "contracts": {
     "scene.diverge": {
       "kind": "artifact_audit",
       "purpose": "Propose a small set of materially different causal scene branches from the same bounded state. Diversity must come from different choices, conflicts, information, tactics, costs or consequences—not paraphrase or cosmetic style variation.",
-      "rubric": ["Respect supplied Canon/current state, character knowledge boundaries and hard plan constraints.", "Generate branches that diverge at the causal mechanism level: who acts, what choice is made, what information changes hands, what resistance appears, what cost is paid, or what relationship leverage shifts.", "Do not create multiple versions that differ mainly in wording, tone, scenery, sentence rhythm or arbitrary surprise.", "Keep important characters agentic. At least one branch should test a non-obvious but character-supported response when the evidence allows it.", "For each branch, state what makes it genuinely distinct and which existing pressure or uncertainty it exploits.", "Do not select a winner and do not write prose. These are non-Canon exploration proposals for Scenario Fork."],
-      "output_contract": {"type": "object", "required": ["confidence", "branches"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "branches": {"type": "array", "minItems": 2, "items": {"type": "object", "required": ["branch_key", "divergence_axis", "causal_trajectory", "character_agency", "cost_or_tradeoff", "distinct_from_others"], "properties": {"branch_key": {"type": "string", "minLength": 1}, "divergence_axis": {"type": "string", "minLength": 1}, "causal_trajectory": {"type": "array", "items": {"type": "string"}, "minItems": 1}, "character_agency": {"type": "string", "minLength": 1}, "cost_or_tradeoff": {"type": "string"}, "reader_pressure_or_reward": {"type": "string"}, "distinct_from_others": {"type": "string", "minLength": 1}}}}}},
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "scenario_branch_proposals"},
+      "rubric": [
+        "Respect supplied Canon/current state, character knowledge boundaries and hard plan constraints.",
+        "Generate branches that diverge at the causal mechanism level: who acts, what choice is made, what information changes hands, what resistance appears, what cost is paid, or what relationship leverage shifts.",
+        "Do not create multiple versions that differ mainly in wording, tone, scenery, sentence rhythm or arbitrary surprise.",
+        "Keep important characters agentic. At least one branch should test a non-obvious but character-supported response when the evidence allows it.",
+        "For each branch, state what makes it genuinely distinct and which existing pressure or uncertainty it exploits.",
+        "Do not select a winner and do not write prose. These are non-Canon exploration proposals for Scenario Fork."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": [
+          "confidence",
+          "branches"
+        ],
+        "properties": {
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "branches": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "required": [
+                "branch_key",
+                "divergence_axis",
+                "causal_trajectory",
+                "character_agency",
+                "cost_or_tradeoff",
+                "distinct_from_others"
+              ],
+              "properties": {
+                "branch_key": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "divergence_axis": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "causal_trajectory": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1
+                },
+                "character_agency": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "cost_or_tradeoff": {
+                  "type": "string"
+                },
+                "reader_pressure_or_reward": {
+                  "type": "string"
+                },
+                "distinct_from_others": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "scenario_branch_proposals"
+      },
       "independent_gate": false
     },
     "quality.compare": {
       "kind": "external_review",
-      "purpose": "Compare an incumbent and challenger against an explicit repair target, typed findings and preserved strengths. Determine whether the challenger actually improves the artifact rather than assuming a later revision is better.",
+      "purpose": "Compare an incumbent and repair challenger against an explicit repair target and compact objective envelope. Classify whether the target was not fixed, the target was fixed but a required objective regressed, or the repair succeeded without material higher-order regression.",
       "input_contract": {
         "type": "object",
-        "required": ["evolution_run_id", "evolution_subject_id", "comparison_id", "incumbent", "challenger", "repair_context"],
+        "required": [
+          "evolution_run_id",
+          "evolution_subject_id",
+          "comparison_id",
+          "incumbent",
+          "challenger",
+          "repair_context"
+        ],
         "properties": {
-          "evolution_run_id": {"type": "string", "minLength": 1},
-          "evolution_subject_id": {"type": "string", "minLength": 1},
-          "comparison_id": {"type": "string", "minLength": 1},
-          "incumbent": {"type": "object", "required": ["candidate_id", "content_fingerprint"], "properties": {"candidate_id": {"type": "string", "minLength": 1}, "content_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71}}, "additionalProperties": false},
-          "challenger": {"type": "object", "required": ["candidate_id", "content_fingerprint", "repair_owner"], "properties": {"candidate_id": {"type": "string", "minLength": 1}, "content_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71}, "repair_owner": {"type": "string", "minLength": 1}}, "additionalProperties": false},
-          "repair_context": {"type": "object"}
+          "evolution_run_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evolution_subject_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "comparison_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "incumbent": {
+            "type": "object",
+            "required": [
+              "candidate_id",
+              "content_fingerprint"
+            ],
+            "properties": {
+              "candidate_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "content_fingerprint": {
+                "type": "string",
+                "minLength": 71,
+                "maxLength": 71
+              }
+            },
+            "additionalProperties": false
+          },
+          "challenger": {
+            "type": "object",
+            "required": [
+              "candidate_id",
+              "content_fingerprint",
+              "repair_owner"
+            ],
+            "properties": {
+              "candidate_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "content_fingerprint": {
+                "type": "string",
+                "minLength": 71,
+                "maxLength": 71
+              },
+              "repair_owner": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          },
+          "repair_context": {
+            "type": "object",
+            "required": [
+              "repair_target",
+              "objective_envelope"
+            ],
+            "properties": {
+              "repair_target": {
+                "type": "string",
+                "minLength": 1
+              },
+              "objective_envelope": {
+                "type": "object",
+                "required": [
+                  "schema",
+                  "subject_id",
+                  "run_id",
+                  "fingerprint",
+                  "objective_items",
+                  "must_preserve",
+                  "derived_from_rejected_realization"
+                ],
+                "properties": {
+                  "schema": {
+                    "enum": [
+                      "novelforge_objective_envelope_v1"
+                    ]
+                  },
+                  "subject_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "run_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "fingerprint": {
+                    "type": "string",
+                    "minLength": 71,
+                    "maxLength": 71
+                  },
+                  "objective_items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object"
+                    }
+                  },
+                  "must_preserve": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "derived_from_rejected_realization": {
+                    "enum": [
+                      false
+                    ]
+                  },
+                  "supersedes_fingerprint": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "change_authority_ref": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "authority_cutoff": {
+                    "type": "string"
+                  },
+                  "semantic_completeness_judged_by_runtime": {
+                    "type": "boolean"
+                  },
+                  "authority": {
+                    "type": "boolean"
+                  },
+                  "permissions": {
+                    "type": "object"
+                  },
+                  "model_execution": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": true
+              },
+              "repair_evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "incumbent_strengths": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
         },
         "additionalProperties": false
       },
       "rubric": [
-        "Judge only the supplied incumbent, challenger, repair targets/findings, relevant constraints and evidence.",
-        "Treat the candidate IDs and content fingerprints as the frozen comparison identity; never substitute a different artifact or infer a winner from orchestration metadata.",
-        "First test whether the challenger resolves the targeted failure. Then check whether it introduces regressions in story causality, character integrity, reader engagement, continuity or surface realization.",
-        "Preserve strengths that were not targeted for repair. A smoother or more elaborate rewrite is not an improvement if it weakens what already worked.",
-        "Prefer pairwise observable evidence over absolute literary scores.",
-        "Use tie when there is no clear net gain, when gains and regressions cancel, or when evidence is insufficient. Do not manufacture improvement to keep a revision loop moving.",
-        "Return concise evidence and repaired/regressed finding references. This comparison does not itself grant user-visible, Canon or settlement authority."
+        "Judge only the supplied incumbent, challenger, repair target, objective envelope and bounded evidence. The objective envelope is current run evidence, not a weighted score or a wording-preservation template.",
+        "First decide TARGET OUTCOME: whether the challenger materially improves the specified failure mechanism. Separately decide OBJECTIVE PRESERVATION: whether the required story/reader/character functions in the objective envelope survive.",
+        "Also compare reader value and character/relationship energy when applicable. Surface cleanliness is a constraint on valid solutions, not the objective function.",
+        "Classify TARGET_NOT_FIXED when the defect did not improve; OBJECTIVE_REGRESSION when the target improved but a required higher-order objective materially degraded; SUCCESSFUL_REPAIR only when the target improved without blocking objective regression; INCONCLUSIVE when evidence is insufficient.",
+        "A challenger with objective regression must not win merely because it is smoother, shorter, safer or more constraint-compliant. Preserve the incumbent or request another repair.",
+        "Do not require wording or structure preservation. A major fresh realization can win when it preserves the intended functions and improves the repair target.",
+        "If the supplied objective envelope explicitly supersedes an earlier one under authorized user steering, judge the challenger against the current envelope; legitimate goal change is not regression.",
+        "Prefer pairwise observable evidence over absolute scores. Do not use arbitrary weighted sums. Return concise evidence without private chain-of-thought."
       ],
-      "output_contract": {"type": "object", "required": ["confidence", "winner", "reason", "repaired_findings", "introduced_regressions", "evidence"], "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}, "winner": {"enum": ["incumbent", "challenger", "tie"]}, "reason": {"type": "string", "minLength": 1}, "repaired_findings": {"type": "array", "items": {"type": "string"}}, "introduced_regressions": {"type": "array", "items": {"type": "string"}}, "preserved_strengths": {"type": "array", "items": {"type": "string"}}, "evidence": {"type": "array", "items": {"type": "string"}}}},
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "quality_pairwise_comparison"},
+      "output_contract": {
+        "type": "object",
+        "required": [
+          "confidence",
+          "winner",
+          "reason",
+          "target_outcome",
+          "objective_preservation",
+          "reader_value",
+          "character_relationship_energy",
+          "outcome_class",
+          "repaired_findings",
+          "introduced_regressions",
+          "regressed_dimensions",
+          "preserved_strengths",
+          "evidence"
+        ],
+        "properties": {
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "winner": {
+            "enum": [
+              "incumbent",
+              "challenger",
+              "tie"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "target_outcome": {
+            "enum": [
+              "improved",
+              "unchanged",
+              "worse",
+              "insufficient_evidence"
+            ]
+          },
+          "objective_preservation": {
+            "enum": [
+              "preserved",
+              "degraded",
+              "materially_degraded",
+              "insufficient_evidence"
+            ]
+          },
+          "reader_value": {
+            "enum": [
+              "improved",
+              "unchanged",
+              "degraded",
+              "insufficient_evidence"
+            ]
+          },
+          "character_relationship_energy": {
+            "enum": [
+              "preserved",
+              "degraded",
+              "not_applicable",
+              "insufficient_evidence"
+            ]
+          },
+          "outcome_class": {
+            "enum": [
+              "target_not_fixed",
+              "objective_regression",
+              "successful_repair",
+              "inconclusive"
+            ]
+          },
+          "repaired_findings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "introduced_regressions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "regressed_dimensions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "preserved_strengths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "quality_pairwise_comparison"
+      },
       "independent_gate": false
     },
     "quality.ablation_compare": {
       "kind": "external_review",
       "purpose": "Blindly compare two anonymous semantic-ablation condition results from the same frozen candidate. Judge only whether A or B is materially better on the supplied observation criteria and whether either condition introduces a material regression; do not infer which condition is incumbent, challenger, simpler, preferred, or intended for removal.",
-      "forbidden_input_keys": ["simpler_arm", "incumbent", "challenger", "removal_intent", "recommendation", "expected", "expected_verdict", "gold", "gold_label"],
+      "forbidden_input_keys": [
+        "simpler_arm",
+        "incumbent",
+        "challenger",
+        "removal_intent",
+        "recommendation",
+        "expected",
+        "expected_verdict",
+        "gold",
+        "gold_label"
+      ],
       "input_contract": {
         "type": "object",
-        "required": ["comparison_id", "candidate_fingerprint", "condition_a", "condition_b", "observation_criteria"],
+        "required": [
+          "comparison_id",
+          "candidate_fingerprint",
+          "condition_a",
+          "condition_b",
+          "observation_criteria"
+        ],
         "properties": {
-          "comparison_id": {"type": "string", "minLength": 1},
-          "candidate_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
+          "comparison_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "candidate_fingerprint": {
+            "type": "string",
+            "minLength": 71,
+            "maxLength": 71
+          },
           "condition_a": {
             "type": "object",
-            "required": ["condition_id", "input_fingerprint", "result_fingerprint", "judgment"],
+            "required": [
+              "condition_id",
+              "input_fingerprint",
+              "result_fingerprint",
+              "judgment"
+            ],
             "properties": {
-              "condition_id": {"enum": ["A"]},
-              "input_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
-              "result_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
-              "judgment": {"type": "object"}
+              "condition_id": {
+                "enum": [
+                  "A"
+                ]
+              },
+              "input_fingerprint": {
+                "type": "string",
+                "minLength": 71,
+                "maxLength": 71
+              },
+              "result_fingerprint": {
+                "type": "string",
+                "minLength": 71,
+                "maxLength": 71
+              },
+              "judgment": {
+                "type": "object"
+              }
             },
             "additionalProperties": false
           },
           "condition_b": {
             "type": "object",
-            "required": ["condition_id", "input_fingerprint", "result_fingerprint", "judgment"],
+            "required": [
+              "condition_id",
+              "input_fingerprint",
+              "result_fingerprint",
+              "judgment"
+            ],
             "properties": {
-              "condition_id": {"enum": ["B"]},
-              "input_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
-              "result_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
-              "judgment": {"type": "object"}
+              "condition_id": {
+                "enum": [
+                  "B"
+                ]
+              },
+              "input_fingerprint": {
+                "type": "string",
+                "minLength": 71,
+                "maxLength": 71
+              },
+              "result_fingerprint": {
+                "type": "string",
+                "minLength": 71,
+                "maxLength": 71
+              },
+              "judgment": {
+                "type": "object"
+              }
             },
             "additionalProperties": false
           },
-          "observation_criteria": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+          "observation_criteria": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
         },
         "additionalProperties": false
       },
@@ -86,17 +501,56 @@
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "relation", "regression_in", "reason", "evidence"],
+        "required": [
+          "confidence",
+          "relation",
+          "regression_in",
+          "reason",
+          "evidence"
+        ],
         "properties": {
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "relation": {"enum": ["A_BETTER", "B_BETTER", "NO_MATERIAL_DIFFERENCE", "INCONCLUSIVE"]},
-          "regression_in": {"enum": ["A", "B", "NEITHER", "UNCLEAR"]},
-          "reason": {"type": "string", "minLength": 1},
-          "evidence": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "relation": {
+            "enum": [
+              "A_BETTER",
+              "B_BETTER",
+              "NO_MATERIAL_DIFFERENCE",
+              "INCONCLUSIVE"
+            ]
+          },
+          "regression_in": {
+            "enum": [
+              "A",
+              "B",
+              "NEITHER",
+              "UNCLEAR"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
         },
         "additionalProperties": false
       },
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "ablation_pair_comparison"},
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "ablation_pair_comparison"
+      },
       "independent_gate": true
     }
   }

@@ -15,7 +15,7 @@ from typing import Any
 
 HERE=Path(__file__).resolve();
 if str(HERE.parent) not in sys.path: sys.path.insert(0,str(HERE.parent))
-from semantic_worker_router import validate_job,validate_result  # noqa: E402
+from semantic_worker_router import validate_dispatchable_job,validate_job,validate_result,worker_job_view  # noqa: E402
 
 PACKET_SCHEMA="novelforge_peer_review_packet_v1"
 
@@ -30,10 +30,11 @@ def dump(v:Any,path:Path|None=None)->None:
     else:print(s,end="")
 
 def build(job:dict[str,Any])->dict[str,Any]:
-    errors=validate_job(job)
-    if errors: raise ValueError("invalid job: "+"; ".join(errors))
+    errors=validate_dispatchable_job(job)
+    if errors: raise ValueError("invalid dispatchable job: "+"; ".join(errors))
     nonce=secrets.token_urlsafe(24)
-    bounded={k:job.get(k) for k in ("job_id","kind","subject_id","created_at","input_fingerprint","input","rubric","output_contract","permissions","provenance")}
+    visible=worker_job_view(job)
+    bounded={k:visible.get(k) for k in ("job_id","kind","subject_id","created_at","input_fingerprint","input","rubric","output_contract","permissions","provenance")}
     reviewer_instruction=(
         "You are a genuinely separate independent semantic reviewer. Judge only the blind job below. "
         "Do not ask for or inspect the writer conversation/project files; do not search for expected labels; do not provide private chain-of-thought. "
