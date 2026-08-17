@@ -30,16 +30,16 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          for path in [
-            Path('.github/workflows/novelforge-contracts.yml'),
-            Path('.github/workflows/novelforge-semantic-contract-packs.yml'),
-            Path('.github/workflows/novelforge-quality-gate-hardening.yml'),
-          ]:
-              text=path.read_text(encoding='utf-8')
-              assert 'repair_objective_preservation.py self-test' in text
-              assert 'objective_envelope' in text
-              assert 'quality.production_review' in text
-              assert 'qualification_receipt' in text
+          contracts=Path('.github/workflows/novelforge-contracts.yml').read_text(encoding='utf-8')
+          packs=Path('.github/workflows/novelforge-semantic-contract-packs.yml').read_text(encoding='utf-8')
+          hardening=Path('.github/workflows/novelforge-quality-gate-hardening.yml').read_text(encoding='utf-8')
+          assert 'repair_objective_preservation.py self-test' in contracts
+          assert 'objective_envelope' in contracts
+          assert 'quality.production_review' in contracts and 'qualification_receipt' in contracts
+          assert 'objective_envelope' in packs
+          assert 'quality.production_review' in packs and 'qualification_receipt' in packs
+          assert 'repair_objective_preservation.py self-test' in hardening
+          assert 'quality.production_review' in hardening and 'qualification_receipt' in hardening
           print('permanent quality workflow wiring text checks PASS')
           PY
           python quality/objective_envelope.py self-test
