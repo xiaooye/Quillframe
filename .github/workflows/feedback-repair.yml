@@ -1,0 +1,33 @@
+name: Apply feedback intake repair
+
+on:
+  push:
+    branches: [agent/automatic-feedback-learning-intake]
+    paths:
+      - 'feedback-repair.patch'
+      - '.github/workflows/feedback-repair.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/automatic-feedback-learning-intake
+      - name: Apply exact validated patch
+        run: |
+          git apply --check feedback-repair.patch
+          git apply feedback-repair.patch
+          git rm feedback-repair.patch .github/workflows/feedback-repair.yml
+          git diff --check
+      - name: Commit repaired tree
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: finalize automatic feedback learning intake'
+          git push origin HEAD:agent/automatic-feedback-learning-intake
