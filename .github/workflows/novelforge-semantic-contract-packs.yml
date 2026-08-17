@@ -92,7 +92,7 @@ jobs:
                   'candidate_fingerprint': fp,
                   'candidate_text': 'A bounded independent production-review candidate.',
                   'reader_grip': 'very_high',
-                  'reader_visible_context': [{'source_ref': 'accepted:prior', 'text': 'Only reader-visible prior context.'}],
+                  'reader_visible_context': [{'source_ref': 'accepted:prior', 'text': 'Reader-visible prior context.'}],
               },
               'learning.promotion_review': {
                   'candidate_id': 'LEARN-CI',
