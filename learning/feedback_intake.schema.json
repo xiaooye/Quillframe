@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novelforge_feedback_intake_v1",
+  "title": "NovelForge automatic feedback learning intake",
+  "$defs": {
+    "feedbackObservationPayload": {
+      "type": "object",
+      "required": ["schema", "kind", "feedback_text", "current_task"],
+      "properties": {
+        "schema": {"const": "novelforge_feedback_observation_v1"},
+        "kind": {"const": "feedback_observation"},
+        "feedback_text": {"type": "string", "minLength": 1, "maxLength": 12000},
+        "current_task": {"type": "object"},
+        "target": {"type": "object"},
+        "project_profile": {"type": "object"},
+        "authority": {"const": false},
+        "canon_authority": {"const": false},
+        "framework_write_authority": {"const": false}
+      },
+      "additionalProperties": false
+    },
+    "status": {
+      "enum": ["observed", "awaiting_semantic", "interpreted", "skipped", "persisted", "blocked", "failed"]
+    },
+    "projection": {
+      "type": "object",
+      "required": ["schema", "event_id", "event_hash", "status", "consumer", "version", "permissions"],
+      "properties": {
+        "schema": {"const": "novelforge_feedback_intake_projection_v1"},
+        "event_id": {"type": "string", "minLength": 1},
+        "event_hash": {"type": "string", "minLength": 71, "maxLength": 71},
+        "status": {"$ref": "#/$defs/status"},
+        "consumer": {"type": "string", "minLength": 1},
+        "project_id": {"type": ["string", "null"]},
+        "resource_id": {"type": "string", "minLength": 1},
+        "feedback_ref": {"type": "string", "minLength": 1},
+        "target_ref": {"type": ["string", "null"]},
+        "artifact_ref": {"type": ["string", "null"]},
+        "artifact_fingerprint": {"type": ["string", "null"]},
+        "semantic_job_fingerprint": {"type": ["string", "null"]},
+        "semantic_result_hash": {"type": ["string", "null"]},
+        "capture_decision": {"type": ["string", "null"], "enum": ["capture", "skip", null]},
+        "skip_reason": {"type": ["string", "null"]},
+        "evidence_id": {"type": ["string", "null"]},
+        "hypothesis_id": {"type": ["string", "null"]},
+        "hypothesis_action": {"type": ["string", "null"]},
+        "target_hypothesis_id": {"type": ["string", "null"]},
+        "version": {"type": "integer", "minimum": 1},
+        "permissions": {
+          "type": "object",
+          "required": ["canon_write", "framework_write", "project_profile_write", "durable_user_taste_write"],
+          "properties": {
+            "canon_write": {"const": false},
+            "framework_write": {"const": false},
+            "project_profile_write": {"const": false},
+            "durable_user_taste_write": {"const": false}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "oneOf": [
+    {"$ref": "#/$defs/feedbackObservationPayload"},
+    {"$ref": "#/$defs/projection"}
+  ]
+}
