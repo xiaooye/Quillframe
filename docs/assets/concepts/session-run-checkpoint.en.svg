@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 300" role="img" aria-labelledby="t d">
+<title id="t">Session run checkpoint model</title>
+<desc id="d">Nested runtime identity separates project resource, session thread, run invocation, and checkpoint.</desc>
+<style>
+text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;fill:#24212A}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:1.5px;fill:#716A74}
+.title{font-size:28px;font-weight:760}
+.label{font-size:17px;font-weight:700}
+.body{font-size:14px;fill:#716A74}
+.micro{font-size:12px;fill:#716A74}
+.line{stroke:#D9D1C6;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.dash{stroke:#716A74;stroke-width:1.3;stroke-dasharray:6 7;fill:none}
+</style>
+<rect width="920" height="300" fill="#FFF9F0"/>
+<text x="48" y="38" class="eyebrow">SESSION / RUN / CHECKPOINT</text><text x="48" y="72" class="title">Execution identity has layers.</text><rect x="82" y="101" width="700" height="30" rx="10" fill="#EAF5FF"/><text x="96" y="121" class="label">PROJECT / RESOURCE</text><rect x="82" y="143" width="560" height="30" rx="10" fill="#F1ECFF"/><text x="96" y="163" class="label">SESSION / THREAD</text><rect x="82" y="185" width="420" height="30" rx="10" fill="#FCECF3"/><text x="96" y="205" class="label">RUN / INVOCATION</text><rect x="82" y="227" width="280" height="30" rx="10" fill="#FFF3CF"/><text x="96" y="247" class="label">CHECKPOINT</text><text x="810" y="124" class="label">≠ Canon</text><text x="810" y="166" class="body">≠ model context</text><text x="810" y="208" class="body">bounded work</text><text x="810" y="250" class="body">recoverable state</text>
+</svg>

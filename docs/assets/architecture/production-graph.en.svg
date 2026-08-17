@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 310" role="img" aria-labelledby="t d">
+<title id="t">Quillframe production graph</title>
+<desc id="d">Sparse context, simulation, internal candidate, qualification, independent review, user-visible gate, and repair loop.</desc>
+<style>
+text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;fill:#24212A}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:1.5px;fill:#716A74}
+.title{font-size:28px;font-weight:760}
+.label{font-size:17px;font-weight:700}
+.body{font-size:14px;fill:#716A74}
+.micro{font-size:12px;fill:#716A74}
+.line{stroke:#D9D1C6;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.dash{stroke:#716A74;stroke-width:1.3;stroke-dasharray:6 7;fill:none}
+</style>
+<rect width="920" height="310" fill="#FFF9F0"/>
+<text x="48" y="38" class="eyebrow">PRODUCTION GRAPH</text><text x="48" y="72" class="title">A chapter is a run, not a completion.</text><circle cx="82" cy="151" r="7" fill="#7AAED6"/><text x="82" y="181" class="label" text-anchor="middle">FREEZE</text><path d="M91 151 L217 151" class="line"/><circle cx="226" cy="151" r="7" fill="#8D7CCB"/><text x="226" y="181" class="label" text-anchor="middle">SIMULATE</text><path d="M235 151 L361 151" class="line"/><circle cx="370" cy="151" r="7" fill="#C985A4"/><text x="370" y="181" class="label" text-anchor="middle">CANDIDATE</text><path d="M379 151 L505 151" class="line"/><circle cx="514" cy="151" r="7" fill="#BE9A45"/><text x="514" y="181" class="label" text-anchor="middle">QUALIFY</text><path d="M523 151 L649 151" class="line"/><circle cx="658" cy="151" r="7" fill="#8D7CCB"/><text x="658" y="181" class="label" text-anchor="middle">REVIEW</text><path d="M667 151 L793 151" class="line"/><circle cx="802" cy="151" r="7" fill="#6AA985"/><text x="802" y="181" class="label" text-anchor="middle">GATE</text><text x="82" y="209" class="micro" text-anchor="middle">sparse context</text><text x="226" y="209" class="micro" text-anchor="middle">story · character · reader</text><text x="370" y="209" class="micro" text-anchor="middle">raw internal</text><text x="514" y="209" class="micro" text-anchor="middle">FIX + PRESERVE</text><text x="658" y="209" class="micro" text-anchor="middle">separate invocation</text><text x="802" y="209" class="micro" text-anchor="middle">user-visible</text><path d="M520 237 C480 276 360 276 300 232" class="dash"/><text x="409" y="277" class="body" text-anchor="middle">repair returns to the owning mechanism</text>
+</svg>

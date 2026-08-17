@@ -1,178 +1,59 @@
-<div align="center">
-  <img src="../assets/brand/novelforge-lockup.svg" alt="NovelForge — Adaptive Fiction Agent Framework" width="580" />
-  <p><strong>Start with the product model. Drop into contracts only when you need exact execution semantics.</strong></p>
-  <p><kbd>ORIENT</kbd>&nbsp;&nbsp;<kbd>BUILD</kbd>&nbsp;&nbsp;<kbd>WRITE</kbd>&nbsp;&nbsp;<kbd>VERIFY</kbd>&nbsp;&nbsp;<kbd>OPERATE</kbd></p>
-  <p><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
-</div>
+# Quillframe Documentation
 
-<img src="../assets/brand/story-thread.svg" alt="" width="100%" />
+Quillframe documentation starts with a mental model, then descends into contracts. The implementation, schemas, tests, and current manifest outrank explanatory prose when they disagree.
 
-# NovelForge Documentation
+<img src="assets/architecture/framework-vs-project.en.svg" alt="Framework versus Project: Quillframe provides generic production mechanisms while each Project owns its concrete story facts and Canon" width="100%" />
 
-NovelForge documentation is organized by **reader intent**, not by source-tree shape.
+## Start here
 
-The current development implementation is AI-native and contract-first: models own semantic fiction judgment; deterministic code owns authority, permissions, fingerprints, persistence, routing, typed validation, transactions, hard budgets, and reproducibility. For released compatibility claims, `HARNESS_MANIFEST.yaml` remains the release-metadata authority; during active 8.0 development, the latest `main` branch is the working implementation baseline. See the [8.0 Development Change Inventory](8-0-development-inventory.en.md) for merged work, active dependencies, and deferred scope, and the [Changelog](../CHANGELOG.en.md) for release history and the unreleased ledger.
+Begin with [Architecture](architecture.en.md), then [Production Pipeline](production-pipeline.en.md) and [Quality Assurance](quality-assurance.en.md). Those three pages explain the runtime boundaries that prevent a long project from collapsing plan, draft, evidence, and Canon into one undifferentiated memory.
 
-This documentation follows the same separation. Product pages explain the mental model and tradeoffs. Guides show how to use a subsystem. Deep contracts define exact invariants.
+## Core concepts
 
----
+[Architecture Atlas](architecture-atlas.en.md) maps generic mechanisms to their implementation owners. [Canon State](../core/CANON_STATE.en.md) is the normative authority contract. [Candidate Lineage](CANDIDATE_LINEAGE_V1.en.md) explains how candidate ancestry and exact review binding remain non-authoritative provenance.
 
-## 01 · If you are evaluating NovelForge ✦
+## Writing
 
-Start with these four pages:
+[Production Pipeline](production-pipeline.en.md), [Surface Fundamentals](../surface/FUNDAMENTALS.en.md), and [Reader Engagement](../surface/READER_ENGAGEMENT.en.md) cover generation, diagnosis, repair ownership, and reader-facing quality.
 
-**[Why NovelForge](why-novelforge.en.md)** explains the product thesis, direct novel-agent/framework alternatives, mature author products, tradeoffs, and where NovelForge is not the best fit.
+## Quality
 
-**[Architecture](architecture.en.md)** gives the system-level mental model: Project authority, semantic intelligence, deterministic runtime, state separation, and write boundaries.
+[Quality Assurance](quality-assurance.en.md) explains release truth and pre-independent qualification. [Quality Evolution](quality-evolution.en.md) covers incumbent/challenger comparison, objective preservation, regression protection, and stopping behavior. [Eval Reference](../evals/README.en.md) describes deterministic and semantic evaluation boundaries.
 
-**[Production Pipeline](production-pipeline.en.md)** explains how DRAFT/REVISE become production runs rather than one-shot model calls.
+## Canon & settlement
 
-**[Quality & QA](quality-assurance.en.md)** explains deterministic QA, semantic contracts, independent review, findings, candidate evolution, and release gates.
+[Canon State](../core/CANON_STATE.en.md) defines authority classes. Settlement is a separate authorized transaction: explicit acceptance, exact before/after intent, current-state compare-and-swap, required projections, and post-condition validation.
 
-For subsystem ownership and deep links, continue to **[Architecture Atlas](architecture-atlas.en.md)**.
+## Context & memory
 
----
+[Context & Memory](context-and-memory.en.md) explains sparse Context Manifests, protected authority, derived memory, and why persistence never means automatic prompt injection.
 
-## 02 · If you are integrating a fiction project ⚙️
+## Learning
 
-Read **[Project SDK](project-sdk.en.md)** first. It defines what a complete consuming project must own: manifest, exact Framework lock, Project-owned Canon/state, plans, manuscripts, research, regressions, tests, and build outputs.
+[Adaptive Learning](adaptive-learning.en.md) covers automatic feedback intake and governed promotion. [Corpus Intelligence](../corpus/README.en.md) and [Corpus Policy](../corpus/CORPUS_POLICY.en.md) keep evidence, rights, and Canon separate.
 
-If the project already has a legacy directory layout, continue to **[Project Adapters](project-adapters.en.md)** and the exact **[Project Adapter Protocol](../harness/PROJECT_ADAPTER_PROTOCOL.en.md)**.
+## Semantic execution
 
-Important boundary: the generic Framework never becomes the database for one novel. Dependency direction remains Project → pinned NovelForge.
+[Semantic Worker Protocol](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md) defines typed semantic work. [Semantic Execution Runtime](../harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.en.md) defines dispatch, provenance, result validation, and independent-execution boundaries.
 
----
+## Session & control plane
 
-## 03 · If you are writing or revising fiction 📖
+[Runtime & Integrations](integrations.en.md), [Session Runtime](../harness/session_runtime/SESSION_RUNTIME.en.md), [Runtime Routing](../harness/session_runtime/RUNTIME_ROUTING.en.md), and [Control Plane](../harness/control_plane/CONTROL_PLANE.en.md) define resource/session/run/checkpoint identity and durable external work.
 
-Use the fiction-mechanics layer in this order:
+## Corpus & research
 
-**[Story System](../core/STORY_SYSTEM.en.md)** — story units, pressure, causal movement, structural ownership.
+Corpus is evidence, not Canon. Research truth is not automatic character knowledge. Use the [Corpus overview](../corpus/README.en.md), [ingest protocol](../corpus/CORPUS_INGEST_PROTOCOL.en.md), and Project-side research/knowledge boundaries together.
 
-**[Character & Relationship System](../core/CHARACTER_SYSTEM.en.md)** — agenda, beliefs, knowledge boundaries, independent action, relationship state.
+## Project integration
 
-**[Canon State](../core/CANON_STATE.en.md)** — what is locked, accepted, planned, under review, or merely proposed.
+[Project SDK](project-sdk.en.md), [Project Adapters](project-adapters.en.md), [Project Adapter Protocol](../harness/PROJECT_ADAPTER_PROTOCOL.en.md), and [Framework Bundle](../release/FRAMEWORK_BUNDLE.en.md) define how a novel stays independently reproducible without importing its private facts into the generic framework.
 
-**[Surface Fundamentals](../surface/FUNDAMENTALS.en.md)** — recurring AI-prose failure mechanisms and their repair ownership.
+## Development
 
-**[Reader Engagement](../surface/READER_ENGAGEMENT.en.md)** — reader pressure, payoff, causality, grip, expectation, and chapter-level experience.
+[8.0 Development Inventory](8-0-development-inventory.en.md), [Agent Framework Adoption](../knowledge/AGENT_FRAMEWORK_ADOPTION.en.md), and the [Changelog](../CHANGELOG.en.md) record current evolution. Historical specs remain historical records even when the public brand changes.
 
-The production graph that combines them lives in **[Production Pipeline](production-pipeline.en.md)**.
+## Reference
 
----
+Operational authority lives in [SKILL](../SKILL.en.md), [Harness Agent](../harness/HARNESS_AGENT.en.md), schemas, implementation modules, and tests. Documentation authoring follows the [Documentation Standard](DOCUMENTATION_STANDARD.en.md) and [Documentation QA](DOCUMENTATION_QA.en.md).
 
-## 04 · If you are working with context or memory 🧠
-
-Read **[Context & Memory](context-and-memory.en.md)**.
-
-The important idea is simple: persistent storage is not automatic prompt injection. Project authority, derived memory, runtime state, and model inference remain distinct.
-
-Context inspection explains what entered the working set. Memory tiers and the editable memory bank provide explicit controls. Protected `accepted` / `locked` references cannot be silently rewritten through a memory editor.
-
-When semantic relevance requires actual interpretation, the model owns that judgment. Deterministic memory code enforces hard budgets, provenance, lifecycle, authority class, and explicit controls.
-
----
-
-## 05 · If you are operating the runtime 🔌
-
-Read **[Runtime & Integrations](integrations.en.md)** for the practical entry point.
-
-Then use the exact contracts as needed:
-
-- **[Harness Agent](../harness/HARNESS_AGENT.en.md)** — manager ownership and run responsibilities;
-- **[Orchestration Protocol](../harness/ORCHESTRATION_PROTOCOL.en.md)** — how one task run progresses;
-- **[Session Runtime](../harness/session_runtime/SESSION_RUNTIME.en.md)** — session/run/checkpoint identity and recovery;
-- **[Runtime Capabilities](../harness/session_runtime/RUNTIME_CAPABILITIES.en.md)** — what the current host can actually do;
-- **[Runtime Routing](../harness/session_runtime/RUNTIME_ROUTING.en.md)** — how an eligible execution path is selected;
-- **[Control Plane](../harness/control_plane/CONTROL_PLANE.en.md)** — durable external work and consume-once result handling;
-- **[Semantic Worker Protocol](../harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.en.md)** — bounded semantic jobs and results;
-- **[Semantic Execution Runtime](../harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.en.md)** — transport, validation, receipts, and consumption.
-
-Runtime capability never grants story authority by itself.
-
-NovelForge Studio now has a **Phase 1 read-only contract probe on `main`**: a Run / Context Inspector that can load `novelforge_run_receipt_v1` locally and exposes no write operation. This is a product/observability prototype, not a released Studio application. See [Studio](../studio/README.en.md) and the [Studio Product Architecture](../studio/PRODUCT_ARCHITECTURE.en.md).
-
----
-
-## 06 · If you are working with semantic model contracts ✦
-
-The current development implementation uses a progressively disclosed contract system.
-
-The deterministic index is:
-
-`harness/semantic_workers/model_contract_catalog.json`
-
-Concrete packs live under:
-
-`harness/semantic_workers/contracts/`
-
-The catalog is the only registry index. A run resolves an exact contract ID, loads only the necessary pack, packages bounded input/rubric/output contract, computes a semantic fingerprint, and validates the typed result.
-
-This keeps literary intelligence in the model without letting model output bypass authority, permissions, or persistence rules.
-
----
-
-## 07 · If you are auditing quality or revision ✅
-
-Start with **[Quality & QA](quality-assurance.en.md)**, then continue to **[Quality Evolution](quality-evolution.en.md)** and **[Eval Reference](../evals/README.en.md)**.
-
-Think in layers:
-
-**Deterministic QA** proves machine-checkable invariants.
-
-**Semantic contracts** answer questions requiring interpretation.
-
-**Findings** make diagnosis explicit and traceable.
-
-**Failure routing** returns a defect to the mechanism that owns it.
-
-**Candidate evolution** tracks lineage and supports plateau stopping rather than endless rewriting.
-
-**Independent review**, when mandatory, must come from a genuinely separate invocation/session and return a fingerprint-bound typed result.
-
----
-
-## 08 · If you are working with learning or Corpus evidence 🔎
-
-Read **[Adaptive Learning](adaptive-learning.en.md)** for preference/craft learning and **[Corpus Intelligence](../corpus/README.en.md)** for governed external evidence.
-
-Deep policy references:
-
-- [Corpus Policy](../corpus/CORPUS_POLICY.en.md)
-- [Corpus Ingest Protocol](../corpus/CORPUS_INGEST_PROTOCOL.en.md)
-- [Self-Improvement Protocol](../harness/SELF_IMPROVEMENT_PROTOCOL.en.md)
-- [Continuous Maintenance](../harness/CONTINUOUS_MAINTENANCE.en.md)
-
-Discovery, access, rights, storage, semantic analysis, learning, and promotion are separate gates. Corpus is not Canon. Model inference is not durable user taste. General Craft requires evidence, counterexamples/profile boundaries, eval coverage, versioning, rollback, and green deterministic validation.
-
----
-
-## 09 · If you are comparing frameworks or runtimes 🧭
-
-Use two different comparison layers.
-
-**Product positioning:** [Why NovelForge](why-novelforge.en.md) compares NovelForge primarily with direct novel-writing agents/frameworks and distinguishes mature author products from engineering frameworks.
-
-**Implementation influence:** [Agent Framework Adoption](../knowledge/AGENT_FRAMEWORK_ADOPTION.en.md) examines general runtimes and agent frameworks such as LangGraph, OpenAI Agents SDK, CrewAI, AutoGen, coding-agent runtimes, MCP, and related engineering patterns.
-
-Do not collapse these into one homepage comparison. They answer different questions.
-
----
-
-## 10 · Documentation tiers 🌸
-
-**Tier A · Product surfaces** — README, Docs Home, Why, Architecture, Pipeline, QA. These pages must be understandable without reading implementation files and must receive the strongest copy/visual QA.
-
-**Tier B · Guides** — Project SDK, integrations, learning, Corpus, evals, context/memory, quality evolution, Studio Phase 1. These pages optimize for practical understanding and happy-path use.
-
-**Tier C · Contracts and records** — Harness, runtime, semantic worker, Story/Character/Canon, Surface/Reader, Corpus policy, historical specs. These optimize for exact boundaries and stable semantics rather than decorative presentation.
-
-Historical specs and changelogs preserve their original meaning; documentation cleanup must not rewrite history into current-product claims.
-
-The repository-wide authoring and QA rules live in **[Documentation Standard](DOCUMENTATION_STANDARD.en.md)** and **[Documentation QA](DOCUMENTATION_QA.en.md)**.
-
-<div align="center">
-  <img src="../assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom mark" width="54" />
-  <br />
-  <sub>Read only as deep as the task requires. 🌸</sub>
-</div>
+The stable filename `why-novelforge.en.md` remains as a compatibility route; its current content explains [why Quillframe](why-novelforge.en.md) and the retained technical namespace.

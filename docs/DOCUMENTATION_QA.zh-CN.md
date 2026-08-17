@@ -1,208 +1,29 @@
-# NovelForge 文档质量自检门槛
+# Documentation QA
 
-> 本文件配套 [`DOCUMENTATION_STANDARD.zh-CN.md`](DOCUMENTATION_STANDARD.zh-CN.md) 与 [`assets/DESIGN_SYSTEM.zh-CN.md`](../assets/DESIGN_SYSTEM.zh-CN.md)。
+Documentation QA 用来验证 Quillframe 的当前解释仍然与 current implementation 对齐，同时不让 deterministic prose checker 假装自己拥有 semantic judgment。
 
-A 级品牌视觉或重要面向用户文案，**不能因为“SVG 已经生成成功”或“Markdown 能渲染”就算完成**。NovelForge 的文档需要在进入 README / Docs Home 前经过专门的自检门槛。
+## Deterministic Checks
 
-这套门槛重点抓源码层很容易漏掉的问题：文字出框、GitHub 缩放后字号过小、层级混乱、信息密度不足、品牌语言泛化、中文翻译腔、竞品结论失真，以及“看起来像 UI、实际上并没有让信息更清楚”的装饰性设计。
+Documentation gate 应验证 manifest registration、paired-language presence、每篇 registered page 只有一个 H1、local link/asset、UTF-8、current Framework version identity、stable router path，以及 SVG parseability/accessibility metadata。
 
----
+Current public-brand surface 必须使用 Quillframe；allowlist 中的 technical identifier 与 historical record 可以保留 legacy namespace。Brand-leak check 必须有 scope，明确禁止 global string replace。
 
-## 1 · 必须执行的顺序
+## Visual Checks
 
-```text
-先冻结文案 / 信息架构
-→ 确定设计系统与信息表现形式
-→ 实现视觉源码
-→ 确定性文档检查
-→ 实际渲染检查
-→ 脱离视觉单独审文案
-→ 组合、层级、品牌自检
-→ 中英双语语义对齐检查
-→ 全部通过后才接入 README / Docs Home
-```
+Documentation-owned SVG 要检查 valid viewBox、non-empty `<title>/<desc>`、合法颜色、不嵌入 font file、label 可读。Human review 另外执行 border budget：不承载信息的 border、card background、decoration、container 默认删除。
 
-确定性阶段可以进入普通 CI，而且**不得**调用付费模型 API。
+验收问题不是“够不够 pastel”，而是信息能否用更少 visual ink 仍然清晰，以及整页是否像 editorial canvas，而不是 dashboard。
 
-视觉 / 文案自检属于创作阶段的必经门槛。对特别重要的公开定位、竞品结论或高曝光视觉，可以再加独立 reviewer，但不能因为未来可能有人 review，就省略当前作者自己的自检。
+## Semantic Review
 
----
+Human/model documentation review 负责判断 mental model 是否吻合 implementation、diagram 的 authority relation 是否正确、EN/zh-CN 是否 semantic parity，以及文档有没有把 evidence 偷偷写成 authority。
 
-## 2 · 先定文案，再做盒子
+Deterministic green check 本身不能证明这些 semantic property。
 
-禁止先画一堆卡片，再把句子硬塞进剩余空间。
+## Historical Records
 
-开始布局前必须先回答：
-- 这张视觉只回答哪一个核心问题；
-- 第一次看到它的人必须带走哪 3–6 条事实；
-- 哪些内容必须出现在视觉内，哪些应该留给图下正文或深入文档；
-- 哪些产品名 / 机制名 / 竞品结论需要来源核实；
-- 文案能否在不损失精度的情况下继续压缩。
+Historical spec 保留写作当时真实使用的 public name 与 terminology。Current docs 可以加说明或链接，但 reconstruction 不改写历史。
 
-视觉是已经想清楚的信息层级，不是帮我们临时发明信息结构的容器。
+## Scope Guard
 
----
-
-## 3 · 确定性源码检查
-
-运行：
-
-```bash
-python scripts/docs_quality.py
-```
-
-检查器负责抓客观错误，包括：
-- SVG / XML 格式错误；
-- 非法十六进制颜色；
-- 产品级 UI SVG 缺少 `<title>` / `<desc>`；
-- `viewBox` 缺失或非法；
-- 明显跑出画布的文字坐标；
-- 对标记了 `data-doc-tier="A"` 的严格 A 级资产执行字号与文字宽度预算；
-- 严格 A 级 SVG 中长文本缺少宽度预算；
-- 根 README 重新退化成 fenced code block 里的长箭头流程；
-- Markdown 中能够静态发现的本地图片 / 文件链接失效。
-
-确定性检查是必要条件，但远远不够。
-
----
-
-## 4 · 必须看实际渲染结果
-
-新建或实质修改 A 级 SVG 后，提交前必须使用当前环境可用的浏览器 / SVG renderer 将它渲染出来，**真正看渲染图，而不是只看 XML**。
-
-至少检查：
-- 原始画布 / 100%；
-- 约 760–900 px 的 GitHub 正文宽度；
-- 如果视觉需要在移动端保持可读，再检查约 360–430 px 的窄屏预览。
-
-每个尺寸都要确认：
-- 文字没有跨出卡片、表格单元格或容器；
-- 文字没有被 viewport 裁切；
-- 缩放后正文仍然可读；
-- 换行是主动设计的，不是被空间挤出来的；
-- 标签不会撞描边、箭头、图标或相邻文本；
-- padding 与 gutter 一致；
-- 不逐字细读也能看出主次层级和阅读路径；
-- 没有“大片装饰性空白 + 关键文字被挤在角落”的情况。
-
-如果当前环境根本无法查看实际 render，那么该资产**不能被批准接入 A 级页面**。可以保留为 WIP，或者先使用更简单的文字 fallback，等有条件检查后再上首页。
-
----
-
-## 5 · 按 UI/UX Pro Max 思路做视觉自检
-
-产品级模块必须逐项回答：
-
-### 信息层级
-- 2–3 秒内能不能看出标题、主要分区、核心差异与最终结果？
-- 最强视觉强调是否给了最重要的信息，而不是给了装饰标签？
-
-### 布局
-- 间距是不是来自统一规则，而不是每个盒子临时手调？
-- 对齐线、列宽、gutter 是否一致？
-- 页面是否只有一条明显主阅读路径？
-
-### 字体
-- 缩放到 GitHub 正文宽度后，字号是否仍然舒服？
-- 字号 / 字重层级是否过多？
-- 是否有一些“图内小字”本来就应该移到图下说明？
-
-### 品牌一致性
-- 不看 Logo，仅看视觉语言，能不能认出它属于 Story Loom？
-- 语义色是否按项目 / 运行时 / 编辑质量 / 证据 / 已验证结果稳定使用？
-- 二次元编辑感是否克制、服务信息，而不是成为装饰噪声？
-
-### 信息密度
-- 每一张卡片 / 每一个 cell 是否真的值得占据这块面积？
-- 这类信息是不是本来更适合矩阵、泳道、时间轴、层级图，而不是卡片？
-- 有没有为了“做 UI”而把天然表格 / 顺序信息强行拆成低效率卡片？
-
-### 可访问性
-- 不靠颜色还能不能理解语义？
-- 图片失效时，alt text 与附近正文能否支撑核心信息？
-- 对比度和字号是否合理？
-
-**即使视觉漂亮，只要表达绕、信息密度低，也判定失败。**
-
----
-
-## 6 · 文案单独自检
-
-视觉做完之后，把图先放到一边，只看文字。
-
-每个主要文案块都问：
-- 这句话到底在主张什么；
-- 这个结论是不是当前事实、有没有来源；
-- 它是在解释产品、解释机制，还是只是在填营销文案；
-- 能不能删掉 20–30% 的字仍保留全部含义；
-- 权威边界有没有说准；
-- 有真实取舍时有没有明确说出来。
-
-直接拒绝：
-- 模糊最高级；
-- 重复“NovelForge 提供……还提供……”的目录式文案；
-- 旁白式 hype；
-- 用星级 / 营销分数掩盖实际机制；
-- 只可爱、不准确的标签；
-- 纯粹为了把卡片填满而写的句子。
-
----
-
-## 7 · 双语文案自检
-
-英文和中文必须分别当作母语原稿审一遍，然后再比较语义是否一致。
-
-### 英文
-- 像专业技术英语原文；
-- 不带中文句法直译痕迹；
-- 产品术语简洁自然；
-- 避免无意义全大写和伪企业黑话。
-
-### 中文
-- 假装英文版不存在，单独通读中文；
-- 能自然翻译的概念，不保留多余英文名词链；
-- 只有真正的协议值 / Schema key / 产品名 / 精确 identifier 才保留原文；
-- 中文图表优先使用中文标签；
-- 去掉机械镜像英文从句、过量斜杠并列、术语堆叠造成的翻译腔。
-
-### 语义对齐
-两版必须一致保留：
-- 同一个产品主张；
-- 同一个限制 / 取舍；
-- 同一个权威边界；
-- 同一个竞品比较维度；
-- 同一个深入文档入口。
-
-不要求逐句结构一致。
-
----
-
-## 8 · A 级资产批准记录
-
-新的 A 级 SVG 根节点应写 `data-doc-tier="A"`，并通过严格确定性检查。
-
-在提交 / 变更记录中，应尽量留下：
-- 视觉解决的问题；
-- 对应的来源 / 参考文档；
-- 实际检查过的渲染宽度；
-- deterministic lint 结果；
-- 文案自检完成；
-- 双语语义对齐完成；
-- 已知限制。
-
-任何一项还没解决，都不能把这个资产称为完成品。
-
----
-
-## 9 · QA 失败后的修复归属
-
-- XML / 颜色 / 路径错误 → 回源码实现；
-- 文字出框 / 字太小 / 对齐乱 → 回布局与字体系统；
-- 字太多 → 回文案与信息层级，**不要缩小字号硬塞**；
-- 卡片绕、比较不直观 → 回信息架构；
-- 看起来像通用 SaaS 模板 → 回品牌设计系统；
-- 中文 / 英文生硬 → 回语言重写；
-- 竞品结论无依据 → 回 Research / Source；
-- 语义过度依赖颜色 → 回视觉编码与文字 fallback。
-
-**绝对不能用“把字体继续缩小直到不出框”来解决 overflow。** 那只是把版式失败变成可读性失败。
+Documentation work 不修改 Product UI、Godot/Solid/React/Vue implementation、application CSS、runtime semantics 或 consumer Project state。发现 scope 外问题，只记录为 `UI_REBRAND_FOLLOWUP` 或 `DOCUMENTATION_DISCOVERED_IMPLEMENTATION_GAP`。

@@ -1,190 +1,60 @@
-<div align="center">
-  <img src="assets/brand/novelforge-lockup.svg" alt="NovelForge 自适应小说智能体框架" width="640" />
-  <p><strong>让模型负责理解小说，让确定性系统负责边界、恢复、验证与持久状态。</strong></p>
-  <p><kbd>正典边界</kbd>&nbsp;&nbsp;<kbd>语义契约包</kbd>&nbsp;&nbsp;<kbd>可恢复运行</kbd>&nbsp;&nbsp;<kbd>质量演进</kbd>&nbsp;&nbsp;<kbd>证据学习</kbd></p>
-  <p><a href="README.en.md">English</a> · <strong>简体中文</strong> · <a href="docs/README.zh-CN.md">文档中心</a></p>
-</div>
+# Quillframe
 
-<img src="assets/brand/story-thread.svg" alt="" width="100%" />
+**一个面向长篇小说的生产框架：让模型判断意义，让显式系统守住故事事实与执行真相。**
 
-# NovelForge · 自适应小说智能体框架
+<img src="docs/assets/brand/quillframe-mark.svg" alt="Quillframe 标记：一页手稿被一条叙事线穿过" width="92" />
 
-NovelForge 是面向长篇与连载小说的项目无关生产框架。它不试图把文学判断伪装成一堆 Python 规则，也不会把模型第一次生成出来的文字直接当成完成稿。
+Quillframe 面向的是会持续数十章、跨多个会话、经历多轮修改与审查的小说工程。它把连续性、权威、修订、评审、学习与恢复当成真正的生产问题，同时不让确定性代码伪装成文学判断者。
 
-> **核心边界 ✦** 文本、人物、读者体验与创作机制等语义判断由模型负责；权威、权限、指纹、持久化、路由、硬预算、阶段隔离、类型校验、事务与可复现性由确定性系统负责。
+<img src="docs/assets/architecture/framework-mental-model.zh-CN.svg" alt="Quillframe 心智模型：Project 权威进入 manager，经稀疏执行与验证后，只有获得显式授权才进入 Settlement" width="100%" />
 
-具体小说项目拥有自己的故事事实；NovelForge 只拥有围绕这些事实运行的通用生产机制。
+## 为什么需要它
 
-**开发版本：** NovelForge 现在用 pre-1.0 SemVer 表示仍在快速演进的开发线。machine manifest、CLI、Project SDK 默认值、Skill metadata 与对外暴露的 MCP server metadata 已统一为 **0.8.0**。开发期间仍以最新 `main` 作为工作实现基线；`0.8.0` 是开发身份，不代表已经冻结出 1.0 级兼容承诺。详见 [8.0 开发变更清单](docs/8-0-development-inventory.zh-CN.md) 与 [Changelog](CHANGELOG.zh-CN.md)。
+长篇写作会累积不同性质的“真相”。Plan 是未来意图；Review Draft 是候选稿；Accepted 是明确编辑决定；Settled 才是这个决定已经转化成持久状态的结果。Research、Corpus、telemetry、learning hypothesis 与 runtime receipt 都可以是证据，却不会因为系统看见了就自动成为故事事实。
 
-<p align="center"><a href="docs/why-novelforge.zh-CN.md"><strong>为什么是 NovelForge？</strong></a> · <a href="docs/production-pipeline.zh-CN.md"><strong>生产流水线</strong></a> · <a href="docs/quality-assurance.zh-CN.md"><strong>质量保障</strong></a> · <a href="docs/architecture-atlas.zh-CN.md"><strong>架构图谱</strong></a></p>
+Quillframe 的核心工作，是把这些类别分开，再通过明确契约让它们协作。
 
----
+## 核心架构
 
-## 01 · NovelForge 真正要解决什么问题？ ✦
+**Project authority 拥有故事事实。** `locked`、`accepted`、`active_plan`、`review`、`proposal` 保持不同层级。Plan != Canon；Review != Accepted；Accepted != Settled。
 
-长篇小说一旦持续写上几十章、跨越多个会话和多轮修改，最难的问题通常已经不是“模型会不会写一句话”，而是：
+**模型负责语义判断。** 故事解释、人物可信度、Reader 反应、repair diagnosis、相关性、候选比较与 learning interpretation 都通过受限的 model-readable contract 完成。
 
-- 计划中的事件被误当成已经发生的事实；
-- 人物突然知道了自己从未获得的信息；
-- 会话记忆反过来压过已接受正典；
-- 真正的问题明明出在故事结构或人物逻辑，却一直在句子层继续润色；
-- 不同审查者看到的并不是同一个候选稿；
-- 所谓“记忆”逐渐变成无控制的提示词堆积；
-- 研究材料、语料证据、评测结果或学习假设悄悄获得了不该拥有的权威；
-- 外部任务中断后，系统无法可靠判断之前究竟已经执行到哪里。
+**确定性代码负责执行真相。** Identity、permission、fingerprint、provenance、persistence、consume-once、hard budget、routing、transaction 与 fail-closed state transition 可以机械验证。
 
-NovelForge 把这些问题当成**小说生产系统的问题**，而不是靠提示词技巧勉强维持的约定。
+**Independent review 必须真的独立。** 一旦 gate 要求 independence，reviewer 必须来自真正不同的 invocation/session，并绑定 exact candidate fingerprint。
 
-它的核心机制包括：**权威分层、稀疏上下文、独立人物状态、显式语义契约、可恢复运行状态、按问题归属修复、事务化结算，以及有证据约束的长期学习。**
+## 正文是一张生产图
 
-<img src="assets/ui/home-comparison.zh-CN.svg" alt="NovelForge、NovelClaw、Novel OS、AuthorAgent 与 autonovel 的公开机制证据对比，覆盖长篇状态、质量演化与出版能力" width="100%" />
+章节不会从 prompt 直接跳到发布。系统先稀疏选择 Context，模拟 Story / Character / Reader Pressure，生成内部候选，再收集质量证据，把缺陷送回真正 owning mechanism；只有完成 pre-independent qualification 的候选才进入独立评审与 user-visible gate。
 
-直接小说智能体 / 小说框架的定位、取舍与来源说明见 [为什么是 NovelForge](docs/why-novelforge.zh-CN.md)；LangGraph、OpenAI Agents SDK、CrewAI、AutoGen 等通用框架放在更深一层的 [智能体框架采用分析](knowledge/AGENT_FRAMEWORK_ADOPTION.zh-CN.md) 中讨论。
+修复遵守 **FIX + PRESERVE**：修掉目标缺陷，同时保住 objective envelope、reader value 与 character/relationship energy。Fresh regeneration 可以挑战 incumbent，但不得假装继承了被拒绝的 prose。Candidate Lineage 分开记录 comparison ancestry 与 prose derivation，避免两种“父级”语义混在一起。
 
----
-
-## 02 · 开发中的核心心智模型 🪄
-
-<img src="assets/ui/home-architecture.zh-CN.svg" alt="NovelForge Story Loom 架构：项目权威、模型语义契约、确定性运行外壳与证据演化彼此分离" width="100%" />
-
-### 故事权威
-
-项目事实必须保留明确的权威等级，例如 `locked`、`accepted`、`active_plan`、`review` 与 `proposal`。计划、记忆、语义判断、情景分支、语料结果或运行回执，不会因为“系统已经看见”就自动成为正典（Canon）。
-
-### 语义智能
-
-NovelForge 通过精确的模型可读契约来承载文学与叙事理解。运行时从 `harness/semantic_workers/model_contract_catalog.json` 解析具体契约，只加载 `harness/semantic_workers/contracts/` 中当前任务真正需要的契约包，然后封装受限上下文与评判标准，计算语义任务指纹，并校验类型化结果。
-
-Catalog 是唯一的契约索引。系统不再维护一个巨大的兼容性总注册表，也不再让确定性代码假装自己拥有“文学评分能力”。
-
-### 确定性外壳
-
-Python 与工作流代码负责真正适合确定性处理的部分：权限、生命周期、持久化、内容指纹、会话 / 运行身份、检查点、结果一次性消费、硬预算、权威边界、版权与来源门槛、发布不变量，以及可复现构建。
-
-### 项目工程
-
-一本小说是一个有版本的独立项目，拥有自己的清单、精确 Framework lock、配置画像、故事圣经、已接受正典、当前状态、计划、稿件、研究、回归样本、测试与构建产物。聊天记录永远不是项目数据库。
-
-阅读 [总体架构](docs/architecture.zh-CN.md) 与 [架构图谱](docs/architecture-atlas.zh-CN.md)。
-
----
-
-## 03 · 一章正文是一轮生产运行，不是一次模型调用 📖
-
-<img src="assets/ui/home-pipeline.zh-CN.svg" alt="NovelForge 四阶段正文生产运行：冻结与模拟、内部候选稿、诊断与演化、发布门槛，以及按问题归属返回的失败回路" width="100%" />
-
-DRAFT / REVISE 的核心不是一条巨型提示词，而是四类职责明确的工作。
-
-### 准备运行
-
-只冻结当前任务真正需要的上下文，重新确认项目权威与正典截止点，并在生成正文前完成场景因果、人物目标 / 知识边界与读者压力模拟。
-
-### 生成内部候选稿
-
-先生成事件优先的原始草稿，再完成正文表层实现。原始草稿始终留在内部；模型第一次完成的文本不会自动成为用户看到的章节。
-
-### 诊断真正的问题
-
-生成后可以调用 Surface / Reader 机制、回归证据、人物完整性判断、读者反应或成对比较、修改诊断、连续性 / 状态证据以及其他精确语义契约。需要理解文本的工作由模型完成，并绑定明确指纹；不需要文学理解的部分则由确定性检查验证。
-
-### 回到问题归属层修复，再决定是否展示
-
-句子级缺陷可以局部改写；表层问题成簇时可能需要重做整个场景实现；`SAFE-BUT-FLAT` 回到 Reader Pressure 与 Scene Simulation；人物失败回到 Character Simulation；故事失败回到 Story / Plan；上下文失败回到 Context / Memory。
-
-只有真正解决当前质量、连续性与用户可见门槛的候选稿，才能作为可审阅正文展示。
-
-阅读 [生产流水线](docs/production-pipeline.zh-CN.md)。
-
----
-
-## 04 · 质量不是一个分数，而是一套诊断系统 ✅
-
-<img src="assets/ui/home-quality.zh-CN.svg" alt="NovelForge 质量系统：确定性 QA、语义 QA、质量演化，以及绑定指纹的独立判断" width="100%" />
-
-NovelForge 刻意把“机器可以证明的正确性”与“必须理解文本才能作出的判断”分开。
-
-**确定性质量检查**负责发现：Schema 错误、权威边界破坏、隐藏答案泄漏、陈旧指纹、重复消费结果、生命周期违规、能力缺失、项目数据泄漏、版权 / 来源问题以及发布不变量失败。
-
-**语义质量判断**负责回答真正需要理解的问题：人物行为是否符合其信念与目标；读者此刻可能感受到什么、期待什么；场景为什么平；某个修改问题真正属于哪个机制；两个候选稿哪一个更符合给定评判标准。
-
-需要独立判断时，结果必须来自真正不同的调用 / 会话，并返回绑定候选稿指纹的类型化结果。有效的 `semantic_reject` 应进入修复流程，而不是通过不断更换审查者去“刷”出通过。
-
-质量演进层记录 findings 与候选稿谱系，让修改在收益趋于平台期时可以停止，而不是无限改写。
-
-阅读 [质量保障](docs/quality-assurance.zh-CN.md)、[质量演进](docs/quality-evolution.zh-CN.md) 与 [评测参考](evals/README.zh-CN.md)。
-
----
-
-## 05 · 上下文和记忆必须受作者控制 🧠
-
-持久记忆是受治理的派生视图，不是自动注入 prompt 的黑盒。
-
-上下文检查器可以解释某条信息为什么进入当前工作集；记忆分层与可编辑 Memory Bank 允许显式控制派生视图，但受保护的 `accepted` / `locked` 内容不能通过记忆编辑器被静默改写。对受保护事实的修改只能生成 proposal 或其他明确不具权威的产物。
-
-真正需要解释意义时，相关性判断属于模型；确定性 Context / Memory 代码负责硬预算、权威等级、来源、生命周期和显式控制，而不是用任意数值启发式冒充文学相关性。
-
-阅读 [上下文与记忆](docs/context-and-memory.zh-CN.md)。
-
----
-
-## 06 · 多运行时，但不混淆“能力”和“权威” 🔌
-
-只要当前环境确实具备所需能力，Harness 可以通过当前聊天、独立 peer chat、本地 Codex / Claude 调用、模型提供商 API、MCP / service worker、GitHub job、本地模型或人工审阅执行任务。
-
-**运行时名称 ≠ 能力证明。能力 ≠ 权威。**
-
-运行时层明确区分 `project/resource`、`session/thread`、`run/invocation` 与 `checkpoint`，因此外部任务或中断任务可以在重新验证后恢复，而不会把 provider history 错当成正典。
-
-阅读 [运行时与集成](docs/integrations.zh-CN.md)、[会话运行时](harness/session_runtime/SESSION_RUNTIME.zh-CN.md) 与 [语义执行](harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.zh-CN.md)。
-
----
-
-## 07 · 证据驱动的长期学习与语料智能 🔎
-
-NovelForge 可以从用户修改、接受 / 拒绝、反复出现的纠错模式、项目约定、语料证据和评测中学习，但学习从来不会自动获得写入权威。
-
-偏好与创作机制假设必须有作用域、允许被新证据推翻、可版本化并可回滚。语料发现、版权分类、存储、语义分析、学习与 promotion 是不同的门槛。能够搜索到内容，不等于有权完整镜像版权文本；语料证据也不是正典，更不会自动变成人物知识。
-
-阅读 [自适应学习](docs/adaptive-learning.zh-CN.md) 与 [语料智能](corpus/README.zh-CN.md)。
-
----
-
-## 08 · 项目工程化 ⚙️
+## 快速开始
 
 ```bash
 python project_sdk.py init <path> --id PROJECT-X --title "Novel"
 python project_sdk.py validate <path>
 python project_sdk.py build <path>
-python project_sdk.py self-test
 ```
 
-下游项目锁定精确 NovelForge revision，也可以通过 Project Adapter 映射旧有目录结构。真正的结构级变更可以采用 `spec → plan → tasks → implementation → verification → acceptance`；普通正文 micro edit 不需要人为制造工程仪式。
+生产 Project 为了 runtime 可复现性会锁定 exact framework revision；而 Framework 开发文档以当前 `main` 为目标。两者是不同事实，不互相覆盖。
 
-阅读 [项目 SDK](docs/project-sdk.zh-CN.md)、[项目适配器](docs/project-adapters.zh-CN.md) 与 [Framework Bundle](release/FRAMEWORK_BUNDLE.zh-CN.md)。
+## 关键概念
 
----
+- [总体架构](docs/architecture.zh-CN.md)：authority、semantic execution、deterministic runtime 与 settlement。
+- [生产流水线](docs/production-pipeline.zh-CN.md)：从 sparse context 到 user-visible gate。
+- [质量保障](docs/quality-assurance.zh-CN.md)：pre-independent qualification、FIX + PRESERVE、fingerprint binding 与 release truth。
+- [Candidate Lineage](docs/CANDIDATE_LINEAGE_V1.zh-CN.md)：comparison parent、prose parent、review receipt 与无权威的 acceptance evidence。
+- [上下文与记忆](docs/context-and-memory.zh-CN.md)：让 Context 稀疏可控，而不是让 memory 偷偷变成 Canon。
+- [自适应学习](docs/adaptive-learning.zh-CN.md)：自动 capture，受治理 promotion。
+- [运行时与集成](docs/integrations.zh-CN.md)：session、run、checkpoint、capability 与 independent execution。
+- [Project SDK](docs/project-sdk.zh-CN.md)：Project / Framework 边界。
 
-## 09 · 适用场景与真实取舍 ⚖️
+## 兼容性说明
 
-<img src="assets/ui/home-fit.zh-CN.svg" alt="NovelForge 适用场景：强适配场景、更轻工具更适合的场景，以及需要接受的工程代价" width="100%" />
+**Quillframe 是当前 public brand；`NovelForge` 继续作为 legacy technical namespace 保留。** `novelforge.toml`、`novelforge.lock.json`、`novelforge_*` schema、既有 workflow 名、repository path 与 stable contract ID 本次都不改名。
 
-NovelForge 最适合那些生命周期足够长、确实需要治理权威、连续性、上下文控制、任务恢复、运行时选择、质量证据与长期学习的小说项目。
+Framework 当前处于 pre-1.0 的 `0.8.0` 开发线。开发期的当前实现真相来自本次冻结的 exact `main` commit，而不是旧文档叙述。
 
-它刻意比一次性写作助手更重。如果主要需求只是快速构思、轻量续写 / 润色，或者更需要成熟的消费级编辑器，那么更简单的产品往往更合适。
-
-NovelForge 也不会假装语义判断是免费的或确定性的。模型 / 人工审阅会增加延迟与成本；框架要做的是让这些判断**显式、受边界约束、可追踪，并且不能意外改写故事事实**。
-
----
-
-<img src="assets/brand/story-thread.svg" alt="" width="100%" />
-
-## 10 · 文档入口 🌸
-
-<p align="center"><a href="docs/README.zh-CN.md"><strong>文档中心</strong></a> · <a href="docs/why-novelforge.zh-CN.md"><strong>产品定位</strong></a> · <a href="docs/architecture-atlas.zh-CN.md"><strong>架构图谱</strong></a> · <a href="docs/production-pipeline.zh-CN.md"><strong>生产流水线</strong></a> · <a href="docs/quality-assurance.zh-CN.md"><strong>质量保障</strong></a> · <a href="assets/DESIGN_SYSTEM.zh-CN.md"><strong>Story Loom 设计系统</strong></a></p>
-
-<div align="center">
-  <img src="assets/brand/novelforge-mark.svg" alt="NovelForge Story Loom 标志" width="58" />
-  <br />
-  <sub><strong>后台严格，正文鲜活。</strong> 🌸</sub>
-</div>
+[文档中心](docs/README.zh-CN.md) · [English](README.en.md)

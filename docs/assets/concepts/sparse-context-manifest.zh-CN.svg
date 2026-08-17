@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 304" role="img" aria-labelledby="t d">
+<title id="t">Sparse Context Manifest</title>
+<desc id="d">从 Project、人物、State、Research、Benchmark 中只选择 task-relevant references。</desc>
+<style>
+text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;fill:#24212A}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:1.5px;fill:#716A74}
+.title{font-size:28px;font-weight:760}
+.label{font-size:17px;font-weight:700}
+.body{font-size:14px;fill:#716A74}
+.micro{font-size:12px;fill:#716A74}
+.line{stroke:#D9D1C6;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.dash{stroke:#716A74;stroke-width:1.3;stroke-dasharray:6 7;fill:none}
+</style>
+<rect width="920" height="304" fill="#FFF9F0"/>
+<text x="48" y="38" class="eyebrow">SPARSE CONTEXT MANIFEST</text><text x="48" y="72" class="title">Schema 完整，Working Set 稀疏。</text><rect x="55" y="126" width="130" height="48" rx="16" fill="#EAF5FF"/><text x="120" y="156" class="label" text-anchor="middle">Project / CH</text><rect x="200" y="126" width="130" height="48" rx="16" fill="#FCECF3"/><text x="265" y="156" class="label" text-anchor="middle">人物</text><rect x="345" y="126" width="130" height="48" rx="16" fill="#E7F7EE"/><text x="410" y="156" class="label" text-anchor="middle">State</text><rect x="490" y="126" width="130" height="48" rx="16" fill="#FFF3CF"/><text x="555" y="156" class="label" text-anchor="middle">Research</text><rect x="635" y="126" width="130" height="48" rx="16" fill="#F1ECFF"/><text x="700" y="156" class="label" text-anchor="middle">Benchmark</text><path d="M105 207 C240 250 610 250 802 207" class="line"/><circle cx="802" cy="207" r="6" fill="#24212A"/><text x="802" y="238" class="body" text-anchor="middle">当前 Invocation</text><text x="48" y="280" class="body">Stored ≠ Injected；Relevant ≠ Authoritative。</text>
+</svg>

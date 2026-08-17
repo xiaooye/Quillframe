@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 294" role="img" aria-labelledby="t d">
+<title id="t">Framework 与 Project</title>
+<desc id="d">Generic Framework 机制与 Project 专属故事权威保持分离。</desc>
+<style>
+text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;fill:#24212A}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:1.5px;fill:#716A74}
+.title{font-size:28px;font-weight:760}
+.label{font-size:17px;font-weight:700}
+.body{font-size:14px;fill:#716A74}
+.micro{font-size:12px;fill:#716A74}
+.line{stroke:#D9D1C6;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.dash{stroke:#716A74;stroke-width:1.3;stroke-dasharray:6 7;fill:none}
+</style>
+<rect width="920" height="294" fill="#FFF9F0"/>
+<text x="48" y="38" class="eyebrow">FRAMEWORK vs PROJECT</text><text x="48" y="72" class="title">通用机制，与具体故事权威分离。</text><rect x="52" y="112" width="330" height="120" rx="22" fill="#F1ECFF"/><rect x="538" y="112" width="330" height="120" rx="22" fill="#EAF5FF"/><text x="76" y="138" class="eyebrow">QUILLFRAME</text><text x="76" y="169" class="label">Story / Quality / Runtime</text><text x="76" y="194" class="body">Learning · Corpus · Evals · SDK</text><text x="562" y="138" class="eyebrow">PROJECT</text><text x="562" y="169" class="label">人物 · Canon · State</text><text x="562" y="194" class="body">Plan · Research · Manuscript</text><path d="M392 171 L526 171" class="line"/><text x="459" y="155" class="micro" text-anchor="middle">依赖</text><text x="459" y="198" class="micro" text-anchor="middle">不反向导入</text><text x="48" y="270" class="body">Project → Framework；绝不反向吸收 Project 私有故事事实。</text>
+</svg>

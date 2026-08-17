@@ -1,0 +1,5 @@
+{
+  "schema": "quillframe_followup_registry_v1",
+  "ui_rebrand_followup": ["site/godot/** public header/brand strings","SolidJS/Product UI surfaces and Studio UI","assets/brand/novelforge-lockup.svg and novelforge-mark.svg","assets/brand/story-loom.weiui.css and shared Product tokens/naming","assets/ui/home-*.svg shared Product illustrations/screenshots","Product/Publication pages that still present Story Loom or NovelForge branding"],
+  "documentation_discovered_implementation_gap": []
+}

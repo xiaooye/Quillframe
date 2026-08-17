@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 300" role="img" aria-labelledby="t d">
+<title id="t">Authority ladder</title>
+<desc id="d">Five authority states and explicit reminders that plan is not Canon and acceptance is not settlement.</desc>
+<style>
+text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;fill:#24212A}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:1.5px;fill:#716A74}
+.title{font-size:28px;font-weight:760}
+.label{font-size:17px;font-weight:700}
+.body{font-size:14px;fill:#716A74}
+.micro{font-size:12px;fill:#716A74}
+.line{stroke:#D9D1C6;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.dash{stroke:#716A74;stroke-width:1.3;stroke-dasharray:6 7;fill:none}
+</style>
+<rect width="920" height="300" fill="#FFF9F0"/>
+<text x="48" y="38" class="eyebrow">AUTHORITY LADDER</text><text x="48" y="72" class="title">Different states are not automatic promotions.</text><circle cx="93" cy="118" r="5" fill="#24212A"/><text x="116" y="123" class="label">LOCKED</text><text x="310" y="123" class="body">protected baseline</text><circle cx="93" cy="152" r="5" fill="#6AA985"/><text x="116" y="157" class="label">ACCEPTED</text><text x="310" y="157" class="body">explicit editorial decision</text><circle cx="93" cy="186" r="5" fill="#7AAED6"/><text x="116" y="191" class="label">ACTIVE PLAN</text><text x="310" y="191" class="body">future intent</text><circle cx="93" cy="220" r="5" fill="#8D7CCB"/><text x="116" y="225" class="label">REVIEW</text><text x="310" y="225" class="body">candidate</text><circle cx="93" cy="254" r="5" fill="#716A74"/><text x="116" y="259" class="label">PROPOSAL</text><text x="310" y="259" class="body">non-authoritative suggestion</text><path d="M93 123 L93 249" class="line"/><rect x="610" y="124" width="250" height="96" rx="22" fill="#FFF3CF"/><text x="634" y="151" class="eyebrow">BOUNDARIES</text><text x="634" y="181" class="label">Plan ≠ Canon</text><text x="634" y="207" class="label">Accepted ≠ Settled</text>
+</svg>
