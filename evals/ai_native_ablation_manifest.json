@@ -1,14 +1,19 @@
 {
   "schema": "novelforge_ai_native_ablation_manifest_v1",
-  "version": "2",
+  "version": "3",
   "purpose": "Bind same-candidate AI-native semantic ablations and map the required refoundation regression families without converting model judgment into deterministic truth.",
   "model_execution_required_for_semantic_outcomes": true,
   "manager_self_judgment_allowed": false,
   "missing_model_state": "PENDING_MODEL",
   "decision_protocol": {
-    "minimum_comparable_observations": 3,
-    "require_counterbalanced_presentation_order": true,
-    "semantic_judgment_source": "independent_model",
+    "pair_review_contract": "quality.ablation_compare",
+    "required_condition_replicates": 3,
+    "reviews_per_replicate": 2,
+    "required_pair_reviews": 6,
+    "require_exact_counterbalance": true,
+    "condition_replicates_must_be_independent": true,
+    "pair_reviews_must_use_unique_execution_identity": true,
+    "semantic_judgment_source": "registered_independent_model_contract",
     "semantic_relations": [
       "INCUMBENT_BETTER",
       "CHALLENGER_BETTER",
@@ -17,8 +22,9 @@
     ],
     "absence_of_evidence": "PENDING_MODEL",
     "simpler_arm_safety_regression": "KEEP",
+    "unclear_regression": "INCONCLUSIVE",
     "conflicting_judgments": "INCONCLUSIVE",
-    "simplify_only_when": "declared simpler arm is externally judged non-inferior or better across all required comparable observations, with no safety regression"
+    "simplify_only_when": "all six validated counterbalanced pair reviews judge the declared simpler arm non-inferior or better, no review finds a regression in that simpler arm, and all provenance/comparability requirements hold"
   },
   "pairs": [
     {
@@ -27,6 +33,7 @@
       "challenger_case": "ABL-READER-UNPRIMED-001",
       "same_candidate_ref": "ablation:reader-agenda-dialogue-v1",
       "simpler_arm": "challenger",
+      "complexity_basis": "challenger removes taxonomy/diagnostic priming from the natural Reader input",
       "change": "remove taxonomy/diagnostic priming from natural Reader",
       "observe": ["verdict stability", "forced checklist findings", "salient natural-language reading effect", "report breadth"]
     },
@@ -36,6 +43,7 @@
       "challenger_case": "ABL-TELEMETRY-CLEAN-001",
       "same_candidate_ref": "ablation:telemetry-rhythm-v1",
       "simpler_arm": "challenger",
+      "complexity_basis": "challenger removes prose telemetry from the default Reader input",
       "change": "remove prose telemetry from default Reader input",
       "observe": ["false-positive rejection", "metric anchoring", "reading-experience evidence"]
     },
@@ -45,6 +53,7 @@
       "challenger_case": "ABL-RULE-DECOMPOSED-001",
       "same_candidate_ref": "ablation:rule-inference-v1",
       "simpler_arm": "incumbent",
+      "complexity_basis": "incumbent keeps one holistic semantic hard-rule judgment instead of adding a decomposed applicability/evidence pass",
       "change": "decompose mandatory semantic hard-rule applicability/evidence judgment",
       "observe": ["false-positive knowledge failure", "evidence traceability", "applicability reasoning"]
     }
@@ -68,7 +77,7 @@
     {"id": 16, "name": "long_horizon_resume", "evidence": "resume-preflight/session-runtime stale/wrong-authority self-tests", "kind": "deterministic"}
   ],
   "interpretation": {
-    "semantic_pair_pass_condition": "requires real model outputs; no deterministic script may infer literary superiority",
+    "semantic_pair_pass_condition": "requires real independent model outputs from the registered neutral pair-review contract; no deterministic script may infer literary superiority",
     "simplicity_win_allowed": true,
     "safety_regression_allowed": false,
     "no_model_behavior": "validate packet identity only and report PENDING_MODEL"
