@@ -1,16 +1,32 @@
 {
   "schema": "novelforge_ai_native_ablation_manifest_v1",
-  "version": "1",
+  "version": "2",
   "purpose": "Bind same-candidate AI-native semantic ablations and map the required refoundation regression families without converting model judgment into deterministic truth.",
   "model_execution_required_for_semantic_outcomes": true,
   "manager_self_judgment_allowed": false,
   "missing_model_state": "PENDING_MODEL",
+  "decision_protocol": {
+    "minimum_comparable_observations": 3,
+    "require_counterbalanced_presentation_order": true,
+    "semantic_judgment_source": "independent_model",
+    "semantic_relations": [
+      "INCUMBENT_BETTER",
+      "CHALLENGER_BETTER",
+      "NO_MATERIAL_DIFFERENCE",
+      "INCONCLUSIVE"
+    ],
+    "absence_of_evidence": "PENDING_MODEL",
+    "safety_regression": "KEEP",
+    "conflicting_judgments": "INCONCLUSIVE",
+    "simplify_only_when": "declared simpler arm is externally judged non-inferior or better across all required comparable observations, with no safety regression"
+  },
   "pairs": [
     {
       "id": "reader_contamination",
       "incumbent_case": "ABL-READER-PRIMED-001",
       "challenger_case": "ABL-READER-UNPRIMED-001",
       "same_candidate_ref": "ablation:reader-agenda-dialogue-v1",
+      "simpler_arm": "challenger",
       "change": "remove taxonomy/diagnostic priming from natural Reader",
       "observe": ["verdict stability", "forced checklist findings", "salient natural-language reading effect", "report breadth"]
     },
@@ -19,6 +35,7 @@
       "incumbent_case": "ABL-TELEMETRY-ANCHORED-001",
       "challenger_case": "ABL-TELEMETRY-CLEAN-001",
       "same_candidate_ref": "ablation:telemetry-rhythm-v1",
+      "simpler_arm": "challenger",
       "change": "remove prose telemetry from default Reader input",
       "observe": ["false-positive rejection", "metric anchoring", "reading-experience evidence"]
     },
@@ -27,6 +44,7 @@
       "incumbent_case": "ABL-RULE-HOLISTIC-001",
       "challenger_case": "ABL-RULE-DECOMPOSED-001",
       "same_candidate_ref": "ablation:rule-inference-v1",
+      "simpler_arm": "incumbent",
       "change": "decompose mandatory semantic hard-rule applicability/evidence judgment",
       "observe": ["false-positive knowledge failure", "evidence traceability", "applicability reasoning"]
     }
