@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
+# Retry after correcting deterministic isolation assertions.
 
 def rep(path,old,new):
     p=ROOT/path;text=p.read_text(encoding='utf-8');n=text.count(old)
