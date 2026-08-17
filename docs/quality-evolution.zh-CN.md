@@ -1,27 +1,27 @@
 # 质量演进
 
-Quillframe Quality Evolution 是 revision 的 durable comparison ledger，不是 automatic rewriting authority。它记录 exact incumbent、challenger、comparison 时使用的 objective envelope，以及继续改写是否还在产生真实 gain。
+Quillframe 的质量演进机制是一份用于修订的持久比较账本，不具备自动改写权。它记录精确的基准稿、挑战稿、比较时使用的目标约束集，以及继续修改是否还在产生真实收益。
 
-## Incumbent / Challenger
+## 基准稿与挑战稿
 
-Candidate 带 exact content fingerprint 进入；challenger 记录 direct comparison parent。Registered `quality.compare` 获得 incumbent、challenger、objective envelope 与 bounded evidence，再由 semantic judgment 选择 challenger / incumbent / tie。Deterministic layer 先验证 result 绑定 exact pair，再 consume-once。
+候选稿带着精确内容指纹进入比较；挑战稿会记录直接比较父级。已登记的 `quality.compare` 接收基准稿、挑战稿、目标约束集和受限证据，再由语义判断选择挑战稿、基准稿或平局。确定性层先验证结果是否绑定精确的比较双方，再执行一次性消费。
 
-## Objective Envelope
+## 目标约束集
 
-<img src="assets/concepts/objective-preserving-repair.zh-CN.svg" alt="Repair target 的改善受到稳定 objective envelope 约束" width="100%" />
+<img src="assets/concepts/objective-preserving-repair.zh-CN.svg" alt="修订目标的改善受到稳定目标约束集的保护" width="100%" />
 
-Objective envelope 在 repair 前从 authorized Project/request evidence 中选择，防止局部润色把真正的 story/readership/character/pressure/reward 目标优化掉。它不能从 rejected realization text 重新推导。
+目标约束集会在修订前，从已经授权的项目证据或用户请求中选出，用来防止局部润色把真正的故事、读者、人物、压力和阶段回报目标优化掉。它不能从被拒绝的成稿文字重新推导。
 
-## Candidate Lineage
+## 候选稿谱系
 
-Comparison ancestry 与 prose derivation 是两种关系。Repair 通常把 comparison parent 同时作为 prose parent；fresh regeneration 为了 evaluation 仍有 comparison parent，但 prose parent 必须为空，从而守住 contamination boundary。User edit 也显式记录 lineage，而不是当成无法追踪的 overwrite。
+比较谱系和文本派生是两种不同关系。修订稿通常把比较父级同时作为文本父级；全新重生成稿为了参与评估仍有比较父级，但文本父级必须为空，从而守住污染边界。用户编辑稿也显式记录谱系，而不是当成无法追踪的覆盖写入。
 
-<img src="assets/concepts/candidate-lineage.zh-CN.svg" alt="Candidate lineage tree 分开 comparison ancestry 与 prose derivation，并显示 fresh regeneration 没有 prose parent" width="100%" />
+<img src="assets/concepts/candidate-lineage.zh-CN.svg" alt="候选稿谱系分开比较关系与文本派生关系，并显示全新重生成稿没有文本父级" width="100%" />
 
-## Regression Evidence
+## 回退证据
 
-Repair-induced objective regression 记录“目标 defect 改好但 collateral harm 出现”；known-regression escape 记录已知 mechanism 没有在 expected stage 被发现。这些都是 diagnostic provenance，不是 Canon，也不授予 autonomous repair authority。
+修订引发的目标回退记录“目标缺陷改好但出现连带伤害”；已知规则漏检记录“已知问题没有在预期阶段被发现”。这些都属于诊断来源证据，不是正典，也不会授予系统自主修订权限。
 
-## Stopping
+## 停止条件
 
-No-gain comparison 会累积 plateau state；challenger 胜出就成为新 incumbent。重复无收益可以终止 revision，避免无限 rewrite churn。Stopping rule 属于 execution policy，不会把未评审 artifact 自动变成 Accepted。
+无收益比较会累积平台期状态；挑战稿胜出后成为新的基准稿。连续无收益可以终止修订，避免无限改写。停止规则属于执行策略，不会把未经评审的制品自动变成已接受稿。

@@ -1,29 +1,29 @@
 # 上下文与记忆
 
-Persistent storage != model context。Quillframe 先针对当前 semantic question 选择 sparse working set，再验证这组 exact selection 的机械边界。
+持久存储不等于模型上下文。Quillframe 会先针对当前语义问题选择一个稀疏工作集合，再验证这组精确选择的机械边界。
 
-<img src="assets/concepts/sparse-context-manifest.zh-CN.svg" alt="Sparse Context Manifest 从更大的 Project store 中只选择当前任务真正相关的小集合" width="100%" />
+<img src="assets/concepts/sparse-context-manifest.zh-CN.svg" alt="稀疏上下文清单从更大的项目存储中只选择当前任务真正相关的小集合" width="100%" />
 
-## Sparse Context Manifest
+## 稀疏上下文清单
 
-Context Manifest 可以列出当前 book/volume/unit/chapter/scene、实际出场 character/relationship、直接相关 state、claim、dependency、recent Accepted material，以及只与当前 craft problem 相关的 benchmark。它是 selection contract，不是把整个 Novel Bible 或 Corpus 倒进 prompt。
+上下文清单可以列出当前书、卷、单元、章节、场景，实际出场的人物与关系，直接相关的状态、主张、依赖，最近已接受的正文，以及只与当前写作问题相关的基准材料。它是一份选择契约，不是把整本小说资料库或语料库全部倒进提示词。
 
-真正需要解释意义时，semantic relevance 由模型判断。Deterministic context code 在 selection 之后验证 exact refs、receiving stage、authority class、provenance、fingerprint、private/hidden restriction、invalidation state 与 hard budget。
+真正需要解释意义时，相关性由模型判断。确定性上下文代码会在选择完成后验证精确引用、接收阶段、权威级别、来源链、内容指纹、私有或隐藏限制、失效状态和硬预算。
 
-## Authority Protection
+## 保护权威事实
 
-`locked` / `accepted` reference 继续 protected。编辑 derived memory view 不会覆盖 protected Canon，而是生成 proposal 或其他明确 non-authoritative artifact。Future Plan 结果也不能因为存储位置相邻就泄漏进 current-state field。
+`locked` 和 `accepted` 引用继续受到保护。编辑派生记忆视图不会覆盖受保护的正典，而是生成提案或其他明确不具权威性的制品。未来计划的结果也不能因为存储位置相邻，就泄漏进当前状态字段。
 
-## Perspective 与 Knowledge
+## 视角与人物知识
 
-<img src="assets/concepts/research-corpus-canon.zh-CN.svg" alt="Research、Corpus、Canon 保持不同 evidence 与 authority class" width="100%" />
+<img src="assets/concepts/research-corpus-canon.zh-CN.svg" alt="研究资料、语料库和正典保持不同的证据性质与权威级别" width="100%" />
 
-Research truth != automatic Character Knowledge。Character 只有通过 Project knowledge/state model 与真正发生的 story event，才获得相应知识。Corpus evidence 也不会因为 ingestion 就变成人物记忆。
+研究结论不等于人物自动知情。人物只有通过项目的知识与状态模型，以及故事里真正发生的事件，才获得相应知识。语料库证据也不会因为被摄取，就自动变成人物记忆。
 
-## Generation Isolation
+## 生成阶段隔离
 
-Regression bad example 与 hidden expected label 不进入 Writer first-pass context。生成后的 Auditor 可以获得额外 authoritative rule / regression material，但不能反向污染已经 freeze 的 candidate。
+回退坏例和隐藏的预期标签不会进入第一遍写作上下文。生成完成后的审核阶段可以获得额外的权威规则和回退材料，但不能反向污染已经冻结的候选稿。
 
-## Memory Lifecycle
+## 记忆生命周期
 
-Derived memory 可以在权限范围内 rank、pin、invalidate、rebuild 或 edit；这些操作都不会把 memory promote 成 Canon。Session persistence 也不表示 resume 时应把 provider history 整段重新注入。
+派生记忆可以在权限范围内排序、置顶、失效、重建或编辑；这些操作都不会把记忆提升成正典。会话能够持久恢复，也不表示恢复时应该把服务提供方的整段历史重新注入模型。

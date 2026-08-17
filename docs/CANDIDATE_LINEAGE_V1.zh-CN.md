@@ -1,31 +1,31 @@
-# Candidate Lineage v1
+# 候选稿谱系（版本 1）
 
-Candidate Lineage 用显式 provenance 解决“一个 parent 字段到底是什么意思”的歧义。它扩展 Quality Evolution，不创建第二套 comparison、acceptance、Canon 或 Settlement authority。
+候选稿谱系用显式来源关系解决“一个父级字段到底表示什么”的歧义。它扩展质量演进机制，但不创建第二套比较、接受、正典或状态落定权威。
 
-<img src="assets/concepts/candidate-lineage.zh-CN.svg" alt="Candidate Lineage 为 draft、repair、fresh regeneration、user edit 分开 comparison parent 与 prose parent" width="100%" />
+<img src="assets/concepts/candidate-lineage.zh-CN.svg" alt="候选稿谱系为草稿、修订稿、全新重生成稿和用户编辑稿分别记录比较父级与文本父级" width="100%" />
 
-## 两种 Parent Relation
+## 两种父级关系
 
-**Comparison parent** 回答：这个 challenger 是和哪个 incumbent 比较的？Quality Evolution 现有 parent 继续表示 `quality.compare` 使用的 comparison ancestry。
+**比较父级**回答：这份挑战稿是和哪一份基准稿比较的？质量演进机制原有的父级继续表示 `quality.compare` 使用的比较谱系。
 
-**Prose parent** 回答：当前 prose 直接由哪份旧 prose 派生？两者必须分开，因为 fresh regeneration 可以和 incumbent 比较，却有意不继承 incumbent prose。
+**文本父级**回答：当前文字直接由哪一份旧稿派生？两者必须分开，因为全新重生成稿可以和基准稿比较，却有意不继承基准稿文字。
 
-## Origin Rules
+## 来源规则
 
-`draft` 没有 comparison/prose parent；`repair` 必须有 comparison parent，且 prose parent 必须等于这个 direct parent；`fresh_regeneration` 必须有 comparison parent，但 prose parent 必须为空；`user_edit` 是显式 challenger，derivation 要记录而不是猜。
+`draft` 没有比较父级和文本父级；`repair` 必须有比较父级，而且文本父级必须等于这个直接父级；`fresh_regeneration` 必须有比较父级，但文本父级必须为空；`user_edit` 是显式挑战稿，派生关系必须记录，不能猜。
 
-Runtime facade 在 required lineage 缺失或与 origin 冲突时 fail closed，从不根据 prose similarity 猜 ancestry。
+运行时外观层在必要谱系缺失或与来源类型冲突时默认阻断，从不根据文字相似度猜测来源关系。
 
-## Exact Review Receipts
+## 精确评审回执
 
-Semantic review receipt 把一个 `candidate_id` 与 exact candidate fingerprint 绑定到 contract ID、job fingerprint、result fingerprint、result status。只要 candidate 不同或 fingerprint 已旧，review 就 stale。
+语义评审回执把一个 `candidate_id` 和精确候选稿指纹绑定到契约标识、任务指纹、结果指纹和结果状态。只要候选稿不同，或者内容指纹已经过期，旧评审立即失效。
 
-## Acceptance Evidence Boundary
+## 接受证据的权威边界
 
-Lineage 可以把 opaque external acceptance ref 绑定到 exact candidate fingerprint、authority source ref、authority receipt fingerprint 与 accepted artifact fingerprint，但不会验证 authority source 本身是否真的有权。
+谱系可以把不透明的外部接受证据引用绑定到精确候选稿指纹、权威来源引用、权威回执指纹和已接受制品指纹，但不会验证那个权威来源本身是否真的有权。
 
-所有 view 都保持 `authority=false`；acceptance evidence 明确 `authority_verified=false`、`settlement_authorized=false`。真正的 user/editorial acceptance 必须由 authority/settlement layer 另外验证。
+所有视图都保持 `authority=false`；接受证据明确保持 `authority_verified=false`、`settlement_authorized=false`。真正的用户或编辑接受，必须由权威层和状态落定层另外验证。
 
-## Compatibility
+## 兼容性
 
-Schema ID 继续是 `novelforge_candidate_lineage_v1`。这是 legacy technical namespace 下的 stable identifier，不随 Quillframe public brand 改名。
+模式标识继续是 `novelforge_candidate_lineage_v1`。这是旧技术命名空间下的稳定标识，不随 Quillframe 公开品牌改名。

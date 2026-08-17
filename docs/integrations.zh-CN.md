@@ -1,29 +1,29 @@
 # 运行时与集成
 
-Quillframe 能保持 provider-neutral，是因为 runtime identity、capability、authority 是三个不同概念。Provider 名字不证明 capability 存在；capability 本身也不授予 story/write authority。
+Quillframe 能保持不绑定具体服务提供方，是因为**运行身份、可用能力和事实权威**是三个不同概念。服务提供方的名字不能证明某项能力真的存在；能力本身也不会授予故事事实或写入权限。
 
-<img src="assets/concepts/session-run-checkpoint.zh-CN.svg" alt="Runtime identity model 分开 project/resource、session/thread、run/invocation 与 checkpoint" width="100%" />
+<img src="assets/concepts/session-run-checkpoint.zh-CN.svg" alt="运行身份模型分开项目与资源、会话与线程、单次运行与调用，以及检查点" width="100%" />
 
-## Identity
+## 身份
 
-`project/resource` 标识工作对象；`session/thread` 是 durable conversational/execution relationship；`run/invocation` 是一次 bounded execution attempt；`checkpoint` 保存 exact execution state 以便恢复。
+`project/resource` 标识工作对象；`session/thread` 表示可持续的对话或执行关系；`run/invocation` 表示一次受限的执行尝试；`checkpoint` 保存精确执行状态，供后续恢复。
 
-Provider session history 不是 Canon，也不能替代 Project bootstrap。
+服务提供方的会话历史不是正典，也不能替代项目启动校验。
 
-## Capabilities
+## 能力
 
-Current host manifest 才是 tool、model、network、filesystem、GitHub、peer chat、local agent 或 human review 是否可用的 evidence。未声明 capability 视为 unavailable；credential 与 authority token 不进入普通 semantic context。
+当前宿主环境清单，才是工具、模型、网络、文件系统、GitHub、同伴会话、本地代理或人工评审是否可用的能力证据。未声明的能力视为不可用；凭据和授权令牌不会进入普通语义上下文。
 
-## Resume
+## 恢复
 
-Resume 必须重核 current Framework/Project compatibility、latest checkpoint、artifact fingerprint、live Project authority、pending approval/write intent、required capability 与 consume-once state。Framework revision 变化属于 dependency migration 问题，不是 ordinary resume。
+恢复时必须重新核对当前框架与项目的兼容关系、最新检查点、制品指纹、实时项目权威、待确认事项或写入意图、所需能力和一次性消费状态。框架版本变化属于依赖迁移问题，不是普通恢复。
 
-## Independent Semantic Execution
+## 独立语义执行
 
-<img src="assets/concepts/independent-semantic-review.zh-CN.svg" alt="Manager 与 reviewer 使用不同 invocation marker，中间只传 fingerprint-bound artifact" width="100%" />
+<img src="assets/concepts/independent-semantic-review.zh-CN.svg" alt="管理器与评审者使用不同调用，中间只传递绑定内容指纹的制品" width="100%" />
 
-Eligible independent path 可以是 separate local agent invocation、provider call、service/MCP worker、GitHub job、peer chat、local model 或 human，只要 current capability evidence 支持。Transport failure 可以在同 fingerprint 下 fallback；有效 semantic rejection 不可以。
+可用的独立执行通道可以是单独的本地代理调用、服务提供方调用、服务或 MCP 工作者、GitHub 任务、同伴会话、本地模型或人工评审，只要当前能力证据确实支持。传输故障可以在同一指纹下切换执行通道；有效的语义拒绝不能通过换通道重抽。
 
-## Control Plane
+## 控制平面
 
-Control Plane 保存 durable event/handoff/result lifecycle 与 metadata-only receipt，可以证明 result 的 dispatch、return、validate、consume，却不能把这个 result 变成 Canon 或 editorial acceptance。
+控制平面保存可持久恢复的事件、交接和结果生命周期，以及只含元数据的回执。它可以证明结果已经派发、返回、校验和消费，却不能把这个结果变成正典或编辑接受。

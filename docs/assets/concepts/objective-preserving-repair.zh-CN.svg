@@ -1,16 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 300" role="img" aria-labelledby="t d">
-<title id="t">Objective-preserving Repair</title>
-<desc id="d">局部缺陷被修复，同时 baseline objective envelope 保持完整。</desc>
-<style>
-text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;fill:#24212A}
-.eyebrow{font-size:13px;font-weight:700;letter-spacing:1.5px;fill:#716A74}
-.title{font-size:28px;font-weight:760}
-.label{font-size:17px;font-weight:700}
-.body{font-size:14px;fill:#716A74}
-.micro{font-size:12px;fill:#716A74}
-.line{stroke:#D9D1C6;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
-.dash{stroke:#716A74;stroke-width:1.3;stroke-dasharray:6 7;fill:none}
-</style>
-<rect width="920" height="300" fill="#FFF9F0"/>
-<text x="48" y="38" class="eyebrow">FIX + PRESERVE</text><text x="48" y="72" class="title">修复缺陷，同时保住 Objective Envelope。</text><rect x="52" y="125" width="180" height="76" rx="22" fill="#FCE8E8"/><text x="75" y="150" class="eyebrow">局部缺陷</text><text x="75" y="178" class="label">Target Failure</text><path d="M240 163 L340 163" class="line"/><circle cx="290" cy="163" r="4" fill="#C985A4"/><text x="285" y="145" class="micro" text-anchor="middle">Repair</text><rect x="348" y="125" width="180" height="76" rx="22" fill="#E7F7EE"/><text x="370" y="150" class="eyebrow">CHALLENGER</text><text x="370" y="178" class="label">Target 改善</text><path d="M90 239 L810 239" class="line"/><text x="90" y="266" class="label">Objective Envelope</text><text x="810" y="266" class="label" text-anchor="end">保持完整</text><circle cx="529" cy="239" r="5" fill="#BE9A45"/>
+<title id="t">保持目标的修订</title><desc id="d">局部缺陷被修复，同时基线目标约束集保持完整。</desc>
+<style>text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;fill:#24212A}.eyebrow{font-size:13px;font-weight:700;letter-spacing:1.5px;fill:#716A74}.title{font-size:28px;font-weight:760}.label{font-size:17px;font-weight:700}.micro{font-size:12px;fill:#716A74}.line{stroke:#D9D1C6;stroke-width:1.5;fill:none}</style>
+<rect width="920" height="300" fill="#FFF9F0"/><text x="48" y="38" class="eyebrow">修复且保持</text><text x="48" y="72" class="title">修复缺陷，同时守住目标约束集。</text>
+<rect x="52" y="125" width="180" height="76" rx="22" fill="#FCE8E8"/><text x="75" y="150" class="eyebrow">局部缺陷</text><text x="75" y="178" class="label">目标问题</text><path d="M240 163 L340 163" class="line"/><circle cx="290" cy="163" r="4" fill="#C985A4"/><text x="285" y="145" class="micro" text-anchor="middle">修订</text><rect x="348" y="125" width="180" height="76" rx="22" fill="#E7F7EE"/><text x="370" y="150" class="eyebrow">挑战稿</text><text x="370" y="178" class="label">目标改善</text><path d="M90 239 L810 239" class="line"/><text x="90" y="266" class="label">目标约束集</text><text x="810" y="266" class="label" text-anchor="end">保持完整</text><circle cx="529" cy="239" r="5" fill="#BE9A45"/>
 </svg>

@@ -1,27 +1,27 @@
-# Project SDK
+# 项目开发工具
 
-Quillframe Project 是独立 versioned 的小说工程。Framework 提供 generic production mechanism；Project 提供 concrete story authority。
+Quillframe 项目是一套独立、版本化的小说工程。框架提供通用生产机制；项目提供具体故事事实与权威。
 
-<img src="assets/architecture/framework-vs-project.zh-CN.svg" alt="Project 指向 pinned framework，而具体人物、Canon、plan、state、research 与 manuscript 都留在 Project 侧" width="100%" />
+<img src="assets/architecture/framework-vs-project.zh-CN.svg" alt="项目指向锁定的框架版本，而具体人物、正典、计划、状态、研究资料和正文都留在项目侧" width="100%" />
 
-## Project Identity
+## 项目标识
 
-受支持 Project 用 `novelforge.toml` 声明 schema/path，在 `novelforge.lock.json` 锁定 exact Framework revision，并可对 materialized framework bundle 做 attestation。这些文件名属于 compatibility identifier，即使 public framework brand 已经是 Quillframe，也继续保留。
+受支持的项目用 `novelforge.toml` 声明模式版本和路径，在 `novelforge.lock.json` 锁定框架的精确版本，并可以对实体化的框架构建包做证明。这些文件名属于兼容标识，即使公开品牌已经是 Quillframe，也继续保留。
 
-## Ownership
+## 责任归属
 
-Project-owned data 包括具体 BOOK/VOL/ARC/UNIT/CH/SCN instance、character/relationship、current state、claim、dependency、active plan、profile、research、regression、manuscript 与 Accepted Canon。
+项目拥有的数据包括具体的书、卷、篇章弧、单元、章节和场景实例，人物与关系，当前状态，主张，依赖，活动计划，项目配置，研究资料，回退证据，正文和已接受正典。
 
-Generic Framework source 绝不能把这些私有故事事实反向吸收成 built-in behavior。
+通用框架源码绝不能把这些私有故事事实反向吸收成内置行为。
 
-## Standard 与 Mapped Layout
+## 标准布局与映射布局
 
-Project SDK 支持 standard layout；Project Adapter 可以把成熟/legacy repo 映射成同一 logical contract。Mapping 改变 storage path，不改变 authority semantics。
+项目开发工具支持标准目录布局；项目适配器可以把成熟项目或旧仓库映射成同一套逻辑契约。映射只改变存储路径，不改变事实权威语义。
 
-## Reproducibility
+## 可复现性
 
-Project 应能脱离 chat memory 自己 validate/build。Exact Framework pin 与 deterministic bundle fingerprint 让 runtime bytes 可检查、可复现。Framework current `main` 是 Framework maintenance 的开发 authority，不会在普通 production 中静默替换 consumer pin。
+项目应能脱离聊天记忆，独立完成校验与构建。精确框架锁定版本和确定性构建包指纹，使运行字节可以检查和复现。框架当前 `main` 是框架维护阶段的开发依据，不会在普通生产运行中静默替换下游项目锁定的版本。
 
-## Change Discipline
+## 变更纪律
 
-结构级改变可以走 spec → plan → tasks → implementation → verification → acceptance；普通 prose micro-edit 不需要假软件工程仪式。无论 layout 如何，Canon mutation 仍必须 explicit acceptance + Settlement。
+结构级改变可以走“规格 → 计划 → 任务 → 实现 → 验证 → 验收”；普通正文微调不需要伪造软件工程仪式。无论目录布局如何，修改正典仍然必须有明确接受和经授权的状态落定事务。

@@ -1,45 +1,45 @@
 # 生产流水线
 
-Quillframe 的 DRAFT / REVISE 不是固定次数的模型调用，而是一张 adaptive production graph。图上的 boundary 是硬的，但每章不必机械走完全相同的调用数量。
+Quillframe 的起草与修订（`DRAFT` / `REVISE`）不是固定次数的模型调用，而是一张自适应生产图。图上的边界是硬约束，但每一章不必机械地走完全相同的调用数量。
 
-<img src="assets/architecture/production-graph.zh-CN.svg" alt="从 sparse context 与 simulation 到 internal candidate、qualification、repair loop、independent review 和 user-visible gate 的生产图" width="100%" />
+<img src="assets/architecture/production-graph.zh-CN.svg" alt="从稀疏上下文和场景模拟，到内部候选稿、资格检查、修订循环、独立评审和对用户可见交付门的生产图" width="100%" />
 
-## 1. Freeze Authority 与 Sparse Context
+## 1. 冻结权威与稀疏上下文
 
-解析本轮 exact Framework/Project authority，建立 session/run identity，只选择 task-relevant context，并验证 stage/fingerprint boundary。Future Plan 结果不得提前进入 current state；regression bad example 与 hidden expected label 不得污染 first-pass generation。
+解析本轮框架与项目的精确权威来源，建立会话和运行身份，只选择与当前任务直接相关的上下文，并验证阶段隔离和指纹边界。未来计划的结果不得提前进入当前状态；回退坏例和隐藏的预期标签不得污染第一遍正文生成。
 
-## 2. 正文之前先 Simulation
+## 2. 正文之前先做场景模拟
 
-Story/Canon preflight、scene simulation、private character state、character action proposal、scene action resolution 与 Reader Pressure 先建立因果、agenda、knowledge boundary、pressure、reward 与 forward pull，再进入 surface realization。
+故事与正典预检、场景模拟、人物私有状态、人物行动提案、场景行动结算和阅读牵引，会先建立因果、人物意图、知识边界、压力、阶段回报和继续阅读的动力，然后才进入文字实现。
 
-## 3. 生成内部 Candidate
+## 3. 生成内部候选稿
 
-Event-first Raw Draft 只存在于内部；Surface realization 把模拟后的事件结构实现成 prose。随后 freeze candidate + fingerprint。Raw Draft 永远不是 user-visible artifact。
+事件优先的原始稿只存在于内部；文字实现阶段把模拟后的事件结构写成正文，随后冻结候选稿并生成内容指纹。内部原始稿永远不会直接成为对用户可见的制品。
 
-## 4. Independent Review 之前先 Qualification
+## 4. 独立评审之前先做资格检查
 
-`quality/candidate_qualification.py` 要求 registered、non-independent 的 candidate self-audit 与 reader engagement semantic evidence，再加 continuity evidence。Repair cycle > 0 时，还需要 `quality.compare` 对 objective envelope 做 preservation check。
+`quality/candidate_qualification.py` 要求已登记的非独立候选稿自检、读者投入度语义证据和连续性证据。只要候选稿经历过一次修订，还必须由 `quality.compare` 对目标约束集执行保持性比较。
 
-输出只可能是 `awaiting_semantic`、`repair_required`、`qualified_for_independent`。Qualification 本身不是 independent review，也不能替代它。
+输出只可能是 `awaiting_semantic`、`repair_required`、`qualified_for_independent`。资格检查本身不是独立评审，也不能替代独立评审。
 
-## 5. 回到 Owning Mechanism 修复
+## 5. 回到真正负责问题的机制修复
 
-局部 Surface defect 可以 local rewrite；Surface cluster 可以重新 realization；SAFE-BUT-FLAT 回 Reader Pressure + Scene Simulation；Character failure 回 Character Simulation；Story/Plan failure 回上游；Context failure 回 Context/Memory。
+局部文字缺陷可以局部改写；成片的文字实现问题可以重新实现整段；“安全但平淡”的问题回到阅读牵引与场景模拟；人物失败回到人物模拟；故事或计划失败回到更上游；上下文失败则回到上下文与记忆机制。
 
-每个 repair cycle 都遵守 FIX + PRESERVE。局部 target 改好了，但 objective envelope、reader value 或 relationship energy 被破坏，不算整体 repair 成功。
+每一轮修订都遵守**修复且保持**（`FIX + PRESERVE`）。局部目标改好了，但目标约束集、读者价值或人物关系能量被破坏，就不算整体修订成功。
 
-<img src="assets/concepts/objective-preserving-repair.zh-CN.svg" alt="Objective-preserving repair：target defect 改善，同时 objective envelope 保持完整" width="100%" />
+<img src="assets/concepts/objective-preserving-repair.zh-CN.svg" alt="修复且保持：目标缺陷改善，同时目标约束集保持完整" width="100%" />
 
-## 6. Candidate Evolution 不污染 Fresh Regeneration
+## 6. 候选稿演进不能污染全新重生成
 
-Quality Evolution 通过 registered semantic comparison 比较 incumbent 与 challenger。Candidate Lineage 记录 challenger 是 repair、fresh regeneration 还是 user edit。Repair 的 prose parent 等于 comparison parent；fresh regeneration 仍有 comparison parent，但 prose parent 必须为空。
+质量演进通过已登记的语义比较评估基准稿与挑战稿。候选稿谱系记录挑战稿是修订稿、全新重生成稿还是用户编辑稿。修订稿的文本父级等于比较父级；全新重生成稿仍然有比较父级，但文本父级必须为空。
 
-## 7. 对 Exact Candidate 执行 Independent Review
+## 7. 对精确候选稿执行独立评审
 
-Gate 要求 independence 时，先 freeze/package qualified candidate 并 checkpoint，再 dispatch 到真正独立且 eligible 的 invocation/session；返回结果必须与 exact candidate fingerprint 绑定，validate 后 consume-once。有效 rejection 回 repair，不允许 reviewer-shopping。
+质量门要求独立性时，先冻结并打包已经合格的候选稿，记录检查点，再派发给真正独立且具备所需能力的调用或会话。返回结果必须绑定同一份候选稿指纹，校验后只能消费一次。有效拒绝必须回到修订流程，不能通过不停更换评审者来规避判断。
 
-<img src="assets/concepts/independent-semantic-review.zh-CN.svg" alt="Manager invocation 与 reviewer invocation 分离，只通过 fingerprint-bound candidate artifact 连接" width="100%" />
+<img src="assets/concepts/independent-semantic-review.zh-CN.svg" alt="管理器调用与评审调用彼此分离，只通过带内容指纹的候选稿制品连接" width="100%" />
 
-## 8. User-visible Gate
+## 8. 对用户可见的交付门
 
-只有 applicable semantic、continuity、lineage、independence gate 都解决的 candidate，才可以按当前 contract 称为 Review Draft / production-ready。Acceptance 是另外的用户/编辑决定；Settlement 又是另外的 authorized state mutation。
+只有适用的语义检查、连续性检查、谱系检查和独立性要求全部解决后，候选稿才可以按当前契约称为评审稿或具备生产交付条件。用户或编辑的接受是另一项决定；状态落定又是另一项经授权的状态修改事务。

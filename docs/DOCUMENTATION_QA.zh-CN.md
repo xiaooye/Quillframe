@@ -1,29 +1,37 @@
-# Documentation QA
+# 文档质量检查
 
-Documentation QA 用来验证 Quillframe 的当前解释仍然与 current implementation 对齐，同时不让 deterministic prose checker 假装自己拥有 semantic judgment。
+文档质量检查用于验证 Quillframe 的当前解释仍然与当前实现对齐，同时不让确定性文字检查器冒充语义判断者。
 
-## Deterministic Checks
+## 确定性检查
 
-Documentation gate 应验证 manifest registration、paired-language presence、每篇 registered page 只有一个 H1、local link/asset、UTF-8、current Framework version identity、stable router path，以及 SVG parseability/accessibility metadata。
+文档质量门应验证清单登记、双语文件是否成对存在、每篇登记页面只有一个一级标题、本地链接与图片资源、UTF-8 编码、当前框架版本身份、稳定入口路径，以及 SVG 是否可以解析并带有无障碍元数据。
 
-Current public-brand surface 必须使用 Quillframe；allowlist 中的 technical identifier 与 historical record 可以保留 legacy namespace。Brand-leak check 必须有 scope，明确禁止 global string replace。
+当前公开品牌页面必须使用 Quillframe；允许清单中的技术标识和历史记录继续保留旧技术命名空间。品牌泄漏检查必须有明确作用范围，严禁用全局字符串替换解决命名问题。
 
-## Visual Checks
+## 中文原生表达检查
 
-Documentation-owned SVG 要检查 valid viewBox、non-empty `<title>/<desc>`、合法颜色、不嵌入 font file、label 可读。Human review 另外执行 border budget：不承载信息的 border、card background、decoration、container 默认删除。
+当前简体中文公开文档必须使用自然中文，而不是大量普通英文名词嵌进中文语法。确定性检查会先排除代码块、行内代码、链接地址和标签属性，再检查正文与中文图示中的普通英文术语。
 
-验收问题不是“够不够 pastel”，而是信息能否用更少 visual ink 仍然清晰，以及整页是否像 editorial canvas，而不是 dashboard。
+允许保留的主要是 Quillframe 等专有品牌，以及确实需要原名的 GitHub、Python、JSON、SVG、MCP 等外部技术名称。精确代码标识、枚举值、文件名和命令模式应放入代码样式，不应作为普通英文名词散落在正文里。
 
-## Semantic Review
+这项检查只能发现明显的中英夹杂，不能替代母语级编辑判断；人工或模型复核仍需判断句子是否自然、术语是否统一、译法是否符合上下文。
 
-Human/model documentation review 负责判断 mental model 是否吻合 implementation、diagram 的 authority relation 是否正确、EN/zh-CN 是否 semantic parity，以及文档有没有把 evidence 偷偷写成 authority。
+## 视觉检查
 
-Deterministic green check 本身不能证明这些 semantic property。
+文档自有 SVG 要检查合法的 `viewBox`、非空的 `<title>` 与 `<desc>`、合法颜色、不嵌入字体文件，以及标签是否可读。人工复核还要执行“边框预算”：不承载信息的边框、卡片底色、装饰和容器默认删除。
 
-## Historical Records
+验收问题不是“粉彩色够不够多”，而是能否用更少视觉负担保持清晰，以及整页是否像开放的编辑画布，而不是仪表盘。
 
-Historical spec 保留写作当时真实使用的 public name 与 terminology。Current docs 可以加说明或链接，但 reconstruction 不改写历史。
+## 语义复核
 
-## Scope Guard
+人工或模型文档复核负责判断心智模型是否吻合实现、图示中的权威关系是否正确、中英文是否语义一致，以及文档有没有把证据偷偷写成权威。
 
-Documentation work 不修改 Product UI、Godot/Solid/React/Vue implementation、application CSS、runtime semantics 或 consumer Project state。发现 scope 外问题，只记录为 `UI_REBRAND_FOLLOWUP` 或 `DOCUMENTATION_DISCOVERED_IMPLEMENTATION_GAP`。
+确定性检查通过本身不能证明这些语义性质。
+
+## 历史记录
+
+历史规格保留写作当时真实使用的公开名称和术语。当前文档可以加说明或链接，但重构工作不改写历史。
+
+## 范围边界
+
+文档工作不修改产品界面、Godot、SolidJS、React、Vue 实现、应用样式、运行时语义或下游项目状态。发现范围外问题，只记录为 `UI_REBRAND_FOLLOWUP` 或 `DOCUMENTATION_DISCOVERED_IMPLEMENTATION_GAP`。

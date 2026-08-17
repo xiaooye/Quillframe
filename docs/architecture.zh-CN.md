@@ -1,45 +1,45 @@
 # 总体架构
 
-理解 Quillframe 最简单的方法，是把它看成三块协作平面：Orchestration 决定当前应执行什么 bounded work；Execution + Verification 产出并判断 exact artifact；Settlement 则是 Accepted evidence 变成 durable story state 的唯一授权通道。
+理解 Quillframe 最简单的方法，是把它看成三个协作平面：**编排**决定当前该做什么受限工作；**执行与验证**负责产出并判断精确制品；**状态落定**则是“已接受证据”变成持久故事状态的唯一授权通道。
 
-<img src="assets/architecture/framework-mental-model.zh-CN.svg" alt="Quillframe 三平面架构：Orchestration、Execution + Verification、授权 Settlement" width="100%" />
+<img src="assets/architecture/framework-mental-model.zh-CN.svg" alt="Quillframe 三平面架构：编排、执行与验证、授权状态落定" width="100%" />
 
-## Project authority 在 Generic Framework 之外
+## 项目事实权威在通用框架之外
 
-Generic Framework 拥有 Story/Character/Canon mechanics、质量机制、session/runtime contract、semantic execution、learning infrastructure、Corpus governance、eval 与 Project SDK。下游 Project 拥有具体人物、剧情、关系、research、plan、manuscript、Accepted Canon 与 current state。
+通用框架拥有故事、人物、关系与正典机制，质量机制，会话与运行时契约，语义执行，学习设施，语料库治理，评测系统和项目开发工具。下游项目拥有具体人物、剧情、关系、研究资料、计划、正文、已接受正典和当前状态。
 
-<img src="assets/architecture/framework-vs-project.zh-CN.svg" alt="Generic Framework 通用机制与 Project 专属故事事实保持分离" width="100%" />
+<img src="assets/architecture/framework-vs-project.zh-CN.svg" alt="通用框架机制与项目专属故事事实保持分离" width="100%" />
 
-依赖方向只有 Project → Framework。某条 Project 内容即使参加过 run，也不会因此成为 Generic Framework truth。
+依赖方向只有“项目 → 框架”。某条项目内容即使参加过一次运行，也不会因此变成通用框架的内置事实。
 
-## Semantic intelligence 与 deterministic execution
+## 语义判断与确定性执行
 
-Semantic contract 打包 bounded context、rubric、permission、output shape、subject identity 与 semantic fingerprint。模型负责 interpretation；deterministic runtime 负责验证 exact contract identity、provenance、fingerprint binding、permission、typed result 与 consume-once。
+语义契约会打包受限上下文、评审准则、权限、输出结构、对象身份和语义任务指纹。模型负责解释意义；确定性运行时负责验证精确契约身份、来源链、指纹绑定、权限、类型化结果和一次性消费。
 
-Telemetry 可以描述可观察形式，但不能冒充 semantic judgment；manager self-review 可以形成 non-independent evidence，却不能满足 independent gate。
+遥测数据可以描述可观察形式，却不能冒充语义判断；管理器自审可以形成非独立证据，却不能满足独立评审门。
 
-## Authority Ladder
+## 权威层级
 
-<img src="assets/concepts/authority-ladder.zh-CN.svg" alt="Authority ladder：locked、accepted、active plan、review、proposal；Settlement 与 Acceptance 分离" width="100%" />
+<img src="assets/concepts/authority-ladder.zh-CN.svg" alt="权威层级：锁定、已接受、活动计划、评审、提案；状态落定与接受决定彼此分离" width="100%" />
 
-`locked > accepted > active_plan > review > proposal` 表达 lifecycle 区分，并不表示 artifact 可以自行向上升级。Plan 是 future intent；Review 是 candidate；Acceptance 是明确 evidence；Settlement 是另一个授权 transaction。
+`locked > accepted > active_plan > review > proposal` 表达的是生命周期和权威级别的差异，并不表示任何制品可以自行向上升级。计划是未来意图；评审态是候选；接受需要明确证据；状态落定则是另一项独立授权事务。
 
-Corpus != Canon；Research != automatic Character Knowledge；Session state != Story state；Learning state != Editorial authority。
+语料库不等于正典；研究结论不等于人物自动知情；会话状态不等于故事状态；学习状态也不等于编辑权威。
 
-## Sparse Context
+## 稀疏上下文
 
-持久存储永远大于一次 model invocation。Manager 先针对当前 semantic question 选择 sparse Context Manifest；deterministic assembly 再验证 exact refs、authority class、stage isolation、provenance、fingerprint 与 hard budget。
+持久存储永远大于一次模型调用实际需要的内容。管理器先针对当前语义问题选择稀疏上下文清单；确定性组装阶段再验证精确引用、权威级别、阶段隔离、来源链、内容指纹和硬预算。
 
-<img src="assets/concepts/sparse-context-manifest.zh-CN.svg" alt="Sparse Context Manifest 只选择当前任务相关的 Project、人物、状态、Research 与 benchmark 引用" width="100%" />
+<img src="assets/concepts/sparse-context-manifest.zh-CN.svg" alt="稀疏上下文清单只选择当前任务相关的项目、人物、状态、研究资料与基准材料" width="100%" />
 
-## Session 与 External Work
+## 会话与外部工作
 
-Quillframe 分开 `project/resource`、`session/thread`、`run/invocation`、`checkpoint`。Checkpoint 只记录 execution position 与 exact artifact，不会把 Plan/Review 提升为 Canon。Resume 必须重核 live authority、artifact fingerprint、pending approval、capability 与 consume-once state。
+Quillframe 分开 `project/resource`、`session/thread`、`run/invocation` 和 `checkpoint`。检查点只记录执行位置与精确制品，不会把计划或评审稿提升成正典。恢复时必须重新核对当前权威、制品指纹、待确认事项、可用能力和一次性消费状态。
 
-## Settlement
+## 状态落定
 
-<img src="assets/concepts/settlement.zh-CN.svg" alt="Settlement transaction：从 explicit acceptance，经 exact state delta 与 before-state validation，到 authorized write、projection、post-condition" width="100%" />
+<img src="assets/concepts/settlement.zh-CN.svg" alt="状态落定事务：从明确接受，经精确状态变化和前置状态验证，到授权写入、派生更新与事后条件检查" width="100%" />
 
-Settlement 要求 explicit acceptance / Canon intent、exact before→after state ops、dependency impact、checkpoint/write intent、live before-state validation、authorized write、required derived projection 与 post-condition。Before-state mismatch 或 required projection failure 必须返回 `settlement_incomplete`，不能猜测式“部分成功”。
+状态落定要求明确接受或明确正典修改意图、精确的前后状态操作、依赖影响、检查点与写入意图、实时前置状态验证、授权写入、必要派生更新和事后条件检查。前置状态不匹配或必要派生更新失败时，必须返回 `settlement_incomplete`，不能猜测式地宣布“部分成功”。
 
-Implementation owner 见[架构图谱](architecture-atlas.zh-CN.md)。
+具体实现归属见[架构图谱](architecture-atlas.zh-CN.md)。

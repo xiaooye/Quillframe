@@ -1,37 +1,37 @@
 # 为什么是 Quillframe？
 
-本页文件名来自旧 public brand，为稳定兼容路径而保留；当前产品名称是 **Quillframe**。
+本页文件名来自旧公开品牌，为稳定兼容路径而保留；当前产品名称是 **Quillframe**。
 
-Quillframe 要解决的是长篇创作里一个常被混在一起的矛盾：创意解释必须保持弹性，而 authority 与 execution state 必须保持精确。
+Quillframe 要解决的是长篇创作里一个常被混在一起的矛盾：创意解释必须保持弹性，而故事事实的权威和执行状态必须保持精确。
 
 ## 系统边界本身就是产品能力
 
-确定性脚本不应该判断一段关系是否“有生命”；模型也不应该自行决定 Plan 已经成为 Canon、stale review 仍然有效，或者一次失败写入“大概成功了”。
+确定性脚本不应该判断一段关系是否“有生命”；模型也不应该自行决定计划已经成为正典、过期评审仍然有效，或者一次失败写入“大概成功了”。
 
-因此 Quillframe 分开 semantic ownership 与 deterministic ownership。需要理解意义的判断交给模型或人；identity、permission、fingerprint、lifecycle、provenance、transaction 与 reproducibility 交给代码证明。
+因此 Quillframe 把语义职责与确定性职责分开。需要理解意义的判断交给模型或人；身份、权限、内容指纹、生命周期、来源链、事务和可复现性则交给代码证明。
 
-## 长篇需要 authority，不只是更大的 memory
+## 长篇需要事实权威，不只是更大的记忆
 
-更大的 context window 并不能回答“哪条信息算权威”。Quillframe 分开 Project truth、current state、plan、review candidate、derived memory、research、Corpus evidence 与 runtime state，再通过 Sparse Context Manifest 只选择当前任务真正需要的内容。
+更大的上下文窗口并不能回答“哪条信息算权威”。Quillframe 分开项目事实、当前状态、计划、待评审候选稿、派生记忆、研究资料、语料库证据和运行时状态，再通过稀疏上下文清单，只选择当前任务真正需要的内容。
 
-<img src="assets/concepts/authority-ladder.zh-CN.svg" alt="从 locked 到 proposal 的 authority ladder，并明确 Plan 不等于 Canon、Accepted 不等于 Settled" width="100%" />
+<img src="assets/concepts/authority-ladder.zh-CN.svg" alt="从锁定到提案的权威层级，并明确计划不等于正典、接受不等于已经落定" width="100%" />
 
-## Revision 需要 lineage，而不是无限改写
+## 修订需要谱系，而不是无限改写
 
-修复可能把局部问题改好，却把章节真正的目标改坏。Quillframe 冻结 objective envelope，用 semantic comparison 比较 incumbent/challenger，记录 repair-induced regression，并分开 comparison ancestry 与 prose ancestry。Fresh regeneration 可以竞争，但不会继承被拒 prose。
+修订可能把局部问题改好，却把章节真正的目标改坏。Quillframe 会冻结目标约束集，用语义比较评估基准稿与挑战稿，记录修订引发的回退，并把比较谱系与文本派生谱系分开。全新重生成可以参与比较，但不会继承被拒稿件的文字。
 
-## Independence 是 runtime property
+## 独立性是一项运行时属性
 
-Manager 在同一次 invocation 里换一个“reviewer”角色名，不构成 independent review。Gate 要求 independence 时，artifact 必须 freeze + fingerprint，交给真正独立且 eligible 的 invocation/session，再对 exact fingerprint 验证并 consume-once。
+管理器在同一次调用里换一个“评审者”角色名，并不构成独立评审。质量门要求独立性时，待评审制品必须先冻结并生成指纹，再交给真正独立且具备所需能力的调用或会话；返回结果只能对同一份精确指纹生效，而且只能消费一次。
 
-## Learning 的 intake 自动，promotion 受治理
+## 学习自动接入反馈，长期提升仍受治理
 
-用户对既有产物或工作方式给出的 meaningful feedback，可以在任何 primary mode 中进入 bounded learning intake。Automatic 的是 capture，不是 promotion。`one_off`、`project`、`user_taste`、`general_craft` 四个 scope 仍然分开，模型推断不会自动获得 durable write authority。
+用户对既有产物或工作方式给出的有效反馈，可以在任何主要任务模式中进入受限的学习接入流程。自动发生的是反馈捕获，不是长期规则升级。`one_off`、`project`、`user_taste`、`general_craft` 四种作用范围仍然分开；模型推断也不会自动获得持久写入权限。
 
 ## 代价与适用边界
 
-Quillframe 有意比一次性 writing assistant 更重。只有当项目足够长，continuity、state、revision provenance、recovery、independent review 与 learning discipline 真正重要时，这些机制才值得。轻量 ideation 或单次改写，简单工具反而可能更合适。
+Quillframe 有意比一次性写作助手更重。只有当项目足够长，连续性、状态、修订来源、恢复、独立评审和学习纪律真正重要时，这些机制才值得。轻量构思或单次改写，简单工具反而可能更合适。
 
 ## 兼容性
 
-旧 public name 仍存在于 `novelforge.toml`、`novelforge.lock.json`、schema、workflow 与 repository path 等 technical identifier 中。它们属于 compatibility surface，不是当前 public branding；本次 documentation migration 有意保留这些 ID。
+旧公开名称仍存在于 `novelforge.toml`、`novelforge.lock.json`、模式标识、工作流名称和仓库路径等技术标识中。它们属于兼容界面，不是当前公开品牌；本次文档迁移有意保留这些稳定标识。

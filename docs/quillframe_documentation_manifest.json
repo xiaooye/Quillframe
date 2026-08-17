@@ -1,9 +1,10 @@
 {
   "schema": "quillframe_public_documentation_manifest_v1",
   "framework_version": "0.8.0",
-  "target_main": "84ec25e182b7d9e1e655dede75324dacd6aca752",
+  "target_main": "58e0c616960f68571a56c808e7770c4307e053ff",
   "public_brand": "Quillframe",
   "legacy_technical_namespace": "novelforge",
+  "chinese_style": "native_zh_CN_prose_exact_identifiers_only",
   "visual_system": {
     "principle": "THE PAGE IS THE CANVAS",
     "containers": "exceptional",

@@ -1,34 +1,34 @@
 # Quillframe
 
-**一个面向长篇小说的生产框架：让模型判断意义，让显式系统守住故事事实与执行真相。**
+**一个面向长篇小说的生产框架：让模型负责理解与判断，让显式系统守住故事事实和执行真相。**
 
 <img src="docs/assets/brand/quillframe-mark.svg" alt="Quillframe 标记：一页手稿被一条叙事线穿过" width="92" />
 
-Quillframe 面向的是会持续数十章、跨多个会话、经历多轮修改与审查的小说工程。它把连续性、权威、修订、评审、学习与恢复当成真正的生产问题，同时不让确定性代码伪装成文学判断者。
+Quillframe 面向会持续数十章、跨多个会话、经历多轮修改与评审的小说工程。它把连续性、事实权威、修订、评审、学习和恢复当成真正的生产问题，同时不让确定性代码冒充文学判断者。
 
-<img src="docs/assets/architecture/framework-mental-model.zh-CN.svg" alt="Quillframe 心智模型：Project 权威进入 manager，经稀疏执行与验证后，只有获得显式授权才进入 Settlement" width="100%" />
+<img src="docs/assets/architecture/framework-mental-model.zh-CN.svg" alt="Quillframe 心智模型：项目事实进入编排层，经稀疏执行与验证后，只有获得明确授权才进入状态落定" width="100%" />
 
 ## 为什么需要它
 
-长篇写作会累积不同性质的“真相”。Plan 是未来意图；Review Draft 是候选稿；Accepted 是明确编辑决定；Settled 才是这个决定已经转化成持久状态的结果。Research、Corpus、telemetry、learning hypothesis 与 runtime receipt 都可以是证据，却不会因为系统看见了就自动成为故事事实。
+长篇写作会累积不同性质的“真相”。计划描述未来意图；评审稿只是候选；已接受稿代表明确的编辑决定；只有完成状态落定，这个决定才真正转化为持久状态。研究资料、语料库证据、遥测数据、学习假设和运行回执都可以提供参考，却不会因为系统看见了就自动成为故事事实。
 
 Quillframe 的核心工作，是把这些类别分开，再通过明确契约让它们协作。
 
 ## 核心架构
 
-**Project authority 拥有故事事实。** `locked`、`accepted`、`active_plan`、`review`、`proposal` 保持不同层级。Plan != Canon；Review != Accepted；Accepted != Settled。
+**项目拥有故事事实的最终权威。** `locked`、`accepted`、`active_plan`、`review`、`proposal` 是不同层级。计划不等于正典；评审不等于接受；接受也不等于已经落定。
 
-**模型负责语义判断。** 故事解释、人物可信度、Reader 反应、repair diagnosis、相关性、候选比较与 learning interpretation 都通过受限的 model-readable contract 完成。
+**模型负责语义判断。** 故事解释、人物可信度、读者反应、修订诊断、相关性、候选稿比较和学习解释，都通过边界明确、机器可读的契约完成。
 
-**确定性代码负责执行真相。** Identity、permission、fingerprint、provenance、persistence、consume-once、hard budget、routing、transaction 与 fail-closed state transition 可以机械验证。
+**确定性代码负责执行真相。** 身份、权限、内容指纹、来源链、持久化、一次性消费、硬预算、路由、事务和失败即阻断的状态转换，都可以机械验证。
 
-**Independent review 必须真的独立。** 一旦 gate 要求 independence，reviewer 必须来自真正不同的 invocation/session，并绑定 exact candidate fingerprint。
+**独立评审必须真的独立。** 一旦质量门要求独立性，评审者就必须来自真正不同的调用或会话，并且只评审已经冻结且指纹确定的候选稿。
 
 ## 正文是一张生产图
 
-章节不会从 prompt 直接跳到发布。系统先稀疏选择 Context，模拟 Story / Character / Reader Pressure，生成内部候选，再收集质量证据，把缺陷送回真正 owning mechanism；只有完成 pre-independent qualification 的候选才进入独立评审与 user-visible gate。
+章节不会从提示词直接跳到发布。系统先稀疏选择上下文，模拟故事、人物和阅读牵引，再生成内部候选稿；随后收集质量证据，把缺陷送回真正负责它的机制。只有完成独立评审前资格检查的候选稿，才会进入独立评审和对用户可见的交付门。
 
-修复遵守 **FIX + PRESERVE**：修掉目标缺陷，同时保住 objective envelope、reader value 与 character/relationship energy。Fresh regeneration 可以挑战 incumbent，但不得假装继承了被拒绝的 prose。Candidate Lineage 分开记录 comparison ancestry 与 prose derivation，避免两种“父级”语义混在一起。
+修订遵守**修复且保持**（`FIX + PRESERVE`）：修掉目标缺陷，同时保住目标约束集、读者价值以及人物与关系的能量。全新重生成可以挑战当前基准稿，但不得假装继承被拒稿件的文字。候选稿谱系分别记录“和谁比较”与“文字从哪里派生”，避免两种父级关系混为一谈。
 
 ## 快速开始
 
@@ -38,23 +38,23 @@ python project_sdk.py validate <path>
 python project_sdk.py build <path>
 ```
 
-生产 Project 为了 runtime 可复现性会锁定 exact framework revision；而 Framework 开发文档以当前 `main` 为目标。两者是不同事实，不互相覆盖。
+生产项目为了运行可复现性会锁定框架的精确版本；框架开发文档则以开发时冻结的 `main` 为实现依据。这是两类不同事实，不能互相覆盖。
 
 ## 关键概念
 
-- [总体架构](docs/architecture.zh-CN.md)：authority、semantic execution、deterministic runtime 与 settlement。
-- [生产流水线](docs/production-pipeline.zh-CN.md)：从 sparse context 到 user-visible gate。
-- [质量保障](docs/quality-assurance.zh-CN.md)：pre-independent qualification、FIX + PRESERVE、fingerprint binding 与 release truth。
-- [Candidate Lineage](docs/CANDIDATE_LINEAGE_V1.zh-CN.md)：comparison parent、prose parent、review receipt 与无权威的 acceptance evidence。
-- [上下文与记忆](docs/context-and-memory.zh-CN.md)：让 Context 稀疏可控，而不是让 memory 偷偷变成 Canon。
-- [自适应学习](docs/adaptive-learning.zh-CN.md)：自动 capture，受治理 promotion。
-- [运行时与集成](docs/integrations.zh-CN.md)：session、run、checkpoint、capability 与 independent execution。
-- [Project SDK](docs/project-sdk.zh-CN.md)：Project / Framework 边界。
+- [总体架构](docs/architecture.zh-CN.md)：故事事实权威、语义执行、确定性运行时与状态落定。
+- [生产流水线](docs/production-pipeline.zh-CN.md)：从稀疏上下文到对用户可见的交付门。
+- [质量保障](docs/quality-assurance.zh-CN.md)：独立评审前资格检查、修复且保持、内容指纹绑定与发布真相。
+- [候选稿谱系](docs/CANDIDATE_LINEAGE_V1.zh-CN.md)：比较父级、文本父级、评审回执与不具权威性的接受证据。
+- [上下文与记忆](docs/context-and-memory.zh-CN.md)：让工作上下文保持稀疏可控，而不是让记忆偷偷变成正典。
+- [自适应学习](docs/adaptive-learning.zh-CN.md)：自动捕获反馈，受治理地提升长期规则。
+- [运行时与集成](docs/integrations.zh-CN.md)：会话、运行、检查点、能力和独立执行。
+- [项目开发工具](docs/project-sdk.zh-CN.md)：项目与框架的责任边界。
 
 ## 兼容性说明
 
-**Quillframe 是当前 public brand；`NovelForge` 继续作为 legacy technical namespace 保留。** `novelforge.toml`、`novelforge.lock.json`、`novelforge_*` schema、既有 workflow 名、repository path 与 stable contract ID 本次都不改名。
+**Quillframe 是当前公开品牌；`NovelForge` 继续作为旧技术命名空间保留。** `novelforge.toml`、`novelforge.lock.json`、`novelforge_*` 模式标识、既有工作流名称、仓库路径和稳定契约标识，本次都不改名。
 
-Framework 当前处于 pre-1.0 的 `0.8.0` 开发线。开发期的当前实现真相来自本次冻结的 exact `main` commit，而不是旧文档叙述。
+框架目前处于 1.0 之前的 `0.8.0` 开发线。开发期的实现真相来自本次冻结的精确 `main` 提交，而不是旧文档叙述。
 
-[文档中心](docs/README.zh-CN.md) · [English](README.en.md)
+[文档中心](docs/README.zh-CN.md) · [英文版](README.en.md)

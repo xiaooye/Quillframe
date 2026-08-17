@@ -1,45 +1,45 @@
 # 质量保障
 
-Quillframe 的质量体系是一条 evidence + ownership 链，不是一个文学总分。每次判断都先问：哪些事实可以机械证明，哪些必须 semantic judgment，失败真正属于哪个 mechanism？
+Quillframe 的质量体系是一条“证据 + 责任归属”链，而不是一个文学总分。每次判断都先问三件事：哪些事实可以机械证明，哪些必须依赖语义判断，失败真正属于哪个机制？
 
-## Pre-independent Candidate Qualification
+## 独立评审前的候选稿资格检查
 
-进入成本更高或更 consequential 的 independent gate 前，`candidate_qualification.py` 把 non-independent 的 semantic self-audit 与 reader-engagement result 绑定到 exact candidate，再结合 continuity evidence；只要经历过 repair，还必须有 objective-preservation comparison evidence。
+在进入成本更高、后果更重的独立评审门之前，`candidate_qualification.py` 会把非独立的语义自检和读者投入度结果绑定到精确候选稿，再结合连续性证据。只要候选稿经历过修订，还必须具备目标保持比较证据。
 
-Pass 的含义只是 **qualified for independent review**，绝不是“已经独立通过”。
+通过只表示“具备进入独立评审的资格”，绝不表示“已经独立评审通过”。
 
-## FIX + PRESERVE
+## 修复且保持
 
-<img src="assets/concepts/objective-preserving-repair.zh-CN.svg" alt="FIX + PRESERVE：目标缺陷改善，同时 objective envelope baseline 不被破坏" width="100%" />
+<img src="assets/concepts/objective-preserving-repair.zh-CN.svg" alt="修复且保持：目标缺陷改善，同时基线目标约束集不被破坏" width="100%" />
 
-Objective envelope 是 compact、fingerprinted、来自 authorized evidence 的 must-preserve objectives；它不能从 rejected prose 反推。替换 envelope 需要显式 change authority，并链接 previous fingerprint。
+目标约束集是一组精简、带指纹、来自授权证据且必须保住的目标；它不能从被拒稿件的文字反推。替换目标约束集需要明确的变更权限，并链接上一版指纹。
 
-Repair preservation comparison 分开看 target outcome、objective preservation、reader value、character/relationship energy。证据不足就 pending；局部变好但伴随 collateral regression 就 fail。
+修订保持性比较会分别检查目标问题是否改善、目标约束是否保持、读者价值是否下降、人物与关系能量是否受损。证据不足就等待补齐；局部变好但造成连带退化，仍然判定失败。
 
-## Incumbent 与 Challenger
+## 基准稿与挑战稿
 
-`quality_evolution.py` 为 incumbent/challenger 保存 exact content fingerprint；semantic winner 由 registered `quality.compare` 判断。Deterministic ledger 只验证 exact pair、objective envelope、consume-once，并更新 incumbent 或 no-gain / plateau state。
+`quality_evolution.py` 为基准稿和挑战稿保存精确内容指纹；语义上的胜者由已登记的 `quality.compare` 判断。确定性账本只负责验证比较双方、目标约束集和一次性消费，再更新基准稿或记录无收益、平台期状态。
 
-Absolute score 不能单独决定 keep/discard。
+绝对分数不能单独决定保留或淘汰。
 
-## Repair-induced Regression Protection
+## 防止修订引发新的回退
 
-`repair_objective_regression.py` 专门观察“repair target 改善，但 protected objective 退化”的失败；`regression_escape.py` 记录 known regression 没有在 expected stage 被抓住的 escape。两者都不自行作文学判断，只把已有 evidence 精确绑定到 artifact 与 stage。
+`repair_objective_regression.py` 专门观察“目标缺陷改善，但受保护目标退化”的失败；`regression_escape.py` 记录已知回退没有在预期阶段被发现的漏检。两者都不自行作文学判断，只把已有证据精确绑定到制品和阶段。
 
-## Fresh Regeneration Contamination Boundary
+## 全新重生成的污染边界
 
-Fresh regeneration 可以挑战 incumbent，同时对 writer context 隐藏 rejected prose。它为了 comparison 仍有 comparison parent，但不能有 prose parent。这个边界由 Candidate Lineage 显式执行，不靠 prose similarity 猜测。
+全新重生成稿可以挑战当前基准稿，同时对写作阶段隐藏被拒稿件。为了参与比较，它仍然有比较父级，但不能有文本父级。这个边界由候选稿谱系显式执行，不靠文字相似度猜测。
 
-## Exact Fingerprint Review Binding
+## 精确指纹绑定评审结果
 
-每个 semantic review receipt 都绑定 candidate fingerprint、semantic job fingerprint 与 result fingerprint。Candidate 只要 materially changed，旧 review evidence 就 stale。Lineage 或 binding 缺失时 runtime fail closed，不猜 ancestry。
+每份语义评审回执都会绑定候选稿指纹、语义任务指纹和结果指纹。候选稿只要发生实质变化，旧评审证据立即过期。谱系或绑定缺失时，运行时默认阻断，不猜测来源关系。
 
-## Acceptance Evidence 不等于 Settlement Authority
+## 接受证据不等于状态落定权限
 
-Candidate Lineage 可以把 opaque acceptance evidence ref 绑定到 exact artifact fingerprint，但会明确返回 `authority_verified=false`、`settlement_authorized=false`。真正的 authority layer 必须另外验证 acceptance。
+候选稿谱系可以把不透明的外部接受证据引用绑定到精确制品指纹，但会明确返回 `authority_verified=false`、`settlement_authorized=false`。真正的权威层必须另外验证这次接受是否有效。
 
-## Independent Semantic Integrity
+## 独立语义完整性
 
-<img src="assets/concepts/independent-semantic-review.zh-CN.svg" alt="Independent review 必须来自独立 reviewer invocation，并绑定 exact candidate fingerprint" width="100%" />
+<img src="assets/concepts/independent-semantic-review.zh-CN.svg" alt="独立评审必须来自独立评审调用，并绑定精确候选稿指纹" width="100%" />
 
-Manager self-review != independent review；Telemetry != semantic judgment。有效 semantic rejection 是判断结果，不是 infrastructure failure；必须回 owning repair mechanism，不能 reviewer-shopping。
+管理器自审不等于独立评审；遥测数据也不等于语义判断。有效的语义拒绝是正式判断，不是基础设施故障；系统必须回到真正负责问题的修订机制，不能靠不停更换评审者来规避结果。

@@ -1,45 +1,53 @@
-# Documentation Standard
+# 文档规范
 
-Quillframe 文档只遵守一个最重要的视觉与信息原则：**THE PAGE IS THE CANVAS。** 结构先由 typography、spacing、alignment 与 semantic sequence 建立，再考虑 container。
+Quillframe 文档只遵守一个最重要的视觉与信息原则：**页面就是画布。** 结构先由字体层级、留白、对齐和语义顺序建立，再考虑容器。
 
-## Information Architecture
+## 信息架构
 
-主要文档先用一段话给 mental model；只有空间关系真的能帮助理解时，才加入一张 canonical diagram；随后进入详细解释，contract/schema/reference 放在后面，不要一开页就倒 schema dump。
+主要文档先用一段话建立心智模型；只有空间关系确实能帮助理解时，才加入一张核心图示；随后进入详细解释，把契约、模式定义和参考资料放在后面，不要一开页就堆机器定义。
 
-Docs Home 的信息架构固定为 Start Here、Core Concepts、Writing、Quality、Canon & Settlement、Context & Memory、Learning、Semantic Execution、Session & Control Plane、Corpus & Research、Project Integration、Development、Reference。
+文档首页的信息架构固定为：从这里开始、核心概念、写作、质量、正典与状态落定、上下文与记忆、学习、语义执行、会话与控制平面、语料库与研究、项目集成、开发、参考。
 
-## Canvas First, Cards Second
+## 画布优先，卡片其次
 
-默认状态：no container。
+默认状态是不加容器。
 
-Spacing 能建立 group，就不要画 border；极淡 semantic wash 能建立 group，就不要画 border；typography 能建立 hierarchy，就不要画 border。
+留白能分组，就不要画边框；极淡的语义底色能分组，就不要画边框；字体层级能建立结构，就不要画边框。
 
-只有真实 artifact、state、comparison 或明确 conceptual boundary 才使用边界。禁止 framed section 里再塞 framed card 的嵌套结构。
+只有真实制品、状态、比较关系或明确概念边界才使用容器。禁止在有边框的章节里再套有边框卡片。
 
-## Visual Language
+## 视觉语言
 
-Base canvas 使用 warm ivory / soft off-white，正文用 graphite ink；大字号 display type 建立 editorial hierarchy；technical label 小、精确、安静。Kawaii personality 只是克制 accent——全页大约 5%，高密度 technical diagram 甚至更少。
+基础画布使用暖象牙色或柔和的灰白色，正文使用石墨色；较大的展示字体建立编辑层级；技术标签保持小、准、安静。可爱元素只是克制的点缀——整页大约 5%，高密度技术图甚至更少。
 
-允许极少量 spark、tape fragment、ribbon marker、soft index tab；一张图通常 0–3 个 decorative detail 就够了。
+允许极少量星点、胶带碎片、丝带标记或柔和索引签；一张图通常 0–3 个装饰细节就够了。
 
-## Semantic Color
+## 语义配色
 
-Project = soft blue；Runtime = violet；Editorial = soft pink；Evidence = warm cream/gold；Validated = mint；Rejected/Stale = soft rose；Neutral = warm paper + graphite。颜色负责 signal，不能成为唯一的信息载体。
+项目使用柔和蓝色；运行时使用紫色；编辑状态使用柔和粉色；证据使用暖奶油色或金色；验证通过使用薄荷绿；拒绝或过期使用柔和玫瑰红；中性区域使用暖纸色和石墨色。颜色用于辅助识别，不能成为唯一的信息载体。
 
-## Diagram Rules
+## 图示规则
 
-Technical architecture 默认 SVG：diffable、inspectable、scalable、accessible。优先 open group、text-only node、thin connector、short rule、small semantic marker，而不是重复 rounded rectangle。
+技术架构默认使用 SVG：便于比较差异、检查内容、无损缩放并满足无障碍要求。优先使用开放分组、纯文字节点、细连接线、短分隔线和小型语义标记，而不是重复堆圆角矩形。
 
-所有 documentation SVG 必须有 meaningful `<title>` / `<desc>`、可读 label、足够 contrast；结构复杂时文档正文还要有 textual explanation。禁止 AI-generated raster 代替 technical diagram。
+所有文档 SVG 都必须有有意义的 `<title>` 和 `<desc>`、可读标签与足够对比度；结构复杂时，正文还必须提供文字解释。禁止用模型生成的位图代替技术架构图。
 
-## Public Brand 与 Technical Namespace
+## 公开品牌与技术命名空间
 
-Quillframe 是 current public brand。旧品牌只在 historical record 或 compatibility identifier 中保留。Repository name、schema ID、`novelforge.toml`、`novelforge.lock.json`、workflow name 与 stable contract ID 属于 technical namespace，禁止 global replace。
+Quillframe 是当前公开品牌。旧品牌只在历史记录或兼容标识中保留。仓库名称、模式标识、`novelforge.toml`、`novelforge.lock.json`、工作流名称和稳定契约标识属于技术命名空间，禁止全局替换。
 
-## Bilingual Parity
+## 中文必须按中文写作习惯撰写
 
-English / 简体中文是 semantic parity 的 native edition，不做逐行硬翻。Canon、SETTLE、Candidate Lineage、Context Manifest 等正式 term 在能提升 contract precision 时可以保留英文。
+简体中文文档不是英文术语的中文语法外壳。解释性正文、标题、链接文字、图示标签和无障碍说明，默认都应使用自然中文。
 
-## Source Hierarchy
+只有以下情况可以保留英文或缩写：公开品牌与专有产品名；必须精确匹配的代码标识、枚举值、命令模式、文件名和模式标识；行业中没有自然中文替代且保留原名更准确的外部技术名称。精确标识应尽量放在反引号代码样式中，不要把它们扩散成整句中英夹杂。
 
-Current implementation、schema、tests、current manifest 高于 explanatory docs。Historical spec 保留当时设计记录与当时名称；current docs 可以链接，但不能重写历史。
+如果需要介绍一个技术术语，先写中文含义，再在必要时给出一次精确英文标识；后文继续使用中文。禁止出现“中文动词 + 一串普通英文名词”的写法，例如把“项目权威、语义执行、确定性运行时”写成英文词组拼接。
+
+## 双语一致性
+
+英文版和简体中文版都应作为各自语言的原生撰写版本，保持语义一致，但不做逐行硬翻。技术标识在确实需要精确匹配时可以保留，概念性术语则优先使用自然中文。
+
+## 资料优先级
+
+当前实现、模式定义、测试和当前清单高于解释性文档。历史规格保留当时的设计记录和当时的名称；当前文档可以链接历史规格，但不能改写历史。
