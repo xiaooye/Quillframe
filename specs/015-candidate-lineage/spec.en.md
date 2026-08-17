@@ -16,6 +16,7 @@ Make prose-candidate derivation inspectable and fingerprint-bound without replac
 8. Preserve exact resume reconstruction from durable state.
 9. Add no Writer context and no mandatory semantic call.
 10. Keep all lineage/evidence records `authority=false`.
+11. Expose machine-readable projections through `quality/candidate_lineage.schema.json`, versioned as `novelforge_candidate_lineage_v1` using JSON Schema draft 2020-12.
 
 ## Non-goals
 
@@ -30,6 +31,8 @@ Make prose-candidate derivation inspectable and fingerprint-bound without replac
 
 Migration is additive in the existing quality-evolution SQLite database. Existing callers remain valid. Historical provenance is not guessed. Consumers require no automatic repin or migration.
 
+The machine-readable schema is additive and describes the lineage candidate view, durable graph projection, and SETTLE reference-consistency receipt. It does not grant those projections authority.
+
 ## Acceptance criteria
 
-Required deterministic tests A-H in `docs/CANDIDATE_LINEAGE_V1.en.md` pass; the legacy-vs-lineage ablation demonstrates the representation gap is closed without changing incumbent selection; repository hygiene and relevant CI pass; no authority boundary is weakened.
+Required deterministic tests A-H in `docs/CANDIDATE_LINEAGE_V1.en.md` pass; the legacy-vs-lineage ablation demonstrates the representation gap is closed without changing incumbent selection; `quality/candidate_lineage.schema.json` parses with identity `novelforge_candidate_lineage_v1`; repository hygiene and relevant CI pass; no authority boundary is weakened.
