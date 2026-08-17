@@ -110,6 +110,23 @@ jobs:
                   'challenger': {'candidate_id': 'C1', 'content_fingerprint': 'sha256:' + '1' * 64, 'repair_owner': 'scene'},
                   'repair_context': {'targets': ['reader pressure']},
               },
+              'quality.ablation_compare': {
+                  'comparison_id': 'ABL-CI',
+                  'candidate_fingerprint': fp,
+                  'condition_a': {
+                      'condition_id': 'A',
+                      'input_fingerprint': 'sha256:' + '1' * 64,
+                      'result_fingerprint': 'sha256:' + '2' * 64,
+                      'judgment': {'confidence': 0.8, 'verdict': 'accept', 'codes': [], 'evidence': ['A evidence']},
+                  },
+                  'condition_b': {
+                      'condition_id': 'B',
+                      'input_fingerprint': 'sha256:' + '3' * 64,
+                      'result_fingerprint': 'sha256:' + '4' * 64,
+                      'judgment': {'confidence': 0.8, 'verdict': 'accept', 'codes': [], 'evidence': ['B evidence']},
+                  },
+                  'observation_criteria': ['semantic stability', 'regression evidence'],
+              },
               'relationship.memory_reconcile': {
                   'relationship_id': 'REL-CI', 'current_story_order': 9, 'participants': ['CHAR-A', 'CHAR-B'],
                   'ordered_evidence': [{'evidence_id': 'RE-CI', 'story_order': 8, 'source_ref': 'accepted:REL-CI', 'authority': 'accepted', 'event': 'A promise created an obligation.', 'effects': {'obligation': 'open'}}],
