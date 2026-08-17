@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "novelforge_known_regression_escape_v1",
+  "title": "NovelForge Known Regression Escape Receipt",
+  "type": "object",
+  "required": [
+    "schema",
+    "candidate_fingerprint",
+    "failure_mechanism",
+    "where_it_should_have_been_caught",
+    "where_it_was_actually_detected",
+    "user_detected",
+    "previously_known",
+    "known_evidence_refs",
+    "detection_evidence_refs",
+    "quality_loop_escape",
+    "user_regression_detector_escape",
+    "literary_verdict_created_by_runtime",
+    "authority",
+    "permissions",
+    "model_execution",
+    "receipt_fingerprint"
+  ],
+  "properties": {
+    "schema": {"const": "novelforge_known_regression_escape_v1"},
+    "candidate_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "failure_mechanism": {"type": "string", "minLength": 1},
+    "where_it_should_have_been_caught": {"enum": ["manager_self_audit", "reader_engagement", "continuity", "independent_review", "user", "post_delivery_audit", "unknown"]},
+    "where_it_was_actually_detected": {"enum": ["manager_self_audit", "reader_engagement", "continuity", "independent_review", "user", "post_delivery_audit", "unknown"]},
+    "user_detected": {"type": "boolean"},
+    "previously_known": {"type": "boolean"},
+    "known_evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "detection_evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "quality_loop_escape": {"type": "boolean"},
+    "user_regression_detector_escape": {"type": "boolean"},
+    "literary_verdict_created_by_runtime": {"const": false},
+    "authority": {"const": false},
+    "permissions": {
+      "type": "object",
+      "required": ["canon_write", "framework_write", "durable_user_taste_write"],
+      "properties": {
+        "canon_write": {"const": false},
+        "framework_write": {"const": false},
+        "durable_user_taste_write": {"const": false}
+      },
+      "additionalProperties": false
+    },
+    "model_execution": {"const": false},
+    "receipt_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "additionalProperties": false
+}
