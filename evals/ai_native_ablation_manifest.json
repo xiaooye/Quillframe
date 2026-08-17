@@ -16,7 +16,7 @@
       "INCONCLUSIVE"
     ],
     "absence_of_evidence": "PENDING_MODEL",
-    "safety_regression": "KEEP",
+    "simpler_arm_safety_regression": "KEEP",
     "conflicting_judgments": "INCONCLUSIVE",
     "simplify_only_when": "declared simpler arm is externally judged non-inferior or better across all required comparable observations, with no safety regression"
   },
