@@ -1,0 +1,103 @@
+{
+  "schema": "novelforge_feedback_learning_ablation_manifest_v1",
+  "version": "1",
+  "purpose": "Blind, fingerprint-bound semantic comparison of steering-only feedback handling against automatic bounded Learning intake, including negative, authority, dual-consumer, contradiction and resume controls.",
+  "pair_review_contract": "quality.ablation_compare",
+  "model_execution_required_for_semantic_outcomes": true,
+  "manager_self_judgment_allowed": false,
+  "missing_model_state": "PENDING_MODEL",
+  "conditions_are_anonymous_to_reviewer": true,
+  "controls": [
+    {
+      "id": "automatic_intake",
+      "candidate_ref": "feedback-learning:explicit-project-feedback-v1",
+      "observation_criteria": [
+        "current-run instruction remains immediately actionable",
+        "meaningful feedback becomes resumable learning evidence without a LEARN-mode switch",
+        "durable behavior authority is not silently granted",
+        "the behavior is auditable through exact event/result/evidence bindings"
+      ],
+      "condition_a": {
+        "feedback": "This book's ensemble dialogue is too bookish; make it more natural and interesting going forward.",
+        "primary_mode": "REVISE",
+        "trace": {
+          "feedback_observed": true,
+          "author_steering_applied": true,
+          "learning_intake_triggered": false,
+          "learning_evidence_persisted": false,
+          "mode_switch_to_learn": false
+        }
+      },
+      "condition_b": {
+        "feedback": "This book's ensemble dialogue is too bookish; make it more natural and interesting going forward.",
+        "primary_mode": "REVISE",
+        "trace": {
+          "feedback_observed": true,
+          "author_steering_applied": true,
+          "learning_intake_triggered": true,
+          "semantic_interpretation_bound": true,
+          "learning_evidence_candidate_persisted": true,
+          "project_profile_auto_written": false,
+          "durable_preference_auto_activated": false,
+          "mode_switch_to_learn": false
+        }
+      }
+    },
+    {
+      "id": "negative_control",
+      "candidate_ref": "feedback-learning:nonfeedback-v1",
+      "observation_criteria": [
+        "ordinary continuation/acknowledgement is not converted into a fabricated preference",
+        "the system may leave an auditable skip receipt without manufacturing semantic content"
+      ],
+      "condition_a": {"user_turn": "Continue to the next paragraph.", "trace": {"learning_intake": "absent"}},
+      "condition_b": {"user_turn": "Continue to the next paragraph.", "trace": {"learning_intake": "processed", "capture_decision": "skip", "hypothesis_created": false}}
+    },
+    {
+      "id": "authority_control",
+      "candidate_ref": "feedback-learning:user-taste-authority-v1",
+      "observation_criteria": [
+        "user-taste evidence can be captured without becoming active",
+        "General Craft/user-taste promotion authority remains separate from semantic interpretation"
+      ],
+      "condition_a": {"feedback": "I dislike heavy English code-switching in all my Chinese novels.", "trace": {"learning_intake_triggered": false}},
+      "condition_b": {"feedback": "I dislike heavy English code-switching in all my Chinese novels.", "trace": {"scope_candidate": "user_taste", "candidate_persisted": true, "active": false, "promotion_authorized": false}}
+    },
+    {
+      "id": "dual_consumer_control",
+      "candidate_ref": "feedback-learning:dual-consumer-v1",
+      "observation_criteria": [
+        "author steering and learning can consume the same durable event independently",
+        "one consumer's exactly-once receipt cannot starve the other consumer"
+      ],
+      "condition_a": {"trace": {"author_steering_consumed": true, "learning_consumed": false}},
+      "condition_b": {"trace": {"author_steering_consumed": true, "learning_consumed": true, "distinct_consumer_receipts": true}}
+    },
+    {
+      "id": "contradiction_control",
+      "candidate_ref": "feedback-learning:contradiction-v1",
+      "observation_criteria": [
+        "new contextual feedback can contest or narrow an older hypothesis rather than blindly coexist",
+        "semantic contradiction remains contextual and provenance-bound rather than keyword-driven"
+      ],
+      "condition_a": {"prior": "Use more professional detail.", "new": "In openings, avoid professional feel; charisma and plot matter more.", "trace": {"both_preferences_left_unreconciled": true}},
+      "condition_b": {"prior": "Use more professional detail.", "new": "In openings, avoid professional feel; charisma and plot matter more.", "trace": {"semantic_relation": "contest", "applicability_boundary": "opening", "old_hypothesis_state": "contested"}}
+    },
+    {
+      "id": "pending_resume_control",
+      "candidate_ref": "feedback-learning:pending-resume-v1",
+      "observation_criteria": [
+        "missing semantic capability does not drop or heuristically classify feedback",
+        "later resume can validate and consume the same event exactly once"
+      ],
+      "condition_a": {"trace": {"semantic_capability": false, "feedback_after_session": "not_learned"}},
+      "condition_b": {"trace": {"semantic_capability": false, "status": "awaiting_semantic", "heuristic_classification": false, "later_resume_supported": true, "consume_once": true}}
+    }
+  ],
+  "authority": {
+    "canon_write": false,
+    "project_profile_write": false,
+    "durable_user_taste_write": false,
+    "framework_behavior_write": false
+  }
+}

@@ -130,6 +130,8 @@ worker completes
 
 NovelForge 的 consume-once 语义针对的是**下游逻辑应用**，不是宣称 transport message 一定只送达一次。
 
+`feedback.observed` 刻意支持 multi-consumer。Author Steering 与 automatic Learning Intake 使用不同 logical consumer（例如 `author_steering:<session>` 与 `learning_feedback:<project-or-resource>`），因此一个 receipt 不会把 event 对另一路径全局吃掉或删除；每个 consumer 分别绑定同一 exact event hash。只读 feedback observability 不 consume event。event 到达或被消费都不会授予 Project Profile、user-taste、Framework 或 Canon authority。
+
 这样才能正确容忍：
 
 - webhook / event 重复送达；

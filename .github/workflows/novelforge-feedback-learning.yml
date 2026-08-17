@@ -1,0 +1,110 @@
+name: NovelForge Feedback Learning
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  feedback-learning:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile feedback learning runtime
+        run: |
+          python -m py_compile \
+            learning/learning_store.py \
+            learning/author_model.py \
+            learning/feedback_intake.py \
+            learning/feedback_query.py \
+            evals/feedback_learning_ablation.py \
+            harness/control_plane/control_plane.py \
+            harness/control_plane/author_steering.py \
+            harness/semantic_workers/semantic_worker_router.py
+
+      - name: Validate feedback learning schemas
+        run: |
+          python -m json.tool learning/feedback_intake.schema.json > /dev/null
+          python -m json.tool evals/feedback_learning_ablation_manifest.json > /dev/null
+          python -m json.tool harness/semantic_workers/model_contract_catalog.json > /dev/null
+          python -m json.tool harness/semantic_workers/contracts/production-loop.json > /dev/null
+
+      - name: Automatic feedback intake contract
+        run: |
+          python learning/feedback_intake.py self-test --path /tmp/novelforge-feedback-learning-ci > feedback-intake-test.json
+          cat feedback-intake-test.json
+
+      - name: Semantic ablation packet contract
+        run: |
+          python evals/feedback_learning_ablation.py self-test > feedback-ablation-test.json
+          python evals/feedback_learning_ablation.py build > feedback-ablation-queue.json
+          cat feedback-ablation-test.json
+
+      - name: Existing learning and steering regression contracts
+        run: |
+          python learning/author_model.py self-test --path /tmp/novelforge-author-model-feedback-ci.db > author-model-feedback-test.json
+          python learning/learning_store.py --db /tmp/novelforge-learning-feedback-ci.db self-test > learning-store-feedback-test.json
+          python learning/learning_cycle.py self-test --path /tmp/novelforge-learning-cycle-feedback-ci.db > learning-cycle-feedback-test.json
+          python learning/promotion_gate.py self-test > promotion-gate-feedback-test.json
+          python harness/control_plane/control_plane.py --db /tmp/novelforge-control-feedback-ci.db self-test > control-plane-feedback-test.json
+          python harness/control_plane/author_steering.py self-test --path /tmp/novelforge-steering-feedback-ci.db > steering-feedback-test.json
+
+      - name: Assert authority privacy and no hidden model use
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('feedback-intake-test.json',encoding='utf-8'))
+          assert d['feedback_intake_contract']=='PASS',d
+          required=[
+            'automatic_project_feedback','one_off_not_active','user_taste_candidate_not_active',
+            'general_craft_not_auto_promoted','nonfeedback_and_ack_skipped','rejection_negative_only',
+            'comparison_strengthens_existing','contradiction_first_class','retry_exactly_once',
+            'two_independent_turns_one_hypothesis','dual_consumer_independent',
+            'missing_semantic_pending_and_resume','current_explicit_instruction_wins',
+            'privacy_minimal_runtime_storage','normal_ci_model_execution_false',
+          ]
+          assert all(d[x] is True for x in required),d
+          assert d['shared_event_schema_changed'] is False,d
+          assert d['second_learning_database_created'] is False,d
+          assert d['project_profile_write'] is False,d
+          assert d['canon_write'] is False,d
+          assert d['framework_behavior_write'] is False,d
+          assert d['model_execution'] is False,d
+
+          a=json.load(open('feedback-ablation-test.json',encoding='utf-8'))
+          assert a['feedback_learning_ablation_contract']=='PASS',a
+          assert a['independent_contract_bound'] is True,a
+          assert a['no_model_state']=='PENDING_MODEL',a
+          assert a['manager_self_judgment_allowed'] is False,a
+          assert a['model_execution'] is False,a
+
+          # Legacy deterministic self-tests predate the model_execution field.
+          # Missing is compatible; an explicit true is never allowed in normal CI.
+          for f in ['author-model-feedback-test.json','learning-store-feedback-test.json','learning-cycle-feedback-test.json','promotion-gate-feedback-test.json','control-plane-feedback-test.json','steering-feedback-test.json']:
+            x=json.load(open(f,encoding='utf-8'))
+            assert x.get('model_execution', False) is False,(f,x)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: novelforge-feedback-learning-contract
+          path: |
+            feedback-intake-test.json
+            feedback-ablation-test.json
+            feedback-ablation-queue.json
+            author-model-feedback-test.json
+            learning-store-feedback-test.json
+            learning-cycle-feedback-test.json
+            promotion-gate-feedback-test.json
+            control-plane-feedback-test.json
+            steering-feedback-test.json
+          if-no-files-found: error
+          retention-days: 7
