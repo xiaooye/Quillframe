@@ -11,12 +11,16 @@ inputs:
     description: Expected Project ID
     required: true
   github-token:
-    description: Caller repository token; review mode additionally requires workflow permission models: read
+    description: Caller repository token with issues write permission
     required: true
-  review-model:
-    description: GitHub Models model id used only in review mode
+  copilot-token:
+    description: Optional fine-grained PAT with Copilot Requests permission; recommended for personal repositories. Organization workflows may use their GitHub Actions token when Copilot CLI billing policy permits it.
     required: false
-    default: openai/gpt-4.1
+    default: ""
+  review-model:
+    description: GitHub Copilot CLI model id used only in review mode
+    required: false
+    default: claude-sonnet-4.6
 outputs:
   validation-receipt:
     description: Machine receipt emitted after review or validate-result succeeds; empty during prepare mode.
@@ -40,13 +44,23 @@ runs:
         QUILLFRAME_ACTION_REF: ${{ github.action_ref }}
         QUILLFRAME_ACTION_REPOSITORY: ${{ github.action_repository }}
       run: python "$QUILLFRAME_ACTION_PATH/bridge.py"
-    - name: Execute independent GitHub Models peer review
+    - name: Set up Node for independent Copilot reviewer
+      if: ${{ inputs.mode == 'review' }}
+      uses: actions/setup-node@v7
+      with:
+        node-version: '24'
+    - name: Install GitHub Copilot CLI
+      if: ${{ inputs.mode == 'review' }}
+      shell: bash
+      run: npm install -g @github/copilot
+    - name: Execute independent GitHub Copilot peer review
       id: review
       if: ${{ inputs.mode == 'review' }}
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
+        COPILOT_GITHUB_TOKEN: ${{ inputs.copilot-token }}
         QUILLFRAME_PROJECT_ROOT: ${{ inputs.project-root }}
         QUILLFRAME_PROJECT_ID: ${{ inputs.project-id }}
         QUILLFRAME_ACTION_PATH: ${{ github.action_path }}
