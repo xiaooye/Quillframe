@@ -34,6 +34,7 @@
 @import "./embedded-features.css";
 @import "./route-identities.css";
 @import "./story-loom-route-refinements.css";
+@import "./changelog-notebook.css";
 @import "./publication-gallery.css";
 
 /* Cross-cutting readability, then the final resilience/accessibility contract. */
