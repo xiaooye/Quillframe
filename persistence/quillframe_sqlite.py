@@ -399,6 +399,10 @@ class QuillframeStore:
                 ).fetchall()
             except sqlite3.OperationalError:
                 rows = []
+            # FTS unicode tokenization is not a substring guarantee. In particular,
+            # short CJK queries such as "门开" may legally produce no MATCH rows.
+            # A bounded literal fallback preserves predictable manuscript search
+            # without pretending tokenizer failure means the text is absent.
             if not rows:
                 rows = self._literal_search_rows(conn, needle, bounded_limit)
             return [dict(row) for row in rows]
