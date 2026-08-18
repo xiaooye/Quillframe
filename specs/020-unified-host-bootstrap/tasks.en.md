@@ -11,37 +11,38 @@ Format: `[ID] [P?] [Phase] exact target + completion criterion`
 
 ## Phase 2 · Unified Host Runtime
 
-- [ ] T010 Add `harness/integrations/host_bootstrap.py` with host-neutral scope/authority/session state.
-- [ ] T011 Persist full `quillframe_agent_session_v1` through Control Plane instead of ad-hoc host session payload.
-- [ ] T012 Derive truthful `blocked | awaiting_task_mode | running` host states.
-- [ ] T013 Make `claude_hook.py` a compatibility wrapper over the unified runtime.
-- [ ] T014 Add Codex wrapper/dispatch with Codex tool alias normalization.
+- [x] T010 Add `harness/integrations/host_bootstrap.py` with host-neutral scope/authority/session state.
+- [x] T011 Persist full `quillframe_agent_session_v1` through Control Plane instead of ad-hoc host session payload.
+- [x] T012 Derive truthful `blocked | awaiting_task_mode | running` host states.
+- [x] T013 Make `claude_hook.py` a compatibility wrapper over the unified runtime.
+- [x] T014 Add Codex wrapper/dispatch with Codex tool alias normalization.
 
 ## Phase 3 · Task Mode / Run Gate
 
-- [ ] T020 Add `quillframe host-run status|begin` deterministic CLI surface.
-- [ ] T021 Validate exactly one allowed task mode and start exactly one manager run.
-- [ ] T022 Deny consequential writes until valid authority + active task mode/run.
-- [ ] T023 Permit only strict Quillframe bootstrap commands before mode resolution; reject lookalike shell commands.
-- [ ] T024 Treat Codex `apply_patch` as consequential edit.
+- [x] T020 Add `quillframe host-run status|begin` deterministic CLI surface.
+- [x] T021 Validate exactly one allowed task mode and start exactly one manager run.
+- [x] T022 Deny consequential writes until valid authority + active task mode/run.
+- [x] T023 Permit only strict Quillframe bootstrap commands before mode resolution; reject lookalike shell commands.
+- [x] T024 Treat Codex `apply_patch` as consequential edit.
 
 ## Phase 4 · Host Scaffolding
 
-- [ ] T030 Replace root router-only `AGENTS.md` with compact direct Quillframe bootstrap instructions.
-- [ ] T031 Update generated consumer `AGENTS.md` to include direct exact-authority/session/run bootstrap.
-- [ ] T032 Generate consumer `.codex/hooks.json` and keep Claude host scaffold compatible.
-- [ ] T033 Add Framework `.codex/hooks.json` for trusted local Codex sessions without requiring package installation for static instruction correctness.
-- [ ] T034 Add explicit idempotent `quillframe host-install` repair path for existing supported Projects with safe overwrite preconditions.
+- [x] T030 Replace root router-only `AGENTS.md` with compact direct Quillframe bootstrap instructions.
+- [x] T031 Make official `quillframe init` / `host-install` install the generated consumer `AGENTS.md` with direct exact-authority/session/run bootstrap.
+- [x] T032 Generate consumer `.codex/hooks.json` through the official CLI scaffold path and keep Claude host scaffold compatible.
+- [x] T033 Add Framework `.codex/hooks.json` for trusted local Codex sessions without requiring package installation for static instruction correctness.
+- [x] T034 Add explicit idempotent `quillframe host-install` repair path for existing supported Projects with safe overwrite preconditions.
 
 ## Phase 5 · Verification
 
-- [ ] T040 Add deterministic unified-host regression tests covering Claude/Codex parity, typed sessions, task modes, runs, write gates, stale authority, hook aliases, and retrofit behavior.
-- [ ] T041 Verify existing Project SDK/bootstrap tests remain green.
-- [ ] T042 Verify normal CI performs no live model/API execution.
-- [ ] T043 Run docs/site/Studio CI and separate candidate-owned failures from unrelated debt.
+- [x] T040 Add deterministic unified-host regression tests covering Claude/Codex parity, typed sessions, task modes, runs, write gates, stale authority, hook aliases, and retrofit behavior.
+- [x] T041 Verify existing Project SDK/bootstrap tests remain green after compatibility repairs.
+- [x] T042 Verify normal CI performs no live model/API execution.
+- [x] T043 Run Core/SQLite/authority, docs/site, and Studio CI; run 705 is fully green.
 
 ## Phase 6 · Documentation / Acceptance
 
-- [ ] T050 Synchronize bilingual Project SDK/integration docs including Codex hook trust instructions.
-- [ ] T051 Review exact diff for Framework/Project/Canon/provider overreach.
-- [ ] T052 Open review PR only after deterministic candidate checks are ready; merge only after CI and explicit acceptance.
+- [x] T050 Synchronize bilingual Project SDK/integration docs including Codex hook trust instructions.
+- [x] T051 Review exact changed-file set for Framework/Project/Canon/provider overreach: changes are limited to host/runtime/CLI/tests/docs/spec surfaces; no Project Canon, settlement, provider secret, or Studio UI path is modified.
+- [x] T052 Open draft review PR #141 with the candidate isolated from `main`.
+- [ ] T053 Mark ready/merge only after explicit user acceptance; until then keep the candidate reviewable and do not mutate `main`.
