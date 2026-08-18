@@ -10,26 +10,26 @@
 
 ## Phase 2 · Project Authority
 
-- [ ] T010 在 `project_sdk.py` 增加 clean-checkout exact Framework identity helper。
-- [ ] T011 新 Project init 写入 exact lock + 匹配的 `framework.attestation.json`。
-- [ ] T012 增加显式 `pin` operation 与 `authority_ready` validation，不静默迁移 legacy Project。
+- [x] T010 在 `project_sdk.py` 增加 clean-checkout exact Framework identity helper。
+- [x] T011 新 Project init 写入 exact lock + 匹配的 `framework.attestation.json`。
+- [x] T012 增加显式 `pin` operation 与 `authority_ready` validation，不静默迁移 legacy Project。
 
 ## Phase 3 · Host Entry
 
-- [ ] T020 增加 `quillframe` console entrypoint 与 CLI delegation。
-- [ ] T021 把根 Claude router-only 行为改为官方支持的 static imports。
-- [ ] T022 把 Claude hook 从 telemetry-only 升级为 bootstrap context + cached authority snapshot。
-- [ ] T023 consumer authority verification 失败时，对 consequential tools fail closed。
-- [ ] T024 新 Project scaffold 生成使用已安装 host bridge 的 `.claude/settings.json`。
+- [x] T020 增加 `quillframe` console entrypoint 与 CLI delegation。
+- [x] T021 把根 Claude router-only 行为改为官方支持的 static imports。
+- [x] T022 把 Claude hook 从 telemetry-only 升级为 bootstrap context + cached authority snapshot。
+- [x] T023 consumer authority verification 失败时，对 consequential tools fail closed。
+- [x] T024 新 Project scaffold 生成使用已安装 host bridge 的 `.claude/settings.json`。
 
 ## Phase 4 · Verification
 
-- [ ] T030 增加 deterministic bootstrap / host regression tests。
+- [x] T030 增加 deterministic bootstrap / host regression tests。
 - [ ] T031 运行 core/unit/docs quality CI，并修复 candidate-owned failure。
 - [ ] T032 确认 normal CI 没有引入 model / live API execution。
 
 ## Phase 5 · Documentation / Acceptance
 
-- [ ] T040 同步中英文 Quick Start 与 Project SDK docs。
+- [x] T040 同步中英文 Quick Start 与 Project SDK docs。
 - [ ] T041 审查 exact diff，确认 Framework / Project / Canon boundary 没有 overreach。
 - [ ] T042 仅在 CI green 后 merge，并删除临时 branch。
