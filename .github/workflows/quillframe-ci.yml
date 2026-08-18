@@ -61,6 +61,23 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_quillframe_*.py' -v
       - name: Host Bridge self-test
         run: python studio/host_bridge.py self-test
+      - name: Build exact-SHA ephemeral runtime bundle
+        run: |
+          mkdir -p /tmp/quillframe-runtime
+          tar \
+            --exclude='.git' \
+            --exclude='site/node_modules' \
+            --exclude='studio/app/node_modules' \
+            -czf "/tmp/quillframe-runtime/quillframe-runtime-${GITHUB_SHA}.tar.gz" .
+          sha256sum "/tmp/quillframe-runtime/quillframe-runtime-${GITHUB_SHA}.tar.gz" > "/tmp/quillframe-runtime/quillframe-runtime-${GITHUB_SHA}.sha256"
+          printf '%s\n' "${GITHUB_SHA}" > /tmp/quillframe-runtime/framework-commit.txt
+      - name: Upload exact-SHA ephemeral runtime bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: quillframe-runtime-${{ github.sha }}
+          path: /tmp/quillframe-runtime/
+          if-no-files-found: error
+          retention-days: 7
 
   site:
     name: Product site and docs
