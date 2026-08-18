@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_studio_host_bridge_contract_v1",
-  "version": "5",
+  "version": "6",
   "framework_version": "0.9.0",
   "authority": false,
   "canon_authority": false,
@@ -8,12 +8,7 @@
   "settlement_authority": false,
   "direct_core_store_access": false,
   "product_model": "one_product_one_core_many_transports",
-  "surfaces": [
-    "cli",
-    "local_app",
-    "hosted_web",
-    "agent_package"
-  ],
+  "surfaces": ["cli", "local_app", "hosted_web", "agent_package"],
   "invariants": {
     "browser_sqlite_access": false,
     "generic_mutation_dispatch": false,
@@ -24,186 +19,76 @@
     "feedback_auto_promote": false,
     "corpus_is_canon": false,
     "research_is_character_knowledge": false,
-    "secret_in_semantic_context": false
+    "secret_in_semantic_context": false,
+    "production_worker_db_fetch": false,
+    "context_refresh_is_explicit": true,
+    "model_capability_grants_authority": false
+  },
+  "secret_boundary": {
+    "public_setup_inputs": ["endpoint", "access_token"],
+    "durable_core_field": "credential_ref",
+    "access_token_durable_storage": false,
+    "access_token_in_request_fingerprint": false,
+    "access_token_in_context": false,
+    "access_token_in_agent_job": false,
+    "access_token_in_receipt": false,
+    "access_token_in_export": false,
+    "desktop_expected_host_store": "tauri_os_keychain_secret_store",
+    "hosted_expected_host_store": "server_side_secure_secret_or_session_store",
+    "process_fallback": "memory_secret_store_non_durable",
+    "cloudflare_required": false
   },
   "operations": {
-    "bridge.describe": {
-      "kind": "query",
-      "required_args": []
-    },
-    "database.doctor": {
-      "kind": "query",
-      "required_args": []
-    },
-    "project.create": {
-      "kind": "command",
-      "required_args": [
-        "project_id",
-        "title"
-      ]
-    },
-    "project.inspect": {
-      "kind": "query",
-      "required_args": [
-        "project_id"
-      ]
-    },
-    "project.search": {
-      "kind": "query",
-      "required_args": [
-        "project_id",
-        "query"
-      ]
-    },
-    "project.backup": {
-      "kind": "command",
-      "required_args": [
-        "project_id"
-      ]
-    },
-    "document.create": {
-      "kind": "command",
-      "required_args": [
-        "project_id",
-        "document_id",
-        "title"
-      ]
-    },
-    "document.revision.save": {
-      "kind": "command",
-      "required_args": [
-        "project_id",
-        "document_id",
-        "content",
-        "source"
-      ]
-    },
-    "document.revision.compare": {
-      "kind": "query",
-      "required_args": [
-        "project_id",
-        "left_revision_id",
-        "right_revision_id"
-      ]
-    },
-    "author.run.start": {
-      "kind": "command",
-      "required_args": [
-        "project_id",
-        "task_mode",
-        "payload"
-      ]
-    },
-    "candidate.accept": {
-      "kind": "authority_command",
-      "required_args": [
-        "project_id",
-        "candidate_id",
-        "candidate_fingerprint",
-        "authorized_by",
-        "authorization",
-        "idempotency_key",
-        "user_authorized"
-      ],
-      "allowed_surfaces": [
-        "cli",
-        "local_app",
-        "hosted_web"
-      ]
-    },
-    "settlement.apply": {
-      "kind": "authority_command",
-      "required_args": [
-        "project_id",
-        "acceptance_id",
-        "target_ref",
-        "expected_before_fingerprint",
-        "idempotency_key",
-        "user_authorized"
-      ],
-      "allowed_surfaces": [
-        "cli",
-        "local_app",
-        "hosted_web"
-      ]
-    },
-    "feedback.observe": {
-      "kind": "command",
-      "required_args": [
-        "project_id",
-        "evidence_kind",
-        "payload"
-      ]
-    },
-    "publication.preview": {
-      "kind": "query",
-      "required_args": [
-        "project_id",
-        "acceptance_id"
-      ]
-    },
-    "publication.build": {
-      "kind": "command",
-      "required_args": [
-        "project_id",
-        "acceptance_id"
-      ]
-    },
-    "inspector.sessions.list": {
-      "kind": "query",
-      "required_args": [
-        "project_id"
-      ]
-    },
-    "inspector.runs.list": {
-      "kind": "query",
-      "required_args": [
-        "project_id"
-      ]
-    },
-    "inspector.checkpoints.list": {
-      "kind": "query",
-      "required_args": [
-        "project_id"
-      ]
-    },
-    "inspector.context.list": {
-      "kind": "query",
-      "required_args": [
-        "project_id"
-      ]
-    },
-    "inspector.receipts.list": {
-      "kind": "query",
-      "required_args": [
-        "project_id"
-      ]
-    },
-    "inspector.candidates.list": {
-      "kind": "query",
-      "required_args": [
-        "project_id"
-      ]
-    },
-    "inspector.learning.list": {
-      "kind": "query",
-      "required_args": [
-        "project_id"
-      ]
-    },
-    "inspector.context.runtime": {
-      "kind": "query",
-      "required_args": [
-        "project_id",
-        "run_id"
-      ]
-    }
+    "bridge.describe": {"kind": "query", "required_args": []},
+    "database.doctor": {"kind": "query", "required_args": []},
+    "project.create": {"kind": "command", "required_args": ["project_id", "title"]},
+    "project.open": {"kind": "query", "required_args": ["project_id"]},
+    "project.inspect": {"kind": "query", "required_args": ["project_id"]},
+    "project.search": {"kind": "query", "required_args": ["project_id", "query"]},
+    "project.backup": {"kind": "command", "required_args": ["project_id"]},
+    "project.restore": {"kind": "command", "required_args": ["bundle_path"], "allowed_surfaces": ["cli", "local_app"]},
+
+    "document.create": {"kind": "command", "required_args": ["project_id", "document_id", "title"]},
+    "document.open": {"kind": "query", "required_args": ["project_id", "document_id"]},
+    "document.revisions.list": {"kind": "query", "required_args": ["project_id", "document_id"]},
+    "document.revision.save": {"kind": "command", "required_args": ["project_id", "document_id", "content", "source"]},
+    "document.revision.compare": {"kind": "query", "required_args": ["project_id", "left_revision_id", "right_revision_id"]},
+
+    "author.run.start": {"kind": "command", "required_args": ["project_id", "task_mode", "payload"]},
+    "author.run.status": {"kind": "query", "required_args": ["project_id", "run_id"]},
+    "author.run.execute": {"kind": "semantic_command", "required_args": ["project_id", "run_id", "service_id", "instruction"], "allowed_surfaces": ["cli", "local_app", "hosted_web"]},
+    "author.run.context.refresh": {"kind": "semantic_command", "required_args": ["project_id", "run_id", "service_id", "instruction"], "allowed_surfaces": ["cli", "local_app", "hosted_web"]},
+
+    "model.service.add": {"kind": "secret_command", "required_args": ["endpoint", "access_token"], "allowed_surfaces": ["cli", "local_app", "hosted_web"]},
+    "model.service.list": {"kind": "query", "required_args": []},
+    "model.service.get": {"kind": "query", "required_args": ["service_id"]},
+    "model.service.discover": {"kind": "external_query", "required_args": ["service_id"], "allowed_surfaces": ["cli", "local_app", "hosted_web"]},
+    "model.service.test": {"kind": "external_query", "required_args": ["service_id"], "allowed_surfaces": ["cli", "local_app", "hosted_web"]},
+    "model.service.token.replace": {"kind": "secret_command", "required_args": ["service_id", "access_token"], "allowed_surfaces": ["cli", "local_app", "hosted_web"]},
+    "model.service.token.remove": {"kind": "secret_command", "required_args": ["service_id"], "allowed_surfaces": ["cli", "local_app", "hosted_web"]},
+    "model.service.delete": {"kind": "command", "required_args": ["service_id"], "allowed_surfaces": ["cli", "local_app", "hosted_web"]},
+    "model.capabilities": {"kind": "query", "required_args": ["service_id"]},
+
+    "candidate.accept": {"kind": "authority_command", "required_args": ["project_id", "candidate_id", "candidate_fingerprint", "authorized_by", "authorization", "idempotency_key", "user_authorized"], "allowed_surfaces": ["cli", "local_app", "hosted_web"]},
+    "settlement.apply": {"kind": "authority_command", "required_args": ["project_id", "acceptance_id", "target_ref", "expected_before_fingerprint", "idempotency_key", "user_authorized"], "allowed_surfaces": ["cli", "local_app", "hosted_web"]},
+    "feedback.observe": {"kind": "command", "required_args": ["project_id", "evidence_kind", "payload"]},
+    "publication.preview": {"kind": "query", "required_args": ["project_id", "acceptance_id"]},
+    "publication.build": {"kind": "command", "required_args": ["project_id", "acceptance_id"]},
+
+    "inspector.sessions.list": {"kind": "query", "required_args": ["project_id"]},
+    "inspector.runs.list": {"kind": "query", "required_args": ["project_id"]},
+    "inspector.checkpoints.list": {"kind": "query", "required_args": ["project_id"]},
+    "inspector.context.list": {"kind": "query", "required_args": ["project_id"]},
+    "inspector.receipts.list": {"kind": "query", "required_args": ["project_id"]},
+    "inspector.candidates.list": {"kind": "query", "required_args": ["project_id"]},
+    "inspector.learning.list": {"kind": "query", "required_args": ["project_id"]},
+    "inspector.context.runtime": {"kind": "query", "required_args": ["project_id", "run_id"]}
   },
-  "forbidden_operations": [
-    "command.invoke",
-    "project.mutate",
-    "audit.rewrite",
-    "draft.settle",
-    "feedback.promote"
-  ]
+  "deferred_operations": {
+    "project.delete": {"status": "unsupported", "reason": "no Core-owned reversible delete transaction yet"},
+    "project.export": {"status": "awaiting_external", "reason": "portable project export/import transport is not part of this Core change"},
+    "project.import": {"status": "awaiting_external", "reason": "portable project export/import transport is not part of this Core change"},
+    "candidate.review.request": {"status": "unsupported", "reason": "production run owns mandatory review; no free-floating review authority is fabricated"}
+  },
+  "forbidden_operations": ["command.invoke", "project.mutate", "audit.rewrite", "draft.settle", "feedback.promote"]
 }
