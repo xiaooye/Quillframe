@@ -16,8 +16,8 @@ for path in (ROOT, SEMANTIC, QUALITY):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from model_runtime.persistence import ModelServiceRepository  # noqa: E402
-from model_runtime.secrets import SecretStore, SecretUnavailableError  # noqa: E402
+from model_runtime.persistence import SQLiteModelServiceRepository  # noqa: E402
+from model_runtime.secrets import SecretStore  # noqa: E402
 from persistence.quillframe_sqlite import QuillframeStore  # noqa: E402
 from studio import host_bridge  # noqa: E402
 
@@ -26,12 +26,7 @@ SECRET_REF_PREFIX = "keyring:qf:"
 
 
 class TauriInjectedSecretStore(SecretStore):
-    """Per-invocation SecretStore hydrated from the Tauri host keychain.
-
-    The store never persists secret bytes. A credential-producing request must
-    arrive with a preallocated keyring reference whose bytes have already been
-    durably stored by the Rust/Tauri host.
-    """
+    """Per-invocation SecretStore hydrated from the Tauri host keychain."""
 
     def __init__(self, seeded: dict[str, str] | None = None, *, prepared_ref: str | None = None) -> None:
         self._values = dict(seeded or {})
@@ -49,7 +44,7 @@ class TauriInjectedSecretStore(SecretStore):
         if not isinstance(secret, str) or not secret:
             raise ValueError("credential secret must be a non-empty string")
         if self._prepared_ref is None or self._prepared_used:
-            raise SecretUnavailableError("Tauri host did not preallocate a durable credential reference")
+            raise RuntimeError("Tauri host did not preallocate a durable credential reference")
         if not self._prepared_ref.startswith(SECRET_REF_PREFIX):
             raise ValueError("prepared credential reference has an invalid namespace")
         self._prepared_used = True
@@ -61,14 +56,14 @@ class TauriInjectedSecretStore(SecretStore):
         try:
             return self._values[reference]
         except KeyError as exc:
-            raise SecretUnavailableError(f"credential reference unavailable: {reference}") from exc
+            raise KeyError("credential reference unavailable") from exc
 
     def delete(self, reference: str) -> None:
         self._values.pop(reference, None)
         self._actions.append({"kind": "delete", "credential_ref": reference})
 
-    def present(self, reference: str) -> bool:
-        return reference in self._values
+    def present(self, reference: str | None) -> bool:
+        return bool(reference and reference in self._values)
 
     @property
     def prepared_used(self) -> bool:
@@ -81,7 +76,7 @@ class TauriInjectedSecretStore(SecretStore):
 
 def _credential_refs() -> dict[str, Any]:
     store = QuillframeStore()
-    repository = ModelServiceRepository(store)
+    repository = SQLiteModelServiceRepository(store)
     refs: set[str] = set()
     for public in repository.list_services():
         service_id = str(public.get("service_id") or "")
@@ -154,7 +149,7 @@ def _invoke(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _read_stdin_json() -> dict[str, Any]:
-    raw = sys.stdin.read()
+    raw = sys.stdin.readline()
     if not raw.strip():
         raise ValueError("stdin JSON payload required")
     value = json.loads(raw)
@@ -230,7 +225,7 @@ def main(argv: list[str] | None = None) -> int:
             raise ValueError(f"unknown sidecar command: {command}")
         print(json.dumps(output, ensure_ascii=False, separators=(",", ":")))
         return 0
-    except Exception as exc:  # host protocol must fail closed without traceback/secret dumps
+    except Exception as exc:
         safe = {
             "schema": "quillframe_tauri_sidecar_error_v1",
             "status": "failed",
