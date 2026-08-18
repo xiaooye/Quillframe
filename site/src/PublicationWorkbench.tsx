@@ -3,7 +3,6 @@ import brandMark from "../../assets/brand/quillframe-mark.svg?url";
 import type { Locale } from "./content";
 import { ProductSurfaceHero } from "./ProductSurface";
 import type { PublicationCompilerProfile } from "./publicationCompiler.worker";
-import "./styles/publication-playground.css";
 
 type UiProfile = {
   id: "text" | "web" | "print" | "epub";
