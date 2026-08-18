@@ -10,6 +10,8 @@ import "./styles/index.css";
 
 const Desk = lazy(() => import("./routes/Desk"));
 const Start = lazy(() => import("./routes/Start"));
+const Manuscript = lazy(() => import("./routes/Manuscript"));
+const Review = lazy(() => import("./routes/Review"));
 const Project = lazy(() => import("./routes/Project"));
 const Inspector = lazy(() => import("./routes/InspectorRoute"));
 const Control = lazy(() => import("./routes/Control"));
@@ -31,67 +33,50 @@ document.documentElement.dataset.experience = "story-loom-kawaii-atelier-v5";
 document.documentElement.dataset.productLanguage = "quillframe-kawaii-v1";
 
 function StudioShellRoot(props: { children?: JSX.Element }) {
-  return (
-    <AppShell>
-      <Suspense fallback={<StudioRouteLoading />}>{props.children}</Suspense>
-    </AppShell>
-  );
+  return <AppShell><Suspense fallback={<StudioRouteLoading />}>{props.children}</Suspense></AppShell>;
 }
 
 async function configureOfflineShell() {
   if (!("serviceWorker" in navigator)) return;
-
   if (bridgeTransportAvailable()) {
     const registrations = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(
-      registrations
-        .filter((registration) => {
-          const scriptUrl = registration.active?.scriptURL ?? registration.waiting?.scriptURL ?? registration.installing?.scriptURL;
-          return scriptUrl ? new URL(scriptUrl).pathname === "/sw.js" : false;
-        })
-        .map((registration) => registration.unregister()),
-    );
+    await Promise.all(registrations.filter((registration) => {
+      const scriptUrl = registration.active?.scriptURL ?? registration.waiting?.scriptURL ?? registration.installing?.scriptURL;
+      return scriptUrl ? new URL(scriptUrl).pathname === "/sw.js" : false;
+    }).map((registration) => registration.unregister()));
     return;
   }
-
-  window.addEventListener(
-    "load",
-    () => {
-      void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch(() => undefined);
-    },
-    { once: true },
-  );
+  window.addEventListener("load", () => { void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch(() => undefined); }, { once: true });
 }
 
 void configureOfflineShell().catch(() => undefined);
 
-render(
-  () => (
-    <I18nProvider>
-      <StudioProvider>
-        <StudioFailureBoundary>
-          <StudioSkipLink />
-          <Router root={StudioShellRoot}>
-            <Route path="/" component={Desk} />
-            <Route path="/start" component={Start} />
-            <Route path="/project" component={Project} />
-            <Route path="/inspect" component={Inspector} />
-            <Route path="/control" component={Control} />
-            <Route path="/architecture" component={Architecture} />
-            <Route path="/publication" component={Publication} />
-            <Route path="/workspace" component={Workspace} />
-            <Route path="/agents" component={Agents} />
-            <Route path="/runtime" component={RuntimeRoute} />
-            <Route path="/context" component={ContextRoute} />
-            <Route path="/capabilities" component={Capabilities} />
-            <Route path="/semantic" component={Semantic} />
-            <Route path="/diagnostics" component={Diagnostics} />
-            <Route path="/settings" component={Settings} />
-            <Route path="*404" component={StudioNotFound} />
-          </Router>
-        </StudioFailureBoundary>
-      </StudioProvider>
-    </I18nProvider>
-  ),
-  root,
-);
+render(() => (
+  <I18nProvider>
+    <StudioProvider>
+      <StudioFailureBoundary>
+        <StudioSkipLink />
+        <Router root={StudioShellRoot}>
+          <Route path="/" component={Desk} />
+          <Route path="/start" component={Start} />
+          <Route path="/manuscript" component={Manuscript} />
+          <Route path="/review" component={Review} />
+          <Route path="/project" component={Project} />
+          <Route path="/inspect" component={Inspector} />
+          <Route path="/control" component={Control} />
+          <Route path="/architecture" component={Architecture} />
+          <Route path="/publication" component={Publication} />
+          <Route path="/workspace" component={Workspace} />
+          <Route path="/agents" component={Agents} />
+          <Route path="/runtime" component={RuntimeRoute} />
+          <Route path="/context" component={ContextRoute} />
+          <Route path="/capabilities" component={Capabilities} />
+          <Route path="/semantic" component={Semantic} />
+          <Route path="/diagnostics" component={Diagnostics} />
+          <Route path="/settings" component={Settings} />
+          <Route path="*404" component={StudioNotFound} />
+        </Router>
+      </StudioFailureBoundary>
+    </StudioProvider>
+  </I18nProvider>
+), root);
