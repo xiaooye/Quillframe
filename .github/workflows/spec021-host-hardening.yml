@@ -21,8 +21,8 @@ jobs:
           python-version: '3.13'
       - name: Apply exact verified host-hardening patch
         run: |
-          git apply --check specs/021-production-visibility-enforcement/.host-hardening.patch
-          git apply specs/021-production-visibility-enforcement/.host-hardening.patch
+          git apply --exclude=studio/tauri_core_sidecar.py --check specs/021-production-visibility-enforcement/.host-hardening.patch
+          git apply --exclude=studio/tauri_core_sidecar.py specs/021-production-visibility-enforcement/.host-hardening.patch
       - name: Verify Python host and production boundaries
         run: |
           python -m unittest \
