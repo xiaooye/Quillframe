@@ -1,0 +1,142 @@
++        "project_id",
++        "candidate_id"
++      ],
++      "allowed_surfaces": [
++        "cli",
++        "local_app",
++        "hosted_web",
++        "agent_package"
++      ]
++    },
+     "candidate.reject": {
+       "kind": "authority_command",
+       "required_args": [
+--- a/tests/test_quillframe_authoring_primitives.py
++++ b/tests/test_quillframe_authoring_primitives.py
+@@ -5,7 +5,7 @@
+ from pathlib import Path
+ 
+ from core_operations import CoreOperations, OperationError
+-from persistence.quillframe_sqlite import QuillframeStore, canonical_json, now_iso
++from persistence.quillframe_sqlite import QuillframeStore, canonical_json, fingerprint_text, now_iso
+ 
+ 
+ class AuthoringPrimitiveTests(unittest.TestCase):
+@@ -28,6 +28,28 @@
+                 conn.execute("INSERT INTO receipts(receipt_id,run_id,receipt_kind,idempotency_key,payload_json,created_at) VALUES(?,?,?,?,?,?)", (f"R-{mechanism}", "RUN", "production_stage", f"RUN:{mechanism}", canonical_json(payload), stamp))
+             review = {"model_contract_id": "quality.production_review", "production_readiness": {"ready_for_user_visible_review": True}, "private_reasoning_exposed": False}
+             conn.execute("INSERT INTO review_evidence(review_id,candidate_id,evidence_kind,result_json,candidate_fingerprint,reviewer_fingerprint,independent,stale,created_at) VALUES(?,?,?,?,?,?,1,0,?)", ("REV", "C", "quality.production_review", canonical_json(review), second["content_fingerprint"], "sha256:peer", stamp))
++            release = {
++                "schema": "quillframe_production_release_v1",
++                "candidate_fingerprint": second["content_fingerprint"],
++                "production_readiness_fingerprint": "sha256:" + "a" * 64,
++                "base_production_readiness": True,
++                "pre_independent_qualification_required": True,
++                "pre_independent_qualification_fingerprint": "sha256:" + "b" * 64,
++                "independent_pass_can_override_qualification_failure": False,
++                "required_structural_receipts": ["context_assembly", "user_visible_gate"],
++                "structural_receipts": [],
++                "missing_structural_receipts": [],
++                "blocking_structural_receipts": [],
++                "pending_structural_receipts": [],
++                "structural_ready": True,
++                "ready_for_user_visible_review": True,
++                "semantic_pass_can_override_missing_structural_receipt": False,
++                "authority": False,
++                "permissions": {"canon_write": False, "framework_write": False},
++                "model_execution": False,
++            }
++            release["release_fingerprint"] = fingerprint_text(canonical_json(release))
++            conn.execute("INSERT INTO receipts(receipt_id,run_id,receipt_kind,idempotency_key,payload_json,created_at) VALUES(?,?,?,?,?,?)", ("R-RELEASE", "RUN", "production_release", "RUN:production_release", canonical_json(release), stamp))
+             conn.commit()
+ 
+     def tearDown(self) -> None:
+@@ -49,9 +71,24 @@
+         self.assertEqual(review["candidate_revision"]["content"], "candidate")
+         self.assertEqual(review["incumbent_revision"]["content"], "incumbent")
+         self.assertTrue(review["diff"]["diff"])
+-        self.assertEqual(set(review["evidence"]), {"reader", "character", "continuity", "independent", "production_readiness", "user_visible_gate"})
++        self.assertEqual(set(review["evidence"]), {"reader", "character", "continuity", "independent", "production_readiness", "user_visible_gate", "production_release"})
+         self.assertFalse(review["private_reasoning_exposed"])
+ 
++
++    def test_candidate_visible_get_returns_content_only_with_valid_release(self):
++        visible = self.ops.candidate_visible_get("P", candidate_id="C")
++        self.assertEqual(visible["content"], "candidate")
++        self.assertEqual(visible["content_access"], "production_release_only")
++        self.assertTrue(visible["production_release"]["ready_for_user_visible_review"])
++
++    def test_candidate_visible_get_fails_closed_when_release_is_missing_or_tampered(self):
++        with self.store.open_project("P") as conn:
++            conn.execute("DELETE FROM receipts WHERE receipt_kind='production_release'")
++            conn.commit()
++        with self.assertRaises(OperationError) as missing:
++            self.ops.candidate_visible_get("P", candidate_id="C")
++        self.assertEqual(missing.exception.code, "production_release_required")
++
+     def test_candidate_reject_is_idempotent_exact_and_terminal(self):
+         result = self.ops.reject_candidate("P", candidate_id="C", candidate_fingerprint=self.second["content_fingerprint"], authorized_by="user", authorization={"intent": "reject"}, idempotency_key="reject-1", reason="not right")
+         replay = self.ops.reject_candidate("P", candidate_id="C", candidate_fingerprint=self.second["content_fingerprint"], authorized_by="user", authorization={"intent": "reject"}, idempotency_key="reject-1")
+--- a/tests/test_quillframe_production_host_bridge.py
++++ b/tests/test_quillframe_production_host_bridge.py
+@@ -6,9 +6,9 @@
+ 
+ 
+ class ProductionHostBridgeTests(unittest.TestCase):
+-    def test_v8_contract_exposes_authoring_production_and_model_service_primitives(self):
++    def test_v9_contract_exposes_authoring_production_and_model_service_primitives(self):
+         contract = host_bridge.contract()
+-        self.assertEqual(contract["version"], "8")
++        self.assertEqual(contract["version"], "9")
+         for operation in (
+             "author.run.execute",
+             "author.run.status",
+@@ -24,6 +24,7 @@
+             "project.list",
+             "document.list",
+             "candidate.review.get",
++            "candidate.visible.get",
+             "candidate.reject",
+             "candidate.revision.request",
+             "settlement.preflight",
+@@ -45,6 +46,9 @@
+         self.assertFalse(contract["invariants"]["independent_review_same_runtime_substitution"])
+         self.assertEqual(contract["deferred_operations"]["project.delete"]["status"], "unsupported")
+         self.assertFalse(contract["secret_boundary"]["cloudflare_required"])
++        self.assertTrue(contract["invariants"]["manuscript_visibility_requires_production_release"])
++        self.assertFalse(contract["invariants"]["host_self_generated_manuscript_is_releaseable"])
++        self.assertTrue(contract["invariants"]["ephemeral_runtime_exact_git_identity_required"])
+ 
+     def test_access_token_is_redacted_from_fingerprint_but_business_authorization_is_bound(self):
+         secret_a = "QF-SECRET-SENTINEL-111"
+@@ -151,7 +155,7 @@
+     def test_self_test_passes_without_live_network(self):
+         report = host_bridge.self_test()
+         self.assertEqual(report["quillframe_host_bridge_contract"], "PASS")
+-        self.assertEqual(report["contract_version"], "8")
++        self.assertEqual(report["contract_version"], "9")
+         self.assertTrue(report["secret_value_fingerprint_independent"])
+ 
+ 
+--- a/tests/test_quillframe_production_runtime.py
++++ b/tests/test_quillframe_production_runtime.py
+@@ -270,6 +270,8 @@
+         self.assertFalse(completed["raw_draft_visible"])
+         self.assertFalse(completed["accepted"])
+         self.assertFalse(completed["settled"])
++        self.assertTrue(completed["production_release"]["ready_for_user_visible_review"])
++        self.assertEqual(completed["production_release"]["candidate_fingerprint"], completed["candidate"]["candidate_fingerprint"])
+         self.assertEqual(
+             tuple(PRODUCTION_MECHANISMS),
+             tuple(x for x in MANDATORY_PRODUCTION_MECHANISMS if x != "context_freeze"),
+@@ -285,6 +287,10 @@
+             self.assertEqual(candidate["user_visible_gate"], "PASS")
+             self.assertEqual(evidence["independent"], 1)
+             self.assertEqual(evidence["evidence_kind"], "quality.production_review")
++            release_rows = conn.execute("SELECT payload_json FROM receipts WHERE run_id=? AND receipt_kind='production_release'", (run_id,)).fetchall()
++            self.assertEqual(len(release_rows), 1)
++        visible = CoreOperations(self.store).candidate_visible_get("PROD", candidate_id=completed["candidate"]["candidate_id"])
++        self.assertEqual(visible["content"], "Review prose ready for the user-visible gate.")
+ 
+     def test_stage_materializer_has_no_database_access_path(self):
+         source = inspect.getsource(ProductionRunExecutor.materialize_stage_context).lower()
