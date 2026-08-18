@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   reconstruct:
-    if: ${{ hashFiles('.quillframe-0.9-migrated') == '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +32,9 @@ jobs:
           git config user.name "quillframe-ci"
           git config user.email "quillframe-ci@users.noreply.github.com"
           git add -A
-          git diff --cached --quiet && exit 0
+          if git diff --cached --quiet; then
+            echo "No migration changes left to commit"
+            exit 0
+          fi
           git commit -m "refactor!: reconstruct Quillframe 0.9 live architecture"
           git push origin HEAD:system-improve/quillframe-0.9.0
