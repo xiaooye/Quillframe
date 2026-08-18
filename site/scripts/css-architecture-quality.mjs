@@ -6,7 +6,9 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const siteRoot = path.resolve(here, "..");
+const repoRoot = path.resolve(siteRoot, "..");
 const read = (relative) => fs.readFileSync(path.join(siteRoot, relative), "utf8");
+const readRepo = (relative) => fs.readFileSync(path.join(repoRoot, relative), "utf8");
 const exists = (relative) => fs.existsSync(path.join(siteRoot, relative));
 const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
@@ -22,7 +24,7 @@ const changelog = read("src/styles/changelog-notebook.css");
 const publicationGallery = read("src/styles/publication-gallery.css");
 const readability = read("src/styles/readability.css");
 const hardening = read("src/styles/hardening.css");
-const sharedLanguage = read("../assets/brand/quillframe-product-language.css");
+const sharedLanguage = readRepo("assets/brand/quillframe-product-language.css");
 
 const styleImports = [...main.matchAll(/import\s+["']\.\/styles\/([^"']+)["']/g)].map((match) => match[1]);
 check(styleImports.length === 1 && styleImports[0] === "index.css", `main.tsx must import exactly one stylesheet entrypoint; got ${styleImports.join(", ") || "none"}`);
@@ -90,7 +92,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "quillframe_css_architecture_v9",
+    schema: "quillframe_css_architecture_v10",
     status: "pass",
     entrypoints: 1,
     audit_override: false,
