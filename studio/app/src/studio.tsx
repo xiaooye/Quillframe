@@ -1,28 +1,18 @@
 import { createContext, createResource, createSignal, ParentComponent, useContext } from "solid-js";
-import { BridgeDescription, BridgeResult, StudioSurface, bridgeTransportAvailable, invokeBridge, studioSurface } from "./bridge";
-
-export interface ProjectHubProjection {
-  schema: "quillframe_studio_project_hub_projection_v1";
-  authority: false;
-  project: {
-    id: string | null;
-    title: string | null;
-    version: string | null;
-    language: string | null;
-    layout: string | null;
-    project_schema_version: string | null;
-  };
-  framework_lock: Record<string, unknown>;
-  logical_paths: Record<string, { relative: string | null; exists: boolean; kind: string }>;
-  policy_availability: Record<string, boolean>;
-  unavailable: string[];
-  projection_fingerprint: string;
-}
+import { BridgeDescription, BridgeResult, StudioSurface, bridgeTransportAvailable, invokeBridge, operationError, studioSurface } from "./bridge";
 
 export interface ProjectInspectData {
-  valid: boolean;
-  errors: unknown[];
-  project: ProjectHubProjection;
+  schema: "quillframe_project_projection_v1";
+  project: {
+    project_id: string;
+    title: string;
+    language: string;
+    project_schema_version: number;
+    created_at?: string;
+    updated_at?: string;
+  };
+  counts?: Record<string, number>;
+  authority: false;
 }
 
 interface StudioValue {
@@ -32,12 +22,16 @@ interface StudioValue {
   bridgeError: () => unknown;
   bridgeLoading: () => boolean;
   refreshBridge: () => void;
+  projectId: () => string;
+  setProjectId: (value: string) => void;
+  /** @deprecated compatibility alias; value is a stable project id, never a filesystem root. */
   projectRoot: () => string;
+  /** @deprecated compatibility alias; value is a stable project id, never a filesystem root. */
   setProjectRoot: (value: string) => void;
   projectResult: () => BridgeResult<ProjectInspectData> | undefined;
   projectLoading: () => boolean;
   projectError: () => string | undefined;
-  inspectProject: (root?: string) => Promise<void>;
+  inspectProject: (projectId?: string) => Promise<void>;
 }
 
 const StudioContext = createContext<StudioValue>();
@@ -49,32 +43,38 @@ export const StudioProvider: ParentComponent = (props) => {
     () => (hasBridge ? "bound" : undefined),
     async () => {
       const result = await invokeBridge<BridgeDescription>("bridge.describe");
-      if (result.status !== "ok" || !result.data) throw new Error("bridge.describe did not return data");
+      if (result.status !== "ok" || !result.data) throw new Error(operationError(result));
       return result.data;
     },
   );
-  const [projectRoot, setProjectRoot] = createSignal("");
+  const [projectId, setProjectIdSignal] = createSignal(localStorage.getItem("quillframe.ui.lastProjectId") || "");
   const [projectResult, setProjectResult] = createSignal<BridgeResult<ProjectInspectData>>();
   const [projectLoading, setProjectLoading] = createSignal(false);
   const [projectError, setProjectError] = createSignal<string>();
 
-  const inspectProject = async (root = projectRoot()) => {
+  const setProjectId = (value: string) => {
+    const next = value.trim();
+    setProjectIdSignal(next);
+    if (next) localStorage.setItem("quillframe.ui.lastProjectId", next);
+  };
+
+  const inspectProject = async (requested = projectId()) => {
     if (!hasBridge) {
       setProjectError("Quillframe Core host is not bound to this Studio surface");
       return;
     }
-    const trimmed = root.trim();
+    const trimmed = requested.trim();
     if (!trimmed) {
-      setProjectError("project_root is required");
+      setProjectError("project_id is required");
       return;
     }
-    setProjectRoot(trimmed);
+    setProjectId(trimmed);
     setProjectLoading(true);
     setProjectError(undefined);
     try {
-      const result = await invokeBridge<ProjectInspectData>("project.inspect", { project_root: trimmed });
+      const result = await invokeBridge<ProjectInspectData>("project.inspect", { project_id: trimmed });
       setProjectResult(result);
-      if (result.status !== "ok") setProjectError(JSON.stringify(result.error));
+      if (result.status !== "ok") setProjectError(operationError(result));
     } catch (error) {
       setProjectError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -88,11 +88,11 @@ export const StudioProvider: ParentComponent = (props) => {
     bridgeDescription: () => bridge(),
     bridgeError: () => bridge.error,
     bridgeLoading: () => hasBridge && bridge.loading,
-    refreshBridge: () => {
-      if (hasBridge) void refetch();
-    },
-    projectRoot,
-    setProjectRoot,
+    refreshBridge: () => { if (hasBridge) void refetch(); },
+    projectId,
+    setProjectId,
+    projectRoot: projectId,
+    setProjectRoot: setProjectId,
     projectResult,
     projectLoading,
     projectError,
