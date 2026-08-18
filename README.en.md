@@ -38,15 +38,28 @@
 
 **Requirements:** Python 3.11+. Node.js 24 and pnpm 10.33.0 are only needed for the web/Studio surfaces.
 
+Install the Framework from a clean source checkout and verify the local runtime:
+
 ```bash
 git clone https://github.com/xiaooye/Quillframe.git
 cd Quillframe
 python -m pip install -e .
-
-python -c "from quillframe import Quillframe; print(Quillframe.__name__)"
-python project_sdk.py self-test
-python persistence/cli.py doctor
+quillframe doctor
 ```
+
+Create fiction Projects **outside** the generic Framework repository. Initialization pins the Project to the exact clean Framework commit and deterministic bundle fingerprint:
+
+```bash
+quillframe init ../my-novel \
+  --id MY-NOVEL \
+  --title "My Novel" \
+  --language en
+
+cd ../my-novel
+quillframe validate .
+```
+
+If you use Claude Code as a host, start it from the consumer Project directory after initialization. The project-local bootstrap verifies the lock/attestation against the materialized Framework before consequential host tools are allowed. Claude Code remains a host; it does not replace Quillframe's Agent Runtime or gain Canon authority.
 
 The authoring/inspection shell can work without a model connection. When inference is needed, ordinary setup is deliberately small:
 
@@ -97,7 +110,7 @@ The boundary is intentional:
 
 - **Models own semantic fiction judgment.** They can reason about story, character, reader experience, relevance, and repair.
 - **Quillframe owns execution truth.** Deterministic code owns identity, permissions, fingerprints, routing, budgets, transactions, persistence, and reproducibility.
-- **Independent means independent.** A required independent semantic judgment must come from a genuinely separate invocation/session/worker and be bound to the exact artifact fingerprint; manager self-roleplay does not qualify.
+- **Independent means independent.** A required independent semantic judgment must come from a genuinely separate invocation/session/worker and be bound to the exact candidate fingerprint; manager self-roleplay does not qualify.
 - **SQLite is canonical durable state, not a fallback cache.** The UI boundary is `Solid/Tauri → typed Bridge/API → Python Core → SQLite`.
 
 The current Model Runtime is provider-neutral at the authority layer. Quillframe owns protocol/model discovery, capability evidence, eligibility, model selection, tool execution, checkpoints, and receipts. Model APIs are inference capability—not the agent-runtime authority.
