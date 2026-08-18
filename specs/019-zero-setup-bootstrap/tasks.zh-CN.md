@@ -25,11 +25,11 @@
 ## Phase 4 · Verification
 
 - [x] T030 增加 deterministic bootstrap / host regression tests。
-- [ ] T031 运行 core/unit/docs quality CI，并修复 candidate-owned failure。
-- [ ] T032 确认 normal CI 没有引入 model / live API execution。
+- [x] T031 运行 core/unit/docs quality CI，并修复 candidate-owned failure。
+- [x] T032 确认 normal CI 没有引入 model / live API execution。
 
 ## Phase 5 · Documentation / Acceptance
 
 - [x] T040 同步中英文 Quick Start 与 Project SDK docs。
-- [ ] T041 审查 exact diff，确认 Framework / Project / Canon boundary 没有 overreach。
+- [x] T041 审查 exact diff，确认 Framework / Project / Canon boundary没有 overreach。
 - [ ] T042 仅在 CI green 后 merge，并删除临时 branch。
