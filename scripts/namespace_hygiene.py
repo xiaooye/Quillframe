@@ -7,7 +7,9 @@ ROOT=Path(__file__).resolve().parents[1]
 SKIP_PREFIX=(".git/","specs/","history/","migration/")
 SKIP_FILES={"CHANGELOG.en.md","CHANGELOG.zh-CN.md","scripts/namespace_hygiene.py"}
 TEXT_EXT={".py",".json",".yaml",".yml",".toml",".md",".ts",".tsx",".js",".mjs",".css",".html",".sh",".rs",".svg"}
-forbidden=("Novel"+"Forge","novel"+"forge","NOVEL"+"FORGE","@"+"quillframe/","--"+"nf-")
+# Construct legacy identifiers at runtime so this negative gate does not create
+# the very contiguous active-namespace references it is designed to reject.
+forbidden=("Novel"+"Forge","novel"+"forge","NOVEL"+"FORGE","@"+"novel"+"forge/","--"+"nf-")
 violations=[]
 for p in ROOT.rglob("*"):
     if not p.is_file(): continue
