@@ -59,6 +59,46 @@ jobs:
       - name: Host Bridge self-test
         run: python studio/host_bridge.py self-test
 
+  bundle-fingerprint:
+    name: Frozen framework bundle fingerprint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 8533c12bec929eac44bf23a9bede45e3b24ea0af
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Build deterministic bundle twice
+        run: |
+          mkdir -p dist
+          python release/build_framework_bundle.py build --root . --output dist/quillframe-framework-a.tar --report dist/bundle-a.json
+          python release/build_framework_bundle.py build --root . --output dist/quillframe-framework-b.tar --report dist/bundle-b.json
+          cmp dist/quillframe-framework-a.tar dist/quillframe-framework-b.tar
+          python - <<'PY'
+          import json
+          a=json.load(open('dist/bundle-a.json',encoding='utf-8'))
+          b=json.load(open('dist/bundle-b.json',encoding='utf-8'))
+          assert a['bundle_fingerprint']==b['bundle_fingerprint'],(a,b)
+          print('BUNDLE_FINGERPRINT='+a['bundle_fingerprint'])
+          print('CONTENT_INDEX_FINGERPRINT='+a['content_index_fingerprint'])
+          print('BUNDLE_SIZE='+str(a['bundle_size']))
+          print('BUNDLE_FILES='+str(a['files']))
+          PY
+      - name: Verify exact bundle
+        run: |
+          EXPECTED="$(python -c "import json;print(json.load(open('dist/bundle-a.json'))['bundle_fingerprint'])")"
+          python release/build_framework_bundle.py verify --bundle dist/quillframe-framework-a.tar --expected "$EXPECTED" --report dist/bundle-verify.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quillframe-framework-8533c12bec929eac44bf23a9bede45e3b24ea0af
+          path: |
+            dist/quillframe-framework-a.tar
+            dist/bundle-a.json
+            dist/bundle-verify.json
+          if-no-files-found: error
+          retention-days: 7
+
   site:
     name: Product site and docs
     runs-on: ubuntu-latest
