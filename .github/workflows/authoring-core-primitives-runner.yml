@@ -23,11 +23,12 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import textwrap
           source = Path('.github/workflows/authoring-core-primitives-fixup.yml').read_text(encoding='utf-8')
           start = source.index("          python - <<'PY'\n") + len("          python - <<'PY'\n")
           end = source.index("\n          PY\n", start)
-          script = textwrap.dedent(source[start:end])
+          raw = source[start:end]
+          prefix = "          "
+          script = "\n".join(line[len(prefix):] if line.startswith(prefix) else line for line in raw.splitlines())
           exec(compile(script, '<authoring-core-fixup>', 'exec'), {'__name__': '__main__'})
           PY
           python -m unittest tests.test_quillframe_authoring_primitives tests.test_quillframe_production_host_bridge -v
