@@ -5,8 +5,8 @@
   "preview_urls": true,
   "routes": [
     {
-      "pattern": "quillframe.wei-dev.com/*",
-      "zone_name": "wei-dev.com"
+      "pattern": "quillframe.wei-dev.com",
+      "custom_domain": true
     }
   ],
   "observability": {
