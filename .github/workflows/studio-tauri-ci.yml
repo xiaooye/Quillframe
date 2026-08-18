@@ -1,0 +1,25 @@
+name: Quillframe Studio Tauri CI
+on:
+  push:
+    branches: ['agent/**']
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  tauri-source:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.13'}
+      - name: Compile Python Core sidecar
+        run: python -m py_compile studio/core_sidecar_server.py studio/scripts/build_tauri_sidecar.py
+      - name: Sidecar host bridge self-test
+        run: python studio/host_bridge.py self-test
+      - name: Install Tauri Linux build prerequisites
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cargo check Tauri 2 thin host
+        working-directory: studio/app/src-tauri
+        run: cargo check --locked || cargo check
