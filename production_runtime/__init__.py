@@ -7,7 +7,7 @@ from .contracts import (
     PRODUCTION_STATUS_SCHEMA,
     ProductionRunError,
 )
-from .runtime import ProductionRunExecutor
+from .guarded_runtime import ProductionRunExecutor
 from .sources import ProjectContextSourceLoader
 
 __all__ = [
