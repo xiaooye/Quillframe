@@ -8,9 +8,10 @@
   },
   "scripts": {
     "dev": "npm run content && vite",
-    "build": "npm run content && tsc --noEmit && vite build",
+    "build": "npm run content && tsc --noEmit && vite build && npm run docs:build",
     "preview": "vite preview",
-    "quality": "npm run content && npm run docs:content && node scripts/quality.mjs && node scripts/product-hardening-quality.mjs",
+    "quality": "npm run content && npm run docs:content && node scripts/quality.mjs && node scripts/product-hardening-quality.mjs && npm run baseline:quality",
+    "baseline:quality": "node scripts/atelier-quality.mjs && node scripts/product-shell-quality.mjs && node scripts/css-architecture-quality.mjs && node scripts/surface-audit-quality.mjs && node scripts/docs-platform-quality.mjs",
     "dev:docs": "npm run docs:content && astro dev --root docs-site",
     "docs:build": "npm run docs:content && astro build --root docs-site && node scripts/verify-starlight-build.mjs",
     "content": "node scripts/sync-weiui.mjs && node scripts/build-content.mjs",

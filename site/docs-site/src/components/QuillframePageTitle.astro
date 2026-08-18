@@ -7,7 +7,7 @@ const english = route.lang.toLowerCase().startsWith("en");
 const pathname = Astro.url.pathname.replace(/\/+$/, "");
 const isDocsHome = pathname === "/docs" || pathname === "/docs/en";
 const slug = pathname.split("/").filter(Boolean).at(-1) ?? "";
-const eyebrow = english ? "NovelForge Docs" : "NovelForge 知识库";
+const eyebrow = english ? "Quillframe Docs" : "Quillframe 知识库";
 
 const sections = [
   {

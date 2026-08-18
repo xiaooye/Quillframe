@@ -1,7 +1,8 @@
 @layer product-components {
+  /* Architecture is an execution-paper workspace, not a route-colored dashboard. */
   .architecture-main {
     display: grid;
-    gap: clamp(18px, 2.4vw, 30px);
+    gap: clamp(24px, 3.5vw, 46px);
   }
 
   .architecture-intro {
@@ -12,9 +13,7 @@
     padding-block: 8px 6px;
   }
 
-  .architecture-intro > div:first-child {
-    max-width: 900px;
-  }
+  .architecture-intro > div:first-child { max-width: 900px; }
 
   .architecture-badges {
     display: flex;
@@ -53,14 +52,12 @@
   }
 
   .architecture-canvas {
-    overflow: clip;
-    border: 1px solid color-mix(in oklab, var(--pe-border) 84%, transparent);
-    border-radius: var(--pe-radius-lg);
-    background:
-      radial-gradient(34rem 18rem at 0% 0%, color-mix(in oklab, var(--pe-project-soft) 70%, transparent), transparent 74%),
-      radial-gradient(34rem 20rem at 100% 0%, color-mix(in oklab, var(--pe-editorial-soft) 64%, transparent), transparent 74%),
-      color-mix(in oklab, var(--pe-surface) 97%, transparent);
-    box-shadow: var(--pe-shadow-2);
+    overflow: visible;
+    border: 0;
+    border-block: 1px solid color-mix(in oklab, var(--pe-border) 54%, transparent);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   .architecture-toolbar {
@@ -69,8 +66,8 @@
     justify-content: space-between;
     gap: 20px;
     min-height: 78px;
-    padding: 16px 18px;
-    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 72%, transparent);
+    padding: 14px 0;
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 46%, transparent);
   }
 
   .architecture-toolbar > div:first-child {
@@ -100,76 +97,63 @@
     grid-template-columns: repeat(7, minmax(150px, 1fr));
     gap: 0;
     overflow-x: auto;
-    padding: 18px;
+    padding: 20px 0 22px;
     scrollbar-width: thin;
   }
 
   .architecture-node {
+    --architecture-lane: var(--pe-runtime);
+    --architecture-soft: var(--pe-runtime-soft);
     position: relative;
     min-width: 0;
-    min-height: 176px;
+    min-height: 154px;
     display: grid;
     grid-template-rows: auto auto 1fr auto;
     align-content: start;
     gap: 9px;
-    padding: 14px 14px 13px;
-    border: 1px solid color-mix(in oklab, var(--pe-border) 76%, transparent);
-    border-radius: 16px;
+    padding: 14px 13px 12px;
+    border: 0;
+    border-radius: 13px;
     color: var(--pe-fg);
-    background: color-mix(in oklab, var(--pe-surface) 94%, transparent);
-    box-shadow: 0 12px 30px -28px rgb(45 32 58 / .5);
+    background: transparent;
+    box-shadow: none;
     text-align: left;
     cursor: pointer;
-    transition: transform .16s ease, border-color .16s ease, background-color .16s ease, box-shadow .16s ease;
+    transition: background-color .16s ease, transform .16s ease;
   }
 
-  .architecture-node + .architecture-node {
-    margin-left: 16px;
-  }
+  .architecture-node + .architecture-node { margin-left: 14px; }
 
   .architecture-node:not(:last-child)::after {
     content: "→";
     position: absolute;
     z-index: 2;
     top: 50%;
-    right: -17px;
-    width: 18px;
-    color: color-mix(in oklab, var(--pe-muted) 66%, transparent);
-    font-size: 12px;
+    right: -15px;
+    width: 16px;
+    color: color-mix(in oklab, var(--pe-muted) 58%, transparent);
+    font-size: 11px;
     text-align: center;
     transform: translateY(-50%);
     pointer-events: none;
   }
 
   .architecture-node:hover,
-  .architecture-node:focus-visible,
-  .architecture-node[data-active="true"] {
-    z-index: 3;
-    transform: translateY(-2px);
-    border-color: color-mix(in oklab, var(--pe-runtime) 34%, var(--pe-border));
-    background: color-mix(in oklab, var(--pe-runtime-soft) 26%, var(--pe-surface));
-    box-shadow: 0 18px 44px -34px rgb(63 44 94 / .38);
+  .architecture-node:focus-visible {
+    background: color-mix(in oklab, var(--architecture-soft) 28%, transparent);
   }
+
+  .architecture-node[data-active="true"] {
+    background: color-mix(in oklab, var(--architecture-soft) 44%, var(--pe-surface));
+  }
+
+  .architecture-node[data-run-state="current"] { transform: translateY(-2px); }
 
   .architecture-node[data-lane="project"] { --architecture-lane: var(--pe-project); --architecture-soft: var(--pe-project-soft); }
   .architecture-node[data-lane="runtime"] { --architecture-lane: var(--pe-runtime); --architecture-soft: var(--pe-runtime-soft); }
   .architecture-node[data-lane="editorial"] { --architecture-lane: var(--pe-editorial); --architecture-soft: var(--pe-editorial-soft); }
   .architecture-node[data-lane="evidence"] { --architecture-lane: var(--pe-evidence); --architecture-soft: var(--pe-evidence-soft); }
   .architecture-node[data-lane="validated"] { --architecture-lane: var(--pe-valid); --architecture-soft: var(--pe-valid-soft); }
-
-  .architecture-node[data-active="true"] {
-    border-color: color-mix(in oklab, var(--architecture-lane) 44%, var(--pe-border));
-    background: color-mix(in oklab, var(--architecture-soft) 44%, var(--pe-surface));
-  }
-
-  .architecture-node[data-run-state="complete"] {
-    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--pe-valid) 24%, transparent);
-  }
-
-  .architecture-node[data-run-state="current"] {
-    border-color: color-mix(in oklab, var(--architecture-lane) 58%, var(--pe-border));
-    box-shadow: 0 0 0 3px color-mix(in oklab, var(--architecture-soft) 76%, transparent), 0 18px 44px -34px rgb(63 44 94 / .38);
-  }
 
   .architecture-node-step {
     width: fit-content;
@@ -184,10 +168,10 @@
     place-items: center;
     width: 34px;
     height: 34px;
-    border: 1px solid color-mix(in oklab, var(--architecture-lane) 28%, var(--pe-border));
-    border-radius: 11px 11px 7px 11px;
+    border: 0;
+    border-radius: 10px;
     color: color-mix(in oklab, var(--architecture-lane) 74%, var(--pe-fg));
-    background: color-mix(in oklab, var(--architecture-soft) 72%, transparent);
+    background: color-mix(in oklab, var(--architecture-soft) 70%, transparent);
     font-size: 14px;
   }
 
@@ -197,10 +181,7 @@
     gap: 5px;
   }
 
-  .architecture-node-copy strong {
-    font-size: 13px;
-    letter-spacing: -.015em;
-  }
+  .architecture-node-copy strong { font-size: 13px; letter-spacing: -.015em; }
 
   .architecture-node-copy small {
     display: -webkit-box;
@@ -224,21 +205,19 @@
     display: grid;
     grid-template-columns: minmax(0, 1.42fr) minmax(300px, .58fr);
     align-items: start;
-    gap: clamp(14px, 2vw, 22px);
+    gap: clamp(16px, 2.4vw, 28px);
   }
 
+  /* Detail + trace are real inspector objects, so a restrained boundary is useful. */
   .architecture-detail,
   .architecture-run-evidence {
-    border: 1px solid color-mix(in oklab, var(--pe-border) 82%, transparent);
-    border-radius: var(--pe-radius-md);
-    background: color-mix(in oklab, var(--pe-surface) 96%, transparent);
-    box-shadow: var(--pe-shadow-1);
+    border: 1px solid color-mix(in oklab, var(--pe-border) 58%, transparent);
+    border-radius: 14px;
+    background: color-mix(in oklab, var(--pe-surface) 97%, var(--pe-bg));
+    box-shadow: none;
   }
 
-  .architecture-detail {
-    overflow: clip;
-  }
-
+  .architecture-detail { overflow: clip; }
   .architecture-detail[data-lane="project"] { --architecture-detail-lane: var(--pe-project); --architecture-detail-soft: var(--pe-project-soft); }
   .architecture-detail[data-lane="runtime"] { --architecture-detail-lane: var(--pe-runtime); --architecture-detail-soft: var(--pe-runtime-soft); }
   .architecture-detail[data-lane="editorial"] { --architecture-detail-lane: var(--pe-editorial); --architecture-detail-soft: var(--pe-editorial-soft); }
@@ -250,8 +229,8 @@
     grid-template-columns: 48px minmax(0, 1fr);
     gap: 14px;
     padding: clamp(18px, 2.4vw, 26px);
-    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 72%, transparent);
-    background: linear-gradient(135deg, color-mix(in oklab, var(--architecture-detail-soft) 48%, transparent), transparent 68%);
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 48%, transparent);
+    background: transparent;
   }
 
   .architecture-detail-icon {
@@ -259,10 +238,10 @@
     place-items: center;
     width: 46px;
     height: 46px;
-    border: 1px solid color-mix(in oklab, var(--architecture-detail-lane) 28%, var(--pe-border));
-    border-radius: 15px 15px 9px 15px;
+    border: 0;
+    border-radius: 13px;
     color: color-mix(in oklab, var(--architecture-detail-lane) 72%, var(--pe-fg));
-    background: color-mix(in oklab, var(--architecture-detail-soft) 76%, var(--pe-surface));
+    background: color-mix(in oklab, var(--architecture-detail-soft) 64%, var(--pe-surface));
     font-size: 18px;
   }
 
@@ -289,17 +268,15 @@
   .architecture-detail-grid > section {
     min-width: 0;
     padding: 18px 20px;
-    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 66%, transparent);
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 42%, transparent);
   }
 
   .architecture-detail-grid > section:nth-child(odd) {
-    border-right: 1px solid color-mix(in oklab, var(--pe-border) 66%, transparent);
+    border-right: 1px solid color-mix(in oklab, var(--pe-border) 42%, transparent);
   }
 
   .architecture-detail-grid > section:nth-last-child(-n + 1),
-  .architecture-detail-grid > section:nth-last-child(-n + 2):nth-child(odd) {
-    border-bottom: 0;
-  }
+  .architecture-detail-grid > section:nth-last-child(-n + 2):nth-child(odd) { border-bottom: 0; }
 
   .architecture-detail-grid > section > span {
     display: block;
@@ -331,7 +308,7 @@
     content: "✦";
     position: absolute;
     left: 0;
-    color: color-mix(in oklab, var(--architecture-detail-lane) 72%, var(--pe-muted));
+    color: color-mix(in oklab, var(--architecture-detail-lane) 66%, var(--pe-muted));
     font-size: 7px;
   }
 
@@ -342,14 +319,8 @@
     line-height: 1.62;
   }
 
-  .architecture-authority {
-    background: color-mix(in oklab, var(--pe-evidence-soft) 28%, transparent);
-  }
-
-  .architecture-persisted {
-    grid-column: 1 / -1;
-    border-right: 0 !important;
-  }
+  .architecture-authority { background: color-mix(in oklab, var(--pe-evidence-soft) 20%, transparent); }
+  .architecture-persisted { grid-column: 1 / -1; border-right: 0; }
 
   .architecture-contracts {
     display: flex;
@@ -361,10 +332,10 @@
     max-width: 100%;
     padding: 5px 7px;
     overflow: hidden;
-    border: 1px solid color-mix(in oklab, var(--pe-border) 68%, transparent);
-    border-radius: 8px;
-    color: color-mix(in oklab, var(--architecture-detail-lane) 64%, var(--pe-fg));
-    background: color-mix(in oklab, var(--pe-surface-soft) 72%, transparent);
+    border: 0;
+    border-radius: 7px;
+    color: color-mix(in oklab, var(--architecture-detail-lane) 62%, var(--pe-fg));
+    background: color-mix(in oklab, var(--architecture-detail-soft) 30%, var(--pe-surface-soft));
     font-size: 10px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -383,9 +354,7 @@
     gap: 12px;
   }
 
-  .architecture-run-head h2 {
-    font-size: 18px;
-  }
+  .architecture-run-head h2 { font-size: 18px; }
 
   .architecture-run-evidence > p {
     margin: 13px 0 0;
@@ -396,7 +365,7 @@
 
   .architecture-trace-list {
     display: grid;
-    gap: 6px;
+    gap: 0;
     margin: 16px 0 0;
     padding: 0;
     list-style: none;
@@ -407,12 +376,15 @@
     grid-template-columns: 28px minmax(0, 1fr);
     align-items: center;
     gap: 9px;
-    min-height: 42px;
-    padding: 7px 9px;
-    border: 1px solid color-mix(in oklab, var(--pe-border) 62%, transparent);
-    border-radius: 10px;
-    background: color-mix(in oklab, var(--pe-surface-soft) 58%, transparent);
+    min-height: 46px;
+    padding: 8px 2px;
+    border: 0;
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 38%, transparent);
+    border-radius: 0;
+    background: transparent;
   }
+
+  .architecture-trace-list li:last-child { border-bottom: 0; }
 
   .architecture-trace-list li > span {
     display: grid;
@@ -421,30 +393,15 @@
     height: 25px;
     border-radius: 8px;
     color: var(--pe-muted);
-    background: color-mix(in oklab, var(--pe-surface) 80%, transparent);
+    background: color-mix(in oklab, var(--pe-surface-soft) 70%, transparent);
     font-family: var(--wui-font-family-mono, ui-monospace, monospace);
     font-size: 8px;
     font-weight: 780;
   }
 
-  .architecture-trace-list li > div {
-    display: grid;
-    gap: 1px;
-  }
-
-  .architecture-trace-list strong {
-    font-size: 11px;
-  }
-
-  .architecture-trace-list small {
-    color: var(--pe-muted);
-    font-size: 9px;
-  }
-
-  .architecture-trace-list li[data-state="complete"] {
-    border-color: color-mix(in oklab, var(--pe-valid) 22%, var(--pe-border));
-    background: color-mix(in oklab, var(--pe-valid-soft) 26%, transparent);
-  }
+  .architecture-trace-list li > div { display: grid; gap: 1px; }
+  .architecture-trace-list strong { font-size: 11px; }
+  .architecture-trace-list small { color: var(--pe-muted); font-size: 9px; }
 
   .architecture-trace-list li[data-state="complete"] > span {
     color: color-mix(in oklab, var(--pe-valid) 72%, var(--pe-fg));
@@ -452,8 +409,7 @@
   }
 
   .architecture-trace-list li[data-state="current"] {
-    border-color: color-mix(in oklab, var(--pe-runtime) 34%, var(--pe-border));
-    background: color-mix(in oklab, var(--pe-runtime-soft) 34%, transparent);
+    background: color-mix(in oklab, var(--pe-runtime-soft) 22%, transparent);
   }
 
   .architecture-trace-list li[data-state="current"] > span {
@@ -467,9 +423,9 @@
     gap: 10px;
     margin-top: 14px;
     padding: 12px;
-    border: 1px solid color-mix(in oklab, var(--pe-valid) 24%, var(--pe-border));
-    border-radius: 11px;
-    background: color-mix(in oklab, var(--pe-valid-soft) 34%, transparent);
+    border: 0;
+    border-radius: 10px;
+    background: color-mix(in oklab, var(--pe-valid-soft) 28%, transparent);
   }
 
   .architecture-run-complete > span {
@@ -477,90 +433,39 @@
     place-items: center;
     width: 30px;
     height: 30px;
-    border-radius: 10px;
+    border-radius: 9px;
     color: color-mix(in oklab, var(--pe-valid) 72%, var(--pe-fg));
-    background: color-mix(in oklab, var(--pe-valid-soft) 84%, var(--pe-surface));
+    background: color-mix(in oklab, var(--pe-valid-soft) 80%, var(--pe-surface));
   }
 
-  .architecture-run-complete > div {
-    display: grid;
-    gap: 2px;
-  }
-
-  .architecture-run-complete strong {
-    font-size: 11px;
-  }
-
-  .architecture-run-complete small {
-    color: var(--pe-muted);
-    font-size: 9px;
-    line-height: 1.45;
-  }
+  .architecture-run-complete > div { display: grid; gap: 2px; }
+  .architecture-run-complete strong { font-size: 11px; }
+  .architecture-run-complete small { color: var(--pe-muted); font-size: 9px; line-height: 1.45; }
 }
 
 @media (max-width: 1120px) {
-  .architecture-intro {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .architecture-intro-actions {
-    justify-content: flex-start;
-  }
-
-  .architecture-inspector-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .architecture-run-evidence {
-    position: static;
-  }
+  .architecture-intro { align-items: flex-start; flex-direction: column; }
+  .architecture-intro-actions { justify-content: flex-start; }
+  .architecture-inspector-grid { grid-template-columns: 1fr; }
+  .architecture-run-evidence { position: static; }
 }
 
 @media (max-width: 760px) {
-  .architecture-toolbar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
+  .architecture-toolbar { align-items: stretch; flex-direction: column; }
   .architecture-run-actions,
   .architecture-run-actions .wui-button,
   .architecture-intro-actions,
-  .architecture-intro-actions .wui-button {
-    width: 100%;
-  }
+  .architecture-intro-actions .wui-button { width: 100%; }
 
-  .architecture-detail-grid {
-    grid-template-columns: 1fr;
-  }
-
+  .architecture-detail-grid { grid-template-columns: 1fr; }
   .architecture-detail-grid > section,
   .architecture-detail-grid > section:nth-child(odd) {
     border-right: 0;
-    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 66%, transparent);
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 42%, transparent);
   }
-
-  .architecture-detail-grid > section:last-child {
-    border-bottom: 0;
-  }
-
-  .architecture-detail-head {
-    grid-template-columns: 40px minmax(0, 1fr);
-    padding: 18px;
-  }
-
-  .architecture-detail-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 13px 13px 8px 13px;
-  }
-
-  .architecture-flow {
-    grid-template-columns: repeat(7, minmax(172px, 1fr));
-    padding: 14px;
-  }
-
-  .architecture-node {
-    min-height: 164px;
-  }
+  .architecture-detail-grid > section:last-child { border-bottom: 0; }
+  .architecture-detail-head { grid-template-columns: 40px minmax(0, 1fr); padding: 18px; }
+  .architecture-detail-icon { width: 38px; height: 38px; border-radius: 11px; }
+  .architecture-flow { grid-template-columns: repeat(7, minmax(160px, 1fr)); padding-block: 14px 18px; }
+  .architecture-node { min-height: 150px; }
 }

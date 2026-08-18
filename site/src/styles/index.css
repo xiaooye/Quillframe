@@ -1,15 +1,16 @@
 /*
  * Quillframe Product Site stylesheet entrypoint.
  *
- * Import order is contractual: foundation first, route implementations next,
- * Story Loom product-language composition after route defaults, and hardening last.
- * main.tsx must import only this file.
+ * Import order is contractual: foundation first, shared shell/primitives next,
+ * route implementations after that, cross-route composition after route
+ * defaults, and hardening last. main.tsx must import only this file.
  */
 @import "./site.css";
 @import "../../../assets/brand/quillframe-product-language.css";
 
-/* Stable product primitives. */
+/* Stable product shell + primitives. */
 @import "./product-contract.css";
+@import "./product-shell.css";
 @import "./product-surface.css";
 @import "./unified-product-app.css";
 
@@ -26,12 +27,14 @@
 @import "./agent-integration.css";
 @import "./agent-host-profiles.css";
 
-/* Story Loom / kawaii product-language composition. Keep these after route defaults. */
-@import "./kawaii-surfaces.css";
+/* Shared Story Loom composition. The retired kawaii-surfaces.css route-wallpaper
+ * layer is intentionally inactive: route identity belongs to the route owners,
+ * while cross-route language stays restrained and canvas-first. */
 @import "./tool-workbench-kawaii.css";
 @import "./embedded-features.css";
 @import "./route-identities.css";
 @import "./story-loom-route-refinements.css";
+@import "./changelog-notebook.css";
 @import "./publication-gallery.css";
 
 /* Cross-cutting readability, then the final resilience/accessibility contract. */

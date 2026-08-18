@@ -31,8 +31,20 @@ check(main.includes('path="/settings"'), "Studio must expose Settings as a globa
 for (const token of ["--qf-product-pink","--qf-product-lilac","--qf-product-mint","--qf-product-radius-panel"]) check(sharedLanguage.includes(token), `shared product language missing ${token}`);
 for (const marker of [".nf-sidebar",".nf-topbar",".nf-page-intro",".nf-command",".nf-bottom-nav"]) check(studioLanguage.includes(marker), `Studio product-language mapping missing ${marker}`);
 for (const marker of [".nf-main-column", ".nf-nav-section", ".nf-page-intro", ".nf-workspace-stage", ".nf-command", ":root.dark", "@media (max-width: 719px)"]) check(experience.includes(marker), `Studio workstation composition missing ${marker}`);
-check(experience.includes("Studio parity pass") && experience.includes("same soft Quillframe atmosphere"), "Studio parity layer must document its workstation-only ownership");
-check(experience.includes("var(--qf-product-pink-soft)") && experience.includes("var(--qf-product-lilac-soft)") && experience.includes("var(--qf-product-mint-soft)"), "Studio parity layer must consume shared Quillframe color language rather than inventing local colors");
+
+check(experience.includes("Cross-product polish without turning Studio into a marketing page"), "Studio parity layer must document its workstation-only ownership");
+check(experience.includes("background: var(--qf-product-canvas)"), "Studio workstation canvas must stay on the shared quiet Quillframe canvas");
+check(!/\.nf-main-column\s*\{[\s\S]*?radial-gradient/.test(experience), "Studio main canvas must not use route-level radial wallpaper");
+check(experience.includes("var(--qf-product-pink-soft)") && experience.includes("var(--qf-product-lilac-soft)"), "Studio parity layer must consume shared Quillframe semantic accent tokens rather than inventing local colors");
+check(experience.includes(".nf-page-intro::before") && experience.includes("content: none"), "Studio page intro must suppress decorative hero-card pseudo surfaces");
+
+const introOwner = studioLanguage.match(/\.nf-page-intro\s*\{[^}]*\}/)?.[0] ?? "";
+check(introOwner.length > 0, "Studio semantic product-language layer must own the page-intro composition directly");
+for (const marker of ["border: 0", "border-radius: 0", "background: transparent", "box-shadow: none"]) {
+  check(introOwner.includes(marker), `Studio page-intro owner must remain canvas-first: ${marker}`);
+}
+check(!/\.nf-page-intro\s*\{[^}]*var\(--qf-product-radius-panel\)/.test(studioLanguage), "Studio semantic owner must not restore the old generic page-intro card radius");
+check(!/\.nf-page-intro\s*\{[^}]*var\(--qf-product-shadow-soft\)/.test(studioLanguage), "Studio semantic owner must not restore page-intro card shadow");
 check(i18n.includes("document.documentElement.dataset.locale = next"), "Studio locale changes must expose the same data-locale selector contract as the Product Site");
 check(!studioLanguage.includes("!important"), "Studio product-language layer must not depend on specificity escape hatches");
 check(!experience.includes("!important"), "Studio workstation composition must not depend on specificity escape hatches");
@@ -52,5 +64,5 @@ if(failures.length){
   for(const failure of failures) console.error(`product-language-quality: FAIL: ${failure}`);
   process.exitCode=1;
 }else{
-  console.log(JSON.stringify({schema:"quillframe_studio_product_language_v5",status:"pass",shared_tokens:true,single_css_entrypoint:true,legacy_visual_fixes_in_cascade:false,workstation_parity:true,hardening_layer:"final",product_language:"quillframe-kawaii-v1",model_service_setup_fields:["api_endpoint","access_token"],automatic_model_selection:true},null,2));
+  console.log(JSON.stringify({schema:"quillframe_studio_product_language_v7",status:"pass",shared_tokens:true,single_css_entrypoint:true,legacy_visual_fixes_in_cascade:false,quiet_workstation_canvas:true,page_intro_canvas_first:true,page_intro_owner:"product-language.css",workstation_parity:true,hardening_layer:"final",product_language:"quillframe-kawaii-v1",model_service_setup_fields:["api_endpoint","access_token"],automatic_model_selection:true},null,2));
 }
