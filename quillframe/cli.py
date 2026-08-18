@@ -52,10 +52,22 @@ def project_sdk() -> ModuleType:
     return _load_source_module("quillframe_project_sdk_cli", root / "project_sdk.py")
 
 
-def claude_hook_main() -> int:
+def host_bootstrap() -> ModuleType:
     root = framework_root()
-    module = _load_source_module("quillframe_claude_hook_cli", root / "harness" / "integrations" / "claude_hook.py")
-    return int(module.main())
+    return _load_source_module(
+        "quillframe_host_bootstrap_cli",
+        root / "harness" / "integrations" / "host_bootstrap.py",
+    )
+
+
+def host_hook_main(host: str) -> int:
+    return int(host_bootstrap().main_for_host(host))
+
+
+def resolve_host_project(path: str | None) -> Path | None:
+    module = host_bootstrap()
+    start = Path(path).expanduser() if path else Path.cwd()
+    return module.find_project_root(start)
 
 
 def doctor(project_id: str | None = None, *, fix: bool = False, data_dir: str | None = None) -> dict[str, Any]:
@@ -77,47 +89,73 @@ def doctor(project_id: str | None = None, *, fix: bool = False, data_dir: str | 
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="quillframe", description="Quillframe local authoring/runtime utilities")
-    sub = p.add_subparsers(dest="cmd", required=True)
+    parser = argparse.ArgumentParser(prog="quillframe", description="Quillframe local authoring/runtime utilities")
+    sub = parser.add_subparsers(dest="cmd", required=True)
 
-    d = sub.add_parser("doctor", help="Check local Framework source and SQLite health")
-    d.add_argument("--project-id")
-    d.add_argument("--data-dir")
-    d.add_argument("--fix", action="store_true")
+    doctor_cmd = sub.add_parser("doctor", help="Check local Framework source and SQLite health")
+    doctor_cmd.add_argument("--project-id")
+    doctor_cmd.add_argument("--data-dir")
+    doctor_cmd.add_argument("--fix", action="store_true")
 
-    i = sub.add_parser("init", help="Create a fiction Project pinned to this exact Framework checkout")
-    i.add_argument("path")
-    i.add_argument("--id", required=True)
-    i.add_argument("--title", required=True)
-    i.add_argument("--language", default="en")
-    i.add_argument("--framework-version", default="0.9.0", help="Minimum acceptable Framework version")
-    i.add_argument("--framework-root")
-    i.add_argument("--force", action="store_true")
+    init_cmd = sub.add_parser("init", help="Create a fiction Project pinned to this exact Framework checkout")
+    init_cmd.add_argument("path")
+    init_cmd.add_argument("--id", required=True)
+    init_cmd.add_argument("--title", required=True)
+    init_cmd.add_argument("--language", default="en")
+    init_cmd.add_argument("--framework-version", default="0.9.0", help="Minimum acceptable Framework version")
+    init_cmd.add_argument("--framework-root")
+    init_cmd.add_argument("--force", action="store_true")
 
-    pin = sub.add_parser("pin", help="Explicitly repin an existing Project to an exact clean Framework checkout")
-    pin.add_argument("path")
-    pin.add_argument("--framework-root")
+    pin_cmd = sub.add_parser("pin", help="Explicitly repin an existing Project to an exact clean Framework checkout")
+    pin_cmd.add_argument("path")
+    pin_cmd.add_argument("--framework-root")
 
-    v = sub.add_parser("validate", help="Validate Project structure and exact authority readiness")
-    v.add_argument("path")
+    validate_cmd = sub.add_parser("validate", help="Validate Project structure and exact authority readiness")
+    validate_cmd.add_argument("path")
 
-    b = sub.add_parser("build", help="Build the deterministic Project bundle")
-    b.add_argument("path")
+    build_cmd = sub.add_parser("build", help="Build the deterministic Project bundle")
+    build_cmd.add_argument("path")
 
-    s = sub.add_parser("spec-new", help="Create a bilingual structural change spec scaffold")
-    s.add_argument("path")
-    s.add_argument("--title", required=True)
+    spec_cmd = sub.add_parser("spec-new", help="Create a bilingual structural change spec scaffold")
+    spec_cmd.add_argument("path")
+    spec_cmd.add_argument("--title", required=True)
+
+    host_install = sub.add_parser("host-install", help="Install/repair Claude Code and Codex host bootstrap files")
+    host_install.add_argument("path")
+    host_install.add_argument("--force", action="store_true")
+
+    host_run = sub.add_parser("host-run", help="Inspect or begin the typed Quillframe manager run for a host session")
+    host_run_sub = host_run.add_subparsers(dest="host_run_cmd", required=True)
+    host_status = host_run_sub.add_parser("status", help="Inspect one exact host manager session")
+    host_status.add_argument("--session-id", required=True)
+    host_status.add_argument("--project")
+    host_begin = host_run_sub.add_parser("begin", help="Resolve exactly one task mode and begin one manager run")
+    host_begin.add_argument("--session-id", required=True)
+    host_begin.add_argument("--mode", required=True)
+    host_begin.add_argument("--project")
 
     sub.add_parser("claude-hook", help=argparse.SUPPRESS)
+    sub.add_parser("codex-hook", help=argparse.SUPPRESS)
 
-    args = p.parse_args(argv)
+    args = parser.parse_args(argv)
     try:
         if args.cmd == "doctor":
             result = doctor(args.project_id, fix=args.fix, data_dir=args.data_dir)
             dump(result)
             return 0 if result["ok"] else 1
         if args.cmd == "claude-hook":
-            return claude_hook_main()
+            return host_hook_main("claude_code")
+        if args.cmd == "codex-hook":
+            return host_hook_main("codex")
+        if args.cmd == "host-run":
+            module = host_bootstrap()
+            project_root = resolve_host_project(args.project)
+            if args.host_run_cmd == "status":
+                result = module.run_status(project_root, args.session_id)
+            else:
+                result = module.begin_run(project_root, args.session_id, args.mode)
+            dump(result)
+            return 0
 
         sdk = project_sdk()
         if args.cmd == "init":
@@ -133,6 +171,8 @@ def main(argv: list[str] | None = None) -> int:
             result = sdk.validate_project(Path(args.path))
         elif args.cmd == "build":
             result = sdk.build_project(Path(args.path))
+        elif args.cmd == "host-install":
+            result = sdk.host_install_project(Path(args.path), force=args.force)
         else:
             result = sdk.create_spec(Path(args.path), args.title)
         dump(result)
