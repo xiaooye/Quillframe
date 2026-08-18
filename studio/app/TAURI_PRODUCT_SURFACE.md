@@ -1,54 +1,64 @@
-# Quillframe Studio · Tauri 2 consumer surface
+# Quillframe Studio · Tauri 2 product surface
 
-Status: **awaiting_external** on frozen main `5fd991a5621f2c68e1030aa6e0b35014ca4011c7`.
+Core authority consumed by the current Studio consumer: `main@6ee7299f81b92e11b67da32d16abf73e7ace1ccd`, Host Bridge **v8**.
 
-This document belongs to the Studio consumer. It does **not** define Python Core behavior, SQLite authority, provider protocols, or secret storage.
+## Current PR #130 state
 
-## Product topology
+The SolidJS consumer side is implemented:
 
 ```text
 SolidJS Studio
   → BridgeClient
     → TauriTransport
-      → Tauri 2 command: bridge_invoke
-        → local Quillframe Core
-          → canonical SQLite
+      → invoke("bridge_invoke", { request })
 ```
 
-The Desktop product must be completely Cloudflare-independent. Cloudflare configuration, bindings, Workers, Pages, or temporary serverless storage are not part of this path.
+`TauriTransport` accepts only the same `quillframe_studio_host_bridge_request_v1` / `quillframe_studio_host_bridge_result_v1` semantics used by other transports. It does not read SQLite, infer Canon, run semantic logic, or persist credentials.
 
-## Exact host primitive required
+The **actual Tauri 2 host is intentionally not claimed by PR #130**. There is not yet a committed `src-tauri` host in this consumer branch. Desktop therefore remains `awaiting_external` even though the TypeScript transport exists.
 
-Studio detects a real Tauri host only when `window.__TAURI__.core.invoke` exists. It then calls:
+## Required thin-host architecture
 
-- command: `bridge_invoke`
-- input: one `quillframe_studio_host_bridge_request_v1` object
-- output: one `quillframe_studio_host_bridge_result_v1` object
+The follow-on Desktop host must implement:
 
-Until Core/host ownership supplies that command, `TauriTransport.available()` remains false. Studio does not install a JavaScript mock or route requests through Cloudflare.
+```text
+SolidJS
+→ one Tauri command: bridge_invoke
+→ thin Rust host
+   ├─ packaged Python Core sidecar
+   └─ OS-native credential store
+→ studio/host_bridge.py v8
+→ Python Core
+→ SQLite
+```
 
-Current Core contract exposes `local_app` but no distinct `tauri_local` semantic surface. Therefore Tauri forwards the same `local_app` envelope. If Core later introduces a stable Tauri-specific surface, Studio must reconcile after that Core change is reviewed/merged.
+Rust may own process lifecycle, IPC framing, OS integration, window lifecycle and secure secret storage. It must **not** duplicate Python Core operation semantics, Context logic, Candidate lifecycle, Settlement policy, Model Runtime capability judgment, or SQLite domain queries.
 
-## Required host behavior
+## Secret boundary
 
-1. Start/connect to the real local Python Core without copying Core semantics into Rust/TypeScript.
-2. Preserve the request/result envelope and operation names exactly.
-3. Keep canonical persistence in Core-owned SQLite.
-4. Never return secret values to Studio.
-5. Return typed `unsupported`/`failed` results rather than fabricating normal-path data.
-6. Survive Desktop app restart while relying on Core persistence, not browser persistence.
-7. Preserve explicit authorization for authority commands.
+Desktop Model Service credentials must survive app restart without entering SQLite, browser storage, Vite assets, semantic Context, receipts or logs.
 
-## Verification still required
+The intended boundary is:
 
-A packaged Tauri build must prove, on an installed application:
+1. Studio sends Endpoint + Access Token only through the Tauri IPC request.
+2. Tauri host / OS secure store owns durable secret bytes.
+3. Python Core receives a host-injected `SecretStore` view keyed by `credential_ref`.
+4. Durable Quillframe SQLite stores only the reference/public presence metadata.
+5. Core/bridge public results never echo the credential value.
 
-- create/open Project;
-- manuscript write + autosave + app/Core restart + exact reload;
-- Endpoint + Access Token connection through Core-owned secret handling;
-- real Agent Run through the production semantic runtime;
-- Candidate/Review/Accept/Settlement sequence;
-- Context/Run inspection;
-- no Cloudflare/network dependency for local-only operation.
+A process-local `MemorySecretStore` is not sufficient for Desktop production acceptance.
 
-Until those checks execute against the real host primitive, Desktop production readiness is not claimed.
+## Desktop acceptance gate
+
+Do not call Desktop production-ready until a separate host implementation proves:
+
+- Tauri 2 app compiles against the current Studio build;
+- `bridge_invoke` round-trips a real `bridge.describe` Host Bridge v8 request;
+- Python Core is packaged/launched as a sidecar rather than reimplemented in Rust;
+- OS-native secret set/get/delete works and survives app restart;
+- Model Service reconnect after restart resolves its durable `credential_ref` without storing plaintext in SQLite;
+- secret values do not appear in stdout/stderr, window state, browser storage or bridge results;
+- Project/manuscript operations round-trip through the same Python Core;
+- Desktop remains Cloudflare-independent.
+
+This is a distinct host engineering workstream after the Web/Studio consumer PR #130 is merged; it is not replaced by a browser mock or by declaring the TypeScript transport itself sufficient.
