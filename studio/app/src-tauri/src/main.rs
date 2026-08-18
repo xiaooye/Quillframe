@@ -66,7 +66,7 @@ async fn run_sidecar(app: &AppHandle, args: &[&str], input: Option<&Value>, secr
         let mut bytes = serde_json::to_vec(payload).map_err(|error| format!("sidecar payload serialization failed: {error}"))?;
         bytes.push(b'\n');
         child
-            .write(bytes)
+            .write(bytes.as_slice())
             .map_err(|error| scrub(format!("sidecar stdin write failed: {error}"), secrets))?;
     }
     drop(child);
