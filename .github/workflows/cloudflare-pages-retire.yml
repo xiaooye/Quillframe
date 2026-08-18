@@ -91,10 +91,10 @@ jobs:
             while :; do
               rounds=$((rounds + 1))
               (( rounds <= 50 )) || { echo 'Deployment prune exceeded safety bound.' >&2; exit 1; }
-              curl -fsS --get "${auth[@]}" \
+              list_status=$(curl -sS -o /tmp/deployments.json -w '%{http_code}' --get "${auth[@]}" \
                 --data-urlencode 'page=1' \
-                --data-urlencode 'per_page=100' \
-                "${deployments_api}" -o /tmp/deployments.json
+                "${deployments_api}")
+              [[ "${list_status}" == 200 ]] || { echo "Deployment list failed: HTTP ${list_status}" >&2; cat /tmp/deployments.json >&2; exit 1; }
               jq -e '.success == true' /tmp/deployments.json >/dev/null
               mapfile -t ids < <(jq -r --arg canonical "${canonical}" '.result[]?.id | select(. != $canonical)' /tmp/deployments.json)
               if (( ${#ids[@]} == 0 )); then break; fi
