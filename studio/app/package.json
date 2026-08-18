@@ -10,7 +10,8 @@
     "lint": "pnpm quality",
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.mjs",
-    "build": "pnpm lint && pnpm typecheck && pnpm test && vite build && node scripts/write-offline-shell.mjs && node scripts/write-footprint.mjs",
+    "browser:smoke": "node scripts/browser-smoke.mjs",
+    "build": "pnpm lint && pnpm typecheck && pnpm test && vite build && pnpm browser:smoke && node scripts/write-offline-shell.mjs && node scripts/write-footprint.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
