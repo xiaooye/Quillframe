@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 300" role="img" aria-labelledby="t d">
+<title id="t">Quillframe 框架心智模型 — 深色</title>
+<desc id="d">在深色画布上展示编排、执行与验证，以及经授权的状态落定。</desc>
+<style>
+text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;fill:#F5EFF8}.eyebrow{font-size:13px;font-weight:700;letter-spacing:1.5px;fill:#BEB4C3}.title{font-size:28px;font-weight:760}.label{font-size:17px;font-weight:700}.body{font-size:14px;fill:#BEB4C3}.line{stroke:#625B68;stroke-width:1.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+</style>
+<rect width="920" height="300" fill="#18151E"/>
+<text x="48" y="38" class="eyebrow">框架心智模型</text><text x="48" y="72" class="title">从故事事实权威到持久状态</text>
+<rect x="44" y="105" width="225" height="136" rx="22" fill="#1C2A35"/><rect x="292" y="105" width="350" height="136" rx="22" fill="#29233C"/><rect x="668" y="105" width="208" height="136" rx="22" fill="#1D3027"/>
+<text x="64" y="129" class="eyebrow">编排</text><text x="64" y="165" class="label">项目事实权威</text><text x="64" y="192" class="body">管理器 + 稀疏上下文</text>
+<text x="316" y="129" class="eyebrow">执行与验证</text><text x="316" y="165" class="label">语义工作</text><text x="316" y="190" class="body">精确候选稿 · 内容指纹</text><text x="316" y="213" class="body">资格检查 · 独立评审</text>
+<text x="692" y="129" class="eyebrow">状态落定</text><text x="692" y="165" class="label">授权写入</text><text x="692" y="190" class="body">前置状态 → 目标状态</text><text x="692" y="213" class="body">事后条件检查</text>
+<path d="M269 174 L292 174" class="line"/><path d="M642 174 L668 174" class="line"/><circle cx="281" cy="174" r="4" fill="#E0B85A"/><circle cx="655" cy="174" r="4" fill="#E0B85A"/>
+<text x="48" y="273" class="body">证据可以向前流动；权威级别从不隐式升级。</text>
+</svg>
