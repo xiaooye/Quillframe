@@ -1,0 +1,505 @@
+name: Production Runtime Contract Fixup
+
+on:
+  push:
+    branches: ['agent/production-runtime-integration']
+
+permissions:
+  contents: write
+
+jobs:
+  fixup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/production-runtime-integration
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Align Host Bridge and production tests with external independent gate
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          runtime_path = Path('production_runtime/runtime.py')
+          runtime = runtime_path.read_text(encoding='utf-8')
+          marker = '    def submit_independent(\n'
+          if '    def prepare_independent(\n' not in runtime:
+              method = '''    def prepare_independent(\n        self,\n        project_id: str,\n        run_id: str,\n        *,\n        provenance: dict[str, Any],\n    ) -> dict[str, Any]:\n        """Package the already-qualified candidate for a real external reviewer.\n\n        This operation never re-runs Writer/Reader/Editor stages and never treats\n        a same-runtime model call as independent evidence.\n        """\n        run = self._run_row(project_id, run_id)\n        if run.get("status") == "completed":\n            bundle = self._latest_bundle(project_id, run_id)\n            replay = self._completed_projection(project_id, run, bundle)\n            if replay is None:\n                raise ProductionRunError("completed_run_missing_candidate", "completed production run has no candidate")\n            return replay\n        if run.get("status") != "awaiting_external":\n            raise ProductionRunError("independent_prepare_not_expected", f"run status is {run.get('status')}, not awaiting_external")\n        bundle = self._latest_bundle(project_id, run_id)\n        qualified = self._latest_checkpoint(project_id, run_id, "production_qualified_candidate")\n        if not bundle or not qualified:\n            raise ProductionRunError("qualified_candidate_missing", "frozen Context bundle and qualified candidate checkpoint are required")\n        existing = self._latest_checkpoint(project_id, run_id, "production_independent_handoff")\n        if existing:\n            return self._awaiting_external_projection(project_id, run, bundle) or {}\n        validation = self._validate_bundle_current(project_id, bundle)\n        if not validation.get("proceed"):\n            self._set_run(project_id, run_id, "stale_conflict")\n            return {\n                "schema": PRODUCTION_EXECUTION_SCHEMA,\n                "project_id": project_id,\n                "run_id": run_id,\n                "status": "stale_conflict",\n                "validation": validation,\n                "new_context_fingerprint_required": True,\n                "candidate_visible": False,\n                "raw_draft_visible": False,\n                "authority": False,\n            }\n        return self._build_handoff_from_qualified(project_id, run, bundle, qualified, provenance)\n\n'''
+              if marker not in runtime:
+                  raise SystemExit('runtime submit_independent marker not found')
+              runtime = runtime.replace(marker, method + marker, 1)
+              runtime_path.write_text(runtime, encoding='utf-8')
+
+          bridge_path = Path('studio/host_bridge.py')
+          bridge = bridge_path.read_text(encoding='utf-8')
+          old_execute = '''def _author_run_execute(args: dict[str, Any], _: str):\n    return production_runtime().execute(\n        require(args, "project_id"), require(args, "run_id"), service_id=require(args, "service_id"),\n        instruction=require(args, "instruction"), document_id=args.get("document_id"), model_preference=args.get("model_id"),\n        stage_budgets=args.get("stage_budgets") if isinstance(args.get("stage_budgets"), dict) else None,\n    )\n\n\n'''
+          new_execute = '''def _author_run_execute(args: dict[str, Any], _: str):\n    return production_runtime().execute(\n        require(args, "project_id"),\n        require(args, "run_id"),\n        service_id=require(args, "service_id"),\n        instruction=require(args, "instruction"),\n        document_id=args.get("document_id"),\n        model_preference=args.get("model_id"),\n        stage_budgets=args.get("stage_budgets") if isinstance(args.get("stage_budgets"), dict) else None,\n        reader_grip=require(args, "reader_grip"),\n        rule_material=require(args, "rule_material", list),\n        reader_visible_context=args.get("reader_visible_context") if isinstance(args.get("reader_visible_context"), list) else None,\n        repair_preservation=args.get("repair_preservation") if isinstance(args.get("repair_preservation"), dict) else None,\n    )\n\n\ndef _author_independent_prepare(args: dict[str, Any], _: str):\n    return production_runtime().prepare_independent(\n        require(args, "project_id"),\n        require(args, "run_id"),\n        provenance=require(args, "provenance", dict),\n    )\n\n\ndef _author_independent_submit(args: dict[str, Any], _: str):\n    return production_runtime().submit_independent(\n        require(args, "project_id"),\n        require(args, "run_id"),\n        peer_packet=require(args, "peer_packet", dict),\n        result=require(args, "result", dict),\n        bridge_receipt=require(args, "bridge_receipt", dict),\n    )\n\n\n'''
+          if old_execute not in bridge:
+              raise SystemExit('old host bridge execute block not found')
+          bridge = bridge.replace(old_execute, new_execute, 1)
+          old_dispatch = '''    "author.run.execute": _author_run_execute,\n    "author.run.context.refresh": _author_context_refresh,\n'''
+          new_dispatch = '''    "author.run.execute": _author_run_execute,\n    "author.run.independent.prepare": _author_independent_prepare,\n    "author.run.independent.submit": _author_independent_submit,\n    "author.run.context.refresh": _author_context_refresh,\n'''
+          if old_dispatch not in bridge:
+              raise SystemExit('host bridge dispatch marker not found')
+          bridge = bridge.replace(old_dispatch, new_dispatch, 1)
+          bridge = bridge.replace('"contract_version": "6"', '"contract_version": "7"')
+          bridge_path.write_text(bridge, encoding='utf-8')
+
+          contract_path = Path('studio/host_bridge_contract.json')
+          contract = json.loads(contract_path.read_text(encoding='utf-8'))
+          contract['version'] = '7'
+          contract['invariants']['independent_review_same_runtime_substitution'] = False
+          contract['invariants']['independent_review_project_peer_receipt_required'] = True
+          contract['operations']['author.run.execute']['required_args'] = [
+              'project_id', 'run_id', 'service_id', 'instruction', 'reader_grip', 'rule_material'
+          ]
+          contract['operations']['author.run.independent.prepare'] = {
+              'kind': 'external_handoff',
+              'required_args': ['project_id', 'run_id', 'provenance'],
+              'allowed_surfaces': ['cli', 'local_app', 'hosted_web'],
+          }
+          contract['operations']['author.run.independent.submit'] = {
+              'kind': 'external_handoff_result',
+              'required_args': ['project_id', 'run_id', 'peer_packet', 'result', 'bridge_receipt'],
+              'allowed_surfaces': ['cli', 'local_app', 'hosted_web'],
+          }
+          contract_path.write_text(json.dumps(contract, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          Path('tests/test_quillframe_production_runtime.py').write_text(r'''from __future__ import annotations
+
+import inspect
+import json
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+from agent_runtime import AgentJob, AgentResult
+from core_operations import CoreOperations
+from harness.context_runtime import MANDATORY_PRODUCTION_MECHANISMS
+from persistence.quillframe_sqlite import QuillframeStore, now_iso
+from production_runtime import PRODUCTION_MECHANISMS, ProductionRunError, ProductionRunExecutor
+
+ROOT = Path(__file__).resolve().parents[1]
+SEM = ROOT / "harness" / "semantic_workers"
+if str(SEM) not in sys.path:
+    sys.path.insert(0, str(SEM))
+from peer_bridge_receipt import build_receipt  # noqa: E402
+
+RULE_MATERIAL = [{"id": "HF-CI", "authority": "framework", "statement": "Synthetic production-runtime test rule."}]
+PROVENANCE = {
+    "project_id": "PROD",
+    "project_repo": "owner/project",
+    "framework_repo": "owner/framework",
+    "framework_commit": "f" * 40,
+}
+
+
+class FakeAgentRuntime:
+    """Deterministic contract fixture; explicitly not live-provider acceptance."""
+
+    def __init__(self, *, reject_mechanism: str | None = None, invalid_selector: bool = False) -> None:
+        self.reject_mechanism = reject_mechanism
+        self.invalid_selector = invalid_selector
+        self.calls: list[AgentJob] = []
+
+    def run(self, job: AgentJob, *, cancellation=None) -> AgentResult:  # noqa: ANN001
+        self.calls.append(job)
+        role = job.runtime_role
+        if role == "context_profile_deriver":
+            packet = job.context[0]
+            payload = {
+                "description": f"profile for {packet['source_object_id']}",
+                "trigger_when": "when relevant to the current production stage",
+                "estimated_tokens": 16,
+                "semantic_tags": [packet["source_object_type"]],
+                "stage_affinities": list(packet["allowed_stage_ids"]),
+            }
+        elif role == "context_selector":
+            packet = job.context[0]
+            eligible = packet["eligible"]
+            if self.invalid_selector:
+                selections = [{"profile_id": "CTXPROF-NOT-IN-UNIVERSE", "stage_id": packet["stage_id"], "priority": 100, "reason_code": "bad", "reason": "invalid test id", "required_for_grounding": False}]
+            else:
+                selections = [
+                    {"profile_id": row["profile_id"], "stage_id": packet["stage_id"], "priority": 100 - index, "reason_code": "eligible", "reason": "fixture selects eligible source", "required_for_grounding": False}
+                    for index, row in enumerate(eligible)
+                ]
+            payload = {"selections": selections}
+        elif role == "registered_reader_engagement":
+            payload = {
+                "confidence": 1.0,
+                "result": "pass",
+                "report": "Synthetic Blind Reader pass.",
+                "strongest_positive": "The candidate is coherent.",
+                "strongest_problem": None,
+                "evidence_refs": ["candidate:synthetic"],
+            }
+        elif role == "registered_candidate_self_audit":
+            payload = {
+                "confidence": 1.0,
+                "result": "pass",
+                "report": "Synthetic manager audit pass.",
+                "dimensions": {
+                    "surface": "pass",
+                    "regression": "pass",
+                    "character_or_ownership": "pass",
+                    "natural_realization": "pass",
+                    "cluster": "pass",
+                },
+                "findings": [],
+                "evidence_refs": ["candidate:synthetic"],
+            }
+        elif role == "event_first_raw_draft":
+            payload = {"status": "fail" if self.reject_mechanism == role else "pass", "text": "INTERNAL RAW DRAFT", "summary": "event-first draft", "findings": []}
+        elif role == "surface_realization":
+            payload = {"status": "fail" if self.reject_mechanism == role else "pass", "text": "Review prose ready for the user-visible gate.", "summary": "surface candidate", "findings": []}
+        else:
+            payload = {"status": "fail" if self.reject_mechanism == role else "pass", "summary": role, "findings": ["fixture rejection"] if self.reject_mechanism == role else [], "artifact": {"role": role}}
+        return AgentResult(
+            job_id=job.job_id,
+            session_id=job.session_id,
+            run_id=job.run_id,
+            status="completed",
+            model_service_id=job.service_id,
+            model_id="fixture-model",
+            protocol="fixture_protocol",
+            input_fingerprint=job.input_fingerprint,
+            final_text=json.dumps(payload),
+            steps=1,
+            model_requests=1,
+        )
+
+
+def peer_result(handoff: dict, verdict: str = "pass") -> dict:
+    packet = handoff["independent_review_request"]["peer_packet"]
+    job = packet["job"]
+    return {
+        "job_id": job["job_id"],
+        "subject_id": job["subject_id"],
+        "kind": job["kind"],
+        "input_fingerprint": job["input_fingerprint"],
+        "status": "completed",
+        "worker": {
+            "provider": "chatgpt_peer_chat",
+            "model_or_reviewer": "synthetic-independent-fixture",
+            "run_reference": packet["relay_nonce"],
+        },
+        "judgment": {
+            "confidence": 1.0,
+            "result": verdict,
+            "report": f"Synthetic independent {verdict}.",
+            "evidence_refs": ["candidate:synthetic"],
+        },
+        "proposals": [],
+        "errors": [],
+    }
+
+
+def bridge_receipt(handoff: dict, result: dict) -> dict:
+    packet = handoff["independent_review_request"]["peer_packet"]
+    return build_receipt(
+        packet,
+        result,
+        project_id=PROVENANCE["project_id"],
+        project_repo=PROVENANCE["project_repo"],
+        framework_repo=PROVENANCE["framework_repo"],
+        framework_commit=PROVENANCE["framework_commit"],
+        issue_number=1,
+        runtime_trace={
+            "github_run_id": 1,
+            "github_run_attempt": 1,
+            "github_event_name": "issue_comment",
+            "result_comment_id": 1,
+            "workflow_name": "Synthetic project peer bridge fixture",
+            "framework_action_ref": PROVENANCE["framework_commit"],
+        },
+    )
+
+
+class ProductionRuntimeTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.store = QuillframeStore(Path(self.temp.name))
+        self.store.create_project("PROD", "Production Fixture")
+        self.store.create_document("PROD", "DOC-1", "Chapter")
+        self.store.save_revision("PROD", "DOC-1", "seed", expected_parent_revision_id=None, source="test")
+        stamp = now_iso()
+        with self.store.open_project("PROD") as conn:
+            conn.execute("INSERT INTO characters(character_id,name,agenda,voice_notes,state_json,updated_at) VALUES(?,?,?,?,?,?)", ("CHAR-A", "A", "protect the deal", "precise", '{}', stamp))
+            conn.execute("INSERT INTO character_knowledge(knowledge_id,character_id,claim_ref,fact_json,available_from_story_order,evidence_ref,confidence) VALUES(?,?,?,?,?,?,?)", ("KN-A", "CHAR-A", None, '{"fact":"private knowledge"}', 1, "accepted", "known"))
+            conn.execute("INSERT INTO research_sources(source_id,title,source_uri,source_kind,rights_json,provenance_json,status,created_at) VALUES(?,?,?,?,?,?,?,?)", ("RS-1", "Research", None, "fixture", '{}', '{}', "active", stamp))
+            conn.execute("INSERT INTO research_claims(research_claim_id,source_id,claim_text,citation_json,fictionalization_notes,character_knowledge_boundary_json,canon_status,created_at) VALUES(?,?,?,?,?,?,?,?)", ("RC-1", "RS-1", "external fact", '{}', None, '{}', "research_only", stamp))
+            conn.commit()
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def start(self) -> str:
+        result = CoreOperations(self.store).start_author_run("PROD", task_mode="DRAFT", target_ref="DOC-1", payload={"instruction": "draft chapter"})
+        return result["run_id"]
+
+    def execute_to_qualified(self, runtime: ProductionRunExecutor, run_id: str) -> dict:
+        return runtime.execute(
+            "PROD", run_id, service_id="svc", instruction="draft chapter",
+            reader_grip="very_high", rule_material=RULE_MATERIAL,
+        )
+
+    def prepare_handoff(self, runtime: ProductionRunExecutor, run_id: str) -> dict:
+        return runtime.prepare_independent("PROD", run_id, provenance=PROVENANCE)
+
+    def complete(self, runtime: ProductionRunExecutor, run_id: str, verdict: str = "pass") -> dict:
+        handoff = self.prepare_handoff(runtime, run_id)
+        result = peer_result(handoff, verdict)
+        receipt = bridge_receipt(handoff, result)
+        return runtime.submit_independent(
+            "PROD", run_id,
+            peer_packet=handoff["independent_review_request"]["peer_packet"],
+            result=result,
+            bridge_receipt=receipt,
+        )
+
+    def test_full_graph_consumes_frozen_context_and_requires_external_independent_evidence(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        qualified = self.execute_to_qualified(runtime, run_id)
+        self.assertEqual(qualified["status"], "awaiting_external")
+        self.assertEqual(qualified["awaiting"], "independent_provenance")
+        self.assertFalse(qualified["candidate_visible"])
+        self.assertFalse(any(job.runtime_role == "independent_semantic_gate" for job in fake.calls))
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0], 0)
+
+        handoff = self.prepare_handoff(runtime, run_id)
+        self.assertEqual(handoff["awaiting"], "independent_semantic_review")
+        packet = handoff["independent_review_request"]["peer_packet"]
+        self.assertTrue(packet["return_binding"]["fresh_conversation_required"])
+        self.assertTrue(packet["return_binding"]["same_project_writer_chat_forbidden"])
+
+        result = peer_result(handoff, "pass")
+        completed = runtime.submit_independent(
+            "PROD", run_id,
+            peer_packet=packet,
+            result=result,
+            bridge_receipt=bridge_receipt(handoff, result),
+        )
+        self.assertEqual(completed["status"], "completed")
+        self.assertTrue(completed["candidate_visible"])
+        self.assertFalse(completed["raw_draft_visible"])
+        self.assertFalse(completed["accepted"])
+        self.assertFalse(completed["settled"])
+        self.assertEqual(tuple(PRODUCTION_MECHANISMS), tuple(x for x in MANDATORY_PRODUCTION_MECHANISMS if x != "context_freeze"))
+        self.assertIn("registered_reader_engagement", [job.runtime_role for job in fake.calls])
+        self.assertIn("registered_candidate_self_audit", [job.runtime_role for job in fake.calls])
+        public = json.dumps(completed)
+        self.assertNotIn("INTERNAL RAW DRAFT", public)
+        for receipt in completed["stage_receipts"]:
+            self.assertIs(receipt["private_reasoning_exposed"], False)
+            self.assertIs(receipt["raw_draft_visible"], False)
+        with self.store.open_project("PROD") as conn:
+            candidate = conn.execute("SELECT * FROM candidates WHERE run_id=?", (run_id,)).fetchone()
+            evidence = conn.execute("SELECT * FROM review_evidence WHERE candidate_id=?", (candidate["candidate_id"],)).fetchone()
+            self.assertEqual(candidate["status"], "review_draft")
+            self.assertEqual(candidate["user_visible_gate"], "PASS")
+            self.assertEqual(evidence["independent"], 1)
+            self.assertEqual(evidence["evidence_kind"], "quality.production_review")
+
+    def test_stage_materializer_has_no_database_access_path(self):
+        source = inspect.getsource(ProductionRunExecutor.materialize_stage_context).lower()
+        self.assertNotIn("sqlite", source)
+        self.assertNotIn("open_project", source)
+        self.assertNotIn("self.store", source)
+
+    def test_character_simulation_excludes_research_but_keeps_character_knowledge(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        bundle = runtime.prepare_context("PROD", self.start(), service_id="svc", instruction="draft")
+        character = runtime.materialize_stage_context(bundle, "character_simulation")
+        draft = runtime.materialize_stage_context(bundle, "event_first_raw_draft")
+        self.assertIn("character_knowledge", {row["domain"] for row in character["items"]})
+        self.assertNotIn("research", {row["domain"] for row in character["items"]})
+        self.assertIn("research", {row["domain"] for row in draft["items"]})
+        self.assertFalse(character["db_fetch_performed"])
+
+    def test_invalid_selector_id_is_rejected_not_guessed(self):
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime(invalid_selector=True))
+        with self.assertRaises(ProductionRunError) as caught:
+            runtime.prepare_context("PROD", self.start(), service_id="svc", instruction="draft")
+        self.assertEqual(caught.exception.code, "semantic_invalid")
+
+    def test_mutation_after_freeze_blocks_before_stage_worker(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        runtime.prepare_context("PROD", run_id, service_id="svc", instruction="draft")
+        fake.calls.clear()
+        with self.store.open_project("PROD") as conn:
+            conn.execute("UPDATE characters SET agenda=?,updated_at=? WHERE character_id='CHAR-A'", ("changed", now_iso()))
+            conn.commit()
+        result = self.execute_to_qualified(runtime, run_id)
+        self.assertEqual(result["status"], "stale_conflict")
+        self.assertTrue(result["new_context_fingerprint_required"])
+        self.assertEqual(fake.calls, [])
+
+    def test_new_source_after_freeze_changes_source_universe_and_blocks(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        runtime.prepare_context("PROD", run_id, service_id="svc", instruction="draft")
+        fake.calls.clear()
+        with self.store.open_project("PROD") as conn:
+            conn.execute("INSERT INTO characters(character_id,name,agenda,voice_notes,state_json,updated_at) VALUES(?,?,?,?,?,?)", ("CHAR-B", "B", "new agenda", None, '{}', now_iso()))
+            conn.commit()
+        result = self.execute_to_qualified(runtime, run_id)
+        self.assertEqual(result["status"], "stale_conflict")
+        self.assertTrue(result["validation"].get("source_universe_changed"))
+        self.assertEqual(fake.calls, [])
+
+    def test_explicit_refresh_supersedes_old_bundle_with_new_fingerprint(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        old = runtime.prepare_context("PROD", run_id, service_id="svc", instruction="draft")
+        with self.store.open_project("PROD") as conn:
+            conn.execute("UPDATE characters SET agenda=?,updated_at=? WHERE character_id='CHAR-A'", ("changed", now_iso()))
+            conn.commit()
+        new = runtime.refresh_context("PROD", run_id, service_id="svc", instruction="draft", reason="user_requested_refresh")
+        self.assertNotEqual(old["bundle_fingerprint"], new["bundle_fingerprint"])
+        self.assertNotEqual(old["freeze"]["freeze_fingerprint"], new["freeze"]["freeze_fingerprint"])
+        self.assertEqual(new["supersedes_bundle_fingerprint"], old["bundle_fingerprint"])
+
+    def test_mutation_after_qualification_blocks_independent_prepare(self):
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        run_id = self.start()
+        self.execute_to_qualified(runtime, run_id)
+        with self.store.open_project("PROD") as conn:
+            conn.execute("UPDATE characters SET agenda=?,updated_at=? WHERE character_id='CHAR-A'", ("post-qualified mutation", now_iso()))
+            conn.commit()
+        result = runtime.prepare_independent("PROD", run_id, provenance=PROVENANCE)
+        self.assertEqual(result["status"], "stale_conflict")
+        self.assertTrue(result["new_context_fingerprint_required"])
+
+    def test_independent_reject_is_not_reviewer_shopped_and_creates_no_candidate(self):
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        run_id = self.start()
+        self.execute_to_qualified(runtime, run_id)
+        handoff = self.prepare_handoff(runtime, run_id)
+        rejected = peer_result(handoff, "fail")
+        result = runtime.submit_independent(
+            "PROD", run_id,
+            peer_packet=handoff["independent_review_request"]["peer_packet"],
+            result=rejected,
+            bridge_receipt=bridge_receipt(handoff, rejected),
+        )
+        self.assertEqual(result["status"], "failed_gate")
+        self.assertEqual(result["failed_mechanism"], "independent_semantic_gate")
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0], 0)
+        with self.assertRaises(ProductionRunError) as caught:
+            self.execute_to_qualified(runtime, run_id)
+        self.assertEqual(caught.exception.code, "failed_gate_requires_fresh_run")
+
+    def test_completed_run_replay_is_idempotent(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        self.execute_to_qualified(runtime, run_id)
+        first = self.complete(runtime, run_id)
+        calls = len(fake.calls)
+        second = self.execute_to_qualified(runtime, run_id)
+        self.assertTrue(second["replayed"])
+        self.assertEqual(first["candidate"]["candidate_id"], second["candidate"]["candidate_id"])
+        self.assertEqual(calls, len(fake.calls))
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0], 1)
+
+
+if __name__ == "__main__":
+    unittest.main()
+''', encoding='utf-8')
+
+          Path('tests/test_quillframe_production_host_bridge.py').write_text(r'''from __future__ import annotations
+
+import unittest
+
+from studio import host_bridge
+
+
+class ProductionHostBridgeTests(unittest.TestCase):
+    def test_v7_contract_exposes_production_external_review_and_model_service_primitives(self):
+        contract = host_bridge.contract()
+        self.assertEqual(contract["version"], "7")
+        for operation in (
+            "author.run.execute", "author.run.status", "author.run.context.refresh",
+            "author.run.independent.prepare", "author.run.independent.submit",
+            "model.service.add", "model.service.discover", "model.service.test", "model.capabilities",
+            "document.open", "document.revisions.list", "project.restore",
+        ):
+            self.assertIn(operation, contract["operations"])
+        self.assertEqual(
+            contract["operations"]["author.run.execute"]["required_args"],
+            ["project_id", "run_id", "service_id", "instruction", "reader_grip", "rule_material"],
+        )
+        self.assertTrue(contract["invariants"]["independent_review_project_peer_receipt_required"])
+        self.assertFalse(contract["invariants"]["independent_review_same_runtime_substitution"])
+        self.assertEqual(contract["deferred_operations"]["project.delete"]["status"], "unsupported")
+        self.assertFalse(contract["secret_boundary"]["cloudflare_required"])
+
+    def test_access_token_is_redacted_from_fingerprint_but_business_authorization_is_bound(self):
+        secret_a = "QF-SECRET-SENTINEL-111"
+        secret_b = "QF-SECRET-SENTINEL-222"
+        token_a = {"schema": host_bridge.REQUEST_SCHEMA, "request_id": "same", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": secret_a}, "authority": False}
+        token_b = {**token_a, "args": {"endpoint": "https://example.invalid/v1", "access_token": secret_b}}
+        result_a = host_bridge.invoke(token_a)
+        result_b = host_bridge.invoke(token_b)
+        self.assertEqual(result_a["request_fingerprint"], result_b["request_fingerprint"])
+        self.assertNotIn(secret_a, str(result_a))
+        self.assertNotIn(secret_b, str(result_b))
+        self.assertFalse(result_a["secret_values_persisted"])
+
+        auth_a = {"schema": host_bridge.REQUEST_SCHEMA, "request_id": "auth", "operation": "candidate.accept", "surface": "local_app", "args": {"project_id": "MISSING", "candidate_id": "C", "candidate_fingerprint": "sha256:x", "authorized_by": "user", "authorization": {"reason": "approve-a"}, "idempotency_key": "k", "user_authorized": True}, "authority": False}
+        auth_b = {**auth_a, "args": {**auth_a["args"], "authorization": {"reason": "approve-b"}}}
+        accepted_a = host_bridge.invoke(auth_a)
+        accepted_b = host_bridge.invoke(auth_b)
+        self.assertNotEqual(accepted_a["request_fingerprint"], accepted_b["request_fingerprint"])
+
+    def test_secret_commands_and_production_execution_are_not_agent_package_operations(self):
+        for operation, args in (
+            ("model.service.add", {"endpoint": "https://example.invalid/v1", "access_token": "secret"}),
+            ("model.service.token.replace", {"service_id": "s", "access_token": "secret"}),
+            ("author.run.execute", {"project_id": "p", "run_id": "r", "service_id": "s", "instruction": "x", "reader_grip": "very_high", "rule_material": [{"id": "R", "authority": "framework", "statement": "x"}]}),
+            ("author.run.independent.submit", {"project_id": "p", "run_id": "r", "peer_packet": {}, "result": {}, "bridge_receipt": {}}),
+        ):
+            out = host_bridge.invoke({"schema": host_bridge.REQUEST_SCHEMA, "request_id": operation, "operation": operation, "surface": "agent_package", "args": args, "authority": False})
+            self.assertEqual(out["status"], "invalid")
+            self.assertIn("not authorized", " ".join(out["error"]["messages"]))
+
+    def test_self_test_passes_without_live_network(self):
+        report = host_bridge.self_test()
+        self.assertEqual(report["quillframe_host_bridge_contract"], "PASS")
+        self.assertEqual(report["contract_version"], "7")
+        self.assertTrue(report["secret_value_fingerprint_independent"])
+
+
+if __name__ == "__main__":
+    unittest.main()
+''', encoding='utf-8')
+          PY
+      - name: Commit fixup
+        run: |
+          git config user.name "quillframe-runtime-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add production_runtime/runtime.py studio/host_bridge.py studio/host_bridge_contract.json tests/test_quillframe_production_runtime.py tests/test_quillframe_production_host_bridge.py
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "no fixup needed"
+          else
+            git commit -m "fix(runtime): require registered external independent gate"
+            git push origin HEAD:agent/production-runtime-integration
+          fi
