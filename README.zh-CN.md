@@ -38,15 +38,28 @@
 
 **环境要求：** Python 3.11+。只有 Web / Studio surface 需要 Node.js 24 与 pnpm 10.33.0。
 
+从干净的 Quillframe 源码工作区安装框架，并检查本地运行环境：
+
 ```bash
 git clone https://github.com/xiaooye/Quillframe.git
 cd Quillframe
 python -m pip install -e .
-
-python -c "from quillframe import Quillframe; print(Quillframe.__name__)"
-python project_sdk.py self-test
-python persistence/cli.py doctor
+quillframe doctor
 ```
+
+具体小说 Project 应创建在通用 Framework 仓库**之外**。初始化时会把 Project 固定到当前干净 Framework 的精确 commit 与确定性 bundle fingerprint：
+
+```bash
+quillframe init ../my-novel \
+  --id MY-NOVEL \
+  --title "My Novel" \
+  --language zh-CN
+
+cd ../my-novel
+quillframe validate .
+```
+
+如果使用 Claude Code 作为宿主，应在初始化完成后从 consumer Project 目录启动。项目级 bootstrap 会先验证 lock / attestation 与本地 Framework 是否一致，再允许有副作用的宿主工具执行。Claude Code 仍然只是宿主，不会替代 Quillframe Agent Runtime，也不会因此获得 Canon 权威。
 
 基础写作与检查 shell 不需要先连接模型。真正需要 inference 时，普通设置刻意只保留两个输入：
 

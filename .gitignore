@@ -1,9 +1,13 @@
 .novelforge/
+.quillframe/
 __pycache__/
 *.pyc
 *.sqlite
 *.sqlite3
 *.db
+*.egg-info/
+/build/
+/dist/
 .env
 .env.*
 *.log
