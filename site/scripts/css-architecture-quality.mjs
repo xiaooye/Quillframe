@@ -18,6 +18,7 @@ const surface = read("src/styles/product-surface.css");
 const atelier = read("src/styles/atelier.css");
 const architecture = read("src/styles/architecture-explorer.css");
 const routeIdentity = read("src/styles/route-identities.css");
+const changelog = read("src/styles/changelog-notebook.css");
 const publicationGallery = read("src/styles/publication-gallery.css");
 const readability = read("src/styles/readability.css");
 const hardening = read("src/styles/hardening.css");
@@ -30,7 +31,8 @@ check(index.indexOf('product-surface.css') < index.indexOf('architecture-explore
 check(!index.includes('@import "./kawaii-surfaces.css"'), "retired route-wallpaper kawaii layer must stay out of the active cascade");
 check(index.indexOf('architecture-explorer.css') < index.indexOf('embedded-features.css'), "shared route composition must follow route defaults without a wallpaper override layer");
 check(index.indexOf('embedded-features.css') < index.indexOf('route-identities.css'), "route identity must refine shared/embedded composition rather than replace it");
-check(index.indexOf('route-identities.css') < index.indexOf('publication-gallery.css'), "publication gallery must remain a route-specific refinement of the shared identity layer");
+check(index.indexOf('route-identities.css') < index.indexOf('changelog-notebook.css'), "Changelog notebook must refine the shared route identity layer");
+check(index.indexOf('changelog-notebook.css') < index.indexOf('publication-gallery.css'), "Changelog owner must not override the Publication-owned gallery refinement");
 check(index.indexOf('publication-gallery.css') < index.indexOf('readability.css'), "route-specific composition must precede readability hardening");
 check(index.indexOf('readability.css') < index.indexOf('hardening.css'), "resilience/accessibility hardening must remain the final Product layer");
 check(!index.includes('editorial-composition.css'), "rejected global editorial flattening must stay out of the active cascade");
@@ -69,6 +71,9 @@ check(routeIdentity.includes("Route identity layer") && routeIdentity.includes("
 check(routeIdentity.includes("never becomes a second hero card or route wallpaper"), "route identity must protect the page-canvas boundary");
 check(!routeIdentity.includes("radial-gradient"), "route visual slots must not reintroduce broad radial wallpaper");
 check(!routeIdentity.includes("!important"), "route identity must not depend on specificity escalation");
+check(changelog.includes("editorial release notebook") && changelog.includes(":has(.unified-release-badge)"), "Changelog must own a dedicated release-notebook/timeline composition");
+check(changelog.includes("border-inline-start: 1px dotted") && changelog.includes(".unified-info-card::before"), "Changelog timeline must expose an editorial trace instead of a release-card grid");
+check(!changelog.includes("radial-gradient") && !changelog.includes("!important"), "Changelog route owner must stay canvas-first without specificity hacks");
 for (const marker of [".snapshot-text", ".snapshot-web", ".snapshot-print", ".snapshot-epub", '[data-profile="text"]', '[data-profile="web"]', '[data-profile="print"]', '[data-profile="epub"]']) {
   check(publicationGallery.includes(marker), `publication gallery missing distinct preview treatment ${marker}`);
 }
@@ -85,7 +90,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "quillframe_css_architecture_v8",
+    schema: "quillframe_css_architecture_v9",
     status: "pass",
     entrypoints: 1,
     audit_override: false,
@@ -93,6 +98,7 @@ if (failures.length) {
     canvas_first_surface_hero: true,
     route_wallpaper_layer_active: false,
     architecture_execution_paper: true,
+    changelog_release_notebook: true,
     screenshot_era_home_dom: true,
     screenshot_era_home_sections: 5,
     home_style_owner: "showcase.css+atelier.css",
