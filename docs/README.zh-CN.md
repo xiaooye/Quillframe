@@ -14,9 +14,9 @@ Quillframe 文档先建立心智模型，再进入契约与参考资料。只要
 
 ## Model Runtime 与 Agent Runtime
 
-[Model Runtime](https://github.com/xiaooye/cn_webnovel_agent/blob/main/docs/model-runtime.zh-CN.md)解释普通用户只需要的 `API Endpoint + Access Token` 连接面，以及 model/protocol discovery、capability evidence、secret handling 和 inference transport；[Agent Runtime](https://github.com/xiaooye/cn_webnovel_agent/blob/main/docs/agent-runtime.zh-CN.md)解释 AgentJob/Result、Quillframe 自己的 model → tool → model loop、工具权限、checkpoint、receipt 与可嵌入 `quillframe` Python library。
+[Model Runtime](model-runtime.zh-CN.md)解释普通用户只需要的 `API Endpoint + Access Token` 连接面，以及模型/协议发现、能力证据、密钥处理和推理传输；[Agent Runtime](agent-runtime.zh-CN.md)解释 AgentJob/Result、Quillframe 自己的 model → tool → model 循环、工具权限、checkpoint、receipt 与可嵌入的 `quillframe` Python library。
 
-Provider/vendor identity 最多只是诊断 metadata。外部模型提供 inference；Runtime semantics、tools、Context、authority 与 project state 仍由 Quillframe 负责。
+Provider/vendor identity 最多只是诊断 metadata。外部模型提供 inference；运行语义、工具、Context、authority 与项目状态仍由 Quillframe 负责。
 
 ## 写作
 
@@ -56,11 +56,11 @@ Provider/vendor identity 最多只是诊断 metadata。外部模型提供 infere
 
 ## Studio
 
-[Studio 概览](../studio/README.zh-CN.md)说明当前 SolidJS authoring shell 与 typed Host Bridge。Studio 只消费 Core contract；UI state 与 browser persistence 不会成为第二套 authority system。
+[Studio 概览](../studio/README.zh-CN.md)说明当前 SolidJS 创作界面与 typed Host Bridge。Studio 只消费 Core contract；UI 状态与浏览器持久化不会成为第二套 authority system。
 
 ## 开发
 
-[8.0 开发变更清单](8-0-development-inventory.zh-CN.md)、[代理框架采纳记录](../knowledge/AGENT_FRAMEWORK_ADOPTION.zh-CN.md)与[变更日志](../CHANGELOG.zh-CN.md)记录当前演进；历史规格即使经历产品架构和公开品牌变化，也仍保持当时的真实原貌。
+[变更日志](../CHANGELOG.zh-CN.md)、[路线图](../ROADMAP.md)与[代理框架采纳记录](../knowledge/AGENT_FRAMEWORK_ADOPTION.zh-CN.md)共同记录当前演进与实现影响来源。历史规格即使经历产品架构和公开品牌变化，也仍保持当时的真实原貌。
 
 ## 参考
 
