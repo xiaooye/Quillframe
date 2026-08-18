@@ -80,6 +80,6 @@ jobs:
           '
       - name: Tauri 2 thin-host build
         run: |
-          cargo install tauri-cli --version '^2.11' --locked
+          cargo install tauri-cli --version '=2.11.4' --locked
           cd studio/app
-          cargo tauri build --debug --no-bundle --locked
+          cargo tauri build --debug --no-bundle -- --locked
