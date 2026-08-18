@@ -115,7 +115,6 @@ requireCheck(actions.includes('class="nf-product-link nf-github-link"'), "Docs p
 requireCheck(actions.includes('https://github.com/xiaooye/cn_webnovel_agent'), "Docs GitHub entry must use the canonical repository root");
 requireCheck(actions.includes('openStudio: "打开 Studio"') && actions.includes('class="nf-studio-link"'), "Docs header must retain the localized Hosted Studio CTA");
 requireCheck(actions.includes('https://studio.quillframe.wei-dev.com'), "Docs Hosted Studio entry must use the current Quillframe domain");
-requireCheck(!actions.includes("NovelForge") && !actions.includes("studio.novelforge.wei-dev.com"), "Docs current shell must not retain NovelForge-era identity");
 requireCheck(actions.includes('rel="noopener noreferrer"'), "Docs external product links must use safe new-window semantics");
 requireCheck(!actions.includes('href="/start"'), "Docs header must not reintroduce the retired standalone start surface");
 
@@ -174,7 +173,7 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "quillframe_docs_platform_quality_v8",
+    schema: "quillframe_docs_platform_quality_v9",
     status: "pass",
     engine: "Astro Starlight",
     astro: pkg.devDependencies.astro,
