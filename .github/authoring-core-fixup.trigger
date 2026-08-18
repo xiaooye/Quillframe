@@ -1,1 +1,1 @@
-trigger=authoring-core-primitives-v1
+trigger=authoring-core-primitives-v2
