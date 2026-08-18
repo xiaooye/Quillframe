@@ -32,6 +32,20 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Generate exact Tauri Cargo lock
+        run: cargo generate-lockfile --manifest-path studio/app/src-tauri/Cargo.toml
+      - name: Commit exact Tauri Cargo lock
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          git add studio/app/src-tauri/Cargo.lock
+          if git diff --cached --quiet; then
+            echo 'Cargo.lock already matches the resolved graph'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'build(tauri): lock Desktop host dependencies'
+          git push origin HEAD:${{ github.head_ref }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -57,20 +71,6 @@ jobs:
         run: python studio/tauri_core_sidecar.py self-test
       - name: Build target-suffixed Python Core sidecar
         run: python studio/scripts/build_tauri_sidecar.py
-      - name: Generate exact Tauri Cargo lock
-        run: cargo generate-lockfile --manifest-path studio/app/src-tauri/Cargo.toml
-      - name: Commit exact Tauri Cargo lock
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        run: |
-          git add studio/app/src-tauri/Cargo.lock
-          if git diff --cached --quiet; then
-            echo 'Cargo.lock already matches the resolved graph'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'build(tauri): lock Desktop host dependencies'
-          git push origin HEAD:${{ github.head_ref }}
       - name: Rust host unit tests and compile
         run: |
           cargo test --locked --manifest-path studio/app/src-tauri/Cargo.toml
