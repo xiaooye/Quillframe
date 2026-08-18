@@ -59,7 +59,9 @@ jobs:
                 echo "${project}: deployment pruning complete; active production=${prod_id:-none}"
                 break
               fi
+
               deleted_this_round=0
+              missing_this_round=0
               while IFS= read -r id; do
                 [ -n "${id}" ] || continue
                 set +e
@@ -67,6 +69,7 @@ jobs:
                 rc=$?
                 set -e
                 printf '%s\n' "${output}"
+
                 if [ "${rc}" -eq 0 ] && printf '%s' "${output}" | grep -q 'Successfully deleted'; then
                   deleted_this_round=$((deleted_this_round + 1))
                   continue
@@ -75,9 +78,20 @@ jobs:
                   prod_id="${id}"
                   continue
                 fi
+                if printf '%s' "${output}" | grep -Eqi 'deployment ID.*does not exist|code: 8000009'; then
+                  echo "${project}/${id}: already absent; waiting for list consistency"
+                  missing_this_round=$((missing_this_round + 1))
+                  continue
+                fi
+
                 echo "Unexpected deployment deletion result for ${project}/${id}" >&2
                 exit 1
               done <<< "${to_delete}"
+
+              if [ "${deleted_this_round}" -eq 0 ] && [ "${missing_this_round}" -gt 0 ]; then
+                sleep 2
+                continue
+              fi
               if [ "${deleted_this_round}" -eq 0 ] && [ -z "${prod_id}" ]; then
                 echo "No progress pruning ${project}" >&2
                 exit 1
@@ -95,7 +109,9 @@ jobs:
             jq -e '.success == true' "/tmp/${project}.json" >/dev/null
             returned=$(jq -r '.result.name' "/tmp/${project}.json")
             test "${returned}" = "${project}"
+
             prune_deployments "${project}"
+
             delete_status=$(curl -sS -o "/tmp/${project}-delete.json" -w '%{http_code}' -X DELETE "${auth[@]}" "${base}/${project}")
             case "${delete_status}" in 200|202|204) ;; *) cat "/tmp/${project}-delete.json"; exit 1;; esac
             post=$(get_status "${project}")
