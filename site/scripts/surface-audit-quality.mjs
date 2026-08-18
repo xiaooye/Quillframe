@@ -17,6 +17,7 @@ const productIndex = read("src/styles/index.css");
 const productSurface = read("src/styles/product-surface.css");
 const atelier = read("src/styles/atelier.css");
 const workbench = read("src/styles/tool-workbench-kawaii.css");
+const routeIdentity = read("src/styles/route-identities.css");
 const routeScenes = read("src/styles/story-loom-route-refinements.css");
 const docsConfig = read("docs-site/astro.config.mjs");
 const docsAudit = read("docs-site/src/styles/surface-audit.css");
@@ -26,11 +27,13 @@ const docsReadability = read("docs-site/src/styles/readability-audit.css");
 check(main.includes('import "./styles/index.css"'), "product site must load the single CSS entrypoint");
 check(!productIndex.includes("surface-audit.css"), "product site must not use a final audit override layer");
 check(!exists("src/styles/surface-audit.css"), "retired product surface-audit.css must stay deleted");
-check(productIndex.includes("kawaii-surfaces.css") && productIndex.includes("atelier.css"), "Story Loom product composition layers must remain explicit");
+check(productIndex.includes("atelier.css"), "Homepage Atelier composition must remain explicit");
+check(!productIndex.includes('@import "./kawaii-surfaces.css"'), "retired route-wallpaper kawaii layer must stay inactive");
 check(productIndex.includes("tool-workbench-kawaii.css") && productIndex.includes("story-loom-route-refinements.css"), "Story Loom workstation and route-language layers must stay active");
 check(!productIndex.includes("editorial-composition.css"), "global editorial flattening must remain retired from the active product cascade");
 check(!productIndex.includes("home-identity.css"), "temporary simplified-home rewrite must remain retired from the active product cascade");
-check(productIndex.indexOf("architecture-explorer.css") < productIndex.indexOf("kawaii-surfaces.css"), "feature defaults must precede Story Loom product-language composition");
+check(productIndex.indexOf("architecture-explorer.css") < productIndex.indexOf("embedded-features.css"), "route defaults must precede shared product-language composition");
+check(productIndex.indexOf("embedded-features.css") < productIndex.indexOf("route-identities.css"), "route identity must refine shared workbench composition");
 check(productIndex.indexOf("route-identities.css") < productIndex.indexOf("story-loom-route-refinements.css"), "route-specific Story Loom scenes must refine route identity defaults");
 check(productIndex.indexOf("story-loom-route-refinements.css") < productIndex.indexOf("publication-gallery.css"), "non-publication route scenes must not replace the Publication-owned refinement");
 
@@ -43,6 +46,8 @@ check(!productSurface.includes("border: 1px dashed"), "shared ProductSurfaceHero
 check(!productSurface.includes("box-shadow: var(--pe-shadow-2)"), "shared ProductSurfaceHero root must not restore card shadow");
 check(productSurface.includes('.product-surface-hero[data-tone="project"]') && productSurface.includes('.product-surface-hero[data-tone="publication"]'), "route semantic accents must remain explicit without becoming wallpaper");
 check(productSurface.includes("--product-hero-accent"), "shared hero tones must resolve through a restrained semantic accent token");
+check(routeIdentity.includes("never becomes a second hero card or route wallpaper"), "route visual slots must preserve the page-canvas boundary");
+check(!routeIdentity.includes("radial-gradient"), "route visual-slot owner must not reintroduce route-level radial wallpaper");
 
 for (const marker of ["entry-hero", "hero-launcher wui-card material-panel", "capability-ribbon", "capability-focus page-width section-compact", "product-lab section-pad-soft", "product-world page-width section-compact", "knowledge-preview section-pad-soft"]) {
   check(productApp.includes(marker), `restored screenshot-era HomePage missing ${marker}`);
@@ -77,17 +82,18 @@ check(docsAudit.includes(".nf-article-title") && docsAudit.includes("border-bott
 check(docsReadability.includes(":lang(zh-CN) body:has(.nf-article-title) .sl-markdown-content") && docsReadability.includes("line-height: 1.9"), "Chinese long-form reading rhythm must remain explicit");
 check(docsReadability.includes(".sl-markdown-content li > p") && docsReadability.includes("margin-block: .18rem"), "tight Markdown lists must not inherit full paragraph spacing");
 check(docsReadability.includes("max-width: 68ch") && docsReadability.includes("max-width: 42em"), "docs reading measure must remain bounded for Latin and CJK copy");
-check(!workbench.includes("!important") && !routeScenes.includes("!important") && !docsIdentity.includes("!important"), "Story Loom identity layers must not depend on specificity escalation");
+check(!workbench.includes("!important") && !routeIdentity.includes("!important") && !routeScenes.includes("!important") && !docsIdentity.includes("!important"), "Story Loom identity layers must not depend on specificity escalation");
 
 if (failures.length) {
   for (const failure of failures) console.error(`surface-audit-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "quillframe_surface_identity_quality_v8",
+    schema: "quillframe_surface_identity_quality_v9",
     status: "pass",
     product_final_override: false,
     product_editorial_flattening: false,
+    route_wallpaper_layer_active: false,
     canvas_first_route_hero: true,
     giant_hero_card: false,
     screenshot_era_home_dom: true,
