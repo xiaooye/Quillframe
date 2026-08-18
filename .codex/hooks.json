@@ -1,0 +1,67 @@
+{
+  "description": "Quillframe Framework bootstrap and execution guard. Review/trust with /hooks before use.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/harness/integrations/codex_hook.py\"",
+            "timeout": 30,
+            "additionalContextLimit": 6000
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/harness/integrations/codex_hook.py\"",
+            "timeout": 30,
+            "additionalContextLimit": 6000
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/harness/integrations/codex_hook.py\"",
+            "timeout": 30,
+            "additionalContextLimit": 6000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/harness/integrations/codex_hook.py\"",
+            "timeout": 30,
+            "additionalContextLimit": 6000
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/harness/integrations/codex_hook.py\"",
+            "timeout": 3
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Claude Code compatibility wrapper for Quillframe's unified host bootstrap."""
+"""Codex compatibility wrapper for Quillframe's unified host bootstrap."""
 from __future__ import annotations
 
 import sys
@@ -12,7 +12,7 @@ from host_bootstrap import main_for_host  # noqa: E402
 
 
 def main() -> int:
-    return main_for_host("claude_code")
+    return main_for_host("codex")
 
 
 if __name__ == "__main__":
