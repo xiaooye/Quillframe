@@ -26,12 +26,37 @@ test("authoring intents map to exactly one Core task_mode", () => {
 test("loaded Context is never conflated with considered/selected Context", () => {
   const projection = {
     items: [
-      { object_type: "story_node", object_key: "CH-001", decision: "loaded", authority_class: "active_plan" },
-      { object_type: "character", object_key: "CHAR-001", decision: "not_selected", authority_class: "locked" },
+      { state: "loaded", source_object_id: "Martin" },
+      { state: "selected", source_object_id: "周叙" },
+      { state: "considered", source_object_id: "CH002-ending" },
+      { state: "dropped_due_budget", source_object_id: "research-note" },
+      { state: "visibility_excluded", source_object_id: "hidden" },
     ],
   };
-  const summary = contracts.contextSelectionSummary(projection);
-  assert.equal(summary.loaded, 1);
-  assert.equal(summary.considered, 2);
-  assert.equal(summary.items[1].loaded, false);
+  assert.deepEqual(contracts.loadedContextItems(projection).map((item) => item.source_object_id), ["Martin"]);
+  assert.deepEqual(contracts.consideredNotLoaded(projection).map((item) => item.source_object_id), ["周叙", "CH002-ending", "research-note"]);
+});
+
+test("Studio consumer requirements use exact Host Bridge v8 primitives", () => {
+  const names = new Set(contracts.CORE_CONSUMER_REQUIREMENTS.map((item) => item.operation));
+  for (const required of [
+    "project.list",
+    "document.list",
+    "document.open",
+    "model.service.add",
+    "model.service.list",
+    "author.run.execute",
+    "author.run.status",
+    "candidate.review.get",
+    "candidate.reject",
+    "candidate.revision.request",
+    "settlement.preflight",
+  ]) assert.equal(names.has(required), true, required);
+  for (const obsolete of ["document.get", "model.connect", "model.services.list", "run.events.list"]) assert.equal(names.has(obsolete), false, obsolete);
+});
+
+test("Request Revision contract is explicit and never auto-chains REVISE", () => {
+  const request = contracts.CORE_CONSUMER_REQUIREMENTS.find((item) => item.operation === "candidate.revision.request");
+  assert.ok(request);
+  assert.match(request.authorityExpectation, /does not auto-run REVISE/);
 });
