@@ -1,0 +1,150 @@
++    def _validated_production_release(conn, candidate: dict[str, Any]) -> dict[str, Any]:  # noqa: ANN001
++        run_id = candidate.get("run_id")
++        if candidate.get("user_visible_gate") != "PASS" or not run_id:
++            raise OperationError("production_release_required", "Candidate has no releasable user-visible execution binding")
++        run = conn.execute("SELECT status,result_fingerprint FROM runs WHERE run_id=?", (run_id,)).fetchone()
++        if not run or run["status"] != "completed":
++            raise OperationError("production_release_required", "Candidate run is not completed")
++        row = conn.execute(
++            "SELECT payload_json FROM receipts WHERE run_id=? AND receipt_kind='production_release' ORDER BY created_at DESC,rowid DESC LIMIT 1",
++            (run_id,),
++        ).fetchone()
++        if not row:
++            raise OperationError("production_release_required", "Candidate has no production release receipt")
++        try:
++            release = json.loads(row["payload_json"])
++        except (TypeError, json.JSONDecodeError) as exc:
++            raise OperationError("production_release_invalid", "Production release receipt is not valid JSON") from exc
++        if release.get("schema") != "quillframe_production_release_v1":
++            raise OperationError("production_release_invalid", "Production release schema mismatch")
++        if release.get("candidate_fingerprint") != candidate.get("content_fingerprint"):
++            raise OperationError("production_release_invalid", "Production release candidate fingerprint mismatch")
++        if release.get("ready_for_user_visible_review") is not True:
++            raise OperationError("production_release_required", "Production release did not authorize user-visible review")
++        declared = release.get("release_fingerprint")
++        body = {key: value for key, value in release.items() if key != "release_fingerprint"}
++        if not isinstance(declared, str) or fingerprint_text(canonical_json(body)) != declared:
++            raise OperationError("production_release_invalid", "Production release fingerprint is invalid")
++        if run["result_fingerprint"] and run["result_fingerprint"] != candidate.get("content_fingerprint"):
++            raise OperationError("production_release_invalid", "Completed run result fingerprint does not match candidate")
++        return release
++
++    def candidate_visible_get(self, project_id: str, *, candidate_id: str) -> dict[str, Any]:
++        """Return manuscript text only after exact production release validation."""
++        with self.store.open_project(project_id) as conn:
++            row = conn.execute(
++                """SELECT c.*,r.content AS candidate_content,r.content_fingerprint AS revision_fingerprint,
++                r.authority_class AS revision_authority_class
++                FROM candidates c LEFT JOIN document_revisions r ON r.revision_id=c.revision_id
++                WHERE c.candidate_id=?""",
++                (candidate_id,),
++            ).fetchone()
++            if not row:
++                raise OperationError("candidate_not_found", candidate_id)
++            candidate = dict(row)
++            if not candidate.get("revision_id") or candidate.get("revision_fingerprint") != candidate.get("content_fingerprint"):
++                raise OperationError("stale_review", "Candidate revision no longer matches its release fingerprint")
++            release = self._validated_production_release(conn, candidate)
++        return {
++            "schema": "quillframe_user_visible_candidate_v1",
++            "project_id": project_id,
++            "candidate_id": candidate["candidate_id"],
++            "candidate_fingerprint": candidate["content_fingerprint"],
++            "document_id": candidate.get("document_id"),
++            "revision_id": candidate.get("revision_id"),
++            "content": candidate["candidate_content"],
++            "authority_class": candidate.get("revision_authority_class"),
++            "production_release": release,
++            "content_access": "production_release_only",
++            "accepted": candidate.get("status") == "accepted",
++            "settled": False,
++            "private_reasoning_exposed": False,
++            "authority": False,
++            "canon_authority": False,
++        }
++
+     def candidate_review_get(self, project_id: str, *, candidate_id: str) -> dict[str, Any]:
+         with self.store.open_project(project_id) as conn:
+             candidate = conn.execute(
+@@ -144,6 +210,7 @@
+             c = dict(candidate)
+             if not c.get("revision_id") or c.get("revision_fingerprint") != c.get("content_fingerprint"):
+                 raise OperationError("stale_review", "Candidate revision no longer matches its review fingerprint")
++            release = self._validated_production_release(conn, c)
+             parent = None
+             if c.get("parent_revision_id"):
+                 row = conn.execute(
+@@ -207,6 +274,7 @@
+                 "independent": independent,
+                 "production_readiness": independent.get("production_readiness"),
+                 "user_visible_gate": by_mechanism["user_visible_gate"],
++                "production_release": release,
+             },
+             "revision_request": revision_request,
+             "private_reasoning_exposed": False,
+@@ -306,6 +374,7 @@
+                 raise OperationError("candidate_not_acceptable", "only a user-visible-gate PASS Review Draft may be accepted")
+             if candidate["content_fingerprint"] != candidate_fingerprint:
+                 raise OperationError("candidate_fingerprint_mismatch", "candidate changed since review")
++            self._validated_production_release(conn, dict(candidate))
+             if self._candidate_revision_request_receipt(conn, candidate_id):
+                 raise OperationError("candidate_revision_requested", "Candidate has a durable revision request and cannot be accepted")
+             evidence = conn.execute(
+--- a/studio/host_bridge.py
++++ b/studio/host_bridge.py
+@@ -315,6 +315,9 @@
+ def _candidate_review_get(args: dict[str, Any], _: str):
+     return ops().candidate_review_get(require(args, "project_id"), candidate_id=require(args, "candidate_id"))
+ 
++def _candidate_visible_get(args: dict[str, Any], _: str):
++    return ops().candidate_visible_get(require(args, "project_id"), candidate_id=require(args, "candidate_id"))
++
+ 
+ def _candidate_reject(args: dict[str, Any], _: str):
+     if args.get("user_authorized") is not True:
+@@ -416,6 +419,7 @@
+     "model.service.delete": _model_delete,
+     "model.capabilities": _model_capabilities,
+     "candidate.review.get": _candidate_review_get,
++    "candidate.visible.get": _candidate_visible_get,
+     "candidate.accept": _candidate_accept,
+     "candidate.reject": _candidate_reject,
+     "candidate.revision.request": _candidate_revision_request,
+@@ -503,7 +507,7 @@
+     first = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "A"}, "authority": False})
+     second = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "B"}, "authority": False})
+     ok = desc["status"] == "ok" and generic["status"] == "invalid" and desc["authority"] is False and first["request_fingerprint"] == second["request_fingerprint"] and first["secret_values_persisted"] is False
+-    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": "8", "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
++    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": "9", "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
+ 
+ 
+ def main() -> int:
+--- a/studio/host_bridge_contract.json
++++ b/studio/host_bridge_contract.json
+@@ -1,6 +1,6 @@
+ {
+   "schema": "quillframe_studio_host_bridge_contract_v1",
+-  "version": "8",
++  "version": "9",
+   "framework_version": "0.9.0",
+   "authority": false,
+   "canon_authority": false,
+@@ -32,7 +32,10 @@
+     "independent_review_project_peer_receipt_required": true,
+     "request_revision_auto_starts_revise": false,
+     "settlement_preflight_mutates_canon": false,
+-    "browser_project_registry_authority": false
++    "browser_project_registry_authority": false,
++    "manuscript_visibility_requires_production_release": true,
++    "host_self_generated_manuscript_is_releaseable": false,
++    "ephemeral_runtime_exact_git_identity_required": true
+   },
+   "secret_boundary": {
+     "public_setup_inputs": [
+@@ -407,6 +410,19 @@
+         "candidate_id"
+       ]
+     },
++    "candidate.visible.get": {
++      "kind": "query",
++      "required_args": [
