@@ -16,6 +16,7 @@ import shlex
 import subprocess
 import sys
 import uuid
+from copy import deepcopy
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -209,6 +210,9 @@ def load_authority_cache(project_root: Path | None, host: str, session_id: str) 
 
 
 def lightweight_authority_fresh(authority: dict[str, Any]) -> tuple[bool, str | None]:
+    stale_reason = authority.get("stale_reason")
+    if isinstance(stale_reason, str) and stale_reason:
+        return False, stale_reason
     if authority.get("scope") == "framework":
         try:
             commit = subprocess.run(
@@ -265,6 +269,19 @@ def _usage_class(host: str) -> str:
     return "claude_plan" if host == "claude_code" else "codex_agentic"
 
 
+def authority_binding(authority: dict[str, Any]) -> dict[str, Any]:
+    framework = authority.get("framework") if isinstance(authority.get("framework"), dict) else {}
+    return {
+        "scope": authority.get("scope"),
+        "project_id": authority.get("project_id"),
+        "framework_version": framework.get("version"),
+        "framework_commit": framework.get("commit"),
+        "bundle_fingerprint": framework.get("bundle_fingerprint"),
+        "lock_sha256": authority.get("guard", {}).get("lock_sha256"),
+        "attestation_sha256": authority.get("guard", {}).get("attestation_sha256"),
+    }
+
+
 def ensure_manager_session(
     host: str,
     native_session_id: str,
@@ -307,19 +324,6 @@ def ensure_manager_session(
     return session, 1
 
 
-def authority_binding(authority: dict[str, Any]) -> dict[str, Any]:
-    framework = authority.get("framework") if isinstance(authority.get("framework"), dict) else {}
-    return {
-        "scope": authority.get("scope"),
-        "project_id": authority.get("project_id"),
-        "framework_version": framework.get("version"),
-        "framework_commit": framework.get("commit"),
-        "bundle_fingerprint": framework.get("bundle_fingerprint"),
-        "lock_sha256": authority.get("guard", {}).get("lock_sha256"),
-        "attestation_sha256": authority.get("guard", {}).get("attestation_sha256"),
-    }
-
-
 def active_runs(session: dict[str, Any]) -> list[dict[str, Any]]:
     return [
         run for run in session.get("runs", [])
@@ -332,14 +336,22 @@ def derived_state(authority: dict[str, Any], session: dict[str, Any]) -> tuple[s
     errors = runtime.validate(session)
     if errors:
         return "blocked", errors
+    stale_reason = authority.get("stale_reason")
+    if isinstance(stale_reason, str) and stale_reason:
+        return "blocked", [stale_reason]
     if authority.get("scope") == "project" and not authority.get("materialized_authority_verified"):
         return "blocked", list(authority.get("errors", [])) or ["exact Project Framework authority is not verified"]
     if authority.get("scope") == "framework" and not authority.get("authority_ready"):
         return "blocked", list(authority.get("errors", [])) or ["Framework checkout identity is unavailable"]
+
     mode = session.get("task_mode")
     runs = active_runs(session)
     if len(runs) > 1:
         return "blocked", ["manager session contains multiple active runs"]
+    if mode and runs:
+        stored_binding = session.get("context_policy", {}).get("authority_snapshot")
+        if stored_binding != authority_binding(authority):
+            return "blocked", ["authority changed after active run start; begin a fresh manager session/run"]
     if not mode or not runs:
         return "awaiting_task_mode", []
     if mode not in TASK_MODES:
@@ -355,19 +367,27 @@ def build_snapshot(
     project_root: Path | None,
     *,
     full_authority_refresh: bool,
+    refresh_stale: bool = True,
 ) -> dict[str, Any]:
     sid = host_session_id(host, native_session_id)
     authority = None if full_authority_refresh else load_authority_cache(project_root, host, sid)
     if authority is not None:
-        fresh, _ = lightweight_authority_fresh(authority)
+        fresh, stale_reason = lightweight_authority_fresh(authority)
         if not fresh:
-            authority = None
+            if refresh_stale:
+                authority = None
+            else:
+                authority = deepcopy(authority)
+                authority["stale_reason"] = stale_reason or "authority changed after bootstrap"
     if authority is None:
         authority = authority_snapshot(project_root)
         save_authority_cache(project_root, host, sid, authority)
     session, version = ensure_manager_session(host, native_session_id, project_root, authority)
     state, state_errors = derived_state(authority, session)
     errors = list(authority.get("errors", []))
+    stale_reason = authority.get("stale_reason")
+    if isinstance(stale_reason, str) and stale_reason and stale_reason not in errors:
+        errors.append(stale_reason)
     errors.extend(x for x in state_errors if x not in errors)
     runs = active_runs(session)
     return {
@@ -399,19 +419,23 @@ def _mode_command(snapshot: dict[str, Any]) -> str:
 def bootstrap_context(snapshot: dict[str, Any]) -> str:
     authority = snapshot.get("authority") or {}
     framework = authority.get("framework") or {}
+    scope_token = "GENERIC_FRAMEWORK" if snapshot.get("scope") == "framework" else "PROJECT"
     base = (
-        f"Quillframe host bootstrap v2: host={snapshot.get('host')} scope={snapshot.get('scope')} "
+        f"Quillframe host bootstrap v2: host={snapshot.get('host')} scope={scope_token} "
         f"state={snapshot.get('state')} QF_SESSION_ID={snapshot.get('session_id')}. "
     )
     if snapshot.get("scope") == "framework":
         base += (
             f"This is the Generic Framework, not a fiction Project. Framework version={framework.get('version')} "
             f"commit={framework.get('commit')}. Never write concrete novel characters/plot/Canon/private user taste here. "
+            "For a new story, create a separate consumer Project with `quillframe init`; never turn the Framework checkout into story storage. "
         )
     else:
+        verified = "VERIFIED" if authority.get("materialized_authority_verified") else "UNVERIFIED"
         base += (
-            f"Project={snapshot.get('project_id')}; Framework={framework.get('version')} commit={framework.get('commit')} "
-            f"bundle={framework.get('bundle_fingerprint')}. Project owns story facts/Canon/plans/manuscripts; Framework owns generic mechanisms. "
+            f"Authority={verified}; Project={snapshot.get('project_id')}; Framework={framework.get('version')} "
+            f"commit={framework.get('commit')} bundle={framework.get('bundle_fingerprint')}. "
+            "Project owns story facts/Canon/plans/manuscripts; Framework owns generic mechanisms. "
         )
     if snapshot.get("state") == "blocked":
         errors = "; ".join(str(x) for x in snapshot.get("errors", [])) or "bootstrap precondition failed"
@@ -466,7 +490,10 @@ def is_bootstrap_command(command: str, expected_session_id: str) -> bool:
         return False
     if tokens[:2] == ["quillframe", "host-run"]:
         rest = tokens[2:]
-    elif tokens[:4] in (["python", "-m", "quillframe.cli", "host-run"], ["python3", "-m", "quillframe.cli", "host-run"]):
+    elif tokens[:4] in (
+        ["python", "-m", "quillframe.cli", "host-run"],
+        ["python3", "-m", "quillframe.cli", "host-run"],
+    ):
         rest = tokens[4:]
     else:
         return False
@@ -540,8 +567,7 @@ def begin_run(project_root: Path | None, session_id: str, mode: str) -> dict[str
     errors = runtime.validate(session) if isinstance(session, dict) else ["session payload must be object"]
     if errors:
         raise ValueError("invalid persisted manager session: " + "; ".join(errors))
-    expected_project = authority.get("project_id")
-    if session.get("project_id") != expected_project:
+    if session.get("project_id") != authority.get("project_id"):
         raise ValueError("session Project does not match current bootstrap target")
 
     active = active_runs(session)
@@ -559,9 +585,8 @@ def begin_run(project_root: Path | None, session_id: str, mode: str) -> dict[str
     if session.get("task_mode") not in (None, mode):
         raise ValueError("manager session already resolved a different task_mode")
 
-    updated = dict(session)
+    updated = deepcopy(session)
     updated["task_mode"] = mode
-    updated["context_policy"] = dict(updated.get("context_policy", {}))
     updated["context_policy"]["authority_snapshot"] = authority_binding(authority)
     run_id = "RUN-HOST-" + uuid.uuid4().hex
     inputs = [
@@ -627,9 +652,12 @@ def main_for_host(host: str) -> int:
             native,
             project_root,
             full_authority_refresh=name == "SessionStart",
+            refresh_stale=name != "PreToolUse",
         )
+        if name == "SessionEnd":
+            return 0
         context = bootstrap_context(snapshot)
-        if name in {"SessionStart", "UserPromptSubmit", "PostToolUse", "SessionEnd"}:
+        if name in {"SessionStart", "UserPromptSubmit", "PostToolUse"}:
             print(json.dumps(hook_json(name, context=context), ensure_ascii=False))
             return 0
         if name == "PreToolUse":
@@ -645,7 +673,7 @@ def main_for_host(host: str) -> int:
         if name == "PreToolUse" and (normalized in CONSEQUENTIAL_TOOLS or normalized == "Skill"):
             print(json.dumps(hook_json("PreToolUse", decision="deny", reason=message), ensure_ascii=False))
             return 0
-        if name in {"SessionStart", "UserPromptSubmit", "PostToolUse", "SessionEnd"}:
+        if name in {"SessionStart", "UserPromptSubmit", "PostToolUse"}:
             print(json.dumps(hook_json(name, context=message), ensure_ascii=False))
             return 0
         print(message, file=sys.stderr)
