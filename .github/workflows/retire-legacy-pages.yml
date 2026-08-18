@@ -38,6 +38,7 @@ jobs:
             curl -sS -o "/tmp/${project}.json" -w '%{http_code}' "${auth[@]}" "${base}/${project}"
           }
 
+          # Replacement projects must exist before any destructive action.
           for project in quillframe quillframe-studio; do
             status=$(get_status "${project}")
             test "${status}" = "200"
@@ -99,6 +100,43 @@ jobs:
             done
           }
 
+          delete_custom_domains() {
+            local project="$1"
+            local domains_api="${base}/${project}/domains"
+            curl -fsS "${auth[@]}" "${domains_api}" -o "/tmp/${project}-domains.json"
+            jq -e '.success == true' "/tmp/${project}-domains.json" >/dev/null
+            domains=$(jq -r '.result[]?.name' "/tmp/${project}-domains.json")
+
+            while IFS= read -r domain; do
+              [ -n "${domain}" ] || continue
+              case "${domain}" in
+                quillframe.wei-dev.com|studio.quillframe.wei-dev.com)
+                  echo "Refusing to delete active Quillframe custom domain ${domain} from ${project}" >&2
+                  exit 1
+                  ;;
+              esac
+              encoded=$(jq -rn --arg v "${domain}" '$v|@uri')
+              echo "${project}: deleting legacy custom domain ${domain}"
+              domain_delete_status=$(curl -sS -o "/tmp/${project}-domain-delete.json" -w '%{http_code}' -X DELETE "${auth[@]}" "${domains_api}/${encoded}")
+              case "${domain_delete_status}" in 200|202|204) ;; *) cat "/tmp/${project}-domain-delete.json"; exit 1;; esac
+            done <<< "${domains}"
+
+            for attempt in $(seq 1 30); do
+              curl -fsS "${auth[@]}" "${domains_api}" -o "/tmp/${project}-domains-post.json"
+              jq -e '.success == true' "/tmp/${project}-domains-post.json" >/dev/null
+              remaining=$(jq '.result | length' "/tmp/${project}-domains-post.json")
+              if [ "${remaining}" -eq 0 ]; then
+                echo "${project}: custom domains removed"
+                return 0
+              fi
+              sleep 2
+            done
+            echo "${project}: custom domains did not clear" >&2
+            jq '.result' "/tmp/${project}-domains-post.json" >&2
+            exit 1
+          }
+
+          # Delete only the two exact historical projects requested by the user.
           for project in novelforge novelforge-studio; do
             status=$(get_status "${project}")
             if [ "${status}" = "404" ]; then
@@ -111,6 +149,7 @@ jobs:
             test "${returned}" = "${project}"
 
             prune_deployments "${project}"
+            delete_custom_domains "${project}"
 
             delete_status=$(curl -sS -o "/tmp/${project}-delete.json" -w '%{http_code}' -X DELETE "${auth[@]}" "${base}/${project}")
             case "${delete_status}" in 200|202|204) ;; *) cat "/tmp/${project}-delete.json"; exit 1;; esac
@@ -119,6 +158,7 @@ jobs:
             echo "${project}: deleted"
           done
 
+          # Post-condition: current projects still exist after legacy cleanup.
           for project in quillframe quillframe-studio; do
             status=$(get_status "${project}")
             test "${status}" = "200"
