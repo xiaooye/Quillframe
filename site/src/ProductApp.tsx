@@ -19,6 +19,7 @@ import { zhCN } from "./content.zh-CN";
 import { loadKnowledgeIndex, searchKnowledge } from "./knowledge";
 import ProjectInspector from "./ProjectInspector";
 import LocalPlayground from "./LocalPlayground";
+import PublicationWorkbench from "./PublicationWorkbench";
 import { ProductSectionHeading, ProductSurfaceHero } from "./ProductSurface";
 
 const siteCopy = { "en-US": enUS, "zh-CN": zhCN } as const;
@@ -506,37 +507,9 @@ function ArchitecturePage() {
   </div>;
 }
 
-type PublicationProfile = { id: "text" | "web" | "print" | "epub"; icon: string; labelZh: string; labelEn: string; artifact: string; titleZh: string; titleEn: string };
-const publicationProfiles: PublicationProfile[] = [
-  { id: "text", icon: "TXT", labelZh: "纯文本", labelEn: "Clean text", artifact: ".txt", titleZh: "只保留正文，不叠加表现层", titleEn: "Exact text, no presentation layer" },
-  { id: "web", icon: "WEB", labelZh: "网页", labelEn: "Web", artifact: ".html + .css", titleZh: "适配屏幕的阅读表面", titleEn: "Responsive reading surface" },
-  { id: "print", icon: "PRINT", labelZh: "印刷版", labelEn: "Print", artifact: "print HTML/CSS", titleZh: "面向纸面的分页排版", titleEn: "Paged-media composition" },
-  { id: "epub", icon: "EPUB", labelZh: "EPUB", labelEn: "EPUB", artifact: ".epub", titleZh: "可重排的电子书包", titleEn: "Reflowable ebook package" },
-];
-
-function PublicationSnapshot(props: { profile: PublicationProfile; active: boolean; onClick: () => void }) {
-  const { zh } = useUi();
-  return <button type="button" class={`unified-publication-snapshot snapshot-${props.profile.id}`} data-active={props.active} onClick={props.onClick}><span class="snapshot-label">{props.profile.icon}</span><div class="snapshot-mini-page"><strong>{zh() ? "第一章 · 夜幕与灯火" : "Chapter 1 · Nightfall and lights"}</strong><i /><i /><i /><i /></div><small>{zh() ? props.profile.labelZh : props.profile.labelEn}</small></button>;
-}
-
 function PublicationPage() {
-  const { zh } = useUi();
-  const [selected, setSelected] = createSignal(3);
-  const current = createMemo(() => publicationProfiles[selected()]);
-  return <div class="page-width section-compact unified-route-page publication-workbench-entry">
-    <ProductSurfaceHero
-      class="kawaii-publication-hero"
-      tone="publication"
-      eyebrow={<span>🎀 {zh() ? "出版工作台" : "PUBLICATION WORKBENCH"}</span>}
-      badges={<><span class="wui-badge wui-badge--outline">deterministic</span><span class="wui-badge wui-badge--outline">authority=false</span></>}
-      title={zh() ? <>同一份接受稿，生成多种<span>确定性派生格式。</span></> : <>One accepted manuscript, <span>many deterministic derivatives.</span></>}
-      lede={<p>{zh() ? "基于唯一 Publication IR，从一次构建生成 TXT、Web、Print、EPUB。版式可以不同，正文事实始终只有一份。" : "One Publication IR produces TXT, Web, Print, and EPUB. Presentation changes; manuscript truth does not."}</p>}
-      visual={<div class="unified-publication-gallery"><For each={publicationProfiles}>{(profile, index) => <PublicationSnapshot profile={profile} active={selected() === index()} onClick={() => setSelected(index())} />}</For></div>}
-    />
-    <section class="publication-profile-rail"><div class="publication-rail-title"><span>🛠</span><div><strong>{zh() ? "出版工作台" : "Publication workbench"}</strong><small>{zh() ? "选择目标格式并查看预览、配置与 provenance。" : "Choose a format and inspect preview, configuration, and provenance."}</small></div></div><For each={publicationProfiles}>{(profile, index) => <button type="button" class="publication-profile-card" data-active={selected() === index()} data-profile={profile.id} onClick={() => setSelected(index())}><span class="publication-profile-icon">{profile.icon}</span><span class="publication-profile-copy"><small>{zh() ? profile.labelZh : profile.labelEn}</small><strong>{zh() ? profile.titleZh : profile.titleEn}</strong><span>{profile.artifact}</span></span><span class="publication-profile-arrow">{selected() === index() ? "✓" : "→"}</span></button>}</For></section>
-    <section class="publication-workbench-grid"><article class="wui-card publication-preview-card" data-profile={current().id}><div class="publication-preview-toolbar"><div><small>{zh() ? "阅读预览" : "READING PREVIEW"}</small><strong>{zh() ? current().labelZh : current().labelEn}</strong></div><div class="publication-preview-state"><span class="wui-badge wui-badge--success">exact text</span><span class="wui-badge wui-badge--outline">preview only</span></div></div><div class="unified-large-publication-preview" data-profile={current().id}><span class="preview-device-label">{current().icon}</span><article><small>Quillframe · {current().icon}</small><h2>{zh() ? "第一章 · 夜幕与灯火" : "Chapter 1 · Nightfall and lights"}</h2><p>{zh() ? "夜幕降临，城市的灯光一盏盏亮起，像星星坠落在河面上。" : "Night fell and city lights came on one by one, like stars settling on the river."}</p><p>{zh() ? "他站在桥边，手里握着一封信，风从河面吹来。" : "He stood by the bridge holding a letter while wind moved across the river."}</p></article></div></article><aside class="publication-inspector"><section class="wui-card publication-profile-inspector"><div class="publication-inspector-head"><span class="publication-inspector-icon">{current().icon}</span><div><small>{zh() ? "格式配置与元数据" : "PROFILE & METADATA"}</small><h2>{zh() ? current().titleZh : current().titleEn}</h2></div></div><div class="publication-token-grid"><div><span>artifact</span><strong>{current().artifact}</strong></div><div><span>source</span><strong>sha256 · exact</strong></div><div><span>authority</span><strong>false</strong></div><div><span>render</span><strong>deterministic</strong></div></div></section></aside></section>
-    <section class="wui-card publication-provenance"><div class="publication-provenance-head"><div><small>PROVENANCE</small><h2>{zh() ? "每个派生物都能回到同一份接受正文。" : "Every derivative resolves back to the same accepted manuscript."}</h2></div></div><div class="publication-pipeline"><div class="publication-pipeline-node" data-kind="source"><span>✓</span><div><small>ACCEPTED</small><strong>Accepted manuscript</strong><code>sha256 · exact</code></div></div><span class="publication-pipeline-arrow">→</span><div class="publication-pipeline-node" data-kind="ir"><span>IR</span><div><small>PUBLICATION IR</small><strong>quillframe_publication_ir_v1</strong><code>schema-bound</code></div></div><span class="publication-pipeline-arrow">→</span><div class="publication-pipeline-node" data-kind="renderer"><span>⌘</span><div><small>COMPILER</small><strong>publication/compiler.py</strong><code>deterministic</code></div></div><span class="publication-pipeline-arrow">→</span><div class="publication-pipeline-node" data-kind="artifact"><span>{current().icon}</span><div><small>ARTIFACT</small><strong>{current().artifact}</strong><code>authority=false</code></div></div></div></section>
-  </div>;
+  const { locale } = useUi();
+  return <PublicationWorkbench locale={locale()} />;
 }
 
 function InspectorPage() {

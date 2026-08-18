@@ -10,11 +10,13 @@ const read = (relative) => fs.readFileSync(path.join(siteRoot, relative), "utf8"
 const exists = (relative) => fs.existsSync(path.join(siteRoot, relative));
 const main = read("src/main.tsx");
 const app = read("src/ProductApp.tsx");
+const publication = read("src/PublicationWorkbench.tsx");
 const content = read("src/content.ts");
 const surface = read("src/ProductSurface.tsx");
 const styleIndex = read("src/styles/index.css");
 const shellCss = read("src/styles/product-shell.css");
 const embedded = read("src/styles/embedded-features.css");
+const routeSurfaces = `${app}\n${publication}`;
 const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
 
@@ -89,7 +91,7 @@ check(!shellCss.includes("!important"), "shared ProductShell styling must not de
 for (const pageMarker of ["function HomePage", "function ProductPage", "function StudioPage", "function ArchitecturePage", "function PublicationPage", "function InspectorPage", "function PlaygroundPage", "function AgentsPage", "function ChangelogPage"]) {
   check(app.includes(pageMarker), `shared ProductApp missing ${pageMarker}`);
 }
-const heroUses = (app.match(/<ProductSurfaceHero/g) ?? []).length;
+const heroUses = (routeSurfaces.match(/<ProductSurfaceHero/g) ?? []).length;
 check(heroUses >= 8, `expected shared ProductSurfaceHero across product pages; got ${heroUses}`);
 check(embedded.includes(".project-inspector-intro") && embedded.includes(".playground-intro"), "embedded feature bodies must suppress duplicate internal page heroes");
 
