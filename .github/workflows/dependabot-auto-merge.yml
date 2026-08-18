@@ -20,34 +20,49 @@ jobs:
         id: pr
         env:
           GH_TOKEN: ${{ github.token }}
+          RUN_EVENT: ${{ github.event.workflow_run.event }}
           RUN_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RUN_BASE_SHA: ${{ github.event.workflow_run.pull_requests[0].base.sha }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
 
-          PR_NUMBER="$RUN_PR_NUMBER"
-          if [ -z "$PR_NUMBER" ]; then
-            PR_NUMBER=$(gh api --method GET "repos/$GITHUB_REPOSITORY/pulls" \
-              -f state=open \
-              -f head="$GITHUB_REPOSITORY_OWNER:$HEAD_BRANCH" \
-              --jq '.[0].number // empty')
-          fi
-
-          if [ -z "$PR_NUMBER" ]; then
-            echo "No pull request associated with this successful CI run."
+          if [ "$RUN_EVENT" != "pull_request" ]; then
+            echo "Successful CI run was not a pull_request run."
             echo "eligible=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
+          if [ -z "$RUN_PR_NUMBER" ] || [ -z "$RUN_BASE_SHA" ]; then
+            echo "Successful CI run is missing pull request/base provenance."
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PR_NUMBER="$RUN_PR_NUMBER"
           PR=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")
           AUTHOR=$(echo "$PR" | jq -r '.user.login')
           CURRENT_HEAD_SHA=$(echo "$PR" | jq -r '.head.sha')
+          HEAD_REPO=$(echo "$PR" | jq -r '.head.repo.full_name')
+          BASE_REF=$(echo "$PR" | jq -r '.base.ref')
           STATE=$(echo "$PR" | jq -r '.state')
           DRAFT=$(echo "$PR" | jq -r '.draft')
+          DEFAULT_BRANCH=$(gh api "repos/$GITHUB_REPOSITORY" --jq '.default_branch')
 
           if [ "$AUTHOR" != "dependabot[bot]" ]; then
             echo "PR #$PR_NUMBER was opened by $AUTHOR, not Dependabot."
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$HEAD_REPO" != "$GITHUB_REPOSITORY" ]; then
+            echo "PR #$PR_NUMBER does not originate from this repository."
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$BASE_REF" != "$DEFAULT_BRANCH" ]; then
+            echo "PR #$PR_NUMBER targets $BASE_REF, not default branch $DEFAULT_BRANCH."
             echo "eligible=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -60,6 +75,13 @@ jobs:
 
           if [ "$CURRENT_HEAD_SHA" != "$HEAD_SHA" ]; then
             echo "PR head moved after the successful CI run; refusing stale merge."
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CURRENT_BASE_SHA=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$BASE_REF" --jq '.object.sha')
+          if [ "$RUN_BASE_SHA" != "$CURRENT_BASE_SHA" ]; then
+            echo "Base branch moved after the successful CI run; refusing stale merge."
             echo "eligible=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
