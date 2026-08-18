@@ -13,7 +13,9 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -22,7 +24,9 @@ import tomllib
 SDK_VERSION = "1"
 PROJECT_SCHEMA = "quillframe_project_v1"
 LOCK_SCHEMA = "quillframe_lock_v1"
+ATTESTATION_SCHEMA = "quillframe_framework_attestation_v1"
 DEFAULT_FRAMEWORK_VERSION = "0.9.0"
+FRAMEWORK_ROOT = Path(__file__).resolve().parent
 
 REQUIRED_DIRS = [
     "specs",
@@ -93,6 +97,69 @@ def toml_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+def _version_tuple(value: str) -> tuple[int, ...]:
+    match = re.fullmatch(r"(\d+)(?:\.(\d+))?(?:\.(\d+))?", value.strip())
+    if not match:
+        raise ValueError(f"unsupported framework version format: {value}")
+    return tuple(int(part or 0) for part in match.groups(default="0"))
+
+
+def _git(root: Path, *args: str) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), *args],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        raise ValueError(f"unable to inspect Framework git checkout: {type(exc).__name__}") from exc
+    return result.stdout.strip()
+
+
+def framework_checkout_identity(framework_root: Path | None = None, *, require_clean: bool = True) -> dict[str, Any]:
+    """Return an exact identity for a materialized Quillframe source checkout.
+
+    Exact pinning intentionally rejects dirty checkouts. A commit paired with a
+    fingerprint of uncommitted bytes would not be reproducible from that commit.
+    """
+    root = (framework_root or FRAMEWORK_ROOT).resolve()
+    for rel in ("HARNESS_MANIFEST.yaml", "VERSION", "release/build_framework_bundle.py"):
+        if not (root / rel).is_file():
+            raise ValueError(f"not a complete Quillframe Framework checkout: missing {rel}")
+    status = _git(root, "status", "--porcelain", "--untracked-files=normal")
+    if require_clean and status:
+        raise ValueError("Framework checkout is dirty; commit or stash changes before exact pinning")
+    commit = _git(root, "rev-parse", "HEAD")
+    if not re.fullmatch(r"[0-9a-f]{40,64}", commit):
+        raise ValueError("Framework git HEAD is not a supported exact commit id")
+    version = (root / "VERSION").read_text(encoding="utf-8").strip()
+    if not version:
+        raise ValueError("Framework VERSION is empty")
+
+    # Import lazily so project_sdk remains light for read/validate operations.
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    try:
+        from release.build_framework_bundle import build as build_framework_bundle
+    except ImportError as exc:
+        raise ValueError("unable to load deterministic Framework bundle builder") from exc
+    with tempfile.TemporaryDirectory(prefix="quillframe-pin-") as td:
+        report = build_framework_bundle(root, Path(td) / "framework.tar")
+    fingerprint = report.get("bundle_fingerprint")
+    content_index = report.get("content_index_fingerprint")
+    if not isinstance(fingerprint, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", fingerprint):
+        raise ValueError("Framework bundle builder returned an invalid fingerprint")
+    return {
+        "name": "Quillframe",
+        "version": version,
+        "commit": commit,
+        "bundle_fingerprint": fingerprint,
+        "content_index_fingerprint": content_index,
+    }
+
+
 def framework_toml(project_id: str, title: str, language: str, version: str) -> str:
     return f'''# Quillframe project manifest. Project facts live in project-owned files, not here.
 [quillframe]
@@ -143,17 +210,28 @@ author_context_memory_controls_supported = true
 '''
 
 
-def lock_json(framework_version: str) -> dict[str, Any]:
+def lock_json(framework_version: str, commit: str | None = None, bundle_fingerprint: str | None = None) -> dict[str, Any]:
     return {
         "schema": LOCK_SCHEMA,
         "framework": {
             "name": "Quillframe",
             "version": framework_version,
-            "commit": None,
-            "bundle_fingerprint": None,
+            "commit": commit,
+            "bundle_fingerprint": bundle_fingerprint,
         },
         "project_schema_version": "1",
         "updated_at": now_iso(),
+    }
+
+
+def attestation_json(identity: dict[str, Any]) -> dict[str, Any]:
+    framework = {key: identity.get(key) for key in ("name", "version", "commit", "bundle_fingerprint")}
+    return {
+        "schema": ATTESTATION_SCHEMA,
+        "framework": framework,
+        "content_index_fingerprint": identity.get("content_index_fingerprint"),
+        "source": {"kind": "clean_git_checkout"},
+        "attested_at": now_iso(),
     }
 
 
@@ -170,6 +248,7 @@ This is a Quillframe fiction project repository.
 - Project-specific profiles: `profiles/`
 - Research claims/sources: `research/`
 - Draft/review/accepted manuscripts: `manuscripts/`
+- Exact Framework identity: `quillframe.lock.json` + `framework.attestation.json`
 
 Plans, drafts, runtime sessions, corpus, memory overlays, reader panels, revision reports, and semantic judgments are not Canon.
 
@@ -182,11 +261,11 @@ bootstrap → validate → plan/spec when required → produce → test/audit �
 Run:
 
 ```bash
-python <QUILLFRAME>/project_sdk.py validate .
-python <QUILLFRAME>/project_sdk.py build .
+quillframe validate .
+quillframe build .
 ```
 
-See the pinned framework in `quillframe.lock.json`.
+Use `quillframe pin .` only for an explicit Framework repin. A normal authoring run must not silently replace the lock with a newer Framework checkout.
 '''
 
 
@@ -195,14 +274,15 @@ def readme_zh(title: str) -> str:
 
 这是一个 Quillframe 小说工程仓库。
 
-## Authority
+## 权威
 
 - Accepted Canon：`state/canon/`
 - 当前结构化状态：`state/`
 - 当前未来计划：`plans/`
-- Project-specific profiles：`profiles/`
+- 项目专属 profiles：`profiles/`
 - Research claims / sources：`research/`
 - Draft / Review / Accepted 正文：`manuscripts/`
+- 精确 Framework identity：`quillframe.lock.json` + `framework.attestation.json`
 
 Plan、Draft、runtime session、Corpus、memory overlay、Reader Panel、revision report、semantic judgment 都不是 Canon。
 
@@ -215,18 +295,18 @@ bootstrap → validate → 需要时 spec/plan → produce → test/audit → ex
 运行：
 
 ```bash
-python <QUILLFRAME>/project_sdk.py validate .
-python <QUILLFRAME>/project_sdk.py build .
+quillframe validate .
+quillframe build .
 ```
 
-Framework 版本以 `quillframe.lock.json` 为准。
+只有显式升级 Framework 时才运行 `quillframe pin .`。普通创作 run 不得静默把 Project lock 换成更新的 Framework checkout。
 '''
 
 
 def agents_md() -> str:
     return '''# Quillframe Project Agent Bootstrap
 
-Read `quillframe.toml` and `quillframe.lock.json`, then load the pinned Quillframe framework bootstrap.
+Read `quillframe.toml`, `quillframe.lock.json`, and `framework.attestation.json` before project work, then load the exact pinned Quillframe Framework bootstrap.
 
 Rules:
 - project repository owns project facts, plans, profiles, research, manuscripts and Canon;
@@ -237,19 +317,53 @@ Rules:
 - author-visible memory/context controls affect retrieval or proposals, never silently mutate Canon;
 - checkpoint before external waits and consequential writes;
 - Canon mutation requires explicit acceptance + settlement transaction;
+- do not silently repin the Framework during ordinary production;
 - run project validation/tests before release or structural migration completion.
 '''
 
 
 def claude_md() -> str:
-    return '''# Claude Code · Quillframe Project
+    return '''# Claude Code · Quillframe Project Host
 
-Read `AGENTS.md`, `quillframe.toml`, and `quillframe.lock.json` before project work.
+@AGENTS.md
 
-Use the pinned Quillframe framework as the generic runtime/quality authority and this repository as project authority.
-Do not infer Canon from chat/session history, memory-bank views, or reader/revision diagnostics.
-Use a separate invocation/session when independent semantic review is mandatory.
+The project-local Claude hook verifies the exact Framework lock/attestation and injects current bootstrap state at session start. Claude Code is a host, not the source of Project or Framework authority.
 '''
+
+
+def claude_settings_json() -> str:
+    return json.dumps(
+        {
+            "hooks": {
+                "SessionStart": [
+                    {
+                        "matcher": "startup|resume|clear|compact",
+                        "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
+                    }
+                ],
+                "UserPromptSubmit": [
+                    {"hooks": [{"type": "command", "command": "quillframe claude-hook"}]}
+                ],
+                "PreToolUse": [
+                    {
+                        "matcher": "Write|Edit|Bash|Skill",
+                        "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
+                    }
+                ],
+                "PostToolUse": [
+                    {
+                        "matcher": "Edit|Write|Bash",
+                        "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
+                    }
+                ],
+                "SessionEnd": [
+                    {"hooks": [{"type": "command", "command": "quillframe claude-hook"}]}
+                ],
+            }
+        },
+        ensure_ascii=False,
+        indent=2,
+    ) + "\n"
 
 
 def gitignore() -> str:
@@ -272,26 +386,55 @@ status: active
 '''
 
 
-def init_project(root: Path, project_id: str, title: str, language: str, framework_version: str, force: bool) -> dict[str, Any]:
+def _pin_payload(framework_root: Path | None, minimum_version: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    identity = framework_checkout_identity(framework_root)
+    if _version_tuple(identity["version"]) < _version_tuple(minimum_version):
+        raise ValueError(
+            f"Framework {identity['version']} is below project minimum {minimum_version}"
+        )
+    lock = lock_json(identity["version"], identity["commit"], identity["bundle_fingerprint"])
+    return lock, attestation_json(identity)
+
+
+def init_project(
+    root: Path,
+    project_id: str,
+    title: str,
+    language: str,
+    framework_version: str,
+    force: bool,
+    framework_root: Path | None = None,
+) -> dict[str, Any]:
     root = root.resolve()
     if root.exists() and any(root.iterdir()) and not force:
         raise ValueError(f"target directory is not empty: {root}; use --force only when intentional")
+    lock, attestation = _pin_payload(framework_root, framework_version)
     root.mkdir(parents=True, exist_ok=True)
     for rel in REQUIRED_DIRS:
         (root / rel).mkdir(parents=True, exist_ok=True)
     write(root / "quillframe.toml", framework_toml(project_id, title, language, framework_version))
-    write(root / "quillframe.lock.json", json.dumps(lock_json(framework_version), ensure_ascii=False, indent=2) + "\n")
+    write(root / "framework.attestation.json", json.dumps(attestation, ensure_ascii=False, indent=2) + "\n")
+    # Lock is written after the attestation so a partial failure never advertises
+    # a new Project authority without its evidence file.
+    write(root / "quillframe.lock.json", json.dumps(lock, ensure_ascii=False, indent=2) + "\n")
     write(root / "README.en.md", readme_en(title))
     write(root / "README.zh-CN.md", readme_zh(title))
     write(root / "AGENTS.md", agents_md())
     write(root / "CLAUDE.md", claude_md())
+    write(root / ".claude" / "settings.json", claude_settings_json())
     write(root / ".gitignore", gitignore())
     for name in ("genre", "platform", "prose", "reader", "project"):
         write(root / "profiles" / f"{name}.yaml", profile_template(name))
     write(root / "state" / "canon" / "README.md", "# Accepted Canon\n\nOnly explicitly accepted and settled project facts/artifacts belong here.\n")
     write(root / "plans" / "README.md", "# Active Plans\n\nFuture intent only. Plan is never current Canon.\n")
     write(root / "manuscripts" / "README.md", "# Manuscripts\n\nLifecycle: draft → review → accepted. Acceptance still requires settlement for structured state mutation.\n")
-    return {"project_root": str(root), "project_id": project_id, "initialized": True, "framework_version": framework_version}
+    return {
+        "project_root": str(root),
+        "project_id": project_id,
+        "initialized": True,
+        "framework_pin": lock["framework"],
+        "authority_ready": True,
+    }
 
 
 def load_manifest(root: Path) -> dict[str, Any]:
@@ -313,6 +456,134 @@ def load_lock(root: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError("lockfile must be object")
     return value
+
+
+def load_attestation(root: Path) -> dict[str, Any]:
+    path = root / "framework.attestation.json"
+    if not path.exists():
+        raise ValueError("missing framework.attestation.json")
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("framework attestation must be object")
+    return value
+
+
+def _exact_framework_fields(framework: Any) -> tuple[bool, list[str]]:
+    problems: list[str] = []
+    if not isinstance(framework, dict):
+        return False, ["framework lock must be object"]
+    if framework.get("name") != "Quillframe":
+        problems.append("framework.name must be Quillframe")
+    if not framework.get("version"):
+        problems.append("framework.version required")
+    commit = framework.get("commit")
+    if commit is None:
+        problems.append("framework.commit is not pinned")
+    elif not re.fullmatch(r"[0-9a-f]{40,64}", str(commit)):
+        problems.append("framework.commit must be an exact lowercase git commit id")
+    fingerprint = framework.get("bundle_fingerprint")
+    if fingerprint is None:
+        problems.append("framework.bundle_fingerprint is not pinned")
+    elif not re.fullmatch(r"sha256:[0-9a-f]{64}", str(fingerprint)):
+        problems.append("framework.bundle_fingerprint must be sha256:<64 lowercase hex>")
+    return not problems, problems
+
+
+def project_authority_status(root: Path) -> dict[str, Any]:
+    root = root.resolve()
+    errors: list[str] = []
+    try:
+        lock = load_lock(root)
+    except Exception as exc:
+        return {"authority_ready": False, "errors": [str(exc)], "framework_lock": None, "framework_attestation": None}
+    framework = lock.get("framework", {}) if isinstance(lock, dict) else {}
+    exact, exact_problems = _exact_framework_fields(framework)
+    errors.extend(exact_problems)
+    attestation: dict[str, Any] | None = None
+    try:
+        attestation = load_attestation(root)
+    except Exception as exc:
+        errors.append(str(exc))
+    if attestation is not None:
+        if attestation.get("schema") != ATTESTATION_SCHEMA:
+            errors.append("framework attestation schema must be quillframe_framework_attestation_v1")
+        att_framework = attestation.get("framework")
+        if not isinstance(att_framework, dict):
+            errors.append("framework attestation framework must be object")
+        else:
+            for key in ("name", "version", "commit", "bundle_fingerprint"):
+                if att_framework.get(key) != framework.get(key):
+                    errors.append(f"framework attestation mismatch: {key}")
+    return {
+        "authority_ready": exact and not errors,
+        "errors": errors,
+        "framework_lock": framework,
+        "framework_attestation": attestation,
+    }
+
+
+def verify_materialized_framework(
+    root: Path,
+    framework_root: Path | None = None,
+    *,
+    compute_bundle: bool = True,
+) -> dict[str, Any]:
+    """Verify a Project's exact lock/attestation against local Framework bytes."""
+    local = project_authority_status(root)
+    errors = list(local["errors"])
+    actual: dict[str, Any] | None = None
+    if not local["authority_ready"]:
+        return {**local, "materialized_authority_verified": False, "materialized_framework": None}
+    try:
+        if compute_bundle:
+            actual = framework_checkout_identity(framework_root)
+        else:
+            fw_root = (framework_root or FRAMEWORK_ROOT).resolve()
+            status = _git(fw_root, "status", "--porcelain", "--untracked-files=normal")
+            if status:
+                raise ValueError("Framework checkout is dirty")
+            actual = {
+                "name": "Quillframe",
+                "version": (fw_root / "VERSION").read_text(encoding="utf-8").strip(),
+                "commit": _git(fw_root, "rev-parse", "HEAD"),
+                "bundle_fingerprint": local["framework_lock"].get("bundle_fingerprint"),
+            }
+    except Exception as exc:
+        errors.append(str(exc))
+    if actual is not None:
+        expected = local["framework_lock"]
+        for key in ("name", "version", "commit", "bundle_fingerprint"):
+            if actual.get(key) != expected.get(key):
+                errors.append(f"materialized Framework mismatch: {key}")
+    return {
+        **local,
+        "authority_ready": local["authority_ready"],
+        "errors": errors,
+        "materialized_authority_verified": actual is not None and not errors,
+        "materialized_framework": actual,
+    }
+
+
+def pin_project(root: Path, framework_root: Path | None = None) -> dict[str, Any]:
+    root = root.resolve()
+    manifest = load_manifest(root)
+    old_lock = load_lock(root)
+    minimum = str(manifest.get("quillframe", {}).get("minimum_framework_version") or DEFAULT_FRAMEWORK_VERSION)
+    new_lock, attestation = _pin_payload(framework_root, minimum)
+    # Write evidence first and authority lock second. If the second write fails,
+    # validation reports a mismatch rather than silently accepting partial state.
+    write(root / "framework.attestation.json", json.dumps(attestation, ensure_ascii=False, indent=2) + "\n")
+    write(root / "quillframe.lock.json", json.dumps(new_lock, ensure_ascii=False, indent=2) + "\n")
+    status = project_authority_status(root)
+    if not status["authority_ready"]:
+        raise ValueError("post-pin authority verification failed: " + "; ".join(status["errors"]))
+    return {
+        "pinned": True,
+        "project_root": str(root),
+        "previous_framework": old_lock.get("framework", {}),
+        "framework": new_lock["framework"],
+        "authority_ready": True,
+    }
 
 
 def iter_files(root: Path):
@@ -364,7 +635,7 @@ def validate_project(root: Path) -> dict[str, Any]:
     warnings: list[str] = []
     try: manifest = load_manifest(root)
     except Exception as exc:
-        return {"valid": False, "errors": [str(exc)], "warnings": warnings}
+        return {"valid": False, "errors": [str(exc)], "warnings": warnings, "authority_ready": False}
     try: lock = load_lock(root)
     except Exception as exc:
         errors.append(str(exc)); lock = {}
@@ -375,9 +646,16 @@ def validate_project(root: Path) -> dict[str, Any]:
         if not project.get(key): errors.append(f"project.{key} required")
     if lock and lock.get("schema") != LOCK_SCHEMA: errors.append("lock schema must be quillframe_lock_v1")
     framework_lock = lock.get("framework", {}) if isinstance(lock, dict) else {}
-    bundle_fingerprint = framework_lock.get("bundle_fingerprint") if isinstance(framework_lock, dict) else None
-    if bundle_fingerprint is not None and not re.fullmatch(r"sha256:[0-9a-f]{64}", str(bundle_fingerprint)):
-        errors.append("framework.bundle_fingerprint must be null or sha256:<64 lowercase hex>")
+    # Exact authority readiness is deliberately reported separately from structural
+    # validity so legacy Projects are not silently migrated by `validate`.
+    authority = project_authority_status(root) if lock else {
+        "authority_ready": False,
+        "errors": ["missing exact Framework authority"],
+        "framework_lock": framework_lock,
+        "framework_attestation": None,
+    }
+    if not authority["authority_ready"]:
+        warnings.extend(f"authority: {problem}" for problem in authority["errors"])
     for rel in REQUIRED_DIRS:
         if not (root / rel).is_dir(): errors.append(f"missing required directory: {rel}")
     for rel in ("README.en.md", "README.zh-CN.md", "AGENTS.md", "CLAUDE.md", ".gitignore"):
@@ -394,7 +672,16 @@ def validate_project(root: Path) -> dict[str, Any]:
         text = p.read_text(encoding="utf-8", errors="replace")
         if re.search(r"framework_surface_fundamentals\s*:\s*false", text, re.I):
             errors.append(f"profile attempts to disable framework Surface Fundamentals: {p.relative_to(root)}")
-    return {"valid": not errors, "errors": errors, "warnings": warnings, "project_id": project.get("id"), "project_version": project.get("version"), "framework_lock": framework_lock}
+    return {
+        "valid": not errors,
+        "errors": errors,
+        "warnings": warnings,
+        "project_id": project.get("id"),
+        "project_version": project.get("version"),
+        "framework_lock": framework_lock,
+        "framework_attestation": authority.get("framework_attestation"),
+        "authority_ready": authority["authority_ready"],
+    }
 
 
 def build_project(root: Path) -> dict[str, Any]:
@@ -410,7 +697,10 @@ def build_project(root: Path) -> dict[str, Any]:
         data = path.read_bytes()
         item = {"path": rel.as_posix(), "class": classify(rel), "size": len(data), "fingerprint": sha256_bytes(data)}
         files.append(item)
-        if rel.as_posix() in {"quillframe.toml", "quillframe.lock.json", "README.en.md", "README.zh-CN.md", "AGENTS.md", "CLAUDE.md"}:
+        if rel.as_posix() in {
+            "quillframe.toml", "quillframe.lock.json", "framework.attestation.json",
+            "README.en.md", "README.zh-CN.md", "AGENTS.md", "CLAUDE.md", ".claude/settings.json",
+        }:
             bootstrap[rel.as_posix()] = data.decode("utf-8", errors="replace")
     content_index_hash = sha256_bytes(canonical_json(files).encode("utf-8"))
     payload = {
@@ -466,7 +756,10 @@ def self_test(tmp_root: Path) -> dict[str, Any]:
     manifest = load_manifest(tmp_root)
     quality = manifest.get("quality", {})
     ok = (
-        validation["valid"] and Path(build["output"], "project.bundle.json").exists()
+        validation["valid"] and validation["authority_ready"]
+        and (tmp_root / "framework.attestation.json").exists()
+        and (tmp_root / ".claude" / "settings.json").exists()
+        and Path(build["output"], "project.bundle.json").exists()
         and Path(spec["spec_dir"], "tasks.zh-CN.md").exists()
         and quality.get("reader_simulation_supported") is True
         and quality.get("quality_evolution_supported") is True
@@ -477,6 +770,8 @@ def self_test(tmp_root: Path) -> dict[str, Any]:
         "framework_default": DEFAULT_FRAMEWORK_VERSION,
         "scaffold": True,
         "validate": validation["valid"],
+        "authority_ready": validation["authority_ready"],
+        "exact_framework_pin": True,
         "bilingual_specs": True,
         "reproducible_bundle": True,
         "software_project_contract": True,
@@ -486,16 +781,19 @@ def self_test(tmp_root: Path) -> dict[str, Any]:
 
 def main() -> int:
     p = argparse.ArgumentParser(description="Quillframe Project SDK"); sub = p.add_subparsers(dest="cmd", required=True)
-    i = sub.add_parser("init"); i.add_argument("path"); i.add_argument("--id", required=True); i.add_argument("--title", required=True); i.add_argument("--language", default="en"); i.add_argument("--framework-version", default=DEFAULT_FRAMEWORK_VERSION); i.add_argument("--force", action="store_true")
+    i = sub.add_parser("init"); i.add_argument("path"); i.add_argument("--id", required=True); i.add_argument("--title", required=True); i.add_argument("--language", default="en"); i.add_argument("--framework-version", default=DEFAULT_FRAMEWORK_VERSION); i.add_argument("--framework-root"); i.add_argument("--force", action="store_true")
     v = sub.add_parser("validate"); v.add_argument("path")
     b = sub.add_parser("build"); b.add_argument("path")
+    pin = sub.add_parser("pin"); pin.add_argument("path"); pin.add_argument("--framework-root")
     s = sub.add_parser("spec-new"); s.add_argument("path"); s.add_argument("--title", required=True)
     t = sub.add_parser("self-test"); t.add_argument("--tmp", default="/tmp/quillframe-project-sdk-self-test")
     args = p.parse_args()
     try:
-        if args.cmd == "init": result = init_project(Path(args.path), args.id, args.title, args.language, args.framework_version, args.force)
+        if args.cmd == "init":
+            result = init_project(Path(args.path), args.id, args.title, args.language, args.framework_version, args.force, Path(args.framework_root) if args.framework_root else None)
         elif args.cmd == "validate": result = validate_project(Path(args.path))
         elif args.cmd == "build": result = build_project(Path(args.path))
+        elif args.cmd == "pin": result = pin_project(Path(args.path), Path(args.framework_root) if args.framework_root else None)
         elif args.cmd == "spec-new": result = create_spec(Path(args.path), args.title)
         else: result = self_test(Path(args.tmp))
         dump(result)
