@@ -1,0 +1,11 @@
+{
+  "name": "quillframe",
+  "compatibility_date": "2026-08-18",
+  "workers_dev": true,
+  "preview_urls": true,
+  "assets": {
+    // Product routes are handled by dist/_redirects. Do not enable a global
+    // SPA fallback here because /docs is an independent Astro/Starlight tree.
+    "directory": "./dist"
+  }
+}
