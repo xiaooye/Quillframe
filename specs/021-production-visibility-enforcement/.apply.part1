@@ -1,0 +1,150 @@
+--- a/production_runtime/runtime.py
++++ b/production_runtime/runtime.py
+@@ -22,6 +22,7 @@
+     RegisteredSemanticExecutor,
+     build_pre_independent_qualification,
+     final_readiness,
++    final_release,
+     prepare_independent_review,
+     semantic_status,
+     validate_independent_submission,
+@@ -217,6 +218,25 @@
+             ).fetchone()
+         return _json(row["state_json"], {}) if row else None
+ 
++    def _persist_release_receipt(self, project_id: str, run_id: str, release: dict[str, Any]) -> None:
++        assert_secret_free(release, label="production release")
++        key = f"{run_id}:production_release"
++        with self.store.open_project(project_id) as conn:
++            existing = conn.execute(
++                "SELECT payload_json FROM receipts WHERE receipt_kind='production_release' AND idempotency_key=?",
++                (key,),
++            ).fetchone()
++            if existing:
++                prior = _json(existing["payload_json"], {})
++                if prior.get("release_fingerprint") != release.get("release_fingerprint"):
++                    raise ProductionRunError("production_release_replay_conflict", "production release changed for immutable run")
++                return
++            conn.execute(
++                "INSERT INTO receipts(receipt_id,run_id,receipt_kind,idempotency_key,payload_json,created_at) VALUES(?,?,?,?,?,?)",
++                ("rcpt_" + uuid.uuid4().hex, run_id, "production_release", key, canonical_json(release), now_iso()),
++            )
++            conn.commit()
++
+     def _persist_candidate(
+         self,
+         project_id: str,
+@@ -227,6 +247,7 @@
+         candidate_fingerprint: str,
+         independent_binding: dict[str, Any],
+         readiness: dict[str, Any],
++        release: dict[str, Any],
+     ) -> dict[str, Any]:
+         with self.store.open_project(project_id) as conn:
+             document = conn.execute("SELECT document_id FROM documents WHERE document_id=?", (document_id,)).fetchone()
+@@ -247,6 +268,7 @@
+                     "context_bundle_fingerprint": bundle["bundle_fingerprint"],
+                     "freeze_fingerprint": bundle["freeze"]["freeze_fingerprint"],
+                     "production_readiness_schema": readiness.get("schema"),
++                    "production_release_fingerprint": release.get("release_fingerprint"),
+                     "authority": False,
+                 },
+             )
+@@ -298,6 +320,7 @@
+             "candidate_fingerprint": candidate_fingerprint,
+             "status": "review_draft",
+             "user_visible_gate": "PASS",
++            "production_release_fingerprint": release.get("release_fingerprint"),
+             "authority": False,
+         }
+ 
+@@ -316,8 +339,19 @@
+                     (run["run_id"],),
+                 )
+             ]
++            release_row = conn.execute(
++                "SELECT payload_json FROM receipts WHERE run_id=? AND receipt_kind='production_release' ORDER BY created_at DESC,rowid DESC LIMIT 1",
++                (run["run_id"],),
++            ).fetchone()
+         if not candidate:
+             raise ProductionRunError("completed_run_missing_candidate", "completed production run has no persisted candidate")
++        release = _json(release_row["payload_json"], {}) if release_row else {}
++        if (
++            release.get("schema") != "quillframe_production_release_v1"
++            or release.get("candidate_fingerprint") != candidate["content_fingerprint"]
++            or release.get("ready_for_user_visible_review") is not True
++        ):
++            raise ProductionRunError("production_release_missing", "completed production candidate lacks a valid exact-fingerprint production release")
+         return {
+             "schema": PRODUCTION_EXECUTION_SCHEMA,
+             "project_id": project_id,
+@@ -329,6 +363,7 @@
+             "stage_receipts": receipts,
+             "candidate": {**dict(candidate), "candidate_fingerprint": candidate["content_fingerprint"], "authority": False},
+             "candidate_visible": True,
++            "production_release": release,
+             "raw_draft_visible": False,
+             "accepted": candidate["status"] == "accepted",
+             "settled": False,
+@@ -833,6 +868,30 @@
+         visible_receipt["stage_result_fingerprint"] = fingerprint({key: value for key, value in visible_receipt.items() if key != "stage_result_fingerprint"})
+         self._persist_stage_receipt(project_id, run_id, visible_receipt)
+ 
++        release = final_release(
++            production_readiness=readiness,
++            qualification_receipt=handoff["qualification_receipt"],
++            candidate_fingerprint=handoff["candidate_fingerprint"],
++            context_bundle_fingerprint=bundle["bundle_fingerprint"],
++            freeze_fingerprint=bundle["freeze"]["freeze_fingerprint"],
++            user_visible_gate_receipt_fingerprint=visible_receipt["stage_result_fingerprint"],
++        )
++        if release.get("ready_for_user_visible_review") is not True:
++            self._set_run(project_id, run_id, "failed_gate" if release.get("blocking_structural_receipts") else "semantic_pending")
++            return {
++                "schema": PRODUCTION_EXECUTION_SCHEMA,
++                "project_id": project_id,
++                "run_id": run_id,
++                "status": "failed_gate" if release.get("blocking_structural_receipts") else "semantic_pending",
++                "failed_mechanism": "production_release",
++                "production_readiness": readiness,
++                "production_release": release,
++                "candidate_visible": False,
++                "raw_draft_visible": False,
++                "authority": False,
++            }
++        self._persist_release_receipt(project_id, run_id, release)
++
+         candidate = self._persist_candidate(
+             project_id,
+             run,
+@@ -842,6 +901,7 @@
+             handoff["candidate_fingerprint"],
+             independent_binding,
+             readiness,
++            release,
+         )
+         self._set_run(project_id, run_id, "completed", result_fingerprint=candidate["candidate_fingerprint"])
+         self._event(
+@@ -878,5 +938,6 @@
+             "accepted": False,
+             "settled": False,
+             "production_readiness": readiness,
++            "production_release": release,
+             "authority": False,
+         }
+--- a/core_operations.py
++++ b/core_operations.py
+@@ -44,7 +44,7 @@
+             "operations": [
+                 "project.create", "project.list", "project.inspect", "project.search", "project.backup",
+                 "document.create", "document.list", "document.revision.save", "document.revision.compare",
+-                "author.run.start", "candidate.review.get", "candidate.accept", "candidate.reject", "candidate.revision.request",
++                "author.run.start", "candidate.review.get", "candidate.visible.get", "candidate.accept", "candidate.reject", "candidate.revision.request",
+                 "settlement.preflight", "settlement.apply",
+                 "feedback.observe", "publication.preview", "publication.build",
+                 "database.doctor",
+@@ -130,6 +130,72 @@
+                 return payload
+         return None
+ 
++    @staticmethod
