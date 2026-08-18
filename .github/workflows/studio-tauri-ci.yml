@@ -25,7 +25,7 @@ on:
       - '.github/workflows/studio-tauri-ci.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   linux-desktop-host:
@@ -59,13 +59,18 @@ jobs:
         run: python studio/scripts/build_tauri_sidecar.py
       - name: Generate exact Tauri Cargo lock
         run: cargo generate-lockfile --manifest-path studio/app/src-tauri/Cargo.toml
-      - name: Upload exact Cargo lock bootstrap artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: tauri-cargo-lock-${{ github.sha }}
-          path: studio/app/src-tauri/Cargo.lock
-          if-no-files-found: error
-          retention-days: 1
+      - name: Commit exact Tauri Cargo lock
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          git add studio/app/src-tauri/Cargo.lock
+          if git diff --cached --quiet; then
+            echo 'Cargo.lock already matches the resolved graph'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'build(tauri): lock Desktop host dependencies'
+          git push origin HEAD:${{ github.head_ref }}
       - name: Rust host unit tests and compile
         run: |
           cargo test --locked --manifest-path studio/app/src-tauri/Cargo.toml
