@@ -1,0 +1,15 @@
+{
+  "schema": "quillframe_system_improve_execution_v1",
+  "task_mode": "SYSTEM-IMPROVE",
+  "manager_session_id": "SES-4788e9e1d9144db9820d05c120eba50a",
+  "run_id": "RUN-924e976c94e34973ac98554b0c3f8e1a",
+  "frozen_framework_sha": "5fd991a5621f2c68e1030aa6e0b35014ca4011c7",
+  "branch": "agent/production-runtime-integration",
+  "parallel_ui_pr": 129,
+  "consumer_project_repin": false,
+  "canon_mutation": false,
+  "studio_visual_change": false,
+  "cloudflare_dependency": false,
+  "authority": false,
+  "live_model_acceptance": "pending_capability_check"
+}
