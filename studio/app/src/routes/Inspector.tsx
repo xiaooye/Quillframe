@@ -4,7 +4,7 @@ import { useI18n } from "../i18n";
 import { downloadProjection, loadProductProjection, type ProductProjectionBundle } from "../productProjection";
 import { useStudio } from "../studio";
 
-type Section = "project" | "session" | "runs" | "checkpoints" | "events" | "receipts" | "context" | "provenance";
+type Section = "project" | "session" | "runs" | "checkpoints" | "events" | "receipts" | "context" | "execution" | "provenance";
 
 const sections: Array<{ id: Section; label: string }> = [
   { id: "project", label: "Project" },
@@ -14,6 +14,7 @@ const sections: Array<{ id: Section; label: string }> = [
   { id: "events", label: "Events" },
   { id: "receipts", label: "Receipts" },
   { id: "context", label: "Context" },
+  { id: "execution", label: "Execution" },
   { id: "provenance", label: "Provenance" },
 ];
 
@@ -53,6 +54,7 @@ export default function Inspector() {
   const checkpoints = createMemo(() => session()?.checkpoints ?? []);
   const events = createMemo(() => bundle()?.runtime.events?.events ?? []);
   const receipts = createMemo(() => bundle()?.runtime.receipts?.receipts ?? []);
+  const semanticJobs = createMemo(() => receipts().flatMap((receipt) => receipt.semantic_jobs.map((job) => ({ ...job, receipt_id: receipt.receipt_id }))));
 
   const countFor = (id: Section) => {
     if (!bundle()) return 0;
@@ -63,6 +65,7 @@ export default function Inspector() {
     if (id === "events") return events().length;
     if (id === "receipts") return receipts().length;
     if (id === "context") return bundle()?.context ? 1 : 0;
+    if (id === "execution") return semanticJobs().length;
     return bundle()?.bridge_result_fingerprints.length ?? 0;
   };
 
@@ -72,8 +75,8 @@ export default function Inspector() {
         eyebrow="CORE INSPECTOR · EXACT PROJECTIONS"
         title={zh() ? "把 Project、Runtime、Receipt 和 Context 放在同一张证据桌上。" : "Put Project, Runtime, Receipts, and Context on one evidence desk."}
         body={zh()
-          ? "Inspector 只消费公开 Host Bridge 查询。缺失字段显示为 unavailable；不会根据目录、文件名、capability 或 UI 状态猜 Canon、Settlement、质量结论或 release eligibility。"
-          : "Inspector consumes public Host Bridge queries only. Missing fields remain unavailable; directory shape, filenames, capabilities, or UI state never become inferred Canon, Settlement, quality, or release eligibility."}
+          ? "Inspector 只消费公开 Host Bridge 查询。缺失字段显示为 unavailable；不会根据目录、文件名、capability、Model Service 名称或 UI 状态猜 Canon、Settlement、质量结论或 execution eligibility。"
+          : "Inspector consumes public Host Bridge queries only. Missing fields remain unavailable; directory shape, filenames, capabilities, Model Service names, or UI state never become inferred Canon, Settlement, quality, or execution eligibility."}
         actions={<span class="wui-badge wui-badge--outline">authority=false</span>}
       />
 
@@ -158,6 +161,24 @@ export default function Inspector() {
                   <header><div><span class="nf-eyebrow">CONTEXT INSPECTOR</span><h2>{projection().context ? printable(projection().context?.schema) : "unavailable"}</h2></div></header>
                   <Show when={projection().context} fallback={<p class="nf-inspector-empty-copy">{zh() ? "没有提供 Context Manifest，因此没有请求 Context projection。" : "No Context Manifest was supplied, so no Context projection was requested."}</p>}>
                     <pre class="nf-inspector-json">{JSON.stringify(projection().context, null, 2)}</pre>
+                  </Show>
+                </Show>
+
+                <Show when={section() === "execution"}>
+                  <header><div><span class="nf-eyebrow">MODEL EXECUTION PROVENANCE</span><h2>{semanticJobs().length} semantic jobs</h2></div><span class="wui-badge wui-badge--outline">observation only</span></header>
+                  <p class="nf-inspector-empty-copy">{zh()
+                    ? "当前公开 projection 只提供 semantic job / worker 级证据；尚未公开 connected Model Services、discovered models、exact model ID、capability provenance、eligibility、independence eligibility、latency / usage / cost 或 credential status。Inspector 不会从 worker_ref、model 名称或 endpoint 猜这些字段。"
+                    : "The current public projection exposes semantic-job / worker evidence only. Connected Model Services, discovered models, exact model ID, capability provenance, eligibility, independence eligibility, latency / usage / cost, and credential status are not yet exposed. Inspector will not infer them from worker_ref, model names, or endpoints."}</p>
+                  <Show when={semanticJobs().length > 0} fallback={<p class="nf-inspector-empty-copy">{zh() ? "当前 Receipt 中没有 semantic job。" : "No semantic jobs are present in the current receipts."}</p>}>
+                    <div class="nf-inspector-records">
+                      <For each={semanticJobs()}>{(job) => (
+                        <article>
+                          <header><strong class="nf-mono">{job.job_id}</strong><span>{job.status}</span></header>
+                          <small>{job.contract_id}</small>
+                          <code>{`worker_ref=${job.worker_ref ?? "unavailable"}\nmodel_service=unavailable\nexact_model=unavailable\ncapability_evidence=unavailable`}</code>
+                        </article>
+                      )}</For>
+                    </div>
                   </Show>
                 </Show>
 
