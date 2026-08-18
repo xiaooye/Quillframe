@@ -19,13 +19,15 @@ class ProductionHostBridgeTests(unittest.TestCase):
         self.assertFalse(contract["secret_boundary"]["cloudflare_required"])
 
     def test_access_token_is_redacted_from_fingerprint_but_business_authorization_is_bound(self):
-        token_a = {"schema": host_bridge.REQUEST_SCHEMA, "request_id": "same", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "A"}, "authority": False}
-        token_b = {**token_a, "args": {"endpoint": "https://example.invalid/v1", "access_token": "B"}}
+        secret_a = "QF-SECRET-SENTINEL-111"
+        secret_b = "QF-SECRET-SENTINEL-222"
+        token_a = {"schema": host_bridge.REQUEST_SCHEMA, "request_id": "same", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": secret_a}, "authority": False}
+        token_b = {**token_a, "args": {"endpoint": "https://example.invalid/v1", "access_token": secret_b}}
         result_a = host_bridge.invoke(token_a)
         result_b = host_bridge.invoke(token_b)
         self.assertEqual(result_a["request_fingerprint"], result_b["request_fingerprint"])
-        self.assertNotIn("A", str(result_a))
-        self.assertNotIn("B", str(result_b))
+        self.assertNotIn(secret_a, str(result_a))
+        self.assertNotIn(secret_b, str(result_b))
         self.assertFalse(result_a["secret_values_persisted"])
 
         auth_a = {"schema": host_bridge.REQUEST_SCHEMA, "request_id": "auth", "operation": "candidate.accept", "surface": "local_app", "args": {"project_id": "MISSING", "candidate_id": "C", "candidate_fingerprint": "sha256:x", "authorized_by": "user", "authorization": {"reason": "approve-a"}, "idempotency_key": "k", "user_authorized": True}, "authority": False}
