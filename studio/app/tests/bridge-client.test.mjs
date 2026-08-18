@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
-import * as ts from "typescript";
+import ts from "typescript";
 
 async function loadBridge() {
   const source = fs.readFileSync(new URL("../src/bridge.ts", import.meta.url), "utf8");
