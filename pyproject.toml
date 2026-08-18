@@ -18,6 +18,7 @@ include = [
   "agent_runtime*",
   "model_runtime*",
   "persistence*",
+  "production_runtime*",
   "harness*",
 ]
 namespaces = true
