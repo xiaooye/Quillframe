@@ -248,7 +248,7 @@ export default function PublicationWorkbench(props: { locale: Locale }) {
       eyebrow={<span>🎀 {zh() ? "真实出版 Playground" : "REAL PUBLICATION PLAYGROUND"}</span>}
       badges={<><span class="wui-badge wui-badge--outline">publication/compiler.py</span><span class="wui-badge wui-badge--outline">authority=false</span></>}
       title={zh() ? <>上传或粘贴一份正文，生成<span>真正可下载的出版文件。</span></> : <>Upload or paste manuscript text and build <span>real downloadable publication files.</span></>}
-      lede={<p>{zh() ? "浏览器在 Web Worker 里运行仓库同一份 Python compiler。TXT、Web、Print、EPUB 都来自真实 artifact；上传内容不会写入 Project、Canon 或 SQLite。" : "The browser runs the repository's same Python compiler inside a Web Worker. TXT, Web, Print, and EPUB previews come from real artifacts; uploads never write Project, Canon, or SQLite."}</p>}
+      lede={<p>{zh() ? "浏览器在 Web Worker 里运行仓库同一份 Python compiler。TXT、Web、Print、EPUB 都来自真实 artifact；上传内容不会写入 Project、Canon 或持久状态。" : "The browser runs the repository's same Python compiler inside a Web Worker. TXT, Web, Print, and EPUB previews come from real artifacts; uploads never write Project, Canon, or persistent state."}</p>}
       visual={<ProfileGallery selected={selected()} onSelect={(index) => { setSelected(index); setResult(undefined); }} zh={zh()} />}
     />
 
