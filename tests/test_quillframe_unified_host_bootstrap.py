@@ -58,14 +58,14 @@ class UnifiedHostBootstrapTests(unittest.TestCase):
                 "python -m quillframe.cli host-run begin "
                 f"--session-id {snapshot['session_id']} --mode SYSTEM-IMPROVE"
             )
-            allowed, _ = host_bootstrap.pretool_decision(
+            decision, reason = host_bootstrap.pretool_decision(
                 snapshot,
-                {"tool_name": "Bash", "tool_input": {"command": begin_command}},
+                {"tool_name": "Bash", "tool_input": {"command": begin_command}, "cwd": str(ROOT)},
             )
-            self.assertEqual(allowed, "allow")
+            self.assertIsNone(decision, reason)
             lookalike, _ = host_bootstrap.pretool_decision(
                 snapshot,
-                {"tool_name": "Bash", "tool_input": {"command": begin_command + "; rm -rf /tmp/nope"}},
+                {"tool_name": "Bash", "tool_input": {"command": begin_command + "; rm -rf /tmp/nope"}, "cwd": str(ROOT)},
             )
             self.assertEqual(lookalike, "deny")
 
@@ -83,6 +83,42 @@ class UnifiedHostBootstrapTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "active run/task_mode"):
                 host_bootstrap.begin_run(None, snapshot["session_id"], "AUDIT")
+
+    def test_framework_fiction_intent_can_only_escape_through_strict_project_init(self):
+        native = "test-framework-init-" + uuid.uuid4().hex
+        with tempfile.TemporaryDirectory(prefix="qf-host-db-") as td, patch.dict(
+            os.environ, {"QUILLFRAME_DB": str(Path(td) / "runtime.db")}
+        ):
+            snapshot = host_bootstrap.build_snapshot("claude_code", native, None, full_authority_refresh=True)
+            init_command = (
+                "python -m quillframe.cli init ../riverside-high "
+                "--id RIVERSIDE-HIGH --title 'Riverside High' --language zh-CN"
+            )
+            decision, reason = host_bootstrap.pretool_decision(
+                snapshot,
+                {"tool_name": "Bash", "tool_input": {"command": init_command}, "cwd": str(ROOT)},
+            )
+            self.assertIsNone(decision, reason)
+            self.assertTrue(host_bootstrap.is_project_init_command(init_command, ROOT))
+
+            inside = "python -m quillframe.cli init fiction --id BAD --title Bad"
+            self.assertFalse(host_bootstrap.is_project_init_command(inside, ROOT))
+            denied_inside, _ = host_bootstrap.pretool_decision(
+                snapshot,
+                {"tool_name": "Bash", "tool_input": {"command": inside}, "cwd": str(ROOT)},
+            )
+            self.assertEqual(denied_inside, "deny")
+
+            force = init_command + " --force"
+            self.assertFalse(host_bootstrap.is_project_init_command(force, ROOT))
+            denied_force, _ = host_bootstrap.pretool_decision(
+                snapshot,
+                {"tool_name": "Bash", "tool_input": {"command": force}, "cwd": str(ROOT)},
+            )
+            self.assertEqual(denied_force, "deny")
+
+            chained = init_command + "; echo unsafe"
+            self.assertFalse(host_bootstrap.is_project_init_command(chained, ROOT))
 
     def test_project_scaffold_adds_codex_and_preserves_unknown_agents(self):
         with tempfile.TemporaryDirectory(prefix="qf-host-scaffold-") as td:
