@@ -1,0 +1,15 @@
+# Tasks
+- [x] Freeze live main at `5fd991a5621f2c68e1030aa6e0b35014ca4011c7`.
+- [x] Inspect open PRs and record UI PR #129 overlap.
+- [x] Read Framework manifest/Skill/Harness/Self-Improvement authority.
+- [ ] Implement production runtime contracts and executor.
+- [ ] Bind immutable payload bundle to Context Freeze.
+- [ ] Implement stale preflight and explicit refresh.
+- [ ] Persist only gated Review Draft + independent evidence.
+- [ ] Implement Model Service facade and Host Bridge v6 primitives.
+- [ ] Fix SQLite ResourceWarning root cause.
+- [ ] Add deterministic/integration/security tests.
+- [ ] Run full unittest, runtime self-tests, Studio build, docs/site checks and Framework bundle verification.
+- [ ] Attempt live provider acceptance if capability exists; otherwise record `PENDING_MODEL`.
+- [ ] Produce frontend contract handoff.
+- [ ] Open Draft PR and report exact acceptance state.
