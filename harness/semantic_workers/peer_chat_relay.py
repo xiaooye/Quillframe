@@ -2,10 +2,9 @@
 """Build/validate bounded peer-chat semantic review packets.
 
 This tool never performs the review itself. It binds a genuinely separate chat
-session result to a semantic job through fingerprint + relay nonce.
+session/result to a semantic job through fingerprint + relay nonce.
 """
 from __future__ import annotations
-
 import argparse
 import json
 import secrets
@@ -18,6 +17,7 @@ if str(HERE.parent) not in sys.path: sys.path.insert(0,str(HERE.parent))
 from semantic_worker_router import validate_dispatchable_job,validate_job,validate_result,worker_job_view  # noqa: E402
 
 PACKET_SCHEMA="quillframe_peer_review_packet_v1"
+PEER_PROVIDERS={"chatgpt_peer_chat","claude_peer_chat","gemini_peer_chat","github_models","human","other_peer_chat"}
 
 def load(path:Path)->dict[str,Any]:
     v=json.loads(path.read_text(encoding="utf-8"));
@@ -38,7 +38,8 @@ def build(job:dict[str,Any])->dict[str,Any]:
     reviewer_instruction=(
         "You are a genuinely separate independent semantic reviewer. Judge only the blind job below. "
         "Do not ask for or inspect the writer conversation/project files; do not search for expected labels; do not provide private chain-of-thought. "
-        "Return ONLY one JSON semantic result with the exact job_id/subject_id/kind/input_fingerprint, status=completed, worker provider=chatgpt_peer_chat (or truthful peer-chat provider), a short evidence-based judgment, empty proposals/errors, and execution.run_reference exactly equal to the relay nonce. "
+        "Return ONLY one JSON semantic result with the exact job_id/subject_id/kind/input_fingerprint, status=completed, a truthful worker provider, a short evidence-based judgment, empty proposals/errors, and execution.run_reference exactly equal to the relay nonce. "
+        "Valid peer providers include chatgpt_peer_chat, claude_peer_chat, gemini_peer_chat, github_models, human, and other_peer_chat. "
         "You have no Canon/framework/taste/write authority."
     )
     return {"schema":PACKET_SCHEMA,"relay_nonce":nonce,"input_fingerprint":job["input_fingerprint"],"job":bounded,"reviewer_instruction":reviewer_instruction,"return_binding":{"run_reference":nonce,"fresh_conversation_required":True,"same_project_writer_chat_forbidden":True}}
@@ -59,7 +60,7 @@ def validate_peer_result(packet:dict[str,Any],result:dict[str,Any])->list[str]:
     job=packet["job"]
     e.extend(validate_result(job,result))
     worker=result.get("worker") or {}
-    if worker.get("provider") not in {"chatgpt_peer_chat","claude_peer_chat","gemini_peer_chat","human","other_peer_chat"}:e.append("worker.provider is not a declared peer-chat/human provider")
+    if worker.get("provider") not in PEER_PROVIDERS:e.append("worker.provider is not a declared independent peer/model/human provider")
     run_ref=worker.get("run_reference")
     execution=result.get("execution") or {}
     if run_ref!=packet["relay_nonce"] and execution.get("run_reference")!=packet["relay_nonce"]:e.append("relay nonce/run_reference mismatch")
@@ -69,9 +70,9 @@ def self_test()->int:
     from semantic_worker_router import fingerprint_for
     job={"job_id":"SEM-SELF","kind":"eval_judge","subject_id":"CASE","created_at":"now","input_fingerprint":"","input":{"text":"x"},"rubric":["judge"],"output_contract":{},"permissions":{"canon_write":False,"framework_behavior_write":False,"durable_user_taste_write":False,"allowed_result_scope":"observation"},"provenance":{"source":"self"}}
     job["input_fingerprint"]=fingerprint_for(job);packet=build(job)
-    result={"job_id":job["job_id"],"subject_id":job["subject_id"],"kind":job["kind"],"input_fingerprint":job["input_fingerprint"],"status":"completed","worker":{"provider":"chatgpt_peer_chat","model_or_reviewer":"independent peer","run_reference":packet["relay_nonce"]},"judgment":{"verdict":"accept","result":None,"codes":[],"evidence":["fixture"],"confidence":0.8},"proposals":[],"errors":[]}
+    result={"job_id":job["job_id"],"subject_id":job["subject_id"],"kind":job["kind"],"input_fingerprint":job["input_fingerprint"],"status":"completed","worker":{"provider":"github_models","model_or_reviewer":"openai/gpt-4.1 via GitHub Models","run_reference":packet["relay_nonce"]},"judgment":{"verdict":"accept","result":None,"codes":[],"evidence":["fixture"],"confidence":0.8},"proposals":[],"errors":[]}
     ok=not validate_packet(packet) and not validate_peer_result(packet,result)
-    dump({"peer_chat_relay_contract":"PASS" if ok else "FAIL","fresh_conversation_required":True,"fingerprint_binding":True,"relay_nonce_binding":True});return 0 if ok else 1
+    dump({"peer_chat_relay_contract":"PASS" if ok else "FAIL","fresh_conversation_required":True,"fingerprint_binding":True,"relay_nonce_binding":True,"github_models_provider":True});return 0 if ok else 1
 
 def main()->int:
     p=argparse.ArgumentParser();sub=p.add_subparsers(dest="cmd",required=True)
