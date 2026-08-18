@@ -1,0 +1,56 @@
+name: Documentation issue
+description: Report incorrect, stale, confusing, or broken Quillframe documentation
+title: "[Docs]: "
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Page / file / link
+      placeholder: "docs/architecture.en.md or https://quillframe.wei-dev.com/docs/..."
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or unclear?
+      description: Quote only the small portion needed to identify the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should the documentation communicate instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Issue type
+      options:
+        - Incorrect current capability
+        - Stale product/name/version language
+        - Broken link or navigation
+        - Setup / command problem
+        - Architecture or authority ambiguity
+        - Translation / wording
+        - Visual / accessibility issue
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit if relevant
+      placeholder: "0.9.0 / commit SHA"
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Supporting evidence
+      description: Link to current implementation, contract, workflow, or authoritative source when available.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed API tokens, credentials, private manuscript text, and other sensitive project data.
+          required: true
