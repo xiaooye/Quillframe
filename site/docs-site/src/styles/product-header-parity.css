@@ -1,8 +1,10 @@
-/* Product Entry parity ----------------------------------------------------
-   This is intentionally the final Starlight custom stylesheet. It maps the
-   docs chrome back onto the same 64px product app-bar geometry used by the
-   main entry while preserving Starlight's search, theme, locale, and sidebar
-   behavior. */
+/*
+ * Quillframe Docs product-shell owner.
+ *
+ * Maps Starlight chrome onto the same quiet 64px shell used by the Product
+ * Site while preserving Starlight search, theme, locale, menu, and sidebar
+ * behavior. Header content is canvas chrome, not a route-colored banner card.
+ */
 
 :root {
   --sl-nav-height: 4rem;
@@ -12,18 +14,16 @@
 
 header.header {
   height: var(--sl-nav-height);
+  margin: 0;
   padding-block: 0;
   padding-inline: max(12px, calc((100vw - var(--qf-product-header-max)) / 2 + var(--qf-product-header-gutter)));
-  border-bottom: 1px solid color-mix(in oklab, var(--qf-border) 68%, transparent);
-  background:
-    linear-gradient(90deg,
-      color-mix(in oklab, var(--qf-blue-soft) 24%, transparent),
-      color-mix(in oklab, var(--qf-surface-solid) 82%, transparent) 26%,
-      color-mix(in oklab, var(--qf-surface-solid) 82%, transparent) 72%,
-      color-mix(in oklab, var(--qf-pink-soft) 24%, transparent));
-  box-shadow: 0 8px 30px oklch(.2 .03 300 / .05);
-  backdrop-filter: blur(20px) saturate(145%);
-  -webkit-backdrop-filter: blur(20px) saturate(145%);
+  border: 0;
+  border-bottom: 1px solid color-mix(in oklab, var(--qf-border) 58%, transparent);
+  border-radius: 0;
+  background: color-mix(in oklab, var(--qf-surface-solid) 94%, transparent);
+  box-shadow: none;
+  backdrop-filter: blur(18px) saturate(118%);
+  -webkit-backdrop-filter: blur(18px) saturate(118%);
 }
 
 header.header > .header {
@@ -32,13 +32,11 @@ header.header > .header {
 }
 
 header.header .title-wrapper {
-  padding: 0;
   margin: 0;
+  padding: 0;
 }
 
-.nf-site-title {
-  gap: 9px;
-}
+.nf-site-title { gap: 9px; }
 
 .nf-brand-home {
   min-height: 44px;
@@ -46,21 +44,19 @@ header.header .title-wrapper {
   margin-inline-end: 9px;
 }
 
+/* Small logo object may carry more personality than the global chrome. */
 .nf-brand-mark-shell {
   width: 38px;
   height: 38px;
-  border: 1px solid transparent;
-  border-radius: 13px;
-  background:
-    linear-gradient(var(--qf-surface-solid), var(--qf-surface-solid)) padding-box,
-    conic-gradient(from 210deg, var(--qf-blue), var(--qf-lilac), var(--qf-pink), var(--qf-mint), var(--qf-blue)) border-box;
-  box-shadow: 0 7px 18px color-mix(in oklab, var(--qf-blue) 16%, transparent);
+  border: 1px solid color-mix(in oklab, var(--qf-pink) 20%, var(--qf-border));
+  border-radius: 12px 12px 8px 12px;
+  background: color-mix(in oklab, var(--qf-pink-soft) 32%, var(--qf-surface-solid));
+  box-shadow: none;
+  transform: rotate(-1deg);
 }
 
 :root[data-theme="dark"] .nf-brand-mark-shell {
-  background:
-    linear-gradient(var(--qf-surface-solid), var(--qf-surface-solid)) padding-box,
-    conic-gradient(from 210deg, var(--qf-blue), var(--qf-lilac), var(--qf-pink), var(--qf-mint), var(--qf-blue)) border-box;
+  background: color-mix(in oklab, var(--qf-pink-soft) 18%, var(--qf-surface-solid));
 }
 
 .nf-brand-home img {
@@ -76,91 +72,88 @@ header.header .title-wrapper {
 .nf-version-chip {
   min-height: 1.45rem;
   padding-inline: .45rem;
-  border: 1px solid color-mix(in oklab, var(--qf-lilac) 22%, var(--qf-border));
+  border: 1px solid color-mix(in oklab, var(--qf-lilac) 18%, var(--qf-border));
   border-radius: 999px;
-  color: color-mix(in oklab, var(--qf-lilac) 72%, var(--qf-ink));
-  background: color-mix(in oklab, var(--qf-lilac-soft) 74%, transparent);
+  color: color-mix(in oklab, var(--qf-lilac) 68%, var(--qf-ink));
+  background: color-mix(in oklab, var(--qf-lilac-soft) 48%, transparent);
   font-size: 10px;
   font-weight: 800;
 }
 
-header.header .right-group,
-header.header .social-icons {
-  gap: 8px;
-}
-
-header.header .social-icons::after {
-  display: none;
-}
+header.header .right-group { gap: 8px; }
 
 header.header .nf-product-nav {
   display: inline-flex;
+  align-items: center;
   gap: 2px;
-  padding: 2px;
+  padding: 0;
   border: 0;
-  border-radius: 12px;
+  border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
 
 header.header .nf-product-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   min-height: 36px;
-  padding-inline: 10px;
+  padding-inline: 9px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 9px;
   color: var(--sl-color-gray-2);
   background: transparent;
-  font-size: .8rem;
+  font-size: .78rem;
   font-weight: 700;
 }
 
 header.header .nf-product-link:hover,
 header.header .nf-product-link:focus-visible {
   color: var(--qf-ink);
-  background: color-mix(in oklab, var(--qf-blue-soft) 52%, transparent);
+  background: color-mix(in oklab, var(--qf-blue-soft) 24%, transparent);
 }
 
 header.header .nf-docs-nav-link[aria-current="page"] {
-  color: color-mix(in oklab, var(--qf-blue) 78%, var(--qf-ink));
-  background: color-mix(in oklab, var(--qf-blue-soft) 78%, transparent);
+  color: color-mix(in oklab, var(--qf-blue) 76%, var(--qf-ink));
+  background: color-mix(in oklab, var(--qf-blue-soft) 34%, transparent);
+}
+
+header.header .nf-github-link span {
+  color: var(--qf-muted);
+  font-size: .68rem;
 }
 
 header.header .nf-studio-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   min-height: 40px;
   padding-inline: 14px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 10px;
   color: white;
   background: linear-gradient(135deg, var(--qf-pink-strong), color-mix(in oklab, var(--qf-lilac) 66%, var(--qf-pink)));
   box-shadow: none;
   font-size: .8rem;
 }
 
-header.header .nf-social-default {
-  display: none;
-}
-
 header.header site-search button,
 header.header button[data-open-modal],
 header.header .search-input {
   min-height: 40px;
-  border: 1px solid color-mix(in oklab, var(--qf-border) 68%, transparent);
-  border-radius: 12px;
-  background: color-mix(in oklab, var(--qf-surface) 76%, transparent);
+  border: 1px solid color-mix(in oklab, var(--qf-border) 60%, transparent);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--qf-surface-solid) 84%, transparent);
   box-shadow: none;
   backdrop-filter: blur(10px);
 }
 
-@media (max-width: 68rem) {
-  header.header .nf-product-nav {
-    display: none;
-  }
+@media (max-width: 72rem) {
+  header.header .nf-product-nav { display: none; }
 }
 
-/* Starlight's mobile navigation is a full-viewport panel by default. For the
-   product shell it behaves better as a bounded menu sheet directly below the
-   64px app bar. The official toggle still owns aria-expanded, focus trapping,
-   and body scroll locking. */
+/* Starlight's mobile navigation remains the behavior owner. We only make its
+ * visible panel a bounded menu sheet below the shared 64px product shell. */
 @media (max-width: 50rem) {
   :root {
     --sl-nav-height: 4rem;
@@ -168,29 +161,26 @@ header.header .search-input {
   }
 
   header.header {
-    padding-inline: 12px;
-    padding-inline-end: 64px !important;
+    padding-inline: 12px 64px;
   }
 
-  .nf-brand-home {
-    margin-inline-end: 0;
+  .nf-brand-home { margin-inline-end: 0; }
+
+  header.header starlight-menu-button button {
+    top: 12px;
+    inset-inline-end: 12px;
+    width: 40px;
+    height: 40px;
+    padding: 10px;
+    border: 1px solid color-mix(in oklab, var(--qf-border) 64%, transparent);
+    border-radius: 10px;
+    color: var(--qf-ink);
+    background: color-mix(in oklab, var(--qf-surface-solid) 90%, transparent);
+    box-shadow: none;
   }
 
-  starlight-menu-button button {
-    top: 12px !important;
-    inset-inline-end: 12px !important;
-    width: 40px !important;
-    height: 40px !important;
-    padding: 10px !important;
-    border: 1px solid color-mix(in oklab, var(--qf-border) 72%, transparent) !important;
-    border-radius: 12px !important;
-    color: var(--qf-ink) !important;
-    background: color-mix(in oklab, var(--qf-surface) 88%, transparent) !important;
-    box-shadow: none !important;
-  }
-
-  starlight-menu-button[aria-expanded="true"] button {
-    background: color-mix(in oklab, var(--qf-blue-soft) 68%, var(--qf-surface)) !important;
+  header.header starlight-menu-button[aria-expanded="true"] button {
+    background: color-mix(in oklab, var(--qf-blue-soft) 40%, var(--qf-surface-solid));
   }
 
   .sidebar-pane {
@@ -198,17 +188,17 @@ header.header .search-input {
     inset-inline: 12px;
     width: auto;
     max-height: calc(100svh - var(--sl-nav-height) - 20px);
-    border: 1px solid color-mix(in oklab, var(--qf-border) 78%, transparent);
-    border-radius: 18px;
-    background: color-mix(in oklab, var(--qf-surface-solid) 96%, transparent);
-    box-shadow: 0 28px 70px -36px oklch(.22 .05 300 / .38);
     overflow-y: auto;
     overscroll-behavior: contain;
+    border: 1px solid color-mix(in oklab, var(--qf-border) 66%, transparent);
+    border-radius: 14px;
+    background: color-mix(in oklab, var(--qf-surface-solid) 97%, transparent);
+    box-shadow: 0 24px 56px -42px oklch(.22 .04 300 / .34);
   }
 
   .sidebar-content {
-    padding: 14px 14px 12px;
     gap: 12px;
+    padding: 14px 14px 12px;
   }
 
   .sidebar-content .mobile-preferences {
@@ -218,7 +208,7 @@ header.header .search-input {
     align-items: center;
     margin-top: 4px;
     padding-top: 12px;
-    border-top: 1px solid color-mix(in oklab, var(--qf-border) 72%, transparent);
+    border-top: 1px solid color-mix(in oklab, var(--qf-border) 60%, transparent);
   }
 
   .sidebar-content .mobile-preferences > .social-icons {
@@ -231,9 +221,9 @@ header.header .search-input {
   }
 
   .sidebar-content .nf-product-nav {
-    display: grid !important;
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    gap: 4px;
     width: 100%;
     padding: 0;
     border: 0;
@@ -244,38 +234,36 @@ header.header .search-input {
   .sidebar-content .nf-product-link {
     justify-content: flex-start;
     min-height: 44px;
-    padding-inline: 12px;
-    border: 1px solid color-mix(in oklab, var(--qf-border) 72%, transparent);
-    border-radius: 12px;
-    background: color-mix(in oklab, var(--qf-surface) 84%, transparent);
+    padding-inline: 10px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
     font-size: .82rem;
   }
 
+  .sidebar-content .nf-product-link:hover,
+  .sidebar-content .nf-product-link:focus-visible {
+    background: color-mix(in oklab, var(--qf-blue-soft) 24%, transparent);
+  }
+
   .sidebar-content .nf-docs-nav-link[aria-current="page"] {
-    color: color-mix(in oklab, var(--qf-blue) 78%, var(--qf-ink));
-    border-color: color-mix(in oklab, var(--qf-blue) 28%, var(--qf-border));
-    background: color-mix(in oklab, var(--qf-blue-soft) 72%, var(--qf-surface));
+    color: color-mix(in oklab, var(--qf-blue) 76%, var(--qf-ink));
+    background: color-mix(in oklab, var(--qf-blue-soft) 34%, transparent);
   }
 
   .sidebar-content .nf-studio-link {
     width: 100%;
     min-height: 44px;
-    border-radius: 12px;
-  }
-
-  .sidebar-content .nf-social-default {
-    display: flex;
-    align-items: center;
-    min-height: 40px;
+    border-radius: 10px;
   }
 }
 
 @media (max-width: 34rem) {
-  .nf-brand-name {
-    display: inline;
-  }
+  .nf-brand-name { display: inline; }
+  .nf-version-chip { display: none; }
+  .sidebar-content .nf-product-nav { grid-template-columns: 1fr; }
+}
 
-  .nf-version-chip {
-    display: none;
-  }
+@media (prefers-reduced-motion: reduce) {
+  .nf-brand-mark-shell { transform: none; }
 }
