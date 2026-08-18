@@ -235,18 +235,6 @@
   .architecture-hero-path button strong { margin-top: 7px; overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
   .architecture-hero-path i { display: none; }
 
-  .architecture-entry .architecture-flow {
-    grid-template-columns: repeat(7, minmax(174px, 1fr));
-    overflow-x: auto;
-    padding-bottom: 4px;
-  }
-  .architecture-entry .architecture-node { min-width: 174px; overflow: hidden; }
-  .architecture-entry .architecture-node-copy { min-width: 0; }
-  .architecture-entry .architecture-node-copy strong,
-  .architecture-entry .architecture-node-copy small { display: block; overflow: hidden; text-overflow: ellipsis; }
-  .architecture-entry .architecture-node-copy strong { white-space: nowrap; }
-  .architecture-entry .architecture-node-copy small { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.35; }
-
   /* Publication uses paper/device objects, not format-colored wallpaper. */
   .unified-publication-gallery {
     display: grid;

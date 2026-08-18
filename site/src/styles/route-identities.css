@@ -59,20 +59,6 @@
     background: color-mix(in oklab, var(--pe-runtime-soft) 46%, var(--pe-surface));
   }
 
-  .architecture-entry .architecture-flow {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .architecture-entry .architecture-node,
-  .architecture-entry .architecture-node + .architecture-node {
-    min-inline-size: 0;
-    margin-inline-start: 0;
-    overflow: visible;
-  }
-
-  .architecture-entry .architecture-node-copy { padding-inline-start: 0; }
-
   /* Publication — the paper/device objects themselves carry the identity. */
   .publication-workbench-entry .product-surface-hero__visual {
     align-content: center;
@@ -234,7 +220,6 @@
     .architecture-entry .architecture-hero-path { grid-template-columns: repeat(4, minmax(70px, 1fr)); }
     .architecture-entry .architecture-hero-path::before { display: none; }
     .architecture-entry .architecture-hero-path button strong { font-size: 9px; }
-    .architecture-entry .architecture-flow { grid-template-columns: repeat(7, minmax(150px, 1fr)); overflow-x: auto; }
   }
 
   @media (max-width: 900px) {

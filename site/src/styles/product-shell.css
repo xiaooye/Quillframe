@@ -4,6 +4,13 @@
    * Header, mobile navigation, and footer use the same quiet shell language;
    * route identity starts inside #main-content, not in global chrome.
    */
+  .unified-product-shell {
+    --pe-nav-foreground: color-mix(in oklab, var(--pe-fg) 78%, var(--pe-muted));
+    --pe-nav-active: color-mix(in oklab, var(--pe-runtime) 76%, var(--pe-fg));
+    --pe-link-foreground: color-mix(in oklab, var(--pe-fg) 82%, var(--pe-muted));
+    --pe-link-hover: var(--pe-fg);
+  }
+
   .unified-product-shell .product-appbar {
     --wui-color-background: color-mix(in oklab, var(--pe-bg) 94%, transparent);
     border-block-end: 1px solid color-mix(in oklab, var(--pe-border) 58%, transparent);
@@ -15,16 +22,24 @@
 
   .unified-product-shell .desktop-nav .wui-app-bar__link {
     border-radius: 9px;
+    color: var(--pe-nav-foreground);
     background: transparent;
+  }
+
+  .unified-product-shell .desktop-nav .wui-app-bar__link > span,
+  .unified-product-shell .mobile-nav .wui-sidebar__item > span,
+  .unified-product-footer .footer-link > span {
+    color: inherit;
   }
 
   .unified-product-shell .desktop-nav .wui-app-bar__link:hover,
   .unified-product-shell .desktop-nav .wui-app-bar__link:focus-visible {
+    color: var(--pe-link-hover);
     background: color-mix(in oklab, var(--pe-runtime-soft) 24%, transparent);
   }
 
   .unified-product-shell .desktop-nav .wui-app-bar__link.active {
-    color: color-mix(in oklab, var(--pe-runtime) 76%, var(--pe-fg));
+    color: var(--pe-nav-active);
     background: color-mix(in oklab, var(--pe-runtime-soft) 34%, transparent);
   }
 
@@ -39,6 +54,20 @@
     border-radius: 14px;
     background: color-mix(in oklab, var(--pe-surface) 96%, transparent);
     box-shadow: 0 22px 48px -42px oklch(.22 .03 290 / .35);
+  }
+
+  .unified-product-shell .mobile-nav .wui-sidebar__item {
+    min-block-size: 44px;
+    color: var(--pe-nav-foreground);
+  }
+
+  .unified-product-shell .mobile-nav .wui-sidebar__item:hover,
+  .unified-product-shell .mobile-nav .wui-sidebar__item:focus-visible {
+    color: var(--pe-link-hover);
+  }
+
+  .unified-product-shell .mobile-nav .wui-sidebar__item.active {
+    color: var(--pe-nav-active);
   }
 
   /* Footer and top navigation deliberately share a neutral canvas. Footer
@@ -71,11 +100,11 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    min-block-size: 36px;
+    min-block-size: 44px;
     width: fit-content;
     padding-inline: 4px;
     border-radius: 7px;
-    color: var(--pe-muted);
+    color: var(--pe-link-foreground);
     background: transparent;
   }
 
@@ -83,7 +112,7 @@
   .unified-product-footer .footer-link:focus-visible,
   .unified-product-footer .footer-links > a:hover,
   .unified-product-footer .footer-links > a:focus-visible {
-    color: var(--pe-fg);
+    color: var(--pe-link-hover);
     background: color-mix(in oklab, var(--pe-editorial-soft) 20%, transparent);
   }
 }
