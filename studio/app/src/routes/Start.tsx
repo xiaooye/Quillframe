@@ -27,6 +27,11 @@ const copy = {
     agentTitle: "Coding agent",
     agentBody: "Bootstrap Quillframe inside Claude Code, Codex, OpenCode, Cursor, or a custom agent through the portable skill and public boundaries.",
     agentAction: "Open Agent Integrations",
+    modelMeta: "AI · optional",
+    modelTitle: "Connect a model API",
+    modelBody: "AI does not block ordinary authoring. When you want model-assisted work, Quillframe only asks for an API Endpoint and Access Token; model discovery and capability observation belong to the runtime.",
+    modelAction: "Open AI & Models",
+    modelNote: "No model selection is required during onboarding. Automatic model selection remains the default.",
     boundary: "These are delivery surfaces, not separate authorities. Core/project contracts remain the source of truth, and no UI or agent integration can synthesize Canon or write authority.",
     copied: "Copied",
   },
@@ -51,6 +56,11 @@ const copy = {
     agentTitle: "Coding agent",
     agentBody: "通过 portable skill 与公共边界，把 Quillframe 接入 Claude Code、Codex、OpenCode、Cursor 或自定义 Agent。",
     agentAction: "打开 Agent Integrations",
+    modelMeta: "AI · 可选",
+    modelTitle: "连接模型 API",
+    modelBody: "AI 不会阻塞普通写作。需要模型辅助时，Quillframe 只向你索取 API Endpoint 与 Access Token；模型发现与 capability observation 都交给 runtime。",
+    modelAction: "打开 AI 与模型",
+    modelNote: "Onboarding 不要求选择模型；默认始终是自动选择模型。",
     boundary: "这些只是不同 delivery surface，不是不同 authority。Core / Project contract 仍是事实来源，任何 UI 或 Agent integration 都不能自行合成 Canon 或写入权限。",
     copied: "已复制",
   },
@@ -141,6 +151,16 @@ export default function Start() {
           </div>
         </article>
       </div>
+
+      <section class="nf-start-model-api" aria-labelledby="start-model-api-heading">
+        <div>
+          <span class="nf-eyebrow">{text().modelMeta}</span>
+          <h2 id="start-model-api-heading">{text().modelTitle}</h2>
+          <p>{text().modelBody}</p>
+          <small>{text().modelNote}</small>
+        </div>
+        <A class="wui-button wui-button--outline" href="/settings?section=models">{text().modelAction}</A>
+      </section>
 
       <div class="wui-alert" role="note">
         <div class="wui-alert__body">
