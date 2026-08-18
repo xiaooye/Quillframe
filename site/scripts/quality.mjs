@@ -21,6 +21,7 @@ const app = read("src/ProductApp.tsx");
 const surface = read("src/ProductSurface.tsx");
 const inspector = read("src/ProjectInspector.tsx");
 const playground = read("src/LocalPlayground.tsx");
+const publication = read("src/PublicationWorkbench.tsx");
 const knowledge = read("src/knowledge.ts");
 const renderer = read("src/DocumentRenderer.tsx");
 const contentTypes = read("src/content.ts");
@@ -37,8 +38,9 @@ const foundationSync = read("scripts/sync-weiui.mjs");
 const tokens = JSON.parse(readRepo("assets/brand/tokens.json"));
 const weiuiIntegration = JSON.parse(readRepo("assets/brand/weiui.integration.json"));
 const storyLoomTheme = readRepo("assets/brand/story-loom.weiui.css");
-const runtime = `${app}\n${surface}\n${inspector}\n${playground}\n${knowledge}\n${renderer}\n${contentTypes}`;
-const allCopy = `${en}\n${zh}\n${app}`;
+const routeSurfaces = `${app}\n${publication}`;
+const runtime = `${app}\n${surface}\n${inspector}\n${playground}\n${publication}\n${knowledge}\n${renderer}\n${contentTypes}`;
+const allCopy = `${en}\n${zh}\n${app}\n${publication}`;
 
 const exactVersions = {
   "solid-js": "1.9.14",
@@ -92,7 +94,7 @@ check(!main.includes("standaloneProductPaths") && !main.includes("Entry initialL
 check(app.includes("<Router root={ProductShell}>"), "golden baseline must have one shared Router root shell");
 check(app.includes("const UiContext = createContext"), "golden baseline must share locale/appearance state through one context");
 check(surface.includes("export function ProductSurfaceHero"), "shared ProductSurfaceHero primitive missing from golden baseline");
-check((app.match(/<ProductSurfaceHero/g) ?? []).length >= 8, "golden baseline pages must consistently consume ProductSurfaceHero");
+check((routeSurfaces.match(/<ProductSurfaceHero/g) ?? []).length >= 8, "golden baseline pages must consistently consume ProductSurfaceHero");
 
 for (const route of ["/", "/product", "/studio", "/architecture", "/publication", "/inspect", "/playground", "/agents", "/changelog"]) {
   check(app.includes(`path="${route}"`), `missing required golden baseline route ${route}`);
