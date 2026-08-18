@@ -5,11 +5,42 @@
   "run_id": "RUN-924e976c94e34973ac98554b0c3f8e1a",
   "frozen_framework_sha": "5fd991a5621f2c68e1030aa6e0b35014ca4011c7",
   "branch": "agent/production-runtime-integration",
+  "draft_pr": 131,
   "parallel_ui_pr": 129,
+  "host_bridge_version": "7",
   "consumer_project_repin": false,
   "canon_mutation": false,
   "studio_visual_change": false,
   "cloudflare_dependency": false,
   "authority": false,
-  "live_model_acceptance": "pending_capability_check"
+  "deterministic_runtime_health": "PASS",
+  "python_tests": {
+    "status": "PASS",
+    "passed": 77,
+    "failed": 0,
+    "validated_runtime_head": "6af8d41d8813abe1933988f0b53059d366b2632e"
+  },
+  "host_bridge_self_test": "PASS",
+  "studio_typecheck_build": "PASS",
+  "product_site_docs": "PASS",
+  "sqlite_connection_hygiene": "PASS",
+  "sqlite_resource_warning_observed_in_final_successful_core_ci": false,
+  "framework_bundle_contract": "PASS",
+  "clean_runtime_target_sha": "0148be45c5236ae3e94daa03e29a89456e4786c4",
+  "clean_runtime_bundle_fingerprint": null,
+  "clean_runtime_content_index_fingerprint": null,
+  "live_model_acceptance": "PENDING_MODEL",
+  "live_model_acceptance_state": "awaiting_external",
+  "live_model_reason": "No usable live provider credential was available to this workstream; deterministic FakeAgentRuntime fixtures are not live-model acceptance.",
+  "reviewed_semantic_baseline": "PENDING_MODEL",
+  "reviewed_semantic_baseline_is_separate_from_deterministic_health": true,
+  "independent_gate": {
+    "contract": "quality.production_review",
+    "same_runtime_substitution": false,
+    "pre_independent_qualification_required": true,
+    "fresh_peer_review_required": true,
+    "project_peer_validation_receipt_required": true,
+    "reviewer_shopping": false
+  },
+  "merge_performed": false
 }
