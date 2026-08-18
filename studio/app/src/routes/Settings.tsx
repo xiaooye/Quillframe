@@ -109,9 +109,11 @@ export default function Settings() {
           <Show when={section() === "models"}><div class="qf-model-workspace">
             <section class="qf-editorial-sheet qf-model-connect">
               <span class="nf-eyebrow">MODEL SERVICE</span><h2>Endpoint + Access Token</h2><p>{zh() ? "普通用户只连接服务。协议、模型与 capability discovery 由 Quillframe Core 负责。" : "Ordinary users connect a service only. Quillframe Core owns protocol, model and capability discovery."}</p>
-              <div class="qf-model-connect-fields">
-                <label class="nf-field-label"><span>{text().endpoint}</span><input class="wui-input nf-mono" inputmode="url" autocomplete="url" value={endpoint()} onInput={(event) => setEndpoint(event.currentTarget.value)} placeholder="https://api.example.com/v1" /></label>
-                <label class="nf-field-label"><span>{text().token}</span><input class="wui-input nf-mono" type="password" autocomplete="new-password" value={token()} onInput={(event) => setToken(event.currentTarget.value)} placeholder={zh() ? "不会回显" : "Never echoed back"} /><small>{zh() ? "Token 只交给 Host/Core SecretStore；Studio 不写 localStorage、Project state 或 Context。" : "The token is handed only to the Host/Core SecretStore; Studio never writes it to localStorage, Project state or Context."}</small></label>
+              <div class="nf-model-connect-form">
+                <div class="qf-model-connect-fields">
+                  <label class="nf-field-label"><span>{text().endpoint}</span><input class="wui-input nf-mono" inputmode="url" autocomplete="url" value={endpoint()} onInput={(event) => setEndpoint(event.currentTarget.value)} placeholder="https://api.example.com/v1" /></label>
+                  <label class="nf-field-label"><span>{text().token}</span><input class="wui-input nf-mono" type="password" autocomplete="new-password" value={token()} onInput={(event) => setToken(event.currentTarget.value)} placeholder={zh() ? "不会回显" : "Never echoed back"} /><small>{zh() ? "Token 只交给 Host/Core SecretStore；Studio 不写 localStorage、Project state 或 Context。" : "The token is handed only to the Host/Core SecretStore; Studio never writes it to localStorage, Project state or Context."}</small></label>
+                </div>
               </div>
               <button class="wui-button wui-button--solid" type="button" disabled={connecting() || !endpoint().trim() || !operations().includes("model.service.add")} onClick={() => void connect()}>{connecting() ? (zh() ? "连接中…" : "Connecting…") : text().connect}</button>
               <CoreRequirementNotice operation="model.service.add" />
