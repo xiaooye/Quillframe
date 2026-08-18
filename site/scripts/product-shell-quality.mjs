@@ -12,6 +12,8 @@ const main = read("src/main.tsx");
 const app = read("src/ProductApp.tsx");
 const content = read("src/content.ts");
 const surface = read("src/ProductSurface.tsx");
+const styleIndex = read("src/styles/index.css");
+const shellCss = read("src/styles/product-shell.css");
 const embedded = read("src/styles/embedded-features.css");
 const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
@@ -73,6 +75,17 @@ check(app.includes('label: copy().nav.github') && app.includes('label: copy().na
 check(app.includes("aria-expanded={menuOpen()}"), "shared shell must own accessible mobile navigation state");
 check(app.includes("const [locale, setLocale] = createSignal") && app.includes("const [dark, setDark] = createSignal"), "shared ProductApp must own one locale and one appearance state");
 
+/* Header and footer share a dedicated style owner instead of drifting through
+ * route CSS or late overrides. */
+check(styleIndex.includes('@import "./product-shell.css"'), "Product stylesheet entrypoint must load the shared ProductShell style owner");
+check(styleIndex.indexOf('product-contract.css') < styleIndex.indexOf('product-shell.css') && styleIndex.indexOf('product-shell.css') < styleIndex.indexOf('product-surface.css'), "ProductShell style owner must sit with shared primitives before route styling");
+for (const marker of [".unified-product-shell .product-appbar", ".unified-product-footer", ".unified-product-footer .footer-link"]) {
+  check(shellCss.includes(marker), `shared ProductShell CSS missing ${marker}`);
+}
+check(shellCss.includes("background: transparent") && shellCss.includes("border-block-start"), "footer must use the same quiet canvas language as the top shell");
+check(!shellCss.includes("radial-gradient"), "shared ProductShell chrome must not use route-level radial wallpaper");
+check(!shellCss.includes("!important"), "shared ProductShell styling must not depend on specificity escape hatches");
+
 for (const pageMarker of ["function HomePage", "function ProductPage", "function StudioPage", "function ArchitecturePage", "function PublicationPage", "function InspectorPage", "function PlaygroundPage", "function AgentsPage", "function ChangelogPage"]) {
   check(app.includes(pageMarker), `shared ProductApp missing ${pageMarker}`);
 }
@@ -85,11 +98,12 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "quillframe_product_shell_quality_v4",
+    schema: "quillframe_product_shell_quality_v5",
     status: "pass",
     shared_router: true,
     shared_header: true,
     shared_footer: true,
+    shared_shell_style_owner: "product-shell.css",
     shared_primary_navigation: true,
     shared_mobile_navigation: true,
     github_entry: true,
