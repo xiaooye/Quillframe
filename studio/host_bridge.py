@@ -31,6 +31,7 @@ REQUEST_SCHEMA = "quillframe_studio_host_bridge_request_v1"
 RESULT_SCHEMA = "quillframe_studio_host_bridge_result_v1"
 
 _SECRET_REQUEST_KEYS = {"access_token", "api_key", "apikey", "password", "secret", "token"}
+_SECRET_OPERATIONS = {"model.service.add", "model.service.token.replace"}
 _secret_store: SecretStore = MemorySecretStore()
 _agent_runtime_instance: QuillframeAgentRuntime | None = None
 
@@ -50,16 +51,48 @@ def fp(v: Any) -> str:
     return "sha256:" + hashlib.sha256(canonical(v).encode()).hexdigest()
 
 
-def _redact(value: Any) -> Any:
-    """Remove credential values without erasing business authorization evidence."""
+def _secret_values(value: Any) -> set[str]:
+    """Collect credential values only from explicitly secret-bearing request fields."""
+    found: set[str] = set()
+
+    def visit(node: Any) -> None:
+        if isinstance(node, dict):
+            for key, child in node.items():
+                normalized = str(key).lower().replace("-", "_")
+                if normalized in _SECRET_REQUEST_KEYS:
+                    if isinstance(child, str) and child:
+                        found.add(child)
+                    continue
+                visit(child)
+        elif isinstance(node, list):
+            for child in node:
+                visit(child)
+
+    visit(value)
+    return found
+
+
+def _redact(value: Any, secret_values: set[str] | None = None) -> Any:
+    """Remove credential keys and scrub their values from nested strings.
+
+    Business authorization evidence remains fingerprint-bound because only values
+    originating from explicitly credential-bearing fields are treated as secrets.
+    """
+    secrets = secret_values or set()
     if isinstance(value, dict):
         out: dict[str, Any] = {}
         for key, child in value.items():
             normalized = str(key).lower().replace("-", "_")
-            out[str(key)] = "<redacted>" if normalized in _SECRET_REQUEST_KEYS else _redact(child)
+            out[str(key)] = "<redacted>" if normalized in _SECRET_REQUEST_KEYS else _redact(child, secrets)
         return out
     if isinstance(value, list):
-        return [_redact(child) for child in value]
+        return [_redact(child, secrets) for child in value]
+    if isinstance(value, str):
+        scrubbed = value
+        for secret in sorted(secrets, key=len, reverse=True):
+            if secret:
+                scrubbed = scrubbed.replace(secret, "<redacted>")
+        return scrubbed
     return value
 
 
@@ -379,14 +412,15 @@ def validate_request(req: dict[str, Any]) -> list[str]:
 
 
 def result(req: dict[str, Any], status: str, *, data: Any = None, error: Any = None) -> dict[str, Any]:
-    safe_req = _redact(req)
-    safe_data = _redact(data)
-    safe_error = _redact(error)
+    secrets = _secret_values(req)
+    safe_req = _redact(req, secrets)
+    safe_data = _redact(data, secrets)
+    safe_error = _redact(error, secrets)
     out = {
         "schema": RESULT_SCHEMA,
-        "request_id": req.get("request_id"),
-        "operation": req.get("operation"),
-        "surface": req.get("surface"),
+        "request_id": safe_req.get("request_id"),
+        "operation": safe_req.get("operation"),
+        "surface": safe_req.get("surface"),
         "status": status,
         "data": safe_data,
         "error": safe_error,
@@ -440,6 +474,9 @@ def main() -> int:
     raw = Path(args.request).read_text(encoding="utf-8") if args.request else sys.stdin.read()
     req = json.loads(raw)
     out = invoke(req)
+    # `invoke` emits only the credential-scrubbed public bridge result. Raw request
+    # payloads and credential-bearing exception text are never written to stdout.
+    # codeql[py/clear-text-logging-sensitive-data]
     print(json.dumps(out, ensure_ascii=False, indent=2))
     return 0 if out["status"] == "ok" else 1
 

@@ -80,6 +80,28 @@ class ProductionHostBridgeTests(unittest.TestCase):
         accepted_b = host_bridge.invoke(auth_b)
         self.assertNotEqual(accepted_a["request_fingerprint"], accepted_b["request_fingerprint"])
 
+    def test_secret_value_is_scrubbed_from_nested_data_and_exception_text(self):
+        secret = "QF-SECRET-EXCEPTION-SENTINEL"
+        req = {
+            "schema": host_bridge.REQUEST_SCHEMA,
+            "request_id": "secret-error",
+            "operation": "model.service.add",
+            "surface": "local_app",
+            "args": {"endpoint": "https://example.invalid/v1", "access_token": secret},
+            "authority": False,
+        }
+        out = host_bridge.result(
+            req,
+            "failed",
+            data={"diagnostic": f"provider echoed {secret}"},
+            error={"code": "fixture", "message": f"request rejected credential {secret}"},
+        )
+        serialized = str(out)
+        self.assertNotIn(secret, serialized)
+        self.assertIn("<redacted>", serialized)
+        self.assertEqual(out["operation"], "model.service.add")
+        self.assertFalse(out["secret_values_persisted"])
+
     def test_production_and_secret_operations_are_not_agent_package_operations(self):
         cases = (
             ("model.service.add", {"endpoint": "https://example.invalid/v1", "access_token": "secret"}),
