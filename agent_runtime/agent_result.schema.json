@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "quillframe_agent_result_v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "job_id", "session_id", "run_id", "status", "model_service_id",
+    "model_id", "protocol", "input_fingerprint", "steps", "model_requests",
+    "tool_calls", "tool_receipts", "usage", "errors", "authority",
+    "canon_authority", "framework_write_authority"
+  ],
+  "properties": {
+    "schema": {"const": "quillframe_agent_result_v1"},
+    "job_id": {"type": "string"},
+    "session_id": {"type": "string"},
+    "run_id": {"type": "string"},
+    "status": {"enum": ["completed", "cancelled", "budget_exhausted", "model_failed", "tool_failed", "checkpoint_failed", "side_effect_unconfirmed"]},
+    "final_text": {"type": "string"},
+    "model_service_id": {"type": "string"},
+    "model_id": {"type": "string"},
+    "protocol": {"type": "string"},
+    "input_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "steps": {"type": "integer", "minimum": 0},
+    "model_requests": {"type": "integer", "minimum": 0},
+    "tool_calls": {"type": "integer", "minimum": 0},
+    "tool_receipts": {"type": "array"},
+    "usage": {"type": "object"},
+    "errors": {"type": "array"},
+    "authority": {"const": false},
+    "canon_authority": {"const": false},
+    "framework_write_authority": {"const": false}
+  }
+}

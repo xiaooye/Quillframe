@@ -2,7 +2,7 @@ name: Quillframe 0.9 CI
 
 on:
   push:
-    branches: [main, system-improve/quillframe-0.9.0]
+    branches: [main, 'agent/**']
   pull_request:
     branches: [main]
 
@@ -26,6 +26,34 @@ jobs:
         run: python scripts/version_consistency.py
       - name: Active technical namespace hygiene
         run: python scripts/namespace_hygiene.py
+      - name: Compile Model and Agent Runtime
+        run: python -m compileall -q model_runtime agent_runtime quillframe harness/semantic_workers/adapters/model_runtime_adapter.py
+      - name: Build and import Quillframe wheel
+        run: |
+          python -m pip wheel . --no-deps -w /tmp/quillframe-wheel
+          python -m pip install --no-deps --target /tmp/quillframe-install /tmp/quillframe-wheel/quillframe-*.whl
+          cd /tmp
+          PYTHONPATH=/tmp/quillframe-install python - <<'PY'
+          from quillframe import Quillframe, AgentJob
+          assert Quillframe.__name__ == 'Quillframe'
+          assert AgentJob.__name__ == 'AgentJob'
+          print('quillframe_library_import=PASS')
+          PY
+      - name: Deterministic runtime capability contracts
+        run: |
+          python harness/runtime_capabilities.py self-test
+          python harness/semantic_workers/adapters/model_runtime_adapter.py --self-test
+      - name: Normal CI never invokes configured live Model API
+        env:
+          QUILLFRAME_MODEL_API_ENDPOINT: ''
+          QUILLFRAME_MODEL_API_TOKEN: ''
+        run: |
+          python - <<'PY'
+          import os
+          assert not os.getenv('QUILLFRAME_MODEL_API_ENDPOINT')
+          assert not os.getenv('QUILLFRAME_MODEL_API_TOKEN')
+          print('live_model_execution=disabled')
+          PY
       - name: Quillframe 0.9 persistence and authority tests
         run: python -m unittest discover -s tests -p 'test_quillframe_*.py' -v
       - name: Host Bridge self-test

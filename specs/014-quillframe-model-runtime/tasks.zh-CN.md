@@ -1,0 +1,23 @@
+# 任务 — Quillframe Model Runtime
+
+- [x] 冻结 0.9 reconstruction candidate head，并建立独立 agent branch。
+- [x] 重新验证 OpenCode Go mixed protocol、OpenAI/Ollama/Anthropic tool-loop wire contract。
+- [x] 定义 Model Runtime / Agent Runtime / Tool Runtime / Semantic Runtime ownership。
+- [x] 实现 endpoint normalization / DNS destination / redirect network policy。
+- [x] 实现 secret-reference boundary 与 deterministic mock transport。
+- [x] 实现 Chat Completions / Responses / Anthropic Messages codec 与 continuation semantics。
+- [x] 实现 model discovery、lazy protocol/tool capability probe、automatic eligible model selection。
+- [x] 实现 AgentJob/Result、hard budgets、cancellation、ToolRuntime 与 bounded AgentRunner。
+- [x] 实现 repo read/search/write、subprocess isolation 与 secret-bearing path protection。
+- [x] consequential tool side effect 绑定现有 Session Runtime checkpoint + Control Plane consume-once。
+- [x] 落地 SQLite `002_model_runtime.sql`，一次性迁移 provider-centric tables。
+- [x] 增加 durable Model Service persistence / fingerprint-bound hydrate / credential-reference lifecycle。
+- [x] 更新 runtime capabilities / runtime registry 为 generic `model_api` route。
+- [x] 接入 Semantic Runtime generic Model Runtime executor，同时保留 Codex/Claude/MCP/GitHub/peer/human routes。
+- [x] 暴露 `from quillframe import Quillframe` public library façade 与 wheel packaging。
+- [x] 新增 normal-CI mock regression suites 与 explicit live opt-in compatibility harness。
+- [x] 同步 HARNESS_MANIFEST machine ownership 与中英双语 Model/Agent Runtime 文档。
+- [ ] 当前 exact PR head 的 Core / Site / Studio CI 全绿。
+- [ ] 最终与 live `main` 做 before-review reconciliation / rebase 判断。
+- [ ] 取得真正独立的 architecture / semantic review evidence。
+- [ ] 输出 acceptance-readiness report；用户授权前不 merge。
