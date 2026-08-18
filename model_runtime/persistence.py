@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 import json
 import sqlite3
 import uuid
@@ -33,7 +34,7 @@ class SQLiteModelServiceRepository:
             if f'"{forbidden}"' in lowered:
                 raise ValueError(f"snapshot contains forbidden secret field: {forbidden}")
         stamp = now_iso()
-        with self._connect() as conn:
+        with closing(self._connect()) as conn:
             conn.execute("BEGIN IMMEDIATE")
             existing = conn.execute("SELECT created_at FROM model_services WHERE service_id=?", (snapshot.service_id,)).fetchone()
             created_at = existing["created_at"] if existing else stamp
@@ -86,14 +87,14 @@ class SQLiteModelServiceRepository:
         return {"service_id": snapshot.service_id, "snapshot_fingerprint": snapshot.snapshot_fingerprint, "models": len(snapshot.models)}
 
     def list_services(self) -> list[dict[str, Any]]:
-        with self._connect() as conn:
+        with closing(self._connect()) as conn:
             rows = conn.execute(
                 "SELECT service_id,endpoint,enabled,auth_style,discovery_state,snapshot_fingerprint,last_checked_at,created_at,updated_at,credential_ref IS NOT NULL AS credential_present FROM model_services ORDER BY updated_at DESC"
             ).fetchall()
         return [dict(row) for row in rows]
 
     def get_service(self, service_id: str) -> dict[str, Any]:
-        with self._connect() as conn:
+        with closing(self._connect()) as conn:
             row = conn.execute(
                 "SELECT service_id,endpoint,enabled,auth_style,discovery_state,snapshot_fingerprint,last_checked_at,created_at,updated_at,credential_ref IS NOT NULL AS credential_present FROM model_services WHERE service_id=?",
                 (service_id,),
@@ -113,7 +114,7 @@ class SQLiteModelServiceRepository:
         return {**dict(row), "models": models, "authority": False}
 
     def get_internal(self, service_id: str) -> dict[str, Any]:
-        with self._connect() as conn:
+        with closing(self._connect()) as conn:
             row = conn.execute(
                 "SELECT service_id,endpoint,credential_ref,enabled,auth_style,discovery_state,snapshot_fingerprint,snapshot_json,last_checked_at,created_at,updated_at FROM model_services WHERE service_id=?",
                 (service_id,),
@@ -123,18 +124,18 @@ class SQLiteModelServiceRepository:
         return dict(row)
 
     def find_service_by_endpoint(self, endpoint: str) -> dict[str, Any] | None:
-        with self._connect() as conn:
+        with closing(self._connect()) as conn:
             row = conn.execute("SELECT service_id,endpoint,credential_ref FROM model_services WHERE endpoint=?", (endpoint,)).fetchone()
         return dict(row) if row else None
 
     def set_credential_ref(self, service_id: str, credential_ref: str | None) -> None:
-        with self._connect() as conn:
+        with closing(self._connect()) as conn:
             cur = conn.execute("UPDATE model_services SET credential_ref=?,updated_at=? WHERE service_id=?", (credential_ref, now_iso(), service_id))
             if cur.rowcount != 1:
                 raise KeyError(service_id)
             conn.commit()
 
     def delete_service(self, service_id: str) -> None:
-        with self._connect() as conn:
+        with closing(self._connect()) as conn:
             conn.execute("DELETE FROM model_services WHERE service_id=?", (service_id,))
             conn.commit()

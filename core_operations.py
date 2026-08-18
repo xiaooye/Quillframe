@@ -42,9 +42,10 @@ class CoreOperations:
             "settlement_authority": False,
             "direct_core_store_access": False,
             "operations": [
-                "project.create", "project.inspect", "project.search", "project.backup",
-                "document.create", "document.revision.save", "document.revision.compare",
-                "author.run.start", "candidate.accept", "settlement.apply",
+                "project.create", "project.list", "project.inspect", "project.search", "project.backup",
+                "document.create", "document.list", "document.revision.save", "document.revision.compare",
+                "author.run.start", "candidate.review.get", "candidate.accept", "candidate.reject", "candidate.revision.request",
+                "settlement.preflight", "settlement.apply",
                 "feedback.observe", "publication.preview", "publication.build",
                 "database.doctor",
             ],
@@ -67,6 +68,151 @@ class CoreOperations:
             "authority": False,
             "project": dict(identity),
             "counts": counts,
+        }
+
+    def project_list(self, *, limit: int = 100) -> dict[str, Any]:
+        return {
+            "schema": "quillframe_project_registry_projection_v1",
+            "items": self.store.list_projects(limit),
+            "authority": False,
+            "canon_authority": False,
+        }
+
+    def document_list(self, project_id: str, *, document_kind: str | None = None, limit: int = 500) -> dict[str, Any]:
+        bounded = max(1, min(int(limit), 500))
+        with self.store.open_project(project_id) as conn:
+            if document_kind is not None:
+                rows = conn.execute(
+                    """SELECT d.document_id,d.story_node_id,d.document_kind,d.title,d.created_at,
+                    r.revision_id AS latest_revision_id,r.content_fingerprint AS latest_content_fingerprint,
+                    r.authority_class AS latest_authority_class,r.created_at AS latest_revision_created_at
+                    FROM documents d
+                    LEFT JOIN document_revisions r ON r.revision_id=(
+                      SELECT rr.revision_id FROM document_revisions rr
+                      WHERE rr.document_id=d.document_id ORDER BY rr.created_at DESC,rr.rowid DESC LIMIT 1
+                    )
+                    WHERE d.document_kind=? ORDER BY d.created_at,d.document_id LIMIT ?""",
+                    (document_kind, bounded),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    """SELECT d.document_id,d.story_node_id,d.document_kind,d.title,d.created_at,
+                    r.revision_id AS latest_revision_id,r.content_fingerprint AS latest_content_fingerprint,
+                    r.authority_class AS latest_authority_class,r.created_at AS latest_revision_created_at
+                    FROM documents d
+                    LEFT JOIN document_revisions r ON r.revision_id=(
+                      SELECT rr.revision_id FROM document_revisions rr
+                      WHERE rr.document_id=d.document_id ORDER BY rr.created_at DESC,rr.rowid DESC LIMIT 1
+                    )
+                    ORDER BY d.created_at,d.document_id LIMIT ?""",
+                    (bounded,),
+                ).fetchall()
+        return {
+            "schema": "quillframe_document_list_projection_v1",
+            "project_id": project_id,
+            "document_kind": document_kind,
+            "items": [dict(row) for row in rows],
+            "authority": False,
+            "canon_authority": False,
+        }
+
+    @staticmethod
+    def _candidate_revision_request_receipt(conn, candidate_id: str) -> dict[str, Any] | None:  # noqa: ANN001
+        rows = conn.execute(
+            "SELECT payload_json FROM receipts WHERE receipt_kind='candidate_revision_request' ORDER BY created_at DESC,rowid DESC"
+        ).fetchall()
+        for row in rows:
+            try:
+                payload = json.loads(row["payload_json"])
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if payload.get("candidate_id") == candidate_id:
+                return payload
+        return None
+
+    def candidate_review_get(self, project_id: str, *, candidate_id: str) -> dict[str, Any]:
+        with self.store.open_project(project_id) as conn:
+            candidate = conn.execute(
+                """SELECT c.*,r.parent_revision_id,r.content AS candidate_content,
+                r.content_fingerprint AS revision_fingerprint,r.authority_class AS revision_authority_class
+                FROM candidates c LEFT JOIN document_revisions r ON r.revision_id=c.revision_id
+                WHERE c.candidate_id=?""",
+                (candidate_id,),
+            ).fetchone()
+            if not candidate:
+                raise OperationError("candidate_not_found", candidate_id)
+            c = dict(candidate)
+            if not c.get("revision_id") or c.get("revision_fingerprint") != c.get("content_fingerprint"):
+                raise OperationError("stale_review", "Candidate revision no longer matches its review fingerprint")
+            parent = None
+            if c.get("parent_revision_id"):
+                row = conn.execute(
+                    "SELECT revision_id,document_id,content,content_fingerprint,authority_class,created_at FROM document_revisions WHERE revision_id=?",
+                    (c["parent_revision_id"],),
+                ).fetchone()
+                parent = dict(row) if row else None
+            current_review_rows = conn.execute(
+                "SELECT * FROM review_evidence WHERE candidate_id=? AND candidate_fingerprint=? AND independent=1 AND stale=0 ORDER BY created_at DESC,rowid DESC",
+                (candidate_id, c["content_fingerprint"]),
+            ).fetchall()
+            any_review = conn.execute("SELECT COUNT(*) FROM review_evidence WHERE candidate_id=?", (candidate_id,)).fetchone()[0]
+            if not current_review_rows:
+                raise OperationError("stale_review" if any_review else "review_pending", "fresh fingerprint-bound independent Review evidence is unavailable")
+            independent = json.loads(current_review_rows[0]["result_json"])
+            stage_rows = conn.execute(
+                "SELECT payload_json FROM receipts WHERE run_id=? AND receipt_kind='production_stage' ORDER BY created_at,rowid",
+                (c.get("run_id"),),
+            ).fetchall() if c.get("run_id") else []
+            stage_receipts = []
+            for row in stage_rows:
+                try:
+                    stage_receipts.append(json.loads(row["payload_json"]))
+                except (TypeError, json.JSONDecodeError):
+                    continue
+            by_mechanism = {row.get("mechanism"): row for row in stage_receipts if isinstance(row, dict)}
+            required = ("reader_engagement", "character_simulation", "continuity", "independent_semantic_gate", "user_visible_gate")
+            if any(name not in by_mechanism for name in required):
+                raise OperationError("review_pending", "Candidate Review evidence is not complete")
+            revision_request = self._candidate_revision_request_receipt(conn, candidate_id)
+
+        diff = None
+        if parent:
+            diff = self.store.compare_revisions(project_id, parent["revision_id"], c["revision_id"])
+        return {
+            "schema": "quillframe_candidate_review_projection_v1",
+            "project_id": project_id,
+            "candidate": {
+                "candidate_id": c["candidate_id"],
+                "candidate_fingerprint": c["content_fingerprint"],
+                "document_id": c.get("document_id"),
+                "run_id": c.get("run_id"),
+                "task_mode": c.get("task_mode"),
+                "candidate_kind": c.get("candidate_kind"),
+                "persisted_status": c.get("status"),
+                "effective_status": "revision_requested" if revision_request and c.get("status") == "review_draft" else c.get("status"),
+                "user_visible_gate": c.get("user_visible_gate"),
+            },
+            "candidate_revision": {
+                "revision_id": c["revision_id"],
+                "content": c["candidate_content"],
+                "content_fingerprint": c["revision_fingerprint"],
+                "authority_class": c["revision_authority_class"],
+            },
+            "incumbent_revision": parent,
+            "diff": diff,
+            "evidence": {
+                "reader": by_mechanism["reader_engagement"],
+                "character": by_mechanism["character_simulation"],
+                "continuity": by_mechanism["continuity"],
+                "independent": independent,
+                "production_readiness": independent.get("production_readiness"),
+                "user_visible_gate": by_mechanism["user_visible_gate"],
+            },
+            "revision_request": revision_request,
+            "private_reasoning_exposed": False,
+            "authority": False,
+            "canon_authority": False,
+            "settlement_authority": False,
         }
 
     def start_author_run(
@@ -160,6 +306,8 @@ class CoreOperations:
                 raise OperationError("candidate_not_acceptable", "only a user-visible-gate PASS Review Draft may be accepted")
             if candidate["content_fingerprint"] != candidate_fingerprint:
                 raise OperationError("candidate_fingerprint_mismatch", "candidate changed since review")
+            if self._candidate_revision_request_receipt(conn, candidate_id):
+                raise OperationError("candidate_revision_requested", "Candidate has a durable revision request and cannot be accepted")
             evidence = conn.execute(
                 "SELECT COUNT(*) FROM review_evidence WHERE candidate_id=? AND candidate_fingerprint=? AND independent=1 AND stale=0",
                 (candidate_id, candidate_fingerprint),
@@ -191,6 +339,188 @@ class CoreOperations:
             )
             conn.commit()
             return result
+
+    def reject_candidate(
+        self,
+        project_id: str,
+        *,
+        candidate_id: str,
+        candidate_fingerprint: str,
+        authorized_by: str,
+        authorization: dict[str, Any],
+        idempotency_key: str,
+        reason: str | None = None,
+    ) -> dict[str, Any]:
+        if not idempotency_key:
+            raise OperationError("idempotency_required", "Candidate rejection requires an idempotency key")
+        with self.store.open_project(project_id) as conn:
+            prior = conn.execute(
+                "SELECT payload_json FROM receipts WHERE receipt_kind='candidate_reject' AND idempotency_key=?",
+                (idempotency_key,),
+            ).fetchone()
+            if prior:
+                return json.loads(prior["payload_json"])
+            conn.execute("BEGIN IMMEDIATE")
+            candidate = conn.execute("SELECT * FROM candidates WHERE candidate_id=?", (candidate_id,)).fetchone()
+            if not candidate:
+                conn.rollback()
+                raise OperationError("candidate_not_found", candidate_id)
+            if candidate["content_fingerprint"] != candidate_fingerprint:
+                conn.rollback()
+                raise OperationError("candidate_fingerprint_mismatch", "candidate changed since Review")
+            accepted = conn.execute("SELECT 1 FROM acceptance_evidence WHERE candidate_id=? LIMIT 1", (candidate_id,)).fetchone()
+            if candidate["status"] == "accepted" or accepted:
+                conn.rollback()
+                raise OperationError("already_accepted", "Accepted Candidate cannot be rejected")
+            if candidate["status"] != "review_draft" or self._candidate_revision_request_receipt(conn, candidate_id):
+                conn.rollback()
+                raise OperationError("stale_state", "Candidate is no longer an actionable Review Draft")
+            conn.execute("UPDATE candidates SET status='rejected' WHERE candidate_id=?", (candidate_id,))
+            stamp = now_iso()
+            result = {
+                "schema": "quillframe_candidate_rejection_result_v1",
+                "candidate_id": candidate_id,
+                "candidate_fingerprint": candidate_fingerprint,
+                "before_status": "review_draft",
+                "status": "rejected",
+                "authorized_by": authorized_by,
+                "authorization": authorization,
+                "reason": reason,
+                "canon_mutated": False,
+                "settled": False,
+                "authority": False,
+            }
+            conn.execute(
+                "INSERT INTO receipts(receipt_id,run_id,receipt_kind,idempotency_key,payload_json,created_at) VALUES(?,?,?,?,?,?)",
+                ("rcpt_" + uuid.uuid4().hex, candidate["run_id"], "candidate_reject", idempotency_key, canonical_json(result), stamp),
+            )
+            if candidate["run_id"]:
+                conn.execute(
+                    "INSERT INTO runtime_events(event_id,run_id,event_kind,payload_json,created_at) VALUES(?,?,?,?,?)",
+                    ("evt_" + uuid.uuid4().hex, candidate["run_id"], "candidate_rejected", canonical_json({"candidate_id": candidate_id, "candidate_fingerprint": candidate_fingerprint}), stamp),
+                )
+            conn.commit()
+            return result
+
+    def request_candidate_revision(
+        self,
+        project_id: str,
+        *,
+        candidate_id: str,
+        candidate_fingerprint: str,
+        revision_request: dict[str, Any],
+        authorized_by: str,
+        authorization: dict[str, Any],
+        idempotency_key: str,
+    ) -> dict[str, Any]:
+        if not idempotency_key:
+            raise OperationError("idempotency_required", "Request Revision requires an idempotency key")
+        if not isinstance(revision_request, dict) or not revision_request:
+            raise OperationError("invalid_args", "revision_request must be a non-empty object")
+        with self.store.open_project(project_id) as conn:
+            prior = conn.execute(
+                "SELECT payload_json FROM receipts WHERE receipt_kind='candidate_revision_request' AND idempotency_key=?",
+                (idempotency_key,),
+            ).fetchone()
+            if prior:
+                return json.loads(prior["payload_json"])
+            conn.execute("BEGIN IMMEDIATE")
+            candidate = conn.execute("SELECT * FROM candidates WHERE candidate_id=?", (candidate_id,)).fetchone()
+            if not candidate:
+                conn.rollback()
+                raise OperationError("candidate_not_found", candidate_id)
+            if candidate["content_fingerprint"] != candidate_fingerprint:
+                conn.rollback()
+                raise OperationError("candidate_fingerprint_mismatch", "candidate changed since Review")
+            accepted = conn.execute("SELECT 1 FROM acceptance_evidence WHERE candidate_id=? LIMIT 1", (candidate_id,)).fetchone()
+            if candidate["status"] == "accepted" or accepted:
+                conn.rollback()
+                raise OperationError("already_accepted", "Accepted Candidate cannot request revision")
+            if candidate["status"] != "review_draft" or self._candidate_revision_request_receipt(conn, candidate_id):
+                conn.rollback()
+                raise OperationError("stale_state", "Candidate is no longer an actionable Review Draft")
+            stamp = now_iso()
+            request_id = "revreq_" + uuid.uuid4().hex
+            result = {
+                "schema": "quillframe_candidate_revision_request_result_v1",
+                "revision_request_id": request_id,
+                "candidate_id": candidate_id,
+                "candidate_fingerprint": candidate_fingerprint,
+                "persisted_candidate_status": candidate["status"],
+                "effective_status": "revision_requested",
+                "revision_request": revision_request,
+                "authorized_by": authorized_by,
+                "authorization": authorization,
+                "next_action": {
+                    "operation": "author.run.start",
+                    "task_mode": "REVISE",
+                    "target_ref": candidate["document_id"],
+                    "requires_explicit_user_action": True,
+                    "auto_started": False,
+                    "source_candidate_id": candidate_id,
+                    "source_candidate_fingerprint": candidate_fingerprint,
+                },
+                "canon_mutated": False,
+                "settled": False,
+                "authority": False,
+            }
+            conn.execute(
+                "INSERT INTO receipts(receipt_id,run_id,receipt_kind,idempotency_key,payload_json,created_at) VALUES(?,?,?,?,?,?)",
+                ("rcpt_" + uuid.uuid4().hex, candidate["run_id"], "candidate_revision_request", idempotency_key, canonical_json(result), stamp),
+            )
+            if candidate["run_id"]:
+                conn.execute(
+                    "INSERT INTO runtime_events(event_id,run_id,event_kind,payload_json,created_at) VALUES(?,?,?,?,?)",
+                    ("evt_" + uuid.uuid4().hex, candidate["run_id"], "candidate_revision_requested", canonical_json({"candidate_id": candidate_id, "candidate_fingerprint": candidate_fingerprint, "revision_request_id": request_id}), stamp),
+                )
+            conn.commit()
+            return result
+
+    def settlement_preflight(self, project_id: str, *, acceptance_id: str, target_ref: str) -> dict[str, Any]:
+        with self.store.open_project(project_id) as conn:
+            acceptance = conn.execute(
+                """SELECT a.acceptance_id,a.candidate_id,a.candidate_fingerprint,c.status AS candidate_status,
+                c.revision_id,c.content_fingerprint,c.document_id
+                FROM acceptance_evidence a JOIN candidates c ON c.candidate_id=a.candidate_id
+                WHERE a.acceptance_id=?""",
+                (acceptance_id,),
+            ).fetchone()
+            if not acceptance:
+                raise OperationError("acceptance_not_found", acceptance_id)
+            if acceptance["candidate_status"] != "accepted" or acceptance["candidate_fingerprint"] != acceptance["content_fingerprint"]:
+                raise OperationError("not_settleable", "Acceptance/Candidate binding is not settleable")
+            if not acceptance["revision_id"]:
+                raise OperationError("not_settleable", "Accepted Candidate has no document revision")
+            revision = conn.execute(
+                "SELECT revision_id,document_id,content_fingerprint,authority_class FROM document_revisions WHERE revision_id=?",
+                (acceptance["revision_id"],),
+            ).fetchone()
+            if not revision or revision["authority_class"] != "accepted" or revision["content_fingerprint"] != acceptance["candidate_fingerprint"]:
+                raise OperationError("not_settleable", "Accepted source revision is missing or no longer matches the Acceptance")
+            settled = conn.execute(
+                "SELECT settlement_id,status,after_fingerprint FROM settlements WHERE acceptance_id=? AND target_ref=? AND status='settled' ORDER BY created_at DESC LIMIT 1",
+                (acceptance_id, target_ref),
+            ).fetchone()
+            if settled:
+                raise OperationError("not_settleable", "Acceptance is already settled to this target", detail=dict(settled))
+            current = conn.execute("SELECT content_fingerprint FROM canon_state WHERE state_key=?", (target_ref,)).fetchone()
+            before = current["content_fingerprint"] if current else "absent"
+        return {
+            "schema": "quillframe_settlement_preflight_v1",
+            "project_id": project_id,
+            "acceptance_id": acceptance_id,
+            "candidate_id": acceptance["candidate_id"],
+            "candidate_fingerprint": acceptance["candidate_fingerprint"],
+            "document_id": acceptance["document_id"],
+            "revision_id": acceptance["revision_id"],
+            "target_ref": target_ref,
+            "expected_before_fingerprint": before,
+            "current_before_fingerprint": before,
+            "settleable": True,
+            "mutation_performed": False,
+            "canon_mutated": False,
+            "authority": False,
+        }
 
     def settle(
         self,

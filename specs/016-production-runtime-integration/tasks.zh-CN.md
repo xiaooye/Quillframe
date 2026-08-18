@@ -1,0 +1,37 @@
+# Tasks
+- [x] 冻结 live main：`5fd991a5621f2c68e1030aa6e0b35014ca4011c7`。
+- [x] 检查并发工作，并将当前 Studio consumer PR #130 与 Core authority 隔离。
+- [x] 读取 Framework manifest/Skill/Harness/Self-Improvement authority。
+- [x] 实现 production runtime contracts/executor。
+- [x] 将 immutable source payload bundle 绑定 Context Freeze，并强制 production mechanism 只消费 frozen stage Context。
+- [x] 实现 stale preflight、source-universe conflict detection 与 explicit Context refresh/supersession。
+- [x] 只有 registered pre-independent qualification 与合法 external `quality.production_review` peer result + Project bridge receipt 全部成立时，才持久化 Review Draft。
+- [x] 实现 Model Service facade，不建立第二套 provider subsystem。
+- [x] 加固 bridge credential output：除 secret-bearing key redaction 外，也 scrub nested data/error string 中的真实 secret value。
+- [x] 在 owning connection layer 修复 SQLite ResourceWarning 根因。
+- [x] 增加 canonical read-only `project.list` 与 `document.list` projection。
+- [x] 增加 exact `candidate.review.get`，包含 incumbent/diff 与安全的 Reader/Character/Continuity/Independent/readiness evidence。
+- [x] 增加 explicit fingerprint-bound idempotent `candidate.reject`。
+- [x] 增加 durable `candidate.revision.request`；不得静默启动 REVISE，并阻止旧 Candidate 后续 Accept。
+- [x] 增加 read-only authoritative `settlement.preflight`，向单独授权的 Settlement 提供 exact current before-state。
+- [x] 将 Host Bridge contract 升级到 v8，并保持 unsupported/deferred operation 明确可见。
+- [x] 增加 deterministic、integration、authority、secret-boundary、provider-failure、restart/persistence 与 authoring-lifecycle tests。
+- [x] 在 clean runtime head 跑完整 CI：Core/SQLite/authority、Studio typecheck/build、product site/docs。
+- [x] 验证 clean runtime aggregate self-test 与 deterministic Framework bundle 双构建。
+- [x] 检查 live provider 可用性。本 workstream 没有可用真实 provider credential，因此记录 `PENDING_MODEL / awaiting_external`，不把 deterministic fixture 冒充 live acceptance。
+- [x] 为 Studio PR #130 输出 Host Bridge v8 frontend contract handoff。
+- [ ] 清掉最终 PR review/security thread，并在 gates 全绿后 merge Core PR #131。
+- [ ] 将 Studio PR #130 rebase/integrate 到 merged Core v8，执行完整 UI/E2E verification，绿色后 merge。
+
+## Merge 前 Acceptance state
+- Deterministic Core/runtime health：PASS。
+- SQLite connection hygiene：PASS；clean Core CI 未产生 SQLite ResourceWarning。
+- Host Bridge contract：v8 PASS。
+- Existing + new Python suite：clean runtime target `6b1e9a1e6bca792fcb299e3814c8bf61bf3e97e6` 上 84/84 PASS。
+- SolidJS Studio typecheck/build：PASS。
+- Product site/docs：PASS。
+- Framework deterministic bundle：PASS，380 files。
+  - bundle：`sha256:6e8019c8c39aa7ce192f941f127561cdd0e242f1b58512177fc20af26a3671a4`
+  - content index：`sha256:5174159c16516fa3003518e3f676111deb080f413efc863fa671d7a9763a0bce`
+- Live production/model semantic acceptance：`PENDING_MODEL / awaiting_external`。
+- Existing reviewed semantic baseline：独立维度仍为 `PENDING_MODEL`；不影响 deterministic/bundle health。
