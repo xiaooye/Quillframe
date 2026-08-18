@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic authority gate for NovelForge learning promotion.
+"""Deterministic authority gate for Quillframe learning promotion.
 
 Models judge whether evidence semantically supports a preference/craft hypothesis
 at a proposed scope. This module verifies that judgment is an exact registered
@@ -26,7 +26,7 @@ if str(SEM) not in sys.path:
 from registered_contract_binding import validate_registered_job  # noqa: E402
 from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
 
-SCHEMA = "novelforge_learning_promotion_candidate_v1"
+SCHEMA = "quillframe_learning_promotion_candidate_v1"
 SCOPES = {"one_off", "project", "user_taste", "general_craft"}
 PASS_STATES = {"pass", "passed", "success", "green"}
 PROMOTION_REVIEW_CONTRACT = "learning.promotion_review"
@@ -208,7 +208,7 @@ def evaluate(candidate: dict[str, Any]) -> dict[str, Any]:
             status = "promotable"
 
     return {
-        "schema": "novelforge_learning_promotion_gate_v2",
+        "schema": "quillframe_learning_promotion_gate_v2",
         "candidate_id": candidate.get("candidate_id"),
         "scope": scope,
         "mechanism": mechanism or None,
@@ -330,7 +330,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge learning promotion authority gate")
+    p = argparse.ArgumentParser(description="Quillframe learning promotion authority gate")
     sub = p.add_subparsers(dest="cmd", required=True)
     e = sub.add_parser("evaluate"); e.add_argument("--candidate", required=True); e.add_argument("--output")
     sub.add_parser("self-test")

@@ -1,12 +1,12 @@
-# NovelForge Studio
+# Quillframe Studio
 
 <p><kbd>PRODUCT EXPERIENCE</kbd>&nbsp;&nbsp;<kbd>CREATOR WORKBENCH</kbd>&nbsp;&nbsp;<kbd>LOW-OVERHEAD</kbd></p>
 
-NovelForge Studio is the product-experience layer around NovelForge Core. Phase 1, Phase 2A, and Phase 2B established the product model, safe projections, and portable Host Bridge. **Phase 2C now contains a real read-only SolidJS application shell** built with TypeScript, Vite, `@solidjs/router`, Story Loom v2, and a config-generated zero-runtime-JavaScript WeiUI CSS foundation.
+Quillframe Studio is the product-experience layer around Quillframe Core. Phase 1, Phase 2A, and Phase 2B established the product model, safe projections, and portable Host Bridge. **Phase 2C now contains a real read-only SolidJS application shell** built with TypeScript, Vite, `@solidjs/router`, Story Loom v2, and a config-generated zero-runtime-JavaScript WeiUI CSS foundation.
 
 Local Web is first-class and preferred when minimum incremental CPU/RAM matters. Tauri remains an optional future installable host; it is not the semantic center of the product.
 
-> **Authority boundary ✦** Studio consumes NovelForge Core state. UI state is not Canon, Memory, semantic truth, write authority, or a second workflow engine.
+> **Authority boundary ✦** Studio consumes Quillframe Core state. UI state is not Canon, Memory, semantic truth, write authority, or a second workflow engine.
 
 [简体中文](README.zh-CN.md)
 
@@ -30,7 +30,7 @@ The prototype established a central observability distinction: evidence selected
 
 ## Phase 2A · One product, many hosts
 
-NovelForge product semantics are designed for four first-class delivery surfaces:
+Quillframe product semantics are designed for four first-class delivery surfaces:
 
 - **CLI** — scriptable native inspection and automation.
 - **Local Web / local app** — low-overhead creator workstation.
@@ -43,7 +43,7 @@ The Phase 2A Project Hub projection remains at [`project_hub_projection.py`](pro
 
 ## Phase 2B · Portable read-only Host Bridge
 
-[`host_bridge.py`](host_bridge.py) accepts `novelforge_studio_host_bridge_request_v1` and returns fingerprint-bound `novelforge_studio_host_bridge_result_v1` envelopes.
+[`host_bridge.py`](host_bridge.py) accepts `quillframe_studio_host_bridge_request_v1` and returns fingerprint-bound `quillframe_studio_host_bridge_result_v1` envelopes.
 
 Current supported operations are deliberately small:
 
@@ -56,11 +56,11 @@ Current supported operations are deliberately small:
 
 Runtime session/event/handoff reads, Run Receipt retrieval, resume, generic command invocation, and project mutation remain deferred to Core issue #23. Studio does not read private SQLite state to fake those surfaces.
 
-[`../agent-skills/novelforge/SKILL.md`](../agent-skills/novelforge/SKILL.md) consumes the same operation vocabulary without importing private Core runtime modules.
+[`../agent-skills/quillframe/SKILL.md`](../agent-skills/quillframe/SKILL.md) consumes the same operation vocabulary without importing private Core runtime modules.
 
 ## Story Loom v2 · WeiUI config-generated foundation
 
-Story Loom remains NovelForge visual/product-semantic authority. WeiUI owns generic CSS/token primitives.
+Story Loom remains Quillframe visual/product-semantic authority. WeiUI owns generic CSS/token primitives.
 
 The reviewed upstream is pinned exactly in [`../assets/brand/weiui.integration.json`](../assets/brand/weiui.integration.json). Phase 2C consumes only `@weiui/tokens` and `@weiui/css`; `@weiui/react` and `@weiui/headless` remain forbidden Studio runtime dependencies.
 
@@ -147,6 +147,6 @@ The first production build is intentionally small: the main Solid/router JS chun
 
 ## Current Core additions relevant to Studio
 
-`novelforge_production_readiness_v1` gives Review a real same-fingerprint conjunction gate instead of a fabricated quality percentage.
+`quillframe_production_readiness_v1` gives Review a real same-fingerprint conjunction gate instead of a fabricated quality percentage.
 
-`novelforge_publication_ir_v1` + `publication/compiler.py` provide deterministic Accepted-text compilation to clean text, Web HTML, print-oriented HTML/CSS, and EPUB 3.3. Richer Publication Studio work remains bounded by the Core contracts that actually exist.
+`quillframe_publication_ir_v1` + `publication/compiler.py` provide deterministic Accepted-text compilation to clean text, Web HTML, print-oriented HTML/CSS, and EPUB 3.3. Richer Publication Studio work remains bounded by the Core contracts that actually exist.

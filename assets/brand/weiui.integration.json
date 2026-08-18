@@ -1,5 +1,5 @@
 {
-  "schema": "novelforge_weiui_integration_v2",
+  "schema": "quillframe_weiui_integration_v2",
   "source": {
     "repository": "xiaooye/weiui",
     "commit": "876534000439f0c98aa39c439f7eb9276b18809d",
@@ -22,7 +22,7 @@
     "runtime_javascript_from_weiui": false,
     "generic_component_css_owner": "@weiui/css",
     "story_loom_css_scope": "theme_tokens_and_product_identity",
-    "studio_custom_css_scope": "composition_layout_and_novelforge_specific_information_architecture",
+    "studio_custom_css_scope": "composition_layout_and_quillframe_specific_information_architecture",
     "custom_generic_component_chrome_allowed": false,
     "required_generic_primitives": [
       "alert",

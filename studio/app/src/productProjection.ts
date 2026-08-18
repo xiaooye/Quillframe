@@ -22,7 +22,7 @@ export type SessionSummary = {
 };
 
 export type SessionListProjection = {
-  schema: "novelforge_runtime_sessions_projection_v1";
+  schema: "quillframe_runtime_sessions_projection_v1";
   count: number;
   sessions: SessionSummary[];
   query_only: true;
@@ -53,7 +53,7 @@ export type CheckpointProjection = {
 };
 
 export type SessionProjection = {
-  schema: "novelforge_runtime_session_projection_v1";
+  schema: "quillframe_runtime_session_projection_v1";
   session: SessionSummary & {
     context_policy: {
       hidden_gold?: string | null;
@@ -98,7 +98,7 @@ export type RuntimeEvent = {
 };
 
 export type EventsProjection = {
-  schema: "novelforge_runtime_events_projection_v1";
+  schema: "quillframe_runtime_events_projection_v1";
   count: number;
   events: RuntimeEvent[];
   query_only: true;
@@ -129,7 +129,7 @@ export type ReceiptProjection = {
 };
 
 export type ReceiptsProjection = {
-  schema: "novelforge_run_receipts_projection_v1";
+  schema: "quillframe_run_receipts_projection_v1";
   count: number;
   receipts: ReceiptProjection[];
   query_only: true;
@@ -144,7 +144,7 @@ export type ContextProjection = Record<string, unknown> & {
 };
 
 export type ProductProjectionBundle = {
-  schema: "novelforge_product_projection_bundle_v1";
+  schema: "quillframe_product_projection_bundle_v1";
   project: ProjectInspectData;
   runtime: {
     sessions: SessionListProjection;
@@ -223,7 +223,7 @@ export async function loadProductProjection(
   }
 
   return {
-    schema: "novelforge_product_projection_bundle_v1",
+    schema: "quillframe_product_projection_bundle_v1",
     project,
     runtime: {
       sessions,
@@ -241,7 +241,7 @@ export async function loadProductProjection(
   };
 }
 
-export function downloadProjection(bundle: ProductProjectionBundle, fileName = "novelforge-projection.json") {
+export function downloadProjection(bundle: ProductProjectionBundle, fileName = "quillframe-projection.json") {
   const blob = new Blob([JSON.stringify(bundle, null, 2) + "\n"], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");

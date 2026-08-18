@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic execution-boundary receipt for selected NovelForge context.
+"""Deterministic execution-boundary receipt for selected Quillframe context.
 
 The model/manager owns the semantic questions: what information is missing,
 what to search, which result is relevant, and when context is sufficient.  This
@@ -20,9 +20,9 @@ from typing import Any
 
 import context_inspector
 
-SCHEMA = "novelforge_context_assembly_v2"
-LEGACY_SCHEMA = "novelforge_context_assembly_v1"
-RECEIPT_SCHEMA = "novelforge_context_assembly_receipt_v2"
+SCHEMA = "quillframe_context_assembly_v2"
+LEGACY_SCHEMA = "quillframe_context_assembly_v1"
+RECEIPT_SCHEMA = "quillframe_context_assembly_receipt_v2"
 STATUSES = {"satisfied", "missing_required_ref", "invalid_selection"}
 
 
@@ -214,7 +214,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge context execution-boundary receipt")
+    p = argparse.ArgumentParser(description="Quillframe context execution-boundary receipt")
     sub = p.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("assemble")
     a.add_argument("--input", required=True)

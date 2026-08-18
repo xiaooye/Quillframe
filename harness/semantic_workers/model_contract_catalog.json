@@ -1,5 +1,5 @@
 {
-  "schema": "novelforge_model_contract_catalog_v1",
+  "schema": "quillframe_model_contract_catalog_v1",
   "version": "10",
   "loading_policy": "progressive_disclosure",
   "principle": "Keep the catalog small. The manager/model chooses the smallest relevant semantic capability from metadata; deterministic runtime resolves an exact contract id to exactly one pack and enforces execution boundaries without keyword-routing literary meaning.",

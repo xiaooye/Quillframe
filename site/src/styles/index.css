@@ -1,12 +1,12 @@
 /*
- * NovelForge Product Site stylesheet entrypoint.
+ * Quillframe Product Site stylesheet entrypoint.
  *
  * Import order is contractual: foundation first, route implementations next,
  * Story Loom product-language composition after route defaults, and hardening last.
  * main.tsx must import only this file.
  */
 @import "./site.css";
-@import "../../../assets/brand/novelforge-product-language.css";
+@import "../../../assets/brand/quillframe-product-language.css";
 
 /* Stable product primitives. */
 @import "./product-contract.css";

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic context-budget packer for NovelForge.
+"""Deterministic context-budget packer for Quillframe.
 
 The model owns semantic relevance and sufficiency through the `context.select`
 contract. This module owns only mechanical execution truth: visibility,
@@ -28,7 +28,7 @@ from semantic_worker_router import make_contract_job, validate_result  # noqa: E
 # Keep the externally declared pack envelope at v4. The migration in this
 # module changes the semantic-selection input/result contract, while retaining
 # the established pack envelope and adding explicit ownership/provenance fields.
-SCHEMA = "novelforge_memory_tiers_v4"
+SCHEMA = "quillframe_memory_tiers_v4"
 PERSPECTIVE_SCOPES = {"manager", "reader", "character", "narrator", "research", "other"}
 VISIBILITY_SCOPES = {"shared", *PERSPECTIVE_SCOPES}
 QUESTION_KINDS = {"concept", "behavior", "state", "continuity", "relationship", "other"}
@@ -689,7 +689,7 @@ def self_test() -> int:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge perspective-safe model-selected context packer")
+    p = argparse.ArgumentParser(description="Quillframe perspective-safe model-selected context packer")
     sub = p.add_subparsers(dest="command", required=True)
     prep = sub.add_parser("prepare")
     prep.add_argument("--input", required=True)

@@ -52,7 +52,7 @@
 
 ## 03 · Seed Registry
 
-[`mechanisms.json`](mechanisms.json) 保存第一批迁入 NovelForge 的通用机制基准：
+[`mechanisms.json`](mechanisms.json) 保存第一批迁入 Quillframe 的通用机制基准：
 
 - 有功能的小动作；
 - 与具体决定绑定的内心活动；
@@ -63,7 +63,7 @@
 - 会改变选择集合的压力阶梯；
 - 由真实后果产生的前推式结尾。
 
-这些记录属于**迁移后的 seed evidence**。Registry 内部的版本字段描述这份 seed artifact，本身**不是当前 NovelForge release number**。
+这些记录属于**迁移后的 seed evidence**。Registry 内部的版本字段描述这份 seed artifact，本身**不是当前 Quillframe release number**。
 
 这里不保存任何消费项目事实，也不保存原始版权段落。
 

@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "novelforge_repair_policy_v2"
+SCHEMA = "quillframe_repair_policy_v2"
 OWNERS = {
     "story", "plan", "scene", "character", "reader_pressure", "surface",
     "continuity", "context", "research", "runtime", "human",
@@ -119,7 +119,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge semantic-repair writer-context boundary")
+    parser = argparse.ArgumentParser(description="Quillframe semantic-repair writer-context boundary")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("self-test")
     ev = sub.add_parser("evaluate")

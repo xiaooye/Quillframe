@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Side-effect-free preflight for a guarded NovelForge session termination.
+"""Side-effect-free preflight for a guarded Quillframe session termination.
 
 Termination is an operational runtime-state command only. This preflight binds
 one exact durable Session before-state and its current active/latest Run, checks
@@ -25,7 +25,7 @@ import resume_preflight  # noqa: E402
 import session_runtime  # noqa: E402
 from control_plane import ControlPlane  # noqa: E402
 
-SCHEMA = "novelforge_session_terminate_preflight_v1"
+SCHEMA = "quillframe_session_terminate_preflight_v1"
 TERMINABLE_STATUSES = {
     status for status, targets in session_runtime.ALLOWED_TRANSITIONS.items()
     if "terminated" in targets
@@ -168,27 +168,27 @@ def inspect(
 
 
 def self_test() -> int:
-    with tempfile.TemporaryDirectory(prefix="novelforge-terminate-preflight-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="quillframe-terminate-preflight-") as tmp:
         root = Path(tmp)
-        (root / ".novelforge").mkdir()
+        (root / ".quillframe").mkdir()
         framework = {
-            "name": "NovelForge",
-            "version": "0.8.0",
+            "name": "Quillframe",
+            "version": "0.9.0",
             "commit": "fixture-terminate",
             "bundle_fingerprint": "sha256:" + "a" * 64,
         }
-        (root / "novelforge.toml").write_text(
-            '[novelforge]\nschema="novelforge_project_v1"\n[project]\nid="BOOK-TERMINATE"\ntitle="Terminate"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[authority]\ncanon_write="settlement_only"\nframework_write="forbidden"\n',
+        (root / "quillframe.toml").write_text(
+            '[quillframe]\nschema="quillframe_project_v1"\n[project]\nid="BOOK-TERMINATE"\ntitle="Terminate"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[authority]\ncanon_write="settlement_only"\nframework_write="forbidden"\n',
             encoding="utf-8",
         )
-        (root / "novelforge.lock.json").write_text(json.dumps({"schema": "novelforge_lock_v1", "framework": framework}), encoding="utf-8")
+        (root / "quillframe.lock.json").write_text(json.dumps({"schema": "quillframe_lock_v1", "framework": framework}), encoding="utf-8")
         (root / "framework.attestation.json").write_text(json.dumps({"framework": framework}), encoding="utf-8")
 
-        db = root / ".novelforge" / "runtime.db"
+        db = root / ".quillframe" / "runtime.db"
         cp = ControlPlane(db)
         cp.init()
         session = {
-            "schema": "novelforge_agent_session_v1",
+            "schema": "quillframe_agent_session_v1",
             "resource_id": "BOOK-TERMINATE",
             "project_id": "BOOK-TERMINATE",
             "session_id": "SES-TERMINATE",
@@ -239,8 +239,8 @@ def self_test() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge session terminate preflight")
-    parser.add_argument("--db", default=".novelforge/runtime.db")
+    parser = argparse.ArgumentParser(description="Quillframe session terminate preflight")
+    parser.add_argument("--db", default=".quillframe/runtime.db")
     sub = parser.add_subparsers(dest="command", required=True)
     inspect_p = sub.add_parser("inspect")
     inspect_p.add_argument("--project-root", required=True)

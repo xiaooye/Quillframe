@@ -21,7 +21,7 @@ if str(QUALITY) not in sys.path:
 import candidate_lineage as cl  # noqa: E402
 import quality_evolution as qe  # noqa: E402
 
-SCHEMA = "novelforge_candidate_lineage_ablation_v1"
+SCHEMA = "quillframe_candidate_lineage_ablation_v1"
 
 
 def run(path: Path) -> dict:
@@ -104,7 +104,7 @@ def self_test(path: Path) -> int:
 def main() -> int:
     p = argparse.ArgumentParser(description="Candidate lineage deterministic architecture ablation")
     p.add_argument("command", choices=["run", "self-test"])
-    p.add_argument("--path", default="/tmp/novelforge-candidate-lineage-ablation.db")
+    p.add_argument("--path", default="/tmp/quillframe-candidate-lineage-ablation.db")
     args = p.parse_args()
     result = run(Path(args.path))
     print(json.dumps(result, ensure_ascii=False, indent=2))

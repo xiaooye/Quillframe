@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · 契约</kbd>&nbsp;&nbsp;<kbd>EVENT</kbd>&nbsp;&nbsp;<kbd>LEASE</kbd>&nbsp;&nbsp;<kbd>CONSUME-ONCE</kbd></p>
 
-NovelForge Control Plane 是跨 invocation / process 工作的持久 operational substrate。它保存 session、typed event、bounded handoff、worker lease、result hash 与 logical consume-once receipt，让外部工作即使遇到重试、中断和进程重启，也不会靠猜测判断“之前到底做没做完”。
+Quillframe Control Plane 是跨 invocation / process 工作的持久 operational substrate。它保存 session、typed event、bounded handoff、worker lease、result hash 与 logical consume-once receipt，让外部工作即使遇到重试、中断和进程重启，也不会靠猜测判断“之前到底做没做完”。
 
 > **边界 ✦** Control Plane 回答的是：**工作现在在哪里、哪个 attempt 正在拥有它、某个 result 是否已经被逻辑消费。** 它不判断故事事实，也不判断文学质量。
 
@@ -128,7 +128,7 @@ worker completes
 
 ## 07 · Exactly-once 指“逻辑应用一次”
 
-NovelForge 的 consume-once 语义针对的是**下游逻辑应用**，不是宣称 transport message 一定只送达一次。
+Quillframe 的 consume-once 语义针对的是**下游逻辑应用**，不是宣称 transport message 一定只送达一次。
 
 `feedback.observed` 刻意支持 multi-consumer。Author Steering 与 automatic Learning Intake 使用不同 logical consumer（例如 `author_steering:<session>` 与 `learning_feedback:<project-or-resource>`），因此一个 receipt 不会把 event 对另一路径全局吃掉或删除；每个 consumer 分别绑定同一 exact event hash。只读 feedback observability 不 consume event。event 到达或被消费都不会授予 Project Profile、user-taste、Framework 或 Canon authority。
 

@@ -18,11 +18,11 @@ const fingerprint = createHash("sha256")
   .update(JSON.stringify(assets))
   .digest("hex")
   .slice(0, 16);
-const cacheName = `novelforge-studio-shell-${fingerprint}`;
+const cacheName = `quillframe-studio-shell-${fingerprint}`;
 const precache = [
   "/index.html",
   "/manifest.webmanifest",
-  "/novelforge-mark.svg",
+  "/quillframe-mark.svg",
   ...assets.map((asset) => asset.url),
 ];
 
@@ -36,7 +36,7 @@ self.addEventListener("install",(event)=>{
 });
 
 self.addEventListener("activate",(event)=>{
-  event.waitUntil(caches.keys().then((keys)=>Promise.all(keys.filter((key)=>key.startsWith("novelforge-studio-shell-")&&key!==CACHE_NAME).map((key)=>caches.delete(key)))).then(()=>self.clients.claim()));
+  event.waitUntil(caches.keys().then((keys)=>Promise.all(keys.filter((key)=>key.startsWith("quillframe-studio-shell-")&&key!==CACHE_NAME).map((key)=>caches.delete(key)))).then(()=>self.clients.claim()));
 });
 
 self.addEventListener("fetch",(event)=>{
@@ -62,7 +62,7 @@ if (Buffer.byteLength(source) > 8 * 1024) throw new Error("generated service wor
 
 await writeFile(new URL("sw.js", dist), source, "utf8");
 console.log(JSON.stringify({
-  schema: "novelforge_studio_offline_shell_v1",
+  schema: "quillframe_studio_offline_shell_v1",
   cache: cacheName,
   precache_entries: precache.length,
   service_worker_bytes: Buffer.byteLength(source),

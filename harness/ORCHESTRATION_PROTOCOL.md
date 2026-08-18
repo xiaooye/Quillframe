@@ -1,4 +1,4 @@
-# NovelForge Orchestration Protocol · Bootstrap Router
+# Quillframe Orchestration Protocol · Bootstrap Router
 
 Authoritative human editions:
 - English: `ORCHESTRATION_PROTOCOL.en.md`

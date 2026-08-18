@@ -1,5 +1,5 @@
 @layer studio-components {
-  .nf-core-inspector-page { --inspector-accent: var(--nf-product-pink, #ec77ad); }
+  .nf-core-inspector-page { --inspector-accent: var(--qf-product-pink, #ec77ad); }
 
   .nf-inspector-query-bar label { flex: 1 1 320px; }
 
@@ -16,9 +16,9 @@
     display: grid;
     gap: 5px;
     padding: 9px;
-    border: 1px dashed color-mix(in oklab, var(--nf-product-lilac, #b99fe8) 38%, var(--wui-color-border, #ddd));
+    border: 1px dashed color-mix(in oklab, var(--qf-product-lilac, #b99fe8) 38%, var(--wui-color-border, #ddd));
     border-radius: 18px;
-    background: color-mix(in oklab, var(--nf-product-cream, #fffaf1) 88%, var(--wui-color-surface, white));
+    background: color-mix(in oklab, var(--qf-product-cream, #fffaf1) 88%, var(--wui-color-surface, white));
   }
 
   .nf-core-inspector-tabs button {
@@ -43,7 +43,7 @@
   }
 
   .nf-core-inspector-tabs button span { font-size: 11px; font-weight: 760; }
-  .nf-core-inspector-tabs button small { display: grid; place-items: center; min-inline-size: 22px; block-size: 22px; padding-inline: 5px; border-radius: 999px; color: var(--wui-color-text-muted, #766b78); background: color-mix(in oklab, var(--nf-product-lilac, #b99fe8) 13%, white); font: 700 9px/1 var(--wui-font-family-mono, monospace); }
+  .nf-core-inspector-tabs button small { display: grid; place-items: center; min-inline-size: 22px; block-size: 22px; padding-inline: 5px; border-radius: 999px; color: var(--wui-color-text-muted, #766b78); background: color-mix(in oklab, var(--qf-product-lilac, #b99fe8) 13%, white); font: 700 9px/1 var(--wui-font-family-mono, monospace); }
 
   .nf-core-inspector-panel {
     min-width: 0;
@@ -51,7 +51,7 @@
     border: 1px solid color-mix(in oklab, var(--inspector-accent) 20%, var(--wui-color-border, #ddd));
     border-radius: 22px 22px 15px 22px;
     background:
-      linear-gradient(135deg, color-mix(in oklab, var(--nf-product-cream, #fffaf1) 78%, white), color-mix(in oklab, var(--nf-product-lilac, #b99fe8) 5%, white));
+      linear-gradient(135deg, color-mix(in oklab, var(--qf-product-cream, #fffaf1) 78%, white), color-mix(in oklab, var(--qf-product-lilac, #b99fe8) 5%, white));
     box-shadow: 0 20px 48px -42px rgba(79, 52, 90, .5);
   }
 
@@ -95,16 +95,16 @@
     padding: 13px 14px;
     border: 1px solid color-mix(in oklab, var(--wui-color-border, #ddd) 76%, transparent);
     border-radius: 14px 14px 9px 14px;
-    background: color-mix(in oklab, var(--wui-color-surface, white) 92%, var(--nf-product-cream, #fffaf1));
+    background: color-mix(in oklab, var(--wui-color-surface, white) 92%, var(--qf-product-cream, #fffaf1));
   }
 
-  .nf-inspector-records article:nth-child(3n + 2) { background: color-mix(in oklab, var(--nf-product-lilac, #b99fe8) 7%, var(--wui-color-surface, white)); }
-  .nf-inspector-records article:nth-child(3n) { background: color-mix(in oklab, var(--nf-product-mint, #78cfa8) 7%, var(--wui-color-surface, white)); }
+  .nf-inspector-records article:nth-child(3n + 2) { background: color-mix(in oklab, var(--qf-product-lilac, #b99fe8) 7%, var(--wui-color-surface, white)); }
+  .nf-inspector-records article:nth-child(3n) { background: color-mix(in oklab, var(--qf-product-mint, #78cfa8) 7%, var(--wui-color-surface, white)); }
   .nf-inspector-records article > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .nf-inspector-records article > header strong { min-width: 0; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
   .nf-inspector-records article > header span { flex: 0 0 auto; color: var(--wui-color-text-muted, #766b78); font-size: 9px; }
   .nf-inspector-records article > small { color: var(--wui-color-text-muted, #766b78); font-size: 10px; }
-  .nf-inspector-records article > code { overflow-wrap: anywhere; color: color-mix(in oklab, var(--nf-product-lilac, #8d72bd) 66%, var(--wui-color-text, #403744)); font-size: 9px; white-space: pre-wrap; }
+  .nf-inspector-records article > code { overflow-wrap: anywhere; color: color-mix(in oklab, var(--qf-product-lilac, #8d72bd) 66%, var(--wui-color-text, #403744)); font-size: 9px; white-space: pre-wrap; }
 
   .nf-inspector-json {
     max-height: 560px;
@@ -112,12 +112,12 @@
     padding: 18px;
     overflow: auto;
     color: inherit;
-    background: color-mix(in oklab, var(--nf-product-lilac, #b99fe8) 7%, transparent);
+    background: color-mix(in oklab, var(--qf-product-lilac, #b99fe8) 7%, transparent);
     font: 10px/1.65 var(--wui-font-family-mono, monospace);
   }
 
   .nf-inspector-fingerprints { display: grid; gap: 7px; padding: 16px 18px 20px; }
-  .nf-inspector-fingerprints code { padding: 9px 10px; overflow-wrap: anywhere; border-radius: 10px; background: color-mix(in oklab, var(--nf-product-mint, #78cfa8) 9%, transparent); font-size: 9px; }
+  .nf-inspector-fingerprints code { padding: 9px 10px; overflow-wrap: anywhere; border-radius: 10px; background: color-mix(in oklab, var(--qf-product-mint, #78cfa8) 9%, transparent); font-size: 9px; }
   .nf-inspector-empty-copy { margin: 0; padding: 20px 18px; color: var(--wui-color-text-muted, #766b78); }
 
   .nf-core-inspector-workbench > .nf-live-projection-foot {

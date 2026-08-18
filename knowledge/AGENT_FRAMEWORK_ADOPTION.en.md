@@ -1,8 +1,8 @@
 # Agent Framework Adoption · Borrow runtime mechanisms, keep fiction semantics ours
 
-NovelForge is not a thin wrapper around one agent SDK. It studies mature agent/runtime systems for **execution mechanisms**, then adopts, adapts, or rejects them according to long-form fiction requirements.
+Quillframe is not a thin wrapper around one agent SDK. It studies mature agent/runtime systems for **execution mechanisms**, then adopts, adapts, or rejects them according to long-form fiction requirements.
 
-> **Scope ✦** This is an implementation-influence document, not a product-comparison page. General agent frameworks solve different problems from NovelForge and should not be presented as its primary customer alternatives.
+> **Scope ✦** This is an implementation-influence document, not a product-comparison page. General agent frameworks solve different problems from Quillframe and should not be presented as its primary customer alternatives.
 
 **Research snapshot:** 2026-08-14. Upstream frameworks evolve quickly; verify primary sources before turning an observation here into a dependency or architectural change.
 
@@ -29,7 +29,7 @@ A mechanism is adapted or rejected when it would blur:
 - long-term memory vs. Canon;
 - orchestration convenience vs. sparse context discipline.
 
-NovelForge owns fiction-specific semantics: Story, Character, Relationship, Canon, Reader Engagement, Surface Fundamentals, quality failure routing, settlement, and evidence-backed learning.
+Quillframe owns fiction-specific semantics: Story, Character, Relationship, Canon, Reader Engagement, Surface Fundamentals, quality failure routing, settlement, and evidence-backed learning.
 
 ---
 
@@ -50,7 +50,7 @@ NovelForge owns fiction-specific semantics: Story, Character, Relationship, Cano
 
 ### Adapt
 
-- NovelForge passes **task-bounded context**, not the whole prior conversation by default;
+- Quillframe passes **task-bounded context**, not the whole prior conversation by default;
 - provider/session memory remains execution state, never project Canon;
 - observability stores metadata and fingerprints by default rather than copying manuscript text into a second tracing authority;
 - mandatory independent semantic gates require separate invocation/session identity and artifact binding, not merely a new agent object inside the same run.
@@ -59,7 +59,7 @@ NovelForge owns fiction-specific semantics: Story, Character, Relationship, Cano
 
 - treating provider conversation state as story truth;
 - assuming every task needs an agent handoff rather than a direct model contract or deterministic step;
-- coupling NovelForge's fiction semantics to one model provider.
+- coupling Quillframe's fiction semantics to one model provider.
 
 Primary sources:
 - https://openai.github.io/openai-agents-python/
@@ -85,7 +85,7 @@ Primary sources:
 
 ### Adapt
 
-NovelForge separates more authority domains than a generic agent graph typically needs:
+Quillframe separates more authority domains than a generic agent graph typically needs:
 
 ```text
 runtime/session state
@@ -124,14 +124,14 @@ Primary sources:
 
 ### Adapt
 
-- NovelForge Project SDK scaffolds **fiction projects**, including authority classes, Canon/state, plans, manuscripts, research, corpus and regression evidence;
+- Quillframe Project SDK scaffolds **fiction projects**, including authority classes, Canon/state, plans, manuscripts, research, corpus and regression evidence;
 - Framework upgrades are exact-lock dependency migrations, not implicit toolchain upgrades;
 - deployment/observability concepts are useful, but fiction production remains provider- and hosting-neutral.
 
 ### Reject
 
 - binding the fiction project model to one cloud deployment target;
-- treating generated eval scenarios or LLM grades as authority without NovelForge's blindness/evidence rules.
+- treating generated eval scenarios or LLM grades as authority without Quillframe's blindness/evidence rules.
 
 Primary sources:
 - https://google.github.io/adk-docs/
@@ -155,7 +155,7 @@ Primary sources:
 
 ### Adapt
 
-- NovelForge defaults to **one manager + bounded specialists**;
+- Quillframe defaults to **one manager + bounded specialists**;
 - independent reviewers receive isolated packets instead of shared group-chat history;
 - worker/team state is runtime evidence, not Canon;
 - saved state must still be rebound to current project authority on resume.
@@ -221,7 +221,7 @@ Primary sources:
 
 ### Adapt
 
-- NovelForge exposes operational/project-safe capabilities, not raw Canon-write power by default;
+- Quillframe exposes operational/project-safe capabilities, not raw Canon-write power by default;
 - MCP authorization proves transport access, **not story authority**;
 - high-authority writes remain explicit Harness / Settlement transactions with project preconditions.
 
@@ -238,7 +238,7 @@ Primary sources:
 
 ## 08 · Software-engineering repository discipline
 
-NovelForge also borrows from ordinary software engineering rather than agent frameworks:
+Quillframe also borrows from ordinary software engineering rather than agent frameworks:
 
 ```text
 spec → plan → tasks → implementation → verification → acceptance
@@ -267,7 +267,7 @@ spec → plan → tasks → implementation → verification → acceptance
 
 ---
 
-## 09 · NovelForge synthesis
+## 09 · Quillframe synthesis
 
 ```text
 one manager
@@ -304,10 +304,10 @@ When an upstream mechanism changes:
 ```text
 verify primary source
 → record adopt / adapt / reject hypothesis
-→ identify affected NovelForge contract
+→ identify affected Quillframe contract
 → test capability + regression impact
 → change implementation only when justified
 → update this page with date/source
 ```
 
-**NovelForge should become better at runtime engineering without becoming a generic agent framework with a fiction prompt attached.**
+**Quillframe should become better at runtime engineering without becoming a generic agent framework with a fiction prompt attached.**

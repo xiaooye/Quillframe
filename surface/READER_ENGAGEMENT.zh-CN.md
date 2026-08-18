@@ -306,7 +306,7 @@ Profile 改阈值，不会因为作品“安静”或“专业”就把某些质
 
 ## 18 · Reader diagnostics 与 Reader Engagement contract 不是同一个东西
 
-NovelForge 可以使用受限的 Reader Simulation Panel 收集诊断证据，例如 continue desire、pacing、confusion、emotional response、favorite / stumble beat、forward pull、character investment、reward、drop-off point。
+Quillframe 可以使用受限的 Reader Simulation Panel 收集诊断证据，例如 continue desire、pacing、confusion、emotional response、favorite / stumble beat、forward pull、character investment、reward、drop-off point。
 
 这个面板只是本质量模型的**一个证据来源**，不是模型本身。
 

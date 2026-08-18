@@ -92,7 +92,7 @@ Do not call this `semantic_pending` merely because the relay is manual; the dist
 
 ## 06 · Local agent path
 
-An authenticated local Codex/Claude/other agent can often run the full Harness or bounded semantic jobs without requiring NovelForge to introduce a second provider API key.
+An authenticated local Codex/Claude/other agent can often run the full Harness or bounded semantic jobs without requiring Quillframe to introduce a second provider API key.
 
 However:
 

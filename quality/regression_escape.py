@@ -2,7 +2,7 @@
 """Deterministic QA observability for known-regression escapes.
 
 This module never decides whether prose is bad. It records already-interpreted
-mechanism identity plus expected/actual detection stage so NovelForge can tell a
+mechanism identity plus expected/actual detection stage so Quillframe can tell a
 new discovery from a known failure that escaped the manager quality loop.
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "novelforge_known_regression_escape_v1"
+SCHEMA = "quillframe_known_regression_escape_v1"
 DETECTION_STAGES = {
     "manager_self_audit",
     "reader_engagement",
@@ -180,7 +180,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge known-regression escape observability")
+    p = argparse.ArgumentParser(description="Quillframe known-regression escape observability")
     sub = p.add_subparsers(dest="command", required=True)
     r = sub.add_parser("record")
     r.add_argument("--input", required=True)

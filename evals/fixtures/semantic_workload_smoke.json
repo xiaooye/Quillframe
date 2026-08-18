@@ -1,5 +1,5 @@
 {
-  "schema": "novelforge_semantic_run_receipt_v1",
+  "schema": "quillframe_semantic_run_receipt_v1",
   "run_id": "RUN-SYNTHETIC-STORY-001",
   "session_id": "SES-SYNTHETIC-001",
   "workflow_name": "synthetic_pre_draft_causal_exploration",

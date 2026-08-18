@@ -28,7 +28,7 @@ const css = await measure(".css");
 const integration = JSON.parse(await readFile(new URL("../../../assets/brand/weiui.integration.json", import.meta.url), "utf8"));
 
 const payload = {
-  schema: "novelforge_studio_footprint_v1",
+  schema: "quillframe_studio_footprint_v1",
   generated_at: new Date().toISOString(),
   measurement: "production_build_artifacts",
   assets: { javascript: js, css },
@@ -43,5 +43,5 @@ const payload = {
 
 const targetDir = new URL(".well-known/", dist);
 await mkdir(targetDir, { recursive: true });
-await writeFile(new URL("novelforge-studio-footprint.json", targetDir), `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+await writeFile(new URL("quillframe-studio-footprint.json", targetDir), `${JSON.stringify(payload, null, 2)}\n`, "utf8");
 console.log(JSON.stringify({ schema: payload.schema, js_bytes: js.bytes, css_bytes: css.bytes, js_gzip_bytes: js.gzip_bytes, css_gzip_bytes: css.gzip_bytes }));

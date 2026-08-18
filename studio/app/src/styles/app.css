@@ -1,4 +1,4 @@
-@layer novelforge-app {
+@layer quillframe-app {
   :root {
     font-synthesis: none;
     text-rendering: optimizeLegibility;
@@ -191,7 +191,7 @@
     .nf-topbar-context > span:not(.nf-mobile-brand), .nf-topbar-context > strong { display: none; }
     .nf-mobile-brand { display: inline; color: var(--wui-color-foreground); font-weight: var(--wui-font-weight-semibold); }
     .nf-command-label, .nf-command-trigger kbd { display: none; }
-    .nf-command-trigger { min-inline-size: var(--nf-touch-target-min, 44px); padding-inline: 12px; }
+    .nf-command-trigger { min-inline-size: var(--qf-touch-target-min, 44px); padding-inline: 12px; }
     .nf-content { padding: 20px 14px 28px; }
     .nf-page { gap: var(--wui-spacing-4); }
     .nf-page-intro { display: grid; align-items: start; gap: var(--wui-spacing-3); }

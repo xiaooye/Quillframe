@@ -34,7 +34,7 @@ Every documentation SVG needs a meaningful `<title>` and `<desc>`, readable labe
 
 ## Public brand and technical namespace
 
-Quillframe is the current public brand. The former brand remains only where it names a historical record or compatibility identifier. Repository names, schema IDs, `novelforge.toml`, `novelforge.lock.json`, workflow names, and stable contract IDs are technical namespace and are not globally replaced.
+Quillframe is the current public brand. The former brand remains only where it names a historical record or compatibility identifier. Repository names, schema IDs, `quillframe.toml`, `quillframe.lock.json`, workflow names, and stable contract IDs are technical namespace and are not globally replaced.
 
 ## Bilingual parity
 

@@ -1,9 +1,9 @@
 {
   "schema": "quillframe_public_documentation_manifest_v1",
-  "framework_version": "0.8.0",
+  "framework_version": "0.9.0",
   "target_main": "58e0c616960f68571a56c808e7770c4307e053ff",
   "public_brand": "Quillframe",
-  "legacy_technical_namespace": "novelforge",
+  "legacy_technical_namespace": "quillframe",
   "chinese_style": "native_zh_CN_prose_exact_identifiers_only",
   "visual_system": {
     "principle": "THE PAGE IS THE CANVAS",
@@ -15,7 +15,7 @@
   "current_pairs": [
     ["README.en.md", "README.zh-CN.md"],
     ["docs/README.en.md", "docs/README.zh-CN.md"],
-    ["docs/why-novelforge.en.md", "docs/why-novelforge.zh-CN.md"],
+    ["docs/why-quillframe.en.md", "docs/why-quillframe.zh-CN.md"],
     ["docs/architecture.en.md", "docs/architecture.zh-CN.md"],
     ["docs/architecture-atlas.en.md", "docs/architecture-atlas.zh-CN.md"],
     ["docs/production-pipeline.en.md", "docs/production-pipeline.zh-CN.md"],

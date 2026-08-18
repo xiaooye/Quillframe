@@ -1,6 +1,6 @@
 # Corpus Policy · Govern evidence without turning source access into story or style authority
 
-NovelForge uses corpus material to study **mechanisms**, test preference/craft hypotheses, build eval evidence and identify counterexamples. Corpus is an evidence domain. It is never Project Canon, character knowledge, a hidden imitation prompt, or automatic Framework guidance.
+Quillframe uses corpus material to study **mechanisms**, test preference/craft hypotheses, build eval evidence and identify counterexamples. Corpus is an evidence domain. It is never Project Canon, character knowledge, a hidden imitation prompt, or automatic Framework guidance.
 
 > **Core invariant ✦** Access, rights, storage, analysis, learning and promotion are separate gates. Passing one gate never implies that the next gate has passed.
 
@@ -44,7 +44,7 @@ A non-empty rights basis and provenance are required.
 
 ### `analysis_only`
 
-The material may be accessed/analyzed under the declared basis, but NovelForge must not store the full text as Corpus data.
+The material may be accessed/analyzed under the declared basis, but Quillframe must not store the full text as Corpus data.
 
 Allowed storage may include:
 
@@ -64,7 +64,7 @@ A private repository does not turn unknown rights into redistributable rights.
 
 ## 03 · Deterministic Rights Gate is not legal analysis
 
-[`rights_gate.py`](rights_gate.py) validates whether **declared metadata and requested storage intent are internally consistent with NovelForge policy**.
+[`rights_gate.py`](rights_gate.py) validates whether **declared metadata and requested storage intent are internally consistent with Quillframe policy**.
 
 It enforces, for example:
 
@@ -111,7 +111,7 @@ If provenance cannot be established, lower confidence, keep only safe metadata, 
 
 ## 05 · Discovery is not ingestion
 
-A discovery result says **a candidate source was found**. It does not mean NovelForge may copy or persist the source content.
+A discovery result says **a candidate source was found**. It does not mean Quillframe may copy or persist the source content.
 
 ```text
 discovery
@@ -161,7 +161,7 @@ One work may create an observation. It does not create a universal rule.
 
 ## 08 · Named-author imitation boundary
 
-NovelForge may analyze broad, transferable craft mechanisms such as:
+Quillframe may analyze broad, transferable craft mechanisms such as:
 
 - scene causality and pressure sequencing;
 - information timing;

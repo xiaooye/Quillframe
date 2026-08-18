@@ -1,6 +1,6 @@
-# NovelForge Product Site
+# Quillframe Product Site
 
-NovelForge's public Product surface is a **Godot Web control room** with a separate Astro/Starlight documentation application.
+Quillframe's public Product surface is a **Godot Web control room** with a separate Astro/Starlight documentation application.
 
 ## Runtime boundary
 

@@ -17,7 +17,7 @@ export function StudioFailureBoundary(props: { children: JSX.Element }) {
       <main id="main-content" class="nf-studio-resilience" role="alert">
         <section class="nf-studio-resilience-card">
           <span aria-hidden="true">♡</span>
-          <small>NovelForge Studio · UI recovery</small>
+          <small>Quillframe Studio · UI recovery</small>
           <h1>{zh() ? "Studio 没有完成这次渲染。" : "Studio did not finish this render."}</h1>
           <p>{zh() ? "这只是界面故障，不会自动产生 Canon、Settlement 或 Framework 写入。可以重试，或返回 Studio 起点。" : "This is a UI failure only; it does not create Canon, Settlement, or Framework writes. Retry or return to the Studio start."}</p>
           <details>

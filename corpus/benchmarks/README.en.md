@@ -1,6 +1,6 @@
 # Corpus Benchmarks · Mechanism evidence, not style templates
 
-This directory stores **project-agnostic, cross-work mechanism benchmarks**. Their job is to preserve compact evidence about recurring craft mechanisms so NovelForge can design evals, test hypotheses, and calibrate guidance without feeding raw copyrighted corpus text into the Writer.
+This directory stores **project-agnostic, cross-work mechanism benchmarks**. Their job is to preserve compact evidence about recurring craft mechanisms so Quillframe can design evals, test hypotheses, and calibrate guidance without feeding raw copyrighted corpus text into the Writer.
 
 > **Boundary ✦** A benchmark is not Canon, not a user preference, not a named-author style fingerprint, and not automatic Framework guidance.
 
@@ -63,7 +63,7 @@ The second statement exposes a mechanism and a boundary that can actually be tes
 - pressure ladder to action;
 - concrete forward-pull ending.
 
-These entries are **migrated seed evidence**. The registry's internal version field describes that seed artifact; it must not be read as the current NovelForge release number.
+These entries are **migrated seed evidence**. The registry's internal version field describes that seed artifact; it must not be read as the current Quillframe release number.
 
 No consumer-project facts or raw source passages are stored in this registry.
 

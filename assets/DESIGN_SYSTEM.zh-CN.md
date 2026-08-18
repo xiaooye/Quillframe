@@ -1,8 +1,8 @@
 <div align="center">
-  <img src="brand/novelforge-lockup.svg" alt="NovelForge 自适应小说智能体框架" width="620" />
+  <img src="brand/quillframe-lockup.svg" alt="Quillframe 自适应小说智能体框架" width="620" />
 </div>
 
-# NovelForge Story Loom 设计系统
+# Quillframe Story Loom 设计系统
 
 > **一套视觉语言，同时服务文档与产品 UI。**
 >
@@ -18,7 +18,7 @@
 
 ## 01 · 品牌气质 ✦
 
-NovelForge 应同时具备四种气质：
+Quillframe 应同时具备四种气质：
 
 | 气质 | 设计含义 |
 |---|---|
@@ -31,7 +31,7 @@ NovelForge 应同时具备四种气质：
 
 ### 标志系统
 
-<img src="brand/novelforge-mark.svg" alt="NovelForge Story Loom 主标志" width="120" />
+<img src="brand/quillframe-mark.svg" alt="Quillframe Story Loom 主标志" width="120" />
 
 主标志结合书页、编织成 N 的 story thread 与 forge spark。高曝光入口优先使用 lockup，小尺寸位置使用 mark。不要旋转、发光、随意改色，也不要把 logo 当成 architecture/status icon。只使用系统字体回退，不提交外部字体文件。
 
@@ -39,9 +39,9 @@ NovelForge 应同时具备四种气质：
 
 ## 02 · Product Token 权威 · Story Loom v2
 
-机器源：[`brand/tokens.json`](brand/tokens.json)，schema 为 **`novelforge_brand_tokens_v2`**。
+机器源：[`brand/tokens.json`](brand/tokens.json)，schema 为 **`quillframe_brand_tokens_v2`**。
 
-当前 token contract 同时覆盖文档语义与 application constraints，是 NovelForge 侧以下内容的 source of truth：
+当前 token contract 同时覆盖文档语义与 application constraints，是 Quillframe 侧以下内容的 source of truth：
 
 - Story Loom domain families：Project、Runtime、Editorial、Evidence、Validated、Rejected、Neutral；
 - application light/dark theme roles；
@@ -65,7 +65,7 @@ NovelForge 应同时具备四种气质：
 
 ## 03 · WeiUI 集成边界 · 已合并
 
-WeiUI 是 generic **zero-JavaScript token/CSS foundation**，不是 NovelForge product authority，也不是 Phase 2C application runtime。
+WeiUI 是 generic **zero-JavaScript token/CSS foundation**，不是 Quillframe product authority，也不是 Phase 2C application runtime。
 
 机器契约：[`brand/weiui.integration.json`](brand/weiui.integration.json)。
 
@@ -90,7 +90,7 @@ Integration contract 将 WeiUI 精确固定到 commit `d84d1cd365fb5f90cbbab794d
 - 不 fork `.wui-*` component selector；
 - 不用 `!important` 逃逸 cascade。
 
-[`brand/story-loom.weiui.css`](brand/story-loom.weiui.css) 把产品 roles 映射到 `--wui-*` variables，同时把 NovelForge 专属语义保留在 `--nf-*` variables。WeiUI 升级可以改变通用实现细节，但不能静默重定义 NovelForge 概念。
+[`brand/story-loom.weiui.css`](brand/story-loom.weiui.css) 把产品 roles 映射到 `--wui-*` variables，同时把 Quillframe 专属语义保留在 `--qf-*` variables。WeiUI 升级可以改变通用实现细节，但不能静默重定义 Quillframe 概念。
 
 ---
 
@@ -248,4 +248,4 @@ Mermaid 继续作为技术文档中可检查的 source chart。
 - 已经做过真实 render；application 工作还要有真实 runtime measurements；
 - presentation code 从不成为 Core 或 story truth 的第二权威。
 
-**Story Loom 成功的标准，是 NovelForge 足够工程化、足够有编辑感、足够有辨识度，而且在不牺牲语义诚实的前提下尽可能轻。✦**
+**Story Loom 成功的标准，是 Quillframe 足够工程化、足够有编辑感、足够有辨识度，而且在不牺牲语义诚实的前提下尽可能轻。✦**

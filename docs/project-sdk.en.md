@@ -6,7 +6,7 @@ A Quillframe Project is an independently versioned fiction project. The framewor
 
 ## Project identity
 
-A supported Project declares its schema and paths in `novelforge.toml`, pins an exact framework revision in `novelforge.lock.json`, and may attest the materialized framework bundle. These filenames remain compatibility identifiers even though the public framework brand is Quillframe.
+A supported Project declares its schema and paths in `quillframe.toml`, pins an exact framework revision in `quillframe.lock.json`, and may attest the materialized framework bundle. These filenames remain compatibility identifiers even though the public framework brand is Quillframe.
 
 ## Ownership
 

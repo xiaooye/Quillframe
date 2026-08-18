@@ -2,28 +2,28 @@
 
 ## 目的
 
-NovelForge 是一个 Generic Framework，服务许多彼此独立的小说 repo。Project Adapter 负责把某个项目的物理存储映射到 Project SDK logical contract，而不是把项目事实 import 进 Framework。
+Quillframe 是一个 Generic Framework，服务许多彼此独立的小说 repo。Project Adapter 负责把某个项目的物理存储映射到 Project SDK logical contract，而不是把项目事实 import 进 Framework。
 
 ## Standard Project
 
 新项目建议直接使用 Project SDK：
 
 ```bash
-python novelforge.py project init <path> --id <PROJECT-ID> --title "Title"
+python quillframe.py project init <path> --id <PROJECT-ID> --title "Title"
 ```
 
 核心身份文件：
 
 ```text
-novelforge.toml
-novelforge.lock.json
+quillframe.toml
+quillframe.lock.json
 ```
 
 之后由项目自己拥有 `profiles/`、`bible/`、`state/`、`plans/`、`manuscripts/`、`research/`、`corpus/`、`evals/`、`tests/`、`specs/`、`assets/`。
 
 ## Legacy Project
 
-已有小说不必先做 destructive directory rewrite 才能使用 NovelForge。
+已有小说不必先做 destructive directory rewrite 才能使用 Quillframe。
 
 Legacy Adapter 可以映射：
 - legacy project identity → Project SDK identity；
@@ -78,7 +78,7 @@ Migration 分阶段执行，每阶段验证 behavior/authority compatibility。
 普通生产不应该每次跨 repo ping-pong 读取 framework 文件。Project 应解析一次 pinned framework release，并把 verified read-only dependency materialize 到：
 
 ```text
-.novelforge/framework/
+.quillframe/framework/
 ```
 
 Lockfile 记录 release/version/commit/fingerprint。Project task 使用本地同步 dependency + 本地 project state。

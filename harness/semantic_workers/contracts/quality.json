@@ -1,5 +1,5 @@
 {
-  "schema": "novelforge_model_contract_registry_v1",
+  "schema": "quillframe_model_contract_registry_v1",
   "version": "6",
   "principle": "Literary and narrative judgment belongs to model-readable contracts. Deterministic runtime binds exact contracts, candidates, provenance, permissions and execution identity; it does not reinterpret literary findings. Manager self-audit, Blind Reader, Semantic Rule Auditor and independent production review are distinct roles with distinct information boundaries.",
   "contracts": {

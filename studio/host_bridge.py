@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Portable product bridge for NovelForge Studio.
+"""Portable product bridge for Quillframe Studio.
 
 The bridge exposes versioned public Core queries plus a deliberately narrow
 runtime command boundary. Delivery surfaces never gain Canon, Settlement,
@@ -24,18 +24,18 @@ from typing import Any
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-CLI = ROOT / "novelforge.py"
+CLI = ROOT / "quillframe.py"
 CONTRACT_PATH = HERE / "host_bridge_contract.json"
 
-REQUEST_SCHEMA = "novelforge_studio_host_bridge_request_v1"
-RESULT_SCHEMA = "novelforge_studio_host_bridge_result_v1"
-DESCRIPTION_SCHEMA = "novelforge_studio_host_bridge_description_v1"
-CONTRACT_SCHEMA = "novelforge_studio_host_bridge_contract_v1"
-RESUME_PREFLIGHT_SCHEMA = "novelforge_session_resume_preflight_v1"
-TERMINATE_PREFLIGHT_SCHEMA = "novelforge_session_terminate_preflight_v1"
-RUNTIME_COMMAND_RESULT_SCHEMA = "novelforge_runtime_command_execution_result_v1"
-RUNTIME_COMMAND_RECEIPT_SCHEMA = "novelforge_runtime_command_receipt_v1"
-RUNTIME_COMMAND_RECEIPT_PROJECTION_SCHEMA = "novelforge_runtime_command_receipt_projection_v1"
+REQUEST_SCHEMA = "quillframe_studio_host_bridge_request_v1"
+RESULT_SCHEMA = "quillframe_studio_host_bridge_result_v1"
+DESCRIPTION_SCHEMA = "quillframe_studio_host_bridge_description_v1"
+CONTRACT_SCHEMA = "quillframe_studio_host_bridge_contract_v1"
+RESUME_PREFLIGHT_SCHEMA = "quillframe_session_resume_preflight_v1"
+TERMINATE_PREFLIGHT_SCHEMA = "quillframe_session_terminate_preflight_v1"
+RUNTIME_COMMAND_RESULT_SCHEMA = "quillframe_runtime_command_execution_result_v1"
+RUNTIME_COMMAND_RECEIPT_SCHEMA = "quillframe_runtime_command_receipt_v1"
+RUNTIME_COMMAND_RECEIPT_PROJECTION_SCHEMA = "quillframe_runtime_command_receipt_projection_v1"
 
 try:
     from project_hub_projection import build_projection
@@ -103,14 +103,14 @@ def sanitize(value: Any) -> Any:
 
 def _root() -> Path:
     if not CLI.exists():
-        raise BridgeError("framework_unavailable", "novelforge.py not found beside Studio")
+        raise BridgeError("framework_unavailable", "quillframe.py not found beside Studio")
     return ROOT
 
 
 def _run_cli(args: list[str], *, cwd: Path | None = None) -> dict[str, Any]:
     root = _root()
     proc = subprocess.run(
-        [sys.executable, str(root / "novelforge.py"), *args],
+        [sys.executable, str(root / "quillframe.py"), *args],
         cwd=str(cwd or root),
         text=True,
         capture_output=True,
@@ -121,16 +121,16 @@ def _run_cli(args: list[str], *, cwd: Path | None = None) -> dict[str, Any]:
     except json.JSONDecodeError:
         raise BridgeError(
             "core_cli_invalid_output",
-            "NovelForge CLI did not return a JSON object",
+            "Quillframe CLI did not return a JSON object",
             detail={"returncode": proc.returncode, "stderr": proc.stderr[-2000:]},
         )
     if not isinstance(value, dict):
-        raise BridgeError("core_cli_invalid_output", "NovelForge CLI JSON root must be an object")
+        raise BridgeError("core_cli_invalid_output", "Quillframe CLI JSON root must be an object")
     if proc.returncode != 0:
         error_code = value.get("code") if isinstance(value.get("code"), str) else "core_cli_failed"
         raise BridgeError(
             error_code,
-            value.get("message") if isinstance(value.get("message"), str) else "NovelForge CLI operation failed",
+            value.get("message") if isinstance(value.get("message"), str) else "Quillframe CLI operation failed",
             detail={"returncode": proc.returncode, "result": sanitize(value)},
         )
     return value
@@ -217,13 +217,13 @@ def _publication_preview(args: dict[str, Any], _: str) -> dict[str, Any]:
 
 def _runtime_args(args: dict[str, Any], *query_args: str) -> tuple[Path, list[str]]:
     project_root = _project_root(args)
-    runtime_db = project_root / ".novelforge" / "runtime.db"
+    runtime_db = project_root / ".quillframe" / "runtime.db"
     return project_root, ["runtime-query", "--db", str(runtime_db), *query_args]
 
 
 def _runtime_command_args(args: dict[str, Any], *command_args: str) -> tuple[Path, list[str]]:
     project_root = _project_root(args)
-    runtime_db = project_root / ".novelforge" / "runtime.db"
+    runtime_db = project_root / ".quillframe" / "runtime.db"
     return project_root, ["runtime-command", "--db", str(runtime_db), *command_args]
 
 
@@ -315,7 +315,7 @@ def _resume_inputs(args: dict[str, Any]) -> tuple[Path, str, str, int, str]:
 
 def _session_resume_preflight(args: dict[str, Any], _: str) -> dict[str, Any]:
     project_root, session_id, checkpoint_id, expected_version, authority_evidence = _resume_inputs(args)
-    runtime_db = project_root / ".novelforge" / "runtime.db"
+    runtime_db = project_root / ".quillframe" / "runtime.db"
     evidence = project_root / authority_evidence
     argv = [
         "resume-preflight", "inspect", "--db", str(runtime_db), "--project-root", str(project_root),
@@ -349,7 +349,7 @@ def _session_resume(args: dict[str, Any], surface: str) -> dict[str, Any]:
     command_id = args.get("command_id")
     if command_id is not None and (not isinstance(command_id, str) or not command_id.strip() or len(command_id) > 160):
         raise BridgeError("invalid_args", "command_id must be a non-empty string up to 160 characters")
-    authorization_ref = f"urn:novelforge:studio:user-action:{session_id}:{checkpoint_id}"
+    authorization_ref = f"urn:quillframe:studio:user-action:{session_id}:{checkpoint_id}"
     _, argv = _runtime_command_args(args, "execute-resume")
     argv += [
         "--project-root", str(project_root),
@@ -381,7 +381,7 @@ def _terminate_inputs(args: dict[str, Any]) -> tuple[Path, str, int]:
 
 def _session_terminate_preflight(args: dict[str, Any], _: str) -> dict[str, Any]:
     project_root, session_id, expected_version = _terminate_inputs(args)
-    runtime_db = project_root / ".novelforge" / "runtime.db"
+    runtime_db = project_root / ".quillframe" / "runtime.db"
     argv = [
         "terminate-preflight", "--db", str(runtime_db), "inspect",
         "--project-root", str(project_root),
@@ -415,8 +415,8 @@ def _session_terminate(args: dict[str, Any], surface: str) -> dict[str, Any]:
     command_id = args.get("command_id")
     if command_id is not None and (not isinstance(command_id, str) or not command_id.strip() or len(command_id) > 160):
         raise BridgeError("invalid_args", "command_id must be a non-empty string up to 160 characters")
-    runtime_db = project_root / ".novelforge" / "runtime.db"
-    authorization_ref = f"urn:novelforge:studio:user-action:{session_id}:terminate"
+    runtime_db = project_root / ".quillframe" / "runtime.db"
+    authorization_ref = f"urn:quillframe:studio:user-action:{session_id}:terminate"
     argv = [
         "terminate-executor", "--db", str(runtime_db), "execute-terminate",
         "--project-root", str(project_root),
@@ -585,7 +585,7 @@ def self_test() -> dict[str, Any]:
     publication_text = "第一段。\n\nPublication preview."
     publication_source = {
         "book": {
-            "identifier": "urn:novelforge:bridge-preview-self-test",
+            "identifier": "urn:quillframe:bridge-preview-self-test",
             "title": "Bridge Preview",
             "language": "zh-CN",
             "modified": "2026-08-15T00:00:00Z",
@@ -600,14 +600,14 @@ def self_test() -> dict[str, Any]:
     publication = invoke(_request("REQ-PUBLICATION", "publication.preview", {"profile": "epub", "source": publication_source}))
     publication_preview_safe = (
         publication["status"] == "ok"
-        and publication["data"].get("schema") == "novelforge_publication_preview_projection_v1"
+        and publication["data"].get("schema") == "quillframe_publication_preview_projection_v1"
         and publication["data"].get("authority") is False
         and publication["data"].get("mutation_performed") is False
         and publication["data"].get("text_roundtrip") is True
         and publication["data"].get("source_authority_verified") is False
     )
 
-    temp_root = Path(tempfile.mkdtemp(prefix="novelforge-host-bridge-"))
+    temp_root = Path(tempfile.mkdtemp(prefix="quillframe-host-bridge-"))
     project_ready = project_safe = context_safe = runtime_safe = False
     runtime_queries_ok = resume_preflight_safe = terminate_preflight_safe = False
     resume_command_safe = command_receipt_safe = terminate_command_safe = False
@@ -628,13 +628,13 @@ def self_test() -> dict[str, Any]:
         publication_from_project = invoke(_request("REQ-PUBLICATION-FILE", "publication.preview", {"project_root": str(temp_root), "source_manifest": "publication-source.json", "profile": "web"}))
         publication_preview_safe = publication_preview_safe and publication_from_project["status"] == "ok" and str(temp_root) not in canonical(publication_from_project)
 
-        runtime_db = temp_root / ".novelforge" / "runtime.db"
+        runtime_db = temp_root / ".quillframe" / "runtime.db"
         runtime_db.parent.mkdir(parents=True, exist_ok=True)
         runtime_init = _run_setup(["runtime", "--db", str(runtime_db), "init"], cwd=temp_root)
 
         session_path = temp_root / "session.json"
         session_path.write_text(json.dumps({
-            "schema": "novelforge_agent_session_v1",
+            "schema": "quillframe_agent_session_v1",
             "resource_id": "BOOK-BRIDGE",
             "project_id": "BOOK-BRIDGE",
             "session_id": "SES-BRIDGE",
@@ -655,7 +655,7 @@ def self_test() -> dict[str, Any]:
 
         event_path = temp_root / "event.json"
         event_path.write_text(json.dumps({
-            "schema": "novelforge_event_v1",
+            "schema": "quillframe_event_v1",
             "event_id": "EV-BRIDGE",
             "event_type": "semantic.requested",
             "source": {"kind": "self_test", "actor": "host_bridge.py"},
@@ -673,7 +673,7 @@ def self_test() -> dict[str, Any]:
 
         handoff_path = temp_root / "handoff.json"
         handoff_path.write_text(json.dumps({
-            "schema": "novelforge_handoff_v1",
+            "schema": "quillframe_handoff_v1",
             "handoff_id": "HO-BRIDGE",
             "source_session_id": "SES-BRIDGE",
             "target_session_class": "semantic_reviewer",
@@ -714,17 +714,17 @@ def self_test() -> dict[str, Any]:
 
         # Build a second, fully resumable session bound to the exact Project
         # identity created by the Project Adapter fixture.
-        with (temp_root / "novelforge.toml").open("rb") as handle:
+        with (temp_root / "quillframe.toml").open("rb") as handle:
             manifest = tomllib.load(handle)
         project_id = manifest["project"]["id"]
         project_authority = manifest.get("authority") if isinstance(manifest.get("authority"), dict) else {}
-        lock = load_json(temp_root / "novelforge.lock.json")
+        lock = load_json(temp_root / "quillframe.lock.json")
         framework = lock["framework"]
         artifact = temp_root / "resume-artifact.txt"
         artifact.write_text("bridge resume candidate\n", encoding="utf-8")
         artifact_fp = "sha256:" + hashlib.sha256(artifact.read_bytes()).hexdigest()
         ready_evidence = {
-            "schema": "novelforge_resume_authority_evidence_v1",
+            "schema": "quillframe_resume_authority_evidence_v1",
             "project_id": project_id,
             "project_authority_fingerprint": fingerprint(project_authority),
             "framework": {key: framework[key] for key in ("version", "commit", "bundle_fingerprint")},
@@ -736,7 +736,7 @@ def self_test() -> dict[str, Any]:
         ready_evidence_path.write_text(json.dumps(ready_evidence), encoding="utf-8")
         ready_session_path = temp_root / "resume-session.json"
         ready_session_path.write_text(json.dumps({
-            "schema": "novelforge_agent_session_v1",
+            "schema": "quillframe_agent_session_v1",
             "resource_id": project_id,
             "project_id": project_id,
             "session_id": "SES-BRIDGE-RESUME",
@@ -885,7 +885,7 @@ def dump(value: Any) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge Studio portable host bridge")
+    parser = argparse.ArgumentParser(description="Quillframe Studio portable host bridge")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("describe")
     inv = sub.add_parser("invoke")

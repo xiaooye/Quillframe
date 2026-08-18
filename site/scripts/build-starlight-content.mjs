@@ -159,7 +159,7 @@ function renderDocument(doc, sourcePath, locale) {
   const title = extractTitle(body, doc.id);
   body = stripFirstH1(body);
   body = rewriteLinks(body, sourcePath).trim();
-  const description = extractDescription(body, locale === "zh-CN" ? "NovelForge 文档。" : "NovelForge documentation.");
+  const description = extractDescription(body, locale === "zh-CN" ? "Quillframe 文档。" : "Quillframe documentation.");
   const editUrl = `https://github.com/xiaooye/cn_webnovel_agent/blob/main/${sourcePath}`;
 
   return `---
@@ -196,7 +196,7 @@ if (generated !== expectedStagedDocuments) {
 }
 
 console.log(JSON.stringify({
-  schema: "novelforge_starlight_content_v1",
+  schema: "quillframe_starlight_content_v1",
   status: "pass",
   documents: manifest.documents.length,
   staged_markdown_pages: generated,

@@ -20,11 +20,11 @@ const routeIdentity = read("src/styles/route-identities.css");
 const publicationGallery = read("src/styles/publication-gallery.css");
 const readability = read("src/styles/readability.css");
 const hardening = read("src/styles/hardening.css");
-const sharedLanguage = read("../assets/brand/novelforge-product-language.css");
+const sharedLanguage = read("../assets/brand/quillframe-product-language.css");
 
 const styleImports = [...main.matchAll(/import\s+["']\.\/styles\/([^"']+)["']/g)].map((match) => match[1]);
 check(styleImports.length === 1 && styleImports[0] === "index.css", `main.tsx must import exactly one stylesheet entrypoint; got ${styleImports.join(", ") || "none"}`);
-check(index.includes('@import "../../../assets/brand/novelforge-product-language.css"'), "Product Site must consume the shared product-language tokens");
+check(index.includes('@import "../../../assets/brand/quillframe-product-language.css"'), "Product Site must consume the shared product-language tokens");
 check(index.indexOf('product-surface.css') < index.indexOf('architecture-explorer.css'), "shared primitives must load before route feature styles");
 check(index.indexOf('architecture-explorer.css') < index.indexOf('kawaii-surfaces.css'), "Story Loom product-language composition must load after route defaults");
 check(index.indexOf('kawaii-surfaces.css') < index.indexOf('embedded-features.css'), "embedded feature ownership must remain after the shared kawaii language");
@@ -37,7 +37,7 @@ check(!index.includes('home-identity.css'), "temporary simplified-home rewrite m
 check(!index.includes("surface-audit.css"), "legacy surface-audit override must not return to the cascade");
 check(!exists("src/styles/surface-audit.css"), "legacy surface-audit.css must stay deleted");
 check(!exists("src/styles/readability-audit.css"), "readability must remain a named hardening layer, not a catch-all audit override");
-check(sharedLanguage.includes("--nf-product-pink") && sharedLanguage.includes("--nf-product-radius-panel"), "shared product-language tokens are incomplete");
+check(sharedLanguage.includes("--qf-product-pink") && sharedLanguage.includes("--qf-product-radius-panel"), "shared product-language tokens are incomplete");
 
 check(surface.includes("border-radius: 28px") && surface.includes("radial-gradient") && surface.includes("border: 1px dashed"), "shared ProductSurfaceHero must retain the restored Story Loom framed treatment for newer routes");
 check(surface.includes('.product-surface-hero[data-tone="project"]') && surface.includes('.product-surface-hero[data-tone="publication"]'), "shared surface tones must retain route-aware pastel treatments");
@@ -62,8 +62,8 @@ for (const marker of [".snapshot-text", ".snapshot-web", ".snapshot-print", ".sn
 }
 check(publicationGallery.includes("columns: 2") && publicationGallery.includes("novel.example / chapter-1") && publicationGallery.includes("9:41"), "publication gallery must visibly distinguish print, web, and EPUB objects");
 check(!publicationGallery.includes("!important"), "publication gallery must not depend on specificity escalation");
-check(readability.includes("--nf-copy-size: 14px") && readability.includes("--nf-micro-size: 11px"), "readability hardening must preserve the product copy floor");
-check(readability.includes(".unified-info-card p") && readability.includes("font-size: var(--nf-copy-size)"), "capability copy must not regress to miniature dashboard text");
+check(readability.includes("--qf-copy-size: 14px") && readability.includes("--qf-micro-size: 11px"), "readability hardening must preserve the product copy floor");
+check(readability.includes(".unified-info-card p") && readability.includes("font-size: var(--qf-copy-size)"), "capability copy must not regress to miniature dashboard text");
 check(!readability.includes("!important"), "readability hardening must not depend on specificity escalation");
 check(hardening.includes(":focus-visible") && hardening.includes("prefers-reduced-motion: reduce"), "final hardening layer must preserve accessibility contracts");
 check(!index.includes("!important"), "the stylesheet entrypoint must not encode specificity overrides");
@@ -73,7 +73,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_css_architecture_v7",
+    schema: "quillframe_css_architecture_v7",
     status: "pass",
     entrypoints: 1,
     audit_override: false,

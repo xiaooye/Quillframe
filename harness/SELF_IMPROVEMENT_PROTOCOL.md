@@ -1,4 +1,4 @@
-# NovelForge Self-Improvement Protocol · Bootstrap Router
+# Quillframe Self-Improvement Protocol · Bootstrap Router
 
 Authoritative editions:
 - English: `SELF_IMPROVEMENT_PROTOCOL.en.md`

@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "novelforge_evaluation_execution_identity_v1"
+SCHEMA = "quillframe_evaluation_execution_identity_v1"
 FP_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
@@ -107,9 +107,9 @@ def build_identity(*, root: Path, queue: Path, jobs: Path, capabilities: Path, c
         "harness/semantic_workers/model_contract_catalog.json",
     ]
     harness_parts = {rel: file_fingerprint(root / rel) for rel in harness_files}
-    max_calls = optional_positive_int(env, "NOVELFORGE_MAX_SEMANTIC_CALLS")
-    job_timeout = optional_positive_int(env, "NOVELFORGE_JOB_TIMEOUT_MINUTES")
-    budget_binding = env.get("NOVELFORGE_RESOURCE_BUDGET_BINDING")
+    max_calls = optional_positive_int(env, "QUILLFRAME_MAX_SEMANTIC_CALLS")
+    job_timeout = optional_positive_int(env, "QUILLFRAME_JOB_TIMEOUT_MINUTES")
+    budget_binding = env.get("QUILLFRAME_RESOURCE_BUDGET_BINDING")
     if not budget_binding:
         budget_binding = "workflow_has_no_explicit_token_or_job-timeout_budget" if max_calls is None and job_timeout is None else "explicit_workflow_resource_budget"
     payload: dict[str, Any] = {

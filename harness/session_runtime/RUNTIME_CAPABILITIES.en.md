@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>CAPABILITY EVIDENCE</kbd>&nbsp;&nbsp;<kbd>CAPABILITY ≠ AUTHORITY</kbd></p>
 
-NovelForge never treats a runtime or provider name as proof that a capability exists. “ChatGPT”, “Codex”, “Claude”, “MCP”, “GitHub Actions”, or “local model” describes a runtime family—not whether this invocation can search the Web, write a repository, call a model, access user files, or reach a human reviewer.
+Quillframe never treats a runtime or provider name as proof that a capability exists. “ChatGPT”, “Codex”, “Claude”, “MCP”, “GitHub Actions”, or “local model” describes a runtime family—not whether this invocation can search the Web, write a repository, call a model, access user files, or reach a human reviewer.
 
 > **Core invariant ✦** Route from proven current capabilities. Do not infer them from documentation, memory, branding, or model self-assertion.
 

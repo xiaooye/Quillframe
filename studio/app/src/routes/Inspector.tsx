@@ -91,7 +91,7 @@ export default function Inspector() {
             {loading() ? (zh() ? "检查中…" : "Inspecting…") : (zh() ? "读取真实投影" : "Inspect real projections")}
           </button>
           <Show when={bundle()}>
-            <button class="wui-button wui-button--outline" type="button" onClick={() => downloadProjection(bundle()!, "novelforge-inspector-projection.json")}>{zh() ? "导出" : "Export"}</button>
+            <button class="wui-button wui-button--outline" type="button" onClick={() => downloadProjection(bundle()!, "quillframe-inspector-projection.json")}>{zh() ? "导出" : "Export"}</button>
           </Show>
         </section>
         <QueryError message={error()} />

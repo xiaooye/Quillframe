@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>TRANSPORT-NEUTRAL</kbd>&nbsp;&nbsp;<kbd>PROVENANCE</kbd>&nbsp;&nbsp;<kbd>VALIDATE BEFORE CONSUME</kbd></p>
 
-The Semantic Execution Runtime is the transport layer between a frozen semantic job and an eligible model/human invocation. It exists so NovelForge can change **how** judgment executes without changing **what judgment was requested**.
+The Semantic Execution Runtime is the transport layer between a frozen semantic job and an eligible model/human invocation. It exists so Quillframe can change **how** judgment executes without changing **what judgment was requested**.
 
 > **Core invariant ✦** Transport may change. Semantic identity, bounded input, rubric, output contract, permissions, and fingerprint do not silently change with it.
 

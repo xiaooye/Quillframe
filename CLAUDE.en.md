@@ -1,6 +1,6 @@
-# Claude Code · NovelForge Framework Bootstrap
+# Claude Code · Quillframe Framework Bootstrap
 
-This repository contains the **generic NovelForge framework**, not a specific novel. Claude Code may host the manager or a bounded specialist, but provider/session state never becomes fiction authority.
+This repository contains the **generic Quillframe framework**, not a specific novel. Claude Code may host the manager or a bounded specialist, but provider/session state never becomes fiction authority.
 
 ## 01 · Bootstrap
 
@@ -15,7 +15,7 @@ Then load only the contracts and implementation modules required by the active t
 
 ## 02 · Exactly one task mode
 
-Resolve one primary NovelForge task mode before execution. Do not silently turn a review into a rewrite, a draft into the next chapter, or an audit into a settlement.
+Resolve one primary Quillframe task mode before execution. Do not silently turn a review into a rewrite, a draft into the next chapter, or an audit into a settlement.
 
 When operating against a consuming novel project:
 
@@ -26,7 +26,7 @@ When operating against a consuming novel project:
 
 ## 03 · Contract-first semantic work
 
-NovelForge is AI-native but **not prompt-only**.
+Quillframe is AI-native but **not prompt-only**.
 
 Use [`harness/semantic_workers/model_contract_catalog.json`](harness/semantic_workers/model_contract_catalog.json) to resolve the smallest semantic pack required by the task. Models own literary/semantic interpretation; deterministic code owns authority, permission, visibility, fingerprints, persistence, hard budgets, stage isolation, transactions and typed validation.
 

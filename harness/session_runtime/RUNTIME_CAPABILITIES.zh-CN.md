@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · 契约</kbd>&nbsp;&nbsp;<kbd>能力证据</kbd>&nbsp;&nbsp;<kbd>CAPABILITY ≠ AUTHORITY</kbd></p>
 
-NovelForge 从不把 runtime 或 provider 名字当成 capability 证据。“ChatGPT”“Codex”“Claude”“MCP”“GitHub Actions”“local model”只描述运行时家族，并不能证明这一次 invocation 现在真的能搜索 Web、写 GitHub repo、调用模型、读取用户文件或联系人工 reviewer。
+Quillframe 从不把 runtime 或 provider 名字当成 capability 证据。“ChatGPT”“Codex”“Claude”“MCP”“GitHub Actions”“local model”只描述运行时家族，并不能证明这一次 invocation 现在真的能搜索 Web、写 GitHub repo、调用模型、读取用户文件或联系人工 reviewer。
 
 > **核心不变量 ✦** 只根据当前能够证明的 capability 路由。不要根据文档、旧记忆、品牌名称或模型自我声明去猜。
 

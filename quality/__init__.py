@@ -1,4 +1,4 @@
-"""NovelForge deterministic quality-control primitives.
+"""Quillframe deterministic quality-control primitives.
 
 Semantic judgment is executed only through declared host/runtime capabilities.
 Modules in this package package, validate, aggregate, and persist quality work;

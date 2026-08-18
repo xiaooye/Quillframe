@@ -306,7 +306,7 @@ Profiles alter thresholds. They do not delete quality dimensions simply because 
 
 ## 18 · Reader diagnostics versus Reader Engagement contract
 
-NovelForge may use a bounded Reader Simulation Panel to gather diagnostic evidence. That panel can report signals such as continue desire, pacing, confusion, emotional response, favorite/stumble beats, forward pull, character investment, reward, and drop-off points.
+Quillframe may use a bounded Reader Simulation Panel to gather diagnostic evidence. That panel can report signals such as continue desire, pacing, confusion, emotional response, favorite/stumble beats, forward pull, character investment, reward, and drop-off points.
 
 The panel is **one evidence source** for this quality model. It is not the model itself.
 

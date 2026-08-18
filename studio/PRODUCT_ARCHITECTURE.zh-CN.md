@@ -1,8 +1,8 @@
-# NovelForge Studio · 产品架构
+# Quillframe Studio · 产品架构
 
 <p><kbd>SYSTEM-IMPROVE</kbd>&nbsp;&nbsp;<kbd>READ-ONLY CORE</kbd>&nbsp;&nbsp;<kbd>LOW-OVERHEAD PRODUCT SHELL</kbd></p>
 
-本文记录建立在当前 live NovelForge Core 与 Product contracts 之上的 Studio 产品架构。它是一份 consumer specification，不是另一份 runtime specification。Phase 2C 现在明确采用 **SolidJS + TypeScript + Vite + `@solidjs/router`**，WeiUI 只作为 **zero-JavaScript CSS/token foundation**。Local Web 保持一等产品面；Tauri 只是 optional/installable desktop host，不再是产品架构中心。
+本文记录建立在当前 live Quillframe Core 与 Product contracts 之上的 Studio 产品架构。它是一份 consumer specification，不是另一份 runtime specification。Phase 2C 现在明确采用 **SolidJS + TypeScript + Vite + `@solidjs/router`**，WeiUI 只作为 **zero-JavaScript CSS/token foundation**。Local Web 保持一等产品面；Tauri 只是 optional/installable desktop host，不再是产品架构中心。
 
 > **不变量 ✦ `UI CONSUMES CORE STATE. UI DOES NOT INVENT CORE STATE.`**
 
@@ -12,15 +12,15 @@
 
 ### 已经存在的 Side Goal substrate
 
-NovelForge 已经具备相当完整的 Studio 底座：
+Quillframe 已经具备相当完整的 Studio 底座：
 
 - Session / Run / Checkpoint identity 与持久 Control Plane；
 - typed host capability evidence，并明确 `capability != authority`；
 - Project Adapter 对 logical project domains 的解析；
-- `novelforge_context_inspector_v2`：authority-aware、stage-aware 的 Context view 与安全 derived controls；
-- `novelforge_run_receipt_v1`：metadata-only execution evidence；
-- `novelforge_production_readiness_v1`：同一 fingerprint 的 user-visible readiness conjunction；
-- `novelforge_publication_ir_v1` + deterministic compiler：从 Accepted manuscript text 生成 derived publication；
+- `quillframe_context_inspector_v2`：authority-aware、stage-aware 的 Context view 与安全 derived controls；
+- `quillframe_run_receipt_v1`：metadata-only execution evidence；
+- `quillframe_production_readiness_v1`：同一 fingerprint 的 user-visible readiness conjunction；
+- `quillframe_publication_ir_v1` + deterministic compiler：从 Accepted manuscript text 生成 derived publication；
 - semantic contract ID、input/result fingerprint、worker reference 与 typed status；
 - Quality Evolution、Reader Expectations、State Graph、scenario branch 与 settlement receipt 等非 Canon 证据/状态机制；
 - deterministic docs、design-system、Framework-contract 与 release CI。
@@ -33,30 +33,30 @@ Story Loom 现在已经不只是 documentation styling，而是 application-read
 
 当前 `main` 已包含：
 
-- `assets/brand/tokens.json`，schema 为 `novelforge_brand_tokens_v2`；
+- `assets/brand/tokens.json`，schema 为 `quillframe_brand_tokens_v2`；
 - `assets/brand/weiui.integration.json`，把 generic WeiUI foundation 精确固定到 commit `d84d1cd365fb5f90cbbab794d2358f7a13b29b79`；
 - Phase 2C 只允许 `@weiui/tokens` 与 `@weiui/css`；
 - `@weiui/react` 与 `@weiui/headless` 明确禁止成为 Studio runtime dependency；
 - `assets/brand/story-loom.weiui.css`，在 WeiUI tokens/CSS 之后以 `wui-theme` layer 加载；
 - WeiUI runtime JavaScript required = `false`；
-- machine-owned light/dark theme roles，以及 NovelForge `--nf-*` product-semantic variables；
+- machine-owned light/dark theme roles，以及 Quillframe `--qf-*` product-semantic variables；
 - mobile-first breakpoint、44px minimum touch target、focus geometry、`en-US` + `zh-CN`、logical properties、reduced motion 与 no-default-polling contract；
 - `scripts/design_system_quality.py` + CI，确定性验证 exact pin/provenance、CSS layering、contrast、mobile/i18n/a11y 与 runtime-overhead invariants。
 
-Story Loom 继续拥有 NovelForge 产品语义。WeiUI 拥有 generic CSS/token primitives。Integration contract 是 dependency boundary，不会把产品身份或 story authority 交给 WeiUI。
+Story Loom 继续拥有 Quillframe 产品语义。WeiUI 拥有 generic CSS/token primitives。Integration contract 是 dependency boundary，不会把产品身份或 story authority 交给 WeiUI。
 
 ### Studio 可以直接消费的 Core interfaces
 
 | Core contract | Studio 用途 | Authority 边界 |
 |---|---|---|
-| `novelforge_run_receipt_v1` | Run summary、真实 Context loading、semantic jobs、guard outcomes | 只属于 execution evidence |
-| `novelforge_context_inspector_v2` | Context source、authority、stage eligibility、derived controls | overlay/proposal；不是 Canon |
-| `novelforge_production_readiness_v1` | 解释同一 candidate fingerprint 上哪些 gate pass/fail/pending | deterministic gate evidence；不是文学分数，也不是 Canon |
-| `novelforge_publication_ir_v1` + `publication/compiler.py` | 把 Accepted text 确定性编译为 clean text、Web HTML、print-oriented HTML/CSS 与 EPUB 3.3 | derived output；精确保留正文；`authority=false` |
+| `quillframe_run_receipt_v1` | Run summary、真实 Context loading、semantic jobs、guard outcomes | 只属于 execution evidence |
+| `quillframe_context_inspector_v2` | Context source、authority、stage eligibility、derived controls | overlay/proposal；不是 Canon |
+| `quillframe_production_readiness_v1` | 解释同一 candidate fingerprint 上哪些 gate pass/fail/pending | deterministic gate evidence；不是文学分数，也不是 Canon |
+| `quillframe_publication_ir_v1` + `publication/compiler.py` | 把 Accepted text 确定性编译为 clean text、Web HTML、print-oriented HTML/CSS 与 EPUB 3.3 | derived output；精确保留正文；`authority=false` |
 | Session / Run identity | navigation、history、resume affordance | operational identity |
 | Control Plane | event/handoff/result/consume lineage | operational evidence |
-| `novelforge_host_capabilities_v1` | integration/capability health | capability 不是 authority |
-| `novelforge_project_adapter_resolution_v1` | Project Hub logical domains / paths | 只负责 path classification |
+| `quillframe_host_capabilities_v1` | integration/capability health | capability 不是 authority |
+| `quillframe_project_adapter_resolution_v1` | Project Hub logical domains / paths | 只负责 path classification |
 | semantic contract catalog | Semantic Pack Inspector label / deep link | contract metadata |
 | settlement receipts | settlement review / failure explanation | settlement semantics 仍由 Core 拥有 |
 
@@ -116,7 +116,7 @@ Creator Mode 不应该被迫按第二条链路思考。
 
 **Story** —— Story Loom、Characters、Relationships、World。它们应该是 evidence-rich creative view，而不是通用 CRUD profile。
 
-**Review** —— Reader evidence、Quality Evolution、Context Inspector、branches、continuity findings、pending gates，以及当前 exact candidate 的 `novelforge_production_readiness_v1` gate explanation。
+**Review** —— Reader evidence、Quality Evolution、Context Inspector、branches、continuity findings、pending gates，以及当前 exact candidate 的 `quillframe_production_readiness_v1` gate explanation。
 
 **Publish** —— 通过当前 Core Publication IR/compiler 对 Accepted manuscript 做确定性 compile / validate，并展示 Core 真正支持的 output profile 与 provenance。更丰富的 typesetting controls 必须等对应 Core contract，而不是存在于 UI state 里自说自话。
 
@@ -163,11 +163,11 @@ Global Search 必须保留 source domain 与 authority class。manuscript text�
 
 ## 05 · Run / Context Inspector vertical slice
 
-Phase 1 先验证 NovelForge 最有辨识度的 observability promise：
+Phase 1 先验证 Quillframe 最有辨识度的 observability promise：
 
 > **“MODEL THOUGHT THIS WAS SUPPORT” 和 “THIS ACTUALLY ENTERED MODEL CONTEXT” 必须是两件不同的事。**
 
-`novelforge_run_receipt_v1` 已经直接支持这个区别：
+`quillframe_run_receipt_v1` 已经直接支持这个区别：
 
 - `support_block_ids` —— semantic selection 认为可以支持当前问题的 block；
 - `loaded_support_block_ids` —— 实际进入 packet 的 support；
@@ -193,18 +193,18 @@ Studio 至少需要四个彼此正交的视觉维度，不能让一种颜色同�
 
 **Provenance** —— source run、contract、worker、artifact fingerprint、readiness receipt、publication source fingerprint、build result、settlement transaction。surface 可以截断，完整值必须能一键展开。
 
-Core 没有定义 calibrated measurement 时，UI 禁止发明看起来很科学的百分比。`novelforge_production_readiness_v1` 是 typed gate status 的 conjunction，不是质量百分比。
+Core 没有定义 calibrated measurement 时，UI 禁止发明看起来很科学的百分比。`quillframe_production_readiness_v1` 是 typed gate status 的 conjunction，不是质量百分比。
 
 ---
 
 ## 07 · Design System direction
 
-**`assets/brand/tokens.json` 是 NovelForge product-token authority。** 当前 schema 已升级为 `novelforge_brand_tokens_v2`，同时包含 Story Loom visual semantics 与 machine-readable app constraints。
+**`assets/brand/tokens.json` 是 Quillframe product-token authority。** 当前 schema 已升级为 `quillframe_brand_tokens_v2`，同时包含 Story Loom visual semantics 与 machine-readable app constraints。
 
 当前 live dependency chain 是：
 
 ```text
-NovelForge Story Loom v2 tokens
+Quillframe Story Loom v2 tokens
 → assets/brand/weiui.integration.json
 → @weiui/tokens + @weiui/css
 → assets/brand/story-loom.weiui.css (`wui-theme`)
@@ -215,10 +215,10 @@ NovelForge Story Loom v2 tokens
 
 所有权继续明确分开：
 
-- NovelForge 拥有 Story Loom domain semantics、authority/status/provenance encoding、typography roles、density、responsive/i18n interaction rules 与视觉人格；
+- Quillframe 拥有 Story Loom domain semantics、authority/status/provenance encoding、typography roles、density、responsive/i18n interaction rules 与视觉人格；
 - WeiUI 拥有 generic reusable token/CSS primitives 与公开 CSS/token contracts；
 - `weiui.integration.json` 拥有 exact upstream pin 与 consumption boundary；
-- `story-loom.weiui.css` 拥有到 WeiUI variables + NovelForge `--nf-*` semantics 的确定性映射；
+- `story-loom.weiui.css` 拥有到 WeiUI variables + Quillframe `--qf-*` semantics 的确定性映射；
 - `design_system_quality.py` 拥有 machine-checkable integration gate。
 
 WeiUI 通用的 `success` state 不能被拿来暗示 Accepted Canon、通过的 production-readiness conjunction 或有效 publication artifact。产品 authority 与 validation state 必须继续是分开的、带文字标签的表达通道。
@@ -253,7 +253,7 @@ WeiUI 通用的 `success` state 不能被拿来暗示 Accepted Canon、通过的
 ```text
 Studio surface
 → Studio projection/query adapter
-→ stable NovelForge Core CLI/schema/query/command contracts
+→ stable Quillframe Core CLI/schema/query/command contracts
 → Core persistence / deterministic derived build
 ```
 
@@ -346,7 +346,7 @@ Publication build / validation 同样由 Core 拥有。Studio 可以 package inp
 
 **Phase 4 — Publication Studio**
 
-- 现在可以直接基于已合并的 `novelforge_publication_ir_v1` 与 deterministic compiler 开始；
+- 现在可以直接基于已合并的 `quillframe_publication_ir_v1` 与 deterministic compiler 开始；
 - 第一阶段只 preview / validate Core 真实支持的四类输出：clean text、Web HTML、print-oriented HTML/CSS、EPUB 3.3；
 - release EPUB 必须展示 external EPUBCheck requirement，不能把 internal validation 冒充完整 conformance；
 - print-oriented HTML 不能标成 final print PDF；

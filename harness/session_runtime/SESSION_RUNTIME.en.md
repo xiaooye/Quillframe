@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>SESSION ≠ RUN ≠ CHECKPOINT</kbd>&nbsp;&nbsp;<kbd>RESUMABLE</kbd></p>
 
-The Session Runtime gives NovelForge a durable execution identity across chat turns, local agents, external workers, waits, retries, and restarts. It records **where execution is**, not what is true in the novel.
+The Session Runtime gives Quillframe a durable execution identity across chat turns, local agents, external workers, waits, retries, and restarts. It records **where execution is**, not what is true in the novel.
 
 > **Core invariant ✦** Session/provider history can help resume work. It never becomes Project authority merely because it persisted.
 

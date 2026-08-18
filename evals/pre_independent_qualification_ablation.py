@@ -97,7 +97,7 @@ def build()->dict[str,Any]:
     queue={'blind':True,'suite_version':'pre-independent-qualification-v1','cases':cases}
     jobs=make_eval_jobs(queue,source_session_id='SES-QUAL-ABLATION',handoff_id='HND-QUAL-ABLATION')
     return {
-        'schema':'novelforge_pre_independent_qualification_ablation_v1',
+        'schema':'quillframe_pre_independent_qualification_ablation_v1',
         'semantic_status':'PENDING_MODEL',
         'manager_self_judgment_allowed':False,
         'paired_conditions':['BEFORE_FUNCTION_ONLY','AFTER_THREE_LAYER'],
@@ -128,7 +128,7 @@ def self_test()->dict[str,Any]:
         'normal_ci_model_execution':packet['model_execution'] is False,
     }
     return {
-        'schema':'novelforge_pre_independent_qualification_ablation_test_v1',
+        'schema':'quillframe_pre_independent_qualification_ablation_test_v1',
         'pre_independent_qualification_ablation_contract':'PASS' if all(checks.values()) else 'FAIL',
         'checks':checks,
         'model_execution':False,

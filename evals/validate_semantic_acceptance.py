@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 EVALS = ROOT / "evals"
 DEFAULT_BASELINE = EVALS / "baselines" / "semantic-8.0-dev.1.json"
 ROUTER = ROOT / "harness" / "semantic_workers" / "semantic_worker_router.py"
-SCHEMA = "novelforge_semantic_acceptance_baseline_v1"
+SCHEMA = "quillframe_semantic_acceptance_baseline_v1"
 FP_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 FORBIDDEN_BASELINE_KEYS = {
@@ -52,7 +52,7 @@ def leaked_keys(value: Any, path: str = "$") -> list[str]:
 
 
 def current_semantic_jobs() -> tuple[str, dict[str, str]]:
-    with tempfile.TemporaryDirectory(prefix="novelforge-semantic-baseline-") as td:
+    with tempfile.TemporaryDirectory(prefix="quillframe-semantic-baseline-") as td:
         tmp = Path(td)
         queue = tmp / "queue.json"
         jobs = tmp / "jobs.json"
@@ -186,7 +186,7 @@ def evaluate(path: Path) -> dict[str, Any]:
     baseline = load(path)
     errors = validate_baseline(baseline, suite_version, current)
     return {
-        "schema": "novelforge_semantic_acceptance_validation_v1",
+        "schema": "quillframe_semantic_acceptance_validation_v1",
         "baseline": str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path),
         "suite_version": suite_version,
         "semantic_case_count": len(current),
@@ -293,7 +293,7 @@ def self_test() -> int:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge reviewed semantic acceptance baseline validator")
+    p = argparse.ArgumentParser(description="Quillframe reviewed semantic acceptance baseline validator")
     sub = p.add_subparsers(dest="command", required=True)
     sub.add_parser("self-test")
     v = sub.add_parser("validate")

@@ -1,8 +1,8 @@
-# Agent 框架机制采用 · 借运行时机制，但小说语义必须由 NovelForge 自己拥有
+# Agent 框架机制采用 · 借运行时机制，但小说语义必须由 Quillframe 自己拥有
 
-NovelForge 不是某个 Agent SDK 外面套一层小说提示词。它会研究成熟 Agent / Runtime 系统里的**执行机制**，再按照长篇小说生产真正需要的边界决定：采用、改造，还是拒绝。
+Quillframe 不是某个 Agent SDK 外面套一层小说提示词。它会研究成熟 Agent / Runtime 系统里的**执行机制**，再按照长篇小说生产真正需要的边界决定：采用、改造，还是拒绝。
 
-> **范围 ✦** 这是一份“实现影响”文档，不是产品竞品页。通用 Agent 框架解决的问题与 NovelForge 不同，不应该被摆成主要客户替代品。
+> **范围 ✦** 这是一份“实现影响”文档，不是产品竞品页。通用 Agent 框架解决的问题与 Quillframe 不同，不应该被摆成主要客户替代品。
 
 **研究快照：2026-08-14。** 上游框架变化很快；任何准备进入架构或依赖层的结论，都必须重新核对第一方资料。
 
@@ -29,7 +29,7 @@ NovelForge 不是某个 Agent SDK 外面套一层小说提示词。它会研究�
 - long-term memory vs. Canon；
 - 编排方便 vs. 稀疏上下文纪律。
 
-Story、Character、Relationship、Canon、Reader Engagement、Surface Fundamentals、质量失败路由、Settlement 与证据化学习，属于 NovelForge 自己的小说语义，不从通用 Agent 框架外包。
+Story、Character、Relationship、Canon、Reader Engagement、Surface Fundamentals、质量失败路由、Settlement 与证据化学习，属于 Quillframe 自己的小说语义，不从通用 Agent 框架外包。
 
 ---
 
@@ -50,7 +50,7 @@ Story、Character、Relationship、Canon、Reader Engagement、Surface Fundament
 
 ### 改造
 
-- NovelForge 默认传递**任务级受限上下文**，而不是整段历史会话；
+- Quillframe 默认传递**任务级受限上下文**，而不是整段历史会话；
 - provider/session memory 永远只是执行状态，不是项目正典；
 - observability 默认记录 metadata / fingerprint，而不是复制整份 manuscript 到第二套 tracing authority；
 - mandatory independent gate 要求真正不同的 invocation / session 与 artifact binding，不是同一个 run 里再 new 一个 agent object。
@@ -85,7 +85,7 @@ Story、Character、Relationship、Canon、Reader Engagement、Surface Fundament
 
 ### 改造
 
-NovelForge 至少明确区分三类持久域：
+Quillframe 至少明确区分三类持久域：
 
 ```text
 runtime / session state
@@ -124,14 +124,14 @@ Scenario fork、run receipt、checkpoint、memory overlay 与 generic graph stat
 
 ### 改造
 
-- NovelForge Project SDK scaffold 的是**小说工程**，包含 authority classes、Canon/state、plans、manuscripts、research、corpus 与 regression evidence；
+- Quillframe Project SDK scaffold 的是**小说工程**，包含 authority classes、Canon/state、plans、manuscripts、research、corpus 与 regression evidence；
 - Framework upgrade 是 exact-lock dependency migration，不是工具链自动升级；
 - deployment / observability 思想可以借，但小说生产仍保持 provider-neutral、hosting-neutral。
 
 ### 拒绝
 
 - 把小说项目模型绑定到一个 cloud deployment target；
-- 自动生成 eval scenario 或 LLM grade 没经过 NovelForge blindness / evidence rule 就获得权威。
+- 自动生成 eval scenario 或 LLM grade 没经过 Quillframe blindness / evidence rule 就获得权威。
 
 第一方资料：
 - https://google.github.io/adk-docs/
@@ -155,7 +155,7 @@ Scenario fork、run receipt、checkpoint、memory overlay 与 generic graph stat
 
 ### 改造
 
-- NovelForge 默认 **single manager + bounded specialists**；
+- Quillframe 默认 **single manager + bounded specialists**；
 - independent reviewer 收到隔离 packet，而不是共享 group-chat history；
 - worker/team state 是 runtime evidence，不是 Canon；
 - saved state 恢复时必须重新绑定当前 project authority。
@@ -221,7 +221,7 @@ Scenario fork、run receipt、checkpoint、memory overlay 与 generic graph stat
 
 ### 改造
 
-- NovelForge 默认暴露 operational / project-safe capability，而不是 raw Canon-write power；
+- Quillframe 默认暴露 operational / project-safe capability，而不是 raw Canon-write power；
 - MCP authorization 证明的是 transport access，**不是 story authority**；
 - 高权威写入仍然必须走 Harness / Settlement transaction 与项目 precondition。
 
@@ -238,7 +238,7 @@ Scenario fork、run receipt、checkpoint、memory overlay 与 generic graph stat
 
 ## 08 · 普通软件工程同样是重要来源
 
-NovelForge 还借用一套并不属于 Agent 框架的纪律：
+Quillframe 还借用一套并不属于 Agent 框架的纪律：
 
 ```text
 spec → plan → tasks → implementation → verification → acceptance
@@ -267,7 +267,7 @@ spec → plan → tasks → implementation → verification → acceptance
 
 ---
 
-## 09 · NovelForge 最终综合
+## 09 · Quillframe 最终综合
 
 ```text
 one manager
@@ -304,10 +304,10 @@ one manager
 ```text
 重新核对第一方资料
 → 记录 adopt / adapt / reject 假设
-→ 找到受影响的 NovelForge contract
+→ 找到受影响的 Quillframe contract
 → 跑 capability + regression impact
 → 只有确实合理时才改实现
 → 更新本页日期与来源
 ```
 
-**NovelForge 应该不断变得更懂 runtime engineering，但不能退化成“通用 Agent 框架 + 小说提示词”。**
+**Quillframe 应该不断变得更懂 runtime engineering，但不能退化成“通用 Agent 框架 + 小说提示词”。**

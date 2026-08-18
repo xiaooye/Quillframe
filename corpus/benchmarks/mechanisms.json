@@ -1,5 +1,5 @@
 {
-  "schema": "novelforge_mechanism_benchmark_registry_v1",
+  "schema": "quillframe_mechanism_benchmark_registry_v1",
   "version": "7.0.0",
   "benchmarks": [
     {

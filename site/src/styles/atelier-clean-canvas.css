@@ -5,9 +5,9 @@
 
 @layer atelier-clean-canvas {
   :root[data-experience="story-loom-kawaii-atelier-v5"] {
-    --atelier-canvas: color-mix(in oklab, var(--wui-color-background) 98%, var(--nf-lane-evidence-fill));
-    --atelier-canvas-wash-blue: color-mix(in oklab, var(--nf-lane-project-fill) 18%, transparent);
-    --atelier-canvas-wash-pink: color-mix(in oklab, var(--nf-lane-editorial-fill) 14%, transparent);
+    --atelier-canvas: color-mix(in oklab, var(--wui-color-background) 98%, var(--qf-lane-evidence-fill));
+    --atelier-canvas-wash-blue: color-mix(in oklab, var(--qf-lane-project-fill) 18%, transparent);
+    --atelier-canvas-wash-pink: color-mix(in oklab, var(--qf-lane-editorial-fill) 14%, transparent);
   }
 
   /* Accessible skip link: visually absent until a keyboard user asks for it. */
@@ -16,9 +16,9 @@
     z-index: 1000;
     inset-block-start: 12px;
     inset-inline-start: 12px;
-    min-block-size: var(--nf-touch-target-min, 44px);
+    min-block-size: var(--qf-touch-target-min, 44px);
     padding: 10px 14px;
-    border: 1px solid color-mix(in oklab, var(--wui-color-border) 78%, var(--nf-lane-runtime-stroke));
+    border: 1px solid color-mix(in oklab, var(--wui-color-border) 78%, var(--qf-lane-runtime-stroke));
     border-radius: 10px;
     color: var(--wui-color-foreground);
     background: color-mix(in oklab, var(--wui-surface-overlay) 94%, var(--atelier-canvas));
@@ -53,7 +53,7 @@
     opacity: .14;
     background:
       linear-gradient(110deg, transparent 0 42%, color-mix(in oklab, white 42%, transparent) 50%, transparent 58%),
-      radial-gradient(36rem 14rem at 50% 0%, color-mix(in oklab, var(--nf-lane-runtime-fill) 12%, transparent), transparent 76%);
+      radial-gradient(36rem 14rem at 50% 0%, color-mix(in oklab, var(--qf-lane-runtime-fill) 12%, transparent), transparent 76%);
     mask-image: linear-gradient(to bottom, black 0%, transparent 46%);
   }
 
@@ -66,8 +66,8 @@
   /* Hero stays luminous, but stops reading as a separate scrapbook sheet. */
   :root[data-experience="story-loom-kawaii-atelier-v5"] .entry-hero {
     background:
-      radial-gradient(42rem 24rem at 12% 28%, color-mix(in oklab, var(--nf-lane-project-fill) 20%, transparent), transparent 74%),
-      radial-gradient(38rem 22rem at 90% 20%, color-mix(in oklab, var(--nf-lane-editorial-fill) 16%, transparent), transparent 76%),
+      radial-gradient(42rem 24rem at 12% 28%, color-mix(in oklab, var(--qf-lane-project-fill) 20%, transparent), transparent 74%),
+      radial-gradient(38rem 22rem at 90% 20%, color-mix(in oklab, var(--qf-lane-editorial-fill) 16%, transparent), transparent 76%),
       transparent;
   }
 
@@ -125,9 +125,9 @@
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"].dark {
-    --atelier-canvas: color-mix(in oklab, var(--wui-color-background) 96%, var(--nf-lane-runtime-fill));
-    --atelier-canvas-wash-blue: color-mix(in oklab, var(--nf-lane-project-stroke) 8%, transparent);
-    --atelier-canvas-wash-pink: color-mix(in oklab, var(--nf-lane-editorial-stroke) 7%, transparent);
+    --atelier-canvas: color-mix(in oklab, var(--wui-color-background) 96%, var(--qf-lane-runtime-fill));
+    --atelier-canvas-wash-blue: color-mix(in oklab, var(--qf-lane-project-stroke) 8%, transparent);
+    --atelier-canvas-wash-pink: color-mix(in oklab, var(--qf-lane-editorial-stroke) 7%, transparent);
   }
 
   @media (max-width: 760px) {

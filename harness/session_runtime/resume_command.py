@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate typed NovelForge session-resume command candidates.
+"""Validate typed Quillframe session-resume command candidates.
 
 This validator binds a proposed resume intent to one READY preflight, one exact
 durable before-state, and one authority-evidence fingerprint. Validation itself
@@ -16,10 +16,10 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-COMMAND_SCHEMA = "novelforge_session_resume_command_v1"
-VALIDATION_SCHEMA = "novelforge_session_resume_command_validation_v1"
-PREFLIGHT_SCHEMA = "novelforge_session_resume_preflight_v1"
-AUTHORITY_EVIDENCE_SCHEMA = "novelforge_resume_authority_evidence_v1"
+COMMAND_SCHEMA = "quillframe_session_resume_command_v1"
+VALIDATION_SCHEMA = "quillframe_session_resume_command_validation_v1"
+PREFLIGHT_SCHEMA = "quillframe_session_resume_preflight_v1"
+AUTHORITY_EVIDENCE_SCHEMA = "quillframe_resume_authority_evidence_v1"
 SHA_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 TOP_FIELDS = {
@@ -287,13 +287,13 @@ def make_command(*, session_id: str, version: int, payload_hash: str, checkpoint
 
 
 def self_test() -> int:
-    with tempfile.TemporaryDirectory(prefix="novelforge-resume-command-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="quillframe-resume-command-") as tmp:
         root = Path(tmp)
         evidence = {
             "schema": AUTHORITY_EVIDENCE_SCHEMA,
             "project_id": "BOOK-CMD",
             "project_authority_fingerprint": "sha256:" + "a" * 64,
-            "framework": {"version": "0.8.0", "commit": "fixture", "bundle_fingerprint": "sha256:" + "b" * 64},
+            "framework": {"version": "0.9.0", "commit": "fixture", "bundle_fingerprint": "sha256:" + "b" * 64},
             "artifact_bindings": [],
             "required_capabilities": [],
             "approval_refs": [],
@@ -383,7 +383,7 @@ def self_test() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge typed session-resume command candidate validator")
+    parser = argparse.ArgumentParser(description="Quillframe typed session-resume command candidate validator")
     sub = parser.add_subparsers(dest="command", required=True)
     validate_p = sub.add_parser("validate")
     validate_p.add_argument("--command", required=True)

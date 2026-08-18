@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NovelForge corpus rights/storage intent validator.
+"""Quillframe corpus rights/storage intent validator.
 
 This tool validates declared rights metadata and whether the requested storage
 mode is consistent with policy. It does NOT perform legal analysis or infer
@@ -44,7 +44,7 @@ def validate(record: dict[str, Any]) -> list[str]:
 def decision(record: dict[str, Any]) -> dict[str, Any]:
     errors = validate(record)
     return {
-        "schema": "novelforge_corpus_rights_decision_v1",
+        "schema": "quillframe_corpus_rights_decision_v1",
         "corpus_id": record.get("corpus_id"),
         "allowed": not errors,
         "rights_class": record.get("rights_class"),
@@ -89,7 +89,7 @@ def load(path: Path) -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge corpus rights gate")
+    p = argparse.ArgumentParser(description="Quillframe corpus rights gate")
     sub = p.add_subparsers(dest="cmd", required=True)
     v = sub.add_parser("validate"); v.add_argument("--json", required=True)
     sub.add_parser("self-test")

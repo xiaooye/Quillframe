@@ -17,7 +17,7 @@ export type DocIndexEntry = {
 };
 
 export type DocIndex = {
-  schema: "novelforge_product_document_index_v1";
+  schema: "quillframe_product_document_index_v1";
   authority: false;
   frameworkVersion: string;
   manifestSchema: string;
@@ -45,7 +45,7 @@ export type DocumentBlock =
   | { type: "hr" };
 
 export type ProductDocument = {
-  schema: "novelforge_product_document_v1";
+  schema: "quillframe_product_document_v1";
   authority: false;
   generatedFrom: string;
   id: string;
@@ -69,7 +69,7 @@ export function loadKnowledgeIndex(): Promise<DocIndex> {
   indexPromise ??= fetch("/generated/docs-index.json", { cache: "force-cache" }).then(async (response) => {
     if (!response.ok) throw new Error(`Knowledge index failed: ${response.status}`);
     const payload = await response.json() as DocIndex;
-    if (payload.schema !== "novelforge_product_document_index_v1" || payload.authority !== false) {
+    if (payload.schema !== "quillframe_product_document_index_v1" || payload.authority !== false) {
       throw new Error("Knowledge index contract mismatch");
     }
     return payload;
@@ -82,7 +82,7 @@ export async function loadProductDocument(locale: KnowledgeLocale, id: string | 
   const response = await fetch(`/generated/docs/${locale}/${encodeURIComponent(id)}.json`, { cache: "force-cache" });
   if (!response.ok) throw new Error(`Document failed: ${response.status}`);
   const payload = await response.json() as ProductDocument;
-  if (payload.schema !== "novelforge_product_document_v1" || payload.authority !== false) {
+  if (payload.schema !== "quillframe_product_document_v1" || payload.authority !== false) {
     throw new Error("Document contract mismatch");
   }
   return payload;

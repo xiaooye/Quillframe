@@ -36,7 +36,7 @@ def main() -> int:
         },
     })
 
-    with tempfile.TemporaryDirectory(prefix="novelforge-property-runtime-cross-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="quillframe-property-runtime-cross-") as tmp:
         root = Path(tmp)
         _, preflight, command = runtime_authorization.fixture(root=root, status="idle")
         authorization = runtime_authorization.make_authorization(
@@ -45,7 +45,7 @@ def main() -> int:
             project_root=root,
             decision="allow",
             source_kind="user",
-            evidence_ref="urn:novelforge:self-test:runtime-authorization",
+            evidence_ref="urn:quillframe:self-test:runtime-authorization",
             authorization_id="AUTH-PROPERTY-CROSS",
         )
         authorization_result = runtime_authorization.validate(authorization, command, preflight, root)
@@ -92,7 +92,7 @@ def main() -> int:
         }
         ok = all(checks.values())
         print(json.dumps({
-            "schema": "novelforge_state_integrity_cross_contract_v1",
+            "schema": "quillframe_state_integrity_cross_contract_v1",
             "contract": "PASS" if ok else "FAIL",
             "checks": checks,
             "runtime_authorization_authority": False,

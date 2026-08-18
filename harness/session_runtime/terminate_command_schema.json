@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "novelforge_session_terminate_command_v1",
-  "title": "NovelForge Session Terminate Command",
+  "$id": "quillframe_session_terminate_command_v1",
+  "title": "Quillframe Session Terminate Command",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -16,7 +16,7 @@
     "authority"
   ],
   "properties": {
-    "schema": {"const": "novelforge_session_terminate_command_v1"},
+    "schema": {"const": "quillframe_session_terminate_command_v1"},
     "command_id": {"type": "string", "minLength": 1, "maxLength": 160},
     "action": {"const": "session.terminate"},
     "mode": {"const": "terminate_session_and_active_run"},

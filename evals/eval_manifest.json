@@ -1,6 +1,6 @@
 {
   "suite_version": "8.0-dev.2",
-  "description": "NovelForge 8.0-development generic architecture, context, character, long-horizon, Surface, Reader, Canon, Corpus, revision, AI-native ablation and semantic capability/regression suite.",
+  "description": "Quillframe 8.0-development generic architecture, context, character, long-horizon, Surface, Reader, Canon, Corpus, revision, AI-native ablation and semantic capability/regression suite.",
   "cases": [
     {"file": "cases/infra_framework_contract.json"},
     {"file": "cases/canon_plan_not_accepted.json"},

@@ -1,8 +1,8 @@
 # 项目适配协议 · 映射存储结构，但绝不导入故事事实
 
-NovelForge Project Adapter 的职责，是把某个下游小说仓库的物理目录映射成 Harness 所需的**逻辑项目接口**。它解析项目身份、安全路径、权威领域和依赖信息；它不负责判断哪些内容与当前任务语义相关，也不能把项目事实反向带进通用 Framework source。
+Quillframe Project Adapter 的职责，是把某个下游小说仓库的物理目录映射成 Harness 所需的**逻辑项目接口**。它解析项目身份、安全路径、权威领域和依赖信息；它不负责判断哪些内容与当前任务语义相关，也不能把项目事实反向带进通用 Framework source。
 
-> **核心不变量 ✦** 项目拥有实例与事实；NovelForge 拥有通用 Schema 与机制。Adapter 只负责说明“项目自己的东西在哪里、属于哪类逻辑领域”。
+> **核心不变量 ✦** 项目拥有实例与事实；Quillframe 拥有通用 Schema 与机制。Adapter 只负责说明“项目自己的东西在哪里、属于哪类逻辑领域”。
 
 ---
 
@@ -11,13 +11,13 @@ NovelForge Project Adapter 的职责，是把某个下游小说仓库的物理�
 标准项目由两个文件建立根身份：
 
 ```text
-novelforge.toml
-novelforge.lock.json
+quillframe.toml
+quillframe.lock.json
 ```
 
-`novelforge.toml` 声明项目身份、Project Schema 兼容性、逻辑权威 / 路径映射、质量与 profile 配置，以及 build 设置。
+`quillframe.toml` 声明项目身份、Project Schema 兼容性、逻辑权威 / 路径映射、质量与 profile 配置，以及 build 设置。
 
-`novelforge.lock.json` 记录 Framework dependency identity。正式生产的 lock 可以绑定版本、精确 commit 与 bundle fingerprint。
+`quillframe.lock.json` 记录 Framework dependency identity。正式生产的 lock 可以绑定版本、精确 commit 与 bundle fingerprint。
 
 **Lock 负责识别依赖，不会把项目事实的 authority 转让给 Framework。**
 
@@ -28,8 +28,8 @@ novelforge.lock.json
 ## 02 · 依赖方向只有一个
 
 ```text
-小说项目 → 锁定的 NovelForge Framework
-NovelForge Framework -X→ 项目专属事实
+小说项目 → 锁定的 Quillframe Framework
+Quillframe Framework -X→ 项目专属事实
 ```
 
 通用 Framework source 里不能 hard-code：
@@ -99,7 +99,7 @@ corpus evidence ≠ character knowledge
 确定性 resolver 会产生类似：
 
 ```yaml
-schema: novelforge_project_adapter_resolution_v1
+schema: quillframe_project_adapter_resolution_v1
 project_id: ...
 project_version: ...
 project_root: ...
@@ -164,7 +164,7 @@ Adapter 可以构建紧凑 mapped project bundle，记录：
 项目可以把锁定的 Framework dependency 物化到：
 
 ```text
-.novelforge/framework/
+.quillframe/framework/
 ```
 
 把它视为 read-only dependency cache：
@@ -202,7 +202,7 @@ Framework Schema 或 mechanism 改变时，不能静默重新解释已经 Accept
 
 ## 10 · Legacy Migration
 
-成熟旧小说不需要为了接入 NovelForge 先做 destructive directory rewrite。
+成熟旧小说不需要为了接入 Quillframe 先做 destructive directory rewrite。
 
 安全迁移通常是：
 

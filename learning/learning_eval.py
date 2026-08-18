@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic learning-input boundary for NovelForge semantic contracts.
+"""Deterministic learning-input boundary for Quillframe semantic contracts.
 
 This module converts already-bounded verified corpus/eval artifacts into semantic
 jobs, rejects raw or oversized evidence, protects blind packets, and delegates
@@ -19,8 +19,8 @@ SEM = ROOT / "harness" / "semantic_workers"
 if str(SEM) not in sys.path: sys.path.insert(0, str(SEM))
 from semantic_worker_router import find_forbidden_keys, find_named_keys, make_contract_job, validate_job  # noqa: E402
 
-ANALYSIS_QUEUE_SCHEMA = "novelforge_learning_analysis_jobs_v1"
-EVAL_QUEUE_SCHEMA = "novelforge_learning_eval_jobs_v1"
+ANALYSIS_QUEUE_SCHEMA = "quillframe_learning_analysis_jobs_v1"
+EVAL_QUEUE_SCHEMA = "quillframe_learning_eval_jobs_v1"
 FORBIDDEN_RAW = {"full_text", "raw_text", "source_text"}
 MAX_EXCERPT_CHARS = 4000
 
@@ -46,7 +46,7 @@ def bounded_evidence(record: dict[str, Any]) -> dict[str, Any]:
     return dict(evidence)
 
 def build_analysis_jobs(verified: dict[str, Any], *, research_question: str, hypothesis_id: str | None=None, source_session_id: str | None=None) -> dict[str, Any]:
-    if verified.get("schema")!="novelforge_verified_corpus_discovery_v1": raise ValueError("verified discovery schema required")
+    if verified.get("schema")!="quillframe_verified_corpus_discovery_v1": raise ValueError("verified discovery schema required")
     jobs=[]
     for record in verified.get("verified",[]):
         if not isinstance(record,dict) or not record.get("verified"): continue
@@ -56,7 +56,7 @@ def build_analysis_jobs(verified: dict[str, Any], *, research_question: str, hyp
     return {"schema":ANALYSIS_QUEUE_SCHEMA,"blind":True,"research_question":research_question,"hypothesis_id":hypothesis_id,"jobs":jobs}
 
 def build_eval_jobs(request: dict[str, Any], *, source_session_id: str | None=None) -> dict[str, Any]:
-    if request.get("schema")!="novelforge_learning_eval_request_v1": raise ValueError("learning eval request schema required")
+    if request.get("schema")!="quillframe_learning_eval_request_v1": raise ValueError("learning eval request schema required")
     leakage=find_forbidden_keys(request)
     if leakage: raise ValueError("learning eval request leaks answer-key fields: "+", ".join(leakage))
     jobs=[]
@@ -69,7 +69,7 @@ def build_eval_jobs(request: dict[str, Any], *, source_session_id: str | None=No
     return {"schema":EVAL_QUEUE_SCHEMA,"blind":True,"scope":request.get("scope"),"hypothesis_id":request.get("hypothesis_id"),"jobs":jobs}
 
 def self_test() -> dict[str, Any]:
-    verified={"schema":"novelforge_verified_corpus_discovery_v1","verified":[{"verified":True,"corpus_id":"CORP-T","source_title":"Fixture","source_type":"book","source_locator":"fixture://work","work_id":"WORK-T","channel":"user_files","tool_or_provider":"fixture","rights_class":"analysis_only","storage_intent":"derived_only","evidence_fingerprint":"sha256:"+"1"*64,"metadata":{},"evidence":{"mechanism_hint":"pressure changes options","excerpt":"bounded fixture evidence"}}]}
+    verified={"schema":"quillframe_verified_corpus_discovery_v1","verified":[{"verified":True,"corpus_id":"CORP-T","source_title":"Fixture","source_type":"book","source_locator":"fixture://work","work_id":"WORK-T","channel":"user_files","tool_or_provider":"fixture","rights_class":"analysis_only","storage_intent":"derived_only","evidence_fingerprint":"sha256:"+"1"*64,"metadata":{},"evidence":{"mechanism_hint":"pressure changes options","excerpt":"bounded fixture evidence"}}]}
     analysis=build_analysis_jobs(verified,research_question="What creates pace?",hypothesis_id="PH-T"); aj=analysis["jobs"][0]
     analysis_contract=aj["input"].get("model_contract_id")=="learning.mechanism_analyze"; catalog_resolved=aj["provenance"].get("pack_id")=="learning"; fingerprint_valid=not validate_job(aj)
     raw_guard=False
@@ -80,7 +80,7 @@ def self_test() -> dict[str, Any]:
     bad_long=json.loads(json.dumps(verified)); bad_long["verified"][0]["evidence"]["excerpt"]="x"*(MAX_EXCERPT_CHARS+1)
     try: build_analysis_jobs(bad_long,research_question="What creates pace?")
     except ValueError: oversize_guard=True
-    req={"schema":"novelforge_learning_eval_request_v1","scope":"user_taste","hypothesis_id":"PH-T","mechanism":"pace comes from state change","profile_boundary":{"exceptions":["deliberate shock fragment"]},"cases":[{"id":"LE-1","purpose":"distinguish functional pace from fragmentation","fixture":{"text":"fixture"},"rubric":["judge functional pacing mechanism"]}]}
+    req={"schema":"quillframe_learning_eval_request_v1","scope":"user_taste","hypothesis_id":"PH-T","mechanism":"pace comes from state change","profile_boundary":{"exceptions":["deliberate shock fragment"]},"cases":[{"id":"LE-1","purpose":"distinguish functional pace from fragmentation","fixture":{"text":"fixture"},"rubric":["judge functional pacing mechanism"]}]}
     evaluation=build_eval_jobs(req); ej=evaluation["jobs"][0]; eval_contract=ej["input"].get("model_contract_id")=="learning.evaluate" and ej["provenance"].get("pack_id")=="learning"
     leak_guard=False
     try:
@@ -90,7 +90,7 @@ def self_test() -> dict[str, Any]:
     return {"learning_eval_contract":"PASS" if ok else "FAIL","semantic_intelligence_in_model_contracts":analysis_contract and eval_contract,"catalog_resolved_learning_pack":catalog_resolved,"analysis_jobs_fingerprint_bound":fingerprint_valid,"raw_source_text_fail_closed":raw_guard,"oversized_excerpt_fail_closed":oversize_guard,"answer_key_leakage_guard":leak_guard,"silent_semantic_input_rewrite":False,"model_execution":False,"write_authority":False}
 
 def main() -> int:
-    p=argparse.ArgumentParser(description="NovelForge deterministic learning semantic-input boundary"); sub=p.add_subparsers(dest="cmd",required=True)
+    p=argparse.ArgumentParser(description="Quillframe deterministic learning semantic-input boundary"); sub=p.add_subparsers(dest="cmd",required=True)
     a=sub.add_parser("analysis-jobs"); a.add_argument("--verified",required=True); a.add_argument("--research-question",required=True); a.add_argument("--hypothesis-id"); a.add_argument("--source-session-id"); a.add_argument("--output")
     e=sub.add_parser("eval-jobs"); e.add_argument("--request",required=True); e.add_argument("--source-session-id"); e.add_argument("--output")
     sub.add_parser("self-test"); args=p.parse_args()

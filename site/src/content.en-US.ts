@@ -17,7 +17,7 @@ export const enUS = {
   home: {
     eyebrow: "Adaptive fiction agent framework · 0.8.x",
     title: "A fiction system that can show what it knew, what passed, and what changed.",
-    lede: "NovelForge treats long-form fiction as an inspectable creative system: context is grounded, characters only act on evidence they can know, quality gates bind to the exact candidate, and accepted text can travel into deterministic publication without silently changing the manuscript.",
+    lede: "Quillframe treats long-form fiction as an inspectable creative system: context is grounded, characters only act on evidence they can know, quality gates bind to the exact candidate, and accepted text can travel into deterministic publication without silently changing the manuscript.",
     primaryCta: "Explore the forge",
     secondaryCta: "See the architecture",
     proofLabel: "Proof, not promises",
@@ -26,7 +26,7 @@ export const enUS = {
       title: "A prompt can make prose. A novel needs memory with rules.",
       lede: "One-shot generation is good at producing text. It is much worse at preserving authority, perspective, continuity, and repair history across a living book.",
       cards: [
-        { title: "Context without leakage", body: "Relevant evidence is not enough. NovelForge also checks visibility, story order, stage eligibility, authority, and the hard packet budget before evidence can reach the model." },
+        { title: "Context without leakage", body: "Relevant evidence is not enough. Quillframe also checks visibility, story order, stage eligibility, authority, and the hard packet budget before evidence can reach the model." },
         { title: "Characters with epistemic limits", body: "A character action cannot cite future, unknown, or perspective-incompatible evidence as positive support just because the framework stores it somewhere." },
         { title: "Quality without fake scores", body: "Surface, reader engagement, continuity, and independent semantic review remain distinct typed gates. Readiness is a conjunction, not a made-up 8.7/10." },
       ],
@@ -45,12 +45,12 @@ export const enUS = {
       ],
     },
     proofs: [
-      { eyebrow: "Context", title: "Support ≠ loaded context", body: "Run Receipts distinguish evidence selected as support from evidence that actually entered the bounded packet — including budget drops and visibility exclusions.", meta: "novelforge_run_receipt_v1" },
-      { eyebrow: "Readiness", title: "One fingerprint, all required gates", body: "The production-readiness record fails closed when required Surface, Reader Engagement, Continuity, or independent semantic evidence is missing, pending, or failing.", meta: "novelforge_production_readiness_v1" },
+      { eyebrow: "Context", title: "Support ≠ loaded context", body: "Run Receipts distinguish evidence selected as support from evidence that actually entered the bounded packet — including budget drops and visibility exclusions.", meta: "quillframe_run_receipt_v1" },
+      { eyebrow: "Readiness", title: "One fingerprint, all required gates", body: "The production-readiness record fails closed when required Surface, Reader Engagement, Continuity, or independent semantic evidence is missing, pending, or failing.", meta: "quillframe_production_readiness_v1" },
       { eyebrow: "Character", title: "Knowledge has a story-time boundary", body: "Epistemic status and acquisition mode are separate, and proposed actions must be backed by character-visible, story-ordered evidence.", meta: "character evidence contract" },
-      { eyebrow: "Publication", title: "Accepted text stays exact", body: "Publication IR checks source fingerprints and preserves exact Unicode manuscript text while producing derived clean text, Web HTML, print-oriented HTML/CSS, and EPUB 3.3.", meta: "novelforge_publication_ir_v1" },
+      { eyebrow: "Publication", title: "Accepted text stays exact", body: "Publication IR checks source fingerprints and preserves exact Unicode manuscript text while producing derived clean text, Web HTML, print-oriented HTML/CSS, and EPUB 3.3.", meta: "quillframe_publication_ir_v1" },
       { eyebrow: "Hosts", title: "Capability never becomes authority", body: "CLI, Local Web, hosted UI, and Agent Skill may expose different capabilities. Host access never grants Canon, Framework-write, or Settlement authority.", meta: "authority=false" },
-      { eyebrow: "Design", title: "The visual system is executable too", body: "Story Loom v2 pins the WeiUI zero-JavaScript foundation and machine-checks theme layering, contrast, touch size, locales, reduced motion, and no-default-polling rules.", meta: "novelforge_brand_tokens_v2" },
+      { eyebrow: "Design", title: "The visual system is executable too", body: "Story Loom v2 pins the WeiUI zero-JavaScript foundation and machine-checks theme layering, contrast, touch size, locales, reduced motion, and no-default-polling rules.", meta: "quillframe_brand_tokens_v2" },
     ],
     studio: {
       eyebrow: "Studio",
@@ -70,7 +70,7 @@ export const enUS = {
     architecture: {
       eyebrow: "Architecture",
       title: "One system, distinct responsibilities.",
-      lede: "NovelForge is intentionally not an agent round-table. Each subsystem owns a bounded mechanism and emits typed evidence for the next boundary.",
+      lede: "Quillframe is intentionally not an agent round-table. Each subsystem owns a bounded mechanism and emits typed evidence for the next boundary.",
       cards: [
         { eyebrow: "Project", title: "Canon & state", body: "Authority classes, dependencies, accepted state, plans, and settlement evidence stay explicit." },
         { eyebrow: "Runtime", title: "Harness & sessions", body: "Manager sessions, runs, checkpoints, capabilities, handoffs, fingerprints, and consume-once evidence." },
@@ -94,7 +94,7 @@ export const enUS = {
     release: {
       eyebrow: "Release truth",
       title: "0.8.x means active pre-1.0 development.",
-      lede: "Latest main is the development baseline. Machine contracts are increasingly explicit and CI-gated, but NovelForge does not pretend that every 8.0-line goal is frozen or complete.",
+      lede: "Latest main is the development baseline. Machine contracts are increasingly explicit and CI-gated, but Quillframe does not pretend that every 8.0-line goal is frozen or complete.",
       cta: "Read the changelog",
     },
     final: {
@@ -106,7 +106,7 @@ export const enUS = {
   routes: {
     product: {
       eyebrow: "Product model",
-      title: "NovelForge is a fiction production system, not a prompt wrapper.",
+      title: "Quillframe is a fiction production system, not a prompt wrapper.",
       lede: "It separates creative judgment from deterministic control so a long-running book can accumulate evidence, revisions, and state without turning every previous model output into truth.",
       cards: [
         { title: "Authority before convenience", body: "Locked, accepted, active plan, review, proposal, derived, runtime, learning, and corpus material are not interchangeable." },
@@ -116,7 +116,7 @@ export const enUS = {
       ],
     },
     studio: {
-      eyebrow: "NovelForge Studio",
+      eyebrow: "Quillframe Studio",
       title: "The creative workbench around Core — with progressive disclosure instead of dashboard overload.",
       lede: "Phase 2C now ships a real read-only SolidJS shell: bilingual, mobile-first, loopback-hosted, no default polling, and backed by the public Host Bridge. Local Web remains first-class; Tauri is still optional.",
       cards: [
@@ -129,7 +129,7 @@ export const enUS = {
     architecture: {
       eyebrow: "System architecture",
       title: "Generic mechanisms stay generic. Project truth stays in the project.",
-      lede: "NovelForge defines reusable Story, Character, Canon, Context, Quality, Runtime, Learning, Corpus, Publication, and Product contracts. Consumer novels supply their own characters, world, plans, state, manuscript, and accepted Canon.",
+      lede: "Quillframe defines reusable Story, Character, Canon, Context, Quality, Runtime, Learning, Corpus, Publication, and Product contracts. Consumer novels supply their own characters, world, plans, state, manuscript, and accepted Canon.",
       cards: [
         { title: "Harness", body: "Session-native orchestration, capabilities, routing, handoff, and checkpoint semantics." },
         { title: "Context", body: "Sparse question-bounded evidence with visibility, story-order, authority, and hard-budget enforcement." },
@@ -167,9 +167,9 @@ export const enUS = {
     changelog: {
       eyebrow: "Release truth",
       title: "A changelog that separates implementation from aspiration.",
-      lede: "NovelForge is pre-1.0. The current ledger records merged machine/product behavior and keeps remaining Core/Product gaps explicit rather than silently promoting roadmaps into capabilities.",
+      lede: "Quillframe is pre-1.0. The current ledger records merged machine/product behavior and keeps remaining Core/Product gaps explicit rather than silently promoting roadmaps into capabilities.",
       cards: [
-        { title: "0.8.0 identity", body: "Manifest, CLI, Skill, Project SDK default, MCP metadata, and documentation governance use one pre-1.0 development identity." },
+        { title: "0.9.0 identity", body: "Manifest, CLI, Skill, Project SDK default, MCP metadata, and documentation governance use one pre-1.0 development identity." },
         { title: "Breaking cleanup is still possible", body: "Before 1.0, justified machine-contract cleanup may land on latest main when architecture and deterministic CI support it." },
         { title: "History stays history", body: "Older 7.x changelog/spec records retain their original meaning; active docs do not rewrite the past to make current naming look inevitable." },
       ],

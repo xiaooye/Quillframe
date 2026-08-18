@@ -28,7 +28,7 @@ type SessionSummary = {
 };
 
 type SessionListProjection = {
-  schema: "novelforge_runtime_sessions_projection_v1";
+  schema: "quillframe_runtime_sessions_projection_v1";
   count: number;
   sessions: SessionSummary[];
   query_only: true;
@@ -59,7 +59,7 @@ type CheckpointProjection = {
 };
 
 type SessionProjection = {
-  schema: "novelforge_runtime_session_projection_v1";
+  schema: "quillframe_runtime_session_projection_v1";
   session: SessionSummary & {
     context_policy: {
       hidden_gold?: string | null;
@@ -98,7 +98,7 @@ type RuntimeEvent = {
 };
 
 type EventsProjection = {
-  schema: "novelforge_runtime_events_projection_v1";
+  schema: "quillframe_runtime_events_projection_v1";
   count: number;
   events: RuntimeEvent[];
   query_only: true;
@@ -122,7 +122,7 @@ type ReceiptProjection = {
 };
 
 type ReceiptsProjection = {
-  schema: "novelforge_run_receipts_projection_v1";
+  schema: "quillframe_run_receipts_projection_v1";
   count: number;
   receipts: ReceiptProjection[];
   query_only: true;
@@ -132,7 +132,7 @@ type ReceiptsProjection = {
 };
 
 type HandoffProjection = {
-  schema: "novelforge_runtime_handoff_projection_v1";
+  schema: "quillframe_runtime_handoff_projection_v1";
   handoff: {
     handoff_id: string;
     source_session_id: string;
@@ -164,7 +164,7 @@ const copyByLocale = {
   "en-US": {
     eyebrow: "Runtime observatory",
     title: "Sessions, checkpoints, events, and receipts",
-    body: "Inspect the durable execution lineage exposed by NovelForge Core. These projections are read-only and side-effect-free; Studio never opens the runtime store directly.",
+    body: "Inspect the durable execution lineage exposed by Quillframe Core. These projections are read-only and side-effect-free; Studio never opens the runtime store directly.",
     root: "Project root",
     rootPlaceholder: "/path/to/project",
     load: "Load runtime",
@@ -210,7 +210,7 @@ const copyByLocale = {
   "zh-CN": {
     eyebrow: "Runtime 观测台",
     title: "Session、Checkpoint、Event 与 Receipt",
-    body: "检查 NovelForge Core 暴露的持久执行 lineage。所有投影均为只读、无副作用；Studio 不会直接打开 runtime store。",
+    body: "检查 Quillframe Core 暴露的持久执行 lineage。所有投影均为只读、无副作用；Studio 不会直接打开 runtime store。",
     root: "项目根目录",
     rootPlaceholder: "/path/to/project",
     load: "加载 Runtime",

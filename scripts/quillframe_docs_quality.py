@@ -81,8 +81,8 @@ def check_native_chinese(path: Path, text: str) -> None:
 def check_public(manifest: dict) -> None:
     if manifest.get("public_brand") != "Quillframe":
         err("public manifest brand must be Quillframe")
-    if manifest.get("legacy_technical_namespace") != "novelforge":
-        err("technical namespace must remain novelforge")
+    if manifest.get("legacy_technical_namespace") != "quillframe":
+        err("technical namespace must remain quillframe")
     if manifest.get("target_main") != TARGET_MAIN:
         err("public manifest target_main mismatch")
     if manifest.get("chinese_style") != "native_zh_CN_prose_exact_identifiers_only":
@@ -101,7 +101,7 @@ def check_public(manifest: dict) -> None:
             if "Quillframe" not in text:
                 err(f"{raw}: current public surface does not name Quillframe")
             for line_no, line in enumerate(text.splitlines(), 1):
-                if "NovelForge" in line:
+                if "Quillframe" in line:
                     low = line.lower()
                     if not ("legacy" in low or "technical" in low or "compatib" in low or "former" in low or "旧" in line or "兼容" in line):
                         err(f"{raw}:{line_no}: legacy public brand outside compatibility context")
@@ -125,7 +125,7 @@ def check_svg(path: Path) -> None:
     raw = path.read_text(encoding="utf-8")
     if "@font-face" in raw or re.search(r"\.(?:woff2?|ttf|otf)\b", raw, re.I):
         err(f"{path.relative_to(ROOT)}: embedded font forbidden")
-    if "NovelForge" in raw:
+    if "Quillframe" in raw:
         err(f"{path.relative_to(ROOT)}: legacy public brand in current SVG")
 
     if path.name.endswith(".zh-CN.svg"):

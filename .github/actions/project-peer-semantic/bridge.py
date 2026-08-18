@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Project-hosted peer semantic bridge.
 
-Runs inside a consuming repository through a NovelForge composite action. The
+Runs inside a consuming repository through a Quillframe composite action. The
 consumer owns the Issue/runtime trace. This module only supplies the generic
 relay/validation mechanism from the exact Framework revision pinned by the
 consumer lockfile.
@@ -16,10 +16,10 @@ from pathlib import Path
 from typing import Any, NoReturn
 import tomllib
 
-PACKET_MARKER = "<!-- novelforge-peer-packet-v1 -->"
-RESULT_MARKER = "<!-- novelforge-peer-result-v1 -->"
-VALIDATION_MARKER = "<!-- novelforge-peer-validation-v1 -->"
-RECEIPT_MARKER = "<!-- novelforge-peer-validation-receipt-v1 -->"
+PACKET_MARKER = "<!-- quillframe-peer-packet-v1 -->"
+RESULT_MARKER = "<!-- quillframe-peer-result-v1 -->"
+VALIDATION_MARKER = "<!-- quillframe-peer-validation-v1 -->"
+RECEIPT_MARKER = "<!-- quillframe-peer-validation-receipt-v1 -->"
 
 
 def fail(message: str) -> NoReturn:
@@ -71,20 +71,20 @@ def parse_fenced(body: str, marker: str) -> dict[str, Any]:
 
 def load_project_binding() -> dict[str, Any]:
     workspace = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
-    project_root = (workspace / os.environ["NOVELFORGE_PROJECT_ROOT"]).resolve()
+    project_root = (workspace / os.environ["QUILLFRAME_PROJECT_ROOT"]).resolve()
     if workspace not in project_root.parents and project_root != workspace:
         fail("project root escapes caller workspace")
 
-    manifest_path = project_root / "novelforge.toml"
-    lock_path = project_root / "novelforge.lock.json"
+    manifest_path = project_root / "quillframe.toml"
+    lock_path = project_root / "quillframe.lock.json"
     if not manifest_path.exists() or not lock_path.exists():
-        fail("consumer must contain novelforge.toml and novelforge.lock.json")
+        fail("consumer must contain quillframe.toml and quillframe.lock.json")
 
     with manifest_path.open("rb") as f:
         manifest = tomllib.load(f)
     lock = read_json(lock_path)
 
-    expected_project_id = os.environ["NOVELFORGE_PROJECT_ID"]
+    expected_project_id = os.environ["QUILLFRAME_PROJECT_ID"]
     actual_project_id = str((manifest.get("project") or {}).get("id") or "")
     if actual_project_id != expected_project_id:
         fail(f"project id mismatch: expected {expected_project_id}, got {actual_project_id}")
@@ -92,8 +92,8 @@ def load_project_binding() -> dict[str, Any]:
     framework = lock.get("framework") or {}
     locked_repo = canonical_repo(str(framework.get("source_repo") or ""))
     locked_commit = str(framework.get("commit") or "")
-    action_repo = canonical_repo(os.environ.get("NOVELFORGE_ACTION_REPOSITORY", ""))
-    action_ref = str(os.environ.get("NOVELFORGE_ACTION_REF") or "")
+    action_repo = canonical_repo(os.environ.get("QUILLFRAME_ACTION_REPOSITORY", ""))
+    action_ref = str(os.environ.get("QUILLFRAME_ACTION_REF") or "")
     caller_repo = canonical_repo(os.environ.get("GITHUB_REPOSITORY", ""))
 
     if not locked_repo or not locked_commit:
@@ -128,7 +128,7 @@ def common_event(binding: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any
     owner = os.environ.get("GITHUB_REPOSITORY_OWNER", "")
     if actor != owner:
         fail("only repository owner may trigger the default peer bridge")
-    prefix = f"[novelforge-peer][{binding['project_id']}] "
+    prefix = f"[quillframe-peer][{binding['project_id']}] "
     title = str(issue.get("title") or "")
     if not title.startswith(prefix):
         fail(f"issue title must start with {prefix!r}")
@@ -136,7 +136,7 @@ def common_event(binding: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any
 
 
 def framework_paths() -> tuple[Path, Path, Path, Path]:
-    action_path = Path(os.environ["NOVELFORGE_ACTION_PATH"]).resolve()
+    action_path = Path(os.environ["QUILLFRAME_ACTION_PATH"]).resolve()
     framework_root = action_path.parents[2]
     router = framework_root / "harness" / "semantic_workers" / "semantic_worker_router.py"
     relay = framework_root / "harness" / "semantic_workers" / "peer_chat_relay.py"
@@ -178,14 +178,14 @@ def prepare(binding: dict[str, Any]) -> None:
     if not isinstance(job, dict):
         fail("issue body must be one semantic job JSON object")
 
-    prefix = f"[novelforge-peer][{binding['project_id']}] "
+    prefix = f"[quillframe-peer][{binding['project_id']}] "
     expected_job_id = str(issue.get("title") or "")[len(prefix):].strip()
     if job.get("job_id") != expected_job_id:
         fail("issue body job_id must match title suffix")
     verify_job_provenance(job, binding)
 
     router, relay, registered, _receipt = framework_paths()
-    with tempfile.TemporaryDirectory(prefix="novelforge-peer-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="quillframe-peer-") as tmp:
         tmpdir = Path(tmp)
         job_path = tmpdir / "job.json"
         jobs_path = tmpdir / "jobs.json"
@@ -201,7 +201,7 @@ def prepare(binding: dict[str, Any]) -> None:
         PACKET_MARKER,
         "`semantic_status: awaiting_user`",
         "",
-        "This runtime trace is owned by the consuming Project repository. Use a genuinely separate reviewer session and return only the typed result in a new comment prefixed with `<!-- novelforge-peer-result-v1 -->`.",
+        "This runtime trace is owned by the consuming Project repository. Use a genuinely separate reviewer session and return only the typed result in a new comment prefixed with `<!-- quillframe-peer-result-v1 -->`.",
         "",
         "```json",
         packet,
@@ -242,11 +242,11 @@ def validate_result(binding: dict[str, Any]) -> dict[str, Any]:
         "github_event_name": os.environ.get("GITHUB_EVENT_NAME", ""),
         "result_comment_id": result_comment_id,
         "workflow_name": os.environ.get("GITHUB_WORKFLOW", ""),
-        "framework_action_ref": os.environ.get("NOVELFORGE_ACTION_REF", ""),
+        "framework_action_ref": os.environ.get("QUILLFRAME_ACTION_REF", ""),
     }
 
     _router, relay, registered, receipt_tool = framework_paths()
-    with tempfile.TemporaryDirectory(prefix="novelforge-peer-result-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="quillframe-peer-result-") as tmp:
         tmpdir = Path(tmp)
         packet_path = tmpdir / "packet.json"
         result_path = tmpdir / "result.json"
@@ -278,7 +278,7 @@ def validate_result(binding: dict[str, Any]) -> dict[str, Any]:
         RECEIPT_MARKER,
         "`semantic_status: validated_result_ready`",
         "",
-        f"Project-owned peer result binding passed against NovelForge `{binding['framework_commit']}`. The manager may consume this logical result once after revalidating Project authority.",
+        f"Project-owned peer result binding passed against Quillframe `{binding['framework_commit']}`. The manager may consume this logical result once after revalidating Project authority.",
         "",
         "```json",
         json.dumps(receipt, ensure_ascii=False, indent=2),
@@ -294,20 +294,20 @@ def write_action_output(receipt: dict[str, Any]) -> None:
     if not path:
         return
     with Path(path).open("a", encoding="utf-8") as handle:
-        handle.write("validation-receipt<<NOVELFORGE_RECEIPT\n")
+        handle.write("validation-receipt<<QUILLFRAME_RECEIPT\n")
         handle.write(json.dumps(receipt, ensure_ascii=False, separators=(",", ":")) + "\n")
-        handle.write("NOVELFORGE_RECEIPT\n")
+        handle.write("QUILLFRAME_RECEIPT\n")
 
 
 def main() -> int:
-    mode = os.environ.get("NOVELFORGE_BRIDGE_MODE", "")
+    mode = os.environ.get("QUILLFRAME_BRIDGE_MODE", "")
     if mode not in {"prepare", "validate-result"}:
-        fail("NOVELFORGE_BRIDGE_MODE must be prepare or validate-result")
+        fail("QUILLFRAME_BRIDGE_MODE must be prepare or validate-result")
     binding = load_project_binding()
     if mode == "prepare":
         prepare(binding)
         output = {
-            "schema": "novelforge_project_peer_bridge_receipt_v1",
+            "schema": "quillframe_project_peer_bridge_receipt_v1",
             "mode": mode,
             "project_id": binding["project_id"],
             "project_repo": binding["caller_repo"],

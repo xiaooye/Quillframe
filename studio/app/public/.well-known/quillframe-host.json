@@ -1,5 +1,5 @@
 {
-  "schema": "novelforge_studio_host_descriptor_v1",
+  "schema": "quillframe_studio_host_descriptor_v1",
   "surface": "cloud_ui",
   "delivery": "cloudflare_pages",
   "core_host": "unbound",

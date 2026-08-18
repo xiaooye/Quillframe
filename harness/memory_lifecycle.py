@@ -14,8 +14,8 @@ if str(ROOT / "harness") not in sys.path:
     sys.path.insert(0, str(ROOT / "harness"))
 from memory_bank import add_entry, canonical_fingerprint, connect, export_context, now, view_entry  # noqa: E402
 
-SCHEMA = "novelforge_memory_lifecycle_v1"
-OP_SCHEMA = "novelforge_memory_lifecycle_operation_v1"
+SCHEMA = "quillframe_memory_lifecycle_v1"
+OP_SCHEMA = "quillframe_memory_lifecycle_operation_v1"
 
 
 def ensure_schema(conn: sqlite3.Connection) -> None:
@@ -281,8 +281,8 @@ def self_test(path: Path) -> int:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge non-destructive derived-memory lifecycle")
-    p.add_argument("--db", default=".novelforge/memory-bank.db")
+    p = argparse.ArgumentParser(description="Quillframe non-destructive derived-memory lifecycle")
+    p.add_argument("--db", default=".quillframe/memory-bank.db")
     sub = p.add_subparsers(dest="command", required=True)
     c = sub.add_parser("contest")
     c.add_argument("--entry-id", required=True)
@@ -298,7 +298,7 @@ def main() -> int:
     o = sub.add_parser("operations")
     o.add_argument("--entry-id")
     t = sub.add_parser("self-test")
-    t.add_argument("--path", default="/tmp/novelforge-memory-lifecycle-selftest.db")
+    t.add_argument("--path", default="/tmp/quillframe-memory-lifecycle-selftest.db")
     args = p.parse_args()
 
     if args.command == "self-test":

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 48" role="img" aria-labelledby="title desc">
-  <title id="title">NovelForge story thread divider</title>
+  <title id="title">Quillframe story thread divider</title>
   <desc id="desc">A subtle branded thread connecting project, runtime, editorial, evidence, and validated-state colors.</desc>
   <path d="M36 24H1164" stroke="#E2DAE8" stroke-width="2"/>
   <path d="M188 24C278 9 355 39 444 24S611 9 700 24s166 15 255 0" fill="none" stroke="#796BC4" stroke-opacity="0.34" stroke-width="2" stroke-dasharray="5 8"/>

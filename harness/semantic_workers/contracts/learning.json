@@ -1,5 +1,5 @@
 {
-  "schema": "novelforge_model_contract_registry_v1",
+  "schema": "quillframe_model_contract_registry_v1",
   "version": "2",
   "principle": "Adaptive-learning interpretation and evidence sufficiency belong to models; deterministic runtime binds evidence, exact semantic receipts, promotion authority, version/rollback/CI and durable-write permissions. A semantic PASS never grants its own write authority.",
   "contracts": {

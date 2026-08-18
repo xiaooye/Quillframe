@@ -2,14 +2,14 @@ import { For, createMemo, createSignal } from "solid-js";
 import { PageIntro } from "../components";
 import { useI18n } from "../i18n";
 
-const agentBootstrap = `# NovelForge project bootstrap
+const agentBootstrap = `# Quillframe project bootstrap
 
-1. Read novelforge.toml.
-2. Read novelforge.lock.json and use the exact Framework commit + bundle fingerprint.
+1. Read quillframe.toml.
+2. Read quillframe.lock.json and use the exact Framework commit + bundle fingerprint.
 3. Verify framework.attestation.json when the project provides it.
-4. Load the pinned NovelForge HARNESS_MANIFEST.yaml, SKILL.md, and harness/HARNESS_AGENT.md.
+4. Load the pinned Quillframe HARNESS_MANIFEST.yaml, SKILL.md, and harness/HARNESS_AGENT.md.
 5. Treat chat/session history as runtime context, never as Project or Canon authority.
-6. Use agent-skills/novelforge/SKILL.md for the public read-only Host Bridge when a portable agent integration is needed.
+6. Use agent-skills/quillframe/SKILL.md for the public read-only Host Bridge when a portable agent integration is needed.
 7. Fail closed on unsupported bridge operations; do not bypass public boundaries through private runtime stores.
 8. Default to one manager run. Add external workers, handoffs, or independent gates only through the pinned runtime-routing and control-plane contracts.
 9. Treat session, event, handoff, and run-receipt state as Core-owned. If a safe public projection is unavailable, keep it unavailable rather than inferring it.
@@ -21,8 +21,8 @@ const runtimeCopy = {
   "en-US": {
     eyebrow: "Execution model",
     title: "One run, explicit state, observable boundaries",
-    body: "NovelForge uses the useful common denominator of modern agent runtimes without adopting their private storage or orchestration vocabulary. Deterministic control stays outside the model; agency enters only where the task actually needs judgment.",
-    status: "NOVELFORGE-NATIVE",
+    body: "Quillframe uses the useful common denominator of modern agent runtimes without adopting their private storage or orchestration vocabulary. Deterministic control stays outside the model; agency enters only where the task actually needs judgment.",
+    status: "QUILLFRAME-NATIVE",
     patterns: [
       ["Run + Trace", "A run owns an ordered observable chain. Studio inspects steps instead of scraping terminal logs.", "run → events"],
       ["Context + State", "Context is explicit, stage-scoped, and fingerprintable. Chat history never becomes hidden authority.", "manifest → state"],
@@ -34,8 +34,8 @@ const runtimeCopy = {
   "zh-CN": {
     eyebrow: "执行模型",
     title: "一次 Run，显式状态，可观察边界",
-    body: "NovelForge 吸收现代 Agent runtime 已经验证过的共同模式，但不复制它们的私有存储或编排词汇。确定性控制留在模型之外；只有任务确实需要判断时，才引入 agency。",
-    status: "NOVELFORGE 原生",
+    body: "Quillframe 吸收现代 Agent runtime 已经验证过的共同模式，但不复制它们的私有存储或编排词汇。确定性控制留在模型之外；只有任务确实需要判断时，才引入 agency。",
+    status: "QUILLFRAME 原生",
     patterns: [
       ["Run + Trace", "一次 Run 拥有有序、可观察的执行链。Studio 检查步骤，不靠抓终端日志猜运行过程。", "run → events"],
       ["Context + State", "上下文保持显式、分阶段、可指纹绑定；聊天历史不会悄悄变成 authority。", "manifest → state"],
@@ -65,8 +65,8 @@ export default function Agents() {
         class="wui-card wui-card--outlined nf-inspector-surface nf-agent-matrix"
         aria-labelledby="agent-matrix-heading"
         style={{
-          background: "color-mix(in oklab,var(--nf-lane-validated-fill) 38%,var(--nf-studio-panel))",
-          "border-color": "color-mix(in oklab,var(--nf-lane-validated-stroke) 22%,var(--nf-studio-line-soft))",
+          background: "color-mix(in oklab,var(--qf-lane-validated-fill) 38%,var(--qf-studio-panel))",
+          "border-color": "color-mix(in oklab,var(--qf-lane-validated-stroke) 22%,var(--qf-studio-line-soft))",
         }}
       >
         <header class="nf-agent-matrix-head">
@@ -93,7 +93,7 @@ export default function Agents() {
       <section
         class="wui-card wui-card--outlined nf-inspector-surface nf-agent-matrix"
         aria-labelledby="agent-runtime-heading"
-        style={{ background: "color-mix(in oklab,var(--nf-lane-runtime-fill) 28%,var(--nf-studio-panel))" }}
+        style={{ background: "color-mix(in oklab,var(--qf-lane-runtime-fill) 28%,var(--qf-studio-panel))" }}
       >
         <header class="nf-agent-matrix-head">
           <div>
@@ -119,37 +119,37 @@ export default function Agents() {
       <div class="nf-agent-grid">
         <section
           class="wui-card wui-card--outlined nf-inspector-surface nf-agent-capability"
-          style={{ background: "color-mix(in oklab,var(--nf-lane-editorial-fill) 42%,var(--nf-studio-panel))" }}
+          style={{ background: "color-mix(in oklab,var(--qf-lane-editorial-fill) 42%,var(--qf-studio-panel))" }}
         >
           <header><span class="nf-card-label">01</span><h2>{t("agents.skillTitle")}</h2></header>
           <p>{t("agents.skillBody")}</p>
-          <code>agent-skills/novelforge/SKILL.md</code>
+          <code>agent-skills/quillframe/SKILL.md</code>
           <div class="nf-agent-facts">
             <span><strong>{t("agents.readOnly")}</strong><small>authority=false</small></span>
-            <span><strong>Python 3.11+</strong><small>NOVELFORGE_ROOT</small></span>
+            <span><strong>Python 3.11+</strong><small>QUILLFRAME_ROOT</small></span>
           </div>
         </section>
 
         <section
           class="wui-card wui-card--outlined nf-inspector-surface nf-agent-capability"
-          style={{ background: "color-mix(in oklab,var(--nf-lane-project-fill) 42%,var(--nf-studio-panel))" }}
+          style={{ background: "color-mix(in oklab,var(--qf-lane-project-fill) 42%,var(--qf-studio-panel))" }}
         >
           <header><span class="nf-card-label">02</span><h2>{t("agents.detectTitle")}</h2></header>
           <p>{t("agents.detectBody")}</p>
           <div class="nf-agent-detect-list">
-            <code>novelforge.toml</code>
-            <code>novelforge.lock.json</code>
+            <code>quillframe.toml</code>
+            <code>quillframe.lock.json</code>
             <code>framework.attestation.json</code>
           </div>
         </section>
 
         <section
           class="wui-card wui-card--outlined nf-inspector-surface nf-agent-capability"
-          style={{ background: "color-mix(in oklab,var(--nf-lane-runtime-fill) 42%,var(--nf-studio-panel))" }}
+          style={{ background: "color-mix(in oklab,var(--qf-lane-runtime-fill) 42%,var(--qf-studio-panel))" }}
         >
           <header><span class="nf-card-label">03</span><h2>{t("agents.bridgeTitle")}</h2></header>
           <p>{t("agents.bridgeBody")}</p>
-          <code>python scripts/novelforge_bridge.py describe</code>
+          <code>python scripts/quillframe_bridge.py describe</code>
           <div class="nf-chip-row">
             <span class="wui-badge wui-badge--success">Host Bridge v1</span>
             <span class="wui-badge wui-badge--outline">MCP-ready boundary</span>

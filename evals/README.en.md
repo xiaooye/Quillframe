@@ -1,8 +1,8 @@
-# NovelForge Evals
+# Quillframe Evals
 
 ## Purpose
 
-NovelForge separates **deterministic invariants** from **semantic quality judgment**.
+Quillframe separates **deterministic invariants** from **semantic quality judgment**.
 
 ```mermaid
 flowchart LR
@@ -70,7 +70,7 @@ The evidence floor for simplifying one pair is **3 independent condition replica
 
 The deterministic evaluator validates registered-contract binding, candidate/queue/result/execution fingerprints, independent invocation lineage, exact 3:3 presentation counterbalance, and the predeclared decision protocol. It does not make literary judgments, and synthetic self-tests are never semantic evidence.
 
-Live ablation execution is **manual-only**. Pull-request CI resolves to `deterministic_only` even if a repository provider credential exists. A human-authorized run must dispatch `novelforge-adaptive-production-semantic.yml` with `execution_mode=reader_contamination_3x2`. That mode executes exactly 3 two-arm condition batches plus 6 single pair-review jobs: a hard ceiling of **12 semantic calls** with no automatic retry beyond the ceiling. Each execution identity binds `max_semantic_calls=12`, the workflow timeout, and the named budget binding before the corresponding reviewer call. The resulting ablation decision is non-promotion evidence; it cannot turn the Framework feature gate into promotion PASS by itself.
+Live ablation execution is **manual-only**. Pull-request CI resolves to `deterministic_only` even if a repository provider credential exists. A human-authorized run must dispatch `quillframe-adaptive-production-semantic.yml` with `execution_mode=reader_contamination_3x2`. That mode executes exactly 3 two-arm condition batches plus 6 single pair-review jobs: a hard ceiling of **12 semantic calls** with no automatic retry beyond the ceiling. Each execution identity binds `max_semantic_calls=12`, the workflow timeout, and the named budget binding before the corresponding reviewer call. The resulting ablation decision is non-promotion evidence; it cannot turn the Framework feature gate into promotion PASS by itself.
 
 ## Commands
 

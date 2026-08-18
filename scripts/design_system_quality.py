@@ -88,8 +88,8 @@ def main() -> int:
     config = load(APP_CONFIG_PATH)
     css = THEME_PATH.read_text(encoding="utf-8")
 
-    require(tokens.get("schema") == "novelforge_brand_tokens_v2", "unexpected token schema")
-    require(integration.get("schema") == "novelforge_weiui_integration_v2", "unexpected WeiUI integration schema")
+    require(tokens.get("schema") == "quillframe_brand_tokens_v2", "unexpected token schema")
+    require(integration.get("schema") == "quillframe_weiui_integration_v2", "unexpected WeiUI integration schema")
 
     source = integration.get("source", {})
     require(source.get("repository") == "xiaooye/weiui", "WeiUI source repository must be exact")
@@ -106,7 +106,7 @@ def main() -> int:
     require({"@weiui/headless", "@weiui/react"}.issubset(forbidden), "Solid Studio must forbid React runtime packages")
     require(consumption.get("generic_component_css_owner") == "@weiui/css", "WeiUI must own generic Studio component CSS")
     require(consumption.get("story_loom_css_scope") == "theme_tokens_and_product_identity", "Story Loom CSS scope drifted")
-    require(consumption.get("studio_custom_css_scope") == "composition_layout_and_novelforge_specific_information_architecture", "Studio custom CSS scope drifted")
+    require(consumption.get("studio_custom_css_scope") == "composition_layout_and_quillframe_specific_information_architecture", "Studio custom CSS scope drifted")
     require(consumption.get("custom_generic_component_chrome_allowed") is False, "Studio must not fork generic component chrome")
     required_generic_primitives = set(consumption.get("required_generic_primitives", []))
     require(required_generic_primitives == {
@@ -202,7 +202,7 @@ def main() -> int:
     for variable in (
         "--wui-color-background", "--wui-color-foreground", "--wui-color-primary",
         "--wui-color-ring", "--wui-color-success", "--wui-color-warning",
-        "--nf-lane-project-fill", "--nf-lane-runtime-fill", "--nf-touch-target-min",
+        "--qf-lane-project-fill", "--qf-lane-runtime-fill", "--qf-touch-target-min",
     ):
         require(variable in css, f"theme CSS missing {variable}")
 
@@ -216,7 +216,7 @@ def main() -> int:
         require(commit in str(assets[asset_id].get("license_note", "")), f"{asset_id} provenance must bind exact WeiUI commit")
 
     print(json.dumps({
-        "schema": "novelforge_story_loom_design_system_check_v2",
+        "schema": "quillframe_story_loom_design_system_check_v2",
         "status": "pass",
         "weiui_commit": commit,
         "weiui_config_fingerprint": config_fp,

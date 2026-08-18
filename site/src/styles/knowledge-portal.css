@@ -28,8 +28,8 @@
     block-size: 28px;
     margin-inline-end: 2px;
     border-radius: 9px;
-    color: var(--nf-lane-runtime-stroke);
-    background: color-mix(in oklab, var(--nf-lane-runtime-fill) 78%, white);
+    color: var(--qf-lane-runtime-stroke);
+    background: color-mix(in oklab, var(--qf-lane-runtime-fill) 78%, white);
   }
 
   .document-human-meta strong {

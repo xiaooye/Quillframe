@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""NovelForge generic Project Adapter resolver.
+"""Quillframe generic Project Adapter resolver.
 
-Supports standard and mapped/legacy layouts through novelforge.toml without
+Supports standard and mapped/legacy layouts through quillframe.toml without
 hard-coding any consumer project. The adapter validates identity, lockfile, path
 safety, required logical domains, and can build a compact mapped bundle.
 """
@@ -17,11 +17,11 @@ from pathlib import Path
 from typing import Any
 import tomllib
 
-PROJECT_SCHEMA="novelforge_project_v1"
-LOCK_SCHEMA="novelforge_lock_v1"
+PROJECT_SCHEMA="quillframe_project_v1"
+LOCK_SCHEMA="quillframe_lock_v1"
 REQUIRED_STANDARD_KEYS={"bible","state","plans","manuscripts","profiles","evals","tests","research","corpus","specs","assets"}
 REQUIRED_MAPPED_KEYS={"project_entry","start_here","context_protocol","story_bible","current_state","active_plans","manuscripts","profiles"}
-IGNORE_PARTS={".git",".novelforge","dist","__pycache__"}
+IGNORE_PARTS={".git",".quillframe","dist","__pycache__"}
 
 
 def now_iso()->str:return datetime.now(timezone.utc).isoformat()
@@ -30,15 +30,15 @@ def sha(data:bytes)->str:return "sha256:"+hashlib.sha256(data).hexdigest()
 def dump(v:Any)->None:print(json.dumps(v,ensure_ascii=False,indent=2))
 
 def load_toml(root:Path)->dict[str,Any]:
-    path=root/"novelforge.toml"
-    if not path.exists():raise ValueError("missing novelforge.toml")
+    path=root/"quillframe.toml"
+    if not path.exists():raise ValueError("missing quillframe.toml")
     with path.open("rb") as f:v=tomllib.load(f)
-    if not isinstance(v,dict):raise ValueError("novelforge.toml must parse to object")
+    if not isinstance(v,dict):raise ValueError("quillframe.toml must parse to object")
     return v
 
 def load_lock(root:Path)->dict[str,Any]:
-    path=root/"novelforge.lock.json"
-    if not path.exists():raise ValueError("missing novelforge.lock.json")
+    path=root/"quillframe.lock.json"
+    if not path.exists():raise ValueError("missing quillframe.lock.json")
     v=json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(v,dict):raise ValueError("lockfile must be object")
     return v
@@ -50,10 +50,10 @@ def safe_resolve(root:Path,rel:str)->Path:
 
 def resolve_contract(root:Path)->dict[str,Any]:
     root=root.resolve();m=load_toml(root);lock=load_lock(root)
-    nf=m.get("novelforge",{});proj=m.get("project",{});adapter=m.get("adapter",{});paths=m.get("paths",{})
+    nf=m.get("quillframe",{});proj=m.get("project",{});adapter=m.get("adapter",{});paths=m.get("paths",{})
     layout=adapter.get("layout","standard")
-    if nf.get("schema")!=PROJECT_SCHEMA:raise ValueError("novelforge.schema must be novelforge_project_v1")
-    if lock.get("schema")!=LOCK_SCHEMA:raise ValueError("lock schema must be novelforge_lock_v1")
+    if nf.get("schema")!=PROJECT_SCHEMA:raise ValueError("quillframe.schema must be quillframe_project_v1")
+    if lock.get("schema")!=LOCK_SCHEMA:raise ValueError("lock schema must be quillframe_lock_v1")
     for key in ("id","title","language","version","status"):
         if not proj.get(key):raise ValueError(f"project.{key} required")
     if layout not in {"standard","mapped"}:raise ValueError("adapter.layout must be standard|mapped")
@@ -67,9 +67,9 @@ def resolve_contract(root:Path)->dict[str,Any]:
         if key in required and not p.exists():raise ValueError(f"required mapped path does not exist: {key}={rel}")
         resolved[key]={"relative":rel,"absolute":str(p),"exists":p.exists(),"kind":"dir" if p.is_dir() else ("file" if p.is_file() else "missing")}
     framework=lock.get("framework",{})
-    if framework.get("name")!="NovelForge":raise ValueError("lock framework.name must be NovelForge")
+    if framework.get("name")!="Quillframe":raise ValueError("lock framework.name must be Quillframe")
     return {
-        "schema":"novelforge_project_adapter_resolution_v1",
+        "schema":"quillframe_project_adapter_resolution_v1",
         "project_id":proj["id"],"project_title":proj["title"],"project_version":proj["version"],"language":proj["language"],
         "project_root":str(root),"layout":layout,"framework_lock":framework,
         "project_schema_version":nf.get("project_schema_version") or lock.get("project_schema_version"),
@@ -106,7 +106,7 @@ def build(root:Path,output:Path|None=None)->dict[str,Any]:
             elif domain not in seen[rel]["domains"]:seen[rel]["domains"].append(domain)
     items.sort(key=lambda x:x["path"])
     payload={
-        "schema":"novelforge_mapped_project_bundle_v1","built_at":now_iso(),"project_id":r["project_id"],"project_version":r["project_version"],
+        "schema":"quillframe_mapped_project_bundle_v1","built_at":now_iso(),"project_id":r["project_id"],"project_version":r["project_version"],
         "layout":r["layout"],"framework_lock":r["framework_lock"],"authority":r["authority"],
         "path_map":{k:v["relative"] for k,v in r["paths"].items()},"files":items,
     }
@@ -120,21 +120,21 @@ def self_test(tmp:Path)->dict[str,Any]:
     (tmp/"legacy"/"bible").mkdir(parents=True);(tmp/"legacy"/"state").mkdir();(tmp/"legacy"/"plans").mkdir();(tmp/"legacy"/"drafts").mkdir();(tmp/"legacy"/"profiles").mkdir()
     for name in ("PROJECT.md","START_HERE.md","CONTEXT.md"):(tmp/"legacy"/name).write_text(name,encoding="utf-8")
     (tmp/"legacy"/"bible"/"CHAR-TEST.md").write_text("fixture",encoding="utf-8")
-    manifest='''[novelforge]\nschema="novelforge_project_v1"\nproject_schema_version="1"\nminimum_framework_version="7.0.0"\n[project]\nid="PROJECT-TEST"\ntitle="Fixture"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[adapter]\nlayout="mapped"\n[paths]\nproject_entry="legacy/PROJECT.md"\nstart_here="legacy/START_HERE.md"\ncontext_protocol="legacy/CONTEXT.md"\nstory_bible="legacy/bible"\ncurrent_state="legacy/state"\nactive_plans="legacy/plans"\nmanuscripts="legacy/drafts"\nprofiles="legacy/profiles"\n[quality]\nframework_surface_fundamentals=true\nframework_reader_engagement=true\n'''
-    (tmp/"novelforge.toml").write_text(manifest,encoding="utf-8")
-    framework={"name":"NovelForge","version":"7.0.0","commit":"fixture","bundle_fingerprint":"sha256:"+"a"*64}
-    (tmp/"novelforge.lock.json").write_text(json.dumps({"schema":LOCK_SCHEMA,"framework":framework,"project_schema_version":"1"}),encoding="utf-8")
+    manifest='''[quillframe]\nschema="quillframe_project_v1"\nproject_schema_version="1"\nminimum_framework_version="7.0.0"\n[project]\nid="PROJECT-TEST"\ntitle="Fixture"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[adapter]\nlayout="mapped"\n[paths]\nproject_entry="legacy/PROJECT.md"\nstart_here="legacy/START_HERE.md"\ncontext_protocol="legacy/CONTEXT.md"\nstory_bible="legacy/bible"\ncurrent_state="legacy/state"\nactive_plans="legacy/plans"\nmanuscripts="legacy/drafts"\nprofiles="legacy/profiles"\n[quality]\nframework_surface_fundamentals=true\nframework_reader_engagement=true\n'''
+    (tmp/"quillframe.toml").write_text(manifest,encoding="utf-8")
+    framework={"name":"Quillframe","version":"7.0.0","commit":"fixture","bundle_fingerprint":"sha256:"+"a"*64}
+    (tmp/"quillframe.lock.json").write_text(json.dumps({"schema":LOCK_SCHEMA,"framework":framework,"project_schema_version":"1"}),encoding="utf-8")
     (tmp/"framework.attestation.json").write_text(json.dumps({"framework":framework}),encoding="utf-8")
     v=validate(tmp);b=build(tmp)
     ok=v["valid"] and b["file_count"]>=4
     return {"project_adapter_contract":"PASS" if ok else "FAIL","mapped_layout":True,"path_escape_guard":True,"attestation_fixture":True,"bundle":b}
 
 def main()->int:
-    p=argparse.ArgumentParser(description="NovelForge Project Adapter");sub=p.add_subparsers(dest="cmd",required=True)
+    p=argparse.ArgumentParser(description="Quillframe Project Adapter");sub=p.add_subparsers(dest="cmd",required=True)
     for cmd in ("resolve","validate","build"):
         s=sub.add_parser(cmd);s.add_argument("path");
         if cmd=="build":s.add_argument("--output")
-    st=sub.add_parser("self-test");st.add_argument("--tmp",default="/tmp/novelforge-project-adapter-self-test")
+    st=sub.add_parser("self-test");st.add_argument("--tmp",default="/tmp/quillframe-project-adapter-self-test")
     args=p.parse_args()
     if args.cmd=="self-test":r=self_test(Path(args.tmp));dump(r);return 0 if r["project_adapter_contract"]=="PASS" else 1
     root=Path(args.path)

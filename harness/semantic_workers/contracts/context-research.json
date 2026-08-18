@@ -1,5 +1,5 @@
 {
-  "schema": "novelforge_model_contract_registry_v1",
+  "schema": "quillframe_model_contract_registry_v1",
   "version": "4",
   "principle": "Search and context selection are agent decisions. Deterministic runtime exposes authorized search/fetch primitives, candidate blocks, provenance, visibility and resource limits; the model decides what is missing, what query to issue, which evidence matters, whether to reformulate, what to retain and when to stop.",
   "contracts": {

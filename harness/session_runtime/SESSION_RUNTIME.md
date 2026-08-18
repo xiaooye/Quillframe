@@ -1,4 +1,4 @@
-# NovelForge Session Runtime · Bootstrap Router
+# Quillframe Session Runtime · Bootstrap Router
 
 Authoritative editions:
 - English: `SESSION_RUNTIME.en.md`

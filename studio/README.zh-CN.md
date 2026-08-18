@@ -1,12 +1,12 @@
-# NovelForge Studio
+# Quillframe Studio
 
 <p><kbd>产品体验</kbd>&nbsp;&nbsp;<kbd>创作工作台</kbd>&nbsp;&nbsp;<kbd>低运行开销</kbd></p>
 
-NovelForge Studio 是 NovelForge Core 之上的产品体验层。Phase 1、Phase 2A、Phase 2B 已经建立产品模型、安全投影和 portable Host Bridge。**Phase 2C 现在已经包含一个真实可构建的只读 SolidJS application shell**：TypeScript + Vite + `@solidjs/router`，消费 Story Loom v2 和通过 config 按需生成的 zero-runtime-JavaScript WeiUI CSS foundation。
+Quillframe Studio 是 Quillframe Core 之上的产品体验层。Phase 1、Phase 2A、Phase 2B 已经建立产品模型、安全投影和 portable Host Bridge。**Phase 2C 现在已经包含一个真实可构建的只读 SolidJS application shell**：TypeScript + Vite + `@solidjs/router`，消费 Story Loom v2 和通过 config 按需生成的 zero-runtime-JavaScript WeiUI CSS foundation。
 
 Local Web 是一等产品面；当目标是最低增量 CPU/RAM 时，它也是首选宿主。Tauri 继续作为未来 optional/installable host，而不是产品语义中心。
 
-> **权威边界 ✦** Studio 只消费 NovelForge Core 状态。UI state 不是 Canon、Memory、semantic truth、write authority，也不是第二套 workflow engine。
+> **权威边界 ✦** Studio 只消费 Quillframe Core 状态。UI state 不是 Canon、Memory、semantic truth、write authority，也不是第二套 workflow engine。
 
 [English](README.en.md)
 
@@ -30,7 +30,7 @@ Local Web 是一等产品面；当目标是最低增量 CPU/RAM 时，它也是�
 
 ## Phase 2A · 一个产品，多种宿主
 
-NovelForge 产品语义面向四种一等交付方式：
+Quillframe 产品语义面向四种一等交付方式：
 
 - **CLI** —— 可脚本化的原生 inspection / automation。
 - **Local Web / local app** —— low-overhead creator workstation。
@@ -43,7 +43,7 @@ Phase 2A Project Hub safe projection 位于 [`project_hub_projection.py`](projec
 
 ## Phase 2B · Portable read-only Host Bridge
 
-[`host_bridge.py`](host_bridge.py) 接收 `novelforge_studio_host_bridge_request_v1`，返回 fingerprint-bound `novelforge_studio_host_bridge_result_v1`。
+[`host_bridge.py`](host_bridge.py) 接收 `quillframe_studio_host_bridge_request_v1`，返回 fingerprint-bound `quillframe_studio_host_bridge_result_v1`。
 
 当前真实支持的操作刻意保持很小：
 
@@ -56,11 +56,11 @@ Phase 2A Project Hub safe projection 位于 [`project_hub_projection.py`](projec
 
 Runtime session/event/handoff reads、Run Receipt retrieval、resume、generic command invocation 与 project mutation 继续依赖 Core Issue #23。Studio 不会读取 private SQLite state 去伪造这些能力。
 
-[`../agent-skills/novelforge/SKILL.md`](../agent-skills/novelforge/SKILL.md) 使用相同 operation vocabulary，同时不 import 私有 Core runtime module。
+[`../agent-skills/quillframe/SKILL.md`](../agent-skills/quillframe/SKILL.md) 使用相同 operation vocabulary，同时不 import 私有 Core runtime module。
 
 ## Story Loom v2 · WeiUI config-generated foundation
 
-Story Loom 继续拥有 NovelForge visual/product-semantic authority；WeiUI 拥有 generic CSS/token primitives。
+Story Loom 继续拥有 Quillframe visual/product-semantic authority；WeiUI 拥有 generic CSS/token primitives。
 
 Reviewed upstream exact pin 记录在 [`../assets/brand/weiui.integration.json`](../assets/brand/weiui.integration.json)。Phase 2C 只消费 `@weiui/tokens` 与 `@weiui/css`；`@weiui/react` 和 `@weiui/headless` 继续禁止成为 Studio runtime dependency。
 
@@ -147,6 +147,6 @@ Phase 2C 把性能当成 acceptance condition，而不是后期优化项。CI �
 
 ## 当前与 Studio 直接相关的 Core 能力
 
-`novelforge_production_readiness_v1` 让 Review 拥有真实 same-fingerprint conjunction gate，而不是虚构的 quality percentage。
+`quillframe_production_readiness_v1` 让 Review 拥有真实 same-fingerprint conjunction gate，而不是虚构的 quality percentage。
 
-`novelforge_publication_ir_v1` + `publication/compiler.py` 提供 Accepted text → clean text、Web HTML、print-oriented HTML/CSS、EPUB 3.3 的 deterministic compilation。更丰富的 Publication Studio 仍然只能建立在 Core 实际存在的 contract 上。
+`quillframe_publication_ir_v1` + `publication/compiler.py` 提供 Accepted text → clean text、Web HTML、print-oriented HTML/CSS、EPUB 3.3 的 deterministic compilation。更丰富的 Publication Studio 仍然只能建立在 Core 实际存在的 contract 上。

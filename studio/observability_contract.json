@@ -1,5 +1,5 @@
 {
-  "schema": "novelforge_studio_observability_contract_v1",
+  "schema": "quillframe_studio_observability_contract_v1",
   "version": "1",
   "authority": false,
   "canon_authority": false,

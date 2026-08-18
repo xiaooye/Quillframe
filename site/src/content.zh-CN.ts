@@ -17,7 +17,7 @@ export const zhCN = {
   home: {
     eyebrow: "自适应小说智能体框架 · 0.8.x",
     title: "让长篇创作有记忆，也有边界。",
-    lede: "NovelForge 不只生成文字。它会记录上下文从哪里来、角色此刻能知道什么、候选稿通过了哪些审查，以及正文在接受后如何进入可重复的出版流程。每一步都有边界，也都有证据可查。",
+    lede: "Quillframe 不只生成文字。它会记录上下文从哪里来、角色此刻能知道什么、候选稿通过了哪些审查，以及正文在接受后如何进入可重复的出版流程。每一步都有边界，也都有证据可查。",
     primaryCta: "看看它怎么工作",
     secondaryCta: "查看系统架构",
     proofLabel: "不是承诺，是证据",
@@ -45,12 +45,12 @@ export const zhCN = {
       ],
     },
     proofs: [
-      { eyebrow: "上下文", title: "被判定有帮助 ≠ 真正进入上下文", body: "运行收据会区分：哪些证据被判定为支持材料，哪些最后真的进入了受预算约束的上下文包，以及哪些因为预算或可见性被排除。", meta: "novelforge_run_receipt_v1" },
-      { eyebrow: "就绪状态", title: "所有必要审查，都对应同一份候选稿", body: "只要必要的文本表面、读者参与、连续性或独立语义证据缺失、等待中或失败，这份候选稿就不会被标记为可进入用户审查。", meta: "novelforge_production_readiness_v1" },
+      { eyebrow: "上下文", title: "被判定有帮助 ≠ 真正进入上下文", body: "运行收据会区分：哪些证据被判定为支持材料，哪些最后真的进入了受预算约束的上下文包，以及哪些因为预算或可见性被排除。", meta: "quillframe_run_receipt_v1" },
+      { eyebrow: "就绪状态", title: "所有必要审查，都对应同一份候选稿", body: "只要必要的文本表面、读者参与、连续性或独立语义证据缺失、等待中或失败，这份候选稿就不会被标记为可进入用户审查。", meta: "quillframe_production_readiness_v1" },
       { eyebrow: "角色知识", title: "角色知道什么，有故事时间边界", body: "角色是否知道一件事，与它通过什么方式得知，是两件不同的事。角色行动必须由它在当前故事时点真正可见的证据支持。", meta: "角色证据契约" },
-      { eyebrow: "出版", title: "接受后的正文保持逐字一致", body: "出版中间表示会核对来源指纹，并在生成纯文本、网页 HTML、面向印刷的 HTML/CSS 和 EPUB 3.3 时保持接受稿的 Unicode 正文逐字一致。", meta: "novelforge_publication_ir_v1" },
+      { eyebrow: "出版", title: "接受后的正文保持逐字一致", body: "出版中间表示会核对来源指纹，并在生成纯文本、网页 HTML、面向印刷的 HTML/CSS 和 EPUB 3.3 时保持接受稿的 Unicode 正文逐字一致。", meta: "quillframe_publication_ir_v1" },
       { eyebrow: "运行方式", title: "能访问，不等于拥有权威", body: "命令行、本地网页端、云端界面和 Agent Skill 可以开放不同能力，但运行方式不同不会自动产生正典、框架写入或结算权威。", meta: "authority=false" },
-      { eyebrow: "设计系统", title: "设计系统本身也接受机器检查", body: "Story Loom v2 精确固定 WeiUI 的零运行时 JavaScript 基础，并检查主题层、对比度、触控尺寸、语言、减少动画和禁止默认轮询等约束。", meta: "novelforge_brand_tokens_v2" },
+      { eyebrow: "设计系统", title: "设计系统本身也接受机器检查", body: "Story Loom v2 精确固定 WeiUI 的零运行时 JavaScript 基础，并检查主题层、对比度、触控尺寸、语言、减少动画和禁止默认轮询等约束。", meta: "quillframe_brand_tokens_v2" },
     ],
     studio: {
       eyebrow: "Studio",
@@ -70,7 +70,7 @@ export const zhCN = {
     architecture: {
       eyebrow: "系统架构",
       title: "一套系统，各自负责一件事。",
-      lede: "NovelForge 不把一群智能体堆成圆桌会。每个子系统只负责边界清晰的机制，再把带类型的证据交给下一层。",
+      lede: "Quillframe 不把一群智能体堆成圆桌会。每个子系统只负责边界清晰的机制，再把带类型的证据交给下一层。",
       cards: [
         { eyebrow: "项目", title: "正典与状态", body: "权威等级、依赖、已接受状态、计划和结算证据始终显式存在。" },
         { eyebrow: "运行时", title: "运行与会话", body: "管理会话、运行、检查点、宿主能力、交接、指纹和一次性消费证据各自有清晰身份。" },
@@ -106,7 +106,7 @@ export const zhCN = {
   routes: {
     product: {
       eyebrow: "产品模型",
-      title: "NovelForge 是小说生产系统，不是提示词外壳。",
+      title: "Quillframe 是小说生产系统，不是提示词外壳。",
       lede: "它把创作判断与确定性控制分开，让一本长期运行的书能持续积累证据、修订和状态，而不是把每一次模型输出都顺手升级成事实。",
       cards: [
         { title: "权威先于方便", body: "锁定内容、已接受内容、当前计划、审查稿、提案、派生状态、运行状态、学习材料和语料材料不能混成一层“记忆”。" },
@@ -116,7 +116,7 @@ export const zhCN = {
       ],
     },
     studio: {
-      eyebrow: "NovelForge Studio",
+      eyebrow: "Quillframe Studio",
       title: "把创作放在前台，把运行证据留在需要时展开。",
       lede: "第二阶段 C 已有真实的只读 SolidJS 应用壳：双语、移动优先、无默认轮询，通过本地回环宿主桥接层读取 Core 的公开能力；本地网页端是一等产品入口，Tauri 仍是可选宿主。",
       cards: [
@@ -129,7 +129,7 @@ export const zhCN = {
     architecture: {
       eyebrow: "系统架构",
       title: "通用机制保持通用；项目事实始终属于项目。",
-      lede: "NovelForge 定义可复用的故事、角色、正典、上下文、质量、运行时、学习、语料、出版与产品契约；具体小说自己拥有角色、世界、计划、状态、正文和已接受正典。",
+      lede: "Quillframe 定义可复用的故事、角色、正典、上下文、质量、运行时、学习、语料、出版与产品契约；具体小说自己拥有角色、世界、计划、状态、正文和已接受正典。",
       cards: [
         { title: "运行编排", body: "负责会话级编排、能力、路由、交接和检查点语义。" },
         { title: "上下文", body: "围绕问题建立稀疏证据包，并执行可见性、故事顺序、权威等级和硬预算限制。" },
@@ -157,7 +157,7 @@ export const zhCN = {
       lede: "这里把持续维护、与当前实现同步的仓库文档编译进产品本身。日常阅读不必离开站点；需要核对来源时仍可以追溯到仓库。",
       cards: [
         { eyebrow: "入门", title: "知识库首页", body: "按任务进入架构、运行时、质量、项目、Studio 与版本状态。", meta: "docs/README.zh-CN.md" },
-        { eyebrow: "核心", title: "架构图谱", body: "按子系统与契约浏览 NovelForge 的整体架构。", meta: "docs/architecture-atlas.zh-CN.md" },
+        { eyebrow: "核心", title: "架构图谱", body: "按子系统与契约浏览 Quillframe 的整体架构。", meta: "docs/architecture-atlas.zh-CN.md" },
         { eyebrow: "生产", title: "生产流水线", body: "从上下文冻结与情节模拟，一直到用户审查和结算边界。", meta: "docs/production-pipeline.zh-CN.md" },
         { eyebrow: "质量", title: "质量保障", body: "解释文本表面、读者参与、连续性和语义审查各自如何工作。", meta: "docs/quality-assurance.zh-CN.md" },
         { eyebrow: "产品", title: "Studio 架构", body: "创作 / 检查双模式、可移植运行方式、真实的第二阶段 C SolidJS 应用壳、WeiUI 基础和当前缺口。", meta: "studio/PRODUCT_ARCHITECTURE.zh-CN.md" },
@@ -167,9 +167,9 @@ export const zhCN = {
     changelog: {
       eyebrow: "版本状态",
       title: "版本记录只写已经发生的事。",
-      lede: "NovelForge 仍处于 1.0 之前。当前记录只描述已经合入的机器契约与产品行为，并把剩余缺口明确留在开发计划里，不把路线图提前包装成能力。",
+      lede: "Quillframe 仍处于 1.0 之前。当前记录只描述已经合入的机器契约与产品行为，并把剩余缺口明确留在开发计划里，不把路线图提前包装成能力。",
       cards: [
-        { title: "统一使用 0.8.0 开发身份", body: "Manifest、CLI、Skill、Project SDK 默认值、MCP 元数据与文档治理共用同一个 1.0 前开发版本身份。" },
+        { title: "统一使用 0.9.0 开发身份", body: "Manifest、CLI、Skill、Project SDK 默认值、MCP 元数据与文档治理共用同一个 1.0 前开发版本身份。" },
         { title: "1.0 前仍允许必要的破坏性清理", body: "只要架构理由充分，并且有确定性 CI 保护，机器契约仍可能在当前主分支上继续收敛。" },
         { title: "历史保持原样", body: "旧 7.x 变更记录与规格保留当时的原始语义；当前文档不会为了新命名而倒写历史。" },
       ],

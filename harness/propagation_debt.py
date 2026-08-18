@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Durable non-authoritative downstream propagation-debt ledger for NovelForge."""
+"""Durable non-authoritative downstream propagation-debt ledger for Quillframe."""
 from __future__ import annotations
 
 import argparse
@@ -11,11 +11,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "novelforge_propagation_debt_v1"
-OPEN_SCHEMA = "novelforge_propagation_debt_open_v1"
-DISCHARGE_SCHEMA = "novelforge_propagation_debt_discharge_v1"
-WAIVER_SCHEMA = "novelforge_propagation_debt_waiver_v1"
-SUPERSEDE_SCHEMA = "novelforge_propagation_debt_supersede_v1"
+SCHEMA = "quillframe_propagation_debt_v1"
+OPEN_SCHEMA = "quillframe_propagation_debt_open_v1"
+DISCHARGE_SCHEMA = "quillframe_propagation_debt_discharge_v1"
+WAIVER_SCHEMA = "quillframe_propagation_debt_waiver_v1"
+SUPERSEDE_SCHEMA = "quillframe_propagation_debt_supersede_v1"
 ACTIONS = {"revalidate", "rebuild", "replan", "resimulate", "human_review"}
 STATUSES = {"open", "discharged", "superseded", "waived_with_evidence"}
 AUTHORITIES = {"locked", "accepted", "settled", "active_plan"}
@@ -204,7 +204,7 @@ def open_debt(conn: sqlite3.Connection, raw: Any) -> dict[str, Any]:
     c, d = req["source_change"], req["dependency"]
     if c["before_fingerprint"] == c["after_fingerprint"]:
         return {
-            "schema": "novelforge_propagation_debt_open_result_v1",
+            "schema": "quillframe_propagation_debt_open_result_v1",
             "status": "not_created", "reason": "source_fingerprint_unchanged", "debt_id": None,
             "authority": False, "canon_authority": False, "framework_write_authority": False, "model_execution": False,
         }
@@ -359,7 +359,7 @@ def summary(conn: sqlite3.Connection, project_id: str | None = None) -> dict[str
     items = list_debts(conn, project_id=project_id)
     counts = {status: sum(item["status"] == status for item in items) for status in sorted(STATUSES)}
     return {
-        "schema": "novelforge_propagation_debt_summary_v1", "project_id": project_id,
+        "schema": "quillframe_propagation_debt_summary_v1", "project_id": project_id,
         "counts": counts, "open_debt_ids": [x["debt_id"] for x in items if x["status"] == "open"],
         "authority": False, "canon_authority": False, "framework_write_authority": False,
         "auto_action_performed": False, "model_execution": False,
@@ -371,8 +371,8 @@ def dump(value: Any) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge propagation-debt ledger")
-    parser.add_argument("--db", default=".novelforge/propagation-debt.db")
+    parser = argparse.ArgumentParser(description="Quillframe propagation-debt ledger")
+    parser.add_argument("--db", default=".quillframe/propagation-debt.db")
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("open"); p.add_argument("--request", required=True)
     p = sub.add_parser("status"); p.add_argument("--debt-id", required=True)
@@ -385,13 +385,13 @@ def main() -> int:
     args = parser.parse_args()
     if args.command == "self-test":
         from propagation_debt_selftest import run_self_test
-        path = Path(args.path) if args.path else Path(tempfile.gettempdir()) / "novelforge-propagation-debt-selftest.db"
+        path = Path(args.path) if args.path else Path(tempfile.gettempdir()) / "quillframe-propagation-debt-selftest.db"
         return run_self_test(path)
     conn = connect(Path(args.db))
     try:
         if args.command == "open": out = open_debt(conn, load(Path(args.request)))
         elif args.command == "status": out = view(conn, args.debt_id)
-        elif args.command == "list": out = {"schema": "novelforge_propagation_debt_list_v1", "items": list_debts(conn, args.status, args.project_id)}
+        elif args.command == "list": out = {"schema": "quillframe_propagation_debt_list_v1", "items": list_debts(conn, args.status, args.project_id)}
         elif args.command == "discharge": out = discharge(conn, load(Path(args.receipt)))
         elif args.command == "waive": out = waive(conn, load(Path(args.receipt)))
         elif args.command == "supersede": out = supersede(conn, load(Path(args.receipt)))

@@ -32,7 +32,7 @@ for (const [name, source] of [["KnowledgeExperience", knowledgeExperience], ["Do
 }
 
 // Knowledge links are owned by the replacement portal. pushState already emits
-// novelforge:locationchange in main.tsx; a synthetic popstate also wakes the
+// quillframe:locationchange in main.tsx; a synthetic popstate also wakes the
 // legacy @solidjs/router route and previously made document navigation brittle.
 requireCheck(
   !knowledgeExperience.includes("new PopStateEvent") && !knowledgeExperience.includes("dispatchEvent(new PopStateEvent"),
@@ -63,7 +63,7 @@ requireCheck(
   "Knowledge document reader must disable generic per-block intrinsic placeholders",
 );
 requireCheck(
-  knowledgeCss.includes("--nf-doc-reading: 800px") && knowledgeCss.includes("font-size: 17px"),
+  knowledgeCss.includes("--qf-doc-reading: 800px") && knowledgeCss.includes("font-size: 17px"),
   "Knowledge document reader must preserve the professional reading-width and prose-size contract",
 );
 requireCheck(
@@ -86,7 +86,7 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_knowledge_experience_quality_v1",
+    schema: "quillframe_knowledge_experience_quality_v1",
     status: "pass",
     zh_documents: chineseDocs.length,
     native_chinese_presentation: true,

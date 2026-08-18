@@ -34,7 +34,7 @@ Quillframe 文档只遵守一个最重要的视觉与信息原则：**页面就�
 
 ## 公开品牌与技术命名空间
 
-Quillframe 是当前公开品牌。旧品牌只在历史记录或兼容标识中保留。仓库名称、模式标识、`novelforge.toml`、`novelforge.lock.json`、工作流名称和稳定契约标识属于技术命名空间，禁止全局替换。
+Quillframe 是当前公开品牌。旧品牌只在历史记录或兼容标识中保留。仓库名称、模式标识、`quillframe.toml`、`quillframe.lock.json`、工作流名称和稳定契约标识属于技术命名空间，禁止全局替换。
 
 ## 中文必须按中文写作习惯撰写
 

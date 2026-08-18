@@ -1,6 +1,6 @@
-# NovelForge 产品站
+# Quillframe 产品站
 
-NovelForge 的公开 Product 界面现在是一个 **Godot Web 控制室**，并与 Astro/Starlight 文档应用保持明确边界。
+Quillframe 的公开 Product 界面现在是一个 **Godot Web 控制室**，并与 Astro/Starlight 文档应用保持明确边界。
 
 ## 运行时边界
 

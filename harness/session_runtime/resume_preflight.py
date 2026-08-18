@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic, side-effect-free resume preflight for NovelForge sessions.
+"""Deterministic, side-effect-free resume preflight for Quillframe sessions.
 
 This module answers one question only: does the currently durable session and
 checkpoint have enough still-valid evidence to be eligible for a future resume
@@ -20,9 +20,9 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-SCHEMA = "novelforge_session_resume_preflight_v1"
-AUTHORITY_EVIDENCE_SCHEMA = "novelforge_resume_authority_evidence_v1"
-CAPABILITY_SCHEMA = "novelforge_host_capabilities_v1"
+SCHEMA = "quillframe_session_resume_preflight_v1"
+AUTHORITY_EVIDENCE_SCHEMA = "quillframe_resume_authority_evidence_v1"
+CAPABILITY_SCHEMA = "quillframe_host_capabilities_v1"
 RESUMABLE_STATUSES = {"idle", "awaiting_user", "awaiting_external", "failed"}
 FRAMEWORK_KEYS = ("version", "commit", "bundle_fingerprint")
 
@@ -88,8 +88,8 @@ def read_session_row(db_path: Path, session_id: str) -> dict[str, Any] | None:
 
 def current_project_identity(project_root: Path) -> tuple[dict[str, Any] | None, list[str]]:
     blockers: list[str] = []
-    manifest_path = project_root / "novelforge.toml"
-    lock_path = project_root / "novelforge.lock.json"
+    manifest_path = project_root / "quillframe.toml"
+    lock_path = project_root / "quillframe.lock.json"
     attestation_path = project_root / "framework.attestation.json"
 
     if not manifest_path.exists():
@@ -111,12 +111,12 @@ def current_project_identity(project_root: Path) -> tuple[dict[str, Any] | None,
         lock = load_object(lock_path)
     except Exception:
         return None, ["project_lock_invalid"]
-    if lock.get("schema") != "novelforge_lock_v1":
+    if lock.get("schema") != "quillframe_lock_v1":
         blockers.append("project_lock_schema_invalid")
     framework = lock.get("framework")
     if (
         not isinstance(framework, dict)
-        or framework.get("name") != "NovelForge"
+        or framework.get("name") != "Quillframe"
         or any(not isinstance(framework.get(k), str) or not framework.get(k) for k in FRAMEWORK_KEYS)
     ):
         return None, [*blockers, "project_framework_identity_invalid"]
@@ -142,7 +142,7 @@ def current_project_identity(project_root: Path) -> tuple[dict[str, Any] | None,
 
 def probe_local_capabilities(project_root: Path) -> dict[str, Any] | None:
     proc = subprocess.run(
-        [sys.executable, str(ROOT / "novelforge.py"), "capabilities", "probe-local"],
+        [sys.executable, str(ROOT / "quillframe.py"), "capabilities", "probe-local"],
         cwd=str(project_root),
         text=True,
         capture_output=True,
@@ -402,25 +402,25 @@ def self_test() -> int:
     sys.path.insert(0, str(ROOT / "harness" / "control_plane"))
     from control_plane import ControlPlane  # type: ignore
 
-    with tempfile.TemporaryDirectory(prefix="novelforge-resume-preflight-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="quillframe-resume-preflight-") as tmp:
         root = Path(tmp)
-        (root / ".novelforge").mkdir()
+        (root / ".quillframe").mkdir()
         artifact = root / "draft.txt"
         artifact.write_text("frozen candidate\n", encoding="utf-8")
         artifact_fp = sha_bytes(artifact.read_bytes())
         authority = {"canon_write": "settlement_only", "framework_write": "forbidden"}
         authority_fp = fingerprint(authority)
         framework = {
-            "name": "NovelForge",
-            "version": "0.8.0",
+            "name": "Quillframe",
+            "version": "0.9.0",
             "commit": "fixture-commit",
             "bundle_fingerprint": "sha256:" + "a" * 64,
         }
-        (root / "novelforge.toml").write_text(
-            '[novelforge]\nschema="novelforge_project_v1"\n[project]\nid="BOOK-SELFTEST"\ntitle="Self Test"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[authority]\ncanon_write="settlement_only"\nframework_write="forbidden"\n',
+        (root / "quillframe.toml").write_text(
+            '[quillframe]\nschema="quillframe_project_v1"\n[project]\nid="BOOK-SELFTEST"\ntitle="Self Test"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[authority]\ncanon_write="settlement_only"\nframework_write="forbidden"\n',
             encoding="utf-8",
         )
-        (root / "novelforge.lock.json").write_text(json.dumps({"schema": "novelforge_lock_v1", "framework": framework}), encoding="utf-8")
+        (root / "quillframe.lock.json").write_text(json.dumps({"schema": "quillframe_lock_v1", "framework": framework}), encoding="utf-8")
         (root / "framework.attestation.json").write_text(json.dumps({"framework": framework}), encoding="utf-8")
         evidence_path = root / "resume-authority.json"
         evidence_path.write_text(json.dumps({
@@ -433,11 +433,11 @@ def self_test() -> int:
             "approval_refs": [],
         }), encoding="utf-8")
 
-        db = root / ".novelforge" / "runtime.db"
+        db = root / ".quillframe" / "runtime.db"
         cp = ControlPlane(db)
         cp.init()
         session = {
-            "schema": "novelforge_agent_session_v1",
+            "schema": "quillframe_agent_session_v1",
             "resource_id": "BOOK-SELFTEST",
             "project_id": "BOOK-SELFTEST",
             "session_id": "SES-PREFLIGHT",
@@ -464,7 +464,7 @@ def self_test() -> int:
         artifact.write_text("changed\n", encoding="utf-8")
         stale_artifact = inspect(db_path=db, project_root=root, session_id="SES-PREFLIGHT", checkpoint_id="CP-PREFLIGHT", expected_session_version=put["version"], authority_evidence_path=evidence_path)
         artifact.write_text("frozen candidate\n", encoding="utf-8")
-        changed_manifest = root / "novelforge.toml"
+        changed_manifest = root / "quillframe.toml"
         changed_manifest.write_text(changed_manifest.read_text(encoding="utf-8").replace('id="BOOK-SELFTEST"', 'id="BOOK-OTHER"'), encoding="utf-8")
         wrong_project = inspect(db_path=db, project_root=root, session_id="SES-PREFLIGHT", checkpoint_id="CP-PREFLIGHT", expected_session_version=put["version"], authority_evidence_path=evidence_path)
         changed_manifest.write_text(changed_manifest.read_text(encoding="utf-8").replace('id="BOOK-OTHER"', 'id="BOOK-SELFTEST"'), encoding="utf-8")
@@ -510,7 +510,7 @@ def self_test() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge deterministic session resume preflight")
+    parser = argparse.ArgumentParser(description="Quillframe deterministic session resume preflight")
     sub = parser.add_subparsers(dest="command", required=True)
     inspect_p = sub.add_parser("inspect")
     inspect_p.add_argument("--db", required=True)

@@ -10,9 +10,9 @@ const manifest = JSON.parse(fs.readFileSync(path.resolve(siteRoot, "../docs/docu
 
 const required = [
   path.join(outputRoot, "index.html"),
-  path.join(outputRoot, "why-novelforge", "index.html"),
+  path.join(outputRoot, "why-quillframe", "index.html"),
   path.join(outputRoot, "en", "index.html"),
-  path.join(outputRoot, "en", "why-novelforge", "index.html"),
+  path.join(outputRoot, "en", "why-quillframe", "index.html"),
 ];
 
 const missing = required.filter((file) => !fs.existsSync(file));
@@ -38,9 +38,9 @@ if (htmlPages < expectedMinimum) {
   process.exit(1);
 }
 
-const sample = fs.readFileSync(path.join(outputRoot, "why-novelforge", "index.html"), "utf8");
-if (!sample.includes("NovelForge") || !sample.includes("starlight")) {
-  console.error("verify-starlight-build: why-novelforge is not recognizable as a Starlight document");
+const sample = fs.readFileSync(path.join(outputRoot, "why-quillframe", "index.html"), "utf8");
+if (!sample.includes("Quillframe") || !sample.includes("starlight")) {
+  console.error("verify-starlight-build: why-quillframe is not recognizable as a Starlight document");
   process.exit(1);
 }
 
@@ -56,7 +56,7 @@ for (const [label, file] of [
 }
 
 console.log(JSON.stringify({
-  schema: "novelforge_starlight_build_verification_v1",
+  schema: "quillframe_starlight_build_verification_v1",
   status: "pass",
   output: "site/dist/docs",
   html_pages: htmlPages,

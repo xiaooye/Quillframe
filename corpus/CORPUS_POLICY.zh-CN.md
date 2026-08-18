@@ -1,6 +1,6 @@
 # Corpus Policy · 管理证据，而不是把“拿得到”变成故事或风格权威
 
-NovelForge 使用 Corpus 研究**写作机制**、检验偏好 / craft hypothesis、构建 eval evidence，并主动寻找反例。Corpus 属于证据域，不是 Project Canon，不是人物知识，也不是隐藏的模仿 prompt，更不会自动成为 Framework guidance。
+Quillframe 使用 Corpus 研究**写作机制**、检验偏好 / craft hypothesis、构建 eval evidence，并主动寻找反例。Corpus 属于证据域，不是 Project Canon，不是人物知识，也不是隐藏的模仿 prompt，更不会自动成为 Framework guidance。
 
 > **核心不变量 ✦** Access、rights、storage、analysis、learning、promotion 是六个不同 gate。通过前一个，永远不代表后一个已经通过。
 
@@ -44,7 +44,7 @@ Corpus evidence 本身不能：
 
 ### `analysis_only`
 
-材料可以在已声明依据下被访问 / 分析，但 NovelForge 不能把全文作为 Corpus data 保存。
+材料可以在已声明依据下被访问 / 分析，但 Quillframe 不能把全文作为 Corpus data 保存。
 
 允许持久化的通常是：
 
@@ -64,7 +64,7 @@ Private repository 不会把 unknown rights 自动变成 redistributable rights�
 
 ## 03 · Deterministic Rights Gate 不是法律判断器
 
-[`rights_gate.py`](rights_gate.py) 只验证：**已经声明的 metadata 与请求的 storage intent，是否在 NovelForge policy 内部自洽。**
+[`rights_gate.py`](rights_gate.py) 只验证：**已经声明的 metadata 与请求的 storage intent，是否在 Quillframe policy 内部自洽。**
 
 例如它会直接拒绝：
 
@@ -111,7 +111,7 @@ source_tool_or_capability:
 
 ## 05 · Discovery 不等于 Ingestion
 
-Discovery result 只说明：**发现了一个候选来源。** 它并不代表 NovelForge 可以复制或持久化该来源内容。
+Discovery result 只说明：**发现了一个候选来源。** 它并不代表 Quillframe 可以复制或持久化该来源内容。
 
 ```text
 discovery
@@ -161,7 +161,7 @@ Corpus research 应主动寻找：
 
 ## 08 · Named-author Imitation Boundary
 
-NovelForge 可以分析广泛、可迁移的 craft mechanism，例如：
+Quillframe 可以分析广泛、可迁移的 craft mechanism，例如：
 
 - scene causality / pressure sequencing；
 - information timing；

@@ -24,7 +24,7 @@ def check() -> dict:
         errors.append("missing authoritative model_contract_catalog.json")
         return {"semantic_reference_integrity": "FAIL", "errors": errors, "authority": False, "model_execution": False}
     catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
-    if catalog.get("schema") != "novelforge_model_contract_catalog_v1":
+    if catalog.get("schema") != "quillframe_model_contract_catalog_v1":
         errors.append("invalid catalog schema")
     seen: set[str] = set()
     for pack in catalog.get("packs", []):

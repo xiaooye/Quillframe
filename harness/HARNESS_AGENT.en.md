@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>ONE MANAGER</kbd>&nbsp;&nbsp;<kbd>ONE PRIMARY MODE</kbd>&nbsp;&nbsp;<kbd>AI-NATIVE</kbd></p>
 
-The NovelForge Harness coordinates a validated fiction Project plus a declared task into a bounded, resumable run. It owns execution policy, not story truth.
+The Quillframe Harness coordinates a validated fiction Project plus a declared task into a bounded, resumable run. It owns execution policy, not story truth.
 
 > **Project authority owns Canon and project-specific facts. Models own semantic fiction judgment. Deterministic runtime owns identity, power, persistence and exact execution state.**
 

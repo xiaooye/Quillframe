@@ -56,4 +56,4 @@ Quillframe 文档先建立心智模型，再进入契约与参考资料。只要
 
 操作层面的权威规范见[框架操作契约](../SKILL.zh-CN.md)、[编排执行契约](../harness/HARNESS_AGENT.zh-CN.md)、模式定义、实现模块与测试。文档编写遵守[文档规范](DOCUMENTATION_STANDARD.zh-CN.md)和[文档质量检查](DOCUMENTATION_QA.zh-CN.md)。
 
-稳定路径 `why-novelforge.zh-CN.md` 为兼容保留；当前内容解释[为什么是 Quillframe](why-novelforge.zh-CN.md)，以及为什么技术命名空间不随公开品牌一起改名。
+稳定路径 `why-quillframe.zh-CN.md` 为兼容保留；当前内容解释[为什么是 Quillframe](why-quillframe.zh-CN.md)，以及为什么技术命名空间不随公开品牌一起改名。

@@ -1,5 +1,5 @@
 {
-  "schema": "novelforge_model_contract_registry_v1",
+  "schema": "quillframe_model_contract_registry_v1",
   "version": "1",
   "principle": "Long-form narrative interpretation and memory consolidation are model-owned semantic work. Derived observations remain source-bound, invalidatable and non-authoritative.",
   "contracts": {

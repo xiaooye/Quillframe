@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic kernel for model-owned NovelForge semantic contracts."""
+"""Deterministic kernel for model-owned Quillframe semantic contracts."""
 from __future__ import annotations
 import argparse, hashlib, json, sys
 from datetime import datetime, timezone
@@ -59,7 +59,7 @@ def validate_typed_value(v:Any,s:Any,path:str="$")->list[str]:
     return e
 def load_contract_registry(path:Path)->dict[str,Any]:
     r=load_json(path)
-    if not isinstance(r,dict) or r.get("schema")!="novelforge_model_contract_registry_v1":raise ValueError(f"invalid model contract registry: {path}")
+    if not isinstance(r,dict) or r.get("schema")!="quillframe_model_contract_registry_v1":raise ValueError(f"invalid model contract registry: {path}")
     contracts=r.get("contracts")
     if not isinstance(contracts,dict) or not contracts:raise ValueError("registry requires contracts")
     for cid,c in contracts.items():
@@ -77,7 +77,7 @@ def load_contract_registry(path:Path)->dict[str,Any]:
     return r
 def load_contract_catalog(path:Path=CATALOG)->dict[str,Any]:
     c=load_json(path)
-    if not isinstance(c,dict) or c.get("schema")!="novelforge_model_contract_catalog_v1" or c.get("loading_policy")!="progressive_disclosure":raise ValueError("invalid contract catalog")
+    if not isinstance(c,dict) or c.get("schema")!="quillframe_model_contract_catalog_v1" or c.get("loading_policy")!="progressive_disclosure":raise ValueError("invalid contract catalog")
     packs=c.get("packs");seen=set()
     if not isinstance(packs,list) or not packs:raise ValueError("catalog requires packs")
     for p in packs:

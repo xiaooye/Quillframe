@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NovelForge Project SDK.
+"""Quillframe Project SDK.
 
 Stdlib-only project scaffold / validate / build / spec tooling.
 It treats a fiction project as a reproducible software project without making
@@ -20,9 +20,9 @@ from typing import Any
 import tomllib
 
 SDK_VERSION = "1"
-PROJECT_SCHEMA = "novelforge_project_v1"
-LOCK_SCHEMA = "novelforge_lock_v1"
-DEFAULT_FRAMEWORK_VERSION = "0.8.0"
+PROJECT_SCHEMA = "quillframe_project_v1"
+LOCK_SCHEMA = "quillframe_lock_v1"
+DEFAULT_FRAMEWORK_VERSION = "0.9.0"
 
 REQUIRED_DIRS = [
     "specs",
@@ -59,7 +59,7 @@ REQUIRED_DIRS = [
 ]
 
 TEXT_EXTS = {".md", ".txt", ".json", ".toml", ".yaml", ".yml", ".csv"}
-IGNORE_PARTS = {".git", ".novelforge", "dist", "__pycache__"}
+IGNORE_PARTS = {".git", ".quillframe", "dist", "__pycache__"}
 
 
 def now_iso() -> str:
@@ -94,8 +94,8 @@ def toml_string(value: str) -> str:
 
 
 def framework_toml(project_id: str, title: str, language: str, version: str) -> str:
-    return f'''# NovelForge project manifest. Project facts live in project-owned files, not here.
-[novelforge]
+    return f'''# Quillframe project manifest. Project facts live in project-owned files, not here.
+[quillframe]
 schema = {toml_string(PROJECT_SCHEMA)}
 project_schema_version = "1"
 minimum_framework_version = {toml_string(version)}
@@ -147,7 +147,7 @@ def lock_json(framework_version: str) -> dict[str, Any]:
     return {
         "schema": LOCK_SCHEMA,
         "framework": {
-            "name": "NovelForge",
+            "name": "Quillframe",
             "version": framework_version,
             "commit": None,
             "bundle_fingerprint": None,
@@ -160,7 +160,7 @@ def lock_json(framework_version: str) -> dict[str, Any]:
 def readme_en(title: str) -> str:
     return f'''# {title}
 
-This is a NovelForge fiction project repository.
+This is a Quillframe fiction project repository.
 
 ## Authority
 
@@ -182,18 +182,18 @@ bootstrap → validate → plan/spec when required → produce → test/audit �
 Run:
 
 ```bash
-python <NOVELFORGE>/project_sdk.py validate .
-python <NOVELFORGE>/project_sdk.py build .
+python <QUILLFRAME>/project_sdk.py validate .
+python <QUILLFRAME>/project_sdk.py build .
 ```
 
-See the pinned framework in `novelforge.lock.json`.
+See the pinned framework in `quillframe.lock.json`.
 '''
 
 
 def readme_zh(title: str) -> str:
     return f'''# {title}
 
-这是一个 NovelForge 小说工程仓库。
+这是一个 Quillframe 小说工程仓库。
 
 ## Authority
 
@@ -215,18 +215,18 @@ bootstrap → validate → 需要时 spec/plan → produce → test/audit → ex
 运行：
 
 ```bash
-python <NOVELFORGE>/project_sdk.py validate .
-python <NOVELFORGE>/project_sdk.py build .
+python <QUILLFRAME>/project_sdk.py validate .
+python <QUILLFRAME>/project_sdk.py build .
 ```
 
-Framework 版本以 `novelforge.lock.json` 为准。
+Framework 版本以 `quillframe.lock.json` 为准。
 '''
 
 
 def agents_md() -> str:
-    return '''# NovelForge Project Agent Bootstrap
+    return '''# Quillframe Project Agent Bootstrap
 
-Read `novelforge.toml` and `novelforge.lock.json`, then load the pinned NovelForge framework bootstrap.
+Read `quillframe.toml` and `quillframe.lock.json`, then load the pinned Quillframe framework bootstrap.
 
 Rules:
 - project repository owns project facts, plans, profiles, research, manuscripts and Canon;
@@ -242,18 +242,18 @@ Rules:
 
 
 def claude_md() -> str:
-    return '''# Claude Code · NovelForge Project
+    return '''# Claude Code · Quillframe Project
 
-Read `AGENTS.md`, `novelforge.toml`, and `novelforge.lock.json` before project work.
+Read `AGENTS.md`, `quillframe.toml`, and `quillframe.lock.json` before project work.
 
-Use the pinned NovelForge framework as the generic runtime/quality authority and this repository as project authority.
+Use the pinned Quillframe framework as the generic runtime/quality authority and this repository as project authority.
 Do not infer Canon from chat/session history, memory-bank views, or reader/revision diagnostics.
 Use a separate invocation/session when independent semantic review is mandatory.
 '''
 
 
 def gitignore() -> str:
-    return '''.novelforge/
+    return '''.quillframe/
 dist/
 __pycache__/
 *.pyc
@@ -264,7 +264,7 @@ __pycache__/
 
 
 def profile_template(name: str) -> str:
-    return f'''schema: novelforge_profile_v1
+    return f'''schema: quillframe_profile_v1
 profile_type: {name}
 status: active
 # Add only project-specific overrides/weights here.
@@ -279,8 +279,8 @@ def init_project(root: Path, project_id: str, title: str, language: str, framewo
     root.mkdir(parents=True, exist_ok=True)
     for rel in REQUIRED_DIRS:
         (root / rel).mkdir(parents=True, exist_ok=True)
-    write(root / "novelforge.toml", framework_toml(project_id, title, language, framework_version))
-    write(root / "novelforge.lock.json", json.dumps(lock_json(framework_version), ensure_ascii=False, indent=2) + "\n")
+    write(root / "quillframe.toml", framework_toml(project_id, title, language, framework_version))
+    write(root / "quillframe.lock.json", json.dumps(lock_json(framework_version), ensure_ascii=False, indent=2) + "\n")
     write(root / "README.en.md", readme_en(title))
     write(root / "README.zh-CN.md", readme_zh(title))
     write(root / "AGENTS.md", agents_md())
@@ -295,20 +295,20 @@ def init_project(root: Path, project_id: str, title: str, language: str, framewo
 
 
 def load_manifest(root: Path) -> dict[str, Any]:
-    path = root / "novelforge.toml"
+    path = root / "quillframe.toml"
     if not path.exists():
-        raise ValueError("missing novelforge.toml")
+        raise ValueError("missing quillframe.toml")
     with path.open("rb") as f:
         data = tomllib.load(f)
     if not isinstance(data, dict):
-        raise ValueError("novelforge.toml must parse to object")
+        raise ValueError("quillframe.toml must parse to object")
     return data
 
 
 def load_lock(root: Path) -> dict[str, Any]:
-    path = root / "novelforge.lock.json"
+    path = root / "quillframe.lock.json"
     if not path.exists():
-        raise ValueError("missing novelforge.lock.json")
+        raise ValueError("missing quillframe.lock.json")
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
         raise ValueError("lockfile must be object")
@@ -368,12 +368,12 @@ def validate_project(root: Path) -> dict[str, Any]:
     try: lock = load_lock(root)
     except Exception as exc:
         errors.append(str(exc)); lock = {}
-    novelforge = manifest.get("novelforge", {})
+    quillframe = manifest.get("quillframe", {})
     project = manifest.get("project", {})
-    if novelforge.get("schema") != PROJECT_SCHEMA: errors.append("novelforge.schema must be novelforge_project_v1")
+    if quillframe.get("schema") != PROJECT_SCHEMA: errors.append("quillframe.schema must be quillframe_project_v1")
     for key in ("id", "title", "language", "version", "status"):
         if not project.get(key): errors.append(f"project.{key} required")
-    if lock and lock.get("schema") != LOCK_SCHEMA: errors.append("lock schema must be novelforge_lock_v1")
+    if lock and lock.get("schema") != LOCK_SCHEMA: errors.append("lock schema must be quillframe_lock_v1")
     framework_lock = lock.get("framework", {}) if isinstance(lock, dict) else {}
     bundle_fingerprint = framework_lock.get("bundle_fingerprint") if isinstance(framework_lock, dict) else None
     if bundle_fingerprint is not None and not re.fullmatch(r"sha256:[0-9a-f]{64}", str(bundle_fingerprint)):
@@ -410,11 +410,11 @@ def build_project(root: Path) -> dict[str, Any]:
         data = path.read_bytes()
         item = {"path": rel.as_posix(), "class": classify(rel), "size": len(data), "fingerprint": sha256_bytes(data)}
         files.append(item)
-        if rel.as_posix() in {"novelforge.toml", "novelforge.lock.json", "README.en.md", "README.zh-CN.md", "AGENTS.md", "CLAUDE.md"}:
+        if rel.as_posix() in {"quillframe.toml", "quillframe.lock.json", "README.en.md", "README.zh-CN.md", "AGENTS.md", "CLAUDE.md"}:
             bootstrap[rel.as_posix()] = data.decode("utf-8", errors="replace")
     content_index_hash = sha256_bytes(canonical_json(files).encode("utf-8"))
     payload = {
-        "schema": "novelforge_project_bundle_v1", "sdk_version": SDK_VERSION, "built_at": now_iso(),
+        "schema": "quillframe_project_bundle_v1", "sdk_version": SDK_VERSION, "built_at": now_iso(),
         "project": manifest.get("project", {}), "framework_lock": lock.get("framework", {}),
         "authority": manifest.get("authority", {}), "paths": manifest.get("paths", {}), "bootstrap": bootstrap,
         "content_index": files, "content_index_fingerprint": content_index_hash,
@@ -425,7 +425,7 @@ def build_project(root: Path) -> dict[str, Any]:
     classes: dict[str, list[dict[str, Any]]] = {}
     for item in files: classes.setdefault(item["class"], []).append(item)
     for name, values in classes.items():
-        write(out / f"{name}.manifest.json", json.dumps({"schema": "novelforge_file_manifest_v1", "class": name, "files": values}, ensure_ascii=False, indent=2) + "\n")
+        write(out / f"{name}.manifest.json", json.dumps({"schema": "quillframe_file_manifest_v1", "class": name, "files": values}, ensure_ascii=False, indent=2) + "\n")
     write(out / "fingerprints.json", json.dumps({"bundle_fingerprint": payload["bundle_fingerprint"], "content_index_fingerprint": content_index_hash}, ensure_ascii=False, indent=2) + "\n")
     return {"built": True, "output": str(out), "file_count": len(files), "bundle_fingerprint": payload["bundle_fingerprint"]}
 
@@ -450,7 +450,7 @@ def spec_template(kind: str, title: str, lang: str) -> str:
 
 def create_spec(root: Path, title: str) -> dict[str, Any]:
     root = root.resolve()
-    if not (root / "novelforge.toml").exists(): raise ValueError("not a NovelForge project")
+    if not (root / "quillframe.toml").exists(): raise ValueError("not a Quillframe project")
     n = next_spec_number(root); dirname = f"{n:03d}-{slugify(title)}"; target = root / "specs" / dirname
     target.mkdir(parents=True, exist_ok=False)
     for kind in ("spec", "plan", "tasks"):
@@ -485,12 +485,12 @@ def self_test(tmp_root: Path) -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge Project SDK"); sub = p.add_subparsers(dest="cmd", required=True)
+    p = argparse.ArgumentParser(description="Quillframe Project SDK"); sub = p.add_subparsers(dest="cmd", required=True)
     i = sub.add_parser("init"); i.add_argument("path"); i.add_argument("--id", required=True); i.add_argument("--title", required=True); i.add_argument("--language", default="en"); i.add_argument("--framework-version", default=DEFAULT_FRAMEWORK_VERSION); i.add_argument("--force", action="store_true")
     v = sub.add_parser("validate"); v.add_argument("path")
     b = sub.add_parser("build"); b.add_argument("path")
     s = sub.add_parser("spec-new"); s.add_argument("path"); s.add_argument("--title", required=True)
-    t = sub.add_parser("self-test"); t.add_argument("--tmp", default="/tmp/novelforge-project-sdk-self-test")
+    t = sub.add_parser("self-test"); t.add_argument("--tmp", default="/tmp/quillframe-project-sdk-self-test")
     args = p.parse_args()
     try:
         if args.cmd == "init": result = init_project(Path(args.path), args.id, args.title, args.language, args.framework_version, args.force)

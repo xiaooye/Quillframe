@@ -51,7 +51,7 @@ export default function Project() {
                 <div>
                   <span class="nf-card-label">{t("project.browserPreflight")}</span>
                   <strong>{browser().project?.title ?? browser().project?.id ?? t("project.browserUnknown")}</strong>
-                  <small>{browser().project?.id ?? "novelforge_project_v1"}</small>
+                  <small>{browser().project?.id ?? "quillframe_project_v1"}</small>
                 </div>
                 <div class="nf-browser-project-meta">
                   <span><strong>{browser().files.length}</strong>{t("project.browserFiles")}</span>

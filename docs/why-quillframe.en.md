@@ -34,4 +34,4 @@ Quillframe is intentionally heavier than a one-shot writing assistant. It is use
 
 ## Compatibility
 
-The former public name remains embedded in technical identifiers such as `novelforge.toml`, `novelforge.lock.json`, schema names, workflow names, and repository paths. Those are compatibility surfaces, not current public branding, and this documentation migration intentionally preserves them.
+The former public name remains embedded in technical identifiers such as `quillframe.toml`, `quillframe.lock.json`, schema names, workflow names, and repository paths. Those are compatibility surfaces, not current public branding, and this documentation migration intentionally preserves them.

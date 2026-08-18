@@ -28,4 +28,4 @@
 
 ## 兼容性
 
-模式标识继续是 `novelforge_candidate_lineage_v1`。这是旧技术命名空间下的稳定标识，不随 Quillframe 公开品牌改名。
+模式标识继续是 `quillframe_candidate_lineage_v1`。这是旧技术命名空间下的稳定标识，不随 Quillframe 公开品牌改名。

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail when live NovelForge machine surfaces reintroduce pre-release Novel OS identifiers."""
+"""Fail when live Quillframe machine surfaces reintroduce pre-release Novel OS identifiers."""
 from __future__ import annotations
 
 import json
@@ -44,7 +44,7 @@ def main() -> int:
                 findings.append({"file": path.relative_to(ROOT).as_posix(), "kind": label})
     result = {
         "machine_namespace_contract": "PASS" if not findings else "FAIL",
-        "namespace": "NovelForge-only",
+        "namespace": "Quillframe-only",
         "files_scanned": len(files),
         "findings": findings,
     }

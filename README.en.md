@@ -53,8 +53,8 @@ A production Project pins an exact framework revision for runtime reproducibilit
 
 ## Compatibility note
 
-**Quillframe is the public brand. `NovelForge` remains the legacy technical namespace for compatibility.** Identifiers such as `novelforge.toml`, `novelforge.lock.json`, `novelforge_*` schemas, existing workflow names, repository paths, and stable contract IDs are not renamed by this documentation migration.
+**Quillframe is the public brand. `Quillframe` remains the legacy technical namespace for compatibility.** Identifiers such as `quillframe.toml`, `quillframe.lock.json`, `quillframe_*` schemas, existing workflow names, repository paths, and stable contract IDs are not renamed by this documentation migration.
 
-The framework is currently on the pre-1.0 `0.8.0` development line. During active development, current implementation truth comes from the exact `main` commit being documented, not from older prose documentation.
+The framework is currently on the pre-1.0 `0.9.0` development line. During active development, current implementation truth comes from the exact `main` commit being documented, not from older prose documentation.
 
 [Documentation home](docs/README.en.md) · [中文](README.zh-CN.md)

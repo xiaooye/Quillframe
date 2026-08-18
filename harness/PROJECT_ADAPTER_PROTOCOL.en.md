@@ -1,8 +1,8 @@
 # Project Adapter Protocol · Map storage without importing story truth
 
-A NovelForge Project Adapter maps one consuming project's physical repository into the **logical Project contract** required by the Harness. It resolves identity, safe paths, authority domains and dependency metadata. It does not decide what context is semantically relevant and it never imports project facts into generic Framework source.
+A Quillframe Project Adapter maps one consuming project's physical repository into the **logical Project contract** required by the Harness. It resolves identity, safe paths, authority domains and dependency metadata. It does not decide what context is semantically relevant and it never imports project facts into generic Framework source.
 
-> **Core invariant ✦** The Project owns instances and facts. NovelForge owns generic schemas and mechanisms. The Adapter only describes how to reach the Project-owned domains.
+> **Core invariant ✦** The Project owns instances and facts. Quillframe owns generic schemas and mechanisms. The Adapter only describes how to reach the Project-owned domains.
 
 ---
 
@@ -11,13 +11,13 @@ A NovelForge Project Adapter maps one consuming project's physical repository in
 A standard project is rooted by:
 
 ```text
-novelforge.toml
-novelforge.lock.json
+quillframe.toml
+quillframe.lock.json
 ```
 
-`novelforge.toml` declares project identity, project schema compatibility, logical authority/path mappings, quality/profile configuration and build settings.
+`quillframe.toml` declares project identity, project schema compatibility, logical authority/path mappings, quality/profile configuration and build settings.
 
-`novelforge.lock.json` records the Framework dependency identity. A production lock may bind version, exact commit and bundle fingerprint. **A lock identifies the dependency; it does not grant the Framework authority over Project facts.**
+`quillframe.lock.json` records the Framework dependency identity. A production lock may bind version, exact commit and bundle fingerprint. **A lock identifies the dependency; it does not grant the Framework authority over Project facts.**
 
 Alternative/legacy layouts are supported through a mapped adapter, but they must resolve to the same logical boundary.
 
@@ -26,8 +26,8 @@ Alternative/legacy layouts are supported through a mapped adapter, but they must
 ## 02 · Dependency direction
 
 ```text
-Novel Project → pinned NovelForge Framework
-NovelForge Framework -X→ project-specific facts
+Novel Project → pinned Quillframe Framework
+Quillframe Framework -X→ project-specific facts
 ```
 
 Generic Framework source must not hard-code:
@@ -97,7 +97,7 @@ corpus evidence ≠ character knowledge
 The deterministic resolver produces metadata similar to:
 
 ```yaml
-schema: novelforge_project_adapter_resolution_v1
+schema: quillframe_project_adapter_resolution_v1
 project_id: ...
 project_version: ...
 project_root: ...
@@ -162,7 +162,7 @@ If source Project state changes, rebuild the bundle rather than editing the bund
 A Project may materialize its pinned Framework dependency under:
 
 ```text
-.novelforge/framework/
+.quillframe/framework/
 ```
 
 Treat this as a read-only dependency cache:
@@ -200,7 +200,7 @@ If a running session resumes after the lock changed, it must re-bootstrap agains
 
 ## 10 · Legacy migration
 
-A mature legacy novel does not need a destructive directory rewrite before adopting NovelForge.
+A mature legacy novel does not need a destructive directory rewrite before adopting Quillframe.
 
 A safe migration usually moves through:
 

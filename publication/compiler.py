@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic NovelForge publication compiler.
+"""Deterministic Quillframe publication compiler.
 
 Accepted manuscript text is immutable input. The compiler creates a renderer-
 neutral IR and derived clean-text, web-reflow, print-HTML and EPUB 3.3 outputs.
@@ -21,8 +21,8 @@ from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree as ET
 
-IR_SCHEMA = "novelforge_publication_ir_v1"
-BUILD_SCHEMA = "novelforge_publication_build_v1"
+IR_SCHEMA = "quillframe_publication_ir_v1"
+BUILD_SCHEMA = "quillframe_publication_build_v1"
 PROFILES = {"clean_text", "web_reflow", "print_book", "epub3"}
 EPUB_MIMETYPE = b"application/epub+zip"
 ZIP_TIME = (1980, 1, 1, 0, 0, 0)
@@ -239,7 +239,7 @@ def _write_epub(ir: dict[str, Any], out: Path) -> dict[str, Any]:
         _zip_write(zf, "EPUB/style.css", _css("web_reflow").encode("utf-8"))
         for (name, _), c in zip(names, ir["chapters"]):
             _zip_write(zf, "EPUB/" + name, _chapter_xhtml(ir, c))
-        _zip_write(zf, "META-INF/novelforge-publication-ir.json", (json.dumps(ir, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8"))
+        _zip_write(zf, "META-INF/quillframe-publication-ir.json", (json.dumps(ir, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8"))
     report = validate_epub(out, ir=ir)
     return {"profile": "epub3", "files": [{"path": out.name, "sha256": sha256_bytes(out.read_bytes())}], "text_roundtrip": report["text_roundtrip"], "internal_validation": report["valid"]}
 
@@ -287,7 +287,7 @@ def validate_epub(path: Path, *, ir: dict[str, Any] | None = None) -> dict[str, 
                 text_roundtrip = False
     except (OSError, zipfile.BadZipFile, ET.ParseError) as exc:
         errors.append(f"EPUB validation error: {type(exc).__name__}: {exc}"); text_roundtrip = False
-    return {"schema": "novelforge_epub_validation_v1", "valid": not errors, "errors": errors, "text_roundtrip": text_roundtrip, "spec_target": "W3C EPUB 3.3", "external_epubcheck": "not_run", "authority": False}
+    return {"schema": "quillframe_epub_validation_v1", "valid": not errors, "errors": errors, "text_roundtrip": text_roundtrip, "spec_target": "W3C EPUB 3.3", "external_epubcheck": "not_run", "authority": False}
 
 
 def run_epubcheck(epub: Path, command: str) -> dict[str, Any]:
@@ -309,7 +309,7 @@ def build(ir: dict[str, Any], profile: str, output: Path) -> dict[str, Any]:
 def self_test() -> int:
     c1 = "第一段。\n\n第二段 <&> 保持原样。"
     c2 = "A line.\nAnother line.\n\n最后一段。"
-    source = {"book": {"identifier": "urn:novelforge:selftest", "title": "测试书", "language": "zh-CN", "modified": "2026-01-13T00:00:00Z"}, "chapters": [
+    source = {"book": {"identifier": "urn:quillframe:selftest", "title": "测试书", "language": "zh-CN", "modified": "2026-01-13T00:00:00Z"}, "chapters": [
         {"chapter_id": "CH-001", "title": "第一章", "text": c1, "accepted_fingerprint": text_fingerprint(c1)},
         {"chapter_id": "CH-002", "title": "第二章", "text": c2, "accepted_fingerprint": text_fingerprint(c2)},
     ]}
@@ -317,7 +317,7 @@ def self_test() -> int:
     tamper = json.loads(json.dumps(source)); tamper["chapters"][0]["text"] += "x"; tamper_guard = False
     try: compile_ir(tamper)
     except ValueError: tamper_guard = True
-    with tempfile.TemporaryDirectory(prefix="novelforge-publication-") as td:
+    with tempfile.TemporaryDirectory(prefix="quillframe-publication-") as td:
         root = Path(td)
         clean = build(ir, "clean_text", root / "clean")
         web = build(ir, "web_reflow", root / "web")
@@ -333,7 +333,7 @@ def self_test() -> int:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge deterministic publication compiler")
+    p = argparse.ArgumentParser(description="Quillframe deterministic publication compiler")
     sub = p.add_subparsers(dest="command", required=True)
     sub.add_parser("self-test")
     comp = sub.add_parser("compile"); comp.add_argument("--input", required=True); comp.add_argument("--output", required=True)

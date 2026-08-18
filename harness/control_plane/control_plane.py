@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NovelForge durable runtime control plane.
+"""Quillframe durable runtime control plane.
 
 Stdlib-only. This module persists operational execution state:
 sessions, events, handoffs, leases, and exactly-once consumption receipts.
@@ -19,10 +19,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-CONTROL_PLANE_SCHEMA = "novelforge_control_plane_v1"
-EVENT_SCHEMA = "novelforge_event_v1"
-HANDOFF_SCHEMA = "novelforge_handoff_v1"
-DEFAULT_DB = ".novelforge/runtime.db"
+CONTROL_PLANE_SCHEMA = "quillframe_control_plane_v1"
+EVENT_SCHEMA = "quillframe_event_v1"
+HANDOFF_SCHEMA = "quillframe_handoff_v1"
+DEFAULT_DB = ".quillframe/runtime.db"
 EVENT_TYPES = {
     "session.resume_requested",
     "session.terminate_requested",
@@ -414,7 +414,7 @@ def self_test(db_path: str | Path) -> dict[str, Any]:
     event_schema = json.loads(Path(__file__).with_name("event_schema.json").read_text(encoding="utf-8"))
     schema_event_types = set(event_schema["properties"]["event_type"]["enum"])
     event_registry_aligned = EVENT_TYPES == schema_event_types
-    session = {"schema": "novelforge_agent_session_v1", "resource_id": "BOOK-TEST", "project_id": "BOOK-TEST", "session_id": "SES-TEST-MANAGER", "role": "manager", "status": "awaiting_external"}
+    session = {"schema": "quillframe_agent_session_v1", "resource_id": "BOOK-TEST", "project_id": "BOOK-TEST", "session_id": "SES-TEST-MANAGER", "role": "manager", "status": "awaiting_external"}
     first_session = cp.put_session(session, expected_version=0)
     duplicate_session = cp.put_session(session, expected_version=1)
     event = {"schema": EVENT_SCHEMA, "event_id": "EV-TEST-1", "event_type": "semantic.requested", "source": {"kind": "self_test", "actor": "control_plane.py"}, "resource_id": "BOOK-TEST", "session_id": "SES-TEST-MANAGER", "run_id": "RUN-TEST", "handoff_id": "HO-TEST-1", "authority_scope": "request", "idempotency_key": "selftest-semantic-request", "artifact_fingerprints": ["sha256:" + "a" * 64], "created_at": now_iso(), "payload": {"job_id": "SEM-TEST"}}
@@ -441,8 +441,8 @@ def self_test(db_path: str | Path) -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge durable runtime control plane")
-    p.add_argument("--db", default=os.getenv("NOVELFORGE_DB", DEFAULT_DB))
+    p = argparse.ArgumentParser(description="Quillframe durable runtime control plane")
+    p.add_argument("--db", default=os.getenv("QUILLFRAME_DB", DEFAULT_DB))
     sub = p.add_subparsers(dest="command", required=True)
     sub.add_parser("init")
     sub.add_parser("status")

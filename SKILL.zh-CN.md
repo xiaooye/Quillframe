@@ -1,20 +1,20 @@
-# NovelForge Skill Contract · 中文版
+# Quillframe Skill Contract · 中文版
 
 <p><kbd>TIER C · 框架契约</kbd>&nbsp;&nbsp;<kbd>AI-NATIVE</kbd>&nbsp;&nbsp;<kbd>CONTRACT-FIRST</kbd></p>
 
-NovelForge 是一个与具体项目解耦的小说生产框架。它提供通用的故事、人物、Canon、质量、运行时、学习、Corpus、评测与项目工程机制；下游 Project 提供某一部作品的具体事实。
+Quillframe 是一个与具体项目解耦的小说生产框架。它提供通用的故事、人物、Canon、质量、运行时、学习、Corpus、评测与项目工程机制；下游 Project 提供某一部作品的具体事实。
 
 > **核心边界 ✦** 需要理解文本、人物、读者体验和创作机制的语义判断由模型负责；确定性代码负责 authority、权限、指纹、持久化、路由、硬预算、阶段隔离、类型校验、事务与可复现性。两边都不得静默越权代替另一边。
 
-NovelForge 内不得内置任何具体小说、人物、剧情、Canon 或用户私有偏好数据。
+Quillframe 内不得内置任何具体小说、人物、剧情、Canon 或用户私有偏好数据。
 
 ## 01 · 从权威状态启动，不从记忆启动
 
-任何 NovelForge 任务都按以下顺序开始：
+任何 Quillframe 任务都按以下顺序开始：
 
 1. 读取 `HARNESS_MANIFEST.yaml`；
 2. 读取本 Skill 契约、`harness/HARNESS_AGENT.md` 及适用语言版本；
-3. 通过 `novelforge.toml` 与 exact `novelforge.lock.json`，或受支持的 Project Adapter，解析下游 Project；
+3. 通过 `quillframe.toml` 与 exact `quillframe.lock.json`，或受支持的 Project Adapter，解析下游 Project；
 4. 确定且只确定一个 primary `task_mode`；
 5. 创建或恢复 manager session 与当前 run；
 6. 从 Project 当前权威状态构建稀疏 Context Manifest；
@@ -119,7 +119,7 @@ Raw Draft 只在内部存在。Regression 坏例与 hidden expected label 不得
 
 持久存储不等于自动注入 prompt。
 
-NovelForge 必须区分 Project 当前 authority、derived memory、runtime state 与模型推断。Context/Memory 工具可以对 derived/context view 做预算、pin、排序、invalidate 或 rebuild，但不能静默改写受保护 Canon。
+Quillframe 必须区分 Project 当前 authority、derived memory、runtime state 与模型推断。Context/Memory 工具可以对 derived/context view 做预算、pin、排序、invalidate 或 rebuild，但不能静默改写受保护 Canon。
 
 `locked` / `accepted` reference 必须保持受保护状态。编辑受保护 memory reference 时，应产生 proposal 或其他明确非权威的 artifact，而不是覆盖故事事实。
 
@@ -159,8 +159,8 @@ Learning 永远采用证据支持的最窄 scope：
 
 项目身份至少由以下内容锚定：
 
-- `novelforge.toml`；
-- exact `novelforge.lock.json`；
+- `quillframe.toml`；
+- exact `quillframe.lock.json`；
 - 清晰的 source / plan / derived / generated 边界；
 - deterministic validation / build / tests；
 - 配置后可验证、可复现的 Framework bundle。
@@ -195,4 +195,4 @@ Scheduled maintenance 可以观察、报告、封装和排队任务。schedule �
 
 只要 mandatory gate 仍未解决，就不能把 artifact 称为 production-ready。
 
-> NovelForge 的后台应越来越严格、可恢复、可验证；最终小说则应该越来越自然、有因果、有具体性、有意外，也更像活人写出来的故事。
+> Quillframe 的后台应越来越严格、可恢复、可验证；最终小说则应该越来越自然、有因果、有具体性、有意外，也更像活人写出来的故事。

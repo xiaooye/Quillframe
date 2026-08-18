@@ -13,7 +13,7 @@ export function ProductFailureBoundary(props: { children: JSX.Element }) {
       <main id="main-content" class="nf-resilience-page page-width" role="alert">
         <section class="nf-resilience-card">
           <span class="nf-resilience-mark" aria-hidden="true">♡</span>
-          <p class="nf-resilience-eyebrow">NovelForge · UI recovery</p>
+          <p class="nf-resilience-eyebrow">Quillframe · UI recovery</p>
           <h1>{prefersChinese() ? "这个界面没有正常完成渲染。" : "This surface did not finish rendering."}</h1>
           <p>{prefersChinese() ? "你的项目和正典状态没有因此被修改。可以重新尝试渲染，或返回产品首页。" : "No Project or Canon state was changed by this UI failure. Retry the render or return to the product home."}</p>
           <details>
@@ -38,7 +38,7 @@ export function ProductNotFound() {
     <main id="main-content" class="nf-resilience-page page-width">
       <section class="nf-resilience-card nf-not-found">
         <span class="nf-resilience-mark" aria-hidden="true">404</span>
-        <p class="nf-resilience-eyebrow">NovelForge · route</p>
+        <p class="nf-resilience-eyebrow">Quillframe · route</p>
         <h1>{zh ? "这里没有这个页面。" : "There is no page here."}</h1>
         <p>{zh ? "这个地址不属于当前 Product Site。可以返回产品首页，或继续查看架构与知识库。" : "This address is not part of the current Product Site. Return home or continue with Architecture and Knowledge."}</p>
         <div class="nf-resilience-actions">

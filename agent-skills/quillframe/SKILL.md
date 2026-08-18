@@ -1,24 +1,24 @@
 ---
-name: novelforge
-description: Inspect a NovelForge fiction project through the portable read-only Studio host bridge. Use for NovelForge project orientation, host capability checks, runtime/session observability, deterministic runtime-command preflight checks, Context Manifest inspection, semantic contract discovery, or when another agent framework needs a safe NovelForge integration without importing private runtime internals.
-compatibility: Requires Python 3.11+ and a NovelForge checkout. Set NOVELFORGE_ROOT when the skill is installed outside that checkout.
+name: quillframe
+description: Inspect a Quillframe fiction project through the portable read-only Studio host bridge. Use for Quillframe project orientation, host capability checks, runtime/session observability, deterministic runtime-command preflight checks, Context Manifest inspection, semantic contract discovery, or when another agent framework needs a safe Quillframe integration without importing private runtime internals.
+compatibility: Requires Python 3.11+ and a Quillframe checkout. Set QUILLFRAME_ROOT when the skill is installed outside that checkout.
 metadata:
-  novelforge-host-bridge: "v1"
+  quillframe-host-bridge: "v1"
   authority: "read-only"
 ---
 
-# NovelForge portable skill
+# Quillframe portable skill
 
 **Language:** English operating instructions. 简体中文用户可以直接提出中文请求；machine contracts and operation identifiers remain unchanged.
 
-Use this skill as a thin **read-only agent-package client** of NovelForge's public product boundary. Do not treat the skill, the current agent, or host tool availability as Canon, Settlement, Framework-write, Project-write, runtime-mutation, or semantic authority.
+Use this skill as a thin **read-only agent-package client** of Quillframe's public product boundary. Do not treat the skill, the current agent, or host tool availability as Canon, Settlement, Framework-write, Project-write, runtime-mutation, or semantic authority.
 
 ## Start with discovery
 
 Run:
 
 ```bash
-python scripts/novelforge_bridge.py describe
+python scripts/quillframe_bridge.py describe
 ```
 
 The shared bridge description is host-wide. Its `supported_operations` may therefore advertise operation-specific commands that are available only to another delivery surface such as `local_app`. For this portable `agent_package` skill, invoke **query operations only**. If an operation contract has `kind: command`, do not invoke it through this skill even when it appears in the shared supported vocabulary.
@@ -27,10 +27,10 @@ Never guess operations from private Python modules or persistence tables. Preser
 
 ## Invoke a read operation
 
-Create a JSON request with schema `novelforge_studio_host_bridge_request_v1`, then run:
+Create a JSON request with schema `quillframe_studio_host_bridge_request_v1`, then run:
 
 ```bash
-python scripts/novelforge_bridge.py invoke --request /path/to/request.json
+python scripts/quillframe_bridge.py invoke --request /path/to/request.json
 ```
 
 Every request must carry `authority: false`. Treat the returned `request_fingerprint` and `result_fingerprint` as provenance for that invocation.
@@ -68,18 +68,18 @@ If the bridge returns `status: unsupported`, report that state. If discovery rep
 
 Do not bypass the product boundary by:
 
-- opening `.novelforge/runtime.db` directly;
+- opening `.quillframe/runtime.db` directly;
 - importing private Control Plane or persistence modules;
 - calling a mutating Core primitive as a substitute;
 - forging a `local_app` surface identity through an Agent Skills request;
 - reconstructing private runtime state from unrelated files or terminal logs;
 - treating host capability, preflight readiness, or a command receipt as write authority.
 
-If a preflight returns `BLOCKED`, do not reinterpret it as permission to continue. Resolve the reported blocker through the owning NovelForge runtime contract.
+If a preflight returns `BLOCKED`, do not reinterpret it as permission to continue. Resolve the reported blocker through the owning Quillframe runtime contract.
 
 ## Consequential story changes
 
-This skill is read-only. It never accepts or settles manuscript text and never changes Canon. If the user asks for a consequential NovelForge write, use the owning NovelForge Core workflow available in the authorized host rather than manufacturing a write path through this skill.
+This skill is read-only. It never accepts or settles manuscript text and never changes Canon. If the user asks for a consequential Quillframe write, use the owning Quillframe Core workflow available in the authorized host rather than manufacturing a write path through this skill.
 
 ## Final checks
 

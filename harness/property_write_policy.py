@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic property-level write-source policy for NovelForge Projects.
+"""Deterministic property-level write-source policy for Quillframe Projects.
 
 This module does not decide story truth or infer state from prose. It resolves a
 Project-owned policy into a typed route describing whether a writer class may
@@ -22,8 +22,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
-POLICY_SCHEMA = "novelforge_property_write_policy_v1"
-DECISION_SCHEMA = "novelforge_property_write_decision_v1"
+POLICY_SCHEMA = "quillframe_property_write_policy_v1"
+DECISION_SCHEMA = "quillframe_property_write_decision_v1"
 POLICY_PATH_KEY = "property_write_policy"
 
 MUTATION_CLASSES = {
@@ -369,7 +369,7 @@ def self_test() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge property-level write-source policy resolver")
+    parser = argparse.ArgumentParser(description="Quillframe property-level write-source policy resolver")
     sub = parser.add_subparsers(dest="command", required=True)
     validate = sub.add_parser("validate")
     validate.add_argument("--policy")
@@ -392,7 +392,7 @@ def main() -> int:
 
     if args.command == "validate":
         result = {
-            "schema": "novelforge_property_write_policy_validation_v1",
+            "schema": "quillframe_property_write_policy_validation_v1",
             "valid": True,
             "policy_status": "absent" if policy is None else "configured",
             "policy_ref": None if policy is None else policy.get("policy_ref"),

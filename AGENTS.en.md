@@ -1,8 +1,8 @@
-# AGENTS · NovelForge Repository Guidance
+# AGENTS · Quillframe Repository Guidance
 
 ## Scope
 
-This file governs coding/agent work inside the **generic NovelForge framework repository**.
+This file governs coding/agent work inside the **generic Quillframe framework repository**.
 
 No consuming novel's characters, plot, Canon, repository path, or private user preference data belongs here.
 
@@ -42,7 +42,7 @@ The repository-wide human-facing documentation contract is `docs/DOCUMENTATION_S
 Mandatory summary:
 
 - Documentation is a product surface, not source-tree decoration.
-- Root landing pages must explain what NovelForge is, why it differs, how it works, why QA is credible, its tradeoffs, and how to start.
+- Root landing pages must explain what Quillframe is, why it differs, how it works, why QA is credible, its tradeoffs, and how to start.
 - Tier-A landing pages use coherent Story Loom presentation modules for core product concepts. Do **not** represent a primary architecture, production pipeline, QA stack, or competitor comparison with a raw `A → B → C` arrow list, generic placeholder Mermaid, low-information card stack, or oversized native Markdown table when a branded high-density visual is more appropriate.
 - **A generated SVG is not approved by source generation alone.** New/materially changed Tier-A visuals must pass deterministic docs lint, be rendered and visually inspected at real GitHub-like widths, have copy reviewed independently of layout, and pass bilingual parity when paired. If the environment cannot inspect the render, keep the asset WIP and do not integrate it into a Tier-A page.
 - Do not solve overflow by shrinking type until it fits. Reduce/restructure copy or repair layout.
@@ -50,7 +50,7 @@ Mandatory summary:
 - The homepage's primary comparison class is **direct novel-writing agents/frameworks**. General agent runtimes belong in implementation-influence/adoption docs; author SaaS/editor products are discussed separately when category differences matter.
 - Comparisons describe verifiable mechanisms rather than star scores or marketing grades, and current competitor claims must be freshly verified before material updates.
 - English and Simplified Chinese human-facing editions are parallel **native-quality** authoritative versions, not literal translations. Chinese prose and diagrams should use natural Chinese terminology except for exact identifiers/product names; English should read as native professional technical English.
-- Customer-facing docs must state meaningful limitations and tradeoffs rather than presenting NovelForge as universally superior.
+- Customer-facing docs must state meaningful limitations and tradeoffs rather than presenting Quillframe as universally superior.
 - Branded SVG/UI modules are the preferred Tier-A presentation layer; Mermaid remains the inspectable/diffable technical source/reference layer.
 - Static visual assets must be original or clearly licensed/provenanced, accessible, and semantically backed by nearby text/reference docs.
 - Story Loom targets roughly `70% professional technical / 30% anime-editorial warmth`; emoji may add editorial warmth but never replace structural/status semantics.

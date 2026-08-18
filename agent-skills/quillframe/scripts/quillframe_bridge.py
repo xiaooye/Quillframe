@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Thin read-only Agent Skills client for the NovelForge Studio host bridge.
+"""Thin read-only Agent Skills client for the Quillframe Studio host bridge.
 
 The shared bridge may advertise host-specific commands, but the portable Agent
 Skills surface remains query-only. In particular, ``session.resume`` and
@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-EXPECTED_DESCRIPTION = "novelforge_studio_host_bridge_description_v1"
+EXPECTED_DESCRIPTION = "quillframe_studio_host_bridge_description_v1"
 RUNTIME_QUERIES = {
     "runtime.sessions.list",
     "runtime.session.get",
@@ -31,7 +31,7 @@ RUNTIME_QUERIES = {
 
 def candidate_roots() -> list[Path]:
     roots: list[Path] = []
-    env = os.getenv("NOVELFORGE_ROOT")
+    env = os.getenv("QUILLFRAME_ROOT")
     if env:
         roots.append(Path(env).expanduser())
     roots.extend([Path.cwd(), *Path.cwd().parents])
@@ -50,9 +50,9 @@ def candidate_roots() -> list[Path]:
 
 def find_root() -> Path:
     for root in candidate_roots():
-        if (root / "novelforge.py").is_file() and (root / "studio" / "host_bridge.py").is_file():
+        if (root / "quillframe.py").is_file() and (root / "studio" / "host_bridge.py").is_file():
             return root
-    raise SystemExit("NovelForge checkout not found. Run inside the checkout or set NOVELFORGE_ROOT.")
+    raise SystemExit("Quillframe checkout not found. Run inside the checkout or set QUILLFRAME_ROOT.")
 
 
 def run_bridge(args: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
@@ -98,7 +98,7 @@ def self_test() -> dict[str, Any]:
         "write_command_not_supported": "command.invoke" not in supported and "command.invoke" in deferred,
     }
     return {
-        "novelforge_agent_skill_contract": "PASS" if all(checks.values()) else "FAIL",
+        "quillframe_agent_skill_contract": "PASS" if all(checks.values()) else "FAIL",
         "checks": checks,
         "surface": "agent_package",
         "runtime_mutation_allowed": False,
@@ -108,7 +108,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge read-only Agent Skills bridge client")
+    parser = argparse.ArgumentParser(description="Quillframe read-only Agent Skills bridge client")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("describe")
     inv = sub.add_parser("invoke")
@@ -119,7 +119,7 @@ def main() -> int:
     if args.command == "self-test":
         result = self_test()
         print(json.dumps(result, ensure_ascii=False, indent=2))
-        return 0 if result["novelforge_agent_skill_contract"] == "PASS" else 1
+        return 0 if result["quillframe_agent_skill_contract"] == "PASS" else 1
 
     bridge_args = ["describe"] if args.command == "describe" else ["invoke", "--request", args.request]
     proc = run_bridge(bridge_args)

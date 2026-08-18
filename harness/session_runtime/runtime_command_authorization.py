@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate authorization for a typed NovelForge runtime command.
+"""Validate authorization for a typed Quillframe runtime command.
 
 V1 authorizes only `session.resume`. Authorization is operational permission to
 attempt a runtime-state transition after a fresh preflight. It never grants
@@ -22,8 +22,8 @@ if str(HERE) not in sys.path:
 
 import resume_command  # noqa: E402
 
-AUTH_SCHEMA = "novelforge_runtime_command_authorization_v1"
-VALIDATION_SCHEMA = "novelforge_runtime_command_authorization_validation_v1"
+AUTH_SCHEMA = "quillframe_runtime_command_authorization_v1"
+VALIDATION_SCHEMA = "quillframe_runtime_command_authorization_validation_v1"
 MANAGER_POLICY_REF = "policy:runtime.resume.non_consequential.v1"
 SOURCE_KINDS = {"user", "authorized_human", "manager_runtime_policy"}
 MANAGER_ALLOWED_STATUSES = {"idle", "awaiting_external"}
@@ -231,7 +231,7 @@ def fixture(
         "project_id": "BOOK-AUTH",
         "project_authority_fingerprint": "sha256:" + "a" * 64,
         "framework": {
-            "version": "0.8.0",
+            "version": "0.9.0",
             "commit": "fixture",
             "bundle_fingerprint": "sha256:" + "b" * 64,
         },
@@ -316,7 +316,7 @@ def make_authorization(
 
 
 def self_test() -> int:
-    with tempfile.TemporaryDirectory(prefix="novelforge-resume-authorization-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="quillframe-resume-authorization-") as tmp:
         root = Path(tmp)
         _, idle_preflight, idle_command = fixture(root=root, status="idle")
         manager = make_authorization(
@@ -348,7 +348,7 @@ def self_test() -> int:
             project_root=root,
             decision="allow",
             source_kind="user",
-            evidence_ref="urn:novelforge:user-action:resume-self-test",
+            evidence_ref="urn:quillframe:user-action:resume-self-test",
             authorization_id="AUTH-USER-WAIT",
         )
         human_wait_result = validate(human_wait, wait_command, wait_preflight, root)
@@ -410,7 +410,7 @@ def self_test() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge runtime command authorization validator")
+    parser = argparse.ArgumentParser(description="Quillframe runtime command authorization validator")
     sub = parser.add_subparsers(dest="command", required=True)
     validate_p = sub.add_parser("validate")
     validate_p.add_argument("--authorization", required=True)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Durable candidate-evolution ledger for NovelForge.
+"""Durable candidate-evolution ledger for Quillframe.
 
 Deterministic SQLite state only. The ledger tracks candidates, exact semantic
 comparison jobs/results, repair ownership, and plateau stopping. It never makes
@@ -22,7 +22,7 @@ if str(SEM) not in sys.path:
     sys.path.insert(0, str(SEM))
 from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
 
-SCHEMA = "novelforge_quality_evolution_v2"
+SCHEMA = "quillframe_quality_evolution_v2"
 REPAIR_OWNERS = {
     "story", "plan", "scene", "character", "reader", "surface",
     "continuity", "context", "memory", "research", "runtime", "human",
@@ -507,8 +507,8 @@ def load_json_file(path: str) -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge durable quality evolution ledger")
-    p.add_argument("--db", default=".novelforge/quality-evolution.db")
+    p = argparse.ArgumentParser(description="Quillframe durable quality evolution ledger")
+    p.add_argument("--db", default=".quillframe/quality-evolution.db")
     sub = p.add_subparsers(dest="command", required=True)
     st = sub.add_parser("start")
     st.add_argument("--run-id", required=True)
@@ -536,7 +536,7 @@ def main() -> int:
     cp = sub.add_parser("complete")
     cp.add_argument("--run-id", required=True)
     sf = sub.add_parser("self-test")
-    sf.add_argument("--path", default="/tmp/novelforge-quality-evolution-selftest.db")
+    sf.add_argument("--path", default="/tmp/quillframe-quality-evolution-selftest.db")
     args = p.parse_args()
     if args.command == "self-test":
         return self_test(Path(args.path))

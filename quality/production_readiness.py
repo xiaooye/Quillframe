@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic conjunctive readiness gate for NovelForge candidates.
+"""Deterministic conjunctive readiness gate for Quillframe candidates.
 
 Semantic contracts own literary judgment.  This module validates exact contract
 identity, candidate fingerprints, typed results, execution provenance and
@@ -26,7 +26,7 @@ from registered_contract_binding import validate_registered_job  # noqa: E402
 from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
 from candidate_qualification import validate_qualification_receipt  # noqa: E402
 
-SCHEMA = "novelforge_production_readiness_v1"
+SCHEMA = "quillframe_production_readiness_v1"
 CATEGORIES = {"surface", "reader_engagement", "continuity", "semantic_rules", "semantic_independent"}
 STATUSES = {"pass", "fail", "pending"}
 READER_GRIP = {"low", "medium", "high", "very_high"}
@@ -378,7 +378,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge production readiness gate")
+    p = argparse.ArgumentParser(description="Quillframe production readiness gate")
     sub = p.add_subparsers(dest="command", required=True)
     e = sub.add_parser("evaluate")
     e.add_argument("--input", required=True)

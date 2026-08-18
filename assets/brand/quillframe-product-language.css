@@ -1,0 +1,49 @@
+:root {
+  --qf-product-canvas: oklch(.985 .016 82);
+  --qf-product-surface: oklch(.995 .01 82);
+  --qf-product-surface-soft: oklch(.97 .02 82);
+  --qf-product-ink: oklch(.27 .035 332);
+  --qf-product-muted: oklch(.51 .035 322);
+  --qf-product-line: oklch(.84 .055 344 / .78);
+  --qf-product-pink: oklch(.72 .16 352);
+  --qf-product-pink-strong: oklch(.66 .2 352);
+  --qf-product-pink-soft: oklch(.95 .035 350);
+  --qf-product-lilac: oklch(.74 .105 300);
+  --qf-product-lilac-soft: oklch(.955 .03 302);
+  --qf-product-blue: oklch(.72 .105 248);
+  --qf-product-blue-soft: oklch(.955 .028 245);
+  --qf-product-mint: oklch(.76 .095 158);
+  --qf-product-mint-soft: oklch(.958 .028 158);
+  --qf-product-peach: oklch(.83 .085 72);
+  --qf-product-radius-control: 10px;
+  --qf-product-radius-card: 16px;
+  --qf-product-radius-panel: 26px;
+  --qf-product-shadow-soft: 0 18px 44px -34px oklch(.48 .12 342 / .38), 0 5px 15px -12px oklch(.42 .08 300 / .18);
+  --qf-product-shadow-float: 0 30px 72px -46px oklch(.42 .12 330 / .42);
+  --qf-product-focus: 0 0 0 3px color-mix(in oklab, var(--qf-product-pink) 26%, transparent);
+  --qf-product-duration-fast: 140ms;
+  --qf-product-duration-medium: 220ms;
+  --qf-product-ease: cubic-bezier(.22, 1, .36, 1);
+}
+
+html.dark {
+  --qf-product-canvas: oklch(.18 .018 323);
+  --qf-product-surface: oklch(.22 .018 323);
+  --qf-product-surface-soft: oklch(.25 .02 323);
+  --qf-product-ink: oklch(.94 .018 78);
+  --qf-product-muted: oklch(.72 .025 305);
+  --qf-product-line: oklch(.42 .055 332 / .82);
+  --qf-product-pink-soft: oklch(.29 .07 350);
+  --qf-product-lilac-soft: oklch(.28 .055 300);
+  --qf-product-blue-soft: oklch(.27 .05 248);
+  --qf-product-mint-soft: oklch(.27 .05 158);
+  --qf-product-shadow-soft: 0 18px 48px -32px rgb(0 0 0 / .58);
+  --qf-product-shadow-float: 0 34px 82px -44px rgb(0 0 0 / .72);
+}
+
+html { color-scheme: light; }
+html.dark { color-scheme: dark; }
+
+:where(button, input, textarea, select, a) {
+  accent-color: var(--qf-product-pink-strong);
+}

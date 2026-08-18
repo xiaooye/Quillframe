@@ -1,10 +1,10 @@
-# NovelForge Framework Bundle
+# Quillframe Framework Bundle
 
 ## Purpose
 
-A consuming fiction project pins an exact NovelForge Framework revision. The deterministic Framework bundle lets a local or remote host verify that its materialized Framework bytes match the evidence recorded by the project lock.
+A consuming fiction project pins an exact Quillframe Framework revision. The deterministic Framework bundle lets a local or remote host verify that its materialized Framework bytes match the evidence recorded by the project lock.
 
-The bundle is a transport/cache artifact, not a second authority. Project bootstrap still resolves the exact Framework dependency from `novelforge.lock.json`; a bundle fingerprint proves byte identity for that dependency, not story truth.
+The bundle is a transport/cache artifact, not a second authority. Project bootstrap still resolves the exact Framework dependency from `quillframe.lock.json`; a bundle fingerprint proves byte identity for that dependency, not story truth.
 
 ## Format
 
@@ -23,7 +23,7 @@ Runtime/Framework material such as Core, Surface, Harness, Learning, Corpus, Eva
 
 - `.git` history;
 - `specs/` engineering work records;
-- `.novelforge/` runtime state;
+- `.quillframe/` runtime state;
 - caches/bytecode;
 - SQLite/runtime databases and WAL/SHM files;
 - generated bundle files and bundle attestation metadata.
@@ -34,15 +34,15 @@ Bundle attestation is excluded intentionally so publishing the fingerprint canno
 
 ```bash
 python release/build_framework_bundle.py build \
-  --output dist/novelforge-framework.tar \
-  --report dist/novelforge-framework-build.json
+  --output dist/quillframe-framework.tar \
+  --report dist/quillframe-framework-build.json
 ```
 
 ## Verify
 
 ```bash
 python release/build_framework_bundle.py verify \
-  --bundle dist/novelforge-framework.tar \
+  --bundle dist/quillframe-framework.tar \
   --expected 'sha256:...'
 ```
 
@@ -55,7 +55,7 @@ A resolved production lock may record evidence such as:
 ```json
 {
   "framework": {
-    "name": "NovelForge",
+    "name": "Quillframe",
     "version": "<resolved release version>",
     "commit": "<exact git sha>",
     "bundle_fingerprint": "sha256:<64 hex>"
@@ -71,7 +71,7 @@ A materialized bundle with a mismatching fingerprint must not silently become ru
 
 Do not confuse two derived artifacts:
 
-- **Framework bundle** — immutable materialization of the pinned generic NovelForge dependency;
+- **Framework bundle** — immutable materialization of the pinned generic Quillframe dependency;
 - **Project bundle** — indexed derived view of one consuming fiction project's own files/authority mappings.
 
 Neither bundle is a second source of truth. Both are reproducible views whose fingerprints help detect drift.

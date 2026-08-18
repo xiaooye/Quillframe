@@ -143,7 +143,7 @@ export default function Architecture() {
     <section class="nf-page nf-live-architecture-page">
       <PageIntro
         eyebrow={zh() ? "LIVE ARCHITECTURE · CORE PROJECTION" : "LIVE ARCHITECTURE · CORE PROJECTION"}
-        title={zh() ? "看这一条真实 Run 怎样穿过 NovelForge。" : "See how this real run moves through NovelForge."}
+        title={zh() ? "看这一条真实 Run 怎样穿过 Quillframe。" : "See how this real run moves through Quillframe."}
         body={zh()
           ? "从 Project Adapter、Runtime Session、Context policy、Receipt、Guard 与 Event 读取真实只读投影。没有对应 Core 证据的阶段会显示为空，而不是由 Studio 猜测。"
           : "Reads real, read-only projections from Project Adapter, Runtime Session, Context policy, Receipts, Guards, and Events. Stages without Core evidence stay empty instead of being guessed by Studio."}

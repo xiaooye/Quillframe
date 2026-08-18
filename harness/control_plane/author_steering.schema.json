@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "novelforge_author_steering_contract_v1",
-  "title": "NovelForge Author Steering Contract",
+  "$id": "quillframe_author_steering_contract_v1",
+  "title": "Quillframe Author Steering Contract",
   "oneOf": [
     {"$ref": "#/$defs/requestPayload"},
     {"$ref": "#/$defs/safePoint"},
@@ -16,7 +16,7 @@
       "additionalProperties": false,
       "required": ["schema", "kind", "instruction", "applicability", "authored_against_checkpoint_id", "authority", "canon_authority", "framework_write_authority"],
       "properties": {
-        "schema": {"const": "novelforge_author_steering_request_v1"},
+        "schema": {"const": "quillframe_author_steering_request_v1"},
         "kind": {"const": "author_steering"},
         "instruction": {"type": "string", "minLength": 1, "maxLength": 10000},
         "applicability": {
@@ -40,7 +40,7 @@
       "additionalProperties": false,
       "required": ["schema", "resource_id", "session_id", "run_id", "run_lineage", "checkpoint_id", "safe_point_id", "safe_point_kind", "workflow_cursor", "artifact_fingerprints", "pending_handoff_ids", "consequential_write_state"],
       "properties": {
-        "schema": {"const": "novelforge_author_steering_safe_point_v1"},
+        "schema": {"const": "quillframe_author_steering_safe_point_v1"},
         "resource_id": {"$ref": "#/$defs/nonempty"},
         "session_id": {"$ref": "#/$defs/nonempty"},
         "run_id": {"$ref": "#/$defs/nonempty"},
@@ -59,7 +59,7 @@
       "additionalProperties": false,
       "required": ["schema", "decision_input_fingerprint", "route", "binding_acknowledgement", "invalidate_artifact_fingerprints", "cancel_handoff_ids", "deferred_target_ref", "reason_ref", "authority", "canon_authority", "framework_write_authority", "model_execution"],
       "properties": {
-        "schema": {"const": "novelforge_author_steering_decision_v1"},
+        "schema": {"const": "quillframe_author_steering_decision_v1"},
         "decision_input_fingerprint": {"$ref": "#/$defs/sha"},
         "route": {"enum": ["continue", "rebuild_context", "replan", "regenerate", "cancel_handoff", "await_user", "defer_future"]},
         "binding_acknowledgement": {"enum": ["exact", "reinterpreted_against_current_state", "await_user", "defer_future"]},
@@ -77,7 +77,7 @@
       "type": "object",
       "required": ["schema", "event_id", "event_hash", "decision_input_fingerprint", "decision_fingerprint", "route", "binding_state", "consumed", "already_consumed", "consumption_key", "required_followup_operations", "followup_execution_performed", "authority", "canon_authority", "project_write_authority", "framework_write_authority", "settlement_authority", "model_execution"],
       "properties": {
-        "schema": {"const": "novelforge_author_steering_receipt_v1"},
+        "schema": {"const": "quillframe_author_steering_receipt_v1"},
         "event_id": {"$ref": "#/$defs/nonempty"},
         "event_hash": {"$ref": "#/$defs/sha"},
         "decision_input_fingerprint": {"$ref": "#/$defs/sha"},

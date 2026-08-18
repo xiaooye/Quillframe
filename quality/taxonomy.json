@@ -1,5 +1,5 @@
 {
-  "schema": "novelforge_quality_taxonomy_v1",
+  "schema": "quillframe_quality_taxonomy_v1",
   "version": "2",
   "principle": "Framework-owned quality identifiers are a machine contract. Human documentation and consuming-project regression/profile references must be checked against this registry so an identifier cannot silently change meaning across Framework migrations.",
   "families": {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local Codex/Claude adapter for NovelForge semantic model contracts.
+"""Local Codex/Claude adapter for Quillframe semantic model contracts.
 
 stdin: one validated semantic job JSON
 stdout: one semantic result JSON
@@ -87,7 +87,7 @@ def typed(job: dict[str, Any], provider: str, status: str, *, judgment: dict[str
         "status": status,
         "worker": {
             "provider": f"{provider}_cli",
-            "model_or_reviewer": os.getenv(f"NOVELFORGE_{provider.upper()}_MODEL", f"{provider} configured model"),
+            "model_or_reviewer": os.getenv(f"QUILLFRAME_{provider.upper()}_MODEL", f"{provider} configured model"),
             "run_reference": run_ref,
         },
         "judgment": judgment or empty_judgment(),
@@ -104,7 +104,7 @@ def prompt(job: dict[str, Any]) -> str:
     )}
     independent = bool((job.get("provenance") or {}).get("independent_gate", False))
     return (
-        "You are a bounded semantic worker in the NovelForge fiction-production harness. "
+        "You are a bounded semantic worker in the Quillframe fiction-production harness. "
         "Perform the semantic task described by the supplied purpose/rubric using ONLY the packet below. "
         "Do not inspect repository/project files, search for hidden expected labels, or provide private chain-of-thought. "
         "Return ONLY one JSON object matching the packet's output_contract. "
@@ -133,7 +133,7 @@ def codex_command(schema: Path, output: Path) -> list[str]:
         "--sandbox", "read-only", "--output-schema", str(schema),
         "--output-last-message", str(output),
     ]
-    model = os.getenv("NOVELFORGE_CODEX_MODEL", "").strip()
+    model = os.getenv("QUILLFRAME_CODEX_MODEL", "").strip()
     if model:
         cmd += ["--model", model]
     return cmd + ["-"]
@@ -142,10 +142,10 @@ def codex_command(schema: Path, output: Path) -> list[str]:
 def claude_command() -> list[str]:
     cmd = [
         exe("claude") or "claude", "-p",
-        "Execute the bounded NovelForge semantic packet supplied on stdin and return only the requested JSON object.",
+        "Execute the bounded Quillframe semantic packet supplied on stdin and return only the requested JSON object.",
         "--output-format", "json", "--max-turns", "1", "--permission-mode", "plan",
     ]
-    model = os.getenv("NOVELFORGE_CLAUDE_MODEL", "").strip()
+    model = os.getenv("QUILLFRAME_CLAUDE_MODEL", "").strip()
     if model:
         cmd += ["--model", model]
     return cmd
@@ -177,7 +177,7 @@ def execute(job: dict[str, Any], requested: str, timeout: int) -> dict[str, Any]
         return typed(job, label, "failed", errors=[f"local agent unavailable: {requested}"])
 
     run_ref = f"local-{provider}:{uuid.uuid4().hex}"
-    with tempfile.TemporaryDirectory(prefix="novelforge-semantic-") as td:
+    with tempfile.TemporaryDirectory(prefix="quillframe-semantic-") as td:
         wd = Path(td)
         try:
             if provider == "codex":
@@ -232,7 +232,7 @@ def self_test() -> int:
 
 def main() -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--provider", choices=["auto", "codex", "claude"], default=os.getenv("NOVELFORGE_LOCAL_AGENT_PROVIDER", "auto"))
+    p.add_argument("--provider", choices=["auto", "codex", "claude"], default=os.getenv("QUILLFRAME_LOCAL_AGENT_PROVIDER", "auto"))
     p.add_argument("--timeout", type=int, default=180); p.add_argument("--capabilities", action="store_true"); p.add_argument("--self-test", action="store_true")
     args = p.parse_args()
     if args.self_test: return self_test()

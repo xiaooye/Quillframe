@@ -1,8 +1,8 @@
-# NovelForge Evals · 评测系统
+# Quillframe Evals · 评测系统
 
 ## 目的
 
-NovelForge 严格区分 **deterministic invariant** 与 **semantic quality judgment**。
+Quillframe 严格区分 **deterministic invariant** 与 **semantic quality judgment**。
 
 ```mermaid
 flowchart LR
@@ -70,7 +70,7 @@ Blind queue 先通过 Harness semantic router 变成 typed semantic jobs，再�
 
 Deterministic evaluator 只负责验证 registered contract、candidate/queue/result/execution fingerprint、独立 invocation lineage、3:3 presentation counterbalance 与预声明 decision protocol。它不做文学判断，也不会因为 synthetic self-test 通过就产生真实 simplification evidence。
 
-Live ablation execution **只允许手动触发**。Pull-request CI 即使仓库已经配置 provider credential，也固定解析为 `deterministic_only`，不会自动花费模型调用。经过明确授权的实验必须手动 dispatch `novelforge-adaptive-production-semantic.yml`，并选择 `execution_mode=reader_contamination_3x2`。该模式只执行 3 个双-arm condition batch 加 6 个单独 pair-review job，总计 **12 次 semantic call 的硬上限**；超出上限直接拒绝，也不会为了补结果自动 retry。每次 reviewer execution 之前，其 execution identity 都会绑定 `max_semantic_calls=12`、workflow timeout 与命名 budget binding。得到的 ablation decision 只是 non-promotion evidence，本身不能把 Framework feature gate 自动提升成 promotion PASS。
+Live ablation execution **只允许手动触发**。Pull-request CI 即使仓库已经配置 provider credential，也固定解析为 `deterministic_only`，不会自动花费模型调用。经过明确授权的实验必须手动 dispatch `quillframe-adaptive-production-semantic.yml`，并选择 `execution_mode=reader_contamination_3x2`。该模式只执行 3 个双-arm condition batch 加 6 个单独 pair-review job，总计 **12 次 semantic call 的硬上限**；超出上限直接拒绝，也不会为了补结果自动 retry。每次 reviewer execution 之前，其 execution identity 都会绑定 `max_semantic_calls=12`、workflow timeout 与命名 budget binding。得到的 ablation decision 只是 non-promotion evidence，本身不能把 Framework feature gate 自动提升成 promotion PASS。
 
 ## Commands
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only publication preview projection for NovelForge product surfaces.
+"""Read-only publication preview projection for Quillframe product surfaces.
 
 This adapter executes the deterministic publication compiler in a temporary
 workspace and returns browser-safe preview material plus artifact fingerprints.
@@ -21,7 +21,7 @@ from typing import Any
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 COMPILER_PATH = ROOT / "publication" / "compiler.py"
-SCHEMA = "novelforge_publication_preview_projection_v1"
+SCHEMA = "quillframe_publication_preview_projection_v1"
 PROFILE_ALIASES = {
     "text": "clean_text",
     "clean_text": "clean_text",
@@ -38,7 +38,7 @@ MAX_PREVIEW_CHARS = 160_000
 def _compiler() -> ModuleType:
     if not COMPILER_PATH.is_file():
         raise ValueError("publication/compiler.py is unavailable")
-    spec = importlib.util.spec_from_file_location("novelforge_publication_compiler", COMPILER_PATH)
+    spec = importlib.util.spec_from_file_location("quillframe_publication_compiler", COMPILER_PATH)
     if spec is None or spec.loader is None:
         raise ValueError("publication compiler cannot be loaded")
     module = importlib.util.module_from_spec(spec)
@@ -70,7 +70,7 @@ def _derived_artifact_sha(output: Path) -> str:
 
 
 def _inline_epub_css(content: str, css: str) -> str:
-    style = "<style data-novelforge-preview=\"epub-inline\">" + css + "</style>"
+    style = "<style data-quillframe-preview=\"epub-inline\">" + css + "</style>"
     marker = "</head>"
     return content.replace(marker, style + marker, 1) if marker in content else style + content
 
@@ -120,7 +120,7 @@ def build_preview(source: dict[str, Any], profile: str) -> dict[str, Any]:
 
     compiler = _compiler()
     ir = compiler.compile_ir(source)
-    with tempfile.TemporaryDirectory(prefix="novelforge-publication-preview-") as td:
+    with tempfile.TemporaryDirectory(prefix="quillframe-publication-preview-") as td:
         root = Path(td)
         output = root / ("book.epub" if compiler_profile == "epub3" else compiler_profile)
         report = compiler.build(ir, compiler_profile, output)
@@ -171,7 +171,7 @@ def self_test() -> dict[str, Any]:
     accepted = "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
     source = {
         "book": {
-            "identifier": "urn:novelforge:publication-preview-self-test",
+            "identifier": "urn:quillframe:publication-preview-self-test",
             "title": "Preview Fixture",
             "language": "zh-CN",
             "modified": "2026-08-15T00:00:00Z",
@@ -209,7 +209,7 @@ def self_test() -> dict[str, Any]:
 def main() -> int:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Build a read-only NovelForge publication preview projection")
+    parser = argparse.ArgumentParser(description="Build a read-only Quillframe publication preview projection")
     sub = parser.add_subparsers(dest="command", required=True)
     build = sub.add_parser("build")
     build.add_argument("--input", required=True)

@@ -1,10 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "novelforge-publication-ir-v1",
+  "$id": "quillframe-publication-ir-v1",
   "type": "object",
   "required": ["schema", "book", "chapters", "source_fingerprint", "text_preservation", "authority"],
   "properties": {
-    "schema": {"const": "novelforge_publication_ir_v1"},
+    "schema": {"const": "quillframe_publication_ir_v1"},
     "book": {
       "type": "object",
       "required": ["identifier", "title", "language", "modified"],

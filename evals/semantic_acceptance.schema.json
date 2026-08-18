@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "novelforge_semantic_acceptance_baseline_v1",
-  "title": "NovelForge Semantic Acceptance Baseline",
+  "$id": "quillframe_semantic_acceptance_baseline_v1",
+  "title": "Quillframe Semantic Acceptance Baseline",
   "type": "object",
   "required": ["schema", "framework_version", "suite_version", "acceptance_subject_commit", "status", "blind", "fingerprint_bound", "review_sources", "cases", "authority", "permissions", "model_execution"],
   "properties": {
-    "schema": {"const": "novelforge_semantic_acceptance_baseline_v1"},
+    "schema": {"const": "quillframe_semantic_acceptance_baseline_v1"},
     "framework_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
     "suite_version": {"type": "string", "minLength": 1},
     "acceptance_subject_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},

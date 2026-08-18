@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "novelforge_runtime_command_execution_result_v1",
-  "title": "NovelForge Runtime Command Execution Result",
+  "$id": "quillframe_runtime_command_execution_result_v1",
+  "title": "Quillframe Runtime Command Execution Result",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -25,7 +25,7 @@
     "result_fingerprint"
   ],
   "properties": {
-    "schema": {"const": "novelforge_runtime_command_execution_result_v1"},
+    "schema": {"const": "quillframe_runtime_command_execution_result_v1"},
     "status": {"enum": ["applied", "duplicate", "rejected", "conflict", "failed"]},
     "failure_class": {"type": ["string", "null"]},
     "errors": {"type": "array", "items": {"type": "string"}},

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic documentation QA for NovelForge.
+"""Deterministic documentation QA for Quillframe.
 
 Normal CI must never spend model/API usage. This checker validates the machine-
 checkable half of the documentation contract. It also reports release-metadata
@@ -17,7 +17,7 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parents[1]
 DOC_MANIFEST = ROOT / "docs" / "documentation_manifest.json"
 FRAMEWORK_MANIFEST = ROOT / "HARNESS_MANIFEST.yaml"
-CLI_ENTRY = ROOT / "novelforge.py"
+CLI_ENTRY = ROOT / "quillframe.py"
 UI_DIR = ROOT / "assets" / "ui"
 TARGET_GITHUB_WIDTH = 820.0
 MIN_RENDERED_TEXT_PX = 12.0
@@ -41,7 +41,7 @@ CLI_VERSION_RE = re.compile(r'^FRAMEWORK_VERSION\s*=\s*["\']([0-9]+\.[0-9]+\.[0-
 STALE_EXAMPLE_RE = re.compile(
     r'(?:minimum_framework_version\s*=\s*"7\.[01]\.0"|'
     r'"version"\s*:\s*"7\.[01]\.0"|'
-    r'\bNovelForge\s+7\.[01](?:\.0)?\b)',
+    r'\bQuillframe\s+7\.[01](?:\.0)?\b)',
     re.I,
 )
 
@@ -59,7 +59,7 @@ CONTROLLED_DOC_ROOTS = (
     ROOT / "studio",
     ROOT / "surface",
 )
-EXCLUDED_DISCOVERY_DIRS = {".git", ".novelforge", "node_modules", "dist", "__pycache__"}
+EXCLUDED_DISCOVERY_DIRS = {".git", ".quillframe", "node_modules", "dist", "__pycache__"}
 
 
 def rel(path: Path) -> str:
@@ -91,7 +91,7 @@ def load_doc_manifest() -> dict:
     except (OSError, json.JSONDecodeError) as exc:
         error(DOC_MANIFEST, f"invalid JSON: {exc}")
         return {}
-    if data.get("schema") != "novelforge_documentation_manifest_v1":
+    if data.get("schema") != "quillframe_documentation_manifest_v1":
         error(DOC_MANIFEST, f"unexpected schema: {data.get('schema')!r}")
     return data
 
@@ -459,7 +459,7 @@ def main() -> int:
     if release_version and implementation_version and release_version != implementation_version:
         warn(
             FRAMEWORK_MANIFEST,
-            f"release metadata drift: HARNESS_MANIFEST.yaml={release_version} while novelforge.py implementation reports {implementation_version}; do not silently resolve this in documentation QA",
+            f"release metadata drift: HARNESS_MANIFEST.yaml={release_version} while quillframe.py implementation reports {implementation_version}; do not silently resolve this in documentation QA",
         )
 
     checks = check_inventory(manifest) if manifest else []

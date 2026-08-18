@@ -24,7 +24,7 @@ requireCheck(index.includes('@import "./local-playground.css"'), "local playgrou
 requireCheck(index.indexOf('local-playground.css') < index.indexOf('readability.css'), "playground route styling must precede cross-cutting readability hardening");
 requireCheck(!main.includes("LocalPlaygroundEntry") && !main.includes("standaloneProductPaths"), "playground must not retain a standalone shell/handoff path");
 
-requireCheck(playground.includes('type PlaygroundMode = "DRAFT" | "REVISE" | "AUDIT" | "PLAN-CHAPTER"'), "Playground modes must use real NovelForge task modes");
+requireCheck(playground.includes('type PlaygroundMode = "DRAFT" | "REVISE" | "AUDIT" | "PLAN-CHAPTER"'), "Playground modes must use real Quillframe task modes");
 requireCheck(!playground.includes('"REVIEW"') && !playground.includes('"PLAN" |'), "Playground must not invent REVIEW or generic PLAN primary task modes");
 
 for (const marker of ["Context Manifest", "Contract candidates", "Execution", "Evidence", "Result", "context.select", "revision.diagnose", "quality.production_review", "plan.reconcile", "0 model calls", "no semantic routing", "deterministic semantic router", "No automatic settlement"]) {
@@ -45,5 +45,5 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`local-playground-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ schema: "novelforge_local_playground_quality_v3", status: "pass", route: "/playground", shell: "shared_product_app", css_entrypoint: "index.css", execution: "deterministic_preview", model_calls: 0, semantic_routing: false, authority: false, modes: ["DRAFT", "REVISE", "AUDIT", "PLAN-CHAPTER"] }, null, 2));
+  console.log(JSON.stringify({ schema: "quillframe_local_playground_quality_v3", status: "pass", route: "/playground", shell: "shared_product_app", css_entrypoint: "index.css", execution: "deterministic_preview", model_calls: 0, semantic_routing: false, authority: false, modes: ["DRAFT", "REVISE", "AUDIT", "PLAN-CHAPTER"] }, null, 2));
 }

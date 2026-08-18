@@ -27,7 +27,7 @@ const root = document.getElementById("app");
 if (!root) throw new Error("#app mount point is missing");
 
 document.documentElement.dataset.experience = "story-loom-kawaii-atelier-v5";
-document.documentElement.dataset.productLanguage = "novelforge-kawaii-v1";
+document.documentElement.dataset.productLanguage = "quillframe-kawaii-v1";
 
 function StudioShellRoot(props: { children?: JSX.Element }) {
   return (

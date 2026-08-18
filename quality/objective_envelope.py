@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fingerprint-bound creative objective envelope for repair-safe NovelForge runs.
+"""Fingerprint-bound creative objective envelope for repair-safe Quillframe runs.
 
 The manager/model selects a compact set of current objectives from authorized
 Project/request evidence. This deterministic module validates provenance,
@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "novelforge_objective_envelope_v1"
+SCHEMA = "quillframe_objective_envelope_v1"
 CATEGORIES = {
     "story", "reader", "character_relationship", "pressure", "reward",
     "payoff_forward_pull", "profile", "user_direction", "continuity",

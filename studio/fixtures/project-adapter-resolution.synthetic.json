@@ -1,13 +1,13 @@
 {
-  "schema": "novelforge_project_adapter_resolution_v1",
+  "schema": "quillframe_project_adapter_resolution_v1",
   "project_id": "PROJECT-SYNTHETIC-STORY-LOOM",
   "project_title": "Synthetic Story Loom",
   "project_version": "0.0.0-fixture",
   "language": "en",
-  "project_root": "/private/synthetic-host/novelforge-project",
+  "project_root": "/private/synthetic-host/quillframe-project",
   "layout": "mapped",
   "framework_lock": {
-    "name": "NovelForge",
+    "name": "Quillframe",
     "version": "8.0.0-dev",
     "commit": "synthetic-fixture",
     "bundle_fingerprint": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -19,37 +19,37 @@
   "paths": {
     "project_entry": {
       "relative": "novel_bible/PROJECT.md",
-      "absolute": "/private/synthetic-host/novelforge-project/novel_bible/PROJECT.md",
+      "absolute": "/private/synthetic-host/quillframe-project/novel_bible/PROJECT.md",
       "exists": true,
       "kind": "file"
     },
     "story_bible": {
       "relative": "novel_bible",
-      "absolute": "/private/synthetic-host/novelforge-project/novel_bible",
+      "absolute": "/private/synthetic-host/quillframe-project/novel_bible",
       "exists": true,
       "kind": "dir"
     },
     "current_state": {
       "relative": "novel_bible/shared/database",
-      "absolute": "/private/synthetic-host/novelforge-project/novel_bible/shared/database",
+      "absolute": "/private/synthetic-host/quillframe-project/novel_bible/shared/database",
       "exists": true,
       "kind": "dir"
     },
     "active_plans": {
       "relative": "plans",
-      "absolute": "/private/synthetic-host/novelforge-project/plans",
+      "absolute": "/private/synthetic-host/quillframe-project/plans",
       "exists": true,
       "kind": "dir"
     },
     "manuscripts": {
       "relative": "manuscripts",
-      "absolute": "/private/synthetic-host/novelforge-project/manuscripts",
+      "absolute": "/private/synthetic-host/quillframe-project/manuscripts",
       "exists": true,
       "kind": "dir"
     },
     "profiles": {
       "relative": "profiles",
-      "absolute": "/private/synthetic-host/novelforge-project/profiles",
+      "absolute": "/private/synthetic-host/quillframe-project/profiles",
       "exists": true,
       "kind": "dir"
     }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NovelForge capability-aware Corpus discovery runtime.
+"""Quillframe capability-aware Corpus discovery runtime.
 
 Deterministic responsibilities only:
 - resolve requested discovery channels against a host capability manifest;
@@ -29,10 +29,10 @@ if str(Path(__file__).resolve().parent) not in sys.path:
 from runtime_capabilities import validate_manifest  # noqa: E402
 from rights_gate import decision as rights_decision  # noqa: E402
 
-QUEUE_SCHEMA = "novelforge_corpus_discovery_queue_v2"
-DISPATCH_SCHEMA = "novelforge_corpus_dispatch_plan_v1"
-RESULT_SCHEMA = "novelforge_corpus_discovery_results_v1"
-VERIFIED_SCHEMA = "novelforge_verified_corpus_discovery_v1"
+QUEUE_SCHEMA = "quillframe_corpus_discovery_queue_v2"
+DISPATCH_SCHEMA = "quillframe_corpus_dispatch_plan_v1"
+RESULT_SCHEMA = "quillframe_corpus_discovery_results_v1"
+VERIFIED_SCHEMA = "quillframe_verified_corpus_discovery_v1"
 
 
 def canonical(value: Any) -> bytes:
@@ -243,7 +243,7 @@ def validate_results(queue: dict[str, Any], results: dict[str, Any]) -> dict[str
 
 def self_test() -> dict[str, Any]:
     request = {
-        "schema": "novelforge_corpus_discovery_request_v2", "request_id": "CDR-T", "gap_id": "CG-T",
+        "schema": "quillframe_corpus_discovery_request_v2", "request_id": "CDR-T", "gap_id": "CG-T",
         "hypothesis_id": "PH-T", "research_question": "fixture", "host_search_plan": [
             {"channel": "web", "requires_capability": "web_search", "query_seed": "fixture", "purpose": "fixture"},
             {"channel": "github", "requires_capability": "github_search", "query_seed": "fixture", "purpose": "fixture"},
@@ -252,7 +252,7 @@ def self_test() -> dict[str, Any]:
     }
     queue = {"schema": QUEUE_SCHEMA, "requests": [request]}
     manifest = {
-        "schema": "novelforge_host_capabilities_v1", "manifest_id": "HC-T", "secrets_embedded": False,
+        "schema": "quillframe_host_capabilities_v1", "manifest_id": "HC-T", "secrets_embedded": False,
         "capabilities": {
             "web_search": {"available": True, "source": "fixture", "permission": "read", "usage_class": "none", "user_interaction": False, "model_execution": False},
             "github_search": {"available": False, "source": "fixture", "permission": "none", "usage_class": "none", "user_interaction": False, "model_execution": False},
@@ -289,7 +289,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge Corpus discovery runtime")
+    p = argparse.ArgumentParser(description="Quillframe Corpus discovery runtime")
     sub = p.add_subparsers(dest="cmd", required=True)
     d = sub.add_parser("dispatch"); d.add_argument("--queue", required=True); d.add_argument("--capabilities", required=True); d.add_argument("--output"); d.add_argument("--allow-model", action="store_true"); d.add_argument("--no-user-interaction", action="store_true")
     v = sub.add_parser("validate-results"); v.add_argument("--queue", required=True); v.add_argument("--results", required=True); v.add_argument("--output")

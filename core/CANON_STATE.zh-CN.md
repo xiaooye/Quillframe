@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · 契约</kbd>&nbsp;&nbsp;<kbd>权威</kbd>&nbsp;&nbsp;<kbd>结算</kbd>&nbsp;&nbsp;<kbd>证据</kbd></p>
 
-NovelForge 把**故事事实**与计划、草稿、研究、审阅结论、运行时状态、模型记忆和派生摘要严格分开。长篇连续性真正依赖的不是“记住得更多”，而是始终记得：**每一条记录究竟被允许代表什么。**
+Quillframe 把**故事事实**与计划、草稿、研究、审阅结论、运行时状态、模型记忆和派生摘要严格分开。长篇连续性真正依赖的不是“记住得更多”，而是始终记得：**每一条记录究竟被允许代表什么。**
 
 > **核心不变量 ✦** 一条信息出现在上下文、记忆库、数据库、审阅结果或会话里，并不会让它自动变成正典。
 
@@ -25,7 +25,7 @@ NovelForge 把**故事事实**与计划、草稿、研究、审阅结论、运�
 
 ## 02 · 权威等级
 
-NovelForge 使用一组通用生命周期标签：
+Quillframe 使用一组通用生命周期标签：
 
 ```text
 proposal     可替换的候选想法或修改建议
@@ -257,7 +257,7 @@ ops:
 
 ## 13 · Context、Memory 与派生视图属于更低权威
 
-NovelForge 可以提供作者可编辑的上下文和记忆控制，但这些控制不能偷偷变成第二套 Canon editor。
+Quillframe 可以提供作者可编辑的上下文和记忆控制，但这些控制不能偷偷变成第二套 Canon editor。
 
 `locked` / `accepted` 受保护引用可以作为只读 snapshot 展示在 editable-memory surface 中；编辑这种 snapshot 必须生成**proposal**，不能原地修改受保护 Canon row。
 

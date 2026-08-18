@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""NovelForge Studio Project Hub projection.
+"""Quillframe Studio Project Hub projection.
 
-Consumes novelforge_project_adapter_resolution_v1 and emits a browser/remote-safe,
+Consumes quillframe_project_adapter_resolution_v1 and emits a browser/remote-safe,
 read-only Studio projection. This module is a presentation/query adapter only;
 it carries no Canon, Framework-write, settlement, or semantic authority.
 
@@ -18,8 +18,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-SOURCE_SCHEMA = "novelforge_project_adapter_resolution_v1"
-OUTPUT_SCHEMA = "novelforge_studio_project_hub_projection_v1"
+SOURCE_SCHEMA = "quillframe_project_adapter_resolution_v1"
+OUTPUT_SCHEMA = "quillframe_studio_project_hub_projection_v1"
 SURFACES = {"cli", "local_app", "cloud_ui", "agent_package"}
 
 
@@ -129,7 +129,7 @@ def self_test() -> dict[str, Any]:
         "project_root": private_marker,
         "layout": "mapped",
         "framework_lock": {
-            "name": "NovelForge",
+            "name": "Quillframe",
             "version": "8.0.0-dev",
             "commit": "fixture",
             "bundle_fingerprint": "sha256:" + "a" * 64,
@@ -188,7 +188,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build a safe NovelForge Studio Project Hub projection")
+    parser = argparse.ArgumentParser(description="Build a safe Quillframe Studio Project Hub projection")
     sub = parser.add_subparsers(dest="command", required=True)
 
     build = sub.add_parser("build")

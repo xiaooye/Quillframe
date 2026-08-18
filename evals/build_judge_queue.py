@@ -41,7 +41,7 @@ def build(manifest_path:Path)->dict[str,Any]:
         for key in ('id','type','domain','fixture','rubric','judgment_contract'):
             if key not in blind:raise ValueError(f"semantic case {case.get('id')} missing {key}")
         cases.append(blind)
-    payload={'schema':'novelforge_blind_eval_queue_v1','suite_version':manifest.get('suite_version'),'blind':True,'cases':cases}
+    payload={'schema':'quillframe_blind_eval_queue_v1','suite_version':manifest.get('suite_version'),'blind':True,'cases':cases}
     hits=find(payload)
     if hits:raise ValueError('blind queue leaks forbidden fields: '+', '.join(hits))
     return payload

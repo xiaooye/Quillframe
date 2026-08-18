@@ -1,10 +1,10 @@
 {
-  "schema": "novelforge_visual_provenance_v1",
+  "schema": "quillframe_visual_provenance_v1",
   "updated_at": "2026-08-15",
   "assets": [
     {
       "id": "brand-mark-v1",
-      "path": "assets/brand/novelforge-mark.svg",
+      "path": "assets/brand/quillframe-mark.svg",
       "method": "hand-authored vector",
       "intent": "Story Loom mark: woven N, book-page forms, forge spark",
       "user_reference": false,
@@ -13,9 +13,9 @@
     },
     {
       "id": "brand-lockup-v1",
-      "path": "assets/brand/novelforge-lockup.svg",
+      "path": "assets/brand/quillframe-lockup.svg",
       "method": "hand-authored vector",
-      "intent": "Primary horizontal NovelForge lockup using the Story Loom mark",
+      "intent": "Primary horizontal Quillframe lockup using the Story Loom mark",
       "user_reference": false,
       "third_party_asset": false,
       "license_note": "Original repository asset; wordmark uses system-font fallbacks only."
@@ -42,7 +42,7 @@
       "id": "weiui-integration-v2",
       "path": "assets/brand/weiui.integration.json",
       "method": "hand-authored exact integration lock and generated-bundle contract",
-      "intent": "Pin the reviewed WeiUI generic foundation and define the config-generated, zero-runtime-JavaScript NovelForge consumption boundary",
+      "intent": "Pin the reviewed WeiUI generic foundation and define the config-generated, zero-runtime-JavaScript Quillframe consumption boundary",
       "user_reference": false,
       "third_party_asset": true,
       "license_note": "Consumes xiaooye/weiui at exact commit 876534000439f0c98aa39c439f7eb9276b18809d under MIT."
@@ -54,7 +54,7 @@
       "intent": "Map Story Loom application semantics onto the pinned WeiUI wui-theme custom-property contract without copying generic component CSS",
       "user_reference": false,
       "third_party_asset": true,
-      "license_note": "NovelForge theme authored in this repository; consumes WeiUI public CSS-variable/cascade contract at exact MIT-licensed commit 876534000439f0c98aa39c439f7eb9276b18809d."
+      "license_note": "Quillframe theme authored in this repository; consumes WeiUI public CSS-variable/cascade contract at exact MIT-licensed commit 876534000439f0c98aa39c439f7eb9276b18809d."
     },
     {
       "id": "weiui-studio-bundle-config-v1",
@@ -63,7 +63,7 @@
       "intent": "Declare the minimum WeiUI CSS surface required by the SolidJS Studio shell without naming WeiUI source files",
       "user_reference": false,
       "third_party_asset": true,
-      "license_note": "Config is original NovelForge material; its public selection vocabulary is defined by pinned MIT-licensed WeiUI."
+      "license_note": "Config is original Quillframe material; its public selection vocabulary is defined by pinned MIT-licensed WeiUI."
     },
     {
       "id": "weiui-studio-generated-css-v1",

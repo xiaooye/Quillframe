@@ -9,7 +9,7 @@ const repoRoot = path.resolve(siteRoot, "..");
 const integrationPath = path.join(repoRoot, "assets", "brand", "weiui.integration.json");
 const integration = JSON.parse(fs.readFileSync(integrationPath, "utf8"));
 
-if (integration.schema !== "novelforge_weiui_integration_v2") {
+if (integration.schema !== "quillframe_weiui_integration_v2") {
   throw new Error(`Unsupported WeiUI integration schema: ${integration.schema}`);
 }
 
@@ -33,7 +33,7 @@ for (const [outputName, repoRelative] of Object.entries(sourceFiles)) {
 }
 
 fs.writeFileSync(path.join(outDir, "weiui.foundation.json"), `${JSON.stringify({
-  schema: "novelforge_product_weiui_foundation_v1",
+  schema: "quillframe_product_weiui_foundation_v1",
   authority: false,
   integration: integration.schema,
   sourceRepository: integration.source.repository,
@@ -48,7 +48,7 @@ fs.writeFileSync(path.join(outDir, "weiui.foundation.json"), `${JSON.stringify({
 }, null, 2)}\n`, "utf8");
 
 console.log(JSON.stringify({
-  schema: "novelforge_product_weiui_foundation_v1",
+  schema: "quillframe_product_weiui_foundation_v1",
   status: "pass",
   sourceCommit: integration.source.commit,
   generated: Object.keys(sourceFiles),

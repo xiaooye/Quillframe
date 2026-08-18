@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and verify deterministic NovelForge framework bundles.
+"""Build and verify deterministic Quillframe framework bundles.
 
 The runtime bundle is an uncompressed deterministic POSIX tar. It contains a
 per-file content manifest but excludes repository history, specs, generated
@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
-BUNDLE_SCHEMA = "novelforge_framework_bundle_v1"
+BUNDLE_SCHEMA = "quillframe_framework_bundle_v1"
 CONTENT_MANIFEST = "BUNDLE_CONTENT_MANIFEST.json"
 DEFAULT_INCLUDE = {
     ".claude", ".github", "assets", "core", "corpus", "docs", "evals", "harness",
@@ -32,9 +32,9 @@ ROOT_FILES = {
     "HARNESS_MANIFEST.yaml", "README.md", "README.en.md", "README.zh-CN.md",
     "SKILL.md", "SKILL.en.md", "SKILL.zh-CN.md",
     "CHANGELOG.en.md", "CHANGELOG.zh-CN.md",
-    "novelforge.py", "project_sdk.py", "project_adapter.py",
+    "quillframe.py", "project_sdk.py", "project_adapter.py",
 }
-EXCLUDE_PARTS = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".novelforge", "specs"}
+EXCLUDE_PARTS = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".quillframe", "specs"}
 EXCLUDE_NAMES = {
     "framework_bundle.attestation.json", "framework-bundle.tar", "framework-bundle.manifest.json",
 }
@@ -113,7 +113,7 @@ def build(root: Path, output: Path) -> dict[str, Any]:
         add_bytes(tf, CONTENT_MANIFEST, manifest_bytes)
     bundle_bytes = output.read_bytes()
     return {
-        "schema": "novelforge_framework_bundle_build_v1",
+        "schema": "quillframe_framework_bundle_build_v1",
         "bundle_path": str(output),
         "bundle_fingerprint": sha256_bytes(bundle_bytes),
         "bundle_size": len(bundle_bytes),
@@ -126,7 +126,7 @@ def build(root: Path, output: Path) -> dict[str, Any]:
 def verify(bundle: Path, expected: str | None = None) -> dict[str, Any]:
     bundle = bundle.resolve(); errors: list[str] = []
     if not bundle.is_file():
-        return {"schema": "novelforge_framework_bundle_verify_v1", "valid": False, "errors": ["bundle missing"]}
+        return {"schema": "quillframe_framework_bundle_verify_v1", "valid": False, "errors": ["bundle missing"]}
     data = bundle.read_bytes(); actual = sha256_bytes(data)
     if expected and actual != expected:
         errors.append("bundle fingerprint mismatch")
@@ -162,7 +162,7 @@ def verify(bundle: Path, expected: str | None = None) -> dict[str, Any]:
     except (tarfile.TarError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
         errors.append(f"bundle parse failure: {type(exc).__name__}: {exc}")
     return {
-        "schema": "novelforge_framework_bundle_verify_v1",
+        "schema": "quillframe_framework_bundle_verify_v1",
         "valid": not errors,
         "bundle_fingerprint": actual,
         "expected_fingerprint": expected,
@@ -172,7 +172,7 @@ def verify(bundle: Path, expected: str | None = None) -> dict[str, Any]:
 
 
 def self_test() -> dict[str, Any]:
-    with tempfile.TemporaryDirectory(prefix="novelforge-bundle-test-") as td:
+    with tempfile.TemporaryDirectory(prefix="quillframe-bundle-test-") as td:
         root = Path(td) / "repo"; (root / "core").mkdir(parents=True); (root / "harness").mkdir(); (root / "quality").mkdir(); (root / "publication").mkdir()
         (root / "core" / "a.txt").write_text("alpha\n", encoding="utf-8")
         (root / "harness" / "b.py").write_text("print('beta')\n", encoding="utf-8")
@@ -211,7 +211,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge deterministic framework bundle")
+    p = argparse.ArgumentParser(description="Quillframe deterministic framework bundle")
     sub = p.add_subparsers(dest="cmd", required=True)
     b = sub.add_parser("build"); b.add_argument("--root", default=str(ROOT)); b.add_argument("--output", required=True); b.add_argument("--report")
     v = sub.add_parser("verify"); v.add_argument("--bundle", required=True); v.add_argument("--expected"); v.add_argument("--report")

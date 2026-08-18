@@ -12,13 +12,13 @@ body:has(.nf-article-title) .main-pane {
 /* Product chrome --------------------------------------------------------- */
 
 header.header {
-  border-bottom: 1px solid color-mix(in oklab, var(--nf-border) 68%, transparent);
-  background: color-mix(in oklab, var(--nf-surface-solid) 94%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--qf-border) 68%, transparent);
+  background: color-mix(in oklab, var(--qf-surface-solid) 94%, transparent);
   box-shadow: none;
 }
 
 .nf-brand-mark-shell {
-  border-color: color-mix(in oklab, var(--nf-border) 76%, transparent);
+  border-color: color-mix(in oklab, var(--qf-border) 76%, transparent);
   border-radius: .42rem;
   background: transparent;
   box-shadow: none;
@@ -41,7 +41,7 @@ header.header {
 .nf-product-link:hover,
 .nf-product-link:focus-visible {
   border-color: transparent;
-  background: color-mix(in oklab, var(--nf-pink-soft) 28%, transparent);
+  background: color-mix(in oklab, var(--qf-pink-soft) 28%, transparent);
 }
 
 .nf-studio-link {
@@ -52,7 +52,7 @@ header.header {
 header.header site-search button,
 header.header button[data-open-modal],
 header.header .search-input {
-  border-color: color-mix(in oklab, var(--nf-border) 72%, transparent);
+  border-color: color-mix(in oklab, var(--qf-border) 72%, transparent);
   border-radius: .45rem;
   background: transparent;
   box-shadow: none;
@@ -81,13 +81,13 @@ body:has(.nf-article-title) .right-sidebar a {
 }
 
 .sidebar-content a:hover {
-  border-color: color-mix(in oklab, var(--nf-border) 70%, transparent);
+  border-color: color-mix(in oklab, var(--qf-border) 70%, transparent);
   background: transparent;
 }
 
 .sidebar-content a[aria-current="page"] {
   border: 0;
-  border-inline-start: 2px solid var(--nf-pink-strong);
+  border-inline-start: 2px solid var(--qf-pink-strong);
   background: transparent;
   box-shadow: none;
 }
@@ -105,7 +105,7 @@ body:has(.nf-article-title) .right-sidebar a[aria-current="page"] {
 
 body:has([data-nf-docs-home]) .hero {
   border: 0;
-  border-bottom: 1px solid color-mix(in oklab, var(--nf-border) 62%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--qf-border) 62%, transparent);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -172,7 +172,7 @@ body:has([data-nf-docs-home]) .hero::after {
   overflow: visible;
   padding: clamp(1.5rem, 3vw, 2.35rem) 0 clamp(1.2rem, 2.4vw, 1.8rem);
   border: 0;
-  border-bottom: 1px solid color-mix(in oklab, var(--nf-border) 62%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--qf-border) 62%, transparent);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -197,7 +197,7 @@ body:has([data-nf-docs-home]) .hero::after {
 }
 
 .nf-article-title__rule {
-  color: color-mix(in oklab, var(--nf-pink) 48%, var(--nf-muted));
+  color: color-mix(in oklab, var(--qf-pink) 48%, var(--qf-muted));
 }
 
 /* Markdown reading surface -------------------------------------------- */
@@ -205,7 +205,7 @@ body:has([data-nf-docs-home]) .hero::after {
 .sl-markdown-content h2,
 body:has(.nf-article-title) .sl-markdown-content h2 {
   border-top-style: solid;
-  border-top-color: color-mix(in oklab, var(--nf-border) 62%, transparent);
+  border-top-color: color-mix(in oklab, var(--qf-border) 62%, transparent);
 }
 
 body:has(.nf-article-title) .sl-markdown-content h2 {
@@ -220,23 +220,23 @@ body:has(.nf-article-title) .sl-markdown-content h2::before {
 body:has(.nf-article-title) .sl-markdown-content blockquote {
   padding: .7rem 0 .7rem 1rem;
   border: 0;
-  border-inline-start: 2px solid color-mix(in oklab, var(--nf-pink) 58%, var(--nf-border));
+  border-inline-start: 2px solid color-mix(in oklab, var(--qf-pink) 58%, var(--qf-border));
   border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
 
 .sl-markdown-content :not(pre) > code {
-  border-color: color-mix(in oklab, var(--nf-border) 72%, transparent);
+  border-color: color-mix(in oklab, var(--qf-border) 72%, transparent);
   border-radius: .2rem;
-  color: var(--nf-ink);
-  background: color-mix(in oklab, var(--nf-surface-solid) 90%, var(--sl-color-black));
+  color: var(--qf-ink);
+  background: color-mix(in oklab, var(--qf-surface-solid) 90%, var(--sl-color-black));
 }
 
 .sl-markdown-content pre,
 .expressive-code figure,
 body:has(.nf-article-title) .sl-markdown-content pre {
-  border-color: color-mix(in oklab, var(--nf-border) 76%, transparent);
+  border-color: color-mix(in oklab, var(--qf-border) 76%, transparent);
   border-radius: .45rem;
   box-shadow: none;
 }
@@ -244,7 +244,7 @@ body:has(.nf-article-title) .sl-markdown-content pre {
 .sl-markdown-content table,
 body:has(.nf-article-title) .sl-markdown-content table {
   border: 0;
-  border-block: 1px solid color-mix(in oklab, var(--nf-border) 72%, transparent);
+  border-block: 1px solid color-mix(in oklab, var(--qf-border) 72%, transparent);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -259,14 +259,14 @@ body:has(.nf-article-title) .sl-markdown-content tr:nth-child(even) td {
 body:has(.nf-article-title) .sl-markdown-content details {
   padding: .8rem 0;
   border: 0;
-  border-block: 1px solid color-mix(in oklab, var(--nf-border) 60%, transparent);
+  border-block: 1px solid color-mix(in oklab, var(--qf-border) 60%, transparent);
   border-radius: 0;
   background: transparent;
 }
 
 .starlight-aside {
   border: 0;
-  border-inline-start: 2px solid var(--sl-color-asides-border, var(--nf-border));
+  border-inline-start: 2px solid var(--sl-color-asides-border, var(--qf-border));
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -274,14 +274,14 @@ body:has(.nf-article-title) .sl-markdown-content details {
 
 .pagination-links a {
   border: 0;
-  border-top: 1px solid color-mix(in oklab, var(--nf-border) 62%, transparent);
+  border-top: 1px solid color-mix(in oklab, var(--qf-border) 62%, transparent);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
 
 .pagination-links a:hover {
-  border-color: color-mix(in oklab, var(--nf-pink) 42%, var(--nf-border));
+  border-color: color-mix(in oklab, var(--qf-pink) 42%, var(--qf-border));
   background: transparent;
 }
 

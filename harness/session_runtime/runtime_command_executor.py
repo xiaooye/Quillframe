@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Execute explicitly authorized NovelForge runtime commands.
+"""Execute explicitly authorized Quillframe runtime commands.
 
 V1 exposes one mutation only: ``session.resume``. The executor consumes the
 public resume preflight, typed resume command candidate, and runtime command
@@ -34,10 +34,10 @@ import runtime_command_authorization as command_authorization  # noqa: E402
 import session_runtime  # noqa: E402
 from control_plane import ControlPlane  # noqa: E402
 
-RECEIPT_SCHEMA = "novelforge_runtime_command_receipt_v1"
-RESULT_SCHEMA = "novelforge_runtime_command_execution_result_v1"
-QUERY_SCHEMA = "novelforge_runtime_command_receipt_projection_v1"
-DEFAULT_DB = ".novelforge/runtime.db"
+RECEIPT_SCHEMA = "quillframe_runtime_command_receipt_v1"
+RESULT_SCHEMA = "quillframe_runtime_command_execution_result_v1"
+QUERY_SCHEMA = "quillframe_runtime_command_receipt_projection_v1"
+DEFAULT_DB = ".quillframe/runtime.db"
 
 
 def canonical(value: Any) -> str:
@@ -408,7 +408,7 @@ def execute(
 
         event_id = "EV-RESUME-" + hashlib.sha256(command["command_id"].encode("utf-8")).hexdigest()[:24]
         event = {
-            "schema": "novelforge_event_v1",
+            "schema": "quillframe_event_v1",
             "event_id": event_id,
             "event_type": "session.resume_requested",
             "source": {"kind": "runtime_command_executor", "actor": "runtime-command"},
@@ -625,25 +625,25 @@ def execute_resume(
 
 
 def self_test() -> int:
-    with tempfile.TemporaryDirectory(prefix="novelforge-runtime-command-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="quillframe-runtime-command-") as tmp:
         root = Path(tmp)
-        (root / ".novelforge").mkdir()
+        (root / ".quillframe").mkdir()
         artifact = root / "draft.txt"
         artifact.write_text("frozen candidate\n", encoding="utf-8")
         artifact_fp = resume_preflight.sha_bytes(artifact.read_bytes())
         authority = {"canon_write": "settlement_only", "framework_write": "forbidden"}
         authority_fp = resume_preflight.fingerprint(authority)
         framework = {
-            "name": "NovelForge",
-            "version": "0.8.0",
+            "name": "Quillframe",
+            "version": "0.9.0",
             "commit": "fixture-commit",
             "bundle_fingerprint": "sha256:" + "a" * 64,
         }
-        (root / "novelforge.toml").write_text(
-            '[novelforge]\nschema="novelforge_project_v1"\n[project]\nid="BOOK-COMMAND"\ntitle="Command Test"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[authority]\ncanon_write="settlement_only"\nframework_write="forbidden"\n',
+        (root / "quillframe.toml").write_text(
+            '[quillframe]\nschema="quillframe_project_v1"\n[project]\nid="BOOK-COMMAND"\ntitle="Command Test"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[authority]\ncanon_write="settlement_only"\nframework_write="forbidden"\n',
             encoding="utf-8",
         )
-        (root / "novelforge.lock.json").write_text(json.dumps({"schema": "novelforge_lock_v1", "framework": framework}), encoding="utf-8")
+        (root / "quillframe.lock.json").write_text(json.dumps({"schema": "quillframe_lock_v1", "framework": framework}), encoding="utf-8")
         (root / "framework.attestation.json").write_text(json.dumps({"framework": framework}), encoding="utf-8")
         evidence = {
             "schema": resume_command.AUTHORITY_EVIDENCE_SCHEMA,
@@ -657,11 +657,11 @@ def self_test() -> int:
         evidence_ref = "resume-authority.json"
         (root / evidence_ref).write_text(json.dumps(evidence), encoding="utf-8")
 
-        db = root / ".novelforge" / "runtime.db"
+        db = root / ".quillframe" / "runtime.db"
         cp = ControlPlane(db)
         cp.init()
         session = {
-            "schema": "novelforge_agent_session_v1",
+            "schema": "quillframe_agent_session_v1",
             "resource_id": "BOOK-COMMAND",
             "project_id": "BOOK-COMMAND",
             "session_id": "SES-COMMAND",
@@ -707,7 +707,7 @@ def self_test() -> int:
             project_root=root,
             decision="allow",
             source_kind="user",
-            evidence_ref="urn:novelforge:self-test:user-resume",
+            evidence_ref="urn:quillframe:self-test:user-resume",
             authorization_id="AUTH-COMMAND-ALLOW",
         )
         deny = command_authorization.make_authorization(
@@ -716,7 +716,7 @@ def self_test() -> int:
             project_root=root,
             decision="deny",
             source_kind="user",
-            evidence_ref="urn:novelforge:self-test:user-resume",
+            evidence_ref="urn:quillframe:self-test:user-resume",
             authorization_id="AUTH-COMMAND-DENY",
         )
         denied = execute(command, deny, db_path=db, project_root=root)
@@ -760,8 +760,8 @@ def self_test() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge typed runtime command executor")
-    parser.add_argument("--db", default=os.getenv("NOVELFORGE_DB", DEFAULT_DB))
+    parser = argparse.ArgumentParser(description="Quillframe typed runtime command executor")
+    parser.add_argument("--db", default=os.getenv("QUILLFRAME_DB", DEFAULT_DB))
     sub = parser.add_subparsers(dest="command", required=True)
 
     execute_p = sub.add_parser("execute")

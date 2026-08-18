@@ -56,4 +56,4 @@ Corpus is evidence, not Canon. Research truth is not automatic character knowled
 
 Operational authority lives in [SKILL](../SKILL.en.md), [Harness Agent](../harness/HARNESS_AGENT.en.md), schemas, implementation modules, and tests. Documentation authoring follows the [Documentation Standard](DOCUMENTATION_STANDARD.en.md) and [Documentation QA](DOCUMENTATION_QA.en.md).
 
-The stable filename `why-novelforge.en.md` remains as a compatibility route; its current content explains [why Quillframe](why-novelforge.en.md) and the retained technical namespace.
+The stable filename `why-quillframe.en.md` remains as a compatibility route; its current content explains [why Quillframe](why-quillframe.en.md) and the retained technical namespace.

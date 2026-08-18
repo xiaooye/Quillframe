@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Portable planning commitment-horizon contract for NovelForge.
+"""Portable planning commitment-horizon contract for Quillframe.
 
 This deterministic tool controls admission to known planning depths and selects
 an evidence-bounded first rebalance frontier. It does not judge story quality,
@@ -15,15 +15,15 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-POLICY_SCHEMA = "novelforge_planning_horizon_policy_v1"
-REGION_SCHEMA = "novelforge_planning_horizon_region_v1"
-REGION_REQUEST_SCHEMA = "novelforge_planning_horizon_region_request_v1"
-ADMISSION_REQUEST_SCHEMA = "novelforge_planning_horizon_admission_request_v1"
-ADMISSION_RESULT_SCHEMA = "novelforge_planning_horizon_admission_result_v1"
-TRANSITION_REQUEST_SCHEMA = "novelforge_planning_horizon_transition_request_v1"
-TRANSITION_RESULT_SCHEMA = "novelforge_planning_horizon_transition_result_v1"
-REBALANCE_REQUEST_SCHEMA = "novelforge_planning_rebalance_frontier_request_v1"
-REBALANCE_RESULT_SCHEMA = "novelforge_planning_rebalance_frontier_result_v1"
+POLICY_SCHEMA = "quillframe_planning_horizon_policy_v1"
+REGION_SCHEMA = "quillframe_planning_horizon_region_v1"
+REGION_REQUEST_SCHEMA = "quillframe_planning_horizon_region_request_v1"
+ADMISSION_REQUEST_SCHEMA = "quillframe_planning_horizon_admission_request_v1"
+ADMISSION_RESULT_SCHEMA = "quillframe_planning_horizon_admission_result_v1"
+TRANSITION_REQUEST_SCHEMA = "quillframe_planning_horizon_transition_request_v1"
+TRANSITION_RESULT_SCHEMA = "quillframe_planning_horizon_transition_result_v1"
+REBALANCE_REQUEST_SCHEMA = "quillframe_planning_rebalance_frontier_request_v1"
+REBALANCE_RESULT_SCHEMA = "quillframe_planning_rebalance_frontier_result_v1"
 
 DEPTHS = ("arc_boundary", "beat", "scene_intent", "chapter_detail")
 DEPTH_RANK = {name: idx for idx, name in enumerate(DEPTHS)}
@@ -608,7 +608,7 @@ def self_test() -> dict[str, Any]:
     }
     return {
         "planning_horizon_contract": "PASS" if all(checks.values()) else "FAIL",
-        "schema": "novelforge_planning_horizon_self_test_v1", "checks": checks,
+        "schema": "quillframe_planning_horizon_self_test_v1", "checks": checks,
         "artifact_depth_registry": ARTIFACT_DEPTH, "planning_depth_order": list(DEPTHS),
         "authority": False, "model_execution": False,
     }

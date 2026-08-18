@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NovelForge repository hygiene / release-boundary checks."""
+"""Quillframe repository hygiene / release-boundary checks."""
 from __future__ import annotations
 
 import pathlib
@@ -21,7 +21,7 @@ FORBIDDEN_CONSUMER_TOKENS = {
 TEXT_EXTS = {".md", ".py", ".json", ".yaml", ".yml", ".toml", ".txt"}
 STABLE_ROUTERS = {
     pathlib.Path("README.md"), pathlib.Path("SKILL.md"), pathlib.Path("AGENTS.md"), pathlib.Path("CLAUDE.md"),
-    pathlib.Path("agent-skills/novelforge/SKILL.md"),
+    pathlib.Path("agent-skills/quillframe/SKILL.md"),
     pathlib.Path("harness/HARNESS_AGENT.md"), pathlib.Path("harness/ORCHESTRATION_PROTOCOL.md"),
     pathlib.Path("harness/SELF_IMPROVEMENT_PROTOCOL.md"), pathlib.Path("harness/CONTINUOUS_MAINTENANCE.md"),
     pathlib.Path("harness/control_plane/CONTROL_PLANE.md"),
@@ -118,7 +118,7 @@ def contract_errors() -> list[str]:
     manifest = (ROOT / "HARNESS_MANIFEST.yaml").read_text(encoding="utf-8")
     errors.extend(release_version_errors(manifest))
     required = [
-        "name: novelforge", "project_agnostic: true",
+        "name: quillframe", "project_agnostic: true",
         "built_in_novel_or_canon: false", "dependency_direction: project-to-framework-only",
         "human_facing_pair_required: true", "project_sdk: project_sdk.py",
         "durable_store: learning/learning_store.py", "scout: corpus/corpus_scout.py",
@@ -131,7 +131,7 @@ def contract_errors() -> list[str]:
     if not ("RG-01" in reader and "RG-15" in reader and "SAFE-BUT-FLAT" in reader): errors.append("Reader RG range incomplete")
     for p in (ROOT / "docs/project-sdk.en.md", ROOT / "docs/project-sdk.zh-CN.md"):
         text = p.read_text(encoding="utf-8")
-        if "novelforge.toml" not in text: errors.append(f"{relative(p)} missing novelforge.toml")
+        if "quillframe.toml" not in text: errors.append(f"{relative(p)} missing quillframe.toml")
         if "project.yaml" in text: errors.append(f"{relative(p)} contains stale project.yaml")
     return errors
 

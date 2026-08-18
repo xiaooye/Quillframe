@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NovelForge Studio — Run / Context Inspector</title>
+  <title>Quillframe Studio — Run / Context Inspector</title>
   <style>
     /* Prototype mirror of assets/brand/tokens.json. The JSON remains the source of truth. */
     :root {
@@ -169,7 +169,7 @@
   <aside class="sidebar" aria-label="Studio navigation">
     <div class="brand">
       <div class="mark" aria-hidden="true">N</div>
-      <div class="brand-copy"><strong>NovelForge Studio</strong><small>Story Loom · Phase 1</small></div>
+      <div class="brand-copy"><strong>Quillframe Studio</strong><small>Story Loom · Phase 1</small></div>
     </div>
     <nav>
       <div class="nav-group">
@@ -205,7 +205,7 @@
         <div class="eyebrow">
           <span class="chip runtime">RUN RECEIPT</span>
           <span class="chip not-canon">EXECUTION EVIDENCE · NOT CANON</span>
-          <span class="chip" id="schema-chip">novelforge_run_receipt_v1</span>
+          <span class="chip" id="schema-chip">quillframe_run_receipt_v1</span>
         </div>
         <div class="hero-line">
           <div class="hero-title"><h1 id="run-title">—</h1><p><span id="subject-id">—</span> · <span id="stage">—</span> · <span id="created-at">—</span></p></div>
@@ -223,7 +223,7 @@
           <div class="panel-head"><h2>Question → evidence grounding</h2><span>support identified ≠ support loaded</span></div>
           <div class="panel-body">
             <div class="thread" id="question-list"></div>
-            <div class="missing-details"><strong>Data honesty:</strong> Run Receipt v1 does not contain each context block's authority, source, inclusion reason, tier, or text. This prototype does not infer them from IDs. A production Studio should join a stable <code>novelforge_context_inspector_v2</code> projection when Core exposes the read boundary.</div>
+            <div class="missing-details"><strong>Data honesty:</strong> Run Receipt v1 does not contain each context block's authority, source, inclusion reason, tier, or text. This prototype does not infer them from IDs. A production Studio should join a stable <code>quillframe_context_inspector_v2</code> projection when Core exposes the read boundary.</div>
           </div>
         </section>
         <div class="stack">
@@ -246,13 +246,13 @@
         <section class="panel"><div class="panel-head"><h2>Deterministic guards</h2><span>workflow evidence</span></div><div class="panel-body list" id="guard-list"></div></section>
       </div>
       <div class="section-note"><strong>Phase 1 boundary:</strong> no resume, accept, settle, retry, edit-memory, or Canon-write action is exposed here. Those operations require explicit typed Core commands, permissions and preconditions before they can become Studio controls.</div>
-      <div class="footer">NovelForge Studio · Story Loom prototype · local-only JSON inspection</div>
+      <div class="footer">Quillframe Studio · Story Loom prototype · local-only JSON inspection</div>
     </div>
   </main>
 </div>
 <script>
 const syntheticReceipt = {
-  schema:"novelforge_run_receipt_v1", receipt_id:"RCPT-SYN-CH042-REVIEW-01",
+  schema:"quillframe_run_receipt_v1", receipt_id:"RCPT-SYN-CH042-REVIEW-01",
   resource_id:"BOOK-SYNTHETIC-DEMO", session_id:"SES-SYN-20260815-A", run_id:"RUN-SYN-CH042-REVIEW-01",
   stage:"reader-review", subject_id:"CH-SYN-042",
   artifact_fingerprints:["sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
@@ -282,7 +282,7 @@ const pills = values => values && values.length ? values.map(v=>`<span class="id
 const statusClass = value => ({sufficient:"good",partial:"partial",none:"none",all_loaded:"good",partially_loaded:"partial",not_loaded:"fail",no_support_identified:"none",completed:"good",pass:"good",pending:"pending",semantic_reject:"fail",invalid:"fail",failed:"fail",unsupported:"none"}[value] || "");
 function validateReceipt(r) {
   if (!r || typeof r !== "object" || Array.isArray(r)) throw new Error("Receipt must be a JSON object.");
-  if (r.schema !== "novelforge_run_receipt_v1") throw new Error(`Unsupported schema: ${r.schema ?? "missing"}. Expected novelforge_run_receipt_v1.`);
+  if (r.schema !== "quillframe_run_receipt_v1") throw new Error(`Unsupported schema: ${r.schema ?? "missing"}. Expected quillframe_run_receipt_v1.`);
   if (r.authority !== false) throw new Error("Run receipts must have authority=false. Refusing to render this payload as trusted execution evidence.");
   for (const key of ["receipt_id","resource_id","session_id","run_id","stage","subject_id","context","semantic_jobs","guards","created_at"]) if (!(key in r)) throw new Error(`Missing required receipt field: ${key}`);
   if (!Array.isArray(r.context.question_grounding) || !Array.isArray(r.context.loaded_block_ids)) throw new Error("Invalid context shape for Run Receipt v1.");

@@ -4,8 +4,8 @@
 
 body:has([data-nf-docs-home]) {
   background:
-    radial-gradient(48rem 26rem at 8% 0%, color-mix(in oklab, var(--nf-pink-soft) 56%, transparent), transparent 74%),
-    radial-gradient(42rem 24rem at 94% 1%, color-mix(in oklab, var(--nf-lilac-soft) 46%, transparent), transparent 74%),
+    radial-gradient(48rem 26rem at 8% 0%, color-mix(in oklab, var(--qf-pink-soft) 56%, transparent), transparent 74%),
+    radial-gradient(42rem 24rem at 94% 1%, color-mix(in oklab, var(--qf-lilac-soft) 46%, transparent), transparent 74%),
     var(--sl-color-black);
 }
 
@@ -63,7 +63,7 @@ body:has([data-nf-docs-home]) .hero .actions a {
 .nf-link-grid {
   gap: 0 clamp(1.8rem, 3vw, 3.2rem);
   margin-top: 1.35rem;
-  border-top: 1px solid color-mix(in oklab, var(--nf-border) 62%, transparent);
+  border-top: 1px solid color-mix(in oklab, var(--qf-border) 62%, transparent);
 }
 
 .nf-link-grid--compact {
@@ -76,7 +76,7 @@ body:has([data-nf-docs-home]) .hero .actions a {
   padding: 1.15rem .1rem 1.25rem;
   overflow: visible;
   border: 0;
-  border-bottom: 1px solid color-mix(in oklab, var(--nf-border) 58%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--qf-border) 58%, transparent);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -89,8 +89,8 @@ body:has([data-nf-docs-home]) .hero .actions a {
 
 .nf-link-card:hover,
 .nf-link-card:focus-visible {
-  border-color: color-mix(in oklab, var(--nf-border) 58%, transparent);
-  background: linear-gradient(90deg, color-mix(in oklab, var(--nf-card-soft) 28%, transparent), transparent 78%);
+  border-color: color-mix(in oklab, var(--qf-border) 58%, transparent);
+  background: linear-gradient(90deg, color-mix(in oklab, var(--qf-card-soft) 28%, transparent), transparent 78%);
   box-shadow: none;
   transform: translateX(3px);
 }
@@ -100,7 +100,7 @@ body:has([data-nf-docs-home]) .hero .actions a {
   height: 2.15rem;
   border: 0;
   border-radius: .62rem;
-  background: color-mix(in oklab, var(--nf-card-soft) 54%, transparent);
+  background: color-mix(in oklab, var(--qf-card-soft) 54%, transparent);
   box-shadow: none;
 }
 
@@ -119,14 +119,14 @@ body:has([data-nf-docs-home]) .hero .actions a {
 .nf-tier-grid {
   gap: 0 clamp(1.8rem, 3vw, 3.2rem);
   margin-top: 1.45rem;
-  border-top: 1px solid color-mix(in oklab, var(--nf-border) 62%, transparent);
+  border-top: 1px solid color-mix(in oklab, var(--qf-border) 62%, transparent);
 }
 
 .nf-tier-card {
   min-height: 0;
   padding: 1.3rem 0 1.5rem;
   border: 0;
-  border-bottom: 1px solid color-mix(in oklab, var(--nf-border) 58%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--qf-border) 58%, transparent);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -151,7 +151,7 @@ body:has([data-nf-docs-home]) .hero .actions a {
   padding: 1.8rem 0 0;
   overflow: visible;
   border: 0;
-  border-top: 1px solid color-mix(in oklab, var(--nf-pink) 28%, var(--nf-border));
+  border-top: 1px solid color-mix(in oklab, var(--qf-pink) 28%, var(--qf-border));
   border-radius: 0;
   background: transparent;
   box-shadow: none;

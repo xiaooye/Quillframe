@@ -31,5 +31,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`product-hardening-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ schema: "novelforge_product_hardening_v1", status: "pass", error_boundary: true, direct_404: true, skip_link_owner: "document", focus_visible: true, reduced_motion: true, forced_colors: true, coarse_pointer_targets: true }, null, 2));
+  console.log(JSON.stringify({ schema: "quillframe_product_hardening_v1", status: "pass", error_boundary: true, direct_404: true, skip_link_owner: "document", focus_visible: true, reduced_motion: true, forced_colors: true, coarse_pointer_targets: true }, null, 2));
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Metadata-only run observability receipts for NovelForge.
+"""Metadata-only run observability receipts for Quillframe.
 
 A receipt records what a run actually loaded/executed: artifact fingerprints,
 context-selection fingerprints, question→evidence loading, semantic job
@@ -21,7 +21,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 from control_plane import ControlPlane, EVENT_SCHEMA, now_iso  # noqa: E402
 
-RECEIPT_SCHEMA = "novelforge_run_receipt_v1"
+RECEIPT_SCHEMA = "quillframe_run_receipt_v1"
 TOP_KEYS = {
     "schema", "receipt_id", "resource_id", "session_id", "run_id", "stage",
     "subject_id", "artifact_fingerprints", "context", "semantic_jobs",
@@ -333,8 +333,8 @@ def dump(value: Any, path: str | Path | None = None) -> None:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge metadata-only run receipt boundary")
-    p.add_argument("--db", default=os.getenv("NOVELFORGE_DB", ".novelforge/runtime.db"))
+    p = argparse.ArgumentParser(description="Quillframe metadata-only run receipt boundary")
+    p.add_argument("--db", default=os.getenv("QUILLFRAME_DB", ".quillframe/runtime.db"))
     sub = p.add_subparsers(dest="command", required=True)
     v = sub.add_parser("validate"); v.add_argument("--receipt", required=True)
     e = sub.add_parser("event"); e.add_argument("--receipt", required=True); e.add_argument("--source-kind", required=True); e.add_argument("--actor"); e.add_argument("--transport"); e.add_argument("--output")
