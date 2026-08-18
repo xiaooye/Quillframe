@@ -2,21 +2,21 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import subprocess
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SEMANTIC = ROOT / "harness" / "semantic_workers"
-for path in (ROOT, SEMANTIC):
+EVALS = ROOT / "evals"
+for path in (ROOT, SEMANTIC, EVALS):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
 from harness.integrations import chat_host_relay
 from peer_bridge_receipt import self_test as receipt_self_test
 from peer_chat_relay import build as build_packet, validate_peer_result
+from qualification_test_fixtures import make_qualified_receipt
 from semantic_worker_router import make_contract_job
 
 
@@ -49,6 +49,7 @@ class EphemeralChatHostTests(unittest.TestCase):
             "CH-TEST",
             {"candidate_fingerprint": fp, "candidate_text": "bounded candidate", "reader_grip": "very_high"},
             source_session_id="SES-MANAGER",
+            qualification_receipt=make_qualified_receipt(fp, "CH-TEST"),
         )
         packet = build_packet(job)
         result = {
