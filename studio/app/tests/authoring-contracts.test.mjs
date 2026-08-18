@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
-import * as ts from "typescript";
+import ts from "typescript";
 
 async function loadContracts() {
   const source = fs.readFileSync(new URL("../src/authoring/contracts.ts", import.meta.url), "utf8");
   const output = ts.transpileModule(source, {
-    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, importsNotUsedAsValues: ts.ImportsNotUsedAsValues.Remove },
   }).outputText;
   return import(`data:text/javascript;base64,${Buffer.from(output).toString("base64")}`);
 }
