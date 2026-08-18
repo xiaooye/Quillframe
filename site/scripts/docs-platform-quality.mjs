@@ -11,12 +11,14 @@ const readJson = (relative) => JSON.parse(read(relative));
 const pkg = readJson("package.json");
 const main = read("src/main.tsx");
 const productApp = read("src/ProductApp.tsx");
+const content = read("src/content.ts");
 const config = read("docs-site/astro.config.mjs");
 const contentConfig = read("docs-site/src/content.config.ts");
 const customCss = read("docs-site/src/styles/custom.css");
 const articleCss = read("docs-site/src/styles/article-polish.css");
 const navigationCss = read("docs-site/src/styles/navigation-polish.css");
 const docsHomeCss = read("docs-site/src/styles/docs-home-clean.css");
+const shellCss = read("docs-site/src/styles/product-header-parity.css");
 const siteTitle = read("docs-site/src/components/QuillframeSiteTitle.astro");
 const pageTitle = read("docs-site/src/components/QuillframePageTitle.astro");
 const actions = read("docs-site/src/components/QuillframeActions.astro");
@@ -44,6 +46,7 @@ function markdownCount(directory) {
   return count;
 }
 
+/* Platform + exact pins ------------------------------------------------ */
 requireCheck(pkg.devDependencies?.astro === "7.1.6", "Astro must remain exact-pinned at 7.1.6");
 requireCheck(pkg.devDependencies?.["@astrojs/starlight"] === "0.41.5", "Starlight must remain exact-pinned at 0.41.5");
 requireCheck(pkg.scripts?.["docs:build"]?.includes("astro build --root docs-site"), "docs:build must execute Astro with docs-site as the real project root");
@@ -57,14 +60,16 @@ requireCheck(config.includes('lang: "zh-CN"') && config.includes('lang: "en"'), 
 requireCheck(config.includes("starlight({"), "docs app must remain powered by Starlight");
 requireCheck(config.includes('SiteTitle: "./src/components/QuillframeSiteTitle.astro"'), "docs header must override SiteTitle so product and docs homes remain distinct");
 requireCheck(config.includes('PageTitle: "./src/components/QuillframePageTitle.astro"'), "deep docs must use the Quillframe article title surface");
-requireCheck(config.includes('"./src/styles/article-polish.css"'), "deep docs article polish stylesheet must stay wired into Starlight");
-requireCheck(config.includes('"./src/styles/navigation-polish.css"'), "final navigation polish stylesheet must stay wired into Starlight");
-requireCheck(config.includes('"./src/styles/docs-home-clean.css"'), "docs landing clean-surface override must load after the shared Starlight polish");
+for (const stylesheet of ["article-polish.css", "navigation-polish.css", "docs-home-clean.css", "product-header-parity.css"]) {
+  requireCheck(config.includes(`"./src/styles/${stylesheet}"`), `Starlight custom CSS must include ${stylesheet}`);
+}
 requireCheck(config.indexOf('navigation-polish.css') < config.indexOf('docs-home-clean.css'), "docs landing clean layer must refine the shared navigation/theme layers");
+requireCheck(config.indexOf('docs-home-clean.css') < config.indexOf('product-header-parity.css'), "dedicated Docs product-shell owner must load after landing/article styling");
 requireCheck(config.includes('label: "入门"') && config.includes('en: "Getting started"'), "sidebar information architecture must keep concise native group labels");
 requireCheck(config.includes('label: "创作与质量"') && config.includes('label: "架构与发布"'), "sidebar must retain product-oriented Chinese grouping");
 requireCheck(contentConfig.includes("docsLoader()") && contentConfig.includes("docsSchema()"), "Starlight content collection must use official loader and schema");
 
+/* Reading-first composition ------------------------------------------- */
 requireCheck(customCss.includes("--sl-content-width: 52rem"), "documentation reading width must stay deliberately bounded");
 requireCheck(customCss.includes(':lang(zh-CN) .sl-markdown-content'), "Chinese typography override must remain explicit");
 requireCheck(customCss.includes('a[aria-current="page"]'), "documentation navigation must retain a strong current-page state");
@@ -85,34 +90,54 @@ requireCheck(pageTitle.includes('zh: "入门"') && pageTitle.includes('zh: "创�
 requireCheck(articleCss.includes(".nf-article-title") && articleCss.includes(".sl-markdown-content h2"), "deep article polish must style both title and reading hierarchy");
 requireCheck(articleCss.includes(".right-sidebar") && articleCss.includes(".pagination-links"), "deep article polish must cover TOC and footer navigation");
 requireCheck(articleCss.includes("@media (max-width: 50rem)"), "deep article polish must keep an explicit mobile treatment");
+requireCheck(navigationCss.includes(".nf-product-nav") && navigationCss.includes(".sidebar-content summary::before"), "navigation polish must cover product header and sidebar hierarchy");
+requireCheck(navigationCss.includes('.right-sidebar a[aria-current="true"]'), "navigation polish must retain a visible active TOC state");
+requireCheck(navigationCss.includes("@media (max-width: 68rem)") && navigationCss.includes("@media (max-width: 50rem)"), "navigation polish must deliberately collapse at tablet and mobile widths");
 
-requireCheck(navigationCss.includes(".nf-product-nav") && navigationCss.includes(".sidebar-content summary::before"), "final navigation polish must cover product header and sidebar hierarchy");
-requireCheck(navigationCss.includes('.right-sidebar a[aria-current="true"]'), "final navigation polish must retain a visible active TOC state");
-requireCheck(navigationCss.includes("@media (max-width: 68rem)") && navigationCss.includes("@media (max-width: 50rem)"), "final navigation polish must deliberately collapse at tablet and mobile widths");
-
+/* Shared Quillframe shell --------------------------------------------- */
 requireCheck(siteTitle.includes('class="nf-brand-home" href="/"'), "Quillframe docs brand must navigate to the main product home");
-requireCheck(siteTitle.includes('english ? "/docs/en/" : "/docs/"'), "docs header must retain a locale-aware documentation-home link");
-requireCheck(siteTitle.includes('english ? "Docs" : "知识库"'), "docs header must use the same knowledge namespace as the product navigation");
-requireCheck(siteTitle.includes('aria-current="page"'), "docs namespace must expose an explicit active navigation state");
+requireCheck(siteTitle.includes('english ? "/docs/en/" : "/docs/"'), "docs title component must retain locale-aware docs identity markers");
+requireCheck(siteTitle.includes('english ? "Docs" : "知识库"'), "docs title component must retain the current knowledge namespace markers");
+requireCheck(siteTitle.includes('aria-label="Quillframe 0.9.x"') && siteTitle.includes('>0.9.x</span>'), "Docs visible version identity must track the Quillframe 0.9.x development line");
+requireCheck(!siteTitle.includes("0.8.x") && !siteTitle.includes(">0.9.0</span>"), "Docs title must not regress to stale shell-version copy");
 
-for (const [href, marker] of [
+const primaryDocsRoutes = [
   ['/product', 'product: "产品"'],
   ['/studio', 'studio: "Studio"'],
   ['/architecture', 'architecture: "架构"'],
   ['/publication', 'publication: "出版"'],
-]) {
+];
+for (const [href, marker] of primaryDocsRoutes) {
   requireCheck(actions.includes(`href="${href}"`) && actions.includes(marker), `Docs header product navigation missing ${href}`);
 }
-requireCheck(actions.includes('openStudio: "打开 Studio"') && actions.includes('class="nf-studio-link"'), "Docs header must retain the localized primary Studio CTA");
-requireCheck(actions.includes('class="nf-product-nav"'), "Docs header product links must be grouped as semantic navigation");
+requireCheck(actions.includes('class="nf-product-link nf-docs-nav-link"') && actions.includes('aria-current="page"'), "Docs item must own the active product-navigation state");
+requireCheck(actions.includes('class="nf-product-link nf-github-link"'), "Docs primary navigation must expose GitHub");
+requireCheck(actions.includes('https://github.com/xiaooye/cn_webnovel_agent'), "Docs GitHub entry must use the canonical repository root");
+requireCheck(actions.includes('openStudio: "打开 Studio"') && actions.includes('class="nf-studio-link"'), "Docs header must retain the localized Hosted Studio CTA");
+requireCheck(actions.includes('https://studio.quillframe.wei-dev.com'), "Docs Hosted Studio entry must use the current Quillframe domain");
+requireCheck(!actions.includes("NovelForge") && !actions.includes("studio.novelforge.wei-dev.com"), "Docs current shell must not retain NovelForge-era identity");
+requireCheck(actions.includes('rel="noopener noreferrer"'), "Docs external product links must use safe new-window semantics");
 requireCheck(!actions.includes('href="/start"'), "Docs header must not reintroduce the retired standalone start surface");
 
+requireCheck(shellCss.includes("Quillframe Docs product-shell owner"), "Docs final header stylesheet must explicitly own shared shell parity");
+requireCheck(shellCss.includes("border-bottom: 1px solid") && shellCss.includes("box-shadow: none"), "Docs top chrome must use a quiet divider rather than floating banner chrome");
+requireCheck(shellCss.includes("background: color-mix(in oklab, var(--qf-surface-solid) 94%, transparent)"), "Docs header must use the shared near-white canvas");
+requireCheck(!shellCss.includes("radial-gradient") && !shellCss.includes("!important"), "Docs shell owner must not use route wallpaper or specificity hacks");
+requireCheck(shellCss.includes("@media (max-width: 50rem)") && shellCss.includes(".sidebar-pane"), "Docs shared shell must preserve deliberate mobile navigation behavior");
+
+/* Product → Docs handoff ---------------------------------------------- */
 requireCheck(!main.includes("KnowledgePortal"), "legacy Knowledge Portal must not mount beside the product router");
 requireCheck(!main.includes("KnowledgeExperience"), "product entry must not import the retired custom docs renderer");
 requireCheck(main.includes('import ProductApp from "./ProductApp"') && main.includes("<ProductApp />") && main.includes("ProductFailureBoundary"), "product entry must route through the resilient shared ProductApp shell");
-requireCheck(productApp.includes('href={zh() ? "/docs" : "/docs/en"}'), "shared product navigation must hand off to the locale-aware Starlight docs root");
+requireCheck(productApp.includes('kind: "document", href: zh() ? "/docs" : "/docs/en"'), "shared primary navigation model must hand off to the locale-aware Starlight docs root");
+requireCheck(productApp.includes('<For each={primaryNav()}>{(item) => navLink(item, "wui-app-bar__link")}</For>'), "desktop Product header must render the shared primary navigation source");
+requireCheck(productApp.includes('<div class="footer-links"><For each={primaryNav()}>{(item) => navLink(item, "footer-link")}</For></div>'), "Product footer primary section must render the same primary navigation source");
+requireCheck(content.includes('export const githubRoot = "https://github.com/xiaooye/cn_webnovel_agent"'), "Product content authority must retain the canonical GitHub repository root");
+requireCheck(productApp.includes('kind: "external", href: githubRoot, label: copy().nav.github'), "Product shared primary navigation must include GitHub");
 requireCheck(productApp.includes('if (result.href.startsWith("/docs")) window.location.assign(result.href);'), "product command search must use a real document navigation for Starlight results");
 requireCheck(productApp.includes('`/docs/${encodeURIComponent(doc.id)}`') && productApp.includes('`/docs/en/${encodeURIComponent(doc.id)}`'), "product knowledge search must keep localized deep-document URLs");
+
+/* Staging + emitted pages --------------------------------------------- */
 requireCheck(stagingCompiler.includes("rewriteHtmlAttributes"), "Starlight staging must rewrite raw HTML document attributes");
 requireCheck(stagingCompiler.includes("copyRelativeAsset"), "Starlight staging must copy repository-local documentation assets");
 requireCheck(stagingCompiler.includes('if (doc.id === "docs-home") continue;'), "docs home must be reserved for the curated Starlight landing routes");
@@ -149,7 +174,7 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "quillframe_docs_platform_quality_v7",
+    schema: "quillframe_docs_platform_quality_v8",
     status: "pass",
     engine: "Astro Starlight",
     astro: pkg.devDependencies.astro,
@@ -165,8 +190,14 @@ if (failures.length > 0) {
     native_landing_copy: true,
     product_home_primary_entry: true,
     unified_product_shell_handoff: true,
+    shared_primary_navigation: true,
+    github_entry: true,
+    quillframe_studio_domain: true,
+    product_version: "0.9.x",
+    current_identity: "Quillframe",
     resilience_boundary: true,
     product_header_navigation_parity: true,
+    quiet_product_shell: true,
     knowledge_namespace_active: true,
     concise_sidebar_information_architecture: true,
     route_aware_article_sections: true,
