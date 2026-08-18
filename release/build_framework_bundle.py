@@ -23,8 +23,9 @@ ROOT = Path(__file__).resolve().parents[1]
 BUNDLE_SCHEMA = "quillframe_framework_bundle_v1"
 CONTENT_MANIFEST = "BUNDLE_CONTENT_MANIFEST.json"
 DEFAULT_INCLUDE = {
-    ".claude", ".github", "assets", "core", "corpus", "docs", "evals", "harness",
-    "knowledge_base", "learning", "quality", "publication", "release", "scripts", "surface",
+    ".claude", ".github", "agent_runtime", "assets", "core", "corpus", "docs", "evals", "harness",
+    "knowledge_base", "learning", "model_runtime", "persistence", "production_runtime", "quality",
+    "publication", "release", "scripts", "surface",
 }
 ROOT_FILES = {
     ".gitignore", "AGENTS.md", "AGENTS.en.md", "AGENTS.zh-CN.md",
@@ -173,11 +174,21 @@ def verify(bundle: Path, expected: str | None = None) -> dict[str, Any]:
 
 def self_test() -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="quillframe-bundle-test-") as td:
-        root = Path(td) / "repo"; (root / "core").mkdir(parents=True); (root / "harness").mkdir(); (root / "quality").mkdir(); (root / "publication").mkdir()
-        (root / "core" / "a.txt").write_text("alpha\n", encoding="utf-8")
-        (root / "harness" / "b.py").write_text("print('beta')\n", encoding="utf-8")
-        (root / "quality" / "c.py").write_text("print('quality')\n", encoding="utf-8")
-        (root / "publication" / "compiler.py").write_text("print('publication')\n", encoding="utf-8")
+        root = Path(td) / "repo"
+        for directory in ("core", "harness", "quality", "publication", "agent_runtime", "model_runtime", "persistence", "production_runtime"):
+            (root / directory).mkdir(parents=True, exist_ok=True)
+        fixtures = {
+            "core/a.txt": "alpha\n",
+            "harness/b.py": "print('beta')\n",
+            "quality/c.py": "print('quality')\n",
+            "publication/compiler.py": "print('publication')\n",
+            "agent_runtime/runtime.py": "print('agent')\n",
+            "model_runtime/runtime.py": "print('model')\n",
+            "persistence/quillframe_sqlite.py": "print('sqlite')\n",
+            "production_runtime/runtime.py": "print('production')\n",
+        }
+        for name, text in fixtures.items():
+            (root / name).write_text(text, encoding="utf-8")
         (root / "specs").mkdir(); (root / "specs" / "ignore.md").write_text("ignore", encoding="utf-8")
         a = Path(td) / "a.tar"; b = Path(td) / "b.tar"
         ba = build(root, a); bb = build(root, b)
@@ -194,10 +205,15 @@ def self_test() -> dict[str, Any]:
                 add_bytes(tf, name, content)
             add_bytes(tf, CONTENT_MANIFEST, (json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8"))
         bad = verify(tampered)
-        excluded = all(x["path"] != "specs/ignore.md" for x in manifest["files"])
-        quality_included = any(x["path"] == "quality/c.py" for x in manifest["files"])
-        publication_included = any(x["path"] == "publication/compiler.py" for x in manifest["files"])
-        ok = same and good["valid"] and not bad["valid"] and excluded and quality_included and publication_included
+        paths = {x["path"] for x in manifest["files"]}
+        excluded = "specs/ignore.md" not in paths
+        quality_included = "quality/c.py" in paths
+        publication_included = "publication/compiler.py" in paths
+        core_runtime_paths = {
+            "agent_runtime/runtime.py", "model_runtime/runtime.py", "persistence/quillframe_sqlite.py", "production_runtime/runtime.py"
+        }
+        core_runtime_included = core_runtime_paths.issubset(paths)
+        ok = same and good["valid"] and not bad["valid"] and excluded and quality_included and publication_included and core_runtime_included
     return {
         "framework_bundle_contract": "PASS" if ok else "FAIL",
         "deterministic_bytes": same,
@@ -206,6 +222,7 @@ def self_test() -> dict[str, Any]:
         "specs_excluded": excluded,
         "quality_runtime_included": quality_included,
         "publication_runtime_included": publication_included,
+        "core_runtime_packages_included": core_runtime_included,
         "model_execution": False,
     }
 

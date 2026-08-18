@@ -1,0 +1,37 @@
+# Tasks
+- [x] Freeze live main at `5fd991a5621f2c68e1030aa6e0b35014ca4011c7`.
+- [x] Inspect concurrent work and isolate the current Studio consumer PR #130 from Core authority.
+- [x] Read Framework manifest/Skill/Harness/Self-Improvement authority.
+- [x] Implement production runtime contracts and executor.
+- [x] Bind immutable source payload bundle to Context Freeze and require frozen stage Context consumption.
+- [x] Implement stale preflight, source-universe conflict detection and explicit Context refresh/supersession.
+- [x] Persist a Review Draft only after registered pre-independent qualification plus a valid external `quality.production_review` peer result and Project bridge receipt.
+- [x] Implement Model Service facade without creating a second provider subsystem.
+- [x] Harden bridge credential output so secret values are scrubbed from nested data/error strings as well as secret-bearing keys.
+- [x] Fix SQLite ResourceWarning root cause in owning connection layers.
+- [x] Add `project.list` and `document.list` canonical read-only projections.
+- [x] Add exact `candidate.review.get` projection with incumbent/diff and safe Reader/Character/Continuity/Independent/readiness evidence.
+- [x] Add explicit fingerprint-bound idempotent `candidate.reject`.
+- [x] Add durable `candidate.revision.request` without silently starting REVISE; block later Accept of the old Candidate.
+- [x] Add read-only authoritative `settlement.preflight` that supplies the exact current before-state for separately authorized Settlement.
+- [x] Advance Host Bridge contract to v8 and keep unsupported/deferred operations explicit.
+- [x] Add deterministic, integration, authority, secret-boundary, provider-failure, restart/persistence and authoring-lifecycle tests.
+- [x] Run clean runtime full CI: Core/SQLite/authority, Studio typecheck/build and product site/docs.
+- [x] Verify clean runtime aggregate self-test and deterministic Framework bundle double-build.
+- [x] Check live-provider availability. No usable provider credential was available to this workstream; record `PENDING_MODEL / awaiting_external` rather than treating deterministic fixtures as live acceptance.
+- [x] Produce Host Bridge v8 frontend contract handoff for Studio PR #130.
+- [ ] Resolve final PR review/security thread and merge Core PR #131 after gates are green.
+- [ ] Rebase/integrate Studio PR #130 against merged Core v8, run its full UI/E2E verification, and merge if green.
+
+## Acceptance state before merge
+- Deterministic Core/runtime health: PASS.
+- SQLite connection hygiene: PASS; final successful clean Core CI emitted no SQLite ResourceWarning.
+- Host Bridge contract: v8 PASS.
+- Existing + new Python suite: 84/84 PASS on clean runtime target `6b1e9a1e6bca792fcb299e3814c8bf61bf3e97e6`.
+- SolidJS Studio typecheck/build: PASS.
+- Product site/docs: PASS.
+- Framework deterministic bundle: PASS, 380 files.
+  - bundle: `sha256:6e8019c8c39aa7ce192f941f127561cdd0e242f1b58512177fc20af26a3671a4`
+  - content index: `sha256:5174159c16516fa3003518e3f676111deb080f413efc863fa671d7a9763a0bce`
+- Live production/model semantic acceptance: `PENDING_MODEL / awaiting_external`.
+- Existing reviewed semantic baseline: separately remains `PENDING_MODEL`; this does not downgrade deterministic/bundle health.
