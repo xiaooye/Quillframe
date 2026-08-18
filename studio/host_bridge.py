@@ -141,7 +141,7 @@ def _project_search(args: dict[str, Any], _: str):
 
 def _project_backup(args: dict[str, Any], _: str):
     path = store().backup_project(require(args, "project_id"))
-    return {"schema": "quillframe_backup_result_v1", "project_id": args["project_id"], "bundle_ref": str(path), "verified": True, "authority": False}
+    return {"schema": "quillframe_backup_result_v1", "project_id": args["project_id"], "bundle_ref": path.name, "verified": True, "authority": False}
 
 
 def _project_restore(args: dict[str, Any], _: str):
