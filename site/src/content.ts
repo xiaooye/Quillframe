@@ -15,7 +15,7 @@ export type RouteCopy = {
   note?: string;
 };
 
-export const githubRoot = "https://github.com/xiaooye/cn_webnovel_agent";
+export const githubRoot = "https://github.com/xiaooye/Quillframe";
 
 export function sourceUrl(path: string): string {
   return `${githubRoot}/blob/main/${path}`;
