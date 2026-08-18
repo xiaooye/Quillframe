@@ -37,6 +37,16 @@ class IntegrityError(RuntimeError):
     pass
 
 
+class _ClosingConnection(sqlite3.Connection):
+    """Transaction context manager that also closes the SQLite handle."""
+
+    def __exit__(self, exc_type, exc, tb):  # noqa: ANN001
+        try:
+            return super().__exit__(exc_type, exc, tb)
+        finally:
+            self.close()
+
+
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -66,7 +76,7 @@ def project_dir(project_id: str, root: Path | None = None) -> Path:
 
 def _connect(path: Path) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path, timeout=5.0)
+    conn = sqlite3.connect(path, timeout=5.0, factory=_ClosingConnection)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
     conn.execute("PRAGMA busy_timeout=5000")
@@ -389,10 +399,6 @@ class QuillframeStore:
                 ).fetchall()
             except sqlite3.OperationalError:
                 rows = []
-            # FTS unicode tokenization is not a substring guarantee. In particular,
-            # short CJK queries such as "门开" may legally produce no MATCH rows.
-            # A bounded literal fallback preserves predictable manuscript search
-            # without pretending tokenizer failure means the text is absent.
             if not rows:
                 rows = self._literal_search_rows(conn, needle, bounded_limit)
             return [dict(row) for row in rows]
@@ -421,10 +427,10 @@ class QuillframeStore:
 
     def _snapshot(self, source: Path, destination: Path) -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
-        with _connect(source) as src, sqlite3.connect(destination) as dst:
+        with _connect(source) as src, sqlite3.connect(destination, factory=_ClosingConnection) as dst:
             src.execute("PRAGMA wal_checkpoint(PASSIVE)")
             src.backup(dst)
-        with sqlite3.connect(destination) as check:
+        with sqlite3.connect(destination, factory=_ClosingConnection) as check:
             if check.execute("PRAGMA quick_check").fetchone()[0] != "ok":
                 raise IntegrityError("backup snapshot failed quick_check")
 
@@ -487,7 +493,7 @@ class QuillframeStore:
                         errors.append(f"blob fingerprint mismatch {row['relative_path']}")
                 with tempfile.NamedTemporaryFile(suffix=".sqlite") as temp:
                     temp.write(db); temp.flush()
-                    with sqlite3.connect(temp.name) as conn:
+                    with sqlite3.connect(temp.name, factory=_ClosingConnection) as conn:
                         if conn.execute("PRAGMA quick_check").fetchone()[0] != "ok":
                             errors.append("database quick_check failed")
         except Exception as exc:
@@ -508,7 +514,7 @@ class QuillframeStore:
             with tempfile.TemporaryDirectory(prefix="quillframe-restore-", dir=self.root) as td:
                 stage = Path(td) / project_id
                 zf.extractall(stage)
-                with sqlite3.connect(stage / "project.sqlite") as conn:
+                with sqlite3.connect(stage / "project.sqlite", factory=_ClosingConnection) as conn:
                     if conn.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                         raise IntegrityError("restored database failed integrity_check")
                 if loc.directory.exists():
