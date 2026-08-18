@@ -1,0 +1,15 @@
+# Tasks
+- [x] 冻结 live main：`5fd991a5621f2c68e1030aa6e0b35014ca4011c7`。
+- [x] 检查 open PR 并记录 UI PR #129 overlap。
+- [x] 读取 Framework manifest/Skill/Harness/Self-Improvement authority。
+- [ ] 实现 production runtime contracts/executor。
+- [ ] 将 immutable payload bundle 绑定 Context Freeze。
+- [ ] 实现 stale preflight 与 explicit refresh。
+- [ ] 只持久化通过 gate 的 Review Draft + independent evidence。
+- [ ] 实现 Model Service facade 与 Host Bridge v6 primitives。
+- [ ] 修复 SQLite ResourceWarning 根因。
+- [ ] 增加 deterministic/integration/security tests。
+- [ ] 运行 full unittest、runtime self-tests、Studio build、docs/site checks、Framework bundle verification。
+- [ ] 有真实 provider capability 才跑 live acceptance，否则记录 `PENDING_MODEL`。
+- [ ] 输出 frontend contract handoff。
+- [ ] 创建 Draft PR 并报告 exact acceptance state。
