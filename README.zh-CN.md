@@ -1,60 +1,357 @@
-# Quillframe
+<p align="center">
+  <img src="assets/brand/quillframe-mark.svg" width="104" alt="Quillframe 标志" />
+</p>
 
-**一个面向长篇小说的生产框架：让模型负责理解与判断，让显式系统守住故事事实和执行真相。**
+<h1 align="center">Quillframe</h1>
 
-<img src="docs/assets/brand/quillframe-mark.svg" alt="Quillframe 标记：一页手稿被一条叙事线穿过" width="92" />
+<p align="center"><strong>面向长篇小说的 AI-native 创作框架与写作环境。</strong></p>
 
-Quillframe 面向会持续数十章、跨多个会话、经历多轮修改与评审的小说工程。它把连续性、事实权威、修订、评审、学习和恢复当成真正的生产问题，同时不让确定性代码冒充文学判断者。
+<p align="center">
+  故事可以越写越长；正典、上下文、人物状态和执行事实，仍然应该清楚知道自己处在什么位置。
+</p>
 
-<img src="docs/assets/architecture/framework-mental-model.zh-CN.svg" alt="Quillframe 心智模型：项目事实进入编排层，经稀疏执行与验证后，只有获得明确授权才进入状态落定" width="100%" />
+<p align="center">
+  <a href="https://quillframe.wei-dev.com/">产品网站</a> ·
+  <a href="https://studio.quillframe.wei-dev.com/">Studio</a> ·
+  <a href="https://quillframe.wei-dev.com/docs/">文档</a> ·
+  <a href="#快速开始">快速开始</a>
+</p>
 
-## 为什么需要它
+<p align="center">
+  <a href="https://github.com/xiaooye/cn_webnovel_agent/actions/workflows/quillframe-ci.yml"><img alt="Quillframe 0.9 CI" src="https://github.com/xiaooye/cn_webnovel_agent/actions/workflows/quillframe-ci.yml/badge.svg?branch=main" /></a>
+  <img alt="Version 0.9.0" src="https://img.shields.io/badge/version-0.9.0-796BC4" />
+  <a href="LICENSE"><img alt="Source-available license" src="https://img.shields.io/badge/license-source--available-C985A4" /></a>
+</p>
 
-长篇写作会累积不同性质的“真相”。计划描述未来意图；评审稿只是候选；已接受稿代表明确的编辑决定；只有完成状态落定，这个决定才真正转化为持久状态。研究资料、语料库证据、遥测数据、学习假设和运行回执都可以提供参考，却不会因为系统看见了就自动成为故事事实。
+<p align="center"><sub>0.9.x · pre-1.0 · 持续开发中</sub></p>
 
-Quillframe 的核心工作，是把这些类别分开，再通过明确契约让它们协作。
+<p align="center"><strong>简体中文</strong> · <a href="README.en.md">English</a></p>
 
-## 核心架构
+---
 
-**项目拥有故事事实的最终权威。** `locked`、`accepted`、`active_plan`、`review`、`proposal` 是不同层级。计划不等于正典；评审不等于接受；接受也不等于已经落定。
+> **✦ Quillframe 不是给 LLM 套一层聊天界面的 wrapper。** 模型负责需要理解力的判断与生成；Quillframe 负责长时间运行的那套系统：故事结构、人物与关系状态、正典、受边界约束的上下文、运行身份、质量门槛、学习证据、持久化，以及经过授权的状态落定。
 
-**模型负责语义判断。** 故事解释、人物可信度、读者反应、修订诊断、相关性、候选稿比较和学习解释，都通过边界明确、机器可读的契约完成。
+## 为什么需要 Quillframe
 
-**确定性代码负责执行真相。** 身份、权限、内容指纹、来源链、持久化、一次性消费、硬预算、路由、事务和失败即阻断的状态转换，都可以机械验证。
+一次性的 AI 写作流程很简单：
 
-**独立评审必须真的独立。** 一旦质量门要求独立性，评审者就必须来自真正不同的调用或会话，并且只评审已经冻结且指纹确定的候选稿。
+```text
+提示词 → 模型 → 文本
+```
 
-## 正文是一张生产图
+但一本活过几百个场景的小说，需要回答更难的问题：哪些事实才有权威？哪些只是未来计划？某条证据到底有没有真正进入这次模型调用？一次评审是不是针对当前这份候选稿？用户接受了修改以后，项目状态是否真的、完整地落定了？
 
-章节不会从提示词直接跳到发布。系统先稀疏选择上下文，模拟故事、人物和阅读牵引，再生成内部候选稿；随后收集质量证据，把缺陷送回真正负责它的机制。只有完成独立评审前资格检查的候选稿，才会进入独立评审和对用户可见的交付门。
+Quillframe 不靠聊天记录去猜这些答案，而是把它们变成明确的系统边界。
 
-修订遵守**修复且保持**（`FIX + PRESERVE`）：修掉目标缺陷，同时保住目标约束集、读者价值以及人物与关系的能量。全新重生成可以挑战当前基准稿，但不得假装继承被拒稿件的文字。候选稿谱系分别记录“和谁比较”与“文字从哪里派生”，避免两种父级关系混为一谈。
+```text
+受限 Context
+      ↓
+Story / Canon 预检
+      ↓
+场景与人物模拟
+      ↓
+生成 / 修订
+      ↓
+需要时进行真正独立的语义评审
+      ↓
+读者投入度 + 连续性验证
+      ↓
+用户可见 Review 候选稿
+      ↓  明确接受
+Settlement → 持久项目状态
+```
+
+它有意比一次性写作助手更重；也正因为如此，它适合那些真正会被连续性、来源证明、恢复能力和长周期质量拖垮的大型项目。
+
+## 真正重要的原则
+
+| | 原则 | 在系统里的实际含义 |
+|---|---|---|
+| ✦ | **正典有边界** | Plan、Draft、Review、Accepted 正文、Canon 与 Settled 状态是不同生命周期/权威状态。 |
+| ✧ | **上下文有边界** | 项目里保存的内容远多于一次调用该看到的内容。稀疏 Context Manifest 只选当前任务真正需要的证据；stored ≠ injected。 |
+| ♡ | **人物完整性** | 人物目标、知识边界、关系、空间位置和情绪后果属于生产状态，不是装饰提示词。 |
+| ⋆ | **独立语义判断是真的独立** | 同一个 manager 换个 critic 标签不算独立评审。需要独立性时，评审必须绑定到精确 artifact fingerprint，并由真正不同的合格执行完成。 |
+| ✦ | **作者优先** | Studio 首先是写作环境。Runtime 与诊断可以深入查看，但不应该反过来主导日常创作界面。 |
+| ✧ | **SQLite-native** | 持久产品状态以 SQLite 为 canonical authority；Markdown、DOCX、EPUB 等是导入/导出产物，不是第二套 live database。 |
+| ♡ | **推理能力不是系统权威** | 模型负责理解与生成；Quillframe 负责编排、状态、权限、来源证明和项目权威边界。 |
+| ⋆ | **自动学习不等于偷偷晋升规则** | 用户反馈可以自动进入证据 intake，但不会悄悄变成 Project preference、Canon、user taste 或 Framework policy。 |
+
+## Quillframe 怎样组成
+
+### 1 · 产品心智模型
+
+```text
+作者
+ ↓
+Quillframe
+ ├─ 创作工作流
+ ├─ Story / Character / Relationship / Canon / Context
+ ├─ Runtime / Quality / Learning / Settlement
+ └─ 持久项目状态
+ ↕
+模型推理
+```
+
+模型不在 Quillframe 的 authority chain 上方。它只是为某个 Quillframe-owned operation 提供 inference。
+
+0.9 的发展方向是把模型连接面继续收窄成 **API Endpoint + Access Token**；无认证本地 endpoint 时 token 可以为空。Session、Context、Tools、Execution Contract、Authority 与 Agent Loop 仍由 Quillframe 自己负责。这个 Quillframe-owned Model Runtime 正在独立开发，**尚未合并进当前冻结的 0.9.0 `main`**。
+
+### 2 · Framework、Studio 与持久状态
+
+当前架构不允许 UI 直接把 SQLite 当应用 API：
+
+```text
+SolidJS Studio / host surface
+          ↓
+   typed Bridge / API
+          ↓
+   Python Quillframe Core
+          ↓
+        SQLite
+```
+
+Tauri 2 thin host 是当前桌面 architecture direction；但冻结的 `0.9.0` 基线中，真正已经存在的是 SolidJS Local Web / cloud UI 与 Python typed Host Bridge，而不是一个已经完成的 Tauri wrapper。
+
+<img src="docs/assets/architecture/framework-mental-model.zh-CN.svg" alt="Quillframe 编排、执行与验证、Settlement 架构" width="100%" />
+
+通用 Framework 拥有机制；具体 Project 拥有自己的剧情事实、人物、关系、研究、计划、稿件、Accepted Canon 与当前状态。依赖方向只有 **Project → Quillframe**，一本小说里的私有事实不会因为被调用过，就反向变成通用 Framework 真理。
+
+### 3 · 正文生产是一条生命周期，不是一次生成调用
+
+<img src="docs/assets/architecture/production-graph.zh-CN.svg" alt="Quillframe 长篇小说生产流程" width="100%" />
+
+当前 DRAFT / REVISE 路径会经过受限上下文与权威 bootstrap、Story/Canon 预检、人物/场景模拟、Reader Pressure、事件优先 Raw Draft、表层实现、资格检查、需要时的独立语义评审、修复/挑战稿、读者投入度、连续性检查与用户可见门槛。
+
+**Raw Draft 永远是内部产物。** 用户看得到的 Review Draft 仍不等于 Accepted；Accepted 仍不等于 Settled。
+
+## Canon、Context 与 Settlement
+
+Quillframe 刻意把这些概念拆开：
+
+```text
+stored      ≠ injected
+Plan        ≠ Canon
+Review      ≠ Accepted
+Accepted    ≠ Settled
+autosave    ≠ Accepted
+revision    ≠ Canon
+Research    ≠ Character Knowledge
+Corpus      ≠ Canon
+session     ≠ Canon
+persistence ≠ authority
+```
+
+当前 Canon precedence 表达为：
+
+```text
+locked > accepted > active_plan > review > proposal
+```
+
+这描述的是权威与生命周期，不是一条可以自动往上“升级”的流水线。
+
+**Settlement** 才是把明确接受变成持久状态修改的授权事务。它要求精确 before → after 意图、当前 before-state 校验、写入授权、依赖/派生处理和 post-condition。任何关键前状态不匹配都会得到 `settlement_incomplete`，而不是“估计已经写成功”。
+
+<details>
+<summary><strong>为什么 Sparse Context 很重要</strong></summary>
+
+一个长期项目可以存下远超一次模型调用容量的内容。Quillframe 先判断当前语义问题需要哪些证据，再由确定性 assembly 校验精确引用、权威类别、可见性/阶段约束、来源证明、fingerprint 与 hard budget。
+
+因此三件事始终分开：
+
+1. 项目存了什么；
+2. 语义选择认为哪些内容有用；
+3. 经过预算与可见性规则后，实际上有哪些内容进入了模型上下文。
+
+完整模型见[上下文与记忆](docs/context-and-memory.zh-CN.md)。
+
+</details>
+
+## Learning：自动接收，受治理晋升
+
+有意义的用户反馈可以自动进入 learning intake，用户不需要每次都说“把这个学进去”。预期流程是：
+
+```text
+capture → interpret → scope → evidence → candidate → validation
+```
+
+自动 capture **不等于** 自动 promotion。`one_off`、`project`、`user_taste`、`general_craft` 各自独立；模型推断出一个偏好，不会因此自动获得永久写权限。
+
+## Studio · 首先是写作环境
+
+Quillframe Studio 是 Core 周围的 product-experience layer。冻结的 `0.9.0` 基线已经有真实的 SolidJS + TypeScript + Vite application shell，并通过 typed read-only Host Bridge 工作，同时支持 local 和 cloud-hosted web surface。
+
+长期 Writer Mode 的信息架构围绕写作任务展开：书桌、正文、计划、故事、审阅、研究与语料、学习、发布；更底层的 Sessions、Runs、Checkpoints、Context、Semantic Jobs、Capabilities、Receipts、Diagnostics 等通过 Inspector 渐进展开。并行 UI/UX session 正在继续完善这套 authoring surface；**未合并 branch 的功能和未来截图都不能冒充 released behavior。**
+
+当前基线 Studio 已有的 Bridge operation 包括 bridge describe、Framework doctor、project inspect、capabilities inspect、Context inspect、semantic catalog inspect。Core 没有暴露 mutation / acceptance / Settlement / private SQLite contract 的地方，UI 不会自行伪造。
+
+## SQLite 是 canonical durable state
+
+Quillframe 0.9 当前持久化布局：
+
+```text
+~/.quillframe/
+├─ quillframe.sqlite
+├─ projects/
+│  └─ <project-id>/
+│     ├─ project.sqlite
+│     ├─ blobs/
+│     └─ exports/
+├─ backups/
+└─ cache/
+```
+
+连接会开启 foreign keys、busy timeout、WAL journal mode 与 `synchronous=FULL`。Migration 按顺序执行并校验 checksum；persistence CLI 还提供 `doctor`、backup/verify/restore、project creation 与 search。
+
+持久化本身不会授予 Canon、Accepted、Settlement 或 Learning promotion 权威。
 
 ## 快速开始
 
+### 环境要求
+
+当前 CI 验证基线：
+
+- **Python 3.13**：Core / SQLite / Host Bridge；
+- **Node.js 24**：产品网站、文档与 Studio build；
+- **pnpm 10.33.0**：`studio/app`。
+
+Quillframe 仍在 pre-1.0。消费项目应遵循自己锁定的 exact Framework revision / lock，不要默认 latest `main` 一定兼容所有项目。
+
+### Clone 并验证 Core
+
 ```bash
-python project_sdk.py init <path> --id PROJECT-X --title "Novel"
-python project_sdk.py validate <path>
-python project_sdk.py build <path>
+git clone https://github.com/xiaooye/cn_webnovel_agent.git
+cd cn_webnovel_agent
+python project_sdk.py self-test
+python studio/host_bridge.py self-test
+python persistence/cli.py doctor
 ```
 
-生产项目为了运行可复现性会锁定框架的精确版本；框架开发文档则以开发时冻结的 `main` 为实现依据。这是两类不同事实，不能互相覆盖。
+Self-test 成功时会输出结构化 JSON；`doctor` 会初始化/检查默认 Quillframe data root，但不会因为“保存成功”就把任何正文变成 Canon。
 
-## 关键概念
+### 运行当前本地 Studio
 
-- [总体架构](docs/architecture.zh-CN.md)：故事事实权威、语义执行、确定性运行时与状态落定。
-- [生产流水线](docs/production-pipeline.zh-CN.md)：从稀疏上下文到对用户可见的交付门。
-- [质量保障](docs/quality-assurance.zh-CN.md)：独立评审前资格检查、修复且保持、内容指纹绑定与发布真相。
-- [候选稿谱系](docs/CANDIDATE_LINEAGE_V1.zh-CN.md)：比较父级、文本父级、评审回执与不具权威性的接受证据。
-- [上下文与记忆](docs/context-and-memory.zh-CN.md)：让工作上下文保持稀疏可控，而不是让记忆偷偷变成正典。
-- [自适应学习](docs/adaptive-learning.zh-CN.md)：自动捕获反馈，受治理地提升长期规则。
-- [运行时与集成](docs/integrations.zh-CN.md)：会话、运行、检查点、能力和独立执行。
-- [项目开发工具](docs/project-sdk.zh-CN.md)：项目与框架的责任边界。
+```bash
+cd studio/app
+corepack enable
+pnpm install --frozen-lockfile
+pnpm build
+cd ../..
+python studio/local_server.py
+```
 
-## 兼容性说明
+Local server 只绑定 loopback，并打印可打开的 URL。这个基线上的 Studio 消费 typed read-only Host Bridge。**基本 inspection / authoring shell 启动不要求先配置 AI provider。**
 
-**Quillframe 是当前公开品牌；`Quillframe` 继续作为旧技术命名空间保留。** `quillframe.toml`、`quillframe.lock.json`、`quillframe_*` 模式标识、既有工作流名称、仓库路径和稳定契约标识，本次都不改名。
+### 创建一个 Quillframe 小说工程骨架
 
-框架目前处于 1.0 之前的 `0.9.0` 开发线。开发期的实现真相来自本次冻结的精确 `main` 提交，而不是旧文档叙述。
+```bash
+python project_sdk.py init ./my-novel \
+  --id PROJECT-MY-NOVEL \
+  --title "我的小说" \
+  --language zh-CN
 
-[文档中心](docs/README.zh-CN.md) · [英文版](README.en.md)
+python project_sdk.py validate ./my-novel
+python project_sdk.py build ./my-novel
+```
+
+Project SDK 会把计划、状态、正文、研究、Corpus refs、tests 与 project lock 分开建立；它不会自动把内容晋升为 Canon。
+
+<details>
+<summary><strong>运行产品网站与 Starlight 文档</strong></summary>
+
+```bash
+cd site
+npm install --no-audit --no-fund
+npm run dev
+```
+
+运行 Starlight 文档：
+
+```bash
+npm run dev:docs
+```
+
+Production verification 使用 `npm run quality`、`npm run build`、`npm run docs:build`。
+
+</details>
+
+## 仓库结构
+
+```text
+cn_webnovel_agent/
+├─ core/                 # Story / Character / Canon 契约
+├─ harness/              # runtime、sessions、semantic execution、control plane
+├─ quality/              # production readiness 与 quality evolution
+├─ learning/             # evidence intake、hypothesis、受治理 promotion
+├─ corpus/               # 受治理 craft/research evidence
+├─ persistence/          # canonical SQLite durable state
+├─ publication/          # Accepted-text publication IR/compiler
+├─ studio/               # Host Bridge、local server、SolidJS Studio app
+├─ site/                 # 产品网站 + Astro/Starlight 文档 build
+├─ docs/                 # 公共概念、指南、架构与文档地图
+├─ tests/                # deterministic contract/regression tests
+├─ specs/                # 当前与历史工程规格
+└─ .github/              # CI、部署、Issue/PR contribution surfaces
+```
+
+历史 specs 会刻意保留当时的历史命名。新访问者不应该先读这些工程记录，才能知道今天的 Quillframe 是什么。
+
+## 文档地图
+
+| 从这里开始 | 当你需要了解 |
+|---|---|
+| [文档中心](docs/README.zh-CN.md) | 整套文档的推荐阅读路径 |
+| [为什么是 Quillframe](docs/why-quillframe.zh-CN.md) | 产品适用场景、取舍与系统边界 |
+| [总体架构](docs/architecture.zh-CN.md) | Framework/Project authority、语义与确定性 ownership、Settlement |
+| [生产流水线](docs/production-pipeline.zh-CN.md) | DRAFT/REVISE 生命周期与用户可见 readiness |
+| [上下文与记忆](docs/context-and-memory.zh-CN.md) | Sparse Context、visibility、persistence、memory boundaries |
+| [质量保障](docs/quality-assurance.zh-CN.md) | fingerprint-bound gate、diagnostics、独立评审 |
+| [自适应学习](docs/adaptive-learning.zh-CN.md) | feedback intake、evidence、scope、promotion rules |
+| [Project SDK](docs/project-sdk.zh-CN.md) | 把一本小说接成可复现 Project |
+| [Studio](studio/README.zh-CN.md) | 当前产品 shell 与 Host Bridge 行为 |
+| [架构图谱](docs/architecture-atlas.zh-CN.md) | implementation owner 与深入 contract link |
+
+公共文档使用 **Astro + Starlight** 构建，并挂在 Quillframe 产品站下。
+
+## 当前状态 · 0.9.x
+
+Quillframe 仍是 **pre-1.0 / active development**；1.0 前可能出现 breaking changes。
+
+| Area | 冻结 `main` 状态 |
+|---|---|
+| Python Core / authority contracts | 已实现，CI 覆盖 |
+| SQLite-native persistence | 已实现，CI 覆盖 |
+| typed read-only Host Bridge | 已实现，有 self-test |
+| SolidJS Studio | 已有真实 application shell；authoring UX 仍在演进 |
+| 产品网站 + Starlight docs | 已实现并由 deployment workflow 管理 |
+| Tauri 2 thin desktop host | architecture direction；冻结基线没有完成 wrapper |
+| Quillframe-owned Model API runtime | **独立 Draft PR #108 开发中；尚未 merge** |
+| Writer Mode UX reconstruction | **并行 UI/UX 工作中；未合并内容不是 released** |
+
+这份 README 只把冻结 `main` 当作 current fact。Branch work ≠ merged capability；merged code ≠ deployed surface。
+
+## 贡献
+
+从 [CONTRIBUTING.md](CONTRIBUTING.md) 开始。小型修复欢迎提交；涉及 Canon/Settlement semantics、semantic independence、Learning promotion、persistence authority 或 runtime contract 的改动，需要明确 architecture reasoning 与对应 tests。
+
+常用入口：
+
+- [提交 Issue](https://github.com/xiaooye/cn_webnovel_agent/issues/new/choose)
+- [安全政策](SECURITY.md)
+- [行为准则](CODE_OF_CONDUCT.md)
+- [变更日志](CHANGELOG.zh-CN.md)
+
+## 安全
+
+不要在公开 Issue 中粘贴 API Access Token、provider credential、私有小说正文或敏感 project database。Hosted secret 只能保留在 server side，绝不能进入 Vite client bundle。私密漏洞报告与数据处理规则见 [SECURITY.md](SECURITY.md)。
+
+## License
+
+**这个 public repository 当前是 source-available，而不是 OSI open source。** 当前 [LICENSE](LICENSE) 只授予有限的私人、非商业评估/研究权限，并限制 redistribution、deployment 与 commercial use；除非另有单独书面授权。
+
+License 里仍保留历史 `NovelForge` 法律命名。本次 presentation cleanup 不修改这段法律文本：如果要改变 license scope / product legal identity，应作为独立且明确的 relicensing/legal decision。
+
+---
+
+<p align="center">
+  <sub>✦ · Quillframe 让创作判断保持灵活，也让系统事实始终明确。 · ♡</sub>
+</p>
