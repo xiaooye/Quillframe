@@ -1,0 +1,14 @@
+{
+  "schema": "quillframe_system_improve_execution_receipt_v1",
+  "primary_task_mode": "SYSTEM-IMPROVE",
+  "manager_session_id": "SES-c1596c7cad504047990515520bf85de2",
+  "run_id": "RUN-fa347b8ff1f0441cb7bf8c4b34b25c5f",
+  "framework_repository": "xiaooye/Quillframe",
+  "frozen_framework_main_sha": "0d211675fd9f545b83d02ab4102563f0c67e11b9",
+  "research_repository": "AlbusKen/shujuku",
+  "frozen_research_main_sha": "12fec85bae325cacd8370b4dd0f4aff0dfd6da0e",
+  "consumer_project_repin": false,
+  "canon_mutation": false,
+  "studio_visual_change": false,
+  "authority": false
+}

@@ -1,19 +1,110 @@
 {
-  "$schema":"https://json-schema.org/draft/2020-12/schema",
-  "$id":"quillframe-semantic-job-v1",
-  "type":"object",
-  "required":["job_id","kind","subject_id","created_at","input_fingerprint","input","rubric","output_contract","permissions","provenance"],
-  "properties":{
-    "job_id":{"type":"string","minLength":1},
-    "kind":{"enum":["eval_judge","artifact_audit","corpus_analyze","benchmark_synthesize","external_review","preference_distill"]},
-    "subject_id":{"type":"string","minLength":1},
-    "created_at":{"type":"string","minLength":1},
-    "input_fingerprint":{"type":"string","pattern":"^sha256:[a-f0-9]{64}$"},
-    "input":{"type":"object"},
-    "rubric":{"type":"array"},
-    "output_contract":{"type":"object"},
-    "permissions":{"type":"object","required":["canon_write","framework_behavior_write","durable_user_taste_write"],"properties":{"canon_write":{"const":false},"framework_behavior_write":{"const":false},"durable_user_taste_write":{"const":false},"allowed_result_scope":{"type":"string"}}},
-    "provenance":{"type":"object"},
-    "execution":{"type":"object","additionalProperties":false,"properties":{"source_session_id":{"type":["string","null"]},"worker_session_id":{"type":["string","null"]},"handoff_id":{"type":["string","null"]},"attempt_id":{"type":["string","null"]}}}
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "quillframe-semantic-job-v1",
+  "type": "object",
+  "required": [
+    "job_id",
+    "kind",
+    "subject_id",
+    "created_at",
+    "input_fingerprint",
+    "input",
+    "rubric",
+    "output_contract",
+    "permissions",
+    "provenance"
+  ],
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": [
+        "eval_judge",
+        "artifact_audit",
+        "corpus_analyze",
+        "benchmark_synthesize",
+        "external_review",
+        "preference_distill",
+        "artifact_analyze"
+      ]
+    },
+    "subject_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "input": {
+      "type": "object"
+    },
+    "rubric": {
+      "type": "array"
+    },
+    "output_contract": {
+      "type": "object"
+    },
+    "permissions": {
+      "type": "object",
+      "required": [
+        "canon_write",
+        "framework_behavior_write",
+        "durable_user_taste_write"
+      ],
+      "properties": {
+        "canon_write": {
+          "const": false
+        },
+        "framework_behavior_write": {
+          "const": false
+        },
+        "durable_user_taste_write": {
+          "const": false
+        },
+        "allowed_result_scope": {
+          "type": "string"
+        }
+      }
+    },
+    "provenance": {
+      "type": "object"
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source_session_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "worker_session_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "handoff_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "attempt_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
   }
 }

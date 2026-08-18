@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path: sys.path.insert(0,str(ROOT))
 
 from core_operations import CoreOperations, OperationError
 from persistence.quillframe_sqlite import ConflictError, IntegrityError, QuillframeStore
+from persistence.context_repository import ContextRepository
 
 CONTRACT_PATH=Path(__file__).with_name("host_bridge_contract.json")
 REQUEST_SCHEMA="quillframe_studio_host_bridge_request_v1"
@@ -70,6 +71,9 @@ def _feedback(args:dict[str,Any],_:str):return ops().observe_feedback(require(ar
 def _pub_preview(args:dict[str,Any],_:str):return ops().publication_preview(require(args,"project_id"),require(args,"acceptance_id"))
 def _pub_build(args:dict[str,Any],_:str):return ops().publication_build(require(args,"project_id"),require(args,"acceptance_id"),args.get("format") or "md")
 
+def _context_projection(args:dict[str,Any],_:str):
+    return ContextRepository(store()).inspector_projection(require(args,"project_id"),require(args,"run_id"))
+
 def _fixed_list(table:str,order_by:str="rowid DESC",limit_default:int=100)->Callable[[dict[str,Any],str],dict[str,Any]]:
     def handler(args:dict[str,Any],_:str):
         project_id=require(args,"project_id"); limit=max(1,min(int(args.get("limit") or limit_default),500))
@@ -86,6 +90,7 @@ DISPATCH:dict[str,Callable[[dict[str,Any],str],dict[str,Any]]]={
     "bridge.describe":_describe,"database.doctor":_doctor,"project.create":_project_create,"project.inspect":_project_inspect,"project.search":_project_search,"project.backup":_project_backup,
     "document.create":_document_create,"document.revision.save":_revision_save,"document.revision.compare":_revision_compare,"author.run.start":_author_run,"candidate.accept":_candidate_accept,"settlement.apply":_settle,"feedback.observe":_feedback,
     "publication.preview":_pub_preview,"publication.build":_pub_build,
+    "inspector.context.runtime":_context_projection,
     "inspector.sessions.list":_fixed_list("sessions","updated_at DESC"),"inspector.runs.list":_fixed_list("runs","updated_at DESC"),"inspector.checkpoints.list":_fixed_list("checkpoints","created_at DESC"),"inspector.context.list":_fixed_list("context_manifests","created_at DESC"),"inspector.receipts.list":_fixed_list("receipts","created_at DESC"),"inspector.candidates.list":_fixed_list("candidates","created_at DESC"),"inspector.learning.list":_fixed_list("learning_evidence","created_at DESC"),
 }
 
@@ -122,7 +127,7 @@ def self_test()->dict[str,Any]:
     desc=invoke({"schema":REQUEST_SCHEMA,"request_id":"self","operation":"bridge.describe","surface":"agent_package","args":{},"authority":False})
     generic=invoke({"schema":REQUEST_SCHEMA,"request_id":"bad","operation":"command.invoke","surface":"agent_package","args":{},"authority":False})
     ok=desc["status"]=="ok" and generic["status"]=="invalid" and desc["authority"] is False
-    return {"quillframe_host_bridge_contract":"PASS" if ok else "FAIL","contract_version":"4","generic_mutation_dispatch":False,"authority":False}
+    return {"quillframe_host_bridge_contract":"PASS" if ok else "FAIL","contract_version":"5","generic_mutation_dispatch":False,"authority":False}
 
 def main()->int:
     p=argparse.ArgumentParser(); sub=p.add_subparsers(dest="cmd",required=True)

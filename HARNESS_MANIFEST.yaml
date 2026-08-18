@@ -614,3 +614,17 @@ write_boundary:
   settlement_before_state_mismatch_blocks_all_writes: true
   settlement_complete_requires_required_projection_receipts: true
   settlement_projection_receipts_bind_transaction_fingerprint: true
+
+semantic_context_runtime_v1:
+  runtime: harness/context_runtime.py
+  persistence: persistence/context_repository.py
+  migration: persistence/migrations/project/002_semantic_context_runtime.sql
+  semantic_contracts: [context.profile_derive, context.stage_select]
+  pipeline: [eligibility_gate, semantic_profiles, semantic_decision, stage_greenlights, budget_packing, context_freeze]
+  eligibility_precedes_relevance: true
+  context_freeze_fingerprint_bound: true
+  post_freeze_untracked_db_fetch: forbidden
+  inspector_projection: quillframe_context_inspector_projection_v4
+  private_chain_of_thought_projection: false
+  authority: false
+  host_neutral: true

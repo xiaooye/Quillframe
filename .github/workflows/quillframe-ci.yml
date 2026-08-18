@@ -44,6 +44,7 @@ jobs:
       - name: Deterministic runtime capability contracts
         run: |
           python harness/runtime_capabilities.py self-test
+          python harness/context_runtime.py self-test
           python harness/semantic_workers/adapters/model_runtime_adapter.py --self-test
       - name: Normal CI never invokes configured live Model API
         env:

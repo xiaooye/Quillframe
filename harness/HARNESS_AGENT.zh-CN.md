@@ -277,3 +277,7 @@ live bootstrap
 - [生产流水线](../docs/production-pipeline.zh-CN.md)
 - [自适应学习](../docs/adaptive-learning.zh-CN.md)
 - [正典与状态模型](../core/CANON_STATE.zh-CN.md)
+
+### Semantic Context Runtime（0.9）
+
+生产 Context 必须先做 deterministic eligibility，再做 semantic relevance。使用 fingerprint-bound Semantic Context Profile、`context.stage_select`、stage Greenlight、hard-budget packing，最后 Context Freeze。任何 stage 都不得通过未追踪 DB read 偷扩冻结范围；refresh/extension 必须产生新的 Context fingerprint。selector 不授予 authority，也不能替代 independent semantic review。
