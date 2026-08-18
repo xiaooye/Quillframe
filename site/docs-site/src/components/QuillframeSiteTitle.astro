@@ -1,13 +1,13 @@
 ---
-import brandMark from "../assets/novelforge-mark.svg?url";
+import brandMark from "../assets/quillframe-mark.svg?url";
 
 const { lang } = Astro.locals.starlightRoute;
 const english = lang.toLowerCase().startsWith("en");
-const productAria = english ? "Open NovelForge product home" : "打开 NovelForge 产品首页";
+const productAria = english ? "Open Quillframe product home" : "打开 Quillframe 产品首页";
 
 // Kept as explicit source markers for the docs-platform contract. The active
-// docs namespace now lives with the rest of the product navigation so the
-// desktop header matches Product Entry exactly.
+// docs namespace lives with the rest of the product navigation so the desktop
+// header matches Product Entry exactly.
 const docsHref = english ? "/docs/en/" : "/docs/";
 const docsLabel = english ? "Docs" : "知识库";
 void docsHref;
@@ -19,9 +19,9 @@ void docsLabel;
     <span class="nf-brand-mark-shell">
       <img src={brandMark} alt="" width="32" height="32" aria-hidden="true" />
     </span>
-    <span class="nf-brand-name">NovelForge</span>
+    <span class="nf-brand-name">Quillframe</span>
   </a>
-  <span class="nf-version-chip" aria-label="NovelForge 0.8.x">0.8.x</span>
+  <span class="nf-version-chip" aria-label="Quillframe 0.9.0">0.9.0</span>
 </div>
 
-<!-- aria-current="page" is owned by the Docs item in NovelForgeActions. -->
+<!-- aria-current="page" is owned by the Docs item in QuillframeActions. -->
