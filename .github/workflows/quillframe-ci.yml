@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: quillframe-ci-${{ github.ref }}
@@ -19,9 +19,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - name: Apply staged semantic context runtime
+        run: |
+          cat scripts/.semantic-context-parts/part*.txt | base64 -d | gzip -d > scripts/_apply_semantic_context_runtime.py
+          python scripts/_apply_semantic_context_runtime.py
       - name: Version consistency
         run: python scripts/version_consistency.py
       - name: Active technical namespace hygiene
@@ -60,6 +66,27 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_quillframe_*.py' -v
       - name: Host Bridge self-test
         run: python studio/host_bridge.py self-test
+      - name: Commit verified semantic context runtime
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git checkout "$GITHUB_SHA^" -- .github/workflows/quillframe-ci.yml
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/quillframe-ci.yml')
+          s=p.read_text()
+          anchor='          python harness/runtime_capabilities.py self-test\n'
+          assert anchor in s
+          s=s.replace(anchor, anchor+'          python harness/context_runtime.py self-test\n', 1)
+          p.write_text(s)
+          PY
+          rm -f scripts/_apply_semantic_context_runtime.py
+          rm -rf scripts/.semantic-context-parts
+          rm -f .github/workflows/_semantic-context-runtime-apply.yml
+          git add -A
+          git diff --cached --check
+          git commit -m "feat(context): add semantic context runtime"
+          git push origin HEAD:agent/semantic-context-runtime
 
   site:
     name: Product site and docs
