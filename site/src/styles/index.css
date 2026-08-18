@@ -1,15 +1,16 @@
 /*
  * Quillframe Product Site stylesheet entrypoint.
  *
- * Import order is contractual: foundation first, route implementations next,
- * shared product-language composition after route defaults, and hardening last.
- * main.tsx must import only this file.
+ * Import order is contractual: foundation first, shared shell/primitives next,
+ * route implementations after that, cross-route composition after route
+ * defaults, and hardening last. main.tsx must import only this file.
  */
 @import "./site.css";
 @import "../../../assets/brand/quillframe-product-language.css";
 
-/* Stable product primitives. */
+/* Stable product shell + primitives. */
 @import "./product-contract.css";
+@import "./product-shell.css";
 @import "./product-surface.css";
 @import "./unified-product-app.css";
 
