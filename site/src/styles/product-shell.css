@@ -1,0 +1,114 @@
+@layer product-layout {
+  /*
+   * Shared ProductShell owner.
+   * Header, mobile navigation, and footer use the same quiet shell language;
+   * route identity starts inside #main-content, not in global chrome.
+   */
+  .unified-product-shell .product-appbar {
+    --wui-color-background: color-mix(in oklab, var(--pe-bg) 94%, transparent);
+    border-block-end: 1px solid color-mix(in oklab, var(--pe-border) 58%, transparent);
+    background: color-mix(in oklab, var(--pe-bg) 94%, transparent);
+    box-shadow: none;
+    backdrop-filter: blur(18px) saturate(118%);
+    -webkit-backdrop-filter: blur(18px) saturate(118%);
+  }
+
+  .unified-product-shell .desktop-nav .wui-app-bar__link {
+    border-radius: 9px;
+    background: transparent;
+  }
+
+  .unified-product-shell .desktop-nav .wui-app-bar__link:hover,
+  .unified-product-shell .desktop-nav .wui-app-bar__link:focus-visible {
+    background: color-mix(in oklab, var(--pe-runtime-soft) 24%, transparent);
+  }
+
+  .unified-product-shell .desktop-nav .wui-app-bar__link.active {
+    color: color-mix(in oklab, var(--pe-runtime) 76%, var(--pe-fg));
+    background: color-mix(in oklab, var(--pe-runtime-soft) 34%, transparent);
+  }
+
+  .unified-product-shell .header-search {
+    border-color: color-mix(in oklab, var(--pe-border) 56%, transparent);
+    background: color-mix(in oklab, var(--pe-surface) 74%, transparent);
+    box-shadow: none;
+  }
+
+  .unified-product-shell .mobile-nav {
+    border: 1px solid color-mix(in oklab, var(--pe-border) 58%, transparent);
+    border-radius: 14px;
+    background: color-mix(in oklab, var(--pe-surface) 96%, transparent);
+    box-shadow: 0 22px 48px -42px oklch(.22 .03 290 / .35);
+  }
+
+  /* Footer and top navigation deliberately share a neutral canvas. Footer
+   * contains the same primary navigation model, then utility/runtime links. */
+  .unified-product-footer {
+    margin-block-start: clamp(46px, 7vw, 88px);
+    border-block-start: 1px solid color-mix(in oklab, var(--pe-border) 54%, transparent);
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .unified-product-footer .footer-grid {
+    align-items: start;
+    padding-block: clamp(34px, 4vw, 48px) clamp(44px, 6vw, 70px);
+  }
+
+  .unified-product-footer .footer-brand-block p {
+    max-inline-size: 38ch;
+    color: var(--pe-muted);
+    font-size: 12px;
+    line-height: 1.65;
+  }
+
+  .unified-product-footer .footer-links {
+    gap: 5px;
+  }
+
+  .unified-product-footer .footer-link,
+  .unified-product-footer .footer-links > a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-block-size: 36px;
+    width: fit-content;
+    padding-inline: 4px;
+    border-radius: 7px;
+    color: var(--pe-muted);
+    background: transparent;
+  }
+
+  .unified-product-footer .footer-link:hover,
+  .unified-product-footer .footer-link:focus-visible,
+  .unified-product-footer .footer-links > a:hover,
+  .unified-product-footer .footer-links > a:focus-visible {
+    color: var(--pe-fg);
+    background: color-mix(in oklab, var(--pe-editorial-soft) 20%, transparent);
+  }
+}
+
+@media (max-width: 900px) {
+  .unified-product-footer .footer-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .unified-product-footer .footer-brand-block {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 620px) {
+  .unified-product-shell .product-appbar {
+    padding-inline: 12px;
+  }
+
+  .unified-product-footer .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .unified-product-footer .footer-brand-block {
+    grid-column: auto;
+  }
+}
