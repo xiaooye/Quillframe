@@ -7,9 +7,11 @@ import { invokeBridge, operationError } from "./bridge";
 import {
   AUTHORING_INTENT_TASK_MODE,
   type AuthorRunStartResult,
+  type AuthorRunStatusProjection,
   type AuthoringIntent,
   type ContextRuntimeProjection,
-  type InspectorListProjection,
+  type ModelServiceListProjection,
+  type ProductionExecutionProjection,
 } from "./authoring/contracts";
 import { CoreRequirementNotice, RunProgress, WriterContextStrip } from "./authoring/AuthoringUI";
 
@@ -37,16 +39,27 @@ const inspectorNavigation: NavEntry[] = [
 
 const routeByOperation: Record<string, string> = {
   "project.create": "/start",
+  "project.list": "/start",
   "project.inspect": "/",
   "document.create": "/manuscript",
+  "document.list": "/manuscript",
+  "document.open": "/manuscript",
   "document.revision.save": "/manuscript",
   "document.revision.compare": "/manuscript",
   "author.run.start": "/manuscript",
+  "author.run.status": "/runtime",
+  "author.run.execute": "/manuscript",
   "inspector.context.runtime": "/context",
   "inspector.runs.list": "/runtime",
   "inspector.candidates.list": "/review",
+  "candidate.review.get": "/review",
   "candidate.accept": "/review",
+  "candidate.reject": "/review",
+  "candidate.revision.request": "/review",
+  "settlement.preflight": "/review",
   "settlement.apply": "/review",
+  "model.service.add": "/settings?section=models",
+  "model.service.list": "/settings?section=models",
   "publication.preview": "/publication",
   "publication.build": "/publication",
 };
@@ -72,6 +85,8 @@ export const AppShell: ParentComponent = (props) => {
   const [instruction, setInstruction] = createSignal("");
   const [run, setRun] = createSignal<AuthorRunStartResult>();
   const [runStatus, setRunStatus] = createSignal("");
+  const [productionStatus, setProductionStatus] = createSignal<string>();
+  const [readerGrip, setReaderGrip] = createSignal<"low" | "medium" | "high" | "very_high">("high");
   const [contextProjection, setContextProjection] = createSignal<ContextRuntimeProjection>();
   const [aiError, setAiError] = createSignal<string>();
   const [aiBusy, setAiBusy] = createSignal(false);
@@ -79,7 +94,13 @@ export const AppShell: ParentComponent = (props) => {
   const capabilities = () => studio.bridgeCapabilities();
   const supported = createMemo(() => capabilities()?.operations ?? []);
   const currentProject = () => new URLSearchParams(location.search).get("project")?.trim() || studio.projectId();
-  const currentDocument = () => new URLSearchParams(location.search).get("document")?.trim() || undefined;
+  const currentDocument = () => {
+    const fromUrl = new URLSearchParams(location.search).get("document")?.trim();
+    if (fromUrl) return fromUrl;
+    const projectId = currentProject();
+    if (!projectId || typeof localStorage === "undefined") return undefined;
+    return localStorage.getItem(`quillframe.ui.lastDocumentId:${projectId}`)?.trim() || undefined;
+  };
 
   const setTheme = (next: boolean) => {
     setDark(next);
@@ -139,6 +160,46 @@ export const AppShell: ParentComponent = (props) => {
     }
   };
 
+  const executeRun = async () => {
+    const projectId = currentProject();
+    const activeRun = run();
+    const runId = activeRun?.run_id || studio.lastRunId();
+    if (!projectId || !runId || !instruction().trim()) return;
+    if (activeRun && !["DRAFT", "REVISE"].includes(activeRun.task_mode)) {
+      setAiError(zh() ? "当前 production executor 只拥有 DRAFT / REVISE；AUDIT / RESEARCH 必须使用各自 Core contract。" : "The production executor owns DRAFT / REVISE only; AUDIT / RESEARCH require their own Core contracts.");
+      return;
+    }
+    setAiBusy(true);
+    setAiError(undefined);
+    try {
+      const services = await invokeBridge<ModelServiceListProjection>("model.service.list");
+      if (services.status !== "ok" || !services.data) throw new Error(operationError(services));
+      const service = services.data.items.find((item) => item.credential_present && item.service_id);
+      if (!service?.service_id) throw new Error(zh() ? "没有带可用 credential 的 Model Service。请先到 AI 与模型连接 Endpoint + Access Token。" : "No Model Service with a usable credential is connected. Add Endpoint + Access Token in AI & Models first.");
+      const response = await invokeBridge<ProductionExecutionProjection>("author.run.execute", {
+        project_id: projectId,
+        run_id: runId,
+        service_id: service.service_id,
+        instruction: instruction().trim(),
+        document_id: currentDocument(),
+        reader_grip: readerGrip(),
+        rule_material: [{
+          id: "studio-current-request",
+          authority: "current_request",
+          statement: instruction().trim(),
+        }],
+      });
+      if (response.status !== "ok" || !response.data) throw new Error(operationError(response));
+      setProductionStatus(response.data.status);
+      setRunStatus(response.data.status);
+      await refreshRunEvidence();
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
   const refreshRunEvidence = async () => {
     const projectId = currentProject();
     const runId = run()?.run_id || studio.lastRunId();
@@ -146,12 +207,9 @@ export const AppShell: ParentComponent = (props) => {
     setAiBusy(true);
     setAiError(undefined);
     try {
-      if (supported().includes("inspector.runs.list")) {
-        const response = await invokeBridge<InspectorListProjection<{ run_id: string; status?: string }>>("inspector.runs.list", { project_id: projectId });
-        if (response.status === "ok" && response.data) {
-          const persisted = response.data.items.find((item) => item.run_id === runId);
-          if (persisted?.status) setRunStatus(persisted.status);
-        }
+      if (supported().includes("author.run.status")) {
+        const response = await invokeBridge<AuthorRunStatusProjection>("author.run.status", { project_id: projectId, run_id: runId });
+        if (response.status === "ok" && response.data) setRunStatus(response.data.status);
       }
       if (supported().includes("inspector.context.runtime")) {
         const response = await invokeBridge<ContextRuntimeProjection>("inspector.context.runtime", { project_id: projectId, run_id: runId });
@@ -238,8 +296,13 @@ export const AppShell: ParentComponent = (props) => {
           <p class="qf-ai-dock__boundary">{zh() ? "这是 Quillframe Agent surface，不是 provider chat。Context、执行与审查由 Core 决定。" : "This is a Quillframe Agent surface, not a provider chat. Core owns Context, execution and review."}</p>
           <label class="nf-field-label"><span>{zh() ? "意图" : "Intent"}</span><select class="wui-input" value={intent()} onChange={(event) => setIntent(event.currentTarget.value as AuthoringIntent)}><option value="write">{zh() ? "写作 · DRAFT" : "Write · DRAFT"}</option><option value="revise">{zh() ? "修改 · REVISE" : "Revise · REVISE"}</option><option value="review">{zh() ? "审阅 · AUDIT" : "Review · AUDIT"}</option><option value="continuity">{zh() ? "连续性 · AUDIT" : "Continuity · AUDIT"}</option><option value="research">{zh() ? "研究 · RESEARCH" : "Research · RESEARCH"}</option></select></label>
           <label class="nf-field-label"><span>{zh() ? "任务" : "Task"}</span><textarea class="wui-input qf-ai-instruction" value={instruction()} onInput={(event) => setInstruction(event.currentTarget.value)} placeholder={zh() ? "描述你要完成的创作任务。不要手工拼 Context。" : "Describe the authoring task. Do not hand-assemble Context."} /></label>
-          <button class="wui-button wui-button--solid" type="button" disabled={aiBusy() || !currentProject() || !instruction().trim() || !supported().includes("author.run.start")} onClick={() => void startRun()}>{aiBusy() ? (zh() ? "处理中…" : "Working…") : (zh() ? "启动 Core Run" : "Start Core run")}</button>
+          <div class="qf-inline-actions">
+            <button class="wui-button wui-button--solid" type="button" disabled={aiBusy() || !currentProject() || !instruction().trim() || !supported().includes("author.run.start")} onClick={() => void startRun()}>{aiBusy() ? (zh() ? "处理中…" : "Working…") : (zh() ? "注册 Core Run" : "Register Core run")}</button>
+            <button class="wui-button wui-button--outline" type="button" disabled={aiBusy() || !(run()?.run_id || studio.lastRunId()) || !instruction().trim() || !supported().includes("author.run.execute") || !supported().includes("model.service.list")} onClick={() => void executeRun()}>{zh() ? "Execute production" : "Execute production"}</button>
+          </div>
+          <label class="nf-field-label"><span>{zh() ? "Reader grip（本次请求）" : "Reader grip (this request)"}</span><select class="wui-input" value={readerGrip()} onChange={(event) => setReaderGrip(event.currentTarget.value as "low" | "medium" | "high" | "very_high")}><option value="medium">medium</option><option value="high">high</option><option value="very_high">very_high</option><option value="low">low</option></select></label>
           <CoreRequirementNotice operation="author.run.start" compact />
+          <CoreRequirementNotice operation="author.run.execute" compact />
           <Show when={aiError()}>{(message) => <div class="wui-alert" role="alert"><div class="wui-alert__body"><strong class="wui-alert__title">Agent</strong><span class="wui-alert__description">{message()}</span></div></div>}</Show>
           <Show when={run() || studio.lastRunId()}>
             <section class="qf-ai-run" aria-live="polite">
@@ -247,7 +310,8 @@ export const AppShell: ParentComponent = (props) => {
               <Show when={run()?.message}><p>{run()?.message}</p></Show>
               <RunProgress waiting zh={zh()} />
               <button class="wui-button wui-button--outline" type="button" disabled={aiBusy()} onClick={() => void refreshRunEvidence()}>{zh() ? "刷新 Core evidence" : "Refresh Core evidence"}</button>
-              <CoreRequirementNotice operation="run.events.list" compact />
+              <CoreRequirementNotice operation="author.run.status" compact />
+              <Show when={productionStatus() === "awaiting_external"}><p class="qf-success-note">{zh() ? "已到真实 independent handoff boundary；Studio 不会用同一 runtime 自审替代外部独立审查。" : "Reached the real independent handoff boundary; Studio will not substitute same-runtime self-review for external independent review."}</p></Show>
               <WriterContextStrip projection={contextProjection()} zh={zh()} />
             </section>
           </Show>
