@@ -6,8 +6,8 @@
   "frozen_framework_sha": "5fd991a5621f2c68e1030aa6e0b35014ca4011c7",
   "branch": "agent/production-runtime-integration",
   "draft_pr": 131,
-  "parallel_ui_pr": 129,
-  "host_bridge_version": "7",
+  "studio_consumer_pr": 130,
+  "host_bridge_version": "8",
   "consumer_project_repin": false,
   "canon_mutation": false,
   "studio_visual_change": false,
@@ -16,27 +16,44 @@
   "deterministic_runtime_health": "PASS",
   "python_tests": {
     "status": "PASS",
-    "passed": 77,
+    "passed": 84,
     "failed": 0,
-    "validated_runtime_head": "6af8d41d8813abe1933988f0b53059d366b2632e",
-    "ci_run_id": 32146128298
+    "validated_runtime_head": "6b1e9a1e6bca792fcb299e3814c8bf61bf3e97e6",
+    "ci_run_id": 32155300126
   },
   "host_bridge_self_test": "PASS",
   "studio_typecheck_build": "PASS",
   "product_site_docs": "PASS",
   "sqlite_connection_hygiene": "PASS",
   "sqlite_resource_warning_observed_in_final_successful_core_ci": false,
+  "credential_output_scrub": {
+    "status": "PASS",
+    "secret_key_redaction": true,
+    "nested_secret_value_scrub": true,
+    "regression_tested": true
+  },
+  "authoring_core_primitives": {
+    "status": "PASS",
+    "project_list": true,
+    "document_list": true,
+    "candidate_review_get": true,
+    "candidate_reject": true,
+    "candidate_revision_request": true,
+    "settlement_preflight": true,
+    "request_revision_auto_starts_revise": false,
+    "settlement_preflight_mutates_canon": false
+  },
   "framework_bundle_contract": "PASS",
-  "clean_runtime_target_sha": "0148be45c5236ae3e94daa03e29a89456e4786c4",
-  "clean_runtime_verifier_run_id": 32146870734,
-  "clean_runtime_bundle_fingerprint": "sha256:525db5cb17391384f50e092d8d18af8e99c081ee8d54988ab86f0f056e3f130e",
-  "clean_runtime_content_index_fingerprint": "sha256:62d869e83e7e75a36b47145f81053fd50554d2f8068bf237f5adbe61dd65c800",
+  "clean_runtime_target_sha": "6b1e9a1e6bca792fcb299e3814c8bf61bf3e97e6",
+  "clean_runtime_verifier_run_id": 32155493976,
+  "clean_runtime_bundle_fingerprint": "sha256:6e8019c8c39aa7ce192f941f127561cdd0e242f1b58512177fc20af26a3671a4",
+  "clean_runtime_content_index_fingerprint": "sha256:5174159c16516fa3003518e3f676111deb080f413efc863fa671d7a9763a0bce",
   "clean_runtime_bundle_files": 380,
   "clean_runtime_aggregate_self_test": "PASS",
   "core_runtime_packages_in_bundle": true,
   "live_model_acceptance": "PENDING_MODEL",
   "live_model_acceptance_state": "awaiting_external",
-  "live_model_reason": "No usable live provider credential was available to this workstream; deterministic FakeAgentRuntime fixtures are not live-model acceptance.",
+  "live_model_reason": "No usable live provider credential was available to this workstream; deterministic fixtures are not live-model acceptance.",
   "reviewed_semantic_baseline": "PENDING_MODEL",
   "reviewed_semantic_baseline_is_separate_from_deterministic_health": true,
   "independent_gate": {
@@ -47,5 +64,8 @@
     "project_peer_validation_receipt_required": true,
     "reviewer_shopping": false
   },
-  "merge_performed": false
+  "codeql_secret_output_finding_remediated": true,
+  "final_review_thread_resolved": false,
+  "merge_performed": false,
+  "studio_consumer_integration_completed": false
 }
