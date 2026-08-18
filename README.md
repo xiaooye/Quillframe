@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="assets/brand/quillframe-mark.svg" width="96" alt="Quillframe mark" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/quillframe-mark-dark.svg" />
+    <img src="assets/brand/quillframe-mark.svg" width="96" alt="Quillframe mark" />
+  </picture>
 </p>
 
 <h1 align="center">Quillframe</h1>
@@ -79,7 +82,10 @@ Quillframe makes those questions explicit system contracts rather than reconstru
 
 ## The product model
 
-<img src="docs/assets/architecture/framework-mental-model.en.svg" alt="Quillframe framework mental model: project authority, semantic execution and verification, then authorized Settlement" width="100%" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/architecture/framework-mental-model.en.dark.svg" />
+  <img src="docs/assets/architecture/framework-mental-model.en.svg" alt="Quillframe framework mental model: project authority, semantic execution and verification, then authorized Settlement" width="100%" />
+</picture>
 
 Quillframe separates four kinds of truth that ordinary AI-writing loops tend to blur:
 
@@ -104,7 +110,10 @@ Read more: [Model Runtime](docs/model-runtime.en.md) · [Agent Runtime](docs/age
 
 ## Production is a lifecycle, not a generation call
 
-<img src="docs/assets/architecture/production-graph.en.svg" alt="Quillframe long-form fiction production lifecycle" width="100%" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/architecture/production-graph.en.dark.svg" />
+  <img src="docs/assets/architecture/production-graph.en.svg" alt="Quillframe long-form fiction production lifecycle" width="100%" />
+</picture>
 
 Current DRAFT / REVISE production is built around bounded Context, Story/Canon preflight, scene and character simulation, reader pressure, event-first drafting, surface realization, candidate qualification, independent semantic review when required, repair/challenger generation, reader engagement, continuity, and a user-visible gate.
 
@@ -150,11 +159,12 @@ Automatic capture is not automatic promotion. `one_off`, `project`, `user_taste`
 
 ## AI-readable by design
 
-The public site now exposes small, explicit discovery surfaces for AI clients without pretending that the website itself is an authority-bearing agent server:
+The public site exposes small, explicit discovery surfaces for AI clients without pretending that the website itself is an authority-bearing agent server:
 
 - [`llms.txt`](site/public/llms.txt) — concise product/context guide.
 - [`llms-full.txt`](site/public/llms-full.txt) — fuller machine-oriented architecture and authority guide.
-- [`ai-catalog.json`](site/public/.well-known/ai-catalog.json) — machine-readable public-surface catalog.
+- [`sitemap.md`](site/public/sitemap.md) — human- and agent-readable navigation index alongside `sitemap.xml`.
+- [`ai-catalog.json`](site/public/.well-known/ai-catalog.json) — machine-readable public-surface catalog and content-use signal.
 - [`agent-skills/index.json`](site/public/.well-known/agent-skills/index.json) — discoverability for the real portable Quillframe Agent Skill.
 - [`agent-skills/quillframe/SKILL.md`](agent-skills/quillframe/SKILL.md) — read-only Host Bridge skill for external agent packages.
 
