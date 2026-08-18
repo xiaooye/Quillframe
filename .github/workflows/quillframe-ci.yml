@@ -14,39 +14,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  refresh_studio_lock:
-    name: Temporary Studio lock refresh
-    if: github.event_name == 'pull_request' && github.head_ref == 'agent/dependabot-stale-refresh-20260818'
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: agent/dependabot-stale-refresh-20260818
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.33.0
-          run_install: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-      - name: Regenerate Studio lockfile
-        working-directory: studio/app
-        run: pnpm install --lockfile-only
-      - name: Commit regenerated lockfile
-        run: |
-          set -euo pipefail
-          if git diff --quiet -- studio/app/pnpm-lock.yaml; then
-            echo 'Studio lockfile already current.'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add studio/app/pnpm-lock.yaml
-          git commit -m 'chore(deps): regenerate Studio lockfile without TypeScript 7'
-          git push origin HEAD:agent/dependabot-stale-refresh-20260818
-
   core:
     name: Core, SQLite, authority and namespace
     runs-on: ubuntu-latest
