@@ -22,8 +22,9 @@ Format: `[ID] [P?] [Phase] exact target + completion criterion`
 - [x] T020 Add `quillframe host-run status|begin` deterministic CLI surface.
 - [x] T021 Validate exactly one allowed task mode and start exactly one manager run.
 - [x] T022 Deny consequential writes until valid authority + active task mode/run.
-- [x] T023 Permit only strict Quillframe bootstrap commands before mode resolution; reject lookalike shell commands.
+- [x] T023 Permit only strict Quillframe run-bootstrap commands before mode resolution; reject shell-chained lookalikes.
 - [x] T024 Treat Codex `apply_patch` as consequential edit.
+- [x] T025 Close the Generic Framework → fiction Project deadlock with a separate strict pre-mode `init` escape: outside target + id/title only, no `--force`, no shell chaining, normal host approval preserved, then require host restart from the new Project.
 
 ## Phase 4 · Host Scaffolding
 
@@ -35,14 +36,14 @@ Format: `[ID] [P?] [Phase] exact target + completion criterion`
 
 ## Phase 5 · Verification
 
-- [x] T040 Add deterministic unified-host regression tests covering Claude/Codex parity, typed sessions, task modes, runs, write gates, stale authority, hook aliases, and retrofit behavior.
+- [x] T040 Add deterministic unified-host regression tests covering Claude/Codex parity, typed sessions, task modes, runs, write gates, stale authority, hook aliases, retrofit behavior, and the Framework-to-consumer init escape.
 - [x] T041 Verify existing Project SDK/bootstrap tests remain green after compatibility repairs.
 - [x] T042 Verify normal CI performs no live model/API execution.
-- [x] T043 Run Core/SQLite/authority, docs/site, and Studio CI; run 705 is fully green.
+- [x] T043 Run Core/SQLite/authority, docs/site, and Studio CI; run 705 was fully green before the final init-escape hardening, and the final candidate CI must be green again before acceptance.
 
 ## Phase 6 · Documentation / Acceptance
 
 - [x] T050 Synchronize bilingual Project SDK/integration docs including Codex hook trust instructions.
 - [x] T051 Review exact changed-file set for Framework/Project/Canon/provider overreach: changes are limited to host/runtime/CLI/tests/docs/spec surfaces; no Project Canon, settlement, provider secret, or Studio UI path is modified.
 - [x] T052 Open draft review PR #141 with the candidate isolated from `main`.
-- [ ] T053 Mark ready/merge only after explicit user acceptance; until then keep the candidate reviewable and do not mutate `main`.
+- [ ] T053 Mark ready/merge only after the final candidate CI is green and explicit user acceptance is received; until then keep the candidate reviewable and do not mutate `main`.
