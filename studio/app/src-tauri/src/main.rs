@@ -152,6 +152,16 @@ async fn invoke_inner(app: &AppHandle, mut request: Value) -> Result<Value, Stri
     }
 
     let request_token = access_token(&request);
+    let mut redactions = credential_secrets
+        .values()
+        .filter_map(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .collect::<Vec<_>>();
+    if let Some(secret) = request_token.as_ref() {
+        redactions.push(secret.clone());
+    }
+
     let prepared_ref = request_token
         .as_ref()
         .map(|_| format!("{SECRET_REF_PREFIX}{}", Uuid::new_v4().simple()));
@@ -164,7 +174,6 @@ async fn invoke_inner(app: &AppHandle, mut request: Value) -> Result<Value, Stri
         "credential_secrets": Value::Object(credential_secrets),
         "prepared_secret_ref": prepared_ref,
     });
-    let redactions = request_token.clone().into_iter().collect::<Vec<_>>();
     let sidecar_result = run_sidecar(app, &["invoke"], Some(&envelope), &redactions).await;
     let value = match sidecar_result {
         Ok(value) => value,
@@ -256,8 +265,12 @@ mod tests {
     fn request_secret_scrub_is_exact_and_business_fields_survive() {
         let request = json!({"args": {"access_token": "SECRET", "authorization": {"token_budget": "not-a-secret"}}});
         assert_eq!(access_token(&request).as_deref(), Some("SECRET"));
-        let scrubbed = scrub("provider echoed SECRET; token_budget survives".to_string(), &["SECRET".to_string()]);
+        let scrubbed = scrub(
+            "provider echoed SECRET and EXISTING; token_budget survives".to_string(),
+            &["SECRET".to_string(), "EXISTING".to_string()],
+        );
         assert!(!scrubbed.contains("SECRET"));
+        assert!(!scrubbed.contains("EXISTING"));
         assert!(scrubbed.contains("token_budget survives"));
     }
 
