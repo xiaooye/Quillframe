@@ -1,17 +1,25 @@
 # Tasks 021 · Production Visibility Enforcement
 
 - [x] Freeze SYSTEM-IMPROVE baseline at `c6832365be6c4e3816b9c779dd0c2aa88b42cab9`.
-- [x] Create isolated implementation branch and draft PR.
+- [x] Create isolated implementation branch and Draft PR #143.
 - [x] Prove the minimal visibility invariant in a local smoke harness: unreleased candidates return no content.
-- [ ] Fix runtime artifact to bind PR head SHA and retain verifiable shallow Git identity.
-- [ ] Download exact-head artifact into isolated Linux runtime and pass authority/bootstrap tests.
-- [ ] Wire `quality.production_release` into final production execution and persist release receipt.
-- [ ] Add Core `candidate_visible_get` projection with fail-closed content withholding.
-- [ ] Add Host Bridge `candidate.visible.get` and contract version update.
-- [ ] Add host/HARNESS requirement forbidding DRAFT/REVISE manuscript synthesis outside released production runtime.
-- [ ] Add regression tests for missing/stale/mismatched/pending/failing/fabricated release evidence and valid release success.
-- [ ] Run complete Python/Core/Host Bridge/Studio/site CI.
-- [ ] Download final exact-head artifact and rerun tests in ChatGPT Linux container.
-- [ ] Execute a real gated DRAFT candidate and surface it only after release for user review.
-- [ ] Record verification evidence in PR and mark ready only after all acceptance criteria pass.
-- [ ] Do not repin consumer Project or mutate Canon in this task.
+- [x] Fix runtime artifact to bind PR head SHA and retain verifiable shallow Git identity.
+- [x] Download exact-head artifact into isolated Linux runtime; verify digest and Git HEAD and pass 102/102 baseline tests.
+- [x] Wire `quality.production_release` into final production execution and persist release receipt.
+- [x] Add Core `candidate_visible_get` with fail-closed content withholding.
+- [x] Add Host Bridge `candidate.visible.get` and contract v9.
+- [x] Block `agent_package` from enumerating raw production checkpoints that may contain pre-release `candidate_text`.
+- [x] Add missing/tampered/mismatched release, checkpoint leak, and valid release regressions; local clean overlay passes 106/106 tests.
+- [x] Fix Tauri sidecar self-test hardcoded to Host Bridge v8.
+- [x] Drive the real DRAFT pre-independent graph through a localhost Model Service relay to `awaiting_external / independent_semantic_review` while Raw Draft/Candidate remain hidden.
+- [x] Productize the tested localhost relay with loopback-only atomic request/response and manager-only, non-independent provenance.
+- [x] Repair missing Project peer receipt CLI `build/validate` execution surface.
+- [x] Register `github_models` as an auditable independent provider and add automated `review` mode to the Project peer action.
+- [x] Add registered-contract deterministic fail-fast preflight for `rule_material` plus regressions.
+- [ ] Latest Framework head passes complete Python/Core/Host Bridge/Studio/site/Tauri CI.
+- [ ] Download latest exact-head artifact and rerun the final complete tests in the ChatGPT Linux container.
+- [ ] Run one live GitHub Models peer inference in the private consumer Project with `models: read` and obtain a fingerprint/nonce-bound validation receipt.
+- [ ] Submit that receipt/result to the pending DRAFT run and verify final production release plus `candidate.visible.get`.
+- [ ] Run a fresh school-drama DRAFT with complete Project hard-rule material and surface it only after release for user review.
+- [ ] Record final verification evidence in PR and mark ready/merge only after every acceptance criterion passes.
+- [ ] Consumer Project repin is a separate engineering run; this SYSTEM-IMPROVE run does not mutate Canon.
