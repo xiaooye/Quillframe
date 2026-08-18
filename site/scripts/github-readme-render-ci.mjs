@@ -70,11 +70,15 @@ try {
     const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45_000 });
     if (!response || !response.ok()) throw new Error(`${item.id}: GitHub returned ${response ? response.status() : "no response"}`);
 
-    const readme = page.locator("article.markdown-body").first();
-    await readme.waitFor({ state: "visible", timeout: 30_000 });
-    await readme.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(1200);
+    await page.locator("article.markdown-body").first().waitFor({ state: "visible", timeout: 30_000 });
+    // GitHub can replace the README node once after the initial document load.
+    // Scroll through a fresh DOM query instead of retaining an element handle.
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => document.querySelector("article.markdown-body")?.scrollIntoView({ block: "start" }));
+    await page.waitForTimeout(400);
 
+    const readme = page.locator("article.markdown-body").first();
+    await readme.waitFor({ state: "visible", timeout: 10_000 });
     const metrics = await readme.evaluate((el) => {
       const images = [...el.querySelectorAll("img")];
       const bounds = el.getBoundingClientRect();
