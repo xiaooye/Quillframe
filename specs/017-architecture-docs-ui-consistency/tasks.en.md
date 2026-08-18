@@ -1,0 +1,23 @@
+# Quillframe Architecture / Docs UI Consistency Bugfix · Tasks
+
+- [ ] Freeze latest `main` and bootstrap current Quillframe SYSTEM-IMPROVE authority.
+- [ ] Create isolated bugfix branch from the frozen SHA.
+- [ ] Audit Architecture pipeline DOM, CSS ownership, semantic order, and responsive behavior.
+- [ ] Replace split card/connector layout ownership with one shared execution-step mechanism.
+- [ ] Remove architecture rail late overrides and per-node positioning hacks.
+- [ ] Add desktop seven-step, tablet 4+3, and phone vertical reflow rules.
+- [ ] Audit `site/docs-site` current runtime/build inputs for NovelForge/novelforge/NOVELFORGE.
+- [ ] Correct current Docs landing identity, CTA copy, Studio naming, and `why-quillframe` targets.
+- [ ] Correct stale current route metadata/slug references without changing historical records.
+- [ ] Audit Product/Docs anchor and span foreground cascade.
+- [ ] Establish component-owned semantic foreground roles using existing palette authority.
+- [ ] Repair Product header/mobile/footer link color ownership and nested span inheritance.
+- [ ] Repair Docs header/sidebar/TOC/inline/CTA color ownership and nested span inheritance.
+- [ ] Preserve focus visibility, keyboard semantics, reduced-motion, and 44px touch behavior.
+- [ ] Update deterministic Architecture quality contract.
+- [ ] Update deterministic Docs identity/link/color quality contract.
+- [ ] Update Product shell foreground/destructive-override quality contract.
+- [ ] Run full repository quality/build/namespace CI without weakening tests.
+- [ ] Inspect CI failures and fix any real regression introduced by this branch.
+- [ ] Open a draft PR to `main` and do not merge.
+- [ ] Report rendered visual acceptance as pending unless a real browser render was actually verified.

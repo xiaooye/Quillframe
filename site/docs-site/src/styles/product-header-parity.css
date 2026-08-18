@@ -10,6 +10,10 @@
   --sl-nav-height: 4rem;
   --qf-product-header-max: 1480px;
   --qf-product-header-gutter: clamp(16px, 3.4vw, 48px);
+  --qf-nav-foreground: var(--sl-color-gray-2);
+  --qf-nav-active: color-mix(in oklab, var(--qf-blue) 76%, var(--qf-ink));
+  --qf-action-foreground: white;
+  --qf-link-hover: var(--qf-ink);
 }
 
 header.header {
@@ -101,26 +105,34 @@ header.header .nf-product-link {
   padding-inline: 9px;
   border: 0;
   border-radius: 9px;
-  color: var(--sl-color-gray-2);
+  color: var(--qf-nav-foreground);
   background: transparent;
   font-size: .78rem;
   font-weight: 700;
 }
 
+header.header .nf-product-link > span,
+header.header .nf-studio-link > span,
+.sidebar-content .nf-product-link > span,
+.sidebar-content .nf-studio-link > span {
+  color: inherit;
+}
+
 header.header .nf-product-link:hover,
 header.header .nf-product-link:focus-visible {
-  color: var(--qf-ink);
+  color: var(--qf-link-hover);
   background: color-mix(in oklab, var(--qf-blue-soft) 24%, transparent);
 }
 
 header.header .nf-docs-nav-link[aria-current="page"] {
-  color: color-mix(in oklab, var(--qf-blue) 76%, var(--qf-ink));
+  color: var(--qf-nav-active);
   background: color-mix(in oklab, var(--qf-blue-soft) 34%, transparent);
 }
 
 header.header .nf-github-link span {
-  color: var(--qf-muted);
+  color: inherit;
   font-size: .68rem;
+  opacity: .72;
 }
 
 header.header .nf-studio-link {
@@ -131,10 +143,15 @@ header.header .nf-studio-link {
   padding-inline: 14px;
   border: 0;
   border-radius: 10px;
-  color: white;
+  color: var(--qf-action-foreground);
   background: linear-gradient(135deg, var(--qf-pink-strong), color-mix(in oklab, var(--qf-lilac) 66%, var(--qf-pink)));
   box-shadow: none;
   font-size: .8rem;
+}
+
+header.header .nf-studio-link:hover,
+header.header .nf-studio-link:focus-visible {
+  color: var(--qf-action-foreground);
 }
 
 header.header site-search button,
@@ -237,17 +254,19 @@ header.header .search-input {
     padding-inline: 10px;
     border: 0;
     border-radius: 9px;
+    color: var(--qf-nav-foreground);
     background: transparent;
     font-size: .82rem;
   }
 
   .sidebar-content .nf-product-link:hover,
   .sidebar-content .nf-product-link:focus-visible {
+    color: var(--qf-link-hover);
     background: color-mix(in oklab, var(--qf-blue-soft) 24%, transparent);
   }
 
   .sidebar-content .nf-docs-nav-link[aria-current="page"] {
-    color: color-mix(in oklab, var(--qf-blue) 76%, var(--qf-ink));
+    color: var(--qf-nav-active);
     background: color-mix(in oklab, var(--qf-blue-soft) 34%, transparent);
   }
 
@@ -255,6 +274,7 @@ header.header .search-input {
     width: 100%;
     min-height: 44px;
     border-radius: 10px;
+    color: var(--qf-action-foreground);
   }
 }
 
