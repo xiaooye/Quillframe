@@ -11,10 +11,14 @@
 - [x] T009 display provenance and `source_authority_verified=false`
 - [x] T010 add responsive Borderless Kawaii Editorial styling
 - [x] T011 add publication playground static quality gate
-- [ ] T012 run product `npm run quality`
-- [ ] T013 run product `npm run build`
-- [ ] T014 inspect PR CI / candidate-owned failures
+- [x] T012 run product `npm run quality`
+- [x] T013 run product `npm run build`
+- [x] T014 inspect PR CI / candidate-owned failures
 - [ ] T015 human acceptance
+
+## Verification receipt
+
+PR #113 · Quillframe 0.9 CI run 159: Core/SQLite/authority, SolidJS Studio, Product quality, Product build and docs build all PASS on implementation head `2c0aba17ac6a9e600ce7fb70339e7bf8b0847932` before this checklist-only update.
 
 ## Deferred, not silently included
 
