@@ -25,11 +25,11 @@ Format: `[ID] [P?] [Phase/Story] exact target + completion criterion`
 ## Phase 4 · Verification
 
 - [x] T030 Add deterministic bootstrap/host regression tests.
-- [ ] T031 Run core/unit/docs quality CI and repair candidate-owned failures.
-- [ ] T032 Verify no model/live API execution was introduced into normal CI.
+- [x] T031 Run core/unit/docs quality CI and repair candidate-owned failures.
+- [x] T032 Verify no model/live API execution was introduced into normal CI.
 
 ## Phase 5 · Documentation / Acceptance
 
 - [x] T040 Synchronize English/Chinese Quick Start and Project SDK docs.
-- [ ] T041 Review exact diff for Framework/Project/Canon boundary overreach.
+- [x] T041 Review exact diff for Framework/Project/Canon boundary overreach.
 - [ ] T042 Merge only after CI is green; delete the temporary branch after merge.
