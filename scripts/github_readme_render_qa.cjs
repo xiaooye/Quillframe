@@ -62,6 +62,7 @@ function luminance(css) {
       const bounds = el.getBoundingClientRect();
       const bodyStyle = getComputedStyle(document.body);
       const rootStyle = getComputedStyle(document.documentElement);
+      const text = (el.textContent || "").trim();
       return {
         article_width: Math.round(bounds.width),
         article_scroll_width: Math.round(el.scrollWidth),
@@ -73,7 +74,10 @@ function luminance(css) {
           .map((img) => ({ src: img.currentSrc || img.src, width: Math.round(img.getBoundingClientRect().width) })),
         headings: el.querySelectorAll("h1,h2,h3").length,
         links: el.querySelectorAll("a").length,
-        text_chars: (el.textContent || "").trim().length,
+        text_chars: text.length,
+        has_product_name: text.includes("Quillframe"),
+        has_quick_start: text.includes("Quick Start"),
+        has_license: text.includes("License"),
         body_background: bodyStyle.backgroundColor,
         root_background: rootStyle.backgroundColor,
         html_color_mode: document.documentElement.getAttribute("data-color-mode"),
@@ -86,8 +90,16 @@ function luminance(css) {
     metrics.page_overflow = metrics.viewport_scroll_width > metrics.viewport_width + 1;
     metrics.requested_color_scheme = item.scheme;
     metrics.background_luminance = luminance(metrics.body_background) ?? luminance(metrics.root_background);
+    metrics.complete_readme = Boolean(
+      metrics.has_product_name && metrics.has_quick_start && metrics.has_license && metrics.headings >= 10 && metrics.text_chars >= 5000
+    );
 
-    if (metrics.broken_images.length || metrics.oversized_images.length || metrics.article_overflow) {
+    if (
+      metrics.broken_images.length ||
+      metrics.oversized_images.length ||
+      metrics.article_overflow ||
+      !metrics.complete_readme
+    ) {
       failed = true;
     }
 
