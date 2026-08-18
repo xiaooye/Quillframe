@@ -1,0 +1,49 @@
+@layer quillframe-app {
+  .nf-start-model-api {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: clamp(20px, 4vw, 44px);
+    padding: clamp(22px, 3vw, 34px);
+    border-radius: 22px 9px 22px 9px;
+    background:
+      linear-gradient(135deg, color-mix(in oklab, var(--qf-lane-editorial-fill) 36%, transparent), transparent 64%),
+      color-mix(in oklab, var(--qf-studio-panel-subtle) 58%, var(--qf-studio-panel));
+  }
+
+  .nf-start-model-api > div {
+    min-inline-size: 0;
+    display: grid;
+    gap: 8px;
+  }
+
+  .nf-start-model-api h2 {
+    margin: 0;
+    font-size: clamp(1.35rem, 2.4vw, 2rem);
+    letter-spacing: -0.025em;
+  }
+
+  .nf-start-model-api p {
+    margin: 0;
+    max-inline-size: 72ch;
+    color: var(--wui-color-muted-foreground);
+    line-height: 1.6;
+  }
+
+  .nf-start-model-api small {
+    color: var(--wui-color-muted-foreground);
+  }
+
+  @media (max-width: 719px) {
+    .nf-start-model-api {
+      grid-template-columns: 1fr;
+      padding: 20px 16px;
+      border-radius: 18px 8px 18px 8px;
+    }
+
+    .nf-start-model-api .wui-button {
+      inline-size: 100%;
+      min-block-size: var(--qf-touch-target-min, 44px);
+    }
+  }
+}
