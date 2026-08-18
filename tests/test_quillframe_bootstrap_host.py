@@ -23,7 +23,7 @@ class BootstrapHostTests(unittest.TestCase):
         self.assertIn("@CLAUDE.en.md", text)
         self.assertIn("@harness/HARNESS_AGENT.en.md", text)
         settings = json.loads((ROOT / ".claude" / "settings.json").read_text(encoding="utf-8"))
-        self.assertIn("Skill", settings["permissions"]["ask"])
+        self.assertIn("Skill", settings["permissions"]["deny"])
 
     def test_console_entrypoint_is_declared(self):
         with (ROOT / "pyproject.toml").open("rb") as fh:
