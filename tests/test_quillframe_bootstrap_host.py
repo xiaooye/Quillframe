@@ -149,8 +149,9 @@ class BootstrapHostTests(unittest.TestCase):
         return json.loads(proc.stdout) if proc.stdout.strip() else {}
 
     def test_framework_session_start_identifies_generic_framework_before_first_prompt(self):
+        session = "framework-bootstrap-host-test-session"
         start = self._run_hook({
-            "session_id": "framework-bootstrap-host-test-session",
+            "session_id": session,
             "cwd": str(ROOT),
             "hook_event_name": "SessionStart",
             "source": "startup",
@@ -160,6 +161,17 @@ class BootstrapHostTests(unittest.TestCase):
         self.assertIn("scope=GENERIC_FRAMEWORK", context)
         self.assertIn("not a fiction Project", context)
         self.assertIn("create a separate consumer Project", context)
+
+        skill = self._run_hook({
+            "session_id": session,
+            "cwd": str(ROOT),
+            "hook_event_name": "PreToolUse",
+            "tool_name": "Skill",
+            "tool_use_id": "framework-skill",
+            "tool_input": {"skill": "superpowers:brainstorming"},
+            "permission_mode": "bypassPermissions",
+        })
+        self.assertEqual(skill["hookSpecificOutput"]["permissionDecision"], "deny")
 
     def test_claude_project_bootstrap_and_stale_authority_guard(self):
         with tempfile.TemporaryDirectory(prefix="qf-hook-test-") as td:
@@ -192,8 +204,9 @@ class BootstrapHostTests(unittest.TestCase):
                 "tool_name": "Skill",
                 "tool_use_id": "tool-skill",
                 "tool_input": {"skill": "superpowers:brainstorming"},
+                "permission_mode": "bypassPermissions",
             })
-            self.assertEqual(skill["hookSpecificOutput"]["permissionDecision"], "ask")
+            self.assertEqual(skill["hookSpecificOutput"]["permissionDecision"], "deny")
 
             lock_path = project / "quillframe.lock.json"
             lock = json.loads(lock_path.read_text(encoding="utf-8"))
@@ -206,6 +219,7 @@ class BootstrapHostTests(unittest.TestCase):
                 "tool_name": "Write",
                 "tool_use_id": "tool-write",
                 "tool_input": {"file_path": str(project / "plans" / "book" / "x.md")},
+                "permission_mode": "bypassPermissions",
             })
             self.assertEqual(denied["hookSpecificOutput"]["permissionDecision"], "deny")
             self.assertIn("lock changed", denied["hookSpecificOutput"]["permissionDecisionReason"].lower())
