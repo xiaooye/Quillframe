@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   linux-desktop-host:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -44,7 +44,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: studio/app/pnpm-lock.yaml
       - name: Install Tauri Linux prerequisites
-        timeout-minutes: 8
+        timeout-minutes: 20
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
