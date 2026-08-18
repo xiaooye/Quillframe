@@ -103,6 +103,8 @@ Contract packs：
 
 Raw Draft 只在内部存在。Regression 坏例与 hidden expected label 不得进入 first-pass generation。
 
+**Production visibility 必须 fail closed。** 在 `DRAFT` / `REVISE` 中，读过这些合同不等于执行了 Quillframe。Host 必须调用经过验证的 Quillframe production runtime，且只有 exact fingerprint-bound production release 才能提供用户可见 manuscript。若 runtime、模型执行、required independent review 或 release evidence 不可用，必须返回 typed pending/blocked 状态，禁止用 host 自己写的正文补齐缺失机制。Ephemeral agent sandbox 可以 materialize exact locked Framework，但执行前必须验证 Git identity；其中的 SQLite 只是 runtime materialization，不是第二套 Canon authority。
+
 失败必须回到真正拥有该问题的机制：
 
 - 单点 Surface 缺陷 → local rewrite；
