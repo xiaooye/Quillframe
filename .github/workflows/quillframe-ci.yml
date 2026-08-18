@@ -95,7 +95,6 @@ jobs:
           cache-dependency-path: studio/app/pnpm-lock.yaml
       - working-directory: studio/app
         run: pnpm install --frozen-lockfile
-      - working-directory: studio/app
-        run: pnpm typecheck
-      - working-directory: studio/app
-        run: pnpm build
+      - name: Build Studio production assets and run browser acceptance
+        working-directory: studio/app
+        run: pnpm ci:studio

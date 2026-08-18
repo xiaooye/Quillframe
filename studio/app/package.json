@@ -11,7 +11,10 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.mjs",
     "browser:smoke": "node scripts/browser-smoke.mjs",
-    "build": "pnpm lint && pnpm typecheck && pnpm test && vite build && pnpm browser:smoke && node scripts/write-offline-shell.mjs && node scripts/write-footprint.mjs",
+    "build:assets": "pnpm lint && pnpm typecheck && pnpm test && vite build",
+    "build:finalize": "node scripts/write-offline-shell.mjs && node scripts/write-footprint.mjs",
+    "build": "pnpm build:assets && pnpm build:finalize",
+    "ci:studio": "pnpm build:assets && pnpm browser:smoke && pnpm build:finalize",
     "preview": "vite preview"
   },
   "dependencies": {
