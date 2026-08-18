@@ -37,10 +37,10 @@ jobs:
           python-version: '3.13'
       - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10.33.0
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           cache: pnpm
           cache-dependency-path: studio/app/pnpm-lock.yaml
       - name: Install Tauri Linux prerequisites
@@ -57,20 +57,29 @@ jobs:
         run: python studio/tauri_core_sidecar.py self-test
       - name: Build target-suffixed Python Core sidecar
         run: python studio/scripts/build_tauri_sidecar.py
+      - name: Generate exact Tauri Cargo lock
+        run: cargo generate-lockfile --manifest-path studio/app/src-tauri/Cargo.toml
+      - name: Upload exact Cargo lock bootstrap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-cargo-lock-${{ github.sha }}
+          path: studio/app/src-tauri/Cargo.lock
+          if-no-files-found: error
+          retention-days: 1
       - name: Rust host unit tests and compile
         run: |
-          cargo test --manifest-path studio/app/src-tauri/Cargo.toml
-          cargo check --manifest-path studio/app/src-tauri/Cargo.toml
+          cargo test --locked --manifest-path studio/app/src-tauri/Cargo.toml
+          cargo check --locked --manifest-path studio/app/src-tauri/Cargo.toml
       - name: Real OS Secret Service round-trip
         run: |
           dbus-run-session -- bash -lc '
             export XDG_RUNTIME_DIR="$(mktemp -d)"
             printf "ci-keyring\n" | gnome-keyring-daemon --unlock --components=secrets >/tmp/qf-keyring.env
             cat /tmp/qf-keyring.env
-            cargo test --manifest-path studio/app/src-tauri/Cargo.toml os_keyring_roundtrip -- --ignored --nocapture
+            cargo test --locked --manifest-path studio/app/src-tauri/Cargo.toml os_keyring_roundtrip -- --ignored --nocapture
           '
       - name: Tauri 2 thin-host build
         run: |
           cargo install tauri-cli --version '^2.11' --locked
           cd studio/app
-          cargo tauri build --debug --no-bundle
+          cargo tauri build --debug --no-bundle --locked
