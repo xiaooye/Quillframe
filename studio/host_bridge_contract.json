@@ -35,7 +35,8 @@
     "browser_project_registry_authority": false,
     "manuscript_visibility_requires_production_release": true,
     "host_self_generated_manuscript_is_releaseable": false,
-    "ephemeral_runtime_exact_git_identity_required": true
+    "ephemeral_runtime_exact_git_identity_required": true,
+    "production_checkpoint_manuscript_private_from_agent_package": true
   },
   "secret_boundary": {
     "public_setup_inputs": [
@@ -360,6 +361,11 @@
       "kind": "query",
       "required_args": [
         "project_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
       ]
     },
     "inspector.context.list": {
