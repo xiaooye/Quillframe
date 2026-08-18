@@ -1,0 +1,93 @@
+@layer product-components {
+  /* Changelog is an editorial release notebook, not a release-card grid. */
+  .unified-route-page:has(.unified-release-badge) .unified-card-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin-inline-start: clamp(8px, 3vw, 34px);
+    padding-inline-start: clamp(28px, 4vw, 52px);
+    border: 0;
+  }
+
+  .unified-route-page:has(.unified-release-badge) .unified-card-grid::before {
+    content: "";
+    position: absolute;
+    inset-block: 8px 20px;
+    inset-inline-start: 8px;
+    border-inline-start: 1px dotted color-mix(in oklab, var(--pe-valid) 32%, var(--pe-border));
+  }
+
+  .unified-route-page:has(.unified-release-badge) .unified-info-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(56px, .16fr) minmax(0, 1fr);
+    column-gap: clamp(18px, 3vw, 34px);
+    padding: clamp(24px, 3vw, 36px) 0;
+    border: 0;
+    border-bottom: 1px solid color-mix(in oklab, var(--pe-border) 42%, transparent);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .unified-route-page:has(.unified-release-badge) .unified-info-card::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: calc(clamp(28px, 4vw, 52px) * -1 - 3px);
+    inset-block-start: clamp(30px, 3.4vw, 42px);
+    inline-size: 9px;
+    block-size: 9px;
+    border: 2px solid var(--pe-bg);
+    border-radius: 50%;
+    background: var(--pe-valid);
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--pe-valid) 30%, var(--pe-border));
+  }
+
+  .unified-route-page:has(.unified-release-badge) .unified-info-card > small {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: start;
+    padding-top: 3px;
+    color: color-mix(in oklab, var(--pe-valid) 64%, var(--pe-muted));
+    font-family: var(--wui-font-family-mono, ui-monospace, monospace);
+    font-size: 10px;
+    font-weight: 780;
+    letter-spacing: .08em;
+  }
+
+  .unified-route-page:has(.unified-release-badge) .unified-info-card h3,
+  .unified-route-page:has(.unified-release-badge) .unified-info-card p {
+    grid-column: 2;
+  }
+
+  .unified-route-page:has(.unified-release-badge) .unified-info-card h3 {
+    max-inline-size: 34ch;
+    margin: 0;
+    font-size: clamp(20px, 2.2vw, 28px);
+    letter-spacing: -.035em;
+  }
+
+  .unified-route-page:has(.unified-release-badge) .unified-info-card p {
+    max-inline-size: 72ch;
+    margin: 8px 0 0;
+    color: var(--pe-muted);
+    line-height: 1.75;
+  }
+}
+
+@media (max-width: 620px) {
+  .unified-route-page:has(.unified-release-badge) .unified-card-grid {
+    margin-inline-start: 0;
+    padding-inline-start: 28px;
+  }
+
+  .unified-route-page:has(.unified-release-badge) .unified-info-card {
+    grid-template-columns: 38px minmax(0, 1fr);
+    column-gap: 12px;
+  }
+
+  .unified-route-page:has(.unified-release-badge) .unified-info-card::before {
+    inset-inline-start: -24px;
+  }
+}
