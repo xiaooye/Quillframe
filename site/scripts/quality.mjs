@@ -111,7 +111,7 @@ check(inspector.includes("<input") || inspector.includes("<button"), "Project In
 check(playground.includes("<textarea") && playground.includes("<button"), "Local Playground golden fixture must retain accessible native form controls");
 
 check(packageJson.scripts?.content?.includes("sync-weiui.mjs") || packageJson.scripts?.content?.includes("foundation"), "content build must sync WeiUI foundation");
-check(packageJson.scripts?.build?.includes("npm run content"), "Godot production build must compile Product Entry content first");
+check(packageJson.scripts?.build?.includes("npm run content"), "SolidJS production build must compile Product Entry content first");
 check(contentCompiler.includes("marked.lexer") && !contentCompiler.includes("marked.parse("), "documentation compiler must use structured parser tokens");
 check(contentCompiler.includes('authority: false'), "generated documentation must remain authority=false");
 check(renderer.includes("DocumentBlock") && renderer.includes("InlineNode") && !renderer.includes("innerHTML"), "golden baseline document renderer must consume structured AST without innerHTML");
@@ -150,7 +150,7 @@ if (failures.length) {
     identity: "story_loom_kawaii_atelier_golden_baseline",
     fixture_role: "visual_behavior_baseline",
     fixture_stack: "SolidJS + TypeScript + Vite",
-    production_runtime: "godot_web",
+    production_runtime: "solidjs_static",
     shared_shell_fixture: true,
     css_entrypoint: "src/styles/index.css",
     readability_hardening: true,
