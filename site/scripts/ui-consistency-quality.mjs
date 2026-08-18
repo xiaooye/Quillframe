@@ -36,7 +36,7 @@ check(docsLanding.includes('primaryAction: "Why Quillframe"') && docsLanding.inc
 check(docsLanding.includes('"/docs/en/why-quillframe"') && docsLanding.includes('"/docs/why-quillframe"'), "Docs landing must target current why-quillframe routes");
 check(![legacyProduct, legacyLower, legacyUpper, legacyWhyRoute].some((token) => docsLanding.includes(token)), "current Docs landing must not retain stale product identity or route slugs");
 check(docsPageTitle.includes('"why-quillframe"') && !docsPageTitle.includes(legacyWhyRoute), "Docs route-aware PageTitle must classify the current why-quillframe slug");
-check(docsActions.includes('https://github.com/xiaooye/cn_webnovel_agent'), "current Docs GitHub entry must target the canonical repository");
+check(docsActions.includes('https://github.com/xiaooye/Quillframe'), "current Docs GitHub entry must target the canonical repository");
 check(docsActions.includes('https://studio.quillframe.wei-dev.com'), "current Docs Studio entry must target the current Quillframe Studio destination");
 check(!docsActions.toLowerCase().includes(`studio.${legacyLower}`) && !docsActions.toLowerCase().includes(`github.com/xiaooye/${legacyLower}`), "current Docs actions must not retain stale product destinations");
 check(docsActions.includes("Quillframe product navigation") && !docsActions.includes(`${legacyProduct} product navigation`), "current Docs navigation aria identity must be Quillframe");
@@ -80,7 +80,7 @@ if (failures.length) {
     schema: "quillframe_ui_consistency_quality_v1",
     status: "pass",
     docs_current_identity: "Quillframe",
-    github: "https://github.com/xiaooye/cn_webnovel_agent",
+    github: "https://github.com/xiaooye/Quillframe",
     studio: "https://studio.quillframe.wei-dev.com",
     stale_current_identity: false,
     product_semantic_foreground_owner: "product-shell.css",
