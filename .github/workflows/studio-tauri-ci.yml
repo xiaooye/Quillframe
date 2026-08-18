@@ -32,6 +32,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Generate exact Tauri Cargo lock
         run: cargo generate-lockfile --manifest-path studio/app/src-tauri/Cargo.toml
       - name: Commit exact Tauri Cargo lock
