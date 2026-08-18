@@ -21,6 +21,7 @@
 <p align="center">
   <a href="https://github.com/xiaooye/Quillframe/actions/workflows/quillframe-ci.yml"><img alt="Quillframe CI" src="https://github.com/xiaooye/Quillframe/actions/workflows/quillframe-ci.yml/badge.svg?branch=main" /></a>
   <img alt="Version 0.9.0" src="https://img.shields.io/badge/version-0.9.0-796BC4" />
+  <a href="SECURITY.md"><img alt="Tokens stay host-local" src="https://img.shields.io/badge/security-tokens%20stay%20host--local-4D9B7D" /></a>
   <a href="LICENSE"><img alt="Quillframe source-available license" src="https://img.shields.io/badge/license-source--available-C985A4" /></a>
 </p>
 
@@ -30,8 +31,10 @@
 
 > [!IMPORTANT]
 > **Quillframe runs the agent. Models provide inference.** Bring an API endpoint and an access token; Quillframe keeps ownership of context, tools, model discovery and selection, Session / Run / Checkpoint identity, the model → tool → model loop, quality gates, authority, and durable state.
+>
+> **Tokens stay host-local.** Resolved access-token values are transient host secrets. Quillframe never writes them to repository files, SQLite, prompts, Context, AgentJob / AgentResult, checkpoints, receipts, fingerprints, logs, or client bundles; the host uses a credential only transiently when authenticating to the model endpoint you configured.
 
-## Quick start
+## Quick Start
 
 **Requirements:** Python 3.11+. Node.js 24 and pnpm 10.33.0 are only needed for the web/Studio surfaces.
 
@@ -178,7 +181,7 @@ A consuming fiction Project should pin the exact Framework revision/bundle requi
 
 ## Security & license
 
-Never paste model access tokens, private manuscript text, or project databases into public issues. Hosted secrets belong server-side; resolved tokens must not enter browser bundles, prompts, Context, SQLite, receipts, or fingerprints. See [SECURITY.md](SECURITY.md).
+Resolved access-token values are transient host secrets. Quillframe never writes them to repository files, SQLite, prompts, Context, AgentJob / AgentResult, checkpoints, receipts, fingerprints, logs, or client bundles. Never paste model access tokens, private manuscript text, or project databases into public issues. See [SECURITY.md](SECURITY.md).
 
 Quillframe is distributed under the **Quillframe Proprietary Source-Available License**. The repository is public and source-available, but the license is **not** an OSI open-source license and restricts redistribution, deployment, and commercial use unless separate written permission is granted. Read the exact terms in [LICENSE](LICENSE).
 
