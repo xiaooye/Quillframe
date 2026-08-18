@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="assets/brand/quillframe-mark.svg" width="96" alt="Quillframe 标志" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/quillframe-mark-dark.svg" />
+    <img src="assets/brand/quillframe-mark.svg" width="96" alt="Quillframe 标志" />
+  </picture>
 </p>
 
 <h1 align="center">Quillframe</h1>
@@ -79,7 +82,10 @@ Quillframe 不靠聊天历史去反推这些答案，而是把它们做成显式
 
 ## 产品心智模型
 
-<img src="docs/assets/architecture/framework-mental-model.zh-CN.svg" alt="Quillframe 框架心智模型：项目权威、语义执行与验证、经过授权的 Settlement" width="100%" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/architecture/framework-mental-model.zh-CN.dark.svg" />
+  <img src="docs/assets/architecture/framework-mental-model.zh-CN.svg" alt="Quillframe 框架心智模型：项目权威、语义执行与验证、经过授权的 Settlement" width="100%" />
+</picture>
 
 Quillframe 把普通 AI 写作流程经常混在一起的四类“事实”拆开：
 
@@ -104,7 +110,10 @@ Agent Runtime 负责 `AgentJob`、model selection、hard budget、标准化 tool
 
 ## 正文生产是一条生命周期，不是一次生成调用
 
-<img src="docs/assets/architecture/production-graph.zh-CN.svg" alt="Quillframe 长篇小说生产生命周期" width="100%" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/architecture/production-graph.zh-CN.dark.svg" />
+  <img src="docs/assets/architecture/production-graph.zh-CN.svg" alt="Quillframe 长篇小说生产生命周期" width="100%" />
+</picture>
 
 当前 DRAFT / REVISE 会围绕受限 Context、Story/Canon 预检、场景与人物模拟、Reader Pressure、事件优先起草、表层实现、candidate qualification、需要时的独立语义评审、repair/challenger generation、读者投入度、连续性与用户可见门槛执行。
 
@@ -150,11 +159,12 @@ UI 边界保持单向：**Solid/Tauri → typed Bridge/API → Python Core → S
 
 ## 对 AI 也友好的公开入口
 
-产品网站现在提供一组小而明确的 AI discovery surface，但不会假装网站本身就是带 authority 的 agent server：
+产品网站提供一组小而明确的 AI discovery surface，但不会假装网站本身就是带 authority 的 agent server：
 
 - [`llms.txt`](site/public/llms.txt) —— 精简的产品与 Context 指南。
 - [`llms-full.txt`](site/public/llms-full.txt) —— 更完整的 machine-oriented 架构与 authority 说明。
-- [`ai-catalog.json`](site/public/.well-known/ai-catalog.json) —— 面向机器的 public-surface catalog。
+- [`sitemap.md`](site/public/sitemap.md) —— 与 `sitemap.xml` 并行的人类/智能体可读导航索引。
+- [`ai-catalog.json`](site/public/.well-known/ai-catalog.json) —— 面向机器的 public-surface catalog 与 content-use signal。
 - [`agent-skills/index.json`](site/public/.well-known/agent-skills/index.json) —— 暴露真实 Quillframe portable Agent Skill 的发现入口。
 - [`agent-skills/quillframe/SKILL.md`](agent-skills/quillframe/SKILL.md) —— 给外部 agent package 使用的 read-only Host Bridge skill。
 
