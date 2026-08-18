@@ -44,7 +44,7 @@ class CoreOperations:
             "operations": [
                 "project.create", "project.list", "project.inspect", "project.search", "project.backup",
                 "document.create", "document.list", "document.revision.save", "document.revision.compare",
-                "author.run.start", "candidate.review.get", "candidate.accept", "candidate.reject", "candidate.revision.request",
+                "author.run.start", "candidate.review.get", "candidate.visible.get", "candidate.accept", "candidate.reject", "candidate.revision.request",
                 "settlement.preflight", "settlement.apply",
                 "feedback.observe", "publication.preview", "publication.build",
                 "database.doctor",
@@ -130,6 +130,72 @@ class CoreOperations:
                 return payload
         return None
 
+    @staticmethod
+    def _validated_production_release(conn, candidate: dict[str, Any]) -> dict[str, Any]:  # noqa: ANN001
+        run_id = candidate.get("run_id")
+        if candidate.get("user_visible_gate") != "PASS" or not run_id:
+            raise OperationError("production_release_required", "Candidate has no releasable user-visible execution binding")
+        run = conn.execute("SELECT status,result_fingerprint FROM runs WHERE run_id=?", (run_id,)).fetchone()
+        if not run or run["status"] != "completed":
+            raise OperationError("production_release_required", "Candidate run is not completed")
+        row = conn.execute(
+            "SELECT payload_json FROM receipts WHERE run_id=? AND receipt_kind='production_release' ORDER BY created_at DESC,rowid DESC LIMIT 1",
+            (run_id,),
+        ).fetchone()
+        if not row:
+            raise OperationError("production_release_required", "Candidate has no production release receipt")
+        try:
+            release = json.loads(row["payload_json"])
+        except (TypeError, json.JSONDecodeError) as exc:
+            raise OperationError("production_release_invalid", "Production release receipt is not valid JSON") from exc
+        if release.get("schema") != "quillframe_production_release_v1":
+            raise OperationError("production_release_invalid", "Production release schema mismatch")
+        if release.get("candidate_fingerprint") != candidate.get("content_fingerprint"):
+            raise OperationError("production_release_invalid", "Production release candidate fingerprint mismatch")
+        if release.get("ready_for_user_visible_review") is not True:
+            raise OperationError("production_release_required", "Production release did not authorize user-visible review")
+        declared = release.get("release_fingerprint")
+        body = {key: value for key, value in release.items() if key != "release_fingerprint"}
+        if not isinstance(declared, str) or fingerprint_text(canonical_json(body)) != declared:
+            raise OperationError("production_release_invalid", "Production release fingerprint is invalid")
+        if run["result_fingerprint"] and run["result_fingerprint"] != candidate.get("content_fingerprint"):
+            raise OperationError("production_release_invalid", "Completed run result fingerprint does not match candidate")
+        return release
+
+    def candidate_visible_get(self, project_id: str, *, candidate_id: str) -> dict[str, Any]:
+        """Return manuscript text only after exact production release validation."""
+        with self.store.open_project(project_id) as conn:
+            row = conn.execute(
+                """SELECT c.*,r.content AS candidate_content,r.content_fingerprint AS revision_fingerprint,
+                r.authority_class AS revision_authority_class
+                FROM candidates c LEFT JOIN document_revisions r ON r.revision_id=c.revision_id
+                WHERE c.candidate_id=?""",
+                (candidate_id,),
+            ).fetchone()
+            if not row:
+                raise OperationError("candidate_not_found", candidate_id)
+            candidate = dict(row)
+            if not candidate.get("revision_id") or candidate.get("revision_fingerprint") != candidate.get("content_fingerprint"):
+                raise OperationError("stale_review", "Candidate revision no longer matches its release fingerprint")
+            release = self._validated_production_release(conn, candidate)
+        return {
+            "schema": "quillframe_user_visible_candidate_v1",
+            "project_id": project_id,
+            "candidate_id": candidate["candidate_id"],
+            "candidate_fingerprint": candidate["content_fingerprint"],
+            "document_id": candidate.get("document_id"),
+            "revision_id": candidate.get("revision_id"),
+            "content": candidate["candidate_content"],
+            "authority_class": candidate.get("revision_authority_class"),
+            "production_release": release,
+            "content_access": "production_release_only",
+            "accepted": candidate.get("status") == "accepted",
+            "settled": False,
+            "private_reasoning_exposed": False,
+            "authority": False,
+            "canon_authority": False,
+        }
+
     def candidate_review_get(self, project_id: str, *, candidate_id: str) -> dict[str, Any]:
         with self.store.open_project(project_id) as conn:
             candidate = conn.execute(
@@ -144,6 +210,7 @@ class CoreOperations:
             c = dict(candidate)
             if not c.get("revision_id") or c.get("revision_fingerprint") != c.get("content_fingerprint"):
                 raise OperationError("stale_review", "Candidate revision no longer matches its review fingerprint")
+            release = self._validated_production_release(conn, c)
             parent = None
             if c.get("parent_revision_id"):
                 row = conn.execute(
@@ -207,6 +274,7 @@ class CoreOperations:
                 "independent": independent,
                 "production_readiness": independent.get("production_readiness"),
                 "user_visible_gate": by_mechanism["user_visible_gate"],
+                "production_release": release,
             },
             "revision_request": revision_request,
             "private_reasoning_exposed": False,
@@ -306,6 +374,7 @@ class CoreOperations:
                 raise OperationError("candidate_not_acceptable", "only a user-visible-gate PASS Review Draft may be accepted")
             if candidate["content_fingerprint"] != candidate_fingerprint:
                 raise OperationError("candidate_fingerprint_mismatch", "candidate changed since review")
+            self._validated_production_release(conn, dict(candidate))
             if self._candidate_revision_request_receipt(conn, candidate_id):
                 raise OperationError("candidate_revision_requested", "Candidate has a durable revision request and cannot be accepted")
             evidence = conn.execute(

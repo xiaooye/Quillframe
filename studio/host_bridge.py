@@ -315,6 +315,9 @@ def _model_delete(args: dict[str, Any], _: str):
 def _candidate_review_get(args: dict[str, Any], _: str):
     return ops().candidate_review_get(require(args, "project_id"), candidate_id=require(args, "candidate_id"))
 
+def _candidate_visible_get(args: dict[str, Any], _: str):
+    return ops().candidate_visible_get(require(args, "project_id"), candidate_id=require(args, "candidate_id"))
+
 
 def _candidate_reject(args: dict[str, Any], _: str):
     if args.get("user_authorized") is not True:
@@ -416,6 +419,7 @@ DISPATCH: dict[str, Callable[[dict[str, Any], str], dict[str, Any]]] = {
     "model.service.delete": _model_delete,
     "model.capabilities": _model_capabilities,
     "candidate.review.get": _candidate_review_get,
+    "candidate.visible.get": _candidate_visible_get,
     "candidate.accept": _candidate_accept,
     "candidate.reject": _candidate_reject,
     "candidate.revision.request": _candidate_revision_request,
@@ -503,7 +507,7 @@ def self_test() -> dict[str, Any]:
     first = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "A"}, "authority": False})
     second = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "B"}, "authority": False})
     ok = desc["status"] == "ok" and generic["status"] == "invalid" and desc["authority"] is False and first["request_fingerprint"] == second["request_fingerprint"] and first["secret_values_persisted"] is False
-    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": "8", "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
+    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": "9", "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
 
 
 def main() -> int:

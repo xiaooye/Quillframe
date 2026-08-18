@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_studio_host_bridge_contract_v1",
-  "version": "8",
+  "version": "9",
   "framework_version": "0.9.0",
   "authority": false,
   "canon_authority": false,
@@ -32,7 +32,10 @@
     "independent_review_project_peer_receipt_required": true,
     "request_revision_auto_starts_revise": false,
     "settlement_preflight_mutates_canon": false,
-    "browser_project_registry_authority": false
+    "browser_project_registry_authority": false,
+    "manuscript_visibility_requires_production_release": true,
+    "host_self_generated_manuscript_is_releaseable": false,
+    "ephemeral_runtime_exact_git_identity_required": true
   },
   "secret_boundary": {
     "public_setup_inputs": [
@@ -405,6 +408,19 @@
       "required_args": [
         "project_id",
         "candidate_id"
+      ]
+    },
+    "candidate.visible.get": {
+      "kind": "query",
+      "required_args": [
+        "project_id",
+        "candidate_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web",
+        "agent_package"
       ]
     },
     "candidate.reject": {
