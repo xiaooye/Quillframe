@@ -22,6 +22,7 @@ const ContextRoute = lazy(() => import("./routes/Context"));
 const Capabilities = lazy(() => import("./routes/Capabilities"));
 const Semantic = lazy(() => import("./routes/Semantic"));
 const Diagnostics = lazy(() => import("./routes/Diagnostics"));
+const Settings = lazy(() => import("./routes/Settings"));
 
 const root = document.getElementById("app");
 if (!root) throw new Error("#app mount point is missing");
@@ -85,6 +86,7 @@ render(
             <Route path="/capabilities" component={Capabilities} />
             <Route path="/semantic" component={Semantic} />
             <Route path="/diagnostics" component={Diagnostics} />
+            <Route path="/settings" component={Settings} />
             <Route path="*404" component={StudioNotFound} />
           </Router>
         </StudioFailureBoundary>
