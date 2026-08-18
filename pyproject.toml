@@ -11,6 +11,9 @@ license = {text = "Proprietary"}
 authors = [{name = "Quillframe"}]
 dependencies = []
 
+[project.scripts]
+quillframe = "quillframe.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = [
