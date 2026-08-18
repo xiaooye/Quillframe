@@ -17,10 +17,6 @@ jobs:
   core:
     name: Core, SQLite, authority and namespace
     runs-on: ubuntu-latest
-    # SPEC021-APPLY-PERMISSION-BEGIN
-    permissions:
-      contents: write
-    # SPEC021-APPLY-PERMISSION-END
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -65,55 +61,6 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_quillframe_*.py' -v
       - name: Host Bridge self-test
         run: python studio/host_bridge.py self-test
-      # SPEC021-APPLY-BEGIN
-      - name: Finalize and verify Spec 021 host hardening once
-        if: >-
-          github.actor != 'github-actions[bot]' &&
-          ((github.event_name == 'push' && github.ref == 'refs/heads/agent/production-visibility-enforcement') ||
-           (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
-        run: |
-          set -euo pipefail
-          TARGET_BRANCH=agent/production-visibility-enforcement
-          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-            git fetch origin "$TARGET_BRANCH"
-            git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
-          fi
-          PATCH=specs/021-production-visibility-enforcement/.host-hardening.patch
-          git apply --exclude=studio/tauri_core_sidecar.py --check "$PATCH"
-          git apply --exclude=studio/tauri_core_sidecar.py "$PATCH"
-          rm -f "$PATCH" .github/workflows/spec021-host-hardening.yml
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('.github/workflows/quillframe-ci.yml')
-          lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
-          out = []
-          skipping = False
-          for line in lines:
-              if 'SPEC021-APPLY-PERMISSION-BEGIN' in line or 'SPEC021-APPLY-BEGIN' in line:
-                  skipping = True
-                  continue
-              if 'SPEC021-APPLY-PERMISSION-END' in line or 'SPEC021-APPLY-END' in line:
-                  skipping = False
-                  continue
-              if not skipping:
-                  out.append(line)
-          path.write_text(''.join(out), encoding='utf-8')
-          PY
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git diff --cached --check
-          git commit -m 'fix: enforce released manuscript host boundary'
-          test -z "$(git status --porcelain)"
-          python -m unittest \
-            tests.test_quillframe_authoring_primitives \
-            tests.test_quillframe_production_host_bridge \
-            tests.test_quillframe_production_runtime \
-            tests.test_quillframe_unified_host_bootstrap -v
-          python studio/tauri_core_sidecar.py self-test
-          test -z "$(git status --porcelain)"
-          git push origin HEAD:$TARGET_BRANCH
-      # SPEC021-APPLY-END
       - name: Checkout exact source for ephemeral runtime bundle
         uses: actions/checkout@v7
         with:
