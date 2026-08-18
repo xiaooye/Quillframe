@@ -148,6 +148,19 @@ class BootstrapHostTests(unittest.TestCase):
         )
         return json.loads(proc.stdout) if proc.stdout.strip() else {}
 
+    def test_framework_session_start_identifies_generic_framework_before_first_prompt(self):
+        start = self._run_hook({
+            "session_id": "framework-bootstrap-host-test-session",
+            "cwd": str(ROOT),
+            "hook_event_name": "SessionStart",
+            "source": "startup",
+            "model": "test-model",
+        })
+        context = start["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("scope=GENERIC_FRAMEWORK", context)
+        self.assertIn("not a fiction Project", context)
+        self.assertIn("create a separate consumer Project", context)
+
     def test_claude_project_bootstrap_and_stale_authority_guard(self):
         with tempfile.TemporaryDirectory(prefix="qf-hook-test-") as td:
             project = Path(td) / "novel"
