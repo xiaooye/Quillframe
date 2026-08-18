@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@solidjs/router": "0.16.2",
-    "pyodide": "314.0.2",
+    "pyodide": "314.0.4",
     "solid-js": "1.9.14"
   },
   "devDependencies": {
