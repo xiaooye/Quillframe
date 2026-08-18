@@ -1,7 +1,15 @@
 export type BridgeStatus = "ok" | "invalid" | "unsupported" | "failed" | "error";
 export type CoreSurface = "local_app" | "hosted_web";
 export type TransportName = "local-http" | "hosted-http" | "tauri-ipc";
-export type OperationKind = "query" | "command" | "authority_command";
+export type OperationKind =
+  | "query"
+  | "command"
+  | "authority_command"
+  | "semantic_command"
+  | "secret_command"
+  | "external_query"
+  | "external_handoff"
+  | "external_handoff_result";
 
 const REQUEST_SCHEMA = "quillframe_studio_host_bridge_request_v1" as const;
 const RESULT_SCHEMA = "quillframe_studio_host_bridge_result_v1" as const;
@@ -169,8 +177,6 @@ export class HostedHttpTransport implements BridgeTransport {
 
 export class TauriTransport implements BridgeTransport {
   readonly name = "tauri-ipc" as const;
-  // Tauri is a local delivery host. Until Core exposes a dedicated tauri_local
-  // surface, the host must forward the exact local_app request envelope.
   readonly requestSurface = "local_app" as const;
 
   available(): boolean {
