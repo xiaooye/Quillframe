@@ -1,0 +1,32 @@
+# Tasks — Quillframe 0.9.0 Reconstruction
+
+- [x] Freeze exact latest main and create dedicated branch.
+- [x] Inventory 0.8 Godot/SolidJS/compatibility/namespace/Bridge/version/persistence/deployment state.
+- [x] Create Draft PR without merge authority.
+- [x] Write 0.9 architecture specification and implementation plan.
+- [ ] Land non-workflow repository migration and verify Godot source removal.
+- [ ] Remove/replace Godot, baseline, shadow and obsolete namespace workflows.
+- [ ] Add deterministic version and namespace hygiene gates.
+- [ ] Add canonical Quillframe Python package/CLI without a legacy runtime fallback.
+- [ ] Add global/project SQLite schemas and checksummed migrations.
+- [ ] Add document revisions, conflict detection, FTS5 search and blob fingerprints.
+- [ ] Add Doctor/Doctor --fix, backup, restore and integrity tests.
+- [ ] Add explicit 0.8 → 0.9 project migration tool.
+- [ ] Rebuild Host Bridge around typed operation-specific commands.
+- [ ] Implement author run dispatch and authority invariants for all author-facing task modes.
+- [ ] Implement acceptance and settlement as separate operations.
+- [ ] Implement feedback intake without automatic promotion.
+- [ ] Reconstruct Studio Writer Mode and responsive shell.
+- [ ] Implement Manuscript, Plan, Story, Review, Research & Corpus, Learning and Publish routes.
+- [ ] Implement AI Assistant Dock and Inspector Mode.
+- [ ] Add Tauri 2 thin host.
+- [ ] Add localhost/server authentication bootstrap and durable Docker deployment.
+- [ ] Rewrite current 0.9 docs and migration/deployment/data/Studio documentation.
+- [ ] Add current Framework/Site/Studio/Tauri/Persistence CI and negative gates.
+- [ ] Execute route visual QA at phone/tablet/desktop/wide widths.
+- [ ] Execute native Chinese copy/accessibility/keyboard QA.
+- [ ] Measure site/Studio bundles, route chunks, idle requests and practical desktop footprint/startup evidence.
+- [ ] Remove all migration-only repository bootstrap machinery.
+- [ ] Run exact remaining Godot and NovelForge occurrence audit with historical justifications.
+- [ ] Run full CI and repair failures.
+- [ ] Update PR with final evidence and report merge readiness; do not merge.
