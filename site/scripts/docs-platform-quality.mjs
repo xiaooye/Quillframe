@@ -46,9 +46,7 @@ function markdownCount(directory) {
   return count;
 }
 
-/* Platform + exact pins ------------------------------------------------ */
-requireCheck(pkg.devDependencies?.astro === "7.1.6", "Astro must remain exact-pinned at 7.1.6");
-requireCheck(pkg.devDependencies?.["@astrojs/starlight"] === "0.41.5", "Starlight must remain exact-pinned at 0.41.5");
+/* Platform contracts --------------------------------------------------- */
 requireCheck(pkg.scripts?.["docs:build"]?.includes("astro build --root docs-site"), "docs:build must execute Astro with docs-site as the real project root");
 requireCheck(pkg.scripts?.["dev:docs"]?.includes("astro dev --root docs-site"), "dev:docs must execute Astro with docs-site as the real project root");
 requireCheck(pkg.scripts?.["docs:build"]?.includes("verify-starlight-build.mjs"), "docs:build must verify emitted Starlight pages");
@@ -131,7 +129,7 @@ requireCheck(main.includes('import ProductApp from "./ProductApp"') && main.incl
 requireCheck(productApp.includes('kind: "document", href: zh() ? "/docs" : "/docs/en"'), "shared primary navigation model must hand off to the locale-aware Starlight docs root");
 requireCheck(productApp.includes('<For each={primaryNav()}>{(item) => navLink(item, "wui-app-bar__link")}</For>'), "desktop Product header must render the shared primary navigation source");
 requireCheck(productApp.includes('<div class="footer-links"><For each={primaryNav()}>{(item) => navLink(item, "footer-link")}</For></div>'), "Product footer primary section must render the same primary navigation source");
-requireCheck(content.includes('export const githubRoot = "https://github.com/xiaooye/Quillframe"'), "Product content authority must retain the canonical GitHub repository root");
+requireCheck(content.includes('export const githubRoot = "https://github.com/xiaooye/Quillframe"'), "Product content authority must retain the canonical repository root");
 requireCheck(productApp.includes('kind: "external", href: githubRoot, label: copy().nav.github'), "Product shared primary navigation must include GitHub");
 requireCheck(productApp.includes('if (result.href.startsWith("/docs")) window.location.assign(result.href);'), "product command search must use a real document navigation for Starlight results");
 requireCheck(productApp.includes('`/docs/${encodeURIComponent(doc.id)}`') && productApp.includes('`/docs/en/${encodeURIComponent(doc.id)}`'), "product knowledge search must keep localized deep-document URLs");

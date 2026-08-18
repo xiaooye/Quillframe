@@ -68,7 +68,7 @@ jobs:
           echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
           echo "head_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
 
-      - name: Enable native squash auto-merge
+      - name: Squash merge verified Dependabot pull request
         if: steps.pr.outputs.eligible == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -77,6 +77,5 @@ jobs:
         run: |
           gh pr merge "$PR_NUMBER" \
             --repo "$GITHUB_REPOSITORY" \
-            --auto \
             --squash \
             --match-head-commit "$HEAD_SHA"
