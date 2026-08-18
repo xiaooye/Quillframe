@@ -38,15 +38,28 @@
 
 **环境要求：** Python 3.11+。只有 Web / Studio surface 需要 Node.js 24 与 pnpm 10.33.0。
 
+从干净的 Quillframe 源码工作区安装框架，并检查本地运行环境：
+
 ```bash
 git clone https://github.com/xiaooye/Quillframe.git
 cd Quillframe
 python -m pip install -e .
-
-python -c "from quillframe import Quillframe; print(Quillframe.__name__)"
-python project_sdk.py self-test
-python persistence/cli.py doctor
+quillframe doctor
 ```
+
+具体小说 Project 应创建在通用 Framework 仓库**之外**。初始化时会把 Project 固定到当前干净 Framework 的精确 commit 与确定性 bundle fingerprint：
+
+```bash
+quillframe init ../my-novel \
+  --id MY-NOVEL \
+  --title "My Novel" \
+  --language zh-CN
+
+cd ../my-novel
+quillframe validate .
+```
+
+如果使用 Claude Code 作为宿主，应在初始化完成后从 consumer Project 目录启动。项目级 bootstrap 会先验证 lock / attestation 与本地 Framework 是否一致，再允许有副作用的宿主工具执行。Claude Code 仍然只是宿主，不会替代 Quillframe Agent Runtime，也不会因此获得 Canon 权威。
 
 基础写作与检查 shell 不需要先连接模型。真正需要 inference 时，普通设置刻意只保留两个输入：
 
@@ -119,33 +132,33 @@ DRAFT / REVISE 会经过受限 Context、Story / Canon 预检、场景与人物�
 
 Settlement 是把经过明确授权和接受的变更真正写入 durable Project state 的事务。Before-state 不匹配或 post-condition 失败时，结果是 `settlement_incomplete`，而不是猜测成功。
 
-## Studio · 作者优先
+## Writer-first Studio
 
-Quillframe Studio 首先是创作环境，而不是 Framework dashboard。日常写作 surface 保持优先；Runtime 与 control-plane 细节按需渐进展开。
+Quillframe Studio 首先是一套创作环境，不是 Framework 仪表盘。作者工作保持第一优先级；runtime 与 control-plane 细节只在需要检查时逐步展开。
 
 **当前技术栈：**
 
 - Frontend / Studio — **SolidJS + TypeScript + Vite**
 - Core — **Python**
-- Persistence — **SQLite-native**，包含 WAL、foreign keys、migration、backup / restore 与 integrity checks
+- Persistence — **SQLite-native**，包括 WAL、外键、migration、backup/restore 与 integrity check
 - Documentation — **Astro + Starlight**
-- Desktop direction — **Tauri 2 thin host**；当前 `0.9.0` checkout 尚未交付完整 Tauri wrapper
+- Desktop 方向 — **Tauri 2 thin host**；当前 `0.9.0` checkout 尚未发布完整 Tauri wrapper
 
-可以直接进入在线 [Studio](https://studio.quillframe.wei-dev.com/)，或阅读 [Studio 架构](studio/README.zh-CN.md)。
+可以直接体验在线 [Studio](https://studio.quillframe.wei-dev.com/)，或阅读 [Studio 架构](studio/README.zh-CN.md)。
 
-## 从哪里继续
+## 深入了解
 
-| 目标 | 入口 |
+| 目标 | 从这里开始 |
 | --- | --- |
-| 了解产品适合什么场景 | [为什么是 Quillframe](docs/why-quillframe.zh-CN.md) |
+| 理解产品 | [为什么是 Quillframe](docs/why-quillframe.zh-CN.md) |
 | 理解 ownership 与 authority | [架构](docs/architecture.zh-CN.md) |
-| 跟踪 DRAFT / REVISE 执行 | [正文生产流程](docs/production-pipeline.zh-CN.md) |
-| 理解 fingerprint-bound review | [质量保障](docs/quality-assurance.zh-CN.md) |
+| 跟踪 DRAFT / REVISE 执行 | [Production Pipeline](docs/production-pipeline.zh-CN.md) |
+| 理解 fingerprint-bound review | [质量保证](docs/quality-assurance.zh-CN.md) |
 | 连接 inference endpoint | [Model Runtime](docs/model-runtime.zh-CN.md) |
-| 使用 agent loop 与 tools | [Agent Runtime](docs/agent-runtime.zh-CN.md) · [运行时与集成](docs/integrations.zh-CN.md) |
-| 接入小说 Project | [Project SDK](docs/project-sdk.zh-CN.md) |
-| 查看系统 ownership | [架构图谱](docs/architecture-atlas.zh-CN.md) |
-| 读取面向机器的产品 Context | [`llms.txt`](site/public/llms.txt) · [`llms-full.txt`](site/public/llms-full.txt) |
+| 使用 agent loop 与工具 | [Agent Runtime](docs/agent-runtime.zh-CN.md) · [Integrations](docs/integrations.zh-CN.md) |
+| 接入小说 Project | [项目开发工具](docs/project-sdk.zh-CN.md) |
+| 检查系统 ownership | [Architecture Atlas](docs/architecture-atlas.zh-CN.md) |
+| 读取机器友好的产品上下文 | [`llms.txt`](site/public/llms.txt) · [`llms-full.txt`](site/public/llms-full.txt) |
 
 ## 开发
 
@@ -171,20 +184,20 @@ pnpm build
 
 </details>
 
-参见 [贡献指南](CONTRIBUTING.md)、[路线图](ROADMAP.md)、[安全策略](SECURITY.md)、[行为准则](CODE_OF_CONDUCT.md) 与 [变更记录](CHANGELOG.zh-CN.md)。
+另见 [贡献指南](CONTRIBUTING.md)、[Roadmap](ROADMAP.md)、[Security](SECURITY.md)、[Code of Conduct](CODE_OF_CONDUCT.md) 与 [Changelog](CHANGELOG.zh-CN.md)。
 
 ## 当前状态
 
-Quillframe 仍处于 **pre-1.0 持续开发阶段**。当前 `main` 已包含 embeddable Python façade、Model Runtime、Agent Runtime、小说 Core / authority contract、SQLite persistence、typed Host Bridge、SolidJS Studio、产品网站、publication pipeline 与 Starlight 文档。Normal CI 使用确定性执行，不会悄悄调用配置好的付费 / 在线 Model API。
+Quillframe 仍处于 **pre-1.0、持续开发中**。当前 `main` 已包含可嵌入 Python façade、Model Runtime、Agent Runtime、小说 Core / authority contracts、SQLite persistence、typed Host Bridge、SolidJS Studio、产品网站、publication pipeline 与 Starlight 文档。正常 CI 是确定性的，不会静默调用已配置的付费 / live Model API。
 
-下游小说 Project 应按照自己的 lock 固定 exact Framework revision / bundle，不要假设最新 `main` 一定兼容。
+下游小说 Project 应按自己的 lock 固定所需 Framework exact revision / bundle，不应默认把最新 `main` 当作兼容 authority。
 
-## Security 与 License
+## 安全与许可证
 
-解析后的 Access Token 是瞬态 Host Secret。Quillframe 不会把它写入仓库文件、SQLite、prompt、Context、AgentJob / AgentResult、checkpoint、receipt、fingerprint、日志或客户端 bundle。也不要把 Token、私有正文或 Project database 粘贴到公开 issue。参见 [SECURITY.md](SECURITY.md)。
+解析后的 Access Token 是瞬态 Host Secret。Quillframe 不会把它写入仓库文件、SQLite、prompt、Context、AgentJob / AgentResult、checkpoint、receipt、fingerprint、日志或客户端 bundle。不要把模型 Access Token、私人正文或 Project database 粘贴到公开 issue。详见 [SECURITY.md](SECURITY.md)。
 
-Quillframe 使用 **Quillframe Proprietary Source-Available License**。仓库公开且 source-available，但该许可证**不是** OSI open-source license，并限制未经单独书面许可的再分发、部署与商业使用。准确条款以 [LICENSE](LICENSE) 为准。
+Quillframe 采用 **Quillframe Proprietary Source-Available License**。仓库公开且 source-available，但该许可证**不是** OSI 开源许可证，并限制未经单独书面许可的再分发、部署与商业使用。精确条款以 [LICENSE](LICENSE) 为准。
 
 ---
 
-<p align="center"><sub>✦ 创作判断保持灵活，执行事实保持明确。♡</sub></p>
+<p align="center"><sub>✦ 创作判断保持弹性，执行事实保持清晰。♡</sub></p>
