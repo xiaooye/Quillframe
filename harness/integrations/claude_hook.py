@@ -67,12 +67,20 @@ def framework_mode_snapshot(event: dict[str, Any], sid: str) -> dict[str, Any]:
     try:
         commit = subprocess.run(
             ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
-            check=True, capture_output=True, text=True, timeout=10,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
         ).stdout.strip()
-        clean = not bool(subprocess.run(
-            ["git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=normal"],
-            check=True, capture_output=True, text=True, timeout=10,
-        ).stdout.strip())
+        clean = not bool(
+            subprocess.run(
+                ["git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=normal"],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            ).stdout.strip()
+        )
     except Exception as exc:
         errors.append(f"Framework git inspection failed: {type(exc).__name__}")
     return {
@@ -96,7 +104,7 @@ def framework_mode_snapshot(event: dict[str, Any], sid: str) -> dict[str, Any]:
 def project_mode_snapshot(project_root: Path, event: dict[str, Any], sid: str) -> dict[str, Any]:
     sdk = project_sdk()
     validation = sdk.validate_project(project_root)
-    materialized = sdk.verify_materialized_framework(project_root, ROOT, compute_bundle=True)
+    materialized = sdk.verify_materialized_framework(project_root, ROOT)
     errors = list(validation.get("errors", []))
     errors.extend(x for x in materialized.get("errors", []) if x not in errors)
     manifest = sdk.load_manifest(project_root)
@@ -167,12 +175,20 @@ def lightweight_snapshot_fresh(snapshot: dict[str, Any]) -> tuple[bool, str | No
     try:
         commit = subprocess.run(
             ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
-            check=True, capture_output=True, text=True, timeout=10,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
         ).stdout.strip()
-        dirty = bool(subprocess.run(
-            ["git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=normal"],
-            check=True, capture_output=True, text=True, timeout=10,
-        ).stdout.strip())
+        dirty = bool(
+            subprocess.run(
+                ["git", "-C", str(ROOT), "status", "--porcelain", "--untracked-files=normal"],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            ).stdout.strip()
+        )
     except Exception as exc:
         return False, f"Framework git inspection failed: {type(exc).__name__}"
     if dirty:
@@ -211,7 +227,13 @@ def bootstrap_context(snapshot: dict[str, Any]) -> str:
     return "Quillframe host bootstrap could not identify a Framework or consumer Project; do not assume story or write authority."
 
 
-def hook_json(event_name: str, *, context: str | None = None, decision: str | None = None, reason: str | None = None) -> dict[str, Any]:
+def hook_json(
+    event_name: str,
+    *,
+    context: str | None = None,
+    decision: str | None = None,
+    reason: str | None = None,
+) -> dict[str, Any]:
     specific: dict[str, Any] = {"hookEventName": event_name}
     if context:
         specific["additionalContext"] = context
@@ -286,7 +308,6 @@ def main() -> int:
         try:
             put_session(event, snapshot, sid)
         except Exception as exc:
-            # Telemetry cannot create authority and must not break a valid host path.
             snapshot.setdefault("telemetry_warnings", []).append(f"ControlPlane: {type(exc).__name__}: {exc}")
 
         context = bootstrap_context(snapshot)
@@ -303,24 +324,29 @@ def main() -> int:
                 verified = bool(snapshot.get("materialized_authority_verified")) and fresh
                 if tool in CONSEQUENTIAL_TOOLS and not verified:
                     reason = stale_reason or "Quillframe Project exact Framework authority is not verified"
-                    print(json.dumps(hook_json("PreToolUse", context=context, decision="deny", reason=reason), ensure_ascii=False))
+                    print(
+                        json.dumps(
+                            hook_json("PreToolUse", context=context, decision="deny", reason=reason),
+                            ensure_ascii=False,
+                        )
+                    )
                     return 0
                 if tool == "Skill":
-                    # Third-party Claude skills may be useful, but they must not silently
-                    # replace Quillframe's fiction workflow. Ask the user instead of
-                    # heuristically guessing the skill's semantics.
-                    print(json.dumps(hook_json(
-                        "PreToolUse",
-                        context=context,
-                        decision="ask",
-                        reason="External Claude Skill is not Quillframe workflow authority; explicit approval is required in a Quillframe Project.",
-                    ), ensure_ascii=False))
+                    print(
+                        json.dumps(
+                            hook_json(
+                                "PreToolUse",
+                                context=context,
+                                decision="ask",
+                                reason="External Claude Skill is not Quillframe workflow authority; explicit approval is required in a Quillframe Project.",
+                            ),
+                            ensure_ascii=False,
+                        )
+                    )
                     return 0
             print(json.dumps(hook_json("PreToolUse", context=context), ensure_ascii=False))
             return 0
         if name == "PostToolUse":
-            # If an authority file changed, refresh immediately so the next model
-            # continuation receives the new verified/blocked state.
             if snapshot.get("scope") == "project":
                 fresh, _ = lightweight_snapshot_fresh(snapshot)
                 if not fresh and project_root:
@@ -329,7 +355,6 @@ def main() -> int:
                     context = bootstrap_context(snapshot)
             print(json.dumps(hook_json("PostToolUse", context=context), ensure_ascii=False))
             return 0
-        # SessionEnd has no decision control; lifecycle metadata is already stored.
         return 0
     except Exception as exc:
         message = f"Quillframe Claude host guard error: {type(exc).__name__}: {exc}"
