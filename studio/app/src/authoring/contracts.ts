@@ -14,11 +14,11 @@ export const AUTHORING_INTENT_TASK_MODE: Record<AuthoringIntent, AuthorTaskMode>
 
 export const RUN_PROGRESS_STAGES = [
   { id: "context_frozen", en: "Context frozen", zh: "Context 已冻结" },
-  { id: "story_preflight", en: "Story preflight", zh: "Story preflight" },
+  { id: "story_preflight", en: "Story preflight", zh: "故事 / Canon 预检" },
   { id: "character_simulation", en: "Character simulation", zh: "角色模拟" },
   { id: "reader_review", en: "Reader review", zh: "读者审查" },
-  { id: "independent_review", en: "Independent review", zh: "独立语义审查" },
   { id: "continuity", en: "Continuity", zh: "连续性检查" },
+  { id: "independent_review", en: "Independent review", zh: "独立语义审查" },
 ] as const;
 
 export type RunProgressStageId = (typeof RUN_PROGRESS_STAGES)[number]["id"];
@@ -44,6 +44,77 @@ export interface ProjectCreateResult {
   authority: false;
 }
 
+export interface ProjectRegistryItem {
+  project_id: string;
+  title: string;
+  language: string;
+  project_schema_version: number;
+  registered_at?: string;
+  last_opened_at?: string;
+}
+
+export interface ProjectListProjection {
+  schema: "quillframe_project_registry_projection_v1";
+  items: ProjectRegistryItem[];
+  authority: false;
+  canon_authority: false;
+}
+
+export interface DocumentListItem {
+  document_id: string;
+  story_node_id?: string | null;
+  document_kind: string;
+  title: string;
+  created_at?: string;
+  latest_revision_id?: string | null;
+  latest_content_fingerprint?: string | null;
+  latest_authority_class?: string | null;
+  latest_revision_created_at?: string | null;
+}
+
+export interface DocumentListProjection {
+  schema: "quillframe_document_list_projection_v1";
+  project_id: string;
+  document_kind?: string | null;
+  items: DocumentListItem[];
+  authority: false;
+  canon_authority: false;
+}
+
+export interface DocumentRevisionProjection {
+  revision_id: string;
+  document_id: string;
+  parent_revision_id?: string | null;
+  content: string;
+  content_fingerprint: string;
+  created_at?: string;
+  source?: string;
+  authority_class: string;
+  provenance?: Record<string, unknown>;
+}
+
+export interface DocumentProjection {
+  schema: "quillframe_document_projection_v1";
+  project_id: string;
+  document: {
+    document_id: string;
+    story_node_id?: string | null;
+    document_kind: string;
+    title: string;
+    created_at?: string;
+  };
+  latest_revision: DocumentRevisionProjection | null;
+  authority: false;
+}
+
+export interface DocumentRevisionListProjection {
+  schema: "quillframe_document_revision_list_v1";
+  project_id: string;
+  document_id: string;
+  items: Array<Omit<DocumentRevisionProjection, "content">>;
+  authority: false;
+}
+
 export interface RevisionSaveResult {
   revision_id: string;
   content_fingerprint: string;
@@ -63,6 +134,64 @@ export interface AuthorRunStartResult {
   canon_authority: false;
   settlement_authority: false;
   message: string;
+}
+
+export interface AuthorRunEvent {
+  event_kind: string;
+  created_at?: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface AuthorRunStatusProjection {
+  schema: string;
+  project_id: string;
+  run_id: string;
+  task_mode: string;
+  target_ref?: string | null;
+  status: string;
+  result_fingerprint?: string | null;
+  events: AuthorRunEvent[];
+  candidate?: CandidateRow | null;
+  authority: false;
+}
+
+export interface ProductionExecutionProjection {
+  schema: string;
+  project_id: string;
+  run_id: string;
+  status: string;
+  awaiting?: string;
+  candidate_visible: false | boolean;
+  raw_draft_visible: false;
+  independent_review_request?: Record<string, unknown>;
+  authority: false;
+}
+
+export interface ModelProjection {
+  model_id?: string;
+  display_name?: string;
+  protocol?: string;
+  protocol_family?: string;
+  context_window?: number | null;
+  capabilities?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ModelServiceProjection {
+  schema?: string;
+  service_id?: string;
+  endpoint?: string;
+  discovery_state?: string;
+  credential_present?: boolean;
+  last_checked_at?: string;
+  models?: ModelProjection[];
+  authority?: false;
+}
+
+export interface ModelServiceListProjection {
+  schema: "quillframe_model_service_list_v1";
+  items: ModelServiceProjection[];
+  authority: false;
 }
 
 export type ContextRuntimeState =
@@ -121,9 +250,37 @@ export interface CandidateRow {
   task_mode?: string;
   candidate_kind?: string;
   status?: string;
+  effective_status?: string;
   content_fingerprint?: string;
+  candidate_fingerprint?: string;
   user_visible_gate?: string;
   created_at?: string;
+}
+
+export interface CandidateReviewProjection {
+  schema: "quillframe_candidate_review_projection_v1";
+  project_id: string;
+  candidate: CandidateRow & {
+    candidate_fingerprint: string;
+    persisted_status: string;
+    effective_status: string;
+  };
+  candidate_revision: DocumentRevisionProjection;
+  incumbent_revision: DocumentRevisionProjection | null;
+  diff: { diff?: string[] } | null;
+  evidence: {
+    reader: Record<string, unknown>;
+    character: Record<string, unknown>;
+    continuity: Record<string, unknown>;
+    independent: Record<string, unknown>;
+    production_readiness: Record<string, unknown> | null;
+    user_visible_gate: Record<string, unknown>;
+  };
+  revision_request?: CandidateRevisionRequestResult | null;
+  private_reasoning_exposed: false;
+  authority: false;
+  canon_authority: false;
+  settlement_authority: false;
 }
 
 export interface AcceptanceResult {
@@ -134,6 +291,56 @@ export interface AcceptanceResult {
   accepted: true;
   settled: false;
   canon_mutated: false;
+}
+
+export interface CandidateRejectionResult {
+  schema: "quillframe_candidate_rejection_result_v1";
+  candidate_id: string;
+  candidate_fingerprint: string;
+  before_status: "review_draft";
+  status: "rejected";
+  canon_mutated: false;
+  settled: false;
+  authority: false;
+}
+
+export interface CandidateRevisionRequestResult {
+  schema: "quillframe_candidate_revision_request_result_v1";
+  revision_request_id: string;
+  candidate_id: string;
+  candidate_fingerprint: string;
+  persisted_candidate_status: string;
+  effective_status: "revision_requested";
+  revision_request: Record<string, unknown>;
+  next_action: {
+    operation: "author.run.start";
+    task_mode: "REVISE";
+    target_ref: string;
+    requires_explicit_user_action: true;
+    auto_started: false;
+    source_candidate_id: string;
+    source_candidate_fingerprint: string;
+  };
+  canon_mutated: false;
+  settled: false;
+  authority: false;
+}
+
+export interface SettlementPreflight {
+  schema: "quillframe_settlement_preflight_v1";
+  project_id: string;
+  acceptance_id: string;
+  candidate_id: string;
+  candidate_fingerprint: string;
+  document_id: string;
+  revision_id: string;
+  target_ref: string;
+  expected_before_fingerprint: string;
+  current_before_fingerprint: string;
+  settleable: true;
+  mutation_performed: false;
+  canon_mutated: false;
+  authority: false;
 }
 
 export interface SettlementResult {
@@ -160,7 +367,7 @@ export const CORE_CONSUMER_REQUIREMENTS: CoreConsumerRequirement[] = [
   {
     operation: "project.list",
     userAction: "Open an existing Project without memorizing its stable id",
-    minimalInput: "none or pagination cursor",
+    minimalInput: "optional limit",
     minimalOutput: "project_id, title, language, last_opened_at",
     requiredErrors: ["host_unavailable"],
     authorityExpectation: "read-only projection; authority=false",
@@ -176,67 +383,85 @@ export const CORE_CONSUMER_REQUIREMENTS: CoreConsumerRequirement[] = [
     whyUiCannotImplement: "The UI cannot infer manuscript structure from browser state or filesystem paths.",
   },
   {
-    operation: "document.get",
+    operation: "document.open",
     userAction: "Reload/restart Studio and restore the exact latest manuscript revision",
     minimalInput: "project_id, document_id",
     minimalOutput: "document metadata plus latest revision content/id/fingerprint/authority_class",
-    requiredErrors: ["document_not_found", "revision_not_found"],
-    authorityExpectation: "read-only; must preserve persisted authority_class",
+    requiredErrors: ["document_not_found"],
+    authorityExpectation: "read-only; persisted authority_class is preserved",
     whyUiCannotImplement: "Persisting manuscript content in localStorage would create a second live authority.",
   },
   {
-    operation: "model.connect",
-    userAction: "Settings → AI & Models → Endpoint + Access Token → Test / Connect",
+    operation: "model.service.add",
+    userAction: "AI & Models → Endpoint + Access Token → Test / Connect",
     minimalInput: "endpoint, access_token",
-    minimalOutput: "service_id, connection/discovery state, discovered models/capability evidence or refs",
-    requiredErrors: ["endpoint_unreachable", "authentication_failed", "unsupported_protocol", "discovery_failed"],
+    minimalOutput: "service_id, discovery state, discovered model/capability evidence",
+    requiredErrors: ["model_discovery_failed", "network_request_failed", "model_protocol_unresolved"],
     authorityExpectation: "runtime observation only; secret value never returned",
-    whyUiCannotImplement: "Provider protocols, discovery and secret storage are Core-owned.",
+    whyUiCannotImplement: "Protocol discovery and secret storage are Core-owned.",
   },
   {
-    operation: "model.services.list",
-    userAction: "Show connected Model Services and available Models",
+    operation: "model.service.list",
+    userAction: "Show connected Model Services",
     minimalInput: "none",
-    minimalOutput: "service metadata, credential_present boolean, discovered model/capability projections",
+    minimalOutput: "service metadata and credential_present without token values",
     requiredErrors: ["host_unavailable"],
-    authorityExpectation: "read-only runtime projection; no token values",
-    whyUiCannotImplement: "Endpoint history or vendor hostname is not provider health or capability evidence.",
+    authorityExpectation: "read-only runtime projection",
+    whyUiCannotImplement: "Endpoint history is not provider health or capability evidence.",
   },
   {
     operation: "author.run.execute",
-    userAction: "Continue a durably registered author Run through production semantic execution",
-    minimalInput: "project_id, run_id or exact registered run receipt",
-    minimalOutput: "typed run status plus candidate/result reference only after production gates",
-    requiredErrors: ["semantic_pending", "model_unavailable", "context_failed", "review_failed", "cancelled"],
-    authorityExpectation: "no raw-draft visibility; candidate only after Core user-visible gate",
+    userAction: "Continue a registered DRAFT/REVISE run through production semantic execution",
+    minimalInput: "project_id, run_id, service_id, instruction, reader_grip, authoritative rule_material",
+    minimalOutput: "typed run status; normally awaiting_external before independent review",
+    requiredErrors: ["semantic_pending", "stale_conflict", "failed_gate", "model_unavailable"],
+    authorityExpectation: "no raw-draft visibility; no same-runtime independent substitution",
     whyUiCannotImplement: "Semantic execution, Context Freeze and independent review are Core-owned.",
   },
   {
-    operation: "run.events.list",
+    operation: "author.run.status",
     userAction: "Show typed AI Dock progress without exposing private reasoning",
     minimalInput: "project_id, run_id",
-    minimalOutput: "event_kind, stage/status, timestamp, safe display detail",
+    minimalOutput: "status plus persisted typed events and safe Candidate projection",
     requiredErrors: ["run_not_found"],
     authorityExpectation: "read-only runtime evidence; private CoT excluded",
-    whyUiCannotImplement: "The UI cannot infer completed semantic stages from elapsed time or local animations.",
+    whyUiCannotImplement: "Studio must not infer completed stages from elapsed time or animation.",
   },
   {
     operation: "candidate.review.get",
-    userAction: "Review Incumbent vs Candidate with findings and independent evidence",
+    userAction: "Review Incumbent vs Candidate with exact review evidence",
     minimalInput: "project_id, candidate_id",
-    minimalOutput: "candidate/incumbent revision refs, diff source, findings, reader/character/continuity/independent evidence, fingerprints",
+    minimalOutput: "candidate/incumbent revision, diff, Reader/Character/Continuity/Independent/readiness evidence",
     requiredErrors: ["candidate_not_found", "review_pending", "stale_review"],
-    authorityExpectation: "read-only evidence; exact candidate fingerprint bound",
-    whyUiCannotImplement: "Candidate prose and semantic review evidence cannot be reconstructed from candidate table metadata.",
+    authorityExpectation: "read-only evidence bound to exact Candidate fingerprint",
+    whyUiCannotImplement: "Review prose/evidence cannot be reconstructed from browser state or candidate metadata.",
+  },
+  {
+    operation: "candidate.reject",
+    userAction: "Explicitly reject the exact Review Draft",
+    minimalInput: "project_id, candidate_id, candidate_fingerprint, authorization, idempotency_key",
+    minimalOutput: "rejected state and receipt projection",
+    requiredErrors: ["candidate_not_found", "candidate_fingerprint_mismatch", "stale_state"],
+    authorityExpectation: "Candidate lifecycle mutation only; no Canon/Settlement write",
+    whyUiCannotImplement: "Candidate lifecycle belongs to Core persistence.",
+  },
+  {
+    operation: "candidate.revision.request",
+    userAction: "Request a revision of the exact Review Draft",
+    minimalInput: "project_id, candidate_id, candidate_fingerprint, revision_request, authorization, idempotency_key",
+    minimalOutput: "durable revision request plus explicit REVISE next action; auto_started=false",
+    requiredErrors: ["candidate_not_found", "candidate_fingerprint_mismatch", "stale_state"],
+    authorityExpectation: "does not auto-run REVISE and does not mutate Canon",
+    whyUiCannotImplement: "A browser flag must not impersonate durable Candidate state.",
   },
   {
     operation: "settlement.preflight",
     userAction: "Open Settle… after explicit Acceptance",
     minimalInput: "project_id, acceptance_id, target_ref",
-    minimalOutput: "expected_before_fingerprint, acceptance/candidate fingerprints, readiness status",
-    requiredErrors: ["acceptance_not_found", "before_state_conflict", "not_settleable"],
-    authorityExpectation: "read-only preflight; does not mutate Canon",
-    whyUiCannotImplement: "settlement.apply requires exact canonical before-state that only Core may read.",
+    minimalOutput: "exact expected_before_fingerprint and settleability binding",
+    requiredErrors: ["acceptance_not_found", "not_settleable"],
+    authorityExpectation: "read-only preflight; no Canon mutation",
+    whyUiCannotImplement: "settlement.apply requires the exact current Canon before-state that only Core may read.",
   },
 ];
 
