@@ -22,6 +22,8 @@ class BootstrapHostTests(unittest.TestCase):
         self.assertIn("@SKILL.md", text)
         self.assertIn("@CLAUDE.en.md", text)
         self.assertIn("@harness/HARNESS_AGENT.en.md", text)
+        settings = json.loads((ROOT / ".claude" / "settings.json").read_text(encoding="utf-8"))
+        self.assertIn("Skill", settings["permissions"]["ask"])
 
     def test_console_entrypoint_is_declared(self):
         with (ROOT / "pyproject.toml").open("rb") as fh:
@@ -37,6 +39,18 @@ class BootstrapHostTests(unittest.TestCase):
         self.assertIn("pyproject.toml", paths)
         self.assertIn("VERSION", paths)
 
+    def test_init_rejects_project_inside_framework_checkout(self):
+        with self.assertRaisesRegex(ValueError, "outside the generic Quillframe Framework checkout"):
+            project_sdk.init_project(
+                ROOT / "fiction-project-must-not-live-here",
+                "PROJECT-BAD-LOCATION",
+                "Bad Location",
+                "en",
+                project_sdk.DEFAULT_FRAMEWORK_VERSION,
+                False,
+                ROOT,
+            )
+
     def test_init_writes_exact_lock_attestation_and_claude_host(self):
         with tempfile.TemporaryDirectory(prefix="qf-bootstrap-test-") as td:
             project = Path(td) / "novel"
@@ -50,7 +64,8 @@ class BootstrapHostTests(unittest.TestCase):
                 ROOT,
             )
             self.assertTrue(result["authority_ready"])
-            lock = json.loads((project / "quillframe.lock.json").read_text(encoding="utf-8"))
+            lock_path = project / "quillframe.lock.json"
+            lock = json.loads(lock_path.read_text(encoding="utf-8"))
             attestation = json.loads((project / "framework.attestation.json").read_text(encoding="utf-8"))
             framework = lock["framework"]
             self.assertRegex(framework["commit"], r"^[0-9a-f]{40,64}$")
@@ -59,7 +74,16 @@ class BootstrapHostTests(unittest.TestCase):
             settings = json.loads((project / ".claude" / "settings.json").read_text(encoding="utf-8"))
             self.assertIn("SessionStart", settings["hooks"])
             self.assertIn("PreToolUse", settings["hooks"])
+            self.assertIn("Skill", settings["permissions"]["ask"])
             self.assertTrue(project_sdk.validate_project(project)["authority_ready"])
+
+            lock["framework"]["commit"] = None
+            lock_path.write_text(json.dumps(lock), encoding="utf-8")
+            legacy = project_sdk.validate_project(project)
+            self.assertTrue(legacy["valid"])
+            self.assertFalse(legacy["authority_ready"])
+            with self.assertRaisesRegex(ValueError, "exact Framework authority is not ready"):
+                project_sdk.build_project(project)
 
     def test_attestation_mismatch_is_not_authority_ready(self):
         with tempfile.TemporaryDirectory(prefix="qf-attestation-test-") as td:
@@ -81,13 +105,37 @@ class BootstrapHostTests(unittest.TestCase):
                 "project_schema_version": "1",
             }
             (project / "quillframe.lock.json").write_text(json.dumps(lock), encoding="utf-8")
-            bad = dict(framework); bad["commit"] = "c" * 40
+            bad = dict(framework)
+            bad["commit"] = "c" * 40
             (project / "framework.attestation.json").write_text(
                 json.dumps({"schema": project_sdk.ATTESTATION_SCHEMA, "framework": bad}), encoding="utf-8"
             )
             status = project_sdk.project_authority_status(project)
             self.assertFalse(status["authority_ready"])
             self.assertTrue(any("mismatch: commit" in item for item in status["errors"]))
+
+    def test_malformed_explicit_fingerprint_is_structural_error(self):
+        with tempfile.TemporaryDirectory(prefix="qf-malformed-lock-test-") as td:
+            project = Path(td)
+            for rel in project_sdk.REQUIRED_DIRS:
+                (project / rel).mkdir(parents=True, exist_ok=True)
+            (project / "quillframe.toml").write_text(
+                project_sdk.framework_toml("PROJECT-X", "X", "en", "0.9.0"), encoding="utf-8"
+            )
+            lock = {
+                "schema": project_sdk.LOCK_SCHEMA,
+                "framework": {
+                    "name": "Quillframe",
+                    "version": "0.9.0",
+                    "commit": "a" * 40,
+                    "bundle_fingerprint": "not-a-fingerprint",
+                },
+                "project_schema_version": "1",
+            }
+            (project / "quillframe.lock.json").write_text(json.dumps(lock), encoding="utf-8")
+            validation = project_sdk.validate_project(project)
+            self.assertFalse(validation["valid"])
+            self.assertTrue(any("bundle_fingerprint" in item for item in validation["errors"]))
 
     def _run_hook(self, event: dict) -> dict:
         proc = subprocess.run(
