@@ -197,9 +197,28 @@ def _author_run_status(args: dict[str, Any], _: str):
 
 def _author_run_execute(args: dict[str, Any], _: str):
     return production_runtime().execute(
-        require(args, "project_id"), require(args, "run_id"), service_id=require(args, "service_id"),
-        instruction=require(args, "instruction"), document_id=args.get("document_id"), model_preference=args.get("model_id"),
+        require(args, "project_id"),
+        require(args, "run_id"),
+        service_id=require(args, "service_id"),
+        instruction=require(args, "instruction"),
+        document_id=args.get("document_id"),
+        model_preference=args.get("model_id"),
         stage_budgets=args.get("stage_budgets") if isinstance(args.get("stage_budgets"), dict) else None,
+        reader_grip=require(args, "reader_grip"),
+        rule_material=require(args, "rule_material", list),
+        reader_visible_context=args.get("reader_visible_context") if isinstance(args.get("reader_visible_context"), list) else None,
+        independent_provenance=require(args, "independent_provenance", dict),
+        repair_preservation=args.get("repair_preservation") if isinstance(args.get("repair_preservation"), dict) else None,
+    )
+
+
+def _author_independent_submit(args: dict[str, Any], _: str):
+    return production_runtime().submit_independent(
+        require(args, "project_id"),
+        require(args, "run_id"),
+        peer_packet=require(args, "peer_packet", dict),
+        result=require(args, "result", dict),
+        bridge_receipt=require(args, "bridge_receipt", dict),
     )
 
 
@@ -306,6 +325,7 @@ DISPATCH: dict[str, Callable[[dict[str, Any], str], dict[str, Any]]] = {
     "author.run.start": _author_run,
     "author.run.status": _author_run_status,
     "author.run.execute": _author_run_execute,
+    "author.run.independent.submit": _author_independent_submit,
     "author.run.context.refresh": _author_context_refresh,
     "model.service.add": _model_add,
     "model.service.list": _model_list,
@@ -399,7 +419,7 @@ def self_test() -> dict[str, Any]:
     first = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "A"}, "authority": False})
     second = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "B"}, "authority": False})
     ok = desc["status"] == "ok" and generic["status"] == "invalid" and desc["authority"] is False and first["request_fingerprint"] == second["request_fingerprint"] and first["secret_values_persisted"] is False
-    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": "6", "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
+    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": "7", "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
 
 
 def main() -> int:
