@@ -2,7 +2,7 @@ name: Quillframe 0.9 CI
 
 on:
   push:
-    branches: [main, 'agent/**']
+    branches: [main, 'agent/**', 'system-improve/**']
   pull_request:
     branches: [main]
 
@@ -101,12 +101,12 @@ jobs:
 
   readme-render-evidence:
     name: GitHub README light/dark/narrow evidence
-    if: github.event_name == 'pull_request' && github.event.pull_request.number == 110
+    if: (github.event_name == 'pull_request' && github.event.pull_request.number == 110) || github.ref == 'refs/heads/system-improve/quillframe-repo-polish'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
       README_REPO: ${{ github.repository }}
-      README_SHA: ${{ github.event.pull_request.head.sha }}
+      README_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       README_QA_DIR: ${{ runner.temp }}/quillframe-readme-qa
     steps:
       - uses: actions/checkout@v4
