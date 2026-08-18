@@ -27,15 +27,22 @@ check(main.includes('import "./styles/index.css"'), "product site must load the 
 check(!productIndex.includes("surface-audit.css"), "product site must not use a final audit override layer");
 check(!exists("src/styles/surface-audit.css"), "retired product surface-audit.css must stay deleted");
 check(productIndex.includes("kawaii-surfaces.css") && productIndex.includes("atelier.css"), "Story Loom product composition layers must remain explicit");
-check(productIndex.includes("tool-workbench-kawaii.css") && productIndex.includes("story-loom-route-refinements.css"), "Story Loom workstation and hero-scene layers must stay active");
+check(productIndex.includes("tool-workbench-kawaii.css") && productIndex.includes("story-loom-route-refinements.css"), "Story Loom workstation and route-language layers must stay active");
 check(!productIndex.includes("editorial-composition.css"), "global editorial flattening must remain retired from the active product cascade");
 check(!productIndex.includes("home-identity.css"), "temporary simplified-home rewrite must remain retired from the active product cascade");
 check(productIndex.indexOf("architecture-explorer.css") < productIndex.indexOf("kawaii-surfaces.css"), "feature defaults must precede Story Loom product-language composition");
 check(productIndex.indexOf("route-identities.css") < productIndex.indexOf("story-loom-route-refinements.css"), "route-specific Story Loom scenes must refine route identity defaults");
 check(productIndex.indexOf("story-loom-route-refinements.css") < productIndex.indexOf("publication-gallery.css"), "non-publication route scenes must not replace the Publication-owned refinement");
 
-check(productSurface.includes("border-radius: 28px") && productSurface.includes("box-shadow: var(--pe-shadow-2)") && productSurface.includes("border: 1px dashed"), "shared ProductSurfaceHero must keep the restored framed pastel treatment for new routes");
-check(productSurface.includes('.product-surface-hero[data-tone="project"]') && productSurface.includes('.product-surface-hero[data-tone="publication"]'), "route surface tones must remain explicit");
+/* PAGE == CANVAS: shared route hero owns composition, never a giant card. */
+for (const marker of ["border: 0", "border-radius: 0", "background: transparent", "box-shadow: none", "content: none"]) {
+  check(productSurface.includes(marker), `shared ProductSurfaceHero canvas contract missing ${marker}`);
+}
+check(!productSurface.includes("border-radius: 28px"), "shared ProductSurfaceHero must not restore the old 28px giant-card frame");
+check(!productSurface.includes("border: 1px dashed"), "shared ProductSurfaceHero must not restore the old dashed inset frame");
+check(!productSurface.includes("box-shadow: var(--pe-shadow-2)"), "shared ProductSurfaceHero root must not restore card shadow");
+check(productSurface.includes('.product-surface-hero[data-tone="project"]') && productSurface.includes('.product-surface-hero[data-tone="publication"]'), "route semantic accents must remain explicit without becoming wallpaper");
+check(productSurface.includes("--product-hero-accent"), "shared hero tones must resolve through a restrained semantic accent token");
 
 for (const marker of ["entry-hero", "hero-launcher wui-card material-panel", "capability-ribbon", "capability-focus page-width section-compact", "product-lab section-pad-soft", "product-world page-width section-compact", "knowledge-preview section-pad-soft"]) {
   check(productApp.includes(marker), `restored screenshot-era HomePage missing ${marker}`);
@@ -44,7 +51,7 @@ for (const marker of [".entry-hero", ".hero-launcher.material-panel", ".launcher
   check(atelier.includes(marker), `Story Loom Atelier source missing restored HomePage marker ${marker}`);
 }
 check(productApp.includes("让故事越写越长，系统仍然知道自己在做什么。") && productApp.includes("六条真实产品能力"), "restored HomePage must keep the screenshot-era visual/copy anchor points");
-check(productApp.includes('href="/inspect"') && productApp.includes('href="/playground"') && productApp.includes('href="/agents"'), "new Product capabilities must remain reachable while HomePage layout is restored");
+check(productApp.includes('href: "/inspect"') && productApp.includes('href: "/playground"') && productApp.includes('href: "/agents"'), "new Product capabilities must remain reachable while HomePage layout is restored");
 
 for (const marker of ["Story Loom workstation language", "PROJECT FILES", "open notebook + execution sheet", "host rail + wiring desk"]) {
   check(workbench.includes(marker), `workbench Story Loom identity missing ${marker}`);
@@ -77,10 +84,12 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "quillframe_surface_identity_quality_v7",
+    schema: "quillframe_surface_identity_quality_v8",
     status: "pass",
     product_final_override: false,
     product_editorial_flattening: false,
+    canvas_first_route_hero: true,
+    giant_hero_card: false,
     screenshot_era_home_dom: true,
     screenshot_era_home_sections: true,
     home_style_owner: "showcase.css+atelier.css",
