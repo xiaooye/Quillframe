@@ -59,6 +59,49 @@
     background: color-mix(in oklab, var(--pe-runtime-soft) 46%, var(--pe-surface));
   }
 
+  /* The legacy Home architecture map still uses the generic architecture-node
+   * class in site.css. Keep those absolute-map rules from leaking into this
+   * route's in-flow execution grid. */
+  .architecture-entry .architecture-flow > .architecture-node {
+    position: relative;
+    inset: auto;
+    inline-size: auto;
+    min-inline-size: 0;
+    align-items: stretch;
+    transform: none;
+    backdrop-filter: none;
+  }
+
+  .architecture-entry .architecture-flow > .architecture-node[data-active="true"] {
+    transform: none;
+  }
+
+  .architecture-entry .architecture-flow > .architecture-node > span {
+    inline-size: auto;
+    block-size: auto;
+    place-items: initial;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .architecture-entry .architecture-flow > .architecture-node > .architecture-node-step {
+    inline-size: fit-content;
+  }
+
+  .architecture-entry .architecture-flow > .architecture-node > .architecture-node-icon {
+    inline-size: 34px;
+    block-size: 34px;
+    place-items: center;
+    border-radius: 10px;
+    background: color-mix(in oklab, var(--architecture-soft) 70%, transparent);
+  }
+
+  .architecture-entry .architecture-detail {
+    position: static;
+    inset: auto;
+    padding: 0;
+  }
+
   /* Publication — the paper/device objects themselves carry the identity. */
   .publication-workbench-entry .product-surface-hero__visual {
     align-content: center;
