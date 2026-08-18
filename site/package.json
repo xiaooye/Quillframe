@@ -18,17 +18,17 @@
     "docs:content": "node scripts/build-starlight-content.mjs"
   },
   "dependencies": {
-    "@solidjs/router": "0.16.2",
-    "pyodide": "314.0.2",
+    "@solidjs/router": "1.0.0",
+    "pyodide": "314.0.4",
     "solid-js": "1.9.14"
   },
   "devDependencies": {
-    "@astrojs/starlight": "0.41.5",
-    "astro": "7.1.6",
-    "marked": "18.0.7",
-    "playwright-core": "1.60.0",
+    "@astrojs/starlight": "0.41.7",
+    "astro": "7.2.2",
+    "marked": "18.0.9",
+    "playwright-core": "1.62.1",
     "typescript": "7.0.2",
-    "vite": "8.1.5",
+    "vite": "8.2.1",
     "vite-plugin-solid": "2.11.14"
   }
 }
