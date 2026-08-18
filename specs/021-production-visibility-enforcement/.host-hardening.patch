@@ -1,0 +1,216 @@
+diff --git a/SKILL.en.md b/SKILL.en.md
+index 38dd721..d5767ac 100644
+--- a/SKILL.en.md
++++ b/SKILL.en.md
+@@ -103,6 +103,8 @@ Generic production graph:
+ 
+ Raw Draft is internal. Regression bad examples and hidden expected labels stay out of first-pass generation.
+ 
++**Production visibility is fail-closed.** In `DRAFT` / `REVISE`, reading these contracts is not execution. The host must invoke a verified Quillframe production runtime and may surface manuscript text only from an exact fingerprint-bound production release. If runtime, model execution, required independent review, or release evidence is unavailable, report the typed pending/blocked state and do not replace the missing mechanism with host-authored prose. Ephemeral agent sandboxes may materialize the exact locked Framework, but must verify Git identity before execution; their SQLite state is runtime materialization, not a second Canon authority.
++
+ Failure ownership matters:
+ 
+ - isolated surface defect → local rewrite;
+diff --git a/SKILL.zh-CN.md b/SKILL.zh-CN.md
+index d62b277..1492487 100644
+--- a/SKILL.zh-CN.md
++++ b/SKILL.zh-CN.md
+@@ -103,6 +103,8 @@ Contract packs：
+ 
+ Raw Draft 只在内部存在。Regression 坏例与 hidden expected label 不得进入 first-pass generation。
+ 
++**Production visibility 必须 fail closed。** 在 `DRAFT` / `REVISE` 中，读过这些合同不等于执行了 Quillframe。Host 必须调用经过验证的 Quillframe production runtime，且只有 exact fingerprint-bound production release 才能提供用户可见 manuscript。若 runtime、模型执行、required independent review 或 release evidence 不可用，必须返回 typed pending/blocked 状态，禁止用 host 自己写的正文补齐缺失机制。Ephemeral agent sandbox 可以 materialize exact locked Framework，但执行前必须验证 Git identity；其中的 SQLite 只是 runtime materialization，不是第二套 Canon authority。
++
+ 失败必须回到真正拥有该问题的机制：
+ 
+ - 单点 Surface 缺陷 → local rewrite；
+diff --git a/harness/HARNESS_AGENT.en.md b/harness/HARNESS_AGENT.en.md
+index ccbca3b..df83c06 100644
+--- a/harness/HARNESS_AGENT.en.md
++++ b/harness/HARNESS_AGENT.en.md
+@@ -122,6 +122,9 @@ Important boundaries:
+ - `repair_policy.py` only enforces the resulting writer-context boundary.
+ - Any material candidate change invalidates stale fingerprint-bound review results.
+ - Explicit acceptance and SETTLE remain separate.
++- DRAFT / REVISE manuscript text must come from a real production runtime and a Core-owned release path; manager/host prose written after merely reading the rules is not Quillframe execution.
++- `candidate.visible.get` (or an equivalent Core-owned released projection) is the production manuscript release boundary; missing receipts, fingerprint mismatch, pending/fail, or stale state must return no manuscript text.
++- An ephemeral host that materializes Framework locally must prove the exact locked Git identity; runtime SQLite does not become Project/Canon authority.
+ 
+ When the user gives feedback during production, the current explicit instruction constrains the current run immediately; the same turn may independently enter automatic Learning intake. Current compliance never waits for durable promotion.
+ 
+diff --git a/harness/HARNESS_AGENT.zh-CN.md b/harness/HARNESS_AGENT.zh-CN.md
+index dbabeb7..8e13630 100644
+--- a/harness/HARNESS_AGENT.zh-CN.md
++++ b/harness/HARNESS_AGENT.zh-CN.md
+@@ -121,7 +121,10 @@ authority/session bootstrap
+ - Editor 语义上选择 repair owner 与 generation mode；
+ - `repair_policy.py` 只执行所选 mode 对 writer-context 的信息边界；
+ - material candidate change 会使旧 fingerprint-bound review result 失效；
+-- explicit acceptance 与 SETTLE 继续分离。
++- explicit acceptance 与 SETTLE 继续分离；
++- `DRAFT` / `REVISE` 的正文只能由真实 production runtime 产生并经 Core-owned release 出口展示；manager/host 读过规则后自行写正文，不构成 Quillframe execution；
++- `candidate.visible.get`（或等价 Core-owned released projection）是 production manuscript 的 release boundary；缺 receipt、fingerprint mismatch、pending/fail/stale 时必须无正文返回；
++- ephemeral host 若需本地 materialize Framework，必须证明 exact locked Git identity；runtime SQLite 不升级为 Project/Canon authority。
+ 
+ 如果用户在 production loop 中给出 feedback，当前明确指令立即约束当前 run；同一 turn 也可以独立进入 automatic Learning intake。Learning capture 不需要等 durable promotion 才让当前指令生效。
+ 
+diff --git a/harness/integrations/host_scaffold.py b/harness/integrations/host_scaffold.py
+index ec2cbe9..85f1abb 100644
+--- a/harness/integrations/host_scaffold.py
++++ b/harness/integrations/host_scaffold.py
+@@ -44,6 +44,8 @@ This repository is a **consumer fiction Project**. Project facts, characters, re
+ 4. Determine exactly one primary Quillframe `task_mode` from the user task. Do not combine user-visible modes.
+ 5. Execute the exact `quillframe host-run begin --session-id ... --mode ...` command injected by the host bootstrap before consequential work.
+ 6. Confirm the host state becomes `running` with one active manager run, then build sparse Context from current Project authority.
++7. For `DRAFT` / `REVISE`, resolve a real Quillframe production runtime before producing manuscript text. If the host lacks a bound runtime, materialize the exact locked Framework in an ephemeral sandbox, verify its Git identity, and invoke the typed production bridge. If runtime/model/independent-review capability is unavailable, return the typed pending/blocked state; **never synthesize a Quillframe manuscript in the host itself**.
++8. Surface production manuscript text only through an exact fingerprint-bound production release (`candidate.visible.get` or an equivalent Core-owned released projection). Raw Draft, pending candidates, failed candidates, and host-authored substitutes are not user-visible Review Drafts.
+ 
+ ## Authority rules
+ 
+diff --git a/studio/app/HOSTED_WEB_PRODUCT_SURFACE.md b/studio/app/HOSTED_WEB_PRODUCT_SURFACE.md
+index 446887b..2c41a3b 100644
+--- a/studio/app/HOSTED_WEB_PRODUCT_SURFACE.md
++++ b/studio/app/HOSTED_WEB_PRODUCT_SURFACE.md
+@@ -29,7 +29,7 @@ If it is empty, `HostedHttpTransport.available()` is false and Studio remains un
+ 
+ The endpoint itself is not a credential. Authentication/session material remains host-owned and must not be embedded into Vite environment variables or semantic context.
+ 
+-## Required Host Bridge v8 behavior
++## Required Host Bridge v9 behavior
+ 
+ The hosted Core API must expose the same typed request/result semantics as the other transports. Current Studio authoring paths consume, among others:
+ 
+diff --git a/studio/app/TAURI_PRODUCT_SURFACE.md b/studio/app/TAURI_PRODUCT_SURFACE.md
+index 62b1d31..ed23deb 100644
+--- a/studio/app/TAURI_PRODUCT_SURFACE.md
++++ b/studio/app/TAURI_PRODUCT_SURFACE.md
+@@ -53,7 +53,7 @@ A process-local `MemorySecretStore` is not sufficient for Desktop production acc
+ Do not call Desktop production-ready until a separate host implementation proves:
+ 
+ - Tauri 2 app compiles against the current Studio build;
+-- `bridge_invoke` round-trips a real `bridge.describe` Host Bridge v8 request;
++- `bridge_invoke` round-trips a real `bridge.describe` Host Bridge v9 request;
+ - Python Core is packaged/launched as a sidecar rather than reimplemented in Rust;
+ - OS-native secret set/get/delete works and survives app restart;
+ - Model Service reconnect after restart resolves its durable `credential_ref` without storing plaintext in SQLite;
+diff --git a/studio/app/src/authoring/contracts.ts b/studio/app/src/authoring/contracts.ts
+index 81ed51e..8a591fb 100644
+--- a/studio/app/src/authoring/contracts.ts
++++ b/studio/app/src/authoring/contracts.ts
+@@ -436,6 +436,12 @@ export const CORE_CONSUMER_REQUIREMENTS: CoreConsumerRequirement[] = [
+     authorityExpectation: "read-only evidence bound to exact Candidate fingerprint",
+     whyUiCannotImplement: "Review prose/evidence cannot be reconstructed from browser state or candidate metadata.",
+   },
++  {
++    operation: "candidate.visible.get",
++    kind: "query",
++    writerSurface: true,
++    authorityExpectation: "released production manuscript only; Core withholds content unless the exact candidate has a valid production release",
++  },
+   {
+     operation: "candidate.reject",
+     userAction: "Explicitly reject the exact Review Draft",
+diff --git a/studio/app/tests/authoring-contracts.test.mjs b/studio/app/tests/authoring-contracts.test.mjs
+index 0f28f6f..0e72b7a 100644
+--- a/studio/app/tests/authoring-contracts.test.mjs
++++ b/studio/app/tests/authoring-contracts.test.mjs
+@@ -37,7 +37,7 @@ test("loaded Context is never conflated with considered/selected Context", () =>
+   assert.deepEqual(contracts.consideredNotLoaded(projection).map((item) => item.source_object_id), ["周叙", "CH002-ending", "research-note"]);
+ });
+ 
+-test("Studio consumer requirements use exact Host Bridge v8 primitives", () => {
++test("Studio consumer requirements use exact Host Bridge v9 primitives", () => {
+   const names = new Set(contracts.CORE_CONSUMER_REQUIREMENTS.map((item) => item.operation));
+   for (const required of [
+     "project.list",
+@@ -48,6 +48,7 @@ test("Studio consumer requirements use exact Host Bridge v8 primitives", () =>
+     "author.run.execute",
+     "author.run.status",
+     "candidate.review.get",
++    "candidate.visible.get",
+     "candidate.reject",
+     "candidate.revision.request",
+     "settlement.preflight",
+diff --git a/studio/host_bridge.py b/studio/host_bridge.py
+index df8dade..7cc580c 100755
+--- a/studio/host_bridge.py
++++ b/studio/host_bridge.py
+@@ -225,7 +225,10 @@ def _revisions_list(args: dict[str, Any], _: str):
+ 
+ 
+ def _revision_save(args: dict[str, Any], _: str):
+-    return store().save_revision(require(args, "project_id"), require(args, "document_id"), require(args, "content"), expected_parent_revision_id=args.get("expected_parent_revision_id"), source=require(args, "source"), authority_class=args.get("authority_class") or "proposal", provenance=args.get("provenance") if isinstance(args.get("provenance"), dict) else {})
++    source = require(args, "source")
++    if source == "production_runtime":
++        raise BridgeError("reserved_provenance", "production_runtime provenance is Core-owned and cannot be supplied through document.revision.save")
++    return store().save_revision(require(args, "project_id"), require(args, "document_id"), require(args, "content"), expected_parent_revision_id=args.get("expected_parent_revision_id"), source=source, authority_class=args.get("authority_class") or "proposal", provenance=args.get("provenance") if isinstance(args.get("provenance"), dict) else {})
+ 
+ 
+ def _revision_compare(args: dict[str, Any], _: str):
+diff --git a/studio/tauri_core_sidecar.py b/studio/tauri_core_sidecar.py
+index b58ffc2..818e3a1 100644
+--- a/studio/tauri_core_sidecar.py
++++ b/studio/tauri_core_sidecar.py
+@@ -211,7 +211,7 @@ def _self_test() -> dict[str, Any]:
+             }
+             result = host_bridge.invoke(request)
+             assert result["status"] == "ok"
+-            assert result["data"]["contract_version"] == "8"
++            assert result["data"]["contract_version"] == "9"
+             refs = _credential_refs()
+             assert refs["credential_refs"] == []
+         finally:
+@@ -226,7 +226,7 @@ def _self_test() -> dict[str, Any]:
+     return {
+         "schema": "quillframe_tauri_sidecar_self_test_v1",
+         "status": "PASS",
+-        "host_bridge_v8": True,
++        "host_bridge_v9": True,
+         "prepared_reference_contract": True,
+         "rollback_contract": True,
+         "all_injected_secret_scrub": True,
+diff --git a/tests/test_quillframe_production_host_bridge.py b/tests/test_quillframe_production_host_bridge.py
+index d2fd744..e62bfee 100644
+--- a/tests/test_quillframe_production_host_bridge.py
++++ b/tests/test_quillframe_production_host_bridge.py
+@@ -152,6 +152,24 @@ class ProductionHostBridgeTests(unittest.TestCase):
+             self.assertEqual(out["status"], "invalid")
+             self.assertIn("not authorized", " ".join(out["error"]["messages"]))
+ 
++
++    def test_host_cannot_fabricate_production_runtime_provenance(self):
++        out = host_bridge.invoke({
++            "schema": host_bridge.REQUEST_SCHEMA,
++            "request_id": "reserved-production-source",
++            "operation": "document.revision.save",
++            "surface": "agent_package",
++            "args": {
++                "project_id": "missing",
++                "document_id": "missing",
++                "content": "host-authored substitute",
++                "source": "production_runtime",
++            },
++            "authority": False,
++        })
++        self.assertEqual(out["status"], "failed")
++        self.assertEqual(out["error"]["code"], "reserved_provenance")
++
+     def test_self_test_passes_without_live_network(self):
+         report = host_bridge.self_test()
+         self.assertEqual(report["quillframe_host_bridge_contract"], "PASS")
+diff --git a/tests/test_quillframe_unified_host_bootstrap.py b/tests/test_quillframe_unified_host_bootstrap.py
+index 9dda7a0..f2a493a 100644
+--- a/tests/test_quillframe_unified_host_bootstrap.py
++++ b/tests/test_quillframe_unified_host_bootstrap.py
+@@ -132,7 +132,10 @@ class UnifiedHostBootstrapTests(unittest.TestCase):
+             first = host_scaffold.install_project_hosts(project)
+             self.assertTrue(first["installed"])
+             self.assertIn(".codex/hooks.json", first["changed"])
+-            self.assertIn("QF_SESSION_ID", (project / "AGENTS.md").read_text(encoding="utf-8"))
++            agents_text = (project / "AGENTS.md").read_text(encoding="utf-8")
++            self.assertIn("QF_SESSION_ID", agents_text)
++            self.assertIn("never synthesize a Quillframe manuscript", agents_text)
++            self.assertIn("candidate.visible.get", agents_text)
+             codex = json.loads((project / ".codex" / "hooks.json").read_text(encoding="utf-8"))
+             self.assertEqual(codex["hooks"]["PreToolUse"][0]["matcher"], "Bash|apply_patch|Edit|Write")
+ 
