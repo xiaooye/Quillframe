@@ -9,6 +9,9 @@ import { marked } from "marked";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const siteRoot = path.resolve(here, "..");
 const repoRoot = path.resolve(siteRoot, "..");
+const sitePackage = JSON.parse(fs.readFileSync(path.join(siteRoot, "package.json"), "utf8"));
+const markedVersion = sitePackage.dependencies?.marked ?? sitePackage.devDependencies?.marked;
+if (typeof markedVersion !== "string" || !markedVersion) throw new Error("site/package.json must exact-pin marked");
 const manifestPath = path.join(repoRoot, "docs", "documentation_manifest.json");
 const outputRoot = path.join(siteRoot, "public", "generated");
 const docsOutputRoot = path.join(outputRoot, "docs");
@@ -290,7 +293,7 @@ fs.writeFileSync(path.join(outputRoot, "build-meta.json"), `${JSON.stringify({
   manifest: path.relative(repoRoot, manifestPath).replaceAll(path.sep, "/"),
   documents: compiledCount,
   locales: ["en-US", "zh-CN"],
-  parser: "marked@18.0.7",
+  parser: `marked@${markedVersion}`,
 }, null, 2)}\n`, "utf8");
 
 console.log(JSON.stringify({

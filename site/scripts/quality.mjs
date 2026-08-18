@@ -42,18 +42,12 @@ const routeSurfaces = `${app}\n${publication}`;
 const runtime = `${app}\n${surface}\n${inspector}\n${playground}\n${publication}\n${knowledge}\n${renderer}\n${contentTypes}`;
 const allCopy = `${en}\n${zh}\n${app}\n${publication}`;
 
-const exactVersions = {
-  "solid-js": "1.9.14",
-  "@solidjs/router": "0.16.2",
-  marked: "18.0.7",
-  typescript: "7.0.2",
-  vite: "8.1.5",
-  "vite-plugin-solid": "2.11.14",
-};
-for (const [name, version] of Object.entries(exactVersions)) {
-  const actual = packageJson.dependencies?.[name] ?? packageJson.devDependencies?.[name];
-  check(actual === version, `${name} must remain exactly pinned to ${version}; got ${actual ?? "missing"}`);
-  check(typeof actual === "string" && !actual.startsWith("^") && !actual.startsWith("~"), `${name} must not use a version range`);
+const exactSemver = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+for (const [name, actual] of Object.entries({
+  ...(packageJson.dependencies ?? {}),
+  ...(packageJson.devDependencies ?? {}),
+})) {
+  check(typeof actual === "string" && exactSemver.test(actual), `${name} must remain exact-pinned to one semantic version; got ${actual ?? "missing"}`);
 }
 for (const forbidden of ["@weiui/react", "@weiui/headless", "react", "react-dom"]) {
   check(!(forbidden in (packageJson.dependencies ?? {})) && !(forbidden in (packageJson.devDependencies ?? {})), `forbidden dependency ${forbidden}`);
@@ -124,7 +118,8 @@ const docsIndex = readJson("public/generated/docs-index.json");
 const buildMeta = readJson("public/generated/build-meta.json");
 check(docsIndex.schema === "quillframe_product_document_index_v1" && docsIndex.authority === false, "generated documentation index contract drifted");
 check(buildMeta.schema === "quillframe_product_content_build_v1" && buildMeta.authority === false, "generated content build metadata contract drifted");
-check(buildMeta.parser === "marked@18.0.7", "generated content must record exact Markdown parser identity");
+const markedVersion = packageJson.dependencies?.marked ?? packageJson.devDependencies?.marked;
+check(buildMeta.parser === `marked@${markedVersion}`, `generated content parser identity must match current marked pin; expected marked@${markedVersion}, got ${buildMeta.parser}`);
 check(Number(docsIndex.documentCount) >= 20, `expected substantial repository documentation corpus; got ${docsIndex.documentCount}`);
 check(docsIndex.documents.some((doc) => doc.locale === "en-US") && docsIndex.documents.some((doc) => doc.locale === "zh-CN"), "generated docs must include both locales");
 check(docsIndex.documents.every((doc) => typeof doc.sourceFingerprint === "string" && doc.sourceFingerprint.length === 64), "every generated document index entry must carry source SHA-256");
