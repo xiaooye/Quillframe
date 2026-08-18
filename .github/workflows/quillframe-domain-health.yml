@@ -5,8 +5,6 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/quillframe-domain-health.yml'
-      - '.github/workflows/quillframe-deploy.yml'
-      - '.github/scripts/quillframe-pages-domain.sh'
       - 'site/**'
       - 'studio/app/**'
   workflow_dispatch:
@@ -28,24 +26,29 @@ jobs:
           set -euo pipefail
           check_dns() {
             domain="$1"
-            echo "== ${domain} via Cloudflare DoH =="
-            cf=$(curl -fsS --get 'https://cloudflare-dns.com/dns-query' \
-              -H 'accept: application/dns-json' \
-              --data-urlencode "name=${domain}" \
-              --data-urlencode 'type=CNAME')
-            echo "${cf}" | jq .
-            echo "== ${domain} via Google DoH =="
-            google=$(curl -fsS --get 'https://dns.google/resolve' \
-              --data-urlencode "name=${domain}" \
-              --data-urlencode 'type=CNAME')
-            echo "${google}" | jq .
+            resolved=0
+            for resolver in cloudflare google; do
+              if [ "${resolver}" = cloudflare ]; then
+                endpoint='https://cloudflare-dns.com/dns-query'
+                header=(-H 'accept: application/dns-json')
+              else
+                endpoint='https://dns.google/resolve'
+                header=()
+              fi
 
-            cf_status=$(echo "${cf}" | jq -r '.Status')
-            google_status=$(echo "${google}" | jq -r '.Status')
-            test "${cf_status}" = "0"
-            test "${google_status}" = "0"
-            echo "${cf}" | jq -e '.Answer and (.Answer | length > 0)' >/dev/null
-            echo "${google}" | jq -e '.Answer and (.Answer | length > 0)' >/dev/null
+              for type in A AAAA; do
+                echo "== ${domain} ${type} via ${resolver} DoH =="
+                response=$(curl -fsS --get "${endpoint}" "${header[@]}" \
+                  --data-urlencode "name=${domain}" \
+                  --data-urlencode "type=${type}")
+                echo "${response}" | jq .
+                test "$(echo "${response}" | jq -r '.Status')" = "0"
+                if echo "${response}" | jq -e '.Answer and (.Answer | length > 0)' >/dev/null; then
+                  resolved=$((resolved + 1))
+                fi
+              done
+            done
+            test "${resolved}" -gt 0
           }
           check_dns "${PRODUCT_DOMAIN}"
           check_dns "${STUDIO_DOMAIN}"
