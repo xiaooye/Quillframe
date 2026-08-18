@@ -1,101 +1,14 @@
 {
-  "version": "2",
-  "policy": "Eligibility is capability, permission, independence, connection and user-cost scoped. Availability is probed at execution time.",
+  "version": "3",
+  "policy": "Eligibility is capability, permission, independence, connection and user-cost scoped. Model Service identity is not capability proof; availability is resolved at execution time.",
   "runtimes": [
-    {
-      "id": "chatgpt_current_chat",
-      "kind": "chat_session",
-      "roles": ["manager", "writer", "specialist"],
-      "independent_semantic": false,
-      "interactive": true,
-      "automation": false,
-      "session_native": true,
-      "control_plane_transport": "connected_or_relay",
-      "usage_class": "ordinary_chat"
-    },
-    {
-      "id": "chatgpt_peer_chat",
-      "kind": "chat_session",
-      "roles": ["semantic_reviewer", "human_reviewer"],
-      "independent_semantic": true,
-      "interactive": true,
-      "automation": false,
-      "session_native": true,
-      "fresh_per_fingerprint": true,
-      "control_plane_transport": "relay",
-      "usage_class": "ordinary_chat"
-    },
-    {
-      "id": "codex_cli",
-      "kind": "local_agent_cli",
-      "roles": ["manager", "writer", "specialist", "semantic_reviewer"],
-      "independent_semantic": "separate_invocation_required",
-      "interactive": false,
-      "automation": true,
-      "session_native": true,
-      "control_plane_transport": "stdio_mcp_or_cli",
-      "auth": "existing Codex CLI login/config",
-      "usage_class": "codex_agentic"
-    },
-    {
-      "id": "claude_code",
-      "kind": "local_agent_cli",
-      "roles": ["manager", "writer", "specialist", "semantic_reviewer"],
-      "independent_semantic": "separate_invocation_required",
-      "interactive": false,
-      "automation": true,
-      "session_native": true,
-      "control_plane_transport": "stdio_mcp_or_cli",
-      "auth": "existing Claude Code supported login/config",
-      "usage_class": "claude_plan"
-    },
-    {
-      "id": "openai_responses_api",
-      "kind": "provider_api",
-      "roles": ["semantic_reviewer"],
-      "independent_semantic": true,
-      "automation": true,
-      "session_native": false,
-      "credential": "OPENAI_API_KEY",
-      "usage_class": "api_metered"
-    },
-    {
-      "id": "github_actions_bridge",
-      "kind": "remote_job",
-      "roles": ["semantic_reviewer", "eval_runner", "maintenance_observer"],
-      "independent_semantic": true,
-      "automation": true,
-      "session_native": false,
-      "requires": ["connected_github"],
-      "control_plane_transport": "repository_dispatch_or_issue_bridge",
-      "usage_class": "unknown"
-    },
-    {
-      "id": "mcp_remote_worker",
-      "kind": "mcp_service",
-      "roles": ["manager", "specialist", "semantic_reviewer"],
-      "independent_semantic": "isolated_session_required",
-      "automation": true,
-      "session_native": true,
-      "control_plane_transport": "streamable_http",
-      "usage_class": "unknown"
-    },
-    {
-      "id": "local_model",
-      "kind": "local_model",
-      "roles": ["specialist", "semantic_reviewer"],
-      "independent_semantic": "isolated_invocation_required",
-      "automation": true,
-      "usage_class": "local_model"
-    },
-    {
-      "id": "human_reviewer",
-      "kind": "human",
-      "roles": ["human_reviewer", "semantic_reviewer"],
-      "independent_semantic": true,
-      "interactive": true,
-      "automation": false,
-      "usage_class": "human"
-    }
+    {"id":"chatgpt_current_chat","kind":"chat_session","roles":["manager","writer","specialist"],"independent_semantic":false,"interactive":true,"automation":false,"session_native":true,"control_plane_transport":"connected_or_relay","usage_class":"ordinary_chat"},
+    {"id":"chatgpt_peer_chat","kind":"chat_session","roles":["semantic_reviewer","human_reviewer"],"independent_semantic":true,"interactive":true,"automation":false,"session_native":true,"fresh_per_fingerprint":true,"control_plane_transport":"relay","usage_class":"ordinary_chat"},
+    {"id":"codex_cli","kind":"local_agent_cli","roles":["manager","writer","specialist","semantic_reviewer"],"independent_semantic":"separate_invocation_required","interactive":false,"automation":true,"session_native":true,"control_plane_transport":"stdio_mcp_or_cli","auth":"existing Codex CLI login/config","usage_class":"codex_agentic"},
+    {"id":"claude_code","kind":"local_agent_cli","roles":["manager","writer","specialist","semantic_reviewer"],"independent_semantic":"separate_invocation_required","interactive":false,"automation":true,"session_native":true,"control_plane_transport":"stdio_mcp_or_cli","auth":"existing Claude Code supported login/config","usage_class":"claude_plan"},
+    {"id":"model_api","kind":"direct_model_api","roles":["manager","writer","specialist","semantic_reviewer"],"independent_semantic":"separate_invocation_required","interactive":false,"automation":true,"session_native":false,"requires":["model_api","semantic_model"],"model_selection":"quillframe_owned","protocol_discovery":"quillframe_owned","tool_loop":"quillframe_owned","provider_identity_required":false,"usage_class":"unknown"},
+    {"id":"github_actions_bridge","kind":"remote_job","roles":["semantic_reviewer","eval_runner","maintenance_observer"],"independent_semantic":true,"automation":true,"session_native":false,"requires":["connected_github"],"control_plane_transport":"repository_dispatch_or_issue_bridge","usage_class":"unknown"},
+    {"id":"mcp_remote_worker","kind":"mcp_service","roles":["manager","specialist","semantic_reviewer"],"independent_semantic":"isolated_session_required","automation":true,"session_native":true,"control_plane_transport":"streamable_http","usage_class":"unknown"},
+    {"id":"human_reviewer","kind":"human","roles":["human_reviewer","semantic_reviewer"],"independent_semantic":true,"interactive":true,"automation":false,"usage_class":"human"}
   ]
 }

@@ -1,0 +1,23 @@
+# Tasks — Quillframe Model Runtime
+
+- [x] Freeze the 0.9 reconstruction candidate head and create an isolated agent branch.
+- [x] Re-verify current mixed-protocol and tool-loop wire evidence.
+- [x] Freeze Model/Agent/Tool/Semantic ownership boundaries.
+- [x] Implement endpoint normalization, DNS destination and redirect network policy.
+- [x] Implement secret-reference isolation and deterministic mock transport.
+- [x] Implement Chat Completions / Responses / Anthropic Messages codecs and continuation semantics.
+- [x] Implement model discovery, lazy protocol/tool probes and automatic eligible-model selection.
+- [x] Implement AgentJob/Result, hard budgets, cancellation, ToolRuntime and bounded AgentRunner.
+- [x] Implement repository read/search/write, subprocess isolation and secret-bearing path protection.
+- [x] Bind consequential tool side effects to existing Session Runtime checkpoints and Control Plane consume-once receipts.
+- [x] Add SQLite `002_model_runtime.sql` and one-shot migration from provider-centric tables.
+- [x] Add durable Model Service persistence, fingerprint-bound hydration and credential-reference lifecycle.
+- [x] Update runtime capabilities/registry to the generic `model_api` route.
+- [x] Integrate a generic Model Runtime semantic executor while retaining Codex/Claude/MCP/GitHub/peer/human routes.
+- [x] Expose the `from quillframe import Quillframe` public library façade and wheel packaging.
+- [x] Add normal-CI mock regression suites and an explicit live opt-in compatibility harness.
+- [x] Synchronize HARNESS_MANIFEST machine ownership and bilingual Model/Agent Runtime docs.
+- [ ] Current exact PR head has green Core / Site / Studio CI.
+- [ ] Perform final before-review reconciliation against live `main`.
+- [ ] Obtain genuinely independent architecture / semantic review evidence.
+- [ ] Produce acceptance-readiness report; do not merge without user authorization.

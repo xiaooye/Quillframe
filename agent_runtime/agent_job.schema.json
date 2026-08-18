@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "quillframe_agent_job_v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "job_id", "session_id", "run_id", "task_mode", "runtime_role",
+    "service_id", "instruction", "tool_grants", "required_model_capabilities",
+    "authority", "budgets"
+  ],
+  "properties": {
+    "schema": {"const": "quillframe_agent_job_v1"},
+    "job_id": {"type": "string", "minLength": 1},
+    "session_id": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "task_mode": {"type": "string", "minLength": 1},
+    "runtime_role": {"type": "string", "minLength": 1},
+    "service_id": {"type": "string", "minLength": 1},
+    "instruction": {"type": "string", "minLength": 1},
+    "context": {"type": "array", "items": {"type": "object"}},
+    "tool_grants": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "model_preference": {"type": ["string", "null"]},
+    "required_model_capabilities": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "authority": {"type": "object"},
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_steps", "max_model_requests", "max_tool_calls", "max_parallel_tool_calls",
+        "max_output_tokens_per_request", "max_total_tokens", "max_elapsed_ms"
+      ],
+      "properties": {
+        "max_steps": {"type": "integer", "minimum": 1},
+        "max_model_requests": {"type": "integer", "minimum": 1},
+        "max_tool_calls": {"type": "integer", "minimum": 1},
+        "max_parallel_tool_calls": {"type": "integer", "minimum": 1},
+        "max_output_tokens_per_request": {"type": "integer", "minimum": 1},
+        "max_total_tokens": {"type": "integer", "minimum": 1},
+        "max_elapsed_ms": {"type": "integer", "minimum": 1}
+      }
+    },
+    "idempotency_key": {"type": ["string", "null"]}
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "quillframe_model_service_snapshot_v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "service_id", "endpoint", "credential_ref", "discovered_at", "auth_style", "models", "api_surfaces", "diagnostics", "secret_present", "snapshot_fingerprint"],
+  "properties": {
+    "schema": {"const": "quillframe_model_service_snapshot_v1"},
+    "service_id": {"type": "string", "minLength": 1},
+    "endpoint": {"type": "string", "minLength": 1},
+    "credential_ref": {"type": ["string", "null"]},
+    "discovered_at": {"type": "string"},
+    "auth_style": {"enum": ["bearer", "x_api_key", "none", "unknown"]},
+    "models": {"type": "array"},
+    "api_surfaces": {"type": "object"},
+    "diagnostics": {"type": "array"},
+    "secret_present": {"type": "boolean"},
+    "snapshot_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

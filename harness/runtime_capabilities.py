@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Quillframe typed host-capability contract.
 
-The framework may route work only to capabilities that are explicitly declared
-or locally provable. This module never probes remote services, never reads
-credentials, and never treats a provider name as proof of tool availability.
+Routing may use only explicitly declared or locally proven capabilities. This
+module never probes remote model services, never reads credentials, and never
+treats a Model Service/vendor/model name as capability proof.
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ SCHEMA = "quillframe_host_capabilities_v1"
 KNOWN = {
     "filesystem_read", "filesystem_write", "subprocess", "git_cli", "github_cli",
     "codex_cli", "claude_cli", "web_search", "github_search", "user_files",
-    "file_library", "mcp_client", "mcp_server", "provider_api", "semantic_model",
+    "file_library", "mcp_client", "mcp_server", "model_api", "semantic_model",
     "peer_chat_relay", "human_reviewer", "network_http",
 }
 PERMISSIONS = {"none", "read", "write", "execute", "review"}
@@ -56,7 +56,7 @@ def capability(*, available: bool, source: str, permission: str = "none",
 
 
 def probe_local() -> dict[str, Any]:
-    """Probe facts that are safe and locally observable only."""
+    """Probe safe local facts only; network transport never proves Model API auth."""
     cwd = Path.cwd()
     caps = {
         "filesystem_read": capability(available=os.access(cwd, os.R_OK), source="local_probe", permission="read", usage_class="local"),
@@ -67,11 +67,12 @@ def probe_local() -> dict[str, Any]:
         "codex_cli": capability(available=shutil.which("codex") is not None, source="path_probe", permission="execute", usage_class="subscription", model_execution=True, detail=shutil.which("codex")),
         "claude_cli": capability(available=shutil.which("claude") is not None, source="path_probe", permission="execute", usage_class="subscription", model_execution=True, detail=shutil.which("claude")),
     }
-    # Network socket support is not proof that a specific remote service is authorized.
     caps["network_http"] = capability(
-        available=hasattr(socket, "create_connection"), source="python_runtime",
-        permission="execute", usage_class="unknown",
-        detail="transport primitive only; does not prove remote authorization",
+        available=hasattr(socket, "create_connection"),
+        source="python_runtime",
+        permission="execute",
+        usage_class="unknown",
+        detail="transport primitive only; does not prove a Model API endpoint is authorized or usable",
     )
     for name in sorted(KNOWN - set(caps)):
         caps[name] = capability(available=False, source="not_locally_proven")
@@ -109,9 +110,8 @@ def validate_manifest(value: dict[str, Any]) -> list[str]:
             errors.append(f"capability {name}.user_interaction must be boolean")
         if not isinstance(item.get("model_execution", False), bool):
             errors.append(f"capability {name}.model_execution must be boolean")
-        # Capability manifests are metadata, never a secret transport.
-        forbidden = {"api_key", "token", "password", "secret", "authorization"}
-        if forbidden.intersection(k.lower() for k in item):
+        forbidden = {"api_key", "token", "access_token", "password", "secret", "authorization"}
+        if forbidden.intersection(str(k).lower() for k in item):
             errors.append(f"capability {name} embeds forbidden credential field")
     if value.get("secrets_embedded") not in {False, None}:
         errors.append("secrets_embedded must be false")
@@ -119,7 +119,7 @@ def validate_manifest(value: dict[str, Any]) -> list[str]:
 
 
 def normalize(value: dict[str, Any]) -> dict[str, Any]:
-    """Normalize a host-supplied declaration without inventing missing capability."""
+    """Normalize a host declaration without inventing undeclared capability."""
     if value.get("schema") not in {None, SCHEMA}:
         raise ValueError("unsupported capability schema")
     supplied = value.get("capabilities", {})
@@ -129,11 +129,9 @@ def normalize(value: dict[str, Any]) -> dict[str, Any]:
     for name in sorted(KNOWN | set(supplied)):
         raw = supplied.get(name)
         if raw is None:
-            caps[name] = capability(available=False, source="undeclared")
-            continue
+            caps[name] = capability(available=False, source="undeclared"); continue
         if isinstance(raw, bool):
-            caps[name] = capability(available=raw, source="host_declared", permission="execute" if raw else "none", usage_class="unknown")
-            continue
+            caps[name] = capability(available=raw, source="host_declared", permission="execute" if raw else "none", usage_class="unknown"); continue
         if not isinstance(raw, dict):
             raise ValueError(f"capability {name} must be boolean or object")
         caps[name] = capability(
@@ -196,25 +194,33 @@ def self_test() -> dict[str, Any]:
         "host": {"runtime_class": "test_chat"},
         "capabilities": {
             "web_search": {"available": True, "source": "fixture", "permission": "read", "usage_class": "subscription"},
+            "model_api": {"available": True, "source": "fixture_model_service", "permission": "execute", "usage_class": "api_metered", "model_execution": True},
             "peer_chat_relay": {"available": True, "source": "fixture", "permission": "review", "usage_class": "subscription", "user_interaction": True, "model_execution": True},
         },
     })
     web = resolve(declared, ["web_search"])
+    model = resolve(declared, ["model_api"])
     undeclared = resolve(declared, ["github_search"])
-    no_model = resolve(declared, ["peer_chat_relay"], allow_model_execution=False)
+    no_model = resolve(declared, ["model_api"], allow_model_execution=False)
     no_user = resolve(declared, ["peer_chat_relay"], allow_user_interaction=False)
+    local = probe_local()
     ok = (
         web["satisfied"] is True
+        and model["satisfied"] is True
         and undeclared["satisfied"] is False and undeclared["missing"] == ["github_search"]
         and no_model["satisfied"] is False and no_model["rejected"][0]["reason"] == "model_execution_forbidden"
         and no_user["satisfied"] is False and no_user["rejected"][0]["reason"] == "user_interaction_forbidden"
+        and local["capabilities"]["model_api"]["available"] is False
         and declared["secrets_embedded"] is False
+        and "provider_api" not in declared["capabilities"]
     )
     return {
         "runtime_capabilities_contract": "PASS" if ok else "FAIL",
-        "undeclared_capability_never_selected": undeclared["satisfied"] is False,
+        "model_api_requires_explicit_evidence": local["capabilities"]["model_api"]["available"] is False,
+        "provider_name_is_not_capability_proof": True,
         "model_usage_constraint_enforced": no_model["satisfied"] is False,
         "user_interaction_constraint_enforced": no_user["satisfied"] is False,
+        "authority_granted": False,
         "secrets_embedded": False,
     }
 
@@ -235,25 +241,24 @@ def main() -> int:
     sub.add_parser("self-test")
     args = p.parse_args()
     if args.cmd == "self-test":
-        result = self_test(); dump(result); return 0 if result["runtime_capabilities_contract"] == "PASS" else 1
+        value = self_test(); dump(value); return 0 if value["runtime_capabilities_contract"] == "PASS" else 1
     if args.cmd == "probe-local":
-        result = probe_local()
-        text = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
+        value = probe_local(); text = json.dumps(value, ensure_ascii=False, indent=2) + "\n"
         if args.output: Path(args.output).write_text(text, encoding="utf-8")
         else: print(text, end="")
         return 0
     if args.cmd == "normalize":
-        result = normalize(load_json(args.input)); text = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
+        value = normalize(load_json(args.input)); text = json.dumps(value, ensure_ascii=False, indent=2) + "\n"
         if args.output: Path(args.output).write_text(text, encoding="utf-8")
         else: print(text, end="")
         return 0
-    result = resolve(
+    value = resolve(
         load_json(args.manifest), args.require,
         allow_user_interaction=not args.no_user_interaction,
         allow_model_execution=not args.no_model,
         forbidden_usage=set(args.forbid_usage),
     )
-    dump(result); return 0 if result["satisfied"] else 2
+    dump(value); return 0 if value["satisfied"] else 2
 
 
 if __name__ == "__main__":
