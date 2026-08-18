@@ -29,10 +29,25 @@ jobs:
           cat scripts/.semantic-context-parts/part*.txt | base64 -d | gzip -d > scripts/_apply_semantic_context_runtime.py
           python scripts/_apply_semantic_context_runtime.py
           python - <<'PY'
+          import json
           from pathlib import Path
           for path in Path('specs/014-semantic-context-runtime').glob('*.md'):
               text=path.read_text(encoding='utf-8')
               path.write_text('\n'.join(line.rstrip() for line in text.splitlines())+'\n', encoding='utf-8')
+          router=Path('harness/semantic_workers/semantic_worker_router.py')
+          text=router.read_text(encoding='utf-8')
+          old='ALLOWED_KINDS={"eval_judge","corpus_analyze","benchmark_synthesize","external_review","preference_distill","artifact_audit"}'
+          new='ALLOWED_KINDS={"eval_judge","corpus_analyze","benchmark_synthesize","external_review","preference_distill","artifact_audit","artifact_analyze"}'
+          assert old in text or new in text
+          router.write_text(text.replace(old,new), encoding='utf-8')
+          schema=Path('harness/semantic_workers/job_schema.json')
+          data=json.loads(schema.read_text(encoding='utf-8'))
+          kinds=data['properties']['kind']['enum']
+          if 'artifact_analyze' not in kinds:
+              kinds.append('artifact_analyze')
+          schema.write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          test=Path('tests/test_quillframe_semantic_context_contracts.py')
+          test.write_text('''from __future__ import annotations\nimport sys\nimport unittest\nfrom pathlib import Path\n\nROOT=Path(__file__).resolve().parents[1]\nsys.path.insert(0,str(ROOT / "harness" / "semantic_workers"))\nfrom registered_contract_binding import validate_registered_job\nfrom semantic_worker_router import make_contract_job\n\nFP="sha256:"+"a"*64\n\nclass SemanticContextContractTests(unittest.TestCase):\n    def test_profile_derive_registered_contract_is_valid(self):\n        job=make_contract_job("context.profile_derive","CHAR-1",{\n            "source":{"object_id":"CHAR-1","object_type":"Character","source_fingerprint":FP,"model_view":{},"stage_hints":["character_simulation"]},\n            "manual_override_present":False,\n        },source_session_id="SES-TEST")\n        self.assertEqual(job["kind"],"artifact_analyze")\n        self.assertEqual(validate_registered_job(job),[])\n\n    def test_stage_select_registered_contract_is_valid(self):\n        job=make_contract_job("context.stage_select","RUN-1",{\n            "task":{},"stage_id":"draft","candidate_universe_fingerprint":FP,\n            "candidates":[{"profile_id":"PROF-1","object_id":"CHAR-1","authority":"accepted","lifecycle":"active","source_fingerprint":FP,"profile_fingerprint":FP,"description":"d","trigger_when":"t","estimated_tokens":8,"semantic_tags":[],"required_for_grounding":True}],\n            "hard_budget":128,\n        },source_session_id="SES-TEST")\n        self.assertEqual(job["kind"],"artifact_audit")\n        self.assertEqual(validate_registered_job(job),[])\n\nif __name__ == "__main__":\n    unittest.main()\n''',encoding='utf-8')
           PY
       - name: Version consistency
         run: python scripts/version_consistency.py
@@ -85,10 +100,25 @@ jobs:
           cat scripts/.semantic-context-parts/part*.txt | base64 -d | gzip -d > scripts/_apply_semantic_context_runtime.py
           python scripts/_apply_semantic_context_runtime.py
           python - <<'PY'
+          import json
           from pathlib import Path
           for path in Path('specs/014-semantic-context-runtime').glob('*.md'):
               text=path.read_text(encoding='utf-8')
               path.write_text('\n'.join(line.rstrip() for line in text.splitlines())+'\n', encoding='utf-8')
+          router=Path('harness/semantic_workers/semantic_worker_router.py')
+          text=router.read_text(encoding='utf-8')
+          old='ALLOWED_KINDS={"eval_judge","corpus_analyze","benchmark_synthesize","external_review","preference_distill","artifact_audit"}'
+          new='ALLOWED_KINDS={"eval_judge","corpus_analyze","benchmark_synthesize","external_review","preference_distill","artifact_audit","artifact_analyze"}'
+          assert old in text or new in text
+          router.write_text(text.replace(old,new), encoding='utf-8')
+          schema=Path('harness/semantic_workers/job_schema.json')
+          data=json.loads(schema.read_text(encoding='utf-8'))
+          kinds=data['properties']['kind']['enum']
+          if 'artifact_analyze' not in kinds:
+              kinds.append('artifact_analyze')
+          schema.write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          test=Path('tests/test_quillframe_semantic_context_contracts.py')
+          test.write_text('''from __future__ import annotations\nimport sys\nimport unittest\nfrom pathlib import Path\n\nROOT=Path(__file__).resolve().parents[1]\nsys.path.insert(0,str(ROOT / "harness" / "semantic_workers"))\nfrom registered_contract_binding import validate_registered_job\nfrom semantic_worker_router import make_contract_job\n\nFP="sha256:"+"a"*64\n\nclass SemanticContextContractTests(unittest.TestCase):\n    def test_profile_derive_registered_contract_is_valid(self):\n        job=make_contract_job("context.profile_derive","CHAR-1",{\n            "source":{"object_id":"CHAR-1","object_type":"Character","source_fingerprint":FP,"model_view":{},"stage_hints":["character_simulation"]},\n            "manual_override_present":False,\n        },source_session_id="SES-TEST")\n        self.assertEqual(job["kind"],"artifact_analyze")\n        self.assertEqual(validate_registered_job(job),[])\n\n    def test_stage_select_registered_contract_is_valid(self):\n        job=make_contract_job("context.stage_select","RUN-1",{\n            "task":{},"stage_id":"draft","candidate_universe_fingerprint":FP,\n            "candidates":[{"profile_id":"PROF-1","object_id":"CHAR-1","authority":"accepted","lifecycle":"active","source_fingerprint":FP,"profile_fingerprint":FP,"description":"d","trigger_when":"t","estimated_tokens":8,"semantic_tags":[],"required_for_grounding":True}],\n            "hard_budget":128,\n        },source_session_id="SES-TEST")\n        self.assertEqual(job["kind"],"artifact_audit")\n        self.assertEqual(validate_registered_job(job),[])\n\nif __name__ == "__main__":\n    unittest.main()\n''',encoding='utf-8')
           PY
           git checkout 0d211675fd9f545b83d02ab4102563f0c67e11b9 -- .github/workflows/quillframe-ci.yml
           python - <<'PY'
