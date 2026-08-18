@@ -67,9 +67,17 @@ jobs:
         run: python studio/host_bridge.py self-test
       # SPEC021-APPLY-BEGIN
       - name: Apply verified Spec 021 host hardening once
-        if: github.event_name == 'push' && github.ref == 'refs/heads/agent/production-visibility-enforcement' && github.actor != 'github-actions[bot]'
+        if: >-
+          github.actor != 'github-actions[bot]' &&
+          ((github.event_name == 'push' && github.ref == 'refs/heads/agent/production-visibility-enforcement') ||
+           (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
         run: |
           set -euo pipefail
+          TARGET_BRANCH=agent/production-visibility-enforcement
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            git fetch origin "$TARGET_BRANCH"
+            git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+          fi
           PATCH=specs/021-production-visibility-enforcement/.host-hardening.patch
           git apply --exclude=studio/tauri_core_sidecar.py --check "$PATCH"
           git apply --exclude=studio/tauri_core_sidecar.py "$PATCH"
@@ -102,7 +110,7 @@ jobs:
           git add -A
           git diff --cached --check
           git commit -m 'fix: enforce released manuscript host boundary'
-          git push origin HEAD:agent/production-visibility-enforcement
+          git push origin HEAD:$TARGET_BRANCH
       # SPEC021-APPLY-END
       - name: Checkout exact source for ephemeral runtime bundle
         uses: actions/checkout@v7
