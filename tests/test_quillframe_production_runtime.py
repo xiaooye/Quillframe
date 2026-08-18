@@ -9,9 +9,8 @@ from pathlib import Path
 from agent_runtime import AgentJob, AgentResult
 from core_operations import CoreOperations
 from harness.context_runtime import MANDATORY_PRODUCTION_MECHANISMS
-from persistence.quillframe_sqlite import QuillframeStore, fingerprint_text, now_iso
+from persistence.quillframe_sqlite import QuillframeStore, now_iso
 from production_runtime import PRODUCTION_MECHANISMS, ProductionRunError, ProductionRunExecutor
-from production_runtime.sources import CONTEXT_STAGE_IDS
 
 
 class FakeAgentRuntime:
@@ -109,7 +108,12 @@ class ProductionRuntimeTests(unittest.TestCase):
             self.assertNotIn("INTERNAL RAW DRAFT", json.dumps(job.to_dict()) if job.runtime_role not in {"surface_realization"} else "")
         public = json.dumps(result)
         self.assertNotIn("INTERNAL RAW DRAFT", public)
-        self.assertNotIn("private_reasoning", public)
+        for receipt in result["stage_receipts"]:
+            self.assertIs(receipt["private_reasoning_exposed"], False)
+            self.assertIs(receipt["raw_draft_visible"], False)
+            for forbidden in ("analysis", "chain_of_thought", "reasoning", "scratchpad"):
+                self.assertNotIn(forbidden, receipt)
+                self.assertNotIn(forbidden, receipt["judgment"])
         with self.store.open_project("PROD") as conn:
             candidate = conn.execute("SELECT * FROM candidates WHERE run_id=?", (run_id,)).fetchone()
             self.assertEqual(candidate["status"], "review_draft")
