@@ -23,6 +23,8 @@ const docsConfig = read("docs-site/astro.config.mjs");
 const docsAudit = read("docs-site/src/styles/surface-audit.css");
 const docsIdentity = read("docs-site/src/styles/story-loom-docs.css");
 const docsReadability = read("docs-site/src/styles/readability-audit.css");
+const docsHeader = read("docs-site/src/styles/product-header-parity.css");
+const docsActions = read("docs-site/src/components/QuillframeActions.astro");
 
 check(main.includes('import "./styles/index.css"'), "product site must load the single CSS entrypoint");
 check(!productIndex.includes("surface-audit.css"), "product site must not use a final audit override layer");
@@ -68,12 +70,15 @@ for (const marker of ["Route-specific Story Loom scenes", "♡ STORY STATE", "LO
 check(!routeScenes.includes(".architecture-entry") && !routeScenes.includes(".publication-workbench-entry"), "new route-scene layer must not take ownership of Architecture or Publication");
 check(!routeScenes.includes("radial-gradient"), "late route-scene refinement must not reintroduce hero/card wallpaper");
 
-/* Docs remain reading-first, but their chrome and landing share Story Loom identity. */
+/* Docs remain reading-first, while their product chrome stays synchronized with
+ * the Product Site instead of carrying a separate NovelForge-era shell. */
 check(docsConfig.includes('"./src/styles/surface-audit.css"'), "Starlight must keep its docs-specific reading-surface audit");
 check(docsConfig.includes('"./src/styles/story-loom-docs.css"'), "Starlight must load the restrained Story Loom identity layer");
 check(docsConfig.includes('"./src/styles/readability-audit.css"'), "Starlight must load the docs readability pass");
+check(docsConfig.includes('"./src/styles/product-header-parity.css"'), "Starlight must load the dedicated shared-shell header owner");
 check(docsConfig.indexOf('surface-audit.css') < docsConfig.indexOf('story-loom-docs.css'), "docs Story Loom identity must refine the neutral reading surface");
-check(docsConfig.indexOf('story-loom-docs.css') < docsConfig.indexOf('readability-audit.css'), "docs readability must remain final after identity styling");
+check(docsConfig.indexOf('story-loom-docs.css') < docsConfig.indexOf('readability-audit.css'), "docs readability must remain after identity styling");
+check(docsConfig.indexOf('readability-audit.css') < docsConfig.indexOf('product-header-parity.css'), "docs shell owner may load last but must remain scoped to chrome");
 for (const marker of ["header.header", ".sidebar-pane", "body:has([data-nf-docs-home]) .hero", ".nf-article-title", ".sl-markdown-content blockquote", ".sl-markdown-content table", ".pagination-links a"]) {
   check(docsAudit.includes(marker), `docs reading-surface audit missing ${marker}`);
 }
@@ -84,6 +89,19 @@ check(docsAudit.includes(".nf-article-title") && docsAudit.includes("border-bott
 check(docsReadability.includes(":lang(zh-CN) body:has(.nf-article-title) .sl-markdown-content") && docsReadability.includes("line-height: 1.9"), "Chinese long-form reading rhythm must remain explicit");
 check(docsReadability.includes(".sl-markdown-content li > p") && docsReadability.includes("margin-block: .18rem"), "tight Markdown lists must not inherit full paragraph spacing");
 check(docsReadability.includes("max-width: 68ch") && docsReadability.includes("max-width: 42em"), "docs reading measure must remain bounded for Latin and CJK copy");
+
+check(docsHeader.includes("Quillframe Docs product-shell owner"), "Docs final header layer must document its shared-shell ownership");
+check(docsHeader.includes("background: color-mix(in oklab, var(--qf-surface-solid) 94%, transparent)") && docsHeader.includes("box-shadow: none"), "Docs top chrome must use the same quiet canvas language as ProductShell");
+check(!docsHeader.includes("radial-gradient") && !docsHeader.includes("!important"), "Docs shell owner must not use route wallpaper or specificity escape hatches");
+for (const route of ["/product", "/studio", "/architecture", "/publication"]) {
+  check(docsActions.includes(`href=\"${route}\"`), `Docs primary product navigation missing ${route}`);
+}
+check(docsActions.includes('class="nf-product-link nf-docs-nav-link"'), "Docs primary navigation must include the Docs entry");
+check(docsActions.includes('class="nf-product-link nf-github-link"') && docsActions.includes("https://github.com/xiaooye/cn_webnovel_agent"), "Docs primary navigation must include the canonical GitHub repository");
+check(docsActions.includes("https://studio.quillframe.wei-dev.com"), "Docs Hosted Studio action must use the current Quillframe Studio domain");
+check(!docsActions.includes("NovelForge") && !docsActions.includes("studio.novelforge.wei-dev.com"), "Docs current product chrome must not retain NovelForge-era identity");
+check(docsActions.includes('rel="noopener noreferrer"'), "Docs external product-shell links must use safe new-window semantics");
+
 check(!workbench.includes("!important") && !routeIdentity.includes("!important") && !routeScenes.includes("!important") && !docsIdentity.includes("!important"), "Story Loom identity layers must not depend on specificity escalation");
 
 if (failures.length) {
@@ -91,7 +109,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "quillframe_surface_identity_quality_v10",
+    schema: "quillframe_surface_identity_quality_v11",
     status: "pass",
     product_final_override: false,
     product_editorial_flattening: false,
@@ -110,6 +128,9 @@ if (failures.length) {
     docs_reading_surface: true,
     docs_story_loom_identity: true,
     docs_readability_audit: true,
+    docs_shell_synced: true,
+    docs_github_entry: true,
+    docs_current_quillframe_identity: true,
     tight_markdown_lists: true,
     cjk_reading_rhythm: true,
   }, null, 2));
