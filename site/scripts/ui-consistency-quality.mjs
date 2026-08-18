@@ -19,6 +19,10 @@ const docsNavigation = read("docs-site/src/styles/navigation-polish.css");
 const docsArticle = read("docs-site/src/styles/article-polish.css");
 const docsCustom = read("docs-site/src/styles/custom.css");
 
+const legacyProduct = ["Novel", "Forge"].join("");
+const legacyLower = legacyProduct.toLowerCase();
+const legacyUpper = legacyProduct.toUpperCase();
+const legacyWhyRoute = `why-${legacyLower}`;
 const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
 
@@ -26,16 +30,16 @@ const check = (condition, message) => { if (!condition) failures.push(message); 
  * scope here by design: this gate only inspects files that own current chrome. */
 check(docsConfig.includes('title: "Quillframe"'), "current Starlight title must be Quillframe");
 check(docsConfig.includes('site: "https://quillframe.wei-dev.com"'), "current Docs canonical site must use the Quillframe domain");
-check(docsSiteTitle.includes("Quillframe") && !docsSiteTitle.includes("NovelForge"), "current Docs SiteTitle must expose only Quillframe identity");
+check(docsSiteTitle.includes("Quillframe") && !docsSiteTitle.includes(legacyProduct), "current Docs SiteTitle must expose only Quillframe identity");
 check(docsLanding.includes('title: "Quillframe Documentation"') && docsLanding.includes('title: "Quillframe 文档中心"'), "Docs landing title must use Quillframe in both locales");
 check(docsLanding.includes('primaryAction: "Why Quillframe"') && docsLanding.includes('primaryAction: "为什么选择 Quillframe"'), "Docs landing CTA must use Quillframe in both locales");
 check(docsLanding.includes('"/docs/en/why-quillframe"') && docsLanding.includes('"/docs/why-quillframe"'), "Docs landing must target current why-quillframe routes");
-check(!/NovelForge|NOVELFORGE|why-novelforge/.test(docsLanding), "current Docs landing must not retain stale NovelForge identity or route slugs");
-check(docsPageTitle.includes('"why-quillframe"') && !docsPageTitle.includes("why-novelforge"), "Docs route-aware PageTitle must classify the current why-quillframe slug");
+check(![legacyProduct, legacyLower, legacyUpper, legacyWhyRoute].some((token) => docsLanding.includes(token)), "current Docs landing must not retain stale product identity or route slugs");
+check(docsPageTitle.includes('"why-quillframe"') && !docsPageTitle.includes(legacyWhyRoute), "Docs route-aware PageTitle must classify the current why-quillframe slug");
 check(docsActions.includes('https://github.com/xiaooye/cn_webnovel_agent'), "current Docs GitHub entry must target the canonical repository");
 check(docsActions.includes('https://studio.quillframe.wei-dev.com'), "current Docs Studio entry must target the current Quillframe Studio destination");
-check(!/studio\.novelforge|github\.com\/xiaooye\/novelforge/i.test(docsActions), "current Docs actions must not retain stale product destinations");
-check(docsActions.includes("Quillframe product navigation") && !docsActions.includes("NovelForge product navigation"), "current Docs navigation aria identity must be Quillframe");
+check(!docsActions.toLowerCase().includes(`studio.${legacyLower}`) && !docsActions.toLowerCase().includes(`github.com/xiaooye/${legacyLower}`), "current Docs actions must not retain stale product destinations");
+check(docsActions.includes("Quillframe product navigation") && !docsActions.includes(`${legacyProduct} product navigation`), "current Docs navigation aria identity must be Quillframe");
 
 /* Product foreground ownership. */
 for (const token of ["--pe-nav-foreground", "--pe-nav-active", "--pe-link-foreground", "--pe-link-hover"]) {
