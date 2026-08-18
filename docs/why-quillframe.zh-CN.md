@@ -1,6 +1,6 @@
 # 为什么是 Quillframe？
 
-本页文件名来自旧公开品牌，为稳定兼容路径而保留；当前产品名称是 **Quillframe**。
+**Quillframe** 是当前产品身份，`quillframe` 是当前技术命名空间。
 
 Quillframe 要解决的是长篇创作里一个常被混在一起的矛盾：创意解释必须保持弹性，而故事事实的权威和执行状态必须保持精确。
 
@@ -10,9 +10,11 @@ Quillframe 要解决的是长篇创作里一个常被混在一起的矛盾：创
 
 因此 Quillframe 把语义职责与确定性职责分开。需要理解意义的判断交给模型或人；身份、权限、内容指纹、生命周期、来源链、事务和可复现性则交给代码证明。
 
+同一原则也适用于模型执行：用户只用 `API Endpoint + Access Token` 连接 inference；discovery、capability evidence、model selection、tools、sessions、Context、authority 和 agent loop 仍由 Quillframe 负责。Vendor identity 不是产品权威。
+
 ## 长篇需要事实权威，不只是更大的记忆
 
-更大的上下文窗口并不能回答“哪条信息算权威”。Quillframe 分开项目事实、当前状态、计划、待评审候选稿、派生记忆、研究资料、语料库证据和运行时状态，再通过稀疏上下文清单，只选择当前任务真正需要的内容。
+更大的上下文窗口并不能回答“哪条信息算权威”。Quillframe 分开项目事实、当前状态、计划、待评审候选稿、派生记忆、研究资料、语料库证据和运行时状态，再通过稀疏 Context Manifest，只选择当前任务真正需要的内容。
 
 <img src="assets/concepts/authority-ladder.zh-CN.svg" alt="从锁定到提案的权威层级，并明确计划不等于正典、接受不等于已经落定" width="100%" />
 
@@ -28,10 +30,14 @@ Quillframe 要解决的是长篇创作里一个常被混在一起的矛盾：创
 
 用户对既有产物或工作方式给出的有效反馈，可以在任何主要任务模式中进入受限的学习接入流程。自动发生的是反馈捕获，不是长期规则升级。`one_off`、`project`、`user_taste`、`general_craft` 四种作用范围仍然分开；模型推断也不会自动获得持久写入权限。
 
+## 持久化不是权威
+
+SQLite 是 Quillframe 的 canonical durable product state，但“已经保存”不等于 Canon、Accepted、Settled，也不等于下一次模型调用就应该把它注入 Context。Persistence 回答“什么能持续存在”；authority 回答“这条信息有权代表什么”。
+
 ## 代价与适用边界
 
 Quillframe 有意比一次性写作助手更重。只有当项目足够长，连续性、状态、修订来源、恢复、独立评审和学习纪律真正重要时，这些机制才值得。轻量构思或单次改写，简单工具反而可能更合适。
 
-## 兼容性
+## 当前命名与历史记录
 
-旧公开名称仍存在于 `quillframe.toml`、`quillframe.lock.json`、模式标识、工作流名称和仓库路径等技术标识中。它们属于兼容界面，不是当前公开品牌；本次文档迁移有意保留这些稳定标识。
+当前产品文档、package metadata、schema 与 active architecture 使用 **Quillframe / `quillframe`**。历史规格、迁移记录、Git history 与法律文本可以在改名会破坏 provenance 或 legal meaning 时保留早期术语。这些历史记录不会改变当前产品身份。

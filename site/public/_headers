@@ -1,0 +1,23 @@
+/*
+  Link: </llms.txt>; rel="alternate"; type="text/plain", </sitemap.md>; rel="sitemap"; type="text/markdown", </sitemap.xml>; rel="sitemap"; type="application/xml"
+  Content-Signal: search=yes, ai-input=yes, ai-train=no
+
+/llms.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=3600
+
+/llms-full.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=3600
+
+/sitemap.md
+  Content-Type: text/markdown; charset=utf-8
+  Cache-Control: public, max-age=3600
+
+/auth.md
+  Content-Type: text/markdown; charset=utf-8
+  Cache-Control: public, max-age=3600
+
+/.well-known/*
+  Cache-Control: public, max-age=3600
+  X-Content-Type-Options: nosniff

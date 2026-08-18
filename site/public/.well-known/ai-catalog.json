@@ -1,0 +1,33 @@
+{
+  "schema": "quillframe_ai_catalog_v1",
+  "product": "Quillframe",
+  "version_line": "0.9.x",
+  "canonical": "https://quillframe.wei-dev.com/",
+  "documentation": "https://quillframe.wei-dev.com/docs/",
+  "studio": "https://studio.quillframe.wei-dev.com/",
+  "repository": "https://github.com/xiaooye/cn_webnovel_agent",
+  "sitemap_xml": "https://quillframe.wei-dev.com/sitemap.xml",
+  "sitemap_markdown": "https://quillframe.wei-dev.com/sitemap.md",
+  "llms": "https://quillframe.wei-dev.com/llms.txt",
+  "llms_full": "https://quillframe.wei-dev.com/llms-full.txt",
+  "agent_skills_index": "https://quillframe.wei-dev.com/.well-known/agent-skills/index.json",
+  "content_signal": {
+    "search": "yes",
+    "ai-input": "yes",
+    "ai-train": "no"
+  },
+  "public_service_contracts": {
+    "quillframe_core_api": false,
+    "a2a_server": false,
+    "mcp_server": false,
+    "oauth_resource_server": false,
+    "hosted_model_gateway": false
+  },
+  "authority": false,
+  "notes": [
+    "This catalog is Quillframe discovery metadata, not an authority grant.",
+    "Model access tokens belong to the host runtime and must not be sent to the public product site.",
+    "The repository license is authoritative for permitted reuse; public crawlability does not grant AI training rights.",
+    "Plan, Review, Accepted, Canon, Settled state, persistence, and public discovery are distinct concepts."
+  ]
+}

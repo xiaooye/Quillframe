@@ -1,0 +1,70 @@
+name: Feature request
+description: Propose a product or framework capability grounded in a real user need
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Quillframe is pre-1.0. Please describe the user/editorial problem before prescribing implementation. Do not include secrets or private manuscript material.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / user value
+      description: What becomes difficult, unsafe, repetitive, or impossible without this capability?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed capability
+      description: Describe the behavior and the smallest useful scope.
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Primary surface
+      options:
+        - Authoring / Studio
+        - Fiction Core
+        - Model Runtime
+        - Agent Runtime
+        - Harness / semantic execution
+        - Context / memory
+        - Quality / review
+        - Learning / Corpus
+        - SQLite / persistence
+        - Publication
+        - Documentation / developer experience
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives / workarounds considered
+  - type: dropdown
+    id: authority
+    attributes:
+      label: Could this affect authority or durable state?
+      description: Canon, acceptance, Settlement, Learning promotion, Context visibility, permissions, or persistence semantics.
+      options:
+        - No / presentation or tooling only
+        - Possibly / needs architecture review
+        - Yes / authority-sensitive change
+    validations:
+      required: true
+  - type: textarea
+    id: status_truth
+    attributes:
+      label: Current behavior or evidence
+      description: Link to current docs/code/issues if this request depends on an existing capability.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I am not presenting an unmerged branch or planned feature as current released behavior.
+          required: true
+        - label: I removed tokens, credentials, and private project/manuscript data.
+          required: true

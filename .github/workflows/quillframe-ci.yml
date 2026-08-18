@@ -26,6 +26,8 @@ jobs:
         run: python scripts/version_consistency.py
       - name: Active technical namespace hygiene
         run: python scripts/namespace_hygiene.py
+      - name: Documentation governance
+        run: python scripts/docs_quality.py
       - name: Compile Model and Agent Runtime
         run: python -m compileall -q model_runtime agent_runtime quillframe harness/semantic_workers/adapters/model_runtime_adapter.py
       - name: Build and import Quillframe wheel

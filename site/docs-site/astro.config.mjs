@@ -22,7 +22,7 @@ const groups = [
   {
     label: "Studio 与接入",
     translations: { en: "Studio & integration" },
-    ids: ["studio-overview", "studio-product-architecture", "integrations", "project-sdk", "project-adapters"],
+    ids: ["studio-overview", "studio-product-architecture", "model-runtime", "agent-runtime", "integrations", "project-sdk", "project-adapters"],
   },
   {
     label: "架构与发布",

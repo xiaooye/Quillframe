@@ -6,11 +6,17 @@ Quillframe 文档先建立心智模型，再进入契约与参考资料。只要
 
 ## 从这里开始
 
-先读[总体架构](architecture.zh-CN.md)，再读[生产流水线](production-pipeline.zh-CN.md)与[质量保障](quality-assurance.zh-CN.md)。这三篇解释为什么长篇项目不能把计划、草稿、证据和正典混成一团“记忆”。
+先读[为什么是 Quillframe](why-quillframe.zh-CN.md)和[总体架构](architecture.zh-CN.md)，再读[生产流水线](production-pipeline.zh-CN.md)与[质量保障](quality-assurance.zh-CN.md)。这些页面先建立产品边界，再解释为什么长篇项目不能把计划、草稿、证据、运行状态和正典混成一团“记忆”。
 
 ## 核心概念
 
 [架构图谱](architecture-atlas.zh-CN.md)把通用机制映射到实际实现；[正典状态](../core/CANON_STATE.zh-CN.md)是事实权威的规范契约；[候选稿谱系](CANDIDATE_LINEAGE_V1.zh-CN.md)解释候选稿的派生关系和精确评审绑定为什么仍然只属于来源证明，而不是故事权威。
+
+## Model Runtime 与 Agent Runtime
+
+[Model Runtime](model-runtime.zh-CN.md)解释普通用户只需要的 `API Endpoint + Access Token` 连接面，以及模型/协议发现、能力证据、密钥处理和推理传输；[Agent Runtime](agent-runtime.zh-CN.md)解释 AgentJob/Result、Quillframe 自己的 model → tool → model 循环、工具权限、checkpoint、receipt 与可嵌入的 `quillframe` Python library。
+
+Provider/vendor identity 最多只是诊断 metadata。外部模型提供 inference；运行语义、工具、Context、authority 与项目状态仍由 Quillframe 负责。
 
 ## 写作
 
@@ -22,11 +28,11 @@ Quillframe 文档先建立心智模型，再进入契约与参考资料。只要
 
 ## 正典与状态落定
 
-[正典状态](../core/CANON_STATE.zh-CN.md)定义事实权威层级。状态落定是一项独立授权事务：必须有明确接受、精确的前后状态意图、当前状态比较交换、必要派生更新以及事后条件验证。
+[正典状态](../core/CANON_STATE.zh-CN.md)定义事实权威层级。Settlement 是独立授权事务：必须有明确接受、精确的前后状态意图、当前状态比较交换、必要派生更新以及事后条件验证。
 
 ## 上下文与记忆
 
-[上下文与记忆](context-and-memory.zh-CN.md)说明稀疏上下文清单、受保护的权威事实、派生记忆，以及为什么“已经持久保存”从来不等于“应该自动塞进提示词”。
+[上下文与记忆](context-and-memory.zh-CN.md)说明稀疏 Context Manifest、受保护的权威事实、派生记忆，以及为什么“已经持久保存”从来不等于“应该自动塞进提示词”。
 
 ## 学习
 
@@ -48,12 +54,16 @@ Quillframe 文档先建立心智模型，再进入契约与参考资料。只要
 
 [项目开发工具](project-sdk.zh-CN.md)、[项目适配器](project-adapters.zh-CN.md)、[项目适配协议](../harness/PROJECT_ADAPTER_PROTOCOL.zh-CN.md)与[框架构建包](../release/FRAMEWORK_BUNDLE.zh-CN.md)确保小说项目可以独立复现，又不会把私有故事事实反向写进通用框架。
 
+## Studio
+
+[Studio 概览](../studio/README.zh-CN.md)说明当前 SolidJS 创作界面与 typed Host Bridge。Studio 只消费 Core contract；UI 状态与浏览器持久化不会成为第二套 authority system。
+
 ## 开发
 
-[8.0 开发变更清单](8-0-development-inventory.zh-CN.md)、[代理框架采纳记录](../knowledge/AGENT_FRAMEWORK_ADOPTION.zh-CN.md)与[变更日志](../CHANGELOG.zh-CN.md)记录当前演进；历史规格即使经历公开品牌变化，也仍保持当时的真实原貌。
+[变更日志](../CHANGELOG.zh-CN.md)、[路线图](../ROADMAP.md)与[代理框架采纳记录](../knowledge/AGENT_FRAMEWORK_ADOPTION.zh-CN.md)共同记录当前演进与实现影响来源。历史规格即使经历产品架构和公开品牌变化，也仍保持当时的真实原貌。
 
 ## 参考
 
 操作层面的权威规范见[框架操作契约](../SKILL.zh-CN.md)、[编排执行契约](../harness/HARNESS_AGENT.zh-CN.md)、模式定义、实现模块与测试。文档编写遵守[文档规范](DOCUMENTATION_STANDARD.zh-CN.md)和[文档质量检查](DOCUMENTATION_QA.zh-CN.md)。
 
-稳定路径 `why-quillframe.zh-CN.md` 为兼容保留；当前内容解释[为什么是 Quillframe](why-quillframe.zh-CN.md)，以及为什么技术命名空间不随公开品牌一起改名。
+**Quillframe** 是当前产品身份，`quillframe` 是当前技术命名空间。历史记录可以在改名会破坏 provenance 时保留早期术语；当前产品指导统一使用现用身份。

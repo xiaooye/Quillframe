@@ -1,0 +1,85 @@
+name: Architecture proposal
+description: Propose a structural change to Quillframe contracts, authority boundaries, or product architecture
+title: "[Architecture]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for structural changes, not ordinary feature requests. Prefer the narrowest owning subsystem and preserve `Project → Quillframe` dependency direction.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / architectural pressure
+      description: What current invariant, contract, or boundary is insufficient?
+    validations:
+      required: true
+  - type: dropdown
+    id: owner
+    attributes:
+      label: Owning subsystem
+      options:
+        - Story / Character / Relationships
+        - Canon / Settlement
+        - Context / memory
+        - Semantic execution / quality
+        - Model Runtime
+        - Agent Runtime / tools
+        - Session / Control Plane
+        - Learning / Corpus
+        - SQLite persistence
+        - Studio / Host Bridge
+        - Publication
+        - Project SDK
+        - Cross-cutting / unknown
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current contract / evidence
+      description: Identify the current implementation, manifest entry, schema, test, or documentation that owns the behavior today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed architecture
+      description: Include important data/control flow and failure behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: authority
+    attributes:
+      label: Authority / Canon / Settlement / Learning impact
+      description: State explicitly what can and cannot gain authority after this change.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: true
+  - type: textarea
+    id: migration
+    attributes:
+      label: Compatibility / migration / rollback
+      description: Describe pre-1.0 compatibility impact, persisted-state impact, and rollback strategy.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification strategy
+      description: Tests, deterministic checks, semantic review, migration checks, or visual QA required to prove the change.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: This proposal does not treat Plan, Review, model output, persistence, or UI state as Canon/Settlement authority.
+          required: true
+        - label: I removed API tokens, credentials, and private project/manuscript data.
+          required: true

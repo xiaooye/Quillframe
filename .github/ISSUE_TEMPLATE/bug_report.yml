@@ -1,0 +1,83 @@
+name: Bug report
+description: Report a reproducible defect in Quillframe
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a defect. **Do not paste API tokens, credentials, private manuscript text, or sensitive SQLite/project data.** Use `SECURITY.md` for unpatched vulnerabilities.
+  - type: input
+    id: version
+    attributes:
+      label: Quillframe version / commit
+      description: Provide the version and, when possible, the exact commit SHA.
+      placeholder: "0.9.0 / 0123456789abcdef..."
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "Fedora 42, Windows 11, macOS 15..."
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      options:
+        - Python library / Core
+        - Model Runtime
+        - Agent Runtime
+        - Harness / semantic execution
+        - SQLite persistence
+        - Studio / Host Bridge
+        - Product site / documentation
+        - Publication
+        - Learning / Corpus
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Give the shortest reliable steps using synthetic/redacted data where possible.
+      placeholder: |
+        1. Run ...
+        2. Open ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs / diagnostics
+      description: Remove tokens, credentials, private text, absolute paths you do not want public, and unrelated data.
+      render: text
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Optional. Redact private manuscript/project information before attaching.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed API tokens, credentials, private manuscript text, and other sensitive project data.
+          required: true
+        - label: This is a normal bug report, not an unpatched security vulnerability.
+          required: true

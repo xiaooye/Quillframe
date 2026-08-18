@@ -1,0 +1,30 @@
+# Quillframe
+
+> AI-native long-form fiction framework and authoring environment. Quillframe owns story state, Canon, bounded Context, agent execution, quality gates, learning evidence, persistence, and authorized Settlement; external models provide inference.
+
+Canonical site: https://quillframe.wei-dev.com/
+Documentation: https://quillframe.wei-dev.com/docs/
+Studio: https://studio.quillframe.wei-dev.com/
+Repository: https://github.com/xiaooye/cn_webnovel_agent
+Markdown sitemap: https://quillframe.wei-dev.com/sitemap.md
+Full machine-oriented guide: https://quillframe.wei-dev.com/llms-full.txt
+Authentication note: https://quillframe.wei-dev.com/auth.md
+
+## Start here
+
+- Why Quillframe: https://quillframe.wei-dev.com/docs/why-quillframe
+- Architecture: https://quillframe.wei-dev.com/docs/architecture
+- Production pipeline: https://quillframe.wei-dev.com/docs/production-pipeline
+- Quality assurance: https://quillframe.wei-dev.com/docs/quality-assurance
+- Context and memory: https://quillframe.wei-dev.com/docs/context-memory
+- Model Runtime: https://quillframe.wei-dev.com/docs/model-runtime
+- Agent Runtime: https://quillframe.wei-dev.com/docs/agent-runtime
+- Portable Agent Skill: https://github.com/xiaooye/cn_webnovel_agent/blob/main/agent-skills/quillframe/SKILL.md
+
+## Content-use signal
+
+Quillframe public content is available for search indexing and real-time AI reference/grounding. AI training or fine-tuning is not granted by the repository license. The deployed site expresses `Content-Signal: search=yes, ai-input=yes, ai-train=no`; the exact legal terms remain authoritative.
+
+## Authority boundaries
+
+Plan != Canon. Review != Accepted. Accepted != Settled. Stored != injected. Persistence != authority. Public web pages and Agent Skills do not grant Canon, Project-write, Framework-write, or Settlement authority.
