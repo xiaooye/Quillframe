@@ -428,7 +428,7 @@ def bootstrap_context(snapshot: dict[str, Any]) -> str:
         base += (
             f"This is the Generic Framework, not a fiction Project. Framework version={framework.get('version')} "
             f"commit={framework.get('commit')}. Never write concrete novel characters/plot/Canon/private user taste here. "
-            "For a new story, create a separate consumer Project with `quillframe init`; never turn the Framework checkout into story storage. "
+            "For fiction intent, create a separate consumer Project outside this checkout with the strict `python -m quillframe.cli init <path> --id <ID> --title <TITLE> [--language zh-CN]` command, then restart the host from that Project. "
         )
     else:
         verified = "VERIFIED" if authority.get("materialized_authority_verified") else "UNVERIFIED"
@@ -442,7 +442,7 @@ def bootstrap_context(snapshot: dict[str, Any]) -> str:
         return base + f"BLOCKED: {errors}. Read-only diagnosis only; do not repin or mutate Canon automatically."
     if snapshot.get("state") == "awaiting_task_mode":
         return base + (
-            "Primary task_mode is UNRESOLVED. Semantically determine exactly one Quillframe mode before consequential work, then run: "
+            "Primary task_mode is UNRESOLVED. For work that belongs to this scope, semantically determine exactly one Quillframe mode before consequential work, then run: "
             + _mode_command(snapshot)
             + ". Do not guess multiple modes or use generic agent workflows as authority."
         )
@@ -484,20 +484,23 @@ def _command_tokens(command: str) -> list[str] | None:
         return None
 
 
+def _split_quillframe_command(tokens: list[str], subcommand: str) -> list[str] | None:
+    if tokens[:2] == ["quillframe", subcommand]:
+        return tokens[2:]
+    if tokens[:4] in (
+        ["python", "-m", "quillframe.cli", subcommand],
+        ["python3", "-m", "quillframe.cli", subcommand],
+    ):
+        return tokens[4:]
+    return None
+
+
 def is_bootstrap_command(command: str, expected_session_id: str) -> bool:
     tokens = _command_tokens(command)
     if not tokens:
         return False
-    if tokens[:2] == ["quillframe", "host-run"]:
-        rest = tokens[2:]
-    elif tokens[:4] in (
-        ["python", "-m", "quillframe.cli", "host-run"],
-        ["python3", "-m", "quillframe.cli", "host-run"],
-    ):
-        rest = tokens[4:]
-    else:
-        return False
-    if not rest or rest[0] not in {"status", "begin"}:
+    rest = _split_quillframe_command(tokens, "host-run")
+    if rest is None or not rest or rest[0] not in {"status", "begin"}:
         return False
     action = rest[0]
     args = rest[1:]
@@ -515,6 +518,40 @@ def is_bootstrap_command(command: str, expected_session_id: str) -> bool:
     if action == "begin":
         return parsed.get("--mode") in TASK_MODES
     return "--mode" not in parsed
+
+
+def is_project_init_command(command: str, cwd: Path) -> bool:
+    """Allow only the narrow consumer-project creation escape from Framework scope.
+
+    This does not approve the shell operation; returning True only lets the host's
+    normal permission layer consider it. `project_sdk.init_project` still enforces
+    clean exact Framework pinning and that the target lives outside the Framework.
+    """
+    tokens = _command_tokens(command)
+    if not tokens:
+        return False
+    rest = _split_quillframe_command(tokens, "init")
+    if rest is None or not rest or rest[0].startswith("-"):
+        return False
+    target_raw = rest[0]
+    args = rest[1:]
+    allowed_flags = {"--id", "--title", "--language", "--framework-version"}
+    parsed: dict[str, str] = {}
+    index = 0
+    while index < len(args):
+        flag = args[index]
+        if flag not in allowed_flags or flag in parsed or index + 1 >= len(args):
+            return False
+        parsed[flag] = args[index + 1]
+        index += 2
+    if not parsed.get("--id") or not parsed.get("--title"):
+        return False
+    target = Path(target_raw).expanduser()
+    if not target.is_absolute():
+        target = cwd / target
+    target = target.resolve()
+    framework = ROOT.resolve()
+    return target != framework and framework not in target.parents
 
 
 def _tool_command(event: dict[str, Any]) -> str:
@@ -539,10 +576,16 @@ def pretool_decision(snapshot: dict[str, Any], event: dict[str, Any]) -> tuple[s
     if snapshot.get("state") == "blocked":
         return "deny", "; ".join(snapshot.get("errors", [])) or "Quillframe bootstrap is blocked"
     if snapshot.get("state") != "running":
-        if tool == "Bash" and is_bootstrap_command(_tool_command(event), snapshot["session_id"]):
-            return "allow", "Narrow Quillframe task-mode/run bootstrap command permitted before consequential work."
+        if tool == "Bash":
+            command = _tool_command(event)
+            if is_bootstrap_command(command, snapshot["session_id"]):
+                return None, None
+            if snapshot.get("scope") == "framework":
+                cwd = Path(str(event.get("cwd") or ROOT))
+                if is_project_init_command(command, cwd):
+                    return None, None
         return "deny", (
-            "Quillframe primary task_mode/run is not active. Determine exactly one task mode and execute the injected host-run begin command first."
+            "Quillframe primary task_mode/run is not active. Determine exactly one task mode and execute the injected host-run begin command first; fiction intent from the Generic Framework may only use the strict consumer-project init command."
         )
     return None, None
 
