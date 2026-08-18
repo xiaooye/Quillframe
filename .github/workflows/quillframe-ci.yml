@@ -66,7 +66,7 @@ jobs:
       - name: Host Bridge self-test
         run: python studio/host_bridge.py self-test
       # SPEC021-APPLY-BEGIN
-      - name: Apply verified Spec 021 host hardening once
+      - name: Finalize and verify Spec 021 host hardening once
         if: >-
           github.actor != 'github-actions[bot]' &&
           ((github.event_name == 'push' && github.ref == 'refs/heads/agent/production-visibility-enforcement') ||
@@ -81,12 +81,6 @@ jobs:
           PATCH=specs/021-production-visibility-enforcement/.host-hardening.patch
           git apply --exclude=studio/tauri_core_sidecar.py --check "$PATCH"
           git apply --exclude=studio/tauri_core_sidecar.py "$PATCH"
-          python -m unittest \
-            tests.test_quillframe_authoring_primitives \
-            tests.test_quillframe_production_host_bridge \
-            tests.test_quillframe_production_runtime \
-            tests.test_quillframe_unified_host_bootstrap -v
-          python studio/tauri_core_sidecar.py self-test
           rm -f "$PATCH" .github/workflows/spec021-host-hardening.yml
           python - <<'PY'
           from pathlib import Path
@@ -110,6 +104,14 @@ jobs:
           git add -A
           git diff --cached --check
           git commit -m 'fix: enforce released manuscript host boundary'
+          test -z "$(git status --porcelain)"
+          python -m unittest \
+            tests.test_quillframe_authoring_primitives \
+            tests.test_quillframe_production_host_bridge \
+            tests.test_quillframe_production_runtime \
+            tests.test_quillframe_unified_host_bootstrap -v
+          python studio/tauri_core_sidecar.py self-test
+          test -z "$(git status --porcelain)"
           git push origin HEAD:$TARGET_BRANCH
       # SPEC021-APPLY-END
       - name: Checkout exact source for ephemeral runtime bundle
