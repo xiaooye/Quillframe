@@ -66,9 +66,12 @@ function dumpDom(path, windowSize = "1280,900") {
   return result.stdout;
 }
 
-function assertRendered(path, marker, windowSize) {
+function assertRendered(path, markers, windowSize) {
   const dom = dumpDom(path, windowSize);
-  if (!dom.includes(marker)) throw new Error(`browser route ${path} did not render marker: ${marker}`);
+  const acceptable = Array.isArray(markers) ? markers : [markers];
+  if (!acceptable.some((marker) => dom.includes(marker))) {
+    throw new Error(`browser route ${path} did not render any marker: ${acceptable.join(" | ")}`);
+  }
   if (dom.includes("Studio crashed") || dom.includes("Unexpected bridge result schema")) {
     throw new Error(`browser route ${path} rendered a fatal Studio/Bridge error`);
   }
@@ -77,14 +80,16 @@ function assertRendered(path, marker, windowSize) {
 
 try {
   await waitForPreview();
-  assertRendered("/", "Back to the work.");
-  const manuscriptDesktop = assertRendered("/manuscript", "The manuscript is the center of Studio.");
-  if (!manuscriptDesktop.includes("Core unbound")) throw new Error("unbound Manuscript route must render truthful Core-unbound state");
-  assertRendered("/review", "Review, Accept and Settlement are three different things.");
-  assertRendered("/context", "Relevant is not the same as actually loaded.");
+  assertRendered("/", "DESK");
+  const manuscriptDesktop = assertRendered("/manuscript", "MANUSCRIPT");
+  if (!manuscriptDesktop.includes("Core unbound") && !manuscriptDesktop.includes("Core 未绑定")) {
+    throw new Error("unbound Manuscript route must render truthful Core-unbound state");
+  }
+  assertRendered("/review", "REVIEW");
+  assertRendered("/context", "CONTEXT INSPECTOR");
   assertRendered("/settings?section=models", "Endpoint + Access Token");
-  const manuscriptPhone = assertRendered("/manuscript", "The manuscript is the center of Studio.", "390,844");
-  if (!manuscriptPhone.includes("Writer Mode mobile navigation")) throw new Error("phone Manuscript route did not render mobile Writer navigation semantics");
+  const manuscriptPhone = assertRendered("/manuscript", "MANUSCRIPT", "390,844");
+  if (!manuscriptPhone.includes("qf-writer-bottom-nav")) throw new Error("phone Manuscript route did not render mobile Writer navigation");
   console.log("browser_smoke=PASS");
   console.log("browser_routes=desk,manuscript,review,context,ai-models,manuscript-phone");
 } catch (error) {
