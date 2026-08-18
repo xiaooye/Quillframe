@@ -61,20 +61,32 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_quillframe_*.py' -v
       - name: Host Bridge self-test
         run: python studio/host_bridge.py self-test
+      - name: Checkout exact source for ephemeral runtime bundle
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          path: runtime-src
       - name: Build exact-SHA ephemeral runtime bundle
+        env:
+          QUILLFRAME_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
+          SOURCE_SHA="$(git -C runtime-src rev-parse HEAD)"
+          test "${SOURCE_SHA}" = "${QUILLFRAME_SOURCE_SHA}"
+          test -d runtime-src/.git
           mkdir -p /tmp/quillframe-runtime
           tar \
-            --exclude='.git' \
+            -C runtime-src \
             --exclude='site/node_modules' \
             --exclude='studio/app/node_modules' \
-            -czf "/tmp/quillframe-runtime/quillframe-runtime-${GITHUB_SHA}.tar.gz" .
-          sha256sum "/tmp/quillframe-runtime/quillframe-runtime-${GITHUB_SHA}.tar.gz" > "/tmp/quillframe-runtime/quillframe-runtime-${GITHUB_SHA}.sha256"
-          printf '%s\n' "${GITHUB_SHA}" > /tmp/quillframe-runtime/framework-commit.txt
+            -czf "/tmp/quillframe-runtime/quillframe-runtime-${SOURCE_SHA}.tar.gz" .
+          sha256sum "/tmp/quillframe-runtime/quillframe-runtime-${SOURCE_SHA}.tar.gz" > "/tmp/quillframe-runtime/quillframe-runtime-${SOURCE_SHA}.sha256"
+          printf '%s\n' "${SOURCE_SHA}" > /tmp/quillframe-runtime/framework-commit.txt
+          tar -tzf "/tmp/quillframe-runtime/quillframe-runtime-${SOURCE_SHA}.tar.gz" | grep -q '^\./\.git/'
       - name: Upload exact-SHA ephemeral runtime bundle
         uses: actions/upload-artifact@v4
         with:
-          name: quillframe-runtime-${{ github.sha }}
+          name: quillframe-runtime-${{ github.event.pull_request.head.sha || github.sha }}
           path: /tmp/quillframe-runtime/
           if-no-files-found: error
           retention-days: 7
