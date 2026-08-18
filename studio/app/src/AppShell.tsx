@@ -5,7 +5,7 @@ import type { MessageKey } from "./locales/types";
 import { useStudio } from "./studio";
 import { StudioIcon, type StudioIconName } from "./StudioIcon";
 
-type NavigationLabel = MessageKey | "Runtime" | "Control Plane" | "Inspector" | "Architecture" | "Publication";
+type NavigationLabel = MessageKey | "Runtime" | "Control Plane" | "Inspector" | "Architecture" | "Publication" | "Settings";
 type NavigationEntry = readonly [string, NavigationLabel, StudioIconName];
 
 const productNavigation: ReadonlyArray<NavigationEntry> = [
@@ -27,7 +27,11 @@ const inspectionNavigation: ReadonlyArray<NavigationEntry> = [
   ["/diagnostics", "nav.diagnostics", "diagnostics"],
 ];
 
-const navigation = [...productNavigation, ...inspectionNavigation];
+const utilityNavigation: ReadonlyArray<NavigationEntry> = [
+  ["/settings", "Settings", "settings"],
+];
+
+const navigation = [...productNavigation, ...inspectionNavigation, ...utilityNavigation];
 
 const operationRoute: Record<string, string> = {
   "bridge.describe": "/",
@@ -80,6 +84,7 @@ export const AppShell: ParentComponent = (props) => {
     if (label === "Architecture") return locale() === "zh-CN" ? "架构观测" : "Architecture";
     if (label === "Publication") return locale() === "zh-CN" ? "出版" : "Publication";
     if (label === "Control Plane") return locale() === "zh-CN" ? "控制台" : "Control Plane";
+    if (label === "Settings") return locale() === "zh-CN" ? "设置" : "Settings";
     return t(label);
   };
   const coreStatus = createMemo(() => {
@@ -117,7 +122,7 @@ export const AppShell: ParentComponent = (props) => {
     <div class="nf-app-shell">
       <aside class="wui-sidebar nf-sidebar" aria-label={t("nav.primaryLabel")}>
         <A href="/" class="wui-sidebar__header nf-brand">
-          <img class="nf-brand-mark" src="/novelforge-mark.svg" width="30" height="30" alt="" aria-hidden="true" />
+          <img class="nf-brand-mark" src="/quillframe-mark.svg" width="30" height="30" alt="" aria-hidden="true" />
           <span class="wui-sidebar__brand-label">
             <strong>{t("app.brand")}</strong>
             <small>{t("app.readOnly")}</small>
@@ -157,6 +162,9 @@ export const AppShell: ParentComponent = (props) => {
               <StudioIcon name="command" class="nf-control-icon" />
               <span class="nf-command-label">{t("top.command")}</span><kbd>⌘K</kbd>
             </button>
+            <A class="wui-button wui-button--ghost wui-button--icon" href="/settings" aria-label={navLabel("Settings")} title={navLabel("Settings")}>
+              <StudioIcon name="settings" class="nf-control-icon" />
+            </A>
             <button class="wui-button wui-button--ghost wui-button--icon" type="button" onClick={() => setTheme(!dark())} aria-label={t("top.theme")}>
               <StudioIcon name={dark() ? "sun" : "moon"} class="nf-control-icon" />
             </button>

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AI-native Corpus discovery planning boundary for NovelForge.
+"""AI-native Corpus discovery planning boundary for Quillframe.
 
 The model owns query/contrast/counterexample strategy through the
 `corpus.discovery_plan` contract. This module only exposes bounded learning gaps,
@@ -28,9 +28,9 @@ if str(SEM) not in sys.path:
 from learning_store import LearningStore  # noqa: E402
 from semantic_worker_router import make_contract_job, validate_results  # noqa: E402
 
-PLANNING_QUEUE_SCHEMA = "novelforge_corpus_planning_jobs_v1"
-DISCOVERY_QUEUE_SCHEMA = "novelforge_corpus_discovery_queue_v2"
-REQUEST_SCHEMA = "novelforge_corpus_discovery_request_v2"
+PLANNING_QUEUE_SCHEMA = "quillframe_corpus_planning_jobs_v1"
+DISCOVERY_QUEUE_SCHEMA = "quillframe_corpus_discovery_queue_v2"
+REQUEST_SCHEMA = "quillframe_corpus_discovery_request_v2"
 CHANNEL_CAPABILITIES = {
     "web": "web_search",
     "github": "github_search",
@@ -196,7 +196,7 @@ def _request_from_result(job: dict[str, Any], result: dict[str, Any]) -> dict[st
         },
         "host_search_plan": plans,
         "result_contract": {
-            "schema": "novelforge_corpus_discovery_results_v1",
+            "schema": "quillframe_corpus_discovery_results_v1",
             "required_provenance": [
                 "channel", "tool_or_provider", "retrieved_at", "source_locator",
                 "source_title", "source_type", "evidence_fingerprint",
@@ -306,8 +306,8 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge AI-native Corpus discovery planner boundary")
-    p.add_argument("--learning-db", default=os.getenv("NOVELFORGE_LEARNING_DB", ".novelforge/learning.db"))
+    p = argparse.ArgumentParser(description="Quillframe AI-native Corpus discovery planner boundary")
+    p.add_argument("--learning-db", default=os.getenv("QUILLFRAME_LEARNING_DB", ".quillframe/learning.db"))
     sub = p.add_subparsers(dest="cmd", required=True)
     prep = sub.add_parser("prepare")
     prep.add_argument("--limit", type=int, default=10); prep.add_argument("--source-session-id"); prep.add_argument("--output")

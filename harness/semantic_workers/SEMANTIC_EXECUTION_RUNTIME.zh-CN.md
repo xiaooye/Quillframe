@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · 契约</kbd>&nbsp;&nbsp;<kbd>TRANSPORT-NEUTRAL</kbd>&nbsp;&nbsp;<kbd>PROVENANCE</kbd>&nbsp;&nbsp;<kbd>VALIDATE BEFORE CONSUME</kbd></p>
 
-Semantic Execution Runtime 是冻结 semantic job 与合格 model / human invocation 之间的 transport layer。它的目的，是让 NovelForge 可以改变**判断在哪里执行、怎么传输**，却不改变**原来到底请求了什么判断**。
+Semantic Execution Runtime 是冻结 semantic job 与合格 model / human invocation 之间的 transport layer。它的目的，是让 Quillframe 可以改变**判断在哪里执行、怎么传输**，却不改变**原来到底请求了什么判断**。
 
 > **核心不变量 ✦** Transport 可以变；semantic identity、bounded input、rubric、output contract、permission 与 fingerprint 不能跟着 transport 静默改变。
 

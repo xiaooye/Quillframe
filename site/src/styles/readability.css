@@ -8,9 +8,9 @@
    */
 
   .unified-product-shell {
-    --nf-copy-size: 14px;
-    --nf-small-size: 12px;
-    --nf-micro-size: 11px;
+    --qf-copy-size: 14px;
+    --qf-small-size: 12px;
+    --qf-micro-size: 11px;
   }
 
   /* Shared shell -------------------------------------------------------- */
@@ -20,12 +20,12 @@
   .unified-product-shell .studio-cta,
   .unified-product-shell .footer-links a,
   .unified-product-shell .footer-brand-block p {
-    font-size: var(--nf-small-size);
+    font-size: var(--qf-small-size);
   }
 
   .unified-product-shell .header-search kbd,
   .unified-product-shell .version-chip {
-    font-size: var(--nf-micro-size);
+    font-size: var(--qf-micro-size);
   }
 
   .unified-product-shell .command-result strong {
@@ -41,7 +41,7 @@
 
   .product-surface-hero__eyebrow,
   .product-section-heading small {
-    font-size: var(--nf-micro-size);
+    font-size: var(--qf-micro-size);
   }
 
   .product-surface-hero__lede {
@@ -57,7 +57,7 @@
   }
 
   .unified-info-card > small {
-    font-size: var(--nf-micro-size);
+    font-size: var(--qf-micro-size);
     letter-spacing: .055em;
   }
 
@@ -68,7 +68,7 @@
 
   .unified-info-card p {
     max-width: 62ch;
-    font-size: var(--nf-copy-size);
+    font-size: var(--qf-copy-size);
     line-height: 1.72;
   }
 
@@ -78,7 +78,7 @@
   }
 
   .unified-info-card code {
-    font-size: var(--nf-micro-size);
+    font-size: var(--qf-micro-size);
     line-height: 1.55;
   }
 
@@ -91,7 +91,7 @@
   .preview-device-label,
   .unified-large-publication-preview article small,
   .unified-release-badge span {
-    font-size: var(--nf-micro-size);
+    font-size: var(--qf-micro-size);
   }
 
   .unified-studio-terminal pre {

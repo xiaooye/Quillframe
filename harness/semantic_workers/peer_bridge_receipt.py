@@ -18,7 +18,7 @@ from typing import Any
 from peer_chat_relay import validate_peer_result
 from registered_contract_binding import validate_registered_job
 
-SCHEMA = "novelforge_project_peer_validation_receipt_v1"
+SCHEMA = "quillframe_project_peer_validation_receipt_v1"
 
 
 def canonical(value: Any) -> bytes:

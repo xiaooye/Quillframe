@@ -1,4 +1,4 @@
-# NovelForge Semantic Worker Protocol · Bootstrap Router
+# Quillframe Semantic Worker Protocol · Bootstrap Router
 
 Authoritative editions:
 - English: `SEMANTIC_WORKER_PROTOCOL.en.md`

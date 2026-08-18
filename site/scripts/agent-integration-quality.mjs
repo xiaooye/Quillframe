@@ -15,7 +15,7 @@ const main = read("src/main.tsx");
 const index = read("src/styles/index.css");
 const style = `${read("src/styles/agent-integration.css")}\n${read("src/styles/agent-host-profiles.css")}\n${read("src/styles/unified-product-app.css")}`;
 const contract = JSON.parse(read("../studio/host_bridge_contract.json"));
-const skill = read("../agent-skills/novelforge/SKILL.md");
+const skill = read("../agent-skills/quillframe/SKILL.md");
 const supported = contract.operations?.supported ?? {};
 const deferred = contract.operations?.deferred ?? {};
 const runtimeObservability = [
@@ -30,9 +30,9 @@ const runtimeSafetyQueries = ["session.resume.preflight", "session.terminate.pre
 const localAppCommands = ["session.resume", "session.terminate"];
 const deferredCommands = ["command.invoke", "project.mutate", "publication.build"];
 
-check(contract.schema === "novelforge_studio_host_bridge_contract_v1", "host bridge contract schema changed");
+check(contract.schema === "quillframe_studio_host_bridge_contract_v1", "host bridge contract schema changed");
 check(contract.authority === false, "host bridge must remain authority=false");
-check(contract.agent_skill?.path === "agent-skills/novelforge/SKILL.md", "portable Agent Skill path changed");
+check(contract.agent_skill?.path === "agent-skills/quillframe/SKILL.md", "portable Agent Skill path changed");
 check(contract.agent_skill?.runtime_mutation_allowed === false, "portable Agent Skill must remain runtime-mutation=false");
 check(skill.includes("read-only") && skill.includes("authority: false"), "portable skill must retain read-only authority boundary");
 check(skill.includes("Runtime observability is not runtime control"), "portable skill must distinguish runtime observability from control");
@@ -62,7 +62,7 @@ for (const operation of deferredCommands) {
 
 check(app.includes('<Route path="/agents" component={AgentsPage}'), "shared ProductApp must expose /agents");
 check(app.includes("ProductSurfaceHero") && app.includes("AGENT SKILL · HOST BRIDGE V1"), "Agent Integration must use the shared surface hero");
-check(app.includes("agent-skills/novelforge/SKILL.md"), "Agent Integration must expose the portable Agent Skill entry");
+check(app.includes("agent-skills/quillframe/SKILL.md"), "Agent Integration must expose the portable Agent Skill entry");
 check(app.includes("bridge.describe"), "Agent Integration must expose capability discovery");
 check(app.includes("authority=false") || app.includes("authority: false"), "Agent Integration must visibly preserve authority=false");
 check(app.includes("Never read private runtime stores directly"), "Agent Integration host instruction must forbid direct private runtime access");
@@ -83,7 +83,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_agent_integration_quality_v7",
+    schema: "quillframe_agent_integration_quality_v7",
     status: "pass",
     route: "/agents",
     shell: "shared_product_app",

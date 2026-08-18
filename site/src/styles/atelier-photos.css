@@ -44,7 +44,7 @@
     background-clip: content-box;
     background-repeat: no-repeat;
     box-shadow:
-      0 5px 0 color-mix(in oklab, var(--nf-lane-runtime-stroke) 10%, transparent),
+      0 5px 0 color-mix(in oklab, var(--qf-lane-runtime-stroke) 10%, transparent),
       0 18px 36px oklch(.35 .035 310 / .16),
       inset 0 1px 0 rgb(255 255 255 / .72);
     pointer-events: none;
@@ -74,10 +74,10 @@
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal .portal-icon {
-    border-color: color-mix(in oklab, var(--nf-lane-runtime-stroke) 24%, white);
+    border-color: color-mix(in oklab, var(--qf-lane-runtime-stroke) 24%, white);
     background: color-mix(in oklab, var(--atelier-paper-violet) 84%, white);
     box-shadow:
-      0 5px 0 color-mix(in oklab, var(--nf-lane-runtime-stroke) 13%, transparent),
+      0 5px 0 color-mix(in oklab, var(--qf-lane-runtime-stroke) 13%, transparent),
       0 12px 28px oklch(.35 .03 310 / .12);
   }
 
@@ -90,14 +90,14 @@
   :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal:hover::before {
     transform: translateY(-8px) rotate(-7deg) scale(1.025);
     box-shadow:
-      0 7px 0 color-mix(in oklab, var(--nf-lane-editorial-stroke) 10%, transparent),
+      0 7px 0 color-mix(in oklab, var(--qf-lane-editorial-stroke) 10%, transparent),
       0 24px 44px oklch(.35 .04 330 / .19);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-portal:hover::after {
     transform: translateY(-5px) rotate(7deg) scale(1.02);
     box-shadow:
-      0 7px 0 color-mix(in oklab, var(--nf-lane-project-stroke) 10%, transparent),
+      0 7px 0 color-mix(in oklab, var(--qf-lane-project-stroke) 10%, transparent),
       0 22px 42px oklch(.35 .04 255 / .18);
   }
 

@@ -12,7 +12,7 @@ const groups = [
   {
     label: "入门",
     translations: { en: "Getting started" },
-    ids: ["why-novelforge", "architecture", "production-pipeline"],
+    ids: ["why-quillframe", "architecture", "production-pipeline"],
   },
   {
     label: "创作与质量",
@@ -57,15 +57,15 @@ const sidebar = [
 ];
 
 export default defineConfig({
-  site: "https://novelforge.wei-dev.com",
+  site: "https://quillframe.wei-dev.com",
   base: "/docs",
   integrations: [
     starlight({
-      title: "NovelForge",
-      description: "NovelForge documentation for long-form fiction production, project integration, runtime contracts, quality, and publication.",
+      title: "Quillframe",
+      description: "Quillframe documentation for long-form fiction production, project integration, runtime contracts, quality, and publication.",
       logo: {
-        src: "./src/assets/novelforge-mark.svg",
-        alt: "NovelForge",
+        src: "./src/assets/quillframe-mark.svg",
+        alt: "Quillframe",
       },
       locales: {
         root: {
@@ -91,9 +91,9 @@ export default defineConfig({
         },
       ],
       components: {
-        SiteTitle: "./src/components/NovelForgeSiteTitle.astro",
-        PageTitle: "./src/components/NovelForgePageTitle.astro",
-        SocialIcons: "./src/components/NovelForgeActions.astro",
+        SiteTitle: "./src/components/QuillframeSiteTitle.astro",
+        PageTitle: "./src/components/QuillframePageTitle.astro",
+        SocialIcons: "./src/components/QuillframeActions.astro",
       },
       customCss: [
         "./src/styles/custom.css",

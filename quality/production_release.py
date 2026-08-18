@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Final structural release aggregation for NovelForge production candidates.
+"""Final structural release aggregation for Quillframe production candidates.
 
 `quality.production_readiness` remains the owner of semantic/surface/continuity
 quality gates. This wrapper prevents a valid semantic PASS from becoming release
@@ -16,8 +16,8 @@ from typing import Any
 
 from candidate_qualification import validate_qualification_receipt
 
-SCHEMA = "novelforge_production_release_v1"
-READINESS_SCHEMA = "novelforge_production_readiness_v1"
+SCHEMA = "quillframe_production_release_v1"
+READINESS_SCHEMA = "quillframe_production_readiness_v1"
 STATUSES = {"pass", "fail", "pending"}
 
 
@@ -150,7 +150,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge final production release aggregator")
+    p = argparse.ArgumentParser(description="Quillframe final production release aggregator")
     sub = p.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("aggregate"); a.add_argument("--input", required=True)
     sub.add_parser("self-test")

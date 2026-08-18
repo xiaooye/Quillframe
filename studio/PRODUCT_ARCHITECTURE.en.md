@@ -1,8 +1,8 @@
-# NovelForge Studio · Product Architecture
+# Quillframe Studio · Product Architecture
 
 <p><kbd>SYSTEM-IMPROVE</kbd>&nbsp;&nbsp;<kbd>READ-ONLY CORE</kbd>&nbsp;&nbsp;<kbd>LOW-OVERHEAD PRODUCT SHELL</kbd></p>
 
-This document records the Studio product architecture against live NovelForge Core and Product contracts. It is a consumer specification, not a competing runtime specification. Phase 2C is now directed toward **SolidJS + TypeScript + Vite + `@solidjs/router`**, consuming WeiUI as a **zero-JavaScript CSS/token foundation**. Local Web remains first-class; Tauri is an optional/installable desktop host rather than the center of product architecture.
+This document records the Studio product architecture against live Quillframe Core and Product contracts. It is a consumer specification, not a competing runtime specification. Phase 2C is now directed toward **SolidJS + TypeScript + Vite + `@solidjs/router`**, consuming WeiUI as a **zero-JavaScript CSS/token foundation**. Local Web remains first-class; Tauri is an optional/installable desktop host rather than the center of product architecture.
 
 > **Invariant ✦ `UI CONSUMES CORE STATE. UI DOES NOT INVENT CORE STATE.`**
 
@@ -12,15 +12,15 @@ This document records the Studio product architecture against live NovelForge Co
 
 ### Existing side-goal substrate
 
-NovelForge already has substantial Studio substrate:
+Quillframe already has substantial Studio substrate:
 
 - Session / Run / Checkpoint identity and a durable Control Plane;
 - typed host capability evidence with `capability != authority`;
 - Project Adapter resolution for logical project domains;
-- `novelforge_context_inspector_v2` for authority-aware, stage-aware context views and safe derived controls;
-- `novelforge_run_receipt_v1` for metadata-only execution evidence;
-- `novelforge_production_readiness_v1` for same-fingerprint conjunctive user-visible readiness;
-- `novelforge_publication_ir_v1` plus a deterministic compiler for Accepted manuscript text;
+- `quillframe_context_inspector_v2` for authority-aware, stage-aware context views and safe derived controls;
+- `quillframe_run_receipt_v1` for metadata-only execution evidence;
+- `quillframe_production_readiness_v1` for same-fingerprint conjunctive user-visible readiness;
+- `quillframe_publication_ir_v1` plus a deterministic compiler for Accepted manuscript text;
 - semantic contract IDs, input/result fingerprints, worker references and typed statuses;
 - Quality Evolution, Reader Expectations, State Graph, scenario branches and settlement receipts as non-Canon evidence/state machines;
 - deterministic docs, design-system, Framework-contract and release CI.
@@ -33,30 +33,30 @@ Story Loom is now an application-ready foundation rather than documentation-only
 
 Current `main` includes:
 
-- `assets/brand/tokens.json` with schema `novelforge_brand_tokens_v2`;
+- `assets/brand/tokens.json` with schema `quillframe_brand_tokens_v2`;
 - `assets/brand/weiui.integration.json`, which pins the generic WeiUI foundation to exact commit `d84d1cd365fb5f90cbbab794d2358f7a13b29b79`;
 - only `@weiui/tokens` and `@weiui/css` allowed from WeiUI for Phase 2C;
 - `@weiui/react` and `@weiui/headless` explicitly forbidden as Studio runtime dependencies;
 - `assets/brand/story-loom.weiui.css`, loaded in `wui-theme` after WeiUI tokens/CSS;
 - zero required WeiUI runtime JavaScript;
-- machine-owned light/dark theme roles plus NovelForge `--nf-*` product-semantic variables;
+- machine-owned light/dark theme roles plus Quillframe `--qf-*` product-semantic variables;
 - mobile-first breakpoints, 44px minimum touch target, focus geometry, `en-US` + `zh-CN`, logical properties, reduced-motion and no-default-polling rules;
 - `scripts/design_system_quality.py` + CI enforcing pin/provenance, CSS layering, contrast, mobile/i18n/a11y and runtime-overhead invariants.
 
-Story Loom still owns NovelForge product semantics. WeiUI owns generic CSS/token primitives. The integration contract is a dependency boundary, not a transfer of product identity or story authority.
+Story Loom still owns Quillframe product semantics. WeiUI owns generic CSS/token primitives. The integration contract is a dependency boundary, not a transfer of product identity or story authority.
 
 ### Current Core interfaces Studio can consume directly
 
 | Core contract | Studio use | Authority note |
 |---|---|---|
-| `novelforge_run_receipt_v1` | Run summary, actual context loading, semantic jobs, guard outcomes | execution evidence only |
-| `novelforge_context_inspector_v2` | context item source, authority, stage eligibility, explicit derived controls | overlay/proposal; not Canon |
-| `novelforge_production_readiness_v1` | explain which same-fingerprint gates pass/fail/pending | deterministic gate evidence; not a literary score and not Canon |
-| `novelforge_publication_ir_v1` + `publication/compiler.py` | deterministic Accepted-text compilation to clean text, Web HTML, print-oriented HTML/CSS and EPUB 3.3 | derived output; exact text preservation; `authority=false` |
+| `quillframe_run_receipt_v1` | Run summary, actual context loading, semantic jobs, guard outcomes | execution evidence only |
+| `quillframe_context_inspector_v2` | context item source, authority, stage eligibility, explicit derived controls | overlay/proposal; not Canon |
+| `quillframe_production_readiness_v1` | explain which same-fingerprint gates pass/fail/pending | deterministic gate evidence; not a literary score and not Canon |
+| `quillframe_publication_ir_v1` + `publication/compiler.py` | deterministic Accepted-text compilation to clean text, Web HTML, print-oriented HTML/CSS and EPUB 3.3 | derived output; exact text preservation; `authority=false` |
 | Session / Run identity | navigation, history, resume affordances | operational identity |
 | Control Plane | event/handoff/result/consume lineage | operational evidence |
-| `novelforge_host_capabilities_v1` | integrations/capability health | capability is not authority |
-| `novelforge_project_adapter_resolution_v1` | Project Hub logical domains and paths | path classification only |
+| `quillframe_host_capabilities_v1` | integrations/capability health | capability is not authority |
+| `quillframe_project_adapter_resolution_v1` | Project Hub logical domains and paths | path classification only |
 | semantic contract catalog | Semantic Pack Inspector labels and deep links | contract metadata |
 | settlement receipts | settlement review and failure explanation | settlement semantics remain Core-owned |
 
@@ -116,7 +116,7 @@ Do not make fifteen top-level sidebar items. Group the product around how a nove
 
 **Story** — Story Loom, characters, relationships and world. These are evidence-rich creative views, not generic CRUD profiles.
 
-**Review** — Reader evidence, Quality Evolution, Context Inspector, branches, continuity findings, pending gates, and `novelforge_production_readiness_v1` explanations for the exact candidate under review.
+**Review** — Reader evidence, Quality Evolution, Context Inspector, branches, continuity findings, pending gates, and `quillframe_production_readiness_v1` explanations for the exact candidate under review.
 
 **Publish** — deterministic compilation/validation of Accepted manuscript through the current Publication IR/compiler, plus preview/provenance for the output profiles the Core actually supports. Richer typesetting controls must wait for corresponding Core contracts rather than being invented in UI state.
 
@@ -167,7 +167,7 @@ Phase 1 proves the most distinctive observability promise:
 
 > **“The model thought this evidence supported the question” is different from “this evidence actually entered the model context.”**
 
-`novelforge_run_receipt_v1` supports this distinction directly through:
+`quillframe_run_receipt_v1` supports this distinction directly through:
 
 - `support_block_ids` — support identified by the semantic selection result;
 - `loaded_support_block_ids` — support actually loaded;
@@ -193,18 +193,18 @@ Studio visual semantics need four orthogonal dimensions. Never overload one colo
 
 **Provenance** — source run, contract, worker, artifact fingerprint, readiness receipt, publication source fingerprint, build result, settlement transaction. Truncation is allowed in the surface; full values remain one click away.
 
-Never invent calibrated-looking percentages when the Core does not define a calibrated measurement. `novelforge_production_readiness_v1` is a conjunction of typed gate statuses, not a quality percentage.
+Never invent calibrated-looking percentages when the Core does not define a calibrated measurement. `quillframe_production_readiness_v1` is a conjunction of typed gate statuses, not a quality percentage.
 
 ---
 
 ## 07 · Design-system direction
 
-**`assets/brand/tokens.json` is the NovelForge product-token authority.** It is now `novelforge_brand_tokens_v2` and includes both Story Loom visual semantics and machine-readable app constraints.
+**`assets/brand/tokens.json` is the Quillframe product-token authority.** It is now `quillframe_brand_tokens_v2` and includes both Story Loom visual semantics and machine-readable app constraints.
 
 The live dependency chain is:
 
 ```text
-NovelForge Story Loom v2 tokens
+Quillframe Story Loom v2 tokens
 → assets/brand/weiui.integration.json
 → @weiui/tokens + @weiui/css
 → assets/brand/story-loom.weiui.css (`wui-theme`)
@@ -215,10 +215,10 @@ There is no planned `@weiui/react` runtime layer. The integration contract expli
 
 The ownership split remains explicit:
 
-- NovelForge owns Story Loom domain semantics, authority/status/provenance encodings, typography roles, density, responsive/i18n interaction rules and visual personality;
+- Quillframe owns Story Loom domain semantics, authority/status/provenance encodings, typography roles, density, responsive/i18n interaction rules and visual personality;
 - WeiUI owns generic reusable token/CSS primitives and its public CSS/token contracts;
 - `weiui.integration.json` owns the exact upstream pin and consumption boundary;
-- `story-loom.weiui.css` owns deterministic mapping into WeiUI variables plus NovelForge `--nf-*` semantics;
+- `story-loom.weiui.css` owns deterministic mapping into WeiUI variables plus Quillframe `--qf-*` semantics;
 - `design_system_quality.py` owns the deterministic machine-checkable integration gate.
 
 A generic WeiUI `success` state must never become shorthand for Accepted Canon, a passing production-readiness conjunction, or a valid publication artifact. Product authority and validation state remain separate labeled channels.
@@ -253,7 +253,7 @@ Every delivery surface consumes the same product semantics through typed project
 ```text
 Studio surface
 → Studio projection/query adapter
-→ stable NovelForge Core CLI/schema/query/command contracts
+→ stable Quillframe Core CLI/schema/query/command contracts
 → Core persistence / deterministic derived build
 ```
 
@@ -346,7 +346,7 @@ Changing the application framework or host later requires an explicit Product de
 
 **Phase 4 — Publication Studio**
 
-- can begin against merged `novelforge_publication_ir_v1` and deterministic compiler;
+- can begin against merged `quillframe_publication_ir_v1` and deterministic compiler;
 - first scope previews/validates only Core-supported outputs: clean text, Web HTML, print-oriented HTML/CSS and EPUB 3.3;
 - release EPUB surfaces the external EPUBCheck requirement rather than treating internal validation as full conformance;
 - print-oriented HTML is not labeled final print PDF;

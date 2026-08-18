@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "novelforge_runtime_command_authorization_v1",
-  "title": "NovelForge Runtime Command Authorization",
+  "$id": "quillframe_runtime_command_authorization_v1",
+  "title": "Quillframe Runtime Command Authorization",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -17,7 +17,7 @@
     "authority"
   ],
   "properties": {
-    "schema": {"const": "novelforge_runtime_command_authorization_v1"},
+    "schema": {"const": "quillframe_runtime_command_authorization_v1"},
     "authorization_id": {"type": "string", "minLength": 1, "maxLength": 160},
     "operation": {"const": "session.resume"},
     "command_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},

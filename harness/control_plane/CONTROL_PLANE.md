@@ -1,4 +1,4 @@
-# NovelForge Runtime Control Plane · Bootstrap Router
+# Quillframe Runtime Control Plane · Bootstrap Router
 
 Authoritative editions:
 - English: `CONTROL_PLANE.en.md`

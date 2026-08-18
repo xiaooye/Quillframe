@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Quillframe brand mark</title>
+  <desc id="desc">A woven N formed from two book-page shapes and a connecting story thread, finished with a small forge spark.</desc>
+  <defs>
+    <linearGradient id="thread" x1="36" y1="92" x2="92" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D6679A"/>
+      <stop offset="1" stop-color="#796BC4"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="#FFFDFC" stroke="#E2DAE8" stroke-width="2"/>
+  <path d="M28 34c0-5 5-8 10-6l18 7v62l-19-7c-5-2-9-6-9-11V34Z" fill="#F9DDE9" stroke="#D6679A" stroke-width="2.25"/>
+  <path d="M72 35l18-7c5-2 10 1 10 6v45c0 5-4 9-9 11l-19 7V35Z" fill="#E7E1F8" stroke="#796BC4" stroke-width="2.25"/>
+  <path d="M42 83C53 69 58 57 64 49c5-7 9-8 13-3l10 12" fill="none" stroke="url(#thread)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="42" cy="83" r="4.25" fill="#D6679A"/>
+  <circle cx="87" cy="58" r="4.25" fill="#796BC4"/>
+  <path d="M94 19l3.3 7.7L105 30l-7.7 3.3L94 41l-3.3-7.7L83 30l7.7-3.3L94 19Z" fill="#BE892F"/>
+</svg>

@@ -1,4 +1,4 @@
-# 持续维护协议 · 让 NovelForge 保持健康，但不把自动化变成权威
+# 持续维护协议 · 让 Quillframe 保持健康，但不把自动化变成权威
 
 Continuous Maintenance 负责观察 Framework 健康状态、推进安全的确定性维护工作，并为后续审查准备受限 evidence / candidate。它**不会**因为有 schedule、CI、webhook、queue 或 durable state，就自动获得编辑权威或 source-code write authority。
 
@@ -203,6 +203,6 @@ trigger
 - [Runtime Capabilities](session_runtime/RUNTIME_CAPABILITIES.zh-CN.md)：capability proof 与 constraints。
 - [Control Plane](control_plane/CONTROL_PLANE.zh-CN.md)：durable external work coordination。
 - [语料智能](../corpus/README.zh-CN.md)：discovery 与 provenance boundary。
-- `.github/workflows/novelforge-weekly-maintenance.yml`：scheduled deterministic maintenance 入口。
+- `.github/workflows/quillframe-weekly-maintenance.yml`：scheduled deterministic maintenance 入口。
 
 **持续维护的目标，是让系统更可观察、更少陈旧，而不是让自动化获得超过 authority model 的权力。**

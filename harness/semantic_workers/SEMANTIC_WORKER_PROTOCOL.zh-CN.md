@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · 契约</kbd>&nbsp;&nbsp;<kbd>MODEL-READABLE CONTRACT</kbd>&nbsp;&nbsp;<kbd>FINGERPRINT-BOUND</kbd>&nbsp;&nbsp;<kbd>禁止 REVIEWER SHOPPING</kbd></p>
 
-Semantic work 是 NovelForge 明确选择让模型或人类处理“确定性规则无法诚实解决的判断”的地方。本协议先冻结语义问题、限制 worker 可以看到的内容、定义允许返回的结果，再用 exact fingerprint 把结果绑定回原问题，之后 owning workflow 才能消费它。
+Semantic work 是 Quillframe 明确选择让模型或人类处理“确定性规则无法诚实解决的判断”的地方。本协议先冻结语义问题、限制 worker 可以看到的内容、定义允许返回的结果，再用 exact fingerprint 把结果绑定回原问题，之后 owning workflow 才能消费它。
 
 > **核心不变量 ✦** 模型负责 semantic interpretation；确定性 infrastructure 负责 identity、permission、fingerprint、typed validation 与 logical consumption。两边都不能静默获得对方的权威。
 

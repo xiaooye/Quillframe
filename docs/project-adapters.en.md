@@ -2,28 +2,28 @@
 
 ## Purpose
 
-NovelForge is one generic framework used by many independent novel repositories. A Project Adapter maps a project's physical storage into the logical Project SDK contract without importing project-specific facts into the framework.
+Quillframe is one generic framework used by many independent novel repositories. A Project Adapter maps a project's physical storage into the logical Project SDK contract without importing project-specific facts into the framework.
 
 ## Standard project
 
 New projects should use the standard Project SDK structure created by:
 
 ```bash
-python novelforge.py project init <path> --id <PROJECT-ID> --title "Title"
+python quillframe.py project init <path> --id <PROJECT-ID> --title "Title"
 ```
 
 Core identity:
 
 ```text
-novelforge.toml
-novelforge.lock.json
+quillframe.toml
+quillframe.lock.json
 ```
 
 Then the project owns its `profiles/`, `bible/`, `state/`, `plans/`, `manuscripts/`, `research/`, `corpus/`, `evals/`, `tests/`, `specs/`, and `assets/`.
 
 ## Legacy project
 
-Existing fiction projects do not need a destructive directory rewrite before they can use NovelForge.
+Existing fiction projects do not need a destructive directory rewrite before they can use Quillframe.
 
 A legacy adapter can map:
 - legacy project identity → Project SDK identity;
@@ -78,7 +78,7 @@ Perform migrations incrementally and verify behavior/authority compatibility aft
 Projects should avoid remote file ping-pong during ordinary production. Resolve the pinned framework release once and materialize a verified read-only dependency bundle under:
 
 ```text
-.novelforge/framework/
+.quillframe/framework/
 ```
 
 The lockfile records the release/version/commit/fingerprint. Project tasks use the local synchronized dependency plus local project state.

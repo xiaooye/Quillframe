@@ -1,5 +1,5 @@
 {
-  "schema": "novelforge_model_contract_registry_v1",
+  "schema": "quillframe_model_contract_registry_v1",
   "version": "4",
   "principle": "Creative exploration should produce causally distinct options, while repair comparison must verify both targeted improvement and preservation of the current creative objective. Deterministic ledgers bind candidates, envelopes and results but never manufacture literary improvement signals or weighted quality scores.",
   "contracts": {
@@ -176,7 +176,7 @@
                 "properties": {
                   "schema": {
                     "enum": [
-                      "novelforge_objective_envelope_v1"
+                      "quillframe_objective_envelope_v1"
                     ]
                   },
                   "subject_id": {

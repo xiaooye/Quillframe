@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>GENERIC FAILURE MECHANISMS</kbd>&nbsp;&nbsp;<kbd>PROFILE-SENSITIVE THRESHOLDS</kbd></p>
 
-Surface Fundamentals are NovelForge's default prose-realization safeguards. They exist because language models exhibit recurring cross-project failure mechanisms: fragmented pseudo-pace, camera-like micro-actions, narrator explanation, design-language leakage, empty embodiment, procedural reporting, fake significance, and other forms of polished text that do not behave like lived fiction.
+Surface Fundamentals are Quillframe's default prose-realization safeguards. They exist because language models exhibit recurring cross-project failure mechanisms: fragmented pseudo-pace, camera-like micro-actions, narrator explanation, design-language leakage, empty embodiment, procedural reporting, fake significance, and other forms of polished text that do not behave like lived fiction.
 
 > **Boundary ✦** Surface Fundamentals define generic model-failure mechanisms. They are not one novel's house style, and passing them does **not** mean a chapter is engaging, emotionally effective, or production-ready.
 

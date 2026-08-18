@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Optional mechanical prose instrumentation for NovelForge.
+"""Optional mechanical prose instrumentation for Quillframe.
 
 This module is not a default Reader input and never produces literary truth.
 Agents may call it on demand when mechanical measurements would help investigate
-a semantic observation.  Generic NovelForge does not preload these numbers into
+a semantic observation.  Generic Quillframe does not preload these numbers into
 Blind Reader, Rule Auditor, Writer, or Editor context.
 """
 from __future__ import annotations
@@ -15,7 +15,7 @@ from pathlib import Path
 from statistics import mean, median
 from typing import Any
 
-SCHEMA = "novelforge_prose_telemetry_v2"
+SCHEMA = "quillframe_prose_telemetry_v2"
 SENTENCE_END = re.compile(r"(?<=[。！？!?])|(?<=[.!?])(?=\s|$)")
 DIALOGUE_PREFIX = tuple("\"'“‘「『")
 
@@ -122,7 +122,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge optional prose telemetry")
+    p = argparse.ArgumentParser(description="Quillframe optional prose telemetry")
     sub = p.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("analyze")
     a.add_argument("--text")

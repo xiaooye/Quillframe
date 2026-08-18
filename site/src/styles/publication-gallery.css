@@ -27,8 +27,8 @@
     color: var(--publication-ink);
     background: var(--publication-paper);
     transition:
-      transform var(--nf-product-duration-fast) var(--nf-product-ease),
-      border-color var(--nf-product-duration-fast) var(--nf-product-ease);
+      transform var(--qf-product-duration-fast) var(--qf-product-ease),
+      border-color var(--qf-product-duration-fast) var(--qf-product-ease);
   }
 
   .publication-workbench-entry .unified-publication-snapshot:hover .snapshot-mini-page,

@@ -53,8 +53,8 @@ python project_sdk.py build <path>
 
 ## 兼容性说明
 
-**Quillframe 是当前公开品牌；`NovelForge` 继续作为旧技术命名空间保留。** `novelforge.toml`、`novelforge.lock.json`、`novelforge_*` 模式标识、既有工作流名称、仓库路径和稳定契约标识，本次都不改名。
+**Quillframe 是当前公开品牌；`Quillframe` 继续作为旧技术命名空间保留。** `quillframe.toml`、`quillframe.lock.json`、`quillframe_*` 模式标识、既有工作流名称、仓库路径和稳定契约标识，本次都不改名。
 
-框架目前处于 1.0 之前的 `0.8.0` 开发线。开发期的实现真相来自本次冻结的精确 `main` 提交，而不是旧文档叙述。
+框架目前处于 1.0 之前的 `0.9.0` 开发线。开发期的实现真相来自本次冻结的精确 `main` 提交，而不是旧文档叙述。
 
 [文档中心](docs/README.zh-CN.md) · [英文版](README.en.md)

@@ -2,10 +2,10 @@
   "schema": "quillframe_brand_migration_v1",
   "public_brand": "Quillframe",
   "descriptor": "Long-form Fiction Production Framework",
-  "legacy_public_brand": "NovelForge",
-  "technical_namespace": "novelforge",
+  "legacy_public_brand": "Quillframe",
+  "technical_namespace": "quillframe",
   "migration_policy": "selective_not_global_replace",
-  "preserve": ["xiaooye/cn_webnovel_agent","novelforge.toml","novelforge.lock.json","novelforge_* schema IDs","stable contract IDs","workflow names","historical specs"],
-  "public_current_surfaces": ["README.md","README.en.md","README.zh-CN.md","docs/README.en.md","docs/README.zh-CN.md","docs/why-novelforge.en.md","docs/why-novelforge.zh-CN.md","docs/architecture.en.md","docs/architecture.zh-CN.md","docs/production-pipeline.en.md","docs/production-pipeline.zh-CN.md","docs/quality-assurance.en.md","docs/quality-assurance.zh-CN.md"],
+  "preserve": ["xiaooye/cn_webnovel_agent","quillframe.toml","quillframe.lock.json","quillframe_* schema IDs","stable contract IDs","workflow names","historical specs"],
+  "public_current_surfaces": ["README.md","README.en.md","README.zh-CN.md","docs/README.en.md","docs/README.zh-CN.md","docs/why-quillframe.en.md","docs/why-quillframe.zh-CN.md","docs/architecture.en.md","docs/architecture.zh-CN.md","docs/production-pipeline.en.md","docs/production-pipeline.zh-CN.md","docs/quality-assurance.en.md","docs/quality-assurance.zh-CN.md"],
   "ui_rebrand_followup": true
 }

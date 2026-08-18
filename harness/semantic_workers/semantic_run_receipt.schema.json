@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "novelforge-semantic-run-receipt-v1",
-  "title": "NovelForge Semantic Run Receipt",
+  "$id": "quillframe-semantic-run-receipt-v1",
+  "title": "Quillframe Semantic Run Receipt",
   "description": "Provider-neutral, non-authoritative trace of one bounded semantic workflow. It links sparse context, selected contract packs, fingerprint-bound model calls, artifacts and decisions without becoming Canon or a replacement for Session/Control Plane state.",
   "type": "object",
   "additionalProperties": false,
@@ -22,7 +22,7 @@
     "permissions"
   ],
   "properties": {
-    "schema": {"const": "novelforge_semantic_run_receipt_v1"},
+    "schema": {"const": "quillframe_semantic_run_receipt_v1"},
     "run_id": {"type": "string", "minLength": 1},
     "session_id": {"type": ["string", "null"]},
     "workflow_name": {"type": "string", "minLength": 1},

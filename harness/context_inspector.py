@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "novelforge_context_inspector_v3"
+SCHEMA = "quillframe_context_inspector_v3"
 PROTECTED_AUTHORITIES = {"locked", "accepted"}
 AUTHORITIES = PROTECTED_AUTHORITIES | {"active_plan", "review", "proposal", "runtime", "learning", "corpus", "derived"}
 STAGES = {
@@ -251,7 +251,7 @@ def self_test() -> int:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge Context Manifest inspector"); sub = p.add_subparsers(dest="command", required=True)
+    p = argparse.ArgumentParser(description="Quillframe Context Manifest inspector"); sub = p.add_subparsers(dest="command", required=True)
     ins = sub.add_parser("inspect"); ins.add_argument("--manifest", required=True); ins.add_argument("--overlay"); ins.add_argument("--stage", choices=sorted(STAGES)); ins.add_argument("--output")
     ctl = sub.add_parser("control"); ctl.add_argument("--overlay"); ctl.add_argument("--item-id", required=True); ctl.add_argument("--action", required=True, choices=["pin", "unpin", "priority", "hide-derived", "invalidate-derived"]); ctl.add_argument("--value", type=float); ctl.add_argument("--output", required=True)
     ed = sub.add_parser("request-edit"); ed.add_argument("--manifest", required=True); ed.add_argument("--overlay"); ed.add_argument("--item-id", required=True); ed.add_argument("--patch-json", required=True); ed.add_argument("--output", required=True)

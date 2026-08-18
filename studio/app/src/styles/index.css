@@ -1,8 +1,8 @@
-/* NovelForge Studio CSS entrypoint: framework → routes → shared product language → hardening. */
+/* Quillframe Studio CSS entrypoint: framework → routes → shared product language → hardening. */
 @import "./vendor/weiui.tokens.generated.css";
 @import "./vendor/weiui.generated.css";
 @import "../../../../assets/brand/story-loom.weiui.css";
-@import "../../../../assets/brand/novelforge-product-language.css";
+@import "../../../../assets/brand/quillframe-product-language.css";
 
 @import "./app.css";
 @import "./observability.css";
@@ -11,6 +11,8 @@
 @import "./product-surfaces.css";
 @import "./onboarding.css";
 @import "./integrations.css";
+@import "./model-onboarding.css";
+@import "./model-services.css";
 
 /* Cross-product semantic mapping, workstation composition, then hardening. */
 @import "./product-language.css";

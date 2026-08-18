@@ -101,7 +101,7 @@ def build_semantic_jobs()->dict[str,Any]:
 
 def expectation_manifest()->dict[str,Any]:
     return {
-        'schema':'novelforge_pre_independent_qualification_expectations_v1',
+        'schema':'quillframe_pre_independent_qualification_expectations_v1',
         'cases':[{k:v for k,v in case.items() if k!='text'} for case in CASES],
         'stored_separately_from_semantic_jobs':True,
         'model_execution':False,
@@ -234,7 +234,7 @@ def self_test()->dict[str,Any]:
         'normal_ci_no_model_execution':jobs['model_execution'] is False,
     }
     return {
-        'schema':'novelforge_pre_independent_qualification_test_v1',
+        'schema':'quillframe_pre_independent_qualification_test_v1',
         'pre_independent_qualification_contract':'PASS' if all(checks.values()) else 'FAIL',
         'checks':checks,
         'case_count':len(CASES),

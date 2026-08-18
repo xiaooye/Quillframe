@@ -1,6 +1,6 @@
-version: 0.8.0
-name: novelforge
-product_name: NovelForge Adaptive Fiction Agent Framework
+version: 0.9.0
+name: quillframe
+product_name: Quillframe Adaptive Fiction Framework
 architecture: generic-fiction-os-ai-native-contract-first-capability-aware-adaptive-learning
 entry: SKILL.md
 
@@ -8,7 +8,7 @@ scope:
   project_agnostic: true
   built_in_novel_or_canon: false
   dependency_direction: project-to-framework-only
-  supported_project_contract: novelforge_project_v1
+  supported_project_contract: quillframe_project_v1
   project_sdk: project_sdk.py
   project_adapter: project_adapter.py
 
@@ -44,28 +44,28 @@ harness:
     en: harness/session_runtime/RUNTIME_CAPABILITIES.en.md
     zh_cn: harness/session_runtime/RUNTIME_CAPABILITIES.zh-CN.md
   runtime_query_tool: harness/control_plane/runtime_query.py
-  runtime_query_schema: novelforge_runtime_query_v1
-  runtime_sessions_projection_schema: novelforge_runtime_sessions_projection_v1
-  runtime_session_projection_schema: novelforge_runtime_session_projection_v1
-  runtime_events_projection_schema: novelforge_runtime_events_projection_v1
-  runtime_handoff_projection_schema: novelforge_runtime_handoff_projection_v1
+  runtime_query_schema: quillframe_runtime_query_v1
+  runtime_sessions_projection_schema: quillframe_runtime_sessions_projection_v1
+  runtime_session_projection_schema: quillframe_runtime_session_projection_v1
+  runtime_events_projection_schema: quillframe_runtime_events_projection_v1
+  runtime_handoff_projection_schema: quillframe_runtime_handoff_projection_v1
   resume_preflight_tool: harness/session_runtime/resume_preflight.py
-  resume_preflight_schema: novelforge_session_resume_preflight_v1
+  resume_preflight_schema: quillframe_session_resume_preflight_v1
   resume_command_tool: harness/session_runtime/resume_command.py
   resume_command_schema: harness/session_runtime/resume_command_schema.json
-  resume_command_schema_id: novelforge_session_resume_command_v1
+  resume_command_schema_id: quillframe_session_resume_command_v1
   runtime_command_authorization_tool: harness/session_runtime/runtime_command_authorization.py
   runtime_command_authorization_schema: harness/session_runtime/runtime_command_authorization_schema.json
-  runtime_command_authorization_schema_id: novelforge_runtime_command_authorization_v1
+  runtime_command_authorization_schema_id: quillframe_runtime_command_authorization_v1
   runtime_command_executor_tool: harness/session_runtime/runtime_command_executor.py
   runtime_command_receipt_schema: harness/session_runtime/runtime_command_receipt_schema.json
-  runtime_command_receipt_schema_id: novelforge_runtime_command_receipt_v1
+  runtime_command_receipt_schema_id: quillframe_runtime_command_receipt_v1
   runtime_command_execution_result_schema: harness/session_runtime/runtime_command_execution_result_schema.json
-  runtime_command_execution_result_schema_id: novelforge_runtime_command_execution_result_v1
-  runtime_command_receipt_projection_schema: novelforge_runtime_command_receipt_projection_v1
+  runtime_command_execution_result_schema_id: quillframe_runtime_command_execution_result_v1
+  runtime_command_receipt_projection_schema: quillframe_runtime_command_receipt_projection_v1
   run_receipt_tool: harness/control_plane/run_receipt.py
-  run_receipt_schema: novelforge_run_receipt_v1
-  run_receipts_projection_schema: novelforge_run_receipts_projection_v1
+  run_receipt_schema: quillframe_run_receipt_v1
+  run_receipts_projection_schema: quillframe_run_receipts_projection_v1
   context_inspector: harness/context_inspector.py
   context_assembly: harness/context_assembly.py
   memory_tiers: harness/memory_tiers.py
@@ -107,20 +107,20 @@ quality:
   taxonomy_registry: quality/taxonomy.json
   taxonomy_tool: quality/quality_taxonomy.py
   repair_policy: quality/repair_policy.py
-  quality_evolution_schema: novelforge_quality_evolution_v2
-  reader_expectation_schema: novelforge_reader_expectation_v2
-  context_inspector_schema: novelforge_context_inspector_v3
-  context_assembly_schema: novelforge_context_assembly_v2
-  memory_tiers_schema: novelforge_memory_tiers_v4
-  memory_bank_schema: novelforge_memory_bank_v1
-  finding_schema: novelforge_quality_finding_v1
-  production_readiness_schema: novelforge_production_readiness_v1
-  production_release_schema: novelforge_production_release_v1
-  prose_telemetry_schema: novelforge_prose_telemetry_v2
-  write_intent_guard_schema: novelforge_write_intent_guard_v1
-  state_graph_schema: novelforge_state_graph_v1
-  taxonomy_schema: novelforge_quality_taxonomy_v1
-  repair_policy_schema: novelforge_repair_policy_v2
+  quality_evolution_schema: quillframe_quality_evolution_v2
+  reader_expectation_schema: quillframe_reader_expectation_v2
+  context_inspector_schema: quillframe_context_inspector_v3
+  context_assembly_schema: quillframe_context_assembly_v2
+  memory_tiers_schema: quillframe_memory_tiers_v4
+  memory_bank_schema: quillframe_memory_bank_v1
+  finding_schema: quillframe_quality_finding_v1
+  production_readiness_schema: quillframe_production_readiness_v1
+  production_release_schema: quillframe_production_release_v1
+  prose_telemetry_schema: quillframe_prose_telemetry_v2
+  write_intent_guard_schema: quillframe_write_intent_guard_v1
+  state_graph_schema: quillframe_state_graph_v1
+  taxonomy_schema: quillframe_quality_taxonomy_v1
+  repair_policy_schema: quillframe_repair_policy_v2
   semantic_contracts:
     reader_reaction: reader.reaction
     reader_engagement_audit: reader.engagement_audit
@@ -162,9 +162,9 @@ quality:
 
 settlement:
   runtime: harness/settlement_runtime.py
-  runtime_schema: novelforge_settlement_runtime_v1
-  transaction_schema: novelforge_settlement_transaction_v1
-  projection_receipt_schema: novelforge_projection_receipt_v1
+  runtime_schema: quillframe_settlement_runtime_v1
+  transaction_schema: quillframe_settlement_transaction_v1
+  projection_receipt_schema: quillframe_projection_receipt_v1
   semantic_inference: forbidden
   explicit_acceptance_receipt_required: true
   checkpoint_before_write_required: true
@@ -187,13 +187,13 @@ learning:
   semantic_work_packager: learning/learning_eval.py
   promotion_gate: learning/promotion_gate.py
   author_model: learning/author_model.py
-  author_model_schema: novelforge_author_model_v1
-  feedback_capture_schema: novelforge_feedback_capture_v1
-  author_model_projection_schema: novelforge_author_model_projection_v2
+  author_model_schema: quillframe_author_model_v1
+  feedback_capture_schema: quillframe_feedback_capture_v1
+  author_model_projection_schema: quillframe_author_model_projection_v2
   feedback_intake: learning/feedback_intake.py
   feedback_intake_schema: learning/feedback_intake.schema.json
-  feedback_intake_schema_id: novelforge_feedback_intake_v1
-  feedback_intake_projection_schema: novelforge_feedback_intake_projection_v1
+  feedback_intake_schema_id: quillframe_feedback_intake_v1
+  feedback_intake_projection_schema: quillframe_feedback_intake_projection_v1
   feedback_query: learning/feedback_query.py
   feedback_query_side_effect_free: true
   feedback_transport_event: feedback.observed
@@ -253,8 +253,8 @@ corpus:
     zh_cn: corpus/CORPUS_INGEST_PROTOCOL.zh-CN.md
   scout: corpus/corpus_scout.py
   discovery_runtime: corpus/discovery_runtime.py
-  discovery_request_schema: novelforge_corpus_discovery_request_v2
-  discovery_result_schema: novelforge_corpus_discovery_results_v1
+  discovery_request_schema: quillframe_corpus_discovery_request_v2
+  discovery_result_schema: quillframe_corpus_discovery_results_v1
   rights_gate: corpus/rights_gate.py
   benchmark_registry: corpus/benchmarks/mechanisms.json
   rights_classes: [redistributable, analysis_only, unknown]
@@ -267,7 +267,7 @@ corpus:
 publication:
   compiler: publication/compiler.py
   ir_schema: publication/publication_ir.schema.json
-  ir_schema_id: novelforge_publication_ir_v1
+  ir_schema_id: quillframe_publication_ir_v1
   profiles: [clean_text, web_reflow, print_book, epub3]
   accepted_text_mutation: forbidden
   deterministic_internal_validation: required
@@ -303,9 +303,9 @@ project_engineering:
   adapter_contract:
     en: harness/PROJECT_ADAPTER_PROTOCOL.en.md
     zh_cn: harness/PROJECT_ADAPTER_PROTOCOL.zh-CN.md
-  manifest: novelforge.toml
-  lockfile: novelforge.lock.json
-  local_framework_materialization: .novelforge/framework
+  manifest: quillframe.toml
+  lockfile: quillframe.lock.json
+  local_framework_materialization: .quillframe/framework
   optional_property_write_policy_path_key: property_write_policy
   property_write_policy_absent_behavior: legacy_unmanaged
   layouts: [standard, mapped]
@@ -331,22 +331,22 @@ session_runtime:
   public_query_boundary: harness/control_plane/runtime_query.py
   public_queries_are_side_effect_free: true
   resume_preflight: harness/session_runtime/resume_preflight.py
-  resume_preflight_schema: novelforge_session_resume_preflight_v1
+  resume_preflight_schema: quillframe_session_resume_preflight_v1
   resume_preflight_is_side_effect_free: true
   resume_preflight_public_operation: session.resume.preflight
   resume_preflight_ready_grants_runtime_control: false
   ordinary_resume_requires_latest_checkpoint: true
   older_checkpoint_requires_replay_or_fork_contract: true
   resume_command: harness/session_runtime/resume_command.py
-  resume_command_schema: novelforge_session_resume_command_v1
+  resume_command_schema: quillframe_session_resume_command_v1
   resume_command_exposed: true
   runtime_command_authorization: harness/session_runtime/runtime_command_authorization.py
-  runtime_command_authorization_schema: novelforge_runtime_command_authorization_v1
+  runtime_command_authorization_schema: quillframe_runtime_command_authorization_v1
   runtime_command_executor_tool: harness/session_runtime/runtime_command_executor.py
   runtime_command_executor_exposed: true
-  runtime_command_receipt_schema: novelforge_runtime_command_receipt_v1
-  runtime_command_execution_result_schema: novelforge_runtime_command_execution_result_v1
-  runtime_command_receipt_projection_schema: novelforge_runtime_command_receipt_projection_v1
+  runtime_command_receipt_schema: quillframe_runtime_command_receipt_v1
+  runtime_command_execution_result_schema: quillframe_runtime_command_execution_result_v1
+  runtime_command_receipt_projection_schema: quillframe_runtime_command_receipt_projection_v1
   session_resume_mutation_exposed: true
   session_resume_mutation_scope: runtime_session_state_only
   session_resume_public_surface: local_app_only
@@ -366,10 +366,10 @@ session_runtime:
   resume_revalidates_project_authority: true
   resume_reresolves_required_capabilities: true
   author_steering_transport_event: feedback.observed
-  author_steering_payload_schema: novelforge_author_steering_request_v1
-  author_steering_safe_point_schema: novelforge_author_steering_safe_point_v1
-  author_steering_decision_schema: novelforge_author_steering_decision_v1
-  author_steering_receipt_schema: novelforge_author_steering_receipt_v1
+  author_steering_payload_schema: quillframe_author_steering_request_v1
+  author_steering_safe_point_schema: quillframe_author_steering_safe_point_v1
+  author_steering_decision_schema: quillframe_author_steering_decision_v1
+  author_steering_receipt_schema: quillframe_author_steering_receipt_v1
   author_steering_source_kinds: [user, authorized_human]
   author_steering_requires_safe_point: true
   author_steering_consume_once: true
@@ -378,7 +378,7 @@ session_runtime:
   author_steering_followup_auto_execute: false
   author_steering_model_execution: false
   feedback_learning_transport_event: feedback.observed
-  feedback_learning_payloads: [novelforge_author_steering_request_v1, novelforge_feedback_observation_v1]
+  feedback_learning_payloads: [quillframe_author_steering_request_v1, quillframe_feedback_observation_v1]
   feedback_learning_source_kinds: [user, authorized_human]
   feedback_learning_consumer_scoped: true
   feedback_learning_pending_is_resumable: true
@@ -386,7 +386,7 @@ session_runtime:
   feedback_learning_model_execution_required_in_normal_ci: false
 
 runtime_capabilities:
-  schema: novelforge_host_capabilities_v1
+  schema: quillframe_host_capabilities_v1
   undeclared_is_unavailable: true
   provider_name_is_not_capability_proof: true
   network_primitive_is_not_remote_authorization: true
@@ -395,12 +395,12 @@ runtime_capabilities:
   common_capabilities: [filesystem_read, filesystem_write, subprocess, git_cli, github_cli, codex_cli, claude_cli, web_search, github_search, user_files, file_library, mcp_client, mcp_server, provider_api, semantic_model, peer_chat_relay, human_reviewer]
 
 control_plane:
-  schema: novelforge_control_plane_v1
-  event_schema: novelforge_event_v1
-  handoff_schema: novelforge_handoff_v1
-  public_query_schema: novelforge_runtime_query_v1
-  run_receipt_schema: novelforge_run_receipt_v1
-  runtime_command_receipt_schema: novelforge_runtime_command_receipt_v1
+  schema: quillframe_control_plane_v1
+  event_schema: quillframe_event_v1
+  handoff_schema: quillframe_handoff_v1
+  public_query_schema: quillframe_runtime_query_v1
+  run_receipt_schema: quillframe_run_receipt_v1
+  runtime_command_receipt_schema: quillframe_runtime_command_receipt_v1
   event_idempotency: required
   runtime_command_idempotency: required
   runtime_command_before_state_compare_and_swap: required
@@ -417,9 +417,9 @@ control_plane:
   result_consumption: exactly-once-logical-receipt
   canon_authority: false
   framework_promotion_authority: false
-  default_local_db: .novelforge/runtime.db
+  default_local_db: .quillframe/runtime.db
   write_intent_guard: harness/control_plane/write_intent_guard.py
-  write_intent_guard_schema: novelforge_write_intent_guard_v1
+  write_intent_guard_schema: quillframe_write_intent_guard_v1
   write_intent_requires_exact_resource_action_target: true
   write_intent_requires_exact_before_state: true
   write_intent_does_not_grant_authority: true
@@ -462,23 +462,23 @@ bilingual_docs:
   mermaid_diagrams: preferred
 
 workflows:
-  deterministic_ci: .github/workflows/novelforge-ci.yml
-  reusable_contracts: .github/workflows/novelforge-contracts.yml
-  feedback_learning: .github/workflows/novelforge-feedback-learning.yml
-  semantic_contract_packs: .github/workflows/novelforge-semantic-contract-packs.yml
-  quality_gate_hardening: .github/workflows/novelforge-quality-gate-hardening.yml
-  framework_bundle: .github/workflows/novelforge-release-bundle.yml
-  typed_event_router: .github/workflows/novelforge-event-router.yml
-  live_semantic_optional: .github/workflows/novelforge-semantic-live.yml
-  weekly_maintenance: .github/workflows/novelforge-weekly-maintenance.yml
-  state_integrity_p0: .github/workflows/novelforge-state-integrity-p0.yml
-  author_steering: .github/workflows/novelforge-author-steering.yml
-  planning_horizon: .github/workflows/novelforge-planning-horizon.yml
-  planning_horizon_semantic: .github/workflows/novelforge-planning-horizon-semantic.yml
-  adaptive_production: .github/workflows/novelforge-adaptive-production.yml
-  adaptive_production_semantic: .github/workflows/novelforge-adaptive-production-semantic.yml
+  deterministic_ci: .github/workflows/quillframe-ci.yml
+  reusable_contracts: .github/workflows/quillframe-contracts.yml
+  feedback_learning: .github/workflows/quillframe-feedback-learning.yml
+  semantic_contract_packs: .github/workflows/quillframe-semantic-contract-packs.yml
+  quality_gate_hardening: .github/workflows/quillframe-quality-gate-hardening.yml
+  framework_bundle: .github/workflows/quillframe-release-bundle.yml
+  typed_event_router: .github/workflows/quillframe-event-router.yml
+  live_semantic_optional: .github/workflows/quillframe-semantic-live.yml
+  weekly_maintenance: .github/workflows/quillframe-weekly-maintenance.yml
+  state_integrity_p0: .github/workflows/quillframe-state-integrity-p0.yml
+  author_steering: .github/workflows/quillframe-author-steering.yml
+  planning_horizon: .github/workflows/quillframe-planning-horizon.yml
+  planning_horizon_semantic: .github/workflows/quillframe-planning-horizon-semantic.yml
+  adaptive_production: .github/workflows/quillframe-adaptive-production.yml
+  adaptive_production_semantic: .github/workflows/quillframe-adaptive-production-semantic.yml
   peer_chat:
-    reusable_workflow: .github/workflows/novelforge-chat-semantic-bridge.yml
+    reusable_workflow: .github/workflows/quillframe-chat-semantic-bridge.yml
     composite_action: .github/actions/project-peer-semantic/action.yml
     bridge_runtime: .github/actions/project-peer-semantic/bridge.py
     issue_owner: consuming-project-repository

@@ -73,8 +73,8 @@ def main() -> int:
     args = parser.parse_args()
 
     integration = load(INTEGRATION)
-    if integration.get("schema") != "novelforge_weiui_integration_v2":
-        raise SystemExit("unexpected NovelForge WeiUI integration schema")
+    if integration.get("schema") != "quillframe_weiui_integration_v2":
+        raise SystemExit("unexpected Quillframe WeiUI integration schema")
     expected = integration.get("source", {}).get("commit")
     if not isinstance(expected, str) or len(expected) != 40:
         raise SystemExit("WeiUI integration does not contain an exact commit")
@@ -83,7 +83,7 @@ def main() -> int:
     assert_checkout(weiui_root, expected)
     build_upstream(weiui_root)
 
-    with tempfile.TemporaryDirectory(prefix="novelforge-weiui-sync-") as temp:
+    with tempfile.TemporaryDirectory(prefix="quillframe-weiui-sync-") as temp:
         generated_css, generated_tokens = generate(weiui_root, Path(temp))
         if args.write:
             CSS_TARGET.parent.mkdir(parents=True, exist_ok=True)
@@ -100,7 +100,7 @@ def main() -> int:
             status = "verified"
 
     print(json.dumps({
-        "schema": "novelforge_weiui_sync_v1",
+        "schema": "quillframe_weiui_sync_v1",
         "status": status,
         "weiui_commit": expected,
         "config": CONFIG.relative_to(ROOT).as_posix(),

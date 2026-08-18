@@ -83,8 +83,8 @@ const stringAt = (value: Record<string, unknown> | undefined, key: string) => ty
 
 export async function inspectBrowserProject(input: FileList | File[]): Promise<BrowserProjectProjection> {
   const files = Array.from(input);
-  const manifestFile = findFile(files, "novelforge.toml");
-  const lockFile = findFile(files, "novelforge.lock.json");
+  const manifestFile = findFile(files, "quillframe.toml");
+  const lockFile = findFile(files, "quillframe.lock.json");
   const attestationFile = findFile(files, "framework.attestation.json");
 
   const [manifestText, lockText, attestationText] = await Promise.all([
@@ -99,8 +99,8 @@ export async function inspectBrowserProject(input: FileList | File[]): Promise<B
   const attestationFramework = objectAt(attestation, "framework");
 
   const project = manifestText ? {
-    schema: readTomlValue(manifestText, "novelforge", "schema"),
-    minimumFrameworkVersion: readTomlValue(manifestText, "novelforge", "minimum_framework_version"),
+    schema: readTomlValue(manifestText, "quillframe", "schema"),
+    minimumFrameworkVersion: readTomlValue(manifestText, "quillframe", "minimum_framework_version"),
     id: readTomlValue(manifestText, "project", "id"),
     title: readTomlValue(manifestText, "project", "title"),
     language: readTomlValue(manifestText, "project", "language"),
@@ -132,13 +132,13 @@ export async function inspectBrowserProject(input: FileList | File[]): Promise<B
   const checks: BrowserProjectCheck[] = [
     {
       id: "manifest",
-      label: "novelforge.toml",
-      status: manifestFile && project?.schema === "novelforge_project_v1" ? "pass" : manifestFile ? "warn" : "missing",
+      label: "quillframe.toml",
+      status: manifestFile && project?.schema === "quillframe_project_v1" ? "pass" : manifestFile ? "warn" : "missing",
       detail: manifestFile ? project?.schema ?? "schema not detected" : "required project manifest not selected",
     },
     {
       id: "lock",
-      label: "novelforge.lock.json",
+      label: "quillframe.lock.json",
       status: lockValid ? "pass" : lockFile ? "warn" : "missing",
       detail: lockValid ? `${framework?.version} · ${framework?.commit?.slice(0, 12)}…` : lockFile ? "lock JSON is incomplete or invalid" : "framework lock not selected",
     },

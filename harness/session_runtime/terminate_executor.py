@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Execute an explicitly human-authorized NovelForge session termination.
+"""Execute an explicitly human-authorized Quillframe session termination.
 
 The command terminates the Session and, when present, its single active latest
 Run as one exact runtime-state CAS. It performs no model execution and cannot
@@ -190,7 +190,7 @@ def execute(command: dict[str, Any], authorization: dict[str, Any], *, db_path: 
 
         event_id = "EV-TERMINATE-" + terminate_command.fingerprint(command)[7:31]
         event = {
-            "schema": "novelforge_event_v1",
+            "schema": "quillframe_event_v1",
             "event_id": event_id,
             "event_type": "session.terminate_requested",
             "source": {"kind": "runtime_command_executor", "actor": "runtime-command"},
@@ -343,24 +343,24 @@ def execute_terminate(*, db_path: Path, project_root: Path, session_id: str, exp
 
 
 def self_test() -> int:
-    with tempfile.TemporaryDirectory(prefix="novelforge-terminate-executor-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="quillframe-terminate-executor-") as tmp:
         root = Path(tmp)
-        (root / ".novelforge").mkdir()
-        framework = {"name": "NovelForge", "version": "0.8.0", "commit": "fixture-terminate-executor", "bundle_fingerprint": "sha256:" + "a" * 64}
-        (root / "novelforge.toml").write_text(
-            '[novelforge]\nschema="novelforge_project_v1"\n[project]\nid="BOOK-STOP"\ntitle="Stop"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[authority]\ncanon_write="settlement_only"\nframework_write="forbidden"\n', encoding="utf-8")
-        (root / "novelforge.lock.json").write_text(json.dumps({"schema": "novelforge_lock_v1", "framework": framework}), encoding="utf-8")
+        (root / ".quillframe").mkdir()
+        framework = {"name": "Quillframe", "version": "0.9.0", "commit": "fixture-terminate-executor", "bundle_fingerprint": "sha256:" + "a" * 64}
+        (root / "quillframe.toml").write_text(
+            '[quillframe]\nschema="quillframe_project_v1"\n[project]\nid="BOOK-STOP"\ntitle="Stop"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[authority]\ncanon_write="settlement_only"\nframework_write="forbidden"\n', encoding="utf-8")
+        (root / "quillframe.lock.json").write_text(json.dumps({"schema": "quillframe_lock_v1", "framework": framework}), encoding="utf-8")
         (root / "framework.attestation.json").write_text(json.dumps({"framework": framework}), encoding="utf-8")
 
-        db = root / ".novelforge" / "runtime.db"
+        db = root / ".quillframe" / "runtime.db"
         cp = ControlPlane(db); cp.init()
         session = session_runtime.new_session("BOOK-STOP", "manager", "chat_session", "self_test", project_id="BOOK-STOP", usage_class="ordinary_chat", memory_policy="session", resume_policy="checkpoint_revalidate")
         session = session_runtime.start_run(session, "RUN-STOP", [])
         put = cp.put_session(session, expected_version=0)
         preflight = terminate_preflight.inspect(db_path=db, project_root=root, session_id=session["session_id"], expected_session_version=put["version"])
         command = terminate_command.make_command(preflight=preflight, command_id="CMD-STOP-1")
-        deny = terminate_authorization.make_authorization(command=command, preflight=preflight, decision="deny", source_kind="user", evidence_ref="urn:novelforge:self-test:stop", authorization_id="AUTH-STOP-DENY", issued_at=receipt_runtime.now_iso())
-        allow = terminate_authorization.make_authorization(command=command, preflight=preflight, decision="allow", source_kind="user", evidence_ref="urn:novelforge:self-test:stop", authorization_id="AUTH-STOP-ALLOW", issued_at=receipt_runtime.now_iso())
+        deny = terminate_authorization.make_authorization(command=command, preflight=preflight, decision="deny", source_kind="user", evidence_ref="urn:quillframe:self-test:stop", authorization_id="AUTH-STOP-DENY", issued_at=receipt_runtime.now_iso())
+        allow = terminate_authorization.make_authorization(command=command, preflight=preflight, decision="allow", source_kind="user", evidence_ref="urn:quillframe:self-test:stop", authorization_id="AUTH-STOP-ALLOW", issued_at=receipt_runtime.now_iso())
 
         denied = execute(command, deny, db_path=db, project_root=root)
         after_deny = cp.get_session(session["session_id"])
@@ -402,7 +402,7 @@ def self_test() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge guarded session terminate executor")
+    parser = argparse.ArgumentParser(description="Quillframe guarded session terminate executor")
     parser.add_argument("--db", default=DEFAULT_DB)
     sub = parser.add_subparsers(dest="command", required=True)
     execute_p = sub.add_parser("execute")

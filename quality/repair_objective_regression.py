@@ -19,7 +19,7 @@ SEM = ROOT / "harness" / "semantic_workers"
 if str(SEM) not in sys.path:
     sys.path.insert(0, str(SEM))
 
-SCHEMA = "novelforge_repair_induced_objective_regression_v1"
+SCHEMA = "quillframe_repair_induced_objective_regression_v1"
 TARGET = {"improved", "unchanged", "worse", "insufficient_evidence"}
 PRESERVATION = {"preserved", "degraded", "materially_degraded", "insufficient_evidence"}
 STATUS = {"observed", "not_observed", "inconclusive"}

@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>AUTHORITY</kbd>&nbsp;&nbsp;<kbd>SETTLEMENT</kbd>&nbsp;&nbsp;<kbd>EVIDENCE</kbd></p>
 
-NovelForge separates **story truth** from plans, drafts, research, review judgments, runtime state, model memory, and derived summaries. Long-form continuity depends less on remembering more than on remembering **what kind of thing each record is allowed to mean**.
+Quillframe separates **story truth** from plans, drafts, research, review judgments, runtime state, model memory, and derived summaries. Long-form continuity depends less on remembering more than on remembering **what kind of thing each record is allowed to mean**.
 
 > **Core invariant ✦** Something being present in context, memory, a database, a review, or a session does not make it Canon.
 
@@ -25,7 +25,7 @@ It does not define the facts of any particular novel. A consuming project suppli
 
 ## 02 · Authority classes
 
-NovelForge uses a generic lifecycle vocabulary:
+Quillframe uses a generic lifecycle vocabulary:
 
 ```text
 proposal     replaceable candidate or suggested change
@@ -257,7 +257,7 @@ Resume must distinguish completed mutations from pending ones.
 
 ## 13 · Context, memory, and derived views are lower-authority
 
-NovelForge may expose author-editable context or memory controls, but those controls do not become a second Canon editor.
+Quillframe may expose author-editable context or memory controls, but those controls do not become a second Canon editor.
 
 A protected `locked` or `accepted` reference may be shown in an editable-memory surface as a snapshot. Editing that snapshot must create a **proposal**, not mutate the protected Canon row.
 

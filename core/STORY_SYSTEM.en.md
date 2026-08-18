@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>STORY HIERARCHY</kbd>&nbsp;&nbsp;<kbd>PLAN ≠ CANON</kbd></p>
 
-NovelForge models long-form fiction as **persistent story objects at different planning scales** plus transient scene beats. The system exists to keep a serial coherent across chapters without requiring the distant future to be specified at scene-level detail.
+Quillframe models long-form fiction as **persistent story objects at different planning scales** plus transient scene beats. The system exists to keep a serial coherent across chapters without requiring the distant future to be specified at scene-level detail.
 
 > **Boundary ✦** The Story System owns planning structure, dramatic objectives, dependencies, and expected state movement. It does **not** decide what has already happened. Current truth belongs to the consuming project's Canon/state system.
 

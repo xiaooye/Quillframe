@@ -1,19 +1,19 @@
-@layer novelforge-product-language {
-  /* Studio parity pass: the same soft NovelForge atmosphere, kept deliberately
+@layer quillframe-product-language {
+  /* Studio parity pass: the same soft Quillframe atmosphere, kept deliberately
    * small so Studio remains a dense workstation rather than a landing page. */
 
   .nf-main-column {
     min-inline-size: 0;
     background:
-      radial-gradient(38rem 20rem at 14% -2%, color-mix(in oklab, var(--nf-product-pink-soft) 50%, transparent), transparent 72%),
-      radial-gradient(34rem 18rem at 88% 1%, color-mix(in oklab, var(--nf-product-lilac-soft) 46%, transparent), transparent 74%),
-      radial-gradient(24rem 14rem at 74% 88%, color-mix(in oklab, var(--nf-product-mint-soft) 18%, transparent), transparent 76%),
-      var(--nf-product-canvas);
+      radial-gradient(38rem 20rem at 14% -2%, color-mix(in oklab, var(--qf-product-pink-soft) 50%, transparent), transparent 72%),
+      radial-gradient(34rem 18rem at 88% 1%, color-mix(in oklab, var(--qf-product-lilac-soft) 46%, transparent), transparent 74%),
+      radial-gradient(24rem 14rem at 74% 88%, color-mix(in oklab, var(--qf-product-mint-soft) 18%, transparent), transparent 76%),
+      var(--qf-product-canvas);
   }
 
   .nf-nav-section { min-inline-size: 0; }
   .nf-nav-item[data-active="true"] .nf-nav-glyph {
-    background: color-mix(in oklab, var(--nf-product-surface) 58%, var(--nf-product-pink-soft));
+    background: color-mix(in oklab, var(--qf-product-surface) 58%, var(--qf-product-pink-soft));
   }
 
   .nf-page-intro {
@@ -30,61 +30,61 @@
     block-size: 220px;
     inset: -122px -62px auto auto;
     border-radius: 50%;
-    background: radial-gradient(circle, color-mix(in oklab, var(--nf-product-lilac-soft) 62%, transparent), transparent 72%);
+    background: radial-gradient(circle, color-mix(in oklab, var(--qf-product-lilac-soft) 62%, transparent), transparent 72%);
   }
   .nf-page-intro::after {
     content: "✦";
     position: absolute;
     inset: 16px 20px auto auto;
-    color: color-mix(in oklab, var(--nf-product-pink-strong) 32%, transparent);
+    color: color-mix(in oklab, var(--qf-product-pink-strong) 32%, transparent);
     font-size: 18px;
   }
 
   .nf-workspace-stage {
     min-block-size: clamp(460px, 62vh, 760px);
     overflow: clip;
-    border-color: color-mix(in oklab, var(--nf-product-lilac) 16%, var(--nf-studio-line-soft));
-    box-shadow: 0 28px 70px -58px color-mix(in oklab, var(--nf-product-lilac) 38%, transparent);
+    border-color: color-mix(in oklab, var(--qf-product-lilac) 16%, var(--qf-studio-line-soft));
+    box-shadow: 0 28px 70px -58px color-mix(in oklab, var(--qf-product-lilac) 38%, transparent);
   }
   .nf-workspace-outline,
   .nf-workspace-inspector {
-    background: color-mix(in oklab, var(--nf-studio-subtle) 92%, var(--nf-product-lilac-soft));
+    background: color-mix(in oklab, var(--qf-studio-subtle) 92%, var(--qf-product-lilac-soft));
   }
   .nf-focus-placeholder {
     background:
-      radial-gradient(26rem 18rem at 50% 12%, color-mix(in oklab, var(--nf-product-pink-soft) 22%, transparent), transparent 72%),
-      var(--nf-studio-panel);
+      radial-gradient(26rem 18rem at 50% 12%, color-mix(in oklab, var(--qf-product-pink-soft) 22%, transparent), transparent 72%),
+      var(--qf-studio-panel);
   }
 
   .nf-inspector-surface,
   .nf-diagnostic-workstation,
   .nf-catalog-workstation {
-    background: color-mix(in oklab, var(--nf-studio-panel) 96%, var(--nf-product-blue-soft));
+    background: color-mix(in oklab, var(--qf-studio-panel) 96%, var(--qf-product-blue-soft));
   }
 
   .nf-app-shell :where(input, textarea, select, .wui-input, .wui-select, .wui-textarea):focus {
-    border-color: color-mix(in oklab, var(--nf-product-lilac) 44%, var(--nf-studio-line));
-    background: var(--nf-studio-panel);
-    box-shadow: 0 0 0 3px color-mix(in oklab, var(--nf-product-lilac-soft) 70%, transparent);
+    border-color: color-mix(in oklab, var(--qf-product-lilac) 44%, var(--qf-studio-line));
+    background: var(--qf-studio-panel);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--qf-product-lilac-soft) 70%, transparent);
   }
 
   .nf-command {
     background:
-      linear-gradient(180deg, color-mix(in oklab, var(--nf-product-lilac-soft) 18%, transparent), transparent 72px),
-      var(--nf-studio-panel);
+      linear-gradient(180deg, color-mix(in oklab, var(--qf-product-lilac-soft) 18%, transparent), transparent 72px),
+      var(--qf-studio-panel);
   }
   .nf-command .wui-command__group-label {
-    color: color-mix(in oklab, var(--nf-product-muted) 78%, transparent);
+    color: color-mix(in oklab, var(--qf-product-muted) 78%, transparent);
     font-size: 8px;
     font-weight: 760;
     letter-spacing: .1em;
   }
 
-  :root.dark[data-product-language="novelforge-kawaii-v1"] .nf-main-column {
+  :root.dark[data-product-language="quillframe-kawaii-v1"] .nf-main-column {
     background:
-      radial-gradient(34rem 18rem at 14% -2%, color-mix(in oklab, var(--nf-product-pink) 7%, transparent), transparent 72%),
-      radial-gradient(30rem 16rem at 88% 1%, color-mix(in oklab, var(--nf-product-lilac) 7%, transparent), transparent 74%),
-      var(--nf-product-canvas);
+      radial-gradient(34rem 18rem at 14% -2%, color-mix(in oklab, var(--qf-product-pink) 7%, transparent), transparent 72%),
+      radial-gradient(30rem 16rem at 88% 1%, color-mix(in oklab, var(--qf-product-lilac) 7%, transparent), transparent 74%),
+      var(--qf-product-canvas);
   }
 
   @media (max-width: 719px) {

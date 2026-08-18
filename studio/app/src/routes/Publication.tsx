@@ -7,7 +7,7 @@ import "../styles/projection-workbenches.css";
 
 type Profile = "text" | "web" | "print" | "epub";
 type PublicationPreviewProjection = {
-  schema: "novelforge_publication_preview_projection_v1";
+  schema: "quillframe_publication_preview_projection_v1";
   profile: Profile | string;
   compiler_profile: string;
   compiler: "publication/compiler.py";
@@ -37,8 +37,8 @@ const profiles: Array<{ id: Profile; icon: string; label: string; meta: string }
 
 const inlineFixture = `{
   "book": {
-    "identifier": "urn:novelforge:preview",
-    "title": "NovelForge Preview",
+    "identifier": "urn:quillframe:preview",
+    "title": "Quillframe Preview",
     "language": "zh-CN",
     "modified": "2026-08-15T00:00:00Z"
   },
@@ -154,7 +154,7 @@ export default function Publication() {
                 <header><span class="nf-eyebrow">PROVENANCE</span><h2>{zh() ? "真实编译结果" : "Real compiler result"}</h2></header>
                 <dl>
                   <div><dt>Compiler</dt><dd class="nf-mono">{result().compiler}</dd></div>
-                  <div><dt>IR</dt><dd class="nf-mono">novelforge_publication_ir_v1</dd></div>
+                  <div><dt>IR</dt><dd class="nf-mono">quillframe_publication_ir_v1</dd></div>
                   <div><dt>Profile</dt><dd>{result().compiler_profile}</dd></div>
                   <div><dt>Source</dt><dd class="nf-mono">{result().source_fingerprint}</dd></div>
                   <div><dt>Artifact</dt><dd class="nf-mono">{result().artifact.sha256 ?? "—"}</dd></div>

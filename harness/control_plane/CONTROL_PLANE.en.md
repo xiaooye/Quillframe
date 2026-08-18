@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>EVENTS</kbd>&nbsp;&nbsp;<kbd>LEASES</kbd>&nbsp;&nbsp;<kbd>CONSUME-ONCE</kbd></p>
 
-The NovelForge Control Plane is the durable operational substrate for work that crosses invocation/process boundaries. It persists sessions, events, bounded handoffs, worker leases, result hashes, and logical consume-once receipts so external work can be retried and resumed without inventing what already happened.
+The Quillframe Control Plane is the durable operational substrate for work that crosses invocation/process boundaries. It persists sessions, events, bounded handoffs, worker leases, result hashes, and logical consume-once receipts so external work can be retried and resumed without inventing what already happened.
 
 > **Boundary ✦** The Control Plane answers **where work is, what attempt owns it, and whether a result has already been logically consumed**. It never decides story truth or literary quality.
 
@@ -128,7 +128,7 @@ An identical duplicate can return “already consumed.” A conflicting result h
 
 ## 07 · Exactly-once means logical application
 
-NovelForge uses consume-once semantics for **logical downstream application**, not a claim that every transport message is delivered exactly once.
+Quillframe uses consume-once semantics for **logical downstream application**, not a claim that every transport message is delivered exactly once.
 
 `feedback.observed` is intentionally multi-consumer. Author Steering and automatic Learning Intake use distinct logical consumer names (for example `author_steering:<session>` and `learning_feedback:<project-or-resource>`), so one receipt cannot globally consume or delete the event for the other path. Each consumer binds the same exact event hash independently. Read-only feedback observability does not consume the event. Arrival or consumption never grants Project Profile, user-taste, Framework, or Canon authority.
 

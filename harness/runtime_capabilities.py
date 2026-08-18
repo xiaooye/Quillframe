@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NovelForge typed host-capability contract.
+"""Quillframe typed host-capability contract.
 
 The framework may route work only to capabilities that are explicitly declared
 or locally provable. This module never probes remote services, never reads
@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "novelforge_host_capabilities_v1"
+SCHEMA = "quillframe_host_capabilities_v1"
 KNOWN = {
     "filesystem_read", "filesystem_write", "subprocess", "git_cli", "github_cli",
     "codex_cli", "claude_cli", "web_search", "github_search", "user_files",
@@ -180,7 +180,7 @@ def resolve(manifest: dict[str, Any], requirements: list[str], *, allow_user_int
             rejected.append({"capability": req, "reason": "usage_class_forbidden"}); continue
         selected.append({"capability": req, **item})
     return {
-        "schema": "novelforge_capability_resolution_v1",
+        "schema": "quillframe_capability_resolution_v1",
         "manifest_id": manifest.get("manifest_id"),
         "requirements": requirements,
         "satisfied": not missing and not rejected,
@@ -227,7 +227,7 @@ def load_json(path: str) -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge host capability contract")
+    p = argparse.ArgumentParser(description="Quillframe host capability contract")
     sub = p.add_subparsers(dest="cmd", required=True)
     pr = sub.add_parser("probe-local"); pr.add_argument("--output")
     no = sub.add_parser("normalize"); no.add_argument("--input", required=True); no.add_argument("--output")

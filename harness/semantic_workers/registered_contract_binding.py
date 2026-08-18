@@ -25,7 +25,7 @@ from semantic_worker_router import (
     validate_job,
 )
 
-SCHEMA = "novelforge_registered_contract_binding_v1"
+SCHEMA = "quillframe_registered_contract_binding_v1"
 
 
 def validate_registered_job(job: dict[str, Any]) -> list[str]:
@@ -156,7 +156,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate a NovelForge registered semantic contract job binding")
+    parser = argparse.ArgumentParser(description="Validate a Quillframe registered semantic contract job binding")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("self-test")
     val = sub.add_parser("validate-job")

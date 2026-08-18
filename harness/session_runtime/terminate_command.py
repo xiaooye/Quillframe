@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate typed NovelForge session-terminate command candidates.
+"""Validate typed Quillframe session-terminate command candidates.
 
 The candidate binds one explicit stop intent to one READY terminate preflight and
 one exact durable Session/Run before-state. Validation is side-effect-free and
@@ -17,8 +17,8 @@ from typing import Any
 
 import terminate_preflight
 
-COMMAND_SCHEMA = "novelforge_session_terminate_command_v1"
-VALIDATION_SCHEMA = "novelforge_session_terminate_command_validation_v1"
+COMMAND_SCHEMA = "quillframe_session_terminate_command_v1"
+VALIDATION_SCHEMA = "quillframe_session_terminate_command_validation_v1"
 SHA_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 TOP_FIELDS = {
     "schema", "command_id", "action", "mode", "session_id",
@@ -302,7 +302,7 @@ def self_test() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge typed session terminate command validator")
+    parser = argparse.ArgumentParser(description="Quillframe typed session terminate command validator")
     sub = parser.add_subparsers(dest="command", required=True)
     validate_p = sub.add_parser("validate")
     validate_p.add_argument("--command", required=True)

@@ -22,8 +22,8 @@ export const knowledgeJourneys: KnowledgeJourneyDefinition[] = [
     icon: "✦",
     label: { "zh-CN": "先从这里开始", "en-US": "Start here" },
     description: {
-      "zh-CN": "第一次来？先看 NovelForge 是什么、适合谁，以及从哪里开始。",
-      "en-US": "Understand NovelForge, the problems it solves, and the recommended reading path.",
+      "zh-CN": "第一次来？先看 Quillframe 是什么、适合谁，以及从哪里开始。",
+      "en-US": "Understand Quillframe, the problems it solves, and the recommended reading path.",
     },
   },
   {
@@ -109,7 +109,7 @@ export function knowledgeJourneyFor(doc: DocIndexEntry): KnowledgeJourney {
   ])) return "workflow";
 
   if (doc.tier === "A" && includesAny(haystack, [
-    "readme", "why novelforge", "documentation", "introduction", "start", "overview", "why-novelforge", "文档中心", "为什么", "架构总览",
+    "readme", "why quillframe", "documentation", "introduction", "start", "overview", "why-quillframe", "文档中心", "为什么", "架构总览",
   ])) return "start";
 
   return "reference";
@@ -149,7 +149,7 @@ export function recommendedStartDocs(docs: DocIndexEntry[]): DocIndexEntry[] {
     const haystack = `${doc.id} ${doc.title} ${doc.sourcePath}`.toLocaleLowerCase();
     let value = 0;
     if (doc.tier === "A") value += 20;
-    if (includesAny(haystack, ["why-novelforge", "why novelforge", "为什么是 novelforge"])) value += 90;
+    if (includesAny(haystack, ["why-quillframe", "why quillframe", "为什么是 quillframe"])) value += 90;
     if (includesAny(haystack, ["readme.zh-cn", "readme.en", "documentation", "文档中心"])) value += 70;
     if (includesAny(haystack, ["architecture-atlas", "架构图谱"])) value += 60;
     if (includesAny(haystack, ["production-pipeline", "生产流水线"])) value += 50;

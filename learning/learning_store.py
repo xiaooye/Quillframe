@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NovelForge adaptive-learning store.
+"""Quillframe adaptive-learning store.
 
 Persists user-preference evidence, revisable hypotheses, corpus gaps, learning
 candidates, promotions and rollback metadata. This is deliberately separate
@@ -18,8 +18,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-SCHEMA = "novelforge_learning_store_v1"
-DEFAULT_DB = ".novelforge/learning.db"
+SCHEMA = "quillframe_learning_store_v1"
+DEFAULT_DB = ".quillframe/learning.db"
 EVIDENCE_SOURCES = {
     "explicit_rule", "user_edit", "rejection", "acceptance",
     "repeated_pattern", "corpus", "external_system", "human_review",
@@ -381,8 +381,8 @@ def load(path: str | Path) -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge adaptive learning store")
-    p.add_argument("--db", default=os.getenv("NOVELFORGE_LEARNING_DB", DEFAULT_DB))
+    p = argparse.ArgumentParser(description="Quillframe adaptive learning store")
+    p.add_argument("--db", default=os.getenv("QUILLFRAME_LEARNING_DB", DEFAULT_DB))
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("init")
     sub.add_parser("status")

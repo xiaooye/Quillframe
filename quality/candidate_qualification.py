@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic pre-independent qualification for NovelForge production candidates.
+"""Deterministic pre-independent qualification for Quillframe production candidates.
 
 Literary judgment is supplied by registered semantic contracts. This module only
 validates exact candidate/subject bindings, semantic result provenance, required
@@ -19,7 +19,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 SEM = ROOT / "harness" / "semantic_workers"
 
-SCHEMA = "novelforge_candidate_qualification_v1"
+SCHEMA = "quillframe_candidate_qualification_v1"
 STATUSES = {"awaiting_semantic", "repair_required", "qualified_for_independent"}
 GATE_STATUSES = {"pass", "fail", "pending"}
 REGISTERED_GATES = {
@@ -545,7 +545,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge pre-independent candidate qualification")
+    parser = argparse.ArgumentParser(description="Quillframe pre-independent candidate qualification")
     sub = parser.add_subparsers(dest="command", required=True)
     ev = sub.add_parser("evaluate")
     ev.add_argument("--input", required=True)

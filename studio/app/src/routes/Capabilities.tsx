@@ -6,7 +6,7 @@ import { useStudio } from "../studio";
 
 type FootprintMetric = { files: number; bytes: number; gzip_bytes: number; largest_bytes: number };
 type Footprint = {
-  schema: "novelforge_studio_footprint_v1";
+  schema: "quillframe_studio_footprint_v1";
   generated_at: string;
   measurement: string;
   assets: { javascript: FootprintMetric; css: FootprintMetric };
@@ -58,7 +58,7 @@ const runtimeCopy = {
   "en-US": {
     eyebrow: "Runtime boundary",
     title: "Observable state is public; one runtime command is guarded",
-    body: "NovelForge exposes typed side-effect-free projections and one narrowly scoped local command: session.resume. The command requires a fresh preflight, explicit user authorization, exact Session CAS, and a durable receipt; it does not run a model or gain Project/Canon authority.",
+    body: "Quillframe exposes typed side-effect-free projections and one narrowly scoped local command: session.resume. The command requires a fresh preflight, explicit user authorization, exact Session CAS, and a durable receipt; it does not run a model or gain Project/Canon authority.",
     supported: "Supported Host Bridge operations",
     deferred: "Additional writes still deferred",
     supportedBody: "Queries remain authority=false and side-effect-free. session.resume is local_app-only and may mutate only runtime Session state through its typed command contract.",
@@ -68,7 +68,7 @@ const runtimeCopy = {
   "zh-CN": {
     eyebrow: "Runtime 边界",
     title: "运行状态公开可观测；一个 Runtime Command 已受保护开放",
-    body: "NovelForge 已公开类型化、无副作用的运行时投影，并只开放一个严格限定的本地 command：session.resume。它要求 fresh preflight、显式用户授权、精确 Session CAS 与持久 receipt；不会运行模型，也不会获得 Project/Canon authority。",
+    body: "Quillframe 已公开类型化、无副作用的运行时投影，并只开放一个严格限定的本地 command：session.resume。它要求 fresh preflight、显式用户授权、精确 Session CAS 与持久 receipt；不会运行模型，也不会获得 Project/Canon authority。",
     supported: "已支持的 Host Bridge 操作",
     deferred: "仍 deferred 的额外写操作",
     supportedBody: "查询仍是 authority=false 且无副作用。session.resume 仅允许 local_app 调用，并且只能通过类型化 command contract 修改 Runtime Session state。",
@@ -91,7 +91,7 @@ export default function Capabilities() {
     };
   });
   const [footprint] = createResource(async () => {
-    const response = await fetch("/.well-known/novelforge-studio-footprint.json", { cache: "no-store" });
+    const response = await fetch("/.well-known/quillframe-studio-footprint.json", { cache: "no-store" });
     if (!response.ok) throw new Error(`footprint manifest: ${response.status}`);
     return await response.json() as Footprint;
   });

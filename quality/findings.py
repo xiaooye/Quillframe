@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Normalized evidence-chained quality findings for NovelForge 7.2.
+"""Normalized evidence-chained quality findings for Quillframe 7.2.
 
 Deterministic only. Findings are observations/proposals and never grant Canon,
 Framework-behavior, or durable user-taste write authority.
@@ -11,7 +11,7 @@ import hashlib
 import json
 from typing import Any
 
-SCHEMA = "novelforge_quality_finding_v1"
+SCHEMA = "quillframe_quality_finding_v1"
 SEVERITIES = {"error", "warning", "info"}
 REPAIR_OWNERS = {
     "story", "plan", "scene", "character", "reader", "surface",
@@ -164,7 +164,7 @@ def self_test() -> int:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge normalized quality findings")
+    p = argparse.ArgumentParser(description="Quillframe normalized quality findings")
     sub = p.add_subparsers(dest="command", required=True)
     sub.add_parser("self-test")
     args = p.parse_args()

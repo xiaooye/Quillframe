@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "novelforge_property_write_policy_v1",
-  "title": "NovelForge Property Write Policy",
+  "$id": "quillframe_property_write_policy_v1",
+  "title": "Quillframe Property Write Policy",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "default"],
   "properties": {
-    "schema": {"const": "novelforge_property_write_policy_v1"},
+    "schema": {"const": "quillframe_property_write_policy_v1"},
     "default": {"$ref": "#/$defs/rule"},
     "object_types": {
       "type": "object",

@@ -92,7 +92,7 @@ Transport 只是载体，真正的不变量是：
 
 ## 06 · Local agent path
 
-已经认证的 local Codex / Claude / 其他 Agent，通常可以运行完整 Harness 或受限 semantic job，而不需要 NovelForge 强制再引入一套 provider API key。
+已经认证的 local Codex / Claude / 其他 Agent，通常可以运行完整 Harness 或受限 semantic job，而不需要 Quillframe 强制再引入一套 provider API key。
 
 但必须注意：
 

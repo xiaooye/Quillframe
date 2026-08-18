@@ -1,6 +1,6 @@
 # Framework 自我改进协议 · 证据可以提出改变，但不能自行获得写权限
 
-NovelForge 可以从用户反馈、项目结果、语料证据、评测和外部框架研究中持续学习。只有当证据支持**最窄且正确的作用域**、改变可测试可回滚，并且真正有权限的流程执行了升级以后，行为变化才可以持久化。
+Quillframe 可以从用户反馈、项目结果、语料证据、评测和外部框架研究中持续学习。只有当证据支持**最窄且正确的作用域**、改变可测试可回滚，并且真正有权限的流程执行了升级以后，行为变化才可以持久化。
 
 > **核心不变量 ✦** Learning 可以产生 evidence、hypothesis、eval result 和 promotion candidate；这些产物本身都不会获得 Framework write、Canon write 或 durable user-taste write authority。
 
@@ -13,7 +13,7 @@ NovelForge 可以从用户反馈、项目结果、语料证据、评测和外部
 - `one_off`：只服务当前 request / run；
 - `project`：只适用于某一本下游小说；
 - `user_taste`：某个用户跨项目的持久偏好假设；
-- `general_craft`：准备进入 NovelForge 通用机制的候选。
+- `general_craft`：准备进入 Quillframe 通用机制的候选。
 
 永远选择证据真正支持的最窄作用域。一个项目偏好不会因为出现两次就自动变成 user taste；user taste 也不会因为模型觉得“很有道理”就升级成 General Craft。
 
@@ -173,7 +173,7 @@ OpenAI Agents SDK、LangGraph、ADK / agents-cli、AutoGen、Claude Code、MCP �
 
 - 到底哪个 mechanism 发生了变化？
 - 它解决的真实问题是什么？
-- NovelForge 是否已经用另一种方式解决？
+- Quillframe 是否已经用另一种方式解决？
 - 采用以后会不会模糊 runtime state、Canon、independence 或 permission boundary？
 - 需要什么 capability / regression evidence 才能证明它真的更好？
 

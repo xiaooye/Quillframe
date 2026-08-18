@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · 契约</kbd>&nbsp;&nbsp;<kbd>SESSION ≠ RUN ≠ CHECKPOINT</kbd>&nbsp;&nbsp;<kbd>可恢复</kbd></p>
 
-Session Runtime 让 NovelForge 能跨聊天回合、本地 Agent、外部 worker、等待、重试与进程重启保持一个可恢复的执行身份。它记录的是**工作执行到哪里**，不是“小说里什么是真的”。
+Session Runtime 让 Quillframe 能跨聊天回合、本地 Agent、外部 worker、等待、重试与进程重启保持一个可恢复的执行身份。它记录的是**工作执行到哪里**，不是“小说里什么是真的”。
 
 > **核心不变量 ✦** Session / provider history 可以帮助恢复工作，但不会因为被保存下来就自动成为 Project authority。
 

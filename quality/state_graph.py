@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Derived scene/world state graph diffing for NovelForge 7.2.
+"""Derived scene/world state graph diffing for Quillframe 7.2.
 
 The graph is a verification view, never a second Canon authority. Deterministic
 logic reports stable-field contradictions and unexplained changes; narrative
@@ -18,7 +18,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from quality.findings import make_finding, validate_finding  # noqa:E402
 
-SCHEMA = "novelforge_state_graph_v1"
+SCHEMA = "quillframe_state_graph_v1"
 
 
 def load_json(path: Path) -> Any:
@@ -142,7 +142,7 @@ def diff(before_snapshot: dict[str, Any], after_snapshot: dict[str, Any]) -> dic
             )
             findings.append(finding)
     return {
-        "schema": "novelforge_state_graph_diff_v1",
+        "schema": "quillframe_state_graph_diff_v1",
         "before_snapshot_id": before["snapshot_id"],
         "after_snapshot_id": after["snapshot_id"],
         "findings": findings,
@@ -186,7 +186,7 @@ def self_test() -> int:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge derived state graph audit")
+    p = argparse.ArgumentParser(description="Quillframe derived state graph audit")
     sub = p.add_subparsers(dest="command", required=True)
     d = sub.add_parser("diff"); d.add_argument("--before", required=True); d.add_argument("--after", required=True); d.add_argument("--output")
     sub.add_parser("self-test")

@@ -17,8 +17,8 @@ from typing import Any
 
 import terminate_command
 
-AUTH_SCHEMA = "novelforge_session_terminate_authorization_v1"
-VALIDATION_SCHEMA = "novelforge_session_terminate_authorization_validation_v1"
+AUTH_SCHEMA = "quillframe_session_terminate_authorization_v1"
+VALIDATION_SCHEMA = "quillframe_session_terminate_authorization_validation_v1"
 SOURCE_KINDS = {"user", "authorized_human"}
 TOP_FIELDS = {
     "schema", "authorization_id", "operation", "command_fingerprint",
@@ -174,7 +174,7 @@ def make_authorization(*, command: dict[str, Any], preflight: dict[str, Any], de
 def self_test() -> int:
     checks = {name: True for name in terminate_command.REQUIRED_PREFLIGHT_CHECKS}
     preflight = {
-        "schema": "novelforge_session_terminate_preflight_v1",
+        "schema": "quillframe_session_terminate_preflight_v1",
         "status": "READY",
         "ready": True,
         "checks": checks,
@@ -192,8 +192,8 @@ def self_test() -> int:
     }
     preflight["result_fingerprint"] = terminate_command.fingerprint(preflight)
     command = terminate_command.make_command(preflight=preflight, command_id="CMD-AUTH-STOP")
-    allow = make_authorization(command=command, preflight=preflight, decision="allow", source_kind="user", evidence_ref="urn:novelforge:user-action:stop", authorization_id="AUTH-STOP", issued_at="2026-01-01T00:00:00+00:00")
-    deny = make_authorization(command=command, preflight=preflight, decision="deny", source_kind="user", evidence_ref="urn:novelforge:user-action:stop", authorization_id="AUTH-STOP-DENY", issued_at="2026-01-01T00:00:00+00:00")
+    allow = make_authorization(command=command, preflight=preflight, decision="allow", source_kind="user", evidence_ref="urn:quillframe:user-action:stop", authorization_id="AUTH-STOP", issued_at="2026-01-01T00:00:00+00:00")
+    deny = make_authorization(command=command, preflight=preflight, decision="deny", source_kind="user", evidence_ref="urn:quillframe:user-action:stop", authorization_id="AUTH-STOP-DENY", issued_at="2026-01-01T00:00:00+00:00")
     forged = json.loads(json.dumps(allow)); forged["source"]["kind"] = "manager_runtime_policy"
     allow_result = validate(allow, command, preflight)
     deny_result = validate(deny, command, preflight)
@@ -219,7 +219,7 @@ def self_test() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge session terminate authorization validator")
+    parser = argparse.ArgumentParser(description="Quillframe session terminate authorization validator")
     sub = parser.add_subparsers(dest="command", required=True)
     validate_p = sub.add_parser("validate")
     validate_p.add_argument("--authorization", required=True)

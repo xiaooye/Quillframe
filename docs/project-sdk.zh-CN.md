@@ -6,7 +6,7 @@ Quillframe 项目是一套独立、版本化的小说工程。框架提供通用
 
 ## 项目标识
 
-受支持的项目用 `novelforge.toml` 声明模式版本和路径，在 `novelforge.lock.json` 锁定框架的精确版本，并可以对实体化的框架构建包做证明。这些文件名属于兼容标识，即使公开品牌已经是 Quillframe，也继续保留。
+受支持的项目用 `quillframe.toml` 声明模式版本和路径，在 `quillframe.lock.json` 锁定框架的精确版本，并可以对实体化的框架构建包做证明。这些文件名属于兼容标识，即使公开品牌已经是 Quillframe，也继续保留。
 
 ## 责任归属
 

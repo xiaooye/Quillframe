@@ -8,10 +8,10 @@
   align-items: center;
   gap: .08rem;
   padding: .18rem;
-  border: 1px solid color-mix(in oklab, var(--nf-border) 78%, transparent);
+  border: 1px solid color-mix(in oklab, var(--qf-border) 78%, transparent);
   border-radius: .82rem;
-  background: color-mix(in oklab, var(--nf-surface) 82%, transparent);
-  box-shadow: 0 8px 22px -22px color-mix(in oklab, var(--nf-lilac) 45%, transparent);
+  background: color-mix(in oklab, var(--qf-surface) 82%, transparent);
+  box-shadow: 0 8px 22px -22px color-mix(in oklab, var(--qf-lilac) 45%, transparent);
 }
 
 .nf-product-nav .nf-product-link {
@@ -25,27 +25,27 @@
 .nf-product-nav .nf-product-link:hover,
 .nf-product-nav .nf-product-link:focus-visible {
   border-color: transparent;
-  color: var(--nf-ink);
-  background: color-mix(in oklab, var(--nf-pink-soft) 62%, var(--nf-surface));
+  color: var(--qf-ink);
+  background: color-mix(in oklab, var(--qf-pink-soft) 62%, var(--qf-surface));
   box-shadow: none;
   transform: none;
 }
 
 .nf-docs-root-link[aria-current="page"] {
-  border-color: color-mix(in oklab, var(--nf-pink) 38%, var(--nf-border));
-  color: color-mix(in oklab, var(--nf-pink-strong) 84%, var(--nf-ink));
+  border-color: color-mix(in oklab, var(--qf-pink) 38%, var(--qf-border));
+  color: color-mix(in oklab, var(--qf-pink-strong) 84%, var(--qf-ink));
   background: linear-gradient(135deg,
-    color-mix(in oklab, var(--nf-pink-soft) 94%, var(--nf-surface)),
-    color-mix(in oklab, var(--nf-lilac-soft) 54%, var(--nf-surface)));
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, white 42%, transparent), 0 8px 20px -18px var(--nf-pink-strong);
+    color-mix(in oklab, var(--qf-pink-soft) 94%, var(--qf-surface)),
+    color-mix(in oklab, var(--qf-lilac-soft) 54%, var(--qf-surface)));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, white 42%, transparent), 0 8px 20px -18px var(--qf-pink-strong);
 }
 
 /* Left navigation */
 .sidebar-pane {
   background:
     linear-gradient(180deg,
-      color-mix(in oklab, var(--nf-surface) 97%, transparent),
-      color-mix(in oklab, var(--nf-cream) 93%, transparent));
+      color-mix(in oklab, var(--qf-surface) 97%, transparent),
+      color-mix(in oklab, var(--qf-cream) 93%, transparent));
 }
 
 .sidebar-content {
@@ -56,7 +56,7 @@
   position: relative;
   margin-top: .34rem;
   padding: .48rem .58rem .4rem .78rem;
-  color: color-mix(in oklab, var(--nf-ink) 82%, var(--sl-color-gray-2));
+  color: color-mix(in oklab, var(--qf-ink) 82%, var(--sl-color-gray-2));
   font-size: .735rem;
   font-weight: 790;
   letter-spacing: .025em;
@@ -70,8 +70,8 @@
   width: .28rem;
   height: .28rem;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--nf-pink), var(--nf-lilac));
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--nf-pink-soft) 72%, transparent);
+  background: linear-gradient(135deg, var(--qf-pink), var(--qf-lilac));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--qf-pink-soft) 72%, transparent);
   transform: translateY(-50%);
 }
 
@@ -80,7 +80,7 @@
   margin-block: .035rem;
   padding-block: .34rem;
   padding-inline: .68rem;
-  color: color-mix(in oklab, var(--sl-color-gray-2) 94%, var(--nf-ink));
+  color: color-mix(in oklab, var(--sl-color-gray-2) 94%, var(--qf-ink));
   border-radius: .58rem;
   font-size: .82rem;
   line-height: 1.42;
@@ -92,36 +92,36 @@
 
 .sidebar-content li > a:hover {
   border-color: transparent;
-  color: var(--nf-ink);
-  background: color-mix(in oklab, var(--nf-pink-soft) 44%, var(--nf-surface));
+  color: var(--qf-ink);
+  background: color-mix(in oklab, var(--qf-pink-soft) 44%, var(--qf-surface));
 }
 
 .sidebar-content li > a[aria-current="page"] {
-  border-color: color-mix(in oklab, var(--nf-pink) 22%, var(--nf-border));
-  color: color-mix(in oklab, var(--nf-pink-strong) 78%, var(--nf-ink));
+  border-color: color-mix(in oklab, var(--qf-pink) 22%, var(--qf-border));
+  color: color-mix(in oklab, var(--qf-pink-strong) 78%, var(--qf-ink));
   background: linear-gradient(90deg,
-    color-mix(in oklab, var(--nf-pink-soft) 86%, var(--nf-surface)),
-    color-mix(in oklab, var(--nf-lilac-soft) 30%, var(--nf-surface)));
-  box-shadow: inset 2px 0 0 var(--nf-pink-strong);
+    color-mix(in oklab, var(--qf-pink-soft) 86%, var(--qf-surface)),
+    color-mix(in oklab, var(--qf-lilac-soft) 30%, var(--qf-surface)));
+  box-shadow: inset 2px 0 0 var(--qf-pink-strong);
   font-weight: 740;
 }
 
 .sidebar-content details + details {
   margin-top: .18rem;
   padding-top: .18rem;
-  border-top: 1px solid color-mix(in oklab, var(--nf-border) 52%, transparent);
+  border-top: 1px solid color-mix(in oklab, var(--qf-border) 52%, transparent);
 }
 
 /* Right-hand table of contents */
 .right-sidebar {
   background: linear-gradient(180deg,
-    color-mix(in oklab, var(--nf-surface) 72%, transparent),
+    color-mix(in oklab, var(--qf-surface) 72%, transparent),
     transparent 78%);
 }
 
 .right-sidebar h2,
 .right-sidebar strong {
-  color: color-mix(in oklab, var(--nf-ink) 84%, var(--sl-color-gray-2));
+  color: color-mix(in oklab, var(--qf-ink) 84%, var(--sl-color-gray-2));
   font-size: .72rem;
   font-weight: 790;
   letter-spacing: .045em;
@@ -139,14 +139,14 @@
 }
 
 .right-sidebar a:hover {
-  color: var(--nf-ink);
-  background: color-mix(in oklab, var(--nf-pink-soft) 36%, transparent);
+  color: var(--qf-ink);
+  background: color-mix(in oklab, var(--qf-pink-soft) 36%, transparent);
 }
 
 .right-sidebar a[aria-current="true"],
 .right-sidebar a[aria-current="page"] {
-  color: color-mix(in oklab, var(--nf-pink-strong) 78%, var(--nf-ink));
-  background: color-mix(in oklab, var(--nf-pink-soft) 46%, transparent);
+  color: color-mix(in oklab, var(--qf-pink-strong) 78%, var(--qf-ink));
+  background: color-mix(in oklab, var(--qf-pink-soft) 46%, transparent);
   font-weight: 700;
 }
 
@@ -159,7 +159,7 @@
   bottom: .48rem;
   width: 2px;
   border-radius: 999px;
-  background: linear-gradient(180deg, var(--nf-pink), var(--nf-lilac));
+  background: linear-gradient(180deg, var(--qf-pink), var(--qf-lilac));
 }
 
 /* Reading-page density */

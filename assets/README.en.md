@@ -1,6 +1,6 @@
-# NovelForge Visual Assets · Story Loom in the repository
+# Quillframe Visual Assets · Story Loom in the repository
 
-This directory contains the maintained Story Loom presentation and application-token foundation for NovelForge documentation and product surfaces. It is deliberately small: a coherent brand system, high-value product diagrams, machine-readable product semantics, exact dependency provenance, and deterministic design-system QA—not a stock-art library or a second UI framework.
+This directory contains the maintained Story Loom presentation and application-token foundation for Quillframe documentation and product surfaces. It is deliberately small: a coherent brand system, high-value product diagrams, machine-readable product semantics, exact dependency provenance, and deterministic design-system QA—not a stock-art library or a second UI framework.
 
 > **Boundary ✦** Visual assets and tokens improve comprehension, recognition, interaction consistency, and product theming. They never become a second authority for Framework behavior, Canon, Settlement, semantic truth, production readiness, or workflow state.
 
@@ -14,8 +14,8 @@ assets/
 ├── DESIGN_SYSTEM.en.md / DESIGN_SYSTEM.zh-CN.md
 ├── provenance.json
 ├── brand/
-│   ├── novelforge-mark.svg
-│   ├── novelforge-lockup.svg
+│   ├── quillframe-mark.svg
+│   ├── quillframe-lockup.svg
 │   ├── story-thread.svg
 │   ├── tokens.json
 │   ├── weiui.integration.json
@@ -34,7 +34,7 @@ Machine integration QA lives at [`../scripts/design_system_quality.py`](../scrip
 
 ## 02 · Brand and product-semantic authority
 
-`brand/tokens.json` is now schema **`novelforge_brand_tokens_v2`** and remains the NovelForge-side product-token authority.
+`brand/tokens.json` is now schema **`quillframe_brand_tokens_v2`** and remains the Quillframe-side product-token authority.
 
 It contains:
 
@@ -46,7 +46,7 @@ It contains:
 - reduced-motion / no-idle-animation rules;
 - performance constraints such as no default polling and no heavy default component import.
 
-A generic UI foundation does not get to redefine what Project, Runtime, Editorial, Evidence, Accepted/Validated, Rejected, Canon authority, or execution state mean in NovelForge.
+A generic UI foundation does not get to redefine what Project, Runtime, Editorial, Evidence, Accepted/Validated, Rejected, Canon authority, or execution state mean in Quillframe.
 
 ---
 
@@ -65,7 +65,7 @@ The Story Loom → WeiUI bridge is now a real repository artifact, not only a fu
 - theme layer: `wui-theme`;
 - CSS order: WeiUI tokens → WeiUI CSS → Story Loom theme.
 
-[`brand/story-loom.weiui.css`](brand/story-loom.weiui.css) is the live application theme bridge. It maps Story Loom light/dark roles into WeiUI `--wui-*` variables while keeping NovelForge-specific `--nf-*` product semantics separate. It must not fork WeiUI `.wui-*` component selectors or use `!important` to win the cascade.
+[`brand/story-loom.weiui.css`](brand/story-loom.weiui.css) is the live application theme bridge. It maps Story Loom light/dark roles into WeiUI `--wui-*` variables while keeping Quillframe-specific `--qf-*` product semantics separate. It must not fork WeiUI `.wui-*` component selectors or use `!important` to win the cascade.
 
 The product dependency therefore stays one-way:
 
@@ -77,7 +77,7 @@ Story Loom v2 product tokens
 → Local Web / optional Tauri host
 ```
 
-WeiUI is a zero-JavaScript styling/token foundation for Phase 2C, **not** the application runtime and not NovelForge product authority.
+WeiUI is a zero-JavaScript styling/token foundation for Phase 2C, **not** the application runtime and not Quillframe product authority.
 
 ---
 
@@ -116,7 +116,7 @@ The checker verifies, among other things:
 - reduced motion required and idle animation forbidden;
 - no default polling;
 - required light/dark contrast ≥ 4.5:1 for primary/destructive/success/warning role pairs;
-- `wui-theme`, light/dark definitions, required `--wui-*` / `--nf-*` variables;
+- `wui-theme`, light/dark definitions, required `--wui-*` / `--qf-*` variables;
 - no `!important` and no Story Loom fork of WeiUI component selectors;
 - complete design-system provenance IDs.
 
@@ -165,4 +165,4 @@ Directory placement never implies authority. For generated or mapped artifacts, 
 - validation mechanism;
 - whether the artifact is presentation-only or consumed by product runtime.
 
-**The asset system is successful when NovelForge looks distinctive, Studio reuses one source of product semantics, and neither presentation tooling nor the generic UI foundation becomes a competing source of truth.**
+**The asset system is successful when Quillframe looks distinctive, Studio reuses one source of product semantics, and neither presentation tooling nor the generic UI foundation becomes a competing source of truth.**

@@ -1,6 +1,6 @@
 # Corpus Intelligence · 语料智能系统
 
-NovelForge 把 Corpus 当成有治理的 evidence pipeline，而不是文本堆。
+Quillframe 把 Corpus 当成有治理的 evidence pipeline，而不是文本堆。
 
 ```mermaid
 flowchart LR
@@ -32,7 +32,7 @@ Corpus 永远不是 Canon。
 
 ## 自主学习循环
 
-NovelForge 可以自主：
+Quillframe 可以自主：
 
 1. 发现 preference/craft 的 evidence gap；
 2. 生成 typed discovery request；
@@ -84,4 +84,4 @@ corpus/
 
 ## Named-author Imitation Boundary
 
-NovelForge 可以学习 pressure sequencing、dialogue embodiment、paragraph function、information timing、scene causality 等通用机制；不能把现代作者变成 imitation fingerprint，也不能生产可复用的“完全照 Author X 写”的 profile。
+Quillframe 可以学习 pressure sequencing、dialogue embodiment、paragraph function、information timing、scene causality 等通用机制；不能把现代作者变成 imitation fingerprint，也不能生产可复用的“完全照 Author X 写”的 profile。

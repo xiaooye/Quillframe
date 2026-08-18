@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Candidate lineage extension for NovelForge quality evolution.
+"""Candidate lineage extension for Quillframe quality evolution.
 
 This module extends the existing ``quality_evolution`` ledger; it does not create
 another candidate-selection, comparison, acceptance, Canon, or settlement system.
@@ -32,7 +32,7 @@ for p in (QUALITY, SEM):
 import quality_evolution as qe  # noqa: E402
 from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
 
-SCHEMA = "novelforge_candidate_lineage_v1"
+SCHEMA = "quillframe_candidate_lineage_v1"
 ORIGINS = {"draft", "repair", "fresh_regeneration", "user_edit"}
 
 
@@ -592,13 +592,13 @@ def self_test(path: Path) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge candidate-lineage extension")
-    parser.add_argument("--db", default=".novelforge/quality-evolution.db")
+    parser = argparse.ArgumentParser(description="Quillframe candidate-lineage extension")
+    parser.add_argument("--db", default=".quillframe/quality-evolution.db")
     sub = parser.add_subparsers(dest="command", required=True)
     graph_parser = sub.add_parser("graph")
     graph_parser.add_argument("--run-id", required=True)
     self_parser = sub.add_parser("self-test")
-    self_parser.add_argument("--path", default="/tmp/novelforge-candidate-lineage-selftest.db")
+    self_parser.add_argument("--path", default="/tmp/quillframe-candidate-lineage-selftest.db")
     args = parser.parse_args()
     if args.command == "self-test":
         return self_test(Path(args.path))

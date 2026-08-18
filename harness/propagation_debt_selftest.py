@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Executable regressions for the NovelForge propagation-debt ledger."""
+"""Executable regressions for the Quillframe propagation-debt ledger."""
 from __future__ import annotations
 
 import json
@@ -124,4 +124,4 @@ def run_self_test(path: Path) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(run_self_test(Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/novelforge-propagation-debt-selftest.db")))
+    raise SystemExit(run_self_test(Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/quillframe-propagation-debt-selftest.db")))

@@ -1,5 +1,5 @@
 {
-  "schema": "novelforge_feedback_learning_ablation_manifest_v1",
+  "schema": "quillframe_feedback_learning_ablation_manifest_v1",
   "version": "1",
   "purpose": "Blind, fingerprint-bound semantic comparison of steering-only feedback handling against automatic bounded Learning intake, including negative, authority, dual-consumer, contradiction and resume controls.",
   "pair_review_contract": "quality.ablation_compare",

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = ROOT / ".github/workflows/novelforge-chat-semantic-bridge.yml"
+WORKFLOW = ROOT / ".github/workflows/quillframe-chat-semantic-bridge.yml"
 ACTION = ROOT / ".github/actions/project-peer-semantic/action.yml"
 BRIDGE = ROOT / ".github/actions/project-peer-semantic/bridge.py"
 

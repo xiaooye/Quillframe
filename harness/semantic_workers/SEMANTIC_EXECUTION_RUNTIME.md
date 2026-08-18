@@ -1,4 +1,4 @@
-# NovelForge Semantic Execution Runtime · Bootstrap Router
+# Quillframe Semantic Execution Runtime · Bootstrap Router
 
 Authoritative editions:
 - English: `SEMANTIC_EXECUTION_RUNTIME.en.md`

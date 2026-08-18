@@ -1,39 +1,39 @@
 @layer atelier-workbench {
   :root[data-experience="story-loom-kawaii-atelier-v5"] {
-    --nf-workbench-sidebar: 236px;
-    --nf-workbench-content-max: 1480px;
-    --nf-workbench-canvas: var(--wui-color-background);
-    --nf-workbench-surface: var(--wui-surface-raised);
-    --nf-workbench-surface-subtle: color-mix(in oklab, var(--wui-color-muted) 44%, var(--wui-color-background));
-    --nf-workbench-divider: color-mix(in oklab, var(--wui-color-border) 66%, transparent);
-    --nf-workbench-divider-soft: color-mix(in oklab, var(--wui-color-border) 42%, transparent);
-    --nf-workbench-shadow-1: 0 1px 2px oklch(.25 .02 300 / .05), 0 8px 24px oklch(.25 .02 300 / .035);
-    --nf-workbench-shadow-2: 0 16px 48px oklch(.2 .025 300 / .12);
-    --nf-workbench-radius-sm: 10px;
-    --nf-workbench-radius: 14px;
-    --nf-workbench-radius-lg: 18px;
-    --nf-workbench-accent-soft: color-mix(in oklab, var(--nf-lane-runtime-fill) 46%, var(--wui-color-background));
-    --nf-workbench-project-soft: color-mix(in oklab, var(--nf-lane-project-fill) 42%, var(--wui-color-background));
-    --nf-workbench-editorial-soft: color-mix(in oklab, var(--nf-lane-editorial-fill) 40%, var(--wui-color-background));
-    --nf-workbench-success-soft: color-mix(in oklab, var(--nf-lane-validated-fill) 40%, var(--wui-color-background));
-    background: var(--nf-workbench-canvas);
+    --qf-workbench-sidebar: 236px;
+    --qf-workbench-content-max: 1480px;
+    --qf-workbench-canvas: var(--wui-color-background);
+    --qf-workbench-surface: var(--wui-surface-raised);
+    --qf-workbench-surface-subtle: color-mix(in oklab, var(--wui-color-muted) 44%, var(--wui-color-background));
+    --qf-workbench-divider: color-mix(in oklab, var(--wui-color-border) 66%, transparent);
+    --qf-workbench-divider-soft: color-mix(in oklab, var(--wui-color-border) 42%, transparent);
+    --qf-workbench-shadow-1: 0 1px 2px oklch(.25 .02 300 / .05), 0 8px 24px oklch(.25 .02 300 / .035);
+    --qf-workbench-shadow-2: 0 16px 48px oklch(.2 .025 300 / .12);
+    --qf-workbench-radius-sm: 10px;
+    --qf-workbench-radius: 14px;
+    --qf-workbench-radius-lg: 18px;
+    --qf-workbench-accent-soft: color-mix(in oklab, var(--qf-lane-runtime-fill) 46%, var(--wui-color-background));
+    --qf-workbench-project-soft: color-mix(in oklab, var(--qf-lane-project-fill) 42%, var(--wui-color-background));
+    --qf-workbench-editorial-soft: color-mix(in oklab, var(--qf-lane-editorial-fill) 40%, var(--wui-color-background));
+    --qf-workbench-success-soft: color-mix(in oklab, var(--qf-lane-validated-fill) 40%, var(--wui-color-background));
+    background: var(--qf-workbench-canvas);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"].dark {
-    --nf-workbench-surface-subtle: color-mix(in oklab, var(--wui-color-muted) 34%, var(--wui-color-background));
-    --nf-workbench-divider: color-mix(in oklab, var(--wui-color-border) 78%, transparent);
-    --nf-workbench-divider-soft: color-mix(in oklab, var(--wui-color-border) 52%, transparent);
-    --nf-workbench-shadow-1: 0 1px 2px oklch(.05 .02 300 / .18), 0 8px 24px oklch(.04 .02 300 / .12);
-    --nf-workbench-shadow-2: 0 18px 54px oklch(.03 .025 300 / .36);
-    --nf-workbench-accent-soft: color-mix(in oklab, var(--nf-lane-runtime-stroke) 16%, var(--wui-color-background));
-    --nf-workbench-project-soft: color-mix(in oklab, var(--nf-lane-project-stroke) 14%, var(--wui-color-background));
-    --nf-workbench-editorial-soft: color-mix(in oklab, var(--nf-lane-editorial-stroke) 13%, var(--wui-color-background));
-    --nf-workbench-success-soft: color-mix(in oklab, var(--nf-lane-validated-stroke) 13%, var(--wui-color-background));
+    --qf-workbench-surface-subtle: color-mix(in oklab, var(--wui-color-muted) 34%, var(--wui-color-background));
+    --qf-workbench-divider: color-mix(in oklab, var(--wui-color-border) 78%, transparent);
+    --qf-workbench-divider-soft: color-mix(in oklab, var(--wui-color-border) 52%, transparent);
+    --qf-workbench-shadow-1: 0 1px 2px oklch(.05 .02 300 / .18), 0 8px 24px oklch(.04 .02 300 / .12);
+    --qf-workbench-shadow-2: 0 18px 54px oklch(.03 .025 300 / .36);
+    --qf-workbench-accent-soft: color-mix(in oklab, var(--qf-lane-runtime-stroke) 16%, var(--wui-color-background));
+    --qf-workbench-project-soft: color-mix(in oklab, var(--qf-lane-project-stroke) 14%, var(--wui-color-background));
+    --qf-workbench-editorial-soft: color-mix(in oklab, var(--qf-lane-editorial-stroke) 13%, var(--wui-color-background));
+    --qf-workbench-success-soft: color-mix(in oklab, var(--qf-lane-validated-stroke) 13%, var(--wui-color-background));
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] body {
     color: var(--wui-color-foreground);
-    background: var(--nf-workbench-canvas);
+    background: var(--qf-workbench-canvas);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] body::before {
@@ -49,22 +49,22 @@
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-app-shell {
     min-block-size: 100vh;
     min-block-size: 100dvh;
-    grid-template-columns: var(--nf-workbench-sidebar) minmax(0, 1fr);
-    background: var(--nf-workbench-canvas);
+    grid-template-columns: var(--qf-workbench-sidebar) minmax(0, 1fr);
+    background: var(--qf-workbench-canvas);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-sidebar {
     position: sticky;
     inset-block-start: 0;
-    inline-size: var(--nf-workbench-sidebar);
+    inline-size: var(--qf-workbench-sidebar);
     block-size: 100vh;
     block-size: 100dvh;
     margin: 0;
     overflow: auto;
     border: 0;
-    border-inline-end: 1px solid var(--nf-workbench-divider-soft);
+    border-inline-end: 1px solid var(--qf-workbench-divider-soft);
     border-radius: 0;
-    background: color-mix(in oklab, var(--nf-workbench-surface) 94%, var(--wui-color-background));
+    background: color-mix(in oklab, var(--qf-workbench-surface) 94%, var(--wui-color-background));
     box-shadow: none;
   }
 
@@ -81,7 +81,7 @@
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-brand:hover {
-    background: var(--nf-workbench-surface-subtle);
+    background: var(--qf-workbench-surface-subtle);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-brand-mark {
@@ -120,22 +120,22 @@
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-nav-item {
-    min-block-size: var(--nf-touch-target-min);
+    min-block-size: var(--qf-touch-target-min);
     border: 0;
-    border-radius: var(--nf-workbench-radius-sm);
+    border-radius: var(--qf-workbench-radius-sm);
     color: var(--wui-color-muted-foreground);
     transition: color 120ms ease, background-color 120ms ease;
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-nav-item:hover {
     color: var(--wui-color-foreground);
-    background: var(--nf-workbench-surface-subtle);
+    background: var(--qf-workbench-surface-subtle);
     transform: none;
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-nav-item[data-active="true"] {
     color: color-mix(in oklab, var(--wui-color-primary) 86%, var(--wui-color-foreground));
-    background: var(--nf-workbench-accent-soft);
+    background: var(--qf-workbench-accent-soft);
     box-shadow: none;
   }
 
@@ -162,7 +162,7 @@
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-sidebar-foot {
     margin: auto 14px 14px;
     padding: 12px 4px 0;
-    border-block-start: 1px solid var(--nf-workbench-divider-soft);
+    border-block-start: 1px solid var(--qf-workbench-divider-soft);
     border-radius: 0;
     background: transparent;
   }
@@ -186,7 +186,7 @@
     margin: 0;
     padding-inline: clamp(18px, 3vw, 36px);
     border: 0;
-    border-block-end: 1px solid var(--nf-workbench-divider-soft);
+    border-block-end: 1px solid var(--qf-workbench-divider-soft);
     border-radius: 0;
     background: color-mix(in oklab, var(--wui-color-background) 94%, transparent);
     box-shadow: none;
@@ -210,32 +210,32 @@
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-host-chip {
     min-block-size: 30px;
     border-style: solid;
-    border-color: var(--nf-workbench-divider);
+    border-color: var(--qf-workbench-divider);
     border-radius: 999px;
     background: transparent;
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-command-trigger {
-    min-block-size: var(--nf-touch-target-min);
+    min-block-size: var(--qf-touch-target-min);
     border-style: solid;
-    border-color: var(--nf-workbench-divider);
-    border-radius: var(--nf-workbench-radius-sm);
+    border-color: var(--qf-workbench-divider);
+    border-radius: var(--qf-workbench-radius-sm);
     background: transparent;
     box-shadow: none;
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-command-trigger:hover,
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-topbar .wui-button--ghost:hover {
-    background: var(--nf-workbench-surface-subtle);
+    background: var(--qf-workbench-surface-subtle);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-topbar .wui-button--ghost {
-    border-radius: var(--nf-workbench-radius-sm);
+    border-radius: var(--qf-workbench-radius-sm);
   }
 
   /* Page composition. */
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-content {
-    max-inline-size: var(--nf-workbench-content-max);
+    max-inline-size: var(--qf-workbench-content-max);
     padding: clamp(32px, 4vw, 56px) clamp(22px, 4vw, 56px) clamp(48px, 6vw, 88px);
   }
 
@@ -250,7 +250,7 @@
     padding: 0 0 clamp(22px, 3vw, 32px);
     overflow: visible;
     border: 0;
-    border-block-end: 1px solid var(--nf-workbench-divider-soft);
+    border-block-end: 1px solid var(--qf-workbench-divider-soft);
     border-radius: 0;
     background: transparent;
     box-shadow: none;
@@ -300,7 +300,7 @@
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-page-actions .wui-button {
-    border-radius: var(--nf-workbench-radius-sm);
+    border-radius: var(--qf-workbench-radius-sm);
     box-shadow: none;
   }
 
@@ -308,9 +308,9 @@
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-card {
     position: relative;
     border: 0;
-    border-radius: var(--nf-workbench-radius);
-    background: var(--nf-workbench-surface);
-    box-shadow: var(--nf-workbench-shadow-1);
+    border-radius: var(--qf-workbench-radius);
+    background: var(--qf-workbench-surface);
+    box-shadow: var(--qf-workbench-shadow-1);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-card::after {
@@ -319,7 +319,7 @@
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-card-accent {
     border: 0;
-    background: var(--nf-workbench-surface);
+    background: var(--qf-workbench-surface);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-card-accent::before {
@@ -359,13 +359,13 @@
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-metric-grid > * {
-    background: var(--nf-workbench-surface);
+    background: var(--qf-workbench-surface);
   }
 
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-metric-grid > :nth-child(4n + 1) { --nf-metric-accent: var(--nf-lane-project-stroke); }
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-metric-grid > :nth-child(4n + 2) { --nf-metric-accent: var(--nf-lane-runtime-stroke); }
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-metric-grid > :nth-child(4n + 3) { --nf-metric-accent: var(--nf-lane-editorial-stroke); }
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-metric-grid > :nth-child(4n + 4) { --nf-metric-accent: var(--nf-lane-validated-stroke); }
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-metric-grid > :nth-child(4n + 1) { --qf-metric-accent: var(--qf-lane-project-stroke); }
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-metric-grid > :nth-child(4n + 2) { --qf-metric-accent: var(--qf-lane-runtime-stroke); }
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-metric-grid > :nth-child(4n + 3) { --qf-metric-accent: var(--qf-lane-editorial-stroke); }
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-metric-grid > :nth-child(4n + 4) { --qf-metric-accent: var(--qf-lane-validated-stroke); }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-metric-grid > *::before {
     content: "";
@@ -374,13 +374,13 @@
     inset-block-start: 0;
     block-size: 2px;
     border-radius: 0 0 999px 999px;
-    background: var(--nf-metric-accent, var(--wui-color-primary));
+    background: var(--qf-metric-accent, var(--wui-color-primary));
     opacity: .68;
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-detail-list > div,
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-path-row {
-    border-color: var(--nf-workbench-divider-soft);
+    border-color: var(--qf-workbench-divider-soft);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-detail-list span,
@@ -393,16 +393,16 @@
   :root[data-experience="story-loom-kawaii-atelier-v5"] .wui-input,
   :root[data-experience="story-loom-kawaii-atelier-v5"] .wui-select,
   :root[data-experience="story-loom-kawaii-atelier-v5"] .wui-textarea {
-    min-block-size: var(--nf-touch-target-min);
-    border-color: var(--nf-workbench-divider);
-    border-radius: var(--nf-workbench-radius-sm);
-    background: var(--nf-workbench-surface);
+    min-block-size: var(--qf-touch-target-min);
+    border-color: var(--qf-workbench-divider);
+    border-radius: var(--qf-workbench-radius-sm);
+    background: var(--qf-workbench-surface);
     box-shadow: none;
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .wui-button {
-    min-block-size: var(--nf-touch-target-min);
-    border-radius: var(--nf-workbench-radius-sm);
+    min-block-size: var(--qf-touch-target-min);
+    border-radius: var(--qf-workbench-radius-sm);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .wui-badge {
@@ -412,12 +412,12 @@
   /* Technical evidence remains neutral and scan-first. */
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-json-block,
   :root[data-experience="story-loom-kawaii-atelier-v5"] .wui-code-block {
-    border-radius: var(--nf-workbench-radius-sm);
+    border-radius: var(--qf-workbench-radius-sm);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .wui-code-block {
-    border: 1px solid var(--nf-workbench-divider);
-    background: var(--nf-workbench-surface-subtle);
+    border: 1px solid var(--qf-workbench-divider);
+    background: var(--qf-workbench-surface-subtle);
     box-shadow: none;
   }
 
@@ -435,7 +435,7 @@
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .wui-alert {
-    border-radius: var(--nf-workbench-radius-sm);
+    border-radius: var(--qf-workbench-radius-sm);
     box-shadow: none;
   }
 
@@ -450,9 +450,9 @@
     gap: 1px;
     padding: 0;
     overflow: clip;
-    border: 1px solid var(--nf-workbench-divider);
-    border-radius: var(--nf-workbench-radius-lg);
-    background: var(--nf-workbench-divider-soft);
+    border: 1px solid var(--qf-workbench-divider);
+    border-radius: var(--qf-workbench-radius-lg);
+    background: var(--qf-workbench-divider-soft);
     box-shadow: none;
   }
 
@@ -460,7 +460,7 @@
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-workspace-inspector {
     border: 0;
     border-radius: 0;
-    background: var(--nf-workbench-surface-subtle);
+    background: var(--qf-workbench-surface-subtle);
     box-shadow: none;
   }
 
@@ -468,7 +468,7 @@
     min-block-size: 520px;
     border: 0;
     border-radius: 0;
-    background: var(--nf-workbench-surface);
+    background: var(--qf-workbench-surface);
     box-shadow: none;
   }
 
@@ -476,7 +476,7 @@
     inline-size: 52px;
     block-size: 52px;
     border: 0;
-    background: var(--nf-workbench-accent-soft);
+    background: var(--qf-workbench-accent-soft);
     color: var(--wui-color-primary);
   }
 
@@ -486,9 +486,9 @@
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-preview {
     position: relative;
     overflow: clip;
-    border: 1px solid var(--nf-workbench-divider);
-    border-radius: var(--nf-workbench-radius);
-    background: var(--nf-workbench-surface);
+    border: 1px solid var(--qf-workbench-divider);
+    border-radius: var(--qf-workbench-radius);
+    background: var(--qf-workbench-surface);
     box-shadow: none;
   }
 
@@ -499,7 +499,7 @@
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-observe-section-head {
-    border-color: var(--nf-workbench-divider-soft);
+    border-color: var(--qf-workbench-divider-soft);
     background: transparent;
   }
 
@@ -525,12 +525,12 @@
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-validation-scope > article + article,
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-lane,
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-preview > .nf-observe-footnote {
-    border-color: var(--nf-workbench-divider-soft);
+    border-color: var(--qf-workbench-divider-soft);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-pack-row:hover,
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-contract-row > summary:hover {
-    background: var(--nf-workbench-surface-subtle);
+    background: var(--qf-workbench-surface-subtle);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-contract-row > summary {
@@ -558,13 +558,13 @@
     opacity: .42;
   }
 
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-lane:nth-child(7n + 1)::before { background: var(--nf-lane-project-stroke); }
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-lane:nth-child(7n + 2)::before { background: var(--nf-lane-editorial-stroke); }
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-lane:nth-child(7n + 3)::before { background: var(--nf-lane-runtime-stroke); }
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-lane:nth-child(7n + 4)::before { background: var(--nf-lane-evidence-stroke); }
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-lane:nth-child(7n + 5)::before { background: var(--nf-lane-project-stroke); }
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-lane:nth-child(7n + 6)::before { background: var(--nf-lane-validated-stroke); }
-  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-lane:nth-child(7n + 7)::before { background: var(--nf-lane-runtime-stroke); }
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-lane:nth-child(7n + 1)::before { background: var(--qf-lane-project-stroke); }
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-lane:nth-child(7n + 2)::before { background: var(--qf-lane-editorial-stroke); }
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-lane:nth-child(7n + 3)::before { background: var(--qf-lane-runtime-stroke); }
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-lane:nth-child(7n + 4)::before { background: var(--qf-lane-evidence-stroke); }
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-lane:nth-child(7n + 5)::before { background: var(--qf-lane-project-stroke); }
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-lane:nth-child(7n + 6)::before { background: var(--qf-lane-validated-stroke); }
+  :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-production-lane:nth-child(7n + 7)::before { background: var(--qf-lane-runtime-stroke); }
 
   /* Command palette: blur serves modal separation only. */
   :root[data-experience="story-loom-kawaii-atelier-v5"] .wui-command-overlay {
@@ -575,23 +575,23 @@
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-command {
     overflow: clip;
-    border: 1px solid var(--nf-workbench-divider);
-    border-radius: var(--nf-workbench-radius-lg);
+    border: 1px solid var(--qf-workbench-divider);
+    border-radius: var(--qf-workbench-radius-lg);
     background: var(--wui-surface-overlay);
-    box-shadow: var(--nf-workbench-shadow-2);
+    box-shadow: var(--qf-workbench-shadow-2);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-command .wui-command__input-wrapper {
-    border-color: var(--nf-workbench-divider-soft);
+    border-color: var(--qf-workbench-divider-soft);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-command .wui-command__item {
-    min-block-size: var(--nf-touch-target-min);
-    border-radius: var(--nf-workbench-radius-sm);
+    min-block-size: var(--qf-touch-target-min);
+    border-radius: var(--qf-workbench-radius-sm);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-command .wui-command__item:hover:not([data-disabled]) {
-    background: var(--nf-workbench-surface-subtle);
+    background: var(--qf-workbench-surface-subtle);
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-footer {
@@ -600,7 +600,7 @@
     margin: 0 clamp(22px, 4vw, 56px);
     padding-inline: 0;
     border: 0;
-    border-block-start: 1px solid var(--nf-workbench-divider-soft);
+    border-block-start: 1px solid var(--qf-workbench-divider-soft);
     border-radius: 0;
     color: var(--wui-color-muted-foreground);
     background: transparent;
@@ -616,7 +616,7 @@
     border: 0;
     border-radius: 16px;
     background: color-mix(in oklab, var(--wui-surface-overlay) 96%, transparent);
-    box-shadow: var(--nf-workbench-shadow-2);
+    box-shadow: var(--qf-workbench-shadow-2);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
   }
@@ -634,7 +634,7 @@
 
   @media (max-width: 1100px) {
     :root[data-experience="story-loom-kawaii-atelier-v5"] {
-      --nf-workbench-sidebar: 208px;
+      --qf-workbench-sidebar: 208px;
     }
 
     :root[data-experience="story-loom-kawaii-atelier-v5"] .nf-workspace-stage {

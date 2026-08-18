@@ -7,7 +7,7 @@ import { downloadProjection, loadProductProjection, type ProductProjectionBundle
 import { useStudio } from "../studio";
 
 type ResumePreflight = {
-  schema: "novelforge_session_resume_preflight_v1";
+  schema: "quillframe_session_resume_preflight_v1";
   status: "READY" | "BLOCKED";
   ready: boolean;
   checks: Record<string, boolean>;
@@ -31,7 +31,7 @@ type ResumePreflight = {
 };
 
 type CommandReceipt = {
-  schema: "novelforge_runtime_command_receipt_v1";
+  schema: "quillframe_runtime_command_receipt_v1";
   command_id: string;
   session_id: string;
   idempotency_key: string;
@@ -55,7 +55,7 @@ type CommandReceipt = {
 };
 
 type CommandExecution = {
-  schema: "novelforge_runtime_command_execution_result_v1";
+  schema: "quillframe_runtime_command_execution_result_v1";
   status: "applied" | "duplicate" | "rejected" | "conflict" | "failed";
   failure_class?: string | null;
   errors: string[];
@@ -68,7 +68,7 @@ type CommandExecution = {
 };
 
 type CommandReceiptProjection = {
-  schema: "novelforge_runtime_command_receipt_projection_v1";
+  schema: "quillframe_runtime_command_receipt_projection_v1";
   count: number;
   receipts: CommandReceipt[];
   query_only: true;
@@ -174,7 +174,7 @@ export default function Control() {
       const receipt = result.status === "ok" && result.data?.count === 1 ? result.data.receipts[0] : undefined;
       if (!receipt) return undefined;
       return {
-        schema: "novelforge_runtime_command_execution_result_v1",
+        schema: "quillframe_runtime_command_execution_result_v1",
         status: "duplicate",
         errors: [],
         receipt,

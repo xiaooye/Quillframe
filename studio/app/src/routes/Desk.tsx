@@ -5,7 +5,7 @@ import { useI18n } from "../i18n";
 import { useStudio } from "../studio";
 
 const localCoreCommand = "python studio/local_server.py";
-const architectureUrl = "https://novelforge.wei-dev.com/architecture";
+const architectureUrl = "https://quillframe.wei-dev.com/architecture";
 
 export default function Desk() {
   const { t, locale } = useI18n();
@@ -39,7 +39,7 @@ export default function Desk() {
           <strong>{t("desk.startAgentTitle")}</strong>
           <small>{t("desk.startAgentBody")}</small>
         </A>
-        <a href={architectureUrl} target="_blank" rel="noreferrer" class="nf-start-action" data-intent="explore-novelforge">
+        <a href={architectureUrl} target="_blank" rel="noreferrer" class="nf-start-action" data-intent="explore-quillframe">
           <span class="nf-card-label">04</span>
           <strong>{t("desk.startExploreTitle")}</strong>
           <small>{t("desk.startExploreBody")}</small>
@@ -104,7 +104,7 @@ export default function Desk() {
             <div class="wui-card__content">
               <span class="nf-card-label">{t("desk.bridgeTitle")}</span>
               <strong>{studio.bridgeLoading() ? t("common.loading") : studio.bridgeDescription() ? t("desk.bridgeReady") : t("desk.bridgeUnavailable")}</strong>
-              <small>{studio.bridgeDescription()?.contract_schema ?? "novelforge_studio_host_bridge_contract_v1"}</small>
+              <small>{studio.bridgeDescription()?.contract_schema ?? "quillframe_studio_host_bridge_contract_v1"}</small>
             </div>
           </article>
           <article class="wui-card nf-card">

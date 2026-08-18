@@ -1,8 +1,8 @@
 <div align="center">
-  <img src="brand/novelforge-lockup.svg" alt="NovelForge — Adaptive Fiction Agent Framework" width="620" />
+  <img src="brand/quillframe-lockup.svg" alt="Quillframe — Adaptive Fiction Agent Framework" width="620" />
 </div>
 
-# NovelForge Story Loom Design System
+# Quillframe Story Loom Design System
 
 > **One visual language across documentation and product UI.**
 >
@@ -18,7 +18,7 @@ This file explains the human-facing design contract. Machine authority lives in 
 
 ## 01 · Brand DNA ✦
 
-NovelForge should hold four qualities at once:
+Quillframe should hold four qualities at once:
 
 | Trait | Design meaning |
 |---|---|
@@ -31,7 +31,7 @@ Landing pages may naturally use `🌸 ✦ ✨ 📖`; dense contracts, schemas, c
 
 ### Logo system
 
-<img src="brand/novelforge-mark.svg" alt="NovelForge Story Loom brand mark" width="120" />
+<img src="brand/quillframe-mark.svg" alt="Quillframe Story Loom brand mark" width="120" />
 
 The mark combines book pages, a woven N/story thread, and a forge spark. Use the lockup on major landing surfaces and the mark at small sizes. Do not rotate, glow, arbitrarily recolor, or use the logo as an architecture/status icon. System-font fallbacks only; no committed external font files.
 
@@ -39,9 +39,9 @@ The mark combines book pages, a woven N/story thread, and a forge spark. Use the
 
 ## 02 · Product-token authority · Story Loom v2
 
-Machine source: [`brand/tokens.json`](brand/tokens.json), schema **`novelforge_brand_tokens_v2`**.
+Machine source: [`brand/tokens.json`](brand/tokens.json), schema **`quillframe_brand_tokens_v2`**.
 
-The token contract now covers both documentation semantics and application constraints. It is the NovelForge-side source of truth for:
+The token contract now covers both documentation semantics and application constraints. It is the Quillframe-side source of truth for:
 
 - Story Loom domain families: Project, Runtime, Editorial, Evidence, Validated, Rejected, Neutral;
 - application light/dark theme roles;
@@ -65,7 +65,7 @@ The token contract now covers both documentation semantics and application const
 
 ## 03 · WeiUI integration boundary · merged
 
-WeiUI is the generic **zero-JavaScript token/CSS foundation**, not NovelForge product authority and not the Phase 2C application runtime.
+WeiUI is the generic **zero-JavaScript token/CSS foundation**, not Quillframe product authority and not the Phase 2C application runtime.
 
 Machine contract: [`brand/weiui.integration.json`](brand/weiui.integration.json).
 
@@ -90,7 +90,7 @@ The integration contract pins WeiUI to exact commit `d84d1cd365fb5f90cbbab794d23
 - no `.wui-*` component-selector forks;
 - no `!important` as a cascade escape hatch.
 
-[`brand/story-loom.weiui.css`](brand/story-loom.weiui.css) maps product roles into `--wui-*` variables and keeps NovelForge-specific semantics in `--nf-*` variables. A WeiUI upgrade may change generic implementation detail, but it cannot silently redefine NovelForge concepts.
+[`brand/story-loom.weiui.css`](brand/story-loom.weiui.css) maps product roles into `--wui-*` variables and keeps Quillframe-specific semantics in `--qf-*` variables. A WeiUI upgrade may change generic implementation detail, but it cannot silently redefine Quillframe concepts.
 
 ---
 
@@ -248,4 +248,4 @@ A Story Loom documentation or product surface is complete only when:
 - real render and, for application work, real runtime measurements have happened;
 - presentation code never becomes a second authority for Core or story truth.
 
-**Story Loom succeeds when NovelForge feels engineered, editorial, recognizable, and unusually light without sacrificing semantic honesty. ✦**
+**Story Loom succeeds when Quillframe feels engineered, editorial, recognizable, and unusually light without sacrificing semantic honesty. ✦**

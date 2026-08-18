@@ -28,4 +28,4 @@ Every view remains `authority=false`. Acceptance evidence reports `authority_ver
 
 ## Compatibility
 
-The schema ID remains `novelforge_candidate_lineage_v1`. That is a stable technical identifier under the legacy namespace and is not renamed with the Quillframe public brand.
+The schema ID remains `quillframe_candidate_lineage_v1`. That is a stable technical identifier under the legacy namespace and is not renamed with the Quillframe public brand.

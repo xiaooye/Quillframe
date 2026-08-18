@@ -22,7 +22,7 @@ if str(SEM) not in sys.path:
 
 from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
 
-SCHEMA = "novelforge_feedback_learning_ablation_queue_v1"
+SCHEMA = "quillframe_feedback_learning_ablation_queue_v1"
 CONTRACT = "quality.ablation_compare"
 
 
@@ -50,7 +50,7 @@ def _condition(condition_id: str, value: dict[str, Any]) -> dict[str, Any]:
 
 def validate_manifest(manifest: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    if manifest.get("schema") != "novelforge_feedback_learning_ablation_manifest_v1":
+    if manifest.get("schema") != "quillframe_feedback_learning_ablation_manifest_v1":
         errors.append("manifest schema mismatch")
     if manifest.get("pair_review_contract") != CONTRACT:
         errors.append("pair review contract mismatch")
@@ -145,7 +145,7 @@ def consume_results(queue: dict[str, Any], results: list[dict[str, Any]]) -> dic
         })
     status = "PENDING_MODEL" if pending else "SEMANTIC_EVIDENCE_READY"
     return {
-        "schema": "novelforge_feedback_learning_ablation_evidence_v1",
+        "schema": "quillframe_feedback_learning_ablation_evidence_v1",
         "semantic_status": status,
         "pending_controls": pending,
         "observations": observations,
@@ -186,7 +186,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge feedback learning ablation packager")
+    p = argparse.ArgumentParser(description="Quillframe feedback learning ablation packager")
     p.add_argument("--manifest", default=str(MANIFEST))
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("build")

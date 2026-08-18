@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Optional OpenAI Responses API adapter for NovelForge semantic contracts.
+"""Optional OpenAI Responses API adapter for Quillframe semantic contracts.
 
 This path is separately metered API usage and is never required for local/peer
 chat operation. stdin is one validated semantic job; stdout is one typed result.
@@ -59,7 +59,7 @@ def bounded_prompt(job: dict[str, Any]) -> str:
     payload = {k: job.get(k) for k in ("kind", "subject_id", "input_fingerprint", "input", "rubric", "output_contract", "permissions", "provenance")}
     independent = bool((job.get("provenance") or {}).get("independent_gate", False))
     return (
-        "You are a bounded semantic worker in the NovelForge fiction-production harness. "
+        "You are a bounded semantic worker in the Quillframe fiction-production harness. "
         "Perform only the semantic task described by the supplied packet using only its evidence. "
         "Do not provide private chain-of-thought. Return only one JSON object matching output_contract. "
         "Never settle Canon, promote framework behavior, overwrite durable taste, grant permissions, or perform story-direction writes. "
@@ -69,14 +69,14 @@ def bounded_prompt(job: dict[str, Any]) -> str:
 
 
 def request_body(job: dict[str, Any]) -> dict[str, Any]:
-    model = os.getenv("NOVELFORGE_OPENAI_MODEL", "gpt-5.1")
-    effort = os.getenv("NOVELFORGE_OPENAI_REASONING_EFFORT", "medium")
+    model = os.getenv("QUILLFRAME_OPENAI_MODEL", "gpt-5.1")
+    effort = os.getenv("QUILLFRAME_OPENAI_REASONING_EFFORT", "medium")
     return {
         "model": model,
         "store": False,
         "reasoning": {"effort": effort},
         "input": [{"role": "user", "content": [{"type": "input_text", "text": bounded_prompt(job)}]}],
-        "text": {"format": {"type": "json_schema", "name": "novelforge_semantic_judgment", "strict": False, "schema": output_schema(job)}},
+        "text": {"format": {"type": "json_schema", "name": "quillframe_semantic_judgment", "strict": False, "schema": output_schema(job)}},
     }
 
 
@@ -89,7 +89,7 @@ def typed(job: dict[str, Any], status: str, judgment: dict[str, Any] | None = No
         "job_id": job.get("job_id", "unknown"), "subject_id": job.get("subject_id", "unknown"),
         "kind": job.get("kind", "artifact_audit"), "input_fingerprint": job.get("input_fingerprint", "sha256:" + "0" * 64),
         "status": status,
-        "worker": {"provider": "openai", "model_or_reviewer": os.getenv("NOVELFORGE_OPENAI_MODEL", "gpt-5.1"), "run_reference": run_ref},
+        "worker": {"provider": "openai", "model_or_reviewer": os.getenv("QUILLFRAME_OPENAI_MODEL", "gpt-5.1"), "run_reference": run_ref},
         "judgment": judgment or empty(), "proposals": [], "errors": errors or [], "execution": lineage,
     }
 

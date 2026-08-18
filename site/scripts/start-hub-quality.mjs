@@ -10,7 +10,7 @@ const read = (relative) => fs.readFileSync(path.join(siteRoot, relative), "utf8"
 
 const main = read("src/main.tsx");
 const app = read("src/ProductApp.tsx");
-const docsActions = read("docs-site/src/components/NovelForgeActions.astro");
+const docsActions = read("docs-site/src/components/QuillframeActions.astro");
 const docsLanding = read("docs-site/src/components/DocsLanding.astro");
 const failures = [];
 const check = (condition, message) => { if (!condition) failures.push(message); };
@@ -32,5 +32,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`start-hub-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ schema: "novelforge_start_flow_consolidation_quality_v2", status: "pass", standalone_start_page: false, legacy_start_redirect: "/", product_home_is_primary_entry: true, shared_router: true, project_inspector_discoverable: true, local_playground_discoverable: true, agent_integration_discoverable: true }, null, 2));
+  console.log(JSON.stringify({ schema: "quillframe_start_flow_consolidation_quality_v2", status: "pass", standalone_start_page: false, legacy_start_redirect: "/", product_home_is_primary_entry: true, shared_router: true, project_inspector_discoverable: true, local_playground_discoverable: true, agent_integration_discoverable: true }, null, 2));
 }

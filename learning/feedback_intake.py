@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Automatic, resumable feedback -> Learning intake for NovelForge.
+"""Automatic, resumable feedback -> Learning intake for Quillframe.
 
 This is wiring, not a second preference authority. It consumes durable
 `feedback.observed` Control Plane events under its own logical consumer,
@@ -36,10 +36,10 @@ from control_plane import ControlPlane  # noqa: E402
 from learning_store import LearningStore, now_iso  # noqa: E402
 from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
 
-SCHEMA = "novelforge_feedback_intake_v1"
-PROJECTION_SCHEMA = "novelforge_feedback_intake_projection_v1"
-GENERIC_FEEDBACK_SCHEMA = "novelforge_feedback_observation_v1"
-LEGACY_STEERING_SCHEMA = "novelforge_author_steering_request_v1"
+SCHEMA = "quillframe_feedback_intake_v1"
+PROJECTION_SCHEMA = "quillframe_feedback_intake_projection_v1"
+GENERIC_FEEDBACK_SCHEMA = "quillframe_feedback_observation_v1"
+LEGACY_STEERING_SCHEMA = "quillframe_author_steering_request_v1"
 CONTRACT_ID = "learning.preference_interpret"
 STATES = {"observed", "awaiting_semantic", "interpreted", "skipped", "persisted", "blocked", "failed"}
 CAPTURE_FIELDS = {
@@ -472,7 +472,7 @@ def _event(event_id: str, text: str, *, legacy: bool = False, artifact_fp: str |
             "framework_write_authority": False,
         }
     return {
-        "schema": "novelforge_event_v1",
+        "schema": "quillframe_event_v1",
         "event_id": event_id,
         "event_type": "feedback.observed",
         "source": {"kind": "user", "id": "USER-FIXTURE"},
@@ -524,7 +524,7 @@ def _capture_judgment(scope: str, mechanism: str, *, source: str = "human_review
 
 
 def self_test(path: str | Path | None = None) -> dict[str, Any]:
-    root = Path(path) if path else Path(tempfile.gettempdir()) / "novelforge-feedback-intake-selftest"
+    root = Path(path) if path else Path(tempfile.gettempdir()) / "quillframe-feedback-intake-selftest"
     runtime_db = root.with_suffix(".runtime.db")
     learning_db = root.with_suffix(".learning.db")
     for db in (runtime_db, learning_db):
@@ -648,9 +648,9 @@ def _load(path: str) -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge automatic feedback learning intake")
-    p.add_argument("--runtime-db", default=".novelforge/runtime.db")
-    p.add_argument("--learning-db", default=".novelforge/learning.db")
+    p = argparse.ArgumentParser(description="Quillframe automatic feedback learning intake")
+    p.add_argument("--runtime-db", default=".quillframe/runtime.db")
+    p.add_argument("--learning-db", default=".quillframe/learning.db")
     sub = p.add_subparsers(dest="cmd", required=True)
     prep = sub.add_parser("prepare"); prep.add_argument("--event", required=True); prep.add_argument("--project-id"); prep.add_argument("--current-task"); prep.add_argument("--semantic-unavailable", action="store_true")
     apply = sub.add_parser("apply"); apply.add_argument("--event-id", required=True); apply.add_argument("--result", required=True)

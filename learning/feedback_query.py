@@ -13,7 +13,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "novelforge_feedback_intake_projection_v1"
+SCHEMA = "quillframe_feedback_intake_projection_v1"
 STATES = {"observed", "awaiting_semantic", "interpreted", "skipped", "persisted", "blocked", "failed"}
 
 
@@ -85,7 +85,7 @@ def list_status(db_path: str | Path, *, status: str | None = None, limit: int = 
         else:
             rows = conn.execute("SELECT * FROM feedback_intake ORDER BY updated_at DESC LIMIT ?", (limit,)).fetchall()
     return {
-        "schema": "novelforge_feedback_intake_list_projection_v1",
+        "schema": "quillframe_feedback_intake_list_projection_v1",
         "items": [_projection(row) for row in rows],
         "side_effect_free": True,
         "model_execution": False,
@@ -93,8 +93,8 @@ def list_status(db_path: str | Path, *, status: str | None = None, limit: int = 
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="Read-only NovelForge feedback-learning query")
-    p.add_argument("--db", default=".novelforge/learning.db")
+    p = argparse.ArgumentParser(description="Read-only Quillframe feedback-learning query")
+    p.add_argument("--db", default=".quillframe/learning.db")
     sub = p.add_subparsers(dest="cmd", required=True)
     g = sub.add_parser("status"); g.add_argument("--event-id", required=True)
     ls = sub.add_parser("list"); ls.add_argument("--status"); ls.add_argument("--limit", type=int, default=50)

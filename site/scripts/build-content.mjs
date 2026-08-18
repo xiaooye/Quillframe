@@ -14,7 +14,7 @@ const outputRoot = path.join(siteRoot, "public", "generated");
 const docsOutputRoot = path.join(outputRoot, "docs");
 
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-if (manifest.schema !== "novelforge_documentation_manifest_v1") {
+if (manifest.schema !== "quillframe_documentation_manifest_v1") {
   throw new Error(`Unsupported documentation manifest schema: ${manifest.schema}`);
 }
 
@@ -233,7 +233,7 @@ for (const doc of manifest.documents) {
     const fingerprint = crypto.createHash("sha256").update(markdown, "utf8").digest("hex");
 
     const payload = {
-      schema: "novelforge_product_document_v1",
+      schema: "quillframe_product_document_v1",
       authority: false,
       generatedFrom: "docs/documentation_manifest.json",
       id: doc.id,
@@ -275,7 +275,7 @@ for (const doc of manifest.documents) {
 }
 
 const indexPayload = {
-  schema: "novelforge_product_document_index_v1",
+  schema: "quillframe_product_document_index_v1",
   authority: false,
   frameworkVersion: manifest.framework_version,
   manifestSchema: manifest.schema,
@@ -285,7 +285,7 @@ const indexPayload = {
 
 fs.writeFileSync(path.join(outputRoot, "docs-index.json"), `${JSON.stringify(indexPayload)}\n`, "utf8");
 fs.writeFileSync(path.join(outputRoot, "build-meta.json"), `${JSON.stringify({
-  schema: "novelforge_product_content_build_v1",
+  schema: "quillframe_product_content_build_v1",
   authority: false,
   manifest: path.relative(repoRoot, manifestPath).replaceAll(path.sep, "/"),
   documents: compiledCount,
@@ -294,7 +294,7 @@ fs.writeFileSync(path.join(outputRoot, "build-meta.json"), `${JSON.stringify({
 }, null, 2)}\n`, "utf8");
 
 console.log(JSON.stringify({
-  schema: "novelforge_product_content_build_v1",
+  schema: "quillframe_product_content_build_v1",
   status: "pass",
   documents: compiledCount,
   output: path.relative(repoRoot, outputRoot).replaceAll(path.sep, "/"),

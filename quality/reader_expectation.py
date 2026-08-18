@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Durable reader-expectation lifecycle ledger for NovelForge.
+"""Durable reader-expectation lifecycle ledger for Quillframe.
 
 Tracks explicit reader-facing obligations and their evidence-backed lifecycle.
 It does not infer reader importance, assign salience scores, or perform model
@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "novelforge_reader_expectation_v2"
+SCHEMA = "quillframe_reader_expectation_v2"
 KINDS = {"question", "promise", "setup", "relationship", "goal", "mystery"}
 STATUSES = {"open", "partial", "paid", "invalidated", "abandoned"}
 FINAL = {"paid", "invalidated", "abandoned"}
@@ -105,7 +105,7 @@ def pressure_report(conn: sqlite3.Connection, *, current_order: int, dormant_aft
         if due is not None and current>due: item["pressure_reason"]="past_due"; overdue.append(item)
         elif gap>dormant_after: item["pressure_reason"]="dormant"; dormant.append(item)
         else: item["pressure_reason"]="active"; active.append(item)
-    return {"schema":"novelforge_reader_pressure_ledger_v2","current_order":current,"overdue":overdue,"dormant":dormant,"active":active,"counts":{"overdue":len(overdue),"dormant":len(dormant),"active":len(active)},"semantic_priority_owner":"model","semantic_salience_stored":False,"authority":False,"model_execution":False}
+    return {"schema":"quillframe_reader_pressure_ledger_v2","current_order":current,"overdue":overdue,"dormant":dormant,"active":active,"counts":{"overdue":len(overdue),"dormant":len(dormant),"active":len(active)},"semantic_priority_owner":"model","semantic_salience_stored":False,"authority":False,"model_execution":False}
 
 def events(conn: sqlite3.Connection, expectation_id: str) -> list[dict[str, Any]]:
     return [dict(row) for row in conn.execute("SELECT * FROM expectation_events WHERE expectation_id=? ORDER BY event_id",(expectation_id,)).fetchall()]
@@ -131,14 +131,14 @@ def self_test(path: Path) -> int:
     print(json.dumps({"reader_expectation_contract":"PASS" if ok else "FAIL","before_state_guard":stale,"overdue_detection":overdue,"dormancy_detection":dormant,"payoff_lifecycle":paid["status"]=="paid" and removed,"event_history":history,"semantic_salience_stored":False,"semantic_priority_owner":"model","authority":False,"model_execution":False},ensure_ascii=False,indent=2)); conn.close(); return 0 if ok else 1
 
 def main() -> int:
-    p=argparse.ArgumentParser(description="NovelForge reader expectation lifecycle ledger"); p.add_argument("--db",default=".novelforge/reader-expectations.db"); sub=p.add_subparsers(dest="command",required=True)
+    p=argparse.ArgumentParser(description="Quillframe reader expectation lifecycle ledger"); p.add_argument("--db",default=".quillframe/reader-expectations.db"); sub=p.add_subparsers(dest="command",required=True)
     o=sub.add_parser("open"); o.add_argument("--id",required=True); o.add_argument("--kind",choices=sorted(KINDS),required=True); o.add_argument("--scope",required=True); o.add_argument("--description",required=True); o.add_argument("--opened-order",type=int,required=True); o.add_argument("--due-by-order",type=int); o.add_argument("--source-ref",required=True); o.add_argument("--source-fingerprint")
     t=sub.add_parser("touch"); t.add_argument("--id",required=True); t.add_argument("--at-order",type=int,required=True); t.add_argument("--evidence-ref",required=True); t.add_argument("--detail"); t.add_argument("--expected-version",type=int)
     r=sub.add_parser("resolve"); r.add_argument("--id",required=True); r.add_argument("--status",choices=["partial","paid","invalidated","abandoned"],required=True); r.add_argument("--at-order",type=int,required=True); r.add_argument("--evidence-ref",required=True); r.add_argument("--detail"); r.add_argument("--expected-version",type=int)
     g=sub.add_parser("get"); g.add_argument("--id",required=True)
     pr=sub.add_parser("pressure"); pr.add_argument("--current-order",type=int,required=True); pr.add_argument("--dormant-after",type=int,default=3)
     ev=sub.add_parser("events"); ev.add_argument("--id",required=True)
-    st=sub.add_parser("self-test"); st.add_argument("--path",default="/tmp/novelforge-reader-expectation-selftest.db")
+    st=sub.add_parser("self-test"); st.add_argument("--path",default="/tmp/quillframe-reader-expectation-selftest.db")
     args=p.parse_args()
     if args.command=="self-test": return self_test(Path(args.path))
     conn=connect(Path(args.db))

@@ -17,9 +17,9 @@ const customCss = read("docs-site/src/styles/custom.css");
 const articleCss = read("docs-site/src/styles/article-polish.css");
 const navigationCss = read("docs-site/src/styles/navigation-polish.css");
 const docsHomeCss = read("docs-site/src/styles/docs-home-clean.css");
-const siteTitle = read("docs-site/src/components/NovelForgeSiteTitle.astro");
-const pageTitle = read("docs-site/src/components/NovelForgePageTitle.astro");
-const actions = read("docs-site/src/components/NovelForgeActions.astro");
+const siteTitle = read("docs-site/src/components/QuillframeSiteTitle.astro");
+const pageTitle = read("docs-site/src/components/QuillframePageTitle.astro");
+const actions = read("docs-site/src/components/QuillframeActions.astro");
 const landing = read("docs-site/src/components/DocsLanding.astro");
 const zhLandingRoute = read("docs-site/src/pages/index.astro");
 const enLandingRoute = read("docs-site/src/pages/en/index.astro");
@@ -55,8 +55,8 @@ requireCheck(config.includes('base: "/docs"'), "Starlight must own the /docs sur
 requireCheck(config.includes('outDir: "../dist/docs"'), "Starlight output must compose into site/dist/docs");
 requireCheck(config.includes('lang: "zh-CN"') && config.includes('lang: "en"'), "Starlight must keep zh-CN and English locales");
 requireCheck(config.includes("starlight({"), "docs app must remain powered by Starlight");
-requireCheck(config.includes('SiteTitle: "./src/components/NovelForgeSiteTitle.astro"'), "docs header must override SiteTitle so product and docs homes remain distinct");
-requireCheck(config.includes('PageTitle: "./src/components/NovelForgePageTitle.astro"'), "deep docs must use the NovelForge article title surface");
+requireCheck(config.includes('SiteTitle: "./src/components/QuillframeSiteTitle.astro"'), "docs header must override SiteTitle so product and docs homes remain distinct");
+requireCheck(config.includes('PageTitle: "./src/components/QuillframePageTitle.astro"'), "deep docs must use the Quillframe article title surface");
 requireCheck(config.includes('"./src/styles/article-polish.css"'), "deep docs article polish stylesheet must stay wired into Starlight");
 requireCheck(config.includes('"./src/styles/navigation-polish.css"'), "final navigation polish stylesheet must stay wired into Starlight");
 requireCheck(config.includes('"./src/styles/docs-home-clean.css"'), "docs landing clean-surface override must load after the shared Starlight polish");
@@ -77,10 +77,10 @@ requireCheck(docsHomeCss.includes(".nf-link-card") && docsHomeCss.includes("bord
 requireCheck(docsHomeCss.includes(".nf-tier-card") && docsHomeCss.includes("border-radius: 0"), "documentation tiers must read as editorial columns rather than cards");
 requireCheck(docsHomeCss.includes(".nf-reference-callout") && docsHomeCss.includes("border-top: 1px solid"), "reference CTA must use a section divider instead of a framed callout card");
 requireCheck(docsHomeCss.includes("@media (max-width: 50rem)"), "clean docs landing must retain explicit mobile behavior");
-requireCheck(!docsHomeCss.includes("var(--nf-shadow)"), "docs landing clean layer must not restore heavy surface shadowing");
+requireCheck(!docsHomeCss.includes("var(--qf-shadow)"), "docs landing clean layer must not restore heavy surface shadowing");
 
 requireCheck(pageTitle.includes('class="nf-article-title"') && pageTitle.includes('id="_top"'), "custom PageTitle must keep the product surface and Starlight top anchor");
-requireCheck(pageTitle.includes('english ? "NovelForge Docs" : "NovelForge 知识库"'), "custom PageTitle must keep native bilingual labeling");
+requireCheck(pageTitle.includes('english ? "Quillframe Docs" : "Quillframe 知识库"'), "custom PageTitle must keep native bilingual labeling");
 requireCheck(pageTitle.includes('zh: "入门"') && pageTitle.includes('zh: "创作与质量"') && pageTitle.includes('zh: "架构与发布"'), "article titles must expose route-aware section context");
 requireCheck(articleCss.includes(".nf-article-title") && articleCss.includes(".sl-markdown-content h2"), "deep article polish must style both title and reading hierarchy");
 requireCheck(articleCss.includes(".right-sidebar") && articleCss.includes(".pagination-links"), "deep article polish must cover TOC and footer navigation");
@@ -90,7 +90,7 @@ requireCheck(navigationCss.includes(".nf-product-nav") && navigationCss.includes
 requireCheck(navigationCss.includes('.right-sidebar a[aria-current="true"]'), "final navigation polish must retain a visible active TOC state");
 requireCheck(navigationCss.includes("@media (max-width: 68rem)") && navigationCss.includes("@media (max-width: 50rem)"), "final navigation polish must deliberately collapse at tablet and mobile widths");
 
-requireCheck(siteTitle.includes('class="nf-brand-home" href="/"'), "NovelForge docs brand must navigate to the main product home");
+requireCheck(siteTitle.includes('class="nf-brand-home" href="/"'), "Quillframe docs brand must navigate to the main product home");
 requireCheck(siteTitle.includes('english ? "/docs/en/" : "/docs/"'), "docs header must retain a locale-aware documentation-home link");
 requireCheck(siteTitle.includes('english ? "Docs" : "知识库"'), "docs header must use the same knowledge namespace as the product navigation");
 requireCheck(siteTitle.includes('aria-current="page"'), "docs namespace must expose an explicit active navigation state");
@@ -122,8 +122,8 @@ const expectedStagedMarkdownPages = (manifest.documents.length - 1) * 2;
 requireCheck(markdownCount(stagedRoot) === expectedStagedMarkdownPages, `Starlight staging must contain ${expectedStagedMarkdownPages} localized Markdown reference pages`);
 requireCheck(!fs.existsSync(path.join(stagedRoot, "index.md")), "zh-CN docs root must not conflict with the curated Astro landing route");
 requireCheck(!fs.existsSync(path.join(stagedRoot, "en", "index.md")), "English docs root must not conflict with the curated Astro landing route");
-requireCheck(fs.existsSync(path.join(stagedRoot, "why-novelforge.md")), "zh-CN why-novelforge route must be staged at the docs root");
-requireCheck(fs.existsSync(path.join(stagedRoot, "en", "why-novelforge.md")), "English why-novelforge route must be staged under /en");
+requireCheck(fs.existsSync(path.join(stagedRoot, "why-quillframe.md")), "zh-CN why-quillframe route must be staged at the docs root");
+requireCheck(fs.existsSync(path.join(stagedRoot, "en", "why-quillframe.md")), "English why-quillframe route must be staged under /en");
 
 requireCheck(landing.includes('template: "splash"'), "docs home must use Starlight's splash landing template");
 requireCheck(landing.includes("StarlightPage"), "docs home must remain inside the official Starlight page shell");
@@ -140,8 +140,8 @@ requireCheck(landing.includes("编程智能体") && landing.includes("真正负�
 requireCheck(zhLandingRoute.includes('<DocsLanding locale="zh-CN" />'), "zh-CN docs root must render the curated Chinese landing");
 requireCheck(enLandingRoute.includes('<DocsLanding locale="en" />'), "English docs root must render the curated English landing");
 
-requireCheck(verifier.includes('path.join(outputRoot, "why-novelforge", "index.html")'), "post-build verifier must assert a concrete zh-CN deep route");
-requireCheck(verifier.includes('path.join(outputRoot, "en", "why-novelforge", "index.html")'), "post-build verifier must assert a concrete English deep route");
+requireCheck(verifier.includes('path.join(outputRoot, "why-quillframe", "index.html")'), "post-build verifier must assert a concrete zh-CN deep route");
+requireCheck(verifier.includes('path.join(outputRoot, "en", "why-quillframe", "index.html")'), "post-build verifier must assert a concrete English deep route");
 requireCheck(verifier.includes("data-nf-docs-home"), "post-build verifier must assert the curated landing page marker");
 
 if (failures.length > 0) {
@@ -149,7 +149,7 @@ if (failures.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_docs_platform_quality_v7",
+    schema: "quillframe_docs_platform_quality_v7",
     status: "pass",
     engine: "Astro Starlight",
     astro: pkg.devDependencies.astro,

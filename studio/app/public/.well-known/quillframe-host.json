@@ -1,0 +1,11 @@
+{
+  "schema": "quillframe_studio_host_descriptor_v1",
+  "surface": "cloud_ui",
+  "delivery": "cloudflare_pages",
+  "core_host": "unbound",
+  "authority": false,
+  "canon_authority": false,
+  "framework_write_authority": false,
+  "settlement_authority": false,
+  "direct_core_store_access": false
+}

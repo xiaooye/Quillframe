@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NovelForge durable editable memory bank.
+"""Quillframe durable editable memory bank.
 
 Stores source-bound memory entries and explicit author/runtime controls. It never
 assigns semantic relevance: task-specific selection belongs to the model-facing
@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "novelforge_memory_bank_v1"
+SCHEMA = "quillframe_memory_bank_v1"
 AUTHORITIES = {"locked", "accepted", "active_plan", "review", "proposal", "runtime", "learning", "corpus", "derived"}
 PROTECTED = {"locked", "accepted"}
 
@@ -215,7 +215,7 @@ def export_context(conn: sqlite3.Connection) -> dict[str, Any]:
             "priority": row["priority"], "pinned": bool(row["pinned"]),
             "derived": row["authority"] == "derived", "metadata": {"bank": row["bank"], "entry_version": row["version"]},
         })
-    return {"schema": "novelforge_context_manifest_v1", "manifest_id": "memory-bank-export", "items": items, "authority": False}
+    return {"schema": "quillframe_context_manifest_v1", "manifest_id": "memory-bank-export", "items": items, "authority": False}
 
 
 def self_test(path: Path) -> int:
@@ -253,8 +253,8 @@ def self_test(path: Path) -> int:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge durable editable memory bank")
-    p.add_argument("--db", default=".novelforge/memory-bank.db")
+    p = argparse.ArgumentParser(description="Quillframe durable editable memory bank")
+    p.add_argument("--db", default=".quillframe/memory-bank.db")
     sub = p.add_subparsers(dest="command", required=True)
     add = sub.add_parser("add"); add.add_argument("--entry-id", required=True); add.add_argument("--bank", required=True); add.add_argument("--authority", required=True); add.add_argument("--content-json", required=True); add.add_argument("--source-ref", action="append", dest="source_refs"); add.add_argument("--source-fingerprint", action="append", dest="source_fps"); add.add_argument("--parent-entry-id"); add.add_argument("--pinned", action="store_true"); add.add_argument("--priority", type=float, default=0)
     ls = sub.add_parser("list"); ls.add_argument("--bank"); ls.add_argument("--authority")
@@ -262,7 +262,7 @@ def main() -> int:
     ctl = sub.add_parser("control"); ctl.add_argument("--entry-id", required=True); ctl.add_argument("--pin", action="store_true"); ctl.add_argument("--unpin", action="store_true"); ctl.add_argument("--priority", type=float)
     inv = sub.add_parser("invalidate"); inv.add_argument("--entry-id", required=True); inv.add_argument("--evidence-ref", required=True)
     sub.add_parser("export-context")
-    st = sub.add_parser("self-test"); st.add_argument("--path", default="/tmp/novelforge-memory-bank-selftest.db")
+    st = sub.add_parser("self-test"); st.add_argument("--path", default="/tmp/quillframe-memory-bank-selftest.db")
     args = p.parse_args()
     if args.command == "self-test": return self_test(Path(args.path))
     conn = connect(Path(args.db))

@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "novelforge_write_intent_guard_v1"
+SCHEMA = "quillframe_write_intent_guard_v1"
 BLOCK_RESOURCE_ACTION_MISMATCH = "BLOCK_RESOURCE_ACTION_MISMATCH"
 BLOCK_WRITE_BEFORE_STATE_MISMATCH = "BLOCK_WRITE_BEFORE_STATE_MISMATCH"
 BLOCK_WRITE_AUTHORITY_MISSING = "BLOCK_WRITE_AUTHORITY_MISSING"
@@ -136,7 +136,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge write intent guard")
+    p = argparse.ArgumentParser(description="Quillframe write intent guard")
     sub = p.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("check"); c.add_argument("--input", required=True)
     sub.add_parser("self-test")

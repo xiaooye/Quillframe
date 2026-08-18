@@ -1,20 +1,20 @@
-# NovelForge Skill Contract
+# Quillframe Skill Contract
 
 <p><kbd>TIER C · FRAMEWORK CONTRACT</kbd>&nbsp;&nbsp;<kbd>AI-NATIVE</kbd>&nbsp;&nbsp;<kbd>CONTRACT-FIRST</kbd></p>
 
-NovelForge is a project-agnostic fiction-production framework. It supplies generic story, character, Canon, quality, runtime, learning, corpus, evaluation, and project-engineering mechanisms. A consuming Project supplies the facts of one story.
+Quillframe is a project-agnostic fiction-production framework. It supplies generic story, character, Canon, quality, runtime, learning, corpus, evaluation, and project-engineering mechanisms. A consuming Project supplies the facts of one story.
 
 > **Core boundary ✦** Models own semantic fiction judgment. Deterministic code owns authority, permissions, fingerprints, persistence, routing, hard budgets, stage isolation, typed validation, transactions, and reproducibility. Neither side may silently take over the other's job.
 
-NovelForge contains no built-in novel, character, plot, Canon, or private user-taste data.
+Quillframe contains no built-in novel, character, plot, Canon, or private user-taste data.
 
 ## 01 · Bootstrap from authority, not memory
 
-For every NovelForge task:
+For every Quillframe task:
 
 1. read `HARNESS_MANIFEST.yaml`;
 2. read this Skill contract and `harness/HARNESS_AGENT.md` plus the language-appropriate edition;
-3. resolve the consuming Project through `novelforge.toml` and its exact `novelforge.lock.json`, or through a supported Project Adapter;
+3. resolve the consuming Project through `quillframe.toml` and its exact `quillframe.lock.json`, or through a supported Project Adapter;
 4. choose exactly one primary `task_mode`;
 5. create or resume the manager session and current run;
 6. build a sparse Context Manifest from current Project authority;
@@ -119,7 +119,7 @@ Do not solve an upstream failure by polishing sentences.
 
 Persistent storage is not automatic prompt injection.
 
-NovelForge keeps current Project authority, derived memory, runtime state, and model inference distinct. Context inspection and memory tooling may rank, pin, budget, invalidate, or rebuild derived/context views; they may not silently mutate protected Canon.
+Quillframe keeps current Project authority, derived memory, runtime state, and model inference distinct. Context inspection and memory tooling may rank, pin, budget, invalidate, or rebuild derived/context views; they may not silently mutate protected Canon.
 
 Protected `locked` / `accepted` references remain protected. Editing a protected memory reference must produce a proposal or another explicitly non-authoritative artifact rather than overwrite story truth.
 
@@ -159,8 +159,8 @@ A consuming Project should be independently cloneable, self-describing, testable
 
 Project identity is anchored by:
 
-- `novelforge.toml`;
-- exact `novelforge.lock.json`;
+- `quillframe.toml`;
+- exact `quillframe.lock.json`;
 - explicit source/plan/derived/generated boundaries;
 - deterministic validation/build/tests;
 - reproducible Framework bundle verification when configured.
@@ -191,4 +191,4 @@ Use truthful states such as:
 
 Never call an artifact production-ready while a mandatory gate remains unresolved.
 
-> NovelForge should make backstage production increasingly rigorous while making the fiction itself feel increasingly human, causal, specific, surprising, and alive.
+> Quillframe should make backstage production increasingly rigorous while making the fiction itself feel increasingly human, causal, specific, surprising, and alive.

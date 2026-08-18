@@ -1,6 +1,6 @@
 {
-  "schema": "novelforge_semantic_acceptance_baseline_v1",
-  "framework_version": "0.8.0",
+  "schema": "quillframe_semantic_acceptance_baseline_v1",
+  "framework_version": "0.9.0",
   "suite_version": "8.0-dev.1",
   "acceptance_subject_commit": "12dfdf5f4697e27cd5bfd975cfba9a72b627aa61",
   "status": "semantic_accept",
@@ -10,7 +10,7 @@
     {
       "source_id": "RUN-A",
       "github_run_id": 31857512980,
-      "artifact_name": "novelforge-8-0-semantic-acceptance-31857512980",
+      "artifact_name": "quillframe-8-0-semantic-acceptance-31857512980",
       "artifact_digest": "sha256:1bc971c021e218ba08e2e557f032ae26cef6707253b372c78fbdc4788aec3bcc",
       "transport": "github_actions_copilot_cli",
       "independent_invocation": true,
@@ -19,7 +19,7 @@
     {
       "source_id": "RUN-B",
       "github_run_id": 31857851291,
-      "artifact_name": "novelforge-8-0-semantic-repair-31857851291",
+      "artifact_name": "quillframe-8-0-semantic-repair-31857851291",
       "artifact_digest": "sha256:cd96a7525fb0a81864e2441f235c0d33fda6388008f7ce489417168d74a1f8d0",
       "transport": "github_actions_copilot_cli",
       "independent_invocation": true,

@@ -6,4 +6,4 @@
 
 <img src="docs/assets/brand/quillframe-mark.svg" alt="Quillframe mark: a manuscript page crossed by a single narrative thread" width="84" />
 
-Quillframe is the current public brand of the framework whose compatibility namespace remains `novelforge`. Existing repository paths, schema IDs, project manifests, lockfiles, workflow names, and contract IDs are intentionally preserved.
+Quillframe is the current public brand of the framework whose compatibility namespace remains `quillframe`. Existing repository paths, schema IDs, project manifests, lockfiles, workflow names, and contract IDs are intentionally preserved.

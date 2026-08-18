@@ -1,16 +1,16 @@
 @layer product-base, product-layout, product-components, product-docs;
 
 /*
- * NovelForge Product Entry semantic bridge.
+ * Quillframe Product Entry semantic bridge.
  *
- * WeiUI owns generic control behavior and Story Loom owns NovelForge semantic
+ * WeiUI owns generic control behavior and Story Loom owns Quillframe semantic
  * tokens. This layer only maps those contracts into Product Entry composition;
  * it must not introduce a parallel palette, spacing scale, or accessibility
  * contract.
  */
 @layer product-base {
   :root {
-    --pe-touch-target: var(--nf-touch-target-min, 44px);
+    --pe-touch-target: var(--qf-touch-target-min, 44px);
   }
 }
 

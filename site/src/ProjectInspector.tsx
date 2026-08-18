@@ -56,9 +56,9 @@ function basename(pathname: string) {
 }
 
 function rootNameFor(files: File[]) {
-  if (!files[0]) return "NovelForge Project";
+  if (!files[0]) return "Quillframe Project";
   const parts = normalizePath(files[0]).split("/").filter(Boolean);
-  return parts.length > 1 ? parts[0] : "NovelForge Project";
+  return parts.length > 1 ? parts[0] : "Quillframe Project";
 }
 
 function escapeRegExp(value: string) {
@@ -111,8 +111,8 @@ async function inspectFiles(fileList: FileList | File[], zh: boolean): Promise<P
   const files = Array.from(fileList);
   const entries = files.map((file) => ({ file, path: relativeToProject(normalizePath(file)) }));
   const find = (name: string) => entries.find((entry) => basename(entry.path).toLocaleLowerCase() === name.toLocaleLowerCase());
-  const manifestEntry = find("novelforge.toml");
-  const lockEntry = find("novelforge.lock.json");
+  const manifestEntry = find("quillframe.toml");
+  const lockEntry = find("quillframe.lock.json");
   const attestationEntry = find("framework.attestation.json");
 
   const manifestSource = manifestEntry ? await manifestEntry.file.text() : "";
@@ -146,11 +146,11 @@ async function inspectFiles(fileList: FileList | File[], zh: boolean): Promise<P
   const checks: InspectionCheck[] = [];
   const push = (key: string, state: CheckState, title: string, detail: string) => checks.push({ key, state, title, detail });
 
-  push("manifest", manifestEntry ? "pass" : "fail", "novelforge.toml", manifestEntry?.path ?? (zh ? "没有找到 Project manifest。" : "Project manifest not found."));
+  push("manifest", manifestEntry ? "pass" : "fail", "quillframe.toml", manifestEntry?.path ?? (zh ? "没有找到 Project manifest。" : "Project manifest not found."));
   push(
     "lock",
     lockEntry && !lockParseError ? "pass" : "fail",
-    "novelforge.lock.json",
+    "quillframe.lock.json",
     lockParseError
       ? (zh ? "Lockfile 存在，但不是有效 JSON。" : "Lockfile exists but is not valid JSON.")
       : lockEntry?.path ?? (zh ? "没有找到 Framework lockfile。" : "Framework lockfile not found."),
@@ -229,7 +229,7 @@ function demoInspection(zh: boolean): ProjectInspection {
     rootName: "moonlit-archive",
     fileCount: 84,
     totalBytes: 1_842_770,
-    project: { id: "MOONLIT-ARCHIVE", title: "Moonlit Archive", language: "zh-CN", version: "0.4.0", schema: "novelforge-project-v1" },
+    project: { id: "MOONLIT-ARCHIVE", title: "Moonlit Archive", language: "zh-CN", version: "0.4.0", schema: "quillframe-project-v1" },
     framework: {
       repository: "xiaooye/cn_webnovel_agent",
       version: "8.0-dev",
@@ -238,8 +238,8 @@ function demoInspection(zh: boolean): ProjectInspection {
     },
     status: "coherent",
     checks: [
-      { key: "manifest", state: "pass", title: "novelforge.toml", detail: "novelforge.toml" },
-      { key: "lock", state: "pass", title: "novelforge.lock.json", detail: "novelforge.lock.json" },
+      { key: "manifest", state: "pass", title: "quillframe.toml", detail: "quillframe.toml" },
+      { key: "lock", state: "pass", title: "quillframe.lock.json", detail: "quillframe.lock.json" },
       { key: "commit", state: "pass", title: zh ? "精确 Framework revision" : "Exact framework revision", detail: "4f18d3c9d4b11cf0d282e108db9fc8f18ad9e67a" },
       { key: "fingerprint", state: "pass", title: "Bundle fingerprint", detail: "SHA-256 bundle identity present." },
       { key: "structure", state: "pass", title: "Project authority structure", detail: zh ? "6/6 标准逻辑目录已检测。" : "6/6 core logical directories detected." },
@@ -269,8 +269,8 @@ export default function ProjectInspector(props: Props) {
     select: "选择项目文件夹",
     demo: "载入示例项目",
     privacy: "本地读取 · 不上传",
-    emptyTitle: "选择一个 NovelForge Project",
-    emptyBody: "检查器会识别 novelforge.toml、lock、可选 attestation、核心逻辑目录与质量证据面。",
+    emptyTitle: "选择一个 Quillframe Project",
+    emptyBody: "检查器会识别 quillframe.toml、lock、可选 attestation、核心逻辑目录与质量证据面。",
     cliTitle: "还没有项目？",
     cliBody: "当前 Project SDK 的真实入口是 Python CLI：",
     summary: "项目摘要",
@@ -294,8 +294,8 @@ export default function ProjectInspector(props: Props) {
     select: "Choose project folder",
     demo: "Load demo project",
     privacy: "Local read · no upload",
-    emptyTitle: "Choose a NovelForge Project",
-    emptyBody: "The inspector detects novelforge.toml, the framework lock, optional attestation, core logical directories, and quality evidence surfaces.",
+    emptyTitle: "Choose a Quillframe Project",
+    emptyBody: "The inspector detects quillframe.toml, the framework lock, optional attestation, core logical directories, and quality evidence surfaces.",
     cliTitle: "No project yet?",
     cliBody: "The current Project SDK entry point is the Python CLI:",
     summary: "Project summary",

@@ -1,4 +1,4 @@
-# NovelForge · Claude Code Bootstrap Router
+# Quillframe · Claude Code Bootstrap Router
 
 Authoritative editions:
 - English: `CLAUDE.en.md`

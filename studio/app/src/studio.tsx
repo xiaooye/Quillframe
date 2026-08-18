@@ -2,7 +2,7 @@ import { createContext, createResource, createSignal, ParentComponent, useContex
 import { BridgeDescription, BridgeResult, StudioSurface, bridgeTransportAvailable, invokeBridge, studioSurface } from "./bridge";
 
 export interface ProjectHubProjection {
-  schema: "novelforge_studio_project_hub_projection_v1";
+  schema: "quillframe_studio_project_hub_projection_v1";
   authority: false;
   project: {
     id: string | null;
@@ -60,7 +60,7 @@ export const StudioProvider: ParentComponent = (props) => {
 
   const inspectProject = async (root = projectRoot()) => {
     if (!hasBridge) {
-      setProjectError("NovelForge Core host is not bound to this Studio surface");
+      setProjectError("Quillframe Core host is not bound to this Studio surface");
       return;
     }
     const trimmed = root.trim();

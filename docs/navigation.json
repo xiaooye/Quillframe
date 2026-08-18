@@ -2,7 +2,7 @@
   "schema": "quillframe_docs_navigation_v1",
   "public_brand": "Quillframe",
   "sections": [
-    {"id":"start_here","title":"START HERE","items":["README.en.md","why-novelforge.en.md","architecture.en.md"]},
+    {"id":"start_here","title":"START HERE","items":["README.en.md","why-quillframe.en.md","architecture.en.md"]},
     {"id":"core_concepts","title":"CORE CONCEPTS","items":["architecture.en.md","architecture-atlas.en.md","../core/CANON_STATE.en.md"]},
     {"id":"writing","title":"WRITING","items":["production-pipeline.en.md","../surface/FUNDAMENTALS.en.md","../surface/READER_ENGAGEMENT.en.md"]},
     {"id":"quality","title":"QUALITY","items":["quality-assurance.en.md","quality-evolution.en.md","CANDIDATE_LINEAGE_V1.en.md"]},

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lineage-aware runtime facade for NovelForge quality evolution.
+"""Lineage-aware runtime facade for Quillframe quality evolution.
 
 `quality_evolution` remains the single durable incumbent/challenger ledger and
 `quality.compare` remains the semantic winner owner. This facade is the runtime
@@ -27,7 +27,7 @@ if str(QUALITY) not in sys.path:
 import candidate_lineage as cl  # noqa: E402
 import quality_evolution as qe  # noqa: E402
 
-SCHEMA = "novelforge_candidate_lineage_runtime_v1"
+SCHEMA = "quillframe_candidate_lineage_runtime_v1"
 
 
 def connect(path: Path):
@@ -380,8 +380,8 @@ def self_test(path: Path) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge lineage-aware quality evolution runtime")
-    parser.add_argument("--db", default=".novelforge/quality-evolution.db")
+    parser = argparse.ArgumentParser(description="Quillframe lineage-aware quality evolution runtime")
+    parser.add_argument("--db", default=".quillframe/quality-evolution.db")
     sub = parser.add_subparsers(dest="command", required=True)
 
     st = sub.add_parser("start")
@@ -426,7 +426,7 @@ def main() -> int:
     cp.add_argument("--run-id", required=True)
 
     sf = sub.add_parser("self-test")
-    sf.add_argument("--path", default="/tmp/novelforge-candidate-lineage-runtime-selftest.db")
+    sf.add_argument("--path", default="/tmp/quillframe-candidate-lineage-runtime-selftest.db")
 
     args = parser.parse_args()
     if args.command == "self-test":

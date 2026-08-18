@@ -1,11 +1,11 @@
 /* Deep documentation pages -------------------------------------------------
    Keep Starlight's information architecture, but make the reading experience
-   feel native to the NovelForge product rather than like a themed docs shell. */
+   feel native to the Quillframe product rather than like a themed docs shell. */
 
 body:has(.nf-article-title) .main-pane {
   background:
-    radial-gradient(34rem 18rem at 14% 0%, color-mix(in oklab, var(--nf-pink-soft) 44%, transparent), transparent 72%),
-    radial-gradient(30rem 18rem at 90% 2%, color-mix(in oklab, var(--nf-lilac-soft) 42%, transparent), transparent 74%);
+    radial-gradient(34rem 18rem at 14% 0%, color-mix(in oklab, var(--qf-pink-soft) 44%, transparent), transparent 72%),
+    radial-gradient(30rem 18rem at 90% 2%, color-mix(in oklab, var(--qf-lilac-soft) 42%, transparent), transparent 74%);
 }
 
 body:has(.nf-article-title) .content-panel {
@@ -27,14 +27,14 @@ body:has(.nf-article-title) .content-panel + .content-panel {
   isolation: isolate;
   overflow: hidden;
   padding: clamp(1.45rem, 3.4vw, 2.25rem) clamp(1.35rem, 3.4vw, 2.35rem);
-  border: 1px solid color-mix(in oklab, var(--nf-pink) 28%, var(--nf-border));
+  border: 1px solid color-mix(in oklab, var(--qf-pink) 28%, var(--qf-border));
   border-radius: 1.35rem;
-  color: var(--nf-ink);
+  color: var(--qf-ink);
   background:
-    radial-gradient(24rem 13rem at 5% 0%, color-mix(in oklab, var(--nf-pink-soft) 82%, transparent), transparent 72%),
-    radial-gradient(22rem 13rem at 100% 6%, color-mix(in oklab, var(--nf-lilac-soft) 78%, transparent), transparent 74%),
-    color-mix(in oklab, var(--nf-surface-solid) 94%, var(--nf-cream));
-  box-shadow: var(--nf-shadow-soft);
+    radial-gradient(24rem 13rem at 5% 0%, color-mix(in oklab, var(--qf-pink-soft) 82%, transparent), transparent 72%),
+    radial-gradient(22rem 13rem at 100% 6%, color-mix(in oklab, var(--qf-lilac-soft) 78%, transparent), transparent 74%),
+    color-mix(in oklab, var(--qf-surface-solid) 94%, var(--qf-cream));
+  box-shadow: var(--qf-shadow-soft);
 }
 
 .nf-article-title::before {
@@ -42,7 +42,7 @@ body:has(.nf-article-title) .content-panel + .content-panel {
   position: absolute;
   inset: 7px;
   z-index: -1;
-  border: 1px dashed color-mix(in oklab, var(--nf-pink) 24%, transparent);
+  border: 1px dashed color-mix(in oklab, var(--qf-pink) 24%, transparent);
   border-radius: 1rem;
   pointer-events: none;
 }
@@ -53,7 +53,7 @@ body:has(.nf-article-title) .content-panel + .content-panel {
   right: 1.1rem;
   top: .8rem;
   z-index: -1;
-  color: color-mix(in oklab, var(--nf-pink) 24%, transparent);
+  color: color-mix(in oklab, var(--qf-pink) 24%, transparent);
   font-size: .8rem;
   letter-spacing: .4rem;
   pointer-events: none;
@@ -80,21 +80,21 @@ body:has(.nf-article-title) .content-panel + .content-panel {
 .nf-article-title__eyebrow {
   gap: .32rem;
   padding: 0 .62rem;
-  color: color-mix(in oklab, var(--nf-pink-strong) 82%, var(--nf-ink));
-  background: color-mix(in oklab, var(--nf-pink-soft) 88%, transparent);
+  color: color-mix(in oklab, var(--qf-pink-strong) 82%, var(--qf-ink));
+  background: color-mix(in oklab, var(--qf-pink-soft) 88%, transparent);
 }
 
 .nf-article-title__section {
   padding: 0 .58rem;
-  border: 1px solid color-mix(in oklab, var(--nf-lilac) 26%, var(--nf-border));
-  color: color-mix(in oklab, var(--nf-lilac) 72%, var(--nf-ink));
-  background: color-mix(in oklab, var(--nf-lilac-soft) 72%, transparent);
+  border: 1px solid color-mix(in oklab, var(--qf-lilac) 26%, var(--qf-border));
+  color: color-mix(in oklab, var(--qf-lilac) 72%, var(--qf-ink));
+  background: color-mix(in oklab, var(--qf-lilac-soft) 72%, transparent);
 }
 
 .nf-article-title h1 {
   max-width: 18ch;
   margin: 0;
-  color: var(--nf-ink);
+  color: var(--qf-ink);
   font-size: clamp(2rem, 4vw, 3.2rem);
   font-weight: 780;
   letter-spacing: -.052em;
@@ -128,16 +128,16 @@ body:has(.nf-article-title) .content-panel + .content-panel {
   gap: .5rem;
   width: min(100%, 18rem);
   margin-top: 1.15rem;
-  color: color-mix(in oklab, var(--nf-pink) 62%, var(--nf-lilac));
+  color: color-mix(in oklab, var(--qf-pink) 62%, var(--qf-lilac));
 }
 
 .nf-article-title__rule span {
   height: 1px;
-  background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--nf-pink) 46%, var(--nf-border)));
+  background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--qf-pink) 46%, var(--qf-border)));
 }
 
 .nf-article-title__rule span:last-child {
-  background: linear-gradient(90deg, color-mix(in oklab, var(--nf-lilac) 42%, var(--nf-border)), transparent);
+  background: linear-gradient(90deg, color-mix(in oklab, var(--qf-lilac) 42%, var(--qf-border)), transparent);
 }
 
 .nf-article-title__rule i {
@@ -148,7 +148,7 @@ body:has(.nf-article-title) .content-panel + .content-panel {
 /* Reading column ---------------------------------------------------------- */
 
 body:has(.nf-article-title) .sl-markdown-content {
-  color: color-mix(in oklab, var(--sl-color-gray-2) 94%, var(--nf-ink));
+  color: color-mix(in oklab, var(--sl-color-gray-2) 94%, var(--qf-ink));
 }
 
 body:has(.nf-article-title) .sl-markdown-content > :where(p, ul, ol, blockquote, table, details) {
@@ -171,8 +171,8 @@ body:has(.nf-article-title) .sl-markdown-content h2::before {
   width: .34rem;
   height: 1.05em;
   border-radius: 999px;
-  background: linear-gradient(180deg, var(--nf-pink), var(--nf-lilac));
-  box-shadow: 0 5px 12px -8px var(--nf-pink-strong);
+  background: linear-gradient(180deg, var(--qf-pink), var(--qf-lilac));
+  box-shadow: 0 5px 12px -8px var(--qf-pink-strong);
 }
 
 body:has(.nf-article-title) .sl-markdown-content h3 {
@@ -186,51 +186,51 @@ body:has(.nf-article-title) .sl-markdown-content h3::after {
   width: 2.4rem;
   height: 1px;
   margin-top: .4rem;
-  background: color-mix(in oklab, var(--nf-lilac) 40%, var(--nf-border));
+  background: color-mix(in oklab, var(--qf-lilac) 40%, var(--qf-border));
 }
 
 body:has(.nf-article-title) .sl-markdown-content blockquote {
   border-inline-start-width: 0;
-  border: 1px solid color-mix(in oklab, var(--nf-lilac) 26%, var(--nf-border));
+  border: 1px solid color-mix(in oklab, var(--qf-lilac) 26%, var(--qf-border));
   border-radius: .9rem;
   background:
-    linear-gradient(135deg, color-mix(in oklab, var(--nf-lilac-soft) 54%, var(--nf-surface)), color-mix(in oklab, var(--nf-pink-soft) 36%, var(--nf-surface)));
-  box-shadow: 0 12px 30px -28px color-mix(in oklab, var(--nf-lilac) 55%, transparent);
+    linear-gradient(135deg, color-mix(in oklab, var(--qf-lilac-soft) 54%, var(--qf-surface)), color-mix(in oklab, var(--qf-pink-soft) 36%, var(--qf-surface)));
+  box-shadow: 0 12px 30px -28px color-mix(in oklab, var(--qf-lilac) 55%, transparent);
 }
 
 body:has(.nf-article-title) .sl-markdown-content pre {
   overflow: auto;
-  border: 1px solid color-mix(in oklab, var(--nf-lilac) 20%, var(--nf-border));
+  border: 1px solid color-mix(in oklab, var(--qf-lilac) 20%, var(--qf-border));
   border-radius: 1rem;
-  box-shadow: 0 18px 42px -36px color-mix(in oklab, var(--nf-lilac) 60%, transparent);
+  box-shadow: 0 18px 42px -36px color-mix(in oklab, var(--qf-lilac) 60%, transparent);
 }
 
 body:has(.nf-article-title) .sl-markdown-content table {
   overflow: hidden;
-  border: 1px solid color-mix(in oklab, var(--nf-border) 92%, transparent);
+  border: 1px solid color-mix(in oklab, var(--qf-border) 92%, transparent);
   border-radius: .9rem;
-  background: color-mix(in oklab, var(--nf-surface) 94%, transparent);
+  background: color-mix(in oklab, var(--qf-surface) 94%, transparent);
   box-shadow: 0 14px 34px -32px oklch(.48 .08 340 / .32);
 }
 
 body:has(.nf-article-title) .sl-markdown-content th {
-  color: var(--nf-ink);
-  background: color-mix(in oklab, var(--nf-pink-soft) 42%, var(--nf-surface));
+  color: var(--qf-ink);
+  background: color-mix(in oklab, var(--qf-pink-soft) 42%, var(--qf-surface));
 }
 
 body:has(.nf-article-title) .sl-markdown-content tr:nth-child(even) td {
-  background: color-mix(in oklab, var(--nf-lilac-soft) 16%, transparent);
+  background: color-mix(in oklab, var(--qf-lilac-soft) 16%, transparent);
 }
 
 body:has(.nf-article-title) .sl-markdown-content details {
   padding: .75rem .9rem;
-  border: 1px solid color-mix(in oklab, var(--nf-border) 86%, transparent);
+  border: 1px solid color-mix(in oklab, var(--qf-border) 86%, transparent);
   border-radius: .82rem;
-  background: color-mix(in oklab, var(--nf-surface) 92%, transparent);
+  background: color-mix(in oklab, var(--qf-surface) 92%, transparent);
 }
 
 body:has(.nf-article-title) .sl-markdown-content details > summary {
-  color: var(--nf-ink);
+  color: var(--qf-ink);
   font-weight: 720;
   cursor: pointer;
 }
@@ -238,8 +238,8 @@ body:has(.nf-article-title) .sl-markdown-content details > summary {
 /* Table of contents ------------------------------------------------------- */
 
 body:has(.nf-article-title) .right-sidebar {
-  border-inline-start-color: color-mix(in oklab, var(--nf-border) 72%, transparent);
-  background: linear-gradient(180deg, color-mix(in oklab, var(--nf-surface) 76%, transparent), transparent 74%);
+  border-inline-start-color: color-mix(in oklab, var(--qf-border) 72%, transparent);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--qf-surface) 76%, transparent), transparent 74%);
 }
 
 body:has(.nf-article-title) .right-sidebar a {
@@ -250,36 +250,36 @@ body:has(.nf-article-title) .right-sidebar a {
 }
 
 body:has(.nf-article-title) .right-sidebar a:hover {
-  color: var(--nf-ink);
-  background: color-mix(in oklab, var(--nf-pink-soft) 48%, transparent);
+  color: var(--qf-ink);
+  background: color-mix(in oklab, var(--qf-pink-soft) 48%, transparent);
 }
 
 body:has(.nf-article-title) .right-sidebar a[aria-current="true"],
 body:has(.nf-article-title) .right-sidebar a[aria-current="page"] {
-  color: color-mix(in oklab, var(--nf-pink-strong) 82%, var(--nf-ink));
+  color: color-mix(in oklab, var(--qf-pink-strong) 82%, var(--qf-ink));
   font-weight: 720;
 }
 
 /* Footer navigation ------------------------------------------------------- */
 
 body:has(.nf-article-title) .pagination-links a {
-  border: 1px solid color-mix(in oklab, var(--nf-border) 90%, transparent);
+  border: 1px solid color-mix(in oklab, var(--qf-border) 90%, transparent);
   border-radius: 1rem;
-  background: color-mix(in oklab, var(--nf-surface) 92%, transparent);
+  background: color-mix(in oklab, var(--qf-surface) 92%, transparent);
   box-shadow: 0 14px 34px -32px oklch(.48 .08 340 / .34);
   transition: border-color .16s ease, background-color .16s ease, transform .16s ease, box-shadow .16s ease;
 }
 
 body:has(.nf-article-title) .pagination-links a:hover,
 body:has(.nf-article-title) .pagination-links a:focus-visible {
-  border-color: color-mix(in oklab, var(--nf-pink) 34%, var(--nf-border));
-  background: color-mix(in oklab, var(--nf-pink-soft) 34%, var(--nf-surface));
-  box-shadow: 0 18px 38px -30px color-mix(in oklab, var(--nf-pink) 40%, transparent);
+  border-color: color-mix(in oklab, var(--qf-pink) 34%, var(--qf-border));
+  background: color-mix(in oklab, var(--qf-pink-soft) 34%, var(--qf-surface));
+  box-shadow: 0 18px 38px -30px color-mix(in oklab, var(--qf-pink) 40%, transparent);
   transform: translateY(-1px);
 }
 
 body:has(.nf-article-title) .pagination-links a:focus-visible {
-  outline: 2px solid color-mix(in oklab, var(--nf-pink) 60%, transparent);
+  outline: 2px solid color-mix(in oklab, var(--qf-pink) 60%, transparent);
   outline-offset: 3px;
 }
 

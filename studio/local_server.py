@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Loopback-only HTTP transport for the NovelForge Studio product shell.
+"""Loopback-only HTTP transport for the Quillframe Studio product shell.
 
 This server is transport, not authority. It serves the built SolidJS app and
 forwards one typed POST endpoint to studio/host_bridge.py. It does not read
@@ -27,9 +27,9 @@ from host_bridge import invoke
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_DIST = HERE / "app" / "dist"
-TOKEN_PLACEHOLDER = "__NOVELFORGE_STUDIO_TOKEN__"
+TOKEN_PLACEHOLDER = "__QUILLFRAME_STUDIO_TOKEN__"
 MAX_REQUEST_BYTES = 128 * 1024
-SERVER_SCHEMA = "novelforge_studio_local_server_v1"
+SERVER_SCHEMA = "quillframe_studio_local_server_v1"
 
 
 class StudioServer(ThreadingHTTPServer):
@@ -81,7 +81,7 @@ class StudioHandler(BaseHTTPRequestHandler):
         self._send_bytes(status, body, "application/json; charset=utf-8")
 
     def _transport_error(self, status: int, code: str, message: str) -> None:
-        self._json(status, {"schema": "novelforge_studio_transport_error_v1", "code": code, "message": message, "authority": False})
+        self._json(status, {"schema": "quillframe_studio_transport_error_v1", "code": code, "message": message, "authority": False})
 
     def _host_allowed(self) -> bool:
         return self.headers.get("Host", "") in self.allowed_hosts
@@ -136,7 +136,7 @@ class StudioHandler(BaseHTTPRequestHandler):
         if not self._host_allowed() or not self._request_origin_allowed():
             self._transport_error(HTTPStatus.FORBIDDEN, "origin_rejected", "Request is not from the loopback Studio origin")
             return
-        supplied = self.headers.get("X-NovelForge-Studio-Token", "")
+        supplied = self.headers.get("X-Quillframe-Studio-Token", "")
         if not supplied or not hmac.compare_digest(supplied, self.server.token):
             self._transport_error(HTTPStatus.FORBIDDEN, "token_rejected", "Studio transport token is missing or invalid")
             return
@@ -175,9 +175,9 @@ def create_server(dist: Path, *, port: int = 0, token: str | None = None, verbos
 
 
 def self_test() -> dict[str, Any]:
-    with tempfile.TemporaryDirectory(prefix="novelforge-studio-server-") as temp:
+    with tempfile.TemporaryDirectory(prefix="quillframe-studio-server-") as temp:
         dist = Path(temp)
-        (dist / "index.html").write_text(f"<meta name='novelforge-studio-token' content='{TOKEN_PLACEHOLDER}'>", encoding="utf-8")
+        (dist / "index.html").write_text(f"<meta name='quillframe-studio-token' content='{TOKEN_PLACEHOLDER}'>", encoding="utf-8")
         (dist / "asset.txt").write_text("asset-ok", encoding="utf-8")
         server = create_server(dist, token="self-test-token")
         thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -191,7 +191,7 @@ def self_test() -> dict[str, Any]:
             checks["static_asset"] = urllib.request.urlopen(base + "/asset.txt", timeout=3).read() == b"asset-ok"
 
             request_body = json.dumps({
-                "schema": "novelforge_studio_host_bridge_request_v1",
+                "schema": "quillframe_studio_host_bridge_request_v1",
                 "request_id": "local-server-self-test",
                 "operation": "bridge.describe",
                 "surface": "local_app",
@@ -204,13 +204,13 @@ def self_test() -> dict[str, Any]:
                 data=request_body,
                 headers={
                     "Content-Type": "application/json",
-                    "X-NovelForge-Studio-Token": "self-test-token",
+                    "X-Quillframe-Studio-Token": "self-test-token",
                     "Origin": base,
                     "Sec-Fetch-Site": "same-origin",
                 },
             )
             result = json.loads(urllib.request.urlopen(good, timeout=5).read())
-            checks["bridge_envelope"] = result.get("schema") == "novelforge_studio_host_bridge_result_v1" and result.get("status") == "ok"
+            checks["bridge_envelope"] = result.get("schema") == "quillframe_studio_host_bridge_result_v1" and result.get("status") == "ok"
             checks["authority_false"] = all(result.get(key) is False for key in ("authority", "canon_authority", "framework_write_authority", "settlement_authority"))
 
             bad = urllib.request.Request(base + "/api/bridge/invoke", method="POST", data=request_body, headers={"Content-Type": "application/json"})
@@ -225,7 +225,7 @@ def self_test() -> dict[str, Any]:
             thread.join(timeout=3)
 
     return {
-        "schema": "novelforge_studio_local_server_self_test_v1",
+        "schema": "quillframe_studio_local_server_self_test_v1",
         "status": "pass" if all(checks.values()) else "fail",
         "checks": checks,
         "bind_host": "127.0.0.1",
@@ -236,7 +236,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Serve the NovelForge Studio app on a loopback-only transport")
+    parser = argparse.ArgumentParser(description="Serve the Quillframe Studio app on a loopback-only transport")
     parser.add_argument("--dist", default=str(DEFAULT_DIST))
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--verbose", action="store_true")

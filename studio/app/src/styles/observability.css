@@ -1,4 +1,4 @@
-@layer novelforge-app {
+@layer quillframe-app {
   /* WeiUI owns alert/card/badge chrome. Studio owns the information architecture. */
   .nf-evidence-boundary { align-items: flex-start; }
   .nf-evidence-boundary .wui-alert__description { max-inline-size: 92ch; color: var(--wui-color-muted-foreground); }
@@ -52,7 +52,7 @@
   .nf-contract-row { min-inline-size: 0; border-block-end: 1px solid color-mix(in oklch, var(--wui-color-border) 74%, transparent); }
   .nf-contract-row:last-child { border-block-end: 0; }
   .nf-contract-row > summary {
-    min-block-size: var(--nf-touch-target-min, 44px);
+    min-block-size: var(--qf-touch-target-min, 44px);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -92,7 +92,7 @@
 
   .nf-raw-evidence { border-block-start: 1px solid var(--wui-color-border); }
   .nf-raw-evidence > summary {
-    min-block-size: var(--nf-touch-target-min, 44px);
+    min-block-size: var(--qf-touch-target-min, 44px);
     display: flex;
     align-items: center;
     padding-inline: var(--wui-spacing-5);

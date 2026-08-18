@@ -11,7 +11,7 @@ from build_judge_queue import build as build_blind_queue
 from evaluation_execution_identity import fingerprint,validate_identity
 from registered_contract_binding import validate_registered_job
 from semantic_worker_router import make_contract_job,make_eval_jobs,validate_result
-PACKET='novelforge_ai_native_ablation_observations_v2'; EVIDENCE='novelforge_ai_native_ablation_evidence_v2'; CONTRACT='quality.ablation_compare'
+PACKET='quillframe_ai_native_ablation_observations_v2'; EVIDENCE='quillframe_ai_native_ablation_evidence_v2'; CONTRACT='quality.ablation_compare'
 REL={'INCUMBENT_BETTER','CHALLENGER_BETTER','NO_MATERIAL_DIFFERENCE','INCONCLUSIVE'}; ORD={'INCUMBENT_FIRST','CHALLENGER_FIRST'}
 OBS_KEYS={'pair_id','replicate_id','presentation_order','candidate_fingerprint','condition_execution_identity','incumbent_result','challenger_result','pair_review_execution_identity','pair_review_job','pair_review_result'}
 def load(p:Path)->Any:return json.loads(p.read_text(encoding='utf-8'))
@@ -30,7 +30,7 @@ def eval_ctx()->tuple[dict[str,Any],dict[str,dict[str,Any]],str]:
  q=build_blind_queue(EVAL); jobs={j['subject_id']:j for j in make_eval_jobs(q).get('jobs',[])}; return q,jobs,json_file_fp(q)
 def manifest_errors(m:dict[str,Any],cs:dict[str,dict[str,Any]])->list[str]:
  e=[]; p=m.get('decision_protocol',{})
- if m.get('schema')!='novelforge_ai_native_ablation_manifest_v1':e.append('manifest schema mismatch')
+ if m.get('schema')!='quillframe_ai_native_ablation_manifest_v1':e.append('manifest schema mismatch')
  if m.get('model_execution_required_for_semantic_outcomes') is not True:e.append('model execution must be required')
  if m.get('manager_self_judgment_allowed') is not False:e.append('manager self-judgment must be forbidden')
  for k,v in [('pair_review_contract',CONTRACT),('required_condition_replicates',3),('reviews_per_replicate',2),('required_pair_reviews',6),('require_exact_counterbalance',True)]:
@@ -187,7 +187,7 @@ def prepare(m:dict[str,Any],cs:dict[str,dict[str,Any]])->dict[str,Any]:
   plan.append({'pair_id':pair['id'],'candidate_ref':pair['same_candidate_ref'],'candidate_fingerprint':cfp(text),'incumbent_case':pair['incumbent_case'],'challenger_case':pair['challenger_case'],'incumbent_input_fingerprint':jobs[pair['incumbent_case']]['input_fingerprint'],'challenger_input_fingerprint':jobs[pair['challenger_case']]['input_fingerprint'],'replicates':reps})
  return {'schema':PACKET,'pair_review_contract':CONTRACT,'blind_queue_fingerprint':qfp,'required_condition_replicates':3,'reviews_per_replicate':2,'required_pair_reviews':6,'manager_self_judgment_allowed':False,'execution_plan':plan,'observations':[]}
 def tid(model:str,run:str,qfp:str)->dict[str,Any]:
- i={'schema':'novelforge_evaluation_execution_identity_v1','candidate':{'commit':'a'*40,'framework_version':'9.9.9'},'reviewer':{'provider':'openai','model_id':model,'model_revision_binding':'provider_managed_unpinned','reasoning_effort':'medium','sampling':{'binding':'provider_defaults_unpinned'}},'evaluation':{'suite_version':'test','domain':'ablation','blind':True,'queue_fingerprint':qfp,'jobs_fingerprint':'sha256:'+hashlib.sha256(run.encode()).hexdigest(),'capabilities_fingerprint':'sha256:'+'3'*64,'harness_fingerprint':'sha256:'+'4'*64},'environment':{'runner_os':'Linux','runner_arch':'X64','python_version':'3.11'},'resource_budget':{'binding':'same-test-budget'},'provenance':{'github_run_id':run}};i['identity_fingerprint']=fingerprint(i);return i
+ i={'schema':'quillframe_evaluation_execution_identity_v1','candidate':{'commit':'a'*40,'framework_version':'9.9.9'},'reviewer':{'provider':'openai','model_id':model,'model_revision_binding':'provider_managed_unpinned','reasoning_effort':'medium','sampling':{'binding':'provider_defaults_unpinned'}},'evaluation':{'suite_version':'test','domain':'ablation','blind':True,'queue_fingerprint':qfp,'jobs_fingerprint':'sha256:'+hashlib.sha256(run.encode()).hexdigest(),'capabilities_fingerprint':'sha256:'+'3'*64,'harness_fingerprint':'sha256:'+'4'*64},'environment':{'runner_os':'Linux','runner_arch':'X64','python_version':'3.11'},'resource_budget':{'binding':'same-test-budget'},'provenance':{'github_run_id':run}};i['identity_fingerprint']=fingerprint(i);return i
 def arm_result(job:dict[str,Any],tag:str)->dict[str,Any]:return {'job_id':job['job_id'],'subject_id':job['subject_id'],'kind':job['kind'],'input_fingerprint':job['input_fingerprint'],'status':'completed','worker':{'provider':'openai','model_or_reviewer':'arm-model'},'judgment':{'confidence':.8,'verdict':'accept','codes':[],'evidence':[tag]},'proposals':[],'errors':[],'execution':{'worker_session_id':f'SES-ARM-{tag}','attempt_id':f'ATT-ARM-{tag}'}}
 def rev_result(job:dict[str,Any],tag:str,rel:str='NO_MATERIAL_DIFFERENCE',reg:str='NEITHER')->dict[str,Any]:return {'job_id':job['job_id'],'subject_id':job['subject_id'],'kind':job['kind'],'input_fingerprint':job['input_fingerprint'],'status':'completed','worker':{'provider':'openai','model_or_reviewer':'review-model'},'judgment':{'confidence':.8,'relation':rel,'regression_in':reg,'reason':'synthetic evidence','evidence':[tag]},'proposals':[],'errors':[],'execution':{'worker_session_id':f'SES-REV-{tag}','attempt_id':f'ATT-REV-{tag}'}}
 def synthetic(m:dict[str,Any],cs:dict[str,dict[str,Any]])->dict[str,Any]:

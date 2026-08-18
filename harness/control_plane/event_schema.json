@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "novelforge-event-v1",
-  "title": "NovelForge Runtime Event",
+  "$id": "quillframe-event-v1",
+  "title": "Quillframe Runtime Event",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -17,7 +17,7 @@
     "payload"
   ],
   "properties": {
-    "schema": {"const": "novelforge_event_v1"},
+    "schema": {"const": "quillframe_event_v1"},
     "event_id": {"type": "string", "minLength": 1},
     "event_type": {
       "enum": [

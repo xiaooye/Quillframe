@@ -65,7 +65,7 @@ check(css.includes('content: "PROJECT FILES"'), "Inspector must preserve the pro
 check(css.includes("open notebook + execution sheet") && css.includes("linear-gradient(90deg"), "Playground must preserve the two-page notebook/workbench composition");
 check(css.includes("host rail + wiring desk"), "Agent integration must preserve its host-workbench composition");
 check(css.includes("Product / Studio: keep the same brand grammar"), "Product and Studio must participate in the shared Story Loom visual language");
-check(readability.includes("--nf-copy-size: 14px") && readability.includes("--nf-micro-size: 11px"), "workbench readability floor must stay active");
+check(readability.includes("--qf-copy-size: 14px") && readability.includes("--qf-micro-size: 11px"), "workbench readability floor must stay active");
 check(!css.includes("!important"), "Story Loom workstation composition must not rely on specificity escalation");
 check(!/animation-iteration-count\s*:\s*infinite|animation\s*:[^;]*\binfinite\b/i.test(`${css}\n${embedded}\n${readability}`), "tool workbench layers must not add infinite idle animation");
 
@@ -74,7 +74,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_tool_workbench_quality_v5",
+    schema: "quillframe_tool_workbench_quality_v5",
     status: "pass",
     shell: "shared_product_app",
     css_entrypoint: "index.css",

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NovelForge mid-run author steering: durable input, safe-point binding, consume-once."""
+"""Quillframe mid-run author steering: durable input, safe-point binding, consume-once."""
 from __future__ import annotations
 import argparse, hashlib, json, sys, tempfile
 from pathlib import Path
@@ -12,11 +12,11 @@ import control_plane  # noqa: E402
 
 EVENT_TYPE = "feedback.observed"
 PAYLOAD_KIND = "author_steering"
-REQUEST_SCHEMA = "novelforge_author_steering_request_v1"
-SAFE_POINT_SCHEMA = "novelforge_author_steering_safe_point_v1"
-DECISION_INPUT_SCHEMA = "novelforge_author_steering_decision_input_v1"
-DECISION_SCHEMA = "novelforge_author_steering_decision_v1"
-RECEIPT_SCHEMA = "novelforge_author_steering_receipt_v1"
+REQUEST_SCHEMA = "quillframe_author_steering_request_v1"
+SAFE_POINT_SCHEMA = "quillframe_author_steering_safe_point_v1"
+DECISION_INPUT_SCHEMA = "quillframe_author_steering_decision_input_v1"
+DECISION_SCHEMA = "quillframe_author_steering_decision_v1"
+RECEIPT_SCHEMA = "quillframe_author_steering_receipt_v1"
 SOURCE_KINDS = {"user", "authorized_human"}
 SCOPES = {"current_run", "future_runs", "named_target"}
 CONSUME_AT = {"next_safe_point", "before_draft", "before_review", "before_user_visible_gate"}
@@ -294,7 +294,7 @@ def main() -> int:
     q=sub.add_parser("consume"); q.add_argument("--event-id",required=True); q.add_argument("--safe-point",required=True); q.add_argument("--decision",required=True)
     q=sub.add_parser("self-test"); q.add_argument("--path")
     a=p.parse_args()
-    if a.cmd=="self-test": return self_test(Path(a.path) if a.path else Path(tempfile.gettempdir())/"novelforge-author-steering.db")
+    if a.cmd=="self-test": return self_test(Path(a.path) if a.path else Path(tempfile.gettempdir())/"quillframe-author-steering.db")
     cp=control_plane.ControlPlane(a.db); cp.init()
     if a.cmd=="validate-event": out={"valid":True,**validate_event(control_plane.load_json(a.event))}
     elif a.cmd=="prepare": out=prepare(cp,a.event_id,control_plane.load_json(a.safe_point))

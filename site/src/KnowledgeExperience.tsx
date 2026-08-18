@@ -20,12 +20,12 @@ import {
 
 const copy = {
   "zh-CN": {
-    eyebrow: "NovelForge 知识库",
+    eyebrow: "Quillframe 知识库",
     title: "先说你想做什么，再决定要不要往深处读。",
     lede: "这里按实际使用场景来组织内容，不要求你先记住框架里的术语。可以从推荐路线开始，也可以直接搜一个问题。",
     search: "搜索文档、概念或问题…",
     start: "从这里开始",
-    startLede: "第一次了解 NovelForge，建议先看这几篇。",
+    startLede: "第一次了解 Quillframe，建议先看这几篇。",
     browse: "按你现在要做的事来找",
     browseLede: "不用先知道内部模块叫什么。选中你正在做的事，就能看到相关内容。",
     results: "搜索结果",
@@ -42,12 +42,12 @@ const copy = {
     retry: "再试一次",
   },
   "en-US": {
-    eyebrow: "NovelForge Knowledge",
+    eyebrow: "Quillframe Knowledge",
     title: "Start with the problem you need to solve, then go as deep as you want.",
     lede: "Knowledge is organized around the creative journey, not internal framework taxonomy. Follow a recommended path or search for a question directly.",
     search: "Search docs, concepts, or questions…",
     start: "Start here",
-    startLede: "New to NovelForge? This is the recommended reading path.",
+    startLede: "New to Quillframe? This is the recommended reading path.",
     browse: "Browse by goal",
     browseLede: "You do not need to know the framework's internal vocabulary first. Pick what you are trying to do.",
     results: "Search results",
@@ -78,7 +78,7 @@ function navigateSpa(event: MouseEvent, href: string) {
   event.preventDefault();
   if (window.location.pathname === href) return;
 
-  // main.tsx wraps pushState and emits novelforge:locationchange for this
+  // main.tsx wraps pushState and emits quillframe:locationchange for this
   // replacement surface. Do not also synthesize popstate: @solidjs/router owns
   // that event and would re-render the legacy route under our portal mid-click.
   window.history.pushState({}, "", href);

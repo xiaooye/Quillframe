@@ -1,6 +1,6 @@
-# Claude Code · NovelForge 框架启动契约
+# Claude Code · Quillframe 框架启动契约
 
-本仓库保存的是**通用 NovelForge 框架**，不是某一本具体小说。Claude Code 可以承担 manager 或受限 specialist，但 provider / session 状态永远不会因此获得小说权威。
+本仓库保存的是**通用 Quillframe 框架**，不是某一本具体小说。Claude Code 可以承担 manager 或受限 specialist，但 provider / session 状态永远不会因此获得小说权威。
 
 ## 01 · 启动顺序
 
@@ -26,7 +26,7 @@
 
 ## 03 · 语义工作以契约为中心
 
-NovelForge 是 AI-native，但不是“全靠 prompt”。
+Quillframe 是 AI-native，但不是“全靠 prompt”。
 
 通过 [`harness/semantic_workers/model_contract_catalog.json`](harness/semantic_workers/model_contract_catalog.json) 解析当前任务所需的最小 semantic pack。文学与语义理解归模型；确定性代码负责权威、权限、可见性、指纹、持久化、硬预算、阶段隔离、事务和类型验证。
 

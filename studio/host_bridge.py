@@ -1,912 +1,134 @@
 #!/usr/bin/env python3
-"""Portable product bridge for NovelForge Studio.
+"""Typed Quillframe 0.9 Core/Product bridge.
 
-The bridge exposes versioned public Core queries plus a deliberately narrow
-runtime command boundary. Delivery surfaces never gain Canon, Settlement,
-Framework-write, Project-write, or semantic authority. V3 exposes only the
-operation-specific, explicitly user-authorized local ``session.resume`` and
-``session.terminate`` runtime mutations. Both remain backed by fresh preflight,
-typed authorization, exact CAS, idempotency, and durable receipts.
+Transports may be local HTTP, hosted HTTP or Tauri-local IPC, but semantic
+operations are shared here. The delivery surface never becomes the authority;
+operation-specific Core code performs any authorized state transition.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
-import re
-import shutil
-import subprocess
 import sys
-import tempfile
-import tomllib
+import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
-HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent
-CLI = ROOT / "novelforge.py"
-CONTRACT_PATH = HERE / "host_bridge_contract.json"
+ROOT=Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path: sys.path.insert(0,str(ROOT))
 
-REQUEST_SCHEMA = "novelforge_studio_host_bridge_request_v1"
-RESULT_SCHEMA = "novelforge_studio_host_bridge_result_v1"
-DESCRIPTION_SCHEMA = "novelforge_studio_host_bridge_description_v1"
-CONTRACT_SCHEMA = "novelforge_studio_host_bridge_contract_v1"
-RESUME_PREFLIGHT_SCHEMA = "novelforge_session_resume_preflight_v1"
-TERMINATE_PREFLIGHT_SCHEMA = "novelforge_session_terminate_preflight_v1"
-RUNTIME_COMMAND_RESULT_SCHEMA = "novelforge_runtime_command_execution_result_v1"
-RUNTIME_COMMAND_RECEIPT_SCHEMA = "novelforge_runtime_command_receipt_v1"
-RUNTIME_COMMAND_RECEIPT_PROJECTION_SCHEMA = "novelforge_runtime_command_receipt_projection_v1"
+from core_operations import CoreOperations, OperationError
+from persistence.quillframe_sqlite import ConflictError, IntegrityError, QuillframeStore
 
-try:
-    from project_hub_projection import build_projection
-    from publication_preview import build_preview as build_publication_preview
-except ImportError as exc:  # pragma: no cover - startup guard
-    raise SystemExit(f"cannot load Studio projection adapter: {exc}")
-
-ABS_WIN_RE = re.compile(r"^[A-Za-z]:[\\/]")
-REDACT_KEYS = {"project_root", "framework_root", "absolute", "db", "database_path"}
+CONTRACT_PATH=Path(__file__).with_name("host_bridge_contract.json")
+REQUEST_SCHEMA="quillframe_studio_host_bridge_request_v1"
+RESULT_SCHEMA="quillframe_studio_host_bridge_result_v1"
 
 
-class BridgeError(Exception):
-    def __init__(self, code: str, message: str, *, detail: Any = None):
-        super().__init__(message)
-        self.code = code
-        self.message = message
-        self.detail = detail
+class BridgeError(RuntimeError):
+    def __init__(self,code:str,message:str,detail:Any=None):
+        super().__init__(message); self.code=code; self.detail=detail
 
 
-def canonical(value: Any) -> str:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+def canonical(v:Any)->str:return json.dumps(v,ensure_ascii=False,sort_keys=True,separators=(",",":"))
+def fp(v:Any)->str:return "sha256:"+hashlib.sha256(canonical(v).encode()).hexdigest()
+def contract()->dict[str,Any]:return json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
+def store()->QuillframeStore:return QuillframeStore()
+def ops()->CoreOperations:return CoreOperations(store())
 
-
-def fingerprint(value: Any) -> str:
-    return "sha256:" + hashlib.sha256(canonical(value).encode("utf-8")).hexdigest()
-
-
-def load_json(path: Path) -> dict[str, Any]:
-    value = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(value, dict):
-        raise BridgeError("invalid_json", "JSON root must be an object")
+def require(args:dict[str,Any],key:str,typ:type|tuple[type,...]=str):
+    value=args.get(key)
+    if not isinstance(value,typ) or (isinstance(value,str) and not value.strip()): raise BridgeError("invalid_args",f"{key} is required")
     return value
 
+def _describe(_:dict[str,Any],surface:str):
+    c=contract(); return {"schema":"quillframe_host_bridge_description_v1","framework_version":"0.9.0","contract_version":c["version"],"surface":surface,"operations":sorted(c["operations"]),"authority":False,"canon_authority":False,"framework_write_authority":False,"settlement_authority":False,"direct_core_store_access":False}
 
-def load_contract() -> dict[str, Any]:
-    value = load_json(CONTRACT_PATH)
-    if value.get("schema") != CONTRACT_SCHEMA:
-        raise BridgeError("invalid_bridge_contract", f"expected {CONTRACT_SCHEMA}")
-    if value.get("authority") is not False:
-        raise BridgeError("invalid_bridge_contract", "bridge contract authority must be false")
-    return value
+def _doctor(args:dict[str,Any],_:str):return store().doctor(args.get("project_id"),fix=args.get("fix") is True)
+def _project_create(args:dict[str,Any],_:str):
+    loc=store().create_project(require(args,"project_id"),require(args,"title"),args.get("language") or "zh-CN")
+    return {"schema":"quillframe_project_create_result_v1","project_id":loc.project_id,"created":True,"authority":False}
+def _project_inspect(args:dict[str,Any],_:str):return ops().project_inspect(require(args,"project_id"))
+def _project_search(args:dict[str,Any],_:str):return {"schema":"quillframe_search_results_v1","results":store().search(require(args,"project_id"),require(args,"query"),int(args.get("limit") or 30))}
+def _project_backup(args:dict[str,Any],_:str):
+    path=store().backup_project(require(args,"project_id")); return {"schema":"quillframe_backup_result_v1","project_id":args["project_id"],"bundle_ref":path.name,"verified":True}
+def _document_create(args:dict[str,Any],_:str):
+    store().create_document(require(args,"project_id"),require(args,"document_id"),require(args,"title"),args.get("document_kind") or "manuscript",args.get("story_node_id")); return {"created":True,"document_id":args["document_id"],"authority":False}
+def _revision_save(args:dict[str,Any],_:str):
+    return store().save_revision(require(args,"project_id"),require(args,"document_id"),require(args,"content"),expected_parent_revision_id=args.get("expected_parent_revision_id"),source=require(args,"source"),authority_class=args.get("authority_class") or "proposal",provenance=args.get("provenance") if isinstance(args.get("provenance"),dict) else {})
+def _revision_compare(args:dict[str,Any],_:str):return store().compare_revisions(require(args,"project_id"),require(args,"left_revision_id"),require(args,"right_revision_id"))
+def _author_run(args:dict[str,Any],_:str):
+    payload=require(args,"payload",dict)
+    return ops().start_author_run(require(args,"project_id"),task_mode=require(args,"task_mode"),target_ref=args.get("target_ref"),payload=payload,session_id=args.get("session_id"),idempotency_key=args.get("idempotency_key"))
+def _candidate_accept(args:dict[str,Any],_:str):
+    if args.get("user_authorized") is not True: raise BridgeError("authorization_required","candidate.accept requires an explicit user action")
+    return ops().accept_candidate(require(args,"project_id"),candidate_id=require(args,"candidate_id"),candidate_fingerprint=require(args,"candidate_fingerprint"),authorized_by=require(args,"authorized_by"),authorization=require(args,"authorization",dict),idempotency_key=require(args,"idempotency_key"))
+def _settle(args:dict[str,Any],_:str):
+    return ops().settle(require(args,"project_id"),acceptance_id=require(args,"acceptance_id"),target_ref=require(args,"target_ref"),expected_before_fingerprint=require(args,"expected_before_fingerprint"),user_authorized=args.get("user_authorized") is True,idempotency_key=require(args,"idempotency_key"))
+def _feedback(args:dict[str,Any],_:str):return ops().observe_feedback(require(args,"project_id"),evidence_kind=require(args,"evidence_kind"),payload=require(args,"payload",dict),source_ref=args.get("source_ref"))
+def _pub_preview(args:dict[str,Any],_:str):return ops().publication_preview(require(args,"project_id"),require(args,"acceptance_id"))
+def _pub_build(args:dict[str,Any],_:str):return ops().publication_build(require(args,"project_id"),require(args,"acceptance_id"),args.get("format") or "md")
 
+def _fixed_list(table:str,order_by:str="rowid DESC",limit_default:int=100)->Callable[[dict[str,Any],str],dict[str,Any]]:
+    def handler(args:dict[str,Any],_:str):
+        project_id=require(args,"project_id"); limit=max(1,min(int(args.get("limit") or limit_default),500))
+        with store().open_project(project_id) as conn:
+            rows=[dict(r) for r in conn.execute(f"SELECT * FROM {table} ORDER BY {order_by} LIMIT ?",(limit,))]
+        # Inspector projections contain persisted execution facts only; they never expose provider secrets or hidden reasoning.
+        for row in rows:
+            for key in list(row):
+                if "secret" in key.lower() or "credential" in key.lower(): row.pop(key,None)
+        return {"schema":"quillframe_inspector_projection_v1","kind":table,"project_id":project_id,"items":rows,"authority":False}
+    return handler
 
-def _looks_absolute_path(value: str) -> bool:
-    if value.startswith(("http://", "https://", "urn:", "sha256:")):
-        return False
-    return value.startswith("/") or bool(ABS_WIN_RE.match(value))
-
-
-def sanitize(value: Any) -> Any:
-    """Default-deny host-private path material from external result envelopes."""
-    if isinstance(value, dict):
-        out: dict[str, Any] = {}
-        for key, item in value.items():
-            if str(key).lower() in REDACT_KEYS:
-                continue
-            out[str(key)] = sanitize(item)
-        return out
-    if isinstance(value, list):
-        return [sanitize(item) for item in value]
-    if isinstance(value, str) and _looks_absolute_path(value):
-        return "<host-path-redacted>"
-    return value
-
-
-def _root() -> Path:
-    if not CLI.exists():
-        raise BridgeError("framework_unavailable", "novelforge.py not found beside Studio")
-    return ROOT
-
-
-def _run_cli(args: list[str], *, cwd: Path | None = None) -> dict[str, Any]:
-    root = _root()
-    proc = subprocess.run(
-        [sys.executable, str(root / "novelforge.py"), *args],
-        cwd=str(cwd or root),
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    try:
-        value = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        raise BridgeError(
-            "core_cli_invalid_output",
-            "NovelForge CLI did not return a JSON object",
-            detail={"returncode": proc.returncode, "stderr": proc.stderr[-2000:]},
-        )
-    if not isinstance(value, dict):
-        raise BridgeError("core_cli_invalid_output", "NovelForge CLI JSON root must be an object")
-    if proc.returncode != 0:
-        error_code = value.get("code") if isinstance(value.get("code"), str) else "core_cli_failed"
-        raise BridgeError(
-            error_code,
-            value.get("message") if isinstance(value.get("message"), str) else "NovelForge CLI operation failed",
-            detail={"returncode": proc.returncode, "result": sanitize(value)},
-        )
-    return value
-
-
-def _project_root(args: dict[str, Any]) -> Path:
-    raw = args.get("project_root")
-    if not isinstance(raw, str) or not raw.strip():
-        raise BridgeError("invalid_args", "project_root is required")
-    root = Path(raw).expanduser().resolve()
-    if not root.exists() or not root.is_dir():
-        raise BridgeError("project_unavailable", "project_root must be an existing directory")
-    return root
-
-
-def _scoped_path(project_root: Path, raw: Any, field: str) -> Path:
-    if not isinstance(raw, str) or not raw.strip():
-        raise BridgeError("invalid_args", f"{field} is required")
-    candidate = Path(raw)
-    if candidate.is_absolute() or ABS_WIN_RE.match(raw):
-        raise BridgeError("path_scope_violation", f"{field} must be project-relative")
-    resolved = (project_root / candidate).resolve()
-    if resolved != project_root and project_root not in resolved.parents:
-        raise BridgeError("path_scope_violation", f"{field} escapes project_root")
-    if not resolved.exists() or not resolved.is_file():
-        raise BridgeError("path_unavailable", f"{field} does not resolve to an existing file")
-    return resolved
-
-
-def _safe_doctor(_: dict[str, Any], __: str) -> dict[str, Any]:
-    return sanitize(_run_cli(["doctor"]))
-
-
-def _project_inspect(args: dict[str, Any], surface: str) -> dict[str, Any]:
-    project_root = _project_root(args)
-    validation = _run_cli(["adapter", "validate", str(project_root)], cwd=project_root)
-    if validation.get("valid") is not True or not isinstance(validation.get("resolution"), dict):
-        raise BridgeError("project_invalid", "Project Adapter validation did not produce a valid resolution")
-    projection = build_projection(validation["resolution"], surface)
-    return sanitize({"valid": True, "errors": validation.get("errors", []), "project": projection})
-
-
-def _capabilities_inspect(args: dict[str, Any], _: str) -> dict[str, Any]:
-    cwd = _project_root(args) if args.get("project_root") is not None else _root()
-    return sanitize(_run_cli(["capabilities", "probe-local"], cwd=cwd))
-
-
-def _context_inspect(args: dict[str, Any], _: str) -> dict[str, Any]:
-    project_root = _project_root(args)
-    manifest = _scoped_path(project_root, args.get("manifest"), "manifest")
-    argv = ["context-inspect", "inspect", "--manifest", str(manifest)]
-    if args.get("overlay") is not None:
-        overlay = _scoped_path(project_root, args.get("overlay"), "overlay")
-        argv += ["--overlay", str(overlay)]
-    stage = args.get("stage")
-    if stage is not None:
-        if stage not in {"writer_pre_draft", "post_draft_critic", "independent_reviewer", "never"}:
-            raise BridgeError("invalid_args", "unsupported Context Inspector stage")
-        argv += ["--stage", stage]
-    return sanitize(_run_cli(argv, cwd=project_root))
-
-
-def _semantic_catalog(_: dict[str, Any], __: str) -> dict[str, Any]:
-    return sanitize(_run_cli(["semantic", "catalog"]))
-
-
-def _publication_preview(args: dict[str, Any], _: str) -> dict[str, Any]:
-    profile = args.get("profile")
-    if not isinstance(profile, str) or not profile.strip():
-        raise BridgeError("invalid_args", "profile is required")
-
-    source = args.get("source")
-    if source is None and args.get("source_manifest") is not None:
-        project_root = _project_root(args)
-        source = load_json(_scoped_path(project_root, args.get("source_manifest"), "source_manifest"))
-    if not isinstance(source, dict):
-        raise BridgeError("invalid_args", "source object or project-relative source_manifest is required")
-
-    try:
-        return sanitize(build_publication_preview(source, profile.strip()))
-    except (ValueError, OSError, json.JSONDecodeError) as exc:
-        raise BridgeError("publication_preview_invalid", str(exc)) from exc
-
-
-def _runtime_args(args: dict[str, Any], *query_args: str) -> tuple[Path, list[str]]:
-    project_root = _project_root(args)
-    runtime_db = project_root / ".novelforge" / "runtime.db"
-    return project_root, ["runtime-query", "--db", str(runtime_db), *query_args]
-
-
-def _runtime_command_args(args: dict[str, Any], *command_args: str) -> tuple[Path, list[str]]:
-    project_root = _project_root(args)
-    runtime_db = project_root / ".novelforge" / "runtime.db"
-    return project_root, ["runtime-command", "--db", str(runtime_db), *command_args]
-
-
-def _runtime_sessions_list(args: dict[str, Any], _: str) -> dict[str, Any]:
-    project_root, argv = _runtime_args(args, "session-list")
-    resource_id = args.get("resource_id")
-    if resource_id is not None:
-        if not isinstance(resource_id, str) or not resource_id.strip():
-            raise BridgeError("invalid_args", "resource_id must be a non-empty string")
-        argv += ["--resource-id", resource_id]
-    return sanitize(_run_cli(argv, cwd=project_root))
-
-
-def _runtime_session_get(args: dict[str, Any], _: str) -> dict[str, Any]:
-    session_id = args.get("session_id")
-    if not isinstance(session_id, str) or not session_id.strip():
-        raise BridgeError("invalid_args", "session_id is required")
-    project_root, argv = _runtime_args(args, "session-get", "--session-id", session_id)
-    return sanitize(_run_cli(argv, cwd=project_root))
-
-
-def _runtime_events_list(args: dict[str, Any], _: str) -> dict[str, Any]:
-    project_root, argv = _runtime_args(args, "event-list")
-    for field, flag in (("session_id", "--session-id"), ("run_id", "--run-id")):
-        value = args.get(field)
-        if value is not None:
-            if not isinstance(value, str) or not value.strip():
-                raise BridgeError("invalid_args", f"{field} must be a non-empty string")
-            argv += [flag, value]
-    return sanitize(_run_cli(argv, cwd=project_root))
-
-
-def _runtime_handoff_inspect(args: dict[str, Any], _: str) -> dict[str, Any]:
-    handoff_id = args.get("handoff_id")
-    if not isinstance(handoff_id, str) or not handoff_id.strip():
-        raise BridgeError("invalid_args", "handoff_id is required")
-    project_root, argv = _runtime_args(args, "handoff-get", "--handoff-id", handoff_id)
-    return sanitize(_run_cli(argv, cwd=project_root))
-
-
-def _run_receipt_get(args: dict[str, Any], _: str) -> dict[str, Any]:
-    selectors: list[tuple[str, str]] = []
-    for field, flag in (("receipt_id", "--receipt-id"), ("run_id", "--run-id"), ("session_id", "--session-id")):
-        value = args.get(field)
-        if value is not None:
-            if not isinstance(value, str) or not value.strip():
-                raise BridgeError("invalid_args", f"{field} must be a non-empty string")
-            selectors.append((flag, value))
-    if not selectors:
-        raise BridgeError("invalid_args", "receipt_id, run_id, or session_id is required")
-    project_root, argv = _runtime_args(args, "receipt-get")
-    for flag, value in selectors:
-        argv += [flag, value]
-    return sanitize(_run_cli(argv, cwd=project_root))
-
-
-def _runtime_command_receipt_get(args: dict[str, Any], _: str) -> dict[str, Any]:
-    selectors: list[tuple[str, str]] = []
-    for field, flag in (("command_id", "--command-id"), ("idempotency_key", "--idempotency-key"), ("session_id", "--session-id")):
-        value = args.get(field)
-        if value is not None:
-            if not isinstance(value, str) or not value.strip():
-                raise BridgeError("invalid_args", f"{field} must be a non-empty string")
-            selectors.append((flag, value))
-    if not selectors:
-        raise BridgeError("invalid_args", "command_id, idempotency_key, or session_id is required")
-    project_root, argv = _runtime_command_args(args, "receipt-get")
-    for flag, value in selectors:
-        argv += [flag, value]
-    return sanitize(_run_cli(argv, cwd=project_root))
-
-
-def _resume_inputs(args: dict[str, Any]) -> tuple[Path, str, str, int, str]:
-    project_root = _project_root(args)
-    authority_evidence = args.get("authority_evidence")
-    _scoped_path(project_root, authority_evidence, "authority_evidence")
-    session_id = args.get("session_id")
-    checkpoint_id = args.get("checkpoint_id")
-    expected_version = args.get("expected_session_version")
-    if not isinstance(session_id, str) or not session_id.strip():
-        raise BridgeError("invalid_args", "session_id is required")
-    if not isinstance(checkpoint_id, str) or not checkpoint_id.strip():
-        raise BridgeError("invalid_args", "checkpoint_id is required")
-    if isinstance(expected_version, bool) or not isinstance(expected_version, int) or expected_version < 1:
-        raise BridgeError("invalid_args", "expected_session_version must be a positive integer")
-    assert isinstance(authority_evidence, str)
-    return project_root, session_id, checkpoint_id, expected_version, authority_evidence
-
-
-def _session_resume_preflight(args: dict[str, Any], _: str) -> dict[str, Any]:
-    project_root, session_id, checkpoint_id, expected_version, authority_evidence = _resume_inputs(args)
-    runtime_db = project_root / ".novelforge" / "runtime.db"
-    evidence = project_root / authority_evidence
-    argv = [
-        "resume-preflight", "inspect", "--db", str(runtime_db), "--project-root", str(project_root),
-        "--session-id", session_id, "--checkpoint-id", checkpoint_id,
-        "--expected-session-version", str(expected_version), "--authority-evidence", str(evidence),
-    ]
-    try:
-        return sanitize(_run_cli(argv, cwd=project_root))
-    except BridgeError as exc:
-        detail = exc.detail if isinstance(exc.detail, dict) else {}
-        blocked = detail.get("result")
-        if (
-            exc.code == "core_cli_failed"
-            and isinstance(blocked, dict)
-            and blocked.get("schema") == RESUME_PREFLIGHT_SCHEMA
-            and blocked.get("status") == "BLOCKED"
-            and blocked.get("ready") is False
-            and blocked.get("mutation_performed") is False
-            and blocked.get("authority") is False
-        ):
-            return sanitize(blocked)
-        raise
-
-
-def _session_resume(args: dict[str, Any], surface: str) -> dict[str, Any]:
-    if surface != "local_app":
-        raise BridgeError("mutation_surface_not_authorized", "session.resume is restricted to the loopback-bound local_app surface")
-    if args.get("user_authorized") is not True:
-        raise BridgeError("authorization_required", "session.resume requires an explicit user authorization action")
-    project_root, session_id, checkpoint_id, expected_version, authority_evidence = _resume_inputs(args)
-    command_id = args.get("command_id")
-    if command_id is not None and (not isinstance(command_id, str) or not command_id.strip() or len(command_id) > 160):
-        raise BridgeError("invalid_args", "command_id must be a non-empty string up to 160 characters")
-    authorization_ref = f"urn:novelforge:studio:user-action:{session_id}:{checkpoint_id}"
-    _, argv = _runtime_command_args(args, "execute-resume")
-    argv += [
-        "--project-root", str(project_root),
-        "--session-id", session_id,
-        "--checkpoint-id", checkpoint_id,
-        "--expected-session-version", str(expected_version),
-        "--authority-evidence", authority_evidence,
-        "--authorization-source", "user",
-        "--authorization-ref", authorization_ref,
-    ]
-    if command_id is not None:
-        argv += ["--command-id", command_id]
-    result = _run_cli(argv, cwd=project_root)
-    if result.get("schema") != RUNTIME_COMMAND_RESULT_SCHEMA or result.get("status") not in {"applied", "duplicate"}:
-        raise BridgeError("runtime_command_invalid_result", "runtime command executor returned an unexpected success envelope", detail=sanitize(result))
-    return sanitize(result)
-
-
-def _terminate_inputs(args: dict[str, Any]) -> tuple[Path, str, int]:
-    project_root = _project_root(args)
-    session_id = args.get("session_id")
-    expected_version = args.get("expected_session_version")
-    if not isinstance(session_id, str) or not session_id.strip():
-        raise BridgeError("invalid_args", "session_id is required")
-    if isinstance(expected_version, bool) or not isinstance(expected_version, int) or expected_version < 1:
-        raise BridgeError("invalid_args", "expected_session_version must be a positive integer")
-    return project_root, session_id, expected_version
-
-
-def _session_terminate_preflight(args: dict[str, Any], _: str) -> dict[str, Any]:
-    project_root, session_id, expected_version = _terminate_inputs(args)
-    runtime_db = project_root / ".novelforge" / "runtime.db"
-    argv = [
-        "terminate-preflight", "--db", str(runtime_db), "inspect",
-        "--project-root", str(project_root),
-        "--session-id", session_id,
-        "--expected-session-version", str(expected_version),
-    ]
-    try:
-        return sanitize(_run_cli(argv, cwd=project_root))
-    except BridgeError as exc:
-        detail = exc.detail if isinstance(exc.detail, dict) else {}
-        blocked = detail.get("result")
-        if (
-            exc.code == "core_cli_failed"
-            and isinstance(blocked, dict)
-            and blocked.get("schema") == TERMINATE_PREFLIGHT_SCHEMA
-            and blocked.get("status") == "BLOCKED"
-            and blocked.get("ready") is False
-            and blocked.get("mutation_performed") is False
-            and blocked.get("authority") is False
-        ):
-            return sanitize(blocked)
-        raise
-
-
-def _session_terminate(args: dict[str, Any], surface: str) -> dict[str, Any]:
-    if surface != "local_app":
-        raise BridgeError("mutation_surface_not_authorized", "session.terminate is restricted to the loopback-bound local_app surface")
-    if args.get("user_authorized") is not True:
-        raise BridgeError("authorization_required", "session.terminate requires an explicit user authorization action")
-    project_root, session_id, expected_version = _terminate_inputs(args)
-    command_id = args.get("command_id")
-    if command_id is not None and (not isinstance(command_id, str) or not command_id.strip() or len(command_id) > 160):
-        raise BridgeError("invalid_args", "command_id must be a non-empty string up to 160 characters")
-    runtime_db = project_root / ".novelforge" / "runtime.db"
-    authorization_ref = f"urn:novelforge:studio:user-action:{session_id}:terminate"
-    argv = [
-        "terminate-executor", "--db", str(runtime_db), "execute-terminate",
-        "--project-root", str(project_root),
-        "--session-id", session_id,
-        "--expected-session-version", str(expected_version),
-        "--authorization-ref", authorization_ref,
-    ]
-    if command_id is not None:
-        argv += ["--command-id", command_id]
-    result = _run_cli(argv, cwd=project_root)
-    if result.get("schema") != RUNTIME_COMMAND_RESULT_SCHEMA or result.get("status") not in {"applied", "duplicate"}:
-        raise BridgeError("runtime_command_invalid_result", "terminate executor returned an unexpected success envelope", detail=sanitize(result))
-    return sanitize(result)
-
-
-DISPATCH = {
-    "bridge.describe": lambda args, surface: description(surface=surface),
-    "framework.doctor": _safe_doctor,
-    "project.inspect": _project_inspect,
-    "capabilities.inspect": _capabilities_inspect,
-    "context.inspect": _context_inspect,
-    "semantic.catalog": _semantic_catalog,
-    "publication.preview": _publication_preview,
-    "runtime.sessions.list": _runtime_sessions_list,
-    "runtime.session.get": _runtime_session_get,
-    "runtime.events.list": _runtime_events_list,
-    "runtime.handoff.inspect": _runtime_handoff_inspect,
-    "run.receipt.get": _run_receipt_get,
-    "runtime.command.receipt.get": _runtime_command_receipt_get,
-    "session.resume.preflight": _session_resume_preflight,
-    "session.resume": _session_resume,
-    "session.terminate.preflight": _session_terminate_preflight,
-    "session.terminate": _session_terminate,
+DISPATCH:dict[str,Callable[[dict[str,Any],str],dict[str,Any]]]={
+    "bridge.describe":_describe,"database.doctor":_doctor,"project.create":_project_create,"project.inspect":_project_inspect,"project.search":_project_search,"project.backup":_project_backup,
+    "document.create":_document_create,"document.revision.save":_revision_save,"document.revision.compare":_revision_compare,"author.run.start":_author_run,"candidate.accept":_candidate_accept,"settlement.apply":_settle,"feedback.observe":_feedback,
+    "publication.preview":_pub_preview,"publication.build":_pub_build,
+    "inspector.sessions.list":_fixed_list("sessions","updated_at DESC"),"inspector.runs.list":_fixed_list("runs","updated_at DESC"),"inspector.checkpoints.list":_fixed_list("checkpoints","created_at DESC"),"inspector.context.list":_fixed_list("context_manifests","created_at DESC"),"inspector.receipts.list":_fixed_list("receipts","created_at DESC"),"inspector.candidates.list":_fixed_list("candidates","created_at DESC"),"inspector.learning.list":_fixed_list("learning_evidence","created_at DESC"),
 }
 
-
-def description(*, surface: str | None = None) -> dict[str, Any]:
-    contract = load_contract()
-    return {
-        "schema": DESCRIPTION_SCHEMA,
-        "contract_schema": contract["schema"],
-        "contract_version": contract.get("version"),
-        "request_schema": REQUEST_SCHEMA,
-        "result_schema": RESULT_SCHEMA,
-        "product_model": "one_product_many_hosts",
-        "surface": surface,
-        "supported_operations": sorted(contract["operations"]["supported"]),
-        "operation_contracts": contract["operations"]["supported"],
-        "deferred_operations": contract["operations"]["deferred"],
-        "authority": False,
-        "canon_authority": False,
-        "framework_write_authority": False,
-        "settlement_authority": False,
-        "direct_core_store_access": False,
-    }
-
-
-def validate_request(request: dict[str, Any]) -> list[str]:
-    errors: list[str] = []
-    allowed = {"schema", "request_id", "operation", "surface", "args", "authority"}
-    extra = sorted(set(request) - allowed)
-    if extra:
-        errors.append("unexpected fields: " + ", ".join(extra))
-    if request.get("schema") != REQUEST_SCHEMA:
-        errors.append(f"schema must be {REQUEST_SCHEMA}")
-    if not isinstance(request.get("request_id"), str) or not request["request_id"].strip():
-        errors.append("request_id must be non-empty string")
-    if not isinstance(request.get("operation"), str) or not request["operation"].strip():
-        errors.append("operation must be non-empty string")
-    contract = load_contract()
-    if request.get("surface") not in contract.get("surfaces", []):
-        errors.append("surface is not supported")
-    if not isinstance(request.get("args"), dict):
-        errors.append("args must be object")
-    if request.get("authority") is not False:
-        errors.append("request authority must be false")
+def validate_request(req:dict[str,Any])->list[str]:
+    c=contract(); errors=[]
+    if req.get("schema")!=REQUEST_SCHEMA: errors.append(f"schema must be {REQUEST_SCHEMA}")
+    if not isinstance(req.get("request_id"),str) or not req["request_id"].strip(): errors.append("request_id must be non-empty string")
+    op=req.get("operation")
+    if op not in c["operations"]: errors.append("unknown operation")
+    if req.get("surface") not in c["surfaces"]: errors.append("unsupported surface")
+    if not isinstance(req.get("args"),dict): errors.append("args must be object")
+    if req.get("authority") is not False: errors.append("request authority must be false")
+    if op in c["operations"] and isinstance(req.get("args"),dict):
+        missing=[x for x in c["operations"][op].get("required_args",[]) if req["args"].get(x) in (None,"")]
+        if missing: errors.append("missing args: "+", ".join(missing))
+        allowed=c["operations"][op].get("allowed_surfaces")
+        if allowed and req.get("surface") not in allowed: errors.append("operation is not authorized on this surface")
     return errors
 
+def result(req:dict[str,Any],status:str,*,data:Any=None,error:Any=None)->dict[str,Any]:
+    out={"schema":RESULT_SCHEMA,"request_id":req.get("request_id"),"operation":req.get("operation"),"surface":req.get("surface"),"status":status,"data":data,"error":error,"request_fingerprint":fp(req),"authority":False,"canon_authority":False,"framework_write_authority":False,"settlement_authority":False}
+    out["result_fingerprint"]=fp(out); return out
 
-def _base_result(request: dict[str, Any], *, status: str, data: Any = None, error: Any = None) -> dict[str, Any]:
-    out = {
-        "schema": RESULT_SCHEMA,
-        "request_id": request.get("request_id"),
-        "operation": request.get("operation"),
-        "surface": request.get("surface"),
-        "status": status,
-        "request_fingerprint": fingerprint(request),
-        "data": sanitize(data),
-        "error": sanitize(error),
-        "authority": False,
-        "canon_authority": False,
-        "framework_write_authority": False,
-        "settlement_authority": False,
-    }
-    out["result_fingerprint"] = fingerprint(out)
-    return out
-
-
-def invoke(request: dict[str, Any]) -> dict[str, Any]:
-    errors = validate_request(request)
-    if errors:
-        return _base_result(request, status="invalid", error={"code": "invalid_request", "messages": errors})
-
-    operation = request["operation"]
-    contract = load_contract()
-    deferred = contract["operations"]["deferred"]
-    if operation in deferred:
-        info = deferred[operation]
-        return _base_result(request, status="unsupported", error={"code": "operation_deferred", "reason": info.get("reason"), "dependency": info.get("dependency"), "mutation_performed": False})
-    if operation not in contract["operations"]["supported"] or operation not in DISPATCH:
-        return _base_result(request, status="invalid", error={"code": "unknown_operation", "mutation_performed": False})
-
-    required_args = contract["operations"]["supported"][operation].get("required_args", [])
-    missing_args = [name for name in required_args if request["args"].get(name) in {None, ""}]
-    if missing_args:
-        return _base_result(request, status="invalid", error={"code": "missing_args", "fields": missing_args, "mutation_performed": False})
-
-    try:
-        data = DISPATCH[operation](request["args"], request["surface"])
-        return _base_result(request, status="ok", data=data)
-    except BridgeError as exc:
-        return _base_result(request, status="failed", error={"code": exc.code, "message": exc.message, "detail": exc.detail, "mutation_performed": False})
+def invoke(req:dict[str,Any])->dict[str,Any]:
+    errors=validate_request(req)
+    if errors:return result(req,"invalid",error={"code":"invalid_request","messages":errors,"mutation_performed":False})
+    try:return result(req,"ok",data=DISPATCH[req["operation"]](req["args"],req["surface"]))
+    except (BridgeError,OperationError,ConflictError,IntegrityError,FileNotFoundError,FileExistsError,ValueError,KeyError) as exc:
+        return result(req,"failed",error={"code":getattr(exc,"code",type(exc).__name__),"message":str(exc),"detail":getattr(exc,"detail",None),"mutation_performed":False})
     except Exception as exc:
-        return _base_result(request, status="failed", error={"code": "bridge_internal_error", "message": f"{type(exc).__name__}: {exc}", "mutation_performed": False})
+        return result(req,"failed",error={"code":"bridge_internal_error","message":f"{type(exc).__name__}: {exc}","mutation_performed":False})
 
+def self_test()->dict[str,Any]:
+    desc=invoke({"schema":REQUEST_SCHEMA,"request_id":"self","operation":"bridge.describe","surface":"agent_package","args":{},"authority":False})
+    generic=invoke({"schema":REQUEST_SCHEMA,"request_id":"bad","operation":"command.invoke","surface":"agent_package","args":{},"authority":False})
+    ok=desc["status"]=="ok" and generic["status"]=="invalid" and desc["authority"] is False
+    return {"quillframe_host_bridge_contract":"PASS" if ok else "FAIL","contract_version":"4","generic_mutation_dispatch":False,"authority":False}
 
-def _request(request_id: str, operation: str, args: dict[str, Any] | None = None, *, surface: str = "agent_package") -> dict[str, Any]:
-    return {"schema": REQUEST_SCHEMA, "request_id": request_id, "operation": operation, "surface": surface, "args": args or {}, "authority": False}
+def main()->int:
+    p=argparse.ArgumentParser(); sub=p.add_subparsers(dest="cmd",required=True)
+    sub.add_parser("describe"); sub.add_parser("self-test"); inv=sub.add_parser("invoke"); inv.add_argument("--request"); args=p.parse_args()
+    if args.cmd=="describe": print(json.dumps(_describe({},"cli"),ensure_ascii=False,indent=2)); return 0
+    if args.cmd=="self-test": r=self_test(); print(json.dumps(r,indent=2)); return 0 if r["quillframe_host_bridge_contract"]=="PASS" else 1
+    raw=Path(args.request).read_text(encoding="utf-8") if args.request else sys.stdin.read(); req=json.loads(raw); out=invoke(req); print(json.dumps(out,ensure_ascii=False,indent=2)); return 0 if out["status"]=="ok" else 1
 
-
-def _run_setup(argv: list[str], *, cwd: Path) -> bool:
-    proc = subprocess.run([sys.executable, str(CLI), *argv], cwd=str(cwd), text=True, capture_output=True, check=False)
-    return proc.returncode == 0
-
-
-def self_test() -> dict[str, Any]:
-    contract = load_contract()
-    desc_req = _request("REQ-DESC", "bridge.describe")
-    desc_a = invoke(desc_req)
-    desc_b = invoke(desc_req)
-    desc_without_fp = {k: v for k, v in desc_a.items() if k != "result_fingerprint"}
-    deterministic_envelope = desc_a == desc_b and desc_a["request_fingerprint"] == fingerprint(desc_req) and desc_a["result_fingerprint"] == fingerprint(desc_without_fp)
-
-    unknown = invoke(_request("REQ-UNKNOWN", "project.delete"))
-    deferred_write = invoke(_request("REQ-WRITE", "command.invoke"))
-    nonlocal_resume = invoke(_request("REQ-REMOTE-RESUME", "session.resume", {
-        "project_root": str(ROOT),
-        "session_id": "SES-NOT-USED",
-        "checkpoint_id": "CP-NOT-USED",
-        "expected_session_version": 1,
-        "authority_evidence": "README.md",
-        "user_authorized": True,
-    }))
-    nonlocal_terminate = invoke(_request("REQ-REMOTE-TERMINATE", "session.terminate", {
-        "project_root": str(ROOT),
-        "session_id": "SES-NOT-USED",
-        "expected_session_version": 1,
-        "user_authorized": True,
-    }))
-    wrong_authority = _request("REQ-AUTH", "bridge.describe")
-    wrong_authority["authority"] = True
-    authority_rejected = invoke(wrong_authority)
-    doctor = invoke(_request("REQ-DOCTOR", "framework.doctor"))
-    capabilities = invoke(_request("REQ-CAP", "capabilities.inspect"))
-
-    publication_text = "第一段。\n\nPublication preview."
-    publication_source = {
-        "book": {
-            "identifier": "urn:novelforge:bridge-preview-self-test",
-            "title": "Bridge Preview",
-            "language": "zh-CN",
-            "modified": "2026-08-15T00:00:00Z",
-        },
-        "chapters": [{
-            "chapter_id": "CH-001",
-            "title": "第一章",
-            "text": publication_text,
-            "accepted_fingerprint": "sha256:" + hashlib.sha256(publication_text.encode("utf-8")).hexdigest(),
-        }],
-    }
-    publication = invoke(_request("REQ-PUBLICATION", "publication.preview", {"profile": "epub", "source": publication_source}))
-    publication_preview_safe = (
-        publication["status"] == "ok"
-        and publication["data"].get("schema") == "novelforge_publication_preview_projection_v1"
-        and publication["data"].get("authority") is False
-        and publication["data"].get("mutation_performed") is False
-        and publication["data"].get("text_roundtrip") is True
-        and publication["data"].get("source_authority_verified") is False
-    )
-
-    temp_root = Path(tempfile.mkdtemp(prefix="novelforge-host-bridge-"))
-    project_ready = project_safe = context_safe = runtime_safe = False
-    runtime_queries_ok = resume_preflight_safe = terminate_preflight_safe = False
-    resume_command_safe = command_receipt_safe = terminate_command_safe = False
-    try:
-        setup = subprocess.run([sys.executable, str(ROOT / "project_adapter.py"), "self-test", "--tmp", str(temp_root)], cwd=str(ROOT), text=True, capture_output=True, check=False)
-        project_ready = setup.returncode == 0
-        project = invoke(_request("REQ-PROJECT", "project.inspect", {"project_root": str(temp_root)}))
-        serialized_project = canonical(project)
-        project_safe = project["status"] == "ok" and str(temp_root) not in serialized_project and "<host-path-redacted>" not in canonical(project["data"].get("project", {})) and project["data"]["project"]["authority"] is False
-
-        context_path = temp_root / "context-manifest.json"
-        context_path.write_text(json.dumps({"manifest_id": "CTX-BRIDGE-SELF", "items": [{"id": "CTX-A", "class": "summary", "source": str(temp_root / "private-source.txt"), "authority": "derived", "derived": True, "stages": ["writer_pre_draft"], "priority": 1}]}), encoding="utf-8")
-        context = invoke(_request("REQ-CONTEXT", "context.inspect", {"project_root": str(temp_root), "manifest": "context-manifest.json", "stage": "writer_pre_draft"}))
-        context_safe = context["status"] == "ok" and str(temp_root) not in canonical(context) and context["data"]["authority"] is False
-
-        publication_manifest = temp_root / "publication-source.json"
-        publication_manifest.write_text(json.dumps(publication_source, ensure_ascii=False), encoding="utf-8")
-        publication_from_project = invoke(_request("REQ-PUBLICATION-FILE", "publication.preview", {"project_root": str(temp_root), "source_manifest": "publication-source.json", "profile": "web"}))
-        publication_preview_safe = publication_preview_safe and publication_from_project["status"] == "ok" and str(temp_root) not in canonical(publication_from_project)
-
-        runtime_db = temp_root / ".novelforge" / "runtime.db"
-        runtime_db.parent.mkdir(parents=True, exist_ok=True)
-        runtime_init = _run_setup(["runtime", "--db", str(runtime_db), "init"], cwd=temp_root)
-
-        session_path = temp_root / "session.json"
-        session_path.write_text(json.dumps({
-            "schema": "novelforge_agent_session_v1",
-            "resource_id": "BOOK-BRIDGE",
-            "project_id": "BOOK-BRIDGE",
-            "session_id": "SES-BRIDGE",
-            "role": "manager",
-            "status": "awaiting_external",
-            "transport": "chat_session",
-            "backend": "self_test",
-            "usage_class": "ordinary_chat",
-            "memory_policy": "session",
-            "resume_policy": "checkpoint_revalidate",
-            "context_policy": {"hidden_gold": "forbidden", "allowed_artifact_refs": [], "allowed_paths": [str(temp_root / "private")], "forbidden_context_classes": []},
-            "runs": [{"run_id": "RUN-BRIDGE", "started_at": "2026-01-01T00:00:00+00:00", "ended_at": None, "status": "running", "input_artifact_fingerprints": [], "output_artifact_fingerprints": [], "usage_class": "ordinary_chat"}],
-            "checkpoints": [],
-            "events": [],
-            "provenance": {"runtime": "self_test", "version": "1", "durable_store": "control_plane"},
-        }), encoding="utf-8")
-        session_put = _run_setup(["runtime", "--db", str(runtime_db), "session-put", "--session", str(session_path), "--expected-version", "0"], cwd=temp_root)
-
-        event_path = temp_root / "event.json"
-        event_path.write_text(json.dumps({
-            "schema": "novelforge_event_v1",
-            "event_id": "EV-BRIDGE",
-            "event_type": "semantic.requested",
-            "source": {"kind": "self_test", "actor": "host_bridge.py"},
-            "resource_id": "BOOK-BRIDGE",
-            "session_id": "SES-BRIDGE",
-            "run_id": "RUN-BRIDGE",
-            "handoff_id": "HO-BRIDGE",
-            "authority_scope": "request",
-            "idempotency_key": "host-bridge-runtime-self-test",
-            "artifact_fingerprints": [],
-            "created_at": "2026-01-01T00:00:01+00:00",
-            "payload": {"private_path": str(temp_root / "private-event")},
-        }), encoding="utf-8")
-        event_put = _run_setup(["runtime", "--db", str(runtime_db), "event-ingest", "--event", str(event_path)], cwd=temp_root)
-
-        handoff_path = temp_root / "handoff.json"
-        handoff_path.write_text(json.dumps({
-            "schema": "novelforge_handoff_v1",
-            "handoff_id": "HO-BRIDGE",
-            "source_session_id": "SES-BRIDGE",
-            "target_session_class": "semantic_reviewer",
-            "resource_id": "BOOK-BRIDGE",
-            "task_mode": "DRAFT",
-            "artifact_refs": [str(temp_root / "private-artifact")],
-            "artifact_fingerprints": [],
-            "context_policy": {"hidden_gold": "forbidden", "allowed_artifact_refs": []},
-            "permissions": {"canon_write": False, "framework_behavior_write": False, "durable_user_taste_write": False, "allowed_result_scope": "observation"},
-            "return_contract": {"schema": "semantic_worker_result", "fingerprint_required": True},
-        }), encoding="utf-8")
-        handoff_put = _run_setup(["runtime", "--db", str(runtime_db), "handoff-submit", "--handoff", str(handoff_path)], cwd=temp_root)
-
-        sessions = invoke(_request("REQ-SESSIONS", "runtime.sessions.list", {"project_root": str(temp_root)}))
-        session = invoke(_request("REQ-SESSION", "runtime.session.get", {"project_root": str(temp_root), "session_id": "SES-BRIDGE"}))
-        events = invoke(_request("REQ-EVENTS", "runtime.events.list", {"project_root": str(temp_root), "session_id": "SES-BRIDGE"}))
-        handoff = invoke(_request("REQ-HANDOFF", "runtime.handoff.inspect", {"project_root": str(temp_root), "handoff_id": "HO-BRIDGE"}))
-        receipts = invoke(_request("REQ-RECEIPTS", "run.receipt.get", {"project_root": str(temp_root), "run_id": "RUN-BRIDGE"}))
-        runtime_results = [sessions, session, events, handoff, receipts]
-        runtime_queries_ok = all(item["status"] == "ok" for item in runtime_results)
-        runtime_serialized = canonical(runtime_results)
-        runtime_safe = runtime_queries_ok and str(temp_root) not in runtime_serialized and all(item["data"]["authority"] is False for item in runtime_results)
-        runtime_queries_ok = runtime_queries_ok and runtime_init and session_put and event_put and handoff_put and sessions["data"]["count"] == 1 and events["data"]["count"] == 1 and receipts["data"]["count"] == 0
-
-        evidence_path = temp_root / "resume-authority.json"
-        evidence_path.write_text("{}", encoding="utf-8")
-        preflight = invoke(_request("REQ-RESUME-PREFLIGHT", "session.resume.preflight", {
-            "project_root": str(temp_root), "session_id": "SES-BRIDGE", "checkpoint_id": "CP-NOT-PRESENT",
-            "expected_session_version": 1, "authority_evidence": "resume-authority.json",
-        }))
-        resume_preflight_safe = (
-            preflight["status"] == "ok" and preflight["data"].get("schema") == RESUME_PREFLIGHT_SCHEMA
-            and preflight["data"].get("status") == "BLOCKED" and preflight["data"].get("ready") is False
-            and "checkpoint_not_found" in preflight["data"].get("blockers", [])
-            and preflight["data"].get("mutation_performed") is False and preflight["data"].get("authority") is False
-            and str(temp_root) not in canonical(preflight)
-        )
-
-        # Build a second, fully resumable session bound to the exact Project
-        # identity created by the Project Adapter fixture.
-        with (temp_root / "novelforge.toml").open("rb") as handle:
-            manifest = tomllib.load(handle)
-        project_id = manifest["project"]["id"]
-        project_authority = manifest.get("authority") if isinstance(manifest.get("authority"), dict) else {}
-        lock = load_json(temp_root / "novelforge.lock.json")
-        framework = lock["framework"]
-        artifact = temp_root / "resume-artifact.txt"
-        artifact.write_text("bridge resume candidate\n", encoding="utf-8")
-        artifact_fp = "sha256:" + hashlib.sha256(artifact.read_bytes()).hexdigest()
-        ready_evidence = {
-            "schema": "novelforge_resume_authority_evidence_v1",
-            "project_id": project_id,
-            "project_authority_fingerprint": fingerprint(project_authority),
-            "framework": {key: framework[key] for key in ("version", "commit", "bundle_fingerprint")},
-            "artifact_bindings": [{"path": "resume-artifact.txt", "fingerprint": artifact_fp}],
-            "required_capabilities": [],
-            "approval_refs": [],
-        }
-        ready_evidence_path = temp_root / "resume-ready-authority.json"
-        ready_evidence_path.write_text(json.dumps(ready_evidence), encoding="utf-8")
-        ready_session_path = temp_root / "resume-session.json"
-        ready_session_path.write_text(json.dumps({
-            "schema": "novelforge_agent_session_v1",
-            "resource_id": project_id,
-            "project_id": project_id,
-            "session_id": "SES-BRIDGE-RESUME",
-            "provider_session_id": None,
-            "external_session_ref": None,
-            "parent_session_id": None,
-            "role": "manager",
-            "task_mode": "DRAFT",
-            "transport": "chat_session",
-            "backend": "self_test",
-            "usage_class": "ordinary_chat",
-            "status": "idle",
-            "memory_policy": "session",
-            "context_policy": {"authority_snapshot": None, "context_manifest_ref": None, "hidden_gold": "forbidden", "allowed_artifact_refs": [], "allowed_paths": [], "forbidden_context_classes": []},
-            "resume_policy": "checkpoint_revalidate",
-            "runs": [{"run_id": "RUN-BRIDGE-RESUME", "started_at": "2026-01-01T00:00:00+00:00", "ended_at": None, "status": "running", "input_artifact_fingerprints": [artifact_fp], "output_artifact_fingerprints": [], "usage_class": "ordinary_chat"}],
-            "checkpoints": [{"checkpoint_id": "CP-BRIDGE-RESUME", "run_id": "RUN-BRIDGE-RESUME", "workflow_step": "context-frozen", "artifact_fingerprints": [artifact_fp], "pending_gate": None, "pending_handoff": None, "resume_policy": "checkpoint_revalidate", "created_at": "2026-01-01T00:00:00+00:00"}],
-            "events": [],
-            "provenance": {"runtime": "self_test", "version": "1", "durable_store": "control_plane"},
-        }), encoding="utf-8")
-        ready_put = _run_setup(["runtime", "--db", str(runtime_db), "session-put", "--session", str(ready_session_path), "--expected-version", "0"], cwd=temp_root)
-        ready_args = {
-            "project_root": str(temp_root),
-            "session_id": "SES-BRIDGE-RESUME",
-            "checkpoint_id": "CP-BRIDGE-RESUME",
-            "expected_session_version": 1,
-            "authority_evidence": "resume-ready-authority.json",
-        }
-        ready_preflight = invoke(_request("REQ-RESUME-READY", "session.resume.preflight", ready_args, surface="local_app"))
-        resume = invoke(_request("REQ-RESUME-APPLY", "session.resume", {
-            **ready_args,
-            "user_authorized": True,
-            "command_id": "CMD-BRIDGE-RESUME",
-        }, surface="local_app"))
-        receipt_query = invoke(_request("REQ-COMMAND-RECEIPT", "runtime.command.receipt.get", {
-            "project_root": str(temp_root),
-            "command_id": "CMD-BRIDGE-RESUME",
-        }, surface="local_app"))
-        resumed_session = invoke(_request("REQ-RESUMED-SESSION", "runtime.session.get", {
-            "project_root": str(temp_root),
-            "session_id": "SES-BRIDGE-RESUME",
-        }, surface="local_app"))
-        resume_command_safe = (
-            ready_put
-            and ready_preflight["status"] == "ok" and ready_preflight["data"].get("ready") is True
-            and resume["status"] == "ok" and resume["data"].get("schema") == RUNTIME_COMMAND_RESULT_SCHEMA
-            and resume["data"].get("status") == "applied" and resume["data"].get("runtime_mutation_performed") is True
-            and resume["data"].get("model_execution") is False and resume["data"].get("authority") is False
-            and isinstance(resume["data"].get("receipt"), dict)
-            and resume["data"]["receipt"].get("schema") == RUNTIME_COMMAND_RECEIPT_SCHEMA
-            and resumed_session["status"] == "ok" and resumed_session["data"]["session"]["status"] == "running"
-            and resumed_session["data"]["session"]["version"] == 2
-            and str(temp_root) not in canonical([resume, resumed_session])
-        )
-        command_receipt_safe = (
-            receipt_query["status"] == "ok"
-            and receipt_query["data"].get("schema") == RUNTIME_COMMAND_RECEIPT_PROJECTION_SCHEMA
-            and receipt_query["data"].get("count") == 1
-            and receipt_query["data"].get("query_only") is True
-            and receipt_query["data"].get("authority") is False
-            and str(temp_root) not in canonical(receipt_query)
-        )
-
-        terminate_args = {
-            "project_root": str(temp_root),
-            "session_id": "SES-BRIDGE-RESUME",
-            "expected_session_version": 2,
-        }
-        terminate_preflight = invoke(_request("REQ-TERMINATE-PREFLIGHT", "session.terminate.preflight", terminate_args, surface="local_app"))
-        terminate = invoke(_request("REQ-TERMINATE-APPLY", "session.terminate", {
-            **terminate_args,
-            "user_authorized": True,
-            "command_id": "CMD-BRIDGE-TERMINATE",
-        }, surface="local_app"))
-        terminate_receipt = invoke(_request("REQ-TERMINATE-RECEIPT", "runtime.command.receipt.get", {
-            "project_root": str(temp_root),
-            "command_id": "CMD-BRIDGE-TERMINATE",
-        }, surface="local_app"))
-        terminated_session = invoke(_request("REQ-TERMINATED-SESSION", "runtime.session.get", {
-            "project_root": str(temp_root),
-            "session_id": "SES-BRIDGE-RESUME",
-        }, surface="local_app"))
-        stopped_run = (
-            terminated_session["data"]["session"]["runs"][-1]
-            if terminated_session["status"] == "ok" and terminated_session["data"]["session"].get("runs")
-            else {}
-        )
-        terminate_preflight_safe = (
-            terminate_preflight["status"] == "ok"
-            and terminate_preflight["data"].get("schema") == TERMINATE_PREFLIGHT_SCHEMA
-            and terminate_preflight["data"].get("status") == "READY"
-            and terminate_preflight["data"].get("ready") is True
-            and terminate_preflight["data"].get("mutation_performed") is False
-            and terminate_preflight["data"].get("authority") is False
-            and str(temp_root) not in canonical(terminate_preflight)
-        )
-        terminate_command_safe = (
-            terminate["status"] == "ok" and terminate["data"].get("schema") == RUNTIME_COMMAND_RESULT_SCHEMA
-            and terminate["data"].get("status") == "applied" and terminate["data"].get("runtime_mutation_performed") is True
-            and terminate["data"].get("model_execution") is False and terminate["data"].get("authority") is False
-            and isinstance(terminate["data"].get("receipt"), dict)
-            and terminate["data"]["receipt"].get("schema") == RUNTIME_COMMAND_RECEIPT_SCHEMA
-            and terminate["data"]["receipt"].get("operation") == "session.terminate"
-            and terminate["data"]["receipt"].get("after_state", {}).get("session_status") == "terminated"
-            and terminate["data"]["receipt"].get("after_state", {}).get("run_status") == "terminated"
-            and terminate_receipt["status"] == "ok"
-            and terminate_receipt["data"].get("schema") == RUNTIME_COMMAND_RECEIPT_PROJECTION_SCHEMA
-            and terminate_receipt["data"].get("count") == 1
-            and terminated_session["status"] == "ok"
-            and terminated_session["data"]["session"]["status"] == "terminated"
-            and terminated_session["data"]["session"]["version"] == 3
-            and stopped_run.get("status") == "terminated" and isinstance(stopped_run.get("ended_at"), str)
-            and str(temp_root) not in canonical([terminate, terminate_receipt, terminated_session])
-        )
-    finally:
-        shutil.rmtree(temp_root, ignore_errors=True)
-
-    checks = {
-        "contract_dispatch_match": set(contract["operations"]["supported"]) == set(DISPATCH),
-        "authority_false": contract.get("authority") is False and desc_a.get("authority") is False,
-        "deterministic_envelope": deterministic_envelope,
-        "unknown_operation_fails_closed": unknown["status"] == "invalid",
-        "resume_nonlocal_surface_rejected": nonlocal_resume["status"] == "failed" and nonlocal_resume.get("error", {}).get("code") == "mutation_surface_not_authorized",
-        "terminate_nonlocal_surface_rejected": nonlocal_terminate["status"] == "failed" and nonlocal_terminate.get("error", {}).get("code") == "mutation_surface_not_authorized",
-        "write_command_deferred": deferred_write["status"] == "unsupported",
-        "request_authority_rejected": authority_rejected["status"] == "invalid",
-        "doctor_query": doctor["status"] == "ok",
-        "capability_query": capabilities["status"] == "ok",
-        "publication_preview_query_safe": publication_preview_safe,
-        "project_fixture_ready": project_ready,
-        "project_projection_safe": project_safe,
-        "context_projection_safe": context_safe,
-        "runtime_queries_supported": runtime_queries_ok,
-        "runtime_projection_safe": runtime_safe,
-        "resume_preflight_query_safe": resume_preflight_safe,
-        "resume_command_safe": resume_command_safe,
-        "runtime_command_receipt_safe": command_receipt_safe,
-        "terminate_preflight_query_safe": terminate_preflight_safe,
-        "terminate_command_safe": terminate_command_safe,
-    }
-    return {"studio_host_bridge_contract": "PASS" if all(checks.values()) else "FAIL", "schema": CONTRACT_SCHEMA, "checks": checks, "authority": False, "model_execution": False}
-
-
-def dump(value: Any) -> None:
-    print(json.dumps(value, ensure_ascii=False, indent=2))
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge Studio portable host bridge")
-    sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("describe")
-    inv = sub.add_parser("invoke")
-    inv.add_argument("--request", required=True)
-    sub.add_parser("self-test")
-    args = parser.parse_args()
-
-    if args.command == "describe":
-        dump(description())
-        return 0
-    if args.command == "self-test":
-        result = self_test()
-        dump(result)
-        return 0 if result["studio_host_bridge_contract"] == "PASS" else 1
-    try:
-        result = invoke(load_json(Path(args.request)))
-    except BridgeError as exc:
-        result = _base_result({"request_id": None, "operation": None, "surface": None}, status="invalid", error={"code": exc.code, "message": exc.message, "mutation_performed": False})
-    dump(result)
-    return 0 if result["status"] == "ok" else (2 if result["status"] in {"invalid", "unsupported"} else 1)
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+if __name__=="__main__":raise SystemExit(main())

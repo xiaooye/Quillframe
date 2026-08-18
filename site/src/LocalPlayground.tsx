@@ -90,7 +90,7 @@ export default function LocalPlayground(props: Props) {
 
   const text = createMemo(() => zh() ? {
     eyebrow: "Local Playground · Deterministic Preview",
-    title: "先把 NovelForge 的运行过程变成可以玩的东西。",
+    title: "先把 Quillframe 的运行过程变成可以玩的东西。",
     lede: "输入一段文本，选择真实 task mode，然后在浏览器里查看一个确定性的 execution trace。这里不调用模型、不做 semantic routing，也不写入任何 Project state。",
     input: "工作文本",
     placeholder: "贴一段场景、章节计划、现稿或审阅对象……\n\n这个 playground 只用它来构造可重复的演示 trace。",
@@ -110,11 +110,11 @@ export default function LocalPlayground(props: Props) {
     chars: "字符",
     blocks: "段落",
     fingerprint: "Demo fingerprint",
-    boundary: "这些 contract 只是当前 mode 的示例候选，不是 deterministic router 的真实选择。NovelForge 的 semantic contract activation 仍由 model / manager 决定，exact contract ID resolution 才由确定性 runtime 完成。",
+    boundary: "这些 contract 只是当前 mode 的示例候选，不是 deterministic router 的真实选择。Quillframe 的 semantic contract activation 仍由 model / manager 决定，exact contract ID resolution 才由确定性 runtime 完成。",
     resultBoundary: "此结果没有 Canon write、publication、settlement 或 durable-state authority。",
   } : {
     eyebrow: "Local Playground · Deterministic Preview",
-    title: "Make the NovelForge execution path something you can actually play with.",
+    title: "Make the Quillframe execution path something you can actually play with.",
     lede: "Paste working text, choose a real task mode, and inspect a deterministic execution trace in the browser. No model call, no semantic routing, and no Project-state write occurs here.",
     input: "Working text",
     placeholder: "Paste a scene, chapter plan, current draft, or review target…\n\nThe playground uses it only to construct a reproducible demo trace.",
@@ -134,7 +134,7 @@ export default function LocalPlayground(props: Props) {
     chars: "Characters",
     blocks: "Blocks",
     fingerprint: "Demo fingerprint",
-    boundary: "These contracts are illustrative candidates for the selected mode, not the output of a deterministic semantic router. NovelForge contract activation remains model / manager owned; deterministic runtime resolves exact contract IDs.",
+    boundary: "These contracts are illustrative candidates for the selected mode, not the output of a deterministic semantic router. Quillframe contract activation remains model / manager owned; deterministic runtime resolves exact contract IDs.",
     resultBoundary: "This result carries no Canon-write, publication, settlement, or durable-state authority.",
   });
 

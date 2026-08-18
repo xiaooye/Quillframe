@@ -17,7 +17,7 @@ HERE=Path(__file__).resolve();
 if str(HERE.parent) not in sys.path: sys.path.insert(0,str(HERE.parent))
 from semantic_worker_router import validate_dispatchable_job,validate_job,validate_result,worker_job_view  # noqa: E402
 
-PACKET_SCHEMA="novelforge_peer_review_packet_v1"
+PACKET_SCHEMA="quillframe_peer_review_packet_v1"
 
 def load(path:Path)->dict[str,Any]:
     v=json.loads(path.read_text(encoding="utf-8"));

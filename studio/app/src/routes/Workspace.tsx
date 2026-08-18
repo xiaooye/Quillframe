@@ -153,7 +153,7 @@ export default function Workspace() {
       setPreview({
         fingerprint,
         run: {
-          schema: "novelforge_playground_run_preview_v1",
+          schema: "quillframe_playground_run_preview_v1",
           run_id: runId,
           task_mode: mode(),
           status: "preview_complete",
@@ -164,7 +164,7 @@ export default function Workspace() {
           authority: false,
         },
         manifest: {
-          schema: "novelforge_playground_context_preview_v1",
+          schema: "quillframe_playground_context_preview_v1",
           run_id: runId,
           task_mode: mode(),
           source: "browser_ephemeral",
@@ -208,7 +208,7 @@ export default function Workspace() {
           t("playground.evidenceNoAuthority"),
         ],
         result: {
-          schema: "novelforge_playground_result_preview_v1",
+          schema: "quillframe_playground_result_preview_v1",
           run_id: runId,
           status: "preview_complete",
           mode: mode(),

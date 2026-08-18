@@ -145,7 +145,7 @@ def build()->dict[str,Any]:
     cases=[{'id':'OBJ-'+c['id'],'type':'repair_preservation','domain':'creative_repair','fixture':_fixture(c),'rubric':RUBRIC,'judgment_contract':JUDGMENT} for c in CASES]
     jobs=make_eval_jobs({'blind':True,'suite_version':'repair-objective-preservation-v1','cases':cases},source_session_id='SES-OBJ-PRES',handoff_id='HND-OBJ-PRES')
     return {
-        'schema':'novelforge_repair_objective_preservation_eval_v1',
+        'schema':'quillframe_repair_objective_preservation_eval_v1',
         'semantic_status':'PENDING_MODEL',
         'jobs':jobs['jobs'],
         'expectations':[{ 'case_id':c['id'],'expected':c['expected']} for c in CASES],
@@ -161,7 +161,7 @@ def build()->dict[str,Any]:
             'constraint_interference':'Qi et al. 2026 preprint; Harada et al. Findings EMNLP 2025; Zeng et al. Findings ACL 2025',
             'long_context_multi_turn':'Robinette et al. Findings EACL 2026; Singh et al. Findings ACL 2026',
             'context_refactoring':'Shen et al. Findings ACL 2026; Chen et al. Findings ACL 2026',
-            'inference_boundary':'These sources do not directly test fiction repair. Objective-envelope and FIX+PRESERVE semantics are NovelForge-specific adaptations to be evaluated, not claimed empirical facts.',
+            'inference_boundary':'These sources do not directly test fiction repair. Objective-envelope and FIX+PRESERVE semantics are Quillframe-specific adaptations to be evaluated, not claimed empirical facts.',
         },
         'model_execution':False,
         'authority':False,
@@ -186,7 +186,7 @@ def self_test()->dict[str,Any]:
         'all_jobs_valid':all(not validate_job(j) for j in packet['jobs']),
         'normal_ci_no_model_execution':packet['model_execution'] is False and packet['semantic_status']=='PENDING_MODEL',
     }
-    return {'schema':'novelforge_repair_objective_preservation_eval_test_v1','repair_objective_preservation_eval_contract':'PASS' if all(checks.values()) else 'FAIL','checks':checks,'model_execution':False,'authority':False}
+    return {'schema':'quillframe_repair_objective_preservation_eval_test_v1','repair_objective_preservation_eval_contract':'PASS' if all(checks.values()) else 'FAIL','checks':checks,'model_execution':False,'authority':False}
 
 
 def main()->int:

@@ -12,7 +12,7 @@ import {
   type Accessor,
   type JSX,
 } from "solid-js";
-import brandMark from "../../assets/brand/novelforge-mark.svg?url";
+import brandMark from "../../assets/brand/quillframe-mark.svg?url";
 import { type Locale } from "./content";
 import { enUS } from "./content.en-US";
 import { zhCN } from "./content.zh-CN";
@@ -22,7 +22,7 @@ import LocalPlayground from "./LocalPlayground";
 import { ProductSectionHeading, ProductSurfaceHero } from "./ProductSurface";
 
 const siteCopy = { "en-US": enUS, "zh-CN": zhCN } as const;
-const studioUrl = "https://studio.novelforge.wei-dev.com";
+const studioUrl = "https://studio.quillframe.wei-dev.com";
 
 const homeEntryCopy = {
   "zh-CN": {
@@ -31,7 +31,7 @@ const homeEntryCopy = {
     launch: "开始探索",
     heroEyebrow: "长篇小说创作系统 · 0.8.x",
     heroTitle: "让故事越写越长，系统仍然知道自己在做什么。",
-    heroLede: "NovelForge 把创作、上下文、角色知识、质量审查与出版连成一套可检查的工作流。你可以从这里直接进入 Studio、搜索真实文档、探索架构，或者试试关键机制。",
+    heroLede: "Quillframe 把创作、上下文、角色知识、质量审查与出版连成一套可检查的工作流。你可以从这里直接进入 Studio、搜索真实文档、探索架构，或者试试关键机制。",
     cuteHint: "今天也把故事织得更漂亮一点吧 (｡•̀ᴗ-)✧",
     capabilityTitle: "六条真实产品能力",
     capabilityLede: "不是 feature list；每一项都对应当前主分支里的真实契约。点开看看它解决什么问题。",
@@ -63,7 +63,7 @@ const homeEntryCopy = {
     launch: "Explore",
     heroEyebrow: "Long-form fiction system · 0.8.x",
     heroTitle: "Let the story grow without letting the system lose the plot.",
-    heroLede: "NovelForge connects creation, context, character knowledge, quality gates, and publication into one inspectable workflow. Launch Studio, search real docs, explore architecture, or play with the core boundaries from here.",
+    heroLede: "Quillframe connects creation, context, character knowledge, quality gates, and publication into one inspectable workflow. Launch Studio, search real docs, explore architecture, or play with the core boundaries from here.",
     cuteHint: "Let’s weave something lovely today (｡•̀ᴗ-)✧",
     capabilityTitle: "Six real product capabilities",
     capabilityLede: "Not a feature wall. Every item maps to a contract that exists on current main. Pick one to inspect the problem it owns.",
@@ -105,13 +105,13 @@ type UiContextValue = {
 const UiContext = createContext<UiContextValue>();
 
 function initialLocale(): Locale {
-  const saved = localStorage.getItem("novelforge.locale");
+  const saved = localStorage.getItem("quillframe.locale");
   if (saved === "zh-CN" || saved === "en-US") return saved;
   return navigator.language.toLowerCase().startsWith("zh") ? "zh-CN" : "en-US";
 }
 
 function initialDark() {
-  const saved = localStorage.getItem("novelforge.appearance");
+  const saved = localStorage.getItem("quillframe.appearance");
   if (saved === "dark") return true;
   if (saved === "light") return false;
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -133,8 +133,8 @@ function syncDocumentState() {
   document.documentElement.lang = zh() ? "zh-CN" : "en";
   document.documentElement.dataset.locale = locale();
   document.documentElement.classList.toggle("dark", dark());
-  localStorage.setItem("novelforge.locale", locale());
-  localStorage.setItem("novelforge.appearance", dark() ? "dark" : "light");
+  localStorage.setItem("quillframe.locale", locale());
+  localStorage.setItem("quillframe.appearance", dark() ? "dark" : "light");
 }
 
 function updatePointerLight(event: PointerEvent & { currentTarget: HTMLElement }) {
@@ -252,9 +252,9 @@ function ProductShell(props: { children?: JSX.Element }) {
     <UiContext.Provider value={context}>
       <div class="site-shell product-entry unified-product-shell">
         <header class="wui-app-bar product-appbar" data-position="sticky">
-          <A href="/" class="wui-app-bar__brand brand-link" aria-label={zh() ? "NovelForge 首页" : "NovelForge home"}>
+          <A href="/" class="wui-app-bar__brand brand-link" aria-label={zh() ? "Quillframe 首页" : "Quillframe home"}>
             <span class="brand-mark-wrap"><img src={brandMark} alt="" width="32" height="32" aria-hidden="true" /></span>
-            <span>NovelForge</span>
+            <span>Quillframe</span>
             <span class="wui-badge wui-badge--soft version-chip">0.8.x</span>
           </A>
           <nav class="wui-app-bar__nav desktop-nav" aria-label={zh() ? "主导航" : "Primary navigation"}>
@@ -262,7 +262,7 @@ function ProductShell(props: { children?: JSX.Element }) {
             <a class="wui-app-bar__link" href={zh() ? "/docs" : "/docs/en"}>{copy().nav.docs}</a>
           </nav>
           <div class="wui-app-bar__actions header-actions">
-            <button type="button" class="wui-button wui-button--soft header-search" onClick={openCommand}><span>⌕</span><span>{zh() ? "搜索 NovelForge" : "Search NovelForge"}</span><kbd>⌘K / Ctrl+K</kbd></button>
+            <button type="button" class="wui-button wui-button--soft header-search" onClick={openCommand}><span>⌕</span><span>{zh() ? "搜索 Quillframe" : "Search Quillframe"}</span><kbd>⌘K / Ctrl+K</kbd></button>
             <a class="wui-button wui-button--solid studio-cta" href={studioUrl} target="_blank" rel="noreferrer">✦ {zh() ? "打开 Studio" : "Open Studio"}</a>
             <button class="wui-button wui-button--ghost wui-button--icon-only" type="button" onClick={toggleLocale} aria-label={zh() ? "切换到英文" : "Switch to Chinese"}>{copy().languageName}</button>
             <button class="wui-button wui-button--ghost wui-button--icon-only" type="button" onClick={toggleDark} aria-label={copy().nav.appearance}><span aria-hidden="true">{dark() ? "☼" : "◐"}</span></button>
@@ -284,7 +284,7 @@ function ProductShell(props: { children?: JSX.Element }) {
 
         <footer class="site-footer unified-product-footer">
           <div class="page-width footer-grid">
-            <div class="footer-brand-block"><div class="footer-brand"><img src={brandMark} alt="" /><strong>NovelForge</strong></div><p>{zh() ? "一个产品壳，共享同一套导航、主题与语言状态。" : "One product shell, one navigation, theme, and locale state."}</p></div>
+            <div class="footer-brand-block"><div class="footer-brand"><img src={brandMark} alt="" /><strong>Quillframe</strong></div><p>{zh() ? "一个产品壳，共享同一套导航、主题与语言状态。" : "One product shell, one navigation, theme, and locale state."}</p></div>
             <div class="footer-links"><A href="/product">{copy().nav.product}</A><A href="/architecture">{copy().nav.architecture}</A><A href="/publication">{copy().nav.publication}</A><a href={zh() ? "/docs" : "/docs/en"}>{copy().nav.docs}</a></div>
             <div class="footer-links"><A href="/inspect">{zh() ? "检查项目" : "Inspect"}</A><A href="/playground">Playground</A><A href="/agents">{zh() ? "Agent 集成" : "Agents"}</A><a href={studioUrl} target="_blank" rel="noreferrer">Studio ↗</a></div>
           </div>
@@ -292,7 +292,7 @@ function ProductShell(props: { children?: JSX.Element }) {
 
         <dialog ref={commandDialog} class="command-dialog" onClose={() => setQuery("")} onClick={(event) => { if (event.target === commandDialog) closeCommand(); }}>
           <div class="wui-command command-surface">
-            <div class="command-cute-strip"><span>✦</span><strong>{zh() ? "搜索 NovelForge" : "Search NovelForge"}</strong><span>{zh() ? "今天也把故事织得漂亮一点吧" : "Weave something lovely today"}</span></div>
+            <div class="command-cute-strip"><span>✦</span><strong>{zh() ? "搜索 Quillframe" : "Search Quillframe"}</strong><span>{zh() ? "今天也把故事织得漂亮一点吧" : "Weave something lovely today"}</span></div>
             <div class="wui-command__input-wrapper"><span class="wui-command__icon">⌕</span><input ref={commandInput} class="wui-command__input" value={query()} onInput={(event) => { setQuery(event.currentTarget.value); setHighlighted(0); }} onKeyDown={handleCommandKey} placeholder={zh() ? "搜索产品、文档、架构、出版…" : "Search product, docs, architecture, publication…"} /><kbd>Esc</kbd></div>
             <div class="wui-command__list" role="listbox"><For each={commandResults()}>{(result, index) => <button type="button" class="wui-command__item command-result" data-highlighted={highlighted() === index()} role="option" aria-selected={highlighted() === index()} onMouseEnter={() => setHighlighted(index())} onClick={() => runResult(result)}><span class="command-result-icon">{result.icon}</span><span class="command-result-copy"><strong>{result.label}</strong><small>{result.description}</small></span><span>→</span></button>}</For></div>
           </div>
@@ -407,7 +407,7 @@ function HomePage() {
       <section class="product-world page-width section-compact">
         <div class="section-heading compact-heading"><p class="eyebrow">{homeUi().productWorld}</p><h2>{isZh() ? "真正的产品入口，不是“继续阅读”。" : "Real product doors, not another ‘read more’."}</h2></div>
         <div class="portal-grid">
-          <a class="portal-card studio-portal" href={studioUrl} target="_blank" rel="noreferrer"><div class="portal-icon">✦</div><div><small>{homeUi().hostedStudio}</small><h3>NovelForge Studio</h3><p>{homeUi().hostedNote}</p></div><span>↗</span></a>
+          <a class="portal-card studio-portal" href={studioUrl} target="_blank" rel="noreferrer"><div class="portal-icon">✦</div><div><small>{homeUi().hostedStudio}</small><h3>Quillframe Studio</h3><p>{homeUi().hostedNote}</p></div><span>↗</span></a>
           <a class="portal-card docs-portal" href={docsRoot()}><div class="portal-icon">📚</div><div><small>{homeUi().docs}</small><h3>{homeUi().knowledgeTitle}</h3><p>{homeUi().knowledgeLede}</p></div><span>→</span></a>
           <A class="portal-card architecture-portal" href="/architecture"><div class="portal-icon">⌘</div><div><small>{homeUi().architecture}</small><h3>{homeUi().architectureTitle}</h3><p>{copy().routes.architecture.lede}</p></div><span>→</span></A>
           <A class="portal-card publication-portal" href="/publication"><div class="portal-icon">✧</div><div><small>{homeUi().publication}</small><h3>{homeUi().publicationTitle}</h3><p>{copy().routes.publication.lede}</p></div><span>→</span></A>
@@ -434,18 +434,18 @@ function ProductPage() {
 
 function StudioPage() {
   const route = () => siteCopy[locale()].routes.studio;
-  return <div class="page-width section-compact unified-route-page"><ProductSurfaceHero tone="runtime" eyebrow={<span>{route().eyebrow}</span>} title={route().title} lede={<p>{route().lede}</p>} actions={<a class="wui-button wui-button--solid" href={studioUrl} target="_blank" rel="noreferrer">✦ {zh() ? "打开 Hosted Studio" : "Open Hosted Studio"}</a>} visual={<div class="unified-studio-terminal"><div><i /><i /><i /><strong>studio.novelforge.wei-dev.com</strong></div><pre>host: cloudflare{`\n`}core: unbound{`\n`}authority: false{`\n`}mode: read-only</pre></div>} /><div class="unified-card-grid"><For each={route().cards}>{(card) => <article class="wui-card unified-info-card"><small>{card.eyebrow}</small><h3>{card.title}</h3><p>{card.body}</p></article>}</For></div></div>;
+  return <div class="page-width section-compact unified-route-page"><ProductSurfaceHero tone="runtime" eyebrow={<span>{route().eyebrow}</span>} title={route().title} lede={<p>{route().lede}</p>} actions={<a class="wui-button wui-button--solid" href={studioUrl} target="_blank" rel="noreferrer">✦ {zh() ? "打开 Hosted Studio" : "Open Hosted Studio"}</a>} visual={<div class="unified-studio-terminal"><div><i /><i /><i /><strong>studio.quillframe.wei-dev.com</strong></div><pre>host: cloudflare{`\n`}core: unbound{`\n`}authority: false{`\n`}mode: read-only</pre></div>} /><div class="unified-card-grid"><For each={route().cards}>{(card) => <article class="wui-card unified-info-card"><small>{card.eyebrow}</small><h3>{card.title}</h3><p>{card.body}</p></article>}</For></div></div>;
 }
 
 type Lane = "project" | "runtime" | "evidence" | "editorial" | "validated";
 const architectureNodes = [
-  { id: "project", icon: "⌂", lane: "project" as Lane, title: "Project", zh: "Project", compactZh: "身份 · Framework lock", compactEn: "identity · framework lock", descZh: "解析项目身份、精确 Framework lock、attestation 与项目逻辑域。", descEn: "Resolve project identity, exact Framework lock, attestation, and logical domains.", input: ["novelforge.toml", "novelforge.lock.json", "framework.attestation.json"], output: ["project identity", "Framework identity", "adapter resolution"], authorityZh: "项目文件拥有权威；UI 只读。", authorityEn: "Project files own authority; the UI is read-only.", contracts: ["novelforge_project_adapter_resolution_v1"] },
-  { id: "manager", icon: "✦", lane: "runtime" as Lane, title: "Manager", zh: "Manager", compactZh: "Session · Run", compactEn: "session · run", descZh: "协调 Session / Run、checkpoint、routing 与 Control Plane lineage。", descEn: "Coordinate Session / Run identity, checkpoints, routing, and control-plane lineage.", input: ["resolved project", "task intent", "host capability"], output: ["run identity", "checkpoint boundary", "execution path"], authorityZh: "运行协调不等于 Canon authority。", authorityEn: "Operational coordination is not Canon authority.", contracts: ["novelforge_host_capabilities_v1"] },
-  { id: "context", icon: "🫧", lane: "evidence" as Lane, title: "Context", zh: "Context", compactZh: "稀疏上下文", compactEn: "sparse context", descZh: "选择稀疏、带 authority 的工作集，并区分 support 与实际 loaded context。", descEn: "Select a sparse authority-aware working set and distinguish support from loaded context.", input: ["eligible sources", "visibility", "budget"], output: ["context view", "loaded support", "excluded evidence"], authorityZh: "Context selection 是工作证据，不会变成 Canon。", authorityEn: "Context selection is working evidence, not Canon.", contracts: ["novelforge_context_inspector_v2", "novelforge_run_receipt_v1"] },
+  { id: "project", icon: "⌂", lane: "project" as Lane, title: "Project", zh: "Project", compactZh: "身份 · Framework lock", compactEn: "identity · framework lock", descZh: "解析项目身份、精确 Framework lock、attestation 与项目逻辑域。", descEn: "Resolve project identity, exact Framework lock, attestation, and logical domains.", input: ["quillframe.toml", "quillframe.lock.json", "framework.attestation.json"], output: ["project identity", "Framework identity", "adapter resolution"], authorityZh: "项目文件拥有权威；UI 只读。", authorityEn: "Project files own authority; the UI is read-only.", contracts: ["quillframe_project_adapter_resolution_v1"] },
+  { id: "manager", icon: "✦", lane: "runtime" as Lane, title: "Manager", zh: "Manager", compactZh: "Session · Run", compactEn: "session · run", descZh: "协调 Session / Run、checkpoint、routing 与 Control Plane lineage。", descEn: "Coordinate Session / Run identity, checkpoints, routing, and control-plane lineage.", input: ["resolved project", "task intent", "host capability"], output: ["run identity", "checkpoint boundary", "execution path"], authorityZh: "运行协调不等于 Canon authority。", authorityEn: "Operational coordination is not Canon authority.", contracts: ["quillframe_host_capabilities_v1"] },
+  { id: "context", icon: "🫧", lane: "evidence" as Lane, title: "Context", zh: "Context", compactZh: "稀疏上下文", compactEn: "sparse context", descZh: "选择稀疏、带 authority 的工作集，并区分 support 与实际 loaded context。", descEn: "Select a sparse authority-aware working set and distinguish support from loaded context.", input: ["eligible sources", "visibility", "budget"], output: ["context view", "loaded support", "excluded evidence"], authorityZh: "Context selection 是工作证据，不会变成 Canon。", authorityEn: "Context selection is working evidence, not Canon.", contracts: ["quillframe_context_inspector_v2", "quillframe_run_receipt_v1"] },
   { id: "worker", icon: "⌘", lane: "editorial" as Lane, title: "Worker", zh: "Worker", compactZh: "typed semantic I/O", compactEn: "typed semantic I/O", descZh: "执行 typed semantic contract，并返回可检查的 result identity。", descEn: "Execute a typed semantic contract and return inspectable result identity.", input: ["typed task", "visible context", "contract"], output: ["typed result", "fingerprint", "worker status"], authorityZh: "Worker result 是 evidence，不授予写权限。", authorityEn: "Worker results are evidence and grant no write authority.", contracts: ["semantic contract catalog"] },
-  { id: "gate", icon: "✓", lane: "validated" as Lane, title: "Gate", zh: "Gate", compactZh: "candidate 指纹校验", compactEn: "candidate fingerprint", descZh: "围绕同一个 exact candidate fingerprint 汇合必要证据。", descEn: "Conjoin required evidence around one exact candidate fingerprint.", input: ["candidate fingerprint", "deterministic checks", "semantic evidence"], output: ["gate status", "blocking evidence", "readiness"], authorityZh: "Production readiness 是 gate evidence，不是 Canon acceptance。", authorityEn: "Production readiness is gate evidence, not Canon acceptance.", contracts: ["novelforge_production_readiness_v1"] },
+  { id: "gate", icon: "✓", lane: "validated" as Lane, title: "Gate", zh: "Gate", compactZh: "candidate 指纹校验", compactEn: "candidate fingerprint", descZh: "围绕同一个 exact candidate fingerprint 汇合必要证据。", descEn: "Conjoin required evidence around one exact candidate fingerprint.", input: ["candidate fingerprint", "deterministic checks", "semantic evidence"], output: ["gate status", "blocking evidence", "readiness"], authorityZh: "Production readiness 是 gate evidence，不是 Canon acceptance。", authorityEn: "Production readiness is gate evidence, not Canon acceptance.", contracts: ["quillframe_production_readiness_v1"] },
   { id: "settlement", icon: "◇", lane: "evidence" as Lane, title: "Settlement", zh: "Settlement", compactZh: "语义提交", compactEn: "semantic commit", descZh: "通过 Core-owned settlement semantics 应用 eligible accepted changes。", descEn: "Apply eligible accepted changes through Core-owned settlement semantics.", input: ["accepted decision", "state changes", "provenance"], output: ["settlement receipt", "committed transition"], authorityZh: "UI 不能制造 settlement authority。", authorityEn: "The UI cannot manufacture settlement authority.", contracts: ["Control Plane lineage"] },
-  { id: "publication", icon: "📖", lane: "validated" as Lane, title: "Publication", zh: "Publication", compactZh: "文本物化", compactEn: "text materialization", descZh: "把 accepted manuscript 确定性编译成带 provenance 的派生出版物。", descEn: "Compile accepted manuscript text deterministically into derived publication artifacts.", input: ["accepted manuscript", "publication profile"], output: ["TXT", "Web", "Print", "EPUB 3.3"], authorityZh: "Publication artifact 是 derived，authority=false。", authorityEn: "Publication artifacts are derived and authority=false.", contracts: ["novelforge_publication_ir_v1", "publication/compiler.py"] },
+  { id: "publication", icon: "📖", lane: "validated" as Lane, title: "Publication", zh: "Publication", compactZh: "文本物化", compactEn: "text materialization", descZh: "把 accepted manuscript 确定性编译成带 provenance 的派生出版物。", descEn: "Compile accepted manuscript text deterministically into derived publication artifacts.", input: ["accepted manuscript", "publication profile"], output: ["TXT", "Web", "Print", "EPUB 3.3"], authorityZh: "Publication artifact 是 derived，authority=false。", authorityEn: "Publication artifacts are derived and authority=false.", contracts: ["quillframe_publication_ir_v1", "publication/compiler.py"] },
 ];
 
 function ArchitecturePage() {
@@ -465,7 +465,7 @@ function ArchitecturePage() {
       tone="project"
       eyebrow={<span>INTERACTIVE ARCHITECTURE</span>}
       badges={<span class="wui-badge wui-badge--outline">authority=false</span>}
-      title={zh() ? "看一条 NovelForge 运行，怎样穿过整个系统。" : "See how one NovelForge run moves through the system."}
+      title={zh() ? "看一条 Quillframe 运行，怎样穿过整个系统。" : "See how one Quillframe run moves through the system."}
       lede={<p>{zh() ? "Project → Manager → Context → Worker → Gate → Settlement → Publication。共享的是同一个产品壳；每个节点只拥有自己的机制边界。" : "Project → Manager → Context → Worker → Gate → Settlement → Publication. One product shell, with each node owning only its mechanism boundary."}</p>}
       actions={<><a class="wui-button wui-button--soft" href={zh() ? "/docs/architecture" : "/docs/en/architecture"}>📚 {zh() ? "阅读架构文档" : "Read architecture docs"}</a><A class="wui-button wui-button--ghost" href="/playground">▷ Playground</A></>}
       visual={<div class="architecture-hero-path">{architectureNodes.map((node, index) => <><button type="button" data-active={selected() === index} onClick={() => setSelected(index)}><span>{node.icon}</span><strong>{node.title}</strong></button>{index < architectureNodes.length - 1 ? <i>→</i> : null}</>)}</div>}
@@ -509,14 +509,14 @@ function PublicationPage() {
       visual={<div class="unified-publication-gallery"><For each={publicationProfiles}>{(profile, index) => <PublicationSnapshot profile={profile} active={selected() === index()} onClick={() => setSelected(index())} />}</For></div>}
     />
     <section class="publication-profile-rail"><div class="publication-rail-title"><span>🛠</span><div><strong>{zh() ? "出版工作台" : "Publication workbench"}</strong><small>{zh() ? "选择目标格式并查看预览、配置与 provenance。" : "Choose a format and inspect preview, configuration, and provenance."}</small></div></div><For each={publicationProfiles}>{(profile, index) => <button type="button" class="publication-profile-card" data-active={selected() === index()} data-profile={profile.id} onClick={() => setSelected(index())}><span class="publication-profile-icon">{profile.icon}</span><span class="publication-profile-copy"><small>{zh() ? profile.labelZh : profile.labelEn}</small><strong>{zh() ? profile.titleZh : profile.titleEn}</strong><span>{profile.artifact}</span></span><span class="publication-profile-arrow">{selected() === index() ? "✓" : "→"}</span></button>}</For></section>
-    <section class="publication-workbench-grid"><article class="wui-card publication-preview-card" data-profile={current().id}><div class="publication-preview-toolbar"><div><small>{zh() ? "阅读预览" : "READING PREVIEW"}</small><strong>{zh() ? current().labelZh : current().labelEn}</strong></div><div class="publication-preview-state"><span class="wui-badge wui-badge--success">exact text</span><span class="wui-badge wui-badge--outline">preview only</span></div></div><div class="unified-large-publication-preview" data-profile={current().id}><span class="preview-device-label">{current().icon}</span><article><small>NovelForge · {current().icon}</small><h2>{zh() ? "第一章 · 夜幕与灯火" : "Chapter 1 · Nightfall and lights"}</h2><p>{zh() ? "夜幕降临，城市的灯光一盏盏亮起，像星星坠落在河面上。" : "Night fell and city lights came on one by one, like stars settling on the river."}</p><p>{zh() ? "他站在桥边，手里握着一封信，风从河面吹来。" : "He stood by the bridge holding a letter while wind moved across the river."}</p></article></div></article><aside class="publication-inspector"><section class="wui-card publication-profile-inspector"><div class="publication-inspector-head"><span class="publication-inspector-icon">{current().icon}</span><div><small>{zh() ? "格式配置与元数据" : "PROFILE & METADATA"}</small><h2>{zh() ? current().titleZh : current().titleEn}</h2></div></div><div class="publication-token-grid"><div><span>artifact</span><strong>{current().artifact}</strong></div><div><span>source</span><strong>sha256 · exact</strong></div><div><span>authority</span><strong>false</strong></div><div><span>render</span><strong>deterministic</strong></div></div></section></aside></section>
-    <section class="wui-card publication-provenance"><div class="publication-provenance-head"><div><small>PROVENANCE</small><h2>{zh() ? "每个派生物都能回到同一份接受正文。" : "Every derivative resolves back to the same accepted manuscript."}</h2></div></div><div class="publication-pipeline"><div class="publication-pipeline-node" data-kind="source"><span>✓</span><div><small>ACCEPTED</small><strong>Accepted manuscript</strong><code>sha256 · exact</code></div></div><span class="publication-pipeline-arrow">→</span><div class="publication-pipeline-node" data-kind="ir"><span>IR</span><div><small>PUBLICATION IR</small><strong>novelforge_publication_ir_v1</strong><code>schema-bound</code></div></div><span class="publication-pipeline-arrow">→</span><div class="publication-pipeline-node" data-kind="renderer"><span>⌘</span><div><small>COMPILER</small><strong>publication/compiler.py</strong><code>deterministic</code></div></div><span class="publication-pipeline-arrow">→</span><div class="publication-pipeline-node" data-kind="artifact"><span>{current().icon}</span><div><small>ARTIFACT</small><strong>{current().artifact}</strong><code>authority=false</code></div></div></div></section>
+    <section class="publication-workbench-grid"><article class="wui-card publication-preview-card" data-profile={current().id}><div class="publication-preview-toolbar"><div><small>{zh() ? "阅读预览" : "READING PREVIEW"}</small><strong>{zh() ? current().labelZh : current().labelEn}</strong></div><div class="publication-preview-state"><span class="wui-badge wui-badge--success">exact text</span><span class="wui-badge wui-badge--outline">preview only</span></div></div><div class="unified-large-publication-preview" data-profile={current().id}><span class="preview-device-label">{current().icon}</span><article><small>Quillframe · {current().icon}</small><h2>{zh() ? "第一章 · 夜幕与灯火" : "Chapter 1 · Nightfall and lights"}</h2><p>{zh() ? "夜幕降临，城市的灯光一盏盏亮起，像星星坠落在河面上。" : "Night fell and city lights came on one by one, like stars settling on the river."}</p><p>{zh() ? "他站在桥边，手里握着一封信，风从河面吹来。" : "He stood by the bridge holding a letter while wind moved across the river."}</p></article></div></article><aside class="publication-inspector"><section class="wui-card publication-profile-inspector"><div class="publication-inspector-head"><span class="publication-inspector-icon">{current().icon}</span><div><small>{zh() ? "格式配置与元数据" : "PROFILE & METADATA"}</small><h2>{zh() ? current().titleZh : current().titleEn}</h2></div></div><div class="publication-token-grid"><div><span>artifact</span><strong>{current().artifact}</strong></div><div><span>source</span><strong>sha256 · exact</strong></div><div><span>authority</span><strong>false</strong></div><div><span>render</span><strong>deterministic</strong></div></div></section></aside></section>
+    <section class="wui-card publication-provenance"><div class="publication-provenance-head"><div><small>PROVENANCE</small><h2>{zh() ? "每个派生物都能回到同一份接受正文。" : "Every derivative resolves back to the same accepted manuscript."}</h2></div></div><div class="publication-pipeline"><div class="publication-pipeline-node" data-kind="source"><span>✓</span><div><small>ACCEPTED</small><strong>Accepted manuscript</strong><code>sha256 · exact</code></div></div><span class="publication-pipeline-arrow">→</span><div class="publication-pipeline-node" data-kind="ir"><span>IR</span><div><small>PUBLICATION IR</small><strong>quillframe_publication_ir_v1</strong><code>schema-bound</code></div></div><span class="publication-pipeline-arrow">→</span><div class="publication-pipeline-node" data-kind="renderer"><span>⌘</span><div><small>COMPILER</small><strong>publication/compiler.py</strong><code>deterministic</code></div></div><span class="publication-pipeline-arrow">→</span><div class="publication-pipeline-node" data-kind="artifact"><span>{current().icon}</span><div><small>ARTIFACT</small><strong>{current().artifact}</strong><code>authority=false</code></div></div></div></section>
   </div>;
 }
 
 function InspectorPage() {
   const { locale, zh } = useUi();
-  return <div class="page-width section-compact unified-route-page inspector-entry"><ProductSurfaceHero tone="project" eyebrow={<span>PROJECT INSPECTOR</span>} title={zh() ? "先确认项目是谁，再让任何工具碰它。" : "Resolve the project before any tool touches it."} lede={<p>{zh() ? "本地检查 manifest、精确 Framework lock、attestation 与结构证据。文件不会上传，检查结果也不会产生新的 Project authority。" : "Inspect the manifest, exact Framework lock, attestation, and structural evidence locally. Files are not uploaded and inspection grants no new Project authority."}</p>} visual={<div class="unified-inspector-visual"><span>novelforge.toml</span><span>novelforge.lock.json</span><span>framework.attestation.json</span><strong>✓ local only</strong></div>} /><ProjectInspector locale={locale()} /></div>;
+  return <div class="page-width section-compact unified-route-page inspector-entry"><ProductSurfaceHero tone="project" eyebrow={<span>PROJECT INSPECTOR</span>} title={zh() ? "先确认项目是谁，再让任何工具碰它。" : "Resolve the project before any tool touches it."} lede={<p>{zh() ? "本地检查 manifest、精确 Framework lock、attestation 与结构证据。文件不会上传，检查结果也不会产生新的 Project authority。" : "Inspect the manifest, exact Framework lock, attestation, and structural evidence locally. Files are not uploaded and inspection grants no new Project authority."}</p>} visual={<div class="unified-inspector-visual"><span>quillframe.toml</span><span>quillframe.lock.json</span><span>framework.attestation.json</span><strong>✓ local only</strong></div>} /><ProjectInspector locale={locale()} /></div>;
 }
 
 function PlaygroundPage() {
@@ -528,7 +528,7 @@ const agentHosts = ["Claude Code", "Codex", "Cursor", "OpenCode", "Custom agent"
 function AgentsPage() {
   const { zh } = useUi();
   const [selected, setSelected] = createSignal(1);
-  return <div class="page-width section-compact unified-route-page agent-integration-entry"><ProductSurfaceHero tone="runtime" eyebrow={<span>AGENT SKILL · HOST BRIDGE V1</span>} badges={<span class="wui-badge wui-badge--outline">authority=false</span>} title={zh() ? "让你的 Agent 接入 NovelForge，而不是绕过 NovelForge。" : "Let your agent use NovelForge without bypassing NovelForge."} lede={<p>{zh() ? "portable Agent Skill 通过公开 Host Bridge 发现能力、检查 Project / Context / semantic contracts，并把写权限明确留在 Core。" : "The portable Agent Skill uses the public Host Bridge to discover capabilities and inspect Project, Context, and semantic contracts while writes remain Core-owned."}</p>} visual={<div class="unified-agent-hosts"><For each={agentHosts}>{(host, index) => <button type="button" data-active={selected() === index()} onClick={() => setSelected(index())}><span>{host.slice(0, 1)}</span><strong>{host}</strong></button>}</For></div>} /><section class="agent-host-workbench"><ProductSectionHeading eyebrow={zh() ? "宿主 recipe" : "HOST RECIPE"} title={zh() ? `${agentHosts[selected()]} 使用同一条公开边界。` : `${agentHosts[selected()]} uses the same public boundary.`} /><div class="agent-host-detail"><article class="agent-host-profile"><div class="agent-host-profile-badges"><span class="wui-badge wui-badge--soft">{agentHosts[selected()]}</span><span class="wui-badge wui-badge--outline">generic read-only bridge</span></div><h3>{zh() ? "能力匹配，不制造新的权威层。" : "Match capabilities without inventing another authority layer."}</h3><ul class="agent-host-facts"><li><span>{zh() ? "入口" : "Entry"}</span><strong>agent-skills/novelforge/SKILL.md</strong></li><li><span>{zh() ? "发现" : "Discovery"}</span><strong>bridge.describe</strong></li><li><span>{zh() ? "写权限" : "Write authority"}</span><strong>0 · authority=false</strong></li></ul></article><article class="agent-host-instruction"><div class="agent-host-instruction-head"><div><small>HOST INSTRUCTION</small><strong>{zh() ? "最小安全边界" : "Minimal safe boundary"}</strong></div></div><pre><code>{`1. Read agent-skills/novelforge/SKILL.md\n2. Run bridge self-test\n3. Run bridge.describe\n4. Invoke advertised operations only\n5. authority: false\n6. Never read private runtime stores directly`}</code></pre></article></div></section></div>;
+  return <div class="page-width section-compact unified-route-page agent-integration-entry"><ProductSurfaceHero tone="runtime" eyebrow={<span>AGENT SKILL · HOST BRIDGE V1</span>} badges={<span class="wui-badge wui-badge--outline">authority=false</span>} title={zh() ? "让你的 Agent 接入 Quillframe，而不是绕过 Quillframe。" : "Let your agent use Quillframe without bypassing Quillframe."} lede={<p>{zh() ? "portable Agent Skill 通过公开 Host Bridge 发现能力、检查 Project / Context / semantic contracts，并把写权限明确留在 Core。" : "The portable Agent Skill uses the public Host Bridge to discover capabilities and inspect Project, Context, and semantic contracts while writes remain Core-owned."}</p>} visual={<div class="unified-agent-hosts"><For each={agentHosts}>{(host, index) => <button type="button" data-active={selected() === index()} onClick={() => setSelected(index())}><span>{host.slice(0, 1)}</span><strong>{host}</strong></button>}</For></div>} /><section class="agent-host-workbench"><ProductSectionHeading eyebrow={zh() ? "宿主 recipe" : "HOST RECIPE"} title={zh() ? `${agentHosts[selected()]} 使用同一条公开边界。` : `${agentHosts[selected()]} uses the same public boundary.`} /><div class="agent-host-detail"><article class="agent-host-profile"><div class="agent-host-profile-badges"><span class="wui-badge wui-badge--soft">{agentHosts[selected()]}</span><span class="wui-badge wui-badge--outline">generic read-only bridge</span></div><h3>{zh() ? "能力匹配，不制造新的权威层。" : "Match capabilities without inventing another authority layer."}</h3><ul class="agent-host-facts"><li><span>{zh() ? "入口" : "Entry"}</span><strong>agent-skills/quillframe/SKILL.md</strong></li><li><span>{zh() ? "发现" : "Discovery"}</span><strong>bridge.describe</strong></li><li><span>{zh() ? "写权限" : "Write authority"}</span><strong>0 · authority=false</strong></li></ul></article><article class="agent-host-instruction"><div class="agent-host-instruction-head"><div><small>HOST INSTRUCTION</small><strong>{zh() ? "最小安全边界" : "Minimal safe boundary"}</strong></div></div><pre><code>{`1. Read agent-skills/quillframe/SKILL.md\n2. Run bridge self-test\n3. Run bridge.describe\n4. Invoke advertised operations only\n5. authority: false\n6. Never read private runtime stores directly`}</code></pre></article></div></section></div>;
 }
 
 function ChangelogPage() {

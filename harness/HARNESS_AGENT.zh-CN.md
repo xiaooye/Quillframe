@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>ONE MANAGER</kbd>&nbsp;&nbsp;<kbd>ONE PRIMARY MODE</kbd>&nbsp;&nbsp;<kbd>AI-NATIVE</kbd></p>
 
-NovelForge Harness 把经过验证的小说 Project 与明确任务组织成一轮 bounded、resumable run。它拥有 execution policy，不拥有 story truth。
+Quillframe Harness 把经过验证的小说 Project 与明确任务组织成一轮 bounded、resumable run。它拥有 execution policy，不拥有 story truth。
 
 > **Project authority 拥有 Canon 与项目专属事实；模型拥有 semantic fiction judgment；deterministic runtime 拥有 identity、power、persistence 与 exact execution state。**
 

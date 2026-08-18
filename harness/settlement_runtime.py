@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NovelForge deterministic settlement transaction runtime.
+"""Quillframe deterministic settlement transaction runtime.
 
 The runtime executes only exact, explicitly accepted and authorized project
 writes. It never infers State Delta, Canon, acceptance, or literary meaning.
@@ -27,11 +27,11 @@ if str(ROOT) not in sys.path:
 from project_adapter import resolve_contract  # noqa: E402
 from project_sdk import init_project  # noqa: E402
 
-SCHEMA = "novelforge_settlement_runtime_v1"
-TX_SCHEMA = "novelforge_settlement_transaction_v1"
-RECEIPT_SCHEMA = "novelforge_projection_receipt_v1"
+SCHEMA = "quillframe_settlement_runtime_v1"
+TX_SCHEMA = "quillframe_settlement_transaction_v1"
+RECEIPT_SCHEMA = "quillframe_projection_receipt_v1"
 ALLOWED_OPS = {"create", "update", "delete"}
-FORBIDDEN_TOP_LEVELS = {".git", ".novelforge", "dist", "__pycache__"}
+FORBIDDEN_TOP_LEVELS = {".git", ".quillframe", "dist", "__pycache__"}
 
 
 def now() -> str:
@@ -402,7 +402,7 @@ def apply_authority(conn: sqlite3.Connection, tx_id: str) -> dict[str, Any]:
                 path.unlink()
             else:
                 data = w["after_text"].encode("utf-8")
-                fd, temp_name = tempfile.mkstemp(prefix=".novelforge-settle-", dir=str(path.parent))
+                fd, temp_name = tempfile.mkstemp(prefix=".quillframe-settle-", dir=str(path.parent))
                 try:
                     with os.fdopen(fd, "wb") as handle:
                         handle.write(data)
@@ -560,7 +560,7 @@ def self_test(path: Path, project_root: Path) -> int:
         path.unlink()
     if project_root.exists():
         shutil.rmtree(project_root)
-    init_project(project_root, "PROJECT-SETTLE-TEST", "Settlement Fixture", "en", "0.8.0", False)
+    init_project(project_root, "PROJECT-SETTLE-TEST", "Settlement Fixture", "en", "0.9.0", False)
     target = project_root / "state" / "canon" / "TEST.json"
     target.write_text('{"value":"before"}\n', encoding="utf-8")
     before = fingerprint_bytes(target.read_bytes())
@@ -646,8 +646,8 @@ def self_test(path: Path, project_root: Path) -> int:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge deterministic settlement transaction runtime")
-    p.add_argument("--db", default=".novelforge/settlement.db")
+    p = argparse.ArgumentParser(description="Quillframe deterministic settlement transaction runtime")
+    p.add_argument("--db", default=".quillframe/settlement.db")
     sub = p.add_subparsers(dest="command", required=True)
     prep = sub.add_parser("prepare")
     prep.add_argument("--project-root", required=True)
@@ -662,8 +662,8 @@ def main() -> int:
     st = sub.add_parser("status")
     st.add_argument("--tx-id", required=True)
     test = sub.add_parser("self-test")
-    test.add_argument("--path", default="/tmp/novelforge-settlement-selftest.db")
-    test.add_argument("--project-root", default="/tmp/novelforge-settlement-project")
+    test.add_argument("--path", default="/tmp/quillframe-settlement-selftest.db")
+    test.add_argument("--project-root", default="/tmp/quillframe-settlement-project")
     args = p.parse_args()
     if args.command == "self-test":
         return self_test(Path(args.path), Path(args.project_root))

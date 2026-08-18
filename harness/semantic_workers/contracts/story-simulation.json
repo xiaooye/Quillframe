@@ -1,5 +1,5 @@
 {
-  "schema": "novelforge_model_contract_registry_v1",
+  "schema": "quillframe_model_contract_registry_v1",
   "version": "4",
   "principle": "Character and scene causality are semantic simulation work. Private character state may justify a separate semantic role, but schemas stay thin: deterministic runtime binds identity, visibility, story-time eligibility, provenance and evidence references; models decide motivation, action, causal collision and dramatic usefulness.",
   "contracts": {

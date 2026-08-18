@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NovelForge durable adaptive-learning cycle.
+"""Quillframe durable adaptive-learning cycle.
 
 The cycle coordinates learning work across host/session boundaries without
 performing semantic judgment itself. It stores operational learning progress in
@@ -24,7 +24,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 from learning_store import LearningStore  # noqa: E402
 
-SCHEMA = "novelforge_learning_cycle_v1"
+SCHEMA = "quillframe_learning_cycle_v1"
 STATES = {
     "created", "discovery_planned", "awaiting_discovery", "discovery_ready",
     "analysis_queued", "awaiting_analysis", "analysis_ready",
@@ -332,15 +332,15 @@ def load_json(path: str) -> dict[str, Any]:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge durable learning cycle")
-    p.add_argument("--db", default=".novelforge/learning.db")
+    p = argparse.ArgumentParser(description="Quillframe durable learning cycle")
+    p.add_argument("--db", default=".quillframe/learning.db")
     sub = p.add_subparsers(dest="cmd", required=True)
     st = sub.add_parser("start"); st.add_argument("--gap-id", required=True); st.add_argument("--cycle-id"); st.add_argument("--context")
     ge = sub.add_parser("get"); ge.add_argument("--cycle-id", required=True)
     tr = sub.add_parser("transition"); tr.add_argument("--cycle-id", required=True); tr.add_argument("--to", required=True, choices=sorted(STATES)); tr.add_argument("--expected-version", type=int); tr.add_argument("--step")
     at = sub.add_parser("attach"); at.add_argument("--cycle-id", required=True); at.add_argument("--kind", required=True, choices=sorted(ARTIFACT_KINDS)); at.add_argument("--artifact-id", required=True); at.add_argument("--json", required=True)
     co = sub.add_parser("consume"); co.add_argument("--cycle-id", required=True); co.add_argument("--kind", required=True, choices=sorted(ARTIFACT_KINDS)); co.add_argument("--artifact-id", required=True); co.add_argument("--consumer", required=True)
-    sf = sub.add_parser("self-test"); sf.add_argument("--path", default="/tmp/novelforge-learning-cycle-selftest.db")
+    sf = sub.add_parser("self-test"); sf.add_argument("--path", default="/tmp/quillframe-learning-cycle-selftest.db")
     args = p.parse_args(); store = LearningCycleStore(args.db) if args.cmd != "self-test" else None
     if args.cmd == "self-test":
         result = self_test(args.path); print(json.dumps(result, ensure_ascii=False, indent=2)); return 0 if result["learning_cycle_contract"] == "PASS" else 1

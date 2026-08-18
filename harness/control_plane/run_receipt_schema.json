@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "novelforge-run-receipt-v1",
-  "title": "NovelForge Run Receipt",
+  "$id": "quillframe-run-receipt-v1",
+  "title": "Quillframe Run Receipt",
   "description": "Metadata-only observability receipt. It records what a run actually loaded/executed without becoming Canon, memory, or semantic truth.",
   "type": "object",
   "additionalProperties": false,
@@ -21,7 +21,7 @@
     "authority"
   ],
   "properties": {
-    "schema": {"const": "novelforge_run_receipt_v1"},
+    "schema": {"const": "quillframe_run_receipt_v1"},
     "receipt_id": {"type": "string", "minLength": 1},
     "resource_id": {"type": "string", "minLength": 1},
     "session_id": {"type": "string", "minLength": 1},

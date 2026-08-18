@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "novelforge_feedback_intake_v1",
-  "title": "NovelForge automatic feedback learning intake",
+  "$id": "quillframe_feedback_intake_v1",
+  "title": "Quillframe automatic feedback learning intake",
   "$defs": {
     "feedbackObservationPayload": {
       "type": "object",
       "required": ["schema", "kind", "feedback_text", "current_task"],
       "properties": {
-        "schema": {"const": "novelforge_feedback_observation_v1"},
+        "schema": {"const": "quillframe_feedback_observation_v1"},
         "kind": {"const": "feedback_observation"},
         "feedback_text": {"type": "string", "minLength": 1, "maxLength": 12000},
         "current_task": {"type": "object"},
@@ -26,7 +26,7 @@
       "type": "object",
       "required": ["schema", "event_id", "event_hash", "status", "consumer", "version", "permissions"],
       "properties": {
-        "schema": {"const": "novelforge_feedback_intake_projection_v1"},
+        "schema": {"const": "quillframe_feedback_intake_projection_v1"},
         "event_id": {"type": "string", "minLength": 1},
         "event_hash": {"type": "string", "minLength": 71, "maxLength": 71},
         "status": {"$ref": "#/$defs/status"},

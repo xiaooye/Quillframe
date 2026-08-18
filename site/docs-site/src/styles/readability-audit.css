@@ -4,16 +4,16 @@
    or overly sparse. */
 
 :root {
-  --nf-doc-copy: 1rem;
-  --nf-doc-small: .86rem;
-  --nf-doc-micro: .76rem;
+  --qf-doc-copy: 1rem;
+  --qf-doc-small: .86rem;
+  --qf-doc-micro: .76rem;
 }
 
 /* Header and navigation -------------------------------------------------- */
 
 .sidebar-content a,
 .sidebar-content summary {
-  font-size: var(--nf-doc-small);
+  font-size: var(--qf-doc-small);
   line-height: 1.5;
 }
 
@@ -38,7 +38,7 @@ body:has(.nf-article-title) .right-sidebar a {
 
 .nf-article-title__eyebrow,
 .nf-article-title__section {
-  font-size: var(--nf-doc-micro);
+  font-size: var(--qf-doc-micro);
   letter-spacing: .045em;
 }
 
@@ -56,7 +56,7 @@ body:has(.nf-article-title) .right-sidebar a {
 /* Long-form body --------------------------------------------------------- */
 
 body:has(.nf-article-title) .sl-markdown-content {
-  font-size: var(--nf-doc-copy);
+  font-size: var(--qf-doc-copy);
   line-height: 1.78;
 }
 
@@ -150,12 +150,12 @@ body:has([data-nf-docs-home]) main {
 .nf-tier-card small,
 .nf-tier-badge,
 .nf-home-eyebrow {
-  font-size: var(--nf-doc-micro);
+  font-size: var(--qf-doc-micro);
 }
 
 @media (max-width: 50rem) {
   :root {
-    --nf-doc-copy: 1rem;
+    --qf-doc-copy: 1rem;
   }
 
   body:has(.nf-article-title) .sl-markdown-content,

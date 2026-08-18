@@ -30,46 +30,46 @@
     --wui-surface-overlay: oklch(0.9953 0.0025 48.72);
     --wui-surface-sunken: oklch(0.9739 0.0073 312.30);
 
-    --nf-lane-project-fill: #DDEFF8;
-    --nf-lane-project-stroke: #4F8FBA;
-    --nf-lane-runtime-fill: #E7E1F8;
-    --nf-lane-runtime-stroke: #796BC4;
-    --nf-lane-editorial-fill: #F9DDE9;
-    --nf-lane-editorial-stroke: #D6679A;
-    --nf-lane-evidence-fill: #F9EDCF;
-    --nf-lane-evidence-stroke: #BE892F;
-    --nf-lane-validated-fill: #DCF1E7;
-    --nf-lane-validated-stroke: #4D9B7D;
-    --nf-lane-rejected-fill: #F7DEE2;
-    --nf-lane-rejected-stroke: #B95767;
+    --qf-lane-project-fill: #DDEFF8;
+    --qf-lane-project-stroke: #4F8FBA;
+    --qf-lane-runtime-fill: #E7E1F8;
+    --qf-lane-runtime-stroke: #796BC4;
+    --qf-lane-editorial-fill: #F9DDE9;
+    --qf-lane-editorial-stroke: #D6679A;
+    --qf-lane-evidence-fill: #F9EDCF;
+    --qf-lane-evidence-stroke: #BE892F;
+    --qf-lane-validated-fill: #DCF1E7;
+    --qf-lane-validated-stroke: #4D9B7D;
+    --qf-lane-rejected-fill: #F7DEE2;
+    --qf-lane-rejected-stroke: #B95767;
 
     /* Story Loom Kawaii Atelier appearance primitives. */
-    --nf-atelier-paper: color-mix(in oklab, var(--wui-color-background) 94%, var(--nf-lane-evidence-fill));
-    --nf-atelier-paper-warm: color-mix(in oklab, var(--wui-color-background) 82%, var(--nf-lane-evidence-fill));
-    --nf-atelier-paper-pink: color-mix(in oklab, var(--wui-color-background) 64%, var(--nf-lane-editorial-fill));
-    --nf-atelier-paper-blue: color-mix(in oklab, var(--wui-color-background) 64%, var(--nf-lane-project-fill));
-    --nf-atelier-paper-violet: color-mix(in oklab, var(--wui-color-background) 62%, var(--nf-lane-runtime-fill));
-    --nf-atelier-paper-mint: color-mix(in oklab, var(--wui-color-background) 62%, var(--nf-lane-validated-fill));
-    --nf-atelier-ink: var(--wui-color-foreground);
-    --nf-atelier-pencil: color-mix(in oklab, var(--wui-color-muted-foreground) 78%, var(--nf-atelier-ink));
-    --nf-atelier-line: color-mix(in oklab, var(--wui-color-border) 72%, transparent);
-    --nf-atelier-stitch: color-mix(in oklab, var(--nf-lane-runtime-stroke) 34%, var(--wui-color-border));
-    --nf-atelier-border: 1px solid color-mix(in oklab, var(--wui-color-border) 76%, var(--nf-lane-runtime-stroke));
-    --nf-atelier-shadow-sm: 0 3px 0 color-mix(in oklab, var(--nf-lane-runtime-stroke) 7%, transparent), 0 10px 24px oklch(.35 .03 310 / .08);
-    --nf-atelier-shadow-md: 0 5px 0 color-mix(in oklab, var(--nf-lane-project-stroke) 8%, transparent), 0 18px 45px oklch(.35 .035 310 / .11);
-    --nf-atelier-shadow-lg: 0 8px 0 color-mix(in oklab, var(--nf-lane-editorial-stroke) 8%, transparent), 0 30px 90px oklch(.3 .04 310 / .14);
-    --nf-atelier-radius-sm: 13px;
-    --nf-atelier-radius: 22px;
-    --nf-atelier-radius-lg: 34px;
-    --nf-atelier-grid-size: 32px;
-    --nf-atelier-ease: cubic-bezier(.2, .85, .22, 1.15);
-    --nf-atelier-ease-soft: cubic-bezier(.22, 1, .36, 1);
+    --qf-atelier-paper: color-mix(in oklab, var(--wui-color-background) 94%, var(--qf-lane-evidence-fill));
+    --qf-atelier-paper-warm: color-mix(in oklab, var(--wui-color-background) 82%, var(--qf-lane-evidence-fill));
+    --qf-atelier-paper-pink: color-mix(in oklab, var(--wui-color-background) 64%, var(--qf-lane-editorial-fill));
+    --qf-atelier-paper-blue: color-mix(in oklab, var(--wui-color-background) 64%, var(--qf-lane-project-fill));
+    --qf-atelier-paper-violet: color-mix(in oklab, var(--wui-color-background) 62%, var(--qf-lane-runtime-fill));
+    --qf-atelier-paper-mint: color-mix(in oklab, var(--wui-color-background) 62%, var(--qf-lane-validated-fill));
+    --qf-atelier-ink: var(--wui-color-foreground);
+    --qf-atelier-pencil: color-mix(in oklab, var(--wui-color-muted-foreground) 78%, var(--qf-atelier-ink));
+    --qf-atelier-line: color-mix(in oklab, var(--wui-color-border) 72%, transparent);
+    --qf-atelier-stitch: color-mix(in oklab, var(--qf-lane-runtime-stroke) 34%, var(--wui-color-border));
+    --qf-atelier-border: 1px solid color-mix(in oklab, var(--wui-color-border) 76%, var(--qf-lane-runtime-stroke));
+    --qf-atelier-shadow-sm: 0 3px 0 color-mix(in oklab, var(--qf-lane-runtime-stroke) 7%, transparent), 0 10px 24px oklch(.35 .03 310 / .08);
+    --qf-atelier-shadow-md: 0 5px 0 color-mix(in oklab, var(--qf-lane-project-stroke) 8%, transparent), 0 18px 45px oklch(.35 .035 310 / .11);
+    --qf-atelier-shadow-lg: 0 8px 0 color-mix(in oklab, var(--qf-lane-editorial-stroke) 8%, transparent), 0 30px 90px oklch(.3 .04 310 / .14);
+    --qf-atelier-radius-sm: 13px;
+    --qf-atelier-radius: 22px;
+    --qf-atelier-radius-lg: 34px;
+    --qf-atelier-grid-size: 32px;
+    --qf-atelier-ease: cubic-bezier(.2, .85, .22, 1.15);
+    --qf-atelier-ease-soft: cubic-bezier(.22, 1, .36, 1);
 
-    --nf-touch-target-min: 44px;
-    --nf-breakpoint-compact-max: 599px;
-    --nf-breakpoint-medium-min: 600px;
-    --nf-breakpoint-wide-min: 1024px;
-    --nf-breakpoint-ultrawide-min: 1440px;
+    --qf-touch-target-min: 44px;
+    --qf-breakpoint-compact-max: 599px;
+    --qf-breakpoint-medium-min: 600px;
+    --qf-breakpoint-wide-min: 1024px;
+    --qf-breakpoint-ultrawide-min: 1440px;
   }
 
   .dark {
@@ -95,14 +95,14 @@
     --wui-surface-overlay: oklch(0.2759 0.0293 308.73);
     --wui-surface-sunken: oklch(0.1953 0.0169 307.50);
 
-    --nf-atelier-paper: color-mix(in oklab, var(--wui-color-background) 88%, var(--nf-lane-runtime-fill));
-    --nf-atelier-paper-warm: color-mix(in oklab, var(--wui-color-background) 82%, var(--nf-lane-evidence-stroke));
-    --nf-atelier-paper-pink: color-mix(in oklab, var(--wui-color-background) 78%, var(--nf-lane-editorial-stroke));
-    --nf-atelier-paper-blue: color-mix(in oklab, var(--wui-color-background) 78%, var(--nf-lane-project-stroke));
-    --nf-atelier-paper-violet: color-mix(in oklab, var(--wui-color-background) 72%, var(--nf-lane-runtime-stroke));
-    --nf-atelier-paper-mint: color-mix(in oklab, var(--wui-color-background) 76%, var(--nf-lane-validated-stroke));
-    --nf-atelier-shadow-sm: 0 10px 30px oklch(.05 .02 310 / .28);
-    --nf-atelier-shadow-md: 0 20px 56px oklch(.05 .03 310 / .34);
-    --nf-atelier-shadow-lg: 0 36px 100px oklch(.04 .03 310 / .42);
+    --qf-atelier-paper: color-mix(in oklab, var(--wui-color-background) 88%, var(--qf-lane-runtime-fill));
+    --qf-atelier-paper-warm: color-mix(in oklab, var(--wui-color-background) 82%, var(--qf-lane-evidence-stroke));
+    --qf-atelier-paper-pink: color-mix(in oklab, var(--wui-color-background) 78%, var(--qf-lane-editorial-stroke));
+    --qf-atelier-paper-blue: color-mix(in oklab, var(--wui-color-background) 78%, var(--qf-lane-project-stroke));
+    --qf-atelier-paper-violet: color-mix(in oklab, var(--wui-color-background) 72%, var(--qf-lane-runtime-stroke));
+    --qf-atelier-paper-mint: color-mix(in oklab, var(--wui-color-background) 76%, var(--qf-lane-validated-stroke));
+    --qf-atelier-shadow-sm: 0 10px 30px oklch(.05 .02 310 / .28);
+    --qf-atelier-shadow-md: 0 20px 56px oklch(.05 .03 310 / .34);
+    --qf-atelier-shadow-lg: 0 36px 100px oklch(.04 .03 310 / .42);
   }
 }

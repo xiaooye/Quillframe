@@ -1,6 +1,6 @@
 # Framework Self-Improvement Protocol · Evidence may propose change; it may not grant itself authority
 
-NovelForge may learn from user feedback, project outcomes, corpus evidence, evals, and upstream framework research. Durable behavior change is allowed only when the evidence supports the **narrowest valid scope**, the change is testable and reversible, and an authorized workflow actually performs the promotion.
+Quillframe may learn from user feedback, project outcomes, corpus evidence, evals, and upstream framework research. Durable behavior change is allowed only when the evidence supports the **narrowest valid scope**, the change is testable and reversible, and an authorized workflow actually performs the promotion.
 
 > **Core invariant ✦** Learning produces evidence, hypotheses, eval results and promotion candidates. None of those artifacts grants Framework-write, Canon-write, or durable-user-taste authority by itself.
 
@@ -13,7 +13,7 @@ Every learning claim belongs to one of four scopes:
 - `one_off` — useful only for the current request/run;
 - `project` — convention or preference for one consuming novel;
 - `user_taste` — durable preference hypothesis for one user across projects;
-- `general_craft` — candidate generic mechanism for NovelForge itself.
+- `general_craft` — candidate generic mechanism for Quillframe itself.
 
 Always select the narrowest scope justified by evidence. A project preference does not become user taste merely because it appeared twice, and user taste does not become General Craft because the model finds it reasonable.
 
@@ -173,7 +173,7 @@ Ask:
 
 - what mechanism changed?
 - what problem does it actually solve?
-- does NovelForge already solve that problem differently?
+- does Quillframe already solve that problem differently?
 - would adoption blur runtime state, Canon, independence or permission boundaries?
 - what capability/regression evidence would prove the change beneficial?
 

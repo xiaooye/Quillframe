@@ -63,7 +63,7 @@ check(docsConfig.indexOf('story-loom-docs.css') < docsConfig.indexOf('readabilit
 for (const marker of ["header.header", ".sidebar-pane", "body:has([data-nf-docs-home]) .hero", ".nf-article-title", ".sl-markdown-content blockquote", ".sl-markdown-content table", ".pagination-links a"]) {
   check(docsAudit.includes(marker), `docs reading-surface audit missing ${marker}`);
 }
-for (const marker of ["Story Loom identity for Starlight", "♡ NovelForge Docs", ".nf-link-card", ".nf-tier-card", ".nf-article-title"] ) {
+for (const marker of ["Story Loom identity for Starlight", "♡ Quillframe Docs", ".nf-link-card", ".nf-tier-card", ".nf-article-title"] ) {
   check(docsIdentity.includes(marker), `docs Story Loom identity missing ${marker}`);
 }
 check(docsAudit.includes(".nf-article-title") && docsAudit.includes("border-bottom: 1px solid"), "article hierarchy must retain a restrained divider");
@@ -77,7 +77,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "novelforge_surface_identity_quality_v7",
+    schema: "quillframe_surface_identity_quality_v7",
     status: "pass",
     product_final_override: false,
     product_editorial_flattening: false,

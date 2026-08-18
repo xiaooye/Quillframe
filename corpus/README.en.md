@@ -1,6 +1,6 @@
 # Corpus Intelligence
 
-NovelForge treats corpus work as a governed evidence pipeline, not a text dump.
+Quillframe treats corpus work as a governed evidence pipeline, not a text dump.
 
 ```mermaid
 flowchart LR
@@ -32,7 +32,7 @@ Corpus is never Canon.
 
 ## Autonomous loop
 
-NovelForge may autonomously:
+Quillframe may autonomously:
 
 1. detect a preference/craft evidence gap;
 2. create a typed discovery request;
@@ -84,4 +84,4 @@ Actual user/project corpus data should normally live in user/project storage, no
 
 ## Named-author imitation boundary
 
-NovelForge may learn broad mechanisms such as pressure sequencing, dialogue embodiment, paragraph function, information timing, or scene causality. It must not turn modern authors into imitation fingerprints or generate reusable “write exactly like Author X” profiles.
+Quillframe may learn broad mechanisms such as pressure sequencing, dialogue embodiment, paragraph function, information timing, or scene causality. It must not turn modern authors into imitation fingerprints or generate reusable “write exactly like Author X” profiles.

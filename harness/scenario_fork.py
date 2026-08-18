@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scenario fork/replay ledger for NovelForge.
+"""Scenario fork/replay ledger for Quillframe.
 
 Creates non-Canon exploration branches from a checkpoint or artifact state. A
 branch may carry explicit state mutations and generated artifact fingerprints,
@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "novelforge_scenario_fork_v1"
+SCHEMA = "quillframe_scenario_fork_v1"
 STATUSES = {"exploring", "selected", "discarded"}
 
 
@@ -176,7 +176,7 @@ def set_status(conn: sqlite3.Connection, *, branch_id: str, status: str,
 def replay_packet(conn: sqlite3.Connection, branch_id: str) -> dict[str, Any]:
     branch = get_branch(conn, branch_id)
     return {
-        "schema": "novelforge_scenario_replay_packet_v1",
+        "schema": "quillframe_scenario_replay_packet_v1",
         "branch_id": branch_id,
         "branch_fingerprint": branch["branch_fingerprint"],
         "base_checkpoint_id": branch["base_checkpoint_id"],
@@ -233,8 +233,8 @@ def self_test(path: Path) -> int:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge scenario fork/replay ledger")
-    p.add_argument("--db", default=".novelforge/scenario-forks.db")
+    p = argparse.ArgumentParser(description="Quillframe scenario fork/replay ledger")
+    p.add_argument("--db", default=".quillframe/scenario-forks.db")
     sub = p.add_subparsers(dest="command", required=True)
     c = sub.add_parser("create"); c.add_argument("--branch-id", required=True); c.add_argument("--base-checkpoint-id", required=True); c.add_argument("--base-state-fingerprint", required=True); c.add_argument("--mutation-json"); c.add_argument("--parent-branch-id")
     a = sub.add_parser("artifact"); a.add_argument("--branch-id", required=True); a.add_argument("--artifact-ref", required=True); a.add_argument("--artifact-fingerprint", required=True); a.add_argument("--role", required=True)
@@ -242,7 +242,7 @@ def main() -> int:
     r = sub.add_parser("replay"); r.add_argument("--branch-id", required=True)
     l = sub.add_parser("lineage"); l.add_argument("--branch-id", required=True)
     g = sub.add_parser("get"); g.add_argument("--branch-id", required=True)
-    st = sub.add_parser("self-test"); st.add_argument("--path", default="/tmp/novelforge-scenario-fork-selftest.db")
+    st = sub.add_parser("self-test"); st.add_argument("--path", default="/tmp/quillframe-scenario-fork-selftest.db")
     args = p.parse_args()
     if args.command == "self-test": return self_test(Path(args.path))
     conn = connect(Path(args.db))

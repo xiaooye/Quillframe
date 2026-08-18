@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>CHARACTER STATE</kbd>&nbsp;&nbsp;<kbd>RELATIONSHIP STATE</kbd>&nbsp;&nbsp;<kbd>KNOWLEDGE BOUNDARIES</kbd></p>
 
-NovelForge treats important characters as **stateful agents with their own goals, knowledge, limits, work, relationships, and consequences**. A character is not a trait card and a supporting character is not a delivery mechanism for the protagonist's plot.
+Quillframe treats important characters as **stateful agents with their own goals, knowledge, limits, work, relationships, and consequences**. A character is not a trait card and a supporting character is not a delivery mechanism for the protagonist's plot.
 
 > **Boundary ✦** This system defines generic character/relationship mechanics and simulation inputs. The consuming project owns the actual people, their Accepted history, and their current authoritative state.
 
@@ -363,7 +363,7 @@ The simulation should make conflicts and possible reactions legible while leavin
 
 ## 16 · Character Integrity audit interface
 
-NovelForge may run a bounded Character Integrity audit after a candidate exists. The audit checks evidence such as:
+Quillframe may run a bounded Character Integrity audit after a candidate exists. The audit checks evidence such as:
 
 - agenda alignment;
 - knowledge boundary;

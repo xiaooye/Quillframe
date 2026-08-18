@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "novelforge_known_regression_escape_v1",
-  "title": "NovelForge Known Regression Escape Receipt",
+  "$id": "quillframe_known_regression_escape_v1",
+  "title": "Quillframe Known Regression Escape Receipt",
   "type": "object",
   "required": [
     "schema",
@@ -22,7 +22,7 @@
     "receipt_fingerprint"
   ],
   "properties": {
-    "schema": {"const": "novelforge_known_regression_escape_v1"},
+    "schema": {"const": "quillframe_known_regression_escape_v1"},
     "candidate_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "failure_mechanism": {"type": "string", "minLength": 1},
     "where_it_should_have_been_caught": {"enum": ["manager_self_audit", "reader_engagement", "continuity", "independent_review", "user", "post_delivery_audit", "unknown"]},

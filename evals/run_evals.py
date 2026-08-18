@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NovelForge generic eval runner.
+"""Quillframe generic eval runner.
 
 Deterministic assertions run locally. Rubric/hybrid cases require external
 semantic judgments; missing judgments remain PENDING_MODEL.
@@ -109,7 +109,7 @@ def run_case(case:dict[str,Any],root:Path,judgments:dict[str,Any])->CaseResult:
     return CaseResult(case['id'],case['type'],case['domain'],result,bool(case.get('blocks_release',False)),details)
 
 def main()->int:
-    p=argparse.ArgumentParser(description='Run NovelForge evals')
+    p=argparse.ArgumentParser(description='Run Quillframe evals')
     p.add_argument('--root');p.add_argument('--manifest');p.add_argument('--judgments');p.add_argument('--domain',action='append');p.add_argument('--case',dest='case_ids',action='append');p.add_argument('--release',action='store_true');p.add_argument('--json',action='store_true');args=p.parse_args()
     here=Path(__file__).resolve();root=Path(args.root).resolve() if args.root else here.parents[1]
     manifest_path=Path(args.manifest).resolve() if args.manifest else here.with_name('eval_manifest.json')

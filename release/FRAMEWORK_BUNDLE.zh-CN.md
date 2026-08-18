@@ -1,10 +1,10 @@
-# NovelForge Framework Bundle · 中文版
+# Quillframe Framework Bundle · 中文版
 
 ## 目的
 
-Consumer Project 继续锁定 NovelForge exact commit。7.1 额外提供 deterministic runtime bundle，使本地/远程 host 可以验证自己 materialize 的 Framework bytes 是否与 Project lock 一致。
+Consumer Project 继续锁定 Quillframe exact commit。7.1 额外提供 deterministic runtime bundle，使本地/远程 host 可以验证自己 materialize 的 Framework bytes 是否与 Project lock 一致。
 
-Bundle 只是 transport/cache artifact，不是第二权威。Authority 仍然是 consumer `novelforge.lock.json` 的 exact commit + expected bundle fingerprint。
+Bundle 只是 transport/cache artifact，不是第二权威。Authority 仍然是 consumer `quillframe.lock.json` 的 exact commit + expected bundle fingerprint。
 
 ## 格式
 
@@ -23,7 +23,7 @@ Core、Surface、Harness、Learning、Corpus、Evals、Project SDK/Adapter、int
 
 - `.git` history；
 - `specs/` 工程过程记录；
-- `.novelforge/` runtime state；
+- `.quillframe/` runtime state；
 - cache/bytecode；
 - SQLite/runtime DB 及 WAL/SHM；
 - 已生成 bundle 与 bundle attestation metadata。
@@ -34,15 +34,15 @@ Bundle attestation 故意排除在 fingerprint input 外，避免“把 fingerpr
 
 ```bash
 python release/build_framework_bundle.py build \
-  --output dist/novelforge-framework.tar \
-  --report dist/novelforge-framework-build.json
+  --output dist/quillframe-framework.tar \
+  --report dist/quillframe-framework-build.json
 ```
 
 ## Verify
 
 ```bash
 python release/build_framework_bundle.py verify \
-  --bundle dist/novelforge-framework.tar \
+  --bundle dist/quillframe-framework.tar \
   --expected 'sha256:...'
 ```
 

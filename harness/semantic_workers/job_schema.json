@@ -1,6 +1,6 @@
 {
   "$schema":"https://json-schema.org/draft/2020-12/schema",
-  "$id":"novelforge-semantic-job-v1",
+  "$id":"quillframe-semantic-job-v1",
   "type":"object",
   "required":["job_id","kind","subject_id","created_at","input_fingerprint","input","rubric","output_contract","permissions","provenance"],
   "properties":{

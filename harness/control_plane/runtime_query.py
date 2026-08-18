@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Side-effect-free public runtime observability projections for NovelForge.
+"""Side-effect-free public runtime observability projections for Quillframe.
 
 This module is the read boundary for delivery surfaces and external agents. It
 opens the Control Plane store read-only, returns versioned safe projections,
@@ -18,15 +18,15 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
-CONTROL_PLANE_SCHEMA = "novelforge_control_plane_v1"
-QUERY_SCHEMA = "novelforge_runtime_query_v1"
-SESSIONS_SCHEMA = "novelforge_runtime_sessions_projection_v1"
-SESSION_SCHEMA = "novelforge_runtime_session_projection_v1"
-EVENTS_SCHEMA = "novelforge_runtime_events_projection_v1"
-HANDOFF_SCHEMA = "novelforge_runtime_handoff_projection_v1"
-RECEIPTS_SCHEMA = "novelforge_run_receipts_projection_v1"
-ERROR_SCHEMA = "novelforge_runtime_query_error_v1"
-DEFAULT_DB = ".novelforge/runtime.db"
+CONTROL_PLANE_SCHEMA = "quillframe_control_plane_v1"
+QUERY_SCHEMA = "quillframe_runtime_query_v1"
+SESSIONS_SCHEMA = "quillframe_runtime_sessions_projection_v1"
+SESSION_SCHEMA = "quillframe_runtime_session_projection_v1"
+EVENTS_SCHEMA = "quillframe_runtime_events_projection_v1"
+HANDOFF_SCHEMA = "quillframe_runtime_handoff_projection_v1"
+RECEIPTS_SCHEMA = "quillframe_run_receipts_projection_v1"
+ERROR_SCHEMA = "quillframe_runtime_query_error_v1"
+DEFAULT_DB = ".quillframe/runtime.db"
 REQUIRED_TABLES = {"meta", "sessions", "events", "handoffs", "consumptions"}
 
 
@@ -351,13 +351,13 @@ def self_test() -> dict[str, Any]:
     from control_plane import ControlPlane, EVENT_SCHEMA, HANDOFF_SCHEMA as CONTROL_HANDOFF_SCHEMA, now_iso
     from run_receipt import fixture as receipt_fixture, record_receipt
 
-    with tempfile.TemporaryDirectory(prefix="novelforge-runtime-query-") as temp:
+    with tempfile.TemporaryDirectory(prefix="quillframe-runtime-query-") as temp:
         root = Path(temp)
         db = root / "runtime.db"
         cp = ControlPlane(db)
         cp.init()
         session = {
-            "schema": "novelforge_agent_session_v1",
+            "schema": "quillframe_agent_session_v1",
             "resource_id": "BOOK-QUERY",
             "project_id": "BOOK-QUERY",
             "session_id": "SES-QUERY",
@@ -472,8 +472,8 @@ def dump(value: Any) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge side-effect-free runtime query boundary")
-    parser.add_argument("--db", default=os.getenv("NOVELFORGE_DB", DEFAULT_DB))
+    parser = argparse.ArgumentParser(description="Quillframe side-effect-free runtime query boundary")
+    parser.add_argument("--db", default=os.getenv("QUILLFRAME_DB", DEFAULT_DB))
     sub = parser.add_subparsers(dest="command", required=True)
     sessions = sub.add_parser("session-list"); sessions.add_argument("--resource-id")
     session = sub.add_parser("session-get"); session.add_argument("--session-id", required=True)

@@ -1,6 +1,6 @@
-# NovelForge 视觉资产 · 仓库里的 Story Loom
+# Quillframe 视觉资产 · 仓库里的 Story Loom
 
-本目录保存 NovelForge 文档与产品界面共用的 Story Loom 展示层和 application-token foundation。它刻意保持精简：一套一致的品牌系统、少量高价值产品图、机器可读的产品语义、精确 dependency provenance 与 deterministic design-system QA，而不是 stock art 仓库，也不是第二套 UI Framework。
+本目录保存 Quillframe 文档与产品界面共用的 Story Loom 展示层和 application-token foundation。它刻意保持精简：一套一致的品牌系统、少量高价值产品图、机器可读的产品语义、精确 dependency provenance 与 deterministic design-system QA，而不是 stock art 仓库，也不是第二套 UI Framework。
 
 > **边界 ✦** 视觉资产与 token 负责帮助理解、建立识别度、保持交互一致性和产品主题。它们永远不是 Framework 行为、Canon、Settlement、semantic truth、production readiness 或 workflow state 的第二权威来源。
 
@@ -14,8 +14,8 @@ assets/
 ├── DESIGN_SYSTEM.en.md / DESIGN_SYSTEM.zh-CN.md
 ├── provenance.json
 ├── brand/
-│   ├── novelforge-mark.svg
-│   ├── novelforge-lockup.svg
+│   ├── quillframe-mark.svg
+│   ├── quillframe-lockup.svg
 │   ├── story-thread.svg
 │   ├── tokens.json
 │   ├── weiui.integration.json
@@ -34,7 +34,7 @@ Machine integration QA 位于 [`../scripts/design_system_quality.py`](../scripts
 
 ## 02 · 品牌与产品语义权威
 
-`brand/tokens.json` 当前 schema 已是 **`novelforge_brand_tokens_v2`**，继续作为 NovelForge 侧 product-token authority。
+`brand/tokens.json` 当前 schema 已是 **`quillframe_brand_tokens_v2`**，继续作为 Quillframe 侧 product-token authority。
 
 它现在包含：
 
@@ -46,7 +46,7 @@ Machine integration QA 位于 [`../scripts/design_system_quality.py`](../scripts
 - reduced-motion / no-idle-animation rules；
 - no default polling、no heavy default component import 等性能约束。
 
-Generic UI foundation 不能反过来重定义 NovelForge 中 Project、Runtime、Editorial、Evidence、Accepted/Validated、Rejected、Canon authority 或 execution state 的含义。
+Generic UI foundation 不能反过来重定义 Quillframe 中 Project、Runtime、Editorial、Evidence、Accepted/Validated、Rejected、Canon authority 或 execution state 的含义。
 
 ---
 
@@ -65,7 +65,7 @@ Story Loom → WeiUI bridge 已经是仓库真实 artifact，不再只是未来�
 - theme layer：`wui-theme`；
 - CSS order：WeiUI tokens → WeiUI CSS → Story Loom theme。
 
-[`brand/story-loom.weiui.css`](brand/story-loom.weiui.css) 是当前 live application theme bridge。它把 Story Loom light/dark roles 映射到 WeiUI `--wui-*` variables，同时保留独立的 NovelForge `--nf-*` product semantics。它不能 fork WeiUI `.wui-*` component selector，也不能靠 `!important` 抢 cascade。
+[`brand/story-loom.weiui.css`](brand/story-loom.weiui.css) 是当前 live application theme bridge。它把 Story Loom light/dark roles 映射到 WeiUI `--wui-*` variables，同时保留独立的 Quillframe `--qf-*` product semantics。它不能 fork WeiUI `.wui-*` component selector，也不能靠 `!important` 抢 cascade。
 
 因此产品依赖保持单向：
 
@@ -77,7 +77,7 @@ Story Loom v2 product tokens
 → Local Web / optional Tauri host
 ```
 
-WeiUI 在 Phase 2C 中是 zero-JavaScript styling/token foundation，**不是** application runtime，也不是 NovelForge product authority。
+WeiUI 在 Phase 2C 中是 zero-JavaScript styling/token foundation，**不是** application runtime，也不是 Quillframe product authority。
 
 ---
 
@@ -116,7 +116,7 @@ Checker 会验证：
 - reduced motion required，idle animation forbidden；
 - no default polling；
 - primary/destructive/success/warning role pair 的 required light/dark contrast ≥ 4.5:1；
-- `wui-theme`、light/dark definitions、required `--wui-*` / `--nf-*` variables；
+- `wui-theme`、light/dark definitions、required `--wui-*` / `--qf-*` variables；
 - 禁止 `!important`，Story Loom 也不能 fork WeiUI component selector；
 - design-system provenance IDs 完整。
 
@@ -165,4 +165,4 @@ Tier-A SVG 继续要求真实 820px + narrow render inspection、visible-copy re
 - validation mechanism；
 - artifact 只是 presentation，还是会被 product runtime 消费。
 
-**视觉系统真正成功，是让 NovelForge 一眼可识别，让 Studio 复用唯一一套产品语义，同时不让展示工具或 generic UI foundation 变成竞争性的第二权威。**
+**视觉系统真正成功，是让 Quillframe 一眼可识别，让 Studio 复用唯一一套产品语义，同时不让展示工具或 generic UI foundation 变成竞争性的第二权威。**

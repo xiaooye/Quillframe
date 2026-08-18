@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "novelforge_candidate_lineage_v1",
-  "title": "NovelForge Candidate Lineage v1",
+  "$id": "quillframe_candidate_lineage_v1",
+  "title": "Quillframe Candidate Lineage v1",
   "description": "Non-authoritative candidate derivation, review-binding, and external acceptance-evidence projection over quality_evolution.",
   "$defs": {
     "fingerprint": {
@@ -125,7 +125,7 @@
         "permissions"
       ],
       "properties": {
-        "schema": {"const": "novelforge_candidate_lineage_v1"},
+        "schema": {"const": "quillframe_candidate_lineage_v1"},
         "candidate_id": {"type": "string", "minLength": 1},
         "content_fingerprint": {"$ref": "#/$defs/fingerprint"},
         "parent_candidate_id": {"$ref": "#/$defs/nullableCandidateId"},
@@ -182,7 +182,7 @@
         "model_execution"
       ],
       "properties": {
-        "schema": {"const": "novelforge_candidate_lineage_v1"},
+        "schema": {"const": "quillframe_candidate_lineage_v1"},
         "run_id": {"type": "string", "minLength": 1},
         "subject_id": {"type": "string", "minLength": 1},
         "state": {"enum": ["active", "plateau", "complete"]},
@@ -217,7 +217,7 @@
         "requires_external_authority_verification"
       ],
       "properties": {
-        "schema": {"const": "novelforge_candidate_lineage_v1"},
+        "schema": {"const": "quillframe_candidate_lineage_v1"},
         "result": {"enum": ["REFERENCE_MATCH", "REFERENCE_MISMATCH"]},
         "run_id": {"type": "string", "minLength": 1},
         "acceptance_evidence_id": {"type": "string", "minLength": 1},

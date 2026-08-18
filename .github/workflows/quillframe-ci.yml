@@ -1,0 +1,70 @@
+name: Quillframe 0.9 CI
+
+on:
+  push:
+    branches: [main, system-improve/quillframe-0.9.0]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quillframe-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: Core, SQLite, authority and namespace
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Version consistency
+        run: python scripts/version_consistency.py
+      - name: Active technical namespace hygiene
+        run: python scripts/namespace_hygiene.py
+      - name: Quillframe 0.9 persistence and authority tests
+        run: python -m unittest discover -s tests -p 'test_quillframe_*.py' -v
+      - name: Host Bridge self-test
+        run: python studio/host_bridge.py self-test
+
+  site:
+    name: Product site and docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - working-directory: site
+        run: npm install --no-audit --no-fund
+      - working-directory: site
+        run: npm run quality
+      - working-directory: site
+        run: npm run build
+      - working-directory: site
+        run: npm run docs:build
+
+  studio:
+    name: SolidJS Studio
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: studio/app/pnpm-lock.yaml
+      - working-directory: studio/app
+        run: pnpm install --frozen-lockfile
+      - working-directory: studio/app
+        run: pnpm typecheck
+      - working-directory: studio/app
+        run: pnpm build

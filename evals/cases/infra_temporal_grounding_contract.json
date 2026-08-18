@@ -6,7 +6,7 @@
   "blocks_release": true,
   "fixture": {},
   "assertions": [
-    {"op": "file_text_contains", "file": "harness/memory_tiers.py", "value": "novelforge_memory_tiers_v4"},
+    {"op": "file_text_contains", "file": "harness/memory_tiers.py", "value": "quillframe_memory_tiers_v4"},
     {"op": "file_text_contains", "file": "harness/memory_tiers.py", "value": "available_from_story_order"},
     {"op": "file_text_contains", "file": "harness/memory_tiers.py", "value": "grounding_incomplete"},
     {"op": "file_text_contains", "file": "harness/semantic_workers/contracts/context-research.json", "value": "as_of_story_order"}

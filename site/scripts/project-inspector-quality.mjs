@@ -25,8 +25,8 @@ requireCheck(index.indexOf('project-inspector.css') < index.indexOf('readability
 requireCheck(!main.includes("ProjectInspectorEntry") && !main.includes("standaloneProductPaths"), "inspector must not retain a standalone shell/handoff path");
 
 for (const marker of [
-  "novelforge.toml",
-  "novelforge.lock.json",
+  "quillframe.toml",
+  "quillframe.lock.json",
   "framework.attestation.json",
   "webkitdirectory",
   "FileList",
@@ -53,5 +53,5 @@ if (failures.length > 0) {
   for (const failure of failures) console.error(`project-inspector-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ schema: "novelforge_project_inspector_quality_v3", status: "pass", route: "/inspect", shell: "shared_product_app", css_entrypoint: "index.css", execution: "browser-native", upload: false, authority: false }, null, 2));
+  console.log(JSON.stringify({ schema: "quillframe_project_inspector_quality_v3", status: "pass", route: "/inspect", shell: "shared_product_app", css_entrypoint: "index.css", execution: "browser-native", upload: false, authority: false }, null, 2));
 }

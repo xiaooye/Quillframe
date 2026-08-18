@@ -19,7 +19,7 @@ for (const node of ["project", "manager", "context", "worker", "gate", "settleme
   check(app.includes(`id: "${node}"`), `architecture explorer missing ${node} node`);
 }
 
-for (const contract of ["novelforge_project_adapter_resolution_v1", "novelforge_host_capabilities_v1", "novelforge_context_inspector_v2", "novelforge_run_receipt_v1", "novelforge_production_readiness_v1", "novelforge_publication_ir_v1"]) {
+for (const contract of ["quillframe_project_adapter_resolution_v1", "quillframe_host_capabilities_v1", "quillframe_context_inspector_v2", "quillframe_run_receipt_v1", "quillframe_production_readiness_v1", "quillframe_publication_ir_v1"]) {
   check(app.includes(contract), `architecture explorer missing public contract ${contract}`);
 }
 
@@ -42,5 +42,5 @@ if (failures.length) {
   for (const failure of failures) console.error(`architecture-explorer-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ schema: "novelforge_architecture_explorer_quality_v3", status: "pass", shell: "shared_product_app", css_entrypoint: "index.css", shared_surface_hero: true, nodes: 7, deterministic_preview: true, model_execution: false, authority: false, public_contract_grounded: true, responsive: true }, null, 2));
+  console.log(JSON.stringify({ schema: "quillframe_architecture_explorer_quality_v3", status: "pass", shell: "shared_product_app", css_entrypoint: "index.css", shared_surface_hero: true, nodes: 7, deterministic_preview: true, model_execution: false, authority: false, public_contract_grounded: true, responsive: true }, null, 2));
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Machine contract and compatibility scanner for NovelForge prose quality IDs.
+"""Machine contract and compatibility scanner for Quillframe prose quality IDs.
 
 The registry is the machine-facing source of truth for HF/RG identifiers. Human
 Surface/Reader documentation remains the explanatory contract, and self-test
@@ -20,7 +20,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = Path(__file__).with_name("taxonomy.json")
-SCHEMA = "novelforge_quality_taxonomy_v1"
+SCHEMA = "quillframe_quality_taxonomy_v1"
 CODE_RE = re.compile(r"\b(?:HF|RG)-\d{2}\b")
 LEGACY_RUNTIME_RE = re.compile(r"\bGeneric\s+Surface\s+v\d+(?:\.\d+)*\b", re.IGNORECASE)
 
@@ -161,7 +161,7 @@ def scan_text(text: str, *, source: str = "<memory>", registry: dict[str, Any] |
                 "line": lineno,
                 "code": "legacy_runtime_taxonomy_marker",
                 "text": line.strip(),
-                "message": "Framework taxonomy identity must come from novelforge.lock.json plus the pinned taxonomy registry, not a hand-maintained Generic Surface version label.",
+                "message": "Framework taxonomy identity must come from quillframe.lock.json plus the pinned taxonomy registry, not a hand-maintained Generic Surface version label.",
             })
     # De-duplicate findings that can be triggered by canonical name plus an alias on the same line.
     seen: set[str] = set()
@@ -183,7 +183,7 @@ def scan_files(paths: list[Path], registry: dict[str, Any] | None = None) -> dic
             continue
         findings.extend(scan_text(path.read_text(encoding="utf-8"), source=str(path), registry=registry))
     return {
-        "schema": "novelforge_quality_taxonomy_scan_v1",
+        "schema": "quillframe_quality_taxonomy_scan_v1",
         "registry_schema": registry["schema"],
         "registry_version": registry.get("version"),
         "valid": not findings,
@@ -227,7 +227,7 @@ def self_test() -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="NovelForge quality taxonomy compatibility contract")
+    parser = argparse.ArgumentParser(description="Quillframe quality taxonomy compatibility contract")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("self-test")
     scan = sub.add_parser("scan")

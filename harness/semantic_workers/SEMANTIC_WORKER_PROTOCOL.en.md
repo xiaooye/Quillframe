@@ -2,7 +2,7 @@
 
 <p><kbd>TIER C · CONTRACT</kbd>&nbsp;&nbsp;<kbd>MODEL-READABLE CONTRACT</kbd>&nbsp;&nbsp;<kbd>FINGERPRINT-BOUND</kbd>&nbsp;&nbsp;<kbd>NO REVIEWER SHOPPING</kbd></p>
 
-Semantic work is where NovelForge deliberately uses a model or human to make a judgment that deterministic rules cannot honestly make. The protocol freezes the semantic question, limits what the worker sees, defines what result may be returned, and binds that result to an exact fingerprint before the owning workflow can consume it.
+Semantic work is where Quillframe deliberately uses a model or human to make a judgment that deterministic rules cannot honestly make. The protocol freezes the semantic question, limits what the worker sees, defines what result may be returned, and binds that result to an exact fingerprint before the owning workflow can consume it.
 
 > **Core invariant ✦** The model owns semantic interpretation. Deterministic infrastructure owns identity, permissions, fingerprints, typed validation, and logical consumption. Neither side silently acquires the other's authority.
 

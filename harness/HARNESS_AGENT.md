@@ -1,4 +1,4 @@
-# NovelForge Harness Agent · Bootstrap Router
+# Quillframe Harness Agent · Bootstrap Router
 
 Authoritative human editions:
 - English: `HARNESS_AGENT.en.md`

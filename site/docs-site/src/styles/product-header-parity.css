@@ -6,21 +6,21 @@
 
 :root {
   --sl-nav-height: 4rem;
-  --nf-product-header-max: 1480px;
-  --nf-product-header-gutter: clamp(16px, 3.4vw, 48px);
+  --qf-product-header-max: 1480px;
+  --qf-product-header-gutter: clamp(16px, 3.4vw, 48px);
 }
 
 header.header {
   height: var(--sl-nav-height);
   padding-block: 0;
-  padding-inline: max(12px, calc((100vw - var(--nf-product-header-max)) / 2 + var(--nf-product-header-gutter)));
-  border-bottom: 1px solid color-mix(in oklab, var(--nf-border) 68%, transparent);
+  padding-inline: max(12px, calc((100vw - var(--qf-product-header-max)) / 2 + var(--qf-product-header-gutter)));
+  border-bottom: 1px solid color-mix(in oklab, var(--qf-border) 68%, transparent);
   background:
     linear-gradient(90deg,
-      color-mix(in oklab, var(--nf-blue-soft) 24%, transparent),
-      color-mix(in oklab, var(--nf-surface-solid) 82%, transparent) 26%,
-      color-mix(in oklab, var(--nf-surface-solid) 82%, transparent) 72%,
-      color-mix(in oklab, var(--nf-pink-soft) 24%, transparent));
+      color-mix(in oklab, var(--qf-blue-soft) 24%, transparent),
+      color-mix(in oklab, var(--qf-surface-solid) 82%, transparent) 26%,
+      color-mix(in oklab, var(--qf-surface-solid) 82%, transparent) 72%,
+      color-mix(in oklab, var(--qf-pink-soft) 24%, transparent));
   box-shadow: 0 8px 30px oklch(.2 .03 300 / .05);
   backdrop-filter: blur(20px) saturate(145%);
   -webkit-backdrop-filter: blur(20px) saturate(145%);
@@ -52,15 +52,15 @@ header.header .title-wrapper {
   border: 1px solid transparent;
   border-radius: 13px;
   background:
-    linear-gradient(var(--nf-surface-solid), var(--nf-surface-solid)) padding-box,
-    conic-gradient(from 210deg, var(--nf-blue), var(--nf-lilac), var(--nf-pink), var(--nf-mint), var(--nf-blue)) border-box;
-  box-shadow: 0 7px 18px color-mix(in oklab, var(--nf-blue) 16%, transparent);
+    linear-gradient(var(--qf-surface-solid), var(--qf-surface-solid)) padding-box,
+    conic-gradient(from 210deg, var(--qf-blue), var(--qf-lilac), var(--qf-pink), var(--qf-mint), var(--qf-blue)) border-box;
+  box-shadow: 0 7px 18px color-mix(in oklab, var(--qf-blue) 16%, transparent);
 }
 
 :root[data-theme="dark"] .nf-brand-mark-shell {
   background:
-    linear-gradient(var(--nf-surface-solid), var(--nf-surface-solid)) padding-box,
-    conic-gradient(from 210deg, var(--nf-blue), var(--nf-lilac), var(--nf-pink), var(--nf-mint), var(--nf-blue)) border-box;
+    linear-gradient(var(--qf-surface-solid), var(--qf-surface-solid)) padding-box,
+    conic-gradient(from 210deg, var(--qf-blue), var(--qf-lilac), var(--qf-pink), var(--qf-mint), var(--qf-blue)) border-box;
 }
 
 .nf-brand-home img {
@@ -76,10 +76,10 @@ header.header .title-wrapper {
 .nf-version-chip {
   min-height: 1.45rem;
   padding-inline: .45rem;
-  border: 1px solid color-mix(in oklab, var(--nf-lilac) 22%, var(--nf-border));
+  border: 1px solid color-mix(in oklab, var(--qf-lilac) 22%, var(--qf-border));
   border-radius: 999px;
-  color: color-mix(in oklab, var(--nf-lilac) 72%, var(--nf-ink));
-  background: color-mix(in oklab, var(--nf-lilac-soft) 74%, transparent);
+  color: color-mix(in oklab, var(--qf-lilac) 72%, var(--qf-ink));
+  background: color-mix(in oklab, var(--qf-lilac-soft) 74%, transparent);
   font-size: 10px;
   font-weight: 800;
 }
@@ -116,13 +116,13 @@ header.header .nf-product-link {
 
 header.header .nf-product-link:hover,
 header.header .nf-product-link:focus-visible {
-  color: var(--nf-ink);
-  background: color-mix(in oklab, var(--nf-blue-soft) 52%, transparent);
+  color: var(--qf-ink);
+  background: color-mix(in oklab, var(--qf-blue-soft) 52%, transparent);
 }
 
 header.header .nf-docs-nav-link[aria-current="page"] {
-  color: color-mix(in oklab, var(--nf-blue) 78%, var(--nf-ink));
-  background: color-mix(in oklab, var(--nf-blue-soft) 78%, transparent);
+  color: color-mix(in oklab, var(--qf-blue) 78%, var(--qf-ink));
+  background: color-mix(in oklab, var(--qf-blue-soft) 78%, transparent);
 }
 
 header.header .nf-studio-link {
@@ -131,7 +131,7 @@ header.header .nf-studio-link {
   border: 0;
   border-radius: 999px;
   color: white;
-  background: linear-gradient(135deg, var(--nf-pink-strong), color-mix(in oklab, var(--nf-lilac) 66%, var(--nf-pink)));
+  background: linear-gradient(135deg, var(--qf-pink-strong), color-mix(in oklab, var(--qf-lilac) 66%, var(--qf-pink)));
   box-shadow: none;
   font-size: .8rem;
 }
@@ -144,9 +144,9 @@ header.header site-search button,
 header.header button[data-open-modal],
 header.header .search-input {
   min-height: 40px;
-  border: 1px solid color-mix(in oklab, var(--nf-border) 68%, transparent);
+  border: 1px solid color-mix(in oklab, var(--qf-border) 68%, transparent);
   border-radius: 12px;
-  background: color-mix(in oklab, var(--nf-surface) 76%, transparent);
+  background: color-mix(in oklab, var(--qf-surface) 76%, transparent);
   box-shadow: none;
   backdrop-filter: blur(10px);
 }
@@ -182,15 +182,15 @@ header.header .search-input {
     width: 40px !important;
     height: 40px !important;
     padding: 10px !important;
-    border: 1px solid color-mix(in oklab, var(--nf-border) 72%, transparent) !important;
+    border: 1px solid color-mix(in oklab, var(--qf-border) 72%, transparent) !important;
     border-radius: 12px !important;
-    color: var(--nf-ink) !important;
-    background: color-mix(in oklab, var(--nf-surface) 88%, transparent) !important;
+    color: var(--qf-ink) !important;
+    background: color-mix(in oklab, var(--qf-surface) 88%, transparent) !important;
     box-shadow: none !important;
   }
 
   starlight-menu-button[aria-expanded="true"] button {
-    background: color-mix(in oklab, var(--nf-blue-soft) 68%, var(--nf-surface)) !important;
+    background: color-mix(in oklab, var(--qf-blue-soft) 68%, var(--qf-surface)) !important;
   }
 
   .sidebar-pane {
@@ -198,9 +198,9 @@ header.header .search-input {
     inset-inline: 12px;
     width: auto;
     max-height: calc(100svh - var(--sl-nav-height) - 20px);
-    border: 1px solid color-mix(in oklab, var(--nf-border) 78%, transparent);
+    border: 1px solid color-mix(in oklab, var(--qf-border) 78%, transparent);
     border-radius: 18px;
-    background: color-mix(in oklab, var(--nf-surface-solid) 96%, transparent);
+    background: color-mix(in oklab, var(--qf-surface-solid) 96%, transparent);
     box-shadow: 0 28px 70px -36px oklch(.22 .05 300 / .38);
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -218,7 +218,7 @@ header.header .search-input {
     align-items: center;
     margin-top: 4px;
     padding-top: 12px;
-    border-top: 1px solid color-mix(in oklab, var(--nf-border) 72%, transparent);
+    border-top: 1px solid color-mix(in oklab, var(--qf-border) 72%, transparent);
   }
 
   .sidebar-content .mobile-preferences > .social-icons {
@@ -245,16 +245,16 @@ header.header .search-input {
     justify-content: flex-start;
     min-height: 44px;
     padding-inline: 12px;
-    border: 1px solid color-mix(in oklab, var(--nf-border) 72%, transparent);
+    border: 1px solid color-mix(in oklab, var(--qf-border) 72%, transparent);
     border-radius: 12px;
-    background: color-mix(in oklab, var(--nf-surface) 84%, transparent);
+    background: color-mix(in oklab, var(--qf-surface) 84%, transparent);
     font-size: .82rem;
   }
 
   .sidebar-content .nf-docs-nav-link[aria-current="page"] {
-    color: color-mix(in oklab, var(--nf-blue) 78%, var(--nf-ink));
-    border-color: color-mix(in oklab, var(--nf-blue) 28%, var(--nf-border));
-    background: color-mix(in oklab, var(--nf-blue-soft) 72%, var(--nf-surface));
+    color: color-mix(in oklab, var(--qf-blue) 78%, var(--qf-ink));
+    border-color: color-mix(in oklab, var(--qf-blue) 28%, var(--qf-border));
+    background: color-mix(in oklab, var(--qf-blue-soft) 72%, var(--qf-surface));
   }
 
   .sidebar-content .nf-studio-link {

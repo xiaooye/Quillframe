@@ -24,7 +24,7 @@ type ContextItemProjection = {
 };
 
 type ContextProjection = {
-  schema: "novelforge_context_inspector_v2";
+  schema: "quillframe_context_inspector_v2";
   manifest_id?: string | null;
   stage?: string | null;
   items: ContextItemProjection[];

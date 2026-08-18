@@ -19,8 +19,8 @@ def dump(v:Any,path:Path|None=None)->None:
     if path:path.parent.mkdir(parents=True,exist_ok=True);path.write_text(s,encoding="utf-8")
     else:print(s,end="")
 def local_command()->tuple[str|None,str|None]:
-    if os.getenv("NOVELFORGE_DISABLE_LOCAL_AGENT_AUTO","").lower() in {"1","true","yes"}:return None,None
-    requested=os.getenv("NOVELFORGE_LOCAL_AGENT_PROVIDER","auto").strip().lower() or "auto"
+    if os.getenv("QUILLFRAME_DISABLE_LOCAL_AGENT_AUTO","").lower() in {"1","true","yes"}:return None,None
+    requested=os.getenv("QUILLFRAME_LOCAL_AGENT_PROVIDER","auto").strip().lower() or "auto"
     if requested not in {"auto","codex","claude"}:return None,None
     selected=None
     if requested=="codex" and shutil.which("codex"):selected="codex"
@@ -38,7 +38,7 @@ def openai_command()->str|None:
 
 def resolve(explicit:str|None)->tuple[str|None,str|None]:
     if explicit:return explicit,"cli"
-    if os.getenv("NOVELFORGE_SEMANTIC_WORKER_CMD"):return os.environ["NOVELFORGE_SEMANTIC_WORKER_CMD"],"environment"
+    if os.getenv("QUILLFRAME_SEMANTIC_WORKER_CMD"):return os.environ["QUILLFRAME_SEMANTIC_WORKER_CMD"],"environment"
     cmd,src=local_command()
     if cmd:return cmd,src
     cmd=openai_command()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Enforce one current NovelForge Framework version identity.
+"""Enforce one current Quillframe Framework version identity.
 
-NovelForge is still pre-1.0 and latest ``main`` is the development baseline, but
+Quillframe is still pre-1.0 and latest ``main`` is the development baseline, but
 public machine/version surfaces must not drift independently. This checker is
 stdlib-only, deterministic, and performs no release promotion or model work.
 """
@@ -17,7 +17,7 @@ SEMVER = r"([0-9]+\.[0-9]+\.[0-9]+)"
 
 FRAMEWORK_MANIFEST = ROOT / "HARNESS_MANIFEST.yaml"
 SKILL_ENTRY = ROOT / "SKILL.md"
-CLI_ENTRY = ROOT / "novelforge.py"
+CLI_ENTRY = ROOT / "quillframe.py"
 PROJECT_SDK = ROOT / "project_sdk.py"
 MCP_STDIO = ROOT / "harness" / "control_plane" / "mcp_stdio.py"
 DOC_MANIFEST = ROOT / "docs" / "documentation_manifest.json"
@@ -63,7 +63,7 @@ def main() -> int:
     probes = {
         "HARNESS_MANIFEST.yaml": parse_text_version(FRAMEWORK_MANIFEST, VERSION_LINE_RE, "Framework manifest"),
         "SKILL.md": parse_text_version(SKILL_ENTRY, VERSION_LINE_RE, "Skill metadata"),
-        "novelforge.py": parse_text_version(CLI_ENTRY, CLI_VERSION_RE, "CLI Framework"),
+        "quillframe.py": parse_text_version(CLI_ENTRY, CLI_VERSION_RE, "CLI Framework"),
         "project_sdk.py": parse_text_version(PROJECT_SDK, SDK_VERSION_RE, "Project SDK default Framework"),
         "harness/control_plane/mcp_stdio.py": parse_text_version(MCP_STDIO, MCP_VERSION_RE, "MCP server"),
         "docs/documentation_manifest.json": doc_manifest_version(),
@@ -80,7 +80,7 @@ def main() -> int:
                 )
 
     result = {
-        "schema": "novelforge_version_identity_check_v1",
+        "schema": "quillframe_version_identity_check_v1",
         "version_identity_contract": "PASS" if not errors else "FAIL",
         "authority": "HARNESS_MANIFEST.yaml",
         "framework_version": authority,

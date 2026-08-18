@@ -1,4 +1,4 @@
-# Continuous Maintenance · Keep NovelForge healthy without turning automation into authority
+# Continuous Maintenance · Keep Quillframe healthy without turning automation into authority
 
 Continuous Maintenance observes Framework health, advances safe deterministic maintenance work, and prepares bounded evidence/candidates for later review. It does **not** convert schedules, CI, webhooks, queues, or persistent state into autonomous editorial or source-code authority.
 
@@ -203,6 +203,6 @@ trigger
 - [Runtime Capabilities](session_runtime/RUNTIME_CAPABILITIES.en.md) — capability proof and constraints.
 - [Control Plane](control_plane/CONTROL_PLANE.en.md) — durable external work coordination.
 - [Corpus Intelligence](../corpus/README.en.md) — discovery and provenance boundaries.
-- `.github/workflows/novelforge-weekly-maintenance.yml` — scheduled deterministic maintenance entrypoint.
+- `.github/workflows/quillframe-weekly-maintenance.yml` — scheduled deterministic maintenance entrypoint.
 
 **Continuous maintenance should make the system more observable and less stale—not more autonomous than its authority model allows.**

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "novelforge_propagation_debt_contract_v1",
-  "title": "NovelForge Propagation Debt Contract",
+  "$id": "quillframe_propagation_debt_contract_v1",
+  "title": "Quillframe Propagation Debt Contract",
   "oneOf": [
     {"$ref": "#/$defs/openRequest"},
     {"$ref": "#/$defs/debt"},
@@ -20,7 +20,7 @@
       "additionalProperties": false,
       "required": ["schema", "project_id", "source_change", "dependency"],
       "properties": {
-        "schema": {"const": "novelforge_propagation_debt_open_v1"},
+        "schema": {"const": "quillframe_propagation_debt_open_v1"},
         "project_id": {"$ref": "#/$defs/nonempty"},
         "source_change": {
           "type": "object",
@@ -55,7 +55,7 @@
       "type": "object",
       "required": ["schema", "debt_id", "project_id", "source_ref", "source_before_fingerprint", "source_after_fingerprint", "dependent_ref", "dependency_ref", "required_action", "status", "authority", "canon_authority", "framework_write_authority", "auto_action_performed"],
       "properties": {
-        "schema": {"const": "novelforge_propagation_debt_v1"},
+        "schema": {"const": "quillframe_propagation_debt_v1"},
         "debt_id": {"$ref": "#/$defs/nonempty"},
         "project_id": {"$ref": "#/$defs/nonempty"},
         "source_ref": {"$ref": "#/$defs/nonempty"},
@@ -81,7 +81,7 @@
       "additionalProperties": false,
       "required": ["schema", "debt_id", "source_after_fingerprint", "required_action", "result_ref", "result_fingerprint", "dependent_after_fingerprint"],
       "properties": {
-        "schema": {"const": "novelforge_propagation_debt_discharge_v1"},
+        "schema": {"const": "quillframe_propagation_debt_discharge_v1"},
         "debt_id": {"$ref": "#/$defs/nonempty"},
         "source_after_fingerprint": {"$ref": "#/$defs/fingerprint"},
         "required_action": {"$ref": "#/$defs/requiredAction"},
@@ -95,7 +95,7 @@
       "additionalProperties": false,
       "required": ["schema", "debt_id", "source_after_fingerprint", "actor_class", "evidence_ref", "evidence_fingerprint", "reason"],
       "properties": {
-        "schema": {"const": "novelforge_propagation_debt_waiver_v1"},
+        "schema": {"const": "quillframe_propagation_debt_waiver_v1"},
         "debt_id": {"$ref": "#/$defs/nonempty"},
         "source_after_fingerprint": {"$ref": "#/$defs/fingerprint"},
         "actor_class": {"enum": ["user", "authorized_human", "registered_semantic_result", "deterministic_contract"]},
@@ -109,7 +109,7 @@
       "additionalProperties": false,
       "required": ["schema", "debt_id", "new_debt_id", "evidence_ref", "evidence_fingerprint"],
       "properties": {
-        "schema": {"const": "novelforge_propagation_debt_supersede_v1"},
+        "schema": {"const": "quillframe_propagation_debt_supersede_v1"},
         "debt_id": {"$ref": "#/$defs/nonempty"},
         "new_debt_id": {"$ref": "#/$defs/nonempty"},
         "evidence_ref": {"$ref": "#/$defs/nonempty"},

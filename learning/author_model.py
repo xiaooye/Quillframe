@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NovelForge Author Model evidence persistence and selective projection.
+"""Quillframe Author Model evidence persistence and selective projection.
 
 This module is the deterministic capture/projection layer over LearningStore.
 Models own feedback meaning, scope, applicability and hypothesis relation.
@@ -24,9 +24,9 @@ from promotion_gate import SCHEMA as PROMOTION_CANDIDATE_SCHEMA
 from promotion_gate import _semantic_binding as _promotion_semantic_binding
 from promotion_gate import evaluate as evaluate_promotion_candidate
 
-SCHEMA = "novelforge_author_model_v1"
-CAPTURE_SCHEMA = "novelforge_feedback_capture_v1"
-PROJECTION_SCHEMA = "novelforge_author_model_projection_v2"
+SCHEMA = "quillframe_author_model_v1"
+CAPTURE_SCHEMA = "quillframe_feedback_capture_v1"
+PROJECTION_SCHEMA = "quillframe_author_model_projection_v2"
 SCOPES = {"one_off", "project", "user_taste", "general_craft"}
 POLARITIES = {"positive", "negative", "mixed"}
 HYPOTHESIS_ACTIONS = {"create", "strengthen", "contest", "supersede", "split"}
@@ -506,7 +506,7 @@ def project_author_model(store: LearningStore, *, project_id: str | None, explic
 
 
 def self_test(path: Path | None = None) -> dict[str, Any]:
-    db = path or Path(tempfile.gettempdir()) / "novelforge-author-model-selftest.db"
+    db = path or Path(tempfile.gettempdir()) / "quillframe-author-model-selftest.db"
     for p in (db, Path(str(db) + "-wal"), Path(str(db) + "-shm")):
         if p.exists(): p.unlink()
     store = LearningStore(db); store.init()
@@ -598,8 +598,8 @@ def _load(path: str) -> Any:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="NovelForge Author Model and review feedback capture")
-    p.add_argument("--db", default=".novelforge/learning.db")
+    p = argparse.ArgumentParser(description="Quillframe Author Model and review feedback capture")
+    p.add_argument("--db", default=".quillframe/learning.db")
     sub = p.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("capture"); c.add_argument("--request", required=True)
     r = sub.add_parser("project"); r.add_argument("--project-id"); r.add_argument("--explicit-intent"); r.add_argument("--selected-hypothesis-ids")
