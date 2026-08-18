@@ -1,0 +1,85 @@
+name: Quillframe Domain Health
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/quillframe-domain-health.yml'
+      - '.github/workflows/quillframe-deploy.yml'
+      - '.github/scripts/quillframe-pages-domain.sh'
+      - 'site/**'
+      - 'studio/app/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  public-domain-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PRODUCT_DOMAIN: quillframe.wei-dev.com
+      STUDIO_DOMAIN: studio.quillframe.wei-dev.com
+    steps:
+      - name: Verify public DNS from independent resolvers
+        run: |
+          set -euo pipefail
+          check_dns() {
+            domain="$1"
+            echo "== ${domain} via Cloudflare DoH =="
+            cf=$(curl -fsS --get 'https://cloudflare-dns.com/dns-query' \
+              -H 'accept: application/dns-json' \
+              --data-urlencode "name=${domain}" \
+              --data-urlencode 'type=CNAME')
+            echo "${cf}" | jq .
+            echo "== ${domain} via Google DoH =="
+            google=$(curl -fsS --get 'https://dns.google/resolve' \
+              --data-urlencode "name=${domain}" \
+              --data-urlencode 'type=CNAME')
+            echo "${google}" | jq .
+
+            cf_status=$(echo "${cf}" | jq -r '.Status')
+            google_status=$(echo "${google}" | jq -r '.Status')
+            test "${cf_status}" = "0"
+            test "${google_status}" = "0"
+            echo "${cf}" | jq -e '.Answer and (.Answer | length > 0)' >/dev/null
+            echo "${google}" | jq -e '.Answer and (.Answer | length > 0)' >/dev/null
+          }
+          check_dns "${PRODUCT_DOMAIN}"
+          check_dns "${STUDIO_DOMAIN}"
+
+      - name: Verify public HTTPS surfaces
+        run: |
+          set -euo pipefail
+          curl -fsvL --connect-timeout 10 --max-time 30 "https://${PRODUCT_DOMAIN}/" -o /tmp/product.html
+          grep -Fq '<title>Quillframe' /tmp/product.html
+          curl -fsSL --connect-timeout 10 --max-time 30 "https://${PRODUCT_DOMAIN}/docs/" -o /tmp/docs.html
+          grep -Fq 'Quillframe' /tmp/docs.html
+          curl -fsvL --connect-timeout 10 --max-time 30 "https://${STUDIO_DOMAIN}/" -o /tmp/studio.html
+          grep -Fq '<title>Quillframe Studio</title>' /tmp/studio.html
+          curl -fsSL --connect-timeout 10 --max-time 30 "https://${STUDIO_DOMAIN}/.well-known/quillframe-host.json" -o /tmp/host.json
+          jq -e '.schema == "quillframe_studio_host_descriptor_v1" and .authority == false' /tmp/host.json >/dev/null
+
+      - name: Publish public domain health status
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          case "${JOB_STATUS}" in
+            success) state=success; description='Public DNS and HTTPS verified from GitHub Actions' ;;
+            failure) state=failure; description='Public DNS or HTTPS verification failed' ;;
+            *) state=error; description="Domain health ended with ${JOB_STATUS}" ;;
+          esac
+          target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          payload=$(jq -nc --arg state "${state}" --arg target_url "${target_url}" --arg description "${description}" --arg context 'quillframe/domain-health' '{state:$state,target_url:$target_url,description:$description,context:$context}')
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            -H 'Content-Type: application/json' \
+            --data "${payload}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" >/dev/null
