@@ -11,6 +11,12 @@ import "./styles/index.css";
 const Desk = lazy(() => import("./routes/Desk"));
 const Start = lazy(() => import("./routes/Start"));
 const Project = lazy(() => import("./routes/Project"));
+const Manuscript = lazy(() => import("./routes/Manuscript"));
+const Plan = lazy(() => import("./routes/Plan"));
+const Story = lazy(() => import("./routes/Story"));
+const Review = lazy(() => import("./routes/Review"));
+const Research = lazy(() => import("./routes/Research"));
+const Learning = lazy(() => import("./routes/Learning"));
 const Inspector = lazy(() => import("./routes/InspectorRoute"));
 const Control = lazy(() => import("./routes/Control"));
 const Architecture = lazy(() => import("./routes/Architecture"));
@@ -29,6 +35,7 @@ if (!root) throw new Error("#app mount point is missing");
 
 document.documentElement.dataset.experience = "story-loom-kawaii-atelier-v5";
 document.documentElement.dataset.productLanguage = "quillframe-kawaii-v1";
+document.documentElement.dataset.writerMode = "authoring-first-v1";
 
 function StudioShellRoot(props: { children?: JSX.Element }) {
   return (
@@ -40,7 +47,6 @@ function StudioShellRoot(props: { children?: JSX.Element }) {
 
 async function configureOfflineShell() {
   if (!("serviceWorker" in navigator)) return;
-
   if (bridgeTransportAvailable()) {
     const registrations = await navigator.serviceWorker.getRegistrations();
     await Promise.all(
@@ -53,14 +59,9 @@ async function configureOfflineShell() {
     );
     return;
   }
-
-  window.addEventListener(
-    "load",
-    () => {
-      void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch(() => undefined);
-    },
-    { once: true },
-  );
+  window.addEventListener("load", () => {
+    void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch(() => undefined);
+  }, { once: true });
 }
 
 void configureOfflineShell().catch(() => undefined);
@@ -75,10 +76,16 @@ render(
             <Route path="/" component={Desk} />
             <Route path="/start" component={Start} />
             <Route path="/project" component={Project} />
+            <Route path="/manuscript" component={Manuscript} />
+            <Route path="/plan" component={Plan} />
+            <Route path="/story" component={Story} />
+            <Route path="/review" component={Review} />
+            <Route path="/research" component={Research} />
+            <Route path="/learning" component={Learning} />
+            <Route path="/publication" component={Publication} />
             <Route path="/inspect" component={Inspector} />
             <Route path="/control" component={Control} />
             <Route path="/architecture" component={Architecture} />
-            <Route path="/publication" component={Publication} />
             <Route path="/workspace" component={Workspace} />
             <Route path="/agents" component={Agents} />
             <Route path="/runtime" component={RuntimeRoute} />

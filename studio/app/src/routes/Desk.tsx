@@ -1,157 +1,45 @@
-import { Show, createSignal } from "solid-js";
+import { Show } from "solid-js";
 import { A } from "@solidjs/router";
-import { AuthorityBadge, PageIntro, QueryError } from "../components";
+import { PageIntro } from "../components";
 import { useI18n } from "../i18n";
 import { useStudio } from "../studio";
-
-const localCoreCommand = "python studio/local_server.py";
-const architectureUrl = "https://quillframe.wei-dev.com/architecture";
+import { CoreRequirementNotice } from "../authoring/AuthoringUI";
 
 export default function Desk() {
-  const { t, locale } = useI18n();
+  const { locale } = useI18n();
   const studio = useStudio();
-  const hosted = () => !studio.bridgeAvailable();
-  const [copied, setCopied] = createSignal(false);
-
-  const copyLocalCore = async () => {
-    await navigator.clipboard.writeText(localCoreCommand);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
-  };
-
+  const zh = () => locale() === "zh-CN";
+  const project = () => studio.projectProjection();
+  const manuscriptHref = () => studio.projectId() ? `/manuscript?project=${encodeURIComponent(studio.projectId())}` : "/start";
+  const reviewHref = () => studio.projectId() ? `/review?project=${encodeURIComponent(studio.projectId())}` : "/start";
   return (
-    <section class="nf-page nf-desk-page">
-      <PageIntro eyebrow={t("desk.eyebrow")} title={t("desk.title")} body={t("desk.body")} />
+    <section class="nf-page qf-desk-page">
+      <PageIntro eyebrow="DESK" title={zh() ? "回到作品。" : "Back to the work."} body={zh() ? "Quillframe 的首页先回答：我现在写什么？不是 Runtime 有多少条记录。" : "Quillframe's home answers what you are writing now, not how many runtime records exist."} />
 
-      <div class="nf-start-actions" aria-label={t("desk.title")}>
-        <A href="/start" class="nf-start-action" data-intent="start-novel">
-          <span class="nf-card-label">01</span>
-          <strong>{t("desk.startPlaygroundTitle")}</strong>
-          <small>{t("desk.startPlaygroundBody")}</small>
-        </A>
-        <A href="/project" class="nf-start-action" data-intent="open-project">
-          <span class="nf-card-label">02</span>
-          <strong>{t("desk.startProjectTitle")}</strong>
-          <small>{t("desk.startProjectBody")}</small>
-        </A>
-        <A href="/agents" class="nf-start-action" data-intent="agent-integration">
-          <span class="nf-card-label">03</span>
-          <strong>{t("desk.startAgentTitle")}</strong>
-          <small>{t("desk.startAgentBody")}</small>
-        </A>
-        <a href={architectureUrl} target="_blank" rel="noreferrer" class="nf-start-action" data-intent="explore-quillframe">
-          <span class="nf-card-label">04</span>
-          <strong>{t("desk.startExploreTitle")}</strong>
-          <small>{t("desk.startExploreBody")}</small>
-        </a>
-      </div>
+      <Show when={studio.bridgeAvailable()} fallback={<section class="qf-desk-hero qf-desk-unbound"><div><span class="nf-eyebrow">CORE UNBOUND</span><h2>{zh() ? "先连接一个真实 Core，再开始作品。" : "Bind a real Core before starting the work."}</h2><p>{zh() ? "Hosted Web 需要 hosted Core；Tauri 需要 local Core bridge。这里不会用 Demo state 冒充 Project。" : "Hosted Web needs hosted Core; Tauri needs a local Core bridge. Demo state never impersonates a Project here."}</p></div><A class="wui-button wui-button--solid" href="/start">{zh() ? "开始" : "Start"}</A></section>}>
+        <Show when={project()} fallback={<section class="qf-desk-hero"><div><span class="nf-eyebrow">NEW WORK</span><h2>{zh() ? "建立 Project，然后直接进入正文。" : "Create a Project, then go straight to the manuscript."}</h2><p>{zh() ? "AI 是可选增强，不是打开编辑器的前置条件。" : "AI is optional assistance, not a prerequisite for opening the editor."}</p></div><A class="wui-button wui-button--solid" href="/start">{zh() ? "新建 / 打开 Project" : "New / Open Project"}</A></section>}>
+          {(value) => <>
+            <section class="qf-desk-hero">
+              <div><span class="nf-eyebrow">CURRENT PROJECT</span><h2>{value().project.title}</h2><p><code>{value().project.project_id}</code> · {value().project.language}</p></div>
+              <A class="wui-button wui-button--solid qf-primary-writing-action" href={manuscriptHref()}>{zh() ? "继续写正文" : "Continue Manuscript"}</A>
+            </section>
 
-      <Show when={hosted()}>
-        <section
-          id="core-binding"
-          class="wui-card wui-card--outlined nf-inspector-surface nf-binding-surface"
-          aria-labelledby="binding-heading"
-          data-core-unbound={t("host.unboundTitle")}
-        >
-          <header class="nf-binding-head">
-            <div>
-              <span class="nf-eyebrow">{t("desk.bindingEyebrow")}</span>
-              <h2 id="binding-heading">{t("desk.bindingTitle")}</h2>
-              <p>{t("desk.bindingBody")}</p>
+            <div class="qf-desk-thread" aria-label={zh() ? "创作路径" : "Authoring path"}>
+              <A href={manuscriptHref()}><span>01</span><strong>{zh() ? "正文" : "Manuscript"}</strong><small>{value().counts.documents ?? 0} documents · {value().counts.document_revisions ?? 0} revisions</small></A>
+              <A href={`/plan?project=${encodeURIComponent(value().project.project_id)}`}><span>02</span><strong>{zh() ? "计划" : "Plan"}</strong><small>{value().counts.plans ?? 0} plans</small></A>
+              <A href={`/story?project=${encodeURIComponent(value().project.project_id)}`}><span>03</span><strong>{zh() ? "故事" : "Story"}</strong><small>{value().counts.characters ?? 0} characters · {value().counts.canon_claims ?? 0} canon claims</small></A>
+              <A href={reviewHref()}><span>04</span><strong>{zh() ? "审阅" : "Review"}</strong><small>{value().counts.candidates ?? 0} candidates · {value().counts.review_evidence ?? 0} review evidence</small></A>
             </div>
-            <span class="wui-badge wui-badge--outline">Core unbound</span>
-          </header>
-          <div class="nf-binding-options">
-            <article class="nf-binding-option" data-state="available">
-              <div class="nf-binding-option-head">
-                <span class="nf-binding-dot" aria-hidden="true" />
-                <div><strong>{t("desk.bindingLocalTitle")}</strong><small>{t("desk.bindingLocalMeta")}</small></div>
-              </div>
-              <p>{t("desk.bindingLocalBody")}</p>
-              <div class="nf-binding-command">
-                <code>{localCoreCommand}</code>
-                <button class="wui-button wui-button--outline" type="button" onClick={() => void copyLocalCore()}>
-                  {copied() ? (locale() === "zh-CN" ? "已复制" : "Copied") : (locale() === "zh-CN" ? "复制启动命令" : "Copy command")}
-                </button>
-              </div>
-              <span class="wui-badge wui-badge--success">{t("desk.bindingLocalStatus")}</span>
-            </article>
-            <article class="nf-binding-option" data-state="planned">
-              <div class="nf-binding-option-head">
-                <span class="nf-binding-dot" aria-hidden="true" />
-                <div><strong>{t("desk.bindingRemoteTitle")}</strong><small>{t("desk.bindingRemoteMeta")}</small></div>
-              </div>
-              <p>{t("desk.bindingRemoteBody")}</p>
-              <button class="wui-button wui-button--outline" type="button" disabled>{t("desk.bindingRemoteAction")}</button>
-            </article>
-            <article class="nf-binding-option" data-state="demo">
-              <div class="nf-binding-option-head">
-                <span class="nf-binding-dot" aria-hidden="true" />
-                <div><strong>{t("desk.bindingDemoTitle")}</strong><small>{t("desk.bindingDemoMeta")}</small></div>
-              </div>
-              <p>{t("desk.bindingDemoBody")}</p>
-              <A class="wui-button wui-button--solid" href="/workspace">{t("desk.bindingDemoAction")}</A>
-            </article>
-          </div>
-        </section>
+
+            <section class="qf-desk-contextual">
+              <div><span class="nf-eyebrow">AI ASSISTANT</span><h2>{zh() ? "需要帮助时再打开。" : "Open it when you need help."}</h2><p>{zh() ? "⌘I 打开 Quillframe Agent Dock；真实 Run 会留下可检查的 Context 与 Runtime evidence。" : "⌘I opens the Quillframe Agent Dock; real Runs leave inspectable Context and runtime evidence."}</p></div>
+              <div class="qf-inline-actions"><A class="wui-button wui-button--outline" href="/settings?section=models">{zh() ? "AI 与模型" : "AI & Models"}</A><A class="wui-button wui-button--ghost" href={`/context?project=${encodeURIComponent(value().project.project_id)}${studio.lastRunId() ? `&run=${encodeURIComponent(studio.lastRunId())}` : ""}`}>Context</A></div>
+            </section>
+          </>}
+        </Show>
       </Show>
 
-      <Show when={studio.bridgeAvailable()}>
-        <QueryError message={studio.bridgeError() ? String(studio.bridgeError()) : undefined} />
-
-        <div class="nf-metric-grid">
-          <article class="wui-card nf-card nf-card-accent">
-            <div class="wui-card__content">
-              <span class="nf-card-label">{t("desk.bridgeTitle")}</span>
-              <strong>{studio.bridgeLoading() ? t("common.loading") : studio.bridgeDescription() ? t("desk.bridgeReady") : t("desk.bridgeUnavailable")}</strong>
-              <small>{studio.bridgeDescription()?.contract_schema ?? "quillframe_studio_host_bridge_contract_v1"}</small>
-            </div>
-          </article>
-          <article class="wui-card nf-card">
-            <div class="wui-card__content">
-              <span class="nf-card-label">{t("desk.queryCount")}</span>
-              <strong>{studio.bridgeDescription()?.supported_operations.length ?? "—"}</strong>
-              <small>bridge.describe · project.inspect · …</small>
-            </div>
-          </article>
-          <article class="wui-card nf-card">
-            <div class="wui-card__content">
-              <span class="nf-card-label">{t("desk.deferredCount")}</span>
-              <strong>{studio.bridgeDescription() ? Object.keys(studio.bridgeDescription()!.deferred_operations).length : "—"}</strong>
-              <small>Core #23</small>
-            </div>
-          </article>
-          <article class="wui-card nf-card">
-            <div class="wui-card__content">
-              <span class="nf-card-label">{t("desk.authority")}</span>
-              <AuthorityBadge />
-              <small>canon=false · settlement=false · framework-write=false</small>
-            </div>
-          </article>
-        </div>
-
-        <div class="nf-two-column">
-          <article class="wui-card nf-card">
-            <div class="wui-card__header"><h2>{t("nav.project")}</h2></div>
-            <div class="wui-card__content">
-              <Show when={studio.projectResult()?.data?.project} fallback={<p class="nf-muted">{t("project.noProject")}</p>}>
-                <div class="nf-project-summary">
-                  <strong>{studio.projectResult()?.data?.project.project.title}</strong>
-                  <span>{studio.projectResult()?.data?.project.project.id}</span>
-                  <span>{studio.projectResult()?.data?.project.framework_lock.version as string}</span>
-                </div>
-              </Show>
-            </div>
-          </article>
-          <article class="wui-card wui-card--filled nf-card">
-            <div class="wui-card__header"><h2>{t("nav.workspace")}</h2></div>
-            <div class="wui-card__content">
-              <p>{t("playground.body")}</p>
-              <A class="wui-button wui-button--outline" href="/workspace">{t("playground.runAction")}</A>
-            </div>
-          </article>
-        </div>
-      </Show>
+      <CoreRequirementNotice operation="project.list" compact />
     </section>
   );
 }

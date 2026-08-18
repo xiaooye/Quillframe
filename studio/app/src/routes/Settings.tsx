@@ -1,213 +1,135 @@
-import { For, Show, createMemo, createSignal } from "solid-js";
+import { For, Show, createMemo, createSignal, onMount } from "solid-js";
 import { A } from "@solidjs/router";
-import { CoreHostBoundary, PageIntro } from "../components";
+import { PageIntro } from "../components";
 import { useI18n } from "../i18n";
 import { useStudio } from "../studio";
+import { invokeBridge, operationError } from "../bridge";
+import type { ModelServiceListProjection, ModelServiceProjection } from "../authoring/contracts";
+import { CoreRequirementNotice } from "../authoring/AuthoringUI";
 
-type SettingsSection = "general" | "models" | "appearance" | "advanced";
+type Section = "general" | "models" | "appearance" | "advanced";
 type CapabilityState = "verified" | "detected" | "unknown" | "unavailable";
 
-const sections: ReadonlyArray<{ id: SettingsSection; en: string; zh: string }> = [
+const sections: Array<{ id: Section; en: string; zh: string }> = [
   { id: "general", en: "General", zh: "通用" },
   { id: "models", en: "AI & Models", zh: "AI 与模型" },
   { id: "appearance", en: "Appearance", zh: "外观" },
   { id: "advanced", en: "Advanced", zh: "高级" },
 ];
 
-function initialSettingsSection(): SettingsSection {
-  const candidate = new URLSearchParams(window.location.search).get("section") as SettingsSection | null;
-  return candidate && sections.some((item) => item.id === candidate) ? candidate : "general";
-}
-
-const capabilityLegend: ReadonlyArray<{ state: CapabilityState; en: string; zh: string; detailEn: string; detailZh: string }> = [
-  { state: "verified", en: "Verified", zh: "已验证", detailEn: "Quillframe has direct evidence from an executed probe or runtime result.", detailZh: "Quillframe 已从真实探测或运行结果获得直接证据。" },
-  { state: "detected", en: "Detected", zh: "已检测", detailEn: "The Model Runtime observed metadata but has not independently verified behavior.", detailZh: "Model Runtime 已观察到相关信息，但尚未独立验证实际行为。" },
-  { state: "unknown", en: "Unknown", zh: "未知", detailEn: "No reliable observation is available yet.", detailZh: "当前还没有足够可靠的观察结果。" },
-  { state: "unavailable", en: "Unavailable", zh: "不可用", detailEn: "The runtime has evidence that this capability is not available.", detailZh: "运行时已有证据表明该能力不可用。" },
-];
-
-const copy = {
-  "en-US": {
-    eyebrow: "GLOBAL SETTINGS · HOST-OWNED",
-    title: "Settings that stay out of your manuscript.",
-    body: "Configure Studio behavior and connect model APIs without turning runtime infrastructure into Project or Canon state.",
-    generalTitle: "General",
-    generalBody: "Global host settings appear here only when Quillframe Core exposes a truthful contract. Studio does not synthesize persistence or write Project files on its own.",
-    generalNote: "Project truth, Canon, runtime state, and host settings remain separate authority domains.",
-    modelsEyebrow: "MODEL API",
-    modelsTitle: "Connect a model API with two fields.",
-    modelsBody: "Give Quillframe an API Endpoint and Access Token. Quillframe handles discovery and shows only observations returned by the Model Runtime.",
-    servicesTitle: "Model Services",
-    servicesBody: "A Model Service is an API endpoint Quillframe can use for inference. Connection setup always uses the same two-field surface.",
-    addService: "Add model service",
-    endpoint: "API Endpoint",
-    endpointPlaceholder: "https://api.example.com/v1",
-    token: "Access Token",
-    tokenPlaceholder: "Optional for endpoints that do not require authentication",
-    tokenHelp: "The token may be empty for local endpoints that require no authentication. Saved tokens belong in secure host storage and are never shown again by Studio.",
-    connect: "Connect",
-    contractPending: "Connection is disabled because this branch does not yet expose an operation-specific Model Runtime command through the Host Bridge. Studio will not simulate a successful connection.",
-    coreUnbound: "A bound Quillframe Core is required before a model API can be connected.",
-    serviceProjectionTitle: "Connected services",
-    serviceProjectionEmpty: "Core does not expose a Model Service projection yet. Studio will not infer services from endpoint history, hostname, browser state, or vendor names.",
-    modelsListTitle: "Discovered models",
-    modelsListBody: "Models appear only after Core reports model discovery from a connected Model Service.",
-    modelsListEmpty: "No discovered-model projection is available yet.",
-    usageTitle: "Model usage",
-    autoTitle: "Automatic model selection",
-    autoBadge: "DEFAULT",
-    autoBody: "Quillframe chooses a model that meets the current task requirements. An exact-model preference can guide selection later, but it cannot change what a model is qualified to do.",
-    preferenceTitle: "Exact-model preference",
-    preferenceBody: "Available only after Core reports discovered models and eligibility for the relevant task. No model choice is required during onboarding.",
-    capabilityTitle: "Capability evidence",
-    capabilityBody: "Settings shows observed capability evidence as read-only. Advanced manual overrides, if Core supports them, live in Inspector / Diagnostics and can never appear as Verified.",
-    appearanceTitle: "Appearance",
-    appearanceBody: "Theme and language controls already live in the Studio top bar. Persistent appearance settings will use host-owned settings contracts when available.",
-    advancedTitle: "Advanced",
-    advancedBody: "Runtime evidence belongs in Inspector and Diagnostics. Vendor identity, when detected, is diagnostic metadata only—not a setup entity.",
-    openInspector: "Open Inspector",
-    openDiagnostics: "Open Diagnostics",
-    bridgeContracts: "Model Runtime bridge signals",
-    noBridgeContracts: "bridge.describe currently exposes no model/inference-related operation.",
-    modelBoundary: "User → Quillframe → Model API",
-  },
-  "zh-CN": {
-    eyebrow: "全局设置 · 宿主管理",
-    title: "设置留在作品之外。",
-    body: "配置 Studio、连接模型 API，同时不把运行基础设施混入 Project 或 Canon。",
-    generalTitle: "通用",
-    generalBody: "只有 Quillframe Core 暴露真实契约后，全局宿主设置才会在这里出现。Studio 不会自行伪造持久化，也不会暗中写入 Project 文件。",
-    generalNote: "Project truth、Canon、运行状态与宿主设置始终属于不同的 authority domain。",
-    modelsEyebrow: "模型 API",
-    modelsTitle: "只用两个字段连接模型 API。",
-    modelsBody: "只需要给 Quillframe 一个 API Endpoint 和 Access Token。后续发现由 Quillframe 完成，这里只展示 Model Runtime 实际返回的观察结果。",
-    servicesTitle: "模型服务",
-    servicesBody: "Model Service 就是 Quillframe 可用于推理的 API 地址。创建连接始终只有同一套两个字段。",
-    addService: "添加模型服务",
-    endpoint: "API Endpoint",
-    endpointPlaceholder: "https://api.example.com/v1",
-    token: "Access Token",
-    tokenPlaceholder: "无需认证的本机 endpoint 可以留空",
-    tokenHelp: "无需认证的本机 endpoint 可以留空。真正保存后的令牌必须进入宿主安全存储，Studio 不会再次显示明文。",
-    connect: "连接",
-    contractPending: "当前分支的 Host Bridge 尚未公开 Model Runtime 的专用 command，因此连接按钮保持禁用。Studio 不会模拟连接成功。",
-    coreUnbound: "连接模型 API 前需要先绑定 Quillframe Core。",
-    serviceProjectionTitle: "已连接的模型服务",
-    serviceProjectionEmpty: "Core 当前尚未提供 Model Service 投影。Studio 不会根据 endpoint 历史、hostname、浏览器状态或厂商名称自行推断连接。",
-    modelsListTitle: "已发现模型",
-    modelsListBody: "只有 Core 从真实 Model Service 返回模型发现结果后，模型才会出现在这里。",
-    modelsListEmpty: "当前尚无已发现模型的投影。",
-    usageTitle: "模型使用方式",
-    autoTitle: "自动选择模型",
-    autoBadge: "默认",
-    autoBody: "Quillframe 会选择满足当前任务要求的模型。之后可以指定模型偏好来影响选择，但偏好不能改变模型是否具备执行资格。",
-    preferenceTitle: "指定模型偏好",
-    preferenceBody: "只有 Core 已提供已发现模型和对应任务的执行资格后才开放。首次设置不要求选择模型。",
-    capabilityTitle: "能力证据",
-    capabilityBody: "普通设置只读展示实际观察到的模型能力。若 Core 支持手动覆盖，它只进入高级 Inspector / Diagnostics，而且永远不能显示成“已验证”。",
-    appearanceTitle: "外观",
-    appearanceBody: "主题与语言控制目前已经位于 Studio 顶栏。后续需要持久化时，也只通过宿主设置契约。",
-    advancedTitle: "高级",
-    advancedBody: "运行证据进入 Inspector 与 Diagnostics。厂商身份即使被检测到，也只能作为诊断信息，而不是设置实体。",
-    openInspector: "打开 Inspector",
-    openDiagnostics: "打开 Diagnostics",
-    bridgeContracts: "Model Runtime bridge signals",
-    noBridgeContracts: "bridge.describe 当前没有公开 model / inference 相关 operation。",
-    modelBoundary: "User → Quillframe → Model API",
-  },
+const settingsCopy = {
+  "en-US": { endpoint: "API Endpoint", token: "Access Token", autoTitle: "Automatic model selection", connect: "Test / Connect" },
+  "zh-CN": { endpoint: "API Endpoint", token: "Access Token", autoTitle: "自动选择模型", connect: "Test / Connect" },
 } as const;
 
-function CapabilityBadge(props: { state: CapabilityState; label: string }) {
-  return <span class="nf-capability-state" data-state={props.state}><span aria-hidden="true" />{props.label}</span>;
+function initialSection(): Section {
+  const value = new URLSearchParams(window.location.search).get("section") as Section | null;
+  return value && sections.some((item) => item.id === value) ? value : "general";
+}
+
+function observedState(service: ModelServiceProjection): CapabilityState {
+  const state = service.discovery_state?.toLowerCase();
+  if (state === "connected" || state === "ready" || state === "verified") return "verified";
+  if (state === "detected" || state === "discovering") return "detected";
+  if (state === "failed" || state === "unavailable") return "unavailable";
+  return "unknown";
 }
 
 export default function Settings() {
-  const { locale } = useI18n();
+  const { locale, setLocale } = useI18n();
   const studio = useStudio();
-  const text = createMemo(() => copy[locale()]);
   const zh = () => locale() === "zh-CN";
-  const [section, setSection] = createSignal<SettingsSection>(initialSettingsSection());
+  const text = createMemo(() => settingsCopy[locale()]);
+  const [section, setSection] = createSignal<Section>(initialSection());
   const [endpoint, setEndpoint] = createSignal("");
   const [token, setToken] = createSignal("");
+  const [services, setServices] = createSignal<ModelServiceProjection[]>([]);
+  const [connecting, setConnecting] = createSignal(false);
+  const [message, setMessage] = createSignal<string>();
+  const [error, setError] = createSignal<string>();
+  const operations = createMemo(() => studio.bridgeCapabilities()?.operations ?? []);
 
-  const modelBridgeSignals = createMemo(() => {
-    const description = studio.bridgeDescription();
-    if (!description) return [] as string[];
-    const operations = [...description.supported_operations, ...Object.keys(description.deferred_operations ?? {})];
-    return operations.filter((operation) => /model|inference/i.test(operation));
-  });
+  const refreshServices = async () => {
+    if (!operations().includes("model.service.list")) return;
+    setError(undefined);
+    try {
+      const result = await invokeBridge<ModelServiceListProjection>("model.service.list");
+      if (result.status !== "ok" || !result.data) throw new Error(operationError(result));
+      setServices(result.data.items ?? []);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
+  };
+
+  const connect = async () => {
+    if (!endpoint().trim() || !operations().includes("model.service.add")) return;
+    setConnecting(true); setError(undefined); setMessage(undefined);
+    const accessToken = token();
+    try {
+      const result = await invokeBridge<ModelServiceProjection>("model.service.add", { endpoint: endpoint().trim(), access_token: accessToken });
+      setToken("");
+      if (result.status !== "ok" || !result.data) throw new Error(operationError(result));
+      setMessage(zh() ? "Model Service 已由 Core discover；Access Token 明文已从表单清除。" : "Core discovered the Model Service; the Access Token value was cleared from the form.");
+      await refreshServices();
+    } catch (cause) {
+      setToken("");
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally { setConnecting(false); }
+  };
+
+  const discover = async (serviceId: string) => {
+    if (!operations().includes("model.service.discover")) return;
+    setError(undefined);
+    try {
+      const result = await invokeBridge<ModelServiceProjection>("model.service.discover", { service_id: serviceId });
+      if (result.status !== "ok") throw new Error(operationError(result));
+      await refreshServices();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
+  };
+
+  const testService = async (serviceId: string) => {
+    if (!operations().includes("model.service.test")) return;
+    setError(undefined); setMessage(undefined);
+    try {
+      const result = await invokeBridge("model.service.test", { service_id: serviceId, verify_tools: true });
+      if (result.status !== "ok") throw new Error(operationError(result));
+      setMessage(zh() ? "Core model probe 已完成；capability evidence 已刷新。" : "Core model probe completed; capability evidence was refreshed.");
+      await refreshServices();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
+  };
+
+  onMount(() => { if (studio.bridgeAvailable()) void refreshServices(); });
 
   return (
-    <section class="nf-page nf-settings-page">
-      <PageIntro eyebrow={text().eyebrow} title={text().title} body={text().body} />
+    <section class="nf-page qf-settings-page">
+      <PageIntro eyebrow={zh() ? "设置 · 宿主级" : "SETTINGS · HOST LEVEL"} title={zh() ? "设置服务写作，不接管作品。" : "Settings serve the writing, not the work itself."} body={zh() ? "Project / Canon / Context / Settlement authority 不进入浏览器 settings。Model Service 只通过 typed Core。" : "Project / Canon / Context / Settlement authority never becomes browser settings state. Model Services go through typed Core only."} />
+      <div class="qf-settings-layout">
+        <nav class="qf-settings-nav" aria-label={zh() ? "设置分类" : "Settings sections"}><For each={sections}>{(item) => <button type="button" data-active={section() === item.id ? "true" : undefined} onClick={() => setSection(item.id)}>{zh() ? item.zh : item.en}</button>}</For></nav>
+        <div class="qf-settings-content">
+          <Show when={section() === "general"}><section class="qf-editorial-sheet"><span class="nf-eyebrow">GENERAL</span><h2>Studio</h2><dl class="qf-settings-facts"><dt>{zh() ? "传输" : "Transport"}</dt><dd>{studio.transportName()}</dd><dt>Core</dt><dd>{studio.bridgeAvailable() ? (zh() ? "已绑定" : "bound") : (zh() ? "未绑定" : "unbound")}</dd><dt>Project</dt><dd>{studio.projectId() || "—"}</dd><dt>Host Bridge</dt><dd>v{studio.bridgeCapabilities()?.contractVersion ?? "—"}</dd></dl><p>{zh() ? "浏览器持久化只保存 UI convenience，不保存正文或 Canon authority。" : "Browser persistence stores UI convenience only, never manuscript or Canon authority."}</p></section></Show>
 
-      <div class="nf-settings-layout">
-        <nav class="nf-settings-nav" aria-label={zh() ? "设置分类" : "Settings sections"}>
-          <For each={sections}>{(item) => (
-            <button type="button" data-active={section() === item.id ? "true" : undefined} onClick={() => setSection(item.id)}>{zh() ? item.zh : item.en}</button>
-          )}</For>
-        </nav>
-
-        <div class="nf-settings-main">
-          <Show when={section() === "general"}>
-            <section class="nf-settings-section">
-              <span class="nf-eyebrow">SETTINGS</span>
-              <h2>{text().generalTitle}</h2>
-              <p>{text().generalBody}</p>
-              <div class="nf-settings-note"><strong>authority boundary</strong><span>{text().generalNote}</span></div>
-            </section>
-          </Show>
-
-          <Show when={section() === "models"}>
-            <section class="nf-settings-section nf-model-settings-intro">
-              <span class="nf-eyebrow">{text().modelsEyebrow}</span>
-              <h2>{text().modelsTitle}</h2>
-              <p>{text().modelsBody}</p>
-              <code class="nf-model-mental-model">{text().modelBoundary}</code>
-            </section>
-
-            <section class="nf-settings-section" aria-labelledby="model-services-heading">
-              <div class="nf-settings-section-head"><div><span class="nf-section-index">01</span><h2 id="model-services-heading">{text().servicesTitle}</h2><p>{text().servicesBody}</p></div></div>
-              <Show when={studio.bridgeAvailable()} fallback={<CoreHostBoundary />}>
-                <div class="nf-model-connect-surface">
-                  <div class="nf-model-connect-copy"><span class="nf-eyebrow">{text().addService}</span><strong>{text().endpoint} + {text().token}</strong></div>
-                  <div class="nf-model-connect-form" role="group" aria-label={text().addService}>
-                    <label class="nf-field-label"><span>{text().endpoint}</span><input class="wui-input nf-mono" inputmode="url" autocomplete="url" spellcheck={false} value={endpoint()} onInput={(event) => setEndpoint(event.currentTarget.value)} placeholder={text().endpointPlaceholder} /></label>
-                    <label class="nf-field-label"><span>{text().token}</span><input class="wui-input nf-mono" type="password" autocomplete="new-password" value={token()} onInput={(event) => setToken(event.currentTarget.value)} placeholder={text().tokenPlaceholder} /><small class="nf-field-help">{text().tokenHelp}</small></label>
-                    <button class="wui-button wui-button--solid" type="button" disabled aria-disabled="true">{text().connect}</button>
-                    <p class="nf-model-contract-note">{text().contractPending}</p>
-                  </div>
+          <Show when={section() === "models"}><div class="qf-model-workspace">
+            <section class="qf-editorial-sheet qf-model-connect">
+              <span class="nf-eyebrow">MODEL SERVICE</span><h2>Endpoint + Access Token</h2><p>{zh() ? "普通用户只连接服务。协议、模型与 capability discovery 由 Quillframe Core 负责。" : "Ordinary users connect a service only. Quillframe Core owns protocol, model and capability discovery."}</p>
+              <div class="nf-model-connect-form">
+                <div class="qf-model-connect-fields">
+                  <label class="nf-field-label"><span>{text().endpoint}</span><input class="wui-input nf-mono" inputmode="url" autocomplete="url" value={endpoint()} onInput={(event) => setEndpoint(event.currentTarget.value)} placeholder="https://api.example.com/v1" /></label>
+                  <label class="nf-field-label"><span>{text().token}</span><input class="wui-input nf-mono" type="password" autocomplete="new-password" value={token()} onInput={(event) => setToken(event.currentTarget.value)} placeholder={zh() ? "不会回显" : "Never echoed back"} /><small>{zh() ? "Token 只交给 Host/Core SecretStore；Studio 不写 localStorage、Project state 或 Context。" : "The token is handed only to the Host/Core SecretStore; Studio never writes it to localStorage, Project state or Context."}</small></label>
                 </div>
-              </Show>
-              <div class="nf-model-observation-block"><div><strong>{text().serviceProjectionTitle}</strong><span class="wui-badge wui-badge--outline">Core observation</span></div><p>{studio.bridgeAvailable() ? text().serviceProjectionEmpty : text().coreUnbound}</p></div>
+              </div>
+              <button class="wui-button wui-button--solid" type="button" disabled={connecting() || !endpoint().trim() || !operations().includes("model.service.add")} onClick={() => void connect()}>{connecting() ? (zh() ? "连接中…" : "Connecting…") : text().connect}</button>
+              <CoreRequirementNotice operation="model.service.add" />
+              <Show when={message()}>{(value) => <p class="qf-success-note" role="status">{value()}</p>}</Show><Show when={error()}>{(value) => <div class="wui-alert" role="alert"><div class="wui-alert__body"><strong class="wui-alert__title">AI & Models</strong><span class="wui-alert__description">{value()}</span></div></div>}</Show>
             </section>
 
-            <section class="nf-settings-section" aria-labelledby="discovered-models-heading">
-              <div class="nf-settings-section-head"><div><span class="nf-section-index">02</span><h2 id="discovered-models-heading">{text().modelsListTitle}</h2><p>{text().modelsListBody}</p></div></div>
-              <div class="nf-model-empty-state"><span aria-hidden="true">✦</span><p>{text().modelsListEmpty}</p></div>
+            <section class="qf-editorial-sheet"><div class="qf-section-head"><div><span class="nf-eyebrow">MODEL SERVICES</span><h2>{zh() ? "模型服务" : "Model Services"}</h2></div><button class="wui-button wui-button--outline" type="button" disabled={!operations().includes("model.service.list")} onClick={() => void refreshServices()}>{zh() ? "刷新" : "Refresh"}</button></div><CoreRequirementNotice operation="model.service.list" compact />
+              <div class="qf-model-service-list"><For each={services()}>{(service) => <article><div><strong>{service.endpoint ?? service.service_id ?? "Model Service"}</strong><span class="qf-capability-state">{observedState(service)}</span></div><p>{service.credential_present ? (zh() ? "Credential present · 明文不可见" : "Credential present · value hidden") : (zh() ? "无 credential evidence" : "No credential evidence")}</p><div class="qf-model-chip-list"><For each={service.models ?? []}>{(model) => <span>{model.display_name ?? model.model_id ?? "model"}</span>}</For></div><Show when={service.service_id}><div class="qf-inline-actions"><button class="wui-button wui-button--outline" type="button" disabled={!operations().includes("model.service.discover")} onClick={() => void discover(service.service_id!)}>Discover</button><button class="wui-button wui-button--outline" type="button" disabled={!operations().includes("model.service.test")} onClick={() => void testService(service.service_id!)}>Probe</button></div></Show></article>}</For><Show when={!services().length}><p>{zh() ? "尚未连接 Model Service。" : "No Model Service is connected yet."}</p></Show></div>
             </section>
 
-            <section class="nf-settings-section" aria-labelledby="model-usage-heading">
-              <div class="nf-settings-section-head"><div><span class="nf-section-index">03</span><h2 id="model-usage-heading">{text().usageTitle}</h2></div></div>
-              <div class="nf-model-usage-row"><div><strong>{text().autoTitle}</strong><p>{text().autoBody}</p></div><span class="wui-badge wui-badge--success">{text().autoBadge}</span></div>
-              <div class="nf-model-usage-row" data-muted><div><strong>{text().preferenceTitle}</strong><p>{text().preferenceBody}</p></div><span class="wui-badge wui-badge--outline">unavailable</span></div>
-            </section>
+            <section class="qf-editorial-sheet"><span class="nf-eyebrow">MODEL SELECTION</span><h2>{zh() ? "自动选择" : "Automatic selection"}</h2><div class="qf-default-model-row"><div><strong>{text().autoTitle}</strong><p>{zh() ? "默认使用 Core eligibility/capability evidence；Studio 不靠 vendor 名猜能力。" : "Core eligibility/capability evidence is the default; Studio never guesses capability from a vendor name."}</p></div><span class="wui-badge wui-badge--outline">DEFAULT</span></div></section>
+          </div></Show>
 
-            <section class="nf-settings-section" aria-labelledby="capability-evidence-heading">
-              <div class="nf-settings-section-head"><div><span class="nf-section-index">04</span><h2 id="capability-evidence-heading">{text().capabilityTitle}</h2><p>{text().capabilityBody}</p></div></div>
-              <div class="nf-capability-legend"><For each={capabilityLegend}>{(item) => <div class="nf-capability-row"><CapabilityBadge state={item.state} label={zh() ? item.zh : item.en} /><p>{zh() ? item.detailZh : item.detailEn}</p></div>}</For></div>
-            </section>
-          </Show>
+          <Show when={section() === "appearance"}><section class="qf-editorial-sheet"><span class="nf-eyebrow">APPEARANCE</span><h2>{zh() ? "外观" : "Appearance"}</h2><p>{zh() ? "主题继续服从 Story Loom 的 warm ivory / dark roles；语言必须支持中英文扩张。" : "Theme follows Story Loom warm-ivory / dark roles; layout must tolerate Chinese and English expansion."}</p><button class="wui-button wui-button--outline" type="button" onClick={() => setLocale(locale() === "zh-CN" ? "en-US" : "zh-CN")}>{locale() === "zh-CN" ? "English" : "中文"}</button></section></Show>
 
-          <Show when={section() === "appearance"}><section class="nf-settings-section"><span class="nf-eyebrow">APPEARANCE</span><h2>{text().appearanceTitle}</h2><p>{text().appearanceBody}</p></section></Show>
-
-          <Show when={section() === "advanced"}>
-            <section class="nf-settings-section">
-              <span class="nf-eyebrow">ADVANCED</span><h2>{text().advancedTitle}</h2><p>{text().advancedBody}</p>
-              <div class="nf-settings-actions"><A class="wui-button wui-button--outline" href="/inspect">{text().openInspector}</A><A class="wui-button wui-button--outline" href="/diagnostics">{text().openDiagnostics}</A></div>
-              <details class="nf-settings-contracts"><summary>{text().bridgeContracts}</summary><Show when={modelBridgeSignals().length > 0} fallback={<p>{text().noBridgeContracts}</p>}><div class="nf-chip-row"><For each={modelBridgeSignals()}>{(operation) => <code>{operation}</code>}</For></div></Show></details>
-            </section>
-          </Show>
+          <Show when={section() === "advanced"}><section class="qf-editorial-sheet"><span class="nf-eyebrow">ADVANCED</span><h2>{zh() ? "协议与诊断只在这里出现" : "Protocol and diagnostics stay here"}</h2><p>{zh() ? "Provider/vendor/protocol identity 只能作为 Core observation；它们不是普通设置实体。" : "Provider/vendor/protocol identity is Core observation only; it is not an ordinary setup entity."}</p><div class="qf-inline-actions"><A class="wui-button wui-button--outline" href="/diagnostics">Diagnostics</A><A class="wui-button wui-button--outline" href="/capabilities">Capabilities</A></div><details><summary>{zh() ? "当前 Core operations" : "Current Core operations"}</summary><pre class="qf-diff"><code>{operations().join("\n") || "unbound"}</code></pre></details></section></Show>
         </div>
       </div>
     </section>

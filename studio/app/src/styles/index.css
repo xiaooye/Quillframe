@@ -13,6 +13,7 @@
 @import "./integrations.css";
 @import "./model-onboarding.css";
 @import "./model-services.css";
+@import "./authoring-product.css";
 
 /* Cross-product semantic mapping, workstation composition, then hardening. */
 @import "./product-language.css";

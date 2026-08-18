@@ -1,215 +1,85 @@
-import { For, Show, createMemo, createSignal } from "solid-js";
-import { invokeBridge } from "../bridge";
-import { CoreHostBoundary, JsonBlock, PageIntro, QueryError } from "../components";
+import { For, Show, createMemo, createSignal, onMount } from "solid-js";
+import { useLocation } from "@solidjs/router";
+import { PageIntro } from "../components";
 import { useI18n } from "../i18n";
 import { useStudio } from "../studio";
+import { invokeBridge, operationError } from "../bridge";
+import type { ContextRuntimeItem, ContextRuntimeProjection } from "../authoring/contracts";
+import { AuthorityLabel, WriterContextStrip } from "../authoring/AuthoringUI";
 
-const stages = ["writer_pre_draft", "post_draft_critic", "independent_reviewer", "never"] as const;
-
-type ContextItemProjection = {
-  id: string;
-  class: string;
-  source?: unknown;
-  source_fingerprint?: unknown;
-  authority: string;
-  inclusion_reason: string;
-  stages: string[];
-  priority: number;
-  pinned: boolean;
-  derived: boolean;
-  hidden: boolean;
-  invalidated: boolean;
-  metadata: unknown;
-  eligible: boolean;
-};
-
-type ContextProjection = {
-  schema: "quillframe_context_inspector_v2";
-  manifest_id?: string | null;
-  stage?: string | null;
-  items: ContextItemProjection[];
-  proposals: unknown[];
-  ordering_policy: string;
-  semantic_relevance_field_allowed: false;
-  authority: false;
-  model_execution: false;
-};
-
-const inspectorCopy = {
-  "en-US": {
-    eyebrow: "Context state snapshot",
-    body: "Eligibility below is deterministic stage and overlay visibility. It is not a semantic relevance score and does not select context for the model.",
-    items: "Items",
-    eligible: "Eligible",
-    excluded: "Excluded",
-    proposals: "Proposals",
-    manifest: "Manifest",
-    ordering: "Ordering",
-    relevance: "Semantic relevance",
-    forbidden: "Not carried",
-    authority: "Authority",
-    none: "None",
-    stageVisibility: "Stage visibility",
-    controls: "Controls",
-    priority: "priority",
-    pinned: "pinned",
-    derived: "derived",
-    hidden: "hidden",
-    invalidated: "invalidated",
-    raw: "Raw context evidence",
-  },
-  "zh-CN": {
-    eyebrow: "Context 状态快照",
-    body: "下面的 eligible 只表示确定性的阶段 / overlay 可见性；它不是 semantic relevance 分数，也不会替模型完成 Context 选择。",
-    items: "条目",
-    eligible: "可见",
-    excluded: "排除",
-    proposals: "提案",
-    manifest: "Manifest",
-    ordering: "排序规则",
-    relevance: "Semantic relevance",
-    forbidden: "不携带",
-    authority: "Authority",
-    none: "无",
-    stageVisibility: "阶段可见性",
-    controls: "控制状态",
-    priority: "priority",
-    pinned: "pinned",
-    derived: "derived",
-    hidden: "hidden",
-    invalidated: "invalidated",
-    raw: "原始 Context 证据",
-  },
-} as const;
+const order = ["loaded", "selected", "considered", "eligible", "dropped_due_budget", "visibility_excluded", "lifecycle_excluded", "stale", "invalid"];
 
 export default function ContextRoute() {
-  const { t, locale } = useI18n();
+  const { locale } = useI18n();
   const studio = useStudio();
-  const [manifest, setManifest] = createSignal("");
-  const [overlay, setOverlay] = createSignal("");
-  const [stage, setStage] = createSignal<(typeof stages)[number]>("writer_pre_draft");
-  const [result, setResult] = createSignal<ContextProjection>();
-  const [error, setError] = createSignal<string>();
+  const location = useLocation();
+  const zh = () => locale() === "zh-CN";
+  const projectId = () => new URLSearchParams(location.search).get("project")?.trim() || studio.projectId();
+  const [runId, setRunId] = createSignal(new URLSearchParams(location.search).get("run")?.trim() || studio.lastRunId());
+  const [projection, setProjection] = createSignal<ContextRuntimeProjection>();
   const [loading, setLoading] = createSignal(false);
-  const copy = createMemo(() => inspectorCopy[locale()]);
+  const [error, setError] = createSignal<string>();
+
+  const grouped = createMemo(() => {
+    const result: Record<string, ContextRuntimeItem[]> = {};
+    for (const state of order) result[state] = [];
+    for (const item of projection()?.items ?? []) (result[item.state] ??= []).push(item);
+    return result;
+  });
 
   const inspect = async () => {
-    if (!studio.bridgeAvailable()) return;
-    if (!studio.projectRoot().trim()) {
-      setError(t("context.noProject"));
-      return;
-    }
-    setLoading(true);
-    setError(undefined);
+    if (!projectId() || !runId().trim()) return;
+    setLoading(true); setError(undefined);
     try {
-      const args: Record<string, unknown> = {
-        project_root: studio.projectRoot(),
-        manifest: manifest().trim(),
-        stage: stage(),
-      };
-      if (overlay().trim()) args.overlay = overlay().trim();
-      const response = await invokeBridge<ContextProjection>("context.inspect", args);
-      if (response.status !== "ok" || !response.data) {
-        setResult(undefined);
-        setError(JSON.stringify(response.error));
-        return;
-      }
-      setResult(response.data);
-    } catch (caught) {
-      setResult(undefined);
-      setError(caught instanceof Error ? caught.message : String(caught));
-    } finally {
-      setLoading(false);
-    }
+      const response = await invokeBridge<ContextRuntimeProjection>("inspector.context.runtime", { project_id: projectId(), run_id: runId().trim() });
+      if (response.status !== "ok" || !response.data) throw new Error(operationError(response));
+      setProjection(response.data);
+      studio.setLastRunId(runId().trim());
+    } catch (cause) { setProjection(undefined); setError(cause instanceof Error ? cause.message : String(cause)); }
+    finally { setLoading(false); }
   };
 
+  onMount(() => { if (projectId() && runId()) void inspect(); });
+
   return (
-    <section class="nf-page nf-context-page">
-      <PageIntro title={t("context.title")} body={t("context.body")} />
-      <Show when={studio.bridgeAvailable()} fallback={<CoreHostBoundary />}>
-        <div class="nf-inspector-toolbar nf-context-toolbar nf-form-grid">
-          <label class="nf-field-label">
-            <span>{t("context.manifestLabel")}</span>
-            <input class="wui-input" value={manifest()} onInput={(event) => setManifest(event.currentTarget.value)} placeholder={t("context.manifestPlaceholder")} spellcheck={false} />
-          </label>
-          <label class="nf-field-label">
-            <span>{t("context.overlayLabel")}</span>
-            <input class="wui-input" value={overlay()} onInput={(event) => setOverlay(event.currentTarget.value)} placeholder={t("context.overlayPlaceholder")} spellcheck={false} />
-          </label>
-          <label class="nf-field-label">
-            <span>{t("context.stageLabel")}</span>
-            <select class="wui-input" value={stage()} onChange={(event) => setStage(event.currentTarget.value as (typeof stages)[number])}>
-              {stages.map((value) => <option value={value}>{value}</option>)}
-            </select>
-          </label>
-          <button class="wui-button wui-button--solid nf-form-action" type="button" disabled={loading() || !manifest().trim()} onClick={() => void inspect()}>
-            {loading() ? t("common.loading") : t("context.inspectAction")}
-          </button>
-        </div>
-        <QueryError message={error()} />
-        <Show when={result()}>
-          {(snapshot) => {
-            const eligibleCount = () => snapshot().items.filter((item) => item.eligible).length;
-            return (
-              <section class="wui-card wui-card--outlined nf-inspector-surface nf-catalog-workstation nf-context-result" aria-labelledby="context-result-heading">
-                <div class="nf-observe-section-head">
-                  <div>
-                    <span class="nf-eyebrow">{copy().eyebrow}</span>
-                    <h2 id="context-result-heading">{t("context.resultTitle")}</h2>
-                    <p>{copy().body}</p>
-                  </div>
-                  <div class="nf-catalog-counts">
-                    <span><strong>{snapshot().items.length}</strong>{copy().items}</span>
-                    <span><strong>{eligibleCount()}</strong>{copy().eligible}</span>
-                    <span><strong>{snapshot().items.length - eligibleCount()}</strong>{copy().excluded}</span>
-                    <span><strong>{snapshot().proposals.length}</strong>{copy().proposals}</span>
-                  </div>
-                </div>
+    <section class="nf-page qf-context-page">
+      <PageIntro eyebrow="CONTEXT INSPECTOR" title={zh() ? "相关，不等于实际加载。" : "Relevant is not the same as actually loaded."} body={zh() ? "Writer Mode 只轻量展示实际 Loaded Context；这里完整展示 Eligible / Considered / Selected / Loaded / Dropped / Excluded / Stale，并且 authority 永远用文字标注。" : "Writer Mode lightly shows actually Loaded Context; this Inspector exposes Eligible / Considered / Selected / Loaded / Dropped / Excluded / Stale, always with textual authority labels."} />
 
-                <div class="nf-diagnostic-facts">
-                  <div><span>{copy().manifest}</span><strong class="nf-mono">{snapshot().manifest_id ?? "—"}</strong></div>
-                  <div><span>{t("context.stageLabel")}</span><strong class="nf-mono">{snapshot().stage ?? stage()}</strong></div>
-                  <div><span>{copy().ordering}</span><strong class="nf-mono">{snapshot().ordering_policy}</strong></div>
-                  <div><span>{copy().relevance}</span><strong>{copy().forbidden}</strong></div>
-                  <div><span>{copy().authority}</span><strong>{copy().none}</strong></div>
-                </div>
+      <form class="qf-context-query" onSubmit={(event) => { event.preventDefault(); void inspect(); }}>
+        <label class="nf-field-label"><span>Project ID</span><input class="wui-input nf-mono" value={projectId()} disabled aria-readonly="true" /></label>
+        <label class="nf-field-label"><span>Run ID</span><input class="wui-input nf-mono" value={runId()} onInput={(event) => setRunId(event.currentTarget.value)} placeholder="run_…" /></label>
+        <button class="wui-button wui-button--solid" disabled={loading() || !projectId() || !runId().trim()}>{loading() ? (zh() ? "读取中…" : "Loading…") : (zh() ? "读取 Core Context" : "Inspect Core Context")}</button>
+      </form>
 
-                <div class="nf-pack-list">
-                  <For each={snapshot().items}>
-                    {(item) => (
-                      <article class="nf-pack-row">
-                        <div class="nf-pack-heading">
-                          <div>
-                            <strong class="nf-mono">{item.id}</strong>
-                            <small>{item.class}</small>
-                          </div>
-                          <span class={`wui-badge ${item.eligible ? "wui-badge--success" : "wui-badge--outline"}`}>{item.eligible ? copy().eligible : copy().excluded}</span>
-                        </div>
-                        <div class="nf-pack-description">
-                          <strong>{item.authority}</strong><br />
-                          {item.inclusion_reason}
-                        </div>
-                        <div class="nf-pack-load-boundary">
-                          <span>{copy().stageVisibility}</span>
-                          <strong class="nf-mono">{item.stages.join(" · ")}</strong>
-                          <span>{copy().controls}</span>
-                          <strong class="nf-mono">
-                            {copy().priority} {item.priority} · {copy().pinned} {String(item.pinned)} · {copy().derived} {String(item.derived)} · {copy().hidden} {String(item.hidden)} · {copy().invalidated} {String(item.invalidated)}
-                          </strong>
-                        </div>
-                      </article>
-                    )}
-                  </For>
-                </div>
+      <Show when={error()}>{(message) => <div class="wui-alert" role="alert"><div class="wui-alert__body"><strong class="wui-alert__title">Context</strong><span class="wui-alert__description">{message()}</span></div></div>}</Show>
 
-                <details class="nf-raw-evidence">
-                  <summary>{copy().raw}</summary>
-                  <JsonBlock value={snapshot()} label={snapshot().schema} />
-                </details>
-              </section>
-            );
-          }}
-        </Show>
+      <Show when={projection()} fallback={<div class="qf-empty-workspace"><strong>{zh() ? "选择一个真实 Run" : "Choose a real Run"}</strong><p>{zh() ? "没有 run_id 时，Studio 不会生成示例 Context。" : "Without a run_id, Studio does not generate sample Context."}</p></div>}>
+        {(snapshot) => <>
+          <WriterContextStrip projection={snapshot()} zh={zh()} />
+          <section class="qf-context-summary" aria-label={zh() ? "Context 状态摘要" : "Context state summary"}>
+            <div><span>ACTUALLY LOADED INTO THIS STAGE</span><strong>{grouped().loaded?.length ?? 0}</strong></div>
+            <div><span>MODEL CONSIDERED RELEVANT</span><strong>{(grouped().considered?.length ?? 0) + (grouped().selected?.length ?? 0)}</strong></div>
+            <div><span>DROPPED / EXCLUDED / STALE</span><strong>{["dropped_due_budget","visibility_excluded","lifecycle_excluded","stale","invalid"].reduce((sum, state) => sum + (grouped()[state]?.length ?? 0), 0)}</strong></div>
+            <div><span>Context Freeze</span><strong>{snapshot().context_freeze_id ?? (zh() ? "尚无 freeze" : "no freeze")}</strong></div>
+          </section>
+
+          <section class="qf-context-inspector-table" aria-labelledby="context-items-heading">
+            <header><div><span class="nf-eyebrow">RUNTIME EVIDENCE</span><h2 id="context-items-heading">{zh() ? "Context items" : "Context items"}</h2></div><div><span>authority=false</span><span>private CoT: {String(snapshot().private_chain_of_thought_exposed)}</span></div></header>
+            <div class="qf-context-table-head" aria-hidden="true"><span>State</span><span>Object</span><span>Stage</span><span>Authority</span><span>Reason</span><span>Tokens</span></div>
+            <For each={snapshot().items.slice().sort((a, b) => order.indexOf(a.state) - order.indexOf(b.state) || a.source_object_id.localeCompare(b.source_object_id))}>
+              {(item) => <article class="qf-context-table-row" data-state={item.state}>
+                <strong class="qf-context-state">{item.state}</strong>
+                <div><code>{item.source_object_id}</code><small>{item.domain} · {item.lifecycle}</small></div>
+                <code>{item.stage}</code>
+                <AuthorityLabel value={item.authority} />
+                <div><strong>{item.reason_code ?? "—"}</strong><small>{item.reason ?? ""}</small></div>
+                <span>{item.actual_tokens ?? item.estimated_tokens ?? 0}</span>
+              </article>}
+            </For>
+          </section>
+
+          <details class="qf-context-fingerprints"><summary>{zh() ? "指纹与 receipt" : "Fingerprints & receipts"}</summary><dl><dt>context_fingerprint</dt><dd><code>{snapshot().context_fingerprint ?? "—"}</code></dd><dt>run_id</dt><dd><code>{snapshot().run_id}</code></dd></dl><For each={snapshot().items}>{(item) => <div><code>{item.source_object_id}</code><span>{item.state}</span><code>{item.receipt ?? "—"}</code></div>}</For></details>
+        </>}
       </Show>
     </section>
   );

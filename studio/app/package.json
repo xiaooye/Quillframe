@@ -6,9 +6,12 @@
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "vite",
-    "quality": "node scripts/product-language-quality.mjs && node scripts/hardening-quality.mjs",
+    "quality": "node scripts/product-language-quality.mjs && node scripts/hardening-quality.mjs && node scripts/authoring-boundary-quality.mjs",
+    "lint": "pnpm quality",
     "typecheck": "tsc --noEmit",
-    "build": "pnpm quality && pnpm typecheck && vite build && node scripts/write-offline-shell.mjs && node scripts/write-footprint.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "browser:smoke": "node scripts/browser-smoke.mjs",
+    "build": "pnpm lint && pnpm typecheck && pnpm test && vite build && pnpm browser:smoke && node scripts/write-offline-shell.mjs && node scripts/write-footprint.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
