@@ -1,165 +1,49 @@
 {
   "schema": "quillframe_studio_host_bridge_contract_v1",
-  "version": "3",
+  "version": "4",
+  "framework_version": "0.9.0",
   "authority": false,
   "canon_authority": false,
   "framework_write_authority": false,
   "settlement_authority": false,
-  "model_execution": false,
-  "product_model": "one_product_many_hosts",
-  "request_schema": "quillframe_studio_host_bridge_request_v1",
-  "result_schema": "quillframe_studio_host_bridge_result_v1",
-  "surfaces": [
-    "cli",
-    "local_app",
-    "cloud_ui",
-    "agent_package"
-  ],
+  "direct_core_store_access": false,
+  "product_model": "one_product_one_core_many_transports",
+  "surfaces": ["cli", "local_app", "hosted_web", "agent_package"],
   "invariants": {
-    "delivery_surface_is_not_source_of_truth": true,
-    "direct_core_store_access": false,
-    "absolute_host_paths_in_results": false,
-    "capability_implies_authority": false,
-    "unsupported_operation_fails_closed": true,
-    "mutation_exposed": true,
-    "mutation_scopes": ["runtime_session_state", "runtime_active_run_state"],
-    "mutation_requires_operation_specific_contract": true,
-    "mutation_requires_explicit_authorization": true,
-    "mutation_requires_fresh_preflight": true,
-    "mutation_requires_compare_and_swap": true,
-    "mutation_requires_idempotent_receipt": true
+    "browser_sqlite_access": false,
+    "generic_mutation_dispatch": false,
+    "exact_primary_task_mode": true,
+    "audit_rewrite": false,
+    "draft_settlement": false,
+    "acceptance_is_settlement": false,
+    "feedback_auto_promote": false,
+    "corpus_is_canon": false,
+    "research_is_character_knowledge": false,
+    "secret_in_semantic_context": false
   },
   "operations": {
-    "supported": {
-      "bridge.describe": {
-        "kind": "query",
-        "core_basis": "Studio machine contract",
-        "required_args": []
-      },
-      "framework.doctor": {
-        "kind": "query",
-        "core_basis": "quillframe.py doctor",
-        "required_args": []
-      },
-      "project.inspect": {
-        "kind": "query",
-        "core_basis": "Project Adapter + quillframe_studio_project_hub_projection_v1",
-        "required_args": ["project_root"]
-      },
-      "capabilities.inspect": {
-        "kind": "query",
-        "core_basis": "quillframe_host_capabilities_v1",
-        "required_args": []
-      },
-      "context.inspect": {
-        "kind": "query",
-        "core_basis": "quillframe_context_inspector_v3",
-        "required_args": ["project_root", "manifest"]
-      },
-      "semantic.catalog": {
-        "kind": "query",
-        "core_basis": "semantic model contract catalog CLI",
-        "required_args": []
-      },
-      "publication.preview": {
-        "kind": "query",
-        "core_basis": "publication/compiler.py + quillframe_publication_preview_projection_v1",
-        "required_args": ["profile"],
-        "source_contract": "caller supplies a publication source object or project-relative source_manifest; compiler enforces accepted text fingerprints but the bridge does not invent source authority"
-      },
-      "runtime.sessions.list": {
-        "kind": "query",
-        "core_basis": "quillframe_runtime_sessions_projection_v1 via quillframe.py runtime-query",
-        "required_args": ["project_root"]
-      },
-      "runtime.session.get": {
-        "kind": "query",
-        "core_basis": "quillframe_runtime_session_projection_v1 via quillframe.py runtime-query",
-        "required_args": ["project_root", "session_id"]
-      },
-      "runtime.events.list": {
-        "kind": "query",
-        "core_basis": "quillframe_runtime_events_projection_v1 via quillframe.py runtime-query",
-        "required_args": ["project_root"]
-      },
-      "runtime.handoff.inspect": {
-        "kind": "query",
-        "core_basis": "quillframe_runtime_handoff_projection_v1 via quillframe.py runtime-query",
-        "required_args": ["project_root", "handoff_id"]
-      },
-      "run.receipt.get": {
-        "kind": "query",
-        "core_basis": "quillframe_run_receipts_projection_v1 via quillframe.py runtime-query",
-        "required_args": ["project_root"]
-      },
-      "runtime.command.receipt.get": {
-        "kind": "query",
-        "core_basis": "quillframe_runtime_command_receipt_projection_v1 via operation-specific runtime command executors",
-        "required_args": ["project_root"]
-      },
-      "session.resume.preflight": {
-        "kind": "query",
-        "core_basis": "quillframe_session_resume_preflight_v1 via quillframe.py resume-preflight",
-        "required_args": ["project_root", "session_id", "checkpoint_id", "expected_session_version", "authority_evidence"]
-      },
-      "session.resume": {
-        "kind": "command",
-        "core_basis": "quillframe_session_resume_command_v1 + quillframe_runtime_command_authorization_v1 + quillframe_runtime_command_receipt_v1 via quillframe.py runtime-command",
-        "required_args": ["project_root", "session_id", "checkpoint_id", "expected_session_version", "authority_evidence", "user_authorized"],
-        "allowed_surfaces": ["local_app"],
-        "mutation_scope": "runtime_session_state_only",
-        "model_execution": false,
-        "project_write": false,
-        "canon_write": false,
-        "framework_write": false,
-        "settlement": false
-      },
-      "session.terminate.preflight": {
-        "kind": "query",
-        "core_basis": "quillframe_session_terminate_preflight_v1 via quillframe.py terminate-preflight",
-        "required_args": ["project_root", "session_id", "expected_session_version"]
-      },
-      "session.terminate": {
-        "kind": "command",
-        "core_basis": "quillframe_session_terminate_command_v1 + quillframe_session_terminate_authorization_v1 + quillframe_runtime_command_receipt_v1 via quillframe.py terminate-executor",
-        "required_args": ["project_root", "session_id", "expected_session_version", "user_authorized"],
-        "allowed_surfaces": ["local_app"],
-        "authorization_sources": ["user", "authorized_human"],
-        "mutation_scope": "runtime_session_and_active_run_state_only",
-        "model_execution": false,
-        "project_write": false,
-        "canon_write": false,
-        "framework_write": false,
-        "settlement": false
-      }
-    },
-    "deferred": {
-      "command.invoke": {
-        "kind": "command",
-        "reason": "generic write dispatch remains forbidden; every mutation needs an operation-specific typed Core command, authority policy, preconditions, CAS/idempotency, and receipt",
-        "dependency": "#23"
-      },
-      "project.mutate": {
-        "kind": "command",
-        "reason": "Project mutation remains behind explicit Core authority/settlement operations",
-        "dependency": "#23"
-      },
-      "publication.build": {
-        "kind": "command",
-        "reason": "persistent publication output still needs an operation-specific destination/write contract and release-validation policy; preview remains query-only",
-        "dependency": "#23"
-      }
-    }
+    "bridge.describe": {"kind":"query","required_args":[]},
+    "database.doctor": {"kind":"query","required_args":[]},
+    "project.create": {"kind":"command","required_args":["project_id","title"]},
+    "project.inspect": {"kind":"query","required_args":["project_id"]},
+    "project.search": {"kind":"query","required_args":["project_id","query"]},
+    "project.backup": {"kind":"command","required_args":["project_id"]},
+    "document.create": {"kind":"command","required_args":["project_id","document_id","title"]},
+    "document.revision.save": {"kind":"command","required_args":["project_id","document_id","content","source"]},
+    "document.revision.compare": {"kind":"query","required_args":["project_id","left_revision_id","right_revision_id"]},
+    "author.run.start": {"kind":"command","required_args":["project_id","task_mode","payload"]},
+    "candidate.accept": {"kind":"authority_command","required_args":["project_id","candidate_id","candidate_fingerprint","authorized_by","authorization","idempotency_key","user_authorized"],"allowed_surfaces":["cli","local_app","hosted_web"]},
+    "settlement.apply": {"kind":"authority_command","required_args":["project_id","acceptance_id","target_ref","expected_before_fingerprint","idempotency_key","user_authorized"],"allowed_surfaces":["cli","local_app","hosted_web"]},
+    "feedback.observe": {"kind":"command","required_args":["project_id","evidence_kind","payload"]},
+    "publication.preview": {"kind":"query","required_args":["project_id","acceptance_id"]},
+    "publication.build": {"kind":"command","required_args":["project_id","acceptance_id"]},
+    "inspector.sessions.list": {"kind":"query","required_args":["project_id"]},
+    "inspector.runs.list": {"kind":"query","required_args":["project_id"]},
+    "inspector.checkpoints.list": {"kind":"query","required_args":["project_id"]},
+    "inspector.context.list": {"kind":"query","required_args":["project_id"]},
+    "inspector.receipts.list": {"kind":"query","required_args":["project_id"]},
+    "inspector.candidates.list": {"kind":"query","required_args":["project_id"]},
+    "inspector.learning.list": {"kind":"query","required_args":["project_id"]}
   },
-  "agent_skill": {
-    "format": "Agent Skills open standard",
-    "path": "agent-skills/quillframe/SKILL.md",
-    "client_script": "agent-skills/quillframe/scripts/quillframe_bridge.py",
-    "private_python_imports_required": false,
-    "private_persistence_layout_required": false,
-    "runtime_mutation_allowed": false,
-    "session_resume_surface": "local_app_only",
-    "session_terminate_surface": "local_app_only"
-  },
-  "core_dependencies": ["#23"]
+  "forbidden_operations": ["command.invoke", "project.mutate", "audit.rewrite", "draft.settle", "feedback.promote"]
 }
