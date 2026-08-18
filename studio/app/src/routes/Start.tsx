@@ -1,10 +1,10 @@
-import { Show, createMemo, createSignal } from "solid-js";
+import { For, Show, createMemo, createSignal, onMount } from "solid-js";
 import { A, useNavigate } from "@solidjs/router";
 import { PageIntro } from "../components";
 import { useI18n } from "../i18n";
 import { useStudio } from "../studio";
 import { invokeBridge, operationError } from "../bridge";
-import type { ProjectCreateResult } from "../authoring/contracts";
+import type { ProjectCreateResult, ProjectListProjection, ProjectRegistryItem } from "../authoring/contracts";
 import { CoreRequirementNotice } from "../authoring/AuthoringUI";
 
 export default function Start() {
@@ -16,10 +16,36 @@ export default function Start() {
   const [title, setTitle] = createSignal("");
   const [language, setLanguage] = createSignal("zh-CN");
   const [openingId, setOpeningId] = createSignal(studio.projectId());
+  const [projects, setProjects] = createSignal<ProjectRegistryItem[]>([]);
   const [busy, setBusy] = createSignal(false);
   const [message, setMessage] = createSignal<string>();
   const [error, setError] = createSignal<string>();
   const capabilities = createMemo(() => studio.bridgeCapabilities()?.operations ?? []);
+
+  const openProject = async (requested = openingId()) => {
+    const id = requested.trim();
+    if (!id) return;
+    setBusy(true); setError(undefined); setMessage(undefined);
+    try {
+      await studio.inspectProject(id);
+      if (studio.projectError()) throw new Error(studio.projectError());
+      studio.setProjectId(id);
+      navigate(`/manuscript?project=${encodeURIComponent(id)}`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally { setBusy(false); }
+  };
+
+  const loadProjects = async () => {
+    if (!capabilities().includes("project.list")) return;
+    try {
+      const result = await invokeBridge<ProjectListProjection>("project.list", { limit: 100 });
+      if (result.status !== "ok" || !result.data) throw new Error(operationError(result));
+      setProjects(result.data.items ?? []);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  };
 
   const createProject = async () => {
     if (!projectId().trim() || !title().trim()) return;
@@ -33,32 +59,21 @@ export default function Start() {
       if (result.status !== "ok" || !result.data) throw new Error(operationError(result));
       studio.setProjectId(result.data.project_id);
       await studio.inspectProject(result.data.project_id);
+      await loadProjects();
       navigate(`/manuscript?project=${encodeURIComponent(result.data.project_id)}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally { setBusy(false); }
   };
 
-  const openProject = async () => {
-    const id = openingId().trim();
-    if (!id) return;
-    setBusy(true); setError(undefined); setMessage(undefined);
-    try {
-      await studio.inspectProject(id);
-      if (studio.projectError()) throw new Error(studio.projectError());
-      studio.setProjectId(id);
-      navigate(`/manuscript?project=${encodeURIComponent(id)}`);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
-    } finally { setBusy(false); }
-  };
+  onMount(() => { if (studio.bridgeAvailable()) void loadProjects(); });
 
   return (
     <section class="nf-page qf-start-page">
       <PageIntro
-        eyebrow={zh() ? "AUTHORING FIRST · CORE-BACKED" : "AUTHORING FIRST · CORE-BACKED"}
+        eyebrow="AUTHORING FIRST · CORE-BACKED"
         title={zh() ? "开始写，而不是先配置一套系统。" : "Start writing, not administering a system."}
-        body={zh() ? "Project 创建与打开只通过 typed Core operation。浏览器只记住最近使用的 Project ID，不保存正文 authority。" : "Project creation and opening use typed Core operations only. The browser remembers a recent Project ID, never manuscript authority."}
+        body={zh() ? "Project registry、Project 创建与打开全部来自 typed Core。浏览器只保存最近选择，永远不是作品 authority。" : "Project registry, creation and opening all come from typed Core. The browser remembers a recent choice only; it is never work authority."}
       />
 
       <Show when={studio.bridgeAvailable()} fallback={<div class="qf-empty-workspace" role="status"><strong>{zh() ? "Core 未绑定" : "Core unbound"}</strong><p>{zh() ? "Hosted Studio 需要 hosted Core；Desktop 需要 Tauri local Core bridge。UI 不会用浏览器存储代替。" : "Hosted Studio requires a hosted Core; Desktop requires a Tauri local Core bridge. Browser storage is not a substitute."}</p></div>}>
@@ -74,12 +89,15 @@ export default function Start() {
           </section>
 
           <section class="qf-editorial-sheet" aria-labelledby="open-project-heading">
-            <span class="nf-eyebrow">02 · OPEN PROJECT</span>
-            <h2 id="open-project-heading">{zh() ? "打开现有 Project" : "Open existing Project"}</h2>
-            <p>{zh() ? "当前 Core 尚未提供 Project registry projection，所以这里按稳定 Project ID 打开。" : "Core does not yet expose a Project registry projection, so opening is by stable Project ID."}</p>
+            <div class="qf-section-head"><div><span class="nf-eyebrow">02 · OPEN PROJECT</span><h2 id="open-project-heading">{zh() ? "打开现有 Project" : "Open existing Project"}</h2></div><button class="wui-button wui-button--outline" type="button" disabled={busy() || !capabilities().includes("project.list")} onClick={() => void loadProjects()}>{zh() ? "刷新" : "Refresh"}</button></div>
+            <p>{zh() ? "列表来自 canonical Core registry；最近 Project ID 只用于便利，不参与 authority。" : "The list comes from the canonical Core registry; the recent Project ID is convenience only."}</p>
+            <CoreRequirementNotice operation="project.list" compact />
+            <div class="qf-model-service-list">
+              <For each={projects()}>{(project) => <button class="qf-candidate-row" type="button" disabled={busy()} onClick={() => void openProject(project.project_id)}><strong>{project.title}</strong><span>{project.project_id} · {project.language}</span><small>{project.last_opened_at ?? project.registered_at ?? ""}</small></button>}</For>
+              <Show when={!projects().length}><p>{zh() ? "暂无 Project；也可以按稳定 ID 打开。" : "No Projects yet; you can also open by stable ID."}</p></Show>
+            </div>
             <label class="nf-field-label"><span>Project ID</span><input class="wui-input nf-mono" value={openingId()} onInput={(event) => setOpeningId(event.currentTarget.value)} autocomplete="off" spellcheck={false} placeholder="my-novel" /></label>
-            <button class="wui-button wui-button--outline" type="button" disabled={busy() || !capabilities().includes("project.inspect") || !openingId().trim()} onClick={() => void openProject()}>{zh() ? "打开" : "Open"}</button>
-            <CoreRequirementNotice operation="project.list" />
+            <button class="wui-button wui-button--outline" type="button" disabled={busy() || !capabilities().includes("project.inspect") || !openingId().trim()} onClick={() => void openProject()}>{zh() ? "按 ID 打开" : "Open by ID"}</button>
           </section>
         </div>
       </Show>
