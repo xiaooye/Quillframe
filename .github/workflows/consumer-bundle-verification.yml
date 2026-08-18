@@ -49,3 +49,89 @@ jobs:
             bundle-b.json
             bundle-verify.json
           retention-days: 7
+
+  chinaboy-consumer-repin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact locked Framework
+        uses: actions/checkout@v4
+        with:
+          repository: xiaooye/cn_webnovel_agent
+          ref: c6832365be6c4e3816b9c779dd0c2aa88b42cab9
+          path: framework
+          persist-credentials: false
+
+      - name: Checkout exact consumer candidate
+        uses: actions/checkout@v4
+        with:
+          repository: xiaooye/frostloom
+          ref: 5d8a4e8112013c62cfccbd084fbe296a572eef9c
+          path: consumer
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Assert exact subjects
+        run: |
+          test "$(git -C framework rev-parse HEAD)" = "c6832365be6c4e3816b9c779dd0c2aa88b42cab9"
+          test "$(git -C consumer rev-parse HEAD)" = "5d8a4e8112013c62cfccbd084fbe296a572eef9c"
+          grep -q '^version: 0.9.0$' framework/HARNESS_MANIFEST.yaml
+
+      - name: Rebuild and verify exact Framework bundle against consumer lock
+        run: |
+          python framework/release/build_framework_bundle.py build \
+            --root framework \
+            --output /tmp/quillframe-framework-consumer.tar \
+            --report consumer-framework-build.json
+          EXPECTED_FINGERPRINT="$(python - <<'PY'
+          import json
+          print(json.load(open('consumer/new cards/chinaboy_webnovel/quillframe.lock.json', encoding='utf-8'))['framework']['bundle_fingerprint'])
+          PY
+          )"
+          python framework/release/build_framework_bundle.py verify \
+            --bundle /tmp/quillframe-framework-consumer.tar \
+            --expected "$EXPECTED_FINGERPRINT" \
+            --report consumer-framework-verify.json
+          cat consumer-framework-build.json
+          cat consumer-framework-verify.json
+
+      - name: Validate and build mapped Project with exact Framework
+        run: |
+          python framework/project_adapter.py validate 'consumer/new cards/chinaboy_webnovel' > consumer-adapter-validation.json
+          python framework/project_adapter.py build 'consumer/new cards/chinaboy_webnovel' --output /tmp/chinaboy-project.bundle.json > consumer-adapter-build.json
+          cat consumer-adapter-validation.json
+          cat consumer-adapter-build.json
+
+      - name: Run consumer authority validator
+        run: |
+          python 'consumer/new cards/chinaboy_webnovel/scripts/validate_quillframe_project.py' \
+            --framework-root framework > consumer-validation.json
+          cat consumer-validation.json
+          python - <<'PY'
+          import json
+          d = json.load(open('consumer-validation.json', encoding='utf-8'))
+          assert d['valid'] is True, d
+          assert d['framework_commit'] == 'c6832365be6c4e3816b9c779dd0c2aa88b42cab9', d
+          assert d['framework_bundle_fingerprint'] == 'sha256:ea1d3c29a859e1aa0881c44ef6382a1464cbfee3a1f01fb393f05131a95a47cf', d
+          assert d['framework_materialization_valid'] is True, d
+          assert d['peer_bridge_exact_lock_binding'] is True, d
+          assert d['canon_mutation_expected'] is False, d
+          assert d['model_execution'] is False, d
+          PY
+
+      - name: Upload consumer repin evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chinaboy-consumer-repin-c6832365
+          path: |
+            consumer-framework-build.json
+            consumer-framework-verify.json
+            consumer-adapter-validation.json
+            consumer-adapter-build.json
+            consumer-validation.json
+          if-no-files-found: warn
+          retention-days: 7
