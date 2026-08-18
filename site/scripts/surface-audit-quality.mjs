@@ -97,7 +97,7 @@ for (const route of ["/product", "/studio", "/architecture", "/publication"]) {
   check(docsActions.includes(`href=\"${route}\"`), `Docs primary product navigation missing ${route}`);
 }
 check(docsActions.includes('class="nf-product-link nf-docs-nav-link"'), "Docs primary navigation must include the Docs entry");
-check(docsActions.includes('class="nf-product-link nf-github-link"') && docsActions.includes("https://github.com/xiaooye/cn_webnovel_agent"), "Docs primary navigation must include the canonical GitHub repository");
+check(docsActions.includes('class="nf-product-link nf-github-link"') && docsActions.includes("https://github.com/xiaooye/Quillframe"), "Docs primary navigation must include the canonical GitHub repository");
 check(docsActions.includes("https://studio.quillframe.wei-dev.com"), "Docs Hosted Studio action must use the current Quillframe Studio domain");
 check(docsActions.includes('rel="noopener noreferrer"'), "Docs external product-shell links must use safe new-window semantics");
 
