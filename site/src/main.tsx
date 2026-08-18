@@ -5,6 +5,7 @@ import { ProductFailureBoundary, ProductNotFound } from "./ProductResilience";
 import "./styles/index.css";
 
 const root = document.getElementById("root");
+const weiUiUrl = "https://ui.wei-dev.com/";
 
 if (!root) {
   throw new Error("Quillframe Product Site root element is missing");
@@ -62,6 +63,22 @@ function installCrossAppNavigationGuard() {
   }, true);
 }
 
+function installWeiUiCredit() {
+  const footerColumns = document.querySelectorAll(".site-footer .footer-links");
+  const creditHost = footerColumns.item(footerColumns.length - 1);
+  if (!(creditHost instanceof HTMLElement) || creditHost.querySelector("[data-weiui-credit]")) {
+    return;
+  }
+
+  const credit = document.createElement("a");
+  credit.href = weiUiUrl;
+  credit.target = "_blank";
+  credit.rel = "noopener noreferrer";
+  credit.dataset.weiuiCredit = "true";
+  credit.textContent = "Powered by WeiUI ↗";
+  creditHost.append(credit);
+}
+
 installCrossAppNavigationGuard();
 
 render(() => (
@@ -69,3 +86,5 @@ render(() => (
     {productRoutes.has(normalizedPath()) ? <ProductApp /> : <ProductNotFound />}
   </ProductFailureBoundary>
 ), root);
+
+installWeiUiCredit();
