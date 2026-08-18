@@ -10,6 +10,8 @@ __pycache__/
 .DS_Store
 studio/app/node_modules/
 studio/app/dist/
+studio/app/src-tauri/target/
+studio/app/src-tauri/binaries/quillframe-core-*
 site/node_modules/
 site/dist/
 site/public/generated/

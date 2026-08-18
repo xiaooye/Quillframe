@@ -1,0 +1,17 @@
+{
+  "schema": "quillframe_system_improve_execution_v1",
+  "task_mode": "SYSTEM-IMPROVE",
+  "frozen_framework_sha": "252fcd6066a73df06953c974f2324e1c264492a6",
+  "branch": "agent/tauri-thin-host-v8",
+  "host_bridge_version": "8",
+  "consumer_project_repin": false,
+  "canon_mutation": false,
+  "studio_visual_change": false,
+  "cloudflare_dependency": false,
+  "authority": false,
+  "desktop_host_state": "implementation_pending",
+  "live_model_acceptance": "PENDING_MODEL",
+  "live_model_acceptance_state": "awaiting_external",
+  "merge_performed": false,
+  "obsolete_pr_129_closed": false
+}
