@@ -98,7 +98,7 @@ for (const route of ["/", "/product", "/studio", "/architecture", "/publication"
   check(app.includes(`path="${route}"`), `missing required golden baseline route ${route}`);
 }
 check(app.includes('path="/start"') && app.includes('<Navigate href="/"'), "legacy /start must resolve inside the golden baseline router");
-check(app.includes('href={zh() ? "/docs" : "/docs/en"}'), "Knowledge must remain a deliberate separate docs boundary");
+check(app.includes('kind: "document", href: zh() ? "/docs" : "/docs/en"'), "Knowledge must remain a deliberate separate docs boundary in the shared navigation model");
 check(app.includes("https://studio.quillframe.wei-dev.com"), "golden baseline must expose the real Hosted Studio entry point");
 check(app.includes("metaKey || event.ctrlKey") && app.includes('event.key.toLowerCase() === "k"'), "golden baseline must expose Ctrl/Cmd+K command palette shortcut");
 check(app.includes("command-dialog") && app.includes("showModal"), "golden baseline must expose an accessible command dialog");
@@ -145,7 +145,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "quillframe_product_golden_baseline_quality_v6",
+    schema: "quillframe_product_golden_baseline_quality_v7",
     status: "pass",
     identity: "story_loom_kawaii_atelier_golden_baseline",
     fixture_role: "visual_behavior_baseline",
