@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""Project-owned independent semantic review through GitHub Models.
+"""Project-owned independent semantic review through GitHub Copilot CLI.
 
-Runs only inside a consuming Project GitHub Actions workflow. The model sees the
-bounded peer packet, never the writer conversation or Project checkout. The
-script deterministically wraps the model's judgment with exact job/fingerprint/
-nonce provenance, validates it through Quillframe's peer contracts, builds the
-Project-owned receipt, and posts the auditable result back to the Project issue.
+Runs only inside a consuming Project GitHub Actions workflow. The reviewer sees
+only the bounded peer packet, never the writer conversation or Project checkout.
+The script deterministically wraps the model's judgment with exact job/
+fingerprint/nonce provenance, validates it through Quillframe's peer contracts,
+builds the Project-owned receipt, and posts the auditable result back to the
+Project issue.
 """
 from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import tempfile
-import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -24,8 +24,7 @@ if str(ACTION) not in sys.path:
 
 import bridge  # noqa: E402
 
-DEFAULT_MODEL = "openai/gpt-4.1"
-MODELS_ENDPOINT = "https://models.github.ai/inference/chat/completions"
+DEFAULT_MODEL = "claude-sonnet-4.6"
 
 
 def _semantic_modules():
@@ -56,61 +55,62 @@ def _parse_json_object(text: str) -> dict[str, Any]:
         start = value.find("{")
         end = value.rfind("}")
         if start < 0 or end <= start:
-            raise ValueError("GitHub Models reviewer did not return a JSON object")
+            raise ValueError("Copilot reviewer did not return a JSON object")
         parsed = json.loads(value[start:end + 1])
     if not isinstance(parsed, dict):
-        raise ValueError("GitHub Models reviewer judgment must be a JSON object")
+        raise ValueError("Copilot reviewer judgment must be a JSON object")
     return parsed
 
 
-def _github_models_judgment(packet: dict[str, Any], model: str) -> dict[str, Any]:
-    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-    if not token:
-        raise ValueError("GITHUB_TOKEN is required for GitHub Models peer review")
+def _copilot_judgment(packet: dict[str, Any], model: str) -> dict[str, Any]:
+    if not (os.environ.get("COPILOT_GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")):
+        raise ValueError("Copilot authentication token is required for independent peer review")
     job = packet["job"]
-    prompt = {
-        "reviewer_instruction": packet["reviewer_instruction"],
-        "task": "Return ONLY the judgment object required by job.output_contract. Do not return the outer semantic-result envelope; the deterministic bridge owns IDs, fingerprints, worker provenance, and nonce binding.",
-        "job": job,
-    }
-    body = json.dumps({
-        "model": model,
-        "temperature": 0,
-        "messages": [
-            {
-                "role": "system",
-                "content": "You are the independent reviewer described by the supplied Quillframe peer packet. Use only supplied reviewer-visible evidence. Do not expose chain-of-thought. Return JSON only.",
-            },
-            {"role": "user", "content": json.dumps(prompt, ensure_ascii=False)},
-        ],
-    }, ensure_ascii=False).encode("utf-8")
-    request = urllib.request.Request(
-        MODELS_ENDPOINT,
-        data=body,
-        method="POST",
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "X-GitHub-Api-Version": "2026-03-10",
-        },
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=120) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")[:1200]
-        raise RuntimeError(f"GitHub Models inference failed with HTTP {exc.code}: {detail}") from exc
-    if not isinstance(payload, dict):
-        raise ValueError("GitHub Models response must be object")
-    choices = payload.get("choices")
-    if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
-        raise ValueError("GitHub Models response choices missing")
-    message = choices[0].get("message")
-    content = message.get("content") if isinstance(message, dict) else None
-    if not isinstance(content, str) or not content.strip():
-        raise ValueError("GitHub Models reviewer response content missing")
-    return _parse_json_object(content)
+    prompt = "\n".join([
+        "You are the genuinely separate independent semantic reviewer for one frozen Quillframe job.",
+        "Judge ONLY the bounded job supplied below. Do not use repository files, web access, tools, persistent memory, hidden expected labels, or the writer conversation.",
+        "Return ONLY the JSON object required by job.output_contract for result.judgment.",
+        "Do not return the outer semantic-result envelope, markdown, commentary, or chain-of-thought. The deterministic Quillframe bridge owns IDs, fingerprints, worker provenance, and nonce binding.",
+        "",
+        json.dumps({
+            "reviewer_instruction": packet.get("reviewer_instruction"),
+            "job": job,
+        }, ensure_ascii=False, indent=2),
+    ])
+    with tempfile.TemporaryDirectory(prefix="quillframe-copilot-review-") as tmp:
+        root = Path(tmp)
+        home = root / "copilot-home"
+        home.mkdir()
+        env = os.environ.copy()
+        env["COPILOT_HOME"] = str(home)
+        command = [
+            "copilot",
+            "-s",
+            "--no-ask-user",
+            "--model",
+            model,
+            "--deny-tool=shell",
+            "--deny-tool=write",
+            "--deny-tool=read",
+            "--deny-tool=url",
+            "--deny-tool=memory",
+        ]
+        proc = subprocess.run(
+            command,
+            text=True,
+            input=prompt,
+            capture_output=True,
+            cwd=root,
+            env=env,
+            check=False,
+            timeout=180,
+        )
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout or "Copilot CLI failed").strip()[:1600]
+        raise RuntimeError(f"Copilot CLI independent review failed: {detail}")
+    if not proc.stdout.strip():
+        raise ValueError("Copilot reviewer response content missing")
+    return _parse_json_object(proc.stdout)
 
 
 def _post_comment(repo: str, issue_number: int, body: str) -> int:
@@ -166,7 +166,7 @@ def main() -> int:
         bridge.PACKET_MARKER,
         "`semantic_status: independent_model_running`",
         "",
-        "Project-owned GitHub Actions is dispatching this exact bounded packet to a separate GitHub Models invocation.",
+        "Project-owned GitHub Actions is dispatching this exact bounded packet to a separate GitHub Copilot CLI invocation.",
         "",
         "```json",
         json.dumps(packet, ensure_ascii=False, indent=2),
@@ -175,7 +175,7 @@ def main() -> int:
     _post_comment(binding["caller_repo"], issue_number, packet_comment)
 
     model = os.environ.get("QUILLFRAME_REVIEW_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
-    judgment = _github_models_judgment(packet, model)
+    judgment = _copilot_judgment(packet, model)
     result = {
         "job_id": job["job_id"],
         "subject_id": job["subject_id"],
@@ -183,23 +183,31 @@ def main() -> int:
         "input_fingerprint": job["input_fingerprint"],
         "status": "completed",
         "worker": {
-            "provider": "github_models",
-            "model_or_reviewer": model,
+            "provider": "github_copilot_actions",
+            "model_or_reviewer": f"github-copilot-cli:{model}",
             "run_reference": packet["relay_nonce"],
         },
         "judgment": judgment,
         "proposals": [],
         "errors": [],
+        "execution": {
+            "run_reference": packet["relay_nonce"],
+            "transport": "github_copilot_actions",
+            "github_run_id": bridge.positive_env_int("GITHUB_RUN_ID"),
+            "github_run_attempt": bridge.positive_env_int("GITHUB_RUN_ATTEMPT"),
+            "workflow_name": os.environ.get("GITHUB_WORKFLOW", ""),
+            "model_requested": model,
+        },
     }
     peer_errors = validate_peer_result(packet, result)
     if peer_errors:
-        bridge.fail("GitHub Models peer result failed Quillframe validation: " + "; ".join(peer_errors))
+        bridge.fail("Copilot peer result failed Quillframe validation: " + "; ".join(peer_errors))
 
     result_comment = "\n".join([
         bridge.RESULT_MARKER,
-        "`semantic_status: completed_by_github_models`",
+        "`semantic_status: completed_by_github_copilot_actions`",
         "",
-        f"Independent provider: `github_models` · model: `{model}`",
+        f"Independent provider: `github_copilot_actions` · model: `{model}`",
         "",
         "```json",
         json.dumps(result, ensure_ascii=False, indent=2),
@@ -234,7 +242,7 @@ def main() -> int:
         bridge.RECEIPT_MARKER,
         "`semantic_status: validated_result_ready`",
         "",
-        f"Project-owned GitHub Models result passed exact Quillframe `{binding['framework_commit']}` binding.",
+        f"Project-owned GitHub Copilot result passed exact Quillframe `{binding['framework_commit']}` binding.",
         "",
         "```json",
         json.dumps(receipt, ensure_ascii=False, indent=2),
@@ -245,11 +253,11 @@ def main() -> int:
     _write_output("peer-result", result)
     _write_output("validation-receipt", receipt)
     print(json.dumps({
-        "schema": "quillframe_project_github_models_peer_review_v1",
+        "schema": "quillframe_project_github_copilot_peer_review_v1",
         "project_id": binding["project_id"],
         "issue_number": issue_number,
-        "worker_provider": "github_models",
-        "model_or_reviewer": model,
+        "worker_provider": "github_copilot_actions",
+        "model_or_reviewer": f"github-copilot-cli:{model}",
         "result": judgment.get("result"),
         "result_fingerprint": receipt["result_fingerprint"],
         "validation_receipt": receipt,
