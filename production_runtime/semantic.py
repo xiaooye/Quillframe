@@ -13,8 +13,10 @@ from .sources import AgentRuntimeLike
 
 ROOT = Path(__file__).resolve().parents[1]
 SEMANTIC_ROOT = ROOT / "harness" / "semantic_workers"
-if str(SEMANTIC_ROOT) not in sys.path:
-    sys.path.insert(0, str(SEMANTIC_ROOT))
+QUALITY_ROOT = ROOT / "quality"
+for runtime_root in (SEMANTIC_ROOT, QUALITY_ROOT):
+    if str(runtime_root) not in sys.path:
+        sys.path.insert(0, str(runtime_root))
 
 from peer_bridge_receipt import validate_receipt as validate_peer_bridge_receipt  # noqa: E402
 from peer_chat_relay import build as build_peer_packet, validate_peer_result  # noqa: E402
