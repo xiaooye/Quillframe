@@ -15,7 +15,9 @@
 @import "./model-services.css";
 @import "./authoring-product.css";
 
-/* Cross-product semantic mapping, workstation composition, then hardening. */
+/* Cross-product semantic mapping, workstation composition, user-facing parity,
+ * then final resilience/accessibility hardening. */
 @import "./product-language.css";
 @import "./experience-polish.css";
+@import "./uiux-parity.css";
 @import "./hardening.css";
