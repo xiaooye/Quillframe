@@ -49,7 +49,7 @@ async function waitForPreview() {
   throw new Error(`vite preview did not become ready\n${previewLog}`);
 }
 
-function dumpDom(path, windowSize = "1280,900") {
+function dumpDom(path, windowSize = "1280,900", extraArgs = []) {
   const result = spawnSync(chrome, [
     "--headless=new",
     "--no-sandbox",
@@ -59,6 +59,7 @@ function dumpDom(path, windowSize = "1280,900") {
     "--no-default-browser-check",
     `--window-size=${windowSize}`,
     "--virtual-time-budget=1500",
+    ...extraArgs,
     "--dump-dom",
     `${origin}${path}`,
   ], { encoding: "utf8", timeout: 25000, maxBuffer: 12 * 1024 * 1024 });
@@ -66,8 +67,8 @@ function dumpDom(path, windowSize = "1280,900") {
   return result.stdout;
 }
 
-function assertRendered(path, markers, windowSize) {
-  const dom = dumpDom(path, windowSize);
+function assertRendered(path, markers, windowSize, extraArgs = []) {
+  const dom = dumpDom(path, windowSize, extraArgs);
   const acceptable = Array.isArray(markers) ? markers : [markers];
   if (!acceptable.some((marker) => dom.includes(marker))) {
     throw new Error(`browser route ${path} did not render any marker: ${acceptable.join(" | ")}`);
@@ -90,8 +91,17 @@ try {
   assertRendered("/settings?section=models", "Endpoint + Access Token");
   const manuscriptPhone = assertRendered("/manuscript", "MANUSCRIPT", "390,844");
   if (!manuscriptPhone.includes("qf-writer-bottom-nav")) throw new Error("phone Manuscript route did not render mobile Writer navigation");
+
+  const manuscriptDark = assertRendered("/manuscript", "MANUSCRIPT", "1280,900", ["--force-dark-mode"]);
+  if (!/<html[^>]*class="[^"]*dark[^"]*"/i.test(manuscriptDark)) {
+    throw new Error("forced dark preference did not activate Studio's documentElement.dark theme state");
+  }
+  if (!manuscriptDark.includes("Toggle theme") && !manuscriptDark.includes("切换主题")) {
+    throw new Error("dark Studio route must retain an accessible theme-toggle control");
+  }
+
   console.log("browser_smoke=PASS");
-  console.log("browser_routes=desk,manuscript,review,context,ai-models,manuscript-phone");
+  console.log("browser_routes=desk,manuscript,review,context,ai-models,manuscript-phone,manuscript-dark");
 } catch (error) {
   console.error(`browser_smoke=FAIL: ${error instanceof Error ? error.stack || error.message : String(error)}`);
   process.exitCode = 1;
