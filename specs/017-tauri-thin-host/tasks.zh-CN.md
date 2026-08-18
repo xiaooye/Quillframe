@@ -1,0 +1,18 @@
+# Tasks
+- [x] 冻结 main：`252fcd6066a73df06953c974f2324e1c264492a6`。
+- [x] 检查旧 PR #129，将可复用 Tauri host evidence 与过时 Core semantics 隔离。
+- [x] 定义 one-shot sidecar + OS-keyring consistency model。
+- [x] 增加 Python sidecar source contract/self-test。
+- [x] 增加只有一个 `bridge_invoke` command 的 Tauri 2 Rust host。
+- [x] 增加 target-suffixed PyInstaller external-binary builder。
+- [x] 增加 OS-native keyring set/get/delete 与 durable credential-ref hydration。
+- [x] 增加带真实 Secret Service integration 的 Linux Desktop CI。
+- [x] 生成并提交 Cargo.lock，随后将 Cargo CI 切换到 locked operation。
+- [x] 跑 source 与 packaged sidecar self-test。
+- [x] 跑 Rust unit tests/check 与 `cargo tauri build --debug --no-bundle`。
+- [x] 重跑 Studio Web consumer regression 与 normal repository CI。
+- [x] 验证 plaintext secret 不进入 SQLite/public bridge/log/browser asset。
+- [x] 更新 Tauri product-surface docs 与 execution receipt。
+- [ ] Open/verify/merge 新 Tauri v8 host PR。
+- [ ] 仅在新 host merge 后关闭旧 PR #129 并标记 superseded。
+- [x] 无真实 credential，因此独立记录 live-model acceptance 为 `PENDING_MODEL / awaiting_external`。

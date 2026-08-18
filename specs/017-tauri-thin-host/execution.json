@@ -1,0 +1,45 @@
+{
+  "schema": "quillframe_system_improve_execution_v1",
+  "task_mode": "SYSTEM-IMPROVE",
+  "frozen_framework_sha": "252fcd6066a73df06953c974f2324e1c264492a6",
+  "branch": "agent/tauri-thin-host-v8",
+  "pr": 132,
+  "host_bridge_version": "8",
+  "validated_code_head": "5084ebadc314ec6eb270c75e6824f45cf8908f1b",
+  "consumer_project_repin": false,
+  "canon_mutation": false,
+  "studio_visual_change": false,
+  "cloudflare_dependency": false,
+  "authority": false,
+  "desktop_host_state": "accepted_for_merge",
+  "desktop_ci": {
+    "status": "PASS",
+    "run_id": 32168765327,
+    "job_id": 95814588094,
+    "ubuntu_baseline": "22.04",
+    "studio_web_consumer_regression": "PASS",
+    "python_sidecar_source_contract": "PASS",
+    "packaged_target_suffixed_sidecar": "PASS",
+    "rust_unit_tests_and_check_locked": "PASS",
+    "os_secret_service_roundtrip": "PASS",
+    "tauri_debug_no_bundle_build_locked": "PASS"
+  },
+  "repository_ci": {
+    "status": "PASS",
+    "run_id": 32168765343
+  },
+  "cargo_lock_committed": true,
+  "cargo_operations_locked": true,
+  "secret_boundary_review": {
+    "status": "PASS",
+    "credential_ref_only_persistence": true,
+    "public_bridge_secret_scrub": true,
+    "plaintext_secret_browser_asset_injection": false
+  },
+  "live_model_acceptance": "PENDING_MODEL",
+  "live_model_acceptance_state": "awaiting_external",
+  "live_model_reason": "No usable live provider credential was available to this workstream; deterministic and OS-keyring acceptance are not live-model provider acceptance.",
+  "merge_authorized": true,
+  "merge_performed_at_receipt_time": false,
+  "obsolete_pr_129_closed_at_receipt_time": false
+}

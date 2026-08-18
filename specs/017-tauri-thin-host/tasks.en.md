@@ -1,0 +1,18 @@
+# Tasks
+- [x] Freeze main at `252fcd6066a73df06953c974f2324e1c264492a6`.
+- [x] Inspect obsolete PR #129 and isolate reusable Tauri host evidence from obsolete Core semantics.
+- [x] Define the one-shot sidecar + OS-keyring consistency model.
+- [x] Add Python sidecar source contract and self-test.
+- [x] Add Tauri 2 Rust host with one `bridge_invoke` command.
+- [x] Add target-suffixed PyInstaller external-binary builder.
+- [x] Add OS-native keyring set/get/delete and durable credential-ref hydration.
+- [x] Add Linux Desktop CI with real Secret Service integration.
+- [x] Generate and commit Cargo.lock; switch CI to locked Cargo operations.
+- [x] Run source and packaged sidecar self-tests.
+- [x] Run Rust unit tests/check and `cargo tauri build --debug --no-bundle`.
+- [x] Re-run Studio Web consumer regression and normal repository CI.
+- [x] Verify no plaintext secret reaches SQLite/public bridge/log/browser assets.
+- [x] Update Tauri product-surface docs and execution receipt.
+- [ ] Open/verify/merge the new Tauri v8 host PR.
+- [ ] Close obsolete PR #129 as superseded only after the new host is merged.
+- [x] Record live-model acceptance separately as `PENDING_MODEL / awaiting_external` because no real credential exists.
