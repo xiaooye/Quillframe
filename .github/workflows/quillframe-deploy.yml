@@ -1,0 +1,192 @@
+name: Quillframe Cloud Deploy
+
+on:
+  push:
+    branches: [main, system-improve/quillframe-0.9.0]
+    paths:
+      - 'site/**'
+      - 'studio/app/**'
+      - 'assets/brand/**'
+      - 'docs/**'
+      - 'CHANGELOG*.md'
+      - '.github/workflows/quillframe-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: quillframe-cloud-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PRODUCT_PROJECT: quillframe
+  PRODUCT_DOMAIN: quillframe.wei-dev.com
+  STUDIO_PROJECT: quillframe-studio
+  STUDIO_DOMAIN: studio.quillframe.wei-dev.com
+
+jobs:
+  product-site:
+    name: Product site and Starlight deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install and build product + docs
+        working-directory: site
+        run: |
+          npm install --no-audit --no-fund
+          npm run quality
+          npm run build
+          npm run docs:build
+          test -s dist/index.html
+          test -s dist/docs/index.html
+          grep -Fq '<title>Quillframe' dist/index.html
+      - name: Ensure Pages project
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PRODUCT_PROJECT}"
+          status=$(curl -sS -o /tmp/product-project.json -w '%{http_code}' -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "${api}")
+          if [ "${status}" = 404 ]; then
+            payload=$(jq -nc --arg name "${PRODUCT_PROJECT}" '{name:$name,production_branch:"main"}')
+            status=$(curl -sS -o /tmp/product-project.json -w '%{http_code}' -X POST -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json' --data "${payload}" "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects")
+          fi
+          case "${status}" in 200|201) ;; *) cat /tmp/product-project.json; exit 1;; esac
+          jq -e '.success == true' /tmp/product-project.json >/dev/null
+      - name: Deploy product
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.123.0'
+          packageManager: npm
+          command: pages deploy site/dist --project-name=quillframe --branch=${{ github.ref_name }} --commit-hash=${{ github.sha }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify product preview
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          set -euo pipefail
+          test -n "${DEPLOYMENT_URL}"
+          for attempt in $(seq 1 20); do
+            if curl -fsSL "${DEPLOYMENT_URL}/?qf_verify=${GITHUB_SHA}-${attempt}" -o /tmp/product.html && grep -Fq '<title>Quillframe' /tmp/product.html; then break; fi
+            sleep 2
+          done
+          grep -Fq '<title>Quillframe' /tmp/product.html
+          curl -fsSL "${DEPLOYMENT_URL}/docs/" -o /tmp/docs.html
+          grep -Fq 'Quillframe' /tmp/docs.html
+          echo "product_preview=${DEPLOYMENT_URL}" >> "${GITHUB_STEP_SUMMARY}"
+      - name: Activate product custom domain
+        if: github.ref == 'refs/heads/main'
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: bash .github/scripts/quillframe-pages-domain.sh "${PRODUCT_PROJECT}" "${PRODUCT_DOMAIN}"
+      - name: Verify product production
+        if: github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            if curl -fsSL "https://${PRODUCT_DOMAIN}/?qf_verify=${GITHUB_SHA}-${attempt}" -o /tmp/product-live.html && grep -Fq '<title>Quillframe' /tmp/product-live.html; then break; fi
+            sleep 4
+          done
+          grep -Fq '<title>Quillframe' /tmp/product-live.html
+          curl -fsSL "https://${PRODUCT_DOMAIN}/docs/" -o /tmp/docs-live.html
+          grep -Fq 'Quillframe' /tmp/docs-live.html
+
+  studio:
+    name: SolidJS Studio deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: studio/app/pnpm-lock.yaml
+      - name: Install and build Studio
+        working-directory: studio/app
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+          test -s dist/index.html
+          test -s dist/.well-known/quillframe-host.json
+          grep -Fq '<title>Quillframe Studio</title>' dist/index.html
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const d = JSON.parse(fs.readFileSync('dist/.well-known/quillframe-host.json','utf8'));
+          if (d.schema !== 'quillframe_studio_host_descriptor_v1' || d.surface !== 'cloud_ui' || d.core_host !== 'unbound' || d.authority !== false || d.canon_authority !== false || d.framework_write_authority !== false || d.settlement_authority !== false || d.direct_core_store_access !== false) process.exit(1);
+          NODE
+      - name: Ensure Pages project
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${STUDIO_PROJECT}"
+          status=$(curl -sS -o /tmp/studio-project.json -w '%{http_code}' -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "${api}")
+          if [ "${status}" = 404 ]; then
+            payload=$(jq -nc --arg name "${STUDIO_PROJECT}" '{name:$name,production_branch:"main"}')
+            status=$(curl -sS -o /tmp/studio-project.json -w '%{http_code}' -X POST -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json' --data "${payload}" "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects")
+          fi
+          case "${status}" in 200|201) ;; *) cat /tmp/studio-project.json; exit 1;; esac
+          jq -e '.success == true' /tmp/studio-project.json >/dev/null
+      - name: Deploy Studio
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4.123.0'
+          packageManager: pnpm
+          command: pages deploy studio/app/dist --project-name=quillframe-studio --branch=${{ github.ref_name }} --commit-hash=${{ github.sha }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify Studio preview
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          set -euo pipefail
+          test -n "${DEPLOYMENT_URL}"
+          for attempt in $(seq 1 20); do
+            if curl -fsSL "${DEPLOYMENT_URL}/?qf_verify=${GITHUB_SHA}-${attempt}" -o /tmp/studio.html && grep -Fq '<title>Quillframe Studio</title>' /tmp/studio.html; then break; fi
+            sleep 2
+          done
+          grep -Fq '<title>Quillframe Studio</title>' /tmp/studio.html
+          curl -fsSL "${DEPLOYMENT_URL}/settings?section=models" -o /tmp/studio-settings.html
+          grep -Fq '<title>Quillframe Studio</title>' /tmp/studio-settings.html
+          curl -fsSL "${DEPLOYMENT_URL}/.well-known/quillframe-host.json" -o /tmp/studio-host.json
+          jq -e '.schema == "quillframe_studio_host_descriptor_v1" and .surface == "cloud_ui" and .core_host == "unbound" and .authority == false' /tmp/studio-host.json >/dev/null
+          curl -fsSI "${DEPLOYMENT_URL}/" -o /tmp/studio-headers.txt
+          grep -qi '^content-security-policy:' /tmp/studio-headers.txt
+          grep -qi '^x-content-type-options: nosniff' /tmp/studio-headers.txt
+          echo "studio_preview=${DEPLOYMENT_URL}" >> "${GITHUB_STEP_SUMMARY}"
+      - name: Activate Studio custom domain
+        if: github.ref == 'refs/heads/main'
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: bash .github/scripts/quillframe-pages-domain.sh "${STUDIO_PROJECT}" "${STUDIO_DOMAIN}"
+      - name: Verify Studio production
+        if: github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            if curl -fsSL "https://${STUDIO_DOMAIN}/?qf_verify=${GITHUB_SHA}-${attempt}" -o /tmp/studio-live.html && grep -Fq '<title>Quillframe Studio</title>' /tmp/studio-live.html; then break; fi
+            sleep 4
+          done
+          grep -Fq '<title>Quillframe Studio</title>' /tmp/studio-live.html
+          curl -fsSL "https://${STUDIO_DOMAIN}/.well-known/quillframe-host.json" -o /tmp/studio-host-live.json
+          jq -e '.schema == "quillframe_studio_host_descriptor_v1" and .authority == false' /tmp/studio-host-live.json >/dev/null
