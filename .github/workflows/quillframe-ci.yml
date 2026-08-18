@@ -28,6 +28,12 @@ jobs:
         run: |
           cat scripts/.semantic-context-parts/part*.txt | base64 -d | gzip -d > scripts/_apply_semantic_context_runtime.py
           python scripts/_apply_semantic_context_runtime.py
+          python - <<'PY'
+          from pathlib import Path
+          for path in Path('specs/014-semantic-context-runtime').glob('*.md'):
+              text=path.read_text(encoding='utf-8')
+              path.write_text('\n'.join(line.rstrip() for line in text.splitlines())+'\n', encoding='utf-8')
+          PY
       - name: Version consistency
         run: python scripts/version_consistency.py
       - name: Active technical namespace hygiene
@@ -50,6 +56,7 @@ jobs:
       - name: Deterministic runtime capability contracts
         run: |
           python harness/runtime_capabilities.py self-test
+          python harness/context_runtime.py self-test
           python harness/semantic_workers/adapters/model_runtime_adapter.py --self-test
       - name: Normal CI never invokes configured live Model API
         env:
@@ -66,25 +73,40 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_quillframe_*.py' -v
       - name: Host Bridge self-test
         run: python studio/host_bridge.py self-test
+      - name: Aggregate Framework and bundle self-test
+        run: python quillframe.py self-test
       - name: Commit verified semantic context runtime
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git checkout "$GITHUB_SHA^" -- .github/workflows/quillframe-ci.yml
+          git reset --hard
+          git clean -fd
+          git switch -C agent/semantic-context-runtime origin/agent/semantic-context-runtime
+          cat scripts/.semantic-context-parts/part*.txt | base64 -d | gzip -d > scripts/_apply_semantic_context_runtime.py
+          python scripts/_apply_semantic_context_runtime.py
+          python - <<'PY'
+          from pathlib import Path
+          for path in Path('specs/014-semantic-context-runtime').glob('*.md'):
+              text=path.read_text(encoding='utf-8')
+              path.write_text('\n'.join(line.rstrip() for line in text.splitlines())+'\n', encoding='utf-8')
+          PY
+          git checkout 0d211675fd9f545b83d02ab4102563f0c67e11b9 -- .github/workflows/quillframe-ci.yml
           python - <<'PY'
           from pathlib import Path
           p=Path('.github/workflows/quillframe-ci.yml')
-          s=p.read_text()
+          s=p.read_text(encoding='utf-8')
           anchor='          python harness/runtime_capabilities.py self-test\n'
           assert anchor in s
           s=s.replace(anchor, anchor+'          python harness/context_runtime.py self-test\n', 1)
-          p.write_text(s)
+          p.write_text(s, encoding='utf-8')
           PY
           rm -f scripts/_apply_semantic_context_runtime.py
           rm -rf scripts/.semantic-context-parts
           rm -f .github/workflows/_semantic-context-runtime-apply.yml
           git add -A
           git diff --cached --check
+          echo '--- final changed files ---'
+          git diff --cached --name-only
           git commit -m "feat(context): add semantic context runtime"
           git push origin HEAD:agent/semantic-context-runtime
 
