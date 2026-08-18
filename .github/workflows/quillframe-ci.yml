@@ -80,7 +80,7 @@ jobs:
             --exclude='site/node_modules' \
             --exclude='studio/app/node_modules' \
             -czf "/tmp/quillframe-runtime/quillframe-runtime-${SOURCE_SHA}.tar.gz" .
-          sha256sum "/tmp/quillframe-runtime/quillframe-runtime-${SOURCE_SHA}.tar.gz" > "/tmp/quillframe-runtime/quillframe-runtime-${SOURCE_SHA}.sha256"
+          (cd /tmp/quillframe-runtime && sha256sum "quillframe-runtime-${SOURCE_SHA}.tar.gz" > "quillframe-runtime-${SOURCE_SHA}.sha256")
           printf '%s\n' "${SOURCE_SHA}" > /tmp/quillframe-runtime/framework-commit.txt
           tar -tzf "/tmp/quillframe-runtime/quillframe-runtime-${SOURCE_SHA}.tar.gz" | grep -q '^\./\.git/'
       - name: Upload exact-SHA ephemeral runtime bundle
