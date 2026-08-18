@@ -108,6 +108,21 @@ def _scrub(value: Any, secrets: set[str]) -> Any:
     return value
 
 
+def _payload_secret_values(payload: dict[str, Any]) -> set[str]:
+    secrets: set[str] = set()
+    credentials = payload.get("credential_secrets")
+    if isinstance(credentials, dict):
+        secrets.update(value for value in credentials.values() if isinstance(value, str) and value)
+    request = payload.get("request")
+    if isinstance(request, dict):
+        args = request.get("args")
+        if isinstance(args, dict):
+            token = args.get("access_token")
+            if isinstance(token, str) and token:
+                secrets.add(token)
+    return secrets
+
+
 def _invoke(payload: dict[str, Any]) -> dict[str, Any]:
     request = payload.get("request")
     if not isinstance(request, dict):
@@ -119,12 +134,7 @@ def _invoke(payload: dict[str, Any]) -> dict[str, Any]:
     if prepared_ref is not None and not isinstance(prepared_ref, str):
         raise ValueError("prepared_secret_ref must be a string")
 
-    secret_values = {value for value in credentials.values() if value}
-    args = request.get("args") if isinstance(request.get("args"), dict) else {}
-    request_token = args.get("access_token")
-    if isinstance(request_token, str) and request_token:
-        secret_values.add(request_token)
-
+    secret_values = _payload_secret_values(payload)
     secret_store = TauriInjectedSecretStore(credentials, prepared_ref=prepared_ref)
     checkpoint = secret_store.checkpoint()
     host_bridge.configure_secret_store(secret_store)
@@ -160,8 +170,9 @@ def _read_stdin_json() -> dict[str, Any]:
 
 def _self_test() -> dict[str, Any]:
     sentinel = "TAURI-SECRET-SENTINEL"
+    existing_sentinel = "TAURI-EXISTING-SECRET"
     prepared_ref = SECRET_REF_PREFIX + uuid.uuid4().hex
-    store = TauriInjectedSecretStore({"keyring:qf:existing": "existing"}, prepared_ref=prepared_ref)
+    store = TauriInjectedSecretStore({"keyring:qf:existing": existing_sentinel}, prepared_ref=prepared_ref)
     checkpoint = store.checkpoint()
     returned = store.put(sentinel)
     assert returned == prepared_ref
@@ -173,6 +184,17 @@ def _self_test() -> dict[str, Any]:
     store.rollback(checkpoint)
     assert not store.present(prepared_ref)
     assert store.present("keyring:qf:existing")
+
+    sample_payload = {
+        "request": {"args": {"access_token": sentinel}},
+        "credential_secrets": {"keyring:qf:existing": existing_sentinel},
+    }
+    sample_secrets = _payload_secret_values(sample_payload)
+    assert sample_secrets == {sentinel, existing_sentinel}
+    scrubbed_error = _scrub({"message": f"provider echoed {sentinel} and {existing_sentinel}"}, sample_secrets)
+    serialized_error = json.dumps(scrubbed_error)
+    assert sentinel not in serialized_error
+    assert existing_sentinel not in serialized_error
 
     with tempfile.TemporaryDirectory() as temp:
         old = os.environ.get("QUILLFRAME_DATA_DIR")
@@ -200,12 +222,14 @@ def _self_test() -> dict[str, Any]:
 
     serialized = json.dumps({"ref": prepared_ref, "actions": store.actions})
     assert sentinel not in serialized
+    assert existing_sentinel not in serialized
     return {
         "schema": "quillframe_tauri_sidecar_self_test_v1",
         "status": "PASS",
         "host_bridge_v8": True,
         "prepared_reference_contract": True,
         "rollback_contract": True,
+        "all_injected_secret_scrub": True,
         "secret_values_exposed": False,
         "authority": False,
     }
@@ -214,11 +238,14 @@ def _self_test() -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     args = list(argv or sys.argv[1:])
     command = args[0] if args else "invoke"
+    secret_values: set[str] = set()
     try:
         if command == "credential-refs":
             output = _credential_refs()
         elif command == "invoke":
-            output = _invoke(_read_stdin_json())
+            payload = _read_stdin_json()
+            secret_values = _payload_secret_values(payload)
+            output = _invoke(payload)
         elif command == "self-test":
             output = _self_test()
         else:
@@ -226,14 +253,17 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(output, ensure_ascii=False, separators=(",", ":")))
         return 0
     except Exception as exc:
-        safe = {
-            "schema": "quillframe_tauri_sidecar_error_v1",
-            "status": "failed",
-            "code": type(exc).__name__,
-            "message": str(exc),
-            "secret_values_exposed": False,
-            "authority": False,
-        }
+        safe = _scrub(
+            {
+                "schema": "quillframe_tauri_sidecar_error_v1",
+                "status": "failed",
+                "code": type(exc).__name__,
+                "message": str(exc),
+                "secret_values_exposed": False,
+                "authority": False,
+            },
+            secret_values,
+        )
         print(json.dumps(safe, ensure_ascii=False, separators=(",", ":")))
         return 1
 
