@@ -103,6 +103,8 @@ Generic production graph:
 
 Raw Draft is internal. Regression bad examples and hidden expected labels stay out of first-pass generation.
 
+**Production visibility is fail-closed.** In `DRAFT` / `REVISE`, reading these contracts is not execution. The host must invoke a verified Quillframe production runtime and may surface manuscript text only from an exact fingerprint-bound production release. If runtime, model execution, required independent review, or release evidence is unavailable, report the typed pending/blocked state and do not replace the missing mechanism with host-authored prose. Ephemeral agent sandboxes may materialize the exact locked Framework, but must verify Git identity before execution; their SQLite state is runtime materialization, not a second Canon authority.
+
 Failure ownership matters:
 
 - isolated surface defect → local rewrite;
