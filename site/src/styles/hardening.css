@@ -44,6 +44,24 @@
     content: "01\A 02\A 03\A 04\A 05\A 06\A 07\A 08";
   }
 
+  /* The playground is one workspace, not an open-book spread. Let result
+   * growth change the page height naturally without drawing a long center
+   * gutter, and never clip the action row at the workspace boundary. */
+  .playground-workspace {
+    overflow: visible;
+    background: color-mix(in oklab, var(--pe-surface) 98%, var(--pe-bg));
+  }
+
+  .playground-input-panel textarea {
+    min-height: clamp(220px, 30vh, 300px);
+  }
+
+  .playground-actions {
+    position: relative;
+    z-index: 1;
+    padding-block-end: 8px;
+  }
+
   @media (pointer: coarse) { .unified-product-shell :where(a, button, input, select, summary) { min-block-size: 44px; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto; transition-duration: .01ms; animation-duration: .01ms; animation-iteration-count: 1; } }
   @media (forced-colors: active) { .nf-resilience-card, .nf-skip-link { border: 1px solid CanvasText; } }
