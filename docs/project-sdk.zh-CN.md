@@ -8,7 +8,7 @@ Quillframe 项目是一套独立、版本化的小说工程。框架提供通用
 
 受支持的项目用 `quillframe.toml` 声明模式版本和逻辑路径；`quillframe.lock.json` 保存精确框架身份；`framework.attestation.json` 记录同一身份所对应的实体化框架构建包证明。
 
-普通生产运行不得用当前 `main`、Claude 会话记忆或另一份本地源码工作区静默替换项目锁。显式升级使用 `quillframe pin`；这是依赖与权威变更，不是普通创作的副作用。
+普通生产运行不得用当前 `main`、宿主会话记忆或另一份本地源码工作区静默替换项目锁。显式升级使用 `quillframe pin`；这是依赖与权威变更，不是普通创作的副作用。
 
 ## 新建项目
 
@@ -28,9 +28,40 @@ quillframe init ../my-novel \
   --language zh-CN
 ```
 
-`init` 会固定当前干净源码工作区的精确 Git commit，并用现有的确定性框架构建包契约计算 `sha256:` 指纹。若源码工作区存在未提交修改，精确固定会拒绝执行；不能把“某个 commit + 一组未提交字节”伪装成可复现权威。
+`quillframe init` 会固定当前干净源码工作区的精确 Git commit，计算确定性的框架构建包指纹，写入匹配的证明文件，然后安装 Claude Code 与 Codex 的生成式宿主脚手架。若框架源码工作区存在未提交修改，精确固定会拒绝执行；不能把“某个 commit + 一组未提交字节”伪装成可复现权威。
 
-生成的项目还包含项目级 `CLAUDE.md` 与 `.claude/settings.json`。Claude Code 只是可选宿主：`SessionStart` 会验证项目锁、证明文件与本地框架是否一致，并注入精简的启动状态。若下游项目权威无效，`Write`、`Edit`、`Bash` 等有副作用的宿主工具会默认拒绝执行。Hook 不会因此获得正典写入、框架晋升或状态落定权威。
+## Claude Code 与 Codex 启动流程
+
+Claude Code 与 Codex 都只是可选宿主，不是 Quillframe 工作流权威。两个宿主都进入同一条确定性生命周期：
+
+`Project discovery → exact authority verification → typed manager session → exactly one task_mode → manager run → sparse Context execution`
+
+`SessionStart` 时，宿主适配器会创建或恢复真正的 `quillframe_agent_session_v1`，并注入包含 `QF_SESSION_ID` 的精简上下文。此时 Project 的精确权威可以已经验证成功，但在模型/用户完成语义判断、明确选择且只选择一个 Quillframe `task_mode`，并启动 manager run 之前，有副作用的工作仍然被阻止。例如宿主会注入类似以下精确命令：
+
+```bash
+quillframe host-run begin \
+  --session-id SES-CODEX-... \
+  --mode DESIGN-BOOK \
+  --project .
+```
+
+可以用 `quillframe host-run status --session-id ... --project .` 查看当前确定性状态。宿主 bootstrap 的真实状态只有 `blocked`、`awaiting_task_mode` 或 `running`；仅仅把 Quillframe 术语塞进模型上下文不算完成启动。
+
+在进入 `running` 前，`Write`、`Edit`、`Bash` 等有副作用的操作默认拒绝；Codex 的 `apply_patch` 同样按编辑处理。Mode 尚未解析时，唯一允许的 Bash 例外是与注入的精确 session ID 绑定、经过严格解析的 Quillframe `host-run` bootstrap 命令；带 shell chaining 的相似命令不会被放行。
+
+### Codex 的 trust 边界
+
+Codex 会在工作前读取 Project `AGENTS.md`，所以生成文件现在直接包含 Quillframe bootstrap 规则，而不是只做链接跳转。Project 也会生成 `.codex/hooks.json`，但 Codex 会把 Project trust 和非托管 command hook 的 review/trust 当作用户安全边界。如果启动上下文里没有 `QF_SESSION_ID`，请先在 Codex 中打开 `/hooks`，审查并信任 Quillframe hooks，然后重启该 Codex session；在此之前不要执行有副作用的 Project 写入。
+
+### 修复现有 Project 的宿主脚手架
+
+较早创建、但仍受支持的 Project 可以显式安装或修复当前宿主配置：
+
+```bash
+quillframe host-install .
+```
+
+这个操作与 `quillframe pin` 明确分离：它不会修改 Framework lock / attestation，也不会改变任何 Project Canon、计划、profiles、正文或故事状态。已知由 Quillframe 生成的文件会幂等升级；如果检测到未知的用户自定义 `AGENTS.md` 或宿主配置，则返回 `manual_merge_required`，不会静默覆盖。只有用户明确决定替换时才使用 `--force`。
 
 ## 校验与显式重新固定
 
@@ -53,7 +84,7 @@ quillframe pin .
 
 项目拥有的数据包括具体的书、卷、篇章弧、单元、章节和场景实例，人物与关系，当前状态，主张，依赖，活动计划，项目配置，研究资料，回退证据，正文和已接受正典。
 
-通用框架源码绝不能把这些私有故事事实反向吸收成内置行为。Claude Code、Hook、命令行、SQLite、模型结果或宿主能力也不会仅因为“能够执行”就获得故事权威。
+通用框架源码绝不能把这些私有故事事实反向吸收成内置行为。Claude Code、Codex、Hook、命令行、SQLite、模型结果或宿主能力也不会仅因为“能够执行”就获得故事权威。
 
 ## 标准布局与映射布局
 
