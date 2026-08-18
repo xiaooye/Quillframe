@@ -10,6 +10,7 @@ const read = (relative) => fs.readFileSync(path.join(siteRoot, relative), "utf8"
 const exists = (relative) => fs.existsSync(path.join(siteRoot, relative));
 const main = read("src/main.tsx");
 const app = read("src/ProductApp.tsx");
+const content = read("src/content.ts");
 const surface = read("src/ProductSurface.tsx");
 const embedded = read("src/styles/embedded-features.css");
 const failures = [];
@@ -49,11 +50,26 @@ check((app.match(/<footer class="site-footer unified-product-footer"/g) ?? []).l
 for (const route of ["/", "/product", "/studio", "/architecture", "/publication", "/inspect", "/playground", "/agents", "/changelog"]) {
   check(app.includes(`path="${route}"`), `shared ProductApp missing route ${route}`);
 }
+
+check(app.includes("const primaryNav = (): ShellNavItem[]"), "shared shell must own one primary navigation model");
+check(app.includes("const utilityNav = (): ShellNavItem[]"), "shared shell must own one utility navigation model");
 for (const nav of ["/product", "/studio", "/architecture", "/publication"]) {
-  check(app.includes(`["${nav}"`), `canonical product navigation missing ${nav}`);
+  check(app.includes(`href: "${nav}"`), `canonical primary navigation missing ${nav}`);
 }
-check(app.includes('href={zh() ? "/docs" : "/docs/en"}'), "Knowledge must remain an explicit documentation boundary");
+check(app.includes('kind: "document", href: zh() ? "/docs" : "/docs/en"'), "Knowledge must remain an explicit documentation boundary in primary navigation");
+check(content.includes('export const githubRoot = "https://github.com/xiaooye/cn_webnovel_agent"'), "content source must own canonical GitHub repository root");
+check(app.includes('import { githubRoot, type Locale } from "./content"'), "ProductApp must consume the canonical GitHub repository root");
+check(app.includes('kind: "external", href: githubRoot, label: copy().nav.github'), "GitHub must be a primary external navigation entry");
+check(app.includes('<For each={primaryNav()}>{(item) => navLink(item, "wui-app-bar__link")}</For>'), "desktop header must render the shared primary navigation model");
+check(app.includes('<For each={primaryNav()}>{(item) => navLink(item, "wui-sidebar__item")}</For>'), "mobile navigation must render the shared primary navigation model");
+check(app.includes('<div class="footer-links"><For each={primaryNav()}>{(item) => navLink(item, "footer-link")}</For></div>'), "footer primary section must render the same primary navigation model");
+check(app.includes('href: "/changelog", label: copy().nav.changelog'), "utility navigation must expose Changelog");
+check(app.includes("noopener noreferrer"), "external shell links must use safe new-window semantics");
+check(app.includes('const productVersion = "0.9.x"'), "visible product shell identity must track the 0.9.x development line");
+check(!app.includes("0.8.x"), "stale 0.8.x shell identity must not remain in ProductApp");
+
 check(app.includes("header-search") && app.includes("command-dialog") && app.includes("showModal"), "shared shell must own one command palette");
+check(app.includes('label: copy().nav.github') && app.includes('label: copy().nav.changelog') && app.includes('description: copy().routes.studio.lede'), "command palette must expose GitHub, Changelog, and Studio landing");
 check(app.includes("aria-expanded={menuOpen()}"), "shared shell must own accessible mobile navigation state");
 check(app.includes("const [locale, setLocale] = createSignal") && app.includes("const [dark, setDark] = createSignal"), "shared ProductApp must own one locale and one appearance state");
 
@@ -68,5 +84,24 @@ if (failures.length) {
   for (const failure of failures) console.error(`product-shell-quality: FAIL: ${failure}`);
   process.exitCode = 1;
 } else {
-  console.log(JSON.stringify({ schema: "quillframe_product_shell_quality_v3", status: "pass", shared_router: true, shared_header: true, shared_footer: true, shared_locale_state: true, shared_appearance_state: true, shared_command_palette: true, shared_surface_hero: true, resilience_boundary: true, standalone_product_shells: 0, duplicate_runtime_sources: 0, docs_boundary: "hard-navigation" }, null, 2));
+  console.log(JSON.stringify({
+    schema: "quillframe_product_shell_quality_v4",
+    status: "pass",
+    shared_router: true,
+    shared_header: true,
+    shared_footer: true,
+    shared_primary_navigation: true,
+    shared_mobile_navigation: true,
+    github_entry: true,
+    changelog_entry: true,
+    product_version: "0.9.x",
+    shared_locale_state: true,
+    shared_appearance_state: true,
+    shared_command_palette: true,
+    shared_surface_hero: true,
+    resilience_boundary: true,
+    standalone_product_shells: 0,
+    duplicate_runtime_sources: 0,
+    docs_boundary: "hard-navigation",
+  }, null, 2));
 }
