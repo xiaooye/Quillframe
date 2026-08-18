@@ -1,5 +1,5 @@
 import { For, Show, createMemo, createSignal } from "solid-js";
-import { A, useSearchParams } from "@solidjs/router";
+import { A } from "@solidjs/router";
 import { CoreHostBoundary, PageIntro } from "../components";
 import { useI18n } from "../i18n";
 import { useStudio } from "../studio";
@@ -13,6 +13,11 @@ const sections: ReadonlyArray<{ id: SettingsSection; en: string; zh: string }> =
   { id: "appearance", en: "Appearance", zh: "外观" },
   { id: "advanced", en: "Advanced", zh: "高级" },
 ];
+
+function initialSettingsSection(): SettingsSection {
+  const candidate = new URLSearchParams(window.location.search).get("section") as SettingsSection | null;
+  return candidate && sections.some((item) => item.id === candidate) ? candidate : "general";
+}
 
 const capabilityLegend: ReadonlyArray<{ state: CapabilityState; en: string; zh: string; detailEn: string; detailZh: string }> = [
   { state: "verified", en: "Verified", zh: "已验证", detailEn: "Quillframe has direct evidence from an executed probe or runtime result.", detailZh: "Quillframe 已从真实探测或运行结果获得直接证据。" },
@@ -119,16 +124,11 @@ function CapabilityBadge(props: { state: CapabilityState; label: string }) {
 export default function Settings() {
   const { locale } = useI18n();
   const studio = useStudio();
-  const [params, setParams] = useSearchParams();
   const text = createMemo(() => copy[locale()]);
   const zh = () => locale() === "zh-CN";
+  const [section, setSection] = createSignal<SettingsSection>(initialSettingsSection());
   const [endpoint, setEndpoint] = createSignal("");
   const [token, setToken] = createSignal("");
-
-  const section = createMemo<SettingsSection>(() => {
-    const candidate = params.section as SettingsSection | undefined;
-    return sections.some((item) => item.id === candidate) ? candidate! : "models";
-  });
 
   const modelBridgeSignals = createMemo(() => {
     const description = studio.bridgeDescription();
@@ -137,8 +137,6 @@ export default function Settings() {
     return operations.filter((operation) => /model|inference/i.test(operation));
   });
 
-  const chooseSection = (id: SettingsSection) => setParams({ section: id }, { replace: true });
-
   return (
     <section class="nf-page nf-settings-page">
       <PageIntro eyebrow={text().eyebrow} title={text().title} body={text().body} />
@@ -146,7 +144,7 @@ export default function Settings() {
       <div class="nf-settings-layout">
         <nav class="nf-settings-nav" aria-label={zh() ? "设置分类" : "Settings sections"}>
           <For each={sections}>{(item) => (
-            <button type="button" data-active={section() === item.id ? "true" : undefined} onClick={() => chooseSection(item.id)}>{zh() ? item.zh : item.en}</button>
+            <button type="button" data-active={section() === item.id ? "true" : undefined} onClick={() => setSection(item.id)}>{zh() ? item.zh : item.en}</button>
           )}</For>
         </nav>
 
