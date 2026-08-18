@@ -14,7 +14,7 @@ Begin with [Why Quillframe](why-quillframe.en.md) and [Architecture](architectur
 
 ## Model and Agent Runtime
 
-[Model Runtime](https://github.com/xiaooye/cn_webnovel_agent/blob/main/docs/model-runtime.en.md) explains the ordinary `API Endpoint + Access Token` connection surface, model/protocol discovery, capability evidence, secret handling, and inference transport. [Agent Runtime](https://github.com/xiaooye/cn_webnovel_agent/blob/main/docs/agent-runtime.en.md) explains AgentJob/Result, the Quillframe-owned model → tool → model loop, tool permissions, checkpoints, receipts, and the embeddable `quillframe` Python library.
+[Model Runtime](model-runtime.en.md) explains the ordinary `API Endpoint + Access Token` connection surface, model/protocol discovery, capability evidence, secret handling, and inference transport. [Agent Runtime](agent-runtime.en.md) explains AgentJob/Result, the Quillframe-owned model → tool → model loop, tool permissions, checkpoints, receipts, and the embeddable `quillframe` Python library.
 
 Provider/vendor identity is diagnostic metadata at most. External models provide inference; Quillframe owns runtime semantics, tools, Context, authority, and project state.
 
@@ -60,7 +60,7 @@ Corpus is evidence, not Canon. Research truth is not automatic character knowled
 
 ## Development
 
-[8.0 Development Inventory](8-0-development-inventory.en.md), [Agent Framework Adoption](../knowledge/AGENT_FRAMEWORK_ADOPTION.en.md), and the [Changelog](../CHANGELOG.en.md) record current evolution. Historical specs remain historical records even when product architecture and public branding change.
+The [Changelog](../CHANGELOG.en.md), [Roadmap](../ROADMAP.md), and [Agent Framework Adoption](../knowledge/AGENT_FRAMEWORK_ADOPTION.en.md) record current evolution and implementation influences. Historical specs remain historical records even when product architecture and public branding change.
 
 ## Reference
 
