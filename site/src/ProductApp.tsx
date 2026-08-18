@@ -13,7 +13,7 @@ import {
   type JSX,
 } from "solid-js";
 import brandMark from "../../assets/brand/quillframe-mark.svg?url";
-import { type Locale } from "./content";
+import { githubRoot, type Locale } from "./content";
 import { enUS } from "./content.en-US";
 import { zhCN } from "./content.zh-CN";
 import { loadKnowledgeIndex, searchKnowledge } from "./knowledge";
@@ -23,13 +23,14 @@ import { ProductSectionHeading, ProductSurfaceHero } from "./ProductSurface";
 
 const siteCopy = { "en-US": enUS, "zh-CN": zhCN } as const;
 const studioUrl = "https://studio.quillframe.wei-dev.com";
+const productVersion = "0.9.x";
 
 const homeEntryCopy = {
   "zh-CN": {
     searchPlaceholder: "搜索产品、文档、架构、出版…",
     openStudio: "打开 Studio",
     launch: "开始探索",
-    heroEyebrow: "长篇小说创作系统 · 0.8.x",
+    heroEyebrow: `长篇小说创作系统 · ${productVersion}`,
     heroTitle: "让故事越写越长，系统仍然知道自己在做什么。",
     heroLede: "Quillframe 把创作、上下文、角色知识、质量审查与出版连成一套可检查的工作流。你可以从这里直接进入 Studio、搜索真实文档、探索架构，或者试试关键机制。",
     cuteHint: "今天也把故事织得更漂亮一点吧 (｡•̀ᴗ-)✧",
@@ -61,7 +62,7 @@ const homeEntryCopy = {
     searchPlaceholder: "Search product, docs, architecture, publication…",
     openStudio: "Open Studio",
     launch: "Explore",
-    heroEyebrow: "Long-form fiction system · 0.8.x",
+    heroEyebrow: `Long-form fiction system · ${productVersion}`,
     heroTitle: "Let the story grow without letting the system lose the plot.",
     heroLede: "Quillframe connects creation, context, character knowledge, quality gates, and publication into one inspectable workflow. Launch Studio, search real docs, explore architecture, or play with the core boundaries from here.",
     cuteHint: "Let’s weave something lovely today (｡•̀ᴗ-)✧",
@@ -100,6 +101,13 @@ type UiContextValue = {
   zh: Accessor<boolean>;
   toggleLocale: () => void;
   toggleDark: () => void;
+};
+
+type ShellNavItem = {
+  kind: "route" | "document" | "external";
+  href: string;
+  label: string;
+  icon?: string;
 };
 
 const UiContext = createContext<UiContextValue>();
@@ -173,22 +181,42 @@ function ProductShell(props: { children?: JSX.Element }) {
     setMenuOpen(false);
   });
 
-  const nav = () => [
-    ["/product", copy().nav.product],
-    ["/studio", copy().nav.studio],
-    ["/architecture", copy().nav.architecture],
-    ["/publication", copy().nav.publication],
-  ] as const;
+  const primaryNav = (): ShellNavItem[] => [
+    { kind: "route", href: "/product", label: copy().nav.product },
+    { kind: "route", href: "/studio", label: copy().nav.studio },
+    { kind: "route", href: "/architecture", label: copy().nav.architecture },
+    { kind: "route", href: "/publication", label: copy().nav.publication },
+    { kind: "document", href: zh() ? "/docs" : "/docs/en", label: copy().nav.docs, icon: "📚" },
+    { kind: "external", href: githubRoot, label: copy().nav.github, icon: "↗" },
+  ];
+
+  const utilityNav = (): ShellNavItem[] => [
+    { kind: "route", href: "/inspect", label: zh() ? "检查项目" : "Inspect", icon: "▣" },
+    { kind: "route", href: "/playground", label: "Playground", icon: "▷" },
+    { kind: "route", href: "/agents", label: zh() ? "Agent 集成" : "Agents", icon: "◈" },
+    { kind: "route", href: "/changelog", label: copy().nav.changelog, icon: "◇" },
+  ];
+
+  const navLink = (item: ShellNavItem, className: string) => {
+    const label = <>{item.icon ? <span aria-hidden="true">{item.icon}</span> : null}{item.label}</>;
+    if (item.kind === "route") return <A href={item.href} class={className} activeClass="active">{label}</A>;
+    if (item.kind === "external") return <a class={className} href={item.href} target="_blank" rel="noopener noreferrer">{label}</a>;
+    return <a class={className} href={item.href}>{label}</a>;
+  };
 
   const routeResults = createMemo<CommandResult[]>(() => [
     { kind: "route", icon: "⌂", label: zh() ? "首页" : "Home", description: copy().home.lede, href: "/" },
     { kind: "route", icon: "♡", label: copy().nav.product, description: copy().routes.product.lede, href: "/product" },
+    { kind: "route", icon: "✦", label: copy().nav.studio, description: copy().routes.studio.lede, href: "/studio" },
     { kind: "route", icon: "⌘", label: copy().nav.architecture, description: copy().routes.architecture.lede, href: "/architecture" },
     { kind: "route", icon: "✧", label: copy().nav.publication, description: copy().routes.publication.lede, href: "/publication" },
+    { kind: "external", icon: "📚", label: copy().nav.docs, description: zh() ? "搜索与阅读仓库权威文档。" : "Search and read repository-authoritative documentation.", href: zh() ? "/docs" : "/docs/en" },
+    { kind: "external", icon: "↗", label: copy().nav.github, description: zh() ? "打开 Quillframe GitHub 仓库。" : "Open the Quillframe GitHub repository.", href: githubRoot },
     { kind: "route", icon: "▣", label: zh() ? "检查项目" : "Inspect project", description: zh() ? "在浏览器本地检查 Project manifest、lock 与 attestation。" : "Inspect Project manifest, lock, and attestation locally in the browser.", href: "/inspect" },
     { kind: "route", icon: "▷", label: "Playground", description: zh() ? "本地确定性 execution trace。" : "Local deterministic execution trace.", href: "/playground" },
     { kind: "route", icon: "◈", label: zh() ? "Agent 集成" : "Agent integration", description: zh() ? "通过 portable skill 与 Host Bridge 接入 coding agent。" : "Connect coding agents through the portable skill and Host Bridge.", href: "/agents" },
-    { kind: "external", icon: "✦", label: zh() ? "打开 Studio" : "Open Studio", description: zh() ? "打开 Hosted Studio。" : "Open the hosted Studio.", href: studioUrl },
+    { kind: "route", icon: "◇", label: copy().nav.changelog, description: copy().routes.changelog.lede, href: "/changelog" },
+    { kind: "external", icon: "✦", label: zh() ? "Hosted Studio" : "Hosted Studio", description: zh() ? "打开 Hosted Studio；这是外部运行入口，不是 Studio 产品介绍页。" : "Open Hosted Studio; this is the external runtime entry, not the Studio product landing.", href: studioUrl },
   ]);
 
   const commandResults = createMemo(() => {
@@ -255,15 +283,14 @@ function ProductShell(props: { children?: JSX.Element }) {
           <A href="/" class="wui-app-bar__brand brand-link" aria-label={zh() ? "Quillframe 首页" : "Quillframe home"}>
             <span class="brand-mark-wrap"><img src={brandMark} alt="" width="32" height="32" aria-hidden="true" /></span>
             <span>Quillframe</span>
-            <span class="wui-badge wui-badge--soft version-chip">0.8.x</span>
+            <span class="wui-badge wui-badge--soft version-chip">{productVersion}</span>
           </A>
           <nav class="wui-app-bar__nav desktop-nav" aria-label={zh() ? "主导航" : "Primary navigation"}>
-            <For each={nav()}>{([href, label]) => <A href={href} class="wui-app-bar__link" activeClass="active">{label}</A>}</For>
-            <a class="wui-app-bar__link" href={zh() ? "/docs" : "/docs/en"}>{copy().nav.docs}</a>
+            <For each={primaryNav()}>{(item) => navLink(item, "wui-app-bar__link")}</For>
           </nav>
           <div class="wui-app-bar__actions header-actions">
             <button type="button" class="wui-button wui-button--soft header-search" onClick={openCommand}><span>⌕</span><span>{zh() ? "搜索 Quillframe" : "Search Quillframe"}</span><kbd>⌘K / Ctrl+K</kbd></button>
-            <a class="wui-button wui-button--solid studio-cta" href={studioUrl} target="_blank" rel="noreferrer">✦ {zh() ? "打开 Studio" : "Open Studio"}</a>
+            <a class="wui-button wui-button--solid studio-cta" href={studioUrl} target="_blank" rel="noopener noreferrer">✦ {zh() ? "打开 Studio" : "Open Studio"}</a>
             <button class="wui-button wui-button--ghost wui-button--icon-only" type="button" onClick={toggleLocale} aria-label={zh() ? "切换到英文" : "Switch to Chinese"}>{copy().languageName}</button>
             <button class="wui-button wui-button--ghost wui-button--icon-only" type="button" onClick={toggleDark} aria-label={copy().nav.appearance}><span aria-hidden="true">{dark() ? "☼" : "◐"}</span></button>
             <button class="wui-button wui-button--ghost wui-button--icon-only mobile-menu-button" type="button" aria-expanded={menuOpen()} onClick={() => setMenuOpen((value) => !value)}><span aria-hidden="true">{menuOpen() ? "×" : "≡"}</span></button>
@@ -272,11 +299,9 @@ function ProductShell(props: { children?: JSX.Element }) {
 
         <Show when={menuOpen()}>
           <nav class="mobile-nav wui-card" aria-label={zh() ? "移动端导航" : "Mobile navigation"}>
-            <For each={nav()}>{([href, label]) => <A href={href} class="wui-sidebar__item" activeClass="active">{label}</A>}</For>
-            <a class="wui-sidebar__item" href={zh() ? "/docs" : "/docs/en"}>📚 {copy().nav.docs}</a>
-            <A class="wui-sidebar__item" href="/inspect">▣ {zh() ? "检查项目" : "Inspect project"}</A>
-            <A class="wui-sidebar__item" href="/playground">▷ Playground</A>
-            <A class="wui-sidebar__item" href="/agents">◈ {zh() ? "Agent 集成" : "Agent integration"}</A>
+            <For each={primaryNav()}>{(item) => navLink(item, "wui-sidebar__item")}</For>
+            <For each={utilityNav()}>{(item) => navLink(item, "wui-sidebar__item")}</For>
+            <a class="wui-sidebar__item" href={studioUrl} target="_blank" rel="noopener noreferrer">✦ Hosted Studio ↗</a>
           </nav>
         </Show>
 
@@ -285,8 +310,8 @@ function ProductShell(props: { children?: JSX.Element }) {
         <footer class="site-footer unified-product-footer">
           <div class="page-width footer-grid">
             <div class="footer-brand-block"><div class="footer-brand"><img src={brandMark} alt="" /><strong>Quillframe</strong></div><p>{zh() ? "一个产品壳，共享同一套导航、主题与语言状态。" : "One product shell, one navigation, theme, and locale state."}</p></div>
-            <div class="footer-links"><A href="/product">{copy().nav.product}</A><A href="/architecture">{copy().nav.architecture}</A><A href="/publication">{copy().nav.publication}</A><a href={zh() ? "/docs" : "/docs/en"}>{copy().nav.docs}</a></div>
-            <div class="footer-links"><A href="/inspect">{zh() ? "检查项目" : "Inspect"}</A><A href="/playground">Playground</A><A href="/agents">{zh() ? "Agent 集成" : "Agents"}</A><a href={studioUrl} target="_blank" rel="noreferrer">Studio ↗</a></div>
+            <div class="footer-links"><For each={primaryNav()}>{(item) => navLink(item, "footer-link")}</For></div>
+            <div class="footer-links"><For each={utilityNav()}>{(item) => navLink(item, "footer-link")}</For><a href={studioUrl} target="_blank" rel="noopener noreferrer">Hosted Studio ↗</a></div>
           </div>
         </footer>
 
@@ -362,7 +387,7 @@ function HomePage() {
               <a class="launcher-tile lane-evidence" href={docsRoot()}><span>📚</span><div><strong>{homeUi().docs}</strong><small>{isZh() ? "搜索真实文档" : "Search real docs"}</small></div><b>→</b></a>
               <A class="launcher-tile lane-validated" href="/publication"><span>✧</span><div><strong>{homeUi().publication}</strong><small>{isZh() ? "从接受稿到派生格式" : "Accepted text to formats"}</small></div><b>→</b></A>
             </div>
-            <div class="launcher-footer"><span>0.8.x</span><span>{isZh() ? "pre-1.0 · 快速演进" : "pre-1.0 · actively evolving"}</span><span>authority=false</span></div>
+            <div class="launcher-footer"><span>{productVersion}</span><span>{isZh() ? "pre-1.0 · 快速演进" : "pre-1.0 · actively evolving"}</span><span>authority=false</span></div>
           </div>
         </div>
 
@@ -533,7 +558,7 @@ function AgentsPage() {
 
 function ChangelogPage() {
   const route = () => siteCopy[locale()].routes.changelog;
-  return <div class="page-width section-compact unified-route-page"><ProductSurfaceHero tone="validated" eyebrow={<span>{route().eyebrow}</span>} title={route().title} lede={<p>{route().lede}</p>} visual={<div class="unified-release-badge"><strong>0.8.x</strong><span>{zh() ? "current main" : "current main"}</span></div>} /><div class="unified-card-grid"><For each={route().cards}>{(card, index) => <article class="wui-card unified-info-card"><small>0{index() + 1}</small><h3>{card.title}</h3><p>{card.body}</p></article>}</For></div></div>;
+  return <div class="page-width section-compact unified-route-page"><ProductSurfaceHero tone="validated" eyebrow={<span>{route().eyebrow}</span>} title={route().title} lede={<p>{route().lede}</p>} visual={<div class="unified-release-badge"><strong>{productVersion}</strong><span>{zh() ? "current main" : "current main"}</span></div>} /><div class="unified-card-grid"><For each={route().cards}>{(card, index) => <article class="wui-card unified-info-card"><small>0{index() + 1}</small><h3>{card.title}</h3><p>{card.body}</p></article>}</For></div></div>;
 }
 
 export default function ProductApp() {
