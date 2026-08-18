@@ -6,7 +6,7 @@
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "vite",
-    "quality": "node scripts/product-language-quality.mjs && node scripts/hardening-quality.mjs && node scripts/authoring-boundary-quality.mjs",
+    "quality": "node scripts/product-language-quality.mjs && node scripts/uiux-parity-quality.mjs && node scripts/hardening-quality.mjs && node scripts/authoring-boundary-quality.mjs",
     "lint": "pnpm quality",
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.mjs",

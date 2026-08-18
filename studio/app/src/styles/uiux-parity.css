@@ -1,0 +1,61 @@
+@layer quillframe-product-language {
+  /*
+   * Writer-facing UI parity with the Quillframe Product Site.
+   * The Product Site's authoritative canvas is WeiUI background; Studio must
+   * not introduce a separate yellow parchment canvas for ordinary authoring.
+   */
+  :root[data-product-language="quillframe-kawaii-v1"] {
+    --qf-studio-canvas: var(--wui-color-background);
+  }
+
+  body,
+  .nf-app-shell,
+  .nf-main-column {
+    background: var(--qf-studio-canvas);
+  }
+
+  /* Keep kawaii personality in restrained chrome rather than tinting the
+   * entire manuscript/workspace canvas. */
+  .nf-sidebar {
+    background: color-mix(in oklab, var(--wui-surface-raised) 97%, var(--qf-product-pink-soft));
+  }
+
+  .nf-topbar {
+    background: color-mix(in oklab, var(--wui-surface-raised) 96%, transparent);
+  }
+
+  /* Icon slots are a product contract, not incidental inherited layout. */
+  .nf-nav-glyph {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 28px;
+    inline-size: 28px;
+    block-size: 28px;
+    color: color-mix(in oklab, var(--qf-product-lilac) 62%, var(--qf-product-muted));
+    background: color-mix(in oklab, var(--wui-surface-sunken) 78%, var(--qf-product-lilac-soft));
+  }
+
+  .nf-nav-glyph svg {
+    inline-size: 17px;
+    block-size: 17px;
+    overflow: visible;
+    stroke: currentColor;
+  }
+
+  .nf-nav-item[data-active="true"] .nf-nav-glyph {
+    color: var(--qf-product-pink-strong);
+    background: color-mix(in oklab, var(--wui-surface-raised) 76%, var(--qf-product-pink-soft));
+  }
+
+  /* Runtime/authority diagnostics belong in Inspector, not the ordinary
+   * Writer Mode navigation footer. */
+  .nf-sidebar-foot {
+    display: none;
+  }
+
+  @media (max-width: 719px) {
+    .nf-main-column {
+      background: var(--qf-studio-canvas);
+    }
+  }
+}
