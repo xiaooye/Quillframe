@@ -2,8 +2,13 @@
 """Deterministic documentation QA for Quillframe.
 
 Normal CI must never spend model/API usage. This checker validates the machine-
-checkable half of the documentation contract. It also reports release-metadata
-drift without pretending documentation code can promote a Framework release.
+checkable half of the documentation contract without pretending deterministic
+code can replace semantic or rendered visual review.
+
+The public documentation manifest is authoritative for registered product/docs
+pages. Engineering specifications under ``specs/`` are opt-in records: selected
+specs may be registered, but the checker does not force every historical or
+single-language engineering record into the public documentation inventory.
 """
 from __future__ import annotations
 
@@ -45,6 +50,9 @@ STALE_EXAMPLE_RE = re.compile(
     re.I,
 )
 
+# Public documentation roots are automatically inventoried. ``specs/`` is
+# intentionally absent: engineering specs are historical/implementation records
+# and enter the public docs manifest only when explicitly selected.
 CONTROLLED_DOC_ROOTS = (
     ROOT,
     ROOT / "assets",
@@ -55,7 +63,6 @@ CONTROLLED_DOC_ROOTS = (
     ROOT / "harness",
     ROOT / "knowledge",
     ROOT / "release",
-    ROOT / "specs",
     ROOT / "studio",
     ROOT / "surface",
 )
@@ -78,7 +85,7 @@ def warn(path: Path, message: str) -> None:
 
 
 def migration_issue(path: Path, message: str, *, strict_current: bool) -> None:
-    """Block reviewed-current docs; migration/candidate debt remains visible as warnings."""
+    """Block reviewed-current docs; candidate migration debt remains visible."""
     (error if strict_current else warn)(path, message)
 
 
@@ -130,12 +137,8 @@ def local_target(source: Path, raw: str) -> Path | None:
     return (source.parent / raw).resolve()
 
 
-def markdown_table_count(text: str) -> int:
-    return len(TABLE_SEPARATOR_RE.findall(text))
-
-
 def check_links(path: Path, text: str) -> None:
-    for match in list(MD_LINK_RE.finditer(text)) + list(HTML_LINK_RE.finditer(text)):
+    for match in [*MD_LINK_RE.finditer(text), *HTML_LINK_RE.finditer(text)]:
         target = local_target(path, match.group(1))
         if target is None:
             continue
@@ -150,7 +153,7 @@ def check_links(path: Path, text: str) -> None:
 
 def check_chinese_copy(path: Path, text: str) -> None:
     risky = {
-        "reviewer shopping": "prefer native Chinese prose; keep the English term only when naming the exact anti-pattern",
+        "reviewer shopping": "prefer native Chinese prose; keep the English term only for the exact anti-pattern",
         "semantic reject": "prefer Chinese prose with `semantic_reject` only as an exact identifier",
         "consumer project": "prefer 下游项目",
         "Human-facing": "prefer 面向用户 / 人类可读",
@@ -174,7 +177,6 @@ def check_markdown(path: Path, *, tier: str, status: str, rewrite_policy: str) -
         return
 
     strict_current = status in {"reviewed_7_2", "reviewed_current"} and rewrite_policy != "preserve_history"
-
     h1_count = len(H1_RE.findall(text))
     if h1_count != 1:
         migration_issue(path, f"expected exactly one Markdown H1, found {h1_count}", strict_current=strict_current)
@@ -188,16 +190,16 @@ def check_markdown(path: Path, *, tier: str, status: str, rewrite_policy: str) -
                 "Tier-A page contains a fenced arrow-process block; use a designed module or structured prose",
                 strict_current=strict_current,
             )
-        tables = markdown_table_count(text)
+        tables = len(TABLE_SEPARATOR_RE.findall(text))
         if tables:
             migration_issue(
                 path,
-                f"Tier-A page contains {tables} native Markdown table(s); product surfaces should use designed modules or compact prose",
+                f"Tier-A page contains {tables} native Markdown table(s); use designed modules or compact prose",
                 strict_current=strict_current,
             )
 
     if rewrite_policy != "preserve_history" and STALE_EXAMPLE_RE.search(text):
-        warn(path, "contains a 7.0/7.1 framework-version example/reference; verify whether it is intentionally historical or stale")
+        warn(path, "contains a 7.0/7.1 framework-version example/reference; verify whether it is stale")
 
     if path.name.endswith(".zh-CN.md") and rewrite_policy != "preserve_history":
         check_chinese_copy(path, text)
@@ -226,7 +228,7 @@ def check_inventory(manifest: dict) -> list[tuple[Path, str, str, str]]:
         return []
 
     ids: set[str] = set()
-    tracked: set[str] = set()
+    tracked: dict[str, tuple[str, str, str]] = {}
     checks: list[tuple[Path, str, str, str]] = []
     allowed_tiers = {"A", "B", "C"}
     allowed_status = {"needs_rebuild", "candidate_review", "reviewed_current", "reviewed_7_2", "preserve"}
@@ -265,14 +267,26 @@ def check_inventory(manifest: dict) -> list[tuple[Path, str, str, str]]:
             error(DOC_MANIFEST, f"{doc_id}: bilingual pair path mismatch: expected {expected_zh}")
 
         for raw in (en, zh):
-            if raw in tracked:
-                error(DOC_MANIFEST, f"path tracked by more than one document entry: {raw}")
-            tracked.add(raw)
-            checks.append((ROOT / raw, str(tier), str(status), str(rewrite_policy)))
+            previous = tracked.get(raw)
+            if previous is not None:
+                previous_id, previous_status, previous_rewrite = previous
+                historical_alias = (
+                    status == "preserve"
+                    and rewrite_policy == "preserve_history"
+                    and previous_status == "preserve"
+                    and previous_rewrite == "preserve_history"
+                )
+                if historical_alias:
+                    warn(DOC_MANIFEST, f"historical document path has multiple navigation aliases: {previous_id}, {doc_id} -> {raw}")
+                else:
+                    error(DOC_MANIFEST, f"path tracked by more than one active document entry: {raw}")
+            else:
+                tracked[raw] = (doc_id, str(status), str(rewrite_policy))
+                checks.append((ROOT / raw, str(tier), str(status), str(rewrite_policy)))
 
     discovered = discover_bilingual_docs()
-    for raw in sorted(discovered - tracked):
-        error(ROOT / raw, "bilingual human-facing doc is not registered in documentation_manifest.json")
+    for raw in sorted(discovered - set(tracked)):
+        error(ROOT / raw, "bilingual public-facing doc is not registered in documentation_manifest.json")
 
     routers = manifest.get("routers", [])
     if not isinstance(routers, list):
@@ -288,6 +302,10 @@ def check_inventory(manifest: dict) -> list[tuple[Path, str, str, str]]:
                 error(path, "manifest-listed router is missing")
 
     return checks
+
+
+def element_text(el: ET.Element) -> str:
+    return "".join(el.itertext()).strip()
 
 
 def parse_viewbox(path: Path, root: ET.Element) -> tuple[float, float, float, float] | None:
@@ -310,17 +328,12 @@ def parse_viewbox(path: Path, root: ET.Element) -> tuple[float, float, float, fl
     return x, y, w, h
 
 
-def element_text(el: ET.Element) -> str:
-    return "".join(el.itertext()).strip()
-
-
 def css_class_font_sizes(root: ET.Element) -> dict[str, float]:
     result: dict[str, float] = {}
     for el in root.iter():
         if el.tag.rsplit("}", 1)[-1] != "style":
             continue
-        css = el.text or ""
-        for selector, body in re.findall(r"\.([A-Za-z0-9_-]+)\s*\{([^}]+)\}", css):
+        for selector, body in re.findall(r"\.([A-Za-z0-9_-]+)\s*\{([^}]+)\}", el.text or ""):
             match = FONT_SIZE_RE.search(body) or FONT_SHORTHAND_RE.search(body)
             if match:
                 result[selector] = float(match.group(1))
@@ -330,9 +343,8 @@ def css_class_font_sizes(root: ET.Element) -> dict[str, float]:
 def inherited_font_size(el: ET.Element, class_sizes: dict[str, float]) -> float | None:
     raw = el.attrib.get("font-size")
     if raw:
-        raw = raw.removesuffix("px")
         try:
-            return float(raw)
+            return float(raw.removesuffix("px"))
         except ValueError:
             return None
     for cls in el.attrib.get("class", "").split():
@@ -348,8 +360,7 @@ def char_em_width(ch: str) -> float:
         return 0.34
     if unicodedata.east_asian_width(ch) in {"W", "F"}:
         return 1.0
-    category = unicodedata.category(ch)
-    if category.startswith("P"):
+    if unicodedata.category(ch).startswith("P"):
         return 0.38
     if ch.isupper():
         return 0.66
@@ -391,7 +402,6 @@ def check_svg(path: Path) -> None:
             value = el.attrib.get(attr)
             if value and value.startswith("#") and not HEX_RE.fullmatch(value):
                 error(path, f"invalid {attr} color {value!r}")
-
     for style_el in (el for el in root.iter() if el.tag.rsplit("}", 1)[-1] == "style"):
         for token in CSS_HEX_RE.findall(style_el.text or ""):
             color = "#" + token
@@ -400,7 +410,6 @@ def check_svg(path: Path) -> None:
 
     if "@font-face" in raw or re.search(r"\.(?:woff2?|ttf|otf)\b", raw, re.I):
         error(path, "external/embedded font files are not allowed in documentation SVGs")
-
     if vb is None:
         return
 
@@ -408,7 +417,6 @@ def check_svg(path: Path) -> None:
     scale = min(1.0, TARGET_GITHUB_WIDTH / vw)
     class_sizes = css_class_font_sizes(root)
     strict = root.attrib.get("data-doc-tier") == "A"
-
     for el in root.iter():
         if el.tag.rsplit("}", 1)[-1] != "text":
             continue
@@ -421,7 +429,6 @@ def check_svg(path: Path) -> None:
             error(path, f"text x={x:g} is outside viewBox")
         if y is not None and not (vy <= y <= vy + vh):
             error(path, f"text y={y:g} is outside viewBox")
-
         font_size = inherited_font_size(el, class_sizes)
         if strict:
             if font_size is None:
@@ -429,7 +436,7 @@ def check_svg(path: Path) -> None:
                 continue
             rendered = font_size * scale
             if rendered < MIN_RENDERED_TEXT_PX:
-                error(path, f"text becomes ~{rendered:.1f}px at {TARGET_GITHUB_WIDTH:.0f}px GitHub width (< {MIN_RENDERED_TEXT_PX}px): {text[:48]!r}")
+                error(path, f"text becomes ~{rendered:.1f}px at {TARGET_GITHUB_WIDTH:.0f}px (< {MIN_RENDERED_TEXT_PX}px): {text[:48]!r}")
             if len(text) >= LONG_TEXT_CHARS:
                 budget_raw = el.attrib.get("data-max-width")
                 if not budget_raw:
@@ -451,15 +458,16 @@ def main() -> int:
     manifest = load_doc_manifest()
     release_version = framework_version()
     implementation_version = cli_framework_version()
+
     if manifest and release_version and manifest.get("framework_version") != release_version:
         error(
             DOC_MANIFEST,
-            f"framework_version={manifest.get('framework_version')!r} does not match release authority HARNESS_MANIFEST.yaml {release_version!r}",
+            f"framework_version={manifest.get('framework_version')!r} does not match HARNESS_MANIFEST.yaml {release_version!r}",
         )
     if release_version and implementation_version and release_version != implementation_version:
         warn(
             FRAMEWORK_MANIFEST,
-            f"release metadata drift: HARNESS_MANIFEST.yaml={release_version} while quillframe.py implementation reports {implementation_version}; do not silently resolve this in documentation QA",
+            f"release metadata drift: HARNESS_MANIFEST.yaml={release_version} while quillframe.py reports {implementation_version}",
         )
 
     checks = check_inventory(manifest) if manifest else []
@@ -483,7 +491,7 @@ def main() -> int:
         for entry in manifest.get("documents", []):
             state = entry.get("status", "unknown")
             states[state] = states.get(state, 0) + 1
-        print("documentation-inventory:", ", ".join(f"{k}={v}" for k, v in sorted(states.items())))
+        print("documentation-inventory:", ", ".join(f"{key}={value}" for key, value in sorted(states.items())))
 
     for item in WARNINGS:
         print(f"WARNING: {item}")
