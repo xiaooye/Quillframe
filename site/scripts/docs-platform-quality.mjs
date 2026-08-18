@@ -112,7 +112,7 @@ for (const [href, marker] of primaryDocsRoutes) {
 }
 requireCheck(actions.includes('class="nf-product-link nf-docs-nav-link"') && actions.includes('aria-current="page"'), "Docs item must own the active product-navigation state");
 requireCheck(actions.includes('class="nf-product-link nf-github-link"'), "Docs primary navigation must expose GitHub");
-requireCheck(actions.includes('https://github.com/xiaooye/cn_webnovel_agent'), "Docs GitHub entry must use the canonical repository root");
+requireCheck(actions.includes('https://github.com/xiaooye/Quillframe'), "Docs GitHub entry must use the canonical repository root");
 requireCheck(actions.includes('openStudio: "打开 Studio"') && actions.includes('class="nf-studio-link"'), "Docs header must retain the localized Hosted Studio CTA");
 requireCheck(actions.includes('https://studio.quillframe.wei-dev.com'), "Docs Hosted Studio entry must use the current Quillframe domain");
 requireCheck(actions.includes('rel="noopener noreferrer"'), "Docs external product links must use safe new-window semantics");
@@ -131,7 +131,7 @@ requireCheck(main.includes('import ProductApp from "./ProductApp"') && main.incl
 requireCheck(productApp.includes('kind: "document", href: zh() ? "/docs" : "/docs/en"'), "shared primary navigation model must hand off to the locale-aware Starlight docs root");
 requireCheck(productApp.includes('<For each={primaryNav()}>{(item) => navLink(item, "wui-app-bar__link")}</For>'), "desktop Product header must render the shared primary navigation source");
 requireCheck(productApp.includes('<div class="footer-links"><For each={primaryNav()}>{(item) => navLink(item, "footer-link")}</For></div>'), "Product footer primary section must render the same primary navigation source");
-requireCheck(content.includes('export const githubRoot = "https://github.com/xiaooye/cn_webnovel_agent"'), "Product content authority must retain the canonical GitHub repository root");
+requireCheck(content.includes('export const githubRoot = "https://github.com/xiaooye/Quillframe"'), "Product content authority must retain the canonical GitHub repository root");
 requireCheck(productApp.includes('kind: "external", href: githubRoot, label: copy().nav.github'), "Product shared primary navigation must include GitHub");
 requireCheck(productApp.includes('if (result.href.startsWith("/docs")) window.location.assign(result.href);'), "product command search must use a real document navigation for Starlight results");
 requireCheck(productApp.includes('`/docs/${encodeURIComponent(doc.id)}`') && productApp.includes('`/docs/en/${encodeURIComponent(doc.id)}`'), "product knowledge search must keep localized deep-document URLs");
