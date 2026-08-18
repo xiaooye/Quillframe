@@ -3,13 +3,17 @@ name: Spec 021 host hardening apply
 on:
   push:
     branches: [agent/production-visibility-enforcement]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
   apply:
-    if: github.actor != 'github-actions[bot]'
+    if: >-
+      github.actor != 'github-actions[bot]' &&
+      (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -21,22 +25,33 @@ jobs:
           python-version: '3.13'
       - name: Apply exact verified host-hardening patch
         run: |
-          git apply --exclude=studio/tauri_core_sidecar.py --check specs/021-production-visibility-enforcement/.host-hardening.patch
-          git apply --exclude=studio/tauri_core_sidecar.py specs/021-production-visibility-enforcement/.host-hardening.patch
-      - name: Verify Python host and production boundaries
+          set -euo pipefail
+          PATCH=specs/021-production-visibility-enforcement/.host-hardening.patch
+          git apply \
+            --exclude=studio/tauri_core_sidecar.py \
+            --exclude=SKILL.en.md \
+            --exclude=SKILL.zh-CN.md \
+            --check "$PATCH"
+          git apply \
+            --exclude=studio/tauri_core_sidecar.py \
+            --exclude=SKILL.en.md \
+            --exclude=SKILL.zh-CN.md \
+            "$PATCH"
+      - name: Verify clean production host boundaries
         run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          rm specs/021-production-visibility-enforcement/.host-hardening.patch
+          git add -A
+          git diff --cached --check
+          git commit -m 'fix: enforce released manuscript host boundary'
+          test -z "$(git status --porcelain)"
           python -m unittest \
             tests.test_quillframe_authoring_primitives \
             tests.test_quillframe_production_host_bridge \
             tests.test_quillframe_production_runtime \
             tests.test_quillframe_unified_host_bootstrap -v
           python studio/tauri_core_sidecar.py self-test
-      - name: Commit and remove one-shot machinery
-        run: |
-          rm specs/021-production-visibility-enforcement/.host-hardening.patch .github/workflows/spec021-host-hardening.yml
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git diff --cached --check
-          git commit -m 'fix: enforce released manuscript host boundary'
-          git push origin HEAD:agent/production-visibility-enforcement
+          test -z "$(git status --porcelain)"
+      - name: Push verified ordinary-file commit
+        run: git push origin HEAD:agent/production-visibility-enforcement
