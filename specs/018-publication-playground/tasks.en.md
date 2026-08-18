@@ -11,9 +11,11 @@
 - [x] Expose provenance and authority boundaries
 - [x] Add responsive Kawaii Editorial styling
 - [x] Add publication-specific static quality gate
-- [ ] Run `npm run quality`
-- [ ] Run `npm run build`
-- [ ] Inspect PR CI
+- [x] Run `npm run quality`
+- [x] Run `npm run build`
+- [x] Inspect PR CI
 - [ ] Human acceptance
+
+Verification receipt: PR #113 · Quillframe 0.9 CI run 159 passed Core/SQLite/authority, SolidJS Studio, Product quality, Product build, and docs build on implementation head `2c0aba17ac6a9e600ce7fb70339e7bf8b0847932` before this checklist-only update.
 
 Deferred: Studio/Host Bridge drift, durable Core publication profile migration, release EPUBCheck integration.
