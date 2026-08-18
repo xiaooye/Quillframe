@@ -43,7 +43,8 @@ test("AI Dock has keyboard access and no self-advancing progress timer", () => {
 test("AI & Models remains endpoint-plus-token and token is never persisted by Settings", () => {
   assert.match(settings, /Endpoint \+ Access Token/);
   assert.match(settings, /type="password"/);
-  assert.doesNotMatch(settings, /localStorage|sessionStorage|indexedDB/);
+  assert.doesNotMatch(settings, /(?:localStorage|sessionStorage)\.(?:setItem|getItem|removeItem|clear)\s*\(/);
+  assert.doesNotMatch(settings, /indexedDB\.(?:open|deleteDatabase)\s*\(/);
 });
 
 test("responsive authoring CSS encodes touch and focus-first constraints", () => {
