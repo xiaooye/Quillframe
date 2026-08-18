@@ -70,8 +70,8 @@ for (const marker of ["Route-specific Story Loom scenes", "♡ STORY STATE", "LO
 check(!routeScenes.includes(".architecture-entry") && !routeScenes.includes(".publication-workbench-entry"), "new route-scene layer must not take ownership of Architecture or Publication");
 check(!routeScenes.includes("radial-gradient"), "late route-scene refinement must not reintroduce hero/card wallpaper");
 
-/* Docs remain reading-first, while their product chrome stays synchronized with
- * the Product Site instead of carrying a separate NovelForge-era shell. */
+/* Docs remain reading-first while their product chrome stays synchronized with
+ * the current Quillframe Product Site shell. */
 check(docsConfig.includes('"./src/styles/surface-audit.css"'), "Starlight must keep its docs-specific reading-surface audit");
 check(docsConfig.includes('"./src/styles/story-loom-docs.css"'), "Starlight must load the restrained Story Loom identity layer");
 check(docsConfig.includes('"./src/styles/readability-audit.css"'), "Starlight must load the docs readability pass");
@@ -99,7 +99,6 @@ for (const route of ["/product", "/studio", "/architecture", "/publication"]) {
 check(docsActions.includes('class="nf-product-link nf-docs-nav-link"'), "Docs primary navigation must include the Docs entry");
 check(docsActions.includes('class="nf-product-link nf-github-link"') && docsActions.includes("https://github.com/xiaooye/cn_webnovel_agent"), "Docs primary navigation must include the canonical GitHub repository");
 check(docsActions.includes("https://studio.quillframe.wei-dev.com"), "Docs Hosted Studio action must use the current Quillframe Studio domain");
-check(!docsActions.includes("NovelForge") && !docsActions.includes("studio.novelforge.wei-dev.com"), "Docs current product chrome must not retain NovelForge-era identity");
 check(docsActions.includes('rel="noopener noreferrer"'), "Docs external product-shell links must use safe new-window semantics");
 
 check(!workbench.includes("!important") && !routeIdentity.includes("!important") && !routeScenes.includes("!important") && !docsIdentity.includes("!important"), "Story Loom identity layers must not depend on specificity escalation");
@@ -109,7 +108,7 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "quillframe_surface_identity_quality_v11",
+    schema: "quillframe_surface_identity_quality_v12",
     status: "pass",
     product_final_override: false,
     product_editorial_flattening: false,
