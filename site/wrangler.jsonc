@@ -3,6 +3,12 @@
   "compatibility_date": "2026-08-18",
   "workers_dev": true,
   "preview_urls": true,
+  "routes": [
+    {
+      "pattern": "quillframe.wei-dev.com/*",
+      "zone_name": "wei-dev.com"
+    }
+  ],
   "observability": {
     "enabled": false,
     "head_sampling_rate": 1,
