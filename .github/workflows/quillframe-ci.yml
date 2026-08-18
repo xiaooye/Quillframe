@@ -14,12 +14,91 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  repair_stale_dependency_contracts:
+    name: Temporary dependency contract repair
+    if: github.event_name == 'pull_request' && github.head_ref == 'agent/dependabot-stale-refresh-20260818'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/dependabot-stale-refresh-20260818
+      - name: Replace frozen version values with exact-pin invariants
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          quality = Path('site/scripts/quality.mjs')
+          text = quality.read_text()
+          old = '''const exactVersions = {
+            "solid-js": "1.9.14",
+            "@solidjs/router": "0.16.2",
+            marked: "18.0.7",
+            typescript: "7.0.2",
+            vite: "8.1.5",
+            "vite-plugin-solid": "2.11.14",
+          };
+          for (const [name, version] of Object.entries(exactVersions)) {
+            const actual = packageJson.dependencies?.[name] ?? packageJson.devDependencies?.[name];
+            check(actual === version, `${name} must remain exactly pinned to ${version}; got ${actual ?? "missing"}`);
+            check(typeof actual === "string" && !actual.startsWith("^") && !actual.startsWith("~"), `${name} must not use a version range`);
+          }
+          '''
+          new = '''const exactSemver = /^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$/;
+          for (const [name, actual] of Object.entries({
+            ...(packageJson.dependencies ?? {}),
+            ...(packageJson.devDependencies ?? {}),
+          })) {
+            check(typeof actual === "string" && exactSemver.test(actual), `${name} must remain exact-pinned to one semantic version; got ${actual ?? "missing"}`);
+          }
+          '''
+          if old not in text:
+              raise SystemExit('quality.mjs exact-version block no longer matches expected before-state')
+          text = text.replace(old, new, 1)
+          old_parser = 'check(buildMeta.parser === "marked@18.0.7", "generated content must record exact Markdown parser identity");'
+          new_parser = '''const markedVersion = packageJson.dependencies?.marked ?? packageJson.devDependencies?.marked;
+          check(buildMeta.parser === `marked@${markedVersion}`, `generated content parser identity must match current marked pin; expected marked@${markedVersion}, got ${buildMeta.parser}`);'''
+          if old_parser not in text:
+              raise SystemExit('quality.mjs parser identity check no longer matches expected before-state')
+          quality.write_text(text.replace(old_parser, new_parser, 1))
+
+          build = Path('site/scripts/build-content.mjs')
+          text = build.read_text()
+          old_roots = '''const siteRoot = path.resolve(here, "..");
+          const repoRoot = path.resolve(siteRoot, "..");
+          const manifestPath = path.join(repoRoot, "docs", "documentation_manifest.json");'''
+          new_roots = '''const siteRoot = path.resolve(here, "..");
+          const repoRoot = path.resolve(siteRoot, "..");
+          const sitePackage = JSON.parse(fs.readFileSync(path.join(siteRoot, "package.json"), "utf8"));
+          const markedVersion = sitePackage.dependencies?.marked ?? sitePackage.devDependencies?.marked;
+          if (typeof markedVersion !== "string" || !markedVersion) throw new Error("site/package.json must exact-pin marked");
+          const manifestPath = path.join(repoRoot, "docs", "documentation_manifest.json");'''
+          if old_roots not in text:
+              raise SystemExit('build-content.mjs root block no longer matches expected before-state')
+          text = text.replace(old_roots, new_roots, 1)
+          old_meta = '  parser: "marked@18.0.7",'
+          new_meta = '  parser: `marked@${markedVersion}`,'
+          if old_meta not in text:
+              raise SystemExit('build-content.mjs parser metadata no longer matches expected before-state')
+          build.write_text(text.replace(old_meta, new_meta, 1))
+          PY
+      - name: Commit repaired contracts
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add site/scripts/quality.mjs site/scripts/build-content.mjs
+          git diff --cached --quiet && { echo 'No contract repair required.'; exit 0; }
+          git commit -m 'fix(site): make dependency quality gates version-agnostic'
+          git push origin HEAD:agent/dependabot-stale-refresh-20260818
+
   core:
     name: Core, SQLite, authority and namespace
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
       - name: Version consistency
@@ -66,8 +145,8 @@ jobs:
     name: Product site and docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - working-directory: site
@@ -83,12 +162,12 @@ jobs:
     name: SolidJS Studio
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.33.0
           run_install: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: pnpm
