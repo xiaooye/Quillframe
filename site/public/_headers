@@ -1,6 +1,6 @@
 /*
-  Link: </llms.txt>; rel="alternate"; type="text/plain"
-  Link: </sitemap.xml>; rel="sitemap"; type="application/xml"
+  Link: </llms.txt>; rel="alternate"; type="text/plain", </sitemap.md>; rel="sitemap"; type="text/markdown", </sitemap.xml>; rel="sitemap"; type="application/xml"
+  Content-Signal: search=yes, ai-input=yes, ai-train=no
 
 /llms.txt
   Content-Type: text/plain; charset=utf-8
@@ -8,6 +8,10 @@
 
 /llms-full.txt
   Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=3600
+
+/sitemap.md
+  Content-Type: text/markdown; charset=utf-8
   Cache-Control: public, max-age=3600
 
 /auth.md

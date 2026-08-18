@@ -1,4 +1,17 @@
+# Quillframe public content is available for search and real-time AI reference,
+# but the repository license does not grant AI training/fine-tuning rights.
 User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=no
+Allow: /
+
+# Explicitly keep common AI discovery/fetch agents crawlable for permitted use.
+User-agent: GPTBot
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: Google-Extended
+Allow: /
+User-agent: CCBot
 Allow: /
 
 Sitemap: https://quillframe.wei-dev.com/sitemap.xml
