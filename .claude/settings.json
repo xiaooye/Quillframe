@@ -1,4 +1,9 @@
 {
+  "permissions": {
+    "ask": [
+      "Skill"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
