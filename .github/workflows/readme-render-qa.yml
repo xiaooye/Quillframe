@@ -1,0 +1,54 @@
+name: README Render QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'README.en.md'
+      - 'README.zh-CN.md'
+      - 'assets/brand/**'
+      - 'docs/assets/**'
+      - 'scripts/github_readme_render_qa.cjs'
+      - '.github/workflows/readme-render-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: readme-render-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  github-render:
+    name: GitHub README light/dark/narrow
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      README_REPO: ${{ github.repository }}
+      README_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      README_QA_DIR: ${{ runner.temp }}/quillframe-readme-qa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install pinned Playwright renderer
+        run: |
+          mkdir -p "${README_QA_DIR}/npm"
+          cd "${README_QA_DIR}/npm"
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright@1.60.0
+          npx playwright install --with-deps chromium
+      - name: Capture actual GitHub-rendered README
+        env:
+          NODE_PATH: ${{ runner.temp }}/quillframe-readme-qa/npm/node_modules
+        run: node scripts/github_readme_render_qa.cjs
+      - name: Upload visual evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: github-readme-render-${{ env.README_SHA }}
+          path: ${{ env.README_QA_DIR }}/evidence
+          if-no-files-found: error
+          retention-days: 14
