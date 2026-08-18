@@ -225,7 +225,10 @@ def _revisions_list(args: dict[str, Any], _: str):
 
 
 def _revision_save(args: dict[str, Any], _: str):
-    return store().save_revision(require(args, "project_id"), require(args, "document_id"), require(args, "content"), expected_parent_revision_id=args.get("expected_parent_revision_id"), source=require(args, "source"), authority_class=args.get("authority_class") or "proposal", provenance=args.get("provenance") if isinstance(args.get("provenance"), dict) else {})
+    source = require(args, "source")
+    if source == "production_runtime":
+        raise BridgeError("reserved_provenance", "production_runtime provenance is Core-owned and cannot be supplied through document.revision.save")
+    return store().save_revision(require(args, "project_id"), require(args, "document_id"), require(args, "content"), expected_parent_revision_id=args.get("expected_parent_revision_id"), source=source, authority_class=args.get("authority_class") or "proposal", provenance=args.get("provenance") if isinstance(args.get("provenance"), dict) else {})
 
 
 def _revision_compare(args: dict[str, Any], _: str):
@@ -314,6 +317,9 @@ def _model_delete(args: dict[str, Any], _: str):
 
 def _candidate_review_get(args: dict[str, Any], _: str):
     return ops().candidate_review_get(require(args, "project_id"), candidate_id=require(args, "candidate_id"))
+
+def _candidate_visible_get(args: dict[str, Any], _: str):
+    return ops().candidate_visible_get(require(args, "project_id"), candidate_id=require(args, "candidate_id"))
 
 
 def _candidate_reject(args: dict[str, Any], _: str):
@@ -416,6 +422,7 @@ DISPATCH: dict[str, Callable[[dict[str, Any], str], dict[str, Any]]] = {
     "model.service.delete": _model_delete,
     "model.capabilities": _model_capabilities,
     "candidate.review.get": _candidate_review_get,
+    "candidate.visible.get": _candidate_visible_get,
     "candidate.accept": _candidate_accept,
     "candidate.reject": _candidate_reject,
     "candidate.revision.request": _candidate_revision_request,
@@ -503,7 +510,7 @@ def self_test() -> dict[str, Any]:
     first = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "A"}, "authority": False})
     second = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "B"}, "authority": False})
     ok = desc["status"] == "ok" and generic["status"] == "invalid" and desc["authority"] is False and first["request_fingerprint"] == second["request_fingerprint"] and first["secret_values_persisted"] is False
-    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": "8", "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
+    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": "9", "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
 
 
 def main() -> int:

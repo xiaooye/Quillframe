@@ -122,6 +122,9 @@ Important boundaries:
 - `repair_policy.py` only enforces the resulting writer-context boundary.
 - Any material candidate change invalidates stale fingerprint-bound review results.
 - Explicit acceptance and SETTLE remain separate.
+- DRAFT / REVISE manuscript text must come from a real production runtime and a Core-owned release path; manager/host prose written after merely reading the rules is not Quillframe execution.
+- `candidate.visible.get` (or an equivalent Core-owned released projection) is the production manuscript release boundary; missing receipts, fingerprint mismatch, pending/fail, or stale state must return no manuscript text.
+- An ephemeral host that materializes Framework locally must prove the exact locked Git identity; runtime SQLite does not become Project/Canon authority.
 
 When the user gives feedback during production, the current explicit instruction constrains the current run immediately; the same turn may independently enter automatic Learning intake. Current compliance never waits for durable promotion.
 

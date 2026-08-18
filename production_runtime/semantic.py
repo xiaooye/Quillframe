@@ -26,6 +26,7 @@ from semantic_worker_router import make_contract_job, validate_result, worker_jo
 from quality.candidate_qualification import evaluate as evaluate_qualification  # noqa: E402
 from quality.candidate_qualification import validate_qualification_receipt  # noqa: E402
 from quality.production_readiness import evaluate as evaluate_production_readiness  # noqa: E402
+from quality.production_release import aggregate as aggregate_production_release  # noqa: E402
 
 
 class RegisteredSemanticExecutor:
@@ -318,3 +319,44 @@ def final_readiness(
         })
     except ValueError as exc:
         raise ProductionRunError("production_readiness_invalid", str(exc)) from exc
+
+
+def final_release(
+    *,
+    production_readiness: dict[str, Any],
+    qualification_receipt: dict[str, Any],
+    candidate_fingerprint: str,
+    context_bundle_fingerprint: str,
+    freeze_fingerprint: str,
+    user_visible_gate_receipt_fingerprint: str,
+) -> dict[str, Any]:
+    """Aggregate semantic readiness with structural execution receipts.
+
+    This is the only release object that can authorize manuscript visibility.
+    A semantic PASS or user-visible stage receipt alone is insufficient.
+    """
+    structural_receipts = [
+        {
+            "kind": "context_assembly",
+            "status": "pass",
+            "candidate_fingerprint": candidate_fingerprint,
+            "receipt_fingerprint": context_bundle_fingerprint,
+            "evidence_refs": [f"context_bundle:{context_bundle_fingerprint}", f"freeze:{freeze_fingerprint}"],
+        },
+        {
+            "kind": "user_visible_gate",
+            "status": "pass",
+            "candidate_fingerprint": candidate_fingerprint,
+            "receipt_fingerprint": user_visible_gate_receipt_fingerprint,
+            "evidence_refs": [f"user_visible_gate:{user_visible_gate_receipt_fingerprint}"],
+        },
+    ]
+    try:
+        return aggregate_production_release({
+            "production_readiness": production_readiness,
+            "pre_independent_qualification": qualification_receipt,
+            "structural_policy": {"required_receipts": ["context_assembly", "user_visible_gate"]},
+            "structural_receipts": structural_receipts,
+        })
+    except ValueError as exc:
+        raise ProductionRunError("production_release_invalid", str(exc)) from exc

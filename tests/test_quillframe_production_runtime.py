@@ -270,6 +270,8 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.assertFalse(completed["raw_draft_visible"])
         self.assertFalse(completed["accepted"])
         self.assertFalse(completed["settled"])
+        self.assertTrue(completed["production_release"]["ready_for_user_visible_review"])
+        self.assertEqual(completed["production_release"]["candidate_fingerprint"], completed["candidate"]["candidate_fingerprint"])
         self.assertEqual(
             tuple(PRODUCTION_MECHANISMS),
             tuple(x for x in MANDATORY_PRODUCTION_MECHANISMS if x != "context_freeze"),
@@ -285,6 +287,10 @@ class ProductionRuntimeTests(unittest.TestCase):
             self.assertEqual(candidate["user_visible_gate"], "PASS")
             self.assertEqual(evidence["independent"], 1)
             self.assertEqual(evidence["evidence_kind"], "quality.production_review")
+            release_rows = conn.execute("SELECT payload_json FROM receipts WHERE run_id=? AND receipt_kind='production_release'", (run_id,)).fetchall()
+            self.assertEqual(len(release_rows), 1)
+        visible = CoreOperations(self.store).candidate_visible_get("PROD", candidate_id=completed["candidate"]["candidate_id"])
+        self.assertEqual(visible["content"], "Review prose ready for the user-visible gate.")
 
     def test_stage_materializer_has_no_database_access_path(self):
         source = inspect.getsource(ProductionRunExecutor.materialize_stage_context).lower()

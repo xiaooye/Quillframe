@@ -1,0 +1,25 @@
+# Tasks 021 · Production Visibility Enforcement / 生产可见性强制
+
+- [x] 将 SYSTEM-IMPROVE 基线冻结在 `c6832365be6c4e3816b9c779dd0c2aa88b42cab9`。
+- [x] 建立隔离实现分支与 Draft PR #143。
+- [x] 用本地 smoke harness 证明最小 visibility invariant：未 release candidate 响应中没有 content。
+- [x] 修正 runtime artifact：绑定 PR head SHA并保留可验证 shallow Git identity。
+- [x] 将 exact-head artifact 下载进隔离 Linux runtime；验证 digest、Git HEAD，并通过 102/102 baseline tests。
+- [x] 将 `quality.production_release` 接入最终 production execution 并持久化 release receipt。
+- [x] 新增 Core `candidate_visible_get`，失败条件 fail closed 且隐藏 content。
+- [x] 新增 Host Bridge `candidate.visible.get` 并升级 contract v9。
+- [x] 阻止 `agent_package` 枚举可能包含 pre-release `candidate_text` 的 raw production checkpoints。
+- [x] 增加 missing/tampered/mismatched release、checkpoint leak 与 valid release regression tests；本地 clean overlay 106/106 PASS。
+- [x] 修复 Tauri sidecar 对 Host Bridge v8 的硬编码 self-test。
+- [x] 用真实 localhost Model Service relay 将 DRAFT pre-independent graph 跑到 `awaiting_external / independent_semantic_review`，期间 Raw Draft/Candidate 不可见。
+- [x] 将实测 localhost relay 收入 Framework，使用 loopback + atomic request/response，并声明 manager-only / non-independent provenance。
+- [x] 修复 Project peer receipt CLI 缺失的 `build/validate` 执行面。
+- [x] 注册 `github_models` 为可审计 independent provider，并为 Project peer action 增加 automated `review` mode。
+- [x] 对 `rule_material` 增加 registered-contract deterministic fail-fast preflight，并增加回归测试。
+- [ ] 最新 Framework head 完整 Python/Core/Host Bridge/Studio/site/Tauri CI 全绿。
+- [ ] 下载最新 exact-head artifact，在 ChatGPT Linux container 重跑最终完整 tests。
+- [ ] 在 private consumer Project 中用 `models: read` 做一次真实 GitHub Models peer inference，得到 fingerprint/nonce-bound validation receipt。
+- [ ] 将该 receipt/result 提交给等待中的 DRAFT run，验证 final production release 与 `candidate.visible.get`。
+- [ ] 用完整项目 hard-rule material 跑新的校园剧 DRAFT，只在 release 后向用户展示做质量 review。
+- [ ] 将最终验证证据写入 PR，全部验收项通过后标记 ready/merge。
+- [ ] Consumer Project repin 作为独立工程 run 执行；本 SYSTEM-IMPROVE run 不修改 Canon。

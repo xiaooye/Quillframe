@@ -53,7 +53,7 @@ A process-local `MemorySecretStore` is not sufficient for Desktop production acc
 Do not call Desktop production-ready until a separate host implementation proves:
 
 - Tauri 2 app compiles against the current Studio build;
-- `bridge_invoke` round-trips a real `bridge.describe` Host Bridge v8 request;
+- `bridge_invoke` round-trips a real `bridge.describe` Host Bridge v9 request;
 - Python Core is packaged/launched as a sidecar rather than reimplemented in Rust;
 - OS-native secret set/get/delete works and survives app restart;
 - Model Service reconnect after restart resolves its durable `credential_ref` without storing plaintext in SQLite;

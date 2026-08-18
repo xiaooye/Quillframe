@@ -6,9 +6,9 @@ from studio import host_bridge
 
 
 class ProductionHostBridgeTests(unittest.TestCase):
-    def test_v8_contract_exposes_authoring_production_and_model_service_primitives(self):
+    def test_v9_contract_exposes_authoring_production_and_model_service_primitives(self):
         contract = host_bridge.contract()
-        self.assertEqual(contract["version"], "8")
+        self.assertEqual(contract["version"], "9")
         for operation in (
             "author.run.execute",
             "author.run.status",
@@ -24,6 +24,7 @@ class ProductionHostBridgeTests(unittest.TestCase):
             "project.list",
             "document.list",
             "candidate.review.get",
+            "candidate.visible.get",
             "candidate.reject",
             "candidate.revision.request",
             "settlement.preflight",
@@ -45,6 +46,9 @@ class ProductionHostBridgeTests(unittest.TestCase):
         self.assertFalse(contract["invariants"]["independent_review_same_runtime_substitution"])
         self.assertEqual(contract["deferred_operations"]["project.delete"]["status"], "unsupported")
         self.assertFalse(contract["secret_boundary"]["cloudflare_required"])
+        self.assertTrue(contract["invariants"]["manuscript_visibility_requires_production_release"])
+        self.assertFalse(contract["invariants"]["host_self_generated_manuscript_is_releaseable"])
+        self.assertTrue(contract["invariants"]["ephemeral_runtime_exact_git_identity_required"])
 
     def test_access_token_is_redacted_from_fingerprint_but_business_authorization_is_bound(self):
         secret_a = "QF-SECRET-SENTINEL-111"
@@ -148,10 +152,28 @@ class ProductionHostBridgeTests(unittest.TestCase):
             self.assertEqual(out["status"], "invalid")
             self.assertIn("not authorized", " ".join(out["error"]["messages"]))
 
+
+    def test_host_cannot_fabricate_production_runtime_provenance(self):
+        out = host_bridge.invoke({
+            "schema": host_bridge.REQUEST_SCHEMA,
+            "request_id": "reserved-production-source",
+            "operation": "document.revision.save",
+            "surface": "agent_package",
+            "args": {
+                "project_id": "missing",
+                "document_id": "missing",
+                "content": "host-authored substitute",
+                "source": "production_runtime",
+            },
+            "authority": False,
+        })
+        self.assertEqual(out["status"], "failed")
+        self.assertEqual(out["error"]["code"], "reserved_provenance")
+
     def test_self_test_passes_without_live_network(self):
         report = host_bridge.self_test()
         self.assertEqual(report["quillframe_host_bridge_contract"], "PASS")
-        self.assertEqual(report["contract_version"], "8")
+        self.assertEqual(report["contract_version"], "9")
         self.assertTrue(report["secret_value_fingerprint_independent"])
 
 

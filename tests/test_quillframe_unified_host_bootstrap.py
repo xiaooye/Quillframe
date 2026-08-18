@@ -132,7 +132,10 @@ class UnifiedHostBootstrapTests(unittest.TestCase):
             first = host_scaffold.install_project_hosts(project)
             self.assertTrue(first["installed"])
             self.assertIn(".codex/hooks.json", first["changed"])
-            self.assertIn("QF_SESSION_ID", (project / "AGENTS.md").read_text(encoding="utf-8"))
+            agents_text = (project / "AGENTS.md").read_text(encoding="utf-8")
+            self.assertIn("QF_SESSION_ID", agents_text)
+            self.assertIn("never synthesize a Quillframe manuscript", agents_text)
+            self.assertIn("candidate.visible.get", agents_text)
             codex = json.loads((project / ".codex" / "hooks.json").read_text(encoding="utf-8"))
             self.assertEqual(codex["hooks"]["PreToolUse"][0]["matcher"], "Bash|apply_patch|Edit|Write")
 

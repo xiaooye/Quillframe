@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Machine receipt for Project-owned peer semantic validation.
 
-The peer-chat relay proves job/result/nonce binding. The Project-hosted bridge
-adds consuming-Project and exact-Framework provenance plus an auditable GitHub
+The peer relay proves job/result/nonce binding. The Project-hosted bridge adds
+consuming-Project and exact-Framework provenance plus an auditable GitHub
 runtime trace. This receipt is deterministic evidence bound to the exact result;
 it is not a cryptographic signature, literary judgment, or Canon authority.
 """
@@ -15,8 +15,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from peer_chat_relay import validate_peer_result
-from registered_contract_binding import validate_registered_job
+HERE = Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+
+from peer_chat_relay import validate_peer_result  # noqa: E402
+from registered_contract_binding import validate_registered_job  # noqa: E402
 
 SCHEMA = "quillframe_project_peer_validation_receipt_v1"
 
@@ -100,8 +104,6 @@ def build_receipt(
     issue_number: int,
     runtime_trace: dict[str, Any],
 ) -> dict[str, Any]:
-    from peer_chat_relay import validate_peer_result
-
     job = packet.get("job")
     if not isinstance(job, dict):
         raise ValueError("peer packet job required")
@@ -226,6 +228,22 @@ def validate_receipt(receipt: Any, packet: dict[str, Any], result: dict[str, Any
     return errors
 
 
+def _read_object(path: Path, name: str) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError(f"{name} must be JSON object")
+    return value
+
+
+def _write(value: dict[str, Any], path: Path | None) -> None:
+    text = json.dumps(value, ensure_ascii=False, indent=2) + "\n"
+    if path is None:
+        print(text, end="")
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+
 def self_test() -> dict[str, Any]:
     from peer_chat_relay import build as build_packet
     from semantic_worker_router import make_contract_job
@@ -258,7 +276,7 @@ def self_test() -> dict[str, Any]:
         "kind": job["kind"],
         "input_fingerprint": job["input_fingerprint"],
         "status": "completed",
-        "worker": {"provider": "chatgpt_peer_chat", "model_or_reviewer": "fixture", "run_reference": packet["relay_nonce"]},
+        "worker": {"provider": "github_models", "model_or_reviewer": "fixture", "run_reference": packet["relay_nonce"]},
         "judgment": {"confidence": 0.9, "result": "pass", "report": "fixture", "evidence_refs": ["fixture"]},
         "proposals": [],
         "errors": [],
@@ -307,13 +325,48 @@ def self_test() -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["self-test"])
+    sub = parser.add_subparsers(dest="command", required=True)
+    build = sub.add_parser("build")
+    build.add_argument("--packet", required=True)
+    build.add_argument("--result", required=True)
+    build.add_argument("--project-id", required=True)
+    build.add_argument("--project-repo", required=True)
+    build.add_argument("--framework-repo", required=True)
+    build.add_argument("--framework-commit", required=True)
+    build.add_argument("--issue-number", required=True, type=int)
+    build.add_argument("--runtime-trace", required=True)
+    build.add_argument("--output")
+    validate = sub.add_parser("validate")
+    validate.add_argument("--receipt", required=True)
+    validate.add_argument("--packet", required=True)
+    validate.add_argument("--result", required=True)
+    sub.add_parser("self-test")
     args = parser.parse_args()
+
     if args.command == "self-test":
         value = self_test()
-        print(json.dumps(value, ensure_ascii=False, indent=2))
+        _write(value, None)
         return 0 if value["peer_bridge_receipt_contract"] == "PASS" else 1
-    return 1
+    if args.command == "build":
+        receipt = build_receipt(
+            _read_object(Path(args.packet), "packet"),
+            _read_object(Path(args.result), "result"),
+            project_id=args.project_id,
+            project_repo=args.project_repo,
+            framework_repo=args.framework_repo,
+            framework_commit=args.framework_commit,
+            issue_number=args.issue_number,
+            runtime_trace=_read_object(Path(args.runtime_trace), "runtime_trace"),
+        )
+        _write(receipt, Path(args.output) if args.output else None)
+        return 0
+    errors = validate_receipt(
+        _read_object(Path(args.receipt), "receipt"),
+        _read_object(Path(args.packet), "packet"),
+        _read_object(Path(args.result), "result"),
+    )
+    _write({"valid": not errors, "errors": errors}, None)
+    return 0 if not errors else 1
 
 
 if __name__ == "__main__":
