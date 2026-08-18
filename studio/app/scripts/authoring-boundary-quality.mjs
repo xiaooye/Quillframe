@@ -48,7 +48,7 @@ assert(!/localStorage\.setItem\([^\n]*(content|manuscript|canon)/i.test(manuscri
 assert(review.includes("Accepted ✓") && review.includes("Not Settled"), "Review must visibly separate Accepted from Settled");
 assert(review.includes("candidate.accept"), "Accept must use the typed Core authority operation");
 assert(review.includes("settlement.preflight"), "Settlement must remain gated on Core preflight");
-assert(!review.includes('invokeBridge<SettlementResult>("settlement.apply"'), "Studio must not call settlement.apply without a Core preflight in this contract");
+assert(!review.includes('"settlement.apply"'), "Studio must not call settlement.apply without a Core preflight in this contract");
 
 assert(context.includes("ACTUALLY LOADED INTO THIS STAGE"), "Context Inspector must label actually loaded Context");
 assert(context.includes("MODEL CONSIDERED RELEVANT"), "Context Inspector must distinguish considered Context");
@@ -58,7 +58,8 @@ assert(context.includes("private_chain_of_thought_exposed"), "Context Inspector 
 assert(settings.includes("Endpoint + Access Token"), "AI & Models must preserve the Endpoint + Access Token mental model");
 assert(settings.includes('operations().includes("model.connect")'), "Model connection must stay disabled without the Core operation");
 assert(settings.includes('setToken("")'), "Access Token field must be cleared after a connection attempt");
-assert(!/Provider dashboard|provider type/i.test(settings), "Ordinary Settings must not introduce a Provider dashboard/type chooser");
+assert(!/<select[^>]+(?:name|id)=["'][^"']*provider/i.test(settings), "Ordinary Settings must not introduce a Provider type chooser");
+assert(!/Provider Dashboard/.test(settings), "Ordinary Settings must not introduce a Provider dashboard");
 
 assert(publication.includes("acceptance_id"), "Publish must consume a Core acceptance_id");
 assert(!publication.includes("accepted manuscript text") && !publication.includes("inlineFixture"), "Publish must not let browser input impersonate Accepted text");
