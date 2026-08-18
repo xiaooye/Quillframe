@@ -1,0 +1,32 @@
+# 任务清单 — Quillframe 0.9.0 重构
+
+- [x] 冻结精确最新 main，并创建专用分支。
+- [x] 盘点 0.8 的 Godot/SolidJS/兼容层/命名空间/Bridge/版本/持久化/部署状态。
+- [x] 创建无合并授权的 Draft PR。
+- [x] 写入 0.9 架构规格与实施计划。
+- [ ] 落地非 workflow 全仓迁移并验证 Godot 源码删除。
+- [ ] 删除/替换 Godot、baseline、shadow 与旧命名空间 workflow。
+- [ ] 增加确定性的版本与命名空间卫生 gate。
+- [ ] 建立当前 Quillframe Python package/CLI，普通 runtime 不回退旧格式。
+- [ ] 建立全局/项目 SQLite schema 与有 checksum 的顺序迁移。
+- [ ] 建立文档修订、冲突检测、FTS5 搜索和 blob 指纹。
+- [ ] 建立 Doctor/Doctor --fix、备份、恢复和完整性测试。
+- [ ] 建立显式 0.8 → 0.9 项目迁移工具。
+- [ ] 以类型化、操作专用命令重建 Host Bridge。
+- [ ] 为所有作者 task mode 建立真实 run dispatch 与权威不变量。
+- [ ] 把接受和 Settlement 实现为两个独立操作。
+- [ ] 实现反馈自动 intake，但不自动 promotion。
+- [ ] 重构 Studio Writer Mode 与响应式 shell。
+- [ ] 实现正文、规划、故事设定、评审、研究与语料、学习、发布。
+- [ ] 实现 AI Assistant Dock 与 Inspector Mode。
+- [ ] 加入轻量 Tauri 2 宿主。
+- [ ] 加入 localhost/server 认证引导和持久卷 Docker 部署。
+- [ ] 重写当前 0.9 文档和迁移/部署/数据/Studio 文档。
+- [ ] 加入当前 Framework/Site/Studio/Tauri/Persistence CI 与负向 gate。
+- [ ] 在手机/平板/桌面/宽桌面执行主要路由视觉 QA。
+- [ ] 执行自然中文、可访问性与键盘 QA。
+- [ ] 实测 site/Studio bundle、路由 chunk、idle request 与可行的桌面体积/启动证据。
+- [ ] 删除所有仓库迁移期 bootstrap 机制。
+- [ ] 审计剩余 Godot/NovelForge 出现，并逐项说明历史合理性。
+- [ ] 跑完整 CI 并修复失败。
+- [ ] 用最终证据更新 PR 并报告 merge readiness；不得 merge。
