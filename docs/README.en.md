@@ -6,11 +6,17 @@ Quillframe documentation starts with a mental model, then descends into contract
 
 ## Start here
 
-Begin with [Architecture](architecture.en.md), then [Production Pipeline](production-pipeline.en.md) and [Quality Assurance](quality-assurance.en.md). Those three pages explain the runtime boundaries that prevent a long project from collapsing plan, draft, evidence, and Canon into one undifferentiated memory.
+Begin with [Why Quillframe](why-quillframe.en.md) and [Architecture](architecture.en.md), then [Production Pipeline](production-pipeline.en.md) and [Quality Assurance](quality-assurance.en.md). Those pages explain the product boundary and why a long project cannot collapse plan, draft, evidence, runtime state, and Canon into one undifferentiated memory.
 
 ## Core concepts
 
 [Architecture Atlas](architecture-atlas.en.md) maps generic mechanisms to their implementation owners. [Canon State](../core/CANON_STATE.en.md) is the normative authority contract. [Candidate Lineage](CANDIDATE_LINEAGE_V1.en.md) explains how candidate ancestry and exact review binding remain non-authoritative provenance.
+
+## Model and Agent Runtime
+
+[Model Runtime](https://github.com/xiaooye/cn_webnovel_agent/blob/main/docs/model-runtime.en.md) explains the ordinary `API Endpoint + Access Token` connection surface, model/protocol discovery, capability evidence, secret handling, and inference transport. [Agent Runtime](https://github.com/xiaooye/cn_webnovel_agent/blob/main/docs/agent-runtime.en.md) explains AgentJob/Result, the Quillframe-owned model → tool → model loop, tool permissions, checkpoints, receipts, and the embeddable `quillframe` Python library.
+
+Provider/vendor identity is diagnostic metadata at most. External models provide inference; Quillframe owns runtime semantics, tools, Context, authority, and project state.
 
 ## Writing
 
@@ -20,7 +26,7 @@ Begin with [Architecture](architecture.en.md), then [Production Pipeline](produc
 
 [Quality Assurance](quality-assurance.en.md) explains release truth and pre-independent qualification. [Quality Evolution](quality-evolution.en.md) covers incumbent/challenger comparison, objective preservation, regression protection, and stopping behavior. [Eval Reference](../evals/README.en.md) describes deterministic and semantic evaluation boundaries.
 
-## Canon & settlement
+## Canon & Settlement
 
 [Canon State](../core/CANON_STATE.en.md) defines authority classes. Settlement is a separate authorized transaction: explicit acceptance, exact before/after intent, current-state compare-and-swap, required projections, and post-condition validation.
 
@@ -48,12 +54,16 @@ Corpus is evidence, not Canon. Research truth is not automatic character knowled
 
 [Project SDK](project-sdk.en.md), [Project Adapters](project-adapters.en.md), [Project Adapter Protocol](../harness/PROJECT_ADAPTER_PROTOCOL.en.md), and [Framework Bundle](../release/FRAMEWORK_BUNDLE.en.md) define how a novel stays independently reproducible without importing its private facts into the generic framework.
 
+## Studio
+
+[Studio overview](../studio/README.en.md) describes the current SolidJS authoring shell and typed Host Bridge. Studio consumes Core contracts; UI state and browser persistence do not become a second authority system.
+
 ## Development
 
-[8.0 Development Inventory](8-0-development-inventory.en.md), [Agent Framework Adoption](../knowledge/AGENT_FRAMEWORK_ADOPTION.en.md), and the [Changelog](../CHANGELOG.en.md) record current evolution. Historical specs remain historical records even when the public brand changes.
+[8.0 Development Inventory](8-0-development-inventory.en.md), [Agent Framework Adoption](../knowledge/AGENT_FRAMEWORK_ADOPTION.en.md), and the [Changelog](../CHANGELOG.en.md) record current evolution. Historical specs remain historical records even when product architecture and public branding change.
 
 ## Reference
 
 Operational authority lives in [SKILL](../SKILL.en.md), [Harness Agent](../harness/HARNESS_AGENT.en.md), schemas, implementation modules, and tests. Documentation authoring follows the [Documentation Standard](DOCUMENTATION_STANDARD.en.md) and [Documentation QA](DOCUMENTATION_QA.en.md).
 
-The stable filename `why-quillframe.en.md` remains as a compatibility route; its current content explains [why Quillframe](why-quillframe.en.md) and the retained technical namespace.
+**Quillframe** is the current product identity and `quillframe` is the current technical namespace. Historical records may retain `NovelForge` where changing the name would damage provenance; active product guidance should not use it as the current identity.
