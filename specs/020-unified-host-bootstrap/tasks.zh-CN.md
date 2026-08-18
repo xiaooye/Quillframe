@@ -22,8 +22,9 @@
 - [x] T020 新增 `quillframe host-run status|begin` deterministic CLI。
 - [x] T021 验证 exactly one 合法 task mode，并启动 exactly one manager run。
 - [x] T022 没有 valid authority + active task mode/run 时拒绝 consequential writes。
-- [x] T023 mode 未解析前只允许严格匹配 Quillframe bootstrap command，拒绝 lookalike shell command。
+- [x] T023 mode 未解析前只允许严格匹配 Quillframe run-bootstrap command，拒绝 shell-chained lookalike。
 - [x] T024 把 Codex `apply_patch` 视为 consequential edit。
+- [x] T025 修复 Generic Framework → fiction Project bootstrap deadlock：pre-mode 只额外允许外部 target + id/title 的严格 `init` escape，不允许 `--force` / shell chaining，继续服从宿主正常 approval，创建后必须从新 Project 重启宿主。
 
 ## Phase 4 · Host Scaffolding
 
@@ -35,14 +36,14 @@
 
 ## Phase 5 · Verification
 
-- [x] T040 增加 deterministic unified-host regression tests，覆盖 Claude/Codex parity、typed session、task mode、run、write gate、stale authority、hook alias 与 retrofit。
+- [x] T040 增加 deterministic unified-host regression tests，覆盖 Claude/Codex parity、typed session、task mode、run、write gate、stale authority、hook alias、retrofit 与 Framework→consumer init escape。
 - [x] T041 compatibility repair 后确认既有 Project SDK/bootstrap tests 保持 green。
 - [x] T042 确认 normal CI 不执行 live model/API。
-- [x] T043 跑 Core/SQLite/authority、docs/site 与 Studio CI；run 705 全部 green。
+- [x] T043 跑 Core/SQLite/authority、docs/site 与 Studio CI；run 705 在最终 init-escape hardening 前已全绿，最终 candidate 仍须再次全绿才能验收。
 
 ## Phase 6 · Documentation / Acceptance
 
 - [x] T050 同步 Project SDK/integration 中英文文档，包括 Codex hook trust 指引。
 - [x] T051 审查 exact changed-file set：变更只落在 host/runtime/CLI/tests/docs/spec surfaces；没有修改 Project Canon、Settlement、provider secret 或 Studio UI 路径。
 - [x] T052 已打开隔离于 `main` 的 draft review PR #141。
-- [ ] T053 只有用户明确接受后才 mark ready / merge；在此之前保持 candidate 可审查，不修改 `main`。
+- [ ] T053 只有最终 candidate CI 全绿且用户明确接受后才 mark ready / merge；在此之前保持 candidate 可审查，不修改 `main`。
