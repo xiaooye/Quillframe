@@ -61,10 +61,12 @@ check(productApp.includes('href: "/inspect"') && productApp.includes('href: "/pl
 for (const marker of ["Story Loom workstation language", "PROJECT FILES", "open notebook + execution sheet", "host rail + wiring desk"]) {
   check(workbench.includes(marker), `workbench Story Loom identity missing ${marker}`);
 }
+check(!workbench.includes("radial-gradient"), "Inspector/Playground/Agent workstation layer must not paint route-level radial wallpaper");
 for (const marker of ["Route-specific Story Loom scenes", "♡ STORY STATE", "LOCAL ONLY", "AGENT PATCH BAY"]) {
   check(routeScenes.includes(marker), `route Story Loom scene missing ${marker}`);
 }
 check(!routeScenes.includes(".architecture-entry") && !routeScenes.includes(".publication-workbench-entry"), "new route-scene layer must not take ownership of Architecture or Publication");
+check(!routeScenes.includes("radial-gradient"), "late route-scene refinement must not reintroduce hero/card wallpaper");
 
 /* Docs remain reading-first, but their chrome and landing share Story Loom identity. */
 check(docsConfig.includes('"./src/styles/surface-audit.css"'), "Starlight must keep its docs-specific reading-surface audit");
@@ -89,11 +91,13 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(JSON.stringify({
-    schema: "quillframe_surface_identity_quality_v9",
+    schema: "quillframe_surface_identity_quality_v10",
     status: "pass",
     product_final_override: false,
     product_editorial_flattening: false,
     route_wallpaper_layer_active: false,
+    route_scene_wallpaper: false,
+    workbench_wallpaper: false,
     canvas_first_route_hero: true,
     giant_hero_card: false,
     screenshot_era_home_dom: true,
