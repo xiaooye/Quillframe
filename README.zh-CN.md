@@ -86,17 +86,39 @@ Settlement → 持久项目状态
 Quillframe
  ├─ 创作工作流
  ├─ Story / Character / Relationship / Canon / Context
- ├─ Runtime / Quality / Learning / Settlement
+ ├─ Agent Runtime / Quality / Learning / Settlement
  └─ 持久项目状态
  ↕
-模型推理
+Model API
 ```
 
-模型不在 Quillframe 的 authority chain 上方。它只是为某个 Quillframe-owned operation 提供 inference。
+Model API 不在 Quillframe 的 authority chain 上方。它只是为某个 Quillframe-owned operation 提供 inference。
 
-0.9 的发展方向是把模型连接面继续收窄成 **API Endpoint + Access Token**；无认证本地 endpoint 时 token 可以为空。Session、Context、Tools、Execution Contract、Authority 与 Agent Loop 仍由 Quillframe 自己负责。这个 Quillframe-owned Model Runtime 正在独立开发，**尚未合并进当前冻结的 0.9.0 `main`**。
+### 2 · 模型连接：用户只需要两个输入
 
-### 2 · Framework、Studio 与持久状态
+当前 Quillframe Model Runtime 的普通设置面只有：
+
+```text
+API Endpoint
+Access Token
+```
+
+无认证本地 endpoint 时，`Access Token` 可以为空。Protocol discovery、model discovery、capability evidence、model selection、tool execution、Session/Run/Checkpoint 身份，以及 model → tool → model loop 都由 Quillframe 自己负责，而不是交给 provider。Provider/vendor identity 最多只是诊断 provenance，不是 runtime authority，也不是 onboarding input。
+
+解析后的 token 不会被持久化到 SQLite、prompt、Context、AgentJob/Result、checkpoint、receipt 或 fingerprint；durable Model Service 只保存 credential reference，真正 secret 在需要 inference 时由 host 即时解析。
+
+<details>
+<summary><strong>Wire protocol 细节</strong></summary>
+
+当前 codec 覆盖 OpenAI Chat Completions、OpenAI Responses 与 Anthropic Messages。这里描述的是 wire protocol family，不是 provider identity。能够列出模型，只能证明 model discovery；tools、vision、structured output、context limit 等能力仍需要独立 evidence。
+
+Normal CI 不会调用付费/在线 Model API。Live compatibility probe 必须显式 opt-in，而且结果只是带时间戳、绑定具体 endpoint/model 的 evidence，不会被当成永久能力事实。
+
+详见 [Model Runtime](docs/model-runtime.zh-CN.md) 与 [Agent Runtime](docs/agent-runtime.zh-CN.md)。
+
+</details>
+
+### 3 · Framework、Studio 与持久状态
 
 当前架构不允许 UI 直接把 SQLite 当应用 API：
 
@@ -110,13 +132,13 @@ SolidJS Studio / host surface
         SQLite
 ```
 
-Tauri 2 thin host 是当前桌面 architecture direction；但冻结的 `0.9.0` 基线中，真正已经存在的是 SolidJS Local Web / cloud UI 与 Python typed Host Bridge，而不是一个已经完成的 Tauri wrapper。
+Tauri 2 thin host 是当前桌面 architecture direction；但 `0.9.0` 当前真正已经存在的是 SolidJS Local Web / cloud UI 与 Python typed Host Bridge，而不是一个已经完成的 Tauri wrapper。
 
 <img src="docs/assets/architecture/framework-mental-model.zh-CN.svg" alt="Quillframe 编排、执行与验证、Settlement 架构" width="100%" />
 
 通用 Framework 拥有机制；具体 Project 拥有自己的剧情事实、人物、关系、研究、计划、稿件、Accepted Canon 与当前状态。依赖方向只有 **Project → Quillframe**，一本小说里的私有事实不会因为被调用过，就反向变成通用 Framework 真理。
 
-### 3 · 正文生产是一条生命周期，不是一次生成调用
+### 4 · 正文生产是一条生命周期，不是一次生成调用
 
 <img src="docs/assets/architecture/production-graph.zh-CN.svg" alt="Quillframe 长篇小说生产流程" width="100%" />
 
@@ -178,11 +200,11 @@ capture → interpret → scope → evidence → candidate → validation
 
 ## Studio · 首先是写作环境
 
-Quillframe Studio 是 Core 周围的 product-experience layer。冻结的 `0.9.0` 基线已经有真实的 SolidJS + TypeScript + Vite application shell，并通过 typed read-only Host Bridge 工作，同时支持 local 和 cloud-hosted web surface。
+Quillframe Studio 是 Core 周围的 product-experience layer。`0.9.0` 已经有真实的 SolidJS + TypeScript + Vite application shell，并通过 typed read-only Host Bridge 工作，同时支持 local 和 cloud-hosted web surface。
 
-长期 Writer Mode 的信息架构围绕写作任务展开：书桌、正文、计划、故事、审阅、研究与语料、学习、发布；更底层的 Sessions、Runs、Checkpoints、Context、Semantic Jobs、Capabilities、Receipts、Diagnostics 等通过 Inspector 渐进展开。并行 UI/UX session 正在继续完善这套 authoring surface；**未合并 branch 的功能和未来截图都不能冒充 released behavior。**
+Writer Mode 的方向围绕写作任务展开：书桌、正文、计划、故事、审阅、研究与语料、学习、发布；更底层的 Sessions、Runs、Checkpoints、Context、Semantic Jobs、Capabilities、Receipts、Diagnostics 等通过 Inspector 渐进展开。并行 UI/UX branch 正在继续完善这套 authoring surface；**未合并 branch 的功能和未来截图都不能冒充 released behavior。**
 
-当前基线 Studio 已有的 Bridge operation 包括 bridge describe、Framework doctor、project inspect、capabilities inspect、Context inspect、semantic catalog inspect。Core 没有暴露 mutation / acceptance / Settlement / private SQLite contract 的地方，UI 不会自行伪造。
+当前 Studio Bridge 已有 bridge description、Framework doctor、project inspection、capability inspection、Context inspection、semantic catalog inspection。Core 没有暴露 mutation / acceptance / Settlement / private SQLite contract 的地方，UI 不会自行伪造。
 
 ## SQLite 是 canonical durable state
 
@@ -208,25 +230,25 @@ Quillframe 0.9 当前持久化布局：
 
 ### 环境要求
 
-当前 CI 验证基线：
-
-- **Python 3.13**：Core / SQLite / Host Bridge；
-- **Node.js 24**：产品网站、文档与 Studio build；
+- **Python >= 3.11**；当前 CI 使用 Python 3.13 验证。
+- **Node.js 24**：产品网站、文档与 Studio build。
 - **pnpm 10.33.0**：`studio/app`。
 
 Quillframe 仍在 pre-1.0。消费项目应遵循自己锁定的 exact Framework revision / lock，不要默认 latest `main` 一定兼容所有项目。
 
-### Clone 并验证 Core
+### Clone、安装并验证 Library/Core
 
 ```bash
 git clone https://github.com/xiaooye/cn_webnovel_agent.git
 cd cn_webnovel_agent
+python -m pip install -e .
+python -c "from quillframe import Quillframe, AgentJob; print(Quillframe.__name__, AgentJob.__name__)"
 python project_sdk.py self-test
 python studio/host_bridge.py self-test
 python persistence/cli.py doctor
 ```
 
-Self-test 成功时会输出结构化 JSON；`doctor` 会初始化/检查默认 Quillframe data root，但不会因为“保存成功”就把任何正文变成 Canon。
+Self-test 成功时会输出结构化结果；`doctor` 会初始化/检查默认 Quillframe data root，但 persistence 本身永远不会把正文变成 Canon。
 
 ### 运行当前本地 Studio
 
@@ -239,7 +261,7 @@ cd ../..
 python studio/local_server.py
 ```
 
-Local server 只绑定 loopback，并打印可打开的 URL。这个基线上的 Studio 消费 typed read-only Host Bridge。**基本 inspection / authoring shell 启动不要求先配置 AI provider。**
+Local server 只绑定 loopback，并打印可打开的 URL。当前 Studio 消费 typed read-only Host Bridge。**基本 inspection / authoring shell 启动不要求先配置 AI endpoint。**
 
 ### 创建一个 Quillframe 小说工程骨架
 
@@ -278,19 +300,22 @@ Production verification 使用 `npm run quality`、`npm run build`、`npm run do
 
 ```text
 cn_webnovel_agent/
-├─ core/                 # Story / Character / Canon 契约
-├─ harness/              # runtime、sessions、semantic execution、control plane
-├─ quality/              # production readiness 与 quality evolution
-├─ learning/             # evidence intake、hypothesis、受治理 promotion
-├─ corpus/               # 受治理 craft/research evidence
-├─ persistence/          # canonical SQLite durable state
-├─ publication/          # Accepted-text publication IR/compiler
-├─ studio/               # Host Bridge、local server、SolidJS Studio app
-├─ site/                 # 产品网站 + Astro/Starlight 文档 build
-├─ docs/                 # 公共概念、指南、架构与文档地图
-├─ tests/                # deterministic contract/regression tests
-├─ specs/                # 当前与历史工程规格
-└─ .github/              # CI、部署、Issue/PR contribution surfaces
+├─ quillframe/            # embeddable public Python façade
+├─ agent_runtime/         # Quillframe-owned AgentJob / Tool / Agent loop
+├─ model_runtime/         # Endpoint、discovery、capability evidence、inference transport
+├─ core/                  # Story / Character / Canon 契约
+├─ harness/               # sessions、semantic execution、control plane
+├─ quality/               # production readiness 与 quality evolution
+├─ learning/              # evidence intake、hypothesis、受治理 promotion
+├─ corpus/                # 受治理 craft/research evidence
+├─ persistence/           # canonical SQLite durable state
+├─ publication/           # Accepted-text publication IR/compiler
+├─ studio/                # Host Bridge、local server、SolidJS Studio app
+├─ site/                  # 产品网站 + Astro/Starlight 文档 build
+├─ docs/                  # 公共概念、指南、架构与文档地图
+├─ tests/                 # deterministic contract/regression tests
+├─ specs/                 # 当前与历史工程规格
+└─ .github/               # CI、部署、Issue/PR contribution surfaces
 ```
 
 历史 specs 会刻意保留当时的历史命名。新访问者不应该先读这些工程记录，才能知道今天的 Quillframe 是什么。
@@ -302,6 +327,8 @@ cn_webnovel_agent/
 | [文档中心](docs/README.zh-CN.md) | 整套文档的推荐阅读路径 |
 | [为什么是 Quillframe](docs/why-quillframe.zh-CN.md) | 产品适用场景、取舍与系统边界 |
 | [总体架构](docs/architecture.zh-CN.md) | Framework/Project authority、语义与确定性 ownership、Settlement |
+| [Model Runtime](docs/model-runtime.zh-CN.md) | Endpoint + Token、discovery、capability evidence、secret/network policy |
+| [Agent Runtime](docs/agent-runtime.zh-CN.md) | AgentJob、tool loop、checkpoint、receipt、embeddable library |
 | [生产流水线](docs/production-pipeline.zh-CN.md) | DRAFT/REVISE 生命周期与用户可见 readiness |
 | [上下文与记忆](docs/context-and-memory.zh-CN.md) | Sparse Context、visibility、persistence、memory boundaries |
 | [质量保障](docs/quality-assurance.zh-CN.md) | fingerprint-bound gate、diagnostics、独立评审 |
@@ -316,22 +343,24 @@ cn_webnovel_agent/
 
 Quillframe 仍是 **pre-1.0 / active development**；1.0 前可能出现 breaking changes。
 
-| Area | 冻结 `main` 状态 |
+| Area | 当前 `main` 状态 |
 |---|---|
-| Python Core / authority contracts | 已实现，CI 覆盖 |
+| 可嵌入 `quillframe` Python library | 已实现；wheel/import 由 CI 验证 |
+| Quillframe-owned Model Runtime | 已实现；Endpoint + Token、discovery、capability evidence、inference transport |
+| Quillframe-owned Agent Runtime | 已实现；typed job/result、tool runtime、checkpoint/receipt boundary |
+| Python fiction Core / authority contracts | 已实现，CI 覆盖 |
 | SQLite-native persistence | 已实现，CI 覆盖 |
 | typed read-only Host Bridge | 已实现，有 self-test |
 | SolidJS Studio | 已有真实 application shell；authoring UX 仍在演进 |
 | 产品网站 + Starlight docs | 已实现并由 deployment workflow 管理 |
-| Tauri 2 thin desktop host | architecture direction；冻结基线没有完成 wrapper |
-| Quillframe-owned Model API runtime | **独立 Draft PR #108 开发中；尚未 merge** |
+| Tauri 2 thin desktop host | architecture direction；当前 `main` 还没有完成 wrapper |
 | Writer Mode UX reconstruction | **并行 UI/UX 工作中；未合并内容不是 released** |
 
-这份 README 只把冻结 `main` 当作 current fact。Branch work ≠ merged capability；merged code ≠ deployed surface。
+Normal CI 刻意使用 deterministic/mock Model Runtime；live endpoint compatibility 是 opt-in evidence，不是默认 release claim。
 
 ## 贡献
 
-从 [CONTRIBUTING.md](CONTRIBUTING.md) 开始。小型修复欢迎提交；涉及 Canon/Settlement semantics、semantic independence、Learning promotion、persistence authority 或 runtime contract 的改动，需要明确 architecture reasoning 与对应 tests。
+从 [CONTRIBUTING.md](CONTRIBUTING.md) 开始。小型修复欢迎提交；涉及 Canon/Settlement semantics、semantic independence、Learning promotion、persistence authority、Model/Agent Runtime contract 或其他 authority surface 的改动，需要明确 architecture reasoning 与对应 tests。
 
 常用入口：
 
@@ -342,7 +371,7 @@ Quillframe 仍是 **pre-1.0 / active development**；1.0 前可能出现 breakin
 
 ## 安全
 
-不要在公开 Issue 中粘贴 API Access Token、provider credential、私有小说正文或敏感 project database。Hosted secret 只能保留在 server side，绝不能进入 Vite client bundle。私密漏洞报告与数据处理规则见 [SECURITY.md](SECURITY.md)。
+不要在公开 Issue 中粘贴 API Access Token、provider credential、私有小说正文或敏感 project database。解析后的 Model API token 是 host secret，不得进入 prompt、receipt、SQLite 或 Vite client bundle；Hosted secret 只能留在 server side。私密漏洞报告与数据处理规则见 [SECURITY.md](SECURITY.md)。
 
 ## License
 

@@ -86,17 +86,39 @@ Writer
 Quillframe
   ├─ authoring workflow
   ├─ Story / Character / Relationship / Canon / Context
-  ├─ Runtime / Quality / Learning / Settlement
+  ├─ Agent Runtime / Quality / Learning / Settlement
   └─ durable project state
   ↕
-Model inference
+Model API
 ```
 
-The model is not above Quillframe in the authority chain. It supplies inference to a Quillframe-owned operation.
+The Model API is not above Quillframe in the authority chain. It supplies inference to a Quillframe-owned operation.
 
-The 0.9 development direction is an even simpler model connection surface—**API Endpoint + Access Token** (the token may be empty for unauthenticated local endpoints)—while Quillframe continues to own sessions, context, tools, execution contracts, authority, and the agent loop. That Quillframe-owned Model Runtime is being developed separately and is **not yet merged into this frozen 0.9.0 baseline**.
+### 2 · Model connection: two user inputs
 
-### 2 · Framework, Studio, and durable state
+The current Quillframe Model Runtime exposes exactly two ordinary setup inputs:
+
+```text
+API Endpoint
+Access Token
+```
+
+`Access Token` may be empty for an unauthenticated local endpoint. Quillframe—not the vendor—owns protocol discovery, model discovery, capability evidence, model selection, tool execution, Session/Run/Checkpoint identity, and the model → tool → model loop. Provider/vendor identity is diagnostic provenance at most, not runtime authority or an onboarding field.
+
+Resolved token values are never persisted into SQLite, prompts, Context, AgentJob/Result, checkpoints, receipts, or fingerprints. Durable Model Service state keeps a credential reference; the host resolves the actual secret just in time.
+
+<details>
+<summary><strong>Wire protocol details</strong></summary>
+
+Current codecs cover OpenAI Chat Completions, OpenAI Responses, and Anthropic Messages. These are wire protocol families, not provider identities. Model listing proves discovery only; tool use, vision, structured output, context limits, and similar capabilities require separate evidence.
+
+Normal CI never calls a paid/live Model API. Live compatibility probing is explicit opt-in and produces timestamped endpoint/model-bound evidence rather than permanent capability truth.
+
+See [Model Runtime](docs/model-runtime.en.md) and [Agent Runtime](docs/agent-runtime.en.md).
+
+</details>
+
+### 3 · Framework, Studio, and durable state
 
 The current architecture keeps presentation away from direct persistence access:
 
@@ -110,13 +132,13 @@ SolidJS Studio / host surface
         SQLite
 ```
 
-A thin Tauri 2 desktop host is the current desktop architecture direction; the frozen `0.9.0` baseline checked into `main` still ships the SolidJS Local Web/cloud UI and typed Python Host Bridge rather than a finished Tauri wrapper.
+A thin Tauri 2 desktop host is the current desktop architecture direction; the checked-in `0.9.0` Studio currently ships its SolidJS Local Web/cloud UI and typed Python Host Bridge rather than a finished Tauri wrapper.
 
 <img src="docs/assets/architecture/framework-mental-model.en.svg" alt="Quillframe orchestration, execution and verification, and Settlement architecture" width="100%" />
 
 The generic Framework owns mechanisms. A consuming Project owns its concrete story facts, characters, relationships, research, plans, manuscripts, Accepted Canon, and current state. Dependency direction is **Project → Quillframe**; private story facts do not become generic Framework truth.
 
-### 3 · Production is a lifecycle, not a single generation call
+### 4 · Production is a lifecycle, not a single generation call
 
 <img src="docs/assets/architecture/production-graph.en.svg" alt="Quillframe long-form fiction production graph" width="100%" />
 
@@ -178,11 +200,11 @@ Automatic capture does **not** imply automatic promotion. `one_off`, `project`, 
 
 ## Studio · authoring environment first
 
-Quillframe Studio is the product-experience layer around the Core. On the frozen `0.9.0` baseline it is a real SolidJS + TypeScript + Vite application shell behind a typed read-only Host Bridge, with local and cloud-hosted web surfaces.
+Quillframe Studio is the product-experience layer around the Core. In `0.9.0` it is a real SolidJS + TypeScript + Vite application shell behind a typed read-only Host Bridge, with local and cloud-hosted web surfaces.
 
-The long-term Writer Mode information architecture centers the writing task—Desk, Manuscript, Plan, Story, Review, Research & Corpus, Learning, and Publish—with runtime details progressively disclosed through an Inspector. The parallel UI/UX session is actively evolving that authoring surface; **do not treat its unmerged branch work or future screenshots as released product behavior.**
+The Writer Mode direction centers the writing task—Desk, Manuscript, Plan, Story, Review, Research & Corpus, Learning, and Publish—with runtime details progressively disclosed through an Inspector. A parallel UI/UX branch is actively evolving that authoring surface; **unmerged branch behavior and future screenshots are not released product behavior.**
 
-Current baseline Studio operations include bridge description, Framework doctor, project inspection, capability inspection, Context inspection, and semantic catalog inspection. Mutation, acceptance, Settlement, and direct private SQLite access are not fabricated in the UI when Core contracts do not expose them.
+Current Studio Bridge operations include bridge description, Framework doctor, project inspection, capability inspection, Context inspection, and semantic catalog inspection. Mutation, acceptance, Settlement, and direct private SQLite access are not fabricated in the UI when Core contracts do not expose them.
 
 ## SQLite is the canonical durable state
 
@@ -208,25 +230,25 @@ Persistence does not grant Canon, acceptance, Settlement, or Learning-promotion 
 
 ### Prerequisites
 
-The current CI baseline is:
-
-- **Python 3.13** for Core/SQLite/Host Bridge validation;
-- **Node.js 24** for the product site/docs and Studio builds;
+- **Python >= 3.11** for the package; current CI validates on Python 3.13.
+- **Node.js 24** for the product site/docs and Studio builds.
 - **pnpm 10.33.0** for `studio/app`.
 
 Quillframe is pre-1.0; use the exact repository revision/lock required by your consuming Project rather than assuming latest `main` is compatible with every project.
 
-### Clone and verify the Core
+### Clone, install, and verify the library/Core
 
 ```bash
 git clone https://github.com/xiaooye/cn_webnovel_agent.git
 cd cn_webnovel_agent
+python -m pip install -e .
+python -c "from quillframe import Quillframe, AgentJob; print(Quillframe.__name__, AgentJob.__name__)"
 python project_sdk.py self-test
 python studio/host_bridge.py self-test
 python persistence/cli.py doctor
 ```
 
-Successful self-tests print structured JSON. `doctor` initializes/checks the default Quillframe data root; it does not make manuscript content Canon.
+Successful self-tests print structured output. `doctor` initializes/checks the default Quillframe data root; persistence never turns manuscript content into Canon by itself.
 
 ### Run the current local Studio
 
@@ -239,7 +261,7 @@ cd ../..
 python studio/local_server.py
 ```
 
-The local server binds loopback and prints the URL to open. On this baseline the Studio consumes the typed read-only Host Bridge. **An AI provider is not required for basic inspection/authoring shell startup.**
+The local server binds loopback and prints the URL to open. The current Studio consumes the typed read-only Host Bridge. **An AI endpoint is not required for basic inspection/authoring shell startup.**
 
 ### Create a Quillframe fiction project skeleton
 
@@ -278,19 +300,22 @@ Production verification uses `npm run quality`, `npm run build`, and `npm run do
 
 ```text
 cn_webnovel_agent/
-├─ core/                 # Story / Character / Canon contracts
-├─ harness/              # runtime, sessions, semantic execution, control plane
-├─ quality/              # production readiness and quality evolution
-├─ learning/             # evidence intake, hypotheses, governed promotion
-├─ corpus/               # governed craft/research evidence
-├─ persistence/          # canonical SQLite durable state
-├─ publication/          # Accepted-text publication IR/compiler
-├─ studio/               # Host Bridge, local server, SolidJS Studio app
-├─ site/                 # product site + Astro/Starlight docs build
-├─ docs/                 # public concepts, guides, architecture, documentation map
-├─ tests/                # deterministic contract/regression tests
-├─ specs/                # current and historical engineering specifications
-└─ .github/              # CI, deployment, issue/PR contribution surfaces
+├─ quillframe/            # embeddable public Python façade
+├─ agent_runtime/         # Quillframe-owned AgentJob / Tool / Agent loop
+├─ model_runtime/         # Endpoint, discovery, capability evidence, inference transport
+├─ core/                  # Story / Character / Canon contracts
+├─ harness/               # sessions, semantic execution, control plane
+├─ quality/               # production readiness and quality evolution
+├─ learning/              # evidence intake, hypotheses, governed promotion
+├─ corpus/                # governed craft/research evidence
+├─ persistence/           # canonical SQLite durable state
+├─ publication/           # Accepted-text publication IR/compiler
+├─ studio/                # Host Bridge, local server, SolidJS Studio app
+├─ site/                  # product site + Astro/Starlight docs build
+├─ docs/                  # public concepts, guides, architecture, documentation map
+├─ tests/                 # deterministic contract/regression tests
+├─ specs/                 # current and historical engineering specifications
+└─ .github/               # CI, deployment, issue/PR contribution surfaces
 ```
 
 Historical specs deliberately preserve historical terminology. Current product guidance should not require a visitor to read those records first.
@@ -302,6 +327,8 @@ Historical specs deliberately preserve historical terminology. Current product g
 | [Documentation home](docs/README.en.md) | a curated path through the full documentation set |
 | [Why Quillframe](docs/why-quillframe.en.md) | product fit, tradeoffs, and the system boundary |
 | [Architecture](docs/architecture.en.md) | Framework/Project authority, semantic vs deterministic ownership, Settlement |
+| [Model Runtime](docs/model-runtime.en.md) | Endpoint + token setup, discovery, capability evidence, secret/network policy |
+| [Agent Runtime](docs/agent-runtime.en.md) | AgentJob, tool loop, checkpoints, receipts, embeddable library |
 | [Production Pipeline](docs/production-pipeline.en.md) | DRAFT/REVISE lifecycle and user-visible readiness |
 | [Context & Memory](docs/context-and-memory.en.md) | sparse Context, visibility, persistence, memory boundaries |
 | [Quality Assurance](docs/quality-assurance.en.md) | fingerprint-bound gates, diagnostics, independent review |
@@ -316,22 +343,24 @@ Public docs are built with **Astro + Starlight** and deployed under the Quillfra
 
 Quillframe is **pre-1.0 and in active development**. Breaking changes may occur before 1.0.
 
-| Area | Frozen `main` status |
+| Area | Current `main` status |
 |---|---|
-| Python Core / authority contracts | Implemented and CI-tested |
+| Embeddable `quillframe` Python library | Implemented; wheel/import validated in CI |
+| Quillframe-owned Model Runtime | Implemented; endpoint + token setup, discovery, capability evidence, inference transport |
+| Quillframe-owned Agent Runtime | Implemented; typed jobs/results, tool runtime, checkpoint/receipt boundaries |
+| Python fiction Core / authority contracts | Implemented and CI-tested |
 | SQLite-native persistence | Implemented and CI-tested |
 | Typed read-only Host Bridge | Implemented and self-tested |
 | SolidJS Studio | Implemented application shell; authoring UX still evolving |
 | Product site + Starlight docs | Implemented and deployment-managed |
-| Tauri 2 thin desktop host | Architecture direction; finished wrapper not present on frozen baseline |
-| Quillframe-owned Model API runtime | **In active development in separate Draft PR #108; not merged** |
-| Writer Mode UX reconstruction | **In active parallel UI/UX work; unmerged work is not released** |
+| Tauri 2 thin desktop host | Architecture direction; finished wrapper is not present in current `main` |
+| Writer Mode UX reconstruction | **Active parallel UI/UX work; unmerged work is not released** |
 
-This README describes `main` as frozen for its reconstruction. Branch work ≠ merged capability; merged code ≠ deployed surface.
+Normal CI deliberately uses deterministic/mock Model Runtime execution; live endpoint compatibility is opt-in rather than a release claim.
 
 ## Contributing
 
-Start with [CONTRIBUTING.md](CONTRIBUTING.md). Small fixes are welcome, but changes to Canon/Settlement semantics, semantic independence, Learning promotion, persistence authority, or runtime contracts require explicit architecture reasoning and matching tests.
+Start with [CONTRIBUTING.md](CONTRIBUTING.md). Small fixes are welcome, but changes to Canon/Settlement semantics, semantic independence, Learning promotion, persistence authority, Model/Agent Runtime contracts, or other authority surfaces require explicit architecture reasoning and matching tests.
 
 Useful entry points:
 
@@ -342,7 +371,7 @@ Useful entry points:
 
 ## Security
 
-Never paste API access tokens, provider credentials, private manuscript text, or sensitive project databases into public issues. Hosted secrets belong server-side and must never be bundled into Vite client code. See [SECURITY.md](SECURITY.md) for private vulnerability reporting and data-handling guidance.
+Never paste API access tokens, provider credentials, private manuscript text, or sensitive project databases into public issues. Resolved Model API tokens are host secrets and must not enter prompts, receipts, SQLite, or Vite client bundles. Hosted secrets belong server-side. See [SECURITY.md](SECURITY.md) for private vulnerability reporting and data-handling guidance.
 
 ## License
 
