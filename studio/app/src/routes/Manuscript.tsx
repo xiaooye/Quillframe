@@ -133,11 +133,11 @@ export default function Manuscript() {
       <Show when={projectId()} fallback={<div class="qf-empty-workspace"><strong>{zh() ? "先打开 Project" : "Open a Project first"}</strong><a href="/start">{zh() ? "开始" : "Start"}</a></div>}>
         <WriterContextStrip projection={context()} zh={zh()} />
         <div class="qf-manuscript-workspace">
-          <aside class="qf-binder" aria-label={zh() ? "Binder" : "Binder"}>
+          <aside class="qf-binder" aria-label="Binder">
             <div class="qf-binder__heading"><span class="nf-eyebrow">BINDER</span><strong>{projectId()}</strong></div>
             <CoreRequirementNotice operation="document.list" compact />
             <Show when={sessionDocuments().length}>
-              <div class="qf-binder__session"><small>{zh() ? "本次会话已创建" : "Created this session"}</small><For each={sessionDocuments()}>{(doc) => <button type="button" onClick={() => { setDocumentId(doc.id); setTitle(doc.title); setEditable(true); }}>{doc.title}<span>{doc.id}</span></button>}</For></div>
+              <div class="qf-binder__session"><small>{zh() ? "本次会话已创建；切换需要 document.get" : "Created this session; switching requires document.get"}</small><For each={sessionDocuments()}>{(doc) => <button type="button" disabled aria-disabled="true" title={zh() ? "等待 Core document.get 后才能安全切换" : "Safe switching awaits Core document.get"}>{doc.title}<span>{doc.id}</span></button>}</For></div>
             </Show>
             <details open={!editable()}><summary>{zh() ? "新建 / 按 ID 打开" : "New / open by ID"}</summary>
               <label class="nf-field-label"><span>Document ID</span><input class="wui-input nf-mono" value={documentId()} onInput={(event) => setDocumentId(event.currentTarget.value)} placeholder="CH001" /></label>
