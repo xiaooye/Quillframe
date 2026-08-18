@@ -61,7 +61,7 @@ for (const nav of ["/product", "/studio", "/architecture", "/publication"]) {
   check(app.includes(`href: "${nav}"`), `canonical primary navigation missing ${nav}`);
 }
 check(app.includes('kind: "document", href: zh() ? "/docs" : "/docs/en"'), "Knowledge must remain an explicit documentation boundary in primary navigation");
-check(content.includes('export const githubRoot = "https://github.com/xiaooye/cn_webnovel_agent"'), "content source must own canonical GitHub repository root");
+check(content.includes('export const githubRoot = "https://github.com/xiaooye/Quillframe"'), "content source must own canonical GitHub repository root");
 check(app.includes('import { githubRoot, type Locale } from "./content"'), "ProductApp must consume the canonical GitHub repository root");
 check(app.includes('kind: "external", href: githubRoot, label: copy().nav.github'), "GitHub must be a primary external navigation entry");
 check(app.includes('<For each={primaryNav()}>{(item) => navLink(item, "wui-app-bar__link")}</For>'), "desktop header must render the shared primary navigation model");
