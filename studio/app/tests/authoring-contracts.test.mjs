@@ -37,7 +37,7 @@ test("loaded Context is never conflated with considered/selected Context", () =>
   assert.deepEqual(contracts.consideredNotLoaded(projection).map((item) => item.source_object_id), ["周叙", "CH002-ending", "research-note"]);
 });
 
-test("Studio consumer requirements use exact Host Bridge v8 primitives", () => {
+test("Studio consumer requirements use exact Host Bridge v9 primitives", () => {
   const names = new Set(contracts.CORE_CONSUMER_REQUIREMENTS.map((item) => item.operation));
   for (const required of [
     "project.list",
@@ -48,6 +48,7 @@ test("Studio consumer requirements use exact Host Bridge v8 primitives", () => {
     "author.run.execute",
     "author.run.status",
     "candidate.review.get",
+    "candidate.visible.get",
     "candidate.reject",
     "candidate.revision.request",
     "settlement.preflight",

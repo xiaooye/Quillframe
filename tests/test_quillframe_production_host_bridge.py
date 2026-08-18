@@ -152,6 +152,24 @@ class ProductionHostBridgeTests(unittest.TestCase):
             self.assertEqual(out["status"], "invalid")
             self.assertIn("not authorized", " ".join(out["error"]["messages"]))
 
+
+    def test_host_cannot_fabricate_production_runtime_provenance(self):
+        out = host_bridge.invoke({
+            "schema": host_bridge.REQUEST_SCHEMA,
+            "request_id": "reserved-production-source",
+            "operation": "document.revision.save",
+            "surface": "agent_package",
+            "args": {
+                "project_id": "missing",
+                "document_id": "missing",
+                "content": "host-authored substitute",
+                "source": "production_runtime",
+            },
+            "authority": False,
+        })
+        self.assertEqual(out["status"], "failed")
+        self.assertEqual(out["error"]["code"], "reserved_provenance")
+
     def test_self_test_passes_without_live_network(self):
         report = host_bridge.self_test()
         self.assertEqual(report["quillframe_host_bridge_contract"], "PASS")

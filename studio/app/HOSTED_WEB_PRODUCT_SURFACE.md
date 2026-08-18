@@ -29,7 +29,7 @@ If it is empty, `HostedHttpTransport.available()` is false and Studio remains un
 
 The endpoint itself is not a credential. Authentication/session material remains host-owned and must not be embedded into Vite environment variables or semantic context.
 
-## Required Host Bridge v8 behavior
+## Required Host Bridge v9 behavior
 
 The hosted Core API must expose the same typed request/result semantics as the other transports. Current Studio authoring paths consume, among others:
 

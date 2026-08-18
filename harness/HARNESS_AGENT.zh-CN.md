@@ -121,7 +121,10 @@ authority/session bootstrap
 - Editor 语义上选择 repair owner 与 generation mode；
 - `repair_policy.py` 只执行所选 mode 对 writer-context 的信息边界；
 - material candidate change 会使旧 fingerprint-bound review result 失效；
-- explicit acceptance 与 SETTLE 继续分离。
+- explicit acceptance 与 SETTLE 继续分离；
+- `DRAFT` / `REVISE` 的正文只能由真实 production runtime 产生并经 Core-owned release 出口展示；manager/host 读过规则后自行写正文，不构成 Quillframe execution；
+- `candidate.visible.get`（或等价 Core-owned released projection）是 production manuscript 的 release boundary；缺 receipt、fingerprint mismatch、pending/fail/stale 时必须无正文返回；
+- ephemeral host 若需本地 materialize Framework，必须证明 exact locked Git identity；runtime SQLite 不升级为 Project/Canon authority。
 
 如果用户在 production loop 中给出 feedback，当前明确指令立即约束当前 run；同一 turn 也可以独立进入 automatic Learning intake。Learning capture 不需要等 durable promotion 才让当前指令生效。
 

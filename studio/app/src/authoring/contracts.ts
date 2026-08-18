@@ -437,6 +437,12 @@ export const CORE_CONSUMER_REQUIREMENTS: CoreConsumerRequirement[] = [
     whyUiCannotImplement: "Review prose/evidence cannot be reconstructed from browser state or candidate metadata.",
   },
   {
+    operation: "candidate.visible.get",
+    kind: "query",
+    writerSurface: true,
+    authorityExpectation: "released production manuscript only; Core withholds content unless the exact candidate has a valid production release",
+  },
+  {
     operation: "candidate.reject",
     userAction: "Explicitly reject the exact Review Draft",
     minimalInput: "project_id, candidate_id, candidate_fingerprint, authorization, idempotency_key",

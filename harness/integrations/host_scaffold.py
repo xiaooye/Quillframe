@@ -44,6 +44,8 @@ This repository is a **consumer fiction Project**. Project facts, characters, re
 4. Determine exactly one primary Quillframe `task_mode` from the user task. Do not combine user-visible modes.
 5. Execute the exact `quillframe host-run begin --session-id ... --mode ...` command injected by the host bootstrap before consequential work.
 6. Confirm the host state becomes `running` with one active manager run, then build sparse Context from current Project authority.
+7. For `DRAFT` / `REVISE`, resolve a real Quillframe production runtime before producing manuscript text. If the host lacks a bound runtime, materialize the exact locked Framework in an ephemeral sandbox, verify its Git identity, and invoke the typed production bridge. If runtime/model/independent-review capability is unavailable, return the typed pending/blocked state; **never synthesize a Quillframe manuscript in the host itself**.
+8. Surface production manuscript text only through an exact fingerprint-bound production release (`candidate.visible.get` or an equivalent Core-owned released projection). Raw Draft, pending candidates, failed candidates, and host-authored substitutes are not user-visible Review Drafts.
 
 ## Authority rules
 

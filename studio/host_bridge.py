@@ -225,7 +225,10 @@ def _revisions_list(args: dict[str, Any], _: str):
 
 
 def _revision_save(args: dict[str, Any], _: str):
-    return store().save_revision(require(args, "project_id"), require(args, "document_id"), require(args, "content"), expected_parent_revision_id=args.get("expected_parent_revision_id"), source=require(args, "source"), authority_class=args.get("authority_class") or "proposal", provenance=args.get("provenance") if isinstance(args.get("provenance"), dict) else {})
+    source = require(args, "source")
+    if source == "production_runtime":
+        raise BridgeError("reserved_provenance", "production_runtime provenance is Core-owned and cannot be supplied through document.revision.save")
+    return store().save_revision(require(args, "project_id"), require(args, "document_id"), require(args, "content"), expected_parent_revision_id=args.get("expected_parent_revision_id"), source=source, authority_class=args.get("authority_class") or "proposal", provenance=args.get("provenance") if isinstance(args.get("provenance"), dict) else {})
 
 
 def _revision_compare(args: dict[str, Any], _: str):
