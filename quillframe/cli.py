@@ -60,6 +60,14 @@ def host_bootstrap() -> ModuleType:
     )
 
 
+def host_scaffold() -> ModuleType:
+    root = framework_root()
+    return _load_source_module(
+        "quillframe_host_scaffold_cli",
+        root / "harness" / "integrations" / "host_scaffold.py",
+    )
+
+
 def host_hook_main(host: str) -> int:
     return int(host_bootstrap().main_for_host(host))
 
@@ -156,6 +164,10 @@ def main(argv: list[str] | None = None) -> int:
                 result = module.begin_run(project_root, args.session_id, args.mode)
             dump(result)
             return 0
+        if args.cmd == "host-install":
+            result = host_scaffold().install_project_hosts(Path(args.path), force=args.force)
+            dump(result)
+            return 0 if result.get("installed") else 2
 
         sdk = project_sdk()
         if args.cmd == "init":
@@ -164,6 +176,8 @@ def main(argv: list[str] | None = None) -> int:
                 Path(args.path), args.id, args.title, args.language, args.framework_version,
                 args.force, fw_root,
             )
+            host_result = host_scaffold().install_project_hosts(Path(args.path), force=False)
+            result = {**result, "host_bootstrap": host_result}
         elif args.cmd == "pin":
             fw_root = Path(args.framework_root).expanduser() if args.framework_root else framework_root()
             result = sdk.pin_project(Path(args.path), fw_root)
@@ -171,8 +185,6 @@ def main(argv: list[str] | None = None) -> int:
             result = sdk.validate_project(Path(args.path))
         elif args.cmd == "build":
             result = sdk.build_project(Path(args.path))
-        elif args.cmd == "host-install":
-            result = sdk.host_install_project(Path(args.path), force=args.force)
         else:
             result = sdk.create_spec(Path(args.path), args.title)
         dump(result)
