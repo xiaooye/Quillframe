@@ -1,0 +1,38 @@
+name: Quillframe 0.9 reconstruction bootstrap
+
+on:
+  push:
+    branches:
+      - system-improve/quillframe-0.9.0
+
+permissions:
+  contents: write
+
+jobs:
+  reconstruct:
+    if: ${{ hashFiles('.quillframe-0.9-migrated') == '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Apply classified breaking migration
+        run: python scripts/quillframe_0_9_reconstruct.py
+      - name: Basic post-migration sanity
+        run: |
+          test "$(cat VERSION)" = "0.9.0"
+          test ! -d site/godot
+          ! find . -path './.git' -prune -o -name '*.gd' -print | grep .
+          ! grep -R --include='package.json' '"baseline:' site studio 2>/dev/null
+          ! grep -R --include='package.json' '"shadow:' site studio 2>/dev/null
+      - name: Commit reconstruction baseline
+        run: |
+          git config user.name "quillframe-ci"
+          git config user.email "quillframe-ci@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "refactor!: reconstruct Quillframe 0.9 live architecture"
+          git push origin HEAD:system-improve/quillframe-0.9.0
