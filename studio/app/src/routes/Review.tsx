@@ -17,10 +17,16 @@ export default function Review() {
   const [rows, setRows] = createSignal<CandidateRow[]>([]);
   const [selectedId, setSelectedId] = createSignal("");
   const [acceptance, setAcceptance] = createSignal<AcceptanceResult>();
-  const [confirmAccept, setConfirmAccept] = createSignal(false);
+  const [acceptDialogOpen, setAcceptDialogOpen] = createSignal(false);
+  const [acceptExact, setAcceptExact] = createSignal(false);
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string>();
   const selected = createMemo(() => rows().find((row) => row.candidate_id === selectedId()));
+
+  const resetAcceptanceIntent = () => {
+    setAcceptDialogOpen(false);
+    setAcceptExact(false);
+  };
 
   const load = async () => {
     if (!projectId() || !operations().includes("inspector.candidates.list")) return;
@@ -36,7 +42,7 @@ export default function Review() {
 
   const accept = async () => {
     const candidate = selected();
-    if (!candidate?.content_fingerprint || !confirmAccept()) return;
+    if (!candidate?.content_fingerprint || !acceptDialogOpen() || !acceptExact()) return;
     setLoading(true); setError(undefined);
     try {
       const result = await invokeBridge<AcceptanceResult>("candidate.accept", {
@@ -44,13 +50,13 @@ export default function Review() {
         candidate_id: candidate.candidate_id,
         candidate_fingerprint: candidate.content_fingerprint,
         authorized_by: "studio_user",
-        authorization: { source: "Studio Review", explicit_action: "accept", observed_gate: candidate.user_visible_gate ?? null },
+        authorization: { source: "Studio Review", explicit_action: "accept_exact_fingerprint", observed_gate: candidate.user_visible_gate ?? null },
         idempotency_key: `studio-accept-${candidate.candidate_id}-${crypto.randomUUID()}`,
         user_authorized: true,
       });
       if (result.status !== "ok" || !result.data) throw new Error(operationError(result));
       setAcceptance(result.data);
-      setConfirmAccept(false);
+      resetAcceptanceIntent();
       await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
     finally { setLoading(false); }
@@ -65,7 +71,7 @@ export default function Review() {
       <div class="qf-review-layout">
         <aside class="qf-review-list" aria-label={zh() ? "Candidates" : "Candidates"}>
           <div class="qf-section-head"><div><span class="nf-eyebrow">CANDIDATES</span><strong>{rows().length}</strong></div><button class="wui-button wui-button--outline" type="button" disabled={loading()} onClick={() => void load()}>{zh() ? "刷新" : "Refresh"}</button></div>
-          <For each={rows()}>{(candidate) => <button type="button" class="qf-candidate-row" data-active={selectedId() === candidate.candidate_id ? "true" : undefined} onClick={() => { setSelectedId(candidate.candidate_id); setAcceptance(undefined); setConfirmAccept(false); }}><strong>{candidate.candidate_id}</strong><span>{candidate.task_mode ?? "—"} · {candidate.status ?? "—"}</span><small>{candidate.user_visible_gate ? `gate ${candidate.user_visible_gate}` : "gate unknown"}</small></button>}</For>
+          <For each={rows()}>{(candidate) => <button type="button" class="qf-candidate-row" data-active={selectedId() === candidate.candidate_id ? "true" : undefined} onClick={() => { setSelectedId(candidate.candidate_id); setAcceptance(undefined); resetAcceptanceIntent(); }}><strong>{candidate.candidate_id}</strong><span>{candidate.task_mode ?? "—"} · {candidate.status ?? "—"}</span><small>{candidate.user_visible_gate ? `gate ${candidate.user_visible_gate}` : "gate unknown"}</small></button>}</For>
           <Show when={!rows().length && !loading()}><p>{zh() ? "当前没有 Core Candidate。" : "No Core Candidate is currently available."}</p></Show>
         </aside>
 
@@ -78,11 +84,11 @@ export default function Review() {
               <section class="qf-review-evidence" aria-labelledby="review-evidence-heading"><h3 id="review-evidence-heading">{zh() ? "Diff 与审查证据" : "Diff & review evidence"}</h3><p>{zh() ? "当前 inspector.candidates.list 只给 metadata，不能支持 Incumbent vs Candidate prose、Reader evidence、Character integrity、Continuity 或 Independent semantic review。" : "The current candidate list exposes metadata only; it cannot support Incumbent vs Candidate prose, Reader evidence, Character integrity, Continuity or Independent semantic review."}</p><CoreRequirementNotice operation="candidate.review.get" /></section>
 
               <div class="qf-review-actions" aria-label={zh() ? "Review actions" : "Review actions"}>
-                <button class="wui-button wui-button--outline" type="button" disabled aria-disabled="true">{zh() ? "Reject" : "Reject"}</button>
-                <button class="wui-button wui-button--outline" type="button" disabled aria-disabled="true">{zh() ? "Request Revision" : "Request Revision"}</button>
-                <button class="wui-button wui-button--solid" type="button" disabled={!operations().includes("candidate.accept") || candidate().status !== "review_draft" || candidate().user_visible_gate !== "PASS" || !candidate().content_fingerprint} onClick={() => setConfirmAccept(true)}>{zh() ? "Accept…" : "Accept…"}</button>
+                <button class="wui-button wui-button--outline" type="button" disabled aria-disabled="true">Reject</button>
+                <button class="wui-button wui-button--outline" type="button" disabled aria-disabled="true">Request Revision</button>
+                <button class="wui-button wui-button--solid" type="button" disabled={!operations().includes("candidate.accept") || candidate().status !== "review_draft" || candidate().user_visible_gate !== "PASS" || !candidate().content_fingerprint} onClick={() => { setAcceptExact(false); setAcceptDialogOpen(true); }}>Accept…</button>
               </div>
-              <Show when={confirmAccept()}><section class="qf-authority-confirm" role="alertdialog" aria-modal="false" aria-labelledby="accept-confirm-heading"><h3 id="accept-confirm-heading">{zh() ? "确认 Accept" : "Confirm Accept"}</h3><p>{zh() ? "Accept 会写入 acceptance evidence，并把 Candidate 标为 accepted；它不会执行 Settlement。" : "Accept writes acceptance evidence and marks the Candidate accepted; it does not perform Settlement."}</p><label><input type="checkbox" checked={confirmAccept()} onChange={(event) => setConfirmAccept(event.currentTarget.checked)} /> {zh() ? "我明确接受这个 exact fingerprint" : "I explicitly accept this exact fingerprint"}</label><div class="qf-inline-actions"><button class="wui-button wui-button--solid" type="button" disabled={loading()} onClick={() => void accept()}>{zh() ? "Accept exact Candidate" : "Accept exact Candidate"}</button><button class="wui-button wui-button--ghost" type="button" onClick={() => setConfirmAccept(false)}>{zh() ? "取消" : "Cancel"}</button></div></section></Show>
+              <Show when={acceptDialogOpen()}><section class="qf-authority-confirm" role="alertdialog" aria-modal="false" aria-labelledby="accept-confirm-heading"><h3 id="accept-confirm-heading">{zh() ? "确认 Accept" : "Confirm Accept"}</h3><p>{zh() ? "Accept 会写入 acceptance evidence，并把 Candidate 标为 accepted；它不会执行 Settlement。" : "Accept writes acceptance evidence and marks the Candidate accepted; it does not perform Settlement."}</p><label><input type="checkbox" checked={acceptExact()} onChange={(event) => setAcceptExact(event.currentTarget.checked)} /> {zh() ? "我明确接受这个 exact fingerprint" : "I explicitly accept this exact fingerprint"}</label><div class="qf-inline-actions"><button class="wui-button wui-button--solid" type="button" disabled={loading() || !acceptExact()} onClick={() => void accept()}>{zh() ? "Accept exact Candidate" : "Accept exact Candidate"}</button><button class="wui-button wui-button--ghost" type="button" onClick={resetAcceptanceIntent}>{zh() ? "取消" : "Cancel"}</button></div></section></Show>
 
               <Show when={acceptance()}>{(receipt) => <section class="qf-accepted-state" aria-live="polite"><div><strong>Accepted ✓</strong><span>Not Settled</span></div><dl><dt>acceptance_id</dt><dd><code>{receipt().acceptance_id}</code></dd><dt>candidate</dt><dd><code>{receipt().candidate_fingerprint}</code></dd><dt>canon_mutated</dt><dd>false</dd></dl><button class="wui-button wui-button--solid" type="button" disabled aria-disabled="true">Settle…</button><CoreRequirementNotice operation="settlement.preflight" /></section>}</Show>
             </>}
