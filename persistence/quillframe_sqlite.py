@@ -362,25 +362,39 @@ class QuillframeStore:
         if commit:
             conn.commit()
 
+    @staticmethod
+    def _literal_search_rows(conn: sqlite3.Connection, query: str, limit: int) -> list[sqlite3.Row]:
+        escaped = query.casefold().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        pattern = f"%{escaped}%"
+        return conn.execute(
+            "SELECT entity_type,entity_id,title,body AS snippet,0.0 AS rank "
+            "FROM search_index WHERE lower(title) LIKE ? ESCAPE '\\' OR lower(body) LIKE ? ESCAPE '\\' LIMIT ?",
+            (pattern, pattern, limit),
+        ).fetchall()
+
     def search(self, project_id: str, query: str, limit: int = 30) -> list[dict[str, Any]]:
-        if not query.strip():
+        needle = query.strip()
+        if not needle:
             return []
+        bounded_limit = max(1, min(limit, 100))
         with self.open_project(project_id) as conn:
             tables = {row["name"] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-            use_trigram = "search_trigram" in tables and len(query.strip()) >= 3
+            use_trigram = "search_trigram" in tables and len(needle) >= 3
             table = "search_trigram" if use_trigram else "search_index"
             try:
                 rows = conn.execute(
-                    f"SELECT entity_type,entity_id,title,snippet({table},3,'‹','›','…',18) AS snippet,rank FROM {table} WHERE {table} MATCH ? ORDER BY rank LIMIT ?",
-                    (query, max(1, min(limit, 100))),
+                    f"SELECT entity_type,entity_id,title,snippet({table},3,'‹','›','…',18) AS snippet,rank "
+                    f"FROM {table} WHERE {table} MATCH ? ORDER BY rank LIMIT ?",
+                    (needle, bounded_limit),
                 ).fetchall()
             except sqlite3.OperationalError:
-                # CJK single/two-character queries cannot use trigram MATCH; fall back to a bounded literal scan.
-                needle = query.casefold()
-                rows = conn.execute(
-                    "SELECT entity_type,entity_id,title,body AS snippet,0.0 AS rank FROM search_index WHERE lower(title) LIKE ? OR lower(body) LIKE ? LIMIT ?",
-                    (f"%{needle}%", f"%{needle}%", max(1, min(limit, 100))),
-                ).fetchall()
+                rows = []
+            # FTS unicode tokenization is not a substring guarantee. In particular,
+            # short CJK queries such as "门开" may legally produce no MATCH rows.
+            # A bounded literal fallback preserves predictable manuscript search
+            # without pretending tokenizer failure means the text is absent.
+            if not rows:
+                rows = self._literal_search_rows(conn, needle, bounded_limit)
             return [dict(row) for row in rows]
 
     def put_blob(self, project_id: str, data: bytes, media_type: str | None = None) -> dict[str, Any]:
@@ -484,6 +498,7 @@ class QuillframeStore:
         verification = self.verify_backup(bundle)
         if not verification["valid"]:
             raise IntegrityError("invalid backup: " + "; ".join(verification["errors"]))
+        self.ensure_layout()
         with zipfile.ZipFile(bundle) as zf:
             manifest = json.loads(zf.read("manifest.json"))
             project_id = manifest["project_id"]
