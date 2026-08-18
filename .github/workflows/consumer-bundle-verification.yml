@@ -1,0 +1,51 @@
+name: Consumer bundle verification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/consumer-bundle-verification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-framework-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout frozen Framework commit
+        uses: actions/checkout@v4
+        with:
+          ref: c6832365be6c4e3816b9c779dd0c2aa88b42cab9
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Assert frozen subject
+        run: |
+          test "$(git rev-parse HEAD)" = "c6832365be6c4e3816b9c779dd0c2aa88b42cab9"
+          test "$(cat VERSION)" = "0.9.0"
+
+      - name: Build deterministic bundle twice
+        run: |
+          python release/build_framework_bundle.py build --root . --output /tmp/quillframe-framework-a.tar --report bundle-a.json
+          python release/build_framework_bundle.py build --root . --output /tmp/quillframe-framework-b.tar --report bundle-b.json
+          cmp /tmp/quillframe-framework-a.tar /tmp/quillframe-framework-b.tar
+          python release/build_framework_bundle.py verify --bundle /tmp/quillframe-framework-a.tar --report bundle-verify.json
+          cat bundle-a.json
+          cat bundle-b.json
+          cat bundle-verify.json
+
+      - name: Upload frozen bundle evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: quillframe-framework-c6832365
+          path: |
+            /tmp/quillframe-framework-a.tar
+            bundle-a.json
+            bundle-b.json
+            bundle-verify.json
+          retention-days: 7
