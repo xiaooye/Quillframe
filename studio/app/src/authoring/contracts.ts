@@ -438,9 +438,12 @@ export const CORE_CONSUMER_REQUIREMENTS: CoreConsumerRequirement[] = [
   },
   {
     operation: "candidate.visible.get",
-    kind: "query",
-    writerSurface: true,
+    userAction: "Read the exact released production manuscript after the user-visible gate passes",
+    minimalInput: "project_id, candidate_id",
+    minimalOutput: "released candidate content, exact candidate/revision fingerprint, production release evidence",
+    requiredErrors: ["candidate_not_found", "production_release_missing", "production_release_invalid", "stale_review"],
     authorityExpectation: "released production manuscript only; Core withholds content unless the exact candidate has a valid production release",
+    whyUiCannotImplement: "The UI must not reconstruct or reveal pre-release manuscript content from candidate metadata, checkpoints, or local state.",
   },
   {
     operation: "candidate.reject",
