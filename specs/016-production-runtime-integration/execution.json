@@ -65,7 +65,8 @@
     "reviewer_shopping": false
   },
   "codeql_secret_output_finding_remediated": true,
-  "final_review_thread_resolved": false,
-  "merge_performed": false,
-  "studio_consumer_integration_completed": false
+  "final_review_thread_resolved": true,
+  "merge_authorized_by_current_user_instruction": true,
+  "merge_performed_at_receipt_time": false,
+  "studio_consumer_integration_completed_at_receipt_time": false
 }
