@@ -10,192 +10,95 @@ permissions:
   contents: read
   statuses: write
 
-concurrency:
-  group: quillframe-pages-retire
-  cancel-in-progress: false
-
 jobs:
-  retire-studio-pages:
+  diagnose-studio-cutover:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
     env:
-      PRODUCT_DOMAIN: quillframe.wei-dev.com
-      STUDIO_DOMAIN: studio.quillframe.wei-dev.com
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      STUDIO_DOMAIN: studio.quillframe.wei-dev.com
+      STUDIO_WORKERS_DEV: quillframe-studio.cool-meadow-eb73.workers.dev
     steps:
-      - name: Repair Studio DNS and retire remaining Pages project
-        id: retire
+      - name: Inspect Cloudflare Worker, DNS, Pages and HTTP state
+        id: diag
         shell: bash
         run: |
           set -euo pipefail
           : "${CLOUDFLARE_ACCOUNT_ID:?missing CLOUDFLARE_ACCOUNT_ID}"
           : "${CLOUDFLARE_API_TOKEN:?missing CLOUDFLARE_API_TOKEN}"
-
           auth=(-H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}")
           api='https://api.cloudflare.com/client/v4'
-          project='quillframe-studio'
-          domain="${STUDIO_DOMAIN}"
-          project_api="${api}/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${project}"
-          domain_api="${project_api}/domains/${domain}"
 
-          verify_studio() {
-            curl -fsSL --connect-timeout 10 --max-time 30 "https://${domain}/" -o /tmp/studio.html &&
-              grep -Fq '<title>Quillframe Studio</title>' /tmp/studio.html &&
-              curl -fsSL --connect-timeout 10 --max-time 30 "https://${domain}/.well-known/quillframe-host.json" -o /tmp/host.json &&
-              jq -e '.schema == "quillframe_studio_host_descriptor_v1" and .authority == false' /tmp/host.json >/dev/null
-          }
-
-          verify_studio_retry() {
-            local ok=false
-            for attempt in $(seq 1 30); do
-              if verify_studio; then ok=true; break; fi
-              sleep 4
-            done
-            [[ "${ok}" == true ]]
-          }
-
-          project_status=$(curl -sS -o /tmp/project.json -w '%{http_code}' "${auth[@]}" "${project_api}")
-          if [[ "${project_status}" == 404 ]]; then
-            echo 'Studio Pages project is already absent.'
-            verify_studio_retry
-            echo 'retired=true' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          [[ "${project_status}" == 200 ]] || { cat /tmp/project.json >&2; exit 1; }
-          jq -e '.success == true' /tmp/project.json >/dev/null
-          canonical=$(jq -r '.result.canonical_deployment.id // empty' /tmp/project.json)
-          test -n "${canonical}"
-
-          zone_id=''
-          domain_status=$(curl -sS -o /tmp/pages-domain.json -w '%{http_code}' "${auth[@]}" "${domain_api}")
-          if [[ "${domain_status}" == 200 ]]; then
-            jq -e '.success == true' /tmp/pages-domain.json >/dev/null
-            zone_id=$(jq -r '.result.zone_tag // empty' /tmp/pages-domain.json)
-          elif [[ "${domain_status}" != 404 ]]; then
-            cat /tmp/pages-domain.json >&2
-            exit 1
+          echo '== workers.dev HTTP =='
+          workers_code=$(curl -sS -L --connect-timeout 10 --max-time 30 -o /tmp/workers-dev.html -w '%{http_code}' "https://${STUDIO_WORKERS_DEV}/" || true)
+          echo "workers.dev: HTTP ${workers_code}"
+          if [[ -s /tmp/workers-dev.html ]]; then
+            grep -o '<title>[^<]*</title>' /tmp/workers-dev.html | head -1 || true
           fi
 
-          if [[ -z "${zone_id}" ]]; then
-            curl -fsS --get "${auth[@]}" \
-              --data-urlencode 'name=wei-dev.com' \
-              --data-urlencode "account.id=${CLOUDFLARE_ACCOUNT_ID}" \
-              "${api}/zones" -o /tmp/zones.json
-            jq -e '.success == true' /tmp/zones.json >/dev/null
+          echo '== custom domain HTTP =='
+          custom_code=$(curl -sS -L --connect-timeout 10 --max-time 30 -o /tmp/custom.html -w '%{http_code}' "https://${STUDIO_DOMAIN}/" || true)
+          echo "custom domain: HTTP ${custom_code}"
+          if [[ -s /tmp/custom.html ]]; then
+            grep -o '<title>[^<]*</title>' /tmp/custom.html | head -1 || true
+          fi
+
+          echo '== Worker custom-domain API =='
+          domains_code=$(curl -sS -o /tmp/worker-domains.json -w '%{http_code}' --get "${auth[@]}" \
+            --data-urlencode "hostname=${STUDIO_DOMAIN}" \
+            "${api}/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/domains" || true)
+          echo "workers/domains: HTTP ${domains_code}"
+          if [[ "${domains_code}" == 200 ]]; then
+            jq '{success, result: [.result[] | {id, hostname, service, zone_name, environment}]}' /tmp/worker-domains.json
+          else
+            jq '{success, errors}' /tmp/worker-domains.json 2>/dev/null || cat /tmp/worker-domains.json
+          fi
+
+          echo '== Pages project API =='
+          pages_code=$(curl -sS -o /tmp/pages.json -w '%{http_code}' "${auth[@]}" \
+            "${api}/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/quillframe-studio" || true)
+          echo "Pages project: HTTP ${pages_code}"
+
+          echo '== zone and DNS API =='
+          zones_code=$(curl -sS -o /tmp/zones.json -w '%{http_code}' --get "${auth[@]}" \
+            --data-urlencode 'name=wei-dev.com' \
+            --data-urlencode "account.id=${CLOUDFLARE_ACCOUNT_ID}" \
+            "${api}/zones" || true)
+          echo "zones: HTTP ${zones_code}"
+          if [[ "${zones_code}" == 200 ]]; then
             zone_id=$(jq -r '.result | if length == 1 then .[0].id else empty end' /tmp/zones.json)
-          fi
-          test -n "${zone_id}"
-
-          dns_base="${api}/zones/${zone_id}/dns_records"
-          ensure_placeholder() {
-            curl -fsS --get "${auth[@]}" --data-urlencode "name=${domain}" "${dns_base}" -o /tmp/dns.json
-            jq -e '.success == true' /tmp/dns.json >/dev/null
-            count=$(jq '.result | length' /tmp/dns.json)
-            if [[ "${count}" == 0 ]]; then
-              payload=$(jq -nc --arg name "${domain}" '{type:"AAAA",name:$name,content:"100::",ttl:1,proxied:true}')
-              curl -fsS -X POST "${auth[@]}" -H 'Content-Type: application/json' --data "${payload}" "${dns_base}" -o /tmp/dns-write.json
-              jq -e '.success == true' /tmp/dns-write.json >/dev/null
-              echo "Created Worker-route placeholder DNS for ${domain}"
-            elif [[ "${count}" == 1 ]]; then
-              id=$(jq -r '.result[0].id' /tmp/dns.json)
-              type=$(jq -r '.result[0].type' /tmp/dns.json)
-              content=$(jq -r '.result[0].content' /tmp/dns.json)
-              proxied=$(jq -r '.result[0].proxied' /tmp/dns.json)
-              if [[ "${type}" == AAAA && "${content}" == '100::' && "${proxied}" == true ]]; then
-                echo "Worker-route placeholder DNS already present for ${domain}"
-              elif [[ "${type}" == CNAME && "${content%.}" == 'quillframe-studio.pages.dev' ]]; then
-                payload=$(jq -nc --arg name "${domain}" '{type:"AAAA",name:$name,content:"100::",ttl:1,proxied:true}')
-                curl -fsS -X PUT "${auth[@]}" -H 'Content-Type: application/json' --data "${payload}" "${dns_base}/${id}" -o /tmp/dns-write.json
-                jq -e '.success == true' /tmp/dns-write.json >/dev/null
-                echo "Cut ${domain} from Pages CNAME to Worker-route placeholder"
-              else
-                echo "Refusing unexpected DNS for ${domain}: ${type} ${content} proxied=${proxied}" >&2
-                exit 1
+            if [[ -n "${zone_id}" ]]; then
+              dns_code=$(curl -sS -o /tmp/dns.json -w '%{http_code}' --get "${auth[@]}" \
+                --data-urlencode "name=${STUDIO_DOMAIN}" \
+                "${api}/zones/${zone_id}/dns_records" || true)
+              echo "DNS query: HTTP ${dns_code}"
+              if [[ "${dns_code}" == 200 ]]; then
+                jq '{success, result: [.result[] | {id, type, name, content, proxied, ttl}]}' /tmp/dns.json
               fi
-            else
-              echo "Refusing ambiguous DNS for ${domain}: ${count} records" >&2
-              jq '.result' /tmp/dns.json >&2
-              exit 1
             fi
-          }
-
-          ensure_placeholder
-          if ! verify_studio_retry; then
-            echo 'Studio Worker route did not become healthy after DNS repair; refusing Pages deletion.' >&2
-            exit 1
           fi
 
-          if [[ "${domain_status}" == 200 ]]; then
-            delete_domain_status=$(curl -sS -o /tmp/domain-delete.json -w '%{http_code}' -X DELETE "${auth[@]}" "${domain_api}")
-            case "${delete_domain_status}" in
-              200|404) ;;
-              *) cat /tmp/domain-delete.json >&2; exit 1;;
-            esac
-          fi
+          echo "workers_code=${workers_code}" >> "$GITHUB_OUTPUT"
+          echo "custom_code=${custom_code}" >> "$GITHUB_OUTPUT"
+          echo "domains_code=${domains_code}" >> "$GITHUB_OUTPUT"
+          echo "pages_code=${pages_code}" >> "$GITHUB_OUTPUT"
 
-          # Pages may remove its managed DNS record when its custom-domain binding is deleted.
-          ensure_placeholder
-          verify_studio_retry
-
-          deployments_api="${project_api}/deployments"
-          rounds=0
-          while :; do
-            rounds=$((rounds + 1))
-            (( rounds <= 40 )) || { echo 'Deployment prune exceeded safety bound' >&2; exit 1; }
-            curl -fsS --get "${auth[@]}" --data-urlencode 'page=1' --data-urlencode 'per_page=100' "${deployments_api}" -o /tmp/deployments.json
-            jq -e '.success == true' /tmp/deployments.json >/dev/null
-            mapfile -t ids < <(jq -r --arg canonical "${canonical}" '.result[]?.id | select(. != $canonical)' /tmp/deployments.json)
-            (( ${#ids[@]} > 0 )) || break
-            echo "Pruning ${#ids[@]} old Studio Pages deployments"
-            for id in "${ids[@]}"; do
-              status=$(curl -sS -o /tmp/deployment-delete.json -w '%{http_code}' -X DELETE "${auth[@]}" "${deployments_api}/${id}?force=true")
-              case "${status}" in
-                200|204|404) ;;
-                *) echo "Failed to delete deployment ${id}: HTTP ${status}" >&2; cat /tmp/deployment-delete.json >&2; exit 1;;
-              esac
-            done
-          done
-
-          deleted=false
-          for attempt in $(seq 1 5); do
-            status=$(curl -sS -o /tmp/project-delete.json -w '%{http_code}' -X DELETE "${auth[@]}" "${project_api}")
-            if [[ "${status}" == 200 || "${status}" == 204 ]]; then
-              deleted=true
-              break
-            fi
-            echo "Studio Pages project delete attempt ${attempt} returned HTTP ${status}" >&2
-            cat /tmp/project-delete.json >&2 || true
-            sleep 3
-          done
-          [[ "${deleted}" == true ]]
-
-          post=$(curl -sS -o /tmp/project-post.json -w '%{http_code}' "${auth[@]}" "${project_api}")
-          [[ "${post}" == 404 ]]
-          verify_studio_retry
-
-          product_post=$(curl -sS -o /tmp/product-post.json -w '%{http_code}' "${auth[@]}" "${api}/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/quillframe")
-          [[ "${product_post}" == 404 ]]
-          echo 'retired=true' >> "$GITHUB_OUTPUT"
-          echo 'Both legacy Pages projects are retired.'
-
-      - name: Publish Pages retirement status
+      - name: Publish diagnostic status
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RETIRED: ${{ steps.retire.outputs.retired }}
-          JOB_STATUS: ${{ job.status }}
+          WORKERS_CODE: ${{ steps.diag.outputs.workers_code }}
+          CUSTOM_CODE: ${{ steps.diag.outputs.custom_code }}
+          DOMAINS_CODE: ${{ steps.diag.outputs.domains_code }}
+          PAGES_CODE: ${{ steps.diag.outputs.pages_code }}
         run: |
           set -euo pipefail
-          if [[ "${RETIRED}" == true && "${JOB_STATUS}" == success ]]; then
-            state=success
-            description='Both legacy Cloudflare Pages projects are retired'
-          else
-            state=failure
-            description='Legacy Pages retirement is incomplete; inspect this run'
-          fi
+          state=error
+          description="Studio cutover: workers.dev=${WORKERS_CODE:-?} custom=${CUSTOM_CODE:-?} domainsAPI=${DOMAINS_CODE:-?} Pages=${PAGES_CODE:-?}"
+          if [[ "${WORKERS_CODE}" == 200 && "${CUSTOM_CODE}" == 200 ]]; then state=success; fi
           target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          payload=$(jq -nc --arg state "${state}" --arg target_url "${target_url}" --arg description "${description}" --arg context 'quillframe/pages-retire-op' '{state:$state,target_url:$target_url,description:$description,context:$context}')
+          payload=$(jq -nc --arg state "${state}" --arg target_url "${target_url}" --arg description "${description}" --arg context 'quillframe/studio-cutover-diag' '{state:$state,target_url:$target_url,description:$description,context:$context}')
           curl -fsS -X POST \
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H 'Accept: application/vnd.github+json' \
