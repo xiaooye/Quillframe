@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://quillframe.wei-dev.com/sitemap.xml

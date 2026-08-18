@@ -2,8 +2,8 @@
 /docs /docs/ 301
 /docs/en /docs/en/ 301
 
-# Product routes are owned by the Godot Web runtime. These explicit rewrites
-# preserve direct-link and reload behavior without swallowing /docs/**.
+# Product routes are owned by the SolidJS/Vite product entry. These explicit
+# rewrites preserve direct-link and reload behavior without swallowing /docs/**.
 /product /index.html 200
 /studio /index.html 200
 /architecture /index.html 200
