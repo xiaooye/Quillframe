@@ -211,7 +211,7 @@ def _self_test() -> dict[str, Any]:
             }
             result = host_bridge.invoke(request)
             assert result["status"] == "ok"
-            assert result["data"]["contract_version"] == "8"
+            assert result["data"]["contract_version"] == host_bridge.contract()["version"]
             refs = _credential_refs()
             assert refs["credential_refs"] == []
         finally:
@@ -226,7 +226,7 @@ def _self_test() -> dict[str, Any]:
     return {
         "schema": "quillframe_tauri_sidecar_self_test_v1",
         "status": "PASS",
-        "host_bridge_v8": True,
+        "host_bridge_contract_version": host_bridge.contract()["version"],
         "prepared_reference_contract": True,
         "rollback_contract": True,
         "all_injected_secret_scrub": True,
