@@ -18,7 +18,7 @@
     "docs:content": "node scripts/build-starlight-content.mjs"
   },
   "dependencies": {
-    "@solidjs/router": "0.16.2",
+    "@solidjs/router": "1.0.0",
     "pyodide": "314.0.2",
     "solid-js": "1.9.14"
   },
