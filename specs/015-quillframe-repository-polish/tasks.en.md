@@ -1,35 +1,46 @@
 # Tasks · Quillframe Repository Polish
 
-Format: `[ID] [Phase] exact target + completion criterion`
+Format: `[ID] exact target + completion criterion`
 
-## Phase 1 · Audit and freeze
+## Audit / reconciliation
 
-- [x] T001 Freeze current `main` at `e49304bde7fb0c5ba0822deb3823f960c6425804` and inspect active PRs/branches/workflows.
-- [x] T002 Identify Agent PR #108 and UI/UX branch ownership; do not merge or overwrite them.
-- [x] T003 Benchmark current mature GitHub repositories across agent, framework, Python, frontend, desktop, and authoring categories.
+- [x] T001 Freeze starting `main` at `e49304bde7fb0c5ba0822deb3823f960c6425804` and identify concurrent ownership.
+- [x] T002 Reconcile merged Agent/Model Runtime PR #108 without importing provider authority.
+- [x] T003 Reconcile merged UI/product-language PR #109 and later main layout/consistency fixes.
+- [x] T004 Benchmark current high-star README patterns across agent/framework/product repositories.
 
-## Phase 2 · Repository landing
+## Repository landing
 
-- [ ] T004 Reconstruct root README hero, positioning, principles, architecture, workflow, status, Quick Start, docs map, and license truth.
-- [ ] T005 Synchronize native English/Chinese root README editions.
-- [ ] T006 Use only stable current brand/architecture assets; do not pin a volatile Studio screenshot before UI/UX reconciliation.
+- [x] T005 Reconstruct root README as a complete product landing with Quick Start near the top.
+- [x] T006 Synchronize native English and Simplified Chinese editions.
+- [x] T007 Add stable theme-aware Quillframe mark + architecture/production artwork for GitHub light/dark rendering.
+- [x] T008 Keep current status honest: pre-1.0, no shipped Tauri wrapper, no fake provider gateway.
 
-## Phase 3 · Contributor surface
+## Contributor / legal surface
 
-- [ ] T007 Add concise `CONTRIBUTING.md` with exact setup/test commands and authority-sensitive change guidance.
-- [ ] T008 Add `SECURITY.md` using GitHub private vulnerability reporting as the preferred route and explicit secret/project-data handling.
-- [ ] T009 Add standard `CODE_OF_CONDUCT.md` without inventing project-specific enforcement machinery.
-- [ ] T010 Add bounded issue forms and a concise PR template with authority impact fields.
+- [x] T009 Add `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `ROADMAP.md`, issue forms, and PR template.
+- [x] T010 Rename legal product identifiers in `LICENSE` to Quillframe without changing the substantive source-available terms.
 
-## Phase 4 · Docs/public naming
+## Documentation governance
 
-- [ ] T011 Repair docs landing current-facing NovelForge copy and retired Studio domain.
-- [ ] T012 Repair active docs compatibility wording that incorrectly treats `quillframe` as a former-name namespace.
-- [ ] T013 Preserve historical specs and legal license wording unless a separate authorized legal/history change exists.
+- [x] T011 Register paired Model Runtime and Agent Runtime docs in `documentation_manifest.json`.
+- [x] T012 Surface Model/Agent Runtime in Starlight and repair docs-home links.
+- [x] T013 Make standalone `scripts/docs_quality.py` executable against the current public-doc corpus.
+- [x] T014 Run `docs_quality.py` in normal CI with no model/API execution.
 
-## Phase 5 · Verification and PR
+## AI-readable public surface
 
-- [ ] T014 Re-fetch live `main`, Agent PR, and UI/UX branch before final review; reconcile only merged facts.
-- [ ] T015 Validate Markdown/YAML/relative links and observe CI/docs build evidence.
-- [ ] T016 Report GitHub-render/light/dark QA as unverified unless directly evidenced.
-- [ ] T017 Create Draft PR with starting SHA, changed files, truth boundaries, verification, dependencies, and known limitations. Do not merge.
+- [x] T015 Add `robots.txt`, `sitemap.xml`, `sitemap.md`, `llms.txt`, `llms-full.txt`, `auth.md`, AI catalog, and Agent Skills index.
+- [x] T016 Publish explicit `search=yes, ai-input=yes, ai-train=no` content-use signal while keeping the license authoritative.
+- [x] T017 Explicitly deny unsupported public Core API / MCP / A2A / OAuth / hosted model-gateway claims.
+
+## Verification / finalization
+
+- [x] T018 Observe green full CI after docs-governance/runtime/Studio/site changes (runs #128 and #130 on earlier exact heads).
+- [x] T019 Add an exact-head GitHub README renderer for desktop light/dark and 390px narrow light/dark, with screenshot + JSON evidence artifacts.
+- [ ] T020 Obtain actual GitHub-render evidence for the final README head; if GitHub Actions blocks a newly introduced workflow before default-branch availability, record `awaiting_external` rather than a fake PASS.
+- [ ] T021 Perform final late reconciliation against current `main` after concurrent sessions stop moving relevant surfaces.
+- [ ] T022 Restore/remove any temporary PR-specific CI wiring; keep only reusable QA tooling.
+- [ ] T023 Obtain green final-head CI after cleanup/reconciliation.
+- [ ] T024 Write Repository Description/Homepage/Topics only if an authorized connected action exists; otherwise report exact settings as external.
+- [ ] T025 Refresh Draft PR #110 body with exact final SHA/evidence and keep it Draft/unmerged.

@@ -1,35 +1,46 @@
 # 任务 · Quillframe Repository Polish
 
-格式：`[ID] [Phase] 精确 target + completion criterion`
+格式：`[ID] 精确 target + completion criterion`
 
-## Phase 1 · Audit and freeze
+## 审计 / reconciliation
 
-- [x] T001 冻结 current `main` 为 `e49304bde7fb0c5ba0822deb3823f960c6425804`，检查 active PR / branches / workflows。
-- [x] T002 识别 Agent PR #108 与 UI/UX branch ownership；不 merge、不覆盖。
-- [x] T003 Benchmark current mature GitHub repositories，覆盖 agent、framework、Python、frontend、desktop、authoring。
+- [x] T001 冻结 starting `main` 为 `e49304bde7fb0c5ba0822deb3823f960c6425804`，识别并行 ownership。
+- [x] T002 Reconcile 已合并 Agent/Model Runtime PR #108，不引入 provider authority。
+- [x] T003 Reconcile 已合并 UI/product-language PR #109 与后续 main layout/consistency fixes。
+- [x] T004 Benchmark current high-star agent/framework/product repository README patterns。
 
-## Phase 2 · Repository landing
+## Repository landing
 
-- [ ] T004 重构 root README hero、positioning、principles、architecture、workflow、status、Quick Start、docs map、license truth。
-- [ ] T005 同步英文与自然中文 root README。
-- [ ] T006 只使用稳定 current brand/architecture assets；UI/UX reconciliation 前不固化易过期 Studio screenshot。
+- [x] T005 将 root README 重构为完整产品 landing，并把 Quick Start 放到靠前位置。
+- [x] T006 同步自然英文与简体中文版本。
+- [x] T007 为 GitHub light/dark render 增加稳定、theme-aware 的 Quillframe mark 与 architecture/production artwork。
+- [x] T008 保持 current status 真实：pre-1.0、未发布 Tauri wrapper、不虚构 provider gateway。
 
-## Phase 3 · Contributor surface
+## Contributor / legal surface
 
-- [ ] T007 新增 concise `CONTRIBUTING.md`，包含真实 setup/test commands 和 authority-sensitive change guidance。
-- [ ] T008 新增 `SECURITY.md`，优先 GitHub Private Vulnerability Reporting，并明确 secret/project-data 处理。
-- [ ] T009 新增标准 `CODE_OF_CONDUCT.md`，不自创复杂 enforcement system。
-- [ ] T010 新增精简 issue forms 与 PR template，包含 authority impact 字段。
+- [x] T009 增加 `CONTRIBUTING.md`、`SECURITY.md`、`CODE_OF_CONDUCT.md`、`ROADMAP.md`、issue forms 与 PR template。
+- [x] T010 将 `LICENSE` 法律产品标识改为 Quillframe，不改变实质 source-available 条款。
 
-## Phase 4 · Docs/public naming
+## Documentation governance
 
-- [ ] T011 修复 docs landing 当前语境 NovelForge 文案与退役 Studio domain。
-- [ ] T012 修复 active docs 中把 `quillframe` 错误描述成旧命名空间的 compatibility wording。
-- [ ] T013 除非存在独立授权的法律/历史任务，否则保留 historical specs 与 legal license 原文。
+- [x] T011 在 `documentation_manifest.json` 注册 Model Runtime / Agent Runtime 双语文档。
+- [x] T012 在 Starlight 暴露 Model/Agent Runtime，并修复 docs-home links。
+- [x] T013 让 standalone `scripts/docs_quality.py` 能针对 current public-doc corpus 真正执行。
+- [x] T014 在 normal CI 运行 `docs_quality.py`，不调用模型/API。
 
-## Phase 5 · Verification and PR
+## AI-readable public surface
 
-- [ ] T014 Final review 前重新 fetch live `main`、Agent PR、UI/UX branch；只 reconcile 已 merged facts。
-- [ ] T015 验证 Markdown/YAML/relative links，并收集 CI/docs build evidence。
-- [ ] T016 没有直接 rendered evidence 时，把 GitHub light/dark QA 报告为 unverified。
-- [ ] T017 创建 Draft PR，包含 starting SHA、changed files、truth boundaries、verification、dependencies 与 known limitations；不 merge。
+- [x] T015 增加 `robots.txt`、`sitemap.xml`、`sitemap.md`、`llms.txt`、`llms-full.txt`、`auth.md`、AI catalog 与 Agent Skills index。
+- [x] T016 发布明确的 `search=yes, ai-input=yes, ai-train=no` content-use signal，同时保持 license 为法律 authority。
+- [x] T017 明确否认未支持的 public Core API / MCP / A2A / OAuth / hosted model-gateway claims。
+
+## Verification / finalization
+
+- [x] T018 在前序 exact heads 上取得 docs-governance/runtime/Studio/site 全 CI 绿色证据（runs #128 与 #130）。
+- [x] T019 增加 exact-head GitHub README renderer：desktop light/dark + 390px narrow light/dark，并产出 screenshot + JSON artifact。
+- [ ] T020 为最终 README head 获得真实 GitHub-render evidence；若新增 workflow 在进入 default branch 前受 GitHub Actions 事件规则阻断，则报告 `awaiting_external`，不得伪造 PASS。
+- [ ] T021 并行 session 不再移动相关 surface 后，对 current `main` 做 final late reconciliation。
+- [ ] T022 移除/恢复所有临时 PR-specific CI wiring，只保留 reusable QA tooling。
+- [ ] T023 Cleanup/reconciliation 后取得 final-head green CI。
+- [ ] T024 仅在 connected action 真正支持时写 Repository Description/Homepage/Topics；否则报告精确外部设置值。
+- [ ] T025 用 exact final SHA/evidence 刷新 Draft PR #110 body，并保持 Draft/unmerged。

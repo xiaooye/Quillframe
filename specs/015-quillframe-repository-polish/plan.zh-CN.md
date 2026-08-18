@@ -2,75 +2,57 @@
 
 ## 选定架构
 
-把 repository presentation 当成现有 authority 之上的薄公共层：根 README 负责 orientation；Starlight 负责深入文档；CONTRIBUTING / SECURITY / GitHub templates 负责参与入口；真正执行权威仍在 manifest、contracts、implementation 与 tests。
+把 repository presentation 视为 live Quillframe authority 之上的薄公共层：README 负责 orientation 与开始使用；Starlight 负责深入；AI discovery 文件负责描述；contributor/security/templates 负责参与入口；真正权威仍在 implementation/contracts/tests。
 
 README narrative：
 
-`Hero → 为什么存在 → 核心原则 → architecture → authoring lifecycle → state boundaries → Studio / persistence → Quick Start → repository/docs map → status / contributing / license`
+`Hero → Quick Start → 为什么存在 → 产品心智模型 → Model/Agent Runtime → 正文生产生命周期 → Studio/state → Learning → AI discovery → docs/repo map → status/security/license`
 
-UI/UX branch 正在进行，因此优先使用仓库已有且稳定的 SVG 品牌与架构资产，不把短期易过期的 Studio 截图固定为 README hero。
+这与当前高 star repository 的高质量模式一致：先讲清类别和可运行价值，再逐层展开 architecture，而不是第一屏就展示内部 inventory。
 
-## 外部 Benchmark Patterns
+## Benchmark 集合
 
-已研究当前 LangChain、AutoGen、Pydantic、FastAPI、Vite、Tauri、AppFlowy、Zed 的 GitHub presentation。可复用的是信息设计模式：
+研究了当前 OpenClaw、Spec Kit、autoresearch、Pi Agent Harness、World Monitor、Matt Pocock Skills、DeepSeek Harness、Superpowers，以及其他成熟 framework/product repository 的 README。只吸收信息设计模式，不复制外部品牌、文案、代码或精确布局。
 
-- 第一屏一句话讲清 category；
-- Quick Start 靠前，但先给足最小产品上下文；
-- 生命周期重要时把 status notice 明确放出来；
-- 用分层 architecture 代替 giant inventory；
-- 用户运行路径与 contributor setup 分离；
-- docs / contributing / security 从根入口可见；
-- 高级内部细节用 progressive disclosure；
-- license 如实直说。
+## 影响表面
 
-不复制任何外部品牌、文案、精确布局、代码或资产。
+- root 英文/中文 README 与 light/dark 自适应品牌/架构图；
+- `CONTRIBUTING.md`、`SECURITY.md`、`CODE_OF_CONDUCT.md`、`ROADMAP.md`；
+- GitHub Issue / PR templates；
+- docs home / Why Quillframe / Starlight navigation；
+- `docs/documentation_manifest.json` 与 deterministic `scripts/docs_quality.py`；
+- Model/Agent Runtime 文档发现入口；
+- `site/public` AI discovery：robots、XML/Markdown sitemap、llms、auth note、well-known catalog、response headers；
+- `LICENSE` 中的法律产品标识；
+- README visual-QA automation/evidence tooling。
 
-## 影响对象 / 路径
+Repository Description/Homepage/Topics 只有在 connected GitHub surface 暴露经过授权的 metadata write action 时才直接修改；否则保留为外部 GitHub settings 步骤。
 
-主要：
-- `README.md`, `README.en.md`, `README.zh-CN.md`
-- `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`
-- `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`
-- `docs/README.*`, `docs/why-quillframe.*`
-- `site/docs-site/src/components/DocsLanding.astro`
-- `site/docs-site/src/components/QuillframeActions.astro`
+## 执行顺序
 
-当前可用 GitHub connector 不提供 repository Description/Homepage/Topics 写接口，因此在 PR/final report 提供 exact recommended values。
+1. 冻结/重读 live `main` 与并行 ownership。
+2. Reconcile 已 merge 的 runtime 与 UI/product facts。
+3. Benchmark current high-signal README 与 AI-readable web conventions。
+4. Polish README 并同步中文/英文版本。
+5. 注册 Model/Agent docs，修复 Starlight route 与 docs-home link。
+6. 让 `docs_quality.py` 可在 current corpus 上真正运行，并接入 normal CI。
+7. 增加受边界约束的 AI discovery/content-use 文件。
+8. 修改 license 产品标识，但不改许可条款。
+9. 增加 theme-aware README artwork 与真实 GitHub render QA tooling。
+10. 收集 CI/evidence、修失败项，再次 late-reconcile `main`。
+11. 刷新 Draft PR #110 body，不 merge。
 
-## Dependency Graph
+## 验证策略
 
-1. 冻结 live `main` 与并行 branch ownership。
-2. 研究 current public repositories。
-3. 根据 current contracts 重构 README。
-4. 增加 contributor/security/community 入口。
-5. 修复 current-facing docs naming/routes。
-6. 运行/观察 repository verification。
-7. 重新 fetch `main` 与并行 PR，只吸收已经 merged 的事实。
-8. 创建 Draft PR。
-
-## Migration Strategy
-
-纯文档 / presentation 的 additive 或 replacement changes，不进行 data/runtime/schema migration。
-
-## Test / Eval Strategy
-
-- Pull Request 上的 current CI；
-- CI 中 site `quality`、`build`、`docs:build`；
-- relative path / anchor inventory review；
-- YAML / GitHub template syntax review；
-- 工具允许时验证 public deployment links；
-- README 不引入 Mermaid，因此 Mermaid renderer validation 为 N/A；
-- 若无法拿到真实 rendered GitHub evidence，light/dark QA 明确写 unverified。
-
-## Phases / Checkpoints
-
-1. Spec 与 ownership freeze。
-2. README landing reconstruction。
-3. Contributor / Security / GitHub templates。
-4. Docs entry point naming/link cleanup。
-5. Verification + late truth reconciliation。
-6. Draft PR。
+- normal CI 中运行 `python scripts/docs_quality.py`；
+- Quillframe Python/runtime/authority regression suite；
+- site `quality`、`build`、`docs:build`；
+- Studio frozen install、typecheck、build；
+- local link 与 manifest inventory check；
+- GitHub Actions event 语义允许时，对 public GitHub README 做 desktop-light、desktop-dark、narrow-light、narrow-dark 的真实 render capture；
+- screenshot/report artifact 绑定 exact head SHA；
+- 没有 actual GitHub-render evidence 就不宣布 visual PASS。
 
 ## Rollback
 
-所有改动按 commit bounded，且不触碰 runtime/persistent project state；需要回退时直接 revert 对应 commit。
+所有变更按 commit 划分，不触碰 persistent project/runtime state。Repository-presentation/QA commit 可独立 revert；LICENSE rename 也可独立回退，因为实质性 license clauses 没有改变。

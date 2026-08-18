@@ -2,75 +2,57 @@
 
 ## Chosen Architecture
 
-Treat repository presentation as a thin public layer over existing authority. The root README orients; Starlight deepens; contributor/security/templates route participation; implementation contracts remain authoritative.
+Treat repository presentation as a thin public layer over live Quillframe authority. README orients and starts; Starlight deepens; AI-discovery files describe; contributor/security/templates route participation; implementation contracts remain authoritative.
 
-The README narrative will use:
+README narrative:
 
-`Hero → product problem → principles → architecture → authoring lifecycle → state boundaries → Studio/persistence → Quick Start → repository/docs map → status/contributing/license`.
+`Hero → Quick Start → why → product mental model → Model/Agent Runtime → production lifecycle → Studio/state → Learning → AI discovery → docs/repo map → status/security/license`
 
-Stable SVG brand/architecture assets already in the repository are preferred over a volatile Studio screenshot while the UI/UX branch is active.
+This deliberately follows the strongest pattern found in current high-star repositories: explain category and runnable value early, then earn deeper architecture detail.
 
-## External Benchmark Patterns
+## Benchmark set
 
-Current GitHub presentation patterns were reviewed across LangChain, AutoGen, Pydantic, FastAPI, Vite, Tauri, AppFlowy, and Zed. Reusable patterns:
+Reviewed current README patterns from OpenClaw, Spec Kit, autoresearch, Pi Agent Harness, World Monitor, Matt Pocock's Skills, DeepSeek Harness, Superpowers, and additional mature framework/product repositories. Reused patterns are information-design patterns only; no external branding, prose, code, or layout is copied.
 
-- one-sentence category clarity in the first screen;
-- Quick Start close to the top but after enough product context to know what is being run;
-- explicit project/status notices when lifecycle matters;
-- layered architecture rather than a giant inventory;
-- installation separated from contributor setup;
-- docs/contribution/security entry points visible from the root;
-- progressive disclosure for advanced internals;
-- licensing stated plainly.
+## Affected surfaces
 
-No external branding, copy, layout, or assets are copied.
+- root English/Chinese README and theme-aware brand/architecture artwork;
+- `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `ROADMAP.md`;
+- GitHub issue/PR templates;
+- docs home / Why Quillframe / Starlight navigation;
+- `docs/documentation_manifest.json` and deterministic `scripts/docs_quality.py`;
+- Model/Agent Runtime documentation discoverability;
+- `site/public` AI discovery (`robots.txt`, XML/Markdown sitemaps, llms files, auth note, well-known catalogs, response headers);
+- legal product identifier in `LICENSE`;
+- README visual-QA automation/evidence tooling.
 
-## Affected Objects / Paths
+Repository Description/Homepage/Topics remain an external GitHub settings operation unless the connected GitHub action surface exposes an authorized repository-metadata write.
 
-Primary:
-- `README.md`, `README.en.md`, `README.zh-CN.md`
-- `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`
-- `.github/ISSUE_TEMPLATE/**`, `.github/pull_request_template.md`
-- `docs/README.*`, `docs/why-quillframe.*`
-- `site/docs-site/src/components/DocsLanding.astro`
-- `site/docs-site/src/components/QuillframeActions.astro`
+## Execution order
 
-Presentation metadata cannot be changed by the available repository connector; exact recommended Description/Homepage/Topics will be recorded in the PR/report.
+1. Freeze/re-read live `main` and concurrent ownership.
+2. Reconcile merged runtime and UI/product facts.
+3. Benchmark current high-signal READMEs and AI-readable web conventions.
+4. Polish README and synchronized Chinese/English editions.
+5. Register Model/Agent docs; repair Starlight routes and docs-home links.
+6. Make `docs_quality.py` executable on the current corpus and add it to normal CI.
+7. Add bounded AI discovery/content-use files.
+8. Rename the legal product identifier without changing license terms.
+9. Add theme-aware README artwork and real GitHub-render QA tooling.
+10. Run CI/evidence, repair failures, then late-reconcile `main` again.
+11. Refresh Draft PR #110 body; do not merge.
 
-## Dependency Graph
+## Verification strategy
 
-1. Freeze live `main` and concurrent branch ownership.
-2. Benchmark current public repositories.
-3. Reconstruct README from current contracts.
-4. Add contributor/security/community entry points.
-5. Repair current-facing docs naming/routes.
-6. Run/observe repository verification.
-7. Re-fetch `main` and concurrent PRs; reconcile only merged truth.
-8. Open Draft PR.
-
-## Migration Strategy
-
-Documentation-only additive/replacement changes. No data, runtime, or schema migration.
-
-## Test / Eval Strategy
-
-- current CI on pull request;
-- site `quality`, `build`, and `docs:build` through CI;
-- relative-path/anchor inventory review;
-- YAML/template syntax review;
-- external deployment-link verification where tooling permits;
-- no Mermaid introduced, so Mermaid renderer validation is not applicable;
-- rendered GitHub light/dark QA reported as unverified unless actual rendered evidence becomes available.
-
-## Phases / Checkpoints
-
-1. Specification and ownership freeze.
-2. README landing reconstruction.
-3. Contributor/security/GitHub templates.
-4. Docs entry-point naming/link cleanup.
-5. Verification and late truth reconciliation.
-6. Draft PR.
+- `python scripts/docs_quality.py` in normal CI;
+- Quillframe Python/runtime/authority regression suite;
+- site `quality`, `build`, `docs:build`;
+- Studio frozen install, typecheck, build;
+- local-link and manifest inventory checks;
+- actual public GitHub README render captured at desktop-light, desktop-dark, narrow-light, narrow-dark when GitHub Actions event semantics permit the new renderer to execute;
+- screenshot/report artifacts bound to exact head SHA;
+- no claim of visual PASS without actual GitHub-render evidence.
 
 ## Rollback
 
-Each change is commit-bounded and documentation-only. Revert the relevant commit without touching runtime or persistent project state.
+Changes are commit-bounded and avoid persistent project/runtime mutation. Revert repository-presentation/QA commits independently. LICENSE rename can be reverted independently because substantive license clauses were not changed.

@@ -1,72 +1,73 @@
 # Specification · Quillframe Repository Polish
 
-Status: Implementation candidate
+Status: implementation + verification candidate
 Primary mode: `SYSTEM-IMPROVE`
 Frozen starting `main`: `e49304bde7fb0c5ba0822deb3823f960c6425804`
 
 ## Problem / Context
 
-The repository contains a strong Quillframe 0.9 framework and product surface, but the GitHub landing experience still reads like an internal engineering repository. The root README is only a language router, contributor/security/community entry points are missing, GitHub metadata is empty, and the Starlight landing still exposes current-facing NovelForge copy and a retired Studio domain.
+Quillframe 0.9 already has a substantial framework, product site, Studio, and documentation corpus, but the repository itself must read like a coherent product rather than an internal source tree. The public surface must also be legible to both people and current AI discovery systems without inventing protocols or authority that Quillframe does not expose.
 
-## Current-state Audit
+## Reconciled implementation truth
 
-- Product identity: Quillframe; technical namespace: `quillframe`; version: `0.9.0`.
-- Current runtime truth comes from `HARNESS_MANIFEST.yaml`, `SKILL*`, `harness/HARNESS_AGENT*`, implementation, tests, and the frozen `main` SHA.
-- Canon, Context, Learning, independent review, and Settlement have explicit authority boundaries.
-- SQLite is canonical durable product state in `persistence/quillframe_sqlite.py`.
-- Current Studio is a SolidJS + TypeScript + Vite shell behind a typed Python Host Bridge/local server. Tauri 2 is the desktop-host direction, not a shipped wrapper on the frozen baseline.
-- Model-runtime work is active in draft PR #108 and must not be presented as merged capability.
-- UI/UX work is active on `ui/homepage-product-language-unification`; its owned implementation must not be overwritten.
-- The repository license is proprietary source-available and explicitly not an OSI open-source license. Presentation must say this plainly unless a separate relicensing decision is made.
+- Product identity: **Quillframe**; technical namespace: `quillframe`; version line: `0.9.x`.
+- Agent/Model Runtime work from PR #108 is merged: ordinary model setup is `API Endpoint + Access Token`; Quillframe owns discovery, capability evidence, model selection, tools, sessions/checkpoints, authority, and the agent loop.
+- Product-language / UI work from PR #109 and later consistency/layout fixes has merged and must be preserved rather than reimplemented here.
+- SQLite remains canonical durable product state.
+- SolidJS + TypeScript + Vite is the current web/Studio stack; Tauri 2 remains the thin desktop-host direction rather than a shipped wrapper.
+- The repository remains proprietary source-available, not OSI open source. The legal product name is now Quillframe; license permissions/restrictions are unchanged.
 
 ## User / Editorial Value
 
-A first-time visitor should understand Quillframe in 30 seconds, understand its authority/runtime model within five minutes, reach a truthful setup path within ten minutes, and know how to contribute without opening internal contracts first.
+A first-time visitor should understand the category and central distinction within seconds, reach a real setup path quickly, understand why long-form work needs explicit state/authority, and find deeper runtime/docs material without reading the entire framework.
 
 ## Requirements
 
-1. Reconstruct `README.md` as a full GitHub landing page, with synchronized English and native Chinese editions.
-2. Translate the Borderless Kawaii Editorial identity into GitHub-native composition: generous whitespace, restrained marks, real brand assets, small status labels, diagrams, and progressive disclosure.
-3. Explain why long-form fiction needs explicit Canon, Context, state, independent semantic review, Learning governance, and Settlement rather than one prompt → model → text loop.
-4. Explain product architecture without making the Model API the authority chain.
-5. Separate implemented, active-development, and planned surfaces.
-6. Provide commands that exist on the frozen baseline only.
-7. Add concise contributor, security, conduct, issue, and PR entry points consistent with the repository license and authority model.
-8. Repair current-facing NovelForge copy/dead domains in public documentation entry points without rewriting historical records or legal text.
-9. Preserve other-session ownership; no Core, Agent Runtime, Model Runtime, SQLite schema, Studio behavior, or CSS changes.
-10. Create a Draft PR only; do not merge.
+1. Make `README.md` a complete product landing page with synchronized native English and Simplified Chinese editions.
+2. Follow current high-performing GitHub README patterns: immediate category clarity, a memorable product statement, a near-top Quick Start, one clear mental model, progressive disclosure, explicit status/security/license, and no inventory-first wall of text.
+3. Translate Borderless Kawaii Editorial into GitHub-native presentation: whitespace, restrained marks, real badges, stable brand assets, theme-aware diagrams, and no dashboard/card soup.
+4. Explain Canon, bounded Context, Character/Relationship state, independent semantic review, Learning governance, SQLite persistence, and Settlement without making Model API/provider identity authoritative.
+5. Describe the merged Model Runtime and Agent Runtime truthfully and register their paired docs in documentation governance/Starlight.
+6. Make `python scripts/docs_quality.py` a standalone deterministic gate and execute it in normal CI without model/API spending.
+7. Add/maintain contributor, security, conduct, issue, and PR entry points consistent with the current authority model and source-available license.
+8. Add bounded AI-readable discovery surfaces (`robots.txt`, XML + Markdown sitemaps, `llms.txt`, fuller agent guidance, discovery catalog, Agent Skills index, content-use signals) without claiming unsupported MCP/A2A/OAuth/API services.
+9. Rename the legal product identifier in `LICENSE` from NovelForge to Quillframe without changing the substantive license grant/restrictions.
+10. Produce actual GitHub-rendered README light/dark/narrow QA evidence where the environment can safely execute it; never substitute a local Markdown mock while calling it GitHub-rendered.
+11. Reconcile concurrent merged `main` changes before consequential writes and preserve their ownership.
+12. Keep this work in Draft PR #110; do not merge from this session.
 
 ## Non-goals
 
-- Runtime or schema migration.
-- Agent/Model Service implementation.
-- Studio component/CSS redesign.
-- Relicensing the repository.
-- Global replacement of historical `NovelForge` strings.
-- Pretending draft PR work or planned Tauri packaging is released.
+- Runtime, Canon, Settlement, Learning, or SQLite behavior changes.
+- Provider gateway or third-party agent-runtime authority.
+- Relicensing to an OSI license.
+- Global rewriting of historical product names where provenance matters.
+- Fabricating repository metadata writes, public APIs, agent protocols, or visual QA evidence.
 
 ## Authority / Canon Impact
 
-None. Documentation and GitHub presentation cannot grant Canon, acceptance, Settlement, Learning promotion, or Framework write authority.
+None. Repository presentation, discovery metadata, documentation registration, and QA tooling do not grant Canon, acceptance, Settlement, Project-write, Learning-promotion, or Framework-write authority.
 
 ## Compatibility Constraints
 
-- `Quillframe` is current product identity; `quillframe` is the active technical namespace.
-- `0.9.x` remains pre-1.0 and may break before 1.0.
-- Historical specifications and the current license preserve their original naming where provenance/legal meaning would change.
-- Public URLs must match current deployment workflows and be independently rechecked when possible.
+- Historical records remain historical; current-facing guidance uses Quillframe.
+- Pre-1.0 consumers pin the exact Framework revision/bundle required by their project lock.
+- Model tokens remain host secrets and must not enter prompts, Context, SQLite, receipts, fingerprints, or client bundles.
+- Public AI discovery is metadata only; public crawlability does not expand license rights.
 
 ## Acceptance Scenarios
 
-- A visitor can answer: what Quillframe is, what it owns, what the model owns, where project truth lives, how state persists, how to run current surfaces, and where to contribute.
-- README does not claim Model Runtime capabilities from PR #108 as merged.
-- README does not claim a shipped Tauri wrapper on the frozen baseline.
-- README does not call the current license open source.
-- Current Starlight navigation contains no active NovelForge branding or retired NovelForge Studio URL.
-- CI/docs build and repository link checks pass or limitations are reported precisely.
+- README answers what Quillframe is, what it owns, what models own, where truth/state live, how to start, and what is still pre-1.0.
+- English/Chinese README assets remain readable in GitHub light/dark themes and do not horizontally overflow at narrow width.
+- Model/Agent Runtime docs are registered and reachable through Starlight navigation.
+- `python scripts/docs_quality.py` runs in normal CI and blocks deterministic documentation defects.
+- AI discovery files are internally consistent and explicitly deny unsupported authority/service claims.
+- LICENSE says Quillframe while preserving the existing legal terms.
+- Repository Description/Homepage/Topics are written only if an authorized connected action exists; otherwise exact desired values are reported as an external settings step.
+- Final PR remains Draft and reconciled with current `main`.
 
 ## Risks
 
-- Parallel UI/UX or Agent branches may merge after the initial freeze; perform late truth reconciliation before review.
-- README screenshots can become stale while Studio is actively changing; prefer stable brand/architecture assets and defer volatile Studio screenshots.
-- GitHub rendered light/dark visual QA cannot be declared passed without actual rendered evidence.
+- Concurrent sessions may continue moving `main`; late reconciliation is mandatory.
+- GitHub Actions security/event semantics may prevent a newly introduced visual-QA workflow from running before that workflow exists on the default branch; this must be reported as a tooling boundary rather than converted into a fake PASS.
+- AI crawler/content-signal conventions are evolving; discovery files must remain narrow, descriptive, and subordinate to the license/security contracts.
