@@ -159,6 +159,10 @@ def _doctor(args: dict[str, Any], _: str):
     return store().doctor(args.get("project_id"), fix=args.get("fix") is True)
 
 
+def _project_list(args: dict[str, Any], _: str):
+    return ops().project_list(limit=int(args.get("limit") or 100))
+
+
 def _project_create(args: dict[str, Any], _: str):
     loc = store().create_project(require(args, "project_id"), require(args, "title"), args.get("language") or "zh-CN")
     return {"schema": "quillframe_project_create_result_v1", "project_id": loc.project_id, "created": True, "authority": False}
@@ -180,6 +184,14 @@ def _project_backup(args: dict[str, Any], _: str):
 def _project_restore(args: dict[str, Any], _: str):
     loc = store().restore_project(Path(require(args, "bundle_path")), replace=args.get("replace") is True)
     return {"schema": "quillframe_restore_result_v1", "project_id": loc.project_id, "restored": True, "authority": False}
+
+
+def _document_list(args: dict[str, Any], _: str):
+    return ops().document_list(
+        require(args, "project_id"),
+        document_kind=args.get("document_kind") if isinstance(args.get("document_kind"), str) else None,
+        limit=int(args.get("limit") or 500),
+    )
 
 
 def _document_create(args: dict[str, Any], _: str):
@@ -300,6 +312,38 @@ def _model_delete(args: dict[str, Any], _: str):
     return agent_runtime().delete_model_service(require(args, "service_id"))
 
 
+def _candidate_review_get(args: dict[str, Any], _: str):
+    return ops().candidate_review_get(require(args, "project_id"), candidate_id=require(args, "candidate_id"))
+
+
+def _candidate_reject(args: dict[str, Any], _: str):
+    if args.get("user_authorized") is not True:
+        raise BridgeError("authorization_required", "candidate.reject requires an explicit user action")
+    return ops().reject_candidate(
+        require(args, "project_id"), candidate_id=require(args, "candidate_id"),
+        candidate_fingerprint=require(args, "candidate_fingerprint"), authorized_by=require(args, "authorized_by"),
+        authorization=require(args, "authorization", dict), idempotency_key=require(args, "idempotency_key"),
+        reason=args.get("reason") if isinstance(args.get("reason"), str) else None,
+    )
+
+
+def _candidate_revision_request(args: dict[str, Any], _: str):
+    if args.get("user_authorized") is not True:
+        raise BridgeError("authorization_required", "candidate.revision.request requires an explicit user action")
+    return ops().request_candidate_revision(
+        require(args, "project_id"), candidate_id=require(args, "candidate_id"),
+        candidate_fingerprint=require(args, "candidate_fingerprint"), revision_request=require(args, "revision_request", dict),
+        authorized_by=require(args, "authorized_by"), authorization=require(args, "authorization", dict),
+        idempotency_key=require(args, "idempotency_key"),
+    )
+
+
+def _settlement_preflight(args: dict[str, Any], _: str):
+    return ops().settlement_preflight(
+        require(args, "project_id"), acceptance_id=require(args, "acceptance_id"), target_ref=require(args, "target_ref")
+    )
+
+
 def _candidate_accept(args: dict[str, Any], _: str):
     if args.get("user_authorized") is not True:
         raise BridgeError("authorization_required", "candidate.accept requires an explicit user action")
@@ -345,12 +389,14 @@ DISPATCH: dict[str, Callable[[dict[str, Any], str], dict[str, Any]]] = {
     "bridge.describe": _describe,
     "database.doctor": _doctor,
     "project.create": _project_create,
+    "project.list": _project_list,
     "project.open": _project_inspect,
     "project.inspect": _project_inspect,
     "project.search": _project_search,
     "project.backup": _project_backup,
     "project.restore": _project_restore,
     "document.create": _document_create,
+    "document.list": _document_list,
     "document.open": _document_open,
     "document.revisions.list": _revisions_list,
     "document.revision.save": _revision_save,
@@ -369,7 +415,11 @@ DISPATCH: dict[str, Callable[[dict[str, Any], str], dict[str, Any]]] = {
     "model.service.token.remove": _model_token_remove,
     "model.service.delete": _model_delete,
     "model.capabilities": _model_capabilities,
+    "candidate.review.get": _candidate_review_get,
     "candidate.accept": _candidate_accept,
+    "candidate.reject": _candidate_reject,
+    "candidate.revision.request": _candidate_revision_request,
+    "settlement.preflight": _settlement_preflight,
     "settlement.apply": _settle,
     "feedback.observe": _feedback,
     "publication.preview": _pub_preview,
@@ -453,7 +503,7 @@ def self_test() -> dict[str, Any]:
     first = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "A"}, "authority": False})
     second = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "B"}, "authority": False})
     ok = desc["status"] == "ok" and generic["status"] == "invalid" and desc["authority"] is False and first["request_fingerprint"] == second["request_fingerprint"] and first["secret_values_persisted"] is False
-    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": "7", "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
+    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": "8", "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
 
 
 def main() -> int:

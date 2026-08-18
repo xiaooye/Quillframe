@@ -198,6 +198,18 @@ class QuillframeStore:
         d = project_dir(project_id, self.root)
         return ProjectLocation(project_id, d, d / "project.sqlite", d / "blobs", d / "exports")
 
+    def list_projects(self, limit: int = 100) -> list[dict[str, Any]]:
+        """Return the canonical global Project registry projection."""
+        self.initialize_global()
+        bounded = max(1, min(int(limit), 500))
+        with _connect(self.global_db) as conn:
+            rows = conn.execute(
+                "SELECT project_id,title,language,project_schema_version,registered_at,last_opened_at "
+                "FROM project_registry ORDER BY last_opened_at DESC, project_id LIMIT ?",
+                (bounded,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
     def create_project(self, project_id: str, title: str, language: str = "zh-CN") -> ProjectLocation:
         if not title.strip():
             raise ValueError("title is required")

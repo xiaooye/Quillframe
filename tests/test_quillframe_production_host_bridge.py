@@ -6,9 +6,9 @@ from studio import host_bridge
 
 
 class ProductionHostBridgeTests(unittest.TestCase):
-    def test_v7_contract_exposes_production_external_review_and_model_service_primitives(self):
+    def test_v8_contract_exposes_authoring_production_and_model_service_primitives(self):
         contract = host_bridge.contract()
-        self.assertEqual(contract["version"], "7")
+        self.assertEqual(contract["version"], "8")
         for operation in (
             "author.run.execute",
             "author.run.status",
@@ -21,6 +21,12 @@ class ProductionHostBridgeTests(unittest.TestCase):
             "document.open",
             "document.revisions.list",
             "project.restore",
+            "project.list",
+            "document.list",
+            "candidate.review.get",
+            "candidate.reject",
+            "candidate.revision.request",
+            "settlement.preflight",
         ):
             self.assertIn(operation, contract["operations"])
         self.assertEqual(
@@ -145,7 +151,7 @@ class ProductionHostBridgeTests(unittest.TestCase):
     def test_self_test_passes_without_live_network(self):
         report = host_bridge.self_test()
         self.assertEqual(report["quillframe_host_bridge_contract"], "PASS")
-        self.assertEqual(report["contract_version"], "7")
+        self.assertEqual(report["contract_version"], "8")
         self.assertTrue(report["secret_value_fingerprint_independent"])
 
 
