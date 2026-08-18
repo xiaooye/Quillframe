@@ -269,3 +269,7 @@ Every consequential write revalidates current branch/HEAD/before-state. Long ope
 - [Production Pipeline](../docs/production-pipeline.en.md)
 - [Adaptive Learning](../docs/adaptive-learning.en.md)
 - [Canon & State Model](../core/CANON_STATE.en.md)
+
+### Semantic Context Runtime (0.9)
+
+For production Context, deterministic eligibility precedes semantic relevance. Use fingerprint-bound Semantic Context Profiles, `context.stage_select`, stage Greenlights, hard-budget packing, then Context Freeze. No stage may expand the frozen scope with an untracked DB read. Refresh/extension requires a new Context fingerprint. The selector never grants authority and never substitutes for independent semantic review.

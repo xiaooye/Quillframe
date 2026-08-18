@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_model_contract_registry_v1",
-  "version": "4",
+  "version": "5",
   "principle": "Search and context selection are agent decisions. Deterministic runtime exposes authorized search/fetch primitives, candidate blocks, provenance, visibility and resource limits; the model decides what is missing, what query to issue, which evidence matters, whether to reformulate, what to retain and when to stop.",
   "contracts": {
     "context.select": {
@@ -8,22 +8,61 @@
       "purpose": "Choose useful context for one bounded task and, when supplied candidates are insufficient, request the next authorized search instead of pretending a precomputed context window is semantically complete.",
       "input_contract": {
         "type": "object",
-        "required": ["task", "memory_blocks"],
+        "required": [
+          "task",
+          "memory_blocks"
+        ],
         "properties": {
           "task": {
             "type": "object",
-            "required": ["task_mode", "task_goal", "current_story_order", "perspective", "active_questions"],
+            "required": [
+              "task_mode",
+              "task_goal",
+              "current_story_order",
+              "perspective",
+              "active_questions"
+            ],
             "properties": {
-              "task_mode": {"type": "string", "minLength": 1},
-              "task_goal": {"type": "string", "minLength": 1},
-              "current_story_point": {"type": ["string", "null"]},
-              "current_story_order": {"type": "integer", "minimum": 0},
+              "task_mode": {
+                "type": "string",
+                "minLength": 1
+              },
+              "task_goal": {
+                "type": "string",
+                "minLength": 1
+              },
+              "current_story_point": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "current_story_order": {
+                "type": "integer",
+                "minimum": 0
+              },
               "perspective": {
                 "type": "object",
-                "required": ["scope"],
+                "required": [
+                  "scope"
+                ],
                 "properties": {
-                  "scope": {"enum": ["manager", "reader", "character", "narrator", "research", "other"]},
-                  "perspective_id": {"type": ["string", "null"]}
+                  "scope": {
+                    "enum": [
+                      "manager",
+                      "reader",
+                      "character",
+                      "narrator",
+                      "research",
+                      "other"
+                    ]
+                  },
+                  "perspective_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
                 },
                 "additionalProperties": false
               },
@@ -31,13 +70,42 @@
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "required": ["question_id", "question", "kind", "as_of_story_point", "as_of_story_order"],
+                  "required": [
+                    "question_id",
+                    "question",
+                    "kind",
+                    "as_of_story_point",
+                    "as_of_story_order"
+                  ],
                   "properties": {
-                    "question_id": {"type": "string", "minLength": 1},
-                    "question": {"type": "string", "minLength": 1},
-                    "kind": {"enum": ["concept", "behavior", "state", "continuity", "relationship", "other"]},
-                    "as_of_story_point": {"type": ["string", "null"]},
-                    "as_of_story_order": {"type": "integer", "minimum": 0}
+                    "question_id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "question": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "enum": [
+                        "concept",
+                        "behavior",
+                        "state",
+                        "continuity",
+                        "relationship",
+                        "other"
+                      ]
+                    },
+                    "as_of_story_point": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "as_of_story_order": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
                   },
                   "additionalProperties": false
                 }
@@ -49,27 +117,81 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["block_id", "pinned", "authority", "derived", "source_refs", "available_from_story_order", "visibility", "model_view"],
+              "required": [
+                "block_id",
+                "pinned",
+                "authority",
+                "derived",
+                "source_refs",
+                "available_from_story_order",
+                "visibility",
+                "model_view"
+              ],
               "properties": {
-                "block_id": {"type": "string", "minLength": 1},
-                "pinned": {"type": "boolean"},
-                "authority": {"type": ["string", "boolean"]},
-                "derived": {"type": "boolean"},
-                "source_refs": {"type": "array", "items": {"type": "string"}},
-                "story_point": {"type": ["string", "null"]},
-                "available_from_story_order": {"type": "integer", "minimum": 0},
-                "visibility": {"type": "object"},
-                "model_view": {"type": "object"}
+                "block_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "pinned": {
+                  "type": "boolean"
+                },
+                "authority": {
+                  "type": [
+                    "string",
+                    "boolean"
+                  ]
+                },
+                "derived": {
+                  "type": "boolean"
+                },
+                "source_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "story_point": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "available_from_story_order": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "visibility": {
+                  "type": "object"
+                },
+                "model_view": {
+                  "type": "object"
+                }
               },
               "additionalProperties": false
             }
           },
           "allowed_search_capabilities": {
             "type": "array",
-            "items": {"enum": ["project_search", "web_search", "github_search", "user_files", "file_library", "mcp_client"]}
+            "items": {
+              "enum": [
+                "project_search",
+                "web_search",
+                "github_search",
+                "user_files",
+                "file_library",
+                "mcp_client"
+              ]
+            }
           },
-          "search_history": {"type": "array", "items": {"type": "object"}},
-          "resource_budget": {"type": "object"}
+          "search_history": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "resource_budget": {
+            "type": "object"
+          }
         },
         "additionalProperties": false
       },
@@ -84,30 +206,83 @@
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "decision", "selected_ids", "report", "search_requests", "unresolved_questions"],
+        "required": [
+          "confidence",
+          "decision",
+          "selected_ids",
+          "report",
+          "search_requests",
+          "unresolved_questions"
+        ],
         "properties": {
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "decision": {"enum": ["enough", "search_more"]},
-          "selected_ids": {"type": "array", "items": {"type": "string"}},
-          "report": {"type": "string", "minLength": 1},
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "decision": {
+            "enum": [
+              "enough",
+              "search_more"
+            ]
+          },
+          "selected_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "report": {
+            "type": "string",
+            "minLength": 1
+          },
           "search_requests": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["capability", "query", "reason"],
+              "required": [
+                "capability",
+                "query",
+                "reason"
+              ],
               "properties": {
-                "capability": {"enum": ["project_search", "web_search", "github_search", "user_files", "file_library", "mcp_client"]},
-                "query": {"type": "string", "minLength": 1},
-                "reason": {"type": "string", "minLength": 1}
+                "capability": {
+                  "enum": [
+                    "project_search",
+                    "web_search",
+                    "github_search",
+                    "user_files",
+                    "file_library",
+                    "mcp_client"
+                  ]
+                },
+                "query": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                }
               },
               "additionalProperties": false
             }
           },
-          "unresolved_questions": {"type": "array", "items": {"type": "string"}}
+          "unresolved_questions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         },
         "additionalProperties": false
       },
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "context_selection_or_search_intent"},
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "context_selection_or_search_intent"
+      },
       "independent_gate": false
     },
     "corpus.discovery_plan": {
@@ -123,27 +298,325 @@
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "searches", "diversity_strategy"],
+        "required": [
+          "confidence",
+          "searches",
+          "diversity_strategy"
+        ],
         "properties": {
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
           "searches": {
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "object",
-              "required": ["channel", "query", "purpose", "contrast_role"],
+              "required": [
+                "channel",
+                "query",
+                "purpose",
+                "contrast_role"
+              ],
               "properties": {
-                "channel": {"enum": ["web", "github", "user_files", "file_library", "mcp"]},
-                "query": {"type": "string", "minLength": 1},
-                "purpose": {"type": "string", "minLength": 1},
-                "contrast_role": {"enum": ["support", "counterexample", "contrast", "neutral"]}
+                "channel": {
+                  "enum": [
+                    "web",
+                    "github",
+                    "user_files",
+                    "file_library",
+                    "mcp"
+                  ]
+                },
+                "query": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "purpose": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "contrast_role": {
+                  "enum": [
+                    "support",
+                    "counterexample",
+                    "contrast",
+                    "neutral"
+                  ]
+                }
               }
             }
           },
-          "diversity_strategy": {"type": "string", "minLength": 1}
+          "diversity_strategy": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       },
-      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "corpus_discovery_plan"},
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "corpus_discovery_plan"
+      },
+      "independent_gate": false
+    },
+    "context.profile_derive": {
+      "kind": "artifact_analyze",
+      "purpose": "Derive fingerprint-bound retrieval metadata for one exact Project source object without creating authority or mutating the source.",
+      "input_contract": {
+        "type": "object",
+        "required": [
+          "source"
+        ],
+        "properties": {
+          "source": {
+            "type": "object",
+            "required": [
+              "object_id",
+              "object_type",
+              "source_fingerprint",
+              "model_view"
+            ],
+            "properties": {
+              "object_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "object_type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_fingerprint": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "model_view": {
+                "type": "object"
+              },
+              "stage_hints": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "manual_override_present": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Summarize retrieval semantics only: what this source is about and when it is useful.",
+        "Do not infer or grant Canon, acceptance, settlement, lifecycle, or Character Knowledge authority.",
+        "Estimated tokens are a packing hint, not a minimum quota.",
+        "Keep stage affinities as semantic hints; runtime eligibility remains authoritative."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": [
+          "description",
+          "trigger_when",
+          "estimated_tokens",
+          "semantic_tags",
+          "stage_affinities"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "trigger_when": {
+            "type": "string"
+          },
+          "estimated_tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "semantic_tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "stage_affinities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "derived_semantic_context_profile"
+      },
+      "independent_gate": false
+    },
+    "context.stage_select": {
+      "kind": "artifact_audit",
+      "purpose": "Choose semantically relevant profiles for one production stage from a mechanically eligible, fingerprint-bound candidate universe.",
+      "input_contract": {
+        "type": "object",
+        "required": [
+          "task",
+          "stage_id",
+          "candidate_universe_fingerprint",
+          "candidates",
+          "hard_budget"
+        ],
+        "properties": {
+          "task": {
+            "type": "object"
+          },
+          "stage_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "candidate_universe_fingerprint": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "profile_id",
+                "object_id",
+                "authority",
+                "lifecycle",
+                "source_fingerprint",
+                "profile_fingerprint",
+                "description",
+                "trigger_when",
+                "estimated_tokens"
+              ],
+              "properties": {
+                "profile_id": {
+                  "type": "string"
+                },
+                "object_id": {
+                  "type": "string"
+                },
+                "authority": {
+                  "type": "string"
+                },
+                "lifecycle": {
+                  "type": "string"
+                },
+                "source_fingerprint": {
+                  "type": "string"
+                },
+                "profile_fingerprint": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "trigger_when": {
+                  "type": "string"
+                },
+                "estimated_tokens": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "semantic_tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "required_for_grounding": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "hard_budget": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Candidates are already mechanically eligible; judge relevance only within this universe.",
+        "Relevance never upgrades authority or lifecycle.",
+        "Select only what the stage needs; do not fill a minimum token quota.",
+        "Return only exact supplied profile ids and the exact stage id.",
+        "Reasons must be short public provenance explanations, never hidden chain-of-thought."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": [
+          "selections",
+          "unresolved_questions"
+        ],
+        "properties": {
+          "selections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "profile_id",
+                "stage_id",
+                "priority",
+                "reason_code",
+                "reason"
+              ],
+              "properties": {
+                "profile_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "stage_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "priority": {
+                  "type": "number"
+                },
+                "reason_code": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "required_for_grounding": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "unresolved_questions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "stage_context_selection"
+      },
       "independent_gate": false
     }
   }

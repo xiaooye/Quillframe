@@ -27,3 +27,7 @@ Regression bad examples and hidden expected labels remain outside the writer's f
 ## Memory lifecycle
 
 Derived memory can be ranked, pinned, invalidated, rebuilt, or edited within its permissions. None of those operations promotes memory to Canon. Session persistence also does not mean provider history should be reinjected wholesale on resume.
+
+## Semantic Context Runtime
+
+Context activation is now authority-first: Project objects pass lifecycle/visibility/stage eligibility before fingerprint-bound Semantic Context Profiles are offered to an Agent selector. Stage Greenlights are then hard-budget packed and frozen. A later stage receives only its frozen payload; any refresh creates a new Context fingerprint. Profiles and selector receipts are derived metadata and never grant Canon authority. Research remains distinct from Character Knowledge, and Inspector projections expose bounded reason codes rather than private reasoning.

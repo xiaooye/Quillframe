@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_studio_host_bridge_contract_v1",
-  "version": "4",
+  "version": "5",
   "framework_version": "0.9.0",
   "authority": false,
   "canon_authority": false,
@@ -8,7 +8,12 @@
   "settlement_authority": false,
   "direct_core_store_access": false,
   "product_model": "one_product_one_core_many_transports",
-  "surfaces": ["cli", "local_app", "hosted_web", "agent_package"],
+  "surfaces": [
+    "cli",
+    "local_app",
+    "hosted_web",
+    "agent_package"
+  ],
   "invariants": {
     "browser_sqlite_access": false,
     "generic_mutation_dispatch": false,
@@ -22,28 +27,183 @@
     "secret_in_semantic_context": false
   },
   "operations": {
-    "bridge.describe": {"kind":"query","required_args":[]},
-    "database.doctor": {"kind":"query","required_args":[]},
-    "project.create": {"kind":"command","required_args":["project_id","title"]},
-    "project.inspect": {"kind":"query","required_args":["project_id"]},
-    "project.search": {"kind":"query","required_args":["project_id","query"]},
-    "project.backup": {"kind":"command","required_args":["project_id"]},
-    "document.create": {"kind":"command","required_args":["project_id","document_id","title"]},
-    "document.revision.save": {"kind":"command","required_args":["project_id","document_id","content","source"]},
-    "document.revision.compare": {"kind":"query","required_args":["project_id","left_revision_id","right_revision_id"]},
-    "author.run.start": {"kind":"command","required_args":["project_id","task_mode","payload"]},
-    "candidate.accept": {"kind":"authority_command","required_args":["project_id","candidate_id","candidate_fingerprint","authorized_by","authorization","idempotency_key","user_authorized"],"allowed_surfaces":["cli","local_app","hosted_web"]},
-    "settlement.apply": {"kind":"authority_command","required_args":["project_id","acceptance_id","target_ref","expected_before_fingerprint","idempotency_key","user_authorized"],"allowed_surfaces":["cli","local_app","hosted_web"]},
-    "feedback.observe": {"kind":"command","required_args":["project_id","evidence_kind","payload"]},
-    "publication.preview": {"kind":"query","required_args":["project_id","acceptance_id"]},
-    "publication.build": {"kind":"command","required_args":["project_id","acceptance_id"]},
-    "inspector.sessions.list": {"kind":"query","required_args":["project_id"]},
-    "inspector.runs.list": {"kind":"query","required_args":["project_id"]},
-    "inspector.checkpoints.list": {"kind":"query","required_args":["project_id"]},
-    "inspector.context.list": {"kind":"query","required_args":["project_id"]},
-    "inspector.receipts.list": {"kind":"query","required_args":["project_id"]},
-    "inspector.candidates.list": {"kind":"query","required_args":["project_id"]},
-    "inspector.learning.list": {"kind":"query","required_args":["project_id"]}
+    "bridge.describe": {
+      "kind": "query",
+      "required_args": []
+    },
+    "database.doctor": {
+      "kind": "query",
+      "required_args": []
+    },
+    "project.create": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "title"
+      ]
+    },
+    "project.inspect": {
+      "kind": "query",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "project.search": {
+      "kind": "query",
+      "required_args": [
+        "project_id",
+        "query"
+      ]
+    },
+    "project.backup": {
+      "kind": "command",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "document.create": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "document_id",
+        "title"
+      ]
+    },
+    "document.revision.save": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "document_id",
+        "content",
+        "source"
+      ]
+    },
+    "document.revision.compare": {
+      "kind": "query",
+      "required_args": [
+        "project_id",
+        "left_revision_id",
+        "right_revision_id"
+      ]
+    },
+    "author.run.start": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "task_mode",
+        "payload"
+      ]
+    },
+    "candidate.accept": {
+      "kind": "authority_command",
+      "required_args": [
+        "project_id",
+        "candidate_id",
+        "candidate_fingerprint",
+        "authorized_by",
+        "authorization",
+        "idempotency_key",
+        "user_authorized"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "settlement.apply": {
+      "kind": "authority_command",
+      "required_args": [
+        "project_id",
+        "acceptance_id",
+        "target_ref",
+        "expected_before_fingerprint",
+        "idempotency_key",
+        "user_authorized"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "feedback.observe": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "evidence_kind",
+        "payload"
+      ]
+    },
+    "publication.preview": {
+      "kind": "query",
+      "required_args": [
+        "project_id",
+        "acceptance_id"
+      ]
+    },
+    "publication.build": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "acceptance_id"
+      ]
+    },
+    "inspector.sessions.list": {
+      "kind": "query",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "inspector.runs.list": {
+      "kind": "query",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "inspector.checkpoints.list": {
+      "kind": "query",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "inspector.context.list": {
+      "kind": "query",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "inspector.receipts.list": {
+      "kind": "query",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "inspector.candidates.list": {
+      "kind": "query",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "inspector.learning.list": {
+      "kind": "query",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "inspector.context.runtime": {
+      "kind": "query",
+      "required_args": [
+        "project_id",
+        "run_id"
+      ]
+    }
   },
-  "forbidden_operations": ["command.invoke", "project.mutate", "audit.rewrite", "draft.settle", "feedback.promote"]
+  "forbidden_operations": [
+    "command.invoke",
+    "project.mutate",
+    "audit.rewrite",
+    "draft.settle",
+    "feedback.promote"
+  ]
 }

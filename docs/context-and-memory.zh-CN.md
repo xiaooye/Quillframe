@@ -27,3 +27,7 @@
 ## 记忆生命周期
 
 派生记忆可以在权限范围内排序、置顶、失效、重建或编辑；这些操作都不会把记忆提升成正典。会话能够持久恢复，也不表示恢复时应该把服务提供方的整段历史重新注入模型。
+
+## 语义上下文运行时
+
+Context activation 现在明确采用 authority-first：Project object 先通过 lifecycle / visibility / stage eligibility，随后 fingerprint-bound Semantic Context Profile 才能进入 Agent selector 的候选池。各 stage 的 Greenlight 再经过 hard-budget packing 并冻结。后续 stage 只能读取自己的 frozen payload；任何 refresh 都必须产生新的 Context fingerprint。Profile 与 selector receipt 都只是 derived metadata，不授予 Canon authority；Research 仍不等于 Character Knowledge；Inspector 只公开短 reason code / provenance，不公开 private reasoning。

@@ -9,7 +9,7 @@ from typing import Any
 HERE=Path(__file__).resolve().parent
 CATALOG=HERE/"model_contract_catalog.json"
 FORBIDDEN_BLIND_KEYS={"expected","expected_verdict","expected_codes","blocks_release","gold","gold_label","prior_result"}
-ALLOWED_KINDS={"eval_judge","corpus_analyze","benchmark_synthesize","external_review","preference_distill","artifact_audit"}
+ALLOWED_KINDS={"eval_judge","corpus_analyze","benchmark_synthesize","external_review","preference_distill","artifact_audit","artifact_analyze"}
 WRITE_KEYS=("canon_write","framework_behavior_write","durable_user_taste_write")
 
 def load_json(path:Path)->Any:return json.loads(path.read_text(encoding="utf-8"))

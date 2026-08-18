@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_model_contract_catalog_v1",
-  "version": "10",
+  "version": "11",
   "loading_policy": "progressive_disclosure",
   "principle": "Keep the catalog small. The manager/model chooses the smallest relevant semantic capability from metadata; deterministic runtime resolves an exact contract id to exactly one pack and enforces execution boundaries without keyword-routing literary meaning.",
   "packs": [
@@ -45,12 +45,14 @@
     {
       "id": "context-research",
       "path": "contracts/context-research.json",
-      "description": "Agent-owned context selection and iterative search intent under deterministic visibility, authority, provenance, capability and resource guards.",
+      "description": "Agent-owned context selection, semantic profile derivation and stage-specific activation under deterministic lifecycle, authority, fingerprint, capability and budget guards.",
       "contracts": [
         "context.select",
-        "corpus.discovery_plan"
+        "corpus.discovery_plan",
+        "context.profile_derive",
+        "context.stage_select"
       ],
-      "load_when": "The task must decide what context is needed, reject irrelevant candidates, continue/reformulate search, stop searching, or plan evidence discovery."
+      "load_when": "The task must derive retrieval metadata, select stage-specific context from an eligible candidate universe, decide what context is needed, continue/reformulate search, or plan evidence discovery."
     },
     {
       "id": "story-simulation",
