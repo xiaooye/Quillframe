@@ -12,17 +12,10 @@ Current development prerequisites:
 - Node.js **24** for the product site, documentation, and Studio builds.
 - `pnpm` **10.33.0** for `studio/app`.
 
-Clone and install the Python package in editable mode:
-
 ```bash
 git clone https://github.com/xiaooye/cn_webnovel_agent.git
 cd cn_webnovel_agent
 python -m pip install -e .
-```
-
-For a first sanity check:
-
-```bash
 python -c "from quillframe import Quillframe, AgentJob; print(Quillframe.__name__, AgentJob.__name__)"
 python project_sdk.py self-test
 python studio/host_bridge.py self-test
@@ -54,17 +47,15 @@ The generic Framework owns mechanisms; a consuming fiction Project owns its conc
 
 Small documentation fixes and isolated defects can usually go straight to a focused PR. Structural changes should follow:
 
-```text
-spec → plan → tasks → implementation → verification → acceptance
-```
+`spec → plan → tasks → implementation → verification → acceptance`
 
-A structural change includes anything that materially changes public architecture, runtime contracts, persistence semantics, authority transitions, or the product information architecture.
+A structural change includes anything that materially changes public architecture, runtime contracts, persistence semantics, authority transitions, or product information architecture.
 
-Keep one primary purpose per PR. Do not combine an unrelated refactor, dependency refresh, UI redesign, and runtime change just because they touch nearby files.
+Keep one primary purpose per PR. Do not combine unrelated refactors, dependency refreshes, UI redesigns, and runtime changes just because they touch nearby files.
 
 ## Authority-sensitive changes
 
-Please call out the impact explicitly when a change touches any of these boundaries:
+Please call out the impact explicitly when a change touches:
 
 - Canon or authority precedence;
 - acceptance or Settlement;
@@ -80,8 +71,6 @@ For these changes, include the owning contract, exact before/after behavior, fai
 
 ### Python / Core / Runtime
 
-At minimum for Python-facing changes:
-
 ```bash
 python scripts/version_consistency.py
 python scripts/namespace_hygiene.py
@@ -90,7 +79,7 @@ python project_sdk.py self-test
 python studio/host_bridge.py self-test
 ```
 
-Run any subsystem-specific self-tests documented by the files you changed. Normal CI intentionally does **not** call a configured live/paid Model API.
+Run subsystem-specific self-tests documented by the files you changed. Normal CI intentionally does **not** call a configured live/paid Model API.
 
 ### Product site and documentation
 
@@ -116,7 +105,7 @@ If your change is visual, include screenshots for the affected viewport(s) and v
 
 ## Documentation rules
 
-Current-facing documentation uses **Quillframe**, technical identifiers use the current `quillframe` namespace, and `0.9.x` is pre-1.0. Historical records may retain `NovelForge` where changing the name would damage provenance or historical meaning; do not run a blind global replacement.
+Current-facing documentation uses **Quillframe**, technical identifiers use the current `quillframe` namespace, and `0.9.x` is pre-1.0. Historical records and legal text may retain earlier terminology where changing it would damage provenance or meaning; do not run blind global replacements.
 
 Public capability claims must be supported by current `main`. Keep these distinctions explicit:
 
@@ -131,15 +120,7 @@ stored ≠ injected
 
 ## Pull requests
 
-A good PR explains:
-
-- what changed and why;
-- the exact scope and intentionally untouched areas;
-- tests/builds run;
-- screenshots when UI is affected;
-- breaking-change status;
-- authority/Canon/Settlement/Learning impact;
-- related issues/specs.
+A good PR explains what changed and why, the exact scope and intentionally untouched areas, tests/builds run, screenshots when UI is affected, breaking-change status, authority/Canon/Settlement/Learning impact, and related issues/specs.
 
 Prefer bounded commits with descriptive messages. Do not force-push over concurrent work you do not own; fetch and reconcile unfamiliar changes intentionally.
 

@@ -40,4 +40,4 @@ Quillframe is intentionally heavier than a one-shot writing assistant. It is use
 
 ## Naming and historical records
 
-Current-facing product documentation, package metadata, schemas, and active architecture use **Quillframe / `quillframe`**. Historical specifications, migration records, Git history, and legal text may retain `NovelForge` when changing it would rewrite provenance or legal meaning. Those historical references are not evidence that NovelForge remains the current product.
+Current-facing product documentation, package metadata, schemas, and active architecture use **Quillframe / `quillframe`**. Historical specifications, migration records, Git history, and legal text may retain earlier terminology when changing it would rewrite provenance or legal meaning. Those historical records do not change the current product identity.

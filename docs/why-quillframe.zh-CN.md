@@ -40,4 +40,4 @@ Quillframe 有意比一次性写作助手更重。只有当项目足够长，连
 
 ## 当前命名与历史记录
 
-当前产品文档、package metadata、schema 与 active architecture 使用 **Quillframe / `quillframe`**。历史规格、迁移记录、Git history 与法律文本可以在改名会破坏 provenance 或 legal meaning 时保留 `NovelForge`。这些历史引用不代表 NovelForge 仍是当前产品名称。
+当前产品文档、package metadata、schema 与 active architecture 使用 **Quillframe / `quillframe`**。历史规格、迁移记录、Git history 与法律文本可以在改名会破坏 provenance 或 legal meaning 时保留早期术语。这些历史记录不会改变当前产品身份。

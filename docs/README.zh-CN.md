@@ -66,4 +66,4 @@ Provider/vendor identity 最多只是诊断 metadata。外部模型提供 infere
 
 操作层面的权威规范见[框架操作契约](../SKILL.zh-CN.md)、[编排执行契约](../harness/HARNESS_AGENT.zh-CN.md)、模式定义、实现模块与测试。文档编写遵守[文档规范](DOCUMENTATION_STANDARD.zh-CN.md)和[文档质量检查](DOCUMENTATION_QA.zh-CN.md)。
 
-**Quillframe** 是当前产品身份，`quillframe` 是当前技术命名空间。历史记录可以在改名会破坏 provenance 时保留 `NovelForge`；当前产品指导不应把它继续当成现用品牌。
+**Quillframe** 是当前产品身份，`quillframe` 是当前技术命名空间。历史记录可以在改名会破坏 provenance 时保留早期术语；当前产品指导统一使用现用身份。

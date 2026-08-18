@@ -66,4 +66,4 @@ Corpus is evidence, not Canon. Research truth is not automatic character knowled
 
 Operational authority lives in [SKILL](../SKILL.en.md), [Harness Agent](../harness/HARNESS_AGENT.en.md), schemas, implementation modules, and tests. Documentation authoring follows the [Documentation Standard](DOCUMENTATION_STANDARD.en.md) and [Documentation QA](DOCUMENTATION_QA.en.md).
 
-**Quillframe** is the current product identity and `quillframe` is the current technical namespace. Historical records may retain `NovelForge` where changing the name would damage provenance; active product guidance should not use it as the current identity.
+**Quillframe** is the current product identity and `quillframe` is the current technical namespace. Historical records may retain earlier terminology where changing it would damage provenance; active product guidance uses the current identity.
