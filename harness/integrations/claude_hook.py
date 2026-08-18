@@ -319,6 +319,19 @@ def main() -> int:
             return 0
         if name == "PreToolUse":
             tool = str(event.get("tool_name") or "")
+            if tool == "Skill":
+                print(
+                    json.dumps(
+                        hook_json(
+                            "PreToolUse",
+                            context=context,
+                            decision="deny",
+                            reason="External Claude Skill routing is disabled inside Quillframe. Use the pinned Quillframe task_mode/contracts instead.",
+                        ),
+                        ensure_ascii=False,
+                    )
+                )
+                return 0
             if snapshot.get("scope") == "project":
                 fresh, stale_reason = lightweight_snapshot_fresh(snapshot)
                 verified = bool(snapshot.get("materialized_authority_verified")) and fresh
@@ -327,19 +340,6 @@ def main() -> int:
                     print(
                         json.dumps(
                             hook_json("PreToolUse", context=context, decision="deny", reason=reason),
-                            ensure_ascii=False,
-                        )
-                    )
-                    return 0
-                if tool == "Skill":
-                    print(
-                        json.dumps(
-                            hook_json(
-                                "PreToolUse",
-                                context=context,
-                                decision="ask",
-                                reason="External Claude Skill is not Quillframe workflow authority; explicit approval is required in a Quillframe Project.",
-                            ),
                             ensure_ascii=False,
                         )
                     )
@@ -360,7 +360,7 @@ def main() -> int:
         message = f"Quillframe Claude host guard error: {type(exc).__name__}: {exc}"
         name = str(event.get("hook_event_name") or "")
         tool = str(event.get("tool_name") or "")
-        if name == "PreToolUse" and project_root is not None and tool in CONSEQUENTIAL_TOOLS:
+        if name == "PreToolUse" and (tool == "Skill" or (project_root is not None and tool in CONSEQUENTIAL_TOOLS)):
             print(json.dumps(hook_json("PreToolUse", decision="deny", reason=message), ensure_ascii=False))
             return 0
         if name in {"SessionStart", "UserPromptSubmit", "PostToolUse"}:
