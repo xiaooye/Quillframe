@@ -8,6 +8,7 @@ const assert = (condition, message) => { if (!condition) failures.push(message);
 
 const appShell = read("src/AppShell.tsx");
 const main = read("src/main.tsx");
+const start = read("src/routes/Start.tsx");
 const manuscript = read("src/routes/Manuscript.tsx");
 const review = read("src/routes/Review.tsx");
 const context = read("src/routes/Context.tsx");
@@ -17,7 +18,7 @@ const css = read("src/styles/authoring-product.css");
 const bridge = read("src/bridge.ts");
 
 for (const [file, source] of [
-  ["AppShell.tsx", appShell], ["Manuscript.tsx", manuscript], ["Review.tsx", review],
+  ["AppShell.tsx", appShell], ["Start.tsx", start], ["Manuscript.tsx", manuscript], ["Review.tsx", review],
   ["Context.tsx", context], ["Settings.tsx", settings], ["Publication.tsx", publication],
 ]) {
   assert(!/\bfetch\s*\(/.test(source), `${file} must use BridgeClient/invokeBridge instead of fetch`);
@@ -37,18 +38,27 @@ for (const route of ["/manuscript", "/plan", "/story", "/review", "/research", "
 for (const label of ["Manuscript", "Plan", "Story", "Review", "Research & Corpus", "Learning", "Publish"]) {
   assert(appShell.includes(label), `Writer Mode navigation missing: ${label}`);
 }
-assert(appShell.includes("author.run.start"), "AI Dock must start a real Core author Run");
-assert(appShell.includes("RunProgress") && appShell.includes("run.events.list"), "AI Dock must separate typed progress from missing runtime-event evidence");
+assert(start.includes('"project.list"'), "Project picker must consume canonical project.list");
+assert(appShell.includes("author.run.start"), "AI Dock must register a real Core author Run");
+assert(appShell.includes("author.run.execute"), "AI Dock must expose explicit DRAFT/REVISE production execution");
+assert(appShell.includes("author.run.status") && !appShell.includes("run.events.list"), "AI Dock progress must use author.run.status rather than a fabricated event API");
+assert(appShell.includes('authority: "current_request"'), "Studio may bind the explicit current request as rule_material but must not impersonate Framework/Project authority");
+assert(!appShell.includes('authority: "framework"'), "Studio must not forge Framework rule authority");
 
-assert(manuscript.includes("document.revision.save"), "Manuscript autosave must call document.revision.save");
+for (const operation of ["document.list", "document.open", "document.revisions.list", "document.revision.save"]) {
+  assert(manuscript.includes(`\"${operation}\"`), `Manuscript must consume ${operation}`);
+}
 assert(manuscript.includes("expected_parent_revision_id"), "Manuscript autosave must use optimistic before-state/CAS");
 assert(manuscript.includes('authority_class: "proposal"'), "Manuscript autosave must create proposal authority only");
 assert(!/localStorage\.setItem\([^\n]*(content|manuscript|canon)/i.test(manuscript), "Manuscript content/Canon must never be stored in localStorage");
 
 assert(review.includes("Accepted ✓") && review.includes("Not Settled"), "Review must visibly separate Accepted from Settled");
-assert(review.includes("candidate.accept"), "Accept must use the typed Core authority operation");
-assert(review.includes("settlement.preflight"), "Settlement must remain gated on Core preflight");
-assert(!review.includes('"settlement.apply"'), "Studio must not call settlement.apply without a Core preflight in this contract");
+for (const operation of ["candidate.review.get", "candidate.accept", "candidate.reject", "candidate.revision.request", "settlement.preflight", "settlement.apply"]) {
+  assert(review.includes(`\"${operation}\"`), `Review must consume ${operation}`);
+}
+assert(review.indexOf('"settlement.preflight"') < review.indexOf('"settlement.apply"'), "Settlement preflight call must precede settlement.apply in the explicit settle flow");
+assert(review.includes("expected_before_fingerprint: preflight.data.expected_before_fingerprint"), "Settlement apply must use the exact Core preflight before fingerprint");
+assert(review.includes("auto-start REVISE") || review.includes("auto-start REVISE") || review.includes("does not auto-start REVISE"), "Request Revision UX must state that REVISE is not auto-started");
 
 assert(context.includes("ACTUALLY LOADED INTO THIS STAGE"), "Context Inspector must label actually loaded Context");
 assert(context.includes("MODEL CONSIDERED RELEVANT"), "Context Inspector must distinguish considered Context");
@@ -56,7 +66,9 @@ assert(context.includes("AuthorityLabel"), "Context authority must be textual, n
 assert(context.includes("private_chain_of_thought_exposed"), "Context Inspector must retain the private-CoT boundary");
 
 assert(settings.includes("Endpoint + Access Token"), "AI & Models must preserve the Endpoint + Access Token mental model");
-assert(settings.includes('operations().includes("model.connect")'), "Model connection must stay disabled without the Core operation");
+assert(settings.includes('operations().includes("model.service.add")'), "Model connection must use model.service.add");
+assert(settings.includes('operations().includes("model.service.list")'), "Model list must use model.service.list");
+assert(!settings.includes('"model.connect"') && !settings.includes('"model.services.list"'), "Conceptual pre-v8 model operation names must not survive");
 assert(settings.includes('setToken("")'), "Access Token field must be cleared after a connection attempt");
 assert(!/<select[^>]+(?:name|id)=["'][^"']*provider/i.test(settings), "Ordinary Settings must not introduce a Provider type chooser");
 assert(!/Provider Dashboard/.test(settings), "Ordinary Settings must not introduce a Provider dashboard");
