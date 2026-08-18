@@ -5,13 +5,16 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
 VERSION="0.9.0"
-HIST_PREFIX=("specs/","history/")
+HIST_PREFIX=("specs/","history/","migration/")
 HIST_FILES={"CHANGELOG.en.md","CHANGELOG.zh-CN.md"}
 TEXT={".py",".json",".yaml",".yml",".toml",".md",".txt",".ts",".tsx",".js",".mjs",".cjs",".css",".html",".sh",".rs",".svg",".cfg",".ini",".lock"}
+WORKFLOW_PREFIX=".github/workflows/"
 
 def rel(p): return p.relative_to(ROOT).as_posix()
 def hist(p):
-    r=rel(p); return r in HIST_FILES or any(r.startswith(x) for x in HIST_PREFIX)
+    r=rel(p)
+    return r in HIST_FILES or r.startswith("docs/migration-0.8-to-0.9.") or any(r.startswith(x) for x in HIST_PREFIX)
+def workflow(p): return rel(p).startswith(WORKFLOW_PREFIX)
 def rm(p):
     p=ROOT/p
     if p.is_dir(): shutil.rmtree(p)
@@ -33,11 +36,9 @@ def delete_legacy():
         if p.exists() and not hist(p): p.unlink()
     for p in ROOT.glob("**/export_presets.cfg"):
         if p.exists() and not hist(p): p.unlink()
-    wf=ROOT/".github/workflows"
-    if wf.exists():
-        for p in wf.iterdir():
-            n=p.name.lower()
-            if any(x in n for x in ("godot","shadow","route-baseline","product-baseline","product-parity","route-parity")): p.unlink()
+    # Workflow migration is intentionally handled through the GitHub connector.
+    # The Actions token may not update workflow files, and this one-shot bootstrap
+    # must never need elevated workflow permission to land non-workflow changes.
     ss=ROOT/"site/scripts"
     if ss.exists():
         for p in ss.iterdir():
@@ -47,7 +48,7 @@ def delete_legacy():
                 else: p.unlink()
 
 def rename_paths():
-    items=[p for p in ROOT.rglob("*") if not hist(p)]
+    items=[p for p in ROOT.rglob("*") if not hist(p) and not workflow(p)]
     for p in sorted(items,key=lambda x:len(x.parts),reverse=True):
         if not p.exists() or rel(p).startswith(".git/"): continue
         name=p.name.replace("NOVELFORGE","QUILLFRAME").replace("NovelForge","Quillframe").replace("novelforge","quillframe")
@@ -70,7 +71,7 @@ def rewrite():
       ("NOVELFORGE","QUILLFRAME"),("novelforge","quillframe"),("0.8.0",VERSION)
     ]
     for p in sorted(ROOT.rglob("*")):
-        if not p.is_file() or hist(p) or rel(p).startswith(".git/") or rel(p)=="scripts/quillframe_0_9_reconstruct.py": continue
+        if not p.is_file() or hist(p) or workflow(p) or rel(p).startswith(".git/") or rel(p)=="scripts/quillframe_0_9_reconstruct.py": continue
         if p.suffix.lower() not in TEXT and p.name not in {"Dockerfile","VERSION"}: continue
         try: t=p.read_text(encoding="utf-8")
         except UnicodeDecodeError: continue
@@ -84,15 +85,14 @@ def packages():
         p=json.loads(sp.read_text())
         p["name"]="@quillframe/product-site";p["version"]=VERSION
         p["scripts"]={
-          "foundation":"node scripts/sync-weiui.mjs",
-          "content":"npm run foundation && node scripts/build-content.mjs",
-          "docs:content":"node scripts/build-starlight-content.mjs",
           "dev":"npm run content && vite",
           "build":"npm run content && tsc --noEmit && vite build",
           "preview":"vite preview",
           "quality":"npm run content && npm run docs:content && node scripts/quality.mjs && node scripts/product-hardening-quality.mjs",
           "dev:docs":"npm run docs:content && astro dev --root docs-site",
-          "docs:build":"npm run docs:content && astro build --root docs-site && node scripts/verify-starlight-build.mjs"
+          "docs:build":"npm run docs:content && astro build --root docs-site && node scripts/verify-starlight-build.mjs",
+          "content":"node scripts/sync-weiui.mjs && node scripts/build-content.mjs",
+          "docs:content":"node scripts/build-starlight-content.mjs"
         }
         sp.write_text(json.dumps(p,indent=2,ensure_ascii=False)+"\n")
     ap=ROOT/"studio/app/package.json"
