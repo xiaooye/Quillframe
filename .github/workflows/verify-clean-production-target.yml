@@ -3,6 +3,8 @@ name: Verify Clean Production Target
 on:
   push:
     branches: ['agent/production-runtime-integration']
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
