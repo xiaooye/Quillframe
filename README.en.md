@@ -110,7 +110,7 @@ The boundary is intentional:
 
 - **Models own semantic fiction judgment.** They can reason about story, character, reader experience, relevance, and repair.
 - **Quillframe owns execution truth.** Deterministic code owns identity, permissions, fingerprints, routing, budgets, transactions, persistence, and reproducibility.
-- **Independent means independent.** A required independent semantic judgment must come from a genuinely separate invocation/session/worker and be bound to the exact candidate fingerprint; manager self-roleplay does not qualify.
+- **Independent means independent.** A required independent semantic judgment must come from a genuinely separate invocation/session/worker and be bound to the exact artifact fingerprint; manager self-roleplay does not qualify.
 - **SQLite is canonical durable state, not a fallback cache.** The UI boundary is `Solid/Tauri → typed Bridge/API → Python Core → SQLite`.
 
 The current Model Runtime is provider-neutral at the authority layer. Quillframe owns protocol/model discovery, capability evidence, eligibility, model selection, tool execution, checkpoints, and receipts. Model APIs are inference capability—not the agent-runtime authority.
