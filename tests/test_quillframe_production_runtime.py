@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import sqlite3
 import sys
 import tempfile
 import threading
@@ -618,6 +619,170 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
     def require_generic_submit(self, runtime: ProductionRunExecutor) -> None:
         if "independence_receipt" not in inspect.signature(runtime.submit_independent).parameters:
             self.fail("ProductionRunExecutor.submit_independent must accept independence_receipt")
+
+    def assert_stale_owner_fenced_at_effect_boundary(self, boundary: str) -> None:
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        run_id = self.start_native()
+        self.execute_to_handoff(runtime, run_id)
+        packet = frozen_packet(self.store, run_id)
+        result = peer_result(packet, "pass")
+        receipt = project_bridge_receipt(packet, result)
+        clock = ManualClock()
+        repository = IndependentReviewRepository(
+            self.store,
+            clock=clock,
+            monotonic_clock=clock,
+            sleeper=lambda _: None,
+            processing_lease_seconds=10.0,
+        )
+        method_name = "_persist_stage_receipt" if boundary == "receipt" else "_persist_candidate"
+        original = getattr(runtime, method_name)
+        takeover_started = False
+        stale_boundary_returned = False
+        recovered_outputs: list[dict] = []
+        recovered_errors: list[BaseException] = []
+
+        def recovered_submit() -> None:
+            try:
+                recovered_outputs.append(runtime.submit_independent(
+                    "PROD",
+                    run_id,
+                    peer_packet=packet,
+                    result=result,
+                    independence_receipt=receipt,
+                ))
+            except BaseException as exc:  # pragma: no cover - asserted below
+                recovered_errors.append(exc)
+
+        def interleave(*args, **kwargs):  # noqa: ANN002,ANN003,ANN202
+            nonlocal takeover_started, stale_boundary_returned
+            is_main_owner = threading.current_thread() is threading.main_thread()
+            is_target_receipt = boundary != "receipt" or args[2].get("mechanism") == "independent_semantic_gate"
+            if not is_main_owner or takeover_started or not is_target_receipt:
+                return original(*args, **kwargs)
+            takeover_started = True
+            with self.store.open_project("PROD") as conn:
+                owner_a = conn.execute(
+                    "SELECT processing_epoch,processing_phase FROM independent_review_attempts WHERE run_id=?",
+                    (run_id,),
+                ).fetchone()
+            self.assertEqual(owner_a["processing_epoch"], 1)
+            self.assertEqual(owner_a["processing_phase"], "effects_started")
+            clock.advance(11.0)
+            thread = threading.Thread(target=recovered_submit, name=f"recovered-{boundary}")
+            thread.start()
+            thread.join(timeout=5)
+            self.assertFalse(thread.is_alive())
+            self.assertFalse(recovered_errors)
+            self.assertEqual(len(recovered_outputs), 1)
+            self.assertEqual(recovered_outputs[0]["status"], "completed")
+            try:
+                value = original(*args, **kwargs)
+            except ProductionRunError:
+                raise
+            stale_boundary_returned = True
+            return value
+
+        with patch("production_runtime.runtime.IndependentReviewRepository", return_value=repository):
+            with patch.object(runtime, method_name, side_effect=interleave):
+                with self.assertRaises(ProductionRunError) as stale:
+                    runtime.submit_independent(
+                        "PROD",
+                        run_id,
+                        peer_packet=packet,
+                        result=result,
+                        independence_receipt=receipt,
+                    )
+        self.assertEqual(stale.exception.code, "independent_processing_owner_lost")
+        self.assertTrue(takeover_started)
+        self.assertFalse(stale_boundary_returned)
+        with self.store.open_project("PROD") as conn:
+            attempt = conn.execute(
+                "SELECT status,processing_epoch FROM independent_review_attempts WHERE run_id=?",
+                (run_id,),
+            ).fetchone()
+            candidates = conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0]
+            evidence = conn.execute("SELECT COUNT(*) FROM review_evidence").fetchone()[0]
+            releases = conn.execute(
+                "SELECT COUNT(*) FROM receipts WHERE run_id=? AND receipt_kind='production_release'",
+                (run_id,),
+            ).fetchone()[0]
+            ready_events = conn.execute(
+                "SELECT COUNT(*) FROM runtime_events WHERE run_id=? AND event_kind='production_candidate_ready'",
+                (run_id,),
+            ).fetchone()[0]
+            stage_payloads = [
+                json.loads(row["payload_json"])
+                for row in conn.execute(
+                    "SELECT payload_json FROM receipts WHERE run_id=? AND receipt_kind='production_stage'",
+                    (run_id,),
+                )
+            ]
+        self.assertEqual(dict(attempt), {"status": "terminal", "processing_epoch": 2})
+        self.assertEqual(candidates, 1)
+        self.assertEqual(evidence, 1)
+        self.assertEqual(releases, 1)
+        self.assertEqual(ready_events, 1)
+        self.assertEqual(sum(item.get("mechanism") == "independent_semantic_gate" for item in stage_payloads), 1)
+        self.assertEqual(sum(item.get("mechanism") == "user_visible_gate" for item in stage_payloads), 1)
+
+    def test_clean_install_migrations_use_final_provider_ids_and_processing_fence(self):
+        conn = sqlite3.connect(":memory:")
+        self.addCleanup(conn.close)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON")
+        migrations = ROOT / "persistence" / "migrations" / "project"
+        for name in ("001_initial.sql", "002_semantic_context_runtime.sql", "003_native_independent_review.sql"):
+            conn.executescript((migrations / name).read_text(encoding="utf-8"))
+        stamp = "2026-08-19T00:00:00+00:00"
+        conn.execute(
+            "INSERT INTO project_identity(project_id,title,language,project_schema_version,created_at,updated_at) VALUES('PROD','Fixture','en','1',?,?)",
+            (stamp, stamp),
+        )
+        conn.execute(
+            "INSERT INTO sessions(session_id,status,version,created_at,updated_at) VALUES('SES','active',1,?,?)",
+            (stamp, stamp),
+        )
+        conn.execute(
+            "INSERT INTO runs(run_id,session_id,task_mode,status,request_fingerprint,created_at,updated_at) VALUES('RUN','SES','DRAFT','awaiting_external','sha256:req',?,?)",
+            (stamp, stamp),
+        )
+        conn.execute(
+            "INSERT INTO independent_review_attempts(run_id,candidate_fingerprint,status,created_at,updated_at) VALUES('RUN','sha256:candidate','available',?,?)",
+            (stamp, stamp),
+        )
+        try:
+            conn.execute(
+                """INSERT INTO independent_review_leases(
+                lease_id,project_id,run_id,candidate_fingerprint,job_id,input_fingerprint,packet_bytes,
+                packet_fingerprint,relay_nonce,provider,transport,assurance_class,parent_session_id,status,created_at,updated_at
+                ) VALUES('LEASE','PROD','RUN','sha256:candidate','JOB','sha256:input',X'7B7D','sha256:packet','NONCE',
+                'codex_native_subagent','codex_native','host_native_separate_context','SES','pending',?,?)""",
+                (stamp, stamp),
+            )
+        except sqlite3.IntegrityError as exc:
+            self.fail(f"migration 003 rejected the final native provider ID: {exc}")
+        conn.execute(
+            "INSERT INTO independent_review_lifecycle_events(event_id,lease_id,run_id,event_kind,event_fingerprint,payload_json,created_at) VALUES('EVENT','LEASE','RUN','prepared','sha256:event','{\"provider\":\"codex_native_subagent\"}',?)",
+            (stamp,),
+        )
+        conn.executescript((migrations / "004_independent_review_processing_lease.sql").read_text(encoding="utf-8"))
+        lease = conn.execute("SELECT provider,transport FROM independent_review_leases WHERE lease_id='LEASE'").fetchone()
+        event = conn.execute("SELECT payload_json FROM independent_review_lifecycle_events WHERE event_id='EVENT'").fetchone()
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(independent_review_attempts)")}
+        indexes = {row["name"] for row in conn.execute("PRAGMA index_list(candidates)")}
+        self.assertEqual(dict(lease), {"provider": "codex_native_subagent", "transport": "codex_native"})
+        self.assertEqual(json.loads(event["payload_json"])["provider"], "codex_native_subagent")
+        self.assertTrue({"processing_epoch", "processing_expires_at", "processing_phase"} <= columns)
+        self.assertIn("production_candidate_one_per_run_idx", indexes)
+        with self.assertRaises(sqlite3.IntegrityError):
+            conn.execute("UPDATE independent_review_leases SET provider='codex' WHERE lease_id='LEASE'")
+
+    def test_stale_owner_is_fenced_at_receipt_write_after_identical_takeover(self):
+        self.assert_stale_owner_fenced_at_effect_boundary("receipt")
+
+    def test_stale_owner_is_fenced_at_candidate_write_after_identical_takeover(self):
+        self.assert_stale_owner_fenced_at_effect_boundary("candidate")
 
     def test_native_dispatch_withholds_packet_and_claim_is_one_time_with_distinct_session(self):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
@@ -1249,7 +1414,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         packet = frozen_packet(self.store, run_id)
         result = peer_result(packet, "pass")
         receipt = project_bridge_receipt(packet, result)
-        original = runtime._set_run
+        original = runtime._set_independent_run
         failed_once = False
 
         def crash_after_candidate(project_id, target_run_id, status, **kwargs):  # noqa: ANN001
@@ -1259,7 +1424,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
                 raise RuntimeError("fixture post-candidate crash")
             return original(project_id, target_run_id, status, **kwargs)
 
-        with patch.object(runtime, "_set_run", side_effect=crash_after_candidate):
+        with patch.object(runtime, "_set_independent_run", side_effect=crash_after_candidate):
             with self.assertRaises(RuntimeError):
                 runtime.submit_independent(
                     "PROD",
@@ -1465,11 +1630,51 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         self.assertTrue(recovered["owner"])
         self.assertTrue(recovered["recovered"])
         self.assertNotEqual(first["processing_token"], recovered["processing_token"])
+        self.assertGreater(recovered["processing_epoch"], first["processing_epoch"])
+        with self.assertRaises(IndependentReviewError) as stale_heartbeat:
+            repository.mark_attempt_effects_started(
+                "PROD",
+                run_id,
+                handoff["candidate_fingerprint"],
+                first["processing_token"],
+                first["processing_epoch"],
+            )
+        self.assertEqual(stale_heartbeat.exception.code, "independent_processing_owner_lost")
+        repository.abandon_attempt(
+            "PROD",
+            run_id,
+            handoff["candidate_fingerprint"],
+            first["processing_token"],
+            first["processing_epoch"],
+        )
+        with self.store.open_project("PROD") as conn:
+            current = conn.execute(
+                "SELECT processing_token,processing_epoch,status FROM independent_review_attempts WHERE run_id=?",
+                (run_id,),
+            ).fetchone()
+        self.assertEqual(
+            dict(current),
+            {
+                "processing_token": recovered["processing_token"],
+                "processing_epoch": recovered["processing_epoch"],
+                "status": "processing",
+            },
+        )
+        with self.assertRaises(IndependentReviewError) as stale_release:
+            repository.release_attempt(
+                "PROD",
+                run_id,
+                handoff["candidate_fingerprint"],
+                first["processing_token"],
+                first["processing_epoch"],
+            )
+        self.assertEqual(stale_release.exception.code, "independent_processing_owner_lost")
         repository.terminalize_attempt(
             "PROD",
             run_id,
             handoff["candidate_fingerprint"],
             processing_token=recovered["processing_token"],
+            processing_epoch=recovered["processing_epoch"],
             evidence_fingerprint="evidence:A",
             response={"status": "completed", "candidate_visible": False},
         )

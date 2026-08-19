@@ -16,7 +16,7 @@ from harness.semantic_workers.independent_invocation_receipt import (
 )
 from harness.semantic_workers.peer_chat_relay import validate_peer_result
 from persistence.independent_review_repository import IndependentReviewError, IndependentReviewRepository
-from persistence.quillframe_sqlite import ConflictError, fingerprint_text, now_iso
+from persistence.quillframe_sqlite import fingerprint_text, now_iso
 
 from .context import ProductionContextRuntime
 from .contracts import (
@@ -182,15 +182,26 @@ class ProductionRunExecutor(ProductionContextRuntime):
         receipt["stage_result_fingerprint"] = fingerprint({key: value for key, value in receipt.items() if key != "stage_result_fingerprint"})
         return receipt
 
-    def _persist_stage_receipt(self, project_id: str, run_id: str, receipt: dict[str, Any]) -> None:
+    def _persist_stage_receipt(
+        self,
+        project_id: str,
+        run_id: str,
+        receipt: dict[str, Any],
+        *,
+        effect_guard: Callable[[Any], None] | None = None,
+    ) -> None:
         assert_secret_free(receipt, label="production stage receipt")
         key = f"{run_id}:stage:{receipt['mechanism']}"
         with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            if effect_guard is not None:
+                effect_guard(conn)
             existing = conn.execute("SELECT payload_json FROM receipts WHERE idempotency_key=?", (key,)).fetchone()
             if existing:
                 prior = _json(existing["payload_json"], {})
                 if prior.get("stage_result_fingerprint") != receipt.get("stage_result_fingerprint"):
                     raise ProductionRunError("stage_replay_conflict", f"stage receipt changed for immutable idempotency key: {key}")
+                conn.commit()
                 return
             conn.execute(
                 "INSERT INTO receipts(receipt_id,run_id,receipt_kind,idempotency_key,payload_json,created_at) VALUES(?,?,?,?,?,?)",
@@ -280,10 +291,20 @@ class ProductionRunExecutor(ProductionContextRuntime):
             conn.commit()
             return handoff
 
-    def _persist_release_receipt(self, project_id: str, run_id: str, release: dict[str, Any]) -> None:
+    def _persist_release_receipt(
+        self,
+        project_id: str,
+        run_id: str,
+        release: dict[str, Any],
+        *,
+        effect_guard: Callable[[Any], None] | None = None,
+    ) -> None:
         assert_secret_free(release, label="production release")
         key = f"{run_id}:production_release"
         with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            if effect_guard is not None:
+                effect_guard(conn)
             existing = conn.execute(
                 "SELECT payload_json FROM receipts WHERE receipt_kind='production_release' AND idempotency_key=?",
                 (key,),
@@ -292,6 +313,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 prior = _json(existing["payload_json"], {})
                 if prior.get("release_fingerprint") != release.get("release_fingerprint"):
                     raise ProductionRunError("production_release_replay_conflict", "production release changed for immutable run")
+                conn.commit()
                 return
             conn.execute(
                 "INSERT INTO receipts(receipt_id,run_id,receipt_kind,idempotency_key,payload_json,created_at) VALUES(?,?,?,?,?,?)",
@@ -310,8 +332,28 @@ class ProductionRunExecutor(ProductionContextRuntime):
         independent_binding: dict[str, Any],
         readiness: dict[str, Any],
         release: dict[str, Any],
+        *,
+        effect_guard: Callable[[Any], None],
     ) -> dict[str, Any]:
+        independence_receipt = independent_binding["independence_receipt"]
+        independent_result = independent_binding["result"]
+        review_public = {
+            "model_contract_id": "quality.production_review",
+            "judgment": independent_result.get("judgment"),
+            "worker": independent_result.get("worker"),
+            "job_id": independent_result.get("job_id"),
+            "input_fingerprint": independent_result.get("input_fingerprint"),
+            "independence_receipt": independence_receipt,
+            **({"bridge_receipt": independence_receipt} if independence_receipt.get("schema") != INDEPENDENT_INVOCATION_RECEIPT_SCHEMA else {}),
+            "production_readiness": readiness,
+            "submission_evidence_fingerprint": independent_binding["submission_evidence_fingerprint"],
+            "private_reasoning_exposed": False,
+            "authority": False,
+        }
+        assert_secret_free(review_public, label="independent review evidence")
         with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            effect_guard(conn)
             existing = conn.execute(
                 "SELECT candidate_id,revision_id,status,content_fingerprint,user_visible_gate FROM candidates WHERE run_id=? ORDER BY created_at,rowid",
                 (run["run_id"],),
@@ -337,6 +379,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
                         "candidate_replay_conflict",
                         "persisted production candidate lacks exact independent review evidence",
                     )
+                conn.commit()
                 return {
                     "candidate_id": existing[0]["candidate_id"],
                     "revision_id": existing[0]["revision_id"],
@@ -351,53 +394,47 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 raise ProductionRunError("target_document_required", f"production candidate target document does not exist: {document_id}")
             latest = self.store.latest_revision(conn, document_id)
             parent_id = latest["revision_id"] if latest else None
-        try:
-            revision = self.store.save_revision(
-                project_id,
-                document_id,
-                text,
-                expected_parent_revision_id=parent_id,
-                source="production_runtime",
-                authority_class="review",
-                provenance={
-                    "run_id": run["run_id"],
-                    "context_bundle_fingerprint": bundle["bundle_fingerprint"],
-                    "freeze_fingerprint": bundle["freeze"]["freeze_fingerprint"],
-                    "production_readiness_schema": readiness.get("schema"),
-                    "production_release_fingerprint": release.get("release_fingerprint"),
-                    "authority": False,
-                },
-            )
-        except ConflictError as exc:
-            raise ProductionRunError("revision_conflict", str(exc)) from exc
-        if revision["content_fingerprint"] != candidate_fingerprint:
-            raise ProductionRunError("candidate_fingerprint_mismatch", "diagnostic candidate changed before Review Draft persistence")
-
-        candidate_id = "cand_" + uuid.uuid4().hex
-        review_id = "review_" + uuid.uuid4().hex
-        candidate_kind = "draft" if run["task_mode"] == "DRAFT" else "repair"
-        stamp = now_iso()
-        independence_receipt = independent_binding["independence_receipt"]
-        independent_result = independent_binding["result"]
-        review_public = {
-            "model_contract_id": "quality.production_review",
-            "judgment": independent_result.get("judgment"),
-            "worker": independent_result.get("worker"),
-            "job_id": independent_result.get("job_id"),
-            "input_fingerprint": independent_result.get("input_fingerprint"),
-            "independence_receipt": independence_receipt,
-            **({"bridge_receipt": independence_receipt} if independence_receipt.get("schema") != INDEPENDENT_INVOCATION_RECEIPT_SCHEMA else {}),
-            "production_readiness": readiness,
-            "submission_evidence_fingerprint": independent_binding["submission_evidence_fingerprint"],
-            "private_reasoning_exposed": False,
-            "authority": False,
-        }
-        assert_secret_free(review_public, label="independent review evidence")
-        with self.store.open_project(project_id) as conn:
-            conn.execute("BEGIN IMMEDIATE")
+            content_fingerprint = fingerprint_text(text)
+            if content_fingerprint != candidate_fingerprint:
+                raise ProductionRunError("candidate_fingerprint_mismatch", "diagnostic candidate changed before Review Draft persistence")
+            revision = conn.execute(
+                "SELECT revision_id FROM document_revisions WHERE document_id=? AND content_fingerprint=?",
+                (document_id, content_fingerprint),
+            ).fetchone()
+            revision_id = revision["revision_id"] if revision else "rev_" + uuid.uuid4().hex
+            if not revision:
+                conn.execute(
+                    """INSERT INTO document_revisions(
+                    revision_id,document_id,parent_revision_id,content,content_fingerprint,created_at,source,authority_class,provenance_json
+                    ) VALUES(?,?,?,?,?,?,?,?,?)""",
+                    (
+                        revision_id,
+                        document_id,
+                        parent_id,
+                        text,
+                        content_fingerprint,
+                        now_iso(),
+                        "production_runtime",
+                        "review",
+                        canonical_json({
+                            "run_id": run["run_id"],
+                            "context_bundle_fingerprint": bundle["bundle_fingerprint"],
+                            "freeze_fingerprint": bundle["freeze"]["freeze_fingerprint"],
+                            "production_readiness_schema": readiness.get("schema"),
+                            "production_release_fingerprint": release.get("release_fingerprint"),
+                            "authority": False,
+                        }),
+                    ),
+                )
+                title = conn.execute("SELECT title FROM documents WHERE document_id=?", (document_id,)).fetchone()["title"]
+                self.store.index_search(conn, "document", document_id, title, text, commit=False)
+            candidate_id = "cand_" + uuid.uuid4().hex
+            review_id = "review_" + uuid.uuid4().hex
+            candidate_kind = "draft" if run["task_mode"] == "DRAFT" else "repair"
+            stamp = now_iso()
             conn.execute(
                 "INSERT INTO candidates(candidate_id,document_id,revision_id,run_id,task_mode,candidate_kind,status,content_fingerprint,user_visible_gate,created_at) VALUES(?,?,?,?,?,?,'review_draft',?,'PASS',?)",
-                (candidate_id, document_id, revision["revision_id"], run["run_id"], run["task_mode"], candidate_kind, candidate_fingerprint, stamp),
+                (candidate_id, document_id, revision_id, run["run_id"], run["task_mode"], candidate_kind, candidate_fingerprint, stamp),
             )
             conn.execute(
                 "INSERT INTO review_evidence(review_id,candidate_id,evidence_kind,result_json,candidate_fingerprint,reviewer_fingerprint,independent,stale,created_at) VALUES(?,?,?,?,?,?,1,0,?)",
@@ -414,7 +451,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
             conn.commit()
         return {
             "candidate_id": candidate_id,
-            "revision_id": revision["revision_id"],
+            "revision_id": revision_id,
             "candidate_fingerprint": candidate_fingerprint,
             "status": "review_draft",
             "user_visible_gate": "PASS",
@@ -431,6 +468,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
         candidate_fingerprint: str,
         context_bundle_fingerprint: str,
         independent_result_fingerprint: str | None,
+        effect_guard: Callable[[Any], None],
     ) -> None:
         payload = {
             "candidate_id": candidate_id,
@@ -439,6 +477,8 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "independent_result_fingerprint": independent_result_fingerprint,
         }
         with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            effect_guard(conn)
             existing = conn.execute(
                 "SELECT payload_json FROM runtime_events WHERE run_id=? AND event_kind='production_candidate_ready' ORDER BY created_at,rowid",
                 (run_id,),
@@ -449,10 +489,29 @@ class ProductionRunExecutor(ProductionContextRuntime):
                         "candidate_ready_event_conflict",
                         "production candidate-ready event changed for immutable run",
                     )
+                conn.commit()
                 return
             conn.execute(
                 "INSERT INTO runtime_events(event_id,run_id,event_kind,payload_json,created_at) VALUES(?,?,?,?,?)",
                 ("evt_" + uuid.uuid4().hex, run_id, "production_candidate_ready", canonical_json(payload), now_iso()),
+            )
+            conn.commit()
+
+    def _set_independent_run(
+        self,
+        project_id: str,
+        run_id: str,
+        status: str,
+        *,
+        effect_guard: Callable[[Any], None],
+        result_fingerprint: str | None = None,
+    ) -> None:
+        with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            effect_guard(conn)
+            conn.execute(
+                "UPDATE runs SET status=?,result_fingerprint=COALESCE(?,result_fingerprint),updated_at=? WHERE run_id=?",
+                (status, result_fingerprint, now_iso(), run_id),
             )
             conn.commit()
 
@@ -758,6 +817,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
         if not ownership["owner"]:
             return ownership["response"]
         token = ownership["processing_token"]
+        epoch = ownership["processing_epoch"]
         try:
             response = self._process_independent_submission(
                 project_id,
@@ -766,15 +826,13 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 result=result,
                 independence_receipt=receipt,
                 submission_evidence_fingerprint=evidence_fingerprint,
-                on_effects_started=lambda: repository.mark_attempt_effects_started(
-                    project_id,
-                    run_id,
-                    handoff["candidate_fingerprint"],
-                    token,
-                ),
+                processing_repository=repository,
+                processing_candidate_fingerprint=handoff["candidate_fingerprint"],
+                processing_token=token,
+                processing_epoch=epoch,
             )
             if response.get("status") == "stale_conflict":
-                repository.release_attempt(project_id, run_id, handoff["candidate_fingerprint"], token)
+                repository.release_attempt(project_id, run_id, handoff["candidate_fingerprint"], token, epoch)
                 return response
             try:
                 if _native_lease_id is not None and _native_completion_event is not None:
@@ -785,6 +843,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
                         receipt=receipt,
                         result_fingerprint=independent_fingerprint(result),
                         processing_token=token,
+                        processing_epoch=epoch,
                         evidence_fingerprint=evidence_fingerprint,
                         response=response,
                     )
@@ -794,6 +853,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
                         run_id,
                         handoff["candidate_fingerprint"],
                         processing_token=token,
+                        processing_epoch=epoch,
                         evidence_fingerprint=evidence_fingerprint,
                         response=response,
                     )
@@ -801,7 +861,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 self._raise_independent_repository(exc)
             return response
         except Exception:
-            repository.abandon_attempt(project_id, run_id, handoff["candidate_fingerprint"], token)
+            repository.abandon_attempt(project_id, run_id, handoff["candidate_fingerprint"], token, epoch)
             raise
 
     def _completed_projection(
@@ -1274,8 +1334,36 @@ class ProductionRunExecutor(ProductionContextRuntime):
         result: dict[str, Any],
         independence_receipt: dict[str, Any],
         submission_evidence_fingerprint: str,
-        on_effects_started: Callable[[], None],
+        processing_repository: IndependentReviewRepository,
+        processing_candidate_fingerprint: str,
+        processing_token: str,
+        processing_epoch: int,
     ) -> dict[str, Any]:
+        def effect_guard(conn) -> None:  # noqa: ANN001
+            try:
+                processing_repository.assert_and_renew_attempt_owner(
+                    conn,
+                    project_id,
+                    run_id,
+                    processing_candidate_fingerprint,
+                    processing_token,
+                    processing_epoch,
+                )
+            except IndependentReviewError as exc:
+                self._raise_independent_repository(exc)
+
+        def mark_effects_started() -> None:
+            try:
+                processing_repository.mark_attempt_effects_started(
+                    project_id,
+                    run_id,
+                    processing_candidate_fingerprint,
+                    processing_token,
+                    processing_epoch,
+                )
+            except IndependentReviewError as exc:
+                self._raise_independent_repository(exc)
+
         run = self._run_row(project_id, run_id)
         if run.get("status") == "completed":
             bundle = self._latest_bundle(project_id, run_id)
@@ -1294,6 +1382,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 candidate_fingerprint=replay["candidate"]["candidate_fingerprint"],
                 context_bundle_fingerprint=str(replay.get("context_bundle_fingerprint") or ""),
                 independent_result_fingerprint=independence_receipt.get("result_fingerprint"),
+                effect_guard=effect_guard,
             )
             return replay
         if run.get("status") not in {"awaiting_external", "failed_gate", "semantic_pending"}:
@@ -1304,7 +1393,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
             raise ProductionRunError("independent_handoff_missing", "frozen Context bundle and independent handoff are required")
         validation = self._validate_bundle_current(project_id, bundle)
         if not validation.get("proceed"):
-            self._set_run(project_id, run_id, "stale_conflict")
+            self._set_independent_run(project_id, run_id, "stale_conflict", effect_guard=effect_guard)
             return {
                 "schema": PRODUCTION_EXECUTION_SCHEMA,
                 "project_id": project_id,
@@ -1367,11 +1456,16 @@ class ProductionRunExecutor(ProductionContextRuntime):
             independence_receipt.get("assurance_class") or "project_owned_automation_receipt"
         )
         independent_receipt["stage_result_fingerprint"] = fingerprint({key: value for key, value in independent_receipt.items() if key != "stage_result_fingerprint"})
-        on_effects_started()
-        self._persist_stage_receipt(project_id, run_id, independent_receipt)
+        mark_effects_started()
+        self._persist_stage_receipt(project_id, run_id, independent_receipt, effect_guard=effect_guard)
 
         if not readiness.get("ready_for_user_visible_review"):
-            self._set_run(project_id, run_id, "failed_gate" if readiness.get("blocking_gates") else "semantic_pending")
+            self._set_independent_run(
+                project_id,
+                run_id,
+                "failed_gate" if readiness.get("blocking_gates") else "semantic_pending",
+                effect_guard=effect_guard,
+            )
             return {
                 "schema": PRODUCTION_EXECUTION_SCHEMA,
                 "project_id": project_id,
@@ -1404,7 +1498,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
         )
         visible_receipt["production_readiness_schema"] = readiness.get("schema")
         visible_receipt["stage_result_fingerprint"] = fingerprint({key: value for key, value in visible_receipt.items() if key != "stage_result_fingerprint"})
-        self._persist_stage_receipt(project_id, run_id, visible_receipt)
+        self._persist_stage_receipt(project_id, run_id, visible_receipt, effect_guard=effect_guard)
 
         release = final_release(
             production_readiness=readiness,
@@ -1415,7 +1509,12 @@ class ProductionRunExecutor(ProductionContextRuntime):
             user_visible_gate_receipt_fingerprint=visible_receipt["stage_result_fingerprint"],
         )
         if release.get("ready_for_user_visible_review") is not True:
-            self._set_run(project_id, run_id, "failed_gate" if release.get("blocking_structural_receipts") else "semantic_pending")
+            self._set_independent_run(
+                project_id,
+                run_id,
+                "failed_gate" if release.get("blocking_structural_receipts") else "semantic_pending",
+                effect_guard=effect_guard,
+            )
             return {
                 "schema": PRODUCTION_EXECUTION_SCHEMA,
                 "project_id": project_id,
@@ -1428,7 +1527,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 "raw_draft_visible": False,
                 "authority": False,
             }
-        self._persist_release_receipt(project_id, run_id, release)
+        self._persist_release_receipt(project_id, run_id, release, effect_guard=effect_guard)
 
         candidate = self._persist_candidate(
             project_id,
@@ -1440,8 +1539,15 @@ class ProductionRunExecutor(ProductionContextRuntime):
             independent_binding,
             readiness,
             release,
+            effect_guard=effect_guard,
         )
-        self._set_run(project_id, run_id, "completed", result_fingerprint=candidate["candidate_fingerprint"])
+        self._set_independent_run(
+            project_id,
+            run_id,
+            "completed",
+            result_fingerprint=candidate["candidate_fingerprint"],
+            effect_guard=effect_guard,
+        )
         self._persist_candidate_ready_event(
             project_id,
             run_id,
@@ -1449,6 +1555,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
             candidate_fingerprint=candidate["candidate_fingerprint"],
             context_bundle_fingerprint=bundle["bundle_fingerprint"],
             independent_result_fingerprint=independence_receipt.get("result_fingerprint"),
+            effect_guard=effect_guard,
         )
         with self.store.open_project(project_id) as conn:
             receipts = [

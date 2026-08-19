@@ -1,3 +1,6 @@
+-- This native-review schema was finalized before release. Databases created
+-- from the intermediate local-only 600a555 state must be recreated rather
+-- than partially rewriting its provider-bound evidence graph.
 CREATE TABLE IF NOT EXISTS independent_review_attempts (
   run_id TEXT NOT NULL REFERENCES runs(run_id) ON DELETE CASCADE,
   candidate_fingerprint TEXT NOT NULL,
@@ -29,7 +32,7 @@ CREATE TABLE IF NOT EXISTS independent_review_leases (
   packet_bytes BLOB NOT NULL,
   packet_fingerprint TEXT NOT NULL,
   relay_nonce TEXT NOT NULL,
-  provider TEXT NOT NULL CHECK(provider IN ('codex','claude')),
+  provider TEXT NOT NULL CHECK(provider IN ('codex_native_subagent','claude_native_subagent')),
   transport TEXT NOT NULL CHECK(transport IN ('codex_native','claude_code_native')),
   assurance_class TEXT NOT NULL CHECK(assurance_class='host_native_separate_context'),
   parent_session_id TEXT NOT NULL REFERENCES sessions(session_id) ON DELETE RESTRICT,
