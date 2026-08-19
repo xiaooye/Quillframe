@@ -198,6 +198,108 @@ def _projection_fingerprint(manifest_fp: str, items: list[dict[str, Any]]) -> tu
     return universe, fingerprint({"manifest_fingerprint": manifest_fp, "source_universe_fingerprint": universe})
 
 
+def _target_definition(item: dict[str, Any]) -> dict[str, Any]:
+    """Return the exact durable target fields this compiler owns.
+
+    Target rows are a rebuildable projection, but they still need an explicit
+    integrity boundary.  Keeping this normalization in one place prevents a
+    later status/preflight path from silently ignoring metadata or POV fields.
+    """
+    target = item["target"]
+    target_type, target_id = target["type"], target["id"]
+    if target_type == "story_node":
+        kind = str(target.get("kind", item["object_type"] if item["object_type"] in {"book", "volume", "arc", "unit", "chapter", "scene"} else "chapter"))
+        metadata = target.get("metadata", {})
+        if not isinstance(metadata, dict):
+            raise ValueError(f"story node metadata must be object: {target_id}")
+        return {
+            "type": "story_node",
+            "id": target_id,
+            "parent_id": target.get("parent_id"),
+            "kind": kind,
+            "ordinal": int(target.get("ordinal", 0)),
+            "title": str(target.get("title") or item["stable_id"]),
+            "pov_character_id": target.get("pov_character_id"),
+            "location_id": target.get("location_id"),
+            "metadata": metadata,
+            "document_id": str(target["document_id"]) if target.get("document_id") else None,
+            "document_kind": str(target.get("document_kind", "plan")),
+            "document_title": str(target.get("document_title") or target.get("title") or item["stable_id"]),
+        }
+    return {
+        "type": "document",
+        "id": target_id,
+        "story_node_id": target.get("story_node_id"),
+        "document_kind": str(target.get("document_kind", "plan")),
+        "title": str(target.get("title") or item["stable_id"]),
+    }
+
+
+def _assert_target_matches(conn: sqlite3.Connection, item: dict[str, Any]) -> None:
+    """Fail closed when a projected Story/Document row has drifted."""
+    target = _target_definition(item)
+    if target["type"] == "story_node":
+        row = conn.execute("SELECT * FROM story_nodes WHERE node_id=?", (target["id"],)).fetchone()
+        if row is None:
+            raise ValueError(f"story node target missing: {target['id']}")
+        for key in ("parent_id", "kind", "ordinal", "title", "pov_character_id", "location_id"):
+            if row[key] != target[key]:
+                raise ValueError(f"story node target conflict: {target['id']}")
+        if _json(row["metadata_json"], None) != target["metadata"]:
+            raise ValueError(f"story node target metadata drift: {target['id']}")
+        document_id = target["document_id"]
+        if document_id:
+            doc = conn.execute("SELECT * FROM documents WHERE document_id=?", (document_id,)).fetchone()
+            if doc is None:
+                raise ValueError(f"document target missing: {document_id}")
+            if any(doc[key] != value for key, value in (("story_node_id", target["id"]), ("document_kind", target["document_kind"]), ("title", target["document_title"]))):
+                raise ValueError(f"document target conflict: {document_id}")
+        return
+    row = conn.execute("SELECT * FROM documents WHERE document_id=?", (target["id"],)).fetchone()
+    if row is None:
+        raise ValueError(f"document target missing: {target['id']}")
+    if any(row[key] != value for key, value in (("story_node_id", target["story_node_id"]), ("document_kind", target["document_kind"]), ("title", target["title"]))):
+        raise ValueError(f"document target conflict: {target['id']}")
+
+
+def _projected_target_keys(conn: sqlite3.Connection) -> set[tuple[str, str]]:
+    keys: set[tuple[str, str]] = set()
+    for row in conn.execute("SELECT target_json FROM project_context_sources"):
+        target = _json(row["target_json"], None)
+        if not isinstance(target, dict) or target.get("type") not in _TARGET_TYPES or not target.get("id"):
+            raise ValueError("projected target JSON is invalid")
+        keys.add((str(target["type"]), str(target["id"])))
+        if target.get("type") == "story_node" and target.get("document_id"):
+            keys.add(("document", str(target["document_id"])))
+    return keys
+
+
+def _remove_obsolete_targets(conn: sqlite3.Connection, old_keys: set[tuple[str, str]], new_keys: set[tuple[str, str]]) -> None:
+    """Remove only clean, previously projected targets absent from the new map.
+
+    A user-edited or referenced target is never guessed away: the transaction
+    fails closed and leaves the previous projection intact.
+    """
+    obsolete = old_keys - new_keys
+    for target_type, target_id in sorted(obsolete):
+        if target_type == "document":
+            row = conn.execute("SELECT * FROM documents WHERE document_id=?", (target_id,)).fetchone()
+            if row is None:
+                continue
+            if conn.execute("SELECT 1 FROM document_revisions WHERE document_id=? LIMIT 1", (target_id,)).fetchone():
+                raise ValueError(f"obsolete projected document has revisions: {target_id}")
+            conn.execute("DELETE FROM documents WHERE document_id=?", (target_id,))
+            continue
+        row = conn.execute("SELECT * FROM story_nodes WHERE node_id=?", (target_id,)).fetchone()
+        if row is None:
+            continue
+        if conn.execute("SELECT 1 FROM story_nodes WHERE parent_id=? LIMIT 1", (target_id,)).fetchone():
+            raise ValueError(f"obsolete projected story node has children: {target_id}")
+        if conn.execute("SELECT 1 FROM documents WHERE story_node_id=? LIMIT 1", (target_id,)).fetchone():
+            raise ValueError(f"obsolete projected story node has documents: {target_id}")
+        conn.execute("DELETE FROM story_nodes WHERE node_id=?", (target_id,))
+
+
 def _target_order(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Stable topological order for target graph materialization."""
     by_target = {item["target"]["id"]: item for item in items if item["target"]["type"] == "story_node"}
@@ -245,7 +347,36 @@ def _rows_match(conn: sqlite3.Connection, items: list[dict[str, Any]], projectio
             return False
         if _json(row["allowed_stages_json"], None) != item["allowed_stages"] or _json(row["target_json"], None) != item["target"] or _json(row["runtime_payload_json"], None) != item["runtime_payload"]:
             return False
+        try:
+            _assert_target_matches(conn, item)
+        except ValueError:
+            return False
     return True
+
+
+def _validate_receipt(row: sqlite3.Row, compiled: dict[str, Any], project_id: str) -> dict[str, Any]:
+    """Validate the immutable, non-authoritative receipt before replay."""
+    try:
+        value = json.loads(row["receipt_json"])
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise ValueError("projection receipt JSON is invalid") from exc
+    expected = {
+        "schema": RECEIPT_SCHEMA,
+        "project_id": project_id,
+        "manifest_fingerprint": compiled["manifest_fingerprint"],
+        "source_universe_fingerprint": compiled["source_universe_fingerprint"],
+        "projection_fingerprint": compiled["projection_fingerprint"],
+        "object_count": len(compiled["objects"]),
+        "status": "applied",
+        "authority": False,
+        "accepted": False,
+        "settled": False,
+    }
+    if value != expected or canonical(value) != row["receipt_json"]:
+        raise ValueError("projection receipt integrity failure")
+    if row["projection_fingerprint"] != expected["projection_fingerprint"] or row["manifest_fingerprint"] != expected["manifest_fingerprint"] or row["source_universe_fingerprint"] != expected["source_universe_fingerprint"] or row["status"] != "applied":
+        raise ValueError("projection receipt column integrity failure")
+    return value
 
 
 def preview(project_root: Path, *, toml_manifest: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -256,6 +387,10 @@ def preview(project_root: Path, *, toml_manifest: dict[str, Any] | None = None) 
         with (root / "quillframe.toml").open("rb") as fh:
             toml_manifest = tomllib.load(fh)
     manifest, manifest_fp, manifest_path = _load_manifest(root, toml_manifest)
+    toml_project_id = str((toml_manifest.get("project") or {}).get("id") or "").strip()
+    manifest_project_id = str(manifest.get("project_id") or "").strip()
+    if toml_project_id and manifest_project_id and toml_project_id != manifest_project_id:
+        raise ValueError("mapped Project/manifest project identity mismatch")
     declared_items = _items(manifest)
     context_set = manifest.get("context_set")
     if isinstance(context_set, dict) and isinstance(context_set.get("allowed_object_ids"), list):
@@ -280,7 +415,7 @@ def preview(project_root: Path, *, toml_manifest: dict[str, Any] | None = None) 
     source_universe_fp, projection_fp = _projection_fingerprint(manifest_fp, items)
     return {
         "schema": PREVIEW_SCHEMA,
-        "project_id": str((toml_manifest.get("project") or {}).get("id") or manifest.get("project_id") or ""),
+        "project_id": toml_project_id or manifest_project_id,
         "manifest_path": manifest_path,
         "manifest_fingerprint": manifest_fp,
         "source_universe_fingerprint": source_universe_fp,
@@ -294,44 +429,41 @@ def preview(project_root: Path, *, toml_manifest: dict[str, Any] | None = None) 
 
 def _target_apply(conn: sqlite3.Connection, item: dict[str, Any]) -> None:
     target = item["target"]
-    target_type, target_id = target["type"], target["id"]
+    normalized = _target_definition(item)
+    target_type, target_id = normalized["type"], normalized["id"]
     if target_type == "story_node":
-        kind = str(target.get("kind", item["object_type"] if item["object_type"] in {"book", "volume", "arc", "unit", "chapter", "scene"} else "chapter"))
+        kind = normalized["kind"]
         if kind not in {"book", "volume", "arc", "unit", "chapter", "scene"}:
             raise ValueError(f"invalid story node kind: {kind}")
-        parent = target.get("parent_id")
-        ordinal = int(target.get("ordinal", 0))
-        title = str(target.get("title") or item["stable_id"])
-        metadata = target.get("metadata", {})
-        if not isinstance(metadata, dict):
-            raise ValueError(f"story node metadata must be object: {target_id}")
+        parent = normalized["parent_id"]
+        ordinal = normalized["ordinal"]
+        title = normalized["title"]
+        metadata = normalized["metadata"]
         existing = conn.execute("SELECT * FROM story_nodes WHERE node_id=?", (target_id,)).fetchone()
         if existing:
-            if any(existing[key] != value for key, value in (("parent_id", parent), ("kind", kind), ("ordinal", ordinal), ("title", title))):
-                raise ValueError(f"story node target conflict: {target_id}")
+            _assert_target_matches(conn, item)
         else:
             conn.execute("INSERT INTO story_nodes(node_id,parent_id,kind,ordinal,title,pov_character_id,location_id,metadata_json) VALUES(?,?,?,?,?,?,?,?)", (target_id, parent, kind, ordinal, title, target.get("pov_character_id"), target.get("location_id"), canonical(metadata)))
-        document_id = target.get("document_id")
+        document_id = normalized["document_id"]
         if document_id:
-            document_id = str(document_id)
-            doc_kind = str(target.get("document_kind", "plan"))
-            title_for_doc = str(target.get("document_title") or title)
+            doc_kind = normalized["document_kind"]
+            if doc_kind not in {"manuscript", "note", "plan", "research_note", "publication_source"}:
+                raise ValueError(f"invalid document kind: {doc_kind}")
+            title_for_doc = normalized["document_title"]
             existing_doc = conn.execute("SELECT * FROM documents WHERE document_id=?", (document_id,)).fetchone()
             if existing_doc:
-                if any(existing_doc[key] != value for key, value in (("story_node_id", target_id), ("document_kind", doc_kind), ("title", title_for_doc))):
-                    raise ValueError(f"document target conflict: {document_id}")
+                _assert_target_matches(conn, item)
             else:
                 conn.execute("INSERT INTO documents(document_id,story_node_id,document_kind,title,created_at) VALUES(?,?,?,?,?)", (document_id, target_id, doc_kind, title_for_doc, now_iso()))
     else:
-        doc_kind = str(target.get("document_kind", "plan"))
+        doc_kind = normalized["document_kind"]
         if doc_kind not in {"manuscript", "note", "plan", "research_note", "publication_source"}:
             raise ValueError(f"invalid document kind: {doc_kind}")
-        title = str(target.get("title") or item["stable_id"])
-        story_node_id = target.get("story_node_id")
+        title = normalized["title"]
+        story_node_id = normalized["story_node_id"]
         existing = conn.execute("SELECT * FROM documents WHERE document_id=?", (target_id,)).fetchone()
         if existing:
-            if any(existing[key] != value for key, value in (("story_node_id", story_node_id), ("document_kind", doc_kind), ("title", title))):
-                raise ValueError(f"document target conflict: {target_id}")
+            _assert_target_matches(conn, item)
             return
         if story_node_id and not conn.execute("SELECT 1 FROM story_nodes WHERE node_id=?", (story_node_id,)).fetchone():
             raise ValueError(f"document target story node missing: {story_node_id}")
@@ -354,6 +486,13 @@ def apply(project_root: Path, *, data_dir: Path | None = None, expected_projecti
     with store.open_project(project_id) as conn:
         try:
             conn.execute("BEGIN IMMEDIATE")
+            # The first preview is user-facing and intentionally read-only.
+            # Recompile while the write transaction is held so a source or
+            # manifest edit between preview and apply cannot be committed as
+            # an old fingerprint.
+            fresh = preview(project_root, toml_manifest=toml_manifest)
+            if fresh["projection_fingerprint"] != compiled["projection_fingerprint"] or fresh["manifest_fingerprint"] != compiled["manifest_fingerprint"] or fresh["source_universe_fingerprint"] != compiled["source_universe_fingerprint"]:
+                raise ValueError("projection source snapshot changed during apply")
             identity = conn.execute("SELECT project_id FROM project_identity").fetchone()
             if not identity or identity["project_id"] != project_id:
                 raise ValueError("mapped projection Project database identity mismatch")
@@ -361,12 +500,24 @@ def apply(project_root: Path, *, data_dir: Path | None = None, expected_projecti
             if latest and latest["projection_fingerprint"] == projection_fp:
                 if not _rows_match(conn, compiled["objects"], projection_fp):
                     raise ValueError("projection idempotent replay found tampered runtime rows")
+                receipt = _validate_receipt(latest, compiled, project_id)
                 conn.rollback()
-                return json.loads(latest["receipt_json"])
+                return receipt
             if latest and expected_projection_fingerprint is None:
                 raise ValueError("projection CAS requires expected_projection_fingerprint for replacement")
             if latest and latest["projection_fingerprint"] != expected_projection_fingerprint:
                 raise ValueError("projection CAS current fingerprint mismatch")
+            old_keys = _projected_target_keys(conn)
+            for row in conn.execute("SELECT stable_id,target_json,object_type FROM project_context_sources"):
+                old_target = _json(row["target_json"], None)
+                if isinstance(old_target, dict):
+                    _assert_target_matches(conn, {"stable_id": row["stable_id"], "object_type": row["object_type"], "target": old_target})
+            new_keys = set()
+            for item in compiled["objects"]:
+                normalized = _target_definition(item)
+                new_keys.add((normalized["type"], normalized["id"]))
+                if normalized.get("document_id"):
+                    new_keys.add(("document", normalized["document_id"]))
             for item in _target_order(compiled["objects"]):
                 _target_apply(conn, item)
                 conn.execute(
@@ -377,6 +528,7 @@ def apply(project_root: Path, *, data_dir: Path | None = None, expected_projecti
             ids = [item["stable_id"] for item in compiled["objects"]]
             placeholders = ",".join("?" for _ in ids)
             conn.execute(f"DELETE FROM project_context_sources WHERE stable_id NOT IN ({placeholders})", ids)
+            _remove_obsolete_targets(conn, old_keys, new_keys)
             receipt = {"schema": RECEIPT_SCHEMA, "project_id": project_id, "manifest_fingerprint": compiled["manifest_fingerprint"], "source_universe_fingerprint": compiled["source_universe_fingerprint"], "projection_fingerprint": projection_fp, "object_count": len(compiled["objects"]), "status": "applied", "authority": False, "accepted": False, "settled": False}
             conn.execute("INSERT INTO project_projection_receipts(projection_fingerprint,manifest_fingerprint,source_universe_fingerprint,status,receipt_json,created_at) VALUES(?,?,?,?,?,?)", (projection_fp, compiled["manifest_fingerprint"], compiled["source_universe_fingerprint"], "applied", canonical(receipt), now_iso()))
             conn.commit()
@@ -423,6 +575,7 @@ def status(project_root: Path, *, data_dir: Path | None = None, toml_manifest: d
                 latest = dict(row) if row else None
                 projected_count = int(conn.execute("SELECT COUNT(*) AS n FROM project_context_sources").fetchone()["n"])
                 if compiled and latest and latest.get("projection_fingerprint") == compiled["projection_fingerprint"]:
+                    _validate_receipt(latest, compiled, project_id)
                     rows_match = _rows_match(conn, compiled["objects"], compiled["projection_fingerprint"])
                 else:
                     rows_match = False
@@ -471,6 +624,9 @@ def preflight(project_root: Path, target_id: str, stage: str, *, data_dir: Path 
         except Exception as exc: errors.append(f"project database unavailable: {exc}")
     context = None
     if not errors:
-        try: context = materialize_context(project_root, stage, data_dir=data_dir, target_id=target_id)
+        try:
+            context = materialize_context(project_root, stage, data_dir=data_dir, target_id=target_id)
+            if not context["objects"]:
+                errors.append("target is outside the bounded projected context")
         except Exception as exc: errors.append(str(exc))
     return {"schema": PREFLIGHT_SCHEMA, "project_id": info["project_id"], "target_id": target_id, "stage": stage, "ready": not errors, "errors": errors, "context": context, "model_invocations": 0, "authority": False}

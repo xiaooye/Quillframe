@@ -196,6 +196,86 @@ class MappedProjectionTests(unittest.TestCase):
         self.assertFalse(missing["ready"])
         self.assertEqual(missing["model_invocations"], 0)
 
+    def test_apply_rechecks_source_snapshot_inside_transaction(self):
+        td, root, data = self._fixture()
+        self.addCleanup(td.cleanup)
+        import harness.project_projection as projection
+        original_preview = projection.preview
+        calls = {"count": 0}
+
+        def mutate_after_initial_preview(project_root, *, toml_manifest=None):
+            result = original_preview(project_root, toml_manifest=toml_manifest)
+            calls["count"] += 1
+            if calls["count"] == 1:
+                (root / "design" / "CH001.md").write_text("changed after preview", encoding="utf-8")
+            return result
+
+        projection.preview = mutate_after_initial_preview
+        self.addCleanup(setattr, projection, "preview", original_preview)
+        with self.assertRaisesRegex(ValueError, "snapshot|drift"):
+            apply(root, data_dir=data)
+        self.assertFalse(status(root, data_dir=data)["ready"])
+
+    def test_manifest_project_identity_mismatch_fails_closed(self):
+        td, root, data = self._fixture()
+        self.addCleanup(td.cleanup)
+        manifest_path = root / "runtime-context.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["project_id"] = "FOREIGN-PROJECT"
+        manifest_path.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "project.*mismatch"):
+            preview(root)
+
+    def test_tampered_receipt_never_replays_as_authoritative(self):
+        td, root, data = self._fixture()
+        self.addCleanup(td.cleanup)
+        receipt = apply(root, data_dir=data)
+        with QuillframeStore(data).open_project("PROJECT-MAPPED-TEST") as conn:
+            conn.execute(
+                "UPDATE project_projection_receipts SET receipt_json=? WHERE projection_fingerprint=?",
+                (json.dumps({**receipt, "authority": True, "accepted": True, "settled": True}), receipt["projection_fingerprint"]),
+            )
+            conn.commit()
+        with self.assertRaisesRegex(ValueError, "receipt"):
+            apply(root, data_dir=data)
+        self.assertFalse(status(root, data_dir=data)["ready"])
+
+    def test_target_metadata_tamper_and_obsolete_targets_fail_closed(self):
+        td, root, data = self._fixture()
+        self.addCleanup(td.cleanup)
+        apply(root, data_dir=data)
+        with QuillframeStore(data).open_project("PROJECT-MAPPED-TEST") as conn:
+            conn.execute("UPDATE story_nodes SET metadata_json=? WHERE node_id='CH-001'", ('{"pov":"FOREIGN"}',))
+            conn.commit()
+        self.assertFalse(status(root, data_dir=data)["ready"])
+        with self.assertRaisesRegex(ValueError, "target|projection"):
+            apply(root, data_dir=data)
+
+        # A replacement manifest may not leave a previously materialized
+        # target outside the new bounded projection.
+        td2, root2, data2 = self._fixture()
+        self.addCleanup(td2.cleanup)
+        manifest_path = root2 / "runtime-context.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        source2 = root2 / "design" / "CH002.md"
+        source2.write_text("# CH002\n", encoding="utf-8")
+        second = dict(manifest["sources"][0])
+        second["stable_id"] = "CH-002"
+        second["source_path"] = "design/CH002.md"
+        second["source_fingerprint"] = _sha(source2.read_bytes())
+        second["target"] = {"type": "story_node", "id": "CH-002", "kind": "chapter", "parent_id": None, "ordinal": 2, "title": "CH002", "document_id": "CH-002", "document_kind": "plan"}
+        manifest["sources"].append(second)
+        manifest_path.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
+        first = apply(root2, data_dir=data2)
+        manifest["sources"] = [manifest["sources"][0]]
+        manifest_path.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
+        current = preview(root2)
+        replaced = apply(root2, data_dir=data2, expected_projection_fingerprint=first["projection_fingerprint"])
+        self.assertEqual(replaced["projection_fingerprint"], current["projection_fingerprint"])
+        self.assertNotEqual(current["projection_fingerprint"], first["projection_fingerprint"])
+        with QuillframeStore(data2).open_project("PROJECT-MAPPED-TEST") as conn:
+            self.assertIsNone(conn.execute("SELECT 1 FROM story_nodes WHERE node_id='CH-002'").fetchone())
+        self.assertFalse(preflight(root2, "CH-002", "draft", data_dir=data2)["ready"])
 
 if __name__ == "__main__":
     unittest.main()
