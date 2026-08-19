@@ -18,7 +18,7 @@ if str(HERE.parent) not in sys.path: sys.path.insert(0,str(HERE.parent))
 from semantic_worker_router import validate_dispatchable_job,validate_job,validate_result,worker_job_view  # noqa: E402
 
 PACKET_SCHEMA="quillframe_peer_review_packet_v1"
-PEER_PROVIDERS={"chatgpt_peer_chat","claude_peer_chat","gemini_peer_chat","github_models","github_copilot_actions","human","other_peer_chat"}
+PEER_PROVIDERS={"chatgpt_peer_chat","claude_peer_chat","gemini_peer_chat","github_models","github_copilot_actions","codex_native","claude_code_native","human","other_peer_chat"}
 
 def load(path:Path)->dict[str,Any]:
     v=json.loads(path.read_text(encoding="utf-8"));
@@ -40,7 +40,7 @@ def build(job:dict[str,Any])->dict[str,Any]:
         "You are a genuinely separate independent semantic reviewer. Judge only the blind job below. "
         "Do not ask for or inspect the writer conversation/project files; do not search for expected labels; do not provide private chain-of-thought. "
         "Return ONLY one JSON semantic result with the exact job_id/subject_id/kind/input_fingerprint, status=completed, a truthful declared peer/model/human worker provider, a short evidence-based judgment, empty proposals/errors, and execution.run_reference exactly equal to the relay nonce. "
-        "Declared providers include chatgpt_peer_chat, claude_peer_chat, gemini_peer_chat, github_models, github_copilot_actions, human, and other_peer_chat. "
+        "Declared providers include chatgpt_peer_chat, claude_peer_chat, gemini_peer_chat, github_models, github_copilot_actions, codex_native, claude_code_native, human, and other_peer_chat. "
         "You have no Canon/framework/taste/write authority."
     )
     return {"schema":PACKET_SCHEMA,"relay_nonce":nonce,"input_fingerprint":job["input_fingerprint"],"job":bounded,"reviewer_instruction":reviewer_instruction,"return_binding":{"run_reference":nonce,"fresh_conversation_required":True,"same_project_writer_chat_forbidden":True}}

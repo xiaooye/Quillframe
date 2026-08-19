@@ -6,14 +6,15 @@ from studio import host_bridge
 
 
 class ProductionHostBridgeTests(unittest.TestCase):
-    def test_v9_contract_exposes_authoring_production_and_model_service_primitives(self):
+    def test_v10_contract_exposes_native_dispatch_and_generic_submit_alias(self):
         contract = host_bridge.contract()
-        self.assertEqual(contract["version"], "9")
+        self.assertEqual(contract["version"], "10")
         for operation in (
             "author.run.execute",
             "author.run.status",
             "author.run.context.refresh",
             "author.run.independent.submit",
+            "author.run.independent.dispatch.prepare",
             "model.service.add",
             "model.service.discover",
             "model.service.test",
@@ -42,8 +43,19 @@ class ProductionHostBridgeTests(unittest.TestCase):
                 "independent_provenance",
             ],
         )
-        self.assertTrue(contract["invariants"]["independent_review_project_peer_receipt_required"])
+        self.assertFalse(contract["invariants"]["independent_review_project_peer_receipt_required"])
+        self.assertTrue(contract["invariants"]["independent_review_receipt_required"])
+        self.assertTrue(contract["invariants"]["independent_review_legacy_project_peer_receipt_supported"])
+        self.assertTrue(contract["invariants"]["independent_review_native_lifecycle_receipt_supported"])
         self.assertFalse(contract["invariants"]["independent_review_same_runtime_substitution"])
+        self.assertEqual(
+            contract["operations"]["author.run.independent.submit"]["required_args"],
+            ["project_id", "run_id", "peer_packet", "result"],
+        )
+        self.assertEqual(
+            contract["deferred_operations"]["author.run.independent.local.execute"]["status"],
+            "awaiting_external",
+        )
         self.assertEqual(contract["deferred_operations"]["project.delete"]["status"], "unsupported")
         self.assertFalse(contract["secret_boundary"]["cloudflare_required"])
         self.assertTrue(contract["invariants"]["manuscript_visibility_requires_production_release"])
@@ -173,7 +185,7 @@ class ProductionHostBridgeTests(unittest.TestCase):
     def test_self_test_passes_without_live_network(self):
         report = host_bridge.self_test()
         self.assertEqual(report["quillframe_host_bridge_contract"], "PASS")
-        self.assertEqual(report["contract_version"], "9")
+        self.assertEqual(report["contract_version"], "10")
         self.assertTrue(report["secret_value_fingerprint_independent"])
 
 

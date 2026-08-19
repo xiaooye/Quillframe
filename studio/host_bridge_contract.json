@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_studio_host_bridge_contract_v1",
-  "version": "9",
+  "version": "10",
   "framework_version": "0.9.0",
   "authority": false,
   "canon_authority": false,
@@ -29,7 +29,11 @@
     "context_refresh_is_explicit": true,
     "model_capability_grants_authority": false,
     "independent_review_same_runtime_substitution": false,
-    "independent_review_project_peer_receipt_required": true,
+    "independent_review_project_peer_receipt_required": false,
+    "independent_review_receipt_required": true,
+    "independent_review_legacy_project_peer_receipt_supported": true,
+    "independent_review_native_lifecycle_receipt_supported": true,
+    "independent_review_cross_transport_attempt_consume_once": true,
     "request_revision_auto_starts_revise": false,
     "settlement_preflight_mutates_canon": false,
     "browser_project_registry_authority": false,
@@ -183,8 +187,21 @@
         "project_id",
         "run_id",
         "peer_packet",
-        "result",
-        "bridge_receipt"
+        "result"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "author.run.independent.dispatch.prepare": {
+      "kind": "external_handoff_prepare",
+      "required_args": [
+        "project_id",
+        "run_id",
+        "provider",
+        "parent_session_id"
       ],
       "allowed_surfaces": [
         "cli",
@@ -479,6 +496,10 @@
     }
   },
   "deferred_operations": {
+    "author.run.independent.local.execute": {
+      "status": "awaiting_external",
+      "reason": "Project-free Codex and Claude local runners are implemented in Spec 022 Task 2"
+    },
     "project.delete": {
       "status": "unsupported",
       "reason": "no Core-owned reversible delete transaction yet"

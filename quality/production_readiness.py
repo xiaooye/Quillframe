@@ -21,6 +21,10 @@ if str(SEM) not in sys.path:
     sys.path.insert(0, str(SEM))
 
 from peer_bridge_receipt import validate_receipt as validate_peer_bridge_receipt  # noqa: E402
+from independent_invocation_receipt import (  # noqa: E402
+    SCHEMA as INDEPENDENT_INVOCATION_RECEIPT_SCHEMA,
+    validate_receipt as validate_independent_invocation_receipt,
+)
 from peer_chat_relay import validate_peer_result  # noqa: E402
 from registered_contract_binding import validate_registered_job  # noqa: E402
 from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
@@ -58,11 +62,15 @@ def _string_list(value: Any, name: str) -> list[str]:
 def _validate_independence(binding: dict[str, Any], *, job: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
     """A distinct self-declared session is never independence proof."""
     peer_packet = binding.get("peer_packet")
+    independence_receipt = binding.get("independence_receipt")
     bridge_receipt = binding.get("bridge_receipt")
+    if independence_receipt is not None and bridge_receipt is not None:
+        raise ValueError("semantic_independent accepts exactly one independence receipt")
+    receipt = independence_receipt if independence_receipt is not None else bridge_receipt
     if not isinstance(peer_packet, dict):
         raise ValueError("semantic_independent requires validated peer_packet")
-    if not isinstance(bridge_receipt, dict):
-        raise ValueError("semantic_independent requires project bridge_receipt")
+    if not isinstance(receipt, dict):
+        raise ValueError("semantic_independent requires independence_receipt")
 
     relay_errors = validate_peer_result(peer_packet, result)
     if relay_errors:
@@ -74,18 +82,38 @@ def _validate_independence(binding: dict[str, Any], *, job: dict[str, Any], resu
         if packet_job.get(key) != job.get(key):
             raise ValueError(f"semantic_independent peer packet/job mismatch: {key}")
 
-    receipt_errors = validate_peer_bridge_receipt(bridge_receipt, peer_packet, result)
+    if receipt.get("schema") == INDEPENDENT_INVOCATION_RECEIPT_SCHEMA:
+        receipt_errors = validate_independent_invocation_receipt(receipt, peer_packet, result)
+        if receipt_errors:
+            raise ValueError("semantic_independent native receipt invalid: " + "; ".join(receipt_errors))
+        return {
+            "mode": "host_native_lifecycle",
+            "project_id": receipt.get("project_id"),
+            "provider": receipt.get("provider"),
+            "transport": receipt.get("transport"),
+            "assurance_class": receipt.get("assurance_class"),
+            "parent_session_id": receipt.get("parent_session_id"),
+            "reviewer_session_id": receipt.get("reviewer_session_id"),
+            "host_agent_id": receipt.get("host_agent_id"),
+            "host_invocation_id": receipt.get("host_invocation_id"),
+            "result_fingerprint": receipt.get("result_fingerprint"),
+            "receipt_fingerprint": receipt.get("receipt_fingerprint"),
+        }
+    receipt_errors = validate_peer_bridge_receipt(receipt, peer_packet, result)
     if receipt_errors:
         raise ValueError("semantic_independent project bridge receipt invalid: " + "; ".join(receipt_errors))
     return {
         "mode": "project_owned_peer_bridge",
-        "project_id": bridge_receipt.get("project_id"),
-        "project_repo": bridge_receipt.get("project_repo"),
-        "framework_repo": bridge_receipt.get("framework_repo"),
-        "framework_commit": bridge_receipt.get("framework_commit"),
-        "issue_number": bridge_receipt.get("issue_number"),
-        "result_fingerprint": bridge_receipt.get("result_fingerprint"),
-        "relay_nonce_fingerprint": bridge_receipt.get("relay_nonce_fingerprint"),
+        "project_id": receipt.get("project_id"),
+        "project_repo": receipt.get("project_repo"),
+        "framework_repo": receipt.get("framework_repo"),
+        "framework_commit": receipt.get("framework_commit"),
+        "issue_number": receipt.get("issue_number"),
+        "provider": receipt.get("worker_provider"),
+        "transport": "github_actions",
+        "assurance_class": "project_owned_automation_receipt",
+        "result_fingerprint": receipt.get("result_fingerprint"),
+        "relay_nonce_fingerprint": receipt.get("relay_nonce_fingerprint"),
     }
 
 
@@ -267,7 +295,9 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
         "registered_reader_engagement_required": True,
         "registered_semantic_rule_audit_required": require_semantic_rules,
         "registered_independent_release_contract_required": require_independent,
-        "project_bridge_receipt_required_for_independence": require_independent,
+        "project_bridge_receipt_required_for_independence": False,
+        "independence_receipt_required": require_independent,
+        "native_lifecycle_receipt_supported": True,
         "pre_independent_qualification_required": require_independent,
         "pre_independent_qualification": qualification_summary,
         "independent_pass_can_override_qualification_failure": False,
@@ -368,7 +398,9 @@ def self_test() -> dict[str, Any]:
         "bare_distinct_session_not_independence": True,
         "registered_reader_engagement_required": True,
         "registered_independent_release_contract_required": True,
-        "project_bridge_receipt_required_for_independence": True,
+        "project_bridge_receipt_required_for_independence": False,
+        "independence_receipt_required": True,
+        "native_lifecycle_receipt_supported": True,
         "pre_independent_qualification_required": True,
         "independent_pass_can_override_qualification_failure": False,
         "numeric_quality_aggregation": False,

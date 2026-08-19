@@ -261,12 +261,29 @@ def _author_run_execute(args: dict[str, Any], _: str):
 
 
 def _author_independent_submit(args: dict[str, Any], _: str):
+    independence_receipt = args.get("independence_receipt")
+    bridge_receipt = args.get("bridge_receipt")
+    if (independence_receipt is None) == (bridge_receipt is None):
+        raise BridgeError(
+            "independence_receipt_invalid",
+            "exactly one of independence_receipt or deprecated bridge_receipt is required",
+        )
     return production_runtime().submit_independent(
         require(args, "project_id"),
         require(args, "run_id"),
         peer_packet=require(args, "peer_packet", dict),
         result=require(args, "result", dict),
-        bridge_receipt=require(args, "bridge_receipt", dict),
+        independence_receipt=require(args, "independence_receipt", dict) if independence_receipt is not None else None,
+        bridge_receipt=require(args, "bridge_receipt", dict) if bridge_receipt is not None else None,
+    )
+
+
+def _author_independent_dispatch_prepare(args: dict[str, Any], _: str):
+    return production_runtime().prepare_independent_dispatch(
+        require(args, "project_id"),
+        require(args, "run_id"),
+        provider=require(args, "provider"),
+        parent_session_id=require(args, "parent_session_id"),
     )
 
 
@@ -411,6 +428,7 @@ DISPATCH: dict[str, Callable[[dict[str, Any], str], dict[str, Any]]] = {
     "author.run.status": _author_run_status,
     "author.run.execute": _author_run_execute,
     "author.run.independent.submit": _author_independent_submit,
+    "author.run.independent.dispatch.prepare": _author_independent_dispatch_prepare,
     "author.run.context.refresh": _author_context_refresh,
     "model.service.add": _model_add,
     "model.service.list": _model_list,
@@ -510,7 +528,7 @@ def self_test() -> dict[str, Any]:
     first = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "A"}, "authority": False})
     second = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "B"}, "authority": False})
     ok = desc["status"] == "ok" and generic["status"] == "invalid" and desc["authority"] is False and first["request_fingerprint"] == second["request_fingerprint"] and first["secret_values_persisted"] is False
-    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": "9", "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
+    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": contract()["version"], "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
 
 
 def main() -> int:
