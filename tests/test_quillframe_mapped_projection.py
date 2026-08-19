@@ -199,6 +199,27 @@ class MappedProjectionTests(unittest.TestCase):
         self.assertFalse(blocked["ready"])
         self.assertEqual(blocked["model_invocations"], 0)
 
+    def test_persisted_projection_authority_escalation_fails_closed(self):
+        for table in (
+            "project_context_sources",
+            "project_projection_receipts",
+            "project_projection_target_ownership",
+        ):
+            with self.subTest(table=table):
+                td, root, data = self._fixture()
+                self.addCleanup(td.cleanup)
+                apply(root, data_dir=data)
+                with QuillframeStore(data).open_project("PROJECT-MAPPED-TEST") as conn:
+                    conn.execute("PRAGMA ignore_check_constraints=ON")
+                    conn.execute(f"UPDATE {table} SET authority=1")
+                    conn.commit()
+                self.assertFalse(status(root, data_dir=data)["ready"])
+                blocked = preflight(root, "CH-001", "draft", data_dir=data)
+                self.assertFalse(blocked["ready"])
+                self.assertEqual(blocked["model_invocations"], 0)
+                with self.assertRaises(ValueError):
+                    apply(root, data_dir=data)
+
     def test_declared_context_boundary_rejects_foreign_target(self):
         td, root, data = self._fixture()
         self.addCleanup(td.cleanup)

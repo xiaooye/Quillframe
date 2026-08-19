@@ -376,13 +376,25 @@ def _rows_match(conn: sqlite3.Connection, items: list[dict[str, Any]], projectio
         return False
     for row in rows:
         item = expected[row["stable_id"]]
-        if row["projection_fingerprint"] != projection_fp or row["source_fingerprint"] != item["source_fingerprint"] or row["object_type"] != item["object_type"] or row["authority_class"] != item["authority"] or row["lifecycle"] != item["lifecycle"] or row["domain"] != item["domain"]:
+        if int(row["authority"]) != 0 or row["projection_fingerprint"] != projection_fp or row["source_fingerprint"] != item["source_fingerprint"] or row["object_type"] != item["object_type"] or row["authority_class"] != item["authority"] or row["lifecycle"] != item["lifecycle"] or row["domain"] != item["domain"]:
             return False
         if _json(row["allowed_stages_json"], None) != item["allowed_stages"] or _json(row["target_json"], None) != item["target"] or _json(row["runtime_payload_json"], None) != item["runtime_payload"]:
             return False
         try:
             _assert_target_matches(conn, item)
         except ValueError:
+            return False
+    return True
+
+
+def _projection_authority_is_zero(conn: sqlite3.Connection) -> bool:
+    """Reject any persisted projection row that claims product authority."""
+    for table in (
+        "project_context_sources",
+        "project_projection_receipts",
+        "project_projection_target_ownership",
+    ):
+        if conn.execute(f"SELECT 1 FROM {table} WHERE authority != 0 LIMIT 1").fetchone():
             return False
     return True
 
@@ -407,7 +419,7 @@ def _validate_receipt(row: sqlite3.Row, compiled: dict[str, Any], project_id: st
     }
     if value != expected or canonical(value) != row["receipt_json"]:
         raise ValueError("projection receipt integrity failure")
-    if row["projection_fingerprint"] != expected["projection_fingerprint"] or row["manifest_fingerprint"] != expected["manifest_fingerprint"] or row["source_universe_fingerprint"] != expected["source_universe_fingerprint"] or row["status"] != "applied":
+    if int(row["authority"]) != 0 or row["projection_fingerprint"] != expected["projection_fingerprint"] or row["manifest_fingerprint"] != expected["manifest_fingerprint"] or row["source_universe_fingerprint"] != expected["source_universe_fingerprint"] or row["status"] != "applied":
         raise ValueError("projection receipt column integrity failure")
     return value
 
@@ -529,6 +541,8 @@ def apply(project_root: Path, *, data_dir: Path | None = None, expected_projecti
             identity = conn.execute("SELECT project_id FROM project_identity").fetchone()
             if not identity or identity["project_id"] != project_id:
                 raise ValueError("mapped projection Project database identity mismatch")
+            if not _projection_authority_is_zero(conn):
+                raise ValueError("mapped projection persisted authority escalation")
             latest = conn.execute("SELECT * FROM project_projection_receipts ORDER BY created_at DESC,rowid DESC LIMIT 1").fetchone()
             if latest and latest["projection_fingerprint"] == projection_fp:
                 if not _rows_match(conn, compiled["objects"], projection_fp):
@@ -605,6 +619,8 @@ def status(project_root: Path, *, data_dir: Path | None = None, toml_manifest: d
                 identity = conn.execute("SELECT project_id FROM project_identity").fetchone()
                 if not identity or identity["project_id"] != project_id:
                     raise ValueError("mapped projection Project database identity mismatch")
+                if not _projection_authority_is_zero(conn):
+                    raise ValueError("mapped projection persisted authority escalation")
                 row = conn.execute("SELECT * FROM project_projection_receipts ORDER BY created_at DESC,rowid DESC LIMIT 1").fetchone()
                 latest = dict(row) if row else None
                 projected_count = int(conn.execute("SELECT COUNT(*) AS n FROM project_context_sources").fetchone()["n"])
