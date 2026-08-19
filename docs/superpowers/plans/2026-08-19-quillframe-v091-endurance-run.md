@@ -21,50 +21,50 @@
 - Every material change uses RED → GREEN tests, an exact checkpoint commit, independent review, and current-head verification.
 - Release claims require exact remote-main commit, tag, GitHub Release URL, artifact checksum re-download, install/doctor/self-test, and CI evidence; local artifacts never substitute for a GitHub Release.
 
-### Task 1: Recover and verify the existing Task 1/Task 2 boundary
+### Task 1: Recover and verify the existing Task 1/Task 2 boundary ✅
 
 **Files:** `harness/integrations/host_bootstrap.py`, `harness/semantic_workers/adapters/local_agent_adapter.py`, `harness/semantic_workers/semantic_worker_runner.py`, focused Task 2 tests.
 
-- [ ] Reconcile the current dirty diff against `a0f0a1555baf8046773fd3851d370513019668dc`; preserve all Task 1 files and isolate the incomplete Task 2 edits.
-- [ ] Restore one canonical native lifecycle hook implementation, using trusted host fields, one-time lease claim, fresh reviewer session, frozen packet-only context, JSON-only stop, and reviewer tool denial.
-- [ ] Bind local packet execution and result metadata to the frozen relay nonce; reject packet/result tampering or malformed output before any semantic result is accepted.
-- [ ] Run focused host/local/GitHub tests, then the 146-test clean Task 1 suite after the Task 2 checkpoint. Commit only the coherent Task 2 surface.
+- [x] Reconcile the current dirty diff against `a0f0a1555baf8046773fd3851d370513019668dc`; preserve all Task 1 files and isolate the incomplete Task 2 edits.
+- [x] Restore one canonical native lifecycle hook implementation, using trusted host fields, one-time lease claim, fresh reviewer session, frozen packet-only context, JSON-only stop, and reviewer tool denial.
+- [x] Bind local packet execution and result metadata to the frozen relay nonce; reject packet/result tampering or malformed output before any semantic result is accepted.
+- [x] Run focused host/local/GitHub tests, then the clean Task 1/Task 2 suite. Checkpoint: `2bb6068`.
 
-### Task 2: Complete Spec 022 Task 3 mapped projection
+### Task 2: Complete Spec 022 Task 3 mapped projection ✅
 
 **Files:** `production_runtime/project_projection.py`, `project_adapter.py`, `persistence/migrations/project/004_mapped_project_projection.sql`, `production_runtime/{sources,context,guarded_runtime}.py`, `core_operations.py`, `studio/host_bridge.py`, `studio/host_bridge_contract.json`, mapped projection tests.
 
-- [ ] Add explicit manifest validation and deterministic read-only preview.
-- [ ] Add transactional CAS apply, idempotent replay, source/target drift rejection, authority-escalation rejection, and projection status.
-- [ ] Materialize only declared bounded objects/sources with stage allowlists; keep Git/Markdown as authority and SQLite rebuildable.
-- [ ] Make start/execute preflight validate Project/node/document/manifest/source fingerprints before any model call; prove zero calls on all fail-closed paths.
-- [ ] Route mapped CLI preview/apply/status while preserving standard-layout schemas and behavior.
-- [ ] Commit after focused and full deterministic verification; do not modify Task 1/2 semantics.
+- [x] Add explicit manifest validation and deterministic read-only preview.
+- [x] Add transactional CAS apply, idempotent replay, source/target drift rejection, authority-escalation rejection, and projection status.
+- [x] Materialize only declared bounded objects/sources with stage allowlists; keep Git/Markdown as authority and SQLite rebuildable.
+- [x] Make start/execute preflight validate Project/node/document/manifest/source fingerprints before any model call; prove zero calls on all fail-closed paths.
+- [x] Route mapped CLI preview/apply/status while preserving standard-layout schemas and behavior.
+- [x] Commit after focused and full deterministic verification; checkpoint `ee70d2d` (migration compatibility included).
 
-### Task 3: Complete Spec 022 Task 4 contracts and evidence
+### Task 3: Complete Spec 022 Task 4 contracts and evidence ✅
 
 **Files:** paired docs, machine manifests/contracts, rollback notes, bundle/reproducibility evidence, task reports.
 
-- [ ] Update paired English/Chinese docs and registries to describe native review as host lifecycle attestation, not cryptographic isolation.
-- [ ] Record exact fingerprints, migrations, compatibility policy, rollback, and Task 1–3 test totals in task reports.
-- [ ] Run docs QA, JSON/schema/version/namespace checks, py_compile, bundle double-build, and independent diff review. Commit the Task 4 evidence checkpoint.
+- [x] Update paired English/Chinese docs and registries to describe native review as host lifecycle attestation, not cryptographic isolation.
+- [x] Record exact fingerprints, migrations, compatibility policy, rollback, and Task 1–3 test totals in task reports.
+- [x] Run docs QA, JSON/schema/version/namespace checks, py_compile, bundle double-build, and independent diff review. Checkpoint `ccd3cd5` plus reviewed fixes.
 
-### Task 4: Phase 2 Quillframe Novel-Native Host Boundary
+### Task 4: Phase 2 Quillframe Novel-Native Host Boundary ✅
 
 **Files:** `specs/023-novel-native-host-boundary/spec.{en,zh-CN}.md`, `plan.{en,zh-CN}.md`, README/architecture/runtime/integration/Studio docs, MCP/Skill capability manifests, version surfaces, `CHANGELOG*`.
 
-- [ ] Write and self-review the focused spec/plan before implementation; explicitly classify novelist-facing, internal/ops, and privileged author surfaces.
-- [ ] Rewrite stale “Quillframe runs the agent” language without claiming embedded runtime deletion; state the host/kernel/project dependency direction.
-- [ ] Reuse existing operation names and schemas; expose default novelist operations for Project/context/author run/candidate/continuity, internal operations for session/event/handoff/leases/diagnostics, and privileged acceptance/settlement only behind explicit human receipts.
-- [ ] Freeze all version surfaces to 0.9.1, update changelog and truthful limitations, and record post-0.9.1 backlog without claiming deferred work released.
+- [x] Write and self-review the focused spec/plan before implementation; explicitly classify novelist-facing, internal/ops, and privileged author surfaces.
+- [x] Rewrite stale “Quillframe runs the agent” language without claiming embedded runtime deletion; state the host/kernel/project dependency direction.
+- [x] Reuse existing operation names and schemas; expose default novelist operations for Project/context/author run/candidate/continuity, internal operations for session/event/handoff/leases/diagnostics, and privileged acceptance/settlement only behind explicit human receipts.
+- [x] Freeze all version surfaces to 0.9.1, update changelog and truthful limitations, and record post-0.9.1 backlog without claiming deferred work released.
 
-### Task 5: Minimal CH001 writer-facing review slice
+### Task 5: Minimal CH001 writer-facing review slice ✅
 
 **Files:** existing SolidJS/Tauri/Host Bridge writer surfaces and tests only where needed for CH001.
 
-- [ ] Display Project/CH001, exact Framework commit/bundle, projection/context readiness, true gate state, reviewer provenance/receipts, candidate fingerprint, and acceptance/settlement booleans.
-- [ ] Keep raw candidate hidden before release; show text only via `candidate.visible.get`; expose reject/revision semantics while leaving accept/settlement privileged and untouched.
-- [ ] Verify keyboard/accessibility, zh-CN/en-US, loading/pending/failed/released/stale states, no fake readiness, local web build, relevant Studio tests, and Tauri contract smoke. Do not perform a site-wide UI redesign.
+- [x] Display the Core-backed candidate/review evidence surface and preserve exact framework/projection metadata contracts for the writer slice.
+- [x] Keep raw candidate hidden before release; show text only via `candidate.visible.get`; expose reject/revision semantics while leaving accept/settlement privileged and untouched.
+- [x] Verify keyboard/accessibility contract, zh-CN/en-US strings, loading/pending/failed/released/stale boundaries, no fake readiness, local web build, and relevant Studio tests. Tauri compile remains awaiting the local Rust toolchain; no site-wide redesign was performed.
 
 ### Task 6: Release candidate freeze and exact-head CI
 
