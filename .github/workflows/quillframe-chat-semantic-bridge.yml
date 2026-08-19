@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       framework-ref:
-        description: Exact Quillframe Framework commit or tag pinned by the Project.
+        description: Exact 40-character Quillframe Framework commit pinned by the Project.
         required: true
         type: string
       mode:
@@ -20,7 +20,7 @@ on:
         required: true
         type: string
       frozen-packet:
-        description: Path to the Core-frozen canonical packet; the action never rebuilds it.
+        description: Path to the Core-frozen canonical packet; the bridge never rebuilds it.
         required: true
         type: string
       review-model:
@@ -31,6 +31,13 @@ on:
     secrets:
       COPILOT_TOKEN:
         required: false
+    outputs:
+      validation-receipt:
+        description: Machine receipt emitted by review or validate-result.
+        value: ${{ jobs.project-peer-bridge.outputs.validation-receipt }}
+      peer-result:
+        description: Exact typed peer semantic result emitted by review.
+        value: ${{ jobs.project-peer-bridge.outputs.peer-result }}
 
 permissions:
   contents: read
@@ -40,14 +47,66 @@ jobs:
   project-peer-bridge:
     name: Project-owned exact Framework peer bridge
     runs-on: ubuntu-latest
+    outputs:
+      validation-receipt: ${{ steps.bridge.outputs.validation-receipt }}
+      peer-result: ${{ steps.bridge.outputs.peer-result }}
     steps:
-      - name: Execute the pinned Framework action revision
-        uses: xiaooye/Quillframe/.github/actions/project-peer-semantic@${{ inputs.framework-ref }}
+      - name: Check out the exact Framework commit
+        uses: actions/checkout@v7
         with:
-          mode: ${{ inputs.mode }}
-          project-root: ${{ inputs.project-root }}
-          project-id: ${{ inputs.project-id }}
-          frozen-packet: ${{ inputs.frozen-packet }}
-          review-model: ${{ inputs.review-model }}
-          github-token: ${{ github.token }}
-          copilot-token: ${{ secrets.COPILOT_TOKEN }}
+          repository: xiaooye/Quillframe
+          ref: ${{ inputs.framework-ref }}
+          path: .quillframe-framework
+          persist-credentials: false
+      - name: Verify the immutable Framework checkout
+        id: framework
+        shell: bash
+        env:
+          EXPECTED_FRAMEWORK_COMMIT: ${{ inputs.framework-ref }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$EXPECTED_FRAMEWORK_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "framework-ref must be one exact 40-character lowercase commit" >&2
+            exit 2
+          fi
+          ACTUAL_FRAMEWORK_COMMIT="$(git -C .quillframe-framework rev-parse HEAD)"
+          test "$ACTUAL_FRAMEWORK_COMMIT" = "$EXPECTED_FRAMEWORK_COMMIT"
+          printf 'commit=%s\n' "$ACTUAL_FRAMEWORK_COMMIT" >> "$GITHUB_OUTPUT"
+      - name: Set up Node for independent Copilot reviewer
+        if: ${{ inputs.mode == 'review' }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install GitHub Copilot CLI
+        if: ${{ inputs.mode == 'review' }}
+        shell: bash
+        run: npm install -g @github/copilot
+      - name: Execute the exact-checkout peer bridge
+        id: bridge
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          QUILLFRAME_BRIDGE_MODE: ${{ inputs.mode }}
+          QUILLFRAME_PROJECT_ROOT: ${{ inputs.project-root }}
+          QUILLFRAME_PROJECT_ID: ${{ inputs.project-id }}
+          QUILLFRAME_ACTION_PATH: ${{ github.workspace }}/.quillframe-framework/.github/actions/project-peer-semantic
+          QUILLFRAME_ACTION_REF: ${{ steps.framework.outputs.commit }}
+          QUILLFRAME_ACTION_REPOSITORY: xiaooye/Quillframe
+          QUILLFRAME_FROZEN_PACKET: ${{ inputs.frozen-packet }}
+          QUILLFRAME_REVIEW_MODEL: ${{ inputs.review-model }}
+        run: |
+          set -euo pipefail
+          case "$QUILLFRAME_BRIDGE_MODE" in
+            review)
+              python ".quillframe-framework/.github/actions/project-peer-semantic/auto_review.py"
+              ;;
+            prepare|validate-result)
+              python ".quillframe-framework/.github/actions/project-peer-semantic/bridge.py"
+              ;;
+            *)
+              echo "mode must be prepare, review, or validate-result" >&2
+              exit 2
+              ;;
+          esac
