@@ -315,6 +315,8 @@ def _remove_obsolete_targets(conn: sqlite3.Connection, old_keys: set[tuple[str, 
                 continue
             if conn.execute("SELECT 1 FROM document_revisions WHERE document_id=? LIMIT 1", (target_id,)).fetchone():
                 raise ValueError(f"obsolete projected document has revisions: {target_id}")
+            if conn.execute("SELECT 1 FROM candidates WHERE document_id=? LIMIT 1", (target_id,)).fetchone():
+                raise ValueError(f"obsolete projected document is referenced by a candidate: {target_id}")
             conn.execute("DELETE FROM documents WHERE document_id=?", (target_id,))
             conn.execute("DELETE FROM project_projection_target_ownership WHERE target_type=? AND target_id=?", (target_type, target_id))
             continue

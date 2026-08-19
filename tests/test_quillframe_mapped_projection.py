@@ -304,5 +304,32 @@ class MappedProjectionTests(unittest.TestCase):
             self.assertIsNotNone(conn.execute("SELECT 1 FROM story_nodes WHERE node_id='CH-001'").fetchone())
             self.assertIsNotNone(conn.execute("SELECT 1 FROM documents WHERE document_id='CH-001'").fetchone())
 
+    def test_obsolete_projected_document_with_candidate_reference_fails_closed(self):
+        td, root, data = self._fixture()
+        self.addCleanup(td.cleanup)
+        first = apply(root, data_dir=data)
+        with QuillframeStore(data).open_project("PROJECT-MAPPED-TEST") as conn:
+            conn.execute(
+                "INSERT INTO candidates(candidate_id,document_id,revision_id,run_id,task_mode,candidate_kind,status,content_fingerprint,user_visible_gate,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                ("CAND-REF", "CH-001", None, None, "DRAFT", "draft", "internal", "sha256:" + "a" * 64, "PENDING", "now"),
+            )
+            conn.commit()
+        manifest_path = root / "runtime-context.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        source = root / "design" / "CH002.md"
+        source.write_text("# CH002\n", encoding="utf-8")
+        item = dict(manifest["sources"][0])
+        item["stable_id"] = "CH-002"
+        item["source_path"] = "design/CH002.md"
+        item["source_fingerprint"] = _sha(source.read_bytes())
+        item["target"] = {"type": "story_node", "id": "CH-002", "kind": "chapter", "parent_id": None, "ordinal": 2, "title": "CH002", "document_id": "CH-002", "document_kind": "plan"}
+        manifest["sources"] = [item]
+        manifest_path.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "referenced by a candidate"):
+            apply(root, data_dir=data, expected_projection_fingerprint=first["projection_fingerprint"])
+        with QuillframeStore(data).open_project("PROJECT-MAPPED-TEST") as conn:
+            self.assertEqual(conn.execute("SELECT document_id FROM candidates WHERE candidate_id='CAND-REF'").fetchone()[0], "CH-001")
+            self.assertIsNotNone(conn.execute("SELECT 1 FROM documents WHERE document_id='CH-001'").fetchone())
+
 if __name__ == "__main__":
     unittest.main()
