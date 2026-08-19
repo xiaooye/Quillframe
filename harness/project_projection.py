@@ -274,6 +274,27 @@ def _projected_target_keys(conn: sqlite3.Connection) -> set[tuple[str, str]]:
     return keys
 
 
+def _record_target_ownership(conn: sqlite3.Connection, item: dict[str, Any], projection_fp: str) -> None:
+    normalized = _target_definition(item)
+    keys = [(normalized["type"], normalized["id"])]
+    if normalized.get("document_id"):
+        keys.append(("document", normalized["document_id"]))
+    for target_type, target_id in keys:
+        exists = conn.execute(
+            "SELECT 1 FROM project_projection_target_ownership WHERE target_type=? AND target_id=?",
+            (target_type, target_id),
+        ).fetchone()
+        if exists:
+            continue
+        table = "story_nodes" if target_type == "story_node" else "documents"
+        column = "node_id" if target_type == "story_node" else "document_id"
+        row = conn.execute(f"SELECT 1 FROM {table} WHERE {column}=?", (target_id,)).fetchone()
+        conn.execute(
+            "INSERT INTO project_projection_target_ownership(target_type,target_id,projection_owned,first_projection_fingerprint) VALUES(?,?,?,?)",
+            (target_type, target_id, 0 if row else 1, projection_fp),
+        )
+
+
 def _remove_obsolete_targets(conn: sqlite3.Connection, old_keys: set[tuple[str, str]], new_keys: set[tuple[str, str]]) -> None:
     """Remove only clean, previously projected targets absent from the new map.
 
@@ -282,6 +303,12 @@ def _remove_obsolete_targets(conn: sqlite3.Connection, old_keys: set[tuple[str, 
     """
     obsolete = old_keys - new_keys
     for target_type, target_id in sorted(obsolete):
+        ownership = conn.execute(
+            "SELECT projection_owned FROM project_projection_target_ownership WHERE target_type=? AND target_id=?",
+            (target_type, target_id),
+        ).fetchone()
+        if ownership is None or int(ownership["projection_owned"]) != 1:
+            raise ValueError(f"obsolete target ownership is not proven: {target_type}:{target_id}")
         if target_type == "document":
             row = conn.execute("SELECT * FROM documents WHERE document_id=?", (target_id,)).fetchone()
             if row is None:
@@ -289,6 +316,7 @@ def _remove_obsolete_targets(conn: sqlite3.Connection, old_keys: set[tuple[str, 
             if conn.execute("SELECT 1 FROM document_revisions WHERE document_id=? LIMIT 1", (target_id,)).fetchone():
                 raise ValueError(f"obsolete projected document has revisions: {target_id}")
             conn.execute("DELETE FROM documents WHERE document_id=?", (target_id,))
+            conn.execute("DELETE FROM project_projection_target_ownership WHERE target_type=? AND target_id=?", (target_type, target_id))
             continue
         row = conn.execute("SELECT * FROM story_nodes WHERE node_id=?", (target_id,)).fetchone()
         if row is None:
@@ -298,6 +326,7 @@ def _remove_obsolete_targets(conn: sqlite3.Connection, old_keys: set[tuple[str, 
         if conn.execute("SELECT 1 FROM documents WHERE story_node_id=? LIMIT 1", (target_id,)).fetchone():
             raise ValueError(f"obsolete projected story node has documents: {target_id}")
         conn.execute("DELETE FROM story_nodes WHERE node_id=?", (target_id,))
+        conn.execute("DELETE FROM project_projection_target_ownership WHERE target_type=? AND target_id=?", (target_type, target_id))
 
 
 def _target_order(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -519,6 +548,7 @@ def apply(project_root: Path, *, data_dir: Path | None = None, expected_projecti
                 if normalized.get("document_id"):
                     new_keys.add(("document", normalized["document_id"]))
             for item in _target_order(compiled["objects"]):
+                _record_target_ownership(conn, item, projection_fp)
                 _target_apply(conn, item)
                 conn.execute(
                 "INSERT INTO project_context_sources(stable_id,source_path,source_fingerprint,object_type,authority_class,lifecycle,domain,allowed_stages_json,target_json,runtime_payload_json,manifest_fingerprint,projection_fingerprint,applied_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) "
@@ -614,14 +644,6 @@ def preflight(project_root: Path, target_id: str, stage: str, *, data_dir: Path 
     errors: list[str] = []
     if not info["project_id"]: errors.append("project identity missing")
     if not info["ready"]: errors.append("projection is not current")
-    if info["project_id"]:
-        try:
-            with QuillframeStore(data_dir).open_project(info["project_id"]) as conn:
-                node = conn.execute("SELECT node_id FROM story_nodes WHERE node_id=?", (target_id,)).fetchone()
-                doc = conn.execute("SELECT document_id FROM documents WHERE document_id=? OR story_node_id=?", (target_id, target_id)).fetchone()
-                if not node: errors.append("target story node missing")
-                if not doc: errors.append("target document missing")
-        except Exception as exc: errors.append(f"project database unavailable: {exc}")
     context = None
     if not errors:
         try:
@@ -629,4 +651,13 @@ def preflight(project_root: Path, target_id: str, stage: str, *, data_dir: Path 
             if not context["objects"]:
                 errors.append("target is outside the bounded projected context")
         except Exception as exc: errors.append(str(exc))
+    if not errors:
+        try:
+            with QuillframeStore(data_dir).open_project(info["project_id"]) as conn:
+                target_types = {str((item.get("target") or {}).get("type")) for item in context["objects"]}
+                if "story_node" in target_types and not conn.execute("SELECT node_id FROM story_nodes WHERE node_id=?", (target_id,)).fetchone():
+                    errors.append("target story node missing")
+                if "document" in target_types and not conn.execute("SELECT document_id FROM documents WHERE document_id=? OR story_node_id=?", (target_id, target_id)).fetchone():
+                    errors.append("target document missing")
+        except Exception as exc: errors.append(f"project database unavailable: {exc}")
     return {"schema": PREFLIGHT_SCHEMA, "project_id": info["project_id"], "target_id": target_id, "stage": stage, "ready": not errors, "errors": errors, "context": context, "model_invocations": 0, "authority": False}

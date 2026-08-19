@@ -277,5 +277,32 @@ class MappedProjectionTests(unittest.TestCase):
             self.assertIsNone(conn.execute("SELECT 1 FROM story_nodes WHERE node_id='CH-002'").fetchone())
         self.assertFalse(preflight(root2, "CH-002", "draft", data_dir=data2)["ready"])
 
+    def test_obsolete_preexisting_targets_are_never_deleted(self):
+        td, root, data = self._fixture()
+        self.addCleanup(td.cleanup)
+        with QuillframeStore(data).open_project("PROJECT-MAPPED-TEST") as conn:
+            conn.execute("INSERT INTO story_nodes(node_id,parent_id,kind,ordinal,title) VALUES('CH-001',NULL,'chapter',1,'CH001')")
+            conn.execute("INSERT INTO documents(document_id,story_node_id,document_kind,title,created_at) VALUES('CH-001','CH-001','plan','CH001','now')")
+            conn.commit()
+        first = apply(root, data_dir=data)
+        manifest_path = root / "runtime-context.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["sources"] = []
+        # Keep the manifest contract non-empty while removing the old target.
+        source = root / "design" / "CH002.md"
+        source.write_text("# CH002\n", encoding="utf-8")
+        item = json.loads(json.dumps(manifest["sources"] or [{
+            "stable_id": "CH-002", "source_path": "design/CH002.md", "source_fingerprint": _sha(source.read_bytes()),
+            "object_type": "chapter_plan", "authority": "active_plan", "lifecycle": "planned", "domain": "story", "allowed_stages": ["draft"],
+            "target": {"type": "story_node", "id": "CH-002", "kind": "chapter", "parent_id": None, "ordinal": 2, "title": "CH002", "document_id": "CH-002", "document_kind": "plan"}, "runtime_payload": {"chapter_id": "CH002"}
+        }]))
+        manifest["sources"] = item
+        manifest_path.write_text(json.dumps(manifest, sort_keys=True), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "ownership"):
+            apply(root, data_dir=data, expected_projection_fingerprint=first["projection_fingerprint"])
+        with QuillframeStore(data).open_project("PROJECT-MAPPED-TEST") as conn:
+            self.assertIsNotNone(conn.execute("SELECT 1 FROM story_nodes WHERE node_id='CH-001'").fetchone())
+            self.assertIsNotNone(conn.execute("SELECT 1 FROM documents WHERE document_id='CH-001'").fetchone())
+
 if __name__ == "__main__":
     unittest.main()
