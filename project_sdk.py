@@ -12,10 +12,12 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
+import textwrap
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -379,8 +381,91 @@ permissionMode: plan
 {independent_reviewer_instruction()}'''
 
 
-def codex_hooks_json() -> str:
-    command = "quillframe codex-hook"
+def framework_root_hint_path(project_root: Path) -> Path:
+    return project_root / ".quillframe" / "hosts" / "framework_root.txt"
+
+
+def write_framework_root_hint(project_root: Path, framework_root: Path) -> None:
+    write(framework_root_hint_path(project_root), str(_framework_root(framework_root)) + "\n")
+
+
+def _project_hook_command(host: str, framework_root: Path | None = None) -> str:
+    fallback_root = str(_framework_root(framework_root)) if framework_root is not None else ""
+    host_name = "claude_code" if host == "claude" else "codex"
+    script = textwrap.dedent(
+        """
+        import io
+        import json
+        import os
+        import sys
+        from pathlib import Path
+
+        payload = sys.stdin.read()
+        event = json.loads(payload) if payload.strip() else {}
+        start = Path(event.get("cwd") or os.getcwd()).resolve()
+
+        def is_framework_root(path: Path) -> bool:
+            return (path / "HARNESS_MANIFEST.yaml").is_file() and (path / "project_sdk.py").is_file()
+
+        def find_project_root(path: Path):
+            for candidate in (path, *path.parents):
+                if (candidate / "quillframe.toml").is_file():
+                    return candidate
+            return None
+
+        project_root = find_project_root(start)
+        framework_root = None
+
+        configured = os.environ.get("QUILLFRAME_FRAMEWORK_DIR")
+        if configured:
+            candidate = Path(configured).expanduser().resolve()
+            if is_framework_root(candidate):
+                framework_root = candidate
+
+        if framework_root is None and project_root is not None:
+            hint = project_root / ".quillframe" / "hosts" / "framework_root.txt"
+            if hint.is_file():
+                candidate = Path(hint.read_text(encoding="utf-8").strip()).expanduser().resolve()
+                if is_framework_root(candidate):
+                    framework_root = candidate
+
+        if framework_root is None:
+            for candidate in (start, *start.parents):
+                if is_framework_root(candidate):
+                    framework_root = candidate
+                    break
+
+        if framework_root is None and "__FALLBACK_ROOT__":
+            candidate = Path("__FALLBACK_ROOT__").expanduser().resolve()
+            if is_framework_root(candidate):
+                framework_root = candidate
+
+        if framework_root is None:
+            name = event.get("hook_event_name") or "SessionStart"
+            print(json.dumps({
+                "hookSpecificOutput": {
+                    "hookEventName": name,
+                    "additionalContext": "Quillframe Framework hook unavailable; no authority granted."
+                }
+            }, ensure_ascii=False))
+            raise SystemExit(0)
+
+        root_text = str(framework_root)
+        os.environ.setdefault("QUILLFRAME_FRAMEWORK_DIR", root_text)
+        if root_text not in sys.path:
+            sys.path.insert(0, root_text)
+
+        from harness.integrations.host_bootstrap import main_for_host
+
+        sys.stdin = io.StringIO(payload)
+        raise SystemExit(int(main_for_host("__HOST__")))
+        """
+    ).strip()
+    script = script.replace("__HOST__", host_name).replace("__FALLBACK_ROOT__", fallback_root)
+    return f"python3 -c {shlex.quote(script)}"
+
+def codex_hooks_json(framework_root: Path | None = None) -> str:
+    command = _project_hook_command("codex", framework_root)
     hook = {"type": "command", "command": command, "timeout": 30}
     context_hook = {**hook, "additionalContextLimit": 6000}
     value = {
@@ -409,7 +494,8 @@ def codex_hooks_json() -> str:
     return json.dumps(value, ensure_ascii=False, indent=2) + "\n"
 
 
-def claude_settings_json() -> str:
+def claude_settings_json(framework_root: Path | None = None) -> str:
+    command = _project_hook_command("claude", framework_root)
     return json.dumps(
         {
             "permissions": {"ask": ["Skill"]},
@@ -417,42 +503,42 @@ def claude_settings_json() -> str:
                 "SessionStart": [
                     {
                         "matcher": "startup|resume|clear|compact",
-                        "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
+                        "hooks": [{"type": "command", "command": command}],
                     }
                 ],
                 "UserPromptSubmit": [
-                    {"hooks": [{"type": "command", "command": "quillframe claude-hook"}]}
+                    {"hooks": [{"type": "command", "command": command}]}
                 ],
                 "SubagentStart": [
                     {
                         "matcher": "quillframe-independent-reviewer",
-                        "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
+                        "hooks": [{"type": "command", "command": command}],
                     }
                 ],
                 "SubagentStop": [
                     {
                         "matcher": "quillframe-independent-reviewer",
-                        "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
+                        "hooks": [{"type": "command", "command": command}],
                     }
                 ],
                 "PreToolUse": [
                     {
                         "matcher": "Write|Edit|Bash|Skill",
-                        "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
+                        "hooks": [{"type": "command", "command": command}],
                     },
                     {
                         "matcher": ".*",
-                        "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
+                        "hooks": [{"type": "command", "command": command}],
                     },
                 ],
                 "PostToolUse": [
                     {
                         "matcher": "Edit|Write|Bash",
-                        "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
+                        "hooks": [{"type": "command", "command": command}],
                     }
                 ],
                 "SessionEnd": [
-                    {"hooks": [{"type": "command", "command": "quillframe claude-hook"}]}
+                    {"hooks": [{"type": "command", "command": command}]}
                 ],
             },
         },
@@ -522,6 +608,7 @@ def init_project(
     write(root / ".claude" / "agents" / "quillframe-independent-reviewer.md", claude_independent_reviewer_md())
     write(root / ".codex" / "hooks.json", codex_hooks_json())
     write(root / ".codex" / "agents" / "quillframe-independent-reviewer.toml", codex_independent_reviewer_toml())
+    write_framework_root_hint(root, fw_root)
     write(root / ".gitignore", gitignore())
     for name in ("genre", "platform", "prose", "reader", "project"):
         write(root / "profiles" / f"{name}.yaml", profile_template(name))

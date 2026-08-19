@@ -24,6 +24,31 @@ class BootstrapHostTests(unittest.TestCase):
         self.assertIn("@harness/HARNESS_AGENT.en.md", text)
         settings = json.loads((ROOT / ".claude" / "settings.json").read_text(encoding="utf-8"))
         self.assertIn("Skill", settings["permissions"]["deny"])
+        commands = [
+            hook["command"]
+            for groups in settings["hooks"].values()
+            for group in groups
+            for hook in group["hooks"]
+        ]
+        self.assertTrue(commands)
+        for command in commands:
+            self.assertNotIn("python -m quillframe.cli", command)
+            self.assertIn("framework_root.txt", command)
+            self.assertIn("quillframe.toml", command)
+
+    def test_root_codex_hook_commands_do_not_follow_ambient_git_toplevel(self):
+        hooks = json.loads((ROOT / ".codex" / "hooks.json").read_text(encoding="utf-8"))
+        commands = [
+            hook["command"]
+            for groups in hooks["hooks"].values()
+            for group in groups
+            for hook in group["hooks"]
+        ]
+        self.assertTrue(commands)
+        for command in commands:
+            self.assertNotIn("git rev-parse --show-toplevel", command)
+            self.assertIn("framework_root.txt", command)
+            self.assertIn("quillframe.toml", command)
 
     def test_console_entrypoint_is_declared(self):
         with (ROOT / "pyproject.toml").open("rb") as fh:
@@ -36,6 +61,7 @@ class BootstrapHostTests(unittest.TestCase):
         paths = {row["path"] for row in content_manifest(ROOT)["files"]}
         self.assertIn("quillframe/cli.py", paths)
         self.assertIn("quillframe/api.py", paths)
+        self.assertIn("core_operations.py", paths)
         self.assertIn("pyproject.toml", paths)
         self.assertIn("VERSION", paths)
 

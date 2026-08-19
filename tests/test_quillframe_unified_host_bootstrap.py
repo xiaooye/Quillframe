@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 import uuid
@@ -79,6 +80,93 @@ class FakeNativeRuntime:
 
 
 class UnifiedHostBootstrapTests(unittest.TestCase):
+    def _hook_commands(self, config_path: Path) -> list[str]:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        return [
+            hook["command"]
+            for groups in config["hooks"].values()
+            for group in groups
+            for hook in group["hooks"]
+        ]
+
+    def test_framework_hooks_are_safe_from_an_unrelated_git_cwd(self):
+        codex_commands = self._hook_commands(ROOT / ".codex/hooks.json")
+        claude_commands = self._hook_commands(ROOT / ".claude/settings.json")
+        self.assertTrue(codex_commands)
+        self.assertTrue(claude_commands)
+        event = json.dumps(
+            {
+                "session_id": "unrelated-cwd-session",
+                "cwd": str(ROOT),
+                "hook_event_name": "SessionStart",
+                "source": "startup",
+            }
+        )
+        with tempfile.TemporaryDirectory(prefix="qf-unrelated-hook-cwd-") as td:
+            subprocess.run(["git", "init", "--quiet", td], check=True)
+            for command in (codex_commands[0], claude_commands[0]):
+                proc = subprocess.run(
+                    command,
+                    shell=True,
+                    cwd=td,
+                    input=event,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                    timeout=30,
+                )
+                self.assertEqual(proc.returncode, 0, proc.stderr)
+                payload = json.loads(proc.stdout)
+                self.assertEqual(payload["hookSpecificOutput"]["hookEventName"], "SessionStart")
+                self.assertIn("authority", payload["hookSpecificOutput"]["additionalContext"].lower())
+
+    def test_project_init_hooks_run_without_installed_quillframe_command(self):
+        identity = {
+            "name": "Quillframe",
+            "version": project_sdk.DEFAULT_FRAMEWORK_VERSION,
+            "commit": "a" * 40,
+            "bundle_fingerprint": "sha256:" + "b" * 64,
+        }
+        with tempfile.TemporaryDirectory(prefix="qf-project-hook-run-") as td, patch.object(
+            project_sdk, "framework_checkout_identity", return_value=identity
+        ):
+            project = Path(td) / "project"
+            project_sdk.init_project(
+                project,
+                "PROJECT-HOOK-RUN",
+                "Hook Run",
+                "en",
+                project_sdk.DEFAULT_FRAMEWORK_VERSION,
+                False,
+                ROOT,
+            )
+            settings = json.loads((project / ".claude/settings.json").read_text(encoding="utf-8"))
+            command = settings["hooks"]["SessionStart"][0]["hooks"][0]["command"]
+            self.assertIn("framework_root.txt", command)
+            self.assertIn("quillframe.toml", command)
+            event = json.dumps(
+                {
+                    "session_id": "project-hook-session",
+                    "cwd": str(project),
+                    "hook_event_name": "SessionStart",
+                    "source": "startup",
+                }
+            )
+            proc = subprocess.run(
+                command,
+                shell=True,
+                cwd=project,
+                input=event,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=30,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            payload = json.loads(proc.stdout)
+            self.assertEqual(payload["hookSpecificOutput"]["hookEventName"], "SessionStart")
+            self.assertIn("PROJECT-HOOK-RUN", payload["hookSpecificOutput"]["additionalContext"])
+
     def test_framework_claude_hooks_do_not_depend_on_project_dir_environment(self):
         settings = json.loads((ROOT / ".claude/settings.json").read_text(encoding="utf-8"))
         commands = [
@@ -88,7 +176,14 @@ class UnifiedHostBootstrapTests(unittest.TestCase):
             for hook in group["hooks"]
         ]
         self.assertTrue(commands)
-        self.assertEqual(set(commands), {"python -m quillframe.cli claude-hook"})
+        self.assertEqual(len(set(commands)), 1)
+        command = commands[0]
+        self.assertNotIn("python -m quillframe.cli", command)
+        self.assertIn("framework_root.txt", command)
+        self.assertIn("quillframe.toml", command)
+        self.assertIn("SubagentStart", settings["hooks"])
+        self.assertIn("SubagentStop", settings["hooks"])
+        self.assertIn(".*", [group["matcher"] for group in settings["hooks"]["PreToolUse"]])
 
     def test_native_reviewer_hooks_use_trusted_host_variants_and_hide_stop_result(self):
         self.assertTrue(hasattr(host_bootstrap, "native_reviewer_hook"))
@@ -348,10 +443,24 @@ class UnifiedHostBootstrapTests(unittest.TestCase):
         hooks = json.loads((ROOT / ".codex" / "hooks.json").read_text(encoding="utf-8"))
         self.assertIn("SessionStart", hooks["hooks"])
         self.assertIn("UserPromptSubmit", hooks["hooks"])
+        self.assertIn("SubagentStart", hooks["hooks"])
+        self.assertIn("SubagentStop", hooks["hooks"])
         self.assertIn("PreToolUse", hooks["hooks"])
         matcher = hooks["hooks"]["PreToolUse"][0]["matcher"]
         self.assertIn("apply_patch", matcher)
         self.assertIn("Bash", matcher)
+        commands = [
+            hook["command"]
+            for groups in hooks["hooks"].values()
+            for group in groups
+            for hook in group["hooks"]
+        ]
+        self.assertEqual(len(set(commands)), 1)
+        command = commands[0]
+        self.assertNotIn("python -m quillframe.cli", command)
+        self.assertNotIn("git rev-parse --show-toplevel", command)
+        self.assertIn("framework_root.txt", command)
+        self.assertIn("quillframe.toml", command)
 
     def test_framework_host_uses_typed_session_and_requires_mode_run(self):
         native = "test-codex-" + uuid.uuid4().hex
@@ -451,6 +560,9 @@ class UnifiedHostBootstrapTests(unittest.TestCase):
             first = host_scaffold.install_project_hosts(project)
             self.assertTrue(first["installed"])
             self.assertIn(".codex/hooks.json", first["changed"])
+            framework_hint = project / ".quillframe" / "hosts" / "framework_root.txt"
+            self.assertTrue(framework_hint.is_file())
+            self.assertEqual(framework_hint.read_text(encoding="utf-8").strip(), str(ROOT))
             agents_text = (project / "AGENTS.md").read_text(encoding="utf-8")
             self.assertIn("QF_SESSION_ID", agents_text)
             self.assertIn("never synthesize a Quillframe manuscript", agents_text)

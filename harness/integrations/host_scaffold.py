@@ -104,6 +104,13 @@ def install_project_hosts(root: Path, *, force: bool = False) -> dict[str, Any]:
     desired_codex_hooks = sdk.codex_hooks_json()
     desired_codex_reviewer = sdk.codex_independent_reviewer_toml()
     desired_claude_reviewer = sdk.claude_independent_reviewer_md()
+    framework_hint_path = root / ".quillframe" / "hosts" / "framework_root.txt"
+    desired_framework_hint = str(ROOT) + "\n"
+    framework_hint_changed = (
+        not framework_hint_path.exists()
+        or framework_hint_path.read_text(encoding="utf-8") != desired_framework_hint
+    )
+    _atomic_write(framework_hint_path, desired_framework_hint)
 
     specs = [
         (root / "AGENTS.md", desired_agents, {generated_agents, desired_agents}),
@@ -129,8 +136,13 @@ def install_project_hosts(root: Path, *, force: bool = False) -> dict[str, Any]:
         if warning:
             warnings.append(warning)
 
+    sdk.write_framework_root_hint(root, ROOT)
+
     changed = sorted(path for path, status in results.items() if status in {"created", "updated"})
     manual = sorted(path for path, status in results.items() if status == "manual_merge_required")
+    if framework_hint_changed:
+        changed.append(".quillframe/hosts/framework_root.txt")
+        changed.sort()
     return {
         "schema": "quillframe_host_install_v1",
         "project_root": str(root),

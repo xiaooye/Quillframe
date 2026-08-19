@@ -33,7 +33,7 @@ ROOT_FILES = {
     "HARNESS_MANIFEST.yaml", "README.md", "README.en.md", "README.zh-CN.md",
     "SKILL.md", "SKILL.en.md", "SKILL.zh-CN.md",
     "CHANGELOG.en.md", "CHANGELOG.zh-CN.md", "VERSION", "pyproject.toml",
-    "quillframe.py", "project_sdk.py", "project_adapter.py",
+    "quillframe.py", "project_sdk.py", "project_adapter.py", "core_operations.py",
 }
 EXCLUDE_PARTS = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".quillframe", "specs"}
 EXCLUDE_NAMES = {
