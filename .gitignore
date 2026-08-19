@@ -20,3 +20,7 @@ site/node_modules/
 site/dist/
 site/public/generated/
 site/src/generated/
+site/docs-site/.astro/
+site/docs-site/node_modules/
+site/docs-site/public/repo-assets/
+site/docs-site/src/content/docs/
