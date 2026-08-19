@@ -79,10 +79,10 @@
 
 **Files:** a local consumer overlay runtime/evidence directory and a stable local handoff directory.
 
-- [x] Validate exact local Framework commit/tree/bundle/lock/attestation; preview/apply/status the mapped projection and freeze a bounded CH001-only Context. Evidence: `/var/home/pc/Documents/card/new cards/chinaboy_webnovel_quillframe/runtime/evidence/CH-001.v0.9.1-local-chain.evidence.json`.
+- [x] Validate exact local Framework commit/tree/bundle/lock/attestation; preview/apply/status the mapped projection and freeze a bounded CH001-only Context. The exact consumer-overlay evidence path is recorded in the local handoff ledger, not in the project-agnostic Framework tree.
 - [x] Execute only `DESIGN-BOOK`, `DESIGN-VOLUME`, `PLAN-UNIT`, `PLAN-CHAPTER`, then `DRAFT(CH-001)` and its deterministic/semantic gates. The four planning records are setup-state records; no unproven model output is claimed for them. Raw candidate remained internal.
 - [x] Perform exactly one real Codex native independent review. Claude native was integration-tested only and did not review the same candidate.
-- [x] On PASS, call only `candidate.visible.get`, save the Review Draft and handoff report, and prove `accepted=false`, `settled=false`. Review Draft: `/var/home/pc/Documents/card/new cards/chinaboy_webnovel_quillframe/manuscripts/review/CH-001.review-draft.v0.9.1-local.md`; handoff: `/var/home/pc/Documents/card/new cards/chinaboy_webnovel_quillframe/runtime/evidence/CH-001.v0.9.1-local-chain.human-review.md`.
+- [x] On PASS, call only `candidate.visible.get`, save the Review Draft and handoff report, and prove `accepted=false`, `settled=false`. Exact Review Draft/handoff paths remain local consumer artifacts and are emitted in the final evidence report, not copied into Framework sources.
 - [x] Prove CH002/CH003, future identities, bad examples, unproven images, and consumer remotes were not accessed or invoked for this chain; Frostloom remote remained untouched.
 
 ### Task 8: v0.9.1 tag, GitHub Release, and post-release recovery
