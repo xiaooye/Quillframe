@@ -1047,7 +1047,39 @@ def projection_preflight(root: Path, target_id: str, stage: str, data_dir: Path 
 def self_test(tmp_root: Path) -> dict[str, Any]:
     if tmp_root.exists():
         shutil.rmtree(tmp_root)
-    init_project(tmp_root, "PROJECT-TEST", "Fixture Novel", "en", DEFAULT_FRAMEWORK_VERSION, False)
+    # A release bundle intentionally excludes `.git`.  Keep the production
+    # bootstrap contract strict (real project init still requires a clean git
+    # checkout), but let the model-free SDK self-test exercise the same path
+    # after an artifact is unpacked by creating an isolated temporary checkout.
+    framework_root = FRAMEWORK_ROOT
+    temporary_checkout: Path | None = None
+    if not (framework_root / ".git").exists():
+        temporary_checkout = Path(tempfile.mkdtemp(prefix="quillframe-sdk-framework-"))
+        checkout = temporary_checkout / "framework"
+        shutil.copytree(
+            framework_root,
+            checkout,
+            ignore=shutil.ignore_patterns(".git", ".quillframe", "dist", "__pycache__", ".pytest_cache"),
+        )
+        subprocess.run(["git", "init", "--quiet"], cwd=checkout, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "config", "user.name", "Quillframe SDK self-test"], cwd=checkout, check=True)
+        subprocess.run(["git", "config", "user.email", "sdk-self-test@quillframe.invalid"], cwd=checkout, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=checkout, check=True)
+        subprocess.run(["git", "commit", "--quiet", "-m", "SDK self-test fixture"], cwd=checkout, check=True)
+        framework_root = checkout
+    try:
+        init_project(
+            tmp_root,
+            "PROJECT-TEST",
+            "Fixture Novel",
+            "en",
+            DEFAULT_FRAMEWORK_VERSION,
+            False,
+            framework_root,
+        )
+    finally:
+        if temporary_checkout is not None:
+            shutil.rmtree(temporary_checkout, ignore_errors=True)
     spec = create_spec(tmp_root, "Volume architecture change")
     validation = validate_project(tmp_root)
     build = build_project(tmp_root)

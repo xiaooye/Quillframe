@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import tarfile
 import tempfile
 import tomllib
 import unittest
@@ -66,6 +67,27 @@ class BootstrapHostTests(unittest.TestCase):
         self.assertIn("core_operations.py", paths)
         self.assertIn("pyproject.toml", paths)
         self.assertIn("VERSION", paths)
+
+    def test_unpacked_framework_bundle_runs_project_sdk_self_test(self):
+        from release.build_framework_bundle import build
+
+        with tempfile.TemporaryDirectory(prefix="qf-unpacked-bundle-test-") as td:
+            root = Path(td)
+            bundle = root / "framework.tar"
+            build(ROOT, bundle)
+            unpacked = root / "unpacked"
+            unpacked.mkdir()
+            with tarfile.open(bundle, "r") as archive:
+                archive.extractall(unpacked)
+            proc = subprocess.run(
+                [sys.executable, "project_sdk.py", "self-test", "--tmp", str(root / "project-sdk-self-test")],
+                cwd=unpacked,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr or proc.stdout)
+            self.assertEqual(json.loads(proc.stdout)["project_sdk_contract"], "PASS")
 
     def test_init_rejects_project_inside_framework_checkout(self):
         with self.assertRaisesRegex(ValueError, "outside the generic Quillframe Framework checkout"):
