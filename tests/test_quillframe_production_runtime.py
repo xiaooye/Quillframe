@@ -17,7 +17,7 @@ from harness.semantic_workers.independent_invocation_receipt import (
     fingerprint as native_fingerprint,
     validate_receipt as validate_native_receipt,
 )
-from persistence.independent_review_repository import IndependentReviewRepository
+from persistence.independent_review_repository import IndependentReviewError, IndependentReviewRepository
 from persistence.quillframe_sqlite import QuillframeStore, now_iso
 from production_runtime import PRODUCTION_MECHANISMS, ProductionRunError, ProductionRunExecutor
 
@@ -40,6 +40,25 @@ PROVENANCE = {
     "framework_repo": "owner/framework",
     "framework_commit": "f" * 40,
 }
+
+PUBLIC_MANUSCRIPT_KEYS = {"peer_packet", "peer_packet_bytes", "candidate_text"}
+PRE_RELEASE_MANUSCRIPT = "Review prose ready for the user-visible gate."
+
+
+def assert_public_execution_safe(case: unittest.TestCase, value: object) -> None:
+    def visit(node: object) -> None:
+        if isinstance(node, dict):
+            case.assertTrue(PUBLIC_MANUSCRIPT_KEYS.isdisjoint(node), node)
+            for child in node.values():
+                visit(child)
+        elif isinstance(node, list):
+            for child in node:
+                visit(child)
+
+    visit(value)
+    serialized = json.dumps(value, ensure_ascii=False)
+    case.assertNotIn(PRE_RELEASE_MANUSCRIPT, serialized)
+    case.assertNotIn("INTERNAL RAW DRAFT", serialized)
 
 
 class FakeAgentRuntime:
@@ -149,8 +168,33 @@ class FakeAgentRuntime:
         )
 
 
-def peer_result(handoff: dict, verdict: str = "pass") -> dict:
-    packet = handoff["independent_review_request"]["peer_packet"]
+class ManualClock:
+    def __init__(self, value: float = 1_000.0) -> None:
+        self.value = value
+
+    def __call__(self) -> float:
+        return self.value
+
+    def advance(self, seconds: float) -> None:
+        self.value += seconds
+
+
+def frozen_handoff(store: QuillframeStore, run_id: str) -> dict:
+    with store.open_project("PROD") as conn:
+        row = conn.execute(
+            "SELECT state_json FROM checkpoints WHERE run_id=? AND checkpoint_kind='production_independent_handoff' ORDER BY created_at DESC,rowid DESC LIMIT 1",
+            (run_id,),
+        ).fetchone()
+    if not row:
+        raise AssertionError("internal independent handoff fixture is missing")
+    return json.loads(row["state_json"])
+
+
+def frozen_packet(store: QuillframeStore, run_id: str) -> dict:
+    return frozen_handoff(store, run_id)["peer_packet"]
+
+
+def peer_result(packet: dict, verdict: str = "pass") -> dict:
     job = packet["job"]
     return {
         "job_id": job["job_id"],
@@ -174,8 +218,7 @@ def peer_result(handoff: dict, verdict: str = "pass") -> dict:
     }
 
 
-def project_bridge_receipt(handoff: dict, result: dict) -> dict:
-    packet = handoff["independent_review_request"]["peer_packet"]
+def project_bridge_receipt(packet: dict, result: dict) -> dict:
     return build_receipt(
         packet,
         result,
@@ -198,7 +241,7 @@ def project_bridge_receipt(handoff: dict, result: dict) -> dict:
 def native_result(claim: dict, verdict: str = "pass") -> dict:
     packet = claim["peer_packet"]
     job = packet["job"]
-    provider = {"codex": "codex_native", "claude": "claude_code_native"}[claim["provider"]]
+    provider = claim["provider"]
     return {
         "job_id": job["job_id"],
         "subject_id": job["subject_id"],
@@ -270,14 +313,15 @@ class ProductionRuntimeTests(unittest.TestCase):
             independent_provenance=PROVENANCE,
         )
 
-    def submit(self, runtime: ProductionRunExecutor, run_id: str, handoff: dict, verdict: str = "pass") -> dict:
-        result = peer_result(handoff, verdict)
+    def submit(self, runtime: ProductionRunExecutor, run_id: str, verdict: str = "pass") -> dict:
+        packet = frozen_packet(self.store, run_id)
+        result = peer_result(packet, verdict)
         return runtime.submit_independent(
             "PROD",
             run_id,
-            peer_packet=handoff["independent_review_request"]["peer_packet"],
+            peer_packet=packet,
             result=result,
-            bridge_receipt=project_bridge_receipt(handoff, result),
+            bridge_receipt=project_bridge_receipt(packet, result),
         )
 
     def test_full_graph_uses_frozen_context_and_real_external_independent_boundary(self):
@@ -289,16 +333,20 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.assertEqual(handoff["status"], "awaiting_external")
         self.assertEqual(handoff["awaiting"], "independent_semantic_review")
         self.assertFalse(handoff["candidate_visible"])
+        assert_public_execution_safe(self, handoff)
+        replay = self.execute_to_handoff(runtime, run_id)
+        assert_public_execution_safe(self, replay)
+        self.assertEqual(handoff, replay)
         self.assertFalse(any(job.runtime_role == "independent_semantic_gate" for job in fake.calls))
         self.assertIn("registered_reader_engagement", [job.runtime_role for job in fake.calls])
         self.assertIn("registered_candidate_self_audit", [job.runtime_role for job in fake.calls])
-        packet = handoff["independent_review_request"]["peer_packet"]
+        packet = frozen_packet(self.store, run_id)
         self.assertTrue(packet["return_binding"]["fresh_conversation_required"])
         self.assertTrue(packet["return_binding"]["same_project_writer_chat_forbidden"])
         with self.store.open_project("PROD") as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0], 0)
 
-        completed = self.submit(runtime, run_id, handoff)
+        completed = self.submit(runtime, run_id)
         self.assertEqual(completed["status"], "completed")
         self.assertTrue(completed["candidate_visible"])
         self.assertFalse(completed["raw_draft_visible"])
@@ -404,13 +452,14 @@ class ProductionRuntimeTests(unittest.TestCase):
         with self.store.open_project("PROD") as conn:
             conn.execute("UPDATE characters SET agenda=?,updated_at=? WHERE character_id='CHAR-A'", ("post-handoff mutation", now_iso()))
             conn.commit()
-        result = peer_result(handoff, "pass")
+        packet = frozen_packet(self.store, run_id)
+        result = peer_result(packet, "pass")
         blocked = runtime.submit_independent(
             "PROD",
             run_id,
-            peer_packet=handoff["independent_review_request"]["peer_packet"],
+            peer_packet=packet,
             result=result,
-            bridge_receipt=project_bridge_receipt(handoff, result),
+            bridge_receipt=project_bridge_receipt(packet, result),
         )
         self.assertEqual(blocked["status"], "stale_conflict")
         self.assertTrue(blocked["new_context_fingerprint_required"])
@@ -419,7 +468,7 @@ class ProductionRuntimeTests(unittest.TestCase):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
         run_id = self.start()
         handoff = self.execute_to_handoff(runtime, run_id)
-        rejected = self.submit(runtime, run_id, handoff, "fail")
+        rejected = self.submit(runtime, run_id, "fail")
         self.assertEqual(rejected["status"], "failed_gate")
         self.assertEqual(rejected["failed_mechanism"], "independent_semantic_gate")
         with self.store.open_project("PROD") as conn:
@@ -433,9 +482,11 @@ class ProductionRuntimeTests(unittest.TestCase):
         runtime = ProductionRunExecutor(self.store, fake)
         run_id = self.start()
         handoff = self.execute_to_handoff(runtime, run_id)
-        first = self.submit(runtime, run_id, handoff)
+        first = self.submit(runtime, run_id)
         calls = len(fake.calls)
         second = self.execute_to_handoff(runtime, run_id)
+        assert_public_execution_safe(self, first)
+        assert_public_execution_safe(self, second)
         self.assertTrue(second["replayed"])
         self.assertEqual(first["candidate"]["candidate_id"], second["candidate"]["candidate_id"])
         self.assertEqual(calls, len(fake.calls))
@@ -486,14 +537,15 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
             independent_provenance=PROVENANCE,
         )
 
-    def submit(self, runtime: ProductionRunExecutor, run_id: str, handoff: dict, verdict: str = "pass") -> dict:
-        result = peer_result(handoff, verdict)
+    def submit(self, runtime: ProductionRunExecutor, run_id: str, verdict: str = "pass") -> dict:
+        packet = frozen_packet(self.store, run_id)
+        result = peer_result(packet, verdict)
         return runtime.submit_independent(
             "PROD",
             run_id,
-            peer_packet=handoff["independent_review_request"]["peer_packet"],
+            peer_packet=packet,
             result=result,
-            bridge_receipt=project_bridge_receipt(handoff, result),
+            bridge_receipt=project_bridge_receipt(packet, result),
         )
 
     def start_native(self, session_id: str = "SES-MANAGER") -> str:
@@ -517,7 +569,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         runtime: ProductionRunExecutor,
         run_id: str,
         *,
-        provider: str = "codex",
+        provider: str = "codex_native_subagent",
         parent_session_id: str = "SES-MANAGER",
     ) -> tuple[dict, dict]:
         handoff = self.execute_to_handoff(runtime, run_id)
@@ -535,7 +587,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         self,
         runtime: ProductionRunExecutor,
         *,
-        provider: str = "codex",
+        provider: str = "codex_native_subagent",
         parent_session_id: str = "SES-MANAGER",
         host_agent_id: str = "agent-native-1",
         host_invocation_id: str = "inv-native-1",
@@ -570,18 +622,30 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
     def test_native_dispatch_withholds_packet_and_claim_is_one_time_with_distinct_session(self):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
         run_id = self.start_native()
-        handoff, dispatch = self.prepare_native(runtime, run_id)
+        handoff, dispatch = self.prepare_native(runtime, run_id, provider="codex")
 
         self.assertEqual(dispatch["schema"], "quillframe_independent_dispatch_v1")
-        self.assertEqual(dispatch["provider"], "codex")
+        self.assertEqual(dispatch["provider"], "codex_native_subagent")
         self.assertEqual(dispatch["transport"], "codex_native")
         self.assertEqual(dispatch["assurance_class"], "host_native_separate_context")
         self.assertNotIn("peer_packet", dispatch)
         self.assertNotIn("packet_bytes", dispatch)
         self.assertNotIn("candidate_text", json.dumps(dispatch))
+        with self.store.open_project("PROD") as conn:
+            persisted = conn.execute(
+                "SELECT provider,transport FROM independent_review_leases WHERE lease_id=?",
+                (dispatch["lease_id"],),
+            ).fetchone()
+            prepared_payload = conn.execute(
+                "SELECT payload_json FROM independent_review_lifecycle_events WHERE lease_id=? AND event_kind='prepared'",
+                (dispatch["lease_id"],),
+            ).fetchone()["payload_json"]
+        self.assertEqual(dict(persisted), {"provider": "codex_native_subagent", "transport": "codex_native"})
+        self.assertEqual(json.loads(prepared_payload)["provider"], "codex_native_subagent")
+        self.assertNotIn('"provider":"codex"', prepared_payload)
 
-        claim = self.claim_native(runtime)
-        self.assertEqual(claim["peer_packet"], handoff["independent_review_request"]["peer_packet"])
+        claim = self.claim_native(runtime, provider="codex")
+        self.assertEqual(claim["peer_packet"], frozen_packet(self.store, run_id))
         self.assertEqual(
             claim["packet_bytes"],
             json.dumps(claim["peer_packet"], ensure_ascii=False, sort_keys=True, separators=(",", ":")),
@@ -613,7 +677,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         self.assertEqual(completed["status"], "completed")
         gate = next(g for g in completed["production_readiness"]["gates"] if g["category"] == "semantic_independent")
         independence = gate["semantic_contract"]["independence"]
-        self.assertEqual(independence["provider"], "codex")
+        self.assertEqual(independence["provider"], "codex_native_subagent")
         self.assertEqual(independence["transport"], "codex_native")
         self.assertEqual(independence["assurance_class"], "host_native_separate_context")
         with self.store.open_project("PROD") as conn:
@@ -629,7 +693,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         self.assertEqual(receipt["schema"], "quillframe_independent_invocation_receipt_v1")
         self.assertEqual(receipt["project_id"], "PROD")
         self.assertEqual(receipt["run_id"], run_id)
-        self.assertEqual(receipt["provider"], "codex")
+        self.assertEqual(receipt["provider"], "codex_native_subagent")
         self.assertEqual(receipt["parent_session_id"], "SES-MANAGER")
         self.assertEqual(receipt["reviewer_session_id"], claim["reviewer_session_id"])
         for permission in ("project_read", "filesystem", "shell", "network", "memory", "write"):
@@ -653,7 +717,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         self.prepare_native(runtime, run_id)
         claim = self.claim_native(runtime)
         invalid = native_result(claim, "pass")
-        invalid["worker"]["provider"] = "claude_code_native"
+        invalid["worker"]["provider"] = "claude_native_subagent"
         with self.assertRaises(ProductionRunError) as caught:
             runtime.complete_independent_dispatch(
                 "PROD",
@@ -691,7 +755,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
             lease_id=claim["lease_id"],
             project_id="PROD",
             run_id=run_id,
-            provider="codex",
+            provider="codex_native_subagent",
             parent_session_id=claim["parent_session_id"],
             reviewer_session_id=claim["reviewer_session_id"],
             host_agent_id=claim["host_agent_id"],
@@ -722,7 +786,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         with self.assertRaises(ProductionRunError) as caught:
             runtime.claim_independent_dispatch(
                 "PROD",
-                provider="codex",
+                provider="codex_native_subagent",
                 parent_session_id="SES-MANAGER",
                 agent_type="writer",
                 host_agent_id="agent-writer",
@@ -761,13 +825,14 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
         run_id = self.start_native()
         handoff, _ = self.prepare_native(runtime, run_id)
-        legacy = peer_result(handoff, "pass")
-        legacy_receipt = project_bridge_receipt(handoff, legacy)
+        packet = frozen_packet(self.store, run_id)
+        legacy = peer_result(packet, "pass")
+        legacy_receipt = project_bridge_receipt(packet, legacy)
         with self.assertRaises(ProductionRunError) as blocked:
             runtime.submit_independent(
                 "PROD",
                 run_id,
-                peer_packet=handoff["independent_review_request"]["peer_packet"],
+                peer_packet=packet,
                 result=legacy,
                 bridge_receipt=legacy_receipt,
             )
@@ -785,7 +850,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         completed = runtime.submit_independent(
             "PROD",
             run_id,
-            peer_packet=handoff["independent_review_request"]["peer_packet"],
+            peer_packet=packet,
             result=legacy,
             independence_receipt=legacy_receipt,
         )
@@ -816,14 +881,15 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         self.assertEqual(failed, replay)
         self.assertEqual(failed["status"], "failed_gate")
 
-        legacy = peer_result(handoff, "pass")
+        packet = frozen_packet(self.store, run_id)
+        legacy = peer_result(packet, "pass")
         with self.assertRaises(ProductionRunError) as consumed:
             runtime.submit_independent(
                 "PROD",
                 run_id,
-                peer_packet=handoff["independent_review_request"]["peer_packet"],
+                peer_packet=packet,
                 result=legacy,
-                bridge_receipt=project_bridge_receipt(handoff, legacy),
+                bridge_receipt=project_bridge_receipt(packet, legacy),
             )
         self.assertEqual(consumed.exception.code, "independent_attempt_consumed")
 
@@ -831,7 +897,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
         run_id = self.start_native()
         handoff = self.execute_to_handoff(runtime, run_id)
-        completed = self.submit(runtime, run_id, handoff)
+        completed = self.submit(runtime, run_id)
         self.assertEqual(completed["status"], "completed")
         if not hasattr(runtime, "prepare_independent_dispatch"):
             self.fail("ProductionRunExecutor.prepare_independent_dispatch is required")
@@ -840,6 +906,54 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
                 "PROD", run_id, provider="claude", parent_session_id="SES-MANAGER"
             )
         self.assertEqual(consumed.exception.code, "independent_attempt_consumed")
+
+    def test_pre_v10_handoff_backfills_exact_packet_bytes_once_without_renonce(self):
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        if not hasattr(runtime, "_latest_independent_handoff"):
+            self.fail("runtime requires deterministic pre-v10 independent handoff backfill")
+        run_id = self.start_native()
+        self.execute_to_handoff(runtime, run_id)
+        packet = frozen_packet(self.store, run_id)
+        expected_bytes = json.dumps(packet, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        nonce = packet["relay_nonce"]
+        with self.store.open_project("PROD") as conn:
+            row = conn.execute(
+                "SELECT checkpoint_id,state_json FROM checkpoints WHERE run_id=? AND checkpoint_kind='production_independent_handoff' ORDER BY created_at DESC,rowid DESC LIMIT 1",
+                (run_id,),
+            ).fetchone()
+            legacy = json.loads(row["state_json"])
+            legacy.pop("peer_packet_bytes")
+            conn.execute(
+                "UPDATE checkpoints SET state_json=? WHERE checkpoint_id=?",
+                (json.dumps(legacy, sort_keys=True, separators=(",", ":")), row["checkpoint_id"]),
+            )
+            conn.commit()
+        result = peer_result(packet, "pass")
+        receipt = project_bridge_receipt(packet, result)
+        completed = runtime.submit_independent(
+            "PROD",
+            run_id,
+            peer_packet=packet,
+            result=result,
+            independence_receipt=receipt,
+        )
+        replay = runtime.submit_independent(
+            "PROD",
+            run_id,
+            peer_packet=packet,
+            result=result,
+            independence_receipt=receipt,
+        )
+        self.assertEqual(completed, replay)
+        with self.store.open_project("PROD") as conn:
+            rows = conn.execute(
+                "SELECT state_json FROM checkpoints WHERE run_id=? AND checkpoint_kind='production_independent_handoff' ORDER BY created_at,rowid",
+                (run_id,),
+            ).fetchall()
+        self.assertEqual(len(rows), 2)
+        upgraded = json.loads(rows[-1]["state_json"])
+        self.assertEqual(upgraded["peer_packet_bytes"], expected_bytes)
+        self.assertEqual(upgraded["peer_packet"]["relay_nonce"], nonce)
 
     def test_foreign_project_provenance_and_fabricated_native_receipt_fail_closed(self):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
@@ -859,31 +973,131 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
 
         second = self.start_native()
         handoff = self.execute_to_handoff(runtime, second)
-        result = peer_result(handoff, "pass")
-        fabricated = project_bridge_receipt(handoff, result)
+        packet = frozen_packet(self.store, second)
+        result = peer_result(packet, "pass")
+        fabricated = project_bridge_receipt(packet, result)
         fabricated["schema"] = "quillframe_independent_invocation_receipt_v1"
         fabricated["receipt_fingerprint"] = "sha256:" + "0" * 64
         with self.assertRaises(ProductionRunError) as receipt_error:
             runtime.submit_independent(
                 "PROD",
                 second,
-                peer_packet=handoff["independent_review_request"]["peer_packet"],
+                peer_packet=packet,
                 result=result,
                 independence_receipt=fabricated,
             )
         self.assertEqual(receipt_error.exception.code, "independent_invocation_receipt_invalid")
 
+    def test_actual_project_identity_is_rechecked_before_packet_creation(self):
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        run_id = self.start_native()
+        awaiting = runtime.execute(
+            "PROD",
+            run_id,
+            service_id="svc",
+            instruction="draft chapter",
+            reader_grip="very_high",
+            rule_material=RULE_MATERIAL,
+        )
+        self.assertEqual(awaiting["awaiting"], "independent_provenance")
+        with self.store.open_project("PROD") as conn:
+            conn.execute("UPDATE project_identity SET project_id='FOREIGN'")
+            conn.commit()
+        with self.assertRaises(ProductionRunError) as mismatch:
+            self.execute_to_handoff(runtime, run_id)
+        self.assertEqual(mismatch.exception.code, "independent_project_mismatch")
+        with self.store.open_project("PROD") as conn:
+            checkpoints = conn.execute(
+                "SELECT COUNT(*) FROM checkpoints WHERE run_id=? AND checkpoint_kind='production_independent_handoff'",
+                (run_id,),
+            ).fetchone()[0]
+        self.assertEqual(checkpoints, 0)
+
+    def test_actual_project_identity_drift_blocks_legacy_before_attempt_or_release(self):
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        run_id = self.start_native()
+        self.execute_to_handoff(runtime, run_id)
+        packet = frozen_packet(self.store, run_id)
+        result = peer_result(packet, "pass")
+        receipt = project_bridge_receipt(packet, result)
+        with self.store.open_project("PROD") as conn:
+            conn.execute("UPDATE project_identity SET project_id='FOREIGN'")
+            conn.commit()
+        with self.assertRaises(ProductionRunError) as mismatch:
+            runtime.submit_independent(
+                "PROD",
+                run_id,
+                peer_packet=packet,
+                result=result,
+                independence_receipt=receipt,
+            )
+        self.assertEqual(mismatch.exception.code, "independent_project_mismatch")
+        with self.store.open_project("PROD") as conn:
+            attempt = conn.execute(
+                "SELECT status,terminal_response_json FROM independent_review_attempts WHERE run_id=?",
+                (run_id,),
+            ).fetchone()
+            releases = conn.execute(
+                "SELECT COUNT(*) FROM receipts WHERE run_id=? AND receipt_kind='production_release'",
+                (run_id,),
+            ).fetchone()[0]
+            candidates = conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0]
+        self.assertEqual(attempt["status"], "available")
+        self.assertIsNone(attempt["terminal_response_json"])
+        self.assertEqual(releases, 0)
+        self.assertEqual(candidates, 0)
+
+    def test_actual_project_identity_drift_blocks_native_before_attempt_or_release(self):
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        run_id = self.start_native()
+        self.prepare_native(runtime, run_id)
+        claim = self.claim_native(runtime)
+        result = native_result(claim, "pass")
+        with self.store.open_project("PROD") as conn:
+            conn.execute("UPDATE project_identity SET project_id='FOREIGN'")
+            conn.commit()
+        with self.assertRaises(ProductionRunError) as mismatch:
+            runtime.complete_independent_dispatch(
+                "PROD",
+                lease_id=claim["lease_id"],
+                reviewer_session_id=claim["reviewer_session_id"],
+                host_agent_id=claim["host_agent_id"],
+                host_invocation_id=claim["host_invocation_id"],
+                result=result,
+            )
+        self.assertEqual(mismatch.exception.code, "independent_project_mismatch")
+        with self.store.open_project("PROD") as conn:
+            attempt = conn.execute(
+                "SELECT status,terminal_response_json FROM independent_review_attempts WHERE run_id=?",
+                (run_id,),
+            ).fetchone()
+            lease = conn.execute(
+                "SELECT status FROM independent_review_leases WHERE lease_id=?",
+                (claim["lease_id"],),
+            ).fetchone()
+            releases = conn.execute(
+                "SELECT COUNT(*) FROM receipts WHERE run_id=? AND receipt_kind='production_release'",
+                (run_id,),
+            ).fetchone()[0]
+            candidates = conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0]
+        self.assertEqual(attempt["status"], "available")
+        self.assertIsNone(attempt["terminal_response_json"])
+        self.assertEqual(lease["status"], "claimed")
+        self.assertEqual(releases, 0)
+        self.assertEqual(candidates, 0)
+
     def test_tampered_completed_replay_is_rejected(self):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
         run_id = self.start_native()
         handoff = self.execute_to_handoff(runtime, run_id)
-        result = peer_result(handoff, "pass")
-        receipt = project_bridge_receipt(handoff, result)
+        packet = frozen_packet(self.store, run_id)
+        result = peer_result(packet, "pass")
+        receipt = project_bridge_receipt(packet, result)
         self.require_generic_submit(runtime)
         first = runtime.submit_independent(
             "PROD",
             run_id,
-            peer_packet=handoff["independent_review_request"]["peer_packet"],
+            peer_packet=packet,
             result=result,
             independence_receipt=receipt,
         )
@@ -894,7 +1108,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
             runtime.submit_independent(
                 "PROD",
                 run_id,
-                peer_packet=handoff["independent_review_request"]["peer_packet"],
+                peer_packet=packet,
                 result=tampered,
                 independence_receipt=receipt,
             )
@@ -907,8 +1121,9 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
         run_id = self.start_native()
         handoff = self.execute_to_handoff(runtime, run_id)
-        result = peer_result(handoff, "pass")
-        receipt = project_bridge_receipt(handoff, result)
+        packet = frozen_packet(self.store, run_id)
+        result = peer_result(packet, "pass")
+        receipt = project_bridge_receipt(packet, result)
         self.require_generic_submit(runtime)
         barrier = threading.Barrier(3)
         outputs: list[dict] = []
@@ -920,7 +1135,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
                 outputs.append(runtime.submit_independent(
                     "PROD",
                     run_id,
-                    peer_packet=handoff["independent_review_request"]["peer_packet"],
+                    peer_packet=packet,
                     result=result,
                     independence_receipt=receipt,
                 ))
@@ -1031,8 +1246,9 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
         run_id = self.start_native()
         handoff = self.execute_to_handoff(runtime, run_id)
-        result = peer_result(handoff, "pass")
-        receipt = project_bridge_receipt(handoff, result)
+        packet = frozen_packet(self.store, run_id)
+        result = peer_result(packet, "pass")
+        receipt = project_bridge_receipt(packet, result)
         original = runtime._set_run
         failed_once = False
 
@@ -1048,14 +1264,14 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
                 runtime.submit_independent(
                     "PROD",
                     run_id,
-                    peer_packet=handoff["independent_review_request"]["peer_packet"],
+                    peer_packet=packet,
                     result=result,
                     independence_receipt=receipt,
                 )
         resumed = runtime.submit_independent(
             "PROD",
             run_id,
-            peer_packet=handoff["independent_review_request"]["peer_packet"],
+            peer_packet=packet,
             result=result,
             independence_receipt=receipt,
         )
@@ -1064,12 +1280,13 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0], 1)
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM review_evidence").fetchone()[0], 1)
 
-    def test_post_completion_event_crash_resumes_with_one_candidate_ready_event(self):
+    def test_pass_side_effect_crash_blocks_different_fail_and_exact_pass_recovers(self):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
         run_id = self.start_native()
         handoff = self.execute_to_handoff(runtime, run_id)
-        result = peer_result(handoff, "pass")
-        receipt = project_bridge_receipt(handoff, result)
+        packet = frozen_packet(self.store, run_id)
+        pass_result = peer_result(packet, "pass")
+        pass_receipt = project_bridge_receipt(packet, pass_result)
         with patch.object(
             runtime,
             "_persist_candidate_ready_event",
@@ -1079,16 +1296,27 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
                 runtime.submit_independent(
                     "PROD",
                     run_id,
-                    peer_packet=handoff["independent_review_request"]["peer_packet"],
-                    result=result,
-                    independence_receipt=receipt,
+                    peer_packet=packet,
+                    result=pass_result,
+                    independence_receipt=pass_receipt,
                 )
+        fail_result = peer_result(packet, "fail")
+        fail_receipt = project_bridge_receipt(packet, fail_result)
+        with self.assertRaises(ProductionRunError) as different:
+            runtime.submit_independent(
+                "PROD",
+                run_id,
+                peer_packet=packet,
+                result=fail_result,
+                independence_receipt=fail_receipt,
+            )
+        self.assertEqual(different.exception.code, "independent_attempt_consumed")
         resumed = runtime.submit_independent(
             "PROD",
             run_id,
-            peer_packet=handoff["independent_review_request"]["peer_packet"],
-            result=result,
-            independence_receipt=receipt,
+            peer_packet=packet,
+            result=pass_result,
+            independence_receipt=pass_receipt,
         )
         self.assertEqual(resumed["status"], "completed")
         with self.store.open_project("PROD") as conn:
@@ -1096,14 +1324,173 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
                 "SELECT payload_json FROM runtime_events WHERE run_id=? AND event_kind='production_candidate_ready'",
                 (run_id,),
             ).fetchall()
+            attempt = conn.execute(
+                "SELECT status,terminal_evidence_fingerprint FROM independent_review_attempts WHERE run_id=?",
+                (run_id,),
+            ).fetchone()
+            candidate_count = conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0]
+            evidence_count = conn.execute("SELECT COUNT(*) FROM review_evidence").fetchone()[0]
+            release_count = conn.execute(
+                "SELECT COUNT(*) FROM receipts WHERE run_id=? AND receipt_kind='production_release'",
+                (run_id,),
+            ).fetchone()[0]
+            stage_payloads = [
+                json.loads(row["payload_json"])
+                for row in conn.execute(
+                    "SELECT payload_json FROM receipts WHERE run_id=? AND receipt_kind='production_stage'",
+                    (run_id,),
+                )
+            ]
         self.assertEqual(len(events), 1)
+        self.assertEqual(candidate_count, 1)
+        self.assertEqual(evidence_count, 1)
+        self.assertEqual(release_count, 1)
+        self.assertEqual(sum(item.get("mechanism") == "independent_semantic_gate" for item in stage_payloads), 1)
+        self.assertEqual(sum(item.get("mechanism") == "user_visible_gate" for item in stage_payloads), 1)
+        self.assertEqual(attempt["status"], "terminal")
+
+    def test_completed_recovery_verifies_exact_persisted_submission_evidence(self):
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        run_id = self.start_native()
+        self.execute_to_handoff(runtime, run_id)
+        packet = frozen_packet(self.store, run_id)
+        result = peer_result(packet, "pass")
+        receipt = project_bridge_receipt(packet, result)
+        with patch.object(
+            runtime,
+            "_persist_candidate_ready_event",
+            side_effect=RuntimeError("fixture event crash"),
+        ):
+            with self.assertRaises(RuntimeError):
+                runtime.submit_independent(
+                    "PROD",
+                    run_id,
+                    peer_packet=packet,
+                    result=result,
+                    independence_receipt=receipt,
+                )
+        with self.store.open_project("PROD") as conn:
+            row = conn.execute(
+                "SELECT review_id,result_json FROM review_evidence WHERE independent=1",
+            ).fetchone()
+            persisted = json.loads(row["result_json"])
+            self.assertIn("submission_evidence_fingerprint", persisted)
+            persisted["submission_evidence_fingerprint"] = "sha256:" + "0" * 64
+            conn.execute(
+                "UPDATE review_evidence SET result_json=? WHERE review_id=?",
+                (json.dumps(persisted, sort_keys=True, separators=(",", ":")), row["review_id"]),
+            )
+            conn.commit()
+        with self.assertRaises(ProductionRunError) as mismatch:
+            runtime.submit_independent(
+                "PROD",
+                run_id,
+                peer_packet=packet,
+                result=result,
+                independence_receipt=receipt,
+            )
+        self.assertEqual(mismatch.exception.code, "independent_recovery_evidence_mismatch")
+        with self.store.open_project("PROD") as conn:
+            attempt = conn.execute(
+                "SELECT status,terminal_response_json FROM independent_review_attempts WHERE run_id=?",
+                (run_id,),
+            ).fetchone()
+        self.assertEqual(attempt["status"], "processing")
+        self.assertIsNone(attempt["terminal_response_json"])
+
+    def test_abandoned_processing_lease_only_allows_identical_evidence_to_reclaim_after_expiry(self):
+        if "clock" not in inspect.signature(IndependentReviewRepository).parameters:
+            self.fail("IndependentReviewRepository requires an injectable processing-lease clock")
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        run_id = self.start_native()
+        self.execute_to_handoff(runtime, run_id)
+        handoff = frozen_handoff(self.store, run_id)
+        clock = ManualClock()
+        repository = IndependentReviewRepository(
+            self.store,
+            clock=clock,
+            monotonic_clock=clock,
+            sleeper=lambda _: None,
+            processing_lease_seconds=10.0,
+        )
+        first = repository.begin_attempt(
+            "PROD",
+            run_id,
+            handoff["candidate_fingerprint"],
+            evidence_fingerprint="evidence:A",
+            transport="github_actions",
+            wait_seconds=0,
+        )
+        self.assertTrue(first["owner"])
+        with self.assertRaises(IndependentReviewError) as live_same:
+            repository.begin_attempt(
+                "PROD",
+                run_id,
+                handoff["candidate_fingerprint"],
+                evidence_fingerprint="evidence:A",
+                transport="github_actions",
+                wait_seconds=0,
+            )
+        self.assertEqual(getattr(live_same.exception, "code", None), "independent_submission_in_progress")
+        with self.assertRaises(IndependentReviewError) as different:
+            repository.begin_attempt(
+                "PROD",
+                run_id,
+                handoff["candidate_fingerprint"],
+                evidence_fingerprint="evidence:B",
+                transport="github_actions",
+                wait_seconds=0,
+            )
+        self.assertEqual(different.exception.code, "independent_attempt_consumed")
+
+        clock.advance(11.0)
+        with self.assertRaises(IndependentReviewError) as expired_different:
+            repository.begin_attempt(
+                "PROD",
+                run_id,
+                handoff["candidate_fingerprint"],
+                evidence_fingerprint="evidence:B",
+                transport="github_actions",
+                wait_seconds=0,
+            )
+        self.assertEqual(expired_different.exception.code, "independent_attempt_consumed")
+        recovered = repository.begin_attempt(
+            "PROD",
+            run_id,
+            handoff["candidate_fingerprint"],
+            evidence_fingerprint="evidence:A",
+            transport="github_actions",
+            wait_seconds=0,
+        )
+        self.assertTrue(recovered["owner"])
+        self.assertTrue(recovered["recovered"])
+        self.assertNotEqual(first["processing_token"], recovered["processing_token"])
+        repository.terminalize_attempt(
+            "PROD",
+            run_id,
+            handoff["candidate_fingerprint"],
+            processing_token=recovered["processing_token"],
+            evidence_fingerprint="evidence:A",
+            response={"status": "completed", "candidate_visible": False},
+        )
+        replay = repository.begin_attempt(
+            "PROD",
+            run_id,
+            handoff["candidate_fingerprint"],
+            evidence_fingerprint="evidence:A",
+            transport="github_actions",
+            wait_seconds=0,
+        )
+        self.assertFalse(replay["owner"])
+        self.assertEqual(replay["response"], {"status": "completed", "candidate_visible": False})
 
     def test_failed_processing_releases_claim_and_exact_evidence_resumes(self):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
         run_id = self.start_native()
         handoff = self.execute_to_handoff(runtime, run_id)
-        result = peer_result(handoff, "pass")
-        receipt = project_bridge_receipt(handoff, result)
+        packet = frozen_packet(self.store, run_id)
+        result = peer_result(packet, "pass")
+        receipt = project_bridge_receipt(packet, result)
         self.require_generic_submit(runtime)
         original = runtime._persist_candidate
         with patch.object(runtime, "_persist_candidate", side_effect=RuntimeError("fixture processing crash")):
@@ -1111,7 +1498,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
                 runtime.submit_independent(
                     "PROD",
                     run_id,
-                    peer_packet=handoff["independent_review_request"]["peer_packet"],
+                    peer_packet=packet,
                     result=result,
                     independence_receipt=receipt,
                 )
@@ -1119,7 +1506,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         resumed = runtime.submit_independent(
             "PROD",
             run_id,
-            peer_packet=handoff["independent_review_request"]["peer_packet"],
+            peer_packet=packet,
             result=result,
             independence_receipt=receipt,
         )

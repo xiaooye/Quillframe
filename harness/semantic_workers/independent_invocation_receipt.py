@@ -20,8 +20,8 @@ from peer_chat_relay import validate_peer_result  # noqa: E402
 SCHEMA = "quillframe_independent_invocation_receipt_v1"
 ASSURANCE_CLASS = "host_native_separate_context"
 PROVIDERS = {
-    "codex": {"transport": "codex_native", "worker_provider": "codex_native"},
-    "claude": {"transport": "claude_code_native", "worker_provider": "claude_code_native"},
+    "codex_native_subagent": {"transport": "codex_native", "worker_provider": "codex_native_subagent"},
+    "claude_native_subagent": {"transport": "claude_code_native", "worker_provider": "claude_native_subagent"},
 }
 PERMISSIONS = {
     "canon_write": False,
@@ -68,7 +68,7 @@ def build_receipt(
     if errors:
         raise ValueError("native peer result invalid: " + "; ".join(errors))
     if provider not in PROVIDERS:
-        raise ValueError("provider must be codex|claude")
+        raise ValueError("provider must be codex_native_subagent|claude_native_subagent")
     expected = PROVIDERS[provider]
     if (result.get("worker") or {}).get("provider") != expected["worker_provider"]:
         raise ValueError("native result worker.provider does not match lease provider")

@@ -45,8 +45,20 @@ class ProductionHostBridgeTests(unittest.TestCase):
         )
         self.assertFalse(contract["invariants"]["independent_review_project_peer_receipt_required"])
         self.assertTrue(contract["invariants"]["independent_review_receipt_required"])
+        self.assertIs(
+            contract["invariants"].get("independent_review_eligible_invocation_receipt_required"),
+            True,
+        )
         self.assertTrue(contract["invariants"]["independent_review_legacy_project_peer_receipt_supported"])
         self.assertTrue(contract["invariants"]["independent_review_native_lifecycle_receipt_supported"])
+        self.assertEqual(
+            contract.get("native_independent_review", {}).get("provider_ids"),
+            ["codex_native_subagent", "claude_native_subagent"],
+        )
+        self.assertEqual(
+            contract.get("native_independent_review", {}).get("transports"),
+            ["codex_native", "claude_code_native"],
+        )
         self.assertFalse(contract["invariants"]["independent_review_same_runtime_substitution"])
         self.assertEqual(
             contract["operations"]["author.run.independent.submit"]["required_args"],

@@ -4,13 +4,22 @@ from __future__ import annotations
 import json
 import time
 import uuid
+from collections.abc import Callable
 from typing import Any
 
 from .quillframe_sqlite import QuillframeStore, canonical_json, fingerprint_text, now_iso
 
-PROVIDER_TRANSPORT = {"codex": "codex_native", "claude": "claude_code_native"}
+PROVIDER_TRANSPORT = {
+    "codex_native_subagent": "codex_native",
+    "claude_native_subagent": "claude_code_native",
+}
+DEPRECATED_PROVIDER_ALIASES = {
+    "codex": "codex_native_subagent",
+    "claude": "claude_native_subagent",
+}
 ASSURANCE_CLASS = "host_native_separate_context"
 REVIEWER_AGENT_TYPE = "quillframe-independent-reviewer"
+PROCESSING_LEASE_SECONDS = 30.0
 
 
 class IndependentReviewError(RuntimeError):
@@ -26,9 +35,47 @@ def _required(value: Any, name: str) -> str:
     return value.strip()
 
 
+def normalize_provider(value: Any) -> str:
+    provider = _required(value, "provider")
+    provider = DEPRECATED_PROVIDER_ALIASES.get(provider, provider)
+    if provider not in PROVIDER_TRANSPORT:
+        raise IndependentReviewError(
+            "independent_provider_invalid",
+            "provider must be codex_native_subagent|claude_native_subagent",
+        )
+    return provider
+
+
 class IndependentReviewRepository:
-    def __init__(self, store: QuillframeStore) -> None:
+    def __init__(
+        self,
+        store: QuillframeStore,
+        *,
+        clock: Callable[[], float] | None = None,
+        monotonic_clock: Callable[[], float] | None = None,
+        sleeper: Callable[[float], None] | None = None,
+        processing_lease_seconds: float = PROCESSING_LEASE_SECONDS,
+    ) -> None:
+        if processing_lease_seconds <= 0:
+            raise ValueError("processing_lease_seconds must be positive")
         self.store = store
+        self.clock = clock or time.time
+        self.monotonic_clock = monotonic_clock or time.monotonic
+        self.sleeper = sleeper or time.sleep
+        self.processing_lease_seconds = processing_lease_seconds
+
+    @staticmethod
+    def _assert_project_identity_row(identity: Any, project_id: str) -> None:
+        if not identity or identity["project_id"] != project_id:
+            raise IndependentReviewError(
+                "independent_project_mismatch",
+                "runtime Project identity does not match the requested Project",
+            )
+
+    def assert_project_identity(self, project_id: str) -> None:
+        with self.store.open_project(project_id) as conn:
+            identity = conn.execute("SELECT project_id FROM project_identity").fetchone()
+        self._assert_project_identity_row(identity, project_id)
 
     @staticmethod
     def _event(
@@ -88,8 +135,7 @@ class IndependentReviewRepository:
         provider: str,
         parent_session_id: str,
     ) -> dict[str, Any]:
-        if provider not in PROVIDER_TRANSPORT:
-            raise IndependentReviewError("independent_provider_invalid", "provider must be codex|claude")
+        provider = normalize_provider(provider)
         parent_session_id = _required(parent_session_id, "parent_session_id")
         packet_bytes = _required(packet_bytes, "packet_bytes")
         self.ensure_attempt(project_id, run_id, candidate_fingerprint)
@@ -97,8 +143,7 @@ class IndependentReviewRepository:
             conn.execute("BEGIN IMMEDIATE")
             identity = conn.execute("SELECT project_id FROM project_identity").fetchone()
             run = conn.execute("SELECT session_id,status FROM runs WHERE run_id=?", (run_id,)).fetchone()
-            if not identity or identity["project_id"] != project_id:
-                raise IndependentReviewError("independent_project_mismatch", "runtime Project identity mismatch")
+            self._assert_project_identity_row(identity, project_id)
             if not run:
                 raise IndependentReviewError("run_not_found", run_id)
             if run["session_id"] != parent_session_id:
@@ -198,8 +243,7 @@ class IndependentReviewRepository:
         host_agent_id: str,
         host_invocation_id: str,
     ) -> dict[str, Any]:
-        if provider not in PROVIDER_TRANSPORT:
-            raise IndependentReviewError("independent_provider_invalid", "provider must be codex|claude")
+        provider = normalize_provider(provider)
         parent_session_id = _required(parent_session_id, "parent_session_id")
         agent_type = _required(agent_type, "agent_type")
         if agent_type != REVIEWER_AGENT_TYPE:
@@ -211,6 +255,10 @@ class IndependentReviewRepository:
         host_invocation_id = _required(host_invocation_id, "host_invocation_id")
         with self.store.open_project(project_id) as conn:
             conn.execute("BEGIN IMMEDIATE")
+            self._assert_project_identity_row(
+                conn.execute("SELECT project_id FROM project_identity").fetchone(),
+                project_id,
+            )
             reused = conn.execute(
                 "SELECT lease_id FROM independent_review_leases WHERE host_agent_id=? OR host_invocation_id=? LIMIT 1",
                 (host_agent_id, host_invocation_id),
@@ -390,11 +438,16 @@ class IndependentReviewRepository:
         native_lease_id: str | None = None,
         wait_seconds: float = 3.0,
     ) -> dict[str, Any]:
+        self.assert_project_identity(project_id)
         self.ensure_attempt(project_id, run_id, candidate_fingerprint)
-        deadline = time.monotonic() + wait_seconds
+        deadline = self.monotonic_clock() + wait_seconds
         while True:
             with self.store.open_project(project_id) as conn:
                 conn.execute("BEGIN IMMEDIATE")
+                self._assert_project_identity_row(
+                    conn.execute("SELECT project_id FROM project_identity").fetchone(),
+                    project_id,
+                )
                 row = conn.execute(
                     "SELECT * FROM independent_review_attempts WHERE run_id=? AND candidate_fingerprint=?",
                     (run_id, candidate_fingerprint),
@@ -408,6 +461,31 @@ class IndependentReviewRepository:
                 if row["status"] == "processing":
                     if row["processing_evidence_fingerprint"] != evidence_fingerprint:
                         raise IndependentReviewError("independent_attempt_consumed", "different evidence cannot replace a processing attempt")
+                    now_value = self.clock()
+                    expires_at = row["processing_expires_at"]
+                    if expires_at is None or float(expires_at) <= now_value:
+                        token = "irproc_" + uuid.uuid4().hex
+                        epoch = int(row["processing_epoch"] or 0) + 1
+                        conn.execute(
+                            """UPDATE independent_review_attempts SET processing_token=?,processing_epoch=?,processing_expires_at=?,
+                            updated_at=? WHERE run_id=? AND candidate_fingerprint=? AND status='processing' AND processing_evidence_fingerprint=?""",
+                            (
+                                token,
+                                epoch,
+                                now_value + self.processing_lease_seconds,
+                                now_iso(),
+                                run_id,
+                                candidate_fingerprint,
+                                evidence_fingerprint,
+                            ),
+                        )
+                        conn.commit()
+                        return {
+                            "owner": True,
+                            "processing_token": token,
+                            "processing_epoch": epoch,
+                            "recovered": True,
+                        }
                     conn.commit()
                 else:
                     active = conn.execute(
@@ -418,16 +496,87 @@ class IndependentReviewRepository:
                     if active_ids and (native_lease_id is None or active_ids != {native_lease_id}):
                         raise IndependentReviewError("independent_native_lease_active", "legacy submission is blocked by an active native lease")
                     token = "irproc_" + uuid.uuid4().hex
+                    epoch = int(row["processing_epoch"] or 0) + 1
+                    now_value = self.clock()
                     conn.execute(
                         """UPDATE independent_review_attempts SET status='processing',processing_token=?,processing_evidence_fingerprint=?,
-                        processing_transport=?,updated_at=? WHERE run_id=? AND candidate_fingerprint=? AND status='available'""",
-                        (token, evidence_fingerprint, transport, now_iso(), run_id, candidate_fingerprint),
+                        processing_transport=?,processing_epoch=?,processing_expires_at=?,processing_phase='reserved',updated_at=?
+                        WHERE run_id=? AND candidate_fingerprint=? AND status='available'""",
+                        (
+                            token,
+                            evidence_fingerprint,
+                            transport,
+                            epoch,
+                            now_value + self.processing_lease_seconds,
+                            now_iso(),
+                            run_id,
+                            candidate_fingerprint,
+                        ),
                     )
                     conn.commit()
-                    return {"owner": True, "processing_token": token}
-            if time.monotonic() >= deadline:
+                    return {
+                        "owner": True,
+                        "processing_token": token,
+                        "processing_epoch": epoch,
+                        "recovered": False,
+                    }
+            if self.monotonic_clock() >= deadline:
                 raise IndependentReviewError("independent_submission_in_progress", "identical independent submission did not reach terminal state in time")
-            time.sleep(0.01)
+            self.sleeper(0.01)
+
+    def mark_attempt_effects_started(
+        self,
+        project_id: str,
+        run_id: str,
+        candidate_fingerprint: str,
+        processing_token: str,
+    ) -> None:
+        with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            updated = conn.execute(
+                """UPDATE independent_review_attempts SET processing_phase='effects_started',processing_expires_at=?,updated_at=?
+                WHERE run_id=? AND candidate_fingerprint=? AND status='processing' AND processing_token=?""",
+                (
+                    self.clock() + self.processing_lease_seconds,
+                    now_iso(),
+                    run_id,
+                    candidate_fingerprint,
+                    processing_token,
+                ),
+            ).rowcount
+            if updated != 1:
+                raise IndependentReviewError("independent_processing_owner_lost", "attempt processing owner changed")
+            conn.commit()
+
+    def abandon_attempt(
+        self,
+        project_id: str,
+        run_id: str,
+        candidate_fingerprint: str,
+        processing_token: str,
+    ) -> None:
+        with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT processing_phase FROM independent_review_attempts WHERE run_id=? AND candidate_fingerprint=? AND status='processing' AND processing_token=?",
+                (run_id, candidate_fingerprint, processing_token),
+            ).fetchone()
+            if not row:
+                conn.commit()
+                return
+            if row["processing_phase"] == "effects_started":
+                conn.execute(
+                    "UPDATE independent_review_attempts SET processing_expires_at=?,updated_at=? WHERE run_id=? AND candidate_fingerprint=? AND processing_token=?",
+                    (self.clock(), now_iso(), run_id, candidate_fingerprint, processing_token),
+                )
+            else:
+                conn.execute(
+                    """UPDATE independent_review_attempts SET status='available',processing_token=NULL,processing_evidence_fingerprint=NULL,
+                    processing_transport=NULL,processing_expires_at=NULL,processing_phase=NULL,updated_at=?
+                    WHERE run_id=? AND candidate_fingerprint=? AND status='processing' AND processing_token=?""",
+                    (now_iso(), run_id, candidate_fingerprint, processing_token),
+                )
+            conn.commit()
 
     def release_attempt(
         self,
@@ -440,7 +589,8 @@ class IndependentReviewRepository:
             conn.execute("BEGIN IMMEDIATE")
             conn.execute(
                 """UPDATE independent_review_attempts SET status='available',processing_token=NULL,processing_evidence_fingerprint=NULL,
-                processing_transport=NULL,updated_at=? WHERE run_id=? AND candidate_fingerprint=? AND status='processing' AND processing_token=?""",
+                processing_transport=NULL,processing_expires_at=NULL,processing_phase=NULL,updated_at=?
+                WHERE run_id=? AND candidate_fingerprint=? AND status='processing' AND processing_token=? AND processing_phase='reserved'""",
                 (now_iso(), run_id, candidate_fingerprint, processing_token),
             )
             conn.commit()
@@ -460,7 +610,8 @@ class IndependentReviewRepository:
             conn.execute("BEGIN IMMEDIATE")
             updated = conn.execute(
                 """UPDATE independent_review_attempts SET status='terminal',processing_token=NULL,processing_evidence_fingerprint=NULL,
-                processing_transport=NULL,terminal_evidence_fingerprint=?,terminal_response_json=?,terminal_response_fingerprint=?,terminal_status=?,
+                processing_transport=NULL,processing_expires_at=NULL,processing_phase=NULL,
+                terminal_evidence_fingerprint=?,terminal_response_json=?,terminal_response_fingerprint=?,terminal_status=?,
                 updated_at=? WHERE run_id=? AND candidate_fingerprint=? AND status='processing' AND processing_token=?""",
                 (
                     evidence_fingerprint,
@@ -516,7 +667,8 @@ class IndependentReviewRepository:
             )
             conn.execute(
                 """UPDATE independent_review_attempts SET status='terminal',processing_token=NULL,processing_evidence_fingerprint=NULL,
-                processing_transport=NULL,terminal_evidence_fingerprint=?,terminal_response_json=?,terminal_response_fingerprint=?,terminal_status=?,
+                processing_transport=NULL,processing_expires_at=NULL,processing_phase=NULL,
+                terminal_evidence_fingerprint=?,terminal_response_json=?,terminal_response_fingerprint=?,terminal_status=?,
                 updated_at=? WHERE run_id=? AND candidate_fingerprint=?""",
                 (
                     evidence_fingerprint,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from collections.abc import Callable
 from copy import deepcopy
 from typing import Any
 
@@ -228,6 +229,57 @@ class ProductionRunExecutor(ProductionContextRuntime):
             ).fetchone()
         return _json(row["state_json"], {}) if row else None
 
+    def _latest_independent_handoff(self, project_id: str, run_id: str) -> dict[str, Any] | None:
+        """Load the frozen handoff and backfill pre-v10 packet bytes once.
+
+        The existing packet object is canonicalized directly. No packet builder,
+        nonce generation, or semantic reconstruction is permitted here.
+        """
+        with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                """SELECT state_json,artifact_fingerprint FROM checkpoints
+                WHERE run_id=? AND checkpoint_kind='production_independent_handoff'
+                ORDER BY created_at DESC,rowid DESC LIMIT 1""",
+                (run_id,),
+            ).fetchone()
+            if not row:
+                conn.commit()
+                return None
+            handoff = _json(row["state_json"], {})
+            packet = handoff.get("peer_packet")
+            if not isinstance(packet, dict):
+                raise ProductionRunError(
+                    "independent_handoff_migration_required",
+                    "pending independent handoff has no typed frozen peer packet",
+                )
+            exact_bytes = canonical_json(packet)
+            stored_bytes = handoff.get("peer_packet_bytes")
+            if stored_bytes is None:
+                upgraded = {**handoff, "peer_packet_bytes": exact_bytes}
+                assert_secret_free(upgraded, label="production_independent_handoff")
+                conn.execute(
+                    """INSERT INTO checkpoints(
+                    checkpoint_id,run_id,checkpoint_kind,state_json,artifact_fingerprint,created_at
+                    ) VALUES(?,?,'production_independent_handoff',?,?,?)""",
+                    (
+                        "ckpt_" + uuid.uuid4().hex,
+                        run_id,
+                        canonical_json(upgraded),
+                        row["artifact_fingerprint"],
+                        now_iso(),
+                    ),
+                )
+                conn.commit()
+                return upgraded
+            if not isinstance(stored_bytes, str) or stored_bytes != exact_bytes:
+                raise ProductionRunError(
+                    "independent_packet_mismatch",
+                    "pending independent handoff packet bytes do not match its frozen packet",
+                )
+            conn.commit()
+            return handoff
+
     def _persist_release_receipt(self, project_id: str, run_id: str, release: dict[str, Any]) -> None:
         assert_secret_free(release, label="production release")
         key = f"{run_id}:production_release"
@@ -271,10 +323,16 @@ class ProductionRunExecutor(ProductionContextRuntime):
                         "production run already persisted a different or ambiguous candidate",
                     )
                 evidence = conn.execute(
-                    "SELECT candidate_fingerprint FROM review_evidence WHERE candidate_id=? AND independent=1",
+                    "SELECT candidate_fingerprint,result_json FROM review_evidence WHERE candidate_id=? AND independent=1",
                     (existing[0]["candidate_id"],),
                 ).fetchall()
-                if len(evidence) != 1 or evidence[0]["candidate_fingerprint"] != candidate_fingerprint:
+                prior_evidence = _json(evidence[0]["result_json"], {}) if len(evidence) == 1 else {}
+                if (
+                    len(evidence) != 1
+                    or evidence[0]["candidate_fingerprint"] != candidate_fingerprint
+                    or prior_evidence.get("submission_evidence_fingerprint")
+                    != independent_binding.get("submission_evidence_fingerprint")
+                ):
                     raise ProductionRunError(
                         "candidate_replay_conflict",
                         "persisted production candidate lacks exact independent review evidence",
@@ -330,6 +388,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "independence_receipt": independence_receipt,
             **({"bridge_receipt": independence_receipt} if independence_receipt.get("schema") != INDEPENDENT_INVOCATION_RECEIPT_SCHEMA else {}),
             "production_readiness": readiness,
+            "submission_evidence_fingerprint": independent_binding["submission_evidence_fingerprint"],
             "private_reasoning_exposed": False,
             "authority": False,
         }
@@ -409,6 +468,12 @@ class ProductionRunExecutor(ProductionContextRuntime):
     def _raise_independent_repository(exc: IndependentReviewError) -> None:
         raise ProductionRunError(exc.code, str(exc), detail=exc.detail) from exc
 
+    def _assert_independent_project_identity(self, project_id: str) -> None:
+        try:
+            IndependentReviewRepository(self.store).assert_project_identity(project_id)
+        except IndependentReviewError as exc:
+            self._raise_independent_repository(exc)
+
     def prepare_independent_dispatch(
         self,
         project_id: str,
@@ -417,7 +482,8 @@ class ProductionRunExecutor(ProductionContextRuntime):
         provider: str,
         parent_session_id: str,
     ) -> dict[str, Any]:
-        handoff = self._latest_checkpoint(project_id, run_id, "production_independent_handoff")
+        self._assert_independent_project_identity(project_id)
+        handoff = self._latest_independent_handoff(project_id, run_id)
         if not handoff:
             raise ProductionRunError("independent_handoff_missing", "frozen independent handoff is required before native dispatch")
         try:
@@ -445,6 +511,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
         host_agent_id: str,
         host_invocation_id: str,
     ) -> dict[str, Any]:
+        self._assert_independent_project_identity(project_id)
         try:
             return IndependentReviewRepository(self.store).claim(
                 project_id,
@@ -556,6 +623,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
         host_invocation_id: str,
         result: dict[str, Any],
     ) -> dict[str, Any]:
+        self._assert_independent_project_identity(project_id)
         repository = IndependentReviewRepository(self.store)
         try:
             lease = repository.lease(project_id, lease_id)
@@ -633,6 +701,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
         _native_lease_id: str | None = None,
         _native_completion_event: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        self._assert_independent_project_identity(project_id)
         supplied = [value for value in (independence_receipt, bridge_receipt) if value is not None]
         if len(supplied) != 1 or not isinstance(supplied[0], dict):
             raise ProductionRunError(
@@ -640,7 +709,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 "submit requires exactly one of independence_receipt or deprecated bridge_receipt",
             )
         receipt = supplied[0]
-        handoff = self._latest_checkpoint(project_id, run_id, "production_independent_handoff")
+        handoff = self._latest_independent_handoff(project_id, run_id)
         if not handoff:
             raise ProductionRunError("independent_handoff_missing", "frozen independent handoff is required")
         if receipt.get("schema") == INDEPENDENT_INVOCATION_RECEIPT_SCHEMA:
@@ -696,6 +765,13 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 peer_packet=peer_packet,
                 result=result,
                 independence_receipt=receipt,
+                submission_evidence_fingerprint=evidence_fingerprint,
+                on_effects_started=lambda: repository.mark_attempt_effects_started(
+                    project_id,
+                    run_id,
+                    handoff["candidate_fingerprint"],
+                    token,
+                ),
             )
             if response.get("status") == "stale_conflict":
                 repository.release_attempt(project_id, run_id, handoff["candidate_fingerprint"], token)
@@ -725,10 +801,17 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 self._raise_independent_repository(exc)
             return response
         except Exception:
-            repository.release_attempt(project_id, run_id, handoff["candidate_fingerprint"], token)
+            repository.abandon_attempt(project_id, run_id, handoff["candidate_fingerprint"], token)
             raise
 
-    def _completed_projection(self, project_id: str, run: dict[str, Any], bundle: dict[str, Any] | None) -> dict[str, Any] | None:
+    def _completed_projection(
+        self,
+        project_id: str,
+        run: dict[str, Any],
+        bundle: dict[str, Any] | None,
+        *,
+        expected_submission_evidence_fingerprint: str | None = None,
+    ) -> dict[str, Any] | None:
         if run.get("status") != "completed":
             return None
         with self.store.open_project(project_id) as conn:
@@ -747,6 +830,10 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 "SELECT payload_json FROM receipts WHERE run_id=? AND receipt_kind='production_release' ORDER BY created_at DESC,rowid DESC LIMIT 1",
                 (run["run_id"],),
             ).fetchone()
+            review_rows = conn.execute(
+                "SELECT result_json FROM review_evidence WHERE candidate_id=? AND independent=1 ORDER BY created_at,rowid",
+                (candidate["candidate_id"],),
+            ).fetchall() if candidate else []
         if not candidate:
             raise ProductionRunError("completed_run_missing_candidate", "completed production run has no persisted candidate")
         release = _json(release_row["payload_json"], {}) if release_row else {}
@@ -756,6 +843,13 @@ class ProductionRunExecutor(ProductionContextRuntime):
             or release.get("ready_for_user_visible_review") is not True
         ):
             raise ProductionRunError("production_release_missing", "completed production candidate lacks a valid exact-fingerprint production release")
+        if expected_submission_evidence_fingerprint is not None:
+            persisted_review = _json(review_rows[0]["result_json"], {}) if len(review_rows) == 1 else {}
+            if persisted_review.get("submission_evidence_fingerprint") != expected_submission_evidence_fingerprint:
+                raise ProductionRunError(
+                    "independent_recovery_evidence_mismatch",
+                    "completed production side effects do not bind the submitted independent evidence",
+                )
         return {
             "schema": PRODUCTION_EXECUTION_SCHEMA,
             "project_id": project_id,
@@ -778,7 +872,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
     def _awaiting_external_projection(self, project_id: str, run: dict[str, Any], bundle: dict[str, Any]) -> dict[str, Any] | None:
         if run.get("status") != "awaiting_external":
             return None
-        handoff = self._latest_checkpoint(project_id, run["run_id"], "production_independent_handoff")
+        handoff = self._latest_independent_handoff(project_id, run["run_id"])
         qualified = self._latest_checkpoint(project_id, run["run_id"], "production_qualified_candidate")
         if handoff:
             return {
@@ -795,7 +889,11 @@ class ProductionRunExecutor(ProductionContextRuntime):
                     "schema": handoff["schema"],
                     "subject_id": handoff["subject_id"],
                     "candidate_fingerprint": handoff["candidate_fingerprint"],
-                    "peer_packet": handoff["peer_packet"],
+                    "job_id": handoff["independent_job"]["job_id"],
+                    "input_fingerprint": handoff["independent_job"]["input_fingerprint"],
+                    "packet_fingerprint": fingerprint(handoff["peer_packet"]),
+                    "qualification_receipt_fingerprint": handoff["qualification_receipt"]["receipt_fingerprint"],
+                    "native_dispatch_ready": True,
                 },
                 "candidate_visible": False,
                 "raw_draft_visible": False,
@@ -826,6 +924,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
         qualified: dict[str, Any],
         independent_provenance: dict[str, Any],
     ) -> dict[str, Any]:
+        self._assert_independent_project_identity(project_id)
         if independent_provenance.get("project_id") != project_id:
             raise ProductionRunError(
                 "independent_project_mismatch",
@@ -1174,11 +1273,18 @@ class ProductionRunExecutor(ProductionContextRuntime):
         peer_packet: dict[str, Any],
         result: dict[str, Any],
         independence_receipt: dict[str, Any],
+        submission_evidence_fingerprint: str,
+        on_effects_started: Callable[[], None],
     ) -> dict[str, Any]:
         run = self._run_row(project_id, run_id)
         if run.get("status") == "completed":
             bundle = self._latest_bundle(project_id, run_id)
-            replay = self._completed_projection(project_id, run, bundle)
+            replay = self._completed_projection(
+                project_id,
+                run,
+                bundle,
+                expected_submission_evidence_fingerprint=submission_evidence_fingerprint,
+            )
             if replay is None:
                 raise ProductionRunError("completed_run_missing_candidate", "completed production run has no candidate")
             self._persist_candidate_ready_event(
@@ -1193,7 +1299,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
         if run.get("status") not in {"awaiting_external", "failed_gate", "semantic_pending"}:
             raise ProductionRunError("independent_submission_not_expected", f"run status is {run.get('status')}, not awaiting_external")
         bundle = self._latest_bundle(project_id, run_id)
-        handoff = self._latest_checkpoint(project_id, run_id, "production_independent_handoff")
+        handoff = self._latest_independent_handoff(project_id, run_id)
         if not bundle or not handoff:
             raise ProductionRunError("independent_handoff_missing", "frozen Context bundle and independent handoff are required")
         validation = self._validate_bundle_current(project_id, bundle)
@@ -1217,6 +1323,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
             result=result,
             independence_receipt=independence_receipt,
         )
+        independent_binding["submission_evidence_fingerprint"] = submission_evidence_fingerprint
         packet_project_id = ((handoff.get("independent_job") or {}).get("provenance") or {}).get("project_id")
         if packet_project_id != project_id or independence_receipt.get("project_id") != project_id:
             raise ProductionRunError("independent_project_mismatch", "packet and receipt must bind the actual runtime Project")
@@ -1260,6 +1367,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
             independence_receipt.get("assurance_class") or "project_owned_automation_receipt"
         )
         independent_receipt["stage_result_fingerprint"] = fingerprint({key: value for key, value in independent_receipt.items() if key != "stage_result_fingerprint"})
+        on_effects_started()
         self._persist_stage_receipt(project_id, run_id, independent_receipt)
 
         if not readiness.get("ready_for_user_visible_review"):
