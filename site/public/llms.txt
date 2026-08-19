@@ -1,6 +1,6 @@
 # Quillframe
 
-> AI-native long-form fiction framework and authoring environment. Quillframe owns story state, Canon, bounded Context, agent execution, quality gates, learning evidence, persistence, and authorized Settlement; external models provide inference.
+> AI-native long-form fiction framework and authoring environment. The host runs the agent; Quillframe governs Project story state, Canon boundaries, bounded Context, quality gates, review/release, persistence, and authorized Settlement; external models provide inference.
 
 Canonical site: https://quillframe.wei-dev.com/
 Documentation: https://quillframe.wei-dev.com/docs/

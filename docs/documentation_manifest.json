@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_documentation_manifest_v1",
-  "framework_version": "0.9.0",
+  "framework_version": "0.9.1",
   "source_of_truth": "HARNESS_MANIFEST.yaml",
   "generated_for": "repository-wide documentation governance",
   "lifecycle": {

@@ -1,7 +1,7 @@
 {
   "schema": "quillframe_studio_host_bridge_contract_v1",
-  "version": "9",
-  "framework_version": "0.9.0",
+  "version": "10",
+  "framework_version": "0.9.1",
   "authority": false,
   "canon_authority": false,
   "framework_write_authority": false,
@@ -29,7 +29,12 @@
     "context_refresh_is_explicit": true,
     "model_capability_grants_authority": false,
     "independent_review_same_runtime_substitution": false,
-    "independent_review_project_peer_receipt_required": true,
+    "independent_review_project_peer_receipt_required": false,
+    "independent_review_receipt_required": true,
+    "independent_review_eligible_invocation_receipt_required": true,
+    "independent_review_legacy_project_peer_receipt_supported": true,
+    "independent_review_native_lifecycle_receipt_supported": true,
+    "independent_review_cross_transport_attempt_consume_once": true,
     "request_revision_auto_starts_revise": false,
     "settlement_preflight_mutates_canon": false,
     "browser_project_registry_authority": false,
@@ -37,6 +42,21 @@
     "host_self_generated_manuscript_is_releaseable": false,
     "ephemeral_runtime_exact_git_identity_required": true,
     "production_checkpoint_manuscript_private_from_agent_package": true
+  },
+  "native_independent_review": {
+    "provider_ids": [
+      "codex_native_subagent",
+      "claude_native_subagent"
+    ],
+    "deprecated_input_aliases": {
+      "codex": "codex_native_subagent",
+      "claude": "claude_native_subagent"
+    },
+    "transports": [
+      "codex_native",
+      "claude_code_native"
+    ],
+    "assurance_class": "host_native_separate_context"
   },
   "secret_boundary": {
     "public_setup_inputs": [
@@ -105,6 +125,26 @@
         "cli",
         "local_app"
       ]
+    },
+    "project.projection.preview": {
+      "kind": "query",
+      "required_args": ["project_root"],
+      "allowed_surfaces": ["cli", "local_app", "hosted_web"]
+    },
+    "project.projection.apply": {
+      "kind": "command",
+      "required_args": ["project_root"],
+      "allowed_surfaces": ["cli", "local_app", "hosted_web"]
+    },
+    "project.projection.status": {
+      "kind": "query",
+      "required_args": ["project_root"],
+      "allowed_surfaces": ["cli", "local_app", "hosted_web"]
+    },
+    "project.projection.preflight": {
+      "kind": "query",
+      "required_args": ["project_root", "target_id", "stage"],
+      "allowed_surfaces": ["cli", "local_app", "hosted_web"]
     },
     "document.create": {
       "kind": "command",
@@ -183,8 +223,21 @@
         "project_id",
         "run_id",
         "peer_packet",
-        "result",
-        "bridge_receipt"
+        "result"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "author.run.independent.dispatch.prepare": {
+      "kind": "external_handoff_prepare",
+      "required_args": [
+        "project_id",
+        "run_id",
+        "provider",
+        "parent_session_id"
       ],
       "allowed_surfaces": [
         "cli",
@@ -479,6 +532,10 @@
     }
   },
   "deferred_operations": {
+    "author.run.independent.local.execute": {
+      "status": "awaiting_external",
+      "reason": "Project-free Codex and Claude local runners are implemented in Spec 022 Task 2"
+    },
     "project.delete": {
       "status": "unsupported",
       "reason": "no Core-owned reversible delete transaction yet"

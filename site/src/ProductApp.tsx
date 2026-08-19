@@ -24,7 +24,7 @@ import { ProductSectionHeading, ProductSurfaceHero } from "./ProductSurface";
 
 const siteCopy = { "en-US": enUS, "zh-CN": zhCN } as const;
 const studioUrl = "https://studio.quillframe.wei-dev.com";
-const productVersion = "0.9.x";
+const productVersion = "0.9.1";
 
 const homeEntryCopy = {
   "zh-CN": {

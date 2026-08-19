@@ -14,9 +14,9 @@ Begin with [Why Quillframe](why-quillframe.en.md) and [Architecture](architectur
 
 ## Model and Agent Runtime
 
-[Model Runtime](model-runtime.en.md) explains the ordinary `API Endpoint + Access Token` connection surface, model/protocol discovery, capability evidence, secret handling, and inference transport. [Agent Runtime](agent-runtime.en.md) explains AgentJob/Result, the Quillframe-owned model → tool → model loop, tool permissions, checkpoints, receipts, and the embeddable `quillframe` Python library.
+[Model Runtime](model-runtime.en.md) explains the ordinary `API Endpoint + Access Token` connection surface, model/protocol discovery, capability evidence, secret handling, and inference transport. [Agent Runtime](agent-runtime.en.md) explains the optional embedded AgentJob/Result loop, thin native-host adapters, tool permissions, checkpoints, receipts, and the embeddable `quillframe` Python library.
 
-Provider/vendor identity is diagnostic metadata at most. External models provide inference; Quillframe owns runtime semantics, tools, Context, authority, and project state.
+Provider/vendor identity is diagnostic metadata at most. Hosts run generic agent execution; Quillframe governs runtime contracts, Context, novel authority, and Project state.
 
 ## Writing
 

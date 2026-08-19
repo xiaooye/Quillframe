@@ -62,30 +62,7 @@ Claude Code and Codex are hosts. Neither host, its skills, its memory, nor its t
 
 
 def codex_hooks_json() -> str:
-    command = "quillframe codex-hook"
-    hook = {"type": "command", "command": command, "timeout": 30}
-    context_hook = {"type": "command", "command": command, "timeout": 30, "additionalContextLimit": 6000}
-    value = {
-        "description": "Quillframe Project bootstrap and execution guard. Review/trust with /hooks before use.",
-        "hooks": {
-            "SessionStart": [
-                {"matcher": "startup|resume|clear|compact", "hooks": [context_hook]},
-            ],
-            "UserPromptSubmit": [
-                {"hooks": [context_hook]},
-            ],
-            "PreToolUse": [
-                {"matcher": "Bash|apply_patch|Edit|Write", "hooks": [context_hook]},
-            ],
-            "PostToolUse": [
-                {"matcher": "Bash|apply_patch|Edit|Write", "hooks": [context_hook]},
-            ],
-            "SessionEnd": [
-                {"hooks": [hook]},
-            ],
-        },
-    }
-    return json.dumps(value, ensure_ascii=False, indent=2) + "\n"
+    return project_sdk().codex_hooks_json()
 
 
 def _atomic_write(path: Path, text: str) -> None:
@@ -124,13 +101,32 @@ def install_project_hosts(root: Path, *, force: bool = False) -> dict[str, Any]:
     generated_agents = sdk.agents_md()
     desired_claude = sdk.claude_md()
     desired_claude_settings = sdk.claude_settings_json()
-    desired_codex_hooks = codex_hooks_json()
+    desired_codex_hooks = sdk.codex_hooks_json()
+    desired_codex_reviewer = sdk.codex_independent_reviewer_toml()
+    desired_claude_reviewer = sdk.claude_independent_reviewer_md()
+    framework_hint_path = root / ".quillframe" / "hosts" / "framework_root.txt"
+    desired_framework_hint = str(ROOT) + "\n"
+    framework_hint_changed = (
+        not framework_hint_path.exists()
+        or framework_hint_path.read_text(encoding="utf-8") != desired_framework_hint
+    )
+    _atomic_write(framework_hint_path, desired_framework_hint)
 
     specs = [
         (root / "AGENTS.md", desired_agents, {generated_agents, desired_agents}),
         (root / "CLAUDE.md", desired_claude, {desired_claude}),
         (root / ".claude" / "settings.json", desired_claude_settings, {desired_claude_settings}),
         (root / ".codex" / "hooks.json", desired_codex_hooks, {desired_codex_hooks}),
+        (
+            root / ".codex" / "agents" / "quillframe-independent-reviewer.toml",
+            desired_codex_reviewer,
+            {desired_codex_reviewer},
+        ),
+        (
+            root / ".claude" / "agents" / "quillframe-independent-reviewer.md",
+            desired_claude_reviewer,
+            {desired_claude_reviewer},
+        ),
     ]
     results: dict[str, str] = {}
     warnings: list[str] = []
@@ -140,8 +136,13 @@ def install_project_hosts(root: Path, *, force: bool = False) -> dict[str, Any]:
         if warning:
             warnings.append(warning)
 
+    sdk.write_framework_root_hint(root, ROOT)
+
     changed = sorted(path for path, status in results.items() if status in {"created", "updated"})
     manual = sorted(path for path, status in results.items() if status == "manual_merge_required")
+    if framework_hint_changed:
+        changed.append(".quillframe/hosts/framework_root.txt")
+        changed.sort()
     return {
         "schema": "quillframe_host_install_v1",
         "project_root": str(root),

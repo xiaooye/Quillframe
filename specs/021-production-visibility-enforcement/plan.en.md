@@ -9,9 +9,9 @@
 5. Expose `candidate.visible.get` through Host Bridge and close the `agent_package → raw production checkpoints` pre-release manuscript bypass.
 6. Constrain conversational-sandbox manager execution to a loopback OpenAI-compatible relay using atomic request/response files. The relay is transport only and explicitly cannot satisfy independent review.
 7. Repair the Project peer receipt CLI `build/validate` commands so the existing manual peer workflow is actually executable.
-8. Add GitHub Models `review` mode to the Project peer action. The model returns semantic judgment only; the deterministic bridge binds exact job/fingerprint/nonce/provider/runtime receipt evidence.
+8. Keep the historical GitHub Models design note as superseded; the released compatibility mode is `github_copilot_actions`. It returns semantic judgment only; the deterministic bridge binds exact job/fingerprint/nonce/provider/runtime receipt evidence.
 9. Add registered-contract dry preflight for `rule_material` so malformed schema fails before any Context/Story/Raw Draft semantic execution.
-10. Add regressions for missing/tampered/mismatched release, checkpoint leakage, fabricated host booleans, relay atomicity, GitHub Models provider nonce binding, peer receipt CLI, rule-material fail-fast, and valid release success.
+10. Add regressions for missing/tampered/mismatched release, checkpoint leakage, fabricated host booleans, relay atomicity, unsupported-provider rejection, peer receipt CLI, rule-material fail-fast, and valid release success.
 11. Run complete Framework CI; download the final exact-head artifact and rerun the complete tests in the current ChatGPT Linux container.
 12. Execute a real DRAFT through the localhost manager relay to independent handoff; use a Project-owned independent provider to complete peer review, submit, production release, and `candidate.visible.get`.
 13. Surface the new school-drama candidate to the user for manual quality review only after final release.

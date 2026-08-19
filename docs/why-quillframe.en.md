@@ -10,7 +10,7 @@ A useful fiction framework cannot make a deterministic script decide whether a r
 
 Quillframe therefore separates semantic ownership from deterministic ownership. Models or humans make judgments that require meaning. Code proves identities, permissions, fingerprints, lifecycle, provenance, transactions, and reproducibility.
 
-The same boundary applies to model execution: users connect inference with `API Endpoint + Access Token`; Quillframe owns discovery, capability evidence, model selection, tools, sessions, Context, authority, and the agent loop. Vendor identity is not the product authority.
+The same boundary applies to model execution: users connect inference with `API Endpoint + Access Token`; the host runs the generic agent loop, while Quillframe governs the novel contract, Context, artifact identity, authority, and release boundaries. Vendor identity is not product authority.
 
 ## Long-form work needs authority, not just memory
 

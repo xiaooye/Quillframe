@@ -1,4 +1,25 @@
-# NovelForge Changelog · 中文版
+# Quillframe 变更记录 · 中文版
+
+## 0.9.1 · 小说原生宿主边界
+
+Quillframe v0.9.1 将产品边界收敛为小说契约内核：**宿主运行 Agent，Quillframe 管理小说**。Codex / Claude 原生评审 adapter 消费同一份 exact frozen packet；Project projection、受限 Context、candidate 可见性、独立评审以及 Acceptance / Settlement 仍由 Core 契约负责。
+
+### 已包含
+
+- Codex / Claude 原生评审生命周期 hook：可信的父子 session 隔离、评审工具拒绝、exact packet / nonce 绑定、lease fencing、一次性消费证据与崩溃恢复。
+- 确定性的 mapped Project projection preview / apply / status / preflight：source fingerprint、事务 CAS、可重建 SQLite projection、按阶段受限的 Context 与零模型预检。
+- 成对的 Novel-Native Host Boundary 文档，并明确 novelist-facing、internal/ops 与 privileged author 三类 surface。
+- Framework、CLI、Project SDK、MCP metadata、Host Bridge、Studio、site 与 Tauri packaging 的 v0.9.1 版本身份统一。
+
+### 已知限制
+
+- 内置 Agent / Model Runtime 仍是 optional/reference implementation；通用 session、model/tool、sandbox 与 subagent 执行由宿主负责。
+- Acceptance 与 Settlement 仍是作者明确控制的独立操作，不会成为普通 Agent authority。
+- hosted multi-user、完整 Studio 重构、全量 benchmark corpus、插件生态、云部署和完整 typesetting 仍属于 v0.9.1 之后的 backlog。
+
+### 发布证据
+
+v0.9.1 必须绑定一个 exact main commit、确定性 Framework bundle fingerprint、CI 结果和可下载 checksum manifest。本地构建或等待评审的状态都不能冒充已发布 release。
 
 ## 0.8.0 · 当前 pre-1.0 开发基线
 

@@ -25,6 +25,10 @@ from model_runtime.service_facade import ModelServiceFacade
 from persistence.context_repository import ContextRepository
 from persistence.quillframe_sqlite import ConflictError, IntegrityError, QuillframeStore
 from production_runtime import ProductionRunError, ProductionRunExecutor
+from harness.project_projection import apply as projection_apply
+from harness.project_projection import preflight as projection_preflight
+from harness.project_projection import preview as projection_preview
+from harness.project_projection import status as projection_status
 
 CONTRACT_PATH = Path(__file__).with_name("host_bridge_contract.json")
 REQUEST_SCHEMA = "quillframe_studio_host_bridge_request_v1"
@@ -141,7 +145,7 @@ def _describe(_: dict[str, Any], surface: str):
     c = contract()
     return {
         "schema": "quillframe_host_bridge_description_v1",
-        "framework_version": "0.9.0",
+        "framework_version": "0.9.1",
         "contract_version": c["version"],
         "surface": surface,
         "operations": sorted(c["operations"]),
@@ -184,6 +188,34 @@ def _project_backup(args: dict[str, Any], _: str):
 def _project_restore(args: dict[str, Any], _: str):
     loc = store().restore_project(Path(require(args, "bundle_path")), replace=args.get("replace") is True)
     return {"schema": "quillframe_restore_result_v1", "project_id": loc.project_id, "restored": True, "authority": False}
+
+
+def _projection_preview(args: dict[str, Any], _: str):
+    return projection_preview(Path(require(args, "project_root")))
+
+
+def _projection_apply(args: dict[str, Any], _: str):
+    data_dir = Path(args["data_dir"]) if args.get("data_dir") else None
+    return projection_apply(
+        Path(require(args, "project_root")),
+        data_dir=data_dir,
+        expected_projection_fingerprint=args.get("expected_projection_fingerprint"),
+    )
+
+
+def _projection_status(args: dict[str, Any], _: str):
+    data_dir = Path(args["data_dir"]) if args.get("data_dir") else None
+    return projection_status(Path(require(args, "project_root")), data_dir=data_dir)
+
+
+def _projection_preflight(args: dict[str, Any], _: str):
+    data_dir = Path(args["data_dir"]) if args.get("data_dir") else None
+    return projection_preflight(
+        Path(require(args, "project_root")),
+        require(args, "target_id"),
+        require(args, "stage"),
+        data_dir=data_dir,
+    )
 
 
 def _document_list(args: dict[str, Any], _: str):
@@ -261,12 +293,29 @@ def _author_run_execute(args: dict[str, Any], _: str):
 
 
 def _author_independent_submit(args: dict[str, Any], _: str):
+    independence_receipt = args.get("independence_receipt")
+    bridge_receipt = args.get("bridge_receipt")
+    if (independence_receipt is None) == (bridge_receipt is None):
+        raise BridgeError(
+            "independence_receipt_invalid",
+            "exactly one of independence_receipt or deprecated bridge_receipt is required",
+        )
     return production_runtime().submit_independent(
         require(args, "project_id"),
         require(args, "run_id"),
         peer_packet=require(args, "peer_packet", dict),
         result=require(args, "result", dict),
-        bridge_receipt=require(args, "bridge_receipt", dict),
+        independence_receipt=require(args, "independence_receipt", dict) if independence_receipt is not None else None,
+        bridge_receipt=require(args, "bridge_receipt", dict) if bridge_receipt is not None else None,
+    )
+
+
+def _author_independent_dispatch_prepare(args: dict[str, Any], _: str):
+    return production_runtime().prepare_independent_dispatch(
+        require(args, "project_id"),
+        require(args, "run_id"),
+        provider=require(args, "provider"),
+        parent_session_id=require(args, "parent_session_id"),
     )
 
 
@@ -401,6 +450,10 @@ DISPATCH: dict[str, Callable[[dict[str, Any], str], dict[str, Any]]] = {
     "project.search": _project_search,
     "project.backup": _project_backup,
     "project.restore": _project_restore,
+    "project.projection.preview": _projection_preview,
+    "project.projection.apply": _projection_apply,
+    "project.projection.status": _projection_status,
+    "project.projection.preflight": _projection_preflight,
     "document.create": _document_create,
     "document.list": _document_list,
     "document.open": _document_open,
@@ -411,6 +464,7 @@ DISPATCH: dict[str, Callable[[dict[str, Any], str], dict[str, Any]]] = {
     "author.run.status": _author_run_status,
     "author.run.execute": _author_run_execute,
     "author.run.independent.submit": _author_independent_submit,
+    "author.run.independent.dispatch.prepare": _author_independent_dispatch_prepare,
     "author.run.context.refresh": _author_context_refresh,
     "model.service.add": _model_add,
     "model.service.list": _model_list,
@@ -510,7 +564,7 @@ def self_test() -> dict[str, Any]:
     first = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "A"}, "authority": False})
     second = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "B"}, "authority": False})
     ok = desc["status"] == "ok" and generic["status"] == "invalid" and desc["authority"] is False and first["request_fingerprint"] == second["request_fingerprint"] and first["secret_values_persisted"] is False
-    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": "9", "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
+    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": contract()["version"], "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
 
 
 def main() -> int:

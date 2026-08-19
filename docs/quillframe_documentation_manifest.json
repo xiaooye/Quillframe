@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_public_documentation_manifest_v1",
-  "framework_version": "0.9.0",
+  "framework_version": "0.9.1",
   "target_main": "58e0c616960f68571a56c808e7770c4307e053ff",
   "public_brand": "Quillframe",
   "legacy_technical_namespace": "quillframe",

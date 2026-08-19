@@ -48,6 +48,11 @@ TASK_MODES = {
 FRAMEWORK_TASK_MODES = {"SYSTEM-IMPROVE", "AUDIT", "RESEARCH"}
 CONSEQUENTIAL_TOOLS = {"Bash", "Edit", "Write", "apply_patch"}
 SHELL_META = set(";&|><\n\r`$")
+NATIVE_REVIEWER_AGENT_TYPE = "quillframe-independent-reviewer"
+NATIVE_REVIEWER_PROVIDER = {
+    "codex": "codex_native_subagent",
+    "claude_code": "claude_native_subagent",
+}
 
 
 def _load_source_module(name: str, path: Path) -> ModuleType:
@@ -469,6 +474,215 @@ def hook_json(
     return {"hookSpecificOutput": specific}
 
 
+def _native_reviewer_identity(host: str, event: dict[str, Any]) -> dict[str, str]:
+    """Extract lifecycle identity only from trusted host event fields."""
+    if host == "claude_code":
+        parent_native = event.get("session_id")
+        agent_id = event.get("agent_id")
+        agent_type = event.get("agent_type")
+        invocation_id = event.get("invocation_id") or agent_id
+    elif host == "codex":
+        parent_native = event.get("parent_session_id")
+        agent_id = event.get("subagent_id")
+        agent_type = event.get("subagent_type")
+        invocation_id = event.get("invocation_id") or agent_id
+    else:
+        raise ValueError(f"unsupported host: {host}")
+    if not all(isinstance(value, str) and value.strip() for value in (parent_native, agent_id, agent_type, invocation_id)):
+        raise ValueError("native reviewer lifecycle identity is incomplete")
+    if agent_type != NATIVE_REVIEWER_AGENT_TYPE:
+        raise ValueError("native reviewer agent type is not trusted")
+    return {
+        "parent_session_id": host_session_id(host, parent_native.strip()),
+        "host_agent_id": agent_id.strip(),
+        "host_invocation_id": invocation_id.strip(),
+        "agent_type": agent_type,
+    }
+
+
+def _native_reviewer_state_path(state_root: Path, identity: dict[str, str]) -> Path:
+    safe = hashlib.sha256(
+        (identity["parent_session_id"] + "\0" + identity["host_agent_id"] + "\0" + identity["host_invocation_id"]).encode("utf-8")
+    ).hexdigest()
+    return state_root / ".quillframe" / "native-reviewers" / f"{safe}.json"
+
+
+def _native_reviewer_packet_from_bytes(packet_bytes: Any) -> dict[str, Any]:
+    if not isinstance(packet_bytes, str) or not packet_bytes:
+        raise ValueError("native claim did not contain exact frozen packet bytes")
+    try:
+        packet = json.loads(packet_bytes)
+    except json.JSONDecodeError as exc:
+        raise ValueError("native frozen packet is not valid JSON") from exc
+    if not isinstance(packet, dict):
+        raise ValueError("native frozen packet must be a JSON object")
+    canonical = json.dumps(packet, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    if packet_bytes != canonical:
+        raise ValueError("native frozen packet bytes are not canonical")
+    relay = _load_source_module(
+        "quillframe_native_peer_chat_relay",
+        ROOT / "harness" / "semantic_workers" / "peer_chat_relay.py",
+    )
+    errors = relay.validate_packet(packet)
+    binding = packet.get("return_binding")
+    if isinstance(binding, dict) and binding.get("run_reference") != packet.get("relay_nonce"):
+        errors.append("packet return_binding/run_reference mismatch")
+    if not isinstance(binding, dict):
+        errors.append("packet return_binding is required")
+    if errors:
+        raise ValueError("native frozen packet invalid: " + "; ".join(errors))
+    return packet
+
+
+def _native_reviewer_packet_context(claim: dict[str, Any]) -> str:
+    packet_bytes = claim.get("packet_bytes")
+    packet = _native_reviewer_packet_from_bytes(packet_bytes)
+    return json.dumps(
+        {
+            "schema": "quillframe_native_reviewer_context_v1",
+            "instruction": "Judge only this exact frozen packet and return one JSON judgment object.",
+            "frozen_packet": packet,
+            "permissions": {
+                "project": False,
+                "filesystem": False,
+                "shell": False,
+                "network": False,
+                "memory": False,
+                "write": False,
+            },
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _write_native_reviewer_state(state_path: Path, state: dict[str, Any]) -> None:
+    state_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(state_path.parent, 0o700)
+    temp = state_path.with_suffix(".tmp")
+    payload = json.dumps(state, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    descriptor = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            descriptor = -1
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temp, state_path)
+        os.chmod(state_path, 0o600)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        try:
+            temp.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def _remove_native_reviewer_state(state_path: Path) -> None:
+    try:
+        state_path.unlink()
+    except FileNotFoundError:
+        pass
+    try:
+        state_path.parent.rmdir()
+    except (FileNotFoundError, OSError):
+        pass
+
+
+def _native_reviewer_judgment(event: dict[str, Any]) -> dict[str, Any]:
+    raw = event.get("last_assistant_message") if isinstance(event.get("last_assistant_message"), str) else event.get("response")
+    if not isinstance(raw, str) or not raw.strip():
+        raise ValueError("native_reviewer_output_missing")
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError("native_reviewer_output_invalid_json") from exc
+    if not isinstance(value, dict):
+        raise ValueError("native_reviewer_output_not_object")
+    return value
+
+
+def _native_reviewer_runtime(runtime: Any | None) -> Any:
+    if runtime is not None:
+        return runtime
+    from studio.host_bridge import production_runtime
+    return production_runtime()
+
+
+def native_reviewer_hook(
+    host: str,
+    event: dict[str, Any],
+    *,
+    project_id: str,
+    state_root: Path,
+    runtime: Any | None = None,
+) -> dict[str, Any]:
+    """Run native reviewer lifecycle; host attestation is not OS isolation."""
+    identity = _native_reviewer_identity(host, event)
+    runtime = _native_reviewer_runtime(runtime)
+    event_name = str(event.get("hook_event_name") or "")
+    state_path = _native_reviewer_state_path(state_root, identity)
+    if event_name == "SubagentStart":
+        claim = runtime.claim_independent_dispatch(
+            project_id,
+            provider=NATIVE_REVIEWER_PROVIDER[host],
+            parent_session_id=identity["parent_session_id"],
+            agent_type=identity["agent_type"],
+            host_agent_id=identity["host_agent_id"],
+            host_invocation_id=identity["host_invocation_id"],
+        )
+        reviewer_session_id = claim.get("reviewer_session_id")
+        if not isinstance(reviewer_session_id, str) or not reviewer_session_id:
+            raise ValueError("native claim did not create a reviewer session")
+        if reviewer_session_id == identity["parent_session_id"]:
+            raise ValueError("native reviewer session must differ from parent session")
+        context = _native_reviewer_packet_context(claim)
+        state = {
+            "schema": "quillframe_native_reviewer_hook_state_v3",
+            "lease_id": claim.get("lease_id"),
+            "provider": claim.get("provider"),
+            "reviewer_session_id": reviewer_session_id,
+        }
+        _write_native_reviewer_state(state_path, state)
+        return hook_json(event_name, context=context)
+    if event_name == "PreToolUse":
+        return hook_json(
+            event_name,
+            decision="deny",
+            reason="Quillframe native reviewer is JSON-only and has no tool, filesystem, network, memory, or write access.",
+        )
+    if event_name == "SubagentStop":
+        if not state_path.is_file():
+            raise ValueError("native_reviewer_state_missing")
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        try:
+            judgment = _native_reviewer_judgment(event)
+        except ValueError as exc:
+            runtime.fail_independent_dispatch(
+                project_id,
+                lease_id=state["lease_id"],
+                reviewer_session_id=state["reviewer_session_id"],
+                host_agent_id=identity["host_agent_id"],
+                host_invocation_id=identity["host_invocation_id"],
+                error={"code": str(exc), "kind": "infrastructure"},
+            )
+            _remove_native_reviewer_state(state_path)
+            return hook_json(event_name)
+        runtime.complete_independent_judgment(
+            project_id,
+            lease_id=state["lease_id"],
+            reviewer_session_id=state["reviewer_session_id"],
+            host_agent_id=identity["host_agent_id"],
+            host_invocation_id=identity["host_invocation_id"],
+            judgment=judgment,
+        )
+        _remove_native_reviewer_state(state_path)
+        return hook_json(event_name)
+    return hook_json(event_name)
+
+
 def normalize_tool(host: str, tool_name: str) -> str:
     if host == "codex" and tool_name == "apply_patch":
         return "apply_patch"
@@ -684,12 +898,32 @@ def main_for_host(host: str) -> int:
         event = json.load(sys.stdin)
         if not isinstance(event, dict):
             raise ValueError("hook input must be object")
-        native = str(event.get("session_id") or "")
-        if not native:
-            return 0
         cwd = Path(str(event.get("cwd") or os.getcwd()))
         project_root = find_project_root(cwd)
         name = str(event.get("hook_event_name") or "")
+        reviewer_type = event.get("agent_type") if host == "claude_code" else event.get("subagent_type")
+        native = str(
+            (event.get("session_id") if host == "claude_code" else event.get("parent_session_id"))
+            or event.get("session_id")
+            or ""
+        )
+        if not native and reviewer_type != NATIVE_REVIEWER_AGENT_TYPE:
+            return 0
+        if reviewer_type == NATIVE_REVIEWER_AGENT_TYPE:
+            if project_root is None:
+                raise ValueError("native reviewer requires a mapped Project root")
+            manifest = project_sdk().load_manifest(project_root)
+            project_id = str((manifest.get("project") or {}).get("id") or event.get("project_id") or "")
+            if not project_id:
+                raise ValueError("native reviewer Project identity is missing")
+            output = native_reviewer_hook(
+                host,
+                event,
+                project_id=project_id,
+                state_root=project_root,
+            )
+            print(json.dumps(output, ensure_ascii=False))
+            return 0
         snapshot = build_snapshot(
             host,
             native,

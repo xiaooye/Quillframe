@@ -14,11 +14,11 @@
 - [x] Drive the real DRAFT pre-independent graph through a localhost Model Service relay to `awaiting_external / independent_semantic_review` while Raw Draft/Candidate remain hidden.
 - [x] Productize the tested localhost relay with loopback-only atomic request/response and manager-only, non-independent provenance.
 - [x] Repair missing Project peer receipt CLI `build/validate` execution surface.
-- [x] Register `github_models` as an auditable independent provider and add automated `review` mode to the Project peer action.
+- [x] Historical `github_models` design recorded as superseded; released automated compatibility mode uses `github_copilot_actions`.
 - [x] Add registered-contract deterministic fail-fast preflight for `rule_material` plus regressions.
 - [ ] Latest Framework head passes complete Python/Core/Host Bridge/Studio/site/Tauri CI.
 - [ ] Download latest exact-head artifact and rerun the final complete tests in the ChatGPT Linux container.
-- [ ] Run one live GitHub Models peer inference in the private consumer Project with `models: read` and obtain a fingerprint/nonce-bound validation receipt.
+- [ ] Run one live remote compatibility peer inference in a private consumer Project only when billing/permissions allow; this is not required by the local v0.9.1 acceptance path.
 - [ ] Submit that receipt/result to the pending DRAFT run and verify final production release plus `candidate.visible.get`.
 - [ ] Run a fresh school-drama DRAFT with complete Project hard-rule material and surface it only after release for user review.
 - [ ] Record final verification evidence in PR and mark ready/merge only after every acceptance criterion passes.

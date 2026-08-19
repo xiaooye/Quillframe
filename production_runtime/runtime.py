@@ -1,11 +1,23 @@
 from __future__ import annotations
 
+import json
 import uuid
+from collections.abc import Callable
 from copy import deepcopy
 from typing import Any
 
 from harness.context_runtime import canonical_json, fingerprint, stage_context
-from persistence.quillframe_sqlite import ConflictError, fingerprint_text, now_iso
+from harness.semantic_workers.independent_invocation_receipt import (
+    PROVIDERS as INDEPENDENT_PROVIDER_CONTRACTS,
+    SCHEMA as INDEPENDENT_INVOCATION_RECEIPT_SCHEMA,
+    build_receipt as build_independent_invocation_receipt,
+    fingerprint as independent_fingerprint,
+    validate_receipt as validate_independent_invocation_receipt,
+)
+from harness.semantic_workers.peer_bridge_receipt import LEGACY_SCHEMA as PROJECT_PEER_VALIDATION_RECEIPT_SCHEMA
+from harness.semantic_workers.peer_chat_relay import validate_peer_result
+from persistence.independent_review_repository import IndependentReviewError, IndependentReviewRepository
+from persistence.quillframe_sqlite import fingerprint_text, now_iso
 
 from .context import ProductionContextRuntime
 from .contracts import (
@@ -171,15 +183,26 @@ class ProductionRunExecutor(ProductionContextRuntime):
         receipt["stage_result_fingerprint"] = fingerprint({key: value for key, value in receipt.items() if key != "stage_result_fingerprint"})
         return receipt
 
-    def _persist_stage_receipt(self, project_id: str, run_id: str, receipt: dict[str, Any]) -> None:
+    def _persist_stage_receipt(
+        self,
+        project_id: str,
+        run_id: str,
+        receipt: dict[str, Any],
+        *,
+        effect_guard: Callable[[Any], None] | None = None,
+    ) -> None:
         assert_secret_free(receipt, label="production stage receipt")
         key = f"{run_id}:stage:{receipt['mechanism']}"
         with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            if effect_guard is not None:
+                effect_guard(conn)
             existing = conn.execute("SELECT payload_json FROM receipts WHERE idempotency_key=?", (key,)).fetchone()
             if existing:
                 prior = _json(existing["payload_json"], {})
                 if prior.get("stage_result_fingerprint") != receipt.get("stage_result_fingerprint"):
                     raise ProductionRunError("stage_replay_conflict", f"stage receipt changed for immutable idempotency key: {key}")
+                conn.commit()
                 return
             conn.execute(
                 "INSERT INTO receipts(receipt_id,run_id,receipt_kind,idempotency_key,payload_json,created_at) VALUES(?,?,?,?,?,?)",
@@ -218,10 +241,71 @@ class ProductionRunExecutor(ProductionContextRuntime):
             ).fetchone()
         return _json(row["state_json"], {}) if row else None
 
-    def _persist_release_receipt(self, project_id: str, run_id: str, release: dict[str, Any]) -> None:
+    def _latest_independent_handoff(self, project_id: str, run_id: str) -> dict[str, Any] | None:
+        """Load the frozen handoff and backfill pre-v10 packet bytes once.
+
+        The existing packet object is canonicalized directly. No packet builder,
+        nonce generation, or semantic reconstruction is permitted here.
+        """
+        with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                """SELECT state_json,artifact_fingerprint FROM checkpoints
+                WHERE run_id=? AND checkpoint_kind='production_independent_handoff'
+                ORDER BY created_at DESC,rowid DESC LIMIT 1""",
+                (run_id,),
+            ).fetchone()
+            if not row:
+                conn.commit()
+                return None
+            handoff = _json(row["state_json"], {})
+            packet = handoff.get("peer_packet")
+            if not isinstance(packet, dict):
+                raise ProductionRunError(
+                    "independent_handoff_migration_required",
+                    "pending independent handoff has no typed frozen peer packet",
+                )
+            exact_bytes = canonical_json(packet)
+            stored_bytes = handoff.get("peer_packet_bytes")
+            if stored_bytes is None:
+                upgraded = {**handoff, "peer_packet_bytes": exact_bytes}
+                assert_secret_free(upgraded, label="production_independent_handoff")
+                conn.execute(
+                    """INSERT INTO checkpoints(
+                    checkpoint_id,run_id,checkpoint_kind,state_json,artifact_fingerprint,created_at
+                    ) VALUES(?,?,'production_independent_handoff',?,?,?)""",
+                    (
+                        "ckpt_" + uuid.uuid4().hex,
+                        run_id,
+                        canonical_json(upgraded),
+                        row["artifact_fingerprint"],
+                        now_iso(),
+                    ),
+                )
+                conn.commit()
+                return upgraded
+            if not isinstance(stored_bytes, str) or stored_bytes != exact_bytes:
+                raise ProductionRunError(
+                    "independent_packet_mismatch",
+                    "pending independent handoff packet bytes do not match its frozen packet",
+                )
+            conn.commit()
+            return handoff
+
+    def _persist_release_receipt(
+        self,
+        project_id: str,
+        run_id: str,
+        release: dict[str, Any],
+        *,
+        effect_guard: Callable[[Any], None] | None = None,
+    ) -> None:
         assert_secret_free(release, label="production release")
         key = f"{run_id}:production_release"
         with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            if effect_guard is not None:
+                effect_guard(conn)
             existing = conn.execute(
                 "SELECT payload_json FROM receipts WHERE receipt_kind='production_release' AND idempotency_key=?",
                 (key,),
@@ -230,6 +314,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 prior = _json(existing["payload_json"], {})
                 if prior.get("release_fingerprint") != release.get("release_fingerprint"):
                     raise ProductionRunError("production_release_replay_conflict", "production release changed for immutable run")
+                conn.commit()
                 return
             conn.execute(
                 "INSERT INTO receipts(receipt_id,run_id,receipt_kind,idempotency_key,payload_json,created_at) VALUES(?,?,?,?,?,?)",
@@ -248,40 +333,10 @@ class ProductionRunExecutor(ProductionContextRuntime):
         independent_binding: dict[str, Any],
         readiness: dict[str, Any],
         release: dict[str, Any],
+        *,
+        effect_guard: Callable[[Any], None],
     ) -> dict[str, Any]:
-        with self.store.open_project(project_id) as conn:
-            document = conn.execute("SELECT document_id FROM documents WHERE document_id=?", (document_id,)).fetchone()
-            if not document:
-                raise ProductionRunError("target_document_required", f"production candidate target document does not exist: {document_id}")
-            latest = self.store.latest_revision(conn, document_id)
-            parent_id = latest["revision_id"] if latest else None
-        try:
-            revision = self.store.save_revision(
-                project_id,
-                document_id,
-                text,
-                expected_parent_revision_id=parent_id,
-                source="production_runtime",
-                authority_class="review",
-                provenance={
-                    "run_id": run["run_id"],
-                    "context_bundle_fingerprint": bundle["bundle_fingerprint"],
-                    "freeze_fingerprint": bundle["freeze"]["freeze_fingerprint"],
-                    "production_readiness_schema": readiness.get("schema"),
-                    "production_release_fingerprint": release.get("release_fingerprint"),
-                    "authority": False,
-                },
-            )
-        except ConflictError as exc:
-            raise ProductionRunError("revision_conflict", str(exc)) from exc
-        if revision["content_fingerprint"] != candidate_fingerprint:
-            raise ProductionRunError("candidate_fingerprint_mismatch", "diagnostic candidate changed before Review Draft persistence")
-
-        candidate_id = "cand_" + uuid.uuid4().hex
-        review_id = "review_" + uuid.uuid4().hex
-        candidate_kind = "draft" if run["task_mode"] == "DRAFT" else "repair"
-        stamp = now_iso()
-        bridge_receipt = independent_binding["bridge_receipt"]
+        independence_receipt = independent_binding["independence_receipt"]
         independent_result = independent_binding["result"]
         review_public = {
             "model_contract_id": "quality.production_review",
@@ -289,17 +344,98 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "worker": independent_result.get("worker"),
             "job_id": independent_result.get("job_id"),
             "input_fingerprint": independent_result.get("input_fingerprint"),
-            "bridge_receipt": bridge_receipt,
+            "independence_receipt": independence_receipt,
+            **({"bridge_receipt": independence_receipt} if independence_receipt.get("schema") != INDEPENDENT_INVOCATION_RECEIPT_SCHEMA else {}),
             "production_readiness": readiness,
+            "submission_evidence_fingerprint": independent_binding["submission_evidence_fingerprint"],
             "private_reasoning_exposed": False,
             "authority": False,
         }
         assert_secret_free(review_public, label="independent review evidence")
         with self.store.open_project(project_id) as conn:
             conn.execute("BEGIN IMMEDIATE")
+            effect_guard(conn)
+            existing = conn.execute(
+                "SELECT candidate_id,revision_id,status,content_fingerprint,user_visible_gate FROM candidates WHERE run_id=? ORDER BY created_at,rowid",
+                (run["run_id"],),
+            ).fetchall()
+            if existing:
+                if len(existing) != 1 or existing[0]["content_fingerprint"] != candidate_fingerprint:
+                    raise ProductionRunError(
+                        "candidate_replay_conflict",
+                        "production run already persisted a different or ambiguous candidate",
+                    )
+                evidence = conn.execute(
+                    "SELECT candidate_fingerprint,result_json FROM review_evidence WHERE candidate_id=? AND independent=1",
+                    (existing[0]["candidate_id"],),
+                ).fetchall()
+                prior_evidence = _json(evidence[0]["result_json"], {}) if len(evidence) == 1 else {}
+                if (
+                    len(evidence) != 1
+                    or evidence[0]["candidate_fingerprint"] != candidate_fingerprint
+                    or prior_evidence.get("submission_evidence_fingerprint")
+                    != independent_binding.get("submission_evidence_fingerprint")
+                ):
+                    raise ProductionRunError(
+                        "candidate_replay_conflict",
+                        "persisted production candidate lacks exact independent review evidence",
+                    )
+                conn.commit()
+                return {
+                    "candidate_id": existing[0]["candidate_id"],
+                    "revision_id": existing[0]["revision_id"],
+                    "candidate_fingerprint": candidate_fingerprint,
+                    "status": existing[0]["status"],
+                    "user_visible_gate": existing[0]["user_visible_gate"],
+                    "production_release_fingerprint": release.get("release_fingerprint"),
+                    "authority": False,
+                }
+            document = conn.execute("SELECT document_id FROM documents WHERE document_id=?", (document_id,)).fetchone()
+            if not document:
+                raise ProductionRunError("target_document_required", f"production candidate target document does not exist: {document_id}")
+            latest = self.store.latest_revision(conn, document_id)
+            parent_id = latest["revision_id"] if latest else None
+            content_fingerprint = fingerprint_text(text)
+            if content_fingerprint != candidate_fingerprint:
+                raise ProductionRunError("candidate_fingerprint_mismatch", "diagnostic candidate changed before Review Draft persistence")
+            revision = conn.execute(
+                "SELECT revision_id FROM document_revisions WHERE document_id=? AND content_fingerprint=?",
+                (document_id, content_fingerprint),
+            ).fetchone()
+            revision_id = revision["revision_id"] if revision else "rev_" + uuid.uuid4().hex
+            if not revision:
+                conn.execute(
+                    """INSERT INTO document_revisions(
+                    revision_id,document_id,parent_revision_id,content,content_fingerprint,created_at,source,authority_class,provenance_json
+                    ) VALUES(?,?,?,?,?,?,?,?,?)""",
+                    (
+                        revision_id,
+                        document_id,
+                        parent_id,
+                        text,
+                        content_fingerprint,
+                        now_iso(),
+                        "production_runtime",
+                        "review",
+                        canonical_json({
+                            "run_id": run["run_id"],
+                            "context_bundle_fingerprint": bundle["bundle_fingerprint"],
+                            "freeze_fingerprint": bundle["freeze"]["freeze_fingerprint"],
+                            "production_readiness_schema": readiness.get("schema"),
+                            "production_release_fingerprint": release.get("release_fingerprint"),
+                            "authority": False,
+                        }),
+                    ),
+                )
+                title = conn.execute("SELECT title FROM documents WHERE document_id=?", (document_id,)).fetchone()["title"]
+                self.store.index_search(conn, "document", document_id, title, text, commit=False)
+            candidate_id = "cand_" + uuid.uuid4().hex
+            review_id = "review_" + uuid.uuid4().hex
+            candidate_kind = "draft" if run["task_mode"] == "DRAFT" else "repair"
+            stamp = now_iso()
             conn.execute(
                 "INSERT INTO candidates(candidate_id,document_id,revision_id,run_id,task_mode,candidate_kind,status,content_fingerprint,user_visible_gate,created_at) VALUES(?,?,?,?,?,?,'review_draft',?,'PASS',?)",
-                (candidate_id, document_id, revision["revision_id"], run["run_id"], run["task_mode"], candidate_kind, candidate_fingerprint, stamp),
+                (candidate_id, document_id, revision_id, run["run_id"], run["task_mode"], candidate_kind, candidate_fingerprint, stamp),
             )
             conn.execute(
                 "INSERT INTO review_evidence(review_id,candidate_id,evidence_kind,result_json,candidate_fingerprint,reviewer_fingerprint,independent,stale,created_at) VALUES(?,?,?,?,?,?,1,0,?)",
@@ -309,14 +445,14 @@ class ProductionRunExecutor(ProductionContextRuntime):
                     "quality.production_review",
                     canonical_json(review_public),
                     candidate_fingerprint,
-                    bridge_receipt.get("result_fingerprint"),
+                    independence_receipt.get("result_fingerprint"),
                     stamp,
                 ),
             )
             conn.commit()
         return {
             "candidate_id": candidate_id,
-            "revision_id": revision["revision_id"],
+            "revision_id": revision_id,
             "candidate_fingerprint": candidate_fingerprint,
             "status": "review_draft",
             "user_visible_gate": "PASS",
@@ -324,14 +460,492 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "authority": False,
         }
 
-    def _completed_projection(self, project_id: str, run: dict[str, Any], bundle: dict[str, Any] | None) -> dict[str, Any] | None:
+    def _persist_candidate_ready_event(
+        self,
+        project_id: str,
+        run_id: str,
+        *,
+        candidate_id: str,
+        candidate_fingerprint: str,
+        context_bundle_fingerprint: str,
+        independent_result_fingerprint: str | None,
+        effect_guard: Callable[[Any], None],
+    ) -> None:
+        payload = {
+            "candidate_id": candidate_id,
+            "candidate_fingerprint": candidate_fingerprint,
+            "context_bundle_fingerprint": context_bundle_fingerprint,
+            "independent_result_fingerprint": independent_result_fingerprint,
+        }
+        with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            effect_guard(conn)
+            existing = conn.execute(
+                "SELECT payload_json FROM runtime_events WHERE run_id=? AND event_kind='production_candidate_ready' ORDER BY created_at,rowid",
+                (run_id,),
+            ).fetchall()
+            if existing:
+                if len(existing) != 1 or existing[0]["payload_json"] != canonical_json(payload):
+                    raise ProductionRunError(
+                        "candidate_ready_event_conflict",
+                        "production candidate-ready event changed for immutable run",
+                    )
+                conn.commit()
+                return
+            conn.execute(
+                "INSERT INTO runtime_events(event_id,run_id,event_kind,payload_json,created_at) VALUES(?,?,?,?,?)",
+                ("evt_" + uuid.uuid4().hex, run_id, "production_candidate_ready", canonical_json(payload), now_iso()),
+            )
+            conn.commit()
+
+    def _set_independent_run(
+        self,
+        project_id: str,
+        run_id: str,
+        status: str,
+        *,
+        effect_guard: Callable[[Any], None],
+        result_fingerprint: str | None = None,
+    ) -> None:
+        with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            effect_guard(conn)
+            conn.execute(
+                "UPDATE runs SET status=?,result_fingerprint=COALESCE(?,result_fingerprint),updated_at=? WHERE run_id=?",
+                (status, result_fingerprint, now_iso(), run_id),
+            )
+            conn.commit()
+
+    @staticmethod
+    def _lifecycle_receipt_event(event: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "event_id": event["event_id"],
+            "event_kind": event["event_kind"],
+            "event_fingerprint": event["event_fingerprint"],
+        }
+
+    @staticmethod
+    def _raise_independent_repository(exc: IndependentReviewError) -> None:
+        raise ProductionRunError(exc.code, str(exc), detail=exc.detail) from exc
+
+    def _assert_independent_project_identity(self, project_id: str) -> None:
+        try:
+            IndependentReviewRepository(self.store).assert_project_identity(project_id)
+        except IndependentReviewError as exc:
+            self._raise_independent_repository(exc)
+
+    def prepare_independent_dispatch(
+        self,
+        project_id: str,
+        run_id: str,
+        *,
+        provider: str,
+        parent_session_id: str,
+    ) -> dict[str, Any]:
+        self._assert_independent_project_identity(project_id)
+        handoff = self._latest_independent_handoff(project_id, run_id)
+        if not handoff:
+            raise ProductionRunError("independent_handoff_missing", "frozen independent handoff is required before native dispatch")
+        try:
+            return IndependentReviewRepository(self.store).prepare(
+                project_id,
+                run_id,
+                candidate_fingerprint=handoff["candidate_fingerprint"],
+                packet_bytes=handoff["peer_packet_bytes"],
+                job_id=handoff["independent_job"]["job_id"],
+                input_fingerprint=handoff["independent_job"]["input_fingerprint"],
+                relay_nonce=handoff["peer_packet"]["relay_nonce"],
+                provider=provider,
+                parent_session_id=parent_session_id,
+            )
+        except IndependentReviewError as exc:
+            self._raise_independent_repository(exc)
+
+    def claim_independent_dispatch(
+        self,
+        project_id: str,
+        *,
+        provider: str,
+        parent_session_id: str,
+        agent_type: str,
+        host_agent_id: str,
+        host_invocation_id: str,
+    ) -> dict[str, Any]:
+        self._assert_independent_project_identity(project_id)
+        try:
+            return IndependentReviewRepository(self.store).claim(
+                project_id,
+                provider=provider,
+                parent_session_id=parent_session_id,
+                agent_type=agent_type,
+                host_agent_id=host_agent_id,
+                host_invocation_id=host_invocation_id,
+            )
+        except IndependentReviewError as exc:
+            self._raise_independent_repository(exc)
+
+    def fail_independent_dispatch(
+        self,
+        project_id: str,
+        *,
+        lease_id: str,
+        reviewer_session_id: str,
+        host_agent_id: str,
+        host_invocation_id: str,
+        error: dict[str, Any],
+    ) -> dict[str, Any]:
+        if not isinstance(error, dict) or not error:
+            raise ProductionRunError("invalid_args", "non-empty infrastructure error object is required")
+        self._assert_independent_project_identity(project_id)
+        try:
+            return IndependentReviewRepository(self.store).fail(
+                project_id,
+                lease_id=lease_id,
+                reviewer_session_id=reviewer_session_id,
+                host_agent_id=host_agent_id,
+                host_invocation_id=host_invocation_id,
+                error=error,
+            )
+        except IndependentReviewError as exc:
+            self._raise_independent_repository(exc)
+
+    def _validate_native_lifecycle_receipt(
+        self,
+        project_id: str,
+        run_id: str,
+        handoff: dict[str, Any],
+        peer_packet: dict[str, Any],
+        result: dict[str, Any],
+        receipt: dict[str, Any],
+        *,
+        native_lease_id: str | None = None,
+        completion_event: dict[str, Any] | None = None,
+    ) -> None:
+        errors = validate_independent_invocation_receipt(receipt, peer_packet, result)
+        if errors:
+            raise ProductionRunError("independent_invocation_receipt_invalid", "; ".join(errors))
+        repository = IndependentReviewRepository(self.store)
+        try:
+            lease = repository.lease(project_id, str(receipt.get("lease_id") or ""))
+            durable_events = repository.lifecycle_events(project_id, lease["lease_id"])
+        except IndependentReviewError as exc:
+            self._raise_independent_repository(exc)
+        expected = {
+            "project_id": project_id,
+            "run_id": run_id,
+            "candidate_fingerprint": handoff["candidate_fingerprint"],
+            "job_id": handoff["independent_job"]["job_id"],
+            "input_fingerprint": handoff["independent_job"]["input_fingerprint"],
+            "packet_fingerprint": independent_fingerprint(peer_packet),
+            "result_fingerprint": independent_fingerprint(result),
+            "relay_nonce": peer_packet["relay_nonce"],
+            "provider": lease["provider"],
+            "transport": lease["transport"],
+            "parent_session_id": lease["parent_session_id"],
+            "reviewer_session_id": lease["reviewer_session_id"],
+            "host_agent_id": lease["host_agent_id"],
+            "host_invocation_id": lease["host_invocation_id"],
+        }
+        for key, value in expected.items():
+            if receipt.get(key) != value:
+                raise ProductionRunError("independent_invocation_receipt_invalid", f"durable native lifecycle mismatch: {key}")
+        if lease["packet_bytes"] != handoff["peer_packet_bytes"]:
+            raise ProductionRunError("independent_packet_mismatch", "native lease packet bytes changed")
+        if lease["status"] == "completed":
+            if canonical_json(receipt) != lease.get("receipt_json"):
+                raise ProductionRunError("independent_invocation_receipt_invalid", "native receipt differs from durable completed lease")
+            expected_events = [self._lifecycle_receipt_event(event) for event in durable_events]
+        elif (
+            lease["status"] == "claimed"
+            and native_lease_id == lease["lease_id"]
+            and isinstance(completion_event, dict)
+        ):
+            if lease.get("completion_event_json") != canonical_json(completion_event):
+                raise ProductionRunError(
+                    "independent_invocation_receipt_invalid",
+                    "native receipt completion event differs from the durable completion plan",
+                )
+            expected_events = [
+                *[self._lifecycle_receipt_event(event) for event in durable_events],
+                self._lifecycle_receipt_event(completion_event),
+            ]
+        else:
+            raise ProductionRunError("independent_invocation_receipt_invalid", "native receipt does not match completed or completing durable lifecycle")
+        if receipt.get("lifecycle_events") != expected_events:
+            raise ProductionRunError("independent_invocation_receipt_invalid", "native receipt lifecycle event binding mismatch")
+
+    def complete_independent_dispatch(
+        self,
+        project_id: str,
+        *,
+        lease_id: str,
+        reviewer_session_id: str,
+        host_agent_id: str,
+        host_invocation_id: str,
+        result: dict[str, Any],
+    ) -> dict[str, Any]:
+        self._assert_independent_project_identity(project_id)
+        repository = IndependentReviewRepository(self.store)
+        try:
+            lease = repository.lease(project_id, lease_id)
+        except IndependentReviewError as exc:
+            self._raise_independent_repository(exc)
+        if (
+            lease["reviewer_session_id"] != reviewer_session_id
+            or lease["host_agent_id"] != host_agent_id
+            or lease["host_invocation_id"] != host_invocation_id
+        ):
+            raise ProductionRunError("independent_lifecycle_mismatch", "native completion identity mismatch")
+        peer_packet = json.loads(lease["packet_bytes"])
+        result_errors = validate_peer_result(peer_packet, result)
+        provider_contract = INDEPENDENT_PROVIDER_CONTRACTS[lease["provider"]]
+        if (result.get("worker") or {}).get("provider") != provider_contract["worker_provider"]:
+            result_errors.append("native result worker.provider does not match lease provider")
+        if result_errors:
+            raise ProductionRunError("independent_result_invalid", "; ".join(result_errors))
+        result_fingerprint = independent_fingerprint(result)
+        if lease["status"] == "completed":
+            if lease["result_fingerprint"] != result_fingerprint:
+                raise ProductionRunError("independent_attempt_consumed", "different native result cannot replay completed lease")
+            receipt = json.loads(lease["receipt_json"])
+            return self.submit_independent(
+                project_id,
+                lease["run_id"],
+                peer_packet=peer_packet,
+                result=result,
+                independence_receipt=receipt,
+            )
+        if lease["status"] != "claimed":
+            raise ProductionRunError("independent_lease_not_claimed", "native completion requires a claimed lease")
+        try:
+            completion_event = repository.planned_completion_event(project_id, lease_id, result_fingerprint)
+            durable_events = repository.lifecycle_events(project_id, lease_id)
+            receipt = build_independent_invocation_receipt(
+                peer_packet,
+                result,
+                lease_id=lease_id,
+                project_id=project_id,
+                run_id=lease["run_id"],
+                provider=lease["provider"],
+                parent_session_id=lease["parent_session_id"],
+                reviewer_session_id=reviewer_session_id,
+                host_agent_id=host_agent_id,
+                host_invocation_id=host_invocation_id,
+                lifecycle_events=[
+                    *[self._lifecycle_receipt_event(event) for event in durable_events],
+                    self._lifecycle_receipt_event(completion_event),
+                ],
+            )
+        except (IndependentReviewError, ValueError) as exc:
+            if isinstance(exc, IndependentReviewError):
+                self._raise_independent_repository(exc)
+            raise ProductionRunError("independent_result_invalid", str(exc)) from exc
+        return self.submit_independent(
+            project_id,
+            lease["run_id"],
+            peer_packet=peer_packet,
+            result=result,
+            independence_receipt=receipt,
+            _native_lease_id=lease_id,
+            _native_completion_event=completion_event,
+        )
+
+    def complete_independent_judgment(
+        self,
+        project_id: str,
+        *,
+        lease_id: str,
+        reviewer_session_id: str,
+        host_agent_id: str,
+        host_invocation_id: str,
+        judgment: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Complete a native review without persisting its frozen packet in host state."""
+        if not isinstance(judgment, dict):
+            raise ProductionRunError("invalid_args", "native reviewer judgment must be an object")
+        self._assert_independent_project_identity(project_id)
+        repository = IndependentReviewRepository(self.store)
+        try:
+            lease = repository.lease(project_id, lease_id)
+        except IndependentReviewError as exc:
+            self._raise_independent_repository(exc)
+        if (
+            lease["reviewer_session_id"] != reviewer_session_id
+            or lease["host_agent_id"] != host_agent_id
+            or lease["host_invocation_id"] != host_invocation_id
+        ):
+            raise ProductionRunError("independent_lifecycle_mismatch", "native completion identity mismatch")
+        packet = json.loads(lease["packet_bytes"])
+        job = packet.get("job") or {}
+        nonce = packet.get("relay_nonce")
+        result = {
+            "schema": "quillframe_peer_review_result_v1",
+            "job_id": job.get("job_id"),
+            "subject_id": job.get("subject_id"),
+            "kind": job.get("kind"),
+            "input_fingerprint": job.get("input_fingerprint"),
+            "status": "completed",
+            "judgment": deepcopy(judgment),
+            "worker": {
+                "provider": INDEPENDENT_PROVIDER_CONTRACTS[lease["provider"]]["worker_provider"],
+                "model_or_reviewer": lease.get("agent_type") or "quillframe-independent-reviewer",
+                "session_id": reviewer_session_id,
+                "run_reference": nonce,
+            },
+            "proposals": [],
+            "errors": [],
+            "execution": {"run_reference": nonce},
+        }
+        return self.complete_independent_dispatch(
+            project_id,
+            lease_id=lease_id,
+            reviewer_session_id=reviewer_session_id,
+            host_agent_id=host_agent_id,
+            host_invocation_id=host_invocation_id,
+            result=result,
+        )
+
+    def submit_independent(
+        self,
+        project_id: str,
+        run_id: str,
+        *,
+        peer_packet: dict[str, Any],
+        result: dict[str, Any],
+        independence_receipt: dict[str, Any] | None = None,
+        bridge_receipt: dict[str, Any] | None = None,
+        _native_lease_id: str | None = None,
+        _native_completion_event: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        self._assert_independent_project_identity(project_id)
+        supplied = [value for value in (independence_receipt, bridge_receipt) if value is not None]
+        if len(supplied) != 1 or not isinstance(supplied[0], dict):
+            raise ProductionRunError(
+                "independence_receipt_invalid",
+                "submit requires exactly one of independence_receipt or deprecated bridge_receipt",
+            )
+        receipt = supplied[0]
+        handoff = self._latest_independent_handoff(project_id, run_id)
+        if not handoff:
+            raise ProductionRunError("independent_handoff_missing", "frozen independent handoff is required")
+        run = self._run_row(project_id, run_id)
+        if (
+            receipt.get("schema") == PROJECT_PEER_VALIDATION_RECEIPT_SCHEMA
+            and run.get("status") != "completed"
+        ):
+            raise ProductionRunError(
+                "independent_legacy_receipt_replay_only",
+                "Project peer receipt v1 is readable only for exact historical completed-run replay; new submissions require v2",
+            )
+        if receipt.get("schema") == INDEPENDENT_INVOCATION_RECEIPT_SCHEMA:
+            self._validate_native_lifecycle_receipt(
+                project_id,
+                run_id,
+                handoff,
+                peer_packet,
+                result,
+                receipt,
+                native_lease_id=_native_lease_id,
+                completion_event=_native_completion_event,
+            )
+            transport = str(receipt.get("transport"))
+        else:
+            transport = "github_actions"
+        # Reject malformed evidence before it can acquire the processing owner.
+        validate_independent_submission(
+            handoff=handoff,
+            peer_packet=peer_packet,
+            result=result,
+            independence_receipt=receipt,
+        )
+        packet_project_id = ((handoff.get("independent_job") or {}).get("provenance") or {}).get("project_id")
+        if packet_project_id != project_id or receipt.get("project_id") != project_id:
+            raise ProductionRunError("independent_project_mismatch", "packet and receipt must bind the actual runtime Project")
+        evidence_fingerprint = fingerprint(
+            {
+                "packet_bytes": handoff["peer_packet_bytes"],
+                "result": result,
+                "independence_receipt": receipt,
+            }
+        )
+        repository = IndependentReviewRepository(self.store)
+        try:
+            ownership = repository.begin_attempt(
+                project_id,
+                run_id,
+                handoff["candidate_fingerprint"],
+                evidence_fingerprint=evidence_fingerprint,
+                transport=transport,
+                native_lease_id=_native_lease_id,
+            )
+        except IndependentReviewError as exc:
+            self._raise_independent_repository(exc)
+        if not ownership["owner"]:
+            return ownership["response"]
+        token = ownership["processing_token"]
+        epoch = ownership["processing_epoch"]
+        try:
+            response = self._process_independent_submission(
+                project_id,
+                run_id,
+                peer_packet=peer_packet,
+                result=result,
+                independence_receipt=receipt,
+                submission_evidence_fingerprint=evidence_fingerprint,
+                processing_repository=repository,
+                processing_candidate_fingerprint=handoff["candidate_fingerprint"],
+                processing_token=token,
+                processing_epoch=epoch,
+            )
+            if response.get("status") == "stale_conflict":
+                repository.release_attempt(project_id, run_id, handoff["candidate_fingerprint"], token, epoch)
+                return response
+            try:
+                if _native_lease_id is not None and _native_completion_event is not None:
+                    repository.finalize_native(
+                        project_id,
+                        lease_id=_native_lease_id,
+                        completion_event=_native_completion_event,
+                        receipt=receipt,
+                        result_fingerprint=independent_fingerprint(result),
+                        processing_token=token,
+                        processing_epoch=epoch,
+                        evidence_fingerprint=evidence_fingerprint,
+                        response=response,
+                    )
+                else:
+                    repository.terminalize_attempt(
+                        project_id,
+                        run_id,
+                        handoff["candidate_fingerprint"],
+                        processing_token=token,
+                        processing_epoch=epoch,
+                        evidence_fingerprint=evidence_fingerprint,
+                        response=response,
+                    )
+            except IndependentReviewError as exc:
+                self._raise_independent_repository(exc)
+            return response
+        except Exception:
+            repository.abandon_attempt(project_id, run_id, handoff["candidate_fingerprint"], token, epoch)
+            raise
+
+    def _completed_projection(
+        self,
+        project_id: str,
+        run: dict[str, Any],
+        bundle: dict[str, Any] | None,
+        *,
+        expected_submission_evidence_fingerprint: str | None = None,
+    ) -> dict[str, Any] | None:
         if run.get("status") != "completed":
             return None
         with self.store.open_project(project_id) as conn:
-            candidate = conn.execute(
-                "SELECT candidate_id,revision_id,content_fingerprint,status,user_visible_gate FROM candidates WHERE run_id=? ORDER BY created_at DESC LIMIT 1",
+            candidate_rows = conn.execute(
+                "SELECT candidate_id,revision_id,content_fingerprint,status,user_visible_gate FROM candidates WHERE run_id=? ORDER BY created_at,rowid",
                 (run["run_id"],),
-            ).fetchone()
+            ).fetchall()
+            candidate = candidate_rows[0] if len(candidate_rows) == 1 else None
             receipts = [
                 _json(row["payload_json"], {})
                 for row in conn.execute(
@@ -343,6 +957,15 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 "SELECT payload_json FROM receipts WHERE run_id=? AND receipt_kind='production_release' ORDER BY created_at DESC,rowid DESC LIMIT 1",
                 (run["run_id"],),
             ).fetchone()
+            review_rows = conn.execute(
+                "SELECT result_json FROM review_evidence WHERE candidate_id=? AND independent=1 ORDER BY created_at,rowid",
+                (candidate["candidate_id"],),
+            ).fetchall() if candidate else []
+        if len(candidate_rows) > 1:
+            raise ProductionRunError(
+                "completed_run_candidate_ambiguous",
+                "completed production run has multiple persisted candidates",
+            )
         if not candidate:
             raise ProductionRunError("completed_run_missing_candidate", "completed production run has no persisted candidate")
         release = _json(release_row["payload_json"], {}) if release_row else {}
@@ -352,6 +975,13 @@ class ProductionRunExecutor(ProductionContextRuntime):
             or release.get("ready_for_user_visible_review") is not True
         ):
             raise ProductionRunError("production_release_missing", "completed production candidate lacks a valid exact-fingerprint production release")
+        if expected_submission_evidence_fingerprint is not None:
+            persisted_review = _json(review_rows[0]["result_json"], {}) if len(review_rows) == 1 else {}
+            if persisted_review.get("submission_evidence_fingerprint") != expected_submission_evidence_fingerprint:
+                raise ProductionRunError(
+                    "independent_recovery_evidence_mismatch",
+                    "completed production side effects do not bind the submitted independent evidence",
+                )
         return {
             "schema": PRODUCTION_EXECUTION_SCHEMA,
             "project_id": project_id,
@@ -371,10 +1001,97 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "authority": False,
         }
 
+    def _bind_completed_legacy_submission(
+        self,
+        project_id: str,
+        run_id: str,
+        *,
+        candidate_fingerprint: str,
+        result: dict[str, Any],
+        independence_receipt: dict[str, Any],
+        submission_evidence_fingerprint: str,
+        effect_guard: Callable[[Any], None],
+        mark_effects_started: Callable[[Any], None],
+    ) -> None:
+        """Bind an exact released-v9 GitHub completion to its replay evidence.
+
+        V9 stored the complete bridge result binding but predated the derived
+        submission fingerprint.  This compatibility path adds only that one
+        derivable field, and only while the current processing owner is fenced.
+        """
+
+        def mismatch(message: str) -> None:
+            raise ProductionRunError("independent_recovery_evidence_mismatch", message)
+
+        with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            effect_guard(conn)
+            candidates = conn.execute(
+                """SELECT candidate_id,content_fingerprint FROM candidates
+                WHERE run_id=? ORDER BY created_at,rowid""",
+                (run_id,),
+            ).fetchall()
+            if len(candidates) != 1:
+                mismatch("completed production recovery requires exactly one persisted candidate")
+            candidate = candidates[0]
+            review_rows = conn.execute(
+                """SELECT review_id,candidate_fingerprint,reviewer_fingerprint,result_json
+                FROM review_evidence WHERE candidate_id=? AND independent=1 ORDER BY created_at,rowid""",
+                (candidate["candidate_id"],),
+            ).fetchall()
+            if len(review_rows) != 1:
+                mismatch("completed production recovery requires exactly one independent review evidence row")
+            review_row = review_rows[0]
+            if (
+                candidate["content_fingerprint"] != candidate_fingerprint
+                or review_row["candidate_fingerprint"] != candidate_fingerprint
+            ):
+                mismatch("completed production candidate does not match the submitted evidence subject")
+            persisted = _json(review_row["result_json"], {})
+            existing_fingerprint = persisted.get("submission_evidence_fingerprint")
+            if existing_fingerprint is not None:
+                if existing_fingerprint != submission_evidence_fingerprint:
+                    mismatch("completed production side effects bind different independent evidence")
+                mark_effects_started(conn)
+                conn.commit()
+                return
+            if independence_receipt.get("schema") != PROJECT_PEER_VALIDATION_RECEIPT_SCHEMA:
+                mismatch("only released GitHub bridge evidence may receive the v9 compatibility binding")
+            stored_receipts = [
+                persisted[key]
+                for key in ("bridge_receipt", "independence_receipt")
+                if isinstance(persisted.get(key), dict)
+            ]
+            if not stored_receipts or any(
+                canonical_json(stored) != canonical_json(independence_receipt)
+                for stored in stored_receipts
+            ):
+                mismatch("persisted GitHub bridge receipt differs from the submitted receipt")
+            result_fingerprint = independent_fingerprint(result)
+            if (
+                independence_receipt.get("result_fingerprint") != result_fingerprint
+                or review_row["reviewer_fingerprint"] != result_fingerprint
+                or canonical_json(persisted.get("judgment")) != canonical_json(result.get("judgment"))
+                or canonical_json(persisted.get("worker")) != canonical_json(result.get("worker"))
+                or persisted.get("job_id") != result.get("job_id")
+                or persisted.get("input_fingerprint") != result.get("input_fingerprint")
+            ):
+                mismatch("persisted independent review fields differ from the submitted result")
+            mark_effects_started(conn)
+            bound = dict(persisted)
+            bound["submission_evidence_fingerprint"] = submission_evidence_fingerprint
+            updated = conn.execute(
+                "UPDATE review_evidence SET result_json=? WHERE review_id=? AND result_json=?",
+                (canonical_json(bound), review_row["review_id"], review_row["result_json"]),
+            ).rowcount
+            if updated != 1:
+                mismatch("completed independent review evidence changed during compatibility binding")
+            conn.commit()
+
     def _awaiting_external_projection(self, project_id: str, run: dict[str, Any], bundle: dict[str, Any]) -> dict[str, Any] | None:
         if run.get("status") != "awaiting_external":
             return None
-        handoff = self._latest_checkpoint(project_id, run["run_id"], "production_independent_handoff")
+        handoff = self._latest_independent_handoff(project_id, run["run_id"])
         qualified = self._latest_checkpoint(project_id, run["run_id"], "production_qualified_candidate")
         if handoff:
             return {
@@ -391,7 +1108,11 @@ class ProductionRunExecutor(ProductionContextRuntime):
                     "schema": handoff["schema"],
                     "subject_id": handoff["subject_id"],
                     "candidate_fingerprint": handoff["candidate_fingerprint"],
-                    "peer_packet": handoff["peer_packet"],
+                    "job_id": handoff["independent_job"]["job_id"],
+                    "input_fingerprint": handoff["independent_job"]["input_fingerprint"],
+                    "packet_fingerprint": fingerprint(handoff["peer_packet"]),
+                    "qualification_receipt_fingerprint": handoff["qualification_receipt"]["receipt_fingerprint"],
+                    "native_dispatch_ready": True,
                 },
                 "candidate_visible": False,
                 "raw_draft_visible": False,
@@ -422,6 +1143,12 @@ class ProductionRunExecutor(ProductionContextRuntime):
         qualified: dict[str, Any],
         independent_provenance: dict[str, Any],
     ) -> dict[str, Any]:
+        self._assert_independent_project_identity(project_id)
+        if independent_provenance.get("project_id") != project_id:
+            raise ProductionRunError(
+                "independent_project_mismatch",
+                "independent packet provenance project_id must equal the actual runtime Project",
+            )
         handoff = prepare_independent_review(
             run=run,
             subject_id=qualified["subject_id"],
@@ -438,6 +1165,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
         handoff["reader_binding"] = qualified["reader_binding"]
         handoff["continuity_receipt_fingerprint"] = qualified["continuity_receipt_fingerprint"]
         self._checkpoint(project_id, run["run_id"], "production_independent_handoff", handoff, handoff["candidate_fingerprint"])
+        IndependentReviewRepository(self.store).ensure_attempt(project_id, run["run_id"], handoff["candidate_fingerprint"])
         self._set_run(project_id, run["run_id"], "awaiting_external")
         self._event(
             project_id,
@@ -756,31 +1484,98 @@ class ProductionRunExecutor(ProductionContextRuntime):
             return self._awaiting_external_projection(project_id, {**run, "status": "awaiting_external"}, bundle) or {}
         return self._build_handoff_from_qualified(project_id, run, bundle, qualified_state, independent_provenance)
 
-    def submit_independent(
+    def _process_independent_submission(
         self,
         project_id: str,
         run_id: str,
         *,
         peer_packet: dict[str, Any],
         result: dict[str, Any],
-        bridge_receipt: dict[str, Any],
+        independence_receipt: dict[str, Any],
+        submission_evidence_fingerprint: str,
+        processing_repository: IndependentReviewRepository,
+        processing_candidate_fingerprint: str,
+        processing_token: str,
+        processing_epoch: int,
     ) -> dict[str, Any]:
+        def effect_guard(conn) -> None:  # noqa: ANN001
+            try:
+                processing_repository.assert_and_renew_attempt_owner(
+                    conn,
+                    project_id,
+                    run_id,
+                    processing_candidate_fingerprint,
+                    processing_token,
+                    processing_epoch,
+                )
+            except IndependentReviewError as exc:
+                self._raise_independent_repository(exc)
+
+        def mark_effects_started() -> None:
+            try:
+                processing_repository.mark_attempt_effects_started(
+                    project_id,
+                    run_id,
+                    processing_candidate_fingerprint,
+                    processing_token,
+                    processing_epoch,
+                )
+            except IndependentReviewError as exc:
+                self._raise_independent_repository(exc)
+
+        def mark_effects_started_in_transaction(conn) -> None:  # noqa: ANN001
+            try:
+                processing_repository.mark_attempt_effects_started_in_transaction(
+                    conn,
+                    project_id,
+                    run_id,
+                    processing_candidate_fingerprint,
+                    processing_token,
+                    processing_epoch,
+                )
+            except IndependentReviewError as exc:
+                self._raise_independent_repository(exc)
+
         run = self._run_row(project_id, run_id)
         if run.get("status") == "completed":
             bundle = self._latest_bundle(project_id, run_id)
-            replay = self._completed_projection(project_id, run, bundle)
+            self._bind_completed_legacy_submission(
+                project_id,
+                run_id,
+                candidate_fingerprint=processing_candidate_fingerprint,
+                result=result,
+                independence_receipt=independence_receipt,
+                submission_evidence_fingerprint=submission_evidence_fingerprint,
+                effect_guard=effect_guard,
+                mark_effects_started=mark_effects_started_in_transaction,
+            )
+            replay = self._completed_projection(
+                project_id,
+                run,
+                bundle,
+                expected_submission_evidence_fingerprint=submission_evidence_fingerprint,
+            )
             if replay is None:
                 raise ProductionRunError("completed_run_missing_candidate", "completed production run has no candidate")
+            self._persist_candidate_ready_event(
+                project_id,
+                run_id,
+                candidate_id=replay["candidate"]["candidate_id"],
+                candidate_fingerprint=replay["candidate"]["candidate_fingerprint"],
+                context_bundle_fingerprint=str(replay.get("context_bundle_fingerprint") or ""),
+                independent_result_fingerprint=independence_receipt.get("result_fingerprint"),
+                effect_guard=effect_guard,
+            )
             return replay
-        if run.get("status") != "awaiting_external":
+        if run.get("status") not in {"awaiting_external", "failed_gate", "semantic_pending"}:
             raise ProductionRunError("independent_submission_not_expected", f"run status is {run.get('status')}, not awaiting_external")
         bundle = self._latest_bundle(project_id, run_id)
-        handoff = self._latest_checkpoint(project_id, run_id, "production_independent_handoff")
+        handoff = self._latest_independent_handoff(project_id, run_id)
         if not bundle or not handoff:
             raise ProductionRunError("independent_handoff_missing", "frozen Context bundle and independent handoff are required")
         validation = self._validate_bundle_current(project_id, bundle)
         if not validation.get("proceed"):
-            self._set_run(project_id, run_id, "stale_conflict")
+            self._set_independent_run(project_id, run_id, "stale_conflict", effect_guard=effect_guard)
             return {
                 "schema": PRODUCTION_EXECUTION_SCHEMA,
                 "project_id": project_id,
@@ -797,8 +1592,12 @@ class ProductionRunExecutor(ProductionContextRuntime):
             handoff=handoff,
             peer_packet=peer_packet,
             result=result,
-            bridge_receipt=bridge_receipt,
+            independence_receipt=independence_receipt,
         )
+        independent_binding["submission_evidence_fingerprint"] = submission_evidence_fingerprint
+        packet_project_id = ((handoff.get("independent_job") or {}).get("provenance") or {}).get("project_id")
+        if packet_project_id != project_id or independence_receipt.get("project_id") != project_id:
+            raise ProductionRunError("independent_project_mismatch", "packet and receipt must bind the actual runtime Project")
         readiness = final_readiness(
             candidate_fingerprint=handoff["candidate_fingerprint"],
             qualification_receipt=handoff["qualification_receipt"],
@@ -819,7 +1618,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
             agent_input_fingerprint=handoff["independent_job"]["input_fingerprint"],
             model_service_id=str((result.get("worker") or {}).get("provider") or "peer_review"),
             model_id=str((result.get("worker") or {}).get("model_or_reviewer") or "independent-reviewer"),
-            protocol="project_owned_peer_bridge",
+            protocol=str(independence_receipt.get("transport") or "project_owned_peer_bridge"),
             judgment={
                 "status": independent_judgment.get("result"),
                 "summary": independent_judgment.get("report"),
@@ -828,12 +1627,27 @@ class ProductionRunExecutor(ProductionContextRuntime):
             },
         )
         independent_receipt["model_contract_id"] = "quality.production_review"
-        independent_receipt["bridge_receipt_result_fingerprint"] = bridge_receipt.get("result_fingerprint")
+        independent_receipt["independence_result_fingerprint"] = independence_receipt.get("result_fingerprint")
+        independent_receipt["independence_provider"] = (
+            independence_receipt.get("provider") or independence_receipt.get("worker_provider")
+        )
+        independent_receipt["independence_transport"] = (
+            independence_receipt.get("transport") or "github_actions"
+        )
+        independent_receipt["independence_assurance_class"] = (
+            independence_receipt.get("assurance_class") or "project_owned_automation_receipt"
+        )
         independent_receipt["stage_result_fingerprint"] = fingerprint({key: value for key, value in independent_receipt.items() if key != "stage_result_fingerprint"})
-        self._persist_stage_receipt(project_id, run_id, independent_receipt)
+        mark_effects_started()
+        self._persist_stage_receipt(project_id, run_id, independent_receipt, effect_guard=effect_guard)
 
         if not readiness.get("ready_for_user_visible_review"):
-            self._set_run(project_id, run_id, "failed_gate" if readiness.get("blocking_gates") else "semantic_pending")
+            self._set_independent_run(
+                project_id,
+                run_id,
+                "failed_gate" if readiness.get("blocking_gates") else "semantic_pending",
+                effect_guard=effect_guard,
+            )
             return {
                 "schema": PRODUCTION_EXECUTION_SCHEMA,
                 "project_id": project_id,
@@ -866,7 +1680,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
         )
         visible_receipt["production_readiness_schema"] = readiness.get("schema")
         visible_receipt["stage_result_fingerprint"] = fingerprint({key: value for key, value in visible_receipt.items() if key != "stage_result_fingerprint"})
-        self._persist_stage_receipt(project_id, run_id, visible_receipt)
+        self._persist_stage_receipt(project_id, run_id, visible_receipt, effect_guard=effect_guard)
 
         release = final_release(
             production_readiness=readiness,
@@ -877,7 +1691,12 @@ class ProductionRunExecutor(ProductionContextRuntime):
             user_visible_gate_receipt_fingerprint=visible_receipt["stage_result_fingerprint"],
         )
         if release.get("ready_for_user_visible_review") is not True:
-            self._set_run(project_id, run_id, "failed_gate" if release.get("blocking_structural_receipts") else "semantic_pending")
+            self._set_independent_run(
+                project_id,
+                run_id,
+                "failed_gate" if release.get("blocking_structural_receipts") else "semantic_pending",
+                effect_guard=effect_guard,
+            )
             return {
                 "schema": PRODUCTION_EXECUTION_SCHEMA,
                 "project_id": project_id,
@@ -890,7 +1709,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 "raw_draft_visible": False,
                 "authority": False,
             }
-        self._persist_release_receipt(project_id, run_id, release)
+        self._persist_release_receipt(project_id, run_id, release, effect_guard=effect_guard)
 
         candidate = self._persist_candidate(
             project_id,
@@ -902,18 +1721,23 @@ class ProductionRunExecutor(ProductionContextRuntime):
             independent_binding,
             readiness,
             release,
+            effect_guard=effect_guard,
         )
-        self._set_run(project_id, run_id, "completed", result_fingerprint=candidate["candidate_fingerprint"])
-        self._event(
+        self._set_independent_run(
             project_id,
             run_id,
-            "production_candidate_ready",
-            {
-                "candidate_id": candidate["candidate_id"],
-                "candidate_fingerprint": candidate["candidate_fingerprint"],
-                "context_bundle_fingerprint": bundle["bundle_fingerprint"],
-                "independent_result_fingerprint": bridge_receipt.get("result_fingerprint"),
-            },
+            "completed",
+            result_fingerprint=candidate["candidate_fingerprint"],
+            effect_guard=effect_guard,
+        )
+        self._persist_candidate_ready_event(
+            project_id,
+            run_id,
+            candidate_id=candidate["candidate_id"],
+            candidate_fingerprint=candidate["candidate_fingerprint"],
+            context_bundle_fingerprint=bundle["bundle_fingerprint"],
+            independent_result_fingerprint=independence_receipt.get("result_fingerprint"),
+            effect_guard=effect_guard,
         )
         with self.store.open_project(project_id) as conn:
             receipts = [

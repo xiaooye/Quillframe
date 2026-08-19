@@ -110,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
     init_cmd.add_argument("--id", required=True)
     init_cmd.add_argument("--title", required=True)
     init_cmd.add_argument("--language", default="en")
-    init_cmd.add_argument("--framework-version", default="0.9.0", help="Minimum acceptable Framework version")
+    init_cmd.add_argument("--framework-version", default="0.9.1", help="Minimum acceptable Framework version")
     init_cmd.add_argument("--framework-root")
     init_cmd.add_argument("--force", action="store_true")
 
@@ -123,6 +123,23 @@ def main(argv: list[str] | None = None) -> int:
 
     build_cmd = sub.add_parser("build", help="Build the deterministic Project bundle")
     build_cmd.add_argument("path")
+
+    projection_cmd = sub.add_parser("projection", help="Compile/apply/status a mapped Project runtime projection")
+    projection_sub = projection_cmd.add_subparsers(dest="projection_cmd", required=True)
+    projection_preview_cmd = projection_sub.add_parser("preview", help="Compile the mapped manifest without mutation")
+    projection_preview_cmd.add_argument("path")
+    projection_apply_cmd = projection_sub.add_parser("apply", help="Apply one exact mapped projection transaction")
+    projection_apply_cmd.add_argument("path")
+    projection_apply_cmd.add_argument("--data-dir")
+    projection_apply_cmd.add_argument("--expected-projection-fingerprint")
+    projection_status_cmd = projection_sub.add_parser("status", help="Report mapped projection identity")
+    projection_status_cmd.add_argument("path")
+    projection_status_cmd.add_argument("--data-dir")
+    projection_preflight_cmd = projection_sub.add_parser("preflight", help="Fail-closed zero-model target/context preflight")
+    projection_preflight_cmd.add_argument("path")
+    projection_preflight_cmd.add_argument("--target-id", required=True)
+    projection_preflight_cmd.add_argument("--stage", required=True)
+    projection_preflight_cmd.add_argument("--data-dir")
 
     spec_cmd = sub.add_parser("spec-new", help="Create a bilingual structural change spec scaffold")
     spec_cmd.add_argument("path")
@@ -185,6 +202,17 @@ def main(argv: list[str] | None = None) -> int:
             result = sdk.validate_project(Path(args.path))
         elif args.cmd == "build":
             result = sdk.build_project(Path(args.path))
+        elif args.cmd == "projection":
+            root = Path(args.path)
+            data_dir = Path(args.data_dir) if getattr(args, "data_dir", None) else None
+            if args.projection_cmd == "preview":
+                result = sdk.projection_preview(root)
+            elif args.projection_cmd == "apply":
+                result = sdk.projection_apply(root, data_dir, args.expected_projection_fingerprint)
+            elif args.projection_cmd == "status":
+                result = sdk.projection_status(root, data_dir)
+            else:
+                result = sdk.projection_preflight(root, args.target_id, args.stage, data_dir)
         else:
             result = sdk.create_spec(Path(args.path), args.title)
         dump(result)

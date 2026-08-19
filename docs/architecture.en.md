@@ -1,6 +1,6 @@
 # Architecture
 
-Quillframe is easiest to understand as three cooperating planes: orchestration decides what bounded work should happen; execution and verification produce and judge exact artifacts; settlement is the only path from accepted evidence to durable story-state mutation.
+Quillframe is a novel-contract kernel alongside a generic host. The host runs sessions, model/tool loops, sandboxes, and subagents; Quillframe resolves the Project, bounds Context, governs Story/Character/Canon contracts, verifies exact artifacts, and keeps Settlement as the only path from accepted evidence to durable story-state mutation.
 
 <img src="assets/architecture/framework-mental-model.en.svg" alt="Three-plane Quillframe architecture: orchestration, execution and verification, then authorized settlement" width="100%" />
 

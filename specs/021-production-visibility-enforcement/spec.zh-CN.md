@@ -24,7 +24,7 @@ Quillframe Core 已经会隐藏 Raw Draft，并在 production gate pending/fail 
 6. `quality.production_release` 必须成为最终 structural release aggregator，不能继续作为未接入主链的平行合同。
 7. Ephemeral conversational host 可以在本地运行 Quillframe，但 runtime 源码必须来自可验证 exact Git commit；临时 SQLite 只属于 execution state，不构成第二套 durable Canon authority。
 8. Chat host 的 manager-stage relay 只能是 loopback transport，必须使用原子 request/response materialization，并明确 `independent_review_evidence=false`；它不能充当 independent gate。
-9. Independent semantic review 必须来自真正不同的 invocation/provider。Project-owned GitHub Actions 可以使用 GitHub Models 作为独立 provider，但模型只拥有 semantic judgment；job/fingerprint/nonce/provenance/receipt 由确定性 bridge 绑定并再次验证。
+9. Independent semantic review 必须来自真正不同的 invocation/provider。历史 GitHub Models 路径不是已发布 provider；支持的远端兼容路径是 `github_copilot_actions`。它只拥有 semantic judgment，job/fingerprint/nonce/provenance/receipt 仍由确定性 bridge 绑定并再次验证。
 10. `rule_material` 必须在 production graph 开始前用 registered `quality.candidate_self_audit` input contract 做 deterministic schema preflight。该 preflight 不做文学判断，也不得把 regression bad examples 提前注入 Writer。
 11. 若 consumer Project adapter 规定 Git repo 为持久权威，则 Git 仍是 durable source/authority；Canon 修改只能通过 Settlement。
 
@@ -42,7 +42,7 @@ relay 只负责 transport，不重解释 semantic contract，不获得写权限�
 
 ## Project-owned independent review
 
-`project-peer-semantic` action 支持独立 GitHub Models review。Consumer workflow 必须显式授予 `models: read`，并继续由 Project repo 拥有 issue/runtime trace。模型只看到 bounded peer packet，不看到 writer conversation 或 Project checkout。返回 judgment 后，Framework 必须重新验证 exact job、candidate fingerprint、relay nonce、registered contract、Project/Framework provenance 与 runtime trace，才能生成 peer validation receipt。
+`project-peer-semantic` action 支持显式的 `github_copilot_actions` 兼容 review mode；不宣称 GitHub Models 或 `models: read`。Consumer Project repo 继续拥有 issue/runtime trace。Reviewer 只看到 bounded peer packet，不看到 writer conversation 或 Project checkout。返回 judgment 后，Framework 必须重新验证 exact job、candidate fingerprint、relay nonce、registered contract、Project/Framework provenance 与 runtime trace，才能生成 peer validation receipt。
 
 人工/另一聊天的 `prepare → validate-result` 路径继续保留，并必须真实可执行。
 

@@ -1,7 +1,7 @@
 {
   "schema": "quillframe_ai_catalog_v1",
   "product": "Quillframe",
-  "version_line": "0.9.x",
+  "version_line": "0.9.1",
   "canonical": "https://quillframe.wei-dev.com/",
   "documentation": "https://quillframe.wei-dev.com/docs/",
   "studio": "https://studio.quillframe.wei-dev.com/",

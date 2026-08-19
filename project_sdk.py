@@ -8,14 +8,17 @@ artistic judgment or mutating Canon automatically.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
+import textwrap
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -25,7 +28,7 @@ SDK_VERSION = "1"
 PROJECT_SCHEMA = "quillframe_project_v1"
 LOCK_SCHEMA = "quillframe_lock_v1"
 ATTESTATION_SCHEMA = "quillframe_framework_attestation_v1"
-DEFAULT_FRAMEWORK_VERSION = "0.9.0"
+DEFAULT_FRAMEWORK_VERSION = "0.9.1"
 FRAMEWORK_ROOT = Path(__file__).resolve().parent
 
 REQUIRED_DIRS = [
@@ -140,6 +143,20 @@ def _framework_root(framework_root: Path | None = None) -> Path:
     return root
 
 
+def _refresh_git_index(root: Path) -> None:
+    try:
+        subprocess.run(
+            ["git", "update-index", "--refresh"],
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+
 def _require_project_outside_framework(project_root: Path, framework_root: Path) -> None:
     root = project_root.resolve()
     fw = framework_root.resolve()
@@ -150,6 +167,7 @@ def _require_project_outside_framework(project_root: Path, framework_root: Path)
 def framework_checkout_identity(framework_root: Path | None = None, *, require_clean: bool = True) -> dict[str, Any]:
     """Return exact identity for a materialized Quillframe source checkout."""
     root = _framework_root(framework_root)
+    _refresh_git_index(root)
     status = _git(root, "status", "--porcelain", "--untracked-files=normal")
     if require_clean and status:
         raise ValueError("Framework checkout is dirty; commit or stash changes before exact pinning")
@@ -351,7 +369,149 @@ The project-local Claude hook verifies the exact Framework lock/attestation and 
 '''
 
 
-def claude_settings_json() -> str:
+def independent_reviewer_instruction() -> str:
+    return '''You are Quillframe's native independent reviewer for exactly one frozen packet.
+
+Use ONLY the frozen packet injected by the trusted lifecycle hook. Do not inspect or infer from the Project, filesystem, shell, network, memory, host conversation, or any write-capable tool. Do not call tools.
+
+Return ONLY one JSON object matching the packet's judgment output contract. Do not return markdown, commentary, chain-of-thought, an outer semantic-result envelope, candidate text, or Project paths. The trusted hook owns lifecycle identity, provider identity, the frozen nonce, deterministic result wrapping, and submission.
+'''
+
+
+def codex_independent_reviewer_toml() -> str:
+    instruction = independent_reviewer_instruction().replace('"""', '\\"\\"\\"')
+    return f'''name = "quillframe-independent-reviewer"
+description = "Review one exact frozen Quillframe packet in a separate native context without tools."
+developer_instructions = """{instruction}"""
+'''
+
+
+def claude_independent_reviewer_md() -> str:
+    return f'''---
+name: quillframe-independent-reviewer
+description: Review one exact frozen Quillframe packet in a separate native context.
+tools: []
+permissionMode: plan
+---
+
+{independent_reviewer_instruction()}'''
+
+
+def framework_root_hint_path(project_root: Path) -> Path:
+    return project_root / ".quillframe" / "hosts" / "framework_root.txt"
+
+
+def write_framework_root_hint(project_root: Path, framework_root: Path) -> None:
+    write(framework_root_hint_path(project_root), str(_framework_root(framework_root)) + "\n")
+
+
+def _project_hook_command(host: str, framework_root: Path | None = None) -> str:
+    fallback_root = str(_framework_root(framework_root)) if framework_root is not None else ""
+    host_name = "claude_code" if host == "claude" else "codex"
+    script = textwrap.dedent(
+        """
+        import io
+        import json
+        import os
+        import sys
+        from pathlib import Path
+
+        payload = sys.stdin.read()
+        event = json.loads(payload) if payload.strip() else {}
+        start = Path(event.get("cwd") or os.getcwd()).resolve()
+
+        def is_framework_root(path: Path) -> bool:
+            return (path / "HARNESS_MANIFEST.yaml").is_file() and (path / "project_sdk.py").is_file()
+
+        def find_project_root(path: Path):
+            for candidate in (path, *path.parents):
+                if (candidate / "quillframe.toml").is_file():
+                    return candidate
+            return None
+
+        project_root = find_project_root(start)
+        framework_root = None
+
+        configured = os.environ.get("QUILLFRAME_FRAMEWORK_DIR")
+        if configured:
+            candidate = Path(configured).expanduser().resolve()
+            if is_framework_root(candidate):
+                framework_root = candidate
+
+        if framework_root is None and project_root is not None:
+            hint = project_root / ".quillframe" / "hosts" / "framework_root.txt"
+            if hint.is_file():
+                candidate = Path(hint.read_text(encoding="utf-8").strip()).expanduser().resolve()
+                if is_framework_root(candidate):
+                    framework_root = candidate
+
+        if framework_root is None:
+            for candidate in (start, *start.parents):
+                if is_framework_root(candidate):
+                    framework_root = candidate
+                    break
+
+        if framework_root is None and "__FALLBACK_ROOT__":
+            candidate = Path("__FALLBACK_ROOT__").expanduser().resolve()
+            if is_framework_root(candidate):
+                framework_root = candidate
+
+        if framework_root is None:
+            name = event.get("hook_event_name") or "SessionStart"
+            print(json.dumps({
+                "hookSpecificOutput": {
+                    "hookEventName": name,
+                    "additionalContext": "Quillframe Framework hook unavailable; no authority granted."
+                }
+            }, ensure_ascii=False))
+            raise SystemExit(0)
+
+        root_text = str(framework_root)
+        os.environ.setdefault("QUILLFRAME_FRAMEWORK_DIR", root_text)
+        if root_text not in sys.path:
+            sys.path.insert(0, root_text)
+
+        from harness.integrations.host_bootstrap import main_for_host
+
+        sys.stdin = io.StringIO(payload)
+        raise SystemExit(int(main_for_host("__HOST__")))
+        """
+    ).strip()
+    script = script.replace("__HOST__", host_name).replace("__FALLBACK_ROOT__", fallback_root)
+    return f"python3 -c {shlex.quote(script)}"
+
+def codex_hooks_json(framework_root: Path | None = None) -> str:
+    command = _project_hook_command("codex", framework_root)
+    hook = {"type": "command", "command": command, "timeout": 30}
+    context_hook = {**hook, "additionalContextLimit": 6000}
+    value = {
+        "description": "Quillframe Project bootstrap, native reviewer lifecycle, and execution guard. Review/trust with /hooks before use.",
+        "hooks": {
+            "SessionStart": [
+                {"matcher": "startup|resume|clear|compact", "hooks": [context_hook]},
+            ],
+            "UserPromptSubmit": [{"hooks": [context_hook]}],
+            "SubagentStart": [
+                {"matcher": "quillframe-independent-reviewer", "hooks": [context_hook]},
+            ],
+            "SubagentStop": [
+                {"matcher": "quillframe-independent-reviewer", "hooks": [context_hook]},
+            ],
+            "PreToolUse": [
+                {"matcher": "Bash|apply_patch|Edit|Write", "hooks": [context_hook]},
+                {"matcher": ".*", "hooks": [context_hook]},
+            ],
+            "PostToolUse": [
+                {"matcher": "Bash|apply_patch|Edit|Write", "hooks": [context_hook]},
+            ],
+            "SessionEnd": [{"hooks": [hook]}],
+        },
+    }
+    return json.dumps(value, ensure_ascii=False, indent=2) + "\n"
+
+
+def claude_settings_json(framework_root: Path | None = None) -> str:
+    command = _project_hook_command("claude", framework_root)
     return json.dumps(
         {
             "permissions": {"ask": ["Skill"]},
@@ -359,26 +519,42 @@ def claude_settings_json() -> str:
                 "SessionStart": [
                     {
                         "matcher": "startup|resume|clear|compact",
-                        "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
+                        "hooks": [{"type": "command", "command": command}],
                     }
                 ],
                 "UserPromptSubmit": [
-                    {"hooks": [{"type": "command", "command": "quillframe claude-hook"}]}
+                    {"hooks": [{"type": "command", "command": command}]}
+                ],
+                "SubagentStart": [
+                    {
+                        "matcher": "quillframe-independent-reviewer",
+                        "hooks": [{"type": "command", "command": command}],
+                    }
+                ],
+                "SubagentStop": [
+                    {
+                        "matcher": "quillframe-independent-reviewer",
+                        "hooks": [{"type": "command", "command": command}],
+                    }
                 ],
                 "PreToolUse": [
                     {
                         "matcher": "Write|Edit|Bash|Skill",
-                        "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
-                    }
+                        "hooks": [{"type": "command", "command": command}],
+                    },
+                    {
+                        "matcher": ".*",
+                        "hooks": [{"type": "command", "command": command}],
+                    },
                 ],
                 "PostToolUse": [
                     {
                         "matcher": "Edit|Write|Bash",
-                        "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
+                        "hooks": [{"type": "command", "command": command}],
                     }
                 ],
                 "SessionEnd": [
-                    {"hooks": [{"type": "command", "command": "quillframe claude-hook"}]}
+                    {"hooks": [{"type": "command", "command": command}]}
                 ],
             },
         },
@@ -445,6 +621,10 @@ def init_project(
     write(root / "AGENTS.md", agents_md())
     write(root / "CLAUDE.md", claude_md())
     write(root / ".claude" / "settings.json", claude_settings_json())
+    write(root / ".claude" / "agents" / "quillframe-independent-reviewer.md", claude_independent_reviewer_md())
+    write(root / ".codex" / "hooks.json", codex_hooks_json())
+    write(root / ".codex" / "agents" / "quillframe-independent-reviewer.toml", codex_independent_reviewer_toml())
+    write_framework_root_hint(root, fw_root)
     write(root / ".gitignore", gitignore())
     for name in ("genre", "platform", "prose", "reader", "project"):
         write(root / "profiles" / f"{name}.yaml", profile_template(name))
@@ -703,13 +883,23 @@ def validate_project(root: Path) -> dict[str, Any]:
     if not authority["authority_ready"]:
         warnings.extend(f"authority: {problem}" for problem in authority["errors"])
 
-    for rel in REQUIRED_DIRS:
-        if not (root / rel).is_dir():
-            errors.append(f"missing required directory: {rel}")
-    for rel in ("README.en.md", "README.zh-CN.md", "AGENTS.md", "CLAUDE.md", ".gitignore"):
-        if not (root / rel).exists():
-            errors.append(f"missing required file: {rel}")
-    errors.extend(validate_bilingual_specs(root))
+    layout = str((manifest.get("adapter", {}) or {}).get("layout") or "standard").strip().lower()
+    if layout == "mapped":
+        from project_adapter import validate as validate_project_adapter
+
+        adapter = validate_project_adapter(root)
+        errors.extend(adapter.get("errors", []))
+        for rel in ("AGENTS.md", "CLAUDE.md"):
+            if not (root / rel).exists():
+                errors.append(f"missing required file: {rel}")
+    else:
+        for rel in REQUIRED_DIRS:
+            if not (root / rel).is_dir():
+                errors.append(f"missing required directory: {rel}")
+        for rel in ("README.en.md", "README.zh-CN.md", "AGENTS.md", "CLAUDE.md", ".gitignore"):
+            if not (root / rel).exists():
+                errors.append(f"missing required file: {rel}")
+        errors.extend(validate_bilingual_specs(root))
 
     accepted = root / "manuscripts" / "accepted"
     if accepted.exists():
@@ -849,10 +1039,76 @@ def create_spec(root: Path, title: str) -> dict[str, Any]:
     return {"created": True, "spec_dir": str(target), "number": number}
 
 
+def projection_preview(root: Path) -> dict[str, Any]:
+    """Compile an optional mapped runtime manifest without mutating SQLite."""
+    from harness.project_projection import preview
+    return preview(root)
+
+
+def projection_apply(root: Path, data_dir: Path | None = None, expected_projection_fingerprint: str | None = None) -> dict[str, Any]:
+    from harness.project_projection import apply
+    return apply(root, data_dir=data_dir, expected_projection_fingerprint=expected_projection_fingerprint)
+
+
+def projection_status(root: Path, data_dir: Path | None = None) -> dict[str, Any]:
+    from harness.project_projection import status
+    return status(root, data_dir=data_dir)
+
+
+def projection_preflight(root: Path, target_id: str, stage: str, data_dir: Path | None = None) -> dict[str, Any]:
+    from harness.project_projection import preflight
+    return preflight(root, target_id, stage, data_dir=data_dir)
+
+
+@contextmanager
+def self_test_framework_checkout():
+    """Yield a clean Framework checkout for model-free artifact self-tests.
+
+    Published bundles intentionally omit `.git`.  Production pinning remains
+    strict, while self-tests may use an isolated temporary git fixture so every
+    bundled contract exercises the same exact-pin path without modifying the
+    unpacked artifact.
+    """
+    framework_root = FRAMEWORK_ROOT
+    temporary_checkout: Path | None = None
+    if not (framework_root / ".git").exists():
+        temporary_checkout = Path(tempfile.mkdtemp(prefix="quillframe-sdk-framework-"))
+        checkout = temporary_checkout / "framework"
+        shutil.copytree(
+            framework_root,
+            checkout,
+            ignore=shutil.ignore_patterns(".git", ".quillframe", "dist", "__pycache__", ".pytest_cache"),
+        )
+        subprocess.run(["git", "init", "--quiet"], cwd=checkout, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "config", "user.name", "Quillframe SDK self-test"], cwd=checkout, check=True)
+        subprocess.run(["git", "config", "user.email", "sdk-self-test@quillframe.invalid"], cwd=checkout, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=checkout, check=True)
+        subprocess.run(["git", "commit", "--quiet", "-m", "SDK self-test fixture"], cwd=checkout, check=True)
+        framework_root = checkout
+    try:
+        yield framework_root
+    finally:
+        if temporary_checkout is not None:
+            shutil.rmtree(temporary_checkout, ignore_errors=True)
+
+
 def self_test(tmp_root: Path) -> dict[str, Any]:
     if tmp_root.exists():
         shutil.rmtree(tmp_root)
-    init_project(tmp_root, "PROJECT-TEST", "Fixture Novel", "en", DEFAULT_FRAMEWORK_VERSION, False)
+    # A release bundle intentionally excludes `.git`.  Keep the production
+    # bootstrap contract strict (real project init still requires a clean git
+    # checkout), but let the model-free SDK self-test exercise the same path
+    # after an artifact is unpacked by creating an isolated temporary checkout.
+    with self_test_framework_checkout() as framework_root:
+        init_project(
+            tmp_root,
+            "PROJECT-TEST",
+            "Fixture Novel",
+            "en",
+            DEFAULT_FRAMEWORK_VERSION,
+            False,
+            framework_root,
+        )
     spec = create_spec(tmp_root, "Volume architecture change")
     validation = validate_project(tmp_root)
     build = build_project(tmp_root)

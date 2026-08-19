@@ -8,6 +8,7 @@ import type {
   AcceptanceResult,
   CandidateRejectionResult,
   CandidateReviewProjection,
+  CandidateVisibleProjection,
   CandidateRevisionRequestResult,
   CandidateRow,
   InspectorListProjection,
@@ -26,6 +27,7 @@ export default function Review() {
   const [rows, setRows] = createSignal<CandidateRow[]>([]);
   const [selectedId, setSelectedId] = createSignal("");
   const [review, setReview] = createSignal<CandidateReviewProjection>();
+  const [visible, setVisible] = createSignal<CandidateVisibleProjection>();
   const [acceptance, setAcceptance] = createSignal<AcceptanceResult>();
   const [settlement, setSettlement] = createSignal<SettlementResult>();
   const [acceptDialogOpen, setAcceptDialogOpen] = createSignal(false);
@@ -35,6 +37,7 @@ export default function Review() {
   const [settleTarget, setSettleTarget] = createSignal("");
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string>();
+  let reviewRequestGeneration = 0;
   const selected = createMemo(() => rows().find((row) => row.candidate_id === selectedId()));
   const actionable = createMemo(() => review()?.candidate.effective_status === "review_draft");
   const exactFingerprint = createMemo(() => review()?.candidate.candidate_fingerprint || selected()?.content_fingerprint || "");
@@ -46,14 +49,30 @@ export default function Review() {
 
   const loadReview = async (candidateId: string) => {
     if (!projectId() || !candidateId || !operations().includes("candidate.review.get")) return;
+    const requestGeneration = ++reviewRequestGeneration;
     setError(undefined);
+    setReview(undefined);
+    setVisible(undefined);
     try {
       const result = await invokeBridge<CandidateReviewProjection>("candidate.review.get", { project_id: projectId(), candidate_id: candidateId });
       if (result.status !== "ok" || !result.data) throw new Error(operationError(result));
+      if (requestGeneration !== reviewRequestGeneration || selectedId() !== candidateId) return;
       setReview(result.data);
       if (!settleTarget() && result.data.candidate.document_id) setSettleTarget(`chapter:${result.data.candidate.document_id}`);
+
+      if (!operations().includes("candidate.visible.get")) {
+        setError("candidate.visible.get is required before showing a Review Draft");
+        return;
+      }
+      const released = await invokeBridge<CandidateVisibleProjection>("candidate.visible.get", { project_id: projectId(), candidate_id: candidateId });
+      if (released.status !== "ok" || !released.data) throw new Error(operationError(released));
+      if (requestGeneration !== reviewRequestGeneration || selectedId() !== candidateId) return;
+      if (released.data.candidate_id !== result.data.candidate.candidate_id || released.data.candidate_fingerprint !== result.data.candidate.candidate_fingerprint) {
+        throw new Error("candidate.visible.get returned a different candidate fingerprint");
+      }
+      setVisible(released.data);
     } catch (cause) {
-      setReview(undefined);
+      if (requestGeneration !== reviewRequestGeneration || selectedId() !== candidateId) return;
       setError(cause instanceof Error ? cause.message : String(cause));
     }
   };
@@ -62,6 +81,8 @@ export default function Review() {
     setSelectedId(candidateId);
     setAcceptance(undefined);
     setSettlement(undefined);
+    setReview(undefined);
+    setVisible(undefined);
     setRejectExact(false);
     setRevisionNote("");
     resetAcceptanceIntent();
@@ -82,6 +103,7 @@ export default function Review() {
       } else {
         setSelectedId("");
         setReview(undefined);
+        setVisible(undefined);
       }
     } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
     finally { setLoading(false); }
@@ -193,11 +215,16 @@ export default function Review() {
             {(detail) => <>
               <header class="qf-review-heading"><div><span class="nf-eyebrow">INCUMBENT ↔ CANDIDATE</span><h2>{detail().candidate.candidate_id}</h2></div><div class="qf-review-authority"><AuthorityLabel value={detail().candidate.effective_status} /><span class="qf-gate-label" data-gate={detail().candidate.user_visible_gate}>{`user-visible gate: ${detail().candidate.user_visible_gate ?? "—"}`}</span></div></header>
               <div class="qf-review-fingerprint"><span>Candidate fingerprint</span><code>{detail().candidate.candidate_fingerprint}</code></div>
+              <p class="qf-success-note" role="status" aria-live="polite">
+                <code>accepted={acceptance() ? "true" : "false"}</code>
+                {" · "}
+                <code>settled={settlement()?.status === "settled" ? "true" : "false"}</code>
+              </p>
 
               <section class="qf-review-evidence" aria-labelledby="review-evidence-heading">
-                <h3 id="review-evidence-heading">{zh() ? "正文 Diff" : "Manuscript diff"}</h3>
-                <Show when={detail().incumbent_revision} fallback={<p>{zh() ? "没有 incumbent revision。" : "No incumbent revision."}</p>}>
-                  <pre class="qf-diff"><code>{detail().diff?.diff?.join("\n") || (zh() ? "无文本差异" : "No text diff")}</code></pre>
+                <h3 id="review-evidence-heading">{zh() ? "Released Review Draft" : "Released Review Draft"}</h3>
+                <Show when={visible()} fallback={<div class="qf-empty-workspace"><CoreRequirementNotice operation="candidate.visible.get" /><p>{zh() ? "正文仅在 exact production release 后通过 candidate.visible.get 显示。" : "Manuscript text is shown only through candidate.visible.get after an exact production release."}</p></div>}>
+                  {(released) => <pre class="qf-review-draft" aria-label={zh() ? "Review Draft 正文" : "Review Draft manuscript"}><code>{released().content}</code></pre>}
                 </Show>
                 <div class="qf-review-evidence-grid">
                   <article><strong>Reader</strong><pre><code>{JSON.stringify(detail().evidence.reader, null, 2)}</code></pre></article>

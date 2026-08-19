@@ -3,12 +3,15 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import tarfile
 import tempfile
 import tomllib
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 import project_sdk
+from harness.integrations import host_bootstrap
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +27,31 @@ class BootstrapHostTests(unittest.TestCase):
         self.assertIn("@harness/HARNESS_AGENT.en.md", text)
         settings = json.loads((ROOT / ".claude" / "settings.json").read_text(encoding="utf-8"))
         self.assertIn("Skill", settings["permissions"]["deny"])
+        commands = [
+            hook["command"]
+            for groups in settings["hooks"].values()
+            for group in groups
+            for hook in group["hooks"]
+        ]
+        self.assertTrue(commands)
+        for command in commands:
+            self.assertNotIn("python -m quillframe.cli", command)
+            self.assertIn("framework_root.txt", command)
+            self.assertIn("quillframe.toml", command)
+
+    def test_root_codex_hook_commands_do_not_follow_ambient_git_toplevel(self):
+        hooks = json.loads((ROOT / ".codex" / "hooks.json").read_text(encoding="utf-8"))
+        commands = [
+            hook["command"]
+            for groups in hooks["hooks"].values()
+            for group in groups
+            for hook in group["hooks"]
+        ]
+        self.assertTrue(commands)
+        for command in commands:
+            self.assertNotIn("git rev-parse --show-toplevel", command)
+            self.assertIn("framework_root.txt", command)
+            self.assertIn("quillframe.toml", command)
 
     def test_console_entrypoint_is_declared(self):
         with (ROOT / "pyproject.toml").open("rb") as fh:
@@ -36,8 +64,77 @@ class BootstrapHostTests(unittest.TestCase):
         paths = {row["path"] for row in content_manifest(ROOT)["files"]}
         self.assertIn("quillframe/cli.py", paths)
         self.assertIn("quillframe/api.py", paths)
+        self.assertIn("core_operations.py", paths)
         self.assertIn("pyproject.toml", paths)
         self.assertIn("VERSION", paths)
+        self.assertIn("studio/host_bridge.py", paths)
+        self.assertIn("studio/host_bridge_contract.json", paths)
+
+    def test_unpacked_framework_bundle_runs_project_sdk_self_test(self):
+        from release.build_framework_bundle import build
+
+        with tempfile.TemporaryDirectory(prefix="qf-unpacked-bundle-test-") as td:
+            root = Path(td)
+            bundle = root / "framework.tar"
+            build(ROOT, bundle)
+            unpacked = root / "unpacked"
+            unpacked.mkdir()
+            with tarfile.open(bundle, "r") as archive:
+                archive.extractall(unpacked)
+            proc = subprocess.run(
+                [sys.executable, "project_sdk.py", "self-test", "--tmp", str(root / "project-sdk-self-test")],
+                cwd=unpacked,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr or proc.stdout)
+            self.assertEqual(json.loads(proc.stdout)["project_sdk_contract"], "PASS")
+            cli_self_test = subprocess.run(
+                [sys.executable, "quillframe.py", "self-test"],
+                cwd=unpacked,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(cli_self_test.returncode, 0, cli_self_test.stderr or cli_self_test.stdout)
+            self.assertEqual(json.loads(cli_self_test.stdout)["quillframe_cli_contract"], "PASS")
+
+    def test_framework_checkout_identity_refreshes_index_before_status_check(self):
+        import release.build_framework_bundle as bundle_builder
+
+        calls: list[object] = []
+
+        def fake_refresh(root: Path) -> None:
+            calls.append(("refresh", root))
+
+        def fake_git(root: Path, *args: str) -> str:
+            calls.append(args)
+            if args == ("status", "--porcelain", "--untracked-files=normal"):
+                return ""
+            if args == ("rev-parse", "HEAD"):
+                return "a" * 40
+            raise AssertionError(args)
+
+        with (
+            patch.object(project_sdk, "_framework_root", return_value=ROOT),
+            patch.object(project_sdk, "_refresh_git_index", side_effect=fake_refresh),
+            patch.object(project_sdk, "_git", side_effect=fake_git),
+            patch.object(
+                bundle_builder,
+                "build",
+                return_value={
+                    "bundle_fingerprint": "sha256:" + "b" * 64,
+                    "content_index_fingerprint": "sha256:" + "c" * 64,
+                },
+            ),
+        ):
+            identity = project_sdk.framework_checkout_identity(ROOT)
+
+        self.assertEqual(calls[0], ("refresh", ROOT))
+        self.assertIn(("status", "--porcelain", "--untracked-files=normal"), calls)
+        self.assertEqual(identity["commit"], "a" * 40)
+        self.assertEqual(identity["bundle_fingerprint"], "sha256:" + "b" * 64)
 
     def test_init_rejects_project_inside_framework_checkout(self):
         with self.assertRaisesRegex(ValueError, "outside the generic Quillframe Framework checkout"):
@@ -137,6 +234,99 @@ class BootstrapHostTests(unittest.TestCase):
             self.assertFalse(validation["valid"])
             self.assertTrue(any("bundle_fingerprint" in item for item in validation["errors"]))
 
+    def test_validate_project_accepts_mapped_project_without_standard_tree(self):
+        with tempfile.TemporaryDirectory(prefix="qf-mapped-validate-") as td:
+            project = Path(td)
+            for rel in (
+                "project/book",
+                "project/state",
+                "project/volumes/VOL-001",
+                "project/characters",
+                "project/profiles",
+                "manuscripts/draft",
+                "manuscripts/review",
+                "manuscripts/accepted",
+            ):
+                (project / rel).mkdir(parents=True, exist_ok=True)
+            (project / "project" / "PROJECT.md").write_text("# Project\n", encoding="utf-8")
+            (project / "project" / "START_HERE.md").write_text("# Start\n", encoding="utf-8")
+            (project / "project" / "CONTEXT_PROTOCOL.md").write_text("# Context\n", encoding="utf-8")
+            (project / "AGENTS.md").write_text("# Agents\n", encoding="utf-8")
+            (project / "CLAUDE.md").write_text("# Claude\n", encoding="utf-8")
+            (project / "quillframe.toml").write_text(
+                "\n".join(
+                    [
+                        '[quillframe]',
+                        'schema = "quillframe_project_v1"',
+                        'project_schema_version = "1"',
+                        'minimum_framework_version = "0.9.1"',
+                        '',
+                        '[project]',
+                        'id = "PROJECT-MAPPED-VALIDATE"',
+                        'title = "Mapped Validate"',
+                        'language = "zh-CN"',
+                        'version = "0.1.0"',
+                        'status = "active"',
+                        '',
+                        '[adapter]',
+                        'layout = "mapped"',
+                        '',
+                        '[paths]',
+                        'project_entry = "project/PROJECT.md"',
+                        'start_here = "project/START_HERE.md"',
+                        'context_protocol = "project/CONTEXT_PROTOCOL.md"',
+                        'story_bible = "project/book"',
+                        'current_state = "project/state"',
+                        'active_plans = "project/volumes/VOL-001"',
+                        'manuscripts = "manuscripts"',
+                        'profiles = "project/profiles"',
+                        '',
+                        '[authority]',
+                        'durable_story_authority = "project_files"',
+                        'runtime_projection_authority = false',
+                        'review_draft_is_canon = false',
+                        'acceptance_required_for_canon = true',
+                        'settlement_required_for_canon = true',
+                        '',
+                        '[quality]',
+                        'framework_surface_fundamentals = true',
+                        'framework_reader_engagement = true',
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            framework = {
+                "name": "Quillframe",
+                "version": "0.9.1",
+                "commit": "a" * 40,
+                "bundle_fingerprint": "sha256:" + "b" * 64,
+            }
+            (project / "quillframe.lock.json").write_text(
+                json.dumps(
+                    {
+                        "schema": project_sdk.LOCK_SCHEMA,
+                        "framework": framework,
+                        "project_schema_version": "1",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (project / "framework.attestation.json").write_text(
+                json.dumps(
+                    {
+                        "schema": project_sdk.ATTESTATION_SCHEMA,
+                        "framework": framework,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            validation = project_sdk.validate_project(project)
+            self.assertTrue(validation["valid"], validation)
+            self.assertTrue(validation["authority_ready"], validation)
+            self.assertFalse(any("missing required directory: specs" in item for item in validation["errors"]), validation)
+            self.assertFalse(any("README.en.md" in item for item in validation["errors"]), validation)
+
     def _run_hook(self, event: dict) -> dict:
         proc = subprocess.run(
             [sys.executable, str(HOOK)],
@@ -172,6 +362,104 @@ class BootstrapHostTests(unittest.TestCase):
             "permission_mode": "bypassPermissions",
         })
         self.assertEqual(skill["hookSpecificOutput"]["permissionDecision"], "deny")
+
+    def test_host_bootstrap_accepts_mapped_project_contract(self):
+        with tempfile.TemporaryDirectory(prefix="qf-hook-mapped-") as td:
+            project = Path(td)
+            for rel in (
+                "project/book",
+                "project/state",
+                "project/volumes/VOL-001",
+                "project/characters",
+                "project/profiles",
+                "manuscripts/draft",
+                "manuscripts/review",
+                "manuscripts/accepted",
+            ):
+                (project / rel).mkdir(parents=True, exist_ok=True)
+            (project / "project" / "PROJECT.md").write_text("# Project\n", encoding="utf-8")
+            (project / "project" / "START_HERE.md").write_text("# Start\n", encoding="utf-8")
+            (project / "project" / "CONTEXT_PROTOCOL.md").write_text("# Context\n", encoding="utf-8")
+            (project / "AGENTS.md").write_text("# Agents\n", encoding="utf-8")
+            (project / "CLAUDE.md").write_text("# Claude\n", encoding="utf-8")
+            (project / "quillframe.toml").write_text(
+                "\n".join(
+                    [
+                        '[quillframe]',
+                        'schema = "quillframe_project_v1"',
+                        'project_schema_version = "1"',
+                        f'minimum_framework_version = "{project_sdk.DEFAULT_FRAMEWORK_VERSION}"',
+                        '',
+                        '[project]',
+                        'id = "PROJECT-MAPPED-HOOK"',
+                        'title = "Mapped Hook"',
+                        'language = "zh-CN"',
+                        'version = "0.1.0"',
+                        'status = "active"',
+                        '',
+                        '[adapter]',
+                        'layout = "mapped"',
+                        '',
+                        '[paths]',
+                        'project_entry = "project/PROJECT.md"',
+                        'start_here = "project/START_HERE.md"',
+                        'context_protocol = "project/CONTEXT_PROTOCOL.md"',
+                        'story_bible = "project/book"',
+                        'current_state = "project/state"',
+                        'active_plans = "project/volumes/VOL-001"',
+                        'manuscripts = "manuscripts"',
+                        'profiles = "project/profiles"',
+                        '',
+                        '[authority]',
+                        'durable_story_authority = "project_files"',
+                        'runtime_projection_authority = false',
+                        'review_draft_is_canon = false',
+                        'acceptance_required_for_canon = true',
+                        'settlement_required_for_canon = true',
+                        '',
+                        '[quality]',
+                        'framework_surface_fundamentals = true',
+                        'framework_reader_engagement = true',
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            framework = {
+                "name": "Quillframe",
+                "version": project_sdk.DEFAULT_FRAMEWORK_VERSION,
+                "commit": "a" * 40,
+                "bundle_fingerprint": "sha256:" + "b" * 64,
+            }
+            (project / "quillframe.lock.json").write_text(
+                json.dumps(
+                    {
+                        "schema": project_sdk.LOCK_SCHEMA,
+                        "framework": framework,
+                        "project_schema_version": "1",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (project / "framework.attestation.json").write_text(
+                json.dumps(
+                    {
+                        "schema": project_sdk.ATTESTATION_SCHEMA,
+                        "framework": framework,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with patch.object(project_sdk, "framework_checkout_identity", return_value=framework), patch.object(host_bootstrap, "project_sdk", return_value=project_sdk):
+                snapshot = host_bootstrap.build_snapshot(
+                    "claude_code",
+                    "mapped-hook-session",
+                    project,
+                    full_authority_refresh=True,
+                )
+            context = host_bootstrap.bootstrap_context(snapshot)
+            self.assertEqual(snapshot["project_id"], "PROJECT-MAPPED-HOOK")
+            self.assertNotIn("BLOCKED:", context)
 
     def test_claude_project_bootstrap_and_stale_authority_guard(self):
         with tempfile.TemporaryDirectory(prefix="qf-hook-test-") as td:

@@ -1,6 +1,6 @@
 # Quillframe Model Runtime
 
-Quillframe owns the agent runtime; external model services perform inference only.
+Hosts run the generic agent loop; Quillframe governs the novel contract. The embedded Model/Agent Runtime is an optional/reference implementation for Studio and local adapters. External model services provide inference only and never receive story, Canon, or Settlement authority.
 
 ## Two setup inputs
 

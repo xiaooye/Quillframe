@@ -28,14 +28,43 @@ def main() -> int:
         errors.append("peer bridge workflow must be reusable via workflow_call")
     if "types: [opened]" in workflow or "issues:\n" in workflow or "issue_comment:\n" in workflow:
         errors.append("Framework peer bridge must not listen to Framework issue events")
-    if "$/.github/actions/project-peer-semantic" not in workflow:
-        errors.append("reusable workflow must execute the same-revision bridge action")
+    if "@${{ inputs.framework-ref }}" in workflow:
+        errors.append("reusable workflow may not use an expression in a step uses ref")
+    required_exact_checkout = [
+        "repository: ${{ github.repository }}",
+        "ref: ${{ github.sha }}",
+        "path: .quillframe-project",
+        "persist-credentials: false",
+        "uses: actions/download-artifact@v4",
+        "name: ${{ inputs.frozen-packet-artifact }}",
+        "path: .quillframe-frozen-packet",
+        "repository: xiaooye/Quillframe",
+        "ref: ${{ inputs.framework-ref }}",
+        "path: .quillframe-framework",
+        "EXPECTED_FRAMEWORK_COMMIT: ${{ inputs.framework-ref }}",
+        "QUILLFRAME_ACTION_REF: ${{ steps.framework.outputs.commit }}",
+        "QUILLFRAME_ACTION_REPOSITORY: xiaooye/Quillframe",
+        "QUILLFRAME_PROJECT_CHECKOUT: ${{ github.workspace }}/.quillframe-project",
+        "QUILLFRAME_FROZEN_PACKET_CHECKOUT: ${{ github.workspace }}/.quillframe-frozen-packet",
+        "QUILLFRAME_PROJECT_ROOT: ${{ inputs.project-root }}",
+        "QUILLFRAME_FROZEN_PACKET: ${{ inputs.frozen-packet }}",
+        "QUILLFRAME_FROZEN_PACKET_SHA256: ${{ inputs.frozen-packet-sha256 }}",
+        ".quillframe-framework/.github/actions/project-peer-semantic/bridge.py",
+        ".quillframe-framework/.github/actions/project-peer-semantic/auto_review.py",
+    ]
+    for needle in required_exact_checkout:
+        if needle not in workflow:
+            errors.append(f"reusable workflow exact-checkout guard missing: {needle}")
     if "github.action_ref" not in action or "github.action_repository" not in action:
         errors.append("composite action must expose actual action ref/repository to deterministic binding")
 
     required_bridge_guards = [
         "caller_repo == action_repo",
         "locked_commit != action_ref",
+        "quillframe_peer_issue_tombstone_v1",
+        "quillframe_peer_packet_reference_v1",
+        "quillframe_peer_result_reference_v1",
+        '"manuscript_published": False',
         '"project_repo": binding["caller_repo"]',
         '"framework_repo": binding["framework_repo"]',
         '"framework_commit": binding["framework_commit"]',
@@ -44,6 +73,10 @@ def main() -> int:
     for needle in required_bridge_guards:
         if needle not in bridge:
             errors.append(f"bridge guard missing: {needle}")
+    if "issue body must be one semantic job JSON object" in bridge:
+        errors.append("bridge may not accept a semantic job or manuscript in the Issue body")
+    if "packet_bytes.decode(\"utf-8\")" in bridge:
+        errors.append("bridge may not publish exact frozen packet bytes to an Issue comment")
 
     result = {
         "peer_bridge_contract": "PASS" if not errors else "FAIL",

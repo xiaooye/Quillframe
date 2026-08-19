@@ -24,7 +24,7 @@ Real integration testing also exposed three adjacent gaps:
 6. `quality.production_release` MUST be the final structural release aggregator rather than an unused parallel contract.
 7. Ephemeral conversational hosts MAY run Quillframe locally, but runtime code MUST be materialized from an exact Git commit with verifiable Git identity. Runtime SQLite is execution state, not a second durable Canon authority.
 8. A chat-host manager relay MUST be loopback-only transport, use atomic request/response materialization, declare `independent_review_evidence=false`, and never satisfy the independent gate.
-9. Independent semantic review MUST come from a genuinely distinct invocation/provider. Project-owned GitHub Actions MAY use GitHub Models as the separate provider, but the model owns only semantic judgment; exact job/fingerprint/nonce/provenance/receipt binding remains deterministic and is revalidated.
+9. Independent semantic review MUST come from a genuinely distinct invocation/provider. The historical GitHub Models route is not a released provider. The supported remote compatibility route is `github_copilot_actions`; it owns only semantic judgment while exact job/fingerprint/nonce/provenance/receipt binding remains deterministic and is revalidated.
 10. `rule_material` MUST be deterministically schema-preflighted against the registered `quality.candidate_self_audit` input contract before the production graph begins. This preflight performs no literary judgment and does not inject regression bad examples into the Writer.
 11. Git-backed consumer Projects remain the durable source/authority when their adapter defines Git persistence. Settlement remains the only Canon mutation path.
 
@@ -42,7 +42,7 @@ The relay is transport only. It does not reinterpret semantic contracts, receive
 
 ## Project-owned independent review
 
-The `project-peer-semantic` action supports independent GitHub Models review. The consumer workflow MUST explicitly grant `models: read`; the consuming Project repository continues to own the issue and runtime trace. The model receives only the bounded peer packet, not the writer conversation or Project checkout. After the model returns a judgment, Framework MUST revalidate exact job identity, candidate fingerprint, relay nonce, registered contract, Project/Framework provenance, and runtime trace before issuing a peer validation receipt.
+The `project-peer-semantic` action supports an explicit `github_copilot_actions` compatibility review mode. It does not claim GitHub Models or `models: read`. The consuming Project repository continues to own the issue and runtime trace. The reviewer receives only the bounded peer packet, not the writer conversation or Project checkout. After the judgment returns, Framework MUST revalidate exact job identity, candidate fingerprint, relay nonce, registered contract, Project/Framework provenance, and runtime trace before issuing a peer validation receipt.
 
 The manual/fresh-chat `prepare → validate-result` route remains supported and MUST remain executable.
 

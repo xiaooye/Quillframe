@@ -412,7 +412,7 @@ def self_test() -> int:
         authority_fp = fingerprint(authority)
         framework = {
             "name": "Quillframe",
-            "version": "0.9.0",
+            "version": "0.9.1",
             "commit": "fixture-commit",
             "bundle_fingerprint": "sha256:" + "a" * 64,
         }

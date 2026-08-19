@@ -1,4 +1,4 @@
-name: Quillframe 0.9 CI
+name: Quillframe 0.9.1 CI
 
 on:
   push:
@@ -24,6 +24,20 @@ jobs:
           python-version: '3.13'
       - name: Version consistency
         run: python scripts/version_consistency.py
+      - name: Version identity
+        run: python scripts/version_identity.py
+      - name: Project-hosted peer bridge contract
+        run: python scripts/peer_bridge_contract.py
+      - name: Deterministic framework bundle contract
+        run: |
+          set -euo pipefail
+          python release/build_framework_bundle.py self-test
+          mkdir -p /tmp/quillframe-bundle-ci
+          python release/build_framework_bundle.py build --output /tmp/quillframe-bundle-ci/one.tar --report /tmp/quillframe-bundle-ci/one.json
+          python release/build_framework_bundle.py build --output /tmp/quillframe-bundle-ci/two.tar --report /tmp/quillframe-bundle-ci/two.json
+          cmp /tmp/quillframe-bundle-ci/one.tar /tmp/quillframe-bundle-ci/two.tar
+          FINGERPRINT="$(python -c 'import json; print(json.load(open("/tmp/quillframe-bundle-ci/one.json"))["bundle_fingerprint"])')"
+          python release/build_framework_bundle.py verify --bundle /tmp/quillframe-bundle-ci/one.tar --expected "$FINGERPRINT"
       - name: Active technical namespace hygiene
         run: python scripts/namespace_hygiene.py
       - name: Documentation governance
@@ -57,8 +71,12 @@ jobs:
           assert not os.getenv('QUILLFRAME_MODEL_API_TOKEN')
           print('live_model_execution=disabled')
           PY
-      - name: Quillframe 0.9 persistence and authority tests
+      - name: Quillframe 0.9.1 persistence and authority tests
         run: python -m unittest discover -s tests -p 'test_quillframe_*.py' -v
+      - name: MCP and projection self-tests
+        run: |
+          python harness/control_plane/mcp_stdio.py --self-test
+          python -m unittest tests.test_quillframe_mapped_projection tests.test_quillframe_mcp_surface -q
       - name: Host Bridge self-test
         run: python studio/host_bridge.py self-test
       - name: Checkout exact source for ephemeral runtime bundle

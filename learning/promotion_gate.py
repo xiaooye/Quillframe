@@ -291,7 +291,7 @@ def self_test() -> dict[str, Any]:
         "schema": SCHEMA, "candidate_id": "GC-GOOD", "scope": "general_craft", "mechanism": "causal scene pressure",
         "evidence": {
             "evidence_refs": gc_refs,
-            "version_target": "0.9.0",
+            "version_target": "0.9.1",
             "rollback_ref": "git:baseline",
             "framework_ci": {"conclusion": "success", "commit": "0123456789abcdef0123456789abcdef01234567"},
             "provenance_refs": ["SRC-A"],

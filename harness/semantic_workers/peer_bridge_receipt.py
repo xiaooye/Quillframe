@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Machine receipt for Project-owned peer semantic validation.
+"""Machine receipt for Project-owned peer model semantic validation.
 
 The peer relay proves job/result/nonce binding. The Project-hosted bridge adds
 consuming-Project and exact-Framework provenance plus an auditable GitHub
-runtime trace. This receipt is deterministic evidence bound to the exact result;
-it is not a cryptographic signature, literary judgment, or Canon authority.
+runtime trace. This receipt attests real model execution, so human evidence uses
+a separate authorized receipt boundary. It is deterministic evidence bound to
+the exact result; it is not a cryptographic signature, literary judgment, or
+Canon authority.
 """
 from __future__ import annotations
 
@@ -22,7 +24,9 @@ if str(HERE) not in sys.path:
 from peer_chat_relay import validate_peer_result  # noqa: E402
 from registered_contract_binding import validate_registered_job  # noqa: E402
 
-SCHEMA = "quillframe_project_peer_validation_receipt_v1"
+LEGACY_SCHEMA = "quillframe_project_peer_validation_receipt_v1"
+SCHEMA = "quillframe_project_peer_validation_receipt_v2"
+SUPPORTED_SCHEMAS = {LEGACY_SCHEMA, SCHEMA}
 
 
 def canonical(value: Any) -> bytes:
@@ -110,6 +114,12 @@ def build_receipt(
     peer_errors = validate_peer_result(packet, result)
     if peer_errors:
         raise ValueError("peer result invalid: " + "; ".join(peer_errors))
+    worker_provider = _nonempty((result.get("worker") or {}).get("provider"), "worker.provider")
+    if worker_provider == "human":
+        raise ValueError(
+            "Project peer validation receipt requires real model execution; "
+            "worker.provider=human requires a separate authorized human-review receipt"
+        )
     contract_errors = validate_registered_job(job)
     if contract_errors:
         raise ValueError("registered contract invalid: " + "; ".join(contract_errors))
@@ -150,7 +160,7 @@ def build_receipt(
         "input_fingerprint": _fingerprint(job["input_fingerprint"], "input_fingerprint"),
         "result_fingerprint": fingerprint(result),
         "relay_nonce_fingerprint": scalar_fingerprint(str(packet.get("relay_nonce") or "")),
-        "worker_provider": _nonempty((result.get("worker") or {}).get("provider"), "worker.provider"),
+        "worker_provider": worker_provider,
         "registered_contract_validated": True,
         "peer_relay_validated": True,
         "runtime_trace": trace,
@@ -168,7 +178,8 @@ def validate_receipt(receipt: Any, packet: dict[str, Any], result: dict[str, Any
     errors: list[str] = []
     if not isinstance(receipt, dict):
         return ["peer validation receipt must be object"]
-    if receipt.get("schema") != SCHEMA:
+    receipt_schema = receipt.get("schema")
+    if receipt_schema not in SUPPORTED_SCHEMAS:
         errors.append("peer validation receipt schema mismatch")
     if receipt.get("authority") is not False:
         errors.append("peer validation receipt must be non-authoritative")
@@ -184,6 +195,11 @@ def validate_receipt(receipt: Any, packet: dict[str, Any], result: dict[str, Any
         errors.append("peer relay validation proof missing")
     if receipt.get("model_execution") is not True:
         errors.append("peer validation receipt must describe real model execution")
+    if receipt_schema == SCHEMA and (
+        receipt.get("worker_provider") == "human"
+        or (result.get("worker") or {}).get("provider") == "human"
+    ):
+        errors.append("peer validation receipt does not accept human review evidence")
 
     job = packet.get("job")
     if not isinstance(job, dict):
@@ -276,7 +292,7 @@ def self_test() -> dict[str, Any]:
         "kind": job["kind"],
         "input_fingerprint": job["input_fingerprint"],
         "status": "completed",
-        "worker": {"provider": "github_models", "model_or_reviewer": "fixture", "run_reference": packet["relay_nonce"]},
+        "worker": {"provider": "github_copilot_actions", "model_or_reviewer": "fixture", "run_reference": packet["relay_nonce"]},
         "judgment": {"confidence": 0.9, "result": "pass", "report": "fixture", "evidence_refs": ["fixture"]},
         "proposals": [],
         "errors": [],
@@ -303,6 +319,22 @@ def self_test() -> dict[str, Any]:
     tampered["result_fingerprint"] = "sha256:" + "0" * 64
     fake_ref = json.loads(json.dumps(receipt))
     fake_ref["runtime_trace"]["framework_action_ref"] = "e" * 40
+    human_result = json.loads(json.dumps(result))
+    human_result["worker"]["provider"] = "human"
+    human_rejected = False
+    try:
+        build_receipt(
+            packet,
+            human_result,
+            project_id="PROJECT-SELF",
+            project_repo="owner/project",
+            framework_repo="owner/framework",
+            framework_commit="f" * 40,
+            issue_number=7,
+            runtime_trace=trace,
+        )
+    except ValueError as exc:
+        human_rejected = "model execution" in str(exc)
     checks = {
         "valid_receipt_passes": not validate_receipt(receipt, packet, result),
         "result_tamper_rejected": any("result_fingerprint" in x for x in validate_receipt(tampered, packet, result)),
@@ -313,6 +345,8 @@ def self_test() -> dict[str, Any]:
         "runtime_trace_auditable": receipt["runtime_trace"]["source"] == "project_owned_github_actions_bridge" and receipt["runtime_trace"]["cryptographic_signature"] is False,
         "qualification_proof_not_exposed_to_peer": "dispatch_proof" not in packet["job"],
         "no_write_authority": not any(receipt["permissions"].values()),
+        "human_provider_rejected": human_rejected,
+        "current_schema_is_model_only_v2": receipt["schema"] == SCHEMA,
     }
     return {
         "peer_bridge_receipt_contract": "PASS" if all(checks.values()) else "FAIL",

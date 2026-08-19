@@ -26,6 +26,7 @@ WORKER_DIR = HERE.parent.parent
 if str(WORKER_DIR) not in sys.path:
     sys.path.insert(0, str(WORKER_DIR))
 from semantic_worker_router import ALLOWED_KINDS, validate_job, validate_result  # noqa: E402
+from peer_chat_relay import validate_packet  # noqa: E402
 
 LEGACY_EVAL_SCHEMA = {
     "type": "object",
@@ -39,6 +40,144 @@ LEGACY_EVAL_SCHEMA = {
         "confidence": {"type": "number", "minimum": 0, "maximum": 1},
     },
 }
+
+
+class FrozenPacketError(ValueError):
+    """Infrastructure failure while validating or executing a frozen packet."""
+
+
+def _frozen_packet(packet_bytes: bytes | str) -> tuple[bytes, dict[str, Any]]:
+    raw = packet_bytes.encode("utf-8") if isinstance(packet_bytes, str) else packet_bytes
+    if not isinstance(raw, bytes) or not raw:
+        raise FrozenPacketError("frozen packet bytes are required")
+    try:
+        packet = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise FrozenPacketError("frozen packet is not valid UTF-8 JSON") from exc
+    if not isinstance(packet, dict):
+        raise FrozenPacketError("frozen packet must be a JSON object")
+    errors = validate_packet(packet)
+    if errors:
+        raise FrozenPacketError("frozen packet invalid: " + "; ".join(errors))
+    canonical = json.dumps(packet, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    if raw != canonical:
+        raise FrozenPacketError("frozen packet bytes are not canonical; rebuilding is forbidden")
+    nonce = packet.get("relay_nonce")
+    binding = packet.get("return_binding") or {}
+    if not isinstance(nonce, str) or not nonce or binding.get("run_reference") != nonce:
+        raise FrozenPacketError("frozen packet nonce binding is invalid")
+    return raw, packet
+
+
+def frozen_packet_run_reference(packet_bytes: bytes | str) -> str:
+    return str(_frozen_packet(packet_bytes)[1]["relay_nonce"])
+
+
+def execute_frozen_packet(packet_bytes: bytes | str, requested: str, timeout: int = 180) -> dict[str, Any]:
+    """Execute one exact packet in a Project-free temporary cwd.
+
+    The return value is the provider's judgment object only. Reviewer/session/
+    authority identity remains the Core/host lifecycle's responsibility; this
+    local CLI execution is not native-subagent evidence.
+    """
+    raw, packet = _frozen_packet(packet_bytes)
+    provider = requested if requested in {"codex", "claude"} else None
+    if provider is None:
+        raise FrozenPacketError(f"unsupported local CLI provider: {requested}")
+    if not exe(provider):
+        raise FrozenPacketError(f"local agent unavailable: {provider}")
+    output_contract = packet.get("job", {}).get("output_contract")
+    if not isinstance(output_contract, dict):
+        raise FrozenPacketError("frozen packet output contract is missing")
+    with tempfile.TemporaryDirectory(prefix="quillframe-local-packet-") as td:
+        cwd = Path(td)
+        try:
+            if provider == "codex":
+                schema_path = cwd / "judgment.schema.json"
+                output_path = cwd / "judgment.json"
+                schema_path.write_text(json.dumps(output_contract, ensure_ascii=False, sort_keys=True), encoding="utf-8")
+                proc = subprocess.run(
+                    codex_command(schema_path, output_path),
+                    input=raw,
+                    text=False,
+                    capture_output=True,
+                    cwd=cwd,
+                    timeout=timeout,
+                    check=False,
+                )
+                if proc.returncode != 0:
+                    raise FrozenPacketError(f"{provider} exited {proc.returncode}")
+                if not output_path.is_file():
+                    raise FrozenPacketError(f"{provider} produced no judgment")
+                raw_result = output_path.read_bytes()
+            else:
+                proc = subprocess.run(
+                    claude_command(),
+                    input=raw,
+                    text=False,
+                    capture_output=True,
+                    cwd=cwd,
+                    timeout=timeout,
+                    check=False,
+                )
+                if proc.returncode != 0:
+                    raise FrozenPacketError(f"{provider} exited {proc.returncode}")
+                raw_result = proc.stdout
+            if not isinstance(raw_result, bytes):
+                raw_result = str(raw_result).encode("utf-8")
+            text_result = raw_result.decode("utf-8")
+            judgment = extract_claude(text_result) if provider == "claude" else parse_json_text(text_result)
+        except subprocess.TimeoutExpired as exc:
+            raise FrozenPacketError(f"{provider} timeout after {timeout}s") from exc
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+            if isinstance(exc, FrozenPacketError):
+                raise
+            raise FrozenPacketError(f"{provider} judgment invalid: {exc}") from exc
+    if not isinstance(judgment, dict):
+        raise FrozenPacketError("local CLI judgment must be a JSON object")
+    return judgment
+
+
+def execute_frozen_packet_result(packet_bytes: bytes | str, requested: str, timeout: int = 180) -> dict[str, Any]:
+    """Wrap packet-only judgment as the exact peer-result contract.
+
+    The packet owns the job identity and relay nonce.  This adapter may add
+    execution metadata, but it must never mint a new run reference or alter the
+    frozen packet.
+    """
+    raw, packet = _frozen_packet(packet_bytes)
+    provider = requested if requested in {"codex", "claude"} else None
+    if provider is None:
+        raise FrozenPacketError(f"unsupported local CLI provider: {requested}")
+    nonce = str(packet["relay_nonce"])
+    judgment = execute_frozen_packet(raw, provider, timeout)
+    return {
+        "job_id": packet["job"]["job_id"],
+        "subject_id": packet["job"]["subject_id"],
+        "kind": packet["job"]["kind"],
+        "input_fingerprint": packet["job"]["input_fingerprint"],
+        "status": "completed",
+        "worker": {
+            "provider": f"{provider}_cli",
+            "model_or_reviewer": provider,
+            "run_reference": nonce,
+        },
+        "judgment": judgment,
+        "proposals": [],
+        "errors": [],
+        "execution": {
+            "run_reference": nonce,
+            "transport": "local_cli",
+            "assurance_class": "local_process_bounded_context",
+            "local_process": {
+                "provider": provider,
+                "binary": provider,
+                "temporary_workspace": True,
+                "project_mount": False,
+                "os_isolation_attested": False,
+            },
+        },
+    }
 
 
 def dump(value: Any) -> None:
@@ -233,6 +372,7 @@ def self_test() -> int:
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--provider", choices=["auto", "codex", "claude"], default=os.getenv("QUILLFRAME_LOCAL_AGENT_PROVIDER", "auto"))
+    p.add_argument("--packet-only", action="store_true", help="consume one canonical frozen peer packet and print only its judgment")
     p.add_argument("--timeout", type=int, default=180); p.add_argument("--capabilities", action="store_true"); p.add_argument("--self-test", action="store_true")
     args = p.parse_args()
     if args.self_test: return self_test()
@@ -240,6 +380,17 @@ def main() -> int:
         selected = select(args.provider)
         dump({"adapter": "local-agent-cli", "adapter_version": "0.3", "requested_provider": args.provider, "selected_provider": selected, "codex_binary_available": bool(exe("codex")), "claude_binary_available": bool(exe("claude")), "available": selected is not None, "supported_kinds": sorted(ALLOWED_KINDS), "output_shape": "job.output_contract", "independence_boundary": "separate_local_agent_process", "api_key_required_by_harness": False})
         return 0
+    if args.packet_only:
+        try:
+            raw_packet = sys.stdin.buffer.read()
+            provider = select(args.provider)
+            if provider is None:
+                raise FrozenPacketError(f"local agent unavailable: {args.provider}")
+            dump(execute_frozen_packet(raw_packet, provider, args.timeout))
+            return 0
+        except FrozenPacketError as exc:
+            dump({"status": "infrastructure_failed", "error": str(exc)})
+            return 2
     try: job = json.load(sys.stdin)
     except Exception as exc:
         dump({"status": "failed", "errors": [f"stdin job invalid: {exc}"]}); return 1

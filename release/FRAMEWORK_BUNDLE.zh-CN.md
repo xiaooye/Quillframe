@@ -17,7 +17,7 @@ Bundle 只是 transport/cache artifact，不是第二权威。Authority 仍然�
 
 ## 包含
 
-Core、Surface、Harness、Learning、Corpus、Evals、Project SDK/Adapter、integration/docs/bootstrap、deterministic scripts 等 Framework runtime material。
+Core、Surface、Harness、Learning、Corpus、Evals、Project SDK/Adapter、typed Host Bridge 入口与 contract、integration/docs/bootstrap、deterministic scripts 等 Framework runtime material。
 
 ## 排除
 

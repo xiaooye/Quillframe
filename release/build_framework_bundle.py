@@ -33,7 +33,8 @@ ROOT_FILES = {
     "HARNESS_MANIFEST.yaml", "README.md", "README.en.md", "README.zh-CN.md",
     "SKILL.md", "SKILL.en.md", "SKILL.zh-CN.md",
     "CHANGELOG.en.md", "CHANGELOG.zh-CN.md", "VERSION", "pyproject.toml",
-    "quillframe.py", "project_sdk.py", "project_adapter.py",
+    "quillframe.py", "project_sdk.py", "project_adapter.py", "core_operations.py",
+    "studio/host_bridge.py", "studio/host_bridge_contract.json",
 }
 EXCLUDE_PARTS = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".quillframe", "specs"}
 EXCLUDE_NAMES = {
@@ -187,7 +188,9 @@ def self_test() -> dict[str, Any]:
             "model_runtime/runtime.py": "print('model')\n",
             "persistence/quillframe_sqlite.py": "print('sqlite')\n",
             "production_runtime/runtime.py": "print('production')\n",
-            "VERSION": "0.9.0\n",
+            "studio/host_bridge.py": "print('host bridge')\n",
+            "studio/host_bridge_contract.json": "{}\n",
+            "VERSION": "0.9.1\n",
             "pyproject.toml": "[project]\nname='quillframe'\n",
         }
         for name, text in fixtures.items():
@@ -213,11 +216,12 @@ def self_test() -> dict[str, Any]:
         quality_included = "quality/c.py" in paths
         publication_included = "publication/compiler.py" in paths
         public_runtime_included = {"quillframe/api.py", "VERSION", "pyproject.toml"}.issubset(paths)
+        host_bridge_included = {"studio/host_bridge.py", "studio/host_bridge_contract.json"}.issubset(paths)
         core_runtime_paths = {
             "agent_runtime/runtime.py", "model_runtime/runtime.py", "persistence/quillframe_sqlite.py", "production_runtime/runtime.py"
         }
         core_runtime_included = core_runtime_paths.issubset(paths)
-        ok = same and good["valid"] and not bad["valid"] and excluded and quality_included and publication_included and public_runtime_included and core_runtime_included
+        ok = same and good["valid"] and not bad["valid"] and excluded and quality_included and publication_included and public_runtime_included and host_bridge_included and core_runtime_included
     return {
         "framework_bundle_contract": "PASS" if ok else "FAIL",
         "deterministic_bytes": same,
@@ -227,6 +231,7 @@ def self_test() -> dict[str, Any]:
         "quality_runtime_included": quality_included,
         "publication_runtime_included": publication_included,
         "public_runtime_package_included": public_runtime_included,
+        "host_bridge_included": host_bridge_included,
         "core_runtime_packages_included": core_runtime_included,
         "model_execution": False,
     }

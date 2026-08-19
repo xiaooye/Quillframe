@@ -8,6 +8,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 EXTENSIONS = {".py", ".json", ".yml", ".yaml", ".toml"}
 EXCLUDED_TOP = {".git", "docs", "knowledge", "assets", "specs"}
+SKIP_PREFIX = (
+    "build/",
+    "dist/",
+    "site/dist/",
+    "site/public/generated/",
+    "site/src/generated/",
+    "site/docs-site/public/repo-assets/",
+    "site/docs-site/src/content/docs/",
+    "studio/app/dist/",
+    "studio/app/src-tauri/target/",
+)
+SKIP_PARTS = {"node_modules", "__pycache__", ".astro", ".pytest_cache", ".venv"}
 PATTERNS = {
     "legacy_env_prefix": "NOVEL" + "_OS_",
     "legacy_schema_prefix": "novel" + "_os_",
@@ -27,6 +39,11 @@ def live_files() -> list[Path]:
             continue
         rel = path.relative_to(ROOT)
         if rel.parts and rel.parts[0] in EXCLUDED_TOP:
+            continue
+        rel_text = rel.as_posix()
+        if any(rel_text.startswith(prefix) for prefix in SKIP_PREFIX):
+            continue
+        if any(part in SKIP_PARTS or part.endswith(".egg-info") for part in rel.parts):
             continue
         if path.name.startswith("CHANGELOG"):
             continue
