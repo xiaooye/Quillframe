@@ -24,6 +24,16 @@ ROOT = Path(__file__).resolve().parents[1]
 MIGRATIONS = Path(__file__).resolve().parent / "migrations"
 SCHEMA_VERSION = 1
 
+# ``b2c007a`` briefly shipped the authority column in migration 006 before
+# the durable 006/007 split was restored.  That checkpoint was never released,
+# but a local database can still have its ledger entry.  Keep this compatibility
+# allow-list narrow and structural: it accepts only that exact historical
+# checksum, and migration 007 is skipped only after proving that its column is
+# already present with the expected shape.
+_LEGACY_MIGRATION_CHECKSUMS = {
+    ("project", 6): {"sha256:7acfcdaa564db74a10975ff95814c3066042b7b32d3d2c92b4323997dc12346d"},
+}
+
 
 class MigrationChecksumError(RuntimeError):
     pass
@@ -112,6 +122,24 @@ def _ensure_migration_ledger(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+def _has_projection_authority_column(conn: sqlite3.Connection) -> bool:
+    """Return whether the transient 006 authority addition is already safe."""
+    table = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
+        ("project_projection_target_ownership",),
+    ).fetchone()
+    if not table or not table[0]:
+        return False
+    columns = {
+        row[1]: row for row in conn.execute("PRAGMA table_info(project_projection_target_ownership)")
+    }
+    authority = columns.get("authority")
+    if not authority or int(authority[3]) != 1 or str(authority[4]) != "0":
+        return False
+    normalized = "".join(str(table[0]).lower().split())
+    return "check(authority=0)" in normalized
+
+
 def apply_migrations(conn: sqlite3.Connection, scope: str) -> list[dict[str, Any]]:
     if scope not in {"global", "project"}:
         raise ValueError("scope must be global|project")
@@ -130,9 +158,29 @@ def apply_migrations(conn: sqlite3.Connection, scope: str) -> list[dict[str, Any
         ).fetchone()
         if row:
             if row["checksum"] != checksum:
-                raise MigrationChecksumError(
-                    f"{scope} migration {version} checksum mismatch: {row['checksum']} != {checksum}"
+                legacy = _LEGACY_MIGRATION_CHECKSUMS.get((scope, version), set())
+                if row["checksum"] not in legacy or (
+                    (scope, version) == ("project", 6) and not _has_projection_authority_column(conn)
+                ):
+                    raise MigrationChecksumError(
+                        f"{scope} migration {version} checksum mismatch: {row['checksum']} != {checksum}"
+                    )
+            continue
+        # A transient pre-release 006 already created this column.  Record the
+        # durable 007 ledger entry without replaying ALTER TABLE, which would
+        # otherwise fail with a duplicate-column error.
+        if scope == "project" and version == 7 and _has_projection_authority_column(conn):
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                conn.execute(
+                    "INSERT INTO schema_migrations(scope,version,name,checksum,applied_at) VALUES(?,?,?,?,?)",
+                    (scope, version, path.name, checksum, now_iso()),
                 )
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+            applied.append({"scope": scope, "version": version, "name": path.name, "checksum": checksum})
             continue
         try:
             conn.execute("BEGIN IMMEDIATE")

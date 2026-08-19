@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -79,6 +80,35 @@ class MappedProjectionTests(unittest.TestCase):
                 self.assertIn("authority", columns)
                 self.assertEqual(columns["authority"][4], "0")
         self.assertTrue(status(root, data_dir=data)["ready"])
+
+    def test_transient_b2c007a_projection_database_recovers(self):
+        td, root, data = self._fixture()
+        self.addCleanup(td.cleanup)
+        store = QuillframeStore(data)
+        store.create_project("PROJECT-MAPPED-TEST", "Mapped", "zh-CN")
+        location = store.location("PROJECT-MAPPED-TEST")
+        with sqlite3.connect(location.database) as conn:
+            # Reproduce the short-lived b2c007a ledger: migration 006 already
+            # owns the authority column, and migration 007 was not recorded.
+            conn.execute("DELETE FROM schema_migrations WHERE scope='project' AND version=7")
+            conn.execute(
+                "UPDATE schema_migrations SET checksum=? WHERE scope='project' AND version=6",
+                ("sha256:7acfcdaa564db74a10975ff95814c3066042b7b32d3d2c92b4323997dc12346d",),
+            )
+            conn.commit()
+        with store.open_project("PROJECT-MAPPED-TEST") as conn:
+            self.assertIsNotNone(
+                conn.execute(
+                    "SELECT 1 FROM schema_migrations WHERE scope='project' AND version=7"
+                ).fetchone()
+            )
+            self.assertEqual(
+                conn.execute(
+                    "SELECT name FROM pragma_table_info('project_projection_target_ownership') "
+                    "WHERE name='authority'"
+                ).fetchone()[0],
+                "authority",
+            )
 
     def test_apply_creates_missing_project_and_rolls_back_new_project_on_failure(self):
         td, root, data = self._fixture(create_db=False)
