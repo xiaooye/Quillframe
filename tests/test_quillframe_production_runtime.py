@@ -1124,6 +1124,37 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
             self.claim_native(runtime, host_agent_id="agent-new", host_invocation_id="inv-reuse")
         self.assertEqual(invocation_error.exception.code, "independent_host_identity_reused")
 
+    def test_project_identity_drift_blocks_native_infrastructure_failure_mutation(self):
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        run_id = self.start_native("SES-MANAGER")
+        self.prepare_native(runtime, run_id)
+        claim = self.claim_native(runtime)
+        with self.store.open_project("PROD") as conn:
+            conn.execute("UPDATE project_identity SET project_id='FOREIGN'")
+            conn.commit()
+
+        with self.assertRaises(ProductionRunError) as caught:
+            runtime.fail_independent_dispatch(
+                "PROD",
+                lease_id=claim["lease_id"],
+                reviewer_session_id=claim["reviewer_session_id"],
+                host_agent_id=claim["host_agent_id"],
+                host_invocation_id=claim["host_invocation_id"],
+                error={"code": "transport_failed"},
+            )
+        self.assertEqual(caught.exception.code, "independent_project_mismatch")
+        with self.store.open_project("PROD") as conn:
+            lease = conn.execute(
+                "SELECT status,infrastructure_error_json FROM independent_review_leases WHERE lease_id=?",
+                (claim["lease_id"],),
+            ).fetchone()
+            failed_events = conn.execute(
+                "SELECT COUNT(*) FROM independent_review_lifecycle_events WHERE lease_id=? AND event_kind='infrastructure_failed'",
+                (claim["lease_id"],),
+            ).fetchone()[0]
+        self.assertEqual(dict(lease), {"status": "claimed", "infrastructure_error_json": None})
+        self.assertEqual(failed_events, 0)
+
     def test_active_native_lease_blocks_legacy_but_infrastructure_failure_allows_takeover(self):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
         run_id = self.start_native()

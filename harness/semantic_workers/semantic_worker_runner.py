@@ -55,7 +55,7 @@ def local_command(*, packet_only: bool = False) -> tuple[str | None, str | None]
     args = [sys.executable, str(adapter), "--provider", selected]
     if packet_only:
         args.append("--packet-only")
-    return shlex.join(args), (f"local_{selected}_native_subagent" if packet_only else f"local_{selected}_cli")
+    return shlex.join(args), f"local_{selected}_cli"
 
 
 def legacy_openai_command() -> str | None:
@@ -181,23 +181,42 @@ def invoke_frozen_packet(packet_bytes: bytes | str, cmd: str, timeout: int) -> t
     # The thin local adapter returns only the judgment.  The runner binds that
     # judgment to the Core-owned job and nonce; it does not accept a new
     # reviewer/session/authority identity from the adapter.
-    if not {"job_id", "subject_id", "kind", "input_fingerprint", "status", "worker", "judgment", "proposals", "errors"}.issubset(result):
-        result = {
-            "job_id": packet["job"]["job_id"],
-            "subject_id": packet["job"]["subject_id"],
-            "kind": packet["job"]["kind"],
-            "input_fingerprint": packet["job"]["input_fingerprint"],
-            "status": "completed",
-            "worker": {
-                "provider": f"{provider}_native_subagent",
-                "model_or_reviewer": provider,
-                "run_reference": packet["relay_nonce"],
-            },
-            "judgment": result,
-            "proposals": [],
-            "errors": [],
-            "execution": {"run_reference": packet["relay_nonce"]},
+    typed_fields = {
+        "job_id", "subject_id", "kind", "input_fingerprint", "status",
+        "worker", "judgment", "proposals", "errors",
+    }
+    if typed_fields.issubset(result):
+        return None, {
+            "state": "infrastructure_failed",
+            "error": "packet adapter must return judgment only; typed identity is Core-owned",
         }
+    result = {
+        "job_id": packet["job"]["job_id"],
+        "subject_id": packet["job"]["subject_id"],
+        "kind": packet["job"]["kind"],
+        "input_fingerprint": packet["job"]["input_fingerprint"],
+        "status": "completed",
+        "worker": {
+            "provider": f"{provider}_cli",
+            "model_or_reviewer": provider,
+            "run_reference": packet["relay_nonce"],
+        },
+        "judgment": result,
+        "proposals": [],
+        "errors": [],
+        "execution": {
+            "run_reference": packet["relay_nonce"],
+            "transport": "local_cli",
+            "assurance_class": "local_process_bounded_context",
+            "local_process": {
+                "provider": provider,
+                "binary": provider,
+                "temporary_workspace": True,
+                "project_mount": False,
+                "os_isolation_attested": False,
+            },
+        },
+    }
     result_errors = validate_peer_result(packet, result)
     if result_errors:
         return None, {"state": "infrastructure_failed", "error": "; ".join(result_errors)}

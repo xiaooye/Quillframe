@@ -31,12 +31,19 @@ def main() -> int:
     if "@${{ inputs.framework-ref }}" in workflow:
         errors.append("reusable workflow may not use an expression in a step uses ref")
     required_exact_checkout = [
+        "repository: ${{ github.repository }}",
+        "ref: ${{ github.sha }}",
+        "path: .quillframe-project",
+        "persist-credentials: false",
         "repository: xiaooye/Quillframe",
         "ref: ${{ inputs.framework-ref }}",
         "path: .quillframe-framework",
         "EXPECTED_FRAMEWORK_COMMIT: ${{ inputs.framework-ref }}",
         "QUILLFRAME_ACTION_REF: ${{ steps.framework.outputs.commit }}",
         "QUILLFRAME_ACTION_REPOSITORY: xiaooye/Quillframe",
+        "QUILLFRAME_PROJECT_CHECKOUT: ${{ github.workspace }}/.quillframe-project",
+        "QUILLFRAME_PROJECT_ROOT: ${{ inputs.project-root }}",
+        "QUILLFRAME_FROZEN_PACKET: ${{ inputs.frozen-packet }}",
         ".quillframe-framework/.github/actions/project-peer-semantic/bridge.py",
         ".quillframe-framework/.github/actions/project-peer-semantic/auto_review.py",
     ]

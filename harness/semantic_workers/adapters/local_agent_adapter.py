@@ -76,19 +76,20 @@ def frozen_packet_run_reference(packet_bytes: bytes | str) -> str:
 def execute_frozen_packet(packet_bytes: bytes | str, requested: str, timeout: int = 180) -> dict[str, Any]:
     """Execute one exact packet in a Project-free temporary cwd.
 
-    The return value is the provider's judgment object only.  Reviewer/session/
-    authority identity remains the native host/Core lifecycle's responsibility.
+    The return value is the provider's judgment object only. Reviewer/session/
+    authority identity remains the Core/host lifecycle's responsibility; this
+    local CLI execution is not native-subagent evidence.
     """
     raw, packet = _frozen_packet(packet_bytes)
     provider = requested if requested in {"codex", "claude"} else None
     if provider is None:
-        raise FrozenPacketError(f"unsupported native provider: {requested}")
+        raise FrozenPacketError(f"unsupported local CLI provider: {requested}")
     if not exe(provider):
         raise FrozenPacketError(f"local agent unavailable: {provider}")
     output_contract = packet.get("job", {}).get("output_contract")
     if not isinstance(output_contract, dict):
         raise FrozenPacketError("frozen packet output contract is missing")
-    with tempfile.TemporaryDirectory(prefix="quillframe-native-packet-") as td:
+    with tempfile.TemporaryDirectory(prefix="quillframe-local-packet-") as td:
         cwd = Path(td)
         try:
             if provider == "codex":
@@ -133,7 +134,7 @@ def execute_frozen_packet(packet_bytes: bytes | str, requested: str, timeout: in
                 raise
             raise FrozenPacketError(f"{provider} judgment invalid: {exc}") from exc
     if not isinstance(judgment, dict):
-        raise FrozenPacketError("native judgment must be a JSON object")
+        raise FrozenPacketError("local CLI judgment must be a JSON object")
     return judgment
 
 
@@ -147,7 +148,7 @@ def execute_frozen_packet_result(packet_bytes: bytes | str, requested: str, time
     raw, packet = _frozen_packet(packet_bytes)
     provider = requested if requested in {"codex", "claude"} else None
     if provider is None:
-        raise FrozenPacketError(f"unsupported native provider: {requested}")
+        raise FrozenPacketError(f"unsupported local CLI provider: {requested}")
     nonce = str(packet["relay_nonce"])
     judgment = execute_frozen_packet(raw, provider, timeout)
     return {
@@ -157,14 +158,25 @@ def execute_frozen_packet_result(packet_bytes: bytes | str, requested: str, time
         "input_fingerprint": packet["job"]["input_fingerprint"],
         "status": "completed",
         "worker": {
-            "provider": f"{provider}_native_subagent",
+            "provider": f"{provider}_cli",
             "model_or_reviewer": provider,
             "run_reference": nonce,
         },
         "judgment": judgment,
         "proposals": [],
         "errors": [],
-        "execution": {"run_reference": nonce},
+        "execution": {
+            "run_reference": nonce,
+            "transport": "local_cli",
+            "assurance_class": "local_process_bounded_context",
+            "local_process": {
+                "provider": provider,
+                "binary": provider,
+                "temporary_workspace": True,
+                "project_mount": False,
+                "os_isolation_attested": False,
+            },
+        },
     }
 
 

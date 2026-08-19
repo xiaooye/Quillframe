@@ -596,6 +596,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
     ) -> dict[str, Any]:
         if not isinstance(error, dict) or not error:
             raise ProductionRunError("invalid_args", "non-empty infrastructure error object is required")
+        self._assert_independent_project_identity(project_id)
         try:
             return IndependentReviewRepository(self.store).fail(
                 project_id,

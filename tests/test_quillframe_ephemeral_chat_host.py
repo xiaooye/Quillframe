@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SEMANTIC = ROOT / "harness" / "semantic_workers"
@@ -113,12 +116,88 @@ class EphemeralChatHostTests(unittest.TestCase):
     def test_reusable_github_bridge_checks_out_and_executes_exact_commit(self):
         workflow = (ROOT / ".github/workflows/quillframe-chat-semantic-bridge.yml").read_text(encoding="utf-8")
         self.assertNotIn("@${{ inputs.framework-ref }}", workflow)
+        self.assertIn("repository: ${{ github.repository }}", workflow)
+        self.assertIn("ref: ${{ github.sha }}", workflow)
+        self.assertIn("path: .quillframe-project", workflow)
+        self.assertIn("persist-credentials: false", workflow)
+        self.assertIn("QUILLFRAME_PROJECT_CHECKOUT: ${{ github.workspace }}/.quillframe-project", workflow)
         self.assertIn("repository: xiaooye/Quillframe", workflow)
         self.assertIn("ref: ${{ inputs.framework-ref }}", workflow)
         self.assertIn("EXPECTED_FRAMEWORK_COMMIT: ${{ inputs.framework-ref }}", workflow)
         self.assertIn("QUILLFRAME_ACTION_REF: ${{ steps.framework.outputs.commit }}", workflow)
         self.assertIn(".quillframe-framework/.github/actions/project-peer-semantic/bridge.py", workflow)
         self.assertIn(".quillframe-framework/.github/actions/project-peer-semantic/auto_review.py", workflow)
+
+    def test_project_bridge_binds_to_caller_checkout_and_rejects_escape(self):
+        module_path = ROOT / ".github" / "actions" / "project-peer-semantic" / "bridge.py"
+        spec = importlib.util.spec_from_file_location("quillframe_bridge_checkout_test", module_path)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.path.insert(0, str(module_path.parent))
+        try:
+            spec.loader.exec_module(module)
+        finally:
+            sys.path.pop(0)
+
+        with tempfile.TemporaryDirectory(prefix="qf-peer-caller-") as td:
+            workspace = Path(td)
+            checkout = workspace / ".quillframe-project"
+            checkout.mkdir()
+            (checkout / "project").mkdir()
+            (checkout / "project" / "quillframe.toml").write_text(
+                '[project]\nid = "PROJECT-TEMP"\n', encoding="utf-8"
+            )
+            (checkout / "project" / "quillframe.lock.json").write_text(
+                json.dumps({"framework": {"source_repo": "xiaooye/Quillframe", "commit": "a" * 40}}),
+                encoding="utf-8",
+            )
+            packet_path = checkout / "project" / "packet.json"
+            packet_path.write_bytes(
+                json.dumps(
+                    build_packet(
+                        make_contract_job(
+                            "context.profile_derive",
+                            "CH-TEMP",
+                            {
+                                "source": {
+                                    "object_id": "CH-TEMP",
+                                    "object_type": "Chapter",
+                                    "source_fingerprint": "sha256:" + "b" * 64,
+                                    "model_view": {"bounded": True},
+                                    "stage_hints": ["draft"],
+                                },
+                                "manual_override_present": False,
+                            },
+                            source_session_id="SES-TEMP",
+                        )
+                    ),
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+            )
+            env = {
+                "GITHUB_WORKSPACE": str(workspace),
+                "QUILLFRAME_PROJECT_CHECKOUT": str(checkout),
+                "QUILLFRAME_PROJECT_ROOT": "project",
+                "QUILLFRAME_FROZEN_PACKET": "project/packet.json",
+                "QUILLFRAME_PROJECT_ID": "PROJECT-TEMP",
+                "QUILLFRAME_ACTION_REPOSITORY": "xiaooye/Quillframe",
+                "QUILLFRAME_ACTION_REF": "a" * 40,
+                "GITHUB_REPOSITORY": "example/consumer",
+                "QUILLFRAME_ACTION_PATH": str(ROOT / ".github" / "actions" / "project-peer-semantic"),
+            }
+            with patch.dict(os.environ, env, clear=False):
+                binding = module.load_project_binding()
+                self.assertEqual(binding["project_root"], checkout / "project")
+                packet, raw = module.load_frozen_packet()
+                self.assertEqual(raw, packet_path.read_bytes())
+                with patch.dict(os.environ, {"QUILLFRAME_PROJECT_ROOT": "../escape"}, clear=False):
+                    with self.assertRaises(SystemExit):
+                        module.load_project_binding()
+                with patch.dict(os.environ, {"QUILLFRAME_FROZEN_PACKET": "../escape.json"}, clear=False):
+                    with self.assertRaises(SystemExit):
+                        module.load_frozen_packet()
 
 
 if __name__ == "__main__":

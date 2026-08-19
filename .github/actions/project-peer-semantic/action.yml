@@ -43,6 +43,7 @@ runs:
         GH_TOKEN: ${{ inputs.github-token }}
         QUILLFRAME_BRIDGE_MODE: ${{ inputs.mode }}
         QUILLFRAME_PROJECT_ROOT: ${{ inputs.project-root }}
+        QUILLFRAME_PROJECT_CHECKOUT: ${{ github.workspace }}
         QUILLFRAME_PROJECT_ID: ${{ inputs.project-id }}
         QUILLFRAME_ACTION_PATH: ${{ github.action_path }}
         QUILLFRAME_ACTION_REF: ${{ github.action_ref }}
@@ -67,6 +68,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         COPILOT_GITHUB_TOKEN: ${{ inputs.copilot-token }}
         QUILLFRAME_PROJECT_ROOT: ${{ inputs.project-root }}
+        QUILLFRAME_PROJECT_CHECKOUT: ${{ github.workspace }}
         QUILLFRAME_PROJECT_ID: ${{ inputs.project-id }}
         QUILLFRAME_ACTION_PATH: ${{ github.action_path }}
         QUILLFRAME_ACTION_REF: ${{ github.action_ref }}

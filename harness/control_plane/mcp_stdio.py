@@ -91,14 +91,14 @@ TOOLS: list[dict[str, Any]] = [
         "name": "quillframe_candidate_reject",
         "title": "Reject candidate",
         "description": "Record an explicit user-authorized review rejection. It never accepts or settles Canon.",
-        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}, "candidate_id": {"type": "string", "minLength": 1}, "candidate_fingerprint": {"type": "string", "minLength": 1}, "authorized_by": {"type": "string", "minLength": 1}, "authorization": {"type": "object"}, "idempotency_key": {"type": "string", "minLength": 1}, "reason": {"type": ["string", "null"]}}, "required": ["project_id", "candidate_id", "candidate_fingerprint", "authorized_by", "authorization", "idempotency_key"], "additionalProperties": False},
+        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}, "candidate_id": {"type": "string", "minLength": 1}, "candidate_fingerprint": {"type": "string", "minLength": 1}, "authorized_by": {"type": "string", "minLength": 1}, "authorization": {"type": "object"}, "idempotency_key": {"type": "string", "minLength": 1}, "reason": {"type": ["string", "null"]}, "user_authorized": {"const": True}}, "required": ["project_id", "candidate_id", "candidate_fingerprint", "authorized_by", "authorization", "idempotency_key", "user_authorized"], "additionalProperties": False},
         "_meta": {"surface_class": "novelist_facing", "mapped_operation": "candidate.reject", "requires_explicit_user_authorization": True, "authority": False},
     },
     {
         "name": "quillframe_candidate_revision_request",
         "title": "Request candidate revision",
         "description": "Record an explicit user-authorized revision request with exact candidate binding. It never accepts or settles Canon.",
-        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}, "candidate_id": {"type": "string", "minLength": 1}, "candidate_fingerprint": {"type": "string", "minLength": 1}, "revision_request": {"type": "object"}, "authorized_by": {"type": "string", "minLength": 1}, "authorization": {"type": "object"}, "idempotency_key": {"type": "string", "minLength": 1}}, "required": ["project_id", "candidate_id", "candidate_fingerprint", "revision_request", "authorized_by", "authorization", "idempotency_key"], "additionalProperties": False},
+        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}, "candidate_id": {"type": "string", "minLength": 1}, "candidate_fingerprint": {"type": "string", "minLength": 1}, "revision_request": {"type": "object"}, "authorized_by": {"type": "string", "minLength": 1}, "authorization": {"type": "object"}, "idempotency_key": {"type": "string", "minLength": 1}, "user_authorized": {"const": True}}, "required": ["project_id", "candidate_id", "candidate_fingerprint", "revision_request", "authorized_by", "authorization", "idempotency_key", "user_authorized"], "additionalProperties": False},
         "_meta": {"surface_class": "novelist_facing", "mapped_operation": "candidate.revision.request", "requires_explicit_user_authorization": True, "authority": False},
     },
     {
@@ -174,6 +174,39 @@ def text_result(value: Any, *, is_error: bool = False) -> dict[str, Any]:
     return {"content": [{"type": "text", "text": json.dumps(value, ensure_ascii=False, indent=2)}], "structuredContent": value if isinstance(value, dict) else {"value": value}, "isError": is_error}
 
 
+def agent_safe_candidate_review(review: dict[str, Any]) -> dict[str, Any]:
+    """Project review evidence for MCP, without a manuscript side channel.
+
+    Studio may use the richer Core projection because it separately invokes the
+    exact visibility boundary before rendering text.  A model-discoverable MCP
+    tool must not receive candidate/incumbent content or a reconstructable diff;
+    released manuscript text remains exclusive to ``candidate.visible.get``.
+    """
+    safe = dict(review)
+    safe["schema"] = "quillframe_candidate_review_evidence_projection_v1"
+    for key in ("candidate_revision", "incumbent_revision"):
+        revision = review.get(key)
+        if isinstance(revision, dict):
+            safe[key] = {
+                field: revision[field]
+                for field in (
+                    "revision_id",
+                    "document_id",
+                    "parent_revision_id",
+                    "content_fingerprint",
+                    "authority_class",
+                    "source",
+                    "created_at",
+                )
+                if field in revision
+            }
+        else:
+            safe[key] = None
+    safe.pop("diff", None)
+    safe["manuscript_access"] = "candidate.visible.get_only"
+    return safe
+
+
 class MCPServer:
     def __init__(self, db_path: str):
         self.cp = ControlPlane(db_path)
@@ -213,15 +246,20 @@ class MCPServer:
                 payload=args["payload"], session_id=args.get("session_id"), idempotency_key=args.get("idempotency_key"),
             )
         if name == "quillframe_candidate_review_get":
-            return CoreOperations(QuillframeStore()).candidate_review_get(args["project_id"], candidate_id=args["candidate_id"])
+            review = CoreOperations(QuillframeStore()).candidate_review_get(args["project_id"], candidate_id=args["candidate_id"])
+            return agent_safe_candidate_review(review)
         if name == "quillframe_candidate_visible_get":
             return CoreOperations(QuillframeStore()).candidate_visible_get(args["project_id"], candidate_id=args["candidate_id"])
         if name == "quillframe_candidate_reject":
+            if args.get("user_authorized") is not True:
+                raise ValueError("candidate.reject requires an explicit user action")
             return CoreOperations(QuillframeStore()).reject_candidate(
                 args["project_id"], candidate_id=args["candidate_id"], candidate_fingerprint=args["candidate_fingerprint"],
                 authorized_by=args["authorized_by"], authorization=args["authorization"], idempotency_key=args["idempotency_key"], reason=args.get("reason"),
             )
         if name == "quillframe_candidate_revision_request":
+            if args.get("user_authorized") is not True:
+                raise ValueError("candidate.revision.request requires an explicit user action")
             return CoreOperations(QuillframeStore()).request_candidate_revision(
                 args["project_id"], candidate_id=args["candidate_id"], candidate_fingerprint=args["candidate_fingerprint"],
                 revision_request=args["revision_request"], authorized_by=args["authorized_by"], authorization=args["authorization"], idempotency_key=args["idempotency_key"],

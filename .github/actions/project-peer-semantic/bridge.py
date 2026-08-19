@@ -50,6 +50,27 @@ def canonical_repo(value: str) -> str:
     return value.strip().lower()
 
 
+def caller_checkout(workspace: Path) -> Path:
+    """Resolve the credentials-free caller checkout without allowing escape."""
+    reference = os.environ.get("QUILLFRAME_PROJECT_CHECKOUT", "").strip()
+    checkout = Path(reference) if reference else workspace
+    if not checkout.is_absolute():
+        checkout = workspace / checkout
+    checkout = checkout.resolve()
+    if workspace not in checkout.parents and checkout != workspace:
+        fail("caller Project checkout escapes GitHub workspace")
+    return checkout
+
+
+def checkout_member(checkout: Path, reference: str, label: str) -> Path:
+    path = Path(reference)
+    path = path if path.is_absolute() else checkout / path
+    path = path.resolve()
+    if checkout not in path.parents and path != checkout:
+        fail(f"{label} escapes caller Project checkout")
+    return path
+
+
 def positive_env_int(name: str) -> int:
     raw = os.environ.get(name, "")
     try:
@@ -77,9 +98,8 @@ def parse_fenced(body: str, marker: str) -> dict[str, Any]:
 
 def load_project_binding() -> dict[str, Any]:
     workspace = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
-    project_root = (workspace / os.environ["QUILLFRAME_PROJECT_ROOT"]).resolve()
-    if workspace not in project_root.parents and project_root != workspace:
-        fail("project root escapes caller workspace")
+    checkout = caller_checkout(workspace)
+    project_root = checkout_member(checkout, os.environ["QUILLFRAME_PROJECT_ROOT"], "project root")
 
     manifest_path = project_root / "quillframe.toml"
     lock_path = project_root / "quillframe.lock.json"
@@ -113,6 +133,7 @@ def load_project_binding() -> dict[str, Any]:
 
     return {
         "workspace": workspace,
+        "project_checkout": checkout,
         "project_root": project_root,
         "project_id": actual_project_id,
         "framework_repo": locked_repo,
@@ -160,9 +181,7 @@ def load_frozen_packet() -> tuple[dict[str, Any], bytes]:
     if not reference:
         fail("QUILLFRAME_FROZEN_PACKET is required; packet creation belongs to Core")
     workspace = Path(os.environ.get("GITHUB_WORKSPACE", os.getcwd())).resolve()
-    path = Path(reference)
-    if not path.is_absolute():
-        path = (workspace / path).resolve()
+    path = checkout_member(caller_checkout(workspace), reference, "frozen packet")
     if not path.is_file():
         fail(f"Core-frozen packet file not found: {path}")
     raw = path.read_bytes()

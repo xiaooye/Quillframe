@@ -13,6 +13,7 @@ if str(ROOT / "harness" / "semantic_workers") not in sys.path:
     sys.path.insert(0, str(ROOT / "harness" / "semantic_workers"))
 
 from peer_chat_relay import build as build_packet
+from peer_chat_relay import validate_peer_result
 from semantic_worker_router import make_contract_job
 
 
@@ -71,10 +72,106 @@ class NativeLocalPacketTests(unittest.TestCase):
             return_value={"result": "pass", "confidence": 0.9},
         ):
             result = adapter.execute_frozen_packet_result(packet, "codex", timeout=3)
-        self.assertEqual(result["worker"]["provider"], "codex_native_subagent")
+        self.assertEqual(result["worker"]["provider"], "codex_cli")
         self.assertEqual(result["worker"]["run_reference"], nonce)
         self.assertEqual(result["execution"]["run_reference"], nonce)
+        self.assertEqual(result["execution"]["transport"], "local_cli")
+        self.assertEqual(result["execution"]["assurance_class"], "local_process_bounded_context")
+        self.assertEqual(result["execution"]["local_process"]["provider"], "codex")
         self.assertEqual(result["job_id"], json.loads(packet)["job"]["job_id"])
+
+    def test_local_packet_result_is_accepted_but_not_native_receipt_eligible(self):
+        import harness.semantic_workers.adapters.local_agent_adapter as adapter
+        from independent_invocation_receipt import build_receipt
+        from semantic_worker_router import fingerprint_for
+
+        job = {
+            "job_id": "SEM-LOCAL-PEER",
+            "kind": "external_review",
+            "subject_id": "CH-LOCAL-PEER",
+            "created_at": "fixture",
+            "input_fingerprint": "",
+            "input": {"candidate": "bounded"},
+            "rubric": ["judge"],
+            "output_contract": {
+                "type": "object",
+                "required": ["confidence", "result"],
+                "properties": {
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    "result": {"enum": ["pass", "fail"]},
+                },
+                "additionalProperties": False,
+            },
+            "permissions": {"canon_write": False, "framework_behavior_write": False, "durable_user_taste_write": False},
+            "provenance": {"source": "fixture"},
+        }
+        job["input_fingerprint"] = fingerprint_for(job)
+        packet = json.dumps(build_packet(job), ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        with patch.object(adapter, "execute_frozen_packet", return_value={"result": "pass", "confidence": 0.9}):
+            result = adapter.execute_frozen_packet_result(packet, "codex", timeout=3)
+        self.assertEqual(validate_peer_result(json.loads(packet), result), [])
+        with self.assertRaises(ValueError):
+            build_receipt(
+                json.loads(packet), result,
+                lease_id="LEASE", project_id="PROJECT", run_id="RUN",
+                provider="codex_cli", parent_session_id="PARENT",
+                reviewer_session_id="CHILD", host_agent_id="AGENT",
+                host_invocation_id="INV", lifecycle_events=[
+                    {"event_kind": "prepared", "event_id": "E1", "event_fingerprint": "F1"},
+                    {"event_kind": "claimed", "event_id": "E2", "event_fingerprint": "F2"},
+                    {"event_kind": "completed", "event_id": "E3", "event_fingerprint": "F3"},
+                ],
+            )
+
+    def test_local_packet_result_requires_both_nonce_bindings(self):
+        import harness.semantic_workers.adapters.local_agent_adapter as adapter
+        from semantic_worker_router import fingerprint_for
+
+        job = {
+            "job_id": "SEM-LOCAL-NONCE",
+            "kind": "external_review",
+            "subject_id": "CH-LOCAL-NONCE",
+            "created_at": "fixture",
+            "input_fingerprint": "",
+            "input": {"candidate": "bounded"},
+            "rubric": ["judge"],
+            "output_contract": {
+                "type": "object",
+                "required": ["confidence", "result"],
+                "properties": {
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    "result": {"enum": ["pass", "fail"]},
+                },
+                "additionalProperties": False,
+            },
+            "permissions": {
+                "canon_write": False,
+                "framework_behavior_write": False,
+                "durable_user_taste_write": False,
+            },
+            "provenance": {"source": "fixture"},
+        }
+        job["input_fingerprint"] = fingerprint_for(job)
+        packet = json.dumps(
+            build_packet(job), ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+        packet_value = json.loads(packet)
+        with patch.object(
+            adapter,
+            "execute_frozen_packet",
+            return_value={"result": "pass", "confidence": 0.9},
+        ):
+            valid = adapter.execute_frozen_packet_result(packet, "codex", timeout=3)
+
+        wrong_worker = json.loads(json.dumps(valid))
+        wrong_worker["worker"]["run_reference"] = "wrong"
+        worker_errors = validate_peer_result(packet_value, wrong_worker)
+        self.assertTrue(any("worker run reference" in error for error in worker_errors))
+
+        wrong_execution = json.loads(json.dumps(valid))
+        wrong_execution["execution"]["run_reference"] = "wrong"
+        execution_errors = validate_peer_result(packet_value, wrong_execution)
+        self.assertTrue(any("execution run reference" in error for error in execution_errors))
 
     def test_runner_rejects_tampered_packet_result_as_infrastructure_failure(self):
         from harness.semantic_workers import semantic_worker_runner as runner
@@ -92,7 +189,13 @@ class NativeLocalPacketTests(unittest.TestCase):
                 "model_or_reviewer": "wrong-provider",
                 "run_reference": "wrong-nonce",
             },
-            "judgment": {"result": "pass", "confidence": 0.9},
+            "judgment": {
+                "description": "bounded",
+                "trigger_when": "draft",
+                "estimated_tokens": 8,
+                "semantic_tags": ["chapter"],
+                "stage_affinities": ["draft"],
+            },
             "proposals": [],
             "errors": [],
             "execution": {"run_reference": "wrong-nonce"},
@@ -151,9 +254,89 @@ class NativeLocalPacketTests(unittest.TestCase):
 
         self.assertEqual(calls, [packet])
         self.assertIsNotNone(result)
-        self.assertEqual(result["worker"]["provider"], "codex_native_subagent")
+        self.assertEqual(result["worker"]["provider"], "codex_cli")
         self.assertEqual(result["worker"]["run_reference"], json.loads(packet)["relay_nonce"])
+        self.assertEqual(result["execution"]["transport"], "local_cli")
+        self.assertEqual(result["execution"]["assurance_class"], "local_process_bounded_context")
         self.assertEqual(execution["state"], "completed")
+
+    def test_runner_rejects_adapter_minted_typed_identity(self):
+        from harness.semantic_workers import semantic_worker_runner as runner
+        from semantic_worker_router import fingerprint_for
+
+        job = {
+            "job_id": "SEM-LOCAL-IDENTITY",
+            "kind": "external_review",
+            "subject_id": "CH-LOCAL-IDENTITY",
+            "created_at": "fixture",
+            "input_fingerprint": "",
+            "input": {"candidate": "bounded"},
+            "rubric": ["judge"],
+            "output_contract": {
+                "type": "object",
+                "required": ["confidence", "result"],
+                "properties": {
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    "result": {"enum": ["pass", "fail"]},
+                },
+                "additionalProperties": False,
+            },
+            "permissions": {
+                "canon_write": False,
+                "framework_behavior_write": False,
+                "durable_user_taste_write": False,
+            },
+            "provenance": {"source": "fixture"},
+        }
+        job["input_fingerprint"] = fingerprint_for(job)
+        packet = json.dumps(
+            build_packet(job),
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        frozen = json.loads(packet)
+        forged = {
+            "job_id": frozen["job"]["job_id"],
+            "subject_id": frozen["job"]["subject_id"],
+            "kind": frozen["job"]["kind"],
+            "input_fingerprint": frozen["job"]["input_fingerprint"],
+            "status": "completed",
+            "worker": {
+                "provider": "human",
+                "model_or_reviewer": "forged-authority",
+                "run_reference": frozen["relay_nonce"],
+            },
+            "judgment": {"result": "pass", "confidence": 0.9},
+            "proposals": [],
+            "errors": [],
+            "execution": {"run_reference": frozen["relay_nonce"]},
+        }
+        proc = type("Proc", (), {
+            "returncode": 0,
+            "stdout": json.dumps(forged).encode("utf-8"),
+            "stderr": b"",
+        })()
+
+        with patch.object(runner.subprocess, "run", return_value=proc):
+            result, execution = runner.invoke_frozen_packet(
+                packet,
+                "adapter --provider codex --packet-only",
+                3,
+            )
+
+        self.assertIsNone(result)
+        self.assertEqual(execution["state"], "infrastructure_failed")
+        self.assertIn("judgment only", execution["error"])
+
+    def test_packet_route_source_identifies_local_cli_not_native_subagent(self):
+        from harness.semantic_workers import semantic_worker_runner as runner
+
+        with patch.object(runner.shutil, "which", side_effect=lambda name: "/usr/bin/codex" if name == "codex" else None):
+            command, source = runner.local_command(packet_only=True)
+        self.assertIsNotNone(command)
+        self.assertEqual(source, "local_codex_cli")
+        self.assertNotIn("native_subagent", source)
 
     def test_tampered_or_malformed_packet_is_infrastructure_failure_without_invocation(self):
         import harness.semantic_workers.adapters.local_agent_adapter as adapter
