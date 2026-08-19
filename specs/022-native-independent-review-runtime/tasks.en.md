@@ -11,15 +11,14 @@
 
 ## Task 5 evidence · current reset chain
 
-- Fresh Project: `/tmp/qf-ch001-final-reset-project-1y8fkk01/project`; runtime data: `/tmp/qf-ch001-final-reset-project-1y8fkk01/runtime`.
-- Framework commit: `eb1ad36fb29da6a04fc0b0cc23e603849d32d18f`.
+- Fresh Project and runtime data are recorded in the external, machine-readable CH001 evidence JSON; no consumer Project database is stored in this Framework repository.
+- Exact Framework commit is resolved from the consumer lock and repeated in the external CH001 evidence JSON at execution time.
 - Framework bundle: `sha256:3fd739b14b6c9ef9e0493cf186f4ca6eb4a7092e9c6180234eeccc300a5074d3`.
 - Projection: `sha256:5143ee28e8e1ef1bd43d2ba9c04026d57ca94db5df8c1b901f8c49ac85170a7e`; manifest: `sha256:a3cfb21678401cc7def3d92a8c18948764654fbf9d498ec426e3866d85c317c8`.
-- Context bundle: `sha256:7d137d2b78de373df6861f89b81660d0bd3589f481311e3751efee37b4601c64`.
-- CH001 run: `run_cf95d7cfaabc4573ad475bf766e213fe`; candidate: `cand_1f656ba7a7ff4f23bece86a2d74c04e8`.
+- Context bundle, run ID, candidate ID, and all lifecycle fingerprints are authoritative in the external CH001 evidence JSON.
 - Candidate: `sha256:27604cafbab04b5e4cf2dacb25cbcad8f3f3db8c1f59b7d4f096cabbf7955145`.
-- Native reviewer: exactly one `codex_native_subagent` lifecycle, with a distinct reviewer session `ses_review_eef5b5067e7b4b3dada9fb7173053da7`, exact packet/result/receipt binding, and reviewer tool denial. Claude was not used to review this candidate.
-- Review Draft: `/var/home/pc/Documents/card/new cards/chinaboy_webnovel_quillframe/manuscripts/review/CH-001.review-draft.v0.9.1-local.md`; handoff/evidence are the `.current.*` files beside it.
-- The current overlay contains only CH001 review output and hook/lock metadata. CH002/CH003 were not projected, contextualized, drafted, or reviewed. `accepted=false`, `settled=false`, and Frostloom remote remained untouched.
+- Native reviewer: exactly one `codex_native_subagent` lifecycle with a distinct reviewer session, exact packet/result/receipt binding, and reviewer tool denial; Claude was not used to review this candidate. The exact identities are authoritative in the external evidence JSON.
+- Review Draft, handoff, and evidence are stored in the user-selected consumer overlay outside this Framework repository.
+- CH002/CH003 were not projected, contextualized, drafted, or reviewed. `accepted=false`, `settled=false`, and Frostloom remote remained untouched.
 
 The previous 9668aef chain is historical evidence only; it is not the current Review Draft and must not be presented as the release-chain result.

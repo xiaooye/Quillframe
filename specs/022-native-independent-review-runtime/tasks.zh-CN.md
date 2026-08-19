@@ -11,15 +11,14 @@
 
 ## 任务 5 证据 · 当前 reset 链路
 
-- Fresh Project：`/tmp/qf-ch001-final-reset-project-1y8fkk01/project`；runtime data：`/tmp/qf-ch001-final-reset-project-1y8fkk01/runtime`。
-- Framework commit：`eb1ad36fb29da6a04fc0b0cc23e603849d32d18f`。
+- Fresh Project 与 runtime data 记录在外部、机器可读的 CH001 evidence JSON 中；Framework 仓库不保存 consumer Project 数据库。
+- exact Framework commit 在执行时由 consumer lock 解析，并在外部 CH001 evidence JSON 中重复记录。
 - Framework bundle：`sha256:3fd739b14b6c9ef9e0493cf186f4ca6eb4a7092e9c6180234eeccc300a5074d3`。
 - Projection：`sha256:5143ee28e8e1ef1bd43d2ba9c04026d57ca94db5df8c1b901f8c49ac85170a7e`；manifest：`sha256:a3cfb21678401cc7def3d92a8c18948764654fbf9d498ec426e3866d85c317c8`。
-- Context bundle：`sha256:7d137d2b78de373df6861f89b81660d0bd3589f481311e3751efee37b4601c64`。
-- CH001 run：`run_cf95d7cfaabc4573ad475bf766e213fe`；candidate：`cand_1f656ba7a7ff4f23bece86a2d74c04e8`。
+- Context bundle、run ID、candidate ID 及全部 lifecycle fingerprint 以外部 CH001 evidence JSON 为准。
 - Candidate：`sha256:27604cafbab04b5e4cf2dacb25cbcad8f3f3db8c1f59b7d4f096cabbf7955145`。
-- Native reviewer：恰好一次 `codex_native_subagent` lifecycle，独立 reviewer session 为 `ses_review_eef5b5067e7b4b3dada9fb7173053da7`，并绑定 exact packet/result/receipt；工具访问被拒绝。Claude 没有评审这个 candidate。
-- Review Draft：`/var/home/pc/Documents/card/new cards/chinaboy_webnovel_quillframe/manuscripts/review/CH-001.review-draft.v0.9.1-local.md`；handoff/evidence 为同目录下 `.current.*` 文件。
-- 当前 overlay 只含 CH001 review 输出与 hook/lock 元数据。没有 projection、Context、draft 或 review CH002/CH003；`accepted=false`、`settled=false`，Frostloom remote 未触碰。
+- Native reviewer：恰好一次 `codex_native_subagent` lifecycle，具有独立 reviewer session、exact packet/result/receipt 绑定及工具拒绝；Claude 没有评审这个 candidate。exact identity 以外部 evidence JSON 为准。
+- Review Draft、handoff 与 evidence 保存在 Framework 仓库之外、用户指定的 consumer overlay 中。
+- 没有 projection、Context、draft 或 review CH002/CH003；`accepted=false`、`settled=false`，Frostloom remote 未触碰。
 
 此前的 9668aef 链路只作为历史证据，不是当前 Review Draft，也不得当作 release-chain 结果。
