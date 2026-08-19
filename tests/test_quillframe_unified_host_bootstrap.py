@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 import subprocess
 import tempfile
 import unittest
@@ -70,7 +71,7 @@ class FakeNativeRuntime:
             "packet_bytes": json.dumps(native_packet(), ensure_ascii=False, sort_keys=True, separators=(",", ":")),
         }
 
-    def complete_independent_dispatch(self, project_id: str, **kwargs):
+    def complete_independent_judgment(self, project_id: str, **kwargs):
         self.complete_calls.append({"project_id": project_id, **kwargs})
         return {"status": "completed", "candidate": {"content": "must not reach parent hook output"}}
 
@@ -272,6 +273,23 @@ class UnifiedHostBootstrapTests(unittest.TestCase):
                 self.assertNotIn("lease-native-hook", context)
                 self.assertNotIn(str(Path(td)), context)
 
+                state_files = list((Path(td) / ".quillframe" / "native-reviewers").glob("*.json"))
+                self.assertEqual(len(state_files), 1)
+                state_text = state_files[0].read_text(encoding="utf-8")
+                state_value = json.loads(state_text)
+                self.assertEqual(
+                    set(state_value),
+                    {"schema", "lease_id", "provider", "reviewer_session_id"},
+                )
+                self.assertNotIn("secret frozen candidate", state_text)
+                self.assertNotIn(expected_parent, state_text)
+                self.assertNotIn(expected_agent, state_text)
+                self.assertNotIn(expected_invocation, state_text)
+                self.assertNotIn("packet_bytes", state_text)
+                self.assertNotIn("native-frozen-nonce", state_text)
+                self.assertEqual(stat.S_IMODE(state_files[0].stat().st_mode), 0o600)
+                self.assertEqual(stat.S_IMODE(state_files[0].parent.stat().st_mode), 0o700)
+
                 tool = host_bootstrap.native_reviewer_hook(
                     host,
                     {**trusted, "hook_event_name": "PreToolUse", "tool_name": "Read"},
@@ -288,10 +306,13 @@ class UnifiedHostBootstrapTests(unittest.TestCase):
                     state_root=Path(td),
                     runtime=runtime,
                 )
-                self.assertEqual(runtime.complete_calls[0]["result"]["worker"]["run_reference"], "native-frozen-nonce")
-                self.assertEqual(runtime.complete_calls[0]["result"]["execution"]["run_reference"], "native-frozen-nonce")
+                self.assertEqual(
+                    runtime.complete_calls[0]["judgment"],
+                    json.loads(stop_payload.get("last_assistant_message") or stop_payload["response"]),
+                )
                 self.assertNotIn("secret frozen candidate", json.dumps(stop))
                 self.assertNotIn("must not reach parent", json.dumps(stop))
+                self.assertFalse(state_files[0].exists())
 
     def test_native_reviewer_missing_stop_judgment_fails_claim_as_infrastructure(self):
         self.assertTrue(hasattr(host_bootstrap, "native_reviewer_hook"))
@@ -317,6 +338,7 @@ class UnifiedHostBootstrapTests(unittest.TestCase):
                 state_root=root,
                 runtime=runtime,
             )
+            self.assertFalse((root / ".quillframe" / "native-reviewers").exists())
         self.assertEqual(runtime.complete_calls, [])
         self.assertEqual(len(runtime.fail_calls), 1)
         self.assertEqual(runtime.fail_calls[0]["error"]["code"], "native_reviewer_output_missing")

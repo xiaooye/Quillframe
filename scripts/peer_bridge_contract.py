@@ -61,6 +61,10 @@ def main() -> int:
     required_bridge_guards = [
         "caller_repo == action_repo",
         "locked_commit != action_ref",
+        "quillframe_peer_issue_tombstone_v1",
+        "quillframe_peer_packet_reference_v1",
+        "quillframe_peer_result_reference_v1",
+        '"manuscript_published": False',
         '"project_repo": binding["caller_repo"]',
         '"framework_repo": binding["framework_repo"]',
         '"framework_commit": binding["framework_commit"]',
@@ -69,6 +73,10 @@ def main() -> int:
     for needle in required_bridge_guards:
         if needle not in bridge:
             errors.append(f"bridge guard missing: {needle}")
+    if "issue body must be one semantic job JSON object" in bridge:
+        errors.append("bridge may not accept a semantic job or manuscript in the Issue body")
+    if "packet_bytes.decode(\"utf-8\")" in bridge:
+        errors.append("bridge may not publish exact frozen packet bytes to an Issue comment")
 
     result = {
         "peer_bridge_contract": "PASS" if not errors else "FAIL",

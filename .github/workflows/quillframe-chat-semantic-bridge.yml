@@ -20,7 +20,7 @@ on:
         required: true
         type: string
       frozen-packet:
-        description: Relative packet path inside frozen-packet-artifact; the bridge never rebuilds it.
+        description: Relative packet path inside frozen-packet-artifact; the bridge never rebuilds or publishes it to the Project Issue.
         required: true
         type: string
       frozen-packet-artifact:

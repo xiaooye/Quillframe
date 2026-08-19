@@ -557,6 +557,40 @@ def _native_reviewer_packet_context(claim: dict[str, Any]) -> str:
     )
 
 
+def _write_native_reviewer_state(state_path: Path, state: dict[str, Any]) -> None:
+    state_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(state_path.parent, 0o700)
+    temp = state_path.with_suffix(".tmp")
+    payload = json.dumps(state, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    descriptor = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            descriptor = -1
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temp, state_path)
+        os.chmod(state_path, 0o600)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        try:
+            temp.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def _remove_native_reviewer_state(state_path: Path) -> None:
+    try:
+        state_path.unlink()
+    except FileNotFoundError:
+        pass
+    try:
+        state_path.parent.rmdir()
+    except (FileNotFoundError, OSError):
+        pass
+
+
 def _native_reviewer_judgment(event: dict[str, Any]) -> dict[str, Any]:
     raw = event.get("last_assistant_message") if isinstance(event.get("last_assistant_message"), str) else event.get("response")
     if not isinstance(raw, str) or not raw.strip():
@@ -604,26 +638,14 @@ def native_reviewer_hook(
             raise ValueError("native claim did not create a reviewer session")
         if reviewer_session_id == identity["parent_session_id"]:
             raise ValueError("native reviewer session must differ from parent session")
-        packet_bytes = claim.get("packet_bytes")
-        packet = _native_reviewer_packet_from_bytes(packet_bytes)
         context = _native_reviewer_packet_context(claim)
         state = {
-            "schema": "quillframe_native_reviewer_hook_state_v1",
-            "project_id": project_id,
+            "schema": "quillframe_native_reviewer_hook_state_v3",
             "lease_id": claim.get("lease_id"),
-            "run_id": claim.get("run_id"),
             "provider": claim.get("provider"),
-            "parent_session_id": identity["parent_session_id"],
             "reviewer_session_id": reviewer_session_id,
-            "host_agent_id": identity["host_agent_id"],
-            "host_invocation_id": identity["host_invocation_id"],
-            "packet_bytes": packet_bytes if isinstance(packet_bytes, str) else None,
-            "packet": packet,
         }
-        state_path.parent.mkdir(parents=True, exist_ok=True)
-        temp = state_path.with_suffix(".tmp")
-        temp.write_text(json.dumps(state, ensure_ascii=False, sort_keys=True), encoding="utf-8")
-        os.replace(temp, state_path)
+        _write_native_reviewer_state(state_path, state)
         return hook_json(event_name, context=context)
     if event_name == "PreToolUse":
         return hook_json(
@@ -642,70 +664,21 @@ def native_reviewer_hook(
                 project_id,
                 lease_id=state["lease_id"],
                 reviewer_session_id=state["reviewer_session_id"],
-                host_agent_id=state["host_agent_id"],
-                host_invocation_id=state["host_invocation_id"],
+                host_agent_id=identity["host_agent_id"],
+                host_invocation_id=identity["host_invocation_id"],
                 error={"code": str(exc), "kind": "infrastructure"},
             )
+            _remove_native_reviewer_state(state_path)
             return hook_json(event_name)
-        try:
-            packet = _native_reviewer_packet_from_bytes(state.get("packet_bytes"))
-            if state.get("packet") != packet:
-                raise ValueError("native reviewer state packet differs from exact frozen bytes")
-        except ValueError as exc:
-            runtime.fail_independent_dispatch(
-                project_id,
-                lease_id=state["lease_id"],
-                reviewer_session_id=state["reviewer_session_id"],
-                host_agent_id=state["host_agent_id"],
-                host_invocation_id=state["host_invocation_id"],
-                error={"code": "native_frozen_packet_invalid", "kind": "infrastructure", "detail": str(exc)},
-            )
-            try:
-                state_path.unlink()
-            except FileNotFoundError:
-                pass
-            return hook_json(event_name)
-        nonce = str(packet.get("relay_nonce") or "")
-        if not nonce:
-            runtime.fail_independent_dispatch(
-                project_id,
-                lease_id=state["lease_id"],
-                reviewer_session_id=state["reviewer_session_id"],
-                host_agent_id=state["host_agent_id"],
-                host_invocation_id=state["host_invocation_id"],
-                error={"code": "native_packet_nonce_missing", "kind": "infrastructure"},
-            )
-            return hook_json(event_name)
-        result = {
-            "schema": "quillframe_peer_review_result_v1",
-            "job_id": (packet.get("job") or {}).get("job_id"),
-            "subject_id": (packet.get("job") or {}).get("subject_id"),
-            "kind": (packet.get("job") or {}).get("kind"),
-            "input_fingerprint": packet.get("input_fingerprint"),
-            "status": "completed",
-            "judgment": judgment,
-            "worker": {
-                "provider": state.get("provider"),
-                "model_or_reviewer": NATIVE_REVIEWER_AGENT_TYPE,
-                "session_id": state["reviewer_session_id"],
-                "run_reference": nonce,
-            },
-            "proposals": [],
-            "errors": [],
-            "execution": {"run_reference": nonce},
-        }
-        runtime.complete_independent_dispatch(
+        runtime.complete_independent_judgment(
             project_id,
             lease_id=state["lease_id"],
             reviewer_session_id=state["reviewer_session_id"],
-            host_agent_id=state["host_agent_id"],
-            host_invocation_id=state["host_invocation_id"],
-            result=result,
+            host_agent_id=identity["host_agent_id"],
+            host_invocation_id=identity["host_invocation_id"],
+            judgment=judgment,
         )
-        try:
-            state_path.unlink()
-        except FileNotFoundError:
-            pass
+        _remove_native_reviewer_state(state_path)
         return hook_json(event_name)
     return hook_json(event_name)
 

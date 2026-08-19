@@ -1,5 +1,5 @@
 name: Quillframe Project Peer Semantic Bridge
-description: Execute the generic peer semantic bridge against a consuming Project issue while enforcing exact Framework lock binding.
+description: Execute the generic peer semantic bridge against a manuscript-free Project Issue tombstone while enforcing exact Framework lock binding.
 inputs:
   mode:
     description: prepare, review, or validate-result

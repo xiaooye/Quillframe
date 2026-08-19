@@ -114,6 +114,91 @@ class EphemeralChatHostTests(unittest.TestCase):
         self.assertNotIn("build_packet(job)", bridge)
         self.assertNotIn("build_packet(job)", auto)
         self.assertNotIn("github_models", bridge + auto + action)
+        self.assertNotIn('packet_bytes.decode("utf-8")', auto)
+        self.assertNotIn("bridge.RESULT_MARKER", auto)
+        self.assertNotIn("issue body must be one semantic job JSON object", bridge + auto)
+        self.assertIn("quillframe_peer_issue_tombstone_v1", bridge)
+
+    def test_github_prepare_posts_only_packet_reference_and_requires_tombstone(self):
+        module_path = ROOT / ".github" / "actions" / "project-peer-semantic" / "bridge.py"
+        spec = importlib.util.spec_from_file_location("quillframe_bridge_privacy_test", module_path)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.path.insert(0, str(module_path.parent))
+        try:
+            spec.loader.exec_module(module)
+        finally:
+            sys.path.pop(0)
+
+        fingerprint = "sha256:" + "a" * 64
+        job = make_contract_job(
+            "quality.production_review",
+            "CH-PRIVATE",
+            {
+                "candidate_fingerprint": fingerprint,
+                "candidate_text": "UNRELEASED-MANUSCRIPT-SENTINEL",
+                "reader_grip": "very_high",
+            },
+            source_session_id="SES-PRIVATE",
+            qualification_receipt=make_qualified_receipt(fingerprint, "CH-PRIVATE"),
+        )
+        packet = build_packet(job)
+        packet_bytes = json.dumps(packet, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        issue = {
+            "number": 17,
+            "title": f"[quillframe-peer][PROJECT-PRIVATE] {job['job_id']}",
+            "body": json.dumps({
+                "schema": "quillframe_peer_issue_tombstone_v1",
+                "job_id": job["job_id"],
+                "input_fingerprint": job["input_fingerprint"],
+                "status": "awaiting_external",
+            }),
+        }
+        binding = {
+            "project_id": "PROJECT-PRIVATE",
+            "caller_repo": "example/private-project",
+        }
+        commands = []
+
+        def fake_run(args, *, capture=False):
+            commands.append(args)
+            return "" if capture else None
+
+        with patch.object(module, "common_event", return_value=({}, issue, 17)), \
+             patch.object(module, "load_frozen_packet", return_value=(packet, packet_bytes)), \
+             patch.object(module, "verify_job_provenance"), \
+             patch.object(module, "framework_paths", return_value=tuple(Path(name) for name in ("router", "relay", "registered", "receipt"))), \
+             patch.object(module, "run", side_effect=fake_run):
+            module.prepare(binding)
+
+        posted = [args for args in commands if args[:3] == ["gh", "issue", "comment"]]
+        self.assertEqual(len(posted), 1)
+        comment = posted[0][posted[0].index("--body") + 1]
+        self.assertNotIn("UNRELEASED-MANUSCRIPT-SENTINEL", comment)
+        self.assertNotIn(packet_bytes.decode("utf-8"), comment)
+        self.assertIn("quillframe_peer_packet_reference_v1", comment)
+        self.assertIn("packet_fingerprint", comment)
+
+        result_reference = module.result_reference_comment(
+            {
+                "job_id": job["job_id"],
+                "input_fingerprint": job["input_fingerprint"],
+                "worker": {
+                    "provider": "github_copilot_actions",
+                    "model_or_reviewer": "fixture",
+                },
+                "judgment": {"report": "UNRELEASED-MANUSCRIPT-SENTINEL"},
+            },
+            status="completed_by_github_copilot_actions",
+        )
+        self.assertNotIn("UNRELEASED-MANUSCRIPT-SENTINEL", result_reference)
+        self.assertIn("quillframe_peer_result_reference_v1", result_reference)
+        self.assertIn("result_fingerprint", result_reference)
+
+        unsafe_issue = {**issue, "body": json.dumps(job)}
+        with self.assertRaises(SystemExit), patch.object(module, "common_event", return_value=({}, unsafe_issue, 17)), \
+             patch.object(module, "load_frozen_packet", return_value=(packet, packet_bytes)):
+            module.prepare(binding)
 
     def test_reusable_github_bridge_checks_out_and_executes_exact_commit(self):
         workflow = (ROOT / ".github/workflows/quillframe-chat-semantic-bridge.yml").read_text(encoding="utf-8")

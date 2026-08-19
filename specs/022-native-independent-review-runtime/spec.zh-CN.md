@@ -41,7 +41,10 @@ Mapped Project 也存在断链：Git/Markdown adapter 能校验及构建确定�
     消费 frozen packet。Reusable workflow 只能通过 caller 前置 job 上传的
     artifact 与 Core 签发的 SHA-256 接收这些运行时 bytes；called job 在使用前
     必须下载、限制路径并校验 artifact。同 job 的 composite action 必须同时收到
-    exact packet path 与 SHA-256。
+    exact packet path 与 SHA-256。Project Issue body 只能是绑定 job、fingerprint
+    与 status 的精确 tombstone，不能包含 semantic job 或正文；自动审查路径的
+    Issue comments 只保存 packet/result 指纹引用与 validation receipt，不能保存
+    frozen packet、正文或自动审查 judgment bytes。
 12. Mapped Project 可声明 `paths.runtime_context_manifest`。Project-owned manifest
     显式映射 source fingerprint、stable ID、object type、authority、lifecycle、
     domain、allowed stages、target 与有界 runtime payload；Core 不猜 Markdown。
@@ -64,6 +67,9 @@ lease，不能信任 prompt 文本。它创建新 reviewer session，并把 froz
 additional context 注入。`SubagentStop` 校验一份 JSON 判断，确定性包装 typed
 result，记录终止事件、生成回执并提交。非法 JSON 或 hook 缺失属于基础设施故障，
 不是语义拒绝。
+Host hook state 只在 mode-0700 目录中的 mode-0600 文件里保存不透明 lease/session
+绑定。Exact packet 只保留在 Core 的持久 lease 中，并由 Core 在 completion 时重新
+读取；hook state 文件不得复制 packet。
 
 ## Mapped Project projection
 
@@ -75,6 +81,10 @@ target、幂等记录与不可变回执。source drift、authority escalation �
 ## 兼容性
 
 - 现有 GitHub peer receipt v1 仍可读取。
+- 新 GitHub dispatch 会拒绝含 semantic job 的旧式 Issue body；caller 必须在调用
+  bridge 前创建有界 tombstone。
+- 显式 legacy `validate-result` mode 可以消费人工撰写的 typed result comment，但
+  不会重新发布 frozen packet；自动审查改用不含正文的 result-reference comment。
 - 标准 Project 与未声明 runtime manifest 的 Project 行为不变。
 - Candidate visibility 与 Acceptance/Settlement 合同不变。
 - 本规格不修改或 repin consumer repository。

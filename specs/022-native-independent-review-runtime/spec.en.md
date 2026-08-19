@@ -50,6 +50,10 @@ runtime objects in Project SQLite.
     prior caller-job artifact plus the Core-issued SHA-256 fingerprint; the
     called job downloads, confines, and verifies that artifact before use.
     The same-job composite action requires the exact packet path and SHA-256.
+    The Project Issue body is an exact job/fingerprint/status tombstone, never
+    the semantic job or manuscript. The automated path retains packet/result
+    fingerprint references and the validation receipt in Issue comments,
+    never frozen packet, manuscript, or automated judgment bytes.
 12. Mapped Projects may declare `paths.runtime_context_manifest`. The
     Project-owned manifest explicitly maps source fingerprints to stable IDs,
     object types, authority, lifecycle, domain, allowed stages, targets, and
@@ -78,6 +82,10 @@ fresh reviewer session and injects the frozen packet as additional context.
 `SubagentStop` validates one JSON judgment, deterministically wraps the typed
 result, records the terminal event, creates the receipt, and submits it. Bad
 JSON or a missing hook is infrastructure failure, not semantic rejection.
+Host hook state persists only an opaque lease/session binding in a mode-0600
+file under a mode-0700 directory. The exact packet remains in Core's durable
+lease and is rehydrated there for completion; it is never duplicated in the
+hook state file.
 
 ## Mapped Project projection
 
@@ -90,6 +98,11 @@ authority escalation, or conflicting replay rolls back completely.
 ## Compatibility
 
 - Existing GitHub peer receipt v1 remains readable.
+- New GitHub dispatches reject legacy Issue bodies that contain the semantic
+  job; callers must create the bounded tombstone before invoking the bridge.
+- The explicit legacy `validate-result` mode may consume a manually authored
+  typed result comment; it never republishes the frozen packet. Automated
+  review uses the manuscript-free result-reference comment instead.
 - Standard Projects and Projects without a runtime manifest retain existing
   behavior.
 - Candidate visibility and Acceptance/Settlement contracts do not change.

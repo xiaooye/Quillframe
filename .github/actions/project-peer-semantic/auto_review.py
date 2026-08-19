@@ -143,14 +143,11 @@ def _write_output(name: str, value: dict[str, Any]) -> None:
 def main() -> int:
     binding = bridge.load_project_binding()
     _event, issue, issue_number = bridge.common_event(binding)
-    body = str(issue.get("body") or "")
-    job = json.loads(body)
+    packet, packet_bytes = bridge.load_frozen_packet()
+    job = packet.get("job")
     if not isinstance(job, dict):
-        bridge.fail("issue body must be one semantic job JSON object")
-    prefix = f"[quillframe-peer][{binding['project_id']}] "
-    expected_job_id = str(issue.get("title") or "")[len(prefix):].strip()
-    if job.get("job_id") != expected_job_id:
-        bridge.fail("issue body job_id must match title suffix")
+        bridge.fail("Core-frozen packet job must be an object")
+    bridge.validate_issue_tombstone(issue, binding, packet)
     bridge.verify_job_provenance(job, binding)
 
     build_receipt, validate_receipt, validate_peer_result, validate_registered_job, validate_dispatchable_job = _semantic_modules()
@@ -160,20 +157,7 @@ def main() -> int:
     registered_errors = validate_registered_job(job)
     if registered_errors:
         bridge.fail("invalid registered peer job: " + "; ".join(registered_errors))
-    packet, packet_bytes = bridge.load_frozen_packet()
-    if packet.get("job") != job:
-        bridge.fail("Core-frozen packet job differs from Project issue job")
-
-    packet_comment = "\n".join([
-        bridge.PACKET_MARKER,
-        "`semantic_status: independent_model_running`",
-        "",
-        "Project-owned GitHub Actions is dispatching this exact bounded packet to a separate GitHub Copilot CLI invocation.",
-        "",
-        "```json",
-        packet_bytes.decode("utf-8"),
-        "```",
-    ])
+    packet_comment = bridge.packet_reference_comment(packet, packet_bytes, status="independent_model_running")
     _post_comment(binding["caller_repo"], issue_number, packet_comment)
 
     model = os.environ.get("QUILLFRAME_REVIEW_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
@@ -205,16 +189,10 @@ def main() -> int:
     if peer_errors:
         bridge.fail("Copilot peer result failed Quillframe validation: " + "; ".join(peer_errors))
 
-    result_comment = "\n".join([
-        bridge.RESULT_MARKER,
-        "`semantic_status: completed_by_github_copilot_actions`",
-        "",
-        f"Independent provider: `github_copilot_actions` · model: `{model}`",
-        "",
-        "```json",
-        json.dumps(result, ensure_ascii=False, indent=2),
-        "```",
-    ])
+    result_comment = bridge.result_reference_comment(
+        result,
+        status="completed_by_github_copilot_actions",
+    )
     result_comment_id = _post_comment(binding["caller_repo"], issue_number, result_comment)
     runtime_trace = {
         "source": "project_owned_github_actions_bridge",

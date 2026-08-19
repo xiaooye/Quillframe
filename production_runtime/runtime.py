@@ -750,6 +750,61 @@ class ProductionRunExecutor(ProductionContextRuntime):
             _native_completion_event=completion_event,
         )
 
+    def complete_independent_judgment(
+        self,
+        project_id: str,
+        *,
+        lease_id: str,
+        reviewer_session_id: str,
+        host_agent_id: str,
+        host_invocation_id: str,
+        judgment: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Complete a native review without persisting its frozen packet in host state."""
+        if not isinstance(judgment, dict):
+            raise ProductionRunError("invalid_args", "native reviewer judgment must be an object")
+        self._assert_independent_project_identity(project_id)
+        repository = IndependentReviewRepository(self.store)
+        try:
+            lease = repository.lease(project_id, lease_id)
+        except IndependentReviewError as exc:
+            self._raise_independent_repository(exc)
+        if (
+            lease["reviewer_session_id"] != reviewer_session_id
+            or lease["host_agent_id"] != host_agent_id
+            or lease["host_invocation_id"] != host_invocation_id
+        ):
+            raise ProductionRunError("independent_lifecycle_mismatch", "native completion identity mismatch")
+        packet = json.loads(lease["packet_bytes"])
+        job = packet.get("job") or {}
+        nonce = packet.get("relay_nonce")
+        result = {
+            "schema": "quillframe_peer_review_result_v1",
+            "job_id": job.get("job_id"),
+            "subject_id": job.get("subject_id"),
+            "kind": job.get("kind"),
+            "input_fingerprint": job.get("input_fingerprint"),
+            "status": "completed",
+            "judgment": deepcopy(judgment),
+            "worker": {
+                "provider": INDEPENDENT_PROVIDER_CONTRACTS[lease["provider"]]["worker_provider"],
+                "model_or_reviewer": lease.get("agent_type") or "quillframe-independent-reviewer",
+                "session_id": reviewer_session_id,
+                "run_reference": nonce,
+            },
+            "proposals": [],
+            "errors": [],
+            "execution": {"run_reference": nonce},
+        }
+        return self.complete_independent_dispatch(
+            project_id,
+            lease_id=lease_id,
+            reviewer_session_id=reviewer_session_id,
+            host_agent_id=host_agent_id,
+            host_invocation_id=host_invocation_id,
+            result=result,
+        )
+
     def submit_independent(
         self,
         project_id: str,

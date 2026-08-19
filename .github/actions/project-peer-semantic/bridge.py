@@ -19,10 +19,14 @@ from pathlib import Path
 from typing import Any, NoReturn
 import tomllib
 
-PACKET_MARKER = "<!-- quillframe-peer-packet-v1 -->"
+PACKET_REFERENCE_MARKER = "<!-- quillframe-peer-packet-reference-v1 -->"
 RESULT_MARKER = "<!-- quillframe-peer-result-v1 -->"
+RESULT_REFERENCE_MARKER = "<!-- quillframe-peer-result-reference-v1 -->"
 VALIDATION_MARKER = "<!-- quillframe-peer-validation-v1 -->"
 RECEIPT_MARKER = "<!-- quillframe-peer-validation-receipt-v1 -->"
+ISSUE_TOMBSTONE_SCHEMA = "quillframe_peer_issue_tombstone_v1"
+PACKET_REFERENCE_SCHEMA = "quillframe_peer_packet_reference_v1"
+RESULT_REFERENCE_SCHEMA = "quillframe_peer_result_reference_v1"
 
 
 def canonical_json(value: Any) -> str:
@@ -177,6 +181,99 @@ def common_event(binding: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any
     return event, issue, issue_number
 
 
+def validate_issue_tombstone(
+    issue: dict[str, Any],
+    binding: dict[str, Any],
+    packet: dict[str, Any],
+) -> dict[str, str]:
+    """Require a manuscript-free Issue body bound to the exact frozen packet."""
+    job = packet.get("job")
+    if not isinstance(job, dict):
+        fail("Core-frozen packet job must be an object")
+    prefix = f"[quillframe-peer][{binding['project_id']}] "
+    expected_title = prefix + str(job.get("job_id") or "")
+    if str(issue.get("title") or "") != expected_title:
+        fail("issue title must exactly bind the Core-frozen packet job_id")
+    try:
+        tombstone = json.loads(str(issue.get("body") or ""))
+    except json.JSONDecodeError as exc:
+        fail(f"issue body must be one {ISSUE_TOMBSTONE_SCHEMA} JSON object: {exc}")
+    if not isinstance(tombstone, dict):
+        fail(f"issue body must be one {ISSUE_TOMBSTONE_SCHEMA} JSON object")
+    allowed = {"schema", "job_id", "input_fingerprint", "status"}
+    if set(tombstone) != allowed:
+        fail("peer issue tombstone fields must be exactly schema/job_id/input_fingerprint/status")
+    expected = {
+        "schema": ISSUE_TOMBSTONE_SCHEMA,
+        "job_id": job.get("job_id"),
+        "input_fingerprint": packet.get("input_fingerprint"),
+        "status": "awaiting_external",
+    }
+    if tombstone != expected:
+        fail("peer issue tombstone differs from the Core-frozen packet binding")
+    return tombstone
+
+
+def packet_reference(packet: dict[str, Any], packet_bytes: bytes, *, status: str) -> dict[str, Any]:
+    job = packet.get("job")
+    if not isinstance(job, dict):
+        fail("Core-frozen packet job must be an object")
+    relay_nonce = str(packet.get("relay_nonce") or "")
+    if not relay_nonce:
+        fail("Core-frozen packet relay nonce is required")
+    return {
+        "schema": PACKET_REFERENCE_SCHEMA,
+        "job_id": job.get("job_id"),
+        "input_fingerprint": packet.get("input_fingerprint"),
+        "packet_fingerprint": "sha256:" + hashlib.sha256(packet_bytes).hexdigest(),
+        "relay_nonce_fingerprint": "sha256:" + hashlib.sha256(relay_nonce.encode("utf-8")).hexdigest(),
+        "status": status,
+        "manuscript_published": False,
+        "authority": False,
+    }
+
+
+def packet_reference_comment(packet: dict[str, Any], packet_bytes: bytes, *, status: str) -> str:
+    reference = packet_reference(packet, packet_bytes, status=status)
+    return "\n".join([
+        PACKET_REFERENCE_MARKER,
+        f"`semantic_status: {status}`",
+        "",
+        "The consuming Project retained the exact Core-frozen packet in the workflow artifact. This Issue stores only its non-authoritative fingerprint binding; manuscript bytes are not published here.",
+        "",
+        "```json",
+        json.dumps(reference, ensure_ascii=False, indent=2),
+        "```",
+    ])
+
+
+def result_reference_comment(result: dict[str, Any], *, status: str) -> str:
+    worker = result.get("worker")
+    if not isinstance(worker, dict):
+        fail("peer result worker must be an object")
+    reference = {
+        "schema": RESULT_REFERENCE_SCHEMA,
+        "job_id": result.get("job_id"),
+        "input_fingerprint": result.get("input_fingerprint"),
+        "result_fingerprint": "sha256:" + hashlib.sha256(canonical_json(result).encode("utf-8")).hexdigest(),
+        "worker_provider": worker.get("provider"),
+        "model_or_reviewer": worker.get("model_or_reviewer"),
+        "status": status,
+        "manuscript_published": False,
+        "authority": False,
+    }
+    return "\n".join([
+        RESULT_REFERENCE_MARKER,
+        f"`semantic_status: {status}`",
+        "",
+        "The independent result remains in the workflow output. This Issue stores only its fingerprint and provider binding; judgment text and manuscript bytes are not published here.",
+        "",
+        "```json",
+        json.dumps(reference, ensure_ascii=False, indent=2),
+        "```",
+    ])
+
+
 def framework_paths() -> tuple[Path, Path, Path, Path]:
     action_path = Path(os.environ["QUILLFRAME_ACTION_PATH"]).resolve()
     framework_root = action_path.parents[2]
@@ -264,49 +361,29 @@ def validate_registered_contract_job(job_path: Path, registered: Path) -> None:
 
 def prepare(binding: dict[str, Any]) -> None:
     _event, issue, issue_number = common_event(binding)
-    body = str(issue.get("body") or "")
-    job = json.loads(body)
+    packet, packet_bytes = load_frozen_packet()
+    job = packet.get("job")
     if not isinstance(job, dict):
-        fail("issue body must be one semantic job JSON object")
-
-    prefix = f"[quillframe-peer][{binding['project_id']}] "
-    expected_job_id = str(issue.get("title") or "")[len(prefix):].strip()
-    if job.get("job_id") != expected_job_id:
-        fail("issue body job_id must match title suffix")
+        fail("Core-frozen packet job must be an object")
+    validate_issue_tombstone(issue, binding, packet)
     verify_job_provenance(job, binding)
 
-    packet, packet_bytes = load_frozen_packet()
-    if packet.get("job") != job:
-        fail("Core-frozen packet job differs from Project issue job")
-
-    router, relay, registered, _receipt = framework_paths()
+    router, _relay, registered, _receipt = framework_paths()
     with tempfile.TemporaryDirectory(prefix="quillframe-peer-") as tmp:
         tmpdir = Path(tmp)
         job_path = tmpdir / "job.json"
         jobs_path = tmpdir / "jobs.json"
-        packet_path = tmpdir / "packet.json"
         job_path.write_text(json.dumps(job, ensure_ascii=False, indent=2), encoding="utf-8")
         jobs_path.write_text(json.dumps({"jobs": [job]}, ensure_ascii=False), encoding="utf-8")
         run(["python", str(router), "validate-jobs", "--jobs", str(jobs_path)])
         validate_registered_contract_job(job_path, registered)
-        packet_path.write_bytes(packet_bytes)
-        packet = packet_bytes.decode("utf-8")
 
-    comment = "\n".join([
-        PACKET_MARKER,
-        "`semantic_status: awaiting_user`",
-        "",
-        "This runtime trace is owned by the consuming Project repository. Use a genuinely separate reviewer session and return only the typed result in a new comment prefixed with `<!-- quillframe-peer-result-v1 -->`.",
-        "",
-        "```json",
-        packet,
-        "```",
-    ])
+    comment = packet_reference_comment(packet, packet_bytes, status="awaiting_user")
     run(["gh", "issue", "comment", str(issue_number), "--repo", binding["caller_repo"], "--body", comment])
 
 
 def validate_result(binding: dict[str, Any]) -> dict[str, Any]:
-    event, _issue, issue_number = common_event(binding)
+    event, issue, issue_number = common_event(binding)
     comment = event.get("comment")
     if not isinstance(comment, dict) or RESULT_MARKER not in str(comment.get("body") or ""):
         fail("validate-result requires a marked peer result comment")
@@ -314,19 +391,8 @@ def validate_result(binding: dict[str, Any]) -> dict[str, Any]:
     if result_comment_id <= 0:
         fail("result comment id required")
 
-    comments_raw = run([
-        "gh", "api", f"repos/{binding['caller_repo']}/issues/{issue_number}/comments?per_page=100"
-    ], capture=True)
-    comments = json.loads(comments_raw)
-    if not isinstance(comments, list):
-        fail("GitHub comments response must be a list")
     packet, packet_bytes = load_frozen_packet()
-    packets = [c for c in comments if PACKET_MARKER in str((c or {}).get("body") or "")]
-    if not packets:
-        fail("no peer packet found in Project issue")
-    parsed_packets = [parse_fenced(str(row.get("body") or ""), PACKET_MARKER) for row in packets]
-    if any(canonical_json(value).encode("utf-8") != packet_bytes for value in parsed_packets):
-        fail("one or more Project issue packet comments do not match the Core-frozen packet")
+    validate_issue_tombstone(issue, binding, packet)
     result = parse_fenced(str(comment.get("body") or ""), RESULT_MARKER)
     job = packet.get("job") or {}
     if not isinstance(job, dict):

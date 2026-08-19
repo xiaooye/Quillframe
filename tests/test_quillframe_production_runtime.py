@@ -1014,6 +1014,33 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
             native_result(claim),
         )))
 
+    def test_native_judgment_completion_rehydrates_exact_packet_only_inside_core(self):
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        run_id = self.start_native()
+        self.prepare_native(runtime, run_id)
+        claim = self.claim_native(runtime)
+        judgment = native_result(claim, "pass")["judgment"]
+
+        completed = runtime.complete_independent_judgment(
+            "PROD",
+            lease_id=claim["lease_id"],
+            reviewer_session_id=claim["reviewer_session_id"],
+            host_agent_id=claim["host_agent_id"],
+            host_invocation_id=claim["host_invocation_id"],
+            judgment=judgment,
+        )
+
+        self.assertEqual(completed["status"], "completed")
+        with self.store.open_project("PROD") as conn:
+            lease = conn.execute(
+                "SELECT status,receipt_json FROM independent_review_leases WHERE lease_id=?",
+                (claim["lease_id"],),
+            ).fetchone()
+        receipt = json.loads(lease["receipt_json"])
+        self.assertEqual(lease["status"], "completed")
+        self.assertEqual(receipt["job_id"], claim["peer_packet"]["job"]["job_id"])
+        self.assertEqual(receipt["relay_nonce"], claim["peer_packet"]["relay_nonce"])
+
     def test_invalid_native_result_does_not_consume_completion_plan(self):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
         run_id = self.start_native()
