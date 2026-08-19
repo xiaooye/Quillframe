@@ -14,7 +14,7 @@ from harness.semantic_workers.independent_invocation_receipt import (
     fingerprint as independent_fingerprint,
     validate_receipt as validate_independent_invocation_receipt,
 )
-from harness.semantic_workers.peer_bridge_receipt import SCHEMA as PROJECT_PEER_VALIDATION_RECEIPT_SCHEMA
+from harness.semantic_workers.peer_bridge_receipt import LEGACY_SCHEMA as PROJECT_PEER_VALIDATION_RECEIPT_SCHEMA
 from harness.semantic_workers.peer_chat_relay import validate_peer_result
 from persistence.independent_review_repository import IndependentReviewError, IndependentReviewRepository
 from persistence.quillframe_sqlite import fingerprint_text, now_iso

@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SEMANTIC_ROOT = ROOT / "harness" / "semantic_workers"
 if str(SEMANTIC_ROOT) not in sys.path:
     sys.path.insert(0, str(SEMANTIC_ROOT))
-from peer_bridge_receipt import build_receipt  # noqa: E402
+from peer_bridge_receipt import LEGACY_SCHEMA as LEGACY_PEER_RECEIPT_SCHEMA, build_receipt  # noqa: E402
 
 RULE_MATERIAL = [
     {
@@ -635,6 +635,7 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         packet = handoff["peer_packet"]
         result = peer_result(packet, "pass")
         receipt = project_bridge_receipt(packet, result)
+        receipt["schema"] = LEGACY_PEER_RECEIPT_SCHEMA
         completed = runtime.submit_independent(
             "PROD",
             run_id,

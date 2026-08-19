@@ -24,7 +24,9 @@ if str(HERE) not in sys.path:
 from peer_chat_relay import validate_peer_result  # noqa: E402
 from registered_contract_binding import validate_registered_job  # noqa: E402
 
-SCHEMA = "quillframe_project_peer_validation_receipt_v1"
+LEGACY_SCHEMA = "quillframe_project_peer_validation_receipt_v1"
+SCHEMA = "quillframe_project_peer_validation_receipt_v2"
+SUPPORTED_SCHEMAS = {LEGACY_SCHEMA, SCHEMA}
 
 
 def canonical(value: Any) -> bytes:
@@ -176,7 +178,8 @@ def validate_receipt(receipt: Any, packet: dict[str, Any], result: dict[str, Any
     errors: list[str] = []
     if not isinstance(receipt, dict):
         return ["peer validation receipt must be object"]
-    if receipt.get("schema") != SCHEMA:
+    receipt_schema = receipt.get("schema")
+    if receipt_schema not in SUPPORTED_SCHEMAS:
         errors.append("peer validation receipt schema mismatch")
     if receipt.get("authority") is not False:
         errors.append("peer validation receipt must be non-authoritative")
@@ -192,7 +195,10 @@ def validate_receipt(receipt: Any, packet: dict[str, Any], result: dict[str, Any
         errors.append("peer relay validation proof missing")
     if receipt.get("model_execution") is not True:
         errors.append("peer validation receipt must describe real model execution")
-    if receipt.get("worker_provider") == "human" or (result.get("worker") or {}).get("provider") == "human":
+    if receipt_schema == SCHEMA and (
+        receipt.get("worker_provider") == "human"
+        or (result.get("worker") or {}).get("provider") == "human"
+    ):
         errors.append("peer validation receipt does not accept human review evidence")
 
     job = packet.get("job")
@@ -340,6 +346,7 @@ def self_test() -> dict[str, Any]:
         "qualification_proof_not_exposed_to_peer": "dispatch_proof" not in packet["job"],
         "no_write_authority": not any(receipt["permissions"].values()),
         "human_provider_rejected": human_rejected,
+        "current_schema_is_model_only_v2": receipt["schema"] == SCHEMA,
     }
     return {
         "peer_bridge_receipt_contract": "PASS" if all(checks.values()) else "FAIL",

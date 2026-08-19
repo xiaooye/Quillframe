@@ -53,7 +53,11 @@ runtime objects in Project SQLite.
     The Project Issue body is an exact job/fingerprint/status tombstone, never
     the semantic job or manuscript. The automated path retains packet/result
     fingerprint references and the validation receipt in Issue comments,
-    never frozen packet, manuscript, or automated judgment bytes.
+    never frozen packet, manuscript, or automated judgment bytes. The Copilot
+    child receives a minimal environment containing one dedicated credential,
+    a mode-0600 temporary reviewer profile with no tools, and canonical packet
+    JSON delimited as data. Candidate and reader-context strings are untrusted
+    literary evidence and cannot override the reviewer profile.
 12. Mapped Projects may declare `paths.runtime_context_manifest`. The
     Project-owned manifest explicitly maps source fingerprints to stable IDs,
     object types, authority, lifecycle, domain, allowed stages, targets, and
@@ -97,11 +101,12 @@ authority escalation, or conflicting replay rolls back completely.
 
 ## Compatibility
 
-- Existing GitHub peer receipt v1 remains readable.
+- Existing GitHub peer receipt v1 remains readable for historical replay. New
+  bridge issuance uses the model-only v2 receipt.
 - New GitHub dispatches reject legacy Issue bodies that contain the semantic
   job; callers must create the bounded tombstone before invoking the bridge.
 - The explicit legacy `validate-result` mode may consume a manually authored
-  typed model-result comment; it never republishes the frozen packet. Its v1
+  typed model-result comment; it never republishes the frozen packet. Its v2
   receipt attests real model execution and therefore rejects
   `worker.provider=human`; authorized human review uses a separate privileged
   receipt boundary. Automated review uses the manuscript-free result-reference

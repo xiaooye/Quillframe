@@ -23,6 +23,7 @@
     {"op": "file_text_contains", "file": "quality/production_readiness.py", "value": "numeric_quality_aggregation"},
     {"op": "file_text_contains", "file": "harness/semantic_workers/registered_contract_binding.py", "value": "registered contract rubric mismatch"},
     {"op": "file_text_contains", "file": "harness/semantic_workers/peer_bridge_receipt.py", "value": "quillframe_project_peer_validation_receipt_v1"},
+    {"op": "file_text_contains", "file": "harness/semantic_workers/peer_bridge_receipt.py", "value": "quillframe_project_peer_validation_receipt_v2"},
     {"op": "file_text_contains", "file": "harness/semantic_workers/contracts/quality.json", "value": "reader.engagement_audit"},
     {"op": "file_text_contains", "file": "harness/semantic_workers/contracts/quality.json", "value": "quality.production_review"},
     {"op": "file_text_contains", "file": "harness/semantic_workers/contracts/quality.json", "value": "semantic_independent"},

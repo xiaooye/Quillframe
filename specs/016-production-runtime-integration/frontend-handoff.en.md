@@ -10,7 +10,7 @@ This Core workstream changes no `studio/app/**` visual/frontend composition file
 ## Production state machine
 `author.run.start` durably registers exactly one authoring task mode. `author.run.execute` consumes frozen Context and runs the mandatory production graph through registered Reader/manager qualification, then normally returns `awaiting_external` with a fingerprint-bound peer packet. Raw Draft is never returned and no Review Draft Candidate exists yet.
 
-The same manager/Writer/Model Service cannot satisfy the independent gate. `author.run.independent.submit` requires the exact peer packet, external semantic result and Project-owned `quillframe_project_peer_validation_receipt_v1`. Only a valid independent PASS that satisfies `quality.production_readiness` can create a user-visible Review Draft. Independent FAIL is `failed_gate`; do not reviewer-shop the same run.
+The same manager/Writer/Model Service cannot satisfy the independent gate. `author.run.independent.submit` requires the exact peer packet, external semantic result and current Project-owned `quillframe_project_peer_validation_receipt_v2`; v1 remains valid only for historical replay compatibility. Only a valid independent PASS that satisfies `quality.production_readiness` can create a user-visible Review Draft. Independent FAIL is `failed_gate`; do not reviewer-shop the same run.
 
 Any tracked source/project change after freeze returns `stale_conflict`. `author.run.context.refresh` is the explicit supersession path; Core never silently edits an old freeze.
 
