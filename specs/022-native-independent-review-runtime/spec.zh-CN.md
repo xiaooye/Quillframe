@@ -83,8 +83,10 @@ target、幂等记录与不可变回执。source drift、authority escalation �
 - 现有 GitHub peer receipt v1 仍可读取。
 - 新 GitHub dispatch 会拒绝含 semantic job 的旧式 Issue body；caller 必须在调用
   bridge 前创建有界 tombstone。
-- 显式 legacy `validate-result` mode 可以消费人工撰写的 typed result comment，但
-  不会重新发布 frozen packet；自动审查改用不含正文的 result-reference comment。
+- 显式 legacy `validate-result` mode 可以消费人工撰写的 typed model-result
+  comment，但不会重新发布 frozen packet。其 v1 receipt 证明真实模型执行，因此拒绝
+  `worker.provider=human`；授权人工审查使用独立的 privileged receipt 边界。自动审查
+  改用不含正文的 result-reference comment。
 - 标准 Project 与未声明 runtime manifest 的 Project 行为不变。
 - Candidate visibility 与 Acceptance/Settlement 合同不变。
 - 本规格不修改或 repin consumer repository。

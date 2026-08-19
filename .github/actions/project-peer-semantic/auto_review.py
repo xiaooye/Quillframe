@@ -62,21 +62,22 @@ def _parse_json_object(text: str) -> dict[str, Any]:
     return parsed
 
 
-def _copilot_judgment(packet: dict[str, Any], model: str) -> dict[str, Any]:
+def _copilot_judgment(packet_bytes: bytes, model: str) -> dict[str, Any]:
     if not (os.environ.get("COPILOT_GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")):
         raise ValueError("Copilot authentication token is required for independent peer review")
-    job = packet["job"]
+    if not isinstance(packet_bytes, bytes) or not packet_bytes:
+        raise ValueError("exact Core-frozen packet bytes are required")
+    try:
+        packet_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("Core-frozen packet bytes must be UTF-8") from exc
     prompt = "\n".join([
         "You are the genuinely separate independent semantic reviewer for one frozen Quillframe job.",
-        "Judge ONLY the bounded job supplied below. Do not use repository files, web access, tools, persistent memory, hidden expected labels, or the writer conversation.",
-        "Return ONLY the JSON object required by job.output_contract for result.judgment.",
+        "Judge ONLY the exact immutable Core-frozen packet supplied below. Do not use repository files, web access, tools, persistent memory, hidden expected labels, or the writer conversation.",
+        "Read the packet schema, nonce, job, reviewer instruction, and return binding exactly as supplied. Return ONLY the JSON object required by packet.job.output_contract for result.judgment.",
         "Do not return the outer semantic-result envelope, markdown, commentary, or chain-of-thought. The deterministic Quillframe bridge owns IDs, fingerprints, worker provenance, and nonce binding.",
         "",
-        json.dumps({
-            "reviewer_instruction": packet.get("reviewer_instruction"),
-            "job": job,
-        }, ensure_ascii=False, indent=2),
-    ])
+    ]).encode("utf-8") + packet_bytes
     with tempfile.TemporaryDirectory(prefix="quillframe-copilot-review-") as tmp:
         root = Path(tmp)
         home = root / "copilot-home"
@@ -97,7 +98,7 @@ def _copilot_judgment(packet: dict[str, Any], model: str) -> dict[str, Any]:
         ]
         proc = subprocess.run(
             command,
-            text=True,
+            text=False,
             input=prompt,
             capture_output=True,
             cwd=root,
@@ -106,11 +107,12 @@ def _copilot_judgment(packet: dict[str, Any], model: str) -> dict[str, Any]:
             timeout=180,
         )
     if proc.returncode != 0:
-        detail = (proc.stderr or proc.stdout or "Copilot CLI failed").strip()[:1600]
+        raw_detail = proc.stderr or proc.stdout or b"Copilot CLI failed"
+        detail = raw_detail.decode("utf-8", errors="replace").strip()[:1600]
         raise RuntimeError(f"Copilot CLI independent review failed: {detail}")
     if not proc.stdout.strip():
         raise ValueError("Copilot reviewer response content missing")
-    return _parse_json_object(proc.stdout)
+    return _parse_json_object(proc.stdout.decode("utf-8"))
 
 
 def _post_comment(repo: str, issue_number: int, body: str) -> int:
@@ -161,7 +163,7 @@ def main() -> int:
     _post_comment(binding["caller_repo"], issue_number, packet_comment)
 
     model = os.environ.get("QUILLFRAME_REVIEW_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
-    judgment = _copilot_judgment(packet, model)
+    judgment = _copilot_judgment(packet_bytes, model)
     result = {
         "job_id": job["job_id"],
         "subject_id": job["subject_id"],

@@ -4,6 +4,7 @@ import importlib.util
 import hashlib
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -18,7 +19,7 @@ for path in (ROOT, SEMANTIC, EVALS):
         sys.path.insert(0, str(path))
 
 from harness.integrations import chat_host_relay
-from peer_bridge_receipt import self_test as receipt_self_test
+from peer_bridge_receipt import build_receipt, self_test as receipt_self_test, validate_receipt
 from peer_chat_relay import build as build_packet, validate_peer_result
 from qualification_test_fixtures import make_qualified_receipt
 from semantic_worker_router import make_contract_job
@@ -96,9 +97,123 @@ class EphemeralChatHostTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             module._parse_json_object("not-json")
 
+    def test_auto_review_passes_exact_frozen_packet_bytes_to_copilot(self):
+        module = _load_auto_review()
+        fp = "sha256:" + "a" * 64
+        job = make_contract_job(
+            "quality.production_review",
+            "CH-EXACT-PACKET",
+            {
+                "candidate_fingerprint": fp,
+                "candidate_text": "EXACT-PACKET-MANUSCRIPT-SENTINEL",
+                "reader_grip": "very_high",
+            },
+            source_session_id="SES-EXACT-PACKET",
+            qualification_receipt=make_qualified_receipt(fp, "CH-EXACT-PACKET"),
+        )
+        packet = build_packet(job)
+        packet_bytes = json.dumps(
+            packet,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        completed = subprocess.CompletedProcess(
+            args=["copilot"],
+            returncode=0,
+            stdout=json.dumps({
+                "confidence": 0.9,
+                "result": "pass",
+                "report": "bounded fixture",
+                "evidence_refs": ["candidate:fixture"],
+            }).encode("utf-8"),
+            stderr=b"",
+        )
+        with patch.dict(os.environ, {"COPILOT_GITHUB_TOKEN": "fixture-token"}, clear=False), \
+             patch.object(module.subprocess, "run", return_value=completed) as run:
+            judgment = module._copilot_judgment(packet_bytes, "fixture-model")
+
+        self.assertEqual(judgment["result"], "pass")
+        prompt = run.call_args.kwargs["input"]
+        self.assertIsInstance(prompt, bytes)
+        self.assertEqual(prompt.count(packet_bytes), 1)
+        self.assertIn(packet["schema"].encode("utf-8"), prompt)
+        self.assertIn(packet["relay_nonce"].encode("utf-8"), prompt)
+        self.assertIn(b"return_binding", prompt)
+        self.assertFalse(run.call_args.kwargs["text"])
+
+    def test_project_peer_model_execution_receipt_rejects_human_provider(self):
+        fp = "sha256:" + "b" * 64
+        job = make_contract_job(
+            "quality.production_review",
+            "CH-HUMAN-RESULT",
+            {
+                "candidate_fingerprint": fp,
+                "candidate_text": "bounded candidate",
+                "reader_grip": "very_high",
+            },
+            source_session_id="SES-HUMAN-RESULT",
+            qualification_receipt=make_qualified_receipt(fp, "CH-HUMAN-RESULT"),
+        )
+        job["provenance"].update({
+            "project_id": "PROJECT-HUMAN",
+            "project_repo": "owner/project",
+            "framework_repo": "owner/framework",
+            "framework_commit": "f" * 40,
+        })
+        packet = build_packet(job)
+        result = {
+            "job_id": job["job_id"],
+            "subject_id": job["subject_id"],
+            "kind": job["kind"],
+            "input_fingerprint": job["input_fingerprint"],
+            "status": "completed",
+            "worker": {
+                "provider": "human",
+                "model_or_reviewer": "manual-reviewer",
+                "run_reference": packet["relay_nonce"],
+            },
+            "judgment": {
+                "confidence": 0.9,
+                "result": "pass",
+                "report": "manual fixture",
+                "evidence_refs": ["candidate:fixture"],
+            },
+            "proposals": [],
+            "errors": [],
+        }
+        with self.assertRaisesRegex(ValueError, "model execution"):
+            build_receipt(
+                packet,
+                result,
+                project_id="PROJECT-HUMAN",
+                project_repo="owner/project",
+                framework_repo="owner/framework",
+                framework_commit="f" * 40,
+                issue_number=7,
+                runtime_trace={
+                    "github_run_id": 123,
+                    "github_run_attempt": 1,
+                    "github_event_name": "issue_comment",
+                    "result_comment_id": 456,
+                    "workflow_name": "Project peer bridge",
+                    "framework_action_ref": "f" * 40,
+                },
+            )
+        fabricated = {
+            "schema": "quillframe_project_peer_validation_receipt_v1",
+            "worker_provider": "human",
+            "model_execution": True,
+        }
+        self.assertTrue(any(
+            "does not accept human" in item
+            for item in validate_receipt(fabricated, packet, result)
+        ))
+
     def test_project_peer_action_exposes_review_mode_without_live_model_call(self):
         text = (ROOT / ".github" / "actions" / "project-peer-semantic" / "action.yml").read_text(encoding="utf-8")
         self.assertIn("prepare, review, or validate-result", text)
+        self.assertIn("rejects worker.provider=human", text)
         self.assertIn("QUILLFRAME_REVIEW_MODEL", text)
         self.assertIn("auto_review.py", text)
         self.assertIn("validation-receipt", text)
@@ -114,7 +229,7 @@ class EphemeralChatHostTests(unittest.TestCase):
         self.assertNotIn("build_packet(job)", bridge)
         self.assertNotIn("build_packet(job)", auto)
         self.assertNotIn("github_models", bridge + auto + action)
-        self.assertNotIn('packet_bytes.decode("utf-8")', auto)
+        self.assertIn("_copilot_judgment(packet_bytes", auto)
         self.assertNotIn("bridge.RESULT_MARKER", auto)
         self.assertNotIn("issue body must be one semantic job JSON object", bridge + auto)
         self.assertIn("quillframe_peer_issue_tombstone_v1", bridge)

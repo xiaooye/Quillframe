@@ -2,7 +2,7 @@ name: Quillframe Project Peer Semantic Bridge
 description: Execute the generic peer semantic bridge against a manuscript-free Project Issue tombstone while enforcing exact Framework lock binding.
 inputs:
   mode:
-    description: prepare, review, or validate-result
+    description: prepare, review, or validate-result; the legacy typed-result receipt proves model execution and rejects worker.provider=human
     required: true
   project-root:
     description: Path to the Quillframe Project root in the caller repository

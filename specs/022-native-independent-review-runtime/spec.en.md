@@ -101,8 +101,11 @@ authority escalation, or conflicting replay rolls back completely.
 - New GitHub dispatches reject legacy Issue bodies that contain the semantic
   job; callers must create the bounded tombstone before invoking the bridge.
 - The explicit legacy `validate-result` mode may consume a manually authored
-  typed result comment; it never republishes the frozen packet. Automated
-  review uses the manuscript-free result-reference comment instead.
+  typed model-result comment; it never republishes the frozen packet. Its v1
+  receipt attests real model execution and therefore rejects
+  `worker.provider=human`; authorized human review uses a separate privileged
+  receipt boundary. Automated review uses the manuscript-free result-reference
+  comment instead.
 - Standard Projects and Projects without a runtime manifest retain existing
   behavior.
 - Candidate visibility and Acceptance/Settlement contracts do not change.
