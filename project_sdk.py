@@ -926,6 +926,27 @@ def create_spec(root: Path, title: str) -> dict[str, Any]:
     return {"created": True, "spec_dir": str(target), "number": number}
 
 
+def projection_preview(root: Path) -> dict[str, Any]:
+    """Compile an optional mapped runtime manifest without mutating SQLite."""
+    from harness.project_projection import preview
+    return preview(root)
+
+
+def projection_apply(root: Path, data_dir: Path | None = None, expected_projection_fingerprint: str | None = None) -> dict[str, Any]:
+    from harness.project_projection import apply
+    return apply(root, data_dir=data_dir, expected_projection_fingerprint=expected_projection_fingerprint)
+
+
+def projection_status(root: Path, data_dir: Path | None = None) -> dict[str, Any]:
+    from harness.project_projection import status
+    return status(root, data_dir=data_dir)
+
+
+def projection_preflight(root: Path, target_id: str, stage: str, data_dir: Path | None = None) -> dict[str, Any]:
+    from harness.project_projection import preflight
+    return preflight(root, target_id, stage, data_dir=data_dir)
+
+
 def self_test(tmp_root: Path) -> dict[str, Any]:
     if tmp_root.exists():
         shutil.rmtree(tmp_root)
