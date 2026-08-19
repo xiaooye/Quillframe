@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import os
 import sys
@@ -102,6 +103,7 @@ class EphemeralChatHostTests(unittest.TestCase):
         self.assertIn("auto_review.py", text)
         self.assertIn("validation-receipt", text)
         self.assertIn("peer-result", text)
+        self.assertIn("frozen-packet-sha256", text)
 
     def test_github_paths_consume_frozen_packet_without_rebuild_or_models_claim(self):
         action = (ROOT / ".github/actions/project-peer-semantic/action.yml").read_text(encoding="utf-8")
@@ -120,7 +122,14 @@ class EphemeralChatHostTests(unittest.TestCase):
         self.assertIn("ref: ${{ github.sha }}", workflow)
         self.assertIn("path: .quillframe-project", workflow)
         self.assertIn("persist-credentials: false", workflow)
+        self.assertIn("frozen-packet-artifact:", workflow)
+        self.assertIn("frozen-packet-sha256:", workflow)
+        self.assertIn("uses: actions/download-artifact@v4", workflow)
+        self.assertIn("name: ${{ inputs.frozen-packet-artifact }}", workflow)
+        self.assertIn("path: .quillframe-frozen-packet", workflow)
         self.assertIn("QUILLFRAME_PROJECT_CHECKOUT: ${{ github.workspace }}/.quillframe-project", workflow)
+        self.assertIn("QUILLFRAME_FROZEN_PACKET_CHECKOUT: ${{ github.workspace }}/.quillframe-frozen-packet", workflow)
+        self.assertIn("QUILLFRAME_FROZEN_PACKET_SHA256: ${{ inputs.frozen-packet-sha256 }}", workflow)
         self.assertIn("repository: xiaooye/Quillframe", workflow)
         self.assertIn("ref: ${{ inputs.framework-ref }}", workflow)
         self.assertIn("EXPECTED_FRAMEWORK_COMMIT: ${{ inputs.framework-ref }}", workflow)
@@ -142,7 +151,9 @@ class EphemeralChatHostTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="qf-peer-caller-") as td:
             workspace = Path(td)
             checkout = workspace / ".quillframe-project"
+            packet_transfer = workspace / ".quillframe-frozen-packet"
             checkout.mkdir()
+            packet_transfer.mkdir()
             (checkout / "project").mkdir()
             (checkout / "project" / "quillframe.toml").write_text(
                 '[project]\nid = "PROJECT-TEMP"\n', encoding="utf-8"
@@ -151,7 +162,7 @@ class EphemeralChatHostTests(unittest.TestCase):
                 json.dumps({"framework": {"source_repo": "xiaooye/Quillframe", "commit": "a" * 40}}),
                 encoding="utf-8",
             )
-            packet_path = checkout / "project" / "packet.json"
+            packet_path = packet_transfer / "packet.json"
             packet_path.write_bytes(
                 json.dumps(
                     build_packet(
@@ -179,8 +190,10 @@ class EphemeralChatHostTests(unittest.TestCase):
             env = {
                 "GITHUB_WORKSPACE": str(workspace),
                 "QUILLFRAME_PROJECT_CHECKOUT": str(checkout),
+                "QUILLFRAME_FROZEN_PACKET_CHECKOUT": str(packet_transfer),
                 "QUILLFRAME_PROJECT_ROOT": "project",
-                "QUILLFRAME_FROZEN_PACKET": "project/packet.json",
+                "QUILLFRAME_FROZEN_PACKET": "packet.json",
+                "QUILLFRAME_FROZEN_PACKET_SHA256": "sha256:" + hashlib.sha256(packet_path.read_bytes()).hexdigest(),
                 "QUILLFRAME_PROJECT_ID": "PROJECT-TEMP",
                 "QUILLFRAME_ACTION_REPOSITORY": "xiaooye/Quillframe",
                 "QUILLFRAME_ACTION_REF": "a" * 40,
@@ -190,12 +203,16 @@ class EphemeralChatHostTests(unittest.TestCase):
             with patch.dict(os.environ, env, clear=False):
                 binding = module.load_project_binding()
                 self.assertEqual(binding["project_root"], checkout / "project")
+                self.assertFalse((checkout / "project" / "packet.json").exists())
                 packet, raw = module.load_frozen_packet()
                 self.assertEqual(raw, packet_path.read_bytes())
                 with patch.dict(os.environ, {"QUILLFRAME_PROJECT_ROOT": "../escape"}, clear=False):
                     with self.assertRaises(SystemExit):
                         module.load_project_binding()
                 with patch.dict(os.environ, {"QUILLFRAME_FROZEN_PACKET": "../escape.json"}, clear=False):
+                    with self.assertRaises(SystemExit):
+                        module.load_frozen_packet()
+                with patch.dict(os.environ, {"QUILLFRAME_FROZEN_PACKET_SHA256": "sha256:" + "0" * 64}, clear=False):
                     with self.assertRaises(SystemExit):
                         module.load_frozen_packet()
 

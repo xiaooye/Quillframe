@@ -53,12 +53,12 @@ jobs:
           PY
           )"
           python release/build_framework_bundle.py verify --bundle "release-out/${BUNDLE_NAME}" --expected "$FINGERPRINT" --report release-out/verify.json
-          (cd release-out && sha256sum "$BUNDLE_NAME" > SHA256SUMS)
           rm "release-out/quillframe-framework-${COMMIT}.second.tar"
           cat > release-out/artifact-manifest.json <<EOF
           {"schema":"quillframe_release_artifact_manifest_v1","framework_version":"${FRAMEWORK_VERSION}","commit":"${COMMIT}","tag":"${RELEASE_TAG}","bundle":"${BUNDLE_NAME}","bundle_fingerprint":"${FINGERPRINT}","model_execution":false}
           EOF
           printf '%s\n' "$COMMIT" > release-out/framework-commit.txt
+          (cd release-out && sha256sum "$BUNDLE_NAME" build-1.json build-2.json verify.json artifact-manifest.json framework-commit.txt > SHA256SUMS)
           printf 'commit=%s\n' "$COMMIT" >> "$GITHUB_OUTPUT"
           printf 'bundle=%s\n' "$BUNDLE_NAME" >> "$GITHUB_OUTPUT"
           printf 'fingerprint=%s\n' "$FINGERPRINT" >> "$GITHUB_OUTPUT"
@@ -95,6 +95,16 @@ jobs:
           sha256sum -c SHA256SUMS
           test "$(cat framework-commit.txt)" = "$COMMIT"
           test "$(python -c 'import json; print(json.load(open("artifact-manifest.json", encoding="utf-8"))["bundle_fingerprint"])')" = "$FINGERPRINT"
+          python - <<'PY'
+          import json
+          import os
+          manifest = json.load(open("artifact-manifest.json", encoding="utf-8"))
+          assert manifest["commit"] == os.environ["COMMIT"]
+          assert manifest["tag"] == os.environ["RELEASE_TAG"]
+          assert manifest["bundle"] == os.environ["BUNDLE_NAME"]
+          assert manifest["bundle_fingerprint"] == os.environ["FINGERPRINT"]
+          assert manifest["framework_version"] == "0.9.1"
+          PY
           python "$GITHUB_WORKSPACE/release/build_framework_bundle.py" verify --bundle "$BUNDLE_NAME" --expected "$FINGERPRINT"
           mkdir unpacked
           tar -xf "$BUNDLE_NAME" -C unpacked

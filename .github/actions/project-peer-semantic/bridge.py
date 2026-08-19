@@ -8,8 +8,9 @@ consumer lockfile.
 """
 from __future__ import annotations
 
-import json
+import hashlib
 import importlib.util
+import json
 import os
 import sys
 import subprocess
@@ -59,6 +60,20 @@ def caller_checkout(workspace: Path) -> Path:
     checkout = checkout.resolve()
     if workspace not in checkout.parents and checkout != workspace:
         fail("caller Project checkout escapes GitHub workspace")
+    return checkout
+
+
+def frozen_packet_checkout(workspace: Path) -> Path:
+    """Resolve the bounded packet-transfer root inside the Actions workspace."""
+    reference = os.environ.get("QUILLFRAME_FROZEN_PACKET_CHECKOUT", "").strip()
+    if not reference:
+        return caller_checkout(workspace)
+    checkout = Path(reference)
+    if not checkout.is_absolute():
+        checkout = workspace / checkout
+    checkout = checkout.resolve()
+    if workspace not in checkout.parents and checkout != workspace:
+        fail("frozen packet checkout escapes GitHub workspace")
     return checkout
 
 
@@ -181,10 +196,20 @@ def load_frozen_packet() -> tuple[dict[str, Any], bytes]:
     if not reference:
         fail("QUILLFRAME_FROZEN_PACKET is required; packet creation belongs to Core")
     workspace = Path(os.environ.get("GITHUB_WORKSPACE", os.getcwd())).resolve()
-    path = checkout_member(caller_checkout(workspace), reference, "frozen packet")
+    path = checkout_member(frozen_packet_checkout(workspace), reference, "frozen packet")
     if not path.is_file():
         fail(f"Core-frozen packet file not found: {path}")
     raw = path.read_bytes()
+    expected_sha256 = os.environ.get("QUILLFRAME_FROZEN_PACKET_SHA256", "").strip()
+    if (
+        not expected_sha256.startswith("sha256:")
+        or len(expected_sha256) != 71
+        or any(ch not in "0123456789abcdef" for ch in expected_sha256[7:])
+    ):
+        fail("QUILLFRAME_FROZEN_PACKET_SHA256 must be one exact sha256:<64 lowercase hex> fingerprint")
+    actual_sha256 = "sha256:" + hashlib.sha256(raw).hexdigest()
+    if actual_sha256 != expected_sha256:
+        fail("Core-frozen packet SHA-256 differs from the caller-supplied Core fingerprint")
     try:
         packet = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:

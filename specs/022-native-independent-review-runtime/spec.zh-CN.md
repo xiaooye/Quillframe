@@ -38,7 +38,10 @@ Mapped Project 也存在断链：Git/Markdown adapter 能校验及构建确定�
 10. Readiness 报告 transport、provider 与 assurance class，不再统一要求 GitHub
     issue/comment 字段。
 11. 实现其他 provider 前，GitHub 审查如实标记为 `github_copilot_actions`，且必须
-    消费 frozen packet。
+    消费 frozen packet。Reusable workflow 只能通过 caller 前置 job 上传的
+    artifact 与 Core 签发的 SHA-256 接收这些运行时 bytes；called job 在使用前
+    必须下载、限制路径并校验 artifact。同 job 的 composite action 必须同时收到
+    exact packet path 与 SHA-256。
 12. Mapped Project 可声明 `paths.runtime_context_manifest`。Project-owned manifest
     显式映射 source fingerprint、stable ID、object type、authority、lifecycle、
     domain、allowed stages、target 与有界 runtime payload；Core 不猜 Markdown。

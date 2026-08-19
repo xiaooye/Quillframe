@@ -57,6 +57,7 @@ class McpSurfaceTests(unittest.TestCase):
                 "authority_class": "accepted",
             },
             "diff": {"diff": ["-private incumbent manuscript", "+private candidate manuscript"]},
+            "future_candidate_content": "future top-level manuscript leak",
             "evidence": {"independent": {"result": "pass"}},
             "private_reasoning_exposed": False,
             "authority": False,
@@ -77,6 +78,8 @@ class McpSurfaceTests(unittest.TestCase):
         serialized = str(result)
         self.assertNotIn("private candidate manuscript", serialized)
         self.assertNotIn("private incumbent manuscript", serialized)
+        self.assertNotIn("future top-level manuscript leak", serialized)
+        self.assertNotIn("future_candidate_content", result)
         self.assertNotIn("content", result["candidate_revision"])
         self.assertNotIn("content", result["incumbent_revision"])
         self.assertNotIn("diff", result)

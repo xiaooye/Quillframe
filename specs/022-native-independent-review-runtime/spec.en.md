@@ -46,6 +46,10 @@ runtime objects in Project SQLite.
     universally requiring GitHub issue/comment fields.
 11. GitHub review is truthfully identified as `github_copilot_actions` until a
     different provider is implemented. It must consume the frozen packet.
+    A reusable workflow receives those runtime-created bytes only through a
+    prior caller-job artifact plus the Core-issued SHA-256 fingerprint; the
+    called job downloads, confines, and verifies that artifact before use.
+    The same-job composite action requires the exact packet path and SHA-256.
 12. Mapped Projects may declare `paths.runtime_context_manifest`. The
     Project-owned manifest explicitly maps source fingerprints to stable IDs,
     object types, authority, lifecycle, domain, allowed stages, targets, and

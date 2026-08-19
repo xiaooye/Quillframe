@@ -23,8 +23,10 @@ inputs:
     default: claude-sonnet-4.6
   frozen-packet:
     description: Absolute or workspace-relative path to the immutable Core-frozen peer packet JSON; the action never builds or rewrites this packet.
-    required: false
-    default: ""
+    required: true
+  frozen-packet-sha256:
+    description: Exact sha256:<64 lowercase hex> fingerprint computed by Core for frozen-packet.
+    required: true
 outputs:
   validation-receipt:
     description: Machine receipt emitted after review or validate-result succeeds; empty during prepare mode.
@@ -44,11 +46,13 @@ runs:
         QUILLFRAME_BRIDGE_MODE: ${{ inputs.mode }}
         QUILLFRAME_PROJECT_ROOT: ${{ inputs.project-root }}
         QUILLFRAME_PROJECT_CHECKOUT: ${{ github.workspace }}
+        QUILLFRAME_FROZEN_PACKET_CHECKOUT: ${{ github.workspace }}
         QUILLFRAME_PROJECT_ID: ${{ inputs.project-id }}
         QUILLFRAME_ACTION_PATH: ${{ github.action_path }}
         QUILLFRAME_ACTION_REF: ${{ github.action_ref }}
         QUILLFRAME_ACTION_REPOSITORY: ${{ github.action_repository }}
         QUILLFRAME_FROZEN_PACKET: ${{ inputs.frozen-packet }}
+        QUILLFRAME_FROZEN_PACKET_SHA256: ${{ inputs.frozen-packet-sha256 }}
       run: python "$QUILLFRAME_ACTION_PATH/bridge.py"
     - name: Set up Node for independent Copilot reviewer
       if: ${{ inputs.mode == 'review' }}
@@ -69,10 +73,12 @@ runs:
         COPILOT_GITHUB_TOKEN: ${{ inputs.copilot-token }}
         QUILLFRAME_PROJECT_ROOT: ${{ inputs.project-root }}
         QUILLFRAME_PROJECT_CHECKOUT: ${{ github.workspace }}
+        QUILLFRAME_FROZEN_PACKET_CHECKOUT: ${{ github.workspace }}
         QUILLFRAME_PROJECT_ID: ${{ inputs.project-id }}
         QUILLFRAME_ACTION_PATH: ${{ github.action_path }}
         QUILLFRAME_ACTION_REF: ${{ github.action_ref }}
         QUILLFRAME_ACTION_REPOSITORY: ${{ github.action_repository }}
         QUILLFRAME_REVIEW_MODEL: ${{ inputs.review-model }}
         QUILLFRAME_FROZEN_PACKET: ${{ inputs.frozen-packet }}
+        QUILLFRAME_FROZEN_PACKET_SHA256: ${{ inputs.frozen-packet-sha256 }}
       run: python "$QUILLFRAME_ACTION_PATH/auto_review.py"

@@ -20,7 +20,15 @@ on:
         required: true
         type: string
       frozen-packet:
-        description: Path to the Core-frozen canonical packet; the bridge never rebuilds it.
+        description: Relative packet path inside frozen-packet-artifact; the bridge never rebuilds it.
+        required: true
+        type: string
+      frozen-packet-artifact:
+        description: Artifact name uploaded by a prior caller job with the exact Core-frozen packet bytes.
+        required: true
+        type: string
+      frozen-packet-sha256:
+        description: Exact sha256:<64 lowercase hex> fingerprint computed by Core before artifact upload.
         required: true
         type: string
       review-model:
@@ -58,6 +66,11 @@ jobs:
           ref: ${{ github.sha }}
           path: .quillframe-project
           persist-credentials: false
+      - name: Download the exact Core-frozen packet artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.frozen-packet-artifact }}
+          path: .quillframe-frozen-packet
       - name: Check out the exact Framework commit
         uses: actions/checkout@v7
         with:
@@ -98,11 +111,13 @@ jobs:
           QUILLFRAME_BRIDGE_MODE: ${{ inputs.mode }}
           QUILLFRAME_PROJECT_ROOT: ${{ inputs.project-root }}
           QUILLFRAME_PROJECT_CHECKOUT: ${{ github.workspace }}/.quillframe-project
+          QUILLFRAME_FROZEN_PACKET_CHECKOUT: ${{ github.workspace }}/.quillframe-frozen-packet
           QUILLFRAME_PROJECT_ID: ${{ inputs.project-id }}
           QUILLFRAME_ACTION_PATH: ${{ github.workspace }}/.quillframe-framework/.github/actions/project-peer-semantic
           QUILLFRAME_ACTION_REF: ${{ steps.framework.outputs.commit }}
           QUILLFRAME_ACTION_REPOSITORY: xiaooye/Quillframe
           QUILLFRAME_FROZEN_PACKET: ${{ inputs.frozen-packet }}
+          QUILLFRAME_FROZEN_PACKET_SHA256: ${{ inputs.frozen-packet-sha256 }}
           QUILLFRAME_REVIEW_MODEL: ${{ inputs.review-model }}
         run: |
           set -euo pipefail

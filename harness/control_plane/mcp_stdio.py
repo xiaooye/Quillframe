@@ -182,8 +182,26 @@ def agent_safe_candidate_review(review: dict[str, Any]) -> dict[str, Any]:
     tool must not receive candidate/incumbent content or a reconstructable diff;
     released manuscript text remains exclusive to ``candidate.visible.get``.
     """
-    safe = dict(review)
+    safe = {
+        key: review[key]
+        for key in (
+            "project_id", "evidence", "revision_request",
+            "private_reasoning_exposed", "authority", "canon_authority",
+            "settlement_authority",
+        )
+        if key in review
+    }
     safe["schema"] = "quillframe_candidate_review_evidence_projection_v1"
+    candidate = review.get("candidate")
+    safe["candidate"] = {
+        field: candidate[field]
+        for field in (
+            "candidate_id", "candidate_fingerprint", "document_id", "run_id",
+            "task_mode", "candidate_kind", "persisted_status",
+            "effective_status", "user_visible_gate",
+        )
+        if isinstance(candidate, dict) and field in candidate
+    }
     for key in ("candidate_revision", "incumbent_revision"):
         revision = review.get(key)
         if isinstance(revision, dict):
