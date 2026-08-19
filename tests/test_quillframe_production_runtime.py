@@ -12,14 +12,14 @@ from unittest.mock import patch
 
 from agent_runtime import AgentJob, AgentResult
 from core_operations import CoreOperations
-from harness.context_runtime import MANDATORY_PRODUCTION_MECHANISMS
+from harness.context_runtime import MANDATORY_PRODUCTION_MECHANISMS, fingerprint
 from harness.semantic_workers.independent_invocation_receipt import (
     build_receipt as build_native_receipt,
     fingerprint as native_fingerprint,
     validate_receipt as validate_native_receipt,
 )
 from persistence.independent_review_repository import IndependentReviewError, IndependentReviewRepository
-from persistence.quillframe_sqlite import QuillframeStore, now_iso
+from persistence.quillframe_sqlite import QuillframeStore, fingerprint_text, now_iso
 from production_runtime import PRODUCTION_MECHANISMS, ProductionRunError, ProductionRunExecutor
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -620,6 +620,50 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         if "independence_receipt" not in inspect.signature(runtime.submit_independent).parameters:
             self.fail("ProductionRunExecutor.submit_independent must accept independence_receipt")
 
+    def make_released_v9_completed_fixture(
+        self,
+        runtime: ProductionRunExecutor,
+    ) -> tuple[str, dict, dict, dict, dict, str]:
+        """Create the completed GitHub-review shape released before native v10.
+
+        Released v9 persisted the exact bridge receipt/result fields but did not
+        persist the later submission-evidence fingerprint or native attempt row.
+        """
+        run_id = self.start_native()
+        self.execute_to_handoff(runtime, run_id)
+        handoff = frozen_handoff(self.store, run_id)
+        packet = handoff["peer_packet"]
+        result = peer_result(packet, "pass")
+        receipt = project_bridge_receipt(packet, result)
+        completed = runtime.submit_independent(
+            "PROD",
+            run_id,
+            peer_packet=packet,
+            result=result,
+            independence_receipt=receipt,
+        )
+        self.assertEqual(completed["status"], "completed")
+        with self.store.open_project("PROD") as conn:
+            row = conn.execute(
+                """SELECT review_id,result_json FROM review_evidence
+                WHERE candidate_id=(SELECT candidate_id FROM candidates WHERE run_id=?)
+                AND independent=1""",
+                (run_id,),
+            ).fetchone()
+            legacy_review = json.loads(row["result_json"])
+            legacy_review.pop("submission_evidence_fingerprint")
+            conn.execute(
+                "UPDATE review_evidence SET result_json=? WHERE review_id=?",
+                (json.dumps(legacy_review, sort_keys=True, separators=(",", ":")), row["review_id"]),
+            )
+            conn.execute("DELETE FROM independent_review_attempts WHERE run_id=?", (run_id,))
+            conn.execute(
+                "DELETE FROM runtime_events WHERE run_id=? AND event_kind='production_candidate_ready'",
+                (run_id,),
+            )
+            conn.commit()
+        return run_id, handoff, packet, result, receipt, row["review_id"]
+
     def assert_stale_owner_fenced_at_effect_boundary(self, boundary: str) -> None:
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
         run_id = self.start_native()
@@ -770,13 +814,107 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         lease = conn.execute("SELECT provider,transport FROM independent_review_leases WHERE lease_id='LEASE'").fetchone()
         event = conn.execute("SELECT payload_json FROM independent_review_lifecycle_events WHERE event_id='EVENT'").fetchone()
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(independent_review_attempts)")}
-        indexes = {row["name"] for row in conn.execute("PRAGMA index_list(candidates)")}
+        triggers = {
+            row["name"]
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='trigger' AND tbl_name='candidates'")
+        }
         self.assertEqual(dict(lease), {"provider": "codex_native_subagent", "transport": "codex_native"})
         self.assertEqual(json.loads(event["payload_json"])["provider"], "codex_native_subagent")
         self.assertTrue({"processing_epoch", "processing_expires_at", "processing_phase"} <= columns)
-        self.assertIn("production_candidate_one_per_run_idx", indexes)
+        self.assertIn("production_candidate_one_pass_per_run_insert", triggers)
+        self.assertIn("production_candidate_one_pass_per_run_update", triggers)
         with self.assertRaises(sqlite3.IntegrityError):
             conn.execute("UPDATE independent_review_leases SET provider='codex' WHERE lease_id='LEASE'")
+
+    def test_released_v9_duplicate_pass_candidates_migrate_without_rewriting_history(self):
+        with tempfile.TemporaryDirectory() as legacy_root:
+            legacy_store = QuillframeStore(Path(legacy_root))
+            legacy_store.ensure_layout()
+            location = legacy_store.location("PROD")
+            location.directory.mkdir(parents=True, exist_ok=True)
+            conn = sqlite3.connect(location.database)
+            migrations = ROOT / "persistence" / "migrations" / "project"
+            migration_paths = [migrations / "001_initial.sql", migrations / "002_semantic_context_runtime.sql"]
+            for path in migration_paths:
+                conn.executescript(path.read_text(encoding="utf-8"))
+            conn.execute(
+                """CREATE TABLE schema_migrations (
+                scope TEXT NOT NULL,version INTEGER NOT NULL,name TEXT NOT NULL,checksum TEXT NOT NULL,
+                applied_at TEXT NOT NULL,PRIMARY KEY(scope,version))"""
+            )
+            stamp = "2026-08-19T00:00:00+00:00"
+            for path in migration_paths:
+                conn.execute(
+                    "INSERT INTO schema_migrations(scope,version,name,checksum,applied_at) VALUES('project',?,?,?,?)",
+                    (
+                        int(path.name.split("_", 1)[0]),
+                        path.name,
+                        fingerprint_text(path.read_text(encoding="utf-8")),
+                        stamp,
+                    ),
+                )
+            conn.execute(
+                "INSERT INTO project_identity(project_id,title,language,project_schema_version,created_at,updated_at) VALUES('PROD','Fixture','en',1,?,?)",
+                (stamp, stamp),
+            )
+            conn.execute(
+                "INSERT INTO sessions(session_id,status,version,created_at,updated_at) VALUES('SES','completed',1,?,?)",
+                (stamp, stamp),
+            )
+            conn.execute(
+                "INSERT INTO runs(run_id,session_id,task_mode,status,request_fingerprint,created_at,updated_at) VALUES('RUN','SES','DRAFT','completed','sha256:req',?,?)",
+                (stamp, stamp),
+            )
+            candidate_values = (
+                None,
+                None,
+                "RUN",
+                "DRAFT",
+                "draft",
+                "review_draft",
+                "PASS",
+                stamp,
+            )
+            conn.execute(
+                """INSERT INTO candidates(candidate_id,document_id,revision_id,run_id,task_mode,candidate_kind,status,content_fingerprint,user_visible_gate,created_at)
+                VALUES('CAND-A',?,?,?,?,?,?,'sha256:candidate-a',?,?)""",
+                candidate_values,
+            )
+            conn.execute(
+                """INSERT INTO candidates(candidate_id,document_id,revision_id,run_id,task_mode,candidate_kind,status,content_fingerprint,user_visible_gate,created_at)
+                VALUES('CAND-B',?,?,?,?,?,?,'sha256:candidate-b',?,?)""",
+                candidate_values,
+            )
+            conn.commit()
+            conn.close()
+
+            with legacy_store.open_project("PROD") as upgraded:
+                self.assertEqual(
+                    upgraded.execute(
+                        "SELECT COUNT(*) FROM candidates WHERE run_id='RUN' AND user_visible_gate='PASS'"
+                    ).fetchone()[0],
+                    2,
+                )
+                self.assertEqual(upgraded.execute("PRAGMA foreign_key_check").fetchall(), [])
+                with self.assertRaises(sqlite3.IntegrityError):
+                    upgraded.execute(
+                        """INSERT INTO candidates(candidate_id,run_id,task_mode,candidate_kind,status,content_fingerprint,user_visible_gate,created_at)
+                        VALUES('CAND-C','RUN','DRAFT','draft','review_draft','sha256:candidate-c','PASS',?)""",
+                        (stamp,),
+                    )
+                upgraded.execute(
+                    """INSERT INTO candidates(candidate_id,run_id,task_mode,candidate_kind,status,content_fingerprint,user_visible_gate,created_at)
+                    VALUES('CAND-U1','RUN-UPDATE','DRAFT','draft','review_draft','sha256:update-a','FAIL',?)""",
+                    (stamp,),
+                )
+                upgraded.execute(
+                    """INSERT INTO candidates(candidate_id,run_id,task_mode,candidate_kind,status,content_fingerprint,user_visible_gate,created_at)
+                    VALUES('CAND-U2','RUN-UPDATE','DRAFT','draft','review_draft','sha256:update-b','FAIL',?)""",
+                    (stamp,),
+                )
+                upgraded.execute("UPDATE candidates SET user_visible_gate='PASS' WHERE candidate_id='CAND-U1'")
+                with self.assertRaises(sqlite3.IntegrityError):
+                    upgraded.execute("UPDATE candidates SET user_visible_gate='PASS' WHERE candidate_id='CAND-U2'")
 
     def test_stale_owner_is_fenced_at_receipt_write_after_identical_takeover(self):
         self.assert_stale_owner_fenced_at_effect_boundary("receipt")
@@ -1513,6 +1651,143 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         self.assertEqual(sum(item.get("mechanism") == "independent_semantic_gate" for item in stage_payloads), 1)
         self.assertEqual(sum(item.get("mechanism") == "user_visible_gate" for item in stage_payloads), 1)
         self.assertEqual(attempt["status"], "terminal")
+
+    def test_released_v9_completed_github_replay_binds_exact_evidence_once(self):
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        run_id, handoff, packet, result, receipt, review_id = self.make_released_v9_completed_fixture(runtime)
+        expected_submission_fingerprint = fingerprint(
+            {
+                "packet_bytes": handoff["peer_packet_bytes"],
+                "result": result,
+                "independence_receipt": receipt,
+            }
+        )
+        with self.store.open_project("PROD") as conn:
+            before = json.loads(
+                conn.execute("SELECT result_json FROM review_evidence WHERE review_id=?", (review_id,)).fetchone()[0]
+            )
+            self.assertNotIn("submission_evidence_fingerprint", before)
+            self.assertEqual(
+                conn.execute(
+                    "SELECT COUNT(*) FROM runtime_events WHERE run_id=? AND event_kind='production_candidate_ready'",
+                    (run_id,),
+                ).fetchone()[0],
+                0,
+            )
+
+        first = runtime.submit_independent(
+            "PROD",
+            run_id,
+            peer_packet=packet,
+            result=result,
+            independence_receipt=receipt,
+        )
+        second = runtime.submit_independent(
+            "PROD",
+            run_id,
+            peer_packet=packet,
+            result=result,
+            independence_receipt=receipt,
+        )
+        self.assertEqual(first, second)
+        self.assertEqual(first["status"], "completed")
+        self.assertTrue(first["replayed"])
+        with self.store.open_project("PROD") as conn:
+            after = json.loads(
+                conn.execute("SELECT result_json FROM review_evidence WHERE review_id=?", (review_id,)).fetchone()[0]
+            )
+            attempt = conn.execute(
+                "SELECT status,terminal_evidence_fingerprint FROM independent_review_attempts WHERE run_id=?",
+                (run_id,),
+            ).fetchone()
+            ready_events = conn.execute(
+                "SELECT COUNT(*) FROM runtime_events WHERE run_id=? AND event_kind='production_candidate_ready'",
+                (run_id,),
+            ).fetchone()[0]
+        self.assertEqual(after, {**before, "submission_evidence_fingerprint": expected_submission_fingerprint})
+        self.assertEqual(dict(attempt), {
+            "status": "terminal",
+            "terminal_evidence_fingerprint": expected_submission_fingerprint,
+        })
+        self.assertEqual(ready_events, 1)
+
+    def test_released_v9_completed_github_replay_rejects_tampered_evidence_without_binding(self):
+        for tamper in ("result", "receipt", "candidate"):
+            with self.subTest(tamper=tamper):
+                runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+                run_id, _handoff, packet, result, receipt, review_id = self.make_released_v9_completed_fixture(runtime)
+                submitted_result = json.loads(json.dumps(result))
+                submitted_receipt = json.loads(json.dumps(receipt))
+                if tamper == "result":
+                    submitted_result["judgment"]["report"] = "tampered historical replay"
+                    submitted_receipt = project_bridge_receipt(packet, submitted_result)
+                elif tamper == "receipt":
+                    submitted_receipt["issue_number"] = 2
+                else:
+                    with self.store.open_project("PROD") as conn:
+                        conn.execute(
+                            "UPDATE candidates SET content_fingerprint='sha256:tampered-candidate' WHERE run_id=?",
+                            (run_id,),
+                        )
+                        conn.commit()
+                with self.assertRaises(ProductionRunError) as mismatch:
+                    runtime.submit_independent(
+                        "PROD",
+                        run_id,
+                        peer_packet=packet,
+                        result=submitted_result,
+                        independence_receipt=submitted_receipt,
+                    )
+                self.assertEqual(mismatch.exception.code, "independent_recovery_evidence_mismatch")
+                with self.store.open_project("PROD") as conn:
+                    persisted = json.loads(
+                        conn.execute("SELECT result_json FROM review_evidence WHERE review_id=?", (review_id,)).fetchone()[0]
+                    )
+                    ready_events = conn.execute(
+                        "SELECT COUNT(*) FROM runtime_events WHERE run_id=? AND event_kind='production_candidate_ready'",
+                        (run_id,),
+                    ).fetchone()[0]
+                self.assertNotIn("submission_evidence_fingerprint", persisted)
+                self.assertEqual(ready_events, 0)
+
+    def test_released_v9_completed_replay_fails_closed_on_ambiguous_candidates(self):
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        run_id, _handoff, packet, result, receipt, review_id = self.make_released_v9_completed_fixture(runtime)
+        with self.store.open_project("PROD") as conn:
+            original = conn.execute("SELECT * FROM candidates WHERE run_id=?", (run_id,)).fetchone()
+            conn.execute("DROP INDEX IF EXISTS production_candidate_one_per_run_idx")
+            conn.execute("DROP TRIGGER IF EXISTS production_candidate_one_pass_per_run_insert")
+            conn.execute(
+                """INSERT INTO candidates(candidate_id,document_id,revision_id,run_id,task_mode,candidate_kind,status,
+                content_fingerprint,user_visible_gate,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    "cand_ambiguous",
+                    original["document_id"],
+                    original["revision_id"],
+                    run_id,
+                    original["task_mode"],
+                    original["candidate_kind"],
+                    original["status"],
+                    original["content_fingerprint"],
+                    original["user_visible_gate"],
+                    original["created_at"],
+                ),
+            )
+            conn.commit()
+        with self.assertRaises(ProductionRunError) as ambiguous:
+            runtime.submit_independent(
+                "PROD",
+                run_id,
+                peer_packet=packet,
+                result=result,
+                independence_receipt=receipt,
+            )
+        self.assertEqual(ambiguous.exception.code, "independent_recovery_evidence_mismatch")
+        with self.store.open_project("PROD") as conn:
+            persisted = json.loads(
+                conn.execute("SELECT result_json FROM review_evidence WHERE review_id=?", (review_id,)).fetchone()[0]
+            )
+        self.assertNotIn("submission_evidence_fingerprint", persisted)
 
     def test_completed_recovery_verifies_exact_persisted_submission_evidence(self):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())

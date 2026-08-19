@@ -14,6 +14,7 @@ from harness.semantic_workers.independent_invocation_receipt import (
     fingerprint as independent_fingerprint,
     validate_receipt as validate_independent_invocation_receipt,
 )
+from harness.semantic_workers.peer_bridge_receipt import SCHEMA as PROJECT_PEER_VALIDATION_RECEIPT_SCHEMA
 from harness.semantic_workers.peer_chat_relay import validate_peer_result
 from persistence.independent_review_repository import IndependentReviewError, IndependentReviewRepository
 from persistence.quillframe_sqlite import fingerprint_text, now_iso
@@ -875,10 +876,11 @@ class ProductionRunExecutor(ProductionContextRuntime):
         if run.get("status") != "completed":
             return None
         with self.store.open_project(project_id) as conn:
-            candidate = conn.execute(
-                "SELECT candidate_id,revision_id,content_fingerprint,status,user_visible_gate FROM candidates WHERE run_id=? ORDER BY created_at DESC LIMIT 1",
+            candidate_rows = conn.execute(
+                "SELECT candidate_id,revision_id,content_fingerprint,status,user_visible_gate FROM candidates WHERE run_id=? ORDER BY created_at,rowid",
                 (run["run_id"],),
-            ).fetchone()
+            ).fetchall()
+            candidate = candidate_rows[0] if len(candidate_rows) == 1 else None
             receipts = [
                 _json(row["payload_json"], {})
                 for row in conn.execute(
@@ -894,6 +896,11 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 "SELECT result_json FROM review_evidence WHERE candidate_id=? AND independent=1 ORDER BY created_at,rowid",
                 (candidate["candidate_id"],),
             ).fetchall() if candidate else []
+        if len(candidate_rows) > 1:
+            raise ProductionRunError(
+                "completed_run_candidate_ambiguous",
+                "completed production run has multiple persisted candidates",
+            )
         if not candidate:
             raise ProductionRunError("completed_run_missing_candidate", "completed production run has no persisted candidate")
         release = _json(release_row["payload_json"], {}) if release_row else {}
@@ -928,6 +935,93 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "replayed": True,
             "authority": False,
         }
+
+    def _bind_completed_legacy_submission(
+        self,
+        project_id: str,
+        run_id: str,
+        *,
+        candidate_fingerprint: str,
+        result: dict[str, Any],
+        independence_receipt: dict[str, Any],
+        submission_evidence_fingerprint: str,
+        effect_guard: Callable[[Any], None],
+        mark_effects_started: Callable[[Any], None],
+    ) -> None:
+        """Bind an exact released-v9 GitHub completion to its replay evidence.
+
+        V9 stored the complete bridge result binding but predated the derived
+        submission fingerprint.  This compatibility path adds only that one
+        derivable field, and only while the current processing owner is fenced.
+        """
+
+        def mismatch(message: str) -> None:
+            raise ProductionRunError("independent_recovery_evidence_mismatch", message)
+
+        with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            effect_guard(conn)
+            candidates = conn.execute(
+                """SELECT candidate_id,content_fingerprint FROM candidates
+                WHERE run_id=? ORDER BY created_at,rowid""",
+                (run_id,),
+            ).fetchall()
+            if len(candidates) != 1:
+                mismatch("completed production recovery requires exactly one persisted candidate")
+            candidate = candidates[0]
+            review_rows = conn.execute(
+                """SELECT review_id,candidate_fingerprint,reviewer_fingerprint,result_json
+                FROM review_evidence WHERE candidate_id=? AND independent=1 ORDER BY created_at,rowid""",
+                (candidate["candidate_id"],),
+            ).fetchall()
+            if len(review_rows) != 1:
+                mismatch("completed production recovery requires exactly one independent review evidence row")
+            review_row = review_rows[0]
+            if (
+                candidate["content_fingerprint"] != candidate_fingerprint
+                or review_row["candidate_fingerprint"] != candidate_fingerprint
+            ):
+                mismatch("completed production candidate does not match the submitted evidence subject")
+            persisted = _json(review_row["result_json"], {})
+            existing_fingerprint = persisted.get("submission_evidence_fingerprint")
+            if existing_fingerprint is not None:
+                if existing_fingerprint != submission_evidence_fingerprint:
+                    mismatch("completed production side effects bind different independent evidence")
+                mark_effects_started(conn)
+                conn.commit()
+                return
+            if independence_receipt.get("schema") != PROJECT_PEER_VALIDATION_RECEIPT_SCHEMA:
+                mismatch("only released GitHub bridge evidence may receive the v9 compatibility binding")
+            stored_receipts = [
+                persisted[key]
+                for key in ("bridge_receipt", "independence_receipt")
+                if isinstance(persisted.get(key), dict)
+            ]
+            if not stored_receipts or any(
+                canonical_json(stored) != canonical_json(independence_receipt)
+                for stored in stored_receipts
+            ):
+                mismatch("persisted GitHub bridge receipt differs from the submitted receipt")
+            result_fingerprint = independent_fingerprint(result)
+            if (
+                independence_receipt.get("result_fingerprint") != result_fingerprint
+                or review_row["reviewer_fingerprint"] != result_fingerprint
+                or canonical_json(persisted.get("judgment")) != canonical_json(result.get("judgment"))
+                or canonical_json(persisted.get("worker")) != canonical_json(result.get("worker"))
+                or persisted.get("job_id") != result.get("job_id")
+                or persisted.get("input_fingerprint") != result.get("input_fingerprint")
+            ):
+                mismatch("persisted independent review fields differ from the submitted result")
+            mark_effects_started(conn)
+            bound = dict(persisted)
+            bound["submission_evidence_fingerprint"] = submission_evidence_fingerprint
+            updated = conn.execute(
+                "UPDATE review_evidence SET result_json=? WHERE review_id=? AND result_json=?",
+                (canonical_json(bound), review_row["review_id"], review_row["result_json"]),
+            ).rowcount
+            if updated != 1:
+                mismatch("completed independent review evidence changed during compatibility binding")
+            conn.commit()
 
     def _awaiting_external_projection(self, project_id: str, run: dict[str, Any], bundle: dict[str, Any]) -> dict[str, Any] | None:
         if run.get("status") != "awaiting_external":
@@ -1364,9 +1458,32 @@ class ProductionRunExecutor(ProductionContextRuntime):
             except IndependentReviewError as exc:
                 self._raise_independent_repository(exc)
 
+        def mark_effects_started_in_transaction(conn) -> None:  # noqa: ANN001
+            try:
+                processing_repository.mark_attempt_effects_started_in_transaction(
+                    conn,
+                    project_id,
+                    run_id,
+                    processing_candidate_fingerprint,
+                    processing_token,
+                    processing_epoch,
+                )
+            except IndependentReviewError as exc:
+                self._raise_independent_repository(exc)
+
         run = self._run_row(project_id, run_id)
         if run.get("status") == "completed":
             bundle = self._latest_bundle(project_id, run_id)
+            self._bind_completed_legacy_submission(
+                project_id,
+                run_id,
+                candidate_fingerprint=processing_candidate_fingerprint,
+                result=result,
+                independence_receipt=independence_receipt,
+                submission_evidence_fingerprint=submission_evidence_fingerprint,
+                effect_guard=effect_guard,
+                mark_effects_started=mark_effects_started_in_transaction,
+            )
             replay = self._completed_projection(
                 project_id,
                 run,

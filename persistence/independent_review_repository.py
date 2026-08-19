@@ -575,24 +575,47 @@ class IndependentReviewRepository:
     ) -> None:
         with self.store.open_project(project_id) as conn:
             conn.execute("BEGIN IMMEDIATE")
-            now_value = self.clock()
-            updated = conn.execute(
-                """UPDATE independent_review_attempts SET processing_phase='effects_started',processing_expires_at=?,updated_at=?
-                WHERE run_id=? AND candidate_fingerprint=? AND status='processing' AND processing_token=?
-                AND processing_epoch=? AND processing_expires_at>?""",
-                (
-                    now_value + self.processing_lease_seconds,
-                    now_iso(),
-                    run_id,
-                    candidate_fingerprint,
-                    processing_token,
-                    processing_epoch,
-                    now_value,
-                ),
-            ).rowcount
-            if updated != 1:
-                raise IndependentReviewError("independent_processing_owner_lost", "attempt processing owner changed")
+            self.mark_attempt_effects_started_in_transaction(
+                conn,
+                project_id,
+                run_id,
+                candidate_fingerprint,
+                processing_token,
+                processing_epoch,
+            )
             conn.commit()
+
+    def mark_attempt_effects_started_in_transaction(
+        self,
+        conn,  # noqa: ANN001
+        project_id: str,
+        run_id: str,
+        candidate_fingerprint: str,
+        processing_token: str,
+        processing_epoch: int,
+    ) -> None:
+        """Fence and mark the first durable effect in the caller's transaction."""
+        self._assert_project_identity_row(
+            conn.execute("SELECT project_id FROM project_identity").fetchone(),
+            project_id,
+        )
+        now_value = self.clock()
+        updated = conn.execute(
+            """UPDATE independent_review_attempts SET processing_phase='effects_started',processing_expires_at=?,updated_at=?
+            WHERE run_id=? AND candidate_fingerprint=? AND status='processing' AND processing_token=?
+            AND processing_epoch=? AND processing_expires_at>?""",
+            (
+                now_value + self.processing_lease_seconds,
+                now_iso(),
+                run_id,
+                candidate_fingerprint,
+                processing_token,
+                processing_epoch,
+                now_value,
+            ),
+        ).rowcount
+        if updated != 1:
+            raise IndependentReviewError("independent_processing_owner_lost", "attempt processing owner changed")
 
     def abandon_attempt(
         self,
