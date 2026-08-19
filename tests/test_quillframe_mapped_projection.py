@@ -5,6 +5,7 @@ import json
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 from harness.project_projection import apply, fingerprint_bytes, materialize_context, preflight, preview, status
@@ -87,7 +88,7 @@ class MappedProjectionTests(unittest.TestCase):
         store = QuillframeStore(data)
         store.create_project("PROJECT-MAPPED-TEST", "Mapped", "zh-CN")
         location = store.location("PROJECT-MAPPED-TEST")
-        with sqlite3.connect(location.database) as conn:
+        with closing(sqlite3.connect(location.database)) as conn:
             # Reproduce the short-lived b2c007a ledger: migration 006 already
             # owns the authority column, and migration 007 was not recorded.
             conn.execute("DELETE FROM schema_migrations WHERE scope='project' AND version=7")

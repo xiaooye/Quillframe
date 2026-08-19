@@ -120,6 +120,41 @@ class UnifiedHostBootstrapTests(unittest.TestCase):
                 self.assertEqual(payload["hookSpecificOutput"]["hookEventName"], "SessionStart")
                 self.assertIn("authority", payload["hookSpecificOutput"]["additionalContext"].lower())
 
+    def test_framework_posttool_hooks_do_not_block_without_project_dir_environment(self):
+        event = json.dumps(
+            {
+                "session_id": "posttool-unset-project-dir",
+                "cwd": "/tmp",
+                "hook_event_name": "PostToolUse",
+                "tool_name": "Bash",
+            }
+        )
+        clean_env = {
+            key: value
+            for key, value in os.environ.items()
+            if key not in {"CLAUDE_PROJECT_DIR", "QUILLFRAME_FRAMEWORK_DIR"}
+        }
+        with tempfile.TemporaryDirectory(prefix="qf-posttool-hook-cwd-") as td:
+            for config_path in (ROOT / ".codex/hooks.json", ROOT / ".claude/settings.json"):
+                config = json.loads(config_path.read_text(encoding="utf-8"))
+                command = config["hooks"]["PostToolUse"][0]["hooks"][0]["command"]
+                proc = subprocess.run(
+                    command,
+                    shell=True,
+                    cwd=td,
+                    env=clean_env,
+                    input=event,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                    timeout=30,
+                )
+                self.assertEqual(proc.returncode, 0, proc.stderr)
+                output = json.loads(proc.stdout)["hookSpecificOutput"]
+                self.assertEqual(output["hookEventName"], "PostToolUse")
+                self.assertIn("additionalContext", output)
+                self.assertNotIn("permissionDecision", output)
+
     def test_project_init_hooks_run_without_installed_quillframe_command(self):
         identity = {
             "name": "Quillframe",

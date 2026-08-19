@@ -12,6 +12,7 @@ import hashlib
 import json
 import shutil
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -588,7 +589,7 @@ def apply(project_root: Path, *, data_dir: Path | None = None, expected_projecti
                 # exactly that newly-created location and registry row so a
                 # failed target/CAS cannot leave a half-materialized Project.
                 try:
-                    with sqlite3.connect(store.global_db) as global_conn:
+                    with closing(sqlite3.connect(store.global_db)) as global_conn:
                         global_conn.execute("DELETE FROM project_registry WHERE project_id=?", (project_id,))
                         global_conn.commit()
                     shutil.rmtree(location.directory, ignore_errors=False)
