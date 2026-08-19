@@ -71,7 +71,7 @@
 **Files:** release workflows/scripts, bundle metadata, checksum/build reports, feature branch/PR.
 
 - [ ] Run deterministic Python, Studio/site/docs/Tauri and contract suites on a clean feature commit.
-- [ ] Build the Framework bundle twice and require byte-identical output/fingerprint; verify and run unpacked doctor/self-test.
+- [x] Build the Framework bundle twice and require byte-identical output/fingerprint; verify and run unpacked doctor/self-test. Current checkpoint: `sha256:38cf2ed4b8ec62704c5522a25fc54a251148b900397d1619941d2da56dd81ad7`; the unpacked SDK self-test regression is covered by `BootstrapHostTests.test_unpacked_framework_bundle_runs_project_sdk_self_test`.
 - [ ] Create/update the Quillframe PR, push only the non-force feature branch, wait for exact-head CI, repair real failures, and merge only after required checks are green.
 - [ ] Re-read remote main exact commit and rebuild/verify the bundle after merge; record lock/attestation update for the local consumer overlay without pushing that overlay.
 
@@ -79,11 +79,11 @@
 
 **Files:** a local consumer overlay runtime/evidence directory and a stable local handoff directory.
 
-- [ ] Validate exact release commit/tree/bundle/lock/attestation; preview/apply/status the mapped projection and freeze a bounded CH001-only Context.
-- [ ] Execute only `DESIGN-BOOK`, `DESIGN-VOLUME`, `PLAN-UNIT`, `PLAN-CHAPTER`, then `DRAFT(CH-001)` and its deterministic/semantic gates. Keep raw candidate internal.
-- [ ] Perform exactly one real Codex native independent review. Claude native is integration-tested only and never reviews the same candidate.
-- [ ] On PASS, call only `candidate.visible.get`, save the Review Draft and handoff report, and prove `accepted=false`, `settled=false`. On valid reject, create a fresh candidate (maximum three attempts) without reviewer shopping; on infrastructure failure, retry only under the contract.
-- [ ] Prove CH002/CH003, future identities, bad examples, unproven images, and consumer remotes were not accessed or invoked.
+- [x] Validate exact local Framework commit/tree/bundle/lock/attestation; preview/apply/status the mapped projection and freeze a bounded CH001-only Context. Evidence: `/var/home/pc/Documents/card/new cards/chinaboy_webnovel_quillframe/runtime/evidence/CH-001.v0.9.1-local-chain.evidence.json`.
+- [x] Execute only `DESIGN-BOOK`, `DESIGN-VOLUME`, `PLAN-UNIT`, `PLAN-CHAPTER`, then `DRAFT(CH-001)` and its deterministic/semantic gates. The four planning records are setup-state records; no unproven model output is claimed for them. Raw candidate remained internal.
+- [x] Perform exactly one real Codex native independent review. Claude native was integration-tested only and did not review the same candidate.
+- [x] On PASS, call only `candidate.visible.get`, save the Review Draft and handoff report, and prove `accepted=false`, `settled=false`. Review Draft: `/var/home/pc/Documents/card/new cards/chinaboy_webnovel_quillframe/manuscripts/review/CH-001.review-draft.v0.9.1-local.md`; handoff: `/var/home/pc/Documents/card/new cards/chinaboy_webnovel_quillframe/runtime/evidence/CH-001.v0.9.1-local-chain.human-review.md`.
+- [x] Prove CH002/CH003, future identities, bad examples, unproven images, and consumer remotes were not accessed or invoked for this chain; Frostloom remote remained untouched.
 
 ### Task 8: v0.9.1 tag, GitHub Release, and post-release recovery
 

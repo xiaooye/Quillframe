@@ -1,6 +1,6 @@
 # Spec 023 · Quillframe Novel-Native Host Boundary
 
-Status: proposed for the v0.9.1 release line
+Status: implemented for the v0.9.1 release-candidate line; publication remains gated by exact main/CI/tag evidence
 
 ## Decision
 

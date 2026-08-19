@@ -1,6 +1,6 @@
 # Spec 023 · Quillframe 小说契约原生 Host 边界
 
-状态：v0.9.1 发布线的提案规范
+状态：已在 v0.9.1 release-candidate 线上实现；正式发布仍需 exact main / CI / tag 证据
 
 ## 决策
 
