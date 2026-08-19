@@ -71,7 +71,7 @@
 **Files:** release workflows/scripts, bundle metadata, checksum/build reports, feature branch/PR.
 
 - [ ] Run deterministic Python, Studio/site/docs/Tauri and contract suites on a clean feature commit.
-- [x] Build the Framework bundle twice and require byte-identical output/fingerprint; verify and run unpacked doctor/self-test. Current checkpoint: `sha256:4a7c0abd7b88d3a522060a529b10b870ddc98682d75f1d51451ee4dbffe021aa`; the unpacked SDK/CLI self-test regression is covered by `BootstrapHostTests.test_unpacked_framework_bundle_runs_project_sdk_self_test`.
+- [x] Build the Framework bundle twice and require byte-identical output/fingerprint; verify and run unpacked doctor/self-test. The current checkpoint before this documentation-only update was `sha256:5d11762146b592d78a21107ea18efd35ac06d15f17ef37f9fa5516efc0421a2e`; the unpacked SDK/CLI self-test regression is covered by `BootstrapHostTests.test_unpacked_framework_bundle_runs_project_sdk_self_test`. Recompute after this commit before release/tag.
 - [ ] Create/update the Quillframe PR, push only the non-force feature branch, wait for exact-head CI, repair real failures, and merge only after required checks are green.
 - [ ] Re-read remote main exact commit and rebuild/verify the bundle after merge; record lock/attestation update for the local consumer overlay without pushing that overlay.
 
@@ -79,10 +79,10 @@
 
 **Files:** a local consumer overlay runtime/evidence directory and a stable local handoff directory.
 
-- [x] Validate exact local Framework commit/tree/bundle/lock/attestation; preview/apply/status the mapped projection and freeze a bounded CH001-only Context. The exact consumer-overlay evidence path is recorded in the local handoff ledger, not in the project-agnostic Framework tree.
+- [x] Validate exact local Framework commit/tree/bundle/lock/attestation; preview/apply/status the mapped projection and freeze a bounded CH001-only Context. Current exact evidence is in the local consumer handoff/evidence files, not in the project-agnostic Framework tree.
 - [x] Execute only `DESIGN-BOOK`, `DESIGN-VOLUME`, `PLAN-UNIT`, `PLAN-CHAPTER`, then `DRAFT(CH-001)` and its deterministic/semantic gates. The four planning records are setup-state records; no unproven model output is claimed for them. Raw candidate remained internal.
-- [x] Perform exactly one real Codex native independent review. Claude native was integration-tested only and did not review the same candidate.
-- [x] On PASS, call only `candidate.visible.get`, save the Review Draft and handoff report, and prove `accepted=false`, `settled=false`. Exact Review Draft/handoff paths remain local consumer artifacts and are emitted in the final evidence report, not copied into Framework sources.
+- [x] Perform exactly one real Codex native independent review with the repaired SessionStart/SubagentStart/SubagentStop hooks. Claude native was integration-tested only and did not review the same candidate.
+- [x] On PASS, call only `candidate.visible.get`, save the Review Draft and handoff report, and prove `accepted=false`, `settled=false`. Current draft/handoff/evidence paths are emitted by the local consumer handoff and are not copied into Framework sources.
 - [x] Prove CH002/CH003, future identities, bad examples, unproven images, and consumer remotes were not accessed or invoked for this chain; Frostloom remote remained untouched.
 
 ### Task 8: v0.9.1 tag, GitHub Release, and post-release recovery
