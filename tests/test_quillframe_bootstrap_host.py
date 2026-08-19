@@ -89,6 +89,42 @@ class BootstrapHostTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 0, proc.stderr or proc.stdout)
             self.assertEqual(json.loads(proc.stdout)["project_sdk_contract"], "PASS")
 
+    def test_framework_checkout_identity_refreshes_index_before_status_check(self):
+        import release.build_framework_bundle as bundle_builder
+
+        calls: list[object] = []
+
+        def fake_refresh(root: Path) -> None:
+            calls.append(("refresh", root))
+
+        def fake_git(root: Path, *args: str) -> str:
+            calls.append(args)
+            if args == ("status", "--porcelain", "--untracked-files=normal"):
+                return ""
+            if args == ("rev-parse", "HEAD"):
+                return "a" * 40
+            raise AssertionError(args)
+
+        with (
+            patch.object(project_sdk, "_framework_root", return_value=ROOT),
+            patch.object(project_sdk, "_refresh_git_index", side_effect=fake_refresh),
+            patch.object(project_sdk, "_git", side_effect=fake_git),
+            patch.object(
+                bundle_builder,
+                "build",
+                return_value={
+                    "bundle_fingerprint": "sha256:" + "b" * 64,
+                    "content_index_fingerprint": "sha256:" + "c" * 64,
+                },
+            ),
+        ):
+            identity = project_sdk.framework_checkout_identity(ROOT)
+
+        self.assertEqual(calls[0], ("refresh", ROOT))
+        self.assertIn(("status", "--porcelain", "--untracked-files=normal"), calls)
+        self.assertEqual(identity["commit"], "a" * 40)
+        self.assertEqual(identity["bundle_fingerprint"], "sha256:" + "b" * 64)
+
     def test_init_rejects_project_inside_framework_checkout(self):
         with self.assertRaisesRegex(ValueError, "outside the generic Quillframe Framework checkout"):
             project_sdk.init_project(

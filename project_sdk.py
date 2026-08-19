@@ -142,6 +142,20 @@ def _framework_root(framework_root: Path | None = None) -> Path:
     return root
 
 
+def _refresh_git_index(root: Path) -> None:
+    try:
+        subprocess.run(
+            ["git", "update-index", "--refresh"],
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+
 def _require_project_outside_framework(project_root: Path, framework_root: Path) -> None:
     root = project_root.resolve()
     fw = framework_root.resolve()
@@ -152,6 +166,7 @@ def _require_project_outside_framework(project_root: Path, framework_root: Path)
 def framework_checkout_identity(framework_root: Path | None = None, *, require_clean: bool = True) -> dict[str, Any]:
     """Return exact identity for a materialized Quillframe source checkout."""
     root = _framework_root(framework_root)
+    _refresh_git_index(root)
     status = _git(root, "status", "--porcelain", "--untracked-files=normal")
     if require_clean and status:
         raise ValueError("Framework checkout is dirty; commit or stash changes before exact pinning")
