@@ -28,6 +28,9 @@ test("Manuscript exposes autosave status, proposal authority, conflict alert and
 
 test("Review consumes exact evidence and keeps lifecycle operations separate", () => {
   assert.match(review, /candidate\.review\.get/);
+  assert.match(review, /candidate\.visible\.get/);
+  assert.match(review, /released\(\)\.content/);
+  assert.doesNotMatch(review, /detail\(\)\.diff\?\.diff/);
   assert.match(review, /candidate\.accept/);
   assert.match(review, /candidate\.reject/);
   assert.match(review, /candidate\.revision\.request/);

@@ -283,6 +283,24 @@ export interface CandidateReviewProjection {
   settlement_authority: false;
 }
 
+export interface CandidateVisibleProjection {
+  schema: "quillframe_user_visible_candidate_v1";
+  project_id: string;
+  candidate_id: string;
+  candidate_fingerprint: string;
+  document_id?: string | null;
+  revision_id?: string | null;
+  content: string;
+  authority_class?: string | null;
+  production_release: Record<string, unknown>;
+  content_access: "production_release_only";
+  accepted: boolean;
+  settled: false;
+  private_reasoning_exposed: false;
+  authority: false;
+  canon_authority: false;
+}
+
 export interface AcceptanceResult {
   schema: "quillframe_candidate_acceptance_result_v1";
   acceptance_id: string;
