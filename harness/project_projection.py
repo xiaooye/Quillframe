@@ -327,6 +327,8 @@ def _remove_obsolete_targets(conn: sqlite3.Connection, old_keys: set[tuple[str, 
             raise ValueError(f"obsolete projected story node has children: {target_id}")
         if conn.execute("SELECT 1 FROM documents WHERE story_node_id=? LIMIT 1", (target_id,)).fetchone():
             raise ValueError(f"obsolete projected story node has documents: {target_id}")
+        if conn.execute("SELECT 1 FROM scene_cards WHERE scene_id=? LIMIT 1", (target_id,)).fetchone():
+            raise ValueError(f"obsolete projected story node is referenced by a scene card: {target_id}")
         conn.execute("DELETE FROM story_nodes WHERE node_id=?", (target_id,))
         conn.execute("DELETE FROM project_projection_target_ownership WHERE target_type=? AND target_id=?", (target_type, target_id))
 
