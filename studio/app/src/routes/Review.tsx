@@ -37,6 +37,7 @@ export default function Review() {
   const [settleTarget, setSettleTarget] = createSignal("");
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string>();
+  let reviewRequestGeneration = 0;
   const selected = createMemo(() => rows().find((row) => row.candidate_id === selectedId()));
   const actionable = createMemo(() => review()?.candidate.effective_status === "review_draft");
   const exactFingerprint = createMemo(() => review()?.candidate.candidate_fingerprint || selected()?.content_fingerprint || "");
@@ -48,11 +49,14 @@ export default function Review() {
 
   const loadReview = async (candidateId: string) => {
     if (!projectId() || !candidateId || !operations().includes("candidate.review.get")) return;
+    const requestGeneration = ++reviewRequestGeneration;
     setError(undefined);
+    setReview(undefined);
     setVisible(undefined);
     try {
       const result = await invokeBridge<CandidateReviewProjection>("candidate.review.get", { project_id: projectId(), candidate_id: candidateId });
       if (result.status !== "ok" || !result.data) throw new Error(operationError(result));
+      if (requestGeneration !== reviewRequestGeneration || selectedId() !== candidateId) return;
       setReview(result.data);
       if (!settleTarget() && result.data.candidate.document_id) setSettleTarget(`chapter:${result.data.candidate.document_id}`);
 
@@ -62,11 +66,13 @@ export default function Review() {
       }
       const released = await invokeBridge<CandidateVisibleProjection>("candidate.visible.get", { project_id: projectId(), candidate_id: candidateId });
       if (released.status !== "ok" || !released.data) throw new Error(operationError(released));
+      if (requestGeneration !== reviewRequestGeneration || selectedId() !== candidateId) return;
       if (released.data.candidate_id !== result.data.candidate.candidate_id || released.data.candidate_fingerprint !== result.data.candidate.candidate_fingerprint) {
         throw new Error("candidate.visible.get returned a different candidate fingerprint");
       }
       setVisible(released.data);
     } catch (cause) {
+      if (requestGeneration !== reviewRequestGeneration || selectedId() !== candidateId) return;
       setError(cause instanceof Error ? cause.message : String(cause));
     }
   };
@@ -75,6 +81,7 @@ export default function Review() {
     setSelectedId(candidateId);
     setAcceptance(undefined);
     setSettlement(undefined);
+    setReview(undefined);
     setVisible(undefined);
     setRejectExact(false);
     setRevisionNote("");
