@@ -96,8 +96,8 @@ requireCheck(navigationCss.includes("@media (max-width: 68rem)") && navigationCs
 requireCheck(siteTitle.includes('class="nf-brand-home" href="/"'), "Quillframe docs brand must navigate to the main product home");
 requireCheck(siteTitle.includes('english ? "/docs/en/" : "/docs/"'), "docs title component must retain locale-aware docs identity markers");
 requireCheck(siteTitle.includes('english ? "Docs" : "知识库"'), "docs title component must retain the current knowledge namespace markers");
-requireCheck(siteTitle.includes('aria-label="Quillframe 0.9.x"') && siteTitle.includes('>0.9.x</span>'), "Docs visible version identity must track the Quillframe 0.9.x development line");
-requireCheck(!siteTitle.includes("0.8.x") && !siteTitle.includes(">0.9.1</span>"), "Docs title must not regress to stale shell-version copy");
+requireCheck(siteTitle.includes('aria-label="Quillframe 0.9.1"') && siteTitle.includes('>0.9.1</span>'), "Docs visible version identity must track the Quillframe 0.9.1 release");
+requireCheck(!siteTitle.includes("0.8.x") && !siteTitle.includes(">0.9.x</span>"), "Docs title must not regress to stale shell-version copy");
 
 const primaryDocsRoutes = [
   ['/product', 'product: "产品"'],
@@ -190,7 +190,7 @@ if (failures.length > 0) {
     shared_primary_navigation: true,
     github_entry: true,
     quillframe_studio_domain: true,
-    product_version: "0.9.x",
+    product_version: "0.9.1",
     current_identity: "Quillframe",
     resilience_boundary: true,
     product_header_navigation_parity: true,

@@ -10,7 +10,7 @@
   "theme_color": "#fdfcf9",
   "icons": [
     {
-      "src": "/novelforge-mark.svg",
+      "src": "/quillframe-mark.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"

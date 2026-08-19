@@ -69,7 +69,7 @@ check(app.includes('<For each={primaryNav()}>{(item) => navLink(item, "wui-sideb
 check(app.includes('<div class="footer-links"><For each={primaryNav()}>{(item) => navLink(item, "footer-link")}</For></div>'), "footer primary section must render the same primary navigation model");
 check(app.includes('href: "/changelog", label: copy().nav.changelog'), "utility navigation must expose Changelog");
 check(app.includes("noopener noreferrer"), "external shell links must use safe new-window semantics");
-check(app.includes('const productVersion = "0.9.x"'), "visible product shell identity must track the 0.9.x development line");
+check(app.includes('const productVersion = "0.9.1"'), "visible product shell identity must track the 0.9.1 release");
 check(!app.includes("0.8.x"), "stale 0.8.x shell identity must not remain in ProductApp");
 
 check(app.includes("header-search") && app.includes("command-dialog") && app.includes("showModal"), "shared shell must own one command palette");
@@ -110,7 +110,7 @@ if (failures.length) {
     shared_mobile_navigation: true,
     github_entry: true,
     changelog_entry: true,
-    product_version: "0.9.x",
+    product_version: "0.9.1",
     shared_locale_state: true,
     shared_appearance_state: true,
     shared_command_palette: true,

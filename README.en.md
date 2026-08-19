@@ -25,7 +25,7 @@
   <a href="LICENSE"><img alt="Quillframe source-available license" src="https://img.shields.io/badge/license-source--available-C985A4" /></a>
 </p>
 
-<p align="center"><sub>0.9.x · pre-1.0 · active development</sub></p>
+<p align="center"><sub>0.9.1 · pre-1.0 · active development</sub></p>
 
 <img src="assets/brand/story-thread.svg" width="100%" alt="Quillframe story thread divider" />
 

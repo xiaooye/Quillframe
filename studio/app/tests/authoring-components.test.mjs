@@ -10,6 +10,7 @@ const context = read("src/routes/Context.tsx");
 const appShell = read("src/AppShell.tsx");
 const settings = read("src/routes/Settings.tsx");
 const styles = read("src/styles/authoring-product.css");
+const webManifest = JSON.parse(read("public/manifest.webmanifest"));
 
 test("Start and Binder consume canonical Core registries", () => {
   assert.match(start, /project\.list/);
@@ -77,4 +78,11 @@ test("responsive authoring CSS encodes touch and focus-first constraints", () =>
   assert.match(styles, /@media \(max-width: 760px\)/);
   assert.match(styles, /\.qf-manuscript-editor \{ order: 1;/);
   assert.match(styles, /prefers-reduced-motion/);
+});
+
+test("Studio web manifest references only present Quillframe assets", () => {
+  for (const icon of webManifest.icons ?? []) {
+    assert.match(icon.src, /^\/quillframe-/);
+    assert.equal(fs.existsSync(new URL("../public" + icon.src, import.meta.url)), true);
+  }
 });
