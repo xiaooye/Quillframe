@@ -88,6 +88,15 @@ class BootstrapHostTests(unittest.TestCase):
             )
             self.assertEqual(proc.returncode, 0, proc.stderr or proc.stdout)
             self.assertEqual(json.loads(proc.stdout)["project_sdk_contract"], "PASS")
+            cli_self_test = subprocess.run(
+                [sys.executable, "quillframe.py", "self-test"],
+                cwd=unpacked,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(cli_self_test.returncode, 0, cli_self_test.stderr or cli_self_test.stdout)
+            self.assertEqual(json.loads(cli_self_test.stdout)["quillframe_cli_contract"], "PASS")
 
     def test_framework_checkout_identity_refreshes_index_before_status_check(self):
         import release.build_framework_bundle as bundle_builder

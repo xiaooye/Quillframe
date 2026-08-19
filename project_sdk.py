@@ -8,6 +8,7 @@ artistic judgment or mutating Canon automatically.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import hashlib
 import json
 import os
@@ -1059,13 +1060,15 @@ def projection_preflight(root: Path, target_id: str, stage: str, data_dir: Path 
     return preflight(root, target_id, stage, data_dir=data_dir)
 
 
-def self_test(tmp_root: Path) -> dict[str, Any]:
-    if tmp_root.exists():
-        shutil.rmtree(tmp_root)
-    # A release bundle intentionally excludes `.git`.  Keep the production
-    # bootstrap contract strict (real project init still requires a clean git
-    # checkout), but let the model-free SDK self-test exercise the same path
-    # after an artifact is unpacked by creating an isolated temporary checkout.
+@contextmanager
+def self_test_framework_checkout():
+    """Yield a clean Framework checkout for model-free artifact self-tests.
+
+    Published bundles intentionally omit `.git`.  Production pinning remains
+    strict, while self-tests may use an isolated temporary git fixture so every
+    bundled contract exercises the same exact-pin path without modifying the
+    unpacked artifact.
+    """
     framework_root = FRAMEWORK_ROOT
     temporary_checkout: Path | None = None
     if not (framework_root / ".git").exists():
@@ -1083,6 +1086,20 @@ def self_test(tmp_root: Path) -> dict[str, Any]:
         subprocess.run(["git", "commit", "--quiet", "-m", "SDK self-test fixture"], cwd=checkout, check=True)
         framework_root = checkout
     try:
+        yield framework_root
+    finally:
+        if temporary_checkout is not None:
+            shutil.rmtree(temporary_checkout, ignore_errors=True)
+
+
+def self_test(tmp_root: Path) -> dict[str, Any]:
+    if tmp_root.exists():
+        shutil.rmtree(tmp_root)
+    # A release bundle intentionally excludes `.git`.  Keep the production
+    # bootstrap contract strict (real project init still requires a clean git
+    # checkout), but let the model-free SDK self-test exercise the same path
+    # after an artifact is unpacked by creating an isolated temporary checkout.
+    with self_test_framework_checkout() as framework_root:
         init_project(
             tmp_root,
             "PROJECT-TEST",
@@ -1092,9 +1109,6 @@ def self_test(tmp_root: Path) -> dict[str, Any]:
             False,
             framework_root,
         )
-    finally:
-        if temporary_checkout is not None:
-            shutil.rmtree(temporary_checkout, ignore_errors=True)
     spec = create_spec(tmp_root, "Volume architecture change")
     validation = validate_project(tmp_root)
     build = build_project(tmp_root)
