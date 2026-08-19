@@ -17,7 +17,7 @@ The bundle is a transport/cache artifact, not a second authority. Project bootst
 
 ## Included
 
-Runtime/Framework material such as Core, Surface, Harness, Learning, Corpus, Evals, Project SDK/Adapter, integration/docs/bootstrap files, schemas, and deterministic scripts according to the current bundle builder contract.
+Runtime/Framework material such as Core, Surface, Harness, Learning, Corpus, Evals, Project SDK/Adapter, the typed Host Bridge entry and contract, integration/docs/bootstrap files, schemas, and deterministic scripts according to the current bundle builder contract.
 
 ## Excluded
 

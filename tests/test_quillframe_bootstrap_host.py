@@ -67,6 +67,8 @@ class BootstrapHostTests(unittest.TestCase):
         self.assertIn("core_operations.py", paths)
         self.assertIn("pyproject.toml", paths)
         self.assertIn("VERSION", paths)
+        self.assertIn("studio/host_bridge.py", paths)
+        self.assertIn("studio/host_bridge_contract.json", paths)
 
     def test_unpacked_framework_bundle_runs_project_sdk_self_test(self):
         from release.build_framework_bundle import build
