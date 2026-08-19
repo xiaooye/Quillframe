@@ -28,8 +28,21 @@ def main() -> int:
         errors.append("peer bridge workflow must be reusable via workflow_call")
     if "types: [opened]" in workflow or "issues:\n" in workflow or "issue_comment:\n" in workflow:
         errors.append("Framework peer bridge must not listen to Framework issue events")
-    if "xiaooye/Quillframe/.github/actions/project-peer-semantic@" not in workflow or "inputs.framework-ref" not in workflow:
-        errors.append("reusable workflow must execute the same-revision bridge action")
+    if "@${{ inputs.framework-ref }}" in workflow:
+        errors.append("reusable workflow may not use an expression in a step uses ref")
+    required_exact_checkout = [
+        "repository: xiaooye/Quillframe",
+        "ref: ${{ inputs.framework-ref }}",
+        "path: .quillframe-framework",
+        "EXPECTED_FRAMEWORK_COMMIT: ${{ inputs.framework-ref }}",
+        "QUILLFRAME_ACTION_REF: ${{ steps.framework.outputs.commit }}",
+        "QUILLFRAME_ACTION_REPOSITORY: xiaooye/Quillframe",
+        ".quillframe-framework/.github/actions/project-peer-semantic/bridge.py",
+        ".quillframe-framework/.github/actions/project-peer-semantic/auto_review.py",
+    ]
+    for needle in required_exact_checkout:
+        if needle not in workflow:
+            errors.append(f"reusable workflow exact-checkout guard missing: {needle}")
     if "github.action_ref" not in action or "github.action_repository" not in action:
         errors.append("composite action must expose actual action ref/repository to deterministic binding")
 

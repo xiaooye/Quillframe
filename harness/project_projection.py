@@ -627,7 +627,7 @@ def status(project_root: Path, *, data_dir: Path | None = None, toml_manifest: d
 def materialize_context(project_root: Path, stage: str, *, data_dir: Path | None = None, target_id: str | None = None) -> dict[str, Any]:
     st = stage.strip()
     if not st: raise ValueError("stage is required")
-    st_alias = {"draft": {"draft", "DRAFT"}, "DRAFT": {"draft", "DRAFT"}}.get(st, {st})
+    st_alias = {"draft": {"draft", "DRAFT", "writer_pre_draft"}, "DRAFT": {"draft", "DRAFT", "writer_pre_draft"}}.get(st, {st})
     info = status(project_root, data_dir=data_dir)
     if not info["ready"]: raise ValueError("projection is not current: " + str(info.get("preview_error") or info["state"]))
     with QuillframeStore(data_dir).open_project(info["project_id"]) as conn:

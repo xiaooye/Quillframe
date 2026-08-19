@@ -110,6 +110,16 @@ class EphemeralChatHostTests(unittest.TestCase):
         self.assertNotIn("build_packet(job)", auto)
         self.assertNotIn("github_models", bridge + auto + action)
 
+    def test_reusable_github_bridge_checks_out_and_executes_exact_commit(self):
+        workflow = (ROOT / ".github/workflows/quillframe-chat-semantic-bridge.yml").read_text(encoding="utf-8")
+        self.assertNotIn("@${{ inputs.framework-ref }}", workflow)
+        self.assertIn("repository: xiaooye/Quillframe", workflow)
+        self.assertIn("ref: ${{ inputs.framework-ref }}", workflow)
+        self.assertIn("EXPECTED_FRAMEWORK_COMMIT: ${{ inputs.framework-ref }}", workflow)
+        self.assertIn("QUILLFRAME_ACTION_REF: ${{ steps.framework.outputs.commit }}", workflow)
+        self.assertIn(".quillframe-framework/.github/actions/project-peer-semantic/bridge.py", workflow)
+        self.assertIn(".quillframe-framework/.github/actions/project-peer-semantic/auto_review.py", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

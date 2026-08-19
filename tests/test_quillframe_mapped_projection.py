@@ -16,7 +16,7 @@ def _sha(data: bytes) -> str:
 
 
 class MappedProjectionTests(unittest.TestCase):
-    def _fixture(self, *, create_db: bool = True):
+    def _fixture(self, *, create_db: bool = True, allowed_stages: list[str] | None = None):
         td = tempfile.TemporaryDirectory(prefix="qf-mapped-projection-")
         root = Path(td.name) / "project"
         root.mkdir(parents=True)
@@ -35,7 +35,7 @@ class MappedProjectionTests(unittest.TestCase):
                 "authority": "active_plan",
                 "lifecycle": "planned",
                 "domain": "story",
-                "allowed_stages": ["draft", "reader_pressure"],
+                "allowed_stages": allowed_stages or ["draft", "reader_pressure"],
                 "target": {"type": "story_node", "id": "CH-001", "kind": "chapter", "parent_id": None, "ordinal": 1, "title": "CH001", "document_id": "CH-001", "document_kind": "plan"},
                 "runtime_payload": payload,
             }],
@@ -225,6 +225,16 @@ class MappedProjectionTests(unittest.TestCase):
         missing = preflight(root, "CH-999", "draft", data_dir=data)
         self.assertFalse(missing["ready"])
         self.assertEqual(missing["model_invocations"], 0)
+
+    def test_draft_preflight_accepts_writer_pre_draft_alias(self):
+        td, root, data = self._fixture(allowed_stages=["writer_pre_draft", "reader_pressure"])
+        self.addCleanup(td.cleanup)
+        apply(root, data_dir=data)
+        context = materialize_context(root, "draft", data_dir=data)
+        self.assertEqual([item["stable_id"] for item in context["objects"]], ["CH-001"])
+        ready = preflight(root, "CH-001", "draft", data_dir=data)
+        self.assertTrue(ready["ready"])
+        self.assertEqual(ready["model_invocations"], 0)
 
     def test_apply_rechecks_source_snapshot_inside_transaction(self):
         td, root, data = self._fixture()
