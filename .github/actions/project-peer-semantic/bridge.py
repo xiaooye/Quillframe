@@ -9,7 +9,9 @@ consumer lockfile.
 from __future__ import annotations
 
 import json
+import importlib.util
 import os
+import sys
 import subprocess
 import tempfile
 from pathlib import Path
@@ -20,6 +22,10 @@ PACKET_MARKER = "<!-- quillframe-peer-packet-v1 -->"
 RESULT_MARKER = "<!-- quillframe-peer-result-v1 -->"
 VALIDATION_MARKER = "<!-- quillframe-peer-validation-v1 -->"
 RECEIPT_MARKER = "<!-- quillframe-peer-validation-receipt-v1 -->"
+
+
+def canonical_json(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
 def fail(message: str) -> NoReturn:
@@ -148,6 +154,47 @@ def framework_paths() -> tuple[Path, Path, Path, Path]:
     return router, relay, registered, receipt
 
 
+def load_frozen_packet() -> tuple[dict[str, Any], bytes]:
+    """Load the exact Core packet; absence or reserialization fails closed."""
+    reference = os.environ.get("QUILLFRAME_FROZEN_PACKET", "").strip()
+    if not reference:
+        fail("QUILLFRAME_FROZEN_PACKET is required; packet creation belongs to Core")
+    workspace = Path(os.environ.get("GITHUB_WORKSPACE", os.getcwd())).resolve()
+    path = Path(reference)
+    if not path.is_absolute():
+        path = (workspace / path).resolve()
+    if not path.is_file():
+        fail(f"Core-frozen packet file not found: {path}")
+    raw = path.read_bytes()
+    try:
+        packet = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        fail(f"Core-frozen packet is invalid JSON: {exc}")
+    if not isinstance(packet, dict):
+        fail("Core-frozen packet must be a JSON object")
+    _router, relay, _registered, _receipt = framework_paths()
+    if str(relay.parent) not in sys.path:
+        sys.path.insert(0, str(relay.parent))
+    with tempfile.TemporaryDirectory(prefix="quillframe-frozen-packet-") as tmp:
+        packet_path = Path(tmp) / "packet.json"
+        packet_path.write_bytes(raw)
+        module_path = relay
+        spec = importlib.util.spec_from_file_location("qf_frozen_relay", module_path)
+        if spec is None or spec.loader is None:
+            fail("unable to load packet validator")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        errors = module.validate_packet(packet)
+    if errors:
+        fail("Core-frozen packet rejected: " + "; ".join(errors))
+    if raw != canonical_json(packet).encode("utf-8"):
+        fail("Core-frozen packet bytes are not canonical; rebuild is forbidden")
+    binding = packet.get("return_binding") or {}
+    if binding.get("run_reference") != packet.get("relay_nonce"):
+        fail("Core-frozen packet nonce binding is invalid")
+    return packet, raw
+
+
 def verify_job_provenance(job: dict[str, Any], binding: dict[str, Any]) -> None:
     provenance = job.get("provenance")
     if not isinstance(provenance, dict):
@@ -184,6 +231,10 @@ def prepare(binding: dict[str, Any]) -> None:
         fail("issue body job_id must match title suffix")
     verify_job_provenance(job, binding)
 
+    packet, packet_bytes = load_frozen_packet()
+    if packet.get("job") != job:
+        fail("Core-frozen packet job differs from Project issue job")
+
     router, relay, registered, _receipt = framework_paths()
     with tempfile.TemporaryDirectory(prefix="quillframe-peer-") as tmp:
         tmpdir = Path(tmp)
@@ -194,8 +245,8 @@ def prepare(binding: dict[str, Any]) -> None:
         jobs_path.write_text(json.dumps({"jobs": [job]}, ensure_ascii=False), encoding="utf-8")
         run(["python", str(router), "validate-jobs", "--jobs", str(jobs_path)])
         validate_registered_contract_job(job_path, registered)
-        run(["python", str(relay), "build", "--job", str(job_path), "--output", str(packet_path)])
-        packet = packet_path.read_text(encoding="utf-8").strip()
+        packet_path.write_bytes(packet_bytes)
+        packet = packet_bytes.decode("utf-8")
 
     comment = "\n".join([
         PACKET_MARKER,
@@ -225,11 +276,13 @@ def validate_result(binding: dict[str, Any]) -> dict[str, Any]:
     comments = json.loads(comments_raw)
     if not isinstance(comments, list):
         fail("GitHub comments response must be a list")
+    packet, packet_bytes = load_frozen_packet()
     packets = [c for c in comments if PACKET_MARKER in str((c or {}).get("body") or "")]
     if not packets:
         fail("no peer packet found in Project issue")
-
-    packet = parse_fenced(str(packets[-1].get("body") or ""), PACKET_MARKER)
+    parsed_packets = [parse_fenced(str(row.get("body") or ""), PACKET_MARKER) for row in packets]
+    if any(canonical_json(value).encode("utf-8") != packet_bytes for value in parsed_packets):
+        fail("one or more Project issue packet comments do not match the Core-frozen packet")
     result = parse_fenced(str(comment.get("body") or ""), RESULT_MARKER)
     job = packet.get("job") or {}
     if not isinstance(job, dict):
@@ -253,7 +306,7 @@ def validate_result(binding: dict[str, Any]) -> dict[str, Any]:
         job_path = tmpdir / "job.json"
         runtime_trace_path = tmpdir / "runtime-trace.json"
         receipt_path = tmpdir / "validation-receipt.json"
-        packet_path.write_text(json.dumps(packet, ensure_ascii=False), encoding="utf-8")
+        packet_path.write_bytes(packet_bytes)
         result_path.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
         job_path.write_text(json.dumps(job, ensure_ascii=False), encoding="utf-8")
         runtime_trace_path.write_text(json.dumps(runtime_trace, ensure_ascii=False), encoding="utf-8")

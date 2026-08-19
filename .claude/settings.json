@@ -11,7 +11,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/harness/integrations/claude_hook.py\""
+            "command": "python -m quillframe.cli claude-hook"
           }
         ]
       }
@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/harness/integrations/claude_hook.py\""
+            "command": "python -m quillframe.cli claude-hook"
           }
         ]
       }
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/harness/integrations/claude_hook.py\""
+            "command": "python -m quillframe.cli claude-hook"
           }
         ]
       }
@@ -43,7 +43,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/harness/integrations/claude_hook.py\""
+            "command": "python -m quillframe.cli claude-hook"
           }
         ]
       }
@@ -53,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"${CLAUDE_PROJECT_DIR}/harness/integrations/claude_hook.py\""
+            "command": "python -m quillframe.cli claude-hook"
           }
         ]
       }

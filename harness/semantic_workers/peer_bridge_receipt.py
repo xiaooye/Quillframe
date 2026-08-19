@@ -276,7 +276,7 @@ def self_test() -> dict[str, Any]:
         "kind": job["kind"],
         "input_fingerprint": job["input_fingerprint"],
         "status": "completed",
-        "worker": {"provider": "github_models", "model_or_reviewer": "fixture", "run_reference": packet["relay_nonce"]},
+        "worker": {"provider": "github_copilot_actions", "model_or_reviewer": "fixture", "run_reference": packet["relay_nonce"]},
         "judgment": {"confidence": 0.9, "result": "pass", "report": "fixture", "evidence_refs": ["fixture"]},
         "proposals": [],
         "errors": [],

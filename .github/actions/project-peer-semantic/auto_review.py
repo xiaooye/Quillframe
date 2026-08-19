@@ -34,10 +34,10 @@ def _semantic_modules():
     if str(semantic) not in sys.path:
         sys.path.insert(0, str(semantic))
     from peer_bridge_receipt import build_receipt, validate_receipt
-    from peer_chat_relay import build as build_packet, validate_peer_result
+    from peer_chat_relay import validate_peer_result
     from registered_contract_binding import validate_registered_job
     from semantic_worker_router import validate_dispatchable_job
-    return build_receipt, validate_receipt, build_packet, validate_peer_result, validate_registered_job, validate_dispatchable_job
+    return build_receipt, validate_receipt, validate_peer_result, validate_registered_job, validate_dispatchable_job
 
 
 def _parse_json_object(text: str) -> dict[str, Any]:
@@ -153,14 +153,16 @@ def main() -> int:
         bridge.fail("issue body job_id must match title suffix")
     bridge.verify_job_provenance(job, binding)
 
-    build_receipt, validate_receipt, build_packet, validate_peer_result, validate_registered_job, validate_dispatchable_job = _semantic_modules()
+    build_receipt, validate_receipt, validate_peer_result, validate_registered_job, validate_dispatchable_job = _semantic_modules()
     dispatch_errors = validate_dispatchable_job(job)
     if dispatch_errors:
         bridge.fail("invalid dispatchable peer job: " + "; ".join(dispatch_errors))
     registered_errors = validate_registered_job(job)
     if registered_errors:
         bridge.fail("invalid registered peer job: " + "; ".join(registered_errors))
-    packet = build_packet(job)
+    packet, packet_bytes = bridge.load_frozen_packet()
+    if packet.get("job") != job:
+        bridge.fail("Core-frozen packet job differs from Project issue job")
 
     packet_comment = "\n".join([
         bridge.PACKET_MARKER,
@@ -169,7 +171,7 @@ def main() -> int:
         "Project-owned GitHub Actions is dispatching this exact bounded packet to a separate GitHub Copilot CLI invocation.",
         "",
         "```json",
-        json.dumps(packet, ensure_ascii=False, indent=2),
+        packet_bytes.decode("utf-8"),
         "```",
     ])
     _post_comment(binding["caller_repo"], issue_number, packet_comment)

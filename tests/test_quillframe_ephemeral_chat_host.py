@@ -42,7 +42,7 @@ class EphemeralChatHostTests(unittest.TestCase):
         self.assertTrue(report["checks"]["manager_transport_only"])
         self.assertFalse(report["authority"])
 
-    def test_github_models_is_a_truthful_independent_peer_provider(self):
+    def test_github_copilot_actions_is_the_truthful_github_independent_provider(self):
         fp = "sha256:" + "a" * 64
         job = make_contract_job(
             "quality.production_review",
@@ -59,8 +59,8 @@ class EphemeralChatHostTests(unittest.TestCase):
             "input_fingerprint": job["input_fingerprint"],
             "status": "completed",
             "worker": {
-                "provider": "github_models",
-                "model_or_reviewer": "openai/gpt-4.1",
+                "provider": "github_copilot_actions",
+                "model_or_reviewer": "copilot",
                 "run_reference": packet["relay_nonce"],
             },
             "judgment": {
@@ -73,6 +73,9 @@ class EphemeralChatHostTests(unittest.TestCase):
             "errors": [],
         }
         self.assertEqual(validate_peer_result(packet, result), [])
+        unsupported = json.loads(json.dumps(result))
+        unsupported["worker"]["provider"] = "github_models"
+        self.assertTrue(any("declared" in item for item in validate_peer_result(packet, unsupported)))
         tampered = json.loads(json.dumps(result))
         tampered["worker"]["run_reference"] = "wrong"
         self.assertTrue(any("relay nonce" in item for item in validate_peer_result(packet, tampered)))
@@ -96,6 +99,16 @@ class EphemeralChatHostTests(unittest.TestCase):
         self.assertIn("auto_review.py", text)
         self.assertIn("validation-receipt", text)
         self.assertIn("peer-result", text)
+
+    def test_github_paths_consume_frozen_packet_without_rebuild_or_models_claim(self):
+        action = (ROOT / ".github/actions/project-peer-semantic/action.yml").read_text(encoding="utf-8")
+        bridge = (ROOT / ".github/actions/project-peer-semantic/bridge.py").read_text(encoding="utf-8")
+        auto = (ROOT / ".github/actions/project-peer-semantic/auto_review.py").read_text(encoding="utf-8")
+        self.assertIn("frozen-packet", action)
+        self.assertIn("QUILLFRAME_FROZEN_PACKET", action)
+        self.assertNotIn("build_packet(job)", bridge)
+        self.assertNotIn("build_packet(job)", auto)
+        self.assertNotIn("github_models", bridge + auto + action)
 
 
 if __name__ == "__main__":

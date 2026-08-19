@@ -351,6 +351,64 @@ The project-local Claude hook verifies the exact Framework lock/attestation and 
 '''
 
 
+def independent_reviewer_instruction() -> str:
+    return '''You are Quillframe's native independent reviewer for exactly one frozen packet.
+
+Use ONLY the frozen packet injected by the trusted lifecycle hook. Do not inspect or infer from the Project, filesystem, shell, network, memory, host conversation, or any write-capable tool. Do not call tools.
+
+Return ONLY one JSON object matching the packet's judgment output contract. Do not return markdown, commentary, chain-of-thought, an outer semantic-result envelope, candidate text, or Project paths. The trusted hook owns lifecycle identity, provider identity, the frozen nonce, deterministic result wrapping, and submission.
+'''
+
+
+def codex_independent_reviewer_toml() -> str:
+    instruction = independent_reviewer_instruction().replace('"""', '\\"\\"\\"')
+    return f'''name = "quillframe-independent-reviewer"
+description = "Review one exact frozen Quillframe packet in a separate native context without tools."
+developer_instructions = """{instruction}"""
+'''
+
+
+def claude_independent_reviewer_md() -> str:
+    return f'''---
+name: quillframe-independent-reviewer
+description: Review one exact frozen Quillframe packet in a separate native context.
+tools: []
+permissionMode: plan
+---
+
+{independent_reviewer_instruction()}'''
+
+
+def codex_hooks_json() -> str:
+    command = "quillframe codex-hook"
+    hook = {"type": "command", "command": command, "timeout": 30}
+    context_hook = {**hook, "additionalContextLimit": 6000}
+    value = {
+        "description": "Quillframe Project bootstrap, native reviewer lifecycle, and execution guard. Review/trust with /hooks before use.",
+        "hooks": {
+            "SessionStart": [
+                {"matcher": "startup|resume|clear|compact", "hooks": [context_hook]},
+            ],
+            "UserPromptSubmit": [{"hooks": [context_hook]}],
+            "SubagentStart": [
+                {"matcher": "quillframe-independent-reviewer", "hooks": [context_hook]},
+            ],
+            "SubagentStop": [
+                {"matcher": "quillframe-independent-reviewer", "hooks": [context_hook]},
+            ],
+            "PreToolUse": [
+                {"matcher": "Bash|apply_patch|Edit|Write", "hooks": [context_hook]},
+                {"matcher": ".*", "hooks": [context_hook]},
+            ],
+            "PostToolUse": [
+                {"matcher": "Bash|apply_patch|Edit|Write", "hooks": [context_hook]},
+            ],
+            "SessionEnd": [{"hooks": [hook]}],
+        },
+    }
+    return json.dumps(value, ensure_ascii=False, indent=2) + "\n"
+
+
 def claude_settings_json() -> str:
     return json.dumps(
         {
@@ -365,11 +423,27 @@ def claude_settings_json() -> str:
                 "UserPromptSubmit": [
                     {"hooks": [{"type": "command", "command": "quillframe claude-hook"}]}
                 ],
+                "SubagentStart": [
+                    {
+                        "matcher": "quillframe-independent-reviewer",
+                        "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
+                    }
+                ],
+                "SubagentStop": [
+                    {
+                        "matcher": "quillframe-independent-reviewer",
+                        "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
+                    }
+                ],
                 "PreToolUse": [
                     {
                         "matcher": "Write|Edit|Bash|Skill",
                         "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
-                    }
+                    },
+                    {
+                        "matcher": ".*",
+                        "hooks": [{"type": "command", "command": "quillframe claude-hook"}],
+                    },
                 ],
                 "PostToolUse": [
                     {
@@ -445,6 +519,9 @@ def init_project(
     write(root / "AGENTS.md", agents_md())
     write(root / "CLAUDE.md", claude_md())
     write(root / ".claude" / "settings.json", claude_settings_json())
+    write(root / ".claude" / "agents" / "quillframe-independent-reviewer.md", claude_independent_reviewer_md())
+    write(root / ".codex" / "hooks.json", codex_hooks_json())
+    write(root / ".codex" / "agents" / "quillframe-independent-reviewer.toml", codex_independent_reviewer_toml())
     write(root / ".gitignore", gitignore())
     for name in ("genre", "platform", "prose", "reader", "project"):
         write(root / "profiles" / f"{name}.yaml", profile_template(name))

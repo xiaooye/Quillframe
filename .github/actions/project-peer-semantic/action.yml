@@ -21,6 +21,10 @@ inputs:
     description: GitHub Copilot CLI model id used only in review mode
     required: false
     default: claude-sonnet-4.6
+  frozen-packet:
+    description: Absolute or workspace-relative path to the immutable Core-frozen peer packet JSON; the action never builds or rewrites this packet.
+    required: false
+    default: ""
 outputs:
   validation-receipt:
     description: Machine receipt emitted after review or validate-result succeeds; empty during prepare mode.
@@ -43,6 +47,7 @@ runs:
         QUILLFRAME_ACTION_PATH: ${{ github.action_path }}
         QUILLFRAME_ACTION_REF: ${{ github.action_ref }}
         QUILLFRAME_ACTION_REPOSITORY: ${{ github.action_repository }}
+        QUILLFRAME_FROZEN_PACKET: ${{ inputs.frozen-packet }}
       run: python "$QUILLFRAME_ACTION_PATH/bridge.py"
     - name: Set up Node for independent Copilot reviewer
       if: ${{ inputs.mode == 'review' }}
@@ -67,4 +72,5 @@ runs:
         QUILLFRAME_ACTION_REF: ${{ github.action_ref }}
         QUILLFRAME_ACTION_REPOSITORY: ${{ github.action_repository }}
         QUILLFRAME_REVIEW_MODEL: ${{ inputs.review-model }}
+        QUILLFRAME_FROZEN_PACKET: ${{ inputs.frozen-packet }}
       run: python "$QUILLFRAME_ACTION_PATH/auto_review.py"

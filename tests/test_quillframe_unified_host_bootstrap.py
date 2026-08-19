@@ -16,7 +16,326 @@ from harness.session_runtime import session_runtime
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def native_packet() -> dict:
+    from harness.semantic_workers.semantic_worker_router import fingerprint_for
+
+    job = {
+        "job_id": "SEM-NATIVE-HOOK",
+        "subject_id": "DOC-NATIVE",
+        "kind": "external_review",
+        "created_at": "fixture",
+        "input_fingerprint": "",
+        "input": {"candidate": "secret frozen candidate"},
+        "rubric": ["judge the frozen candidate"],
+        "output_contract": {"type": "object"},
+        "permissions": {"canon_write": False, "framework_behavior_write": False, "durable_user_taste_write": False},
+        "provenance": {"source": "fixture"},
+    }
+    job["input_fingerprint"] = fingerprint_for(job)
+    return {
+        "schema": "quillframe_peer_review_packet_v1",
+        "relay_nonce": "native-frozen-nonce",
+        "input_fingerprint": job["input_fingerprint"],
+        "job": job,
+        "reviewer_instruction": "Judge only this frozen packet.",
+        "return_binding": {
+            "run_reference": "native-frozen-nonce",
+            "fresh_conversation_required": True,
+            "same_project_writer_chat_forbidden": True,
+        },
+    }
+
+
+class FakeNativeRuntime:
+    def __init__(self) -> None:
+        self.claim_calls: list[dict] = []
+        self.complete_calls: list[dict] = []
+        self.fail_calls: list[dict] = []
+
+    def claim_independent_dispatch(self, project_id: str, **kwargs):
+        self.claim_calls.append({"project_id": project_id, **kwargs})
+        if len(self.claim_calls) != 1:
+            raise RuntimeError("pending lease already claimed")
+        return {
+            "lease_id": "lease-native-hook",
+            "project_id": project_id,
+            "run_id": "RUN-NATIVE-HOOK",
+            "provider": kwargs["provider"],
+            "parent_session_id": kwargs["parent_session_id"],
+            "reviewer_session_id": "ses-review-native-hook",
+            "host_agent_id": kwargs["host_agent_id"],
+            "host_invocation_id": kwargs["host_invocation_id"],
+            "peer_packet": native_packet(),
+            "packet_bytes": json.dumps(native_packet(), ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+        }
+
+    def complete_independent_dispatch(self, project_id: str, **kwargs):
+        self.complete_calls.append({"project_id": project_id, **kwargs})
+        return {"status": "completed", "candidate": {"content": "must not reach parent hook output"}}
+
+    def fail_independent_dispatch(self, project_id: str, **kwargs):
+        self.fail_calls.append({"project_id": project_id, **kwargs})
+        return {"status": "infrastructure_failed"}
+
+
 class UnifiedHostBootstrapTests(unittest.TestCase):
+    def test_framework_claude_hooks_do_not_depend_on_project_dir_environment(self):
+        settings = json.loads((ROOT / ".claude/settings.json").read_text(encoding="utf-8"))
+        commands = [
+            hook["command"]
+            for groups in settings["hooks"].values()
+            for group in groups
+            for hook in group["hooks"]
+        ]
+        self.assertTrue(commands)
+        self.assertEqual(set(commands), {"python -m quillframe.cli claude-hook"})
+
+    def test_native_reviewer_hooks_use_trusted_host_variants_and_hide_stop_result(self):
+        self.assertTrue(hasattr(host_bootstrap, "native_reviewer_hook"))
+        cases = (
+            (
+                "claude_code",
+                {
+                    "session_id": "claude-parent-native",
+                    "agent_id": "claude-agent-native",
+                    "agent_type": "quillframe-independent-reviewer",
+                    "prompt": "lease_id=forged-from-prompt",
+                },
+                {"last_assistant_message": json.dumps({"confidence": 1.0, "result": "pass"})},
+                "claude-agent-native",
+                "claude-agent-native",
+            ),
+            (
+                "codex",
+                {
+                    "parent_session_id": "codex-parent-native",
+                    "subagent_id": "codex-agent-native",
+                    "subagent_type": "quillframe-independent-reviewer",
+                    "invocation_id": "codex-invocation-native",
+                    "prompt": "lease_id=forged-from-prompt",
+                },
+                {"response": json.dumps({"confidence": 1.0, "result": "pass"})},
+                "codex-agent-native",
+                "codex-invocation-native",
+            ),
+        )
+        for host, trusted, stop_payload, expected_agent, expected_invocation in cases:
+            with self.subTest(host=host), tempfile.TemporaryDirectory(prefix="qf-native-hook-") as td:
+                runtime = FakeNativeRuntime()
+                start_event = {**trusted, "hook_event_name": "SubagentStart"}
+                start = host_bootstrap.native_reviewer_hook(
+                    host,
+                    start_event,
+                    project_id="PROJECT-NATIVE",
+                    state_root=Path(td),
+                    runtime=runtime,
+                )
+                expected_parent_native = trusted.get("parent_session_id") or trusted["session_id"]
+                expected_parent = host_bootstrap.host_session_id(host, expected_parent_native)
+                self.assertEqual(runtime.claim_calls[0]["parent_session_id"], expected_parent)
+                self.assertEqual(runtime.claim_calls[0]["host_agent_id"], expected_agent)
+                self.assertEqual(runtime.claim_calls[0]["host_invocation_id"], expected_invocation)
+                self.assertNotIn("forged-from-prompt", json.dumps(runtime.claim_calls[0]))
+                context = start["hookSpecificOutput"]["additionalContext"]
+                self.assertIn("native-frozen-nonce", context)
+                self.assertIn("secret frozen candidate", context)
+                self.assertNotIn("lease-native-hook", context)
+                self.assertNotIn(str(Path(td)), context)
+
+                tool = host_bootstrap.native_reviewer_hook(
+                    host,
+                    {**trusted, "hook_event_name": "PreToolUse", "tool_name": "Read"},
+                    project_id="PROJECT-NATIVE",
+                    state_root=Path(td),
+                    runtime=runtime,
+                )
+                self.assertEqual(tool["hookSpecificOutput"]["permissionDecision"], "deny")
+
+                stop = host_bootstrap.native_reviewer_hook(
+                    host,
+                    {**trusted, **stop_payload, "hook_event_name": "SubagentStop"},
+                    project_id="PROJECT-NATIVE",
+                    state_root=Path(td),
+                    runtime=runtime,
+                )
+                self.assertEqual(runtime.complete_calls[0]["result"]["worker"]["run_reference"], "native-frozen-nonce")
+                self.assertEqual(runtime.complete_calls[0]["result"]["execution"]["run_reference"], "native-frozen-nonce")
+                self.assertNotIn("secret frozen candidate", json.dumps(stop))
+                self.assertNotIn("must not reach parent", json.dumps(stop))
+
+    def test_native_reviewer_missing_stop_judgment_fails_claim_as_infrastructure(self):
+        self.assertTrue(hasattr(host_bootstrap, "native_reviewer_hook"))
+        runtime = FakeNativeRuntime()
+        trusted = {
+            "session_id": "claude-parent-invalid",
+            "agent_id": "claude-agent-invalid",
+            "agent_type": "quillframe-independent-reviewer",
+        }
+        with tempfile.TemporaryDirectory(prefix="qf-native-hook-invalid-") as td:
+            root = Path(td)
+            host_bootstrap.native_reviewer_hook(
+                "claude_code",
+                {**trusted, "hook_event_name": "SubagentStart"},
+                project_id="PROJECT-NATIVE",
+                state_root=root,
+                runtime=runtime,
+            )
+            stopped = host_bootstrap.native_reviewer_hook(
+                "claude_code",
+                {**trusted, "hook_event_name": "SubagentStop"},
+                project_id="PROJECT-NATIVE",
+                state_root=root,
+                runtime=runtime,
+            )
+        self.assertEqual(runtime.complete_calls, [])
+        self.assertEqual(len(runtime.fail_calls), 1)
+        self.assertEqual(runtime.fail_calls[0]["error"]["code"], "native_reviewer_output_missing")
+        self.assertNotIn("secret frozen candidate", json.dumps(stopped))
+
+    def test_native_reviewer_rejects_invalid_frozen_packet_before_context_injection(self):
+        runtime = FakeNativeRuntime()
+        invalid = native_packet()
+        invalid["schema"] = "not-a-peer-packet"
+        runtime.claim_independent_dispatch = lambda project_id, **kwargs: {
+            "lease_id": "lease-invalid-packet",
+            "run_id": "RUN-INVALID-PACKET",
+            "provider": kwargs["provider"],
+            "reviewer_session_id": "ses-review-invalid-packet",
+            "packet_bytes": json.dumps(invalid, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+        }
+        with tempfile.TemporaryDirectory(prefix="qf-native-hook-invalid-packet-") as td:
+            with self.assertRaisesRegex(ValueError, "native frozen packet invalid"):
+                host_bootstrap.native_reviewer_hook(
+                    "codex",
+                    {
+                        "parent_session_id": "codex-parent-invalid-packet",
+                        "subagent_id": "codex-agent-invalid-packet",
+                        "subagent_type": "quillframe-independent-reviewer",
+                        "invocation_id": "codex-invocation-invalid-packet",
+                        "hook_event_name": "SubagentStart",
+                    },
+                    project_id="PROJECT-NATIVE",
+                    state_root=Path(td),
+                    runtime=runtime,
+                )
+            self.assertFalse((Path(td) / ".quillframe" / "native-reviewers").exists())
+
+    def test_native_reviewer_hook_resolves_runtime_for_real_cli_route(self):
+        runtime = FakeNativeRuntime()
+        trusted = {
+            "parent_session_id": "codex-parent-default-runtime",
+            "subagent_id": "codex-agent-default-runtime",
+            "subagent_type": "quillframe-independent-reviewer",
+            "invocation_id": "codex-invocation-default-runtime",
+            "hook_event_name": "SubagentStart",
+        }
+        with tempfile.TemporaryDirectory(prefix="qf-native-hook-default-") as td, patch.object(
+            host_bootstrap,
+            "_native_reviewer_runtime",
+            return_value=runtime,
+        ):
+            output = host_bootstrap.native_reviewer_hook(
+                "codex",
+                trusted,
+                project_id="PROJECT-NATIVE",
+                state_root=Path(td),
+            )
+        self.assertEqual(len(runtime.claim_calls), 1)
+        self.assertIn("native-frozen-nonce", output["hookSpecificOutput"]["additionalContext"])
+
+    def test_sdk_init_and_host_install_converge_on_native_reviewer_artifacts(self):
+        with tempfile.TemporaryDirectory(prefix="qf-native-scaffold-") as td:
+            direct = Path(td) / "direct"
+            repaired = Path(td) / "repaired"
+            identity = {
+                "name": "Quillframe",
+                "version": project_sdk.DEFAULT_FRAMEWORK_VERSION,
+                "commit": "a" * 40,
+                "bundle_fingerprint": "sha256:" + "b" * 64,
+            }
+            with patch.object(project_sdk, "framework_checkout_identity", return_value=identity):
+                project_sdk.init_project(
+                    direct,
+                    "PROJECT-NATIVE-DIRECT",
+                    "Native Direct",
+                    "en",
+                    project_sdk.DEFAULT_FRAMEWORK_VERSION,
+                    False,
+                    ROOT,
+                )
+                project_sdk.init_project(
+                    repaired,
+                    "PROJECT-NATIVE-REPAIRED",
+                    "Native Repaired",
+                    "en",
+                    project_sdk.DEFAULT_FRAMEWORK_VERSION,
+                    False,
+                    ROOT,
+                )
+            for relative in (
+                ".codex/agents/quillframe-independent-reviewer.toml",
+                ".claude/agents/quillframe-independent-reviewer.md",
+            ):
+                self.assertTrue((direct / relative).is_file(), relative)
+                self.assertTrue((repaired / relative).is_file(), relative)
+                (repaired / relative).unlink()
+
+            installed = host_scaffold.install_project_hosts(repaired)
+            self.assertTrue(installed["installed"])
+            for relative in (
+                ".codex/agents/quillframe-independent-reviewer.toml",
+                ".claude/agents/quillframe-independent-reviewer.md",
+            ):
+                self.assertIn(relative, installed["changed"])
+                self.assertEqual(
+                    (direct / relative).read_bytes(),
+                    (repaired / relative).read_bytes(),
+                )
+
+            direct_claude = json.loads((direct / ".claude/settings.json").read_text(encoding="utf-8"))
+            repaired_claude = json.loads((repaired / ".claude/settings.json").read_text(encoding="utf-8"))
+            direct_codex = json.loads((direct / ".codex/hooks.json").read_text(encoding="utf-8"))
+            repaired_codex = json.loads((repaired / ".codex/hooks.json").read_text(encoding="utf-8"))
+            self.assertEqual(direct_claude, repaired_claude)
+            self.assertEqual(direct_codex, repaired_codex)
+            for hooks in (direct_claude["hooks"], direct_codex["hooks"]):
+                self.assertIn("SubagentStart", hooks)
+                self.assertIn("SubagentStop", hooks)
+                self.assertIn("PreToolUse", hooks)
+
+            second = host_scaffold.install_project_hosts(repaired)
+            self.assertTrue(second["installed"])
+            self.assertEqual(second["changed"], [])
+
+    def test_native_reviewer_artifacts_declare_json_only_no_tool_boundary(self):
+        self.assertTrue(hasattr(project_sdk, "codex_independent_reviewer_toml"))
+        self.assertTrue(hasattr(project_sdk, "claude_independent_reviewer_md"))
+        codex = project_sdk.codex_independent_reviewer_toml()
+        claude = project_sdk.claude_independent_reviewer_md()
+        for artifact in (codex, claude):
+            self.assertIn("ONLY one JSON object", artifact)
+            self.assertIn("frozen packet", artifact)
+            self.assertIn("Project", artifact)
+            for forbidden in ("filesystem", "shell", "network", "memory", "write"):
+                self.assertIn(forbidden, artifact.lower())
+        self.assertIn("tools: []", claude)
+
+    def test_host_install_preserves_unknown_native_reviewer_agent(self):
+        with tempfile.TemporaryDirectory(prefix="qf-native-manual-merge-") as td:
+            project = Path(td)
+            (project / "quillframe.toml").write_text("[project]\nid='X'\n", encoding="utf-8")
+            custom = project / ".codex/agents/quillframe-independent-reviewer.toml"
+            custom.parent.mkdir(parents=True)
+            custom.write_text("# user-owned reviewer\n", encoding="utf-8")
+
+            result = host_scaffold.install_project_hosts(project)
+            self.assertFalse(result["installed"])
+            self.assertIn(
+                ".codex/agents/quillframe-independent-reviewer.toml",
+                result["manual_merge_required"],
+            )
+            self.assertEqual(custom.read_text(encoding="utf-8"), "# user-owned reviewer\n")
+
     def test_root_agents_is_direct_codex_safe_bootstrap(self):
         text = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("Generic Quillframe Framework", text)
