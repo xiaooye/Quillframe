@@ -867,13 +867,23 @@ def validate_project(root: Path) -> dict[str, Any]:
     if not authority["authority_ready"]:
         warnings.extend(f"authority: {problem}" for problem in authority["errors"])
 
-    for rel in REQUIRED_DIRS:
-        if not (root / rel).is_dir():
-            errors.append(f"missing required directory: {rel}")
-    for rel in ("README.en.md", "README.zh-CN.md", "AGENTS.md", "CLAUDE.md", ".gitignore"):
-        if not (root / rel).exists():
-            errors.append(f"missing required file: {rel}")
-    errors.extend(validate_bilingual_specs(root))
+    layout = str((manifest.get("adapter", {}) or {}).get("layout") or "standard").strip().lower()
+    if layout == "mapped":
+        from project_adapter import validate as validate_project_adapter
+
+        adapter = validate_project_adapter(root)
+        errors.extend(adapter.get("errors", []))
+        for rel in ("AGENTS.md", "CLAUDE.md"):
+            if not (root / rel).exists():
+                errors.append(f"missing required file: {rel}")
+    else:
+        for rel in REQUIRED_DIRS:
+            if not (root / rel).is_dir():
+                errors.append(f"missing required directory: {rel}")
+        for rel in ("README.en.md", "README.zh-CN.md", "AGENTS.md", "CLAUDE.md", ".gitignore"):
+            if not (root / rel).exists():
+                errors.append(f"missing required file: {rel}")
+        errors.extend(validate_bilingual_specs(root))
 
     accepted = root / "manuscripts" / "accepted"
     if accepted.exists():
