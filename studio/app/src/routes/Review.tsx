@@ -215,6 +215,11 @@ export default function Review() {
             {(detail) => <>
               <header class="qf-review-heading"><div><span class="nf-eyebrow">INCUMBENT ↔ CANDIDATE</span><h2>{detail().candidate.candidate_id}</h2></div><div class="qf-review-authority"><AuthorityLabel value={detail().candidate.effective_status} /><span class="qf-gate-label" data-gate={detail().candidate.user_visible_gate}>{`user-visible gate: ${detail().candidate.user_visible_gate ?? "—"}`}</span></div></header>
               <div class="qf-review-fingerprint"><span>Candidate fingerprint</span><code>{detail().candidate.candidate_fingerprint}</code></div>
+              <p class="qf-success-note" role="status" aria-live="polite">
+                <code>accepted={acceptance() ? "true" : "false"}</code>
+                {" · "}
+                <code>settled={settlement()?.status === "settled" ? "true" : "false"}</code>
+              </p>
 
               <section class="qf-review-evidence" aria-labelledby="review-evidence-heading">
                 <h3 id="review-evidence-heading">{zh() ? "Released Review Draft" : "Released Review Draft"}</h3>

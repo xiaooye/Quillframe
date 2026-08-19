@@ -38,6 +38,8 @@ test("Review consumes exact evidence and keeps lifecycle operations separate", (
   assert.match(review, /candidate\.revision\.request/);
   assert.match(review, /Accepted ✓/);
   assert.match(review, /Not Settled/);
+  assert.match(review, /accepted=\{acceptance\(\) \? "true" : "false"\}/);
+  assert.match(review, /settled=\{settlement\(\)\?\.status === "settled" \? "true" : "false"\}/);
   assert.match(review, /settlement\.preflight/);
   assert.match(review, /settlement\.apply/);
   assert.match(review, /expected_before_fingerprint: preflight\.data\.expected_before_fingerprint/);
