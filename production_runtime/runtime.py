@@ -828,6 +828,15 @@ class ProductionRunExecutor(ProductionContextRuntime):
         handoff = self._latest_independent_handoff(project_id, run_id)
         if not handoff:
             raise ProductionRunError("independent_handoff_missing", "frozen independent handoff is required")
+        run = self._run_row(project_id, run_id)
+        if (
+            receipt.get("schema") == PROJECT_PEER_VALIDATION_RECEIPT_SCHEMA
+            and run.get("status") != "completed"
+        ):
+            raise ProductionRunError(
+                "independent_legacy_receipt_replay_only",
+                "Project peer receipt v1 is readable only for exact historical completed-run replay; new submissions require v2",
+            )
         if receipt.get("schema") == INDEPENDENT_INVOCATION_RECEIPT_SCHEMA:
             self._validate_native_lifecycle_receipt(
                 project_id,

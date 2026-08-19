@@ -634,16 +634,17 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         handoff = frozen_handoff(self.store, run_id)
         packet = handoff["peer_packet"]
         result = peer_result(packet, "pass")
-        receipt = project_bridge_receipt(packet, result)
-        receipt["schema"] = LEGACY_PEER_RECEIPT_SCHEMA
+        current_receipt = project_bridge_receipt(packet, result)
         completed = runtime.submit_independent(
             "PROD",
             run_id,
             peer_packet=packet,
             result=result,
-            independence_receipt=receipt,
+            independence_receipt=current_receipt,
         )
         self.assertEqual(completed["status"], "completed")
+        receipt = json.loads(json.dumps(current_receipt))
+        receipt["schema"] = LEGACY_PEER_RECEIPT_SCHEMA
         with self.store.open_project("PROD") as conn:
             row = conn.execute(
                 """SELECT review_id,result_json FROM review_evidence
@@ -652,6 +653,8 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
                 (run_id,),
             ).fetchone()
             legacy_review = json.loads(row["result_json"])
+            legacy_review["independence_receipt"] = receipt
+            legacy_review["bridge_receipt"] = receipt
             legacy_review.pop("submission_evidence_fingerprint")
             conn.execute(
                 "UPDATE review_evidence SET result_json=? WHERE review_id=?",
@@ -1769,6 +1772,43 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
             "terminal_evidence_fingerprint": expected_submission_fingerprint,
         })
         self.assertEqual(ready_events, 1)
+
+    def test_fresh_run_rejects_legacy_v1_receipts_before_attempt_acquisition(self):
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        run_id = self.start_native()
+        self.execute_to_handoff(runtime, run_id)
+        packet = frozen_packet(self.store, run_id)
+        model_result = peer_result(packet, "pass")
+        for provider in ("chatgpt_peer_chat", "human"):
+            with self.subTest(provider=provider):
+                result = json.loads(json.dumps(model_result))
+                receipt = project_bridge_receipt(packet, model_result)
+                if provider == "human":
+                    result["worker"]["provider"] = "human"
+                    result["worker"]["model_or_reviewer"] = "manual-reviewer"
+                    receipt["worker_provider"] = "human"
+                    receipt["result_fingerprint"] = fingerprint(result)
+                receipt["schema"] = LEGACY_PEER_RECEIPT_SCHEMA
+
+                with self.assertRaises(ProductionRunError) as blocked:
+                    runtime.submit_independent(
+                        "PROD",
+                        run_id,
+                        peer_packet=packet,
+                        result=result,
+                        independence_receipt=receipt,
+                    )
+                self.assertEqual(blocked.exception.code, "independent_legacy_receipt_replay_only")
+        with self.store.open_project("PROD") as conn:
+            run = conn.execute("SELECT status FROM runs WHERE run_id=?", (run_id,)).fetchone()
+            attempt = conn.execute(
+                "SELECT status FROM independent_review_attempts WHERE run_id=?",
+                (run_id,),
+            ).fetchone()
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0], 0)
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM review_evidence").fetchone()[0], 0)
+        self.assertEqual(run["status"], "awaiting_external")
+        self.assertEqual(attempt["status"], "available")
 
     def test_released_v9_completed_github_replay_rejects_tampered_evidence_without_binding(self):
         for tamper in ("result", "receipt", "candidate"):
