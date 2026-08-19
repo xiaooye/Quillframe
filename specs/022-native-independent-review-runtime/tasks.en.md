@@ -11,14 +11,14 @@
 
 ## Task 5 evidence · current reset chain
 
-- Fresh Project: `/tmp/qf-ch001-final-reset-project-hwag1re4/project`; runtime data: `/tmp/qf-ch001-final-reset-project-hwag1re4/runtime`.
-- Framework commit: `f5715a71db87b26c15c71b4d30371acef8c63d26`.
+- Fresh Project: `/tmp/qf-ch001-final-reset-project-1y8fkk01/project`; runtime data: `/tmp/qf-ch001-final-reset-project-1y8fkk01/runtime`.
+- Framework commit: `eb1ad36fb29da6a04fc0b0cc23e603849d32d18f`.
 - Framework bundle: `sha256:3fd739b14b6c9ef9e0493cf186f4ca6eb4a7092e9c6180234eeccc300a5074d3`.
 - Projection: `sha256:5143ee28e8e1ef1bd43d2ba9c04026d57ca94db5df8c1b901f8c49ac85170a7e`; manifest: `sha256:a3cfb21678401cc7def3d92a8c18948764654fbf9d498ec426e3866d85c317c8`.
-- Context bundle: `sha256:4f0339454e5fe9ae42a4d6749b041553196009bb58b190498a367f7cf1c3ad2d`.
-- CH001 run: `run_d6cd9fc961bf4321882c87dafb217a09`; candidate: `cand_9ae472d621544e65a47facc98ab82239`.
+- Context bundle: `sha256:7d137d2b78de373df6861f89b81660d0bd3589f481311e3751efee37b4601c64`.
+- CH001 run: `run_cf95d7cfaabc4573ad475bf766e213fe`; candidate: `cand_1f656ba7a7ff4f23bece86a2d74c04e8`.
 - Candidate: `sha256:27604cafbab04b5e4cf2dacb25cbcad8f3f3db8c1f59b7d4f096cabbf7955145`.
-- Native reviewer: exactly one `codex_native_subagent` lifecycle, with a distinct reviewer session `ses_review_0bfbab817dd24e8faa7fce2242a8d792`, exact packet/result/receipt binding, and reviewer tool denial. Claude was not used to review this candidate.
+- Native reviewer: exactly one `codex_native_subagent` lifecycle, with a distinct reviewer session `ses_review_eef5b5067e7b4b3dada9fb7173053da7`, exact packet/result/receipt binding, and reviewer tool denial. Claude was not used to review this candidate.
 - Review Draft: `/var/home/pc/Documents/card/new cards/chinaboy_webnovel_quillframe/manuscripts/review/CH-001.review-draft.v0.9.1-local.md`; handoff/evidence are the `.current.*` files beside it.
 - The current overlay contains only CH001 review output and hook/lock metadata. CH002/CH003 were not projected, contextualized, drafted, or reviewed. `accepted=false`, `settled=false`, and Frostloom remote remained untouched.
 
