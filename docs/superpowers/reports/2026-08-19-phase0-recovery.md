@@ -4,8 +4,8 @@
 
 - Framework worktree: `/var/home/pc/Documents/Quillframe-native-independent-review-runtime`
 - Branch: `codex/native-independent-review-runtime`
-- HEAD: `0775147828c8cfee4d0e1bf42fccc541067937fe`
-- Origin feature head: `6bff852` (remote is not treated as the current implementation)
+- HEAD: `1866213215f02c9eedca771fc5b1b3ec982ebd25`
+- Origin feature head: `1866213` (remote feature branch is synchronized)
 - Framework main worktree: `/var/home/pc/Documents/Quillframe`, HEAD `bc09df8cc08fecd163706ca2c2cffd985e131791`
 - Local consumer overlay: a separate consumer-owned checkout outside the Framework repository
 - Stale CLI writer: exact `codex resume` PID `6130` held the target thread lock; it was terminated and the lock had no remaining owner.
@@ -19,18 +19,27 @@ The bilingual AGENTS, HARNESS_MANIFEST, SKILL, Harness Agent, Orchestration, Ses
 
 The Task 2 native host adapter, Task 3 mapped projection, Task 4 paired
 contracts/evidence, and the minimal writer-facing release-boundary slice are
-now committed. The latest independent-reviewable checkpoint is `0775147`.
+now committed. The latest independent-reviewable checkpoint is `1866213`,
+which also fences stale Studio review responses when a writer switches
+candidates during concurrent loads.
 
 - Framework deterministic suite: 181/181 clean tests.
 - Studio: 14/14 tests, typecheck, quality, and production build pass.
 - Site: quality and static/docs build pass.
 - Host Bridge v10, MCP, SDK, adapter, version, namespace, peer-bridge, and
   deterministic bundle self-tests pass.
-- Framework bundle double-build: byte-identical fingerprint
-  `sha256:38ee82a18a44cf602d8ccbabb790ab152381fa4604f34a9b34a75cc3d10bf575`.
-- Known local tool limitation: `cargo` is not installed, so Tauri compilation
-  remains a contract/static check until a Rust toolchain is available.
+- Framework bundle double-build at the current checkpoint: byte-identical
+  fingerprint `sha256:901c3f242d5116b48dcdc3a6851e462b980ced36254bb301d084ab08ebb9770a`;
+  403 files and 3,502,080 bytes; bundle verify passes.
+- Exact-head PR #144 checks: Quillframe core, site/docs, SolidJS Studio, and
+  Tauri 2 thin-host all pass. The separate GitHub Advanced Security agentic
+  review is an external service failure (`claude-opus-4.6` unsupported), not a
+  source finding; it remains explicitly awaiting external service recovery.
 
-Remaining gates are intentionally not claimed complete: exact-head PR/CI and
-merge, post-merge main verification, local CH001-only projection and native
-Codex review, tag/Release publication, and post-release artifact recovery.
+Remaining gates are intentionally not claimed complete: merge after the
+external review check is resolved, post-merge main verification, local
+CH001-only production and native Codex review, tag/Release publication, and
+post-release artifact recovery. The current consumer overlay projection is
+CH001-only and ready with `model_invocations=0`, `authority=false`, and
+projection fingerprint
+`sha256:403b2d2e4d9a51bc9f6cc2bdd7d470ef8a75990b97166c295037e09cc1316883`.
