@@ -1810,6 +1810,43 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         self.assertEqual(run["status"], "awaiting_external")
         self.assertEqual(attempt["status"], "available")
 
+    def test_persisted_released_v9_human_receipt_remains_exact_replay_readable(self):
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        run_id, _handoff, packet, result, receipt, review_id = self.make_released_v9_completed_fixture(runtime)
+        result["worker"]["provider"] = "human"
+        result["worker"]["model_or_reviewer"] = "historical-manual-reviewer"
+        result_fingerprint = native_fingerprint(result)
+        receipt["worker_provider"] = "human"
+        receipt["result_fingerprint"] = result_fingerprint
+        with self.store.open_project("PROD") as conn:
+            row = conn.execute(
+                "SELECT result_json FROM review_evidence WHERE review_id=?",
+                (review_id,),
+            ).fetchone()
+            persisted = json.loads(row["result_json"])
+            persisted["worker"] = result["worker"]
+            persisted["independence_receipt"] = receipt
+            persisted["bridge_receipt"] = receipt
+            conn.execute(
+                "UPDATE review_evidence SET reviewer_fingerprint=?,result_json=? WHERE review_id=?",
+                (
+                    result_fingerprint,
+                    json.dumps(persisted, sort_keys=True, separators=(",", ":")),
+                    review_id,
+                ),
+            )
+            conn.commit()
+
+        replay = runtime.submit_independent(
+            "PROD",
+            run_id,
+            peer_packet=packet,
+            result=result,
+            independence_receipt=receipt,
+        )
+        self.assertEqual(replay["status"], "completed")
+        self.assertTrue(replay["replayed"])
+
     def test_released_v9_completed_github_replay_rejects_tampered_evidence_without_binding(self):
         for tamper in ("result", "receipt", "candidate"):
             with self.subTest(tamper=tamper):
