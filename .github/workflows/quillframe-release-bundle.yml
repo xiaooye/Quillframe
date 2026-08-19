@@ -1,0 +1,62 @@
+name: Quillframe Framework Release Bundle
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to verify (a v* tag publishes a GitHub Release).
+        required: true
+        default: v0.9.1
+        type: string
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    name: Deterministic v0.9.1 bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Verify release identity and deterministic bundle contract
+        run: |
+          set -euo pipefail
+          python scripts/version_consistency.py
+          python scripts/version_identity.py
+          python release/build_framework_bundle.py self-test
+          COMMIT="$(git rev-parse HEAD)"
+          mkdir -p release-out
+          python release/build_framework_bundle.py build --output "release-out/quillframe-framework-${COMMIT}.tar" --report release-out/build-1.json
+          python release/build_framework_bundle.py build --output "release-out/quillframe-framework-${COMMIT}.second.tar" --report release-out/build-2.json
+          cmp "release-out/quillframe-framework-${COMMIT}.tar" "release-out/quillframe-framework-${COMMIT}.second.tar"
+          FINGERPRINT="$(python - <<'PY'
+          import json
+          print(json.load(open('release-out/build-1.json', encoding='utf-8'))['bundle_fingerprint'])
+          PY
+          )"
+          python release/build_framework_bundle.py verify --bundle "release-out/quillframe-framework-${COMMIT}.tar" --expected "$FINGERPRINT" --report release-out/verify.json
+          sha256sum "release-out/quillframe-framework-${COMMIT}.tar" > release-out/SHA256SUMS
+          cat > release-out/artifact-manifest.json <<EOF
+          {"schema":"quillframe_release_artifact_manifest_v1","framework_version":"0.9.1","commit":"${COMMIT}","tag":"${GITHUB_REF_NAME}","bundle":"quillframe-framework-${COMMIT}.tar","bundle_fingerprint":"${FINGERPRINT}","model_execution":false}
+          EOF
+          printf '%s\n' "$COMMIT" > release-out/framework-commit.txt
+      - name: Upload release bundle evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: quillframe-v0.9.1-${{ github.sha }}
+          path: release-out/
+          if-no-files-found: error
+      - name: Publish GitHub Release for a tag push
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" release-out/quillframe-framework-*.tar release-out/SHA256SUMS release-out/build-1.json release-out/verify.json release-out/artifact-manifest.json release-out/framework-commit.txt --repo "$GITHUB_REPOSITORY" --title "Quillframe ${GITHUB_REF_NAME}" --notes-file CHANGELOG.en.md

@@ -14,16 +14,93 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+# Support both ``python -m harness.control_plane.mcp_stdio`` and the release
+#/CI form that executes this file by path.  The latter otherwise puts only
+# ``harness/control_plane`` on sys.path, so the novel-kernel imports fail.
+ROOT = Path(__file__).resolve().parents[2]
+CONTROL_PLANE_DIR = Path(__file__).resolve().parent
+for _path in (str(ROOT), str(CONTROL_PLANE_DIR)):
+    if _path not in sys.path:
+        sys.path.insert(0, _path)
+
 from control_plane import ControlPlane
+from core_operations import CoreOperations
+from harness.project_projection import preview as projection_preview
+from harness.project_projection import status as projection_status
+from persistence.quillframe_sqlite import QuillframeStore
 
 PROTOCOL_VERSION = "2025-06-18"
 SERVER_INFO = {
     "name": "quillframe-control-plane",
     "title": "Quillframe Control Plane",
-    "version": "0.9.0",
+    "version": "0.9.1",
+    "product_boundary": "host_runs_agent_quillframe_governs_novel",
 }
 
 TOOLS: list[dict[str, Any]] = [
+    {
+        "name": "quillframe_capabilities",
+        "title": "Novelist-facing Quillframe capabilities",
+        "description": "Discover the novelist-facing, internal/ops, and privileged author surfaces without granting authority.",
+        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "authority": False},
+    },
+    {
+        "name": "quillframe_project_inspect",
+        "title": "Inspect fiction Project",
+        "description": "Read the Project projection and story-contract counts. This does not expose private runtime stores or grant authority.",
+        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}}, "required": ["project_id"], "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "project.inspect", "authority": False},
+    },
+    {
+        "name": "quillframe_project_projection_preview",
+        "title": "Preview mapped Project projection",
+        "description": "Compile the explicit Project Context Manifest without SQLite mutation or model execution.",
+        "inputSchema": {"type": "object", "properties": {"project_root": {"type": "string", "minLength": 1}}, "required": ["project_root"], "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "project.projection.preview", "authority": False},
+    },
+    {
+        "name": "quillframe_project_projection_status",
+        "title": "Read mapped Project projection status",
+        "description": "Report projection/source readiness and fingerprints without returning model output.",
+        "inputSchema": {"type": "object", "properties": {"project_root": {"type": "string", "minLength": 1}, "data_dir": {"type": ["string", "null"]}}, "required": ["project_root"], "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "project.projection.status", "authority": False},
+    },
+    {
+        "name": "quillframe_author_run_start",
+        "title": "Start bounded author run",
+        "description": "Register one explicitly named Quillframe task mode. The host/model must still execute and satisfy all gates; raw draft remains private.",
+        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}, "task_mode": {"type": "string", "minLength": 1}, "target_ref": {"type": ["string", "null"]}, "payload": {"type": "object"}, "session_id": {"type": ["string", "null"]}, "idempotency_key": {"type": ["string", "null"]}}, "required": ["project_id", "task_mode", "payload"], "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "author.run.start", "authority": False},
+    },
+    {
+        "name": "quillframe_candidate_review_get",
+        "title": "Read released candidate review",
+        "description": "Read exact candidate review evidence only when production release and fresh independent evidence validate.",
+        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}, "candidate_id": {"type": "string", "minLength": 1}}, "required": ["project_id", "candidate_id"], "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "candidate.review.get", "authority": False},
+    },
+    {
+        "name": "quillframe_candidate_visible_get",
+        "title": "Read Review Draft",
+        "description": "Return manuscript text only through the exact production-release visibility boundary; pending, stale, or unreleased candidates return no text.",
+        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}, "candidate_id": {"type": "string", "minLength": 1}}, "required": ["project_id", "candidate_id"], "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "candidate.visible.get", "authority": False},
+    },
+    {
+        "name": "quillframe_candidate_reject",
+        "title": "Reject candidate",
+        "description": "Record an explicit user-authorized review rejection. It never accepts or settles Canon.",
+        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}, "candidate_id": {"type": "string", "minLength": 1}, "candidate_fingerprint": {"type": "string", "minLength": 1}, "authorized_by": {"type": "string", "minLength": 1}, "authorization": {"type": "object"}, "idempotency_key": {"type": "string", "minLength": 1}, "reason": {"type": ["string", "null"]}}, "required": ["project_id", "candidate_id", "candidate_fingerprint", "authorized_by", "authorization", "idempotency_key"], "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "candidate.reject", "requires_explicit_user_authorization": True, "authority": False},
+    },
+    {
+        "name": "quillframe_candidate_revision_request",
+        "title": "Request candidate revision",
+        "description": "Record an explicit user-authorized revision request with exact candidate binding. It never accepts or settles Canon.",
+        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}, "candidate_id": {"type": "string", "minLength": 1}, "candidate_fingerprint": {"type": "string", "minLength": 1}, "revision_request": {"type": "object"}, "authorized_by": {"type": "string", "minLength": 1}, "authorization": {"type": "object"}, "idempotency_key": {"type": "string", "minLength": 1}}, "required": ["project_id", "candidate_id", "candidate_fingerprint", "revision_request", "authorized_by", "authorization", "idempotency_key"], "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "candidate.revision.request", "requires_explicit_user_authorization": True, "authority": False},
+    },
     {
         "name": "quillframe_status",
         "title": "Quillframe runtime status",
@@ -86,6 +163,12 @@ TOOLS: list[dict[str, Any]] = [
     },
 ]
 
+# The legacy session/event/handoff/consume tools remain available to hosts, but
+# are explicitly internal/ops.  Novelist-facing tools above map to the same
+# Core operation contracts rather than creating a second authority API.
+for _tool in TOOLS:
+    _tool.setdefault("_meta", {"surface_class": "internal_ops", "authority": False})
+
 
 def text_result(value: Any, *, is_error: bool = False) -> dict[str, Any]:
     return {"content": [{"type": "text", "text": json.dumps(value, ensure_ascii=False, indent=2)}], "structuredContent": value if isinstance(value, dict) else {"value": value}, "isError": is_error}
@@ -98,6 +181,51 @@ class MCPServer:
         self.initialized = False
 
     def call_tool(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
+        if name == "quillframe_capabilities":
+            return {
+                "schema": "quillframe_mcp_surface_manifest_v1",
+                "product_boundary": "host_runs_agent_quillframe_governs_novel",
+                "surface_classes": {
+                    "novelist_facing": [
+                        "project.inspect", "project.projection.preview", "project.projection.status",
+                        "author.run.start", "candidate.review.get", "candidate.visible.get",
+                        "candidate.reject", "candidate.revision.request",
+                    ],
+                    "internal_ops": [
+                        "session", "event", "handoff", "leases", "consume-once", "provider/runtime diagnostics",
+                    ],
+                    "privileged_author": ["candidate.accept", "settlement.apply"],
+                },
+                "authority": False,
+                "canon_authority": False,
+                "settlement_authority": False,
+            }
+        if name == "quillframe_project_inspect":
+            return CoreOperations(QuillframeStore()).project_inspect(args["project_id"])
+        if name == "quillframe_project_projection_preview":
+            return projection_preview(Path(args["project_root"]))
+        if name == "quillframe_project_projection_status":
+            data_dir = Path(args["data_dir"]) if args.get("data_dir") else None
+            return projection_status(Path(args["project_root"]), data_dir=data_dir)
+        if name == "quillframe_author_run_start":
+            return CoreOperations(QuillframeStore()).start_author_run(
+                args["project_id"], task_mode=args["task_mode"], target_ref=args.get("target_ref"),
+                payload=args["payload"], session_id=args.get("session_id"), idempotency_key=args.get("idempotency_key"),
+            )
+        if name == "quillframe_candidate_review_get":
+            return CoreOperations(QuillframeStore()).candidate_review_get(args["project_id"], candidate_id=args["candidate_id"])
+        if name == "quillframe_candidate_visible_get":
+            return CoreOperations(QuillframeStore()).candidate_visible_get(args["project_id"], candidate_id=args["candidate_id"])
+        if name == "quillframe_candidate_reject":
+            return CoreOperations(QuillframeStore()).reject_candidate(
+                args["project_id"], candidate_id=args["candidate_id"], candidate_fingerprint=args["candidate_fingerprint"],
+                authorized_by=args["authorized_by"], authorization=args["authorization"], idempotency_key=args["idempotency_key"], reason=args.get("reason"),
+            )
+        if name == "quillframe_candidate_revision_request":
+            return CoreOperations(QuillframeStore()).request_candidate_revision(
+                args["project_id"], candidate_id=args["candidate_id"], candidate_fingerprint=args["candidate_fingerprint"],
+                revision_request=args["revision_request"], authorized_by=args["authorized_by"], authorization=args["authorization"], idempotency_key=args["idempotency_key"],
+            )
         if name == "quillframe_status": return self.cp.status()
         if name == "quillframe_session_put": return self.cp.put_session(args["session"], expected_version=args.get("expected_version"))
         if name == "quillframe_session_get":

@@ -15,7 +15,7 @@ export const zhCN = {
     appearance: "切换外观",
   },
   home: {
-    eyebrow: "AI 原生小说创作框架 · 0.9.0",
+    eyebrow: "AI 原生小说创作框架 · 0.9.1",
     title: "让长篇创作有记忆，也有边界。",
     lede: "Quillframe 不只生成文字。它会记录上下文从哪里来、角色此刻能知道什么、候选稿通过了哪些审查，以及正文在接受后如何进入可重复的出版流程。每一步都有边界，也都有证据可查。",
     primaryCta: "看看它怎么工作",
@@ -73,7 +73,7 @@ export const zhCN = {
       lede: "Quillframe 不把一群智能体堆成圆桌会。每个子系统只负责边界清晰的机制，再把带类型的证据交给下一层。",
       cards: [
         { eyebrow: "项目", title: "正典与状态", body: "权威等级、依赖、已接受状态、计划和结算证据始终显式存在。" },
-        { eyebrow: "运行时", title: "运行与会话", body: "管理会话、运行、检查点、宿主能力、交接、指纹和一次性消费证据各自有清晰身份。" },
+        { eyebrow: "宿主边界", title: "宿主运行，Quillframe 管理小说", body: "宿主负责 session、model/tool 循环、sandbox 与 subagent；Quillframe 保持小说契约、Context、评审与 Settlement 语义。" },
         { eyebrow: "故事", title: "情节与角色", body: "因果机制、角色动机、知识边界、关系变化和长线状态对齐属于故事机制。" },
         { eyebrow: "编辑", title: "读者与文本表面", body: "读者压力、参与度、反 AI 文本表面约束、候选稿演进和窄范围修复各有自己的责任边界。" },
         { eyebrow: "证据", title: "语料与学习", body: "语料权限、偏好证据、反例和可回滚假设都保留来源，也不会泄漏成项目正典。" },
@@ -93,7 +93,7 @@ export const zhCN = {
     },
     release: {
       eyebrow: "版本状态",
-      title: "0.9.0 是当前 1.0 前的架构主线。",
+      title: "0.9.1 是当前 1.0 前的发布主线。",
       lede: "Quillframe 0.9 将活动产品收敛到 SolidJS、Tauri 2、Python Core、SQLite 原生持久化、类型化 Host Bridge 与 Astro/Starlight 文档。1.0 前仍允许有充分理由的破坏性清理，但活动界面不再把旧 0.8 架构描述成当前状态。",
       cta: "查看版本记录",
     },
@@ -161,7 +161,7 @@ export const zhCN = {
         { eyebrow: "生产", title: "生产流水线", body: "从上下文冻结与情节模拟，一直到用户审查和结算边界。", meta: "docs/production-pipeline.zh-CN.md" },
         { eyebrow: "质量", title: "质量保障", body: "解释文本表面、读者参与、连续性和语义审查各自如何工作。", meta: "docs/quality-assurance.zh-CN.md" },
         { eyebrow: "产品", title: "Studio 架构", body: "Writer / Inspector 产品模型、类型化 Host Bridge、SolidJS Studio、Tauri 宿主方向与当前边界。", meta: "studio/PRODUCT_ARCHITECTURE.zh-CN.md" },
-        { eyebrow: "版本", title: "0.9.0 版本记录", body: "当前架构、破坏性迁移说明，以及已实现能力与剩余工作的明确边界。", meta: "CHANGELOG.zh-CN.md" },
+        { eyebrow: "版本", title: "0.9.1 版本记录", body: "小说原生宿主边界、精确评审证据、mapped projection，以及已实现能力与剩余工作的明确边界。", meta: "CHANGELOG.zh-CN.md" },
       ],
     },
     changelog: {
@@ -169,7 +169,7 @@ export const zhCN = {
       title: "版本记录只写已经发生的事。",
       lede: "Quillframe 仍处于 1.0 之前。当前记录只描述已经实现的机器契约与产品行为，并把剩余缺口明确留在开发计划里，不把路线图提前包装成能力。",
       cards: [
-        { title: "统一使用 0.9.0 当前身份", body: "Manifest、CLI、Studio、持久化、Project SDK、技术命名空间与文档共用同一个 Quillframe 当前身份。" },
+        { title: "统一使用 0.9.1 当前身份", body: "Manifest、CLI、Studio、持久化、Project SDK、技术命名空间与文档共用同一个 Quillframe 当前身份。" },
         { title: "1.0 前仍允许必要的破坏性清理", body: "只要架构理由充分，并且有确定性 CI 保护，契约仍可以继续收敛。" },
         { title: "历史保持原样", body: "旧 0.8 / 7.x 变更记录保留当时的原始语义；活动产品面不会把它们描述成当前架构。" },
       ],

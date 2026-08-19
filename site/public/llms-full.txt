@@ -4,9 +4,9 @@ Quillframe is an AI-native long-form fiction framework and authoring environment
 
 ## Product model
 
-Writer -> Quillframe -> Model API
+Host agent -> Quillframe novel contract -> Model API / tools
 
-Quillframe owns orchestration, Story/Character/Relationship state, Canon, bounded Context, Agent Runtime, quality gates, learning evidence, SQLite persistence, tools, checkpoints, receipts, and authorized Settlement. Models perform inference inside Quillframe-owned operations.
+The host owns generic sessions, model/tool loops, sandbox, and subagent lifecycle. Quillframe governs Project resolution, Story/Character/Relationship state, Canon boundaries, bounded Context, candidate/review/release contracts, quality gates, learning evidence, SQLite persistence, checkpoints, receipts, and authorized Settlement. Its embedded Agent Runtime is an optional/reference implementation. Models perform inference; they do not own authority.
 
 Ordinary model-service setup is exactly:
 

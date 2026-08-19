@@ -1,0 +1,53 @@
+name: Quillframe Project Chat Semantic Bridge
+
+on:
+  workflow_call:
+    inputs:
+      framework-ref:
+        description: Exact Quillframe Framework commit or tag pinned by the Project.
+        required: true
+        type: string
+      mode:
+        description: prepare, review, or validate-result.
+        required: true
+        type: string
+      project-root:
+        description: Project root used by the consuming repository bridge.
+        required: true
+        type: string
+      project-id:
+        description: Stable Project identifier.
+        required: true
+        type: string
+      frozen-packet:
+        description: Path to the Core-frozen canonical packet; the action never rebuilds it.
+        required: true
+        type: string
+      review-model:
+        description: Optional Copilot CLI model for the explicit review mode.
+        required: false
+        default: claude-sonnet-4.6
+        type: string
+    secrets:
+      COPILOT_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  project-peer-bridge:
+    name: Project-owned exact Framework peer bridge
+    runs-on: ubuntu-latest
+    steps:
+      - name: Execute the pinned Framework action revision
+        uses: xiaooye/Quillframe/.github/actions/project-peer-semantic@${{ inputs.framework-ref }}
+        with:
+          mode: ${{ inputs.mode }}
+          project-root: ${{ inputs.project-root }}
+          project-id: ${{ inputs.project-id }}
+          frozen-packet: ${{ inputs.frozen-packet }}
+          review-model: ${{ inputs.review-model }}
+          github-token: ${{ github.token }}
+          copilot-token: ${{ secrets.COPILOT_TOKEN }}

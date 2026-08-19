@@ -293,7 +293,7 @@ def self_test() -> int:
             "schema": AUTHORITY_EVIDENCE_SCHEMA,
             "project_id": "BOOK-CMD",
             "project_authority_fingerprint": "sha256:" + "a" * 64,
-            "framework": {"version": "0.9.0", "commit": "fixture", "bundle_fingerprint": "sha256:" + "b" * 64},
+            "framework": {"version": "0.9.1", "commit": "fixture", "bundle_fingerprint": "sha256:" + "b" * 64},
             "artifact_bindings": [],
             "required_capabilities": [],
             "approval_refs": [],

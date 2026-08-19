@@ -16,7 +16,7 @@ const bridge = await loadBridge();
 test("normalizes current Core bridge.describe shape without inventing operations", () => {
   const normalized = bridge.normalizeBridgeDescription({
     schema: "quillframe_host_bridge_description_v1",
-    framework_version: "0.9.0",
+    framework_version: "0.9.1",
     contract_version: "5",
     surface: "local_app",
     operations: ["project.inspect", "author.run.start", "project.inspect"],
@@ -27,7 +27,7 @@ test("normalizes current Core bridge.describe shape without inventing operations
     direct_core_store_access: false,
   });
   assert.deepEqual(normalized.operations, ["author.run.start", "project.inspect"]);
-  assert.equal(normalized.frameworkVersion, "0.9.0");
+  assert.equal(normalized.frameworkVersion, "0.9.1");
   assert.equal(normalized.authority, false);
 });
 

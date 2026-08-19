@@ -9,9 +9,9 @@
 5. 在 Host Bridge 暴露 `candidate.visible.get`，并关闭 `agent_package → raw production checkpoints` 的 pre-release manuscript 旁路。
 6. 将聊天 sandbox 的 manager execution 收口到 loopback OpenAI-compatible relay；relay 采用原子 request/response 文件，只负责 transport，并显式不能作为 independent evidence。
 7. 修复 Project peer receipt CLI 的 `build/validate` 命令，使既有 manual peer workflow 真正可执行。
-8. 为 Project peer action 增加 GitHub Models `review` mode：模型只输出 semantic judgment；deterministic bridge 负责 exact job/fingerprint/nonce/provider/runtime receipt binding。
+8. 将 GitHub Models 设计记录标为 superseded；已发布的兼容 mode 是 `github_copilot_actions`：模型只输出 semantic judgment，deterministic bridge 负责 exact job/fingerprint/nonce/provider/runtime receipt binding。
 9. 对 `rule_material` 增加 registered-contract dry preflight，在任何 Context/Story/Raw Draft semantic execution 前拒绝错误 schema。
-10. 增加 regression tests：missing/tampered/mismatched release、checkpoint leak、host fabricated boolean、relay atomicity、GitHub Models provider nonce binding、peer receipt CLI、rule-material fail-fast 与 valid release success。
+10. 增加 regression tests：missing/tampered/mismatched release、checkpoint leak、host fabricated boolean、relay atomicity、unsupported-provider rejection、peer receipt CLI、rule-material fail-fast 与 valid release success。
 11. 跑完整 Framework CI；下载最终 exact-head artifact，在当前 ChatGPT Linux container 重跑完整 tests。
 12. 用 localhost manager relay 执行真实 DRAFT 到 independent handoff；再用 Project-owned independent provider 完成 peer review、submit、production release 与 `candidate.visible.get`。
 13. 只有最终 release 后，才向用户展示新的校园剧 candidate 做人工质量 review。

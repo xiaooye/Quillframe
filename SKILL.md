@@ -1,6 +1,6 @@
 ---
 name: quillframe
-version: 0.9.0
+version: 0.9.1
 description: Project-agnostic adaptive fiction production framework with Story/Canon Core, Surface/Reader fundamentals, capability-aware session-native Harness, author-visible context/memory controls, reader simulation and quality evolution, durable adaptive learning, Corpus Intelligence, evals, deterministic Framework bundles, Project SDK, and provider-neutral integrations.
 ---
 

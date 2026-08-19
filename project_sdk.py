@@ -25,7 +25,7 @@ SDK_VERSION = "1"
 PROJECT_SCHEMA = "quillframe_project_v1"
 LOCK_SCHEMA = "quillframe_lock_v1"
 ATTESTATION_SCHEMA = "quillframe_framework_attestation_v1"
-DEFAULT_FRAMEWORK_VERSION = "0.9.0"
+DEFAULT_FRAMEWORK_VERSION = "0.9.1"
 FRAMEWORK_ROOT = Path(__file__).resolve().parent
 
 REQUIRED_DIRS = [

@@ -1,6 +1,6 @@
 # Quillframe Model Runtime
 
-Quillframe 自己拥有 Agent Runtime；外部模型服务只负责 inference。
+宿主运行通用 Agent loop，Quillframe 管理小说契约。内置 Model / Agent Runtime 是 Studio 与本地 adapter 使用的 optional/reference implementation。外部模型服务只提供 inference，永远不会获得故事、Canon 或 Settlement authority。
 
 ## 两个输入
 

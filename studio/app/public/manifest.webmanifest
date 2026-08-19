@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "NovelForge Studio",
-  "short_name": "NovelForge",
-  "description": "Local-first NovelForge project preflight, playground, and read-only Studio shell",
+  "name": "Quillframe Studio",
+  "short_name": "Quillframe",
+  "description": "Local-first Quillframe project preflight, writer review, and read-only Studio shell",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

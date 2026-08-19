@@ -20,7 +20,7 @@
 
 <p align="center">
   <a href="https://github.com/xiaooye/Quillframe/actions/workflows/quillframe-ci.yml"><img alt="Quillframe CI" src="https://github.com/xiaooye/Quillframe/actions/workflows/quillframe-ci.yml/badge.svg?branch=main" /></a>
-  <img alt="Version 0.9.0" src="https://img.shields.io/badge/version-0.9.0-796BC4" />
+  <img alt="Version 0.9.1" src="https://img.shields.io/badge/version-0.9.1-796BC4" />
   <a href="SECURITY.md"><img alt="Tokens stay host-local" src="https://img.shields.io/badge/security-tokens%20stay%20host--local-4D9B7D" /></a>
   <a href="LICENSE"><img alt="Quillframe source-available license" src="https://img.shields.io/badge/license-source--available-C985A4" /></a>
 </p>
@@ -30,7 +30,7 @@
 <img src="assets/brand/story-thread.svg" width="100%" alt="Quillframe story thread divider" />
 
 > [!IMPORTANT]
-> **Quillframe runs the agent. Models provide inference.** Bring an API endpoint and an access token; Quillframe keeps ownership of context, tools, model discovery and selection, Session / Run / Checkpoint identity, the model → tool → model loop, quality gates, authority, and durable state.
+> **The host runs the agent. Quillframe governs the novel.** Hosts own generic sessions, model/tool loops, sandboxes, and subagents; Quillframe owns the novel contract, bounded Context, exact candidate review, visibility, and Acceptance / Settlement boundaries. The embedded runtime is an optional/reference implementation.
 >
 > **Tokens stay host-local.** Resolved access-token values are transient host secrets. Quillframe never writes them to repository files, SQLite, prompts, Context, AgentJob / AgentResult, checkpoints, receipts, fingerprints, logs, or client bundles; the host uses a credential only transiently when authenticating to the model endpoint you configured.
 
@@ -142,7 +142,7 @@ Quillframe Studio is an authoring environment first—not a framework dashboard 
 - Core — **Python**
 - Persistence — **SQLite-native** with WAL, foreign keys, migrations, backup/restore, and integrity checks
 - Documentation — **Astro + Starlight**
-- Desktop direction — **Tauri 2 thin host**; a finished Tauri wrapper is not shipped in the current `0.9.0` checkout
+- Desktop direction — **Tauri 2 thin host**; v0.9.1 keeps it as an optional installable host over the same writer-facing contract
 
 Explore the live [Studio](https://studio.quillframe.wei-dev.com/) or read the [Studio architecture](studio/README.en.md).
 

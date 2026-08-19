@@ -346,7 +346,7 @@ def self_test() -> int:
     with tempfile.TemporaryDirectory(prefix="quillframe-terminate-executor-") as tmp:
         root = Path(tmp)
         (root / ".quillframe").mkdir()
-        framework = {"name": "Quillframe", "version": "0.9.0", "commit": "fixture-terminate-executor", "bundle_fingerprint": "sha256:" + "a" * 64}
+        framework = {"name": "Quillframe", "version": "0.9.1", "commit": "fixture-terminate-executor", "bundle_fingerprint": "sha256:" + "a" * 64}
         (root / "quillframe.toml").write_text(
             '[quillframe]\nschema="quillframe_project_v1"\n[project]\nid="BOOK-STOP"\ntitle="Stop"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[authority]\ncanon_write="settlement_only"\nframework_write="forbidden"\n', encoding="utf-8")
         (root / "quillframe.lock.json").write_text(json.dumps({"schema": "quillframe_lock_v1", "framework": framework}), encoding="utf-8")

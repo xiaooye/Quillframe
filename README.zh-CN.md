@@ -20,7 +20,7 @@
 
 <p align="center">
   <a href="https://github.com/xiaooye/Quillframe/actions/workflows/quillframe-ci.yml"><img alt="Quillframe CI" src="https://github.com/xiaooye/Quillframe/actions/workflows/quillframe-ci.yml/badge.svg?branch=main" /></a>
-  <img alt="Version 0.9.0" src="https://img.shields.io/badge/version-0.9.0-796BC4" />
+  <img alt="Version 0.9.1" src="https://img.shields.io/badge/version-0.9.1-796BC4" />
   <a href="SECURITY.md"><img alt="Token 仅驻留于 Host" src="https://img.shields.io/badge/security-tokens%20stay%20host--local-4D9B7D" /></a>
   <a href="LICENSE"><img alt="Quillframe source-available license" src="https://img.shields.io/badge/license-source--available-C985A4" /></a>
 </p>
@@ -30,7 +30,7 @@
 <img src="assets/brand/story-thread.svg" width="100%" alt="Quillframe story thread divider" />
 
 > [!IMPORTANT]
-> **Agent 由 Quillframe 自己运行，模型只提供推理能力。** 用户提供 API Endpoint 与 Access Token；Context、工具、模型发现与选择、Session / Run / Checkpoint 身份、model → tool → model 循环、质量门槛、authority 与持久状态仍由 Quillframe 掌握。
+> **宿主运行 Agent，Quillframe 管理小说。** Codex、Claude Code、Cursor 或其他已声明的宿主负责通用 session、model → tool → model 循环、sandbox 与 subagent 生命周期。Quillframe 负责小说契约：Project 解析、Story / Character / Relationship / Canon 边界、受限 Context、candidate 生命周期、质量门槛、独立评审、可见性，以及 Acceptance / Settlement。内置 runtime 仍保留为 Studio、本地 adapter 与确定性测试使用的 optional/reference implementation。
 >
 > **Token 只在 Host 侧短暂存在。** 解析后的 Access Token 是瞬态 Host Secret。Quillframe 不会把它写入仓库文件、SQLite、prompt、Context、AgentJob / AgentResult、checkpoint、receipt、fingerprint、日志或客户端 bundle；Host 只会在向你配置的模型 endpoint 发起认证时临时使用该凭据。
 
@@ -59,7 +59,7 @@ cd ../my-novel
 quillframe validate .
 ```
 
-如果使用 Claude Code 作为宿主，应在初始化完成后从 consumer Project 目录启动。项目级 bootstrap 会先验证 lock / attestation 与本地 Framework 是否一致，再允许有副作用的宿主工具执行。Claude Code 仍然只是宿主，不会替代 Quillframe Agent Runtime，也不会因此获得 Canon 权威。
+如果使用 Claude Code 作为宿主，应在初始化完成后从 consumer Project 目录启动。项目级 bootstrap 会先验证 lock / attestation 与本地 Framework 是否一致，再允许有副作用的宿主工具执行。Claude Code 仍然只是宿主，不会替代 Quillframe 的小说契约内核，也不会因此获得 Canon 权威。
 
 基础写作与检查 shell 不需要先连接模型。真正需要 inference 时，普通设置刻意只保留两个输入：
 
@@ -113,7 +113,7 @@ Quillframe 的通用系统覆盖 **Story · Character · Relationship · Canon �
 - **独立就必须真的独立。** 需要独立语义判断时，结果必须来自真正不同的 invocation / session / worker，并绑定 exact artifact fingerprint；Manager 自己角色扮演不算。
 - **SQLite 是 canonical durable state，不是 fallback cache。** UI 边界是 `Solid/Tauri → typed Bridge/API → Python Core → SQLite`。
 
-当前 Model Runtime 在 authority 层保持 provider-neutral。协议/模型发现、能力证据、eligibility、模型选择、工具执行、checkpoint 与 receipt 都由 Quillframe 自己掌握；Model API 只是 inference capability，不是 Agent Runtime authority。
+当前 Model Runtime 在 authority 层保持 provider-neutral。宿主负责通用模型与工具执行；Quillframe 在自己的边界内校验小说契约、能力证据、eligibility、checkpoint、receipt 与 exact artifact binding。Model API 只是 inference capability，不拥有故事或 Settlement authority。
 
 继续阅读：[架构](docs/architecture.zh-CN.md) · [Model Runtime](docs/model-runtime.zh-CN.md) · [Agent Runtime](docs/agent-runtime.zh-CN.md) · [Context 与 Memory](docs/context-and-memory.zh-CN.md)
 
@@ -142,7 +142,7 @@ Quillframe Studio 首先是创作环境，而不是 Framework dashboard。日常
 - Core — **Python**
 - Persistence — **SQLite-native**，包含 WAL、foreign keys、migration、backup / restore 与 integrity checks
 - Documentation — **Astro + Starlight**
-- Desktop direction — **Tauri 2 thin host**；当前 `0.9.0` checkout 尚未交付完整 Tauri wrapper
+- Desktop direction — **Tauri 2 thin host**；v0.9.1 仍将它作为同一 writer-facing contract 之上的可选安装宿主
 
 可以直接进入在线 [Studio](https://studio.quillframe.wei-dev.com/)，或阅读 [Studio 架构](studio/README.zh-CN.md)。
 

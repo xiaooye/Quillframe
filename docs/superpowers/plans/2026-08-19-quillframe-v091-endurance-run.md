@@ -4,7 +4,7 @@
 
 **Goal:** Restore the interrupted native-review work, finish Spec 022, narrow Quillframe to a novel-contract kernel with thin native-host adapters, run only CH001 through the real release-bound chain, and publish/verify v0.9.1 when every release and review gate is proven.
 
-**Architecture:** Hosts own generic agent/session/model/tool execution. Quillframe owns novel authority, bounded context, candidate/review/release contracts, and acceptance/settlement boundaries. Project files remain the durable story authority; the local CH001 overlay is never pushed to Frostloom or promoted to Canon.
+**Architecture:** Hosts own generic agent/session/model/tool execution. Quillframe owns novel authority, bounded context, candidate/review/release contracts, and acceptance/settlement boundaries. Project files remain the durable story authority; the local CH001 overlay is never pushed to a consumer remote or promoted to Canon.
 
 **Tech Stack:** Python 3.11+/stdlib, SQLite/WAL migrations, unittest, existing Host Bridge/CLI, SolidJS/Tauri writer surface, deterministic bundle tooling, GitHub Actions and GitHub Release artifacts.
 
@@ -15,7 +15,7 @@
 - Framework source remains project-agnostic; no Chinaboy facts enter Framework code, tests, docs, or release artifacts.
 - `The host runs the agent. Quillframe governs the novel.` is the product boundary; embedded runtime is optional/reference/local-test infrastructure.
 - Only CH001 may enter projection, Context, model invocation, draft, review, or release in this run; CH002/CH003 are excluded everywhere.
-- Frostloom remote is read-only and untouched; the local consumer overlay remains outside Framework commits/releases.
+- Consumer remotes are read-only and untouched; the local overlay remains outside Framework commits/releases.
 - `candidate.accept` and `settlement.apply` are forbidden; final CH001 must retain `accepted=false` and `settled=false`.
 - No force push, branch-protection bypass, security/billing/permission changes, deletion of user worktrees/files, or reviewer shopping.
 - Every material change uses RED → GREEN tests, an exact checkpoint commit, independent review, and current-head verification.
@@ -77,13 +77,13 @@
 
 ### Task 7: CH001-only production and human-review handoff
 
-**Files:** `/var/home/pc/Documents/card/new cards/chinaboy_webnovel_quillframe` local runtime/evidence and a stable local handoff directory.
+**Files:** a local consumer overlay runtime/evidence directory and a stable local handoff directory.
 
 - [ ] Validate exact release commit/tree/bundle/lock/attestation; preview/apply/status the mapped projection and freeze a bounded CH001-only Context.
 - [ ] Execute only `DESIGN-BOOK`, `DESIGN-VOLUME`, `PLAN-UNIT`, `PLAN-CHAPTER`, then `DRAFT(CH-001)` and its deterministic/semantic gates. Keep raw candidate internal.
 - [ ] Perform exactly one real Codex native independent review. Claude native is integration-tested only and never reviews the same candidate.
 - [ ] On PASS, call only `candidate.visible.get`, save the Review Draft and handoff report, and prove `accepted=false`, `settled=false`. On valid reject, create a fresh candidate (maximum three attempts) without reviewer shopping; on infrastructure failure, retry only under the contract.
-- [ ] Prove CH002/CH003, future identities, bad examples, unproven images, and Frostloom remote were not accessed or invoked.
+- [ ] Prove CH002/CH003, future identities, bad examples, unproven images, and consumer remotes were not accessed or invoked.
 
 ### Task 8: v0.9.1 tag, GitHub Release, and post-release recovery
 
@@ -93,4 +93,3 @@
 - [ ] Create and push `v0.9.1`, create the GitHub Release, and upload deterministic bundle, build report, checksum manifest, and release metadata.
 - [ ] Re-download the published artifacts into a new temporary directory; verify checksums, unpack/install, doctor, SDK self-test, MCP/Bridge smoke, and Release→tag→main identity.
 - [ ] Produce the final report with release URL, PR/CI URLs, commit/tag/artifact fingerprints, tests, CH001 handoff paths, architecture boundaries, known limitations, rollback, retained worktrees/branches, and one truthful awaiting-user/external blocker if any.
-

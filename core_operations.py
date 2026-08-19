@@ -35,7 +35,7 @@ class CoreOperations:
     def bridge_description(self) -> dict[str, Any]:
         return {
             "schema": "quillframe_host_bridge_description_v1",
-            "version": "0.9.0",
+            "version": "0.9.1",
             "authority": False,
             "canon_authority": False,
             "framework_write_authority": False,

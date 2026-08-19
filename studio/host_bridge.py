@@ -25,6 +25,10 @@ from model_runtime.service_facade import ModelServiceFacade
 from persistence.context_repository import ContextRepository
 from persistence.quillframe_sqlite import ConflictError, IntegrityError, QuillframeStore
 from production_runtime import ProductionRunError, ProductionRunExecutor
+from harness.project_projection import apply as projection_apply
+from harness.project_projection import preflight as projection_preflight
+from harness.project_projection import preview as projection_preview
+from harness.project_projection import status as projection_status
 
 CONTRACT_PATH = Path(__file__).with_name("host_bridge_contract.json")
 REQUEST_SCHEMA = "quillframe_studio_host_bridge_request_v1"
@@ -141,7 +145,7 @@ def _describe(_: dict[str, Any], surface: str):
     c = contract()
     return {
         "schema": "quillframe_host_bridge_description_v1",
-        "framework_version": "0.9.0",
+        "framework_version": "0.9.1",
         "contract_version": c["version"],
         "surface": surface,
         "operations": sorted(c["operations"]),
@@ -184,6 +188,34 @@ def _project_backup(args: dict[str, Any], _: str):
 def _project_restore(args: dict[str, Any], _: str):
     loc = store().restore_project(Path(require(args, "bundle_path")), replace=args.get("replace") is True)
     return {"schema": "quillframe_restore_result_v1", "project_id": loc.project_id, "restored": True, "authority": False}
+
+
+def _projection_preview(args: dict[str, Any], _: str):
+    return projection_preview(Path(require(args, "project_root")))
+
+
+def _projection_apply(args: dict[str, Any], _: str):
+    data_dir = Path(args["data_dir"]) if args.get("data_dir") else None
+    return projection_apply(
+        Path(require(args, "project_root")),
+        data_dir=data_dir,
+        expected_projection_fingerprint=args.get("expected_projection_fingerprint"),
+    )
+
+
+def _projection_status(args: dict[str, Any], _: str):
+    data_dir = Path(args["data_dir"]) if args.get("data_dir") else None
+    return projection_status(Path(require(args, "project_root")), data_dir=data_dir)
+
+
+def _projection_preflight(args: dict[str, Any], _: str):
+    data_dir = Path(args["data_dir"]) if args.get("data_dir") else None
+    return projection_preflight(
+        Path(require(args, "project_root")),
+        require(args, "target_id"),
+        require(args, "stage"),
+        data_dir=data_dir,
+    )
 
 
 def _document_list(args: dict[str, Any], _: str):
@@ -418,6 +450,10 @@ DISPATCH: dict[str, Callable[[dict[str, Any], str], dict[str, Any]]] = {
     "project.search": _project_search,
     "project.backup": _project_backup,
     "project.restore": _project_restore,
+    "project.projection.preview": _projection_preview,
+    "project.projection.apply": _projection_apply,
+    "project.projection.status": _projection_status,
+    "project.projection.preflight": _projection_preflight,
     "document.create": _document_create,
     "document.list": _document_list,
     "document.open": _document_open,

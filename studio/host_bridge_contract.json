@@ -1,7 +1,7 @@
 {
   "schema": "quillframe_studio_host_bridge_contract_v1",
   "version": "10",
-  "framework_version": "0.9.0",
+  "framework_version": "0.9.1",
   "authority": false,
   "canon_authority": false,
   "framework_write_authority": false,
@@ -125,6 +125,26 @@
         "cli",
         "local_app"
       ]
+    },
+    "project.projection.preview": {
+      "kind": "query",
+      "required_args": ["project_root"],
+      "allowed_surfaces": ["cli", "local_app", "hosted_web"]
+    },
+    "project.projection.apply": {
+      "kind": "command",
+      "required_args": ["project_root"],
+      "allowed_surfaces": ["cli", "local_app", "hosted_web"]
+    },
+    "project.projection.status": {
+      "kind": "query",
+      "required_args": ["project_root"],
+      "allowed_surfaces": ["cli", "local_app", "hosted_web"]
+    },
+    "project.projection.preflight": {
+      "kind": "query",
+      "required_args": ["project_root", "target_id", "stage"],
+      "allowed_surfaces": ["cli", "local_app", "hosted_web"]
     },
     "document.create": {
       "kind": "command",

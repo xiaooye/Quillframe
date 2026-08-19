@@ -1,6 +1,6 @@
 # Quillframe Agent Runtime
 
-Quillframe 的 Agent behavior 由自己的 Harness/Session/Tool/Authority runtime 执行，不依赖 Codex、Claude Code、OpenCode 或其他第三方 coding-agent 产品。
+Quillframe 是小说契约内核，不是通用 Agent harness。Codex、Claude Code、Cursor 或其他已声明的宿主运行通用 session、model/tool 循环、sandbox 与 subagent 生命周期。Quillframe 内置的 Agent Runtime 仍保留为 Studio、standalone adapter 与确定性测试使用的 optional/reference implementation；小说契约与 authority 边界仍由 Quillframe 负责。
 
 ## AgentJob
 
@@ -19,7 +19,7 @@ Quillframe 的 Agent behavior 由自己的 Harness/Session/Tool/Authority runtim
 
 Preference 只能重排 eligible model；不能制造 capability、independence 或 authority。
 
-## Quillframe-owned loop
+## Embedded/reference loop
 
 ```text
 AgentJob
@@ -36,6 +36,8 @@ AgentJob
 ```
 
 Read-only tools 可以不经过 consequential-write checkpoint。任何 side-effect tool 没有 durable execution hook 时 fail closed 为 `checkpoint_failed`，handler 不执行。Tool 已执行但 post-receipt persistence 无法确认时返回 `side_effect_unconfirmed`，不得谎称普通失败或成功。
+
+这个循环只是宿主执行的一种实现。Native host 可以自行运行循环；Quillframe 仍会校验受限小说工作、exact artifact、权限、checkpoint、receipt 以及 release / Settlement 边界。Model API 只是 inference capability，不拥有故事或 Settlement authority。
 
 ## Tool Runtime
 

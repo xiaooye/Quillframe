@@ -15,7 +15,7 @@ export const enUS = {
     appearance: "Toggle appearance",
   },
   home: {
-    eyebrow: "AI-native fiction authoring framework · 0.9.0",
+    eyebrow: "AI-native fiction authoring framework · 0.9.1",
     title: "A fiction system that can show what it knew, what passed, and what changed.",
     lede: "Quillframe treats long-form fiction as an inspectable creative system: context is grounded, characters only act on evidence they can know, quality gates bind to the exact candidate, and accepted text can travel into deterministic publication without silently changing the manuscript.",
     primaryCta: "Explore the forge",
@@ -93,7 +93,7 @@ export const enUS = {
     },
     release: {
       eyebrow: "Release truth",
-      title: "0.9.0 is the current pre-1.0 architecture line.",
+      title: "0.9.1 is the current pre-1.0 release line.",
       lede: "Quillframe 0.9 converges the active product on SolidJS, Tauri 2, Python Core, SQLite-native persistence, typed Host Bridge contracts, and Astro/Starlight documentation. Pre-1.0 still permits justified breaking cleanup, but active surfaces no longer present the old 0.8 architecture as current.",
       cta: "Read the changelog",
     },
@@ -131,7 +131,7 @@ export const enUS = {
       title: "Generic mechanisms stay generic. Project truth stays in the project.",
       lede: "Quillframe defines reusable Story, Character, Canon, Context, Quality, Runtime, Learning, Corpus, Publication, Persistence, and Product contracts. Consumer novels supply their own characters, world, plans, state, manuscript, and accepted Canon.",
       cards: [
-        { title: "Harness", body: "Session-native orchestration, capabilities, routing, handoff, and checkpoint semantics." },
+        { title: "Host boundary", body: "Hosts run sessions, model/tool loops, sandboxes, and subagents; Quillframe keeps novel-contract, Context, review, and Settlement semantics." },
         { title: "Context", body: "Sparse question-bounded evidence with visibility, story-order, authority, and hard-budget enforcement." },
         { title: "Semantic contracts", body: "Typed model judgments with fingerprints; deterministic validators enforce shape and ownership, not literary taste." },
         { title: "Quality", body: "Reader, continuity, character, surface, and independent semantic evidence converge at an explicit readiness boundary." },
@@ -161,7 +161,7 @@ export const enUS = {
         { eyebrow: "Production", title: "Production Pipeline", body: "From context freeze and simulation through user-visible review and settlement boundaries.", meta: "docs/production-pipeline.en.md" },
         { eyebrow: "Quality", title: "Quality Assurance", body: "Surface, Reader Engagement, Continuity, and semantic gate semantics.", meta: "docs/quality-assurance.en.md" },
         { eyebrow: "Product", title: "Studio Architecture", body: "Writer/Inspector product model, typed Host Bridge, SolidJS Studio, Tauri host direction, and current boundaries.", meta: "studio/PRODUCT_ARCHITECTURE.en.md" },
-        { eyebrow: "Release", title: "0.9.0 Changelog", body: "Current architecture, breaking migration notes, and the distinction between implemented behavior and remaining work.", meta: "CHANGELOG.en.md" },
+        { eyebrow: "Release", title: "0.9.1 Changelog", body: "Novel-native host boundary, exact review evidence, mapped projection, and the distinction between implemented behavior and remaining work.", meta: "CHANGELOG.en.md" },
       ],
     },
     changelog: {
@@ -169,7 +169,7 @@ export const enUS = {
       title: "A changelog that separates implementation from aspiration.",
       lede: "Quillframe is pre-1.0. The current ledger records machine/product behavior and keeps remaining Core/Product gaps explicit rather than silently promoting roadmaps into capabilities.",
       cards: [
-        { title: "0.9.0 identity", body: "Manifest, CLI, Studio, persistence, Project SDK, technical namespace, and documentation use one current Quillframe identity." },
+        { title: "0.9.1 identity", body: "Manifest, CLI, Studio, persistence, Project SDK, technical namespace, and documentation use one current Quillframe identity." },
         { title: "Breaking cleanup is still possible", body: "Before 1.0, justified contract cleanup may land when architecture and deterministic CI support it." },
         { title: "History stays history", body: "Older 0.8/7.x records retain their original meaning; active product surfaces do not present them as current architecture." },
       ],

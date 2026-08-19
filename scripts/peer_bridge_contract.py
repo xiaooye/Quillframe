@@ -28,7 +28,7 @@ def main() -> int:
         errors.append("peer bridge workflow must be reusable via workflow_call")
     if "types: [opened]" in workflow or "issues:\n" in workflow or "issue_comment:\n" in workflow:
         errors.append("Framework peer bridge must not listen to Framework issue events")
-    if "$/.github/actions/project-peer-semantic" not in workflow:
+    if "xiaooye/Quillframe/.github/actions/project-peer-semantic@" not in workflow or "inputs.framework-ref" not in workflow:
         errors.append("reusable workflow must execute the same-revision bridge action")
     if "github.action_ref" not in action or "github.action_repository" not in action:
         errors.append("composite action must expose actual action ref/repository to deterministic binding")

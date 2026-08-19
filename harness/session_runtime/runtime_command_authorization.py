@@ -231,7 +231,7 @@ def fixture(
         "project_id": "BOOK-AUTH",
         "project_authority_fingerprint": "sha256:" + "a" * 64,
         "framework": {
-            "version": "0.9.0",
+            "version": "0.9.1",
             "commit": "fixture",
             "bundle_fingerprint": "sha256:" + "b" * 64,
         },

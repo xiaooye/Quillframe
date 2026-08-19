@@ -560,7 +560,7 @@ def self_test(path: Path, project_root: Path) -> int:
         path.unlink()
     if project_root.exists():
         shutil.rmtree(project_root)
-    init_project(project_root, "PROJECT-SETTLE-TEST", "Settlement Fixture", "en", "0.9.0", False)
+    init_project(project_root, "PROJECT-SETTLE-TEST", "Settlement Fixture", "en", "0.9.1", False)
     target = project_root / "state" / "canon" / "TEST.json"
     target.write_text('{"value":"before"}\n', encoding="utf-8")
     before = fingerprint_bytes(target.read_bytes())

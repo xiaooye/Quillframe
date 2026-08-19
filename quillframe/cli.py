@@ -110,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
     init_cmd.add_argument("--id", required=True)
     init_cmd.add_argument("--title", required=True)
     init_cmd.add_argument("--language", default="en")
-    init_cmd.add_argument("--framework-version", default="0.9.0", help="Minimum acceptable Framework version")
+    init_cmd.add_argument("--framework-version", default="0.9.1", help="Minimum acceptable Framework version")
     init_cmd.add_argument("--framework-root")
     init_cmd.add_argument("--force", action="store_true")
 

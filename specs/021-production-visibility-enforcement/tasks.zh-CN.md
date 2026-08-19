@@ -14,11 +14,11 @@
 - [x] 用真实 localhost Model Service relay 将 DRAFT pre-independent graph 跑到 `awaiting_external / independent_semantic_review`，期间 Raw Draft/Candidate 不可见。
 - [x] 将实测 localhost relay 收入 Framework，使用 loopback + atomic request/response，并声明 manager-only / non-independent provenance。
 - [x] 修复 Project peer receipt CLI 缺失的 `build/validate` 执行面。
-- [x] 注册 `github_models` 为可审计 independent provider，并为 Project peer action 增加 automated `review` mode。
+- [x] 将历史 `github_models` 设计标记为 superseded；已发布 automated compatibility mode 使用 `github_copilot_actions`。
 - [x] 对 `rule_material` 增加 registered-contract deterministic fail-fast preflight，并增加回归测试。
 - [ ] 最新 Framework head 完整 Python/Core/Host Bridge/Studio/site/Tauri CI 全绿。
 - [ ] 下载最新 exact-head artifact，在 ChatGPT Linux container 重跑最终完整 tests。
-- [ ] 在 private consumer Project 中用 `models: read` 做一次真实 GitHub Models peer inference，得到 fingerprint/nonce-bound validation receipt。
+- [ ] 只有 billing/权限允许时才在 private consumer Project 运行一次远端兼容 peer inference；本地 v0.9.1 验收不依赖它。
 - [ ] 将该 receipt/result 提交给等待中的 DRAFT run，验证 final production release 与 `candidate.visible.get`。
 - [ ] 用完整项目 hard-rule material 跑新的校园剧 DRAFT，只在 release 后向用户展示做质量 review。
 - [ ] 将最终验证证据写入 PR，全部验收项通过后标记 ready/merge。

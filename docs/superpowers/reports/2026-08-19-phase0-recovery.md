@@ -7,13 +7,13 @@
 - HEAD: `a0f0a1555baf8046773fd3851d370513019668dc`
 - Origin feature head: `6bff852` (remote is not treated as the current implementation)
 - Framework main worktree: `/var/home/pc/Documents/Quillframe`, HEAD `bc09df8cc08fecd163706ca2c2cffd985e131791`
-- Local consumer overlay: `/var/home/pc/Documents/card/new cards/chinaboy_webnovel_quillframe`
+- Local consumer overlay: a separate consumer-owned checkout outside the Framework repository
 - Stale CLI writer: exact `codex resume` PID `6130` held the target thread lock; it was terminated and the lock had no remaining owner.
 - Bootstrap: isolated `SYSTEM-IMPROVE` manager session `SES-CODEX-465bae512cd78ebc01b3e44d`, run `RUN-HOST-2dd30b9f1fb04396aec2f437fe6d39ce`, runtime DB `/tmp/quillframe-endurance-recovery-runtime.db`.
 
 ## Rules and scope confirmed
 
-The bilingual AGENTS, HARNESS_MANIFEST, SKILL, Harness Agent, Orchestration, Session Runtime, Project SDK, and Spec 022 contracts were read. Framework source remains project-agnostic; the host owns generic agent/model/tool execution; Quillframe owns the novel contract kernel; Project files own concrete story authority. CH002/CH003, Frostloom remote, `candidate.accept`, and `settlement.apply` are excluded.
+The bilingual AGENTS, HARNESS_MANIFEST, SKILL, Harness Agent, Orchestration, Session Runtime, Project SDK, and Spec 022 contracts were read. Framework source remains project-agnostic; the host owns generic agent/model/tool execution; Quillframe owns the novel contract kernel; Project files own concrete story authority. CH002/CH003, consumer remotes, `candidate.accept`, and `settlement.apply` are excluded.
 
 ## Preserved work
 

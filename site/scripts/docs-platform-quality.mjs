@@ -97,7 +97,7 @@ requireCheck(siteTitle.includes('class="nf-brand-home" href="/"'), "Quillframe d
 requireCheck(siteTitle.includes('english ? "/docs/en/" : "/docs/"'), "docs title component must retain locale-aware docs identity markers");
 requireCheck(siteTitle.includes('english ? "Docs" : "知识库"'), "docs title component must retain the current knowledge namespace markers");
 requireCheck(siteTitle.includes('aria-label="Quillframe 0.9.x"') && siteTitle.includes('>0.9.x</span>'), "Docs visible version identity must track the Quillframe 0.9.x development line");
-requireCheck(!siteTitle.includes("0.8.x") && !siteTitle.includes(">0.9.0</span>"), "Docs title must not regress to stale shell-version copy");
+requireCheck(!siteTitle.includes("0.8.x") && !siteTitle.includes(">0.9.1</span>"), "Docs title must not regress to stale shell-version copy");
 
 const primaryDocsRoutes = [
   ['/product', 'product: "产品"'],

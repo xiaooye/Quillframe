@@ -187,7 +187,7 @@ def self_test() -> dict[str, Any]:
             "model_runtime/runtime.py": "print('model')\n",
             "persistence/quillframe_sqlite.py": "print('sqlite')\n",
             "production_runtime/runtime.py": "print('production')\n",
-            "VERSION": "0.9.0\n",
+            "VERSION": "0.9.1\n",
             "pyproject.toml": "[project]\nname='quillframe'\n",
         }
         for name, text in fixtures.items():
