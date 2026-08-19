@@ -71,7 +71,7 @@
 **Files:** release workflows/scripts, bundle metadata, checksum/build reports, feature branch/PR.
 
 - [ ] Run deterministic Python, Studio/site/docs/Tauri and contract suites on a clean feature commit.
-- [x] Build the Framework bundle twice and require byte-identical output/fingerprint; verify and run unpacked doctor/self-test. The current checkpoint before this documentation-only update was `sha256:5d11762146b592d78a21107ea18efd35ac06d15f17ef37f9fa5516efc0421a2e`; the unpacked SDK/CLI self-test regression is covered by `BootstrapHostTests.test_unpacked_framework_bundle_runs_project_sdk_self_test`. Recompute after this commit before release/tag.
+- [x] Build the Framework bundle twice and require byte-identical output/fingerprint; verify and run unpacked doctor/self-test. The final exact fingerprint is emitted by the release-candidate build report and CH001 handoff; the unpacked SDK/CLI self-test regression is covered by `BootstrapHostTests.test_unpacked_framework_bundle_runs_project_sdk_self_test`.
 - [ ] Create/update the Quillframe PR, push only the non-force feature branch, wait for exact-head CI, repair real failures, and merge only after required checks are green.
 - [ ] Re-read remote main exact commit and rebuild/verify the bundle after merge; record lock/attestation update for the local consumer overlay without pushing that overlay.
 
