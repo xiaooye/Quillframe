@@ -1,8 +1,8 @@
 # Quillframe 1.0 All-in-One 产品规格
 
-状态：实施权威  
-主任务模式：`SYSTEM-IMPROVE`  
-发布目标：`1.0.0`  
+状态：实施权威
+主任务模式：`SYSTEM-IMPROVE`
+发布目标：`1.0.0`
 验收单元：仅 `CH001`
 
 ## 1. 产品主张

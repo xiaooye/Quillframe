@@ -1,8 +1,8 @@
 # Quillframe 1.0 All-in-One Product Specification
 
-Status: implementation authority  
-Primary mode: `SYSTEM-IMPROVE`  
-Release target: `1.0.0`  
+Status: implementation authority
+Primary mode: `SYSTEM-IMPROVE`
+Release target: `1.0.0`
 Acceptance unit: `CH001` only
 
 ## 1. Product thesis
