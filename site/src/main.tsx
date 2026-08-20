@@ -63,6 +63,25 @@ function installCrossAppNavigationGuard() {
   }, true);
 }
 
+function installProductSkipLinkFocus() {
+  const skipLink = document.querySelector<HTMLAnchorElement>(".nf-skip-link[href='#main-content']");
+  if (!skipLink) {
+    return;
+  }
+
+  skipLink.addEventListener("click", (event) => {
+    const target = document.querySelector<HTMLElement>("#main-content");
+    if (!target) {
+      return;
+    }
+
+    event.preventDefault();
+    window.history.replaceState(window.history.state, "", "#main-content");
+    target.focus({ preventScroll: true });
+    target.scrollIntoView({ block: "start" });
+  });
+}
+
 function installWeiUiCredit() {
   const footerColumns = document.querySelectorAll(".site-footer .footer-links");
   const creditHost = footerColumns.item(footerColumns.length - 1);
@@ -93,4 +112,5 @@ render(() => (
   </ProductFailureBoundary>
 ), root);
 
+installProductSkipLinkFocus();
 installWeiUiCredit();

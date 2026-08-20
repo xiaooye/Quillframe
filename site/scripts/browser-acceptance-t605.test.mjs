@@ -66,6 +66,12 @@ test("all browser fetch seams carry an explicit abort/route deadline", () => {
   assert.match(source, /studio_heading_ready_/);
 });
 
+test("skip-link acceptance requires actual main focus instead of a hash-only fallback", () => {
+  const source = fs.readFileSync(new URL("./browser-acceptance-t605.mjs", import.meta.url), "utf8");
+  assert.match(source, /document\.activeElement\?\.id === "main-content"/);
+  assert.doesNotMatch(source, /document\.activeElement\?\.id === "main-content" \|\| location\.hash === "#main-content"/);
+});
+
 test("Review entry failures stay out of the generic dialog gate", () => {
   const source = fs.readFileSync(new URL("./browser-acceptance-t605.mjs", import.meta.url), "utf8");
   assert.match(source, /check\("review-accept-entry"/);

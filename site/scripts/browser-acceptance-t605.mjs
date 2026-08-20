@@ -1048,7 +1048,7 @@ async function runSurface(browser, origin, surface, evidenceRoot, timeoutMs, rep
         const skipPresent = await boundedBrowserAction(() => skip.count(), matrixTimeout, `skip_count_${item.id}`);
         const skipVisible = skipPresent > 0 && await boundedBrowserAction(() => skip.isVisible({ timeout: matrixTimeout }), matrixTimeout, `skip_visibility_${item.id}`).catch(() => false);
         if (skipVisible) { await boundedBrowserAction(() => skip.focus(), matrixTimeout, `skip_focus_${item.id}`); await boundedBrowserAction(() => skip.press("Enter"), matrixTimeout, `skip_press_${item.id}`); }
-        checks.push(check("keyboard", skipVisible && await page.evaluate(() => document.activeElement?.id === "main-content" || location.hash === "#main-content") ? "pass" : "fail", "/", { skip_present: Boolean(skipPresent), skip_visible: skipVisible }));
+        checks.push(check("keyboard", skipVisible && await page.evaluate(() => document.activeElement?.id === "main-content") ? "pass" : "fail", "/", { skip_present: Boolean(skipPresent), skip_visible: skipVisible }));
         const search = page.locator(".header-search:visible, .launcher-search:visible").first();
         const searchPresent = await boundedBrowserAction(() => search.count(), matrixTimeout, `search_count_${item.id}`);
         const searchVisible = searchPresent > 0 && await boundedBrowserAction(() => search.isVisible({ timeout: matrixTimeout }), matrixTimeout, `search_visibility_${item.id}`).catch(() => false);
@@ -1133,7 +1133,7 @@ async function runSurface(browser, origin, surface, evidenceRoot, timeoutMs, rep
         const skipPresent = await boundedBrowserAction(() => skip.count(), matrixTimeout, `studio_skip_count_${item.id}`);
         const skipVisible = skipPresent > 0 && await boundedBrowserAction(() => skip.isVisible({ timeout: matrixTimeout }), matrixTimeout, `studio_skip_visibility_${item.id}`).catch(() => false);
         if (skipVisible) { await boundedBrowserAction(() => skip.focus(), matrixTimeout, `studio_skip_focus_${item.id}`); await boundedBrowserAction(() => skip.press("Enter"), matrixTimeout, `studio_skip_press_${item.id}`); }
-        checks.push(check("keyboard", skipVisible && await page.evaluate(() => document.activeElement?.id === "main-content" || location.hash === "#main-content") ? "pass" : "fail", route, { skip_present: Boolean(skipPresent), skip_visible: skipVisible }));
+        checks.push(check("keyboard", skipVisible && await page.evaluate(() => document.activeElement?.id === "main-content") ? "pass" : "fail", route, { skip_present: Boolean(skipPresent), skip_visible: skipVisible }));
         const command = page.locator(".nf-command-trigger").first();
         const commandPresent = await boundedBrowserAction(() => command.count(), matrixTimeout, `command_count_${item.id}`);
         const commandVisible = commandPresent > 0 && await boundedBrowserAction(() => command.isVisible({ timeout: matrixTimeout }), matrixTimeout, `command_visibility_${item.id}`).catch(() => false);

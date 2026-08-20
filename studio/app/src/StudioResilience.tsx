@@ -7,8 +7,17 @@ function zh() {
   return navigator.language.toLowerCase().startsWith("zh");
 }
 
+function focusStudioMain(event: MouseEvent) {
+  const target = document.querySelector<HTMLElement>("#main-content");
+  if (!target) return;
+  event.preventDefault();
+  window.history.replaceState(window.history.state, "", "#main-content");
+  target.focus({ preventScroll: true });
+  target.scrollIntoView({ block: "start" });
+}
+
 export function StudioSkipLink() {
-  return <a class="nf-studio-skip-link" href="#main-content">{zh() ? "跳到主要内容" : "Skip to main content"}</a>;
+  return <a class="nf-studio-skip-link" href="#main-content" onClick={focusStudioMain}>{zh() ? "跳到主要内容" : "Skip to main content"}</a>;
 }
 
 export function StudioFailureBoundary(props: { children: JSX.Element }) {

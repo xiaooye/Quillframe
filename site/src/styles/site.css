@@ -2156,7 +2156,7 @@
   }
 }
 
-@media (max-width: 1220px) and (min-width: 1021px) {
+@media (max-width: 1220px) and (min-width: 1081px) {
   .header-search {
     inline-size: 44px;
     padding-inline: 0;
@@ -2169,7 +2169,7 @@
   }
 }
 
-@media (max-width: 1020px) {
+@media (max-width: 1080px) {
   :root { --pe-header-h: 60px; }
 
   .desktop-nav,

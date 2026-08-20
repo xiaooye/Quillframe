@@ -10,11 +10,18 @@ const studioResilience = repoRead("studio/app/src/StudioResilience.tsx");
 const appShell = repoRead("studio/app/src/AppShell.tsx");
 const review = repoRead("studio/app/src/routes/Review.tsx");
 const siteStyles = siteRead("src/styles/site.css");
+const siteMain = siteRead("src/main.tsx");
 
 test("all Product and Studio main targets are programmatically focusable skip-link destinations", () => {
   for (const [name, source] of [["Product shell", product], ["Product resilience", productResilience], ["Studio shell", appShell], ["Studio resilience", studioResilience]]) {
     assert.match(source, /id="main-content"[^>]*tabIndex=\{-1\}/, name);
   }
+  assert.match(studioResilience, /function focusStudioMain/);
+  assert.match(studioResilience, /target\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(studioResilience, /onClick=\{focusStudioMain\}/);
+  assert.match(siteMain, /function installProductSkipLinkFocus/);
+  assert.match(siteMain, /\.nf-skip-link\[href='#main-content'\]/);
+  assert.match(siteMain, /target\.focus\(\{ preventScroll: true \}\)/);
 });
 
 test("native Product dialog has an explicit accessible name and return-focus contract", () => {
@@ -28,9 +35,9 @@ test("native Product dialog has an explicit accessible name and return-focus con
 });
 
 test("Product header has a non-overflowing laptop compact state", () => {
-  assert.match(siteStyles, /@media \(max-width: 1220px\) and \(min-width: 1021px\)/);
+  assert.match(siteStyles, /@media \(max-width: 1220px\) and \(min-width: 1081px\)/);
   assert.match(siteStyles, /\.header-search > span:not\(:first-child\)/);
-  assert.match(siteStyles, /@media \(max-width: 1020px\)[\s\S]*?\.mobile-menu-button\s*\{\s*display: inline-flex;/);
+  assert.match(siteStyles, /@media \(max-width: 1080px\)[\s\S]*?\.mobile-menu-button\s*\{\s*display: inline-flex;/);
 });
 
 test("Studio custom modals use the shared Portal controller and safe Accept alertdialog", () => {
