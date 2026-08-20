@@ -6,4 +6,4 @@ Model-service credentials belong to the Quillframe host runtime. Ordinary model 
 
 Quillframe Studio cloud UI is not authority by itself. Any future authenticated remote Core surface must publish its own versioned authentication and authority contract before clients rely on it.
 
-Security policy: https://github.com/xiaooye/cn_webnovel_agent/blob/main/SECURITY.md
+Security policy: https://github.com/xiaooye/Quillframe/blob/main/SECURITY.md

@@ -63,10 +63,9 @@ def _validate_independence(binding: dict[str, Any], *, job: dict[str, Any], resu
     """A distinct self-declared session is never independence proof."""
     peer_packet = binding.get("peer_packet")
     independence_receipt = binding.get("independence_receipt")
-    bridge_receipt = binding.get("bridge_receipt")
-    if independence_receipt is not None and bridge_receipt is not None:
-        raise ValueError("semantic_independent accepts exactly one independence receipt")
-    receipt = independence_receipt if independence_receipt is not None else bridge_receipt
+    if "bridge_receipt" in binding:
+        raise ValueError("semantic_independent rejects the pre-1.0 bridge_receipt field")
+    receipt = independence_receipt
     if not isinstance(peer_packet, dict):
         raise ValueError("semantic_independent requires validated peer_packet")
     if not isinstance(receipt, dict):

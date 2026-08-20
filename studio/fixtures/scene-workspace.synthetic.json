@@ -7,14 +7,14 @@
     "title": "Synthetic Story Loom"
   },
   "chapter": {
-    "id": "CH-012",
+    "id": "CH001",
     "title": "The Borrowed Key",
     "lifecycle": "review",
     "authority_class": "review",
     "word_count": 2840
   },
   "scene": {
-    "id": "SCN-012-03",
+    "id": "SCN-001-03",
     "title": "Service Corridor",
     "mode": "analysis",
     "manuscript_excerpt": "Synthetic fixture prose. Mira reaches the service corridor before the elevator returns. The key in her hand belongs to someone who has not yet admitted losing it.",
@@ -43,7 +43,7 @@
     "authority_details_available": false
   },
   "runtime": {
-    "latest_run_id": "RUN-SYNTHETIC-012",
+    "latest_run_id": "RUN-SYNTHETIC-001",
     "status": "complete",
     "semantic_jobs": 2,
     "execution_evidence_is_canon": false

@@ -54,7 +54,7 @@ def main() -> int:
             "--paths", str(ROOT / "harness" / "semantic_workers"),
             "--paths", str(ROOT / "quality"),
             "--add-data", add_data(ROOT / "studio" / "host_bridge_contract.json", "studio"),
-            "--add-data", add_data(ROOT / "persistence" / "migrations", "persistence/migrations"),
+            "--add-data", add_data(ROOT / "persistence" / "schema", "persistence/schema"),
             "--add-data", add_data(ROOT / "harness" / "semantic_workers", "harness/semantic_workers"),
             "--add-data", add_data(ROOT / "quality", "quality"),
             "--add-data", add_data(ROOT / "publication", "publication"),

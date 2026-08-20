@@ -52,7 +52,7 @@ Corpus is evidence, not Canon. Research truth is not automatic character knowled
 
 ## Project integration
 
-[Project SDK](project-sdk.en.md), [Project Adapters](project-adapters.en.md), [Project Adapter Protocol](../harness/PROJECT_ADAPTER_PROTOCOL.en.md), and [Framework Bundle](../release/FRAMEWORK_BUNDLE.en.md) define how a novel stays independently reproducible without importing its private facts into the generic framework.
+[Native Project Contract](project-contract.en.md) and [Framework Bundle](../release/FRAMEWORK_BUNDLE.en.md) define how a novel stays independently reproducible without importing its private facts into the generic framework.
 
 ## Studio
 

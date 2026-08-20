@@ -4,7 +4,7 @@ import { PageIntro } from "../components";
 import { useI18n } from "../i18n";
 import { useStudio } from "../studio";
 import { invokeBridge, operationError } from "../bridge";
-import type { ProjectCreateResult, ProjectListProjection, ProjectRegistryItem } from "../authoring/contracts";
+import { parseProjectCreateResult, parseProjectListProjection, type ProjectCreateResult, type ProjectListProjection, type ProjectRegistryItem } from "../authoring/contracts";
 import { CoreRequirementNotice } from "../authoring/AuthoringUI";
 
 export default function Start() {
@@ -41,7 +41,7 @@ export default function Start() {
     try {
       const result = await invokeBridge<ProjectListProjection>("project.list", { limit: 100 });
       if (result.status !== "ok" || !result.data) throw new Error(operationError(result));
-      setProjects(result.data.items ?? []);
+      setProjects((await parseProjectListProjection(result.data)).items);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     }
@@ -57,10 +57,11 @@ export default function Start() {
         language: language(),
       });
       if (result.status !== "ok" || !result.data) throw new Error(operationError(result));
-      studio.setProjectId(result.data.project_id);
-      await studio.inspectProject(result.data.project_id);
+      const created = await parseProjectCreateResult(result.data);
+      studio.setProjectId(created.manifest.id);
+      await studio.inspectProject(created.manifest.id);
       await loadProjects();
-      navigate(`/manuscript?project=${encodeURIComponent(result.data.project_id)}`);
+      navigate(`/manuscript?project=${encodeURIComponent(created.manifest.id)}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally { setBusy(false); }
@@ -93,7 +94,7 @@ export default function Start() {
             <p>{zh() ? "列表来自 canonical Core registry；最近 Project ID 只用于便利，不参与 authority。" : "The list comes from the canonical Core registry; the recent Project ID is convenience only."}</p>
             <CoreRequirementNotice operation="project.list" compact />
             <div class="qf-model-service-list">
-              <For each={projects()}>{(project) => <button class="qf-candidate-row" type="button" disabled={busy()} onClick={() => void openProject(project.project_id)}><strong>{project.title}</strong><span>{project.project_id} · {project.language}</span><small>{project.last_opened_at ?? project.registered_at ?? ""}</small></button>}</For>
+              <For each={projects()}>{(project) => <button class="qf-candidate-row" type="button" disabled={busy()} onClick={() => void openProject(project.id)}><strong>{project.title}</strong><span>{project.id} · {project.language}</span><small>{project.last_opened_at ?? ""}</small></button>}</For>
               <Show when={!projects().length}><p>{zh() ? "暂无 Project；也可以按稳定 ID 打开。" : "No Projects yet; you can also open by stable ID."}</p></Show>
             </div>
             <label class="nf-field-label"><span>Project ID</span><input class="wui-input nf-mono" value={openingId()} onInput={(event) => setOpeningId(event.currentTarget.value)} autocomplete="off" spellcheck={false} placeholder="my-novel" /></label>

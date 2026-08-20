@@ -10,7 +10,7 @@ Every mode begins with:
 
 ```text
 resolve current/pinned Framework authority
-→ validate Project + exact lock/fingerprint
+→ validate the native Project manifest/context and fingerprint
 → choose exactly one task_mode
 → create/resume manager session + run
 → resolve authority cutoff + permissions
@@ -19,7 +19,7 @@ resolve current/pinned Framework authority
 → execute the selected mode graph
 ```
 
-Resume never trusts a stale environment or transcript. It revalidates Framework/Project compatibility, relevant fingerprints, approvals/write intent and pending capabilities before continuing a saved workflow cursor.
+Resume never trusts a stale environment or transcript. It revalidates Framework provenance, native Project identity and contract, relevant fingerprints, approvals/write intent and pending capabilities before continuing a saved workflow cursor.
 
 ## 02 · Shared semantic subroutine
 

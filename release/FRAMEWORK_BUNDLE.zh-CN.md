@@ -2,9 +2,9 @@
 
 ## 目的
 
-Consumer Project 继续锁定 Quillframe exact commit。7.1 额外提供 deterministic runtime bundle，使本地/远程 host 可以验证自己 materialize 的 Framework bytes 是否与 Project lock 一致。
+Consumer Project 可以传输 deterministic Quillframe runtime bundle。本 bundle fingerprint 只证明 materialized bytes 的 evidence；Project identity 与 authority 仍由 native five-key manifest/context 决定。
 
-Bundle 只是 transport/cache artifact，不是第二权威。Authority 仍然是 consumer `quillframe.lock.json` 的 exact commit + expected bundle fingerprint。
+Bundle 只是 transport/cache artifact，不是第二权威。fingerprint 不授予 Project authority。
 
 ## 格式
 
@@ -17,7 +17,7 @@ Bundle 只是 transport/cache artifact，不是第二权威。Authority 仍然�
 
 ## 包含
 
-Core、Surface、Harness、Learning、Corpus、Evals、Project SDK/Adapter、typed Host Bridge 入口与 contract、integration/docs/bootstrap、deterministic scripts 等 Framework runtime material。
+Core、Surface、Harness、Learning、Corpus、Evals、typed Host Bridge 入口与 contract、integration/docs/bootstrap、deterministic scripts 等 Framework runtime material。
 
 ## 排除
 
@@ -26,9 +26,10 @@ Core、Surface、Harness、Learning、Corpus、Evals、Project SDK/Adapter、typ
 - `.quillframe/` runtime state；
 - cache/bytecode；
 - SQLite/runtime DB 及 WAL/SHM；
-- 已生成 bundle 与 bundle attestation metadata。
+- 已生成的 `release/acceptance/` 报告与任务证明；
+- 已生成 bundle 与 bundle verification metadata。
 
-Bundle attestation 故意排除在 fingerprint input 外，避免“把 fingerprint 写回文件后又改变 fingerprint”的 circular self-hash。
+Bundle verification metadata 与 release acceptance 报告故意排除在 fingerprint input 外，避免发布证据反向改变它所证明的 bundle。
 
 ## Build
 
@@ -48,20 +49,20 @@ python release/build_framework_bundle.py verify \
 
 Verify 会检查 outer fingerprint、tar metadata normalization、file-set identity，以及每个 payload 的 hash/size。
 
-## Consumer 使用
+## Evidence 使用
 
-7.1 consumer 可以记录：
+release evidence 可以记录：
 
 ```json
 {
-  "framework": {
+  "transport": {
     "commit": "<exact git sha>",
     "bundle_fingerprint": "sha256:<64 hex>"
   }
 }
 ```
 
-Materialized bundle fingerprint 不匹配时，不能静默成为 runtime authority；应重新 fetch/build，或显式升级 lock。
+Materialized bundle fingerprint 不匹配时必须 fail closed 并重新 build；它不能成为 Project runtime authority。
 
 ## Security / Authority Boundary
 

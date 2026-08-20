@@ -1,6 +1,6 @@
 # Contributing to Quillframe
 
-Thank you for helping improve Quillframe. This repository is a pre-1.0 fiction framework, agent runtime, and authoring product, so the fastest useful contribution is usually a **small, clearly owned change with evidence that it preserves the surrounding contracts**.
+Thank you for helping improve Quillframe. This repository is on the 1.0 prerelease line, so the fastest useful contribution is usually a **small, clearly owned change with evidence that it preserves the surrounding contracts**.
 
 > **License note.** This repository is public and source-available, but its current `LICENSE` is not an OSI open-source license. By intentionally submitting a contribution, you agree to the contribution terms in Section 8 of that license. Please read it before opening a pull request.
 
@@ -10,16 +10,14 @@ Current development prerequisites:
 
 - Python **>= 3.11**; CI currently validates on Python 3.13.
 - Node.js **24** for the product site, documentation, and Studio builds.
-- `pnpm` **10.33.0** for `studio/app`.
+- `pnpm` **10.33.0** through Corepack for the root workspace.
 
 ```bash
-git clone https://github.com/xiaooye/cn_webnovel_agent.git
-cd cn_webnovel_agent
+git clone https://github.com/xiaooye/Quillframe.git
+cd Quillframe
 python -m pip install -e .
-python -c "from quillframe import Quillframe, AgentJob; print(Quillframe.__name__, AgentJob.__name__)"
-python project_sdk.py self-test
-python studio/host_bridge.py self-test
-python persistence/cli.py doctor
+quillframe doctor
+corepack pnpm install --frozen-lockfile
 ```
 
 ## Repository orientation
@@ -63,7 +61,7 @@ Please call out the impact explicitly when a change touches:
 - Context visibility/injection rules;
 - Learning scope or promotion;
 - Model/Agent Runtime permissions, tools, checkpoints, receipts, or secret handling;
-- SQLite durability/migrations or the rule that persistence itself grants no authority.
+- SQLite durability/schema or the rule that persistence itself grants no authority.
 
 For these changes, include the owning contract, exact before/after behavior, failure behavior, and matching tests. A UI, adapter, checkpoint, AgentResult, receipt, model response, autosave, or database write must never silently create Canon/Settlement/Framework authority.
 
@@ -74,9 +72,8 @@ For these changes, include the owning contract, exact before/after behavior, fai
 ```bash
 python scripts/version_consistency.py
 python scripts/namespace_hygiene.py
-python -m unittest discover -s tests -p 'test_quillframe_*.py' -v
-python project_sdk.py self-test
-python studio/host_bridge.py self-test
+python -m unittest discover -s tests -p 'test_*.py' -v
+python quillframe.py self-test
 ```
 
 Run subsystem-specific self-tests documented by the files you changed. Normal CI intentionally does **not** call a configured live/paid Model API.
@@ -84,28 +81,23 @@ Run subsystem-specific self-tests documented by the files you changed. Normal CI
 ### Product site and documentation
 
 ```bash
-cd site
-npm install --no-audit --no-fund
-npm run quality
-npm run build
-npm run docs:build
+corepack pnpm install --frozen-lockfile
+corepack pnpm --filter @quillframe/product-site quality
+corepack pnpm --filter @quillframe/product-site build
 ```
 
 ### Studio
 
 ```bash
-cd studio/app
-corepack enable
-pnpm install --frozen-lockfile
-pnpm typecheck
-pnpm build
+corepack pnpm --filter @quillframe/studio-app typecheck
+corepack pnpm --filter @quillframe/studio-app build
 ```
 
 If your change is visual, include screenshots for the affected viewport(s) and verify both supported locales where copy/layout is involved. Do not use fixture UI or an unmerged branch screenshot to claim a capability exists on `main`.
 
 ## Documentation rules
 
-Current-facing documentation uses **Quillframe**, technical identifiers use the current `quillframe` namespace, and `0.9.x` is pre-1.0. Historical records and legal text may retain earlier terminology where changing it would damage provenance or meaning; do not run blind global replacements.
+Current-facing documentation uses **Quillframe**, technical identifiers use the current `quillframe` namespace, and machine version surfaces remain aligned to `VERSION`. Historical records and legal text may retain earlier terminology where changing it would damage provenance or meaning; do not run blind global replacements.
 
 Public capability claims must be supported by current `main`. Keep these distinctions explicit:
 

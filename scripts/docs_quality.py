@@ -41,8 +41,9 @@ FONT_SIZE_RE = re.compile(r"font-size\s*:\s*(\d+(?:\.\d+)?)px", re.I)
 FONT_SHORTHAND_RE = re.compile(r"\bfont\s*:\s*[^;{}]*?\b(\d+(?:\.\d+)?)px\b", re.I)
 H1_RE = re.compile(r"(?m)^# (?!#)")
 TABLE_SEPARATOR_RE = re.compile(r"(?m)^\s*\|?(?:\s*:?-{3,}:?\s*\|){2,}.*$")
-VERSION_RE = re.compile(r"(?m)^\s*version:\s*[\"']?([0-9]+\.[0-9]+\.[0-9]+)")
-CLI_VERSION_RE = re.compile(r'^FRAMEWORK_VERSION\s*=\s*["\']([0-9]+\.[0-9]+\.[0-9]+)["\']', re.M)
+SEMVER_PATTERN = r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?"
+VERSION_RE = re.compile(rf"(?m)^\s*version:\s*[\"']?({SEMVER_PATTERN})")
+CLI_VERSION_RE = re.compile(rf'^FRAMEWORK_VERSION\s*=\s*["\']({SEMVER_PATTERN})["\']', re.M)
 STALE_EXAMPLE_RE = re.compile(
     r'(?:minimum_framework_version\s*=\s*"7\.[01]\.0"|'
     r'"version"\s*:\s*"7\.[01]\.0"|'
@@ -67,6 +68,7 @@ CONTROLLED_DOC_ROOTS = (
     ROOT / "surface",
 )
 EXCLUDED_DISCOVERY_DIRS = {".git", ".quillframe", "node_modules", "dist", "__pycache__"}
+EXCLUDED_DISCOVERY_PREFIXES = ("release/acceptance/",)
 
 
 def rel(path: Path) -> str:
@@ -215,6 +217,8 @@ def discover_bilingual_docs() -> set[str]:
             continue
         for path in base.rglob("*.md"):
             if any(part in EXCLUDED_DISCOVERY_DIRS for part in path.parts):
+                continue
+            if any(rel(path).startswith(prefix) for prefix in EXCLUDED_DISCOVERY_PREFIXES):
                 continue
             if path.name.endswith((".en.md", ".zh-CN.md")):
                 found.add(rel(path))

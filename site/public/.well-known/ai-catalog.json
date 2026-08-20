@@ -1,11 +1,11 @@
 {
   "schema": "quillframe_ai_catalog_v1",
   "product": "Quillframe",
-  "version_line": "0.9.1",
+  "version_line": "1.0.0-dev.0",
   "canonical": "https://quillframe.wei-dev.com/",
   "documentation": "https://quillframe.wei-dev.com/docs/",
   "studio": "https://studio.quillframe.wei-dev.com/",
-  "repository": "https://github.com/xiaooye/cn_webnovel_agent",
+  "repository": "https://github.com/xiaooye/Quillframe",
   "sitemap_xml": "https://quillframe.wei-dev.com/sitemap.xml",
   "sitemap_markdown": "https://quillframe.wei-dev.com/sitemap.md",
   "llms": "https://quillframe.wei-dev.com/llms.txt",

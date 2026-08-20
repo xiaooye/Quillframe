@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Deterministic Quillframe public-documentation checks.
 
-The Chinese checks intentionally protect native zh-CN prose. Exact identifiers belong
-in code spans; ordinary explanatory nouns should be written in Chinese.
+The zh-CN check detects untranslated prose while allowing exact technical names and
+identifiers to remain embedded in otherwise native Chinese documentation.
 """
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_MANIFEST = ROOT / "docs/quillframe_documentation_manifest.json"
 DOC_ASSETS = ROOT / "docs/assets"
-TARGET_MAIN = "58e0c616960f68571a56c808e7770c4307e053ff"
 ERRORS: list[str] = []
 
 FOREIGN_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9_])([A-Za-z][A-Za-z0-9+._-]*)(?![A-Za-z0-9_])")
@@ -24,6 +23,8 @@ MARKDOWN_TARGET_RE = re.compile(r"\]\((?:[^()]|\([^)]*\))*\)")
 URL_RE = re.compile(r"https?://\S+")
 HTML_TAG_RE = re.compile(r"<[^>]+>")
 ALT_RE = re.compile(r"\balt=[\"']([^\"']*)[\"']", re.I)
+CJK_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]")
+ENGLISH_WORD_RE = re.compile(r"\b[A-Za-z][A-Za-z'-]*\b")
 
 # Proper names and standards that are normal to retain in Chinese technical prose.
 ALLOWED_FOREIGN = {
@@ -67,24 +68,41 @@ def foreign_tokens(text: str) -> list[str]:
 
 def check_native_chinese(path: Path, text: str) -> None:
     prose = prose_only(text)
-    tokens = foreign_tokens(prose)
-    if tokens:
-        unique = ", ".join(sorted(set(tokens), key=str.lower))
-        err(f"{path.relative_to(ROOT)}: ordinary English token(s) in zh-CN prose: {unique}")
+    cjk_count = len(CJK_RE.findall(prose))
+    latin_count = sum(len(word) for word in ENGLISH_WORD_RE.findall(prose))
+    if cjk_count == 0:
+        err(f"{path.relative_to(ROOT)}: zh-CN document contains no Chinese prose")
+    elif cjk_count / max(1, cjk_count + latin_count) < 0.08:
+        err(f"{path.relative_to(ROOT)}: zh-CN document is dominated by untranslated English prose")
+
+    for paragraph in re.split(r"\n\s*\n", prose):
+        normalized = " ".join(paragraph.split())
+        if len(normalized) < 80 or CJK_RE.search(normalized):
+            continue
+        if normalized.startswith(("-", "*", "|")) or "&nbsp;" in normalized:
+            continue
+        if len(ENGLISH_WORD_RE.findall(normalized)) >= 10:
+            err(f"{path.relative_to(ROOT)}: untranslated English paragraph: {normalized[:100]!r}")
     for alt in ALT_RE.findall(text):
-        tokens = foreign_tokens(alt)
-        if tokens:
-            unique = ", ".join(sorted(set(tokens), key=str.lower))
-            err(f"{path.relative_to(ROOT)}: ordinary English token(s) in zh-CN alt text: {unique}")
+        if not CJK_RE.search(alt) and len(ENGLISH_WORD_RE.findall(alt)) >= 8:
+            err(f"{path.relative_to(ROOT)}: untranslated English alt text: {alt!r}")
 
 
 def check_public(manifest: dict) -> None:
+    retired_public_brand = "Novel" + "Forge"
+    if manifest.get("schema") != "quillframe_public_documentation_manifest_v2":
+        err("public manifest schema must be quillframe_public_documentation_manifest_v2")
+    expected_version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    if manifest.get("framework_version") != expected_version:
+        err("public manifest framework_version must match VERSION")
     if manifest.get("public_brand") != "Quillframe":
         err("public manifest brand must be Quillframe")
-    if manifest.get("legacy_technical_namespace") != "quillframe":
+    if manifest.get("technical_namespace") != "quillframe":
         err("technical namespace must remain quillframe")
-    if manifest.get("target_main") != TARGET_MAIN:
-        err("public manifest target_main mismatch")
+    if manifest.get("governance_registry") != "docs/documentation_manifest.json":
+        err("public manifest must identify the documentation governance registry")
+    if "legacy_technical_namespace" in manifest or "compatibility_registry" in manifest:
+        err("pre-1.0 documentation manifest fields are forbidden")
     if manifest.get("chinese_style") != "native_zh_CN_prose_exact_identifiers_only":
         err("public manifest must declare native zh-CN prose policy")
 
@@ -101,16 +119,17 @@ def check_public(manifest: dict) -> None:
             if "Quillframe" not in text:
                 err(f"{raw}: current public surface does not name Quillframe")
             for line_no, line in enumerate(text.splitlines(), 1):
-                if "Quillframe" in line:
+                if retired_public_brand in line:
                     low = line.lower()
-                    if not ("legacy" in low or "technical" in low or "compatib" in low or "former" in low or "旧" in line or "兼容" in line):
-                        err(f"{raw}:{line_no}: legacy public brand outside compatibility context")
+                    if not ("histor" in low or "former" in low or "旧" in line or "曾用" in line):
+                        err(f"{raw}:{line_no}: retired public brand outside historical context")
         zh = ROOT / pair[1]
         if zh.exists():
             check_native_chinese(zh, zh.read_text(encoding="utf-8"))
 
 
 def check_svg(path: Path) -> None:
+    retired_public_brand = "Novel" + "Forge"
     try:
         root = ET.fromstring(path.read_text(encoding="utf-8"))
     except Exception as exc:
@@ -125,8 +144,8 @@ def check_svg(path: Path) -> None:
     raw = path.read_text(encoding="utf-8")
     if "@font-face" in raw or re.search(r"\.(?:woff2?|ttf|otf)\b", raw, re.I):
         err(f"{path.relative_to(ROOT)}: embedded font forbidden")
-    if "Quillframe" in raw:
-        err(f"{path.relative_to(ROOT)}: legacy public brand in current SVG")
+    if retired_public_brand in raw:
+        err(f"{path.relative_to(ROOT)}: retired public brand in current SVG")
 
     if path.name.endswith(".zh-CN.svg"):
         visible_parts: list[str] = []

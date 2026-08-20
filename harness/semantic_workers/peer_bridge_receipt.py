@@ -24,9 +24,7 @@ if str(HERE) not in sys.path:
 from peer_chat_relay import validate_peer_result  # noqa: E402
 from registered_contract_binding import validate_registered_job  # noqa: E402
 
-LEGACY_SCHEMA = "quillframe_project_peer_validation_receipt_v1"
 SCHEMA = "quillframe_project_peer_validation_receipt_v2"
-SUPPORTED_SCHEMAS = {LEGACY_SCHEMA, SCHEMA}
 
 
 def canonical(value: Any) -> bytes:
@@ -179,7 +177,7 @@ def validate_receipt(receipt: Any, packet: dict[str, Any], result: dict[str, Any
     if not isinstance(receipt, dict):
         return ["peer validation receipt must be object"]
     receipt_schema = receipt.get("schema")
-    if receipt_schema not in SUPPORTED_SCHEMAS:
+    if receipt_schema != SCHEMA:
         errors.append("peer validation receipt schema mismatch")
     if receipt.get("authority") is not False:
         errors.append("peer validation receipt must be non-authoritative")

@@ -34,8 +34,7 @@ SOURCE_MAP = {
     "explicit_rule": "explicit_rule",
     "user_edit": "user_edit",
     "rejection": "rejection",
-    "acceptance": "acceptance",               # legacy capture input
-    "reasoned_acceptance": "acceptance",      # v2 semantic contract
+    "reasoned_acceptance": "acceptance",
     "comparison": "human_review",
     "correction": "human_review",
     "repeated_pattern": "repeated_pattern",
@@ -79,11 +78,11 @@ def normalize_interpretation(value: Any) -> dict[str, Any]:
     """Normalize a semantic *capture* judgment.
 
     `capture_decision=skip` is consumed by feedback_intake and never reaches the
-    Author Model. Legacy callers that omit capture_decision remain valid.
+    Author Model. The 1.0 capture contract requires an explicit decision.
     """
     if not isinstance(value, dict):
         raise ValueError("interpretation must be object")
-    decision = value.get("capture_decision", "capture")
+    decision = value.get("capture_decision")
     if decision != "capture":
         raise ValueError("Author Model capture requires capture_decision=capture")
     scope = value.get("scope_candidate")

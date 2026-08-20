@@ -41,22 +41,13 @@ Quillframe 产品语义面向四种一等交付方式：
 
 Phase 2A Project Hub safe projection 位于 [`project_hub_projection.py`](project_hub_projection.py)，会清除 absolute host paths 并携带明确的 non-authority markers。
 
-## Phase 2B · Portable read-only Host Bridge
+## Host Bridge v11 · Portable read-only Agent Package
 
-[`host_bridge.py`](host_bridge.py) 接收 `quillframe_studio_host_bridge_request_v1`，返回 fingerprint-bound `quillframe_studio_host_bridge_result_v1`。
+[`host_bridge.py`](host_bridge.py) 接收 `quillframe_host_bridge_request_v11`，返回带 fingerprint 的 `quillframe_host_bridge_result_v11`。`bridge.describe` 返回 `quillframe_host_bridge_description_v11`，并暴露 live `operation_contracts` metadata（`kind`、`required_args` 以及声明过的 `allowed_surfaces`）。
 
-当前真实支持的操作刻意保持很小：
+Portable [`../agent-skills/quillframe/SKILL.md`](../agent-skills/quillframe/SKILL.md) 会在转发前校验这些 metadata。`agent_package` 只允许 query：任何 command、semantic command、authority command、secret command、external query 或 handoff operation 都会在调用前 fail closed。`database.doctor` 同样是 side-effect-free；repair 不是 Bridge operation。Package 不会打开 private SQLite，也不会 import 私有 Core module。
 
-- `bridge.describe`
-- `framework.doctor`
-- `project.inspect`
-- `capabilities.inspect`
-- `context.inspect`
-- `semantic.catalog`
-
-Runtime session/event/handoff reads、Run Receipt retrieval、resume、generic command invocation 与 project mutation 继续依赖 Core Issue #23。Studio 不会读取 private SQLite state 去伪造这些能力。
-
-[`../agent-skills/quillframe/SKILL.md`](../agent-skills/quillframe/SKILL.md) 使用相同 operation vocabulary，同时不 import 私有 Core runtime module。
+[`portable_product_contract.json`](portable_product_contract.json) 与 [`host_bridge_contract.json`](host_bridge_contract.json) 是 checked-in v11 contract reference；live `bridge.describe` response 仍然是 operation source of truth。
 
 ## Story Loom v2 · WeiUI config-generated foundation
 
@@ -103,13 +94,13 @@ Core public boundary
 
 当前只读 shell 已经包含：
 
-- **Desk** —— bridge status、supported/deferred operation counts、current project summary。
+- **Desk** —— live `bridge.describe`、supported/deferred operation counts 与 current project summary。
 - **Project Hub** —— 真实 `project.inspect` safe projection。
 - **Scene Workspace** —— 在 Core 暴露可信 current-scene/content projection 前明确 unavailable；不使用 fixture 或 filesystem inference 冒充当前场景。
-- **Context Inspector** —— 真实 `context.inspect`，manifest/overlay 只接受 project-relative paths。
-- **Host Capabilities** —— 真实 `capabilities.inspect`；进入 route 时取一次，此后只有显式 Refresh 才再次请求。
-- **Semantic Catalog** —— 真实 `semantic.catalog`；同样没有 polling。
-- **Framework Diagnostics** —— 用户显式触发 `framework.doctor`。
+- **Context Inspector** —— 使用 live contract 暴露的 `inspector.context.runtime` 与 typed inspector projection。
+- **Host Capabilities** —— capability metadata 来自 live `bridge.describe`；UI 不自行发明 capability list。
+- **Semantic evidence** —— 只提供 live v11 description 中存在的 operation，不保留 stale catalog alias。
+- **Framework Diagnostics** —— 显式 `database.doctor` query；repair 有意不通过 Bridge 暴露。
 - **Command palette** —— operation vocabulary 来自 live `bridge.describe`；deferred Core operations 会显示依赖原因，而不会表现成可执行命令。
 
 App 默认没有 interval polling、WebSocket heartbeat、Redux-like second state store，也不把 project truth 持久化到 browser storage。Project root 只是当前页面 session 的 presentation state。
@@ -127,17 +118,15 @@ App 默认没有 interval polling、WebSocket heartbeat、Redux-like second stat
 - 没有 write / Canon / Settlement authority；
 - 没有 polling 或 background refresh。
 
-构建后运行：
+`local_server.py` 是 canonical launcher 管理的内部 transport。从仓库 workspace 完成构建后，只通过唯一受支持的用户入口打开 Project：
 
 ```bash
-cd studio/app
-pnpm install --frozen-lockfile
-pnpm build
-cd ../..
-python studio/local_server.py
+corepack pnpm install --frozen-lockfile
+corepack pnpm --filter @quillframe/studio-app build
+quillframe launch PROJECT
 ```
 
-Server 会打印 loopback URL，不会自动拉起浏览器。
+`quillframe launch` 统一负责 Project 解析、loopback 生命周期、无 secret 的 launch receipt 与浏览器打开。内部 server 不是第二套 CLI 或用户流程。
 
 ## 性能纪律
 

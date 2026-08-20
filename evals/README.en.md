@@ -102,7 +102,7 @@ The initial v7 suite covers:
 - Character/semantic ownership;
 - Canon/Plan boundary;
 - Corpus rights boundary;
-- Project SDK/Framework hygiene;
+- Native Project Contract/Framework hygiene;
 - semantic runtime integrity.
 
 The suite grows through user rejection evidence, corpus research, framework changes, and discovered capability gaps.

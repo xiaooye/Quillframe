@@ -2,9 +2,9 @@
 
 ## Purpose
 
-A consuming fiction project pins an exact Quillframe Framework revision. The deterministic Framework bundle lets a local or remote host verify that its materialized Framework bytes match the evidence recorded by the project lock.
+A consuming fiction project may transport a deterministic Quillframe Framework bundle. The bundle fingerprint is evidence about materialized bytes; Project identity and authority remain the native five-key manifest/context.
 
-The bundle is a transport/cache artifact, not a second authority. Project bootstrap still resolves the exact Framework dependency from `quillframe.lock.json`; a bundle fingerprint proves byte identity for that dependency, not story truth.
+The bundle is a transport/cache artifact, not a second authority. A bundle fingerprint proves byte identity for transport evidence, not story truth or Project authority.
 
 ## Format
 
@@ -17,7 +17,7 @@ The bundle is a transport/cache artifact, not a second authority. Project bootst
 
 ## Included
 
-Runtime/Framework material such as Core, Surface, Harness, Learning, Corpus, Evals, Project SDK/Adapter, the typed Host Bridge entry and contract, integration/docs/bootstrap files, schemas, and deterministic scripts according to the current bundle builder contract.
+Runtime/Framework material such as Core, Surface, Harness, Learning, Corpus, Evals, the typed Host Bridge entry and contract, integration/docs/bootstrap files, schemas, and deterministic scripts according to the current bundle builder contract.
 
 ## Excluded
 
@@ -26,9 +26,10 @@ Runtime/Framework material such as Core, Surface, Harness, Learning, Corpus, Eva
 - `.quillframe/` runtime state;
 - caches/bytecode;
 - SQLite/runtime databases and WAL/SHM files;
-- generated bundle files and bundle attestation metadata.
+- generated `release/acceptance/` reports and task attestations;
+- generated bundle files and bundle verification metadata.
 
-Bundle attestation is excluded intentionally so publishing the fingerprint cannot create a circular self-hash.
+Bundle verification metadata and release acceptance reports are excluded intentionally so publishing evidence cannot recursively alter the bundle it attests.
 
 ## Build
 
@@ -48,13 +49,13 @@ python release/build_framework_bundle.py verify \
 
 Verification checks the outer fingerprint, normalized tar metadata, file-set identity, and every declared payload hash/size.
 
-## Project lock use
+## Evidence use
 
-A resolved production lock may record evidence such as:
+A release evidence record may contain:
 
 ```json
 {
-  "framework": {
+  "transport": {
     "name": "Quillframe",
     "version": "<resolved release version>",
     "commit": "<exact git sha>",
@@ -63,9 +64,9 @@ A resolved production lock may record evidence such as:
 }
 ```
 
-The exact commit and expected bundle fingerprint are the important reproducibility bindings. Documentation examples deliberately avoid hard-coding a release number that will become stale.
+The exact commit and bundle fingerprint are reproducibility evidence. They do not replace the Project's native manifest or context.
 
-A materialized bundle with a mismatching fingerprint must not silently become runtime authority. Re-fetch/rebuild the expected dependency or perform an explicit Framework upgrade through the Project change workflow.
+A materialized bundle with a mismatching fingerprint must fail closed and be rebuilt. It must never become Project runtime authority.
 
 ## Relationship to the Project bundle
 
@@ -90,11 +91,10 @@ Normal CI may build and verify bundles because the operation is deterministic an
 
 ## Release-metadata discipline
 
-The release version advertised by a consuming project must come from the Framework's release authority and exact lock resolution, not from a version number copied out of this guide. If implementation metadata and release metadata drift, report and resolve that through the release workflow rather than editing documentation examples to hide the mismatch.
+The release version advertised by a consuming project must come from the Framework release authority and exact commit/bundle fingerprint evidence, not from a version number copied out of this guide. If implementation metadata and release metadata drift, report and resolve that through the release workflow rather than editing documentation examples to hide the mismatch. This evidence never becomes Project authority.
 
 ## Related contracts
 
 - [`build_framework_bundle.py`](build_framework_bundle.py) — deterministic builder/verifier.
-- [Project SDK](../docs/project-sdk.en.md) — project manifest, exact lock and derived project bundle.
-- [Project Adapter Protocol](../harness/PROJECT_ADAPTER_PROTOCOL.en.md) — dependency materialization and legacy mapping.
+- [Native Project Contract](../docs/project-contract.en.md) — exact five-key Project identity, context, fingerprint, and storage boundary.
 - `HARNESS_MANIFEST.yaml` — current Framework release authority.

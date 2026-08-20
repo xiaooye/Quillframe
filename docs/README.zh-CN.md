@@ -52,7 +52,7 @@ Provider/vendor identity 最多只是诊断 metadata。宿主运行通用 Agent 
 
 ## 项目集成
 
-[项目开发工具](project-sdk.zh-CN.md)、[项目适配器](project-adapters.zh-CN.md)、[项目适配协议](../harness/PROJECT_ADAPTER_PROTOCOL.zh-CN.md)与[框架构建包](../release/FRAMEWORK_BUNDLE.zh-CN.md)确保小说项目可以独立复现，又不会把私有故事事实反向写进通用框架。
+[Native Project Contract](project-contract.zh-CN.md) 与[框架构建包](../release/FRAMEWORK_BUNDLE.zh-CN.md)确保小说项目可以独立复现，又不会把私有故事事实反向写进通用框架。
 
 ## Studio
 

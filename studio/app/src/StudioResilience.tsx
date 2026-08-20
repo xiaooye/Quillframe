@@ -14,7 +14,7 @@ export function StudioSkipLink() {
 export function StudioFailureBoundary(props: { children: JSX.Element }) {
   return (
     <ErrorBoundary fallback={(error, reset) => (
-      <main id="main-content" class="nf-studio-resilience" role="alert">
+      <main id="main-content" class="nf-studio-resilience" role="alert" tabIndex={-1}>
         <section class="nf-studio-resilience-card">
           <span aria-hidden="true">♡</span>
           <small>Quillframe Studio · UI recovery</small>
@@ -42,7 +42,7 @@ export function StudioRouteLoading() {
 
 export function StudioNotFound() {
   return (
-    <section class="nf-page nf-studio-not-found" aria-labelledby="studio-not-found-title">
+    <main id="main-content" class="nf-page nf-studio-not-found" aria-labelledby="studio-not-found-title" tabIndex={-1}>
       <div class="nf-page-intro">
         <div>
           <span class="nf-eyebrow">404 · Studio route</span>
@@ -54,6 +54,6 @@ export function StudioNotFound() {
           <a class="wui-button wui-button--soft" href="/project">{zh() ? "打开项目" : "Open project"}</a>
         </div>
       </div>
-    </section>
+    </main>
   );
 }

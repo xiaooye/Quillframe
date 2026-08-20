@@ -55,7 +55,7 @@ Global SQLite 使用：
 - `discovered_models`
 - `model_capability_evidence`
 
-Migration `002_model_runtime.sql` 从 0.9 初始 provider-centric schema 一次性迁移；它不会建立永久 runtime fallback。
+这些表由原生 1.0 schema fragment `persistence/schema/global/002_model_runtime.sql` 建立。Pre-1.0 数据库会被拒绝；不存在迁移或 fallback 读取路径。
 
 ## Normal CI / Live probe
 

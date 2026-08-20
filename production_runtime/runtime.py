@@ -14,7 +14,6 @@ from harness.semantic_workers.independent_invocation_receipt import (
     fingerprint as independent_fingerprint,
     validate_receipt as validate_independent_invocation_receipt,
 )
-from harness.semantic_workers.peer_bridge_receipt import LEGACY_SCHEMA as PROJECT_PEER_VALIDATION_RECEIPT_SCHEMA
 from harness.semantic_workers.peer_chat_relay import validate_peer_result
 from persistence.independent_review_repository import IndependentReviewError, IndependentReviewRepository
 from persistence.quillframe_sqlite import fingerprint_text, now_iso
@@ -242,54 +241,25 @@ class ProductionRunExecutor(ProductionContextRuntime):
         return _json(row["state_json"], {}) if row else None
 
     def _latest_independent_handoff(self, project_id: str, run_id: str) -> dict[str, Any] | None:
-        """Load the frozen handoff and backfill pre-v10 packet bytes once.
-
-        The existing packet object is canonicalized directly. No packet builder,
-        nonce generation, or semantic reconstruction is permitted here.
-        """
+        """Load one native 1.0 frozen handoff without upgrading stored state."""
         with self.store.open_project(project_id) as conn:
-            conn.execute("BEGIN IMMEDIATE")
             row = conn.execute(
-                """SELECT state_json,artifact_fingerprint FROM checkpoints
+                """SELECT state_json FROM checkpoints
                 WHERE run_id=? AND checkpoint_kind='production_independent_handoff'
                 ORDER BY created_at DESC,rowid DESC LIMIT 1""",
                 (run_id,),
             ).fetchone()
             if not row:
-                conn.commit()
                 return None
             handoff = _json(row["state_json"], {})
             packet = handoff.get("peer_packet")
-            if not isinstance(packet, dict):
-                raise ProductionRunError(
-                    "independent_handoff_migration_required",
-                    "pending independent handoff has no typed frozen peer packet",
-                )
             exact_bytes = canonical_json(packet)
             stored_bytes = handoff.get("peer_packet_bytes")
-            if stored_bytes is None:
-                upgraded = {**handoff, "peer_packet_bytes": exact_bytes}
-                assert_secret_free(upgraded, label="production_independent_handoff")
-                conn.execute(
-                    """INSERT INTO checkpoints(
-                    checkpoint_id,run_id,checkpoint_kind,state_json,artifact_fingerprint,created_at
-                    ) VALUES(?,?,'production_independent_handoff',?,?,?)""",
-                    (
-                        "ckpt_" + uuid.uuid4().hex,
-                        run_id,
-                        canonical_json(upgraded),
-                        row["artifact_fingerprint"],
-                        now_iso(),
-                    ),
-                )
-                conn.commit()
-                return upgraded
-            if not isinstance(stored_bytes, str) or stored_bytes != exact_bytes:
+            if not isinstance(packet, dict) or not isinstance(stored_bytes, str) or stored_bytes != exact_bytes:
                 raise ProductionRunError(
-                    "independent_packet_mismatch",
-                    "pending independent handoff packet bytes do not match its frozen packet",
+                    "independent_handoff_invalid",
+                    "1.0 handoff requires exact frozen peer_packet and peer_packet_bytes",
                 )
-            conn.commit()
             return handoff
 
     def _persist_release_receipt(
@@ -345,7 +315,6 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "job_id": independent_result.get("job_id"),
             "input_fingerprint": independent_result.get("input_fingerprint"),
             "independence_receipt": independence_receipt,
-            **({"bridge_receipt": independence_receipt} if independence_receipt.get("schema") != INDEPENDENT_INVOCATION_RECEIPT_SCHEMA else {}),
             "production_readiness": readiness,
             "submission_evidence_fingerprint": independent_binding["submission_evidence_fingerprint"],
             "private_reasoning_exposed": False,
@@ -812,31 +781,20 @@ class ProductionRunExecutor(ProductionContextRuntime):
         *,
         peer_packet: dict[str, Any],
         result: dict[str, Any],
-        independence_receipt: dict[str, Any] | None = None,
-        bridge_receipt: dict[str, Any] | None = None,
+        independence_receipt: dict[str, Any],
         _native_lease_id: str | None = None,
         _native_completion_event: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         self._assert_independent_project_identity(project_id)
-        supplied = [value for value in (independence_receipt, bridge_receipt) if value is not None]
-        if len(supplied) != 1 or not isinstance(supplied[0], dict):
+        if not isinstance(independence_receipt, dict):
             raise ProductionRunError(
                 "independence_receipt_invalid",
-                "submit requires exactly one of independence_receipt or deprecated bridge_receipt",
+                "submit requires one 1.0 independence_receipt",
             )
-        receipt = supplied[0]
+        receipt = independence_receipt
         handoff = self._latest_independent_handoff(project_id, run_id)
         if not handoff:
             raise ProductionRunError("independent_handoff_missing", "frozen independent handoff is required")
-        run = self._run_row(project_id, run_id)
-        if (
-            receipt.get("schema") == PROJECT_PEER_VALIDATION_RECEIPT_SCHEMA
-            and run.get("status") != "completed"
-        ):
-            raise ProductionRunError(
-                "independent_legacy_receipt_replay_only",
-                "Project peer receipt v1 is readable only for exact historical completed-run replay; new submissions require v2",
-            )
         if receipt.get("schema") == INDEPENDENT_INVOCATION_RECEIPT_SCHEMA:
             self._validate_native_lifecycle_receipt(
                 project_id,
@@ -1000,93 +958,6 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "replayed": True,
             "authority": False,
         }
-
-    def _bind_completed_legacy_submission(
-        self,
-        project_id: str,
-        run_id: str,
-        *,
-        candidate_fingerprint: str,
-        result: dict[str, Any],
-        independence_receipt: dict[str, Any],
-        submission_evidence_fingerprint: str,
-        effect_guard: Callable[[Any], None],
-        mark_effects_started: Callable[[Any], None],
-    ) -> None:
-        """Bind an exact released-v9 GitHub completion to its replay evidence.
-
-        V9 stored the complete bridge result binding but predated the derived
-        submission fingerprint.  This compatibility path adds only that one
-        derivable field, and only while the current processing owner is fenced.
-        """
-
-        def mismatch(message: str) -> None:
-            raise ProductionRunError("independent_recovery_evidence_mismatch", message)
-
-        with self.store.open_project(project_id) as conn:
-            conn.execute("BEGIN IMMEDIATE")
-            effect_guard(conn)
-            candidates = conn.execute(
-                """SELECT candidate_id,content_fingerprint FROM candidates
-                WHERE run_id=? ORDER BY created_at,rowid""",
-                (run_id,),
-            ).fetchall()
-            if len(candidates) != 1:
-                mismatch("completed production recovery requires exactly one persisted candidate")
-            candidate = candidates[0]
-            review_rows = conn.execute(
-                """SELECT review_id,candidate_fingerprint,reviewer_fingerprint,result_json
-                FROM review_evidence WHERE candidate_id=? AND independent=1 ORDER BY created_at,rowid""",
-                (candidate["candidate_id"],),
-            ).fetchall()
-            if len(review_rows) != 1:
-                mismatch("completed production recovery requires exactly one independent review evidence row")
-            review_row = review_rows[0]
-            if (
-                candidate["content_fingerprint"] != candidate_fingerprint
-                or review_row["candidate_fingerprint"] != candidate_fingerprint
-            ):
-                mismatch("completed production candidate does not match the submitted evidence subject")
-            persisted = _json(review_row["result_json"], {})
-            existing_fingerprint = persisted.get("submission_evidence_fingerprint")
-            if existing_fingerprint is not None:
-                if existing_fingerprint != submission_evidence_fingerprint:
-                    mismatch("completed production side effects bind different independent evidence")
-                mark_effects_started(conn)
-                conn.commit()
-                return
-            if independence_receipt.get("schema") != PROJECT_PEER_VALIDATION_RECEIPT_SCHEMA:
-                mismatch("only released GitHub bridge evidence may receive the v9 compatibility binding")
-            stored_receipts = [
-                persisted[key]
-                for key in ("bridge_receipt", "independence_receipt")
-                if isinstance(persisted.get(key), dict)
-            ]
-            if not stored_receipts or any(
-                canonical_json(stored) != canonical_json(independence_receipt)
-                for stored in stored_receipts
-            ):
-                mismatch("persisted GitHub bridge receipt differs from the submitted receipt")
-            result_fingerprint = independent_fingerprint(result)
-            if (
-                independence_receipt.get("result_fingerprint") != result_fingerprint
-                or review_row["reviewer_fingerprint"] != result_fingerprint
-                or canonical_json(persisted.get("judgment")) != canonical_json(result.get("judgment"))
-                or canonical_json(persisted.get("worker")) != canonical_json(result.get("worker"))
-                or persisted.get("job_id") != result.get("job_id")
-                or persisted.get("input_fingerprint") != result.get("input_fingerprint")
-            ):
-                mismatch("persisted independent review fields differ from the submitted result")
-            mark_effects_started(conn)
-            bound = dict(persisted)
-            bound["submission_evidence_fingerprint"] = submission_evidence_fingerprint
-            updated = conn.execute(
-                "UPDATE review_evidence SET result_json=? WHERE review_id=? AND result_json=?",
-                (canonical_json(bound), review_row["review_id"], review_row["result_json"]),
-            ).rowcount
-            if updated != 1:
-                mismatch("completed independent review evidence changed during compatibility binding")
-            conn.commit()
 
     def _awaiting_external_projection(self, project_id: str, run: dict[str, Any], bundle: dict[str, Any]) -> dict[str, Any] | None:
         if run.get("status") != "awaiting_external":
@@ -1523,32 +1394,10 @@ class ProductionRunExecutor(ProductionContextRuntime):
             except IndependentReviewError as exc:
                 self._raise_independent_repository(exc)
 
-        def mark_effects_started_in_transaction(conn) -> None:  # noqa: ANN001
-            try:
-                processing_repository.mark_attempt_effects_started_in_transaction(
-                    conn,
-                    project_id,
-                    run_id,
-                    processing_candidate_fingerprint,
-                    processing_token,
-                    processing_epoch,
-                )
-            except IndependentReviewError as exc:
-                self._raise_independent_repository(exc)
-
         run = self._run_row(project_id, run_id)
         if run.get("status") == "completed":
             bundle = self._latest_bundle(project_id, run_id)
-            self._bind_completed_legacy_submission(
-                project_id,
-                run_id,
-                candidate_fingerprint=processing_candidate_fingerprint,
-                result=result,
-                independence_receipt=independence_receipt,
-                submission_evidence_fingerprint=submission_evidence_fingerprint,
-                effect_guard=effect_guard,
-                mark_effects_started=mark_effects_started_in_transaction,
-            )
+            mark_effects_started()
             replay = self._completed_projection(
                 project_id,
                 run,

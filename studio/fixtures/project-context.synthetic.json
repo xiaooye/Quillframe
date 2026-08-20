@@ -1,0 +1,15 @@
+{
+  "context_schema": "quillframe_project_context_v1_0",
+  "manifest": {
+    "schema": "quillframe_project_v1_0",
+    "id": "PROJECT-SYNTHETIC-STORY-LOOM",
+    "title": "Synthetic Story Loom",
+    "language": "en",
+    "chapter_scope": "CH001"
+  },
+  "manifest_fingerprint": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "project_id": "PROJECT-SYNTHETIC-STORY-LOOM",
+  "project_title": "Synthetic Story Loom",
+  "language": "en",
+  "chapter_scope": "CH001"
+}

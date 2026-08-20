@@ -13,10 +13,6 @@ PROVIDER_TRANSPORT = {
     "codex_native_subagent": "codex_native",
     "claude_native_subagent": "claude_code_native",
 }
-DEPRECATED_PROVIDER_ALIASES = {
-    "codex": "codex_native_subagent",
-    "claude": "claude_native_subagent",
-}
 ASSURANCE_CLASS = "host_native_separate_context"
 REVIEWER_AGENT_TYPE = "quillframe-independent-reviewer"
 PROCESSING_LEASE_SECONDS = 30.0
@@ -37,7 +33,6 @@ def _required(value: Any, name: str) -> str:
 
 def normalize_provider(value: Any) -> str:
     provider = _required(value, "provider")
-    provider = DEPRECATED_PROVIDER_ALIASES.get(provider, provider)
     if provider not in PROVIDER_TRANSPORT:
         raise IndependentReviewError(
             "independent_provider_invalid",
@@ -500,7 +495,7 @@ class IndependentReviewRepository:
                     ).fetchall()
                     active_ids = {item["lease_id"] for item in active}
                     if active_ids and (native_lease_id is None or active_ids != {native_lease_id}):
-                        raise IndependentReviewError("independent_native_lease_active", "legacy submission is blocked by an active native lease")
+                        raise IndependentReviewError("independent_native_lease_active", "non-native submission is blocked by an active native lease")
                     token = "irproc_" + uuid.uuid4().hex
                     epoch = int(row["processing_epoch"] or 0) + 1
                     now_value = self.clock()

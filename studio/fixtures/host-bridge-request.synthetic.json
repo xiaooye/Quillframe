@@ -1,7 +1,8 @@
 {
-  "schema": "quillframe_studio_host_bridge_request_v1",
-  "request_id": "REQ-SYNTHETIC-SEMANTIC-CATALOG",
-  "operation": "semantic.catalog",
+  "schema": "quillframe_host_bridge_request_v11",
+  "bridge_version": "11",
+  "request_id": "REQ-SYNTHETIC-PROJECT-LIST",
+  "operation": "project.list",
   "surface": "agent_package",
   "args": {},
   "authority": false

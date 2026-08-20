@@ -1,4 +1,4 @@
-name: Quillframe 0.9.1 CI
+name: Quillframe 1.0 CI
 
 on:
   push:
@@ -15,122 +15,81 @@ concurrency:
 
 jobs:
   core:
-    name: Core, SQLite, authority and namespace
+    name: Core, SQLite, authority and clean break
+    runs-on: ubuntu-latest
+    env:
+      QUILLFRAME_MODEL_API_ENDPOINT: ''
+      QUILLFRAME_MODEL_API_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Install CI YAML parser
+        run: python -m pip install --disable-pip-version-check 'PyYAML==6.0.3'
+      - name: Verify 1.0 identity, namespaces and documentation
+        run: |
+          set -euo pipefail
+          python scripts/version_consistency.py
+          python scripts/version_identity.py
+          python quality/clean_break.py
+          python scripts/namespace_hygiene.py
+          python scripts/machine_namespace_hygiene.py
+          python scripts/framework_hygiene.py
+          python scripts/docs_quality.py
+          python scripts/quillframe_docs_quality.py
+          python scripts/design_system_quality.py
+          python scripts/peer_bridge_contract.py
+          python scripts/semantic_reference_integrity.py
+      - name: Compile Python surfaces
+        run: >-
+          python -m compileall -q
+          agent_runtime corpus evals harness learning model_runtime persistence
+          production_runtime publication quality quillframe release studio
+          core_operations.py project_resolution.py quillframe.py
+      - name: Run all deterministic Python tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Run aggregate Framework self-test
+        run: python quillframe.py self-test
+      - name: Run explicit runtime, MCP and Host Bridge self-tests
+        run: |
+          set -euo pipefail
+          python harness/runtime_capabilities.py self-test
+          python harness/context_runtime.py self-test
+          python harness/semantic_workers/adapters/model_runtime_adapter.py --self-test
+          python harness/control_plane/mcp_stdio.py --self-test
+          python studio/host_bridge.py self-test
+      - name: Verify deterministic Framework bundle
+        env:
+          QF_EXPECTED_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$QF_EXPECTED_SOURCE_SHA"
+          mkdir -p /tmp/quillframe-bundle-ci
+          python release/build_framework_bundle.py build --output /tmp/quillframe-bundle-ci/one.tar --report /tmp/quillframe-bundle-ci/one.json
+          python release/build_framework_bundle.py build --output /tmp/quillframe-bundle-ci/two.tar --report /tmp/quillframe-bundle-ci/two.json
+          cmp /tmp/quillframe-bundle-ci/one.tar /tmp/quillframe-bundle-ci/two.tar
+          sha256sum /tmp/quillframe-bundle-ci/one.tar > /tmp/quillframe-bundle-ci/one.sha256
+          sha256sum -c /tmp/quillframe-bundle-ci/one.sha256
+          FINGERPRINT="$(python -c 'import json; print(json.load(open("/tmp/quillframe-bundle-ci/one.json"))["bundle_fingerprint"])')"
+          python release/build_framework_bundle.py verify --bundle /tmp/quillframe-bundle-ci/one.tar --expected "$FINGERPRINT"
+      - name: Prove normal CI has no live model credentials
+        run: |
+          python - <<'PY'
+          import os
+          assert not os.getenv("QUILLFRAME_MODEL_API_ENDPOINT")
+          assert not os.getenv("QUILLFRAME_MODEL_API_TOKEN")
+          print("live_model_execution=disabled")
+          PY
+
+  product:
+    name: Site, Docs, Studio, Cloud and browser acceptance
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
-      - name: Version consistency
-        run: python scripts/version_consistency.py
-      - name: Version identity
-        run: python scripts/version_identity.py
-      - name: Project-hosted peer bridge contract
-        run: python scripts/peer_bridge_contract.py
-      - name: Deterministic framework bundle contract
-        run: |
-          set -euo pipefail
-          python release/build_framework_bundle.py self-test
-          mkdir -p /tmp/quillframe-bundle-ci
-          python release/build_framework_bundle.py build --output /tmp/quillframe-bundle-ci/one.tar --report /tmp/quillframe-bundle-ci/one.json
-          python release/build_framework_bundle.py build --output /tmp/quillframe-bundle-ci/two.tar --report /tmp/quillframe-bundle-ci/two.json
-          cmp /tmp/quillframe-bundle-ci/one.tar /tmp/quillframe-bundle-ci/two.tar
-          FINGERPRINT="$(python -c 'import json; print(json.load(open("/tmp/quillframe-bundle-ci/one.json"))["bundle_fingerprint"])')"
-          python release/build_framework_bundle.py verify --bundle /tmp/quillframe-bundle-ci/one.tar --expected "$FINGERPRINT"
-      - name: Active technical namespace hygiene
-        run: python scripts/namespace_hygiene.py
-      - name: Documentation governance
-        run: python scripts/docs_quality.py
-      - name: Compile Model and Agent Runtime
-        run: python -m compileall -q model_runtime agent_runtime quillframe harness/semantic_workers/adapters/model_runtime_adapter.py
-      - name: Build and import Quillframe wheel
-        run: |
-          python -m pip wheel . --no-deps -w /tmp/quillframe-wheel
-          python -m pip install --no-deps --target /tmp/quillframe-install /tmp/quillframe-wheel/quillframe-*.whl
-          cd /tmp
-          PYTHONPATH=/tmp/quillframe-install python - <<'PY'
-          from quillframe import Quillframe, AgentJob
-          assert Quillframe.__name__ == 'Quillframe'
-          assert AgentJob.__name__ == 'AgentJob'
-          print('quillframe_library_import=PASS')
-          PY
-      - name: Deterministic runtime capability contracts
-        run: |
-          python harness/runtime_capabilities.py self-test
-          python harness/context_runtime.py self-test
-          python harness/semantic_workers/adapters/model_runtime_adapter.py --self-test
-      - name: Normal CI never invokes configured live Model API
-        env:
-          QUILLFRAME_MODEL_API_ENDPOINT: ''
-          QUILLFRAME_MODEL_API_TOKEN: ''
-        run: |
-          python - <<'PY'
-          import os
-          assert not os.getenv('QUILLFRAME_MODEL_API_ENDPOINT')
-          assert not os.getenv('QUILLFRAME_MODEL_API_TOKEN')
-          print('live_model_execution=disabled')
-          PY
-      - name: Quillframe 0.9.1 persistence and authority tests
-        run: python -m unittest discover -s tests -p 'test_quillframe_*.py' -v
-      - name: MCP and projection self-tests
-        run: |
-          python harness/control_plane/mcp_stdio.py --self-test
-          python -m unittest tests.test_quillframe_mapped_projection tests.test_quillframe_mcp_surface -q
-      - name: Host Bridge self-test
-        run: python studio/host_bridge.py self-test
-      - name: Checkout exact source for ephemeral runtime bundle
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 1
-          path: runtime-src
-      - name: Build exact-SHA ephemeral runtime bundle
-        env:
-          QUILLFRAME_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          SOURCE_SHA="$(git -C runtime-src rev-parse HEAD)"
-          test "${SOURCE_SHA}" = "${QUILLFRAME_SOURCE_SHA}"
-          test -d runtime-src/.git
-          mkdir -p /tmp/quillframe-runtime
-          tar \
-            -C runtime-src \
-            --exclude='site/node_modules' \
-            --exclude='studio/app/node_modules' \
-            -czf "/tmp/quillframe-runtime/quillframe-runtime-${SOURCE_SHA}.tar.gz" .
-          (cd /tmp/quillframe-runtime && sha256sum "quillframe-runtime-${SOURCE_SHA}.tar.gz" > "quillframe-runtime-${SOURCE_SHA}.sha256")
-          printf '%s\n' "${SOURCE_SHA}" > /tmp/quillframe-runtime/framework-commit.txt
-          tar -tzf "/tmp/quillframe-runtime/quillframe-runtime-${SOURCE_SHA}.tar.gz" | grep -q '^\./\.git/'
-      - name: Upload exact-SHA ephemeral runtime bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: quillframe-runtime-${{ github.event.pull_request.head.sha || github.sha }}
-          path: /tmp/quillframe-runtime/
-          if-no-files-found: error
-          retention-days: 7
-
-  site:
-    name: Product site and docs
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-      - working-directory: site
-        run: npm install --no-audit --no-fund
-      - working-directory: site
-        run: npm run quality
-      - working-directory: site
-        run: npm run build
-      - working-directory: site
-        run: npm run docs:build
-
-  studio:
-    name: SolidJS Studio
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
         with:
           version: 10.33.0
@@ -139,9 +98,156 @@ jobs:
         with:
           node-version: '24'
           cache: pnpm
-          cache-dependency-path: studio/app/pnpm-lock.yaml
-      - working-directory: studio/app
-        run: pnpm install --frozen-lockfile
-      - name: Build Studio production assets and run browser acceptance
-        working-directory: studio/app
-        run: pnpm ci:studio
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install the single workspace lock
+        run: corepack pnpm install --frozen-lockfile
+      - name: Run product quality, types and tests
+        run: |
+          set -euo pipefail
+          corepack pnpm run quality
+          corepack pnpm run typecheck
+          corepack pnpm run test
+      - name: Build Site, Docs, Studio and Cloud
+        run: corepack pnpm run build
+      - name: Build and test the installed wheel
+        run: |
+          set -euo pipefail
+          python -m pip wheel . --no-deps -w /tmp/quillframe-wheel
+          python -m pip install --no-deps --target /tmp/quillframe-install /tmp/quillframe-wheel/quillframe-*.whl
+          cd /tmp
+          PYTHONPATH=/tmp/quillframe-install python - <<'PY'
+          from importlib.resources import files
+
+          import quillframe.cli
+          import quillframe.cloud_core
+          import production_runtime.semantic
+          from quillframe.cli import main
+          from harness.semantic_workers.semantic_worker_router import resolve_contract_registry
+
+          contract_path, pack_id = resolve_contract_registry("reader.reaction")
+          assert pack_id == "quality"
+          assert contract_path.name == "quality.json"
+          assert files("studio").joinpath("app/dist/index.html").is_file()
+          assert files("studio").joinpath("app/dist/.well-known/quillframe-studio-footprint.json").is_file()
+          assert files("studio").joinpath("app/dist/.well-known/quillframe-host.json").is_file()
+          assert files("studio").joinpath("app/dist/.well-known/security.txt").is_file()
+          try:
+              main(["--help"])
+          except SystemExit as exc:
+              assert exc.code == 0
+          print("quillframe_installed_wheel_smoke=PASS")
+          PY
+      - name: Install browser runtime
+        run: corepack pnpm --filter @quillframe/product-site exec playwright-core install --with-deps chromium
+      - name: Resolve explicit Chromium for T605
+        run: |
+          set -euo pipefail
+          chrome="$(corepack pnpm --filter @quillframe/product-site exec node --input-type=module -e 'import { chromium } from "playwright-core"; process.stdout.write(chromium.executablePath())')"
+          test -f "$chrome" && test -x "$chrome"
+          printf 'CHROME_BIN=%s\n' "$chrome" >> "$GITHUB_ENV"
+      - name: Run T605 focused contract tests
+        run: corepack pnpm run test:browser-acceptance-t605
+      - name: Run public and local-product browser acceptance
+        run: |
+          set -euo pipefail
+          corepack pnpm --filter @quillframe/product-site browser:smoke
+          corepack pnpm --filter @quillframe/studio-app browser:smoke
+          corepack pnpm --filter @quillframe/studio-app browser:launch
+      - name: Run T605 production browser acceptance
+        env:
+          QF_START_PREVIEWS: "1"
+          QF_REPO_ROOT: ${{ github.workspace }}
+          QF_BROWSER_EVIDENCE_DIR: /tmp/quillframe-t605-evidence
+          QF_T605_BUILD_TIMEOUT_MS: "300000"
+          QF_T605_PREVIEW_TIMEOUT_MS: "60000"
+          QF_T605_TIMEOUT_MS: "45000"
+        run: corepack pnpm run browser:acceptance:t605
+      - name: Upload T605 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quillframe-t605-browser-evidence
+          path: /tmp/quillframe-t605-evidence/
+          if-no-files-found: error
+      - name: Build the local Core container boundary
+        run: |
+          set -euo pipefail
+          docker build --tag quillframe-core:ci .
+          docker run --rm quillframe-core:ci python -c 'import quillframe.cloud_core; print("cloud_core_import=PASS")'
+
+  acceptance:
+    name: Native fixed release acceptance
+    needs: [core, product]
+    runs-on: ubuntu-latest
+    env:
+      QUILLFRAME_MODEL_API_ENDPOINT: ''
+      QUILLFRAME_MODEL_API_TOKEN: ''
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install deterministic acceptance dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check 'PyYAML==6.0.3'
+          corepack pnpm install --frozen-lockfile
+          corepack pnpm --filter @quillframe/product-site exec playwright-core install --with-deps chromium
+          chrome="$(corepack pnpm --filter @quillframe/product-site exec node --input-type=module -e 'import { chromium } from "playwright-core"; process.stdout.write(chromium.executablePath())')"
+          test -f "$chrome" && test -x "$chrome"
+          printf 'CHROME_BIN=%s\n' "$chrome" >> "$GITHUB_ENV"
+      - name: Run the native fixed acceptance command set
+        run: python release/run_acceptance.py --repo-root . --output /tmp/quillframe-acceptance-ci
+      - name: Generate and read back the exact five reports
+        run: |
+          set -euo pipefail
+          python release/acceptance.py --repo-root . --evidence /tmp/quillframe-acceptance-ci/evidence.json --output /tmp/quillframe-acceptance-ci/reports
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('/tmp/quillframe-acceptance-ci/reports')
+          expected = {
+              '1.0.0-dev.0.en.md',
+              '1.0.0-dev.0.zh-CN.md',
+              '1.0.0-dev.0.tasks.en.md',
+              '1.0.0-dev.0.tasks.zh-CN.md',
+              '1.0.0-dev.0.json',
+          }
+          assert {path.name for path in root.iterdir() if path.is_file()} == expected
+          report = json.loads((root / '1.0.0-dev.0.json').read_text())
+          assert report['status'] == 'implementation_verified_release_blocked'
+          assert report['gates']['local_gates_pass'] is True
+          assert report['gates']['t608_phase'] == 'x'
+          assert report['release_promotion_authorized'] is False
+          assert report['deployment_performed'] is False
+          assert report['model_execution_performed'] is False
+          print('native_acceptance_readback=PASS')
+          PY
+      - name: Upload native acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quillframe-native-acceptance
+          path: |
+            /tmp/quillframe-acceptance-ci/evidence.json
+            /tmp/quillframe-acceptance-ci/browser-acceptance-v1.json
+            /tmp/quillframe-acceptance-ci/t310-local-browser.json
+            /tmp/quillframe-acceptance-ci/commands/
+            /tmp/quillframe-acceptance-ci/site/screenshots/
+            /tmp/quillframe-acceptance-ci/studio/screenshots/
+            /tmp/quillframe-acceptance-ci/t603-site-smoke/
+            /tmp/quillframe-acceptance-ci/t603-studio-smoke/
+            /tmp/quillframe-acceptance-ci/t603-local-launch/
+            /tmp/quillframe-acceptance-ci/local-launch/
+            /tmp/quillframe-acceptance-ci/reports/
+          if-no-files-found: error

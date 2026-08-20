@@ -12,7 +12,11 @@ SKIP_PREFIX=(
     "studio/app/dist/", "studio/app/src-tauri/target/",
 )
 SKIP_PARTS={"node_modules", "__pycache__", ".astro", ".pytest_cache", ".venv"}
-SKIP_FILES={"CHANGELOG.en.md","CHANGELOG.zh-CN.md","scripts/namespace_hygiene.py"}
+SKIP_FILES={
+    "CHANGELOG.en.md",
+    "CHANGELOG.zh-CN.md",
+    "scripts/namespace_hygiene.py",
+}
 TEXT_EXT={".py",".json",".yaml",".yml",".toml",".md",".ts",".tsx",".js",".mjs",".css",".html",".sh",".rs",".svg"}
 # Construct legacy identifiers at runtime so this negative gate does not create
 # the very contiguous active-namespace references it is designed to reject.

@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-"""Quillframe Studio Project Hub projection.
+"""Read-only Studio projection for the native Quillframe Project context.
 
-Consumes quillframe_project_adapter_resolution_v1 and emits a browser/remote-safe,
-read-only Studio projection. This module is a presentation/query adapter only;
-it carries no Canon, Framework-write, settlement, or semantic authority.
-
-The projection is deliberately default-deny: arbitrary Project Adapter policy
-objects are not forwarded to remote/browser consumers merely because they are
-present in the source contract.
+The resolver owns the Project contract. Studio receives only the context
+identity and safe relative data-boundary evidence; host/action provenance is
+not consumer Project identity and is intentionally not projected here.
 """
 from __future__ import annotations
 
@@ -15,12 +11,16 @@ import argparse
 import hashlib
 import json
 import sys
+import re
 from pathlib import Path
 from typing import Any
 
-SOURCE_SCHEMA = "quillframe_project_adapter_resolution_v1"
+SOURCE_SCHEMA = "quillframe_project_context_v1_0"
 OUTPUT_SCHEMA = "quillframe_studio_project_hub_projection_v1"
+PROJECT_SCHEMA = "quillframe_project_v1_0"
+CHAPTER_SCOPE = "CH001"
 SURFACES = {"cli", "local_app", "cloud_ui", "agent_package"}
+PROJECT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
 
 def canonical(value: Any) -> str:
@@ -31,43 +31,49 @@ def fingerprint(value: Any) -> str:
     return "sha256:" + hashlib.sha256(canonical(value).encode("utf-8")).hexdigest()
 
 
-def _safe_framework(value: Any) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        return {}
-    allowed = ("name", "version", "commit", "bundle_fingerprint")
-    return {key: value[key] for key in allowed if value.get(key) is not None}
-
-
-def _safe_paths(value: Any) -> dict[str, dict[str, Any]]:
-    if not isinstance(value, dict):
-        return {}
-    result: dict[str, dict[str, Any]] = {}
-    for domain, entry in sorted(value.items()):
-        if not isinstance(domain, str) or not isinstance(entry, dict):
-            continue
-        result[domain] = {
-            "relative": entry.get("relative"),
-            "exists": bool(entry.get("exists", False)),
-            "kind": entry.get("kind", "unknown"),
-        }
-    return result
-
-
-def _object_available(value: Any) -> bool:
-    return isinstance(value, dict) and bool(value)
+def _require_context(source: dict[str, Any]) -> dict[str, Any]:
+    if source.get("context_schema") != SOURCE_SCHEMA:
+        raise ValueError(f"expected context schema {SOURCE_SCHEMA}")
+    manifest = source.get("manifest")
+    if not isinstance(manifest, dict):
+        raise ValueError("Project context manifest must be an object")
+    if set(manifest) != {"schema", "id", "title", "language", "chapter_scope"}:
+        raise ValueError("Project context manifest must contain exactly five keys")
+    if manifest.get("schema") != PROJECT_SCHEMA:
+        raise ValueError(f"manifest schema must be exactly {PROJECT_SCHEMA}")
+    if manifest.get("chapter_scope") != CHAPTER_SCOPE:
+        raise ValueError(f"chapter scope must be exactly {CHAPTER_SCOPE}")
+    project_id = manifest.get("id")
+    title = manifest.get("title")
+    language = manifest.get("language")
+    if not isinstance(project_id, str) or not PROJECT_ID_RE.fullmatch(project_id):
+        raise ValueError("Project context id is not a native project id")
+    if not isinstance(title, str) or not title.strip() or not isinstance(language, str) or not language.strip():
+        raise ValueError("Project context title/language must be non-empty text")
+    normalized_manifest = {"schema": PROJECT_SCHEMA, "id": project_id, "title": title.strip(), "language": language.strip(), "chapter_scope": CHAPTER_SCOPE}
+    if source.get("project_id") != normalized_manifest["id"]:
+        raise ValueError("Project context id does not match manifest")
+    if source.get("project_title") != normalized_manifest["title"]:
+        raise ValueError("Project context title does not match manifest")
+    if source.get("language") != normalized_manifest["language"]:
+        raise ValueError("Project context language does not match manifest")
+    if source.get("chapter_scope") != normalized_manifest["chapter_scope"]:
+        raise ValueError("Project context chapter scope does not match manifest")
+    manifest_fp = source.get("manifest_fingerprint")
+    if not isinstance(manifest_fp, str) or manifest_fp != fingerprint(normalized_manifest):
+        raise ValueError("Project context manifest fingerprint does not match manifest")
+    return {**source, "manifest": normalized_manifest, "project_title": normalized_manifest["title"], "language": normalized_manifest["language"], "manifest_fingerprint": manifest_fp}
 
 
 def build_projection(source: dict[str, Any], surface: str = "cloud_ui") -> dict[str, Any]:
-    if source.get("schema") != SOURCE_SCHEMA:
-        raise ValueError(f"expected source schema {SOURCE_SCHEMA}")
+    context = _require_context(source)
     if surface not in SURFACES:
         raise ValueError("surface must be one of: " + ", ".join(sorted(SURFACES)))
 
-    source_fp = fingerprint(source)
     projection: dict[str, Any] = {
         "schema": OUTPUT_SCHEMA,
         "source_schema": SOURCE_SCHEMA,
-        "source_fingerprint": source_fp,
+        "source_fingerprint": fingerprint(context),
         "authority": False,
         "canon_authority": False,
         "framework_write_authority": False,
@@ -81,30 +87,28 @@ def build_projection(source: dict[str, Any], surface: str = "cloud_ui") -> dict[
             "arbitrary_policy_passthrough": False,
         },
         "project": {
-            "id": source.get("project_id"),
-            "title": source.get("project_title"),
-            "version": source.get("project_version"),
-            "language": source.get("language"),
-            "layout": source.get("layout"),
-            "project_schema_version": source.get("project_schema_version"),
+            "id": context["project_id"],
+            "title": context["project_title"],
+            "language": context["language"],
+            "chapter_scope": context["chapter_scope"],
+            "manifest_fingerprint": context["manifest_fingerprint"],
+            "schema": context["manifest"]["schema"],
         },
-        "framework_lock": _safe_framework(source.get("framework_lock")),
-        "logical_paths": _safe_paths(source.get("paths")),
-        "policy_availability": {
-            "authority": _object_available(source.get("authority")),
-            "quality": _object_available(source.get("quality")),
-            "build": _object_available(source.get("build")),
+        "data_boundary": {
+            "relative": ".quillframe/data",
+            "fixed": True,
+            "absolute_path_exposed": False,
         },
         "unavailable": [
             "authority_policy_details",
             "quality_policy_details",
-            "build_policy_details",
             "current_chapter",
             "current_scene",
             "manuscript_lifecycle",
             "latest_run",
             "publication_status",
             "quality_status",
+            "host_action_provenance",
         ],
     }
     projection["projection_fingerprint"] = fingerprint(projection)
@@ -121,37 +125,27 @@ def load_json(path: Path) -> dict[str, Any]:
 def self_test() -> dict[str, Any]:
     private_marker = "/private/host/path/never-expose"
     source = {
-        "schema": SOURCE_SCHEMA,
+        "context_schema": SOURCE_SCHEMA,
+        "manifest": {
+            "schema": PROJECT_SCHEMA,
+            "id": "PROJECT-SYNTHETIC",
+            "title": "Synthetic Story Loom",
+            "language": "en",
+            "chapter_scope": CHAPTER_SCOPE,
+        },
+        "manifest_fingerprint": fingerprint({
+            "schema": PROJECT_SCHEMA,
+            "id": "PROJECT-SYNTHETIC",
+            "title": "Synthetic Story Loom",
+            "language": "en",
+            "chapter_scope": CHAPTER_SCOPE,
+        }),
         "project_id": "PROJECT-SYNTHETIC",
         "project_title": "Synthetic Story Loom",
-        "project_version": "0.0.0",
         "language": "en",
+        "chapter_scope": CHAPTER_SCOPE,
         "project_root": private_marker,
-        "layout": "mapped",
-        "framework_lock": {
-            "name": "Quillframe",
-            "version": "8.0.0-dev",
-            "commit": "fixture",
-            "bundle_fingerprint": "sha256:" + "a" * 64,
-        },
-        "project_schema_version": "1",
-        "authority": {
-            "precedence": "locked > accepted > active_plan > review > proposal",
-            "host_private_note": private_marker + "/authority",
-        },
-        "paths": {
-            "manuscripts": {
-                "relative": "manuscripts",
-                "absolute": private_marker + "/manuscripts",
-                "exists": True,
-                "kind": "dir",
-            }
-        },
-        "quality": {
-            "reader_grip": "very_high",
-            "host_private_note": private_marker + "/quality",
-        },
-        "build": {"host_private_note": private_marker + "/build"},
+        "data_root": private_marker + "/.quillframe/data",
     }
     first = build_projection(source, "cloud_ui")
     second = build_projection(source, "cloud_ui")
@@ -159,23 +153,20 @@ def self_test() -> dict[str, Any]:
 
     wrong_schema_rejected = False
     try:
-        build_projection({"schema": "wrong"})
+        build_projection({"context_schema": "wrong"})
     except ValueError:
         wrong_schema_rejected = True
 
+    legacy_markers = ("framework" + "_lock", "framework" + "_attestation", "project" + "_version", "lay" + "out")
     checks = {
         "source_schema_rejected": wrong_schema_rejected,
         "authority_false": first["authority"] is False,
+        "native_project_schema": first["project"]["schema"] == PROJECT_SCHEMA,
+        "ch001_only": first["project"]["chapter_scope"] == CHAPTER_SCOPE,
         "no_project_root": "project_root" not in serialized,
+        "no_data_root_absolute": "data_root" not in serialized,
         "no_absolute_or_private_paths": private_marker not in serialized,
-        "no_arbitrary_policy_passthrough": all(
-            key not in first for key in ("authority_policy", "quality_policy", "build_policy")
-        ),
-        "policy_presence_only": first["policy_availability"] == {
-            "authority": True,
-            "quality": True,
-            "build": True,
-        },
+        "no_legacy_authority": all(key not in serialized for key in legacy_markers),
         "deterministic": first == second,
         "source_fingerprint_bound": first["source_fingerprint"] == fingerprint(source),
         "projection_fingerprint_present": first["projection_fingerprint"].startswith("sha256:"),

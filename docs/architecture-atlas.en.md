@@ -50,7 +50,7 @@ This Quillframe atlas is a map from concepts to current implementation owners. I
 
 ## Project engineering
 
-- `project_sdk.py` and `project_adapter.py` — standalone Project contract and mapped legacy layouts.
+- `quillframe/launch.py` and `project_resolution.py` — canonical launch and native Project resolution.
 - `release/build_framework_bundle.py` — deterministic framework bundle.
 
 For the user-facing mental model, return to [Architecture](architecture.en.md).

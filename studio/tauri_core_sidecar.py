@@ -203,6 +203,7 @@ def _self_test() -> dict[str, Any]:
             host_bridge.configure_secret_store(TauriInjectedSecretStore())
             request = {
                 "schema": host_bridge.REQUEST_SCHEMA,
+                "bridge_version": host_bridge.BRIDGE_VERSION,
                 "request_id": "tauri-sidecar-self-test",
                 "operation": "bridge.describe",
                 "surface": "local_app",
@@ -231,6 +232,7 @@ def _self_test() -> dict[str, Any]:
         "rollback_contract": True,
         "all_injected_secret_scrub": True,
         "secret_values_exposed": False,
+        "model_execution": False,
         "authority": False,
     }
 
@@ -252,18 +254,14 @@ def main(argv: list[str] | None = None) -> int:
             raise ValueError(f"unknown sidecar command: {command}")
         print(json.dumps(output, ensure_ascii=False, separators=(",", ":")))
         return 0
-    except Exception as exc:
-        safe = _scrub(
-            {
-                "schema": "quillframe_tauri_sidecar_error_v1",
-                "status": "failed",
-                "code": type(exc).__name__,
-                "message": str(exc),
-                "secret_values_exposed": False,
-                "authority": False,
-            },
-            secret_values,
-        )
+    except Exception:
+        safe = {
+            "schema": "quillframe_tauri_sidecar_error_v1",
+            "status": "failed",
+            "code": "sidecar_command_invalid" if command not in {"credential-refs", "invoke", "self-test"} else "sidecar_internal_error",
+            "secret_values_exposed": False,
+            "authority": False,
+        }
         print(json.dumps(safe, ensure_ascii=False, separators=(",", ":")))
         return 1
 

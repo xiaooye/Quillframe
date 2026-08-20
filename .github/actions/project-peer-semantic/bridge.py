@@ -2,9 +2,10 @@
 """Project-hosted peer semantic bridge.
 
 Runs inside a consuming repository through a Quillframe composite action. The
-consumer owns the Issue/runtime trace. This module only supplies the generic
-relay/validation mechanism from the exact Framework revision pinned by the
-consumer lockfile.
+consumer owns the Issue/runtime trace. This module supplies the generic
+relay/validation mechanism from the exact host Action revision. Project
+identity is read from the native flat manifest; host/action provenance is
+carried separately by the runtime.
 """
 from __future__ import annotations
 
@@ -12,12 +13,17 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import sys
 import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any, NoReturn
-import tomllib
+
+FRAMEWORK_ROOT = Path(__file__).resolve().parents[3]
+if str(FRAMEWORK_ROOT) not in sys.path:
+    sys.path.insert(0, str(FRAMEWORK_ROOT))
+from project_resolution import resolve_contract  # noqa: E402
 
 PACKET_REFERENCE_MARKER = "<!-- quillframe-peer-packet-reference-v1 -->"
 RESULT_MARKER = "<!-- quillframe-peer-result-v1 -->"
@@ -27,27 +33,52 @@ RECEIPT_MARKER = "<!-- quillframe-peer-validation-receipt-v1 -->"
 ISSUE_TOMBSTONE_SCHEMA = "quillframe_peer_issue_tombstone_v1"
 PACKET_REFERENCE_SCHEMA = "quillframe_peer_packet_reference_v1"
 RESULT_REFERENCE_SCHEMA = "quillframe_peer_result_reference_v1"
+_PUBLIC_CODE_RE = re.compile(r"[a-z][a-z0-9_]{1,63}\Z")
 
 
 def canonical_json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
-def fail(message: str) -> NoReturn:
-    raise SystemExit(message)
+def fail(
+    code: str,
+    *,
+    exit_code: int | None = None,
+    timeout_seconds: int | None = None,
+) -> NoReturn:
+    """Exit with a bounded public diagnostic, never provider or path details."""
+    public_code = code if _PUBLIC_CODE_RE.fullmatch(code) else "bridge_request_failed"
+    fields = [f"quillframe_peer_bridge_failed:{public_code}"]
+    if isinstance(exit_code, int):
+        fields.append(f"exit_code={exit_code}")
+    if isinstance(timeout_seconds, int):
+        fields.append(f"timeout_seconds={timeout_seconds}")
+    raise SystemExit(";".join(fields))
 
 
 def run(cmd: list[str], *, capture: bool = False) -> str:
-    proc = subprocess.run(cmd, text=True, capture_output=capture, check=False)
+    try:
+        # Capture on every path so a failed provider cannot write untrusted
+        # stdout/stderr directly into the Actions log.
+        proc = subprocess.run(cmd, text=True, capture_output=True, check=False)
+    except OSError:
+        fail("command_launch_failed")
     if proc.returncode != 0:
-        fail((proc.stderr or proc.stdout or "command failed").strip())
+        fail("command_failed", exit_code=proc.returncode)
     return proc.stdout if capture else ""
 
 
 def read_json(path: Path) -> dict[str, Any]:
-    value = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        fail("json_read_failed")
+    try:
+        value = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        fail("json_invalid")
     if not isinstance(value, dict):
-        fail(f"{path} must contain a JSON object")
+        fail("json_not_object")
     return value
 
 
@@ -120,33 +151,24 @@ def load_project_binding() -> dict[str, Any]:
     checkout = caller_checkout(workspace)
     project_root = checkout_member(checkout, os.environ["QUILLFRAME_PROJECT_ROOT"], "project root")
 
-    manifest_path = project_root / "quillframe.toml"
-    lock_path = project_root / "quillframe.lock.json"
-    if not manifest_path.exists() or not lock_path.exists():
-        fail("consumer must contain quillframe.toml and quillframe.lock.json")
-
-    with manifest_path.open("rb") as f:
-        manifest = tomllib.load(f)
-    lock = read_json(lock_path)
+    try:
+        context = resolve_contract(project_root)
+    except Exception as exc:
+        fail(f"consumer Project manifest is invalid: {exc}")
 
     expected_project_id = os.environ["QUILLFRAME_PROJECT_ID"]
-    actual_project_id = str((manifest.get("project") or {}).get("id") or "")
+    actual_project_id = context["project_id"]
     if actual_project_id != expected_project_id:
         fail(f"project id mismatch: expected {expected_project_id}, got {actual_project_id}")
 
-    framework = lock.get("framework") or {}
-    locked_repo = canonical_repo(str(framework.get("source_repo") or ""))
-    locked_commit = str(framework.get("commit") or "")
     action_repo = canonical_repo(os.environ.get("QUILLFRAME_ACTION_REPOSITORY", ""))
     action_ref = str(os.environ.get("QUILLFRAME_ACTION_REF") or "")
     caller_repo = canonical_repo(os.environ.get("GITHUB_REPOSITORY", ""))
 
-    if not locked_repo or not locked_commit:
-        fail("framework lock must contain source_repo and exact commit")
-    if locked_repo != action_repo:
-        fail(f"framework repository mismatch: lock={locked_repo}, action={action_repo}")
-    if locked_commit != action_ref:
-        fail(f"framework commit mismatch: lock={locked_commit}, action_ref={action_ref}")
+    if not action_repo:
+        fail("host action provenance must contain repository and exact ref/commit")
+    if re.fullmatch(r"[0-9a-f]{40}", action_ref) is None:
+        fail("host action provenance must contain one exact 40-character lowercase commit")
     if caller_repo == action_repo:
         fail("consumer peer bridge may not run with Framework repository as caller")
 
@@ -155,8 +177,11 @@ def load_project_binding() -> dict[str, Any]:
         "project_checkout": checkout,
         "project_root": project_root,
         "project_id": actual_project_id,
-        "framework_repo": locked_repo,
-        "framework_commit": locked_commit,
+        "chapter_scope": context["chapter_scope"],
+        "manifest_fingerprint": context["manifest_fingerprint"],
+        "data_root": context["data_root"],
+        "framework_repo": action_repo,
+        "framework_commit": action_ref,
         "caller_repo": caller_repo,
     }
 
@@ -462,7 +487,7 @@ def write_action_output(receipt: dict[str, Any]) -> None:
         handle.write("QUILLFRAME_RECEIPT\n")
 
 
-def main() -> int:
+def _main() -> int:
     mode = os.environ.get("QUILLFRAME_BRIDGE_MODE", "")
     if mode not in {"prepare", "validate-result"}:
         fail("QUILLFRAME_BRIDGE_MODE must be prepare or validate-result")
@@ -484,6 +509,15 @@ def main() -> int:
         write_action_output(output)
     print(json.dumps(output, ensure_ascii=False))
     return 0
+
+
+def main() -> int:
+    try:
+        return _main()
+    except SystemExit:
+        raise
+    except Exception:
+        fail("bridge_internal_failure")
 
 
 if __name__ == "__main__":

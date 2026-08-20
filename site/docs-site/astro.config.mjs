@@ -10,24 +10,34 @@ const ids = new Set(manifest.documents.map((doc) => doc.id));
 
 const groups = [
   {
-    label: "入门",
-    translations: { en: "Getting started" },
-    ids: ["why-quillframe", "architecture", "production-pipeline"],
+    label: "开始",
+    translations: { en: "Start" },
+    ids: ["why-quillframe", "architecture", "studio-overview"],
   },
   {
-    label: "创作与质量",
-    translations: { en: "Writing & quality" },
-    ids: ["context-memory", "quality-assurance", "quality-evolution", "adaptive-learning", "story-system", "character-system", "canon-state"],
+    label: "写作",
+    translations: { en: "Write" },
+    ids: ["production-pipeline", "context-memory", "story-system", "character-system", "canon-state"],
   },
   {
-    label: "Studio 与接入",
-    translations: { en: "Studio & integration" },
-    ids: ["studio-overview", "studio-product-architecture", "model-runtime", "agent-runtime", "integrations", "project-sdk", "project-adapters"],
+    label: "审阅",
+    translations: { en: "Review" },
+    ids: ["quality-assurance", "reader-engagement", "quality-evolution", "candidate-lineage", "evals-overview"],
   },
   {
-    label: "架构与发布",
-    translations: { en: "Architecture & release" },
-    ids: ["architecture-atlas", "release-bundle", "development-change-inventory"],
+    label: "发布",
+    translations: { en: "Publish" },
+    ids: ["release-bundle", "product-site-overview"],
+  },
+  {
+    label: "连接与运维",
+    translations: { en: "Connect & operate" },
+    ids: ["model-runtime", "agent-runtime", "integrations", "project-contract", "studio-product-architecture"],
+  },
+  {
+    label: "高级架构",
+    translations: { en: "Advanced architecture" },
+    ids: ["architecture-atlas", "adaptive-learning", "corpus-overview", "changelog"],
   },
 ];
 
@@ -87,7 +97,7 @@ export default defineConfig({
         {
           icon: "github",
           label: "GitHub",
-          href: "https://github.com/xiaooye/cn_webnovel_agent",
+          href: "https://github.com/xiaooye/Quillframe",
         },
       ],
       components: {

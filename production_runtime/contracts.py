@@ -19,11 +19,11 @@ MECHANISM_CONTEXT_STAGE: dict[str, str] = {
     "character_simulation": "character_simulation",
     "reader_pressure": "reader_pressure",
     "event_first_raw_draft": "draft",
-    "surface_realization": "realization_projection",
-    "reader_engagement": "post_draft_critic",
+    "surface_realization": "surface_realization",
+    "reader_engagement": "reader_engagement",
     "continuity": "continuity",
     "independent_semantic_gate": "independent_review",
-    "user_visible_gate": "independent_reviewer",
+    "user_visible_gate": "independent_review",
 }
 
 PRODUCTION_MECHANISMS = tuple(

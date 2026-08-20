@@ -5,7 +5,7 @@ The runtime bundle is an uncompressed deterministic POSIX tar. It contains a
 per-file content manifest but excludes repository history, specs, generated
 runtime state, caches, release attestations and bundle outputs. The overall
 bundle fingerprint is SHA-256 of the exact tar bytes and is suitable for a
-consumer lockfile.
+host/runtime provenance receipt.
 """
 from __future__ import annotations
 
@@ -24,8 +24,8 @@ BUNDLE_SCHEMA = "quillframe_framework_bundle_v1"
 CONTENT_MANIFEST = "BUNDLE_CONTENT_MANIFEST.json"
 DEFAULT_INCLUDE = {
     ".claude", ".github", "agent_runtime", "assets", "core", "corpus", "docs", "evals", "harness",
-    "knowledge_base", "learning", "model_runtime", "persistence", "production_runtime", "quality",
-    "publication", "quillframe", "release", "scripts", "surface",
+    "knowledge", "learning", "model_runtime", "persistence", "production_runtime", "quality",
+    "publication", "quillframe", "release", "schemas", "scripts", "surface",
 }
 ROOT_FILES = {
     ".gitignore", "AGENTS.md", "AGENTS.en.md", "AGENTS.zh-CN.md",
@@ -33,7 +33,7 @@ ROOT_FILES = {
     "HARNESS_MANIFEST.yaml", "README.md", "README.en.md", "README.zh-CN.md",
     "SKILL.md", "SKILL.en.md", "SKILL.zh-CN.md",
     "CHANGELOG.en.md", "CHANGELOG.zh-CN.md", "VERSION", "pyproject.toml",
-    "quillframe.py", "project_sdk.py", "project_adapter.py", "core_operations.py",
+    "quillframe.py", "project_resolution.py", "core_operations.py",
     "studio/host_bridge.py", "studio/host_bridge_contract.json",
 }
 EXCLUDE_PARTS = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".quillframe", "specs"}
@@ -54,6 +54,11 @@ def file_mode(path: Path) -> int:
 
 def eligible(rel: Path) -> bool:
     if not rel.parts:
+        return False
+    # Release acceptance reports attest a source commit and are derived after
+    # the framework bundle is built. Including them would make the attestation
+    # recursively alter the bundle it describes.
+    if rel.parts[:2] == ("release", "acceptance"):
         return False
     if any(part in EXCLUDE_PARTS for part in rel.parts):
         return False
@@ -188,9 +193,11 @@ def self_test() -> dict[str, Any]:
             "model_runtime/runtime.py": "print('model')\n",
             "persistence/quillframe_sqlite.py": "print('sqlite')\n",
             "production_runtime/runtime.py": "print('production')\n",
+            "knowledge/AGENT_FRAMEWORK_ADOPTION.en.md": "# Adoption\n",
+            "schemas/1.0/catalog.json": "{}\n",
             "studio/host_bridge.py": "print('host bridge')\n",
             "studio/host_bridge_contract.json": "{}\n",
-            "VERSION": "0.9.1\n",
+            "VERSION": "1.0.0-dev.0\n",
             "pyproject.toml": "[project]\nname='quillframe'\n",
         }
         for name, text in fixtures.items():
@@ -221,7 +228,10 @@ def self_test() -> dict[str, Any]:
             "agent_runtime/runtime.py", "model_runtime/runtime.py", "persistence/quillframe_sqlite.py", "production_runtime/runtime.py"
         }
         core_runtime_included = core_runtime_paths.issubset(paths)
-        ok = same and good["valid"] and not bad["valid"] and excluded and quality_included and publication_included and public_runtime_included and host_bridge_included and core_runtime_included
+        native_contracts_included = {
+            "knowledge/AGENT_FRAMEWORK_ADOPTION.en.md", "schemas/1.0/catalog.json"
+        }.issubset(paths)
+        ok = same and good["valid"] and not bad["valid"] and excluded and quality_included and publication_included and public_runtime_included and host_bridge_included and core_runtime_included and native_contracts_included
     return {
         "framework_bundle_contract": "PASS" if ok else "FAIL",
         "deterministic_bytes": same,
@@ -233,6 +243,7 @@ def self_test() -> dict[str, Any]:
         "public_runtime_package_included": public_runtime_included,
         "host_bridge_included": host_bridge_included,
         "core_runtime_packages_included": core_runtime_included,
+        "native_schema_and_knowledge_included": native_contracts_included,
         "model_execution": False,
     }
 

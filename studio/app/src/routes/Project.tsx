@@ -49,9 +49,9 @@ export default function Project() {
 
       <Show when={projection()} fallback={<div class="qf-empty-workspace"><strong>{zh() ? "尚未打开 Project" : "No Project open"}</strong></div>}>
         {(project) => <section class="qf-project-identity">
-          <div><span class="nf-eyebrow">IDENTITY</span><h2>{project().project.title}</h2><code>{project().project.project_id}</code></div>
-          <dl><dt>{zh() ? "语言" : "Language"}</dt><dd>{project().project.language}</dd><dt>Schema</dt><dd>{project().project.project_schema_version}</dd><dt>{zh() ? "正文" : "Documents"}</dt><dd>{project().counts.documents ?? 0}</dd><dt>{zh() ? "候选" : "Candidates"}</dt><dd>{project().counts.candidates ?? 0}</dd><dt>{zh() ? "运行" : "Runs"}</dt><dd>{project().counts.runs ?? 0}</dd></dl>
-          <div class="qf-inline-actions"><A class="wui-button wui-button--solid" href={`/manuscript?project=${encodeURIComponent(project().project.project_id)}`}>{zh() ? "打开正文" : "Open Manuscript"}</A><button class="wui-button wui-button--outline" type="button" disabled={busy() || !studio.bridgeCapabilities()?.operations.includes("project.backup")} onClick={() => void backup()}>{zh() ? "Verified backup" : "Verified backup"}</button></div>
+          <div><span class="nf-eyebrow">IDENTITY</span><h2>{project().manifest.title}</h2><code>{project().manifest.id}</code></div>
+          <dl><dt>{zh() ? "语言" : "Language"}</dt><dd>{project().manifest.language}</dd><dt>Schema</dt><dd>{project().manifest.schema}</dd><dt>{zh() ? "正文" : "Documents"}</dt><dd>{project().counts.documents ?? 0}</dd><dt>{zh() ? "候选" : "Candidates"}</dt><dd>{project().counts.candidates ?? 0}</dd><dt>{zh() ? "运行" : "Runs"}</dt><dd>{project().counts.runs ?? 0}</dd></dl>
+          <div class="qf-inline-actions"><A class="wui-button wui-button--solid" href={`/manuscript?project=${encodeURIComponent(project().manifest.id)}`}>{zh() ? "打开正文" : "Open Manuscript"}</A><button class="wui-button wui-button--outline" type="button" disabled={busy() || !studio.bridgeCapabilities()?.operations.includes("project.backup")} onClick={() => void backup()}>{zh() ? "Verified backup" : "Verified backup"}</button></div>
         </section>}
       </Show>
       <Show when={message()}>{(value) => <p class="qf-success-note" role="status">{value()}</p>}</Show><Show when={error()}>{(value) => <div class="wui-alert" role="alert"><div class="wui-alert__body"><strong class="wui-alert__title">Project</strong><span class="wui-alert__description">{value()}</span></div></div>}</Show>

@@ -5,8 +5,7 @@ This module does not decide story truth or infer state from prose. It resolves a
 Project-owned policy into a typed route describing whether a writer class may
 perform a direct mutation or must go through proposal, Settlement, or reconcile.
 
-Existing Projects that do not configure ``paths.property_write_policy`` retain
-legacy object-level authority behavior; this module does not reinterpret them.
+Projects without ``state/property-write-policy.json`` fail closed.
 """
 from __future__ import annotations
 
@@ -24,7 +23,7 @@ if str(ROOT) not in sys.path:
 
 POLICY_SCHEMA = "quillframe_property_write_policy_v1"
 DECISION_SCHEMA = "quillframe_property_write_decision_v1"
-POLICY_PATH_KEY = "property_write_policy"
+NATIVE_POLICY_RELATIVE = Path("state") / "property-write-policy.json"
 
 MUTATION_CLASSES = {
     "user_declared",
@@ -49,7 +48,7 @@ DECISIONS = {
     "settlement_required",
     "reconcile_required",
     "deny",
-    "legacy_unmanaged",
+    "policy_required",
 }
 
 
@@ -135,14 +134,18 @@ def load_policy(path: Path) -> dict[str, Any]:
 
 
 def policy_from_project(project_root: Path) -> dict[str, Any] | None:
-    from project_adapter import resolve_contract  # noqa: WPS433
+    from project_resolution import resolve_contract  # noqa: WPS433
     resolution = resolve_contract(project_root)
-    entry = resolution.get("paths", {}).get(POLICY_PATH_KEY)
-    if entry is None:
+    root = Path(resolution["project_root"]).resolve()
+    policy_path = root / NATIVE_POLICY_RELATIVE
+    if policy_path.is_symlink():
+        raise ValueError("state/property-write-policy.json may not be a symlink")
+    if not policy_path.exists():
         return None
-    if entry.get("kind") != "file" or not entry.get("exists"):
-        raise ValueError("configured paths.property_write_policy must resolve to an existing file")
-    return load_policy(Path(entry["absolute"]))
+    resolved = policy_path.resolve()
+    if root not in resolved.parents or not policy_path.is_file() or resolved != policy_path:
+        raise ValueError("state/property-write-policy.json must be a regular file within the Project root")
+    return load_policy(policy_path)
 
 
 def _resolved_rule(policy: dict[str, Any], object_type: str, property_name: str) -> tuple[dict[str, str], str]:
@@ -219,11 +222,11 @@ def evaluate(policy: dict[str, Any] | None, object_type: str, property_name: str
             "writer_class": writer_class,
             "mutation_class": None,
             "resolution_source": None,
-            "decision": "legacy_unmanaged",
-            "direct_write_allowed": None,
-            "authority_effect": "unchanged_legacy_behavior",
-            "ui_direct_editable": None,
-            "requirements": [],
+            "decision": "policy_required",
+            "direct_write_allowed": False,
+            "authority_effect": "none",
+            "ui_direct_editable": False,
+            "requirements": ["configure_property_write_policy"],
             "write_route_authority": False,
             "canon_authority": False,
             "framework_write_authority": False,
@@ -308,7 +311,7 @@ def self_test() -> int:
     runtime_direct = evaluate(policy, "CHAR", "runtime_focus", "runtime")
     broad_default = evaluate(policy, "CHAR", "unlisted_state", "settlement")
     global_default = evaluate(policy, "ORG", "mission", "semantic_worker")
-    legacy = evaluate(None, "CHAR", "current_location", "semantic_worker")
+    absent = evaluate(None, "CHAR", "current_location", "semantic_worker")
 
     fallback_a = _fixture_policy()
     fallback_a["policy_ref"] = "fixture:path-a"
@@ -348,12 +351,12 @@ def self_test() -> int:
         "mixed_writer_routes_to_reconcile": mixed["decision"] == "reconcile_required",
         "broad_object_default_works": broad_default["resolution_source"] == "object_default" and broad_default["decision"] == "allow_direct",
         "explicit_user_fact_can_remain_low_ceremony": user_direct["decision"] == "allow_direct" and user_direct["authority_effect"] == "user_declared_authority",
-        "policy_absence_preserves_legacy_behavior": legacy["decision"] == "legacy_unmanaged" and legacy["direct_write_allowed"] is None,
+        "policy_absence_fails_closed": absent["decision"] == "policy_required" and absent["direct_write_allowed"] is False,
         "locked_rejects_ordinary_settlement": locked["decision"] == "deny",
         "runtime_is_noncanon_and_scoped": runtime_direct["decision"] == "allow_direct" and runtime_direct["authority_effect"] == "runtime_non_authoritative",
         "global_default_is_deterministic": global_default["resolution_source"] == "global_default" and global_default["decision"] == "proposal_required",
         "unknown_mutation_class_blocked": tampered_class_blocked,
-        "route_authority_is_scoped": all(x["canon_authority"] is False and x["framework_write_authority"] is False and x["model_execution"] is False for x in [semantic_state, settlement_state, derived_direct, user_direct, locked, mixed, runtime_direct, legacy]) and semantic_state["write_route_authority"] is True and legacy["write_route_authority"] is False,
+        "route_authority_is_scoped": all(x["canon_authority"] is False and x["framework_write_authority"] is False and x["model_execution"] is False for x in [semantic_state, settlement_state, derived_direct, user_direct, locked, mixed, runtime_direct, absent]) and semantic_state["write_route_authority"] is True and absent["write_route_authority"] is False,
     }
     ok = all(checks.values())
     result = {

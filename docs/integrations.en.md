@@ -1,45 +1,46 @@
 # Runtime & Integrations
 
-Quillframe is provider-neutral because runtime identity, capability, and authority are separate concepts. A provider name never proves that a capability exists, and a capability never grants story or write authority by itself.
+Quillframe 1.0 separates runtime identity, capability, and authority. A provider name does not prove a capability, and a capability never grants story or write authority.
 
-<img src="assets/concepts/session-run-checkpoint.en.svg" alt="Runtime identity model separating project/resource, session/thread, run/invocation, and checkpoint" width="100%" />
+## One launch path
+
+The author-facing entry is:
+
+```bash
+quillframe launch [PROJECT]
+```
+
+Local mode binds the Studio to a loopback Python Core and project-local SQLite. Cloud mode starts an explicit authentication flow and does not upload a project as a side effect of launch. Repository hooks and host-specific bootstrap commands are not part of product correctness.
 
 ## Identity
 
-`project/resource` identifies the work. `session/thread` is the durable conversational or execution relationship. `run/invocation` is one bounded execution attempt. `checkpoint` is a recoverable snapshot of exact execution state.
+`project` identifies the work, `session` identifies a durable execution relationship, `run` identifies one bounded attempt, and `checkpoint` identifies an exact recoverable snapshot. Provider history is neither Canon nor Project bootstrap authority.
 
-Provider session history is not Canon and is not a substitute for Project bootstrap.
+## Host boundary
 
-## Local coding-agent hosts
+Claude Code, Codex, another agent host, or a model API may execute an eligible task. The host runs the agent; Quillframe governs the novel. Hosts provide capability evidence and transport. Core owns workflow state, permissions, fingerprints, budgets, persistence, and typed validation. The Project owns Canon.
 
-Claude Code and Codex can host a local Quillframe session, but neither host owns Quillframe workflow semantics. Both adapters normalize their lifecycle events into the same deterministic bootstrap core.
+## Exact protocols
 
-For a consumer Project, the required path is:
+- Host Bridge version `11` is the only accepted bridge version.
+- MCP protocol `2026-07-28` is matched exactly; there is no negotiation or fallback.
+- Context assembly accepts only its declared current schema.
+- Independent review uses one `independence_receipt` field bound to the frozen candidate fingerprint.
 
-`Project discovery → exact lock/attestation verification → quillframe_agent_session_v1 → exactly one task_mode → one active manager run → sparse Context execution`
+Pre-1.0 requests are rejected rather than translated.
 
-The host injects a `QF_SESSION_ID`. Exact authority verification alone is not enough to unlock consequential work: the model/user must semantically select exactly one Quillframe mode and run the exact `quillframe host-run begin ...` command supplied in bootstrap context. Host state remains explicitly `blocked`, `awaiting_task_mode`, or `running`.
+## Resume and cancellation
 
-Before `running`, edit/write/shell tools fail closed except for the narrowly parsed Quillframe bootstrap command. Codex `apply_patch` is treated as an edit. A changed Project lock/attestation or changed pinned Framework identity invalidates the running authority binding rather than silently refreshing it.
-
-Claude Code loads its generated `CLAUDE.md` and project hooks. Codex reads the generated direct `AGENTS.md`; project-local `.codex/hooks.json` additionally requires the user's project/hook trust. If Codex starts without injected `QF_SESSION_ID`, review/trust the Quillframe hooks with `/hooks` and restart before consequential work. Quillframe does not bypass that host security boundary.
-
-Existing consumer Projects can explicitly repair generated host files with `quillframe host-install .`. Host repair is not a Framework repin and does not mutate Canon or other story state; unknown user-authored host instructions are preserved and reported for manual merge.
-
-## Capabilities
-
-The current host manifest is the evidence for available tools, models, network, filesystem, GitHub, peer chat, local agents, or human review. Undeclared capability is unavailable. Credentials and authority tokens stay outside ordinary semantic context.
-
-## Resume
-
-Resume revalidates the current framework/project compatibility, latest checkpoint, referenced artifact fingerprints, live Project authority, pending approval/write intent, required capabilities, and consume-once state. A different framework revision is a dependency migration question, not ordinary resume.
+Resume revalidates the exact checkpoint, Project authority, artifact fingerprints, pending approvals, capabilities, and consume-once state. Run events are cursor-based. Pause, resume, and cancellation occur only at Core safe points.
 
 ## Independent semantic execution
 
-<img src="assets/concepts/independent-semantic-review.en.svg" alt="Manager and reviewer use distinct invocation markers with a fingerprint-bound artifact between them" width="100%" />
+Eligible transports include a separate local agent invocation, provider call, MCP worker, GitHub job, peer chat, local model, or human review when current capability evidence supports the route. A transport failure may produce an explicit fallback receipt. A valid semantic rejection routes repair and cannot trigger reviewer shopping.
 
-Eligible independent paths can include a separate local agent invocation, provider call, service/MCP worker, GitHub job, peer chat, local model, or human—when current capability evidence supports it. Transport failure can fall back to another eligible transport for the same fingerprint. A valid semantic rejection cannot.
+## Secrets
 
-## Control plane
+Credentials remain outside semantic context and Project state. Local credentials use a process lease; Hosted Studio uses the encrypted SessionVault. Receipts and logs contain references and capability evidence, never secret values.
 
-The Control Plane stores durable event/handoff/result lifecycle and metadata-only receipts. Local host manager sessions use the existing typed session contract rather than a host-specific parallel schema. The Control Plane can prove that execution state or a result was dispatched, returned, validated, and consumed; it cannot turn that state or result into Canon or editorial acceptance.
+## Control Plane
+
+The Control Plane persists event, handoff, result, and metadata-only receipt lifecycles. It can prove dispatch, validation, consumption, and replay state. It cannot turn operational state or model output into Canon, acceptance, settlement, or publication authority.

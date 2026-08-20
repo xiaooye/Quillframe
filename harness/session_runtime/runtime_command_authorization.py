@@ -229,12 +229,9 @@ def fixture(
     evidence = {
         "schema": resume_command.AUTHORITY_EVIDENCE_SCHEMA,
         "project_id": "BOOK-AUTH",
-        "project_authority_fingerprint": "sha256:" + "a" * 64,
-        "framework": {
-            "version": "0.9.1",
-            "commit": "fixture",
-            "bundle_fingerprint": "sha256:" + "b" * 64,
-        },
+        "project_manifest_fingerprint": "sha256:" + "a" * 64,
+        "chapter_scope": "CH001",
+        "data_root": str(root / ".quillframe" / "data"),
         "artifact_bindings": [],
         "required_capabilities": [],
         "approval_refs": [],

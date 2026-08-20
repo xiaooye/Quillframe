@@ -21,7 +21,6 @@ from typing import Any
 import context_inspector
 
 SCHEMA = "quillframe_context_assembly_v2"
-LEGACY_SCHEMA = "quillframe_context_assembly_v1"
 RECEIPT_SCHEMA = "quillframe_context_assembly_receipt_v2"
 STATUSES = {"satisfied", "missing_required_ref", "invalid_selection"}
 
@@ -78,8 +77,8 @@ def assemble(payload: Any) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError("assembly payload must be object")
     schema = payload.get("schema")
-    if schema not in {None, SCHEMA, LEGACY_SCHEMA}:
-        raise ValueError("invalid assembly schema")
+    if schema != SCHEMA:
+        raise ValueError(f"assembly schema must be exactly {SCHEMA}")
     if payload.get("obligations"):
         raise ValueError(
             "semantic class/purpose obligations are not a deterministic context gate in v2; "
@@ -153,47 +152,46 @@ def self_test() -> dict[str, Any]:
     fp = "sha256:" + "a" * 64
     manifest = {"manifest_id": "CTX-A", "items": [
         {"id": "PROFILE", "class": "project_profile", "authority": "locked", "source_fingerprint": fp,
-         "stages": ["writer_pre_draft"], "metadata": {"purposes": ["prose_realization"]}},
+         "stages": ["draft"], "metadata": {"purposes": ["prose_realization"]}},
         {"id": "REMOTE", "class": "canon", "authority": "accepted", "source_fingerprint": fp,
-         "stages": ["writer_pre_draft"], "metadata": {"purposes": ["whatever-the-agent-needs"]}},
+         "stages": ["draft"], "metadata": {"purposes": ["whatever-the-agent-needs"]}},
         {"id": "PRIVATE", "class": "private_character_state", "authority": "derived", "source_fingerprint": fp,
          "stages": ["character_simulation"], "metadata": {"purposes": ["character_reasoning"]}},
     ]}
 
     ok = assemble({
-        "schema": SCHEMA, "run_id": "RUN-1", "stage": "writer_pre_draft", "manifest": manifest,
+        "schema": SCHEMA, "run_id": "RUN-1", "stage": "draft", "manifest": manifest,
         "selected_item_ids": ["REMOTE"], "required_item_ids": ["REMOTE"],
         "required_source_fingerprints": {"REMOTE": fp},
     })
     missing = assemble({
-        "schema": SCHEMA, "run_id": "RUN-2", "stage": "writer_pre_draft", "manifest": manifest,
+        "schema": SCHEMA, "run_id": "RUN-2", "stage": "draft", "manifest": manifest,
         "selected_item_ids": [], "required_item_ids": ["REMOTE"],
     })
     private = assemble({
-        "schema": SCHEMA, "run_id": "RUN-3", "stage": "writer_pre_draft", "manifest": manifest,
+        "schema": SCHEMA, "run_id": "RUN-3", "stage": "draft", "manifest": manifest,
         "selected_item_ids": ["PRIVATE"], "required_item_ids": [],
     })
     mismatch = assemble({
-        "schema": SCHEMA, "run_id": "RUN-4", "stage": "writer_pre_draft", "manifest": manifest,
+        "schema": SCHEMA, "run_id": "RUN-4", "stage": "draft", "manifest": manifest,
         "selected_item_ids": ["REMOTE"], "required_item_ids": ["REMOTE"],
         "required_source_fingerprints": {"REMOTE": "sha256:" + "b" * 64},
     })
-    legacy_semantic_obligation_rejected = False
+    pre_1_0_schema_rejected = False
     try:
         assemble({
-            "schema": LEGACY_SCHEMA, "run_id": "RUN-5", "stage": "writer_pre_draft", "manifest": manifest,
+            "schema": "quillframe_context_assembly_v1", "run_id": "RUN-5", "stage": "draft", "manifest": manifest,
             "selected_item_ids": ["PROFILE"],
-            "obligations": [{"obligation_id": "O", "class": "project_profile", "purpose": "prose_realization"}],
         })
     except ValueError:
-        legacy_semantic_obligation_rejected = True
+        pre_1_0_schema_rejected = True
 
     passed = all([
         ok["proceed"] and ok["status"] == "satisfied",
         not missing["proceed"] and missing["status"] == "missing_required_ref",
         not private["proceed"] and "PRIVATE" in private["ineligible_selected_ids"],
         not mismatch["proceed"] and "REMOTE" in mismatch["source_fingerprint_mismatches"],
-        legacy_semantic_obligation_rejected,
+        pre_1_0_schema_rejected,
         ok["semantic_relevance_judged_by_runtime"] is False,
         ok["context_sufficiency_judged_by_runtime"] is False,
     ])
@@ -204,7 +202,7 @@ def self_test() -> dict[str, Any]:
         "required_missing_blocks": not missing["proceed"],
         "private_writer_selection_blocks": not private["proceed"],
         "source_fingerprint_mismatch_blocks": not mismatch["proceed"],
-        "legacy_semantic_obligation_rejected": legacy_semantic_obligation_rejected,
+        "pre_1_0_schema_rejected": pre_1_0_schema_rejected,
         "semantic_relevance_judged_by_runtime": False,
         "context_sufficiency_judged_by_runtime": False,
         "semantic_obligation_matching_supported": False,

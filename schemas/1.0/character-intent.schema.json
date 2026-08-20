@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.dev/schemas/1.0/character-intent.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project_id", "chapter_id", "scene_id", "character_id", "private_goal", "perceived_state", "action_candidates"],
+  "properties": {
+    "schema": {"const": "quillframe_character_intent_v1"},
+    "project_id": {"type": "string", "minLength": 1},
+    "chapter_id": {"const": "CH001"},
+    "scene_id": {"type": "string", "minLength": 1},
+    "character_id": {"type": "string", "minLength": 1},
+    "private_goal": {"type": "string", "minLength": 1},
+    "perceived_state": {"type": "object"},
+    "action_candidates": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+  }
+}

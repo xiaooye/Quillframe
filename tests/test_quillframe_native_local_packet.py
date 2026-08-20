@@ -327,7 +327,8 @@ class NativeLocalPacketTests(unittest.TestCase):
 
         self.assertIsNone(result)
         self.assertEqual(execution["state"], "infrastructure_failed")
-        self.assertIn("judgment only", execution["error"])
+        self.assertEqual(execution["error_code"], "packet_adapter_identity_forbidden")
+        self.assertEqual(execution["error"], "packet_adapter_identity_forbidden")
 
     def test_packet_route_source_identifies_local_cli_not_native_subagent(self):
         from harness.semantic_workers import semantic_worker_runner as runner

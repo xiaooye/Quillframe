@@ -1,0 +1,51 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "quillframe-cloud",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-08-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "invocation_logs": false },
+    "traces": { "enabled": true, "head_sampling_rate": 0.05 }
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "WORKSPACE_COORDINATOR", "class_name": "WorkspaceCoordinator" },
+      { "name": "SESSION_VAULT", "class_name": "SessionVault" },
+      { "name": "CORE_CONTAINER", "class_name": "QuillframeCoreContainer" }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["WorkspaceCoordinator", "SessionVault", "QuillframeCoreContainer"]
+    }
+  ],
+  "containers": [
+    {
+      "class_name": "QuillframeCoreContainer",
+      "image": "..",
+      "max_instances": 10
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PROJECT_BUNDLES",
+      "bucket_name": "quillframe-project-bundles"
+    }
+  ],
+  "services": [
+    {
+      "binding": "ENDPOINT_EGRESS",
+      "service": "quillframe-endpoint-egress"
+    }
+  ],
+  "vars": {
+    "PUBLIC_ORIGIN": "https://studio.quillframe.wei-dev.com",
+    "WORKOS_REDIRECT_URI": "https://studio.quillframe.wei-dev.com/api/auth/callback",
+    "CORE_PROOF_KEY_ID": "current"
+  }
+}

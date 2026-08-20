@@ -62,15 +62,15 @@ A mode may invoke shared internal subroutines, but it may not silently perform a
 A fresh manager resolves:
 
 1. current/pinned Framework manifest/identity;
-2. consuming Project manifest + exact lock/fingerprint;
-3. Project Adapter/logical paths;
+2. consuming Project native manifest/context + manifest fingerprint;
+3. native Project identity and logical paths;
 4. exactly one task mode;
 5. manager session/run identity;
 6. authority cutoff + permissions;
 7. sparse Context Manifest/candidate set;
 8. current host capabilities.
 
-Old chat/provider session state is not bootstrap authority. Resume revalidates Framework/Project compatibility, current fingerprints, approvals/write preconditions and pending capabilities before continuing.
+Old chat/provider session state is not bootstrap authority. Resume revalidates Framework provenance, native Project identity and contract, current fingerprints, approvals/write preconditions and pending capabilities before continuing.
 
 ## 05 · Search/context: semantic selection, deterministic boundary
 
@@ -124,7 +124,7 @@ Important boundaries:
 - Explicit acceptance and SETTLE remain separate.
 - DRAFT / REVISE manuscript text must come from a real production runtime and a Core-owned release path; manager/host prose written after merely reading the rules is not Quillframe execution.
 - `candidate.visible.get` (or an equivalent Core-owned released projection) is the production manuscript release boundary; missing receipts, fingerprint mismatch, pending/fail, or stale state must return no manuscript text.
-- An ephemeral host that materializes Framework locally must prove the exact locked Git identity; runtime SQLite does not become Project/Canon authority.
+- An ephemeral host that materializes Framework locally must verify deterministic commit/bundle fingerprint evidence; runtime SQLite does not become Project/Canon authority.
 
 When the user gives feedback during production, the current explicit instruction constrains the current run immediately; the same turn may independently enter automatic Learning intake. Current compliance never waits for durable promotion.
 
@@ -273,6 +273,6 @@ Every consequential write revalidates current branch/HEAD/before-state. Long ope
 - [Adaptive Learning](../docs/adaptive-learning.en.md)
 - [Canon & State Model](../core/CANON_STATE.en.md)
 
-### Semantic Context Runtime (0.9)
+### Semantic Context Runtime (1.0)
 
 For production Context, deterministic eligibility precedes semantic relevance. Use fingerprint-bound Semantic Context Profiles, `context.stage_select`, stage Greenlights, hard-budget packing, then Context Freeze. No stage may expand the frozen scope with an untracked DB read. Refresh/extension requires a new Context fingerprint. The selector never grants authority and never substitutes for independent semantic review.

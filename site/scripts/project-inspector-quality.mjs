@@ -8,6 +8,7 @@ const siteRoot = path.resolve(here, "..");
 const read = (relative) => fs.readFileSync(path.join(siteRoot, relative), "utf8");
 
 const inspector = read("src/ProjectInspector.tsx");
+const inspectorContract = read("src/project-inspector-contract.ts");
 const app = read("src/ProductApp.tsx");
 const main = read("src/main.tsx");
 const index = read("src/styles/index.css");
@@ -26,23 +27,27 @@ requireCheck(!main.includes("ProjectInspectorEntry") && !main.includes("standalo
 
 for (const marker of [
   "quillframe.toml",
-  "quillframe.lock.json",
-  "framework.attestation.json",
+  "quillframe_project_v1_0",
+  "quillframe_project_context_v1_0",
   "webkitdirectory",
   "FileList",
-  "bundle_fingerprint",
-  "production-readiness approval",
-  "production readiness approval",
-  "python project_sdk.py init",
+  "manifest_fingerprint",
+  ".quillframe/data",
+  "CH001",
+  "legacy_metadata_rejected",
 ]) {
-  requireCheck(inspector.includes(marker), `Project Inspector contract marker missing: ${marker}`);
+  requireCheck(`${inspector}\n${inspectorContract}`.includes(marker), `Project Inspector contract marker missing: ${marker}`);
 }
 
-requireCheck(inspector.includes("file.text()"), "Project Inspector must parse selected files locally with the browser File API");
+requireCheck(inspectorContract.includes("file.text()"), "Project Inspector must parse selected files locally with the browser File API");
 requireCheck(!/\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon|WebSocket\s*\(/.test(inspector), "Project Inspector must not upload or transmit selected project content");
 requireCheck(!/FormData\s*\(/.test(inspector), "Project Inspector must not prepare selected project content for upload");
-requireCheck(inspector.includes('type InspectionStatus = "coherent" | "scaffold" | "incomplete" | "conflict"'), "Project Inspector must distinguish coherent, scaffold, incomplete, and conflicting states");
-requireCheck(inspector.includes("Mapped adapters may intentionally use a different physical layout"), "structural inspection must not treat the standard folder layout as universal semantic authority");
+requireCheck(inspectorContract.includes('type InspectionStatus = "coherent" | "scaffold" | "incomplete" | "conflict"'), "Project Inspector must distinguish coherent, scaffold, incomplete, and conflicting states");
+requireCheck(inspectorContract.includes(".quillframe/data"), "structural inspection must expose the exact native data boundary");
+const legacyMarkers = [["quillframe", "lock", "json"].join("."), ["framework", "attestation", "json"].join("."), ["project", "sdk", "py"].join(".")];
+for (const legacy of legacyMarkers) {
+  requireCheck(!`${inspector}\n${inspectorContract}`.includes(legacy), `Project Inspector retains legacy marker: ${legacy}`);
+}
 
 for (const selector of [".project-inspector-shell", ".inspector-dropzone", ".inspector-dashboard-grid", ".inspector-status-badge", ".inspector-disclaimer"]) {
   requireCheck(css.includes(selector), `Project Inspector visual contract missing ${selector}`);

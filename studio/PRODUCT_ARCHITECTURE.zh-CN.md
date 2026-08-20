@@ -16,7 +16,7 @@ Quillframe 已经具备相当完整的 Studio 底座：
 
 - Session / Run / Checkpoint identity 与持久 Control Plane；
 - typed host capability evidence，并明确 `capability != authority`；
-- Project Adapter 对 logical project domains 的解析；
+- native Project resolution 对 logical project domains 的解析；
 - `quillframe_context_inspector_v2`：authority-aware、stage-aware 的 Context view 与安全 derived controls；
 - `quillframe_run_receipt_v1`：metadata-only execution evidence；
 - `quillframe_production_readiness_v1`：同一 fingerprint 的 user-visible readiness conjunction；
@@ -56,7 +56,7 @@ Story Loom 继续拥有 Quillframe 产品语义。WeiUI 拥有 generic CSS/token
 | Session / Run identity | navigation、history、resume affordance | operational identity |
 | Control Plane | event/handoff/result/consume lineage | operational evidence |
 | `quillframe_host_capabilities_v1` | integration/capability health | capability 不是 authority |
-| `quillframe_project_adapter_resolution_v1` | Project Hub logical domains / paths | 只负责 path classification |
+| `quillframe_project_v1_0` + `quillframe_project_context_v1_0` | Project Hub native 五键 manifest、CH001、fingerprint 与 `.quillframe/data` boundary | 浏览器投影；`authority=false` |
 | semantic contract catalog | Semantic Pack Inspector label / deep link | contract metadata |
 | settlement receipts | settlement review / failure explanation | settlement semantics 仍由 Core 拥有 |
 
@@ -367,7 +367,7 @@ Publication build / validation 同样由 Core 拥有。Studio 可以 package inp
 - Story Loom brand、product semantics 与 visual grammar；
 - exact-pinned WeiUI zero-JS token/CSS foundation；
 - existing documentation 与 design-system QA discipline；
-- Core Run Receipt、Context Inspector、Project Adapter、capability、Control Plane substrate；
+- Core Run Receipt、Context Inspector、native Project resolution、capability、Control Plane substrate；
 - Core production-readiness 与 minimum Publication contracts，作为对应产品 surface 的 authority basis；
 - #8 继续做 Studio/MCP umbrella，#16 继续承载更大的 Publication/Typesetting 剩余范围；
 - CLI、Local Web、optional Tauri、Hosted UI、Agent Skill 共用同一个产品 truth model。

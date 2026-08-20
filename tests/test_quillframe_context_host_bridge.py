@@ -30,7 +30,7 @@ class ContextHostBridgeTests(unittest.TestCase):
             green = pack_budget(dec,hard_budget=10)
             freeze = freeze_context(run_id="RUN-B",task_mode="SYSTEM-IMPROVE",pools=[pool],greenlights=[green])
             repo = ContextRepository(store); repo.save_stage_selection("PBRIDGE",pool,green); repo.save_freeze("PBRIDGE",freeze)
-            req={"schema":host_bridge.REQUEST_SCHEMA,"request_id":"ctx","operation":"inspector.context.runtime","surface":"local_app","args":{"project_id":"PBRIDGE","run_id":"RUN-B"},"authority":False}
+            req={"schema":host_bridge.REQUEST_SCHEMA,"bridge_version":host_bridge.BRIDGE_VERSION,"request_id":"ctx","operation":"inspector.context.runtime","surface":"local_app","args":{"project_id":"PBRIDGE","run_id":"RUN-B"},"authority":False}
             with patch.object(host_bridge,"store",return_value=store):
                 out=host_bridge.invoke(req)
             self.assertEqual(out["status"],"ok")

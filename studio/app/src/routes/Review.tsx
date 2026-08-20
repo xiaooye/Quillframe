@@ -1,4 +1,5 @@
-import { For, Show, createMemo, createSignal, onMount } from "solid-js";
+import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { Portal } from "solid-js/web";
 import { useLocation } from "@solidjs/router";
 import { PageIntro } from "../components";
 import { useI18n } from "../i18n";
@@ -16,6 +17,7 @@ import type {
   SettlementResult,
 } from "../authoring/contracts";
 import { AuthorityLabel, CoreRequirementNotice } from "../authoring/AuthoringUI";
+import { createModalA11y } from "../modalA11y";
 
 export default function Review() {
   const { locale } = useI18n();
@@ -37,14 +39,33 @@ export default function Review() {
   const [settleTarget, setSettleTarget] = createSignal("");
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string>();
+  let acceptDialog: HTMLElement | undefined;
+  let acceptCancelButton: HTMLButtonElement | undefined;
   let reviewRequestGeneration = 0;
   const selected = createMemo(() => rows().find((row) => row.candidate_id === selectedId()));
   const actionable = createMemo(() => review()?.candidate.effective_status === "review_draft");
   const exactFingerprint = createMemo(() => review()?.candidate.candidate_fingerprint || selected()?.content_fingerprint || "");
 
-  const resetAcceptanceIntent = () => {
+  const requestAcceptClose = () => {
     setAcceptDialogOpen(false);
     setAcceptExact(false);
+  };
+  const acceptModal = createModalA11y({
+    getDialog: () => acceptDialog,
+    getBackground: () => document.getElementById("app") ?? undefined,
+    requestClose: requestAcceptClose,
+    getInitialFocus: () => acceptCancelButton,
+    getFallbackFocus: () => document.querySelector<HTMLElement>(".qf-review-actions button") ?? undefined,
+  });
+  onCleanup(() => acceptModal.dispose());
+  const resetAcceptanceIntent = () => {
+    if (acceptModal.isOpen()) acceptModal.close();
+    else requestAcceptClose();
+  };
+  const openAcceptance = (trigger: HTMLElement) => {
+    setAcceptExact(false);
+    acceptModal.open(trigger);
+    setAcceptDialogOpen(true);
   };
 
   const loadReview = async (candidateId: string) => {
@@ -239,13 +260,13 @@ export default function Review() {
                 <div class="qf-review-actions" aria-label={zh() ? "Review actions" : "Review actions"}>
                   <button class="wui-button wui-button--outline" type="button" disabled={!operations().includes("candidate.reject")} onClick={() => setRejectExact((value) => !value)}>Reject…</button>
                   <button class="wui-button wui-button--outline" type="button" disabled={!operations().includes("candidate.revision.request")} onClick={() => setRevisionNote((value) => value || " ")}>Request Revision…</button>
-                  <button class="wui-button wui-button--solid" type="button" disabled={!operations().includes("candidate.accept") || detail().candidate.user_visible_gate !== "PASS"} onClick={() => { setAcceptExact(false); setAcceptDialogOpen(true); }}>Accept…</button>
+                  <button class="wui-button wui-button--solid" type="button" disabled={!operations().includes("candidate.accept") || detail().candidate.user_visible_gate !== "PASS"} onClick={(event) => openAcceptance(event.currentTarget)}>Accept…</button>
                 </div>
                 <Show when={rejectExact()}><section class="qf-authority-confirm"><h3>{zh() ? "确认 Reject" : "Confirm Reject"}</h3><p>{zh() ? "只终结这个 exact Review Draft；不改 Canon。" : "This terminates this exact Review Draft only; Canon is unchanged."}</p><div class="qf-inline-actions"><button class="wui-button wui-button--solid" type="button" disabled={loading()} onClick={() => void reject()}>{zh() ? "Reject exact Candidate" : "Reject exact Candidate"}</button><button class="wui-button wui-button--ghost" type="button" onClick={() => setRejectExact(false)}>{zh() ? "取消" : "Cancel"}</button></div></section></Show>
                 <Show when={revisionNote()}><section class="qf-authority-confirm"><h3>{zh() ? "Request Revision" : "Request Revision"}</h3><textarea class="wui-input" value={revisionNote()} onInput={(event) => setRevisionNote(event.currentTarget.value)} placeholder={zh() ? "说明需要修改什么" : "Describe what must change"} /><p>{zh() ? "Core 只记录 durable revision request，不会自动启动 REVISE。" : "Core records a durable revision request and does not auto-start REVISE."}</p><div class="qf-inline-actions"><button class="wui-button wui-button--solid" type="button" disabled={loading() || !revisionNote().trim()} onClick={() => void requestRevision()}>{zh() ? "提交修改请求" : "Submit revision request"}</button><button class="wui-button wui-button--ghost" type="button" onClick={() => setRevisionNote("")}>{zh() ? "取消" : "Cancel"}</button></div></section></Show>
               </Show>
 
-              <Show when={acceptDialogOpen()}><section class="qf-authority-confirm" role="alertdialog" aria-modal="false" aria-labelledby="accept-confirm-heading"><h3 id="accept-confirm-heading">{zh() ? "确认 Accept" : "Confirm Accept"}</h3><p>{zh() ? "Accept 只写 acceptance evidence，不执行 Settlement。" : "Accept writes acceptance evidence only; it does not perform Settlement."}</p><label><input type="checkbox" checked={acceptExact()} onChange={(event) => setAcceptExact(event.currentTarget.checked)} /> {zh() ? "我明确接受这个 exact fingerprint" : "I explicitly accept this exact fingerprint"}</label><div class="qf-inline-actions"><button class="wui-button wui-button--solid" type="button" disabled={loading() || !acceptExact()} onClick={() => void accept()}>{zh() ? "Accept exact Candidate" : "Accept exact Candidate"}</button><button class="wui-button wui-button--ghost" type="button" onClick={resetAcceptanceIntent}>{zh() ? "取消" : "Cancel"}</button></div></section></Show>
+              <Show when={acceptDialogOpen()}><Portal><div class="qf-modal-overlay" role="presentation" onMouseDown={(event) => acceptModal.onOutsidePointer(event)}><section ref={(element) => { acceptDialog = element; }} class="qf-authority-dialog" role="alertdialog" aria-modal="true" aria-labelledby="accept-confirm-heading" aria-describedby="accept-confirm-description" tabIndex={-1} onKeyDown={(event) => acceptModal.onKeyDown(event)}><h3 id="accept-confirm-heading">{zh() ? "确认 Accept" : "Confirm Accept"}</h3><p id="accept-confirm-description">{zh() ? "Accept 只写 acceptance evidence，不执行 Settlement。" : "Accept writes acceptance evidence only; it does not perform Settlement."}</p><label><input type="checkbox" checked={acceptExact()} onChange={(event) => setAcceptExact(event.currentTarget.checked)} /> {zh() ? "我明确接受这个 exact fingerprint" : "I explicitly accept this exact fingerprint"}</label><div class="qf-inline-actions"><button class="wui-button wui-button--solid" type="button" disabled={loading() || !acceptExact()} onClick={() => void accept()}>{zh() ? "Accept exact Candidate" : "Accept exact Candidate"}</button><button ref={(element) => { acceptCancelButton = element; }} class="wui-button wui-button--ghost" type="button" onClick={resetAcceptanceIntent}>{zh() ? "取消" : "Cancel"}</button></div></section></div></Portal></Show>
 
               <Show when={acceptance()}>{(receipt) => <section class="qf-accepted-state" aria-live="polite"><div><strong>Accepted ✓</strong><span>{settlement()?.status === "settled" ? "Settled" : "Not Settled"}</span></div><dl><dt>acceptance_id</dt><dd><code>{receipt().acceptance_id}</code></dd><dt>candidate</dt><dd><code>{receipt().candidate_fingerprint}</code></dd><dt>canon_mutated</dt><dd>{settlement()?.canon_mutated ? "true" : "false"}</dd></dl><label class="nf-field-label"><span>Settlement target_ref</span><input class="wui-input nf-mono" value={settleTarget()} onInput={(event) => setSettleTarget(event.currentTarget.value)} placeholder="chapter:CH001" /></label><button class="wui-button wui-button--solid" type="button" disabled={loading() || !settleTarget().trim() || !operations().includes("settlement.preflight") || !operations().includes("settlement.apply") || settlement()?.status === "settled"} onClick={() => void settle()}>{zh() ? "Preflight + Settle…" : "Preflight + Settle…"}</button><CoreRequirementNotice operation="settlement.preflight" compact /></section>}</Show>
             </>}

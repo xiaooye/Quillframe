@@ -12,7 +12,6 @@ from harness.control_plane.mcp_stdio import MCPServer, TOOLS
 class McpSurfaceTests(unittest.TestCase):
     def test_tools_are_split_between_novelist_and_internal_ops(self):
         by_name = {tool["name"]: tool for tool in TOOLS}
-        self.assertEqual(by_name["quillframe_project_projection_preview"]["_meta"]["surface_class"], "novelist_facing")
         self.assertEqual(by_name["quillframe_candidate_visible_get"]["_meta"]["surface_class"], "novelist_facing")
         self.assertEqual(by_name["quillframe_session_put"]["_meta"]["surface_class"], "internal_ops")
         self.assertEqual(by_name["quillframe_handoff_claim"]["_meta"]["surface_class"], "internal_ops")
@@ -22,7 +21,7 @@ class McpSurfaceTests(unittest.TestCase):
     def test_capabilities_manifest_keeps_authority_privileged(self):
         with tempfile.TemporaryDirectory(prefix="qf-mcp-surface-") as td:
             server = MCPServer(str(Path(td) / "runtime.db"))
-            server.handle({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
+            server.handle({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2026-07-28"}})
             server.handle({"jsonrpc": "2.0", "method": "notifications/initialized"})
             response = server.handle({"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "quillframe_capabilities", "arguments": {}}})
             manifest = response["result"]["structuredContent"]

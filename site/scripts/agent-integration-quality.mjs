@@ -16,52 +16,35 @@ const index = read("src/styles/index.css");
 const style = `${read("src/styles/agent-integration.css")}\n${read("src/styles/agent-host-profiles.css")}\n${read("src/styles/unified-product-app.css")}`;
 const contract = JSON.parse(read("../studio/host_bridge_contract.json"));
 const skill = read("../agent-skills/quillframe/SKILL.md");
-const supported = contract.operations?.supported ?? {};
-const deferred = contract.operations?.deferred ?? {};
-const runtimeObservability = [
-  "runtime.sessions.list",
-  "runtime.session.get",
-  "runtime.events.list",
-  "runtime.handoff.inspect",
-  "run.receipt.get",
-  "runtime.command.receipt.get",
-];
-const runtimeSafetyQueries = ["session.resume.preflight", "session.terminate.preflight"];
-const localAppCommands = ["session.resume", "session.terminate"];
-const deferredCommands = ["command.invoke", "project.mutate", "publication.build"];
+const supported = contract.operations ?? {};
+const deferred = contract.deferred_operations ?? {};
+const operationEntries = Object.entries(supported);
+const queryOperations = operationEntries.filter(([, metadata]) => metadata?.kind === "query");
+const nonQueryOperations = operationEntries.filter(([, metadata]) => metadata?.kind !== "query");
 
-check(contract.schema === "quillframe_studio_host_bridge_contract_v1", "host bridge contract schema changed");
+check(contract.schema === "quillframe_host_bridge_contract_v11", "host bridge contract schema changed");
+check(contract.version === "11", "host bridge contract version changed");
 check(contract.authority === false, "host bridge must remain authority=false");
-check(contract.agent_skill?.path === "agent-skills/quillframe/SKILL.md", "portable Agent Skill path changed");
-check(contract.agent_skill?.runtime_mutation_allowed === false, "portable Agent Skill must remain runtime-mutation=false");
+check(contract.direct_core_store_access === false, "host bridge must not expose direct Core store access");
 check(skill.includes("read-only") && skill.includes("authority: false"), "portable skill must retain read-only authority boundary");
-check(skill.includes("Runtime observability is not runtime control"), "portable skill must distinguish runtime observability from control");
-check(skill.includes("session.resume.preflight") && skill.includes("READY") && skill.includes("BLOCKED"), "portable skill must explain deterministic resume eligibility");
-check(skill.includes("not portable Agent Skills capabilities") && skill.includes("local_app"), "portable skill must preserve local-app-only runtime command boundary");
-
-for (const operation of ["bridge.describe", "framework.doctor", "project.inspect", "capabilities.inspect", "context.inspect", "semantic.catalog", "publication.preview", ...runtimeObservability, ...runtimeSafetyQueries]) {
-  check(Boolean(supported[operation]), `expected supported bridge query missing from contract: ${operation}`);
-  check(supported[operation]?.kind === "query", `supported read operation must remain query kind: ${operation}`);
-  check(!deferred[operation], `public read/safety query must not remain deferred: ${operation}`);
+check(skill.includes("quillframe_host_bridge_description_v11") && skill.includes("quillframe_host_bridge_request_v11"), "portable skill must be hard-cut to Host Bridge v11");
+check(skill.includes("query-only") && skill.includes("fails closed"), "portable skill must document query-only fail-closed behavior");
+check(skill.includes("database.doctor") && skill.includes("side-effect-free"), "portable skill must document side-effect-free doctor");
+check(queryOperations.length > 0, "Host Bridge must expose at least one query operation");
+check(nonQueryOperations.length > 0, "Host Bridge metadata must retain non-query kinds for client validation");
+for (const [operation, metadata] of operationEntries) {
+  check(typeof metadata?.kind === "string", `operation kind missing: ${operation}`);
+  check(Array.isArray(metadata?.required_args), `operation required_args missing: ${operation}`);
+  if (metadata?.kind !== "query") check(!metadata?.allowed_surfaces?.includes("agent_package"), `non-query operation must not allow agent_package: ${operation}`);
 }
-
-for (const operation of localAppCommands) {
-  const entry = supported[operation];
-  check(Boolean(entry), `expected typed local-app runtime command missing from contract: ${operation}`);
-  check(entry?.kind === "command", `typed local-app runtime operation must remain command kind: ${operation}`);
-  check(Array.isArray(entry?.allowed_surfaces) && entry.allowed_surfaces.includes("local_app"), `runtime command must remain local_app scoped: ${operation}`);
-  check(entry?.model_execution === false, `runtime command must not gain model execution: ${operation}`);
-  check(entry?.project_write === false && entry?.canon_write === false && entry?.framework_write === false, `runtime command must not gain Project/Canon/Framework write authority: ${operation}`);
-  check(!deferred[operation], `typed local-app runtime command must not also remain deferred: ${operation}`);
-}
-
-for (const operation of deferredCommands) {
-  check(Boolean(deferred[operation]), `expected deferred generic/persistent command missing from contract: ${operation}`);
-  check(!supported[operation], `deferred command must not be exposed as supported: ${operation}`);
-}
+check(supported["bridge.describe"]?.kind === "query", "bridge.describe must remain query kind");
+check(supported["database.doctor"]?.kind === "query", "database.doctor must remain query kind");
+check(supported["candidate.visible.get"]?.allowed_surfaces?.includes("agent_package"), "candidate.visible.get must declare agent_package when exposed");
+check(!Object.keys(deferred).some((operation) => operation in supported), "deferred operation must not also be advertised");
 
 check(app.includes('<Route path="/agents" component={AgentsPage}'), "shared ProductApp must expose /agents");
-check(app.includes("ProductSurfaceHero") && app.includes("AGENT SKILL · HOST BRIDGE V1"), "Agent Integration must use the shared surface hero");
+check(app.includes("ProductSurfaceHero") && app.includes("AGENT SKILL · HOST BRIDGE V11"), "Agent Integration must use the shared surface hero with exact v11 marker");
+check(!app.includes("AGENT SKILL · HOST BRIDGE V1</span>"), "Agent Integration must not retain the retired v1 marker");
 check(app.includes("agent-skills/quillframe/SKILL.md"), "Agent Integration must expose the portable Agent Skill entry");
 check(app.includes("bridge.describe"), "Agent Integration must expose capability discovery");
 check(app.includes("authority=false") || app.includes("authority: false"), "Agent Integration must visibly preserve authority=false");
@@ -89,12 +72,11 @@ if (failures.length) {
     shell: "shared_product_app",
     css_entrypoint: "index.css",
     portable_skill: true,
-    host_bridge_v1: true,
+    host_bridge_v11: true,
     host_profiles: 5,
     supported_operations: Object.keys(supported).length,
-    runtime_observability_operations: runtimeObservability.length,
-    runtime_safety_queries: runtimeSafetyQueries.length,
-    local_app_runtime_commands: localAppCommands.length,
+    query_operations: queryOperations.length,
+    non_query_operations: nonQueryOperations.length,
     agent_package_runtime_control: false,
     write_authority: false,
     direct_core_store_access: false,

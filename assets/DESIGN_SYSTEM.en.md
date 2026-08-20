@@ -184,7 +184,7 @@ Mermaid remains the inspectable source chart for technical documentation.
 
 ### Lane grammar
 
-- **Project · sky** — inputs, Project SDK, Context;
+- **Project · sky** — inputs, Native Project Contract, Context;
 - **Runtime · lavender** — Harness, Session, Control Plane, workers;
 - **Story / Editorial · neutral + sakura** — Story core, simulation, draft, reader quality;
 - **Evidence · amber** — feedback, Corpus, learning, eval;

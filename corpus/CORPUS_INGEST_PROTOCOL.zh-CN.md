@@ -218,7 +218,7 @@ minimal task-relevant mechanism
 
 现代版权 source text、hidden expected label、regression 坏例默认都不进入 first-pass Writer context。
 
-一条 Corpus item 被存储，不代表它自动拥有 `writer_pre_draft` visibility。
+一条 Corpus item 被存储，不代表它自动拥有 `draft` visibility。
 
 ---
 

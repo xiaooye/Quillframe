@@ -1,9 +1,8 @@
 {
-  "schema": "quillframe_public_documentation_manifest_v1",
-  "framework_version": "0.9.1",
-  "target_main": "58e0c616960f68571a56c808e7770c4307e053ff",
+  "schema": "quillframe_public_documentation_manifest_v2",
+  "framework_version": "1.0.0-dev.0",
   "public_brand": "Quillframe",
-  "legacy_technical_namespace": "quillframe",
+  "technical_namespace": "quillframe",
   "chinese_style": "native_zh_CN_prose_exact_identifiers_only",
   "visual_system": {
     "principle": "THE PAGE IS THE CANVAS",
@@ -23,13 +22,19 @@
     ["docs/context-and-memory.en.md", "docs/context-and-memory.zh-CN.md"],
     ["docs/quality-evolution.en.md", "docs/quality-evolution.zh-CN.md"],
     ["docs/CANDIDATE_LINEAGE_V1.en.md", "docs/CANDIDATE_LINEAGE_V1.zh-CN.md"],
-    ["docs/project-sdk.en.md", "docs/project-sdk.zh-CN.md"],
+    ["docs/project-contract.en.md", "docs/project-contract.zh-CN.md"],
     ["docs/integrations.en.md", "docs/integrations.zh-CN.md"],
+    ["docs/model-runtime.en.md", "docs/model-runtime.zh-CN.md"],
+    ["docs/agent-runtime.en.md", "docs/agent-runtime.zh-CN.md"],
     ["docs/adaptive-learning.en.md", "docs/adaptive-learning.zh-CN.md"],
+    ["studio/README.en.md", "studio/README.zh-CN.md"],
+    ["studio/PRODUCT_ARCHITECTURE.en.md", "studio/PRODUCT_ARCHITECTURE.zh-CN.md"],
+    ["studio/app/HOSTED_WEB_PRODUCT_SURFACE.en.md", "studio/app/HOSTED_WEB_PRODUCT_SURFACE.zh-CN.md"],
+    ["studio/app/TAURI_PRODUCT_SURFACE.en.md", "studio/app/TAURI_PRODUCT_SURFACE.zh-CN.md"],
     ["docs/DOCUMENTATION_STANDARD.en.md", "docs/DOCUMENTATION_STANDARD.zh-CN.md"],
     ["docs/DOCUMENTATION_QA.en.md", "docs/DOCUMENTATION_QA.zh-CN.md"]
   ],
   "canonical_diagrams": ["framework-mental-model", "framework-vs-project", "production-graph", "authority-ladder", "sparse-context-manifest", "objective-preserving-repair", "candidate-lineage", "independent-semantic-review", "settlement", "automatic-learning-intake", "session-run-checkpoint", "research-corpus-canon"],
-  "compatibility_registry": "docs/documentation_manifest.json",
-  "audit_files": ["docs/brand_migration.json", "docs/documentation_inventory.json", "docs/image_inventory.json", "docs/followups.json", "docs/navigation.json"]
+  "governance_registry": "docs/documentation_manifest.json",
+  "audit_files": ["docs/documentation_inventory.json", "docs/image_inventory.json", "docs/followups.json", "docs/navigation.json"]
 }

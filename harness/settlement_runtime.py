@@ -24,8 +24,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-from project_adapter import resolve_contract  # noqa: E402
-from project_sdk import init_project, self_test_framework_checkout  # noqa: E402
+from project_resolution import resolve_contract  # noqa: E402
 
 SCHEMA = "quillframe_settlement_runtime_v1"
 TX_SCHEMA = "quillframe_settlement_transaction_v1"
@@ -175,7 +174,7 @@ def _normalize_intent(project_root: Path, intent: dict[str, Any]) -> dict[str, A
     resolution = resolve_contract(project_root)
     project_id = intent.get("project_id")
     if project_id != resolution.get("project_id"):
-        raise ValueError("intent.project_id does not match project adapter resolution")
+        raise ValueError("intent.project_id does not match native Project resolution")
 
     artifact = intent.get("accepted_artifact")
     acceptance = intent.get("acceptance")
@@ -560,8 +559,16 @@ def self_test(path: Path, project_root: Path) -> int:
         path.unlink()
     if project_root.exists():
         shutil.rmtree(project_root)
-    with self_test_framework_checkout() as framework_root:
-        init_project(project_root, "PROJECT-SETTLE-TEST", "Settlement Fixture", "en", "0.9.1", False, framework_root)
+    project_root.mkdir(parents=True, exist_ok=True)
+    (project_root / "quillframe.toml").write_text(
+        'schema = "quillframe_project_v1_0"\n'
+        'id = "PROJECT-SETTLE-TEST"\n'
+        'title = "Settlement Fixture"\n'
+        'language = "en"\n'
+        'chapter_scope = "CH001"\n',
+        encoding="utf-8",
+    )
+    (project_root / "state" / "canon").mkdir(parents=True, exist_ok=True)
     target = project_root / "state" / "canon" / "TEST.json"
     target.write_text('{"value":"before"}\n', encoding="utf-8")
     before = fingerprint_bytes(target.read_bytes())

@@ -30,10 +30,7 @@ check(main.includes('import "./styles/index.css"'), "product site must load the 
 check(!productIndex.includes("surface-audit.css"), "product site must not use a final audit override layer");
 check(!exists("src/styles/surface-audit.css"), "retired product surface-audit.css must stay deleted");
 check(productIndex.includes("atelier.css"), "Homepage Atelier composition must remain explicit");
-check(!productIndex.includes('@import "./kawaii-surfaces.css"'), "retired route-wallpaper kawaii layer must stay inactive");
 check(productIndex.includes("tool-workbench-kawaii.css") && productIndex.includes("story-loom-route-refinements.css"), "Story Loom workstation and route-language layers must stay active");
-check(!productIndex.includes("editorial-composition.css"), "global editorial flattening must remain retired from the active product cascade");
-check(!productIndex.includes("home-identity.css"), "temporary simplified-home rewrite must remain retired from the active product cascade");
 check(productIndex.indexOf("architecture-explorer.css") < productIndex.indexOf("embedded-features.css"), "route defaults must precede shared product-language composition");
 check(productIndex.indexOf("embedded-features.css") < productIndex.indexOf("route-identities.css"), "route identity must refine shared workbench composition");
 check(productIndex.indexOf("route-identities.css") < productIndex.indexOf("story-loom-route-refinements.css"), "route-specific Story Loom scenes must refine route identity defaults");

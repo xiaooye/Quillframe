@@ -57,7 +57,7 @@ export interface FrameworkDoctorProjection {
   framework_version?: string;
   ok?: boolean;
   missing?: unknown[];
-  forbidden_pre_release_compatibility?: unknown[];
+  forbidden_contracts?: unknown[];
   model_execution?: boolean;
   [key: string]: unknown;
 }

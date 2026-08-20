@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Minimal stdio MCP adapter for the Quillframe Control Plane.
 
-Implements MCP 2025-06-18 lifecycle + tools/list + tools/call over newline-
+Implements the exact MCP 2026-07-28 lifecycle + tools/list + tools/call over newline-
 delimited JSON-RPC. Stdout is reserved for MCP messages; diagnostics go stderr.
 """
 from __future__ import annotations
@@ -25,15 +25,13 @@ for _path in (str(ROOT), str(CONTROL_PLANE_DIR)):
 
 from control_plane import ControlPlane
 from core_operations import CoreOperations
-from harness.project_projection import preview as projection_preview
-from harness.project_projection import status as projection_status
 from persistence.quillframe_sqlite import QuillframeStore
 
-PROTOCOL_VERSION = "2025-06-18"
+PROTOCOL_VERSION = "2026-07-28"
 SERVER_INFO = {
     "name": "quillframe-control-plane",
     "title": "Quillframe Control Plane",
-    "version": "0.9.1",
+    "version": "1.0.0-dev.0",
     "product_boundary": "host_runs_agent_quillframe_governs_novel",
 }
 
@@ -51,20 +49,6 @@ TOOLS: list[dict[str, Any]] = [
         "description": "Read the Project projection and story-contract counts. This does not expose private runtime stores or grant authority.",
         "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}}, "required": ["project_id"], "additionalProperties": False},
         "_meta": {"surface_class": "novelist_facing", "mapped_operation": "project.inspect", "authority": False},
-    },
-    {
-        "name": "quillframe_project_projection_preview",
-        "title": "Preview mapped Project projection",
-        "description": "Compile the explicit Project Context Manifest without SQLite mutation or model execution.",
-        "inputSchema": {"type": "object", "properties": {"project_root": {"type": "string", "minLength": 1}}, "required": ["project_root"], "additionalProperties": False},
-        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "project.projection.preview", "authority": False},
-    },
-    {
-        "name": "quillframe_project_projection_status",
-        "title": "Read mapped Project projection status",
-        "description": "Report projection/source readiness and fingerprints without returning model output.",
-        "inputSchema": {"type": "object", "properties": {"project_root": {"type": "string", "minLength": 1}, "data_dir": {"type": ["string", "null"]}}, "required": ["project_root"], "additionalProperties": False},
-        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "project.projection.status", "authority": False},
     },
     {
         "name": "quillframe_author_run_start",
@@ -163,9 +147,9 @@ TOOLS: list[dict[str, Any]] = [
     },
 ]
 
-# The legacy session/event/handoff/consume tools remain available to hosts, but
-# are explicitly internal/ops.  Novelist-facing tools above map to the same
-# Core operation contracts rather than creating a second authority API.
+# Session/event/handoff/consume tools are internal operations. Novelist-facing
+# tools above map to the same Core contracts rather than creating another
+# authority API.
 for _tool in TOOLS:
     _tool.setdefault("_meta", {"surface_class": "internal_ops", "authority": False})
 
@@ -230,6 +214,7 @@ class MCPServer:
         self.cp = ControlPlane(db_path)
         self.cp.init()
         self.initialized = False
+        self._initialize_accepted = False
 
     def call_tool(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
         if name == "quillframe_capabilities":
@@ -238,7 +223,7 @@ class MCPServer:
                 "product_boundary": "host_runs_agent_quillframe_governs_novel",
                 "surface_classes": {
                     "novelist_facing": [
-                        "project.inspect", "project.projection.preview", "project.projection.status",
+                        "project.inspect",
                         "author.run.start", "candidate.review.get", "candidate.visible.get",
                         "candidate.reject", "candidate.revision.request",
                     ],
@@ -253,11 +238,6 @@ class MCPServer:
             }
         if name == "quillframe_project_inspect":
             return CoreOperations(QuillframeStore()).project_inspect(args["project_id"])
-        if name == "quillframe_project_projection_preview":
-            return projection_preview(Path(args["project_root"]))
-        if name == "quillframe_project_projection_status":
-            data_dir = Path(args["data_dir"]) if args.get("data_dir") else None
-            return projection_status(Path(args["project_root"]), data_dir=data_dir)
         if name == "quillframe_author_run_start":
             return CoreOperations(QuillframeStore()).start_author_run(
                 args["project_id"], task_mode=args["task_mode"], target_ref=args.get("target_ref"),
@@ -302,9 +282,25 @@ class MCPServer:
 
     def handle(self, msg: dict[str, Any]) -> dict[str, Any] | None:
         method = msg.get("method"); rid = msg.get("id")
-        if method == "notifications/initialized": self.initialized = True; return None
+        if method == "notifications/initialized":
+            self.initialized = self._initialize_accepted
+            return None
         if method == "initialize":
             self.initialized = False
+            self._initialize_accepted = False
+            params = msg.get("params")
+            requested = params.get("protocolVersion") if isinstance(params, dict) else None
+            if requested != PROTOCOL_VERSION:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": rid,
+                    "error": {
+                        "code": -32602,
+                        "message": f"protocolVersion must be exactly {PROTOCOL_VERSION}",
+                        "data": {"supported": PROTOCOL_VERSION, "received": requested},
+                    },
+                }
+            self._initialize_accepted = True
             return {"jsonrpc": "2.0", "id": rid, "result": {"protocolVersion": PROTOCOL_VERSION, "capabilities": {"tools": {"listChanged": False}}, "serverInfo": SERVER_INFO, "instructions": "Operational Quillframe runtime tools only. They do not grant Canon or framework-behavior authority."}}
         if method == "ping": return {"jsonrpc": "2.0", "id": rid, "result": {}}
         if not self.initialized: return {"jsonrpc": "2.0", "id": rid, "error": {"code": -32002, "message": "server not initialized"}}

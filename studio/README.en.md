@@ -41,22 +41,13 @@ Different hosts may have different capabilities. Those differences never change 
 
 The Phase 2A Project Hub projection remains at [`project_hub_projection.py`](project_hub_projection.py). It strips absolute host paths and carries explicit non-authority markers.
 
-## Phase 2B · Portable read-only Host Bridge
+## Host Bridge v11 · Portable read-only Agent Package
 
-[`host_bridge.py`](host_bridge.py) accepts `quillframe_studio_host_bridge_request_v1` and returns fingerprint-bound `quillframe_studio_host_bridge_result_v1` envelopes.
+[`host_bridge.py`](host_bridge.py) accepts `quillframe_host_bridge_request_v11` and returns fingerprint-bound `quillframe_host_bridge_result_v11` envelopes. `bridge.describe` returns `quillframe_host_bridge_description_v11` plus live `operation_contracts` metadata (`kind`, `required_args`, and declared `allowed_surfaces`).
 
-Current supported operations are deliberately small:
+The portable [`../agent-skills/quillframe/SKILL.md`](../agent-skills/quillframe/SKILL.md) client validates that metadata before forwarding a request. `agent_package` is query-only: every command, semantic command, authority command, secret command, external query, and handoff operation fails closed before invocation. `database.doctor` is also side-effect-free; repair is not a Bridge operation. The package never opens private SQLite state or imports private Core modules.
 
-- `bridge.describe`
-- `framework.doctor`
-- `project.inspect`
-- `capabilities.inspect`
-- `context.inspect`
-- `semantic.catalog`
-
-Runtime session/event/handoff reads, Run Receipt retrieval, resume, generic command invocation, and project mutation remain deferred to Core issue #23. Studio does not read private SQLite state to fake those surfaces.
-
-[`../agent-skills/quillframe/SKILL.md`](../agent-skills/quillframe/SKILL.md) consumes the same operation vocabulary without importing private Core runtime modules.
+Use [`portable_product_contract.json`](portable_product_contract.json) and [`host_bridge_contract.json`](host_bridge_contract.json) as the checked-in v11 contract references; the live `bridge.describe` response remains the operation source of truth.
 
 ## Story Loom v2 · WeiUI config-generated foundation
 
@@ -103,13 +94,13 @@ Core public boundary
 
 The current read-only shell includes:
 
-- **Desk** — bridge status, supported/deferred operation counts, current project summary.
+- **Desk** — live `bridge.describe`, supported/deferred operation counts, and current project summary.
 - **Project Hub** — real `project.inspect` safe projection.
 - **Scene Workspace** — intentionally unavailable until Core exposes a truthful current-scene/content projection; no fixture or filesystem inference is used.
-- **Context Inspector** — real `context.inspect` with project-relative manifest/overlay paths.
-- **Host Capabilities** — real `capabilities.inspect`, fetched on route entry and only refreshed explicitly.
-- **Semantic Catalog** — real `semantic.catalog`, fetched on route entry and only refreshed explicitly.
-- **Framework Diagnostics** — explicit `framework.doctor` query.
+- **Context Inspector** — real `inspector.context.runtime` and typed inspector projections where the live contract exposes them.
+- **Host Capabilities** — live operation metadata from `bridge.describe`; no UI-invented capability list.
+- **Semantic evidence** — only operations present in the live v11 description are available; no stale catalog alias is retained.
+- **Framework Diagnostics** — explicit `database.doctor` query, with repair intentionally unavailable through Bridge.
 - **Command palette** — operation vocabulary comes from live `bridge.describe`; deferred Core operations carry their dependency reason instead of appearing enabled.
 
 The app has no default timers, polling loop, WebSocket heartbeat, Redux-like second state store, or browser persistence for project truth. Project root is page-session presentation state only.
@@ -127,17 +118,15 @@ The app has no default timers, polling loop, WebSocket heartbeat, Redux-like sec
 - carries no write/Canon/Settlement authority;
 - performs no polling or background refresh.
 
-After building the app:
+`local_server.py` is an internal transport owned by the canonical launcher. Build from the repository workspace, then open a Project through the only supported user entrypoint:
 
 ```bash
-cd studio/app
-pnpm install --frozen-lockfile
-pnpm build
-cd ../..
-python studio/local_server.py
+corepack pnpm install --frozen-lockfile
+corepack pnpm --filter @quillframe/studio-app build
+quillframe launch PROJECT
 ```
 
-The server prints its loopback URL. It does not launch a browser automatically.
+`quillframe launch` owns project resolution, loopback lifecycle, the secret-free launch receipt, and browser opening. The internal server is not a second CLI or user workflow.
 
 ## Performance discipline
 

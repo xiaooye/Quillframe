@@ -306,7 +306,10 @@ class EphemeralChatHostTests(unittest.TestCase):
         ))
         historical = json.loads(json.dumps(fabricated))
         historical["schema"] = "quillframe_project_peer_validation_receipt_v1"
-        self.assertEqual(validate_receipt(historical, packet, result), [])
+        self.assertIn(
+            "peer validation receipt schema mismatch",
+            validate_receipt(historical, packet, result),
+        )
 
     def test_project_peer_action_exposes_review_mode_without_live_model_call(self):
         text = (ROOT / ".github" / "actions" / "project-peer-semantic" / "action.yml").read_text(encoding="utf-8")
@@ -454,10 +457,7 @@ class EphemeralChatHostTests(unittest.TestCase):
             packet_transfer.mkdir()
             (checkout / "project").mkdir()
             (checkout / "project" / "quillframe.toml").write_text(
-                '[project]\nid = "PROJECT-TEMP"\n', encoding="utf-8"
-            )
-            (checkout / "project" / "quillframe.lock.json").write_text(
-                json.dumps({"framework": {"source_repo": "xiaooye/Quillframe", "commit": "a" * 40}}),
+                'schema = "quillframe_project_v1_0"\nid = "PROJECT-TEMP"\ntitle = "Peer fixture"\nlanguage = "en"\nchapter_scope = "CH001"\n',
                 encoding="utf-8",
             )
             packet_path = packet_transfer / "packet.json"
@@ -466,10 +466,10 @@ class EphemeralChatHostTests(unittest.TestCase):
                     build_packet(
                         make_contract_job(
                             "context.profile_derive",
-                            "CH-TEMP",
+                            "CH001",
                             {
                                 "source": {
-                                    "object_id": "CH-TEMP",
+                                    "object_id": "CH001",
                                     "object_type": "Chapter",
                                     "source_fingerprint": "sha256:" + "b" * 64,
                                     "model_view": {"bounded": True},

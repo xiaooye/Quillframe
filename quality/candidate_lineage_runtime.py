@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 """Lineage-aware runtime facade for Quillframe quality evolution.
 
-`quality_evolution` remains the single durable incumbent/challenger ledger and
-`quality.compare` remains the semantic winner owner. This facade is the runtime
-entrypoint for *new lineage-aware evolution runs*: it requires every candidate to
-have an explicit Candidate Lineage record before comparison/consumption.
-
-The older `quality_evolution.py` API/CLI is retained for compatibility. A legacy
-caller can therefore still create an unregistered candidate, but this facade will
-fail closed on that run until the missing provenance is explicitly registered.
-It never guesses historical provenance and never grants Canon/SETTLE authority.
+`quality_evolution` is the private incumbent/challenger storage engine and
+`quality.compare` remains the semantic winner owner. This module is the only
+1.0 runtime entrypoint: every candidate must have an explicit Candidate Lineage
+record before comparison or consumption. Missing provenance fails closed and is
+never inferred. This module never grants Canon or settlement authority.
 """
 from __future__ import annotations
 
@@ -283,8 +279,7 @@ def self_test(path: Path) -> int:
         created_by_run_id="RUN-MANAGER",
     )
 
-    # Simulate a legacy/bypass caller. The row may exist for compatibility, but
-    # lineage-aware comparison must fail closed until provenance is supplied.
+    # Simulate corrupted/incomplete state, then prove the runtime fails closed.
     qe.add_candidate(
         conn,
         run_id="RUN-RUNTIME",
@@ -292,7 +287,7 @@ def self_test(path: Path) -> int:
         text="fresh candidate",
         repair_owner="scene",
     )
-    bypass_detected = any(
+    incomplete_state_detected = any(
         i["candidate_id"] == "A2" and i["code"] == "MISSING_LINEAGE"
         for i in lineage_issues(conn, "RUN-RUNTIME")
     )
@@ -357,7 +352,7 @@ def self_test(path: Path) -> int:
     tests = {
         "baseline_registered": before_resume["graph"]["candidates"][0]["lineage"]["origin"] == "draft",
         "repair_registered": before_resume["graph"]["candidates"][1]["lineage"]["origin"] == "repair",
-        "legacy_bypass_detected": bypass_detected,
+        "incomplete_state_detected": incomplete_state_detected,
         "comparison_fails_closed_on_missing_lineage": comparison_blocked,
         "explicit_recovery_without_guessing": recovered,
         "fresh_regeneration_has_no_prose_parent": before_resume["graph"]["candidates"][2]["lineage"]["prose_parent_candidate_id"] is None,
@@ -369,7 +364,7 @@ def self_test(path: Path) -> int:
         "candidate_lineage_runtime_contract": "PASS" if ok else "FAIL",
         "schema": SCHEMA,
         "tests": tests,
-        "legacy_quality_evolution_retained": True,
+        "single_lineage_runtime_entrypoint": True,
         "lineage_aware_runtime_fails_closed": True,
         "semantic_comparator": "quality.compare",
         "additional_model_calls": 0,

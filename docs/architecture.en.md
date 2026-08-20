@@ -6,7 +6,7 @@ Quillframe is a novel-contract kernel alongside a generic host. The host runs se
 
 ## Project authority is outside the generic framework
 
-The generic framework owns Story/Character/Canon mechanisms, quality mechanisms, session/runtime contracts, semantic execution, learning infrastructure, Corpus governance, evaluation, and the Project SDK. A consuming Project owns its concrete characters, plot, relationships, research, plans, manuscripts, accepted Canon, and current state.
+The generic framework owns Story/Character/Canon mechanisms, quality mechanisms, session/runtime contracts, semantic execution, learning infrastructure, Corpus governance, evaluation, and the native Project Contract. A consuming Project owns its concrete characters, plot, relationships, research, plans, manuscripts, accepted Canon, and current state.
 
 <img src="assets/architecture/framework-vs-project.en.svg" alt="Generic Framework mechanisms remain separate from Project-specific story facts" width="100%" />
 

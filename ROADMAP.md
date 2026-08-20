@@ -1,8 +1,8 @@
-# Quillframe 0.9 Roadmap
+# Quillframe 1.0 Preview Roadmap
 
-Quillframe is pre-1.0 and under active development. This roadmap records **development direction, not release promises**: no item below has an implied date, and branch/PR work is not a released capability until it is merged and revalidated on `main`.
+Quillframe is on the `1.0.0-dev.x` prerelease line. This roadmap records **development direction, not release promises**: no item below has an implied date, and branch/PR work is not a released capability until it is merged and revalidated on `main`.
 
-## Current 0.9 line
+## Current 1.0 preview line
 
 The current architecture is converging on:
 
@@ -37,7 +37,7 @@ The target desktop host is a thin **Tauri 2** layer around the same typed Core b
 
 ### ✧ Model and Agent Runtime hardening
 
-The Quillframe-owned Model/Agent Runtime is now part of the 0.9 codebase. Ongoing work focuses on compatibility evidence, model/capability discovery quality, secure secret/network policy, tool/runtime robustness, embeddable library ergonomics, and preserving the rule that model or tool output never grants Project/Canon/Framework authority by itself.
+The Quillframe-owned Model/Agent Runtime is part of the 1.0 architecture. Ongoing work focuses on model/capability evidence quality, task-profile routing, secure secret/network policy, tool/runtime robustness, embeddable library ergonomics, and preserving the rule that model or tool output never grants Project/Canon/Framework authority by itself.
 
 Normal CI remains deterministic and does not require a paid/live endpoint.
 
@@ -63,24 +63,24 @@ Continue the automatic feedback-intake path while keeping promotion governed and
 
 ### ✧ SQLite-native product persistence
 
-Keep SQLite as the canonical durable product database with explicit migrations, backups/restores, integrity checks, and host/API boundaries. Markdown/DOCX/EPUB remain import/export formats rather than a second live authority.
+Keep SQLite as the canonical durable product database with one native 1.0 schema, backups/restores, integrity checks, and host/API boundaries. Markdown/DOCX/EPUB remain import/export formats rather than a second live authority. Pre-1.0 state is rejected rather than migrated.
 
 ### ♡ Documentation and repository experience
 
 Make Quillframe understandable from the repository and product documentation without requiring readers to reverse-engineer internal manifests first. Current-facing public language uses **Quillframe / `quillframe`** while historical records preserve their original terminology when provenance matters.
 
-## Before 1.0
+## Before 1.0 release acceptance
 
 The broad stabilization goal is to reach a point where:
 
-- public APIs and Project integration contracts have clear compatibility expectations;
+- public APIs and native Project contracts have exact, tested version expectations;
 - Studio's writer-facing information architecture and desktop host are stable enough to document as current behavior;
-- Model/Agent Runtime compatibility and secret/tool boundaries have repeatable evidence;
-- persistence migration/backup/restore behavior is resilient across upgrades;
+- Model/Agent Runtime route evidence and secret/tool boundaries are repeatable;
+- persistence backup/restore behavior is resilient within the native 1.0 schema;
 - Canon, Context, semantic independence, Learning promotion, and Settlement boundaries have strong regression coverage;
 - documentation, packaging, and installation paths no longer depend on internal development knowledge.
 
-Breaking changes may still occur before that point. Consuming Projects should continue pinning the exact Quillframe version/commit and bundle fingerprint required by their project lock.
+Breaking changes may still occur before that point. Consuming Projects must satisfy the native five-key manifest, CH001 context, manifest fingerprint, and `.quillframe/data` boundary. Host and release automation record Framework commit/bundle provenance separately. There is no consumer-owned Project lock, compatibility layer, or state upgrader for discarded development state.
 
 ## What this roadmap does not mean
 

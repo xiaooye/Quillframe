@@ -35,9 +35,14 @@ assert(!/VITE_.*TOKEN|ACCESS_TOKEN|API_KEY/.test(bridge), "Bridge transport must
 for (const route of ["/manuscript", "/plan", "/story", "/review", "/research", "/learning", "/publication"]) {
   assert(main.includes(`path=\"${route}\"`), `Writer Mode route missing: ${route}`);
 }
-for (const label of ["Manuscript", "Plan", "Story", "Review", "Research & Corpus", "Learning", "Publish"]) {
-  assert(appShell.includes(label), `Writer Mode navigation missing: ${label}`);
+for (const label of ["Start", "Write", "Review", "Publish", "Plan", "Story", "Research"]) {
+  assert(appShell.includes(`en: "${label}"`), `Writer Mode navigation missing: ${label}`);
 }
+assert(appShell.includes('data-nav-tier="primary"'), "Writer Mode must expose the Start / Write / Review / Publish primary flow");
+assert(appShell.includes('data-nav-tier="support"'), "Writer Mode must expose Plan / Story / Research as support navigation");
+assert(appShell.includes('data-nav-tier="advanced"'), "Writer Mode must retain advanced diagnostics behind an explicit tier");
+assert(appShell.includes('createSignal(false)') && appShell.includes('aria-expanded={inspectorOpen()}'), "Advanced navigation must be collapsed by default and explicitly disclosed");
+assert(!/en:\s*"(?:Control|Inspector)"/.test(appShell), "Retired Control / Inspector product navigation must not return");
 assert(start.includes('"project.list"'), "Project picker must consume canonical project.list");
 assert(appShell.includes("author.run.start"), "AI Dock must register a real Core author Run");
 assert(appShell.includes("author.run.execute"), "AI Dock must expose explicit DRAFT/REVISE production execution");

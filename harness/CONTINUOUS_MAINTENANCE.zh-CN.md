@@ -34,7 +34,7 @@ Maintenance 可以给 Learning 系统提供输入，但不能绕过它。
 - Session / Control Plane invariants；
 - capability declaration 与 routing invariants；
 - Corpus rights / schema / provenance check；
-- Project SDK / Adapter self-test；
+- Native Project Contract / boundary self-test；
 - deterministic eval release cases；
 - dependency / lock / release-metadata drift detection；
 - 不修改任何权威状态的 health report。

@@ -1,4 +1,3 @@
-import "./appearance-v5";
 import { render } from "solid-js/web";
 import ProductApp from "./ProductApp";
 import { ProductFailureBoundary, ProductNotFound } from "./ProductResilience";
@@ -7,13 +6,14 @@ import "./styles/index.css";
 const root = document.getElementById("root");
 const weiUiUrl = "https://ui.wei-dev.com/";
 
+document.documentElement.dataset.experience = "story-loom-kawaii-atelier-v5";
+
 if (!root) {
   throw new Error("Quillframe Product Site root element is missing");
 }
 
 const productRoutes = new Set([
   "/",
-  "/start",
   "/product",
   "/studio",
   "/architecture",
@@ -80,6 +80,12 @@ function installWeiUiCredit() {
 }
 
 installCrossAppNavigationGuard();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch(() => undefined);
+  }, { once: true });
+}
 
 render(() => (
   <ProductFailureBoundary>

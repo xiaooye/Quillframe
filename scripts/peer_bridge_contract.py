@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -60,7 +61,6 @@ def main() -> int:
 
     required_bridge_guards = [
         "caller_repo == action_repo",
-        "locked_commit != action_ref",
         "quillframe_peer_issue_tombstone_v1",
         "quillframe_peer_packet_reference_v1",
         "quillframe_peer_result_reference_v1",
@@ -73,6 +73,24 @@ def main() -> int:
     for needle in required_bridge_guards:
         if needle not in bridge:
             errors.append(f"bridge guard missing: {needle}")
+    if re.search(r"re\.fullmatch\(r[\"']\[0-9a-f\]\{40\}[\"']\s*,\s*action_ref\)", bridge) is None:
+        errors.append("bridge must exact-match one lowercase 40-hex action ref")
+    if "locked_commit" in bridge or "locked_commit" in workflow or "locked_commit" in action:
+        errors.append("stale locked_commit provenance is forbidden")
+    if not re.search(r"\[0-9a-f\]\{40\}", workflow):
+        errors.append("workflow must guard lowercase 40-hex Framework commits")
+    for needle in (
+        'git -C .quillframe-framework rev-parse HEAD',
+        'test "$ACTUAL_FRAMEWORK_COMMIT" = "$EXPECTED_FRAMEWORK_COMMIT"',
+        'printf \'commit=%s\\n\' "$ACTUAL_FRAMEWORK_COMMIT" >> "$GITHUB_OUTPUT"',
+    ):
+        if needle not in workflow:
+            errors.append(f"workflow immutable checkout evidence missing: {needle}")
+    if "github.action_ref" not in action or "github.action_repository" not in action:
+        errors.append("action repository/ref provenance export missing")
+    for needle in ('"project_id": binding["project_id"]', '"project_repo": binding["caller_repo"]', '"framework_repo": binding["framework_repo"]', '"framework_commit": binding["framework_commit"]'):
+        if needle not in bridge:
+            errors.append(f"independent provenance binding missing: {needle}")
     if "issue body must be one semantic job JSON object" in bridge:
         errors.append("bridge may not accept a semantic job or manuscript in the Issue body")
     if "packet_bytes.decode(\"utf-8\")" in bridge:
@@ -82,7 +100,7 @@ def main() -> int:
         "peer_bridge_contract": "PASS" if not errors else "FAIL",
         "project_hosted_runtime": not errors,
         "framework_issue_listener": False,
-        "exact_lock_binding": not errors,
+        "exact_action_provenance_binding": not errors,
         "errors": errors,
     }
     print(json.dumps(result, ensure_ascii=False, indent=2))

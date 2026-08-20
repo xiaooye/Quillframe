@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.dev/schemas/1.0/model-task-profile.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "profile_id", "role", "required_capabilities", "context_budget_tokens", "max_cost_micros", "quality_floor", "independence", "privacy", "latency_preference"],
+  "properties": {
+    "schema": {"const": "quillframe_model_task_profile_v1"},
+    "profile_id": {"type": "string", "minLength": 1},
+    "role": {"enum": ["writer", "reader_critic", "continuity_critic", "style_critic", "repair_editor", "independent_reviewer", "researcher"]},
+    "required_capabilities": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "context_budget_tokens": {"type": "integer", "minimum": 1},
+    "max_cost_micros": {"type": "integer", "minimum": 0},
+    "quality_floor": {"enum": ["standard", "high", "highest"]},
+    "independence": {"enum": ["none", "required"]},
+    "privacy": {"enum": ["project", "public"]},
+    "latency_preference": {"enum": ["interactive", "balanced", "quality_first"]}
+  }
+}

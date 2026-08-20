@@ -218,7 +218,7 @@ minimal task-relevant mechanism
 
 Modern copyrighted source text, hidden expected labels and regression bad examples do not enter first-pass Writer context by default.
 
-A Corpus item being stored does not imply `writer_pre_draft` visibility.
+A Corpus item being stored does not imply `draft` visibility.
 
 ---
 

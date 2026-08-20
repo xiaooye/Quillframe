@@ -41,7 +41,7 @@ Remote endpoints require HTTPS by default. URL userinfo/query/fragment are rejec
 
 ## Persistence
 
-Global SQLite owns `model_services`, `discovered_models` and `model_capability_evidence`. Migration `002_model_runtime.sql` performs a one-shot migration from the 0.9 initial provider-centric schema; it is not a permanent runtime fallback.
+Global SQLite owns `model_services`, `discovered_models` and `model_capability_evidence` through the native 1.0 schema fragment at `persistence/schema/global/002_model_runtime.sql`. Pre-1.0 databases are rejected; there is no migration or fallback read path.
 
 ## Deterministic CI and live probes
 

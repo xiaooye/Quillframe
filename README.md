@@ -15,17 +15,18 @@
   <a href="https://studio.quillframe.wei-dev.com/">Studio</a> ·
   <a href="https://quillframe.wei-dev.com/docs/">Docs</a> ·
   <a href="docs/why-quillframe.en.md">Why Quillframe</a> ·
+  <a href="README.en.md">English</a> ·
   <a href="README.zh-CN.md">简体中文</a>
 </p>
 
 <p align="center">
   <a href="https://github.com/xiaooye/Quillframe/actions/workflows/quillframe-ci.yml"><img alt="Quillframe CI" src="https://github.com/xiaooye/Quillframe/actions/workflows/quillframe-ci.yml/badge.svg?branch=main" /></a>
-  <img alt="Version 0.9.1" src="https://img.shields.io/badge/version-0.9.1-796BC4" />
+  <img alt="Version 1.0.0-dev.0" src="https://img.shields.io/badge/version-1.0.0--dev.0-796BC4" />
   <a href="SECURITY.md"><img alt="Tokens stay host-local" src="https://img.shields.io/badge/security-tokens%20stay%20host--local-4D9B7D" /></a>
   <a href="LICENSE"><img alt="Quillframe source-available license" src="https://img.shields.io/badge/license-source--available-C985A4" /></a>
 </p>
 
-<p align="center"><sub>0.9.1 · pre-1.0 · active development</sub></p>
+<p align="center"><sub>1.0.0-dev.0 · acceptance in progress · active development</sub></p>
 
 <img src="assets/brand/story-thread.svg" width="100%" alt="Quillframe story thread divider" />
 
@@ -47,19 +48,17 @@ python -m pip install -e .
 quillframe doctor
 ```
 
-Create fiction Projects **outside** the generic Framework repository. Initialization pins the Project to the exact clean Framework commit and deterministic bundle fingerprint:
+Create a fiction Project **outside** the generic Framework repository and open the local-first Studio with the one native command:
 
 ```bash
-quillframe init ../my-novel \
+quillframe launch ../my-novel \
+  --new \
   --id MY-NOVEL \
   --title "My Novel" \
   --language en
-
-cd ../my-novel
-quillframe validate .
 ```
 
-If you use Claude Code as a host, start it from the consumer Project directory after initialization. The project-local bootstrap verifies the lock/attestation against the materialized Framework before consequential host tools are allowed. Claude Code remains a host; it does not replace Quillframe's Agent Runtime or gain Canon authority.
+The command creates the exact native five-key manifest, fixes the acceptance scope to CH001, keeps runtime state under `.quillframe/data`, and binds Studio to loopback only. Reopen an existing Project with `quillframe launch ../my-novel`. If you also use Claude Code or another coding agent, start that host from the Project directory; no repository hook or host-specific configuration is part of Quillframe correctness. The host runs the agent, while Quillframe retains novel and Canon authority.
 
 The authoring/inspection shell can work without a model connection. When inference is needed, ordinary setup is deliberately small:
 
@@ -74,12 +73,9 @@ The token may be empty for an unauthenticated local model server. Provider/vendo
 <summary><strong>Run the Studio locally</strong></summary>
 
 ```bash
-cd studio/app
-corepack enable
-pnpm install --frozen-lockfile
-pnpm build
-cd ../..
-python studio/local_server.py
+corepack pnpm install --frozen-lockfile
+corepack pnpm --filter @quillframe/studio-app build
+quillframe launch ../my-novel
 ```
 
 </details>
@@ -140,9 +136,9 @@ Quillframe Studio is an authoring environment first—not a framework dashboard 
 
 - Frontend / Studio — **SolidJS + TypeScript + Vite**
 - Core — **Python**
-- Persistence — **SQLite-native** with WAL, foreign keys, migrations, backup/restore, and integrity checks
+- Persistence — **SQLite-native** with WAL, foreign keys, native schema fragments, backup/restore, and integrity checks
 - Documentation — **Astro + Starlight**
-- Desktop direction — **Tauri 2 thin host**; v0.9.1 keeps it as an optional installable host over the same writer-facing contract
+- Desktop — **Tauri 2 thin host** over Host Bridge v11; packaged OS/runtime acceptance remains explicit
 
 Explore the live [Studio](https://studio.quillframe.wei-dev.com/) or read the [Studio architecture](studio/README.en.md).
 
@@ -156,7 +152,7 @@ Explore the live [Studio](https://studio.quillframe.wei-dev.com/) or read the [S
 | Understand fingerprint-bound review | [Quality Assurance](docs/quality-assurance.en.md) |
 | Connect inference endpoints | [Model Runtime](docs/model-runtime.en.md) |
 | Build with the agent loop and tools | [Agent Runtime](docs/agent-runtime.en.md) · [Integrations](docs/integrations.en.md) |
-| Integrate a fiction Project | [Project SDK](docs/project-sdk.en.md) |
+| Integrate a fiction Project | [Native Project Contract](docs/project-contract.en.md) |
 | Inspect system ownership | [Architecture Atlas](docs/architecture-atlas.en.md) |
 | Read machine-oriented product context | [`llms.txt`](site/public/llms.txt) · [`llms-full.txt`](site/public/llms-full.txt) |
 
@@ -168,18 +164,11 @@ Explore the live [Studio](https://studio.quillframe.wei-dev.com/) or read the [S
 ```bash
 python scripts/docs_quality.py
 python -m unittest discover -s tests -p 'test_quillframe_*.py' -v
-
-cd site
-npm install --no-audit --no-fund
-npm run quality
-npm run build
-npm run docs:build
-
-cd ../studio/app
-corepack enable
-pnpm install --frozen-lockfile
-pnpm typecheck
-pnpm build
+corepack pnpm install --frozen-lockfile
+corepack pnpm run quality
+corepack pnpm run typecheck
+corepack pnpm run test
+corepack pnpm run build
 ```
 
 </details>
@@ -188,9 +177,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [Roadmap](ROADMAP.md), [Security](SECURI
 
 ## Status
 
-Quillframe is **pre-1.0 and actively developed**. Current `main` includes the embeddable Python façade, Model Runtime, Agent Runtime, fiction Core/authority contracts, SQLite persistence, typed Host Bridge, SolidJS Studio, product site, publication pipeline, and Starlight documentation. Normal CI is deterministic and does not silently call a configured paid/live Model API.
+Quillframe is on the **1.0 prerelease line and actively developed**. Current `main` includes the embeddable Python façade, Model Runtime, Agent Runtime, fiction Core/authority contracts, SQLite persistence, typed Host Bridge, SolidJS Studio, product site, publication pipeline, and Starlight documentation. Normal CI is deterministic and does not silently call a configured paid/live Model API.
 
-A consuming fiction Project should pin the exact Framework revision/bundle required by its lock instead of assuming latest `main` is compatible.
+A fiction Project identifies itself only through the native five-key `quillframe.toml`, CH001 context, manifest fingerprint, and `.quillframe/data` boundary. Framework commit/bundle provenance is recorded independently by the host or release process; it is not Project authority or a consumer lock.
 
 ## Security & license
 

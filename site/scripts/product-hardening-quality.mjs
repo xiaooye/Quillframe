@@ -18,7 +18,8 @@ const hardening = read("src/styles/hardening.css");
 
 check(main.includes('from "./ProductResilience"'), "main must import the product resilience boundary");
 for (const marker of ["ProductFailureBoundary", "ProductNotFound", "productRoutes", "normalizedPath"]) check(main.includes(marker), `main missing hardening marker ${marker}`);
-for (const route of ["/", "/start", "/product", "/studio", "/architecture", "/publication", "/inspect", "/playground", "/agents", "/changelog"]) check(main.includes(`"${route}"`), `direct-route allowlist missing ${route}`);
+for (const route of ["/", "/product", "/studio", "/architecture", "/publication", "/inspect", "/playground", "/agents", "/changelog"]) check(main.includes(`"${route}"`), `direct-route allowlist missing ${route}`);
+check(!main.includes('"/start"'), "retired /start route must not return");
 check(resilience.includes("ErrorBoundary"), "product failure UI must use Solid ErrorBoundary");
 check(indexHtml.includes('class="skip-link nf-skip-link"') && indexHtml.includes('href="#main-content"'), "document shell must own exactly one skip link to main content");
 check(resilience.includes('role="alert"'), "render failure must be announced as an alert");

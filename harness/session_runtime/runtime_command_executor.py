@@ -631,25 +631,17 @@ def self_test() -> int:
         artifact = root / "draft.txt"
         artifact.write_text("frozen candidate\n", encoding="utf-8")
         artifact_fp = resume_preflight.sha_bytes(artifact.read_bytes())
-        authority = {"canon_write": "settlement_only", "framework_write": "forbidden"}
-        authority_fp = resume_preflight.fingerprint(authority)
-        framework = {
-            "name": "Quillframe",
-            "version": "0.9.1",
-            "commit": "fixture-commit",
-            "bundle_fingerprint": "sha256:" + "a" * 64,
-        }
         (root / "quillframe.toml").write_text(
-            '[quillframe]\nschema="quillframe_project_v1"\n[project]\nid="BOOK-COMMAND"\ntitle="Command Test"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[authority]\ncanon_write="settlement_only"\nframework_write="forbidden"\n',
+            'schema="quillframe_project_v1_0"\nid="BOOK-COMMAND"\ntitle="Command Test"\nlanguage="en"\nchapter_scope="CH001"\n',
             encoding="utf-8",
         )
-        (root / "quillframe.lock.json").write_text(json.dumps({"schema": "quillframe_lock_v1", "framework": framework}), encoding="utf-8")
-        (root / "framework.attestation.json").write_text(json.dumps({"framework": framework}), encoding="utf-8")
+        project_context = resume_preflight.resolve_contract(root)
         evidence = {
             "schema": resume_command.AUTHORITY_EVIDENCE_SCHEMA,
             "project_id": "BOOK-COMMAND",
-            "project_authority_fingerprint": authority_fp,
-            "framework": {key: framework[key] for key in resume_preflight.FRAMEWORK_KEYS},
+            "project_manifest_fingerprint": project_context["manifest_fingerprint"],
+            "chapter_scope": "CH001",
+            "data_root": project_context["data_root"],
             "artifact_bindings": [{"path": "draft.txt", "fingerprint": artifact_fp}],
             "required_capabilities": [],
             "approval_refs": [],

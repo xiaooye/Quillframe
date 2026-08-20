@@ -1,0 +1,1 @@
+export const MAX_NATIVE_BACKUP_BODY = 128 * 1024 * 1024;

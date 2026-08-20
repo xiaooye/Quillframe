@@ -119,8 +119,8 @@ Automatic feedback Learning 本身也可能成为 pending runtime work。semanti
 
 ```text
 加载 durable session + checkpoint
-→ 重新验证 Framework / Project compatibility
-→ 重新验证当前 authority 与 exact lock / bundle
+→ 重新验证 Framework provenance 与 native Project identity / contract
+→ 重新验证当前 native Project authority/context 与 deterministic bundle fingerprint evidence
 → 按当前状态重建 sparse context
 → 验证 referenced artifact fingerprint
 → 验证 approval / write precondition

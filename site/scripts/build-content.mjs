@@ -6,6 +6,8 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { marked } from "marked";
 
+import { syncBrowserCore } from "./browser-core-sync.mjs";
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const siteRoot = path.resolve(here, "..");
 const repoRoot = path.resolve(siteRoot, "..");
@@ -15,6 +17,7 @@ if (typeof markedVersion !== "string" || !markedVersion) throw new Error("site/p
 const manifestPath = path.join(repoRoot, "docs", "documentation_manifest.json");
 const outputRoot = path.join(siteRoot, "public", "generated");
 const docsOutputRoot = path.join(outputRoot, "docs");
+const browserRuntimeRoot = path.join(outputRoot, "runtime");
 
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 if (manifest.schema !== "quillframe_documentation_manifest_v1") {
@@ -218,6 +221,25 @@ const compactExcerpt = (text, max = 260) => {
 fs.rmSync(outputRoot, { recursive: true, force: true });
 fs.mkdirSync(docsOutputRoot, { recursive: true });
 
+syncBrowserCore({ repoRoot, browserRuntimeRoot });
+
+const pyodideEntry = fileURLToPath(import.meta.resolve("pyodide"));
+const pyodideSourceRoot = path.dirname(pyodideEntry);
+const pyodideOutputRoot = path.join(siteRoot, "public", "pyodide");
+const pyodideAssets = [
+  "pyodide.asm.mjs",
+  "pyodide.asm.wasm",
+  "pyodide-lock.json",
+  "python_stdlib.zip",
+];
+fs.rmSync(pyodideOutputRoot, { recursive: true, force: true });
+fs.mkdirSync(pyodideOutputRoot, { recursive: true });
+for (const asset of pyodideAssets) {
+  const source = path.join(pyodideSourceRoot, asset);
+  if (!fs.existsSync(source)) throw new Error(`Pyodide local runtime asset is missing: ${asset}`);
+  fs.copyFileSync(source, path.join(pyodideOutputRoot, asset));
+}
+
 const indexDocuments = [];
 let compiledCount = 0;
 
@@ -294,6 +316,7 @@ fs.writeFileSync(path.join(outputRoot, "build-meta.json"), `${JSON.stringify({
   documents: compiledCount,
   locales: ["en-US", "zh-CN"],
   parser: `marked@${markedVersion}`,
+  browserCore: "production_runtime/workflow.py + production_runtime/types.py",
 }, null, 2)}\n`, "utf8");
 
 console.log(JSON.stringify({

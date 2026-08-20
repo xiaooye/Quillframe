@@ -29,7 +29,7 @@ body:
         - SQLite persistence
         - Studio / Host Bridge
         - Publication
-        - Project SDK
+        - Native Project contract
         - Cross-cutting / unknown
     validations:
       required: true
@@ -61,17 +61,17 @@ body:
     validations:
       required: true
   - type: textarea
-    id: migration
+    id: clean_break
     attributes:
-      label: Compatibility / migration / rollback
-      description: Describe pre-1.0 compatibility impact, persisted-state impact, and rollback strategy.
+      label: Clean break / persisted state / rollback
+      description: Describe native 1.0 contract impact, whether disposable development state must be recreated, and the rollback strategy. Do not propose a compatibility layer.
     validations:
       required: true
   - type: textarea
     id: verification
     attributes:
       label: Verification strategy
-      description: Tests, deterministic checks, semantic review, migration checks, or visual QA required to prove the change.
+      description: Tests, deterministic checks, semantic review, clean-break checks, or visual QA required to prove the change.
     validations:
       required: true
   - type: checkboxes

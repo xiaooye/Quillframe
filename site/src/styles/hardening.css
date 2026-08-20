@@ -62,6 +62,26 @@
     padding-block-end: 8px;
   }
 
+  /* Keep the dark Story Loom papers visually distinct without placing pale
+   * text on mid-tone translucent layers. Primary actions inherit the tested
+   * WeiUI foreground/background pair instead of a lane stroke override. */
+  .dark .capability-chip {
+    color: var(--wui-color-card-foreground);
+    background: color-mix(in oklab, var(--lane-color) 18%, var(--wui-color-card));
+  }
+
+  .dark .capability-focus-grid {
+    background: color-mix(in oklab, var(--lane-color) 10%, var(--wui-color-card));
+  }
+
+  .dark .capability-actions :is(.wui-button--soft, .wui-button--ghost) {
+    color: var(--wui-color-card-foreground);
+  }
+
+  .dark .capability-actions .wui-button--soft {
+    background-color: color-mix(in oklab, var(--wui-color-primary) 10%, var(--wui-color-card));
+  }
+
   @media (pointer: coarse) { .unified-product-shell :where(a, button, input, select, summary) { min-block-size: 44px; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto; transition-duration: .01ms; animation-duration: .01ms; animation-iteration-count: 1; } }
   @media (forced-colors: active) { .nf-resilience-card, .nf-skip-link { border: 1px solid CanvasText; } }

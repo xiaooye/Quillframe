@@ -53,8 +53,8 @@
     ],
     "future_groups": [
       "framework_identity",
-      "project_compatibility",
-      "taxonomy_compatibility",
+      "project_contract_health",
+      "taxonomy_contract_health",
       "semantic_contract_health",
       "runtime_capability_status",
       "production_gate_health"

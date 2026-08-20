@@ -23,7 +23,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlsplit
 
-from host_bridge import invoke
+from . import host_bridge
+from .host_bridge import invoke
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_DIST = HERE / "app" / "dist"
@@ -191,7 +192,8 @@ def self_test() -> dict[str, Any]:
             checks["static_asset"] = urllib.request.urlopen(base + "/asset.txt", timeout=3).read() == b"asset-ok"
 
             request_body = json.dumps({
-                "schema": "quillframe_studio_host_bridge_request_v1",
+                "schema": host_bridge.REQUEST_SCHEMA,
+                "bridge_version": host_bridge.BRIDGE_VERSION,
                 "request_id": "local-server-self-test",
                 "operation": "bridge.describe",
                 "surface": "local_app",
@@ -210,7 +212,7 @@ def self_test() -> dict[str, Any]:
                 },
             )
             result = json.loads(urllib.request.urlopen(good, timeout=5).read())
-            checks["bridge_envelope"] = result.get("schema") == "quillframe_studio_host_bridge_result_v1" and result.get("status") == "ok"
+            checks["bridge_envelope"] = result.get("schema") == host_bridge.RESULT_SCHEMA and result.get("bridge_version") == host_bridge.BRIDGE_VERSION and result.get("status") == "ok"
             checks["authority_false"] = all(result.get(key) is False for key in ("authority", "canon_authority", "framework_write_authority", "settlement_authority"))
 
             bad = urllib.request.Request(base + "/api/bridge/invoke", method="POST", data=request_body, headers={"Content-Type": "application/json"})

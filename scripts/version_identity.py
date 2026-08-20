@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Enforce one current Quillframe Framework version identity.
 
-Quillframe is still pre-1.0 and latest ``main`` is the development baseline, but
+Quillframe is on the 1.0 prerelease line and latest ``main`` is the development baseline, but
 public machine/version surfaces must not drift independently. This checker is
 stdlib-only, deterministic, and performs no release promotion or model work.
 """
@@ -14,13 +14,12 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-SEMVER = r"([0-9]+\.[0-9]+\.[0-9]+)"
+SEMVER = r"([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)"
 
 VERSION_FILE = ROOT / "VERSION"
 FRAMEWORK_MANIFEST = ROOT / "HARNESS_MANIFEST.yaml"
 SKILL_ENTRY = ROOT / "SKILL.md"
 CLI_ENTRY = ROOT / "quillframe.py"
-PROJECT_SDK = ROOT / "project_sdk.py"
 MCP_STDIO = ROOT / "harness" / "control_plane" / "mcp_stdio.py"
 DOC_MANIFEST = ROOT / "docs" / "documentation_manifest.json"
 DOC_MANIFEST_FULL = ROOT / "docs" / "quillframe_documentation_manifest.json"
@@ -37,7 +36,6 @@ AI_CATALOG = ROOT / "site" / "public" / ".well-known" / "ai-catalog.json"
 
 VERSION_LINE_RE = re.compile(rf"(?m)^\s*version:\s*[\"']?{SEMVER}[\"']?\s*$")
 CLI_VERSION_RE = re.compile(rf"(?m)^FRAMEWORK_VERSION\s*=\s*[\"']{SEMVER}[\"']\s*$")
-SDK_VERSION_RE = re.compile(rf"(?m)^DEFAULT_FRAMEWORK_VERSION\s*=\s*[\"']{SEMVER}[\"']\s*$")
 MCP_VERSION_RE = re.compile(
     rf"SERVER_INFO\s*=\s*\{{.*?[\"']version[\"']\s*:\s*[\"']{SEMVER}[\"']",
     re.S,
@@ -95,7 +93,7 @@ def version_file() -> tuple[str | None, str | None]:
     except OSError as exc:
         return None, f"VERSION: cannot read version authority: {exc}"
     if not re.fullmatch(SEMVER, value):
-        return None, "VERSION: must be SemVer X.Y.Z"
+        return None, "VERSION: must be SemVer X.Y.Z with an optional prerelease suffix"
     return value, None
 
 
@@ -105,7 +103,6 @@ def main() -> int:
         "HARNESS_MANIFEST.yaml": parse_text_version(FRAMEWORK_MANIFEST, VERSION_LINE_RE, "Framework manifest"),
         "SKILL.md": parse_text_version(SKILL_ENTRY, VERSION_LINE_RE, "Skill metadata"),
         "quillframe.py": parse_text_version(CLI_ENTRY, CLI_VERSION_RE, "CLI Framework"),
-        "project_sdk.py": parse_text_version(PROJECT_SDK, SDK_VERSION_RE, "Project SDK default Framework"),
         "harness/control_plane/mcp_stdio.py": parse_text_version(MCP_STDIO, MCP_VERSION_RE, "MCP server"),
         "pyproject.toml": toml_field_version(PYPROJECT, "project", "version", "Python package"),
         "site/package.json": json_field_version(SITE_PACKAGE, "version", "site package"),

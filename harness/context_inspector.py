@@ -18,8 +18,9 @@ SCHEMA = "quillframe_context_inspector_v3"
 PROTECTED_AUTHORITIES = {"locked", "accepted"}
 AUTHORITIES = PROTECTED_AUTHORITIES | {"active_plan", "review", "proposal", "runtime", "learning", "corpus", "derived"}
 STAGES = {
-    "character_simulation", "scene_simulation", "realization_projection",
-    "writer_pre_draft", "post_draft_critic", "independent_reviewer", "never",
+    "context_freeze", "story_canon_preflight", "scene_simulation",
+    "character_simulation", "reader_pressure", "draft", "surface_realization",
+    "reader_engagement", "continuity", "independent_review", "research", "never",
 }
 SENSITIVE_CLASSES = {"regression", "hidden_gold", "expected_verdict", "answer_key"}
 PRIVATE_SIMULATION_CLASSES = {
@@ -66,14 +67,14 @@ def normalize_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
         authority = raw.get("authority", "derived")
         if authority not in AUTHORITIES:
             raise ValueError(f"invalid authority for {item_id}: {authority}")
-        stages = raw.get("stages") or [raw.get("stage", "writer_pre_draft")]
+        stages = raw.get("stages") or [raw.get("stage", "draft")]
         if not isinstance(stages, list) or not stages or any(stage not in STAGES for stage in stages):
             raise ValueError(f"invalid stages for {item_id}")
         item_class = str(raw.get("class") or raw.get("kind") or "context")
-        if item_class in SENSITIVE_CLASSES and "writer_pre_draft" in stages:
-            raise ValueError(f"sensitive context leaked into writer_pre_draft: {item_id}")
-        if item_class in PRIVATE_SIMULATION_CLASSES and "writer_pre_draft" in stages:
-            raise ValueError(f"private simulation state leaked into writer_pre_draft: {item_id}")
+        if item_class in SENSITIVE_CLASSES and "draft" in stages:
+            raise ValueError(f"sensitive context leaked into draft: {item_id}")
+        if item_class in PRIVATE_SIMULATION_CLASSES and "draft" in stages:
+            raise ValueError(f"private simulation state leaked into draft: {item_id}")
         priority = raw.get("priority", 0)
         if isinstance(priority, bool) or not isinstance(priority, (int, float)):
             raise ValueError(f"priority must be numeric for {item_id}")
@@ -195,17 +196,17 @@ def inspect(manifest: dict[str, Any], overlay: dict[str, Any] | None = None, *, 
 
 def self_test() -> int:
     manifest = {"manifest_id": "CTX-1", "items": [
-        {"id": "CANON-1", "class": "canon", "authority": "accepted", "stages": ["writer_pre_draft", "independent_reviewer"]},
-        {"id": "DER-A", "class": "summary", "authority": "derived", "derived": True, "stages": ["writer_pre_draft"], "priority": 0},
-        {"id": "DER-B", "class": "summary", "authority": "derived", "derived": True, "stages": ["writer_pre_draft"], "priority": 5},
-        {"id": "REG-1", "class": "regression", "authority": "learning", "stages": ["post_draft_critic"]},
+        {"id": "CANON-1", "class": "canon", "authority": "accepted", "stages": ["draft", "independent_review"]},
+        {"id": "DER-A", "class": "summary", "authority": "derived", "derived": True, "stages": ["draft"], "priority": 0},
+        {"id": "DER-B", "class": "summary", "authority": "derived", "derived": True, "stages": ["draft"], "priority": 5},
+        {"id": "REG-1", "class": "regression", "authority": "learning", "stages": ["reader_engagement"]},
         {"id": "PRIVATE-1", "class": "private_character_state", "authority": "derived", "stages": ["character_simulation"]},
-        {"id": "PROJ-1", "class": "realization_projection", "authority": "derived", "stages": ["realization_projection", "writer_pre_draft"], "metadata": {"purposes": ["scene_realization"]}},
+        {"id": "PROJ-1", "class": "realization_projection", "authority": "derived", "stages": ["surface_realization", "draft"], "metadata": {"purposes": ["scene_realization"]}},
     ]}
     overlay = update_control(None, item_id="DER-A", action="pin")
     edit = request_edit(manifest, overlay, item_id="CANON-1", patch={"text": "mutated"})
     protected = edit["proposal"]["status"] == "proposal_required" and edit["proposal"]["direct_mutation_performed"] is False
-    stage_view = inspect(manifest, edit["overlay"], stage="writer_pre_draft")
+    stage_view = inspect(manifest, edit["overlay"], stage="draft")
     regression_hidden = next(x for x in stage_view["items"] if x["id"] == "REG-1")["eligible"] is False
     private_hidden = next(x for x in stage_view["items"] if x["id"] == "PRIVATE-1")["eligible"] is False
     projection_visible = next(x for x in stage_view["items"] if x["id"] == "PROJ-1")["eligible"] is True
@@ -220,12 +221,12 @@ def self_test() -> int:
         relevance_rejected = True
     bad_leak_rejected = False
     try:
-        normalize_manifest({"items": [{"id": "BAD", "class": "hidden_gold", "authority": "learning", "stages": ["writer_pre_draft"]}]})
+        normalize_manifest({"items": [{"id": "BAD", "class": "hidden_gold", "authority": "learning", "stages": ["draft"]}]})
     except ValueError:
         bad_leak_rejected = True
     private_leak_rejected = False
     try:
-        normalize_manifest({"items": [{"id": "BAD-P", "class": "private_character_state", "authority": "derived", "stages": ["writer_pre_draft"]}]})
+        normalize_manifest({"items": [{"id": "BAD-P", "class": "private_character_state", "authority": "derived", "stages": ["draft"]}]})
     except ValueError:
         private_leak_rejected = True
     ok = all([

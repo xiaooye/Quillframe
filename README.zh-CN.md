@@ -20,12 +20,12 @@
 
 <p align="center">
   <a href="https://github.com/xiaooye/Quillframe/actions/workflows/quillframe-ci.yml"><img alt="Quillframe CI" src="https://github.com/xiaooye/Quillframe/actions/workflows/quillframe-ci.yml/badge.svg?branch=main" /></a>
-  <img alt="Version 0.9.1" src="https://img.shields.io/badge/version-0.9.1-796BC4" />
+  <img alt="Version 1.0.0-dev.0" src="https://img.shields.io/badge/version-1.0.0--dev.0-796BC4" />
   <a href="SECURITY.md"><img alt="Token 仅驻留于 Host" src="https://img.shields.io/badge/security-tokens%20stay%20host--local-4D9B7D" /></a>
   <a href="LICENSE"><img alt="Quillframe source-available license" src="https://img.shields.io/badge/license-source--available-C985A4" /></a>
 </p>
 
-<p align="center"><sub>0.9.1 · pre-1.0 · 持续开发中</sub></p>
+<p align="center"><sub>1.0.0-dev.0 · 验收进行中 · 持续开发</sub></p>
 
 <img src="assets/brand/story-thread.svg" width="100%" alt="Quillframe story thread divider" />
 
@@ -47,19 +47,17 @@ python -m pip install -e .
 quillframe doctor
 ```
 
-具体小说 Project 应创建在通用 Framework 仓库**之外**。初始化时会把 Project 固定到当前干净 Framework 的精确 commit 与确定性 bundle fingerprint：
+在通用 Framework 仓库**之外**创建小说 Project，并用唯一的 native 命令打开 local-first Studio：
 
 ```bash
-quillframe init ../my-novel \
+quillframe launch ../my-novel \
+  --new \
   --id MY-NOVEL \
   --title "My Novel" \
   --language zh-CN
-
-cd ../my-novel
-quillframe validate .
 ```
 
-如果使用 Claude Code 作为宿主，应在初始化完成后从 consumer Project 目录启动。项目级 bootstrap 会先验证 lock / attestation 与本地 Framework 是否一致，再允许有副作用的宿主工具执行。Claude Code 仍然只是宿主，不会替代 Quillframe 的小说契约内核，也不会因此获得 Canon 权威。
+该命令会创建精确的 native 五键 manifest，把验收范围固定为 CH001，将运行状态保存在 `.quillframe/data`，并让 Studio 仅绑定 loopback。已有 Project 可用 `quillframe launch ../my-novel` 重新打开。如果同时使用 Claude Code 或其他 coding agent，请从 Project 目录启动该宿主；Quillframe 的正确性不依赖仓库 hook 或宿主专用配置。宿主运行 Agent，小说与 Canon 权威仍归 Quillframe。
 
 基础写作与检查 shell 不需要先连接模型。真正需要 inference 时，普通设置刻意只保留两个输入：
 
@@ -74,12 +72,9 @@ Access Token
 <summary><strong>在本地运行 Studio</strong></summary>
 
 ```bash
-cd studio/app
-corepack enable
-pnpm install --frozen-lockfile
-pnpm build
-cd ../..
-python studio/local_server.py
+corepack pnpm install --frozen-lockfile
+corepack pnpm --filter @quillframe/studio-app build
+quillframe launch ../my-novel
 ```
 
 </details>
@@ -140,9 +135,9 @@ Quillframe Studio 首先是创作环境，而不是 Framework dashboard。日常
 
 - Frontend / Studio — **SolidJS + TypeScript + Vite**
 - Core — **Python**
-- Persistence — **SQLite-native**，包含 WAL、foreign keys、migration、backup / restore 与 integrity checks
+- Persistence — **SQLite-native**，包含 WAL、foreign keys、native schema fragment、backup / restore 与 integrity checks
 - Documentation — **Astro + Starlight**
-- Desktop direction — **Tauri 2 thin host**；v0.9.1 仍将它作为同一 writer-facing contract 之上的可选安装宿主
+- Desktop —— 基于 Host Bridge v11 的 **Tauri 2 thin host**；packaged OS/runtime 验收保持显式
 
 可以直接进入在线 [Studio](https://studio.quillframe.wei-dev.com/)，或阅读 [Studio 架构](studio/README.zh-CN.md)。
 
@@ -156,7 +151,7 @@ Quillframe Studio 首先是创作环境，而不是 Framework dashboard。日常
 | 理解 fingerprint-bound review | [质量保障](docs/quality-assurance.zh-CN.md) |
 | 连接 inference endpoint | [Model Runtime](docs/model-runtime.zh-CN.md) |
 | 使用 agent loop 与 tools | [Agent Runtime](docs/agent-runtime.zh-CN.md) · [运行时与集成](docs/integrations.zh-CN.md) |
-| 接入小说 Project | [Project SDK](docs/project-sdk.zh-CN.md) |
+| 接入小说 Project | [Native Project Contract](docs/project-contract.zh-CN.md) |
 | 查看系统 ownership | [架构图谱](docs/architecture-atlas.zh-CN.md) |
 | 读取面向机器的产品 Context | [`llms.txt`](site/public/llms.txt) · [`llms-full.txt`](site/public/llms-full.txt) |
 
@@ -168,18 +163,11 @@ Quillframe Studio 首先是创作环境，而不是 Framework dashboard。日常
 ```bash
 python scripts/docs_quality.py
 python -m unittest discover -s tests -p 'test_quillframe_*.py' -v
-
-cd site
-npm install --no-audit --no-fund
-npm run quality
-npm run build
-npm run docs:build
-
-cd ../studio/app
-corepack enable
-pnpm install --frozen-lockfile
-pnpm typecheck
-pnpm build
+corepack pnpm install --frozen-lockfile
+corepack pnpm run quality
+corepack pnpm run typecheck
+corepack pnpm run test
+corepack pnpm run build
 ```
 
 </details>
@@ -188,9 +176,9 @@ pnpm build
 
 ## 当前状态
 
-Quillframe 仍处于 **pre-1.0 持续开发阶段**。当前 `main` 已包含 embeddable Python façade、Model Runtime、Agent Runtime、小说 Core / authority contract、SQLite persistence、typed Host Bridge、SolidJS Studio、产品网站、publication pipeline 与 Starlight 文档。Normal CI 使用确定性执行，不会悄悄调用配置好的付费 / 在线 Model API。
+Quillframe 正处于 **1.0 预发布持续开发阶段**。当前 `main` 已包含 embeddable Python façade、Model Runtime、Agent Runtime、小说 Core / authority contract、SQLite persistence、typed Host Bridge、SolidJS Studio、产品网站、publication pipeline 与 Starlight 文档。Normal CI 使用确定性执行，不会悄悄调用配置好的付费 / 在线 Model API。
 
-下游小说 Project 应按照自己的 lock 固定 exact Framework revision / bundle，不要假设最新 `main` 一定兼容。
+小说 Project 只通过 native 五键 `quillframe.toml`、CH001 context、manifest fingerprint 与 `.quillframe/data` boundary 标识自身。Framework commit / bundle provenance 由 Host 或发布流程独立记录；它既不是 Project authority，也不是 consumer lock。
 
 ## Security 与 License
 

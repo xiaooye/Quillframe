@@ -5,7 +5,7 @@
   "contracts": {
     "reader.reaction": {
       "kind": "external_review",
-      "purpose": "Simulate one bounded target reader's immediate experience using reader-visible information only. This lightweight legacy reaction contract is not the production Blind Reader gate.",
+      "purpose": "Simulate one bounded target reader's immediate experience using reader-visible information only. This lightweight reaction contract is not the production Blind Reader gate.",
       "forbidden_input_keys": [
         "outline",
         "active_plan",

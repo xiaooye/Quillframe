@@ -9,6 +9,16 @@ from .contracts import (
 )
 from .guarded_runtime import ProductionRunExecutor
 from .sources import ProjectContextSourceLoader
+from .workflow import CHAPTER_SCOPE, WORKFLOW_STAGES, NovelWorkflowEngine, WorkflowError
+from .types import (
+    CharacterIntent,
+    GenerationPacket,
+    RepairPlan,
+    RiskSignal,
+    RiskSignals,
+    SceneIntent,
+    TransitionConstraints,
+)
 
 __all__ = [
     "MECHANISM_CONTEXT_STAGE",
@@ -20,4 +30,15 @@ __all__ = [
     "ProductionRunError",
     "ProductionRunExecutor",
     "ProjectContextSourceLoader",
+    "CHAPTER_SCOPE",
+    "WORKFLOW_STAGES",
+    "NovelWorkflowEngine",
+    "WorkflowError",
+    "SceneIntent",
+    "CharacterIntent",
+    "TransitionConstraints",
+    "RiskSignal",
+    "RiskSignals",
+    "RepairPlan",
+    "GenerationPacket",
 ]

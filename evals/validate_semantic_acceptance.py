@@ -32,7 +32,10 @@ def load(path: Path) -> Any:
 
 def framework_version() -> str:
     text = (ROOT / "HARNESS_MANIFEST.yaml").read_text(encoding="utf-8")
-    m = re.search(r"(?m)^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\s*$", text)
+    m = re.search(
+        r"(?m)^version:\s*([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)\s*$",
+        text,
+    )
     if not m:
         raise ValueError("HARNESS_MANIFEST.yaml missing version")
     return m.group(1)

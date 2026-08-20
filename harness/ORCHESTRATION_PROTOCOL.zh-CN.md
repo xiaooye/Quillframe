@@ -10,7 +10,7 @@
 
 ```text
 resolve current/pinned Framework authority
-→ validate Project + exact lock/fingerprint
+→ validate native Project manifest/context 与 fingerprint
 → choose single task_mode
 → create/resume manager session + run
 → resolve authority cutoff + permissions
@@ -19,7 +19,7 @@ resolve current/pinned Framework authority
 → execute the selected mode graph
 ```
 
-Resume 永远不能信任 stale environment / transcript。继续 workflow cursor 前必须重新验证 Framework/Project compatibility、relevant fingerprints、approval/write intent 与 pending capabilities。
+Resume 永远不能信任 stale environment / transcript。继续 workflow cursor 前必须重新验证 Framework provenance、native Project identity 与 contract、relevant fingerprints、approval/write intent 及 pending capabilities。
 
 ## 02 · Shared semantic subroutine
 

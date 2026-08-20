@@ -13,7 +13,7 @@
 3. 读取 `harness/HARNESS_AGENT.zh-CN.md`；
 4. 确定且只确定一个 primary `task_mode`；
 5. 结构级 Framework 变更读取 `harness/SELF_IMPROVEMENT_PROTOCOL.zh-CN.md`；
-6. 项目工程化工作读取 `docs/project-sdk.zh-CN.md`；
+6. 项目工程化工作读取 `docs/project-contract.zh-CN.md`；
 7. 学习 / 语料工作读取 `docs/adaptive-learning.zh-CN.md` 与 Corpus policy；
 8. **只要任务涉及 README、人类可读文档、图表、竞品比较、文档信息架构或视觉体系，编辑前必须读取并遵守 `docs/DOCUMENTATION_STANDARD.zh-CN.md`、`docs/DOCUMENTATION_QA.zh-CN.md` 与 `assets/DESIGN_SYSTEM.zh-CN.md`。**
 
@@ -60,8 +60,8 @@ Human-facing authoritative docs 必须成对发布 `.en.md / .zh-CN.md`。只有
 
 Machine schema 保持单份 JSON / YAML / TOML-compatible contract，其人类说明必须双语。
 
-## Project SDK 原则
+## Native Project Contract 原则
 
-每一本小说 project 都是完整 engineering artifact：manifest、lockfile、authority / state、plans、manuscripts、research、tests / evals、build bundle、migration、rollback history 都应存在。
+每一本小说 project 都是完整 engineering artifact：1.0 manifest、authority / state、plans、manuscripts、research、tests / evals 与 build evidence 都应存在。
 
-Generic Framework 不得 hard-code 某个 legacy project 的目录；旧结构通过 adapter / migration 兼容。
+Generic Framework 不得 hard-code 某个 Project 的目录。Quillframe 1.0 直接拒绝 1.0 之前的 Project 与 runtime state；禁止增加 adapter、importer、双路径、alias 或状态升级器。

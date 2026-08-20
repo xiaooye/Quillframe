@@ -200,8 +200,8 @@ def invalidate(conn: sqlite3.Connection, *, entry_id: str, evidence_ref: str) ->
 
 def _default_stages(authority: str) -> list[str]:
     if authority == "proposal": return ["never"]
-    if authority in {"learning", "corpus"}: return ["post_draft_critic"]
-    return ["writer_pre_draft"]
+    if authority in {"learning", "corpus"}: return ["reader_engagement"]
+    return ["draft"]
 
 
 def export_context(conn: sqlite3.Connection) -> dict[str, Any]:

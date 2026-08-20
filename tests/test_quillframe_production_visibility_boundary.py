@@ -69,6 +69,7 @@ class ProductionVisibilityBoundaryTests(unittest.TestCase):
         out = host_bridge.invoke(
             {
                 "schema": host_bridge.REQUEST_SCHEMA,
+                "bridge_version": host_bridge.BRIDGE_VERSION,
                 "request_id": "checkpoint-private",
                 "operation": "inspector.checkpoints.list",
                 "surface": "agent_package",
