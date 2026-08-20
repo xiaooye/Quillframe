@@ -184,7 +184,7 @@ Mermaid 继续作为技术文档中可检查的 source chart。
 
 ### Lane grammar
 
-- **Project · 天空蓝**：输入、Project SDK、Context；
+- **Project · 天空蓝**：输入、Native Project Contract、Context；
 - **Runtime · 薰衣草紫**：Harness、Session、Control Plane、workers；
 - **Story / Editorial · 中性 + 樱花粉**：Story core、simulation、draft、reader quality；
 - **Evidence · 琥珀色**：feedback、Corpus、learning、eval；

@@ -223,7 +223,6 @@
   }
 
   .studio-cta {
-    --wui-color-primary: var(--pe-runtime);
     border-radius: 999px;
   }
 
@@ -410,7 +409,6 @@
   }
 
   .hero-primary {
-    --wui-color-primary: var(--pe-runtime);
     border-radius: 999px;
     box-shadow: 0 16px 36px color-mix(in oklab, var(--pe-runtime) 22%, transparent);
   }
@@ -2158,7 +2156,20 @@
   }
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1220px) and (min-width: 1021px) {
+  .header-search {
+    inline-size: 44px;
+    padding-inline: 0;
+    justify-content: center;
+  }
+
+  .header-search > span:not(:first-child),
+  .header-search kbd {
+    display: none;
+  }
+}
+
+@media (max-width: 1020px) {
   :root { --pe-header-h: 60px; }
 
   .desktop-nav,

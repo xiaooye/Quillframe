@@ -1,27 +1,30 @@
 {
   "name": "@quillframe/studio-app",
-  "version": "0.9.0",
+  "version": "1.0.0-dev.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "vite",
-    "quality": "node scripts/product-language-quality.mjs && node scripts/uiux-parity-quality.mjs && node scripts/hardening-quality.mjs && node scripts/authoring-boundary-quality.mjs",
-    "lint": "pnpm quality",
+    "quality": "node scripts/product-language-quality.mjs && node scripts/uiux-parity-quality.mjs && node scripts/hardening-quality.mjs && node scripts/authoring-boundary-quality.mjs && node scripts/fixture-contract-quality.mjs",
+    "lint": "corepack pnpm quality",
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.mjs",
+    "test:fixture-contract": "node --test tests/fixture-contract.test.mjs",
     "browser:smoke": "node scripts/browser-smoke.mjs",
-    "build:assets": "pnpm lint && pnpm typecheck && pnpm test && vite build",
+    "browser:launch": "node scripts/local-launch-smoke.mjs",
+    "build:assets": "corepack pnpm lint && corepack pnpm typecheck && corepack pnpm test && vite build",
     "build:finalize": "node scripts/write-offline-shell.mjs && node scripts/write-footprint.mjs",
-    "build": "pnpm build:assets && pnpm build:finalize",
-    "ci:studio": "pnpm build:assets && pnpm browser:smoke && pnpm build:finalize",
+    "build": "corepack pnpm build:assets && corepack pnpm build:finalize",
+    "ci:studio": "corepack pnpm build:assets && corepack pnpm browser:smoke && corepack pnpm browser:launch && corepack pnpm build:finalize",
     "preview": "vite preview"
   },
   "dependencies": {
     "@solidjs/router": "1.0.0",
-    "solid-js": "1.9.14"
+    "solid-js": "1.9.15"
   },
   "devDependencies": {
+    "playwright-core": "1.62.1",
     "typescript": "5.9.3",
     "vite": "8.2.1",
     "vite-plugin-solid": "2.11.14"

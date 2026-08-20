@@ -1,6 +1,6 @@
 # Quillframe Model Runtime
 
-Quillframe 自己拥有 Agent Runtime；外部模型服务只负责 inference。
+宿主运行通用 Agent loop，Quillframe 管理小说契约。内置 Model / Agent Runtime 是 Studio 与本地 adapter 使用的 optional/reference implementation。外部模型服务只提供 inference，永远不会获得故事、Canon 或 Settlement authority。
 
 ## 两个输入
 
@@ -55,7 +55,7 @@ Global SQLite 使用：
 - `discovered_models`
 - `model_capability_evidence`
 
-Migration `002_model_runtime.sql` 从 0.9 初始 provider-centric schema 一次性迁移；它不会建立永久 runtime fallback。
+这些表由原生 1.0 schema fragment `persistence/schema/global/002_model_runtime.sql` 建立。Pre-1.0 数据库会被拒绝；不存在迁移或 fallback 读取路径。
 
 ## Normal CI / Live probe
 

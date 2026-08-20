@@ -25,7 +25,7 @@ Canonical site: https://quillframe.wei-dev.com/
 - [Context and memory](https://quillframe.wei-dev.com/docs/context-memory)
 - [Model Runtime](https://quillframe.wei-dev.com/docs/model-runtime)
 - [Agent Runtime](https://quillframe.wei-dev.com/docs/agent-runtime)
-- [Project SDK](https://quillframe.wei-dev.com/docs/project-sdk)
+- [Native Project Contract](https://quillframe.wei-dev.com/docs/project-contract)
 - [Architecture atlas](https://quillframe.wei-dev.com/docs/architecture-atlas)
 
 ## Machine-oriented discovery
@@ -35,6 +35,6 @@ Canonical site: https://quillframe.wei-dev.com/
 - [AI catalog](https://quillframe.wei-dev.com/.well-known/ai-catalog.json)
 - [Agent Skills index](https://quillframe.wei-dev.com/.well-known/agent-skills/index.json)
 - [Authentication and secrets](https://quillframe.wei-dev.com/auth.md)
-- [Repository](https://github.com/xiaooye/cn_webnovel_agent)
+- [Repository](https://github.com/xiaooye/Quillframe)
 
 Public discovery metadata grants no Canon, Project-write, Framework-write, or Settlement authority.

@@ -1,7 +1,7 @@
 {
-  "schema": "quillframe_studio_host_bridge_contract_v1",
-  "version": "8",
-  "framework_version": "0.9.0",
+  "schema": "quillframe_host_bridge_contract_v11",
+  "version": "11",
+  "framework_version": "1.0.0-dev.0",
   "authority": false,
   "canon_authority": false,
   "framework_write_authority": false,
@@ -29,10 +29,29 @@
     "context_refresh_is_explicit": true,
     "model_capability_grants_authority": false,
     "independent_review_same_runtime_substitution": false,
-    "independent_review_project_peer_receipt_required": true,
+    "independent_review_project_peer_receipt_required": false,
+    "independent_review_receipt_required": true,
+    "independent_review_eligible_invocation_receipt_required": true,
+    "independent_review_native_lifecycle_receipt_supported": true,
+    "independent_review_cross_transport_attempt_consume_once": true,
     "request_revision_auto_starts_revise": false,
     "settlement_preflight_mutates_canon": false,
-    "browser_project_registry_authority": false
+    "browser_project_registry_authority": false,
+    "manuscript_visibility_requires_production_release": true,
+    "host_self_generated_manuscript_is_releaseable": false,
+    "ephemeral_runtime_exact_git_identity_required": true,
+    "production_checkpoint_manuscript_private_from_agent_package": true
+  },
+  "native_independent_review": {
+    "provider_ids": [
+      "codex_native_subagent",
+      "claude_native_subagent"
+    ],
+    "transports": [
+      "codex_native",
+      "claude_code_native"
+    ],
+    "assurance_class": "host_native_separate_context"
   },
   "secret_boundary": {
     "public_setup_inputs": [
@@ -156,6 +175,47 @@
         "run_id"
       ]
     },
+    "author.run.resume": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "run_id",
+        "cursor",
+        "idempotency_key"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "author.run.cancel": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "run_id",
+        "cursor",
+        "idempotency_key",
+        "user_authorized"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "author.run.events": {
+      "kind": "query",
+      "required_args": [
+        "run_id",
+        "cursor"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
     "author.run.execute": {
       "kind": "semantic_command",
       "required_args": [
@@ -180,7 +240,21 @@
         "run_id",
         "peer_packet",
         "result",
-        "bridge_receipt"
+        "independence_receipt"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "author.run.independent.dispatch.prepare": {
+      "kind": "external_handoff_prepare",
+      "required_args": [
+        "project_id",
+        "run_id",
+        "provider",
+        "parent_session_id"
       ],
       "allowed_surfaces": [
         "cli",
@@ -207,6 +281,20 @@
       "required_args": [
         "endpoint",
         "access_token"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "model.route.preview": {
+      "kind": "query",
+      "required_args": [
+        "project_id",
+        "manager_invocation_id",
+        "task_profile",
+        "available_routes"
       ],
       "allowed_surfaces": [
         "cli",
@@ -357,6 +445,11 @@
       "kind": "query",
       "required_args": [
         "project_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
       ]
     },
     "inspector.context.list": {
@@ -405,6 +498,19 @@
       "required_args": [
         "project_id",
         "candidate_id"
+      ]
+    },
+    "candidate.visible.get": {
+      "kind": "query",
+      "required_args": [
+        "project_id",
+        "candidate_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web",
+        "agent_package"
       ]
     },
     "candidate.reject": {
@@ -462,10 +568,6 @@
       "reason": "no Core-owned reversible delete transaction yet"
     },
     "project.export": {
-      "status": "awaiting_external",
-      "reason": "portable project export/import transport is not part of this Core change"
-    },
-    "project.import": {
       "status": "awaiting_external",
       "reason": "portable project export/import transport is not part of this Core change"
     },

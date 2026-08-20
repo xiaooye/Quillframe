@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.dev/schemas/1.0/generation-packet.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project_id", "run_id", "chapter_id", "context_freeze_fingerprint", "scene_intents", "character_intents", "transition_constraints", "task_profile_id", "packet_fingerprint"],
+  "properties": {
+    "schema": {"const": "quillframe_generation_packet_v1"},
+    "project_id": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "chapter_id": {"const": "CH001"},
+    "context_freeze_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "scene_intents": {"type": "array", "items": {"type": "object"}},
+    "character_intents": {"type": "array", "items": {"type": "object"}},
+    "transition_constraints": {"type": "object"},
+    "task_profile_id": {"type": "string", "minLength": 1},
+    "packet_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

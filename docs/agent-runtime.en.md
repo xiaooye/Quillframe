@@ -1,6 +1,6 @@
 # Quillframe Agent Runtime
 
-Quillframe executes agent behavior through its own Harness, Session, Tool and Authority runtime. It does not depend on Codex, Claude Code, OpenCode, or another third-party coding-agent product for agent semantics.
+Quillframe is a novel-contract kernel, not a general-purpose agent harness. Codex, Claude Code, Cursor, or another declared host runs the generic session, model/tool loop, sandbox, and subagent lifecycle. Quillframe's embedded Agent Runtime remains an optional/reference implementation for Studio, standalone adapters, and deterministic tests; the novel contract and authority boundaries stay in Quillframe.
 
 ## AgentJob
 
@@ -8,7 +8,7 @@ Quillframe executes agent behavior through its own Harness, Session, Tool and Au
 
 Preference can only reorder already-eligible models. It cannot create capability, independence, or authority.
 
-## Quillframe-owned loop
+## Embedded/reference loop
 
 ```text
 AgentJob

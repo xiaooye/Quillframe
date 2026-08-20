@@ -19,6 +19,10 @@ for runtime_root in (SEMANTIC_ROOT, QUALITY_ROOT):
         sys.path.insert(0, str(runtime_root))
 
 from peer_bridge_receipt import validate_receipt as validate_peer_bridge_receipt  # noqa: E402
+from independent_invocation_receipt import (  # noqa: E402
+    SCHEMA as INDEPENDENT_INVOCATION_RECEIPT_SCHEMA,
+    validate_receipt as validate_independent_invocation_receipt,
+)
 from peer_chat_relay import build as build_peer_packet, validate_peer_result  # noqa: E402
 from registered_contract_binding import validate_registered_job  # noqa: E402
 from semantic_worker_router import make_contract_job, validate_result, worker_job_view  # noqa: E402
@@ -26,6 +30,7 @@ from semantic_worker_router import make_contract_job, validate_result, worker_jo
 from quality.candidate_qualification import evaluate as evaluate_qualification  # noqa: E402
 from quality.candidate_qualification import validate_qualification_receipt  # noqa: E402
 from quality.production_readiness import evaluate as evaluate_production_readiness  # noqa: E402
+from quality.production_release import aggregate as aggregate_production_release  # noqa: E402
 
 
 class RegisteredSemanticExecutor:
@@ -242,6 +247,15 @@ def prepare_independent_review(
         packet = build_peer_packet(job)
     except ValueError as exc:
         raise ProductionRunError("independent_packet_invalid", str(exc)) from exc
+    packet["execution_permissions"] = {
+        "project_read": False,
+        "filesystem": False,
+        "shell": False,
+        "network": False,
+        "memory": False,
+        "write": False,
+    }
+    packet_bytes = canonical_json(packet)
     return {
         "schema": "quillframe_independent_review_handoff_v1",
         "subject_id": subject_id,
@@ -249,6 +263,7 @@ def prepare_independent_review(
         "qualification_receipt": qualification_receipt,
         "independent_job": job,
         "peer_packet": packet,
+        "peer_packet_bytes": packet_bytes,
         "reader_grip": reader_grip,
         "reader_visible_context": reader_visible_context,
         "authority": False,
@@ -260,17 +275,28 @@ def validate_independent_submission(
     handoff: dict[str, Any],
     peer_packet: dict[str, Any],
     result: dict[str, Any],
-    bridge_receipt: dict[str, Any],
+    independence_receipt: dict[str, Any],
 ) -> dict[str, Any]:
     stored_packet = handoff.get("peer_packet")
-    if not isinstance(stored_packet, dict) or canonical_json(stored_packet) != canonical_json(peer_packet):
+    stored_packet_bytes = handoff.get("peer_packet_bytes")
+    if (
+        not isinstance(stored_packet, dict)
+        or not isinstance(stored_packet_bytes, str)
+        or canonical_json(stored_packet) != stored_packet_bytes
+        or canonical_json(peer_packet) != stored_packet_bytes
+    ):
         raise ProductionRunError("independent_packet_mismatch", "submitted peer packet does not match the frozen pending handoff")
     peer_errors = validate_peer_result(peer_packet, result)
     if peer_errors:
         raise ProductionRunError("independent_result_invalid", "; ".join(peer_errors))
-    receipt_errors = validate_peer_bridge_receipt(bridge_receipt, peer_packet, result)
-    if receipt_errors:
-        raise ProductionRunError("independent_bridge_receipt_invalid", "; ".join(receipt_errors))
+    if independence_receipt.get("schema") == INDEPENDENT_INVOCATION_RECEIPT_SCHEMA:
+        receipt_errors = validate_independent_invocation_receipt(independence_receipt, peer_packet, result)
+        if receipt_errors:
+            raise ProductionRunError("independent_invocation_receipt_invalid", "; ".join(receipt_errors))
+    else:
+        receipt_errors = validate_peer_bridge_receipt(independence_receipt, peer_packet, result)
+        if receipt_errors:
+            raise ProductionRunError("independent_bridge_receipt_invalid", "; ".join(receipt_errors))
     stored_job = handoff.get("independent_job")
     packet_job = peer_packet.get("job")
     if not isinstance(stored_job, dict) or not isinstance(packet_job, dict):
@@ -282,7 +308,7 @@ def validate_independent_submission(
         "job": stored_job,
         "result": result,
         "peer_packet": peer_packet,
-        "bridge_receipt": bridge_receipt,
+        "independence_receipt": independence_receipt,
     }
 
 
@@ -318,3 +344,44 @@ def final_readiness(
         })
     except ValueError as exc:
         raise ProductionRunError("production_readiness_invalid", str(exc)) from exc
+
+
+def final_release(
+    *,
+    production_readiness: dict[str, Any],
+    qualification_receipt: dict[str, Any],
+    candidate_fingerprint: str,
+    context_bundle_fingerprint: str,
+    freeze_fingerprint: str,
+    user_visible_gate_receipt_fingerprint: str,
+) -> dict[str, Any]:
+    """Aggregate semantic readiness with structural execution receipts.
+
+    This is the only release object that can authorize manuscript visibility.
+    A semantic PASS or user-visible stage receipt alone is insufficient.
+    """
+    structural_receipts = [
+        {
+            "kind": "context_assembly",
+            "status": "pass",
+            "candidate_fingerprint": candidate_fingerprint,
+            "receipt_fingerprint": context_bundle_fingerprint,
+            "evidence_refs": [f"context_bundle:{context_bundle_fingerprint}", f"freeze:{freeze_fingerprint}"],
+        },
+        {
+            "kind": "user_visible_gate",
+            "status": "pass",
+            "candidate_fingerprint": candidate_fingerprint,
+            "receipt_fingerprint": user_visible_gate_receipt_fingerprint,
+            "evidence_refs": [f"user_visible_gate:{user_visible_gate_receipt_fingerprint}"],
+        },
+    ]
+    try:
+        return aggregate_production_release({
+            "production_readiness": production_readiness,
+            "pre_independent_qualification": qualification_receipt,
+            "structural_policy": {"required_receipts": ["context_assembly", "user_visible_gate"]},
+            "structural_receipts": structural_receipts,
+        })
+    except ValueError as exc:
+        raise ProductionRunError("production_release_invalid", str(exc)) from exc

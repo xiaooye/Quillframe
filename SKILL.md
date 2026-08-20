@@ -1,7 +1,7 @@
 ---
 name: quillframe
-version: 0.9.0
-description: Project-agnostic adaptive fiction production framework with Story/Canon Core, Surface/Reader fundamentals, capability-aware session-native Harness, author-visible context/memory controls, reader simulation and quality evolution, durable adaptive learning, Corpus Intelligence, evals, deterministic Framework bundles, Project SDK, and provider-neutral integrations.
+version: 1.0.0-dev.0
+description: Project-agnostic adaptive fiction production framework with Story/Canon Core, Surface/Reader fundamentals, capability-aware session-native Harness, author-visible context/memory controls, reader simulation and quality evolution, durable adaptive learning, Corpus Intelligence, evals, deterministic Framework bundles, native Project manifest/context contracts, and provider-neutral integrations.
 ---
 
 # Quillframe · Skill Bootstrap
@@ -19,7 +19,7 @@ Machine release contract: `HARNESS_MANIFEST.yaml`
 2. Read the language-appropriate `SKILL.en.md` or `SKILL.zh-CN.md`.
 3. Read `harness/HARNESS_AGENT.md` and its language edition.
 4. Determine exactly one primary task mode.
-5. Resolve/validate the consuming project using its manifest + exact Framework lock.
+5. Resolve/validate the consuming project using its five-key native manifest, CH001 context, fingerprint, and `.quillframe/data` boundary.
 6. If external/tool work is needed, resolve a typed host capability manifest; undeclared capability is unavailable.
 7. Build sparse context; do not load an entire project or corpus by default.
 8. Apply Framework Core + Surface/Reader fundamentals, then genre/platform/project/user profiles.
@@ -30,7 +30,7 @@ Machine release contract: `HARNESS_MANIFEST.yaml`
 13. Mandatory independent semantic review must use a genuinely separate invocation/session.
 14. Adaptive learning uses durable evidence/cycle state; discovery, analysis, eval and promotion remain separate gates.
 15. Canon mutation requires explicit project acceptance + settlement transaction.
-16. When a consumer lock includes `bundle_fingerprint`, verify the materialized Framework bundle before treating it as runtime bytes.
+16. When a transport bundle includes `bundle_fingerprint`, verify it as deterministic evidence only; Project authority remains the native manifest/context.
 
 本仓库是 Generic Framework，**不得包含或反向依赖任何具体小说的 Canon/人物/剧情/私有 user taste**。
 

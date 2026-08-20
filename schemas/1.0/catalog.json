@@ -1,0 +1,19 @@
+{
+  "schema": "quillframe_schema_catalog_v1",
+  "release": "1.0",
+  "compatibility": false,
+  "schemas": {
+    "quillframe_scene_intent_v1": "scene-intent.schema.json",
+    "quillframe_character_intent_v1": "character-intent.schema.json",
+    "quillframe_transition_constraints_v1": "transition-constraints.schema.json",
+    "quillframe_risk_signals_v1": "risk-signals.schema.json",
+    "quillframe_repair_plan_v1": "repair-plan.schema.json",
+    "quillframe_generation_packet_v1": "generation-packet.schema.json",
+    "quillframe_author_run_event_v1": "author-run-event.schema.json",
+    "quillframe_model_task_profile_v1": "model-task-profile.schema.json",
+    "quillframe_model_route_receipt_v1": "model-route-receipt.schema.json",
+    "quillframe_cloud_project_manifest_v1": "cloud-project-manifest.schema.json",
+    "quillframe_secret_lease_receipt_v1": "secret-lease-receipt.schema.json",
+    "quillframe_launch_receipt_v1": "launch-receipt.schema.json"
+  }
+}

@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Quillframe is pre-1.0. Please describe the user/editorial problem before prescribing implementation. Do not include secrets or private manuscript material.
+        Quillframe is on the 1.0 prerelease line. Please describe the user/editorial problem before prescribing implementation. Do not include secrets or private manuscript material.
   - type: textarea
     id: problem
     attributes:

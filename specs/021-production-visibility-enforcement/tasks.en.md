@@ -1,0 +1,25 @@
+# Tasks 021 · Production Visibility Enforcement
+
+- [x] Freeze SYSTEM-IMPROVE baseline at `c6832365be6c4e3816b9c779dd0c2aa88b42cab9`.
+- [x] Create isolated implementation branch and Draft PR #143.
+- [x] Prove the minimal visibility invariant in a local smoke harness: unreleased candidates return no content.
+- [x] Fix runtime artifact to bind PR head SHA and retain verifiable shallow Git identity.
+- [x] Download exact-head artifact into isolated Linux runtime; verify digest and Git HEAD and pass 102/102 baseline tests.
+- [x] Wire `quality.production_release` into final production execution and persist release receipt.
+- [x] Add Core `candidate_visible_get` with fail-closed content withholding.
+- [x] Add Host Bridge `candidate.visible.get` and contract v9.
+- [x] Block `agent_package` from enumerating raw production checkpoints that may contain pre-release `candidate_text`.
+- [x] Add missing/tampered/mismatched release, checkpoint leak, and valid release regressions; local clean overlay passes 106/106 tests.
+- [x] Fix Tauri sidecar self-test hardcoded to Host Bridge v8.
+- [x] Drive the real DRAFT pre-independent graph through a localhost Model Service relay to `awaiting_external / independent_semantic_review` while Raw Draft/Candidate remain hidden.
+- [x] Productize the tested localhost relay with loopback-only atomic request/response and manager-only, non-independent provenance.
+- [x] Repair missing Project peer receipt CLI `build/validate` execution surface.
+- [x] Historical `github_models` design recorded as superseded; released automated compatibility mode uses `github_copilot_actions`.
+- [x] Add registered-contract deterministic fail-fast preflight for `rule_material` plus regressions.
+- [ ] Latest Framework head passes complete Python/Core/Host Bridge/Studio/site/Tauri CI.
+- [ ] Download latest exact-head artifact and rerun the final complete tests in the ChatGPT Linux container.
+- [ ] Run one live remote compatibility peer inference in a private consumer Project only when billing/permissions allow; this is not required by the local v0.9.1 acceptance path.
+- [ ] Submit that receipt/result to the pending DRAFT run and verify final production release plus `candidate.visible.get`.
+- [ ] Run a fresh school-drama DRAFT with complete Project hard-rule material and surface it only after release for user review.
+- [ ] Record final verification evidence in PR and mark ready/merge only after every acceptance criterion passes.
+- [ ] Consumer Project repin is a separate engineering run; this SYSTEM-IMPROVE run does not mutate Canon.

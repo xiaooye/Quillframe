@@ -13,7 +13,7 @@ No consuming novel's characters, plot, Canon, repository path, or private user p
 3. Read `harness/HARNESS_AGENT.en.md`.
 4. Determine exactly one primary task mode.
 5. For structural framework changes, read `harness/SELF_IMPROVEMENT_PROTOCOL.en.md`.
-6. For project-engineering work, read `docs/project-sdk.en.md`.
+6. For project-engineering work, read `docs/project-contract.en.md`.
 7. For learning/corpus work, read `docs/adaptive-learning.en.md` and Corpus policy.
 8. **For any human-facing documentation, README, diagram, comparison, docs information architecture, or visual-identity work, read and follow `docs/DOCUMENTATION_STANDARD.en.md`, `docs/DOCUMENTATION_QA.en.md`, and `assets/DESIGN_SYSTEM.en.md` before editing.**
 
@@ -60,8 +60,8 @@ Human-facing authoritative docs are paired `.en.md` / `.zh-CN.md`. Stable router
 
 Machine schemas remain single-source JSON/YAML/TOML-compatible contracts; their human explanations are bilingual.
 
-## Project SDK principle
+## Native Project Contract principle
 
-A novel project is a complete engineering artifact with manifest, lockfile, authority/state, plans, manuscripts, research, tests/evals, build bundle, migrations, and rollback history.
+A novel project is a complete engineering artifact with a 1.0 manifest, authority/state, plans, manuscripts, research, tests/evals, and build evidence.
 
-Do not hard-code the layout of one legacy project into the generic framework; support legacy structures through adapters/migrations.
+Do not hard-code one Project's layout into the generic Framework. Quillframe 1.0 rejects pre-1.0 Projects and runtime state; do not add adapters, importers, dual paths, aliases, or state upgrades.

@@ -14,7 +14,7 @@ Quillframe 内不得内置任何具体小说、人物、剧情、Canon 或用户
 
 1. 读取 `HARNESS_MANIFEST.yaml`；
 2. 读取本 Skill 契约、`harness/HARNESS_AGENT.md` 及适用语言版本；
-3. 通过 `quillframe.toml` 与 exact `quillframe.lock.json`，或受支持的 Project Adapter，解析下游 Project；
+3. 通过唯一的 native 1.0 Project contract 解析下游 Project；
 4. 确定且只确定一个 primary `task_mode`；
 5. 创建或恢复 manager session 与当前 run；
 6. 从 Project 当前权威状态构建稀疏 Context Manifest；
@@ -103,6 +103,8 @@ Contract packs：
 
 Raw Draft 只在内部存在。Regression 坏例与 hidden expected label 不得进入 first-pass generation。
 
+**Production visibility 必须 fail closed。** 在 `DRAFT` / `REVISE` 中，读过这些合同不等于执行了 Quillframe。Host 必须调用经过验证的 Quillframe production runtime，且只有 exact fingerprint-bound production release 才能提供用户可见 manuscript。若 runtime、模型执行、required independent review 或 release evidence 不可用，必须返回 typed pending/blocked 状态，禁止用 host 自己写的正文补齐缺失机制。Ephemeral agent sandbox 可以 materialize deterministic Framework bundle，但执行前必须验证 exact commit/bundle fingerprint；其中的 SQLite 只是 runtime materialization，不是第二套 Canon authority。
+
 失败必须回到真正拥有该问题的机制：
 
 - 单点 Surface 缺陷 → local rewrite；
@@ -155,12 +157,11 @@ Learning 永远采用证据支持的最窄 scope：
 
 ## 09 · Project Engineering
 
-下游 Project 应当能够独立 clone、自描述、测试、构建、迁移和 rollback，而不依赖聊天记忆。
+下游 Project 应当能够独立 clone、自描述、测试、构建、按 native contract 验证并 rollback，而不依赖聊天记忆。
 
 项目身份至少由以下内容锚定：
 
-- `quillframe.toml`；
-- exact `quillframe.lock.json`；
+- `quillframe.toml` 且只含五个 native key（`schema`、`id`、`title`、`language`、`chapter_scope`），以及 CH001 context、manifest fingerprint 与 `.quillframe/data`；
 - 清晰的 source / plan / derived / generated 边界；
 - deterministic validation / build / tests；
 - 配置后可验证、可复现的 Framework bundle。
@@ -183,7 +184,7 @@ before-state mismatch 或 post-condition failure → `settlement_incomplete`。�
 
 Normal CI 必须保持 deterministic，不得静默消耗 API、Codex、Claude 或其他 model usage。
 
-CI 应验证 schema、lifecycle boundary、semantic contract catalog/packs、hidden-gold isolation、fingerprint、permissions、Context/Memory authority、session/control-plane invariant、Corpus rights/provenance、eval queue、Project SDK contract、Framework bundle reproducibility 与 documentation integrity。
+CI 应验证 schema、lifecycle boundary、semantic contract catalog/packs、hidden-gold isolation、fingerprint、permissions、Context/Memory authority、session/control-plane invariant、Corpus rights/provenance、eval queue、native Project manifest/context/fingerprint/CH001/data-boundary contract、Framework bundle reproducibility 与 documentation integrity。
 
 Scheduled maintenance 可以观察、报告、封装和排队任务。schedule 或 webhook 本身不会授予 story、Canon、taste 或 Framework promotion authority。
 

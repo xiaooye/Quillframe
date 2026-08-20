@@ -1,0 +1,328 @@
+schema: quillframe_research_register_v1
+spec: 024-quillframe-all-in-one-1-0
+reviewed_at: 2026-08-19
+primary_mode: SYSTEM-IMPROVE
+policy:
+  dependency_adoption: explicit_only
+  external_framework_authority: false
+  project_data_ingested: false
+  full_copyright_text_ingested: false
+  decision_values: [adopt, adapt, reject]
+  evidence_rule: "Mechanisms may inform Quillframe only through an explicit decision and a named internal contract."
+
+data_disposition:
+  production_users_exist: false
+  production_data_to_retain: false
+  decision: discard_all_pre_1_0_runtime_state
+  compatibility_layer_permitted: false
+  migration_permitted: false
+  authority: user_instruction
+
+agent_frameworks:
+  - id: openai_agents_sdk
+    source: https://openai.github.io/openai-agents-python/
+    source_type: official_documentation
+    observed_mechanisms:
+      - small primitive set for agents, handoffs, guardrails, sessions, and tracing
+      - explicit run lifecycle and typed tooling
+    decision: adapt
+    internal_contracts:
+      - NovelWorkflowEngine
+      - quillframe_author_run_event_v1
+    rationale: "Use compact run/event ergonomics while retaining Quillframe authority, Canon, and semantic-contract ownership."
+    dependency: none
+
+  - id: langgraph_persistence_interrupts
+    sources:
+      - https://docs.langchain.com/oss/python/langgraph/persistence
+      - https://docs.langchain.com/oss/python/langgraph/interrupts
+    source_type: official_documentation
+    observed_mechanisms:
+      - checkpointed graph state
+      - explicit interrupt and resume with durable identity
+      - replay from persisted state
+    decision: adapt
+    internal_contracts:
+      - NovelWorkflowEngine.safe_point
+      - author.run.resume
+      - author.run.cancel
+    rationale: "Adopt the durable pause/resume mechanism, not LangGraph as runtime authority or a required dependency."
+    dependency: none
+
+  - id: microsoft_agent_framework
+    source: https://learn.microsoft.com/en-us/agent-framework/overview/
+    source_type: official_documentation
+    observed_mechanisms:
+      - workflow composition
+      - middleware and observability boundaries
+      - human-in-the-loop orchestration
+    decision: adapt
+    internal_contracts:
+      - ModelTaskProfile
+      - human_review_gate
+    rationale: "Use composable workflow and observability concepts without importing a generic enterprise agent hierarchy."
+    dependency: none
+
+  - id: pydantic_ai_durable_execution
+    source: https://pydantic.dev/docs/ai/capabilities/durable_execution/overview/
+    source_type: official_documentation
+    observed_mechanisms:
+      - typed durable execution
+      - retry-aware boundaries around non-deterministic work
+    decision: adapt
+    internal_contracts:
+      - quillframe_generation_packet_v1
+      - quillframe_model_route_receipt_v1
+    rationale: "Strengthen typed packets and side-effect boundaries; Quillframe keeps its existing Python runtime and schemas."
+    dependency: none
+
+  - id: ag_ui_protocol
+    source: https://docs.ag-ui.com/concepts/architecture
+    source_type: official_documentation
+    observed_mechanisms:
+      - event-stream separation between agent runtime and user interface
+      - resumable state/event projection
+    decision: adapt
+    internal_contracts:
+      - quillframe_author_run_event_v1
+      - BridgeClient.subscribeAuthorRun
+    rationale: "Use a minimal typed event stream rather than adopting a second product protocol."
+    dependency: none
+
+  - id: mcp_2026_07_28
+    sources:
+      - https://modelcontextprotocol.io/specification/2026-07-28
+      - https://blog.modelcontextprotocol.io/posts/2026-07-28/
+    source_type: primary_specification
+    observed_mechanisms:
+      - current protocol lifecycle and transport contract
+      - explicit initialization version
+    decision: adopt
+    internal_contracts:
+      - control_plane.mcp.protocol_version
+    rationale: "1.0 uses one exact MCP version with no negotiation or fallback because no deployed clients require compatibility."
+    dependency: none
+
+  - id: generic_multi_agent_roundtable
+    source_type: architecture_pattern
+    observed_mechanisms:
+      - many named agents mirroring organizational roles
+      - consensus or debate loops
+    decision: reject
+    internal_contracts:
+      - one_manager_default
+      - independent_review_only_when_required
+    rationale: "It increases cost and ambiguity without strengthening story authority; separation is reserved for real isolation or independent review."
+    dependency: none
+
+novel_creation_research:
+  - id: long_horizon_narrative_planning
+    source: https://arxiv.org/abs/2506.16445
+    source_type: research_paper
+    observed_mechanisms:
+      - hierarchical planning for long-form narrative coherence
+      - separation of high-level plan and local realization
+    decision: adapt
+    internal_contracts:
+      - PlanningHorizon
+      - EventPlan
+      - quillframe_transition_constraints_v1
+    rationale: "Use layered planning horizons while preserving Project authority and explicit plan lifecycle."
+
+  - id: character_intent_simulation
+    source: https://arxiv.org/abs/2503.22828
+    source_type: research_paper
+    observed_mechanisms:
+      - character-centered simulation before prose realization
+      - intent and action consistency as causal scaffolding
+    decision: adapt
+    internal_contracts:
+      - quillframe_character_intent_v1
+      - character_intent_stage
+    rationale: "Model private intent as bounded causal evidence, never as Writer exposition or Canon."
+
+  - id: iterative_narrative_critique
+    source: https://arxiv.org/abs/2607.00918
+    source_type: research_paper
+    observed_mechanisms:
+      - staged critique and targeted revision
+      - critic specialization over one frozen candidate
+    decision: adapt
+    internal_contracts:
+      - ReaderCritic
+      - ContinuityCritic
+      - StyleCritic
+      - quillframe_repair_plan_v1
+    rationale: "Use separate evidence roles and route repair to the owning layer; do not average critics into an authority score."
+
+  - id: long_form_memory_governance
+    source: https://arxiv.org/abs/2608.05169
+    source_type: research_paper
+    observed_mechanisms:
+      - structured long-horizon memory
+      - selective retrieval over narrative state
+    decision: adapt
+    internal_contracts:
+      - ContextFreeze
+      - semantic_context_profiles
+    rationale: "Persist structured evidence but require semantic selection and deterministic authority/budget checks before prompt inclusion."
+
+  - id: narrative_evaluation_acl_2026
+    source: https://aclanthology.org/2026.findings-acl.410/
+    source_type: peer_reviewed_paper
+    observed_mechanisms:
+      - multi-dimensional narrative evaluation
+      - limitations of single aggregate quality scores
+    decision: adapt
+    internal_contracts:
+      - quillframe_risk_signals_v1
+      - critic_evidence
+    rationale: "Retain dimension-specific evidence and human judgment instead of one synthetic readiness number."
+
+  - id: long_context_planning_iclr_2025
+    source: https://proceedings.iclr.cc/paper_files/paper/2025/file/0fbc8a83d93dd8021a4dd8d2d34138eb-Paper-Conference.pdf
+    source_type: peer_reviewed_paper
+    observed_mechanisms:
+      - explicit decomposition for long-horizon generation
+      - evaluation of plan-to-realization consistency
+    decision: adapt
+    internal_contracts:
+      - planning_horizon
+      - context_freeze
+      - continuity_critic
+    rationale: "Bind local generation to an explicit frozen plan/context packet and check downstream consistency."
+
+open_source_novel_tools:
+  - id: autonovel
+    source: https://github.com/NousResearch/autonovel
+    decision: adapt
+    observed_mechanisms: [research_visible_pipeline, modular_generation_stages]
+    rationale: "Borrow inspectable stage UX; do not import project facts, prompts, or runtime authority."
+    dependency: none
+
+  - id: ai_novel_writing_assistant
+    source: https://github.com/ExplosiveCoderflome/AI-Novel-Writing-Assistant
+    decision: adapt
+    observed_mechanisms: [author_workspace, outline_to_draft_flow]
+    rationale: "Use author-facing workflow cues only; Quillframe retains typed governance and quality gates."
+    dependency: none
+
+  - id: novel_engine
+    source: https://github.com/john-paul-ruf/novel-engine
+    decision: adapt
+    observed_mechanisms: [story_state_visibility, iterative_scene_work]
+    rationale: "Use transparent state presentation; reject repository-specific schema adoption."
+    dependency: none
+
+  - id: novel_studio
+    source: https://github.com/Xiaoyangy/novel-studio
+    decision: adapt
+    observed_mechanisms: [studio_information_architecture, long_form_editor_patterns]
+    rationale: "Use comparative UX evidence only; no code or data ingestion is approved by this register."
+    dependency: none
+
+identity_and_cloud:
+  - id: workos_authkit
+    sources:
+      - https://workos.com/docs/authkit/overview
+      - https://workos.com/docs/authkit/sessions
+      - https://workos.com/docs/authkit/passkeys/passkey-configuration/multi-factor-auth
+      - https://workos.com/docs/authkit/sso
+    source_type: official_documentation
+    decision: adopt
+    internal_contracts:
+      - hosted_auth_callback
+      - opaque_session_cookie
+    rationale: "Use hosted authentication and server-side session validation; Quillframe stores no password credential."
+    constraints:
+      - hosted_custom_auth_domain
+      - email_otp_github_google_passkeys
+      - personal_workspace_only
+
+  - id: cloudflare_containers
+    sources:
+      - https://developers.cloudflare.com/containers/container-class/
+      - https://developers.cloudflare.com/containers/platform-details/architecture/
+    source_type: official_documentation
+    decision: adopt
+    internal_contracts:
+      - python_core_container
+    rationale: "Run the existing Python Core behind a Worker coordinator without moving authority into the browser."
+
+  - id: cloudflare_durable_objects_sqlite
+    source: https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/
+    source_type: official_documentation
+    decision: adopt
+    internal_contracts:
+      - WorkspaceCoordinator
+      - SessionVault
+    rationale: "Use per-object serialized coordination and durable session metadata, not as Project Canon authority."
+
+  - id: cloudflare_secrets
+    source: https://developers.cloudflare.com/workers/configuration/secrets/
+    source_type: official_documentation
+    decision: adopt
+    internal_contracts:
+      - worker_secret_binding
+    rationale: "Platform secrets hold service configuration; user model tokens remain shorter-lived encrypted leases."
+
+model_and_product_quality:
+  - id: anthropic_token_counting_and_prompt_caching
+    sources:
+      - https://platform.claude.com/docs/en/build-with-claude/token-counting
+      - https://platform.claude.com/docs/en/build-with-claude/prompt-caching
+    decision: adapt
+    internal_contracts:
+      - ModelTaskProfile.context_budget
+      - stable_prefix_cache_policy
+    rationale: "Preview budgets and cache only stable, non-secret prefixes; never cache cross-project semantic output."
+
+  - id: openai_endpoint_usage_policy
+    source: https://platform.openai.com/docs/models/default-usage-policies-by-endpoint
+    decision: adapt
+    internal_contracts:
+      - provider_capability_evidence
+      - model_route_preview
+    rationale: "Treat endpoint/model capability as current evidence, never infer it from provider name."
+
+  - id: litellm
+    source: https://docs.litellm.ai/
+    decision: reject
+    observed_mechanisms: [provider_normalization, routing]
+    rationale: "Quillframe already owns protocol normalization, exact capability evidence, secrets, and routing; a proxy layer would duplicate authority and expand secret exposure."
+    dependency: none
+
+  - id: core_web_vitals
+    source: https://web.dev/articles/vitals
+    decision: adopt
+    internal_contracts:
+      - public_site_performance_budget
+    rationale: "Use current user-centric loading, responsiveness, and layout-stability evidence for public surfaces."
+
+  - id: wcag_2_2
+    source: https://www.w3.org/WAI/WCAG22/Understanding/
+    decision: adopt
+    internal_contracts:
+      - accessibility_acceptance
+    rationale: "WCAG 2.2 AA is the minimum accessibility target."
+
+  - id: wai_aria_apg
+    source: https://www.w3.org/WAI/ARIA/apg/patterns/
+    decision: adopt
+    internal_contracts:
+      - interaction_pattern_tests
+    rationale: "Use established keyboard and semantic patterns for complex widgets."
+
+rejected_product_scope:
+  - item: compatibility_layer
+    reason: no_users_or_data
+  - item: automatic_cloud_sync
+    reason: violates_local_first_and_explicit_upload
+  - item: teams_billing_collaboration
+    reason: not_required_for_personal_1_0
+  - item: autonomous_accept_settle_publish
+    reason: violates_project_authority
+  - item: cross_project_semantic_output_cache
+    reason: privacy_and_context_contamination
+  - item: generic_agent_framework_dependency
+    reason: duplicates_quillframe_runtime_authority

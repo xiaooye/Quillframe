@@ -23,7 +23,6 @@ const inspector = read("src/ProjectInspector.tsx");
 const playground = read("src/LocalPlayground.tsx");
 const publication = read("src/PublicationWorkbench.tsx");
 const knowledge = read("src/knowledge.ts");
-const renderer = read("src/DocumentRenderer.tsx");
 const contentTypes = read("src/content.ts");
 const en = read("src/content.en-US.ts");
 const zh = read("src/content.zh-CN.ts");
@@ -39,7 +38,7 @@ const tokens = JSON.parse(readRepo("assets/brand/tokens.json"));
 const weiuiIntegration = JSON.parse(readRepo("assets/brand/weiui.integration.json"));
 const storyLoomTheme = readRepo("assets/brand/story-loom.weiui.css");
 const routeSurfaces = `${app}\n${publication}`;
-const runtime = `${app}\n${surface}\n${inspector}\n${playground}\n${publication}\n${knowledge}\n${renderer}\n${contentTypes}`;
+const runtime = `${app}\n${surface}\n${inspector}\n${playground}\n${publication}\n${knowledge}\n${contentTypes}`;
 const allCopy = `${en}\n${zh}\n${app}\n${publication}`;
 
 const exactSemver = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
@@ -93,7 +92,7 @@ check((routeSurfaces.match(/<ProductSurfaceHero/g) ?? []).length >= 8, "golden b
 for (const route of ["/", "/product", "/studio", "/architecture", "/publication", "/inspect", "/playground", "/agents", "/changelog"]) {
   check(app.includes(`path="${route}"`), `missing required golden baseline route ${route}`);
 }
-check(app.includes('path="/start"') && app.includes('<Navigate href="/"'), "legacy /start must resolve inside the golden baseline router");
+check(!app.includes('path="/start"') && !app.includes("<Navigate"), "retired /start must not retain a route redirect");
 check(app.includes('kind: "document", href: zh() ? "/docs" : "/docs/en"'), "Knowledge must remain a deliberate separate docs boundary in the shared navigation model");
 check(app.includes("https://studio.quillframe.wei-dev.com"), "golden baseline must expose the real Hosted Studio entry point");
 check(app.includes("metaKey || event.ctrlKey") && app.includes('event.key.toLowerCase() === "k"'), "golden baseline must expose Ctrl/Cmd+K command palette shortcut");
@@ -107,10 +106,11 @@ check(inspector.includes("<input") || inspector.includes("<button"), "Project In
 check(playground.includes("<textarea") && playground.includes("<button"), "Local Playground golden fixture must retain accessible native form controls");
 
 check(packageJson.scripts?.content?.includes("sync-weiui.mjs") || packageJson.scripts?.content?.includes("foundation"), "content build must sync WeiUI foundation");
-check(packageJson.scripts?.build?.includes("npm run content"), "SolidJS production build must compile Product Entry content first");
+check(packageJson.scripts?.build?.includes("corepack pnpm content"), "SolidJS production build must compile Product Entry content first through the pinned package manager");
 check(contentCompiler.includes("marked.lexer") && !contentCompiler.includes("marked.parse("), "documentation compiler must use structured parser tokens");
 check(contentCompiler.includes('authority: false'), "generated documentation must remain authority=false");
-check(renderer.includes("DocumentBlock") && renderer.includes("InlineNode") && !renderer.includes("innerHTML"), "golden baseline document renderer must consume structured AST without innerHTML");
+check(knowledge.includes("loadKnowledgeIndex") && knowledge.includes("/generated/docs-index.json"), "Product knowledge search must consume the generated document index");
+check(contentCompiler.includes("docs-index.json") && packageJson.scripts?.["docs:build"]?.includes("astro build --root docs-site"), "documentation output must be owned by the compiler and Starlight build");
 check(!runtime.includes("api.github.com"), "golden baseline must not depend on GitHub API");
 
 check(exists("public/generated/docs-index.json") && exists("public/generated/build-meta.json"), "generated documentation build artifacts missing");

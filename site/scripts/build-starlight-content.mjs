@@ -160,7 +160,7 @@ function renderDocument(doc, sourcePath, locale) {
   body = stripFirstH1(body);
   body = rewriteLinks(body, sourcePath).trim();
   const description = extractDescription(body, locale === "zh-CN" ? "Quillframe 文档。" : "Quillframe documentation.");
-  const editUrl = `https://github.com/xiaooye/cn_webnovel_agent/blob/main/${sourcePath}`;
+  const editUrl = `https://github.com/xiaooye/Quillframe/blob/main/${sourcePath}`;
 
   return `---
 title: ${JSON.stringify(title)}

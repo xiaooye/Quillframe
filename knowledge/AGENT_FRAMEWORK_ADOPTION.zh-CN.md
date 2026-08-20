@@ -124,8 +124,8 @@ Scenario fork、run receipt、checkpoint、memory overlay 与 generic graph stat
 
 ### 改造
 
-- Quillframe Project SDK scaffold 的是**小说工程**，包含 authority classes、Canon/state、plans、manuscripts、research、corpus 与 regression evidence；
-- Framework upgrade 是 exact-lock dependency migration，不是工具链自动升级；
+- Quillframe Native Project Contract scaffold 的是**小说工程**，包含 authority classes、Canon/state、plans、manuscripts、research、corpus 与 regression evidence；
+- Framework upgrade 需要显式审核 deterministic commit / bundle evidence，而不是由工具链自动升级；这份证据属于 Framework / Host provenance，不是 Project authority 或 consumer lock；
 - deployment / observability 思想可以借，但小说生产仍保持 provider-neutral、hosting-neutral。
 
 ### 拒绝
@@ -290,7 +290,7 @@ one manager
 5. connector / transport 只是 capability，永远不是 authority。
 6. 语义智能放 model-readable contract；可精确定义的不变量放 deterministic code。
 7. observability 优先记录 metadata / fingerprint，不复制 private reasoning 或整份 manuscript 建第二 authority store。
-8. 小说项目应当是可重复的软件工程制品：manifest、test、build、migration、exact lock 都能独立工作。
+8. 小说项目应当是可重复的软件工程制品：native manifest/context、test、build、CH001 boundary 与 deterministic fingerprint evidence 都能独立工作。上游 migration/consumer-lock pattern 仅是历史研究；Quillframe 当前明确拒绝把它作为 Project recommendation。
 9. Learning 依赖 evidence + counterexample，不依赖模型反复同意自己。
 
 ---

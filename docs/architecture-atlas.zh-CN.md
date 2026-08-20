@@ -50,7 +50,7 @@
 
 ## 项目工程
 
-- `project_sdk.py`、`project_adapter.py`：独立项目契约与旧目录布局映射。
+- `quillframe/launch.py`、`project_resolution.py`：唯一启动流程与 native Project resolution。
 - `release/build_framework_bundle.py`：可复现的确定性框架构建包。
 
 面向使用者的心智模型见[总体架构](architecture.zh-CN.md)。

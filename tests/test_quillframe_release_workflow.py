@@ -1,0 +1,74 @@
+from __future__ import annotations
+
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+WORKFLOW = ROOT / ".github" / "workflows" / "quillframe-release-bundle.yml"
+CI_WORKFLOW = ROOT / ".github" / "workflows" / "quillframe-ci.yml"
+DOCKERFILE = ROOT / "Dockerfile"
+
+
+class ReleaseWorkflowContractTests(unittest.TestCase):
+    def test_development_bundle_is_manual_deterministic_and_non_releasing(self):
+        text = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch:", text)
+        self.assertIn("1.0.0-dev.0", text)
+        self.assertNotIn("gh release create", text)
+        self.assertNotIn("push:\n    tags:", text)
+        self.assertNotIn("tags: ['v*']", text)
+        self.assertNotIn("RELEASE_TAG", text)
+        self.assertIn("python scripts/version_consistency.py", text)
+        self.assertIn("python scripts/version_identity.py", text)
+        self.assertIn("python quality/clean_break.py", text)
+        self.assertIn('cmp "acceptance-out/${BUNDLE_NAME}" "acceptance-out/quillframe-framework-${COMMIT}.second.tar"', text)
+        self.assertIn('python release/build_framework_bundle.py verify --bundle "acceptance-out/${BUNDLE_NAME}"', text)
+        self.assertIn('rm "acceptance-out/quillframe-framework-${COMMIT}.second.tar"', text)
+        self.assertNotIn("acceptance-out/quillframe-framework-*.tar", text)
+        self.assertIn('"release_promotion_performed": False', text)
+        self.assertIn('"hosted_deployment": "awaiting_external"', text)
+        self.assertIn('"model_execution": False', text)
+        self.assertIn('uses: actions/upload-artifact@v4', text)
+
+
+class DistributionWorkflowContractTests(unittest.TestCase):
+    def test_installed_wheel_smoke_follows_studio_build_in_product_job(self):
+        text = CI_WORKFLOW.read_text(encoding="utf-8")
+        product = text.split("\n  product:\n", 1)[1]
+
+        self.assertIn("uses: actions/setup-python@v7", product)
+        self.assertIn("python-version: '3.13'", product)
+        studio_build = product.index("name: Build Site, Docs, Studio and Cloud")
+        wheel_smoke = product.index("name: Build and test the installed wheel")
+        self.assertLess(studio_build, wheel_smoke)
+        self.assertNotIn("pip wheel .", text.split("\n  product:\n", 1)[0])
+
+        for fragment in (
+            "python -m pip wheel . --no-deps -w /tmp/quillframe-wheel",
+            "python -m pip install --no-deps --target /tmp/quillframe-install",
+            "cd /tmp",
+            "import quillframe.cli",
+            "import quillframe.cloud_core",
+            "import production_runtime.semantic",
+            'resolve_contract_registry("reader.reaction")',
+            'files("studio").joinpath("app/dist/index.html").is_file()',
+            'files("studio").joinpath("app/dist/.well-known/quillframe-studio-footprint.json").is_file()',
+            'files("studio").joinpath("app/dist/.well-known/quillframe-host.json").is_file()',
+            'files("studio").joinpath("app/dist/.well-known/security.txt").is_file()',
+            'main(["--help"])',
+        ):
+            self.assertIn(fragment, product)
+
+    def test_docker_smoke_cannot_import_from_wheel_build_checkout(self):
+        text = DOCKERFILE.read_text(encoding="utf-8")
+
+        self.assertIn("WORKDIR /srv/quillframe", text)
+        self.assertNotIn("WORKDIR /app", text)
+        self.assertIn("/tmp/quillframe-build/pyproject.toml", text)
+        self.assertIn("python -m pip wheel", text)
+        self.assertNotIn("COPY pyproject.toml /app/pyproject.toml", text)
+
+
+if __name__ == "__main__":
+    unittest.main()

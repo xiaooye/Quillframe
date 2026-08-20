@@ -1,29 +1,46 @@
 # Runtime & Integrations
 
-Quillframe is provider-neutral because runtime identity, capability, and authority are separate concepts. A provider name never proves that a capability exists, and a capability never grants story or write authority by itself.
+Quillframe 1.0 separates runtime identity, capability, and authority. A provider name does not prove a capability, and a capability never grants story or write authority.
 
-<img src="assets/concepts/session-run-checkpoint.en.svg" alt="Runtime identity model separating project/resource, session/thread, run/invocation, and checkpoint" width="100%" />
+## One launch path
+
+The author-facing entry is:
+
+```bash
+quillframe launch [PROJECT]
+```
+
+Local mode binds the Studio to a loopback Python Core and project-local SQLite. Cloud mode starts an explicit authentication flow and does not upload a project as a side effect of launch. Repository hooks and host-specific bootstrap commands are not part of product correctness.
 
 ## Identity
 
-`project/resource` identifies the work. `session/thread` is the durable conversational or execution relationship. `run/invocation` is one bounded execution attempt. `checkpoint` is a recoverable snapshot of exact execution state.
+`project` identifies the work, `session` identifies a durable execution relationship, `run` identifies one bounded attempt, and `checkpoint` identifies an exact recoverable snapshot. Provider history is neither Canon nor Project bootstrap authority.
 
-Provider session history is not Canon and is not a substitute for Project bootstrap.
+## Host boundary
 
-## Capabilities
+Claude Code, Codex, another agent host, or a model API may execute an eligible task. The host runs the agent; Quillframe governs the novel. Hosts provide capability evidence and transport. Core owns workflow state, permissions, fingerprints, budgets, persistence, and typed validation. The Project owns Canon.
 
-The current host manifest is the evidence for available tools, models, network, filesystem, GitHub, peer chat, local agents, or human review. Undeclared capability is unavailable. Credentials and authority tokens stay outside ordinary semantic context.
+## Exact protocols
 
-## Resume
+- Host Bridge version `11` is the only accepted bridge version.
+- MCP protocol `2026-07-28` is matched exactly; there is no negotiation or fallback.
+- Context assembly accepts only its declared current schema.
+- Independent review uses one `independence_receipt` field bound to the frozen candidate fingerprint.
 
-Resume revalidates the current framework/project compatibility, latest checkpoint, referenced artifact fingerprints, live Project authority, pending approval/write intent, required capabilities, and consume-once state. A different framework revision is a dependency migration question, not ordinary resume.
+Pre-1.0 requests are rejected rather than translated.
+
+## Resume and cancellation
+
+Resume revalidates the exact checkpoint, Project authority, artifact fingerprints, pending approvals, capabilities, and consume-once state. Run events are cursor-based. Pause, resume, and cancellation occur only at Core safe points.
 
 ## Independent semantic execution
 
-<img src="assets/concepts/independent-semantic-review.en.svg" alt="Manager and reviewer use distinct invocation markers with a fingerprint-bound artifact between them" width="100%" />
+Eligible transports include a separate local agent invocation, provider call, MCP worker, GitHub job, peer chat, local model, or human review when current capability evidence supports the route. A transport failure may produce an explicit fallback receipt. A valid semantic rejection routes repair and cannot trigger reviewer shopping.
 
-Eligible independent paths can include a separate local agent invocation, provider call, service/MCP worker, GitHub job, peer chat, local model, or human—when current capability evidence supports it. Transport failure can fall back to another eligible transport for the same fingerprint. A valid semantic rejection cannot.
+## Secrets
 
-## Control plane
+Credentials remain outside semantic context and Project state. Local credentials use a process lease; Hosted Studio uses the encrypted SessionVault. Receipts and logs contain references and capability evidence, never secret values.
 
-The Control Plane stores durable event/handoff/result lifecycle and metadata-only receipts. It can prove that a result was dispatched, returned, validated, and consumed; it cannot turn the result into Canon or editorial acceptance.
+## Control Plane
+
+The Control Plane persists event, handoff, result, and metadata-only receipt lifecycles. It can prove dispatch, validation, consumption, and replay state. It cannot turn operational state or model output into Canon, acceptance, settlement, or publication authority.

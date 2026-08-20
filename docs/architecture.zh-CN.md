@@ -1,12 +1,12 @@
 # 总体架构
 
-理解 Quillframe 最简单的方法，是把它看成三个协作平面：**编排**决定当前该做什么受限工作；**执行与验证**负责产出并判断精确制品；**状态落定**则是“已接受证据”变成持久故事状态的唯一授权通道。
+理解 Quillframe 最简单的方法，是把它看成位于通用宿主旁边的小说契约内核。宿主运行 session、model/tool 循环、sandbox 与 subagent；Quillframe 解析 Project、限制 Context、管理 Story / Character / Canon 契约、校验 exact artifact，并确保“已接受证据”只有通过 Settlement 才能写入持久故事状态。
 
 <img src="assets/architecture/framework-mental-model.zh-CN.svg" alt="Quillframe 三平面架构：编排、执行与验证、授权状态落定" width="100%" />
 
 ## 项目事实权威在通用框架之外
 
-通用框架拥有故事、人物、关系与正典机制，质量机制，会话与运行时契约，语义执行，学习设施，语料库治理，评测系统和项目开发工具。下游项目拥有具体人物、剧情、关系、研究资料、计划、正文、已接受正典和当前状态。
+通用框架拥有故事、人物、关系与正典机制，质量机制，会话与运行时契约，语义执行，学习设施，语料库治理，评测系统和 native Project Contract。下游项目拥有具体人物、剧情、关系、研究资料、计划、正文、已接受正典和当前状态。
 
 <img src="assets/architecture/framework-vs-project.zh-CN.svg" alt="通用框架机制与项目专属故事事实保持分离" width="100%" />
 

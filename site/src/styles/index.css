@@ -22,15 +22,15 @@
 @import "./atelier-clean-canvas.css";
 @import "./project-inspector.css";
 @import "./local-playground.css";
+@import "./quick-demo.css";
 @import "./architecture-explorer.css";
 @import "./publication-workbench.css";
 @import "./publication-playground.css";
 @import "./agent-integration.css";
 @import "./agent-host-profiles.css";
 
-/* Shared Story Loom composition. The retired kawaii-surfaces.css route-wallpaper
- * layer is intentionally inactive: route identity belongs to the route owners,
- * while cross-route language stays restrained and canvas-first. */
+/* Shared Story Loom composition. Route identity belongs to route owners, while
+ * cross-route language stays restrained and canvas-first. */
 @import "./tool-workbench-kawaii.css";
 @import "./embedded-features.css";
 @import "./route-identities.css";

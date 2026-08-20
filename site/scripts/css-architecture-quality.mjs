@@ -30,15 +30,12 @@ const styleImports = [...main.matchAll(/import\s+["']\.\/styles\/([^"']+)["']/g)
 check(styleImports.length === 1 && styleImports[0] === "index.css", `main.tsx must import exactly one stylesheet entrypoint; got ${styleImports.join(", ") || "none"}`);
 check(index.includes('@import "../../../assets/brand/quillframe-product-language.css"'), "Product Site must consume the shared product-language tokens");
 check(index.indexOf('product-surface.css') < index.indexOf('architecture-explorer.css'), "shared primitives must load before route feature styles");
-check(!index.includes('@import "./kawaii-surfaces.css"'), "retired route-wallpaper kawaii layer must stay out of the active cascade");
 check(index.indexOf('architecture-explorer.css') < index.indexOf('embedded-features.css'), "shared route composition must follow route defaults without a wallpaper override layer");
 check(index.indexOf('embedded-features.css') < index.indexOf('route-identities.css'), "route identity must refine shared/embedded composition rather than replace it");
 check(index.indexOf('route-identities.css') < index.indexOf('changelog-notebook.css'), "Changelog notebook must refine the shared route identity layer");
 check(index.indexOf('changelog-notebook.css') < index.indexOf('publication-gallery.css'), "Changelog owner must not override the Publication-owned gallery refinement");
 check(index.indexOf('publication-gallery.css') < index.indexOf('readability.css'), "route-specific composition must precede readability hardening");
 check(index.indexOf('readability.css') < index.indexOf('hardening.css'), "resilience/accessibility hardening must remain the final Product layer");
-check(!index.includes('editorial-composition.css'), "rejected global editorial flattening must stay out of the active cascade");
-check(!index.includes('home-identity.css'), "temporary simplified-home rewrite must stay out of the active cascade");
 check(!index.includes("surface-audit.css"), "legacy surface-audit override must not return to the cascade");
 check(!exists("src/styles/surface-audit.css"), "legacy surface-audit.css must stay deleted");
 check(!exists("src/styles/readability-audit.css"), "readability must remain a named hardening layer, not a catch-all audit override");

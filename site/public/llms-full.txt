@@ -4,9 +4,9 @@ Quillframe is an AI-native long-form fiction framework and authoring environment
 
 ## Product model
 
-Writer -> Quillframe -> Model API
+Host agent -> Quillframe novel contract -> Model API / tools
 
-Quillframe owns orchestration, Story/Character/Relationship state, Canon, bounded Context, Agent Runtime, quality gates, learning evidence, SQLite persistence, tools, checkpoints, receipts, and authorized Settlement. Models perform inference inside Quillframe-owned operations.
+The host owns generic sessions, model/tool loops, sandbox, and subagent lifecycle. Quillframe governs Project resolution, Story/Character/Relationship state, Canon boundaries, bounded Context, candidate/review/release contracts, quality gates, learning evidence, SQLite persistence, checkpoints, receipts, and authorized Settlement. Its embedded Agent Runtime is an optional/reference implementation. Models perform inference; they do not own authority.
 
 Ordinary model-service setup is exactly:
 
@@ -36,14 +36,14 @@ Settlement is an authorized before->after state transition with current-state va
 
 ## Runtime references
 
-- Model Runtime: https://github.com/xiaooye/cn_webnovel_agent/blob/main/docs/model-runtime.en.md
-- Agent Runtime: https://github.com/xiaooye/cn_webnovel_agent/blob/main/docs/agent-runtime.en.md
+- Model Runtime: https://github.com/xiaooye/Quillframe/blob/main/docs/model-runtime.en.md
+- Agent Runtime: https://github.com/xiaooye/Quillframe/blob/main/docs/agent-runtime.en.md
 - Architecture: https://quillframe.wei-dev.com/docs/architecture
 - Production pipeline: https://quillframe.wei-dev.com/docs/production-pipeline
 - Quality assurance: https://quillframe.wei-dev.com/docs/quality-assurance
 - Context and memory: https://quillframe.wei-dev.com/docs/context-memory
 - Adaptive learning: https://quillframe.wei-dev.com/docs/adaptive-learning
-- Project SDK: https://quillframe.wei-dev.com/docs/project-sdk
+- Native Project Contract: https://quillframe.wei-dev.com/docs/project-contract
 - Studio: https://quillframe.wei-dev.com/docs/studio-overview
 - Architecture atlas: https://quillframe.wei-dev.com/docs/architecture-atlas
 
@@ -52,7 +52,7 @@ English references generally live under /docs/en/ on the documentation site. Rep
 ## Agent-facing integration
 
 A portable Quillframe Agent Skill exists at:
-https://github.com/xiaooye/cn_webnovel_agent/blob/main/agent-skills/quillframe/SKILL.md
+https://github.com/xiaooye/Quillframe/blob/main/agent-skills/quillframe/SKILL.md
 
 It is intentionally read-only. It can inspect safe Host Bridge projections but must not manufacture write authority, accept prose, settle Canon, expose host-private paths, or reinterpret READY/preflight states as permission to mutate runtime state.
 
@@ -71,4 +71,4 @@ Do not send model access tokens, private manuscripts, project databases, or othe
 ## License
 
 The repository is source-available under the Quillframe Proprietary Source-Available License. It is not an OSI open-source license. Read the exact legal text before reuse or redistribution:
-https://github.com/xiaooye/cn_webnovel_agent/blob/main/LICENSE
+https://github.com/xiaooye/Quillframe/blob/main/LICENSE

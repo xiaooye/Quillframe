@@ -10,7 +10,7 @@ function prefersChinese() {
 export function ProductFailureBoundary(props: { children: JSX.Element }) {
   return (
     <ErrorBoundary fallback={(error, reset) => (
-      <main id="main-content" class="nf-resilience-page page-width" role="alert">
+      <main id="main-content" class="nf-resilience-page page-width" role="alert" tabIndex={-1}>
         <section class="nf-resilience-card">
           <span class="nf-resilience-mark" aria-hidden="true">♡</span>
           <p class="nf-resilience-eyebrow">Quillframe · UI recovery</p>
@@ -35,7 +35,7 @@ export function ProductFailureBoundary(props: { children: JSX.Element }) {
 export function ProductNotFound() {
   const zh = prefersChinese();
   return (
-    <main id="main-content" class="nf-resilience-page page-width">
+    <main id="main-content" class="nf-resilience-page page-width" tabIndex={-1}>
       <section class="nf-resilience-card nf-not-found">
         <span class="nf-resilience-mark" aria-hidden="true">404</span>
         <p class="nf-resilience-eyebrow">Quillframe · route</p>

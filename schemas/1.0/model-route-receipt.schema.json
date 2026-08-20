@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.dev/schemas/1.0/model-route-receipt.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project_id", "profile_id", "selected_route_id", "selection_reasons", "budget", "fallback", "route_fingerprint", "authority"],
+  "properties": {
+    "schema": {"const": "quillframe_model_route_receipt_v1"},
+    "project_id": {"type": "string", "minLength": 1},
+    "profile_id": {"type": "string", "minLength": 1},
+    "selected_route_id": {"type": "string", "minLength": 1},
+    "selection_reasons": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["context_tokens", "max_cost_micros"],
+      "properties": {
+        "context_tokens": {"type": "integer", "minimum": 1},
+        "max_cost_micros": {"type": "integer", "minimum": 0}
+      }
+    },
+    "fallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["used", "from_route_id", "reason_code"],
+      "properties": {
+        "used": {"type": "boolean"},
+        "from_route_id": {"type": ["string", "null"]},
+        "reason_code": {"type": ["string", "null"]}
+      }
+    },
+    "route_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "authority": {"const": false}
+  }
+}

@@ -1,11 +1,11 @@
 # Quillframe
 
-> AI-native long-form fiction framework and authoring environment. Quillframe owns story state, Canon, bounded Context, agent execution, quality gates, learning evidence, persistence, and authorized Settlement; external models provide inference.
+> AI-native long-form fiction framework and authoring environment. The host runs the agent; Quillframe governs Project story state, Canon boundaries, bounded Context, quality gates, review/release, persistence, and authorized Settlement; external models provide inference.
 
 Canonical site: https://quillframe.wei-dev.com/
 Documentation: https://quillframe.wei-dev.com/docs/
 Studio: https://studio.quillframe.wei-dev.com/
-Repository: https://github.com/xiaooye/cn_webnovel_agent
+Repository: https://github.com/xiaooye/Quillframe
 Markdown sitemap: https://quillframe.wei-dev.com/sitemap.md
 Full machine-oriented guide: https://quillframe.wei-dev.com/llms-full.txt
 Authentication note: https://quillframe.wei-dev.com/auth.md
@@ -19,7 +19,7 @@ Authentication note: https://quillframe.wei-dev.com/auth.md
 - Context and memory: https://quillframe.wei-dev.com/docs/context-memory
 - Model Runtime: https://quillframe.wei-dev.com/docs/model-runtime
 - Agent Runtime: https://quillframe.wei-dev.com/docs/agent-runtime
-- Portable Agent Skill: https://github.com/xiaooye/cn_webnovel_agent/blob/main/agent-skills/quillframe/SKILL.md
+- Portable Agent Skill: https://github.com/xiaooye/Quillframe/blob/main/agent-skills/quillframe/SKILL.md
 
 ## Content-use signal
 

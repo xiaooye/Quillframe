@@ -3,7 +3,7 @@ name: Dependabot Auto Merge
 on:
   workflow_run:
     workflows:
-      - Quillframe 0.9 CI
+      - Quillframe 1.0 CI
     types:
       - completed
 

@@ -14,9 +14,9 @@ Quillframe 文档先建立心智模型，再进入契约与参考资料。只要
 
 ## Model Runtime 与 Agent Runtime
 
-[Model Runtime](model-runtime.zh-CN.md)解释普通用户只需要的 `API Endpoint + Access Token` 连接面，以及模型/协议发现、能力证据、密钥处理和推理传输；[Agent Runtime](agent-runtime.zh-CN.md)解释 AgentJob/Result、Quillframe 自己的 model → tool → model 循环、工具权限、checkpoint、receipt 与可嵌入的 `quillframe` Python library。
+[Model Runtime](model-runtime.zh-CN.md)解释普通用户只需要的 `API Endpoint + Access Token` 连接面，以及模型/协议发现、能力证据、密钥处理和推理传输；[Agent Runtime](agent-runtime.zh-CN.md)解释 optional embedded AgentJob/Result 循环、thin native-host adapter、工具权限、checkpoint、receipt 与可嵌入的 `quillframe` Python library。
 
-Provider/vendor identity 最多只是诊断 metadata。外部模型提供 inference；运行语义、工具、Context、authority 与项目状态仍由 Quillframe 负责。
+Provider/vendor identity 最多只是诊断 metadata。宿主运行通用 Agent execution；Quillframe 管理 runtime contract、Context、小说 authority 与 Project state。
 
 ## 写作
 
@@ -52,7 +52,7 @@ Provider/vendor identity 最多只是诊断 metadata。外部模型提供 infere
 
 ## 项目集成
 
-[项目开发工具](project-sdk.zh-CN.md)、[项目适配器](project-adapters.zh-CN.md)、[项目适配协议](../harness/PROJECT_ADAPTER_PROTOCOL.zh-CN.md)与[框架构建包](../release/FRAMEWORK_BUNDLE.zh-CN.md)确保小说项目可以独立复现，又不会把私有故事事实反向写进通用框架。
+[Native Project Contract](project-contract.zh-CN.md) 与[框架构建包](../release/FRAMEWORK_BUNDLE.zh-CN.md)确保小说项目可以独立复现，又不会把私有故事事实反向写进通用框架。
 
 ## Studio
 

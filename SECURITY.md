@@ -67,7 +67,7 @@ Repository/process tools should continue to fail closed around secret-bearing pa
 
 ## Supported versions
 
-Quillframe is currently pre-1.0. Security fixes target the active `0.9.x` development line unless the repository explicitly documents otherwise. When reporting a problem, always include the exact version/SHA because behavior may change quickly before 1.0.
+Security fixes target the active `1.0.0-dev.x` prerelease line unless the repository explicitly documents otherwise. When reporting a problem, always include the exact version/SHA because behavior may change before 1.0 release acceptance.
 
 ## Public disclosure
 

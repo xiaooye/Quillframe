@@ -11,7 +11,7 @@ body:
     attributes:
       label: Quillframe version / commit
       description: Provide the version and, when possible, the exact commit SHA.
-      placeholder: "0.9.0 / 0123456789abcdef..."
+      placeholder: "1.0.0-dev.0 / 0123456789abcdef..."
     validations:
       required: true
   - type: input

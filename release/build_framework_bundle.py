@@ -5,7 +5,7 @@ The runtime bundle is an uncompressed deterministic POSIX tar. It contains a
 per-file content manifest but excludes repository history, specs, generated
 runtime state, caches, release attestations and bundle outputs. The overall
 bundle fingerprint is SHA-256 of the exact tar bytes and is suitable for a
-consumer lockfile.
+host/runtime provenance receipt.
 """
 from __future__ import annotations
 
@@ -25,15 +25,16 @@ CONTENT_MANIFEST = "BUNDLE_CONTENT_MANIFEST.json"
 DEFAULT_INCLUDE = {
     ".claude", ".github", "agent_runtime", "assets", "core", "corpus", "docs", "evals", "harness",
     "knowledge_base", "learning", "model_runtime", "persistence", "production_runtime", "quality",
-    "publication", "release", "scripts", "surface",
+    "publication", "quillframe", "release", "scripts", "surface",
 }
 ROOT_FILES = {
     ".gitignore", "AGENTS.md", "AGENTS.en.md", "AGENTS.zh-CN.md",
     "CLAUDE.md", "CLAUDE.en.md", "CLAUDE.zh-CN.md",
     "HARNESS_MANIFEST.yaml", "README.md", "README.en.md", "README.zh-CN.md",
     "SKILL.md", "SKILL.en.md", "SKILL.zh-CN.md",
-    "CHANGELOG.en.md", "CHANGELOG.zh-CN.md",
-    "quillframe.py", "project_sdk.py", "project_adapter.py",
+    "CHANGELOG.en.md", "CHANGELOG.zh-CN.md", "VERSION", "pyproject.toml",
+    "quillframe.py", "project_resolution.py", "core_operations.py",
+    "studio/host_bridge.py", "studio/host_bridge_contract.json",
 }
 EXCLUDE_PARTS = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".quillframe", "specs"}
 EXCLUDE_NAMES = {
@@ -53,6 +54,11 @@ def file_mode(path: Path) -> int:
 
 def eligible(rel: Path) -> bool:
     if not rel.parts:
+        return False
+    # Release acceptance reports attest a source commit and are derived after
+    # the framework bundle is built. Including them would make the attestation
+    # recursively alter the bundle it describes.
+    if rel.parts[:2] == ("release", "acceptance"):
         return False
     if any(part in EXCLUDE_PARTS for part in rel.parts):
         return False
@@ -175,20 +181,25 @@ def verify(bundle: Path, expected: str | None = None) -> dict[str, Any]:
 def self_test() -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="quillframe-bundle-test-") as td:
         root = Path(td) / "repo"
-        for directory in ("core", "harness", "quality", "publication", "agent_runtime", "model_runtime", "persistence", "production_runtime"):
+        for directory in ("core", "harness", "quality", "publication", "quillframe", "agent_runtime", "model_runtime", "persistence", "production_runtime"):
             (root / directory).mkdir(parents=True, exist_ok=True)
         fixtures = {
             "core/a.txt": "alpha\n",
             "harness/b.py": "print('beta')\n",
             "quality/c.py": "print('quality')\n",
             "publication/compiler.py": "print('publication')\n",
+            "quillframe/api.py": "print('facade')\n",
             "agent_runtime/runtime.py": "print('agent')\n",
             "model_runtime/runtime.py": "print('model')\n",
             "persistence/quillframe_sqlite.py": "print('sqlite')\n",
             "production_runtime/runtime.py": "print('production')\n",
+            "studio/host_bridge.py": "print('host bridge')\n",
+            "studio/host_bridge_contract.json": "{}\n",
+            "VERSION": "1.0.0-dev.0\n",
+            "pyproject.toml": "[project]\nname='quillframe'\n",
         }
         for name, text in fixtures.items():
-            (root / name).write_text(text, encoding="utf-8")
+            path = root / name; path.parent.mkdir(parents=True, exist_ok=True); path.write_text(text, encoding="utf-8")
         (root / "specs").mkdir(); (root / "specs" / "ignore.md").write_text("ignore", encoding="utf-8")
         a = Path(td) / "a.tar"; b = Path(td) / "b.tar"
         ba = build(root, a); bb = build(root, b)
@@ -209,11 +220,13 @@ def self_test() -> dict[str, Any]:
         excluded = "specs/ignore.md" not in paths
         quality_included = "quality/c.py" in paths
         publication_included = "publication/compiler.py" in paths
+        public_runtime_included = {"quillframe/api.py", "VERSION", "pyproject.toml"}.issubset(paths)
+        host_bridge_included = {"studio/host_bridge.py", "studio/host_bridge_contract.json"}.issubset(paths)
         core_runtime_paths = {
             "agent_runtime/runtime.py", "model_runtime/runtime.py", "persistence/quillframe_sqlite.py", "production_runtime/runtime.py"
         }
         core_runtime_included = core_runtime_paths.issubset(paths)
-        ok = same and good["valid"] and not bad["valid"] and excluded and quality_included and publication_included and core_runtime_included
+        ok = same and good["valid"] and not bad["valid"] and excluded and quality_included and publication_included and public_runtime_included and host_bridge_included and core_runtime_included
     return {
         "framework_bundle_contract": "PASS" if ok else "FAIL",
         "deterministic_bytes": same,
@@ -222,6 +235,8 @@ def self_test() -> dict[str, Any]:
         "specs_excluded": excluded,
         "quality_runtime_included": quality_included,
         "publication_runtime_included": publication_included,
+        "public_runtime_package_included": public_runtime_included,
+        "host_bridge_included": host_bridge_included,
         "core_runtime_packages_included": core_runtime_included,
         "model_execution": False,
     }

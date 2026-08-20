@@ -2856,7 +2856,7 @@ dependencies = [
 
 [[package]]
 name = "quillframe-studio"
-version = "0.9.0"
+version = "1.0.0-dev.0"
 dependencies = [
  "keyring",
  "serde",

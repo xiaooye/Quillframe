@@ -119,8 +119,8 @@ Automatic feedback Learning may itself be pending runtime work. If semantic capa
 
 ```text
 load durable session + checkpoint
-→ revalidate Framework / Project compatibility
-→ revalidate current authority and exact lock/bundle
+→ revalidate Framework provenance and native Project identity/contract
+→ revalidate current native Project authority/context and deterministic bundle fingerprint evidence
 → rebuild sparse context against current state
 → verify referenced artifact fingerprints
 → verify approvals / write preconditions

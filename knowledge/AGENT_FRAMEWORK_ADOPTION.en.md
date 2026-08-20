@@ -124,8 +124,8 @@ Primary sources:
 
 ### Adapt
 
-- Quillframe Project SDK scaffolds **fiction projects**, including authority classes, Canon/state, plans, manuscripts, research, corpus and regression evidence;
-- Framework upgrades are exact-lock dependency migrations, not implicit toolchain upgrades;
+- Quillframe Native Project Contract scaffolds **fiction projects**, including authority classes, Canon/state, plans, manuscripts, research, corpus and regression evidence;
+- Framework upgrades require explicit review of deterministic commit/bundle evidence, not implicit toolchain changes; that evidence is Framework/Host provenance, not Project authority or a consumer lock;
 - deployment/observability concepts are useful, but fiction production remains provider- and hosting-neutral.
 
 ### Reject
@@ -290,7 +290,7 @@ Governing heuristics:
 5. Treat connectors and transports as capabilities, never authorities.
 6. Keep semantic intelligence in model-readable contracts and deterministic invariants in code.
 7. Preserve run observability through metadata/fingerprints without cloning private reasoning or manuscripts into a second authority store.
-8. Treat projects as reproducible software artifacts with manifests, tests, builds, migrations and exact locks.
+8. Treat projects as reproducible software artifacts with the native manifest/context, tests, builds, CH001 boundary, and deterministic fingerprint evidence. The upstream migration/consumer-lock pattern is historical research; Quillframe explicitly rejects it as a current Project recommendation.
 9. Learn from evidence and counterexamples, not repeated model self-assertion.
 
 ---

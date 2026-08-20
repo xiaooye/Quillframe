@@ -44,14 +44,11 @@ SOURCE_TYPES = {
 STAGES = {
     "context_freeze", "story_canon_preflight", "scene_simulation",
     "character_simulation", "reader_pressure", "draft", "continuity",
-    "independent_review", "research",
-    # Compatibility stage vocabulary retained from context_inspector v3.
-    "realization_projection", "writer_pre_draft", "post_draft_critic",
-    "independent_reviewer",
+    "surface_realization", "reader_engagement", "independent_review", "research",
 }
 SENSITIVE_WRITER_TYPES = {"hidden_gold", "regression", "expected_verdict", "answer_key"}
 PRIVATE_SIMULATION_TYPES = {"private_character_state", "character_simulation_private", "scene_simulation_private", "writer_reasoning"}
-WRITER_STAGES = {"draft", "writer_pre_draft", "realization_projection"}
+WRITER_STAGES = {"draft", "surface_realization"}
 PROFILE_FIELDS = {"description", "trigger_when", "estimated_tokens", "semantic_tags", "stage_affinities"}
 FORBIDDEN_REASON_KEYS = {"analysis", "chain_of_thought", "reasoning", "scratchpad", "private_reasoning"}
 CHARACTER_CONTEXT_FIELDS = ("identity", "agenda", "knowledge_boundary", "current_task", "location", "relationship_state", "emotional_carryover", "stakes", "misbeliefs", "scene_presence", "known_facts", "unknown_facts")

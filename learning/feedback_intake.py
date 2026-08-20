@@ -39,7 +39,6 @@ from semantic_worker_router import make_contract_job, validate_result  # noqa: E
 SCHEMA = "quillframe_feedback_intake_v1"
 PROJECTION_SCHEMA = "quillframe_feedback_intake_projection_v1"
 GENERIC_FEEDBACK_SCHEMA = "quillframe_feedback_observation_v1"
-LEGACY_STEERING_SCHEMA = "quillframe_author_steering_request_v1"
 CONTRACT_ID = "learning.preference_interpret"
 STATES = {"observed", "awaiting_semantic", "interpreted", "skipped", "persisted", "blocked", "failed"}
 CAPTURE_FIELDS = {
@@ -101,12 +100,7 @@ def normalize_feedback_event(
     payload = event.get("payload", {})
     schema = payload.get("schema")
     kind = payload.get("kind")
-    if schema == LEGACY_STEERING_SCHEMA and kind == "author_steering":
-        feedback_text = _nonempty(payload.get("instruction"), "payload.instruction")
-        task = current_task or {}
-        target = _target_from_event(event, payload)
-        payload_kind = "legacy_author_steering"
-    elif schema == GENERIC_FEEDBACK_SCHEMA and kind == "feedback_observation":
+    if schema == GENERIC_FEEDBACK_SCHEMA and kind == "feedback_observation":
         feedback_text = _nonempty(payload.get("feedback_text"), "payload.feedback_text")
         task = payload.get("current_task") if isinstance(payload.get("current_task"), dict) else (current_task or {})
         target = _target_from_event(event, payload)
@@ -447,30 +441,17 @@ def apply_semantic_result(
     }
 
 
-def _event(event_id: str, text: str, *, legacy: bool = False, artifact_fp: str | None = None) -> dict[str, Any]:
-    payload: dict[str, Any]
-    if legacy:
-        payload = {
-            "schema": LEGACY_STEERING_SCHEMA,
-            "kind": "author_steering",
-            "instruction": text,
-            "applicability": {"scope": "current_run"},
-            "authored_against_checkpoint_id": "CHK-1",
-            "authority": False,
-            "canon_authority": False,
-            "framework_write_authority": False,
-        }
-    else:
-        payload = {
-            "schema": GENERIC_FEEDBACK_SCHEMA,
-            "kind": "feedback_observation",
-            "feedback_text": text,
-            "current_task": {"task_mode": "REVISE", "artifact_ref": "draft:fixture"},
-            "target": {"artifact_ref": "draft:fixture", "artifact_fingerprint": artifact_fp or "sha256:" + "a" * 64},
-            "authority": False,
-            "canon_authority": False,
-            "framework_write_authority": False,
-        }
+def _event(event_id: str, text: str, *, artifact_fp: str | None = None) -> dict[str, Any]:
+    payload = {
+        "schema": GENERIC_FEEDBACK_SCHEMA,
+        "kind": "feedback_observation",
+        "feedback_text": text,
+        "current_task": {"task_mode": "REVISE", "artifact_ref": "draft:fixture"},
+        "target": {"artifact_ref": "draft:fixture", "artifact_fingerprint": artifact_fp or "sha256:" + "a" * 64},
+        "authority": False,
+        "canon_authority": False,
+        "framework_write_authority": False,
+    }
     return {
         "schema": "quillframe_event_v1",
         "event_id": event_id,
@@ -479,7 +460,7 @@ def _event(event_id: str, text: str, *, legacy: bool = False, artifact_fp: str |
         "resource_id": "BOOK-FIXTURE",
         "session_id": "SES-FIXTURE",
         "run_id": "RUN-FIXTURE",
-        "authority_scope": "request" if legacy else "observation",
+        "authority_scope": "observation",
         "idempotency_key": "feedback:" + event_id,
         "created_at": "2026-01-01T00:00:00Z",
         "artifact_fingerprints": [],
@@ -531,12 +512,12 @@ def self_test(path: str | Path | None = None) -> dict[str, Any]:
         for p in (db, Path(str(db) + "-wal"), Path(str(db) + "-shm")):
             if p.exists(): p.unlink()
 
-    def run_capture(eid: str, text: str, judgment: dict[str, Any], *, legacy: bool = False, available: bool = True) -> dict[str, Any]:
-        prepared = prepare_intake(runtime_db=runtime_db, learning_db=learning_db, event=_event(eid,text,legacy=legacy), project_id="P1", semantic_available=available)
+    def run_capture(eid: str, text: str, judgment: dict[str, Any], *, available: bool = True) -> dict[str, Any]:
+        prepared = prepare_intake(runtime_db=runtime_db, learning_db=learning_db, event=_event(eid,text), project_id="P1", semantic_available=available)
         return apply_semantic_result(runtime_db=runtime_db, learning_db=learning_db, event_id=eid, result=_semantic_result(prepared["semantic_job"], judgment))
 
     # 1 automatic project feedback inside REVISE; no LEARN mode switch and no activation.
-    project = run_capture("FB-1", "这本书的群像对白太书面了，以后更自然有趣一点。", _capture_judgment("project", "natural relational ensemble dialogue", source="explicit_rule"), legacy=True)
+    project = run_capture("FB-1", "这本书的群像对白太书面了，以后更自然有趣一点。", _capture_judgment("project", "natural relational ensemble dialogue", source="explicit_rule"))
     project_ok = project["capture"]["scope"] == "project" and project["capture"]["hypothesis_state"] == "candidate"
 
     # 2 one-off.
@@ -583,8 +564,8 @@ def self_test(path: str | Path | None = None) -> dict[str, Any]:
         n10 = conn.execute("SELECT COUNT(*) AS n FROM preference_evidence WHERE evidence_id=?", (r10a["capture"]["evidence_id"],)).fetchone()["n"]
     retry_ok = n10 == 1 and r10b["consume_receipt"]["already_consumed"] is True
 
-    # 12 dual consumer: steering receipt does not starve Learning receipt.
-    dual_event = _event("FB-12", "这段对白太书面。", legacy=True)
+    # 12 dual consumer: manager receipt does not starve Learning receipt.
+    dual_event = _event("FB-12", "这段对白太书面。")
     cp = ControlPlane(runtime_db); cp.init(); ing = cp.ingest_event(dual_event)
     steering_receipt = cp.consume_once("event", "FB-12", "author_steering:SES-FIXTURE", ing["payload_hash"])
     p12 = prepare_intake(runtime_db=runtime_db, learning_db=learning_db, event=dual_event, project_id="P1", current_task={"task_mode":"REVISE"})

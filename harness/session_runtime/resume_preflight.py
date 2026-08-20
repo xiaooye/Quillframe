@@ -15,16 +15,18 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
-import tomllib
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from project_resolution import resolve_contract  # noqa: E402
+
 SCHEMA = "quillframe_session_resume_preflight_v1"
 AUTHORITY_EVIDENCE_SCHEMA = "quillframe_resume_authority_evidence_v1"
 CAPABILITY_SCHEMA = "quillframe_host_capabilities_v1"
 RESUMABLE_STATUSES = {"idle", "awaiting_user", "awaiting_external", "failed"}
-FRAMEWORK_KEYS = ("version", "commit", "bundle_fingerprint")
 
 
 def canonical(value: Any) -> str:
@@ -87,57 +89,21 @@ def read_session_row(db_path: Path, session_id: str) -> dict[str, Any] | None:
 
 
 def current_project_identity(project_root: Path) -> tuple[dict[str, Any] | None, list[str]]:
-    blockers: list[str] = []
-    manifest_path = project_root / "quillframe.toml"
-    lock_path = project_root / "quillframe.lock.json"
-    attestation_path = project_root / "framework.attestation.json"
-
-    if not manifest_path.exists():
+    if not (project_root / "quillframe.toml").is_file():
         return None, ["project_manifest_missing"]
     try:
-        with manifest_path.open("rb") as handle:
-            manifest = tomllib.load(handle)
+        context = resolve_contract(project_root)
     except Exception:
         return None, ["project_manifest_invalid"]
-    project = manifest.get("project") if isinstance(manifest.get("project"), dict) else {}
-    project_id = project.get("id")
-    if not isinstance(project_id, str) or not project_id:
-        return None, ["project_identity_invalid"]
-    authority = manifest.get("authority") if isinstance(manifest.get("authority"), dict) else {}
-
-    if not lock_path.exists():
-        return None, ["project_lock_missing"]
-    try:
-        lock = load_object(lock_path)
-    except Exception:
-        return None, ["project_lock_invalid"]
-    if lock.get("schema") != "quillframe_lock_v1":
-        blockers.append("project_lock_schema_invalid")
-    framework = lock.get("framework")
-    if (
-        not isinstance(framework, dict)
-        or framework.get("name") != "Quillframe"
-        or any(not isinstance(framework.get(k), str) or not framework.get(k) for k in FRAMEWORK_KEYS)
-    ):
-        return None, [*blockers, "project_framework_identity_invalid"]
-    current_framework = {k: framework[k] for k in FRAMEWORK_KEYS}
-
-    if not attestation_path.exists():
-        blockers.append("framework_attestation_missing")
-    else:
-        try:
-            attestation = load_object(attestation_path)
-            attested_framework = attestation.get("framework") if isinstance(attestation.get("framework"), dict) else attestation
-            if any(attested_framework.get(k) != current_framework[k] for k in FRAMEWORK_KEYS):
-                blockers.append("framework_attestation_mismatch")
-        except Exception:
-            blockers.append("framework_attestation_invalid")
-
     return {
-        "project_id": project_id,
-        "project_authority_fingerprint": fingerprint(authority),
-        "framework": current_framework,
-    }, blockers
+        "context_schema": context["context_schema"],
+        "project_id": context["project_id"],
+        "project_title": context["project_title"],
+        "language": context["language"],
+        "chapter_scope": context["chapter_scope"],
+        "data_root": context["data_root"],
+        "project_manifest_fingerprint": context["manifest_fingerprint"],
+    }, []
 
 
 def probe_local_capabilities(project_root: Path) -> dict[str, Any] | None:
@@ -256,16 +222,6 @@ def inspect(
     blockers.extend(identity_blockers)
     checks["current_project_identity_available"] = current_identity is not None
 
-    current_framework = current_identity.get("framework") if current_identity else None
-    expected_framework = evidence.get("framework") if isinstance(evidence.get("framework"), dict) else None
-    checks["framework_identity_matches"] = bool(
-        current_framework
-        and expected_framework
-        and all(expected_framework.get(k) == current_framework.get(k) for k in FRAMEWORK_KEYS)
-    )
-    if not checks["framework_identity_matches"]:
-        blockers.append("framework_identity_changed_or_unproven")
-
     expected_project_id = evidence.get("project_id")
     current_project_id = current_identity.get("project_id") if current_identity else None
     checks["project_identity_matches"] = bool(
@@ -277,15 +233,27 @@ def inspect(
     if not checks["project_identity_matches"]:
         blockers.append("project_identity_mismatch")
 
-    expected_authority_fp = evidence.get("project_authority_fingerprint")
-    current_authority_fp = current_identity.get("project_authority_fingerprint") if current_identity else None
-    checks["project_authority_matches"] = bool(
-        isinstance(expected_authority_fp, str)
-        and expected_authority_fp.startswith("sha256:")
-        and expected_authority_fp == current_authority_fp
+    expected_manifest_fp = evidence.get("project_manifest_fingerprint")
+    current_manifest_fp = current_identity.get("project_manifest_fingerprint") if current_identity else None
+    checks["project_manifest_matches"] = bool(
+        isinstance(expected_manifest_fp, str)
+        and expected_manifest_fp.startswith("sha256:")
+        and expected_manifest_fp == current_manifest_fp
     )
-    if not checks["project_authority_matches"]:
-        blockers.append("project_authority_changed_or_unproven")
+    if not checks["project_manifest_matches"]:
+        blockers.append("project_manifest_changed_or_unproven")
+
+    expected_chapter_scope = evidence.get("chapter_scope")
+    current_chapter_scope = current_identity.get("chapter_scope") if current_identity else None
+    checks["project_chapter_scope_matches"] = expected_chapter_scope == current_chapter_scope == "CH001"
+    if not checks["project_chapter_scope_matches"]:
+        blockers.append("project_chapter_scope_mismatch")
+
+    expected_data_root = evidence.get("data_root")
+    current_data_root = current_identity.get("data_root") if current_identity else None
+    checks["project_data_boundary_matches"] = expected_data_root == current_data_root
+    if not checks["project_data_boundary_matches"]:
+        blockers.append("project_data_boundary_mismatch")
 
     expected_fingerprints = checkpoint.get("artifact_fingerprints") if isinstance(checkpoint.get("artifact_fingerprints"), list) else []
     bindings = evidence.get("artifact_bindings") if isinstance(evidence.get("artifact_bindings"), list) else []
@@ -408,26 +376,18 @@ def self_test() -> int:
         artifact = root / "draft.txt"
         artifact.write_text("frozen candidate\n", encoding="utf-8")
         artifact_fp = sha_bytes(artifact.read_bytes())
-        authority = {"canon_write": "settlement_only", "framework_write": "forbidden"}
-        authority_fp = fingerprint(authority)
-        framework = {
-            "name": "Quillframe",
-            "version": "0.9.0",
-            "commit": "fixture-commit",
-            "bundle_fingerprint": "sha256:" + "a" * 64,
-        }
         (root / "quillframe.toml").write_text(
-            '[quillframe]\nschema="quillframe_project_v1"\n[project]\nid="BOOK-SELFTEST"\ntitle="Self Test"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[authority]\ncanon_write="settlement_only"\nframework_write="forbidden"\n',
+            'schema="quillframe_project_v1_0"\nid="BOOK-SELFTEST"\ntitle="Self Test"\nlanguage="en"\nchapter_scope="CH001"\n',
             encoding="utf-8",
         )
-        (root / "quillframe.lock.json").write_text(json.dumps({"schema": "quillframe_lock_v1", "framework": framework}), encoding="utf-8")
-        (root / "framework.attestation.json").write_text(json.dumps({"framework": framework}), encoding="utf-8")
+        project_context = resolve_contract(root)
         evidence_path = root / "resume-authority.json"
         evidence_path.write_text(json.dumps({
             "schema": AUTHORITY_EVIDENCE_SCHEMA,
             "project_id": "BOOK-SELFTEST",
-            "project_authority_fingerprint": authority_fp,
-            "framework": {k: framework[k] for k in FRAMEWORK_KEYS},
+            "project_manifest_fingerprint": project_context["manifest_fingerprint"],
+            "chapter_scope": "CH001",
+            "data_root": project_context["data_root"],
             "artifact_bindings": [{"path": "draft.txt", "fingerprint": artifact_fp}],
             "required_capabilities": [],
             "approval_refs": [],

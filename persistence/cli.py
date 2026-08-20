@@ -5,7 +5,6 @@ import argparse
 import json
 from pathlib import Path
 
-from core_operations import CoreOperations, OperationError
 from persistence.quillframe_sqlite import ConflictError, IntegrityError, QuillframeStore
 
 
@@ -33,7 +32,7 @@ def main() -> int:
         if args.cmd == "verify-backup": result=store.verify_backup(Path(args.bundle)); dump(result); return 0 if result["valid"] else 1
         if args.cmd == "restore": loc=store.restore_project(Path(args.bundle), replace=args.replace); dump({"restored": True, "project_id": loc.project_id}); return 0
         if args.cmd == "search": dump({"schema":"quillframe_search_results_v1","results":store.search(args.project_id,args.query,args.limit)}); return 0
-    except (OperationError, ConflictError, IntegrityError, FileNotFoundError, FileExistsError, ValueError, KeyError) as exc:
+    except (ConflictError, IntegrityError, FileNotFoundError, FileExistsError, ValueError, KeyError) as exc:
         dump({"ok": False, "code": getattr(exc, "code", type(exc).__name__), "message": str(exc), "detail": getattr(exc, "detail", None)})
         return 1
     return 2

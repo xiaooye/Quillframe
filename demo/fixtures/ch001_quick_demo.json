@@ -1,0 +1,74 @@
+{
+  "schema": "quillframe_ch001_quick_demo_fixture_v1",
+  "project_id": "northern-lantern-demo",
+  "run_id": "demo-run-ch001",
+  "chapter_id": "CH001",
+  "task_profile_id": "guided-draft-quality",
+  "fixed_time": "2026-08-19T12:00:00+00:00",
+  "context_freeze_fingerprint": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "scene_intent": {
+    "project_id": "northern-lantern-demo",
+    "chapter_id": "CH001",
+    "scene_id": "CH001-S01",
+    "purpose": "Force Lin Yue to choose between hiding the lantern and helping the stranded courier.",
+    "desired_change": "Lin Yue exposes one forbidden capability while gaining the courier's guarded trust.",
+    "constraints": [
+      "Do not reveal the lantern's origin.",
+      "Keep all character knowledge bounded to CH001 evidence."
+    ]
+  },
+  "character_intent": {
+    "project_id": "northern-lantern-demo",
+    "chapter_id": "CH001",
+    "scene_id": "CH001-S01",
+    "character_id": "lin-yue",
+    "private_goal": "Leave the flooded station without exposing the lantern.",
+    "perceived_state": {
+      "courier": "injured but alert",
+      "floodgate": "closing",
+      "lantern": "dangerous if seen"
+    },
+    "action_candidates": [
+      "Extinguish the lantern and search in darkness.",
+      "Use one pulse of light and demand the courier's silence."
+    ]
+  },
+  "transition_constraints": {
+    "project_id": "northern-lantern-demo",
+    "chapter_id": "CH001",
+    "from_state_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "allowed_changes": [
+      "courier_trust increases from unknown to guarded",
+      "lantern_exposure changes from hidden to witnessed_by_courier"
+    ],
+    "forbidden_changes": [
+      "lantern_origin becomes known",
+      "CH002 facts enter character knowledge"
+    ]
+  },
+  "semantic_evidence": {
+    "schema": "quillframe_recorded_semantic_evidence_v1",
+    "source": "recorded_fixture",
+    "recorded_at": "2026-08-19T12:00:00+00:00",
+    "live_model_called": false,
+    "candidate_fingerprint": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "summary": "The proposed choice creates immediate causal pressure and preserves the lantern-origin reveal.",
+    "findings": [
+      {
+        "code": "reader_pressure_present",
+        "severity": "info",
+        "owner": "story"
+      },
+      {
+        "code": "future_chapter_reference_blocked",
+        "severity": "info",
+        "owner": "continuity"
+      }
+    ],
+    "authority": false
+  },
+  "expected": {
+    "packet_fingerprint": "sha256:ed4029cb25481e8de8b22b4080b2a57b02bb65bc72c6edaf11cee7f1464c4244",
+    "workflow_fingerprint": "sha256:b5c9afa1edd157831ff343a8cae4e1a26f9deb41e17ab3432dc0249535815d8a"
+  }
+}

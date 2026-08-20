@@ -3,6 +3,7 @@ import brandMark from "../../assets/brand/quillframe-mark.svg?url";
 import type { Locale } from "./content";
 import { ProductSurfaceHero } from "./ProductSurface";
 import type { PublicationCompilerProfile } from "./publicationCompiler.worker";
+import { createRestartableWorker, createSingleFlight, createLoadingOwner, isCurrentWorkerEvent, shouldCommitPublicationResult } from "./workerLifecycle";
 
 type UiProfile = {
   id: "text" | "web" | "print" | "epub";
@@ -158,64 +159,98 @@ export default function PublicationWorkbench(props: { locale: Locale }) {
   const [result, setResult] = createSignal<PlaygroundResult>();
   const [error, setError] = createSignal<string>();
   let fileInput: HTMLInputElement | undefined;
-  let compilerWorker: Worker | undefined;
-  let activeRequest: { id: string; resolve: (value: PlaygroundResult) => void; reject: (reason: Error) => void } | undefined;
+  type CompileMessage = { kind: "compile"; payload: { id: string; profile: PublicationCompilerProfile; source: Record<string, unknown> } };
+  const lifecycle = createRestartableWorker<CompileMessage>(() => new Worker(new URL("./publicationCompiler.worker.ts", import.meta.url), { type: "module" }));
+  const flight = createSingleFlight<PlaygroundResult>();
+  const loadingOwner = createLoadingOwner();
+  let compilerLease: ReturnType<typeof lifecycle.acquire> | undefined;
+  let activeRequest: { id: string; token: symbol; epoch: number; profile: PublicationCompilerProfile } | undefined;
+  let inputEpoch = 0;
+  let disposed = false;
 
   const current = createMemo(() => profiles[selected()]);
 
   const worker = () => {
-    if (compilerWorker) return compilerWorker;
+    compilerLease ??= lifecycle.acquire();
+    const lease = compilerLease;
     setRuntimeState("loading");
-    compilerWorker = new Worker(new URL("./publicationCompiler.worker.ts", import.meta.url), { type: "module" });
-    compilerWorker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+    lease.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
       const message = event.data;
+      if (disposed || !lifecycle.isCurrent(lease)) return;
       if (message.kind === "ready") {
         setRuntimeVersion(message.pyodide_version);
         setRuntimeState("ready");
         return;
       }
-      if (!activeRequest || message.id !== activeRequest.id) return;
+      if (!activeRequest || !isCurrentWorkerEvent({ disposed, lifecycle, lease, flight, token: activeRequest.token, requestId: activeRequest.id, eventId: message.id })) return;
       const pending = activeRequest;
       activeRequest = undefined;
-      if (message.kind === "error") pending.reject(new Error(message.error));
-      else {
+      if (message.kind === "error") {
+        lifecycle.invalidate(lease);
+        compilerLease = undefined;
+        flight.reject(pending.token, new Error(message.error));
+        setRuntimeState("idle");
+      } else {
         try {
-          pending.resolve(JSON.parse(message.result) as PlaygroundResult);
+          const parsed = JSON.parse(message.result) as PlaygroundResult;
+          if (shouldCommitPublicationResult({ capturedEpoch: pending.epoch, currentEpoch: inputEpoch, capturedProfile: pending.profile, currentProfile: current().compilerProfile })) setResult(parsed);
+          flight.resolve(pending.token, parsed);
         } catch (value) {
-          pending.reject(new Error(`Compiler returned invalid JSON: ${value instanceof Error ? value.message : String(value)}`));
+          lifecycle.invalidate(lease);
+          compilerLease = undefined;
+          flight.reject(pending.token, new Error(`Compiler returned invalid JSON: ${value instanceof Error ? value.message : String(value)}`));
+          setRuntimeState("idle");
         }
       }
+      flight.finish(pending.token);
     };
-    compilerWorker.onerror = (event) => {
-      if (activeRequest) {
-        activeRequest.reject(new Error(event.message || "Publication compiler worker failed"));
+    lease.worker.onerror = (event) => {
+      if (disposed || !lifecycle.isCurrent(lease)) return;
+      lifecycle.invalidate(lease);
+      compilerLease = undefined;
+      if (activeRequest && flight.isCurrent(activeRequest.token)) {
+        flight.reject(activeRequest.token, new Error(event.message || "Publication compiler worker failed"));
+        flight.finish(activeRequest.token);
         activeRequest = undefined;
       }
+      setRuntimeState("idle");
     };
-    return compilerWorker;
+    return lease;
   };
 
   onCleanup(() => {
-    if (activeRequest) activeRequest.reject(new Error("Publication workbench closed"));
-    compilerWorker?.terminate();
+    disposed = true;
+    flight.dispose(new Error("Publication workbench closed"));
+    lifecycle.dispose(new Error("Publication workbench closed"));
   });
 
   const compile = async () => {
+    const started = flight.tryBegin();
+    if (!started.accepted) {
+      setError(started.error.message);
+      return;
+    }
+    const token = started.flight.token;
+    const loadingToken = loadingOwner.begin();
     setLoading(true);
     setError(undefined);
     try {
       const source = await normalizeInput(sourceText(), sourceName());
       const id = crypto.randomUUID();
-      const compiled = await new Promise<PlaygroundResult>((resolve, reject) => {
-        activeRequest = { id, resolve, reject };
-        worker().postMessage({ kind: "compile", payload: { id, profile: current().compilerProfile, source } });
-      });
-      setResult(compiled);
+      const profile = current().compilerProfile;
+      activeRequest = { id, token, epoch: inputEpoch, profile };
+      worker().post({ kind: "compile", payload: { id, profile, source } });
+      await started.flight.promise;
     } catch (value) {
+      if (compilerLease) lifecycle.invalidate(compilerLease);
+      compilerLease = undefined;
+      setRuntimeState("idle");
+      activeRequest = undefined;
+      flight.finish(token);
       setResult(undefined);
       setError(value instanceof Error ? value.message : String(value));
     } finally {
-      setLoading(false);
+      if (loadingOwner.finish(loadingToken)) setLoading(false);
     }
   };
 
@@ -231,6 +266,7 @@ export default function PublicationWorkbench(props: { locale: Locale }) {
     }
     try {
       setSourceText(await file.text());
+      inputEpoch += 1;
       setSourceName(file.name);
       setResult(undefined);
     } catch (value) {
@@ -248,7 +284,7 @@ export default function PublicationWorkbench(props: { locale: Locale }) {
       badges={<><span class="wui-badge wui-badge--outline">publication/compiler.py</span><span class="wui-badge wui-badge--outline">authority=false</span></>}
       title={zh() ? <>上传或粘贴一份正文，生成<span>真正可下载的出版文件。</span></> : <>Upload or paste manuscript text and build <span>real downloadable publication files.</span></>}
       lede={<p>{zh() ? "浏览器在 Web Worker 里运行仓库同一份 Python compiler。TXT、Web、Print、EPUB 都来自真实 artifact；上传内容不会写入 Project、Canon 或持久状态。" : "The browser runs the repository's same Python compiler inside a Web Worker. TXT, Web, Print, and EPUB previews come from real artifacts; uploads never write Project, Canon, or persistent state."}</p>}
-      visual={<ProfileGallery selected={selected()} onSelect={(index) => { setSelected(index); setResult(undefined); }} zh={zh()} />}
+      visual={<ProfileGallery selected={selected()} onSelect={(index) => { inputEpoch += 1; setSelected(index); setResult(undefined); }} zh={zh()} />}
     />
 
     <section class="publication-input-strip" aria-label={zh() ? "出版输入" : "Publication input"}>
@@ -280,7 +316,7 @@ export default function PublicationWorkbench(props: { locale: Locale }) {
         </button>
         <label class="publication-source-editor">
           <span><strong>{sourceName()}</strong><small>{sourceText().length.toLocaleString()} chars</small></span>
-          <textarea value={sourceText()} onInput={(event) => { setSourceText(event.currentTarget.value); setSourceName("Playground manuscript"); setResult(undefined); }} placeholder={zh() ? "粘贴正文、Markdown、publication source JSON，或 quillframe_agent_result_v1…" : "Paste manuscript text, Markdown, publication source JSON, or quillframe_agent_result_v1…"} spellcheck={false} />
+          <textarea value={sourceText()} onInput={(event) => { inputEpoch += 1; setSourceText(event.currentTarget.value); setSourceName("Playground manuscript"); setResult(undefined); }} placeholder={zh() ? "粘贴正文、Markdown、publication source JSON，或 quillframe_agent_result_v1…" : "Paste manuscript text, Markdown, publication source JSON, or quillframe_agent_result_v1…"} spellcheck={false} />
         </label>
       </div>
     </section>

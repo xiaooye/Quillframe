@@ -17,8 +17,6 @@ const Story = lazy(() => import("./routes/Story"));
 const Review = lazy(() => import("./routes/Review"));
 const Research = lazy(() => import("./routes/Research"));
 const Learning = lazy(() => import("./routes/Learning"));
-const Inspector = lazy(() => import("./routes/InspectorRoute"));
-const Control = lazy(() => import("./routes/Control"));
 const Architecture = lazy(() => import("./routes/Architecture"));
 const Publication = lazy(() => import("./routes/Publication"));
 const Workspace = lazy(() => import("./routes/Workspace"));
@@ -83,8 +81,6 @@ render(
             <Route path="/research" component={Research} />
             <Route path="/learning" component={Learning} />
             <Route path="/publication" component={Publication} />
-            <Route path="/inspect" component={Inspector} />
-            <Route path="/control" component={Control} />
             <Route path="/architecture" component={Architecture} />
             <Route path="/workspace" component={Workspace} />
             <Route path="/agents" component={Agents} />

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Minimal stdio MCP adapter for the Quillframe Control Plane.
 
-Implements MCP 2025-06-18 lifecycle + tools/list + tools/call over newline-
+Implements the exact MCP 2026-07-28 lifecycle + tools/list + tools/call over newline-
 delimited JSON-RPC. Stdout is reserved for MCP messages; diagnostics go stderr.
 """
 from __future__ import annotations
@@ -14,16 +14,77 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from control_plane import ControlPlane
+# Support both ``python -m harness.control_plane.mcp_stdio`` and the release
+#/CI form that executes this file by path.  The latter otherwise puts only
+# ``harness/control_plane`` on sys.path, so the novel-kernel imports fail.
+ROOT = Path(__file__).resolve().parents[2]
+CONTROL_PLANE_DIR = Path(__file__).resolve().parent
+for _path in (str(ROOT), str(CONTROL_PLANE_DIR)):
+    if _path not in sys.path:
+        sys.path.insert(0, _path)
 
-PROTOCOL_VERSION = "2025-06-18"
+from control_plane import ControlPlane
+from core_operations import CoreOperations
+from persistence.quillframe_sqlite import QuillframeStore
+
+PROTOCOL_VERSION = "2026-07-28"
 SERVER_INFO = {
     "name": "quillframe-control-plane",
     "title": "Quillframe Control Plane",
-    "version": "0.9.0",
+    "version": "1.0.0-dev.0",
+    "product_boundary": "host_runs_agent_quillframe_governs_novel",
 }
 
 TOOLS: list[dict[str, Any]] = [
+    {
+        "name": "quillframe_capabilities",
+        "title": "Novelist-facing Quillframe capabilities",
+        "description": "Discover the novelist-facing, internal/ops, and privileged author surfaces without granting authority.",
+        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "authority": False},
+    },
+    {
+        "name": "quillframe_project_inspect",
+        "title": "Inspect fiction Project",
+        "description": "Read the Project projection and story-contract counts. This does not expose private runtime stores or grant authority.",
+        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}}, "required": ["project_id"], "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "project.inspect", "authority": False},
+    },
+    {
+        "name": "quillframe_author_run_start",
+        "title": "Start bounded author run",
+        "description": "Register one explicitly named Quillframe task mode. The host/model must still execute and satisfy all gates; raw draft remains private.",
+        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}, "task_mode": {"type": "string", "minLength": 1}, "target_ref": {"type": ["string", "null"]}, "payload": {"type": "object"}, "session_id": {"type": ["string", "null"]}, "idempotency_key": {"type": ["string", "null"]}}, "required": ["project_id", "task_mode", "payload"], "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "author.run.start", "authority": False},
+    },
+    {
+        "name": "quillframe_candidate_review_get",
+        "title": "Read released candidate review",
+        "description": "Read exact candidate review evidence only when production release and fresh independent evidence validate.",
+        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}, "candidate_id": {"type": "string", "minLength": 1}}, "required": ["project_id", "candidate_id"], "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "candidate.review.get", "authority": False},
+    },
+    {
+        "name": "quillframe_candidate_visible_get",
+        "title": "Read Review Draft",
+        "description": "Return manuscript text only through the exact production-release visibility boundary; pending, stale, or unreleased candidates return no text.",
+        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}, "candidate_id": {"type": "string", "minLength": 1}}, "required": ["project_id", "candidate_id"], "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "candidate.visible.get", "authority": False},
+    },
+    {
+        "name": "quillframe_candidate_reject",
+        "title": "Reject candidate",
+        "description": "Record an explicit user-authorized review rejection. It never accepts or settles Canon.",
+        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}, "candidate_id": {"type": "string", "minLength": 1}, "candidate_fingerprint": {"type": "string", "minLength": 1}, "authorized_by": {"type": "string", "minLength": 1}, "authorization": {"type": "object"}, "idempotency_key": {"type": "string", "minLength": 1}, "reason": {"type": ["string", "null"]}, "user_authorized": {"const": True}}, "required": ["project_id", "candidate_id", "candidate_fingerprint", "authorized_by", "authorization", "idempotency_key", "user_authorized"], "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "candidate.reject", "requires_explicit_user_authorization": True, "authority": False},
+    },
+    {
+        "name": "quillframe_candidate_revision_request",
+        "title": "Request candidate revision",
+        "description": "Record an explicit user-authorized revision request with exact candidate binding. It never accepts or settles Canon.",
+        "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}, "candidate_id": {"type": "string", "minLength": 1}, "candidate_fingerprint": {"type": "string", "minLength": 1}, "revision_request": {"type": "object"}, "authorized_by": {"type": "string", "minLength": 1}, "authorization": {"type": "object"}, "idempotency_key": {"type": "string", "minLength": 1}, "user_authorized": {"const": True}}, "required": ["project_id", "candidate_id", "candidate_fingerprint", "revision_request", "authorized_by", "authorization", "idempotency_key", "user_authorized"], "additionalProperties": False},
+        "_meta": {"surface_class": "novelist_facing", "mapped_operation": "candidate.revision.request", "requires_explicit_user_authorization": True, "authority": False},
+    },
     {
         "name": "quillframe_status",
         "title": "Quillframe runtime status",
@@ -86,9 +147,66 @@ TOOLS: list[dict[str, Any]] = [
     },
 ]
 
+# Session/event/handoff/consume tools are internal operations. Novelist-facing
+# tools above map to the same Core contracts rather than creating another
+# authority API.
+for _tool in TOOLS:
+    _tool.setdefault("_meta", {"surface_class": "internal_ops", "authority": False})
+
 
 def text_result(value: Any, *, is_error: bool = False) -> dict[str, Any]:
     return {"content": [{"type": "text", "text": json.dumps(value, ensure_ascii=False, indent=2)}], "structuredContent": value if isinstance(value, dict) else {"value": value}, "isError": is_error}
+
+
+def agent_safe_candidate_review(review: dict[str, Any]) -> dict[str, Any]:
+    """Project review evidence for MCP, without a manuscript side channel.
+
+    Studio may use the richer Core projection because it separately invokes the
+    exact visibility boundary before rendering text.  A model-discoverable MCP
+    tool must not receive candidate/incumbent content or a reconstructable diff;
+    released manuscript text remains exclusive to ``candidate.visible.get``.
+    """
+    safe = {
+        key: review[key]
+        for key in (
+            "project_id", "evidence", "revision_request",
+            "private_reasoning_exposed", "authority", "canon_authority",
+            "settlement_authority",
+        )
+        if key in review
+    }
+    safe["schema"] = "quillframe_candidate_review_evidence_projection_v1"
+    candidate = review.get("candidate")
+    safe["candidate"] = {
+        field: candidate[field]
+        for field in (
+            "candidate_id", "candidate_fingerprint", "document_id", "run_id",
+            "task_mode", "candidate_kind", "persisted_status",
+            "effective_status", "user_visible_gate",
+        )
+        if isinstance(candidate, dict) and field in candidate
+    }
+    for key in ("candidate_revision", "incumbent_revision"):
+        revision = review.get(key)
+        if isinstance(revision, dict):
+            safe[key] = {
+                field: revision[field]
+                for field in (
+                    "revision_id",
+                    "document_id",
+                    "parent_revision_id",
+                    "content_fingerprint",
+                    "authority_class",
+                    "source",
+                    "created_at",
+                )
+                if field in revision
+            }
+        else:
+            safe[key] = None
+    safe.pop("diff", None)
+    safe["manuscript_access"] = "candidate.visible.get_only"
+    return safe
 
 
 class MCPServer:
@@ -96,8 +214,54 @@ class MCPServer:
         self.cp = ControlPlane(db_path)
         self.cp.init()
         self.initialized = False
+        self._initialize_accepted = False
 
     def call_tool(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
+        if name == "quillframe_capabilities":
+            return {
+                "schema": "quillframe_mcp_surface_manifest_v1",
+                "product_boundary": "host_runs_agent_quillframe_governs_novel",
+                "surface_classes": {
+                    "novelist_facing": [
+                        "project.inspect",
+                        "author.run.start", "candidate.review.get", "candidate.visible.get",
+                        "candidate.reject", "candidate.revision.request",
+                    ],
+                    "internal_ops": [
+                        "session", "event", "handoff", "leases", "consume-once", "provider/runtime diagnostics",
+                    ],
+                    "privileged_author": ["candidate.accept", "settlement.apply"],
+                },
+                "authority": False,
+                "canon_authority": False,
+                "settlement_authority": False,
+            }
+        if name == "quillframe_project_inspect":
+            return CoreOperations(QuillframeStore()).project_inspect(args["project_id"])
+        if name == "quillframe_author_run_start":
+            return CoreOperations(QuillframeStore()).start_author_run(
+                args["project_id"], task_mode=args["task_mode"], target_ref=args.get("target_ref"),
+                payload=args["payload"], session_id=args.get("session_id"), idempotency_key=args.get("idempotency_key"),
+            )
+        if name == "quillframe_candidate_review_get":
+            review = CoreOperations(QuillframeStore()).candidate_review_get(args["project_id"], candidate_id=args["candidate_id"])
+            return agent_safe_candidate_review(review)
+        if name == "quillframe_candidate_visible_get":
+            return CoreOperations(QuillframeStore()).candidate_visible_get(args["project_id"], candidate_id=args["candidate_id"])
+        if name == "quillframe_candidate_reject":
+            if args.get("user_authorized") is not True:
+                raise ValueError("candidate.reject requires an explicit user action")
+            return CoreOperations(QuillframeStore()).reject_candidate(
+                args["project_id"], candidate_id=args["candidate_id"], candidate_fingerprint=args["candidate_fingerprint"],
+                authorized_by=args["authorized_by"], authorization=args["authorization"], idempotency_key=args["idempotency_key"], reason=args.get("reason"),
+            )
+        if name == "quillframe_candidate_revision_request":
+            if args.get("user_authorized") is not True:
+                raise ValueError("candidate.revision.request requires an explicit user action")
+            return CoreOperations(QuillframeStore()).request_candidate_revision(
+                args["project_id"], candidate_id=args["candidate_id"], candidate_fingerprint=args["candidate_fingerprint"],
+                revision_request=args["revision_request"], authorized_by=args["authorized_by"], authorization=args["authorization"], idempotency_key=args["idempotency_key"],
+            )
         if name == "quillframe_status": return self.cp.status()
         if name == "quillframe_session_put": return self.cp.put_session(args["session"], expected_version=args.get("expected_version"))
         if name == "quillframe_session_get":
@@ -118,9 +282,25 @@ class MCPServer:
 
     def handle(self, msg: dict[str, Any]) -> dict[str, Any] | None:
         method = msg.get("method"); rid = msg.get("id")
-        if method == "notifications/initialized": self.initialized = True; return None
+        if method == "notifications/initialized":
+            self.initialized = self._initialize_accepted
+            return None
         if method == "initialize":
             self.initialized = False
+            self._initialize_accepted = False
+            params = msg.get("params")
+            requested = params.get("protocolVersion") if isinstance(params, dict) else None
+            if requested != PROTOCOL_VERSION:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": rid,
+                    "error": {
+                        "code": -32602,
+                        "message": f"protocolVersion must be exactly {PROTOCOL_VERSION}",
+                        "data": {"supported": PROTOCOL_VERSION, "received": requested},
+                    },
+                }
+            self._initialize_accepted = True
             return {"jsonrpc": "2.0", "id": rid, "result": {"protocolVersion": PROTOCOL_VERSION, "capabilities": {"tools": {"listChanged": False}}, "serverInfo": SERVER_INFO, "instructions": "Operational Quillframe runtime tools only. They do not grant Canon or framework-behavior authority."}}
         if method == "ping": return {"jsonrpc": "2.0", "id": rid, "result": {}}
         if not self.initialized: return {"jsonrpc": "2.0", "id": rid, "error": {"code": -32002, "message": "server not initialized"}}

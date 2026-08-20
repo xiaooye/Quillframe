@@ -19,8 +19,8 @@ Resolve one primary Quillframe task mode before execution. Do not silently turn 
 
 When operating against a consuming novel project:
 
-- read its manifest and exact Framework lock first;
-- resolve project authority through the Project Adapter / SDK contract;
+- read its five-key native manifest, CH001 context, fingerprint, and `.quillframe/data` boundary first;
+- resolve project authority through the native Project contract;
 - keep project facts in the project repository;
 - treat this Framework repository as the owner of generic mechanisms only.
 
@@ -77,11 +77,11 @@ Canon mutation requires explicit project acceptance plus the settlement transact
 
 Framework behavior changes follow the repository's engineering and self-improvement gates.
 
-## 08 · Hooks and observability
+## 08 · Product observability
 
-Repository hooks may record deterministic lifecycle/file-change telemetry. Metadata-only run receipts may record fingerprints, selected contract IDs, context-selection evidence and guard outcomes.
+Core-owned metadata-only run receipts may record fingerprints, selected contract IDs, context-selection evidence and guard outcomes. Repository hooks are not installed and are not part of product correctness.
 
-They must not:
+Observability must not:
 
 - persist private chain-of-thought;
 - clone manuscript text into a second authority store by default;
@@ -106,4 +106,4 @@ A 409 / before-state mismatch means **re-read and merge**, not overwrite.
 
 Never add consuming-project names, characters, Canon, private user preference data, or project-specific defaults to generic Framework source.
 
-Legacy project compatibility belongs in generic adapter/migration mechanisms. Project facts stay downstream.
+Quillframe 1.0 has one native Project contract. Pre-1.0 Project state is rejected rather than imported, mapped, redirected, or upgraded. Project facts stay downstream.

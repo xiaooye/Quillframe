@@ -4,7 +4,7 @@ import json, re, sys
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
-EXPECTED="0.9.0"
+EXPECTED=(ROOT/"VERSION").read_text(encoding="utf-8").strip()
 values={}
 values["VERSION"]=(ROOT/"VERSION").read_text().strip()
 manifest=(ROOT/"HARNESS_MANIFEST.yaml").read_text(encoding="utf-8")

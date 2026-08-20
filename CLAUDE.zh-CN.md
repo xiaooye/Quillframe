@@ -19,8 +19,8 @@
 
 如果 Claude Code 正在操作某个下游小说项目：
 
-- 先读取项目 manifest 与精确 Framework lock；
-- 通过 Project Adapter / SDK 契约解析项目权威；
+- 先读取项目五键 native manifest、CH001 context、fingerprint 与 `.quillframe/data` boundary；
+- 通过 native Project contract 解析项目权威；
 - 项目事实留在项目仓库；
 - 本 Framework 仓库只拥有通用机制。
 
@@ -77,11 +77,11 @@ Claude Code、hook、MCP、subprocess、GitHub Actions 和 semantic result 都�
 
 Framework 行为变更则遵守仓库自己的工程流程与 Self-Improvement gate。
 
-## 08 · Hook 与可观察性
+## 08 · 产品可观察性
 
-仓库 hook 可以记录确定性的 lifecycle / file-change telemetry；metadata-only run receipt 可以记录 fingerprint、选中的 contract、context-selection evidence 与 guard outcome。
+Core-owned metadata-only run receipt 可以记录 fingerprint、选中的 contract、context-selection evidence 与 guard outcome。产品不安装仓库 Hook，产品正确性也不依赖 Hook。
 
-它们不能：
+可观察性不能：
 
 - 持久化 private chain-of-thought；
 - 默认复制整份 manuscript 建第二套 authority store；
@@ -106,4 +106,4 @@ Framework 行为变更则遵守仓库自己的工程流程与 Self-Improvement g
 
 通用 Framework source 里不得加入下游项目名称、人物、正典、私人用户偏好数据或项目专属默认值。
 
-Legacy project compatibility 应留在通用 adapter / migration mechanism 中；具体项目事实始终留在下游。
+Quillframe 1.0 只有一套 native Project contract。1.0 之前的 Project state 必须被拒绝，不能 import、mapping、redirect 或 upgrade；具体项目事实始终留在下游。

@@ -18,8 +18,18 @@ const copy = english
       secondaryAction: "Explore the product",
       eyebrow: "Choose a path",
       intro: "You do not need to read the framework from top to bottom. Pick the outcome you need and follow the shortest useful path.",
+      journeyTitle: "One author journey",
+      journeyIntro: "The product and the docs use the same four verbs. Start here, then open technical detail only when the task requires it.",
+      journey: [
+        ["Start · 01", "Create or open one CH001 project and choose Guided or Expert mode.", "/docs/en/why-quillframe", "01"],
+        ["Write · 02", "Move from intent and frozen Context into a candidate without silently changing Canon.", "/docs/en/production-pipeline", "02"],
+        ["Review · 03", "Bind deterministic and semantic evidence to the exact candidate fingerprint.", "/docs/en/quality-assurance", "03"],
+        ["Publish · 04", "Accept, settle, and publish as three explicit actions.", "/publication", "04"],
+      ],
+      trustTitle: "Trust boundaries",
+      trustIntro: "The host runs the agent. Quillframe governs the novel. Models make semantic judgments; deterministic Core owns identity, permissions, fingerprints, budgets, persistence, and consequential writes.",
       paths: [
-        ["Inspect an existing project", "Open a Quillframe project folder locally and verify its manifest, exact framework lock, attestation, and structural evidence without uploading the project.", "/inspect", "⌂"],
+        ["Inspect an existing project", "Open a Quillframe project folder locally and verify its five-key manifest, CH001, manifest fingerprint, .quillframe/data boundary, and structural evidence without uploading the project.", "/inspect", "⌂"],
         ["Decide whether Quillframe fits", "Compare the product model, its tradeoffs, and the cases where a simpler writing agent or another authoring tool is a better fit.", "/docs/en/why-quillframe", "✦"],
         ["Understand the architecture", "See how project authority, model judgment, deterministic runtime behavior, state, and writes are kept separate.", "/docs/en/architecture", "⌘"],
         ["Connect model inference", "Use API Endpoint + Access Token while Quillframe owns discovery, capability evidence, model selection, and the agent loop.", "/docs/en/model-runtime", "◇"],
@@ -43,7 +53,7 @@ const copy = english
       modelIntro: "Product concepts, usage guidance, and exact engineering contracts stay separate so each page can serve the reader who actually needs it.",
       tiers: [
         ["A", "Product concepts", "Mental models, positioning, architecture, production flow, and quality. Start here if Quillframe is new to you."],
-        ["B", "Usage guides", "Project SDK, Model/Agent Runtime, integrations, Context, learning, Corpus, evaluations, quality evolution, and Studio."],
+        ["B", "Usage guides", "Native Project Contract, Model/Agent Runtime, integrations, Context, learning, Corpus, evaluations, quality evolution, and Studio."],
         ["C", "Contracts & engineering records", "Harness, runtime, semantic workers, story and Canon mechanics, policies, and historical specifications."],
       ],
       tierLabel: (tier: string) => `Tier ${tier}`,
@@ -61,8 +71,18 @@ const copy = english
       secondaryAction: "进入产品首页",
       eyebrow: "按目标开始",
       intro: "不需要从头到尾读完整个框架。先选你此刻要完成的事情，再沿着最短的阅读路径进入需要的深度。",
+      journeyTitle: "一条作者主流程",
+      journeyIntro: "产品与文档使用同一组四个动作。先完成眼前任务，只有确实需要时才进入技术细节。",
+      journey: [
+        ["开始 · 01", "创建或打开一个 CH001 Project，并选择引导或专家模式。", "/docs/why-quillframe", "01"],
+        ["写作 · 02", "从意图与冻结 Context 进入候选稿，不暗中改变 Canon。", "/docs/production-pipeline", "02"],
+        ["审阅 · 03", "把确定性证据和语义证据绑定到同一个候选稿指纹。", "/docs/quality-assurance", "03"],
+        ["发布 · 04", "把接受、结算与发布保留为三个显式动作。", "/publication", "04"],
+      ],
+      trustTitle: "信任边界",
+      trustIntro: "宿主运行 Agent，Quillframe 治理小说。模型负责语义判断；确定性 Core 负责身份、权限、指纹、预算、持久化与后果性写入。",
       paths: [
-        ["检查现有 Quillframe 项目", "直接在浏览器本地打开项目文件夹，检查项目清单、精确框架锁定、框架证明和结构证据；项目内容不会上传。", "/inspect", "⌂"],
+        ["检查现有 Quillframe 项目", "直接在浏览器本地打开项目文件夹，检查五键 manifest、CH001、manifest fingerprint、.quillframe/data boundary 和结构证据；项目内容不会上传。", "/inspect", "⌂"],
         ["判断 Quillframe 是否适合", "了解产品定位与实际取舍，并比较通用编程智能体、简单写作助手和作者工具在不同场景下是否更合适。", "/docs/why-quillframe", "✦"],
         ["理解总体架构", "看清项目权威、模型语义判断、确定性运行时、状态与写入边界如何彼此分离。", "/docs/architecture", "⌘"],
         ["连接模型推理", "用户只提供 API Endpoint + Access Token；模型发现、能力证据、模型选择与 agent loop 仍由 Quillframe 负责。", "/docs/model-runtime", "◇"],
@@ -86,7 +106,7 @@ const copy = english
       modelIntro: "产品概念、使用指南和精确工程契约彼此分层，让每一页只服务真正需要这一级细节的读者。",
       tiers: [
         ["A", "产品概念", "心智模型、产品定位、总体架构、生产流程与质量保障。第一次了解 Quillframe，从这里开始。"],
-        ["B", "使用指南", "Project SDK、Model/Agent Runtime、集成、Context、学习、语料、评测、质量演化与 Studio。"],
+        ["B", "使用指南", "Native Project Contract、Model/Agent Runtime、集成、Context、学习、语料、评测、质量演化与 Studio。"],
         ["C", "契约与工程记录", "Harness、Runtime、Semantic Worker、故事与 Canon 机制、政策以及历史规范。"],
       ],
       tierLabel: (tier: string) => `第 ${tier} 层`,
@@ -101,8 +121,8 @@ const frontmatter = {
   description: copy.description,
   template: "splash" as const,
   editUrl: english
-    ? "https://github.com/xiaooye/cn_webnovel_agent/blob/main/docs/README.en.md"
-    : "https://github.com/xiaooye/cn_webnovel_agent/blob/main/docs/README.zh-CN.md",
+    ? "https://github.com/xiaooye/Quillframe/blob/main/docs/README.en.md"
+    : "https://github.com/xiaooye/Quillframe/blob/main/docs/README.zh-CN.md",
   hero: {
     title: copy.heroTitle,
     tagline: copy.heroTagline,
@@ -115,7 +135,24 @@ const frontmatter = {
 ---
 
 <StarlightPage frontmatter={frontmatter} lang={locale}>
-  <main class="nf-docs-home" data-nf-docs-home>
+  <div class="nf-docs-home" data-nf-docs-home>
+    <section class="nf-home-section nf-home-section--lead" aria-labelledby="nf-home-journey">
+      <p class="nf-home-eyebrow">Start · Write · Review · Publish</p>
+      <div class="nf-home-section-heading">
+        <h2 id="nf-home-journey">{copy.journeyTitle}</h2>
+        <p>{copy.journeyIntro}</p>
+      </div>
+      <div class="nf-link-grid nf-author-journey">
+        {copy.journey.map(([title, description, href, icon]) => (
+          <a class="nf-link-card" href={href}>
+            <span class="nf-link-icon" aria-hidden="true">{icon}</span>
+            <span class="nf-link-copy"><strong>{title}</strong><small>{description}</small></span>
+            <span class="nf-link-arrow" aria-hidden="true">→</span>
+          </a>
+        ))}
+      </div>
+    </section>
+
     <section class="nf-home-section nf-home-section--lead" aria-labelledby="nf-home-paths">
       <p class="nf-home-eyebrow">{copy.eyebrow}</p>
       <h2 id="nf-home-paths">{copy.eyebrow}</h2>
@@ -130,6 +167,15 @@ const frontmatter = {
         ))}
       </div>
     </section>
+
+    <aside class="nf-reference-callout nf-trust-boundary">
+      <div>
+        <p class="nf-home-eyebrow">Trust boundaries</p>
+        <h2>{copy.trustTitle}</h2>
+        <p>{copy.trustIntro}</p>
+      </div>
+      <a href={english ? "/docs/en/architecture" : "/docs/architecture"}>{english ? "Inspect the boundary" : "查看边界"}<span aria-hidden="true"> →</span></a>
+    </aside>
 
     <section class="nf-home-section" aria-labelledby="nf-home-runtime">
       <div class="nf-home-section-heading">
@@ -171,5 +217,5 @@ const frontmatter = {
       </div>
       <a href={english ? "/docs/en/architecture-atlas" : "/docs/architecture-atlas"}>{copy.referenceAction}<span aria-hidden="true"> →</span></a>
     </aside>
-  </main>
+  </div>
 </StarlightPage>

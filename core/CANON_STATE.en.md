@@ -329,5 +329,5 @@ The correct state is `settlement_incomplete` or an equivalent explicit failure�
 - [Story System](STORY_SYSTEM.en.md) — future planning and dependencies.
 - [Character & Relationship System](CHARACTER_SYSTEM.en.md) — information ownership, relationship/current state, and character evidence.
 - [Context & Memory](../docs/context-and-memory.en.md) — author-visible controls that remain below Canon authority.
-- [Project SDK](../docs/project-sdk.en.md) — manifest/lock/project engineering and project-owned authority.
+- [Native Project Contract](../docs/project-contract.en.md) — five-key manifest/context, fingerprint, project engineering, and project-owned authority.
 - [Session Runtime](../harness/session_runtime/SESSION_RUNTIME.en.md) — operational state that must remain separate from Canon.

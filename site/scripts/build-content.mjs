@@ -15,6 +15,7 @@ if (typeof markedVersion !== "string" || !markedVersion) throw new Error("site/p
 const manifestPath = path.join(repoRoot, "docs", "documentation_manifest.json");
 const outputRoot = path.join(siteRoot, "public", "generated");
 const docsOutputRoot = path.join(outputRoot, "docs");
+const browserRuntimeRoot = path.join(outputRoot, "runtime");
 
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 if (manifest.schema !== "quillframe_documentation_manifest_v1") {
@@ -218,6 +219,48 @@ const compactExcerpt = (text, max = 260) => {
 fs.rmSync(outputRoot, { recursive: true, force: true });
 fs.mkdirSync(docsOutputRoot, { recursive: true });
 
+const browserCoreSources = [
+  "production_runtime/workflow.py",
+  "production_runtime/types.py",
+];
+const browserCoreHashes = {};
+for (const relative of browserCoreSources) {
+  const source = path.join(repoRoot, relative);
+  const destination = path.join(browserRuntimeRoot, relative);
+  if (!fs.existsSync(source)) throw new Error(`Browser Core source is missing: ${relative}`);
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.copyFileSync(source, destination);
+  browserCoreHashes[relative] = crypto.createHash("sha256").update(fs.readFileSync(source)).digest("hex");
+}
+
+const quickDemoFixture = path.join(repoRoot, "demo", "fixtures", "ch001_quick_demo.json");
+if (!fs.existsSync(quickDemoFixture)) throw new Error("CH001 quick-demo fixture is missing");
+fs.copyFileSync(quickDemoFixture, path.join(browserRuntimeRoot, "ch001_quick_demo.json"));
+fs.writeFileSync(path.join(browserRuntimeRoot, "manifest.json"), `${JSON.stringify({
+  schema: "quillframe_browser_core_manifest_v1",
+  chapter_scope: "CH001",
+  files: browserCoreHashes,
+  demo_fixture: "ch001_quick_demo.json",
+  authority: false,
+}, null, 2)}\n`, "utf8");
+
+const pyodideEntry = fileURLToPath(import.meta.resolve("pyodide"));
+const pyodideSourceRoot = path.dirname(pyodideEntry);
+const pyodideOutputRoot = path.join(siteRoot, "public", "pyodide");
+const pyodideAssets = [
+  "pyodide.asm.mjs",
+  "pyodide.asm.wasm",
+  "pyodide-lock.json",
+  "python_stdlib.zip",
+];
+fs.rmSync(pyodideOutputRoot, { recursive: true, force: true });
+fs.mkdirSync(pyodideOutputRoot, { recursive: true });
+for (const asset of pyodideAssets) {
+  const source = path.join(pyodideSourceRoot, asset);
+  if (!fs.existsSync(source)) throw new Error(`Pyodide local runtime asset is missing: ${asset}`);
+  fs.copyFileSync(source, path.join(pyodideOutputRoot, asset));
+}
+
 const indexDocuments = [];
 let compiledCount = 0;
 
@@ -294,6 +337,7 @@ fs.writeFileSync(path.join(outputRoot, "build-meta.json"), `${JSON.stringify({
   documents: compiledCount,
   locales: ["en-US", "zh-CN"],
   parser: `marked@${markedVersion}`,
+  browserCore: "production_runtime/workflow.py + production_runtime/types.py",
 }, null, 2)}\n`, "utf8");
 
 console.log(JSON.stringify({

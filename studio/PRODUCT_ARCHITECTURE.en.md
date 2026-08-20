@@ -16,7 +16,7 @@ Quillframe already has substantial Studio substrate:
 
 - Session / Run / Checkpoint identity and a durable Control Plane;
 - typed host capability evidence with `capability != authority`;
-- Project Adapter resolution for logical project domains;
+- native Project resolution for logical project domains;
 - `quillframe_context_inspector_v2` for authority-aware, stage-aware context views and safe derived controls;
 - `quillframe_run_receipt_v1` for metadata-only execution evidence;
 - `quillframe_production_readiness_v1` for same-fingerprint conjunctive user-visible readiness;
@@ -56,7 +56,7 @@ Story Loom still owns Quillframe product semantics. WeiUI owns generic CSS/token
 | Session / Run identity | navigation, history, resume affordances | operational identity |
 | Control Plane | event/handoff/result/consume lineage | operational evidence |
 | `quillframe_host_capabilities_v1` | integrations/capability health | capability is not authority |
-| `quillframe_project_adapter_resolution_v1` | Project Hub logical domains and paths | path classification only |
+| `quillframe_project_v1_0` + `quillframe_project_context_v1_0` | Project Hub native five-key manifest, CH001, fingerprint, and `.quillframe/data` boundary | browser projection only; `authority=false` |
 | semantic contract catalog | Semantic Pack Inspector labels and deep links | contract metadata |
 | settlement receipts | settlement review and failure explanation | settlement semantics remain Core-owned |
 
@@ -367,7 +367,7 @@ Changing the application framework or host later requires an explicit Product de
 - Story Loom brand, product semantics and visual grammar;
 - exact-pinned WeiUI zero-JS token/CSS foundation;
 - existing documentation and design-system QA discipline;
-- Core Run Receipt, Context Inspector, Project Adapter, capability and Control Plane substrates;
+- Core Run Receipt, Context Inspector, native Project resolution, capability and Control Plane substrates;
 - Core production-readiness and minimum Publication contracts as the authoritative basis for those product surfaces;
 - #8 as the Studio/MCP umbrella and #16 as the broader remaining Publication/Typesetting scope;
 - one product truth model across CLI, Local Web, optional Tauri, hosted UI and Agent Skill.

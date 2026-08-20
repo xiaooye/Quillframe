@@ -5,14 +5,15 @@ import { useI18n } from "../i18n";
 const agentBootstrap = `# Quillframe project bootstrap
 
 1. Read quillframe.toml.
-2. Read quillframe.lock.json and use the exact Framework commit + bundle fingerprint.
-3. Verify framework.attestation.json when the project provides it.
-4. Load the pinned Quillframe HARNESS_MANIFEST.yaml, SKILL.md, and harness/HARNESS_AGENT.md.
-5. Treat chat/session history as runtime context, never as Project or Canon authority.
-6. Use agent-skills/quillframe/SKILL.md for the public read-only Host Bridge when a portable agent integration is needed.
-7. Fail closed on unsupported bridge operations; do not bypass public boundaries through private runtime stores.
-8. Default to one manager run. Add external workers, handoffs, or independent gates only through the pinned runtime-routing and control-plane contracts.
-9. Treat session, event, handoff, and run-receipt state as Core-owned. If a safe public projection is unavailable, keep it unavailable rather than inferring it.
+2. Validate the exact five-key manifest: schema quillframe_project_v1_0, id, title, language, chapter_scope CH001.
+3. Project context v1_0 with manifest_fingerprint, .quillframe/data, and authority=false.
+4. Reject legacy metadata instead of reading or adapting it.
+5. Load the pinned Quillframe HARNESS_MANIFEST.yaml, SKILL.md, and harness/HARNESS_AGENT.md.
+6. Treat chat/session history as runtime context, never as Project or Canon authority.
+7. Use agent-skills/quillframe/SKILL.md for the public read-only Host Bridge when a portable agent integration is needed.
+8. Fail closed on unsupported bridge operations; do not bypass public boundaries through private runtime stores.
+9. Default to one manager run. Add external workers, handoffs, or independent gates only through the pinned runtime-routing and control-plane contracts.
+10. Treat session, event, handoff, and run-receipt state as Core-owned. If a safe public projection is unavailable, keep it unavailable rather than inferring it.
 `;
 
 const targets = ["Claude Code", "Codex", "OpenCode", "Cursor", "Custom agent"] as const;
@@ -138,8 +139,9 @@ export default function Agents() {
           <p>{t("agents.detectBody")}</p>
           <div class="nf-agent-detect-list">
             <code>quillframe.toml</code>
-            <code>quillframe.lock.json</code>
-            <code>framework.attestation.json</code>
+            <code>quillframe_project_context_v1_0</code>
+            <code>CH001 · .quillframe/data</code>
+            <code>manifest_fingerprint</code>
           </div>
         </section>
 
@@ -151,7 +153,7 @@ export default function Agents() {
           <p>{t("agents.bridgeBody")}</p>
           <code>python scripts/quillframe_bridge.py describe</code>
           <div class="nf-chip-row">
-            <span class="wui-badge wui-badge--success">Host Bridge v1</span>
+            <span class="wui-badge wui-badge--success">Host Bridge v11</span>
             <span class="wui-badge wui-badge--outline">MCP-ready boundary</span>
           </div>
         </section>

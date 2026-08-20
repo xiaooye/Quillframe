@@ -10,7 +10,7 @@ UI 负责 SolidJS/Tauri 展示层、路由、Writer/Review/Inspector UX 与 Brid
 ## Production 状态机
 `author.run.start` durable 注册且只注册一个 authoring task mode。`author.run.execute` 消费 frozen Context 并运行 mandatory production graph，通过 registered Reader/manager qualification 后，正常返回 `awaiting_external` 与 fingerprint-bound peer packet。Raw Draft 永不返回；此时 Review Draft Candidate 仍不存在。
 
-同一 manager/Writer/Model Service 不能满足 independent gate。`author.run.independent.submit` 必须收到 exact peer packet、external semantic result 与 Project-owned `quillframe_project_peer_validation_receipt_v1`。只有合法 independent PASS 且 `quality.production_readiness` 通过，才能创建 user-visible Review Draft。Independent FAIL 是 `failed_gate`，禁止在同一 run reviewer-shopping。
+同一 manager/Writer/Model Service 不能满足 independent gate。`author.run.independent.submit` 必须收到 exact peer packet、external semantic result 与当前 Project-owned `quillframe_project_peer_validation_receipt_v2`；v1 只保留历史 replay 兼容。只有合法 independent PASS 且 `quality.production_readiness` 通过，才能创建 user-visible Review Draft。Independent FAIL 是 `failed_gate`，禁止在同一 run reviewer-shopping。
 
 Freeze 后任何 tracked source/project change 都返回 `stale_conflict`。`author.run.context.refresh` 是显式 supersession 路径；Core 不会静默修改旧 freeze。
 

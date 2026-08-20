@@ -8,6 +8,8 @@ const siteRoot = path.resolve(here, "..");
 const read = (relative) => fs.readFileSync(path.join(siteRoot, relative), "utf8");
 
 const playground = read("src/LocalPlayground.tsx");
+const quickDemo = read("src/QuickDemo.tsx");
+const quickDemoWorker = read("src/quickDemo.worker.ts");
 const app = read("src/ProductApp.tsx");
 const main = read("src/main.tsx");
 const index = read("src/styles/index.css");
@@ -19,6 +21,7 @@ requireCheck(main.includes('import ProductApp from "./ProductApp"') && main.incl
 requireCheck(main.includes('import "./styles/index.css"'), "main entry must load the single Product stylesheet entrypoint");
 requireCheck(app.includes('<Route path="/playground" component={PlaygroundPage}'), "shared ProductApp must expose /playground");
 requireCheck(app.includes("<LocalPlayground locale={locale()} />"), "PlaygroundPage must render LocalPlayground with shared locale state");
+requireCheck(app.includes("<QuickDemo"), "Product home must render the CH001 QuickDemo");
 requireCheck(app.includes("ProductSurfaceHero") && app.includes("LOCAL PLAYGROUND"), "PlaygroundPage must use the shared product surface hero");
 requireCheck(index.includes('@import "./local-playground.css"'), "local playground styles must load through the Product CSS entrypoint");
 requireCheck(index.indexOf('local-playground.css') < index.indexOf('readability.css'), "playground route styling must precede cross-cutting readability hardening");
@@ -35,6 +38,14 @@ requireCheck(!/\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon|WebSocket\s*\(/
 requireCheck(!/openai|anthropic|model\.generate|chat\.completions/i.test(playground), "Local Playground must not hide a live model provider call");
 requireCheck(playground.includes("not the output of a deterministic semantic router"), "Playground must not misrepresent illustrative contract candidates as deterministic semantic routing");
 requireCheck(playground.includes("no Canon-write, publication, settlement, or durable-state authority"), "Playground result must explicitly carry no consequential write authority");
+
+for (const marker of ["Deterministic Core", "Recorded semantic evidence", "0 uploads", "CH001"]) {
+  requireCheck(quickDemo.includes(marker), `Quick Demo truth marker missing: ${marker}`);
+}
+requireCheck(quickDemo.includes("Worker(new URL"), "Quick Demo must execute outside the UI thread");
+requireCheck(quickDemoWorker.includes("loadPyodide"), "Quick Demo worker must load Pyodide");
+requireCheck(quickDemoWorker.includes("production_runtime/workflow.py") && quickDemoWorker.includes("production_runtime/types.py"), "Quick Demo must load the canonical Core sources");
+requireCheck(quickDemoWorker.includes("recorded_fixture") && quickDemoWorker.includes("live_model_called"), "Quick Demo receipt must distinguish recorded semantic evidence from live execution");
 
 for (const selector of [".playground-shell", ".playground-workspace", ".playground-mode-tabs", ".playground-trace-flow", ".playground-contract-boundary", ".playground-authority-boundary"]) {
   requireCheck(css.includes(selector), `Local Playground visual contract missing ${selector}`);

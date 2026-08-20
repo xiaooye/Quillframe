@@ -23,41 +23,113 @@ export const RUN_PROGRESS_STAGES = [
 
 export type RunProgressStageId = (typeof RUN_PROGRESS_STAGES)[number]["id"];
 
+export interface NativeProjectManifest {
+  schema: "quillframe_project_v1_0";
+  id: string;
+  title: string;
+  language: string;
+  chapter_scope: "CH001";
+}
+
 export interface ProjectProjection {
-  schema: "quillframe_project_projection_v1";
+  schema: "quillframe_project_inspection_v1_0";
+  manifest: NativeProjectManifest;
+  manifest_fingerprint: string;
+  chapter_scope: "CH001";
+  data_boundary: ".quillframe/data";
   authority: false;
-  project: {
-    project_id: string;
-    title: string;
-    language: string;
-    project_schema_version: number;
-    created_at?: string;
-    updated_at?: string;
-  };
   counts: Record<string, number>;
 }
 
 export interface ProjectCreateResult {
-  schema: "quillframe_project_create_result_v1";
-  project_id: string;
+  schema: "quillframe_project_create_result_v1_0";
+  manifest: NativeProjectManifest;
+  manifest_fingerprint: string;
+  chapter_scope: "CH001";
+  data_boundary: ".quillframe/data";
   created: true;
   authority: false;
 }
 
 export interface ProjectRegistryItem {
-  project_id: string;
+  schema: "quillframe_project_registry_item_v1_0";
+  id: string;
   title: string;
   language: string;
-  project_schema_version: number;
-  registered_at?: string;
-  last_opened_at?: string;
+  chapter_scope: "CH001";
+  manifest_fingerprint: string;
+  data_boundary: ".quillframe/data";
+  last_opened_at: string | null;
 }
 
 export interface ProjectListProjection {
-  schema: "quillframe_project_registry_projection_v1";
+  schema: "quillframe_project_list_v1_0";
   items: ProjectRegistryItem[];
   authority: false;
-  canon_authority: false;
+}
+
+const exactKeys = (value: Record<string, unknown>, keys: readonly string[]) =>
+  Object.keys(value).length === keys.length && keys.every((key) => Object.prototype.hasOwnProperty.call(value, key));
+const text = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0 && !value.includes("\0");
+const canonicalText = (value: unknown): value is string => text(value) && value === value.trim();
+const fingerprint = (value: unknown): value is string => typeof value === "string" && /^sha256:[0-9a-f]{64}$/.test(value);
+
+async function manifestFingerprint(manifest: NativeProjectManifest): Promise<string> {
+  const cryptoApi = globalThis.crypto;
+  if (!cryptoApi?.subtle) throw new Error("project_fingerprint_unavailable");
+  const canonical = JSON.stringify({ chapter_scope: manifest.chapter_scope, id: manifest.id, language: manifest.language, schema: manifest.schema, title: manifest.title });
+  const digest = await cryptoApi.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
+  return `sha256:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+}
+
+async function assertManifestFingerprint(manifest: NativeProjectManifest, value: unknown): Promise<void> {
+  if (!fingerprint(value) || value !== await manifestFingerprint(manifest)) throw new Error("project_fingerprint_invalid");
+}
+
+function parseManifest(value: unknown): NativeProjectManifest {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("project_manifest_invalid");
+  const manifest = value as Record<string, unknown>;
+  if (!exactKeys(manifest, ["schema", "id", "title", "language", "chapter_scope"])) throw new Error("project_manifest_invalid");
+  if (manifest.schema !== "quillframe_project_v1_0" || manifest.chapter_scope !== "CH001") throw new Error("project_manifest_invalid");
+  if (!text(manifest.id) || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(manifest.id)) throw new Error("project_manifest_invalid");
+  if (!canonicalText(manifest.title) || !canonicalText(manifest.language)) throw new Error("project_manifest_invalid");
+  return manifest as unknown as NativeProjectManifest;
+}
+
+export async function parseProjectProjection(value: unknown): Promise<ProjectProjection> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("project_projection_invalid");
+  const result = value as Record<string, unknown>;
+  if (!exactKeys(result, ["schema", "manifest", "manifest_fingerprint", "chapter_scope", "data_boundary", "authority", "counts"])) throw new Error("project_projection_invalid");
+  if (result.schema !== "quillframe_project_inspection_v1_0" || result.chapter_scope !== "CH001" || result.data_boundary !== ".quillframe/data" || result.authority !== false || !fingerprint(result.manifest_fingerprint)) throw new Error("project_projection_invalid");
+  const manifest = parseManifest(result.manifest);
+  await assertManifestFingerprint(manifest, result.manifest_fingerprint);
+  if (!result.counts || typeof result.counts !== "object" || Array.isArray(result.counts) || Object.values(result.counts).some((count) => typeof count !== "number" || !Number.isSafeInteger(count) || count < 0)) throw new Error("project_projection_invalid");
+  return result as unknown as ProjectProjection;
+}
+
+export async function parseProjectListProjection(value: unknown): Promise<ProjectListProjection> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("project_list_invalid");
+  const result = value as Record<string, unknown>;
+  if (!exactKeys(result, ["schema", "items", "authority"]) || result.schema !== "quillframe_project_list_v1_0" || result.authority !== false || !Array.isArray(result.items)) throw new Error("project_list_invalid");
+  for (const raw of result.items) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("project_list_invalid");
+    const item = raw as Record<string, unknown>;
+    if (!exactKeys(item, ["schema", "id", "title", "language", "chapter_scope", "manifest_fingerprint", "data_boundary", "last_opened_at"])) throw new Error("project_list_invalid");
+    if (item.schema !== "quillframe_project_registry_item_v1_0") throw new Error("project_list_invalid");
+    const manifest = parseManifest({ schema: "quillframe_project_v1_0", id: item.id, title: item.title, language: item.language, chapter_scope: item.chapter_scope });
+    await assertManifestFingerprint(manifest, item.manifest_fingerprint);
+    if (item.data_boundary !== ".quillframe/data" || (item.last_opened_at !== null && !text(item.last_opened_at))) throw new Error("project_list_invalid");
+  }
+  return result as unknown as ProjectListProjection;
+}
+
+export async function parseProjectCreateResult(value: unknown): Promise<ProjectCreateResult> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("project_create_invalid");
+  const result = value as Record<string, unknown>;
+  if (!exactKeys(result, ["schema", "manifest", "manifest_fingerprint", "chapter_scope", "data_boundary", "created", "authority"]) || result.schema !== "quillframe_project_create_result_v1_0" || result.chapter_scope !== "CH001" || result.data_boundary !== ".quillframe/data" || result.created !== true || result.authority !== false || !fingerprint(result.manifest_fingerprint)) throw new Error("project_create_invalid");
+  const manifest = parseManifest(result.manifest);
+  await assertManifestFingerprint(manifest, result.manifest_fingerprint);
+  return result as unknown as ProjectCreateResult;
 }
 
 export interface DocumentListItem {
@@ -134,6 +206,29 @@ export interface AuthorRunStartResult {
   canon_authority: false;
   settlement_authority: false;
   message: string;
+  workflow?: { status: string; stage: string; cursor: number; authority: false };
+}
+
+export interface WorkflowRunEvent {
+  schema: "quillframe_author_run_event_v1";
+  project_id: string;
+  run_id: string;
+  chapter_id: "CH001";
+  cursor: number;
+  event_type: string;
+  stage: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+  authority: false;
+}
+
+export interface WorkflowRunEventBatch {
+  schema: "quillframe_author_run_event_batch_v1";
+  project_id: string;
+  run_id: string;
+  events: WorkflowRunEvent[];
+  next_cursor: number;
+  authority: false;
 }
 
 export interface AuthorRunEvent {
@@ -283,6 +378,24 @@ export interface CandidateReviewProjection {
   settlement_authority: false;
 }
 
+export interface CandidateVisibleProjection {
+  schema: "quillframe_user_visible_candidate_v1";
+  project_id: string;
+  candidate_id: string;
+  candidate_fingerprint: string;
+  document_id?: string | null;
+  revision_id?: string | null;
+  content: string;
+  authority_class?: string | null;
+  production_release: Record<string, unknown>;
+  content_access: "production_release_only";
+  accepted: boolean;
+  settled: false;
+  private_reasoning_exposed: false;
+  authority: false;
+  canon_authority: false;
+}
+
 export interface AcceptanceResult {
   schema: "quillframe_candidate_acceptance_result_v1";
   acceptance_id: string;
@@ -368,7 +481,7 @@ export const CORE_CONSUMER_REQUIREMENTS: CoreConsumerRequirement[] = [
     operation: "project.list",
     userAction: "Open an existing Project without memorizing its stable id",
     minimalInput: "optional limit",
-    minimalOutput: "project_id, title, language, last_opened_at",
+    minimalOutput: "id, title, language, chapter_scope, manifest_fingerprint, data_boundary, last_opened_at",
     requiredErrors: ["host_unavailable"],
     authorityExpectation: "read-only projection; authority=false",
     whyUiCannotImplement: "Browser history/localStorage is not the canonical Project registry.",
@@ -435,6 +548,15 @@ export const CORE_CONSUMER_REQUIREMENTS: CoreConsumerRequirement[] = [
     requiredErrors: ["candidate_not_found", "review_pending", "stale_review"],
     authorityExpectation: "read-only evidence bound to exact Candidate fingerprint",
     whyUiCannotImplement: "Review prose/evidence cannot be reconstructed from browser state or candidate metadata.",
+  },
+  {
+    operation: "candidate.visible.get",
+    userAction: "Read the exact released production manuscript after the user-visible gate passes",
+    minimalInput: "project_id, candidate_id",
+    minimalOutput: "released candidate content, exact candidate/revision fingerprint, production release evidence",
+    requiredErrors: ["candidate_not_found", "production_release_missing", "production_release_invalid", "stale_review"],
+    authorityExpectation: "released production manuscript only; Core withholds content unless the exact candidate has a valid production release",
+    whyUiCannotImplement: "The UI must not reconstruct or reveal pre-release manuscript content from candidate metadata, checkpoints, or local state.",
   },
   {
     operation: "candidate.reject",

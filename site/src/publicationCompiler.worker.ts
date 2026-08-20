@@ -2,6 +2,7 @@
 
 import { loadPyodide, version as pyodideVersion } from "pyodide";
 import compilerSource from "../../publication/compiler.py?raw";
+import { createExclusiveWorkerExecutor, retryableRuntime } from "./workerLifecycle";
 
 export type PublicationCompilerProfile = "clean_text" | "web_reflow" | "print_book" | "epub3";
 
@@ -23,7 +24,6 @@ type WorkerResponse =
 
 const worker = self as DedicatedWorkerGlobalScope;
 type PyodideRuntime = Awaited<ReturnType<typeof loadPyodide>>;
-let runtimePromise: Promise<PyodideRuntime> | undefined;
 
 const PYTHON_BOOTSTRAP = String.raw`
 import base64
@@ -143,40 +143,40 @@ def qf_compile_publication(source_json: str, profile: str) -> str:
         shutil.rmtree(root, ignore_errors=True)
 `;
 
-async function runtime(): Promise<PyodideRuntime> {
-  if (!runtimePromise) {
-    runtimePromise = (async () => {
+const getRuntime = retryableRuntime(async (): Promise<PyodideRuntime> => {
       const pyodide = await loadPyodide({
-        indexURL: `https://cdn.jsdelivr.net/pyodide/v${pyodideVersion}/full/`,
+        indexURL: new URL("/pyodide/", worker.location.origin).href,
       });
       pyodide.FS.writeFile("/tmp/quillframe-publication-compiler.py", compilerSource);
       await pyodide.runPythonAsync(PYTHON_BOOTSTRAP);
       worker.postMessage({ kind: "ready", pyodide_version: pyodideVersion } satisfies WorkerResponse);
       return pyodide;
-    })();
-  }
-  return runtimePromise;
-}
+});
+
+const executor = createExclusiveWorkerExecutor();
 
 worker.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   if (event.data?.kind !== "compile") return;
   const { id, profile, source } = event.data.payload;
-  try {
-    const pyodide = await runtime();
-    pyodide.globals.set("qf_source_json", JSON.stringify(source));
-    pyodide.globals.set("qf_profile", profile);
-    const result = await pyodide.runPythonAsync("qf_compile_publication(qf_source_json, qf_profile)");
-    worker.postMessage({ kind: "result", id, result: String(result) } satisfies WorkerResponse);
-  } catch (value) {
+  const run = executor.run(
+    getRuntime,
+    async (pyodide) => {
+      pyodide.globals.set("qf_source_json", JSON.stringify(source));
+      pyodide.globals.set("qf_profile", profile);
+      const result = await pyodide.runPythonAsync("qf_compile_publication(qf_source_json, qf_profile)");
+      worker.postMessage({ kind: "result", id, result: String(result) } satisfies WorkerResponse);
+    },
+    (pyodide) => {
+      pyodide.globals.delete("qf_source_json");
+      pyodide.globals.delete("qf_profile");
+    },
+  );
+  if (!run.accepted) {
+    worker.postMessage({ kind: "error", id, error: "worker_busy" } satisfies WorkerResponse);
+    return;
+  }
+  void run.promise.catch((value) => {
     const error = value instanceof Error ? value.message : String(value);
     worker.postMessage({ kind: "error", id, error } satisfies WorkerResponse);
-  } finally {
-    try {
-      const pyodide = await runtimePromise;
-      pyodide?.globals.delete("qf_source_json");
-      pyodide?.globals.delete("qf_profile");
-    } catch {
-      // Runtime initialization errors are already surfaced above.
-    }
-  }
+  });
 };

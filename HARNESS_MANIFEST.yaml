@@ -1,4 +1,4 @@
-version: 0.9.0
+version: 1.0.0-dev.0
 name: quillframe
 product_name: Quillframe Adaptive Fiction Framework
 architecture: generic-fiction-os-ai-native-contract-first-capability-aware-adaptive-learning
@@ -8,9 +8,9 @@ scope:
   project_agnostic: true
   built_in_novel_or_canon: false
   dependency_direction: project-to-framework-only
-  supported_project_contract: quillframe_project_v1
-  project_sdk: project_sdk.py
-  project_adapter: project_adapter.py
+  supported_project_contract: quillframe_project_v1_0
+  project_resolution: project_resolution.py
+  project_launch: quillframe/launch.py
 
 fundamentals:
   story_system:
@@ -94,8 +94,6 @@ harness:
   semantic_runner: harness/semantic_workers/semantic_worker_runner.py
   semantic_model_runtime_adapter: harness/semantic_workers/adapters/model_runtime_adapter.py
   semantic_local_adapter: harness/semantic_workers/adapters/local_agent_adapter.py
-  semantic_openai_adapter: harness/semantic_workers/adapters/openai_responses_adapter.py
-  semantic_openai_adapter_role: compatibility_only
   semantic_peer_relay: harness/semantic_workers/peer_chat_relay.py
 
 library:
@@ -123,7 +121,7 @@ model_runtime:
   access_token_durable_storage: forbidden
   credential_reference_only_in_durable_state: true
   normal_ci_live_model_execution: forbidden
-  live_compatibility_probe: tests/live_model_runtime.py
+  live_model_probe: tests/live_model_runtime.py
 
 agent_runtime:
   package: agent_runtime
@@ -343,20 +341,16 @@ evals:
 
 project_engineering:
   contract:
-    en: docs/project-sdk.en.md
-    zh_cn: docs/project-sdk.zh-CN.md
-  adapter_contract:
-    en: harness/PROJECT_ADAPTER_PROTOCOL.en.md
-    zh_cn: harness/PROJECT_ADAPTER_PROTOCOL.zh-CN.md
+    en: docs/project-contract.en.md
+    zh_cn: docs/project-contract.zh-CN.md
+  resolution: project_resolution.py
+  launch: quillframe/launch.py
   manifest: quillframe.toml
-  lockfile: quillframe.lock.json
-  local_framework_materialization: .quillframe/framework
+  data_root: .quillframe/data
   optional_property_write_policy_path_key: property_write_policy
-  property_write_policy_absent_behavior: legacy_unmanaged
-  layouts: [standard, mapped]
-  change_classes: [micro_content, chapter_unit, structural_feature, canon_migration, release]
+  property_write_policy_absent_behavior: policy_required
+  change_classes: [micro_content, chapter_unit, structural_feature, canon_revision, release]
   structural_change_flow: [spec, plan, tasks, implementation, verification, acceptance]
-  deterministic_project_build: required
   deterministic_project_tests: required
   framework_bundle:
     builder: release/build_framework_bundle.py
@@ -366,8 +360,7 @@ project_engineering:
     format: deterministic-posix-tar
     fingerprint: sha256-exact-bundle-bytes
     content_manifest: BUNDLE_CONTENT_MANIFEST.json
-    consumer_lock_field: framework.bundle_fingerprint
-    attestation_excluded_from_fingerprint_input: true
+    metadata_excluded_from_fingerprint_input: true
 
 session_runtime:
   identity_model: resource-session-run-checkpoint
@@ -408,7 +401,7 @@ session_runtime:
   provider_session_identifiers_exposed: false
   persistent_session_does_not_grant_authority: true
   reviewer_default: fresh-per-fingerprint
-  resume_revalidates_project_authority: true
+  resume_revalidates_project_manifest: true
   resume_reresolves_required_capabilities: true
   author_steering_transport_event: feedback.observed
   author_steering_payload_schema: quillframe_author_steering_request_v1
@@ -469,7 +462,7 @@ control_plane:
   write_intent_requires_exact_before_state: true
   write_intent_does_not_grant_authority: true
   mcp:
-    protocol_version: 2025-06-18
+    protocol_version: 2026-07-28
     local_transport: stdio
     remote_transport: streamable-http
     canon_write_tools_exposed: false
@@ -481,7 +474,7 @@ semantic:
   contract_pack_root: harness/semantic_workers/contracts
   loading_policy: progressive_disclosure
   exact_contract_id_resolution: deterministic_runtime
-  aggregate_compatibility_registry: forbidden
+  aggregate_duplicate_registry: forbidden
   semantic_intelligence_owner: model
   deterministic_runtime_does_literary_judgment: false
   fingerprint_payload: [kind, subject_id, input, rubric, output_contract]
@@ -515,7 +508,7 @@ workflows:
   framework_bundle: .github/workflows/quillframe-release-bundle.yml
   typed_event_router: .github/workflows/quillframe-event-router.yml
   live_semantic_optional: .github/workflows/quillframe-semantic-live.yml
-  live_model_compatibility: tests/live_model_runtime.py
+  live_model_probe: tests/live_model_runtime.py
   weekly_maintenance: .github/workflows/quillframe-weekly-maintenance.yml
   state_integrity_p0: .github/workflows/quillframe-state-integrity-p0.yml
   author_steering: .github/workflows/quillframe-author-steering.yml
@@ -529,7 +522,7 @@ workflows:
     bridge_runtime: .github/actions/project-peer-semantic/bridge.py
     issue_owner: consuming-project-repository
     framework_issue_listener: forbidden
-    caller_must_pin_exact_framework_commit: true
+    host_action_exact_commit_binding: required
     job_provenance_project_repo_binding: required
     job_provenance_framework_commit_binding: required
   normal_workflows_may_spend_model_usage: false
@@ -540,7 +533,7 @@ workflows:
 
 normal_ci:
   model_execution: forbidden
-  required: [py_compile, repository-hygiene, project-sdk-self-test, project-adapter-self-test, runtime-capabilities-self-test, runtime-query-self-test, resume-preflight-self-test, resume-command-self-test, runtime-command-authorization-self-test, runtime-command-executor-self-test, context-inspector-self-test, context-assembly-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, planning-horizon-self-test, property-write-policy-self-test, propagation-debt-self-test, state-integrity-cross-contract-self-test, author-steering-self-test, feedback-intake-self-test, feedback-learning-ablation-self-test, write-intent-guard-self-test, settlement-runtime-self-test, quality-finding-self-test, quality-taxonomy-self-test, repair-policy-self-test, production-readiness-self-test, production-release-self-test, prose-telemetry-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, semantic-reference-integrity-self-test, registered-release-role-contract-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, author-model-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, semantic-acceptance-baseline-self-test, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, model-runtime-self-test, agent-runtime-self-test, quillframe-library-wheel-import, project-hosted-peer-bridge-ownership, optional-openai-dry-run]
+  required: [py_compile, repository-hygiene, project-resolution-self-test, project-launch-self-test, runtime-capabilities-self-test, runtime-query-self-test, resume-preflight-self-test, resume-command-self-test, runtime-command-authorization-self-test, runtime-command-executor-self-test, context-inspector-self-test, context-assembly-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, planning-horizon-self-test, property-write-policy-self-test, propagation-debt-self-test, state-integrity-cross-contract-self-test, author-steering-self-test, feedback-intake-self-test, feedback-learning-ablation-self-test, write-intent-guard-self-test, settlement-runtime-self-test, quality-finding-self-test, quality-taxonomy-self-test, repair-policy-self-test, production-readiness-self-test, production-release-self-test, prose-telemetry-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, semantic-reference-integrity-self-test, registered-release-role-contract-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, author-model-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, semantic-acceptance-baseline-self-test, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, model-runtime-self-test, agent-runtime-self-test, quillframe-library-wheel-import, project-hosted-peer-bridge-ownership]
 
 scheduled_maintenance:
   model_execution: forbidden
@@ -618,7 +611,7 @@ write_boundary:
 semantic_context_runtime_v1:
   runtime: harness/context_runtime.py
   persistence: persistence/context_repository.py
-  migration: persistence/migrations/project/002_semantic_context_runtime.sql
+  schema_fragment: persistence/schema/project/002_semantic_context_runtime.sql
   semantic_contracts: [context.profile_derive, context.stage_select]
   pipeline: [eligibility_gate, semantic_profiles, semantic_decision, stage_greenlights, budget_packing, context_freeze]
   eligibility_precedes_relevance: true

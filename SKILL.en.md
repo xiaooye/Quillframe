@@ -14,7 +14,7 @@ For every Quillframe task:
 
 1. read `HARNESS_MANIFEST.yaml`;
 2. read this Skill contract and `harness/HARNESS_AGENT.md` plus the language-appropriate edition;
-3. resolve the consuming Project through `quillframe.toml` and its exact `quillframe.lock.json`, or through a supported Project Adapter;
+3. resolve the consuming Project through the one native 1.0 Project contract;
 4. choose exactly one primary `task_mode`;
 5. create or resume the manager session and current run;
 6. build a sparse Context Manifest from current Project authority;
@@ -23,7 +23,7 @@ For every Quillframe task:
 9. checkpoint before external waits and consequential writes;
 10. expose or persist only artifacts that have passed the applicable user-visible and authority gates.
 
-Do not bootstrap from old chat memory, provider session history, stale embedded Framework copies, or an unpinned framework checkout.
+Do not bootstrap from old chat memory, provider session history, stale embedded Framework copies, or an unverified Framework checkout.
 
 ## 02 · Exactly one task mode
 
@@ -103,6 +103,8 @@ Generic production graph:
 
 Raw Draft is internal. Regression bad examples and hidden expected labels stay out of first-pass generation.
 
+**Production visibility is fail-closed.** In `DRAFT` / `REVISE`, reading these contracts is not execution. The host must invoke a verified Quillframe production runtime and may surface manuscript text only from an exact fingerprint-bound production release. If runtime, model execution, required independent review, or release evidence is unavailable, report the typed pending/blocked state and do not replace the missing mechanism with host-authored prose. Ephemeral agent sandboxes may materialize a deterministic Framework bundle and verify its exact commit/bundle fingerprint before execution; their SQLite state is runtime materialization, not a second Canon authority.
+
 Failure ownership matters:
 
 - isolated surface defect → local rewrite;
@@ -155,12 +157,11 @@ Model inference alone cannot become durable user taste or General Craft. General
 
 ## 09 · Project engineering
 
-A consuming Project should be independently cloneable, self-describing, testable, buildable, migration-safe, and rollbackable without depending on chat memory.
+A consuming Project should be independently cloneable, self-describing, testable, buildable, native-contract-validatable, and rollbackable without depending on chat memory.
 
 Project identity is anchored by:
 
-- `quillframe.toml`;
-- exact `quillframe.lock.json`;
+- `quillframe.toml` with exactly five native keys (`schema`, `id`, `title`, `language`, `chapter_scope`), plus CH001 context, manifest fingerprint, and `.quillframe/data`;
 - explicit source/plan/derived/generated boundaries;
 - deterministic validation/build/tests;
 - reproducible Framework bundle verification when configured.
@@ -179,7 +180,7 @@ Before-state mismatch or failed post-condition returns `settlement_incomplete`. 
 
 Normal CI is deterministic and must not silently spend API, Codex, Claude, or other model usage.
 
-CI should validate schemas, lifecycle boundaries, semantic contract catalog/packs, hidden-gold isolation, fingerprints, permissions, context/memory authority, session/control-plane invariants, Corpus rights/provenance, eval queues, Project SDK contracts, Framework bundle reproducibility, and documentation integrity.
+CI should validate schemas, lifecycle boundaries, semantic contract catalog/packs, hidden-gold isolation, fingerprints, permissions, context/memory authority, session/control-plane invariants, Corpus rights/provenance, eval queues, native Project manifest/context/fingerprint/CH001/data-boundary contracts, Framework bundle reproducibility, and documentation integrity.
 
 Scheduled maintenance may observe, report, package, and queue work. A schedule or webhook does not grant story, Canon, taste, or Framework-promotion authority.
 

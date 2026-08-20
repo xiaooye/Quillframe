@@ -12,7 +12,7 @@ from agent_runtime.tools import ToolRuntimeError
 from model_runtime import EndpointPolicy, MemorySecretStore, MockTransport, ModelRuntime, TransportResponse, normalize_endpoint
 from model_runtime.manager import ModelServiceManager
 from model_runtime.protocols import AnthropicMessagesCodec, OpenAIChatCodec, OpenAIResponsesCodec
-from persistence.quillframe_sqlite import QuillframeStore, apply_migrations
+from persistence.quillframe_sqlite import Pre10StateRejectedError, QuillframeStore, apply_schema
 
 
 def response(status: int, body: dict | list | None) -> TransportResponse:
@@ -192,28 +192,33 @@ class ModelRuntimeTests(unittest.TestCase):
         self.assertEqual(result.usage, {"input_tokens": 22, "output_tokens": 8})
         self.assertFalse(result.to_dict()["authority"])
 
-    def test_global_migration_replaces_provider_tables_without_changing_001(self):
-        root = Path(__file__).resolve().parents[1]
-        first = (root / "persistence" / "migrations" / "global" / "001_initial.sql").read_text(encoding="utf-8")
+    def test_pre_1_0_global_state_is_rejected_instead_of_migrated(self):
         with tempfile.TemporaryDirectory() as td:
             db = Path(td) / "global.sqlite"
             conn = sqlite3.connect(db)
             conn.row_factory = sqlite3.Row
-            conn.executescript(first)
-            conn.execute("INSERT INTO provider_configuration(provider_id,display_name,endpoint,credential_ref,enabled,metadata_json,updated_at) VALUES('p','P','https://api.example.test/v1','keyring:x',1,'{}','t')")
-            conn.execute("INSERT INTO model_registry(model_id,provider_id,display_name,context_size,capability_json,cost_metadata_json,enabled,updated_at) VALUES('m','p','M',128000,'{}','{}',1,'t')")
+            conn.execute("CREATE TABLE provider_configuration(provider_id TEXT PRIMARY KEY)")
+            conn.execute("INSERT INTO provider_configuration(provider_id) VALUES('p')")
             conn.commit()
-            apply_migrations(conn, "global")
+            with self.assertRaises(Pre10StateRejectedError):
+                apply_schema(conn, "global")
+            tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            self.assertEqual(tables, {"provider_configuration"})
+            conn.close()
+
+    def test_fresh_1_0_global_schema_has_no_pre_1_0_provider_tables(self):
+        with tempfile.TemporaryDirectory() as td:
+            db = Path(td) / "global.sqlite"
+            conn = sqlite3.connect(db)
+            conn.row_factory = sqlite3.Row
+            apply_schema(conn, "global")
             tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             self.assertIn("model_services", tables)
             self.assertIn("discovered_models", tables)
             self.assertIn("model_capability_evidence", tables)
             self.assertNotIn("provider_configuration", tables)
             self.assertNotIn("model_registry", tables)
-            service = conn.execute("SELECT service_id,endpoint,credential_ref FROM model_services").fetchone()
-            model = conn.execute("SELECT model_id,context_window FROM discovered_models").fetchone()
-            self.assertEqual(tuple(service), ("legacy_p", "https://api.example.test/v1", "keyring:x"))
-            self.assertEqual(tuple(model), ("m", 128000))
+            self.assertEqual(tuple(conn.execute("SELECT scope,release FROM quillframe_schema_identity").fetchone()), ("global", "1.0"))
             conn.close()
 
     def test_sqlite_repository_never_projects_credential_reference_as_secret_value(self):

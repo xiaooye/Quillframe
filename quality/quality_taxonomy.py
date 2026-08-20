@@ -161,7 +161,7 @@ def scan_text(text: str, *, source: str = "<memory>", registry: dict[str, Any] |
                 "line": lineno,
                 "code": "legacy_runtime_taxonomy_marker",
                 "text": line.strip(),
-                "message": "Framework taxonomy identity must come from quillframe.lock.json plus the pinned taxonomy registry, not a hand-maintained Generic Surface version label.",
+                "message": "Framework taxonomy identity must come from the canonical runtime contract plus the pinned taxonomy registry, not a hand-maintained Generic Surface version label.",
             })
     # De-duplicate findings that can be triggered by canonical name plus an alias on the same line.
     seen: set[str] = set()

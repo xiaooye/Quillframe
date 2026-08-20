@@ -8,7 +8,8 @@
   "assertions": [
     {"op": "equals", "path": "project_agnostic", "value": true},
     {"op": "file_exists", "file": "HARNESS_MANIFEST.yaml"},
-    {"op": "file_exists", "file": "project_sdk.py"},
+    {"op": "file_exists", "file": "project_resolution.py"},
+    {"op": "file_exists", "file": "quillframe/launch.py"},
     {"op": "file_exists", "file": "learning/learning_store.py"},
     {"op": "file_exists", "file": "corpus/corpus_scout.py"},
     {"op": "file_exists", "file": "surface/FUNDAMENTALS.en.md"},

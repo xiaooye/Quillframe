@@ -1,29 +1,46 @@
-# 运行时与集成
+# Runtime 与集成
 
-Quillframe 能保持不绑定具体服务提供方，是因为**运行身份、可用能力和事实权威**是三个不同概念。服务提供方的名字不能证明某项能力真的存在；能力本身也不会授予故事事实或写入权限。
+Quillframe 1.0 把 runtime identity、capability 与 authority 明确分开。Provider 名称不能证明能力存在，能力也不会自动授予故事或写入权威。
 
-<img src="assets/concepts/session-run-checkpoint.zh-CN.svg" alt="运行身份模型分开项目与资源、会话与线程、单次运行与调用，以及检查点" width="100%" />
+## 唯一启动路径
 
-## 身份
+面向作者的入口只有：
 
-`project/resource` 标识工作对象；`session/thread` 表示可持续的对话或执行关系；`run/invocation` 表示一次受限的执行尝试；`checkpoint` 保存精确执行状态，供后续恢复。
+```bash
+quillframe launch [PROJECT]
+```
 
-服务提供方的会话历史不是正典，也不能替代项目启动校验。
+Local 模式把 Studio 绑定到 loopback Python Core 与项目本地 SQLite。Cloud 模式只启动显式认证流程，不会因为 launch 就上传项目。仓库 Hook 与 host 专属 bootstrap 命令不参与产品正确性。
 
-## 能力
+## Identity
 
-当前宿主环境清单，才是工具、模型、网络、文件系统、GitHub、同伴会话、本地代理或人工评审是否可用的能力证据。未声明的能力视为不可用；凭据和授权令牌不会进入普通语义上下文。
+`project` 标识作品，`session` 标识持久执行关系，`run` 标识一次有边界的尝试，`checkpoint` 标识可精确恢复的快照。Provider history 既不是 Canon，也不能替代 Project bootstrap authority。
 
-## 恢复
+## Host 边界
 
-恢复时必须重新核对当前框架与项目的兼容关系、最新检查点、制品指纹、实时项目权威、待确认事项或写入意图、所需能力和一次性消费状态。框架版本变化属于依赖迁移问题，不是普通恢复。
+Claude Code、Codex、其他 agent host 或模型 API 可以执行满足条件的任务。Host 运行 agent；Quillframe 治理小说。Host 只提供 capability evidence 与 transport；Core 拥有 workflow state、permission、fingerprint、budget、persistence 与 typed validation；Project 拥有 Canon。
+
+## 精确协议
+
+- 只接受 Host Bridge `11`。
+- MCP 必须精确匹配 `2026-07-28`，不协商、不回退。
+- Context assembly 只接受当前声明的 schema。
+- 独立评审只使用一个 `independence_receipt` 字段，并绑定冻结后的 candidate fingerprint。
+
+任何 1.0 之前的请求都会被拒绝，不会被翻译。
+
+## Resume 与取消
+
+Resume 会重新验证精确 checkpoint、Project authority、artifact fingerprint、待处理授权、capability 与 consume-once 状态。Run event 使用 cursor；pause、resume 与 cancel 只能发生在 Core safe point。
 
 ## 独立语义执行
 
-<img src="assets/concepts/independent-semantic-review.zh-CN.svg" alt="管理器与评审者使用不同调用，中间只传递绑定内容指纹的制品" width="100%" />
+只要当前 capability evidence 支持，可以使用独立本地 agent invocation、provider call、MCP worker、GitHub job、peer chat、本地模型或人工评审。Transport failure 只能生成显式 fallback receipt；有效 semantic reject 必须进入 repair，不能不断更换 reviewer。
 
-可用的独立执行通道可以是单独的本地代理调用、服务提供方调用、服务或 MCP 工作者、GitHub 任务、同伴会话、本地模型或人工评审，只要当前能力证据确实支持。传输故障可以在同一指纹下切换执行通道；有效的语义拒绝不能通过换通道重抽。
+## Secrets
 
-## 控制平面
+Credential 始终位于 semantic context 与 Project state 之外。本地使用进程级 lease；Hosted Studio 使用加密 SessionVault。Receipt 与 log 只能包含引用和能力证据，不能包含 secret value。
 
-控制平面保存可持久恢复的事件、交接和结果生命周期，以及只含元数据的回执。它可以证明结果已经派发、返回、校验和消费，却不能把这个结果变成正典或编辑接受。
+## Control Plane
+
+Control Plane 持久化 event、handoff、result 与 metadata-only receipt 生命周期，可以证明 dispatch、validation、consumption 与 replay 状态，但不能把运行状态或模型输出变成 Canon、acceptance、settlement 或 publication authority。

@@ -1,8 +1,8 @@
 name: Quillframe Project Peer Semantic Bridge
-description: Execute the generic peer-chat relay against a consuming Project issue while enforcing exact Framework lock binding.
+description: Execute the generic peer semantic bridge against a manuscript-free Project Issue tombstone while enforcing exact host/action provenance.
 inputs:
   mode:
-    description: prepare or validate-result
+    description: prepare, review, or validate-result; v2-only typed-result receipts prove model execution and reject worker.provider=human
     required: true
   project-root:
     description: Path to the Quillframe Project root in the caller repository
@@ -13,22 +13,72 @@ inputs:
   github-token:
     description: Caller repository token with issues write permission
     required: true
+  copilot-token:
+    description: Optional fine-grained PAT with Copilot Requests permission; recommended for personal repositories. Organization workflows may use their GitHub Actions token when Copilot CLI billing policy permits it.
+    required: false
+    default: ""
+  review-model:
+    description: GitHub Copilot CLI model id used only in review mode
+    required: false
+    default: claude-sonnet-4.6
+  frozen-packet:
+    description: Absolute or workspace-relative path to the immutable Core-frozen peer packet JSON; the action never builds or rewrites this packet.
+    required: true
+  frozen-packet-sha256:
+    description: Exact sha256:<64 lowercase hex> fingerprint computed by Core for frozen-packet.
+    required: true
 outputs:
   validation-receipt:
-    description: Machine receipt emitted only after validate-result succeeds; empty during prepare mode.
-    value: ${{ steps.bridge.outputs.validation-receipt }}
+    description: Machine receipt emitted after review or validate-result succeeds; empty during prepare mode.
+    value: ${{ steps.review.outputs.validation-receipt || steps.bridge.outputs.validation-receipt }}
+  peer-result:
+    description: Exact typed peer semantic result emitted by automated review mode.
+    value: ${{ steps.review.outputs.peer-result }}
 runs:
   using: composite
   steps:
     - name: Execute project-hosted peer bridge
       id: bridge
+      if: ${{ inputs.mode != 'review' }}
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
         QUILLFRAME_BRIDGE_MODE: ${{ inputs.mode }}
         QUILLFRAME_PROJECT_ROOT: ${{ inputs.project-root }}
+        QUILLFRAME_PROJECT_CHECKOUT: ${{ github.workspace }}
+        QUILLFRAME_FROZEN_PACKET_CHECKOUT: ${{ github.workspace }}
         QUILLFRAME_PROJECT_ID: ${{ inputs.project-id }}
         QUILLFRAME_ACTION_PATH: ${{ github.action_path }}
         QUILLFRAME_ACTION_REF: ${{ github.action_ref }}
         QUILLFRAME_ACTION_REPOSITORY: ${{ github.action_repository }}
+        QUILLFRAME_FROZEN_PACKET: ${{ inputs.frozen-packet }}
+        QUILLFRAME_FROZEN_PACKET_SHA256: ${{ inputs.frozen-packet-sha256 }}
       run: python "$QUILLFRAME_ACTION_PATH/bridge.py"
+    - name: Set up Node for independent Copilot reviewer
+      if: ${{ inputs.mode == 'review' }}
+      uses: actions/setup-node@v7
+      with:
+        node-version: '24'
+    - name: Install GitHub Copilot CLI
+      if: ${{ inputs.mode == 'review' }}
+      shell: bash
+      run: npm install -g @github/copilot
+    - name: Execute independent GitHub Copilot peer review
+      id: review
+      if: ${{ inputs.mode == 'review' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        COPILOT_GITHUB_TOKEN: ${{ inputs.copilot-token }}
+        QUILLFRAME_PROJECT_ROOT: ${{ inputs.project-root }}
+        QUILLFRAME_PROJECT_CHECKOUT: ${{ github.workspace }}
+        QUILLFRAME_FROZEN_PACKET_CHECKOUT: ${{ github.workspace }}
+        QUILLFRAME_PROJECT_ID: ${{ inputs.project-id }}
+        QUILLFRAME_ACTION_PATH: ${{ github.action_path }}
+        QUILLFRAME_ACTION_REF: ${{ github.action_ref }}
+        QUILLFRAME_ACTION_REPOSITORY: ${{ github.action_repository }}
+        QUILLFRAME_REVIEW_MODEL: ${{ inputs.review-model }}
+        QUILLFRAME_FROZEN_PACKET: ${{ inputs.frozen-packet }}
+        QUILLFRAME_FROZEN_PACKET_SHA256: ${{ inputs.frozen-packet-sha256 }}
+      run: python "$QUILLFRAME_ACTION_PATH/auto_review.py"

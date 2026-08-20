@@ -62,15 +62,15 @@ Mode 可以内部调用共享 subroutine，但不能悄悄执行另一个 mode �
 Fresh manager 依次解析：
 
 1. current/pinned Framework manifest / identity；
-2. consuming Project manifest + exact lock/fingerprint；
-3. Project Adapter / logical paths；
+2. consuming Project native manifest/context + manifest fingerprint；
+3. native Project identity / logical paths；
 4. 只能有一个 task mode；
 5. manager session/run identity；
 6. authority cutoff + permissions；
 7. sparse Context Manifest / candidate set；
 8. current host capabilities。
 
-旧聊天 / provider session 不能替代 bootstrap authority。Resume 必须重新验证 Framework/Project compatibility、current fingerprints、approval/write precondition 与 pending capabilities。
+旧聊天 / provider session 不能替代 bootstrap authority。Resume 必须重新验证 Framework provenance、native Project identity 与 contract、current fingerprints、approval/write precondition 及 pending capabilities。
 
 ## 05 · Search / Context：语义选择，确定性边界
 
@@ -121,7 +121,10 @@ authority/session bootstrap
 - Editor 语义上选择 repair owner 与 generation mode；
 - `repair_policy.py` 只执行所选 mode 对 writer-context 的信息边界；
 - material candidate change 会使旧 fingerprint-bound review result 失效；
-- explicit acceptance 与 SETTLE 继续分离。
+- explicit acceptance 与 SETTLE 继续分离；
+- `DRAFT` / `REVISE` 的正文只能由真实 production runtime 产生并经 Core-owned release 出口展示；manager/host 读过规则后自行写正文，不构成 Quillframe execution；
+- `candidate.visible.get`（或等价 Core-owned released projection）是 production manuscript 的 release boundary；缺 receipt、fingerprint mismatch、pending/fail/stale 时必须无正文返回；
+- ephemeral host 若需本地 materialize Framework，必须验证 deterministic commit/bundle fingerprint evidence；runtime SQLite 不升级为 Project/Canon authority。
 
 如果用户在 production loop 中给出 feedback，当前明确指令立即约束当前 run；同一 turn 也可以独立进入 automatic Learning intake。Learning capture 不需要等 durable promotion 才让当前指令生效。
 
@@ -278,6 +281,6 @@ live bootstrap
 - [自适应学习](../docs/adaptive-learning.zh-CN.md)
 - [正典与状态模型](../core/CANON_STATE.zh-CN.md)
 
-### Semantic Context Runtime（0.9）
+### Semantic Context Runtime（1.0）
 
 生产 Context 必须先做 deterministic eligibility，再做 semantic relevance。使用 fingerprint-bound Semantic Context Profile、`context.stage_select`、stage Greenlight、hard-budget packing，最后 Context Freeze。任何 stage 都不得通过未追踪 DB read 偷扩冻结范围；refresh/extension 必须产生新的 Context fingerprint。selector 不授予 authority，也不能替代 independent semantic review。

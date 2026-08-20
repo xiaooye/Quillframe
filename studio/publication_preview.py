@@ -22,16 +22,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 COMPILER_PATH = ROOT / "publication" / "compiler.py"
 SCHEMA = "quillframe_publication_preview_projection_v1"
-PROFILE_ALIASES = {
-    "text": "clean_text",
-    "clean_text": "clean_text",
-    "web": "web_reflow",
-    "web_reflow": "web_reflow",
-    "print": "print_book",
-    "print_book": "print_book",
-    "epub": "epub3",
-    "epub3": "epub3",
-}
+PROFILES = {"clean_text", "web_reflow", "print_book", "epub3"}
 MAX_PREVIEW_CHARS = 160_000
 
 
@@ -114,9 +105,9 @@ def build_preview(source: dict[str, Any], profile: str) -> dict[str, Any]:
     """Compile one deterministic derived preview without mutating Project state."""
     if not isinstance(source, dict):
         raise ValueError("publication source must be an object")
-    compiler_profile = PROFILE_ALIASES.get(profile)
-    if compiler_profile is None:
-        raise ValueError("profile must be text, web, print, epub, clean_text, web_reflow, print_book, or epub3")
+    if profile not in PROFILES:
+        raise ValueError("profile must be clean_text, web_reflow, print_book, or epub3")
+    compiler_profile = profile
 
     compiler = _compiler()
     ir = compiler.compile_ir(source)
@@ -183,8 +174,8 @@ def self_test() -> dict[str, Any]:
             "accepted_fingerprint": accepted,
         }],
     }
-    previews = {profile: build_preview(source, profile) for profile in ("text", "web", "print", "epub")}
-    repeated = {profile: build_preview(source, profile) for profile in ("text", "web", "print", "epub")}
+    previews = {profile: build_preview(source, profile) for profile in sorted(PROFILES)}
+    repeated = {profile: build_preview(source, profile) for profile in sorted(PROFILES)}
     checks = {
         "all_profiles": all(value["schema"] == SCHEMA for value in previews.values()),
         "authority_false": all(value["authority"] is False for value in previews.values()),
@@ -193,8 +184,8 @@ def self_test() -> dict[str, Any]:
         "exact_text_guard": all(value["accepted_fingerprint_guard"] is True and value["text_roundtrip"] is True for value in previews.values()),
         "artifact_fingerprints": all(isinstance(value["artifact"]["sha256"], str) and value["artifact"]["sha256"].startswith("sha256:") and value["artifact"]["fingerprint_scope"] == "complete-derived-output" for value in previews.values()),
         "artifact_determinism": all(previews[profile]["artifact"]["sha256"] == repeated[profile]["artifact"]["sha256"] for profile in previews),
-        "epub_internal_validation": previews["epub"]["validation"]["valid"] is True,
-        "epub_stylesheet_inlined": previews["epub"]["preview"].get("stylesheet_inlined") is True,
+        "epub_internal_validation": previews["epub3"]["validation"]["valid"] is True,
+        "epub_stylesheet_inlined": previews["epub3"]["preview"].get("stylesheet_inlined") is True,
         "source_authority_not_invented": all(value["source_authority_verified"] is False for value in previews.values()),
     }
     return {
@@ -213,7 +204,7 @@ def main() -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     build = sub.add_parser("build")
     build.add_argument("--input", required=True)
-    build.add_argument("--profile", required=True, choices=sorted(PROFILE_ALIASES))
+    build.add_argument("--profile", required=True, choices=sorted(PROFILES))
     build.add_argument("--output")
     sub.add_parser("self-test")
     args = parser.parse_args()

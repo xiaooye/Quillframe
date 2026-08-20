@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.dev/schemas/1.0/repair-plan.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project_id", "chapter_id", "candidate_fingerprint", "mode", "owner", "actions", "preserve_refs"],
+  "properties": {
+    "schema": {"const": "quillframe_repair_plan_v1"},
+    "project_id": {"type": "string", "minLength": 1},
+    "chapter_id": {"const": "CH001"},
+    "candidate_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "mode": {"enum": ["local_rewrite", "scene_regenerate", "upstream_replan"]},
+    "owner": {"enum": ["story", "plan", "character", "context", "surface", "continuity"]},
+    "actions": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "preserve_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.dev/schemas/1.0/transition-constraints.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project_id", "chapter_id", "from_state_fingerprint", "allowed_changes", "forbidden_changes"],
+  "properties": {
+    "schema": {"const": "quillframe_transition_constraints_v1"},
+    "project_id": {"type": "string", "minLength": 1},
+    "chapter_id": {"const": "CH001"},
+    "from_state_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "allowed_changes": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "forbidden_changes": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+  }
+}

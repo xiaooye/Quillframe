@@ -1,4 +1,5 @@
-import { For, Show, createMemo, createSignal, onMount } from "solid-js";
+import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
+import { Portal } from "solid-js/web";
 import { useLocation } from "@solidjs/router";
 import { PageIntro } from "../components";
 import { useI18n } from "../i18n";
@@ -8,6 +9,7 @@ import type {
   AcceptanceResult,
   CandidateRejectionResult,
   CandidateReviewProjection,
+  CandidateVisibleProjection,
   CandidateRevisionRequestResult,
   CandidateRow,
   InspectorListProjection,
@@ -15,6 +17,7 @@ import type {
   SettlementResult,
 } from "../authoring/contracts";
 import { AuthorityLabel, CoreRequirementNotice } from "../authoring/AuthoringUI";
+import { createModalA11y } from "../modalA11y";
 
 export default function Review() {
   const { locale } = useI18n();
@@ -26,6 +29,7 @@ export default function Review() {
   const [rows, setRows] = createSignal<CandidateRow[]>([]);
   const [selectedId, setSelectedId] = createSignal("");
   const [review, setReview] = createSignal<CandidateReviewProjection>();
+  const [visible, setVisible] = createSignal<CandidateVisibleProjection>();
   const [acceptance, setAcceptance] = createSignal<AcceptanceResult>();
   const [settlement, setSettlement] = createSignal<SettlementResult>();
   const [acceptDialogOpen, setAcceptDialogOpen] = createSignal(false);
@@ -35,25 +39,61 @@ export default function Review() {
   const [settleTarget, setSettleTarget] = createSignal("");
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string>();
+  let acceptDialog: HTMLElement | undefined;
+  let acceptCancelButton: HTMLButtonElement | undefined;
+  let reviewRequestGeneration = 0;
   const selected = createMemo(() => rows().find((row) => row.candidate_id === selectedId()));
   const actionable = createMemo(() => review()?.candidate.effective_status === "review_draft");
   const exactFingerprint = createMemo(() => review()?.candidate.candidate_fingerprint || selected()?.content_fingerprint || "");
 
-  const resetAcceptanceIntent = () => {
+  const requestAcceptClose = () => {
     setAcceptDialogOpen(false);
     setAcceptExact(false);
+  };
+  const acceptModal = createModalA11y({
+    getDialog: () => acceptDialog,
+    getBackground: () => document.getElementById("app") ?? undefined,
+    requestClose: requestAcceptClose,
+    getInitialFocus: () => acceptCancelButton,
+    getFallbackFocus: () => document.querySelector<HTMLElement>(".qf-review-actions button") ?? undefined,
+  });
+  onCleanup(() => acceptModal.dispose());
+  const resetAcceptanceIntent = () => {
+    if (acceptModal.isOpen()) acceptModal.close();
+    else requestAcceptClose();
+  };
+  const openAcceptance = (trigger: HTMLElement) => {
+    setAcceptExact(false);
+    acceptModal.open(trigger);
+    setAcceptDialogOpen(true);
   };
 
   const loadReview = async (candidateId: string) => {
     if (!projectId() || !candidateId || !operations().includes("candidate.review.get")) return;
+    const requestGeneration = ++reviewRequestGeneration;
     setError(undefined);
+    setReview(undefined);
+    setVisible(undefined);
     try {
       const result = await invokeBridge<CandidateReviewProjection>("candidate.review.get", { project_id: projectId(), candidate_id: candidateId });
       if (result.status !== "ok" || !result.data) throw new Error(operationError(result));
+      if (requestGeneration !== reviewRequestGeneration || selectedId() !== candidateId) return;
       setReview(result.data);
       if (!settleTarget() && result.data.candidate.document_id) setSettleTarget(`chapter:${result.data.candidate.document_id}`);
+
+      if (!operations().includes("candidate.visible.get")) {
+        setError("candidate.visible.get is required before showing a Review Draft");
+        return;
+      }
+      const released = await invokeBridge<CandidateVisibleProjection>("candidate.visible.get", { project_id: projectId(), candidate_id: candidateId });
+      if (released.status !== "ok" || !released.data) throw new Error(operationError(released));
+      if (requestGeneration !== reviewRequestGeneration || selectedId() !== candidateId) return;
+      if (released.data.candidate_id !== result.data.candidate.candidate_id || released.data.candidate_fingerprint !== result.data.candidate.candidate_fingerprint) {
+        throw new Error("candidate.visible.get returned a different candidate fingerprint");
+      }
+      setVisible(released.data);
     } catch (cause) {
-      setReview(undefined);
+      if (requestGeneration !== reviewRequestGeneration || selectedId() !== candidateId) return;
       setError(cause instanceof Error ? cause.message : String(cause));
     }
   };
@@ -62,6 +102,8 @@ export default function Review() {
     setSelectedId(candidateId);
     setAcceptance(undefined);
     setSettlement(undefined);
+    setReview(undefined);
+    setVisible(undefined);
     setRejectExact(false);
     setRevisionNote("");
     resetAcceptanceIntent();
@@ -82,6 +124,7 @@ export default function Review() {
       } else {
         setSelectedId("");
         setReview(undefined);
+        setVisible(undefined);
       }
     } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
     finally { setLoading(false); }
@@ -193,11 +236,16 @@ export default function Review() {
             {(detail) => <>
               <header class="qf-review-heading"><div><span class="nf-eyebrow">INCUMBENT ↔ CANDIDATE</span><h2>{detail().candidate.candidate_id}</h2></div><div class="qf-review-authority"><AuthorityLabel value={detail().candidate.effective_status} /><span class="qf-gate-label" data-gate={detail().candidate.user_visible_gate}>{`user-visible gate: ${detail().candidate.user_visible_gate ?? "—"}`}</span></div></header>
               <div class="qf-review-fingerprint"><span>Candidate fingerprint</span><code>{detail().candidate.candidate_fingerprint}</code></div>
+              <p class="qf-success-note" role="status" aria-live="polite">
+                <code>accepted={acceptance() ? "true" : "false"}</code>
+                {" · "}
+                <code>settled={settlement()?.status === "settled" ? "true" : "false"}</code>
+              </p>
 
               <section class="qf-review-evidence" aria-labelledby="review-evidence-heading">
-                <h3 id="review-evidence-heading">{zh() ? "正文 Diff" : "Manuscript diff"}</h3>
-                <Show when={detail().incumbent_revision} fallback={<p>{zh() ? "没有 incumbent revision。" : "No incumbent revision."}</p>}>
-                  <pre class="qf-diff"><code>{detail().diff?.diff?.join("\n") || (zh() ? "无文本差异" : "No text diff")}</code></pre>
+                <h3 id="review-evidence-heading">{zh() ? "Released Review Draft" : "Released Review Draft"}</h3>
+                <Show when={visible()} fallback={<div class="qf-empty-workspace"><CoreRequirementNotice operation="candidate.visible.get" /><p>{zh() ? "正文仅在 exact production release 后通过 candidate.visible.get 显示。" : "Manuscript text is shown only through candidate.visible.get after an exact production release."}</p></div>}>
+                  {(released) => <pre class="qf-review-draft" aria-label={zh() ? "Review Draft 正文" : "Review Draft manuscript"}><code>{released().content}</code></pre>}
                 </Show>
                 <div class="qf-review-evidence-grid">
                   <article><strong>Reader</strong><pre><code>{JSON.stringify(detail().evidence.reader, null, 2)}</code></pre></article>
@@ -212,13 +260,13 @@ export default function Review() {
                 <div class="qf-review-actions" aria-label={zh() ? "Review actions" : "Review actions"}>
                   <button class="wui-button wui-button--outline" type="button" disabled={!operations().includes("candidate.reject")} onClick={() => setRejectExact((value) => !value)}>Reject…</button>
                   <button class="wui-button wui-button--outline" type="button" disabled={!operations().includes("candidate.revision.request")} onClick={() => setRevisionNote((value) => value || " ")}>Request Revision…</button>
-                  <button class="wui-button wui-button--solid" type="button" disabled={!operations().includes("candidate.accept") || detail().candidate.user_visible_gate !== "PASS"} onClick={() => { setAcceptExact(false); setAcceptDialogOpen(true); }}>Accept…</button>
+                  <button class="wui-button wui-button--solid" type="button" disabled={!operations().includes("candidate.accept") || detail().candidate.user_visible_gate !== "PASS"} onClick={(event) => openAcceptance(event.currentTarget)}>Accept…</button>
                 </div>
                 <Show when={rejectExact()}><section class="qf-authority-confirm"><h3>{zh() ? "确认 Reject" : "Confirm Reject"}</h3><p>{zh() ? "只终结这个 exact Review Draft；不改 Canon。" : "This terminates this exact Review Draft only; Canon is unchanged."}</p><div class="qf-inline-actions"><button class="wui-button wui-button--solid" type="button" disabled={loading()} onClick={() => void reject()}>{zh() ? "Reject exact Candidate" : "Reject exact Candidate"}</button><button class="wui-button wui-button--ghost" type="button" onClick={() => setRejectExact(false)}>{zh() ? "取消" : "Cancel"}</button></div></section></Show>
                 <Show when={revisionNote()}><section class="qf-authority-confirm"><h3>{zh() ? "Request Revision" : "Request Revision"}</h3><textarea class="wui-input" value={revisionNote()} onInput={(event) => setRevisionNote(event.currentTarget.value)} placeholder={zh() ? "说明需要修改什么" : "Describe what must change"} /><p>{zh() ? "Core 只记录 durable revision request，不会自动启动 REVISE。" : "Core records a durable revision request and does not auto-start REVISE."}</p><div class="qf-inline-actions"><button class="wui-button wui-button--solid" type="button" disabled={loading() || !revisionNote().trim()} onClick={() => void requestRevision()}>{zh() ? "提交修改请求" : "Submit revision request"}</button><button class="wui-button wui-button--ghost" type="button" onClick={() => setRevisionNote("")}>{zh() ? "取消" : "Cancel"}</button></div></section></Show>
               </Show>
 
-              <Show when={acceptDialogOpen()}><section class="qf-authority-confirm" role="alertdialog" aria-modal="false" aria-labelledby="accept-confirm-heading"><h3 id="accept-confirm-heading">{zh() ? "确认 Accept" : "Confirm Accept"}</h3><p>{zh() ? "Accept 只写 acceptance evidence，不执行 Settlement。" : "Accept writes acceptance evidence only; it does not perform Settlement."}</p><label><input type="checkbox" checked={acceptExact()} onChange={(event) => setAcceptExact(event.currentTarget.checked)} /> {zh() ? "我明确接受这个 exact fingerprint" : "I explicitly accept this exact fingerprint"}</label><div class="qf-inline-actions"><button class="wui-button wui-button--solid" type="button" disabled={loading() || !acceptExact()} onClick={() => void accept()}>{zh() ? "Accept exact Candidate" : "Accept exact Candidate"}</button><button class="wui-button wui-button--ghost" type="button" onClick={resetAcceptanceIntent}>{zh() ? "取消" : "Cancel"}</button></div></section></Show>
+              <Show when={acceptDialogOpen()}><Portal><div class="qf-modal-overlay" role="presentation" onMouseDown={(event) => acceptModal.onOutsidePointer(event)}><section ref={(element) => { acceptDialog = element; }} class="qf-authority-dialog" role="alertdialog" aria-modal="true" aria-labelledby="accept-confirm-heading" aria-describedby="accept-confirm-description" tabIndex={-1} onKeyDown={(event) => acceptModal.onKeyDown(event)}><h3 id="accept-confirm-heading">{zh() ? "确认 Accept" : "Confirm Accept"}</h3><p id="accept-confirm-description">{zh() ? "Accept 只写 acceptance evidence，不执行 Settlement。" : "Accept writes acceptance evidence only; it does not perform Settlement."}</p><label><input type="checkbox" checked={acceptExact()} onChange={(event) => setAcceptExact(event.currentTarget.checked)} /> {zh() ? "我明确接受这个 exact fingerprint" : "I explicitly accept this exact fingerprint"}</label><div class="qf-inline-actions"><button class="wui-button wui-button--solid" type="button" disabled={loading() || !acceptExact()} onClick={() => void accept()}>{zh() ? "Accept exact Candidate" : "Accept exact Candidate"}</button><button ref={(element) => { acceptCancelButton = element; }} class="wui-button wui-button--ghost" type="button" onClick={resetAcceptanceIntent}>{zh() ? "取消" : "Cancel"}</button></div></section></div></Portal></Show>
 
               <Show when={acceptance()}>{(receipt) => <section class="qf-accepted-state" aria-live="polite"><div><strong>Accepted ✓</strong><span>{settlement()?.status === "settled" ? "Settled" : "Not Settled"}</span></div><dl><dt>acceptance_id</dt><dd><code>{receipt().acceptance_id}</code></dd><dt>candidate</dt><dd><code>{receipt().candidate_fingerprint}</code></dd><dt>canon_mutated</dt><dd>{settlement()?.canon_mutated ? "true" : "false"}</dd></dl><label class="nf-field-label"><span>Settlement target_ref</span><input class="wui-input nf-mono" value={settleTarget()} onInput={(event) => setSettleTarget(event.currentTarget.value)} placeholder="chapter:CH001" /></label><button class="wui-button wui-button--solid" type="button" disabled={loading() || !settleTarget().trim() || !operations().includes("settlement.preflight") || !operations().includes("settlement.apply") || settlement()?.status === "settled"} onClick={() => void settle()}>{zh() ? "Preflight + Settle…" : "Preflight + Settle…"}</button><CoreRequirementNotice operation="settlement.preflight" compact /></section>}</Show>
             </>}

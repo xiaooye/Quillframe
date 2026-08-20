@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.dev/schemas/1.0/cloud-project-manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "workspace_id", "workspace_kind", "subject_id", "projects", "updated_at", "authority"],
+  "properties": {
+    "schema": {"const": "quillframe_cloud_project_manifest_v1"},
+    "workspace_id": {"type": "string", "minLength": 1},
+    "workspace_kind": {"const": "personal"},
+    "subject_id": {"type": "string", "minLength": 1},
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["project_id", "bundle_key", "bundle_fingerprint"],
+        "properties": {
+          "project_id": {"type": "string", "minLength": 1},
+          "bundle_key": {"type": "string", "minLength": 1},
+          "bundle_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "updated_at": {"type": "string", "format": "date-time"},
+    "authority": {"const": false}
+  }
+}

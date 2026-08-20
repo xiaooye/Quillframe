@@ -34,7 +34,7 @@ Safe unattended work includes machine-checkable operations such as:
 - Session / Control Plane invariants;
 - capability declarations and routing invariants;
 - Corpus rights/schema/provenance checks;
-- Project SDK / Adapter self-tests;
+- Native Project Contract / boundary self-tests;
 - deterministic eval release cases;
 - dependency / lock / release-metadata drift detection;
 - non-mutating health reports.

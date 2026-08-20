@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.dev/schemas/1.0/launch-receipt.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "profile", "project_id", "project_root", "url", "process_id", "storage_boundary", "browser_opened", "cloud_upload_started", "authority"],
+  "properties": {
+    "schema": {"const": "quillframe_launch_receipt_v1"},
+    "profile": {"enum": ["local", "cloud"]},
+    "project_id": {"type": "string", "minLength": 1},
+    "project_root": {"type": "string", "minLength": 1},
+    "url": {"type": "string", "minLength": 1},
+    "process_id": {"type": "integer", "minimum": 1},
+    "storage_boundary": {"enum": ["project_local_sqlite", "encrypted_cloud_bundle"]},
+    "browser_opened": {"type": "boolean"},
+    "cloud_upload_started": {"type": "boolean"},
+    "authority": {"const": false}
+  }
+}

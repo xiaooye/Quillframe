@@ -1,0 +1,18 @@
+{
+  "name": "quillframe-product",
+  "version": "1.0.0-dev.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "build": "corepack pnpm --filter @quillframe/product-site build && corepack pnpm --filter @quillframe/studio-app build && corepack pnpm --filter @quillframe/cloud build",
+    "test": "corepack pnpm --filter @quillframe/product-site test && corepack pnpm --filter @quillframe/studio-app test && corepack pnpm --filter @quillframe/cloud test",
+    "typecheck": "corepack pnpm --filter @quillframe/product-site exec tsc --noEmit && corepack pnpm --filter @quillframe/studio-app typecheck && corepack pnpm --filter @quillframe/cloud typecheck",
+    "quality": "corepack pnpm --filter @quillframe/product-site quality && corepack pnpm --filter @quillframe/studio-app quality && corepack pnpm --filter @quillframe/cloud quality",
+    "ci": "corepack pnpm run typecheck && corepack pnpm run test && corepack pnpm run build",
+    "test:browser-acceptance-t605": "corepack pnpm --filter @quillframe/product-site test:browser-acceptance-t605",
+    "browser:acceptance:t605": "corepack pnpm --filter @quillframe/product-site browser:acceptance:t605"
+  }
+}

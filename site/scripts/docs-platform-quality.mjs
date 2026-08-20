@@ -63,8 +63,9 @@ for (const stylesheet of ["article-polish.css", "navigation-polish.css", "docs-h
 }
 requireCheck(config.indexOf('navigation-polish.css') < config.indexOf('docs-home-clean.css'), "docs landing clean layer must refine the shared navigation/theme layers");
 requireCheck(config.indexOf('docs-home-clean.css') < config.indexOf('product-header-parity.css'), "dedicated Docs product-shell owner must load after landing/article styling");
-requireCheck(config.includes('label: "入门"') && config.includes('en: "Getting started"'), "sidebar information architecture must keep concise native group labels");
-requireCheck(config.includes('label: "创作与质量"') && config.includes('label: "架构与发布"'), "sidebar must retain product-oriented Chinese grouping");
+for (const [zhLabel, enLabel] of [["开始", "Start"], ["写作", "Write"], ["审阅", "Review"], ["发布", "Publish"], ["连接与运维", "Connect & operate"]]) {
+  requireCheck(config.includes(`label: "${zhLabel}"`) && config.includes(`en: "${enLabel}"`), `sidebar task group missing ${zhLabel} / ${enLabel}`);
+}
 requireCheck(contentConfig.includes("docsLoader()") && contentConfig.includes("docsSchema()"), "Starlight content collection must use official loader and schema");
 
 /* Reading-first composition ------------------------------------------- */
@@ -84,7 +85,7 @@ requireCheck(!docsHomeCss.includes("var(--qf-shadow)"), "docs landing clean laye
 
 requireCheck(pageTitle.includes('class="nf-article-title"') && pageTitle.includes('id="_top"'), "custom PageTitle must keep the product surface and Starlight top anchor");
 requireCheck(pageTitle.includes('english ? "Quillframe Docs" : "Quillframe 知识库"'), "custom PageTitle must keep native bilingual labeling");
-requireCheck(pageTitle.includes('zh: "入门"') && pageTitle.includes('zh: "创作与质量"') && pageTitle.includes('zh: "架构与发布"'), "article titles must expose route-aware section context");
+requireCheck(pageTitle.includes('zh: "开始"') && pageTitle.includes('zh: "写作"') && pageTitle.includes('zh: "审阅"') && pageTitle.includes('zh: "发布"'), "article titles must expose author-task section context");
 requireCheck(articleCss.includes(".nf-article-title") && articleCss.includes(".sl-markdown-content h2"), "deep article polish must style both title and reading hierarchy");
 requireCheck(articleCss.includes(".right-sidebar") && articleCss.includes(".pagination-links"), "deep article polish must cover TOC and footer navigation");
 requireCheck(articleCss.includes("@media (max-width: 50rem)"), "deep article polish must keep an explicit mobile treatment");
@@ -96,8 +97,8 @@ requireCheck(navigationCss.includes("@media (max-width: 68rem)") && navigationCs
 requireCheck(siteTitle.includes('class="nf-brand-home" href="/"'), "Quillframe docs brand must navigate to the main product home");
 requireCheck(siteTitle.includes('english ? "/docs/en/" : "/docs/"'), "docs title component must retain locale-aware docs identity markers");
 requireCheck(siteTitle.includes('english ? "Docs" : "知识库"'), "docs title component must retain the current knowledge namespace markers");
-requireCheck(siteTitle.includes('aria-label="Quillframe 0.9.x"') && siteTitle.includes('>0.9.x</span>'), "Docs visible version identity must track the Quillframe 0.9.x development line");
-requireCheck(!siteTitle.includes("0.8.x") && !siteTitle.includes(">0.9.0</span>"), "Docs title must not regress to stale shell-version copy");
+requireCheck(siteTitle.includes('aria-label="Quillframe 1.0.0-dev.0"') && siteTitle.includes('>1.0.0-dev.0</span>'), "Docs visible version identity must track the Quillframe 1.0 development release");
+requireCheck(!siteTitle.includes("0.8.x") && !siteTitle.includes(">0.9.x</span>"), "Docs title must not regress to stale shell-version copy");
 
 const primaryDocsRoutes = [
   ['/product', 'product: "产品"'],
@@ -123,8 +124,6 @@ requireCheck(!shellCss.includes("radial-gradient") && !shellCss.includes("!impor
 requireCheck(shellCss.includes("@media (max-width: 50rem)") && shellCss.includes(".sidebar-pane"), "Docs shared shell must preserve deliberate mobile navigation behavior");
 
 /* Product → Docs handoff ---------------------------------------------- */
-requireCheck(!main.includes("KnowledgePortal"), "legacy Knowledge Portal must not mount beside the product router");
-requireCheck(!main.includes("KnowledgeExperience"), "product entry must not import the retired custom docs renderer");
 requireCheck(main.includes('import ProductApp from "./ProductApp"') && main.includes("<ProductApp />") && main.includes("ProductFailureBoundary"), "product entry must route through the resilient shared ProductApp shell");
 requireCheck(productApp.includes('kind: "document", href: zh() ? "/docs" : "/docs/en"'), "shared primary navigation model must hand off to the locale-aware Starlight docs root");
 requireCheck(productApp.includes('<For each={primaryNav()}>{(item) => navLink(item, "wui-app-bar__link")}</For>'), "desktop Product header must render the shared primary navigation source");
@@ -157,6 +156,9 @@ requireCheck(landing.includes('"/inspect"'), "docs home must retain a direct pat
 requireCheck(landing.includes('"/playground"') && landing.includes('"/agents"'), "docs home must connect to the live Playground and Agent integration workbench");
 requireCheck(landing.includes("data-nf-docs-home"), "docs home must expose a stable verification marker");
 requireCheck(landing.includes("按目标开始") && landing.includes("Choose a path"), "docs landing copy must remain natively localized");
+for (const marker of ["Start · 01", "Write · 02", "Review · 03", "Publish · 04", "Trust boundaries"]) {
+  requireCheck(landing.includes(marker), `docs landing author journey marker missing: ${marker}`);
+}
 requireCheck(landing.includes('tierLabel: (tier: string) => `第 ${tier} 层`') && landing.includes('referenceEyebrow: "参考"'), "Chinese landing chrome must not leak English Tier or Reference labels");
 requireCheck(landing.includes("编程智能体") && landing.includes("真正负责的子系统"), "Chinese landing explanations must prefer native product language over untranslated implementation jargon");
 requireCheck(zhLandingRoute.includes('<DocsLanding locale="zh-CN" />'), "zh-CN docs root must render the curated Chinese landing");
@@ -190,7 +192,7 @@ if (failures.length > 0) {
     shared_primary_navigation: true,
     github_entry: true,
     quillframe_studio_domain: true,
-    product_version: "0.9.x",
+    product_version: "1.0.0-dev.0",
     current_identity: "Quillframe",
     resilience_boundary: true,
     product_header_navigation_parity: true,

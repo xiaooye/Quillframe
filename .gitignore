@@ -1,9 +1,15 @@
-.novelforge/
+.quillframe/
+.superpowers/sdd/
 __pycache__/
 *.pyc
 *.sqlite
 *.sqlite3
 *.db
+*.egg-info/
+/build/
+/dist/
+node_modules/
+cloud/dist/
 .env
 .env.*
 *.log
@@ -15,4 +21,9 @@ studio/app/src-tauri/binaries/quillframe-core-*
 site/node_modules/
 site/dist/
 site/public/generated/
+site/public/pyodide/
 site/src/generated/
+site/docs-site/.astro/
+site/docs-site/node_modules/
+site/docs-site/public/repo-assets/
+site/docs-site/src/content/docs/

@@ -1,4 +1,25 @@
-# NovelForge Changelog
+# Quillframe Changelog
+
+## 0.9.1 · Novel-native host boundary
+
+Quillframe v0.9.1 narrows the product boundary to a novel-contract kernel: **the host runs the agent; Quillframe governs the novel**. Codex/Claude native reviewer adapters consume one exact frozen packet, while Project mapping, bounded Context, candidate visibility, independent review, and Acceptance/Settlement remain Core contracts.
+
+### Included
+
+- Native Codex/Claude reviewer lifecycle hooks with trusted parent/child session separation, reviewer tool denial, exact packet/nonce binding, lease fencing, consume-once evidence, and crash recovery.
+- Deterministic mapped-Project projection preview/apply/status/preflight with source fingerprints, transactional CAS, rebuildable SQLite projection state, stage-bounded Context, and zero-model preflight.
+- Paired Novel-Native Host Boundary documentation and explicit novelist-facing, internal/ops, and privileged author surfaces.
+- v0.9.1 version identity across Framework, CLI, Project SDK, MCP metadata, Host Bridge, Studio, site, and Tauri packaging.
+
+### Known limits
+
+- The embedded Agent/Model Runtime remains an optional/reference implementation; native hosts own generic session, model/tool, sandbox, and subagent execution.
+- Acceptance and Settlement remain explicit author-controlled operations and are not exposed as ordinary agent authority.
+- Full hosted multi-user, broad Studio redesign, complete benchmark corpus, plugin ecosystem, cloud deployment, and full typesetting remain post-v0.9.1 backlog.
+
+### Release evidence
+
+The v0.9.1 release must be bound to one exact main commit, deterministic Framework bundle fingerprint, CI result, and downloadable checksum manifest. A local build or pending review is not a published release.
 
 ## 0.8.0 · Active pre-1.0 development baseline
 

@@ -1,8 +1,0 @@
-const migrationKey = "quillframe.product-entry.v5.appearance-migrated";
-
-if (!localStorage.getItem(migrationKey)) {
-  localStorage.setItem("quillframe.appearance", "light");
-  localStorage.setItem(migrationKey, "true");
-}
-
-document.documentElement.dataset.experience = "story-loom-kawaii-atelier-v5";

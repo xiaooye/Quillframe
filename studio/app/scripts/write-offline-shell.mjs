@@ -46,12 +46,12 @@ self.addEventListener("fetch",(event)=>{
   if(url.origin!==self.location.origin||url.pathname.startsWith(API_PREFIX)) return;
 
   if(request.mode==="navigate"){
-    event.respondWith(fetch(request).catch(()=>caches.match("/index.html")));
+    event.respondWith(fetch(request).catch(()=>caches.match("/index.html",{ignoreVary:true})));
     return;
   }
 
   if(url.pathname.startsWith("/assets/")||PRECACHE.includes(url.pathname)){
-    event.respondWith(caches.match(request).then((cached)=>cached||fetch(request)));
+    event.respondWith(caches.match(url.pathname,{ignoreVary:true}).then((cached)=>cached||fetch(request)));
   }
 });
 `;

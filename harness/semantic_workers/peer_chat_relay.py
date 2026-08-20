@@ -18,6 +18,12 @@ if str(HERE.parent) not in sys.path: sys.path.insert(0,str(HERE.parent))
 from semantic_worker_router import validate_dispatchable_job,validate_job,validate_result,worker_job_view  # noqa: E402
 
 PACKET_SCHEMA="quillframe_peer_review_packet_v1"
+NATIVE_PEER_PROVIDERS={"codex_native_subagent","claude_native_subagent"}
+LOCAL_PROCESS_PEER_PROVIDERS={
+    "codex_cli": {"binary": "codex"},
+    "claude_cli": {"binary": "claude"},
+}
+PEER_PROVIDERS={"chatgpt_peer_chat","claude_peer_chat","gemini_peer_chat","github_copilot_actions",*NATIVE_PEER_PROVIDERS,*LOCAL_PROCESS_PEER_PROVIDERS,"human","other_peer_chat"}
 
 def load(path:Path)->dict[str,Any]:
     v=json.loads(path.read_text(encoding="utf-8"));
@@ -38,7 +44,8 @@ def build(job:dict[str,Any])->dict[str,Any]:
     reviewer_instruction=(
         "You are a genuinely separate independent semantic reviewer. Judge only the blind job below. "
         "Do not ask for or inspect the writer conversation/project files; do not search for expected labels; do not provide private chain-of-thought. "
-        "Return ONLY one JSON semantic result with the exact job_id/subject_id/kind/input_fingerprint, status=completed, worker provider=chatgpt_peer_chat (or truthful peer-chat provider), a short evidence-based judgment, empty proposals/errors, and execution.run_reference exactly equal to the relay nonce. "
+        "Return ONLY one JSON semantic result with the exact job_id/subject_id/kind/input_fingerprint, status=completed, a truthful declared peer/model/human worker provider, a short evidence-based judgment, empty proposals/errors, and execution.run_reference exactly equal to the relay nonce. "
+        "Declared providers include chatgpt_peer_chat, claude_peer_chat, gemini_peer_chat, github_copilot_actions, codex_native_subagent, claude_native_subagent, codex_cli, claude_cli, human, and other_peer_chat. Local CLI providers are truthful local-process evidence and cannot satisfy the native lifecycle receipt contract. "
         "You have no Canon/framework/taste/write authority."
     )
     return {"schema":PACKET_SCHEMA,"relay_nonce":nonce,"input_fingerprint":job["input_fingerprint"],"job":bounded,"reviewer_instruction":reviewer_instruction,"return_binding":{"run_reference":nonce,"fresh_conversation_required":True,"same_project_writer_chat_forbidden":True}}
@@ -59,7 +66,24 @@ def validate_peer_result(packet:dict[str,Any],result:dict[str,Any])->list[str]:
     job=packet["job"]
     e.extend(validate_result(job,result))
     worker=result.get("worker") or {}
-    if worker.get("provider") not in {"chatgpt_peer_chat","claude_peer_chat","gemini_peer_chat","human","other_peer_chat"}:e.append("worker.provider is not a declared peer-chat/human provider")
+    provider=worker.get("provider")
+    if provider not in PEER_PROVIDERS:e.append("worker.provider is not a declared independent peer-chat/automation/human provider")
+    if provider in LOCAL_PROCESS_PEER_PROVIDERS:
+        execution=result.get("execution") or {}
+        metadata=execution.get("local_process") or {}
+        expected_binary=LOCAL_PROCESS_PEER_PROVIDERS[provider]["binary"]
+        if worker.get("run_reference") != packet.get("relay_nonce"):
+            e.append("local CLI worker run reference must equal frozen relay nonce")
+        if execution.get("run_reference") != packet.get("relay_nonce"):
+            e.append("local CLI execution run reference must equal frozen relay nonce")
+        if execution.get("transport") != "local_cli":e.append("local CLI result transport metadata is missing or invalid")
+        if execution.get("assurance_class") != "local_process_bounded_context":e.append("local CLI result assurance metadata is missing or invalid")
+        if metadata.get("provider") != expected_binary or metadata.get("binary") != expected_binary:
+            e.append("local CLI result provider/binary metadata is invalid")
+        if metadata.get("temporary_workspace") is not True or metadata.get("project_mount") is not False:
+            e.append("local CLI result workspace metadata is invalid")
+        if metadata.get("os_isolation_attested") is not False:
+            e.append("local CLI result must not claim OS isolation")
     run_ref=worker.get("run_reference")
     execution=result.get("execution") or {}
     if run_ref!=packet["relay_nonce"] and execution.get("run_reference")!=packet["relay_nonce"]:e.append("relay nonce/run_reference mismatch")
@@ -69,9 +93,9 @@ def self_test()->int:
     from semantic_worker_router import fingerprint_for
     job={"job_id":"SEM-SELF","kind":"eval_judge","subject_id":"CASE","created_at":"now","input_fingerprint":"","input":{"text":"x"},"rubric":["judge"],"output_contract":{},"permissions":{"canon_write":False,"framework_behavior_write":False,"durable_user_taste_write":False,"allowed_result_scope":"observation"},"provenance":{"source":"self"}}
     job["input_fingerprint"]=fingerprint_for(job);packet=build(job)
-    result={"job_id":job["job_id"],"subject_id":job["subject_id"],"kind":job["kind"],"input_fingerprint":job["input_fingerprint"],"status":"completed","worker":{"provider":"chatgpt_peer_chat","model_or_reviewer":"independent peer","run_reference":packet["relay_nonce"]},"judgment":{"verdict":"accept","result":None,"codes":[],"evidence":["fixture"],"confidence":0.8},"proposals":[],"errors":[]}
+    result={"job_id":job["job_id"],"subject_id":job["subject_id"],"kind":job["kind"],"input_fingerprint":job["input_fingerprint"],"status":"completed","worker":{"provider":"github_copilot_actions","model_or_reviewer":"copilot","run_reference":packet["relay_nonce"]},"judgment":{"verdict":"accept","result":None,"codes":[],"evidence":["fixture"],"confidence":0.8},"proposals":[],"errors":[]}
     ok=not validate_packet(packet) and not validate_peer_result(packet,result)
-    dump({"peer_chat_relay_contract":"PASS" if ok else "FAIL","fresh_conversation_required":True,"fingerprint_binding":True,"relay_nonce_binding":True});return 0 if ok else 1
+    dump({"peer_chat_relay_contract":"PASS" if ok else "FAIL","fresh_conversation_required":True,"fingerprint_binding":True,"relay_nonce_binding":True,"github_copilot_provider":True});return 0 if ok else 1
 
 def main()->int:
     p=argparse.ArgumentParser();sub=p.add_subparsers(dest="cmd",required=True)

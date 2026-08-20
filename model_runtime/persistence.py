@@ -6,7 +6,7 @@ import sqlite3
 import uuid
 from typing import Any
 
-from persistence.quillframe_sqlite import QuillframeStore, canonical_json, now_iso
+from persistence.quillframe_sqlite import QuillframeStore, _connect_readonly, canonical_json, now_iso
 from .contracts import ModelServiceSnapshot, fingerprint
 
 
@@ -18,13 +18,24 @@ class SQLiteModelServiceRepository:
 
     def _connect(self) -> sqlite3.Connection:
         self.store.initialize_global()
-        conn = sqlite3.connect(self.store.global_db, timeout=5.0)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys=ON")
-        conn.execute("PRAGMA busy_timeout=5000")
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA synchronous=FULL")
-        return conn
+        if self.store.read_only:
+            return _connect_readonly(self.store.global_db)
+        conn: sqlite3.Connection | None = None
+        try:
+            conn = sqlite3.connect(self.store.global_db, timeout=5.0)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA foreign_keys=ON")
+            conn.execute("PRAGMA busy_timeout=5000")
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA synchronous=FULL")
+            return conn
+        except Exception:
+            if conn is not None:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+            raise
 
     def save_snapshot(self, snapshot: ModelServiceSnapshot) -> dict[str, Any]:
         data = snapshot.to_dict()
@@ -87,6 +98,8 @@ class SQLiteModelServiceRepository:
         return {"service_id": snapshot.service_id, "snapshot_fingerprint": snapshot.snapshot_fingerprint, "models": len(snapshot.models)}
 
     def list_services(self) -> list[dict[str, Any]]:
+        if self.store.read_only and not self.store.global_db.exists():
+            return []
         with closing(self._connect()) as conn:
             rows = conn.execute(
                 "SELECT service_id,endpoint,enabled,auth_style,discovery_state,snapshot_fingerprint,last_checked_at,created_at,updated_at,credential_ref IS NOT NULL AS credential_present FROM model_services ORDER BY updated_at DESC"

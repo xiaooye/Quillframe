@@ -5,7 +5,7 @@
     {
       "id": "quillframe",
       "name": "Quillframe portable skill",
-      "source": "https://github.com/xiaooye/cn_webnovel_agent/blob/main/agent-skills/quillframe/SKILL.md",
+      "source": "https://github.com/xiaooye/Quillframe/blob/main/agent-skills/quillframe/SKILL.md",
       "delivery_surface": "agent_package",
       "authority": "read-only",
       "description": "Inspect safe Quillframe Host Bridge projections without importing private runtime internals or gaining Canon, Settlement, Project-write, or Framework-write authority."

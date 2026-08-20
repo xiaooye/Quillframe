@@ -329,5 +329,5 @@ Verified research 回答的是“外部证据支持什么”，而不是：
 - [故事系统](STORY_SYSTEM.zh-CN.md)：未来规划与依赖。
 - [人物与关系系统](CHARACTER_SYSTEM.zh-CN.md)：信息归属、关系 / 当前状态与人物证据。
 - [上下文与记忆](../docs/context-and-memory.zh-CN.md)：仍然低于正典权威的作者可见控制层。
-- [项目 SDK](../docs/project-sdk.zh-CN.md)：manifest、lock、项目工程与项目自有 authority。
+- [Native Project Contract](../docs/project-contract.zh-CN.md)：五键 manifest/context、fingerprint、项目工程与项目自有 authority。
 - [Session Runtime](../harness/session_runtime/SESSION_RUNTIME.zh-CN.md)：必须与 Canon 分离的操作状态。

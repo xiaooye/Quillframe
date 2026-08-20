@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Thin read-only Agent Skills client for the Quillframe Studio host bridge.
-
-The shared bridge may advertise host-specific commands, but the portable Agent
-Skills surface remains query-only. In particular, ``session.resume`` and
-``session.terminate`` are loopback ``local_app`` commands and are never invoked
-by this client.
-"""
+"""Portable read-only Agent Package client for the Quillframe Host Bridge v11."""
 from __future__ import annotations
 
 import argparse
@@ -16,17 +10,15 @@ import sys
 from pathlib import Path
 from typing import Any
 
-EXPECTED_DESCRIPTION = "quillframe_studio_host_bridge_description_v1"
-RUNTIME_QUERIES = {
-    "runtime.sessions.list",
-    "runtime.session.get",
-    "runtime.events.list",
-    "runtime.handoff.inspect",
-    "run.receipt.get",
-    "runtime.command.receipt.get",
-    "session.resume.preflight",
-    "session.terminate.preflight",
+EXPECTED_DESCRIPTION = "quillframe_host_bridge_description_v11"
+REQUEST_SCHEMA = "quillframe_host_bridge_request_v11"
+BRIDGE_VERSION = "11"
+AGENT_SURFACE = "agent_package"
+OPERATION_KINDS = {
+    "query", "command", "authority_command", "semantic_command", "secret_command",
+    "external_query", "external_handoff_prepare", "external_handoff", "external_handoff_result",
 }
+SURFACES = {"cli", "local_app", "hosted_web", "agent_package"}
 
 
 def candidate_roots() -> list[Path]:
@@ -41,9 +33,8 @@ def candidate_roots() -> list[Path]:
     seen: set[str] = set()
     for root in roots:
         resolved = root.resolve()
-        key = str(resolved)
-        if key not in seen:
-            seen.add(key)
+        if str(resolved) not in seen:
+            seen.add(str(resolved))
             unique.append(resolved)
     return unique
 
@@ -66,49 +57,137 @@ def run_bridge(args: list[str], *, capture: bool = False) -> subprocess.Complete
     )
 
 
-def self_test() -> dict[str, Any]:
+def live_description() -> tuple[dict[str, Any], subprocess.CompletedProcess[str]]:
     proc = run_bridge(["describe"], capture=True)
     try:
         value = json.loads(proc.stdout)
     except json.JSONDecodeError:
         value = {}
-    supported = set(value.get("supported_operations", []))
-    deferred = set(value.get("deferred_operations", {}))
-    operation_contracts = value.get("operation_contracts") if isinstance(value.get("operation_contracts"), dict) else {}
-    resume_contract = operation_contracts.get("session.resume") if isinstance(operation_contracts.get("session.resume"), dict) else {}
-    terminate_contract = operation_contracts.get("session.terminate") if isinstance(operation_contracts.get("session.terminate"), dict) else {}
+    return value, proc
+
+
+def validate_description(description: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    if description.get("schema") != EXPECTED_DESCRIPTION:
+        errors.append(f"description schema must be {EXPECTED_DESCRIPTION}")
+    if description.get("contract_version") != BRIDGE_VERSION:
+        errors.append(f"description contract_version must be exactly {BRIDGE_VERSION}")
+    for field in ("authority", "canon_authority", "framework_write_authority", "settlement_authority", "direct_core_store_access"):
+        if description.get(field) is not False:
+            errors.append(f"description {field} must be false")
+    contracts = description.get("operation_contracts")
+    if not isinstance(contracts, dict):
+        errors.append("live description operation_contracts must be an object")
+        return errors
+    if "bridge.describe" not in contracts:
+        errors.append("live description operation_contracts must include bridge.describe")
+    for operation, metadata in contracts.items():
+        if not isinstance(operation, str) or not operation.strip():
+            errors.append("operation metadata keys must be non-empty strings")
+            continue
+        if not isinstance(metadata, dict):
+            errors.append(f"operation metadata must be an object: {operation}")
+            continue
+        kind = metadata.get("kind")
+        if kind not in OPERATION_KINDS:
+            errors.append(f"operation metadata kind is invalid: {operation}")
+        required = metadata.get("required_args")
+        if not isinstance(required, list) or any(not isinstance(arg, str) or not arg.strip() for arg in required):
+            errors.append(f"operation metadata required_args must be non-empty strings: {operation}")
+        allowed = metadata.get("allowed_surfaces")
+        if allowed is not None and (
+            not isinstance(allowed, list)
+            or any(not isinstance(surface, str) or surface not in SURFACES for surface in allowed)
+            or len(set(allowed)) != len(allowed)
+        ):
+            errors.append(f"operation metadata allowed_surfaces is invalid: {operation}")
+    return errors
+
+
+def preflight(request: dict[str, Any], description: dict[str, Any]) -> list[str]:
+    errors: list[str] = validate_description(description)
+    if request.get("schema") != REQUEST_SCHEMA:
+        errors.append(f"request schema must be {REQUEST_SCHEMA}")
+    if request.get("bridge_version") != BRIDGE_VERSION:
+        errors.append(f"bridge_version must be exactly {BRIDGE_VERSION}")
+    if request.get("surface") != AGENT_SURFACE:
+        errors.append("surface must be agent_package")
+    if request.get("authority") is not False:
+        errors.append("authority must be false")
+    if not isinstance(request.get("operation"), str) or not request["operation"].strip():
+        errors.append("operation must be a non-empty string")
+        return errors
+    if not isinstance(request.get("args"), dict):
+        errors.append("args must be an object")
+        return errors
+    contracts = description.get("operation_contracts")
+    if not isinstance(contracts, dict):
+        return errors
+    metadata = contracts.get(request["operation"])
+    if not isinstance(metadata, dict):
+        errors.append("operation is not advertised by live v11 description")
+        return errors
+    if metadata.get("kind") != "query":
+        errors.append("agent_package only permits query operations")
+    allowed = metadata.get("allowed_surfaces")
+    if isinstance(allowed, list) and AGENT_SURFACE not in allowed:
+        errors.append("operation is not authorized on agent_package")
+    required = metadata.get("required_args")
+    if not isinstance(required, list) or any(not isinstance(key, str) for key in required):
+        errors.append("operation metadata has invalid required_args")
+    else:
+        missing = [key for key in required if request["args"].get(key) in (None, "")]
+        if missing:
+            errors.append("missing args: " + ", ".join(missing))
+    return errors
+
+
+def self_test() -> dict[str, Any]:
+    description, proc = live_description()
+    description_errors = validate_description(description)
+    contracts = description.get("operation_contracts") if isinstance(description.get("operation_contracts"), dict) else {}
+    malformed = [
+        name for name, metadata in contracts.items()
+        if not isinstance(metadata, dict) or not isinstance(metadata.get("required_args"), list)
+    ]
+    non_queries = [
+        name for name, metadata in contracts.items()
+        if isinstance(metadata, dict) and metadata.get("kind") != "query"
+    ]
+    query_contracts = [
+        name for name, metadata in contracts.items()
+        if isinstance(metadata, dict) and metadata.get("kind") == "query"
+    ]
     checks = {
         "bridge_found": proc.returncode == 0,
-        "description_schema": value.get("schema") == EXPECTED_DESCRIPTION,
-        "authority_false": value.get("authority") is False,
-        "direct_core_store_access_false": value.get("direct_core_store_access") is False,
-        "runtime_queries_supported": RUNTIME_QUERIES.issubset(supported),
-        "resume_preflight_supported": "session.resume.preflight" in supported and "session.resume.preflight" not in deferred,
-        "resume_command_advertised": "session.resume" in supported and "session.resume" not in deferred,
-        "resume_local_app_only": resume_contract.get("allowed_surfaces") == ["local_app"] and resume_contract.get("mutation_scope") == "runtime_session_state_only",
-        "terminate_preflight_supported": "session.terminate.preflight" in supported and "session.terminate.preflight" not in deferred,
-        "terminate_command_advertised": "session.terminate" in supported and "session.terminate" not in deferred,
-        "terminate_local_app_only": terminate_contract.get("allowed_surfaces") == ["local_app"] and terminate_contract.get("mutation_scope") == "runtime_session_and_active_run_state_only",
-        "agent_package_remains_read_only": (
-            resume_contract.get("allowed_surfaces") == ["local_app"]
-            and terminate_contract.get("allowed_surfaces") == ["local_app"]
-            and "agent_package" not in resume_contract.get("allowed_surfaces", [])
-            and "agent_package" not in terminate_contract.get("allowed_surfaces", [])
+        "description_schema": description.get("schema") == EXPECTED_DESCRIPTION,
+        "contract_version": description.get("contract_version") == BRIDGE_VERSION,
+        "authority_false": description.get("authority") is False,
+        "operation_metadata_complete": not malformed,
+        "description_contract_valid": not description_errors,
+        "agent_package_query_only": all(
+            isinstance(contracts[name], dict)
+            and contracts[name].get("kind") == "query"
+            for name in query_contracts
         ),
-        "write_command_not_supported": "command.invoke" not in supported and "command.invoke" in deferred,
+        "query_surface_present": "bridge.describe" in query_contracts and "project.list" in query_contracts,
+        "non_query_operations_advertised_for_host_validation": bool(non_queries),
     }
     return {
         "quillframe_agent_skill_contract": "PASS" if all(checks.values()) else "FAIL",
         "checks": checks,
-        "surface": "agent_package",
+        "bridge_version": BRIDGE_VERSION,
+        "surface": AGENT_SURFACE,
         "runtime_mutation_allowed": False,
         "authority": False,
         "model_execution": False,
+        "query_operation_count": len(query_contracts),
+        "non_query_operation_count": len(non_queries),
     }
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Quillframe read-only Agent Skills bridge client")
+    parser = argparse.ArgumentParser(description="Quillframe read-only Agent Package bridge v11 client")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("describe")
     inv = sub.add_parser("invoke")
@@ -117,13 +196,24 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.command == "self-test":
-        result = self_test()
-        print(json.dumps(result, ensure_ascii=False, indent=2))
-        return 0 if result["quillframe_agent_skill_contract"] == "PASS" else 1
+        report = self_test()
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0 if report["quillframe_agent_skill_contract"] == "PASS" else 1
+    if args.command == "describe":
+        proc = run_bridge(["describe"])
+        return proc.returncode
 
-    bridge_args = ["describe"] if args.command == "describe" else ["invoke", "--request", args.request]
-    proc = run_bridge(bridge_args)
-    return proc.returncode
+    request = json.loads(Path(args.request).read_text(encoding="utf-8"))
+    description, proc = live_description()
+    if proc.returncode != 0:
+        print("agent-package preflight could not read live Host Bridge v11 description", file=sys.stderr)
+        return 2
+    errors = preflight(request, description)
+    if errors:
+        print("agent-package preflight rejected request: " + "; ".join(errors), file=sys.stderr)
+        return 2
+    result = run_bridge(["invoke", "--request", args.request])
+    return result.returncode
 
 
 if __name__ == "__main__":

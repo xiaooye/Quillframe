@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Typed Quillframe 0.9 Core/Product bridge.
+"""Typed Quillframe Host Bridge v11.
 
 Transports may be local HTTP, hosted HTTP or Tauri-local IPC, but semantic
 operations are shared here. The delivery surface never becomes the authority;
@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any, Callable
@@ -20,18 +21,29 @@ if str(ROOT) not in sys.path:
 
 from agent_runtime import QuillframeAgentRuntime
 from core_operations import CoreOperations, OperationError
-from model_runtime import MemorySecretStore, ModelRuntimeError, SecretStore
+from model_runtime import (
+    MemorySecretStore,
+    ModelRoute,
+    ModelRuntimeError,
+    ModelTaskProfile,
+    RouteError,
+    SecretStore,
+    preview_route,
+)
 from model_runtime.service_facade import ModelServiceFacade
 from persistence.context_repository import ContextRepository
 from persistence.quillframe_sqlite import ConflictError, IntegrityError, QuillframeStore
-from production_runtime import ProductionRunError, ProductionRunExecutor
+from production_runtime import NovelWorkflowEngine, ProductionRunError, ProductionRunExecutor, WorkflowError
+from production_runtime.workflow_service import NovelWorkflowService
 
 CONTRACT_PATH = Path(__file__).with_name("host_bridge_contract.json")
-REQUEST_SCHEMA = "quillframe_studio_host_bridge_request_v1"
-RESULT_SCHEMA = "quillframe_studio_host_bridge_result_v1"
+BRIDGE_VERSION = "11"
+REQUEST_SCHEMA = "quillframe_host_bridge_request_v11"
+RESULT_SCHEMA = "quillframe_host_bridge_result_v11"
 
 _SECRET_REQUEST_KEYS = {"access_token", "api_key", "apikey", "password", "secret", "token"}
 _SECRET_OPERATIONS = {"model.service.add", "model.service.token.replace"}
+_PUBLIC_ERROR_CODE_RE = re.compile(r"[a-z][a-z0-9_]{0,63}\Z")
 _secret_store: SecretStore = MemorySecretStore()
 _agent_runtime_instance: QuillframeAgentRuntime | None = None
 
@@ -100,12 +112,12 @@ def contract() -> dict[str, Any]:
     return json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
 
 
-def store() -> QuillframeStore:
-    return QuillframeStore()
+def store(*, read_only: bool = False) -> QuillframeStore:
+    return QuillframeStore(read_only=read_only)
 
 
-def ops() -> CoreOperations:
-    return CoreOperations(store())
+def ops(*, read_only: bool = False) -> CoreOperations:
+    return CoreOperations(store(read_only=read_only))
 
 
 def configure_secret_store(secret_store: SecretStore) -> None:
@@ -115,19 +127,25 @@ def configure_secret_store(secret_store: SecretStore) -> None:
     _agent_runtime_instance = None
 
 
-def agent_runtime() -> QuillframeAgentRuntime:
+def agent_runtime(*, read_only: bool = False) -> QuillframeAgentRuntime:
     global _agent_runtime_instance
+    if read_only:
+        return QuillframeAgentRuntime(secret_store=_secret_store, store=store(read_only=True))
     if _agent_runtime_instance is None:
         _agent_runtime_instance = QuillframeAgentRuntime(secret_store=_secret_store, store=store())
     return _agent_runtime_instance
 
 
-def model_services() -> ModelServiceFacade:
-    return ModelServiceFacade(agent_runtime())
+def model_services(*, read_only: bool = False) -> ModelServiceFacade:
+    return ModelServiceFacade(agent_runtime(read_only=read_only))
 
 
-def production_runtime() -> ProductionRunExecutor:
-    return ProductionRunExecutor(store(), agent_runtime())
+def production_runtime(*, read_only: bool = False) -> ProductionRunExecutor:
+    return ProductionRunExecutor(store(read_only=read_only), agent_runtime(read_only=read_only))
+
+
+def workflow_service(*, read_only: bool = False) -> NovelWorkflowService:
+    return NovelWorkflowService(store(read_only=read_only))
 
 
 def require(args: dict[str, Any], key: str, typ: type | tuple[type, ...] = str):
@@ -139,12 +157,21 @@ def require(args: dict[str, Any], key: str, typ: type | tuple[type, ...] = str):
 
 def _describe(_: dict[str, Any], surface: str):
     c = contract()
+    operation_contracts = {
+        name: {
+            "kind": metadata["kind"],
+            "required_args": list(metadata.get("required_args", [])),
+            **({"allowed_surfaces": list(metadata["allowed_surfaces"])} if "allowed_surfaces" in metadata else {}),
+        }
+        for name, metadata in c["operations"].items()
+    }
     return {
-        "schema": "quillframe_host_bridge_description_v1",
-        "framework_version": "0.9.0",
+        "schema": "quillframe_host_bridge_description_v11",
+        "framework_version": "1.0.0-dev.0",
         "contract_version": c["version"],
         "surface": surface,
-        "operations": sorted(c["operations"]),
+        "operations": sorted(operation_contracts),
+        "operation_contracts": operation_contracts,
         "deferred_operations": c.get("deferred_operations", {}),
         "secret_boundary": c.get("secret_boundary", {}),
         "authority": False,
@@ -155,25 +182,36 @@ def _describe(_: dict[str, Any], surface: str):
     }
 
 
-def _doctor(args: dict[str, Any], _: str):
-    return store().doctor(args.get("project_id"), fix=args.get("fix") is True)
+def _doctor(args: dict[str, Any], surface: str):
+    if args.get("fix") is True:
+        raise BridgeError("invalid_args", "database.doctor is read-only; fix is not supported")
+    return store(read_only=surface == "agent_package").doctor(args.get("project_id"), fix=False)
 
 
-def _project_list(args: dict[str, Any], _: str):
-    return ops().project_list(limit=int(args.get("limit") or 100))
+def _project_list(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").project_list(limit=int(args.get("limit") or 100))
 
 
 def _project_create(args: dict[str, Any], _: str):
     loc = store().create_project(require(args, "project_id"), require(args, "title"), args.get("language") or "zh-CN")
-    return {"schema": "quillframe_project_create_result_v1", "project_id": loc.project_id, "created": True, "authority": False}
+    context = ops().project_inspect(loc.project_id)
+    return {
+        "schema": "quillframe_project_create_result_v1_0",
+        "manifest": context["manifest"],
+        "manifest_fingerprint": context["manifest_fingerprint"],
+        "chapter_scope": "CH001",
+        "data_boundary": ".quillframe/data",
+        "created": True,
+        "authority": False,
+    }
 
 
-def _project_inspect(args: dict[str, Any], _: str):
-    return ops().project_inspect(require(args, "project_id"))
+def _project_inspect(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").project_inspect(require(args, "project_id"))
 
 
-def _project_search(args: dict[str, Any], _: str):
-    return {"schema": "quillframe_search_results_v1", "results": store().search(require(args, "project_id"), require(args, "query"), int(args.get("limit") or 30)), "authority": False}
+def _project_search(args: dict[str, Any], surface: str):
+    return {"schema": "quillframe_search_results_v1", "results": store(read_only=surface == "agent_package").search(require(args, "project_id"), require(args, "query"), int(args.get("limit") or 30)), "authority": False}
 
 
 def _project_backup(args: dict[str, Any], _: str):
@@ -186,8 +224,8 @@ def _project_restore(args: dict[str, Any], _: str):
     return {"schema": "quillframe_restore_result_v1", "project_id": loc.project_id, "restored": True, "authority": False}
 
 
-def _document_list(args: dict[str, Any], _: str):
-    return ops().document_list(
+def _document_list(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").document_list(
         require(args, "project_id"),
         document_kind=args.get("document_kind") if isinstance(args.get("document_kind"), str) else None,
         limit=int(args.get("limit") or 500),
@@ -199,25 +237,25 @@ def _document_create(args: dict[str, Any], _: str):
     return {"schema": "quillframe_document_create_result_v1", "created": True, "document_id": args["document_id"], "authority": False}
 
 
-def _document_open(args: dict[str, Any], _: str):
+def _document_open(args: dict[str, Any], surface: str):
     project_id = require(args, "project_id")
     document_id = require(args, "document_id")
-    with store().open_project(project_id) as conn:
+    with store(read_only=surface == "agent_package").open_project(project_id) as conn:
         doc = conn.execute("SELECT document_id,story_node_id,document_kind,title,created_at FROM documents WHERE document_id=?", (document_id,)).fetchone()
         if not doc:
             raise KeyError(document_id)
-        revision = store().latest_revision(conn, document_id)
+        revision = store(read_only=surface == "agent_package").latest_revision(conn, document_id)
     latest = dict(revision) if revision else None
     if latest:
         latest["provenance"] = json.loads(latest.pop("provenance_json") or "{}")
     return {"schema": "quillframe_document_projection_v1", "project_id": project_id, "document": dict(doc), "latest_revision": latest, "authority": False}
 
 
-def _revisions_list(args: dict[str, Any], _: str):
+def _revisions_list(args: dict[str, Any], surface: str):
     project_id = require(args, "project_id")
     document_id = require(args, "document_id")
     limit = max(1, min(int(args.get("limit") or 100), 500))
-    with store().open_project(project_id) as conn:
+    with store(read_only=surface == "agent_package").open_project(project_id) as conn:
         rows = [dict(row) for row in conn.execute("SELECT revision_id,document_id,parent_revision_id,content_fingerprint,created_at,source,authority_class,provenance_json FROM document_revisions WHERE document_id=? ORDER BY created_at DESC,rowid DESC LIMIT ?", (document_id, limit))]
     for row in rows:
         row["provenance"] = json.loads(row.pop("provenance_json") or "{}")
@@ -225,19 +263,75 @@ def _revisions_list(args: dict[str, Any], _: str):
 
 
 def _revision_save(args: dict[str, Any], _: str):
-    return store().save_revision(require(args, "project_id"), require(args, "document_id"), require(args, "content"), expected_parent_revision_id=args.get("expected_parent_revision_id"), source=require(args, "source"), authority_class=args.get("authority_class") or "proposal", provenance=args.get("provenance") if isinstance(args.get("provenance"), dict) else {})
+    source = require(args, "source")
+    if source == "production_runtime":
+        raise BridgeError("reserved_provenance", "production_runtime provenance is Core-owned and cannot be supplied through document.revision.save")
+    return store().save_revision(require(args, "project_id"), require(args, "document_id"), require(args, "content"), expected_parent_revision_id=args.get("expected_parent_revision_id"), source=source, authority_class=args.get("authority_class") or "proposal", provenance=args.get("provenance") if isinstance(args.get("provenance"), dict) else {})
 
 
-def _revision_compare(args: dict[str, Any], _: str):
-    return store().compare_revisions(require(args, "project_id"), require(args, "left_revision_id"), require(args, "right_revision_id"))
+def _revision_compare(args: dict[str, Any], surface: str):
+    return store(read_only=surface == "agent_package").compare_revisions(require(args, "project_id"), require(args, "left_revision_id"), require(args, "right_revision_id"))
 
 
 def _author_run(args: dict[str, Any], _: str):
-    return ops().start_author_run(require(args, "project_id"), task_mode=require(args, "task_mode"), target_ref=args.get("target_ref"), payload=require(args, "payload", dict), session_id=args.get("session_id"), idempotency_key=args.get("idempotency_key"))
+    project_id = require(args, "project_id")
+    payload = require(args, "payload", dict)
+    chapter_id = require(payload, "chapter_id")
+    author_profile = payload.get("author_profile") or "guided"
+    # Validate the hard chapter/profile boundary before Core persists a run row.
+    NovelWorkflowEngine.start(
+        project_id=project_id,
+        run_id="preflight",
+        chapter_id=chapter_id,
+        author_profile=author_profile,
+    )
+    result = ops().start_author_run(
+        project_id,
+        task_mode=require(args, "task_mode"),
+        target_ref=args.get("target_ref"),
+        payload=payload,
+        session_id=args.get("session_id"),
+        idempotency_key=args.get("idempotency_key"),
+    )
+    result["workflow"] = workflow_service().start(
+        project_id=project_id,
+        run_id=result["run_id"],
+        chapter_id=chapter_id,
+        author_profile=author_profile,
+    )
+    return result
 
 
-def _author_run_status(args: dict[str, Any], _: str):
-    return production_runtime().status(require(args, "project_id"), require(args, "run_id"))
+def _author_run_status(args: dict[str, Any], surface: str):
+    return production_runtime(read_only=surface == "agent_package").status(require(args, "project_id"), require(args, "run_id"))
+
+
+def _author_run_resume(args: dict[str, Any], _: str):
+    return workflow_service().resume(
+        project_id=require(args, "project_id"),
+        run_id=require(args, "run_id"),
+        cursor=require(args, "cursor", int),
+        idempotency_key=require(args, "idempotency_key"),
+    )
+
+
+def _author_run_cancel(args: dict[str, Any], _: str):
+    if args.get("user_authorized") is not True:
+        raise BridgeError("authorization_required", "author.run.cancel requires an explicit user action")
+    return workflow_service().cancel(
+        project_id=require(args, "project_id"),
+        run_id=require(args, "run_id"),
+        cursor=require(args, "cursor", int),
+        idempotency_key=require(args, "idempotency_key"),
+        user_authorized=True,
+    )
+
+
+def _author_run_events(args: dict[str, Any], surface: str):
+    return workflow_service(read_only=surface == "agent_package").events(
+        run_id=require(args, "run_id"),
+        cursor=require(args, "cursor", int),
+    )
 
 
 def _author_run_execute(args: dict[str, Any], _: str):
@@ -263,7 +357,16 @@ def _author_independent_submit(args: dict[str, Any], _: str):
         require(args, "run_id"),
         peer_packet=require(args, "peer_packet", dict),
         result=require(args, "result", dict),
-        bridge_receipt=require(args, "bridge_receipt", dict),
+        independence_receipt=require(args, "independence_receipt", dict),
+    )
+
+
+def _author_independent_dispatch_prepare(args: dict[str, Any], _: str):
+    return production_runtime().prepare_independent_dispatch(
+        require(args, "project_id"),
+        require(args, "run_id"),
+        provider=require(args, "provider"),
+        parent_session_id=require(args, "parent_session_id"),
     )
 
 
@@ -280,12 +383,12 @@ def _model_add(args: dict[str, Any], _: str):
     return model_services().connect(require(args, "endpoint"), require(args, "access_token"))
 
 
-def _model_list(_: dict[str, Any], __: str):
-    return model_services().list()
+def _model_list(_: dict[str, Any], surface: str):
+    return model_services(read_only=surface == "agent_package").list()
 
 
-def _model_get(args: dict[str, Any], _: str):
-    return model_services().get(require(args, "service_id"))
+def _model_get(args: dict[str, Any], surface: str):
+    return model_services(read_only=surface == "agent_package").get(require(args, "service_id"))
 
 
 def _model_discover(args: dict[str, Any], _: str):
@@ -296,8 +399,22 @@ def _model_test(args: dict[str, Any], _: str):
     return model_services().test(require(args, "service_id"), model_id=args.get("model_id"), verify_tools=args.get("verify_tools") is True)
 
 
-def _model_capabilities(args: dict[str, Any], _: str):
-    return model_services().capabilities(require(args, "service_id"))
+def _model_capabilities(args: dict[str, Any], surface: str):
+    return model_services(read_only=surface == "agent_package").capabilities(require(args, "service_id"))
+
+
+def _model_route_preview(args: dict[str, Any], _: str):
+    profile = ModelTaskProfile.from_dict(require(args, "task_profile", dict))
+    routes = [
+        ModelRoute.from_dict(item)
+        for item in require(args, "available_routes", list)
+    ]
+    return preview_route(
+        project_id=require(args, "project_id"),
+        profile=profile,
+        routes=routes,
+        manager_invocation_id=require(args, "manager_invocation_id"),
+    )
 
 
 def _model_token_replace(args: dict[str, Any], _: str):
@@ -312,8 +429,11 @@ def _model_delete(args: dict[str, Any], _: str):
     return agent_runtime().delete_model_service(require(args, "service_id"))
 
 
-def _candidate_review_get(args: dict[str, Any], _: str):
-    return ops().candidate_review_get(require(args, "project_id"), candidate_id=require(args, "candidate_id"))
+def _candidate_review_get(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").candidate_review_get(require(args, "project_id"), candidate_id=require(args, "candidate_id"))
+
+def _candidate_visible_get(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").candidate_visible_get(require(args, "project_id"), candidate_id=require(args, "candidate_id"))
 
 
 def _candidate_reject(args: dict[str, Any], _: str):
@@ -338,8 +458,8 @@ def _candidate_revision_request(args: dict[str, Any], _: str):
     )
 
 
-def _settlement_preflight(args: dict[str, Any], _: str):
-    return ops().settlement_preflight(
+def _settlement_preflight(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").settlement_preflight(
         require(args, "project_id"), acceptance_id=require(args, "acceptance_id"), target_ref=require(args, "target_ref")
     )
 
@@ -358,23 +478,23 @@ def _feedback(args: dict[str, Any], _: str):
     return ops().observe_feedback(require(args, "project_id"), evidence_kind=require(args, "evidence_kind"), payload=require(args, "payload", dict), source_ref=args.get("source_ref"))
 
 
-def _pub_preview(args: dict[str, Any], _: str):
-    return ops().publication_preview(require(args, "project_id"), require(args, "acceptance_id"))
+def _pub_preview(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").publication_preview(require(args, "project_id"), require(args, "acceptance_id"))
 
 
 def _pub_build(args: dict[str, Any], _: str):
     return ops().publication_build(require(args, "project_id"), require(args, "acceptance_id"), args.get("format") or "md")
 
 
-def _context_projection(args: dict[str, Any], _: str):
-    return ContextRepository(store()).inspector_projection(require(args, "project_id"), require(args, "run_id"))
+def _context_projection(args: dict[str, Any], surface: str):
+    return ContextRepository(store(read_only=surface == "agent_package")).inspector_projection(require(args, "project_id"), require(args, "run_id"))
 
 
 def _fixed_list(table: str, order_by: str = "rowid DESC", limit_default: int = 100) -> Callable[[dict[str, Any], str], dict[str, Any]]:
-    def handler(args: dict[str, Any], _: str):
+    def handler(args: dict[str, Any], surface: str):
         project_id = require(args, "project_id")
         limit = max(1, min(int(args.get("limit") or limit_default), 500))
-        with store().open_project(project_id) as conn:
+        with store(read_only=surface == "agent_package").open_project(project_id) as conn:
             rows = [dict(row) for row in conn.execute(f"SELECT * FROM {table} ORDER BY {order_by} LIMIT ?", (limit,))]
         for row in rows:
             for key in list(row):
@@ -403,8 +523,12 @@ DISPATCH: dict[str, Callable[[dict[str, Any], str], dict[str, Any]]] = {
     "document.revision.compare": _revision_compare,
     "author.run.start": _author_run,
     "author.run.status": _author_run_status,
+    "author.run.resume": _author_run_resume,
+    "author.run.cancel": _author_run_cancel,
+    "author.run.events": _author_run_events,
     "author.run.execute": _author_run_execute,
     "author.run.independent.submit": _author_independent_submit,
+    "author.run.independent.dispatch.prepare": _author_independent_dispatch_prepare,
     "author.run.context.refresh": _author_context_refresh,
     "model.service.add": _model_add,
     "model.service.list": _model_list,
@@ -415,7 +539,9 @@ DISPATCH: dict[str, Callable[[dict[str, Any], str], dict[str, Any]]] = {
     "model.service.token.remove": _model_token_remove,
     "model.service.delete": _model_delete,
     "model.capabilities": _model_capabilities,
+    "model.route.preview": _model_route_preview,
     "candidate.review.get": _candidate_review_get,
+    "candidate.visible.get": _candidate_visible_get,
     "candidate.accept": _candidate_accept,
     "candidate.reject": _candidate_reject,
     "candidate.revision.request": _candidate_revision_request,
@@ -440,6 +566,8 @@ def validate_request(req: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     if req.get("schema") != REQUEST_SCHEMA:
         errors.append(f"schema must be {REQUEST_SCHEMA}")
+    if req.get("bridge_version") != BRIDGE_VERSION:
+        errors.append(f"bridge_version must be exactly {BRIDGE_VERSION}")
     if not isinstance(req.get("request_id"), str) or not req["request_id"].strip():
         errors.append("request_id must be non-empty string")
     op = req.get("operation")
@@ -452,6 +580,11 @@ def validate_request(req: dict[str, Any]) -> list[str]:
     if req.get("authority") is not False:
         errors.append("request authority must be false")
     if op in c["operations"] and isinstance(req.get("args"), dict):
+        metadata = c["operations"][op]
+        if req.get("surface") == "agent_package" and metadata.get("kind") != "query":
+            errors.append("agent_package only permits query operations")
+        if op == "database.doctor" and req["args"].get("fix") is True:
+            errors.append("database.doctor is read-only; fix is not supported")
         missing = [key for key in c["operations"][op].get("required_args", []) if req["args"].get(key) in (None, "")]
         if missing:
             errors.append("missing args: " + ", ".join(missing))
@@ -468,6 +601,7 @@ def result(req: dict[str, Any], status: str, *, data: Any = None, error: Any = N
     safe_error = _redact(error, secrets)
     out = {
         "schema": RESULT_SCHEMA,
+        "bridge_version": BRIDGE_VERSION,
         "request_id": safe_req.get("request_id"),
         "operation": safe_req.get("operation"),
         "surface": safe_req.get("surface"),
@@ -485,25 +619,32 @@ def result(req: dict[str, Any], status: str, *, data: Any = None, error: Any = N
     return out
 
 
+def _public_error(code: Any, fallback: str) -> dict[str, Any]:
+    """Return the entire public failure body without exception-derived prose."""
+    stable = code if isinstance(code, str) and _PUBLIC_ERROR_CODE_RE.fullmatch(code) else fallback
+    return {"code": stable, "mutation_performed": False}
+
+
 def invoke(req: dict[str, Any]) -> dict[str, Any]:
     errors = validate_request(req)
     if errors:
         return result(req, "invalid", error={"code": "invalid_request", "messages": errors, "mutation_performed": False})
     try:
         return result(req, "ok", data=DISPATCH[req["operation"]](req["args"], req["surface"]))
-    except (BridgeError, OperationError, ProductionRunError, ModelRuntimeError, ConflictError, IntegrityError, FileNotFoundError, FileExistsError, ValueError, KeyError) as exc:
-        return result(req, "failed", error={"code": getattr(exc, "code", type(exc).__name__), "message": str(exc), "detail": getattr(exc, "detail", None), "mutation_performed": False})
-    except Exception as exc:
-        return result(req, "failed", error={"code": "bridge_internal_error", "message": f"{type(exc).__name__}: {exc}", "mutation_performed": False})
+    except (BridgeError, OperationError, ProductionRunError, WorkflowError, RouteError, ModelRuntimeError, ConflictError, IntegrityError, FileNotFoundError, FileExistsError, ValueError, KeyError) as exc:
+        return result(req, "failed", error=_public_error(getattr(exc, "code", None), "bridge_operation_failed"))
+    except Exception:
+        return result(req, "failed", error=_public_error(None, "bridge_internal_error"))
 
 
 def self_test() -> dict[str, Any]:
-    desc = invoke({"schema": REQUEST_SCHEMA, "request_id": "self", "operation": "bridge.describe", "surface": "agent_package", "args": {}, "authority": False})
-    generic = invoke({"schema": REQUEST_SCHEMA, "request_id": "bad", "operation": "command.invoke", "surface": "agent_package", "args": {}, "authority": False})
-    first = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "A"}, "authority": False})
-    second = invoke({"schema": REQUEST_SCHEMA, "request_id": "secret-a", "operation": "model.service.add", "surface": "agent_package", "args": {"endpoint": "https://example.invalid/v1", "access_token": "B"}, "authority": False})
+    base = {"schema": REQUEST_SCHEMA, "bridge_version": BRIDGE_VERSION, "surface": "agent_package", "authority": False}
+    desc = invoke({**base, "request_id": "self", "operation": "bridge.describe", "args": {}})
+    generic = invoke({**base, "request_id": "bad", "operation": "command.invoke", "args": {}})
+    first = invoke({**base, "request_id": "secret-a", "operation": "model.service.add", "args": {"endpoint": "https://example.invalid/v1", "access_token": "A"}})
+    second = invoke({**base, "request_id": "secret-a", "operation": "model.service.add", "args": {"endpoint": "https://example.invalid/v1", "access_token": "B"}})
     ok = desc["status"] == "ok" and generic["status"] == "invalid" and desc["authority"] is False and first["request_fingerprint"] == second["request_fingerprint"] and first["secret_values_persisted"] is False
-    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": "8", "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
+    return {"quillframe_host_bridge_contract": "PASS" if ok else "FAIL", "contract_version": contract()["version"], "generic_mutation_dispatch": False, "secret_value_fingerprint_independent": first["request_fingerprint"] == second["request_fingerprint"], "authority": False}
 
 
 def main() -> int:

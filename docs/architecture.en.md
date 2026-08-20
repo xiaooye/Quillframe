@@ -1,12 +1,12 @@
 # Architecture
 
-Quillframe is easiest to understand as three cooperating planes: orchestration decides what bounded work should happen; execution and verification produce and judge exact artifacts; settlement is the only path from accepted evidence to durable story-state mutation.
+Quillframe is a novel-contract kernel alongside a generic host. The host runs sessions, model/tool loops, sandboxes, and subagents; Quillframe resolves the Project, bounds Context, governs Story/Character/Canon contracts, verifies exact artifacts, and keeps Settlement as the only path from accepted evidence to durable story-state mutation.
 
 <img src="assets/architecture/framework-mental-model.en.svg" alt="Three-plane Quillframe architecture: orchestration, execution and verification, then authorized settlement" width="100%" />
 
 ## Project authority is outside the generic framework
 
-The generic framework owns Story/Character/Canon mechanisms, quality mechanisms, session/runtime contracts, semantic execution, learning infrastructure, Corpus governance, evaluation, and the Project SDK. A consuming Project owns its concrete characters, plot, relationships, research, plans, manuscripts, accepted Canon, and current state.
+The generic framework owns Story/Character/Canon mechanisms, quality mechanisms, session/runtime contracts, semantic execution, learning infrastructure, Corpus governance, evaluation, and the native Project Contract. A consuming Project owns its concrete characters, plot, relationships, research, plans, manuscripts, accepted Canon, and current state.
 
 <img src="assets/architecture/framework-vs-project.en.svg" alt="Generic Framework mechanisms remain separate from Project-specific story facts" width="100%" />
 

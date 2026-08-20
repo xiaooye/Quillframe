@@ -185,7 +185,6 @@
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .studio-cta {
-    --wui-color-primary: var(--qf-lane-runtime-stroke);
     border-radius: 14px 14px 8px 14px;
     box-shadow: 0 4px 0 color-mix(in oklab, var(--qf-lane-runtime-stroke) 24%, transparent);
     transform: rotate(.4deg);
@@ -319,7 +318,6 @@
   }
 
   :root[data-experience="story-loom-kawaii-atelier-v5"] .hero-primary {
-    --wui-color-primary: var(--qf-lane-runtime-stroke);
     box-shadow: 0 5px 0 color-mix(in oklab, var(--qf-lane-runtime-stroke) 28%, transparent), 0 14px 30px color-mix(in oklab, var(--qf-lane-runtime-stroke) 15%, transparent);
   }
 

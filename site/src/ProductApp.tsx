@@ -1,4 +1,4 @@
-import { A, Navigate, Route, Router, useLocation, useNavigate } from "@solidjs/router";
+import { A, Route, Router, useLocation, useNavigate } from "@solidjs/router";
 import {
   For,
   Show,
@@ -19,12 +19,13 @@ import { zhCN } from "./content.zh-CN";
 import { loadKnowledgeIndex, searchKnowledge } from "./knowledge";
 import ProjectInspector from "./ProjectInspector";
 import LocalPlayground from "./LocalPlayground";
+import QuickDemo from "./QuickDemo";
 import PublicationWorkbench from "./PublicationWorkbench";
 import { ProductSectionHeading, ProductSurfaceHero } from "./ProductSurface";
 
 const siteCopy = { "en-US": enUS, "zh-CN": zhCN } as const;
 const studioUrl = "https://studio.quillframe.wei-dev.com";
-const productVersion = "0.9.x";
+const productVersion = "1.0.0-dev.0";
 
 const homeEntryCopy = {
   "zh-CN": {
@@ -172,6 +173,7 @@ function ProductShell(props: { children?: JSX.Element }) {
   const [knowledge] = createResource(loadKnowledgeIndex);
   let commandDialog: HTMLDialogElement | undefined;
   let commandInput: HTMLInputElement | undefined;
+  let commandOpener: HTMLElement | undefined;
 
   const toggleLocale = () => setLocale((value) => value === "zh-CN" ? "en-US" : "zh-CN");
   const toggleDark = () => setDark((value) => !value);
@@ -213,7 +215,7 @@ function ProductShell(props: { children?: JSX.Element }) {
     { kind: "route", icon: "✧", label: copy().nav.publication, description: copy().routes.publication.lede, href: "/publication" },
     { kind: "external", icon: "📚", label: copy().nav.docs, description: zh() ? "搜索与阅读仓库权威文档。" : "Search and read repository-authoritative documentation.", href: zh() ? "/docs" : "/docs/en" },
     { kind: "external", icon: "↗", label: copy().nav.github, description: zh() ? "打开 Quillframe GitHub 仓库。" : "Open the Quillframe GitHub repository.", href: githubRoot },
-    { kind: "route", icon: "▣", label: zh() ? "检查项目" : "Inspect project", description: zh() ? "在浏览器本地检查 Project manifest、lock 与 attestation。" : "Inspect Project manifest, lock, and attestation locally in the browser.", href: "/inspect" },
+    { kind: "route", icon: "▣", label: zh() ? "检查项目" : "Inspect project", description: zh() ? "在浏览器本地检查五键 Project manifest、context v1_0 与 .quillframe/data。" : "Inspect the five-key Project manifest, context v1_0, and .quillframe/data locally in the browser.", href: "/inspect" },
     { kind: "route", icon: "▷", label: "Playground", description: zh() ? "本地确定性 execution trace。" : "Local deterministic execution trace.", href: "/playground" },
     { kind: "route", icon: "◈", label: zh() ? "Agent 集成" : "Agent integration", description: zh() ? "通过 portable skill 与 Host Bridge 接入 coding agent。" : "Connect coding agents through the portable skill and Host Bridge.", href: "/agents" },
     { kind: "route", icon: "◇", label: copy().nav.changelog, description: copy().routes.changelog.lede, href: "/changelog" },
@@ -233,12 +235,27 @@ function ProductShell(props: { children?: JSX.Element }) {
     return [...routes, ...docs].slice(0, 12);
   });
 
-  const openCommand = () => {
+  const openCommand = (trigger?: HTMLElement) => {
+    if (!commandDialog?.open) {
+      commandOpener = trigger ?? (typeof HTMLElement !== "undefined" && document.activeElement instanceof HTMLElement ? document.activeElement : undefined);
+    }
     if (!commandDialog?.open) commandDialog?.showModal();
     setHighlighted(0);
     queueMicrotask(() => commandInput?.focus());
   };
   const closeCommand = () => commandDialog?.open && commandDialog.close();
+  const handleCommandClose = () => {
+    setQuery("");
+    const target = commandOpener;
+    commandOpener = undefined;
+    queueMicrotask(() => {
+      if (target?.isConnected && !("disabled" in target && Boolean((target as HTMLButtonElement).disabled)) && !target.inert) {
+        target.focus();
+        return;
+      }
+      document.querySelector<HTMLElement>(".header-search")?.focus();
+    });
+  };
   const runResult = (result: CommandResult) => {
     closeCommand();
     setQuery("");
@@ -290,7 +307,7 @@ function ProductShell(props: { children?: JSX.Element }) {
             <For each={primaryNav()}>{(item) => navLink(item, "wui-app-bar__link")}</For>
           </nav>
           <div class="wui-app-bar__actions header-actions">
-            <button type="button" class="wui-button wui-button--soft header-search" onClick={openCommand}><span>⌕</span><span>{zh() ? "搜索 Quillframe" : "Search Quillframe"}</span><kbd>⌘K / Ctrl+K</kbd></button>
+            <button type="button" class="wui-button wui-button--soft header-search" aria-label={zh() ? "搜索 Quillframe" : "Search Quillframe"} onClick={(event) => openCommand(event.currentTarget)}><span>⌕</span><span>{zh() ? "搜索 Quillframe" : "Search Quillframe"}</span><kbd>⌘K / Ctrl+K</kbd></button>
             <a class="wui-button wui-button--solid studio-cta" href={studioUrl} target="_blank" rel="noopener noreferrer">✦ {zh() ? "打开 Studio" : "Open Studio"}</a>
             <button class="wui-button wui-button--ghost wui-button--icon-only" type="button" onClick={toggleLocale} aria-label={zh() ? "切换到英文" : "Switch to Chinese"}>{copy().languageName}</button>
             <button class="wui-button wui-button--ghost wui-button--icon-only" type="button" onClick={toggleDark} aria-label={copy().nav.appearance}><span aria-hidden="true">{dark() ? "☼" : "◐"}</span></button>
@@ -306,7 +323,7 @@ function ProductShell(props: { children?: JSX.Element }) {
           </nav>
         </Show>
 
-        <main id="main-content">{props.children}</main>
+        <main id="main-content" tabIndex={-1}>{props.children}</main>
 
         <footer class="site-footer unified-product-footer">
           <div class="page-width footer-grid">
@@ -316,9 +333,9 @@ function ProductShell(props: { children?: JSX.Element }) {
           </div>
         </footer>
 
-        <dialog ref={commandDialog} class="command-dialog" onClose={() => setQuery("")} onClick={(event) => { if (event.target === commandDialog) closeCommand(); }}>
+        <dialog ref={commandDialog} class="command-dialog" aria-modal="true" aria-labelledby="product-command-heading" tabIndex={-1} onClose={handleCommandClose} onClick={(event) => { if (event.target === commandDialog) closeCommand(); }}>
           <div class="wui-command command-surface">
-            <div class="command-cute-strip"><span>✦</span><strong>{zh() ? "搜索 Quillframe" : "Search Quillframe"}</strong><span>{zh() ? "今天也把故事织得漂亮一点吧" : "Weave something lovely today"}</span></div>
+            <div class="command-cute-strip"><span>✦</span><h2 id="product-command-heading" class="wui-sr-only">{zh() ? "搜索 Quillframe" : "Search Quillframe"}</h2><strong aria-hidden="true">{zh() ? "搜索 Quillframe" : "Search Quillframe"}</strong><span>{zh() ? "今天也把故事织得漂亮一点吧" : "Weave something lovely today"}</span></div>
             <div class="wui-command__input-wrapper"><span class="wui-command__icon">⌕</span><input ref={commandInput} class="wui-command__input" value={query()} onInput={(event) => { setQuery(event.currentTarget.value); setHighlighted(0); }} onKeyDown={handleCommandKey} placeholder={zh() ? "搜索产品、文档、架构、出版…" : "Search product, docs, architecture, publication…"} /><kbd>Esc</kbd></div>
             <div class="wui-command__list" role="listbox"><For each={commandResults()}>{(result, index) => <button type="button" class="wui-command__item command-result" data-highlighted={highlighted() === index()} role="option" aria-selected={highlighted() === index()} onMouseEnter={() => setHighlighted(index())} onClick={() => runResult(result)}><span class="command-result-icon">{result.icon}</span><span class="command-result-copy"><strong>{result.label}</strong><small>{result.description}</small></span><span>→</span></button>}</For></div>
           </div>
@@ -358,7 +375,7 @@ function HomePage() {
 
   return (
     <>
-      <section class="entry-hero" onPointerMove={updatePointerLight}>
+      <section id="thesis" class="entry-hero" data-home-section="thesis" onPointerMove={updatePointerLight}>
         <div class="hero-aurora" aria-hidden="true" />
         <div class="hero-sparkles" aria-hidden="true"><i>✦</i><i>♡</i><i>✧</i><i>⋆</i></div>
         <div class="page-width entry-hero-grid">
@@ -379,7 +396,7 @@ function HomePage() {
               <div><small>{isZh() ? "产品入口" : "PRODUCT ENTRY"}</small><strong>{homeUi().launch}</strong></div>
               <span class="kawaii-bubble">{homeUi().cuteHint}</span>
             </div>
-            <button type="button" class="wui-input-group launcher-search" onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }))}>
+            <button type="button" class="wui-input-group launcher-search" onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }))}>
               <span class="wui-input-group__prefix">⌕</span><span class="launcher-search-label">{homeUi().searchPlaceholder}</span><span class="wui-input-group__suffix">{homeUi().commandHint}</span>
             </button>
             <div class="launcher-grid">
@@ -388,7 +405,7 @@ function HomePage() {
               <a class="launcher-tile lane-evidence" href={docsRoot()}><span>📚</span><div><strong>{homeUi().docs}</strong><small>{isZh() ? "搜索真实文档" : "Search real docs"}</small></div><b>→</b></a>
               <A class="launcher-tile lane-validated" href="/publication"><span>✧</span><div><strong>{homeUi().publication}</strong><small>{isZh() ? "从接受稿到派生格式" : "Accepted text to formats"}</small></div><b>→</b></A>
             </div>
-            <div class="launcher-footer"><span>{productVersion}</span><span>{isZh() ? "pre-1.0 · 快速演进" : "pre-1.0 · actively evolving"}</span><span>authority=false</span></div>
+            <div class="launcher-footer"><span>{productVersion}</span><span>{isZh() ? "1.0 预发布 · 验收中" : "1.0 preview · acceptance in progress"}</span><span>authority=false</span></div>
           </div>
         </div>
 
@@ -401,7 +418,9 @@ function HomePage() {
         </div>
       </section>
 
-      <section class="capability-focus page-width section-compact">
+      <QuickDemo locale={locale()} />
+
+      <section id="workflow" class="capability-focus page-width section-compact" data-home-section="workflow">
         <div class="section-kicker"><span>✦</span><div><small>{homeUi().capabilityTitle}</small><strong>{homeUi().capabilityLede}</strong></div></div>
         <div class="capability-focus-grid" data-lane={capabilityLanes[activeCapability()] ?? "runtime"}>
           <div class="capability-orb" aria-hidden="true"><span>{capabilityIcons[activeCapability()]}</span></div>
@@ -410,7 +429,7 @@ function HomePage() {
         </div>
       </section>
 
-      <section class="product-lab section-pad-soft">
+      <section id="evidence" class="product-lab section-pad-soft" data-home-section="evidence">
         <div class="page-width">
           <div class="section-heading compact-heading"><p class="eyebrow">{homeUi().labEyebrow}</p><h2>{homeUi().labTitle}</h2></div>
           <div class="lab-grid">
@@ -430,7 +449,15 @@ function HomePage() {
         </div>
       </section>
 
-      <section class="product-world page-width section-compact">
+      <section id="privacy" class="qf-home-privacy page-width section-compact" data-home-section="privacy">
+        <div class="section-heading compact-heading"><p class="eyebrow">{isZh() ? "隐私与控制" : "PRIVACY & CONTROL"}</p><h2>{isZh() ? "本地默认，云端显式；密钥永远不是作品数据。" : "Local by default, cloud by choice; secrets are never story data."}</h2></div>
+        <div class="portal-grid">
+          <article class="portal-card studio-portal"><div class="portal-icon">⌁</div><div><small>LOCAL</small><h3>{isZh() ? "回环地址内运行" : "Loopback-only execution"}</h3><p>{isZh() ? "quillframe launch 只绑定本机；不需要账号，也不会自动上传 Project。" : "quillframe launch binds only to this machine, needs no account, and never uploads a Project implicitly."}</p></div><span>0 ↑</span></article>
+          <article class="portal-card docs-portal"><div class="portal-icon">◇</div><div><small>CLOUD</small><h3>{isZh() ? "每次上传都要明确选择" : "Every upload is explicit"}</h3><p>{isZh() ? "SSO 只建立个人工作区会话；模型 token 使用短期加密 lease，不进入 Project bundle。" : "SSO establishes a personal-workspace session only; model tokens use short encrypted leases and never enter the Project bundle."}</p></div><span>opt-in</span></article>
+        </div>
+      </section>
+
+      <section id="start" class="product-world page-width section-compact" data-home-section="start">
         <div class="section-heading compact-heading"><p class="eyebrow">{homeUi().productWorld}</p><h2>{isZh() ? "真正的产品入口，不是“继续阅读”。" : "Real product doors, not another ‘read more’."}</h2></div>
         <div class="portal-grid">
           <a class="portal-card studio-portal" href={studioUrl} target="_blank" rel="noreferrer"><div class="portal-icon">✦</div><div><small>{homeUi().hostedStudio}</small><h3>Quillframe Studio</h3><p>{homeUi().hostedNote}</p></div><span>↗</span></a>
@@ -465,7 +492,7 @@ function StudioPage() {
 
 type Lane = "project" | "runtime" | "evidence" | "editorial" | "validated";
 const architectureNodes = [
-  { id: "project", icon: "⌂", lane: "project" as Lane, title: "Project", zh: "Project", compactZh: "身份 · Framework lock", compactEn: "identity · framework lock", descZh: "解析项目身份、精确 Framework lock、attestation 与项目逻辑域。", descEn: "Resolve project identity, exact Framework lock, attestation, and logical domains.", input: ["quillframe.toml", "quillframe.lock.json", "framework.attestation.json"], output: ["project identity", "Framework identity", "adapter resolution"], authorityZh: "项目文件拥有权威；UI 只读。", authorityEn: "Project files own authority; the UI is read-only.", contracts: ["quillframe_project_adapter_resolution_v1"] },
+  { id: "project", icon: "⌂", lane: "project" as Lane, title: "Project", zh: "Project", compactZh: "身份 · native manifest", compactEn: "identity · native manifest", descZh: "解析五键 quillframe.toml、CH001、.quillframe/data 与 manifest fingerprint。", descEn: "Resolve the five-key quillframe.toml, CH001, .quillframe/data, and manifest fingerprint.", input: ["quillframe.toml", "CH001", ".quillframe/data"], output: ["project identity", "context v1_0", "manifest_fingerprint"], authorityZh: "项目文件拥有权威；UI 只读，authority=false。", authorityEn: "Project files own authority; the UI is read-only with authority=false.", contracts: ["quillframe_project_v1_0", "quillframe_project_context_v1_0"] },
   { id: "manager", icon: "✦", lane: "runtime" as Lane, title: "Manager", zh: "Manager", compactZh: "Session · Run", compactEn: "session · run", descZh: "协调 Session / Run、checkpoint、routing 与 Control Plane lineage。", descEn: "Coordinate Session / Run identity, checkpoints, routing, and control-plane lineage.", input: ["resolved project", "task intent", "host capability"], output: ["run identity", "checkpoint boundary", "execution path"], authorityZh: "运行协调不等于 Canon authority。", authorityEn: "Operational coordination is not Canon authority.", contracts: ["quillframe_host_capabilities_v1"] },
   { id: "context", icon: "🫧", lane: "evidence" as Lane, title: "Context", zh: "Context", compactZh: "稀疏上下文", compactEn: "sparse context", descZh: "选择稀疏、带 authority 的工作集，并区分 support 与实际 loaded context。", descEn: "Select a sparse authority-aware working set and distinguish support from loaded context.", input: ["eligible sources", "visibility", "budget"], output: ["context view", "loaded support", "excluded evidence"], authorityZh: "Context selection 是工作证据，不会变成 Canon。", authorityEn: "Context selection is working evidence, not Canon.", contracts: ["quillframe_context_inspector_v2", "quillframe_run_receipt_v1"] },
   { id: "worker", icon: "⌘", lane: "editorial" as Lane, title: "Worker", zh: "Worker", compactZh: "typed semantic I/O", compactEn: "typed semantic I/O", descZh: "执行 typed semantic contract，并返回可检查的 result identity。", descEn: "Execute a typed semantic contract and return inspectable result identity.", input: ["typed task", "visible context", "contract"], output: ["typed result", "fingerprint", "worker status"], authorityZh: "Worker result 是 evidence，不授予写权限。", authorityEn: "Worker results are evidence and grant no write authority.", contracts: ["semantic contract catalog"] },
@@ -514,7 +541,7 @@ function PublicationPage() {
 
 function InspectorPage() {
   const { locale, zh } = useUi();
-  return <div class="page-width section-compact unified-route-page inspector-entry"><ProductSurfaceHero tone="project" eyebrow={<span>PROJECT INSPECTOR</span>} title={zh() ? "先确认项目是谁，再让任何工具碰它。" : "Resolve the project before any tool touches it."} lede={<p>{zh() ? "本地检查 manifest、精确 Framework lock、attestation 与结构证据。文件不会上传，检查结果也不会产生新的 Project authority。" : "Inspect the manifest, exact Framework lock, attestation, and structural evidence locally. Files are not uploaded and inspection grants no new Project authority."}</p>} visual={<div class="unified-inspector-visual"><span>quillframe.toml</span><span>quillframe.lock.json</span><span>framework.attestation.json</span><strong>✓ local only</strong></div>} /><ProjectInspector locale={locale()} /></div>;
+  return <div class="page-width section-compact unified-route-page inspector-entry"><ProductSurfaceHero tone="project" eyebrow={<span>PROJECT INSPECTOR</span>} title={zh() ? "先确认项目是谁，再让任何工具碰它。" : "Resolve the project before any tool touches it."} lede={<p>{zh() ? "本地检查五键 manifest、context v1_0、CH001、manifest fingerprint 与 .quillframe/data。文件不会上传，旧 metadata 只会被拒绝。" : "Inspect the five-key manifest, context v1_0, CH001, manifest fingerprint, and .quillframe/data locally. Files are not uploaded; legacy metadata is rejected."}</p>} visual={<div class="unified-inspector-visual"><span>quillframe.toml</span><span>context v1_0</span><span>CH001 · .quillframe/data</span><strong>✓ local only · authority=false</strong></div>} /><ProjectInspector locale={locale()} /></div>;
 }
 
 function PlaygroundPage() {
@@ -526,7 +553,7 @@ const agentHosts = ["Claude Code", "Codex", "Cursor", "OpenCode", "Custom agent"
 function AgentsPage() {
   const { zh } = useUi();
   const [selected, setSelected] = createSignal(1);
-  return <div class="page-width section-compact unified-route-page agent-integration-entry"><ProductSurfaceHero tone="runtime" eyebrow={<span>AGENT SKILL · HOST BRIDGE V1</span>} badges={<span class="wui-badge wui-badge--outline">authority=false</span>} title={zh() ? "让你的 Agent 接入 Quillframe，而不是绕过 Quillframe。" : "Let your agent use Quillframe without bypassing Quillframe."} lede={<p>{zh() ? "portable Agent Skill 通过公开 Host Bridge 发现能力、检查 Project / Context / semantic contracts，并把写权限明确留在 Core。" : "The portable Agent Skill uses the public Host Bridge to discover capabilities and inspect Project, Context, and semantic contracts while writes remain Core-owned."}</p>} visual={<div class="unified-agent-hosts"><For each={agentHosts}>{(host, index) => <button type="button" data-active={selected() === index()} onClick={() => setSelected(index())}><span>{host.slice(0, 1)}</span><strong>{host}</strong></button>}</For></div>} /><section class="agent-host-workbench"><ProductSectionHeading eyebrow={zh() ? "宿主 recipe" : "HOST RECIPE"} title={zh() ? `${agentHosts[selected()]} 使用同一条公开边界。` : `${agentHosts[selected()]} uses the same public boundary.`} /><div class="agent-host-detail"><article class="agent-host-profile"><div class="agent-host-profile-badges"><span class="wui-badge wui-badge--soft">{agentHosts[selected()]}</span><span class="wui-badge wui-badge--outline">generic read-only bridge</span></div><h3>{zh() ? "能力匹配，不制造新的权威层。" : "Match capabilities without inventing another authority layer."}</h3><ul class="agent-host-facts"><li><span>{zh() ? "入口" : "Entry"}</span><strong>agent-skills/quillframe/SKILL.md</strong></li><li><span>{zh() ? "发现" : "Discovery"}</span><strong>bridge.describe</strong></li><li><span>{zh() ? "写权限" : "Write authority"}</span><strong>0 · authority=false</strong></li></ul></article><article class="agent-host-instruction"><div class="agent-host-instruction-head"><div><small>HOST INSTRUCTION</small><strong>{zh() ? "最小安全边界" : "Minimal safe boundary"}</strong></div></div><pre><code>{`1. Read agent-skills/quillframe/SKILL.md\n2. Run bridge self-test\n3. Run bridge.describe\n4. Invoke advertised operations only\n5. authority: false\n6. Never read private runtime stores directly`}</code></pre></article></div></section></div>;
+  return <div class="page-width section-compact unified-route-page agent-integration-entry"><ProductSurfaceHero tone="runtime" eyebrow={<span>AGENT SKILL · HOST BRIDGE V11</span>} badges={<span class="wui-badge wui-badge--outline">authority=false</span>} title={zh() ? "让你的 Agent 接入 Quillframe，而不是绕过 Quillframe。" : "Let your agent use Quillframe without bypassing Quillframe."} lede={<p>{zh() ? "portable Agent Skill 通过公开 Host Bridge 发现能力、检查 Project / Context / semantic contracts，并把写权限明确留在 Core。" : "The portable Agent Skill uses the public Host Bridge to discover capabilities and inspect Project, Context, and semantic contracts while writes remain Core-owned."}</p>} visual={<div class="unified-agent-hosts"><For each={agentHosts}>{(host, index) => <button type="button" data-active={selected() === index()} onClick={() => setSelected(index())}><span>{host.slice(0, 1)}</span><strong>{host}</strong></button>}</For></div>} /><section class="agent-host-workbench"><ProductSectionHeading eyebrow={zh() ? "宿主 recipe" : "HOST RECIPE"} title={zh() ? `${agentHosts[selected()]} 使用同一条公开边界。` : `${agentHosts[selected()]} uses the same public boundary.`} /><div class="agent-host-detail"><article class="agent-host-profile"><div class="agent-host-profile-badges"><span class="wui-badge wui-badge--soft">{agentHosts[selected()]}</span><span class="wui-badge wui-badge--outline">generic read-only bridge</span></div><h3>{zh() ? "能力匹配，不制造新的权威层。" : "Match capabilities without inventing another authority layer."}</h3><ul class="agent-host-facts"><li><span>{zh() ? "入口" : "Entry"}</span><strong>agent-skills/quillframe/SKILL.md</strong></li><li><span>{zh() ? "发现" : "Discovery"}</span><strong>bridge.describe</strong></li><li><span>{zh() ? "写权限" : "Write authority"}</span><strong>0 · authority=false</strong></li></ul></article><article class="agent-host-instruction"><div class="agent-host-instruction-head"><div><small>HOST INSTRUCTION</small><strong>{zh() ? "最小安全边界" : "Minimal safe boundary"}</strong></div></div><pre><code>{`1. Read agent-skills/quillframe/SKILL.md\n2. Run bridge self-test\n3. Run bridge.describe\n4. Invoke advertised operations only\n5. authority: false\n6. Never read private runtime stores directly`}</code></pre></article></div></section></div>;
 }
 
 function ChangelogPage() {
@@ -537,7 +564,6 @@ function ChangelogPage() {
 export default function ProductApp() {
   return <Router root={ProductShell}>
     <Route path="/" component={HomePage} />
-    <Route path="/start" component={() => <Navigate href="/" />} />
     <Route path="/product" component={ProductPage} />
     <Route path="/studio" component={StudioPage} />
     <Route path="/architecture" component={ArchitecturePage} />

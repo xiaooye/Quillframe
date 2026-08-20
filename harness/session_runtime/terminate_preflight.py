@@ -171,18 +171,10 @@ def self_test() -> int:
     with tempfile.TemporaryDirectory(prefix="quillframe-terminate-preflight-") as tmp:
         root = Path(tmp)
         (root / ".quillframe").mkdir()
-        framework = {
-            "name": "Quillframe",
-            "version": "0.9.0",
-            "commit": "fixture-terminate",
-            "bundle_fingerprint": "sha256:" + "a" * 64,
-        }
         (root / "quillframe.toml").write_text(
-            '[quillframe]\nschema="quillframe_project_v1"\n[project]\nid="BOOK-TERMINATE"\ntitle="Terminate"\nlanguage="en"\nversion="0.1.0"\nstatus="active"\n[authority]\ncanon_write="settlement_only"\nframework_write="forbidden"\n',
+            'schema="quillframe_project_v1_0"\nid="BOOK-TERMINATE"\ntitle="Terminate"\nlanguage="en"\nchapter_scope="CH001"\n',
             encoding="utf-8",
         )
-        (root / "quillframe.lock.json").write_text(json.dumps({"schema": "quillframe_lock_v1", "framework": framework}), encoding="utf-8")
-        (root / "framework.attestation.json").write_text(json.dumps({"framework": framework}), encoding="utf-8")
 
         db = root / ".quillframe" / "runtime.db"
         cp = ControlPlane(db)
