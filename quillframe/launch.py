@@ -47,6 +47,7 @@ class LaunchError(RuntimeError):
 class _Reservation:
     path: Path
     token: _FileToken
+    fd: int | None
     root: Path
     root_token: _FileToken
     created_root: bool
@@ -168,7 +169,30 @@ def _remove_empty_created_root(reservation: _Reservation) -> None:
 
 
 def _release_reservation(reservation: _Reservation) -> None:
-    _unlink_owned(reservation.path, reservation.token)
+    try:
+        if _reservation_owns_current_path(reservation):
+            _unlink_owned(reservation.path, reservation.token)
+    finally:
+        if reservation.fd is not None:
+            try:
+                os.close(reservation.fd)
+            except OSError:
+                pass
+
+
+def _reservation_owns_current_path(reservation: _Reservation) -> bool:
+    """Bind the reservation path to the still-open inode, including unlink state."""
+    if reservation.fd is None:
+        return False
+    try:
+        descriptor = os.fstat(reservation.fd)
+    except OSError:
+        return False
+    return (
+        descriptor.st_nlink > 0
+        and _file_token_from_stat(descriptor) == reservation.token
+        and _path_has_token(reservation.path, reservation.token)
+    )
 
 
 def _reserve_new_target(root: Path) -> _Reservation:
@@ -199,20 +223,19 @@ def _reserve_new_target(root: Path) -> _Reservation:
             raise LaunchError("project_directory_not_empty", f"{root} is already reserved for --new") from exc
         _write_all(fd, f"pid={os.getpid()}\n".encode("ascii"))
         os.fsync(fd)
-        os.close(fd)
-        fd = None
     except Exception:
-        if fd is not None:
+        if lock_token is not None:
+            failed = _Reservation(lock_path, lock_token, fd, root, root_token, created_root)
+            _release_reservation(failed)
+            fd = None
+            _remove_empty_created_root(failed)
+        elif fd is not None:
             try:
                 os.close(fd)
             except OSError:
                 pass
-        if lock_token is not None:
-            _unlink_owned(lock_path, lock_token)
-            _remove_empty_created_root(
-                _Reservation(lock_path, lock_token, root, root_token, created_root)
-            )
-        elif created_root and _path_has_token(root, root_token):
+            fd = None
+        if lock_token is None and created_root and _path_has_token(root, root_token):
             try:
                 if not any(root.iterdir()):
                     root.rmdir()
@@ -220,7 +243,8 @@ def _reserve_new_target(root: Path) -> _Reservation:
                 pass
         raise
     assert lock_token is not None
-    return _Reservation(lock_path, lock_token, root, root_token, created_root)
+    assert fd is not None
+    return _Reservation(lock_path, lock_token, fd, root, root_token, created_root)
 
 
 def _write_new_manifest(path: Path, content: str) -> _FileToken:
@@ -570,7 +594,7 @@ def _assert_database_guard_current(data: Path, guard: _DatabaseGuard) -> None:
 
 
 def _assert_reservation_current(reservation: _Reservation | None) -> None:
-    if reservation is not None and not _path_has_token(reservation.path, reservation.token):
+    if reservation is not None and not _reservation_owns_current_path(reservation):
         raise LaunchError("project_reservation_lost", "Project creation reservation changed during launch")
 
 

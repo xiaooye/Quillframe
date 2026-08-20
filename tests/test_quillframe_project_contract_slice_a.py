@@ -747,6 +747,53 @@ class ProjectContractSliceATests(unittest.TestCase):
             self.assertTrue((root / "quillframe.toml").exists())
             self.assertFalse((root / ".quillframe").exists())
 
+    def test_new_reservation_replacement_with_reused_inode_token_is_rejected(self):
+        with tempfile.TemporaryDirectory(prefix="qf-contract-reservation-inode-reuse-") as td:
+            root = Path(td) / "novel"
+            lock_path = root / launch_module.NEW_RESERVATION_NAME
+            competitor = b"competitor-reused-reservation\n"
+            original_lstat_token = launch_module._lstat_token
+            reservation_token = None
+            replacement_complete = False
+
+            def emulate_reused_token(path):
+                nonlocal reservation_token
+                current = original_lstat_token(path)
+                if Path(path) == lock_path:
+                    if reservation_token is None:
+                        reservation_token = current
+                    elif replacement_complete:
+                        return reservation_token
+                return current
+
+            def replace_after_last_check(_conn):
+                nonlocal replacement_complete
+                lock_path.unlink()
+                lock_path.write_bytes(competitor)
+                write_manifest(root, id="P", title="COMPETITOR", language="en")
+                replacement_complete = True
+
+            with patch.object(launch_module, "_lstat_token", side_effect=emulate_reused_token):
+                with patch.object(launch_module, "_before_new_commit", side_effect=replace_after_last_check):
+                    with self.assertRaises(LaunchError) as rejected:
+                        launch_project(
+                            project=root,
+                            new=True,
+                            profile="cloud",
+                            project_id="P",
+                            title="Title",
+                            language="en",
+                            port=0,
+                            no_browser=True,
+                            serve=False,
+                            interactive=False,
+                        )
+
+            self.assertEqual(rejected.exception.code, "project_reservation_lost")
+            self.assertEqual(lock_path.read_bytes(), competitor)
+            self.assertIn('title = "COMPETITOR"', (root / "quillframe.toml").read_text(encoding="utf-8"))
+            self.assertFalse((root / ".quillframe").exists())
+
     def test_new_core_failure_cleans_owned_state_but_preserves_competitor(self):
         with tempfile.TemporaryDirectory(prefix="qf-contract-core-failure-cleanup-") as td:
             root = Path(td) / "novel"
