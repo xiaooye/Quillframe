@@ -8,7 +8,6 @@ operation-specific Core code performs any authorized state transition.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import sys
@@ -35,13 +34,14 @@ from persistence.context_repository import ContextRepository
 from persistence.quillframe_sqlite import ConflictError, IntegrityError, QuillframeStore
 from production_runtime import NovelWorkflowEngine, ProductionRunError, ProductionRunExecutor, WorkflowError
 from production_runtime.workflow_service import NovelWorkflowService
+from studio import host_bridge_protocol as _protocol
 
 CONTRACT_PATH = Path(__file__).with_name("host_bridge_contract.json")
-BRIDGE_VERSION = "11"
-REQUEST_SCHEMA = "quillframe_host_bridge_request_v11"
-RESULT_SCHEMA = "quillframe_host_bridge_result_v11"
+BRIDGE_VERSION = _protocol.BRIDGE_VERSION
+REQUEST_SCHEMA = _protocol.REQUEST_SCHEMA
+RESULT_SCHEMA = _protocol.RESULT_SCHEMA
 
-_SECRET_REQUEST_KEYS = {"access_token", "api_key", "apikey", "password", "secret", "token"}
+_SECRET_REQUEST_KEYS = _protocol._SECRET_REQUEST_KEYS
 _SECRET_OPERATIONS = {"model.service.add", "model.service.token.replace"}
 _PUBLIC_ERROR_CODE_RE = re.compile(r"[a-z][a-z0-9_]{0,63}\Z")
 _secret_store: SecretStore = MemorySecretStore()
@@ -53,59 +53,6 @@ class BridgeError(RuntimeError):
         super().__init__(message)
         self.code = code
         self.detail = detail
-
-
-def canonical(v: Any) -> str:
-    return json.dumps(v, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-
-
-def fp(v: Any) -> str:
-    return "sha256:" + hashlib.sha256(canonical(v).encode()).hexdigest()
-
-
-def _secret_values(value: Any) -> set[str]:
-    """Collect credential values only from explicitly secret-bearing request fields."""
-    found: set[str] = set()
-
-    def visit(node: Any) -> None:
-        if isinstance(node, dict):
-            for key, child in node.items():
-                normalized = str(key).lower().replace("-", "_")
-                if normalized in _SECRET_REQUEST_KEYS:
-                    if isinstance(child, str) and child:
-                        found.add(child)
-                    continue
-                visit(child)
-        elif isinstance(node, list):
-            for child in node:
-                visit(child)
-
-    visit(value)
-    return found
-
-
-def _redact(value: Any, secret_values: set[str] | None = None) -> Any:
-    """Remove credential keys and scrub their values from nested strings.
-
-    Business authorization evidence remains fingerprint-bound because only values
-    originating from explicitly credential-bearing fields are treated as secrets.
-    """
-    secrets = secret_values or set()
-    if isinstance(value, dict):
-        out: dict[str, Any] = {}
-        for key, child in value.items():
-            normalized = str(key).lower().replace("-", "_")
-            out[str(key)] = "<redacted>" if normalized in _SECRET_REQUEST_KEYS else _redact(child, secrets)
-        return out
-    if isinstance(value, list):
-        return [_redact(child, secrets) for child in value]
-    if isinstance(value, str):
-        scrubbed = value
-        for secret in sorted(secrets, key=len, reverse=True):
-            if secret:
-                scrubbed = scrubbed.replace(secret, "<redacted>")
-        return scrubbed
-    return value
 
 
 def contract() -> dict[str, Any]:
@@ -594,31 +541,6 @@ def validate_request(req: dict[str, Any]) -> list[str]:
     return errors
 
 
-def result(req: dict[str, Any], status: str, *, data: Any = None, error: Any = None) -> dict[str, Any]:
-    secrets = _secret_values(req)
-    safe_req = _redact(req, secrets)
-    safe_data = _redact(data, secrets)
-    safe_error = _redact(error, secrets)
-    out = {
-        "schema": RESULT_SCHEMA,
-        "bridge_version": BRIDGE_VERSION,
-        "request_id": safe_req.get("request_id"),
-        "operation": safe_req.get("operation"),
-        "surface": safe_req.get("surface"),
-        "status": status,
-        "data": safe_data,
-        "error": safe_error,
-        "request_fingerprint": fp(safe_req),
-        "secret_values_persisted": False,
-        "authority": False,
-        "canon_authority": False,
-        "framework_write_authority": False,
-        "settlement_authority": False,
-    }
-    out["result_fingerprint"] = fp(out)
-    return out
-
-
 def _public_error(code: Any, fallback: str) -> dict[str, Any]:
     """Return the entire public failure body without exception-derived prose."""
     stable = code if isinstance(code, str) and _PUBLIC_ERROR_CODE_RE.fullmatch(code) else fallback
@@ -628,13 +550,13 @@ def _public_error(code: Any, fallback: str) -> dict[str, Any]:
 def invoke(req: dict[str, Any]) -> dict[str, Any]:
     errors = validate_request(req)
     if errors:
-        return result(req, "invalid", error={"code": "invalid_request", "messages": errors, "mutation_performed": False})
+        return _protocol.result(req, "invalid", error={"code": "invalid_request", "messages": errors, "mutation_performed": False})
     try:
-        return result(req, "ok", data=DISPATCH[req["operation"]](req["args"], req["surface"]))
+        return _protocol.result(req, "ok", data=DISPATCH[req["operation"]](req["args"], req["surface"]))
     except (BridgeError, OperationError, ProductionRunError, WorkflowError, RouteError, ModelRuntimeError, ConflictError, IntegrityError, FileNotFoundError, FileExistsError, ValueError, KeyError) as exc:
-        return result(req, "failed", error=_public_error(getattr(exc, "code", None), "bridge_operation_failed"))
+        return _protocol.result(req, "failed", error=_public_error(getattr(exc, "code", None), "bridge_operation_failed"))
     except Exception:
-        return result(req, "failed", error=_public_error(None, "bridge_internal_error"))
+        return _protocol.result(req, "failed", error=_public_error(None, "bridge_internal_error"))
 
 
 def self_test() -> dict[str, Any]:

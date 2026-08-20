@@ -404,9 +404,13 @@ REQUIRED_MARKERS: dict[str, tuple[str, ...]] = {
         'CHAPTER_SCOPE = "CH001"',
         "legacy metadata",
     ),
-    "studio/host_bridge.py": (
+    "studio/host_bridge_protocol.py": (
         'BRIDGE_VERSION = "11"',
         'REQUEST_SCHEMA = "quillframe_host_bridge_request_v11"',
+        'RESULT_SCHEMA = "quillframe_host_bridge_result_v11"',
+        "def fingerprint(",
+    ),
+    "studio/host_bridge.py": (
         '"schema": "quillframe_host_bridge_description_v11"',
         '"operation_contracts": operation_contracts',
         "agent_package only permits query operations",

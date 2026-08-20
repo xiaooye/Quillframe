@@ -488,13 +488,13 @@ function productionPython(repoRoot, script, args = []) {
 
 export function productionBridgeSnapshot(repoRoot) {
   const contractPath = path.join(repoRoot, "studio", "host_bridge_contract.json");
-  const sourcePath = path.join(repoRoot, "studio", "host_bridge.py");
+  const protocolPath = path.join(repoRoot, "studio", "host_bridge_protocol.py");
   assertRegularFileNoFollow(contractPath);
-  assertRegularFileNoFollow(sourcePath);
+  assertRegularFileNoFollow(protocolPath);
   let contract;
   try { contract = strictJson(fs.readFileSync(contractPath, "utf8")); } catch { throw Object.assign(new Error("production Host Bridge contract JSON is invalid"), { code: "BRIDGE_FIXTURE_CONTRACT" }); }
-  const source = fs.readFileSync(sourcePath, "utf8");
-  if (!source.includes("def fp(") || !source.includes('return "sha256:" + hashlib.sha256')) throw Object.assign(new Error("production Host Bridge fingerprint source drifted"), { code: "BRIDGE_FIXTURE_CONTRACT" });
+  const protocol = fs.readFileSync(protocolPath, "utf8");
+  if (!protocol.includes("def fingerprint(") || !protocol.includes('return "sha256:" + hashlib.sha256')) throw Object.assign(new Error("production Host Bridge fingerprint source drifted"), { code: "BRIDGE_FIXTURE_CONTRACT" });
   const description = productionPython(repoRoot, "import json\nfrom studio.host_bridge import _describe\nprint(json.dumps(_describe({}, 'local_app'), ensure_ascii=False, separators=(',', ':')))");
   const expectedContracts = Object.fromEntries(Object.entries(contract.operations).map(([name, metadata]) => [name, {
     kind: metadata.kind,
@@ -508,7 +508,7 @@ export function productionBridgeSnapshot(repoRoot) {
 
 export function productionBridgeResult(repoRoot, request, data) {
   assertBridgeRequest(request);
-  return productionPython(repoRoot, "import json,sys\nfrom studio.host_bridge import result\nrequest=json.loads(sys.argv[1])\ndata=json.loads(sys.argv[2])\nprint(json.dumps(result(request, 'ok', data=data), ensure_ascii=False, separators=(',', ':')))", [JSON.stringify(request), JSON.stringify(data)]);
+  return productionPython(repoRoot, "import json,sys\nfrom studio.host_bridge_protocol import result\nrequest=json.loads(sys.argv[1])\ndata=json.loads(sys.argv[2])\nprint(json.dumps(result(request, 'ok', data=data), ensure_ascii=False, separators=(',', ':')))", [JSON.stringify(request), JSON.stringify(data)]);
 }
 
 function canonicalJson(value) {

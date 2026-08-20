@@ -140,7 +140,11 @@ class CleanBreakFoundationTests(unittest.TestCase):
                 if not candidate.is_dir() or not any(candidate.rglob("*.py")):
                     continue
                 if any(fnmatch(candidate.name, pattern.removesuffix("*")) for pattern in includes):
-                    shutil.copytree(candidate, install_root / candidate.name)
+                    shutil.copytree(
+                        candidate,
+                        install_root / candidate.name,
+                        ignore=shutil.ignore_patterns("node_modules", "dist", "__pycache__"),
+                    )
             for module in modules:
                 shutil.copy2(ROOT / f"{module}.py", install_root / f"{module}.py")
 

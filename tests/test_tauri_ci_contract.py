@@ -67,6 +67,7 @@ class TauriCiContractTests(unittest.TestCase):
             "studio/tauri_core_sidecar.py",
             "studio/scripts/build_tauri_sidecar.py",
             "studio/host_bridge.py",
+            "studio/host_bridge_protocol.py",
             "studio/host_bridge_contract.json",
             "model_runtime/**",
             "persistence/**",

@@ -60,6 +60,9 @@ importers:
       vite-plugin-solid:
         specifier: 2.11.14
         version: 2.11.14(solid-js@1.9.15)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2))
+      wrangler:
+        specifier: 4.124.0
+        version: 4.124.0(@cloudflare/workers-types@5.20260819.1)
 
   studio/app:
     dependencies:
@@ -82,6 +85,9 @@ importers:
       vite-plugin-solid:
         specifier: 2.11.14
         version: 2.11.14(solid-js@1.9.15)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2))
+      wrangler:
+        specifier: 4.124.0
+        version: 4.124.0(@cloudflare/workers-types@5.20260819.1)
 
 packages:
 

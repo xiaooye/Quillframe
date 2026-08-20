@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import unittest
 
-from studio import host_bridge
+from studio import host_bridge, host_bridge_protocol
 
 
 class ProductionHostBridgeTests(unittest.TestCase):
     def test_v11_contract_exposes_native_dispatch_without_compatibility_aliases(self):
         contract = host_bridge.contract()
         self.assertEqual(contract["version"], "11")
+        self.assertFalse(hasattr(host_bridge, "result"))
         for operation in (
             "author.run.execute",
             "author.run.status",
@@ -151,7 +152,7 @@ class ProductionHostBridgeTests(unittest.TestCase):
             "args": {"endpoint": "https://example.invalid/v1", "access_token": secret},
             "authority": False,
         }
-        out = host_bridge.result(
+        out = host_bridge_protocol.result(
             req,
             "failed",
             data={"diagnostic": f"provider echoed {secret}"},
