@@ -7,7 +7,7 @@ import test from "node:test";
 import {
   VIEWPORTS, MODES, EXIT, matrix, resolveChrome, redactEvidence, withDeadline, waitForServiceWorkerReady, waitForServer, machineJson, pageFetchProbe, boundedBrowserAction, assertVisibleControl, assertHomeScreenshotReadiness, prepareHomeScreenshot, HOME_REVEAL_SELECTORS, DERIVED_ACCEPTANCE_PATHS, BUILD_INPUT_PATHS, acceptanceTimestamp, acceptanceInputFingerprint,
   assertJsonContract, docsShellForPath, assertQuickDemoReceipt, assertQuickDemoDom,
-  assertUnboundStudio, assertDialogLifecycle, statusFor, writeManifest, parseExit,
+  assertUnboundStudio, assertDialogLifecycle, statusFor, writeManifest, parseExit, captureScreenshotEvidence,
   assertMachineManifest, assertNoWrites, startPreviews, spawnProcess, terminateProcess, contrastRatio, requiredContrastThreshold, assertCwv, assertSemantics, writeFailureManifest, fingerprintTrees, validateManifestContract, assertBuildArtifacts, validateEvidenceRoot, assertNoSymlinkAncestors, assertRegularFileNoFollow, assertLaunchReceipt, assertBridgeRequest, assertBridgeResult, gitSubject, resolveRepoRoot, productionBridgeSnapshot, productionBridgeResult,
 } from "./browser-acceptance-t605.mjs";
 
@@ -76,6 +76,8 @@ test("runSurface returns only the canonical manifest surface keys", () => {
   const source = fs.readFileSync(new URL("./browser-acceptance-t605.mjs", import.meta.url), "utf8");
   assert.doesNotMatch(source, /const checks = \[\], errors = \[\], screenshots = \[\]/);
   assert.doesNotMatch(source, /screenshots\.push\(/);
+  assert.match(source, /let context = null, page = null;\s+try \{\s+context = await boundedBrowserAction/);
+  assert.match(source, /if \(page\) await captureScreenshotEvidence/);
   assert.match(source, /return \{ surface, status: errors\.length \|\| checks\.some\(\(item\) => item\.status === "fail"\) \? "fail" : "pass", matrix_count: viewports\.length, viewports, checks, errors \};/);
 });
 
@@ -207,6 +209,50 @@ test("gitSubject flows into writeManifest and validateManifestContract with repe
   assert.deepEqual(JSON.parse(fs.readFileSync(output, "utf8")).schema, manifest.schema);
   fs.rmSync(root, { recursive: true, force: true });
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+test("failed matrices preserve runtime evidence when an expected screenshot is absent", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "qf-t605-missing-shot-"));
+  try {
+    const chrome = path.join(root, "chrome"); fs.writeFileSync(chrome, "chromium"); fs.chmodSync(chrome, 0o755);
+    const runtimeError = { id: "runtime", surface: "studio", matrix: "small-light", message: "BROWSER_ACTION_TIMEOUT" };
+    const surfaces = [{
+      surface: "studio", status: "fail", matrix_count: 1, checks: [], errors: [runtimeError],
+      viewports: [{ id: "small-light", width: 375, height: 812, mode: { id: "light", color_scheme: "light", reduced_motion: "no-preference", forced_colors: "none" }, route: "/manuscript", checks: [], screenshot: { path: "studio/screenshots/small-light.png" } }],
+    }];
+    const subject = { commit: "1".repeat(40), dirty: false, working_tree_fingerprint: "sha256:" + "2".repeat(64) };
+    const manifest = writeManifest({ evidenceRoot: root, chrome, browserVersion: "Chromium test", surfaces, subjectStart: subject, subjectEnd: { ...subject }, buildStartFingerprint: "sha256:" + "3".repeat(64), buildEndFingerprint: "sha256:" + "3".repeat(64), inputFingerprint: "sha256:" + "4".repeat(64), siteFinalizerFingerprint: "sha256:" + "5".repeat(64), globalChecks: [], now: new Date("2026-08-20T00:00:00Z") });
+    assert.equal(manifest.status, "fail");
+    assert.deepEqual(manifest.errors, [runtimeError]);
+    assert.equal(manifest.artifacts.some((artifact) => artifact.path === "studio/screenshots/small-light.png"), false);
+    assert.equal(manifest.surfaces[0].viewports[0].screenshot, null);
+    assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, "browser-acceptance-v1.json"), "utf8")).errors, [runtimeError]);
+    const outside = path.join(root, "outside.png"); fs.writeFileSync(outside, "outside");
+    const linkedScreenshot = path.join(root, "studio/screenshots/small-light.png"); fs.mkdirSync(path.dirname(linkedScreenshot), { recursive: true }); fs.symlinkSync(outside, linkedScreenshot);
+    assert.throws(() => writeManifest({ evidenceRoot: root, chrome, browserVersion: "Chromium test", surfaces, subjectStart: subject, subjectEnd: { ...subject }, buildStartFingerprint: "sha256:" + "3".repeat(64), buildEndFingerprint: "sha256:" + "3".repeat(64), inputFingerprint: "sha256:" + "4".repeat(64), siteFinalizerFingerprint: "sha256:" + "5".repeat(64), globalChecks: [] }), (error) => error.code === "PATH_SYMLINK");
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test("diagnostic screenshot capture records success and preserves capture failures", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "qf-t605-capture-"));
+  try {
+    const item = matrix().find((entry) => entry.id === "small-light");
+    const captured = new Set(); const errors = [];
+    const page = { screenshot: async ({ path: filename }) => { fs.writeFileSync(filename, "png-evidence"); } };
+    assert.equal(await captureScreenshotEvidence({ page, evidenceRoot: root, surface: "studio", item, timeoutMs: 50, capturedScreenshots: captured, errors }), true);
+    assert.deepEqual([...captured], ["small-light"]);
+    assert.equal(fs.existsSync(path.join(root, "studio/screenshots/small-light.png")), true);
+
+    const failed = new Set(); const captureErrors = [{ id: "runtime", surface: "studio", matrix: "small-light", message: "CONTROL_NOT_VISIBLE" }];
+    const brokenPage = { screenshot: async () => { throw Object.assign(new Error("absolute path must not leak"), { code: "SCREENSHOT_FAILED" }); } };
+    const stale = path.join(root, "studio/screenshots/small-dark.png"); fs.writeFileSync(stale, "stale-png");
+    assert.equal(await captureScreenshotEvidence({ page: brokenPage, evidenceRoot: root, surface: "studio", item: { ...item, id: "small-dark", screenshot: "small-dark.png" }, timeoutMs: 50, capturedScreenshots: failed, errors: captureErrors }), false);
+    assert.equal(fs.existsSync(stale), false);
+    assert.deepEqual(captureErrors, [
+      { id: "runtime", surface: "studio", matrix: "small-light", message: "CONTROL_NOT_VISIBLE" },
+      { id: "screenshot", surface: "studio", matrix: "small-dark", message: "BROWSER_ACTION_FAILED:screenshot_studio_small-dark" },
+    ]);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
 test("timestamp and acceptance build input fingerprint use the canonical seconds/commit/version/input algorithm", () => {

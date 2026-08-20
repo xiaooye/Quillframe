@@ -140,6 +140,13 @@ export async function boundedBrowserAction(action, timeoutMs = DEFAULT_DEADLINE_
   }
 }
 
+function browserEvidenceError(error, fallback = "RUNTIME") {
+  const candidate = String(error?.code || error?.name || fallback);
+  const code = /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(candidate) ? candidate : fallback;
+  const operation = typeof error?.operation === "string" && /^[A-Za-z0-9_-]{1,160}$/.test(error.operation) ? error.operation : null;
+  return operation ? `${code}:${operation}` : code;
+}
+
 export async function assertVisibleControl(locator, timeoutMs = DEFAULT_DEADLINE_MS, operation = "control") {
   const visible = await boundedBrowserAction(() => locator.isVisible({ timeout: normalizeDeadline(timeoutMs) }), timeoutMs, `${operation}_visibility`);
   if (!visible) throw Object.assign(new Error("required control is not visible"), { code: "CONTROL_NOT_VISIBLE", operation, timeout_ms: normalizeDeadline(timeoutMs) });
@@ -310,6 +317,33 @@ export function matrix() {
     id: `${viewport.id}-${mode.id}`, viewport, mode,
     screenshot: ["wide", "tablet", "small"].includes(viewport.id) ? `${viewport.id}-${mode.id}.png` : null,
   })));
+}
+
+export async function captureScreenshotEvidence({ page, evidenceRoot, surface, item, timeoutMs, capturedScreenshots, errors }) {
+  if (!item?.screenshot || capturedScreenshots.has(item.id)) return false;
+  const filename = path.join(evidenceRoot, surface, "screenshots", item.screenshot);
+  try {
+    fs.mkdirSync(path.dirname(filename), { recursive: true });
+    assertNoSymlinkAncestors(path.dirname(filename));
+    try {
+      assertRegularFileNoFollow(filename);
+      fs.unlinkSync(filename);
+    } catch (error) {
+      if (!(error?.code === "PATH_INVALID" && error?.cause?.code === "ENOENT")) throw error;
+    }
+    await boundedBrowserAction(
+      () => page.screenshot({ path: filename, fullPage: true, animations: "disabled", timeout: timeoutMs }),
+      timeoutMs,
+      `screenshot_${surface}_${item.id}`,
+    );
+    const info = assertRegularFileNoFollow(filename);
+    if (info.size < 1) throw Object.assign(new Error("screenshot is empty"), { code: "SCREENSHOT_EMPTY" });
+    capturedScreenshots.add(item.id);
+    return true;
+  } catch (error) {
+    errors.push({ id: "screenshot", surface, matrix: item.id, message: browserEvidenceError(error, "SCREENSHOT_FAILED") });
+    return false;
+  }
 }
 
 export function statusFor({ blocked = false, failed = false } = {}) {
@@ -921,18 +955,19 @@ async function freshOfflineStudio(context, url, timeoutMs) {
 }
 
 async function runSurface(browser, origin, surface, evidenceRoot, timeoutMs, repoRoot) {
-  const checks = [], errors = [];
+  const checks = [], errors = [], capturedScreenshots = new Set();
   for (const item of matrix()) {
     const matrixTimeout = Math.min(timeoutMs, 30000);
-    const context = await boundedBrowserAction(() => browser.newContext({ viewport: item.viewport, colorScheme: item.mode.colorScheme, reducedMotion: item.mode.reducedMotion, forcedColors: item.mode.forcedColors }), matrixTimeout, `context_${surface}_${item.id}`);
-    const page = await boundedBrowserAction(() => context.newPage(), matrixTimeout, `page_${surface}_${item.id}`);
-    if (surface === "site") await boundedBrowserAction(() => installQuickDemoReceiptProbe(page), matrixTimeout, `quick_demo_probe_${item.id}`);
     const nonGet = [];
     const modelRequests = [];
     const checkStart = checks.length;
-    page.on("pageerror", (error) => errors.push({ id: "pageerror", surface, matrix: item.id, message: String(error?.name || "PageError") }));
-    page.on("request", (request) => { if (!["GET", "HEAD"].includes(request.method())) nonGet.push(request.method()); if (/\/api\/(?:model|responses|chat)|\/v1\/(?:responses|chat)|anthropic/i.test(request.url())) modelRequests.push(request.url()); });
+    let context = null, page = null;
     try {
+      context = await boundedBrowserAction(() => browser.newContext({ viewport: item.viewport, colorScheme: item.mode.colorScheme, reducedMotion: item.mode.reducedMotion, forcedColors: item.mode.forcedColors }), matrixTimeout, `context_${surface}_${item.id}`);
+      page = await boundedBrowserAction(() => context.newPage(), matrixTimeout, `page_${surface}_${item.id}`);
+      if (surface === "site") await boundedBrowserAction(() => installQuickDemoReceiptProbe(page), matrixTimeout, `quick_demo_probe_${item.id}`);
+      page.on("pageerror", (error) => errors.push({ id: "pageerror", surface, matrix: item.id, message: String(error?.name || "PageError") }));
+      page.on("request", (request) => { if (!["GET", "HEAD"].includes(request.method())) nonGet.push(request.method()); if (/\/api\/(?:model|responses|chat)|\/v1\/(?:responses|chat)|anthropic/i.test(request.url())) modelRequests.push(request.url()); });
       const route = surface === "site" ? "/" : "/manuscript";
       await page.goto(new URL(route, origin).href, { waitUntil: "domcontentloaded", timeout: timeoutMs });
       if (surface === "studio") await boundedBrowserAction(() => page.waitForSelector("main#main-content h1, main#main-content h2", { state: "visible", timeout: matrixTimeout }), matrixTimeout, `studio_heading_ready_${item.id}`);
@@ -1192,17 +1227,14 @@ async function runSurface(browser, origin, surface, evidenceRoot, timeoutMs, rep
           checks.push(check("screenshot-content", "pass", route, { count: readiness.count, reveal_groups: readiness.reveal_groups.map((group) => ({ selector: group.selector, count: group.count, visible: group.visible, nonempty: group.nonempty })) }));
         }
         else await boundedBrowserAction(() => page.evaluate(() => { window.scrollTo({ top: 0, left: 0, behavior: "auto" }); return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))); }), Math.min(matrixTimeout, DEFAULT_DEADLINE_MS), `studio_screenshot_prepare_${item.id}`);
-        const filename = path.join(evidenceRoot, surface, "screenshots", `${item.id}.png`);
-        fs.mkdirSync(path.dirname(filename), { recursive: true });
-        assertNoSymlinkAncestors(path.dirname(filename));
-        await boundedBrowserAction(() => page.screenshot({ path: filename, fullPage: true, animations: "disabled", timeout: matrixTimeout }), matrixTimeout, `screenshot_${surface}_${item.id}`);
       }
       if (nonGet.length) checks.push(check("no-product-writes", "fail", route, { methods: nonGet }));
     } catch (error) {
-      errors.push({ id: "runtime", surface, matrix: item.id, message: String(error?.code || error?.name || "RUNTIME") });
+      errors.push({ id: "runtime", surface, matrix: item.id, message: browserEvidenceError(error) });
     } finally {
+      if (page) await captureScreenshotEvidence({ page, evidenceRoot, surface, item, timeoutMs: matrixTimeout, capturedScreenshots, errors });
       for (let index = checkStart; index < checks.length; index += 1) checks[index].observed = { ...(checks[index].observed || {}), matrix: item.id };
-      await page.close().catch(() => {}); await context.close().catch(() => {});
+      if (page) await page.close().catch(() => {}); if (context) await context.close().catch(() => {});
     }
   }
   for (const item of matrix()) {
@@ -1210,7 +1242,7 @@ async function runSurface(browser, origin, surface, evidenceRoot, timeoutMs, rep
       if (!checks.some((entry) => entry.id === id && entry.observed?.matrix === item.id)) checks.push(check(id, "fail", surface === "site" ? "/" : "/manuscript", { matrix: item.id }, "required matrix check was not produced"));
     }
   }
-  const viewports = matrix().map((item) => ({ id: item.id, width: item.viewport.width, height: item.viewport.height, mode: { id: item.mode.id, color_scheme: item.mode.colorScheme, reduced_motion: item.mode.reducedMotion, forced_colors: item.mode.forcedColors }, route: surface === "site" ? "/" : "/manuscript", checks: checks.filter((entry) => entry.observed?.matrix === item.id), screenshot: item.screenshot ? { path: `${surface}/screenshots/${item.screenshot}` } : null }));
+  const viewports = matrix().map((item) => ({ id: item.id, width: item.viewport.width, height: item.viewport.height, mode: { id: item.mode.id, color_scheme: item.mode.colorScheme, reduced_motion: item.mode.reducedMotion, forced_colors: item.mode.forcedColors }, route: surface === "site" ? "/" : "/manuscript", checks: checks.filter((entry) => entry.observed?.matrix === item.id), screenshot: item.screenshot && capturedScreenshots.has(item.id) ? { path: `${surface}/screenshots/${item.screenshot}` } : null }));
   return { surface, status: errors.length || checks.some((item) => item.status === "fail") ? "fail" : "pass", matrix_count: viewports.length, viewports, checks, errors };
 }
 
@@ -1263,6 +1295,14 @@ function artifactRecord(evidenceRoot, relative, { id, kind = "screenshot", surfa
   return { id, path: relative.split(path.sep).join("/"), kind, surface, matrix, size: hash.size, sha256: hash.sha256 };
 }
 
+function optionalScreenshotArtifactRecord(evidenceRoot, relative, metadata) {
+  try { return artifactRecord(evidenceRoot, relative, metadata); }
+  catch (error) {
+    if (error?.code === "PATH_INVALID" && error?.cause?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
 function subjectShape(subject) {
   if (!subject || !/^[0-9a-f]{40}$/i.test(subject.commit) || typeof subject.dirty !== "boolean" || !/^sha256:[0-9a-f]{64}$/.test(subject.working_tree_fingerprint)) throw new Error("MANIFEST_SUBJECT");
 }
@@ -1304,13 +1344,26 @@ function surfaceShape(surface) {
 export function writeManifest({ evidenceRoot, chrome, browserVersion = null, surfaces, subjectStart, subjectEnd, buildStartFingerprint, buildEndFingerprint, inputFingerprint, siteFinalizerFingerprint, globalChecks, extraArtifacts = [], now = new Date() }) {
   evidenceRoot = validateEvidenceRoot(evidenceRoot);
   const artifacts = [];
-  for (const surface of surfaces) for (const viewport of surface.viewports) if (viewport.screenshot) artifacts.push(artifactRecord(evidenceRoot, viewport.screenshot.path, { id: `${surface.surface}:${viewport.id}:screenshot`, kind: "screenshot", surface: surface.surface, matrix: viewport.id }));
+  const normalizedSurfaces = surfaces.map((surface) => ({
+    ...surface,
+    viewports: surface.viewports.map((viewport) => {
+      if (!viewport.screenshot) return viewport;
+      const artifact = optionalScreenshotArtifactRecord(evidenceRoot, viewport.screenshot.path, { id: `${surface.surface}:${viewport.id}:screenshot`, kind: "screenshot", surface: surface.surface, matrix: viewport.id });
+      if (!artifact) return { ...viewport, screenshot: null };
+      artifacts.push(artifact);
+      return viewport;
+    }),
+  }));
   for (const item of extraArtifacts) artifacts.push(artifactRecord(evidenceRoot, item.path, item));
   const start = subjectStart; const end = subjectEnd; const subjectStable = start && end && JSON.stringify(start) === JSON.stringify(end);
   const buildStable = Boolean(buildStartFingerprint && buildEndFingerprint && buildStartFingerprint === buildEndFingerprint);
   const identity = start && end && /^sha256:[0-9a-f]{64}$/.test(buildStartFingerprint || "") && /^sha256:[0-9a-f]{64}$/.test(buildEndFingerprint || "") && /^sha256:[0-9a-f]{64}$/.test(inputFingerprint || "") && /^sha256:[0-9a-f]{64}$/.test(siteFinalizerFingerprint || "");
-  const failures = surfaces.some((surface) => surface.status !== "pass") || (globalChecks || []).some((checkItem) => checkItem.status !== "pass") || !subjectStable || !buildStable || !identity;
-  const manifest = redactEvidence({ schema: "quillframe_browser_acceptance_v1", status: failures ? "fail" : "pass", task: "T605", gate: "T605_BROWSER_ACCEPTANCE", chapter_scope: CHAPTER_SCOPE, subject: { start, end, stable: subjectStable }, build: { start_fingerprint: buildStartFingerprint, end_fingerprint: buildEndFingerprint, input_fingerprint: inputFingerprint, site_finalizer_fingerprint: siteFinalizerFingerprint, stable: buildStable }, browser: { name: "chromium", version: browserVersion || chromeVersion(chrome), fingerprint: browserFingerprint(chrome) }, matrix_count: surfaces.reduce((total, surface) => total + surface.matrix_count, 0), surfaces, global_checks: globalChecks || [], artifacts, errors: surfaces.flatMap((surface) => surface.errors), generated_at: acceptanceTimestamp(now), artifacts_root: "." });
+  const expectedScreenshotBindings = new Set(SURFACES.flatMap((surface) => matrix().filter((item) => item.screenshot).map((item) => `${surface}\0${item.id}\0${surface}/screenshots/${item.screenshot}`)));
+  const screenshotArtifacts = artifacts.filter((artifact) => artifact.kind === "screenshot");
+  const actualScreenshotBindings = new Set(screenshotArtifacts.map((artifact) => `${artifact.surface}\0${artifact.matrix}\0${artifact.path}`));
+  const screenshotsComplete = actualScreenshotBindings.size === expectedScreenshotBindings.size && [...expectedScreenshotBindings].every((binding) => actualScreenshotBindings.has(binding));
+  const failures = normalizedSurfaces.some((surface) => surface.status !== "pass") || (globalChecks || []).some((checkItem) => checkItem.status !== "pass") || !subjectStable || !buildStable || !identity || !screenshotsComplete;
+  const manifest = redactEvidence({ schema: "quillframe_browser_acceptance_v1", status: failures ? "fail" : "pass", task: "T605", gate: "T605_BROWSER_ACCEPTANCE", chapter_scope: CHAPTER_SCOPE, subject: { start, end, stable: subjectStable }, build: { start_fingerprint: buildStartFingerprint, end_fingerprint: buildEndFingerprint, input_fingerprint: inputFingerprint, site_finalizer_fingerprint: siteFinalizerFingerprint, stable: buildStable }, browser: { name: "chromium", version: browserVersion || chromeVersion(chrome), fingerprint: browserFingerprint(chrome) }, matrix_count: normalizedSurfaces.reduce((total, surface) => total + surface.matrix_count, 0), surfaces: normalizedSurfaces, global_checks: globalChecks || [], artifacts, errors: normalizedSurfaces.flatMap((surface) => surface.errors), generated_at: acceptanceTimestamp(now), artifacts_root: "." });
   if (manifest.status === "pass") validateManifestContract(manifest);
   fs.mkdirSync(evidenceRoot, { recursive: true }); fs.writeFileSync(path.join(evidenceRoot, MANIFEST_NAME), `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 });
   return manifest;
