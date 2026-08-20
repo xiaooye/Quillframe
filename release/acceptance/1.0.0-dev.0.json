@@ -1,0 +1,1264 @@
+{
+  "acceptance_subject": {
+    "base_commit": "6eb97650f45673412f55a9ee41bc0e70fa8d5d62",
+    "build_fingerprint": "2884bf2e58a14b4bb2206e843331f0edc27eb9f20c72015660b3b13197cc744b",
+    "candidate_id": "CH001",
+    "chapter_scope": "CH001",
+    "current_commit": "6eb97650f45673412f55a9ee41bc0e70fa8d5d62",
+    "dirty": false,
+    "kind": "clean_checkout",
+    "project_id": "quillframe",
+    "untracked_paths": [],
+    "version": "1.0.0-dev.0",
+    "working_tree_fingerprint": "93bdb3b8698d8c340fd51cc195b7e4360f7fb1a0dff749bc56452bfc36cbb33c"
+  },
+  "blocking_evidence": [
+    "T409",
+    "T606",
+    "T607"
+  ],
+  "deployment_performed": false,
+  "environment_limited_checks": [],
+  "evidence_fingerprint": "ea35a84bf9c51f50b80163ad1307e4153e6e42f4e8765a1f1312466f28293e10",
+  "framework_version": "1.0.0-dev.0",
+  "gates": {
+    "chapter_scope": "CH001",
+    "external_cross_binding": false,
+    "json_self_hash": "excluded_by_contract",
+    "local_gates_pass": true,
+    "t608_phase": "x"
+  },
+  "generated_at": "2026-08-20T12:40:00Z",
+  "local_evidence": [
+    "runner-version_consistency-G6.version_consistency",
+    "runner-identity-G0.scope",
+    "runner-docs-G0.spec",
+    "runner-docs-G0.research",
+    "runner-docs-G3.docs",
+    "runner-hygiene-G1.reject",
+    "runner-hygiene-G5.clean_break",
+    "runner-hygiene-G5.no_compat",
+    "runner-peer_contract-G1.bridge",
+    "runner-namespace-G0.yaml",
+    "runner-machine_namespace-G6.machine_namespace",
+    "runner-framework_hygiene-G6.framework_hygiene",
+    "runner-quillframe_docs_quality-G6.quillframe_docs_quality",
+    "runner-design_system_quality-G6.design_system_quality",
+    "runner-semantic_reference_integrity-G6.semantic_reference_integrity",
+    "runner-python_compile-G0.plan",
+    "runner-python_compile-G1.schema",
+    "runner-python_compile-G2.types",
+    "runner-python_compile-G6.python_compile",
+    "runner-python_full-G1.resume",
+    "runner-python_full-G1.subscription",
+    "runner-python_full-G1.mcp",
+    "runner-python_full-G1.launch",
+    "runner-python_full-G2.workflow",
+    "runner-python_full-G2.replay",
+    "runner-python_full-G2.pause",
+    "runner-python_full-G2.invalidation",
+    "runner-python_full-G2.budget",
+    "runner-python_full-G2.model",
+    "runner-python_full-G2.fallback",
+    "runner-python_full-G4.cloud_tests",
+    "runner-python_full-G5.fixture",
+    "runner-python_full-G6.python_full",
+    "runner-framework_selftest-G2.bridge",
+    "runner-framework_selftest-G6.selftest",
+    "runner-bundle_build-G6.bundle_build",
+    "runner-bundle_verify-G6.bundle_verify",
+    "runner-pnpm_frozen-G1.workspace",
+    "runner-pnpm_frozen-G6.pnpm",
+    "runner-quality-G1.tooling",
+    "runner-quality-G5.quality",
+    "runner-quality-G6.quality",
+    "runner-test-G3.fixture",
+    "runner-test-G3.states",
+    "runner-test-G6.node_test",
+    "runner-typecheck-G6.typecheck",
+    "runner-build-G3.studio",
+    "runner-build-G3.homepage",
+    "runner-build-G3.demo",
+    "runner-build-G6.build",
+    "runner-wheel_build-G6.wheel_build",
+    "runner-wheel_install_smoke-G6.wheel_smoke",
+    "runner-wheel_import_smoke-G6.wheel_import",
+    "runner-t603_site_smoke-R.t603.site_smoke",
+    "runner-t603_studio_smoke-R.t603.studio_smoke",
+    "runner-t603_local_launch-G3.launch",
+    "runner-t603_local_launch-G3.project",
+    "runner-t603_local_launch-G3.loopback",
+    "runner-t603_local_launch-G3.cloud_opt_in",
+    "runner-t603_local_launch-R.t603.launch_smoke",
+    "runner-cloud_security-G4.bff",
+    "runner-cloud_security-G4.auth",
+    "runner-cloud_security-G4.security",
+    "runner-cloud_security-G4.coordinator",
+    "runner-cloud_security-G4.vault",
+    "runner-cloud_security-G4.persistence",
+    "runner-cloud_security-G4.container",
+    "runner-cloud_security-G4.endpoint",
+    "runner-cloud_security-G4.redaction",
+    "runner-cloud_security-G6.cloud",
+    "runner-t605_browser-G6.t605_invoke",
+    "runner-t605-browser-manifest",
+    "runner-t310-browser-manifest"
+  ],
+  "model_execution_performed": false,
+  "release_promotion_authorized": false,
+  "rendered_artifacts": [
+    {
+      "path": "1.0.0-dev.0.en.md",
+      "sha256": "844dc80036adb4967cd94b00bd4e5ec19694f6c1bf34d3798f58304b67794fce",
+      "size": 2569
+    },
+    {
+      "path": "1.0.0-dev.0.zh-CN.md",
+      "sha256": "2f5c8a12ced542269c6e580fc1b46caacd682b3ff749d2996f6884ee12edb4c9",
+      "size": 2537
+    },
+    {
+      "path": "1.0.0-dev.0.tasks.en.md",
+      "sha256": "2f1795a205b1729045bb2c1c0165ed3af7324a379441293193ede22e54ba6983",
+      "size": 2486
+    },
+    {
+      "path": "1.0.0-dev.0.tasks.zh-CN.md",
+      "sha256": "872ff92f3f4f9fd04ab587b4f513b78d49430d235ffeb8e504d9370311e21602",
+      "size": 2487
+    }
+  ],
+  "schema": "quillframe_release_acceptance_report_v1",
+  "status": "implementation_verified_release_blocked",
+  "task_ledger": {
+    "ordered_ids": [
+      "T000",
+      "T001",
+      "T002",
+      "T003",
+      "T004",
+      "T100",
+      "T101",
+      "T102",
+      "T103",
+      "T104",
+      "T105",
+      "T106",
+      "T107",
+      "T108",
+      "T200",
+      "T201",
+      "T202",
+      "T203",
+      "T204",
+      "T205",
+      "T206",
+      "T207",
+      "T208",
+      "T300",
+      "T301",
+      "T302",
+      "T303",
+      "T304",
+      "T305",
+      "T306",
+      "T307",
+      "T308",
+      "T309",
+      "T310",
+      "T400",
+      "T401",
+      "T402",
+      "T403",
+      "T404",
+      "T405",
+      "T406",
+      "T407",
+      "T408",
+      "T409",
+      "T500",
+      "T501",
+      "T502",
+      "T503",
+      "T600",
+      "T601",
+      "T602",
+      "T603",
+      "T604",
+      "T605",
+      "T606",
+      "T607",
+      "T608"
+    ],
+    "tasks_en": [
+      {
+        "description": "Confirm no production users/data and authorize destructive clean break.",
+        "id": "T000",
+        "requirements": [
+          "G0.scope"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Write paired product specification.",
+        "id": "T001",
+        "requirements": [
+          "G0.spec"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Write paired implementation plan.",
+        "id": "T002",
+        "requirements": [
+          "G0.plan"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Record adopt/adapt/reject research decisions and primary sources.",
+        "id": "T003",
+        "requirements": [
+          "G0.research"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Validate YAML and bilingual pair integrity.",
+        "id": "T004",
+        "requirements": [
+          "G0.yaml"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Add root pnpm workspace and one lockfile.",
+        "id": "T100",
+        "requirements": [
+          "G1.workspace"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Align Site, Docs, Studio, and Cloud TypeScript/tooling.",
+        "id": "T101",
+        "requirements": [
+          "G1.tooling"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Add canonical 1.0 schema catalog and validator tests.",
+        "id": "T102",
+        "requirements": [
+          "G1.schema"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Replace Host Bridge with version 11 only.",
+        "id": "T103",
+        "requirements": [
+          "G1.bridge"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Add `author.run.resume`, `author.run.cancel`, and `model.route.preview`.",
+        "id": "T104",
+        "requirements": [
+          "G1.resume"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Add cursor-based run subscription contract.",
+        "id": "T105",
+        "requirements": [
+          "G1.subscription"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Hard-cut MCP to `2026-07-28`.",
+        "id": "T106",
+        "requirements": [
+          "G1.mcp"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Add old Bridge/MCP/schema rejection tests.",
+        "id": "T107",
+        "requirements": [
+          "G1.reject"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Remove root host-hook correctness dependency.",
+        "id": "T108",
+        "requirements": [
+          "G1.launch"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Write failing workflow transition and CH001 boundary tests.",
+        "id": "T200",
+        "requirements": [
+          "G2.workflow"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Implement core typed dataclasses/schema validation.",
+        "id": "T201",
+        "requirements": [
+          "G2.types"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Implement `NovelWorkflowEngine` and append-only event stream.",
+        "id": "T202",
+        "requirements": [
+          "G2.replay"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Implement pause/resume/cancel safe points and replay.",
+        "id": "T203",
+        "requirements": [
+          "G2.pause"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Implement candidate fingerprint invalidation.",
+        "id": "T204",
+        "requirements": [
+          "G2.invalidation"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Write failing model route/budget/fallback tests.",
+        "id": "T205",
+        "requirements": [
+          "G2.budget"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Implement `ModelTaskProfile` and route preview.",
+        "id": "T206",
+        "requirements": [
+          "G2.model"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Implement explicit fallback receipt and independent-route integrity.",
+        "id": "T207",
+        "requirements": [
+          "G2.fallback"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Wire Core operations through Bridge v11.",
+        "id": "T208",
+        "requirements": [
+          "G2.bridge"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Write failing CLI launch resolution/receipt tests.",
+        "id": "T300",
+        "requirements": [
+          "G3.launch"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Implement local project resolution/new-project wizard.",
+        "id": "T301",
+        "requirements": [
+          "G3.project"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Implement loopback launch server and lifecycle.",
+        "id": "T302",
+        "requirements": [
+          "G3.loopback"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Add cloud opt-in boundary without implicit upload.",
+        "id": "T303",
+        "requirements": [
+          "G3.cloud_opt_in"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Recompose Studio primary/support/advanced navigation.",
+        "id": "T304",
+        "requirements": [
+          "G3.studio"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Build Homepage six-section information architecture.",
+        "id": "T305",
+        "requirements": [
+          "G3.homepage"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Add Worker/Pyodide deterministic CH001 demo.",
+        "id": "T306",
+        "requirements": [
+          "G3.demo"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Add labelled recorded semantic fixture and truth receipt.",
+        "id": "T307",
+        "requirements": [
+          "G3.fixture"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Rebuild Docs task navigation.",
+        "id": "T308",
+        "requirements": [
+          "G3.docs"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Add responsive, offline, error, and reduced-motion states.",
+        "id": "T309",
+        "requirements": [
+          "G3.states"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Run local browser/accessibility/visual E2E; production fail-closed browser evidence passed.",
+        "id": "T310",
+        "requirements": [
+          "T310.browser.local"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Create Cloudflare Worker BFF package and bindings.",
+        "id": "T400",
+        "requirements": [
+          "G4.bff"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Implement WorkOS authorize/callback/logout adapters.",
+        "id": "T401",
+        "requirements": [
+          "G4.auth"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Implement opaque cookie, CSRF, origin, and security headers.",
+        "id": "T402",
+        "requirements": [
+          "G4.security"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Implement `WorkspaceCoordinator` Durable Object.",
+        "id": "T403",
+        "requirements": [
+          "G4.coordinator"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Implement AES-GCM `SessionVault` leases and expiry.",
+        "id": "T404",
+        "requirements": [
+          "G4.vault"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Implement encrypted R2 project bundle adapter.",
+        "id": "T405",
+        "requirements": [
+          "G4.persistence"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Bind Python Core Container contract.",
+        "id": "T406",
+        "requirements": [
+          "G4.container"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Implement hosted public-HTTPS endpoint validation.",
+        "id": "T407",
+        "requirements": [
+          "G4.endpoint"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Test logout/delete destruction and secret redaction.",
+        "id": "T408",
+        "requirements": [
+          "G4.redaction"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Verify real WorkOS/Cloudflare deployment with account credentials.",
+        "id": "T409",
+        "requirements": [
+          "T409.external"
+        ],
+        "source_status": "!",
+        "status": "!"
+      },
+      {
+        "description": "Delete current legacy routes, package files, constants, and adapters.",
+        "id": "T500",
+        "requirements": [
+          "G5.clean_break"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Rebuild current fixtures against 1.0.",
+        "id": "T501",
+        "requirements": [
+          "G5.fixture"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Add history-aware clean-break scanner.",
+        "id": "T502",
+        "requirements": [
+          "G5.quality"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Prove absence of redirects, migrations, dual paths, and compatibility flags.",
+        "id": "T503",
+        "requirements": [
+          "G5.no_compat"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Run complete Python suite and compile checks.",
+        "id": "T600",
+        "requirements": [
+          "G6.python_compile",
+          "G6.python_full",
+          "G6.selftest"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Run frozen pnpm install, tests, types, and builds.",
+        "id": "T601",
+        "requirements": [
+          "G6.pnpm",
+          "G6.node_test",
+          "G6.typecheck",
+          "G6.build",
+          "G6.wheel_build",
+          "G6.wheel_smoke",
+          "G6.wheel_import"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Run contract, legacy rejection, and secret scans.",
+        "id": "T602",
+        "requirements": [
+          "G5.clean_break",
+          "G1.reject",
+          "G6.version_consistency",
+          "G6.machine_namespace",
+          "G6.framework_hygiene",
+          "G6.quillframe_docs_quality",
+          "G6.design_system_quality",
+          "G6.semantic_reference_integrity"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Run local launch and public demo E2E.",
+        "id": "T603",
+        "requirements": [
+          "T310.browser.local",
+          "G3.demo",
+          "G3.loopback"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Run hosted deterministic/security tests.",
+        "id": "T604",
+        "requirements": [
+          "G6.cloud"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Run accessibility and responsive visual QA; production fail-closed browser evidence passed.",
+        "id": "T605",
+        "requirements": [
+          "T605.browser.full"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "Execute real CH001 candidate→accept→settle→publish chain; deterministic transitions pass, but fresh independent model evidence is `PENDING_MODEL`.",
+        "id": "T606",
+        "requirements": [
+          "T606.external"
+        ],
+        "source_status": "!",
+        "status": "!"
+      },
+      {
+        "description": "Promote version identities only after T409 and T606 pass; identities remain aligned at `1.0.0-dev.0`.",
+        "id": "T607",
+        "requirements": [
+          "T409.external",
+          "T606.external",
+          "T607.approval",
+          "T607.derived"
+        ],
+        "source_status": "!",
+        "status": "!"
+      },
+      {
+        "description": "Produce and read back the release acceptance report with unresolved external evidence recorded.",
+        "id": "T608",
+        "requirements": [
+          "T608.final_readback"
+        ],
+        "source_status": "x",
+        "status": "x"
+      }
+    ],
+    "tasks_zh": [
+      {
+        "description": "确认无生产用户/数据并授权破坏性硬切换。",
+        "id": "T000",
+        "requirements": [
+          "G0.scope"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "编写双语产品规格。",
+        "id": "T001",
+        "requirements": [
+          "G0.spec"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "编写双语实施计划。",
+        "id": "T002",
+        "requirements": [
+          "G0.plan"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "登记 adopt/adapt/reject 研究决定与一手来源。",
+        "id": "T003",
+        "requirements": [
+          "G0.research"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "验证 YAML 与双语文档配对完整性。",
+        "id": "T004",
+        "requirements": [
+          "G0.yaml"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "新增根 pnpm workspace 与唯一 lockfile。",
+        "id": "T100",
+        "requirements": [
+          "G1.workspace"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "对齐 Site、Docs、Studio、Cloud 的 TypeScript/tooling。",
+        "id": "T101",
+        "requirements": [
+          "G1.tooling"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "新增 1.0 canonical schema catalog 与 validator test。",
+        "id": "T102",
+        "requirements": [
+          "G1.schema"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "只保留 Host Bridge v11。",
+        "id": "T103",
+        "requirements": [
+          "G1.bridge"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "新增 `author.run.resume`、`author.run.cancel`、`model.route.preview`。",
+        "id": "T104",
+        "requirements": [
+          "G1.resume"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "新增 cursor-based run subscription 契约。",
+        "id": "T105",
+        "requirements": [
+          "G1.subscription"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "MCP 硬切换到 `2026-07-28`。",
+        "id": "T106",
+        "requirements": [
+          "G1.mcp"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "新增旧 Bridge/MCP/Schema rejection test。",
+        "id": "T107",
+        "requirements": [
+          "G1.reject"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "删除根 host hook 正确性依赖。",
+        "id": "T108",
+        "requirements": [
+          "G1.launch"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "先写 workflow transition 与 CH001 边界失败测试。",
+        "id": "T200",
+        "requirements": [
+          "G2.workflow"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "实现 Core typed dataclass/Schema validation。",
+        "id": "T201",
+        "requirements": [
+          "G2.types"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "实现 `NovelWorkflowEngine` 与 append-only event stream。",
+        "id": "T202",
+        "requirements": [
+          "G2.replay"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "实现 pause/resume/cancel safe point 与 replay。",
+        "id": "T203",
+        "requirements": [
+          "G2.pause"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "实现 candidate fingerprint invalidation。",
+        "id": "T204",
+        "requirements": [
+          "G2.invalidation"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "先写 model route/budget/fallback 失败测试。",
+        "id": "T205",
+        "requirements": [
+          "G2.budget"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "实现 `ModelTaskProfile` 与 route preview。",
+        "id": "T206",
+        "requirements": [
+          "G2.model"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "实现显式 fallback receipt 与 independent-route integrity。",
+        "id": "T207",
+        "requirements": [
+          "G2.fallback"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "通过 Bridge v11 接入 Core 操作。",
+        "id": "T208",
+        "requirements": [
+          "G2.bridge"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "先写 CLI launch 解析/receipt 失败测试。",
+        "id": "T300",
+        "requirements": [
+          "G3.launch"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "实现本地 project resolution/new-project wizard。",
+        "id": "T301",
+        "requirements": [
+          "G3.project"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "实现 loopback launch server 与生命周期。",
+        "id": "T302",
+        "requirements": [
+          "G3.loopback"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "增加 cloud opt-in 边界，禁止隐式上传。",
+        "id": "T303",
+        "requirements": [
+          "G3.cloud_opt_in"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "重组 Studio 主/辅助/Advanced 导航。",
+        "id": "T304",
+        "requirements": [
+          "G3.studio"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "构建 Homepage 六段信息架构。",
+        "id": "T305",
+        "requirements": [
+          "G3.homepage"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "新增 Worker/Pyodide 确定性 CH001 demo。",
+        "id": "T306",
+        "requirements": [
+          "G3.demo"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "新增明确标注的 recorded semantic fixture 与 truth receipt。",
+        "id": "T307",
+        "requirements": [
+          "G3.fixture"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "重建 Docs 任务导航。",
+        "id": "T308",
+        "requirements": [
+          "G3.docs"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "增加 responsive/offline/error/reduced-motion 状态。",
+        "id": "T309",
+        "requirements": [
+          "G3.states"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "执行本地 browser/accessibility/visual E2E；production fail-closed 浏览器证据已通过。",
+        "id": "T310",
+        "requirements": [
+          "T310.browser.local"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "创建 Cloudflare Worker BFF package 与 binding。",
+        "id": "T400",
+        "requirements": [
+          "G4.bff"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "实现 WorkOS authorize/callback/logout adapter。",
+        "id": "T401",
+        "requirements": [
+          "G4.auth"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "实现 opaque cookie、CSRF、origin 与 security header。",
+        "id": "T402",
+        "requirements": [
+          "G4.security"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "实现 `WorkspaceCoordinator` Durable Object。",
+        "id": "T403",
+        "requirements": [
+          "G4.coordinator"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "实现 AES-GCM `SessionVault` lease 与 expiry。",
+        "id": "T404",
+        "requirements": [
+          "G4.vault"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "实现 encrypted R2 project bundle adapter。",
+        "id": "T405",
+        "requirements": [
+          "G4.persistence"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "绑定 Python Core Container contract。",
+        "id": "T406",
+        "requirements": [
+          "G4.container"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "实现 Hosted public-HTTPS endpoint validation。",
+        "id": "T407",
+        "requirements": [
+          "G4.endpoint"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "测试 logout/delete destruction 与 secret redaction。",
+        "id": "T408",
+        "requirements": [
+          "G4.redaction"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "使用账户凭据验证真实 WorkOS/Cloudflare 部署。",
+        "id": "T409",
+        "requirements": [
+          "T409.external"
+        ],
+        "source_status": "!",
+        "status": "!"
+      },
+      {
+        "description": "删除当前 legacy route、package file、constant 与 adapter。",
+        "id": "T500",
+        "requirements": [
+          "G5.clean_break"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "按 1.0 重建当前 fixture。",
+        "id": "T501",
+        "requirements": [
+          "G5.fixture"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "新增理解历史目录的 clean-break scanner。",
+        "id": "T502",
+        "requirements": [
+          "G5.quality"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "证明不存在 redirect、migration、dual path 与 compatibility flag。",
+        "id": "T503",
+        "requirements": [
+          "G5.no_compat"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "执行完整 Python suite 与 compile check。",
+        "id": "T600",
+        "requirements": [
+          "G6.python_compile",
+          "G6.python_full",
+          "G6.selftest"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "执行 frozen pnpm install、test、type 与 build。",
+        "id": "T601",
+        "requirements": [
+          "G6.pnpm",
+          "G6.node_test",
+          "G6.typecheck",
+          "G6.build",
+          "G6.wheel_build",
+          "G6.wheel_smoke",
+          "G6.wheel_import"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "执行 contract、legacy rejection 与 secret scan。",
+        "id": "T602",
+        "requirements": [
+          "G5.clean_break",
+          "G1.reject",
+          "G6.version_consistency",
+          "G6.machine_namespace",
+          "G6.framework_hygiene",
+          "G6.quillframe_docs_quality",
+          "G6.design_system_quality",
+          "G6.semantic_reference_integrity"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "执行 local launch 与 public demo E2E。",
+        "id": "T603",
+        "requirements": [
+          "T310.browser.local",
+          "G3.demo",
+          "G3.loopback"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "执行 Hosted deterministic/security test。",
+        "id": "T604",
+        "requirements": [
+          "G6.cloud"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "执行 accessibility 与 responsive visual QA；production fail-closed 浏览器证据已通过。",
+        "id": "T605",
+        "requirements": [
+          "T605.browser.full"
+        ],
+        "source_status": "x",
+        "status": "x"
+      },
+      {
+        "description": "运行真实 CH001 candidate→accept→settle→publish 链路；确定性状态转换已通过，但新鲜独立模型证据为 `PENDING_MODEL`。",
+        "id": "T606",
+        "requirements": [
+          "T606.external"
+        ],
+        "source_status": "!",
+        "status": "!"
+      },
+      {
+        "description": "仅在 T409 与 T606 通过后提升版本；当前各表面一致保持 `1.0.0-dev.0`。",
+        "id": "T607",
+        "requirements": [
+          "T409.external",
+          "T606.external",
+          "T607.approval",
+          "T607.derived"
+        ],
+        "source_status": "!",
+        "status": "!"
+      },
+      {
+        "description": "生成并回读含未解决外部证据记录的 release acceptance report。",
+        "id": "T608",
+        "requirements": [
+          "T608.final_readback"
+        ],
+        "source_status": "x",
+        "status": "x"
+      }
+    ]
+  }
+}
