@@ -8,7 +8,8 @@ const KEYRING_SERVICE: &str = "com.quillframe.studio.model-service";
 const SECRET_REF_PREFIX: &str = "keyring:qf:";
 
 fn entry(reference: &str) -> Result<Entry, String> {
-    Entry::new(KEYRING_SERVICE, reference).map_err(|error| format!("credential store unavailable: {error}"))
+    Entry::new(KEYRING_SERVICE, reference)
+        .map_err(|error| format!("credential store unavailable: {error}"))
 }
 
 fn vault_set(reference: &str, secret: &str) -> Result<(), String> {
@@ -43,7 +44,11 @@ fn access_token(request: &Value) -> Option<String> {
 }
 
 fn scrub(mut text: String, secrets: &[String]) -> String {
-    let mut ordered = secrets.iter().filter(|value| !value.is_empty()).cloned().collect::<Vec<_>>();
+    let mut ordered = secrets
+        .iter()
+        .filter(|value| !value.is_empty())
+        .cloned()
+        .collect::<Vec<_>>();
     ordered.sort_by_key(|value| std::cmp::Reverse(value.len()));
     ordered.dedup();
     for secret in ordered {
@@ -52,7 +57,12 @@ fn scrub(mut text: String, secrets: &[String]) -> String {
     text
 }
 
-async fn run_sidecar(app: &AppHandle, args: &[&str], input: Option<&Value>, secrets: &[String]) -> Result<Value, String> {
+async fn run_sidecar(
+    app: &AppHandle,
+    args: &[&str],
+    input: Option<&Value>,
+    secrets: &[String],
+) -> Result<Value, String> {
     let command = app
         .shell()
         .sidecar("quillframe-core")
@@ -63,7 +73,8 @@ async fn run_sidecar(app: &AppHandle, args: &[&str], input: Option<&Value>, secr
         .map_err(|error| scrub(format!("sidecar spawn failed: {error}"), secrets))?;
 
     if let Some(payload) = input {
-        let mut bytes = serde_json::to_vec(payload).map_err(|error| format!("sidecar payload serialization failed: {error}"))?;
+        let mut bytes = serde_json::to_vec(payload)
+            .map_err(|error| format!("sidecar payload serialization failed: {error}"))?;
         bytes.push(b'\n');
         child
             .write(bytes.as_slice())
@@ -123,7 +134,10 @@ async fn credential_refs(app: &AppHandle) -> Result<Vec<String>, String> {
             .as_str()
             .ok_or_else(|| "Core sidecar returned a non-string credential reference".to_string())?;
         if !reference.starts_with(SECRET_REF_PREFIX) {
-            return Err("Core sidecar returned a credential reference outside the Tauri keyring namespace".to_string());
+            return Err(
+                "Core sidecar returned a credential reference outside the Tauri keyring namespace"
+                    .to_string(),
+            );
         }
         out.push(reference.to_string());
     }
@@ -226,7 +240,9 @@ async fn invoke_inner(app: &AppHandle, mut request: Value) -> Result<Value, Stri
                 if let Some(reference) = action.get("credential_ref").and_then(Value::as_str) {
                     if reference.starts_with(SECRET_REF_PREFIX) {
                         if let Err(error) = vault_delete(reference) {
-                            eprintln!("Quillframe credential cleanup warning for {reference}: {error}");
+                            eprintln!(
+                                "Quillframe credential cleanup warning for {reference}: {error}"
+                            );
                         }
                     }
                 }
