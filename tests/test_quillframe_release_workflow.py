@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -68,6 +69,19 @@ class DistributionWorkflowContractTests(unittest.TestCase):
         self.assertIn("/tmp/quillframe-build/pyproject.toml", text)
         self.assertIn("python -m pip wheel", text)
         self.assertNotIn("COPY pyproject.toml /app/pyproject.toml", text)
+
+    def test_docker_build_context_copies_every_declared_runtime_package(self):
+        text = DOCKERFILE.read_text(encoding="utf-8")
+        config = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        includes = config["tool"]["setuptools"]["packages"]["find"]["include"]
+
+        for pattern in includes:
+            package = pattern.removesuffix("*")
+            self.assertIn(
+                f"COPY {package} /tmp/quillframe-build/{package}",
+                text,
+                package,
+            )
 
 
 if __name__ == "__main__":
