@@ -1,16 +1,16 @@
 {
   "acceptance_subject": {
-    "base_commit": "d1fd3dd5e5feae1ca46b0724ac26d82466d2d13b",
-    "build_fingerprint": "e01345ff65da4fde3e5732ec1973405f0fa1f3a6eaee338aabb1a5d9e51415dd",
+    "base_commit": "eb16a8adb835718c4f8f7fef3e580031765cb3a4",
+    "build_fingerprint": "5f2de66f1bbcd5f836506499df9ac54e7bd5076f183f4ebc83258b6689f7855d",
     "candidate_id": "CH001",
     "chapter_scope": "CH001",
-    "current_commit": "d1fd3dd5e5feae1ca46b0724ac26d82466d2d13b",
+    "current_commit": "eb16a8adb835718c4f8f7fef3e580031765cb3a4",
     "dirty": false,
     "kind": "clean_checkout",
     "project_id": "quillframe",
     "untracked_paths": [],
     "version": "1.0.0-dev.0",
-    "working_tree_fingerprint": "2364d5b0fdb471154e17b4e7aab2166e3aa9b0b781e08a901ebb625a868c28c4"
+    "working_tree_fingerprint": "1bcea0400b2df306cf984a049a4d5bbe8d08697a20118a72e846693b5e5c68e9"
   },
   "blocking_evidence": [
     "T409",
@@ -19,7 +19,7 @@
   ],
   "deployment_performed": false,
   "environment_limited_checks": [],
-  "evidence_fingerprint": "80bffd570e0b1ec014eee5215080232da99184245df714bb1001614783f60e82",
+  "evidence_fingerprint": "c84dfcb497afe6eb6415608c98729ff6fd204f675785bb48f6635da798030435",
   "framework_version": "1.0.0-dev.0",
   "gates": {
     "chapter_scope": "CH001",
@@ -28,7 +28,7 @@
     "local_gates_pass": true,
     "t608_phase": "x"
   },
-  "generated_at": "2026-08-20T13:14:47Z",
+  "generated_at": "2026-08-20T14:03:16Z",
   "local_evidence": [
     "runner-version_consistency-G6.version_consistency",
     "runner-identity-G0.scope",
@@ -109,22 +109,22 @@
   "rendered_artifacts": [
     {
       "path": "1.0.0-dev.0.en.md",
-      "sha256": "fa5ece0284a4d430beecbe2b835745bab21da4cf856f00f06919058169453023",
+      "sha256": "26766960c8c3f1d363cdf520b0a831ff4297e4692c7525bdcc1a74c324f5846c",
       "size": 2569
     },
     {
       "path": "1.0.0-dev.0.zh-CN.md",
-      "sha256": "896d97a179f4d5f1fe1490a6eb3e185ed08e36c7b48f3edbf343bbf8e7d8d834",
+      "sha256": "1fc7d9a9620c4c0f8041a314cc4eb915bf0792364737f5c4b6a5d3669f6271ec",
       "size": 2537
     },
     {
       "path": "1.0.0-dev.0.tasks.en.md",
-      "sha256": "fdd6ce9d1c95d228440bc71db9878573d0c5b2b5301dd56f0d7dc8c8472b44fd",
+      "sha256": "64b3d9433b0c7feb7429883aab4de77df245e923b495d73799cce7261f03af06",
       "size": 2486
     },
     {
       "path": "1.0.0-dev.0.tasks.zh-CN.md",
-      "sha256": "015a42f7f4385756a3b096e5db3ec39b114c57dea72fb280cf67ead7318cbff8",
+      "sha256": "8eb5dbe92a91667312a1c207523354a74d0b7d789c61b36062ec3e44c08f6d02",
       "size": 2487
     }
   ],
