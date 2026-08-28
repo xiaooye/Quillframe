@@ -2,7 +2,7 @@
 
 ## 目的
 
-Consumer Project 可以传输 deterministic Quillframe runtime bundle。本 bundle fingerprint 只证明 materialized bytes 的 evidence；Project identity 与 authority 仍由 native five-key manifest/context 决定。
+下游项目可以传输确定性的 Quillframe 运行时包。包指纹只证明实际字节的身份；项目身份与权威仍由原生四键 manifest 和顶层含 `scope: "novel"` 的上下文决定。
 
 Bundle 只是 transport/cache artifact，不是第二权威。fingerprint 不授予 Project authority。
 

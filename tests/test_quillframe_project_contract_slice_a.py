@@ -4,6 +4,7 @@ import json
 import hashlib
 import os
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -27,7 +28,6 @@ def write_manifest(root: Path, **overrides: str) -> None:
         "id": "PROJECT-TEST",
         "title": "Fixture",
         "language": "en",
-        "chapter_scope": "CH001",
     }
     values.update(overrides)
     lines = []
@@ -69,7 +69,7 @@ def business_rows(data: Path, project_id: str) -> tuple[tuple[object, ...], tupl
 
 
 class ProjectContractSliceATests(unittest.TestCase):
-    def test_flat_manifest_accepts_exact_five_keys(self):
+    def test_flat_manifest_accepts_exact_four_keys(self):
         with tempfile.TemporaryDirectory(prefix="qf-contract-flat-") as td:
             root = Path(td)
             write_manifest(root)
@@ -78,10 +78,10 @@ class ProjectContractSliceATests(unittest.TestCase):
 
             self.assertEqual(
                 set(context["manifest"]),
-                {"schema", "id", "title", "language", "chapter_scope"},
+                {"schema", "id", "title", "language"},
             )
             self.assertEqual(context["manifest"]["schema"], "quillframe_project_v1_0")
-            self.assertEqual(context["manifest"]["chapter_scope"], "CH001")
+            self.assertEqual(context["scope"], "novel")
             self.assertEqual(Path(context["project_root"]), root.resolve())
             self.assertEqual(Path(context["data_root"]), root.resolve() / ".quillframe" / "data")
 
@@ -99,7 +99,7 @@ class ProjectContractSliceATests(unittest.TestCase):
             write_manifest(root)
             manifest = (root / "quillframe.toml").read_text(encoding="utf-8")
             (root / "quillframe.toml").write_text(
-                manifest.replace('chapter_scope = "CH001"\n', ""),
+                manifest.replace('language = "en"\n', ""),
                 encoding="utf-8",
             )
 
@@ -119,7 +119,7 @@ class ProjectContractSliceATests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 resolve_contract(root)
 
-    def test_flat_manifest_rejects_old_schema_and_non_ch001(self):
+    def test_flat_manifest_rejects_old_schema_and_legacy_scope(self):
         for overrides in (
             {"schema": "quillframe_project_v1"},
             {"chapter_scope": "CH002"},
@@ -471,7 +471,6 @@ class ProjectContractSliceATests(unittest.TestCase):
                 'id = "COMPETITOR"\n'
                 'title = "Competitor"\n'
                 'language = "en"\n'
-                'chapter_scope = "CH001"\n'
             ).encode("utf-8")
 
             def competitor_then_fail(path, content):
@@ -611,7 +610,7 @@ class ProjectContractSliceATests(unittest.TestCase):
 
             def rewrite_same_values(project_root, _context):
                 (project_root / "quillframe.toml").write_text(
-                    'chapter_scope = "CH001"\nlanguage = "en"\n'
+                    'language = "en"\n'
                     'title = "Title"\nid = "P"\nschema = "quillframe_project_v1_0"\n',
                     encoding="utf-8",
                 )
@@ -798,14 +797,14 @@ class ProjectContractSliceATests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="qf-contract-core-failure-cleanup-") as td:
             root = Path(td) / "novel"
             competitor = root / "competitor.txt"
-            original_create = launch_module.QuillframeStore.create_project
+            original_create = launch_module.QuillframeStore.create_native_project
 
-            def create_then_fail(store, project_id, title, language):
-                result = original_create(store, project_id, title, language)
+            def create_then_fail(store, project_id, title, language, **kwargs):
+                result = original_create(store, project_id, title, language, **kwargs)
                 competitor.write_bytes(b"competitor")
                 raise OSError("injected failure after core initialization")
 
-            with patch.object(launch_module.QuillframeStore, "create_project", new=create_then_fail):
+            with patch.object(launch_module.QuillframeStore, "create_native_project", new=create_then_fail):
                 with self.assertRaises(LaunchError):
                     launch_project(
                         project=root,
@@ -1020,6 +1019,112 @@ class ProjectContractSliceATests(unittest.TestCase):
             os.symlink(outside, policy_path)
             with self.assertRaises(ValueError):
                 policy_from_project(root)
+
+
+class NativeNovelStorageTests(unittest.TestCase):
+    def test_native_create_never_follows_a_registry_symlink(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "store"
+            root.mkdir()
+            outside = Path(td) / "outside.sqlite"
+            sentinel = b"do not touch this file"
+            outside.write_bytes(sentinel)
+            (root / "quillframe.sqlite").symlink_to(outside)
+            with self.assertRaises(OSError):
+                QuillframeStore(root).create_native_project("P", "Novel")
+            self.assertEqual(outside.read_bytes(), sentinel)
+            self.assertFalse((root / "projects" / "P").exists())
+
+    def test_open_rejects_incomplete_schema_without_recreating_missing_tables(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            write_manifest(root, id="P", title="Novel", language="en")
+            store = QuillframeStore(root / ".quillframe" / "data")
+            loc = store.create_native_project("P", "Novel", "en")
+            with store.open_project("P") as conn:
+                conn.execute("DROP TABLE publication_collection_requests")
+                conn.commit()
+            with self.assertRaises(LaunchError) as rejected:
+                launch_project(project=root, new=False, profile="cloud", project_id=None, title=None, language="en", port=0, no_browser=True, serve=False, interactive=False)
+            self.assertEqual(rejected.exception.code, "project_state_invalid")
+            conn = sqlite3.connect(loc.database)
+            try:
+                self.assertIsNone(conn.execute("SELECT 1 FROM sqlite_master WHERE name='publication_collection_requests'").fetchone())
+            finally:
+                conn.close()
+
+    def test_native_create_is_exclusive_and_seed_is_atomic(self):
+        with tempfile.TemporaryDirectory() as td:
+            store = QuillframeStore(Path(td))
+            observed = []
+
+            def inspect(conn):
+                observed.append((conn.in_transaction, conn.execute("SELECT COUNT(*) FROM project_identity").fetchone()[0], conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]))
+
+            store.create_native_project("P", "First", "zh-CN", before_commit=inspect)
+            self.assertEqual(observed, [(True, 1, 1)])
+            before = business_rows(Path(td), "P")
+            with self.assertRaises(FileExistsError):
+                store.create_native_project("P", "Overwritten", "en")
+            self.assertEqual(business_rows(Path(td), "P"), before)
+            with store.open_project("P") as conn:
+                self.assertEqual(tuple(conn.execute("SELECT title,language FROM project_identity").fetchone()), ("First", "zh-CN"))
+
+    def test_failed_native_seed_rolls_back_identity_and_manuscript(self):
+        with tempfile.TemporaryDirectory() as td:
+            store = QuillframeStore(Path(td))
+
+            def fail(_conn):
+                raise RuntimeError("before commit")
+
+            with self.assertRaisesRegex(RuntimeError, "before commit"):
+                store.create_native_project("P", "Fixture", before_commit=fail)
+            with store.open_project("P") as conn:
+                for table in ("project_identity", "story_nodes", "documents"):
+                    self.assertEqual(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0], 0)
+            self.assertEqual(store.list_projects(), [])
+            # An incomplete creation is preserved and cannot become an upsert.
+            with self.assertRaises(FileExistsError):
+                store.create_native_project("P", "Retry")
+
+    def test_open_accepts_current_multichapter_titles_and_never_reseeds(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            write_manifest(root, id="P", title="Novel", language="en")
+            data = root / ".quillframe" / "data"
+            store = QuillframeStore(data)
+            store.create_native_project("P", "Novel", "en")
+            with store.open_project("P") as conn:
+                conn.execute("UPDATE story_nodes SET title='A revised chapter title',metadata_json='{}' WHERE node_id='CH001'")
+                conn.execute("UPDATE documents SET title='Chapter one' WHERE document_id='DOC-CH001'")
+                conn.execute("INSERT INTO story_nodes(node_id,kind,ordinal,title,metadata_json) VALUES('CH002','chapter',2,'Next','{}')")
+                conn.execute("INSERT INTO documents(document_id,story_node_id,document_kind,title,created_at) VALUES('DOC-CH002','CH002','manuscript','Next','2026-01-01T00:00:00+00:00')")
+                conn.commit()
+            before = business_rows(data, "P")
+            product = launch_project(project=root, new=False, profile="cloud", project_id=None, title=None, language="en", port=0, no_browser=True, serve=False, interactive=False)
+            product.close()
+            self.assertEqual(business_rows(data, "P"), before)
+            bundle = store.backup_project("P")
+            self.assertTrue(store.verify_backup(bundle)["valid"])
+            restored = QuillframeStore(Path(td) / "restored")
+            restored.restore_project(bundle)
+            self.assertEqual(business_rows(restored.root, "P"), before)
+
+    def test_manuscript_creation_validates_chapter_and_rolls_back_index_failure(self):
+        with tempfile.TemporaryDirectory() as td:
+            store = QuillframeStore(Path(td))
+            store.create_native_project("P", "Novel")
+            for target in (None, "missing"):
+                with self.subTest(target=target), self.assertRaises(ValueError):
+                    store.create_document("P", "INVALID", "Invalid", story_node_id=target)
+            with store.open_project("P") as conn:
+                conn.execute("INSERT INTO story_nodes(node_id,kind,ordinal,title,metadata_json) VALUES('CH002','chapter',2,'Next','{}')")
+                conn.commit()
+            with patch.object(store, "index_search", side_effect=RuntimeError("index failed")):
+                with self.assertRaisesRegex(RuntimeError, "index failed"):
+                    store.create_document("P", "DOC-CH002", "Next", story_node_id="CH002")
+            with store.open_project("P") as conn:
+                self.assertIsNone(conn.execute("SELECT 1 FROM documents WHERE document_id='DOC-CH002'").fetchone())
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@
 
 如果 Claude Code 正在操作某个下游小说项目：
 
-- 先读取项目五键 native manifest、CH001 context、fingerprint 与 `.quillframe/data` boundary；
+- 先读取项目的四键原生 manifest、顶层含 `scope: "novel"` 的上下文、fingerprint 与 `.quillframe/data` 边界；`CH001` 只是初始章节；
 - 通过 native Project contract 解析项目权威；
 - 项目事实留在项目仓库；
 - 本 Framework 仓库只拥有通用机制。

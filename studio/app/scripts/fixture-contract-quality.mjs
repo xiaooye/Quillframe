@@ -18,14 +18,13 @@ try {
   process.exit(1);
 }
 
-for (const marker of ["CH-012", "SCN-012", "RUN-SYNTHETIC-012"]) {
-  check(!source.includes(marker), `historical scene marker is forbidden: ${marker}`);
-}
+const identity = (value) => typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value);
 check(fixture.schema === "quillframe_studio_scene_workspace_fixture_v1", "fixture schema must be the current scene workspace contract");
 check(fixture.synthetic === true && fixture.authority === false, "fixture must remain synthetic and non-authoritative");
-check(fixture.chapter?.id === "CH001", "fixture chapter must be exactly CH001");
-check(typeof fixture.scene?.id === "string" && /^SCN-001-[0-9]{2}$/.test(fixture.scene.id), "fixture scene must use the current CH001 scene identity");
-check(fixture.runtime?.latest_run_id === "RUN-SYNTHETIC-001", "fixture runtime run must be bound to CH001");
+check(identity(fixture.chapter?.id), "fixture chapter must have an explicit valid identity");
+check(identity(fixture.scene?.id), "fixture scene must have an explicit valid identity");
+check(identity(fixture.runtime?.latest_run_id), "fixture runtime must have an explicit valid run identity");
+check(fixture.scene?.accepted_canon === false && fixture.runtime?.execution_evidence_is_canon === false, "synthetic fixture must not claim Canon authority");
 
 if (failures.length) {
   for (const failure of failures) console.error(`fixture-contract-quality: FAIL: ${failure}`);
@@ -35,7 +34,8 @@ if (failures.length) {
 console.log(JSON.stringify({
   schema: "quillframe_studio_scene_fixture_quality_v1",
   status: "pass",
-  chapter_scope: "CH001",
+  scope: "novel",
+  chapter_id: fixture.chapter.id,
   scene_id: fixture.scene.id,
   authority: false,
 }, null, 2));

@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_model_contract_registry_v1",
-  "version": "4",
+  "version": "5",
   "principle": "Character and scene causality are semantic simulation work. Private character state may justify a separate semantic role, but schemas stay thin: deterministic runtime binds identity, visibility, story-time eligibility, provenance and evidence references; models decide motivation, action, causal collision and dramatic usefulness.",
   "contracts": {
     "character.action_propose": {
@@ -162,8 +162,11 @@
       "purpose": "Resolve competing character actions against the bounded scene/world situation and return a compact causal interaction trace. This is simulation evidence, not an outline mutation, Realization Sheet or Canon.",
       "rubric": [
         "Treat supplied character proposals as competing agendas, not instructions that must all succeed.",
+        "Each character_action_evidence.bounded_input is the actual bounded input used for that action judgment, with its input and result fingerprints. Use its eligible observations and memories to understand causal premises and knowledge acquisition, not merely the evidence IDs in the action. An input marked input_is_proposed_cast remains a proposed initial state, never accepted Canon. This private evidence must not be serialized into final narration.",
         "Resolve collisions through the supplied world state, timing, information asymmetry, relationships, resources and consequences rather than narrator fiat.",
+        "For authorized original DRAFT/REVISE work, develop observable consequences from the proposed starting circumstances and fill unspecified connecting details when compatible with all supplied hard bounds and accepted facts. Distinguish new fiction proposals from claims about existing Canon. Do not invent a contradiction or change established evidence to achieve a desired beat; later choices need visible triggers and plausible acquisition of any new knowledge, not forced success of the plan.",
         "Preserve active-plan hard bounds when supplied, but route impossible or newly contradicted assumptions back to the appropriate semantic owner instead of smoothing them over.",
+        "Use repair_routes only for owner repairs that block the next writing stage, such as incompatible evidence or a necessary premise that cannot be resolved within the supplied hard bounds. A nonempty repair_routes stops this production run. Ordinary unanswered questions, deliberate suspense and consequences left open belong in unresolved_pressures and do not by themselves require repair. Empty repair_routes is not a required verdict: keep genuine blockers even when the plan asks for an outcome.",
         "Prefer events that change options, commitments, information, relationships, danger, leverage or cost. Reader pressure should emerge from causal interaction rather than a mandatory beat checklist.",
         "Return the minimum causal interaction trace a capable Writer or Planner needs. Do not force every collision, pressure, reward and state change into a separate JSON slot, and do not write final prose."
       ],

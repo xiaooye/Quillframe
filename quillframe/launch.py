@@ -32,7 +32,7 @@ from studio.local_server import DEFAULT_DIST, StudioServer, create_server
 
 PROJECT_SCHEMA = "quillframe_project_v1_0"
 LAUNCH_SCHEMA = "quillframe_launch_receipt_v1"
-CHAPTER_SCOPE = "CH001"
+PROJECT_SCOPE = "novel"
 NEW_RESERVATION_NAME = ".quillframe-new.lock"
 _FileToken = tuple[int, int, int]
 
@@ -464,14 +464,12 @@ def _create_project(root: Path, *, project_id: str, title: str, language: str) -
         "id": project_id,
         "title": title,
         "language": language,
-        "chapter_scope": CHAPTER_SCOPE,
     }
     toml = (
         f"schema = {json.dumps(manifest['schema'])}\n"
         f"id = {json.dumps(manifest['id'], ensure_ascii=False)}\n"
         f"title = {json.dumps(manifest['title'], ensure_ascii=False)}\n"
         f"language = {json.dumps(manifest['language'], ensure_ascii=False)}\n"
-        f"chapter_scope = {json.dumps(manifest['chapter_scope'])}\n"
     )
     manifest_token: _FileToken | None = None
     try:
@@ -632,38 +630,11 @@ def _validate_existing_project_identity(
         raise LaunchError("project_state_invalid", f"unable to read current Project state: {exc}") from exc
 
 
-def _seed_ch001(conn: sqlite3.Connection, manifest: dict[str, Any]) -> None:
-    stamp = now_iso()
-    conn.execute(
-        """INSERT OR IGNORE INTO story_nodes(
-        node_id,parent_id,kind,ordinal,title,pov_character_id,location_id,metadata_json
-        ) VALUES(?,NULL,'chapter',1,?,NULL,NULL,'{}')""",
-        (CHAPTER_SCOPE, manifest["title"]),
-    )
-    conn.execute(
-        """INSERT OR IGNORE INTO documents(
-        document_id,story_node_id,document_kind,title,created_at
-        ) VALUES(?,?,'manuscript',?,?)""",
-        (f"DOC-{CHAPTER_SCOPE}", CHAPTER_SCOPE, manifest["title"], stamp),
-    )
-
-
-def _assert_required_ch001(conn: sqlite3.Connection, manifest: dict[str, Any]) -> None:
-    """Validate the creation-time CH001 projection without repairing it."""
-    nodes = conn.execute(
-        """SELECT parent_id,kind,ordinal,title,pov_character_id,location_id,metadata_json
-        FROM story_nodes WHERE node_id=?""",
-        (CHAPTER_SCOPE,),
-    ).fetchall()
-    documents = conn.execute(
-        """SELECT story_node_id,document_kind,title
-        FROM documents WHERE document_id=?""",
-        (f"DOC-{CHAPTER_SCOPE}",),
-    ).fetchall()
-    if len(nodes) != 1 or tuple(nodes[0]) != (None, "chapter", 1, manifest["title"], None, None, "{}"):
-        raise LaunchError("project_state_invalid", "existing Project is missing the exact canonical CH001 story node")
-    if len(documents) != 1 or tuple(documents[0]) != (CHAPTER_SCOPE, "manuscript", manifest["title"]):
-        raise LaunchError("project_state_invalid", "existing Project is missing the exact canonical CH001 document")
+def _assert_native_novel(conn: sqlite3.Connection) -> None:
+    try:
+        QuillframeStore.assert_native_project(conn)
+    except ProjectStateError as exc:
+        raise LaunchError("project_state_invalid", str(exc)) from exc
 
 
 def _ensure_local_core(
@@ -712,7 +683,7 @@ def _ensure_local_core(
                 raise LaunchError("project_state_identity_mismatch", str(exc)) from exc
             except ProjectStateError as exc:
                 raise LaunchError("project_state_invalid", str(exc)) from exc
-            _assert_required_ch001(conn, manifest)
+            _assert_native_novel(conn)
             _assert_context_current(root, context)
             _assert_database_guard_current(data, guard)
             if manifest_guard is not None:
@@ -740,28 +711,29 @@ def _ensure_local_core(
             _assert_manifest_guard_current(manifest_guard)
         _assert_reservation_current(reservation)
         try:
-            try:
-                store.create_project(manifest["id"], manifest["title"], manifest["language"])
-            finally:
-                if created is not None:
-                    _record_owned_core_artifacts(root, manifest["id"], created)
-            with store.open_project(manifest["id"]) as conn:
-                _assert_context_current(root, context)
-                if manifest_guard is not None:
-                    _assert_manifest_guard_current(manifest_guard)
-                _assert_reservation_current(reservation)
-                _seed_ch001(conn, manifest)
+            def before_commit(conn: sqlite3.Connection) -> None:
                 _assert_context_current(root, context)
                 if manifest_guard is not None:
                     _assert_manifest_guard_current(manifest_guard)
                 _assert_reservation_current(reservation)
                 _before_new_commit(conn)
                 _assert_reservation_current(reservation)
-                conn.commit()
-                _assert_reservation_current(reservation)
                 if manifest_guard is not None:
                     _assert_manifest_guard_current(manifest_guard)
                 _assert_context_current(root, context)
+
+            try:
+                store.create_native_project(
+                    manifest["id"], manifest["title"], manifest["language"],
+                    before_commit=before_commit,
+                )
+            finally:
+                if created is not None:
+                    _record_owned_core_artifacts(root, manifest["id"], created)
+            _assert_reservation_current(reservation)
+            if manifest_guard is not None:
+                _assert_manifest_guard_current(manifest_guard)
+            _assert_context_current(root, context)
         except LaunchError:
             raise
         except Exception as exc:
@@ -933,9 +905,9 @@ def self_test() -> dict[str, Any]:
             legacy.unlink()
             checks = {
                 "native_context": context["context_schema"] == "quillframe_project_context_v1_0",
-                "exact_five_key_manifest": set(context["manifest"]) == {"schema", "id", "title", "language", "chapter_scope"},
+                "exact_four_key_manifest": set(context["manifest"]) == {"schema", "id", "title", "language"},
                 "project_schema": context["manifest"]["schema"] == PROJECT_SCHEMA,
-                "chapter_scope": context["chapter_scope"] == CHAPTER_SCOPE,
+                "scope": context["scope"] == PROJECT_SCOPE,
                 "data_boundary": context["data_root"].endswith("/.quillframe/data"),
                 "legacy_metadata_rejected": legacy_rejected,
                 "no_lock_created": not (root / "quillframe.lock.json").exists(),
@@ -945,7 +917,7 @@ def self_test() -> dict[str, Any]:
                 "launch_contract": "PASS" if all(checks.values()) else "FAIL",
                 "checks": checks,
                 "project_schema": PROJECT_SCHEMA,
-                "chapter_scope": CHAPTER_SCOPE,
+                "scope": PROJECT_SCOPE,
                 "context_schema": context["context_schema"],
             }
         finally:

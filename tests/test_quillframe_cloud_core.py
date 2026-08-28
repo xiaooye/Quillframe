@@ -83,7 +83,7 @@ class CloudCoreBoundaryTests(unittest.TestCase):
         claims = {
             "schema": "quillframe_core_proof_v1", "key_id": "current", "method": "POST", "path": path,
             "body_sha256": "sha256:" + hashlib.sha256(body).hexdigest(), "workspace_id": "workspace_test",
-            "session_id": "session_test", "project_id": project_id, "chapter_scope": "CH001",
+            "session_id": "session_test", "project_id": project_id, "scope": "novel",
             "issued_at": now, "expires_at": now + 30_000, "nonce": nonce,
             **overrides,
         }
@@ -111,7 +111,7 @@ class CloudCoreBoundaryTests(unittest.TestCase):
             self.assertEqual(response.headers["Cache-Control"], "no-store")
             self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")
         self.assertEqual(payload["schema"], "quillframe_cloud_core_health_v1")
-        self.assertEqual(payload["chapter_scope"], "CH001")
+        self.assertEqual(payload["scope"], "novel")
         self.assertIs(payload["authority"], False)
 
     def test_native_backup_route_returns_exact_verified_receipt_for_c3a_bundle(self):
@@ -124,13 +124,13 @@ class CloudCoreBoundaryTests(unittest.TestCase):
             payload = json.load(response)
         self.assertEqual(
             set(payload),
-            {"schema", "bundle_schema", "body_fingerprint", "bundle_fingerprint", "project_id", "chapter_scope", "database_fingerprint", "database_bytes", "blob_count", "byte_size", "verified", "authority"},
+            {"schema", "bundle_schema", "body_fingerprint", "bundle_fingerprint", "project_id", "scope", "database_fingerprint", "database_bytes", "blob_count", "byte_size", "verified", "authority"},
         )
         expected = "sha256:" + hashlib.sha256(bundle).hexdigest()
         self.assertEqual(payload["body_fingerprint"], expected)
         self.assertEqual(payload["bundle_fingerprint"], expected)
         self.assertEqual(payload["project_id"], "P1")
-        self.assertEqual(payload["chapter_scope"], "CH001")
+        self.assertEqual(payload["scope"], "novel")
         self.assertIs(payload["verified"], True)
         self.assertIs(payload["authority"], False)
 

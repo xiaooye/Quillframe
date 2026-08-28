@@ -4,6 +4,7 @@ import { Route, Router } from "@solidjs/router";
 import { AppShell } from "./AppShell";
 import { StudioFailureBoundary, StudioNotFound, StudioRouteLoading, StudioSkipLink } from "./StudioResilience";
 import { bridgeTransportAvailable } from "./bridge";
+import { HostedSessionBoundary } from "./HostedSessionBoundary";
 import { I18nProvider } from "./i18n";
 import { StudioProvider } from "./studio";
 import "./styles/index.css";
@@ -67,33 +68,35 @@ void configureOfflineShell().catch(() => undefined);
 render(
   () => (
     <I18nProvider>
-      <StudioProvider>
-        <StudioFailureBoundary>
-          <StudioSkipLink />
-          <Router root={StudioShellRoot}>
-            <Route path="/" component={Desk} />
-            <Route path="/start" component={Start} />
-            <Route path="/project" component={Project} />
-            <Route path="/manuscript" component={Manuscript} />
-            <Route path="/plan" component={Plan} />
-            <Route path="/story" component={Story} />
-            <Route path="/review" component={Review} />
-            <Route path="/research" component={Research} />
-            <Route path="/learning" component={Learning} />
-            <Route path="/publication" component={Publication} />
-            <Route path="/architecture" component={Architecture} />
-            <Route path="/workspace" component={Workspace} />
-            <Route path="/agents" component={Agents} />
-            <Route path="/runtime" component={RuntimeRoute} />
-            <Route path="/context" component={ContextRoute} />
-            <Route path="/capabilities" component={Capabilities} />
-            <Route path="/semantic" component={Semantic} />
-            <Route path="/diagnostics" component={Diagnostics} />
-            <Route path="/settings" component={Settings} />
-            <Route path="*404" component={StudioNotFound} />
-          </Router>
-        </StudioFailureBoundary>
-      </StudioProvider>
+      <StudioFailureBoundary>
+        <HostedSessionBoundary>
+          <StudioProvider>
+            <StudioSkipLink />
+            <Router root={StudioShellRoot}>
+              <Route path="/" component={Desk} />
+              <Route path="/start" component={Start} />
+              <Route path="/project" component={Project} />
+              <Route path="/manuscript" component={Manuscript} />
+              <Route path="/plan" component={Plan} />
+              <Route path="/story" component={Story} />
+              <Route path="/review" component={Review} />
+              <Route path="/research" component={Research} />
+              <Route path="/learning" component={Learning} />
+              <Route path="/publication" component={Publication} />
+              <Route path="/architecture" component={Architecture} />
+              <Route path="/workspace" component={Workspace} />
+              <Route path="/agents" component={Agents} />
+              <Route path="/runtime" component={RuntimeRoute} />
+              <Route path="/context" component={ContextRoute} />
+              <Route path="/capabilities" component={Capabilities} />
+              <Route path="/semantic" component={Semantic} />
+              <Route path="/diagnostics" component={Diagnostics} />
+              <Route path="/settings" component={Settings} />
+              <Route path="*404" component={StudioNotFound} />
+            </Router>
+          </StudioProvider>
+        </HostedSessionBoundary>
+      </StudioFailureBoundary>
     </I18nProvider>
   ),
   root,

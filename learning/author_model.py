@@ -19,10 +19,9 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from learning_store import LearningStore
-from promotion_gate import SCHEMA as PROMOTION_CANDIDATE_SCHEMA
-from promotion_gate import _semantic_binding as _promotion_semantic_binding
-from promotion_gate import evaluate as evaluate_promotion_candidate
+from learning.learning_store import LearningStore
+from learning.promotion_gate import SCHEMA as PROMOTION_CANDIDATE_SCHEMA
+from learning.promotion_gate import evaluate as evaluate_promotion_candidate
 
 SCHEMA = "quillframe_author_model_v1"
 CAPTURE_SCHEMA = "quillframe_feedback_capture_v1"
@@ -174,9 +173,10 @@ def hypothesis_index(store: LearningStore, *, project_id: str | None, limit: int
         rows = conn.execute(
             """SELECT hypothesis_id,subject_scope,project_id,dimension,mechanism,state,applicability_json,version
                FROM preference_hypotheses
-               WHERE subject_scope IN ('one_off','project','user_taste')
+               WHERE subject_scope='user_taste' OR
+                     (subject_scope IN ('one_off','project') AND project_id IS ?)
                ORDER BY updated_at DESC,hypothesis_id ASC LIMIT ?""",
-            (limit,),
+            (project_id, limit),
         ).fetchall()
     out = []
     for row in rows:
@@ -196,7 +196,7 @@ def hypothesis_index(store: LearningStore, *, project_id: str | None, limit: int
 
 
 def _assert_target_compatible(target: dict[str, Any], *, project_id: str | None, action: str, scope: str) -> None:
-    if target["subject_scope"] == "project" and target["project_id"] != project_id:
+    if target["subject_scope"] in {"project", "one_off"} and target["project_id"] != project_id:
         raise ValueError("target hypothesis belongs to another Project")
     if action == "strengthen" and target["subject_scope"] != scope:
         raise ValueError("strengthen requires identical hypothesis scope")
@@ -237,6 +237,10 @@ def _updated_existing(
     applicability["avoid_behavior"] = interpretation["avoid_behavior"]
     applicability["exceptions"] = interpretation["exceptions"]
     desired_state = state or target["state"]
+    if fresh_evidence and state is None and target["state"] == "active":
+        # A semantic update is a new proposal, not permission to rewrite an
+        # already-authorized preference used by future production contexts.
+        desired_state = "candidate"
     desired_dimension = interpretation["dimension"] if interpretation["hypothesis_action"] == "strengthen" else target["dimension"]
     desired_statement = interpretation["statement"] if interpretation["hypothesis_action"] == "strengthen" else target["statement"]
     desired_mechanism = interpretation["mechanism"] if interpretation["hypothesis_action"] == "strengthen" else target["mechanism"]
@@ -355,6 +359,13 @@ def _recover_duplicate_effect(
 
 
 def capture_feedback(store: LearningStore, request: Any) -> dict[str, Any]:
+    # Evidence and all hypothesis effects form one Learning-domain transaction.
+    # Runtime consumption is separately recoverable and is not part of this DB.
+    with store.transaction() as conn:
+        return _capture_feedback(LearningStore(store.db_path, connection=conn), request)
+
+
+def _capture_feedback(store: LearningStore, request: Any) -> dict[str, Any]:
     if not isinstance(request, dict):
         raise ValueError("capture request must be object")
     if request.get("schema") not in {None, CAPTURE_SCHEMA}:
@@ -505,6 +516,7 @@ def project_author_model(store: LearningStore, *, project_id: str | None, explic
 
 
 def self_test(path: Path | None = None) -> dict[str, Any]:
+    from learning.promotion_gate import _semantic_binding as _promotion_semantic_binding
     db = path or Path(tempfile.gettempdir()) / "quillframe-author-model-selftest.db"
     for p in (db, Path(str(db) + "-wal"), Path(str(db) + "-shm")):
         if p.exists(): p.unlink()
@@ -514,42 +526,42 @@ def self_test(path: Path | None = None) -> dict[str, Any]:
         "activation": {"project_preference_write_authorized": False, "durable_user_taste_write_authorized": False},
     }
     create_request = {**base, "feedback_ref": "review:1", "evidence_id": "PE-STABLE-1", "interpretation": {
-        "scope_candidate": "project", "dimension": "dialogue", "mechanism": "relationship-shaped dialogue", "statement": "Dialogue should carry relationship asymmetry.",
+        "capture_decision": "capture", "scope_candidate": "project", "dimension": "dialogue", "mechanism": "relationship-shaped dialogue", "statement": "Dialogue should carry relationship asymmetry.",
         "polarity": "negative", "confidence": 0.9, "evidence_source": "human_review", "hypothesis_action": "create",
     }}
     create = capture_feedback(store, create_request)
     crash_retry = capture_feedback(store, create_request)
     distinct = capture_feedback(store, {**base, "feedback_ref": "review:2", "evidence_id": "PE-STABLE-2", "interpretation": {
-        "scope_candidate": "project", "dimension": "dialogue", "mechanism": "relationship-shaped dialogue", "statement": "Dialogue should carry relationship asymmetry.",
+        "capture_decision": "capture", "scope_candidate": "project", "dimension": "dialogue", "mechanism": "relationship-shaped dialogue", "statement": "Dialogue should carry relationship asymmetry.",
         "polarity": "negative", "confidence": 0.95, "evidence_source": "comparison", "hypothesis_action": "strengthen", "target_hypothesis_id": create["hypothesis_id"],
     }})
     merged = _load_hypothesis(store, create["hypothesis_id"]); assert merged is not None
     contest = capture_feedback(store, {**base, "feedback_ref": "review:3", "evidence_id": "PE-STABLE-3", "interpretation": {
-        "scope_candidate": "project", "dimension": "dialogue", "mechanism": "opening dialogue compression",
+        "capture_decision": "capture", "scope_candidate": "project", "dimension": "dialogue", "mechanism": "opening dialogue compression",
         "statement": "In openings, charm and conflict may outrank detailed professional explanation.", "polarity": "negative", "confidence": 0.9,
         "evidence_source": "correction", "hypothesis_action": "contest", "target_hypothesis_id": create["hypothesis_id"], "applicability": {"scene_types": ["opening"]},
     }})
 
     manual_active = capture_feedback(store, {**base, "feedback_ref": "rule:active", "evidence_id": "PE-ACTIVE", "activation": {"project_preference_write_authorized": True, "durable_user_taste_write_authorized": False}, "interpretation": {
-        "scope_candidate": "project", "dimension": "paragraph_rhythm", "mechanism": "functional paragraphing", "statement": "Prefer functional paragraphs.",
+        "capture_decision": "capture", "scope_candidate": "project", "dimension": "paragraph_rhythm", "mechanism": "functional paragraphing", "statement": "Prefer functional paragraphs.",
         "polarity": "positive", "confidence": 1.0, "evidence_source": "explicit_rule", "hypothesis_action": "create",
     }})
     projection = project_author_model(store, project_id="P1", explicit_intent=[{"statement":"Current request wins."}])
     selected = project_author_model(store, project_id="P1", selected_hypothesis_ids=[manual_active["hypothesis_id"]])
 
     user_candidate = capture_feedback(store, {**base, "feedback_ref": "review:user", "evidence_id": "PE-USER", "interpretation": {
-        "scope_candidate": "user_taste", "dimension": "language", "mechanism": "avoid heavy code-switching", "statement": "Prefer less code-switching in Chinese fiction.",
+        "capture_decision": "capture", "scope_candidate": "user_taste", "dimension": "language", "mechanism": "avoid heavy code-switching", "statement": "Prefer less code-switching in Chinese fiction.",
         "polarity": "negative", "confidence": 0.9, "evidence_source": "explicit_rule", "hypothesis_action": "create",
     }})
     general_candidate = capture_feedback(store, {**base, "feedback_ref": "review:gc", "evidence_id": "PE-GC", "interpretation": {
-        "scope_candidate": "general_craft", "dimension": "detail", "mechanism": "professional detail compression", "statement": "Claimed universal rule remains a candidate only.",
+        "capture_decision": "capture", "scope_candidate": "general_craft", "dimension": "detail", "mechanism": "professional detail compression", "statement": "Claimed universal rule remains a candidate only.",
         "polarity": "negative", "confidence": 0.8, "evidence_source": "human_review", "hypothesis_action": "create",
     }})
 
     user_write_only = capture_feedback(store, {**base, "feedback_ref": "review:user-write-only", "evidence_id": "PE-USER-WRITE-ONLY", "activation": {
         "project_preference_write_authorized": False, "durable_user_taste_write_authorized": True,
     }, "interpretation": {
-        "scope_candidate": "user_taste", "dimension": "language", "mechanism": "avoid dense code switching",
+        "capture_decision": "capture", "scope_candidate": "user_taste", "dimension": "language", "mechanism": "avoid dense code switching",
         "statement": "Prefer less dense code switching.", "polarity": "negative", "confidence": 0.9,
         "evidence_source": "explicit_rule", "hypothesis_action": "create",
     }})
@@ -560,7 +572,7 @@ def self_test(path: Path | None = None) -> dict[str, Any]:
     gated = capture_feedback(store, {**base, "feedback_ref": "review:gate", "evidence_id": "PE-GATE", "activation": {
         "project_preference_write_authorized": False, "durable_user_taste_write_authorized": True, "user_taste_promotion_candidate": candidate,
     }, "interpretation": {
-        "scope_candidate": "user_taste", "dimension": "narration", "mechanism": "low narrator commentary", "statement": "Prefer lower narrator commentary.",
+        "capture_decision": "capture", "scope_candidate": "user_taste", "dimension": "narration", "mechanism": "low narrator commentary", "statement": "Prefer lower narrator commentary.",
         "polarity": "negative", "confidence": 0.9, "evidence_source": "explicit_rule", "hypothesis_action": "create",
     }})
 

@@ -32,6 +32,12 @@ def _type(v:Any,t:str)->bool:return {"object":isinstance(v,dict),"array":isinsta
 def validate_typed_value(v:Any,s:Any,path:str="$")->list[str]:
     if not isinstance(s,dict) or not s:return []
     e=[]
+    if "oneOf" in s:
+        branches=s["oneOf"]
+        if not isinstance(branches,list) or not branches or any(not isinstance(branch,dict) for branch in branches):
+            e.append(f"{path}: invalid oneOf contract")
+        elif sum(not validate_typed_value(v,branch,path) for branch in branches)!=1:
+            e.append(f"{path}: must match exactly one oneOf alternative")
     if "enum" in s and v not in s["enum"]:e.append(f"{path}: value not in enum")
     t=s.get("type")
     if t is not None:

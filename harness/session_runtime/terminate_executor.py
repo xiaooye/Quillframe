@@ -347,7 +347,7 @@ def self_test() -> int:
         root = Path(tmp)
         (root / ".quillframe").mkdir()
         (root / "quillframe.toml").write_text(
-            'schema="quillframe_project_v1_0"\nid="BOOK-STOP"\ntitle="Stop"\nlanguage="en"\nchapter_scope="CH001"\n', encoding="utf-8")
+            'schema="quillframe_project_v1_0"\nid="BOOK-STOP"\ntitle="Stop"\nlanguage="en"\n', encoding="utf-8")
 
         db = root / ".quillframe" / "runtime.db"
         cp = ControlPlane(db); cp.init()

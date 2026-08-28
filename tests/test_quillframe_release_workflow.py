@@ -4,6 +4,8 @@ import tomllib
 import unittest
 from pathlib import Path
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "quillframe-release-bundle.yml"
@@ -34,6 +36,30 @@ class ReleaseWorkflowContractTests(unittest.TestCase):
 
 
 class DistributionWorkflowContractTests(unittest.TestCase):
+    def test_dependency_updates_use_the_shared_workspace_lockfile_root(self):
+        workspace_path = ROOT / "pnpm-workspace.yaml"
+        workspace = yaml.safe_load(workspace_path.read_text(encoding="utf-8"))
+        lockfile = yaml.safe_load((workspace_path.parent / "pnpm-lock.yaml").read_text(encoding="utf-8"))
+        dependabot = yaml.safe_load((ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8"))
+        update_roots = [
+            (ROOT / directory.lstrip("/")).resolve()
+            for update in dependabot["updates"]
+            if update["package-ecosystem"] == "npm"
+            for directory in (
+                update["directories"] if "directories" in update else [update["directory"]]
+            )
+        ]
+
+        self.assertEqual(
+            update_roots,
+            [workspace_path.parent],
+            "Dependency updates must run once from the shared lockfile root, not individual packages.",
+        )
+        for package in workspace["packages"]:
+            with self.subTest(package=package):
+                self.assertTrue((update_roots[0] / package / "package.json").is_file())
+                self.assertIn(package, lockfile["importers"])
+
     def test_installed_wheel_smoke_follows_studio_build_in_product_job(self):
         text = CI_WORKFLOW.read_text(encoding="utf-8")
         product = text.split("\n  product:\n", 1)[1]

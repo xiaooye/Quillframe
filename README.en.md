@@ -57,7 +57,7 @@ quillframe launch ../my-novel \
   --language en
 ```
 
-The command creates the exact native five-key manifest, fixes the acceptance scope to CH001, keeps runtime state under `.quillframe/data`, and binds Studio to loopback only. Reopen an existing Project with `quillframe launch ../my-novel`. If you also use Claude Code or another coding agent, start that host from the Project directory; no repository hook or host-specific configuration is part of Quillframe correctness. The host runs the agent, while Quillframe retains novel and Canon authority.
+The command creates the exact native four-key manifest (`schema`, `id`, `title`, `language`) for a complete novel, exposes top-level `scope: "novel"` in Project context, and seeds `CH001` with manuscript `DOC-CH001` as the initial chapter. Runtime state stays under `.quillframe/data`, and Studio binds to loopback only. Reopen an existing Project with `quillframe launch ../my-novel`; opening does not migrate, repair or reseed old development state. If you also use Claude Code or another coding agent, start that host from the Project directory; no repository hook or host-specific configuration is part of Quillframe correctness. The host runs the agent, while Quillframe retains novel and Canon authority.
 
 The authoring/inspection shell can work without a model connection. When inference is needed, ordinary setup is deliberately small:
 
@@ -178,7 +178,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [Roadmap](ROADMAP.md), [Security](SECURI
 
 Quillframe is on the **1.0 prerelease line and actively developed**. Current `main` includes the embeddable Python façade, Model Runtime, Agent Runtime, fiction Core/authority contracts, SQLite persistence, typed Host Bridge, SolidJS Studio, product site, publication pipeline, and Starlight documentation. Normal CI is deterministic and does not silently call a configured paid/live Model API.
 
-A fiction Project identifies itself only through the native five-key `quillframe.toml`, CH001 context, manifest fingerprint, and `.quillframe/data` boundary. Framework commit/bundle provenance is recorded independently by the host or release process; it is not Project authority or a consumer lock.
+A fiction Project identifies itself only through the native four-key `quillframe.toml`, context with top-level `scope: "novel"`, manifest fingerprint, and `.quillframe/data` boundary. `CH001` is the initial chapter; later chapters use the same contract with real chapter relationships. Framework commit/bundle provenance is recorded independently by the host or release process; it is not Project authority or a consumer lock. This development contract does not certify a full-novel live-model run or cloud release readiness.
 
 ## Security & license
 

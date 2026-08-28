@@ -56,7 +56,7 @@ Story Loom still owns Quillframe product semantics. WeiUI owns generic CSS/token
 | Session / Run identity | navigation, history, resume affordances | operational identity |
 | Control Plane | event/handoff/result/consume lineage | operational evidence |
 | `quillframe_host_capabilities_v1` | integrations/capability health | capability is not authority |
-| `quillframe_project_v1_0` + `quillframe_project_context_v1_0` | Project Hub native five-key manifest, CH001, fingerprint, and `.quillframe/data` boundary | browser projection only; `authority=false` |
+| `quillframe_project_v1_0` + `quillframe_project_context_v1_0` | Project Hub native four-key manifest, top-level `scope: "novel"`, fingerprint, and `.quillframe/data` boundary; `CH001` is only the initial chapter | browser projection only; `authority=false` |
 | semantic contract catalog | Semantic Pack Inspector labels and deep links | contract metadata |
 | settlement receipts | settlement review and failure explanation | settlement semantics remain Core-owned |
 

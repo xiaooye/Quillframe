@@ -7,12 +7,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from agent_runtime import AgentBudget, AgentJob, AgentRunner, RepositoryToolset, ToolRuntime, ToolSpec
-from agent_runtime.tools import ToolRuntimeError
-from model_runtime import EndpointPolicy, MemorySecretStore, MockTransport, ModelRuntime, TransportResponse, normalize_endpoint
+from model_runtime import EndpointPolicy, MemorySecretStore, MockTransport, ModelRuntime, ModelRuntimeError, TransportResponse, normalize_endpoint
 from model_runtime.manager import ModelServiceManager
 from model_runtime.protocols import AnthropicMessagesCodec, OpenAIChatCodec, OpenAIResponsesCodec
-from persistence.quillframe_sqlite import Pre10StateRejectedError, QuillframeStore, apply_schema
 
 
 def response(status: int, body: dict | list | None) -> TransportResponse:
@@ -148,7 +145,85 @@ class ModelRuntimeTests(unittest.TestCase):
         self.assertFalse(secrets.present(old_ref))
         self.assertTrue(secrets.present(new_ref))
 
+    def test_model_service_empty_token_reconnect_preserves_secret_and_refreshes_with_authentication(self):
+        endpoint = "https://api.example.test/v1"
+        transport = MockTransport({
+            ("GET", endpoint + "/models", "bearer"): [
+                response(200, {"data": [{"id": "original"}]}),
+                response(200, {"data": [{"id": "refreshed"}]}),
+            ],
+            ("GET", endpoint + "/models", "none"): response(200, {"data": [{"id": "public"}]}),
+        })
+        secrets = MemorySecretStore()
+        repo = MemoryRepository()
+        runtime = ModelRuntime(secrets, transport)
+        manager = ModelServiceManager(runtime, repo, secrets)
+        first = manager.connect(endpoint + "/", "stored-token")
+        service_id = first["service_id"]
+        old_ref = repo.get_internal(service_id)["credential_ref"]
+
+        reconnected = manager.connect(endpoint, "")
+
+        self.assertEqual(reconnected["service_id"], service_id)
+        self.assertEqual(repo.get_internal(service_id)["credential_ref"], old_ref)
+        self.assertTrue(secrets.present(old_ref))
+        self.assertEqual([model["model_id"] for model in reconnected["models"]], ["refreshed"])
+        self.assertEqual(runtime.snapshot(service_id).auth_style, "bearer")
+        self.assertEqual([(item["auth_style"], item["token_present"]) for item in transport.requests], [("bearer", True)] * 2)
+
+        manager.remove_token(service_id)
+        self.assertFalse(secrets.present(old_ref))
+        self.assertIsNone(repo.get_internal(service_id)["credential_ref"])
+        self.assertFalse(manager.get(service_id)["credential_present"])
+
+    def test_model_service_new_anonymous_endpoint_connects_and_reconnects_without_secret(self):
+        endpoint = "http://127.0.0.1:8765/v1"
+        transport = MockTransport({
+            ("GET", endpoint + "/models", "none"): response(200, {"data": [{"id": "local"}]}),
+        })
+        secrets = MemorySecretStore()
+        repo = MemoryRepository()
+        manager = ModelServiceManager(ModelRuntime(secrets, transport), repo, secrets)
+        first = manager.connect(endpoint, "")
+        second = manager.connect(endpoint + "/", "")
+
+        self.assertEqual(first["service_id"], second["service_id"])
+        self.assertFalse(second["credential_present"])
+        self.assertIsNone(repo.get_internal(second["service_id"])["credential_ref"])
+        self.assertEqual([(item["auth_style"], item["token_present"]) for item in transport.requests], [("none", False)] * 2)
+
+    def test_model_service_failed_empty_token_reconnect_retains_secret_and_snapshot(self):
+        endpoint = "https://api.example.test/v1"
+        transport = MockTransport({
+            ("GET", endpoint + "/models", "bearer"): [
+                response(200, {"data": [{"id": "original"}]}),
+                response(503, {"error": "discovery unavailable"}),
+            ],
+            ("GET", endpoint + "/models", "none"): response(200, {"data": [{"id": "public"}]}),
+        })
+        secrets = MemorySecretStore()
+        repo = MemoryRepository()
+        runtime = ModelRuntime(secrets, transport)
+        manager = ModelServiceManager(runtime, repo, secrets)
+        first = manager.connect(endpoint, "stored-token")
+        service_id = first["service_id"]
+        before = repo.get_internal(service_id)
+        snapshot = runtime.snapshot(service_id).to_dict()
+
+        with self.assertRaises(ModelRuntimeError) as failed:
+            manager.connect(endpoint, "")
+
+        self.assertEqual(failed.exception.code, "model_discovery_failed")
+        self.assertEqual(repo.get_internal(service_id), before)
+        self.assertEqual(runtime.snapshot(service_id).to_dict(), snapshot)
+        self.assertTrue(secrets.present(before["credential_ref"]))
+        self.assertEqual(transport.requests[-1]["auth_style"], "bearer")
+        self.assertTrue(transport.requests[-1]["token_present"])
+
     def test_tool_runtime_separates_capability_authority_before_state_and_replay(self):
+        from agent_runtime import RepositoryToolset, ToolRuntime
+        from agent_runtime.tools import ToolRuntimeError
+
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             path = root / "a.txt"
@@ -167,6 +242,8 @@ class ModelRuntimeTests(unittest.TestCase):
             self.assertEqual(conflict.exception.code, "tool_call_replay_conflict")
 
     def test_agent_loop_is_quillframe_owned_model_tool_model(self):
+        from agent_runtime import AgentBudget, AgentJob, AgentRunner, ToolRuntime, ToolSpec
+
         endpoint = "https://api.example.test/v1"
         post = [
             response(200, {"choices": [{"finish_reason": "stop", "message": {"content": "OK"}}], "usage": {"prompt_tokens": 2, "completion_tokens": 1}}),
@@ -193,6 +270,8 @@ class ModelRuntimeTests(unittest.TestCase):
         self.assertFalse(result.to_dict()["authority"])
 
     def test_pre_1_0_global_state_is_rejected_instead_of_migrated(self):
+        from persistence.quillframe_sqlite import Pre10StateRejectedError, apply_schema
+
         with tempfile.TemporaryDirectory() as td:
             db = Path(td) / "global.sqlite"
             conn = sqlite3.connect(db)
@@ -207,6 +286,8 @@ class ModelRuntimeTests(unittest.TestCase):
             conn.close()
 
     def test_fresh_1_0_global_schema_has_no_pre_1_0_provider_tables(self):
+        from persistence.quillframe_sqlite import apply_schema
+
         with tempfile.TemporaryDirectory() as td:
             db = Path(td) / "global.sqlite"
             conn = sqlite3.connect(db)
@@ -222,6 +303,8 @@ class ModelRuntimeTests(unittest.TestCase):
             conn.close()
 
     def test_sqlite_repository_never_projects_credential_reference_as_secret_value(self):
+        from persistence.quillframe_sqlite import QuillframeStore
+
         endpoint = "https://api.example.test/v1"
         with tempfile.TemporaryDirectory() as td:
             store = QuillframeStore(Path(td))

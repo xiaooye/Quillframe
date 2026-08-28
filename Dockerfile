@@ -9,6 +9,7 @@ COPY persistence /tmp/quillframe-build/persistence
 COPY production_runtime /tmp/quillframe-build/production_runtime
 COPY publication /tmp/quillframe-build/publication
 COPY quality /tmp/quillframe-build/quality
+COPY learning /tmp/quillframe-build/learning
 COPY model_runtime /tmp/quillframe-build/model_runtime
 COPY harness /tmp/quillframe-build/harness
 COPY agent_runtime /tmp/quillframe-build/agent_runtime

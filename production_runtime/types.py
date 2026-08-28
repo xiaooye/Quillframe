@@ -1,4 +1,4 @@
-"""Typed CH001 generation contracts used by the Quillframe 1.0 workflow."""
+"""Typed chapter generation contracts used by the Quillframe 1.0 workflow."""
 from __future__ import annotations
 
 import hashlib
@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from .workflow import CHAPTER_SCOPE, WorkflowError
+from .workflow import WorkflowError, validate_chapter_id
 
 
 def _text(value: Any, field: str) -> str:
@@ -16,12 +16,7 @@ def _text(value: Any, field: str) -> str:
 
 
 def _chapter(value: str) -> str:
-    if value != CHAPTER_SCOPE:
-        raise WorkflowError(
-            "chapter_scope_violation",
-            f"Quillframe 1.0 acceptance is limited to {CHAPTER_SCOPE}",
-        )
-    return value
+    return validate_chapter_id(value)
 
 
 def _fingerprint_value(value: Any, field: str) -> str:

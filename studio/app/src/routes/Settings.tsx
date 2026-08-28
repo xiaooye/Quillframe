@@ -1,6 +1,7 @@
 import { For, Show, createMemo, createSignal, onMount } from "solid-js";
 import { A } from "@solidjs/router";
 import { PageIntro } from "../components";
+import { HostedAccountButton } from "../HostedSessionBoundary";
 import { useI18n } from "../i18n";
 import { useStudio } from "../studio";
 import { invokeBridge, operationError } from "../bridge";
@@ -101,6 +102,7 @@ export default function Settings() {
   return (
     <section class="nf-page qf-settings-page">
       <PageIntro eyebrow={zh() ? "设置 · 宿主级" : "SETTINGS · HOST LEVEL"} title={zh() ? "设置服务写作，不接管作品。" : "Settings serve the writing, not the work itself."} body={zh() ? "Project / Canon / Context / Settlement authority 不进入浏览器 settings。Model Service 只通过 typed Core。" : "Project / Canon / Context / Settlement authority never becomes browser settings state. Model Services go through typed Core only."} />
+      <HostedAccountButton />
       <div class="qf-settings-layout">
         <nav class="qf-settings-nav" aria-label={zh() ? "设置分类" : "Settings sections"}><For each={sections}>{(item) => <button type="button" data-active={section() === item.id ? "true" : undefined} onClick={() => setSection(item.id)}>{zh() ? item.zh : item.en}</button>}</For></nav>
         <div class="qf-settings-content">

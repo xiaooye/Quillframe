@@ -15,7 +15,7 @@ export type NativeBackupReceipt = {
   body_fingerprint: string;
   bundle_fingerprint: string;
   project_id: string;
-  chapter_scope: "CH001";
+  scope: "novel";
   database_fingerprint: string;
   database_bytes: number;
   blob_count: number;
@@ -86,10 +86,10 @@ function decodeKey(value: string): Uint8Array {
 }
 
 export function assertNativeBackupReceipt(value: unknown): asserts value is NativeBackupReceipt {
-  const keys = ["schema", "bundle_schema", "body_fingerprint", "bundle_fingerprint", "project_id", "chapter_scope", "database_fingerprint", "database_bytes", "blob_count", "byte_size", "verified", "authority"] as const;
+  const keys = ["schema", "bundle_schema", "body_fingerprint", "bundle_fingerprint", "project_id", "scope", "database_fingerprint", "database_bytes", "blob_count", "byte_size", "verified", "authority"] as const;
   if (!exactKeys(value, keys)) fail("project_verification_invalid");
   const receipt = value as NativeBackupReceipt;
-  if (receipt.schema !== "quillframe_native_backup_verification_v1" || receipt.bundle_schema !== "quillframe_backup_bundle_v1" || !validFingerprint(receipt.body_fingerprint) || !validFingerprint(receipt.bundle_fingerprint) || receipt.body_fingerprint !== receipt.bundle_fingerprint || !validProjectId(receipt.project_id) || receipt.chapter_scope !== "CH001" || !validFingerprint(receipt.database_fingerprint) || !Number.isSafeInteger(receipt.database_bytes) || !Number.isSafeInteger(receipt.blob_count) || receipt.blob_count < 0 || receipt.blob_count > 1022 || !Number.isSafeInteger(receipt.byte_size) || receipt.verified !== true || receipt.authority !== false) fail("project_verification_invalid");
+  if (receipt.schema !== "quillframe_native_backup_verification_v1" || receipt.bundle_schema !== "quillframe_backup_bundle_v1" || !validFingerprint(receipt.body_fingerprint) || !validFingerprint(receipt.bundle_fingerprint) || receipt.body_fingerprint !== receipt.bundle_fingerprint || !validProjectId(receipt.project_id) || receipt.scope !== "novel" || !validFingerprint(receipt.database_fingerprint) || !Number.isSafeInteger(receipt.database_bytes) || !Number.isSafeInteger(receipt.blob_count) || receipt.blob_count < 0 || receipt.blob_count > 1022 || !Number.isSafeInteger(receipt.byte_size) || receipt.verified !== true || receipt.authority !== false) fail("project_verification_invalid");
   assertProjectBundleTransportSize(receipt.database_bytes);
   assertProjectBundleTransportSize(receipt.byte_size);
 }

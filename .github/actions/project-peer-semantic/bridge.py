@@ -177,7 +177,7 @@ def load_project_binding() -> dict[str, Any]:
         "project_checkout": checkout,
         "project_root": project_root,
         "project_id": actual_project_id,
-        "chapter_scope": context["chapter_scope"],
+        "scope": context["scope"],
         "manifest_fingerprint": context["manifest_fingerprint"],
         "data_root": context["data_root"],
         "framework_repo": action_repo,

@@ -16,7 +16,7 @@ from persistence.quillframe_sqlite import (
     now_iso,
 )
 
-from .workflow import CHAPTER_SCOPE, NovelWorkflowEngine, WorkflowError
+from .workflow import NovelWorkflowEngine, WorkflowError, validate_chapter_id
 
 
 CHECKPOINT_KIND = "novel_workflow_v1"
@@ -82,8 +82,7 @@ class NovelWorkflowService:
             raise WorkflowError("workflow_snapshot_invalid", "workflow checkpoint fingerprint mismatch")
         if snapshot.get("project_id") != project_id or snapshot.get("run_id") != run_id:
             raise WorkflowError("workflow_identity_mismatch", "workflow snapshot identity is invalid")
-        if snapshot.get("chapter_id") != CHAPTER_SCOPE:
-            raise WorkflowError("chapter_scope_violation", f"workflow is limited to {CHAPTER_SCOPE}")
+        validate_chapter_id(snapshot.get("chapter_id"))
         if snapshot.get("authority") is not False:
             raise WorkflowError("workflow_snapshot_invalid", "workflow snapshot must be non-authoritative")
         try:
@@ -92,7 +91,7 @@ class NovelWorkflowService:
             raise
         except Exception as exc:
             raise WorkflowError("workflow_snapshot_invalid", "workflow checkpoint could not be restored") from exc
-        if engine.project_id != project_id or engine.run_id != run_id or engine.chapter_id != CHAPTER_SCOPE:
+        if engine.project_id != project_id or engine.run_id != run_id or engine.chapter_id != snapshot["chapter_id"]:
             raise WorkflowError("workflow_identity_mismatch", "restored workflow identity is invalid")
         return engine
 
@@ -130,8 +129,12 @@ class NovelWorkflowService:
         if project_id != engine.project_id:
             raise WorkflowError("workflow_identity_mismatch", "project_id does not match workflow")
         snapshot = engine.snapshot()
-        if snapshot.get("project_id") != project_id or snapshot.get("chapter_id") != CHAPTER_SCOPE or snapshot.get("authority") is not False:
+        validate_chapter_id(snapshot.get("chapter_id"))
+        if snapshot.get("project_id") != project_id or snapshot.get("chapter_id") != engine.chapter_id or snapshot.get("authority") is not False:
             raise WorkflowError("workflow_snapshot_invalid", "workflow snapshot identity or authority is invalid")
+        chapter = conn.execute("SELECT node_id FROM story_nodes WHERE node_id=? AND kind='chapter'", (engine.chapter_id,)).fetchone()
+        if chapter is None:
+            raise WorkflowError("chapter_not_found", "workflow chapter does not exist")
         checkpoint_id = f"workflow:{engine.run_id}:{engine.cursor}"
         existing = conn.execute(
             "SELECT run_id,checkpoint_kind,state_json,artifact_fingerprint FROM checkpoints WHERE checkpoint_id=?",
@@ -349,6 +352,8 @@ class NovelWorkflowService:
                             idempotency_key=idempotency_key,
                             user_authorized=True,
                         )
+                        from persistence.production_stage_repository import ProductionStageRepository
+                        ProductionStageRepository.cancel_locked(conn, run_id)
                     self._save_locked(conn, project_id, engine)
                     conn.commit()
                     return self._canonical_event(event)

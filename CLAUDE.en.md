@@ -19,7 +19,7 @@ Resolve one primary Quillframe task mode before execution. Do not silently turn 
 
 When operating against a consuming novel project:
 
-- read its five-key native manifest, CH001 context, fingerprint, and `.quillframe/data` boundary first;
+- read its four-key native manifest, context with top-level `scope: "novel"`, fingerprint, and `.quillframe/data` boundary first; `CH001` is only the initial chapter;
 - resolve project authority through the native Project contract;
 - keep project facts in the project repository;
 - treat this Framework repository as the owner of generic mechanisms only.

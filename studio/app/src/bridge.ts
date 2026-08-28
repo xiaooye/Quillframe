@@ -102,8 +102,38 @@ function localToken(): string {
   return documentMeta("quillframe-studio-token");
 }
 
-function hostedEndpoint(): string {
-  return documentMeta("quillframe-studio-hosted-endpoint").replace(/\/$/, "");
+/** An explicit hosted binding; a static HTTPS page alone is not a Core binding. */
+export function hostedEndpoint(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const configured = documentMeta("quillframe-studio-hosted-endpoint");
+    if (!configured || /[\u0000-\u0020\u007f\\]/.test(configured)) return "";
+    const endpoint = new URL(configured);
+    const page = new URL(window.location.href);
+    if (
+      endpoint.protocol !== "https:" || page.protocol !== "https:" || endpoint.origin !== page.origin ||
+      endpoint.username || endpoint.password || endpoint.pathname !== "/" || endpoint.search || endpoint.hash
+    ) return "";
+    return endpoint.origin;
+  } catch {
+    return "";
+  }
+}
+
+/** The readable CSRF cookie is separate from the HttpOnly authenticated session. */
+export function hostedCsrfToken(): string {
+  try {
+    const values = document.cookie.split(";").flatMap((part) => {
+      const separator = part.indexOf("=");
+      const name = (separator < 0 ? part : part.slice(0, separator)).trim();
+      return name === "__Host-qf_csrf" ? [separator < 0 ? "" : part.slice(separator + 1).trim()] : [];
+    });
+    // Cloud issues randomToken(24): exactly 32 unpadded base64url characters.
+    if (values.length === 1 && /^[A-Za-z0-9_-]{32}$/.test(values[0])) return values[0];
+  } catch {
+    // Cookie access can fail in restricted contexts; never include its contents.
+  }
+  throw new Error("Hosted Core CSRF token is missing or invalid");
 }
 
 const RESULT_KEYS = [
@@ -116,22 +146,100 @@ const RESULT_STATUSES = new Set<BridgeStatus>(["ok", "invalid", "unsupported", "
 const SECRET_REQUEST_KEYS = new Set(["access_token", "api_key", "apikey", "password", "secret", "token"]);
 const PUBLIC_ERROR_CODE_RE = /^[a-z][a-z0-9_]{0,63}$/;
 
+function compareCanonicalKeys(left: string, right: string): number {
+  const a = Array.from(left, (char) => char.codePointAt(0)!);
+  const b = Array.from(right, (char) => char.codePointAt(0)!);
+  for (let index = 0; index < Math.min(a.length, b.length); index += 1) {
+    if (a[index] !== b[index]) return a[index] - b[index];
+  }
+  return a.length - b.length;
+}
+
 function canonicalValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalValue);
   if (value && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>)
-        .sort(([left], [right]) => left.localeCompare(right))
+        .sort(([left], [right]) => compareCanonicalKeys(left, right))
         .map(([key, child]) => [key, canonicalValue(child)]),
     );
   }
   return value;
 }
 
+function serializeCanonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(serializeCanonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    // Emit keys directly: JSON.stringify would reorder integer-style keys.
+    return `{${Object.keys(record).sort(compareCanonicalKeys).map((key) => `${JSON.stringify(key)}:${serializeCanonicalJson(record[key])}`).join(",")}}`;
+  }
+  const encoded = JSON.stringify(value);
+  if (encoded === undefined) throw new Error("Bridge fingerprint input is not JSON");
+  return encoded;
+}
+
 function canonicalJson(value: unknown): string {
   const encoded = JSON.stringify(canonicalValue(value));
   if (encoded === undefined) throw new Error("Bridge fingerprint input is not JSON");
-  return encoded;
+  // Keep existing JSON normalization for Local/Tauri fingerprints. Only hosted
+  // request bodies use the stricter Cloud wire-value contract below.
+  return serializeCanonicalJson(JSON.parse(encoded));
+}
+
+function hasLoneSurrogate(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const next = value.charCodeAt(++index);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) return true;
+    } else if (code >= 0xdc00 && code <= 0xdfff) return true;
+  }
+  return false;
+}
+
+function hostedJsonValue(value: unknown, ancestors: Set<object>): unknown {
+  if (value === null || typeof value === "boolean") return value;
+  if (typeof value === "string" && !hasLoneSurrogate(value)) return value;
+  if (typeof value === "number" && Number.isSafeInteger(value)) return value;
+  if (!value || typeof value !== "object" || ancestors.has(value)) throw new Error("Invalid hosted JSON value");
+  const isArray = Array.isArray(value);
+  const prototype = Object.getPrototypeOf(value);
+  if (isArray ? prototype !== Array.prototype : prototype !== Object.prototype && prototype !== null) {
+    throw new Error("Invalid hosted JSON prototype");
+  }
+  if (Object.getOwnPropertySymbols(value).length) throw new Error("Invalid hosted JSON keys");
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  if (Object.values(descriptors).some((descriptor) => !("value" in descriptor))) throw new Error("Invalid hosted JSON accessor");
+  if (typeof descriptors.toJSON?.value === "function") throw new Error("Invalid hosted JSON conversion");
+  ancestors.add(value);
+  try {
+    if (isArray) {
+      // Sparse arrays and extra properties cannot silently change wire meaning.
+      if (Object.keys(descriptors).length !== value.length + 1) throw new Error("Invalid hosted JSON array");
+      return Array.from({ length: value.length }, (_, index) => {
+        if (!Object.prototype.hasOwnProperty.call(descriptors, index)) throw new Error("Invalid hosted JSON array");
+        return hostedJsonValue(descriptors[index].value, ancestors);
+      });
+    }
+    const result: Record<string, unknown> = Object.create(null);
+    for (const [key, descriptor] of Object.entries(descriptors)) {
+      if (!descriptor.enumerable || descriptor.value === undefined) continue;
+      if (/[^\x00-\x7f]/.test(key)) throw new Error("Invalid hosted JSON key");
+      result[key] = hostedJsonValue(descriptor.value, ancestors);
+    }
+    return result;
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
+function hostedRequestBody(request: BridgeRequest): string {
+  try {
+    return serializeCanonicalJson(hostedJsonValue(request, new Set()));
+  } catch {
+    throw new Error("Hosted Core request body must use supported canonical JSON values");
+  }
 }
 
 async function fingerprint(value: unknown): Promise<string> {
@@ -288,6 +396,38 @@ export class LocalHttpTransport implements BridgeTransport {
   }
 }
 
+const hostedSessionExpiryListeners = new Set<() => void>();
+let hostedSessionEpoch = 0;
+let hostedSessionReady = false;
+let hostedSessionAbort = new AbortController();
+
+/** Close Core access before checking, ending, or disposing a hosted session. */
+export function invalidateHostedSession(): number {
+  hostedSessionReady = false;
+  hostedSessionEpoch += 1;
+  hostedSessionAbort.abort();
+  hostedSessionAbort = new AbortController();
+  return hostedSessionEpoch;
+}
+
+/** Only the still-current, verified session check may reopen Core access. */
+export function activateHostedSession(epoch: number): boolean {
+  if (epoch !== hostedSessionEpoch) return false;
+  hostedSessionReady = true;
+  return true;
+}
+
+function assertHostedSessionActive(epoch: number): void {
+  if (!hostedSessionReady || epoch !== hostedSessionEpoch) {
+    throw new Error("Hosted Core session is not verified or is no longer active");
+  }
+}
+
+export function subscribeToHostedSessionExpiry(listener: () => void): () => void {
+  hostedSessionExpiryListeners.add(listener);
+  return () => { hostedSessionExpiryListeners.delete(listener); };
+}
+
 export class HostedHttpTransport implements BridgeTransport {
   readonly name = "hosted-http" as const;
   readonly requestSurface = "hosted_web" as const;
@@ -298,14 +438,42 @@ export class HostedHttpTransport implements BridgeTransport {
 
   async invoke<T>(request: BridgeRequest): Promise<BridgeResult<T>> {
     const endpoint = hostedEndpoint();
-    if (!endpoint) throw new Error("Hosted Quillframe Core endpoint is not configured");
-    const response = await fetch(`${endpoint}/api/bridge/invoke`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
-    });
-    return parseHttpResult<T>(response, this.requestSurface, request);
+    if (!endpoint) throw new Error("Hosted Core endpoint must be a configured same-origin HTTPS origin");
+    const epoch = hostedSessionEpoch;
+    assertHostedSessionActive(epoch);
+    const csrfToken = hostedCsrfToken();
+    let response: Response;
+    try {
+      response = await fetch(`${endpoint}/api/core/bridge`, {
+        method: "POST",
+        credentials: "same-origin",
+        redirect: "error",
+        cache: "no-store",
+        signal: hostedSessionAbort.signal,
+        headers: { "Content-Type": "application/json", "X-Qf-Csrf": csrfToken },
+        body: hostedRequestBody(request),
+      });
+    } catch (error) {
+      assertHostedSessionActive(epoch);
+      throw error;
+    }
+    assertHostedSessionActive(epoch);
+    if (response.status === 401) {
+      const listeners = [...hostedSessionExpiryListeners];
+      invalidateHostedSession();
+      for (const listener of listeners) {
+        try { listener(); } catch { /* Preserve the original transport failure. */ }
+      }
+      throw new Error("Host Bridge transport failed (HTTP 401)");
+    }
+    try {
+      const result = await parseHttpResult<T>(response, this.requestSurface, request);
+      assertHostedSessionActive(epoch);
+      return result;
+    } catch (error) {
+      assertHostedSessionActive(epoch);
+      throw error;
+    }
   }
 }
 
@@ -461,4 +629,5 @@ export function operationError(result: BridgeResult<unknown>): string {
 /** Test-only reset. Product code should keep one transport binding for a page lifecycle. */
 export function __resetBridgeClientForTests(): void {
   singleton = undefined;
+  invalidateHostedSession();
 }

@@ -18,7 +18,7 @@ from typing import Any
 SOURCE_SCHEMA = "quillframe_project_context_v1_0"
 OUTPUT_SCHEMA = "quillframe_studio_project_hub_projection_v1"
 PROJECT_SCHEMA = "quillframe_project_v1_0"
-CHAPTER_SCOPE = "CH001"
+PROJECT_SCOPE = "novel"
 SURFACES = {"cli", "local_app", "cloud_ui", "agent_package"}
 PROJECT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
@@ -37,12 +37,10 @@ def _require_context(source: dict[str, Any]) -> dict[str, Any]:
     manifest = source.get("manifest")
     if not isinstance(manifest, dict):
         raise ValueError("Project context manifest must be an object")
-    if set(manifest) != {"schema", "id", "title", "language", "chapter_scope"}:
-        raise ValueError("Project context manifest must contain exactly five keys")
+    if set(manifest) != {"schema", "id", "title", "language"}:
+        raise ValueError("Project context manifest must contain exactly four keys")
     if manifest.get("schema") != PROJECT_SCHEMA:
         raise ValueError(f"manifest schema must be exactly {PROJECT_SCHEMA}")
-    if manifest.get("chapter_scope") != CHAPTER_SCOPE:
-        raise ValueError(f"chapter scope must be exactly {CHAPTER_SCOPE}")
     project_id = manifest.get("id")
     title = manifest.get("title")
     language = manifest.get("language")
@@ -50,15 +48,15 @@ def _require_context(source: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("Project context id is not a native project id")
     if not isinstance(title, str) or not title.strip() or not isinstance(language, str) or not language.strip():
         raise ValueError("Project context title/language must be non-empty text")
-    normalized_manifest = {"schema": PROJECT_SCHEMA, "id": project_id, "title": title.strip(), "language": language.strip(), "chapter_scope": CHAPTER_SCOPE}
+    normalized_manifest = {"schema": PROJECT_SCHEMA, "id": project_id, "title": title.strip(), "language": language.strip()}
     if source.get("project_id") != normalized_manifest["id"]:
         raise ValueError("Project context id does not match manifest")
     if source.get("project_title") != normalized_manifest["title"]:
         raise ValueError("Project context title does not match manifest")
     if source.get("language") != normalized_manifest["language"]:
         raise ValueError("Project context language does not match manifest")
-    if source.get("chapter_scope") != normalized_manifest["chapter_scope"]:
-        raise ValueError("Project context chapter scope does not match manifest")
+    if source.get("scope") != PROJECT_SCOPE:
+        raise ValueError("Project context must declare novel scope")
     manifest_fp = source.get("manifest_fingerprint")
     if not isinstance(manifest_fp, str) or manifest_fp != fingerprint(normalized_manifest):
         raise ValueError("Project context manifest fingerprint does not match manifest")
@@ -90,7 +88,7 @@ def build_projection(source: dict[str, Any], surface: str = "cloud_ui") -> dict[
             "id": context["project_id"],
             "title": context["project_title"],
             "language": context["language"],
-            "chapter_scope": context["chapter_scope"],
+            "scope": context["scope"],
             "manifest_fingerprint": context["manifest_fingerprint"],
             "schema": context["manifest"]["schema"],
         },
@@ -131,19 +129,17 @@ def self_test() -> dict[str, Any]:
             "id": "PROJECT-SYNTHETIC",
             "title": "Synthetic Story Loom",
             "language": "en",
-            "chapter_scope": CHAPTER_SCOPE,
         },
         "manifest_fingerprint": fingerprint({
             "schema": PROJECT_SCHEMA,
             "id": "PROJECT-SYNTHETIC",
             "title": "Synthetic Story Loom",
             "language": "en",
-            "chapter_scope": CHAPTER_SCOPE,
         }),
         "project_id": "PROJECT-SYNTHETIC",
         "project_title": "Synthetic Story Loom",
         "language": "en",
-        "chapter_scope": CHAPTER_SCOPE,
+        "scope": PROJECT_SCOPE,
         "project_root": private_marker,
         "data_root": private_marker + "/.quillframe/data",
     }
@@ -162,7 +158,7 @@ def self_test() -> dict[str, Any]:
         "source_schema_rejected": wrong_schema_rejected,
         "authority_false": first["authority"] is False,
         "native_project_schema": first["project"]["schema"] == PROJECT_SCHEMA,
-        "ch001_only": first["project"]["chapter_scope"] == CHAPTER_SCOPE,
+        "novel_scope": first["project"]["scope"] == PROJECT_SCOPE,
         "no_project_root": "project_root" not in serialized,
         "no_data_root_absolute": "data_root" not in serialized,
         "no_absolute_or_private_paths": private_marker not in serialized,

@@ -14,17 +14,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
-SEM = ROOT / "harness" / "semantic_workers"
-if str(SEM) not in sys.path:
-    sys.path.insert(0, str(SEM))
-
-from registered_contract_binding import validate_registered_job  # noqa: E402
-from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
+from harness.semantic_workers.registered_contract_binding import validate_registered_job
+from harness.semantic_workers.semantic_worker_router import make_contract_job, validate_result
 
 SCHEMA = "quillframe_learning_promotion_candidate_v1"
 SCOPES = {"one_off", "project", "user_taste", "general_craft"}

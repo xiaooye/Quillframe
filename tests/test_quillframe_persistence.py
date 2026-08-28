@@ -16,7 +16,10 @@ class PersistenceTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory(); self.root=Path(self.tmp.name); self.store=QuillframeStore(self.root)
         self.store.create_project("P1","测试长篇","zh-CN")
-        self.store.create_document("P1","DOC1","第一章")
+        with self.store.open_project("P1") as conn:
+            conn.execute("INSERT INTO story_nodes(node_id,kind,ordinal,title,metadata_json) VALUES('CH001','chapter',1,'Chapter','{}')")
+            conn.commit()
+        self.store.create_document("P1","DOC1","第一章",story_node_id="CH001")
     def tearDown(self): self.tmp.cleanup()
 
     def test_revision_conflict_and_search(self):

@@ -57,7 +57,7 @@ quillframe launch ../my-novel \
   --language zh-CN
 ```
 
-该命令会创建精确的 native 五键 manifest，把验收范围固定为 CH001，将运行状态保存在 `.quillframe/data`，并让 Studio 仅绑定 loopback。已有 Project 可用 `quillframe launch ../my-novel` 重新打开。如果同时使用 Claude Code 或其他 coding agent，请从 Project 目录启动该宿主；Quillframe 的正确性不依赖仓库 hook 或宿主专用配置。宿主运行 Agent，小说与 Canon 权威仍归 Quillframe。
+该命令为整部小说创建精确的原生四键 manifest（`schema`、`id`、`title`、`language`），在项目上下文顶层输出 `scope: "novel"`，并创建初始章节 `CH001` 和正文文档 `DOC-CH001`。运行状态保存在 `.quillframe/data`，Studio 仅绑定本机回环地址。已有项目可用 `quillframe launch ../my-novel` 重新打开；打开时不会自动迁移、修复或补建旧开发状态。如果同时使用 Claude Code 或其他编程代理，请从项目目录启动该宿主；Quillframe 的正确性不依赖仓库 hook 或宿主专用配置。宿主运行 Agent，小说与正典权威仍归 Quillframe。
 
 基础写作与检查 shell 不需要先连接模型。真正需要 inference 时，普通设置刻意只保留两个输入：
 
@@ -178,7 +178,7 @@ corepack pnpm run build
 
 Quillframe 正处于 **1.0 预发布持续开发阶段**。当前 `main` 已包含 embeddable Python façade、Model Runtime、Agent Runtime、小说 Core / authority contract、SQLite persistence、typed Host Bridge、SolidJS Studio、产品网站、publication pipeline 与 Starlight 文档。Normal CI 使用确定性执行，不会悄悄调用配置好的付费 / 在线 Model API。
 
-小说 Project 只通过 native 五键 `quillframe.toml`、CH001 context、manifest fingerprint 与 `.quillframe/data` boundary 标识自身。Framework commit / bundle provenance 由 Host 或发布流程独立记录；它既不是 Project authority，也不是 consumer lock。
+小说项目通过原生四键 `quillframe.toml`、顶层含 `scope: "novel"` 的上下文、manifest fingerprint 与 `.quillframe/data` 边界标识自身。`CH001` 是初始章节，后续章节沿用同一契约，并验证真实章节关系。Framework commit / bundle provenance 由宿主或发布流程独立记录，不是项目权威或项目锁定契约。这份开发契约不代表整本小说的真实模型运行或云端发布已经验收通过。
 
 ## Security 与 License
 

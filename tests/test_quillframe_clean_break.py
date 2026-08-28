@@ -13,6 +13,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CleanBreakAuditTests(unittest.TestCase):
+    def _copy_repository(self, target):
+        return shutil.copytree(
+            ROOT, target,
+            ignore=shutil.ignore_patterns(
+                ".git", ".quillframe", "node_modules", "build", "dist",
+                "*.egg-info", "__pycache__", ".venv", "venv",
+            ),
+        )
+
     def _forbidden_marker_entries(self):
         tree = ast.parse(
             (ROOT / "quality" / "clean_break.py").read_text(encoding="utf-8"),
@@ -167,7 +176,7 @@ class CleanBreakAuditTests(unittest.TestCase):
     def test_current_docs_mutation_is_detected_without_global_allowlist(self):
         with tempfile.TemporaryDirectory(prefix="qf-clean-break-mutation-") as tmp:
             copy = Path(tmp) / "repo"
-            shutil.copytree(ROOT, copy, ignore=shutil.ignore_patterns(".git", "node_modules", "dist", "__pycache__"))
+            self._copy_repository(copy)
             target = copy / "SKILL.md"
             target.write_text(target.read_text(encoding="utf-8") + "\nProject SDK\n", encoding="utf-8")
             report = audit_clean_break(copy)
@@ -175,6 +184,16 @@ class CleanBreakAuditTests(unittest.TestCase):
 
     def test_residual_current_surface_mutations_are_detected(self):
         cases = (
+            ("README.en.md", "native five-key"),
+            ("README.zh-CN.md", "native 五键"),
+            ("SKILL.en.md", "exactly five native keys"),
+            ("SKILL.zh-CN.md", "五个 native key"),
+            ("docs/project-contract.en.md", "1.0 acceptance executes CH001 only."),
+            ("docs/project-contract.zh-CN.md", "1.0 验收只执行 CH001。"),
+            ("project_resolution.py", 'CHAPTER_SCOPE = "CH001"'),
+            ("production_runtime/workflow.py", "def require_ch001("),
+            ("cloud/src/core-provenance.ts", 'chapter_scope:'),
+            ("quillframe/cloud_core.py", 'claims["chapter_scope"]'),
             ("README.en.md", "required by its lock"),
             ("README.en.md", "quillframe init"),
             ("README.en.md", "npm install --no-audit --no-fund"),
@@ -193,7 +212,7 @@ class CleanBreakAuditTests(unittest.TestCase):
         )
         with tempfile.TemporaryDirectory(prefix="qf-clean-break-residual-") as tmp:
             copy = Path(tmp) / "repo"
-            shutil.copytree(ROOT, copy, ignore=shutil.ignore_patterns(".git", "node_modules", "dist", "__pycache__"))
+            self._copy_repository(copy)
             for relative, marker in cases:
                 target = copy / relative
                 original = target.read_text(encoding="utf-8")
@@ -206,10 +225,50 @@ class CleanBreakAuditTests(unittest.TestCase):
                 )
                 target.write_text(original, encoding="utf-8")
 
+    def test_native_manifest_keys_and_top_level_scope_cannot_regress(self):
+        cases = (
+            (
+                'MANIFEST_KEYS = {"schema", "id", "title", "language"}',
+                'MANIFEST_KEYS = {"schema", "id", "title", "language", "chapter_scope"}',
+            ),
+            ('PROJECT_SCOPE = "novel"', 'PROJECT_SCOPE = "CH001"'),
+            ('"scope": PROJECT_SCOPE', '"chapter_scope": PROJECT_SCOPE'),
+        )
+        with tempfile.TemporaryDirectory(prefix="qf-clean-break-native-") as tmp:
+            copy = Path(tmp) / "repo"
+            self._copy_repository(copy)
+            target = copy / "project_resolution.py"
+            original = target.read_text(encoding="utf-8")
+            for required, obsolete in cases:
+                with self.subTest(required=required):
+                    self.assertIn(required, original)
+                    target.write_text(original.replace(required, obsolete), encoding="utf-8")
+                    report = audit_clean_break(copy)
+                    self.assertIn(
+                        {"code": "native_1_0_marker_missing", "path": "project_resolution.py", "marker": required},
+                        report["violations"],
+                    )
+            target.write_text(original, encoding="utf-8")
+
+    def test_historical_ch001_contract_is_not_a_current_scope_violation(self):
+        with tempfile.TemporaryDirectory(prefix="qf-clean-break-history-") as tmp:
+            copy = Path(tmp) / "repo"
+            self._copy_repository(copy)
+            baseline = audit_clean_break(copy)
+            historical = copy / "specs" / "single-chapter-history.md"
+            historical.write_text(
+                '# Historical fixture\nThe native five-key manifest used CH001 context.\n'
+                'chapter_scope = "CH001"\n', encoding="utf-8",
+            )
+            evidence = copy / "release" / "acceptance" / "single-chapter-history.json"
+            evidence.parent.mkdir(parents=True, exist_ok=True)
+            evidence.write_text('{"chapter_scope":"CH001"}\n', encoding="utf-8")
+            self.assertEqual(baseline["violations"], audit_clean_break(copy)["violations"])
+
     def test_superseded_plan_mutation_is_detected(self):
         with tempfile.TemporaryDirectory(prefix="qf-clean-break-plan-") as tmp:
             copy = Path(tmp) / "repo"
-            shutil.copytree(ROOT, copy, ignore=shutil.ignore_patterns(".git", "node_modules", "dist", "__pycache__"))
+            self._copy_repository(copy)
             target = copy / "docs/superpowers/plans/2026-08-19-quillframe-v091-endurance-run.en.md"
             target.write_text(target.read_text(encoding="utf-8") + "\nproject_adapter.py\n", encoding="utf-8")
             report = audit_clean_break(copy)
@@ -218,7 +277,7 @@ class CleanBreakAuditTests(unittest.TestCase):
     def test_superseded_plan_chinese_mutation_is_detected_and_bilingual_copy_is_native(self):
         with tempfile.TemporaryDirectory(prefix="qf-clean-break-plan-zh-") as tmp:
             copy = Path(tmp) / "repo"
-            shutil.copytree(ROOT, copy, ignore=shutil.ignore_patterns(".git", "node_modules", "dist", "__pycache__"))
+            self._copy_repository(copy)
             target = copy / "docs/superpowers/plans/2026-08-19-quillframe-v091-endurance-run.zh-CN.md"
             target.write_text(target.read_text(encoding="utf-8") + "\nproject_adapter.py\n", encoding="utf-8")
             report = audit_clean_break(copy)

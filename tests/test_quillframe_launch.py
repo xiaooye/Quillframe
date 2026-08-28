@@ -54,11 +54,11 @@ class LaunchTests(unittest.TestCase):
             child = root / "notes" / "today"
             child.mkdir(parents=True)
             (root / "quillframe.toml").write_text(
-                'schema = "quillframe_project_v1_0"\nid = "novel"\ntitle = "Novel"\nlanguage = "en"\nchapter_scope = "CH001"\n',
+                'schema = "quillframe_project_v1_0"\nid = "novel"\ntitle = "Novel"\nlanguage = "en"\n',
                 encoding="utf-8",
             )
             self.assertEqual(resolve_project_root(child), root)
-            self.assertEqual(resolve_contract(root)["chapter_scope"], "CH001")
+            self.assertEqual(resolve_contract(root)["scope"], "novel")
             self.assertFalse((root / ".quillframe" / "imports").exists())
 
     def test_cloud_profile_never_uploads_implicitly(self):

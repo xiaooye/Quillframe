@@ -56,7 +56,7 @@ Story Loom 继续拥有 Quillframe 产品语义。WeiUI 拥有 generic CSS/token
 | Session / Run identity | navigation、history、resume affordance | operational identity |
 | Control Plane | event/handoff/result/consume lineage | operational evidence |
 | `quillframe_host_capabilities_v1` | integration/capability health | capability 不是 authority |
-| `quillframe_project_v1_0` + `quillframe_project_context_v1_0` | Project Hub native 五键 manifest、CH001、fingerprint 与 `.quillframe/data` boundary | 浏览器投影；`authority=false` |
+| `quillframe_project_v1_0` + `quillframe_project_context_v1_0` | 项目中心的原生四键 manifest、顶层 `scope: "novel"`、fingerprint 与 `.quillframe/data` 边界；`CH001` 只是初始章节 | 浏览器投影；`authority=false` |
 | semantic contract catalog | Semantic Pack Inspector label / deep link | contract metadata |
 | settlement receipts | settlement review / failure explanation | settlement semantics 仍由 Core 拥有 |
 

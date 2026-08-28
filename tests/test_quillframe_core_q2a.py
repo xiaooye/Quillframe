@@ -95,7 +95,7 @@ class CoreQ2AWorkflowTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="qf-q2a-")
         self.root = Path(self.temp.name) / "store"
         self.store = QuillframeStore(self.root)
-        self.store.create_project("P", "Project P", "en")
+        self.store.create_native_project("P", "Project P", "en")
         stamp = now_iso()
         with self.store.open_project("P") as conn:
             conn.execute(
@@ -214,7 +214,7 @@ class CoreQ2AWorkflowTests(unittest.TestCase):
             try:
                 root = Path(temp.name) / "store"
                 store = QuillframeStore(root)
-                store.create_project("P", "Project P", "en")
+                store.create_native_project("P", "Project P", "en")
                 stamp = now_iso()
                 with store.open_project("P") as conn:
                     conn.execute(
@@ -271,7 +271,7 @@ class CoreQ2AWorkflowTests(unittest.TestCase):
         cases = (
             ("project_id", "OTHER", "workflow_identity_mismatch"),
             ("run_id", "run_" + "d" * 32, "workflow_identity_mismatch"),
-            ("chapter_id", "CH002", "chapter_scope_violation"),
+            ("chapter_id", "CH002", "workflow_snapshot_invalid"),
             ("authority", True, "workflow_snapshot_invalid"),
         )
         for field, value, code in cases:
@@ -279,7 +279,7 @@ class CoreQ2AWorkflowTests(unittest.TestCase):
             try:
                 root = Path(temp.name) / "store"
                 store = QuillframeStore(root)
-                store.create_project("P", "Project P", "en")
+                store.create_native_project("P", "Project P", "en")
                 stamp = now_iso()
                 with store.open_project("P") as conn:
                     conn.execute(

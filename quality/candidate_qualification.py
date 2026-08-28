@@ -488,6 +488,52 @@ def self_test() -> dict[str, Any]:
         "reader_engagement": {"status": "pass", "semantic_binding": reader},
         "continuity": continuity,
     })
+    inconsistent_audits = [
+        ("pass_with_failed_dimension_rejected", pass_audit, "pass",
+         {"dimensions": {**pass_audit["result"]["judgment"]["dimensions"], "surface": "fail"}},
+         "pass contradicts failed/insufficient dimension"),
+        ("pass_with_insufficient_dimension_rejected", pass_audit, "pass",
+         {"dimensions": {**pass_audit["result"]["judgment"]["dimensions"], "surface": "insufficient_evidence"}},
+         "pass contradicts failed/insufficient dimension"),
+        ("pass_with_blocking_finding_rejected", pass_audit, "pass",
+         {"findings": fail_audit["result"]["judgment"]["findings"]},
+         "pass cannot contain blocking findings"),
+        ("fail_without_failed_dimension_rejected", fail_audit, "fail",
+         {"dimensions": pass_audit["result"]["judgment"]["dimensions"]},
+         "fail requires at least one failed dimension"),
+        ("fail_without_blocking_finding_rejected", fail_audit, "fail", {"findings": []},
+         "fail requires at least one blocking finding"),
+        ("insufficient_audit_cannot_be_declared_pass", pass_audit, "pass",
+         {"result": "insufficient_evidence"},
+         "status contradicts semantic result"),
+    ]
+    consistency_checks: dict[str, bool] = {}
+    for name, seed, declared, changes, expected_error in inconsistent_audits:
+        binding = json.loads(json.dumps(seed))
+        binding["result"]["judgment"].update(changes)
+        try:
+            evaluate({
+                "candidate_fingerprint": fp, "subject_id": subject, "repair_cycle": 0,
+                "self_audit": {"status": declared, "semantic_binding": binding},
+                "reader_engagement": {"status": "pass", "semantic_binding": reader},
+                "continuity": continuity,
+            })
+        except ValueError as exc:
+            consistency_checks[name] = expected_error in str(exc)
+        else:
+            consistency_checks[name] = False
+    uncertain_audit = json.loads(json.dumps(pass_audit))
+    uncertain_audit["result"]["judgment"].update({
+        "result": "insufficient_evidence",
+        "dimensions": {**pass_audit["result"]["judgment"]["dimensions"], "regression": "insufficient_evidence"},
+    })
+    uncertain = evaluate({
+        "candidate_fingerprint": fp, "subject_id": subject, "repair_cycle": 0,
+        "self_audit": {"status": "pending", "semantic_binding": uncertain_audit},
+        "reader_engagement": {"status": "pass", "semantic_binding": reader},
+        "continuity": continuity,
+    })
+    consistency_checks["consistent_insufficient_audit_remains_pending"] = uncertain["qualification_status"] == "awaiting_semantic"
     pending = evaluate({
         "candidate_fingerprint": fp,
         "subject_id": subject,
@@ -521,6 +567,7 @@ def self_test() -> dict[str, Any]:
     except ValueError: missing_preservation_guard=True
 
     checks = {
+        **consistency_checks,
         "qualified_exact_candidate": not validate_qualification_receipt(qualified, candidate_fingerprint=fp, subject_id=subject),
         "blocking_self_audit_requires_repair": failed["qualification_status"] == "repair_required" and bool(failed["blocking_findings"]),
         "pending_semantic_is_not_qualified": pending["qualification_status"] == "awaiting_semantic" and not pending["qualified_for_independent"],

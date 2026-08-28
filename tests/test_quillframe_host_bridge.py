@@ -112,7 +112,7 @@ class BridgeTests(unittest.TestCase):
     def test_agent_read_only_query_sees_committed_row_in_active_wal_without_writes(self):
         store = QuillframeStore()
         store.create_project("P1", "Test")
-        store.create_document("P1", "D1", "第一章")
+        store.create_document("P1", "D1", "第一章", document_kind="note")
         held = store.open_project("P1")
         try:
             held.execute("BEGIN")
@@ -151,7 +151,7 @@ class BridgeTests(unittest.TestCase):
     def test_agent_read_only_query_fails_closed_when_active_wal_shm_is_missing(self):
         store = QuillframeStore()
         store.create_project("P1", "Test")
-        store.create_document("P1", "D1", "第一章")
+        store.create_document("P1", "D1", "第一章", document_kind="note")
         held = store.open_project("P1")
         try:
             held.execute("BEGIN")
@@ -259,7 +259,7 @@ class BridgeTests(unittest.TestCase):
 
     def test_project_revision_and_exact_audit(self):
         self.assertEqual(invoke(self.req("project.create",{"project_id":"P1","title":"书"}))["status"],"ok")
-        self.assertEqual(invoke(self.req("document.create",{"project_id":"P1","document_id":"D1","title":"第一章"}))["status"],"ok")
+        self.assertEqual(invoke(self.req("document.create",{"project_id":"P1","document_id":"D1","title":"创作笔记","document_kind":"note"}))["status"],"ok")
         saved=invoke(self.req("document.revision.save",{"project_id":"P1","document_id":"D1","content":"正文","source":"autosave"})); self.assertEqual(saved["status"],"ok")
         audit=invoke(self.req("author.run.start",{"project_id":"P1","task_mode":"AUDIT","payload":{"chapter_id":"CH001","author_profile":"guided","rewrite":True}})); self.assertEqual(audit["status"],"failed"); self.assertEqual(audit["error"]["code"],"audit_is_non_mutating")
     def test_feedback_does_not_promote(self):

@@ -2,6 +2,8 @@
 
 Legend: `[ ]` pending, `[~]` in progress, `[x]` verified, `[!]` blocked by external evidence.
 
+The hosted authoring follow-up is tracked in [Hosted authoring closure](cloud-closure.en.md). Earlier component checks do not establish a complete hosted browser journey; T409/T606/T607 remain unresolved.
+
 ## Gate 0
 
 - [x] T000 Confirm no production users/data and authorize destructive clean break.

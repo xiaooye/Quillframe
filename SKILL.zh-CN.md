@@ -161,10 +161,12 @@ Learning 永远采用证据支持的最窄 scope：
 
 项目身份至少由以下内容锚定：
 
-- `quillframe.toml` 且只含五个 native key（`schema`、`id`、`title`、`language`、`chapter_scope`），以及 CH001 context、manifest fingerprint 与 `.quillframe/data`；
+- `quillframe.toml` 且只含四个原生键（`schema`、`id`、`title`、`language`），以及顶层含 `scope: "novel"` 的上下文、manifest fingerprint 与 `.quillframe/data`；
 - 清晰的 source / plan / derived / generated 边界；
 - deterministic validation / build / tests；
 - 配置后可验证、可复现的 Framework bundle。
+
+`CH001` 和 `DOC-CH001` 只是初始章节与正文文档，不代表整部小说的范围。后续章节引用必须指向项目中真实存在的章节。多出的 `chapter_scope` manifest 键或不兼容的开发状态会被拒绝，打开时不会自动迁移、修复或补建数据。
 
 结构级变更在确有必要时使用：
 
@@ -184,7 +186,7 @@ before-state mismatch 或 post-condition failure → `settlement_incomplete`。�
 
 Normal CI 必须保持 deterministic，不得静默消耗 API、Codex、Claude 或其他 model usage。
 
-CI 应验证 schema、lifecycle boundary、semantic contract catalog/packs、hidden-gold isolation、fingerprint、permissions、Context/Memory authority、session/control-plane invariant、Corpus rights/provenance、eval queue、native Project manifest/context/fingerprint/CH001/data-boundary contract、Framework bundle reproducibility 与 documentation integrity。
+CI 应验证 schema、lifecycle boundary、semantic contract catalog/packs、hidden-gold isolation、fingerprint、permissions、Context/Memory authority、session/control-plane invariant、Corpus rights/provenance、eval queue、native Project manifest/context/fingerprint/novel/data-boundary contract 与真实章节关系、Framework bundle reproducibility 与 documentation integrity。
 
 Scheduled maintenance 可以观察、报告、封装和排队任务。schedule 或 webhook 本身不会授予 story、Canon、taste 或 Framework promotion authority。
 

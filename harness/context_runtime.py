@@ -577,13 +577,18 @@ def freeze_context(*, run_id: str, task_mode: str, pools: list[dict[str, Any]], 
         for row in pool.get("eligible", []) + pool.get("excluded", []):
             object_id = row["object_id"]
             source_fps[object_id] = row["source_fingerprint"]
-            source_state_fps[object_id] = fingerprint({
+            source_state_fp = fingerprint({
                 "source_fingerprint": row["source_fingerprint"],
                 "authority": row.get("authority"),
                 "lifecycle": row.get("lifecycle"),
                 "domain": row.get("domain"),
-                "exclusion": row.get("exclusion"),
             })
+            # Visibility exclusions belong to a stage's candidate universe.
+            # The same source may be allowed for an editor and hidden from a
+            # Blind Reader without its global authority/lifecycle changing.
+            if object_id in source_state_fps and source_state_fps[object_id] != source_state_fp:
+                raise ValueError(f"source state differs between frozen stages: {object_id}")
+            source_state_fps[object_id] = source_state_fp
             if row.get("profile_id") and row.get("profile_fingerprint"):
                 profile_fps[row["profile_id"]] = row["profile_fingerprint"]
                 profiles[row["profile_id"]] = {
@@ -644,7 +649,6 @@ def validate_freeze(freeze: dict[str, Any], current_source_fingerprints: dict[st
                     "authority": state.get("authority"),
                     "lifecycle": state.get("lifecycle"),
                     "domain": state.get("domain"),
-                    "exclusion": state.get("exclusion"),
                 })
             else:
                 actual_state_fp = None

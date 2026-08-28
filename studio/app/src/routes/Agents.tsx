@@ -5,8 +5,8 @@ import { useI18n } from "../i18n";
 const agentBootstrap = `# Quillframe project bootstrap
 
 1. Read quillframe.toml.
-2. Validate the exact five-key manifest: schema quillframe_project_v1_0, id, title, language, chapter_scope CH001.
-3. Project context v1_0 with manifest_fingerprint, .quillframe/data, and authority=false.
+2. Validate the exact four-key manifest: schema quillframe_project_v1_0, id, title, language. Chapter identities are resolved through chapter.list within the novel.
+3. Project context v1_0 with scope=novel, manifest_fingerprint, .quillframe/data, and authority=false.
 4. Reject legacy metadata instead of reading or adapting it.
 5. Load the pinned Quillframe HARNESS_MANIFEST.yaml, SKILL.md, and harness/HARNESS_AGENT.md.
 6. Treat chat/session history as runtime context, never as Project or Canon authority.
@@ -140,7 +140,7 @@ export default function Agents() {
           <div class="nf-agent-detect-list">
             <code>quillframe.toml</code>
             <code>quillframe_project_context_v1_0</code>
-            <code>CH001 · .quillframe/data</code>
+            <code>scope=novel · .quillframe/data</code>
             <code>manifest_fingerprint</code>
           </div>
         </section>

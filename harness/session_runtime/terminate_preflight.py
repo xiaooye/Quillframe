@@ -172,7 +172,7 @@ def self_test() -> int:
         root = Path(tmp)
         (root / ".quillframe").mkdir()
         (root / "quillframe.toml").write_text(
-            'schema="quillframe_project_v1_0"\nid="BOOK-TERMINATE"\ntitle="Terminate"\nlanguage="en"\nchapter_scope="CH001"\n',
+            'schema="quillframe_project_v1_0"\nid="BOOK-TERMINATE"\ntitle="Terminate"\nlanguage="en"\n',
             encoding="utf-8",
         )
 

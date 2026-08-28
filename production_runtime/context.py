@@ -10,7 +10,7 @@ from harness.context_runtime import STAGES, build_candidate_pool, canonical_json
 from persistence.context_repository import ContextRepository
 from persistence.quillframe_sqlite import QuillframeStore, now_iso
 
-from .contracts import MECHANISM_CONTEXT_STAGE, PRODUCTION_BUNDLE_SCHEMA, PRODUCTION_STATUS_SCHEMA, ProductionRunError, assert_secret_free, parse_json_object
+from .contracts import MECHANISM_CONTEXT_STAGE, PRODUCTION_BUNDLE_SCHEMA, PRODUCTION_STATUS_SCHEMA, ProductionRunError, assert_secret_free, parse_json_object, validate_bundle_integrity
 from .sources import AgentRuntimeLike, CONTEXT_STAGE_IDS, ProjectContextSourceLoader, _json
 
 DEFAULT_STAGE_BUDGET = 12_000
@@ -44,9 +44,55 @@ class ProductionContextRuntime:
     def _run_row(self, project_id: str, run_id: str) -> dict[str, Any]:
         with self.store.open_project(project_id) as conn:
             row = conn.execute("SELECT * FROM runs WHERE run_id=?", (run_id,)).fetchone()
+            request = conn.execute(
+                "SELECT state_json,artifact_fingerprint FROM checkpoints WHERE run_id=? "
+                "AND checkpoint_kind='author_run_request' ORDER BY created_at DESC,rowid DESC LIMIT 1",
+                (run_id,),
+            ).fetchone()
         if not row:
             raise ProductionRunError("run_not_found", run_id)
-        return dict(row)
+        run = dict(row)
+        if run["task_mode"] in {"DRAFT", "REVISE"}:
+            target = _json(request["state_json"], None) if request else None
+            if not isinstance(target, dict) or target.get("schema") != "quillframe_author_run_request_v1":
+                raise ProductionRunError("target_context_missing", "Core author_run_request checkpoint is required")
+            if request["artifact_fingerprint"] != fingerprint(target):
+                raise ProductionRunError("target_context_invalid", "author request checkpoint fingerprint does not match")
+            if any(not isinstance(target.get(key), str) or not target[key].strip() for key in ("chapter_id", "document_id")):
+                raise ProductionRunError("target_context_invalid", "author request has no exact chapter/document target")
+            for key in ("current_story_order", "current_reading_order"):
+                value = target.get(key)
+                if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                    raise ProductionRunError("target_context_invalid", f"author request requires explicit {key}")
+            if target.get("task_mode") != run["task_mode"] or target.get("target_ref") != run["target_ref"]:
+                raise ProductionRunError("target_context_invalid", "author request changed its run binding")
+            if not isinstance(target.get("payload"), dict):
+                raise ProductionRunError("target_context_invalid", "author request payload must be an object")
+            run["target_context"] = target
+        return run
+
+    def _load_sources(self, project_id: str, target: dict[str, Any]) -> list[dict[str, Any]]:
+        self._validate_selected_preferences(project_id, target)
+        return self.loader.load(
+            project_id, chapter_id=target["chapter_id"], document_id=target["document_id"],
+            current_story_order=target["current_story_order"], current_reading_order=target["current_reading_order"],
+        )
+
+    def _validate_selected_preferences(self, project_id: str, target: dict[str, Any]) -> None:
+        selected = target.get("payload", {}).get("selected_preference_ids", [])
+        if not selected:
+            return
+        frozen = target.get("author_model")
+        if not isinstance(frozen, dict) or frozen.get("selected_hypothesis_ids") != selected or frozen.get("project_id") != project_id:
+            raise ProductionRunError("selected_preference_stale", "selected author preferences do not match the frozen request")
+        from core_operations import CoreOperations
+        try:
+            current = CoreOperations(self.store).project_learning().project_context(project_id=project_id, selected_hypothesis_ids=selected)
+        except ValueError as exc:
+            raise ProductionRunError("selected_preference_stale", "a selected preference is no longer active for this Project") from exc
+        keys = ("selected_hypothesis_ids", "active_preferences")
+        if fingerprint({key: frozen.get(key) for key in keys}) != fingerprint({key: current.get(key) for key in keys}):
+            raise ProductionRunError("selected_preference_stale", "selected author preference version or content changed")
 
     def _event(self, project_id: str, run_id: str, kind: str, payload: dict[str, Any]) -> None:
         assert_secret_free(payload, label=f"runtime event {kind}")
@@ -123,7 +169,8 @@ class ProductionContextRuntime:
             raise ProductionRunError("production_mode_unsupported", "author.run.execute currently owns the DRAFT/REVISE production graph; other task modes remain separate semantic contracts")
         stage_budgets = dict(stage_budgets or {})
         previous = self._latest_bundle(project_id, run_id)
-        items = self.loader.load(project_id)
+        target = run["target_context"]
+        items = self._load_sources(project_id, target)
         self._ensure_profiles(run, project_id, items, service_id=service_id, model_preference=model_preference)
         source_fps, source_states, source_universe_fp = self.loader.state_projection(items)
         pools: list[dict[str, Any]] = []
@@ -162,13 +209,14 @@ class ProductionContextRuntime:
         self.context_repository.save_freeze(project_id, frozen)
         loaded_ids = sorted({object_id for green in greenlights for object_id in green.get("loaded_object_ids", [])})
         by_id = {item["object_id"]: item for item in items}
+        reader_expectations = deepcopy(by_id["reader-expectations:" + project_id]["model_view"]["expectations"])
         payloads = {
             object_id: {"object_id": object_id, "object_type": by_id[object_id]["object_type"], "authority": by_id[object_id]["authority"],
                         "lifecycle": by_id[object_id]["lifecycle"], "domain": by_id[object_id]["domain"],
                         "source_fingerprint": by_id[object_id]["source_fingerprint"], "model_view": deepcopy(by_id[object_id]["model_view"])}
             for object_id in loaded_ids
         }
-        binding = {"run_id": run_id, "task_mode": run["task_mode"], "freeze_fingerprint": frozen["freeze_fingerprint"],
+        binding = {"run_id": run_id, "task_mode": run["task_mode"], "target_context": deepcopy(target), "reader_expectations": reader_expectations, "freeze_fingerprint": frozen["freeze_fingerprint"],
                    "source_universe_fingerprint": source_universe_fp, "source_payloads": payloads,
                    "stage_bindings": MECHANISM_CONTEXT_STAGE,
                    "supersedes_bundle_fingerprint": previous.get("bundle_fingerprint") if previous else None,
@@ -187,7 +235,12 @@ class ProductionContextRuntime:
         return self.prepare_context(project_id, run_id, service_id=service_id, instruction=instruction, model_preference=model_preference, stage_budgets=stage_budgets, refresh_reason=reason)
 
     def _validate_bundle_current(self, project_id: str, bundle: dict[str, Any]) -> dict[str, Any]:
-        current = self.loader.load(project_id)
+        validate_bundle_integrity(bundle)
+        target = self._run_row(project_id, bundle["run_id"])["target_context"]
+        if target != bundle["target_context"]:
+            return {"status": "stale_conflict", "proceed": False, "target_context_changed": True,
+                    "new_context_fingerprint_required": True}
+        current = self._load_sources(project_id, target)
         current_fps, current_states, universe = self.loader.state_projection(current)
         validation = validate_freeze(bundle["freeze"], current_fps, current_states)
         if universe != bundle["source_universe_fingerprint"]:

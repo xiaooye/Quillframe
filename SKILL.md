@@ -19,7 +19,7 @@ Machine release contract: `HARNESS_MANIFEST.yaml`
 2. Read the language-appropriate `SKILL.en.md` or `SKILL.zh-CN.md`.
 3. Read `harness/HARNESS_AGENT.md` and its language edition.
 4. Determine exactly one primary task mode.
-5. Resolve/validate the consuming project using its five-key native manifest, CH001 context, fingerprint, and `.quillframe/data` boundary.
+5. Resolve/validate the consuming project using its four-key native manifest (`schema`, `id`, `title`, `language`), context with top-level `scope: "novel"`, fingerprint, and `.quillframe/data` boundary. `CH001` is only the initial chapter; later chapter references must exist in the Project.
 6. If external/tool work is needed, resolve a typed host capability manifest; undeclared capability is unavailable.
 7. Build sparse context; do not load an entire project or corpus by default.
 8. Apply Framework Core + Surface/Reader fundamentals, then genre/platform/project/user profiles.

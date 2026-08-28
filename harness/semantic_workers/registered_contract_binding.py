@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from semantic_worker_router import (
+from harness.semantic_workers.semantic_worker_router import (
     HERE,
     load_contract_registry,
     resolve_contract_registry,

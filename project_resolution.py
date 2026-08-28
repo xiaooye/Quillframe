@@ -2,7 +2,7 @@
 """Canonical parser and context owner for a Quillframe Project.
 
 The Project contract is deliberately small and hard-cut: the root manifest is
-exactly five scalar keys and durable Project state lives below
+exactly four scalar keys and durable Project state lives below
 ``<project>/.quillframe/data``. This module is the only runtime parser for
 that contract. It never opens or creates the data boundary while resolving.
 """
@@ -17,10 +17,10 @@ from typing import Any
 import tomllib
 
 PROJECT_SCHEMA = "quillframe_project_v1_0"
-CHAPTER_SCOPE = "CH001"
+PROJECT_SCOPE = "novel"
 MANIFEST_NAME = "quillframe.toml"
 DATA_RELATIVE = Path(".quillframe") / "data"
-MANIFEST_KEYS = {"schema", "id", "title", "language", "chapter_scope"}
+MANIFEST_KEYS = {"schema", "id", "title", "language"}
 CONTEXT_SCHEMA = "quillframe_project_context_v1_0"
 PROJECT_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}\Z")
 
@@ -73,15 +73,13 @@ def _validate_manifest(value: dict[str, Any]) -> dict[str, str]:
     missing = sorted(MANIFEST_KEYS - keys)
     extra = sorted(keys - MANIFEST_KEYS)
     if missing or extra:
-        raise ValueError(f"quillframe.toml must contain exactly five root keys; missing={missing}, extra={extra}")
+        raise ValueError(f"quillframe.toml must contain exactly four root keys; missing={missing}, extra={extra}")
 
     manifest = {key: _require_text(value[key], key) for key in MANIFEST_KEYS if key != "id"}
     manifest["id"] = validate_project_id(value["id"])
     if manifest["schema"] != PROJECT_SCHEMA:
         raise ValueError(f"schema must be exactly {PROJECT_SCHEMA}")
-    if manifest["chapter_scope"] != CHAPTER_SCOPE:
-        raise ValueError(f"chapter_scope must be exactly {CHAPTER_SCOPE}")
-    return {key: manifest[key] for key in ("schema", "id", "title", "language", "chapter_scope")}
+    return {key: manifest[key] for key in ("schema", "id", "title", "language")}
 
 
 def _reject_legacy_metadata(root: Path) -> None:
@@ -115,7 +113,7 @@ def resolve_contract(root: Path) -> dict[str, Any]:
         "project_id": manifest["id"],
         "project_title": manifest["title"],
         "language": manifest["language"],
-        "chapter_scope": manifest["chapter_scope"],
+        "scope": PROJECT_SCOPE,
         "project_root": str(root),
         "data_root": str(data_root),
     }
@@ -139,7 +137,6 @@ def self_test(tmp: Path) -> dict[str, Any]:
         'id = "PROJECT-TEST"\n'
         'title = "Fixture"\n'
         'language = "en"\n'
-        'chapter_scope = "CH001"\n'
     )
     (tmp / MANIFEST_NAME).write_text(manifest_text, encoding="utf-8")
     resolution = resolve_contract(tmp)
@@ -152,11 +149,11 @@ def self_test(tmp: Path) -> dict[str, Any]:
     (stale / MANIFEST_NAME).write_text(manifest_text, encoding="utf-8")
     (stale / "quillframe.lock.json").write_text("{}\n", encoding="utf-8")
     stale_rejected = not validate(stale)["valid"]
-    passed = resolution["manifest"]["schema"] == PROJECT_SCHEMA and resolution["chapter_scope"] == CHAPTER_SCOPE and extra_rejected and stale_rejected
+    passed = resolution["manifest"]["schema"] == PROJECT_SCHEMA and resolution["scope"] == PROJECT_SCOPE and extra_rejected and stale_rejected
     return {
         "project_resolution_contract": "PASS" if passed else "FAIL",
-        "exact_five_key_manifest": True,
-        "chapter_scope": CHAPTER_SCOPE,
+        "exact_four_key_manifest": True,
+        "scope": PROJECT_SCOPE,
         "legacy_metadata_rejected": stale_rejected,
         "data_boundary": resolution["data_root"],
     }

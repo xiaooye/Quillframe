@@ -10,6 +10,8 @@
         "schema": {"const": "quillframe_feedback_observation_v1"},
         "kind": {"const": "feedback_observation"},
         "feedback_text": {"type": "string", "minLength": 1, "maxLength": 12000},
+        "evidence_kind": {"enum": ["explicit_rule", "user_edit", "rejection", "acceptance", "comparison", "correction", "human_review"]},
+        "source_type": {"enum": ["author", "human_reader", "model_reader"]},
         "current_task": {"type": "object"},
         "target": {"type": "object"},
         "project_profile": {"type": "object"},

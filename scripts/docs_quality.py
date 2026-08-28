@@ -73,7 +73,7 @@ EXCLUDED_DISCOVERY_PREFIXES = ("release/acceptance/",)
 
 def rel(path: Path) -> str:
     try:
-        return str(path.relative_to(ROOT))
+        return path.relative_to(ROOT).as_posix()
     except ValueError:
         return str(path)
 

@@ -24,7 +24,7 @@ import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterable, Iterator
+from typing import Any, Callable, Iterable, Iterator
 
 from project_resolution import validate_project_id
 
@@ -34,11 +34,12 @@ SCHEMA_VERSION = 1
 SCHEMA_RELEASE = "1.0"
 BUNDLE_SCHEMA = "quillframe_backup_bundle_v1"
 PROJECT_SCHEMA = "quillframe_project_v1_0"
-CHAPTER_SCOPE = "CH001"
+PROJECT_SCOPE = "novel"
+INITIAL_CHAPTER_ID = "CH001"
 BUNDLE_MANIFEST_KEYS = {
     "schema",
     "project_schema",
-    "chapter_scope",
+    "scope",
     "backup_id",
     "project_id",
     "created_at",
@@ -517,8 +518,8 @@ def _parse_bundle_manifest(raw: bytes) -> dict[str, Any]:
         raise BundleSchemaError(f"schema must be exactly {BUNDLE_SCHEMA}")
     if value["project_schema"] != PROJECT_SCHEMA:
         raise BundleSchemaError(f"project_schema must be exactly {PROJECT_SCHEMA}")
-    if value["chapter_scope"] != CHAPTER_SCOPE:
-        raise BundleSchemaError(f"chapter_scope must be exactly {CHAPTER_SCOPE}")
+    if value["scope"] != PROJECT_SCOPE:
+        raise BundleSchemaError(f"scope must be exactly {PROJECT_SCOPE}")
     backup_id = value["backup_id"]
     if not isinstance(backup_id, str) or not BUNDLE_BACKUP_ID_RE.fullmatch(backup_id):
         raise BundleSchemaError("backup_id must match backup_[0-9a-f]{32}")
@@ -552,7 +553,7 @@ def _parse_bundle_manifest(raw: bytes) -> dict[str, Any]:
     return {
         "schema": BUNDLE_SCHEMA,
         "project_schema": PROJECT_SCHEMA,
-        "chapter_scope": CHAPTER_SCOPE,
+        "scope": PROJECT_SCOPE,
         "backup_id": backup_id,
         "project_id": project_id,
         "created_at": created_at,
@@ -1261,37 +1262,60 @@ def apply_schema(conn: sqlite3.Connection, scope: str) -> list[dict[str, Any]]:
 
 
 def _validate_project_chapter_rows(conn: sqlite3.Connection) -> None:
+    """Prove actual novel topology and document ownership without repairing it."""
     try:
-        story_rows = conn.execute("SELECT node_id,metadata_json FROM story_nodes").fetchall()
-        document_rows = conn.execute("SELECT story_node_id FROM documents WHERE story_node_id IS NOT NULL").fetchall()
+        story_rows = conn.execute("SELECT node_id,parent_id,kind,ordinal,metadata_json FROM story_nodes").fetchall()
+        document_rows = conn.execute("SELECT document_id,story_node_id,document_kind FROM documents").fetchall()
+        if conn.execute("PRAGMA foreign_key_check").fetchone() is not None:
+            raise BundleIdentityError("project contains dangling foreign-key references")
     except sqlite3.DatabaseError as exc:
-        raise BundleSchemaError(f"unable to inspect chapter scope rows: {exc}") from exc
-    for row in story_rows:
-        node_id = row["node_id"]
-        if isinstance(node_id, str) and re.fullmatch(r"CH[0-9]{3}", node_id) and node_id != CHAPTER_SCOPE:
-            raise BundleIdentityError(f"project contains non-{CHAPTER_SCOPE} story node: {node_id}")
-        metadata = row["metadata_json"]
-        if not isinstance(metadata, str) or not metadata.strip():
-            continue
+        raise BundleSchemaError(f"unable to inspect chapter relationships: {exc}") from exc
+    nodes = {row["node_id"]: row for row in story_rows}
+    chapters = {key for key, row in nodes.items() if row["kind"] == "chapter"}
+    positions: set[tuple[Any, ...]] = set()
+    for node_id, row in nodes.items():
+        if not isinstance(node_id, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", node_id):
+            raise BundleIdentityError("story node identifier is not a bounded native identifier")
+        if not isinstance(row["ordinal"], int) or row["ordinal"] < 0:
+            raise BundleIdentityError("story node ordinal must be non-negative")
+        position = (row["parent_id"], row["kind"], row["ordinal"])
+        if position in positions:
+            raise BundleIdentityError("story node sibling positions are ambiguous")
+        positions.add(position)
+        seen = {node_id}
+        parent = row["parent_id"]
+        while parent is not None:
+            if parent not in nodes or parent in seen:
+                raise BundleIdentityError("story node ancestry is missing or cyclic")
+            seen.add(parent)
+            parent = nodes[parent]["parent_id"]
         try:
-            value = json.loads(metadata)
+            metadata = json.loads(row["metadata_json"])
         except (TypeError, ValueError) as exc:
-            raise BundleSchemaError(f"story_nodes metadata_json is not valid JSON: {exc}") from exc
-        if isinstance(value, dict):
-            for field in ("chapter_scope", "chapter_id"):
-                scoped_value = value.get(field)
-                if scoped_value is not None and scoped_value != CHAPTER_SCOPE:
-                    raise BundleIdentityError(f"story_nodes {field} is outside {CHAPTER_SCOPE}")
+            raise BundleSchemaError("story node metadata must be valid JSON") from exc
+        if not isinstance(metadata, dict):
+            raise BundleSchemaError("story node metadata must be an object")
+        if "chapter_scope" in metadata:
+            raise BundleIdentityError("legacy chapter_scope metadata is not a native novel contract")
+        if metadata.get("chapter_id") is not None and metadata["chapter_id"] not in chapters:
+            raise BundleIdentityError("story node metadata refers to an unknown chapter")
+    manuscript_chapters: set[str] = set()
     for row in document_rows:
-        story_node_id = row["story_node_id"]
-        if isinstance(story_node_id, str) and re.fullmatch(r"CH[0-9]{3}", story_node_id) and story_node_id != CHAPTER_SCOPE:
-            raise BundleIdentityError(f"document is linked outside {CHAPTER_SCOPE}: {story_node_id}")
+        linked = row["story_node_id"]
+        if linked is not None and linked not in nodes:
+            raise BundleIdentityError("document refers to an unknown story node")
+        if row["document_kind"] == "manuscript":
+            if linked not in chapters or linked in manuscript_chapters:
+                raise BundleIdentityError("manuscript must belong to one distinct chapter")
+            manuscript_chapters.add(linked)
+    if chapters != manuscript_chapters:
+        raise BundleIdentityError("each chapter must own exactly one manuscript")
 
 
-def _validate_project_database_file(path: Path, project_id: str, chapter_scope: str) -> tuple[_ValidatedProjectDatabase, bytes]:
+def _validate_project_database_file(path: Path, project_id: str, scope: str) -> tuple[_ValidatedProjectDatabase, bytes]:
     database = _read_regular_nofollow(path, limit=MAX_BUNDLE_DATABASE_BYTES, label="project.sqlite")
-    if chapter_scope != CHAPTER_SCOPE:
-        raise BundleSchemaError(f"chapter_scope must be exactly {CHAPTER_SCOPE}")
+    if scope != PROJECT_SCOPE:
+        raise BundleSchemaError(f"scope must be exactly {PROJECT_SCOPE}")
     try:
         with _connect_readonly(path) as conn:
             objects = _schema_object_map(conn)
@@ -1530,6 +1554,137 @@ class QuillframeStore:
             conn.commit()
         return loc
 
+    def create_native_project(
+        self,
+        project_id: str,
+        title: str,
+        language: str = "zh-CN",
+        *,
+        before_commit: Callable[[sqlite3.Connection], None] | None = None,
+    ) -> ProjectLocation:
+        """Exclusively create a novel; identity and initial chapter commit together.
+
+        An existing path or registry entry is a conflict, including incomplete
+        earlier creations. No existing state is overwritten or repaired. The
+        registry is a separate durable domain, registered only after the
+        Project transaction commits. Launch owns cleanup of its reserved root.
+        """
+        if self.read_only:
+            raise ProjectStateError("native creation requires a writable store")
+        validate_project_id(project_id)
+        if not isinstance(title, str) or not title.strip() or not isinstance(language, str) or not language.strip():
+            raise ValueError("title and language must be non-empty strings")
+        title, language = title.strip(), language.strip()
+        _, root_fd = _open_real_directory_chain(self._requested_root)
+        projects_fd: int | None = None
+        project_fd: int | None = None
+        database_fd: int | None = None
+        global_fd: int | None = None
+        try:
+            for name in ("projects", "backups", "cache"):
+                try:
+                    os.mkdir(name, 0o700, dir_fd=root_fd)
+                except FileExistsError:
+                    pass
+                child_fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=root_fd)
+                os.close(child_fd)
+            _, projects_fd = _open_real_directory_chain(self.projects_root)
+            loc = self.location(project_id)
+            global_fd = os.open("quillframe.sqlite", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600, dir_fd=root_fd)
+            global_token = os.fstat(global_fd)
+            if not stat.S_ISREG(global_token.st_mode) or global_token.st_nlink != 1:
+                raise ProjectStateError("native registry must be an owned regular file")
+            with _connect_existing_fd(global_fd) as registry:
+                if global_token.st_size == 0:
+                    registry.execute("PRAGMA journal_mode=WAL")
+                    registry.execute("PRAGMA synchronous=FULL")
+                apply_schema(registry, "global")
+                registry.execute("BEGIN IMMEDIATE")
+                if registry.execute("SELECT 1 FROM project_registry WHERE project_id=?", (project_id,)).fetchone():
+                    raise FileExistsError(f"project already exists: {project_id}")
+                os.mkdir(project_id, 0o700, dir_fd=projects_fd)
+                project_fd = os.open(project_id, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=projects_fd)
+                project_token = os.fstat(project_fd)
+                for name in ("blobs", "exports"):
+                    os.mkdir(name, 0o700, dir_fd=project_fd)
+                database_fd = os.open("project.sqlite", os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=project_fd)
+                database_token = os.fstat(database_fd)
+
+                def assert_owned() -> None:
+                    current_registry = os.stat("quillframe.sqlite", dir_fd=root_fd, follow_symlinks=False)
+                    current_project = os.stat(project_id, dir_fd=projects_fd, follow_symlinks=False)
+                    current_database = os.stat("project.sqlite", dir_fd=project_fd, follow_symlinks=False)
+                    if (
+                        not stat.S_ISREG(current_registry.st_mode)
+                        or current_registry.st_nlink != 1
+                        or (current_registry.st_dev, current_registry.st_ino) != (global_token.st_dev, global_token.st_ino)
+                        or not stat.S_ISDIR(current_project.st_mode)
+                        or (current_project.st_dev, current_project.st_ino) != (project_token.st_dev, project_token.st_ino)
+                        or not stat.S_ISREG(current_database.st_mode)
+                        or current_database.st_nlink != 1
+                        or (current_database.st_dev, current_database.st_ino) != (database_token.st_dev, database_token.st_ino)
+                    ):
+                        raise ProjectStateError("native creation reservation changed")
+                    _, current_fd = _open_real_directory_chain(loc.directory)
+                    try:
+                        current = os.fstat(current_fd)
+                        if (current.st_dev, current.st_ino) != (project_token.st_dev, project_token.st_ino):
+                            raise ProjectStateError("native creation path changed")
+                    finally:
+                        os.close(current_fd)
+
+                assert_owned()
+                with _connect_existing_fd(database_fd) as conn:
+                    conn.execute("PRAGMA journal_mode=WAL")
+                    conn.execute("PRAGMA synchronous=FULL")
+                    apply_schema(conn, "project")
+                    self._ensure_optional_search(conn)
+                    conn.execute("BEGIN IMMEDIATE")
+                    stamp = now_iso()
+                    conn.execute(
+                        "INSERT INTO project_identity(project_id,title,language,project_schema_version,created_at,updated_at) VALUES(?,?,?,?,?,?)",
+                        (project_id, title, language, SCHEMA_VERSION, stamp, stamp),
+                    )
+                    conn.execute(
+                        "INSERT INTO story_nodes(node_id,parent_id,kind,ordinal,title,metadata_json) VALUES(?,NULL,'chapter',1,?,'{}')",
+                        (INITIAL_CHAPTER_ID, title),
+                    )
+                    conn.execute(
+                        "INSERT INTO documents(document_id,story_node_id,document_kind,title,created_at) VALUES(?,?,'manuscript',?,?)",
+                        (f"DOC-{INITIAL_CHAPTER_ID}", INITIAL_CHAPTER_ID, title, stamp),
+                    )
+                    self.index_search(conn, "document", f"DOC-{INITIAL_CHAPTER_ID}", title, "", commit=False)
+                    if before_commit is not None:
+                        before_commit(conn)
+                    assert_owned()
+                    self.assert_native_project(conn)
+                    conn.commit()
+                assert_owned()
+                registry.execute(
+                    "INSERT INTO project_registry(project_id,title,language,project_schema_version,project_dir,registered_at,last_opened_at) VALUES(?,?,?,?,?,?,?)",
+                    (project_id, title, language, SCHEMA_VERSION, str(loc.directory), stamp, stamp),
+                )
+                registry.commit()
+            os.fsync(project_fd)
+            os.fsync(projects_fd)
+            return loc
+        finally:
+            for fd in (database_fd, project_fd, projects_fd, global_fd, root_fd):
+                if fd is not None:
+                    os.close(fd)
+
+    @staticmethod
+    def assert_native_project(conn: sqlite3.Connection) -> None:
+        """Validate the current novel graph, never creation-time titles or plans."""
+        try:
+            _validate_project_chapter_rows(conn)
+            chapters = {row[0] for row in conn.execute("SELECT node_id FROM story_nodes WHERE kind='chapter'")}
+            manuscripts = {row[0] for row in conn.execute("SELECT story_node_id FROM documents WHERE document_kind='manuscript'")}
+            if not chapters or chapters != manuscripts:
+                raise ProjectStateError("native novel requires exactly one manuscript for each chapter")
+        except BundleValidationError as exc:
+            raise ProjectStateError(str(exc)) from exc
+
     def open_project(self, project_id: str) -> sqlite3.Connection:
         loc = self.location(project_id)
         if not loc.database.exists():
@@ -1592,6 +1747,10 @@ class QuillframeStore:
                 raise ProjectStateError(
                     f"SQLite schema identity must be exactly project:{SCHEMA_RELEASE}"
                 )
+            try:
+                _validate_current_schema(conn, "project", _schema_fragments("project"))
+            except SchemaContractError as exc:
+                raise ProjectStateError("existing Project schema is not the exact current native contract") from exc
             identity_rows = conn.execute(
                 "SELECT project_id,title,language,project_schema_version FROM project_identity"
             ).fetchall()
@@ -1627,13 +1786,26 @@ class QuillframeStore:
         document_kind: str = "manuscript",
         story_node_id: str | None = None,
     ) -> None:
+        if not isinstance(document_id, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", document_id):
+            raise ValueError("document_id must be a bounded native identifier")
+        if not isinstance(title, str) or not title.strip():
+            raise ValueError("title must be non-empty")
         with self.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            node = conn.execute("SELECT kind FROM story_nodes WHERE node_id=?", (story_node_id,)).fetchone() if story_node_id is not None else None
+            if story_node_id is not None and node is None:
+                raise ValueError("document story_node_id must reference an existing story node")
+            if document_kind == "manuscript":
+                if node is None or node["kind"] != "chapter":
+                    raise ValueError("manuscript story_node_id must reference an existing chapter")
+                if conn.execute("SELECT 1 FROM documents WHERE story_node_id=? AND document_kind='manuscript'", (story_node_id,)).fetchone():
+                    raise ConflictError("chapter already has a manuscript")
             conn.execute(
                 "INSERT INTO documents(document_id,story_node_id,document_kind,title,created_at) VALUES(?,?,?,?,?)",
                 (document_id, story_node_id, document_kind, title, now_iso()),
             )
+            self.index_search(conn, "document", document_id, title, "", commit=False)
             conn.commit()
-            self.index_search(conn, "document", document_id, title, "")
 
     def latest_revision(self, conn: sqlite3.Connection, document_id: str) -> sqlite3.Row | None:
         return conn.execute(
@@ -1914,7 +2086,7 @@ class QuillframeStore:
                     database_result, _ = _validate_project_database_file(
                         database_path,
                         manifest["project_id"],
-                        manifest["chapter_scope"],
+                        manifest["scope"],
                     )
                 manifest_blobs = tuple(
                     {
@@ -2045,7 +2217,7 @@ class QuillframeStore:
         loc = self.location(project_id)
         if not loc.database.exists():
             raise FileNotFoundError(project_id)
-        source_result, _ = _validate_project_database_file(loc.database, project_id, CHAPTER_SCOPE)
+        source_result, _ = _validate_project_database_file(loc.database, project_id, PROJECT_SCOPE)
         if not self.global_db.is_file() or self.global_db.is_symlink():
             raise IntegrityError("global database is required before publishing backup metadata")
         backup_id = "backup_" + uuid.uuid4().hex
@@ -2056,14 +2228,14 @@ class QuillframeStore:
             temp = Path(td)
             db_copy = temp / "project.sqlite"
             self._snapshot(loc.database, db_copy)
-            snapshot_result, database = _validate_project_database_file(db_copy, project_id, CHAPTER_SCOPE)
+            snapshot_result, database = _validate_project_database_file(db_copy, project_id, PROJECT_SCOPE)
             if snapshot_result.identity != source_result.identity or snapshot_result.blobs != source_result.blobs:
                 raise BundleDatabaseError("source project changed during read-only backup snapshot")
             payloads = self._read_project_blobs(loc, snapshot_result.blobs)
             manifest = {
                 "schema": BUNDLE_SCHEMA,
                 "project_schema": PROJECT_SCHEMA,
-                "chapter_scope": CHAPTER_SCOPE,
+                "scope": PROJECT_SCOPE,
                 "backup_id": backup_id,
                 "project_id": project_id,
                 "created_at": now_iso(),
@@ -2351,7 +2523,7 @@ class QuillframeStore:
         if fingerprint_bytes(database) != database_fingerprint:
             raise RestoreError(_public_restore_error_message("restore_failed"), code="restore_database")
         try:
-            result, _ = _validate_project_database_file(database_path, project_id, CHAPTER_SCOPE)
+            result, _ = _validate_project_database_file(database_path, project_id, PROJECT_SCOPE)
         except BundleValidationError as exc:
             raise RestoreError(_public_restore_error_message("restore_failed"), code="restore_database") from exc
         expected_blobs = tuple(_validate_blob_metadata(row) for row in blob_rows)
@@ -2400,7 +2572,7 @@ class QuillframeStore:
                 "project_schema_version": identity["project_schema_version"],
             },
             "project_schema": PROJECT_SCHEMA,
-            "chapter_scope": CHAPTER_SCOPE,
+            "scope": PROJECT_SCOPE,
             "database_fingerprint": database_fingerprint,
             "blobs": [dict(row) for row in blob_rows],
             "registry_prestate": None,
@@ -2421,7 +2593,7 @@ class QuillframeStore:
             "target_inode",
             "identity",
             "project_schema",
-            "chapter_scope",
+            "scope",
             "database_fingerprint",
             "blobs",
             "registry_prestate",
@@ -2451,7 +2623,7 @@ class QuillframeStore:
             raise RestoreIncompleteError(_public_restore_error_message("restore_incomplete"), code="restore_incomplete")
         if record["stage_name"] != f".{project_id}.restore-stage-{nonce}":
             raise RestoreIncompleteError(_public_restore_error_message("restore_incomplete"), code="restore_incomplete")
-        if record["project_schema"] != PROJECT_SCHEMA or record["chapter_scope"] != CHAPTER_SCOPE:
+        if record["project_schema"] != PROJECT_SCHEMA or record["scope"] != PROJECT_SCOPE:
             raise RestoreIncompleteError(_public_restore_error_message("restore_incomplete"), code="restore_incomplete")
         try:
             validate_project_id(project_id)
@@ -2518,7 +2690,7 @@ class QuillframeStore:
             "target_inode": None,
             "identity": dict(record["identity"]),
             "project_schema": PROJECT_SCHEMA,
-            "chapter_scope": CHAPTER_SCOPE,
+            "scope": PROJECT_SCOPE,
             "database_fingerprint": record["database_fingerprint"],
             "blobs": [dict(row) for row in record["blobs"]],
             "registry_prestate": None,

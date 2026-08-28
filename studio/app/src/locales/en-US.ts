@@ -67,7 +67,7 @@ const messages = {
   "project.body": "Preflight a Quillframe project in the browser, then use a bound Core for authoritative native Project resolution.",
   "project.browserEyebrow": "No Core required · local browser",
   "project.browserTitle": "Import and inspect a project",
-  "project.browserBody": "Choose a Quillframe project directory. Studio reads only the files you select and checks the five-key manifest, CH001, manifest fingerprint, and .quillframe/data boundary in your browser.",
+  "project.browserBody": "Choose a Quillframe project directory. Studio reads only the files you select and checks the four-key manifest, scope=novel, manifest fingerprint, and .quillframe/data boundary in your browser.",
   "project.browserAction": "Choose project folder",
   "project.browserPrivacy": "Browser preflight does not upload project files and grants no Canon, Framework, or write authority.",
   "project.browserPreflight": "Browser preflight",

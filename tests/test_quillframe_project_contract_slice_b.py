@@ -22,8 +22,7 @@ def write_native_manifest(root: Path, project_id: str = "PROJECT-SLICE-B") -> No
         "schema = \"quillframe_project_v1_0\"\n"
         f"id = \"{project_id}\"\n"
         "title = \"Slice B fixture\"\n"
-        "language = \"en\"\n"
-        "chapter_scope = \"CH001\"\n",
+        "language = \"en\"\n",
         encoding="utf-8",
     )
 
@@ -73,7 +72,7 @@ class ProjectContractSliceBTests(unittest.TestCase):
         result = json.loads(proc.stdout)
         self.assertEqual(result["launch_contract"], "PASS")
         self.assertEqual(result["project_schema"], "quillframe_project_v1_0")
-        self.assertEqual(result["chapter_scope"], "CH001")
+        self.assertEqual(result["scope"], "novel")
 
     def test_manifest_machine_contract_is_native_and_has_no_consumer_lock(self):
         manifest = (ROOT / "HARNESS_MANIFEST.yaml").read_text(encoding="utf-8")
@@ -94,7 +93,7 @@ class ProjectContractSliceBTests(unittest.TestCase):
         self.assertIsNotNone(identity)
         assert identity is not None
         self.assertEqual(identity["project_id"], "PROJECT-IDENTITY")
-        self.assertEqual(identity["chapter_scope"], "CH001")
+        self.assertEqual(identity["scope"], "novel")
         self.assertTrue(identity["project_manifest_fingerprint"].startswith("sha256:"))
         self.assertTrue(identity["data_root"].endswith(".quillframe/data"))
         self.assertNotIn("framework", identity)
@@ -127,7 +126,7 @@ class ProjectContractSliceBTests(unittest.TestCase):
             with patch.dict(os.environ, env, clear=False):
                 binding = bridge.load_project_binding()
         self.assertEqual(binding["project_id"], "PROJECT-PEER")
-        self.assertEqual(binding["chapter_scope"], "CH001")
+        self.assertEqual(binding["scope"], "novel")
         self.assertTrue(binding["manifest_fingerprint"].startswith("sha256:"))
         self.assertEqual(binding["framework_repo"], "xiaooye/quillframe")
         self.assertEqual(binding["framework_commit"], "a" * 40)
@@ -141,22 +140,21 @@ class ProjectContractSliceBTests(unittest.TestCase):
                 "id": "PROJECT-PROJECTION",
                 "title": "Projection fixture",
                 "language": "en",
-                "chapter_scope": "CH001",
             },
             "manifest_fingerprint": project_hub_projection.fingerprint({
-                "schema": "quillframe_project_v1_0", "id": "PROJECT-PROJECTION", "title": "Projection fixture", "language": "en", "chapter_scope": "CH001",
+                "schema": "quillframe_project_v1_0", "id": "PROJECT-PROJECTION", "title": "Projection fixture", "language": "en",
             }),
             "project_id": "PROJECT-PROJECTION",
             "project_title": "Projection fixture",
             "language": "en",
-            "chapter_scope": "CH001",
+            "scope": "novel",
             "project_root": "/private/project",
             "data_root": "/private/project/.quillframe/data",
         }
         projection = project_hub_projection.build_projection(source, "cloud_ui")
         self.assertEqual(projection["source_schema"], "quillframe_project_context_v1_0")
         self.assertEqual(projection["project"]["id"], "PROJECT-PROJECTION")
-        self.assertEqual(projection["project"]["chapter_scope"], "CH001")
+        self.assertEqual(projection["project"]["scope"], "novel")
         self.assertEqual(projection["project"]["manifest_fingerprint"], source["manifest_fingerprint"])
         self.assertNotIn("framework_lock", projection)
         self.assertNotIn("framework_attestation", projection)
@@ -169,13 +167,13 @@ class ProjectContractSliceBTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             project_hub_projection.build_projection({
                 "context_schema": "quillframe_project_context_v1_0",
-                "manifest": {"schema": "quillframe_project_v1_0", "id": "P", "title": "Novel", "language": "en", "chapter_scope": "CH001"},
+                "manifest": {"schema": "quillframe_project_v1_0", "id": "P", "title": "Novel", "language": "en"},
                 "manifest_fingerprint": "sha256:" + "a" * 64,
-                "project_id": "P", "project_title": "Novel", "language": "en", "chapter_scope": "CH001",
+                "project_id": "P", "project_title": "Novel", "language": "en", "scope": "novel",
             })
 
     def test_project_hub_rejects_native_field_mutations_and_normalizes_text(self):
-        base = {"context_schema": "quillframe_project_context_v1_0", "manifest": {"schema": "quillframe_project_v1_0", "id": "P", "title": " Novel ", "language": " en-US ", "chapter_scope": "CH001"}, "manifest_fingerprint": project_hub_projection.fingerprint({"schema": "quillframe_project_v1_0", "id": "P", "title": "Novel", "language": "en-US", "chapter_scope": "CH001"}), "project_id": "P", "project_title": "Novel", "language": "en-US", "chapter_scope": "CH001"}
+        base = {"context_schema": "quillframe_project_context_v1_0", "manifest": {"schema": "quillframe_project_v1_0", "id": "P", "title": " Novel ", "language": " en-US "}, "manifest_fingerprint": project_hub_projection.fingerprint({"schema": "quillframe_project_v1_0", "id": "P", "title": "Novel", "language": "en-US"}), "project_id": "P", "project_title": "Novel", "language": "en-US", "scope": "novel"}
         projection = project_hub_projection.build_projection(base)
         self.assertEqual(projection["project"]["title"], "Novel")
         for field, value in (("id", 7), ("id", "../escape"), ("title", " "), ("language", 9)):
@@ -192,7 +190,7 @@ class ProjectContractSliceBTests(unittest.TestCase):
         self.assertEqual(projection["source_schema"], context["context_schema"])
         self.assertEqual(projection["project"]["id"], context["project_id"])
         self.assertEqual(projection["project"]["manifest_fingerprint"], context["manifest_fingerprint"])
-        self.assertEqual(projection["project"]["chapter_scope"], "CH001")
+        self.assertEqual(projection["project"]["scope"], "novel")
 
     def test_projection_fixture_is_native_or_absent(self):
         fixture = ROOT / "studio/fixtures/project-context.synthetic.json"

@@ -40,7 +40,13 @@
     "manuscript_visibility_requires_production_release": true,
     "host_self_generated_manuscript_is_releaseable": false,
     "ephemeral_runtime_exact_git_identity_required": true,
-    "production_checkpoint_manuscript_private_from_agent_package": true
+    "production_checkpoint_manuscript_private_from_agent_package": true,
+    "project_scope_is_novel": true,
+    "project_learning_is_project_scoped": true,
+    "model_reader_feedback_is_advisory_only": true,
+    "settled_state_requires_preflight_confirmation": true,
+    "context_refresh_requires_fresh_run": true,
+    "production_checkpoint_manuscript_private_from_all_surfaces": true
   },
   "native_independent_review": {
     "provider_ids": [
@@ -224,8 +230,7 @@
         "service_id",
         "instruction",
         "reader_grip",
-        "rule_material",
-        "independent_provenance"
+        "rule_material"
       ],
       "allowed_surfaces": [
         "cli",
@@ -279,8 +284,7 @@
     "model.service.add": {
       "kind": "secret_command",
       "required_args": [
-        "endpoint",
-        "access_token"
+        "endpoint"
       ],
       "allowed_surfaces": [
         "cli",
@@ -405,6 +409,9 @@
         "cli",
         "local_app",
         "hosted_web"
+      ],
+      "optional_args": [
+        "expected_preflight_fingerprint"
       ]
     },
     "feedback.observe": {
@@ -554,6 +561,217 @@
         "project_id",
         "acceptance_id",
         "target_ref"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "chapter.list": {
+      "kind": "query",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "plan.inspect": {
+      "kind": "query",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "story.inspect": {
+      "kind": "query",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "reader.expectations.inspect": {
+      "kind": "query",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "publication.artifact.get": {
+      "kind": "query",
+      "required_args": [
+        "project_id",
+        "build_id"
+      ]
+    },
+    "learning.feedback.get": {
+      "kind": "query",
+      "required_args": [
+        "project_id",
+        "event_id"
+      ]
+    },
+    "learning.feedback.list": {
+      "kind": "query",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "learning.preference.get": {
+      "kind": "query",
+      "required_args": [
+        "project_id",
+        "hypothesis_id"
+      ]
+    },
+    "learning.preference.list": {
+      "kind": "query",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "chapter.create": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "title",
+        "idempotency_key",
+        "user_authorized"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "plan.save": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "target_ref",
+        "title",
+        "content",
+        "expected_version",
+        "idempotency_key",
+        "user_authorized"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "reader.expectations.apply": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "observation_id",
+        "acceptance_id",
+        "authorized_by",
+        "idempotency_key",
+        "user_authorized"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "publication.collection.build": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "acceptance_ids",
+        "format",
+        "idempotency_key",
+        "user_authorized"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "learning.feedback.observe": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "event_id",
+        "feedback_text",
+        "evidence_kind",
+        "candidate_id",
+        "candidate_fingerprint",
+        "document_id",
+        "run_id",
+        "source_type",
+        "source_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "learning.feedback.execute": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "event_id",
+        "service_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "learning.feedback.resume": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "event_id",
+        "service_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "learning.preference.review": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "hypothesis_id",
+        "expected_version",
+        "service_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "learning.preference.activate": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "hypothesis_id",
+        "expected_version",
+        "authorized_by",
+        "idempotency_key",
+        "user_authorized"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "learning.preference.deactivate": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "hypothesis_id",
+        "expected_version",
+        "authorized_by",
+        "idempotency_key",
+        "user_authorized"
       ],
       "allowed_surfaces": [
         "cli",

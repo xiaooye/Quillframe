@@ -11,7 +11,7 @@ export const CORE_PROOF_MAX_LIFETIME_MS = 30_000;
 const MAX_ID = 128;
 const MAX_PATH = 2048;
 const MAX_NONCE = 128;
-const CLAIM_KEYS = ["body_sha256", "chapter_scope", "expires_at", "issued_at", "key_id", "method", "nonce", "path", "project_id", "schema", "session_id", "workspace_id"] as const;
+const CLAIM_KEYS = ["body_sha256", "expires_at", "issued_at", "key_id", "method", "nonce", "path", "project_id", "schema", "scope", "session_id", "workspace_id"] as const;
 
 const PROJECT_REQUIRED = new Set([
   "project.create", "project.open", "project.inspect", "project.search", "project.backup",
@@ -23,6 +23,10 @@ const PROJECT_REQUIRED = new Set([
   "inspector.sessions.list", "inspector.runs.list", "inspector.checkpoints.list", "inspector.context.list",
   "inspector.receipts.list", "inspector.candidates.list", "inspector.learning.list", "inspector.context.runtime",
   "document.list", "candidate.review.get", "candidate.visible.get",
+  "chapter.list", "chapter.create", "plan.inspect", "plan.save", "story.inspect",
+  "reader.expectations.inspect", "reader.expectations.apply", "publication.artifact.get", "publication.collection.build",
+  "learning.feedback.observe", "learning.feedback.get", "learning.feedback.list", "learning.feedback.execute", "learning.feedback.resume",
+  "learning.preference.list", "learning.preference.get", "learning.preference.review", "learning.preference.activate", "learning.preference.deactivate",
 ]);
 const PROJECT_NULL = new Set([
   "bridge.describe", "database.doctor", "project.list", "author.run.events", "model.service.add",
@@ -45,7 +49,7 @@ export type CoreProofClaims = {
   workspace_id: string;
   session_id: string;
   project_id: string | null;
-  chapter_scope: "CH001";
+  scope: "novel";
   issued_at: number;
   expires_at: number;
   nonce: string;
@@ -119,22 +123,27 @@ function validateJsonValue(value: unknown): void {
   }
   if (typeof value !== "object" || Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) fail("body_json_invalid");
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-    if (/[\x80-\xff]/.test(key) || hasLoneSurrogate(key)) fail("body_json_invalid");
+    if (/[^\x00-\x7f]/.test(key)) fail("body_json_invalid");
     validateJsonValue(child);
   }
 }
 
-function sortedValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(sortedValue);
-  if (value && typeof value === "object") return Object.fromEntries(Object.keys(value as Record<string, unknown>).sort().map((key) => [key, sortedValue((value as Record<string, unknown>)[key])]));
-  return value;
+function serializeCanonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(serializeCanonical).join(",")}]`;
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    // Serializing an intermediate object would reorder integer-style keys.
+    // Emit keys explicitly to match Python's sort_keys=True wire contract.
+    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${serializeCanonical(record[key])}`).join(",")}}`;
+  }
+  const result = JSON.stringify(value);
+  if (typeof result !== "string") fail("body_json_invalid");
+  return result;
 }
 
 export function canonicalJson(value: unknown): string {
   validateJsonValue(value);
-  const result = JSON.stringify(sortedValue(value));
-  if (typeof result !== "string") fail("body_json_invalid");
-  return result;
+  return serializeCanonical(value);
 }
 export function canonicalJsonBytes(value: unknown): Uint8Array { return encoder.encode(canonicalJson(value)); }
 
@@ -155,7 +164,8 @@ class JsonParser {
     if (this.text[this.index] === "}") { this.index += 1; return result; }
     while (true) {
       this.ws(); const key = this.string(); if (/[^\x00-\x7f]/.test(key)) this.error("body_json_invalid"); if (seen.has(key)) this.error("body_duplicate_key"); seen.add(key);
-      this.ws(); if (this.text[this.index++] !== ":") this.error("body_json_invalid"); result[key] = this.value(); this.ws();
+      this.ws(); if (this.text[this.index++] !== ":") this.error("body_json_invalid");
+      Object.defineProperty(result, key, { value: this.value(), enumerable: true, writable: true, configurable: true }); this.ws();
       const delimiter = this.text[this.index++]; if (delimiter === "}") return result; if (delimiter !== ",") this.error("body_json_invalid");
     }
   }
@@ -216,7 +226,7 @@ export function deriveProofProjectId(operation: string, request: Record<string, 
 
 function validateClaims(claims: unknown): asserts claims is CoreProofClaims {
   if (!exactKeys(claims, CLAIM_KEYS)) fail("proof_claims_invalid"); const value = claims as Record<string, unknown>;
-  if (value.schema !== CORE_PROOF_SCHEMA || !boundedId(value.key_id) || !boundedMethod(value.method) || !boundedPath(value.path) || !hexHash(value.body_sha256) || !boundedId(value.workspace_id) || !boundedId(value.session_id) || value.project_id !== null && !nativeProjectId(value.project_id) || value.chapter_scope !== "CH001" || !safeTime(value.issued_at) || !safeTime(value.expires_at) || !boundedNonce(value.nonce)) fail("proof_claims_invalid");
+  if (value.schema !== CORE_PROOF_SCHEMA || !boundedId(value.key_id) || !boundedMethod(value.method) || !boundedPath(value.path) || !hexHash(value.body_sha256) || !boundedId(value.workspace_id) || !boundedId(value.session_id) || value.project_id !== null && !nativeProjectId(value.project_id) || value.scope !== "novel" || !safeTime(value.issued_at) || !safeTime(value.expires_at) || !boundedNonce(value.nonce)) fail("proof_claims_invalid");
   if (value.expires_at <= value.issued_at || value.expires_at - value.issued_at > CORE_PROOF_MAX_LIFETIME_MS) fail("proof_time_invalid");
 }
 
@@ -229,8 +239,8 @@ function keyFrom(options: VerifyOptions, keyId: string): Uint8Array {
 }
 
 export async function signCoreProof(input: ProofOptions): Promise<string> { validateClaims(input.claims); const claimsBytes = canonicalJsonBytes(input.claims); return `${CORE_PROOF_VERSION}.${input.claims.key_id}.${base64Url(claimsBytes)}.${base64Url(await hmac(input.key, claimsBytes))}`; }
-export async function buildCoreProof(input: { key_id: string; key: Uint8Array; method: string; path: string; body: Uint8Array; workspace_id: string; session_id: string; project_id: string | null; chapter_scope: "CH001"; issued_at: number; expires_at: number; nonce: string }): Promise<{ header: string; claims: CoreProofClaims; proof_digest: `sha256:${string}` }> {
-  const claims: CoreProofClaims = { schema: CORE_PROOF_SCHEMA, key_id: input.key_id, method: input.method, path: input.path, body_sha256: `sha256:${await sha256Hex(input.body)}`, workspace_id: input.workspace_id, session_id: input.session_id, project_id: input.project_id, chapter_scope: input.chapter_scope, issued_at: input.issued_at, expires_at: input.expires_at, nonce: input.nonce };
+export async function buildCoreProof(input: { key_id: string; key: Uint8Array; method: string; path: string; body: Uint8Array; workspace_id: string; session_id: string; project_id: string | null; scope: "novel"; issued_at: number; expires_at: number; nonce: string }): Promise<{ header: string; claims: CoreProofClaims; proof_digest: `sha256:${string}` }> {
+  const claims: CoreProofClaims = { schema: CORE_PROOF_SCHEMA, key_id: input.key_id, method: input.method, path: input.path, body_sha256: `sha256:${await sha256Hex(input.body)}`, workspace_id: input.workspace_id, session_id: input.session_id, project_id: input.project_id, scope: input.scope, issued_at: input.issued_at, expires_at: input.expires_at, nonce: input.nonce };
   const header = await signCoreProof({ claims, key: input.key }); return { header, claims, proof_digest: `sha256:${await sha256Hex(header)}` };
 }
 export async function verifyCoreProof(value: string, options: VerifyOptions): Promise<CoreProofClaims> {

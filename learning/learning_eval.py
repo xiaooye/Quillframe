@@ -10,14 +10,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
-SEM = ROOT / "harness" / "semantic_workers"
-if str(SEM) not in sys.path: sys.path.insert(0, str(SEM))
-from semantic_worker_router import find_forbidden_keys, find_named_keys, make_contract_job, validate_job  # noqa: E402
+from harness.semantic_workers.semantic_worker_router import find_forbidden_keys, find_named_keys, make_contract_job, validate_job
 
 ANALYSIS_QUEUE_SCHEMA = "quillframe_learning_analysis_jobs_v1"
 EVAL_QUEUE_SCHEMA = "quillframe_learning_eval_jobs_v1"

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-A consuming fiction project may transport a deterministic Quillframe Framework bundle. The bundle fingerprint is evidence about materialized bytes; Project identity and authority remain the native five-key manifest/context.
+A consuming fiction project may transport a deterministic Quillframe Framework bundle. The bundle fingerprint is evidence about materialized bytes; Project identity and authority remain the native four-key manifest and context with top-level `scope: "novel"`.
 
 The bundle is a transport/cache artifact, not a second authority. A bundle fingerprint proves byte identity for transport evidence, not story truth or Project authority.
 
@@ -96,5 +96,5 @@ The release version advertised by a consuming project must come from the Framewo
 ## Related contracts
 
 - [`build_framework_bundle.py`](build_framework_bundle.py) — deterministic builder/verifier.
-- [Native Project Contract](../docs/project-contract.en.md) — exact five-key Project identity, context, fingerprint, and storage boundary.
+- [Native Project Contract](../docs/project-contract.en.md) — exact four-key Project identity, novel context, fingerprint, and storage boundary.
 - `HARNESS_MANIFEST.yaml` — current Framework release authority.

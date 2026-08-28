@@ -6,6 +6,11 @@ from typing import Any
 from harness.context_runtime import MANDATORY_PRODUCTION_MECHANISMS, fingerprint
 
 PRODUCTION_BUNDLE_SCHEMA = "quillframe_production_context_bundle_v1"
+PRODUCTION_BUNDLE_BINDING_KEYS = (
+    "run_id", "task_mode", "target_context", "reader_expectations", "freeze_fingerprint",
+    "source_universe_fingerprint", "source_payloads", "stage_bindings",
+    "supersedes_bundle_fingerprint", "refresh_reason",
+)
 PRODUCTION_STAGE_RESULT_SCHEMA = "quillframe_production_stage_result_v1"
 PRODUCTION_EXECUTION_SCHEMA = "quillframe_production_execution_result_v1"
 PRODUCTION_STATUS_SCHEMA = "quillframe_production_run_status_v1"
@@ -46,6 +51,14 @@ class ProductionRunError(RuntimeError):
         super().__init__(message)
         self.code = code
         self.detail = detail
+
+
+def validate_bundle_integrity(bundle: dict[str, Any]) -> None:
+    if not isinstance(bundle, dict) or bundle.get("schema") != PRODUCTION_BUNDLE_SCHEMA \
+            or any(key not in bundle for key in PRODUCTION_BUNDLE_BINDING_KEYS):
+        raise ProductionRunError("context_bundle_invalid", "production context bundle binding is incomplete")
+    if fingerprint({key: bundle[key] for key in PRODUCTION_BUNDLE_BINDING_KEYS}) != bundle.get("bundle_fingerprint"):
+        raise ProductionRunError("context_bundle_invalid", "production context bundle fingerprint does not match")
 
 
 def secret_paths(value: Any, path: str = "$") -> list[str]:
@@ -104,8 +117,12 @@ def public_stage_result(
     # Raw draft text and private simulation payloads are deliberately absent.
     public_judgment = {
         "status": judgment.get("status"),
-        "summary": judgment.get("summary"),
-        "findings": judgment.get("findings", []),
+        # Model summaries and findings can quote the hidden draft. Exact text
+        # evidence is released with candidate-bound review_evidence only after
+        # the Core release gate; status/journal endpoints remain text-free.
+        "summary": "semantic_result_recorded",
+        "findings": [],
+        "finding_count": len(judgment.get("findings", [])) if isinstance(judgment.get("findings"), list) else 0,
         "artifact_fingerprint": judgment.get("artifact_fingerprint"),
     }
     result = {

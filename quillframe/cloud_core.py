@@ -35,6 +35,10 @@ PROJECT_REQUIRED = {
     "inspector.sessions.list", "inspector.runs.list", "inspector.checkpoints.list", "inspector.context.list",
     "inspector.receipts.list", "inspector.candidates.list", "inspector.learning.list", "inspector.context.runtime",
     "document.list", "candidate.review.get", "candidate.visible.get",
+    "chapter.list", "chapter.create", "plan.inspect", "plan.save", "story.inspect",
+    "reader.expectations.inspect", "reader.expectations.apply", "publication.artifact.get", "publication.collection.build",
+    "learning.feedback.observe", "learning.feedback.get", "learning.feedback.list", "learning.feedback.execute", "learning.feedback.resume",
+    "learning.preference.list", "learning.preference.get", "learning.preference.review", "learning.preference.activate", "learning.preference.deactivate",
 }
 PROJECT_NULL = {
     "bridge.describe", "database.doctor", "project.list", "author.run.events", "model.service.add",
@@ -224,7 +228,7 @@ def _verify_core_proof(value: str, body: bytes, method: str, path: str, now: int
         claims = json.loads(claims_raw.decode("utf-8"), object_pairs_hook=_reject_duplicate_pairs)
     except (UnicodeDecodeError, json.JSONDecodeError):
         raise CoreProofError("proof_claims_invalid")
-    expected_keys = {"schema", "key_id", "method", "path", "body_sha256", "workspace_id", "session_id", "project_id", "chapter_scope", "issued_at", "expires_at", "nonce"}
+    expected_keys = {"schema", "key_id", "method", "path", "body_sha256", "workspace_id", "session_id", "project_id", "scope", "issued_at", "expires_at", "nonce"}
     if not isinstance(claims, dict) or set(claims) != expected_keys:
         raise CoreProofError("proof_claims_invalid")
     try:
@@ -242,7 +246,7 @@ def _verify_core_proof(value: str, body: bytes, method: str, path: str, now: int
     body_sha256 = claims["body_sha256"]
     project_id = claims["project_id"]
     nonce = claims["nonce"]
-    if schema != "quillframe_core_proof_v1" or claims["key_id"] != key_id or claims["chapter_scope"] != "CH001":
+    if schema != "quillframe_core_proof_v1" or claims["key_id"] != key_id or claims["scope"] != "novel":
         raise CoreProofError("proof_claims_invalid")
     if not isinstance(claim_method, str) or not re.fullmatch(r"[A-Z][A-Z0-9-]{0,15}", claim_method):
         raise CoreProofError("proof_claims_invalid")
@@ -362,7 +366,7 @@ class CoreHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         if self.path == "/health":
-            self._json(200, {"schema": "quillframe_cloud_core_health_v1", "status": "ok", "chapter_scope": "CH001", "authority": False})
+            self._json(200, {"schema": "quillframe_cloud_core_health_v1", "status": "ok", "scope": "novel", "authority": False})
             return
         self._json(404, {"schema": "quillframe_cloud_core_error_v1", "code": "not_found", "authority": False})
 
@@ -387,7 +391,7 @@ class CoreHandler(BaseHTTPRequestHandler):
             now = _active_clock()
             proof = self.headers["X-Qf-Core-Proof"]
             claims = _verify_core_proof(proof, raw, self.command, self.path, now, consume_nonce=False)
-            if claims["project_id"] != query["project_id"] or claims["project_id"] is None or claims["chapter_scope"] != "CH001": raise CoreProofError("proof_project_invalid")
+            if claims["project_id"] != query["project_id"] or claims["project_id"] is None or claims["scope"] != "novel": raise CoreProofError("proof_project_invalid")
             if query["operation"] == "project.read":
                 version_id = query["version_id"]
                 expected_key = f"v2/{hashlib.sha256(claims['workspace_id'].encode('utf-8')).hexdigest()}/{claims['project_id']}/versions/{version_id}.qfbundle"
@@ -403,7 +407,7 @@ class CoreHandler(BaseHTTPRequestHandler):
             )
             verified = QuillframeStore(read_only=True).verify_backup_bytes(raw)
             manifest = verified["manifest"]
-            if manifest.get("project_id") != claims["project_id"] or manifest.get("chapter_scope") != "CH001" or manifest.get("schema") != "quillframe_backup_bundle_v1": raise BundleValidationError("native backup identity mismatch", code="bundle_identity")
+            if manifest.get("project_id") != claims["project_id"] or manifest.get("scope") != "novel" or manifest.get("schema") != "quillframe_backup_bundle_v1": raise BundleValidationError("native backup identity mismatch", code="bundle_identity")
             database_fingerprint = manifest.get("database_fingerprint")
             if not isinstance(database_fingerprint, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", database_fingerprint): raise BundleValidationError("native database fingerprint invalid", code="bundle_schema")
             body_fingerprint = fingerprint_bytes(raw)
@@ -411,7 +415,7 @@ class CoreHandler(BaseHTTPRequestHandler):
             receipt = {
                 "schema": "quillframe_native_backup_verification_v1", "bundle_schema": "quillframe_backup_bundle_v1",
                 "body_fingerprint": body_fingerprint, "bundle_fingerprint": body_fingerprint, "project_id": claims["project_id"],
-                "chapter_scope": "CH001", "database_fingerprint": database_fingerprint, "database_bytes": verified["database_bytes"],
+                "scope": "novel", "database_fingerprint": database_fingerprint, "database_bytes": verified["database_bytes"],
                 "blob_count": verified["blob_count"], "byte_size": len(raw), "verified": True, "authority": False,
             }
             self._json(200, receipt)

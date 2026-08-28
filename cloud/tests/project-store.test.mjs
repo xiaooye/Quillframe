@@ -18,7 +18,7 @@ function verification(projectId, bundle, database = "a") {
     body_fingerprint: `sha256:${bundle.fingerprint}`,
     bundle_fingerprint: `sha256:${bundle.fingerprint}`,
     project_id: projectId,
-    chapter_scope: "CH001",
+    scope: "novel",
     database_fingerprint: `sha256:${database.repeat(64)}`,
     database_bytes: 1,
     blob_count: 0,

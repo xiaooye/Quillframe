@@ -67,7 +67,7 @@ const messages = {
   "project.body": "先在浏览器里检查 Quillframe 项目身份与锁定关系；连接 Core 后再运行权威的 native Project resolution。",
   "project.browserEyebrow": "无需 Core · 浏览器本地",
   "project.browserTitle": "导入并检查项目",
-  "project.browserBody": "选择一个 Quillframe 项目目录。Studio 只读取你选择的文件，并在浏览器内检查五键 manifest、CH001、manifest fingerprint 与 .quillframe/data boundary。",
+  "project.browserBody": "选择一个 Quillframe 项目目录。Studio 只读取你选择的文件，并在浏览器内检查四键 manifest、scope=novel、manifest fingerprint 与 .quillframe/data boundary。",
   "project.browserAction": "选择项目目录",
   "project.browserPrivacy": "浏览器预检不会上传项目文件，也不会授予 Canon、Framework 或写入权限。",
   "project.browserPreflight": "Browser preflight",

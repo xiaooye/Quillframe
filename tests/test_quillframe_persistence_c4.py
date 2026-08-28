@@ -30,6 +30,9 @@ class PersistenceC4WorkflowLookupTests(unittest.TestCase):
     def _save_workflow(self, project_id: str, run_id: str = RUN_ID) -> None:
         with self.store.open_project(project_id) as conn:
             stamp = now_iso()
+            if conn.execute("SELECT 1 FROM story_nodes WHERE node_id='CH001'").fetchone() is None:
+                conn.execute("INSERT INTO story_nodes(node_id,kind,ordinal,title,metadata_json) VALUES('CH001','chapter',1,'Chapter','{}')")
+                conn.execute("INSERT INTO documents(document_id,story_node_id,document_kind,title,created_at) VALUES('DOC-CH001','CH001','manuscript','Chapter',?)", (stamp,))
             conn.execute(
                 "INSERT INTO runs(run_id,task_mode,target_ref,status,request_fingerprint,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",
                 (run_id, "DRAFT", "CH001", "awaiting_semantic", "sha256:" + "b" * 64, stamp, stamp),

@@ -204,7 +204,7 @@ def main() -> int:
     serve.add_argument("--queue", required=True)
     serve.add_argument("--host", default=DEFAULT_HOST)
     serve.add_argument("--port", type=int, default=DEFAULT_PORT)
-    serve.add_argument("--timeout-seconds", type=float, default=180.0)
+    serve.add_argument("--timeout-seconds", type=float, default=170.0)
     nxt = sub.add_parser("next")
     nxt.add_argument("--queue", required=True)
     put = sub.add_parser("submit")

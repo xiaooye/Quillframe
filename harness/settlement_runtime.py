@@ -564,8 +564,7 @@ def self_test(path: Path, project_root: Path) -> int:
         'schema = "quillframe_project_v1_0"\n'
         'id = "PROJECT-SETTLE-TEST"\n'
         'title = "Settlement Fixture"\n'
-        'language = "en"\n'
-        'chapter_scope = "CH001"\n',
+        'language = "en"\n',
         encoding="utf-8",
     )
     (project_root / "state" / "canon").mkdir(parents=True, exist_ok=True)

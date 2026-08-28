@@ -1,0 +1,60 @@
+schema: quillframe_webnovel_research_register_v1
+observed_at: '2026-08-27'
+status: implementation_evidence_not_quality_validation
+scope: chinese_serial_webnovels
+external_code_imported: false
+external_skills_installed: false
+weight_training: false
+repositories:
+  - repository: https://github.com/lingfengQAQ/webnovel-writer
+    commit: 2041abad78211e29a67a2f0c64b2a97a747dce57
+    license_observed: GPL-3.0
+    observed: [context_and_reviewer_pipeline, run_ledger, accepted_chapter_projections]
+    adapt: [durable_stage_evidence, explicit_chapter_state_projections]
+    reject: [automatic_author_acceptance, review_reuse_after_changed_prose, implicit_repair_of_prior_state]
+  - repository: https://github.com/PenglongHuang/chinese-novelist-skill
+    commit: 3db1e3be88343ca531924b0dc6516710f1b11779
+    license_observed: no_license_found
+    observed: [progressive_author_questions, terminology_guidance, whole_book_generation_instructions]
+    adapt: [short_author_intake, project_specific_genre_and_voice]
+    reject: [unattended_whole_book_acceptance, importing_unlicensed_prompts]
+  - repository: https://github.com/ExplosiveCoderflome/ani-book-skill
+    commit: 44a0eb216eee234101af1984df20726713b7690e
+    license_observed: Apache-2.0
+    observed: [chapter_goal_resistance_reward_and_net_change, rolling_plans, single_engine_execution]
+    adapt: [optional_reader_intent_fields, versioned_near_and_far_plans]
+    reject: [mandatory_beat_quotas, claiming_single_engine_roles_are_independent_review]
+  - repository: https://github.com/tance-mang/chinese-webnovel-skills
+    commit: ecf552f6930e769d8bbf17818ad3d5a864a7a70b
+    license_observed: MIT
+    observed: [modular_genre_and_writing_skills, model_reader_predictions]
+    adapt: [progressive_context_selection, distinguish_reader_evidence_types]
+    reject: [treating_model_predictions_as_real_retention]
+  - repository: https://github.com/miserylee/webnovel-handbook
+    commit: 700b2a718c9d3c79f946b35abc7b037088532bac
+    license_observed: MIT
+    observed: [feedback_workflows, writing_guidance_and_memory_instructions]
+    adapt: [source_typed_feedback, project_only_preference_hypotheses]
+    reject: [automatic_memory_promotion, mixing_author_reader_and_model_evidence]
+  - repository: https://github.com/zhougz520/novel-architect
+    commit: 8be80352257f98151921d89200e63464759a329f
+    license_observed: Apache-2.0
+    observed: [reader_promise_ledger, keyword_pressure_signals]
+    adapt: [source_bound_reader_expectations]
+    reject: [keyword_counts_as_engagement_verdict]
+  - repository: https://github.com/jingtai123/Novel-Control-Station-Skill
+    commit: 68d14aa6137efe60f93a4c87a0eccef8c654464b
+    license_observed: MIT
+    decision: comparison_only
+  - repository: https://github.com/bbroot/novel-master
+    commit: a5cef3991c4afacf803935535b78258e3dc2fc20
+    license_observed: MIT
+    decision: comparison_only
+evaluation:
+  development_cases: 4
+  holdout_cases: 6
+  max_actual_model_calls_per_round: 64
+  auxiliary_calls_count_toward_budget: true
+  model_reader_is_market_evidence: false
+  author_acceptance_required_between_chapters: true
+  completed_live_experiment: false

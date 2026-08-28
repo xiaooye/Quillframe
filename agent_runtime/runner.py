@@ -82,7 +82,9 @@ class AgentRunner:
             steps += 1
             model_requests += 1
             try:
-                turn = self.model_runtime.invoke(job.service_id, model.model_id, history, model_tools, max_output_tokens=job.budgets.max_output_tokens_per_request)
+                turn = self.model_runtime.invoke(job.service_id, model.model_id, history, model_tools,
+                    max_output_tokens=job.budgets.max_output_tokens_per_request,
+                    timeout_seconds=min(180.0, (job.budgets.max_elapsed_ms - elapsed_ms) / 1000.0))
             except ModelRuntimeError as exc:
                 return self._result(job, "model_failed", final_text, model.model_id, protocol, steps, model_requests, tool_calls, receipts, {"input_tokens": total_input, "output_tokens": total_output}, [{"code": exc.code, "message": str(exc), "detail": exc.detail}])
 
@@ -90,6 +92,10 @@ class AgentRunner:
             in_tokens, out_tokens = _usage_counts(turn.usage)
             total_input += in_tokens
             total_output += out_tokens
+            if cancellation.cancelled:
+                return self._result(job, "cancelled", "", model.model_id, protocol, steps, model_requests, tool_calls, receipts, {"input_tokens": total_input, "output_tokens": total_output}, [])
+            if int((time.monotonic() - started) * 1000) >= job.budgets.max_elapsed_ms:
+                return self._result(job, "budget_exhausted", "", model.model_id, protocol, steps, model_requests, tool_calls, receipts, {"input_tokens": total_input, "output_tokens": total_output}, [{"code": "elapsed_budget_exhausted_after_response"}])
             if turn.text:
                 final_text = turn.text
             if total_input + total_output > job.budgets.max_total_tokens:

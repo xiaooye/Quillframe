@@ -632,7 +632,7 @@ def self_test() -> int:
         artifact.write_text("frozen candidate\n", encoding="utf-8")
         artifact_fp = resume_preflight.sha_bytes(artifact.read_bytes())
         (root / "quillframe.toml").write_text(
-            'schema="quillframe_project_v1_0"\nid="BOOK-COMMAND"\ntitle="Command Test"\nlanguage="en"\nchapter_scope="CH001"\n',
+            'schema="quillframe_project_v1_0"\nid="BOOK-COMMAND"\ntitle="Command Test"\nlanguage="en"\n',
             encoding="utf-8",
         )
         project_context = resume_preflight.resolve_contract(root)
@@ -640,7 +640,7 @@ def self_test() -> int:
             "schema": resume_command.AUTHORITY_EVIDENCE_SCHEMA,
             "project_id": "BOOK-COMMAND",
             "project_manifest_fingerprint": project_context["manifest_fingerprint"],
-            "chapter_scope": "CH001",
+            "scope": "novel",
             "data_root": project_context["data_root"],
             "artifact_bindings": [{"path": "draft.txt", "fingerprint": artifact_fp}],
             "required_capabilities": [],

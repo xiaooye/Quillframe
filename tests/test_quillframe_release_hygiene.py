@@ -7,7 +7,7 @@ import os
 import shutil
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from unittest.mock import patch
 
 from release import build_framework_bundle
@@ -24,9 +24,16 @@ class ReleaseHygieneTests(unittest.TestCase):
 
         self.assertNotIn("release/acceptance/", serialized)
         self.assertNotIn("release-acceptance-1-0-dev-0", serialized)
+        self.assertIn("docs/project-contract.en.md", discovered)
         self.assertFalse(any(path.startswith("release/acceptance/") for path in discovered))
         self.assertIn("release/acceptance/", framework_hygiene.IGNORED_TREE_PREFIXES)
         self.assertNotIn("release/", framework_hygiene.IGNORED_TREE_PREFIXES)
+
+        windows_root = PureWindowsPath("C:/Quillframe")
+        with patch.object(docs_quality, "ROOT", windows_root):
+            for relative in ("docs/project-contract.en.md", "release/acceptance/1.0.0-dev.0.en.md"):
+                with self.subTest(relative=relative):
+                    self.assertEqual(relative, docs_quality.rel(windows_root / relative))
 
     def test_framework_bundle_excludes_derived_release_acceptance_outputs(self):
         with tempfile.TemporaryDirectory(prefix="qf-bundle-acceptance-boundary-") as tmp:
@@ -121,7 +128,7 @@ class ReleaseHygieneTests(unittest.TestCase):
             project = workspace / "project"
             project.mkdir()
             (project / "quillframe.toml").write_text(
-                'schema = "quillframe_project_v1_0"\nid = "P"\ntitle = "Project"\nlanguage = "en"\nchapter_scope = "CH001"\n',
+                'schema = "quillframe_project_v1_0"\nid = "P"\ntitle = "Project"\nlanguage = "en"\n',
                 encoding="utf-8",
             )
             base = {

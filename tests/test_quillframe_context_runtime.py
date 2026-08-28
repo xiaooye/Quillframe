@@ -310,6 +310,20 @@ class ContextRuntimeTests(unittest.TestCase):
         self.assertEqual({j["source"]["object_id"] for j in plan["jobs"]}, {"MISS","STALE"})
         self.assertTrue(all(j["contract_id"] == "context.profile_derive" and j["authority"] is False for j in plan["jobs"]))
 
+    def test_stage_visibility_exclusion_is_not_global_source_mutation(self):
+        item = self._item("PLAN-PRIVATE", "plan", authority="active_plan", stages=["draft"])
+        pools = [build_candidate_pool(run_id="RUN-CTX", stage_id=stage, items=[item])
+                 for stage in ("draft", "independent_review")]
+        greens = [pack_budget(validate_context_decision(pool, {"selections": []}, selector={"kind": "fixture"}), hard_budget=100)
+                  for pool in pools]
+        frozen = freeze_context(run_id="RUN-CTX", task_mode="DRAFT", pools=pools, greenlights=greens)
+        state = {key: item[key] for key in ("source_fingerprint", "authority", "lifecycle", "domain")}
+        self.assertTrue(validate_freeze(frozen, {item["object_id"]: item["source_fingerprint"]}, {item["object_id"]: state})["proceed"])
+        self.assertEqual(pools[1]["eligible"], [])
+        self.assertEqual(pools[1]["excluded"][0]["exclusion"]["code"], "stage_ineligible")
+        state["lifecycle"] = "invalidated"
+        self.assertFalse(validate_freeze(frozen, {item["object_id"]: item["source_fingerprint"]}, {item["object_id"]: state})["proceed"])
+
     def test_character_projection_is_multi_character_state_not_persona(self):
         out = project_character_context({"character_id":"CHAR-X","identity":{"name":"X"},"agenda":"win","knowledge_boundary":["INFO-1"],"current_task":"negotiate","location":"LOC-1","relationship_state":{"REL-1":"strained"},"emotional_carryover":"angry","stakes":"job","misbeliefs":["M1"],"scene_presence":True,"known_facts":["K"],"unknown_facts":["U"]})
         self.assertFalse(out["persona_substitute"])

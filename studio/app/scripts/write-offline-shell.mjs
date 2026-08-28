@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const dist = new URL("../dist/", import.meta.url);
 const assetsDir = new URL("assets/", dist);
@@ -9,7 +10,7 @@ const assetNames = entries.filter((entry) => entry.isFile()).map((entry) => entr
 
 const assets = [];
 for (const name of assetNames) {
-  const path = join(assetsDir.pathname, name);
+  const path = join(fileURLToPath(assetsDir), name);
   const size = (await stat(path)).size;
   assets.push({ url: `/assets/${name}`, size });
 }

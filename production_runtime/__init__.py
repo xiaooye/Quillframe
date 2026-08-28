@@ -9,7 +9,7 @@ from .contracts import (
 )
 from .guarded_runtime import ProductionRunExecutor
 from .sources import ProjectContextSourceLoader
-from .workflow import CHAPTER_SCOPE, WORKFLOW_STAGES, NovelWorkflowEngine, WorkflowError
+from .workflow import WORKFLOW_STAGES, NovelWorkflowEngine, WorkflowError, validate_chapter_id
 from .types import (
     CharacterIntent,
     GenerationPacket,
@@ -30,7 +30,7 @@ __all__ = [
     "ProductionRunError",
     "ProductionRunExecutor",
     "ProjectContextSourceLoader",
-    "CHAPTER_SCOPE",
+    "validate_chapter_id",
     "WORKFLOW_STAGES",
     "NovelWorkflowEngine",
     "WorkflowError",

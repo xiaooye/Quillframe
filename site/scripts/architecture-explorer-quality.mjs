@@ -26,7 +26,7 @@ for (const node of semanticOrder) {
   previousIndex = currentIndex;
 }
 
-for (const contract of ["quillframe_project_v1_0", "quillframe_project_context_v1_0", "manifest_fingerprint", ".quillframe/data", "CH001", "quillframe_host_capabilities_v1", "quillframe_context_inspector_v2", "quillframe_run_receipt_v1", "quillframe_production_readiness_v1", "quillframe_publication_ir_v1"]) {
+for (const contract of ["quillframe_project_v1_0", "quillframe_project_context_v1_0", "manifest_fingerprint", ".quillframe/data", "scope=novel", "quillframe_host_capabilities_v1", "quillframe_context_inspector_v2", "quillframe_run_receipt_v1", "quillframe_production_readiness_v1", "quillframe_publication_ir_v1"]) {
   check(app.includes(contract), `architecture explorer missing public contract ${contract}`);
 }
 const legacyMarkers = [["quillframe", "project", "resolution", "v1"].join("_"), ["quillframe", "lock", "json"].join("."), ["framework", "attestation", "json"].join("."), ["project", "schema", "version"].join("_")];

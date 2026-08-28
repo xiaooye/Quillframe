@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import uuid
 from typing import Any
 
@@ -249,7 +250,10 @@ class ModelRuntime:
                     return model
         raise ModelRuntimeError("no_eligible_model", "No discovered model has verified evidence for the required capabilities", detail={"requirements": sorted(requirements), "models": [m.model_id for m in ordered]})
 
-    def invoke(self, service_id: str, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], *, max_output_tokens: int = 2048) -> ModelTurn:
+    def invoke(self, service_id: str, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], *, max_output_tokens: int = 2048, timeout_seconds: float = 180.0) -> ModelTurn:
+        if (isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float))
+                or not math.isfinite(timeout_seconds) or not 0 < timeout_seconds <= 180.0):
+            raise ModelRuntimeError('invalid_request_timeout', 'model timeout must be positive and at most 180 seconds')
         snapshot = self.snapshot(service_id)
         model = next((m for m in snapshot.models if m.model_id == model_id), None)
         if not model:
@@ -261,7 +265,7 @@ class ModelRuntime:
         layout = normalize_endpoint(snapshot.endpoint, self.endpoint_policy)
         body = codec.request_body(model.model_id, history, tools, max_output_tokens)
         auth_style = model.auth_style or snapshot.auth_style or codec.auth_style
-        response = self._request_json("POST", layout.url_for(codec.surface), token=token, auth_style=auth_style, body=body, timeout=120.0)
+        response = self._request_json("POST", layout.url_for(codec.surface), token=token, auth_style=auth_style, body=body, timeout=float(timeout_seconds))
         if not (200 <= response.status < 300) or not isinstance(response.body, dict):
             raise ModelRuntimeError("model_request_failed", f"model request failed with HTTP {response.status}")
         try:

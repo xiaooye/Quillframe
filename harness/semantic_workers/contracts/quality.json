@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_model_contract_registry_v1",
-  "version": "6",
+  "version": "7",
   "principle": "Literary and narrative judgment belongs to model-readable contracts. Deterministic runtime binds exact contracts, candidates, provenance, permissions and execution identity; it does not reinterpret literary findings. Manager self-audit, Blind Reader, Semantic Rule Auditor and independent production review are distinct roles with distinct information boundaries.",
   "contracts": {
     "reader.reaction": {
@@ -485,6 +485,9 @@
         "Check clusters even when individual lines are locally plausible: setup → clever answer → clever comeback → narrator witty gloss → another punchline may form synthetic banter/punchline stacking. Cluster failure should route to Character/Scene/Realization rather than synonym-level repair.",
         "Do not punish legitimately witty, charismatic, rhetorical, formal, terse, or metaphorical characters when the expression is owned, situation-appropriate, purpose-first and consequential. Use supplied profile/voice boundaries.",
         "If a material defect exists, identify the smallest owning repair layer and whether it is sentence, paragraph, block, or scene/cluster scope. If required evidence is missing, return insufficient_evidence rather than inventing a verdict.",
+        "Keep the overall result consistent with dimensions and findings: pass permits only pass or not_applicable dimensions and no finding with blocking=true. Nonblocking observations may remain.",
+        "A fail result requires at least one dimension marked fail and at least one evidence-supported finding with blocking=true. Report the actual defect and owning repair layer; never invent a finding or change the verdict merely to satisfy the format.",
+        "An insufficient_evidence result requires at least one dimension marked insufficient_evidence. Describe the missing evidence instead of treating uncertainty as pass or fabricating a blocking defect.",
         "When supplied regression_evidence identifies an already-known mechanism, explicitly check whether the current candidate repeats that mechanism. A known recurrence that remains material is a quality-loop escape risk, not a new preference discovery; judge applicability semantically and do not ban literal phrases.",
         "This audit is manager/internal evidence only: independent=false. It may block dispatch and guide repair but cannot satisfy the independent production-review requirement or grant Canon/Framework/taste authority."
       ],

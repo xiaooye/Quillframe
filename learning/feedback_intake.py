@@ -16,25 +16,17 @@ import argparse
 import hashlib
 import json
 import sqlite3
-import sys
 import tempfile
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent
-CONTROL = ROOT / "harness" / "control_plane"
-SEMANTIC = ROOT / "harness" / "semantic_workers"
-for p in (HERE, CONTROL, SEMANTIC):
-    if str(p) not in sys.path:
-        sys.path.insert(0, str(p))
-
-from author_model import CAPTURE_SCHEMA, capture_feedback, hypothesis_index, project_author_model  # noqa: E402
-from control_plane import ControlPlane  # noqa: E402
-from learning_store import LearningStore, now_iso  # noqa: E402
-from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
+from learning.author_model import CAPTURE_SCHEMA, capture_feedback, hypothesis_index, project_author_model
+from learning.learning_store import LearningStore, now_iso
+from harness.control_plane.control_plane import ControlPlane
+from harness.semantic_workers.registered_contract_binding import validate_registered_job
+from harness.semantic_workers.semantic_worker_router import make_contract_job, validate_result
 
 SCHEMA = "quillframe_feedback_intake_v1"
 PROJECTION_SCHEMA = "quillframe_feedback_intake_projection_v1"
@@ -130,13 +122,18 @@ def normalize_feedback_event(
 class FeedbackIntakeStore:
     """Additive projection in the same Learning DB."""
 
-    def __init__(self, db_path: str | Path):
+    def __init__(self, db_path: str | Path, *, connection: sqlite3.Connection | None = None):
         self.db_path = Path(db_path)
-        LearningStore(self.db_path).init()
-        self.init()
+        self._connection = connection
+        if connection is None:
+            LearningStore(self.db_path).init()
+            self.init()
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
+        if self._connection is not None:
+            yield self._connection
+            return
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(self.db_path, timeout=10, isolation_level=None)
         conn.row_factory = sqlite3.Row
@@ -213,6 +210,9 @@ class FeedbackIntakeStore:
                 conn.execute("ROLLBACK"); raise ValueError("unknown feedback intake event")
             if row["semantic_job_fingerprint"] and row["semantic_job_fingerprint"] != fp:
                 conn.execute("ROLLBACK"); raise ValueError("semantic job fingerprint drift")
+            if row["semantic_job_fingerprint"]:
+                conn.execute("COMMIT")
+                return self.get(event_id)
             version = row["version"] + 1
             conn.execute(
                 "UPDATE feedback_intake SET semantic_job_json=?,semantic_job_fingerprint=?,status='awaiting_semantic',version=?,updated_at=? WHERE event_id=?",
@@ -236,11 +236,10 @@ class FeedbackIntakeStore:
     ) -> dict[str, Any]:
         if status not in {"skipped", "persisted", "blocked", "failed"}:
             raise ValueError("invalid terminal intake status")
-        with self.connect() as conn:
-            conn.execute("BEGIN IMMEDIATE")
+        with LearningStore(self.db_path, connection=self._connection).transaction() as conn:
             row = conn.execute("SELECT version FROM feedback_intake WHERE event_id=?", (event_id,)).fetchone()
             if not row:
-                conn.execute("ROLLBACK"); raise ValueError("unknown feedback intake event")
+                raise ValueError("unknown feedback intake event")
             version = row["version"] + 1
             conn.execute(
                 """UPDATE feedback_intake SET status=?,semantic_result_hash=?,capture_decision=?,skip_reason=?,
@@ -248,7 +247,6 @@ class FeedbackIntakeStore:
                    WHERE event_id=?""",
                 (status,semantic_result_hash,capture_decision,skip_reason,evidence_id,hypothesis_id,hypothesis_action,target_hypothesis_id,version,now_iso(),event_id),
             )
-            conn.execute("COMMIT")
         return self.get(event_id)
 
     def get(self, event_id: str) -> dict[str, Any]:
@@ -329,6 +327,21 @@ def prepare_intake(
     if observed["status"] in {"skipped", "persisted"}:
         return {"schema": SCHEMA, "status": observed["status"], "projection": observed, "semantic_job": None, "already_processed": True, "model_execution": False}
     learning = LearningStore(learning_db); learning.init()
+    # Resume the frozen input, not a regenerated index containing newer facts.
+    with store.connect() as conn:
+        saved = conn.execute("SELECT semantic_job_json FROM feedback_intake WHERE event_id=?", (normalized["event_id"],)).fetchone()
+    if saved and saved["semantic_job_json"]:
+        job = json.loads(saved["semantic_job_json"])
+        errors = validate_registered_job(job)
+        if errors:
+            raise ValueError("stored feedback contract invalid: " + "; ".join(errors))
+        return {
+            "schema": SCHEMA, "status": "awaiting_semantic",
+            "semantic_available": bool(semantic_available),
+            "pending_reason": None if semantic_available else "no_eligible_semantic_capability",
+            "projection": observed, "semantic_job": job, "already_processed": False,
+            "authority": False, "model_execution": False,
+        }
     payload = {
         "feedback_ref": normalized["feedback_ref"],
         "feedback_text": normalized["feedback_text"],
@@ -365,19 +378,52 @@ def apply_semantic_result(
     learning_db: str | Path,
     event_id: str,
     result: dict[str, Any],
+    allowed_scopes: set[str] | None = None,
+    expected_project_id: str | None = None,
 ) -> dict[str, Any]:
     cp = ControlPlane(runtime_db); cp.init()
     store = FeedbackIntakeStore(learning_db)
     current = store.get(event_id)
+    with cp.connect() as conn:
+        event = conn.execute("SELECT payload_hash FROM events WHERE event_id=?", (event_id,)).fetchone()
+    if not event or event["payload_hash"] != current["event_hash"]:
+        raise ValueError("feedback runtime event binding mismatch")
+    # The Learning DB transaction commits before the separately recoverable
+    # runtime consumption receipt. A crash between them replays only the receipt.
+    with LearningStore(learning_db).transaction() as conn:
+        out = _apply_learning_result(
+            FeedbackIntakeStore(learning_db, connection=conn),
+            LearningStore(learning_db, connection=conn),
+            event_id=event_id, result=result, allowed_scopes=allowed_scopes,
+            expected_project_id=expected_project_id,
+        )
+    projection = out["projection"]
+    out["consume_receipt"] = cp.consume_once("event", event_id, projection["consumer"], projection["event_hash"])
+    out["transaction_scope"] = "learning_database"
+    out["cross_database_atomic"] = False
+    return out
+
+
+def _apply_learning_result(
+    store: FeedbackIntakeStore,
+    learning: LearningStore,
+    *, event_id: str, result: dict[str, Any], allowed_scopes: set[str] | None,
+    expected_project_id: str | None,
+) -> dict[str, Any]:
+    current = store.get(event_id)
+    if expected_project_id is not None and current["project_id"] != expected_project_id:
+        raise ValueError("feedback belongs to another Project")
+    result_hash = digest(result)
     if current["status"] in {"skipped", "persisted"}:
-        receipt = cp.consume_once("event", event_id, current["consumer"], current["event_hash"])
-        return {"schema": SCHEMA, "status": current["status"], "projection": current, "consume_receipt": receipt, "already_processed": True, "model_execution": False}
+        if result_hash != current["semantic_result_hash"]:
+            raise ValueError("feedback semantic result identity conflict")
+        return {"schema": SCHEMA, "status": current["status"], "projection": current, "already_processed": True, "model_execution": False}
     with store.connect() as conn:
         row = conn.execute("SELECT semantic_job_json,normalized_json FROM feedback_intake WHERE event_id=?", (event_id,)).fetchone()
     if not row or not row["semantic_job_json"]:
         raise ValueError("feedback intake has no prepared semantic job")
     job = json.loads(row["semantic_job_json"])
-    errors = validate_result(job, result)
+    errors = validate_registered_job(job) + validate_result(job, result)
     if errors:
         raise ValueError("invalid feedback semantic result: " + "; ".join(errors))
     if result.get("status") != "completed":
@@ -386,7 +432,6 @@ def apply_semantic_result(
     if not isinstance(judgment, dict):
         raise ValueError("feedback semantic judgment required")
     decision = judgment.get("capture_decision")
-    result_hash = digest(result)
     if decision == "skip":
         leaked = sorted(field for field in PREFERENCE_FIELDS if field in judgment)
         if leaked:
@@ -395,15 +440,27 @@ def apply_semantic_result(
         if not isinstance(reason, str) or not reason.strip():
             raise ValueError("skip judgment requires skip_reason")
         projection = store.finish(event_id, status="skipped", semantic_result_hash=result_hash, capture_decision="skip", skip_reason=reason.strip())
-        receipt = cp.consume_once("event", event_id, projection["consumer"], projection["event_hash"])
-        return {"schema": SCHEMA, "status": "skipped", "projection": projection, "consume_receipt": receipt, "already_processed": False, "model_execution": False}
+        return {"schema": SCHEMA, "status": "skipped", "projection": projection, "already_processed": False, "model_execution": False}
     if decision != "capture":
         raise ValueError("capture_decision must be capture or skip")
     _capture_semantic_fields(judgment)
+    if allowed_scopes is not None and judgment.get("scope_candidate") not in allowed_scopes:
+        raise ValueError("feedback scope exceeds this Project learning boundary")
+    targets = set(judgment.get("contradicts_hypothesis_ids") or [])
+    if judgment.get("target_hypothesis_id"):
+        targets.add(judgment["target_hypothesis_id"])
+    index = {item["hypothesis_id"]: item for item in job["input"]["payload"].get("hypothesis_index", [])}
+    with store.connect() as conn:
+        for target_id in targets:
+            bound = index.get(target_id)
+            existing = conn.execute("SELECT project_id,subject_scope,version FROM preference_hypotheses WHERE hypothesis_id=?", (target_id,)).fetchone()
+            if not bound or not existing or bound["version"] != existing["version"]:
+                raise ValueError("feedback target missing or changed since semantic input was frozen")
+            if allowed_scopes is not None and (existing["subject_scope"] not in allowed_scopes or existing["project_id"] != current["project_id"]):
+                raise ValueError("feedback target exceeds this Project learning boundary")
     normalized = json.loads(row["normalized_json"])
     target = normalized.get("target", {}) if isinstance(normalized.get("target"), dict) else {}
     evidence_id = stable_evidence_id(event_id, current["event_hash"], current["consumer"])
-    learning = LearningStore(learning_db); learning.init()
     capture = capture_feedback(learning, {
         "schema": CAPTURE_SCHEMA,
         "project_id": normalized.get("project_id"),
@@ -428,13 +485,11 @@ def apply_semantic_result(
         hypothesis_action=capture["hypothesis_action"],
         target_hypothesis_id=capture["target_hypothesis_id"],
     )
-    receipt = cp.consume_once("event", event_id, projection["consumer"], projection["event_hash"])
     return {
         "schema": SCHEMA,
         "status": "persisted",
         "projection": projection,
         "capture": capture,
-        "consume_receipt": receipt,
         "already_processed": False,
         "authority": False,
         "model_execution": False,

@@ -19,6 +19,7 @@ import { WorkOSClient } from "./workos.js";
 import { workspaceHandleForIdentity } from "./workspace-coordinator.js";
 import { canonicalBridgeBody, canonicalJsonBytes, deriveProofProjectId, parseCanonicalJsonBytes, signCoreProof, strictProofKey, validateBridgeRequest } from "./core-provenance.js";
 import { randomToken, sha256Hex } from "./crypto.js";
+import { assertPublicOrigin, isApiPath, serveStudioAsset, withoutCaching } from "./studio-assets.js";
 
 const AUTH_COORDINATOR = "__auth_transactions__";
 const FORBIDDEN_CORE_HEADERS = [
@@ -188,7 +189,7 @@ async function handleUpload(request: Request, env: CloudEnv, projectId: string):
   const proof = await signCoreProof({ claims: {
     schema: "quillframe_core_proof_v1", key_id: env.CORE_PROOF_KEY_ID, method: request.method, path: proofPath,
     body_sha256: bodyFingerprint, workspace_id: authenticated.session.workspace_id, session_id: authenticated.session.session_id,
-    project_id: projectId, chapter_scope: "CH001", issued_at: now, expires_at: now + 30_000, nonce,
+    project_id: projectId, scope: "novel", issued_at: now, expires_at: now + 30_000, nonce,
   }, key });
   await authenticated.coordinator.consumeCoreNonce({ session_id: authenticated.session.session_id, project_id: projectId, nonce, proof_digest: `sha256:${await sha256Hex(proof)}`, issued_at: now, expires_at: now + 30_000 });
   const coreResponse = await forwardToCore(env.CORE_CONTAINER, request, authenticated.session, proof, bundle, proofPath);
@@ -223,14 +224,14 @@ async function handleReadProject(request: Request, env: CloudEnv, projectId: str
   const proof = await signCoreProof({ claims: {
     schema: "quillframe_core_proof_v1", key_id: env.CORE_PROOF_KEY_ID, method: "POST", path: proofPath,
     body_sha256: bodyFingerprint, workspace_id: authenticated.session.workspace_id, session_id: authenticated.session.session_id,
-    project_id: projectId, chapter_scope: "CH001", issued_at: now, expires_at: now + 30_000, nonce,
+    project_id: projectId, scope: "novel", issued_at: now, expires_at: now + 30_000, nonce,
   }, key: coreProofKey(env) });
   await authenticated.coordinator.consumeCoreNonce({ session_id: authenticated.session.session_id, project_id: projectId, nonce, proof_digest: `sha256:${await sha256Hex(proof)}`, issued_at: now, expires_at: now + 30_000 });
   const coreRequest = new Request(`https://studio.example${proofPath}`, { method: "POST", headers: { "content-type": "application/zip", "content-length": String(bundle.byteLength) }, body: new Uint8Array(bundle) });
   const coreResponse = await forwardToCore(env.CORE_CONTAINER, coreRequest, authenticated.session, proof, bundle, proofPath);
   const verification = await boundedCoreReceipt(coreResponse);
   assertNativeBackupReceipt(verification);
-  if (verification.project_id !== projectId || verification.body_fingerprint !== bodyFingerprint || verification.bundle_fingerprint !== bodyFingerprint || verification.byte_size !== bundle.byteLength || verification.chapter_scope !== "CH001") throw Object.assign(new Error("Core verification receipt does not bind the read bytes"), { code: "core_verification_mismatch" });
+  if (verification.project_id !== projectId || verification.body_fingerprint !== bodyFingerprint || verification.bundle_fingerprint !== bodyFingerprint || verification.byte_size !== bundle.byteLength || verification.scope !== "novel") throw Object.assign(new Error("Core verification receipt does not bind the read bytes"), { code: "core_verification_mismatch" });
   return withSecurityHeaders(new Response(new Uint8Array(bundle), { status: 200, headers: {
     "content-type": "application/zip",
     "content-length": String(bundle.byteLength),
@@ -340,7 +341,7 @@ async function handleCore(request: Request, env: CloudEnv): Promise<Response> {
     workspace_id: authenticated.session.workspace_id,
     session_id: authenticated.session.session_id,
     project_id: projectId,
-    chapter_scope: "CH001" as const,
+    scope: "novel" as const,
     issued_at: now,
     expires_at: now + 30_000,
     nonce,
@@ -351,6 +352,7 @@ async function handleCore(request: Request, env: CloudEnv): Promise<Response> {
 }
 
 async function handle(request: Request, env: CloudEnv): Promise<Response> {
+  assertPublicOrigin(env.PUBLIC_ORIGIN);
   assertRequestOrigin(request, env.PUBLIC_ORIGIN);
   const url = new URL(request.url);
   if (request.method === "GET" && url.pathname === "/api/auth/authorize") return handleAuthorize(request, env);
@@ -366,14 +368,21 @@ async function handle(request: Request, env: CloudEnv): Promise<Response> {
   if (request.method === "POST" && url.pathname === "/api/core/bridge") {
     return handleCore(request, env);
   }
+  if (!isApiPath(url.pathname)) {
+    const asset = await serveStudioAsset(request, env);
+    if (asset) return asset;
+  }
   return safeJson({ schema: "quillframe_cloud_error_v1", code: "not_found", authority: false }, { status: 404 });
 }
 
 export function createWorker(): { fetch(request: Request, env: CloudEnv): Promise<Response> } {
   return {
     async fetch(request, env) {
-      try { return await handle(request, env); }
-      catch (error) { return safeError(error); }
+      let response: Response;
+      try { response = await handle(request, env); }
+      catch (error) { response = safeError(error); }
+      if (isApiPath(new URL(request.url).pathname) || response.status >= 400) response = withoutCaching(response);
+      return request.method === "HEAD" ? new Response(null, { status: response.status, statusText: response.statusText, headers: response.headers }) : response;
     },
   };
 }

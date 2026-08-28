@@ -28,6 +28,7 @@ include = [
   "publication*",
   "harness*",
   "quality*",
+  "learning*",
   "studio*",
 ]
 namespaces = true
@@ -38,6 +39,7 @@ model_runtime = ["*.json"]
 persistence = ["schema/**/*.sql"]
 harness = ["**/*.json"]
 quality = ["*.json"]
+learning = ["*.json"]
 studio = [
   "*.json",
   "app/dist/*",

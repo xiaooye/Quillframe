@@ -44,7 +44,7 @@ class SQLiteConnectionHygieneTests(unittest.TestCase):
             root = Path(td)
             store = QuillframeStore(root)
             store.create_project("P", "P")
-            store.create_document("P", "D", "D")
+            store.create_document("P", "D", "D", document_kind="note")
             store.save_revision("P", "D", "text", expected_parent_revision_id=None, source="test")
             bundle = store.backup_project("P")
             self.assertTrue(store.verify_backup(bundle)["valid"])

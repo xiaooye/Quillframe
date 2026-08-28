@@ -20,7 +20,7 @@ class NativeProjectPublicContractTests(unittest.TestCase):
         self.assertEqual(inspect["schema"], "quillframe_project_inspection_v1_0")
         self.assertEqual(inspect["manifest"]["schema"], "quillframe_project_v1_0")
         self.assertEqual(inspect["manifest"]["id"], "NATIVE-PUBLIC")
-        self.assertEqual(inspect["chapter_scope"], "CH001")
+        self.assertEqual(inspect["scope"], "novel")
         self.assertEqual(inspect["data_boundary"], ".quillframe/data")
         self.assertFalse(inspect["authority"])
         self.assertTrue(inspect["manifest_fingerprint"].startswith("sha256:"))

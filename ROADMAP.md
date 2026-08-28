@@ -80,7 +80,9 @@ The broad stabilization goal is to reach a point where:
 - Canon, Context, semantic independence, Learning promotion, and Settlement boundaries have strong regression coverage;
 - documentation, packaging, and installation paths no longer depend on internal development knowledge.
 
-Breaking changes may still occur before that point. Consuming Projects must satisfy the native five-key manifest, CH001 context, manifest fingerprint, and `.quillframe/data` boundary. Host and release automation record Framework commit/bundle provenance separately. There is no consumer-owned Project lock, compatibility layer, or state upgrader for discarded development state.
+Breaking changes may still occur before that point. Consuming Projects must satisfy the native four-key manifest (`schema`, `id`, `title`, `language`), context with top-level `scope: "novel"`, manifest fingerprint, and `.quillframe/data` boundary. `CH001` and `DOC-CH001` are the initial chapter and manuscript; later chapters require actual Project relationships. Host and release automation record Framework commit/bundle provenance separately. There is no consumer-owned Project lock, compatibility layer, or state upgrader for discarded development state; opening does not repair or reseed it.
+
+The novel contract is development work, not evidence that a complete live-model novel, independent semantic review, production recovery or cloud hosting has passed release acceptance.
 
 ## What this roadmap does not mean
 

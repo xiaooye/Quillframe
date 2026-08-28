@@ -6,6 +6,7 @@ deliberately no-clobber and never pretends to be one transaction with SQLite.
 """
 from __future__ import annotations
 
+import base64
 import errno
 import fcntl
 import hashlib
@@ -67,6 +68,8 @@ _PUBLIC_MESSAGES = {
     "publication_source_changed": "publication source changed after staging",
     "publication_ambiguous": "publication ownership is ambiguous",
     "publication_attempt_failed": "publication attempt is failed evidence",
+    "publication_authorization_required": "publication collection build requires author authorization",
+    "publication_idempotency_required": "publication collection build requires a bounded idempotency key",
     "unsupported_export_format": "Quillframe 1.0 supports only md and txt publication exports",
 }
 
@@ -74,17 +77,18 @@ _PUBLIC_MESSAGES = {
 @dataclass(frozen=True)
 class _Source:
     project_id: str
-    acceptance_id: str
+    source_key: str
     source_fingerprint: str
     content: str
     document_id: str
     revision_id: str
+    candidate_id: str
 
 
 @dataclass(frozen=True)
 class _Plan:
     project_id: str
-    acceptance_id: str
+    source_key: str
     fmt: str
     compiler_contract: str
     source_fingerprint: str
@@ -159,7 +163,8 @@ def _safe_file_bytes(
     expected_inode: tuple[int, int] | None,
     stage: bool,
     mutation_hook: Callable[[str], Any] | None = None,
-) -> os.stat_result:
+    capture: bool = False,
+) -> os.stat_result | tuple[os.stat_result, bytes]:
     """Read one regular no-follow inode and prove it did not change."""
 
     fd: int | None = None
@@ -210,6 +215,7 @@ def _safe_file_bytes(
                 raise PublicationRecoveryError("publication_fault") from exc
         second_digest = hashlib.sha256()
         second_total = 0
+        chunks: list[bytes] = []
         while True:
             chunk = os.read(fd, min(1024 * 1024, MAX_ARTIFACT_BYTES + 1))
             if not chunk:
@@ -218,6 +224,8 @@ def _safe_file_bytes(
             if second_total > MAX_ARTIFACT_BYTES:
                 raise PublicationRecoveryError("publication_stage_invalid" if stage else "publication_artifact_invalid")
             second_digest.update(chunk)
+            if capture:
+                chunks.append(chunk)
         if mutation_hook is not None:
             try:
                 mutation_hook("after_second_read")
@@ -238,7 +246,7 @@ def _safe_file_bytes(
             or "sha256:" + second_digest.hexdigest() != expected_fingerprint
         ):
             raise PublicationRecoveryError("publication_stage_invalid" if stage else "publication_artifact_invalid")
-        return after_second
+        return (after_second, b"".join(chunks)) if capture else after_second
     except PublicationRecoveryError:
         raise
     except (OSError, ValueError) as exc:
@@ -306,6 +314,11 @@ def _open_existing_directory_chain(path: Path) -> int:
 class PublicationRecovery:
     """Core-owned publication build and bounded recovery protocol."""
 
+    attempts_table = "publication_build_attempts"
+    builds_table = "publication_builds"
+    source_column = "source_acceptance_id"
+    compiler_contract = COMPILER_CONTRACT
+
     def __init__(
         self,
         store: QuillframeStore,
@@ -371,8 +384,9 @@ class PublicationRecovery:
     @staticmethod
     def _source(conn: Any, project_id: str, acceptance_id: str) -> _Source:
         row = conn.execute(
-            """SELECT a.acceptance_id,a.candidate_fingerprint,c.status,c.document_id,c.revision_id,
-            r.content,r.content_fingerprint,r.authority_class
+            """SELECT a.acceptance_id,a.candidate_id,a.candidate_fingerprint,c.status,c.document_id,c.revision_id,
+            r.content,r.content_fingerprint,r.authority_class,
+            c.content_fingerprint AS candidate_content_fingerprint,r.document_id AS revision_document_id
             FROM acceptance_evidence a JOIN candidates c ON c.candidate_id=a.candidate_id
             JOIN document_revisions r ON r.revision_id=c.revision_id
             WHERE a.acceptance_id=?""",
@@ -388,21 +402,23 @@ class PublicationRecovery:
             row["status"] != "accepted"
             or row["authority_class"] != "accepted"
             or row["candidate_fingerprint"] != row["content_fingerprint"]
+            or row["candidate_content_fingerprint"] != row["content_fingerprint"]
+            or row["document_id"] != row["revision_document_id"]
             or not isinstance(row["content"], str)
             or content_fingerprint != row["content_fingerprint"]
         ):
             raise PublicationRecoveryError("publication_source_invalid")
         return _Source(
             project_id=project_id,
-            acceptance_id=acceptance_id,
+            source_key=acceptance_id,
             source_fingerprint=row["content_fingerprint"],
             content=row["content"],
             document_id=row["document_id"],
             revision_id=row["revision_id"],
+            candidate_id=row["candidate_id"],
         )
 
-    @staticmethod
-    def _plan(source: _Source, fmt: str) -> _Plan:
+    def _plan(self, source: _Source, fmt: str) -> _Plan:
         if fmt not in SUPPORTED_FORMATS:
             raise PublicationRecoveryError("publication_source_invalid")
         try:
@@ -413,18 +429,18 @@ class PublicationRecovery:
             raise PublicationRecoveryError("publication_artifact_invalid")
         identity_payload = {
             "project_id": source.project_id,
-            "source_acceptance_id": source.acceptance_id,
+            self.source_column: source.source_key,
             "format": fmt,
             "source_fingerprint": source.source_fingerprint,
-            "compiler_contract": COMPILER_CONTRACT,
+            "compiler_contract": self.compiler_contract,
         }
         identity_fingerprint = fingerprint_bytes(canonical_json(identity_payload).encode("utf-8"))
         build_id = "pub_" + identity_fingerprint.split(":", 1)[1]
         return _Plan(
             project_id=source.project_id,
-            acceptance_id=source.acceptance_id,
+            source_key=source.source_key,
             fmt=fmt,
-            compiler_contract=COMPILER_CONTRACT,
+            compiler_contract=self.compiler_contract,
             source_fingerprint=source.source_fingerprint,
             content=content,
             artifact_fingerprint=fingerprint_bytes(content),
@@ -436,15 +452,14 @@ class PublicationRecovery:
             final_ref=f"exports/{build_id}.{fmt}",
         )
 
-    @staticmethod
-    def _validate_row(row: Any, plan: _Plan) -> None:
+    def _validate_row(self, row: Any, plan: _Plan) -> None:
         if not row:
             raise PublicationRecoveryError("publication_attempt_invalid")
         expected = {
             "build_id": plan.build_id,
             "identity_fingerprint": plan.identity_fingerprint,
             "project_id": plan.project_id,
-            "source_acceptance_id": plan.acceptance_id,
+            self.source_column: plan.source_key,
             "format": plan.fmt,
             "compiler_contract": plan.compiler_contract,
             "source_fingerprint": plan.source_fingerprint,
@@ -462,9 +477,8 @@ class PublicationRecovery:
         _safe_ref(row["stage_ref"], build_id=plan.build_id, fmt=plan.fmt, stage=True)
         _safe_ref(row["final_ref"], build_id=plan.build_id, fmt=plan.fmt, stage=False)
 
-    @staticmethod
-    def _validate_committed_row(row: Any, plan: _Plan) -> None:
-        if not row or row["build_id"] != plan.build_id or row["source_acceptance_id"] != plan.acceptance_id:
+    def _validate_committed_row(self, row: Any, plan: _Plan) -> None:
+        if not row or row["build_id"] != plan.build_id or row[self.source_column] != plan.source_key:
             raise PublicationRecoveryError("publication_identity_conflict")
         if (
             row["format"] != plan.fmt
@@ -480,7 +494,7 @@ class PublicationRecovery:
         except (TypeError, ValueError) as exc:
             raise PublicationRecoveryError("publication_attempt_invalid") from exc
         expected = {
-            "compiler_contract": COMPILER_CONTRACT,
+            "compiler_contract": self.compiler_contract,
             "identity_fingerprint": plan.identity_fingerprint,
             "artifact_fingerprint": plan.artifact_fingerprint,
             "byte_size": plan.byte_size,
@@ -495,14 +509,15 @@ class PublicationRecovery:
                 conn.execute("BEGIN IMMEDIATE")
                 source = self._source(conn, project_id, acceptance_id)
                 plan = self._plan(source, fmt)
+                self._before_stage(conn, plan)
                 committed = conn.execute(
-                    "SELECT * FROM publication_builds WHERE source_acceptance_id=? AND format=? AND source_fingerprint=? AND compiler_contract=?",
-                    (acceptance_id, fmt, source.source_fingerprint, COMPILER_CONTRACT),
+                    f"SELECT * FROM {self.builds_table} WHERE {self.source_column}=? AND format=? AND source_fingerprint=? AND compiler_contract=?",
+                    (acceptance_id, fmt, source.source_fingerprint, self.compiler_contract),
                 ).fetchone()
                 if committed:
                     if committed["build_id"] != plan.build_id or committed["output_ref"] != plan.final_ref:
                         raise PublicationRecoveryError("publication_identity_conflict")
-                    attempt = conn.execute("SELECT * FROM publication_build_attempts WHERE build_id=?", (plan.build_id,)).fetchone()
+                    attempt = conn.execute(f"SELECT * FROM {self.attempts_table} WHERE build_id=?", (plan.build_id,)).fetchone()
                     if not attempt:
                         raise PublicationRecoveryError("publication_attempt_invalid")
                     self._validate_row(attempt, plan)
@@ -511,7 +526,7 @@ class PublicationRecovery:
                     self._validate_committed_row(committed, plan)
                     conn.commit()
                     return plan, attempt, True
-                row = conn.execute("SELECT * FROM publication_build_attempts WHERE build_id=?", (plan.build_id,)).fetchone()
+                row = conn.execute(f"SELECT * FROM {self.attempts_table} WHERE build_id=?", (plan.build_id,)).fetchone()
                 created = row is None
                 stamp = now_iso()
                 if row:
@@ -520,8 +535,8 @@ class PublicationRecovery:
                         raise PublicationRecoveryError("publication_attempt_failed")
                 else:
                     conn.execute(
-                        """INSERT INTO publication_build_attempts(
-                        build_id,identity_fingerprint,project_id,source_acceptance_id,format,compiler_contract,
+                        f"""INSERT INTO {self.attempts_table}(
+                        build_id,identity_fingerprint,project_id,{self.source_column},format,compiler_contract,
                         source_fingerprint,artifact_fingerprint,byte_size,stage_ref,final_ref,owner_token,state,
                         error_code,created_at,updated_at)
                         VALUES(?,?,?,?,?,?,?,?,?,?,?,?, 'staged',NULL,?,?)""",
@@ -529,7 +544,7 @@ class PublicationRecovery:
                             plan.build_id,
                             plan.identity_fingerprint,
                             plan.project_id,
-                            plan.acceptance_id,
+                            plan.source_key,
                             plan.fmt,
                             plan.compiler_contract,
                             plan.source_fingerprint,
@@ -542,7 +557,8 @@ class PublicationRecovery:
                             stamp,
                         ),
                     )
-                    row = conn.execute("SELECT * FROM publication_build_attempts WHERE build_id=?", (plan.build_id,)).fetchone()
+                    self._new_attempt(conn, plan)
+                    row = conn.execute(f"SELECT * FROM {self.attempts_table} WHERE build_id=?", (plan.build_id,)).fetchone()
                 conn.commit()
                 return plan, row, created
             except PublicationRecoveryError:
@@ -554,21 +570,95 @@ class PublicationRecovery:
                     conn.rollback()
                 raise PublicationRecoveryError("publication_db") from exc
 
+    def _before_stage(self, conn: Any, plan: _Plan) -> None:
+        """Extension point for a source-specific request receipt in this transaction."""
+
+    def _new_attempt(self, conn: Any, plan: _Plan) -> None:
+        """Extension point for normalized source membership in this transaction."""
+
+    def _artifact_source(self, conn: Any, project_id: str, source_key: str) -> Any:
+        return self._source(conn, project_id, source_key)
+
+    def _source_acceptance_ids(self, plan: _Plan) -> list[str]:
+        return [plan.source_key]
+
+    def artifact(self, project_id: str, build_id: str) -> dict[str, Any]:
+        """Return only fingerprint-verified bytes from an exact committed build."""
+        if not isinstance(build_id, str) or not _BUILD_ID_RE.fullmatch(build_id):
+            raise PublicationRecoveryError("publication_attempt_invalid")
+        # Collection builds have their own ledger and normalized membership;
+        # never represent them as a made-up singleton acceptance.
+        if self.__class__ is PublicationRecovery:
+            with self.store.open_project(project_id) as conn:
+                collection = conn.execute("SELECT 1 FROM publication_collection_builds WHERE build_id=?", (build_id,)).fetchone()
+            if collection:
+                from .collection import CollectionPublicationRecovery
+                return CollectionPublicationRecovery(self.store, fault_injector=self.fault_injector).artifact(project_id, build_id)
+        with self._project_lock(project_id) as loc:
+            with self.store.open_project(project_id) as conn:
+                row = conn.execute(f"SELECT * FROM {self.attempts_table} WHERE project_id=? AND build_id=?", (project_id, build_id)).fetchone()
+                if not row:
+                    raise PublicationRecoveryError("publication_missing")
+                if row["state"] != "committed":
+                    raise PublicationRecoveryError("publication_recovery_required")
+                source = self._artifact_source(conn, project_id, row[self.source_column])
+                plan = self._plan(source, row["format"])
+                self._validate_row(row, plan)
+                committed = conn.execute(f"SELECT * FROM {self.builds_table} WHERE build_id=?", (build_id,)).fetchone()
+                self._validate_committed_row(committed, plan)
+            if row["final_dev"] is None or row["final_ino"] is None:
+                raise PublicationRecoveryError("publication_attempt_invalid")
+            exports_fd = self._exports_fd(loc)
+            try:
+                name = _safe_ref(plan.final_ref, build_id=plan.build_id, fmt=plan.fmt, stage=False)
+                _, content = _safe_file_bytes(
+                    exports_fd, name,
+                    expected_fingerprint=plan.artifact_fingerprint,
+                    expected_size=plan.byte_size,
+                    expected_inode=(row["final_dev"], row["final_ino"]),
+                    stage=False, capture=True,
+                    mutation_hook=self._file_hook("download", plan.build_id),
+                )
+            finally:
+                os.close(exports_fd)
+        return {
+            "schema": "quillframe_publication_artifact_v1",
+            "project_id": project_id,
+            "build_id": build_id,
+            "filename": name,
+            "media_type": "text/markdown;charset=utf-8" if plan.fmt == "md" else "text/plain;charset=utf-8",
+            "byte_size": len(content),
+            "artifact_fingerprint": fingerprint_bytes(content),
+            "content_base64": base64.b64encode(content).decode("ascii"),
+            "source_acceptance_ids": self._source_acceptance_ids(plan),
+            "authority": False,
+        }
+
+    def build_collection(
+        self, project_id: str, acceptance_ids: list[str], fmt: str = "md", *,
+        idempotency_key: str, user_authorized: bool,
+    ) -> dict[str, Any]:
+        from .collection import CollectionPublicationRecovery
+        return CollectionPublicationRecovery(self.store, fault_injector=self.fault_injector).build_collection(
+            project_id, acceptance_ids, fmt,
+            idempotency_key=idempotency_key, user_authorized=user_authorized,
+        )
+
     def _record_stage_owner(self, plan: _Plan, value: os.stat_result) -> Any:
         with self.store.open_project(plan.project_id) as conn:
             try:
                 conn.execute("BEGIN IMMEDIATE")
-                row = conn.execute("SELECT * FROM publication_build_attempts WHERE build_id=?", (plan.build_id,)).fetchone()
+                row = conn.execute(f"SELECT * FROM {self.attempts_table} WHERE build_id=?", (plan.build_id,)).fetchone()
                 self._validate_row(row, plan)
                 if row["state"] != "staged":
                     conn.commit()
                     return row
                 conn.execute(
-                    "UPDATE publication_build_attempts SET stage_dev=?,stage_ino=?,updated_at=? WHERE build_id=?",
+                    f"UPDATE {self.attempts_table} SET stage_dev=?,stage_ino=?,updated_at=? WHERE build_id=?",
                     (value.st_dev, value.st_ino, now_iso(), plan.build_id),
                 )
                 conn.commit()
-                return conn.execute("SELECT * FROM publication_build_attempts WHERE build_id=?", (plan.build_id,)).fetchone()
+                return conn.execute(f"SELECT * FROM {self.attempts_table} WHERE build_id=?", (plan.build_id,)).fetchone()
             except PublicationRecoveryError:
                 if conn.in_transaction:
                     conn.rollback()
@@ -731,7 +821,7 @@ class PublicationRecovery:
         with self.store.open_project(plan.project_id) as conn:
             try:
                 conn.execute("BEGIN IMMEDIATE")
-                row = conn.execute("SELECT * FROM publication_build_attempts WHERE build_id=?", (plan.build_id,)).fetchone()
+                row = conn.execute(f"SELECT * FROM {self.attempts_table} WHERE build_id=?", (plan.build_id,)).fetchone()
                 self._validate_row(row, plan)
                 if row["state"] == "published":
                     conn.commit()
@@ -739,11 +829,11 @@ class PublicationRecovery:
                 if row["state"] != "staged":
                     raise PublicationRecoveryError("publication_attempt_invalid")
                 conn.execute(
-                    "UPDATE publication_build_attempts SET state='published',final_dev=?,final_ino=?,updated_at=? WHERE build_id=?",
+                    f"UPDATE {self.attempts_table} SET state='published',final_dev=?,final_ino=?,updated_at=? WHERE build_id=?",
                     (value.st_dev, value.st_ino, now_iso(), plan.build_id),
                 )
                 conn.commit()
-                return conn.execute("SELECT * FROM publication_build_attempts WHERE build_id=?", (plan.build_id,)).fetchone()
+                return conn.execute(f"SELECT * FROM {self.attempts_table} WHERE build_id=?", (plan.build_id,)).fetchone()
             except PublicationRecoveryError:
                 if conn.in_transaction:
                     conn.rollback()
@@ -779,27 +869,27 @@ class PublicationRecovery:
         with self.store.open_project(plan.project_id) as conn:
             try:
                 conn.execute("BEGIN IMMEDIATE")
-                source = self._source(conn, plan.project_id, plan.acceptance_id)
+                source = self._source(conn, plan.project_id, plan.source_key)
                 current = self._plan(source, plan.fmt)
                 if current.identity_fingerprint != plan.identity_fingerprint:
                     raise PublicationRecoveryError("publication_source_changed")
-                current_row = conn.execute("SELECT * FROM publication_build_attempts WHERE build_id=?", (plan.build_id,)).fetchone()
+                current_row = conn.execute(f"SELECT * FROM {self.attempts_table} WHERE build_id=?", (plan.build_id,)).fetchone()
                 self._validate_row(current_row, plan)
                 if current_row["state"] == "committed":
-                    committed = conn.execute("SELECT * FROM publication_builds WHERE build_id=?", (plan.build_id,)).fetchone()
+                    committed = conn.execute(f"SELECT * FROM {self.builds_table} WHERE build_id=?", (plan.build_id,)).fetchone()
                     self._validate_committed_row(committed, plan)
                     conn.commit()
                     return self._result(plan, committed)
                 if current_row["state"] not in {"published", "staged"}:
                     raise PublicationRecoveryError("publication_attempt_invalid")
                 committed = conn.execute(
-                    "SELECT * FROM publication_builds WHERE source_acceptance_id=? AND format=? AND source_fingerprint=? AND compiler_contract=?",
-                    (plan.acceptance_id, plan.fmt, plan.source_fingerprint, plan.compiler_contract),
+                    f"SELECT * FROM {self.builds_table} WHERE {self.source_column}=? AND format=? AND source_fingerprint=? AND compiler_contract=?",
+                    (plan.source_key, plan.fmt, plan.source_fingerprint, plan.compiler_contract),
                 ).fetchone()
                 if committed:
                     self._validate_committed_row(committed, plan)
                     conn.execute(
-                        "UPDATE publication_build_attempts SET state='committed',final_dev=?,final_ino=?,updated_at=? WHERE build_id=?",
+                        f"UPDATE {self.attempts_table} SET state='committed',final_dev=?,final_ino=?,updated_at=? WHERE build_id=?",
                         (final.st_dev, final.st_ino, now_iso(), plan.build_id),
                     )
                     conn.commit()
@@ -807,7 +897,7 @@ class PublicationRecovery:
                 _fault_safe(self.fault_injector, "before_finalize_insert", plan.build_id)
                 validation = {
                     "source_intact": True,
-                    "compiler_contract": COMPILER_CONTRACT,
+                    "compiler_contract": self.compiler_contract,
                     "identity_fingerprint": plan.identity_fingerprint,
                     "artifact_fingerprint": plan.artifact_fingerprint,
                     "byte_size": plan.byte_size,
@@ -817,12 +907,12 @@ class PublicationRecovery:
                 }
                 try:
                     conn.execute(
-                        """INSERT INTO publication_builds(
-                        build_id,source_acceptance_id,format,compiler_contract,output_ref,source_fingerprint,validation_json,persistent,created_at)
+                        f"""INSERT INTO {self.builds_table}(
+                        build_id,{self.source_column},format,compiler_contract,output_ref,source_fingerprint,validation_json,persistent,created_at)
                         VALUES(?,?,?,?,?,?,?,1,?)""",
                         (
                             plan.build_id,
-                            plan.acceptance_id,
+                            plan.source_key,
                             plan.fmt,
                             plan.compiler_contract,
                             plan.final_ref,
@@ -834,12 +924,12 @@ class PublicationRecovery:
                 except Exception as exc:
                     raise PublicationRecoveryError("publication_identity_conflict") from exc
                 conn.execute(
-                    "UPDATE publication_build_attempts SET state='committed',final_dev=?,final_ino=?,error_code=NULL,updated_at=? WHERE build_id=?",
+                    f"UPDATE {self.attempts_table} SET state='committed',final_dev=?,final_ino=?,error_code=NULL,updated_at=? WHERE build_id=?",
                     (final.st_dev, final.st_ino, now_iso(), plan.build_id),
                 )
                 _fault_safe(self.fault_injector, "before_finalize_commit", plan.build_id)
                 conn.commit()
-                committed = conn.execute("SELECT * FROM publication_builds WHERE build_id=?", (plan.build_id,)).fetchone()
+                committed = conn.execute(f"SELECT * FROM {self.builds_table} WHERE build_id=?", (plan.build_id,)).fetchone()
                 return self._result(plan, committed)
             except PublicationRecoveryError:
                 if conn.in_transaction:
@@ -850,17 +940,16 @@ class PublicationRecovery:
                     conn.rollback()
                 raise PublicationRecoveryError("publication_db") from exc
 
-    @staticmethod
-    def _result(plan: _Plan, row: Any) -> dict[str, Any]:
+    def _result(self, plan: _Plan, row: Any) -> dict[str, Any]:
         return {
             "schema": "quillframe_publication_build_v1",
             "build_id": plan.build_id,
             "persistent": True,
-            "source_acceptance_id": plan.acceptance_id,
+            self.source_column: plan.source_key,
             "source_fingerprint": plan.source_fingerprint,
             "output_ref": plan.final_ref,
             "format": plan.fmt,
-            "compiler_contract": COMPILER_CONTRACT,
+            "compiler_contract": self.compiler_contract,
             "identity_fingerprint": plan.identity_fingerprint,
             "artifact_fingerprint": plan.artifact_fingerprint,
             "byte_size": plan.byte_size,
@@ -886,7 +975,7 @@ class PublicationRecovery:
                         mutation_hook=self._file_hook("final", plan.build_id),
                     )
                     with self.store.open_project(project_id) as conn:
-                        committed = conn.execute("SELECT * FROM publication_builds WHERE build_id=?", (plan.build_id,)).fetchone()
+                        committed = conn.execute(f"SELECT * FROM {self.builds_table} WHERE build_id=?", (plan.build_id,)).fetchone()
                     self._validate_committed_row(committed, plan)
                     return self._result(plan, committed)
                 finally:
@@ -905,7 +994,7 @@ class PublicationRecovery:
             with self.store.open_project(project_id) as conn:
                 conn.execute("BEGIN IMMEDIATE")
                 conn.execute(
-                    "UPDATE publication_build_attempts SET state='failed',error_code=?,updated_at=? WHERE build_id=? AND state<>'committed'",
+                    f"UPDATE {self.attempts_table} SET state='failed',error_code=?,updated_at=? WHERE build_id=? AND state<>'committed'",
                     (code, now_iso(), build_id),
                 )
                 conn.commit()
@@ -917,7 +1006,7 @@ class PublicationRecovery:
     def _recover_one(self, loc: Any, row: Any) -> dict[str, Any]:
         project_id = row["project_id"]
         with self.store.open_project(project_id) as conn:
-            source = self._source(conn, project_id, row["source_acceptance_id"])
+            source = self._source(conn, project_id, row[self.source_column])
         if source.source_fingerprint != row["source_fingerprint"]:
             raise PublicationRecoveryError("publication_source_changed")
         plan = self._plan(source, row["format"])
@@ -1003,27 +1092,33 @@ class PublicationRecovery:
     def retry(self, project_id: str, build_id: str) -> dict[str, Any]:
         """Explicitly reopen one failed attempt; ordinary build never does this."""
 
-        if not _BUILD_ID_RE.fullmatch(build_id):
+        if not isinstance(build_id, str) or not _BUILD_ID_RE.fullmatch(build_id):
             raise PublicationRecoveryError("publication_attempt_invalid")
+        if self.__class__ is PublicationRecovery:
+            with self.store.open_project(project_id) as conn:
+                collection = conn.execute("SELECT 1 FROM publication_collection_attempts WHERE build_id=?", (build_id,)).fetchone()
+            if collection:
+                from .collection import CollectionPublicationRecovery
+                return CollectionPublicationRecovery(self.store, fault_injector=self.fault_injector).retry(project_id, build_id)
         with self._project_lock(project_id):
             with self.store.open_project(project_id) as conn:
                 try:
                     conn.execute("BEGIN IMMEDIATE")
                     row = conn.execute(
-                        "SELECT * FROM publication_build_attempts WHERE project_id=? AND build_id=?",
+                        f"SELECT * FROM {self.attempts_table} WHERE project_id=? AND build_id=?",
                         (project_id, build_id),
                     ).fetchone()
                     if not row:
                         raise PublicationRecoveryError("publication_missing")
                     if row["state"] != "failed":
                         raise PublicationRecoveryError("publication_attempt_invalid")
-                    source = self._source(conn, project_id, row["source_acceptance_id"])
+                    source = self._source(conn, project_id, row[self.source_column])
                     if source.source_fingerprint != row["source_fingerprint"]:
                         raise PublicationRecoveryError("publication_source_changed")
                     plan = self._plan(source, row["format"])
                     self._validate_row(row, plan)
                     conn.execute(
-                        "UPDATE publication_build_attempts SET state='staged',error_code=NULL,stage_dev=NULL,stage_ino=NULL,final_dev=NULL,final_ino=NULL,updated_at=? WHERE build_id=?",
+                        f"UPDATE {self.attempts_table} SET state='staged',error_code=NULL,stage_dev=NULL,stage_ino=NULL,final_dev=NULL,final_ino=NULL,updated_at=? WHERE build_id=?",
                         (now_iso(), build_id),
                     )
                     conn.commit()
@@ -1035,9 +1130,37 @@ class PublicationRecovery:
                     if conn.in_transaction:
                         conn.rollback()
                     raise PublicationRecoveryError("publication_db") from exc
-        return self.build(project_id, plan.acceptance_id, plan.fmt)
+        return self.build(project_id, plan.source_key, plan.fmt)
 
     def recover(self, project_id: str, *, build_id: str | None = None, limit: int = MAX_RECOVERY_ATTEMPTS) -> dict[str, Any]:
+        if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1 or limit > MAX_RECOVERY_ATTEMPTS:
+            raise PublicationRecoveryError("publication_recovery_bounded")
+        if build_id is not None and (not isinstance(build_id, str) or not _BUILD_ID_RE.fullmatch(build_id)):
+            raise PublicationRecoveryError("publication_attempt_invalid")
+        if self.__class__ is not PublicationRecovery:
+            return self._recover_ledger(project_id, build_id=build_id, limit=limit)
+        from .collection import CollectionPublicationRecovery
+        collection_runtime = CollectionPublicationRecovery(self.store, fault_injector=self.fault_injector)
+        with self.store.open_project(project_id) as conn:
+            if build_id is not None:
+                collection = conn.execute("SELECT 1 FROM publication_collection_attempts WHERE build_id=?", (build_id,)).fetchone()
+                if collection:
+                    return collection_runtime._recover_ledger(project_id, build_id=build_id, limit=limit)
+            else:
+                single_count = conn.execute("SELECT COUNT(*) FROM publication_build_attempts WHERE state IN ('staged','published')").fetchone()[0]
+                collection_count = conn.execute("SELECT COUNT(*) FROM publication_collection_attempts WHERE state IN ('staged','published')").fetchone()[0]
+                if single_count + collection_count > limit:
+                    raise PublicationRecoveryError("publication_recovery_bounded")
+        result = self._recover_ledger(project_id, build_id=build_id, limit=limit)
+        if build_id is None and collection_count:
+            remaining = limit - len(result["items"])
+            if remaining < 1:
+                raise PublicationRecoveryError("publication_recovery_bounded")
+            collected = collection_runtime._recover_ledger(project_id, limit=remaining)
+            result["items"].extend(collected["items"])
+        return result
+
+    def _recover_ledger(self, project_id: str, *, build_id: str | None = None, limit: int = MAX_RECOVERY_ATTEMPTS) -> dict[str, Any]:
         if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1 or limit > MAX_RECOVERY_ATTEMPTS:
             raise PublicationRecoveryError("publication_recovery_bounded")
         if build_id is not None and not _BUILD_ID_RE.fullmatch(build_id):
@@ -1046,12 +1169,12 @@ class PublicationRecovery:
             with self.store.open_project(project_id) as conn:
                 if build_id is None:
                     rows = conn.execute(
-                        "SELECT * FROM publication_build_attempts WHERE project_id=? AND state IN ('staged','published') ORDER BY created_at,build_id LIMIT ?",
+                        f"SELECT * FROM {self.attempts_table} WHERE project_id=? AND state IN ('staged','published') ORDER BY created_at,build_id LIMIT ?",
                         (project_id, limit + 1),
                     ).fetchall()
                 else:
                     all_rows = conn.execute(
-                        "SELECT * FROM publication_build_attempts WHERE project_id=? AND build_id=?",
+                        f"SELECT * FROM {self.attempts_table} WHERE project_id=? AND build_id=?",
                         (project_id, build_id),
                     ).fetchall()
                     if not all_rows:
@@ -1061,12 +1184,12 @@ class PublicationRecovery:
                     if all_rows[0]["state"] == "committed":
                         row = all_rows[0]
                         with self.store.open_project(project_id) as verify_conn:
-                            source = self._source(verify_conn, project_id, row["source_acceptance_id"])
+                            source = self._source(verify_conn, project_id, row[self.source_column])
                             if source.source_fingerprint != row["source_fingerprint"]:
                                 raise PublicationRecoveryError("publication_source_changed")
                             plan = self._plan(source, row["format"])
                             self._validate_row(row, plan)
-                            committed = verify_conn.execute("SELECT * FROM publication_builds WHERE build_id=?", (build_id,)).fetchone()
+                            committed = verify_conn.execute(f"SELECT * FROM {self.builds_table} WHERE build_id=?", (build_id,)).fetchone()
                         self._validate_committed_row(committed, plan)
                         exports_fd = self._exports_fd(loc)
                         try:

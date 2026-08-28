@@ -129,68 +129,73 @@ novel_creation_research:
       - quillframe_transition_constraints_v1
     rationale: "Use layered planning horizons while preserving Project authority and explicit plan lifecycle."
 
-  - id: character_intent_simulation
+  - id: next_chapter_prediction
     source: https://arxiv.org/abs/2503.22828
     source_type: research_paper
+    title: "Learning to Reason for Long-Form Story Generation"
     observed_mechanisms:
-      - character-centered simulation before prose realization
-      - intent and action consistency as causal scaffolding
+      - next-chapter prediction from condensed story context
+      - reinforcement learning with a verified completion-likelihood reward
+    decision: adapt
+    internal_contracts:
+      - PlanningHorizon
+      - EventPlan
+    rationale: "Use next-chapter planning as a research hypothesis; this slice does not train weights or claim to reproduce the paper. The earlier character-simulation attribution was incorrect."
+
+  - id: character_grounded_multi_agent_generation
+    source: https://arxiv.org/abs/2607.00918
+    source_type: research_paper
+    title: "From Personas to Plot: Character-Grounded Multi-Agent Story Generation for Long-Form Narratives"
+    observed_mechanisms:
+      - MAGNET character actions conditioned on personas and goals in a shared world
+      - ATLAS scene/world graph for contradiction checks
     decision: adapt
     internal_contracts:
       - quillframe_character_intent_v1
       - character_intent_stage
-    rationale: "Model private intent as bounded causal evidence, never as Writer exposition or Canon."
+      - quillframe_scene_simulation_v1
+    rationale: "Use bounded causal action and state evidence; private intent is not Writer exposition or Canon. The paper does not establish reader retention or serve as the source for a generic critique loop."
 
-  - id: iterative_narrative_critique
-    source: https://arxiv.org/abs/2607.00918
-    source_type: research_paper
-    observed_mechanisms:
-      - staged critique and targeted revision
-      - critic specialization over one frozen candidate
-    decision: adapt
-    internal_contracts:
-      - ReaderCritic
-      - ContinuityCritic
-      - StyleCritic
-      - quillframe_repair_plan_v1
-    rationale: "Use separate evidence roles and route repair to the owning layer; do not average critics into an authority score."
-
-  - id: long_form_memory_governance
+  - id: transition_constrained_story_generation
     source: https://arxiv.org/abs/2608.05169
     source_type: research_paper
+    title: "ConWriter: Transition-Constrained Stateful Long-Form Story Generation with Lightweight Neuro-Symbolic Consistency Control"
     observed_mechanisms:
-      - structured long-horizon memory
-      - selective retrieval over narrative state
+      - incremental scene generation with dynamic narrative memory
+      - symbolic transition checks and uncertainty-aware localized repair
     decision: adapt
     internal_contracts:
       - ContextFreeze
       - semantic_context_profiles
-    rationale: "Persist structured evidence but require semantic selection and deterministic authority/budget checks before prompt inclusion."
+      - quillframe_transition_constraints_v1
+    rationale: "Use state and transition checks with bounded repair. Small consistency experiments are not evidence of million-word coherence or commercial reader retention."
 
   - id: narrative_evaluation_acl_2026
     source: https://aclanthology.org/2026.findings-acl.410/
     source_type: peer_reviewed_paper
+    title: "Lost in Stories: Consistency Bugs in Long Story Generation by LLMs"
     observed_mechanisms:
-      - multi-dimensional narrative evaluation
-      - limitations of single aggregate quality scores
+      - ConStory-Bench with four story tasks and a consistency-error taxonomy
+      - ConStory-Checker with source-grounded contradiction evidence
     decision: adapt
     internal_contracts:
       - quillframe_risk_signals_v1
       - critic_evidence
-    rationale: "Retain dimension-specific evidence and human judgment instead of one synthetic readiness number."
+    rationale: "Bind continuity findings to exact evidence. Consistency checking is separate from reader engagement, taste and retention; the earlier generic-quality attribution was too broad."
 
-  - id: long_context_planning_iclr_2025
+  - id: agents_room_iclr_2025
     source: https://proceedings.iclr.cc/paper_files/paper/2025/file/0fbc8a83d93dd8021a4dd8d2d34138eb-Paper-Conference.pdf
     source_type: peer_reviewed_paper
+    title: "Agents' Room: Narrative Generation through Multi-step Collaboration"
     observed_mechanisms:
-      - explicit decomposition for long-horizon generation
-      - evaluation of plan-to-realization consistency
+      - specialized planning and writing agents coordinated through a shared scratchpad
+      - human and automatic story comparisons on Tell Me A Story
     decision: adapt
     internal_contracts:
       - planning_horizon
       - context_freeze
       - continuity_critic
-    rationale: "Bind local generation to an explicit frozen plan/context packet and check downstream consistency."
+    rationale: "Separate planning from realization and compare outputs with human evidence. The paper's roughly 1000-2000 token stories do not validate serial-book scale; Quillframe additionally requires blind-reader isolation instead of sharing all scratchpad content."
 
 open_source_novel_tools:
   - id: autonovel

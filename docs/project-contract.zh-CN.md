@@ -1,10 +1,10 @@
-# Native Project Contract
+# 原生项目契约
 
-一个 Quillframe 1.0 Project 是一部小说唯一的权威边界。Framework 提供通用机制；Project 拥有具体故事事实与 Canon。
+一个 Quillframe 1.0 项目是一部完整小说的权威边界。框架提供通用机制，项目拥有具体故事事实与正典。本文描述当前开发契约，不代表生产链路或云端发布已经验收完成。
 
 ## 创建或打开
 
-面向作者的创建与启动入口只有：
+通过原生启动命令创建并打开本地项目：
 
 ```bash
 quillframe launch ./my-novel --new \
@@ -13,28 +13,45 @@ quillframe launch ./my-novel --new \
   --language zh-CN
 ```
 
-打开已有 Project 使用 `quillframe launch ./my-novel`。不传路径时，交互式 launch 依次检查当前目录、最后一次明确打开的 Project，再提供新建向导；非交互环境无法确定 Project 时会返回 typed error。
+打开已有项目使用 `quillframe launch ./my-novel`。不传路径时，交互式启动依次检查当前目录、最后一次明确打开的项目，再提供新建向导；非交互环境无法确定项目时会返回结构化错误。
 
-## 精确 1.0 identity
+## 精确的 1.0 身份
 
-根目录 `quillframe.toml` 必须精确声明 `quillframe_project_v1_0`、Project identity、language 与 `chapter_scope = "CH001"`。其他 schema 或 chapter scope 会在打开 Core state 前被拒绝。不存在 import、mapped layout、state upgrader 或 dual read path。
+原生四键 `quillframe.toml` 只能包含以下根级键：
 
-本地持久化状态位于 `.quillframe/data/`，SQLite 必须带有精确的 `project:1.0` schema identity。没有该 identity 的数据库会保持原样并被拒绝；处理 pre-release state 的方式是创建新的 1.0 Project。
+```toml
+schema = "quillframe_project_v1_0"
+id = "MY-NOVEL"
+title = "My Novel"
+language = "zh-CN"
+```
 
-## Ownership
+所有值都必须是非空字符串。项目标识由 1–64 个 ASCII 字母、数字、点、下划线或连字符组成，并以字母或数字开头。解析后的上下文仍使用 `quillframe_project_context_v1_0`，在顶层输出 `scope: "novel"`；scope 不是 manifest 的键。多出的 `chapter_scope` 键、其他 schema 或旧元数据会在打开 Core 状态前被拒绝，不提供适配器、状态升级或双读路径。
 
-Project-owned data 包括故事与角色事实、计划、研究、正文修订、作者显式决定、Accepted Canon、settlement receipt 与 publication state。模型提供语义证据和提案；Core 拥有确定性的 state、permission、fingerprint、budget、transaction 与 idempotency。
+本地持久化状态位于 `.quillframe/data/`。SQLite 必须同时符合 `project:1.0` 身份和当前完整的 schema 分片。不兼容或不完整的开发状态会保持原样并被拒绝。状态契约变化后，应另建新项目；打开操作不会自动迁移、修复或补建初始数据。
 
-浏览器、coding-agent host、模型响应、SQLite 中存在数据或 capability declaration 都不能授予 Canon authority。
+原生创建会独占保留新身份，并在同一个项目数据库事务中写入项目记录、初始章节 `CH001` 与正文文档 `DOC-CH001`，不会用 upsert 覆盖已有项目。文件系统发布和全局项目登记属于不同的事务边界。
 
-## CH001 边界
+## 权属
 
-1.0 验收只执行 CH001。CH002 及后续章节必须在 projection、context assembly、model routing、draft、review、accept、settlement 或 publish 之前被拒绝。
+项目数据包括故事与角色事实、计划、研究、正文修订、作者的明确决定、已接受的正典、结算回执与出版状态。模型提供语义证据和提案；Core 管理确定性的状态、权限、指纹、预算、事务和幂等性。
+
+浏览器、编程代理宿主、模型响应、SQLite 中存在的数据或能力声明，都不能授予正典修改权。
+
+## 小说与章节边界
+
+`CH001` 只是初始章节，不是小说的章节上限。明确创建后，`CH002` 及后续章节均可使用。每份正文必须关联同一项目中真实存在的章节；仅仅符合标识格式，不能证明章节存在，也不能授权工作流。
+
+审查、接受和结算绑定该章的精确候选及来源指纹。接受新修订不会自动完成结算。已结算来源发生变化时，依赖它的后续章节可能失效；如果新接受版本仍待结算，不能把旧的已结算版本当作当前可导出的版本。
 
 ## 可复现与导出
 
-Core-owned backup/export action 会绑定精确 Project 与 artifact fingerprint。Hosted upload 每次都必须显式发起且是单次单向动作；本地 launch 不会自动上传或同步。导出 bundle 可以包含 Project material 与 safe receipt，但不能包含模型 credential 或 private reasoning。
+Core 的备份与恢复使用顶层 `scope: "novel"`、精确的项目及 schema 指纹，并验证真实章节关系，不会凭空补建缺失章节。备份包携带项目数据库与已验证的 blob，不承诺搬运这些成员以外的出版文件。
 
-## Native contract boundary
+合集出版要求明确提供唯一的接受版本 ID，并按章节阅读顺序排列，再根据对应正文的精确字节生成 Markdown 或文本。每个选定版本都必须是当前接受版本、已结算，且其自身运行的依赖没有失效。历史产物仍可按 build ID 读取，但必须验证来源绑定、字节大小和 SHA-256 指纹；历史文件存在不代表该章仍是当前版本。出版输出保持 `authority=false`。
 
-唯一 Project identity contract 是五键 `quillframe.toml`、CH001 context、`manifest_fingerprint` 与 `.quillframe/data` boundary。deterministic transport bundle 可以携带 fingerprint evidence，但永远不是 Project authority。产品创建、打开与正常创作始终通过 `quillframe launch` 和 Host Bridge v11。
+托管上传必须明确发起，本地启动不会自动上传或同步。导出包不得包含模型凭据或私有推理。确定性的存储与出版测试通过，不等于真实模型质量、独立审查、整本小说生产或云端部署已经验收通过。
+
+## 原生契约边界
+
+四键 `quillframe.toml`、顶层含 `scope: "novel"` 的上下文、`manifest_fingerprint` 与 `.quillframe/data` 边界共同定义原生项目身份。确定性传输包可以携带指纹证据，但永远不能成为项目权威。本地启动与 Host Bridge v11 共用这一 Core 契约。

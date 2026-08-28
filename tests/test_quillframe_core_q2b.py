@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import base64
+import json
 import tempfile
 import threading
 import unittest
@@ -17,7 +19,10 @@ class PublicationRecoveryTests(unittest.TestCase):
         self.store = QuillframeStore(Path(self.temp.name))
         self.ops = CoreOperations(self.store)
         self.store.create_project("P", "Project P", "zh-CN")
-        self.store.create_document("P", "DOC", "Chapter")
+        with self.store.open_project("P") as conn:
+            conn.execute("INSERT INTO story_nodes(node_id,kind,ordinal,title,metadata_json) VALUES('CH001','chapter',1,'Chapter','{}')")
+            conn.commit()
+        self.store.create_document("P", "DOC", "Chapter", story_node_id="CH001")
         first = self.store.save_revision("P", "DOC", "incumbent", expected_parent_revision_id=None, source="test")
         second = self.store.save_revision(
             "P", "DOC", "candidate", expected_parent_revision_id=first["revision_id"], source="test", authority_class="review"
@@ -509,6 +514,144 @@ class PublicationRecoveryTests(unittest.TestCase):
         with self.assertRaises(OperationError) as raised:
             self.ops.publication_recover("P", build_id="pub_" + "0" * 64)
         self.assertEqual(raised.exception.code, "publication_missing")
+
+    def _settle_publication_fixture(self, acceptance_id: str) -> None:
+        """Seed deterministic publication prerequisites, not semantic evidence."""
+        with self.store.open_project("P") as conn:
+            row = conn.execute(
+                """SELECT a.candidate_id,c.document_id,c.revision_id,c.content_fingerprint,d.story_node_id
+                FROM acceptance_evidence a JOIN candidates c ON c.candidate_id=a.candidate_id
+                JOIN documents d ON d.document_id=c.document_id WHERE a.acceptance_id=?""", (acceptance_id,),
+            ).fetchone()
+            state = {key: row[key] for key in ("candidate_id", "document_id", "revision_id", "content_fingerprint")}
+            state["acceptance_id"] = acceptance_id
+            head_fp = fingerprint_text(canonical_json(state))
+            target = f"chapter:{row['story_node_id']}"
+            conn.execute(
+                "INSERT INTO settlements(settlement_id,acceptance_id,target_ref,before_fingerprint,after_fingerprint,state_delta_json,status,receipt_json,created_at,completed_at) VALUES(?,?,?,?,?,?,'settled',?,?,?)",
+                (f"SET-{acceptance_id}", acceptance_id, target, "sha256:" + "0" * 64, head_fp, "{}", '{"test_fixture":true}', now_iso(), now_iso()),
+            )
+            conn.execute(
+                """INSERT INTO canon_state(state_key,value_json,authority_class,evidence_ref,content_fingerprint,updated_at)
+                VALUES(?,?,'accepted',?,?,?) ON CONFLICT(state_key) DO UPDATE SET value_json=excluded.value_json,
+                evidence_ref=excluded.evidence_ref,content_fingerprint=excluded.content_fingerprint,updated_at=excluded.updated_at""",
+                (target, canonical_json(state), acceptance_id, head_fp, now_iso()),
+            )
+            conn.commit()
+
+    def _second_publication_fixture(self) -> str:
+        stamp = now_iso()
+        with self.store.open_project("P") as conn:
+            conn.execute("INSERT INTO story_nodes(node_id,kind,ordinal,title,metadata_json) VALUES('CH002','chapter',2,'Second','{}')")
+            conn.commit()
+        self.store.create_document("P", "DOC-CH002", "Second", story_node_id="CH002")
+        revision = self.store.save_revision("P", "DOC-CH002", "第二章。", expected_parent_revision_id=None, source="test")
+        with self.store.open_project("P") as conn:
+            conn.execute("UPDATE document_revisions SET authority_class='accepted' WHERE revision_id=?", (revision["revision_id"],))
+            conn.execute("INSERT INTO runs(run_id,task_mode,target_ref,status,request_fingerprint,created_at,updated_at) VALUES('RUN2','DRAFT','chapter:CH002','completed',?,?,?)", (fingerprint_text("request2"), stamp, stamp))
+            conn.execute(
+                "INSERT INTO candidates(candidate_id,document_id,revision_id,run_id,task_mode,candidate_kind,status,content_fingerprint,user_visible_gate,created_at) VALUES('C2','DOC-CH002',?,'RUN2','DRAFT','draft','accepted',?,'PASS',?)",
+                (revision["revision_id"], revision["content_fingerprint"], stamp),
+            )
+            conn.execute(
+                "INSERT INTO acceptance_evidence(acceptance_id,candidate_id,candidate_fingerprint,authorized_by,authorization_json,created_at) VALUES('A2','C2',?,'test-author',?,?)",
+                (revision["content_fingerprint"], '{"test_fixture":true}', stamp),
+            )
+            conn.commit()
+        self._settle_publication_fixture(self.acceptance_id)
+        self._settle_publication_fixture("A2")
+        return "A2"
+
+    def test_artifact_returns_exact_bytes_and_rejects_tamper_and_paths(self):
+        from publication.recovery import PublicationRecovery, PublicationRecoveryError
+        runtime = PublicationRecovery(self.store)
+        built = runtime.build("P", self.acceptance_id)
+        result = runtime.artifact("P", built["build_id"])
+        self.assertEqual(base64.b64decode(result["content_base64"], validate=True), self.content.encode("utf-8"))
+        self.assertEqual(result["artifact_fingerprint"], built["artifact_fingerprint"])
+        self.assertEqual(result["source_acceptance_ids"], [self.acceptance_id])
+        for bad in ("../project.sqlite", built["build_id"] + "/x"):
+            with self.assertRaises(PublicationRecoveryError):
+                runtime.artifact("P", bad)
+        target = self.store.location("P").directory / built["output_ref"]
+        target.write_text("x" * len(self.content), encoding="utf-8")
+        with self.assertRaises(PublicationRecoveryError) as rejected:
+            runtime.artifact("P", built["build_id"])
+        self.assertEqual(rejected.exception.code, "publication_artifact_invalid")
+
+    def test_collection_has_ordered_bytes_real_members_and_idempotency(self):
+        from publication.recovery import PublicationRecovery, PublicationRecoveryError
+        second = self._second_publication_fixture()
+        runtime = PublicationRecovery(self.store)
+        ids = [self.acceptance_id, second]
+        result = runtime.build_collection("P", ids, idempotency_key="book", user_authorized=True)
+        replay = runtime.build_collection("P", ids, idempotency_key="book", user_authorized=True)
+        self.assertEqual(result, replay)
+        artifact = runtime.artifact("P", result["build_id"])
+        self.assertEqual(base64.b64decode(artifact["content_base64"], validate=True), "candidate\n\n第二章。".encode("utf-8"))
+        self.assertEqual(artifact["source_acceptance_ids"], ids)
+        with self.store.open_project("P") as conn:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM publication_builds").fetchone()[0], 0)
+            self.assertEqual([row[0] for row in conn.execute("SELECT acceptance_id FROM publication_collection_members ORDER BY ordinal")], ids)
+        with self.assertRaises(PublicationRecoveryError) as rejected:
+            runtime.build_collection("P", ids, "txt", idempotency_key="book", user_authorized=True)
+        self.assertEqual(rejected.exception.code, "publication_identity_conflict")
+
+    def test_collection_rejects_repeated_unordered_or_unsettled_sources(self):
+        from publication.recovery import PublicationRecovery, PublicationRecoveryError
+        second = self._second_publication_fixture()
+        runtime = PublicationRecovery(self.store)
+        for ids in ([self.acceptance_id, self.acceptance_id], [second, self.acceptance_id]):
+            with self.assertRaises(PublicationRecoveryError):
+                runtime.build_collection("P", ids, idempotency_key="invalid", user_authorized=True)
+        with self.assertRaises(PublicationRecoveryError) as unauthorized:
+            runtime.build_collection("P", [self.acceptance_id, second], idempotency_key="book", user_authorized=False)
+        self.assertEqual(unauthorized.exception.code, "publication_authorization_required")
+        with self.store.open_project("P") as conn:
+            conn.execute("DELETE FROM canon_state WHERE state_key='chapter:CH002'")
+            conn.commit()
+        with self.assertRaises(PublicationRecoveryError) as unsettled:
+            runtime.build_collection("P", [self.acceptance_id, second], idempotency_key="book", user_authorized=True)
+        self.assertEqual(unsettled.exception.code, "publication_source_changed")
+
+    def test_collection_dependency_check_uses_selected_run_not_old_history(self):
+        from publication.recovery import PublicationRecovery, PublicationRecoveryError
+        second = self._second_publication_fixture()
+        stamp = now_iso()
+        with self.store.open_project("P") as conn:
+            source_fp = conn.execute("SELECT content_fingerprint FROM canon_state WHERE state_key='chapter:CH001'").fetchone()[0]
+            conn.execute("INSERT INTO runs(run_id,task_mode,target_ref,status,request_fingerprint,created_at,updated_at) VALUES('RUN2-OLD','DRAFT','chapter:CH002','completed',?,?,?)", (fingerprint_text("old"), stamp, stamp))
+            conn.execute("INSERT INTO chapter_dependencies(chapter_id,source_chapter_id,source_fingerprint,run_id,status,created_at,updated_at) VALUES('CH002','CH001',?,'RUN2-OLD','stale',?,?)", (source_fp, stamp, stamp))
+            conn.execute("INSERT INTO chapter_dependencies(chapter_id,source_chapter_id,source_fingerprint,run_id,status,created_at,updated_at) VALUES('CH002','CH001',?,'RUN2','current',?,?)", (source_fp, stamp, stamp))
+            conn.commit()
+        runtime = PublicationRecovery(self.store)
+        built = runtime.build_collection("P", [self.acceptance_id, second], idempotency_key="book", user_authorized=True)
+        with self.store.open_project("P") as conn:
+            conn.execute("UPDATE chapter_dependencies SET status='stale' WHERE run_id='RUN2'")
+            conn.commit()
+        with self.assertRaises(PublicationRecoveryError) as stale:
+            runtime.build_collection("P", [self.acceptance_id, second], idempotency_key="stale", user_authorized=True)
+        self.assertEqual(stale.exception.code, "publication_source_changed")
+        # Existing build bytes remain an immutable historical artifact.
+        self.assertEqual(runtime.artifact("P", built["build_id"])["source_acceptance_ids"], [self.acceptance_id, second])
+
+    def test_collection_recovers_after_file_publish_without_duplicate_build(self):
+        from publication.recovery import PublicationRecovery, PublicationRecoveryError
+        second = self._second_publication_fixture()
+
+        def fail(phase, _build_id):
+            if phase == "after_publish":
+                raise RuntimeError("simulated interruption")
+
+        with self.assertRaises(PublicationRecoveryError):
+            PublicationRecovery(self.store, fault_injector=fail).build_collection("P", [self.acceptance_id, second], idempotency_key="book", user_authorized=True)
+        with self.store.open_project("P") as conn:
+            build_id = conn.execute("SELECT build_id FROM publication_collection_attempts").fetchone()[0]
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM publication_collection_builds").fetchone()[0], 0)
+        runtime = PublicationRecovery(self.store)
+        recovered = runtime.recover("P", build_id=build_id)
+        self.assertEqual(recovered["items"][0]["build_id"], build_id)
+        self.assertEqual(runtime.artifact("P", build_id)["source_acceptance_ids"], [self.acceptance_id, second])
 
 
 if __name__ == "__main__":

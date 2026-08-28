@@ -10,6 +10,10 @@ const appShell = read("src/AppShell.tsx");
 const main = read("src/main.tsx");
 const start = read("src/routes/Start.tsx");
 const manuscript = read("src/routes/Manuscript.tsx");
+const manuscriptBuffer = read("src/authoring/manuscriptBuffer.ts");
+const plan = read("src/routes/Plan.tsx");
+const story = read("src/routes/Story.tsx");
+const learning = read("src/routes/Learning.tsx");
 const review = read("src/routes/Review.tsx");
 const context = read("src/routes/Context.tsx");
 const settings = read("src/routes/Settings.tsx");
@@ -20,6 +24,7 @@ const bridge = read("src/bridge.ts");
 for (const [file, source] of [
   ["AppShell.tsx", appShell], ["Start.tsx", start], ["Manuscript.tsx", manuscript], ["Review.tsx", review],
   ["Context.tsx", context], ["Settings.tsx", settings], ["Publication.tsx", publication],
+  ["Plan.tsx", plan], ["Story.tsx", story], ["Learning.tsx", learning],
 ]) {
   assert(!/\bfetch\s*\(/.test(source), `${file} must use BridgeClient/invokeBridge instead of fetch`);
   assert(!/indexedDB|openDatabase|better-sqlite|sqlite3/i.test(source), `${file} must not open a browser/database persistence backend`);
@@ -53,16 +58,22 @@ assert(!appShell.includes('authority: "framework"'), "Studio must not forge Fram
 for (const operation of ["document.list", "document.open", "document.revisions.list", "document.revision.save"]) {
   assert(manuscript.includes(`\"${operation}\"`), `Manuscript must consume ${operation}`);
 }
-assert(manuscript.includes("expected_parent_revision_id"), "Manuscript autosave must use optimistic before-state/CAS");
+assert(manuscriptBuffer.includes("expected_parent_revision_id"), "Manuscript autosave must use optimistic before-state/CAS");
+assert(manuscript.includes("editor.flushAndRefresh") && manuscript.includes("!editor.current()?.dirty"), "Navigation must recheck the editor after asynchronous metadata refresh");
 assert(manuscript.includes('authority_class: "proposal"'), "Manuscript autosave must create proposal authority only");
 assert(!/localStorage\.setItem\([^\n]*(content|manuscript|canon)/i.test(manuscript), "Manuscript content/Canon must never be stored in localStorage");
+assert(plan.includes('"plan.inspect"') && plan.includes('"plan.save"') && plan.includes("expected_version"), "Plans must use Core reads and version-bound writes");
+assert(story.includes('"story.inspect"') && story.includes("AuthorityLabel"), "Story facts must use typed Core data with authority labels");
+assert(learning.includes('"learning.feedback.observe"') && learning.includes('"learning.preference.review"') && learning.includes("user_authorized: true"), "Learning must separate observation, model review and explicit author authority");
 
-assert(review.includes("Accepted ✓") && review.includes("Not Settled"), "Review must visibly separate Accepted from Settled");
+assert(review.includes("Accepted ✓") && review.includes("Settlement unconfirmed")
+  && review.includes('settled={settlement()?.status === "settled" ? "true" : "unknown"}'), "Review must separate confirmed settlement from unknown receipt state");
 for (const operation of ["candidate.review.get", "candidate.accept", "candidate.reject", "candidate.revision.request", "settlement.preflight", "settlement.apply"]) {
   assert(review.includes(`\"${operation}\"`), `Review must consume ${operation}`);
 }
 assert(review.indexOf('"settlement.preflight"') < review.indexOf('"settlement.apply"'), "Settlement preflight call must precede settlement.apply in the explicit settle flow");
-assert(review.includes("expected_before_fingerprint: preflight.data.expected_before_fingerprint"), "Settlement apply must use the exact Core preflight before fingerprint");
+assert(review.includes("parseReviewSettlementPreflight(preflight.data, detail, accepted, target)")
+  && review.includes("expected_before_fingerprint: verifiedPreflight.expected_before_fingerprint"), "Settlement apply must use the exact validated Core preflight before fingerprint");
 assert(review.includes("auto-start REVISE") || review.includes("auto-start REVISE") || review.includes("does not auto-start REVISE"), "Request Revision UX must state that REVISE is not auto-started");
 
 assert(context.includes("ACTUALLY LOADED INTO THIS STAGE"), "Context Inspector must label actually loaded Context");
@@ -80,6 +91,8 @@ assert(!/Provider Dashboard/.test(settings), "Ordinary Settings must not introdu
 
 assert(publication.includes("acceptance_id"), "Publish must consume a Core acceptance_id");
 assert(!publication.includes("accepted manuscript text") && !publication.includes("inlineFixture"), "Publish must not let browser input impersonate Accepted text");
+assert(publication.includes('"publication.artifact.get"') && publication.includes("parsePublicationArtifact"), "Downloads must verify actual Core artifact bytes");
+assert(publication.includes('"publication.collection.build"') && publication.includes("current_acceptance_id"), "Ordered collections must use current Core acceptance heads");
 
 assert(css.includes("min-block-size: 44px"), "Writer Mode must enforce 44px touch targets");
 assert(css.includes("@media (max-width: 1080px)"), "Tablet responsive behavior must be explicit");

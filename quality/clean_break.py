@@ -3,7 +3,9 @@
 
 Historical specifications and changelogs may describe superseded contracts.
 Current product, runtime, persistence, and task documentation may only expose
-the native 1.0 paths. The scanner is intentionally based on exact behavioral
+the native novel contract: four manifest keys and top-level scope ``novel``.
+CH001 remains valid as an initial chapter or a historical acceptance fixture.
+The scanner is intentionally based on exact behavioral
 markers rather than a broad word ban, so rejection tests and platform terms
 such as Cloudflare's ``compatibility_date`` remain valid evidence.
 """
@@ -51,6 +53,9 @@ REMOVED_PATHS = (
 
 FORBIDDEN_MARKERS: dict[str, tuple[str, ...]] = {
     "README.md": (
+        "native five-key",
+        "CH001 context",
+        "fixes the acceptance scope to CH001",
         "required by its lock",
         "quillframe init",
         "quillframe validate",
@@ -59,6 +64,9 @@ FORBIDDEN_MARKERS: dict[str, tuple[str, ...]] = {
         "python studio/local_server.py",
     ),
     "README.en.md": (
+        "native five-key",
+        "CH001 context",
+        "fixes the acceptance scope to CH001",
         "required by its lock",
         "quillframe init",
         "quillframe validate",
@@ -67,6 +75,9 @@ FORBIDDEN_MARKERS: dict[str, tuple[str, ...]] = {
         "python studio/local_server.py",
     ),
     "README.zh-CN.md": (
+        "native 五键",
+        "CH001 context",
+        "验收范围固定为 CH001",
         "按照自己的 lock 固定 exact Framework",
         "quillframe init",
         "quillframe validate",
@@ -74,7 +85,11 @@ FORBIDDEN_MARKERS: dict[str, tuple[str, ...]] = {
         "npm install --no-audit --no-fund",
         "python studio/local_server.py",
     ),
-    "ROADMAP.md": ("required by their project lock",),
+    "ROADMAP.md": ("required by their project lock", "native five-key manifest", "CH001 context"),
+    "CLAUDE.en.md": ("five-key native manifest", "CH001 context"),
+    "CLAUDE.zh-CN.md": ("五键 native manifest", "CH001 context"),
+    "core/CANON_STATE.en.md": ("five-key manifest/context",),
+    "core/CANON_STATE.zh-CN.md": ("五键 manifest/context",),
     ".github/ISSUE_TEMPLATE/architecture_proposal.yml": ("        - Project SDK",),
     "quillframe/cli.py": (
         'sub.add_parser("init"',
@@ -95,6 +110,8 @@ FORBIDDEN_MARKERS: dict[str, tuple[str, ...]] = {
         "project-sdk-self-test",
     ),
     "quillframe.py": (
+        '"chapter_scope":resolution.get',
+        '"chapter_scope":"CH001"',
         "PROJECT_SDK",
         "project_sdk.py",
         "--no-build",
@@ -108,6 +125,7 @@ FORBIDDEN_MARKERS: dict[str, tuple[str, ...]] = {
         "project_authority_matches",
     ),
     "harness/session_runtime/resume_command.py": (
+        '    "project_chapter_scope_matches",\n',
         "project_authority_fingerprint",
         "framework_identity_matches",
         "project_authority_matches",
@@ -163,6 +181,8 @@ FORBIDDEN_MARKERS: dict[str, tuple[str, ...]] = {
         ".get(provider, provider)",
     ),
     "persistence/quillframe_sqlite.py": (
+        '"chapter_scope": PROJECT_SCOPE',
+        '"chapter_scope": "CH001"',
         "_LEGACY_MIGRATION_CHECKSUMS",
         "apply_migrations",
         ' / "migrations"',
@@ -182,6 +202,8 @@ FORBIDDEN_MARKERS: dict[str, tuple[str, ...]] = {
         '"acceptance": "acceptance"',
     ),
     "site/src/ProductApp.tsx": (
+        "five-key Project manifest",
+        "五键 Project manifest",
         '<Route path="/start"',
         "<Navigate",
         "legacyProjection",
@@ -211,6 +233,8 @@ FORBIDDEN_MARKERS: dict[str, tuple[str, ...]] = {
         "project-local .codex/hooks.json",
     ),
     "SKILL.md": (
+        "five-key native manifest",
+        "CH001 context",
         "Project SDK",
         "exact locked Framework",
     ),
@@ -263,6 +287,8 @@ FORBIDDEN_MARKERS: dict[str, tuple[str, ...]] = {
         "def bridge_description(",
     ),
     "site/src/ProjectInspector.tsx": (
+        "five-key manifest",
+        "五键 manifest",
         "quillframe.lock.json",
         "framework.attestation.json",
         "Mapped adapters may intentionally use a different physical layout",
@@ -285,28 +311,41 @@ FORBIDDEN_MARKERS: dict[str, tuple[str, ...]] = {
         "attestation",
     ),
     "SKILL.en.md": (
+        "exactly five native keys",
+        "CH001 context",
+        "manifest/context/fingerprint/CH001/data-boundary",
         "quillframe.lock.json",
         "Project SDK contracts",
         "exact locked Framework",
         "migration-safe",
     ),
     "SKILL.zh-CN.md": (
+        "五个 native key",
+        "CH001 context",
+        "manifest/context/fingerprint/CH001/data-boundary",
         "quillframe.lock.json",
         "Project SDK contract",
         "exact locked Framework",
         "构建、迁移和 rollback",
     ),
     "release/FRAMEWORK_BUNDLE.en.md": (
+        "native five-key",
+        "exact five-key Project identity",
         "quillframe.lock.json",
         "exact lock resolution",
         "bundle attestation metadata",
     ),
     "release/FRAMEWORK_BUNDLE.zh-CN.md": (
+        "native five-key",
+        "native 五键",
         "consumer `quillframe.lock.json`",
         "Bundle attestation",
         "exact lock resolution",
     ),
     "docs/project-contract.en.md": (
+        "native five-key",
+        "CH001 context",
+        "1.0 acceptance executes CH001 only.",
         "project_sdk.py",
         "quillframe_project_resolution_v1",
         "quillframe init",
@@ -314,6 +353,9 @@ FORBIDDEN_MARKERS: dict[str, tuple[str, ...]] = {
         "quillframe host-install",
     ),
     "docs/project-contract.zh-CN.md": (
+        "五键 `quillframe.toml`",
+        "CH001 context",
+        "1.0 验收只执行 CH001。",
         "project_sdk.py",
         "quillframe_project_resolution_v1",
         "quillframe init",
@@ -334,9 +376,11 @@ FORBIDDEN_MARKERS: dict[str, tuple[str, ...]] = {
         "project_schema_version",
     ),
     "studio/PRODUCT_ARCHITECTURE.en.md": (
+        "native five-key manifest",
         "quillframe_project_resolution_v1",
     ),
     "studio/PRODUCT_ARCHITECTURE.zh-CN.md": (
+        "native 五键 manifest",
         "quillframe_project_resolution_v1",
     ),
     "docs/superpowers/plans/2026-08-19-quillframe-v091-endurance-run.en.md": (
@@ -376,21 +420,39 @@ FORBIDDEN_MARKERS: dict[str, tuple[str, ...]] = {
     "harness/HARNESS_AGENT.zh-CN.md": ("exact lock/fingerprint", "exact locked Git identity", "Framework/Project compatibility"),
     "harness/session_runtime/SESSION_RUNTIME.en.md": ("exact lock/bundle", "Framework / Project compatibility"),
     "harness/session_runtime/SESSION_RUNTIME.zh-CN.md": ("exact lock / bundle", "Framework / Project compatibility"),
+    "project_resolution.py": (
+        'MANIFEST_KEYS = {"schema", "id", "title", "language", "chapter_scope"}',
+        'CHAPTER_SCOPE = "CH001"',
+        '"chapter_scope":',
+    ),
+    "quillframe/launch.py": ('CHAPTER_SCOPE = "CH001"', '"exact_five_key_manifest"'),
+    "production_runtime/workflow.py": ("def require_ch001(",),
+    "production_runtime/types.py": ("require_ch001",),
+    "site/src/project-inspector-contract.ts": ('chapter_scope: "CH001"', '"chapter_scope"'),
+    "cloud/src/core-provenance.ts": ('chapter_scope:', '"chapter_scope",', '.chapter_scope'),
+    "cloud/src/core-container.ts": ("claims.chapter_scope",),
+    "cloud/src/index.ts": ('chapter_scope:', 'verification.chapter_scope'),
+    "cloud/src/project-store.ts": ('chapter_scope:', '"chapter_scope",', 'receipt.chapter_scope'),
+    "quillframe/cloud_core.py": ('claims["chapter_scope"]', 'manifest.get("chapter_scope")', '"chapter_scope": "CH001"'),
 }
 
 REQUIRED_MARKERS: dict[str, tuple[str, ...]] = {
-    "README.md": ("native five-key", "CH001 context", ".quillframe/data", "Framework commit/bundle provenance"),
-    "README.en.md": ("native five-key", "CH001 context", ".quillframe/data", "Framework commit/bundle provenance"),
-    "README.zh-CN.md": ("native 五键", "CH001 context", ".quillframe/data", "Framework commit / bundle provenance"),
-    "ROADMAP.md": ("native five-key manifest", "CH001 context", ".quillframe/data", "no consumer-owned Project lock"),
+    "README.md": ("native four-key", 'scope: "novel"', "initial chapter", ".quillframe/data", "Framework commit/bundle provenance"),
+    "README.en.md": ("native four-key", 'scope: "novel"', "initial chapter", ".quillframe/data", "Framework commit/bundle provenance"),
+    "README.zh-CN.md": ("原生四键", 'scope: "novel"', "初始章节", ".quillframe/data", "Framework commit / bundle provenance"),
+    "ROADMAP.md": ("native four-key manifest", 'scope: "novel"', ".quillframe/data", "no consumer-owned Project lock"),
     ".github/ISSUE_TEMPLATE/architecture_proposal.yml": ("Native Project contract",),
-    "SKILL.md": ("native Project manifest/context", "CH001", ".quillframe/data"),
-    "SKILL.en.md": ("native Project manifest/context", "CH001", ".quillframe/data", "native-contract-validatable"),
-    "SKILL.zh-CN.md": ("native Project manifest/context", "CH001", ".quillframe/data", "按 native contract 验证"),
+    "SKILL.md": ("native Project manifest/context", "four-key native manifest", 'scope: "novel"', "initial chapter", ".quillframe/data"),
+    "SKILL.en.md": ("native Project manifest/context", "exactly four native keys", 'scope: "novel"', "initial chapter", ".quillframe/data", "native-contract-validatable"),
+    "SKILL.zh-CN.md": ("native Project manifest/context", "四个原生键", 'scope: "novel"', "初始章节", ".quillframe/data", "按 native contract 验证"),
+    "docs/project-contract.en.md": ("native four-key", 'schema = "quillframe_project_v1_0"', 'scope: "novel"', "only the initial chapter", "project:1.0", "manifest_fingerprint"),
+    "docs/project-contract.zh-CN.md": ("原生四键", 'schema = "quillframe_project_v1_0"', 'scope: "novel"', "只是初始章节", "project:1.0", "manifest_fingerprint"),
+    "CLAUDE.en.md": ("four-key native manifest", 'scope: "novel"'),
+    "CLAUDE.zh-CN.md": ("四键原生 manifest", 'scope: "novel"'),
     "knowledge/AGENT_FRAMEWORK_ADOPTION.en.md": ("Framework/Host provenance", "not Project authority or a consumer lock"),
     "knowledge/AGENT_FRAMEWORK_ADOPTION.zh-CN.md": ("Framework / Host provenance", "不是 Project authority 或 consumer lock"),
     "studio/prototypes/project-hub-scene.html": ("CH001", "quillframe_project_v1_0", "manifest_fingerprint", ".quillframe/data", "authority=false"),
-    "site/src/ProductApp.tsx": ("five-key Project manifest, context v1_0, and .quillframe/data", "五键 Project manifest、context v1_0 与 .quillframe/data"),
+    "site/src/ProductApp.tsx": ("four-key Project manifest, context v1_0, and .quillframe/data", "四键 Project manifest、context v1_0 与 .quillframe/data", "scope=novel"),
     "harness/ORCHESTRATION_PROTOCOL.en.md": ("Framework provenance, native Project identity and contract",),
     "harness/ORCHESTRATION_PROTOCOL.zh-CN.md": ("Framework provenance、native Project identity 与 contract",),
     "harness/HARNESS_AGENT.en.md": ("Framework provenance, native Project identity and contract",),
@@ -401,7 +463,8 @@ REQUIRED_MARKERS: dict[str, tuple[str, ...]] = {
     "docs/superpowers/plans/2026-08-19-quillframe-v091-endurance-run.zh-CN.md": ("已被取代", "native 1.0"),
     "quillframe/launch.py": (
         'PROJECT_SCHEMA = "quillframe_project_v1_0"',
-        'CHAPTER_SCOPE = "CH001"',
+        'PROJECT_SCOPE = "novel"',
+        "store.create_native_project(",
         "legacy metadata",
     ),
     "studio/host_bridge_protocol.py": (
@@ -432,15 +495,28 @@ REQUIRED_MARKERS: dict[str, tuple[str, ...]] = {
     ),
     "persistence/quillframe_sqlite.py": (
         'SCHEMA_RELEASE = "1.0"',
+        "def create_native_project(",
+        '"scope": PROJECT_SCOPE',
         "Pre10StateRejectedError",
         ' / "schema"',
     ),
     "project_resolution.py": (
         'PROJECT_SCHEMA = "quillframe_project_v1_0"',
-        'MANIFEST_KEYS = {"schema", "id", "title", "language", "chapter_scope"}',
+        'PROJECT_SCOPE = "novel"',
+        'MANIFEST_KEYS = {"schema", "id", "title", "language"}',
+        '"scope": PROJECT_SCOPE',
         'DATA_RELATIVE = Path(".quillframe") / "data"',
         "_reject_legacy_metadata",
     ),
+    "production_runtime/workflow.py": ("def validate_chapter_id(",),
+    "production_runtime/types.py": ("return validate_chapter_id(value)",),
+    "harness/session_runtime/resume_command.py": ('    "project_scope_matches",\n',),
+    "site/src/project-inspector-contract.ts": ('scope: "novel"', "four-key"),
+    "cloud/src/core-provenance.ts": ('scope: "novel"', 'value.scope !== "novel"'),
+    "cloud/src/core-container.ts": ('claims.scope !== "novel"',),
+    "cloud/src/index.ts": ('scope: "novel"', 'verification.scope !== "novel"'),
+    "cloud/src/project-store.ts": ('scope: "novel"', 'receipt.scope !== "novel"'),
+    "quillframe/cloud_core.py": ('claims["scope"] != "novel"', 'manifest.get("scope") != "novel"', '"scope": "novel"'),
     "schemas/1.0/catalog.json": (
         '"compatibility": false',
     ),

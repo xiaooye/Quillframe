@@ -138,7 +138,7 @@ export async function validateCoreContainerRequest(
       const { operation } = validateBridgeRequest(parsed.value);
       if (deriveProofProjectId(operation, parsed.value) !== claims.project_id) throw new Error("operation binding invalid");
     }
-    if (claims.chapter_scope !== "CH001") throw new Error("chapter scope invalid");
+    if (claims.scope !== "novel") throw new Error("chapter scope invalid");
     return { body, proof };
   } catch (error) {
     if (error instanceof CoreBoundaryError && error.code === "container_boundary_forbidden") throw error;

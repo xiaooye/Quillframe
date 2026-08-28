@@ -16,7 +16,10 @@ class PersistenceC2RevisionTests(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.store = QuillframeStore(self.root)
         self.store.create_project("P1", "Project")
-        self.store.create_document("P1", "DOC1", "Document")
+        with self.store.open_project("P1") as conn:
+            conn.execute("INSERT INTO story_nodes(node_id,kind,ordinal,title,metadata_json) VALUES('CH001','chapter',1,'Chapter','{}')")
+            conn.commit()
+        self.store.create_document("P1", "DOC1", "Document", story_node_id="CH001")
 
     def tearDown(self) -> None:
         self.tmp.cleanup()

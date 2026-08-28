@@ -153,17 +153,26 @@
   margin: 18px 0;
   padding: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  inline-size: 100%;
+  min-inline-size: 0;
   gap: 8px;
 }
 
 .qf-run-progress li {
+  min-inline-size: 0;
   min-block-size: 34px;
-  display: grid;
-  grid-template-columns: 24px 1fr;
-  align-items: center;
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  grid-template-columns: none;
+  align-items: baseline;
+  gap: 4px 8px;
   color: var(--qf-studio-text-muted, currentColor);
+  overflow-wrap: anywhere;
 }
+.qf-run-progress li > * { min-inline-size: 0; max-inline-size: 100%; }
+.qf-run-progress li > span { flex: 1 1 120px; }
+.qf-run-progress li > strong { flex: 1 1 100%; }
 
 .qf-run-progress li[data-state="complete"],
 .qf-run-progress li[data-state="current"] {
@@ -172,7 +181,7 @@
 }
 
 .qf-run-progress li.qf-run-progress__waiting {
-  grid-template-columns: 1fr;
+  display: block;
   margin-block-start: 6px;
   padding: 10px 12px;
   background: color-mix(in oklab, var(--qf-lane-runtime-fill, #eee8fb) 50%, transparent);
@@ -180,6 +189,17 @@
   font-size: 0.88rem;
   font-weight: 500;
 }
+
+.qf-ai-journal { min-inline-size: 0; margin-block: 18px; }
+.qf-ai-journal h3, .qf-ai-journal h4 { margin-block: 12px 8px; }
+.qf-journal-counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-block: 14px; }
+.qf-journal-counts > div { display: grid; align-content: start; gap: 5px; min-inline-size: 0; }
+.qf-journal-counts span { font-size: .76rem; color: var(--qf-studio-text-muted, currentColor); }
+.qf-journal-counts strong { font-size: 1.25rem; }
+.qf-journal-stages { display: block; list-style: none; padding: 0; margin-block: 12px; }
+.qf-journal-stages li, .qf-journal-last { display: flex; flex-direction: column; gap: 5px; min-inline-size: 0; padding-block: 10px; }
+.qf-journal-stages li { border-block-start: 1px solid var(--qf-studio-line, #d9d1d8); }
+.qf-journal-stages code, .qf-journal-last code { white-space: normal; overflow-wrap: anywhere; }
 
 .qf-authority-label,
 .qf-gate-label,
@@ -324,6 +344,12 @@
 .qf-desk-thread small { color: var(--qf-studio-text-muted, currentColor); }
 .qf-desk-contextual { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
 
+.qf-manuscript-page {
+  container-name: qf-manuscript;
+  container-type: inline-size;
+  min-inline-size: 0;
+}
+
 .qf-manuscript-workspace {
   display: grid;
   grid-template-columns: minmax(180px, 220px) minmax(0, 1fr) minmax(220px, 280px);
@@ -376,8 +402,9 @@
   border-radius: 24px;
   box-shadow: 0 18px 46px color-mix(in oklab, currentColor 6%, transparent);
 }
-.qf-manuscript-editor__head { margin-block-end: 18px; }
-.qf-save-state { display: flex; gap: 4px; align-items: baseline; color: var(--qf-studio-text-muted, currentColor); font-size: .82rem; }
+.qf-manuscript-editor__head { margin-block-end: 18px; flex-wrap: wrap; }
+.qf-manuscript-editor__head > div { min-inline-size: 0; overflow-wrap: anywhere; }
+.qf-save-state { display: flex; flex-wrap: wrap; gap: 4px; align-items: baseline; color: var(--qf-studio-text-muted, currentColor); font-size: .82rem; }
 .qf-save-state[data-state="conflict"], .qf-save-state[data-state="failed"] { font-weight: 800; }
 .qf-manuscript-textarea {
   flex: 1;
@@ -396,6 +423,7 @@
 }
 .qf-manuscript-textarea:focus-visible { outline: 3px solid var(--qf-focus-ring, currentColor); outline-offset: 6px; border-radius: 4px; }
 .qf-manuscript-meta { display: flex; flex-wrap: wrap; gap: 10px 18px; color: var(--qf-studio-text-muted, currentColor); font-size: .76rem; }
+.qf-manuscript-meta > span { white-space: nowrap; }
 .qf-manuscript-meta code { overflow-wrap: anywhere; }
 .qf-revision-compare { display: grid; gap: 10px; margin-block: 18px; }
 .qf-revision-compare label { display: grid; gap: 5px; font-size: .78rem; }
@@ -459,6 +487,42 @@
 .qf-search-results article, .qf-learning-list article { padding-block: 18px; border-block-start: 1px dashed color-mix(in oklab, currentColor 16%, transparent); }
 .qf-search-results article > div, .qf-learning-list article > div { display: flex; justify-content: space-between; gap: 12px; }
 .qf-search-results p { line-height: 1.6; }
+
+.qf-plan-workspace { display: grid; grid-template-columns: minmax(210px, .7fr) minmax(0, 1.7fr); gap: clamp(24px, 4vw, 48px); }
+.qf-plan-guide h2 { margin-block: 28px 12px; font-size: 1.2rem; }
+.qf-craft-prompts { padding-inline-start: 20px; line-height: 1.8; }
+.qf-craft-prompts li { margin-block: 10px; }
+.qf-plan-editor { min-inline-size: 0; }
+.qf-plan-editor .nf-field-label, .qf-feedback-form .nf-field-label { display: grid; gap: 8px; margin-block: 16px; }
+.qf-plan-text { min-block-size: 320px; resize: vertical; line-height: 1.8; }
+.qf-reader-intent { padding: 0; margin-block: 24px; border: 0; }
+.qf-reader-intent legend { font-weight: 700; }
+.qf-intent-fields, .qf-story-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 28px; }
+.qf-intent-fields .nf-field-label { margin-block: 8px; }
+.qf-intent-fields textarea { resize: vertical; }
+.qf-story-section { min-inline-size: 0; margin-block: 22px; }
+.qf-story-section > h2 { margin-block-end: 16px; }
+.qf-story-section article { padding-block: 18px; border-block-start: 1px solid color-mix(in oklab, currentColor 14%, transparent); }
+.qf-story-section article header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px; }
+.qf-story-section h3 { font-size: 1.03rem; overflow-wrap: anywhere; }
+.qf-story-section pre, .qf-reader-evidence pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.7; }
+.qf-story-section code, .qf-story-section small { overflow-wrap: anywhere; }
+.qf-story-section dl { display: grid; gap: 8px; margin-block: 14px; }
+.qf-story-section dd { margin-inline: 0; }
+.qf-story-section dt { color: var(--qf-studio-text-muted, currentColor); font-size: .8rem; }
+.qf-story-section summary { min-block-size: 44px; padding-block: 10px; cursor: pointer; }
+.qf-story-source { display: grid; gap: 5px; margin-block: 12px; padding-inline-start: 12px; border-inline-start: 2px solid var(--qf-studio-line, #d9d1d8); font-size: .82rem; }
+.qf-story-source[data-source-state="stale"] { border-inline-start-width: 4px; background: color-mix(in oklab, var(--qf-lane-evidence-fill, #fff0d5) 35%, transparent); padding-block: 10px; padding-inline-end: 12px; }
+.qf-story-source p { margin-block: 0; line-height: 1.65; }
+.qf-reader-evidence { margin-block: 20px; }
+.qf-reader-evidence article { padding-block: 14px; border-block-start: 1px solid color-mix(in oklab, currentColor 14%, transparent); }
+.qf-reader-evidence blockquote { margin-inline: 0; padding-inline-start: 16px; border-inline-start: 3px solid var(--qf-studio-line, #d9d1d8); line-height: 1.7; }
+.qf-feedback-form { margin-block: 26px; }
+.qf-preference-selection { display: grid; gap: 10px; margin-block: 14px; }
+.qf-preference-selection label, .qf-publication-chapters label { display: flex; align-items: start; gap: 10px; min-block-size: 44px; padding-block: 10px; }
+.qf-publication-chapters { margin-block: 20px; }
+.qf-publication-chapters label > span { display: grid; gap: 4px; min-inline-size: 0; }
+.qf-publication-chapters code { overflow-wrap: anywhere; }
 
 .qf-review-layout {
   display: grid;
@@ -559,6 +623,9 @@
   .qf-settings-layout,
   .qf-review-layout,
   .qf-runtime-columns,
+  .qf-plan-workspace,
+  .qf-story-grid,
+  .qf-intent-fields,
   .qf-publish-workspace { grid-template-columns: 1fr; }
   .qf-settings-nav { position: static; display: flex; overflow-x: auto; padding-block-end: 6px; }
   .qf-settings-nav button { flex: 0 0 auto; }
@@ -595,6 +662,19 @@
   .qf-desk-thread a:first-child { border-block-start: 0; }
   .qf-authoring-counts { display: grid; grid-template-columns: 1fr 1fr; }
   .qf-settings-facts, .qf-project-identity dl, .qf-publish-provenance dl, .qf-accepted-state dl { grid-template-columns: 1fr; }
+}
+
+/* Available manuscript width changes when the AI dock opens, independently of the viewport. */
+@container qf-manuscript (max-width: 1119px) {
+  .qf-manuscript-workspace { grid-template-columns: minmax(170px, 200px) minmax(0, 1fr); }
+  .qf-revision-rail { display: block; grid-column: 1 / -1; max-block-size: 24rem; }
+}
+
+@container qf-manuscript (max-width: 760px) {
+  .qf-manuscript-workspace { display: flex; flex-direction: column; min-block-size: auto; }
+  .qf-manuscript-editor { order: 1; padding: 20px 18px; min-block-size: calc(100dvh - 190px); }
+  .qf-binder { order: 2; padding-block-start: 22px; }
+  .qf-revision-rail { display: block; order: 3; max-block-size: 24rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

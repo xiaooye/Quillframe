@@ -230,7 +230,7 @@ def fixture(
         "schema": resume_command.AUTHORITY_EVIDENCE_SCHEMA,
         "project_id": "BOOK-AUTH",
         "project_manifest_fingerprint": "sha256:" + "a" * 64,
-        "chapter_scope": "CH001",
+        "scope": "novel",
         "data_root": str(root / ".quillframe" / "data"),
         "artifact_bindings": [],
         "required_capabilities": [],

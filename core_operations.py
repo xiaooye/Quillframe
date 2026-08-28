@@ -22,8 +22,7 @@ AUTHOR_RUN_MODES = {
     "DRAFT", "REVISE", "AUDIT", "RESEARCH", "CORPUS-INGEST", "LEARN",
 }
 MUTATION_KEYS = {"rewrite", "replacement_text", "apply_changes", "auto_fix", "settle", "accept"}
-CHAPTER_SCOPE = "CH001"
-CHAPTER_REF_RE = re.compile(r"(?<![A-Za-z0-9])CH\d{3}(?![A-Za-z0-9])")
+PROJECT_SCOPE = "novel"
 
 AUTHORIZATION_KEY_ORDER = (
     "intent",
@@ -78,7 +77,7 @@ class CoreOperations:
             "schema": "quillframe_project_inspection_v1_0",
             "manifest": manifest,
             "manifest_fingerprint": self._native_fingerprint(manifest),
-            "chapter_scope": CHAPTER_SCOPE,
+            "scope": PROJECT_SCOPE,
             "data_boundary": ".quillframe/data",
             "authority": False,
             "counts": counts,
@@ -93,7 +92,7 @@ class CoreOperations:
                 "id": manifest["id"],
                 "title": manifest["title"],
                 "language": manifest["language"],
-                "chapter_scope": manifest["chapter_scope"],
+                "scope": PROJECT_SCOPE,
                 "manifest_fingerprint": self._native_fingerprint(manifest),
                 "data_boundary": ".quillframe/data",
                 "last_opened_at": row.get("last_opened_at"),
@@ -111,7 +110,6 @@ class CoreOperations:
             "id": str(identity["project_id"]),
             "title": str(identity["title"]),
             "language": str(identity["language"]),
-            "chapter_scope": CHAPTER_SCOPE,
         }
 
     @staticmethod
@@ -119,6 +117,79 @@ class CoreOperations:
         return "sha256:" + hashlib.sha256(
             canonical_json(manifest).encode("utf-8")
         ).hexdigest()
+
+    def project_create(self, project_id: str, title: str, language: str = "zh-CN") -> dict[str, Any]:
+        self.store.create_native_project(project_id, title, language)
+        context = self.project_inspect(project_id)
+        return {"schema": "quillframe_project_create_result_v1_0", "manifest": context["manifest"],
+                "manifest_fingerprint": context["manifest_fingerprint"], "scope": PROJECT_SCOPE,
+                "data_boundary": ".quillframe/data", "created": True, "authority": False}
+
+    def novel(self):
+        from quillframe.novel import NovelOperations
+        return NovelOperations(self.store)
+
+    def project_learning(self):
+        from learning.project_learning import ProjectLearning
+        return ProjectLearning(learning_db=self.store.root / "learning" / "author.sqlite",
+                               runtime_db=self.store.root / "runtime" / "learning-intake.sqlite")
+
+    def learning(self):
+        from quillframe.project_learning import ProjectLearningOperations
+        return ProjectLearningOperations(self.store, self.project_learning())
+
+    def chapter_list(self, project_id: str) -> dict[str, Any]:
+        return self.novel().chapter_list(project_id)
+
+    def chapter_create(self, project_id: str, **args: Any) -> dict[str, Any]:
+        return self.novel().chapter_create(project_id, **args)
+
+    def plan_inspect(self, project_id: str, *, target_ref: str | None = None) -> dict[str, Any]:
+        return self.novel().plan_inspect(project_id, target_ref=target_ref)
+
+    def plan_save(self, project_id: str, **args: Any) -> dict[str, Any]:
+        return self.novel().plan_save(project_id, **args)
+
+    def story_inspect(self, project_id: str) -> dict[str, Any]:
+        return self.novel().story_inspect(project_id)
+
+    @classmethod
+    def _revision_is_visible(cls, conn, revision: dict[str, Any]) -> bool:
+        if not isinstance(revision.get("content"), str) or fingerprint_text(revision["content"]) != revision.get("content_fingerprint"):
+            return False
+        candidates = conn.execute("SELECT * FROM candidates WHERE revision_id=?", (revision["revision_id"],)).fetchall()
+        if revision.get("source") != "production_runtime" and not candidates:
+            return True
+        for candidate in candidates:
+            try:
+                cls._validated_production_release(conn, dict(candidate))
+                return True
+            except OperationError:
+                continue
+        return False
+
+    def document_open(self, project_id: str, document_id: str) -> dict[str, Any]:
+        with self.store.open_project(project_id) as conn:
+            document = conn.execute("SELECT document_id,story_node_id,document_kind,title,created_at FROM documents WHERE document_id=?", (document_id,)).fetchone()
+            if document is None:
+                raise OperationError("document_not_found", "document is not registered")
+            latest = None
+            for row in conn.execute("SELECT * FROM document_revisions WHERE document_id=? ORDER BY created_at DESC,rowid DESC", (document_id,)):
+                revision = dict(row)
+                if self._revision_is_visible(conn, revision):
+                    latest = revision
+                    latest["provenance"] = json.loads(latest.pop("provenance_json") or "{}")
+                    break
+        return {"schema": "quillframe_document_projection_v1", "project_id": project_id,
+                "document": dict(document), "latest_revision": latest, "authority": False}
+
+    def revision_compare(self, project_id: str, left_revision_id: str, right_revision_id: str) -> dict[str, Any]:
+        with self.store.open_project(project_id) as conn:
+            for revision_id in (left_revision_id, right_revision_id):
+                row = conn.execute("SELECT * FROM document_revisions WHERE revision_id=?", (revision_id,)).fetchone()
+                if row is None or not self._revision_is_visible(conn, dict(row)):
+                    raise OperationError("revision_not_visible", "revision is not available through the Core release boundary")
+        return self.store.compare_revisions(project_id, left_revision_id, right_revision_id)
 
     def document_list(self, project_id: str, *, document_kind: str | None = None, limit: int = 500) -> dict[str, Any]:
         bounded = max(1, min(int(limit), 500))
@@ -217,7 +288,9 @@ class CoreOperations:
             if not row:
                 raise OperationError("candidate_not_found", candidate_id)
             candidate = dict(row)
-            if not candidate.get("revision_id") or candidate.get("revision_fingerprint") != candidate.get("content_fingerprint"):
+            if (not candidate.get("revision_id") or candidate.get("revision_fingerprint") != candidate.get("content_fingerprint")
+                    or not isinstance(candidate.get("candidate_content"), str)
+                    or fingerprint_text(candidate["candidate_content"]) != candidate.get("content_fingerprint")):
                 raise OperationError("stale_review", "Candidate revision no longer matches its release fingerprint")
             release = self._validated_production_release(conn, candidate)
         return {
@@ -250,16 +323,18 @@ class CoreOperations:
             if not candidate:
                 raise OperationError("candidate_not_found", candidate_id)
             c = dict(candidate)
-            if not c.get("revision_id") or c.get("revision_fingerprint") != c.get("content_fingerprint"):
+            if (not c.get("revision_id") or c.get("revision_fingerprint") != c.get("content_fingerprint")
+                    or not isinstance(c.get("candidate_content"), str)
+                    or fingerprint_text(c["candidate_content"]) != c.get("content_fingerprint")):
                 raise OperationError("stale_review", "Candidate revision no longer matches its review fingerprint")
             release = self._validated_production_release(conn, c)
             parent = None
             if c.get("parent_revision_id"):
                 row = conn.execute(
-                    "SELECT revision_id,document_id,content,content_fingerprint,authority_class,created_at FROM document_revisions WHERE revision_id=?",
+                    "SELECT * FROM document_revisions WHERE revision_id=?",
                     (c["parent_revision_id"],),
                 ).fetchone()
-                parent = dict(row) if row else None
+                parent = dict(row) if row and self._revision_is_visible(conn, dict(row)) else None
             current_review_rows = conn.execute(
                 "SELECT * FROM review_evidence WHERE candidate_id=? AND candidate_fingerprint=? AND independent=1 AND stale=0 ORDER BY created_at DESC,rowid DESC",
                 (candidate_id, c["content_fingerprint"]),
@@ -282,6 +357,11 @@ class CoreOperations:
             required = ("reader_engagement", "character_simulation", "continuity", "independent_semantic_gate", "user_visible_gate")
             if any(name not in by_mechanism for name in required):
                 raise OperationError("review_pending", "Candidate Review evidence is not complete")
+            reader_report = independent.get("reader_engagement")
+            if isinstance(reader_report, dict):
+                reader = by_mechanism["reader_engagement"]
+                reader["judgment"] = {**(reader.get("judgment") or {}),
+                    **{key: reader_report[key] for key in ("report", "strongest_positive", "strongest_problem", "evidence_refs") if key in reader_report}}
             revision_request = self._candidate_revision_request_receipt(conn, candidate_id)
 
         diff = None
@@ -459,17 +539,7 @@ class CoreOperations:
             raise OperationError("unsupported_task_mode", "author.run.start requires one supported author task mode")
         if not isinstance(payload, dict):
             raise OperationError("invalid_args", "payload must be an object")
-        if payload.get("chapter_id") != CHAPTER_SCOPE:
-            raise OperationError(
-                "chapter_scope_violation",
-                f"author.run.start requires chapter_id={CHAPTER_SCOPE}",
-            )
-        target_chapters = CHAPTER_REF_RE.findall(target_ref or "")
-        if any(chapter != CHAPTER_SCOPE for chapter in target_chapters):
-            raise OperationError(
-                "chapter_scope_violation",
-                f"author.run.start target_ref must remain within {CHAPTER_SCOPE}",
-            )
+        from quillframe.novel import resolve_chapter_target, bind_prior_dependencies
         if task_mode == "AUDIT" and MUTATION_KEYS.intersection(payload):
             raise OperationError("audit_is_non_mutating", "AUDIT reports findings and cannot request rewrite/apply actions")
         if task_mode == "DRAFT" and {"settle", "accept"}.intersection(payload):
@@ -505,16 +575,39 @@ class CoreOperations:
                 if prior is not None:
                     conn.commit()
                     return prior
+                target = resolve_chapter_target(conn, payload.get("chapter_id"), payload.get("document_id"), target_ref)
+                selected = payload.get("selected_preference_ids", [])
+                if not isinstance(selected, list) or len(selected) > 100 or any(not isinstance(value, str) or not value for value in selected) or len(set(selected)) != len(selected):
+                    raise OperationError("invalid_args", "selected_preference_ids must contain unique preference IDs")
+                author_model = self.project_learning().project_context(project_id=project_id, selected_hypothesis_ids=selected)
                 if session_id is not None:
                     session = conn.execute("SELECT session_id FROM sessions WHERE session_id=?", (session_id,)).fetchone()
                     if not session:
                         raise OperationError("unknown_session", "session_id does not exist")
                 run_id = "run_" + uuid.uuid4().hex
                 stamp = now_iso()
+                if session_id is None:
+                    # Bootstrap only after replay resolution, in the same
+                    # transaction as the run. The request fingerprint remains
+                    # bound to the caller's omitted session, not this identity.
+                    session_id = "ses_manager_" + uuid.uuid4().hex
+                    conn.execute(
+                        "INSERT INTO sessions(session_id,status,version,created_at,updated_at) VALUES(?,?,1,?,?)",
+                        (session_id, "running", stamp, stamp),
+                    )
                 conn.execute(
                     "INSERT INTO runs(run_id,session_id,task_mode,target_ref,status,request_fingerprint,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)",
                     (run_id, session_id, task_mode, target_ref, "awaiting_semantic", request_fp, stamp, stamp),
                 )
+                target_context = {"schema": "quillframe_author_run_request_v1", **target,
+                                  "task_mode": task_mode, "target_ref": target_ref, "payload": payload,
+                                  "author_model": author_model}
+                conn.execute(
+                    "INSERT INTO checkpoints(checkpoint_id,run_id,checkpoint_kind,state_json,artifact_fingerprint,created_at) VALUES(?,?,'author_run_request',?,?,?)",
+                    ("request:" + run_id, run_id, canonical_json(target_context), fingerprint_text(canonical_json(target_context)), stamp),
+                )
+                if task_mode in {"DRAFT", "REVISE"}:
+                    bind_prior_dependencies(conn, target, run_id)
                 event_id = "evt_" + uuid.uuid4().hex
                 conn.execute(
                     "INSERT INTO runtime_events(event_id,run_id,event_kind,payload_json,created_at) VALUES(?,?,?,?,?)",
@@ -523,6 +616,9 @@ class CoreOperations:
                 result = {
                     "schema": "quillframe_author_run_start_result_v1",
                     "run_id": run_id,
+                    "chapter_id": target["chapter_id"],
+                    "document_id": target["document_id"],
+                    "session_id": session_id,
                     "task_mode": task_mode,
                     "target_ref": target_ref,
                     "status": "awaiting_semantic",
@@ -831,143 +927,28 @@ class CoreOperations:
                 raise
 
     def settlement_preflight(self, project_id: str, *, acceptance_id: str, target_ref: str) -> dict[str, Any]:
-        with self.store.open_project(project_id) as conn:
-            acceptance = conn.execute(
-                """SELECT a.acceptance_id,a.candidate_id,a.candidate_fingerprint,c.status AS candidate_status,
-                c.revision_id,c.content_fingerprint,c.document_id
-                FROM acceptance_evidence a JOIN candidates c ON c.candidate_id=a.candidate_id
-                WHERE a.acceptance_id=?""",
-                (acceptance_id,),
-            ).fetchone()
-            if not acceptance:
-                raise OperationError("acceptance_not_found", acceptance_id)
-            if acceptance["candidate_status"] != "accepted" or acceptance["candidate_fingerprint"] != acceptance["content_fingerprint"]:
-                raise OperationError("not_settleable", "Acceptance/Candidate binding is not settleable")
-            if not acceptance["revision_id"]:
-                raise OperationError("not_settleable", "Accepted Candidate has no document revision")
-            revision = conn.execute(
-                "SELECT revision_id,document_id,content_fingerprint,authority_class FROM document_revisions WHERE revision_id=?",
-                (acceptance["revision_id"],),
-            ).fetchone()
-            if not revision or revision["authority_class"] != "accepted" or revision["content_fingerprint"] != acceptance["candidate_fingerprint"]:
-                raise OperationError("not_settleable", "Accepted source revision is missing or no longer matches the Acceptance")
-            settled = conn.execute(
-                "SELECT settlement_id,status,after_fingerprint FROM settlements WHERE acceptance_id=? AND target_ref=? AND status='settled' ORDER BY created_at DESC LIMIT 1",
-                (acceptance_id, target_ref),
-            ).fetchone()
-            if settled:
-                raise OperationError("not_settleable", "Acceptance is already settled to this target", detail=dict(settled))
-            current = conn.execute("SELECT content_fingerprint FROM canon_state WHERE state_key=?", (target_ref,)).fetchone()
-            before = current["content_fingerprint"] if current else "absent"
-        return {
-            "schema": "quillframe_settlement_preflight_v1",
-            "project_id": project_id,
-            "acceptance_id": acceptance_id,
-            "candidate_id": acceptance["candidate_id"],
-            "candidate_fingerprint": acceptance["candidate_fingerprint"],
-            "document_id": acceptance["document_id"],
-            "revision_id": acceptance["revision_id"],
-            "target_ref": target_ref,
-            "expected_before_fingerprint": before,
-            "current_before_fingerprint": before,
-            "settleable": True,
-            "mutation_performed": False,
-            "canon_mutated": False,
-            "authority": False,
-        }
+        from quillframe.settlement import ChapterSettlement
+        return ChapterSettlement(self.store).preflight(project_id, acceptance_id=acceptance_id, target_ref=target_ref)
 
-    def settle(
-        self,
-        project_id: str,
-        *,
-        acceptance_id: str,
-        target_ref: str,
-        expected_before_fingerprint: str,
-        user_authorized: bool,
-        idempotency_key: str,
-    ) -> dict[str, Any]:
-        if not user_authorized:
-            raise OperationError("authorization_required", "Settlement requires explicit user authorization")
-        if not idempotency_key:
-            raise OperationError("idempotency_required", "Settlement requires an idempotency key")
+    def settle(self, project_id: str, *, acceptance_id: str, target_ref: str,
+               expected_before_fingerprint: str, user_authorized: bool, idempotency_key: str,
+               expected_preflight_fingerprint: str | None = None) -> dict[str, Any]:
+        from quillframe.settlement import ChapterSettlement
+        return ChapterSettlement(self.store).settle(project_id, acceptance_id=acceptance_id, target_ref=target_ref,
+            expected_before_fingerprint=expected_before_fingerprint, user_authorized=user_authorized,
+            idempotency_key=idempotency_key, expected_preflight_fingerprint=expected_preflight_fingerprint)
+
+    def reader_expectations_inspect(self, project_id: str, *, current_order: int | None = None) -> dict[str, Any]:
+        from quality.reader_expectation import inspect_project
+        with self.store.open_project(project_id) as conn:
+            return {**inspect_project(conn, current_order=current_order), 'project_id': project_id}
+
+    def reader_expectations_apply(self, project_id: str, **args: Any) -> dict[str, Any]:
+        from quality.reader_expectation import apply_observation
         with self.store.open_project(project_id) as conn:
             try:
-                conn.execute("BEGIN IMMEDIATE")
-                prior = conn.execute("SELECT payload_json FROM receipts WHERE receipt_kind='settlement' AND idempotency_key=?", (idempotency_key,)).fetchone()
-                if prior:
-                    result = json.loads(prior["payload_json"])
-                    conn.commit()
-                    return result
-                acceptance = conn.execute(
-                    """SELECT a.*, c.revision_id, c.content_fingerprint, c.document_id
-                    FROM acceptance_evidence a JOIN candidates c ON c.candidate_id=a.candidate_id
-                    WHERE a.acceptance_id=?""",
-                    (acceptance_id,),
-                ).fetchone()
-                if not acceptance:
-                    raise OperationError("acceptance_not_found", acceptance_id)
-                current = conn.execute("SELECT * FROM canon_state WHERE state_key=?", (target_ref,)).fetchone()
-                before = current["content_fingerprint"] if current else "absent"
-                stamp = now_iso()
-                settlement_id = "settle_" + uuid.uuid4().hex
-                if before != expected_before_fingerprint:
-                    result = {
-                        "schema": "quillframe_settlement_result_v1",
-                        "settlement_id": settlement_id,
-                        "status": "settlement_incomplete",
-                        "target_ref": target_ref,
-                        "expected_before_fingerprint": expected_before_fingerprint,
-                        "actual_before_fingerprint": before,
-                        "canon_mutated": False,
-                    }
-                    conn.execute(
-                        "INSERT INTO settlements(settlement_id,acceptance_id,target_ref,before_fingerprint,state_delta_json,status,receipt_json,created_at) VALUES(?,?,?,?,?,'settlement_incomplete',?,?)",
-                        (settlement_id, acceptance_id, target_ref, before, canonical_json({}), canonical_json(result), stamp),
-                    )
-                    conn.execute(
-                        "INSERT INTO receipts(receipt_id,receipt_kind,idempotency_key,payload_json,created_at) VALUES(?,?,?,?,?)",
-                        ("rcpt_" + uuid.uuid4().hex, "settlement", idempotency_key, canonical_json(result), stamp),
-                    )
-                    conn.commit()
-                    return result
-                if not acceptance["revision_id"]:
-                    raise OperationError("settlement_source_missing", "accepted candidate has no document revision")
-                revision = conn.execute("SELECT * FROM document_revisions WHERE revision_id=?", (acceptance["revision_id"],)).fetchone()
-                if not revision or revision["authority_class"] != "accepted":
-                    raise OperationError("settlement_source_not_accepted", "source revision is not Accepted")
-                value = {
-                    "acceptance_id": acceptance_id,
-                    "candidate_id": acceptance["candidate_id"],
-                    "document_id": acceptance["document_id"],
-                    "revision_id": revision["revision_id"],
-                    "content_fingerprint": revision["content_fingerprint"],
-                }
-                after = fingerprint_text(canonical_json(value))
-                delta = {"before": dict(current) if current else None, "after": value}
-                result = {
-                    "schema": "quillframe_settlement_result_v1",
-                    "settlement_id": settlement_id,
-                    "status": "settled",
-                    "target_ref": target_ref,
-                    "before_fingerprint": before,
-                    "after_fingerprint": after,
-                    "state_delta": delta,
-                    "canon_mutated": True,
-                }
-                conn.execute(
-                    """INSERT INTO canon_state(state_key,value_json,authority_class,evidence_ref,content_fingerprint,updated_at)
-                    VALUES(?,?,'accepted',?,?,?)
-                    ON CONFLICT(state_key) DO UPDATE SET value_json=excluded.value_json,authority_class='accepted',evidence_ref=excluded.evidence_ref,content_fingerprint=excluded.content_fingerprint,updated_at=excluded.updated_at""",
-                    (target_ref, canonical_json(value), acceptance_id, after, stamp),
-                )
-                conn.execute(
-                    "INSERT INTO settlements(settlement_id,acceptance_id,target_ref,before_fingerprint,after_fingerprint,state_delta_json,status,receipt_json,created_at,completed_at) VALUES(?,?,?,?,?,?,'settled',?,?,?)",
-                    (settlement_id, acceptance_id, target_ref, before, after, canonical_json(delta), canonical_json(result), stamp, stamp),
-                )
-                conn.execute(
-                    "INSERT INTO receipts(receipt_id,receipt_kind,idempotency_key,payload_json,created_at) VALUES(?,?,?,?,?)",
-                    ("rcpt_" + uuid.uuid4().hex, "settlement", idempotency_key, canonical_json(result), stamp),
-                )
+                conn.execute('BEGIN IMMEDIATE')
+                result = apply_observation(conn, **args)
                 conn.commit()
                 return result
             except Exception:
@@ -1036,5 +1017,19 @@ class CoreOperations:
     ) -> dict[str, Any]:
         try:
             return PublicationRecovery(self.store).recover(project_id, build_id=build_id, limit=limit)
+        except PublicationRecoveryError as exc:
+            raise OperationError(exc.code, exc.message) from exc
+
+    def publication_artifact_get(self, project_id: str, *, build_id: str) -> dict[str, Any]:
+        try:
+            return PublicationRecovery(self.store).artifact(project_id, build_id)
+        except PublicationRecoveryError as exc:
+            raise OperationError(exc.code, exc.message) from exc
+
+    def publication_collection_build(self, project_id: str, *, acceptance_ids: list[str], fmt: str = 'md',
+                                     idempotency_key: str, user_authorized: bool) -> dict[str, Any]:
+        try:
+            return PublicationRecovery(self.store).build_collection(project_id, acceptance_ids, fmt,
+                idempotency_key=idempotency_key, user_authorized=user_authorized)
         except PublicationRecoveryError as exc:
             raise OperationError(exc.code, exc.message) from exc

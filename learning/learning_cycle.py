@@ -12,17 +12,13 @@ import argparse
 import hashlib
 import json
 import sqlite3
-import sys
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-HERE = Path(__file__).resolve().parent
-if str(HERE) not in sys.path:
-    sys.path.insert(0, str(HERE))
-from learning_store import LearningStore  # noqa: E402
+from learning.learning_store import LearningStore
 
 SCHEMA = "quillframe_learning_cycle_v1"
 STATES = {

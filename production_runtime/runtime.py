@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import json
+import threading
 import uuid
 from collections.abc import Callable
+from contextvars import ContextVar
 from copy import deepcopy
+from dataclasses import fields
 from typing import Any
 
+from agent_runtime import AgentBudget, AgentJob, AgentResult
+from agent_runtime.runner import CancellationToken
 from harness.context_runtime import canonical_json, fingerprint, stage_context
 from harness.semantic_workers.independent_invocation_receipt import (
     PROVIDERS as INDEPENDENT_PROVIDER_CONTRACTS,
@@ -16,7 +21,9 @@ from harness.semantic_workers.independent_invocation_receipt import (
 )
 from harness.semantic_workers.peer_chat_relay import validate_peer_result
 from persistence.independent_review_repository import IndependentReviewError, IndependentReviewRepository
+from persistence.production_stage_repository import ProductionStageError, ProductionStageRepository
 from persistence.quillframe_sqlite import fingerprint_text, now_iso
+from quality.reader_expectation import ReaderExpectationError, record_observation, validate_observation_binding
 
 from .context import ProductionContextRuntime
 from .contracts import (
@@ -32,22 +39,221 @@ from .contracts import (
 from .semantic import (
     RegisteredSemanticExecutor,
     build_pre_independent_qualification,
+    build_narrative_state_proposal,
+    character_action_payloads,
+    character_state_prepare_contract,
     final_readiness,
     final_release,
+    narrative_existing_state,
     prepare_independent_review,
+    prepared_character_action_payloads,
     semantic_status,
     validate_independent_submission,
+    writer_safe_projection,
 )
 from .sources import _json
 
-PRE_INDEPENDENT_MECHANISMS = tuple(
-    mechanism for mechanism in PRODUCTION_MECHANISMS
-    if mechanism not in {"independent_semantic_gate", "user_visible_gate"}
+# Characters propose actions before the Scene resolver can resolve them. The
+# public mechanism vocabulary remains shared with Context Runtime.
+PRE_INDEPENDENT_MECHANISMS = (
+    "story_canon_preflight", "character_simulation", "scene_simulation",
+    "reader_pressure", "event_first_raw_draft", "surface_realization",
+    "reader_engagement", "continuity",
 )
 READER_GRIP_VALUES = {"low", "medium", "high", "very_high"}
+_EXECUTION_SCOPE: ContextVar[dict[str, Any] | None] = ContextVar("quillframe_production_execution", default=None)
 
 
 class ProductionRunExecutor(ProductionContextRuntime):
+    def __init__(self, store, agent_runtime) -> None:  # noqa: ANN001
+        super().__init__(store, agent_runtime)
+        self.stage_repository = ProductionStageRepository(store)
+
+    @staticmethod
+    def _raise_stage_repository(exc: ProductionStageError) -> None:
+        raise ProductionRunError(exc.code, str(exc), detail=exc.detail) from exc
+
+    def _execution_scope(self, project_id: str | None = None, run_id: str | None = None) -> dict[str, Any] | None:
+        scope = _EXECUTION_SCOPE.get()
+        if scope is None or scope["store"] is not self.store:
+            return None
+        if project_id is not None and scope["project_id"] != project_id:
+            return None
+        if run_id is not None and scope["run_id"] != run_id:
+            return None
+        return scope
+
+    def _guard_execution(self, conn, project_id: str, run_id: str) -> None:  # noqa: ANN001
+        scope = self._execution_scope(project_id, run_id)
+        try:
+            self.stage_repository.guard_locked(conn, run_id, scope["owner"] if scope else None)
+        except ProductionStageError as exc:
+            self._raise_stage_repository(exc)
+
+    def _set_run(self, project_id: str, run_id: str, status: str, *, result_fingerprint: str | None = None) -> None:
+        with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            self._guard_execution(conn, project_id, run_id)
+            conn.execute(
+                "UPDATE runs SET status=?,result_fingerprint=COALESCE(?,result_fingerprint),updated_at=? WHERE run_id=?",
+                (status, result_fingerprint, now_iso(), run_id),
+            )
+            conn.commit()
+
+    def _checkpoint_bundle(self, project_id: str, run_id: str, bundle: dict[str, Any]) -> None:
+        self._checkpoint(project_id, run_id, "production_context_bundle", bundle, bundle["bundle_fingerprint"])
+
+    def _event(self, project_id: str, run_id: str, kind: str, payload: dict[str, Any]) -> None:
+        assert_secret_free(payload, label=f"runtime event {kind}")
+        with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            self._guard_execution(conn, project_id, run_id)
+            self.stage_repository._event_locked(conn, run_id, kind, payload)
+            conn.commit()
+
+    def _record_semantic_failure(self, project_id: str, run_id: str, error: ProductionRunError, *, mechanism: str | None = None) -> None:
+        """Close the running state and record one safe failure per durable call."""
+        with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            self._guard_execution(conn, project_id, run_id)
+            latest = conn.execute(
+                "SELECT call_id,stage_key,runtime_role,result_fingerprint FROM production_stage_calls WHERE run_id=? ORDER BY rowid DESC LIMIT 1",
+                (run_id,),
+            ).fetchone()
+            call_id = latest["call_id"] if latest else None
+            event_id = "evt_failure_" + fingerprint({"run_id": run_id, "call_id": call_id, "code": error.code})[7:]
+            payload = {
+                "mechanism": mechanism or (latest["runtime_role"] if latest else "semantic_execution"),
+                "stage_key": latest["stage_key"] if latest else "semantic_execution",
+                "code": error.code, "call_id": call_id,
+                "result_fingerprint": latest["result_fingerprint"] if latest else None,
+                "automatic_model_retry": False, "candidate_visible": False, "authority": False,
+            }
+            # Error messages/details can quote private input or model output.
+            # Only deterministic journal metadata belongs in the public event.
+            assert_secret_free(payload, label="runtime semantic failure event")
+            conn.execute(
+                "UPDATE runs SET status='semantic_pending',updated_at=? WHERE run_id=? AND status NOT IN ('failed_gate','completed','cancelled')",
+                (now_iso(), run_id),
+            )
+            conn.execute(
+                "INSERT INTO runtime_events(event_id,run_id,event_kind,payload_json,created_at) VALUES(?,?,'production_stage_failed',?,?) ON CONFLICT(event_id) DO NOTHING",
+                (event_id, run_id, canonical_json(payload), now_iso()),
+            )
+            conn.commit()
+
+    def status(self, project_id: str, run_id: str) -> dict[str, Any]:
+        result = super().status(project_id, run_id)
+        journal = self.stage_repository.projection(project_id, run_id)
+        if result["status"] == "semantic_running" and not journal["active_executor"]:
+            result["status"] = "semantic_pending" if journal["unconfirmed_call_ids"] else "interrupted"
+        result["execution_journal"] = journal
+        return result
+
+    def resume_execution(self, project_id: str, run_id: str) -> dict[str, Any]:
+        """Continue only the immutable request; callers cannot revise its inputs."""
+        try:
+            request = self.stage_repository.load_request(project_id, run_id)
+        except ProductionStageError as exc:
+            self._raise_stage_repository(exc)
+        return self.execute(project_id, run_id, **request)
+
+    def cancel_execution(self, project_id: str, run_id: str, *, user_authorized: bool) -> dict[str, Any]:
+        if user_authorized is not True:
+            raise ProductionRunError("authorization_required", "cancel requires explicit user action")
+        try:
+            with self.store.open_project(project_id) as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                self.stage_repository.cancel_locked(conn, run_id)
+                conn.commit()
+        except ProductionStageError as exc:
+            self._raise_stage_repository(exc)
+        return self.status(project_id, run_id)
+
+    def refresh_context(self, project_id: str, run_id: str, **kwargs: Any) -> dict[str, Any]:
+        raise ProductionRunError(
+            "fresh_run_required",
+            "context refresh requires a new author run; an immutable execution cannot spend unjournaled model calls",
+        )
+
+    def prepare_context(self, project_id: str, run_id: str, **kwargs: Any) -> dict[str, Any]:
+        if self._execution_scope(project_id, run_id) is None:
+            raise ProductionRunError(
+                "execution_lease_required", "production context preparation must join the budgeted execution lease",
+            )
+        return super().prepare_context(project_id, run_id, **kwargs)
+
+    @staticmethod
+    def _stage_call_key(job: AgentJob) -> str:
+        packet = job.context[0] if job.context else {}
+        registered = packet.get("registered_semantic_job")
+        if isinstance(registered, dict):
+            return "registered:" + str(registered["input"]["model_contract_id"]) + ":" + str(registered["subject_id"])
+        if job.runtime_role == "context_profile_deriver":
+            return "context_profile:" + str(packet["source_object_id"])
+        if job.runtime_role == "context_selector":
+            return "context_selector:" + str(packet["stage_id"])
+        return job.runtime_role
+
+    def _invoke_agent(self, job: AgentJob) -> AgentResult:
+        scope = self._execution_scope(run_id=job.run_id)
+        if scope is None:
+            raise ProductionRunError(
+                "execution_lease_required", "production model calls require a durable budgeted execution lease",
+            )
+        repository = self.stage_repository
+        try:
+            intent = repository.begin_call(
+                scope["project_id"], job.run_id, scope["owner"],
+                stage_key=self._stage_call_key(job), job=job.to_dict(),
+            )
+        except ProductionStageError as exc:
+            self._raise_stage_repository(exc)
+        if intent["replayed"]:
+            value = intent["result"]
+            try:
+                return AgentResult(**{field.name: value[field.name] for field in fields(AgentResult) if field.name in value})
+            except (TypeError, ValueError) as exc:
+                raise ProductionRunError("stage_result_corrupt", "confirmed AgentResult is invalid") from exc
+        try:
+            result = self.agent_runtime.run(job, cancellation=scope["cancellation"])
+            assert_secret_free(result.to_dict(), label="private stage result")
+            repository.confirm_call(
+                scope["project_id"], job.run_id, scope["owner"],
+                call_id=intent["call_id"], result=result.to_dict(),
+            )
+            return result
+        except ProductionStageError as exc:
+            repository.mark_unconfirmed(scope["project_id"], job.run_id, scope["owner"], intent["call_id"], exc.code)
+            self._raise_stage_repository(exc)
+        except Exception as exc:
+            repository.mark_unconfirmed(scope["project_id"], job.run_id, scope["owner"], intent["call_id"], "external_call_interrupted")
+            if isinstance(exc, ProductionRunError):
+                raise
+            raise ProductionRunError(
+                "stage_result_unconfirmed", "external stage call ended without an exact confirmed result",
+                detail={"call_id": intent["call_id"], "stage_key": self._stage_call_key(job)},
+            ) from exc
+
+    def _agent_job(
+        self, *, run: dict[str, Any], service_id: str, runtime_role: str, instruction: str,
+        context: list[dict[str, Any]], model_preference: str | None, suffix: str,
+        max_output_tokens: int = 4096,
+    ) -> tuple[AgentJob, AgentResult]:
+        assert_secret_free(context, label=f"{runtime_role} context")
+        stable_id = fingerprint({"run_id": run["run_id"], "role": runtime_role, "context": context, "instruction": instruction})[7:31]
+        job = AgentJob(
+            job_id=f"job_{run['run_id']}_{stable_id}",
+            session_id=str(run.get("session_id") or f"session:{run['run_id']}"), run_id=str(run["run_id"]),
+            task_mode=str(run["task_mode"]), runtime_role=runtime_role, service_id=service_id,
+            instruction=instruction, context=context, model_preference=model_preference,
+            required_model_capabilities={"text"}, authority={},
+            budgets=AgentBudget(max_steps=1, max_model_requests=1, max_tool_calls=1, max_parallel_tool_calls=1,
+                                max_output_tokens_per_request=max_output_tokens, max_total_tokens=64_000, max_elapsed_ms=180_000),
+            idempotency_key=f"{run['run_id']}:{suffix}:{stable_id}",
+        )
+        return job, self._invoke_agent(job)
+
     @staticmethod
     def materialize_stage_context(bundle: dict[str, Any], mechanism: str) -> dict[str, Any]:
         if bundle.get("schema") != PRODUCTION_BUNDLE_SCHEMA:
@@ -62,17 +268,42 @@ class ProductionRunExecutor(ProductionContextRuntime):
         missing = [object_id for object_id in loaded_ids if object_id not in payloads]
         if missing:
             raise ProductionRunError("frozen_payload_missing", "Context Freeze selected payloads missing from immutable bundle", detail=missing)
+        items = [deepcopy(payloads[object_id]) for object_id in loaded_ids]
+        withheld: list[str] = []
+        if mechanism in {"reader_pressure", "event_first_raw_draft", "surface_realization"}:
+            safe_items = []
+            for item in items:
+                kind = item.get("object_type")
+                if kind == "character_knowledge":
+                    withheld.append(str(item["object_id"]))
+                    continue
+                if kind in {"character", "relationship"}:
+                    allowed = ("character_id", "name", "voice_notes") if kind == "character" else (
+                        "relationship_id", "participant_a", "participant_b", "relationship_type"
+                    )
+                    view = item.get("model_view") or {}
+                    item["model_view"] = {key: deepcopy(view[key]) for key in allowed if key in view}
+                safe_items.append(item)
+            items = safe_items
         materialized = {
             "mechanism": mechanism,
             "context_stage_id": context_stage_id,
             "freeze_fingerprint": bundle["freeze"]["freeze_fingerprint"],
             "context_bundle_fingerprint": bundle["bundle_fingerprint"],
             "loaded_object_ids": loaded_ids,
-            "items": [deepcopy(payloads[object_id]) for object_id in loaded_ids],
+            "items": items,
+            "withheld_private_object_ids": withheld,
             "selector": projection.get("selector"),
             "db_fetch_performed": False,
             "authority": False,
         }
+        if mechanism in {"reader_pressure", "event_first_raw_draft", "surface_realization"}:
+            author_model = (bundle.get("target_context") or {}).get("author_model")
+            if isinstance(author_model, dict):
+                materialized["author_model"] = {key: deepcopy(author_model[key]) for key in (
+                    "schema", "project_id", "priority_order", "explicit_intent", "selected_hypothesis_ids", "active_preferences",
+                    "all_active_preferences_auto_included", "authority",
+                ) if key in author_model}
         materialized["stage_context_fingerprint"] = fingerprint({key: materialized[key] for key in materialized if key != "authority"})
         return materialized
 
@@ -98,12 +329,32 @@ class ProductionRunExecutor(ProductionContextRuntime):
         model_preference: str | None,
         artifacts: dict[str, Any],
     ) -> tuple[dict[str, Any], dict[str, Any]]:
+        if mechanism == "character_simulation":
+            return self._run_character_stage(run, bundle, service_id=service_id, user_instruction=user_instruction, model_preference=model_preference)
+        if mechanism == "scene_simulation":
+            return self._run_scene_stage(run, bundle, service_id=service_id, user_instruction=user_instruction, model_preference=model_preference, artifacts=artifacts)
+        if mechanism == "reader_pressure":
+            return self._run_reader_pressure_stage(run, bundle, service_id=service_id, user_instruction=user_instruction, model_preference=model_preference, artifacts=artifacts)
         frozen_stage = self.materialize_stage_context(bundle, mechanism)
         upstream: dict[str, Any] = {}
+        if mechanism in {"reader_pressure", "event_first_raw_draft", "surface_realization"}:
+            projection = (artifacts.get("scene_simulation") or {}).get("artifact")
+            if not isinstance(projection, dict) or projection.get("projection_fingerprint") != fingerprint({
+                key: value for key, value in projection.items() if key not in {"projection_fingerprint", "authority"}
+            }):
+                raise ProductionRunError("writer_projection_missing", "Writer requires an exact registered scene realization projection")
+            upstream["writer_projection"] = deepcopy(projection)
+        if mechanism in {"event_first_raw_draft", "surface_realization"}:
+            pressure = artifacts.get("reader_pressure") or {}
+            if not isinstance(pressure.get("artifact"), dict) or pressure.get("artifact_fingerprint") != fingerprint(pressure["artifact"]):
+                raise ProductionRunError("reader_pressure_missing", "Writer requires the confirmed Reader Pressure artifact")
+            upstream["reader_pressure"] = {"artifact": deepcopy(pressure["artifact"]), "artifact_fingerprint": pressure["artifact_fingerprint"]}
         if mechanism == "surface_realization":
-            upstream["raw_draft"] = artifacts.get("event_first_raw_draft")
+            raw = artifacts.get("event_first_raw_draft") or {}
+            upstream["raw_draft"] = {key: raw.get(key) for key in ("text", "artifact_fingerprint")}
         elif mechanism == "continuity":
-            upstream["candidate"] = artifacts.get("surface_realization")
+            candidate = artifacts.get("surface_realization") or {}
+            upstream["candidate"] = {key: candidate.get(key) for key in ("text", "artifact_fingerprint")}
         context = [{"frozen_stage_context": frozen_stage, "upstream_artifacts": upstream}]
         job, result = self._agent_job(
             run=run,
@@ -122,8 +373,8 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 detail={"agent_status": result.status, "errors": result.errors},
             )
         judgment = parse_json_object(result.final_text, label=mechanism)
-        status = str(judgment.get("status") or "").strip().lower()
-        if status not in {"pass", "fail"}:
+        status = judgment.get("status")
+        if not isinstance(status, str) or status not in {"pass", "fail"}:
             raise ProductionRunError("semantic_output_invalid", f"{mechanism}.status must be pass|fail")
         if mechanism in {"event_first_raw_draft", "surface_realization"}:
             text = judgment.get("text")
@@ -133,6 +384,8 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 judgment["artifact_fingerprint"] = fingerprint_text(text)
         elif "artifact" in judgment:
             judgment["artifact_fingerprint"] = fingerprint(judgment["artifact"])
+        if mechanism == "reader_pressure" and status == "pass" and not isinstance(judgment.get("artifact"), dict):
+            raise ProductionRunError("semantic_output_invalid", "Reader Pressure pass requires a causal artifact for Writer")
         public = public_stage_result(
             mechanism=mechanism,
             context_stage_id=frozen_stage["context_stage_id"],
@@ -146,6 +399,202 @@ class ProductionRunExecutor(ProductionContextRuntime):
             judgment=judgment,
         )
         return public, deepcopy(judgment)
+
+    @staticmethod
+    def _target_context(bundle: dict[str, Any]) -> dict[str, Any]:
+        target = bundle.get("target_context")
+        if not isinstance(target, dict) or any(not isinstance(target.get(key), str) or not target[key] for key in ("chapter_id", "document_id")):
+            raise ProductionRunError("target_context_missing", "production requires a frozen chapter/document target")
+        for key in ("current_story_order", "current_reading_order"):
+            order = target.get(key)
+            if not isinstance(order, int) or isinstance(order, bool) or order < 0:
+                raise ProductionRunError("target_context_missing", f"production requires a frozen {key} cutoff")
+        return {key: target[key] for key in ("chapter_id", "document_id", "current_story_order", "current_reading_order")}
+
+    def _causal_stage_receipt(
+        self, *, bundle: dict[str, Any], mechanism: str, bindings: list[dict[str, Any]],
+        internal: dict[str, Any], preparation: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        frozen = self.materialize_stage_context(bundle, mechanism)
+        identities = [{
+            "contract_id": binding["contract_id"], "subject_id": binding["job"]["subject_id"],
+            "input_fingerprint": binding["job"]["input_fingerprint"],
+            "result_fingerprint": fingerprint(binding["result"]), "binding_fingerprint": binding["binding_fingerprint"],
+        } for binding in bindings]
+        worker = bindings[-1]["result"]["worker"] if bindings else (preparation or {})
+        artifact_fp = fingerprint({"contracts": identities, "preparation": preparation, "artifact": internal.get("artifact")})
+        internal["artifact_fingerprint"] = artifact_fp
+        public = public_stage_result(
+            mechanism=mechanism, context_stage_id=frozen["context_stage_id"],
+            context_bundle_fingerprint=bundle["bundle_fingerprint"], freeze_fingerprint=bundle["freeze"]["freeze_fingerprint"],
+            stage_context_fingerprint=frozen["stage_context_fingerprint"],
+            agent_input_fingerprint=fingerprint([binding["result"]["worker"]["agent_input_fingerprint"] for binding in bindings] or [preparation]),
+            model_service_id=str(worker.get("model_service_id") or ""), model_id=str(worker.get("model_or_reviewer") or ""),
+            protocol=str(worker.get("protocol") or ""),
+            judgment={"status": internal["status"], "summary": "Bounded causal contracts completed; private simulation remains internal.",
+                      "findings": [], "artifact_fingerprint": artifact_fp},
+        )
+        public["registered_contracts"] = identities
+        public["stage_result_fingerprint"] = fingerprint({key: value for key, value in public.items() if key != "stage_result_fingerprint"})
+        return public
+
+    def _run_character_stage(
+        self, run: dict[str, Any], bundle: dict[str, Any], *, service_id: str,
+        user_instruction: str, model_preference: str | None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        frozen = self.materialize_stage_context(bundle, "character_simulation")
+        target = self._target_context(bundle)
+        payloads = character_action_payloads(frozen, target)
+        preparation = None
+        if not payloads:
+            # A new project has no accepted cast. Any initial cast is a model
+            # proposal bound to the request, not code-authored Canon or a
+            # fabricated existing character. Existing selected cast uses only
+            # each actor's own frozen state above.
+            instruction = (
+                "Prepare the minimal proposed cast needed for this new chapter from the supplied request and frozen context. "
+                "This is a proposal, never accepted Canon. Return only JSON matching the supplied output_contract. "
+                "For original DRAFT/REVISE work, you may propose concrete starting circumstances, observable obstacles or resources, "
+                "and personally acquired memory sources where the request and plans leave details open. "
+                "These additions must remain compatible with every frozen hard bound and accepted fact; they do not replace existing Canon. "
+                "Make the proposed starting situation causally usable by each actor, including how that actor could observe or learn the evidence. "
+                "Missing creative detail is not by itself a missing external fact: supply a bounded proposal when the authorized fiction task allows it. "
+                "Do not prescribe the next action, force a planned outcome, invent prior accepted events, or give actors knowledge of later events. "
+                "Each character is one character.action_propose input with character_id, current_story_order (exact supplied cutoff), "
+                "active_agenda (nonempty string), perceived_state (object), immediate_situation (object), perspective_memory (object). "
+                "Use only character-visible information, never a planned outcome or another character's private knowledge. "
+                "perceived_state may contain only a qualitative summary string; do not place evidence arrays or IDs there. "
+                "Put every observation only in immediate_situation.observables, with observable_id, observation, source_ref and available_from_story_order. "
+                "perspective_memory must contain exactly episodic_visible_events, visibility_tagged_facts and situation_patterns (empty arrays are valid). "
+                "Every memory fact belongs in perspective_memory.visibility_tagged_facts and uses fact_id, claim, source_ref and available_from_story_order. "
+                "Every episodic event uses event_id, source_ref and available_from_story_order; every situation pattern uses pattern_id, evidence_ref and available_from_story_order. "
+                "Never use aliases such as perspective_memory.facts or perceived_state.observables. "
+                "All evidence IDs must be unique within the character, and every availability order must be at or before the supplied cutoff. "
+                "Do not serialize chain-of-thought. "
+                "At most 12 characters. If this chapter needs no acting characters, an empty array is valid; explain briefly. "
+                "Do not create prose or modify existing Canon."
+            )
+            job, result = self._agent_job(
+                run=run, service_id=service_id, runtime_role="character_state_prepare", instruction=instruction,
+                context=[{"request": user_instruction, "target_context": target, "frozen_stage_context": frozen,
+                          "output_contract": character_state_prepare_contract()}],
+                model_preference=model_preference, suffix="character-state-prepare", max_output_tokens=4800,
+            )
+            if result.status != "completed":
+                raise ProductionRunError("semantic_pending", "character preparation has no confirmed completed output")
+            judgment = parse_json_object(result.final_text, label="character_state_prepare")
+            if judgment.get("status") != "pass":
+                raise ProductionRunError("failed_gate" if judgment.get("status") == "fail" else "semantic_output_invalid", "character preparation did not pass")
+            payloads = prepared_character_action_payloads(judgment, target)
+            ids = [payload["character_id"] for payload in payloads]
+            existing_ids = {row["model_view"].get("character_id") for row in bundle.get("source_payloads", {}).values() if row.get("object_type") == "character"}
+            if existing_ids.intersection(ids):
+                raise ProductionRunError("character_context_incomplete", "new cast proposal cannot replace an existing character absent from its frozen stage")
+            preparation = {
+                "agent_job_id": job.job_id, "agent_input_fingerprint": job.input_fingerprint,
+                "model_service_id": result.model_service_id, "model_or_reviewer": result.model_id,
+                "protocol": result.protocol, "result_fingerprint": fingerprint(result.to_dict()),
+            }
+        registered = RegisteredSemanticExecutor(self.agent_runtime, invoke=self._invoke_agent)
+        bindings = [registered.execute(
+            run=run, service_id=service_id, contract_id="character.action_propose", subject_id=payload["character_id"],
+            payload=payload, model_preference=model_preference, runtime_role="registered_character_action", max_output_tokens=2600,
+        ) for payload in payloads]
+        internal = {"status": "pass", "action_bindings": bindings, "artifact": {"character_count": len(bindings)}, "preparation": preparation}
+        return self._causal_stage_receipt(bundle=bundle, mechanism="character_simulation", bindings=bindings, internal=internal, preparation=preparation), internal
+
+    def _run_scene_stage(
+        self, run: dict[str, Any], bundle: dict[str, Any], *, service_id: str,
+        user_instruction: str, model_preference: str | None, artifacts: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        target = self._target_context(bundle)
+        character = artifacts.get("character_simulation") or {}
+        actions = character.get("action_bindings")
+        if not isinstance(actions, list):
+            raise ProductionRunError("character_actions_missing", "Scene resolver requires confirmed character action bindings")
+        # The resolver needs the actual evidence behind an action, not only its
+        # cited IDs. Keep this private, fingerprint-bound input on the causal
+        # side of the writer-safe realization boundary.
+        evidence = [{
+            "character_id": binding["job"]["subject_id"], "input_fingerprint": binding["job"]["input_fingerprint"],
+            "bounded_input": deepcopy(binding["job"]["input"]["payload"]),
+            "input_is_proposed_cast": character.get("preparation") is not None, "authority": False,
+            "result_fingerprint": fingerprint(binding["result"]), "judgment": deepcopy(binding["result"]["judgment"]),
+        } for binding in actions]
+        registered = RegisteredSemanticExecutor(self.agent_runtime, invoke=self._invoke_agent)
+        scene_id = target["chapter_id"]
+        resolved = registered.execute(
+            run=run, service_id=service_id, contract_id="scene.resolve_actions", subject_id=scene_id,
+            payload={"scene_id": scene_id, "current_story_order": target["current_story_order"],
+                     "request": user_instruction, "character_action_evidence": evidence,
+                     "frozen_scene_context": self.materialize_stage_context(bundle, "scene_simulation")},
+            model_preference=model_preference, runtime_role="registered_scene_resolution", max_output_tokens=3600,
+        )
+        if resolved["result"]["judgment"]["repair_routes"]:
+            internal = {"status": "fail", "resolved_binding": resolved, "artifact": {"repair_routes": resolved["result"]["judgment"]["repair_routes"]}}
+            return self._causal_stage_receipt(bundle=bundle, mechanism="scene_simulation", bindings=[resolved], internal=internal), internal
+        projected = registered.execute(
+            run=run, service_id=service_id, contract_id="scene.realization_project", subject_id=scene_id,
+            payload={"scene_id": scene_id, "resolved_trajectory": {
+                "judgment": resolved["result"]["judgment"], "input_fingerprint": resolved["job"]["input_fingerprint"],
+                "result_fingerprint": fingerprint(resolved["result"]),
+            }, "character_action_evidence": evidence,
+                "pov_boundary": {**target, "private_state_may_not_be_serialized": True},
+                "task_context": {"request": user_instruction}},
+            model_preference=model_preference, runtime_role="registered_scene_projection", max_output_tokens=3000,
+        )
+        internal = {"status": "pass", "artifact": writer_safe_projection(projected, scene_id=scene_id),
+                    "resolved_binding": resolved, "projection_binding": projected}
+        return self._causal_stage_receipt(bundle=bundle, mechanism="scene_simulation", bindings=[resolved, projected], internal=internal), internal
+
+    def _run_reader_pressure_stage(
+        self, run: dict[str, Any], bundle: dict[str, Any], *, service_id: str,
+        user_instruction: str, model_preference: str | None, artifacts: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        frozen = self.materialize_stage_context(bundle, "reader_pressure")
+        projection = (artifacts.get("scene_simulation") or {}).get("artifact")
+        if not isinstance(projection, dict) or projection.get("projection_fingerprint") != fingerprint({
+            key: value for key, value in projection.items() if key not in {"projection_fingerprint", "authority"}
+        }):
+            raise ProductionRunError("writer_projection_missing", "Reader Pressure requires an exact registered writer-safe scene projection")
+        sources = [{"source_ref": "scene-projection:" + projection["projection_fingerprint"], "content": projection}]
+        sources.extend({"source_ref": row["object_id"], "source_fingerprint": row["source_fingerprint"],
+                        "authority": row["authority"], "content": row["model_view"]} for row in frozen["items"])
+        payload = {"chapter_id": bundle["target_context"]["chapter_id"],
+                   "current_reading_order": bundle["target_context"]["current_reading_order"],
+                   "author_request": user_instruction, "sources": sources}
+        if isinstance(frozen.get("author_model"), dict):
+            payload["author_model"] = frozen["author_model"]
+        binding = RegisteredSemanticExecutor(self.agent_runtime, invoke=self._invoke_agent).execute(
+            run=run, service_id=service_id, contract_id="reader.pressure", subject_id=bundle["target_context"]["chapter_id"],
+            payload=payload, model_preference=model_preference, runtime_role="registered_reader_pressure", max_output_tokens=3000,
+        )
+        judgment = binding["result"]["judgment"]
+        allowed = {source["source_ref"] for source in sources}
+        if any(ref not in allowed for point in judgment["pressure_points"] for ref in point["evidence_refs"]):
+            raise ProductionRunError("semantic_output_invalid", "Reader Pressure cites an unknown source identity")
+        artifact = deepcopy(judgment)
+        artifact_fp = fingerprint(artifact)
+        worker = binding["result"]["worker"]
+        public = public_stage_result(
+            mechanism="reader_pressure", context_stage_id=frozen["context_stage_id"],
+            context_bundle_fingerprint=bundle["bundle_fingerprint"], freeze_fingerprint=bundle["freeze"]["freeze_fingerprint"],
+            stage_context_fingerprint=frozen["stage_context_fingerprint"], agent_input_fingerprint=worker["agent_input_fingerprint"],
+            model_service_id=worker["model_service_id"], model_id=worker["model_or_reviewer"], protocol=worker["protocol"],
+            judgment={"status": judgment["status"], "summary": judgment["summary"], "artifact_fingerprint": artifact_fp},
+        )
+        public["model_contract_id"] = "reader.pressure"
+        public["registered_contract_binding_fingerprint"] = binding["binding_fingerprint"]
+        public["stage_result_fingerprint"] = fingerprint({key: value for key, value in public.items() if key != "stage_result_fingerprint"})
+        return public, {"status": judgment["status"], "artifact": artifact, "artifact_fingerprint": artifact_fp}
+
+    def _reader_history(self, bundle: dict[str, Any]) -> list[dict[str, Any]]:
+        frozen = self.materialize_stage_context(bundle, "reader_engagement")
+        return [{"source_ref": "chapter:" + row["model_view"]["story_node_id"],
+                 "chapter_id": row["model_view"]["story_node_id"], "revision_id": row["model_view"]["revision_id"],
+                 "content_fingerprint": row["model_view"]["content_fingerprint"],
+                 "reading_order": row["model_view"]["reading_order"], "content": row["model_view"]["content"]}
+                for row in frozen["items"] if row["object_type"] == "accepted_manuscript"]
 
     def _registered_stage_receipt(
         self,
@@ -194,6 +643,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
         key = f"{run_id}:stage:{receipt['mechanism']}"
         with self.store.open_project(project_id) as conn:
             conn.execute("BEGIN IMMEDIATE")
+            self._guard_execution(conn, project_id, run_id)
             if effect_guard is not None:
                 effect_guard(conn)
             existing = conn.execute("SELECT payload_json FROM receipts WHERE idempotency_key=?", (key,)).fetchone()
@@ -226,6 +676,8 @@ class ProductionRunExecutor(ProductionContextRuntime):
     def _checkpoint(self, project_id: str, run_id: str, kind: str, state: dict[str, Any], artifact_fingerprint: str) -> None:
         assert_secret_free(state, label=kind)
         with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            self._guard_execution(conn, project_id, run_id)
             conn.execute(
                 "INSERT INTO checkpoints(checkpoint_id,run_id,checkpoint_kind,state_json,artifact_fingerprint,created_at) VALUES(?,?,?,?,?,?)",
                 ("ckpt_" + uuid.uuid4().hex, run_id, kind, canonical_json(state), artifact_fingerprint, now_iso()),
@@ -274,6 +726,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
         key = f"{run_id}:production_release"
         with self.store.open_project(project_id) as conn:
             conn.execute("BEGIN IMMEDIATE")
+            self._guard_execution(conn, project_id, run_id)
             if effect_guard is not None:
                 effect_guard(conn)
             existing = conn.execute(
@@ -320,9 +773,23 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "private_reasoning_exposed": False,
             "authority": False,
         }
+        qualified = self._latest_checkpoint(project_id, run["run_id"], "production_qualified_candidate")
+        reader_binding = (qualified or {}).get("reader_binding")
+        reader_observation = (qualified or {}).get("reader_expectation_binding")
+        if not isinstance(reader_binding, dict) or not isinstance(reader_observation, dict):
+            raise ProductionRunError("reader_evidence_missing", "released candidate requires its exact reader evidence")
+        reader_payload = reader_binding["job"]["input"]["payload"]
+        if reader_payload.get("candidate_fingerprint") != candidate_fingerprint:
+            raise ProductionRunError("reader_evidence_mismatch", "reader evidence changed its candidate binding")
+        reader_judgment = reader_binding["result"]["judgment"]
+        review_public["reader_engagement"] = {
+            "candidate_fingerprint": candidate_fingerprint, "source_type": "model_proxy",
+            **{key: deepcopy(reader_judgment.get(key)) for key in ("result", "report", "strongest_positive", "strongest_problem", "evidence_refs")},
+        }
         assert_secret_free(review_public, label="independent review evidence")
         with self.store.open_project(project_id) as conn:
             conn.execute("BEGIN IMMEDIATE")
+            self._guard_execution(conn, project_id, run["run_id"])
             effect_guard(conn)
             existing = conn.execute(
                 "SELECT candidate_id,revision_id,status,content_fingerprint,user_visible_gate FROM candidates WHERE run_id=? ORDER BY created_at,rowid",
@@ -418,6 +885,10 @@ class ProductionRunExecutor(ProductionContextRuntime):
                     stamp,
                 ),
             )
+            try:
+                record_observation(conn, run_id=run["run_id"], candidate_id=candidate_id, binding=reader_observation)
+            except ReaderExpectationError as exc:
+                raise ProductionRunError(exc.code, str(exc)) from exc
             conn.commit()
         return {
             "candidate_id": candidate_id,
@@ -448,6 +919,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
         }
         with self.store.open_project(project_id) as conn:
             conn.execute("BEGIN IMMEDIATE")
+            self._guard_execution(conn, project_id, run_id)
             effect_guard(conn)
             existing = conn.execute(
                 "SELECT payload_json FROM runtime_events WHERE run_id=? AND event_kind='production_candidate_ready' ORDER BY created_at,rowid",
@@ -478,6 +950,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
     ) -> None:
         with self.store.open_project(project_id) as conn:
             conn.execute("BEGIN IMMEDIATE")
+            self._guard_execution(conn, project_id, run_id)
             effect_guard(conn)
             conn.execute(
                 "UPDATE runs SET status=?,result_fingerprint=COALESCE(?,result_fingerprint),updated_at=? WHERE run_id=?",
@@ -1053,6 +1526,105 @@ class ProductionRunExecutor(ProductionContextRuntime):
         return self._awaiting_external_projection(project_id, {**run, "status": "awaiting_external"}, bundle) or {}
 
     def execute(
+        self, project_id: str, run_id: str, *, service_id: str, instruction: str,
+        document_id: str | None = None, model_preference: str | None = None,
+        stage_budgets: dict[str, int] | None = None, reader_grip: str,
+        rule_material: list[dict[str, Any]], reader_visible_context: list[dict[str, Any]] | None = None,
+        independent_provenance: dict[str, Any] | None = None, repair_preservation: dict[str, Any] | None = None,
+        max_model_calls: int = 64,
+    ) -> dict[str, Any]:
+        if not isinstance(instruction, str) or not instruction.strip() or not isinstance(service_id, str) or not service_id.strip():
+            raise ProductionRunError("invalid_args", "instruction and service_id are required")
+        if reader_grip not in READER_GRIP_VALUES:
+            raise ProductionRunError("invalid_args", "reader_grip must be low|medium|high|very_high")
+        if not isinstance(rule_material, list) or not rule_material or any(not isinstance(item, dict) for item in rule_material):
+            raise ProductionRunError("quality_rule_material_required", "non-empty authoritative rule_material is required")
+        if reader_visible_context is not None and (
+            not isinstance(reader_visible_context, list) or any(not isinstance(item, dict) for item in reader_visible_context)
+        ):
+            raise ProductionRunError("invalid_args", "reader_visible_context must be an object array")
+        run = self._run_row(project_id, run_id)
+        target = run["target_context"]
+        if document_id is not None and document_id != target["document_id"]:
+            raise ProductionRunError("target_document_mismatch", "execution cannot replace the Core-frozen target document")
+        request = {
+            "service_id": service_id, "instruction": instruction,
+            "document_id": target["document_id"], "model_preference": model_preference,
+            "stage_budgets": stage_budgets or {}, "reader_grip": reader_grip,
+            "rule_material": rule_material, "reader_visible_context": reader_visible_context or [],
+            "repair_preservation": repair_preservation,
+            "max_model_calls": max_model_calls,
+        }
+        assert_secret_free(request, label="frozen production request")
+        # Provenance may be supplied after qualification. It cannot alter any
+        # generation input or replace an already-frozen independent packet.
+        try:
+            owner = self.stage_repository.acquire(project_id, run_id, request)
+        except ProductionStageError as exc:
+            self._raise_stage_repository(exc)
+        cancellation = CancellationToken()
+        scope = {"store": self.store, "project_id": project_id, "run_id": run_id, "owner": owner, "cancellation": cancellation}
+        token = _EXECUTION_SCOPE.set(scope)
+        stop = threading.Event()
+
+        def keep_alive() -> None:
+            while not stop.wait(self.stage_repository.lease_seconds / 3):
+                try:
+                    self.stage_repository.renew(project_id, run_id, owner)
+                except Exception:
+                    cancellation.cancel()
+                    return
+
+        heartbeat = threading.Thread(target=keep_alive, name=f"qf-production-{run_id}", daemon=True)
+        heartbeat.start()
+        try:
+            journal = self.stage_repository.projection(project_id, run_id)
+            if journal["unconfirmed_call_ids"]:
+                self._set_run(project_id, run_id, "semantic_pending")
+                return self._unconfirmed_projection(project_id, run_id)
+            return self._execute_frozen(project_id, run_id, **request, independent_provenance=independent_provenance)
+        except ProductionRunError as exc:
+            if self.status(project_id, run_id)["status"] == "cancelled":
+                return {"schema": PRODUCTION_EXECUTION_SCHEMA, "project_id": project_id, "run_id": run_id,
+                        "status": "cancelled", "candidate_visible": False, "raw_draft_visible": False, "authority": False}
+            if exc.code == "model_call_budget_exhausted":
+                self._set_run(project_id, run_id, "budget_exhausted")
+                return {"schema": PRODUCTION_EXECUTION_SCHEMA, "project_id": project_id, "run_id": run_id,
+                        "status": "budget_exhausted", "execution_journal": self.stage_repository.projection(project_id, run_id),
+                        "candidate_visible": False, "raw_draft_visible": False, "authority": False}
+            if exc.code in {"selected_preference_stale", "settled_source_stale", "settled_source_invalid", "target_context_invalid"}:
+                self._set_run(project_id, run_id, "stale_conflict")
+                return {"schema": PRODUCTION_EXECUTION_SCHEMA, "project_id": project_id, "run_id": run_id,
+                        "status": "stale_conflict", "validation": {"status": "stale_conflict", "proceed": False, "code": exc.code},
+                        "new_context_fingerprint_required": True, "candidate_visible": False, "raw_draft_visible": False, "authority": False}
+            if exc.code in {"stage_result_unconfirmed", "stage_deadline_exceeded"}:
+                self._set_run(project_id, run_id, "semantic_pending")
+                return self._unconfirmed_projection(project_id, run_id)
+            if exc.code == "run_cancelled":
+                return {
+                    "schema": PRODUCTION_EXECUTION_SCHEMA, "project_id": project_id, "run_id": run_id,
+                    "status": "cancelled", "candidate_visible": False, "raw_draft_visible": False, "authority": False,
+                }
+            if exc.code in {"semantic_pending", "semantic_output_invalid"}:
+                self._record_semantic_failure(project_id, run_id, exc)
+            raise
+        finally:
+            stop.set()
+            heartbeat.join(timeout=1)
+            try:
+                self.stage_repository.release(project_id, run_id, owner)
+            finally:
+                _EXECUTION_SCOPE.reset(token)
+
+    def _unconfirmed_projection(self, project_id: str, run_id: str) -> dict[str, Any]:
+        return {
+            "schema": PRODUCTION_EXECUTION_SCHEMA, "project_id": project_id, "run_id": run_id,
+            "status": "semantic_pending", "awaiting": "stage_result_confirmation",
+            "execution_journal": self.stage_repository.projection(project_id, run_id),
+            "automatic_model_retry": False, "candidate_visible": False, "raw_draft_visible": False, "authority": False,
+        }
+
+    def _execute_frozen(
         self,
         project_id: str,
         run_id: str,
@@ -1067,6 +1639,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
         reader_visible_context: list[dict[str, Any]] | None = None,
         independent_provenance: dict[str, Any] | None = None,
         repair_preservation: dict[str, Any] | None = None,
+        max_model_calls: int = 64,
     ) -> dict[str, Any]:
         if not isinstance(instruction, str) or not instruction.strip():
             raise ProductionRunError("invalid_args", "instruction is required")
@@ -1087,10 +1660,14 @@ class ProductionRunExecutor(ProductionContextRuntime):
         completed = self._completed_projection(project_id, run, bundle)
         if completed is not None:
             return completed
+        self._validate_selected_preferences(project_id, run["target_context"])
         if run.get("status") == "failed_gate":
             raise ProductionRunError("failed_gate_requires_fresh_run", "a semantic gate rejected this run; create a fresh DRAFT/REVISE run instead of reviewer-shopping or replaying it")
-        if run.get("status") == "semantic_running":
-            raise ProductionRunError("run_in_progress", "production run is already executing")
+        if bundle and self._latest_independent_handoff(project_id, run_id):
+            # Recover a process that committed the frozen packet before the
+            # awaiting_external status/event. Never mint a replacement nonce.
+            self._set_run(project_id, run_id, "awaiting_external")
+            run = {**run, "status": "awaiting_external"}
         if bundle:
             waiting = self._awaiting_external_projection(project_id, run, bundle)
             if waiting:
@@ -1131,10 +1708,14 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 raise
 
         self._set_run(project_id, run_id, "semantic_running")
+        history = self._reader_history(bundle)
+        if reader_visible_context and reader_visible_context != history:
+            raise ProductionRunError("reader_context_untrusted", "Blind Reader history must equal the Core-frozen accepted source projection")
+        reader_visible_context = history
         artifacts: dict[str, Any] = {}
         public_receipts: list[dict[str, Any]] = []
         reader_binding: dict[str, Any] | None = None
-        registered = RegisteredSemanticExecutor(self.agent_runtime)
+        registered = RegisteredSemanticExecutor(self.agent_runtime, invoke=self._invoke_agent)
 
         for mechanism in PRE_INDEPENDENT_MECHANISMS:
             validation = self._validate_bundle_current(project_id, bundle)
@@ -1209,9 +1790,11 @@ class ProductionRunExecutor(ProductionContextRuntime):
                         artifacts=artifacts,
                     )
             except ProductionRunError as exc:
-                status = "semantic_pending" if exc.code in {"semantic_pending", "semantic_output_invalid"} else "failed_gate"
-                self._set_run(project_id, run_id, status)
-                self._event(project_id, run_id, "production_stage_failed", {"mechanism": mechanism, "code": exc.code, "message": str(exc), "detail": exc.detail})
+                if exc.code in {"semantic_pending", "semantic_output_invalid"}:
+                    self._record_semantic_failure(project_id, run_id, exc, mechanism=mechanism)
+                else:
+                    self._set_run(project_id, run_id, "failed_gate")
+                    self._event(project_id, run_id, "production_stage_failed", {"mechanism": mechanism, "code": exc.code, "message": str(exc), "detail": exc.detail})
                 raise
 
             self._persist_stage_receipt(project_id, run_id, public)
@@ -1305,6 +1888,30 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "qualification_receipt": qualification,
             "authority": False,
         }
+        if qualification["qualification_status"] == "qualified_for_independent":
+            observation = registered.execute(
+                run=run, service_id=service_id, contract_id="reader.expectations", subject_id=target_document,
+                payload={"chapter_id": bundle["target_context"]["chapter_id"], "document_id": target_document,
+                         "candidate_fingerprint": candidate_fingerprint, "candidate_text": candidate_text,
+                         "current_reading_order": bundle["target_context"]["current_reading_order"],
+                         "reader_visible_context": reader_visible_context, "existing_expectations": bundle["reader_expectations"]},
+                model_preference=model_preference, runtime_role="registered_reader_expectations", max_output_tokens=3600,
+            )
+            try:
+                validate_observation_binding(observation)
+            except ReaderExpectationError as exc:
+                raise ProductionRunError("semantic_output_invalid", str(exc)) from exc
+            qualified_state["reader_expectation_binding"] = observation
+            narrative = registered.execute(
+                run=run, service_id=service_id, contract_id="narrative.world", subject_id=target_document,
+                payload={"chapter_id": bundle["target_context"]["chapter_id"], "document_id": target_document,
+                         "candidate_fingerprint": candidate_fingerprint, "candidate_text": candidate_text,
+                         "current_story_order": bundle["target_context"]["current_story_order"],
+                         "existing_state": narrative_existing_state(bundle)},
+                model_preference=model_preference, runtime_role="registered_narrative_state", max_output_tokens=5200,
+            )
+            proposal = build_narrative_state_proposal(narrative, bundle)
+            self._checkpoint(project_id, run_id, "production_narrative_proposal", {"proposal": proposal, "registered_binding": narrative}, proposal["proposal_fingerprint"])
         self._checkpoint(project_id, run_id, "production_qualified_candidate", qualified_state, candidate_fingerprint)
         self._event(
             project_id,
@@ -1342,7 +1949,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 "qualification": {
                     "status": qualification["qualification_status"],
                     "failed_gates": qualification["failed_gates"],
-                    "blocking_findings": qualification["blocking_findings"],
+                    "blocking_finding_count": len(qualification["blocking_findings"]),
                     "receipt_fingerprint": qualification["receipt_fingerprint"],
                 },
                 "candidate_visible": False,

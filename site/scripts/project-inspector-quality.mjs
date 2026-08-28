@@ -33,7 +33,7 @@ for (const marker of [
   "FileList",
   "manifest_fingerprint",
   ".quillframe/data",
-  "CH001",
+  'scope: "novel"',
   "legacy_metadata_rejected",
 ]) {
   requireCheck(`${inspector}\n${inspectorContract}`.includes(marker), `Project Inspector contract marker missing: ${marker}`);
@@ -44,6 +44,7 @@ requireCheck(!/\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon|WebSocket\s*\(/
 requireCheck(!/FormData\s*\(/.test(inspector), "Project Inspector must not prepare selected project content for upload");
 requireCheck(inspectorContract.includes('type InspectionStatus = "coherent" | "scaffold" | "incomplete" | "conflict"'), "Project Inspector must distinguish coherent, scaffold, incomplete, and conflicting states");
 requireCheck(inspectorContract.includes(".quillframe/data"), "structural inspection must expose the exact native data boundary");
+requireCheck(inspectorContract.includes('Object.keys(values).length !== 4') && !inspectorContract.includes("chapter_scope"), "Project Inspector must enforce the four-key novel manifest without a chapter scope alias");
 const legacyMarkers = [["quillframe", "lock", "json"].join("."), ["framework", "attestation", "json"].join("."), ["project", "sdk", "py"].join(".")];
 for (const legacy of legacyMarkers) {
   requireCheck(!`${inspector}\n${inspectorContract}`.includes(legacy), `Project Inspector retains legacy marker: ${legacy}`);

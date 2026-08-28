@@ -100,7 +100,7 @@ def current_project_identity(project_root: Path) -> tuple[dict[str, Any] | None,
         "project_id": context["project_id"],
         "project_title": context["project_title"],
         "language": context["language"],
-        "chapter_scope": context["chapter_scope"],
+        "scope": context["scope"],
         "data_root": context["data_root"],
         "project_manifest_fingerprint": context["manifest_fingerprint"],
     }, []
@@ -243,11 +243,11 @@ def inspect(
     if not checks["project_manifest_matches"]:
         blockers.append("project_manifest_changed_or_unproven")
 
-    expected_chapter_scope = evidence.get("chapter_scope")
-    current_chapter_scope = current_identity.get("chapter_scope") if current_identity else None
-    checks["project_chapter_scope_matches"] = expected_chapter_scope == current_chapter_scope == "CH001"
-    if not checks["project_chapter_scope_matches"]:
-        blockers.append("project_chapter_scope_mismatch")
+    expected_scope = evidence.get("scope")
+    current_scope = current_identity.get("scope") if current_identity else None
+    checks["project_scope_matches"] = expected_scope == current_scope == "novel"
+    if not checks["project_scope_matches"]:
+        blockers.append("project_scope_mismatch")
 
     expected_data_root = evidence.get("data_root")
     current_data_root = current_identity.get("data_root") if current_identity else None
@@ -377,7 +377,7 @@ def self_test() -> int:
         artifact.write_text("frozen candidate\n", encoding="utf-8")
         artifact_fp = sha_bytes(artifact.read_bytes())
         (root / "quillframe.toml").write_text(
-            'schema="quillframe_project_v1_0"\nid="BOOK-SELFTEST"\ntitle="Self Test"\nlanguage="en"\nchapter_scope="CH001"\n',
+            'schema="quillframe_project_v1_0"\nid="BOOK-SELFTEST"\ntitle="Self Test"\nlanguage="en"\n',
             encoding="utf-8",
         )
         project_context = resolve_contract(root)
@@ -386,7 +386,7 @@ def self_test() -> int:
             "schema": AUTHORITY_EVIDENCE_SCHEMA,
             "project_id": "BOOK-SELFTEST",
             "project_manifest_fingerprint": project_context["manifest_fingerprint"],
-            "chapter_scope": "CH001",
+            "scope": "novel",
             "data_root": project_context["data_root"],
             "artifact_bindings": [{"path": "draft.txt", "fingerprint": artifact_fp}],
             "required_capabilities": [],

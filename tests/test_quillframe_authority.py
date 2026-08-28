@@ -9,7 +9,7 @@ from persistence.quillframe_sqlite import QuillframeStore
 
 class AuthorityTests(unittest.TestCase):
     def setUp(self):
-        self.tmp=tempfile.TemporaryDirectory(); self.store=QuillframeStore(Path(self.tmp.name)); self.store.create_project("P1","Book")
+        self.tmp=tempfile.TemporaryDirectory(); self.store=QuillframeStore(Path(self.tmp.name)); self.store.create_native_project("P1","Book")
         self.ops=CoreOperations(self.store)
     def tearDown(self): self.tmp.cleanup()
 
@@ -28,14 +28,14 @@ class AuthorityTests(unittest.TestCase):
         self.assertTrue(result["captured"]); self.assertFalse(result["promotion_eligible"]); self.assertFalse(result["canon_write"])
 
     def test_author_run_is_exact_and_non_authoritative(self):
-        result=self.ops.start_author_run("P1",task_mode="REVISE",target_ref="scene:S1",payload={"chapter_id":"CH001","fix":["pacing"],"preserve":["voice"]})
+        result=self.ops.start_author_run("P1",task_mode="REVISE",target_ref="DOC-CH001",payload={"chapter_id":"CH001","fix":["pacing"],"preserve":["voice"]})
         self.assertEqual(result["task_mode"],"REVISE"); self.assertEqual(result["status"],"awaiting_semantic"); self.assertFalse(result["authority"])
 
-    def test_author_run_rejects_missing_or_non_ch001_scope_before_persistence(self):
-        for target_ref, payload in (
-            ("CH002", {"chapter_id": "CH002", "instruction": "draft"}),
-            ("CH001", {"instruction": "draft"}),
-            ("CH002", {"chapter_id": "CH001", "instruction": "draft"}),
+    def test_author_run_rejects_missing_chapter_or_mismatched_document_before_persistence(self):
+        for target_ref, payload, code in (
+            ("DOC-CH002", {"chapter_id": "CH002", "instruction": "draft"}, "chapter_not_found"),
+            ("DOC-CH001", {"instruction": "draft"}, "invalid_args"),
+            ("DOC-CH002", {"chapter_id": "CH001", "instruction": "draft"}, "chapter_document_mismatch"),
         ):
             with self.subTest(target_ref=target_ref, payload=payload):
                 with self.assertRaises(OperationError) as blocked:
@@ -45,7 +45,7 @@ class AuthorityTests(unittest.TestCase):
                         target_ref=target_ref,
                         payload=payload,
                     )
-                self.assertEqual(blocked.exception.code, "chapter_scope_violation")
+                self.assertEqual(blocked.exception.code, code)
         with self.store.open_project("P1") as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0], 0)
 

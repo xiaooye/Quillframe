@@ -1,5 +1,6 @@
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
 const dist = new URL("../dist/", import.meta.url);
@@ -13,7 +14,7 @@ async function measure(extension) {
   let gzipBytes = 0;
   let largestBytes = 0;
   for (const name of selected) {
-    const path = join(assetsDir.pathname, name);
+    const path = join(fileURLToPath(assetsDir), name);
     const data = await readFile(path);
     const size = (await stat(path)).size;
     bytes += size;

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from studio import host_bridge, host_bridge_protocol
 
@@ -45,7 +46,6 @@ class ProductionHostBridgeTests(unittest.TestCase):
                 "instruction",
                 "reader_grip",
                 "rule_material",
-                "independent_provenance",
             ],
         )
         self.assertFalse(contract["invariants"]["independent_review_project_peer_receipt_required"])
@@ -73,6 +73,65 @@ class ProductionHostBridgeTests(unittest.TestCase):
         self.assertTrue(contract["invariants"]["manuscript_visibility_requires_production_release"])
         self.assertFalse(contract["invariants"]["host_self_generated_manuscript_is_releaseable"])
         self.assertTrue(contract["invariants"]["ephemeral_runtime_exact_git_identity_required"])
+
+    def test_production_can_reach_runtime_without_independent_provenance(self):
+        request = {
+            "schema": host_bridge.REQUEST_SCHEMA,
+            "bridge_version": host_bridge.BRIDGE_VERSION,
+            "request_id": "studio-production",
+            "operation": "author.run.execute",
+            "surface": "local_app",
+            "args": {
+                "project_id": "P",
+                "run_id": "R",
+                "service_id": "S",
+                "instruction": "Draft CH001.",
+                "reader_grip": "high",
+                "rule_material": [{"id": "request", "authority": "current_request", "statement": "Draft CH001."}],
+            },
+            "authority": False,
+        }
+        waiting = {
+            "status": "awaiting_external",
+            "awaiting": "independent_provenance",
+            "candidate_visible": False,
+            "raw_draft_visible": False,
+            "authority": False,
+        }
+        with patch.object(host_bridge, "production_runtime") as factory:
+            factory.return_value.execute.return_value = waiting
+            response = host_bridge.invoke(request)
+            self.assertEqual(response["status"], "ok")
+            self.assertEqual(response["data"], waiting)
+            self.assertIsNone(factory.return_value.execute.call_args.kwargs["independent_provenance"])
+
+        with patch.object(host_bridge, "production_runtime") as factory:
+            invalid = host_bridge.invoke({**request, "args": {**request["args"], "independent_provenance": "untrusted"}})
+            self.assertEqual(invalid["error"]["code"], "invalid_args")
+            factory.assert_not_called()
+
+    def test_unauthenticated_model_service_accepts_empty_or_omitted_token(self):
+        request = {
+            "schema": host_bridge.REQUEST_SCHEMA,
+            "bridge_version": host_bridge.BRIDGE_VERSION,
+            "request_id": "local-relay",
+            "operation": "model.service.add",
+            "surface": "local_app",
+            "authority": False,
+        }
+        endpoint = "http://127.0.0.1:8765/v1"
+        for args in ({"endpoint": endpoint}, {"endpoint": endpoint, "access_token": ""}):
+            with self.subTest(args=args), patch.object(host_bridge, "model_services") as factory:
+                factory.return_value.connect.return_value = {"service_id": "relay", "credential_present": False}
+                response = host_bridge.invoke({**request, "args": args})
+                self.assertEqual(response["status"], "ok")
+                factory.return_value.connect.assert_called_once_with(endpoint, "")
+
+        for token in (None, 1, {}, []):
+            with self.subTest(token=token), patch.object(host_bridge, "model_services") as factory:
+                response = host_bridge.invoke({**request, "args": {"endpoint": endpoint, "access_token": token}})
+                self.assertEqual(response["error"]["code"], "invalid_args")
+                factory.assert_not_called()
 
     def test_access_token_is_redacted_from_fingerprint_but_business_authorization_is_bound(self):
         secret_a = "QF-SECRET-SENTINEL-111"

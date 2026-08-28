@@ -45,7 +45,7 @@ async function fixture({ alignUploadPointerReads = false } = {}) {
         bundle_fingerprint: fingerprint,
         bundle_schema: "quillframe_backup_bundle_v1",
         byte_size: body.byteLength,
-        chapter_scope: "CH001",
+        scope: "novel",
         database_bytes: 1,
         database_fingerprint: `sha256:${"a".repeat(64)}`,
         project_id: "project_h3",

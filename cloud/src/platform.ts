@@ -105,6 +105,7 @@ export const systemClock: Clock = { now: () => Date.now() };
 
 export interface CloudEnv {
   PUBLIC_ORIGIN: string;
+  ASSETS?: FetchBinding;
   WORKOS_CLIENT_ID: string;
   WORKOS_API_KEY: string;
   WORKOS_REDIRECT_URI: string;

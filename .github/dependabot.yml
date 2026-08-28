@@ -7,19 +7,8 @@ updates:
     open-pull-requests-limit: 5
 
   - package-ecosystem: "npm"
-    directory: "/site"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 10
-    groups:
-      solid:
-        patterns:
-          - "solid-js"
-          - "@solidjs/*"
-          - "vite-plugin-solid"
-
-  - package-ecosystem: "npm"
-    directory: "/studio/app"
+    # Site, Studio, and Cloud share the root workspace and lockfile.
+    directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10

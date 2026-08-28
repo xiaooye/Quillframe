@@ -4,10 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 const run = promisify(execFile);
-const siteRoot = path.resolve(new URL("..", import.meta.url).pathname);
+const siteRoot = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const qualityScript = path.join(siteRoot, "scripts/project-inspector-quality.mjs");
 
 test("Project Inspector quality gate binds parser checks to the contract owner", async () => {

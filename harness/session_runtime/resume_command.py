@@ -52,7 +52,7 @@ REQUIRED_PREFLIGHT_CHECKS = {
     "current_project_identity_available",
     "project_identity_matches",
     "project_manifest_matches",
-    "project_chapter_scope_matches",
+    "project_scope_matches",
     "project_data_boundary_matches",
     "artifact_bindings_valid",
     "checkpoint_artifacts_verified",
@@ -294,7 +294,7 @@ def self_test() -> int:
             "schema": AUTHORITY_EVIDENCE_SCHEMA,
             "project_id": "BOOK-CMD",
             "project_manifest_fingerprint": "sha256:" + "a" * 64,
-            "chapter_scope": "CH001",
+            "scope": "novel",
             "data_root": str(root / ".quillframe" / "data"),
             "artifact_bindings": [],
             "required_capabilities": [],
@@ -346,6 +346,14 @@ def self_test() -> int:
         blocked["idempotency_key"] = fingerprint(intent_payload(blocked))
         blocked_result = validate(blocked, blocked_preflight, root)
 
+        old_scope_preflight = json.loads(json.dumps(preflight))
+        old_scope_preflight["checks"].pop("project_scope_matches")
+        old_scope_preflight["checks"]["project_chapter_scope_matches"] = True
+        old_scope = json.loads(json.dumps(command))
+        old_scope["preflight"]["result_fingerprint"] = fingerprint(old_scope_preflight)
+        old_scope["idempotency_key"] = fingerprint(intent_payload(old_scope))
+        old_scope_result = validate(old_scope, old_scope_preflight, root)
+
         tampered_evidence = dict(evidence)
         tampered_evidence["project_id"] = "BOOK-OTHER"
         (root / evidence_ref).write_text(json.dumps(tampered_evidence), encoding="utf-8")
@@ -362,6 +370,8 @@ def self_test() -> int:
             and valid["valid"] is True
             and stale_result["valid"] is False and "session_version_before_state_mismatch" in stale_result["errors"]
             and blocked_result["valid"] is False and "preflight_not_ready" in blocked_result["errors"]
+            and old_scope_result["valid"] is False
+            and "preflight_required_checks_missing_or_false:project_scope_matches" in old_scope_result["errors"]
             and tampered_evidence_result["valid"] is False and "authority_evidence_fingerprint_mismatch" in tampered_evidence_result["errors"]
             and bad_idempotency_result["valid"] is False and "idempotency_key_mismatch" in bad_idempotency_result["errors"]
             and valid["execution_authorized"] is False and valid["runtime_mutation_performed"] is False
@@ -373,6 +383,7 @@ def self_test() -> int:
             "valid_candidate": valid["valid"],
             "stale_before_state_rejected": not stale_result["valid"],
             "blocked_preflight_rejected": not blocked_result["valid"],
+            "obsolete_chapter_scope_check_rejected": not old_scope_result["valid"],
             "tampered_authority_evidence_rejected": not tampered_evidence_result["valid"],
             "idempotency_mismatch_rejected": not bad_idempotency_result["valid"],
             "execution_authorized": False,

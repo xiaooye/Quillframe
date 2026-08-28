@@ -97,7 +97,7 @@ def workflow_service(*, read_only: bool = False) -> NovelWorkflowService:
 
 def require(args: dict[str, Any], key: str, typ: type | tuple[type, ...] = str):
     value = args.get(key)
-    if not isinstance(value, typ) or (isinstance(value, str) and not value.strip()):
+    if not isinstance(value, typ) or (typ is int and isinstance(value, bool)) or (isinstance(value, str) and not value.strip()):
         raise BridgeError("invalid_args", f"{key} is required")
     return value
 
@@ -140,17 +140,7 @@ def _project_list(args: dict[str, Any], surface: str):
 
 
 def _project_create(args: dict[str, Any], _: str):
-    loc = store().create_project(require(args, "project_id"), require(args, "title"), args.get("language") or "zh-CN")
-    context = ops().project_inspect(loc.project_id)
-    return {
-        "schema": "quillframe_project_create_result_v1_0",
-        "manifest": context["manifest"],
-        "manifest_fingerprint": context["manifest_fingerprint"],
-        "chapter_scope": "CH001",
-        "data_boundary": ".quillframe/data",
-        "created": True,
-        "authority": False,
-    }
+    return ops().project_create(require(args, "project_id"), require(args, "title"), args.get("language") or "zh-CN")
 
 
 def _project_inspect(args: dict[str, Any], surface: str):
@@ -185,17 +175,7 @@ def _document_create(args: dict[str, Any], _: str):
 
 
 def _document_open(args: dict[str, Any], surface: str):
-    project_id = require(args, "project_id")
-    document_id = require(args, "document_id")
-    with store(read_only=surface == "agent_package").open_project(project_id) as conn:
-        doc = conn.execute("SELECT document_id,story_node_id,document_kind,title,created_at FROM documents WHERE document_id=?", (document_id,)).fetchone()
-        if not doc:
-            raise KeyError(document_id)
-        revision = store(read_only=surface == "agent_package").latest_revision(conn, document_id)
-    latest = dict(revision) if revision else None
-    if latest:
-        latest["provenance"] = json.loads(latest.pop("provenance_json") or "{}")
-    return {"schema": "quillframe_document_projection_v1", "project_id": project_id, "document": dict(doc), "latest_revision": latest, "authority": False}
+    return ops(read_only=surface == "agent_package").document_open(require(args, "project_id"), require(args, "document_id"))
 
 
 def _revisions_list(args: dict[str, Any], surface: str):
@@ -217,7 +197,7 @@ def _revision_save(args: dict[str, Any], _: str):
 
 
 def _revision_compare(args: dict[str, Any], surface: str):
-    return store(read_only=surface == "agent_package").compare_revisions(require(args, "project_id"), require(args, "left_revision_id"), require(args, "right_revision_id"))
+    return ops(read_only=surface == "agent_package").revision_compare(require(args, "project_id"), require(args, "left_revision_id"), require(args, "right_revision_id"))
 
 
 def _author_run(args: dict[str, Any], _: str):
@@ -254,12 +234,14 @@ def _author_run_status(args: dict[str, Any], surface: str):
 
 
 def _author_run_resume(args: dict[str, Any], _: str):
-    return workflow_service().resume(
+    event = workflow_service().resume(
         project_id=require(args, "project_id"),
         run_id=require(args, "run_id"),
         cursor=require(args, "cursor", int),
         idempotency_key=require(args, "idempotency_key"),
     )
+    execution = production_runtime().resume_execution(require(args, "project_id"), require(args, "run_id"))
+    return {**event, "execution": execution}
 
 
 def _author_run_cancel(args: dict[str, Any], _: str):
@@ -282,6 +264,9 @@ def _author_run_events(args: dict[str, Any], surface: str):
 
 
 def _author_run_execute(args: dict[str, Any], _: str):
+    independent_provenance = args.get("independent_provenance")
+    if independent_provenance is not None and not isinstance(independent_provenance, dict):
+        raise BridgeError("invalid_args", "independent_provenance must be an object when provided")
     return production_runtime().execute(
         require(args, "project_id"),
         require(args, "run_id"),
@@ -293,7 +278,7 @@ def _author_run_execute(args: dict[str, Any], _: str):
         reader_grip=require(args, "reader_grip"),
         rule_material=require(args, "rule_material", list),
         reader_visible_context=args.get("reader_visible_context") if isinstance(args.get("reader_visible_context"), list) else None,
-        independent_provenance=require(args, "independent_provenance", dict),
+        independent_provenance=independent_provenance,
         repair_preservation=args.get("repair_preservation") if isinstance(args.get("repair_preservation"), dict) else None,
     )
 
@@ -327,7 +312,10 @@ def _author_context_refresh(args: dict[str, Any], _: str):
 
 
 def _model_add(args: dict[str, Any], _: str):
-    return model_services().connect(require(args, "endpoint"), require(args, "access_token"))
+    access_token = args.get("access_token", "")
+    if not isinstance(access_token, str):
+        raise BridgeError("invalid_args", "access_token must be a string when provided")
+    return model_services().connect(require(args, "endpoint"), access_token)
 
 
 def _model_list(_: dict[str, Any], surface: str):
@@ -418,7 +406,7 @@ def _candidate_accept(args: dict[str, Any], _: str):
 
 
 def _settle(args: dict[str, Any], _: str):
-    return ops().settle(require(args, "project_id"), acceptance_id=require(args, "acceptance_id"), target_ref=require(args, "target_ref"), expected_before_fingerprint=require(args, "expected_before_fingerprint"), user_authorized=args.get("user_authorized") is True, idempotency_key=require(args, "idempotency_key"))
+    return ops().settle(require(args, "project_id"), acceptance_id=require(args, "acceptance_id"), target_ref=require(args, "target_ref"), expected_before_fingerprint=require(args, "expected_before_fingerprint"), user_authorized=args.get("user_authorized") is True, idempotency_key=require(args, "idempotency_key"), expected_preflight_fingerprint=args.get("expected_preflight_fingerprint"))
 
 
 def _feedback(args: dict[str, Any], _: str):
@@ -433,6 +421,96 @@ def _pub_build(args: dict[str, Any], _: str):
     return ops().publication_build(require(args, "project_id"), require(args, "acceptance_id"), args.get("format") or "md")
 
 
+def _pub_artifact(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").publication_artifact_get(require(args, "project_id"), build_id=require(args, "build_id"))
+
+
+def _pub_collection(args: dict[str, Any], _: str):
+    return ops().publication_collection_build(require(args, "project_id"), acceptance_ids=require(args, "acceptance_ids", list),
+        fmt=args.get("format") or "md", idempotency_key=require(args, "idempotency_key"), user_authorized=args.get("user_authorized") is True)
+
+
+def _chapter_list(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").chapter_list(require(args, "project_id"))
+
+
+def _chapter_create(args: dict[str, Any], _: str):
+    return ops().chapter_create(require(args, "project_id"), title=require(args, "title"), parent_id=args.get("parent_id"),
+        idempotency_key=require(args, "idempotency_key"), user_authorized=args.get("user_authorized") is True)
+
+
+def _plan_inspect(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").plan_inspect(require(args, "project_id"), target_ref=args.get("target_ref"))
+
+
+def _plan_save(args: dict[str, Any], _: str):
+    return ops().plan_save(require(args, "project_id"), target_ref=require(args, "target_ref"), title=require(args, "title"),
+        content=require(args, "content"), expected_version=require(args, "expected_version", int),
+        idempotency_key=require(args, "idempotency_key"), user_authorized=args.get("user_authorized") is True,
+        reader_intent=args.get("reader_intent"), expectation_refs=args.get("expectation_refs"))
+
+
+def _story_inspect(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").story_inspect(require(args, "project_id"))
+
+
+def _reader_inspect(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").reader_expectations_inspect(require(args, "project_id"), current_order=args.get("current_order"))
+
+
+def _reader_apply(args: dict[str, Any], _: str):
+    return ops().reader_expectations_apply(require(args, "project_id"), observation_id=require(args, "observation_id"),
+        acceptance_id=require(args, "acceptance_id"), authorized_by=require(args, "authorized_by"),
+        idempotency_key=require(args, "idempotency_key"), user_authorized=args.get("user_authorized") is True)
+
+
+def _learning_feedback_observe(args: dict[str, Any], _: str):
+    return ops().learning().observe(require(args, "project_id"), event_id=require(args, "event_id"),
+        feedback_text=require(args, "feedback_text"), evidence_kind=require(args, "evidence_kind"),
+        candidate_id=require(args, "candidate_id"), candidate_fingerprint=require(args, "candidate_fingerprint"),
+        document_id=require(args, "document_id"), run_id=require(args, "run_id"),
+        source_type=args.get("source_type") or "author", source_id=args.get("source_id") or "author")
+
+
+def _learning_feedback_get(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").learning().get_feedback(require(args, "project_id"), event_id=require(args, "event_id"))
+
+
+def _learning_feedback_list(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").learning().list_feedback(require(args, "project_id"), limit=args.get("limit") or 50)
+
+
+def _learning_feedback_execute(args: dict[str, Any], _: str):
+    return ops().learning().execute(require(args, "project_id"), event_id=require(args, "event_id"),
+        service_id=require(args, "service_id"), model_id=args.get("model_id"), runtime=agent_runtime())
+
+
+def _learning_preference_list(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").learning().list_preferences(require(args, "project_id"), limit=args.get("limit") or 100)
+
+
+def _learning_preference_get(args: dict[str, Any], surface: str):
+    return ops(read_only=surface == "agent_package").learning().get_preference(require(args, "project_id"), hypothesis_id=require(args, "hypothesis_id"))
+
+
+def _learning_preference_review(args: dict[str, Any], _: str):
+    return ops().learning().review(require(args, "project_id"), hypothesis_id=require(args, "hypothesis_id"),
+        expected_version=require(args, "expected_version", int), service_id=require(args, "service_id"),
+        model_id=args.get("model_id"), runtime=agent_runtime())
+
+
+def _learning_preference_activate(args: dict[str, Any], _: str):
+    return ops().learning().activate(require(args, "project_id"), hypothesis_id=require(args, "hypothesis_id"),
+        expected_version=require(args, "expected_version", int), authorized_by=require(args, "authorized_by"),
+        idempotency_key=require(args, "idempotency_key"), user_authorized=args.get("user_authorized") is True)
+
+
+def _learning_preference_deactivate(args: dict[str, Any], _: str):
+    return ops().learning().deactivate(require(args, "project_id"), hypothesis_id=require(args, "hypothesis_id"),
+        expected_version=require(args, "expected_version", int), authorized_by=require(args, "authorized_by"),
+        idempotency_key=require(args, "idempotency_key"), user_authorized=args.get("user_authorized") is True)
+
+
 def _context_projection(args: dict[str, Any], surface: str):
     return ContextRepository(store(read_only=surface == "agent_package")).inspector_projection(require(args, "project_id"), require(args, "run_id"))
 
@@ -444,6 +522,9 @@ def _fixed_list(table: str, order_by: str = "rowid DESC", limit_default: int = 1
         with store(read_only=surface == "agent_package").open_project(project_id) as conn:
             rows = [dict(row) for row in conn.execute(f"SELECT * FROM {table} ORDER BY {order_by} LIMIT ?", (limit,))]
         for row in rows:
+            if table == "checkpoints" and str(row.get("checkpoint_kind", "")).startswith("production_"):
+                # Raw manuscript and worker packets are never an inspector download.
+                row.pop("state_json", None)
             for key in list(row):
                 normalized = key.lower().replace("-", "_")
                 if normalized in _SECRET_REQUEST_KEYS or "credential" in normalized:
@@ -462,6 +543,13 @@ DISPATCH: dict[str, Callable[[dict[str, Any], str], dict[str, Any]]] = {
     "project.search": _project_search,
     "project.backup": _project_backup,
     "project.restore": _project_restore,
+    "chapter.list": _chapter_list,
+    "chapter.create": _chapter_create,
+    "plan.inspect": _plan_inspect,
+    "plan.save": _plan_save,
+    "story.inspect": _story_inspect,
+    "reader.expectations.inspect": _reader_inspect,
+    "reader.expectations.apply": _reader_apply,
     "document.create": _document_create,
     "document.list": _document_list,
     "document.open": _document_open,
@@ -497,6 +585,18 @@ DISPATCH: dict[str, Callable[[dict[str, Any], str], dict[str, Any]]] = {
     "feedback.observe": _feedback,
     "publication.preview": _pub_preview,
     "publication.build": _pub_build,
+    "publication.artifact.get": _pub_artifact,
+    "publication.collection.build": _pub_collection,
+    "learning.feedback.observe": _learning_feedback_observe,
+    "learning.feedback.get": _learning_feedback_get,
+    "learning.feedback.list": _learning_feedback_list,
+    "learning.feedback.execute": _learning_feedback_execute,
+    "learning.feedback.resume": _learning_feedback_execute,
+    "learning.preference.list": _learning_preference_list,
+    "learning.preference.get": _learning_preference_get,
+    "learning.preference.review": _learning_preference_review,
+    "learning.preference.activate": _learning_preference_activate,
+    "learning.preference.deactivate": _learning_preference_deactivate,
     "inspector.context.runtime": _context_projection,
     "inspector.sessions.list": _fixed_list("sessions", "updated_at DESC"),
     "inspector.runs.list": _fixed_list("runs", "updated_at DESC"),

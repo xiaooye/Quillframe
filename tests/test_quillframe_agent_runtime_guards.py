@@ -16,6 +16,7 @@ from model_runtime.transport import _NoRedirect
 class FakeModelRuntime:
     def __init__(self, turns: list[ModelTurn]) -> None:
         self.turns = list(turns)
+        self.timeouts = []
         stamp = now_iso()
         self.model = DiscoveredModel(
             "fixture-model",
@@ -29,7 +30,8 @@ class FakeModelRuntime:
     def select_model(self, service_id, requirements, *, preference=None, allow_probe=True):  # noqa: ANN001
         return self.model
 
-    def invoke(self, service_id, model_id, history, tools, *, max_output_tokens=2048):  # noqa: ANN001
+    def invoke(self, service_id, model_id, history, tools, *, max_output_tokens=2048, timeout_seconds=180.0):  # noqa: ANN001
+        self.timeouts.append(timeout_seconds)
         if not self.turns:
             raise AssertionError("fixture model invoked too many times")
         return self.turns.pop(0)
@@ -99,6 +101,28 @@ class SideEffectCheckpointTests(unittest.TestCase):
         self.assertEqual(result.status, "checkpoint_failed")
         self.assertEqual(result.errors[0]["code"], "checkpoint_required")
         self.assertFalse(executed["value"])
+
+    def test_model_request_deadline_uses_remaining_job_budget_and_discards_late_output(self):
+        model = FakeModelRuntime([ModelTurn('openai_chat_completions', 'fixture-model', text='late private result')])
+        with patch('agent_runtime.runner.time.monotonic', side_effect=[100.0, 101.0, 131.0]):
+            result = AgentRunner(model, ToolRuntime()).run(self._job())
+        self.assertEqual(model.timeouts, [29.0])
+        self.assertEqual(result.status, 'budget_exhausted')
+        self.assertEqual(result.final_text, '')
+        self.assertEqual(result.model_requests, 1)
+
+    def test_cancel_during_model_call_does_not_release_returned_text(self):
+        from agent_runtime.runner import CancellationToken
+        cancellation = CancellationToken()
+        model = FakeModelRuntime([ModelTurn('openai_chat_completions', 'fixture-model', text='unreleased text')])
+        original = model.invoke
+        def invoke(*args, **kwargs):
+            cancellation.cancel()
+            return original(*args, **kwargs)
+        model.invoke = invoke
+        result = AgentRunner(model, ToolRuntime()).run(self._job(), cancellation=cancellation)
+        self.assertEqual(result.status, 'cancelled')
+        self.assertEqual(result.final_text, '')
 
     def test_control_plane_hook_persists_before_after_and_consume_once(self):
         with tempfile.TemporaryDirectory() as td:

@@ -11,7 +11,7 @@ from model_runtime.routing import (
     preview_route,
 )
 from production_runtime.workflow import (
-    CHAPTER_SCOPE,
+    validate_chapter_id,
     WORKFLOW_STAGES,
     NovelWorkflowEngine,
     WorkflowError,
@@ -29,16 +29,23 @@ FP_B = "sha256:" + "b" * 64
 
 
 class NovelWorkflowEngineTests(unittest.TestCase):
-    def test_ch001_is_rejected_before_any_event_is_created(self):
+    def test_later_chapter_survives_workflow_snapshot(self):
+        engine = NovelWorkflowEngine.start(project_id="P", run_id="R", chapter_id="CH012")
+        snapshot = engine.snapshot()
+        self.assertEqual(snapshot["chapter_id"], "CH012")
+        restored = NovelWorkflowEngine.restore(snapshot)
+        self.assertEqual(restored.chapter_id, "CH012")
+
+    def test_unsafe_chapter_is_rejected_before_any_event_is_created(self):
         with self.assertRaises(WorkflowError) as blocked:
             NovelWorkflowEngine.start(
                 project_id="P",
                 run_id="R",
-                chapter_id="CH002",
+                chapter_id="../CH002",
                 author_profile="guided",
             )
-        self.assertEqual(blocked.exception.code, "chapter_scope_violation")
-        self.assertEqual(CHAPTER_SCOPE, "CH001")
+        self.assertEqual(blocked.exception.code, "invalid_chapter_id")
+        self.assertEqual(validate_chapter_id("CH002"), "CH002")
 
     def test_stage_order_is_exact_and_illegal_skip_fails_closed(self):
         engine = NovelWorkflowEngine.start(
@@ -296,17 +303,17 @@ class WorkflowTypeTests(unittest.TestCase):
         self.assertEqual(packet_a.to_dict(), packet_b.to_dict())
         self.assertEqual(packet_a.to_dict()["schema"], "quillframe_generation_packet_v1")
 
-    def test_typed_contracts_reject_ch002(self):
+    def test_typed_contracts_reject_unsafe_chapter_identifier(self):
         with self.assertRaises(WorkflowError) as blocked:
             SceneIntent(
                 project_id="P",
-                chapter_id="CH002",
+                chapter_id="../CH002",
                 scene_id="SC002",
                 purpose="out of scope",
                 desired_change="none",
                 constraints=(),
             )
-        self.assertEqual(blocked.exception.code, "chapter_scope_violation")
+        self.assertEqual(blocked.exception.code, "invalid_chapter_id")
 
 
 class ModelRoutingTests(unittest.TestCase):

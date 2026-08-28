@@ -457,7 +457,7 @@ class EphemeralChatHostTests(unittest.TestCase):
             packet_transfer.mkdir()
             (checkout / "project").mkdir()
             (checkout / "project" / "quillframe.toml").write_text(
-                'schema = "quillframe_project_v1_0"\nid = "PROJECT-TEMP"\ntitle = "Peer fixture"\nlanguage = "en"\nchapter_scope = "CH001"\n',
+                'schema = "quillframe_project_v1_0"\nid = "PROJECT-TEMP"\ntitle = "Peer fixture"\nlanguage = "en"\n',
                 encoding="utf-8",
             )
             packet_path = packet_transfer / "packet.json"

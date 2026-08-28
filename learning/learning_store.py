@@ -43,11 +43,15 @@ def digest(value: Any) -> str:
 
 
 class LearningStore:
-    def __init__(self, db_path: str | Path = DEFAULT_DB):
+    def __init__(self, db_path: str | Path = DEFAULT_DB, *, connection: sqlite3.Connection | None = None):
         self.db_path = Path(db_path)
+        self._connection = connection
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
+        if self._connection is not None:
+            yield self._connection
+            return
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(self.db_path, timeout=10, isolation_level=None)
         conn.row_factory = sqlite3.Row
@@ -58,6 +62,22 @@ class LearningStore:
             yield conn
         finally:
             conn.close()
+
+    @contextmanager
+    def transaction(self) -> Iterator[sqlite3.Connection]:
+        """Join a caller's Learning-DB transaction without committing it."""
+        with self.connect() as conn:
+            owned = not conn.in_transaction
+            if owned:
+                conn.execute("BEGIN IMMEDIATE")
+            try:
+                yield conn
+                if owned:
+                    conn.execute("COMMIT")
+            except BaseException:
+                if owned and conn.in_transaction:
+                    conn.execute("ROLLBACK")
+                raise
 
     def init(self) -> dict[str, Any]:
         with self.connect() as conn:
@@ -181,13 +201,11 @@ class LearningStore:
         payload = dict(evidence)
         payload["evidence_id"] = eid
         payload_hash = digest(payload)
-        with self.connect() as conn:
-            conn.execute("BEGIN IMMEDIATE")
+        with self.transaction() as conn:
             row = conn.execute(
                 "SELECT payload_hash FROM preference_evidence WHERE evidence_id=?", (eid,)
             ).fetchone()
             if row:
-                conn.execute("COMMIT")
                 if row["payload_hash"] != payload_hash:
                     raise ValueError("evidence_id conflict")
                 return {"evidence_id": eid, "duplicate": True, "payload_hash": payload_hash}
@@ -203,7 +221,6 @@ class LearningStore:
                     canonical_json(payload), payload_hash, now_iso(),
                 ),
             )
-            conn.execute("COMMIT")
         return {"evidence_id": eid, "duplicate": False, "payload_hash": payload_hash}
 
     def upsert_hypothesis(self, hypothesis: dict[str, Any], *, expected_version: int | None = None) -> dict[str, Any]:
@@ -223,15 +240,13 @@ class LearningStore:
         evidence_ids = list(dict.fromkeys(hypothesis.get("evidence_ids", [])))
         contradiction_ids = list(dict.fromkeys(hypothesis.get("contradiction_ids", [])))
         applicability = hypothesis.get("applicability", {})
-        with self.connect() as conn:
-            conn.execute("BEGIN IMMEDIATE")
+        with self.transaction() as conn:
             row = conn.execute(
                 "SELECT version FROM preference_hypotheses WHERE hypothesis_id=?", (hid,)
             ).fetchone()
             ts = now_iso()
             if row:
                 if expected_version is not None and row["version"] != expected_version:
-                    conn.execute("ROLLBACK")
                     raise ValueError("hypothesis version mismatch")
                 version = row["version"] + 1
                 conn.execute(
@@ -248,7 +263,6 @@ class LearningStore:
                 )
             else:
                 if expected_version not in (None, 0):
-                    conn.execute("ROLLBACK")
                     raise ValueError("nonzero expected_version for new hypothesis")
                 version = 1
                 conn.execute(
@@ -265,7 +279,6 @@ class LearningStore:
                         version, ts, ts,
                     ),
                 )
-            conn.execute("COMMIT")
         return {"hypothesis_id": hid, "version": version, "state": state, "confidence": confidence}
 
     def add_gap(self, gap: dict[str, Any]) -> dict[str, Any]:

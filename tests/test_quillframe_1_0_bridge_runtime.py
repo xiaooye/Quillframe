@@ -80,7 +80,7 @@ class BridgeV11RuntimeTests(unittest.TestCase):
         )
         self.assertEqual(replay["data"], cancelled["data"])
 
-    def test_ch002_start_fails_before_workflow_persistence(self):
+    def test_missing_chapter_start_fails_before_workflow_persistence(self):
         self.request("project.create", {"project_id": "P", "title": "Novel"})
         blocked = self.request(
             "author.run.start",
@@ -91,7 +91,7 @@ class BridgeV11RuntimeTests(unittest.TestCase):
             },
         )
         self.assertEqual(blocked["status"], "failed")
-        self.assertEqual(blocked["error"]["code"], "chapter_scope_violation")
+        self.assertEqual(blocked["error"]["code"], "chapter_not_found")
 
     def test_model_route_preview_invokes_no_provider_and_returns_v1_receipt(self):
         preview = self.request(
@@ -132,11 +132,11 @@ class BridgeV11RuntimeTests(unittest.TestCase):
 
     def test_production_executor_rejects_run_without_ch001_workflow_binding(self):
         store = QuillframeStore()
-        store.create_project("RAW", "Bypass attempt")
+        store.create_native_project("RAW", "Bypass attempt")
         run_id = CoreOperations(store).start_author_run(
             "RAW",
             task_mode="DRAFT",
-            target_ref="CH001",
+            target_ref="DOC-CH001",
             payload={"chapter_id": "CH001", "instruction": "bypass Host Bridge"},
         )["run_id"]
 

@@ -161,10 +161,12 @@ A consuming Project should be independently cloneable, self-describing, testable
 
 Project identity is anchored by:
 
-- `quillframe.toml` with exactly five native keys (`schema`, `id`, `title`, `language`, `chapter_scope`), plus CH001 context, manifest fingerprint, and `.quillframe/data`;
+- `quillframe.toml` with exactly four native keys (`schema`, `id`, `title`, `language`), plus context with top-level `scope: "novel"`, manifest fingerprint, and `.quillframe/data`;
 - explicit source/plan/derived/generated boundaries;
 - deterministic validation/build/tests;
 - reproducible Framework bundle verification when configured.
+
+`CH001` and `DOC-CH001` are the initial chapter and manuscript, not the whole novel's scope. Later chapter references must resolve to real Project chapters. An extra `chapter_scope` manifest key or incompatible development state is rejected without migration, repair or reseeding on open.
 
 Structural changes use `spec → plan → tasks → implementation → verification → acceptance` when the change warrants it. Ordinary prose micro-edits should not be wrapped in meaningless engineering ceremony.
 
@@ -180,7 +182,7 @@ Before-state mismatch or failed post-condition returns `settlement_incomplete`. 
 
 Normal CI is deterministic and must not silently spend API, Codex, Claude, or other model usage.
 
-CI should validate schemas, lifecycle boundaries, semantic contract catalog/packs, hidden-gold isolation, fingerprints, permissions, context/memory authority, session/control-plane invariants, Corpus rights/provenance, eval queues, native Project manifest/context/fingerprint/CH001/data-boundary contracts, Framework bundle reproducibility, and documentation integrity.
+CI should validate schemas, lifecycle boundaries, semantic contract catalog/packs, hidden-gold isolation, fingerprints, permissions, context/memory authority, session/control-plane invariants, Corpus rights/provenance, eval queues, native Project manifest/context/fingerprint/novel/data-boundary contracts and actual chapter relationships, Framework bundle reproducibility, and documentation integrity.
 
 Scheduled maintenance may observe, report, package, and queue work. A schedule or webhook does not grant story, Canon, taste, or Framework-promotion authority.
 

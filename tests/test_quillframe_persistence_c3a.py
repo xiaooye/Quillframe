@@ -32,7 +32,7 @@ class PersistenceC3ABundleTests(unittest.TestCase):
             members = {info.filename: archive.read(info) for info in archive.infolist()}
         manifest = json.loads(members["manifest.json"])
         manifest["project_schema"] = "quillframe_project_v1_0"
-        manifest["chapter_scope"] = "CH001"
+        manifest["scope"] = "novel"
         return members, manifest
 
     def _write_bundle(
@@ -94,7 +94,7 @@ class PersistenceC3ABundleTests(unittest.TestCase):
             {
                 "schema",
                 "project_schema",
-                "chapter_scope",
+                "scope",
                 "backup_id",
                 "project_id",
                 "created_at",
@@ -104,7 +104,7 @@ class PersistenceC3ABundleTests(unittest.TestCase):
         )
         self.assertEqual(manifest["schema"], "quillframe_backup_bundle_v1")
         self.assertEqual(manifest["project_schema"], "quillframe_project_v1_0")
-        self.assertEqual(manifest["chapter_scope"], "CH001")
+        self.assertEqual(manifest["scope"], "novel")
         self.assertIsInstance(manifest["backup_id"], str)
         self.assertIsInstance(manifest["project_id"], str)
         self.assertTrue(manifest["created_at"].endswith("+00:00"))

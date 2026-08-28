@@ -1,14 +1,15 @@
-"""Typed, resumable CH001 workflow state machine for Quillframe 1.0."""
+"""Typed, resumable chapter workflow state machine for Quillframe 1.0."""
 from __future__ import annotations
 
 import hashlib
 import json
+import re
 from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any
 
 
-CHAPTER_SCOPE = "CH001"
+CHAPTER_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}\Z")
 EVENT_SCHEMA = "quillframe_author_run_event_v1"
 BATCH_SCHEMA = "quillframe_author_run_event_batch_v1"
 SNAPSHOT_SCHEMA = "quillframe_novel_workflow_snapshot_v1"
@@ -38,6 +39,13 @@ class WorkflowError(RuntimeError):
     def __init__(self, code: str, message: str):
         super().__init__(message)
         self.code = code
+
+
+def validate_chapter_id(value: Any) -> str:
+    """Validate identifier syntax; Core must also prove chapter ownership."""
+    if not isinstance(value, str) or not CHAPTER_ID_PATTERN.fullmatch(value):
+        raise WorkflowError("invalid_chapter_id", "chapter_id must be a bounded native identifier")
+    return value
 
 
 def _now() -> str:
@@ -102,11 +110,7 @@ class NovelWorkflowEngine:
     ) -> None:
         self.project_id = _require_text(project_id, "project_id")
         self.run_id = _require_text(run_id, "run_id")
-        if chapter_id != CHAPTER_SCOPE:
-            raise WorkflowError(
-                "chapter_scope_violation",
-                f"Quillframe 1.0 acceptance is limited to {CHAPTER_SCOPE}",
-            )
+        validate_chapter_id(chapter_id)
         if author_profile not in {"guided", "expert"}:
             raise WorkflowError("invalid_workflow_input", "author_profile must be guided|expert")
         if stage not in WORKFLOW_STAGES:
@@ -133,11 +137,7 @@ class NovelWorkflowEngine:
         chapter_id: str,
         author_profile: str = "guided",
     ) -> "NovelWorkflowEngine":
-        if chapter_id != CHAPTER_SCOPE:
-            raise WorkflowError(
-                "chapter_scope_violation",
-                f"Quillframe 1.0 acceptance is limited to {CHAPTER_SCOPE}",
-            )
+        validate_chapter_id(chapter_id)
         engine = cls(
             project_id=project_id,
             run_id=run_id,

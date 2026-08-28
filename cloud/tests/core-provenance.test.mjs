@@ -35,7 +35,7 @@ function claims(bodySha256, overrides = {}) {
     workspace_id: "workspace_1",
     session_id: "session_1",
     project_id: "project_1",
-    chapter_scope: "CH001",
+    scope: "novel",
     issued_at: 1_800_000_000_000,
     expires_at: 1_800_000_030_000,
     nonce: "nonce_1",
@@ -49,8 +49,20 @@ test("canonicalBridgeBody rejects duplicate keys and non-canonical bytes", () =>
   assert.throws(() => canonicalBridgeBody('{"é":1}'), CoreProofError);
   assert.throws(() => canonicalJson({ value: Number.NaN }), CoreProofError);
   assert.throws(() => canonicalJson({ "é": 1 }), CoreProofError);
+  assert.throws(() => canonicalJson({ "中文": 1 }), CoreProofError);
   const body = canonicalJsonBytes({ b: 2, a: 1 });
   assert.deepEqual(canonicalBridgeBody(body), { bytes: body, value: { a: 1, b: 2 } });
+});
+
+test("canonical JSON preserves lexicographic integer keys and special object keys", () => {
+  const value = JSON.parse('{"2":"two","10":"ten","nested":{"__proto__":{"2":2,"10":10},"constructor":"text"}}');
+  const expected = '{"10":"ten","2":"two","nested":{"__proto__":{"10":10,"2":2},"constructor":"text"}}';
+  assert.equal(canonicalJson(value), expected);
+  const parsed = canonicalBridgeBody(expected).value;
+  assert.deepEqual(parsed, value);
+  assert.equal(Object.hasOwn(parsed.nested, "__proto__"), true);
+  assert.equal(Object.getPrototypeOf(parsed.nested), Object.prototype);
+  assert.throws(() => canonicalBridgeBody('{"2":2,"10":10}'), (error) => error.code === "body_not_canonical");
 });
 
 test("canonical serializer rejects unsupported and malformed values with typed errors", async () => {

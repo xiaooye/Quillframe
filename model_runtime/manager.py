@@ -31,6 +31,8 @@ class ModelServiceManager:
         existing = self.repository.find_service_by_endpoint(normalized)
         service_id = existing["service_id"] if existing else None
         old_ref = existing.get("credential_ref") if existing else None
+        if access_token == "" and old_ref:
+            return self.refresh(service_id)
         snapshot = self.runtime.connect(normalized, access_token, service_id=service_id)
         self.repository.save_snapshot(snapshot)
         if old_ref and old_ref != snapshot.credential_ref:

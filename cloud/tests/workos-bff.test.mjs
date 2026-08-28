@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 
 import { WorkOSClient } from "../dist/workos.js";
@@ -6,6 +7,7 @@ import { createWorker } from "../dist/index.js";
 import { MemoryBucket, MemoryState, keyBase64 } from "./helpers.mjs";
 import { SessionVault } from "../dist/session-vault.js";
 import { WorkspaceCoordinator } from "../dist/workspace-coordinator.js";
+import { canonicalJsonBytes } from "../dist/core-provenance.js";
 
 class Namespace {
   constructor(factory) { this.factory = factory; this.instances = new Map(); }
@@ -122,4 +124,193 @@ test("BFF requires origin, CSRF, and explicit upload headers for mutations", asy
   const response = await worker.fetch(new Request("https://studio.example/api/projects/p/upload", { method: "POST", headers: { Origin: "https://evil.example" }, body: "bundle" }), env);
   assert.equal(response.status, 403);
   assert.match(response.headers.get("content-security-policy"), /default-src 'none'/);
+});
+
+const studioIndexPath = new URL("../../studio/app/index.html", import.meta.url);
+const studioIndex = fs.readFileSync(studioIndexPath, "utf8");
+const hostedSlot = '<meta name="quillframe-studio-hosted-endpoint" content="" />';
+
+function envWithAssets(index = studioIndex) {
+  const requests = [];
+  const env = envWithWorkOS();
+  env.ASSETS = {
+    async fetch(request) {
+      requests.push(request);
+      if (new URL(request.url).pathname !== "/index.html" || index === null) return new Response(null, { status: 404 });
+      return new Response(index, { headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "public, max-age=86400",
+        "cdn-cache-control": "public, max-age=86400",
+        etag: '"unbound-index"',
+        "last-modified": "Thu, 01 Jan 2026 00:00:00 GMT",
+        "content-length": String(Buffer.byteLength(index)),
+        "set-cookie": "asset-cookie=forbidden",
+      } });
+    },
+  };
+  return { env, requests };
+}
+
+function assertNoStore(response) {
+  for (const header of ["cache-control", "cdn-cache-control", "cloudflare-cdn-cache-control"]) {
+    assert.equal(response.headers.get(header), "no-store", header);
+  }
+  assert.equal(response.headers.get("etag"), null);
+  assert.equal(response.headers.get("last-modified"), null);
+}
+
+test("hosted Studio binds only its trusted index to the configured origin without caching HTML", async () => {
+  const worker = createWorker();
+  assert.ok(studioIndex.includes(hostedSlot), "the real Studio template must keep an empty hosted slot");
+  for (const origin of ["https://studio.example", "https://writers.example:8443"]) {
+    const { env, requests } = envWithAssets();
+    env.PUBLIC_ORIGIN = origin;
+    for (const route of ["/", "/index.html", "/review?lang=zh&endpoint=https://evil.example"]) {
+      const response = await worker.fetch(new Request(`${origin}${route}`, { headers: {
+        Cookie: "__Host-qf_session=not-an-asset-credential",
+        Authorization: "not-an-asset-credential",
+        "if-none-match": '"unbound-index"',
+      } }), env);
+      assert.equal(response.status, 200, route);
+      assertNoStore(response);
+      assert.equal(response.headers.get("content-length"), null);
+      assert.equal(response.headers.get("set-cookie"), null);
+      assert.equal(await response.text(), studioIndex.replace(hostedSlot, hostedSlot.replace('content=""', `content="${origin}"`)));
+      const csp = response.headers.get("content-security-policy");
+      for (const kind of ["script", "style", "connect", "manifest"]) assert.match(csp, new RegExp(`${kind}-src 'self'(?:;|$)`));
+      assert.match(csp, /frame-ancestors 'none'/);
+      assert.doesNotMatch(csp, /unsafe-inline|unsafe-eval|\*/);
+    }
+    const head = await worker.fetch(new Request(`${origin}/review`, { method: "HEAD" }), env);
+    assert.equal(head.status, 200);
+    assertNoStore(head);
+    assert.equal(await head.text(), "");
+    for (const request of requests) {
+      assert.equal(new URL(request.url).search, "");
+      assert.equal(request.headers.get("cookie"), null);
+      assert.equal(request.headers.get("authorization"), null);
+      if (new URL(request.url).pathname === "/index.html") assert.equal(request.headers.get("if-none-match"), null);
+    }
+  }
+  assert.equal(fs.readFileSync(studioIndexPath, "utf8"), studioIndex, "the static/local template must remain unchanged");
+});
+
+test("hosted Studio fails closed for missing, pre-bound, or ambiguous index assets", async () => {
+  const worker = createWorker();
+  for (const index of [studioIndex.replace(hostedSlot, ""), studioIndex.replace(hostedSlot, `${hostedSlot}${hostedSlot}`), studioIndex.replace('content=""', 'content="https://evil.example"')]) {
+    const response = await worker.fetch(new Request("https://studio.example/"), envWithAssets(index).env);
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).code, "studio_shell_invalid");
+  }
+  const missing = await worker.fetch(new Request("https://studio.example/"), envWithAssets(null).env);
+  assert.equal(missing.status, 404);
+  assert.equal((await missing.json()).code, "not_found");
+  const { env } = envWithAssets();
+  env.ASSETS.fetch = async () => new Response(studioIndex, { headers: { "content-type": "text/plain" } });
+  const wrongType = await worker.fetch(new Request("https://studio.example/"), env);
+  assert.equal(wrongType.status, 503);
+  assert.equal((await wrongType.json()).code, "studio_shell_invalid");
+});
+
+test("hosted Studio checks its exact HTTPS origin and preserves the no-assets 404 boundary", async () => {
+  const worker = createWorker();
+  for (const configured of ["http://studio.example", "https://studio.example/", "https://studio.example/path", "https://user:password@studio.example", "not an origin"]) {
+    const { env, requests } = envWithAssets();
+    env.PUBLIC_ORIGIN = configured;
+    const requestOrigin = configured.startsWith("http:") ? "http://studio.example" : "https://studio.example";
+    const response = await worker.fetch(new Request(`${requestOrigin}/`), env);
+    assert.equal(response.status, 403, configured);
+    assert.equal(requests.length, 0);
+  }
+  const { env, requests } = envWithAssets();
+  const wrongHost = await worker.fetch(new Request("https://preview.example/"), env);
+  assert.equal(wrongHost.status, 403);
+  assert.equal(requests.length, 0);
+  for (const method of ["GET", "HEAD", "POST"]) {
+    const absent = await worker.fetch(new Request("https://studio.example/", { method, headers: { origin: env.PUBLIC_ORIGIN } }), envWithWorkOS());
+    assert.equal(absent.status, 404);
+  }
+});
+
+test("asset routing never handles API paths, failed sessions, or unsupported methods", async () => {
+  const worker = createWorker();
+  const { env, requests } = envWithAssets();
+  for (const [route, method, expected] of [["/api", "GET", 404], ["/api/unknown", "GET", 404], ["/%61pi/session", "GET", 404], ["/api%2Fsession", "GET", 404], ["/api/core/bridge", "HEAD", 404], ["/api/session", "GET", 401], ["/api/auth/logout", "POST", 401]]) {
+    const response = await worker.fetch(new Request(`${env.PUBLIC_ORIGIN}${route}`, { method, headers: { origin: env.PUBLIC_ORIGIN } }), env);
+    assert.equal(response.status, expected, route);
+    assertNoStore(response);
+    assert.match(response.headers.get("content-type"), /application\/json/);
+    assert.doesNotMatch(await response.text(), /<!doctype|<meta/i);
+  }
+  assert.equal(requests.length, 0);
+  const post = await worker.fetch(new Request(`${env.PUBLIC_ORIGIN}/review`, { method: "POST", headers: { origin: env.PUBLIC_ORIGIN } }), env);
+  assert.equal(post.status, 405);
+  assert.equal(post.headers.get("allow"), "GET, HEAD");
+  assert.equal(requests.length, 0);
+});
+
+test("static assets retain their bytes and cache policy without credentials or HTML rebinding", async () => {
+  const worker = createWorker();
+  const { env, requests } = envWithAssets();
+  const indexFetch = env.ASSETS.fetch;
+  env.ASSETS.fetch = async (request) => {
+    const pathname = new URL(request.url).pathname;
+    if (pathname === "/assets/app.js" || pathname === "/other.html") {
+      requests.push(request);
+      return new Response(request.method === "HEAD" ? null : pathname.endsWith(".js") ? "export const ready = true;" : studioIndex, { headers: {
+        "content-type": pathname.endsWith(".js") ? "text/javascript" : "text/html",
+        "cache-control": "public, max-age=31536000, immutable",
+        "set-cookie": "asset-cookie=forbidden",
+      } });
+    }
+    return indexFetch(request);
+  };
+  const js = await worker.fetch(new Request(`${env.PUBLIC_ORIGIN}/assets/app.js?token=not-an-asset-credential`, { headers: { Cookie: "session=private" } }), env);
+  assert.equal(await js.text(), "export const ready = true;");
+  assert.equal(js.headers.get("cache-control"), "public, max-age=31536000, immutable");
+  assert.equal(js.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(js.headers.get("set-cookie"), null);
+  assert.equal(requests[0].url, `${env.PUBLIC_ORIGIN}/assets/app.js`);
+  assert.equal(requests[0].headers.get("cookie"), null);
+  const head = await worker.fetch(new Request(`${env.PUBLIC_ORIGIN}/assets/app.js`, { method: "HEAD" }), env);
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+  const otherHtml = await worker.fetch(new Request(`${env.PUBLIC_ORIGIN}/other.html`), env);
+  assert.equal(await otherHtml.text(), studioIndex, "only the trusted /index.html is bound");
+  assert.match(otherHtml.headers.get("content-security-policy"), /default-src 'none'/);
+  assertNoStore(otherHtml);
+  for (const route of ["/assets/missing.js", "/assets/missing", "/.well-known/missing", "/missing.css"]) {
+    const missing = await worker.fetch(new Request(`${env.PUBLIC_ORIGIN}${route}`), env);
+    assert.equal(missing.status, 404, route);
+    assert.equal((await missing.json()).code, "not_found");
+  }
+});
+
+test("successful session and Core API responses cannot inherit asset or upstream caching", async () => {
+  const worker = createWorker();
+  const { env, requests } = envWithAssets();
+  const begin = await worker.fetch(new Request(`${env.PUBLIC_ORIGIN}/api/auth/authorize`), env);
+  assertNoStore(begin);
+  const authCookie = begin.headers.get("set-cookie").split(";", 1)[0];
+  const state = new URL(begin.headers.get("location")).searchParams.get("state");
+  const callback = await worker.fetch(new Request(`${env.PUBLIC_ORIGIN}/api/auth/callback?code=code_1&state=${encodeURIComponent(state)}`, { headers: { cookie: authCookie } }), env);
+  assertNoStore(callback);
+  const cookies = callback.headers.getSetCookie().map((value) => value.split(";", 1)[0]);
+  const cookieHeader = cookies.join("; ");
+  const csrf = cookies.find((value) => value.startsWith("__Host-qf_csrf=")).slice("__Host-qf_csrf=".length);
+  const session = await worker.fetch(new Request(`${env.PUBLIC_ORIGIN}/api/session`, { headers: { cookie: cookieHeader } }), env);
+  assert.equal(session.status, 200);
+  assertNoStore(session);
+  env.CORE_PROOF_KEY_ID = "current";
+  env.CORE_PROOF_KEY_B64 = Buffer.alloc(32, 13).toString("base64url");
+  env.CORE_CONTAINER = { getByName: () => ({ fetch: async () => Response.json({ schema: "core", authority: false }, { headers: {
+    "cache-control": "public, max-age=86400", "cdn-cache-control": "public, max-age=86400", etag: '"private-core-result"',
+  } }) }) };
+  const body = canonicalJsonBytes({ schema: "quillframe_host_bridge_request_v11", bridge_version: "11", request_id: "asset_api_test", operation: "model.service.list", args: {}, surface: "hosted_web", authority: false });
+  const core = await worker.fetch(new Request(`${env.PUBLIC_ORIGIN}/api/core/bridge`, { method: "POST", headers: {
+    cookie: cookieHeader, origin: env.PUBLIC_ORIGIN, "x-qf-csrf": csrf, "content-type": "application/json", "content-length": String(body.byteLength),
+  }, body }), env);
+  assert.equal(core.status, 200, await core.clone().text());
+  assertNoStore(core);
+  assert.equal(requests.length, 0);
 });

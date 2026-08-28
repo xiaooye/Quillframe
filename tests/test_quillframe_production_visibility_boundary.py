@@ -16,7 +16,10 @@ class ProductionVisibilityBoundaryTests(unittest.TestCase):
         self.store = QuillframeStore(Path(self.temp.name))
         self.ops = CoreOperations(self.store)
         self.store.create_project("P", "Project P", "zh-CN")
-        self.store.create_document("P", "DOC", "Chapter")
+        with self.store.open_project("P") as conn:
+            conn.execute("INSERT INTO story_nodes(node_id,kind,ordinal,title,metadata_json) VALUES('CH001','chapter',1,'Chapter','{}')")
+            conn.commit()
+        self.store.create_document("P", "DOC", "Chapter", story_node_id="CH001")
         revision = self.store.save_revision(
             "P",
             "DOC",

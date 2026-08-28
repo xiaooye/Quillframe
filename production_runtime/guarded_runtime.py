@@ -6,7 +6,7 @@ from typing import Any
 
 from .contracts import ProductionRunError
 from .runtime import ProductionRunExecutor as _ProductionRunExecutor
-from .workflow import CHAPTER_SCOPE, WorkflowError
+from .workflow import WorkflowError, validate_chapter_id
 from .workflow_service import NovelWorkflowService
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -54,14 +54,19 @@ class ProductionRunExecutor(_ProductionRunExecutor):
         except WorkflowError as exc:
             raise ProductionRunError(
                 "workflow_scope_required",
-                "production execution requires a durable Quillframe 1.0 CH001 workflow binding",
+                "production execution requires a durable native novel workflow binding",
             ) from exc
-        if workflow.chapter_id != CHAPTER_SCOPE:
+        run = self._run_row(project_id, run_id)
+        try:
+            validate_chapter_id(workflow.chapter_id)
+        except WorkflowError as exc:
+            raise ProductionRunError("target_context_invalid", str(exc)) from exc
+        if workflow.chapter_id != run["target_context"]["chapter_id"]:
             raise ProductionRunError(
-                "chapter_scope_violation",
-                f"production execution is limited to {CHAPTER_SCOPE}",
+                "workflow_target_mismatch",
+                "workflow chapter differs from the Core-frozen author request",
             )
-        if workflow.status in {"cancelled", "completed", "failed"}:
+        if workflow.status in {"cancelled", "failed"} or (workflow.status == "completed" and run["status"] != "completed"):
             raise ProductionRunError(
                 "workflow_not_executable",
                 f"workflow status is {workflow.status}",

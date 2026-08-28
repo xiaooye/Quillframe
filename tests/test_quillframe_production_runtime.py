@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from agent_runtime import AgentJob, AgentResult
-from core_operations import CoreOperations
+from core_operations import CoreOperations, OperationError
 from harness.context_runtime import MANDATORY_PRODUCTION_MECHANISMS, fingerprint
 from harness.semantic_workers.independent_invocation_receipt import (
     build_receipt as build_native_receipt,
@@ -21,6 +21,7 @@ from harness.semantic_workers.independent_invocation_receipt import (
 from persistence.independent_review_repository import IndependentReviewError, IndependentReviewRepository
 from persistence.quillframe_sqlite import QuillframeStore, now_iso
 from production_runtime import PRODUCTION_MECHANISMS, ProductionRunError, ProductionRunExecutor
+from production_runtime.context import ProductionContextRuntime
 from production_runtime.workflow_service import NovelWorkflowService
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -110,6 +111,33 @@ class FakeAgentRuntime:
                     for index, row in enumerate(eligible)
                 ]
             payload = {"selections": selections}
+        elif role == "character_state_prepare":
+            payload = {"status": "pass", "characters": [], "summary": "No synthetic cast needed.", "findings": []}
+        elif role == "registered_character_action":
+            source = job.context[0]["registered_semantic_job"]["input"]["payload"]
+            payload = {"confidence": 1.0, "character_id": source["character_id"], "active_agenda": source["active_agenda"],
+                       "proposals": [{"action": "A requests the disputed document.", "knowledge_basis": []}]}
+        elif role == "registered_scene_resolution":
+            payload = {"confidence": 1.0, "interaction_trace": "A requests the document; the clerk delays.",
+                       "observable_trajectory": "The unanswered request remains on the desk.",
+                       "unresolved_pressures": ["The requested document remains withheld."],
+                       "repair_routes": [{"owner": "scene", "reason": "fixture rejection"}] if self.reject_mechanism == "scene_simulation" else []}
+        elif role == "registered_scene_projection":
+            source = job.context[0]["registered_semantic_job"]["input"]["payload"]
+            payload = {"confidence": 1.0, "scene_id": source["scene_id"],
+                       "interaction_trace": "A requests the document; the clerk delays.",
+                       "writer_context": "Show the refused request and its observable cost.",
+                       "observable_event_refs": [], "unresolved_pressures": ["The document is withheld."]}
+        elif role == "registered_reader_pressure":
+            source = job.context[0]["registered_semantic_job"]["input"]["payload"]
+            payload = {"confidence": 1.0, "status": "pass", "summary": "The refused request has a cost.",
+                       "pressure_points": [{"question": "Will the request succeed?", "expected_reward": "An answer to the request.",
+                                            "delay_cost": "The meeting ends.", "evidence_refs": [source["sources"][0]["source_ref"]]}],
+                       "proposed_net_change": "The request acquires a deadline.", "next_chapter_pull": "A decision remains."}
+        elif role == "registered_reader_expectations":
+            payload = {"confidence": 1.0, "expectation_updates": []}
+        elif role == "registered_narrative_state":
+            payload = {"confidence": 1.0, "changes": []}
         elif role == "registered_reader_engagement":
             payload = {
                 "confidence": 1.0,
@@ -168,6 +196,95 @@ class FakeAgentRuntime:
             steps=1,
             model_requests=1,
         )
+
+
+class PreparedCastFixtureRuntime(FakeAgentRuntime):
+    """Exercise a nonempty producer/consumer boundary without a real model."""
+
+    def __init__(self, *, malformed=False):
+        super().__init__()
+        self.malformed = malformed
+        self.preparation = None
+
+    def run(self, job: AgentJob, *, cancellation=None) -> AgentResult:
+        result = super().run(job, cancellation=cancellation)
+        if job.runtime_role == "character_state_prepare":
+            order = job.context[0]["target_context"]["current_story_order"]
+            character = {
+                "character_id": "CHAR-PROPOSED", "current_story_order": order, "active_agenda": "obtain the record",
+                "perceived_state": {"summary": "The record is withheld."},
+                "immediate_situation": {"observables": [
+                    {"observable_id": "OBS-NOW", "observation": "The drawer is closed.", "source_ref": "fixture:drawer", "available_from_story_order": order},
+                    {"observable_id": "OBS-FUTURE", "observation": "UNAVAILABLE FUTURE OBSERVATION", "source_ref": "fixture:future", "available_from_story_order": order + 1},
+                ]},
+                "perspective_memory": {
+                    "episodic_visible_events": [], "situation_patterns": [],
+                    "visibility_tagged_facts": [{"fact_id": "FACT-OWN", "claim": "PRIVATE INITIAL MEMORY: I saw the clerk pocket the drawer key.", "source_ref": "fixture:firsthand-witness", "available_from_story_order": order}],
+                },
+            }
+            if self.malformed:
+                character["perceived_state"]["observables"] = character["immediate_situation"].pop("observables")
+                character["perspective_memory"]["facts"] = character["perspective_memory"].pop("visibility_tagged_facts")
+            self.preparation = {"status": "pass", "characters": [character], "summary": "Synthetic cast proposal.", "findings": []}
+            result.final_text = json.dumps(self.preparation)
+        elif job.runtime_role == "registered_character_action":
+            judgment = json.loads(result.final_text)
+            judgment["proposals"][0]["knowledge_basis"] = [
+                {"evidence_id": evidence_id, "use": "supports"} for evidence_id in job.context[0]["eligible_evidence_ids"]
+            ]
+            result.final_text = json.dumps(judgment)
+        return result
+
+
+class FinalStateFixtureRuntime(FakeAgentRuntime):
+    """Nonempty typed state fixtures, never evidence of model quality."""
+
+    def __init__(self, *, narrative=True, reader_operation="open", candidate_text=PRE_RELEASE_MANUSCRIPT,
+                 invalid_quote=False):
+        super().__init__()
+        self.narrative = narrative
+        self.reader_operation = reader_operation
+        self.candidate_text = candidate_text
+        self.invalid_quote = invalid_quote
+
+    def run(self, job: AgentJob, *, cancellation=None) -> AgentResult:
+        result = super().run(job, cancellation=cancellation)
+        if job.runtime_role == "surface_realization":
+            judgment = json.loads(result.final_text)
+            judgment["text"] = self.candidate_text
+            result.final_text = json.dumps(judgment)
+        if job.runtime_role not in {"registered_reader_expectations", "registered_narrative_state"}:
+            return result
+        source = job.context[0]["registered_semantic_job"]["input"]["payload"]
+        quote = "unwritten future payoff" if self.invalid_quote else source["candidate_text"][:12]
+        if job.runtime_role == "registered_reader_expectations":
+            existing = source["existing_expectations"]
+            prior = existing[0] if existing and self.reader_operation != "open" else None
+            update = {"operation": self.reader_operation, "expectation_id": prior["expectation_id"] if prior else "local:question",
+                      "expected_version": prior["version"] if prior else 0, "kind": "question",
+                      "description": "Synthetic unresolved request.", "detail": "Fixture final-text observation.",
+                      "evidence_ref": "candidate:" + source["candidate_fingerprint"], "evidence_quote": quote}
+            if self.reader_operation == "open":
+                update["due_by_order"] = source["current_reading_order"] + 2
+            result.final_text = json.dumps({"confidence": 1.0, "expectation_updates": [update]})
+        elif self.narrative:
+            changes = [
+                {"entity_type": "character", "entity_ref": "CHAR-A", "fields": {
+                    "name": "A", "agenda": "seek a reply", "voice_notes": "precise", "state": {"perceived_state": {"location": "gate"}}}},
+                {"entity_type": "character", "entity_ref": "local:visitor", "fields": {
+                    "name": "Fixture visitor", "agenda": "seek entry", "voice_notes": "plain", "state": {}}},
+                {"entity_type": "relationship", "entity_ref": "local:meeting", "fields": {
+                    "participant_a": "CHAR-A", "participant_b": "local:visitor", "relationship_type": "met", "state": {"public": True}}},
+                {"entity_type": "world", "entity_ref": "local:gate", "fields": {
+                    "entity_type": "fixture_gate", "name": "Gate", "truth": {"open": False}}},
+                {"entity_type": "timeline", "entity_ref": "local:arrival", "fields": {
+                    "story_order": source["current_story_order"], "title": "Arrival", "description": "Fixture arrival at the gate."}},
+                {"entity_type": "knowledge", "entity_ref": "local:visible_gate", "fields": {
+                    "character_id": "local:visitor", "fact": {"gate_visible": True},
+                    "available_from_story_order": source["current_story_order"], "confidence": "observed"}},
+            ]
+            result.final_text = json.dumps({"confidence": 1.0, "changes": [{**item, "evidence_quote": quote} for item in changes]})
+        return result
 
 
 class ManualClock:
@@ -271,7 +388,10 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.store = QuillframeStore(Path(self.temp.name))
         self.store.create_project("PROD", "Production Fixture")
-        self.store.create_document("PROD", "DOC-1", "Chapter")
+        with self.store.open_project("PROD") as conn:
+            conn.execute("INSERT INTO story_nodes(node_id,kind,ordinal,title,metadata_json) VALUES('CH001','chapter',1,'Chapter','{}')")
+            conn.commit()
+        self.store.create_document("PROD", "DOC-1", "Chapter", story_node_id="CH001")
         self.store.save_revision("PROD", "DOC-1", "seed", expected_parent_revision_id=None, source="test")
         stamp = now_iso()
         with self.store.open_project("PROD") as conn:
@@ -296,17 +416,20 @@ class ProductionRuntimeTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
-    def start(self) -> str:
+    def start(self, *, chapter_id="CH001", document_id="DOC-1", selected_preference_ids=None) -> str:
+        payload = {"instruction": "draft chapter", "chapter_id": chapter_id}
+        if selected_preference_ids is not None:
+            payload["selected_preference_ids"] = selected_preference_ids
         run_id = CoreOperations(self.store).start_author_run(
             "PROD",
             task_mode="DRAFT",
-            target_ref="DOC-1",
-            payload={"instruction": "draft chapter", "chapter_id": "CH001"},
+            target_ref=document_id,
+            payload=payload,
         )["run_id"]
         NovelWorkflowService(self.store).start(
             project_id="PROD",
             run_id=run_id,
-            chapter_id="CH001",
+            chapter_id=chapter_id,
             author_profile="guided",
         )
         return run_id
@@ -390,17 +513,17 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.assertNotIn("self.store", source)
 
     def test_character_simulation_excludes_research_but_keeps_character_knowledge(self):
-        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
-        bundle = runtime.prepare_context("PROD", self.start(), service_id="svc", instruction="draft")
-        character = runtime.materialize_stage_context(bundle, "character_simulation")
-        draft = runtime.materialize_stage_context(bundle, "event_first_raw_draft")
+        context_runtime = ProductionContextRuntime(self.store, FakeAgentRuntime())
+        bundle = context_runtime.prepare_context("PROD", self.start(), service_id="svc", instruction="draft")
+        character = ProductionRunExecutor.materialize_stage_context(bundle, "character_simulation")
+        draft = ProductionRunExecutor.materialize_stage_context(bundle, "event_first_raw_draft")
         self.assertIn("character_knowledge", {row["domain"] for row in character["items"]})
         self.assertNotIn("research", {row["domain"] for row in character["items"]})
         self.assertIn("research", {row["domain"] for row in draft["items"]})
         self.assertFalse(character["db_fetch_performed"])
 
     def test_invalid_selector_id_is_rejected_not_guessed(self):
-        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime(invalid_selector=True))
+        runtime = ProductionContextRuntime(self.store, FakeAgentRuntime(invalid_selector=True))
         with self.assertRaises(ProductionRunError) as caught:
             runtime.prepare_context("PROD", self.start(), service_id="svc", instruction="draft")
         self.assertEqual(caught.exception.code, "semantic_invalid")
@@ -409,7 +532,7 @@ class ProductionRuntimeTests(unittest.TestCase):
         fake = FakeAgentRuntime()
         runtime = ProductionRunExecutor(self.store, fake)
         run_id = self.start()
-        runtime.prepare_context("PROD", run_id, service_id="svc", instruction="draft")
+        ProductionContextRuntime(self.store, fake).prepare_context("PROD", run_id, service_id="svc", instruction="draft")
         fake.calls.clear()
         with self.store.open_project("PROD") as conn:
             conn.execute("UPDATE characters SET agenda=?,updated_at=? WHERE character_id='CHAR-A'", ("changed", now_iso()))
@@ -423,7 +546,7 @@ class ProductionRuntimeTests(unittest.TestCase):
         fake = FakeAgentRuntime()
         runtime = ProductionRunExecutor(self.store, fake)
         run_id = self.start()
-        runtime.prepare_context("PROD", run_id, service_id="svc", instruction="draft")
+        ProductionContextRuntime(self.store, fake).prepare_context("PROD", run_id, service_id="svc", instruction="draft")
         fake.calls.clear()
         with self.store.open_project("PROD") as conn:
             conn.execute(
@@ -436,23 +559,35 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.assertTrue(result["validation"].get("source_universe_changed"))
         self.assertEqual(fake.calls, [])
 
-    def test_explicit_refresh_supersedes_old_bundle_with_new_fingerprint(self):
-        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+    def test_explicit_refresh_requires_fresh_budgeted_run(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
         run_id = self.start()
-        old = runtime.prepare_context("PROD", run_id, service_id="svc", instruction="draft")
+        self.execute_to_handoff(runtime, run_id)
+        calls = len(fake.calls)
         with self.store.open_project("PROD") as conn:
             conn.execute("UPDATE characters SET agenda=?,updated_at=? WHERE character_id='CHAR-A'", ("changed", now_iso()))
             conn.commit()
-        new = runtime.refresh_context(
-            "PROD",
-            run_id,
-            service_id="svc",
-            instruction="draft",
-            reason="user_requested_refresh",
-        )
-        self.assertNotEqual(old["bundle_fingerprint"], new["bundle_fingerprint"])
-        self.assertNotEqual(old["freeze"]["freeze_fingerprint"], new["freeze"]["freeze_fingerprint"])
-        self.assertEqual(new["supersedes_bundle_fingerprint"], old["bundle_fingerprint"])
+        with self.assertRaises(ProductionRunError) as caught:
+            runtime.refresh_context("PROD", run_id, service_id="svc", instruction="draft", reason="user_requested_refresh")
+        self.assertEqual(caught.exception.code, "fresh_run_required")
+        self.assertEqual(len(fake.calls), calls)
+
+    def test_unleased_context_and_direct_model_calls_cannot_bypass_budget(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        with self.assertRaises(ProductionRunError) as context_error:
+            runtime.prepare_context("PROD", run_id, service_id="svc", instruction="draft")
+        self.assertEqual("execution_lease_required", context_error.exception.code)
+        job = AgentJob(job_id="UNLEASED", session_id="fixture", run_id=run_id, task_mode="DRAFT",
+                       runtime_role="surface_realization", service_id="svc", instruction="fixture")
+        with self.assertRaises(ProductionRunError) as direct_error:
+            runtime._invoke_agent(job)
+        self.assertEqual("execution_lease_required", direct_error.exception.code)
+        self.assertEqual([], fake.calls)
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM checkpoints WHERE checkpoint_kind='production_context_bundle'").fetchone()[0])
 
     def test_mutation_after_handoff_blocks_independent_submission(self):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
@@ -502,6 +637,582 @@ class ProductionRuntimeTests(unittest.TestCase):
         with self.store.open_project("PROD") as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0], 1)
 
+    def test_missing_core_target_checkpoint_never_invokes_model(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        with self.store.open_project("PROD") as conn:
+            conn.execute("DELETE FROM checkpoints WHERE run_id=? AND checkpoint_kind='author_run_request'", (run_id,))
+            conn.commit()
+        with self.assertRaises(ProductionRunError) as caught:
+            self.execute_to_handoff(runtime, run_id)
+        self.assertEqual(caught.exception.code, "target_context_missing")
+        self.assertEqual(fake.calls, [])
+
+    def test_confirmed_stage_response_is_reused_after_checkpoint_failure(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        original = runtime._persist_stage_receipt
+
+        def fail_once(project_id, current_run, receipt, **kwargs):
+            if receipt["mechanism"] == "event_first_raw_draft":
+                raise OSError("synthetic process failure after confirmed model response")
+            return original(project_id, current_run, receipt, **kwargs)
+
+        with patch.object(runtime, "_persist_stage_receipt", side_effect=fail_once):
+            with self.assertRaises(OSError):
+                self.execute_to_handoff(runtime, run_id)
+        resumed = ProductionRunExecutor(self.store, fake).resume_execution("PROD", run_id)
+        self.assertEqual(resumed["status"], "awaiting_external")
+        inputs = [job.input_fingerprint for job in fake.calls]
+        self.assertEqual(len(inputs), len(set(inputs)))
+        self.assertEqual(sum(job.runtime_role == "event_first_raw_draft" for job in fake.calls), 1)
+        journal = runtime.status("PROD", run_id)["execution_journal"]
+        self.assertEqual(journal["confirmed_call_count"], len(fake.calls))
+        self.assertEqual(journal["unconfirmed_call_ids"], [])
+        assert_public_execution_safe(self, journal)
+
+    def test_unknown_model_outcome_is_not_automatically_retried(self):
+        class LostResponse(FakeAgentRuntime):
+            def run(self, job, *, cancellation=None):
+                if job.runtime_role == "event_first_raw_draft":
+                    self.calls.append(job)
+                    raise OSError("synthetic disconnected model response")
+                return super().run(job, cancellation=cancellation)
+
+        fake = LostResponse()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        result = self.execute_to_handoff(runtime, run_id)
+        self.assertEqual(result["status"], "semantic_pending")
+        self.assertFalse(result["automatic_model_retry"])
+        calls = len(fake.calls)
+        resumed = ProductionRunExecutor(self.store, fake).resume_execution("PROD", run_id)
+        self.assertEqual(resumed["awaiting"], "stage_result_confirmation")
+        self.assertEqual(len(fake.calls), calls)
+        self.assertEqual(len(resumed["execution_journal"]["unconfirmed_call_ids"]), 1)
+        assert_public_execution_safe(self, resumed)
+
+    def test_cancelled_run_rejects_a_late_model_response(self):
+        run_id = self.start()
+
+        class CancelDuringCall(FakeAgentRuntime):
+            def run(inner, job, *, cancellation=None):
+                result = super().run(job, cancellation=cancellation)
+                if job.runtime_role == "event_first_raw_draft":
+                    runtime.cancel_execution("PROD", run_id, user_authorized=True)
+                return result
+
+        fake = CancelDuringCall()
+        runtime = ProductionRunExecutor(self.store, fake)
+        result = self.execute_to_handoff(runtime, run_id)
+        self.assertEqual(result["status"], "cancelled")
+        journal = runtime.status("PROD", run_id)["execution_journal"]
+        raw = [row for row in journal["calls"] if row["runtime_role"] == "event_first_raw_draft"]
+        self.assertEqual([row["state"] for row in raw], ["cancelled"])
+        self.assertTrue(all(row["result_fingerprint"] is None for row in raw))
+        self.assertFalse(any(job.runtime_role == "surface_realization" for job in fake.calls))
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0], 0)
+
+    def test_total_model_budget_includes_profile_derivation(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        result = runtime.execute("PROD", run_id, service_id="svc", instruction="draft chapter", reader_grip="very_high",
+                                 rule_material=RULE_MATERIAL, max_model_calls=2)
+        self.assertEqual(result["status"], "budget_exhausted")
+        self.assertEqual([job.runtime_role for job in fake.calls], ["context_profile_deriver", "context_profile_deriver"])
+        self.assertEqual(result["execution_journal"]["dispatched_call_count"], 2)
+        replay = runtime.resume_execution("PROD", run_id)
+        self.assertEqual(replay["status"], "budget_exhausted")
+        self.assertEqual(len(fake.calls), 2)
+
+    def test_resume_rejects_changed_model_or_generation_request(self):
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        run_id = self.start()
+        self.execute_to_handoff(runtime, run_id)
+        with self.assertRaises(ProductionRunError) as caught:
+            runtime.execute("PROD", run_id, service_id="different", instruction="draft chapter", reader_grip="very_high", rule_material=RULE_MATERIAL)
+        self.assertEqual(caught.exception.code, "execution_request_conflict")
+
+    def test_writer_uses_causal_outputs_without_private_character_state(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        self.execute_to_handoff(runtime, run_id)
+        action = next(job for job in fake.calls if job.runtime_role == "registered_character_action")
+        scene = next(job for job in fake.calls if job.runtime_role == "registered_scene_resolution")
+        projection = next(job for job in fake.calls if job.runtime_role == "registered_scene_projection")
+        action_job = action.context[0]["registered_semantic_job"]
+        scene_evidence = scene.context[0]["registered_semantic_job"]["input"]["payload"]["character_action_evidence"]
+        self.assertEqual(action_job["input"]["payload"], scene_evidence[0]["bounded_input"])
+        self.assertEqual(action_job["input_fingerprint"], scene_evidence[0]["input_fingerprint"])
+        self.assertFalse(scene_evidence[0]["input_is_proposed_cast"])
+        self.assertFalse(scene_evidence[0]["authority"])
+        self.assertEqual(scene_evidence, projection.context[0]["registered_semantic_job"]["input"]["payload"]["character_action_evidence"])
+        with self.store.open_project("PROD") as conn:
+            receipts = [json.loads(row[0]) for row in conn.execute(
+                "SELECT payload_json FROM receipts WHERE run_id=? AND receipt_kind='production_stage'", (run_id,))]
+        character_receipt = next(row for row in receipts if row["mechanism"] == "character_simulation")
+        self.assertEqual(character_receipt["registered_contracts"][0]["result_fingerprint"], scene_evidence[0]["result_fingerprint"])
+        draft = next(job for job in fake.calls if job.runtime_role == "event_first_raw_draft")
+        action_text = json.dumps(action.context)
+        draft_text = json.dumps(draft.context)
+        self.assertIn("private knowledge", action_text)
+        self.assertIn("private knowledge", json.dumps(scene_evidence))
+        for role in ("registered_reader_pressure", "event_first_raw_draft", "surface_realization", "registered_reader_engagement"):
+            context_text = json.dumps(next(job for job in fake.calls if job.runtime_role == role).context)
+            self.assertNotIn("bounded_input", context_text)
+            self.assertNotIn("private knowledge", context_text)
+            self.assertNotIn("protect the deal", context_text)
+        self.assertIn("writer_projection", draft_text)
+        self.assertIn("expected_reward", draft_text)
+        reader = next(job for job in fake.calls if job.runtime_role == "registered_reader_engagement")
+        self.assertNotIn("frozen_stage_context", json.dumps(reader.context))
+        self.assertNotIn("protect the deal", json.dumps(reader.context))
+
+    def test_new_cast_nonempty_evidence_flows_through_registered_action_and_budget(self):
+        with self.store.open_project("PROD") as conn:
+            conn.execute("DELETE FROM character_knowledge")
+            conn.execute("DELETE FROM characters")
+            conn.commit()
+        fake = PreparedCastFixtureRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        self.assertEqual("awaiting_external", self.execute_to_handoff(runtime, run_id)["status"])
+        preparation = next(job for job in fake.calls if job.runtime_role == "character_state_prepare")
+        self.assertIn("output_contract", preparation.context[0])
+        action = next(job for job in fake.calls if job.runtime_role == "registered_character_action")
+        self.assertEqual(["OBS-NOW", "FACT-OWN"], action.context[0]["eligible_evidence_ids"])
+        self.assertNotIn("UNAVAILABLE FUTURE OBSERVATION", json.dumps(action.context))
+        scene = next(job for job in fake.calls if job.runtime_role == "registered_scene_resolution")
+        evidence = scene.context[0]["registered_semantic_job"]["input"]["payload"]["character_action_evidence"][0]
+        self.assertEqual(action.context[0]["registered_semantic_job"]["input"]["payload"], evidence["bounded_input"])
+        self.assertTrue(evidence["input_is_proposed_cast"])
+        self.assertFalse(evidence["authority"])
+        self.assertIn("fixture:firsthand-witness", json.dumps(evidence))
+        self.assertNotIn("UNAVAILABLE FUTURE OBSERVATION", json.dumps(scene.context))
+        for role in ("event_first_raw_draft", "surface_realization", "registered_reader_engagement"):
+            context_text = json.dumps(next(job for job in fake.calls if job.runtime_role == role).context)
+            self.assertNotIn("PRIVATE INITIAL MEMORY", context_text)
+            self.assertNotIn("fixture:firsthand-witness", context_text)
+        journal = runtime.status("PROD", run_id)["execution_journal"]
+        self.assertEqual(len(fake.calls), journal["confirmed_call_count"])
+        self.assertEqual([], journal["unconfirmed_call_ids"])
+        with self.store.open_project("PROD") as conn:
+            stored = json.loads(conn.execute("SELECT result_json FROM production_stage_calls WHERE run_id=? AND runtime_role='character_state_prepare'", (run_id,)).fetchone()[0])
+            self.assertEqual(fake.preparation, json.loads(stored["final_text"]))
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM characters").fetchone()[0])
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM character_knowledge").fetchone()[0])
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM canon_claims").fetchone()[0])
+
+    def test_scene_blocking_repair_does_not_force_plan_success_or_start_writer(self):
+        refusal = "A refuses to surrender the record without the missing owner's permission."
+        blocker = "The planned transfer cannot occur within the supplied permission boundary; revise the plan instead of overriding the refusal."
+
+        class RefusedTransfer(FakeAgentRuntime):
+            def run(inner, job, *, cancellation=None):
+                result = super().run(job, cancellation=cancellation)
+                judgment = json.loads(result.final_text)
+                if job.runtime_role == "registered_character_action":
+                    judgment["proposals"][0]["action"] = refusal
+                elif job.runtime_role == "registered_scene_resolution":
+                    judgment["repair_routes"] = [{"owner": "plan", "reason": blocker}]
+                result.final_text = json.dumps(judgment)
+                return result
+
+        CoreOperations(self.store).plan_save(
+            "PROD", target_ref="chapter:CH001", title="Requested transfer",
+            content="The record changes hands, with the owner's permission required.",
+            expected_version=0, idempotency_key="scene-refusal-plan", user_authorized=True,
+        )
+        fake = RefusedTransfer()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        result = self.execute_to_handoff(runtime, run_id)
+        self.assertEqual("failed_gate", result["status"])
+        self.assertEqual("scene_simulation", result["failed_mechanism"])
+        self.assertFalse(result["candidate_visible"])
+        roles = [job.runtime_role for job in fake.calls]
+        self.assertEqual("registered_scene_resolution", roles[-1])
+        self.assertNotIn("registered_scene_projection", roles)
+        self.assertNotIn("event_first_raw_draft", roles)
+        scene = fake.calls[-1].context[0]["registered_semantic_job"]["input"]["payload"]
+        self.assertEqual(refusal, scene["character_action_evidence"][0]["judgment"]["proposals"][0]["action"])
+        self.assertIn("The record changes hands", json.dumps(scene["frozen_scene_context"]))
+        calls = len(fake.calls)
+        with self.assertRaises(ProductionRunError) as replay:
+            runtime.resume_execution("PROD", run_id)
+        self.assertEqual("failed_gate_requires_fresh_run", replay.exception.code)
+        self.assertEqual(calls, len(fake.calls))
+        with self.store.open_project("PROD") as conn:
+            stored = json.loads(conn.execute(
+                "SELECT result_json FROM production_stage_calls WHERE run_id=? AND runtime_role='registered_scene_resolution'", (run_id,)).fetchone()[0])
+            self.assertEqual([{"owner": "plan", "reason": blocker}], json.loads(stored["final_text"])["repair_routes"])
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0])
+        assert_public_execution_safe(self, result)
+
+    def test_noncanonical_new_cast_stops_before_action_and_resume_does_not_rewrite_or_retry(self):
+        with self.store.open_project("PROD") as conn:
+            conn.execute("DELETE FROM character_knowledge")
+            conn.execute("DELETE FROM characters")
+            conn.commit()
+        fake = PreparedCastFixtureRuntime(malformed=True)
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        with self.assertRaises(ProductionRunError) as error:
+            self.execute_to_handoff(runtime, run_id)
+        self.assertEqual("semantic_output_invalid", error.exception.code)
+        self.assertFalse(any(job.runtime_role == "registered_character_action" for job in fake.calls))
+        calls = len(fake.calls)
+        self.assertEqual("semantic_pending", runtime.status("PROD", run_id)["status"])
+        with self.assertRaises(ProductionRunError) as replay_error:
+            runtime.resume_execution("PROD", run_id)
+        self.assertEqual("semantic_output_invalid", replay_error.exception.code)
+        self.assertEqual(calls, len(fake.calls))
+        journal = runtime.status("PROD", run_id)["execution_journal"]
+        self.assertEqual(calls, journal["confirmed_call_count"])
+        self.assertEqual([], journal["unconfirmed_call_ids"])
+        with self.store.open_project("PROD") as conn:
+            stored = json.loads(conn.execute("SELECT result_json FROM production_stage_calls WHERE run_id=? AND runtime_role='character_state_prepare'", (run_id,)).fetchone()[0])
+            self.assertEqual(fake.preparation, json.loads(stored["final_text"]))
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0])
+            self.assertEqual(1, conn.execute("SELECT COUNT(*) FROM runtime_events WHERE run_id=? AND event_kind='production_stage_failed'", (run_id,)).fetchone()[0])
+
+    def test_noncanonical_stage_status_cannot_advance_or_release(self):
+        for mechanism, malformed_status in (("story_canon_preflight", "FAIL"), ("event_first_raw_draft", " fail "),
+                                             ("surface_realization", "PASS"), ("continuity", ["fail"])):
+            with self.subTest(mechanism=mechanism, status=malformed_status):
+                class InvalidStatus(FakeAgentRuntime):
+                    def run(inner, job, *, cancellation=None):
+                        result = super().run(job, cancellation=cancellation)
+                        if job.runtime_role == mechanism:
+                            judgment = json.loads(result.final_text)
+                            judgment["status"] = malformed_status
+                            result.final_text = json.dumps(judgment)
+                        return result
+
+                fake = InvalidStatus()
+                runtime = ProductionRunExecutor(self.store, fake)
+                run_id = self.start()
+                with self.assertRaises(ProductionRunError) as error:
+                    self.execute_to_handoff(runtime, run_id)
+                self.assertEqual("semantic_output_invalid", error.exception.code)
+                self.assertEqual(mechanism, fake.calls[-1].runtime_role)
+                self.assertEqual("semantic_pending", runtime.status("PROD", run_id)["status"])
+                with self.store.open_project("PROD") as conn:
+                    stored = json.loads(conn.execute("SELECT result_json FROM production_stage_calls WHERE run_id=? AND runtime_role=?", (run_id, mechanism)).fetchone()[0])
+                    self.assertEqual(malformed_status, json.loads(stored["final_text"])["status"])
+                    self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0])
+                    failures = [json.loads(row[0]) for row in conn.execute("SELECT payload_json FROM runtime_events WHERE run_id=? AND event_kind='production_stage_failed'", (run_id,))]
+                    self.assertEqual(1, len(failures))
+                    self.assertEqual(mechanism, failures[0]["mechanism"])
+                    assert_public_execution_safe(self, failures)
+        fake = FakeAgentRuntime(reject_mechanism="story_canon_preflight")
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        self.assertEqual("failed_gate", self.execute_to_handoff(runtime, run_id)["status"])
+        calls = len(fake.calls)
+        with self.assertRaises(ProductionRunError) as rejected:
+            runtime.resume_execution("PROD", run_id)
+        self.assertEqual("failed_gate_requires_fresh_run", rejected.exception.code)
+        self.assertEqual("failed_gate", runtime.status("PROD", run_id)["status"])
+        self.assertEqual(calls, len(fake.calls))
+
+    def test_narrative_source_metadata_cannot_be_copied_into_replacement_fields(self):
+        from production_runtime.semantic import narrative_field_contracts
+
+        class CopyReadOnlySource(FinalStateFixtureRuntime):
+            def run(inner, job, *, cancellation=None):
+                result = super().run(job, cancellation=cancellation)
+                if job.runtime_role == "registered_narrative_state":
+                    source = job.context[0]["registered_semantic_job"]["input"]["payload"]
+                    actor = next(row for row in source["existing_state"] if row["entity_ref"] == "CHAR-A")
+                    judgment = json.loads(result.final_text)
+                    judgment["changes"][0]["fields"].update(actor["source_metadata"])
+                    result.final_text = json.dumps(judgment)
+                return result
+
+        fake = CopyReadOnlySource()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        with self.assertRaises(ProductionRunError) as error:
+            self.execute_to_handoff(runtime, run_id)
+        self.assertEqual("semantic_output_invalid", error.exception.code)
+        self.assertIn("oneOf", str(error.exception))
+        self.assertEqual("semantic_pending", runtime.status("PROD", run_id)["status"])
+        calls = len(fake.calls)
+        with self.store.open_project("PROD") as conn:
+            original_result = conn.execute("SELECT result_json FROM production_stage_calls WHERE run_id=? AND runtime_role='registered_narrative_state'", (run_id,)).fetchone()[0]
+        with self.assertRaises(ProductionRunError) as resumed:
+            runtime.resume_execution("PROD", run_id)
+        self.assertEqual("semantic_output_invalid", resumed.exception.code)
+        self.assertEqual(calls, len(fake.calls))
+        dispatched = fake.calls[-1]
+        self.assertEqual("registered_narrative_state", dispatched.runtime_role)
+        registered = dispatched.context[0]["registered_semantic_job"]
+        self.assertEqual(narrative_field_contracts(registered["output_contract"]), dispatched.context[0]["writable_field_contracts"])
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0])
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM checkpoints WHERE run_id=? AND checkpoint_kind IN ('production_narrative_proposal','production_independent_handoff')", (run_id,)).fetchone()[0])
+            self.assertEqual("semantic_pending", conn.execute("SELECT status FROM runs WHERE run_id=?", (run_id,)).fetchone()[0])
+            self.assertEqual(original_result, conn.execute("SELECT result_json FROM production_stage_calls WHERE run_id=? AND runtime_role='registered_narrative_state'", (run_id,)).fetchone()[0])
+            failures = [json.loads(row[0]) for row in conn.execute("SELECT payload_json FROM runtime_events WHERE run_id=? AND event_kind='production_stage_failed'", (run_id,))]
+            self.assertEqual(1, len(failures))
+            self.assertEqual("registered_narrative_state", failures[0]["mechanism"])
+            assert_public_execution_safe(self, failures)
+
+    def test_final_reader_or_narrative_pending_records_safe_failure_without_retry(self):
+        for role in ("registered_reader_expectations", "registered_narrative_state"):
+            with self.subTest(role=role):
+                class IncompleteFinalStage(FakeAgentRuntime):
+                    def run(inner, job, *, cancellation=None):
+                        result = super().run(job, cancellation=cancellation)
+                        if job.runtime_role == role:
+                            result.status = "model_failed"
+                            result.errors = ["PRIVATE MODEL ERROR DETAIL"]
+                        return result
+
+                fake = IncompleteFinalStage()
+                runtime = ProductionRunExecutor(self.store, fake)
+                run_id = self.start()
+                with self.assertRaises(ProductionRunError) as error:
+                    self.execute_to_handoff(runtime, run_id)
+                self.assertEqual("semantic_pending", error.exception.code)
+                self.assertEqual("semantic_pending", runtime.status("PROD", run_id)["status"])
+                calls = len(fake.calls)
+                with self.assertRaises(ProductionRunError) as replay:
+                    runtime.resume_execution("PROD", run_id)
+                self.assertEqual("semantic_pending", replay.exception.code)
+                self.assertEqual(calls, len(fake.calls))
+                with self.store.open_project("PROD") as conn:
+                    failures = [json.loads(row[0]) for row in conn.execute("SELECT payload_json FROM runtime_events WHERE run_id=? AND event_kind='production_stage_failed'", (run_id,))]
+                    self.assertEqual(1, len(failures))
+                    self.assertEqual(role, failures[0]["mechanism"])
+                    self.assertNotIn("PRIVATE MODEL ERROR DETAIL", json.dumps(failures))
+                    self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0])
+
+    def test_reader_cannot_be_given_caller_injected_future_plan(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        with self.assertRaises(ProductionRunError) as caught:
+            runtime.execute("PROD", self.start(), service_id="svc", instruction="draft chapter", reader_grip="very_high",
+                            rule_material=RULE_MATERIAL, reader_visible_context=[{"future_plan": "the unrevealed ending"}])
+        self.assertEqual(caught.exception.code, "reader_context_untrusted")
+        self.assertFalse(any(job.runtime_role == "registered_reader_engagement" for job in fake.calls))
+
+    def release_and_accept(self, fake=None, *, chapter_id="CH001", document_id="DOC-1"):
+        fake = fake or FinalStateFixtureRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start(chapter_id=chapter_id, document_id=document_id)
+        self.assertEqual("awaiting_external", self.execute_to_handoff(runtime, run_id)["status"])
+        completed = self.submit(runtime, run_id)
+        acceptance = CoreOperations(self.store).accept_candidate(
+            "PROD", candidate_id=completed["candidate"]["candidate_id"],
+            candidate_fingerprint=completed["candidate"]["candidate_fingerprint"],
+            authorized_by="fixture-author", authorization={"intent": "accept"}, idempotency_key="accept:" + run_id,
+        )
+        return completed, acceptance
+
+    def settle_accepted(self, acceptance, *, chapter_id="CH001", idempotency_key="settle-fixture"):
+        ops = CoreOperations(self.store)
+        preflight = ops.settlement_preflight("PROD", acceptance_id=acceptance["acceptance_id"], target_ref="chapter:" + chapter_id)
+        result = ops.settle("PROD", acceptance_id=acceptance["acceptance_id"], target_ref="chapter:" + chapter_id,
+                            expected_before_fingerprint=preflight["current_before_fingerprint"], user_authorized=True,
+                            expected_preflight_fingerprint=preflight["preflight_fingerprint"], idempotency_key=idempotency_key)
+        return preflight, result
+
+    def add_chapter(self, chapter_id="CH002", document_id="DOC-2", ordinal=2):
+        with self.store.open_project("PROD") as conn:
+            conn.execute("INSERT INTO story_nodes(node_id,kind,ordinal,title,metadata_json) VALUES(?,'chapter',?,?,'{}')",
+                         (chapter_id, ordinal, chapter_id))
+            conn.commit()
+        self.store.create_document("PROD", document_id, chapter_id, story_node_id=chapter_id)
+        self.store.save_revision("PROD", document_id, "unaccepted private chapter " + chapter_id,
+                                 expected_parent_revision_id=None, source="test")
+
+    def seed_preference(self, hypothesis_id="PREF-SELECTED", *, state="active", statement="Selected fixture preference."):
+        from learning.learning_store import LearningStore
+        learning = LearningStore(CoreOperations(self.store).project_learning().learning_db)
+        learning.init()
+        return learning.upsert_hypothesis({"hypothesis_id": hypothesis_id, "subject_scope": "project", "project_id": "PROD",
+                                           "dimension": "dialogue", "mechanism": "knowledge asymmetry", "statement": statement,
+                                           "confidence": 1.0, "state": state})
+
+    def test_nonempty_reader_and_narrative_state_require_author_settlement(self):
+        from quality.reader_expectation import inspect_project
+        fake = FinalStateFixtureRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        self.execute_to_handoff(runtime, run_id)
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual([], inspect_project(conn)["observations"])
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM expectations").fetchone()[0])
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM narrative_state_sources").fetchone()[0])
+        completed = self.submit(runtime, run_id)
+        ops = CoreOperations(self.store)
+        with self.store.open_project("PROD") as conn:
+            inspection = inspect_project(conn)
+            self.assertEqual("proposed", inspection["observations"][0]["state"])
+            self.assertNotIn("binding_json", json.dumps(inspection))
+            self.assertEqual([], inspection["items"])
+        acceptance = ops.accept_candidate("PROD", candidate_id=completed["candidate"]["candidate_id"],
+                                           candidate_fingerprint=completed["candidate"]["candidate_fingerprint"],
+                                           authorized_by="fixture-author", authorization={"intent": "accept"}, idempotency_key="accept-memory")
+        preflight = ops.settlement_preflight("PROD", acceptance_id=acceptance["acceptance_id"], target_ref="chapter:CH001")
+        self.assertEqual(6, len(preflight["narrative_proposal"]["changes"]))
+        self.assertEqual(1, len(preflight["reader_observations"]))
+        args = {"acceptance_id": acceptance["acceptance_id"], "target_ref": "chapter:CH001",
+                "expected_before_fingerprint": preflight["current_before_fingerprint"], "idempotency_key": "settle-memory"}
+        with self.assertRaises(OperationError) as denied:
+            ops.settle("PROD", **args, user_authorized=False, expected_preflight_fingerprint=preflight["preflight_fingerprint"])
+        self.assertEqual("authorization_required", denied.exception.code)
+        with self.assertRaises(OperationError) as missing_review:
+            ops.settle("PROD", **args, user_authorized=True)
+        self.assertEqual("settlement_preflight_changed", missing_review.exception.code)
+        result = ops.settle("PROD", **args, user_authorized=True, expected_preflight_fingerprint=preflight["preflight_fingerprint"])
+        replay = ops.settle("PROD", **args, user_authorized=True, expected_preflight_fingerprint=preflight["preflight_fingerprint"])
+        self.assertEqual(result, replay)
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual("seek a reply", conn.execute("SELECT agenda FROM characters WHERE character_id='CHAR-A'").fetchone()[0])
+            self.assertEqual(2, conn.execute("SELECT COUNT(*) FROM characters").fetchone()[0])
+            self.assertEqual(6, conn.execute("SELECT COUNT(*) FROM narrative_state_sources WHERE state='current'").fetchone()[0])
+            self.assertEqual(1, conn.execute("SELECT COUNT(*) FROM expectations WHERE status='open' AND version=1").fetchone()[0])
+            self.assertEqual("applied", inspect_project(conn)["observations"][0]["state"])
+            self.assertEqual([], conn.execute("PRAGMA foreign_key_check").fetchall())
+
+    def test_settlement_rolls_back_head_facts_and_reader_effects_together(self):
+        _, acceptance = self.release_and_accept()
+        with patch("quality.reader_expectation.apply_observation", side_effect=RuntimeError("fixture reader write failure")):
+            with self.assertRaisesRegex(RuntimeError, "fixture reader write failure"):
+                self.settle_accepted(acceptance)
+        with self.store.open_project("PROD") as conn:
+            for table in ("canon_state", "settlements", "narrative_state_sources", "expectations", "reader_expectation_effects"):
+                self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM " + table).fetchone()[0], table)
+            self.assertEqual("protect the deal", conn.execute("SELECT agenda FROM characters WHERE character_id='CHAR-A'").fetchone()[0])
+            self.assertEqual("proposed", conn.execute("SELECT state FROM reader_expectation_observations").fetchone()[0])
+        self.assertEqual("settled", self.settle_accepted(acceptance)[1]["status"])
+
+    def test_settlement_rejects_changed_narrative_before_state(self):
+        _, acceptance = self.release_and_accept()
+        with self.store.open_project("PROD") as conn:
+            conn.execute("UPDATE characters SET agenda='author changed the character' WHERE character_id='CHAR-A'")
+            conn.commit()
+        with self.assertRaises(OperationError) as conflict:
+            self.settle_accepted(acceptance)
+        self.assertEqual("narrative_state_conflict", conflict.exception.code)
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM canon_state").fetchone()[0])
+
+    def test_final_memory_rejects_evidence_not_in_candidate_text(self):
+        fake = FinalStateFixtureRuntime(invalid_quote=True)
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        with self.assertRaises(ProductionRunError) as invalid:
+            self.execute_to_handoff(runtime, run_id)
+        self.assertEqual("semantic_output_invalid", invalid.exception.code)
+        self.assertEqual("semantic_pending", runtime.status("PROD", run_id)["status"])
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM candidates").fetchone()[0])
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM expectations").fetchone()[0])
+            failure = json.loads(conn.execute("SELECT payload_json FROM runtime_events WHERE run_id=? AND event_kind='production_stage_failed'", (run_id,)).fetchone()[0])
+            self.assertEqual("registered_reader_expectations", failure["mechanism"])
+            assert_public_execution_safe(self, failure)
+
+    def test_changed_bundle_cannot_be_rebound_as_final_narrative_evidence(self):
+        from production_runtime.semantic import build_narrative_state_proposal
+        fake = FinalStateFixtureRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        self.execute_to_handoff(runtime, run_id)
+        state = runtime._latest_checkpoint("PROD", run_id, "production_narrative_proposal")
+        bundle = runtime._latest_bundle("PROD", run_id)
+        bundle["target_context"]["payload"]["instruction"] = "tampered request"
+        with self.assertRaises(ProductionRunError) as invalid:
+            build_narrative_state_proposal(state["registered_binding"], bundle)
+        self.assertEqual("context_bundle_invalid", invalid.exception.code)
+
+    def test_selected_preference_deactivation_stops_before_model_dispatch(self):
+        self.seed_preference()
+        fake = FakeAgentRuntime()
+        run_id = self.start(selected_preference_ids=["PREF-SELECTED"])
+        self.seed_preference(state="deprecated")
+        result = self.execute_to_handoff(ProductionRunExecutor(self.store, fake), run_id)
+        self.assertEqual("stale_conflict", result["status"])
+        self.assertEqual([], fake.calls)
+
+    def test_selected_preference_version_change_stops_resume_without_new_calls(self):
+        self.seed_preference()
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start(selected_preference_ids=["PREF-SELECTED"])
+        self.execute_to_handoff(runtime, run_id)
+        count = len(fake.calls)
+        self.seed_preference(statement="Changed selected preference.")
+        result = runtime.resume_execution("PROD", run_id)
+        self.assertEqual("stale_conflict", result["status"])
+        self.assertEqual(count, len(fake.calls))
+
+    def test_unselected_preference_changes_do_not_stale_or_enter_writer(self):
+        self.seed_preference()
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start(selected_preference_ids=["PREF-SELECTED"])
+        self.seed_preference("PREF-UNSELECTED", statement="UNSELECTED SECRET PREFERENCE")
+        self.assertEqual("awaiting_external", self.execute_to_handoff(runtime, run_id)["status"])
+        writer = next(job for job in fake.calls if job.runtime_role == "event_first_raw_draft")
+        self.assertIn("Selected fixture preference.", json.dumps(writer.context))
+        self.assertNotIn("UNSELECTED SECRET PREFERENCE", json.dumps(writer.context))
+        self.assertNotIn("PREF-UNSELECTED", json.dumps(writer.context))
+
+    def test_prior_history_excludes_unaccepted_current_future_and_stale_narrative(self):
+        completed, acceptance = self.release_and_accept()
+        self.settle_accepted(acceptance)
+        self.add_chapter()
+        self.add_chapter("CH003", "DOC-3", 3)
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        sources = runtime.loader.load("PROD", chapter_id="CH002", document_id="DOC-2", current_story_order=2, current_reading_order=2)
+        history = [item["model_view"] for item in sources if item["object_type"] == "accepted_manuscript"]
+        self.assertEqual(["CH001"], [item["story_node_id"] for item in history])
+        self.assertEqual(completed["candidate"]["candidate_fingerprint"], history[0]["content_fingerprint"])
+        self.assertNotIn("unaccepted private chapter", json.dumps(sources))
+        self.assertIn("CHAR-A", [item["object_id"] for item in sources])
+        early = runtime.loader.load("PROD", chapter_id="CH001", document_id="DOC-1", current_story_order=1, current_reading_order=1)
+        self.assertNotIn("CHAR-A", [item["object_id"] for item in early])
+        with self.store.open_project("PROD") as conn:
+            conn.execute("UPDATE narrative_state_sources SET state='stale'")
+            conn.execute("INSERT INTO characters(character_id,name,agenda,voice_notes,state_json,updated_at) VALUES('CHAR-MANUAL','Manual','manual agenda','plain','{}',?)", (now_iso(),))
+            conn.commit()
+        filtered = runtime.loader.load("PROD", chapter_id="CH002", document_id="DOC-2", current_story_order=2, current_reading_order=2)
+        self.assertNotIn("CHAR-A", [item["object_id"] for item in filtered])
+        self.assertIn("CHAR-MANUAL", [item["object_id"] for item in filtered])
+
+    def test_prior_rewrite_invalidates_dependent_reader_memory_and_chapter(self):
+        from quality.reader_expectation import inspect_project
+        _, first_acceptance = self.release_and_accept()
+        self.settle_accepted(first_acceptance)
+        self.add_chapter()
+        _, second_acceptance = self.release_and_accept(FinalStateFixtureRuntime(narrative=False, reader_operation="touch"), chapter_id="CH002", document_id="DOC-2")
+        self.settle_accepted(second_acceptance, chapter_id="CH002", idempotency_key="settle-second")
+        with self.store.open_project("PROD") as conn:
+            original = inspect_project(conn)["items"][0]
+            self.assertEqual(2, original["version"])
+        _, replacement = self.release_and_accept(FinalStateFixtureRuntime(narrative=False, candidate_text="Changed review prose has different final bytes."))
+        self.settle_accepted(replacement, idempotency_key="settle-replacement")
+        with self.store.open_project("PROD") as conn:
+            items = {item["expectation_id"]: item for item in inspect_project(conn)["items"]}
+            self.assertEqual("invalidated", items[original["expectation_id"]]["status"])
+            self.assertEqual(2, conn.execute("SELECT COUNT(*) FROM reader_expectation_observations WHERE state='invalidated'").fetchone()[0])
+            self.assertEqual("stale", conn.execute("SELECT status FROM chapter_dependencies WHERE chapter_id='CH002'").fetchone()[0])
+            self.assertEqual(6, conn.execute("SELECT COUNT(*) FROM narrative_state_sources WHERE state='stale'").fetchone()[0])
+        self.add_chapter("CH003", "DOC-3", 3)
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        with self.assertRaises(ProductionRunError) as stale:
+            runtime.loader.load("PROD", chapter_id="CH003", document_id="DOC-3", current_story_order=3, current_reading_order=3)
+        self.assertEqual("settled_source_stale", stale.exception.code)
+
 
 class NativeIndependentReviewRuntimeTests(unittest.TestCase):
     """Spec 022 Task 1 contracts; host hooks/adapters remain Task 2."""
@@ -510,7 +1221,10 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.store = QuillframeStore(Path(self.temp.name))
         self.store.create_project("PROD", "Production Fixture")
-        self.store.create_document("PROD", "DOC-1", "Chapter")
+        with self.store.open_project("PROD") as conn:
+            conn.execute("INSERT INTO story_nodes(node_id,kind,ordinal,title,metadata_json) VALUES('CH001','chapter',1,'Chapter','{}')")
+            conn.commit()
+        self.store.create_document("PROD", "DOC-1", "Chapter", story_node_id="CH001")
         self.store.save_revision("PROD", "DOC-1", "seed", expected_parent_revision_id=None, source="test")
         stamp = now_iso()
         with self.store.open_project("PROD") as conn:
@@ -802,6 +1516,28 @@ class NativeIndependentReviewRuntimeTests(unittest.TestCase):
 
     def test_stale_owner_is_fenced_at_candidate_write_after_identical_takeover(self):
         self.assert_stale_owner_fenced_at_effect_boundary("candidate")
+
+    def test_default_author_run_session_can_prepare_and_claim_native_review(self):
+        started = CoreOperations(self.store).start_author_run(
+            "PROD", task_mode="DRAFT", target_ref="DOC-1",
+            payload={"instruction": "draft chapter", "chapter_id": "CH001"},
+        )
+        run_id = started["run_id"]
+        parent_session_id = started["session_id"]
+        NovelWorkflowService(self.store).start(
+            project_id="PROD", run_id=run_id, chapter_id="CH001", author_profile="guided",
+        )
+        runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
+        _, dispatch = self.prepare_native(runtime, run_id, parent_session_id=parent_session_id)
+        claim = self.claim_native(runtime, parent_session_id=parent_session_id)
+
+        self.assertEqual(claim["lease_id"], dispatch["lease_id"])
+        self.assertEqual(claim["parent_session_id"], parent_session_id)
+        self.assertNotEqual(claim["reviewer_session_id"], parent_session_id)
+        self.assertEqual(claim["peer_packet"], frozen_packet(self.store, run_id))
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual(conn.execute("SELECT session_id FROM runs WHERE run_id=?", (run_id,)).fetchone()[0], parent_session_id)
+            self.assertEqual({row["session_id"] for row in conn.execute("SELECT session_id FROM sessions")}, {parent_session_id, claim["reviewer_session_id"]})
 
     def test_native_dispatch_withholds_packet_and_claim_is_one_time_with_distinct_session(self):
         runtime = ProductionRunExecutor(self.store, FakeAgentRuntime())
