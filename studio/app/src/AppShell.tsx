@@ -11,8 +11,10 @@ import {
   connectedModelService,
   pendingIndependentReview,
   projectExecutionJournal,
+  projectRepairSource,
   type AuthorRunStartResult,
   type AuthorRunStatusProjection,
+  type FailedCandidateRepairSource,
   type WorkflowRunEvent,
   type WorkflowRunEventBatch,
   type AuthoringIntent,
@@ -184,6 +186,10 @@ export const AppShell: ParentComponent = (props) => {
   const executionJournal = createMemo(() => projectExecutionJournal(runEvidence(), {
     project_id: currentProject(), run_id: run()?.run_id || studio.lastRunId(), document_id: currentDocument() ?? "",
   }));
+  const repairSource = createMemo(() => projectRepairSource(runEvidence(), {
+    project_id: currentProject(), run_id: run()?.run_id || studio.lastRunId(), document_id: currentDocument() ?? "",
+  }));
+  const isRepairRun = () => (run()?.task_mode || runEvidence()?.task_mode) === "REVISE";
   const executionRoleLabel = (role: string) => {
     const labels: Record<string, [string, string]> = {
       context_profile_deriver: ["准备上下文摘要", "Prepare context profiles"],
@@ -202,6 +208,8 @@ export const AppShell: ParentComponent = (props) => {
       surface_realization: ["形成正文表达", "Realize manuscript prose"],
       registered_reader_engagement: ["读者视角审阅", "Review reader engagement"],
       registered_candidate_self_audit: ["检查候选稿", "Audit candidate draft"],
+      registered_repair_editor: ["制定修订与保留方案", "Plan repair and preservation"],
+      registered_repair_comparison: ["对比缺陷修复与目标保留", "Compare repair and preservation"],
       registered_reader_expectations: ["提议读者期待变化", "Propose expectation changes"],
       registered_narrative_state: ["提议故事状态变化", "Propose narrative state changes"],
     };
@@ -246,13 +254,18 @@ export const AppShell: ParentComponent = (props) => {
   const q = createMemo(() => query().trim().toLowerCase());
   const matches = (value: string) => !q() || value.toLowerCase().includes(q());
 
-  const startRun = async () => {
+  const startRun = async (repair?: FailedCandidateRepairSource) => {
     const projectId = currentProject();
     const chapter = currentChapter();
-    if (!projectId || !chapter || !instruction().trim() || executionPending() || controlBusy()) return;
+    if (!projectId || !chapter || !repair && !instruction().trim() || executionPending() || controlBusy()) return;
+    if (!repair && intent() === "revise") {
+      setAiError(zh() ? "请刷新失败运行，再选择“修订此版本”，以绑定原稿和诊断。" : "Refresh the failed run, then choose Repair this version to bind its exact draft and diagnosis.");
+      return;
+    }
+    const requestedIntent = repair ? "revise" : intent();
     const selectedPreferenceIds = [...studio.selectedPreferenceIds()];
     const current = beginAiRequest();
-    const binding = JSON.stringify({ projectId, chapter, intent: intent(), profile: authorProfile(), instruction: instruction().trim(), selectedPreferenceIds });
+    const binding = JSON.stringify({ projectId, chapter, intent: requestedIntent, profile: authorProfile(), instruction: instruction().trim(), selectedPreferenceIds, repair });
     if (!startIntent || startIntent.binding !== binding) startIntent = { binding, idempotency_key: `studio-ai-${crypto.randomUUID()}` };
     setAiBusy(true);
     setAiError(undefined);
@@ -264,15 +277,15 @@ export const AppShell: ParentComponent = (props) => {
     try {
       const response = await invokeBridge<AuthorRunStartResult>("author.run.start", {
         project_id: projectId,
-        task_mode: AUTHORING_INTENT_TASK_MODE[intent()],
+        task_mode: AUTHORING_INTENT_TASK_MODE[requestedIntent],
         target_ref: chapter.document_id,
         payload: {
           chapter_id: chapter.chapter_id,
           author_profile: authorProfile(),
           instruction: instruction().trim(),
-          intent: intent(),
+          intent: requestedIntent,
+          ...(repair ? { repair_source: repair } : { selected_preference_ids: selectedPreferenceIds }),
           requested_surface: "studio_ai_assistant_dock",
-          selected_preference_ids: selectedPreferenceIds,
         },
         idempotency_key: startIntent.idempotency_key,
       });
@@ -280,6 +293,7 @@ export const AppShell: ParentComponent = (props) => {
       if (response.status !== "ok" || !response.data) throw new Error(operationError(response));
       if (response.data.target_ref !== chapter.document_id || !response.data.run_id || response.data.raw_draft_visible !== false || response.data.candidate_visible !== false) throw new Error("run_start_binding_invalid");
       setRun(response.data);
+      if (repair) setIntent("revise");
       setRunStatus(response.data.status);
       setWorkflowCursor(response.data.workflow?.cursor ?? -1);
       studio.setLastRunId(response.data.run_id);
@@ -296,7 +310,7 @@ export const AppShell: ParentComponent = (props) => {
     const activeRun = run();
     const runId = activeRun?.run_id || studio.lastRunId();
     const chapter = currentChapter();
-    if (!projectId || !chapter || !runId || !instruction().trim() || executionPending() || controlBusy()) return;
+    if (!projectId || !chapter || !runId || !isRepairRun() && !instruction().trim() || executionPending() || controlBusy()) return;
     const current = beginAiRequest();
     const requestedInstruction = instruction().trim();
     const requestedGrip = readerGrip();
@@ -323,14 +337,12 @@ export const AppShell: ParentComponent = (props) => {
         project_id: projectId,
         run_id: runId,
         service_id: service.service_id,
-        instruction: requestedInstruction,
         document_id: chapter.document_id,
-        reader_grip: requestedGrip,
-        rule_material: [{
-          id: "studio-current-request",
-          authority: "current_request",
-          statement: requestedInstruction,
-        }],
+        ...(status.data.task_mode === "REVISE" ? { inherit_repair_request: true } : {
+          instruction: requestedInstruction,
+          reader_grip: requestedGrip,
+          rule_material: [{ id: "studio-current-request", authority: "current_request", statement: requestedInstruction }],
+        }),
       });
       if (!current()) return;
       if (response.status !== "ok" || !response.data) throw new Error(operationError(response));
@@ -522,8 +534,10 @@ export const AppShell: ParentComponent = (props) => {
           <details><summary>{zh() ? "下一次任务采用的项目偏好" : "Project preferences for the next run"}</summary><p>{zh() ? "只有主动选中的已启用偏好会随新任务提交。注册任务后，选择不会修改已冻结的输入。" : "Only explicitly selected active preferences accompany a new run. Changing the selection does not rewrite an already registered run."}</p><div class="qf-preference-selection"><For each={studio.projectPreferences().filter((preference) => preference.active_for_future_production)}>{(preference) => <label><input type="checkbox" disabled={aiBusy()} checked={studio.selectedPreferenceIds().includes(preference.hypothesis_id)} onChange={(event) => studio.setSelectedPreferenceIds(event.currentTarget.checked ? [...studio.selectedPreferenceIds(), preference.hypothesis_id] : studio.selectedPreferenceIds().filter((id) => id !== preference.hypothesis_id))} /><span>{preference.statement}</span></label>}</For></div><Show when={!studio.projectPreferences().some((preference) => preference.active_for_future_production)}><p>{zh() ? "暂无已启用的项目偏好。" : "No active project preferences yet."}</p></Show><Show when={studio.preferenceError()}>{(message) => <p role="alert">{message()}</p>}</Show><A href="/learning">{zh() ? "管理反馈与偏好" : "Manage feedback and preferences"}</A></details>
           <div class="qf-inline-actions">
             <button class="wui-button wui-button--solid" type="button" disabled={aiBusy() || executionPending() || controlBusy() || !currentProject() || !currentChapter() || !instruction().trim() || !supported().includes("author.run.start")} onClick={() => void startRun()}>{aiBusy() ? (zh() ? "处理中…" : "Working…") : (zh() ? "注册 Core Run" : "Register Core run")}</button>
-            <button class="wui-button wui-button--outline" type="button" disabled={aiBusy() || executionPending() || controlBusy() || !currentChapter() || !(run()?.run_id || studio.lastRunId()) || !instruction().trim() || !supported().includes("author.run.execute") || !supported().includes("model.service.list")} onClick={() => void executeRun()}>{zh() ? "执行生产流程" : "Execute production"}</button>
+            <button class="wui-button wui-button--outline" type="button" disabled={aiBusy() || executionPending() || controlBusy() || !currentChapter() || !(run()?.run_id || studio.lastRunId()) || !isRepairRun() && !instruction().trim() || runStatus() === "failed_gate" || !supported().includes("author.run.execute") || !supported().includes("model.service.list")} onClick={() => void executeRun()}>{zh() ? "执行生产流程" : "Execute production"}</button>
           </div>
+          <Show when={repairSource()}>{(source) => <div class="qf-ai-dock__boundary"><p>{zh() ? "此版本未通过检查，正文尚未公开。修订会新建运行，绑定原稿和诊断，沿用原任务、读者目标及规则；不会重放失败运行。" : "This version failed a gate and remains private. Repair creates a new run bound to the exact draft and diagnosis, retaining the original request, reader target and rules."}</p><button class="wui-button wui-button--outline" type="button" disabled={aiBusy() || executionPending() || controlBusy() || !supported().includes("author.run.start")} onClick={() => void startRun(source())}>{zh() ? "修订此版本" : "Repair this version"}</button></div>}</Show>
+          <Show when={isRepairRun()}><p class="qf-ai-dock__boundary">{zh() ? "本次修订使用 Core 冻结的原任务与规则；任务框和 Reader grip 的改动不会替换修订目标。修复后还需对比保留效果并重新审查。" : "This repair uses the original request and rules frozen by Core. Task and Reader grip edits do not replace its objectives. Repair still requires preservation comparison and fresh review."}</p></Show>
           <label class="nf-field-label"><span>{zh() ? "Reader grip（本次请求）" : "Reader grip (this request)"}</span><select class="wui-input" value={readerGrip()} onChange={(event) => setReaderGrip(event.currentTarget.value as "low" | "medium" | "high" | "very_high")}><option value="medium">medium</option><option value="high">high</option><option value="very_high">very_high</option><option value="low">low</option></select></label>
           <CoreRequirementNotice operation="author.run.start" compact />
           <CoreRequirementNotice operation="author.run.execute" compact />

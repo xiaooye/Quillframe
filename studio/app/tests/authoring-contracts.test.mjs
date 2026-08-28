@@ -535,6 +535,25 @@ const executionJournalFixture = () => {
       model_call_budget: 64, safe_to_resume_confirmed_only: false, private_payloads_visible: false, authority: false } };
 };
 
+test("repair action exposes only exact failed-run references, never source prose or active/foreign evidence", () => {
+  const value = executionJournalFixture();
+  value.status = "failed_gate";
+  value.execution_journal.active_executor = false;
+  value.execution_journal.calls = value.execution_journal.calls.slice(0, 1);
+  value.execution_journal.dispatched_call_count = 1;
+  value.execution_journal.unconfirmed_call_ids = [];
+  value.repair_source = { source_run_id: "R", source_checkpoint_id: "CHECKPOINT", expected_candidate_fingerprint: `sha256:${"d".repeat(64)}`,
+    candidate_text: "PRIVATE INCUMBENT", diagnosis: "PRIVATE DIAGNOSIS" };
+  const expected = { project_id: "P", run_id: "R", document_id: "DOC" };
+  assert.deepEqual(contracts.projectRepairSource(value, expected), { source_run_id: "R", source_checkpoint_id: "CHECKPOINT", expected_candidate_fingerprint: `sha256:${"d".repeat(64)}` });
+  for (const change of [{ status: "semantic_pending" }, { project_id: "OTHER" }, { target_ref: "OTHER" },
+    { repair_source: { ...value.repair_source, source_run_id: "OTHER" } },
+    { repair_source: { ...value.repair_source, expected_candidate_fingerprint: "invalid" } },
+    { execution_journal: { ...value.execution_journal, active_executor: true } }]) {
+    assert.equal(contracts.projectRepairSource({ ...value, ...change }, expected), undefined);
+  }
+});
+
 test("execution journal projects exact confirmed/dispatched counts and pending stages without private payloads or progress scores", () => {
   const value = executionJournalFixture();
   value.execution_journal.job = { payload: "PRIVATE-JOB-SENTINEL" };

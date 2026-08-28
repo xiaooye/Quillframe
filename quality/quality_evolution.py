@@ -24,7 +24,7 @@ from semantic_worker_router import make_contract_job, validate_result  # noqa: E
 
 SCHEMA = "quillframe_quality_evolution_v2"
 REPAIR_OWNERS = {
-    "story", "plan", "scene", "character", "reader", "surface",
+    "story", "plan", "scene", "character", "reader", "reader_pressure", "surface",
     "continuity", "context", "memory", "research", "runtime", "human",
 }
 
@@ -162,6 +162,8 @@ def prepare_comparison_job(
     run_id: str,
     comparison_id: str,
     challenger_candidate_id: str,
+    incumbent_text: str,
+    challenger_text: str,
     repair_context: dict[str, Any],
     source_session_id: str | None = None,
 ) -> dict[str, Any]:
@@ -175,6 +177,18 @@ def prepare_comparison_job(
     challenger = _candidate(conn, run_id, challenger_candidate_id)
     if challenger["parent_candidate_id"] != incumbent_id:
         raise ValueError("challenger must descend from current incumbent")
+    for label, text, candidate in (
+        ("incumbent", incumbent_text, incumbent),
+        ("challenger", challenger_text, challenger),
+    ):
+        if not isinstance(text, str) or not text:
+            raise ValueError(f"{label} text must be a non-empty string")
+        try:
+            actual = text_fingerprint(text)
+        except UnicodeError as exc:
+            raise ValueError(f"{label} text must encode as UTF-8") from exc
+        if actual != candidate["content_fingerprint"]:
+            raise ValueError(f"{label} text does not match stored candidate fingerprint")
     if not isinstance(repair_context, dict):
         raise ValueError("repair_context must be object")
     if not isinstance(repair_context.get("repair_target"),str) or not repair_context["repair_target"].strip():
@@ -193,11 +207,13 @@ def prepare_comparison_job(
         "incumbent": {
             "candidate_id": incumbent_id,
             "content_fingerprint": incumbent["content_fingerprint"],
+            "text": incumbent_text,
         },
         "challenger": {
             "candidate_id": challenger_candidate_id,
             "content_fingerprint": challenger["content_fingerprint"],
             "repair_owner": challenger["repair_owner"],
+            "text": challenger_text,
         },
         "repair_context": repair_context,
     }
@@ -435,8 +451,20 @@ def self_test(path: Path) -> int:
     from objective_envelope import build as build_objective_envelope
     envelope=build_objective_envelope({"subject_id":"CH-1","run_id":"RUN-1","authority_cutoff":"synthetic","objective_items":[{"id":"OBJ-1","category":"reader","statement":"Preserve reader pressure.","source_refs":["plan:self"]}],"must_preserve":["reader pressure"],"derived_from_rejected_realization":False})
     def rc(target:str)->dict[str,Any]: return {"repair_target":target,"objective_envelope":envelope}
-    add_candidate(conn, run_id="RUN-1", candidate_id="C1", text="candidate one", repair_owner="reader")
-    j1 = prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-1", challenger_candidate_id="C1", repair_context=rc("forward pull"))
+    add_candidate(conn, run_id="RUN-1", candidate_id="C1", text="candidate one", repair_owner="reader_pressure")
+    j1 = prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-1", challenger_candidate_id="C1", incumbent_text="baseline", challenger_text="candidate one", repair_context=rc("forward pull"))
+    text_mismatch_rejected = False
+    try:
+        prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-WRONG-TEXT", challenger_candidate_id="C1", incumbent_text="changed baseline", challenger_text="candidate one", repair_context=rc("forward pull"))
+    except ValueError:
+        text_mismatch_rejected = True
+    missing_text_rejected = False
+    missing_text = json.loads(json.dumps(j1["input"]["payload"]))
+    del missing_text["challenger"]["text"]
+    try:
+        make_contract_job("quality.compare", "CMP-MISSING-TEXT", missing_text)
+    except ValueError:
+        missing_text_rejected = True
     r1 = _fixture_result(j1, "challenger", "stronger forward pull")
     s1 = record_comparison(conn, job=j1, result=r1)
     replay = record_comparison(conn, job=j1, result=r1)
@@ -451,11 +479,11 @@ def self_test(path: Path) -> int:
         result_binding_guard = True
 
     add_candidate(conn, run_id="RUN-1", candidate_id="C2", text="candidate two", repair_owner="surface")
-    j2 = prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-2", challenger_candidate_id="C2", repair_context=rc("surface"))
+    j2 = prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-2", challenger_candidate_id="C2", incumbent_text="candidate one", challenger_text="candidate two", repair_context=rc("surface"))
     s2 = record_comparison(conn, job=j2, result=_fixture_result(j2, "incumbent", "no net gain"))
 
     add_candidate(conn, run_id="RUN-1", candidate_id="C3", text="candidate three", repair_owner="scene")
-    j3 = prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-3", challenger_candidate_id="C3", repair_context=rc("scene"))
+    j3 = prepare_comparison_job(conn, run_id="RUN-1", comparison_id="CMP-3", challenger_candidate_id="C3", incumbent_text="candidate one", challenger_text="candidate three", repair_context=rc("scene"))
     s3 = record_comparison(conn, job=j3, result=_fixture_result(j3, "tie", "gains and regressions cancel"))
 
     objective_regression_guard=False
@@ -477,6 +505,9 @@ def self_test(path: Path) -> int:
         and result_binding_guard
         and frozen_binding
         and objective_regression_guard
+        and text_mismatch_rejected
+        and missing_text_rejected
+        and j1["input"]["payload"]["challenger"]["repair_owner"] == "reader_pressure"
         and s3["authority"] is False
         and s3["model_execution"] is False
     )
@@ -489,6 +520,8 @@ def self_test(path: Path) -> int:
         "caller_winner_override_removed": caller_override_removed,
         "invalid_winner_rejected_by_contract": result_binding_guard,
         "objective_regression_cannot_promote_challenger": objective_regression_guard,
+        "comparison_requires_exact_text": text_mismatch_rejected and missing_text_rejected,
+        "reader_pressure_owner_preserved": j1["input"]["payload"]["challenger"]["repair_owner"] == "reader_pressure",
         "objective_envelope_bound_to_comparison": j1["input"]["payload"]["repair_context"]["objective_envelope"]["fingerprint"]==envelope["fingerprint"],
         "idempotent_replay": replay["incumbent_candidate_id"] == "C1",
         "plateau_stopping": s3["state"] == "plateau",
@@ -526,6 +559,8 @@ def main() -> int:
     pc.add_argument("--run-id", required=True)
     pc.add_argument("--comparison-id", required=True)
     pc.add_argument("--challenger-id", required=True)
+    pc.add_argument("--incumbent-text-file", required=True)
+    pc.add_argument("--challenger-text-file", required=True)
     pc.add_argument("--repair-context-json", required=True)
     pc.add_argument("--source-session-id")
     rc = sub.add_parser("record-comparison")
@@ -550,7 +585,7 @@ def main() -> int:
                 run_id=args.run_id,
                 subject_id=args.subject_id,
                 baseline_candidate_id=args.baseline_id,
-                baseline_text=Path(args.text_file).read_text(encoding="utf-8"),
+                baseline_text=Path(args.text_file).read_bytes().decode("utf-8"),
                 plateau_limit=args.plateau_limit,
             )
         elif args.command == "add-candidate":
@@ -558,7 +593,7 @@ def main() -> int:
                 conn,
                 run_id=args.run_id,
                 candidate_id=args.candidate_id,
-                text=Path(args.text_file).read_text(encoding="utf-8"),
+                text=Path(args.text_file).read_bytes().decode("utf-8"),
                 repair_owner=args.repair_owner,
                 parent_candidate_id=args.parent_id,
             )
@@ -568,6 +603,8 @@ def main() -> int:
                 run_id=args.run_id,
                 comparison_id=args.comparison_id,
                 challenger_candidate_id=args.challenger_id,
+                incumbent_text=Path(args.incumbent_text_file).read_bytes().decode("utf-8"),
+                challenger_text=Path(args.challenger_text_file).read_bytes().decode("utf-8"),
                 repair_context=load_json_file(args.repair_context_json),
                 source_session_id=args.source_session_id,
             )

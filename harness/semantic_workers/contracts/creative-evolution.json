@@ -112,7 +112,8 @@
             "type": "object",
             "required": [
               "candidate_id",
-              "content_fingerprint"
+              "content_fingerprint",
+              "text"
             ],
             "properties": {
               "candidate_id": {
@@ -123,6 +124,10 @@
                 "type": "string",
                 "minLength": 71,
                 "maxLength": 71
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1
               }
             },
             "additionalProperties": false
@@ -132,7 +137,8 @@
             "required": [
               "candidate_id",
               "content_fingerprint",
-              "repair_owner"
+              "repair_owner",
+              "text"
             ],
             "properties": {
               "candidate_id": {
@@ -145,6 +151,10 @@
                 "maxLength": 71
               },
               "repair_owner": {
+                "type": "string",
+                "minLength": 1
+              },
+              "text": {
                 "type": "string",
                 "minLength": 1
               }

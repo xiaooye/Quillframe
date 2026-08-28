@@ -1,5 +1,14 @@
 # Quillframe Changelog
 
+## Unreleased · 1.0.0-dev.0 internal candidate repair
+
+Studio can register a `REVISE` from an exact, private qualification failure. Core freezes the source and confirmed diagnostics, inherits the original goals and selected preferences, executes registered Editor FIX + PRESERVE and exact-text comparison, and keeps independent review, author acceptance and settlement separate.
+
+- A comparison-losing repair cannot become the next incumbent. Missing or changed ancestor evidence blocks continuation before model execution.
+- `quality.compare` now requires both exact candidate texts, including in its CLI text-file arguments. Callers must update together with the contract pack; fingerprints alone are not semantic evidence.
+- Deterministic regression fixtures cover source tampering, request inheritance, private draft isolation, comparison failure, budget exhaustion and interrupted execution. They are not evidence that a real manuscript passed review.
+- This is a development change, not a published release. No Project schema migration is introduced. Rollback uses the parent commit `d3f1706ff90f8d68621644576a74f4830c8421fa` after stopping executors; preserve run evidence and do not resume new repair runs under older code.
+
 ## 0.9.1 · Novel-native host boundary
 
 Quillframe v0.9.1 narrows the product boundary to a novel-contract kernel: **the host runs the agent; Quillframe governs the novel**. Codex/Claude native reviewer adapters consume one exact frozen packet, while Project mapping, bounded Context, candidate visibility, independent review, and Acceptance/Settlement remain Core contracts.

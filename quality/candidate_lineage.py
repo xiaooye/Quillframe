@@ -106,6 +106,36 @@ def _candidate(conn: sqlite3.Connection, run_id: str, candidate_id: str) -> sqli
     return qe._candidate(conn, run_id, candidate_id)
 
 
+def validate_derivation(
+    *,
+    origin: str,
+    comparison_parent_candidate_id: str | None,
+    prose_parent_candidate_id: str | None,
+) -> None:
+    """Validate declared ancestry without reading or mutating any store."""
+    if not isinstance(origin, str) or origin not in ORIGINS:
+        raise ValueError(f"invalid origin: {origin}")
+    for name, value in (
+        ("comparison_parent_candidate_id", comparison_parent_candidate_id),
+        ("prose_parent_candidate_id", prose_parent_candidate_id),
+    ):
+        if value is not None and (not isinstance(value, str) or not value.strip()):
+            raise ValueError(f"{name} must be a non-empty string or null")
+    if origin == "draft":
+        if comparison_parent_candidate_id is not None or prose_parent_candidate_id is not None:
+            raise ValueError("draft baseline cannot have comparison/prose parent")
+    elif origin == "repair":
+        if comparison_parent_candidate_id is None or prose_parent_candidate_id != comparison_parent_candidate_id:
+            raise ValueError("repair must derive prose from its direct comparison parent")
+    elif origin == "fresh_regeneration":
+        if comparison_parent_candidate_id is None:
+            raise ValueError("fresh regeneration must still have a comparison parent")
+        if prose_parent_candidate_id is not None:
+            raise ValueError("fresh regeneration must not inherit rejected/incumbent prose")
+    elif origin == "user_edit" and comparison_parent_candidate_id is None:
+        raise ValueError("user_edit challenger requires a comparison parent")
+
+
 def register_candidate(
     conn: sqlite3.Connection,
     *,
@@ -120,10 +150,13 @@ def register_candidate(
 ) -> dict[str, Any]:
     """Attach immutable derivation lineage to an existing evolution candidate."""
     migrate(conn)
-    if origin not in ORIGINS:
-        raise ValueError(f"invalid origin: {origin}")
     row = _candidate(conn, run_id, candidate_id)
     comparison_parent = row["parent_candidate_id"]
+    validate_derivation(
+        origin=origin,
+        comparison_parent_candidate_id=comparison_parent,
+        prose_parent_candidate_id=prose_parent_candidate_id,
+    )
     if not isinstance(created_by_run_id, str) or not created_by_run_id.strip():
         raise ValueError("created_by_run_id required")
     if authority_snapshot_fingerprint is not None:
@@ -132,20 +165,6 @@ def register_candidate(
         _fp(diff_fingerprint, "diff_fingerprint")
     if prose_parent_candidate_id is not None:
         _candidate(conn, run_id, prose_parent_candidate_id)
-
-    if origin == "draft":
-        if comparison_parent is not None or prose_parent_candidate_id is not None:
-            raise ValueError("draft baseline cannot have comparison/prose parent")
-    elif origin == "repair":
-        if comparison_parent is None or prose_parent_candidate_id != comparison_parent:
-            raise ValueError("repair must derive prose from its direct comparison parent")
-    elif origin == "fresh_regeneration":
-        if comparison_parent is None:
-            raise ValueError("fresh regeneration must still have a comparison parent")
-        if prose_parent_candidate_id is not None:
-            raise ValueError("fresh regeneration must not inherit rejected/incumbent prose")
-    elif origin == "user_edit" and comparison_parent is None:
-        raise ValueError("user_edit challenger requires a comparison parent")
 
     existing = conn.execute(
         "SELECT * FROM evolution_candidate_lineage WHERE run_id=? AND candidate_id=?",
@@ -476,6 +495,7 @@ def self_test(path: Path) -> int:
     j1 = qe.prepare_comparison_job(
         conn, run_id="RUN-L", comparison_id="CMP-A1",
         challenger_candidate_id="A1", repair_context=repair_context,
+        incumbent_text="draft A", challenger_text="repair A1",
     )
     qe.record_comparison(conn, job=j1, result=qe._fixture_result(j1, "challenger", "repair succeeds"))
 
@@ -524,6 +544,7 @@ def self_test(path: Path) -> int:
     j2 = qe.prepare_comparison_job(
         conn, run_id="RUN-L", comparison_id="CMP-A2",
         challenger_candidate_id="A2", repair_context=repair_context,
+        incumbent_text="repair A1", challenger_text="fresh A2",
     )
     after_worse = qe.record_comparison(
         conn, job=j2, result=qe._fixture_result(j2, "incumbent", "fresh regeneration is worse"),

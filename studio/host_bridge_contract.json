@@ -227,10 +227,7 @@
       "required_args": [
         "project_id",
         "run_id",
-        "service_id",
-        "instruction",
-        "reader_grip",
-        "rule_material"
+        "service_id"
       ],
       "allowed_surfaces": [
         "cli",

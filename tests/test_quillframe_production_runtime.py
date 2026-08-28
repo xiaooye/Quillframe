@@ -7,6 +7,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -19,7 +20,7 @@ from harness.semantic_workers.independent_invocation_receipt import (
     validate_receipt as validate_native_receipt,
 )
 from persistence.independent_review_repository import IndependentReviewError, IndependentReviewRepository
-from persistence.quillframe_sqlite import QuillframeStore, now_iso
+from persistence.quillframe_sqlite import QuillframeStore, fingerprint_text, now_iso
 from production_runtime import PRODUCTION_MECHANISMS, ProductionRunError, ProductionRunExecutor
 from production_runtime.context import ProductionContextRuntime
 from production_runtime.workflow_service import NovelWorkflowService
@@ -196,6 +197,46 @@ class FakeAgentRuntime:
             steps=1,
             model_requests=1,
         )
+
+
+REPAIRED_FIXTURE_TEXT = "Repaired synthetic candidate with the original objective intact."
+
+
+class RepairFixtureRuntime(FakeAgentRuntime):
+    """Synthetic repair judgments only; never live acceptance evidence."""
+
+    def __init__(self, *, generation_mode="local_or_bounded_repair", comparison_outcome="successful_repair", repair_audit_fails=False):
+        super().__init__()
+        self.generation_mode = generation_mode
+        self.comparison_outcome = comparison_outcome
+        self.repair_audit_fails = repair_audit_fails
+
+    def run(self, job, *, cancellation=None):
+        result = super().run(job, cancellation=cancellation)
+        payload = json.loads(result.final_text)
+        if job.runtime_role == "registered_candidate_self_audit" and (job.task_mode == "DRAFT" or self.repair_audit_fails):
+            payload.update({"result": "fail", "report": "PRIVATE SYNTHETIC DIAGNOSIS",
+                            "dimensions": {**payload["dimensions"], "surface": "fail"},
+                            "findings": [{"finding_id": "F-SYN", "mechanism_id": "synthetic_continuity", "severity": "high",
+                                          "scope": "paragraph", "repair_owner": "continuity", "blocking": True,
+                                          "report": "PRIVATE SYNTHETIC DIAGNOSIS", "function_assessment": "pass",
+                                          "ownership_assessment": "pass", "natural_realization_assessment": "fail",
+                                          "evidence_refs": ["candidate:synthetic"]}]})
+        elif job.runtime_role == "registered_repair_editor":
+            payload = {"confidence": 1.0, "repair_owner": "continuity", "generation_mode": self.generation_mode,
+                       "fix": "Resolve the synthetic continuity defect.", "preserve": ["The explicit author objective."],
+                       "repair_plan": "PRIVATE EDITOR TRAJECTORY", "comparison_required": True}
+        elif job.runtime_role == "registered_repair_comparison":
+            regression = self.comparison_outcome == "objective_regression"
+            payload = {"confidence": 1.0, "winner": "incumbent" if regression else "challenger", "reason": "Synthetic comparison.",
+                       "target_outcome": "improved", "objective_preservation": "degraded" if regression else "preserved",
+                       "reader_value": "unchanged", "character_relationship_energy": "preserved",
+                       "outcome_class": self.comparison_outcome, "repaired_findings": ["F-SYN"],
+                       "introduced_regressions": ["reader"] if regression else [], "regressed_dimensions": ["reader"] if regression else [],
+                       "preserved_strengths": ["author objective"], "evidence": ["candidate:synthetic"]}
+        elif job.runtime_role == "surface_realization" and job.task_mode == "REVISE":
+            payload["text"] = REPAIRED_FIXTURE_TEXT
+        return replace(result, final_text=json.dumps(payload))
 
 
 class PreparedCastFixtureRuntime(FakeAgentRuntime):
@@ -655,6 +696,169 @@ class ProductionRuntimeTests(unittest.TestCase):
             self.execute_to_handoff(runtime, run_id)
         self.assertEqual(caught.exception.code, "target_context_missing")
         self.assertEqual(fake.calls, [])
+
+    def repair_fixture(self, **kwargs):
+        fake = RepairFixtureRuntime(**kwargs)
+        runtime = ProductionRunExecutor(self.store, fake)
+        source_id = self.start()
+        failed = self.execute_to_handoff(runtime, source_id)
+        self.assertEqual(failed["status"], "failed_gate")
+        source = runtime.status("PROD", source_id)["repair_source"]
+        run_id = CoreOperations(self.store).start_author_run("PROD", task_mode="REVISE", target_ref="DOC-1",
+                    payload={"chapter_id": "CH001", "repair_source": source})["run_id"]
+        NovelWorkflowService(self.store).start(project_id="PROD", run_id=run_id, chapter_id="CH001", author_profile="guided")
+        return fake, runtime, source_id, run_id
+
+    def test_repair_executes_editor_and_exact_prose_compare_before_fresh_independent_review(self):
+        fake, runtime, source_id, run_id = self.repair_fixture()
+        with self.store.open_project("PROD") as conn:
+            before = [tuple(row) for row in conn.execute("SELECT * FROM production_stage_calls WHERE run_id=? ORDER BY rowid", (source_id,))]
+        result = runtime.execute("PROD", run_id, service_id="svc", inherit_repair_request=True, independent_provenance=PROVENANCE)
+        self.assertEqual(result["status"], "awaiting_external")
+        self.assertFalse(result["candidate_visible"])
+        calls = [job for job in fake.calls if job.run_id == run_id]
+        roles = [job.runtime_role for job in calls]
+        self.assertLess(roles.index("registered_repair_editor"), roles.index("event_first_raw_draft"))
+        self.assertLess(roles.index("surface_realization"), roles.index("registered_repair_comparison"))
+        comparison = next(job for job in calls if job.runtime_role == "registered_repair_comparison").context[0]["registered_semantic_job"]["input"]["payload"]
+        self.assertEqual(comparison["incumbent"]["text"], PRE_RELEASE_MANUSCRIPT)
+        self.assertEqual(comparison["challenger"]["text"], REPAIRED_FIXTURE_TEXT)
+        for side in ("incumbent", "challenger"):
+            self.assertEqual(comparison[side]["content_fingerprint"], fingerprint_text(comparison[side]["text"]))
+        qualified = runtime._latest_checkpoint("PROD", run_id, "production_qualified_candidate")
+        self.assertEqual(qualified["qualification_receipt"]["repair_preservation_status"], "pass")
+        self.assertEqual(qualified["repair_lineage"]["nodes"][-1]["origin"], "repair")
+        self.assertEqual(qualified["repair_lineage"]["nodes"][-1]["prose_parent_candidate_id"], "diagnostic:" + source_id)
+        blind = next(job for job in calls if job.runtime_role == "registered_reader_engagement")
+        for value in (blind.context, frozen_packet(self.store, run_id)):
+            serialized = json.dumps(value)
+            self.assertNotIn(PRE_RELEASE_MANUSCRIPT, serialized)
+            self.assertNotIn("PRIVATE SYNTHETIC DIAGNOSIS", serialized)
+            self.assertNotIn("PRIVATE EDITOR TRAJECTORY", serialized)
+        replay = runtime.resume_execution("PROD", run_id)
+        self.assertEqual(replay["status"], "awaiting_external")
+        self.assertEqual(len(calls), len([job for job in fake.calls if job.run_id == run_id]))
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual(before, [tuple(row) for row in conn.execute("SELECT * FROM production_stage_calls WHERE run_id=? ORDER BY rowid", (source_id,))])
+            self.assertEqual(conn.execute("SELECT status FROM runs WHERE run_id=?", (source_id,)).fetchone()[0], "failed_gate")
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM candidates").fetchone()[0], 0)
+
+    def test_fresh_repair_omits_incumbent_and_critique_from_writer_but_keeps_comparison_parent(self):
+        fake, runtime, source_id, run_id = self.repair_fixture(generation_mode="fresh_realization")
+        result = runtime.execute("PROD", run_id, service_id="svc", inherit_repair_request=True)
+        self.assertEqual(result["status"], "awaiting_external")
+        writers = [job for job in fake.calls if job.run_id == run_id and job.runtime_role in {"event_first_raw_draft", "surface_realization"}]
+        for writer in writers:
+            serialized = json.dumps(writer.to_dict())
+            for excluded in (PRE_RELEASE_MANUSCRIPT, "PRIVATE SYNTHETIC DIAGNOSIS", "PRIVATE EDITOR TRAJECTORY", "bounded_repair_evidence"):
+                self.assertNotIn(excluded, serialized)
+            self.assertIn("objective_envelope", serialized)
+            self.assertIn("reconstructed_current_story_state", serialized)
+        lineage = runtime._latest_checkpoint("PROD", run_id, "production_qualified_candidate")["repair_lineage"]
+        self.assertEqual(lineage["nodes"][-1]["origin"], "fresh_regeneration")
+        self.assertIsNone(lineage["nodes"][-1]["prose_parent_candidate_id"])
+        self.assertEqual(lineage["nodes"][-1]["comparison_parent_candidate_id"], "diagnostic:" + source_id)
+
+    def test_repair_objective_regression_cannot_replace_the_comparison_incumbent(self):
+        fake, runtime, source_id, run_id = self.repair_fixture(comparison_outcome="objective_regression")
+        failed = runtime.execute("PROD", run_id, service_id="svc", inherit_repair_request=True)
+        self.assertEqual(failed["status"], "failed_gate")
+        self.assertIn("repair_preservation", failed["qualification"]["failed_gates"])
+        with self.assertRaises(ProductionRunError) as caught:
+            runtime.resume_execution("PROD", run_id)
+        self.assertEqual(caught.exception.code, "failed_gate_requires_fresh_run")
+        self.assertFalse(any(job.run_id == run_id and job.runtime_role == "registered_narrative_state" for job in fake.calls))
+        self.assertNotIn("repair_source", runtime.status("PROD", run_id))
+        with self.store.open_project("PROD") as conn:
+            row = conn.execute("SELECT checkpoint_id,artifact_fingerprint FROM checkpoints WHERE run_id=? AND checkpoint_kind='production_qualified_candidate'", (run_id,)).fetchone()
+        rejected_ref = {"source_run_id": run_id, "source_checkpoint_id": row["checkpoint_id"],
+                        "expected_candidate_fingerprint": row["artifact_fingerprint"]}
+        before = len(fake.calls)
+        with self.assertRaises(OperationError) as caught:
+            CoreOperations(self.store).start_author_run("PROD", task_mode="REVISE", target_ref="DOC-1",
+                        payload={"chapter_id": "CH001", "repair_source": rejected_ref})
+        self.assertEqual(caught.exception.code, "repair_incumbent_retained")
+        self.assertEqual(len(fake.calls), before)
+        self.assertEqual(runtime.status("PROD", source_id)["status"], "failed_gate")
+
+    def test_passing_comparison_can_continue_repair_only_with_intact_parent_evidence(self):
+        fake, runtime, source_id, run_id = self.repair_fixture(repair_audit_fails=True)
+        failed = runtime.execute("PROD", run_id, service_id="svc", inherit_repair_request=True)
+        self.assertEqual(failed["status"], "failed_gate")
+        self.assertEqual(failed["qualification"]["failed_gates"], ["self_audit"])
+        second_source = runtime.status("PROD", run_id)["repair_source"]
+        next_run = CoreOperations(self.store).start_author_run("PROD", task_mode="REVISE", target_ref="DOC-1",
+                    payload={"chapter_id": "CH001", "repair_source": second_source})["run_id"]
+        NovelWorkflowService(self.store).start(project_id="PROD", run_id=next_run, chapter_id="CH001", author_profile="guided")
+        before = len(fake.calls)
+        with self.store.open_project("PROD") as conn:
+            parent = dict(conn.execute("SELECT * FROM checkpoints WHERE run_id=? AND checkpoint_kind='production_repair_source'", (run_id,)).fetchone())
+            conn.execute("DELETE FROM checkpoints WHERE checkpoint_id=?", (parent["checkpoint_id"],))
+            conn.commit()
+        with self.assertRaises(ProductionRunError) as caught:
+            runtime.execute("PROD", next_run, service_id="svc", inherit_repair_request=True)
+        self.assertEqual(caught.exception.code, "repair_source_missing")
+        self.assertEqual(len(fake.calls), before)
+        self.assertNotIn("repair_source", runtime.status("PROD", run_id))
+        with self.store.open_project("PROD") as conn:
+            columns = ",".join(parent)
+            placeholders = ",".join("?" for _ in parent)
+            conn.execute(f"INSERT INTO checkpoints({columns}) VALUES({placeholders})", list(parent.values()))
+            conn.commit()
+        fake.repair_audit_fails = False
+        result = runtime.execute("PROD", next_run, service_id="svc", inherit_repair_request=True)
+        self.assertEqual(result["status"], "awaiting_external")
+        qualified = runtime._latest_checkpoint("PROD", next_run, "production_qualified_candidate")
+        self.assertEqual(qualified["repair_lineage"]["evolution_run_id"], source_id)
+        self.assertEqual([node["created_by_run_id"] for node in qualified["repair_lineage"]["nodes"]], [source_id, run_id, next_run])
+        self.assertEqual(qualified["qualification_receipt"]["repair_cycle"], 2)
+
+    def test_repair_rejects_caller_pass_or_objective_replacement_before_model_dispatch(self):
+        fake, runtime, _, run_id = self.repair_fixture()
+        before = len(fake.calls)
+        for inputs, code in (
+            ({"inherit_repair_request": True, "repair_preservation": {"status": "pass"}}, "repair_preservation_core_owned"),
+            ({"inherit_repair_request": True, "instruction": "Replace objectives"}, "repair_request_conflict"),
+            ({"instruction": "Replace objectives", "reader_grip": "very_high", "rule_material": RULE_MATERIAL}, "repair_objective_changed"),
+            ({"instruction": "draft chapter", "reader_grip": "very_high", "rule_material": RULE_MATERIAL,
+              "reader_visible_context": [{"id": "unbound-extra-context"}]}, "repair_objective_changed"),
+        ):
+            with self.subTest(code=code), self.assertRaises(ProductionRunError) as caught:
+                runtime.execute("PROD", run_id, service_id="svc", **inputs)
+            self.assertEqual(caught.exception.code, code)
+        self.assertEqual(len(fake.calls), before)
+        unbound = CoreOperations(self.store).start_author_run("PROD", task_mode="REVISE", target_ref="DOC-1", payload={"chapter_id": "CH001"})["run_id"]
+        NovelWorkflowService(self.store).start(project_id="PROD", run_id=unbound, chapter_id="CH001", author_profile="guided")
+        with self.assertRaises(ProductionRunError) as caught:
+            runtime.execute("PROD", unbound, service_id="svc", inherit_repair_request=True)
+        self.assertEqual(caught.exception.code, "repair_source_required")
+        self.assertEqual(len(fake.calls), before)
+
+    def test_repair_confirmed_editor_is_not_rerun_after_checkpoint_interruption(self):
+        fake, runtime, _, run_id = self.repair_fixture()
+        checkpoint = runtime._checkpoint
+
+        def interrupt(project_id, current_run, kind, state, artifact_fingerprint):
+            if kind == "production_repair_plan":
+                raise OSError("synthetic repair checkpoint interruption")
+            return checkpoint(project_id, current_run, kind, state, artifact_fingerprint)
+
+        with patch.object(runtime, "_checkpoint", side_effect=interrupt), self.assertRaises(OSError):
+            runtime.execute("PROD", run_id, service_id="svc", inherit_repair_request=True)
+        result = runtime.resume_execution("PROD", run_id)
+        self.assertEqual(result["status"], "awaiting_external")
+        calls = [job for job in fake.calls if job.run_id == run_id]
+        self.assertEqual(sum(job.runtime_role == "registered_repair_editor" for job in calls), 1)
+        self.assertEqual(len(calls), len({job.input_fingerprint for job in calls}))
+
+    def test_repair_budget_charges_editor_and_stops_before_unfunded_generation(self):
+        fake, runtime, _, run_id = self.repair_fixture()
+        result = runtime.execute("PROD", run_id, service_id="svc", inherit_repair_request=True, max_model_calls=9)
+        self.assertEqual(result["status"], "budget_exhausted")
+        calls = [job for job in fake.calls if job.run_id == run_id]
+        self.assertEqual(len(calls), 9)
+        self.assertEqual(sum(job.runtime_role == "registered_repair_editor" for job in calls), 1)
+        self.assertFalse(any(job.runtime_role == "surface_realization" for job in calls))
 
     def test_confirmed_stage_response_is_reused_after_checkpoint_failure(self):
         fake = FakeAgentRuntime()

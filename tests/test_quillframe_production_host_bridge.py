@@ -7,6 +7,27 @@ from studio import host_bridge, host_bridge_protocol
 
 
 class ProductionHostBridgeTests(unittest.TestCase):
+    def test_repair_execute_inherits_only_core_frozen_inputs_and_rejects_caller_comparison(self):
+        request = {"schema": host_bridge.REQUEST_SCHEMA, "bridge_version": host_bridge.BRIDGE_VERSION, "request_id": "studio-repair",
+                   "operation": "author.run.execute", "surface": "local_app", "args": {
+            "project_id": "P", "run_id": "R", "service_id": "S", "inherit_repair_request": True,
+        }, "authority": False}
+        with patch.object(host_bridge, "production_runtime") as factory:
+            factory.return_value.execute.return_value = {"status": "awaiting_external", "authority": False}
+            response = host_bridge.invoke(request)
+            self.assertEqual(response["status"], "ok")
+            args = factory.return_value.execute.call_args.kwargs
+            self.assertIs(args["inherit_repair_request"], True)
+            self.assertIsNone(args["instruction"])
+            self.assertIsNone(args["rule_material"])
+        for patch_args, code in (({"repair_preservation": {"status": "pass"}}, "repair_preservation_core_owned"),
+                                 ({"inherit_repair_request": "yes"}, "invalid_args"),
+                                 ({"inherit_repair_request": False}, "invalid_args")):
+            with patch.object(host_bridge, "production_runtime") as factory:
+                response = host_bridge.invoke({**request, "args": {**request["args"], **patch_args}})
+                self.assertEqual(response["error"]["code"], code)
+                factory.return_value.execute.assert_not_called()
+
     def test_v11_contract_exposes_native_dispatch_without_compatibility_aliases(self):
         contract = host_bridge.contract()
         self.assertEqual(contract["version"], "11")
@@ -43,9 +64,6 @@ class ProductionHostBridgeTests(unittest.TestCase):
                 "project_id",
                 "run_id",
                 "service_id",
-                "instruction",
-                "reader_grip",
-                "rule_material",
             ],
         )
         self.assertFalse(contract["invariants"]["independent_review_project_peer_receipt_required"])

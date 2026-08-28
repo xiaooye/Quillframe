@@ -303,6 +303,10 @@
             "minLength": 71,
             "maxLength": 71
           },
+          "candidate_text": {
+            "type": "string",
+            "minLength": 1
+          },
           "reader_assessment": {
             "type": "object"
           },
@@ -378,6 +382,7 @@
         "Return a FIX statement for the owning failure mechanism and a compact PRESERVE list grounded in the supplied objective envelope. Preserve function, reader question/pressure/reward, character or relationship energy, humor/charm, payoff and forward pull only when they are actually required by current evidence.",
         "Choose repair depth and generation mode semantically. Do not map a Reader label, HF code, owner, scope, paragraph count, repair-cycle count or metric to a predetermined local/fresh decision table.",
         "Choose fresh_realization when rejected realization or accumulated critique is likely to anchor the Writer, or when objective regression/contextual inertia/oscillation makes patch continuation unsafe. A fresh realization reconstructs current authoritative state; it does not append the full rejection trajectory.",
+        "For fresh_realization, fix and preserve must express abstract current objectives or state constraints. Do not quote rejected sentences, prescribe concrete surface patches, or reconstruct rejected prose in those fields; they are the only repair directives passed to the fresh Writer.",
         "Do not solve objective regression by weakening valid Surface/Canon/character constraints. Search for a candidate that satisfies both the repair target and the preserved objective.",
         "For material subjective changes, require incumbent/challenger comparison. Do not assume revision is improvement, and do not require wording or beat-order preservation when a major fresh realization keeps the intended functions.",
         "Do not perform the rewrite, mutate Canon, activate Author Model preferences or expose private chain-of-thought."

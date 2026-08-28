@@ -248,7 +248,25 @@ export interface AuthorRunStatusProjection {
   events: AuthorRunEvent[];
   candidate?: CandidateRow | null;
   execution_journal?: unknown;
+  repair_source?: FailedCandidateRepairSource;
   authority: false;
+}
+
+export interface FailedCandidateRepairSource {
+  source_run_id: string;
+  source_checkpoint_id: string;
+  expected_candidate_fingerprint: string;
+}
+
+export function projectRepairSource(value: unknown, expected: { project_id: string; run_id: string; document_id: string }): FailedCandidateRepairSource | undefined {
+  const journal = projectExecutionJournal(value, expected);
+  if (!journal || journal.run_status !== "failed_gate" || journal.active_executor || journal.pending_calls.length
+    || !reviewRecord(value) || !reviewRecord(value.repair_source)) return undefined;
+  const source = value.repair_source;
+  if (source.source_run_id !== expected.run_id || !canonicalText(source.source_checkpoint_id)
+    || !fingerprint(source.expected_candidate_fingerprint)) return undefined;
+  return { source_run_id: source.source_run_id as string, source_checkpoint_id: source.source_checkpoint_id,
+    expected_candidate_fingerprint: source.expected_candidate_fingerprint as string };
 }
 
 export interface ExecutionJournalCall {

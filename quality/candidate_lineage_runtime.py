@@ -49,15 +49,16 @@ def _prevalidate_derivation(
     parent_candidate_id: str | None,
     prose_parent_candidate_id: str | None,
 ) -> str:
-    if origin not in cl.ORIGINS - {"draft"}:
+    if not isinstance(origin, str) or origin not in cl.ORIGINS - {"draft"}:
         raise ValueError("challenger origin must be repair|fresh_regeneration|user_edit")
     parent = _expected_parent(conn, run_id, parent_candidate_id)
+    cl.validate_derivation(
+        origin=origin,
+        comparison_parent_candidate_id=parent,
+        prose_parent_candidate_id=prose_parent_candidate_id,
+    )
     if prose_parent_candidate_id is not None:
         qe._candidate(conn, run_id, prose_parent_candidate_id)
-    if origin == "repair" and prose_parent_candidate_id != parent:
-        raise ValueError("repair must explicitly name its direct comparison parent as prose parent")
-    if origin == "fresh_regeneration" and prose_parent_candidate_id is not None:
-        raise ValueError("fresh regeneration must not inherit incumbent/rejected prose")
     return parent
 
 
@@ -198,6 +199,8 @@ def prepare_comparison_job(
     run_id: str,
     comparison_id: str,
     challenger_candidate_id: str,
+    incumbent_text: str,
+    challenger_text: str,
     repair_context: dict[str, Any],
     source_session_id: str | None = None,
 ) -> dict[str, Any]:
@@ -207,6 +210,8 @@ def prepare_comparison_job(
         run_id=run_id,
         comparison_id=comparison_id,
         challenger_candidate_id=challenger_candidate_id,
+        incumbent_text=incumbent_text,
+        challenger_text=challenger_text,
         repair_context=repair_context,
         source_session_id=source_session_id,
     )
@@ -315,6 +320,7 @@ def self_test(path: Path) -> int:
             run_id="RUN-RUNTIME",
             comparison_id="CMP-BLOCKED",
             challenger_candidate_id="A2",
+            incumbent_text="baseline", challenger_text="fresh candidate",
             repair_context=repair_context,
         )
     except ValueError:
@@ -338,6 +344,7 @@ def self_test(path: Path) -> int:
         run_id="RUN-RUNTIME",
         comparison_id="CMP-A2",
         challenger_candidate_id="A2",
+        incumbent_text="baseline", challenger_text="fresh candidate",
         repair_context=repair_context,
     )
     result = qe._fixture_result(job, "incumbent", "fresh candidate does not improve objectives")
@@ -407,6 +414,8 @@ def main() -> int:
     pc.add_argument("--run-id", required=True)
     pc.add_argument("--comparison-id", required=True)
     pc.add_argument("--challenger-id", required=True)
+    pc.add_argument("--incumbent-text-file", required=True)
+    pc.add_argument("--challenger-text-file", required=True)
     pc.add_argument("--repair-context-json", required=True)
     pc.add_argument("--source-session-id")
 
@@ -437,7 +446,7 @@ def main() -> int:
                 run_id=args.run_id,
                 subject_id=args.subject_id,
                 baseline_candidate_id=args.baseline_id,
-                baseline_text=Path(args.text_file).read_text(encoding="utf-8"),
+                baseline_text=Path(args.text_file).read_bytes().decode("utf-8"),
                 created_by_run_id=args.created_by_run_id,
                 created_by_session_id=args.created_by_session_id,
                 authority_snapshot_fingerprint=args.authority_snapshot_fingerprint,
@@ -448,7 +457,7 @@ def main() -> int:
                 conn,
                 run_id=args.run_id,
                 candidate_id=args.candidate_id,
-                text=Path(args.text_file).read_text(encoding="utf-8"),
+                text=Path(args.text_file).read_bytes().decode("utf-8"),
                 repair_owner=args.repair_owner,
                 origin=args.origin,
                 prose_parent_candidate_id=args.prose_parent_id,
@@ -465,6 +474,8 @@ def main() -> int:
                 run_id=args.run_id,
                 comparison_id=args.comparison_id,
                 challenger_candidate_id=args.challenger_id,
+                incumbent_text=Path(args.incumbent_text_file).read_bytes().decode("utf-8"),
+                challenger_text=Path(args.challenger_text_file).read_bytes().decode("utf-8"),
                 repair_context=load_json_file(args.repair_context_json),
                 source_session_id=args.source_session_id,
             )

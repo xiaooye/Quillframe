@@ -23,6 +23,7 @@ from harness.semantic_workers.peer_chat_relay import validate_peer_result
 from persistence.independent_review_repository import IndependentReviewError, IndependentReviewRepository
 from persistence.production_stage_repository import ProductionStageError, ProductionStageRepository
 from persistence.quillframe_sqlite import fingerprint_text, now_iso
+from quality.candidate_qualification import comparison_gate_status
 from quality.reader_expectation import ReaderExpectationError, record_observation, validate_observation_binding
 
 from .context import ProductionContextRuntime
@@ -52,6 +53,11 @@ from .semantic import (
     writer_safe_projection,
 )
 from .sources import _json
+from .repair import (
+    candidate_lineage, comparison_payload, editor_payload, generation_instruction,
+    generation_plan, objective_envelope, prior_lineage, writer_context,
+)
+from .repair_source import freeze_repair_source, load_repair_source
 
 # Characters propose actions before the Scene resolver can resolve them. The
 # public mechanism vocabulary remains shared with Context Runtime.
@@ -148,7 +154,40 @@ class ProductionRunExecutor(ProductionContextRuntime):
         if result["status"] == "semantic_running" and not journal["active_executor"]:
             result["status"] = "semantic_pending" if journal["unconfirmed_call_ids"] else "interrupted"
         result["execution_journal"] = journal
+        if result["status"] == "failed_gate" and not journal["active_executor"] and not journal["unconfirmed_call_ids"]:
+            with self.store.open_project(project_id) as conn:
+                row = conn.execute(
+                    "SELECT checkpoint_id,artifact_fingerprint FROM checkpoints WHERE run_id=? "
+                    "AND checkpoint_kind='production_qualified_candidate' ORDER BY created_at DESC,rowid DESC LIMIT 1", (run_id,),
+                ).fetchone()
+                if row:
+                    source_ref = {"source_run_id": run_id, "source_checkpoint_id": row["checkpoint_id"],
+                                  "expected_candidate_fingerprint": row["artifact_fingerprint"]}
+                    try:
+                        source = freeze_repair_source(conn, source_ref=source_ref, target=self._run_row(project_id, run_id)["target_context"])
+                        prior_lineage(source)
+                    except ProductionRunError:
+                        pass  # An invalid or incomplete source is never offered as repairable.
+                    else:
+                        result["repair_source"] = source_ref
         return result
+
+    def _repair_source(self, project_id: str, run: dict[str, Any]) -> dict[str, Any] | None:
+        requested = run["target_context"].get("payload", {}).get("repair_source")
+        if run["task_mode"] != "REVISE":
+            if requested is not None:
+                raise ProductionRunError("repair_mode_required", "a failed candidate must be repaired through REVISE")
+            return None
+        if requested is None:
+            raise ProductionRunError("repair_source_required", "REVISE requires a Core-frozen failed candidate source")
+        with self.store.open_project(project_id) as conn:
+            source = load_repair_source(conn, run["run_id"])
+        source_author = source["source_target_context"].get("author_model", {})
+        current_author = run["target_context"].get("author_model", {})
+        if any(current_author.get(key) != source_author.get(key) for key in ("selected_hypothesis_ids", "active_preferences")):
+            raise ProductionRunError("repair_objective_changed", "REVISE must preserve the source run's selected author preferences")
+        prior_lineage(source)
+        return source
 
     def resume_execution(self, project_id: str, run_id: str) -> dict[str, Any]:
         """Continue only the immutable request; callers cannot revise its inputs."""
@@ -358,6 +397,9 @@ class ProductionRunExecutor(ProductionContextRuntime):
         model_preference: str | None,
         artifacts: dict[str, Any],
     ) -> tuple[dict[str, Any], dict[str, Any]]:
+        repair = artifacts.get("repair")
+        if repair and mechanism != "continuity":
+            user_instruction = generation_instruction(user_instruction, repair)
         if mechanism == "character_simulation":
             return self._run_character_stage(run, bundle, service_id=service_id, user_instruction=user_instruction, model_preference=model_preference)
         if mechanism == "scene_simulation":
@@ -389,6 +431,8 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "frozen_stage_context": frozen_stage,
             "upstream_artifacts": upstream,
         }]
+        if repair and mechanism in {"event_first_raw_draft", "surface_realization"}:
+            context[0]["repair"] = writer_context(artifacts["repair_source"], repair, frozen_stage)
         job, result = self._agent_job(
             run=run,
             service_id=service_id,
@@ -1559,13 +1603,33 @@ class ProductionRunExecutor(ProductionContextRuntime):
         return self._awaiting_external_projection(project_id, {**run, "status": "awaiting_external"}, bundle) or {}
 
     def execute(
-        self, project_id: str, run_id: str, *, service_id: str, instruction: str,
+        self, project_id: str, run_id: str, *, service_id: str, instruction: str | None = None,
         document_id: str | None = None, model_preference: str | None = None,
-        stage_budgets: dict[str, int] | None = None, reader_grip: str,
-        rule_material: list[dict[str, Any]], reader_visible_context: list[dict[str, Any]] | None = None,
+        stage_budgets: dict[str, int] | None = None, reader_grip: str | None = None,
+        rule_material: list[dict[str, Any]] | None = None, reader_visible_context: list[dict[str, Any]] | None = None,
         independent_provenance: dict[str, Any] | None = None, repair_preservation: dict[str, Any] | None = None,
-        max_model_calls: int = 64,
+        max_model_calls: int = 64, inherit_repair_request: bool = False,
     ) -> dict[str, Any]:
+        if not isinstance(inherit_repair_request, bool):
+            raise ProductionRunError("invalid_args", "inherit_repair_request must be boolean")
+        if repair_preservation is not None:
+            raise ProductionRunError("repair_preservation_core_owned", "repair comparison evidence must be executed and bound by Core")
+        run = self._run_row(project_id, run_id)
+        source = self._repair_source(project_id, run)
+        if inherit_repair_request:
+            if source is None:
+                raise ProductionRunError("repair_source_required", "only a frozen REVISE source can supply the original request")
+            if any(value is not None for value in (instruction, reader_grip, rule_material, reader_visible_context)):
+                raise ProductionRunError("repair_request_conflict", "inherited repair inputs cannot be replaced by caller inputs")
+            original = source["source_request"]
+            instruction, reader_grip = original["instruction"], original["reader_grip"]
+            rule_material = deepcopy(original["rule_material"])
+            reader_visible_context = deepcopy(original.get("reader_visible_context") or [])
+        if source and any(value != source["source_request"].get(key) for key, value in (
+                ("instruction", instruction), ("reader_grip", reader_grip), ("rule_material", rule_material))):
+            raise ProductionRunError("repair_objective_changed", "this repair must retain the exact original request, reader grip and rule material")
+        if source and (reader_visible_context or []) != (source["source_request"].get("reader_visible_context") or []):
+            raise ProductionRunError("repair_objective_changed", "this repair must retain the original reader-visible context")
         if not isinstance(instruction, str) or not instruction.strip() or not isinstance(service_id, str) or not service_id.strip():
             raise ProductionRunError("invalid_args", "instruction and service_id are required")
         if reader_grip not in READER_GRIP_VALUES:
@@ -1576,7 +1640,6 @@ class ProductionRunExecutor(ProductionContextRuntime):
             not isinstance(reader_visible_context, list) or any(not isinstance(item, dict) for item in reader_visible_context)
         ):
             raise ProductionRunError("invalid_args", "reader_visible_context must be an object array")
-        run = self._run_row(project_id, run_id)
         target = run["target_context"]
         if document_id is not None and document_id != target["document_id"]:
             raise ProductionRunError("target_document_mismatch", "execution cannot replace the Core-frozen target document")
@@ -1696,6 +1759,14 @@ class ProductionRunExecutor(ProductionContextRuntime):
         self._validate_selected_preferences(project_id, run["target_context"])
         if run.get("status") == "failed_gate":
             raise ProductionRunError("failed_gate_requires_fresh_run", "a semantic gate rejected this run; create a fresh DRAFT/REVISE run instead of reviewer-shopping or replaying it")
+        source = self._repair_source(project_id, run)
+        if source:
+            source_bundle = self._latest_bundle(project_id, source["source_run_id"])
+            if not source_bundle or source_bundle.get("bundle_fingerprint") != source["source_context_bundle_fingerprint"]:
+                raise ProductionRunError("repair_source_stale", "the source context bundle changed")
+            validation = self._validate_bundle_current(project_id, source_bundle)
+            if not validation.get("proceed"):
+                raise ProductionRunError("repair_source_stale", "the failed source context is no longer current")
         if bundle and self._latest_independent_handoff(project_id, run_id):
             # Recover a process that committed the frozen packet before the
             # awaiting_external status/event. Never mint a replacement nonce.
@@ -1749,6 +1820,29 @@ class ProductionRunExecutor(ProductionContextRuntime):
         public_receipts: list[dict[str, Any]] = []
         reader_binding: dict[str, Any] | None = None
         registered = RegisteredSemanticExecutor(self.agent_runtime, invoke=self._invoke_agent)
+        repair: dict[str, Any] | None = None
+        if source:
+            frozen_story = self.materialize_stage_context(bundle, "story_canon_preflight")
+            envelope = objective_envelope(source, frozen_story)
+            editor = registered.execute(
+                run=run, service_id=service_id, contract_id="editor.repair_spec", subject_id=document_id or source["source_target_context"]["document_id"],
+                payload=editor_payload(source, envelope, frozen_story), model_preference=model_preference,
+                runtime_role="registered_repair_editor", max_output_tokens=4200,
+            )
+            repair = generation_plan(editor, envelope)
+            if repair["policy"]["repair_owner"] in {"runtime", "human", "research", "context"}:
+                self._set_run(project_id, run_id, "failed_gate")
+                self._event(project_id, run_id, "production_repair_requires_external_action", {
+                    "repair_owner": repair["policy"]["repair_owner"], "editor_binding_fingerprint": editor["binding_fingerprint"], "authority": False,
+                })
+                raise ProductionRunError("repair_owner_requires_external_action", "the Editor selected a repair requiring a separate authorized action")
+            self._checkpoint(project_id, run_id, "production_repair_plan", {"editor_binding": editor, "generation_plan": repair}, fingerprint(repair))
+            artifacts.update({"repair": repair, "repair_source": source})
+            self._event(project_id, run_id, "production_repair_planned", {
+                "source_run_id": source["source_run_id"], "source_candidate_fingerprint": source["candidate_fingerprint"],
+                "generation_mode": repair["policy"]["generation_mode"], "repair_owner": repair["policy"]["repair_owner"],
+                "editor_binding_fingerprint": editor["binding_fingerprint"], "authority": False,
+            })
 
         for mechanism in PRE_INDEPENDENT_MECHANISMS:
             validation = self._validate_bundle_current(project_id, bundle)
@@ -1890,7 +1984,17 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 runtime_role="registered_candidate_self_audit",
                 max_output_tokens=5200,
             )
-            repair_cycle = 1 if run["task_mode"] == "REVISE" else 0
+            repair_cycle = 0
+            lineage = None
+            if source and repair:
+                lineage = candidate_lineage(source, run, candidate_text, repair)
+                repair_cycle = len(lineage["nodes"]) - 1
+                comparison = registered.execute(
+                    run=run, service_id=service_id, contract_id="quality.compare", subject_id="repair:" + run_id,
+                    payload=comparison_payload(source, run, candidate_text, repair, lineage), model_preference=model_preference,
+                    runtime_role="registered_repair_comparison", max_output_tokens=4200,
+                )
+                repair_preservation = {"status": comparison_gate_status(comparison["result"]["judgment"]), "semantic_binding": comparison}
             qualification = build_pre_independent_qualification(
                 subject_id=target_document,
                 candidate_fingerprint=candidate_fingerprint,
@@ -1921,6 +2025,9 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "qualification_receipt": qualification,
             "authority": False,
         }
+        if lineage:
+            qualified_state["repair_lineage"] = lineage
+            qualified_state["repair_preservation"] = repair_preservation
         if qualification["qualification_status"] == "qualified_for_independent":
             observation = registered.execute(
                 run=run, service_id=service_id, contract_id="reader.expectations", subject_id=target_document,
@@ -1973,6 +2080,9 @@ class ProductionRunExecutor(ProductionContextRuntime):
             }
         if qualification["qualification_status"] != "qualified_for_independent":
             self._set_run(project_id, run_id, "failed_gate")
+            self._event(project_id, run_id, "production_gate_rejected", {
+                "mechanism": "pre_independent_qualification", "stage_result_fingerprint": qualification["receipt_fingerprint"],
+            })
             return {
                 "schema": PRODUCTION_EXECUTION_SCHEMA,
                 "project_id": project_id,

@@ -539,6 +539,15 @@ class CoreOperations:
             raise OperationError("unsupported_task_mode", "author.run.start requires one supported author task mode")
         if not isinstance(payload, dict):
             raise OperationError("invalid_args", "payload must be an object")
+        if "repair_source" in payload and task_mode != "REVISE":
+            raise OperationError("repair_source_requires_revise", "only REVISE may bind an internal repair source")
+        if "repair_source" in payload and {
+            "candidate_text", "candidate_fingerprint", "reader_binding", "self_audit_binding",
+            "reader_assessment", "semantic_rule_assessment", "qualification_receipt",
+            "qualification_status", "repair_preservation", "repair_lineage", "source_request",
+            "source_target_context", "source_fingerprint", "status", "pass",
+        }.intersection(payload):
+            raise OperationError("repair_source_invalid", "repair evidence must come from Core, not the author payload")
         from quillframe.novel import resolve_chapter_target, bind_prior_dependencies
         if task_mode == "AUDIT" and MUTATION_KEYS.intersection(payload):
             raise OperationError("audit_is_non_mutating", "AUDIT reports findings and cannot request rewrite/apply actions")
@@ -576,10 +585,39 @@ class CoreOperations:
                     conn.commit()
                     return prior
                 target = resolve_chapter_target(conn, payload.get("chapter_id"), payload.get("document_id"), target_ref)
-                selected = payload.get("selected_preference_ids", [])
+                repair_source = None
+                if "repair_source" in payload:
+                    from production_runtime.contracts import ProductionRunError
+                    from production_runtime.repair_source import freeze_repair_source
+                    try:
+                        repair_source = freeze_repair_source(conn, source_ref=payload["repair_source"], target=target)
+                    except ProductionRunError as exc:
+                        raise OperationError(exc.code, str(exc), detail=exc.detail) from exc
+                source_author_model = None
+                if repair_source is not None:
+                    source_author_model = repair_source["source_target_context"].get("author_model")
+                    if not isinstance(source_author_model, dict) or not isinstance(source_author_model.get("selected_hypothesis_ids"), list):
+                        raise OperationError("repair_objective_changed", "repair source has no valid frozen preference selection")
+                inherited_selection = source_author_model["selected_hypothesis_ids"] if source_author_model is not None else []
+                selected = payload.get("selected_preference_ids", inherited_selection)
                 if not isinstance(selected, list) or len(selected) > 100 or any(not isinstance(value, str) or not value for value in selected) or len(set(selected)) != len(selected):
                     raise OperationError("invalid_args", "selected_preference_ids must contain unique preference IDs")
-                author_model = self.project_learning().project_context(project_id=project_id, selected_hypothesis_ids=selected)
+                if source_author_model is not None and selected != inherited_selection:
+                    raise OperationError("repair_objective_changed", "repair must retain its source preference selection")
+                try:
+                    author_model = self.project_learning().project_context(project_id=project_id, selected_hypothesis_ids=selected)
+                except ValueError as exc:
+                    if source_author_model is not None:
+                        raise OperationError("repair_objective_changed", "a source preference is no longer available for this repair") from exc
+                    raise
+                target_payload = payload
+                if source_author_model is not None:
+                    preference_keys = ("selected_hypothesis_ids", "active_preferences")
+                    if {key: author_model.get(key) for key in preference_keys} != {key: source_author_model.get(key) for key in preference_keys}:
+                        raise OperationError("repair_objective_changed", "the selected source preferences changed before repair registration")
+                    # Keep the caller request/idempotency fingerprint intact;
+                    # the derived target records the actual inherited selection.
+                    target_payload = {**payload, "selected_preference_ids": list(selected)}
                 if session_id is not None:
                     session = conn.execute("SELECT session_id FROM sessions WHERE session_id=?", (session_id,)).fetchone()
                     if not session:
@@ -600,12 +638,17 @@ class CoreOperations:
                     (run_id, session_id, task_mode, target_ref, "awaiting_semantic", request_fp, stamp, stamp),
                 )
                 target_context = {"schema": "quillframe_author_run_request_v1", **target,
-                                  "task_mode": task_mode, "target_ref": target_ref, "payload": payload,
+                                  "task_mode": task_mode, "target_ref": target_ref, "payload": target_payload,
                                   "author_model": author_model}
                 conn.execute(
                     "INSERT INTO checkpoints(checkpoint_id,run_id,checkpoint_kind,state_json,artifact_fingerprint,created_at) VALUES(?,?,'author_run_request',?,?,?)",
                     ("request:" + run_id, run_id, canonical_json(target_context), fingerprint_text(canonical_json(target_context)), stamp),
                 )
+                if repair_source is not None:
+                    conn.execute(
+                        "INSERT INTO checkpoints(checkpoint_id,run_id,checkpoint_kind,state_json,artifact_fingerprint,created_at) VALUES(?,?,'production_repair_source',?,?,?)",
+                        ("repair-source:" + run_id, run_id, canonical_json(repair_source), repair_source["source_fingerprint"], stamp),
+                    )
                 if task_mode in {"DRAFT", "REVISE"}:
                     bind_prior_dependencies(conn, target, run_id)
                 event_id = "evt_" + uuid.uuid4().hex

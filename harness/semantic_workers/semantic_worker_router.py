@@ -118,6 +118,15 @@ def _character_evidence_rows(payload:dict[str,Any])->list[tuple[str,int]]:
             rows.append((row["pattern_id"],row.get("available_from_story_order")))
     return rows
 
+def _text_binding_errors(text:Any,expected_fingerprint:Any,label:str)->list[str]:
+    if not isinstance(text,str) or not text:
+        return [f"{label} text must be a non-empty string"]
+    try:
+        actual="sha256:"+hashlib.sha256(text.encode("utf-8")).hexdigest()
+    except UnicodeError:
+        return [f"{label} text must encode as UTF-8"]
+    return [] if actual==expected_fingerprint else [f"{label} fingerprint does not match exact UTF-8 text"]
+
 def validate_contract_input_bindings(cid:str,input_payload:dict[str,Any])->list[str]:
     e=[]
     if cid=="character.action_propose":
@@ -161,6 +170,10 @@ def validate_contract_input_bindings(cid:str,input_payload:dict[str,Any])->list[
                 if unknown:e.append("relationship snapshot cites unknown source refs: "+", ".join(unknown))
         return e
     if cid=="quality.compare":
+        for side in ("incumbent","challenger"):
+            candidate=input_payload.get(side)
+            if not isinstance(candidate,dict):e.append(f"quality.compare {side} object required")
+            else:e += _text_binding_errors(candidate.get("text"),candidate.get("content_fingerprint"),f"quality.compare {side}")
         repair_context=input_payload.get("repair_context",{})
         envelope=repair_context.get("objective_envelope") if isinstance(repair_context,dict) else None
         if isinstance(envelope,dict):
@@ -169,6 +182,8 @@ def validate_contract_input_bindings(cid:str,input_payload:dict[str,Any])->list[
             from objective_envelope import validate as validate_objective_envelope
             e += ["quality.compare objective envelope: "+x for x in validate_objective_envelope(envelope,subject_id=input_payload.get("evolution_subject_id"),run_id=input_payload.get("evolution_run_id"))]
         return e
+    if cid=="editor.repair_spec" and "candidate_text" in input_payload:
+        return _text_binding_errors(input_payload["candidate_text"],input_payload.get("candidate_fingerprint"),"editor.repair_spec candidate")
     return e
 
 def validate_contract_input(cid:str,contract:dict[str,Any],input_payload:dict[str,Any])->list[str]:
@@ -183,7 +198,9 @@ def validate_contract_input(cid:str,contract:dict[str,Any],input_payload:dict[st
 
 def validate_contract_result_bindings(job:dict[str,Any],judgment:dict[str,Any])->list[str]:
     cid=job.get("input",{}).get("model_contract_id"); payload=job.get("input",{}).get("payload",{}); e=[]
+    if cid=="quality.compare" and not isinstance(payload,dict):return ["quality.compare payload must be an object"]
     if not isinstance(payload,dict) or not isinstance(judgment,dict):return e
+    if cid=="editor.repair_spec":return validate_contract_input_bindings(cid,payload)
     if cid=="character.action_propose":
         if judgment.get("character_id")!=payload.get("character_id"):e.append("character action result mismatch: character_id")
         if judgment.get("active_agenda")!=payload.get("active_agenda"):e.append("character action result mismatch: active_agenda")
@@ -239,6 +256,7 @@ def validate_contract_result_bindings(job:dict[str,Any],judgment:dict[str,Any])-
             if unknown:e.append("relationship result invalidates unknown snapshots: "+", ".join(unknown))
         return e
     if cid=="quality.compare":
+        e += validate_contract_input_bindings(cid,payload)
         winner=judgment.get("winner"); target=judgment.get("target_outcome"); preservation=judgment.get("objective_preservation")
         reader=judgment.get("reader_value"); energy=judgment.get("character_relationship_energy"); outcome=judgment.get("outcome_class")
         regressed=judgment.get("regressed_dimensions",[])

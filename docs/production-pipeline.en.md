@@ -32,6 +32,16 @@ Local surface defects can receive local rewrite. A surface cluster can require s
 
 Every repair cycle follows FIX + PRESERVE. A successful local repair that damages the objective envelope, reader value, or relationship energy is not a successful overall repair.
 
+### Repair an internal qualification failure
+
+Studio offers **Repair this version** only when Core can verify a stopped `failed_gate` run with an exact private candidate and a `repair_required` qualification receipt. The action registers a new `REVISE` run. Core freezes the source run, checkpoint, candidate bytes, diagnostics and confirmed execution journal in the same transaction; the browser supplies only exact references. The rejected run and its outputs remain unchanged.
+
+`author.run.execute` can use `inherit_repair_request=true` for that bound run. Core supplies the original instruction, reader grip and rule material; registration also inherits the exact selected author preferences. Callers cannot replace them or submit a passing comparison. Ordinary `DRAFT` execution still requires its execution inputs explicitly. Changed objectives, stale source context, missing candidate evidence, and transport failures need their own resolution; this entry does not convert them into prose repairs.
+
+The registered `editor.repair_spec` receives the failed candidate and bounded diagnosis. Its objective envelope copies the explicit request and frozen active plans, without deriving goals from rejected prose. The model selects the repair owner, generation mode, FIX and PRESERVE. A fresh Writer receives current story material and those constraints, without incumbent prose or the full critique trajectory; a bounded repair also receives the exact incumbent. All production mechanisms execute again under the new run's journal and budget.
+
+After generation, registered `quality.compare` receives both candidates' exact text and verified SHA-256 fingerprints. Its target-improvement and objective-preservation judgments feed the existing qualification gate. Lineage retains the original comparison ancestry; fresh regeneration has no prose parent. A regression or inconclusive comparison cannot release text. The current entry accepts a failed `REVISE` as a later source only if its actual comparison passed and selected that challenger, and its parent evidence remains intact. A losing repair is preserved as diagnostic evidence but cannot replace the incumbent or serve as the next baseline through this entry. Blind Reader and independent review receive only their allowed fresh-candidate inputs. Repair never accepts, settles or publishes the chapter automatically.
+
 <img src="assets/concepts/objective-preserving-repair.en.svg" alt="Objective-preserving repair: target defect improves while the objective envelope stays intact" width="100%" />
 
 ## 6. Evolve candidates without contaminating fresh regeneration

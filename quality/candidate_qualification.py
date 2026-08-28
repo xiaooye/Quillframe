@@ -214,6 +214,19 @@ def _continuity_gate(raw: Any, *, candidate: str) -> dict[str, Any]:
     }
 
 
+def comparison_gate_status(judgment: dict[str, Any]) -> str:
+    """Project already-validated comparison axes without making a new judgment."""
+    if not isinstance(judgment, dict):
+        raise ValueError("comparison judgment must be an object")
+    target=judgment.get("target_outcome"); preservation=judgment.get("objective_preservation")
+    reader=judgment.get("reader_value"); energy=judgment.get("character_relationship_energy"); outcome=judgment.get("outcome_class")
+    if "insufficient_evidence" in {target,preservation,reader,energy} or outcome=="inconclusive":
+        return "pending"
+    if outcome=="successful_repair" and target=="improved" and preservation=="preserved" and reader in {"improved","unchanged"} and energy in {"preserved","not_applicable"}:
+        return "pass"
+    return "fail"
+
+
 def _repair_preservation_gate(raw: Any, *, candidate: str, subject_id: str) -> dict[str, Any]:
     if not isinstance(raw, dict):
         raise ValueError("repair_preservation gate object required for repair_cycle > 0")
@@ -242,9 +255,7 @@ def _repair_preservation_gate(raw: Any, *, candidate: str, subject_id: str) -> d
     _sha(envelope_fp,"repair_preservation objective_envelope_fingerprint")
     judgment=result.get("judgment",{})
     target=judgment.get("target_outcome"); preservation=judgment.get("objective_preservation"); reader=judgment.get("reader_value"); energy=judgment.get("character_relationship_energy"); outcome=judgment.get("outcome_class")
-    if "insufficient_evidence" in {target,preservation,reader,energy} or outcome=="inconclusive": derived="pending"
-    elif outcome=="successful_repair" and target=="improved" and preservation=="preserved" and reader in {"improved","unchanged"} and energy in {"preserved","not_applicable"}: derived="pass"
-    else: derived="fail"
+    derived=comparison_gate_status(judgment)
     if declared!=derived: raise ValueError("repair_preservation.status contradicts semantic comparison")
     return {"gate":"repair_preservation","status":derived,"contract_id":"quality.compare","job_fingerprint":job.get("input_fingerprint"),"result_fingerprint":_result_fingerprint(result),"objective_envelope_fingerprint":envelope_fp,"target_outcome":target,"objective_preservation":preservation,"reader_value":reader,"character_relationship_energy":energy,"outcome_class":outcome,"evidence_refs":_string_list(judgment.get("evidence",[]),"repair_preservation.evidence_refs")}
 
@@ -357,6 +368,40 @@ def validate_qualification_receipt(
         errors.append("qualification pending_gates/failed_gates must be arrays")
         pending = pending if isinstance(pending, list) else []
         failed = failed if isinstance(failed, list) else []
+    cycle = receipt.get("repair_cycle")
+    valid_cycle = isinstance(cycle, int) and not isinstance(cycle, bool) and cycle >= 0
+    if not valid_cycle:
+        errors.append("qualification repair_cycle must be non-negative integer")
+    expected_gates = ("self_audit", "reader_engagement", "continuity", "repair_preservation")
+    gates = receipt.get("gates")
+    by_gate: dict[str, dict[str, Any]] = {}
+    if not isinstance(gates, list):
+        errors.append("qualification gates must be array")
+        gates = []
+    for gate in gates:
+        name = gate.get("gate") if isinstance(gate, dict) else None
+        if not isinstance(name, str) or name not in expected_gates or name in by_gate:
+            errors.append("qualification gate identity invalid or duplicated")
+            continue
+        by_gate[name] = gate
+        allowed = {"not_applicable"} if name == "repair_preservation" and cycle == 0 else GATE_STATUSES
+        if not isinstance(gate.get("status"), str) or gate.get("status") not in allowed:
+            errors.append(f"qualification {name} gate status invalid")
+    if set(by_gate) != set(expected_gates):
+        errors.append("qualification gates must cover the exact required set")
+    else:
+        if pending != [name for name in expected_gates if by_gate[name].get("status") == "pending"]:
+            errors.append("qualification pending_gates contradict gate statuses")
+        if failed != [name for name in expected_gates if by_gate[name].get("status") == "fail"]:
+            errors.append("qualification failed_gates contradict gate statuses")
+        if blockers != by_gate["self_audit"].get("blocking_findings", []):
+            errors.append("qualification blocking_findings contradict self_audit")
+        for name in ("reader_engagement", "continuity", "repair_preservation"):
+            if receipt.get(name + "_status") != by_gate[name].get("status"):
+                errors.append(f"qualification {name}_status contradicts gate")
+    expected_status = "awaiting_semantic" if pending else "repair_required" if failed or blockers else "qualified_for_independent"
+    if status != expected_status:
+        errors.append("qualification status contradicts pending/failed gates or blocking findings")
     for field in ("surface_audit_status", "regression_audit_status", "character_or_ownership_status", "natural_realization_status", "cluster_audit_status", "reader_engagement_status", "continuity_status", "repair_preservation_status"):
         if receipt.get(field) not in {"pass", "fail", "pending", "insufficient_evidence", "not_applicable"}:
             errors.append(f"qualification {field} invalid")
@@ -365,11 +410,32 @@ def validate_qualification_receipt(
     if receipt.get("repair_reader_value") not in {"improved","unchanged","degraded","insufficient_evidence","not_applicable"}: errors.append("qualification repair_reader_value invalid")
     if receipt.get("repair_character_relationship_energy") not in {"preserved","degraded","not_applicable","insufficient_evidence"}: errors.append("qualification repair_character_relationship_energy invalid")
     if receipt.get("repair_outcome_class") not in {"target_not_fixed","objective_regression","successful_repair","inconclusive","not_applicable"}: errors.append("qualification repair_outcome_class invalid")
-    cycle=receipt.get("repair_cycle")
-    if isinstance(cycle,int) and not isinstance(cycle,bool) and cycle>0:
-        if receipt.get("repair_preservation_status")!="pass": errors.append("repaired candidate requires passing repair_preservation")
-        try: _sha(receipt.get("objective_envelope_fingerprint"),"objective_envelope_fingerprint")
-        except ValueError as exc: errors.append(str(exc))
+    if valid_cycle and cycle > 0:
+        preservation = by_gate.get("repair_preservation", {})
+        axes = {
+            "target_outcome": receipt.get("repair_target_status"),
+            "objective_preservation": receipt.get("objective_preservation_status"),
+            "reader_value": receipt.get("repair_reader_value"),
+            "character_relationship_energy": receipt.get("repair_character_relationship_energy"),
+            "outcome_class": receipt.get("repair_outcome_class"),
+        }
+        if all(isinstance(value, str) for value in axes.values()) and receipt.get("repair_preservation_status") != comparison_gate_status(axes):
+            errors.append("qualification repair_preservation_status contradicts comparison axes")
+        if any(preservation.get(key) != value for key, value in axes.items()) or preservation.get("objective_envelope_fingerprint") != receipt.get("objective_envelope_fingerprint"):
+            errors.append("qualification repair comparison summary contradicts gate")
+        if preservation.get("contract_id") != "quality.compare":
+            errors.append("qualification repair preservation requires quality.compare")
+        if (require_qualified or status == "qualified_for_independent") and receipt.get("repair_preservation_status") != "pass":
+            errors.append("repaired candidate requires passing repair_preservation")
+        # A pending placeholder has no completed comparison to bind yet. It can
+        # be retained as a diagnostic, but can never qualify for review.
+        pending_unbound = receipt.get("repair_preservation_status") == "pending" and all(
+            preservation.get(key) is None for key in ("job_fingerprint", "result_fingerprint", "objective_envelope_fingerprint")
+        )
+        if not pending_unbound:
+            for key in ("job_fingerprint", "result_fingerprint", "objective_envelope_fingerprint"):
+                try: _sha(preservation.get(key), "repair_preservation." + key)
+                except ValueError as exc: errors.append(str(exc))
     if receipt.get("independent") is not False:
         errors.append("qualification must be independent=false")
     if receipt.get("authority") is not False:
@@ -427,7 +493,7 @@ def _semantic_binding(contract_id: str, subject_id: str, fp: str, judgment: dict
 
 
 def self_test() -> dict[str, Any]:
-    fp = "sha256:" + "a" * 64
+    fp = "sha256:" + hashlib.sha256("Bounded candidate.".encode("utf-8")).hexdigest()
     subject = "CH-SELF"
     pass_audit = _semantic_binding("quality.candidate_self_audit", subject, fp, {
         "confidence": 0.9,
@@ -552,9 +618,9 @@ def self_test() -> dict[str, Any]:
     tamper_errors = validate_qualification_receipt(tampered, candidate_fingerprint=fp, subject_id=subject)
 
     from objective_envelope import build as build_objective_envelope
-    from semantic_worker_router import make_contract_job
+    from semantic_worker_router import fingerprint_for, make_contract_job
     envelope=build_objective_envelope({"subject_id":subject,"run_id":"RUN-SELF","authority_cutoff":"synthetic","objective_items":[{"id":"OBJ-SELF","category":"reader","statement":"Preserve active pressure.","source_refs":["plan:self"]}],"must_preserve":["active pressure"],"derived_from_rejected_realization":False})
-    compare_payload={"evolution_run_id":"RUN-SELF","evolution_subject_id":subject,"comparison_id":"CMP-SELF","incumbent":{"candidate_id":"C0","content_fingerprint":"sha256:"+"0"*64},"challenger":{"candidate_id":"C1","content_fingerprint":fp,"repair_owner":"surface"},"repair_context":{"repair_target":"remove synthetic realization","objective_envelope":envelope}}
+    compare_payload={"evolution_run_id":"RUN-SELF","evolution_subject_id":subject,"comparison_id":"CMP-SELF","incumbent":{"candidate_id":"C0","content_fingerprint":"sha256:"+hashlib.sha256(b"Baseline candidate.").hexdigest(),"text":"Baseline candidate."},"challenger":{"candidate_id":"C1","content_fingerprint":fp,"repair_owner":"surface","text":"Bounded candidate."},"repair_context":{"repair_target":"remove synthetic realization","objective_envelope":envelope}}
     compare_job=make_contract_job("quality.compare","CMP-SELF",compare_payload,source_session_id="SES-MANAGER")
     def compare_result(outcome:str)->dict[str,Any]:
         if outcome=="successful_repair": judgment={"confidence":.9,"winner":"challenger","reason":"target fixed; objective preserved","target_outcome":"improved","objective_preservation":"preserved","reader_value":"unchanged","character_relationship_energy":"preserved","outcome_class":"successful_repair","repaired_findings":["HF-SELF"],"introduced_regressions":[],"regressed_dimensions":[],"preserved_strengths":["active pressure"],"evidence":["candidate:compare"]}
@@ -562,9 +628,48 @@ def self_test() -> dict[str, Any]:
         return {"job_id":compare_job["job_id"],"subject_id":compare_job["subject_id"],"kind":compare_job["kind"],"input_fingerprint":compare_job["input_fingerprint"],"status":"completed","worker":{"provider":"self_test","model_or_reviewer":"comparison-fixture"},"judgment":judgment,"proposals":[],"errors":[]}
     repaired_ok=evaluate({"candidate_fingerprint":fp,"subject_id":subject,"repair_cycle":1,"self_audit":{"status":"pass","semantic_binding":pass_audit},"reader_engagement":{"status":"pass","semantic_binding":reader},"continuity":continuity,"repair_preservation":{"status":"pass","semantic_binding":{"job":compare_job,"result":compare_result("successful_repair")}}})
     repaired_regression=evaluate({"candidate_fingerprint":fp,"subject_id":subject,"repair_cycle":1,"self_audit":{"status":"pass","semantic_binding":pass_audit},"reader_engagement":{"status":"pass","semantic_binding":reader},"continuity":continuity,"repair_preservation":{"status":"fail","semantic_binding":{"job":compare_job,"result":compare_result("objective_regression")}}})
+    repaired_pending=evaluate({"candidate_fingerprint":fp,"subject_id":subject,"repair_cycle":1,"self_audit":{"status":"pass","semantic_binding":pass_audit},"reader_engagement":{"status":"pass","semantic_binding":reader},"continuity":continuity,"repair_preservation":{"status":"pending"}})
+    diagnostic_receipts=(failed,pending,repaired_regression,repaired_pending)
+    diagnostic_receipts_valid=all(not validate_qualification_receipt(item,candidate_fingerprint=fp,subject_id=subject,require_qualified=False) for item in diagnostic_receipts)
+    diagnostic_receipts_block_review=all(bool(validate_qualification_receipt(item,candidate_fingerprint=fp,subject_id=subject,require_qualified=True)) for item in diagnostic_receipts)
+    diagnostic_consistency_guards={}
+    for defect in ("promote_failure", "changed_summary", "missing_failed_gate", "wrong_pending_status", "missing_failed_envelope", "partially_bound_pending", "missing_gate", "invalid_cycle"):
+        forged=json.loads(json.dumps(repaired_pending if defect in {"wrong_pending_status","partially_bound_pending"} else repaired_regression))
+        if defect=="promote_failure":
+            forged.update(qualification_status="qualified_for_independent",qualified_for_independent=True,failed_gates=[])
+        elif defect=="changed_summary":
+            forged["repair_preservation_status"]="pass"
+        elif defect=="missing_failed_gate":
+            forged["failed_gates"]=[]
+        elif defect=="wrong_pending_status":
+            forged["qualification_status"]="repair_required"
+        elif defect=="missing_failed_envelope":
+            forged["objective_envelope_fingerprint"]=None
+            forged["gates"][-1]["objective_envelope_fingerprint"]=None
+        elif defect=="partially_bound_pending":
+            forged["gates"][-1]["job_fingerprint"]=fp
+        elif defect=="missing_gate":
+            forged["gates"].pop()
+        else:
+            forged["repair_cycle"]=True
+        forged["receipt_fingerprint"]=_fp(_receipt_payload(forged))
+        diagnostic_consistency_guards[defect]=bool(validate_qualification_receipt(forged,candidate_fingerprint=fp,subject_id=subject,require_qualified=False))
     missing_preservation_guard=False
     try: evaluate({"candidate_fingerprint":fp,"subject_id":subject,"repair_cycle":1,"self_audit":{"status":"pass","semantic_binding":pass_audit},"reader_engagement":{"status":"pass","semantic_binding":reader},"continuity":continuity})
     except ValueError: missing_preservation_guard=True
+    comparison_text_guards={}
+    for side in ("incumbent","challenger"):
+        for defect in ("missing_text","changed_hash"):
+            forged=json.loads(json.dumps(compare_job))
+            if defect=="missing_text": del forged["input"]["payload"][side]["text"]
+            else: forged["input"]["payload"][side]["content_fingerprint"]="sha256:"+"f"*64
+            forged["input_fingerprint"]=fingerprint_for(forged)
+            forged_result=compare_result("successful_repair")
+            forged_result["input_fingerprint"]=forged["input_fingerprint"]
+            rejected=False
+            try: evaluate({"candidate_fingerprint":fp,"subject_id":subject,"repair_cycle":1,"self_audit":{"status":"pass","semantic_binding":pass_audit},"reader_engagement":{"status":"pass","semantic_binding":reader},"continuity":continuity,"repair_preservation":{"status":"pass","semantic_binding":{"job":forged,"result":forged_result}}})
+            except ValueError: rejected=True
+            comparison_text_guards[f"{side}_{defect}"]=rejected
 
     checks = {
         **consistency_checks,
@@ -576,8 +681,13 @@ def self_test() -> dict[str, Any]:
         "qualification_is_non_independent": qualified["independent"] is False,
         "runtime_does_not_reinterpret_semantics": qualified["semantic_content_reinterpreted_by_runtime"] is False,
         "repair_success_can_qualify": repaired_ok["qualification_status"]=="qualified_for_independent" and repaired_ok["objective_preservation_status"]=="preserved",
+        "repair_success_receipt_validates_for_review": not validate_qualification_receipt(repaired_ok,candidate_fingerprint=fp,subject_id=subject),
         "repair_objective_regression_blocks": repaired_regression["qualification_status"]=="repair_required" and repaired_regression["repair_outcome_class"]=="objective_regression",
+        "internal_failure_and_pending_receipts_remain_valid": diagnostic_receipts_valid,
+        "internal_diagnostics_never_qualify_for_review": diagnostic_receipts_block_review,
+        "rehashing_cannot_hide_diagnostic_status_inconsistency": all(diagnostic_consistency_guards.values()),
         "material_repair_missing_preservation_blocks": missing_preservation_guard,
+        "repair_comparison_requires_exact_text": all(comparison_text_guards.values()),
         "baseline_preservation_not_applicable": qualified["repair_preservation_status"]=="not_applicable",
         "no_write_authority": not any(qualified["permissions"].values()),
         "model_execution": qualified["model_execution"] is False,

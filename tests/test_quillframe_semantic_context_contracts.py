@@ -1,10 +1,14 @@
 from __future__ import annotations
+import io
 import json
 import sys
+import tempfile
 import unittest
+from contextlib import redirect_stdout
 from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from agent_runtime import AgentResult
 from persistence.quillframe_sqlite import fingerprint_text
@@ -21,7 +25,7 @@ from production_runtime.semantic import (
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT / "harness" / "semantic_workers"))
 from registered_contract_binding import validate_registered_job
-from semantic_worker_router import fingerprint_for, make_contract_job, validate_typed_value, worker_job_view
+from semantic_worker_router import fingerprint_for, make_contract_job, validate_result, validate_typed_value, worker_job_view
 
 FP="sha256:"+"a"*64
 
@@ -274,6 +278,180 @@ class SemanticContextContractTests(unittest.TestCase):
         },source_session_id="SES-TEST")
         self.assertEqual(job["kind"],"artifact_audit")
         self.assertEqual(validate_registered_job(job),[])
+
+class RepairContractBindingTests(unittest.TestCase):
+    def comparison_payload(self):
+        from quality.objective_envelope import build
+
+        incumbent = "合成旧稿。\r\nA bounded question remains.\r\n"
+        challenger = "合成修订。\r\nA bounded question advances.\r\n"
+        envelope = build({
+            "subject_id": "CH-COMPARE", "run_id": "RUN-COMPARE", "authority_cutoff": "synthetic",
+            "objective_items": [{"id": "OBJ-COMPARE", "category": "reader", "statement": "Preserve the active question.", "source_refs": ["fixture:plan"]}],
+            "must_preserve": ["The active question."], "derived_from_rejected_realization": False,
+        })
+        return {"evolution_run_id": "RUN-COMPARE", "evolution_subject_id": "CH-COMPARE", "comparison_id": "CMP-FIXTURE",
+                "incumbent": {"candidate_id": "C0", "content_fingerprint": fingerprint_text(incumbent), "text": incumbent},
+                "challenger": {"candidate_id": "C1", "content_fingerprint": fingerprint_text(challenger), "text": challenger, "repair_owner": "reader_pressure"},
+                "repair_context": {"repair_target": "Advance the active question.", "objective_envelope": envelope}}
+
+    def test_compare_worker_receives_both_exact_texts_and_unmodified_owner(self):
+        from quality.quality_evolution import _fixture_result
+
+        payload = self.comparison_payload()
+        original = deepcopy(payload)
+        job = make_contract_job("quality.compare", payload["comparison_id"], payload)
+        self.assertEqual([], validate_registered_job(job))
+        self.assertEqual([], validate_result(job, _fixture_result(job, "challenger", "Synthetic comparison.")))
+        self.assertEqual(original, worker_job_view(job)["input"]["payload"])
+        self.assertEqual(original, payload)
+
+    def test_compare_rejects_missing_malformed_or_changed_exact_text_before_job_creation(self):
+        for side in ("incumbent", "challenger"):
+            for defect in ("missing", "empty", "wrong_type", "changed", "newline_normalized", "bad_hash", "invalid_utf8"):
+                with self.subTest(side=side, defect=defect):
+                    payload = self.comparison_payload()
+                    candidate = payload[side]
+                    if defect == "missing":
+                        del candidate["text"]
+                    elif defect == "empty":
+                        candidate["text"] = ""
+                    elif defect == "wrong_type":
+                        candidate["text"] = {"text": candidate["text"]}
+                    elif defect == "changed":
+                        candidate["text"] += "Changed."
+                    elif defect == "newline_normalized":
+                        candidate["text"] = candidate["text"].replace("\r\n", "\n")
+                    elif defect == "bad_hash":
+                        candidate["content_fingerprint"] = FP
+                    else:
+                        candidate["text"] = "\ud800"
+                    with self.assertRaises(ValueError):
+                        make_contract_job("quality.compare", payload["comparison_id"], payload)
+
+    def test_rehashed_hash_only_or_changed_comparison_cannot_accept_a_typed_pass(self):
+        from quality.quality_evolution import _fixture_result
+
+        for defect in ("incumbent_missing", "challenger_missing", "changed_text", "malformed_payload"):
+            with self.subTest(defect=defect):
+                payload = self.comparison_payload()
+                job = make_contract_job("quality.compare", payload["comparison_id"], payload)
+                if defect.endswith("_missing"):
+                    del job["input"]["payload"][defect.split("_")[0]]["text"]
+                elif defect == "changed_text":
+                    job["input"]["payload"]["challenger"]["text"] += "Changed."
+                else:
+                    job["input"]["payload"] = []
+                job["input_fingerprint"] = fingerprint_for(job)
+                result = _fixture_result(job, "challenger", "Synthetic successful repair.")
+                self.assertTrue(validate_registered_job(job))
+                self.assertTrue(validate_result(job, result))
+
+    def test_editor_optional_text_is_exactly_bound_when_supplied(self):
+        compare = self.comparison_payload()
+        payload = {"candidate_fingerprint": compare["incumbent"]["content_fingerprint"], "reader_assessment": {},
+                   "objective_envelope": compare["repair_context"]["objective_envelope"]}
+        self.assertEqual([], validate_registered_job(make_contract_job("editor.repair_spec", "C0", payload)))
+        payload["candidate_text"] = compare["incumbent"]["text"]
+        job = make_contract_job("editor.repair_spec", "C0", payload)
+        self.assertEqual([], validate_registered_job(job))
+        self.assertEqual(payload["candidate_text"], worker_job_view(job)["input"]["payload"]["candidate_text"])
+        for invalid in (None, "", 42, payload["candidate_text"].replace("\r\n", "\n"), "\ud800"):
+            with self.subTest(invalid=repr(invalid)):
+                with self.assertRaises(ValueError):
+                    make_contract_job("editor.repair_spec", "C0", {**payload, "candidate_text": invalid})
+        with self.assertRaises(ValueError):
+            make_contract_job("editor.repair_spec", "C0", {**payload, "candidate_fingerprint": FP})
+
+    def test_rehashed_editor_job_with_changed_text_cannot_accept_repair_spec(self):
+        compare = self.comparison_payload()
+        job = make_contract_job("editor.repair_spec", "C0", {
+            "candidate_fingerprint": compare["incumbent"]["content_fingerprint"], "candidate_text": compare["incumbent"]["text"],
+            "reader_assessment": {}, "objective_envelope": compare["repair_context"]["objective_envelope"],
+        })
+        judgment = {"confidence": 1.0, "repair_owner": "reader_pressure", "generation_mode": "fresh_realization",
+                    "fix": "Advance the active question.", "repair_plan": "Reconstruct the current situation.",
+                    "preserve": ["The active question."], "comparison_required": True}
+        result = {**{key: job[key] for key in ("job_id", "subject_id", "kind", "input_fingerprint")},
+                  "status": "completed", "worker": {"provider": "self_test", "model_or_reviewer": "fixture"},
+                  "judgment": judgment, "proposals": [], "errors": []}
+        self.assertEqual([], validate_result(job, result))
+        job["input"]["payload"]["candidate_text"] += "Changed."
+        job["input_fingerprint"] = fingerprint_for(job)
+        result["input_fingerprint"] = job["input_fingerprint"]
+        self.assertTrue(validate_result(job, result))
+
+    def test_lineage_pure_validation_preserves_distinct_comparison_and_prose_parents(self):
+        from quality.candidate_lineage import validate_derivation
+
+        for origin, comparison, prose in (("draft", None, None), ("repair", "C0", "C0"),
+                                          ("fresh_regeneration", "C0", None), ("user_edit", "C0", None), ("user_edit", "C0", "C1")):
+            self.assertIsNone(validate_derivation(origin=origin, comparison_parent_candidate_id=comparison, prose_parent_candidate_id=prose))
+        for origin, comparison, prose in (("draft", "C0", None), ("draft", None, "C0"), ("repair", None, None),
+                                          ("repair", "C0", None), ("repair", "C0", "C1"), ("fresh_regeneration", None, None),
+                                          ("fresh_regeneration", "C0", "C0"), ("user_edit", None, None), ("unknown", None, None),
+                                          ([], None, None), ("repair", "", ""), ("repair", True, True), ("user_edit", "C0", 1)):
+            with self.subTest(origin=origin, comparison=comparison, prose=prose):
+                with self.assertRaises(ValueError):
+                    validate_derivation(origin=origin, comparison_parent_candidate_id=comparison, prose_parent_candidate_id=prose)
+
+    def test_comparison_gate_projection_keeps_preservation_and_pending_precedence(self):
+        from quality.candidate_qualification import comparison_gate_status
+
+        passed = {"target_outcome": "improved", "objective_preservation": "preserved", "reader_value": "unchanged",
+                  "character_relationship_energy": "preserved", "outcome_class": "successful_repair"}
+        for reader in ("improved", "unchanged"):
+            for energy in ("preserved", "not_applicable"):
+                self.assertEqual("pass", comparison_gate_status({**passed, "reader_value": reader, "character_relationship_energy": energy}))
+        for changed in ({"target_outcome": "unchanged", "outcome_class": "target_not_fixed"},
+                        {"objective_preservation": "degraded", "outcome_class": "objective_regression"},
+                        {"reader_value": "degraded"}, {"character_relationship_energy": "degraded"}):
+            self.assertEqual("fail", comparison_gate_status({**passed, **changed}))
+        for field in ("target_outcome", "objective_preservation", "reader_value", "character_relationship_energy"):
+            self.assertEqual("pending", comparison_gate_status({**passed, "objective_preservation": "degraded", field: "insufficient_evidence"}))
+        self.assertEqual("pending", comparison_gate_status({**passed, "outcome_class": "inconclusive"}))
+        self.assertEqual("fail", comparison_gate_status({}))
+
+    def test_evolution_cli_reads_explicit_utf8_bytes_and_checks_stored_fingerprints(self):
+        from quality import candidate_lineage_runtime, quality_evolution
+
+        payload = self.comparison_payload()
+        for module in (quality_evolution, candidate_lineage_runtime):
+            with self.subTest(module=module.__name__), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                incumbent = root / "incumbent.txt"
+                challenger = root / "challenger.txt"
+                context = root / "repair.json"
+                incumbent.write_bytes(payload["incumbent"]["text"].encode("utf-8"))
+                challenger.write_bytes(payload["challenger"]["text"].encode("utf-8"))
+                context.write_text(json.dumps(payload["repair_context"], ensure_ascii=False), encoding="utf-8")
+                base_args = [module.__name__, "--db", str(root / "ledger.db")]
+
+                def invoke(*args):
+                    output = io.StringIO()
+                    with patch.object(sys, "argv", base_args + list(args)), redirect_stdout(output):
+                        self.assertEqual(0, module.main())
+                    return json.loads(output.getvalue())
+
+                lineage = module is candidate_lineage_runtime
+                invoke("start", "--run-id", "RUN-COMPARE", "--subject-id", "CH-COMPARE", "--baseline-id", "C0", "--text-file", str(incumbent),
+                       *(["--created-by-run-id", "RUN-DRAFT"] if lineage else []))
+                invoke("add-candidate", "--run-id", "RUN-COMPARE", "--candidate-id", "C1", "--text-file", str(challenger), "--repair-owner", "reader_pressure",
+                       *(["--created-by-run-id", "RUN-REPAIR", "--origin", "repair", "--prose-parent-id", "C0"] if lineage else []))
+                prepare = ["prepare-comparison", "--run-id", "RUN-COMPARE", "--comparison-id", "CMP-FIXTURE", "--challenger-id", "C1",
+                           "--incumbent-text-file", str(incumbent), "--challenger-text-file", str(challenger), "--repair-context-json", str(context)]
+                job = invoke(*prepare)
+                self.assertEqual(payload, job["input"]["payload"])
+                self.assertEqual([], validate_registered_job(job))
+                before = invoke("status", "--run-id", "RUN-COMPARE")
+                for path in (incumbent, challenger):
+                    original = path.read_bytes()
+                    path.write_bytes(original.replace(b"\r\n", b"\n"))
+                    with self.assertRaisesRegex(ValueError, "stored candidate fingerprint"):
+                        invoke(*prepare)
+                    path.write_bytes(original)
+                self.assertEqual(before, invoke("status", "--run-id", "RUN-COMPARE"))
+
 
 if __name__ == "__main__":
     unittest.main()

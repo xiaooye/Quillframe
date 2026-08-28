@@ -758,6 +758,344 @@ class NovelProductionPrimitiveTests(unittest.TestCase):
 
 
 
+class InternalRepairSourceTests(unittest.TestCase):
+    """Synthetic confirmed calls exercise Core provenance, never model quality."""
+
+    def setUp(self):
+        from production_runtime import ProductionRunExecutor
+        from production_runtime.workflow_service import NovelWorkflowService
+        from tests.test_quillframe_production_runtime import FakeAgentRuntime, RULE_MATERIAL
+
+        class RejectedAuditRuntime(FakeAgentRuntime):
+            def run(self, job, *, cancellation=None):
+                result = super().run(job, cancellation=cancellation)
+                if job.runtime_role == "registered_candidate_self_audit":
+                    judgment = json.loads(result.final_text)
+                    judgment.update({"result": "fail", "report": "Synthetic rejected realization."})
+                    judgment["dimensions"]["natural_realization"] = "fail"
+                    judgment["findings"] = [{
+                        "finding_id": "SYNTHETIC-REPAIR-1", "mechanism_id": "HF-SYNTHETIC",
+                        "severity": "cluster", "scope": "block", "repair_owner": "surface", "blocking": True,
+                        "report": "Synthetic source finding.", "function_assessment": "pass",
+                        "ownership_assessment": "pass", "natural_realization_assessment": "fail",
+                        "evidence_refs": ["candidate:synthetic"],
+                    }]
+                    result.final_text = json.dumps(judgment)
+                return result
+
+        self.temp = tempfile.TemporaryDirectory(prefix="quillframe-repair-source-")
+        self.addCleanup(self.temp.cleanup)
+        self.store = QuillframeStore(Path(self.temp.name))
+        self.ops = CoreOperations(self.store)
+        self.ops.project_create("REPAIR", "Synthetic source binding")
+        from learning.learning_store import LearningStore
+        self.learning = LearningStore(self.ops.project_learning().learning_db)
+        self.learning.init()
+        self.learning.upsert_hypothesis({
+            "hypothesis_id": "PREF-SOURCE", "subject_scope": "project", "project_id": "REPAIR",
+            "dimension": "dialogue", "mechanism": "knowledge asymmetry", "statement": "Synthetic selected preference.",
+            "confidence": 1.0, "state": "active",
+        })
+        self.source_run = self.ops.start_author_run(
+            "REPAIR", task_mode="DRAFT", target_ref="DOC-CH001",
+            payload={"chapter_id": "CH001", "instruction": "Synthetic drafting request.", "selected_preference_ids": ["PREF-SOURCE"]},
+        )
+        NovelWorkflowService(self.store).start(project_id="REPAIR", run_id=self.source_run["run_id"],
+                                               chapter_id="CH001", author_profile="guided")
+        self.fixture = RejectedAuditRuntime()
+        production = ProductionRunExecutor(self.store, self.fixture)
+        outcome = production.execute(
+            "REPAIR", self.source_run["run_id"], service_id="synthetic-production",
+            instruction="Synthetic drafting request.", reader_grip="very_high", rule_material=RULE_MATERIAL,
+        )
+        self.assertEqual("failed_gate", outcome["status"])
+        self.assertEqual("pre_independent_qualification", outcome["failed_mechanism"])
+        with self.store.open_project("REPAIR") as conn:
+            row = conn.execute(
+                "SELECT * FROM checkpoints WHERE run_id=? AND checkpoint_kind='production_qualified_candidate'",
+                (self.source_run["run_id"],),
+            ).fetchone()
+            self.source_checkpoint = dict(row)
+            self.source_state = json.loads(row["state_json"])
+            self.target = json.loads(conn.execute(
+                "SELECT state_json FROM checkpoints WHERE run_id=? AND checkpoint_kind='author_run_request'",
+                (self.source_run["run_id"],),
+            ).fetchone()[0])
+        self.reference = {
+            "source_run_id": self.source_run["run_id"],
+            "source_checkpoint_id": self.source_checkpoint["checkpoint_id"],
+            "expected_candidate_fingerprint": self.source_state["candidate_fingerprint"],
+        }
+
+    def start_repair(self, **changes):
+        args = {"task_mode": "REVISE", "target_ref": "DOC-CH001", "idempotency_key": "repair-registration",
+                "payload": {"chapter_id": "CH001", "repair_source": self.reference}}
+        args.update(changes)
+        return self.ops.start_author_run("REPAIR", **args)
+
+    def source_snapshot(self):
+        with self.store.open_project("REPAIR") as conn:
+            return {
+                table: [dict(row) for row in conn.execute(f"SELECT * FROM {table} WHERE run_id=? ORDER BY rowid", (self.source_run["run_id"],))]
+                for table in ("runs", "production_executions", "production_stage_calls", "checkpoints", "receipts", "runtime_events")
+            }
+
+    def test_repair_registration_freezes_private_exact_evidence_and_replays(self):
+        from production_runtime.repair_source import load_repair_source
+        before, call_count = self.source_snapshot(), len(self.fixture.calls)
+        started = self.start_repair()
+        self.assertEqual(started, self.start_repair())
+        self.assertFalse(started["candidate_visible"])
+        with self.store.open_project("REPAIR") as conn:
+            frozen = load_repair_source(conn, started["run_id"])
+            checkpoint = conn.execute(
+                "SELECT * FROM checkpoints WHERE run_id=? AND checkpoint_kind='production_repair_source'", (started["run_id"],)
+            ).fetchall()
+            self.assertEqual(1, len(checkpoint))
+            self.assertEqual(frozen["source_fingerprint"], checkpoint[0]["artifact_fingerprint"])
+            author = json.loads(conn.execute(
+                "SELECT state_json FROM checkpoints WHERE run_id=? AND checkpoint_kind='author_run_request'", (started["run_id"],)
+            ).fetchone()[0])
+            self.assertEqual({"chapter_id": "CH001", "repair_source": self.reference, "selected_preference_ids": ["PREF-SOURCE"]}, author["payload"])
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM candidates").fetchone()[0])
+        self.assertEqual(self.source_state["candidate_text"], frozen["candidate_text"])
+        self.assertEqual(self.source_state["reader_binding"], frozen["reader_binding"])
+        self.assertEqual(self.source_state["self_audit_binding"], frozen["self_audit_binding"])
+        self.assertEqual(fingerprint_text(self.source_checkpoint["state_json"]), frozen["source_checkpoint_fingerprint"])
+        self.assertEqual("DRAFT", frozen["source_task_mode"])
+        self.assertIsNone(frozen["source_lineage"])
+        self.assertNotIn("candidate_text", canonical_json(started))
+        self.assertNotIn("self_audit_binding", canonical_json(author))
+        self.assertEqual(before, self.source_snapshot())
+        self.assertEqual(call_count, len(self.fixture.calls))
+
+    def test_only_revise_accepts_references_and_reference_free_revise_can_register(self):
+        from production_runtime.contracts import ProductionRunError
+        from production_runtime.repair_source import load_repair_source
+        for mode in ("DRAFT", "AUDIT", "PLAN-CHAPTER"):
+            with self.subTest(mode=mode), self.assertRaises(OperationError) as error:
+                self.start_repair(task_mode=mode)
+            self.assertEqual("repair_source_requires_revise", error.exception.code)
+        started = self.start_repair(payload={"chapter_id": "CH001"})
+        with self.store.open_project("REPAIR") as conn, self.assertRaises(ProductionRunError) as missing:
+            load_repair_source(conn, started["run_id"])
+        self.assertEqual("repair_source_missing", missing.exception.code)
+
+    def test_repair_inherits_preferences_without_mutating_request_and_ignores_unselected_index(self):
+        from production_runtime.repair_source import load_repair_source
+        self.learning.upsert_hypothesis({
+            "hypothesis_id": "PREF-UNSELECTED", "subject_scope": "project", "project_id": "REPAIR",
+            "dimension": "dialogue", "mechanism": "knowledge asymmetry", "statement": "Another synthetic preference.",
+            "confidence": 1.0, "state": "active",
+        })
+        payload = {"chapter_id": "CH001", "repair_source": dict(self.reference)}
+        original_payload = canonical_json(payload)
+        before = self.source_snapshot()
+        started = self.start_repair(payload=payload)
+        self.assertEqual(original_payload, canonical_json(payload))
+        self.assertEqual(started, self.start_repair(payload=payload))
+        with self.store.open_project("REPAIR") as conn:
+            target = json.loads(conn.execute(
+                "SELECT state_json FROM checkpoints WHERE run_id=? AND checkpoint_kind='author_run_request'", (started["run_id"],)
+            ).fetchone()[0])
+            load_repair_source(conn, started["run_id"])
+        self.assertEqual(["PREF-SOURCE"], target["payload"]["selected_preference_ids"])
+        self.assertEqual(self.target["author_model"]["active_preferences"], target["author_model"]["active_preferences"])
+        self.assertNotEqual(self.target["author_model"], target["author_model"], "the unrelated active index may change")
+        expected_request = {"operation": "author.run.start", "project_id": "REPAIR", "task_mode": "REVISE",
+                            "target_ref": "DOC-CH001", "payload": payload, "session_id": None}
+        self.assertEqual(fingerprint_text(canonical_json(expected_request)), started["request_fingerprint"])
+        self.assertEqual(before, self.source_snapshot())
+        explicit = self.start_repair(idempotency_key="explicit-original-selection",
+                    payload={**payload, "selected_preference_ids": ["PREF-SOURCE"]})
+        self.assertEqual("REVISE", explicit["task_mode"])
+
+    def test_repair_rejects_changed_or_cleared_preference_selection_before_registration(self):
+        before, call_count = self.source_snapshot(), len(self.fixture.calls)
+        for selected in ([], ["PREF-OTHER"], ["PREF-SOURCE", "PREF-OTHER"]):
+            with self.subTest(selected=selected), self.assertRaises(OperationError) as error:
+                self.start_repair(payload={"chapter_id": "CH001", "repair_source": self.reference,
+                                           "selected_preference_ids": selected})
+            self.assertEqual("repair_objective_changed", error.exception.code)
+        with self.store.open_project("REPAIR") as conn:
+            self.assertEqual(1, conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0])
+            self.assertEqual(1, conn.execute("SELECT COUNT(*) FROM sessions").fetchone()[0])
+        self.assertEqual(before, self.source_snapshot())
+        self.assertEqual(call_count, len(self.fixture.calls))
+
+    def test_repair_rejects_changed_or_deactivated_selected_preference(self):
+        before, call_count = self.source_snapshot(), len(self.fixture.calls)
+        for mutation in ("statement='Changed selected content.'", "version=version+1", "state='candidate'"):
+            with self.subTest(mutation=mutation), self.learning.connect() as learning:
+                try:
+                    learning.execute("UPDATE preference_hypotheses SET " + mutation + " WHERE hypothesis_id='PREF-SOURCE'")
+                    # A separate Core connection must see the synthetic change.
+                    learning.commit()
+                    with self.assertRaises(OperationError) as error:
+                        self.start_repair()
+                    self.assertEqual("repair_objective_changed", error.exception.code)
+                finally:
+                    learning.execute("UPDATE preference_hypotheses SET statement=?,version=?,state='active' WHERE hypothesis_id='PREF-SOURCE'",
+                                     ("Synthetic selected preference.", self.target["author_model"]["active_preferences"][0]["version"]))
+                    learning.commit()
+        self.assertEqual(before, self.source_snapshot())
+        self.assertEqual(call_count, len(self.fixture.calls))
+        with self.store.open_project("REPAIR") as conn:
+            self.assertEqual(1, conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0])
+
+    def test_repair_load_rejects_rebound_author_model_or_payload_selection(self):
+        from production_runtime.contracts import ProductionRunError
+        from production_runtime.repair_source import load_repair_source
+        started = self.start_repair()
+        for mutation in ("selection", "content"):
+            with self.subTest(mutation=mutation), self.store.open_project("REPAIR") as conn:
+                row = conn.execute("SELECT checkpoint_id,state_json FROM checkpoints WHERE run_id=? AND checkpoint_kind='author_run_request'", (started["run_id"],)).fetchone()
+                target = json.loads(row["state_json"])
+                if mutation == "selection":
+                    target["payload"]["selected_preference_ids"] = []
+                else:
+                    target["author_model"]["active_preferences"][0]["statement"] = "Rebound preference."
+                conn.execute("UPDATE checkpoints SET state_json=?,artifact_fingerprint=? WHERE checkpoint_id=?",
+                             (canonical_json(target), fingerprint_text(canonical_json(target)), row["checkpoint_id"]))
+                with self.assertRaises(ProductionRunError) as error:
+                    load_repair_source(conn, started["run_id"])
+                self.assertEqual("repair_objective_changed", error.exception.code)
+                conn.rollback()
+
+    def test_caller_text_diagnostics_status_and_inexact_references_are_rejected_atomically(self):
+        invalid = [None, {}, [], "source", {**self.reference, "candidate_text": "CALLER TEXT"},
+                   {**self.reference, "reader_binding": {}}, {**self.reference, "status": "pass"},
+                   {**self.reference, "expected_candidate_fingerprint": "sha256:wrong"},
+                   {**self.reference, "source_checkpoint_id": "request:" + self.source_run["run_id"]},
+                   {**self.reference, "source_run_id": "run_foreign"}]
+        before = self.source_snapshot()
+        with self.store.open_project("REPAIR") as conn:
+            counts = tuple(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] for table in ("runs", "sessions", "checkpoints", "receipts"))
+        for index, reference in enumerate(invalid):
+            with self.subTest(index=index), self.assertRaises(OperationError):
+                self.start_repair(payload={"chapter_id": "CH001", "repair_source": reference})
+        for key in ("candidate_text", "self_audit_binding", "repair_preservation", "status"):
+            with self.subTest(injected_payload=key), self.assertRaises(OperationError):
+                self.start_repair(payload={"chapter_id": "CH001", "repair_source": self.reference, key: "CALLER EVIDENCE"})
+        with self.store.open_project("REPAIR") as conn:
+            self.assertEqual(counts, tuple(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] for table in ("runs", "sessions", "checkpoints", "receipts")))
+        self.assertEqual(before, self.source_snapshot())
+
+    def test_foreign_project_and_changed_chapter_or_orders_are_rejected(self):
+        from production_runtime.contracts import ProductionRunError
+        from production_runtime.repair_source import freeze_repair_source
+        self.ops.project_create("OTHER", "Another synthetic project")
+        with self.assertRaises(OperationError) as foreign:
+            self.ops.start_author_run("OTHER", task_mode="REVISE", target_ref="DOC-CH001",
+                                      payload={"chapter_id": "CH001", "repair_source": self.reference})
+        self.assertEqual("repair_source_not_found", foreign.exception.code)
+        with self.store.open_project("REPAIR") as conn:
+            for key, changed in (("chapter_id", "CH002"), ("document_id", "DOC-OTHER"),
+                                 ("current_story_order", 2), ("current_reading_order", 2), ("current_story_order", True)):
+                with self.subTest(key=key, changed=changed), self.assertRaises(ProductionRunError):
+                    freeze_repair_source(conn, source_ref=self.reference, target={**self.target, key: changed})
+
+    def test_active_unconfirmed_and_nonfailed_sources_are_rejected(self):
+        from production_runtime.contracts import ProductionRunError
+        from production_runtime.repair_source import freeze_repair_source
+        changes = [
+            ("UPDATE production_executions SET owner_token='synthetic-active',lease_expires_at_ms=9999999999999 WHERE run_id=?", "repair_source_active"),
+            ("UPDATE production_stage_calls SET state='unconfirmed',result_json=NULL,result_fingerprint=NULL WHERE run_id=? AND runtime_role='registered_candidate_self_audit'", "repair_source_unconfirmed"),
+            ("UPDATE runs SET status='completed' WHERE run_id=?", "repair_source_invalid"),
+        ]
+        with self.store.open_project("REPAIR") as conn:
+            for sql, code in changes:
+                with self.subTest(code=code):
+                    conn.execute("SAVEPOINT rejected_source")
+                    try:
+                        conn.execute(sql, (self.source_run["run_id"],))
+                        with self.assertRaises(ProductionRunError) as error:
+                            freeze_repair_source(conn, source_ref=self.reference, target=self.target)
+                        self.assertEqual(code, error.exception.code)
+                    finally:
+                        conn.execute("ROLLBACK TO rejected_source")
+                        conn.execute("RELEASE rejected_source")
+
+    def test_source_checkpoint_and_rehashed_diagnostics_cannot_replace_confirmed_evidence(self):
+        from production_runtime.contracts import ProductionRunError
+        from production_runtime.repair_source import freeze_repair_source
+        for field in ("candidate_text", "reader_binding", "self_audit_binding", "qualification_receipt"):
+            with self.subTest(field=field), self.store.open_project("REPAIR") as conn:
+                state = json.loads(self.source_checkpoint["state_json"])
+                if field == "candidate_text":
+                    state[field] += " changed"
+                elif field == "qualification_receipt":
+                    state[field]["qualification_status"] = "qualified_for_independent"
+                    state[field]["receipt_fingerprint"] = fingerprint_text(canonical_json({k: v for k, v in state[field].items() if k != "receipt_fingerprint"}))
+                else:
+                    binding = state[field]
+                    binding["result"]["judgment"]["report"] = "Replaced synthetic diagnosis."
+                    binding["binding_fingerprint"] = fingerprint_text(canonical_json({"job": binding["job"], "result": binding["result"]}))
+                conn.execute("UPDATE checkpoints SET state_json=? WHERE checkpoint_id=?", (canonical_json(state), self.source_checkpoint["checkpoint_id"]))
+                with self.assertRaises(ProductionRunError):
+                    freeze_repair_source(conn, source_ref=self.reference, target=self.target)
+                conn.rollback()
+
+    def test_confirmed_surface_reader_and_audit_responses_must_match_exactly(self):
+        from production_runtime.contracts import ProductionRunError
+        from production_runtime.repair_source import freeze_repair_source
+        for role in ("surface_realization", "registered_reader_engagement", "registered_candidate_self_audit"):
+            with self.subTest(role=role), self.store.open_project("REPAIR") as conn:
+                row = conn.execute("SELECT call_id,result_json FROM production_stage_calls WHERE run_id=? AND runtime_role=?",
+                                   (self.source_run["run_id"], role)).fetchone()
+                result = json.loads(row["result_json"])
+                judgment = json.loads(result["final_text"])
+                judgment["text" if role == "surface_realization" else "report"] = "Changed synthetic response."
+                result["final_text"] = json.dumps(judgment)
+                conn.execute("UPDATE production_stage_calls SET result_json=?,result_fingerprint=? WHERE call_id=?",
+                             (canonical_json(result), fingerprint_text(canonical_json(result)), row["call_id"]))
+                with self.assertRaises(ProductionRunError):
+                    freeze_repair_source(conn, source_ref=self.reference, target=self.target)
+                conn.rollback()
+
+    def test_load_rechecks_original_request_and_full_checkpoint_after_registration(self):
+        from production_runtime.contracts import ProductionRunError
+        from production_runtime.repair_source import load_repair_source
+        started = self.start_repair()
+        for mutation in ("request", "checkpoint", "target", "frozen"):
+            with self.subTest(mutation=mutation), self.store.open_project("REPAIR") as conn:
+                if mutation == "request":
+                    request = json.loads(conn.execute("SELECT request_json FROM production_executions WHERE run_id=?", (self.source_run["run_id"],)).fetchone()[0])
+                    request["instruction"] = "Changed synthetic task."
+                    conn.execute("UPDATE production_executions SET request_json=?,request_fingerprint=? WHERE run_id=?",
+                                 (canonical_json(request), fingerprint_text(canonical_json(request)), self.source_run["run_id"]))
+                elif mutation == "checkpoint":
+                    state = dict(self.source_state, extra_diagnostic="Changed source payload.")
+                    conn.execute("UPDATE checkpoints SET state_json=? WHERE checkpoint_id=?", (canonical_json(state), self.source_checkpoint["checkpoint_id"]))
+                elif mutation == "target":
+                    target = json.loads(canonical_json(self.target))
+                    target["payload"]["instruction"] = "Changed author task."
+                    conn.execute("UPDATE checkpoints SET state_json=?,artifact_fingerprint=? WHERE run_id=? AND checkpoint_kind='author_run_request'",
+                                 (canonical_json(target), fingerprint_text(canonical_json(target)), self.source_run["run_id"]))
+                else:
+                    row = conn.execute("SELECT checkpoint_id,state_json FROM checkpoints WHERE run_id=? AND checkpoint_kind='production_repair_source'", (started["run_id"],)).fetchone()
+                    state = json.loads(row["state_json"])
+                    state["candidate_text"] = "CALLER REPLACEMENT"
+                    state["source_fingerprint"] = fingerprint_text(canonical_json({k: v for k, v in state.items() if k != "source_fingerprint"}))
+                    conn.execute("UPDATE checkpoints SET state_json=?,artifact_fingerprint=? WHERE checkpoint_id=?",
+                                 (canonical_json(state), state["source_fingerprint"], row["checkpoint_id"]))
+                with self.assertRaises(ProductionRunError):
+                    load_repair_source(conn, started["run_id"])
+                conn.rollback()
+
+    def test_repair_source_checkpoint_rolls_back_with_failed_author_registration(self):
+        before = self.source_snapshot()
+        failing = CoreOperations(_InjectedCoreFailureStore(self.store.root, "event"))
+        with self.assertRaisesRegex(RuntimeError, "Q1-EVENT-SENTINEL"):
+            failing.start_author_run("REPAIR", task_mode="REVISE", target_ref="DOC-CH001",
+                                     payload={"chapter_id": "CH001", "repair_source": self.reference}, idempotency_key="repair-rollback")
+        with self.store.open_project("REPAIR") as conn:
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM checkpoints WHERE checkpoint_kind='production_repair_source'").fetchone()[0])
+            self.assertEqual(1, conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0])
+            self.assertEqual(1, conn.execute("SELECT COUNT(*) FROM sessions").fetchone()[0])
+        self.assertEqual(before, self.source_snapshot())
+
+
 class ProjectLearningCoreIntegrationTests(unittest.TestCase):
     """Native Core/Bridge storage with synthetic workers; never live model proof."""
 
