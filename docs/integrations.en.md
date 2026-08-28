@@ -45,6 +45,8 @@ Select a model whose installed catalog does not force Code Mode. The relay disab
 
 An append-only ledger charges an attempt before launch, including failed launches, and carries the total across Core runs. A successful response requires a real CLI thread event, one completed turn, and an exact match between the final message and the saved output. Tool, error, unknown or inconsistent events stop publication of the response. Output bytes are preserved; reasoning text is not kept in evidence logs. No automatic CLI restart or failed-request replay occurs. Provider-internal retries that the CLI does not expose are not claimed as measured model calls.
 
+The default `--round-limit 64` permits at most 63 manager attempts, reserving an invocation for independent review. A higher authorized cap must be explicit: for example, `--round-limit 96 --manager-limit 95`; raising only `--manager-limit` cannot bypass the default. These flags express the operator's authorized budget, not proof of human approval. `--expected-used` verifies existing manager-ledger usage and never resets it. Independent reviewer attempts recorded outside this queue must also be counted by the orchestrator and deducted from the available manager limit while preserving the next required review. The cumulative experiment cap is separate from Core's per-run call budget.
+
 These records describe `codex_cli` manager transport, not native subagent independence or operating-system isolation. Production review still requires its separate frozen packet, eligible independent reviewer and Core-validated receipt. Neither the relay nor a passing review authorizes chapter acceptance or settlement.
 
 ## Secrets

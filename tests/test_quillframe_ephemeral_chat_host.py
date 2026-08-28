@@ -621,6 +621,14 @@ class CodexCliRelayTests(unittest.TestCase):
         rows = codex_cli_relay.read_ledger(self.queue)
         self.assertEqual([row["event"] for row in rows], ["cli_started", "cli_finished", "submitted"])
         self.assertEqual(codex_cli_relay.used_calls(rows), 1)
+        self.assertEqual(rows[0]["manager_calls_used_before"], 0)
+        self.assertEqual(rows[0]["manager_calls_used_after_start"], 1)
+        self.assertEqual(rows[0]["round_limit"], 64)
+        self.assertEqual(rows[0]["manager_limit"], 63)
+        self.assertEqual(rows[0]["reserved_independent_review_calls"], 1)
+        self.assertEqual(rows[0]["budget_count_scope"], "manager_ledger_attempts")
+        self.assertFalse(rows[0]["independent_review_usage_observed"])
+        self.assertTrue(rows[0]["external_round_budget_check_required"])
         self.assertNotIn("spawn_tool_result", rows[-1])
         self.assertEqual(rows[-1]["host_provider"], "codex_cli")
         for key in ("output_file", "response_file"):
@@ -669,6 +677,15 @@ class CodexCliRelayTests(unittest.TestCase):
         for config, expected in (
             (replace(self.config, allow_model_execution=False), "opt_in"),
             (replace(self.config, manager_limit=64), "reserved_review_budget"),
+            (replace(self.config, manager_limit=95), "reserved_review_budget"),
+            (replace(self.config, round_limit=96, manager_limit=96), "reserved_review_budget"),
+            (replace(self.config, round_limit=96, manager_limit=True), "reserved_review_budget"),
+            (replace(self.config, round_limit=96, manager_limit=95.0), "reserved_review_budget"),
+            (replace(self.config, round_limit=1, manager_limit=1), "invalid_round_limit"),
+            (replace(self.config, round_limit=-1), "invalid_round_limit"),
+            (replace(self.config, round_limit=True), "invalid_round_limit"),
+            (replace(self.config, round_limit=96.0), "invalid_round_limit"),
+            (replace(self.config, round_limit="96"), "invalid_round_limit"),
             (replace(self.config, worker_seconds=151), "worker_timeout"),
         ):
             with self.subTest(expected=expected), patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
@@ -682,6 +699,94 @@ class CodexCliRelayTests(unittest.TestCase):
             with self.assertRaisesRegex(codex_cli_relay.RelayError, "budget_exhausted"):
                 driver.process_request(packet)
             spawn.assert_not_called()
+
+    def test_cli_round_limit_flag_is_required_for_expanded_manager_limit(self):
+        argv = ["serve", "--queue", str(self.queue), "--cli-binary", "fixture-codex", "--run-id", "RUN-FIXTURE",
+                "--source-snapshot-sha256", "a" * 64, "--model", "fixture-model", "--allow-model-execution", "--expected-used", "47"]
+
+        def serve_without_model(driver, **kwargs):
+            driver.config.validate()
+            self.assertEqual(kwargs["expected_used"], 47)
+            return {"status": "idle_stopped"}
+
+        for flags, code, round_limit, manager_limit in (
+            ([], 0, 64, 63),
+            (["--manager-limit", "95"], 1, 64, 95),
+            (["--round-limit", "96"], 0, 96, 63),
+            (["--round-limit", "96", "--manager-limit", "95"], 0, 96, 95),
+            (["--round-limit", "96", "--manager-limit", "94"], 0, 96, 94),
+            (["--round-limit", "96", "--manager-limit", "96"], 1, 96, 96),
+            (["--round-limit", "65", "--manager-limit", "64"], 0, 65, 64),
+            (["--round-limit", "2", "--manager-limit", "1"], 0, 2, 1),
+        ):
+            with self.subTest(flags=flags), patch.object(codex_cli_relay.RelayDriver, "serve", autospec=True, side_effect=serve_without_model) as serve, \
+                    patch.object(codex_cli_relay.subprocess, "Popen") as spawn, patch("builtins.print"):
+                self.assertEqual(codex_cli_relay.main(argv + flags), code)
+                config = serve.call_args.args[0].config
+                self.assertEqual(config.round_limit, round_limit)
+                self.assertEqual(config.manager_limit, manager_limit)
+                spawn.assert_not_called()
+
+    def test_cli_expanded_budget_retains_47_attempts_and_reports_manager_only(self):
+        events = ["spawned"] * 36 + ["spawn_failed"] + ["cli_started"] * 10
+        old_rows = [{"event": event, "request_id": f"req_{index:032x}", "sequence": index,
+                     "run_id": f"RUN-PRIOR-{index % 3}", "source_snapshot_sha256": "b" * 64}
+                    for index, event in enumerate(events, start=1)]
+        old = b"".join(codex_cli_relay.json_bytes(row) + b"\n" for row in old_rows)
+        (self.queue / "calls.jsonl").write_bytes(old)
+        driver = codex_cli_relay.RelayDriver(replace(self.config, round_limit=96, manager_limit=95))
+        ready = []
+        with patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+            with self.assertRaisesRegex(codex_cli_relay.RelayError, "expected_used"):
+                driver.serve(expected_used=46)
+            with patch.object(codex_cli_relay.time, "monotonic", side_effect=[100.0, 102.0]):
+                stopped = driver.serve(expected_used=47, idle_seconds=1.0, on_event=ready.append)
+            spawn.assert_not_called()
+        for projection in (ready[0], stopped):
+            self.assertEqual(projection["used_calls"], 47)
+            self.assertEqual(projection["used_manager_calls"], 47)
+            self.assertEqual(projection["round_limit"], 96)
+            self.assertEqual(projection["manager_limit"], 95)
+            self.assertEqual(projection["reserved_independent_review_calls"], 1)
+            self.assertEqual(projection["budget_count_scope"], "manager_ledger_attempts")
+            self.assertFalse(projection["independent_review_usage_observed"])
+            self.assertTrue(projection["external_round_budget_check_required"])
+        result, _ = self.run_mock(driver=driver)
+        self.assertEqual(result["status"], "submitted")
+        rows = codex_cli_relay.read_ledger(self.queue)
+        self.assertTrue((self.queue / "calls.jsonl").read_bytes().startswith(old))
+        self.assertEqual(codex_cli_relay.used_calls(rows), 48)
+        self.assertEqual(rows[-3]["sequence"], 48)
+        self.assertEqual(rows[-3]["manager_calls_used_before"], 47)
+        self.assertEqual(rows[-3]["manager_calls_used_after_start"], 48)
+        self.assertEqual(rows[-3]["round_limit"], 96)
+        self.assertEqual(rows[-3]["manager_limit"], 95)
+        self.assertEqual(rows[-3]["reserved_independent_review_calls"], 1)
+        for row in rows[-3:]:
+            self.assertEqual(row["run_id"], self.config.run_id)
+            self.assertEqual(row["source_snapshot_sha256"], self.config.source_snapshot_sha256)
+            self.assertEqual(row["budget_count_scope"], "manager_ledger_attempts")
+        self.assertEqual(codex_cli_relay.used_calls(rows + [{"event": "external_independent_review_completed"}]), 48)
+
+    def test_cli_expanded_budget_charges_failed_95th_attempt_then_blocks(self):
+        old = b"".join(codex_cli_relay.json_bytes({"event": "cli_started", "request_id": f"req_{index:032x}"}) + b"\n"
+                       for index in range(94))
+        (self.queue / "calls.jsonl").write_bytes(old)
+        driver = codex_cli_relay.RelayDriver(replace(self.config, round_limit=96, manager_limit=95))
+        packet = self.packet()
+        with patch.object(codex_cli_relay.subprocess, "Popen", side_effect=FileNotFoundError("fixture")) as spawn:
+            result = driver.process_request(packet)
+        self.assertEqual(spawn.call_count, 1)
+        self.assertEqual(result["status"], "failed")
+        self.assertIsNone(result["thread_id"])
+        self.assertEqual(result["sequence"], 95)
+        self.assertEqual(codex_cli_relay.used_calls(codex_cli_relay.read_ledger(self.queue)), 95)
+        self.assertTrue((self.queue / "calls.jsonl").read_bytes().startswith(old))
+        with patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+            with self.assertRaisesRegex(codex_cli_relay.RelayError, "manager_budget_exhausted"):
+                driver.process_request(self.packet(request_id="req_" + "c" * 32))
+            spawn.assert_not_called()
+        self.assertFalse(list(self.queue.glob("*.response.json")))
 
     def test_cli_does_not_replay_existing_or_recorded_failed_requests(self):
         packet = self.packet()

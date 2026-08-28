@@ -5,6 +5,9 @@ This is manager transport, never an independent-review receipt. It preserves
 the original message values and the CLI's final UTF-8 bytes. CLI configuration
 and event rejection bound context/tool use; they do not attest OS isolation or
 prove the provider's internal retry count. No model runs on import or in CI.
+Budget counts cover this relay's manager-attempt events only. Independent review
+and other external calls require separate round-wide reconciliation by the host.
+Explicit limits are operator configuration, not proof of spending authorization.
 """
 from __future__ import annotations
 
@@ -26,7 +29,8 @@ from typing import Any, Callable, Iterator
 from harness.integrations.chat_host_relay import SCHEMA as RELAY_SCHEMA
 
 SCHEMA = "quillframe_codex_cli_relay_v1"
-MANAGER_CALL_LIMIT = 63  # One further invocation is reserved for independent review.
+DEFAULT_ROUND_LIMIT = 64
+MANAGER_CALL_LIMIT = DEFAULT_ROUND_LIMIT - 1
 RELAY_LIFETIME_SECONDS = 170.0
 MAX_WORKER_SECONDS = 150.0
 PUBLISH_RESERVE_SECONDS = 5.0
@@ -108,6 +112,7 @@ def read_ledger(queue: Path) -> list[dict[str, Any]]:
 
 
 def used_calls(rows: list[dict[str, Any]]) -> int:
+    """Count recorded manager attempts, not independent or unobserved host calls."""
     # Failed launches count, even when a host never returned a thread identity.
     return sum(row["event"] in COUNTED_EVENTS for row in rows)
 
@@ -152,6 +157,7 @@ class DriverConfig:
     allow_model_execution: bool = False
     manager_limit: int = MANAGER_CALL_LIMIT
     worker_seconds: float = MAX_WORKER_SECONDS
+    round_limit: int = DEFAULT_ROUND_LIMIT
 
     def validate(self) -> None:
         if not self.allow_model_execution:
@@ -160,10 +166,22 @@ class DriverConfig:
             raise RelayError("missing_explicit_host_or_run_identity")
         if not re.fullmatch(r"[0-9a-f]{64}", self.source_snapshot_sha256):
             raise RelayError("invalid_source_snapshot_sha256")
-        if not 1 <= self.manager_limit <= MANAGER_CALL_LIMIT:
+        if type(self.round_limit) is not int or self.round_limit < 2:
+            raise RelayError("invalid_round_limit")
+        if type(self.manager_limit) is not int or not 1 <= self.manager_limit < self.round_limit:
             raise RelayError("manager_limit_exceeds_reserved_review_budget")
         if not math.isfinite(self.worker_seconds) or not 0 < self.worker_seconds <= MAX_WORKER_SECONDS:
             raise RelayError("invalid_worker_timeout")
+
+    def budget_metadata(self) -> dict[str, Any]:
+        return {
+            "round_limit": self.round_limit, "manager_limit": self.manager_limit,
+            "reserved_independent_review_calls": self.round_limit - self.manager_limit,
+            "budget_count_scope": "manager_ledger_attempts",
+            "counted_event_types": sorted(COUNTED_EVENTS),
+            "independent_review_usage_observed": False,
+            "external_round_budget_check_required": True,
+        }
 
 
 def cli_command(config: DriverConfig, cwd: Path, output: Path) -> list[str]:
@@ -332,13 +350,14 @@ class RelayDriver:
     def _admit(self, path: Path) -> tuple[dict[str, Any], bytes] | None:
         self.config.validate()
         rows = read_ledger(self.queue)
+        manager_calls_used = used_calls(rows)
         request_id = path.name.removesuffix(".request.json")
         seen_ids = {row.get("request_id") for row in rows}
         if path.name in self.existing_requests or request_id in seen_ids:
             return None
         if (self.queue / f"{request_id}.response.json").exists():
             return None
-        if used_calls(rows) >= self.config.manager_limit:
+        if manager_calls_used >= self.config.manager_limit:
             raise RelayError("manager_budget_exhausted")
         current_rows = [row for row in rows if row.get("run_id") == self.config.run_id]
         finished_ids = {row.get("request_id") for row in current_rows if row["event"] == "submitted"}
@@ -389,7 +408,8 @@ class RelayDriver:
         # Every supplied role/content value remains unchanged inside the array.
         prompt = TRANSPORT_INSTRUCTION.encode("utf-8") + json_bytes(messages)
         return {
-            "schema": SCHEMA, "sequence": used_calls(rows) + 1,
+            "schema": SCHEMA, "sequence": manager_calls_used + 1,
+            **self.config.budget_metadata(), "manager_calls_used_before": manager_calls_used,
             "request_id": request_id, "request_sha256": sha256(raw),
             "request_bytes": len(raw), "request_created_at_unix": created,
             "run_id": self.config.run_id,
@@ -438,6 +458,7 @@ class RelayDriver:
             self._record(
                 base, "cli_started", status="attempted", counts_against_budget=True,
                 budget_count_after_start=base["sequence"], cli_binary=self.config.cli_binary,
+                manager_calls_used_after_start=base["sequence"],
                 model=self.config.model, reasoning_effort=self.config.reasoning_effort,
                 command_sha256=sha256(json_bytes(command)),
                 output_file=output_relative, events_file=events_relative,
@@ -587,7 +608,8 @@ class RelayDriver:
             count = used_calls(read_ledger(self.queue))
             if expected_used is not None and expected_used != count:
                 raise RelayError("ledger_budget_does_not_match_expected_used")
-            emit({"event": "driver_ready", "used_calls": count, "run_id": self.config.run_id, "accept_after_unix": self.started_at})
+            emit({"event": "driver_ready", "used_calls": count, "used_manager_calls": count,
+                  **self.config.budget_metadata(), "run_id": self.config.run_id, "accept_after_unix": self.started_at})
             idle_until = time.monotonic() + idle_seconds
             while time.monotonic() < idle_until:
                 for path in sorted(self.queue.glob("req_*.request.json")):
@@ -600,7 +622,9 @@ class RelayDriver:
                         return result
                     idle_until = time.monotonic() + idle_seconds
                 time.sleep(min(0.5, max(0.0, idle_until - time.monotonic())))
-            return {"status": "idle_stopped", "used_calls": used_calls(read_ledger(self.queue)), "run_id": self.config.run_id}
+            count = used_calls(read_ledger(self.queue))
+            return {"status": "idle_stopped", "used_calls": count, "used_manager_calls": count,
+                    **self.config.budget_metadata(), "run_id": self.config.run_id}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -614,9 +638,12 @@ def main(argv: list[str] | None = None) -> int:
     serve.add_argument("--model", required=True)
     serve.add_argument("--reasoning-effort", choices=("none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"), default="xhigh")
     serve.add_argument("--allow-model-execution", action="store_true")
-    serve.add_argument("--manager-limit", type=int, default=MANAGER_CALL_LIMIT)
+    serve.add_argument("--round-limit", type=int, default=DEFAULT_ROUND_LIMIT,
+                       help="explicit round ceiling; independent usage is reconciled outside this manager ledger")
+    serve.add_argument("--manager-limit", type=int, default=MANAGER_CALL_LIMIT,
+                       help="manager ledger ceiling (default 63); must leave at least one call below --round-limit")
     serve.add_argument("--worker-seconds", type=float, default=MAX_WORKER_SECONDS)
-    serve.add_argument("--expected-used", type=int)
+    serve.add_argument("--expected-used", type=int, help="expected recorded manager-attempt count, excluding external review")
     serve.add_argument("--idle-seconds", type=float, default=60.0)
     args = parser.parse_args(argv)
     try:
@@ -624,7 +651,7 @@ def main(argv: list[str] | None = None) -> int:
             queue=args.queue, cli_binary=args.cli_binary, run_id=args.run_id,
             source_snapshot_sha256=args.source_snapshot_sha256, model=args.model,
             reasoning_effort=args.reasoning_effort, allow_model_execution=args.allow_model_execution,
-            manager_limit=args.manager_limit, worker_seconds=args.worker_seconds,
+            manager_limit=args.manager_limit, worker_seconds=args.worker_seconds, round_limit=args.round_limit,
         ))
         result = driver.serve(
             expected_used=args.expected_used, idle_seconds=args.idle_seconds,

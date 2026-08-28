@@ -1,6 +1,6 @@
 # Local production verification
 
-Status: the real CLI model route and context-binding regressions are verified; a fresh semantic run awaits sufficient authorized budget. This record separates implemented behavior, deterministic regression results, browser observations and actual model outcomes. It does not certify a completed chapter, author acceptance or a successful book export.
+Status: the real CLI model route and context-binding regressions are verified; the user has authorized a cumulative cap of 96 for the fresh semantic run. This record separates implemented behavior, deterministic regression results, browser observations and actual model outcomes. It does not certify a completed chapter, author acceptance or a successful book export.
 
 ## Environment and scope
 
@@ -65,6 +65,8 @@ The cumulative round is now 47/64 attempts: 36 earlier native workers, one faile
 
 The subsequent context repair passed all 667 Core tests on its frozen Linux snapshot, with no failures, errors or skips. Separate focused runs passed 30 context tests, 12 semantic-context tests and 65 production-runtime tests. The context self-test, source-snapshot repository hygiene and both documentation checks passed. A Windows whole-workspace hygiene scan also traversed ignored local helper/tool documentation and reported their missing bilingual pairs and links; the clean production source snapshot passed the same check. No ignored helper or consumer data was added to the framework. Changing a pin invalidates the old context freeze without rewriting the semantic profile's source content. A rollback to the preceding commit likewise requires a fresh source-bound run, never a reclassification of archived failures. Actual semantic acceptance of the repaired handoff remains pending.
 
+The user then explicitly approved the proposed increase to 96 cumulative attempts. An immutable local authorization record binds that approval to the original 47 charged attempts and exact ledger-prefix hash; the ledger has not been reset. This leaves 49 attempts, including independent review. The relay keeps its default cap at 64 and requires an explicit larger cap. External reviewer attempts remain part of the orchestrator's cumulative audit. This authorization does not approve any unseen candidate, settlement, later chapter or cloud deployment.
+
 ## Remaining acceptance gates
 
-Freeze the committed repair and obtain sufficient explicit budget before a fresh single-chapter run and independent review. Verify public draft hiding when an actual private draft exists, and obtain the author's decision before acceptance or settlement. Continue to three and twelve chapters only with those intervening decisions and sufficient authorized budget. Ordered export, real feedback learning and recovery must be verified against those actual states. Four development cases and six held-out cases remain pending. No human retention or million-word consistency result is claimed.
+Freeze the committed repair and execute a fresh single-chapter run and independent review within the authorized cumulative cap. Verify public draft hiding when an actual private draft exists, and obtain the author's decision before acceptance or settlement. Continue to three and twelve chapters only with those intervening decisions and sufficient authorized budget. Ordered export, real feedback learning and recovery must be verified against those actual states. Four development cases and six held-out cases remain pending. No human retention or million-word consistency result is claimed.
