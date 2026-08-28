@@ -42,7 +42,9 @@ DISABLED_FEATURES = (
 )
 CLI_CONFIG = (
     "project_doc_max_bytes=0", "project_doc_fallback_filenames=[]",
-    'web_search="disabled"', "tools.view_image=false",
+    # view_image is disabled as a feature above; tools.view_image is not a
+    # recognized strict-config key in the installed 0.150 CLI schema.
+    'web_search="disabled"',
     "hide_agent_reasoning=true", "show_raw_agent_reasoning=false",
     'model_reasoning_summary="none"', 'history.persistence="none"',
 )
@@ -253,7 +255,7 @@ def audit_events(raw: bytes) -> EventAudit:
             if (
                 set(event) == {"type", "usage"} and isinstance(usage, dict)
                 and {"input_tokens", "output_tokens"}.issubset(usage)
-                and set(usage) <= {"input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens"}
+                and set(usage) <= {"input_tokens", "cached_input_tokens", "cache_write_input_tokens", "output_tokens", "reasoning_output_tokens"}
                 and all(isinstance(k, str) and isinstance(v, int) and not isinstance(v, bool) and v >= 0 for k, v in usage.items())
             ):
                 audit.usage = dict(usage)

@@ -553,7 +553,7 @@ class CodexCliRelayTests(unittest.TestCase):
             {"type": "turn.started"},
             {"type": "item.completed", "item": {"id": "item_0", "type": "reasoning", "text": "PRIVATE-REASONING-SENTINEL"}},
             {"type": "item.completed", "item": {"id": "item_1", "type": "agent_message", "text": self.FINAL if final is None else final}},
-            {"type": "turn.completed", "usage": {"input_tokens": 5, "cached_input_tokens": 0, "output_tokens": 3, "reasoning_output_tokens": 1}},
+            {"type": "turn.completed", "usage": {"input_tokens": 5, "cached_input_tokens": 0, "cache_write_input_tokens": 0, "output_tokens": 3, "reasoning_output_tokens": 1}},
         ]
 
     def raw_events(self, events=None):
@@ -699,6 +699,10 @@ class CodexCliRelayTests(unittest.TestCase):
         events = self.events()
         events[0]["unexpected"] = "not accepted"
         cases.append(events)
+        for key, value in (("cache_write_input_tokens", -1), ("cache_write_input_tokens", True), ("cache_write_input_tokens", "0"), ("unknown_tokens", 0)):
+            events = self.events()
+            events[-1]["usage"][key] = value
+            cases.append(events)
         for extra in (
             {"type": "item.started", "item": {"id": "tool_1", "type": "command_execution", "command": "forbidden"}},
             {"type": "turn.failed", "error": {"message": "private error"}},
