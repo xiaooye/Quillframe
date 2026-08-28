@@ -26,15 +26,17 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
-from harness.integrations.chat_host_relay import SCHEMA as RELAY_SCHEMA
+from harness.integrations.chat_host_relay import SCHEMA as RELAY_SCHEMA, validate_packet_deadline
+from model_runtime.deadlines import (
+    DEFAULT_WORKER_TIMEOUT_SECONDS,
+    MAX_WORKER_TIMEOUT_SECONDS,
+    PUBLISH_RESERVE_SECONDS,
+)
 from model_runtime.structured_output import validate_output_schema, validate_structured_text
 
-SCHEMA = "quillframe_codex_cli_relay_v1"
+SCHEMA = "quillframe_codex_cli_relay_v2"
 DEFAULT_ROUND_LIMIT = 64
 MANAGER_CALL_LIMIT = DEFAULT_ROUND_LIMIT - 1
-RELAY_LIFETIME_SECONDS = 170.0
-MAX_WORKER_SECONDS = 150.0
-PUBLISH_RESERVE_SECONDS = 5.0
 COUNTED_EVENTS = {"spawned", "spawn_failed", "cli_started"}
 REQUEST_ID = re.compile(r"req_[0-9a-f]{32}\Z")
 DISABLED_FEATURES = (
@@ -157,7 +159,7 @@ class DriverConfig:
     reasoning_effort: str = "xhigh"
     allow_model_execution: bool = False
     manager_limit: int = MANAGER_CALL_LIMIT
-    worker_seconds: float = MAX_WORKER_SECONDS
+    worker_seconds: float = DEFAULT_WORKER_TIMEOUT_SECONDS
     round_limit: int = DEFAULT_ROUND_LIMIT
 
     def validate(self) -> None:
@@ -171,7 +173,9 @@ class DriverConfig:
             raise RelayError("invalid_round_limit")
         if type(self.manager_limit) is not int or not 1 <= self.manager_limit < self.round_limit:
             raise RelayError("manager_limit_exceeds_reserved_review_budget")
-        if not math.isfinite(self.worker_seconds) or not 0 < self.worker_seconds <= MAX_WORKER_SECONDS:
+        if (isinstance(self.worker_seconds, bool) or not isinstance(self.worker_seconds, (int, float))
+                or not 0 < self.worker_seconds <= MAX_WORKER_TIMEOUT_SECONDS
+                or not math.isfinite(self.worker_seconds)):
             raise RelayError("invalid_worker_timeout")
 
     def budget_metadata(self) -> dict[str, Any]:
@@ -351,6 +355,9 @@ class RelayDriver:
         self.existing_requests = {path.name for path in self.queue.glob("req_*.request.json")}
 
     def _admit(self, path: Path) -> tuple[dict[str, Any], bytes, bytes | None] | None:
+        # Anchor once, before ledger/request/schema preparation. Neither a slow
+        # preparation step nor a backward wall-clock adjustment buys more time.
+        admitted_monotonic, admitted_unix = time.monotonic(), time.time()
         self.config.validate()
         rows = read_ledger(self.queue)
         manager_calls_used = used_calls(rows)
@@ -377,14 +384,29 @@ class RelayDriver:
             raise RelayError("invalid_request_identity")
         if packet.get("manager_transport") is not True or packet.get("independent_review_evidence") is not False or packet.get("authority") is not False:
             raise RelayError("request_is_not_manager_transport")
-        created = packet.get("created_at_unix")
-        if not isinstance(created, (float, int)) or isinstance(created, bool) or not math.isfinite(created):
-            raise RelayError("invalid_request_timestamp")
+        try:
+            timing = validate_packet_deadline(packet)
+        except ValueError:
+            raise RelayError("invalid_request_deadline") from None
+        created = timing["created_at_unix"]
         if created < self.started_at:
             return None
-        if created > time.time() + 5:
+        if created > admitted_unix + 5:
             raise RelayError("request_timestamp_in_future")
-        if time.time() >= created + RELAY_LIFETIME_SECONDS - PUBLISH_RESERVE_SECONDS:
+        remaining = min(timing["timeout_seconds"], timing["deadline_at_unix"] - admitted_unix)
+        deadline_metadata = {
+            "request_timeout_seconds": timing["timeout_seconds"],
+            "request_deadline_at_unix": timing["deadline_at_unix"],
+            "server_timeout_seconds": timing["server_timeout_seconds"],
+            "caller_deadline_unix_ms": timing["caller_deadline_unix_ms"],
+            "admitted_at_unix": admitted_unix, "admitted_at_monotonic": admitted_monotonic,
+            "request_deadline_monotonic": admitted_monotonic + remaining,
+            "worker_deadline_monotonic": admitted_monotonic + min(
+                self.config.worker_seconds, remaining - PUBLISH_RESERVE_SECONDS),
+            "worker_limit_seconds": self.config.worker_seconds,
+            "deadline_clock_scope": "driver_process",
+        }
+        if self._worker_remaining(deadline_metadata) <= 0:
             raise RelayError("request_deadline_exhausted")
         body = packet.get("request")
         messages = body.get("messages") if isinstance(body, dict) else None
@@ -435,11 +457,14 @@ class RelayDriver:
         # The fixed wrapper identifies transport intent, not a semantic rubric.
         # Every supplied role/content value remains unchanged inside the array.
         prompt = TRANSPORT_INSTRUCTION.encode("utf-8") + json_bytes(messages)
+        if self._worker_remaining(deadline_metadata) <= 0:
+            raise RelayError("request_deadline_exhausted")
         return {
             "schema": SCHEMA, "sequence": manager_calls_used + 1,
             **self.config.budget_metadata(), "manager_calls_used_before": manager_calls_used,
             "request_id": request_id, "request_sha256": sha256(raw),
             "request_bytes": len(raw), "request_created_at_unix": created,
+            **deadline_metadata,
             "run_id": self.config.run_id,
             "source_snapshot_sha256": self.config.source_snapshot_sha256,
             "run_binding": "operator_supplied_with_start_fence",
@@ -448,6 +473,16 @@ class RelayDriver:
             "prompt_sha256": sha256(prompt), "prompt_bytes": len(prompt),
             **schema_metadata,
         }, prompt, schema_raw
+
+    @staticmethod
+    def _request_remaining(base: dict[str, Any]) -> float:
+        return min(base["request_deadline_at_unix"] - time.time(),
+                   base["request_deadline_monotonic"] - time.monotonic())
+
+    @staticmethod
+    def _worker_remaining(base: dict[str, Any]) -> float:
+        return min(base["worker_deadline_monotonic"] - time.monotonic(),
+                   RelayDriver._request_remaining(base) - PUBLISH_RESERVE_SECONDS)
 
     def _record(self, base: dict[str, Any], event: str, **fields: Any) -> None:
         _append(self.queue, {
@@ -470,10 +505,7 @@ class RelayDriver:
         output_schema_validated: bool | None = None if schema_raw is None else False
         process: Any = None
         response_info: dict[str, Any] = {}
-        launched_at = time.time()
-        deadline = base["request_created_at_unix"] + RELAY_LIFETIME_SECONDS
-        worker_seconds = min(self.config.worker_seconds, deadline - launched_at - PUBLISH_RESERVE_SECONDS)
-        if worker_seconds <= 0:
+        if self._worker_remaining(base) <= 0:
             raise RelayError("request_deadline_exhausted")
         with tempfile.TemporaryDirectory(prefix="quillframe-codex-cli-") as temp:
             cwd = Path(temp).resolve()
@@ -494,11 +526,12 @@ class RelayDriver:
                     _exclusive_write(schema_artifact, schema_raw)
                 except OSError:
                     raise RelayError("output_schema_preservation_failed") from None
-                # Schema preparation also consumes the original relay deadline.
-                worker_seconds = min(self.config.worker_seconds, deadline - time.time() - PUBLISH_RESERVE_SECONDS)
-                if worker_seconds <= 0:
-                    raise RelayError("request_deadline_exhausted")
             command = cli_command(self.config, cwd, temporary_output, temporary_schema)
+            environment = child_environment()
+            worker_seconds = self._worker_remaining(base)
+            if worker_seconds <= 0:
+                raise RelayError("request_deadline_exhausted")
+            launched_monotonic, launched_at = time.monotonic(), time.time()
             self._record(
                 base, "cli_started", status="attempted", counts_against_budget=True,
                 budget_count_after_start=base["sequence"], cli_binary=self.config.cli_binary,
@@ -507,18 +540,27 @@ class RelayDriver:
                 command_sha256=sha256(json_bytes(command)),
                 output_file=output_relative, events_file=events_relative,
                 worker_timeout_seconds=worker_seconds, started_unix=launched_at,
+                worker_started_at_monotonic=launched_monotonic,
                 fresh_process=True, project_free_cwd=True, os_isolation_attested=False,
             )
-            monotonic_deadline = time.monotonic() + worker_seconds
             try:
+                # The durable pre-launch attempt is charged even if its fsync
+                # consumes the last allowance. It must not launch a late worker.
+                if self._worker_remaining(base) <= 0:
+                    raise RelayError("request_dispatch_deadline_exhausted")
                 process = subprocess.Popen(
                     command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    cwd=str(cwd), env=child_environment(), shell=False,
+                    cwd=str(cwd), env=environment, shell=False,
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0,
                 )
+                remaining = self._worker_remaining(base)
+                if remaining <= 0:
+                    raise subprocess.TimeoutExpired(self.config.cli_binary, 0)
                 stdout, stderr = process.communicate(
-                    input=prompt, timeout=max(0.001, monotonic_deadline - time.monotonic()),
+                    input=prompt, timeout=remaining,
                 )
+                if self._worker_remaining(base) <= 0:
+                    failures.append("cli_timeout")
             except (subprocess.TimeoutExpired, KeyboardInterrupt) as exc:
                 failures.append("cli_timeout" if isinstance(exc, subprocess.TimeoutExpired) else "cli_interrupted")
                 if process is not None:
@@ -530,6 +572,9 @@ class RelayDriver:
                         failures.append("cli_termination_unconfirmed")
             except OSError:
                 failures.append("cli_launch_or_io_failed")
+            except RelayError as exc:
+                failures.append(str(exc))
+            worker_finished_monotonic = time.monotonic()
             if process is not None and process.returncode != 0:
                 failures.append("cli_nonzero_exit")
             audit = audit_events(stdout)
@@ -574,7 +619,7 @@ class RelayDriver:
                 events_preserved = True
             except OSError:
                 failures.append("cli_events_preservation_failed")
-            if time.time() >= deadline - PUBLISH_RESERVE_SECONDS:
+            if self._request_remaining(base) <= PUBLISH_RESERVE_SECONDS:
                 failures.append("request_publish_deadline_exhausted")
             request_path = self.queue / f"{request_id}.request.json"
             try:
@@ -600,7 +645,9 @@ class RelayDriver:
                 "forbidden_event_count": audit.forbidden_event_count,
                 "failure_codes": sorted(set(failures)),
                 "elapsed_since_request_seconds": time.time() - base["request_created_at_unix"],
-                "elapsed_worker_seconds": time.time() - launched_at,
+                "elapsed_since_admission_seconds": time.monotonic() - base["admitted_at_monotonic"],
+                "elapsed_worker_seconds": worker_finished_monotonic - launched_monotonic,
+                "worker_finished_at_monotonic": worker_finished_monotonic,
             }
             # Durable process identity and sanitized evidence precede the only
             # publication Core can consume. Publication failure is a distinct,
@@ -616,7 +663,7 @@ class RelayDriver:
                     "usage": audit.usage,
                 }) + b"\n"
                 try:
-                    if time.time() >= deadline - PUBLISH_RESERVE_SECONDS:
+                    if self._request_remaining(base) <= PUBLISH_RESERVE_SECONDS:
                         raise RelayError("request_publish_deadline_exhausted")
                     _exclusive_write(response_path, raw_response)
                     response_bytes = response_path.read_bytes()
@@ -624,7 +671,7 @@ class RelayDriver:
                     exact = response.get("content", "").encode("utf-8") == output
                     if not exact:
                         failures.append("published_response_changed")
-                    if time.time() >= deadline:
+                    if self._request_remaining(base) <= 0:
                         failures.append("response_published_after_deadline")
                     response_info = {
                         "response_file": response_path.name,
@@ -670,7 +717,9 @@ class RelayDriver:
             if expected_used is not None and expected_used != count:
                 raise RelayError("ledger_budget_does_not_match_expected_used")
             emit({"event": "driver_ready", "used_calls": count, "used_manager_calls": count,
-                  **self.config.budget_metadata(), "run_id": self.config.run_id, "accept_after_unix": self.started_at})
+                  **self.config.budget_metadata(), "run_id": self.config.run_id, "accept_after_unix": self.started_at,
+                  "schema": SCHEMA, "relay_packet_schema": RELAY_SCHEMA,
+                  "worker_limit_seconds": self.config.worker_seconds})
             idle_until = time.monotonic() + idle_seconds
             while time.monotonic() < idle_until:
                 for path in sorted(self.queue.glob("req_*.request.json")):
@@ -703,7 +752,8 @@ def main(argv: list[str] | None = None) -> int:
                        help="explicit round ceiling; independent usage is reconciled outside this manager ledger")
     serve.add_argument("--manager-limit", type=int, default=MANAGER_CALL_LIMIT,
                        help="manager ledger ceiling (default 63); must leave at least one call below --round-limit")
-    serve.add_argument("--worker-seconds", type=float, default=MAX_WORKER_SECONDS)
+    serve.add_argument("--worker-seconds", type=float, default=DEFAULT_WORKER_TIMEOUT_SECONDS,
+                       help="bounded worker allowance (default 150, maximum 570 seconds)")
     serve.add_argument("--expected-used", type=int, help="expected recorded manager-attempt count, excluding external review")
     serve.add_argument("--idle-seconds", type=float, default=60.0)
     args = parser.parse_args(argv)

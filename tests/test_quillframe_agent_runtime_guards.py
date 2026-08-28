@@ -10,7 +10,8 @@ from unittest.mock import patch
 from agent_runtime import AgentBudget, AgentJob, AgentRunner, ControlPlaneExecutionHooks, ToolRuntime, ToolSpec
 from harness.control_plane.control_plane import ControlPlane
 from harness.session_runtime.session_runtime import new_session, start_run
-from model_runtime import CapabilityEvidence, DiscoveredModel, ModelTurn, ToolCall, TransportError, UrllibTransport
+from harness.semantic_workers.semantic_worker_router import validate_typed_value
+from model_runtime import CapabilityEvidence, DiscoveredModel, ModelRuntimeError, ModelTurn, ToolCall, TransportError, UrllibTransport
 from model_runtime.contracts import now_iso
 from model_runtime.transport import _NoRedirect
 from model_runtime.contracts import fingerprint
@@ -122,6 +123,134 @@ class SideEffectCheckpointTests(unittest.TestCase):
         self.assertNotEqual(constrained.input_fingerprint, replace(constrained, output_schema=None).input_fingerprint)
         narrowed = {**schema, "properties": {"verdict": {"type": "string", "enum": ["fail"]}}}
         self.assertNotEqual(constrained.input_fingerprint, replace(constrained, output_schema=narrowed).input_fingerprint)
+
+    def test_optional_request_deadline_preserves_the_exact_legacy_job_and_fingerprint(self):
+        legacy = self._job()
+        expected = {
+            "schema": "quillframe_agent_job_v1", "job_id": "JOB-GUARD", "session_id": "SES-GUARD",
+            "run_id": "RUN-GUARD", "task_mode": "SYSTEM-IMPROVE", "runtime_role": "coding_implementer",
+            "service_id": "SERVICE-GUARD", "instruction": "Perform the bounded write.", "context": [],
+            "tool_grants": ["fixture.write"], "model_preference": None,
+            "required_model_capabilities": ["text", "tool_calling"], "authority": {"filesystem_write": True},
+            "budgets": {"max_steps": 4, "max_model_requests": 4, "max_tool_calls": 2,
+                        "max_parallel_tool_calls": 1, "max_output_tokens_per_request": 64,
+                        "max_total_tokens": 1000, "max_elapsed_ms": 30000},
+            "idempotency_key": "JOB-GUARD-IDEM",
+        }
+        self.assertEqual(expected, legacy.to_dict(include_fingerprint=False))
+        self.assertEqual(fingerprint(expected), legacy.input_fingerprint)
+        explicit_none = replace(legacy, budgets=replace(legacy.budgets, max_model_request_ms=None))
+        self.assertEqual(legacy.to_dict(), explicit_none.to_dict())
+        extended = replace(legacy, budgets=replace(legacy.budgets, max_model_request_ms=600000))
+        expected["budgets"]["max_model_request_ms"] = 600000
+        self.assertEqual(expected, extended.to_dict(include_fingerprint=False))
+        self.assertEqual(fingerprint(expected), extended.input_fingerprint)
+        self.assertNotEqual(legacy.input_fingerprint, extended.input_fingerprint)
+        self.assertNotEqual(extended.input_fingerprint,
+                            replace(extended, budgets=replace(extended.budgets, max_model_request_ms=180000)).input_fingerprint)
+
+    def test_request_deadline_budget_and_public_schema_enforce_the_same_optional_integer_bound(self):
+        schema = json.loads((Path(__file__).resolve().parents[1] / "agent_runtime" / "agent_job.schema.json").read_text(encoding="utf-8"))
+        self.assertNotIn("max_model_request_ms", schema["properties"]["budgets"]["required"])
+        legacy = self._job()
+        self.assertEqual([], validate_typed_value(legacy.to_dict(include_fingerprint=False), schema))
+        for value in (1, 180000, 600000):
+            with self.subTest(value=value):
+                job = replace(legacy, budgets=replace(legacy.budgets, max_model_request_ms=value))
+                self.assertEqual([], validate_typed_value(job.to_dict(include_fingerprint=False), schema))
+                self.assertEqual(value, job.budgets.to_dict()["max_model_request_ms"])
+        for value in (True, False, 0, -1, 600001, 10 ** 1000, 1.0, "600000", float("nan"), float("inf"), [], {}):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    replace(legacy.budgets, max_model_request_ms=value)
+                payload = legacy.to_dict(include_fingerprint=False)
+                payload["budgets"]["max_model_request_ms"] = value
+                self.assertTrue(validate_typed_value(payload, schema))
+        payload = legacy.to_dict(include_fingerprint=False)
+        payload["budgets"]["max_model_request_ms"] = None
+        self.assertTrue(validate_typed_value(payload, schema))
+
+    def test_request_timeout_is_default_or_explicit_and_clamped_by_remaining_job_time(self):
+        original_history = None
+        for request_ms, elapsed_ms, expected in ((None, 900000, 180.0), (600000, 900000, 600.0),
+                                                 (600000, 600000, 599.0), (600000, 30000, 29.0),
+                                                 (120000, 900000, 120.0)):
+            with self.subTest(request_ms=request_ms, elapsed_ms=elapsed_ms):
+                job = self._job()
+                job = replace(job, tool_grants=set(), required_model_capabilities={"text"},
+                              budgets=replace(job.budgets, max_elapsed_ms=elapsed_ms, max_model_request_ms=request_ms))
+                model = FakeModelRuntime([ModelTurn("openai_chat_completions", "fixture-model", text=" 原始返回\n")])
+                with patch.object(model, "invoke", wraps=model.invoke) as invoke, \
+                        patch("agent_runtime.runner.time.monotonic", side_effect=[100.0, 101.0, 102.0]):
+                    result = AgentRunner(model, ToolRuntime()).run(job)
+                self.assertEqual("completed", result.status)
+                self.assertEqual(" 原始返回\n", result.final_text)
+                self.assertEqual([expected], model.timeouts)
+                self.assertEqual(1, result.model_requests)
+                self.assertEqual(64, invoke.call_args.kwargs["max_output_tokens"])
+                history = invoke.call_args.args[2]
+                if original_history is None:
+                    original_history = history
+                self.assertEqual(original_history, history)
+
+    def test_extended_request_still_discards_late_or_cancelled_output_and_enforces_tokens(self):
+        from agent_runtime.runner import CancellationToken
+        for failure in ("elapsed", "cancelled", "tokens"):
+            with self.subTest(failure=failure):
+                job = self._job()
+                job = replace(job, tool_grants=set(), required_model_capabilities={"text"},
+                              budgets=replace(job.budgets, max_elapsed_ms=600000, max_model_request_ms=600000))
+                cancellation = CancellationToken()
+                model = FakeModelRuntime([ModelTurn("openai_chat_completions", "fixture-model", text="bounded result",
+                                                    usage={"input_tokens": 1001 if failure == "tokens" else 1})])
+                original = model.invoke
+
+                def invoke(*args, **kwargs):
+                    if failure == "cancelled":
+                        cancellation.cancel()
+                    return original(*args, **kwargs)
+
+                with patch.object(model, "invoke", side_effect=invoke), \
+                        patch("agent_runtime.runner.time.monotonic", side_effect=[100.0, 101.0, 700.0 if failure == "elapsed" else 102.0]):
+                    result = AgentRunner(model, ToolRuntime()).run(job, cancellation=cancellation)
+                self.assertEqual("cancelled" if failure == "cancelled" else "budget_exhausted", result.status)
+                self.assertEqual([599.0], model.timeouts)
+                self.assertEqual(1, result.model_requests)
+                if failure != "tokens":
+                    self.assertEqual("", result.final_text)
+                else:
+                    self.assertEqual("token_budget_exhausted_after_response", result.errors[0]["code"])
+
+    def test_extended_request_failure_is_charged_once_without_retry(self):
+        job = self._job()
+        job = replace(job, tool_grants=set(), required_model_capabilities={"text"},
+                      budgets=replace(job.budgets, max_elapsed_ms=600000, max_model_request_ms=600000))
+        model = FakeModelRuntime([])
+        with patch.object(model, "invoke", side_effect=ModelRuntimeError("request_deadline_exceeded", "timed out")) as invoke:
+            result = AgentRunner(model, ToolRuntime()).run(job)
+        self.assertEqual("model_failed", result.status)
+        self.assertEqual("", result.final_text)
+        self.assertEqual("request_deadline_exceeded", result.errors[0]["code"])
+        self.assertEqual(1, result.model_requests)
+        invoke.assert_called_once()
+
+    def test_extended_deadline_does_not_increase_the_model_call_budget(self):
+        job = self._job()
+        job = replace(job, tool_grants={"fixture.echo"}, budgets=replace(
+            job.budgets, max_model_request_ms=600000, max_elapsed_ms=900000, max_model_requests=1))
+        tools = ToolRuntime(host_capabilities={"fixture_read"})
+        tools.register(ToolSpec("fixture.echo", "Bounded fixture read", {"type": "object"},
+                                lambda args: args, "fixture_read"))
+        model = FakeModelRuntime([
+            ModelTurn("openai_chat_completions", "fixture-model", tool_calls=[ToolCall("CALL-1", "fixture.echo", {})]),
+            ModelTurn("openai_chat_completions", "fixture-model", text="must not be requested"),
+        ])
+        result = AgentRunner(model, tools).run(job)
+        self.assertEqual("budget_exhausted", result.status)
+        self.assertEqual(1, result.model_requests)
+        self.assertEqual(1, result.tool_calls)
+        self.assertEqual([600.0], model.timeouts)
+        self.assertEqual(1, len(model.turns))
 
     def test_schema_job_sends_explicit_constraint_and_preserves_a_valid_failure_verdict(self):
         schema = {"type": "object", "properties": {"verdict": {"type": "string", "enum": ["pass", "fail"]}}, "required": ["verdict"], "additionalProperties": False}

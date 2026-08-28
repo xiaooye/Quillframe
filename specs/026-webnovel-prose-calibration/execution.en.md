@@ -22,6 +22,14 @@ A fresh run on the same commit made 12 real model calls with distinct threads. A
 
 Both stopped runs and all original charges remain preserved. The local experiment has used 166 of its authorized 192 attempts; this is an experiment budget, not a default product limit. No historical result is relabeled or replayed under changed source.
 
-## Follow-up verification
+## Third production run: complete-prose request timed out
 
-The next fix narrows only the character identity and agenda echo fields to their supplied values. AI still owns the agenda's meaning and the action proposal. String enums were already exercised by the real transport probe; the additional value bindings require deterministic regressions, fresh source verification and a new production run within the remaining budget. Neither the earlier [prose calibration](evaluation.en.md), the transport probe, nor either stopped run establishes improved literary quality.
+Local commit `e191fd78ba49a258bd334488890ae3459ccc2bd2` passed 835 Python tests and all 21 verification groups. Its 1,031 exact source files were bound to the clean commit. The character identity and agenda echo fields were narrowed to supplied values; their meaning and the action proposal remained AI decisions.
+
+A fresh run then completed eighteen model calls. All six character-action results and the scene resolution passed their explicit output schemas and domain bindings, including the previously failing echo boundary. The nineteenth call, `event_first_raw_draft`, timed out after 150.029 seconds. Its worker produced thread-start and turn-start events but no final message, usage report, output file, or submitted response. Core received HTTP 504 after approximately 170 seconds and retained a `model_failed` result.
+
+The run is inactive at `semantic_pending`. Its nineteen confirmed journal entries contain eighteen completed results and one failure; confirmation must not be described as successful generation. There is no candidate, independent review, acceptance, or settlement. The cumulative experiment now stands at 185 of 192 authorized attempts, with all original spending preserved.
+
+## Follow-up
+
+The [bounded-deadline change](../027-bounded-model-deadlines/spec.en.md) addresses this timing boundary without reducing writing requirements, changing AI judgments, adding retries, or rewriting old results. Its implementation and new live run require separate verification and sufficient explicit remaining authorization. Neither the earlier [prose calibration](evaluation.en.md), the transport probe, nor the stopped runs establish improved literary quality.

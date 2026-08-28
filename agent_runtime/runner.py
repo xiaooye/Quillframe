@@ -8,6 +8,7 @@ from typing import Any
 
 from model_runtime import ModelRuntime, ModelRuntimeError
 from model_runtime.contracts import canonical_json
+from model_runtime.deadlines import DEFAULT_REQUEST_TIMEOUT_SECONDS
 from model_runtime.structured_output import validate_structured_text
 
 from .contracts import AgentJob, AgentResult
@@ -86,9 +87,11 @@ class AgentRunner:
             model_requests += 1
             try:
                 output_options = {"output_schema": job.output_schema} if job.output_schema is not None else {}
+                request_timeout = (DEFAULT_REQUEST_TIMEOUT_SECONDS if job.budgets.max_model_request_ms is None
+                                   else job.budgets.max_model_request_ms / 1000.0)
                 turn = self.model_runtime.invoke(job.service_id, model.model_id, history, model_tools,
                     max_output_tokens=job.budgets.max_output_tokens_per_request,
-                    timeout_seconds=min(180.0, (job.budgets.max_elapsed_ms - elapsed_ms) / 1000.0),
+                    timeout_seconds=min(request_timeout, (job.budgets.max_elapsed_ms - elapsed_ms) / 1000.0),
                     **output_options)
             except ModelRuntimeError as exc:
                 return self._result(job, "model_failed", final_text, model.model_id, protocol, steps, model_requests, tool_calls, receipts, {"input_tokens": total_input, "output_tokens": total_output}, [{"code": exc.code, "message": str(exc), "detail": exc.detail}])

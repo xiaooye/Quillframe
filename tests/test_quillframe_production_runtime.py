@@ -576,6 +576,107 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.assertNotIn("open_project", source)
         self.assertNotIn("self.store", source)
 
+    def test_only_complete_prose_jobs_receive_explicit_long_request_and_journal_deadlines(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        clock = ManualClock()
+        runtime.stage_repository.clock = clock
+        run_id = self.start()
+        self.assertEqual("awaiting_external", self.execute_to_handoff(runtime, run_id)["status"])
+        writers = {"event_first_raw_draft", "surface_realization"}
+        self.assertEqual(2, sum(job.runtime_role in writers for job in fake.calls))
+        with self.store.open_project("PROD") as conn:
+            rows = {row["input_fingerprint"]: row for row in conn.execute(
+                "SELECT input_fingerprint,job_json,deadline_at_ms FROM production_stage_calls WHERE run_id=?", (run_id,),
+            )}
+        for job in fake.calls:
+            with self.subTest(role=job.runtime_role):
+                budget = job.budgets.to_dict()
+                row = rows[job.input_fingerprint]
+                self.assertEqual(budget, json.loads(row["job_json"])["budgets"])
+                if job.runtime_role in writers:
+                    self.assertEqual(600_000, budget["max_model_request_ms"])
+                    self.assertEqual(600_000, budget["max_elapsed_ms"])
+                    self.assertEqual(int(clock() * 1000) + 600_000, row["deadline_at_ms"])
+                    self.assertEqual(1, budget["max_model_requests"])
+                    self.assertEqual(1, budget["max_steps"])
+                    self.assertEqual(64_000, budget["max_total_tokens"])
+                    self.assertEqual(7000, budget["max_output_tokens_per_request"])
+                    self.assertEqual(set(), job.tool_grants)
+                    ordinary_budget = replace(job.budgets, max_model_request_ms=None, max_elapsed_ms=180_000)
+                    self.assertNotEqual(job.input_fingerprint, replace(job, budgets=ordinary_budget).input_fingerprint)
+                    self.assertEqual(runtime._stage_instruction(job.runtime_role, "draft chapter"), job.instruction)
+                else:
+                    self.assertIsNone(job.budgets.max_model_request_ms)
+                    self.assertNotIn("max_model_request_ms", budget)
+                    self.assertEqual(180_000, budget["max_elapsed_ms"])
+                    self.assertEqual(int(clock() * 1000) + 180_000, row["deadline_at_ms"])
+        self.assertFalse(runtime.status("PROD", run_id)["execution_journal"]["active_executor"])
+
+    def test_long_prose_transport_failure_is_immutable_and_not_retried(self):
+        class TimedOutWriter(FakeAgentRuntime):
+            def run(inner, job, *, cancellation=None):
+                result = super().run(job, cancellation=cancellation)
+                if job.runtime_role == "event_first_raw_draft":
+                    return replace(result, status="model_failed", final_text="",
+                                   errors=[{"code": "model_request_failed", "message": "Synthetic HTTP timeout."}])
+                return result
+
+        fake = TimedOutWriter()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        with self.assertRaises(ProductionRunError) as error:
+            self.execute_to_handoff(runtime, run_id)
+        self.assertEqual("semantic_pending", error.exception.code)
+        with self.store.open_project("PROD") as conn:
+            before = tuple(conn.execute(
+                "SELECT job_json,result_json,result_fingerprint FROM production_stage_calls "
+                "WHERE run_id=? AND runtime_role='event_first_raw_draft'", (run_id,),
+            ).fetchone())
+        self.assertEqual(600_000, json.loads(before[0])["budgets"]["max_model_request_ms"])
+        self.assertEqual("model_failed", json.loads(before[1])["status"])
+        calls = len(fake.calls)
+        with self.assertRaises(ProductionRunError) as replay:
+            runtime.resume_execution("PROD", run_id)
+        self.assertEqual("semantic_pending", replay.exception.code)
+        self.assertEqual(calls, len(fake.calls))
+        self.assertEqual(1, sum(job.runtime_role == "event_first_raw_draft" for job in fake.calls))
+        self.assertFalse(any(job.runtime_role == "surface_realization" for job in fake.calls))
+        with self.store.open_project("PROD") as conn:
+            after = tuple(conn.execute(
+                "SELECT job_json,result_json,result_fingerprint FROM production_stage_calls "
+                "WHERE run_id=? AND runtime_role='event_first_raw_draft'", (run_id,),
+            ).fetchone())
+            self.assertEqual(before, after)
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0])
+
+    def test_long_prose_response_at_frozen_deadline_cannot_be_confirmed_or_retried(self):
+        clock = ManualClock()
+
+        class LateWriter(FakeAgentRuntime):
+            def run(inner, job, *, cancellation=None):
+                result = super().run(job, cancellation=cancellation)
+                if job.runtime_role == "event_first_raw_draft":
+                    clock.advance(600)
+                return result
+
+        fake = LateWriter()
+        runtime = ProductionRunExecutor(self.store, fake)
+        runtime.stage_repository.clock = clock
+        runtime.stage_repository.lease_seconds = 1000  # Isolate the stage deadline from lease expiry.
+        run_id = self.start()
+        result = self.execute_to_handoff(runtime, run_id)
+        self.assertEqual("semantic_pending", result["status"])
+        calls = len(fake.calls)
+        with self.store.open_project("PROD") as conn:
+            row = conn.execute("SELECT state,error_code,result_json,result_fingerprint FROM production_stage_calls "
+                               "WHERE run_id=? AND runtime_role='event_first_raw_draft'", (run_id,)).fetchone()
+            self.assertEqual(("unconfirmed", "stage_deadline_exceeded", None, None), tuple(row))
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0])
+        self.assertEqual("stage_result_confirmation", runtime.resume_execution("PROD", run_id)["awaiting"])
+        self.assertEqual(calls, len(fake.calls))
+        self.assertFalse(any(job.runtime_role == "surface_realization" for job in fake.calls))
+
     def test_reading_positioning_reaches_actual_writer_pressure_reader_and_independent_jobs(self):
         fake = FakeAgentRuntime()
         runtime = ProductionRunExecutor(self.store, fake)

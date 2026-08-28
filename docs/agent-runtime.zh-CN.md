@@ -19,6 +19,10 @@ Quillframe 是小说契约内核，不是通用 Agent harness。Codex、Claude C
 
 Preference 只能重排 eligible model；不能制造 capability、independence 或 authority。
 
+可选 `budgets.max_model_request_ms` 显式设置 1 至 600,000 毫秒的单请求时限。未提供时不写入序列化，普通 job 的原指纹与 180 秒默认值保持不变。实际请求取配置时限和 job 剩余总时间中的较小值。显式时限参与输入指纹，不授予新权限，也不增加模型调用额度。
+
+生产中的原始草稿与文字实现 job，分别为其唯一一次请求和整个阶段显式预留最多 600 秒；其余生产 job 保持原限额。这些边界不改变正文要求或 AI 审稿判断，失败或迟到结果仍然阻止后续执行。详见[截止时间契约](../specs/027-bounded-model-deadlines/spec.zh-CN.md)。
+
 ## Embedded/reference loop
 
 ```text

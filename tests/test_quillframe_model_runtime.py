@@ -7,8 +7,9 @@ import tempfile
 import unittest
 from copy import deepcopy
 from pathlib import Path
+from unittest.mock import patch
 
-from model_runtime import EndpointPolicy, MemorySecretStore, MockTransport, ModelRuntime, ModelRuntimeError, TransportResponse, normalize_endpoint
+from model_runtime import EndpointPolicy, MemorySecretStore, MockTransport, ModelRuntime, ModelRuntimeError, TransportError, TransportResponse, normalize_endpoint
 from model_runtime.manager import ModelServiceManager
 from model_runtime.protocols import AnthropicMessagesCodec, OpenAIChatCodec, OpenAIResponsesCodec
 from model_runtime.structured_output import required_only_output_schema, validate_output_schema, validate_structured_text
@@ -207,6 +208,52 @@ class StructuredOutputTests(unittest.TestCase):
 
 
 class ModelRuntimeTests(unittest.TestCase):
+    def test_request_timeout_default_and_explicit_bound_do_not_change_model_body(self):
+        class TimedTransport(MockTransport):
+            def __init__(self, routes):
+                super().__init__(routes)
+                self.timeouts = []
+
+            def request_json(self, *args, **kwargs):
+                self.timeouts.append(kwargs["timeout"])
+                return super().request_json(*args, **kwargs)
+
+        endpoint = "https://api.example.test/v1"
+        raw = ' {"status":"fail","report":"原始判断"}\n'
+        transport = TimedTransport({
+            ("GET", endpoint + "/models", "bearer"): response(200, {"data": [{"id": "m", "protocol": "openai_chat_completions"}]}),
+            ("POST", endpoint + "/chat/completions", "bearer"): response(200, {"choices": [{"finish_reason": "stop", "message": {"content": raw}}]}),
+        })
+        runtime = ModelRuntime(MemorySecretStore(), transport)
+        service = runtime.connect(endpoint, "t")
+        history = [{"role": "user", "content": "Return the exact bounded judgment."}]
+        for kwargs in ({}, {"timeout_seconds": 599.5}, {"timeout_seconds": 600}):
+            result = runtime.invoke(service.service_id, "m", history, [], output_schema=OUTPUT_SCHEMA, **kwargs)
+            self.assertEqual(raw, result.text)
+        self.assertEqual([20.0, 180.0, 599.5, 600.0], transport.timeouts)
+        posts = [request for request in transport.requests if request["method"] == "POST"]
+        self.assertEqual(3, len(posts))
+        for post in posts:
+            self.assertEqual(posts[0]["body"], post["body"])
+            self.assertEqual(history, post["body"]["messages"])
+        for invalid in (True, False, 0, -1, 600.001, 10 ** 1000, float("nan"), float("inf"), None, "600", []):
+            with self.subTest(timeout=invalid), self.assertRaises(ModelRuntimeError) as error:
+                runtime.invoke(service.service_id, "m", history, [], timeout_seconds=invalid)
+            self.assertEqual("invalid_request_timeout", error.exception.code)
+        self.assertEqual(4, len(transport.requests))
+
+    def test_extended_request_transport_failure_does_not_probe_or_retry(self):
+        endpoint = "https://api.example.test/v1"
+        transport = MockTransport({("GET", endpoint + "/models", "bearer"): response(200, {"data": [{"id": "m", "protocol": "openai_chat_completions"}]})})
+        runtime = ModelRuntime(MemorySecretStore(), transport)
+        service = runtime.connect(endpoint, "t")
+        with patch.object(transport, "request_json", side_effect=TransportError("request_deadline_exceeded", "timed out")) as request:
+            with self.assertRaises(ModelRuntimeError) as error:
+                runtime.invoke(service.service_id, "m", [], [], timeout_seconds=600)
+        self.assertEqual("request_deadline_exceeded", error.exception.code)
+        request.assert_called_once()
+        self.assertEqual(600.0, request.call_args.kwargs["timeout"])
+
     def test_native_schema_is_explicit_in_both_openai_protocols(self):
         history = [{"role": "user", "content": "Return the bounded judgment."}]
         original = deepcopy(OUTPUT_SCHEMA)

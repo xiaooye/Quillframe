@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from model_runtime.contracts import canonical_json, fingerprint
+from model_runtime.deadlines import MAX_REQUEST_TIMEOUT_SECONDS
 from model_runtime.structured_output import validate_output_schema
 
 _SECRET_KEYS = {"token", "access_token", "api_key", "apikey", "password", "secret", "authorization", "credential"}
@@ -33,14 +34,20 @@ class AgentBudget:
     max_output_tokens_per_request: int = 4096
     max_total_tokens: int = 200_000
     max_elapsed_ms: int = 15 * 60 * 1000
+    max_model_request_ms: int | None = None
 
     def __post_init__(self) -> None:
         for name, value in self.to_dict().items():
             if not isinstance(value, int) or value <= 0:
                 raise ValueError(f"{name} must be a positive integer")
+        if self.max_model_request_ms is not None and (
+            isinstance(self.max_model_request_ms, bool)
+            or self.max_model_request_ms > int(MAX_REQUEST_TIMEOUT_SECONDS * 1000)
+        ):
+            raise ValueError("max_model_request_ms must be a positive integer at most 600000")
 
     def to_dict(self) -> dict[str, int]:
-        return {
+        value = {
             "max_steps": self.max_steps,
             "max_model_requests": self.max_model_requests,
             "max_tool_calls": self.max_tool_calls,
@@ -49,6 +56,10 @@ class AgentBudget:
             "max_total_tokens": self.max_total_tokens,
             "max_elapsed_ms": self.max_elapsed_ms,
         }
+        # Omitting an unset request limit preserves historical job fingerprints.
+        if self.max_model_request_ms is not None:
+            value["max_model_request_ms"] = self.max_model_request_ms
+        return value
 
 
 @dataclass

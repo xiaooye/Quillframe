@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import hashlib
+import io
 import json
 import os
 import subprocess
@@ -9,7 +10,9 @@ import sys
 import tempfile
 import time
 import unittest
+from contextlib import contextmanager
 from dataclasses import replace
+from email.message import Message
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -517,6 +520,228 @@ class EphemeralChatHostTests(unittest.TestCase):
                         module.load_frozen_packet()
 
 
+class FixtureClock:
+    def __init__(self):
+        self.wall = 2_000_000_000.0
+        self.monotonic = 100.0
+
+    def advance(self, seconds, *, wall_seconds=None):
+        self.monotonic += seconds
+        self.wall += seconds if wall_seconds is None else wall_seconds
+
+    @contextmanager
+    def patched(self):
+        with patch.object(time, "time", side_effect=lambda: self.wall), \
+                patch.object(time, "monotonic", side_effect=lambda: self.monotonic):
+            yield self
+
+
+class ChatHostRelayDeadlineTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="qf-relay-deadlines-")
+        self.addCleanup(self.temp.cleanup)
+        self.queue = Path(self.temp.name)
+        self.clock = FixtureClock()
+        self.body = {"messages": [{"role": "user", "content": "synthetic transport fixture"}],
+                     "metadata": {"timeout_seconds": 99999}}
+
+    def post(self, *, cap=170, headers=(), before_body=None, before_response=None):
+        relay_class = chat_host_relay.handler(self.queue, cap)
+        relay = object.__new__(relay_class)
+        relay.path = "/v1/chat/completions"
+        relay.headers = Message()
+        raw = json.dumps(self.body).encode()
+        relay.headers["Content-Length"] = str(len(raw))
+        for value in headers:
+            relay.headers[chat_host_relay.DEADLINE_HEADER] = value
+        relay.rfile = Mock()
+        relay.rfile.read.side_effect = lambda _size: (before_body() if before_body else None, raw)[1]
+        relay.connection = Mock()
+        relay._json = Mock()
+        packets = []
+        original_write = chat_host_relay._atomic_json
+        original_read = Path.read_text
+
+        def packet_write(path, value, **kwargs):
+            packets.append(value)
+            original_write(path, value, **kwargs)
+            response = {"schema": chat_host_relay.SCHEMA, "request_id": value["request_id"], "content": "fixture"}
+            (self.queue / f'{value["request_id"]}.response.json').write_text(json.dumps(response), encoding="utf-8")
+
+        def response_read(path, *args, **kwargs):
+            if before_response and path.name.endswith(".response.json"):
+                before_response()
+            return original_read(path, *args, **kwargs)
+
+        with patch.object(chat_host_relay.time, "time", side_effect=lambda: self.clock.wall), \
+                patch.object(chat_host_relay.time, "monotonic", side_effect=lambda: self.clock.monotonic), \
+                patch.object(chat_host_relay.time, "sleep", side_effect=self.clock.advance), \
+                patch.object(chat_host_relay, "_atomic_json", side_effect=packet_write), \
+                patch.object(Path, "read_text", response_read):
+            relay.do_POST()
+        return relay._json.call_args.args, packets
+
+    def test_relay_server_caller_and_ordinary_deadline_ordering(self):
+        cases = ((170, None, 170), (0.2, None, 0.2), (590, None, 170), (590, 600, 590),
+                 (590, 80, 70), (20, 600, 20))
+        for cap, caller_seconds, expected in cases:
+            with self.subTest(cap=cap, caller_seconds=caller_seconds):
+                deadline = None if caller_seconds is None else int((self.clock.wall + caller_seconds) * 1000)
+                (status, _), packets = self.post(cap=cap, headers=() if deadline is None else (str(deadline),))
+                self.assertEqual(status, 200)
+                self.assertEqual(len(packets), 1)
+                packet = packets[0]
+                self.assertEqual(packet["schema"], "quillframe_chat_host_relay_v2")
+                self.assertEqual(packet["request"], self.body)
+                self.assertEqual(packet["timeout_seconds"], expected)
+                self.assertEqual(packet["deadline_at_unix"], packet["created_at_unix"] + expected)
+                self.assertEqual(packet["server_timeout_seconds"], cap)
+                self.assertEqual(packet["caller_deadline_unix_ms"], deadline)
+                self.assertEqual(chat_host_relay.validate_packet_deadline(packet)["timeout_seconds"], expected)
+
+    def test_relay_rejects_invalid_or_expired_headers_without_packet(self):
+        future = str(int((self.clock.wall + 180) * 1000))
+        values = (("",), ("NaN",), ("Infinity",), ("12.5",), ("+12",), ("-1",),
+                  ("0",), (" 12 ",), (future + "," + future,), (future, future),
+                  (str(int((self.clock.wall + 10) * 1000)),), ("9" * 400,))
+        for headers in values:
+            with self.subTest(headers=headers):
+                (status, _), packets = self.post(headers=headers)
+                self.assertEqual(status, 400)
+                self.assertEqual(packets, [])
+        self.assertEqual(list(self.queue.iterdir()), [])
+
+    def test_relay_rejects_invalid_server_cap(self):
+        for cap in (False, True, 0, -1, 590.001, float("nan"), float("inf"), "170", 10 ** 400):
+            with self.subTest(cap=cap), self.assertRaises(ValueError):
+                chat_host_relay.handler(self.queue, cap)
+        self.assertEqual(list(self.queue.iterdir()), [])
+
+    def test_relay_preparation_and_response_read_cannot_extend_deadline(self):
+        for stage in ("body", "response"):
+            with self.subTest(stage=stage):
+                def delay():
+                    self.clock.advance(171, wall_seconds=-300)
+
+                (status, _), packets = self.post(**{
+                    "before_body" if stage == "body" else "before_response": delay,
+                })
+                self.assertEqual(status, 504)
+                self.assertEqual(len(packets), 0 if stage == "body" else 1)
+
+    def test_relay_body_rollback_handoff_only_narrows_cli_window(self):
+        with self.clock.patched(), patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+            driver = codex_cli_relay.RelayDriver(codex_cli_relay.DriverConfig(
+                queue=self.queue, cli_binary="fixture", run_id="FIXTURE", source_snapshot_sha256="a" * 64,
+                model="fixture", worker_seconds=570, allow_model_execution=True,
+            ))
+            original_created = self.clock.wall
+            (status, _), packets = self.post(before_body=lambda: self.clock.advance(60, wall_seconds=1))
+            self.assertEqual(status, 200)
+            packet = packets[0]
+            self.assertEqual(packet["created_at_unix"], original_created)
+            self.assertEqual(packet["timeout_seconds"], 111)
+            self.assertEqual(packet["deadline_at_unix"], original_created + 111)
+            self.assertEqual(packet["request"], self.body)
+            rid = packet["request_id"]
+            # This fixture's immediate HTTP response is removed only from its
+            # isolated temp directory so the real CLI admission can inspect it.
+            (self.queue / f"{rid}.response.json").unlink()
+            admitted = driver._admit(self.queue / f"{rid}.request.json")
+            self.assertEqual(admitted[0]["request_deadline_monotonic"] - self.clock.monotonic, 110)
+            self.assertEqual(admitted[0]["worker_deadline_monotonic"] - self.clock.monotonic, 105)
+            spawn.assert_not_called()
+
+    def test_packet_deadline_allows_only_consistent_narrowing(self):
+        initial = chat_host_relay.deadline_fields(self.clock.wall, 170, None)
+        narrowed = {**initial, "timeout_seconds": 111, "deadline_at_unix": self.clock.wall + 111}
+        self.assertEqual(chat_host_relay.validate_packet_deadline(narrowed), narrowed)
+        for mutation in ({"timeout_seconds": 171, "deadline_at_unix": self.clock.wall + 171},
+                         {"timeout_seconds": 111}, {"deadline_at_unix": self.clock.wall + 111}):
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                chat_host_relay.validate_packet_deadline({**initial, **mutation})
+        fractional = chat_host_relay.deadline_fields(self.clock.wall, 0.2, None)
+        self.assertEqual(chat_host_relay.validate_packet_deadline(fractional)["timeout_seconds"], 0.2)
+        (status, _), _packets = self.post(cap=0.2, before_body=lambda: self.clock.advance(0.1))
+        self.assertEqual(status, 200)
+
+    def test_packet_temporary_write_rollback_fails_before_handoff(self):
+        original_write = Path.write_text
+
+        def delayed_write(path, *args, **kwargs):
+            result = original_write(path, *args, **kwargs)
+            if path.name.endswith(".request.json.tmp"):
+                self.clock.advance(60, wall_seconds=1)
+            return result
+
+        with patch.object(Path, "write_text", delayed_write):
+            (status, _), _packets = self.post()
+        self.assertEqual(status, 504)
+        self.assertFalse(list(self.queue.glob("*.request.json")))
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+
+    def test_body_rollback_cannot_rebase_creation_when_narrowed_deadline_is_exhausted(self):
+        (status, _), packets = self.post(before_body=lambda: self.clock.advance(60, wall_seconds=-200))
+        self.assertEqual(status, 504)
+        self.assertEqual(packets, [])
+
+    def test_relay_response_encoding_cannot_send_late_http_success(self):
+        relay = object.__new__(chat_host_relay.handler(self.queue, 170))
+        relay.send_response, relay.send_header, relay.end_headers = Mock(), Mock(), Mock()
+        relay.wfile = io.BytesIO()
+        original_dumps = json.dumps
+        absolute = self.clock.wall + 170
+        monotonic = self.clock.monotonic + 170
+
+        def delayed_encoding(payload, **kwargs):
+            raw = original_dumps(payload, **kwargs)
+            if "choices" in payload:
+                self.clock.advance(170, wall_seconds=-300)
+            return raw
+
+        with self.clock.patched(), patch.object(chat_host_relay.json, "dumps", side_effect=delayed_encoding):
+            relay._json(200, {"id": "req_" + "a" * 32, "choices": [{"message": {"content": "fixture"}}]},
+                        deadline_remaining=lambda: min(absolute - self.clock.wall, monotonic - self.clock.monotonic))
+        relay.send_response.assert_called_once_with(504)
+        self.assertEqual(json.loads(relay.wfile.getvalue())["error"], "host_relay_timeout")
+
+    def test_relay_health_does_not_require_caller_deadline(self):
+        relay = object.__new__(chat_host_relay.handler(self.queue, 170))
+        relay.path = "/health"
+        relay._json = Mock()
+        relay.do_GET()
+        self.assertEqual(relay._json.call_args.args[0], 200)
+        self.assertEqual(relay._json.call_args.args[1]["schema"], chat_host_relay.SCHEMA)
+
+    def test_manual_submit_rejects_late_write_and_preserves_bytes(self):
+        request_id = "req_" + "a" * 32
+        packet = {"schema": chat_host_relay.SCHEMA, "request_id": request_id,
+                  **chat_host_relay.deadline_fields(self.clock.wall, 10, None)}
+        (self.queue / f"{request_id}.request.json").write_text(json.dumps(packet), encoding="utf-8")
+        with patch.object(chat_host_relay.time, "time", side_effect=lambda: self.clock.wall), \
+                patch.object(chat_host_relay.time, "monotonic", side_effect=lambda: self.clock.monotonic), \
+                patch.object(chat_host_relay.os, "fsync", side_effect=lambda _fd: self.clock.advance(11, wall_seconds=-100)):
+            with self.assertRaisesRegex(ValueError, "published_after_deadline"):
+                chat_host_relay.submit(self.queue, request_id, "original exact bytes")
+        response = self.queue / f"{request_id}.response.json"
+        original = response.read_bytes()
+        self.assertEqual(json.loads(original)["content"], "original exact bytes")
+        with patch.object(chat_host_relay.time, "time", return_value=packet["created_at_unix"]):
+            with self.assertRaises(FileExistsError):
+                chat_host_relay.submit(self.queue, request_id, "replacement is forbidden")
+        self.assertEqual(response.read_bytes(), original)
+
+    def test_manual_paths_do_not_execute_historical_packets(self):
+        request_id = "req_" + "a" * 32
+        packet_path = self.queue / f"{request_id}.request.json"
+        raw = json.dumps({"schema": "quillframe_chat_host_relay_v1", "request_id": request_id}).encode()
+        packet_path.write_bytes(raw)
+        self.assertIsNone(chat_host_relay.next_request(self.queue))
+        with self.assertRaisesRegex(ValueError, "identity"):
+            chat_host_relay.submit(self.queue, request_id, "fixture")
+        self.assertEqual(packet_path.read_bytes(), raw)
+
+
 class CodexCliRelayTests(unittest.TestCase):
     THREAD_ID = "0199a213-81c0-7800-8aa1-bbab2a035a53"
     FINAL = '{"result":"fixture", "text":"bounded \u4e2d\u6587"}\r\n'
@@ -536,12 +761,12 @@ class CodexCliRelayTests(unittest.TestCase):
             {"role": "user", "content": "Message values stay intact.\r\nUnicode: \u4e2d\u6587"},
         ]
 
-    def packet(self, *, request_id=None, created=None, **request_fields):
+    def packet(self, *, request_id=None, created=None, server_timeout=170, caller_deadline=None, **request_fields):
         request_id = request_id or "req_" + "b" * 32
         path = self.queue / f"{request_id}.request.json"
         path.write_bytes(codex_cli_relay.json_bytes({
             "schema": chat_host_relay.SCHEMA, "request_id": request_id,
-            "created_at_unix": time.time() if created is None else created,
+            **chat_host_relay.deadline_fields(time.time() if created is None else created, server_timeout, caller_deadline),
             "request": {"messages": self.messages, **request_fields}, "manager_transport": True,
             "independent_review_evidence": False, "authority": False,
         }))
@@ -570,13 +795,15 @@ class CodexCliRelayTests(unittest.TestCase):
         return b"".join(codex_cli_relay.json_bytes(event) + b"\n" for event in (self.events() if events is None else events))
 
     def run_mock(self, *, driver=None, packet=None, events=None, output=True, on_launch=None, returncode=0, timeout=False,
-                 request_fields=None):
+                 request_fields=None, on_communicate=None):
         driver = driver or codex_cli_relay.RelayDriver(self.config)
         packet = packet or self.packet(**(request_fields or {}))
         observed = {}
         process = Mock(pid=4242, returncode=returncode)
         stdout = self.raw_events(events)
         process.communicate.return_value = (stdout, b"PRIVATE-STDERR-SENTINEL")
+        if on_communicate:
+            process.communicate.side_effect = lambda **_kwargs: (on_communicate(), (stdout, b""))[1]
         if timeout:
             process.communicate.side_effect = [subprocess.TimeoutExpired("fixture-codex", 1), (stdout, b"")]
 
@@ -895,7 +1122,12 @@ class CodexCliRelayTests(unittest.TestCase):
             (replace(self.config, round_limit=True), "invalid_round_limit"),
             (replace(self.config, round_limit=96.0), "invalid_round_limit"),
             (replace(self.config, round_limit="96"), "invalid_round_limit"),
-            (replace(self.config, worker_seconds=151), "worker_timeout"),
+            (replace(self.config, worker_seconds=571), "worker_timeout"),
+            (replace(self.config, worker_seconds=True), "worker_timeout"),
+            (replace(self.config, worker_seconds="150"), "worker_timeout"),
+            (replace(self.config, worker_seconds=float("nan")), "worker_timeout"),
+            (replace(self.config, worker_seconds=float("inf")), "worker_timeout"),
+            (replace(self.config, worker_seconds=0), "worker_timeout"),
         ):
             with self.subTest(expected=expected), patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
                 with self.assertRaisesRegex(codex_cli_relay.RelayError, expected):
@@ -939,6 +1171,7 @@ class CodexCliRelayTests(unittest.TestCase):
     def test_cli_expanded_budget_retains_47_attempts_and_reports_manager_only(self):
         events = ["spawned"] * 36 + ["spawn_failed"] + ["cli_started"] * 10
         old_rows = [{"event": event, "request_id": f"req_{index:032x}", "sequence": index,
+                     "schema": "legacy_host_v0" if index < 37 else "quillframe_codex_cli_relay_v1",
                      "run_id": f"RUN-PRIOR-{index % 3}", "source_snapshot_sha256": "b" * 64}
                     for index, event in enumerate(events, start=1)]
         old = b"".join(codex_cli_relay.json_bytes(row) + b"\n" for row in old_rows)
@@ -1079,6 +1312,253 @@ class CodexCliRelayTests(unittest.TestCase):
         timeout = observed["process"].communicate.call_args.kwargs["timeout"]
         self.assertGreater(timeout, 0)
         self.assertLessEqual(timeout, 25)
+
+    def test_cli_long_worker_is_explicit_and_still_clamped_to_packet(self):
+        clock = FixtureClock()
+        self.assertEqual(self.config.worker_seconds, 150)
+        for index, (worker_limit, caller_seconds, expected) in enumerate(((150, 600, 150), (570, 600, 570), (570, None, 165))):
+            with self.subTest(worker_limit=worker_limit, caller_seconds=caller_seconds), clock.patched():
+                driver = codex_cli_relay.RelayDriver(replace(self.config, worker_seconds=worker_limit))
+                packet = self.packet(request_id=f"req_{index:032x}", server_timeout=590,
+                                     caller_deadline=None if caller_seconds is None else int((clock.wall + caller_seconds) * 1000))
+                result, observed = self.run_mock(driver=driver, packet=packet)
+                self.assertEqual(result["status"], "submitted")
+                self.assertEqual(observed["process"].communicate.call_args.kwargs["timeout"], expected)
+                frozen = json.loads(packet.read_bytes())
+                rows = codex_cli_relay.read_ledger(self.queue)[-3:]
+                for row in rows:
+                    self.assertEqual(row["schema"], "quillframe_codex_cli_relay_v2")
+                    self.assertEqual(row["request_deadline_at_unix"], frozen["deadline_at_unix"])
+                    self.assertEqual(row["request_timeout_seconds"], frozen["timeout_seconds"])
+                    self.assertEqual(row["server_timeout_seconds"], frozen["server_timeout_seconds"])
+                    self.assertEqual(row["caller_deadline_unix_ms"], frozen["caller_deadline_unix_ms"])
+                    self.assertEqual(row["worker_deadline_monotonic"], row["admitted_at_monotonic"] + expected)
+                    self.assertEqual(row["deadline_clock_scope"], "driver_process")
+                    self.assertEqual(row["worker_limit_seconds"], worker_limit)
+
+    def test_cli_worker_timeout_flag_keeps_default_and_accepts_only_bounded_values(self):
+        argv = ["serve", "--queue", str(self.queue), "--cli-binary", "fixture-codex", "--run-id", "RUN-FIXTURE",
+                "--source-snapshot-sha256", "a" * 64, "--model", "fixture-model", "--allow-model-execution"]
+
+        def serve_without_model(driver, **_kwargs):
+            driver.config.validate()
+            return {"status": "idle_stopped"}
+
+        for flags, code, value in (([], 0, 150), (["--worker-seconds", "570"], 0, 570),
+                                   (["--worker-seconds", "571"], 1, 571)):
+            with self.subTest(flags=flags), patch.object(codex_cli_relay.RelayDriver, "serve", autospec=True, side_effect=serve_without_model) as serve, \
+                    patch.object(codex_cli_relay.subprocess, "Popen") as spawn, patch("builtins.print"):
+                self.assertEqual(codex_cli_relay.main(argv + flags), code)
+                self.assertEqual(serve.call_args.args[0].config.worker_seconds, value)
+                spawn.assert_not_called()
+
+    def test_cli_rejects_old_missing_and_inconsistent_deadlines_before_charge(self):
+        mutations = [
+            {"schema": "quillframe_chat_host_relay_v1"}, {"timeout_seconds": None},
+            {"timeout_seconds": True}, {"timeout_seconds": "170"}, {"timeout_seconds": float("nan")},
+            {"deadline_at_unix": float("inf")}, {"server_timeout_seconds": 591},
+            {"server_timeout_seconds": True}, {"server_timeout_seconds": -1},
+            {"caller_deadline_unix_ms": "2000000180000"}, {"caller_deadline_unix_ms": True},
+            {"caller_deadline_unix_ms": 2000000000000}, {"created_at_unix": True},
+            {"created_at_unix": 10 ** 400}, {"timeout_seconds": 169},
+            {"server_timeout_seconds": 590, "timeout_seconds": 590, "deadline_at_unix": 2000000590.0},
+            {"deadline_at_unix": 2000000171.0},
+        ]
+        clock = FixtureClock()
+        with clock.patched(), patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+            for index, mutation in enumerate(mutations + [{"remove": "caller_deadline_unix_ms"}]):
+                with self.subTest(mutation=mutation):
+                    driver = codex_cli_relay.RelayDriver(self.config)
+                    packet = self.packet(request_id=f"req_{index:032x}")
+                    value = json.loads(packet.read_bytes())
+                    if "remove" in mutation:
+                        del value[mutation["remove"]]
+                    else:
+                        value.update(mutation)
+                    original = json.dumps(value).encode()
+                    packet.write_bytes(original)
+                    with self.assertRaisesRegex(codex_cli_relay.RelayError, "identity|deadline"):
+                        driver.process_request(packet)
+                    self.assertEqual(packet.read_bytes(), original)
+            spawn.assert_not_called()
+        self.assertEqual(codex_cli_relay.used_calls(codex_cli_relay.read_ledger(self.queue)), 0)
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+
+    def test_cli_queue_admission_and_schema_delay_share_original_allowance(self):
+        clock = FixtureClock()
+        original_ledger = codex_cli_relay.read_ledger
+        original_write = codex_cli_relay._exclusive_write
+
+        def delayed_ledger(queue):
+            rows = original_ledger(queue)
+            clock.advance(8)
+            return rows
+
+        def delayed_schema(path, raw):
+            original_write(path, raw)
+            if path.name.endswith(".output-schema.json"):
+                clock.advance(2)
+
+        with clock.patched():
+            driver = codex_cli_relay.RelayDriver(self.config)
+            driver.started_at -= 150
+            packet = self.packet(created=clock.wall - 140, response_format=self.response_format())
+            with patch.object(codex_cli_relay, "read_ledger", side_effect=delayed_ledger), \
+                    patch.object(codex_cli_relay, "_exclusive_write", side_effect=delayed_schema):
+                result, observed = self.run_mock(driver=driver, packet=packet)
+        self.assertEqual(result["status"], "submitted")
+        self.assertEqual(observed["process"].communicate.call_args.kwargs["timeout"], 15)
+        self.assertEqual(result["worker_deadline_monotonic"], 125)
+        self.assertEqual(result["elapsed_since_admission_seconds"], 10)
+
+    def test_cli_expired_admission_never_launches_or_charges(self):
+        clock = FixtureClock()
+        with clock.patched(), patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+            driver = codex_cli_relay.RelayDriver(self.config)
+            driver.started_at -= 170
+            packet = self.packet(created=clock.wall - 165)
+            with self.assertRaisesRegex(codex_cli_relay.RelayError, "request_deadline_exhausted"):
+                driver.process_request(packet)
+            spawn.assert_not_called()
+        self.assertEqual(codex_cli_relay.used_calls(codex_cli_relay.read_ledger(self.queue)), 0)
+
+    def test_cli_backward_clock_during_schema_preparation_does_not_reset_allowance(self):
+        clock = FixtureClock()
+        original_write = codex_cli_relay._exclusive_write
+
+        def delayed_schema(path, raw):
+            original_write(path, raw)
+            if path.name.endswith(".output-schema.json"):
+                clock.advance(80, wall_seconds=-300)
+
+        with clock.patched(), patch.object(codex_cli_relay, "_exclusive_write", side_effect=delayed_schema):
+            result, observed = self.run_mock(request_fields={"response_format": self.response_format()})
+        self.assertEqual(result["status"], "submitted")
+        self.assertEqual(observed["process"].communicate.call_args.kwargs["timeout"], 70)
+        self.assertEqual(result["elapsed_since_admission_seconds"], 80)
+
+    def test_cli_expired_schema_validation_or_write_never_launches_or_charges(self):
+        original_validate = codex_cli_relay.validate_output_schema
+        original_write = codex_cli_relay._exclusive_write
+        for stage in ("validation", "write"):
+            clock = FixtureClock()
+
+            def validate(schema):
+                original_validate(schema)
+                if stage == "validation":
+                    clock.advance(151, wall_seconds=-300)
+
+            def write(path, raw):
+                original_write(path, raw)
+                if stage == "write" and path.name.endswith(".output-schema.json"):
+                    clock.advance(151, wall_seconds=-300)
+
+            with self.subTest(stage=stage), clock.patched(), \
+                    patch.object(codex_cli_relay, "validate_output_schema", side_effect=validate), \
+                    patch.object(codex_cli_relay, "_exclusive_write", side_effect=write), \
+                    patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+                driver = codex_cli_relay.RelayDriver(self.config)
+                packet = self.packet(request_id="req_" + ("c" if stage == "write" else "d") * 32,
+                                     response_format=self.response_format())
+                with self.assertRaisesRegex(codex_cli_relay.RelayError, "request_deadline_exhausted"):
+                    driver.process_request(packet)
+                spawn.assert_not_called()
+        self.assertEqual(codex_cli_relay.used_calls(codex_cli_relay.read_ledger(self.queue)), 0)
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+
+    def test_cli_expiry_after_charged_attempt_never_launches_or_retries(self):
+        clock = FixtureClock()
+        with clock.patched():
+            driver = codex_cli_relay.RelayDriver(self.config)
+            original_record = driver._record
+
+            def delayed_record(base, event, **fields):
+                original_record(base, event, **fields)
+                if event == "cli_started":
+                    clock.advance(151, wall_seconds=-300)
+
+            with patch.object(driver, "_record", side_effect=delayed_record):
+                result, observed = self.run_mock(driver=driver)
+            self.assertEqual(observed["spawn_count"], 0)
+            self.assertEqual(result["status"], "failed")
+            self.assertIn("request_dispatch_deadline_exhausted", result["failure_codes"])
+            with patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+                with self.assertRaisesRegex(codex_cli_relay.RelayError, "failed_or_unconfirmed"):
+                    driver.process_request(self.packet(request_id="req_" + "e" * 32))
+                spawn.assert_not_called()
+        rows = codex_cli_relay.read_ledger(self.queue)
+        self.assertEqual([row["event"] for row in rows], ["cli_started", "cli_finished"])
+        self.assertEqual(codex_cli_relay.used_calls(rows), 1)
+        self.assertIsNone(rows[-1]["thread_id"])
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+
+    def test_cli_slow_process_creation_cannot_send_late_prompt(self):
+        clock = FixtureClock()
+        with clock.patched():
+            result, observed = self.run_mock(on_launch=lambda: clock.advance(151, wall_seconds=-300))
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("cli_timeout", result["failure_codes"])
+        self.assertEqual(observed["spawn_count"], 1)
+        observed["process"].kill.assert_called_once()
+        self.assertNotIn("input", observed["process"].communicate.call_args.kwargs)
+        self.assertEqual(codex_cli_relay.used_calls(codex_cli_relay.read_ledger(self.queue)), 1)
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+
+    def test_cli_late_complete_process_does_not_publish_success(self):
+        clock = FixtureClock()
+        with clock.patched():
+            result, observed = self.run_mock(on_communicate=lambda: clock.advance(151, wall_seconds=-300))
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("cli_timeout", result["failure_codes"])
+        self.assertTrue(result["output_matches_final_message"])
+        self.assertEqual(result["elapsed_worker_seconds"], 151)
+        self.assertEqual(observed["spawn_count"], 1)
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+
+    def test_cli_publication_rechecks_both_clocks_after_durable_process_evidence(self):
+        for shift in ("backward", "forward"):
+            clock = FixtureClock()
+            with self.subTest(shift=shift), clock.patched():
+                driver = codex_cli_relay.RelayDriver(self.config)
+                original_record = driver._record
+
+                def delayed_finished(base, event, **fields):
+                    original_record(base, event, **fields)
+                    if event == "cli_finished":
+                        clock.advance(171 if shift == "backward" else 0,
+                                      wall_seconds=-300 if shift == "backward" else 171)
+
+                # The preceding failed fixture cannot become a retriable run.
+                driver.config = replace(self.config, run_id="RUN-" + shift)
+                packet = self.packet(request_id="req_" + ("e" if shift == "backward" else "f") * 32)
+                with patch.object(driver, "_record", side_effect=delayed_finished):
+                    result, _ = self.run_mock(driver=driver, packet=packet)
+                self.assertEqual(result["status"], "failed")
+                self.assertIn("request_publish_deadline_exhausted", result["failure_codes"])
+                rows = codex_cli_relay.read_ledger(self.queue)[-3:]
+                self.assertEqual([row["event"] for row in rows], ["cli_started", "cli_finished", "submission_failed"])
+                self.assertEqual(rows[1]["status"], "completed")
+                self.assertEqual(rows[1]["thread_id"], self.THREAD_ID)
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+
+    def test_cli_late_response_write_is_preserved_but_never_recorded_submitted(self):
+        clock = FixtureClock()
+        original_write = codex_cli_relay._exclusive_write
+
+        def delayed_response(path, raw):
+            original_write(path, raw)
+            if path.name.endswith(".response.json"):
+                clock.advance(171, wall_seconds=-300)
+
+        with clock.patched(), patch.object(codex_cli_relay, "_exclusive_write", side_effect=delayed_response):
+            result, _ = self.run_mock()
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("response_published_after_deadline", result["failure_codes"])
+        rows = codex_cli_relay.read_ledger(self.queue)
+        self.assertEqual([row["event"] for row in rows], ["cli_started", "cli_finished", "submission_failed"])
+        self.assertEqual(codex_cli_relay.used_calls(rows), 1)
+        response = next(self.queue.glob("*.response.json"))
+        self.assertEqual(json.loads(response.read_bytes())["content"].encode(), self.FINAL.encode())
 
     def test_cli_never_overwrites_racing_response(self):
         driver = codex_cli_relay.RelayDriver(self.config)

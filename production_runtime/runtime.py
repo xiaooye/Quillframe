@@ -296,6 +296,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
         self, *, run: dict[str, Any], service_id: str, runtime_role: str, instruction: str,
         context: list[dict[str, Any]], model_preference: str | None, suffix: str,
         max_output_tokens: int = 4096,
+        max_elapsed_ms: int = 180_000, max_model_request_ms: int | None = None,
     ) -> tuple[AgentJob, AgentResult]:
         assert_secret_free(context, label=f"{runtime_role} context")
         stable_id = fingerprint({"run_id": run["run_id"], "role": runtime_role, "context": context, "instruction": instruction})[7:31]
@@ -306,7 +307,8 @@ class ProductionRunExecutor(ProductionContextRuntime):
             instruction=instruction, context=context, model_preference=model_preference,
             required_model_capabilities={"text"}, authority={},
             budgets=AgentBudget(max_steps=1, max_model_requests=1, max_tool_calls=1, max_parallel_tool_calls=1,
-                                max_output_tokens_per_request=max_output_tokens, max_total_tokens=64_000, max_elapsed_ms=180_000),
+                                max_output_tokens_per_request=max_output_tokens, max_total_tokens=64_000,
+                                max_elapsed_ms=max_elapsed_ms, max_model_request_ms=max_model_request_ms),
             idempotency_key=f"{run['run_id']}:{suffix}:{stable_id}",
         )
         return job, self._invoke_agent(job)
@@ -466,6 +468,10 @@ class ProductionRunExecutor(ProductionContextRuntime):
             model_preference=model_preference,
             suffix=mechanism,
             max_output_tokens=7000 if mechanism in {"event_first_raw_draft", "surface_realization"} else 3000,
+            # Complete prose may need a longer response. This changes only the
+            # frozen time budget, never the writing requirements or gate rules.
+            max_elapsed_ms=600_000 if mechanism in {"event_first_raw_draft", "surface_realization"} else 180_000,
+            max_model_request_ms=600_000 if mechanism in {"event_first_raw_draft", "surface_realization"} else None,
         )
         if result.status != "completed":
             raise ProductionRunError(

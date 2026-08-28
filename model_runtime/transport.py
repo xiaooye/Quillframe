@@ -3,11 +3,14 @@ from __future__ import annotations
 import ipaddress
 import json
 import socket
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from typing import Any, Protocol
 from urllib.parse import urlsplit
+
+from .deadlines import DEADLINE_HEADER, validate_request_timeout
 
 
 class TransportError(RuntimeError):
@@ -67,6 +70,16 @@ def _address_class(value: str) -> str:
     return "public"
 
 
+def _literal_loopback(url: str) -> bool:
+    host = urlsplit(url).hostname
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host or "").is_loopback
+    except ValueError:
+        return False
+
+
 class UrllibTransport:
     """Minimal HTTP JSON transport with SSRF and credential-redirect hardening."""
 
@@ -108,24 +121,50 @@ class UrllibTransport:
         body: dict[str, Any] | None = None,
         timeout: float = 30.0,
     ) -> TransportResponse:
+        try:
+            timeout = validate_request_timeout(timeout)
+        except ValueError as exc:
+            raise TransportError("invalid_request_timeout", str(exc)) from exc
+        # Freeze both clocks before DNS, JSON encoding or request preparation.
+        # A backward wall-clock adjustment cannot extend this process's budget.
+        monotonic_deadline = time.monotonic() + timeout
+        deadline_unix_ms = int((time.time() + timeout) * 1000)
+
+        def remaining_seconds(local_request: urllib.request.Request | None = None) -> float:
+            wall_now = time.time()
+            remaining = min(monotonic_deadline - time.monotonic(), deadline_unix_ms / 1000.0 - wall_now)
+            if remaining <= 0:
+                raise TransportError("request_deadline_exceeded", "model API request deadline has expired")
+            if local_request is not None:
+                # A preparation-time wall-clock rollback must not grant the relay
+                # more time than this process's still-running monotonic budget.
+                wire_deadline = min(deadline_unix_ms, int((wall_now + remaining) * 1000))
+                local_request.add_header(DEADLINE_HEADER, str(wire_deadline))
+            return remaining
+
         self._validate_destination(url)
         data = json.dumps(body, ensure_ascii=False).encode("utf-8") if body is not None else None
-        request = urllib.request.Request(url, data=data, method=method.upper(), headers=auth_headers(token, auth_style))
+        headers = auth_headers(token, auth_style)
+        loopback_post = method.upper() == "POST" and _literal_loopback(url)
+        if loopback_post:
+            headers[DEADLINE_HEADER] = str(deadline_unix_ms)
+        request = urllib.request.Request(url, data=data, method=method.upper(), headers=headers)
         try:
-            with self._opener.open(request, timeout=timeout) as handle:
+            try:
+                response = self._opener.open(request, timeout=remaining_seconds(request if loopback_post else None))
+            except urllib.error.HTTPError as exc:
+                response = exc
+            with response as handle:
+                remaining_seconds()
                 raw = handle.read().decode("utf-8", errors="replace")
                 try:
                     parsed = json.loads(raw) if raw.strip() else None
                 except json.JSONDecodeError:
                     parsed = None
+                remaining_seconds()
                 return TransportResponse(int(handle.status), {k.lower(): v for k, v in handle.headers.items()}, parsed, raw)
-        except urllib.error.HTTPError as exc:
-            raw = exc.read().decode("utf-8", errors="replace")
-            try:
-                parsed = json.loads(raw) if raw.strip() else None
-            except json.JSONDecodeError:
-                parsed = None
-            return TransportResponse(int(exc.code), {k.lower(): v for k, v in exc.headers.items()}, parsed, raw)
+        except TimeoutError as exc:
+            raise TransportError("request_deadline_exceeded", "model API request timed out") from exc
         except urllib.error.URLError as exc:
             raise TransportError("network_request_failed", f"model API request failed: {exc.reason}") from exc
 

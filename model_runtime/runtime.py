@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import math
 import uuid
 from typing import Any
 
 from .contracts import CapabilityEvidence, DiscoveredModel, ModelServiceSnapshot, ModelTurn, now_iso
+from .deadlines import DEFAULT_REQUEST_TIMEOUT_SECONDS, validate_request_timeout
 from .endpoint import EndpointPolicy, normalize_endpoint
 from .protocols import CODECS
 from .secrets import SecretStore
@@ -250,10 +250,11 @@ class ModelRuntime:
                     return model
         raise ModelRuntimeError("no_eligible_model", "No discovered model has verified evidence for the required capabilities", detail={"requirements": sorted(requirements), "models": [m.model_id for m in ordered]})
 
-    def invoke(self, service_id: str, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], *, max_output_tokens: int = 2048, timeout_seconds: float = 180.0, output_schema: dict[str, Any] | None = None) -> ModelTurn:
-        if (isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float))
-                or not math.isfinite(timeout_seconds) or not 0 < timeout_seconds <= 180.0):
-            raise ModelRuntimeError('invalid_request_timeout', 'model timeout must be positive and at most 180 seconds')
+    def invoke(self, service_id: str, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], *, max_output_tokens: int = 2048, timeout_seconds: float = DEFAULT_REQUEST_TIMEOUT_SECONDS, output_schema: dict[str, Any] | None = None) -> ModelTurn:
+        try:
+            timeout_seconds = validate_request_timeout(timeout_seconds)
+        except ValueError as exc:
+            raise ModelRuntimeError("invalid_request_timeout", str(exc)) from exc
         snapshot = self.snapshot(service_id)
         model = next((m for m in snapshot.models if m.model_id == model_id), None)
         if not model:

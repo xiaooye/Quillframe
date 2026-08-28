@@ -8,6 +8,10 @@ Quillframe is a novel-contract kernel, not a general-purpose agent harness. Code
 
 Preference can only reorder already-eligible models. It cannot create capability, independence, or authority.
 
+An optional `budgets.max_model_request_ms` sets an explicit single-request time limit from 1 to 600,000 milliseconds. It is omitted from serialization when absent, preserving ordinary job fingerprints and the 180-second default. A request always receives the smaller of its configured limit and the job's remaining elapsed budget. Explicit timing is part of the input fingerprint, not a new permission or model-call allowance.
+
+Production's raw-draft and surface-realization jobs explicitly allow up to 600 seconds for their one request and overall stage. Other production jobs keep their existing limits. These bounds do not alter prose requirements or AI review judgments; a failed or late result remains blocking. See the [deadline contract](../specs/027-bounded-model-deadlines/spec.en.md).
+
 ## Embedded/reference loop
 
 ```text
