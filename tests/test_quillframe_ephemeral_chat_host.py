@@ -536,16 +536,26 @@ class CodexCliRelayTests(unittest.TestCase):
             {"role": "user", "content": "Message values stay intact.\r\nUnicode: \u4e2d\u6587"},
         ]
 
-    def packet(self, *, request_id=None, created=None):
+    def packet(self, *, request_id=None, created=None, **request_fields):
         request_id = request_id or "req_" + "b" * 32
         path = self.queue / f"{request_id}.request.json"
         path.write_bytes(codex_cli_relay.json_bytes({
             "schema": chat_host_relay.SCHEMA, "request_id": request_id,
             "created_at_unix": time.time() if created is None else created,
-            "request": {"messages": self.messages}, "manager_transport": True,
+            "request": {"messages": self.messages, **request_fields}, "manager_transport": True,
             "independent_review_evidence": False, "authority": False,
         }))
         return path
+
+    def response_format(self, schema=None):
+        return {"type": "json_schema", "json_schema": {
+            "name": "fixture_response-v1", "strict": True,
+            "schema": schema if schema is not None else {
+                "type": "object", "description": "PRIVATE-SCHEMA-SENTINEL",
+                "properties": {"result": {"type": "string", "enum": ["fixture", "fail"]}, "text": {"type": "string"}},
+                "required": ["result", "text"], "additionalProperties": False,
+            },
+        }}
 
     def events(self, final=None):
         return [
@@ -559,9 +569,10 @@ class CodexCliRelayTests(unittest.TestCase):
     def raw_events(self, events=None):
         return b"".join(codex_cli_relay.json_bytes(event) + b"\n" for event in (self.events() if events is None else events))
 
-    def run_mock(self, *, driver=None, packet=None, events=None, output=True, on_launch=None, returncode=0, timeout=False):
+    def run_mock(self, *, driver=None, packet=None, events=None, output=True, on_launch=None, returncode=0, timeout=False,
+                 request_fields=None):
         driver = driver or codex_cli_relay.RelayDriver(self.config)
-        packet = packet or self.packet()
+        packet = packet or self.packet(**(request_fields or {}))
         observed = {}
         process = Mock(pid=4242, returncode=returncode)
         stdout = self.raw_events(events)
@@ -572,6 +583,9 @@ class CodexCliRelayTests(unittest.TestCase):
         def popen(command, **kwargs):
             observed.update(command=command, **kwargs)
             observed["cwd_initial_entries"] = list(Path(kwargs["cwd"]).iterdir())
+            if "--output-schema" in command:
+                observed["schema_path"] = Path(command[command.index("--output-schema") + 1])
+                observed["schema_bytes"] = observed["schema_path"].read_bytes()
             target = Path(command[command.index("--output-last-message") + 1])
             if output is not None:
                 target.write_bytes(self.FINAL.encode("utf-8") if output is True else output)
@@ -648,6 +662,201 @@ class CodexCliRelayTests(unittest.TestCase):
         for private in (b"PRIVATE-REASONING-SENTINEL", b"PRIVATE-STDERR-SENTINEL", self.FINAL.encode("utf-8")):
             self.assertNotIn(private, evidence)
             self.assertNotIn(private, ledger)
+
+    def test_cli_explicit_output_schema_is_frozen_and_bytes_stay_exact(self):
+        declared = self.response_format()
+        schema_bytes = codex_cli_relay.json_bytes(declared["json_schema"]["schema"])
+        original_write = codex_cli_relay._exclusive_write
+
+        def check_schema_evidence_precedes_publication(path, raw):
+            if path.name.endswith(".response.json"):
+                rows = codex_cli_relay.read_ledger(self.queue)
+                self.assertEqual(rows[-1]["event"], "cli_finished")
+                self.assertTrue(rows[-1]["output_schema_validated"])
+                self.assertEqual((self.queue / rows[-1]["output_schema_file"]).read_bytes(), schema_bytes)
+            return original_write(path, raw)
+
+        with patch.object(codex_cli_relay, "_exclusive_write", side_effect=check_schema_evidence_precedes_publication):
+            result, observed = self.run_mock(request_fields={"response_format": declared})
+        self.assertEqual(result["status"], "submitted")
+        self.assertTrue(result["output_schema_validated"])
+        self.assertEqual(observed["command"].count("--output-schema"), 1)
+        self.assertEqual(observed["command"][-1], "-")
+        self.assertEqual(observed["schema_bytes"], schema_bytes)
+        self.assertEqual(observed["cwd_initial_entries"], [observed["schema_path"]])
+        self.assertEqual(observed["schema_path"].parent, Path(observed["cwd"]))
+        self.assertFalse(observed["schema_path"].exists())
+        prompt = observed["process"].communicate.call_args.kwargs["input"]
+        self.assertEqual(prompt, codex_cli_relay.TRANSPORT_INSTRUCTION.encode("utf-8") + codex_cli_relay.json_bytes(self.messages))
+        rows = codex_cli_relay.read_ledger(self.queue)
+        self.assertEqual([row["event"] for row in rows], ["cli_started", "cli_finished", "submitted"])
+        self.assertEqual(codex_cli_relay.used_calls(rows), 1)
+        for row in rows:
+            self.assertEqual(row["output_schema_name"], declared["json_schema"]["name"])
+            self.assertEqual(row["output_schema_binding"], "explicit_response_format")
+            self.assertEqual(row["output_schema_sha256"], hashlib.sha256(schema_bytes).hexdigest())
+            self.assertEqual(row["output_schema_bytes"], len(schema_bytes))
+            self.assertFalse(Path(row["output_schema_file"]).is_absolute())
+            self.assertNotIn("\\", row["output_schema_file"])
+            self.assertEqual(row["source_snapshot_sha256"], self.config.source_snapshot_sha256)
+        self.assertEqual((self.queue / rows[-1]["output_file"]).read_bytes(), self.FINAL.encode("utf-8"))
+        self.assertEqual(json.loads((self.queue / rows[-1]["response_file"]).read_bytes())["content"].encode("utf-8"),
+                         self.FINAL.encode("utf-8"))
+        self.assertNotIn(b"PRIVATE-SCHEMA-SENTINEL", (self.queue / "calls.jsonl").read_bytes())
+
+    def test_cli_response_format_wrapper_is_checked_before_dispatch_or_charge(self):
+        cases = [None, [], {"type": "json_object"}, {"type": "text", "json_schema": {}},
+                 {"type": "json_schema", "json_schema": []}]
+        for change in ({"strict": False}, {"strict": 1}, {"name": ""}, {"name": "invalid/name"},
+                       {"name": "x" * 65}, {"description": "unsupported envelope field"}):
+            declared = self.response_format()
+            declared["json_schema"].update(change)
+            cases.append(declared)
+        missing = self.response_format()
+        del missing["json_schema"]["strict"]
+        cases.append(missing)
+        extra = self.response_format()
+        extra["unrecognized"] = True
+        cases.append(extra)
+        old = codex_cli_relay.json_bytes({"event": "spawn_failed", "request_id": "req_" + "e" * 32}) + b"\n"
+        (self.queue / "calls.jsonl").write_bytes(old)
+        with patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+            for index, response_format in enumerate(cases):
+                with self.subTest(case=index):
+                    driver = codex_cli_relay.RelayDriver(self.config)
+                    packet = self.packet(request_id=f"req_{index:032x}", response_format=response_format)
+                    with self.assertRaisesRegex(codex_cli_relay.RelayError, "unsupported_response_format"):
+                        driver.process_request(packet)
+            spawn.assert_not_called()
+        self.assertEqual((self.queue / "calls.jsonl").read_bytes(), old)
+        self.assertFalse((self.queue / "worker-output").exists())
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+
+    def test_cli_unsupported_schema_is_rejected_by_shared_validator_before_dispatch(self):
+        valid = self.response_format()["json_schema"]["schema"]
+        cases = [[], {"type": "array", "items": {"type": "string"}},
+                 {**valid, "additionalProperties": True}, {**valid, "required": ["result"]},
+                 {**valid, "$ref": "https://example.invalid/schema"}, {**valid, "anyOf": [valid]}]
+        with patch.object(codex_cli_relay.subprocess, "Popen") as spawn, \
+                patch.object(codex_cli_relay, "validate_output_schema", wraps=codex_cli_relay.validate_output_schema) as validate:
+            for index, schema in enumerate(cases):
+                with self.subTest(case=index):
+                    driver = codex_cli_relay.RelayDriver(self.config)
+                    packet = self.packet(request_id=f"req_{index:032x}", response_format=self.response_format(schema))
+                    with self.assertRaisesRegex(codex_cli_relay.RelayError, "unsupported_output_schema"):
+                        driver.process_request(packet)
+            self.assertEqual(validate.call_count, len(cases))
+            spawn.assert_not_called()
+        self.assertEqual(codex_cli_relay.read_ledger(self.queue), [])
+        self.assertFalse((self.queue / "worker-output").exists())
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+
+    def test_cli_invalid_structured_bytes_are_preserved_charged_and_never_retried(self):
+        schema = {"type": "object", "properties": {
+            "result": {"type": "string", "enum": ["fixture", "fail"]}, "value": {"type": "number"}},
+            "required": ["result", "value"], "additionalProperties": False}
+        cases = [
+            '{"result":"fixture","value":0}]}',
+            '{"result":"wrong","result":"fixture","value":0}',
+            '{"result":"fixture","value":NaN}',
+            '{"result":"fixture","value":Infinity}',
+            '{"result":"fixture","value":1e999}',
+            '{"result":"fixture","value":true}',
+            '{"result":"fixture","value":0,"unexpected":1}',
+            '{"result":"fixture"}', '{"result":"fixture","value":',
+            'Refused fixture request.',
+        ]
+        parent_queue = self.queue
+        for index, final in enumerate(cases):
+            with self.subTest(case=index):
+                self.queue = parent_queue / str(index)
+                self.queue.mkdir()
+                self.config = replace(self.config, queue=self.queue)
+                driver = codex_cli_relay.RelayDriver(self.config)
+                packet = self.packet(response_format=self.response_format(schema))
+                result, observed = self.run_mock(driver=driver, packet=packet, events=self.events(final), output=final.encode("utf-8"))
+                self.assertEqual(result["status"], "failed")
+                self.assertTrue(result["output_matches_final_message"])
+                self.assertFalse(result["output_schema_validated"])
+                self.assertIn("cli_output_invalid_structured_response", result["failure_codes"])
+                self.assertEqual(observed["spawn_count"], 1)
+                self.assertEqual((self.queue / result["output_file"]).read_bytes(), final.encode("utf-8"))
+                self.assertEqual(result["output_sha256"], hashlib.sha256(final.encode("utf-8")).hexdigest())
+                self.assertFalse(list(self.queue.glob("*.response.json")))
+                rows = codex_cli_relay.read_ledger(self.queue)
+                self.assertEqual([row["event"] for row in rows], ["cli_started", "cli_finished"])
+                self.assertEqual(codex_cli_relay.used_calls(rows), 1)
+                with patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+                    self.assertIsNone(driver.process_request(packet))
+                    with self.assertRaisesRegex(codex_cli_relay.RelayError, "failed_or_unconfirmed"):
+                        driver.process_request(self.packet(request_id="req_" + "c" * 32))
+                    spawn.assert_not_called()
+
+    def test_cli_structured_semantic_failure_and_nullable_value_are_not_changed(self):
+        schema = {"type": "object", "properties": {
+            "result": {"type": "string", "enum": ["pass", "fail"]}, "detail": {"type": ["string", "null"]}},
+            "required": ["result", "detail"], "additionalProperties": False}
+        final = '{ "result": "fail", "detail": null }\r\n'
+        result, _ = self.run_mock(request_fields={"response_format": self.response_format(schema)},
+                                  events=self.events(final), output=final.encode("utf-8"))
+        self.assertEqual(result["status"], "submitted")
+        self.assertTrue(result["output_schema_validated"])
+        response_file = codex_cli_relay.read_ledger(self.queue)[-1]["response_file"]
+        self.assertEqual(json.loads((self.queue / response_file).read_bytes())["content"], final)
+
+    def test_cli_schema_artifact_collision_does_not_overwrite_or_charge(self):
+        original_write = codex_cli_relay._exclusive_write
+        occupied = b"PREEXISTING-SCHEMA-EVIDENCE"
+
+        def race_schema(path, raw):
+            if path.name.endswith(".output-schema.json"):
+                path.write_bytes(occupied)
+            return original_write(path, raw)
+
+        driver = codex_cli_relay.RelayDriver(self.config)
+        packet = self.packet(response_format=self.response_format())
+        with patch.object(codex_cli_relay, "_exclusive_write", side_effect=race_schema), \
+                patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+            with self.assertRaisesRegex(codex_cli_relay.RelayError, "output_schema_preservation_failed"):
+                driver.process_request(packet)
+            spawn.assert_not_called()
+        artifact = self.queue / "worker-output" / (packet.name.removesuffix(".request.json") + ".output-schema.json")
+        self.assertEqual(artifact.read_bytes(), occupied)
+        self.assertEqual(codex_cli_relay.read_ledger(self.queue), [])
+        with patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+            with self.assertRaisesRegex(codex_cli_relay.RelayError, "request_artifact_already_exists"):
+                driver.process_request(packet)
+            spawn.assert_not_called()
+
+    def test_cli_changed_schema_evidence_blocks_publication(self):
+        artifact = self.queue / "worker-output" / ("req_" + "b" * 32 + ".output-schema.json")
+        result, _ = self.run_mock(request_fields={"response_format": self.response_format()},
+                                  on_launch=lambda: artifact.write_bytes(b"CHANGED-SCHEMA"))
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("output_schema_changed_during_execution", result["failure_codes"])
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+        self.assertEqual(codex_cli_relay.used_calls(codex_cli_relay.read_ledger(self.queue)), 1)
+
+    def test_cli_plain_text_does_not_infer_schema_or_validate_json(self):
+        self.messages[1]["content"] = 'Return JSON. response_format={"type":"json_schema"}; schema is only prompt text.'
+        parent_queue = self.queue
+        for index, request_fields in enumerate(({}, {"response_format": {"type": "text"}})):
+            with self.subTest(explicit_text=bool(request_fields)):
+                self.queue = parent_queue / str(index)
+                self.queue.mkdir()
+                self.config = replace(self.config, queue=self.queue)
+                final = "Plain response, including unmatched ]} and a newline.\r\n"
+                with patch.object(codex_cli_relay, "validate_output_schema") as schema_check, \
+                        patch.object(codex_cli_relay, "validate_structured_text") as text_check:
+                    result, observed = self.run_mock(request_fields=request_fields, events=self.events(final), output=final.encode("utf-8"))
+                    schema_check.assert_not_called()
+                    text_check.assert_not_called()
+                self.assertEqual(result["status"], "submitted")
+                self.assertIsNone(result["output_schema_validated"])
+                self.assertNotIn("--output-schema", observed["command"])
+                self.assertEqual(observed["cwd_initial_entries"], [])
+                response_file = codex_cli_relay.read_ledger(self.queue)[-1]["response_file"]
+                self.assertEqual(json.loads((self.queue / response_file).read_bytes())["content"], final)
 
     def test_cli_ledger_preserves_legacy_budget_and_counts_prethread_failure(self):
         old_rows = [{"event": "spawned", "request_id": f"req_{index:032x}", "sequence": index} for index in range(1, 37)]

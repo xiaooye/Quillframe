@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from model_runtime.contracts import canonical_json, fingerprint
+from model_runtime.structured_output import validate_output_schema
 
 _SECRET_KEYS = {"token", "access_token", "api_key", "apikey", "password", "secret", "authorization", "credential"}
 
@@ -66,11 +67,16 @@ class AgentJob:
     authority: dict[str, Any] = field(default_factory=dict)
     budgets: AgentBudget = field(default_factory=AgentBudget)
     idempotency_key: str | None = None
+    output_schema: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         for name in ("job_id", "session_id", "run_id", "task_mode", "runtime_role", "service_id", "instruction"):
             if not isinstance(getattr(self, name), str) or not getattr(self, name).strip():
                 raise ValueError(f"{name} is required")
+        if self.output_schema is not None:
+            validate_output_schema(self.output_schema)
+            if self.tool_grants:
+                raise ValueError("native output_schema is supported only for tool-free jobs")
         payload = self.to_dict(include_fingerprint=False)
         secret_paths = _secret_paths(payload)
         if secret_paths:
@@ -98,6 +104,9 @@ class AgentJob:
             "budgets": self.budgets.to_dict(),
             "idempotency_key": self.idempotency_key,
         }
+        # Absent constraints must not change existing jobs or their fingerprints.
+        if self.output_schema is not None:
+            value["output_schema"] = self.output_schema
         if include_fingerprint:
             value["input_fingerprint"] = fingerprint(value)
         return value

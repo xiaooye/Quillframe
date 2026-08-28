@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import tempfile
+import json
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,12 +13,15 @@ from harness.session_runtime.session_runtime import new_session, start_run
 from model_runtime import CapabilityEvidence, DiscoveredModel, ModelTurn, ToolCall, TransportError, UrllibTransport
 from model_runtime.contracts import now_iso
 from model_runtime.transport import _NoRedirect
+from model_runtime.contracts import fingerprint
 
 
 class FakeModelRuntime:
     def __init__(self, turns: list[ModelTurn]) -> None:
         self.turns = list(turns)
         self.timeouts = []
+        self.output_schemas = []
+        self.selection_probe_flags = []
         stamp = now_iso()
         self.model = DiscoveredModel(
             "fixture-model",
@@ -28,10 +33,12 @@ class FakeModelRuntime:
         )
 
     def select_model(self, service_id, requirements, *, preference=None, allow_probe=True):  # noqa: ANN001
+        self.selection_probe_flags.append(allow_probe)
         return self.model
 
-    def invoke(self, service_id, model_id, history, tools, *, max_output_tokens=2048, timeout_seconds=180.0):  # noqa: ANN001
+    def invoke(self, service_id, model_id, history, tools, *, max_output_tokens=2048, timeout_seconds=180.0, output_schema=None):  # noqa: ANN001
         self.timeouts.append(timeout_seconds)
+        self.output_schemas.append(output_schema)
         if not self.turns:
             raise AssertionError("fixture model invoked too many times")
         return self.turns.pop(0)
@@ -101,6 +108,46 @@ class SideEffectCheckpointTests(unittest.TestCase):
         self.assertEqual(result.status, "checkpoint_failed")
         self.assertEqual(result.errors[0]["code"], "checkpoint_required")
         self.assertFalse(executed["value"])
+
+    def test_optional_schema_binds_new_jobs_without_changing_legacy_fingerprints(self):
+        legacy = self._job()
+        payload = legacy.to_dict(include_fingerprint=False)
+        self.assertNotIn("output_schema", payload)
+        self.assertEqual(fingerprint(payload), replace(legacy, output_schema=None).input_fingerprint)
+        schema = {"type": "object", "properties": {"verdict": {"type": "string"}}, "required": ["verdict"], "additionalProperties": False}
+        with self.assertRaisesRegex(ValueError, "tool-free"):
+            replace(legacy, output_schema=schema)
+        constrained = replace(legacy, tool_grants=set(), required_model_capabilities={"text"}, output_schema=schema)
+        self.assertEqual(schema, constrained.to_dict()["output_schema"])
+        self.assertNotEqual(constrained.input_fingerprint, replace(constrained, output_schema=None).input_fingerprint)
+        narrowed = {**schema, "properties": {"verdict": {"type": "string", "enum": ["fail"]}}}
+        self.assertNotEqual(constrained.input_fingerprint, replace(constrained, output_schema=narrowed).input_fingerprint)
+
+    def test_schema_job_sends_explicit_constraint_and_preserves_a_valid_failure_verdict(self):
+        schema = {"type": "object", "properties": {"verdict": {"type": "string", "enum": ["pass", "fail"]}}, "required": ["verdict"], "additionalProperties": False}
+        job = replace(self._job(), tool_grants=set(), required_model_capabilities={"text"}, output_schema=schema)
+        text = ' {"verdict":"fail"}\n'
+        model = FakeModelRuntime([ModelTurn("openai_chat_completions", "fixture-model", text=text, finish_reason="stop")])
+        result = AgentRunner(model, ToolRuntime()).run(job)
+        self.assertEqual("completed", result.status)
+        self.assertEqual(text, result.final_text)
+        self.assertEqual([schema], model.output_schemas)
+        self.assertEqual([False], model.selection_probe_flags)
+        self.assertEqual(1, result.model_requests)
+
+    def test_invalid_truncated_or_refused_schema_output_is_preserved_without_retry(self):
+        schema = {"type": "object", "properties": {"verdict": {"type": "string"}}, "required": ["verdict"], "additionalProperties": False}
+        job = replace(self._job(), tool_grants=set(), required_model_capabilities={"text"}, output_schema=schema)
+        good = json.dumps({"verdict": "fail"})
+        for text, reason in ((good + "]}", "stop"), (good, "length"), (good, "incomplete"), (good, "refusal"), (good, None)):
+            with self.subTest(reason=reason, text=text):
+                model = FakeModelRuntime([ModelTurn("openai_chat_completions", "fixture-model", text=text, finish_reason=reason)])
+                result = AgentRunner(model, ToolRuntime()).run(job)
+                self.assertEqual("model_failed", result.status)
+                self.assertEqual("model_output_schema_invalid", result.errors[0]["code"])
+                self.assertEqual(text, result.final_text)
+                self.assertEqual(1, result.model_requests)
+                self.assertEqual(1, len(model.output_schemas))
 
     def test_model_request_deadline_uses_remaining_job_budget_and_discards_late_output(self):
         model = FakeModelRuntime([ModelTurn('openai_chat_completions', 'fixture-model', text='late private result')])

@@ -250,7 +250,7 @@ class ModelRuntime:
                     return model
         raise ModelRuntimeError("no_eligible_model", "No discovered model has verified evidence for the required capabilities", detail={"requirements": sorted(requirements), "models": [m.model_id for m in ordered]})
 
-    def invoke(self, service_id: str, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], *, max_output_tokens: int = 2048, timeout_seconds: float = 180.0) -> ModelTurn:
+    def invoke(self, service_id: str, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], *, max_output_tokens: int = 2048, timeout_seconds: float = 180.0, output_schema: dict[str, Any] | None = None) -> ModelTurn:
         if (isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float))
                 or not math.isfinite(timeout_seconds) or not 0 < timeout_seconds <= 180.0):
             raise ModelRuntimeError('invalid_request_timeout', 'model timeout must be positive and at most 180 seconds')
@@ -259,11 +259,18 @@ class ModelRuntime:
         if not model:
             raise ModelRuntimeError("unknown_model", model_id)
         if not model.protocol:
+            if output_schema is not None:
+                raise ModelRuntimeError("model_protocol_unresolved", "native output_schema requires an already resolved protocol; no implicit probe")
             model = self.probe_model(service_id, model_id, verify_tools=bool(tools))
         codec = CODECS[model.protocol]
         token = self._token(snapshot)
         layout = normalize_endpoint(snapshot.endpoint, self.endpoint_policy)
-        body = codec.request_body(model.model_id, history, tools, max_output_tokens)
+        try:
+            if output_schema is not None and tools:
+                raise ValueError("native output_schema is supported only for tool-free requests")
+            body = codec.request_body(model.model_id, history, tools, max_output_tokens, **({"output_schema": output_schema} if output_schema is not None else {}))
+        except (ValueError, TypeError, RecursionError) as exc:
+            raise ModelRuntimeError("model_output_schema_unsupported", str(exc)) from exc
         auth_style = model.auth_style or snapshot.auth_style or codec.auth_style
         response = self._request_json("POST", layout.url_for(codec.surface), token=token, auth_style=auth_style, body=body, timeout=float(timeout_seconds))
         if not (200 <= response.status < 300) or not isinstance(response.body, dict):

@@ -8,6 +8,7 @@ from typing import Any
 
 from model_runtime import ModelRuntime, ModelRuntimeError
 from model_runtime.contracts import canonical_json
+from model_runtime.structured_output import validate_structured_text
 
 from .contracts import AgentJob, AgentResult
 from .hooks import AgentExecutionHooks
@@ -48,7 +49,9 @@ class AgentRunner:
         if job.tool_grants:
             required.add("tool_calling")
         try:
-            model = self.model_runtime.select_model(job.service_id, required, preference=job.model_preference, allow_probe=True)
+            # A constrained production request must not add unbudgeted capability
+            # probes. Requesting a schema is not evidence of provider support.
+            model = self.model_runtime.select_model(job.service_id, required, preference=job.model_preference, allow_probe=job.output_schema is None)
         except ModelRuntimeError as exc:
             return self._result(job, "model_failed", "", "", "", 0, 0, 0, [], {}, [{"code": exc.code, "message": str(exc), "detail": exc.detail}])
 
@@ -82,9 +85,11 @@ class AgentRunner:
             steps += 1
             model_requests += 1
             try:
+                output_options = {"output_schema": job.output_schema} if job.output_schema is not None else {}
                 turn = self.model_runtime.invoke(job.service_id, model.model_id, history, model_tools,
                     max_output_tokens=job.budgets.max_output_tokens_per_request,
-                    timeout_seconds=min(180.0, (job.budgets.max_elapsed_ms - elapsed_ms) / 1000.0))
+                    timeout_seconds=min(180.0, (job.budgets.max_elapsed_ms - elapsed_ms) / 1000.0),
+                    **output_options)
             except ModelRuntimeError as exc:
                 return self._result(job, "model_failed", final_text, model.model_id, protocol, steps, model_requests, tool_calls, receipts, {"input_tokens": total_input, "output_tokens": total_output}, [{"code": exc.code, "message": str(exc), "detail": exc.detail}])
 
@@ -102,6 +107,14 @@ class AgentRunner:
                 return self._result(job, "budget_exhausted", final_text, model.model_id, protocol, steps, model_requests, tool_calls, receipts, {"input_tokens": total_input, "output_tokens": total_output}, [{"code": "token_budget_exhausted_after_response"}])
 
             if not turn.tool_calls:
+                if job.output_schema is not None:
+                    try:
+                        if turn.finish_reason not in {"stop", "completed"}:
+                            raise ValueError("structured response was not a complete non-refusal turn")
+                        validate_structured_text(final_text, job.output_schema)
+                    except (ValueError, TypeError, RecursionError) as exc:
+                        # Preserve the exact received text in the failed result.
+                        return self._result(job, "model_failed", final_text, model.model_id, protocol, steps, model_requests, tool_calls, receipts, {"input_tokens": total_input, "output_tokens": total_output}, [{"code": "model_output_schema_invalid", "message": str(exc)}])
                 return self._result(job, "completed", final_text, model.model_id, protocol, steps, model_requests, tool_calls, receipts, {"input_tokens": total_input, "output_tokens": total_output}, [])
 
             if len(turn.tool_calls) > job.budgets.max_parallel_tool_calls:

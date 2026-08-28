@@ -9,6 +9,7 @@ from typing import Any
 
 from agent_runtime import AgentBudget, AgentJob, AgentResult
 from harness.context_runtime import canonical_json, fingerprint
+from model_runtime.structured_output import required_only_output_schema, validate_structured_text
 
 from .contracts import ProductionRunError, assert_secret_free, parse_json_object, validate_bundle_integrity
 from .sources import AgentRuntimeLike
@@ -126,6 +127,20 @@ class RegisteredSemanticExecutor:
             "Do not expose chain-of-thought, private reasoning, credentials, Canon writes, Framework writes, or user-taste writes."
         )
         context = [{"registered_semantic_job": visible_job}]
+        output_schema = None
+        # Explicitly reviewed transport profiles, not inferred from prompt text.
+        # The full registered contracts, versions and historical bindings remain
+        # unchanged. Only newly dispatched AgentJobs carry this narrower shape.
+        if contract_id in {"character.action_propose", "scene.resolve_actions"}:
+            try:
+                output_schema = required_only_output_schema(semantic_job["output_contract"])
+            except ValueError as exc:
+                raise ProductionRunError("semantic_output_schema_unsupported", str(exc)) from exc
+            instruction += (
+                " This invocation uses the native required-only output profile: emit only output_contract required fields, recursively. "
+                "Do not fill optional slots or invent null placeholders. Preserve all applicable semantic findings and repair routes. "
+                "For character proposals, include relevant motive, tactic, resistance or cost in the free-text action when useful."
+            )
         if contract_id == "character.action_propose":
             # Derive this index from the validator's exact canonical paths,
             # without changing the persisted job or extending reference authority.
@@ -168,6 +183,7 @@ class RegisteredSemanticExecutor:
                 max_elapsed_ms=180_000,
             ),
             idempotency_key=f"{run['run_id']}:registered:{contract_id}:{semantic_job['input_fingerprint']}",
+            output_schema=output_schema,
         )
         result = self.invoke(agent_job)
         if result.status != "completed":
@@ -176,7 +192,13 @@ class RegisteredSemanticExecutor:
                 f"registered semantic contract {contract_id} did not complete",
                 detail={"agent_status": result.status, "errors": result.errors},
             )
-        judgment = parse_json_object(result.final_text, label=contract_id)
+        if output_schema is not None:
+            try:
+                judgment = validate_structured_text(result.final_text, output_schema)
+            except (ValueError, TypeError, RecursionError) as exc:
+                raise ProductionRunError("semantic_output_invalid", f"{contract_id}: {exc}") from exc
+        else:
+            judgment = parse_json_object(result.final_text, label=contract_id)
         semantic_result = {
             "job_id": semantic_job["job_id"],
             "subject_id": semantic_job["subject_id"],

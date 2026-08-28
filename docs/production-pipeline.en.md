@@ -16,6 +16,14 @@ Story/Canon preflight, scene simulation, private character state, character acti
 
 Preflight checks whether the exact target has the required materials and whether proposed work conflicts with established facts or explicit hard constraints. Original fiction may start with empty Canon. Non-authoritative source descriptors do not prohibit the dispatched worker from making an internal proposal, and `db_fetch_performed=false` does not invalidate supplied frozen content. Neither permits fresh lookups, changes actual execution evidence or grants write authority. Missing required material and real contradictions still fail; continuity later checks the candidate rather than treating its pending acceptance as a defect. Rejected runs retain their original judgments and require a fresh run after a framework repair.
 
+### Native response constraints
+
+The reference production runtime requests a native JSON response constraint for `character.action_propose` and `scene.resolve_actions`. It uses an explicit subset containing only the original contract's required fields, recursively. Relevant motive, tactic, resistance and cost remain expressible in the action text; optional fields are not replaced with mandatory nulls. All findings, uncertainty and blocking repair routes remain available. The complete original contract and reference checks still apply.
+
+`AgentJob.output_schema` binds the constraint into the actual request fingerprint. OpenAI Chat Completions and Responses codecs forward it explicitly; the Codex CLI relay supplies [`--output-schema`](https://developers.openai.com/codex/noninteractive), preserves the schema and its hash, and validates the exact returned text before publication. Extra trailing bytes, duplicate JSON keys, nonfinite numbers and shape mismatches are rejected without rewriting the response or retrying it. Valid semantic failures are still valid transport results, not passing quality judgments.
+
+This is a limited transport profile, not support for arbitrary JSON Schema or every model service. Open maps, unsupported schema constructs and the current Anthropic codec fail explicitly. The constrained job requires an already verified text model and resolved protocol; no additional capability probe or fallback is issued, and requesting a schema does not mark provider support as verified. Unconstrained jobs omit the new field, retaining their existing fingerprints. Previously dispatched jobs must not be reconstructed with new constraints and replayed; preserve their original evidence and use a fresh run. Fixture tests establish routing and rejection behavior, not live provider acceptance or independent review.
+
 ## 3. Generate an internal candidate
 
 Event-first Raw Draft material is private. Surface realization turns the simulated event structure into prose. The candidate is then frozen and fingerprinted. Raw Draft is never the user-visible artifact.

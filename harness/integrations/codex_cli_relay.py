@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterator
 
 from harness.integrations.chat_host_relay import SCHEMA as RELAY_SCHEMA
+from model_runtime.structured_output import validate_output_schema, validate_structured_text
 
 SCHEMA = "quillframe_codex_cli_relay_v1"
 DEFAULT_ROUND_LIMIT = 64
@@ -184,7 +185,7 @@ class DriverConfig:
         }
 
 
-def cli_command(config: DriverConfig, cwd: Path, output: Path) -> list[str]:
+def cli_command(config: DriverConfig, cwd: Path, output: Path, output_schema: Path | None = None) -> list[str]:
     command = [
         config.cli_binary, "--ask-for-approval", "never", "exec", "--json", "--strict-config",
         "--ephemeral", "--ignore-user-config", "--skip-git-repo-check",
@@ -196,6 +197,8 @@ def cli_command(config: DriverConfig, cwd: Path, output: Path) -> list[str]:
         command.extend(("--disable", feature))
     for setting in (*CLI_CONFIG, "model_reasoning_effort=" + json.dumps(config.reasoning_effort)):
         command.extend(("--config", setting))
+    if output_schema is not None:
+        command.extend(("--output-schema", str(output_schema)))
     return command + ["-"]
 
 
@@ -347,7 +350,7 @@ class RelayDriver:
         # A restarted driver never picks up a previous process/run's packets.
         self.existing_requests = {path.name for path in self.queue.glob("req_*.request.json")}
 
-    def _admit(self, path: Path) -> tuple[dict[str, Any], bytes] | None:
+    def _admit(self, path: Path) -> tuple[dict[str, Any], bytes, bytes | None] | None:
         self.config.validate()
         rows = read_ledger(self.queue)
         manager_calls_used = used_calls(rows)
@@ -401,7 +404,32 @@ class RelayDriver:
             declared_runs.append(metadata.get("run_id"))
         if any(value is not None and value != self.config.run_id for value in declared_runs):
             raise RelayError("request_run_id_mismatch")
-        for suffix in ("assistant.txt", "cli-events.jsonl"):
+        schema_raw: bytes | None = None
+        schema_metadata: dict[str, Any] = {}
+        if "response_format" in body and body["response_format"] != {"type": "text"}:
+            response_format = body["response_format"]
+            specification = response_format.get("json_schema") if isinstance(response_format, dict) else None
+            if (
+                not isinstance(response_format, dict) or set(response_format) != {"type", "json_schema"}
+                or response_format.get("type") != "json_schema" or not isinstance(specification, dict)
+                or set(specification) != {"name", "strict", "schema"}
+                or not isinstance(specification.get("name"), str)
+                or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", specification["name"])
+                or specification.get("strict") is not True
+            ):
+                raise RelayError("unsupported_response_format")
+            try:
+                validate_output_schema(specification["schema"])
+                schema_raw = json_bytes(specification["schema"])
+            except (ValueError, RecursionError):
+                raise RelayError("unsupported_output_schema") from None
+            schema_metadata = {
+                "output_schema_name": specification["name"],
+                "output_schema_sha256": sha256(schema_raw), "output_schema_bytes": len(schema_raw),
+                "output_schema_file": f"worker-output/{request_id}.output-schema.json",
+                "output_schema_binding": "explicit_response_format",
+            }
+        for suffix in ("assistant.txt", "cli-events.jsonl", "output-schema.json"):
             if (self.queue / "worker-output" / f"{request_id}.{suffix}").exists():
                 raise RelayError("request_artifact_already_exists")
         # The fixed wrapper identifies transport intent, not a semantic rubric.
@@ -418,14 +446,15 @@ class RelayDriver:
             "host_provider": "codex_cli", "manager_transport_only": True,
             "independent_review_evidence": False, "authority": False,
             "prompt_sha256": sha256(prompt), "prompt_bytes": len(prompt),
-        }, prompt
+            **schema_metadata,
+        }, prompt, schema_raw
 
     def _record(self, base: dict[str, Any], event: str, **fields: Any) -> None:
         _append(self.queue, {
             **base, "event": event, "recorded_unix": time.time(), **fields,
         })
 
-    def _execute(self, base: dict[str, Any], prompt: bytes) -> dict[str, Any]:
+    def _execute(self, base: dict[str, Any], prompt: bytes, schema_raw: bytes | None = None) -> dict[str, Any]:
         request_id = base["request_id"]
         output_relative = f"worker-output/{request_id}.assistant.txt"
         events_relative = f"worker-output/{request_id}.cli-events.jsonl"
@@ -438,6 +467,7 @@ class RelayDriver:
         stdout = stderr = b""
         output: bytes | None = None
         output_preserved = events_preserved = False
+        output_schema_validated: bool | None = None if schema_raw is None else False
         process: Any = None
         response_info: dict[str, Any] = {}
         launched_at = time.time()
@@ -454,7 +484,21 @@ class RelayDriver:
             ):
                 raise RelayError("temporary_cwd_is_not_project_free")
             temporary_output = cwd / "assistant.txt"
-            command = cli_command(self.config, cwd, temporary_output)
+            temporary_schema = None
+            schema_artifact = None
+            if schema_raw is not None:
+                temporary_schema = cwd / "output-schema.json"
+                schema_artifact = self.queue / base["output_schema_file"]
+                try:
+                    _exclusive_write(temporary_schema, schema_raw)
+                    _exclusive_write(schema_artifact, schema_raw)
+                except OSError:
+                    raise RelayError("output_schema_preservation_failed") from None
+                # Schema preparation also consumes the original relay deadline.
+                worker_seconds = min(self.config.worker_seconds, deadline - time.time() - PUBLISH_RESERVE_SECONDS)
+                if worker_seconds <= 0:
+                    raise RelayError("request_deadline_exhausted")
+            command = cli_command(self.config, cwd, temporary_output, temporary_schema)
             self._record(
                 base, "cli_started", status="attempted", counts_against_budget=True,
                 budget_count_after_start=base["sequence"], cli_binary=self.config.cli_binary,
@@ -509,6 +553,22 @@ class RelayDriver:
                     failures.append("cli_output_empty")
             except UnicodeError:
                 failures.append("cli_output_not_utf8")
+            if schema_raw is not None:
+                try:
+                    if output is None:
+                        raise ValueError("missing_output")
+                    # Validate the original text; never use the returned object
+                    # to reserialize, trim, repair or replace the host's bytes.
+                    validate_structured_text(output.decode("utf-8"), _load_json(schema_raw))
+                    output_schema_validated = True
+                except (ValueError, RecursionError):
+                    failures.append("cli_output_invalid_structured_response")
+                for schema_path in (temporary_schema, schema_artifact):
+                    try:
+                        if schema_path is None or schema_path.is_symlink() or schema_path.read_bytes() != schema_raw:
+                            failures.append("output_schema_changed_during_execution")
+                    except OSError:
+                        failures.append("output_schema_changed_during_execution")
             try:
                 _exclusive_write(events_path, audit.evidence)
                 events_preserved = True
@@ -536,6 +596,7 @@ class RelayDriver:
                 "output_sha256": sha256(output) if output is not None else None,
                 "output_bytes": len(output) if output is not None else None,
                 "output_matches_final_message": matches,
+                "output_schema_validated": output_schema_validated,
                 "forbidden_event_count": audit.forbidden_event_count,
                 "failure_codes": sorted(set(failures)),
                 "elapsed_since_request_seconds": time.time() - base["request_created_at_unix"],

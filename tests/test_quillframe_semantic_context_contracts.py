@@ -11,6 +11,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from agent_runtime import AgentResult
+from model_runtime.structured_output import validate_structured_text
 from persistence.quillframe_sqlite import fingerprint_text
 from production_runtime.contracts import ProductionRunError
 from production_runtime.semantic import (
@@ -106,9 +107,54 @@ class SemanticContextContractTests(unittest.TestCase):
         self.assertEqual(["OBS-CURRENT", "EVENT-PAST", "FACT-OWN", "KN-OWN", "PATTERN-OWN"], calls[0].context[0]["eligible_evidence_ids"])
         self.assertEqual(job, binding["job"])
         self.assertEqual(worker_job_view(job), calls[0].context[0]["registered_semantic_job"])
+        schema = calls[0].output_schema
+        self.assertEqual(set(job["output_contract"]["required"]), set(schema["properties"]))
+        self.assertEqual({"action", "knowledge_basis"}, set(schema["properties"]["proposals"]["items"]["properties"]))
+        self.assertIn("free-text action", calls[0].instruction)
+        self.assertEqual(binding["result"]["judgment"], validate_structured_text(json.dumps(binding["result"]["judgment"]), schema))
         self.assertEqual(original, frozen)
         self.assertNotIn("FUTURE OBSERVATION", json.dumps(calls[0].context))
         self.assertNotIn("KN-OTHER", json.dumps(calls[0].context))
+
+    def test_scene_native_shape_retains_blocking_repair_routes_and_original_contract(self):
+        calls = []
+        judgment = {"confidence": 0.7, "interaction_trace": "Two supplied observations conflict.",
+                    "observable_trajectory": "The interaction cannot yet resolve.", "unresolved_pressures": ["A choice is open."],
+                    "repair_routes": [{"owner": "continuity", "reason": "The object has incompatible locations."}]}
+
+        def invoke(job):
+            calls.append(job)
+            return AgentResult(job_id=job.job_id, session_id=job.session_id, run_id=job.run_id, status="completed",
+                               input_fingerprint=job.input_fingerprint, model_service_id=job.service_id, model_id="fixture", protocol="fixture",
+                               final_text=json.dumps(judgment), steps=1, model_requests=1)
+
+        job = make_contract_job("scene.resolve_actions", "SCENE-FIXTURE", {"scene": "Synthetic conflict"}, source_session_id="SES-FIXTURE")
+        original = deepcopy(job)
+        binding = RegisteredSemanticExecutor(SimpleNamespace(run=invoke)).execute_prepared(
+            semantic_job=job, run={"run_id": "RUN-FIXTURE", "session_id": "SES-FIXTURE", "task_mode": "REVISE"},
+            service_id="svc", model_preference=None, runtime_role="registered_scene_resolution")
+        self.assertEqual(original, binding["job"])
+        self.assertEqual(judgment, validate_structured_text(json.dumps(judgment), calls[0].output_schema))
+        self.assertEqual(judgment, binding["result"]["judgment"])
+        self.assertEqual([], validate_typed_value(judgment, job["output_contract"]))
+        self.assertEqual([], validate_registered_job(original))
+
+    def test_registered_schema_response_rejects_extra_closers_even_for_completed_adapter(self):
+        calls = []
+        raw = '{"confidence":1,"interaction_trace":"A collision.","observable_trajectory":"A delay.","unresolved_pressures":[],"repair_routes":[]}]}'
+
+        def invoke(job):
+            calls.append(job)
+            return AgentResult(job_id=job.job_id, session_id=job.session_id, run_id=job.run_id, status="completed",
+                               input_fingerprint=job.input_fingerprint, model_service_id=job.service_id, model_id="fixture", protocol="fixture",
+                               final_text=raw, steps=1, model_requests=1)
+
+        with self.assertRaises(ProductionRunError) as error:
+            RegisteredSemanticExecutor(SimpleNamespace(run=invoke)).execute(
+                run={"run_id": "RUN-FIXTURE", "task_mode": "DRAFT"}, service_id="svc", contract_id="scene.resolve_actions",
+                subject_id="SCENE-FIXTURE", payload={}, model_preference=None, runtime_role="registered_scene_resolution")
+        self.assertEqual("semantic_output_invalid", error.exception.code)
+        self.assertEqual(1, len(calls))
 
     def test_action_index_does_not_relax_unknown_or_duplicate_reference_guards(self):
         payload = prepared_character_action_payloads({"status": "pass", "characters": [self.character_fixture()], "summary": "Fixture.", "findings": []},

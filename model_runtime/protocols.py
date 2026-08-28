@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from abc import ABC, abstractmethod
 from typing import Any
 
 from .contracts import ModelTurn, ToolCall
+from .structured_output import validate_output_schema
 
 
 def _tool_schema(tool: dict[str, Any]) -> dict[str, Any]:
@@ -17,7 +19,7 @@ class ProtocolCodec(ABC):
     auth_style: str
 
     @abstractmethod
-    def request_body(self, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], max_output_tokens: int) -> dict[str, Any]: ...
+    def request_body(self, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], max_output_tokens: int, *, output_schema: dict[str, Any] | None = None) -> dict[str, Any]: ...
 
     @abstractmethod
     def normalize(self, model_id: str, payload: dict[str, Any]) -> ModelTurn: ...
@@ -28,7 +30,7 @@ class OpenAIChatCodec(ProtocolCodec):
     surface = "openai_chat_completions"
     auth_style = "bearer"
 
-    def request_body(self, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], max_output_tokens: int) -> dict[str, Any]:
+    def request_body(self, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], max_output_tokens: int, *, output_schema: dict[str, Any] | None = None) -> dict[str, Any]:
         messages: list[dict[str, Any]] = []
         for item in history:
             role = item["role"]
@@ -47,6 +49,9 @@ class OpenAIChatCodec(ProtocolCodec):
         body: dict[str, Any] = {"model": model_id, "messages": messages, "max_tokens": max_output_tokens}
         if tools:
             body["tools"] = [{"type": "function", "function": _tool_schema(t)} for t in tools]
+        if output_schema is not None:
+            validate_output_schema(output_schema)
+            body["response_format"] = {"type": "json_schema", "json_schema": {"name": "quillframe_output", "strict": True, "schema": deepcopy(output_schema)}}
         return body
 
     def normalize(self, model_id: str, payload: dict[str, Any]) -> ModelTurn:
@@ -65,7 +70,7 @@ class OpenAIChatCodec(ProtocolCodec):
             if not isinstance(args, dict):
                 raise ValueError("tool arguments must be object")
             calls.append(ToolCall(str(raw.get("id") or ""), str(fn.get("name") or ""), args))
-        return ModelTurn(self.protocol, model_id, text=text, tool_calls=calls, finish_reason=choice.get("finish_reason"), usage=payload.get("usage") or {}, response_id=payload.get("id"))
+        return ModelTurn(self.protocol, model_id, text=text, tool_calls=calls, finish_reason="refusal" if message.get("refusal") else choice.get("finish_reason"), usage=payload.get("usage") or {}, response_id=payload.get("id"))
 
 
 class OpenAIResponsesCodec(ProtocolCodec):
@@ -73,7 +78,7 @@ class OpenAIResponsesCodec(ProtocolCodec):
     surface = "openai_responses"
     auth_style = "bearer"
 
-    def request_body(self, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], max_output_tokens: int) -> dict[str, Any]:
+    def request_body(self, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], max_output_tokens: int, *, output_schema: dict[str, Any] | None = None) -> dict[str, Any]:
         input_items: list[dict[str, Any]] = []
         instructions: list[str] = []
         for item in history:
@@ -98,11 +103,15 @@ class OpenAIResponsesCodec(ProtocolCodec):
             body["instructions"] = "\n\n".join(instructions)
         if tools:
             body["tools"] = [{"type": "function", "name": t["name"], "description": t.get("description", ""), "parameters": t["input_schema"]} for t in tools]
+        if output_schema is not None:
+            validate_output_schema(output_schema)
+            body["text"] = {"format": {"type": "json_schema", "name": "quillframe_output", "strict": True, "schema": deepcopy(output_schema)}}
         return body
 
     def normalize(self, model_id: str, payload: dict[str, Any]) -> ModelTurn:
         text_parts: list[str] = []
         calls: list[ToolCall] = []
+        refused = False
         output_items = [dict(item) for item in payload.get("output") or [] if isinstance(item, dict)]
         for item in output_items:
             if item.get("type") == "function_call":
@@ -113,13 +122,15 @@ class OpenAIResponsesCodec(ProtocolCodec):
                     raise ValueError("function_call arguments must be object")
                 calls.append(ToolCall(str(item.get("call_id") or item.get("id") or ""), str(item.get("name") or ""), args))
             for content in item.get("content") or []:
+                if isinstance(content, dict) and content.get("type") == "refusal":
+                    refused = True
                 if isinstance(content, dict) and content.get("type") in {"output_text", "text"} and isinstance(content.get("text"), str):
                     text_parts.append(content["text"])
         if not text_parts and isinstance(payload.get("output_text"), str):
             text_parts.append(payload["output_text"])
         return ModelTurn(
             self.protocol, model_id, text="\n".join(text_parts), tool_calls=calls,
-            finish_reason=payload.get("status"), usage=payload.get("usage") or {}, response_id=payload.get("id"),
+            finish_reason="refusal" if refused else payload.get("status"), usage=payload.get("usage") or {}, response_id=payload.get("id"),
             opaque_continuation=output_items,
         )
 
@@ -129,7 +140,9 @@ class AnthropicMessagesCodec(ProtocolCodec):
     surface = "anthropic_messages"
     auth_style = "x_api_key"
 
-    def request_body(self, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], max_output_tokens: int) -> dict[str, Any]:
+    def request_body(self, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], max_output_tokens: int, *, output_schema: dict[str, Any] | None = None) -> dict[str, Any]:
+        if output_schema is not None:
+            raise ValueError("native output_schema is not supported by this Anthropic codec")
         messages: list[dict[str, Any]] = []
         systems: list[str] = []
         pending_tool_results: list[dict[str, Any]] = []

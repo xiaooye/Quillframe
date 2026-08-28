@@ -5,11 +5,19 @@ import json
 import sqlite3
 import tempfile
 import unittest
+from copy import deepcopy
 from pathlib import Path
 
 from model_runtime import EndpointPolicy, MemorySecretStore, MockTransport, ModelRuntime, ModelRuntimeError, TransportResponse, normalize_endpoint
 from model_runtime.manager import ModelServiceManager
 from model_runtime.protocols import AnthropicMessagesCodec, OpenAIChatCodec, OpenAIResponsesCodec
+from model_runtime.structured_output import required_only_output_schema, validate_output_schema, validate_structured_text
+
+
+OUTPUT_SCHEMA = {
+    "type": "object", "additionalProperties": False, "required": ["status", "report"],
+    "properties": {"status": {"type": "string", "enum": ["pass", "fail"]}, "report": {"type": "string"}},
+}
 
 
 def response(status: int, body: dict | list | None) -> TransportResponse:
@@ -56,7 +64,134 @@ class MemoryRepository:
         return [self.get_service(key) for key in self.services]
 
 
+class StructuredOutputTests(unittest.TestCase):
+    def test_required_only_profile_is_a_subset_without_mutating_the_contract(self):
+        contract = {"type": "object", "additionalProperties": False, "required": ["decision"], "properties": {
+            "optional_report": {"type": "string"}, "decision": {
+                "type": "object", "additionalProperties": False, "required": ["result", "reason"], "properties": {
+                    "result": {"enum": ["pass", "fail", "repair"]}, "reason": {"type": "string", "minLength": 1},
+                    "optional_map": {"type": "object"},
+                },
+            },
+        }}
+        original = deepcopy(contract)
+        schema = required_only_output_schema(contract)
+        self.assertEqual({"decision"}, set(schema["properties"]))
+        self.assertEqual({"result", "reason"}, set(schema["properties"]["decision"]["properties"]))
+        for result in ("pass", "fail", "repair"):
+            output = {"decision": {"result": result, "reason": "A bounded semantic finding."}}
+            self.assertEqual(output, validate_structured_text(json.dumps(output), schema))
+        self.assertEqual(original, contract)
+        with self.assertRaises(ValueError):
+            required_only_output_schema({**contract, "required": ["optional_report", "decision"], "additionalProperties": True})
+
+    def test_strict_schema_rejects_unsupported_or_unverifiable_shapes(self):
+        invalid = [
+            {"type": "object"}, {**OUTPUT_SCHEMA, "required": ["status"]},
+            {**OUTPUT_SCHEMA, "additionalProperties": True}, {**OUTPUT_SCHEMA, "allOf": []},
+            {**OUTPUT_SCHEMA, "$ref": "#/$defs/value"},
+            {**OUTPUT_SCHEMA, "properties": {"status": {"type": "string", "pattern": "x"}, "report": {"type": "string"}}},
+            {**OUTPUT_SCHEMA, "properties": {"status": {"type": "number", "minimum": True}, "report": {"type": "string"}}},
+        ]
+        for schema in invalid:
+            with self.subTest(schema=schema), self.assertRaises(ValueError):
+                validate_output_schema(schema)
+
+    def test_exact_json_rejects_extra_closers_duplicate_keys_and_nonfinite_numbers(self):
+        valid = ' {"status":"fail","report":"需要修复"}\n'
+        self.assertEqual("fail", validate_structured_text(valid, OUTPUT_SCHEMA)["status"])
+        for raw in (valid + "]}", valid + "{}", '```json\n' + valid + '```',
+                    '{"status":"fail","status":"pass","report":"x"}',
+                    '{"status":"pass","report":NaN}', '{"status":"pass","report":Infinity}'):
+            with self.subTest(raw=raw), self.assertRaises(ValueError):
+                validate_structured_text(raw, OUTPUT_SCHEMA)
+
+    def test_native_schema_size_and_enum_limits_are_checked_locally(self):
+        def wrap(value):
+            return {"type": "object", "additionalProperties": False, "required": ["value"], "properties": {"value": value}}
+        invalid = [
+            wrap({"type": "integer", "enum": list(range(1001))}),
+            wrap({"type": "string", "enum": [str(index) + "x" * 60 for index in range(251)]}),
+            wrap({"type": "string", "enum": ["x" * 120_000]}),
+            wrap({"type": "integer", "enum": [1, 1.0]}),
+        ]
+        for schema in invalid:
+            with self.assertRaises(ValueError):
+                validate_output_schema(schema)
+
+    def test_scalar_bounds_nullable_fields_and_enum_types_are_enforced(self):
+        schema = {"type": "object", "additionalProperties": False, "required": ["count", "note", "items"], "properties": {
+            "count": {"type": "integer", "minimum": 1, "maximum": 2, "enum": [1, 2]},
+            "note": {"type": ["string", "null"], "minLength": 1, "maxLength": 3},
+            "items": {"type": "array", "minItems": 1, "maxItems": 2, "items": {"type": "boolean"}},
+        }}
+        good = {"count": 1, "note": None, "items": [True]}
+        self.assertEqual(good, validate_structured_text(json.dumps(good), schema))
+        self.assertEqual(1.0, validate_structured_text(json.dumps({**good, "count": 1.0}), schema)["count"])
+        invalid = [{**good, "count": True}, {**good, "count": 3}, {**good, "count": 1.5},
+                   {**good, "note": ""}, {**good, "note": "long"}, {**good, "items": []},
+                   {**good, "items": [1]}, {**good, "extra": "not allowed"}]
+        for value in invalid:
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                validate_structured_text(json.dumps(value), schema)
+
+
 class ModelRuntimeTests(unittest.TestCase):
+    def test_native_schema_is_explicit_in_both_openai_protocols(self):
+        history = [{"role": "user", "content": "Return the bounded judgment."}]
+        original = deepcopy(OUTPUT_SCHEMA)
+        chat = OpenAIChatCodec().request_body("m", history, [], 64, output_schema=OUTPUT_SCHEMA)
+        responses = OpenAIResponsesCodec().request_body("m", history, [], 64, output_schema=OUTPUT_SCHEMA)
+        self.assertEqual({"type": "json_schema", "json_schema": {"name": "quillframe_output", "strict": True, "schema": original}}, chat["response_format"])
+        self.assertEqual({"format": {"type": "json_schema", "name": "quillframe_output", "strict": True, "schema": original}}, responses["text"])
+        self.assertEqual(history, chat["messages"])
+        self.assertNotIn("response_format", OpenAIChatCodec().request_body("m", history, [], 64))
+        self.assertNotIn("text", OpenAIResponsesCodec().request_body("m", history, [], 64))
+        chat["response_format"]["json_schema"]["schema"]["properties"].clear()
+        self.assertEqual(original, OUTPUT_SCHEMA)
+        with self.assertRaisesRegex(ValueError, "not supported"):
+            AnthropicMessagesCodec().request_body("m", history, [], 64, output_schema=OUTPUT_SCHEMA)
+
+    def test_schema_transport_rejection_does_not_probe_retry_or_fall_back(self):
+        endpoint = "https://api.example.test/v1"
+        transport = MockTransport({
+            ("GET", endpoint + "/models", "bearer"): response(200, {"data": [{"id": "m", "protocol": "openai_chat_completions"}]}),
+            ("POST", endpoint + "/chat/completions", "bearer"): response(400, {"error": "schema unsupported"}),
+        })
+        runtime = ModelRuntime(MemorySecretStore(), transport)
+        snapshot = runtime.connect(endpoint, "t")
+        with self.assertRaises(ModelRuntimeError) as error:
+            runtime.invoke(snapshot.service_id, "m", [{"role": "user", "content": "Bounded judgment"}], [], output_schema=OUTPUT_SCHEMA)
+        self.assertEqual("model_request_failed", error.exception.code)
+        posts = [r for r in transport.requests if r["method"] == "POST"]
+        self.assertEqual(1, len(posts))
+        self.assertEqual(OUTPUT_SCHEMA, posts[0]["body"]["response_format"]["json_schema"]["schema"])
+        self.assertNotEqual("verified", snapshot.models[0].capability_state("json_schema"))
+        for invalid in ({"type": "object"}, {**OUTPUT_SCHEMA, "anyOf": []}):
+            with self.assertRaises(ModelRuntimeError) as blocked:
+                runtime.invoke(snapshot.service_id, "m", [], [], output_schema=invalid)
+            self.assertEqual("model_output_schema_unsupported", blocked.exception.code)
+        self.assertEqual(1, len([r for r in transport.requests if r["method"] == "POST"]))
+
+    def test_unresolved_schema_protocol_cannot_issue_an_unbudgeted_probe(self):
+        endpoint = "https://api.example.test/v1"
+        transport = MockTransport({("GET", endpoint + "/models", "bearer"): response(200, {"data": [{"id": "m"}]})})
+        runtime = ModelRuntime(MemorySecretStore(), transport)
+        service = runtime.connect(endpoint, "t")
+        with self.assertRaises(ModelRuntimeError) as error:
+            runtime.invoke(service.service_id, "m", [], [], output_schema=OUTPUT_SCHEMA)
+        self.assertEqual("model_protocol_unresolved", error.exception.code)
+        self.assertEqual(["GET"], [request["method"] for request in transport.requests])
+
+    def test_protocol_normalization_keeps_refusal_distinct_from_valid_json(self):
+        text = '{"status":"fail","report":"blocked"}'
+        chat = OpenAIChatCodec().normalize("m", {"choices": [{"finish_reason": "stop", "message": {"content": text, "refusal": "refused"}}]})
+        responses = OpenAIResponsesCodec().normalize("m", {"status": "completed", "output": [{"type": "message", "content": [{"type": "refusal", "refusal": "refused"}, {"type": "output_text", "text": text}]}]})
+        self.assertEqual("refusal", chat.finish_reason)
+        self.assertEqual("refusal", responses.finish_reason)
+        self.assertEqual(text, chat.text)
+        self.assertEqual(text, responses.text)
+
     def test_endpoint_normalization_and_exact_surface(self):
         layout = normalize_endpoint("https://api.example.test/v1/chat/completions/")
         self.assertEqual(layout.base_url, "https://api.example.test/v1")

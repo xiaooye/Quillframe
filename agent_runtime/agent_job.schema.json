@@ -18,6 +18,7 @@
     "service_id": {"type": "string", "minLength": 1},
     "instruction": {"type": "string", "minLength": 1},
     "context": {"type": "array", "items": {"type": "object"}},
+    "output_schema": {"type": "object", "description": "Explicit strict native JSON response constraint; omitted for unconstrained jobs."},
     "tool_grants": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "model_preference": {"type": ["string", "null"]},
     "required_model_capabilities": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},

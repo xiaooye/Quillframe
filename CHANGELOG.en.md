@@ -1,5 +1,13 @@
 # Quillframe Changelog
 
+## Unreleased · 1.0.0-dev.0 constrained simulation responses
+
+- Character action and scene resolution use an explicit native JSON shape containing only the original contract's required fields. Semantic findings and repair routes remain model judgments; original contracts and gates are unchanged.
+- An optional, fingerprint-bound `AgentJob.output_schema` reaches OpenAI Chat Completions / Responses and Codex CLI `--output-schema`. Unsupported formats stop explicitly, without probes, fallback or retries. The current Anthropic codec does not implement this profile.
+- The CLI ledger preserves the exact schema, output bytes and validation outcome. Malformed, duplicate-key, truncated or refused responses cannot become completed constrained jobs; they are not repaired in place.
+- Deterministic fixtures cover transport, failure preservation and unchanged unconstrained fingerprints. These checks do not claim live model or production-chain acceptance.
+- Development change only; no Project schema migration. Stop executors before rollback to `b43aaeeb7ab00baab8261f22f7731c59b7853f08`, retain evidence, and do not resume newly constrained calls under the older code.
+
 ## Unreleased · 1.0.0-dev.0 internal candidate repair
 
 Studio can register a `REVISE` from an exact, private qualification failure. Core freezes the source and confirmed diagnostics, inherits the original goals and selected preferences, executes registered Editor FIX + PRESERVE and exact-text comparison, and keeps independent review, author acceptance and settlement separate.
