@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_model_contract_registry_v1",
-  "version": "8",
+  "version": "7",
   "principle": "Literary and narrative judgment belongs to model-readable contracts. Deterministic runtime binds exact contracts, candidates, provenance, permissions and execution identity; it does not reinterpret literary findings. Manager self-audit, Blind Reader, Semantic Rule Auditor and independent production review are distinct roles with distinct information boundaries.",
   "contracts": {
     "reader.reaction": {
@@ -124,7 +124,7 @@
     },
     "reader.engagement_audit": {
       "kind": "external_review",
-      "purpose": "Blind production Reader: read the exact frozen candidate like a target reader and judge its realized positive reading value within the supplied reading profile and chapter position, without creator-private state, prior judgments, taxonomy priming or mechanical prose telemetry.",
+      "purpose": "Blind production Reader: read the frozen candidate like a target reader and return the salient reading experience without creator-private state, taxonomy priming or mechanical prose telemetry.",
       "forbidden_input_keys": [
         "outline",
         "active_plan",
@@ -138,26 +138,6 @@
         "writer_reasoning",
         "reviewer_verdict",
         "prior_review",
-        "prior_judgment",
-        "prior_judgments",
-        "judgment",
-        "reader_assessment",
-        "semantic_rule_assessment",
-        "reader_pressure",
-        "pressure_points",
-        "expected_reward",
-        "expected_rewards",
-        "proposed_net_change",
-        "next_chapter_pull",
-        "expected",
-        "expected_verdict",
-        "expected_codes",
-        "gold",
-        "gold_label",
-        "prior_result",
-        "qualification_receipt",
-        "self_audit",
-        "blocking_findings",
         "repair_brief",
         "canon_unrevealed",
         "private_character_state",
@@ -212,13 +192,11 @@
         "additionalProperties": false
       },
       "rubric": [
-        "Read the whole candidate naturally before deciding whether it works. Use only candidate_text, reader-visible context and the explicitly supplied genre_profile, platform_profile, chapter_position and reader_grip; when positioning is absent or incomplete, state the relevant uncertainty instead of inventing a platform formula or an intended effect.",
-        "Judge positive reading value actually available in this prose: what sustains attention, makes people matter, changes interpretation or feeling, rewards attention, or gives an appropriate reason to continue. Voice, intimacy, humor, competence, discovery, comfort, atmosphere and rhetorical pleasure are possible returns, not a mandatory dimension checklist.",
-        "Technical cleanliness, factual continuity, successful task completion and changed state alone do not justify a pass. Fail SAFE-BUT-FLAT when materially insufficient reading value remains: for example, equal-weight reporting of outline steps, people used only to relay information, interchangeable speaking strategies, or announced stakes that do not affect choices, visible reactions or consequences. Judge their effect in this candidate and profile, not the presence or count of these labels.",
-        "Explain the strongest realized strengths and material problems with locatable candidate evidence in report and evidence_refs: supplied references or clear paragraph/scene locations, with a brief quotation or specific paraphrase where useful. For flatness, locate the passage or stretch and explain what fails to develop; do not invent passages, source IDs, reader feelings or a promised payoff to fill the report.",
-        "Quiet daily life, specialized procedure and restrained narration can pass when their particular voice, relationship, understanding, competence or other promised pleasure earns the attention. Do not require quotas of events, dialogue, emotion, body reactions, tonal shifts, obstacles, rewards or cliffhangers. Formal, complete or long speech can be appropriate; paragraph length and surface informality are not literary verdicts.",
-        "Do not reconstruct creator intent, hidden plans, private character state, prior judgments or future payoff. Reader Pressure predicts possible effects before drafting; its intended reward, source binding or pass status cannot establish that this candidate delivered them. Do not search for named HF codes or fill a quality taxonomy.",
-        "Return an overall pass/fail only after the natural reading report. A pass requires enough evidenced positive reading value for the supplied boundary, not merely an absence of factual or surface errors; a fail must name a material reading problem rather than personal stylistic dislike. This is a bounded model reading, not measured reader retention. The runtime binds the result but must not reinterpret its literary content."
+        "Read the whole candidate naturally before deciding whether it works for the supplied reader/profile boundary.",
+        "Do not reconstruct creator intent, hidden plans, private character state or future payoff. Do not search for named HF codes or fill a quality taxonomy.",
+        "Report only the strongest effects that materially changed the reading experience. A dimension that did not matter need not be manufactured.",
+        "Use observable candidate evidence. Formal, complete or long speech is not a defect merely because it is explicit; short paragraphs or fragments are not defects merely because they are short.",
+        "Return an overall pass/fail only after the natural reading report. The runtime will bind this result but must not reinterpret the literary content."
       ],
       "output_contract": {
         "type": "object",
@@ -895,7 +873,7 @@
     },
     "quality.production_review": {
       "kind": "external_review",
-      "purpose": "Fresh independent holistic production review of the exact candidate and its realized reading value, isolated from manager/private creator state and prior judgments. It tries to falsify readiness from the prose within the supplied reading profile and chapter position, without becoming a manager checklist or a duplicate Semantic Rule Auditor.",
+      "purpose": "Fresh independent holistic production review of the exact candidate, isolated from manager/private creator state. It tries to falsify readiness without being turned into the Blind Reader or Semantic Rule Auditor.",
       "forbidden_input_keys": [
         "outline",
         "active_plan",
@@ -909,25 +887,6 @@
         "writer_reasoning",
         "reviewer_verdict",
         "prior_review",
-        "prior_judgment",
-        "prior_judgments",
-        "judgment",
-        "reader_assessment",
-        "semantic_rule_assessment",
-        "reader_pressure",
-        "pressure_points",
-        "expected_reward",
-        "expected_rewards",
-        "proposed_net_change",
-        "next_chapter_pull",
-        "expected",
-        "expected_verdict",
-        "expected_codes",
-        "gold",
-        "gold_label",
-        "prior_result",
-        "private_character_state",
-        "character_action_evidence",
         "repair_brief",
         "critic_patch",
         "canon_unrevealed",
@@ -979,14 +938,10 @@
         "additionalProperties": false
       },
       "rubric": [
-        "Read the whole exact candidate holistically first and form an independent judgment using only candidate_text, reader-visible context and the explicitly supplied genre_profile, platform_profile, chapter_position and reader_grip. State relevant limits when positioning or evidence is incomplete; do not infer readiness from having reached this stage.",
-        "Assess positive reading value as well as material defects. Identify what the prose actually offers in attention, character investment, interpretation, feeling, competence, relationship, voice, pleasure or forward pull appropriate to its form. A coherent sequence of correct actions, state changes and clean sentences is not by itself evidence that the chapter works.",
-        "Reject materially SAFE-BUT-FLAT production when outline-step reporting, functional characters, interchangeable speaking strategies or costs asserted without effects on choice, response or consequence leave insufficient realized reading value for the supplied boundary. Diagnose the causal reading problem, not a count of symptoms; successful operations and factual correctness do not cancel it.",
-        "Support material strengths, concerns and the readiness conclusion with locatable evidence from the actual candidate in report and evidence_refs, using supplied references or clear paragraph/scene locations and a brief quotation or specific paraphrase where useful. Locate an inert stretch when relevant rather than asserting that the prose is flat without evidence; do not invent passages or treat intended effects as observed ones.",
-        "Quiet daily life, specialized procedure and restrained narration can pass through their own earned pleasure, specificity or movement. Do not impose quotas of events, dialogue, emotion, body reactions, rewards, conflict or cliffhangers, and do not turn a stylistic preference or sentence length into a production defect.",
-        "Do not reconstruct hidden creator intent, private character state, prior judgments or future payoff. Do not verify a manager-authored checklist, earlier Reader verdict or qualification receipt. Reader Pressure is a pre-draft prediction; its pass status and source references cannot prove that the final prose realizes a reward or a cost.",
-        "Report material production defects in natural semantic language. Named diagnostic vocabulary may help explain a finding but is not the judgment itself. Select pass/fail after the independent reading report; a pass requires evidenced positive reading value and no material readiness defect found within this review's scope.",
-        "This bounded independent judgment is not measured reader retention and grants no Canon, Settlement or write authority."
+        "Read the candidate holistically first and try to falsify production readiness using only supplied, reviewer-eligible evidence.",
+        "Do not reconstruct hidden creator intent or future payoff. Do not mechanically verify a manager-authored checklist or qualification receipt.",
+        "Report material production defects in natural semantic language. Named diagnostic vocabulary may be used when genuinely useful, but a code is not the judgment itself.",
+        "A pass means no material defect was found in this bounded independent review; it grants no Canon, Settlement or write authority."
       ],
       "output_contract": {
         "type": "object",

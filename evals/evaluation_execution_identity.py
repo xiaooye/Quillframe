@@ -14,6 +14,12 @@ from typing import Any
 SCHEMA = "quillframe_evaluation_execution_identity_v1"
 FP_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+VERSION_RE = re.compile(
+    r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+    r"(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)"
+    r"(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?"
+    r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
+)
 
 
 def canonical_bytes(value: Any) -> bytes:
@@ -34,10 +40,15 @@ def load_json(path: Path) -> Any:
 
 def framework_version(root: Path) -> str:
     text = (root / "HARNESS_MANIFEST.yaml").read_text(encoding="utf-8")
-    m = re.search(r"(?m)^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\s*$", text)
+    m = re.search(r"(?m)^version:[ \t]*([^\r\n]+?)[ \t]*$", text)
     if not m:
         raise ValueError("HARNESS_MANIFEST.yaml missing version")
-    return m.group(1)
+    value = m.group(1)
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        value = value[1:-1]
+    if not VERSION_RE.fullmatch(value):
+        raise ValueError("HARNESS_MANIFEST.yaml version must be a complete valid semantic version")
+    return value
 
 
 def identity_payload(identity: dict[str, Any]) -> dict[str, Any]:
@@ -84,8 +95,19 @@ def validate_identity(identity: dict[str, Any]) -> list[str]:
         if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value <= 0):
             errors.append(f"resource_budget.{key} must be a positive integer or null")
     provenance = identity.get("provenance", {})
-    if not isinstance(provenance.get("github_run_id"), str) or not provenance["github_run_id"]:
-        errors.append("provenance.github_run_id required")
+    host = provenance.get("execution_host")
+    if host == "local":
+        if not isinstance(provenance.get("host_run_id"), str) or not provenance["host_run_id"].strip():
+            errors.append("local provenance.host_run_id required")
+        if "github_run_id" in provenance:
+            errors.append("local provenance must not contain github_run_id")
+    else:
+        if host not in {None, "github_actions"}:
+            errors.append("unsupported provenance.execution_host")
+        if not isinstance(provenance.get("github_run_id"), str) or not provenance["github_run_id"]:
+            errors.append("provenance.github_run_id required")
+        if "host_run_id" in provenance:
+            errors.append("host_run_id requires explicit local execution_host")
     actual = identity.get("identity_fingerprint")
     expected = fingerprint(identity_payload(identity))
     if actual != expected:
@@ -97,6 +119,22 @@ def build_identity(*, root: Path, queue: Path, jobs: Path, capabilities: Path, c
                    model_id: str, reasoning_effort: str, domain: str, env: dict[str, str]) -> dict[str, Any]:
     if not SHA_RE.fullmatch(candidate_commit):
         raise ValueError("candidate commit must be 40 lowercase hex")
+    github_run_id = env.get("GITHUB_RUN_ID")
+    local_run_id = env.get("QUILLFRAME_EVAL_HOST_RUN_ID")
+    if github_run_id or env.get("GITHUB_ACTIONS") == "true":
+        if not isinstance(github_run_id, str) or not github_run_id.strip():
+            raise ValueError("GitHub execution requires GITHUB_RUN_ID")
+        if local_run_id:
+            raise ValueError("local host identity must not be mixed with GitHub execution")
+        provenance: dict[str, Any] = {
+            "execution_host": "github_actions", "github_run_id": github_run_id,
+            "github_run_attempt": env.get("GITHUB_RUN_ATTEMPT"),
+            "github_workflow": env.get("GITHUB_WORKFLOW"), "github_ref": env.get("GITHUB_REF"),
+        }
+    else:
+        if not isinstance(local_run_id, str) or not local_run_id.strip():
+            raise ValueError("local execution requires explicit QUILLFRAME_EVAL_HOST_RUN_ID")
+        provenance = {"execution_host": "local", "host_run_id": local_run_id}
     queue_data = load_json(queue)
     harness_files = [
         "HARNESS_MANIFEST.yaml",
@@ -149,12 +187,7 @@ def build_identity(*, root: Path, queue: Path, jobs: Path, capabilities: Path, c
             "token_budget": None,
             "binding": budget_binding,
         },
-        "provenance": {
-            "github_run_id": env.get("GITHUB_RUN_ID") or "local-self-test",
-            "github_run_attempt": env.get("GITHUB_RUN_ATTEMPT"),
-            "github_workflow": env.get("GITHUB_WORKFLOW"),
-            "github_ref": env.get("GITHUB_REF"),
-        },
+        "provenance": provenance,
     }
     payload["identity_fingerprint"] = fingerprint(payload)
     return payload

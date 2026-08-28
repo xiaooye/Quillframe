@@ -163,7 +163,7 @@ quality:
   write_intent_guard_schema: quillframe_write_intent_guard_v1
   state_graph_schema: quillframe_state_graph_v1
   taxonomy_schema: quillframe_quality_taxonomy_v1
-  repair_policy_schema: quillframe_repair_policy_v2
+  repair_policy_schema: quillframe_repair_policy_v3
   semantic_contracts:
     reader_reaction: reader.reaction
     reader_engagement_audit: reader.engagement_audit

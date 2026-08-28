@@ -13,6 +13,7 @@ literary judgment and grants no authority.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -45,6 +46,18 @@ def validate_registered_job(job: dict[str, Any]) -> list[str]:
         registry = load_contract_registry(registry_path)
     except ValueError as exc:
         return [f"registered contract resolution failed: {exc}"]
+    return _validate_binding(job, registry=registry, registry_path=registry_path, pack_id=pack_id)
+
+
+def _validate_binding(job: dict[str, Any], *, registry: dict[str, Any], registry_path: Path, pack_id: str | None) -> list[str]:
+    """Validate against a registry selected by trusted code, never by the job."""
+    errors = validate_job(job)
+    if errors:
+        return list(errors)
+    input_obj = job["input"]
+    if not isinstance(input_obj, dict):
+        return ["registered contract job input must be object"]
+    contract_id = input_obj.get("model_contract_id")
     contract = registry["contracts"].get(contract_id)
     if not isinstance(contract, dict):
         return [f"registered contract unavailable: {contract_id}"]
@@ -102,6 +115,45 @@ def validate_registered_job(job: dict[str, Any]) -> list[str]:
         if provenance.get(key) != expected:
             errors.append(f"registered contract provenance mismatch: {key}")
     return errors
+
+
+def validate_recorded_registered_job(job: dict[str, Any]) -> list[str]:
+    """Read immutable historical evidence; this is NOT a production dispatch gate.
+
+    New execution and release consumers must keep using validate_registered_job.
+    Old evidence is checked against an explicitly pinned, hashed registry, not
+    against a caller-supplied rubric or a registry path claimed by its payload.
+    """
+    current_errors = validate_registered_job(job)
+    if not current_errors:
+        return []
+    provenance = job.get("provenance", {}) if isinstance(job, dict) else {}
+    if not isinstance(provenance, dict):
+        return current_errors
+    history = HERE / "contracts" / "history"
+    try:
+        index = json.loads((history / "index.json").read_text(encoding="utf-8"))
+        if index.get("schema") != "quillframe_recorded_contract_registry_v1":
+            return ["recorded registry index schema mismatch"]
+        matches = [entry for entry in index["entries"]
+                   if entry["pack_id"] == provenance.get("pack_id")
+                   and entry["version"] == provenance.get("registry_version")]
+        if len(matches) != 1:
+            return current_errors + ["no trusted recorded registry for this job"]
+        entry = matches[0]
+        archive = (history / entry["path"]).resolve()
+        original = (HERE / entry["original_registry_path"]).resolve()
+        if not archive.is_relative_to(history.resolve()) or not original.is_relative_to((HERE / "contracts").resolve()):
+            return ["recorded registry path escapes its trusted root"]
+        raw = archive.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != entry["sha256"]:
+            return ["recorded registry fingerprint mismatch"]
+        registry = json.loads(raw)
+        if registry.get("version") != entry["version"]:
+            return ["recorded registry version mismatch"]
+        return _validate_binding(job, registry=registry, registry_path=original, pack_id=entry["pack_id"])
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        return [f"recorded registry unavailable: {type(exc).__name__}"]
 
 
 def self_test() -> dict[str, Any]:

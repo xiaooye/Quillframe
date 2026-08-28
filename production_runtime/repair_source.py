@@ -12,7 +12,7 @@ import time
 from typing import Any
 
 from harness.context_runtime import fingerprint
-from harness.semantic_workers.registered_contract_binding import validate_registered_job
+from harness.semantic_workers.registered_contract_binding import validate_registered_job, validate_recorded_registered_job
 from harness.semantic_workers.semantic_worker_router import validate_result, worker_job_view
 from persistence.quillframe_sqlite import canonical_json, fingerprint_text
 from quality.candidate_qualification import validate_qualification_receipt
@@ -22,6 +22,7 @@ from .semantic import build_pre_independent_qualification
 
 SCHEMA = "quillframe_production_repair_source_v1"
 REFERENCE_KEYS = {"source_run_id", "source_checkpoint_id", "expected_candidate_fingerprint"}
+AUTHOR_REFERENCE_KEYS = {"source_candidate_id", "revision_request_id", "expected_candidate_fingerprint"}
 TARGET_KEYS = ("chapter_id", "document_id", "current_story_order", "current_reading_order")
 
 
@@ -40,9 +41,9 @@ def _object(raw: Any, label: str) -> dict[str, Any]:
 
 
 def _reference(value: Any) -> dict[str, str]:
-    if not isinstance(value, dict) or set(value) != REFERENCE_KEYS:
+    if not isinstance(value, dict) or set(value) not in (REFERENCE_KEYS, AUTHOR_REFERENCE_KEYS):
         _reject("repair_source requires only the three exact source references")
-    for key in ("source_run_id", "source_checkpoint_id"):
+    for key in set(value) - {"expected_candidate_fingerprint"}:
         item = value[key]
         if not isinstance(item, str) or not item or item != item.strip() or len(item) > 512 or any(ord(c) < 32 for c in item):
             _reject("repair_source identity is invalid")
@@ -110,10 +111,11 @@ def _call_for_role(calls, role: str):
     return found[0]
 
 
-def _registered_call(job, result, *, role: str, calls) -> None:
+def _registered_call(job, result, *, role: str, calls, recorded: bool = False) -> None:
     if not isinstance(job, dict) or not isinstance(result, dict):
         _reject("repair source registered job/result are missing")
-    if validate_registered_job(job) or validate_result(job, result) or result.get("status") != "completed":
+    validator = validate_recorded_registered_job if recorded else validate_registered_job
+    if validator(job) or validate_result(job, result) or result.get("status") != "completed":
         _reject("repair source registered contract validation failed")
     agent_job, agent_result = _call_for_role(calls, role)
     if agent_job.get("context") != [{"registered_semantic_job": worker_job_view(job)}]:
@@ -132,11 +134,11 @@ def _registered_call(job, result, *, role: str, calls) -> None:
         _reject("repair source registered result lineage is invalid")
 
 
-def _registered_binding(binding: Any, *, contract_id: str, role: str, calls, candidate: str, text: str, subject: str) -> None:
+def _registered_binding(binding: Any, *, contract_id: str, role: str, calls, candidate: str, text: str, subject: str, recorded: bool = False) -> None:
     if not isinstance(binding, dict) or binding.get("contract_id") != contract_id or binding.get("authority") is not False:
         _reject("repair source registered binding is missing or invalid")
     job, result = binding.get("job"), binding.get("result")
-    _registered_call(job, result, role=role, calls=calls)
+    _registered_call(job, result, role=role, calls=calls, recorded=recorded)
     if binding.get("binding_fingerprint") != fingerprint({"job": job, "result": result}):
         _reject("repair source registered binding fingerprint is invalid")
     payload = job.get("input", {}).get("payload", {})
@@ -188,9 +190,12 @@ def _context_and_continuity(conn, run, state, target, calls) -> tuple[str, str]:
     return fingerprint_text(row["state_json"]), receipt_fp
 
 
-def freeze_repair_source(conn, *, source_ref: Any, target: dict[str, Any], _seen: frozenset[str] = frozenset()) -> dict[str, Any]:
+def freeze_repair_source(conn, *, source_ref: Any, target: dict[str, Any], _seen: frozenset[str] = frozenset(), _recorded: bool = False) -> dict[str, Any]:
     """Read and validate a private source inside the caller's transaction."""
     reference = _reference(source_ref)
+    if set(reference) == AUTHOR_REFERENCE_KEYS:
+        from .author_revision import freeze_author_revision_source
+        return freeze_author_revision_source(conn, reference=reference, target=target, seen=_seen)
     if reference["source_run_id"] in _seen:
         _reject("repair source ancestry contains a cycle", code="repair_lineage_invalid")
     seen = _seen | {reference["source_run_id"]}
@@ -239,7 +244,7 @@ def freeze_repair_source(conn, *, source_ref: Any, target: dict[str, Any], _seen
         ("reader_binding", "reader.engagement_audit", "registered_reader_engagement"),
         ("self_audit_binding", "quality.candidate_self_audit", "registered_candidate_self_audit"),
     ):
-        _registered_binding(state.get(key), contract_id=contract_id, role=role, calls=calls, candidate=candidate, text=text, subject=exact_target["document_id"])
+        _registered_binding(state.get(key), contract_id=contract_id, role=role, calls=calls, candidate=candidate, text=text, subject=exact_target["document_id"], recorded=_recorded)
     context_fp, continuity_fp = _context_and_continuity(conn, run, state, source_target, calls)
     qualification = state.get("qualification_receipt")
     if validate_qualification_receipt(qualification, candidate_fingerprint=candidate, subject_id=exact_target["document_id"], require_qualified=False) or qualification.get("qualification_status") != "repair_required":
@@ -249,7 +254,7 @@ def freeze_repair_source(conn, *, source_ref: Any, target: dict[str, Any], _seen
         if type(qualification.get("repair_cycle")) is not int or qualification["repair_cycle"] < 1 or not isinstance(preservation, dict) or not isinstance(preservation.get("semantic_binding"), dict):
             _reject("a rejected REVISE source requires its actual repair comparison")
         comparison = preservation["semantic_binding"]
-        _registered_call(comparison.get("job"), comparison.get("result"), role="registered_repair_comparison", calls=calls)
+        _registered_call(comparison.get("job"), comparison.get("result"), role="registered_repair_comparison", calls=calls, recorded=_recorded)
         comparison_payload = comparison["job"]["input"]["payload"]
         if comparison["job"]["input"]["model_contract_id"] != "quality.compare" or comparison_payload.get("evolution_subject_id") != exact_target["document_id"] or comparison_payload.get("challenger", {}).get("content_fingerprint") != candidate:
             _reject("repair source comparison does not bind its challenger")
@@ -260,6 +265,7 @@ def freeze_repair_source(conn, *, source_ref: Any, target: dict[str, Any], _seen
         self_audit_binding=state["self_audit_binding"], reader_binding=state["reader_binding"],
         continuity_receipt_fingerprint=continuity_fp, repair_cycle=qualification["repair_cycle"],
         repair_preservation=preservation,
+        _recorded=_recorded,
     )
     if expected != qualification:
         _reject("repair source qualification does not match its confirmed diagnostics")
@@ -270,12 +276,13 @@ def freeze_repair_source(conn, *, source_ref: Any, target: dict[str, Any], _seen
         _reject("repair source lineage is invalid")
     from .repair import prior_lineage
     if run["task_mode"] == "REVISE":
-        parent = load_repair_source(conn, run["run_id"], _seen=seen)
+        parent = load_repair_source(conn, run["run_id"], _seen=seen, _recorded=_recorded)
         evolution_run_id, parent_nodes = prior_lineage(parent)
         if (lineage.get("source_fingerprint") != parent["source_fingerprint"]
                 or lineage.get("evolution_run_id") != evolution_run_id
                 or not isinstance(lineage.get("nodes"), list)
-                or lineage["nodes"][:-1] != parent_nodes):
+                or lineage["nodes"][:-1] != parent_nodes
+                or qualification["repair_cycle"] != len(lineage["nodes"]) - 1):
             _reject("repair lineage differs from its verified parent source", code="repair_lineage_invalid")
     frozen = {
         "schema": SCHEMA, "source_project_id": identity[0]["project_id"],
@@ -302,26 +309,26 @@ def freeze_repair_source(conn, *, source_ref: Any, target: dict[str, Any], _seen
     return frozen
 
 
-def load_repair_source(conn, run_id: str, *, _seen: frozenset[str] = frozenset()) -> dict[str, Any]:
+def load_repair_source(conn, run_id: str, *, _seen: frozenset[str] = frozenset(), _recorded: bool = False) -> dict[str, Any]:
     """Recheck the exact frozen source and its original immutable evidence."""
     row = conn.execute("SELECT * FROM runs WHERE run_id=?", (run_id,)).fetchone()
     if row is None or row["task_mode"] != "REVISE":
         _reject("repair source can only belong to a registered REVISE run")
     target, _ = _author_request(conn, dict(row))
     if "repair_source" not in target["payload"]:
-        _reject("REVISE requires a frozen internal repair source", code="repair_source_missing")
+        _reject("REVISE requires a Core-frozen repair source", code="repair_source_missing")
     reference = _reference(target["payload"].get("repair_source"))
     rows = conn.execute(
         "SELECT state_json,artifact_fingerprint FROM checkpoints WHERE run_id=? AND checkpoint_kind='production_repair_source'",
         (run_id,),
     ).fetchall()
     if len(rows) != 1:
-        _reject("REVISE requires one frozen internal repair source", code="repair_source_missing")
+        _reject("REVISE requires one Core-frozen repair source", code="repair_source_missing")
     frozen = _object(rows[0]["state_json"], "frozen repair source")
     source_fp = fingerprint({key: value for key, value in frozen.items() if key != "source_fingerprint"})
     if frozen.get("schema") != SCHEMA or frozen.get("source_fingerprint") != source_fp or rows[0]["artifact_fingerprint"] != source_fp:
         _reject("frozen repair source fingerprint is invalid")
-    current = freeze_repair_source(conn, source_ref=reference, target=target, _seen=_seen | {run_id})
+    current = freeze_repair_source(conn, source_ref=reference, target=target, _seen=_seen | {run_id}, _recorded=_recorded)
     if current != frozen:
         _reject("the original repair source changed after registration", code="repair_source_changed")
     source_model = frozen["source_target_context"].get("author_model")

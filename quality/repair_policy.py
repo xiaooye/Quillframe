@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "quillframe_repair_policy_v2"
+SCHEMA = "quillframe_repair_policy_v3"
 OWNERS = {
     "story", "plan", "scene", "character", "reader_pressure", "surface",
     "continuity", "context", "research", "runtime", "human",
@@ -33,8 +33,11 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
     candidate_rejected = payload.get("candidate_rejected", True)
     if not isinstance(candidate_rejected, bool):
         raise ValueError("candidate_rejected must be boolean")
-    if generation_mode == "fresh_realization" and not candidate_rejected:
-        raise ValueError("fresh_realization information boundary requires a rejected candidate")
+    author_revision_requested = payload.get("author_revision_requested", False)
+    if not isinstance(author_revision_requested, bool):
+        raise ValueError("author_revision_requested must be boolean")
+    if generation_mode == "fresh_realization" and not (candidate_rejected or author_revision_requested):
+        raise ValueError("fresh_realization requires rejection or an authorized revision request")
 
     fresh = generation_mode == "fresh_realization"
     excluded = []
@@ -50,6 +53,7 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
         "repair_owner": owner,
         "generation_mode": generation_mode,
         "candidate_rejected": candidate_rejected,
+        "author_revision_requested": author_revision_requested,
         "fresh_realization_required": fresh,
         "rejected_prose_visible_to_writer": not fresh,
         "concrete_critic_surface_patches_visible_to_writer": not fresh,
@@ -75,6 +79,8 @@ def self_test() -> dict[str, Any]:
     surface_fresh = evaluate({"repair_owner": "surface", "generation_mode": "fresh_realization", "candidate_rejected": True})
     same_owner_fresh = evaluate({"repair_owner": "scene", "generation_mode": "fresh_realization", "candidate_rejected": True})
     same_owner_local = evaluate({"repair_owner": "scene", "generation_mode": "local_or_bounded_repair", "candidate_rejected": True})
+    requested = evaluate({"repair_owner": "scene", "generation_mode": "fresh_realization", "candidate_rejected": False,
+                          "author_revision_requested": True})
     invalid_fresh_accepted = False
     try:
         evaluate({"repair_owner": "scene", "generation_mode": "fresh_realization", "candidate_rejected": False})
@@ -90,6 +96,8 @@ def self_test() -> dict[str, Any]:
         "scene_can_route_fresh_when_editor_selects_it": same_owner_fresh["fresh_realization_required"] is True,
         "same_owner_can_route_local": same_owner_local["fresh_realization_required"] is False,
         "same_owner_can_route_fresh": same_owner_fresh["fresh_realization_required"] is True,
+        "author_revision_preserves_historical_not_rejected_status": requested["candidate_rejected"] is False,
+        "requested_fresh_revision_keeps_writer_isolation": requested["author_revision_requested"] is True and not requested["rejected_prose_visible_to_writer"],
         "surface_can_route_fresh_when_editor_selects_it": surface_fresh["fresh_realization_required"] is True,
         "fresh_writer_cannot_see_rejected_prose": same_owner_fresh["rejected_prose_visible_to_writer"] is False,
         "fresh_writer_cannot_see_concrete_patches": same_owner_fresh["concrete_critic_surface_patches_visible_to_writer"] is False,

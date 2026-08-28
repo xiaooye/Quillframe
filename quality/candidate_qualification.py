@@ -10,6 +10,7 @@ review gate by itself.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable
 import hashlib
 import json
 import sys
@@ -26,6 +27,7 @@ REGISTERED_GATES = {
     "self_audit": "quality.candidate_self_audit",
     "reader_engagement": "reader.engagement_audit",
 }
+JobBindingValidator = Callable[[dict[str, Any]], list[str]]
 
 
 def _canonical(value: Any) -> bytes:
@@ -74,7 +76,8 @@ def _load_semantic_runtime() -> tuple[Any, Any]:
     return validate_registered_job, validate_result
 
 
-def _semantic_gate(raw: Any, *, gate: str, candidate: str, subject_id: str) -> dict[str, Any]:
+def _semantic_gate(raw: Any, *, gate: str, candidate: str, subject_id: str,
+                   binding_validator: JobBindingValidator) -> dict[str, Any]:
     if not isinstance(raw, dict):
         raise ValueError(f"{gate} gate object required")
     declared = raw.get("status")
@@ -99,8 +102,8 @@ def _semantic_gate(raw: Any, *, gate: str, candidate: str, subject_id: str) -> d
     if not isinstance(job, dict) or not isinstance(result, dict):
         raise ValueError(f"{gate}.semantic_binding requires job and result")
 
-    validate_registered_job, validate_result = _load_semantic_runtime()
-    job_errors = validate_registered_job(job)
+    _, validate_result = _load_semantic_runtime()
+    job_errors = binding_validator(job)
     if job_errors:
         raise ValueError(f"{gate} registered job invalid: " + "; ".join(job_errors))
     result_errors = validate_result(job, result)
@@ -227,7 +230,8 @@ def comparison_gate_status(judgment: dict[str, Any]) -> str:
     return "fail"
 
 
-def _repair_preservation_gate(raw: Any, *, candidate: str, subject_id: str) -> dict[str, Any]:
+def _repair_preservation_gate(raw: Any, *, candidate: str, subject_id: str,
+                            binding_validator: JobBindingValidator) -> dict[str, Any]:
     if not isinstance(raw, dict):
         raise ValueError("repair_preservation gate object required for repair_cycle > 0")
     declared = raw.get("status")
@@ -239,8 +243,8 @@ def _repair_preservation_gate(raw: Any, *, candidate: str, subject_id: str) -> d
     if not isinstance(binding,dict) or not isinstance(binding.get("job"),dict) or not isinstance(binding.get("result"),dict):
         raise ValueError("repair_preservation semantic_binding requires job and result")
     job=binding["job"]; result=binding["result"]
-    validate_registered_job, validate_result = _load_semantic_runtime()
-    job_errors=validate_registered_job(job)
+    _, validate_result = _load_semantic_runtime()
+    job_errors=binding_validator(job)
     if job_errors: raise ValueError("repair_preservation registered job invalid: "+"; ".join(job_errors))
     result_errors=validate_result(job,result)
     if result_errors: raise ValueError("repair_preservation semantic result invalid: "+"; ".join(result_errors))
@@ -265,6 +269,27 @@ def _receipt_payload(receipt: dict[str, Any]) -> dict[str, Any]:
 
 
 def evaluate(payload: Any) -> dict[str, Any]:
+    """Qualify current production evidence using the current registered jobs."""
+    binding_validator, _ = _load_semantic_runtime()
+    return _evaluate(payload, binding_validator=binding_validator)
+
+
+def evaluate_recorded(payload: Any) -> dict[str, Any]:
+    """Recompute a recorded receipt for exact, read-only source verification.
+
+    Only Core's historical source reader may use this result, after checking the
+    original confirmed calls and candidate bindings, and must compare it with
+    the original persisted receipt. This function does not establish that the
+    evidence was persisted or authorize dispatch, release, or a new candidate.
+    No JSON field or CLI option selects this path. Production continues to use
+    evaluate(), and the unchanged receipt schema permits exact old-byte checks.
+    """
+    _load_semantic_runtime()
+    from registered_contract_binding import validate_recorded_registered_job  # type: ignore
+    return _evaluate(payload, binding_validator=validate_recorded_registered_job)
+
+
+def _evaluate(payload: Any, *, binding_validator: JobBindingValidator) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError("qualification payload must be object")
     candidate = _sha(payload.get("candidate_fingerprint"), "candidate_fingerprint")
@@ -273,10 +298,13 @@ def evaluate(payload: Any) -> dict[str, Any]:
     if isinstance(repair_cycle, bool) or not isinstance(repair_cycle, int) or repair_cycle < 0:
         raise ValueError("repair_cycle must be non-negative integer")
 
-    self_audit = _semantic_gate(payload.get("self_audit"), gate="self_audit", candidate=candidate, subject_id=subject_id)
-    reader = _semantic_gate(payload.get("reader_engagement"), gate="reader_engagement", candidate=candidate, subject_id=subject_id)
+    self_audit = _semantic_gate(payload.get("self_audit"), gate="self_audit", candidate=candidate, subject_id=subject_id,
+                                binding_validator=binding_validator)
+    reader = _semantic_gate(payload.get("reader_engagement"), gate="reader_engagement", candidate=candidate, subject_id=subject_id,
+                           binding_validator=binding_validator)
     continuity = _continuity_gate(payload.get("continuity"), candidate=candidate)
-    preservation = _repair_preservation_gate(payload.get("repair_preservation"), candidate=candidate, subject_id=subject_id) if repair_cycle > 0 else {"gate":"repair_preservation","status":"not_applicable","contract_id":"quality.compare","job_fingerprint":None,"result_fingerprint":None,"objective_envelope_fingerprint":None,"target_outcome":"not_applicable","objective_preservation":"not_applicable","reader_value":"not_applicable","character_relationship_energy":"not_applicable","outcome_class":"not_applicable","evidence_refs":[]}
+    preservation = _repair_preservation_gate(payload.get("repair_preservation"), candidate=candidate, subject_id=subject_id,
+                                             binding_validator=binding_validator) if repair_cycle > 0 else {"gate":"repair_preservation","status":"not_applicable","contract_id":"quality.compare","job_fingerprint":None,"result_fingerprint":None,"objective_envelope_fingerprint":None,"target_outcome":"not_applicable","objective_preservation":"not_applicable","reader_value":"not_applicable","character_relationship_energy":"not_applicable","outcome_class":"not_applicable","evidence_refs":[]}
 
     gates = [self_audit, reader, continuity, preservation]
     pending = [g["gate"] for g in gates if g["status"] == "pending"]

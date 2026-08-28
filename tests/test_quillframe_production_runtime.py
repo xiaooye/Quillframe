@@ -7,6 +7,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
@@ -23,6 +24,9 @@ from persistence.independent_review_repository import IndependentReviewError, In
 from persistence.quillframe_sqlite import QuillframeStore, fingerprint_text, now_iso
 from production_runtime import PRODUCTION_MECHANISMS, ProductionRunError, ProductionRunExecutor
 from production_runtime.context import ProductionContextRuntime
+from production_runtime.reading_positioning import (
+    DECLARATION_SCHEMA, READER_FIELDS, build_reading_positioning, reading_positioning_fields,
+)
 from production_runtime.workflow_service import NovelWorkflowService
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -43,6 +47,10 @@ PROVENANCE = {
     "project_repo": "owner/project",
     "framework_repo": "owner/framework",
     "framework_commit": "f" * 40,
+}
+READER_POSITIONING = {
+    "schema": DECLARATION_SCHEMA, "visibility": "reader_eligible",
+    "genre_profile": "都市关系小说", "platform_profile": "中文移动端连载",
 }
 
 PUBLIC_MANUSCRIPT_KEYS = {"peer_packet", "peer_packet_bytes", "candidate_text"}
@@ -457,10 +465,12 @@ class ProductionRuntimeTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
-    def start(self, *, chapter_id="CH001", document_id="DOC-1", selected_preference_ids=None) -> str:
+    def start(self, *, chapter_id="CH001", document_id="DOC-1", selected_preference_ids=None, reader_positioning=None) -> str:
         payload = {"instruction": "draft chapter", "chapter_id": chapter_id}
         if selected_preference_ids is not None:
             payload["selected_preference_ids"] = selected_preference_ids
+        if reader_positioning is not None:
+            payload["reader_positioning"] = reader_positioning
         run_id = CoreOperations(self.store).start_author_run(
             "PROD",
             task_mode="DRAFT",
@@ -559,6 +569,171 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.assertNotIn("sqlite", source)
         self.assertNotIn("open_project", source)
         self.assertNotIn("self.store", source)
+
+    def test_reading_positioning_reaches_actual_writer_pressure_reader_and_independent_jobs(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start(reader_positioning=READER_POSITIONING)
+        self.assertEqual("awaiting_external", self.execute_to_handoff(runtime, run_id)["status"])
+        expected = {
+            "reader_grip": "very_high", "chapter_position": "reading_order=1",
+            "genre_profile": READER_POSITIONING["genre_profile"],
+            "platform_profile": READER_POSITIONING["platform_profile"],
+        }
+        writers = [job for job in fake.calls if job.runtime_role in {"event_first_raw_draft", "surface_realization"}]
+        self.assertEqual(2, len(writers))
+        for writer in writers:
+            self.assertEqual(expected, writer.context[0]["reading_positioning"])
+            for guidance in (
+                "causal constraints, not the shape of the prose", "Choose narrative time deliberately",
+                "Within the authorized viewpoint", "relationship context and distinct voice",
+                "interchangeable bodily reactions", "There are no sentence-length",
+                "A quiet or procedural scene can be rewarding", "not a license to imitate a named author",
+            ):
+                self.assertIn(guidance, writer.instruction)
+            altered = deepcopy(writer.context)
+            altered[0]["reading_positioning"]["genre_profile"] = "另一个明确定位"
+            self.assertNotEqual(writer.input_fingerprint, replace(writer, context=altered).input_fingerprint)
+        for role in ("registered_reader_pressure", "registered_reader_engagement"):
+            job = next(job for job in fake.calls if job.runtime_role == role)
+            payload = job.context[0]["registered_semantic_job"]["input"]["payload"]
+            self.assertEqual(expected, {key: payload[key] for key in READER_FIELDS if key in payload})
+        independent = frozen_packet(self.store, run_id)["job"]["input"]["payload"]
+        self.assertEqual(expected, {key: independent[key] for key in READER_FIELDS if key in independent})
+        self.assertNotIn("source_binding", independent)
+        self.assertNotIn("author_model", independent)
+        qualified = runtime._latest_checkpoint("PROD", run_id, "production_qualified_candidate")
+        bundle = runtime._latest_bundle("PROD", run_id)
+        positioning = qualified["reading_positioning"]
+        self.assertEqual(fingerprint(bundle["target_context"]), positioning["source_binding"]["author_request_fingerprint"])
+        self.assertEqual(fingerprint(runtime.stage_repository.load_request("PROD", run_id)),
+                         positioning["source_binding"]["execution_request_fingerprint"])
+        self.assertEqual(expected, reading_positioning_fields(
+            positioning, target_context=bundle["target_context"], reader_grip="very_high",
+        ))
+        before = len(fake.calls)
+        packet = frozen_packet(self.store, run_id)
+        runtime.resume_execution("PROD", run_id)
+        self.assertEqual(before, len(fake.calls))
+        self.assertEqual(packet, frozen_packet(self.store, run_id))
+
+    def test_plan_labels_and_private_state_are_not_promoted_to_blind_reader_positioning(self):
+        plan = {
+            "content": "FUTURE PLAN SENTINEL: an unrevealed later outcome.",
+            "reader_positioning": {**READER_POSITIONING, "genre_profile": "PRIVATE PLAN LABEL"},
+            "genre_profile": "PRIVATE UNTYPED GENRE", "platform_profile": "PRIVATE UNTYPED PLATFORM",
+        }
+        stamp = now_iso()
+        with self.store.open_project("PROD") as conn:
+            conn.execute(
+                "INSERT INTO plans(plan_id,task_mode,target_id,status,plan_json,content_fingerprint,created_at,updated_at) "
+                "VALUES('PLAN-POSITIONING','DESIGN-BOOK','book','active',?,?,?,?)",
+                (json.dumps(plan), fingerprint(plan), stamp, stamp),
+            )
+            conn.commit()
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        self.execute_to_handoff(runtime, run_id)
+        writer = next(job for job in fake.calls if job.runtime_role == "event_first_raw_draft")
+        pressure = next(job for job in fake.calls if job.runtime_role == "registered_reader_pressure")
+        for value in (writer.context, pressure.context):
+            serialized = json.dumps(value)
+            self.assertIn("FUTURE PLAN SENTINEL", serialized)  # Authorized generation context is retained.
+            self.assertNotIn("private knowledge", serialized)
+        self.assertEqual({"reader_grip": "very_high", "chapter_position": "reading_order=1"},
+                         writer.context[0]["reading_positioning"])
+        reader = next(job for job in fake.calls if job.runtime_role == "registered_reader_engagement")
+        for value in (reader.context, frozen_packet(self.store, run_id)):
+            serialized = json.dumps(value)
+            for excluded in ("FUTURE PLAN SENTINEL", "PRIVATE PLAN LABEL", "PRIVATE UNTYPED", "private knowledge"):
+                self.assertNotIn(excluded, serialized)
+        for payload in (reader.context[0]["registered_semantic_job"]["input"]["payload"],
+                        frozen_packet(self.store, run_id)["job"]["input"]["payload"]):
+            self.assertNotIn("genre_profile", payload)
+            self.assertNotIn("platform_profile", payload)
+
+    def test_reader_positioning_rejects_private_or_untyped_fields_before_model_dispatch(self):
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        invalid = [None, "an untyped profile", {"genre_profile": "unknown provenance"},
+                   {**READER_POSITIONING, "visibility": "creator_private"},
+                   {**READER_POSITIONING, "genre_profile": {"future_plan": "private"}},
+                   {**READER_POSITIONING, "genre_profile": True},
+                   {**READER_POSITIONING, "platform_profile": "two\nlines"},
+                   {**READER_POSITIONING, "platform_profile": "x" * 161}]
+        invalid.extend({**READER_POSITIONING, key: "PRIVATE INPUT"} for key in (
+            "future_plan", "prior_review", "author_intent", "hidden_expected", "private_character_state",
+            "chapter_position", "reader_grip",
+        ))
+        for declaration in invalid:
+            with self.subTest(declaration=declaration):
+                run_id = self.start()
+                # Exercise runtime revalidation even if a malformed value was
+                # present in durable input before the current Core validator.
+                with self.store.open_project("PROD") as conn:
+                    target = json.loads(conn.execute("SELECT state_json FROM checkpoints WHERE checkpoint_id=?", ("request:" + run_id,)).fetchone()[0])
+                    target["payload"]["reader_positioning"] = declaration
+                    conn.execute("UPDATE checkpoints SET state_json=?,artifact_fingerprint=? WHERE checkpoint_id=?",
+                                 (json.dumps(target), fingerprint(target), "request:" + run_id))
+                    conn.commit()
+                with self.assertRaises(ProductionRunError) as caught:
+                    self.execute_to_handoff(runtime, run_id)
+                self.assertEqual("reader_positioning_invalid", caught.exception.code)
+        self.assertEqual([], fake.calls)
+
+    def test_reading_positioning_changes_invalidate_bundle_and_projection_fingerprints(self):
+        from production_runtime.contracts import validate_bundle_integrity
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start(reader_positioning=READER_POSITIONING)
+        self.execute_to_handoff(runtime, run_id)
+        bundle = runtime._latest_bundle("PROD", run_id)
+        qualified = runtime._latest_checkpoint("PROD", run_id, "production_qualified_candidate")
+        changed = deepcopy(bundle)
+        changed["target_context"]["payload"]["reader_positioning"]["genre_profile"] = "different public label"
+        with self.assertRaises(ProductionRunError) as caught:
+            validate_bundle_integrity(changed)
+        self.assertEqual("context_bundle_invalid", caught.exception.code)
+        original = qualified["reading_positioning"]
+        altered = deepcopy(original)
+        altered["reader_fields"]["genre_profile"] = "PRIVATE REPLACEMENT"
+        altered["positioning_fingerprint"] = fingerprint({key: value for key, value in altered.items() if key != "positioning_fingerprint"})
+        with self.assertRaises(ProductionRunError) as caught:
+            reading_positioning_fields(altered, target_context=bundle["target_context"], reader_grip="very_high")
+        self.assertEqual("reader_positioning_mismatch", caught.exception.code)
+        with self.assertRaises(ProductionRunError) as caught:
+            reading_positioning_fields(original, target_context=bundle["target_context"], reader_grip="very_high",
+                                       execution_request_fingerprint="sha256:" + "0" * 64)
+        self.assertEqual("reader_positioning_mismatch", caught.exception.code)
+        rebuilt = build_reading_positioning(target_context=changed["target_context"], reader_grip="very_high",
+                                            execution_request_fingerprint=original["source_binding"]["execution_request_fingerprint"])
+        self.assertNotEqual(original["positioning_fingerprint"], rebuilt["positioning_fingerprint"])
+
+    def test_qualified_reader_positioning_cannot_be_dropped_or_rewritten_before_independent_dispatch(self):
+        for mutation in ("drop", "rewrite"):
+            with self.subTest(mutation=mutation):
+                fake = FakeAgentRuntime()
+                runtime = ProductionRunExecutor(self.store, fake)
+                run_id = self.start(reader_positioning=READER_POSITIONING)
+                result = runtime.execute("PROD", run_id, service_id="svc", instruction="draft chapter",
+                                         reader_grip="very_high", rule_material=RULE_MATERIAL)
+                self.assertEqual("independent_provenance", result["awaiting"])
+                with self.store.open_project("PROD") as conn:
+                    row = conn.execute("SELECT checkpoint_id,state_json FROM checkpoints WHERE run_id=? AND checkpoint_kind='production_qualified_candidate'", (run_id,)).fetchone()
+                    qualified = json.loads(row["state_json"])
+                    if mutation == "drop":
+                        del qualified["reading_positioning"]
+                    else:
+                        qualified["reading_positioning"]["reader_fields"]["genre_profile"] = "different public label"
+                    conn.execute("UPDATE checkpoints SET state_json=? WHERE checkpoint_id=?", (json.dumps(qualified), row["checkpoint_id"]))
+                    conn.commit()
+                before = len(fake.calls)
+                with self.assertRaises(ProductionRunError) as caught:
+                    self.execute_to_handoff(runtime, run_id)
+                self.assertEqual("reader_positioning_missing" if mutation == "drop" else "reader_positioning_mismatch", caught.exception.code)
+                self.assertEqual(before, len(fake.calls))
+                self.assertIsNone(runtime._latest_checkpoint("PROD", run_id, "production_independent_handoff"))
 
     def test_character_simulation_excludes_research_but_keeps_character_knowledge(self):
         context_runtime = ProductionContextRuntime(self.store, FakeAgentRuntime())
@@ -697,10 +872,10 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, "target_context_missing")
         self.assertEqual(fake.calls, [])
 
-    def repair_fixture(self, **kwargs):
+    def repair_fixture(self, *, reader_positioning=None, **kwargs):
         fake = RepairFixtureRuntime(**kwargs)
         runtime = ProductionRunExecutor(self.store, fake)
-        source_id = self.start()
+        source_id = self.start(reader_positioning=reader_positioning)
         failed = self.execute_to_handoff(runtime, source_id)
         self.assertEqual(failed["status"], "failed_gate")
         source = runtime.status("PROD", source_id)["repair_source"]
@@ -708,6 +883,41 @@ class ProductionRuntimeTests(unittest.TestCase):
                     payload={"chapter_id": "CH001", "repair_source": source})["run_id"]
         NovelWorkflowService(self.store).start(project_id="PROD", run_id=run_id, chapter_id="CH001", author_profile="guided")
         return fake, runtime, source_id, run_id
+
+    def test_internal_repair_inherits_positioning_and_cannot_replace_it(self):
+        fake, runtime, source_id, run_id = self.repair_fixture(reader_positioning=READER_POSITIONING)
+        target = runtime._run_row("PROD", run_id)["target_context"]
+        self.assertEqual(READER_POSITIONING, target["payload"]["reader_positioning"])
+        before = len(fake.calls)
+        source_ref = runtime.status("PROD", source_id)["repair_source"]
+        with self.assertRaises(OperationError) as caught:
+            CoreOperations(self.store).start_author_run(
+                "PROD", task_mode="REVISE", target_ref="DOC-1",
+                payload={"chapter_id": "CH001", "repair_source": source_ref,
+                         "reader_positioning": {**READER_POSITIONING, "genre_profile": "a replaced objective"}},
+            )
+        self.assertEqual("repair_objective_changed", caught.exception.code)
+        self.assertEqual(before, len(fake.calls))
+        result = runtime.execute("PROD", run_id, service_id="svc", inherit_repair_request=True,
+                                 independent_provenance=PROVENANCE)
+        self.assertEqual("awaiting_external", result["status"])
+        qualified = runtime._latest_checkpoint("PROD", run_id, "production_qualified_candidate")
+        expected = qualified["reading_positioning"]["reader_fields"]
+        self.assertEqual(READER_POSITIONING["genre_profile"], expected["genre_profile"])
+        calls = [job for job in fake.calls if job.run_id == run_id]
+        for role in ("event_first_raw_draft", "surface_realization"):
+            writer = next(job for job in calls if job.runtime_role == role)
+            self.assertEqual(expected, writer.context[0]["reading_positioning"])
+        reader = next(job for job in calls if job.runtime_role == "registered_reader_engagement")
+        for payload in (reader.context[0]["registered_semantic_job"]["input"]["payload"],
+                        frozen_packet(self.store, run_id)["job"]["input"]["payload"]):
+            self.assertEqual(expected, {key: payload[key] for key in READER_FIELDS if key in payload})
+            serialized = json.dumps(payload)
+            for private in (PRE_RELEASE_MANUSCRIPT, "PRIVATE SYNTHETIC DIAGNOSIS", "PRIVATE EDITOR TRAJECTORY"):
+                self.assertNotIn(private, serialized)
+        editor = next(job for job in calls if job.runtime_role == "registered_repair_editor")
+        objective = editor.context[0]["registered_semantic_job"]["input"]["payload"]["objective_envelope"]
+        self.assertIn("OBJ-CURRENT-READING-POSITIONING", json.dumps(objective))
 
     def test_repair_executes_editor_and_exact_prose_compare_before_fresh_independent_review(self):
         fake, runtime, source_id, run_id = self.repair_fixture()

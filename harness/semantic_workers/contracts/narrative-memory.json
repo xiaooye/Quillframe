@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_model_contract_registry_v1",
-  "version": "3",
+  "version": "4",
   "principle": "Long-form narrative interpretation and memory consolidation are model-owned semantic work. Derived observations remain source-bound, invalidatable and non-authoritative.",
   "contracts": {
     "narrative.world": {
@@ -193,7 +193,7 @@
     },
     "reader.pressure": {
       "kind": "artifact_audit",
-      "purpose": "Prepare evidence-bound reader questions, expected rewards and delay costs from the chapter brief, prior live expectations and the resolved writer-safe causal trace.",
+      "purpose": "Prepare source-bound predictions of reader questions, possible rewards and delay costs from the chapter brief, prior live expectations, explicit reading position and resolved writer-safe causal trace; this proposal cannot prove effects in prose that has not yet been read.",
       "input_contract": {
         "type": "object",
         "required": ["chapter_id", "current_reading_order", "author_request", "sources"],
@@ -202,15 +202,22 @@
           "current_reading_order": {"type": "integer", "minimum": 0},
           "author_request": {"type": "string", "minLength": 1},
           "sources": {"type": "array", "minItems": 1, "items": {"type": "object"}},
-          "author_model": {"type": "object"}
+          "author_model": {"type": "object"},
+          "genre_profile": {"type": "string"},
+          "platform_profile": {"type": "string"},
+          "chapter_position": {"type": "string"},
+          "reader_grip": {"enum": ["low", "medium", "high", "very_high"]}
         },
         "additionalProperties": false
       },
       "rubric": [
         "Identify what a reader has reason to care about, what concrete reward this chapter can provide, and the cost of delaying it. Ground each pressure point in supplied source_ref identities.",
-        "Distinguish intended reader effects from effects actually observed in accepted prior prose. Plans remain plans; reader expectation observations remain model proxies.",
-        "Preserve character choices, consequences and uncertainty from the supplied causal trace. Do not force cliffhangers, fixed reward frequency or a universal beat template.",
-        "A quiet chapter can provide relationship, emotional, informational or atmospheric value. Do not invent measurable retention rates or assign unsupported attraction scores.",
+        "Use the explicitly supplied genre_profile, platform_profile, chapter_position and reader_grip to weigh the proposal. Missing positioning is a limit, not permission to invent a platform formula or to treat a private author preference as reader-observed evidence.",
+        "Distinguish intended reader effects from effects supported by accepted prior prose. Plans remain plans; reader expectation observations remain model proxies. status=pass means only a usable pre-draft proposal, not a passed Reader audit, realized reward, demonstrated reading value or production release.",
+        "Source binding verifies where a prediction came from, not whether a reader felt it. Only a later reading of the actual candidate can judge realization; do not present expected rewards, proposed_net_change or next_chapter_pull as effects already delivered by unwritten prose.",
+        "Preserve supported character choices, observable responses, consequences and uncertainty from the causal trace. Anticipate why they may matter without turning the trace into an equal-weight step report or a paragraph template. Do not invent a cost that changes no option or consequence; if no material delay cost is supported, say so.",
+        "A quiet chapter, specialized procedure or restrained scene can provide relationship, emotional, informational, competence, contemplative or atmospheric value. Do not force conflict, cliffhangers, quotas of events or emotion, fixed reward frequency or a universal beat template; an empty pressure_points array is valid when the evidence supports no discrete pressure point.",
+        "Do not invent measurable retention rates, real reader reactions or unsupported attraction scores.",
         "Keep the output compact and usable by the Writer. Do not copy private character state, author explanations or final manuscript prose."
       ],
       "output_contract": {

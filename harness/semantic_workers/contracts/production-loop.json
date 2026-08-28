@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_model_contract_registry_v1",
-  "version": "5",
+  "version": "6",
   "principle": "Production-loop semantic artifacts stay thin. Models decide whether feedback is learnable, interpret causal scene state, preserve current objectives and choose repair strategy; machines consume only the small fields needed for authority-safe persistence or routing. Private character state may drive semantic decisions but is not prose payload, rejected repair trajectories do not become the fresh Writer objective, and this pack does not duplicate the Blind Reader.",
   "contracts": {
     "learning.preference_interpret": {
@@ -193,7 +193,7 @@
     },
     "scene.realization_project": {
       "kind": "artifact_audit",
-      "purpose": "Convert private character/action evidence and resolved scene trajectory into the minimum writer-safe causal trace needed to realize prose, without serializing Character Sheets or a replacement Realization Sheet.",
+      "purpose": "Convert private character/action evidence and resolved scene trajectory into compact writer-safe causal constraints that preserve consequential choices and observable reactions without prescribing paragraph form, serializing Character Sheets or replacing them with a Realization Sheet.",
       "input_contract": {
         "type": "object",
         "required": [
@@ -232,9 +232,11 @@
         "additionalProperties": false
       },
       "rubric": [
-        "Use private character state as causal evidence only. Do not dump goals, fears, role responsibilities, knowledge inventories or strategy rationale into writer-facing prose instructions.",
-        "Return the smallest interaction/event trace that preserves what changed, what is observable, what each important action is trying to accomplish, and what uncertainty or pressure remains alive.",
-        "Do not draft final dialogue or narration. Do not force every private field to have a corresponding writer-facing field.",
+        "Use private character state as causal evidence only. Do not dump goals, fears, role responsibilities, knowledge inventories or strategy rationale into writer-facing prose instructions. Respect pov_boundary: unrevealed knowledge or another character's hidden motive must not become narrator knowledge or dialogue exposition.",
+        "Return the smallest interaction/event trace that preserves the resolved causal constraints: consequential choices, immediate tactics, observable reactions, resulting options and costs, and uncertainty that remains alive. Preserve an immediate aim or interpretation only when writer-eligible under the supplied POV; retain its observable effects without leaking a private explanation.",
+        "Do not flatten distinct participants into required lines or replace a character's response with a state-update label. Retain listener-specific action, refusal, evasion, changing attention or relational response when supported by the resolved evidence. Mark unresolved meaning as uncertain rather than inventing a feeling, a reaction, a cost or a new event to enliven the trace.",
+        "The event trace is a causal constraint, not a paragraph template or an instruction to report every step at equal weight. The Writer may compress routine, combine connected actions, and dwell on a meaningful choice or response while preserving causality, state and POV. Do not prescribe quotas of beats, dialogue, gestures, emotion or paragraph length.",
+        "Do not draft final dialogue or narration. Do not force every private field to have a corresponding writer-facing field, and do not require a new conflict or a dramatic turn when the supported scene instead offers quiet, procedural or contemplative value.",
         "Explicit complete speech is valid when the speech act or situation genuinely requires completeness. Preserve that reason in the natural-language trace when material.",
         "If the resolved trajectory is already sufficient for a capable Writer, keep the projection compact rather than inventing additional schema detail."
       ],
@@ -379,11 +381,13 @@
       },
       "rubric": [
         "Integrate evidence before prescribing repair. The repair target and the higher-order objective are separate: removing a defect is not success if required story/reader/character value is materially damaged.",
+        "For SAFE-BUT-FLAT concerns, distinguish a realized reading-value failure from factual correctness or a pre-draft promise. Inspect the supplied candidate and evidence for outline-step reporting, missing character-owned choices or reactions, interchangeable speaking strategies, or costs that never bind; repair the owning scene, character, reader-pressure or realization mechanism rather than merely removing adjectives or adding hype.",
         "Return a FIX statement for the owning failure mechanism and a compact PRESERVE list grounded in the supplied objective envelope. Preserve function, reader question/pressure/reward, character or relationship energy, humor/charm, payoff and forward pull only when they are actually required by current evidence.",
         "Choose repair depth and generation mode semantically. Do not map a Reader label, HF code, owner, scope, paragraph count, repair-cycle count or metric to a predetermined local/fresh decision table.",
         "Choose fresh_realization when rejected realization or accumulated critique is likely to anchor the Writer, or when objective regression/contextual inertia/oscillation makes patch continuation unsafe. A fresh realization reconstructs current authoritative state; it does not append the full rejection trajectory.",
         "For fresh_realization, fix and preserve must express abstract current objectives or state constraints. Do not quote rejected sentences, prescribe concrete surface patches, or reconstruct rejected prose in those fields; they are the only repair directives passed to the fresh Writer.",
         "Do not solve objective regression by weakening valid Surface/Canon/character constraints. Search for a candidate that satisfies both the repair target and the preserved objective.",
+        "Preserve earned quiet, procedural pleasure and restraint. Do not cure flatness with quotas of events, dialogue, emotion, gestures, jokes, obstacles or cliffhangers; the repair must supply the missing function under the current profile without inventing unauthorized story facts.",
         "For material subjective changes, require incumbent/challenger comparison. Do not assume revision is improvement, and do not require wording or beat-order preservation when a major fresh realization keeps the intended functions.",
         "Do not perform the rewrite, mutate Canon, activate Author Model preferences or expose private chain-of-thought."
       ],

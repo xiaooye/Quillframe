@@ -9,6 +9,7 @@ from persistence.quillframe_sqlite import fingerprint_text
 from quality.candidate_lineage import validate_derivation
 from quality.candidate_qualification import comparison_gate_status
 from quality.objective_envelope import build as build_objective_envelope
+from quality.objective_envelope import validate as validate_objective_envelope
 from quality.repair_policy import evaluate as evaluate_repair_policy
 
 from .contracts import ProductionRunError
@@ -75,7 +76,7 @@ def prior_lineage(source: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
     return previous["evolution_run_id"], deepcopy(nodes)
 
 
-def objective_envelope(source: dict[str, Any], frozen_story: dict[str, Any]) -> dict[str, Any]:
+def objective_envelope(source: dict[str, Any], frozen_story: dict[str, Any], *, reading_positioning: dict[str, Any] | None = None) -> dict[str, Any]:
     """Lossless projection of explicit inputs, never objectives inferred from prose."""
     evolution_run_id, _ = prior_lineage(source)
     request = source["source_request"]
@@ -84,6 +85,45 @@ def objective_envelope(source: dict[str, Any], frozen_story: dict[str, Any]) -> 
         {"id": "OBJ-REQUEST", "category": "user_direction", "statement": request["instruction"], "source_refs": [request_ref]},
         {"id": "OBJ-GRIP", "category": "profile", "statement": canonical_json({"reader_grip": request["reader_grip"]}), "source_refs": [request_ref]},
     ]
+    previous_envelope = None
+    revisions = []
+    if source.get("source_lineage") is not None:
+        # prior_lineage has bound this Core-built comparison input to the exact
+        # verified source run. Inherit explicit author requests only, never old
+        # plans, model judgments, rejected prose or a critique trajectory.
+        previous_envelope = source["source_repair_preservation"]["semantic_binding"]["job"]["input"]["payload"]["repair_context"]["objective_envelope"]
+        errors = validate_objective_envelope(
+            previous_envelope, subject_id=source["source_target_context"]["document_id"], run_id=evolution_run_id,
+        )
+        if errors:
+            raise ProductionRunError("repair_lineage_invalid", "source objective envelope is invalid: " + "; ".join(errors))
+        revisions = [deepcopy(item) for item in previous_envelope["objective_items"]
+                     if item["category"] == "user_direction"
+                     and any(ref.startswith("author-revision:") for ref in item["source_refs"])]
+    if source.get("source_kind") == "author_revision":
+        # Keep chronological requests, with an unambiguous ID for the new one.
+        # The runtime records precedence; the Editor judges semantic conflicts.
+        for item in revisions:
+            if item["id"] == "OBJ-AUTHOR-REVISION":
+                item["id"] += "-" + fingerprint(item)[7:]
+        revisions.append({
+            "id": "OBJ-AUTHOR-REVISION", "category": "user_direction",
+            "statement": source["author_revision_request"]["revision_request"]["instruction"],
+            "source_refs": ["author-revision:" + source["author_revision_request_fingerprint"]],
+        })
+    items.extend(revisions)
+    if reading_positioning is not None:
+        if (not isinstance(reading_positioning, dict)
+                or reading_positioning.get("schema") != "quillframe_production_reading_positioning_v1"
+                or reading_positioning.get("positioning_fingerprint") != fingerprint(
+                    {key: value for key, value in reading_positioning.items() if key != "positioning_fingerprint"})):
+            raise ProductionRunError("reader_positioning_mismatch", "repair objective requires the exact current positioning projection")
+        items.append({
+            "id": "OBJ-CURRENT-READING-POSITIONING", "category": "profile",
+            "statement": canonical_json(reading_positioning["reader_fields"]),
+            "source_refs": ["reading-positioning:" + reading_positioning["positioning_fingerprint"],
+                            "author-target:" + reading_positioning["source_binding"]["author_request_fingerprint"]],
+        })
     # The freeze already selected and verified these actual active plans. Copy
     # their explicit content without interpreting or selecting literary goals.
     for row in frozen_story["items"]:
@@ -95,33 +135,57 @@ def objective_envelope(source: dict[str, Any], frozen_story: dict[str, Any]) -> 
     if preferences:
         items.append({"id": "OBJ-PREFERENCES", "category": "profile", "statement": canonical_json(preferences),
                       "source_refs": ["author-target:" + source["source_target_context_fingerprint"]]})
+    authority_cutoff = "exact original author request and current frozen active plans"
+    if revisions:
+        authority_cutoff = (
+            "exact original author request, chronological author revision requests, and current frozen active plans; "
+            "later author revisions take precedence on conflict; preserve earlier user directions only where not "
+            "superseded by later author direction, without overriding protected Project authority"
+        )
+    change = {}
+    if previous_envelope is not None and source.get("source_kind") == "author_revision":
+        change = {"supersedes_fingerprint": previous_envelope["fingerprint"],
+                  "change_authority_ref": "author-revision:" + source["author_revision_request_fingerprint"]}
     return build_objective_envelope({
         "subject_id": source["source_target_context"]["document_id"], "run_id": evolution_run_id,
-        "authority_cutoff": "exact original author request and current frozen active plans",
+        "authority_cutoff": authority_cutoff,
         "objective_items": items, "must_preserve": [item["id"] for item in items],
         "derived_from_rejected_realization": False,
+        **change,
     })
 
 
 def editor_payload(source: dict[str, Any], envelope: dict[str, Any], frozen_story: dict[str, Any]) -> dict[str, Any]:
+    goal = (
+        "Resolve the recorded blocking defects without overruling their valid findings or lowering the required gates. "
+        "The objective envelope quotes explicit source inputs; must_preserve lists their objective IDs. "
+        "Choose FIX and PRESERVE semantically from these objectives and evidence. "
+        "For fresh_realization, write abstract current-state/function constraints, never rejected quotations or concrete surface patches."
+    )
+    if source.get("source_kind") == "author_revision":
+        goal = (
+            "The source was released under its historical review contract. Those original judgments are unchanged; "
+            "they do not override the author's explicit request for revision in OBJ-AUTHOR-REVISION. "
+            "Diagnose the requested change from the actual source prose and choose the owning repair and generation mode. "
+            "Preserve the other authorized objectives and all applicable information boundaries. "
+            "For fresh_realization, express FIX and PRESERVE as abstract current-state/function constraints; "
+            "do not send old prose, quoted critiques, or a complaint transcript to the fresh Writer."
+        )
     return {
         "candidate_fingerprint": source["candidate_fingerprint"], "candidate_text": source["candidate_text"],
         "reader_assessment": deepcopy(source["reader_binding"]["result"]["judgment"]),
         "semantic_rule_assessment": deepcopy(source["self_audit_binding"]["result"]["judgment"]),
         "objective_envelope": envelope,
-        "current_repair_goal": (
-            "Resolve the recorded blocking defects without overruling their valid findings or lowering the required gates. "
-            "The objective envelope quotes explicit source inputs; must_preserve lists their objective IDs. "
-            "Choose FIX and PRESERVE semantically from these objectives and evidence. "
-            "For fresh_realization, write abstract current-state/function constraints, never rejected quotations or concrete surface patches."
-        ),
+        "current_repair_goal": goal,
         "authorized_story_evidence": deepcopy(frozen_story["items"]),
     }
 
 
-def generation_plan(editor_binding: dict[str, Any], envelope: dict[str, Any]) -> dict[str, Any]:
+def generation_plan(editor_binding: dict[str, Any], envelope: dict[str, Any], *, source_kind: str | None = None) -> dict[str, Any]:
     judgment = editor_binding["result"]["judgment"]
-    policy = evaluate_repair_policy({"repair_owner": judgment["repair_owner"], "generation_mode": judgment["generation_mode"], "candidate_rejected": True})
+    policy = evaluate_repair_policy({"repair_owner": judgment["repair_owner"], "generation_mode": judgment["generation_mode"],
+                                     "candidate_rejected": source_kind != "author_revision",
+                                     "author_revision_requested": source_kind == "author_revision"})
     # Do not forward reports, evidence quotes, context-strategy explanations, or
     # the complete critique trajectory to a fresh Writer.
     plan = {key: deepcopy(judgment[key]) for key in ("fix", "preserve")}

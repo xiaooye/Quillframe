@@ -11,6 +11,7 @@ Canon authority.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable
 import hashlib
 import json
 import sys
@@ -173,6 +174,22 @@ def build_receipt(
 
 
 def validate_receipt(receipt: Any, packet: dict[str, Any], result: dict[str, Any]) -> list[str]:
+    """Validate a new submission against the current registered contract."""
+    return _validate_receipt(receipt, packet, result, binding_validator=validate_registered_job)
+
+
+def validate_recorded_receipt(receipt: Any, packet: dict[str, Any], result: dict[str, Any]) -> list[str]:
+    """Read already-recorded evidence; never dispatch or authorize a new review.
+
+    Only the trusted historical source reader uses this entry point. No receipt
+    field or CLI option can change the current validator's contract selection.
+    """
+    from registered_contract_binding import validate_recorded_registered_job
+    return _validate_receipt(receipt, packet, result, binding_validator=validate_recorded_registered_job)
+
+
+def _validate_receipt(receipt: Any, packet: dict[str, Any], result: dict[str, Any], *,
+                      binding_validator: Callable[[dict[str, Any]], list[str]]) -> list[str]:
     errors: list[str] = []
     if not isinstance(receipt, dict):
         return ["peer validation receipt must be object"]
@@ -204,7 +221,7 @@ def validate_receipt(receipt: Any, packet: dict[str, Any], result: dict[str, Any
         errors.append("peer packet job required")
         return errors
     errors += ["peer relay: " + item for item in validate_peer_result(packet, result)]
-    errors += ["registered contract: " + item for item in validate_registered_job(job)]
+    errors += ["registered contract: " + item for item in binding_validator(job)]
 
     expected = {
         "job_id": job.get("job_id"),

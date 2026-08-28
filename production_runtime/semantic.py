@@ -12,6 +12,7 @@ from harness.context_runtime import canonical_json, fingerprint
 from model_runtime.structured_output import required_only_output_schema, validate_structured_text
 
 from .contracts import ProductionRunError, assert_secret_free, parse_json_object, validate_bundle_integrity
+from .reading_positioning import reading_positioning_fields
 from .sources import AgentRuntimeLike
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +41,7 @@ from semantic_worker_router import (  # noqa: E402
 )
 
 from quality.candidate_qualification import evaluate as evaluate_qualification  # noqa: E402
+from quality.candidate_qualification import evaluate_recorded as evaluate_recorded_qualification  # noqa: E402
 from quality.candidate_qualification import validate_qualification_receipt  # noqa: E402
 from quality.production_readiness import evaluate as evaluate_production_readiness  # noqa: E402
 from quality.production_release import aggregate as aggregate_production_release  # noqa: E402
@@ -548,6 +550,7 @@ def build_pre_independent_qualification(
     continuity_receipt_fingerprint: str,
     repair_cycle: int = 0,
     repair_preservation: dict[str, Any] | None = None,
+    _recorded: bool = False,
 ) -> dict[str, Any]:
     self_status = semantic_status(self_audit_binding)
     reader_status = semantic_status(reader_binding)
@@ -567,7 +570,8 @@ def build_pre_independent_qualification(
     if repair_cycle > 0:
         payload["repair_preservation"] = repair_preservation or {"status": "pending"}
     try:
-        receipt = evaluate_qualification(payload)
+        evaluator = evaluate_recorded_qualification if _recorded else evaluate_qualification
+        receipt = evaluator(payload)
     except ValueError as exc:
         raise ProductionRunError("qualification_invalid", str(exc)) from exc
     errors = validate_qualification_receipt(
@@ -591,6 +595,7 @@ def prepare_independent_review(
     reader_grip: str,
     qualification_receipt: dict[str, Any],
     provenance: dict[str, Any],
+    reading_positioning: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     errors = validate_qualification_receipt(
         qualification_receipt,
@@ -612,6 +617,10 @@ def prepare_independent_review(
         "reader_visible_context": reader_visible_context,
         "reader_grip": reader_grip,
     }
+    if reading_positioning is not None:
+        payload.update(reading_positioning_fields(
+            reading_positioning, target_context=run.get("target_context"), reader_grip=reader_grip,
+        ))
     try:
         job = make_contract_job(
             "quality.production_review",

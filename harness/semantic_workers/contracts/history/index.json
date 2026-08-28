@@ -1,0 +1,14 @@
+{
+  "schema": "quillframe_recorded_contract_registry_v1",
+  "purpose": "immutable_historical_evidence_and_explicit_eval_baselines_only",
+  "entries": [
+    {
+      "pack_id": "quality",
+      "version": "7",
+      "path": "quality.v7.json",
+      "original_registry_path": "contracts/quality.json",
+      "source_commit": "54c64c07fa2bd18c102fabae264a9797a9a4e100",
+      "sha256": "7a8f5cce2671f0c19806694a27a4111a7f3734fee1573aaa4ea53665b3f624c7"
+    }
+  ]
+}

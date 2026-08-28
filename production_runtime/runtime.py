@@ -36,6 +36,7 @@ from .contracts import (
     assert_secret_free,
     parse_json_object,
     public_stage_result,
+    validate_bundle_integrity,
 )
 from .semantic import (
     RegisteredSemanticExecutor,
@@ -58,6 +59,7 @@ from .repair import (
     generation_plan, objective_envelope, prior_lineage, writer_context,
 )
 from .repair_source import freeze_repair_source, load_repair_source
+from .reading_positioning import build_reading_positioning, reading_positioning_fields, READER_FIELDS
 
 # Characters propose actions before the Scene resolver can resolve them. The
 # public mechanism vocabulary remains shared with Context Runtime.
@@ -67,6 +69,22 @@ PRE_INDEPENDENT_MECHANISMS = (
     "reader_engagement", "continuity",
 )
 READER_GRIP_VALUES = {"low", "medium", "high", "very_high"}
+WRITER_REALIZATION_GUIDANCE = (
+    "The chapter outline, event trace and raw draft are causal constraints, not the shape of the prose. "
+    "Do not give each outline item an equally weighted paragraph or narrate every procedural transition. "
+    "Choose narrative time deliberately: expand consequential perceptions, judgments, choices and relationship exchanges; "
+    "compress routine transitions when nothing important is lost. A quiet or procedural scene can be rewarding when its "
+    "specific experience matters; do not manufacture conflict or a cliffhanger to satisfy a template. "
+    "Within the authorized viewpoint, let the person's particular attention, evaluations and diction shape what is noticed "
+    "and how it is understood. Use only supplied writer-safe information; interior experience does not authorize another "
+    "character's private state, unrevealed knowledge or a change to established events. Keep uncertainty where the viewpoint has it. "
+    "Give dialogue a speaker's purpose, relationship context and distinct voice, rather than only transmitting information. "
+    "Do not force every exchange to become a quip, interruption or short sentence. Emotion can appear through judgment, "
+    "thought, speech, silence and choices; do not replace every feeling with interchangeable bodily reactions or repeated gestures. "
+    "Use physical detail when it serves this moment. There are no sentence-length, action, bodily-reaction or gratification quotas. "
+    "Use the supplied reading_positioning as the explicit reader/profile boundary, not a license to imitate a named author. "
+    "Preserve causal outcomes, facts and authorized FIX/PRESERVE constraints while choosing an original realization. "
+)
 _EXECUTION_SCOPE: ContextVar[dict[str, Any] | None] = ContextVar("quillframe_production_execution", default=None)
 
 
@@ -179,7 +197,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 raise ProductionRunError("repair_mode_required", "a failed candidate must be repaired through REVISE")
             return None
         if requested is None:
-            raise ProductionRunError("repair_source_required", "REVISE requires a Core-frozen failed candidate source")
+            raise ProductionRunError("repair_source_required", "REVISE requires a Core-frozen authorized repair source")
         with self.store.open_project(project_id) as conn:
             source = load_repair_source(conn, run["run_id"])
         source_author = source["source_target_context"].get("author_model", {})
@@ -361,9 +379,9 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "Returning an internal proposal or judgment grants no Canon, project-write, author-acceptance or settlement authority. "
         )
         if mechanism == "event_first_raw_draft":
-            return common + "Produce the internal event-first raw draft for the user request. JSON: {\"status\":\"pass\"|\"fail\",\"text\":string,\"summary\":string,\"findings\":[]}. Raw draft is internal and will not be shown directly. Request: " + user_instruction
+            return common + WRITER_REALIZATION_GUIDANCE + "Produce the internal event-first raw draft for the user request. JSON: {\"status\":\"pass\"|\"fail\",\"text\":string,\"summary\":string,\"findings\":[]}. Raw draft is internal and will not be shown directly. Request: " + user_instruction
         if mechanism == "surface_realization":
-            return common + "Realize the supplied internal draft into candidate prose without changing Canon authority. JSON: {\"status\":\"pass\"|\"fail\",\"text\":string,\"summary\":string,\"findings\":[]}. Request: " + user_instruction
+            return common + WRITER_REALIZATION_GUIDANCE + "Realize the supplied internal draft into candidate prose without changing Canon authority. JSON: {\"status\":\"pass\"|\"fail\",\"text\":string,\"summary\":string,\"findings\":[]}. Request: " + user_instruction
         if mechanism == "story_canon_preflight":
             return common + (
                 "Execute story_canon_preflight for the exact supplied target_context. Do not draft or require an already accepted chapter. "
@@ -431,6 +449,12 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "frozen_stage_context": frozen_stage,
             "upstream_artifacts": upstream,
         }]
+        if mechanism in {"event_first_raw_draft", "surface_realization"}:
+            context[0]["reading_positioning"] = reading_positioning_fields(
+                artifacts.get("reading_positioning"), target_context=bundle["target_context"],
+                reader_grip=(self._execution_scope(run_id=run["run_id"]) or {}).get("reader_grip"),
+                execution_request_fingerprint=(self._execution_scope(run_id=run["run_id"]) or {}).get("request_fingerprint"),
+            )
         if repair and mechanism in {"event_first_raw_draft", "surface_realization"}:
             context[0]["repair"] = writer_context(artifacts["repair_source"], repair, frozen_stage)
         job, result = self._agent_job(
@@ -640,6 +664,11 @@ class ProductionRunExecutor(ProductionContextRuntime):
         payload = {"chapter_id": bundle["target_context"]["chapter_id"],
                    "current_reading_order": bundle["target_context"]["current_reading_order"],
                    "author_request": user_instruction, "sources": sources}
+        payload.update(reading_positioning_fields(
+            artifacts.get("reading_positioning"), target_context=bundle["target_context"],
+            reader_grip=(self._execution_scope(run_id=run["run_id"]) or {}).get("reader_grip"),
+            execution_request_fingerprint=(self._execution_scope(run_id=run["run_id"]) or {}).get("request_fingerprint"),
+        ))
         if isinstance(frozen.get("author_model"), dict):
             payload["author_model"] = frozen["author_model"]
         binding = RegisteredSemanticExecutor(self.agent_runtime, invoke=self._invoke_agent).execute(
@@ -759,6 +788,36 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 "INSERT INTO checkpoints(checkpoint_id,run_id,checkpoint_kind,state_json,artifact_fingerprint,created_at) VALUES(?,?,?,?,?,?)",
                 ("ckpt_" + uuid.uuid4().hex, run_id, kind, canonical_json(state), artifact_fingerprint, now_iso()),
             )
+            conn.commit()
+
+    def _persist_independent_evidence(
+        self, project_id: str, run_id: str, *, handoff: dict[str, Any], result: dict[str, Any],
+        independence_receipt: dict[str, Any], submission_evidence_fingerprint: str,
+        effect_guard: Callable[[Any], None],
+    ) -> None:
+        """Keep the exact validated response, including FAIL, under its owner."""
+        from .recorded_independent import EVIDENCE_KIND, _snapshot
+        evidence = _snapshot(
+            run_id=run_id, handoff=handoff, result=result, receipt=independence_receipt,
+            submission_fingerprint=submission_evidence_fingerprint,
+        )
+        encoded = canonical_json(evidence)
+        with self.store.open_project(project_id) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            self._guard_execution(conn, project_id, run_id)
+            effect_guard(conn)
+            rows = conn.execute(
+                "SELECT state_json,artifact_fingerprint FROM checkpoints WHERE run_id=? AND checkpoint_kind=?",
+                (run_id, EVIDENCE_KIND),
+            ).fetchall()
+            if rows:
+                if len(rows) != 1 or rows[0]["state_json"] != encoded or rows[0]["artifact_fingerprint"] != evidence["evidence_fingerprint"]:
+                    raise ProductionRunError("independent_evidence_replay_conflict", "original independent result changed for immutable run")
+            else:
+                conn.execute(
+                    "INSERT INTO checkpoints(checkpoint_id,run_id,checkpoint_kind,state_json,artifact_fingerprint,created_at) VALUES(?,?,?,?,?,?)",
+                    ("independent-evidence:" + run_id, run_id, EVIDENCE_KIND, encoded, evidence["evidence_fingerprint"], now_iso()),
+                )
             conn.commit()
 
     def _latest_checkpoint(self, project_id: str, run_id: str, kind: str) -> dict[str, Any] | None:
@@ -1570,6 +1629,17 @@ class ProductionRunExecutor(ProductionContextRuntime):
                 "independent_project_mismatch",
                 "independent packet provenance project_id must equal the actual runtime Project",
             )
+        positioning = qualified.get("reading_positioning")
+        reader_payload = qualified["reader_binding"]["job"]["input"]["payload"]
+        if positioning is not None:
+            fields = reading_positioning_fields(
+                positioning, target_context=bundle["target_context"], reader_grip=qualified["reader_grip"],
+                execution_request_fingerprint=(self._execution_scope(project_id, run["run_id"]) or {}).get("request_fingerprint"),
+            )
+            if {key: reader_payload[key] for key in READER_FIELDS if key in reader_payload} != fields:
+                raise ProductionRunError("reader_positioning_mismatch", "independent positioning must equal the completed Reader's frozen input")
+        elif any(key in reader_payload for key in READER_FIELDS if key != "reader_grip"):
+            raise ProductionRunError("reader_positioning_missing", "the completed Reader's positioning source cannot be dropped before independent review")
         handoff = prepare_independent_review(
             run=run,
             subject_id=qualified["subject_id"],
@@ -1579,6 +1649,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
             reader_grip=qualified["reader_grip"],
             qualification_receipt=qualified["qualification_receipt"],
             provenance=independent_provenance,
+            reading_positioning=positioning,
         )
         handoff["context_bundle_fingerprint"] = bundle["bundle_fingerprint"]
         handoff["freeze_fingerprint"] = bundle["freeze"]["freeze_fingerprint"]
@@ -1652,6 +1723,14 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "max_model_calls": max_model_calls,
         }
         assert_secret_free(request, label="frozen production request")
+        # Public labels are explicit task inputs, not metadata mined from a
+        # plan or author preference. Reject malformed declarations before any
+        # profile/selector/model call, then derive them again from the bundle.
+        request_fingerprint = fingerprint(request)
+        build_reading_positioning(
+            target_context=target, reader_grip=reader_grip,
+            execution_request_fingerprint=request_fingerprint,
+        )
         # Provenance may be supplied after qualification. It cannot alter any
         # generation input or replace an already-frozen independent packet.
         try:
@@ -1659,7 +1738,8 @@ class ProductionRunExecutor(ProductionContextRuntime):
         except ProductionStageError as exc:
             self._raise_stage_repository(exc)
         cancellation = CancellationToken()
-        scope = {"store": self.store, "project_id": project_id, "run_id": run_id, "owner": owner, "cancellation": cancellation}
+        scope = {"store": self.store, "project_id": project_id, "run_id": run_id, "owner": owner, "cancellation": cancellation,
+                 "request_fingerprint": request_fingerprint, "reader_grip": reader_grip}
         token = _EXECUTION_SCOPE.set(scope)
         stop = threading.Event()
 
@@ -1764,9 +1844,14 @@ class ProductionRunExecutor(ProductionContextRuntime):
             source_bundle = self._latest_bundle(project_id, source["source_run_id"])
             if not source_bundle or source_bundle.get("bundle_fingerprint") != source["source_context_bundle_fingerprint"]:
                 raise ProductionRunError("repair_source_stale", "the source context bundle changed")
-            validation = self._validate_bundle_current(project_id, source_bundle)
-            if not validation.get("proceed"):
-                raise ProductionRunError("repair_source_stale", "the failed source context is no longer current")
+            validate_bundle_integrity(source_bundle)
+            if source.get("source_kind") != "author_revision":
+                validation = self._validate_bundle_current(project_id, source_bundle)
+                if not validation.get("proceed"):
+                    raise ProductionRunError("repair_source_stale", "the failed source context is no longer current")
+            # An author-requested revision retains exact historical source
+            # evidence, but its new context is frozen and checked below. It
+            # does not relabel the old context as current authority.
         if bundle and self._latest_independent_handoff(project_id, run_id):
             # Recover a process that committed the frozen packet before the
             # awaiting_external status/event. Never mint a replacement nonce.
@@ -1816,20 +1901,27 @@ class ProductionRunExecutor(ProductionContextRuntime):
         if reader_visible_context and reader_visible_context != history:
             raise ProductionRunError("reader_context_untrusted", "Blind Reader history must equal the Core-frozen accepted source projection")
         reader_visible_context = history
-        artifacts: dict[str, Any] = {}
+        reading_positioning = build_reading_positioning(
+            target_context=bundle["target_context"], reader_grip=reader_grip,
+            execution_request_fingerprint=(self._execution_scope(project_id, run_id) or {}).get("request_fingerprint"),
+        )
+        reader_fields = reading_positioning_fields(
+            reading_positioning, target_context=bundle["target_context"], reader_grip=reader_grip,
+        )
+        artifacts: dict[str, Any] = {"reading_positioning": reading_positioning}
         public_receipts: list[dict[str, Any]] = []
         reader_binding: dict[str, Any] | None = None
         registered = RegisteredSemanticExecutor(self.agent_runtime, invoke=self._invoke_agent)
         repair: dict[str, Any] | None = None
         if source:
             frozen_story = self.materialize_stage_context(bundle, "story_canon_preflight")
-            envelope = objective_envelope(source, frozen_story)
+            envelope = objective_envelope(source, frozen_story, reading_positioning=reading_positioning)
             editor = registered.execute(
                 run=run, service_id=service_id, contract_id="editor.repair_spec", subject_id=document_id or source["source_target_context"]["document_id"],
                 payload=editor_payload(source, envelope, frozen_story), model_preference=model_preference,
                 runtime_role="registered_repair_editor", max_output_tokens=4200,
             )
-            repair = generation_plan(editor, envelope)
+            repair = generation_plan(editor, envelope, source_kind=source.get("source_kind"))
             if repair["policy"]["repair_owner"] in {"runtime", "human", "research", "context"}:
                 self._set_run(project_id, run_id, "failed_gate")
                 self._event(project_id, run_id, "production_repair_requires_external_action", {
@@ -1890,7 +1982,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
                             "candidate_fingerprint": candidate_fingerprint,
                             "candidate_text": candidate_text,
                             "reader_visible_context": reader_visible_context,
-                            "reader_grip": reader_grip,
+                            **reader_fields,
                         },
                         model_preference=model_preference,
                         runtime_role="registered_reader_engagement",
@@ -2018,6 +2110,7 @@ class ProductionRunExecutor(ProductionContextRuntime):
             "context_bundle_fingerprint": bundle["bundle_fingerprint"],
             "freeze_fingerprint": bundle["freeze"]["freeze_fingerprint"],
             "reader_grip": reader_grip,
+            "reading_positioning": reading_positioning,
             "reader_visible_context": reader_visible_context,
             "reader_binding": reader_binding,
             "self_audit_binding": self_audit,
@@ -2238,6 +2331,10 @@ class ProductionRunExecutor(ProductionContextRuntime):
         )
         independent_receipt["stage_result_fingerprint"] = fingerprint({key: value for key, value in independent_receipt.items() if key != "stage_result_fingerprint"})
         mark_effects_started()
+        self._persist_independent_evidence(
+            project_id, run_id, handoff=handoff, result=result, independence_receipt=independence_receipt,
+            submission_evidence_fingerprint=submission_evidence_fingerprint, effect_guard=effect_guard,
+        )
         self._persist_stage_receipt(project_id, run_id, independent_receipt, effect_guard=effect_guard)
 
         if not readiness.get("ready_for_user_visible_review"):

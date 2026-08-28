@@ -539,6 +539,13 @@ class CoreOperations:
             raise OperationError("unsupported_task_mode", "author.run.start requires one supported author task mode")
         if not isinstance(payload, dict):
             raise OperationError("invalid_args", "payload must be an object")
+        if "reader_positioning" in payload:
+            from production_runtime.contracts import ProductionRunError
+            from production_runtime.reading_positioning import validate_reader_positioning
+            try:
+                validate_reader_positioning(payload["reader_positioning"])
+            except ProductionRunError as exc:
+                raise OperationError(exc.code, str(exc), detail=exc.detail) from exc
         if "repair_source" in payload and task_mode != "REVISE":
             raise OperationError("repair_source_requires_revise", "only REVISE may bind an internal repair source")
         if "repair_source" in payload and {
@@ -546,6 +553,7 @@ class CoreOperations:
             "reader_assessment", "semantic_rule_assessment", "qualification_receipt",
             "qualification_status", "repair_preservation", "repair_lineage", "source_request",
             "source_target_context", "source_fingerprint", "status", "pass",
+            "source_release", "source_kind", "author_revision_request", "author_revision_request_fingerprint",
         }.intersection(payload):
             raise OperationError("repair_source_invalid", "repair evidence must come from Core, not the author payload")
         from quillframe.novel import resolve_chapter_target, bind_prior_dependencies
@@ -618,6 +626,13 @@ class CoreOperations:
                     # Keep the caller request/idempotency fingerprint intact;
                     # the derived target records the actual inherited selection.
                     target_payload = {**payload, "selected_preference_ids": list(selected)}
+                    inherited_positioning = repair_source["source_target_context"].get("payload", {}).get("reader_positioning")
+                    if (repair_source.get("source_kind") != "author_revision"
+                            and "reader_positioning" in payload and payload["reader_positioning"] != inherited_positioning):
+                        raise OperationError("repair_objective_changed", "internal repair must retain its source reading positioning")
+                    if inherited_positioning is not None and "reader_positioning" not in target_payload:
+                        from production_runtime.reading_positioning import validate_reader_positioning
+                        target_payload["reader_positioning"] = validate_reader_positioning(inherited_positioning)
                 if session_id is not None:
                     session = conn.execute("SELECT session_id FROM sessions WHERE session_id=?", (session_id,)).fetchone()
                     if not session:
@@ -946,6 +961,14 @@ class CoreOperations:
                         "auto_started": False,
                         "source_candidate_id": candidate_id,
                         "source_candidate_fingerprint": candidate_fingerprint,
+                        "payload": {
+                            "document_id": candidate["document_id"],
+                            "repair_source": {
+                                "source_candidate_id": candidate_id,
+                                "revision_request_id": request_id,
+                                "expected_candidate_fingerprint": candidate_fingerprint,
+                            },
+                        },
                     },
                     "canon_mutated": False,
                     "settled": False,

@@ -55,6 +55,7 @@ class ProductionRunError(RuntimeError):
 
 def validate_bundle_integrity(bundle: dict[str, Any]) -> None:
     if not isinstance(bundle, dict) or bundle.get("schema") != PRODUCTION_BUNDLE_SCHEMA \
+            or bundle.get("authority") is not False \
             or any(key not in bundle for key in PRODUCTION_BUNDLE_BINDING_KEYS):
         raise ProductionRunError("context_bundle_invalid", "production context bundle binding is incomplete")
     if fingerprint({key: bundle[key] for key in PRODUCTION_BUNDLE_BINDING_KEYS}) != bundle.get("bundle_fingerprint"):
