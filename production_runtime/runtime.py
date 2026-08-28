@@ -309,13 +309,42 @@ class ProductionRunExecutor(ProductionContextRuntime):
 
     @staticmethod
     def _stage_instruction(mechanism: str, user_instruction: str) -> str:
-        common = "Return exactly one JSON object. Do not expose private reasoning or credentials. "
+        common = (
+            "Return exactly one JSON object for only the named production mechanism. "
+            "The user request supplies task context; do not execute other stages, use tools, fetch missing records, "
+            "write project state, accept a candidate, or settle a chapter. Do not expose private reasoning or credentials. "
+            "Frozen source authority, canon_authority, project_write_authority and model_execution flags describe "
+            "the source records and their permissions or provenance, not a denial of this dispatched semantic job. "
+            "db_fetch_performed=false means the supplied projection was read from the frozen bundle without another fetch; "
+            "it does not make its supplied contents unavailable or authorize a new lookup. "
+            "Active plans and proposals may constrain proposed fiction without being accepted Canon. "
+            "Respect their explicit hard bounds, but never promote planned events or proposed details into prior accepted facts. "
+            "Returning an internal proposal or judgment grants no Canon, project-write, author-acceptance or settlement authority. "
+        )
         if mechanism == "event_first_raw_draft":
             return common + "Produce the internal event-first raw draft for the user request. JSON: {\"status\":\"pass\"|\"fail\",\"text\":string,\"summary\":string,\"findings\":[]}. Raw draft is internal and will not be shown directly. Request: " + user_instruction
         if mechanism == "surface_realization":
             return common + "Realize the supplied internal draft into candidate prose without changing Canon authority. JSON: {\"status\":\"pass\"|\"fail\",\"text\":string,\"summary\":string,\"findings\":[]}. Request: " + user_instruction
-        if mechanism in {"continuity", "story_canon_preflight"}:
-            return common + f"Execute Quillframe mechanism {mechanism}. JSON: {{\"status\":\"pass\"|\"fail\",\"summary\":string,\"findings\":[string]}}. A fail is a real gate result; do not soften it. Request: " + user_instruction
+        if mechanism == "story_canon_preflight":
+            return common + (
+                "Execute story_canon_preflight for the exact supplied target_context. Do not draft or require an already accepted chapter. "
+                "Check the actual availability of materials explicitly required by the task, and whether proposed work conflicts "
+                "with supplied accepted or locked facts, chronology, knowledge boundaries or explicit hard constraints. "
+                "An original chapter may begin with no accepted Canon; creative choices may remain for later proposal stages. "
+                "Do not fail solely because inputs are non-authoritative or the proposed events have not been accepted. "
+                "Fail for a real blocking conflict or genuinely missing required material; do not invent or fetch it, assume a pass, "
+                "or soften an actual failure. A pass permits only the next internal stage, subject to all later gates. "
+                "JSON: {\"status\":\"pass\"|\"fail\",\"summary\":string,\"findings\":[string]}. Request: "
+            ) + user_instruction
+        if mechanism == "continuity":
+            return common + (
+                "Execute continuity for the exact supplied target_context and upstream candidate. Compare the candidate with "
+                "the frozen established facts, story order, character knowledge boundaries and explicit hard constraints. "
+                "Distinguish active-plan intentions from events already established in the story. Candidate prose is still a proposal; "
+                "lack of author acceptance is not itself a continuity defect. Report actual contradictions or missing required evidence "
+                "as fail; never repair the candidate or soften a real gate result. "
+                "JSON: {\"status\":\"pass\"|\"fail\",\"summary\":string,\"findings\":[string]}. Request: "
+            ) + user_instruction
         return common + f"Execute Quillframe mechanism {mechanism}. JSON: {{\"status\":\"pass\"|\"fail\",\"artifact\":object,\"summary\":string,\"findings\":[string]}}. Request: " + user_instruction
 
     def _run_stage(
@@ -355,7 +384,11 @@ class ProductionRunExecutor(ProductionContextRuntime):
         elif mechanism == "continuity":
             candidate = artifacts.get("surface_realization") or {}
             upstream["candidate"] = {key: candidate.get(key) for key in ("text", "artifact_fingerprint")}
-        context = [{"frozen_stage_context": frozen_stage, "upstream_artifacts": upstream}]
+        context = [{
+            "target_context": self._target_context(bundle),
+            "frozen_stage_context": frozen_stage,
+            "upstream_artifacts": upstream,
+        }]
         job, result = self._agent_job(
             run=run,
             service_id=service_id,

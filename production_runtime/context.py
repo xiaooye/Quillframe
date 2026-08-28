@@ -174,13 +174,37 @@ class ProductionContextRuntime:
         self._ensure_profiles(run, project_id, items, service_id=service_id, model_preference=model_preference)
         source_fps, source_states, source_universe_fp = self.loader.state_projection(items)
         pools: list[dict[str, Any]] = []
+        pinned_greenlights: dict[str, dict[str, Any]] = {}
         greenlights: list[dict[str, Any]] = []
-        for index, stage_id in enumerate(CONTEXT_STAGE_IDS):
+        # Resolve task-input eligibility and resource limits before spending a
+        # selector call. These receipts do not claim a model selected the pins.
+        for stage_id in CONTEXT_STAGE_IDS:
             pool = build_candidate_pool(run_id=run_id, stage_id=stage_id, items=items)
-            if pool["eligible"]:
-                selector_packet = {"run_id": run_id, "stage_id": stage_id, "candidate_universe_fingerprint": pool["candidate_universe_fingerprint"], "eligible": pool["eligible"], "instruction": instruction}
+            hard_budget = stage_budgets.get(stage_id, DEFAULT_STAGE_BUDGET)
+            if isinstance(hard_budget, bool) or not isinstance(hard_budget, int) or hard_budget < 0:
+                raise ProductionRunError("invalid_stage_budget", f"invalid hard budget for {stage_id}")
+            pinned_decision = validate_context_decision(pool, {"selections": []}, selector={"kind": "task_binding", "model_invoked": False})
+            if not pinned_decision["proceed"]:
+                raise ProductionRunError("required_context_unavailable", "required task input is not eligible", detail={"stage_id": stage_id, "errors": pinned_decision["errors"]})
+            pinned_greenlight = pack_budget(pinned_decision, hard_budget=hard_budget)
+            if pinned_greenlight["grounding_incomplete_due_budget"]:
+                raise ProductionRunError("grounding_incomplete_due_budget", f"required task inputs could not fit stage budget for {stage_id}")
+            pools.append(pool)
+            pinned_greenlights[stage_id] = pinned_greenlight
+        for index, pool in enumerate(pools):
+            stage_id = pool["stage_id"]
+            pinned_greenlight = pinned_greenlights[stage_id]
+            hard_budget = pinned_greenlight["hard_budget"]
+            pinned_ids = set(pinned_greenlight["pinned_profile_ids"])
+            optional = [row for row in pool["eligible"] if row["profile_id"] not in pinned_ids]
+            if optional:
+                selector_packet = {"run_id": run_id, "stage_id": stage_id, "candidate_universe_fingerprint": pool["candidate_universe_fingerprint"],
+                                   "eligible": optional, "required_inputs": pinned_greenlight["pinned_inputs"],
+                                   "hard_budget": hard_budget, "remaining_budget": hard_budget - pinned_greenlight["estimated_tokens"], "instruction": instruction}
                 selector_instruction = (
-                    "Select Quillframe Context for exactly one stage from the supplied eligible candidate universe. "
+                    "Select optional Quillframe Context for exactly one stage from the supplied eligible candidates. "
+                    "Core has separately bound required_inputs to this exact task; these inputs are already reserved "
+                    "within the hard budget and are not semantic selections. Choose optional inputs within remaining_budget. "
                     "Return only JSON: {\"selections\":[{\"profile_id\":string,\"stage_id\":string,\"priority\":number,"
                     "\"reason_code\":short_string,\"reason\":short_string,\"required_for_grounding\":boolean}]}. "
                     "Never invent IDs, never return excluded objects, never grant authority, and never expose chain-of-thought."
@@ -192,18 +216,15 @@ class ProductionContextRuntime:
                 selector = {"kind": "agent_runtime", "job_id": job.job_id, "input_fingerprint": job.input_fingerprint, "model_service_id": result.model_service_id, "model_id": result.model_id, "protocol": result.protocol}
             else:
                 decision_payload = {"selections": []}
-                selector = {"kind": "deterministic_empty_universe", "model_invoked": False}
+                selector = {"kind": "deterministic_no_optional_candidates", "model_invoked": False}
             decision = validate_context_decision(pool, decision_payload, selector=selector)
             if not decision["proceed"]:
                 raise ProductionRunError("semantic_invalid", "Context Decision returned invalid candidate identities", detail={"stage_id": stage_id, "errors": decision["errors"]})
-            hard_budget = stage_budgets.get(stage_id, DEFAULT_STAGE_BUDGET)
-            if isinstance(hard_budget, bool) or not isinstance(hard_budget, int) or hard_budget < 0:
-                raise ProductionRunError("invalid_stage_budget", f"invalid hard budget for {stage_id}")
             greenlight = pack_budget(decision, hard_budget=hard_budget)
             if greenlight.get("grounding_incomplete_due_budget") is True:
                 raise ProductionRunError("grounding_incomplete_due_budget", f"required grounding could not fit stage budget for {stage_id}")
             self.context_repository.save_stage_selection(project_id, pool, greenlight)
-            pools.append(pool); greenlights.append(greenlight)
+            greenlights.append(greenlight)
 
         frozen = freeze_context(run_id=run_id, task_mode=run["task_mode"], pools=pools, greenlights=greenlights)
         self.context_repository.save_freeze(project_id, frozen)

@@ -317,6 +317,12 @@ def _exclusion(code: str, detail: str, *, category: str) -> dict[str, str]:
     return {"code": code, "detail": detail, "category": category}
 
 
+def _pinned_stages(item: dict[str, Any]) -> list[str]:
+    if not item.get("pinned"):
+        return []
+    return _string_list(item.get("pinned_stages", item.get("stages", sorted(STAGES))), "pinned_stages", allowed=STAGES)
+
+
 def evaluate_eligibility(item: dict[str, Any], stage_id: str) -> tuple[bool, dict[str, str] | None, dict[str, Any]]:
     """Mechanical gate. This function intentionally has no relevance score."""
     if stage_id not in STAGES:
@@ -410,6 +416,8 @@ def build_candidate_pool(*, run_id: str, stage_id: str, items: list[dict[str, An
             "profile_stage_affinity_match": item.get("profile_stage_affinity_match"),
             "required_for_grounding": bool(item.get("required_for_grounding", False)),
             "pinned": bool(item.get("pinned", False)),
+            "pinned_stages": _pinned_stages(item),
+            "stages": _string_list(item.get("stages", sorted(STAGES)), f"{object_id}.stages", allowed=STAGES),
         }
         if ok:
             eligible.append(record)
@@ -421,7 +429,7 @@ def build_candidate_pool(*, run_id: str, stage_id: str, items: list[dict[str, An
         "run_id": run_id,
         "stage_id": stage_id,
         "eligible": [
-            {k: row[k] for k in ("object_id", "profile_id", "source_fingerprint", "profile_fingerprint", "authority", "lifecycle")}
+            {k: row[k] for k in ("object_id", "profile_id", "source_fingerprint", "profile_fingerprint", "authority", "lifecycle", "pinned", "pinned_stages", "required_for_grounding")}
             for row in eligible
         ],
     }
@@ -463,7 +471,20 @@ def validate_context_decision(pool: dict[str, Any], decision: dict[str, Any], *,
         raise ValueError("decision.selections must be an array")
     eligible_by_profile = {row["profile_id"]: row for row in pool["eligible"] if row.get("profile_id")}
     selected: list[dict[str, Any]] = []
-    errors: list[dict[str, Any]] = []
+    # Pinned inputs belong to the task binding, not to the model's selections.
+    # A pin never overrides lifecycle, visibility, knowledge, or profile checks.
+    errors: list[dict[str, Any]] = [
+        {"object_id": row["object_id"], "profile_id": row.get("profile_id"),
+         "code": "required_input_ineligible", "exclusion": deepcopy(row["exclusion"])}
+        for row in pool.get("excluded", [])
+        if pool["stage_id"] in row.get("pinned_stages", [])
+    ]
+    pinned_inputs = [
+        {**deepcopy(row), "stage_id": pool["stage_id"], "required_for_grounding": True,
+         "inclusion_source": "task_binding", "reason_code": "task_bound_input",
+         "reason": "Required by the exact task binding; not a semantic selection."}
+        for row in pool["eligible"] if pool["stage_id"] in row.get("pinned_stages", [])
+    ]
     seen: set[str] = set()
     for index, raw in enumerate(selections):
         if not isinstance(raw, dict):
@@ -491,10 +512,11 @@ def validate_context_decision(pool: dict[str, Any], decision: dict[str, Any], *,
             "priority": float(priority),
             "reason_code": reason_code,
             "reason": reason,
-            "required_for_grounding": bool(raw.get("required_for_grounding", row.get("required_for_grounding", False))),
+            "required_for_grounding": bool(row.get("required_for_grounding") or raw.get("required_for_grounding")),
             "selection_index": index,
         })
-    status = "validated" if not errors else "semantic_invalid"
+    status = ("required_context_unavailable" if any(error["code"] == "required_input_ineligible" for error in errors)
+              else "semantic_invalid" if errors else "validated")
     body = {
         "schema": DECISION_SCHEMA,
         "run_id": pool["run_id"],
@@ -502,6 +524,7 @@ def validate_context_decision(pool: dict[str, Any], decision: dict[str, Any], *,
         "candidate_universe_fingerprint": pool["candidate_universe_fingerprint"],
         "selector": deepcopy(selector),
         "selected": selected if not errors else [],
+        "pinned_inputs": pinned_inputs if not errors else [],
         "candidate_count": pool["candidate_count"],
         "errors": errors,
         "status": status,
@@ -518,7 +541,19 @@ def pack_budget(validated: dict[str, Any], *, hard_budget: int, actual_tokens: d
     if isinstance(hard_budget, bool) or not isinstance(hard_budget, int) or hard_budget < 0:
         raise ValueError("hard_budget must be a non-negative integer")
     actual_tokens = actual_tokens or {}
-    candidates = sorted(validated["selected"], key=lambda x: (-x["priority"], x["selection_index"], x["profile_id"]))
+    pinned = sorted(validated.get("pinned_inputs", []), key=lambda row: (row["object_id"], row["profile_id"]))
+    selected_by_profile = {row["profile_id"]: row for row in validated["selected"]}
+    pinned_ids = {row["profile_id"] for row in pinned}
+    candidates = [
+        {**selected_by_profile.get(row["profile_id"], row), "required_for_grounding": True,
+         "inclusion_source": "task_binding"}
+        for row in pinned
+    ]
+    candidates.extend(
+        {**row, "inclusion_source": "semantic_selection"}
+        for row in sorted(validated["selected"], key=lambda x: (-x["priority"], x["selection_index"], x["profile_id"]))
+        if row["profile_id"] not in pinned_ids
+    )
     loaded: list[dict[str, Any]] = []
     dropped: list[dict[str, Any]] = []
     used = 0
@@ -543,6 +578,9 @@ def pack_budget(validated: dict[str, Any], *, hard_budget: int, actual_tokens: d
         "selected_count": len(validated["selected"]),
         "selected_object_ids": [row["object_id"] for row in validated["selected"]],
         "selected_profile_ids": [row["profile_id"] for row in validated["selected"]],
+        "pinned_inputs": deepcopy(pinned),
+        "pinned_object_ids": [row["object_id"] for row in pinned],
+        "pinned_profile_ids": [row["profile_id"] for row in pinned],
         "loaded_object_ids": [row["object_id"] for row in loaded],
         "loaded_profile_ids": [row["profile_id"] for row in loaded],
         "selected": loaded,
@@ -569,6 +607,8 @@ def freeze_context(*, run_id: str, task_mode: str, pools: list[dict[str, Any]], 
     for stage, greenlight in by_stage_greenlight.items():
         if greenlight.get("candidate_universe_fingerprint") != by_stage_pool[stage].get("candidate_universe_fingerprint"):
             raise ValueError(f"greenlight candidate universe mismatch for {stage}")
+        if greenlight.get("status") != "packed" or greenlight.get("grounding_incomplete_due_budget"):
+            raise ValueError(f"stage context is not complete within its hard budget: {stage}")
     source_fps: dict[str, str] = {}
     source_state_fps: dict[str, str] = {}
     profile_fps: dict[str, str] = {}
@@ -582,6 +622,9 @@ def freeze_context(*, run_id: str, task_mode: str, pools: list[dict[str, Any]], 
                 "authority": row.get("authority"),
                 "lifecycle": row.get("lifecycle"),
                 "domain": row.get("domain"),
+                "pinned": bool(row.get("pinned")),
+                "pinned_stages": _pinned_stages(row),
+                "required_for_grounding": bool(row.get("required_for_grounding")),
             })
             # Visibility exclusions belong to a stage's candidate universe.
             # The same source may be allowed for an editor and hidden from a
@@ -649,6 +692,9 @@ def validate_freeze(freeze: dict[str, Any], current_source_fingerprints: dict[st
                     "authority": state.get("authority"),
                     "lifecycle": state.get("lifecycle"),
                     "domain": state.get("domain"),
+                    "pinned": bool(state.get("pinned")),
+                    "pinned_stages": _pinned_stages(state),
+                    "required_for_grounding": bool(state.get("required_for_grounding")),
                 })
             else:
                 actual_state_fp = None
@@ -710,7 +756,8 @@ def build_inspector_projection(*, run_id: str, pools: list[dict[str, Any]], gree
                 "authority": row["authority"], "lifecycle": row["lifecycle"], "stage": stage,
                 "state": state,
                 "reason_code": ("hard_budget" if pid in dropped_ids else next((x.get("reason_code") for x in (green or {}).get("selected", []) if x.get("profile_id") == pid), "eligible_not_selected")),
-                "reason": ("semantically selected but dropped by hard token budget" if pid in dropped_ids else next((x.get("reason") for x in (green or {}).get("selected", []) if x.get("profile_id") == pid), "mechanically eligible; semantic selector did not load it")),
+                "reason": ("context input dropped by hard token budget" if pid in dropped_ids else next((x.get("reason") for x in (green or {}).get("selected", []) if x.get("profile_id") == pid), "mechanically eligible; semantic selector did not load it")),
+                "inclusion_source": next((x.get("inclusion_source") for x in (green or {}).get("selected", []) + (green or {}).get("dropped_due_budget", []) if x.get("profile_id") == pid), None),
                 "estimated_tokens": row.get("estimated_tokens", 0),
                 "actual_tokens": next((x.get("actual_tokens") for x in (green or {}).get("selected", []) if x.get("profile_id") == pid), None),
                 "source_fingerprint": row.get("source_fingerprint"), "profile_fingerprint": row.get("profile_fingerprint"),

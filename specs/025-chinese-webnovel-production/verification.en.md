@@ -1,6 +1,6 @@
 # Local production verification
 
-Status: implementation and regression verified; local model continuation is prepared. This record separates implemented behavior, deterministic regression results, browser observations and actual model outcomes. It does not certify a completed chapter, author acceptance or a successful book export.
+Status: the real CLI model route and context-binding regressions are verified; a fresh semantic run awaits sufficient authorized budget. This record separates implemented behavior, deterministic regression results, browser observations and actual model outcomes. It does not certify a completed chapter, author acceptance or a successful book export.
 
 ## Environment and scope
 
@@ -12,7 +12,7 @@ The original acceptance project is outside the framework repository. Its manuscr
 
 | Check | Latest completed result |
 | --- | --- |
-| Latest completed frozen Linux Core regression snapshot | 660 passed, zero skipped |
+| Latest completed frozen Linux Core regression snapshot | 667 passed, zero skipped |
 | Studio tests and full build, including run selection, active-lease guards and semantic rejection display | 108 passed; typecheck, quality checks, Vite and offline build passed |
 | Cloud boundary regression and TypeScript | 90 passed; typecheck passed; no deployment |
 | Documentation quality | Zero errors; 21 existing warnings |
@@ -26,6 +26,8 @@ The real browser opened the native project and saved and reloaded book and chapt
 Selecting an actual run from Runtime opened its registered chapter. Refresh showed 14 confirmed responses and a retained semantic failure, without resuming the run or exposing raw prose. The editor remained usable beside the AI panel at a desktop viewport; narrow side panels moved below the editor.
 
 After the scene handoff fix, the browser retained the second run's 13 confirmed results, displayed its specific failed mechanism and disabled resuming that rejected run. Status refresh remained available. A fresh third run was registered and started with the original saved plans and author request against the new frozen source. Reopening that active run in another browser page showed the real lease and disabled Resume even though that page had not issued the execution request; selecting and refreshing did not dispatch a duplicate execution. After the host dispatch failure, the browser showed `semantic_pending`, the retained error and no active executor; Review still had zero candidates.
+
+Refreshing the sixth run showed eight dispatched and confirmed calls, the Story/Canon preflight rejection, no active executor and no pending call. The page explicitly required fixing the blocker and registering a new run; confirmed calls were not presented as a release.
 
 ## Actual GPT evidence
 
@@ -55,6 +57,14 @@ The fifth run obtained a real CLI thread and one completed GPT response. Its sav
 
 The follow-up configuration suppresses only the known experimental-feature notice and explicitly disables Code Mode flags while keeping its host disabled. The next run selects GPT-5.5, whose installed catalog entry does not force Code Mode; the catalog and user preferences are not rewritten. Startup error items remain rejected, but their type and message hash are now retained for diagnosis. A non-model catalog read and 11 Windows relay tests passed; the repaired full production run remains pending.
 
+The sixth run used the clean committed source `970f13a` and GPT-5.5 through eight fresh CLI processes. All eight final messages matched their saved output bytes and were confirmed by Core. Seven context selections completed, then Story/Canon preflight returned `fail`: the selector had omitted the saved target-chapter plan, and preflight also treated non-authoritative source metadata as a prohibition on drafting. Core stopped in `failed_gate` before raw draft or candidate creation. The source manifest, ledger prefix, exact outputs and stopped status were archived before changing the framework.
+
+The repair binds the exact target chapter's active plan and its book plan as required task inputs, separately from unchanged model relevance selections. Eligibility, stage isolation and hard budgets still apply. Preflight and continuity now receive the frozen target identity and distinguish source permissions from the internal semantic task, without changing the strict pass/fail gate or granting Canon authority. The original failure is retained; deterministic regression cannot establish that the real model will understand the repaired handoff.
+
+The cumulative round is now 47/64 attempts: 36 earlier native workers, one failed host dispatch and ten CLI process starts, including both unsuccessful CLI attempts. The remaining 17 include the reserved independent review and are insufficient for the expected fresh path of 22 manager calls plus one independent review. A request to raise the cumulative cap to 96 is pending; it is not authorization, and the ledger will not reset. The full 660-test native Core regression completed successfully on `970f13a`.
+
+The subsequent context repair passed all 667 Core tests on its frozen Linux snapshot, with no failures, errors or skips. Separate focused runs passed 30 context tests, 12 semantic-context tests and 65 production-runtime tests. The context self-test, source-snapshot repository hygiene and both documentation checks passed. A Windows whole-workspace hygiene scan also traversed ignored local helper/tool documentation and reported their missing bilingual pairs and links; the clean production source snapshot passed the same check. No ignored helper or consumer data was added to the framework. Changing a pin invalidates the old context freeze without rewriting the semantic profile's source content. A rollback to the preceding commit likewise requires a fresh source-bound run, never a reclassification of archived failures. Actual semantic acceptance of the repaired handoff remains pending.
+
 ## Remaining acceptance gates
 
-Freeze the committed source and complete real single-chapter generation and independent review within the remaining budget. Verify public draft hiding when an actual private draft exists, and obtain the author's decision before acceptance or settlement. Continue to three and twelve chapters only with those intervening decisions and sufficient authorized budget. Ordered export, real feedback learning and recovery must be verified against those actual states. Four development cases and six held-out cases remain pending. No human retention or million-word consistency result is claimed.
+Freeze the committed repair and obtain sufficient explicit budget before a fresh single-chapter run and independent review. Verify public draft hiding when an actual private draft exists, and obtain the author's decision before acceptance or settlement. Continue to three and twelve chapters only with those intervening decisions and sufficient authorized budget. Ordered export, real feedback learning and recovery must be verified against those actual states. Four development cases and six held-out cases remain pending. No human retention or million-word consistency result is claimed.

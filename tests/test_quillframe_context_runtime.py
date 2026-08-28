@@ -4,8 +4,13 @@ import inspect
 import json
 import tempfile
 import unittest
+from copy import deepcopy
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
+from agent_runtime import AgentResult
+from core_operations import CoreOperations
 from harness.context_runtime import (
     MANDATORY_PRODUCTION_MECHANISMS,
     build_candidate_pool,
@@ -26,6 +31,9 @@ from harness.context_runtime import (
 )
 from persistence.context_repository import ContextRepository
 from persistence.quillframe_sqlite import QuillframeStore
+from production_runtime.context import ProductionContextRuntime
+from production_runtime.contracts import ProductionRunError
+from production_runtime.sources import BLIND_READER_STAGES, EDITOR_STAGE_IDS, ProjectContextSourceLoader
 
 
 class ContextRuntimeTests(unittest.TestCase):
@@ -59,7 +67,7 @@ class ContextRuntimeTests(unittest.TestCase):
             generated_at="2026-08-18T00:00:00Z",
         )
 
-    def _item(self, object_id="CHAR-1", object_type="character", *, authority="accepted", lifecycle=None, domain=None, stages=None, tokens=10, required=False, status=None, source_fp=None, profile=None):
+    def _item(self, object_id="CHAR-1", object_type="character", *, authority="accepted", lifecycle=None, domain=None, stages=None, tokens=10, required=False, pinned=False, status=None, source_fp=None, profile=None):
         source_fp = source_fp or fingerprint(object_id + ":source")
         profile = profile or self._profile(object_id, object_type if object_type in {
             "character", "relationship", "world_fact", "location", "timeline_event", "story_node", "plan", "research", "accepted_manuscript", "previous_scene", "previous_chapter", "canon_claim", "corpus_evidence", "review_artifact", "character_knowledge", "candidate", "runtime_state", "derived_memory"
@@ -73,6 +81,7 @@ class ContextRuntimeTests(unittest.TestCase):
             "source_fingerprint": source_fp,
             "stages": stages or ["draft", "character_simulation", "continuity", "independent_review", "research"],
             "required_for_grounding": required,
+            "pinned": pinned,
             "status": status,
             "profile": profile,
         }
@@ -194,6 +203,88 @@ class ContextRuntimeTests(unittest.TestCase):
         self.assertEqual(green["status"], "grounding_incomplete_due_budget")
         self.assertTrue(green["grounding_incomplete_due_budget"])
         self.assertEqual(green["loaded_profile_ids"], [])
+
+    def test_task_pins_load_before_optional_ranking_without_fabricating_selection(self):
+        plan = self._item("PLAN-BOUND", "plan", authority="active_plan", stages=["draft"], tokens=8, pinned=True)
+        optional = [self._item(oid, stages=["draft"], tokens=5) for oid in ("A", "B")]
+        pool = build_candidate_pool(run_id="RUN-CTX", stage_id="draft", items=[plan, *optional])
+        choices = {"selections": [
+            {"profile_id": item["profile"]["profile_id"], "stage_id": "draft", "priority": 10 - index, "reason": "fixture choice"}
+            for index, item in enumerate(optional)
+        ]}
+        original = deepcopy(choices)
+        decision = validate_context_decision(pool, choices, selector={"kind": "fixture"})
+        green = pack_budget(decision, hard_budget=13)
+        self.assertEqual(original, choices)
+        self.assertEqual(["A", "B"], [row["object_id"] for row in decision["selected"]])
+        self.assertEqual(["PLAN-BOUND"], [row["object_id"] for row in decision["pinned_inputs"]])
+        self.assertEqual(["A", "B"], green["selected_object_ids"])
+        self.assertEqual(["PLAN-BOUND", "A"], green["loaded_object_ids"])
+        self.assertEqual(["B"], [row["object_id"] for row in green["dropped_due_budget"]])
+        self.assertEqual("task_binding", green["selected"][0]["inclusion_source"])
+        self.assertEqual("semantic_selection", green["selected"][1]["inclusion_source"])
+
+    def test_selector_cannot_downgrade_required_source_or_double_charge_pin(self):
+        for pinned in (False, True):
+            with self.subTest(pinned=pinned):
+                item = self._item("REQ", "plan", authority="active_plan", stages=["draft"], tokens=8, required=True, pinned=pinned)
+                pool = build_candidate_pool(run_id="RUN-CTX", stage_id="draft", items=[item])
+                choice = {"selections": [{"profile_id": item["profile"]["profile_id"], "stage_id": "draft", "required_for_grounding": False}]}
+                original = deepcopy(choice)
+                decision = validate_context_decision(pool, choice, selector={"kind": "fixture"})
+                self.assertEqual(original, choice)
+                self.assertTrue(decision["selected"][0]["required_for_grounding"])
+                green = pack_budget(decision, hard_budget=8)
+                self.assertEqual(["REQ"], green["loaded_object_ids"])
+                self.assertEqual(8, green["estimated_tokens"])
+                self.assertTrue(pack_budget(decision, hard_budget=7)["grounding_incomplete_due_budget"])
+
+    def test_task_pin_cannot_override_eligibility_or_freeze_incomplete_budget(self):
+        base = self._item("PLAN-BOUND", "plan", authority="active_plan", stages=["draft"], tokens=8, pinned=True)
+        base["pinned_stages"] = ["draft"]
+        mutations = {
+            "visibility_hidden": {"hidden": True},
+            "stage_ineligible": {"stages": ["continuity"]},
+            "lifecycle_ineligible": {"lifecycle": "superseded"},
+            "profile_stale": {"source_fingerprint": fingerprint("new plan")},
+            "semantic_profile_missing": {"profile": None},
+        }
+        for reason, mutation in mutations.items():
+            with self.subTest(reason=reason):
+                item = {**deepcopy(base), **mutation}
+                pool = build_candidate_pool(run_id="RUN-CTX", stage_id="draft", items=[item])
+                result = validate_context_decision(pool, {"selections": []}, selector={"kind": "fixture"})
+                self.assertEqual("required_context_unavailable", result["status"])
+                self.assertEqual(reason, result["errors"][0]["exclusion"]["code"])
+                self.assertEqual([], result["pinned_inputs"])
+        research = self._item("RESEARCH", "research", authority="research", lifecycle="active", stages=["character_simulation"], pinned=True)
+        pool = build_candidate_pool(run_id="RUN-CTX", stage_id="character_simulation", items=[research])
+        result = validate_context_decision(pool, {"selections": []}, selector={"kind": "fixture"})
+        self.assertEqual("research_not_character_knowledge", result["errors"][0]["exclusion"]["code"])
+        pool = build_candidate_pool(run_id="RUN-CTX", stage_id="draft", items=[base])
+        decision = validate_context_decision(pool, {"selections": []}, selector={"kind": "fixture"})
+        green = pack_budget(decision, hard_budget=7)
+        self.assertTrue(green["grounding_incomplete_due_budget"])
+        with self.assertRaisesRegex(ValueError, "hard budget"):
+            freeze_context(run_id="RUN-CTX", task_mode="DRAFT", pools=[pool], greenlights=[green])
+
+    def test_pin_binding_changes_fingerprints_without_rewriting_profile_content(self):
+        item = self._item("PLAN", "plan", authority="active_plan", stages=["draft"])
+        unpinned_pool = build_candidate_pool(run_id="RUN-CTX", stage_id="draft", items=[item])
+        pinned = {**deepcopy(item), "pinned": True, "required_for_grounding": True}
+        pool = build_candidate_pool(run_id="RUN-CTX", stage_id="draft", items=[pinned])
+        self.assertEqual(item["source_fingerprint"], pinned["source_fingerprint"])
+        self.assertEqual(item["profile"], pinned["profile"])
+        self.assertNotEqual(unpinned_pool["candidate_universe_fingerprint"], pool["candidate_universe_fingerprint"])
+        green = pack_budget(validate_context_decision(pool, {"selections": []}, selector={"kind": "fixture"}), hard_budget=100)
+        frozen = freeze_context(run_id="RUN-CTX", task_mode="DRAFT", pools=[pool], greenlights=[green])
+        self.assertTrue(validate_freeze(frozen, {"PLAN": pinned["source_fingerprint"]}, {"PLAN": pinned})["proceed"])
+        self.assertFalse(validate_freeze(frozen, {"PLAN": item["source_fingerprint"]}, {"PLAN": item})["proceed"])
+        self.repo.save_stage_selection("PCTX", pool, green)
+        self.repo.save_freeze("PCTX", frozen)
+        restored = self.repo.get_freeze("PCTX", run_id="RUN-CTX")
+        self.assertEqual(green["pinned_inputs"], restored["stage_greenlights"]["draft"]["pinned_inputs"])
+        self.assertEqual([], restored["stage_greenlights"]["draft"]["selected_object_ids"])
 
     # 11
     def test_context_freeze_fingerprint_is_reproducible(self):
@@ -323,6 +414,124 @@ class ContextRuntimeTests(unittest.TestCase):
         self.assertEqual(pools[1]["excluded"][0]["exclusion"]["code"], "stage_ineligible")
         state["lifecycle"] = "invalidated"
         self.assertFalse(validate_freeze(frozen, {item["object_id"]: item["source_fingerprint"]}, {item["object_id"]: state})["proceed"])
+
+    def _bound_plan_sources(self):
+        with self.store.open_project("PCTX") as conn:
+            conn.executemany("INSERT INTO story_nodes(node_id,parent_id,kind,ordinal,title) VALUES(?,?,?,?,?)", [
+                ("BOOK-CURRENT", None, "book", 0, "Current book"),
+                ("BOOK-OTHER", None, "book", 1, "Other book"),
+                ("CH-CURRENT", "BOOK-CURRENT", "chapter", 2, "Current chapter"),
+                ("CH-FUTURE", "BOOK-CURRENT", "chapter", 3, "Future chapter"),
+            ])
+            plans = [
+                ("PLAN-CURRENT", "PLAN-CHAPTER", "chapter:CH-CURRENT", "active"),
+                ("PLAN-BOOK", "DESIGN-BOOK", "book", "active"),
+                ("PLAN-ANCESTOR", "DESIGN-BOOK", "BOOK-CURRENT", "active"),
+                ("PLAN-OTHER", "DESIGN-BOOK", "BOOK-OTHER", "active"),
+                ("PLAN-FUTURE", "PLAN-CHAPTER", "chapter:CH-FUTURE", "active"),
+                ("PLAN-PROPOSAL", "PLAN-CHAPTER", "chapter:CH-CURRENT", "proposal"),
+                ("PLAN-COMPLETED", "PLAN-CHAPTER", "chapter:CH-CURRENT", "completed"),
+                ("PLAN-SUPERSEDED", "PLAN-CHAPTER", "chapter:CH-CURRENT", "superseded"),
+            ]
+            for oid, mode, target, status in plans:
+                payload = {"content": "Synthetic planning input " + oid}
+                conn.execute("INSERT INTO plans(plan_id,task_mode,target_id,status,plan_json,content_fingerprint,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)",
+                             (oid, mode, target, status, json.dumps(payload), fingerprint(payload), "fixture", "fixture"))
+            conn.commit()
+        self.store.create_document("PCTX", "DOC-CURRENT", "Current manuscript", story_node_id="CH-CURRENT")
+        self.store.create_document("PCTX", "DOC-FUTURE", "Future manuscript", story_node_id="CH-FUTURE")
+        loader = ProjectContextSourceLoader(self.store, self.repo)
+        target = {"chapter_id": "CH-CURRENT", "document_id": "DOC-CURRENT", "current_story_order": 2, "current_reading_order": 2}
+        for item in loader.load("PCTX", **target):
+            self.repo.save_profile("PCTX", self._profile(item["object_id"], item["object_type"], source_fp=item["source_fingerprint"], stages=item["stages"], tokens=8))
+        return loader, target, loader.load("PCTX", **target)
+
+    def test_plan_source_binding_is_exact_active_and_hidden_from_blind_stages(self):
+        loader, target, items = self._bound_plan_sources()
+        by_id = {item["object_id"]: item for item in items}
+        required = {"PLAN-CURRENT", "PLAN-BOOK", "PLAN-ANCESTOR"}
+        self.assertEqual(required, {item["object_id"] for item in items if item["pinned"]})
+        self.assertNotIn("PLAN-OTHER", by_id)
+        self.assertNotIn("PLAN-FUTURE", by_id)
+        self.assertTrue(all(by_id[oid]["authority"] == "active_plan" for oid in required))
+        before = loader.state_projection(items)
+        without_pins = [{**item, "pinned": False, "pinned_stages": [], "required_for_grounding": False} for item in items]
+        after = loader.state_projection(without_pins)
+        self.assertEqual(before[0], after[0])
+        self.assertNotEqual(before[2], after[2])
+        for stage in (*EDITOR_STAGE_IDS, *sorted(BLIND_READER_STAGES)):
+            with self.subTest(stage=stage):
+                pool = build_candidate_pool(run_id="RUN-CTX", stage_id=stage, items=items)
+                decision = validate_context_decision(pool, {"selections": []}, selector={"kind": "fixture"})
+                self.assertTrue(decision["proceed"])
+                green = pack_budget(decision, hard_budget=100)
+                self.assertEqual(set() if stage in BLIND_READER_STAGES else required, set(green["loaded_object_ids"]))
+                self.assertFalse({"PLAN-COMPLETED", "PLAN-SUPERSEDED"}.intersection(row["object_id"] for row in pool["eligible"]))
+        with self.assertRaises(ProductionRunError) as error:
+            loader.load("PCTX", **{**target, "document_id": "DOC-FUTURE"})
+        self.assertEqual("target_context_invalid", error.exception.code)
+
+    def test_production_context_preserves_optional_selection_and_binds_saved_plans(self):
+        _, _, items = self._bound_plan_sources()
+        profiles = {item["object_id"]: deepcopy(item["profile"]) for item in items}
+        calls = []
+        responses = {}
+
+        def invoke(job):
+            self.assertEqual("context_selector", job.runtime_role)
+            calls.append(job)
+            packet = job.context[0]
+            self.assertFalse({"PLAN-CURRENT", "PLAN-BOOK", "PLAN-ANCESTOR"}.intersection(row["object_id"] for row in packet["eligible"]))
+            choice = packet["eligible"][0]
+            result = {"selections": [{"profile_id": choice["profile_id"], "stage_id": packet["stage_id"], "priority": 1,
+                                      "reason_code": "fixture", "reason": "only optional fixture input", "required_for_grounding": False}]}
+            responses[packet["stage_id"]] = deepcopy(result)
+            return AgentResult(job_id=job.job_id, session_id=job.session_id, run_id=job.run_id, status="completed",
+                               input_fingerprint=job.input_fingerprint, model_service_id=job.service_id, model_id="fixture", protocol="fixture",
+                               final_text=json.dumps(result), steps=1, model_requests=1)
+
+        run_id = CoreOperations(self.store).start_author_run("PCTX", task_mode="DRAFT", target_ref="DOC-CURRENT",
+                                                           payload={"chapter_id": "CH-CURRENT", "instruction": "Use the saved current plans."})["run_id"]
+        runtime = ProductionContextRuntime(self.store, SimpleNamespace(run=invoke))
+        bundle = runtime.prepare_context("PCTX", run_id, service_id="fixture", instruction="Use the saved current plans.")
+        self.assertTrue(calls)
+        for stage, green in bundle["freeze"]["stage_greenlights"].items():
+            if stage in BLIND_READER_STAGES:
+                self.assertEqual([], green["pinned_inputs"])
+                self.assertEqual([], stage_context(bundle["freeze"], stage)["selected"])
+                continue
+            self.assertEqual([row["profile_id"] for row in responses[stage]["selections"]], green["selected_profile_ids"])
+            self.assertEqual({"PLAN-CURRENT", "PLAN-BOOK", "PLAN-ANCESTOR"}, set(green["pinned_object_ids"]))
+            self.assertTrue(set(green["pinned_object_ids"]).issubset(green["loaded_object_ids"]))
+        saved = runtime._latest_bundle("PCTX", run_id)
+        self.assertEqual(bundle["bundle_fingerprint"], saved["bundle_fingerprint"])
+        self.assertEqual(bundle["freeze"], self.repo.get_freeze("PCTX", run_id=run_id))
+        self.assertTrue(runtime._validate_bundle_current("PCTX", bundle)["proceed"])
+        current_profiles = {profile["source_object_id"]: profile for profile in self.repo.list_profiles("PCTX") if profile["status"] == "current"}
+        self.assertEqual(profiles, current_profiles)
+        with self.store.open_project("PCTX") as conn:
+            conn.execute("UPDATE plans SET plan_json=? WHERE plan_id='PLAN-CURRENT'", (json.dumps({"content": "Changed synthetic plan"}),))
+            conn.commit()
+        self.assertFalse(runtime._validate_bundle_current("PCTX", bundle)["proceed"])
+        changed = runtime._load_sources("PCTX", runtime._run_row("PCTX", run_id)["target_context"])
+        plan = next(item for item in changed if item["object_id"] == "PLAN-CURRENT")
+        self.assertNotEqual(plan["source_fingerprint"], plan["profile"]["source_fingerprint"])
+
+    def test_production_required_input_budget_or_permission_blocks_before_selector(self):
+        _, _, items = self._bound_plan_sources()
+        calls = []
+        runtime = ProductionContextRuntime(self.store, SimpleNamespace(run=lambda job: calls.append(job)))
+        run_id = CoreOperations(self.store).start_author_run("PCTX", task_mode="DRAFT", target_ref="DOC-CURRENT", payload={"chapter_id": "CH-CURRENT"})["run_id"]
+        with self.assertRaises(ProductionRunError) as error:
+            runtime.prepare_context("PCTX", run_id, service_id="fixture", instruction="Fixture", stage_budgets={"draft": 23})
+        self.assertEqual("grounding_incomplete_due_budget", error.exception.code)
+        restricted = deepcopy(items)
+        next(item for item in restricted if item["object_id"] == "PLAN-CURRENT")["stages"] = []
+        with patch.object(runtime.loader, "load", return_value=restricted), self.assertRaises(ProductionRunError) as error:
+            runtime.prepare_context("PCTX", run_id, service_id="fixture", instruction="Fixture")
+        self.assertEqual("required_context_unavailable", error.exception.code)
+        self.assertEqual([], calls)
+        self.assertIsNone(runtime._latest_bundle("PCTX", run_id))
 
     def test_character_projection_is_multi_character_state_not_persona(self):
         out = project_character_context({"character_id":"CHAR-X","identity":{"name":"X"},"agenda":"win","knowledge_boundary":["INFO-1"],"current_task":"negotiate","location":"LOC-1","relationship_state":{"REL-1":"strained"},"emotional_carryover":"angry","stakes":"job","misbeliefs":["M1"],"scene_presence":True,"known_facts":["K"],"unknown_facts":["U"]})

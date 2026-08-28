@@ -8,9 +8,13 @@ A Quillframe DRAFT or REVISE run is an adaptive production graph. The graph has 
 
 Resolve the exact framework/project authority for the run, establish session/run identity, select only task-relevant context, and verify stage/fingerprint boundaries. Future Plan outcomes cannot leak into current state. Regression bad examples and hidden expected labels stay out of first-pass generation.
 
+The active plan for the exact target chapter and its owning book are bound task inputs in eligible planning and production stages. Core records these required inputs separately from the model's optional relevance selections; the selector cannot silently omit them. They remain subject to permission, invalidation, story-time and hard-budget checks, and are excluded from blind-reader and independent-review packets. This binding does not make planned events accepted facts.
+
 ## 2. Simulate before prose
 
 Story/Canon preflight, scene simulation, private character state, character action proposals, scene action resolution, and Reader Pressure establish causes, agendas, knowledge boundaries, pressure, reward, and forward pull before surface realization.
+
+Preflight checks whether the exact target has the required materials and whether proposed work conflicts with established facts or explicit hard constraints. Original fiction may start with empty Canon. Non-authoritative source descriptors do not prohibit the dispatched worker from making an internal proposal, and `db_fetch_performed=false` does not invalidate supplied frozen content. Neither permits fresh lookups, changes actual execution evidence or grants write authority. Missing required material and real contradictions still fail; continuity later checks the candidate rather than treating its pending acceptance as a defect. Rejected runs retain their original judgments and require a fresh run after a framework repair.
 
 ## 3. Generate an internal candidate
 

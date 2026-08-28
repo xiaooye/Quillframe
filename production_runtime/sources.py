@@ -31,12 +31,15 @@ def _json(value: str | None, fallback: Any) -> Any:
 
 def _source(*, object_id: str, object_type: str, authority: str, lifecycle: str,
             domain: str, model_view: dict[str, Any], profile: dict[str, Any] | None,
-            status: str | None = None, stages: tuple[str, ...] = EDITOR_STAGE_IDS) -> dict[str, Any]:
+            status: str | None = None, stages: tuple[str, ...] = EDITOR_STAGE_IDS,
+            pinned: bool = False) -> dict[str, Any]:
     assert_secret_free(model_view, label=f"context source {object_id}")
     return {
         "object_id": object_id, "object_type": object_type, "authority": authority,
         "lifecycle": lifecycle, "domain": domain, "source_fingerprint": fingerprint(model_view),
         "stages": list(stages), "model_view": model_view, "profile": profile, "status": status,
+        "pinned": pinned, "required_for_grounding": pinned,
+        "pinned_stages": list(stages) if pinned else [],
     }
 
 
@@ -70,14 +73,17 @@ class ProjectContextSourceLoader:
             if not isinstance(story_order, int) or isinstance(story_order, bool) or story_order != current_story_order or target["ordinal"] != current_reading_order:
                 raise ProductionRunError("target_context_invalid", "chapter ordering changed since the author request")
             ancestor_ids = {chapter_id}
+            book_plan_targets = {"book"}
             parent_id = target["parent_id"]
             while parent_id is not None:
                 if parent_id in ancestor_ids:
                     raise ProductionRunError("target_context_invalid", "story hierarchy contains a cycle")
                 ancestor_ids.add(parent_id)
-                parent = conn.execute("SELECT parent_id FROM story_nodes WHERE node_id=?", (parent_id,)).fetchone()
+                parent = conn.execute("SELECT parent_id,kind FROM story_nodes WHERE node_id=?", (parent_id,)).fetchone()
                 if parent is None:
                     raise ProductionRunError("target_context_invalid", "chapter hierarchy has a missing parent")
+                if parent["kind"] == "book":
+                    book_plan_targets.add(parent_id)
                 parent_id = parent["parent_id"]
             history = self._settled_history(conn, current_reading_order)
             history_ids = {item["story_node_id"] for item in history}
@@ -132,7 +138,13 @@ class ProjectContextSourceLoader:
                     continue
                 status = str(row["status"]); authority = "active_plan" if status in {"active", "completed"} else "proposal"; lifecycle = "superseded" if status in {"superseded", "completed"} else authority
                 view = {"plan_id": row["plan_id"], "task_mode": row["task_mode"], "target_id": row["target_id"], "plan": _json(row["plan_json"], {})}
-                items.append(_source(object_id=row["plan_id"], object_type="plan", authority=authority, lifecycle=lifecycle, domain="plan", model_view=view, profile=p(row["plan_id"]), status=status))
+                # The exact manuscript/chapter association was verified above.
+                # Its active plans are task inputs, not a relevance ranking or Canon.
+                pinned = status == "active" and (
+                    row["task_mode"] == "PLAN-CHAPTER" and target_id in {chapter_id, "chapter:" + chapter_id}
+                    or row["task_mode"] == "DESIGN-BOOK" and target_id in book_plan_targets
+                )
+                items.append(_source(object_id=row["plan_id"], object_type="plan", authority=authority, lifecycle=lifecycle, domain="plan", model_view=view, profile=p(row["plan_id"]), status=status, pinned=pinned))
             for row in conn.execute("SELECT * FROM canon_claims ORDER BY claim_id"):
                 authority = str(row["authority_class"])
                 if authority not in {"accepted", "locked"} or not source_is_visible(row["evidence_ref"]):
@@ -214,5 +226,5 @@ class ProjectContextSourceLoader:
     @staticmethod
     def state_projection(items: list[dict[str, Any]]) -> tuple[dict[str, str], dict[str, dict[str, Any]], str]:
         fingerprints = {str(item["object_id"]): str(item["source_fingerprint"]) for item in items}
-        states = {str(item["object_id"]): {"source_fingerprint": item["source_fingerprint"], "authority": item["authority"], "lifecycle": item["lifecycle"], "domain": item["domain"], "stages": item["stages"], "exclusion": None} for item in items}
+        states = {str(item["object_id"]): {"source_fingerprint": item["source_fingerprint"], "authority": item["authority"], "lifecycle": item["lifecycle"], "domain": item["domain"], "stages": item["stages"], "pinned": bool(item.get("pinned")), "pinned_stages": item.get("pinned_stages", []), "required_for_grounding": bool(item.get("required_for_grounding")), "exclusion": None} for item in items}
         return fingerprints, states, fingerprint({key: states[key] for key in sorted(states)})

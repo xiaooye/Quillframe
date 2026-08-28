@@ -472,6 +472,13 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.assertFalse(any(job.runtime_role == "independent_semantic_gate" for job in fake.calls))
         self.assertIn("registered_reader_engagement", [job.runtime_role for job in fake.calls])
         self.assertIn("registered_candidate_self_audit", [job.runtime_role for job in fake.calls])
+        target = runtime._target_context(runtime._latest_bundle("PROD", run_id))
+        for job in fake.calls:
+            if job.runtime_role in {"story_canon_preflight", "event_first_raw_draft", "surface_realization", "continuity"}:
+                self.assertEqual(job.context[0]["target_context"], target)
+                self.assertFalse(job.context[0]["frozen_stage_context"]["authority"])
+                self.assertFalse(job.context[0]["frozen_stage_context"]["db_fetch_performed"])
+                self.assertEqual(job.authority, {})
         packet = frozen_packet(self.store, run_id)
         self.assertTrue(packet["return_binding"]["fresh_conversation_required"])
         self.assertTrue(packet["return_binding"]["same_project_writer_chat_forbidden"])
@@ -910,16 +917,23 @@ class ProductionRuntimeTests(unittest.TestCase):
                     self.assertEqual(1, len(failures))
                     self.assertEqual(mechanism, failures[0]["mechanism"])
                     assert_public_execution_safe(self, failures)
-        fake = FakeAgentRuntime(reject_mechanism="story_canon_preflight")
-        runtime = ProductionRunExecutor(self.store, fake)
-        run_id = self.start()
-        self.assertEqual("failed_gate", self.execute_to_handoff(runtime, run_id)["status"])
-        calls = len(fake.calls)
-        with self.assertRaises(ProductionRunError) as rejected:
-            runtime.resume_execution("PROD", run_id)
-        self.assertEqual("failed_gate_requires_fresh_run", rejected.exception.code)
-        self.assertEqual("failed_gate", runtime.status("PROD", run_id)["status"])
-        self.assertEqual(calls, len(fake.calls))
+        for mechanism in ("story_canon_preflight", "continuity"):
+            with self.subTest(rejected_mechanism=mechanism):
+                fake = FakeAgentRuntime(reject_mechanism=mechanism)
+                runtime = ProductionRunExecutor(self.store, fake)
+                run_id = self.start()
+                self.assertEqual("failed_gate", self.execute_to_handoff(runtime, run_id)["status"])
+                self.assertEqual(mechanism, fake.calls[-1].runtime_role)
+                calls = len(fake.calls)
+                with self.assertRaises(ProductionRunError) as rejected:
+                    runtime.resume_execution("PROD", run_id)
+                self.assertEqual("failed_gate_requires_fresh_run", rejected.exception.code)
+                self.assertEqual("failed_gate", runtime.status("PROD", run_id)["status"])
+                self.assertEqual(calls, len(fake.calls))
+                with self.store.open_project("PROD") as conn:
+                    stored = json.loads(conn.execute("SELECT result_json FROM production_stage_calls WHERE run_id=? AND runtime_role=?", (run_id, mechanism)).fetchone()[0])
+                    self.assertEqual("fail", json.loads(stored["final_text"])["status"])
+                    self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0])
 
     def test_narrative_source_metadata_cannot_be_copied_into_replacement_fields(self):
         from production_runtime.semantic import narrative_field_contracts
