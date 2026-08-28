@@ -1,0 +1,99 @@
+format_version: 1
+purpose: bounded_research_metadata_not_runtime_or_corpus_ingestion_receipt
+observed_at: '2026-08-28'
+primary_task_mode: RESEARCH
+implementation_status: proposed_not_implemented
+inspected_quillframe_commit: 2053e854049c00780c4fc2027657a7ec6c7fbd5f
+external_skills_installed: false
+external_code_imported: false
+new_production_model_calls: 0
+novel_full_text_stored: false
+novel_text_sent_to_writer: false
+named_author_imitation_profile_created: false
+quality_improvement_verified: false
+sources:
+  - id: oh-story-craft
+    repository: https://github.com/zenstory-ai/oh-story-claudecode
+    prior_repository_redirect: https://github.com/worldwonderer/oh-story-claudecode
+    commit: 66d61809084ec4c5902b659af24ce2acdfa2ed42
+    license_observed: MIT
+    inspected_files:
+      - skills/story-long-write/references/writing-craft.md
+      - demo/craft-stock-reaction-eval/README.md
+    evidence_type: implementation_guidance_and_author_reported_exploratory_experiment
+    experiment_independently_reproduced: false
+    storage: source_metadata_and_original_analysis_only
+  - id: chinese-webnovel-skills
+    repository: https://github.com/tance-mang/chinese-webnovel-skills
+    commit: ecf552f6930e769d8bbf17818ad3d5a864a7a70b
+    license_observed: MIT
+    inspected_files:
+      - skills/expand/SKILL.md
+      - skills/dialogue/SKILL.md
+      - references/human-texture.md
+      - references/pov-guide.md
+      - references/case-studies.md
+    evidence_type: implementation_guidance_not_verified_quality
+    repository_case_studies_used_as_primary_fiction_evidence: false
+    storage: source_metadata_and_original_analysis_only
+  - id: ani-book-humanization
+    repository: https://github.com/ExplosiveCoderflome/ani-book-skill
+    commit: 44a0eb216eee234101af1984df20726713b7690e
+    license_observed: Apache-2.0
+    inspected_files: [references/chinese-novel-humanization.md]
+    evidence_type: implementation_guidance_not_verified_quality
+    storage: source_metadata_and_original_analysis_only
+  - id: webnovel-writer-craft
+    repository: https://github.com/lingfengQAQ/webnovel-writer
+    commit: 2041abad78211e29a67a2f0c64b2a97a747dce57
+    license_observed: GPL-3.0
+    inspected_files: [webnovel-writer/references/csv/写作技法.csv]
+    evidence_type: implementation_guidance_not_verified_quality
+    storage: source_metadata_and_original_analysis_only
+  - id: novel-architect-chapter
+    repository: https://github.com/zhougz520/novel-architect
+    commit: 8be80352257f98151921d89200e63464759a329f
+    license_observed: Apache-2.0
+    inspected_files: [docs/guides/chapter-workflow.md]
+    evidence_type: implementation_guidance_not_verified_quality
+    storage: source_metadata_and_original_analysis_only
+  - id: fanqie-zhanshen-opening
+    title: 我在精神病院学斩神
+    creator: 三九音域
+    url: https://fanqienovel.com/reader/6982735801973113351
+    inspected_scope: chapter_1_black_blindfold_complete
+    retrieval: official_public_page_and_browser_rendered_visible_text
+    rights_class: analysis_only
+    rights_basis: official_free_public_chapter_access_for_bounded_commentary_not_redistribution
+    storage: source_metadata_and_brief_original_analysis_only
+  - id: jjwxc-nanhong-opening
+    title: 难哄
+    creator: 竹已
+    url: https://www.jjwxc.net/onebook.php?novelid=4001734&chapterid=1
+    inspected_scope: complete_chapter_1
+    retrieval: official_public_page
+    rights_class: analysis_only
+    rights_basis: official_free_public_chapter_access_for_bounded_commentary_not_redistribution
+    storage: source_metadata_and_brief_original_analysis_only
+  - id: fanqie-opening-lesson
+    title: 开篇五步走，轻松拿捏读者期待感（上）
+    url: https://fanqienovel.com/writer/zone/article/7480087779494346776
+    inspected_scope: complete_article_text
+    retrieval: official_public_page_and_browser_rendered_visible_text
+    rights_class: analysis_only
+    rights_basis: official_public_author_lesson_for_bounded_commentary_not_redistribution
+    storage: source_metadata_and_brief_original_analysis_only
+  - id: fanqie-character-lesson
+    title: 告别“工具人”，让配角和反派真正“活”起来
+    url: https://fanqienovel.com/writer/zone/article/7651510334422777881
+    inspected_scope: complete_article_text_not_image_templates
+    retrieval: official_public_page_and_browser_rendered_visible_text
+    rights_class: analysis_only
+    rights_basis: official_public_author_lesson_for_bounded_commentary_not_redistribution
+    storage: source_metadata_and_brief_original_analysis_only
+boundaries:
+  - observation_date_is_not_repository_commit_date
+  - popularity_and_skill_counts_are_not_quality_scores
+  - access_does_not_grant_redistribution_or_imitation_permission
+  - model_review_is_not_author_satisfaction_or_market_retention
+  - no_automatic_framework_promotion_or_project_preference_activation

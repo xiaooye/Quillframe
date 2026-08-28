@@ -28,3 +28,7 @@ Status: implementation research, not a reader-retention result. Repository obser
 The product goal is reader engagement: worthwhile questions, attachment to characters, meaningful choices, perceptible payoff and a reason to continue. A model judgment is a diagnostic prediction. Human reading and explicit author decisions remain distinct evidence.
 
 Use four development cases and six held-out cases. Cap every experiment round at 64 actual calls including context selection, critics and repair. Record incomplete rounds honestly. The single-chapter, three-chapter and twelve-chapter chain requires author confirmation between chapters; deterministic tests and created chapter rows do not satisfy it. No market-retention or million-word-consistency claim is made.
+
+## Subsequent prose research
+
+[2026-08-28: Chinese webnovel prose and reader calibration](prose-quality-research.en.md) adds concrete skill files, official public opening chapters, and an inspection of actual prompt wiring. This unimplemented research proposal does not revise the historical adoption record or establish a quality improvement.
