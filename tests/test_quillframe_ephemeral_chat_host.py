@@ -7,9 +7,11 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
+from dataclasses import replace
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SEMANTIC = ROOT / "harness" / "semantic_workers"
@@ -18,7 +20,7 @@ for path in (ROOT, SEMANTIC, EVALS):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from harness.integrations import chat_host_relay
+from harness.integrations import chat_host_relay, codex_cli_relay
 from peer_bridge_receipt import (
     build_receipt,
     fingerprint as receipt_fingerprint,
@@ -513,6 +515,275 @@ class EphemeralChatHostTests(unittest.TestCase):
                 with patch.dict(os.environ, {"QUILLFRAME_FROZEN_PACKET_SHA256": "sha256:" + "0" * 64}, clear=False):
                     with self.assertRaises(SystemExit):
                         module.load_frozen_packet()
+
+
+class CodexCliRelayTests(unittest.TestCase):
+    THREAD_ID = "0199a213-81c0-7800-8aa1-bbab2a035a53"
+    FINAL = '{"result":"fixture", "text":"bounded \u4e2d\u6587"}\r\n'
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="qf-cli-relay-test-")
+        self.addCleanup(self.temp.cleanup)
+        self.queue = Path(self.temp.name) / "queue"
+        self.queue.mkdir()
+        self.config = codex_cli_relay.DriverConfig(
+            queue=self.queue, cli_binary="fixture-codex", run_id="RUN-FIXTURE",
+            source_snapshot_sha256="a" * 64, model="fixture-model",
+            reasoning_effort="high", allow_model_execution=True,
+        )
+        self.messages = [
+            {"role": "system", "content": "Return the exact response requested by this fixture."},
+            {"role": "user", "content": "Message values stay intact.\r\nUnicode: \u4e2d\u6587"},
+        ]
+
+    def packet(self, *, request_id=None, created=None):
+        request_id = request_id or "req_" + "b" * 32
+        path = self.queue / f"{request_id}.request.json"
+        path.write_bytes(codex_cli_relay.json_bytes({
+            "schema": chat_host_relay.SCHEMA, "request_id": request_id,
+            "created_at_unix": time.time() if created is None else created,
+            "request": {"messages": self.messages}, "manager_transport": True,
+            "independent_review_evidence": False, "authority": False,
+        }))
+        return path
+
+    def events(self, final=None):
+        return [
+            {"type": "thread.started", "thread_id": self.THREAD_ID},
+            {"type": "turn.started"},
+            {"type": "item.completed", "item": {"id": "item_0", "type": "reasoning", "text": "PRIVATE-REASONING-SENTINEL"}},
+            {"type": "item.completed", "item": {"id": "item_1", "type": "agent_message", "text": self.FINAL if final is None else final}},
+            {"type": "turn.completed", "usage": {"input_tokens": 5, "cached_input_tokens": 0, "output_tokens": 3, "reasoning_output_tokens": 1}},
+        ]
+
+    def raw_events(self, events=None):
+        return b"".join(codex_cli_relay.json_bytes(event) + b"\n" for event in (self.events() if events is None else events))
+
+    def run_mock(self, *, driver=None, packet=None, events=None, output=True, on_launch=None, returncode=0, timeout=False):
+        driver = driver or codex_cli_relay.RelayDriver(self.config)
+        packet = packet or self.packet()
+        observed = {}
+        process = Mock(pid=4242, returncode=returncode)
+        stdout = self.raw_events(events)
+        process.communicate.return_value = (stdout, b"PRIVATE-STDERR-SENTINEL")
+        if timeout:
+            process.communicate.side_effect = [subprocess.TimeoutExpired("fixture-codex", 1), (stdout, b"")]
+
+        def popen(command, **kwargs):
+            observed.update(command=command, **kwargs)
+            observed["cwd_initial_entries"] = list(Path(kwargs["cwd"]).iterdir())
+            target = Path(command[command.index("--output-last-message") + 1])
+            if output is not None:
+                target.write_bytes(self.FINAL.encode("utf-8") if output is True else output)
+            if on_launch is not None:
+                on_launch()
+            return process
+
+        with patch.object(codex_cli_relay.subprocess, "Popen", side_effect=popen) as spawn:
+            result = driver.process_request(packet)
+        observed["process"] = process
+        observed["spawn_count"] = spawn.call_count
+        return result, observed
+
+    def test_cli_exact_bytes_actual_thread_and_redacted_process_evidence(self):
+        original_write = codex_cli_relay._exclusive_write
+
+        def check_publication_order(path, raw):
+            if path.name.endswith(".response.json"):
+                prior = codex_cli_relay.read_ledger(self.queue)
+                self.assertEqual(prior[-1]["event"], "cli_finished")
+                self.assertEqual(prior[-1]["thread_id"], self.THREAD_ID)
+                self.assertTrue((self.queue / prior[-1]["events_file"]).exists())
+            return original_write(path, raw)
+
+        with patch.dict(os.environ, {
+            "CODEX_HOME": "fixture-auth-home", "CODEX_THREAD_ID": "parent-must-not-reach-worker",
+            "OPENAI_API_KEY": "api-key-must-not-reach-worker", "UNRELATED_PROJECT_SECRET": "secret",
+        }), patch.object(codex_cli_relay, "_exclusive_write", side_effect=check_publication_order):
+            result, observed = self.run_mock()
+        self.assertEqual(result["status"], "submitted")
+        self.assertEqual(result["thread_id"], self.THREAD_ID)
+        self.assertFalse(result["independent_review_evidence"])
+        self.assertEqual(observed["cwd_initial_entries"], [])
+        self.assertFalse(Path(observed["cwd"]).is_relative_to(self.queue))
+        self.assertFalse(Path(observed["cwd"]).exists())
+        prompt = observed["process"].communicate.call_args.kwargs["input"]
+        prefix = codex_cli_relay.TRANSPORT_INSTRUCTION.encode("utf-8")
+        self.assertTrue(prompt.startswith(prefix))
+        self.assertEqual(json.loads(prompt[len(prefix):]), self.messages)
+        self.assertEqual(observed["env"]["CODEX_HOME"], "fixture-auth-home")
+        self.assertTrue({"CODEX_THREAD_ID", "OPENAI_API_KEY", "UNRELATED_PROJECT_SECRET"}.isdisjoint(observed["env"]))
+        command = observed["command"]
+        self.assertTrue({"--json", "--ephemeral", "--ignore-user-config", "read-only", "skip_host_skill_discovery"}.issubset(command))
+        self.assertTrue({"resume", "fork", "--ignore-rules", "--dangerously-bypass-approvals-and-sandbox"}.isdisjoint(command))
+        self.assertIn("project_doc_max_bytes=0", command)
+        self.assertIn("unbounded_connection_retries", command)
+        rows = codex_cli_relay.read_ledger(self.queue)
+        self.assertEqual([row["event"] for row in rows], ["cli_started", "cli_finished", "submitted"])
+        self.assertEqual(codex_cli_relay.used_calls(rows), 1)
+        self.assertNotIn("spawn_tool_result", rows[-1])
+        self.assertEqual(rows[-1]["host_provider"], "codex_cli")
+        for key in ("output_file", "response_file"):
+            self.assertFalse(Path(rows[-1][key]).is_absolute())
+            self.assertNotIn("\\", rows[-1][key])
+        output = (self.queue / rows[-1]["output_file"]).read_bytes()
+        self.assertEqual(output, self.FINAL.encode("utf-8"))
+        response_bytes = (self.queue / rows[-1]["response_file"]).read_bytes()
+        self.assertEqual(json.loads(response_bytes)["content"].encode("utf-8"), output)
+        self.assertEqual(json.loads(response_bytes)["usage"], self.events()[-1]["usage"])
+        self.assertEqual(rows[-2]["usage"], self.events()[-1]["usage"])
+        self.assertEqual(rows[-1]["response_file_sha256"], hashlib.sha256(response_bytes).hexdigest())
+        evidence = (self.queue / result["events_file"]).read_bytes()
+        ledger = (self.queue / "calls.jsonl").read_bytes()
+        self.assertEqual(result["events_sha256"], hashlib.sha256(evidence).hexdigest())
+        self.assertIn(codex_cli_relay.json_bytes(self.events()[0]), evidence)
+        for private in (b"PRIVATE-REASONING-SENTINEL", b"PRIVATE-STDERR-SENTINEL", self.FINAL.encode("utf-8")):
+            self.assertNotIn(private, evidence)
+            self.assertNotIn(private, ledger)
+
+    def test_cli_ledger_preserves_legacy_budget_and_counts_prethread_failure(self):
+        old_rows = [{"event": "spawned", "request_id": f"req_{index:032x}", "sequence": index} for index in range(1, 37)]
+        old_rows.append({"event": "spawn_failed", "request_id": "req_" + "e" * 32, "sequence": 37})
+        old = b"".join(codex_cli_relay.json_bytes(row) + b"\n" for row in old_rows)
+        (self.queue / "calls.jsonl").write_bytes(old)
+        driver = codex_cli_relay.RelayDriver(self.config)
+        packet = self.packet()
+        with patch.object(codex_cli_relay.subprocess, "Popen", side_effect=FileNotFoundError("fixture")) as spawn:
+            result = driver.process_request(packet)
+        self.assertEqual(spawn.call_count, 1)
+        self.assertEqual(result["status"], "failed")
+        self.assertIsNone(result["thread_id"])
+        self.assertIsNone(result["returncode"])
+        self.assertTrue((self.queue / "calls.jsonl").read_bytes().startswith(old))
+        rows = codex_cli_relay.read_ledger(self.queue)
+        self.assertEqual(codex_cli_relay.used_calls(rows), 38)
+        self.assertEqual(rows[-2]["sequence"], 38)
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+        with patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+            self.assertIsNone(driver.process_request(packet))
+            with self.assertRaisesRegex(codex_cli_relay.RelayError, "failed_or_unconfirmed"):
+                driver.process_request(self.packet(request_id="req_" + "c" * 32))
+            spawn.assert_not_called()
+
+    def test_cli_requires_opt_in_and_reserves_review_budget(self):
+        for config, expected in (
+            (replace(self.config, allow_model_execution=False), "opt_in"),
+            (replace(self.config, manager_limit=64), "reserved_review_budget"),
+            (replace(self.config, worker_seconds=151), "worker_timeout"),
+        ):
+            with self.subTest(expected=expected), patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+                with self.assertRaisesRegex(codex_cli_relay.RelayError, expected):
+                    codex_cli_relay.RelayDriver(config).serve()
+                spawn.assert_not_called()
+        (self.queue / "calls.jsonl").write_bytes(b"".join(codex_cli_relay.json_bytes({"event": "cli_started", "request_id": f"req_{index:032x}"}) + b"\n" for index in range(63)))
+        driver = codex_cli_relay.RelayDriver(self.config)
+        packet = self.packet()
+        with patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+            with self.assertRaisesRegex(codex_cli_relay.RelayError, "budget_exhausted"):
+                driver.process_request(packet)
+            spawn.assert_not_called()
+
+    def test_cli_does_not_replay_existing_or_recorded_failed_requests(self):
+        packet = self.packet()
+        driver = codex_cli_relay.RelayDriver(self.config)
+        with patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+            self.assertIsNone(driver.process_request(packet))
+            request_id = "req_" + "c" * 32
+            packet = self.packet(request_id=request_id)
+            (self.queue / "calls.jsonl").write_bytes(codex_cli_relay.json_bytes({"event": "spawn_failed", "request_id": request_id}) + b"\n")
+            self.assertIsNone(driver.process_request(packet))
+            spawn.assert_not_called()
+
+    def test_cli_rejects_tools_failures_duplicates_and_unknown_event_fields(self):
+        cases = []
+        events = self.events()
+        events[0]["unexpected"] = "not accepted"
+        cases.append(events)
+        for extra in (
+            {"type": "item.started", "item": {"id": "tool_1", "type": "command_execution", "command": "forbidden"}},
+            {"type": "turn.failed", "error": {"message": "private error"}},
+            {"type": "error", "message": "private error"},
+            {"type": "unrecognized.event"},
+            {"type": "thread.started", "thread_id": self.THREAD_ID},
+            self.events()[3],
+            {"type": ["malformed"]},
+        ):
+            events = self.events()
+            events.insert(-1, extra)
+            cases.append(events)
+        cases.extend((self.events()[1:], self.events()[:-1]))
+        for events in cases:
+            with self.subTest(event_types=[item["type"] for item in events]):
+                audit = codex_cli_relay.audit_events(self.raw_events(events))
+                self.assertTrue(audit.errors)
+        tool_events = self.events()
+        tool_events.insert(2, {"type": "item.completed", "item": {"id": "tool_1", "type": "mcp_tool_call"}})
+        result, _ = self.run_mock(events=tool_events)
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["forbidden_event_count"], 1)
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+
+    def test_cli_no_whitespace_repair_and_missing_output_rejected(self):
+        result, _ = self.run_mock(output=self.FINAL.rstrip().encode("utf-8"))
+        self.assertEqual(result["status"], "failed")
+        self.assertFalse(result["output_matches_final_message"])
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+        second = self.queue / "second"
+        second.mkdir()
+        self.queue = second
+        self.config = replace(self.config, queue=second)
+        result, _ = self.run_mock(output=None)
+        self.assertIn("cli_output_missing", result["failure_codes"])
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+
+    def test_cli_nonzero_exit_and_timeout_never_publish_or_retry(self):
+        result, observed = self.run_mock(returncode=1, timeout=True)
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("cli_timeout", result["failure_codes"])
+        self.assertEqual(observed["spawn_count"], 1)
+        observed["process"].kill.assert_called_once()
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+
+    def test_cli_worker_timeout_uses_original_request_deadline(self):
+        driver = codex_cli_relay.RelayDriver(self.config)
+        driver.started_at -= 150
+        packet = self.packet(created=time.time() - 140)
+        result, observed = self.run_mock(driver=driver, packet=packet)
+        self.assertEqual(result["status"], "submitted")
+        timeout = observed["process"].communicate.call_args.kwargs["timeout"]
+        self.assertGreater(timeout, 0)
+        self.assertLessEqual(timeout, 25)
+
+    def test_cli_never_overwrites_racing_response(self):
+        driver = codex_cli_relay.RelayDriver(self.config)
+        packet = self.packet()
+        response = self.queue / (packet.name.removesuffix(".request.json") + ".response.json")
+        original = b'{"original":"existing publisher"}'
+        result, _ = self.run_mock(driver=driver, packet=packet, on_launch=lambda: response.write_bytes(original))
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(response.read_bytes(), original)
+        self.assertNotIn("submitted", [row["event"] for row in codex_cli_relay.read_ledger(self.queue)])
+
+    def test_cli_changed_packet_is_not_submitted(self):
+        driver = codex_cli_relay.RelayDriver(self.config)
+        packet = self.packet()
+        result, _ = self.run_mock(
+            driver=driver, packet=packet,
+            on_launch=lambda: packet.write_bytes(packet.read_bytes() + b"\n"),
+        )
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("request_changed_during_execution", result["failure_codes"])
+        self.assertFalse(list(self.queue.glob("*.response.json")))
+
+    def test_cli_startup_expected_count_and_exclusive_lock_are_fail_closed(self):
+        driver = codex_cli_relay.RelayDriver(self.config)
+        with patch.object(codex_cli_relay.subprocess, "Popen") as spawn:
+            with self.assertRaisesRegex(codex_cli_relay.RelayError, "expected_used"):
+                driver.serve(expected_used=37)
+            with codex_cli_relay.driver_lock(self.queue):
+                with self.assertRaisesRegex(codex_cli_relay.RelayError, "driver_lock_exists"):
+                    driver.serve()
+            spawn.assert_not_called()
 
 
 if __name__ == "__main__":

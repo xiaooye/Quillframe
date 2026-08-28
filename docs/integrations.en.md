@@ -37,6 +37,14 @@ Resume revalidates the exact checkpoint, Project authority, artifact fingerprint
 
 Eligible transports include a separate local agent invocation, provider call, MCP worker, GitHub job, peer chat, local model, or human review when current capability evidence supports the route. A transport failure may produce an explicit fallback receipt. A valid semantic rejection routes repair and cannot trigger reviewer shopping.
 
+## Local GPT execution for production stages
+
+The opt-in [Codex CLI relay](../harness/integrations/codex_cli_relay.py) consumes the loopback manager queue. It starts a fresh CLI process in a temporary workspace for each request, using an explicitly selected model and no resumed conversation. Authentication stays with the installed CLI. This uses the documented [non-interactive execution interface](https://learn.chatgpt.com/docs/non-interactive-mode); it is not part of ordinary CI.
+
+An append-only ledger charges an attempt before launch, including failed launches, and carries the total across Core runs. A successful response requires a real CLI thread event, one completed turn, and an exact match between the final message and the saved output. Tool, error, unknown or inconsistent events stop publication of the response. Output bytes are preserved; reasoning text is not kept in evidence logs. No automatic CLI restart or failed-request replay occurs. Provider-internal retries that the CLI does not expose are not claimed as measured model calls.
+
+These records describe `codex_cli` manager transport, not native subagent independence or operating-system isolation. Production review still requires its separate frozen packet, eligible independent reviewer and Core-validated receipt. Neither the relay nor a passing review authorizes chapter acceptance or settlement.
+
 ## Secrets
 
 Credentials remain outside semantic context and Project state. Local credentials use a process lease; Hosted Studio uses the encrypted SessionVault. Receipts and logs contain references and capability evidence, never secret values.

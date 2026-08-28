@@ -1,10 +1,10 @@
 # Local production verification
 
-Status: implementation verified; real-model acceptance paused at the host's subagent capacity limit. This record separates implemented behavior, deterministic regression results, browser observations and actual model outcomes. It does not certify a completed chapter, author acceptance or a successful book export.
+Status: implementation and regression verified; local model continuation is prepared. This record separates implemented behavior, deterministic regression results, browser observations and actual model outcomes. It does not certify a completed chapter, author acceptance or a successful book export.
 
 ## Environment and scope
 
-The actual dirty Windows working tree and built Studio assets are copied into an isolated Ubuntu WSL checkout. Python and SQLite run as an ordinary Linux user against a native filesystem. A SHA-256 source manifest and detailed logs remain outside the tracked framework. The base Git commit alone does not describe this uncommitted implementation.
+The actual Windows working tree and built Studio assets are copied into an isolated Ubuntu WSL checkout. Python and SQLite run as an ordinary Linux user against a native filesystem. A SHA-256 source manifest and detailed logs remain outside the tracked framework. Snapshots record the base Git commit and whether uncommitted changes are present; the commit alone does not replace the file-level evidence.
 
 The original acceptance project is outside the framework repository. Its manuscripts, plans, model packets and call ledger stay there or in local evidence storage. No third-party skill is installed, no cloud deployment occurs and normal CI makes no model calls.
 
@@ -12,7 +12,7 @@ The original acceptance project is outside the framework repository. Its manuscr
 
 | Check | Latest completed result |
 | --- | --- |
-| Latest completed frozen Linux Core regression snapshot | 649 passed, zero skipped |
+| Latest completed frozen Linux Core regression snapshot | 660 passed, zero skipped |
 | Studio tests and full build, including run selection, active-lease guards and semantic rejection display | 108 passed; typecheck, quality checks, Vite and offline build passed |
 | Cloud boundary regression and TypeScript | 90 passed; typecheck passed; no deployment |
 | Documentation quality | Zero errors; 21 existing warnings |
@@ -43,8 +43,10 @@ The third run confirmed nine genuine GPT responses, including initial cast prepa
 
 Across all three runs, 36 distinct workers returned 36 exact, hash-verified responses. The failed host dispatch is also charged, bringing the round to 37 of 64 attempts. There are 26 further manager attempts and one reserved independent review left; a new run does not reset that total. The live ledger counts actual dispatched semantic requests and native reviewer invocations, not the host's unavailable token bill or internal inference requests. All three stopped runs and their source manifests are preserved. Independent review remains pending and must use a fresh worker with only the exact frozen packet. A canonical host task handle is not a provider UUID or an operating-system isolation attestation.
 
-The currently exposed tools offer no completed-subagent close operation. The installed Codex CLI reports a ChatGPT login and supports the documented [non-interactive execution mode](https://learn.chatgpt.com/docs/non-interactive-mode), but no CLI model call has been made. Switching execution hosts requires an explicit continuation decision and truthful new host receipts; existing workers must not be presented as fresh independent reviewers.
+The user subsequently authorized committing the changes and continuing execution. The local service was restarted and the browser still showed the saved plans and stopped runs. A new chapter run was registered with zero dispatched calls. New engineering subagents could also be created in this turn; independent review still requires its own fresh worker, not one of these informed coding agents.
+
+The installed Codex CLI reports a ChatGPT login and supports the documented [non-interactive execution mode](https://learn.chatgpt.com/docs/non-interactive-mode). The opt-in manager relay now preserves exact output bytes, actual CLI thread events, usage and the cumulative budget, with process evidence persisted before response publication. Its 23 targeted tests pass under Linux; the full native-filesystem Core run above includes those tests. Command parsing was checked without starting a model. No CLI model call has yet been made. The relay is not native independent-review evidence, and unexposed provider-internal retries are not counted as observed calls.
 
 ## Remaining acceptance gates
 
-Resolve the host-capacity or execution-host decision, then complete genuine single-chapter generation and independent review within the remaining budget. Verify public draft hiding when an actual private draft exists, and obtain the author's decision before acceptance or settlement. Continue to three and twelve chapters only with those intervening decisions. Ordered export, real feedback learning and recovery must be verified against those actual states. Four development cases and six held-out cases remain pending. No human retention or million-word consistency result is claimed.
+Freeze the committed source and complete real single-chapter generation and independent review within the remaining budget. Verify public draft hiding when an actual private draft exists, and obtain the author's decision before acceptance or settlement. Continue to three and twelve chapters only with those intervening decisions and sufficient authorized budget. Ordered export, real feedback learning and recovery must be verified against those actual states. Four development cases and six held-out cases remain pending. No human retention or million-word consistency result is claimed.

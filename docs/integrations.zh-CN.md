@@ -37,6 +37,14 @@ Resume 会重新验证精确 checkpoint、Project authority、artifact fingerpri
 
 只要当前 capability evidence 支持，可以使用独立本地 agent invocation、provider call、MCP worker、GitHub job、peer chat、本地模型或人工评审。Transport failure 只能生成显式 fallback receipt；有效 semantic reject 必须进入 repair，不能不断更换 reviewer。
 
+## 生产阶段的本地 GPT 执行
+
+需要显式启动的 [Codex CLI 中转驱动](../harness/integrations/codex_cli_relay.py) 消费本机回环地址上的生产请求队列。每个请求都在临时目录中新建 CLI 进程，使用明确选定的模型，不恢复旧会话；认证仍由已安装的 CLI 管理。它使用官方的[非交互执行接口](https://learn.chatgpt.com/docs/non-interactive-mode)，不属于普通 CI。
+
+调用账本只追加记录，启动前即扣除一次尝试，启动失败也计入；新建 Core 运行不会重置总数。只有取得真实 CLI 会话事件、完成单次执行，并确认最终消息与保存的输出完全一致，才会提交响应。工具调用、错误、未知事件或证据不一致都会阻止提交。输出字节保持原样，证据日志不保留推理正文，也不会自动重启 CLI 或重发失败请求。对于 CLI 未暴露的服务商内部重试，不声称已统计其模型调用次数。
+
+这些记录证明的是 `codex_cli` 生产传输，不是原生子任务的独立性或操作系统隔离。生产审阅仍须另行冻结输入包，由满足条件的独立审稿者执行，并通过 Core 的回执校验。中转驱动和审阅通过都不能代替作者对章节采纳与结算的决定。
+
 ## Secrets
 
 Credential 始终位于 semantic context 与 Project state 之外。本地使用进程级 lease；Hosted Studio 使用加密 SessionVault。Receipt 与 log 只能包含引用和能力证据，不能包含 secret value。
