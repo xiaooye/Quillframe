@@ -9,7 +9,7 @@ from typing import Any
 
 from agent_runtime import AgentBudget, AgentJob, AgentResult
 from harness.context_runtime import canonical_json, fingerprint
-from model_runtime.structured_output import required_only_output_schema, validate_structured_text
+from model_runtime.structured_output import required_only_output_schema, validate_output_schema, validate_structured_text
 
 from .contracts import ProductionRunError, assert_secret_free, parse_json_object, validate_bundle_integrity
 from .reading_positioning import reading_positioning_fields
@@ -45,6 +45,67 @@ from quality.candidate_qualification import evaluate_recorded as evaluate_record
 from quality.candidate_qualification import validate_qualification_receipt  # noqa: E402
 from quality.production_readiness import evaluate as evaluate_production_readiness  # noqa: E402
 from quality.production_release import aggregate as aggregate_production_release  # noqa: E402
+from quality.reader_expectation import FINAL as FINAL_EXPECTATION_STATUSES, STATUSES as EXPECTATION_STATUSES  # noqa: E402
+
+
+def _reader_expectation_output_profile(
+    contract: dict[str, Any], payload: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Narrow new transport jobs to operations on the exact frozen ledger.
+
+    The registered contract and original model judgment remain unchanged.
+    Every branch is a complete strict subset; optional deadlines use separate
+    with/without-field branches, never a new nullable output convention.
+    """
+    live = []
+    seen = set()
+    rows = payload["existing_expectations"]
+    for index, row in enumerate(rows):
+        identity, version, status = row.get("expectation_id"), row.get("version"), row.get("status")
+        if (not isinstance(identity, str) or not identity.strip() or identity in seen
+                or not isinstance(version, int) or isinstance(version, bool) or version < 1
+                or not isinstance(status, str) or status not in EXPECTATION_STATUSES):
+            raise ValueError(f"existing_expectations[{index}]: expected a unique exact id, positive integer version and known status")
+        seen.add(identity)
+        if status not in FINAL_EXPECTATION_STATUSES:
+            live.append({"expectation_id": identity, "expected_version": version})
+    live.sort(key=lambda row: row["expectation_id"])
+
+    schema = required_only_output_schema(contract)
+    update = schema["properties"]["expectation_updates"]["items"]
+    deadline = contract["properties"]["expectation_updates"]["items"]["properties"]["due_by_order"]
+    operations = [operation for operation in update["properties"]["operation"]["enum"] if operation != "open"]
+    branches = []
+
+    def add_branches(allowed: list[str], version: int, identities: list[str] | None = None) -> None:
+        branch = deepcopy(update)
+        branch["properties"]["operation"]["enum"] = allowed
+        branch["properties"]["expected_version"]["enum"] = [version]
+        if identities is not None:
+            branch["properties"]["expectation_id"]["enum"] = identities
+        branches.append(branch)
+        with_deadline = deepcopy(branch)
+        with_deadline["properties"]["due_by_order"] = deepcopy(deadline)
+        with_deadline["required"].append("due_by_order")
+        branches.append(with_deadline)
+
+    add_branches(["open"], 0)
+    # Group only identical versions. Independent id/version enums would admit
+    # a wrong cross-product; grouping avoids it without truncating the ledger.
+    by_version: dict[int, list[str]] = {}
+    for row in live:
+        by_version.setdefault(row["expected_version"], []).append(row["expectation_id"])
+    for version in sorted(by_version):
+        add_branches(operations, version, by_version[version])
+    schema["properties"]["expectation_updates"]["items"] = {"anyOf": branches}
+    validate_output_schema(schema)
+    return schema, {
+        "source": "registered_semantic_job.input.payload.existing_expectations",
+        "source_fingerprint": fingerprint(rows),
+        "new_expectation": {"operation": "open", "expected_version": 0},
+        "existing_operations": operations,
+        "live_existing_expectations": live,
+    }
 
 
 class RegisteredSemanticExecutor:
@@ -161,6 +222,25 @@ class RegisteredSemanticExecutor:
                 "Return all and only that schema's required fields, with the declared types. "
                 "Existing source_metadata and source_fingerprint are read-only provenance; never copy them into replacement fields. "
                 "Keep the exact entity_ref outside fields and cite an exact quote from the final candidate."
+            )
+        elif contract_id == "reader.expectations":
+            try:
+                output_schema, operation_constraints = _reader_expectation_output_profile(
+                    semantic_job["output_contract"], semantic_job["input"]["payload"],
+                )
+            except ValueError as exc:
+                raise ProductionRunError("semantic_output_schema_unsupported", str(exc)) from exc
+            context[0]["reader_expectation_operation_constraints"] = operation_constraints
+            instruction += (
+                " Use reader_expectation_operation_constraints as the exact frozen ledger identity/version boundary. "
+                "When live_existing_expectations is empty, only open with expected_version 0 or an empty expectation_updates array is legal. "
+                "Every touch, partial, paid or abandoned operation must copy an exact live id/version pair from that list; terminal entries cannot be updated. "
+                "An open operation uses a local label that Core will replace, not an existing ledger identity. "
+                "Do not chain open and then touch, partial, paid or abandoned within this observation: newly opened labels are not supplied live entries. "
+                "An issue introduced and fully resolved within this chapter does not invent a historical ledger row or justify paid/version 0. "
+                "Only propose supported changes to supplied live expectations or supported new live expectations; an empty array is valid. "
+                "Return at most one update per existing id. Omit due_by_order when unsupported, never fill null; "
+                "for an open operation, a supplied deadline must be at least current_reading_order."
             )
         agent_job = AgentJob(
             job_id=f"agent_{semantic_job['job_id']}",

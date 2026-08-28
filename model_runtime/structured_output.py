@@ -51,6 +51,16 @@ def validate_output_schema(schema: Any) -> None:
         nonlocal property_count, enum_count, string_size
         if not isinstance(node, dict) or depth > 10:
             raise ValueError(f"{path}: schema must be an object with depth at most 10")
+        if "anyOf" in node:
+            # Only nested unions of complete supported schemas are admitted.
+            # Do not merge partial branches or let a union hide unsupported
+            # keywords, optional properties, or aggregate native limits.
+            branches = node["anyOf"]
+            if depth == 0 or set(node) != {"anyOf"} or not isinstance(branches, list) or not branches:
+                raise ValueError(f"{path}: anyOf must be a nonempty, nested, standalone union")
+            for index, branch in enumerate(branches):
+                visit(branch, f"{path}.anyOf[{index}]", depth + 1)
+            return
         raw_type = node.get("type")
         kinds = raw_type if isinstance(raw_type, list) else [raw_type]
         if (not kinds or any(not isinstance(t, str) or t not in _TYPES for t in kinds)
@@ -159,6 +169,14 @@ def validate_structured_text(text: str, schema: dict[str, Any]) -> dict[str, Any
     value = json.loads(text, object_pairs_hook=unique_pairs, parse_constant=invalid_constant)
 
     def visit(item: Any, node: dict[str, Any], path: str) -> None:
+        if "anyOf" in node:
+            for branch in node["anyOf"]:
+                try:
+                    visit(item, branch, path)
+                except ValueError:
+                    continue
+                return
+            raise ValueError(f"{path}: output matches no anyOf branch")
         kinds = node["type"] if isinstance(node["type"], list) else [node["type"]]
         if not any(_matches_type(item, t) for t in kinds):
             raise ValueError(f"{path}: output type mismatch")

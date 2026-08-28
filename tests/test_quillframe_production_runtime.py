@@ -213,16 +213,22 @@ REPAIRED_FIXTURE_TEXT = "Repaired synthetic candidate with the original objectiv
 class RepairFixtureRuntime(FakeAgentRuntime):
     """Synthetic repair judgments only; never live acceptance evidence."""
 
-    def __init__(self, *, generation_mode="local_or_bounded_repair", comparison_outcome="successful_repair", repair_audit_fails=False):
+    def __init__(self, *, generation_mode="local_or_bounded_repair", comparison_outcome="successful_repair", repair_audit_fails=False,
+                 draft_reader_result=None):
         super().__init__()
         self.generation_mode = generation_mode
         self.comparison_outcome = comparison_outcome
         self.repair_audit_fails = repair_audit_fails
+        self.draft_reader_result = draft_reader_result
 
     def run(self, job, *, cancellation=None):
         result = super().run(job, cancellation=cancellation)
         payload = json.loads(result.final_text)
-        if job.runtime_role == "registered_candidate_self_audit" and (job.task_mode == "DRAFT" or self.repair_audit_fails):
+        if job.runtime_role == "registered_reader_engagement" and job.task_mode == "DRAFT" and self.draft_reader_result is not None:
+            payload.update({"result": self.draft_reader_result, "report": "PRIVATE READER DIAGNOSIS",
+                            "strongest_problem": "Synthetic Reader concern."})
+        elif job.runtime_role == "registered_candidate_self_audit" and (
+                (job.task_mode == "DRAFT" and self.draft_reader_result is None) or self.repair_audit_fails):
             payload.update({"result": "fail", "report": "PRIVATE SYNTHETIC DIAGNOSIS",
                             "dimensions": {**payload["dimensions"], "surface": "fail"},
                             "findings": [{"finding_id": "F-SYN", "mechanism_id": "synthetic_continuity", "severity": "high",
@@ -883,6 +889,109 @@ class ProductionRuntimeTests(unittest.TestCase):
                     payload={"chapter_id": "CH001", "repair_source": source})["run_id"]
         NovelWorkflowService(self.store).start(project_id="PROD", run_id=run_id, chapter_id="CH001", author_profile="guided")
         return fake, runtime, source_id, run_id
+
+    def test_reader_fail_collects_diagnostics_for_fresh_repair_without_releasing_the_source(self):
+        fake, runtime, source_id, run_id = self.repair_fixture(
+            draft_reader_result="fail", generation_mode="fresh_realization",
+        )
+        source = runtime._latest_checkpoint("PROD", source_id, "production_qualified_candidate")
+        qualification = source["qualification_receipt"]
+        self.assertEqual("repair_required", qualification["qualification_status"])
+        self.assertEqual(["reader_engagement"], qualification["failed_gates"])
+        self.assertEqual("fail", source["reader_binding"]["result"]["judgment"]["result"])
+        self.assertEqual("pass", source["self_audit_binding"]["result"]["judgment"]["result"])
+        self.assertEqual(["registered_reader_engagement", "continuity", "registered_candidate_self_audit"],
+                         [job.runtime_role for job in fake.calls if job.run_id == source_id][-3:])
+        with self.assertRaises(ProductionRunError) as rejected:
+            runtime._build_handoff_from_qualified(
+                "PROD", runtime._run_row("PROD", source_id), runtime._latest_bundle("PROD", source_id), source, PROVENANCE,
+            )
+        self.assertEqual("not_qualified_for_independent", rejected.exception.code)
+
+        repaired = runtime.execute("PROD", run_id, service_id="svc", inherit_repair_request=True,
+                                   independent_provenance=PROVENANCE)
+        self.assertEqual("awaiting_external", repaired["status"])
+        calls = [job for job in fake.calls if job.run_id == run_id]
+        editor = next(job for job in calls if job.runtime_role == "registered_repair_editor")
+        self.assertEqual(source["reader_binding"]["result"]["judgment"],
+                         editor.context[0]["registered_semantic_job"]["input"]["payload"]["reader_assessment"])
+        isolated = [job.to_dict() for job in calls if job.runtime_role in {
+            "event_first_raw_draft", "surface_realization", "registered_reader_engagement",
+        }]
+        isolated.append(frozen_packet(self.store, run_id))
+        for value in isolated:
+            for private in (PRE_RELEASE_MANUSCRIPT, "PRIVATE READER DIAGNOSIS", "PRIVATE EDITOR TRAJECTORY"):
+                self.assertNotIn(private, json.dumps(value))
+        self.assertEqual("completed", self.submit(runtime, run_id)["status"])
+        self.assertEqual(source, runtime._latest_checkpoint("PROD", source_id, "production_qualified_candidate"))
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (source_id,)).fetchone()[0])
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM receipts WHERE run_id=? AND receipt_kind='production_release'", (source_id,)).fetchone()[0])
+            self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM checkpoints WHERE run_id=? AND checkpoint_kind='production_independent_handoff'", (source_id,)).fetchone()[0])
+            reader_receipt = next(json.loads(row[0]) for row in conn.execute(
+                "SELECT payload_json FROM receipts WHERE run_id=? AND receipt_kind='production_stage'", (source_id,),
+            ) if json.loads(row[0])["mechanism"] == "reader_engagement")
+            self.assertEqual("fail", reader_receipt["judgment"]["status"])
+
+    def test_reader_fail_repair_requires_original_confirmed_reader_evidence(self):
+        fake, runtime, source_id, run_id = self.repair_fixture(draft_reader_result="fail")
+        source_ref = runtime.status("PROD", source_id)["repair_source"]
+        before = len(fake.calls)
+        with self.store.open_project("PROD") as conn:
+            conn.execute("DELETE FROM production_stage_calls WHERE run_id=? AND runtime_role='registered_reader_engagement'", (source_id,))
+            conn.commit()
+        with self.assertRaises(OperationError):
+            CoreOperations(self.store).start_author_run(
+                "PROD", task_mode="REVISE", target_ref="DOC-1", payload={"chapter_id": "CH001", "repair_source": source_ref},
+            )
+        with self.assertRaises(ProductionRunError):
+            runtime.execute("PROD", run_id, service_id="svc", inherit_repair_request=True)
+        self.assertEqual(before, len(fake.calls))
+        self.assertNotIn("repair_source", runtime.status("PROD", source_id))
+
+    def test_nonfinal_reader_result_does_not_enter_repair_diagnostics(self):
+        for verdict in ("insufficient_evidence", "needs_author"):
+            with self.subTest(verdict=verdict):
+                fake = RepairFixtureRuntime(draft_reader_result=verdict)
+                runtime = ProductionRunExecutor(self.store, fake)
+                run_id = self.start()
+                # Reader's current contract admits only an explicit pass/fail.
+                with self.assertRaises(ProductionRunError) as invalid:
+                    self.execute_to_handoff(runtime, run_id)
+                self.assertEqual("semantic_output_invalid", invalid.exception.code)
+                self.assertEqual("registered_reader_engagement", fake.calls[-1].runtime_role)
+                self.assertIsNone(runtime._latest_checkpoint("PROD", run_id, "production_qualified_candidate"))
+                self.assertNotIn("repair_source", runtime.status("PROD", run_id))
+
+    def test_reader_fail_does_not_bypass_a_continuity_failure(self):
+        fake = RepairFixtureRuntime(draft_reader_result="fail")
+        fake.reject_mechanism = "continuity"
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        failed = self.execute_to_handoff(runtime, run_id)
+        self.assertEqual("continuity", failed["failed_mechanism"])
+        self.assertEqual("continuity", fake.calls[-1].runtime_role)
+        self.assertIsNone(runtime._latest_checkpoint("PROD", run_id, "production_qualified_candidate"))
+        self.assertNotIn("repair_source", runtime.status("PROD", run_id))
+
+    def test_reader_fail_diagnostic_resume_reuses_confirmed_reader_and_continuity(self):
+        fake = RepairFixtureRuntime(draft_reader_result="fail")
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        original = runtime._persist_stage_receipt
+
+        def interrupt(project_id, current_run, receipt, **kwargs):
+            if receipt["mechanism"] == "continuity":
+                raise OSError("synthetic interruption while saving Reader-fail diagnostics")
+            return original(project_id, current_run, receipt, **kwargs)
+
+        with patch.object(runtime, "_persist_stage_receipt", side_effect=interrupt), self.assertRaises(OSError):
+            self.execute_to_handoff(runtime, run_id)
+        resumed = runtime.resume_execution("PROD", run_id)
+        self.assertEqual(["reader_engagement"], resumed["qualification"]["failed_gates"])
+        for role in ("registered_reader_engagement", "continuity", "registered_candidate_self_audit"):
+            self.assertEqual(1, sum(job.runtime_role == role for job in fake.calls))
+        self.assertIn("repair_source", runtime.status("PROD", run_id))
 
     def test_internal_repair_inherits_positioning_and_cannot_replace_it(self):
         fake, runtime, source_id, run_id = self.repair_fixture(reader_positioning=READER_POSITIONING)

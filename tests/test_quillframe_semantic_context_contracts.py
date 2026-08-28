@@ -6,11 +6,13 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from copy import deepcopy
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from agent_runtime import AgentResult, AgentRunner, ToolRuntime
+from harness.context_runtime import fingerprint
 from model_runtime import ModelTurn
 from model_runtime.structured_output import validate_structured_text
 from persistence.quillframe_sqlite import fingerprint_text
@@ -30,6 +32,7 @@ from registered_contract_binding import validate_registered_job
 from semantic_worker_router import fingerprint_for, make_contract_job, validate_result, validate_typed_value, worker_job_view
 
 FP="sha256:"+"a"*64
+READER_CANDIDATE = "The promised answer remains unknown."
 
 class SemanticContextContractTests(unittest.TestCase):
     def character_fixture(self):
@@ -231,6 +234,183 @@ class SemanticContextContractTests(unittest.TestCase):
         forged["output_contract"] = ambiguous
         forged["input_fingerprint"] = fingerprint_for(forged)
         self.assertIn("registered contract output_contract mismatch", validate_registered_job(forged))
+
+    def reader_expectation_update(self, **changes):
+        return {"operation": "open", "expectation_id": "local:question", "expected_version": 0, "kind": "question",
+                "description": "Will an answer arrive?", "detail": "The answer is still withheld.",
+                "evidence_ref": "candidate:" + fingerprint_text(READER_CANDIDATE),
+                "evidence_quote": "answer remains unknown", **changes}
+
+    def reader_expectation_fixture(self, existing=(), updates=(), *, suffix="", reader_visible_context=()):
+        job = make_contract_job("reader.expectations", "DOC-READER-FIXTURE", {
+            "chapter_id": "CH-READER-FIXTURE", "document_id": "DOC-READER-FIXTURE",
+            "candidate_text": READER_CANDIDATE, "candidate_fingerprint": fingerprint_text(READER_CANDIDATE),
+            "current_reading_order": 2, "reader_visible_context": list(reader_visible_context), "existing_expectations": list(existing),
+        }, source_session_id="SES-READER-FIXTURE", handoff_id="HANDOFF-READER-FIXTURE")
+        judgment = {"confidence": 0.8, "expectation_updates": list(updates)}
+        raw = " \n" + json.dumps(judgment, ensure_ascii=False, indent=2) + "\n" + suffix
+        model = SimpleNamespace(
+            select_model=Mock(return_value=SimpleNamespace(model_id="fixture-model", protocol="openai_chat_completions")),
+            invoke=Mock(return_value=ModelTurn("openai_chat_completions", "fixture-model", text=raw, finish_reason="stop")),
+        )
+        calls, results = [], []
+
+        def invoke(agent_job):
+            calls.append(agent_job)
+            result = AgentRunner(model, ToolRuntime()).run(agent_job)
+            results.append(result)
+            return result
+
+        return SimpleNamespace(job=job, judgment=judgment, raw=raw, model=model, calls=calls, results=results,
+            executor=RegisteredSemanticExecutor(SimpleNamespace(run=invoke)),
+            args={"run": {"run_id": "RUN-READER-FIXTURE", "session_id": "SES-READER-FIXTURE", "task_mode": "DRAFT"},
+                  "service_id": "fixture-service", "model_preference": None, "runtime_role": "registered_reader_expectations"})
+
+    def test_reader_empty_ledger_native_profile_allows_only_new_open_zero_or_empty(self):
+        from quality.reader_expectation import validate_observation_binding
+
+        for updates in ([], [self.reader_expectation_update()]):
+            with self.subTest(updates=updates):
+                fixture = self.reader_expectation_fixture(updates=updates)
+                binding = fixture.executor.execute_prepared(semantic_job=fixture.job, **fixture.args)
+                actual = fixture.calls[0]
+                self.assertEqual(fixture.judgment, binding["result"]["judgment"])
+                self.assertEqual([], validate_result(binding["job"], binding["result"]))
+                _, normalized = validate_observation_binding(binding)
+                self.assertEqual(len(updates), len(normalized))
+                self.assertEqual(actual.output_schema, fixture.model.invoke.call_args.kwargs["output_schema"])
+                constraints = actual.context[0]["reader_expectation_operation_constraints"]
+                self.assertEqual([], constraints["live_existing_expectations"])
+                self.assertEqual({"operation": "open", "expected_version": 0}, constraints["new_expectation"])
+                self.assertIn("introduced and fully resolved within this chapter", actual.instruction)
+                for operation in ("touch", "partial", "paid", "abandoned"):
+                    invalid = {"confidence": 0.8, "expectation_updates": [self.reader_expectation_update(operation=operation)]}
+                    self.assertEqual([], validate_typed_value(invalid, fixture.job["output_contract"]))
+                    with self.assertRaises(ValueError):
+                        validate_structured_text(json.dumps(invalid), actual.output_schema)
+                with self.assertRaises(ValueError):
+                    validate_structured_text(json.dumps({"confidence": 0.8, "expectation_updates": [
+                        self.reader_expectation_update(expected_version=1)]}), actual.output_schema)
+
+    def test_reader_live_native_profile_binds_each_id_to_its_exact_version(self):
+        from quality.reader_expectation import validate_observation_binding
+
+        live = [{"expectation_id": "EXP-OPEN", "version": 1, "status": "open"},
+                {"expectation_id": "EXP-OPEN-SECOND", "version": 1, "status": "open"},
+                {"expectation_id": "EXP-PARTIAL", "version": 3, "status": "partial"}]
+        terminal = [{"expectation_id": "EXP-" + status.upper(), "version": 3, "status": status}
+                    for status in ("paid", "invalidated", "abandoned")]
+        updates = [self.reader_expectation_update(operation="touch", expectation_id="EXP-OPEN", expected_version=1),
+                   self.reader_expectation_update(operation="paid", expectation_id="EXP-PARTIAL", expected_version=3)]
+        fixture = self.reader_expectation_fixture(live + terminal, updates)
+        binding = fixture.executor.execute_prepared(semantic_job=fixture.job, **fixture.args)
+        self.assertEqual(updates, validate_observation_binding(binding)[1])
+        actual = fixture.calls[0]
+        self.assertEqual([{"expectation_id": row["expectation_id"], "expected_version": row["version"]} for row in live],
+                         actual.context[0]["reader_expectation_operation_constraints"]["live_existing_expectations"])
+        for row in live:
+            for operation in ("touch", "partial", "paid", "abandoned"):
+                valid = {"confidence": 0.8, "expectation_updates": [self.reader_expectation_update(
+                    operation=operation, expectation_id=row["expectation_id"], expected_version=row["version"])]}
+                self.assertEqual(valid, validate_structured_text(json.dumps(valid), actual.output_schema))
+                self.assertEqual([], validate_typed_value(valid, fixture.job["output_contract"]))
+                valid["expectation_updates"][0]["due_by_order"] = 5
+                self.assertEqual(valid, validate_structured_text(json.dumps(valid), actual.output_schema))
+        invalid_pairs = [("EXP-UNKNOWN", 1), ("EXP-OPEN", 3), ("EXP-PARTIAL", 1), ("EXP-OPEN", 0)]
+        invalid_pairs.extend((row["expectation_id"], row["version"]) for row in terminal)
+        for identity, version in invalid_pairs:
+            with self.subTest(identity=identity, version=version), self.assertRaises(ValueError):
+                validate_structured_text(json.dumps({"confidence": 0.8, "expectation_updates": [self.reader_expectation_update(
+                    operation="paid", expectation_id=identity, expected_version=version)]}), actual.output_schema)
+
+    def test_reader_native_optional_deadline_preserves_exact_output_and_registered_contract(self):
+        from quality.reader_expectation import validate_observation_binding
+
+        for deadline in ({}, {"due_by_order": 2}, {"due_by_order": 5}):
+            with self.subTest(deadline=deadline):
+                fixture = self.reader_expectation_fixture(updates=[self.reader_expectation_update(
+                    description="仅用于测试的未解问题。", **deadline)])
+                original = deepcopy(fixture.job)
+                original_raw_fingerprint = fingerprint_text(fixture.raw)
+                binding = fixture.executor.execute_prepared(semantic_job=fixture.job, **fixture.args)
+                actual = fixture.calls[0]
+                _, normalized = validate_observation_binding(binding)
+                self.assertNotEqual("local:question", normalized[0]["expectation_id"])
+                self.assertEqual("local:question", binding["result"]["judgment"]["expectation_updates"][0]["expectation_id"])
+                self.assertEqual(fixture.judgment, binding["result"]["judgment"])
+                self.assertEqual(fixture.raw, fixture.results[0].final_text)
+                self.assertEqual(original_raw_fingerprint, fingerprint_text(fixture.results[0].final_text))
+                self.assertEqual(original, fixture.job)
+                self.assertEqual(original, binding["job"])
+                self.assertEqual(worker_job_view(original), actual.context[0]["registered_semantic_job"])
+                self.assertEqual([], validate_result(binding["job"], binding["result"]))
+                self.assertNotIn("due_by_order", original["output_contract"]["properties"]["expectation_updates"]["items"]["required"])
+                self.assertEqual(actual.input_fingerprint, binding["result"]["worker"]["agent_input_fingerprint"])
+                self.assertEqual(actual.output_schema, actual.to_dict()["output_schema"])
+                self.assertNotEqual(actual.input_fingerprint, replace(actual, output_schema=None).input_fingerprint)
+                for invalid_deadline in (None, -1, True):
+                    invalid = {"confidence": 0.8, "expectation_updates": [self.reader_expectation_update(due_by_order=invalid_deadline)]}
+                    with self.assertRaises(ValueError):
+                        validate_structured_text(json.dumps(invalid), actual.output_schema)
+
+    def test_reader_native_schema_and_context_are_bound_to_frozen_ledger_only(self):
+        other_context = [{"expectation_id": "EXP-NOT-IN-LEDGER", "version": 1, "status": "open"}]
+        first = self.reader_expectation_fixture([{"expectation_id": "EXP-LIVE", "version": 1, "status": "open"}],
+                                                reader_visible_context=other_context)
+        second = self.reader_expectation_fixture([{"expectation_id": "EXP-LIVE", "version": 2, "status": "open"}])
+        for fixture in (first, second):
+            fixture.executor.execute_prepared(semantic_job=fixture.job, **fixture.args)
+            actual = fixture.calls[0]
+            constraints = actual.context[0]["reader_expectation_operation_constraints"]
+            self.assertEqual(fingerprint(fixture.job["input"]["payload"]["existing_expectations"]), constraints["source_fingerprint"])
+            self.assertEqual("registered_semantic_job.input.payload.existing_expectations", constraints["source"])
+        self.assertNotEqual(first.calls[0].output_schema, second.calls[0].output_schema)
+        # Isolate the transport constraint from job ids/timestamps/context: the
+        # schema itself changes the AgentJob fingerprint, not just its payload.
+        self.assertNotEqual(first.calls[0].input_fingerprint,
+                            replace(first.calls[0], output_schema=second.calls[0].output_schema).input_fingerprint)
+        with self.assertRaises(ValueError):
+            validate_structured_text(json.dumps({"confidence": 0.8, "expectation_updates": [self.reader_expectation_update(
+                operation="paid", expectation_id="EXP-NOT-IN-LEDGER", expected_version=1)]}), first.calls[0].output_schema)
+
+    def test_reader_native_rejects_fabricated_history_and_chaining_without_retry_or_byte_repair(self):
+        opened = self.reader_expectation_update()
+        paid = self.reader_expectation_update(operation="paid")
+        for updates, suffix in (([paid], ""), ([opened, paid], ""), ([opened], "]}")):
+            with self.subTest(updates=updates, suffix=suffix):
+                fixture = self.reader_expectation_fixture(updates=updates, suffix=suffix)
+                original = deepcopy(fixture.job)
+                with self.assertRaises(ProductionRunError) as error:
+                    fixture.executor.execute_prepared(semantic_job=fixture.job, **fixture.args)
+                self.assertEqual("semantic_pending", error.exception.code)
+                self.assertEqual("model_failed", error.exception.detail["agent_status"])
+                self.assertEqual("model_output_schema_invalid", error.exception.detail["errors"][0]["code"])
+                self.assertEqual(1, fixture.model.invoke.call_count)
+                self.assertEqual(1, fixture.model.select_model.call_count)
+                self.assertFalse(fixture.model.select_model.call_args.kwargs["allow_probe"])
+                self.assertEqual(1, len(fixture.results))
+                self.assertEqual(1, fixture.results[0].model_requests)
+                self.assertEqual(0, fixture.results[0].tool_calls)
+                self.assertEqual(fixture.raw, fixture.results[0].final_text)
+                self.assertEqual(original, fixture.job)
+
+    def test_reader_native_rejects_malformed_or_oversized_frozen_ledger_before_dispatch(self):
+        row = {"expectation_id": "EXP-LIVE", "version": 1, "status": "open"}
+        invalid_rows = [[{**row, "version": value}] for value in (0, -1, True, "1")]
+        invalid_rows.extend([
+            [{**row, "expectation_id": ""}], [{**row, "status": "unknown"}], [row, deepcopy(row)],
+            [{"expectation_id": "EXP-LIVE", "version": 1}],
+            [{**row, "expectation_id": f"EXP-{index}"} for index in range(500)],
+        ])
+        for rows in invalid_rows:
+            with self.subTest(count=len(rows), first=rows[0]):
+                fixture = self.reader_expectation_fixture(rows)
+                with self.assertRaises(ProductionRunError) as error:
+                    fixture.executor.execute_prepared(semantic_job=fixture.job, **fixture.args)
+                self.assertEqual("semantic_output_schema_unsupported", error.exception.code)
+                self.assertEqual([], fixture.calls)
+                fixture.model.select_model.assert_not_called()
+                fixture.model.invoke.assert_not_called()
 
     def test_reader_observation_still_rejects_duplicate_existing_updates_and_past_open_deadline(self):
         from quality.reader_expectation import ReaderExpectationError, validate_observation_binding

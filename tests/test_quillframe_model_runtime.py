@@ -106,6 +106,76 @@ class StructuredOutputTests(unittest.TestCase):
             with self.subTest(raw=raw), self.assertRaises(ValueError):
                 validate_structured_text(raw, OUTPUT_SCHEMA)
 
+    def test_nested_anyof_uses_complete_closed_branches_without_rewriting_output(self):
+        with_deadline = deepcopy(OUTPUT_SCHEMA)
+        with_deadline["properties"]["due"] = {"type": "integer", "minimum": 0}
+        with_deadline["required"].append("due")
+        schema = {"type": "object", "additionalProperties": False, "required": ["updates"], "properties": {
+            "updates": {"type": "array", "items": {"anyOf": [deepcopy(OUTPUT_SCHEMA), with_deadline]}}}}
+        original = deepcopy(schema)
+        for updates in ([], [{"status": "fail", "report": "需要修复"}], [{"status": "pass", "report": "bounded", "due": 2}]):
+            value = {"updates": updates}
+            raw = " \n" + json.dumps(value, ensure_ascii=False, indent=2) + "\n"
+            self.assertEqual(value, validate_structured_text(raw, schema))
+        self.assertEqual(original, schema)
+        for update in ({"status": "fail"}, {"status": "unknown", "report": "x"},
+                       {"status": "pass", "report": "x", "due": None}, {"status": "pass", "report": "x", "extra": 1}):
+            with self.subTest(update=update), self.assertRaises(ValueError):
+                validate_structured_text(json.dumps({"updates": [update]}), schema)
+        raw = '{"updates":[{"status":"fail","status":"pass","report":"x"}]}'
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            validate_structured_text(raw, schema)
+        # anyOf requires at least one matching branch, not exactly one.
+        overlapping = deepcopy(schema)
+        overlapping["properties"]["updates"]["items"]["anyOf"].append(deepcopy(OUTPUT_SCHEMA))
+        validate_structured_text('{"updates":[{"status":"fail","report":"x"}]}', overlapping)
+        chat = OpenAIChatCodec().request_body("m", [], [], 64, output_schema=schema)
+        responses = OpenAIResponsesCodec().request_body("m", [], [], 64, output_schema=schema)
+        self.assertEqual(original, chat["response_format"]["json_schema"]["schema"])
+        self.assertEqual(original, responses["text"]["format"]["schema"])
+
+    def test_nested_anyof_cannot_admit_root_unions_partial_objects_or_unsupported_keywords(self):
+        def wrap(value):
+            return {"type": "object", "additionalProperties": False, "required": ["value"], "properties": {"value": value}}
+
+        invalid_unions = [
+            {"anyOf": []}, {"anyOf": {}}, {"anyOf": [True]},
+            {"anyOf": [{"type": "string"}], "type": "string"},
+            {"anyOf": [deepcopy(OUTPUT_SCHEMA)], "description": "Siblings are outside this profile."},
+            {"anyOf": [{**OUTPUT_SCHEMA, "additionalProperties": True}]},
+            {"anyOf": [{**OUTPUT_SCHEMA, "required": ["status"]}]},
+            {"anyOf": [{"type": "string", "pattern": ".+"}]},
+            {"anyOf": [{**OUTPUT_SCHEMA, "allOf": []}]},
+        ]
+        for union in invalid_unions:
+            with self.subTest(union=union), self.assertRaises(ValueError):
+                validate_output_schema(wrap(union))
+        for root in ({"anyOf": [deepcopy(OUTPUT_SCHEMA)]}, {**OUTPUT_SCHEMA, "anyOf": [deepcopy(OUTPUT_SCHEMA)]}):
+            with self.assertRaises(ValueError):
+                validate_output_schema(root)
+
+    def test_nested_anyof_preserves_aggregate_enum_string_property_and_depth_limits(self):
+        def wrap(value):
+            return {"type": "object", "additionalProperties": False, "required": ["value"], "properties": {"value": value}}
+
+        many_properties = {f"key_{index}": {"type": "string"} for index in range(2500)}
+        object_branch = {"type": "object", "additionalProperties": False,
+                         "required": list(many_properties), "properties": many_properties}
+        unions = [
+            {"anyOf": [{"type": "integer", "enum": list(range(600))}] * 2},
+            {"anyOf": [{"type": "string", "enum": ["x" * 60_000]}] * 2},
+            {"anyOf": [object_branch, object_branch]},
+        ]
+        for union in unions:
+            with self.assertRaises(ValueError):
+                validate_output_schema(wrap(union))
+        at_limit = {"type": "string"}
+        for _ in range(9):
+            at_limit = {"anyOf": [at_limit]}
+        validate_output_schema(wrap(at_limit))
+        with self.assertRaisesRegex(ValueError, "depth"):
+            validate_output_schema(wrap({"anyOf": [at_limit]}))
+
     def test_native_schema_size_and_enum_limits_are_checked_locally(self):
         def wrap(value):
             return {"type": "object", "additionalProperties": False, "required": ["value"], "properties": {"value": value}}

@@ -24,6 +24,10 @@ Version targets: quality pack 8, production-loop pack 6, narrative-memory pack 4
 
 Registered semantic workers retain one model request and a 180-second deadline, with a 64,000-token hard ceiling matching ordinary production stages. The earlier 32,000-token ceiling could reject a complete rule audit solely because of authoritative rules, project plans, candidate text, and host overhead. This change neither removes rules nor increases the host's cumulative call authorization.
 
+Reader-expectation transport exposes only legal operations derived from the frozen ledger: new entries use `open` and version zero; updates bind an exact live input identity/version pair. A new item cannot be opened and paid within the same observation, and an empty ledger cannot receive an update to an invented historical entry. A narrower structured-output profile preserves the registered contract and original model JSON, including supported optional due dates. Domain validation remains mandatory. Nested complete `anyOf` branches follow the [official Structured Outputs subset](https://developers.openai.com/api/docs/guides/structured-outputs); the root remains a closed object and unsupported keywords, schemas and oversized inputs remain rejected.
+
+A valid Reader `fail` retains its original verdict while the bounded continuity and candidate self-audit stages produce the diagnostics needed for a formal revision source. It must never trigger independent review or release. Pending or invalid Reader evidence, failed continuity, and incomplete source evidence remain blocking conditions. Confirmed results from a stopped run are immutable; a source change requires a new run and does not erase the failed attempt or its spending.
+
 Rollback baseline: `54c64c0`. New runs freeze exact code and inputs; active source replacement is forbidden. Code rollback does not rewrite receipts, candidates, or usage records. Model execution retains the host's existing cumulative authorization without resetting historical spending.
 
 ## Non-goals

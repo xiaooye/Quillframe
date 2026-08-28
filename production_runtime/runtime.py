@@ -2031,7 +2031,10 @@ class ProductionRunExecutor(ProductionContextRuntime):
                     "raw_draft_visible": False,
                     "authority": False,
                 }
-            if internal.get("status") == "fail":
+            # A confirmed Reader rejection still needs continuity/self-audit
+            # evidence for a repair source. Keep its FAIL binding unchanged;
+            # pre-independent qualification below will block release.
+            if internal.get("status") == "fail" and mechanism != "reader_engagement":
                 self._set_run(project_id, run_id, "failed_gate")
                 self._event(project_id, run_id, "production_gate_rejected", {"mechanism": mechanism, "stage_result_fingerprint": public["stage_result_fingerprint"]})
                 return {
