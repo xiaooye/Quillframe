@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@cloudflare/containers": "0.3.7",
-    "ipaddr.js": "2.4.0"
+    "ipaddr.js": "2.5.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260819.1",
