@@ -181,7 +181,7 @@ class RegisteredSemanticExecutor:
                 max_tool_calls=1,
                 max_parallel_tool_calls=1,
                 max_output_tokens_per_request=max_output_tokens,
-                max_total_tokens=32_000,
+                max_total_tokens=64_000,
                 max_elapsed_ms=180_000,
             ),
             idempotency_key=f"{run['run_id']}:registered:{contract_id}:{semantic_job['input_fingerprint']}",

@@ -22,6 +22,8 @@ Generation comparisons and reviewer calibration separately record inputs, models
 
 Version targets: quality pack 8, production-loop pack 6, narrative-memory pack 4, and `quillframe_repair_policy_v3`. The native project format remains 1.0. Old contracts may verify immutable historical evidence or explicitly isolated baselines only; new production jobs require the current registry. Historical verdicts never become review evidence for a new candidate.
 
+Registered semantic workers retain one model request and a 180-second deadline, with a 64,000-token hard ceiling matching ordinary production stages. The earlier 32,000-token ceiling could reject a complete rule audit solely because of authoritative rules, project plans, candidate text, and host overhead. This change neither removes rules nor increases the host's cumulative call authorization.
+
 Rollback baseline: `54c64c0`. New runs freeze exact code and inputs; active source replacement is forbidden. Code rollback does not rewrite receipts, candidates, or usage records. Model execution retains the host's existing cumulative authorization without resetting historical spending.
 
 ## Non-goals

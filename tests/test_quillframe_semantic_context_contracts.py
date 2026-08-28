@@ -8,9 +8,10 @@ from contextlib import redirect_stdout
 from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-from agent_runtime import AgentResult
+from agent_runtime import AgentResult, AgentRunner, ToolRuntime
+from model_runtime import ModelTurn
 from model_runtime.structured_output import validate_structured_text
 from persistence.quillframe_sqlite import fingerprint_text
 from production_runtime.contracts import ProductionRunError
@@ -291,6 +292,53 @@ class SemanticContextContractTests(unittest.TestCase):
         self.assertEqual(worker_job_view(job), calls[0].context[0]["registered_semantic_job"])
         self.assertEqual("agent_" + job["job_id"], calls[0].job_id)
         self.assertEqual(1, calls[0].budgets.max_model_requests)
+
+    def test_registered_self_audit_real_runner_accepts_40k_and_enforces_64k_total_usage(self):
+        candidate = "A bounded synthetic passage."
+        judgment = {
+            "confidence": 1.0, "result": "pass", "report": "Synthetic self-audit result.",
+            "dimensions": {name: "pass" for name in (
+                "surface", "regression", "character_or_ownership", "natural_realization", "cluster")},
+            "findings": [], "evidence_refs": ["candidate:" + fingerprint_text(candidate)],
+        }
+        args = {
+            "run": {"run_id": "RUN-TOKEN-BUDGET", "session_id": "SES-TOKEN-BUDGET", "task_mode": "DRAFT"},
+            "service_id": "fixture-service", "contract_id": "quality.candidate_self_audit",
+            "subject_id": "DOC-TOKEN-BUDGET", "model_preference": None,
+            "runtime_role": "registered_candidate_self_audit",
+            "payload": {"candidate_text": candidate, "candidate_fingerprint": fingerprint_text(candidate),
+                        "rule_material": [{"id": "RULE-FIXTURE", "authority": "framework", "statement": "A bounded synthetic rule."}]},
+        }
+        for total_tokens in (40_000, 64_000, 64_001):
+            with self.subTest(total_tokens=total_tokens):
+                model = SimpleNamespace(
+                    select_model=Mock(return_value=SimpleNamespace(model_id="fixture-model", protocol="openai_chat_completions")),
+                    invoke=Mock(return_value=ModelTurn("openai_chat_completions", "fixture-model",
+                        text=json.dumps(judgment), finish_reason="stop",
+                        usage={"input_tokens": total_tokens - 2_000, "output_tokens": 2_000})),
+                )
+                invoke = Mock(wraps=AgentRunner(model, ToolRuntime()).run)
+                executor = RegisteredSemanticExecutor(SimpleNamespace(run=invoke))
+                with patch("agent_runtime.runner.time.monotonic", return_value=100.0):
+                    if total_tokens <= 64_000:
+                        binding = executor.execute(**args)
+                        self.assertEqual(judgment, binding["result"]["judgment"])
+                        self.assertEqual([], validate_result(binding["job"], binding["result"]))
+                    else:
+                        with self.assertRaises(ProductionRunError) as error:
+                            executor.execute(**args)
+                        self.assertEqual("semantic_pending", error.exception.code)
+                        self.assertEqual("budget_exhausted", error.exception.detail["agent_status"])
+                        self.assertEqual("token_budget_exhausted_after_response", error.exception.detail["errors"][0]["code"])
+                self.assertEqual(1, invoke.call_count)
+                self.assertEqual(1, model.invoke.call_count)
+                actual_job = invoke.call_args.args[0]
+                self.assertEqual(1, actual_job.budgets.max_model_requests)
+                self.assertEqual(1, actual_job.budgets.max_steps)
+                self.assertEqual(180_000, actual_job.budgets.max_elapsed_ms)
+                self.assertEqual(4200, model.invoke.call_args.kwargs["max_output_tokens"])
+                self.assertEqual(180.0, model.invoke.call_args.kwargs["timeout_seconds"])
+                self.assertEqual([], model.invoke.call_args.args[3])
 
     def test_prepared_execution_rejects_modified_registered_rubric_before_invocation(self):
         job, calls, executor, args = self.prepared_fixture()
