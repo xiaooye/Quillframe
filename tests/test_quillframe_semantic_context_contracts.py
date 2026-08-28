@@ -29,7 +29,7 @@ from production_runtime.semantic import (
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT / "harness" / "semantic_workers"))
 from registered_contract_binding import validate_registered_job
-from semantic_worker_router import fingerprint_for, make_contract_job, validate_result, validate_typed_value, worker_job_view
+from semantic_worker_router import fingerprint_for, make_contract_job, validate_contract_result_bindings, validate_result, validate_typed_value, worker_job_view
 
 FP="sha256:"+"a"*64
 READER_CANDIDATE = "The promised answer remains unknown."
@@ -49,6 +49,108 @@ class SemanticContextContractTests(unittest.TestCase):
                 "situation_patterns": [{"pattern_id": "PATTERN-OWN", "evidence_ref": "fixture:visit", "available_from_story_order": 1}],
             },
         }
+
+    def character_action_execution_fixture(self, *, agenda, action="Wait rather than press the request.", echo_changes=None):
+        payload = self.character_fixture()
+        payload["active_agenda"] = agenda
+        payload = prepared_character_action_payloads(
+            {"status": "pass", "characters": [payload], "summary": "Synthetic cast.", "findings": []},
+            {"current_story_order": 2},
+        )[0]
+        job = make_contract_job("character.action_propose", payload["character_id"], payload,
+                                source_session_id="SES-ECHO-FIXTURE", handoff_id="HANDOFF-ECHO-FIXTURE")
+        judgment = {"confidence": 0.8, "character_id": payload["character_id"], "active_agenda": agenda,
+                    "proposals": [{"action": action, "knowledge_basis": [{"evidence_id": "OBS-CURRENT", "use": "uncertainty"}]}],
+                    **(echo_changes or {})}
+        raw = " \n" + json.dumps(judgment, ensure_ascii=False, indent=2) + "\n"
+        model = SimpleNamespace(
+            select_model=Mock(return_value=SimpleNamespace(model_id="fixture-model", protocol="openai_chat_completions")),
+            invoke=Mock(return_value=ModelTurn("openai_chat_completions", "fixture-model", text=raw, finish_reason="stop")),
+        )
+        calls, results = [], []
+
+        def invoke(agent_job):
+            calls.append(agent_job)
+            result = AgentRunner(model, ToolRuntime()).run(agent_job)
+            results.append(result)
+            return result
+
+        return SimpleNamespace(job=job, judgment=judgment, raw=raw, model=model, calls=calls, results=results,
+            executor=RegisteredSemanticExecutor(SimpleNamespace(run=invoke)),
+            args={"run": {"run_id": "RUN-ECHO-FIXTURE", "session_id": "SES-ECHO-FIXTURE", "task_mode": "DRAFT"},
+                  "service_id": "fixture-service", "model_preference": None, "runtime_role": "registered_character_action"})
+
+    def test_character_native_echo_preserves_exact_strings_without_selecting_the_action(self):
+        agenda = " 保留合成目标“甲”；暂缓决定。\n下一步由角色判断。 "
+        actions = ("Wait despite the earlier urgency.", "Refuse the offered route because the evidence remains uncertain.",
+                   "Pursue a side objective before returning to the request.")
+        for action in actions:
+            with self.subTest(action=action):
+                fixture = self.character_action_execution_fixture(agenda=agenda, action=action)
+                original_job = deepcopy(fixture.job)
+                raw_fingerprint = fingerprint_text(fixture.raw)
+                binding = fixture.executor.execute_prepared(semantic_job=fixture.job, **fixture.args)
+                actual = fixture.calls[0]
+                for field in ("character_id", "active_agenda"):
+                    self.assertEqual([original_job["input"]["payload"][field]], actual.output_schema["properties"][field]["enum"])
+                    self.assertNotIn("enum", original_job["output_contract"]["properties"][field])
+                self.assertEqual(fixture.judgment, binding["result"]["judgment"])
+                self.assertEqual(action, binding["result"]["judgment"]["proposals"][0]["action"])
+                self.assertEqual([], validate_result(binding["job"], binding["result"]))
+                self.assertEqual(original_job, fixture.job)
+                self.assertEqual(original_job, binding["job"])
+                self.assertEqual(worker_job_view(original_job), actual.context[0]["registered_semantic_job"])
+                self.assertEqual(fixture.raw, fixture.results[0].final_text)
+                self.assertEqual(raw_fingerprint, fingerprint_text(fixture.results[0].final_text))
+                self.assertEqual(actual.output_schema, fixture.model.invoke.call_args.kwargs["output_schema"])
+                self.assertIn("do not make that baseline permanent Canon", actual.instruction)
+                self.assertIn("Judge the action semantically", actual.instruction)
+
+    def test_character_native_echo_rejects_rephrasing_or_wrong_id_once_without_repair(self):
+        agenda = "Keep the synthetic target; wait. "
+        changes = [{"active_agenda": value} for value in (
+            "Preserve the synthetic objective and pause.", "Keep the synthetic target, wait. ", agenda.rstrip(),
+        )]
+        changes.append({"character_id": "CHAR-OTHER"})
+        for changed in changes:
+            with self.subTest(changed=changed):
+                fixture = self.character_action_execution_fixture(agenda=agenda, echo_changes=changed)
+                original_job = deepcopy(fixture.job)
+                # These strings fit the unchanged registered shape but fail its
+                # original exact binding. Native output now exposes that bound.
+                self.assertEqual([], validate_typed_value(fixture.judgment, fixture.job["output_contract"]))
+                field = next(iter(changed))
+                self.assertIn("character action result mismatch: " + field,
+                              validate_contract_result_bindings(fixture.job, fixture.judgment))
+                with self.assertRaises(ProductionRunError) as error:
+                    fixture.executor.execute_prepared(semantic_job=fixture.job, **fixture.args)
+                self.assertEqual("semantic_pending", error.exception.code)
+                self.assertEqual("model_failed", error.exception.detail["agent_status"])
+                self.assertEqual("model_output_schema_invalid", error.exception.detail["errors"][0]["code"])
+                self.assertEqual(1, fixture.model.invoke.call_count)
+                self.assertEqual(1, fixture.model.select_model.call_count)
+                self.assertFalse(fixture.model.select_model.call_args.kwargs["allow_probe"])
+                self.assertEqual(1, fixture.results[0].model_requests)
+                self.assertEqual(0, fixture.results[0].tool_calls)
+                self.assertEqual(fixture.raw, fixture.results[0].final_text)
+                self.assertEqual(original_job, fixture.job)
+
+    def test_character_native_echo_binds_new_inputs_and_rejects_oversized_profile_before_dispatch(self):
+        fixtures = [self.character_action_execution_fixture(agenda=agenda) for agenda in ("First synthetic goal.", "Second synthetic goal.")]
+        for fixture in fixtures:
+            fixture.executor.execute_prepared(semantic_job=fixture.job, **fixture.args)
+        first, second = (fixture.calls[0] for fixture in fixtures)
+        self.assertNotEqual(first.output_schema, second.output_schema)
+        self.assertNotEqual(first.input_fingerprint, second.input_fingerprint)
+        self.assertNotEqual(first.input_fingerprint, replace(first, output_schema=second.output_schema).input_fingerprint)
+        oversized = self.character_action_execution_fixture(agenda="x" * 120_000)
+        self.assertEqual([], validate_registered_job(oversized.job))
+        with self.assertRaises(ProductionRunError) as error:
+            oversized.executor.execute_prepared(semantic_job=oversized.job, **oversized.args)
+        self.assertEqual("semantic_output_schema_unsupported", error.exception.code)
+        self.assertEqual([], oversized.calls)
+        oversized.model.select_model.assert_not_called()
+        oversized.model.invoke.assert_not_called()
 
     def test_prepared_cast_uses_disclosed_contract_and_filters_future_without_mutating_source(self):
         raw = {"status": "pass", "characters": [self.character_fixture()], "summary": "Fixture cast.", "findings": []}

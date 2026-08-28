@@ -28,6 +28,8 @@ Reader-expectation transport exposes only legal operations derived from the froz
 
 A valid Reader `fail` retains its original verdict while the bounded continuity and candidate self-audit stages produce the diagnostics needed for a formal revision source. It must never trigger independent review or release. Pending or invalid Reader evidence, failed continuity, and incomplete source evidence remain blocking conditions. Confirmed results from a stopped run are immutable; a source change requires a new run and does not erase the failed attempt or its spending.
 
+Character-action transport binds the existing `character_id` and `active_agenda` echo fields to their exact frozen input strings. These values were supplied by project state or a preceding AI stage; Python neither invents the agenda nor judges whether an action fulfills it. The agenda is the baseline for this invocation, not permanent Canon. Action, tactic, interpretation, and evidence selection remain model decisions, including hesitation or a conflicting impulse. Narrowing these two strings must preserve the registered contract, original response, and final binding validator. It introduces no new provider schema primitive beyond the already exercised string enum.
+
 Rollback baseline: `54c64c0`. New runs freeze exact code and inputs; active source replacement is forbidden. Code rollback does not rewrite receipts, candidates, or usage records. Model execution retains the host's existing cumulative authorization without resetting historical spending.
 
 ## Non-goals

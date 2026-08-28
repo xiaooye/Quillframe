@@ -7,7 +7,8 @@
 - [x] Build complete Chinese blind calibration, order controls, and result records.
 - [ ] Complete deterministic checks, code review, commit, and exact source binding.
 - [x] Execute bounded real-model calibration and generation comparisons, recording limits in the [evaluation report](evaluation.en.md). No quality improvement was established.
-- [ ] Verify frozen-ledger output constraints and Reader-rejection revision diagnostics, including one real transport compatibility probe.
+- [x] Verify frozen-ledger output constraints and Reader-rejection revision diagnostics, including one real transport compatibility probe.
+- [ ] Bind exact character-state echoes without Python literary judgment; verify original outputs and semantic action freedom.
 - [ ] Run real drafting or revision under the current authorization, complete independent review, obtain Core release, and deliver.
 
 Research or simulated tests cannot stand in for unchecked tasks. Author approval and literary improvement remain unconfirmed.

@@ -197,6 +197,12 @@ class RegisteredSemanticExecutor:
         if contract_id in {"character.action_propose", "scene.resolve_actions"}:
             try:
                 output_schema = required_only_output_schema(semantic_job["output_contract"])
+                if contract_id == "character.action_propose":
+                    # These are response bindings to the supplied baseline,
+                    # not Python-selected motives or constraints on an action.
+                    for field in ("character_id", "active_agenda"):
+                        output_schema["properties"][field]["enum"] = [semantic_job["input"]["payload"][field]]
+                    validate_output_schema(output_schema)
             except ValueError as exc:
                 raise ProductionRunError("semantic_output_schema_unsupported", str(exc)) from exc
             instruction += (
@@ -211,6 +217,11 @@ class RegisteredSemanticExecutor:
                 evidence_id for evidence_id, _ in _character_evidence_rows(semantic_job["input"]["payload"])
             ]
             instruction += (
+                " Copy character_id and active_agenda exactly from the supplied payload, including punctuation and whitespace. "
+                "These two echo fields bind this response to the frozen input baseline, which may have been proposed by the preceding AI stage; "
+                "they do not make that baseline permanent Canon or prescribe the character's choice. "
+                "Judge the action semantically: proposals.action may express hesitation, resistance, a changed tactic or a supported side objective. "
+                "Do not paraphrase the echo fields to express that judgment or mechanically repeat them in the action. "
                 " In every proposal.knowledge_basis, cite only eligible_evidence_ids from the supplied index. "
                 "Use each evidence_id at most once per proposal, even if it has several implications; choose one use. "
                 "Do not treat IDs in any other field as reference authority. An empty knowledge_basis is allowed when no indexed evidence was used."
