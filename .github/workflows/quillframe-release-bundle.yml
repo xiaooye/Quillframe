@@ -11,10 +11,10 @@ jobs:
     name: Deterministic 1.0.0-dev.0 bundle
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
       - name: Verify development identity and bundle contract
@@ -59,7 +59,7 @@ jobs:
           test -f /tmp/quillframe-development-bundle-smoke/BUNDLE_CONTENT_MANIFEST.json
           python /tmp/quillframe-development-bundle-smoke/quillframe.py doctor
       - name: Upload development acceptance evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: quillframe-1.0.0-dev.0-${{ github.sha }}
           path: acceptance-out/

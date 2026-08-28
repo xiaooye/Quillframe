@@ -164,7 +164,7 @@ jobs:
         run: corepack pnpm run browser:acceptance:t605
       - name: Upload T605 evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: quillframe-t605-browser-evidence
           path: /tmp/quillframe-t605-evidence/
@@ -235,7 +235,7 @@ jobs:
           PY
       - name: Upload native acceptance evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: quillframe-native-acceptance
           path: |
