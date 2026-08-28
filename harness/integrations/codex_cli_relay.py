@@ -34,6 +34,7 @@ COUNTED_EVENTS = {"spawned", "spawn_failed", "cli_started"}
 REQUEST_ID = re.compile(r"req_[0-9a-f]{32}\Z")
 DISABLED_FEATURES = (
     "shell_tool", "unified_exec", "shell_snapshot", "code_mode_host",
+    "code_mode", "code_mode_only", "code_mode_prewarm", "code_mode_interrupt",
     "multi_agent", "apps", "plugins", "remote_plugin", "browser_use",
     "browser_use_external", "computer_use", "in_app_browser",
     "image_generation", "view_image", "workspace_dependencies", "skill_search",
@@ -45,6 +46,7 @@ CLI_CONFIG = (
     # view_image is disabled as a feature above; tools.view_image is not a
     # recognized strict-config key in the installed 0.150 CLI schema.
     'web_search="disabled"',
+    "suppress_unstable_features_warning=true",
     "hide_agent_reasoning=true", "show_raw_agent_reasoning=false",
     'model_reasoning_summary="none"', 'history.persistence="none"',
 )
@@ -267,9 +269,7 @@ def audit_events(raw: bytes) -> EventAudit:
             continue
         elif kind in {"item.started", "item.updated", "item.completed"}:
             item = event.get("item")
-            if not turn_started or not isinstance(item, dict):
-                audit.errors.append("invalid_cli_item")
-            else:
+            if isinstance(item, dict):
                 item_type, item_id = item.get("type"), item.get("id")
                 safe["item_type"] = item_type if isinstance(item_type, str) and re.fullmatch(r"[a-z_]+", item_type) else "invalid"
                 try:
@@ -278,10 +278,16 @@ def audit_events(raw: bytes) -> EventAudit:
                     if isinstance(item.get("text"), str):
                         text_bytes = item["text"].encode("utf-8")
                         safe.update(text_sha256=sha256(text_bytes), text_bytes=len(text_bytes))
+                    if isinstance(item.get("message"), str):
+                        message_bytes = item["message"].encode("utf-8")
+                        safe.update(message_sha256=sha256(message_bytes), message_bytes=len(message_bytes))
                 except UnicodeError:
                     audit.errors.append("invalid_cli_item_unicode")
                     audit.safe_lines.append(json_bytes(safe))
                     continue
+            if not turn_started or not isinstance(item, dict):
+                audit.errors.append("invalid_cli_item")
+            else:
                 if not isinstance(item_type, str) or item_type not in {"agent_message", "reasoning"}:
                     audit.forbidden_event_count += 1
                     audit.errors.append("forbidden_cli_item")

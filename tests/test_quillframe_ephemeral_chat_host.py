@@ -696,6 +696,14 @@ class CodexCliRelayTests(unittest.TestCase):
 
     def test_cli_rejects_tools_failures_duplicates_and_unknown_event_fields(self):
         cases = []
+        startup = self.events()
+        startup.insert(1, {"type": "item.completed", "item": {"id": "notice_0", "type": "error", "message": "PRIVATE-STARTUP-SENTINEL"}})
+        startup_audit = codex_cli_relay.audit_events(self.raw_events(startup))
+        self.assertIn("invalid_cli_item", startup_audit.errors)
+        notice = json.loads(startup_audit.evidence.splitlines()[1])
+        self.assertEqual(notice["item_type"], "error")
+        self.assertEqual(notice["message_sha256"], hashlib.sha256(b"PRIVATE-STARTUP-SENTINEL").hexdigest())
+        self.assertNotIn(b"PRIVATE-STARTUP-SENTINEL", startup_audit.evidence)
         events = self.events()
         events[0]["unexpected"] = "not accepted"
         cases.append(events)
