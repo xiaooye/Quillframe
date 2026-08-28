@@ -19,7 +19,7 @@
     "ipaddr.js": "2.4.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20260819.1",
+    "@cloudflare/workers-types": "5.20260825.1",
     "typescript": "5.9.3",
     "wrangler": "4.124.0"
   }
