@@ -1874,6 +1874,22 @@ class ProductionRuntimeTests(unittest.TestCase):
             self.assertNotIn("protect the deal", context_text)
         self.assertIn("scene_contract", writer_text)
         self.assertIn("director_note", writer_text)
+        self.assertIn("one continuous, legible scene", writer.instruction)
+        self.assertIn(
+            "Keep speaker identity, spatial relations, action order and object continuity clear",
+            writer.instruction,
+        )
+        self.assertIn(
+            "reserve short sentences and one-line paragraphs for genuine emphasis, never as the default rhythm",
+            writer.instruction,
+        )
+        self.assertIn("other characters' or the environment's side reactions", writer.instruction)
+        self.assertIn("never the observable narrative evidence needed to follow who spoke", writer.instruction)
+        self.assertIn(
+            "Stop explaining only after the relevant evidence is present on the page",
+            writer.instruction,
+        )
+        self.assertIn("Directive version: direct-surface-writer-v2", writer.instruction)
         self.assertNotIn("writer_projection", writer_text)
         self.assertNotIn("expected_reward", writer_text)
         reader = next(job for job in fake.calls if job.runtime_role == "registered_reader_engagement")

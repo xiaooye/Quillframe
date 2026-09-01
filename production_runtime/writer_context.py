@@ -18,7 +18,7 @@ from .contracts import ProductionRunError
 
 INVENTORY_SCHEMA = "quillframe_writer_context_inventory_v1"
 PACK_SCHEMA = "quillframe_direct_writer_pack_v1"
-WRITER_DIRECTIVE_VERSION = "direct-surface-writer-v1"
+WRITER_DIRECTIVE_VERSION = "direct-surface-writer-v2"
 ALLOWED_SOURCE_TYPES = {
     "character",
     "relationship",

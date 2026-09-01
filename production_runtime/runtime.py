@@ -103,11 +103,18 @@ PRE_INDEPENDENT_MECHANISMS = (
 )
 READER_GRIP_VALUES = {"low", "medium", "high", "very_high"}
 WRITER_REALIZATION_GUIDANCE = (
-    "Write the candidate directly from the Scene Realization Contract. Put judgment in action, pause, misunderstanding, "
-    "avoidance and choice; show only what the POV would notice now. Let dialogue contest information, relationship, time, "
-    "responsibility or resources. Let motive be inferred from behavior and cost, and stop explaining once the evidence is enough. "
-    "End on a consequence or new constraint, not a theme summary. Use natural Chinese for ordinary narration and speech; "
-    "use brief English only when this character and situation genuinely require it, with natural contextual understanding. "
+    "Write the candidate directly from the Scene Realization Contract as one continuous, legible scene, not a chain of isolated "
+    "dialogue or beat lines. Keep speaker identity, spatial relations, action order and object continuity clear. Attach dialogue to "
+    "a speaker through natural attribution, purposeful action, another character's response or unambiguous turn context. Use full, "
+    "natural Chinese sentences and paragraphs for setup, movement, atmosphere and emotional continuity; reserve short sentences and "
+    "one-line paragraphs for genuine emphasis, never as the default rhythm. Use functional scene description, expression, bodily "
+    "response and other characters' or the environment's side reactions when they clarify attention, relationship pressure, meaning, "
+    "choice or consequence. Put judgment in action, pause, misunderstanding, avoidance and choice; show only what the POV would "
+    "notice now. Let dialogue contest information, relationship, time, responsibility or resources. Let inference replace explanatory "
+    "conclusions, never the observable narrative evidence needed to follow who spoke, where people are or how actions connect. Let "
+    "motive and subtext be inferred from behavior and cost. Stop explaining only after the relevant evidence is present on the page. "
+    "End on a consequence or new constraint, not a theme summary. Use brief English only when this character and situation genuinely "
+    "require it, with natural contextual understanding. "
 )
 _EXECUTION_SCOPE: ContextVar[dict[str, Any] | None] = ContextVar("quillframe_production_execution", default=None)
 _READY_RUN_POOL = ThreadPoolExecutor(max_workers=64, thread_name_prefix="qf-production-resume")
