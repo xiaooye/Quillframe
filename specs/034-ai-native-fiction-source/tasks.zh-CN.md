@@ -44,9 +44,9 @@
 
 ## 文学与真实调用门
 
-- [ ] 用户明确要求启动 source-free canary；不要求 token 或 provider 费用上限。
+- [x] 用户明确要求启动一组 source-free A/B；不要求 token 或 provider 费用上限。
 - [x] 当前 canary 已明确为 source-free，不使用正面声线样本；未来声线学习 canary 必须另走权利门。
-- [ ] 同场景中文 arms 以交换顺序方式盲评。
+- [x] 同场景中文 arms 严格只生成两份，并以随机匿名顺序交给作者，不调用模型 Reviewer。
 - [ ] 作者接受至少一个 canary arm。
 
 这些真实调用项保持 pending，不能由工程完成暗示。

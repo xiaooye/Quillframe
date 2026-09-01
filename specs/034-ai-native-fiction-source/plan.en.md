@@ -1,6 +1,6 @@
 # AI-native fiction-source implementation plan
 
-2026-08-31 · SYSTEM-IMPROVE · no paid canary is authorized by this plan.
+2026-08-31 · SYSTEM-IMPROVE · one two-call source-free A/B was separately authorized by the user and executed.
 
 ## Phase 1 · Preserve the failure evidence
 
@@ -44,8 +44,8 @@ Add deterministic tests for Writer visibility, local versus fresh revision, hard
 
 Visible result: reproducible engineering evidence, with literary quality still explicitly pending.
 
-## Phase 8 · Prepare, but do not run, the canary
+## Phase 8 · Prepare and run one author-authorized canary
 
-Specify candidate models, source-free same-scene inputs, arm order and swapped blind comparisons. Record that this canary has no author-set token or provider-cost ceiling, and ask for an explicit start command before any live call.
+Freeze one source-free same-scene input, an ordinary Writer baseline and the AI-native treatment. Record that this canary has no author-set token or provider-cost ceiling, require an explicit start command, and dispatch exactly two prose calls after authorization.
 
-Visible result: an explicit source-free canary dispatch packet rather than an implicit model call.
+Visible result: one anonymous A/B export for direct author selection, with no model Reviewer or automatic Framework promotion.

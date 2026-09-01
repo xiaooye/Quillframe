@@ -1,6 +1,6 @@
 # AI 原生小说生成源头实施计划
 
-2026-08-31 · SYSTEM-IMPROVE · 本计划不授权付费 canary。
+2026-08-31 · SYSTEM-IMPROVE · 用户已另行授权并执行一组两次调用的 source-free A/B。
 
 ## 阶段 1 · 保全失败证据
 
@@ -44,8 +44,8 @@
 
 可见结果：可复现的工程证据，同时明确文学质量仍待验证。
 
-## 阶段 8 · 准备但不运行 canary
+## 阶段 8 · 准备并运行一组作者授权 canary
 
-列出候选模型、source-free 同场景输入、arm 顺序与交换顺序盲比；明确本次 canary 不设置作者级 token 或 provider 费用上限。任何真实调用前等待用户明确下达启动命令。
+冻结一份 source-free 同场景输入、普通 Writer 基线与 AI-native treatment；明确本次 canary 不设置作者级 token 或 provider 费用上限。任何真实调用前等待用户明确下达启动命令，授权后严格只派发两次正文调用。
 
-可见结果：显式、可审查的 source-free canary 派发包，而非隐式模型调用。
+可见结果：一份直接交给作者选择的匿名 A/B，不调用模型 Reviewer，也不自动提升 Framework。

@@ -1,9 +1,10 @@
 """Typed, fingerprint-bound evidence for an author-approved fiction audition.
 
 This module never runs a canary and never decides literary quality. It checks
-that an explicit author selection binds a pre-approved cost plan, every exact
+that an explicit author selection binds the approved call graph, every exact
 model/scene artifact, both candidate presentation orders, and the selected
-provider-visible model version.
+provider-visible model version. Provider usage is recorded by artifacts; an
+author token or cost ceiling is deliberately not part of this contract.
 """
 from __future__ import annotations
 
@@ -12,8 +13,8 @@ from typing import Any
 
 from .contracts import fingerprint
 
-SCHEMA = "quillframe_fiction_audition_confirmation_v2"
-PLAN_SCHEMA = "quillframe_fiction_audition_plan_v1"
+SCHEMA = "quillframe_fiction_audition_confirmation_v3"
+PLAN_SCHEMA = "quillframe_fiction_audition_plan_v2"
 ARTIFACT_SCHEMA = "quillframe_fiction_audition_artifact_v1"
 PRESENTATION_SCHEMA = "quillframe_fiction_blind_presentation_receipt_v1"
 SELECTION_SCHEMA = "quillframe_fiction_author_selection_receipt_v1"
@@ -47,14 +48,14 @@ def _plan(value: Any) -> dict[str, Any]:
         raise ValueError(f"fiction audition plan must use {PLAN_SCHEMA}")
     exact = {
         "schema", "plan_id", "candidate_models", "scene_fingerprints",
-        "voice_source_fingerprints", "max_output_tokens", "max_cost_micros",
-        "approved_call_count", "author_cost_authorization_ref", "authority",
+        "voice_source_fingerprints", "source_free_voice_baseline",
+        "approved_call_count", "author_start_authorization_ref", "authority",
         "plan_fingerprint",
     }
     if set(value) != exact or value.get("authority") is not False:
         raise ValueError("fiction audition plan fields/authority invalid")
     _text(value.get("plan_id"), "plan.plan_id", maximum=160)
-    _text(value.get("author_cost_authorization_ref"), "plan.author_cost_authorization_ref")
+    _text(value.get("author_start_authorization_ref"), "plan.author_start_authorization_ref")
     models = value.get("candidate_models")
     if not isinstance(models, list) or len(models) < 2:
         raise ValueError("fiction audition plan requires at least two candidate models")
@@ -91,9 +92,15 @@ def _plan(value: Any) -> dict[str, Any]:
         raise ValueError("fiction audition voice sources must be a unique array")
     for index, source in enumerate(voices):
         _sha(source, f"voice_source_fingerprints[{index}]")
-    for key in ("max_output_tokens", "max_cost_micros", "approved_call_count"):
-        if not isinstance(value.get(key), int) or isinstance(value[key], bool) or value[key] < 1:
-            raise ValueError(f"fiction audition plan {key} must be a positive integer")
+    source_free = value.get("source_free_voice_baseline")
+    if not isinstance(source_free, bool):
+        raise ValueError("fiction audition source_free_voice_baseline must be boolean")
+    if source_free == bool(voices):
+        raise ValueError("fiction audition voice sources contradict source-free declaration")
+    if (not isinstance(value.get("approved_call_count"), int)
+            or isinstance(value["approved_call_count"], bool)
+            or value["approved_call_count"] < 1):
+        raise ValueError("fiction audition plan approved_call_count must be a positive integer")
     required_calls = len(models) * len(scenes)
     if value["approved_call_count"] != required_calls:
         raise ValueError("fiction audition plan call count must exactly cover model/scene candidates")

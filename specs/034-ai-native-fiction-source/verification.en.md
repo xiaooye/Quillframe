@@ -63,6 +63,6 @@ Historical runs remain frozen and readable. Project-open may apply only ordered,
 
 ## Canary gate
 
-Before live fiction calls, the authorization packet must name candidate models and exact versions, the planned writing/review call graph, blinded/swapped order, the author decision rule, and either the rights of every positive sample or an exact source-free declaration. The current packet is source-free and has no author-set token or provider-cost ceiling: it uses no Author Voice Sheet, prose anchor or accepted prose tail.
+Before live fiction calls, the authorization packet must name the exact model and call graph, the anonymous author decision rule, and either the rights of every positive sample or an exact source-free declaration. The executed packet was source-free and had no author-set token or provider-cost ceiling: it used no Author Voice Sheet, prose anchor or accepted prose tail. The user narrowed it to exactly two same-scene Writer calls and no model Reviewer.
 
-Until that packet is approved and the author accepts an arm, status is `engineering_verified / canary_awaiting_authorization`, never `literary_success`.
+The packet is now executed and awaiting the author's anonymous A/B decision. Status is `engineering_verified / canary_awaiting_author_decision`, never `literary_success`.

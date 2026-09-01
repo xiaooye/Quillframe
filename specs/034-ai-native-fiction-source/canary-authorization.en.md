@@ -1,27 +1,25 @@
 # Chinese fiction canary authorization packet
 
-2026-08-31 · proposal only · not authorized and not dispatched.
+2026-08-31 · one source-free A/B authorized and dispatched · author decision pending.
 
 ## Purpose and source-free AI boundary
 
-The canary asks one narrow question: can either supported model family realize the same Chinese scene from the new Writer Pack well enough for the author to accept it? It does not revise, accept, settle or overwrite the frozen failed candidate.
+The canary asks one narrow question: does the new near-generation instruction improve one Chinese scene relative to the ordinary Writer baseline enough for the author to prefer it? It does not revise, accept, settle or overwrite the frozen failed candidate.
 
 This canary tests 100% AI-generated candidate prose, not author-voice learning. Fixed input contains only abstract author objectives, project-neutral character/relationship/world facts, one shared Scene Realization Contract, and versioned general craft instructions. Each Writer generates its entire candidate from the first character to the last.
 
 No positive Chinese prose sample is supplied or retrieved, no Author Voice Sheet is compiled, and no accepted prose tail, rejected prose, reviewer analysis, repair explanation or private Character Enactment state is used. The run must record `source_free_voice_baseline=true` and must not claim that Quillframe has learned the author's style.
 
-## Proposed calls
+## Authorized calls
 
 | Phase | Model ID | Planned calls | Purpose |
 | --- | --- | ---: | --- |
-| Writer arm A | `gpt-5.6-sol` | 1 | Generate a complete candidate directly from the shared source-free Writer Pack |
-| Writer arm B | `claude-opus-5` | 1 | Generate a complete candidate directly from the shared source-free Writer Pack |
-| Swapped A/B evidence | `gpt-5.6-terra` | 2 | Review A→B and B→A separately |
-| Swapped A/B evidence | `claude-sonnet-5` | 2 | Review A→B and B→A separately |
+| Ordinary Writer baseline | `gpt-5.6-sol` | 1 | Generate a complete candidate from the shared source-free scene contract and ordinary Writer instruction |
+| AI-native treatment | `gpt-5.6-sol` | 1 | Generate a complete candidate from the same scene contract and the new near-generation instruction |
 
-The baseline experiment plans six calls; this is a call graph, not a token or cost budget. Tools, web search and automatic replacement calls are disabled so the candidates do not receive different external information. An unknown result stops and is reported rather than being called again until uncertainty turns into PASS.
+This experiment authorizes exactly two prose calls. There is no model Reviewer, swapped model review, extra sample or automatic replacement call. Tools and web search are disabled so the candidates do not receive different external information. The author, not another model, makes the only literary comparison.
 
-Before dispatch, each provider model ID, protocol and provider-visible metadata are frozen into Quillframe's model-version fingerprint. A missing service, changed ID, changed price or unverifiable fiction-audition receipt stops before the first paid Writer call and requires a new authorization packet.
+Before dispatch, the provider model ID, protocol and available provider-visible metadata are frozen into the execution receipt. A missing service, changed ID or unverifiable request identity stops before the first Writer call and requires a new authorization packet.
 
 ## Token and cost policy
 
@@ -35,10 +33,12 @@ This plan ingests no third-party prose and requires no user prose sample, so the
 
 1. Both Writers receive the same fingerprint-bound Writer Pack and symmetric non-price settings; neither candidate is truncated merely to force equal token counts.
 2. Export labels and model identities are hidden; A/B mapping is sealed.
-3. Each Reviewer compares A→B and B→A. It reports every current objective as `met`, `not_met` or `uncertain` with exact evidence and repair scope. An order-dependent conflict becomes `uncertain`; no average score chooses a winner.
-4. The author sees the two prose arms in randomized order without model identity or Reviewer verdict, and chooses A, B or neither.
-5. Only an explicit author acceptance can activate the selected fiction-writing receipt. “Neither” stops prompt stacking and records a model-capability boundary.
+3. The author sees the two prose arms in randomized order without model or instruction identity, and chooses A, B or neither.
+4. The selection is one-off instruction evidence only. It cannot promote General Craft, write Canon, qualify a model or claim literary success by itself.
+5. “Neither” records that this instruction treatment did not pass the author canary; it does not trigger more calls.
 
-## Authorization required
+## Execution record
 
-No call may start until the user explicitly asks to start this source-free AI canary. There is no separate token- or cost-ceiling confirmation gate; correcting this document is not itself a start command.
+The user explicitly authorized one sample A/B on 2026-08-31. Exactly two Writer calls completed; the first checkpoint was reused after relay validation stopped, so it was not dispatched twice. The two outputs contain 3,720 and 2,560 Chinese characters in blind order. Recorded usage totals 27,936 input tokens, 6,894 output tokens and 1,393 reasoning-output tokens. No provider monetary-price receipt was exposed.
+
+Both Codex CLI 0.151 calls returned exit code 0, one exact final message and usage, but also emitted sanitized error-type lifecycle items that the v3 relay preserved as `forbidden_cli_item` / `invalid_cli_item`. The blind prose is available for author review; clean transport validation is not claimed. No Reviewer or further model call was made.

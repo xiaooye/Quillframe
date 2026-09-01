@@ -1,27 +1,25 @@
 # 中文小说 Canary 授权单
 
-2026-08-31 · 仅为提案 · 尚未授权、尚未派发。
+2026-08-31 · 已授权并派发一组 source-free A/B · 等待作者选择。
 
 ## 目的与纯 AI 素材边界
 
-Canary 只回答一个小问题：两种当前受支持的模型族中，是否至少有一种能从同一份新 Writer Pack 实现一场中文场景，并获得作者接受？它不会修订、接受、结算或覆盖冻结的失败候选。
+Canary 只回答一个小问题：相对普通 Writer 基线，新的近生成端指令能否把同一个中文场景改善到作者更愿意选择？它不会修订、接受、结算或覆盖冻结的失败候选。
 
 本次测试的是 100% AI-generated candidate prose，而不是作者声线学习。固定输入只包含抽象作者目标、项目中立的角色／关系／世界事实、同一份 Scene Realization Contract 与版本化通用创作指令。两篇候选正文从第一个字到最后一个字均由各自 Writer 生成。
 
 不提供或召回任何正面中文正文样本，不编译 Author Voice Sheet，不使用 accepted prose tail，不使用被否决正文、Reviewer 分析、Repair 解释或私有 Character Enactment 状态。运行必须标明 `source_free_voice_baseline=true`，并且不得声称系统已经学会作者文风。
 
-## 拟议调用
+## 已授权调用
 
 | 阶段 | 模型 ID | 计划调用 | 用途 |
 | --- | --- | ---: | --- |
-| Writer A | `gpt-5.6-sol` | 1 | 从同一份 source-free Writer Pack 直接生成完整候选正文 |
-| Writer B | `claude-opus-5` | 1 | 从同一份 source-free Writer Pack 直接生成完整候选正文 |
-| A/B 交换顺序取证 | `gpt-5.6-terra` | 2 | 分别审查 A→B 与 B→A |
-| A/B 交换顺序取证 | `claude-sonnet-5` | 2 | 分别审查 A→B 与 B→A |
+| 普通 Writer 基线 | `gpt-5.6-sol` | 1 | 从共享 source-free 场景合同与普通 Writer 指令生成完整候选 |
+| AI-native treatment | `gpt-5.6-sol` | 1 | 从同一场景合同与新的近生成端指令生成完整候选 |
 
-基线实验计划为 6 次调用；这是调用图，不是 token 或费用预算。禁止 tools、网页搜索和自动替代调用，避免让两篇候选获得不同的外部信息。结果未知时停止并报告，不用额外调用把不确定性刷成 PASS。
+本次实验只授权两次正文调用。没有模型 Reviewer、交换顺序模型审查、额外样本或自动替代调用。禁止 tools 与网页搜索，避免两篇候选获得不同外部信息。唯一的文学比较由作者完成，不交给另一个模型。
 
-派发前，必须把每个 provider model ID、protocol 与 provider 可见 metadata 冻结为 Quillframe 模型版本指纹。服务缺失、ID 或价格变化、fiction-audition receipt 无法验证时，在第一次付费 Writer 调用前停止，并重新提交授权单。
+派发前，必须把 provider model ID、protocol 与可用的 provider 可见 metadata 冻结到执行回执。服务缺失、ID 变化或 request identity 无法验证时，在第一次 Writer 调用前停止，并重新提交授权单。
 
 ## Token 与费用策略
 
@@ -35,10 +33,12 @@ Canary 只回答一个小问题：两种当前受支持的模型族中，是否�
 
 1. 两个 Writer 接收同一份带指纹 Writer Pack 和对称的非价格设置；不为制造相同 token 数而截断任一候选。
 2. 导出标签与模型身份隐藏，A/B 映射密封。
-3. 每位 Reviewer 分别比较 A→B 与 B→A，对每个当前作者目标输出 `met`、`not_met` 或 `uncertain`、精确证据与修订范围。顺序改变导致冲突时记为 `uncertain`，不得用平均分选赢家。
-4. 作者只看到随机顺序的两篇正文，不看到模型身份或 Reviewer verdict，并选择 A、B 或“两者都不接受”。
-5. 只有作者明确接受，才可激活选中模型的 fiction-writing receipt；“两者都不接受”会停止继续叠 Prompt，并记录模型能力边界。
+3. 作者只看到随机顺序的两篇正文，不看到模型或指令身份，并选择 A、B 或“两者都不接受”。
+4. 这次选择只是一条一次性指令证据，不能自动提升 General Craft、写入 Canon、授予模型资格或单独证明文学成功。
+5. “两者都不接受”表示本次指令 treatment 没有通过作者 canary，不会触发更多调用。
 
-## 等待授权
+## 执行记录
 
-在用户明确要求启动上述纯 AI Canary 前，任何调用都不得开始。不存在额外的 token 或费用上限确认门；本文件的规则修正本身不等于启动命令。
+用户已于 2026-08-31 明确授权一个 sample 的 A/B。两次 Writer 调用均已完成；第一次 relay 校验停止后复用了 checkpoint，没有重复派发。匿名顺序中的两份输出分别为 3,720 与 2,560 个中文字符。实际记录合计为 27,936 input tokens、6,894 output tokens 与 1,393 reasoning-output tokens；provider 没有暴露货币价格回执。
+
+两次 Codex CLI 0.151 调用都以退出码 0 返回一份精确 final message 与 usage，但同时产生了经脱敏保存的 error-type lifecycle items，v3 relay 将其记录为 `forbidden_cli_item` / `invalid_cli_item`。正文可以交给作者盲评，但不能声称 transport validation 完全干净。没有运行 Reviewer 或任何额外模型调用。

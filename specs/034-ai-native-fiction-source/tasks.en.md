@@ -44,9 +44,9 @@
 
 ## Literary and live gates
 
-- [ ] User explicitly asks to start the source-free canary; no token or provider-cost ceiling is required.
+- [x] User explicitly asks to start one source-free A/B; no token or provider-cost ceiling is required.
 - [x] Current canary is explicitly source-free and uses no positive voice sample; any later voice-learning canary requires a separate rights gate.
-- [ ] Same-scene Chinese arms are blind-reviewed with swapped order.
+- [x] Exactly two same-scene Chinese arms are generated and exported in randomized anonymous order without a model Reviewer.
 - [ ] Author accepts at least one canary arm.
 
 These live items remain pending and are not implied by engineering completion.

@@ -55,10 +55,9 @@ def confirmation_for(candidates: list[tuple[str, DiscoveredModel]]) -> dict:
         } for service_id, model in candidates],
         "scene_fingerprints": [scene],
         "voice_source_fingerprints": [],
-        "max_output_tokens": 4000,
-        "max_cost_micros": 100_000,
+        "source_free_voice_baseline": True,
         "approved_call_count": len(candidates),
-        "author_cost_authorization_ref": "author-approved-cost:fixture",
+        "author_start_authorization_ref": "author-started-source-free-canary:fixture",
         "authority": False,
     }, "plan_fingerprint")
     artifacts = []
@@ -170,6 +169,24 @@ class FictionAuditionTests(unittest.TestCase):
         })
         with self.assertRaises(ValueError):
             validate_confirmation(unswapped)
+
+    def test_plan_has_no_author_token_or_cost_ceiling(self) -> None:
+        receipt = confirmation_for(self.models)
+        self.assertNotIn("max_output_tokens", receipt["plan"])
+        self.assertNotIn("max_cost_micros", receipt["plan"])
+        self.assertNotIn("author_cost_authorization_ref", receipt["plan"])
+        capped = deepcopy(receipt)
+        capped["plan"]["max_cost_micros"] = 1
+        capped["plan"]["plan_fingerprint"] = fingerprint({
+            key: value for key, value in capped["plan"].items()
+            if key != "plan_fingerprint"
+        })
+        capped["confirmation_fingerprint"] = fingerprint({
+            key: value for key, value in capped.items()
+            if key != "confirmation_fingerprint"
+        })
+        with self.assertRaises(ValueError):
+            validate_confirmation(capped)
 
     def test_fiction_capability_is_exact_version_bound_and_revalidated_on_selection(self) -> None:
         manager = ModelServiceManager(
