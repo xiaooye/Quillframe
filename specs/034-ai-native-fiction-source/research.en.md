@@ -99,7 +99,7 @@ The frozen failed revision establishes these pipeline facts without using the re
 - a returned Writer response was discarded by an after-response token-budget check;
 - once a coordinator was active, model stages followed each other with sub-second gaps, while the dominant wall-clock gaps were outside model execution.
 
-The evidence does not establish that an English counter or prose telemetry decided release. Current prose telemetry is optional and is not imported by the production runtime. Run-specific helper scripts existed, but their unavailable contents cannot be represented as proven literary counters.
+The evidence does not establish that an English counter or prose telemetry decided release. At the time of the failure audit, the telemetry module was optional and not imported by production runtime; the follow-up AI-native closure removed it from the Framework entirely. Run-specific helper scripts existed, but their unavailable contents cannot be represented as proven literary counters.
 
 Overreach rejected:
 

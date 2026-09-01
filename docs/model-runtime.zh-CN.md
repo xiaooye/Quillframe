@@ -71,13 +71,6 @@ Global SQLite 使用：
 
 ## Normal CI / Live probe
 
-Normal CI 使用 `MockTransport`，禁止真实模型执行。真实兼容性验证只能显式运行：
-
-```bash
-QUILLFRAME_LIVE_MODEL_TEST=1 \
-QUILLFRAME_LIVE_MODEL_ENDPOINT=https://.../v1 \
-QUILLFRAME_LIVE_MODEL_TOKEN=... \
-python tests/live_model_runtime.py
-```
+Normal CI 使用本机 mock HTTP provider，禁止真实模型执行。真实兼容性验证只能通过 Host Bridge v11 显式启动：先用 `model.service.add` 登记 endpoint，通过 OS secret store 保存凭据，再调用 `model.service.test`。Rust Core 会记录精确 endpoint、protocol、model catalog 与 result receipt。
 
 Live probe 的成功只是带时间和 endpoint/model binding 的 evidence，不是永久 capability truth。

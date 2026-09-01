@@ -9,23 +9,23 @@ SolidJS Studio
 → TauriTransport
 → invoke("bridge_invoke", { request })
 → thin Rust host
-   ├─ packaged quillframe-core Python sidecar
+   ├─ 直接链接 quillframe-core Rust crate
    └─ OS keyring
 → Host Bridge v11
-→ Python Core + project-local SQLite
+→ Rust Core + project-local SQLite
 ```
 
-Rust 只负责 process lifecycle、IPC framing、window integration、secret-store call 与输出脱敏，不复制 Python workflow、Context、Candidate、Settlement、model routing 或 persistence 语义。
+Rust Core 直接拥有 workflow、Context、Candidate、Settlement、model routing、publication recovery 与 persistence 语义；Tauri 只保留展示与 IPC host 职责，不再存在 sidecar runtime。
 
 ## Secret boundary
 
-Access token 只进入 Tauri IPC request。Rust 在调用 Core 前分配 `keyring:qf:*` reference 并把 secret 写入 OS keyring。Sidecar 只接收 request envelope 与已提交 reference，只返回 Bridge result 与 secret action，绝不把 plaintext 写入 SQLite。失败或未消费的分配会被删除；stdout、stderr 与返回错误都会按已知 secret value 脱敏。
+Access token 只进入 Tauri IPC request。Rust 在调用 Core 前分配 `keyring:qf:*` reference 并把 secret 写入 OS keyring；Core 只接收已提交 reference，绝不把 plaintext 写入 SQLite。失败或未消费的分配会被删除，返回错误会按已知 secret value 脱敏。
 
 ## Acceptance gate
 
 真实 desktop artifact 在满足以下证据前保持 unreleased：
 
-- bundled sidecar 的 Host Bridge v11 round-trip；
+- 直接链接 Rust Core 的 Host Bridge v11 round-trip；
 - restart 后仍可 create/open/write/review/publish；
 - OS keyring set/get/delete 与 restart 后 reference recovery；
 - SQLite、browser storage、process log、bridge result、export 均无 secret；

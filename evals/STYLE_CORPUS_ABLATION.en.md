@@ -1,13 +1,13 @@
 # Corpus style three-arm ablation
 
-This evaluation asks whether a source-free corpus candidate changes reader experience relative to both an unguided baseline and the current version-4 craft guidance. It does not generate prose, decide a literary winner, activate learned guidance, or grant release authority. The implementation is [`style_corpus_ablation.py`](style_corpus_ablation.py); its checked-in suite is an explicitly test-only synthetic fixture in [`fixtures/style_corpus_ablation_synthetic.json`](fixtures/style_corpus_ablation_synthetic.json).
+This evaluation asks whether a source-free corpus candidate changes reader experience relative to both an unguided baseline and the current version-5 craft guidance. It does not generate prose, decide a literary winner, activate learned guidance, or grant release authority. The implementation is [`style_corpus_ablation.py`](style_corpus_ablation.py); its checked-in suite is an explicitly test-only synthetic fixture in [`fixtures/style_corpus_ablation_synthetic.json`](fixtures/style_corpus_ablation_synthetic.json).
 
 ## Frozen three-arm comparison
 
 Every case carries one task, one context object, and one randomness object above the arm boundary. The evaluator fingerprints those three values separately and as one generation binding. The three supplied artifacts are then bound as:
 
 - `baseline`: prose produced without craft guidance;
-- `current_craft_v4`: prose produced with the currently frozen version-4 craft pack; and
+- `current_craft_v5`: prose produced with the currently frozen version-5 craft pack; and
 - `corpus_candidate`: prose produced with one source-free corpus-derived projection.
 
 The candidate fingerprint is the SHA-256 digest of the exact UTF-8 prose bytes. The craft fingerprint is the SHA-256 digest of canonical JSON for the complete craft binding. Changing line endings, prose, the writer projection, evidence membership, or any other bound craft field invalidates the prepared plan.

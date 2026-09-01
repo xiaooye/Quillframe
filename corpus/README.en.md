@@ -49,11 +49,19 @@ Metadata with no adult or boundary signal is only a provisional `general` candid
 
 This fixed opening/middle/closing protocol remains available for its original statistical artifact. It is not the prose-style learning protocol and must not be used to claim that 120 works or 360 windows constitute deep style learning.
 
-## Scene-aware prose-style learning
+## Web-novel mechanism learning v2
+
+`quillframe_corpus_webnovel_learning_v2` is the current clean-break analysis contract. It replaces the flat ten-axis model with six domains: reader contract, plot progression, emotion/payoff, character/relationship, scene delivery, and Chinese language rhythm. Leaf dimensions cover opening hooks and chapter pull, causal and information progression, conflict escalation and setup/payoff, emotional setup-release-aftermath, character agency and voice, relationship movement, dialogue subtext, viewpoint, exposition integration, and sentence/punctuation/paragraph rhythm.
+
+The deterministic layer validates `domain + dimension`, chapter position, narrative span, opaque cross-work evidence, counterexamples, source-free compilation, and a one-to-four-card Writer projection. The existing sampler remains only a bounded retrieval-hint mechanism; it does not classify payoff, voice, relationship movement, or quality. Models own dimension activation, literary interpretation, evidence gaps, and convergence.
+
+The v2 contract and semantic pack are frozen, while the successor append-only runner, public atlas, rebuilt candidate, and literary evaluation remain pending. Current dispatch rejects the five v1 flat-axis semantic contracts. The completed V5 run and its 135 candidates remain historical evidence and cannot be relabeled, resumed, promoted, or used as v2 evaluation evidence.
+
+## Historical scene-aware prose-style learning v1
 
 `quillframe_corpus_style_learning_v1` reuses the same governed V5 source identity but changes how evidence is selected and interpreted. It creates no V6 and does not confirm or run V5 as a side effect. The exact 120 works form an addressable available pool. Human confirmation binds declared rights and scope, profile, complete membership and proposal fingerprint; membership checks are not per-work literary review. Depth is measured by coverage, contradiction, counterexamples, held-out replication, semantic saturation, blind causal comparison and leakage resistance—not by exhausting the pool.
 
-In the AI-native contract, AI classifies ten scene functions (`opening`, `dialogue`, `action`, `interiority`, `exposition`, `environment`, `body_appearance`, `relationship`, `transition`, `ending`) and ten independent prose axes, identifies gaps, requests the next minimum-sufficient evidence and judges cross-work convergence. The Python runner only binds source identity/version, minimally materializes bounded passages, applies hygiene and budgets, and records receipts; schema and leakage gates remain deterministic release controls rather than literary judgment. Language mismatch narrows language-specific claims; incomplete/serial material supports local scene/prose claims but not unsupported whole-work claims; restart/concatenation requires boundary-aware windows or narrower claims; a contaminated selected window is rejected and replaced. Full-pool exposure and CPU/memory benchmarks are diagnostics, not quality gates. Registered-contract and synthetic-runner tests now demonstrate dynamic activation of model-requested work/scene-function evidence, truthful unused pool members and early convergence without exhausting the pool. This engineering proof is not a real V5 run, learned style, blind-evaluation result, independent leakage review or publication.
+In the AI-native contract, AI classifies scene functions and prose axes, identifies gaps, requests bounded evidence and judges cross-work convergence. The Rust Corpus runtime binds source identity/version, materializes bounded passages, records typed stage receipts, and enforces schema and leakage boundaries without pretending to judge literature mechanically. Language mismatch narrows language-specific claims; incomplete material supports local claims only; selected contaminated windows are rejected. Pool size and machine benchmarks are diagnostics, not quality gates.
 
 The resulting `StyleContract` is a conditional mechanism record, not an author fingerprint. A source-free craft card contains only an axis, operation, intended effect, applicability and avoidance conditions, failure boundary, content zone and bounded confidence. Private evidence references never enter the Writer projection. Body, clothing, anatomy and appearance description—including an isolated term such as `巨乳`—are ordinary `body_appearance` evidence; they do not establish an explicit-content zone by themselves. Actual explicit sexual content remains separately governed by context.
 
@@ -98,7 +106,7 @@ Quillframe may autonomously:
 9. generate personalized/general eval cases;
 10. strengthen, narrow, contest, supersede, or reject the originating hypothesis.
 
-`corpus_scout.py` plans research; it never pretends to have internet access when the host has no search connector.
+Public-internet scouting is outside the local Corpus runtime; local studies never pretend to have a search connector.
 
 ## Generation isolation
 
@@ -127,14 +135,9 @@ corpus/
 ├── README.en.md / README.zh-CN.md
 ├── CORPUS_POLICY.en.md / .zh-CN.md
 ├── CORPUS_INGEST_PROTOCOL.en.md / .zh-CN.md
-├── library.py
-├── style_sampling.py
-├── style_contract.py
-├── style_study_runner.py
-├── style_publication_adapter.py
-├── style_publication.py
-├── corpus_scout.py
-├── rights_gate.py
+├── ../native/quillframe-core/src/corpus.rs
+├── ../native/quillframe-core/src/corpus_store.rs
+├── ../persistence/schema/corpus/001_initial.sql
 ├── general/                    # legacy releases plus the separately gated style-atlas registry
 ├── benchmarks/
 ├── analyses/

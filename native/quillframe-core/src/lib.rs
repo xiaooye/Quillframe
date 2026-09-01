@@ -1,0 +1,94 @@
+//! Authoritative Quillframe fiction-production core.
+//!
+//! Studio is a presentation surface.  This crate owns typed project identity,
+//! story hierarchy, planning authority, sparse context, and the durable
+//! boundaries that later storage/runtime crates execute.
+
+pub mod bridge;
+pub mod context;
+pub mod corpus;
+pub mod corpus_store;
+pub mod decisions;
+pub mod error;
+pub mod events;
+pub mod execution;
+mod fingerprint;
+pub mod global_schema;
+pub mod global_store;
+pub mod learning;
+pub mod model;
+pub mod planning;
+pub mod production;
+pub mod project;
+pub mod prompt;
+pub mod publication;
+pub mod review;
+pub mod schema;
+pub mod semantic;
+pub mod store;
+pub mod story;
+pub mod tracking;
+
+pub use bridge::{BridgeRequest, HostBridgeRuntime};
+pub use context::{
+    ContextEntry, ContextFreeze, ContextManifest, ContextQueryPlan, ContextSelectionProposal,
+    ContextStage, ContextTier,
+};
+pub use corpus::{
+    AnalyzeStage, ChapterBoundary, CorpusArtifact, CorpusMechanism, CorpusProgress, CorpusQuality,
+    EvidenceAnchor, SourceFreeCorpusPack, WriterCorpusMechanism, WriterCorpusProjection,
+    WriterCorpusSelection,
+};
+pub use corpus_store::{
+    CorpusDatabase, CorpusSelectionProjection, CorpusStageDispatch, CorpusStudyProjection,
+    CorpusWorkProjection,
+};
+pub use decisions::{
+    AcceptanceDecision, RevisionRequest, SettlementAuthorization, SettlementPreflight,
+};
+pub use error::{CoreError, CoreResult};
+pub use events::{StoryEvent, StoryStateSnapshot};
+pub use execution::{
+    BoundRuleMaterial, ProductionIntent, ProductionRequest, ProductionTaskMode, RepairBinding,
+    StageCall, StageCallState, StageJob,
+};
+pub use global_schema::{apply_fresh_global_schema, validate_current_global_schema};
+pub use global_store::{GlobalDatabase, ModelServiceRecord, RegisteredProject};
+pub use learning::{
+    FeedbackCaptureDecision, FeedbackInterpretation, PreferenceReviewDecision,
+    PreferenceReviewResult, WriterPreferenceProjection, WriterPreferenceSelection,
+};
+pub use model::{
+    AuthStyle, ModelCatalog, ModelDescriptor, ModelRequest, ModelResult, ModelRuntime, ModelUsage,
+    ProtocolFamily, SecretStore, ServiceEndpoint,
+};
+pub use planning::{
+    ActivePlan, AuthorActivation, BookPlan, ChapterConstraintLock, ChapterPlan, ConstraintClause,
+    FrozenPlanLayer, HierarchicalPlanLock, LengthBand, LengthUnit, PlanBody, PlanLedger, PlanMode,
+    PlanProposal, PlanProposalInput, PlanStatus, PlanTarget, ReaderContract, SceneObjective,
+    UnitPlan, VolumePlan,
+};
+pub use production::{
+    CandidateArtifact, ProductionPipeline, ProductionRelease, ProductionState, SceneWritingBrief,
+    WriterContinuityEntry, WriterPack,
+};
+pub use project::{ProjectContext, ProjectManifest};
+pub use prompt::{PromptAssembly, PromptBlock};
+pub use publication::{
+    PublicationArtifact, PublicationBuild, PublicationFormat, PublicationPreview,
+};
+pub use review::{
+    FindingCategory, ReviewDecision, ReviewFinding, ReviewMode, ReviewReport, ReviewReportInput,
+    Severity,
+};
+pub use schema::{apply_fresh_project_schema, validate_current_project_schema};
+pub use semantic::{
+    ChapterTrackingProposal, CharacterAction, CharacterKnowledgeDelta, CharacterSimulation,
+    ExpectationDeltaAction, NarrativeEntityDelta, NarrativeEntityKind, ReaderExpectationDelta,
+    RelationshipStateDelta, RepairComparison, RepairComparisonOutcome, RepairGenerationMode,
+    RepairSpec, RepairTarget, ResolvedScene, SceneResolution, SemanticFinding, SemanticGate,
+    SemanticGateDecision, SurfaceRealization, TimelineEventDelta,
+};
+pub use store::{NativeProject, ProjectDatabase};
+pub use story::{StoryGraph, StoryKind, StoryNode};
+pub use tracking::{ChapterTrackingRecord, DerivedTrackingContext, TrackingLedger, TrackingState};

@@ -18,7 +18,7 @@
 
 <!-- Commands/tests/builds run, with exact results where useful. -->
 
-- [ ] Relevant Python/Core tests
+- [ ] Relevant Rust Core tests
 - [ ] Product site/docs checks when affected
 - [ ] Studio typecheck/build when affected
 - [ ] Manual/visual QA when affected

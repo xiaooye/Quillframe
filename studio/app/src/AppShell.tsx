@@ -283,6 +283,8 @@ export const AppShell: ParentComponent = (props) => {
           chapter_id: chapter.chapter_id,
           author_profile: authorProfile(),
           instruction: instruction().trim(),
+          reader_grip: readerGrip(),
+          rule_material: [{ id: "studio-current-request", authority: "current_request", statement: instruction().trim() }],
           intent: requestedIntent,
           ...(repair ? { repair_source: repair } : { selected_preference_ids: selectedPreferenceIds }),
           requested_surface: "studio_ai_assistant_dock",

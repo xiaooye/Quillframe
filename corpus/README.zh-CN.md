@@ -49,11 +49,19 @@ flowchart LR
 
 固定的开篇／中段／收束协议继续服务原有统计制品。它不是行文文风学习协议，不能用“120 部”或“360 个窗口”宣称已经深度学会文风。
 
-## 感知场景的行文文风学习
+## 网文机制学习 v2
+
+`quillframe_corpus_webnovel_learning_v2` 是当前 clean break 后继契约。它不再使用十个平铺文风轴，而是按读者契约、剧情推进、情绪回报、人物关系、场景实现和中文语言节奏六域组织证据。叶级维度覆盖开篇钩子与章末牵引、因果与信息推进、冲突升级与伏笔回扣、情绪铺垫—释放—余波、人物能动性与声线、关系运动、对白潜台词、视角与说明信息融入，以及句式、标点和段落节奏。
+
+确定性层只验证 `domain + dimension`、章节位置、叙事跨度、匿名跨作品证据、反例、source-free 编译和一到四张 Writer 投影。现有采样器只提供有界检索提示，不判断爽点、声线、关系推进或文学质量。维度激活、文学解释、证据缺口和收敛仍由模型负责。
+
+v2 契约与语义契约包已经冻结；后继追加式运行器、公共 atlas、新候选和文学评测仍待完成。当前调度已经拒绝五个 v1 平铺文风轴契约。完成的 V5 运行及其 135 张候选只保留为历史证据，不能重标、续跑、晋升或充当 v2 评测证据。
+
+## 历史的感知场景行文文风学习 v1
 
 `quillframe_corpus_style_learning_v1` 复用同一套受治理的 V5 来源身份，但改变证据选择和解释方式。它不创建 V6，也不会顺带确认或执行 V5。精确 120 部作品构成可寻址可用池。人工确认绑定所声明的权利与范围、profile、完整成员和 proposal fingerprint；成员勾选不是逐本文学复核。学习深度由覆盖、矛盾、反例、留出复现、语义饱和、盲测因果比较和泄漏抵抗共同衡量，而不是靠跑完整个池。
 
-在 AI-native 契约中，AI 负责判断十种场景功能（`opening`、`dialogue`、`action`、`interiority`、`exposition`、`environment`、`body_appearance`、`relationship`、`transition`、`ending`）和十个独立行文轴，发现缺口，请求下一份最小充分证据，并判断跨作品收敛。Python 运行器只负责来源身份／版本绑定、最小有界片段物化、清洁、预算和回执；模式与泄漏关卡继续作为确定性发布控制，而不是文学判断。语言不一致会缩窄语言专属结论；不完整／连载材料支持局部场景／行文结论，但不支持未经证实的整部作品结论；重启／拼接要求边界感知窗口或更窄结论；实际选中的污染窗口会整体拒绝并补位。全池暴露和 CPU／内存基准只是诊断，不是质量门。登记契约与合成运行器测试现已证明：可动态激活模型请求的作品／场景功能证据，如实保留未使用的池成员，并且无需耗尽来源池即可提前收敛。这项工程证明不等于真实 V5 已运行、已经学会文风、盲测或独立泄漏复核已通过，也不等于已经发布。
+在 AI-native 契约中，AI 负责判断场景功能与行文轴、发现证据缺口、请求有界证据并判断跨作品收敛。Rust Corpus runtime 负责来源身份／版本绑定、有界片段物化、typed stage receipt，以及 schema 与泄漏边界；它不会用机械指标冒充文学判断。语言不一致会缩窄语言专属结论，不完整材料只支持局部结论，实际选中的污染窗口会被拒绝。来源池规模和机器基准只是诊断，不是质量门。
 
 得到的 `StyleContract` 是带条件的机制记录，不是作者指纹。无来源技法卡只保留行文轴、操作、预期效果、适用／避免条件、失败边界、内容区和有界置信表示；私有证据引用绝不进入 Writer 投影。身体、服饰、解剖与外貌描写——包括单独出现的“巨乳”——都是普通 `body_appearance` 证据，本身不能建立露骨内容区。真实的露骨性行为仍按上下文独立治理。
 
@@ -98,7 +106,7 @@ Quillframe 可以自主：
 9. 生成个性化或通用评测用例；
 10. 加强、缩窄、质疑、取代或拒绝原始假设。
 
-`corpus_scout.py` 负责生成研究计划；如果宿主没有检索连接器，它不会假装自己能联网。
+公网扫榜不属于本地 Corpus runtime；本地研究不会假装自己拥有检索连接器。
 
 ## 写作阶段隔离
 
@@ -127,14 +135,9 @@ corpus/
 ├── README.en.md / README.zh-CN.md
 ├── CORPUS_POLICY.en.md / .zh-CN.md
 ├── CORPUS_INGEST_PROTOCOL.en.md / .zh-CN.md
-├── library.py
-├── style_sampling.py
-├── style_contract.py
-├── style_study_runner.py
-├── style_publication_adapter.py
-├── style_publication.py
-├── corpus_scout.py
-├── rights_gate.py
+├── ../native/quillframe-core/src/corpus.rs
+├── ../native/quillframe-core/src/corpus_store.rs
+├── ../persistence/schema/corpus/001_initial.sql
 ├── general/                    # 旧版发布及独立设门的文风图谱登记表
 ├── benchmarks/
 ├── analyses/

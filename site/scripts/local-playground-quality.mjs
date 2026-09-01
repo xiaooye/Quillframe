@@ -43,8 +43,8 @@ for (const marker of ["Deterministic Core", "Recorded semantic evidence", "0 upl
   requireCheck(quickDemo.includes(marker), `Quick Demo truth marker missing: ${marker}`);
 }
 requireCheck(quickDemo.includes("Worker(new URL"), "Quick Demo must execute outside the UI thread");
-requireCheck(quickDemoWorker.includes("loadPyodide"), "Quick Demo worker must load Pyodide");
-requireCheck(quickDemoWorker.includes("production_runtime/workflow.py") && quickDemoWorker.includes("production_runtime/types.py"), "Quick Demo must load the canonical Core sources");
+requireCheck(quickDemoWorker.includes("recorded-rust-core-receipt-v1"), "Quick Demo must identify its receipt as recorded Rust Core acceptance evidence");
+requireCheck(quickDemo.includes("native/quillframe-core"), "Quick Demo must identify the canonical Rust Core owner");
 requireCheck(quickDemoWorker.includes("recorded_fixture") && quickDemoWorker.includes("live_model_called"), "Quick Demo receipt must distinguish recorded semantic evidence from live execution");
 
 for (const selector of [".playground-shell", ".playground-workspace", ".playground-mode-tabs", ".playground-trace-flow", ".playground-contract-boundary", ".playground-authority-boundary"]) {

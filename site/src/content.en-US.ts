@@ -56,7 +56,7 @@ export const enUS = {
       eyebrow: "Studio",
       title: "A creator workbench, not a runtime dashboard with a manuscript tab.",
       lede: "Writer Mode starts from the work: manuscript, plan, story, review, research, learning, and publish. Inspector Mode reveals sessions, runs, context, capabilities, model execution evidence, and diagnostics only when you need them.",
-      bullets: ["SolidJS + TypeScript + Vite", "Tauri 2 thin desktop host", "Borderless Kawaii Editorial", "Typed Host Bridge over Python Core"],
+      bullets: ["SolidJS + TypeScript + Vite", "Tauri 2 thin desktop host", "Borderless Kawaii Editorial", "Typed Host Bridge over Rust Core"],
       cta: "Explore Studio",
     },
     publication: {
@@ -94,7 +94,7 @@ export const enUS = {
     release: {
       eyebrow: "Release truth",
       title: "1.0.0-dev.0 is the current clean-break acceptance line.",
-      lede: "Quillframe 1.0 development unifies the public demo, local Studio, hosted BFF, Python Core, native SQLite schema, Host Bridge v11, and task-oriented Docs. It remains pre-release while live hosted and semantic acceptance evidence is outstanding.",
+      lede: "Quillframe 1.0 development unifies the public site, local Studio, hosted BFF, Rust Core, native SQLite schema, Host Bridge v11, and task-oriented Docs. It remains pre-release while live hosted and semantic acceptance evidence is outstanding.",
       cta: "Read the changelog",
     },
     final: {

@@ -8,8 +8,7 @@ import { chromium } from "playwright-core";
 const repositoryRoot = fileURLToPath(new URL("../../..", import.meta.url));
 const evidenceDir = process.env.QF_BROWSER_EVIDENCE_DIR || "/tmp/quillframe-browser-evidence";
 const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "quillframe-launch-browser-"));
-const projectRoot = path.join(temporaryRoot, "novel");
-const statePath = path.join(temporaryRoot, "launch-state.json");
+const coreRoot = path.join(temporaryRoot, "core");
 const candidates = [
   process.env.CHROME_BIN,
   chromium.executablePath(),
@@ -37,17 +36,24 @@ if (!chrome) {
 }
 
 fs.mkdirSync(evidenceDir, { recursive: true });
+const cargo = process.env.CARGO || "cargo";
+const built = spawnSync(cargo, ["build", "-p", "quillframe-host"], { cwd: repositoryRoot, encoding: "utf8" });
+if (built.status !== 0) throw new Error(`Rust Host build failed\n${built.stderr}`);
+const hostBinary = path.join(repositoryRoot, "target", "debug", process.platform === "win32" ? "quillframe-host.exe" : "quillframe-host");
+const createRequest = JSON.stringify({
+  schema: "quillframe_host_bridge_request_v11", bridge_version: "11", request_id: "browser-create",
+  operation: "project.create", surface: "local_app",
+  args: { project_id: "browser-e2e", title: "Browser E2E Novel", language: "en" }, authority: false,
+});
+const created = spawnSync(hostBinary, ["invoke", "--core-root", coreRoot, "--request", createRequest], { cwd: repositoryRoot, encoding: "utf8" });
+if (created.status !== 0 || JSON.parse(created.stdout).status !== "ok") throw new Error(`Rust Core project creation failed\n${created.stderr}\n${created.stdout}`);
 const launched = spawn(
-  process.env.PYTHON || "python",
-  [
-    "-u", "-m", "quillframe.cli", "launch", projectRoot, "--new",
-    "--profile", "local", "--id", "browser-e2e", "--title", "Browser E2E Novel",
-    "--language", "en", "--port", "0", "--no-browser", "--json",
-  ],
+  hostBinary,
+  ["serve", "--core-root", coreRoot, "--dist", path.join(repositoryRoot, "studio", "app", "dist"), "--port", "0"],
   {
     cwd: repositoryRoot,
     stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, QUILLFRAME_LAUNCH_STATE: statePath },
+    env: process.env,
   },
 );
 let stderr = "";

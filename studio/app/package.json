@@ -7,16 +7,16 @@
   "scripts": {
     "dev": "vite",
     "quality": "node scripts/product-language-quality.mjs && node scripts/uiux-parity-quality.mjs && node scripts/hardening-quality.mjs && node scripts/authoring-boundary-quality.mjs && node scripts/fixture-contract-quality.mjs",
-    "lint": "corepack pnpm quality",
+    "lint": "pnpm quality",
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.mjs",
     "test:fixture-contract": "node --test tests/fixture-contract.test.mjs",
     "browser:smoke": "node scripts/browser-smoke.mjs",
     "browser:launch": "node scripts/local-launch-smoke.mjs",
-    "build:assets": "corepack pnpm lint && corepack pnpm typecheck && corepack pnpm test && vite build",
+    "build:assets": "pnpm lint && pnpm typecheck && pnpm test && vite build",
     "build:finalize": "node scripts/write-offline-shell.mjs && node scripts/write-footprint.mjs",
-    "build": "corepack pnpm build:assets && corepack pnpm build:finalize",
-    "ci:studio": "corepack pnpm build:assets && corepack pnpm browser:smoke && corepack pnpm browser:launch && corepack pnpm build:finalize",
+    "build": "pnpm build:assets && pnpm build:finalize",
+    "ci:studio": "pnpm build:assets && pnpm browser:smoke && pnpm browser:launch && pnpm build:finalize",
     "preview": "vite preview"
   },
   "dependencies": {

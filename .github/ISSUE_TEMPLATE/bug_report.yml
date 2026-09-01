@@ -26,7 +26,7 @@ body:
     attributes:
       label: Affected surface
       options:
-        - Python library / Core
+        - Rust Core / Host
         - Model Runtime
         - Agent Runtime
         - Harness / semantic execution

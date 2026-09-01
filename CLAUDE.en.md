@@ -30,7 +30,7 @@ Quillframe is AI-native but **not prompt-only**.
 
 Use [`harness/semantic_workers/model_contract_catalog.json`](harness/semantic_workers/model_contract_catalog.json) to resolve the smallest semantic pack required by the task. Models own literary/semantic interpretation; deterministic code owns authority, permission, visibility, fingerprints, persistence, hard budgets, stage isolation, transactions and typed validation.
 
-Do not recreate deleted Python “literary critic” engines or invent new heuristic scorers for semantic quality.
+Do not recreate deleted script-based “literary critic” engines or invent new heuristic scorers for semantic quality.
 
 ## 04 · Context and perspective
 

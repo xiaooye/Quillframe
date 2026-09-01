@@ -38,16 +38,6 @@
       "observe": ["verdict stability", "forced checklist findings", "salient natural-language reading effect", "report breadth"]
     },
     {
-      "id": "telemetry_anchoring",
-      "incumbent_case": "ABL-TELEMETRY-ANCHORED-001",
-      "challenger_case": "ABL-TELEMETRY-CLEAN-001",
-      "same_candidate_ref": "ablation:telemetry-rhythm-v1",
-      "simpler_arm": "challenger",
-      "complexity_basis": "challenger removes prose telemetry from the default Reader input",
-      "change": "remove prose telemetry from default Reader input",
-      "observe": ["false-positive rejection", "metric anchoring", "reading-experience evidence"]
-    },
-    {
       "id": "rule_audit_decomposition",
       "incumbent_case": "ABL-RULE-HOLISTIC-001",
       "challenger_case": "ABL-RULE-DECOMPOSED-001",
@@ -71,10 +61,9 @@
     {"id": 10, "name": "character_embodiment", "evidence": "CHAR-EMBODIMENT-001", "kind": "semantic"},
     {"id": 11, "name": "reader_contamination", "evidence": "reader_contamination pair", "kind": "semantic_ablation"},
     {"id": 12, "name": "rule_audit_reliability", "evidence": "rule_audit_decomposition pair", "kind": "semantic_ablation"},
-    {"id": 13, "name": "telemetry_anchoring", "evidence": "telemetry_anchoring pair", "kind": "semantic_ablation"},
-    {"id": 14, "name": "unauthorized_state", "evidence": "write-intent/control-plane/runtime-command deterministic self-tests", "kind": "deterministic"},
-    {"id": 15, "name": "stale_candidate", "evidence": "production-readiness/semantic binding fingerprint self-tests", "kind": "deterministic"},
-    {"id": 16, "name": "long_horizon_resume", "evidence": "resume-preflight/session-runtime stale/wrong-authority self-tests", "kind": "deterministic"}
+    {"id": 13, "name": "unauthorized_state", "evidence": "write-intent/control-plane/runtime-command deterministic self-tests", "kind": "deterministic"},
+    {"id": 14, "name": "stale_candidate", "evidence": "production-readiness/semantic binding fingerprint self-tests", "kind": "deterministic"},
+    {"id": 15, "name": "long_horizon_resume", "evidence": "resume-preflight/session-runtime stale/wrong-authority self-tests", "kind": "deterministic"}
   ],
   "interpretation": {
     "semantic_pair_pass_condition": "requires real independent model outputs from the registered neutral pair-review contract; no deterministic script may infer literary superiority",

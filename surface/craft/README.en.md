@@ -2,7 +2,7 @@
 
 This library helps a Writer choose how to realize an already authorized scene. It is a candidate set of methods, not a genre classifier, a plot generator, a quality gate or a new Canon source. The existing production guidance remains the default.
 
-The current registry is version 4. Version 3 stopped treating greater restraint and polish as the main objective after the author rejected the earlier prose as literary, over-composed and short on lived character pressure. Version 4 preserves those causal craft hypotheses but removes the active Raw Draft-to-Surface instruction: one direct Surface Writer now realizes the selected scene contract. These mechanisms remain candidates for chapter-by-chapter author review, not a claim of literary improvement.
+The current registry is version 5. Version 4 removed the active Raw Draft-to-Surface instruction so one direct Surface Writer realizes the selected scene contract. Version 5 keeps that architecture while requiring continuous scene units, legible speaker and spatial ownership, natural Chinese connective tissue, and functional setting or side reactions; it also replaces a fragmented dialogue-heavy miniature that contradicted those principles. These mechanisms remain candidates for chapter-by-chapter author review, not a claim of literary improvement.
 
 ## Foundation and composable methods
 

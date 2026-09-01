@@ -168,7 +168,7 @@ No production quality decision, retry, revision-scope choice or release gate may
 - regular-expression or frequency-derived human-likeness scores;
 - an average that overrides a failed hard author objective.
 
-Optional telemetry may exist only outside the production decision path and must label itself non-authoritative.
+The Framework does not ship prose-quality telemetry. Mechanical execution metadata may exist only for Core invariants and cannot be interpreted as literary evidence.
 
 DRAFT and REVISE may create structured data, evidence and model requests. They shall not generate one-off Python, PowerShell, shell or other programs for semantic quality work.
 

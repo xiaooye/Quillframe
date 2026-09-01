@@ -72,7 +72,7 @@ When the purpose is to let an author judge whether craft guidance produces the i
 
 ## Corpus prose-style ablation
 
-Use the [three-arm corpus style protocol](STYLE_CORPUS_ABLATION.en.md) to compare an unguided baseline, current craft v4, and **Craft V4 plus one exact source-free Corpus candidate** on frozen held-out fiction tasks. Corpus is a run-scoped supplement to registered Craft, not a replacement: the V4 foundation remains present and at most four scene-relevant Corpus mechanisms reach Writer. Every pair repeats with swapped display order and sealed treatment labels; leave-one-work-out and scene-function holdout prevent the evaluated source family from contributing to its own candidate. Blind reading dimensions remain separate, and semantic leakage is a distinct independent gate. Synthetic fixtures validate mechanics only and can never become live quality evidence.
+Use the [three-arm corpus style protocol](STYLE_CORPUS_ABLATION.en.md) to compare an unguided baseline, current craft v5, and **Craft V5 plus one exact source-free Corpus candidate** on frozen held-out fiction tasks. Corpus is a run-scoped supplement to registered Craft, not a replacement: the V5 foundation remains present and at most four scene-relevant Corpus mechanisms reach Writer. Every pair repeats with swapped display order and sealed treatment labels; leave-one-work-out and scene-function holdout prevent the evaluated source family from contributing to its own candidate. Blind reading dimensions remain separate, and semantic leakage is a distinct independent gate. Synthetic fixtures validate mechanics only and can never become live quality evidence.
 
 ## Paired AI-native ablations
 

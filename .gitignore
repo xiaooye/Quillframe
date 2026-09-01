@@ -18,6 +18,7 @@ __pycache__/
 *.egg-info/
 /build/
 /dist/
+/target/
 node_modules/
 cloud/dist/
 .env
@@ -31,7 +32,6 @@ studio/app/src-tauri/binaries/quillframe-core-*
 site/node_modules/
 site/dist/
 site/public/generated/
-site/public/pyodide/
 site/src/generated/
 site/docs-site/.astro/
 site/docs-site/node_modules/

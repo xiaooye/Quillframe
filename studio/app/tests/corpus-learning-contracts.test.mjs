@@ -14,7 +14,7 @@ const corpus = await load("../src/research/corpusContracts.ts");
 const taste = await load("../src/learning/userTasteContracts.ts");
 const hash = `sha256:${"a".repeat(64)}`;
 
-test("Corpus parser binds the exact 120-work profile and rejects private locators", () => {
+test("Corpus parser accepts a bounded dynamic cohort and rejects private locators", () => {
   const value = {
     schema: "quillframe_corpus_study_status_v1",
     collection_id: "COL-1",
@@ -24,12 +24,12 @@ test("Corpus parser binds the exact 120-work profile and rejects private locator
     private_local_only: true,
     proposal_hash: hash,
     eligibility_counts: { excluded: 3, quarantined: 5 },
-    works: Array.from({ length: 120 }, (_, index) => ({ public_work_id: `PW-${String(index).padStart(32, "0")}`,
+    works: Array.from({ length: 24 }, (_, index) => ({ public_work_id: `PW-${String(index).padStart(32, "0")}`,
       display_label: `Licensed work ${index + 1}`, creator: `Creator ${index + 1}`,
       ordinal: index + 1, status: "pending" })),
   };
   const parsed = corpus.parseCorpusSelection(value, { allowPrivateLabels: true });
-  assert.equal(parsed.items.length, 120);
+  assert.equal(parsed.items.length, 24);
   assert.equal(parsed.profile, "general");
   assert.equal(parsed.status, "proposed");
   assert.deepEqual(parsed.eligibility_counts, { excluded: 3, quarantined: 5 });
@@ -41,10 +41,10 @@ test("Corpus parser binds the exact 120-work profile and rejects private locator
   const existing = { ...value };
   delete existing.collection_id;
   assert.equal(corpus.parseCorpusSelection(existing, { allowPrivateLabels: true }).study_id, "STUDY-1");
-  assert.throws(
-    () => corpus.parseCorpusSelection({ ...value, works: value.works.slice(0, 119) }, { allowPrivateLabels: true }),
-    /corpus_selection_projection_invalid/,
-  );
+  assert.equal(corpus.parseCorpusSelection({ ...value, works: value.works.slice(0, 7) }, { allowPrivateLabels: true }).items.length, 7);
+  assert.throws(() => corpus.parseCorpusSelection({ ...value, works: [] }, { allowPrivateLabels: true }), /corpus_selection_projection_invalid/);
+  assert.throws(() => corpus.parseCorpusSelection({ ...value, works: Array.from({ length: 501 }, (_, index) => ({ public_work_id: `PW-${index}`,
+    display_label: `Work ${index}` })) }, { allowPrivateLabels: true }), /corpus_selection_projection_invalid/);
   assert.throws(
     () => corpus.parseCorpusSelection({ ...value, profile: "unspecified" }, { allowPrivateLabels: true }),
     /corpus_selection_projection_invalid/,

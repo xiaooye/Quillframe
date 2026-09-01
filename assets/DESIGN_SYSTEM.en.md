@@ -10,7 +10,7 @@
 
 **Ratio:** `70% professional technical / 30% anime-editorial warmth`.
 
-This file explains the human-facing design contract. Machine authority lives in [`brand/tokens.json`](brand/tokens.json), [`brand/weiui.integration.json`](brand/weiui.integration.json), [`brand/story-loom.weiui.css`](brand/story-loom.weiui.css), and [`../scripts/design_system_quality.py`](../scripts/design_system_quality.py). Documentation render/review requirements remain in [`../docs/DOCUMENTATION_QA.en.md`](../docs/DOCUMENTATION_QA.en.md).
+This file explains the human-facing design contract. Machine authority lives in [`brand/tokens.json`](brand/tokens.json), [`brand/weiui.integration.json`](brand/weiui.integration.json), [`brand/story-loom.weiui.css`](brand/story-loom.weiui.css), and the [product-site quality gate](../site/scripts/quality.mjs). Documentation render/review requirements remain in [`../docs/DOCUMENTATION_QA.en.md`](../docs/DOCUMENTATION_QA.en.md).
 
 > **Authority boundary ✦** Story Loom can encode product domain, authority labels, execution status, provenance, focus, hierarchy, and interaction state. It never creates Canon, semantic truth, production readiness, or workflow authority.
 
@@ -108,7 +108,7 @@ The design system deliberately separates presentation/runtime responsibilities:
 
 ### Machine-enforced app invariants
 
-[`../scripts/design_system_quality.py`](../scripts/design_system_quality.py) checks at least:
+The product-site quality gate checks at least:
 
 - exact WeiUI pin and provenance;
 - SolidJS/TypeScript/Vite product-stack contract;
@@ -230,7 +230,7 @@ Hard expectations:
 - root `data-doc-tier="A"`, non-empty `<title>` and `<desc>`, system-font fallbacks only;
 - meaningful images have alt text and nearby prose preserves meaning if SVG fails.
 
-Before integration, run `python scripts/docs_quality.py` and inspect real renders. **Generated is not reviewed; XML-valid is not visually correct.**
+Before integration, run `pnpm --filter @quillframe/product-site quality` and inspect real renders. **Generated is not reviewed; XML-valid is not visually correct.**
 
 ---
 

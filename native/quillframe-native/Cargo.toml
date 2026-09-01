@@ -1,0 +1,18 @@
+[package]
+name = "quillframe-native"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Native filesystem safety, locking, publication, and recovery primitives for Quillframe"
+
+[lib]
+name = "quillframe_native"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+fs2.workspace = true
+thiserror.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"

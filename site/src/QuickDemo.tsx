@@ -6,7 +6,7 @@ type QuickDemoReceipt = {
   schema: "quillframe_ch001_quick_demo_receipt_v1";
   chapter_id: "CH001";
   deterministic_core: {
-    executed: true;
+    executed: false;
     modules: string[];
     packet_fingerprint: string;
     workflow_fingerprint: string;
@@ -25,7 +25,7 @@ type QuickDemoReceipt = {
 };
 
 type WorkerResponse =
-  | { kind: "ready"; pyodide_version: string }
+  | { kind: "ready"; runtime_version: string }
   | { kind: "result"; id: string; receipt: string }
   | { kind: "error"; id: string; error: string };
 
@@ -43,36 +43,36 @@ export default function QuickDemo(props: { locale: Locale }) {
 
   const labels = () => zh() ? {
     eyebrow: "QUICK WORKING DEMO · CH001",
-    title: "不是动画：让真正的确定性 Core 在浏览器里跑一次。",
-    lede: "点击一次，Web Worker 会在本地 Pyodide 中加载 Quillframe 的工作流与生成契约源码，构造 CH001 generation packet，并核对稳定指纹。语义证据来自明确标注的录制夹具，不会伪装成实时模型调用。",
+    title: "检查由 Rust Core 验收测试留下的 CH001 回执。",
+    lede: "点击一次会回放由 Rust Core 验收测试生成的 CH001 回执，并核对 generation packet 与 workflow 指纹。语义证据明确标注为录制夹具；这里不会冒充浏览器内正在执行 Core 或模型。",
     run: "运行 CH001 演示",
-    running: "正在启动本地 Core…",
+    running: "正在核对录制回执…",
     rerun: "再次验证",
     deterministic: "Deterministic Core",
     semantic: "Recorded semantic evidence",
     upload: "0 uploads",
     account: "无需账号 / API key",
-    before: "点击运行后，这里会显示 Core receipt、生成包指纹和录制语义证据。所有执行都停留在浏览器内。",
-    core: "真实 Core 执行",
+    before: "点击后，这里会显示录制的 Core receipt、生成包指纹和语义证据，不会发起网络请求。",
+    core: "录制的 Rust Core 验收",
     evidence: "录制语义证据",
     boundary: "真实性边界",
-    boundaryBody: "确定性 packet/workflow 是这次实时执行；语义摘要是固定夹具。两者都 authority=false，不写 Canon、不发布、不结算。",
+    boundaryBody: "packet/workflow 与语义摘要均来自录制的验收夹具。本页不执行 Core；回执 authority=false，不写 Canon、不发布、不结算。",
   } : {
     eyebrow: "QUICK WORKING DEMO · CH001",
-    title: "Not an animation: run the real deterministic Core in your browser.",
-    lede: "One click loads Quillframe's workflow and generation-contract source into local Pyodide inside a Web Worker, constructs a CH001 generation packet, and verifies stable fingerprints. Semantic evidence is a clearly labelled recording, never presented as a live model call.",
+    title: "Inspect a CH001 receipt produced by Rust Core acceptance tests.",
+    lede: "One click replays a CH001 receipt produced by Rust Core acceptance tests and verifies its generation-packet and workflow fingerprints. Semantic evidence is clearly labelled as recorded; no browser-local Core or model execution is implied.",
     run: "Run the CH001 demo",
-    running: "Starting the local Core…",
+    running: "Checking the recorded receipt…",
     rerun: "Verify again",
     deterministic: "Deterministic Core",
     semantic: "Recorded semantic evidence",
     upload: "0 uploads",
     account: "No account / API key",
-    before: "Run it to inspect the Core receipt, generation-packet fingerprint, and recorded semantic evidence. Execution stays in this browser.",
-    core: "Real Core execution",
+    before: "Inspect the recorded Core receipt, generation-packet fingerprint, and semantic evidence without making a network request.",
+    core: "Recorded Rust Core acceptance",
     evidence: "Recorded semantic evidence",
     boundary: "Truth boundary",
-    boundaryBody: "The deterministic packet/workflow is executed now; the semantic summary is a fixed fixture. Both are authority=false and cannot write Canon, publish, or settle.",
+    boundaryBody: "The packet/workflow and semantic summary are recorded acceptance fixtures. This page does not execute Core; authority=false cannot write Canon, publish, or settle.",
   };
 
   const worker = () => {
@@ -82,7 +82,7 @@ export default function QuickDemo(props: { locale: Locale }) {
       const message = event.data;
       if (disposed || !lifecycle.isCurrent(lease)) return;
       if (message.kind === "ready") {
-        setRuntimeVersion(message.pyodide_version);
+        setRuntimeVersion(message.runtime_version);
         return;
       }
       if (!isCurrentWorkerEvent({ disposed, lifecycle, lease, flight, token: activeRequestToken, requestId: activeRequestId, eventId: message.id })) return;
@@ -186,7 +186,7 @@ export default function QuickDemo(props: { locale: Locale }) {
               <article class="quick-demo-boundary"><span>03</span><div><small>{labels().boundary}</small><strong>{labels().boundaryBody}</strong><code>model={String(value().live_model_called)} · uploads={value().uploads} · canon={String(value().canon_mutated)}</code></div><b>SAFE</b></article>
             </div>}
           </Show>
-          <footer><span>Pyodide {runtimeVersion() ?? "local"}</span><span>production_runtime/*.py</span><span>0 network writes</span></footer>
+          <footer><span>{runtimeVersion() ?? "recorded Rust Core receipt"}</span><span>native/quillframe-core</span><span>0 network writes</span></footer>
         </div>
       </div>
     </section>

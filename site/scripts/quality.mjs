@@ -106,7 +106,7 @@ check(inspector.includes("<input") || inspector.includes("<button"), "Project In
 check(playground.includes("<textarea") && playground.includes("<button"), "Local Playground golden fixture must retain accessible native form controls");
 
 check(packageJson.scripts?.content?.includes("sync-weiui.mjs") || packageJson.scripts?.content?.includes("foundation"), "content build must sync WeiUI foundation");
-check(packageJson.scripts?.build?.includes("corepack pnpm content"), "SolidJS production build must compile Product Entry content first through the pinned package manager");
+check(packageJson.scripts?.build?.includes("pnpm content"), "SolidJS production build must compile Product Entry content first through the pinned package manager");
 check(contentCompiler.includes("marked.lexer") && !contentCompiler.includes("marked.parse("), "documentation compiler must use structured parser tokens");
 check(contentCompiler.includes('authority: false'), "generated documentation must remain authority=false");
 check(knowledge.includes("loadKnowledgeIndex") && knowledge.includes("/generated/docs-index.json"), "Product knowledge search must consume the generated document index");
@@ -134,7 +134,7 @@ for (const requiredShowcase of ["@property --pe-angle", ":has(", "color-mix(in o
 }
 check(!/animation-iteration-count\s*:\s*infinite|animation\s*:[^;]*\binfinite\b/i.test(`${showcaseCss}\n${unifiedCss}`), "golden baseline must not introduce idle infinite animation");
 check(!/setInterval\s*\(|requestAnimationFrame\s*\(/.test(runtime), "golden baseline must not add default polling or decorative frame loops");
-for (const forbidden of [/\.quillframe\/runtime\.db/, /sqlite/i]) check(!forbidden.test(runtime), `golden baseline must not couple to private runtime storage: ${forbidden}`);
+for (const forbidden of [/\.quillframe\/runtime\.db/, /\brusqlite\b/i, /\bsqlite3\b/i]) check(!forbidden.test(runtime), `golden baseline must not couple to private runtime storage: ${forbidden}`);
 check(indexHtml.includes('name="viewport"') && indexHtml.includes('class="skip-link nf-skip-link"') && indexHtml.includes('href="#main-content"'), "golden baseline index.html must retain viewport and the single document skip-link contract");
 
 if (failures.length) {

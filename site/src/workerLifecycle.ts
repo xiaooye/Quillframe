@@ -129,7 +129,7 @@ export function validateQuickDemoReceipt(value: unknown): boolean {
   const evidenceRecord = evidence as Record<string, unknown>;
   return receipt.schema === "quillframe_ch001_quick_demo_receipt_v1"
     && receipt.chapter_id === "CH001"
-    && coreRecord.executed === true
+    && coreRecord.executed === false
     && Array.isArray(coreRecord.modules)
     && coreRecord.modules.every((item) => typeof item === "string")
     && typeof coreRecord.packet_fingerprint === "string"

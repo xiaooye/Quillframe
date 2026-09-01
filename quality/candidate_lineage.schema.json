@@ -185,7 +185,7 @@
         "schema": {"const": "quillframe_candidate_lineage_v1"},
         "run_id": {"type": "string", "minLength": 1},
         "subject_id": {"type": "string", "minLength": 1},
-        "state": {"enum": ["active", "plateau", "complete"]},
+        "state": {"enum": ["active", "complete"]},
         "incumbent_candidate_id": {"type": "string", "minLength": 1},
         "candidates": {
           "type": "array",

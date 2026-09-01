@@ -37,28 +37,25 @@
 
 ## Quick Start
 
-**Requirements:** Python 3.11+. Node.js 24 and pnpm 10.33.0 are only needed for the web/Studio surfaces.
+**Requirements:** Rust 1.88+. Node.js 24 and pnpm 10.33.0 are needed only for UI, site, and documentation builds.
 
-Install the Framework from a clean source checkout and verify the local runtime:
+Build the native host and Studio from a clean checkout:
 
 ```bash
 git clone https://github.com/xiaooye/Quillframe.git
 cd Quillframe
-python -m pip install -e .
-quillframe doctor
+cargo build -p quillframe-host --locked
+pnpm install --frozen-lockfile
+pnpm --filter @quillframe/studio-app build
 ```
 
-Create a fiction Project **outside** the generic Framework repository and open the local-first Studio with the one native command:
+Keep fiction Projects **outside** the generic Framework repository and start the local-first Studio through the Rust host:
 
 ```bash
-quillframe launch ../my-novel \
-  --new \
-  --id MY-NOVEL \
-  --title "My Novel" \
-  --language en
+target/debug/quillframe-host serve --core-root ../quillframe-state --dist studio/app/dist --port 0
 ```
 
-The command creates the exact native four-key manifest (`schema`, `id`, `title`, `language`) for a complete novel, exposes top-level `scope: "novel"` in Project context, and seeds `CH001` with manuscript `DOC-CH001` as the initial chapter. Runtime state stays under `.quillframe/data`, and Studio binds to loopback only. Reopen an existing Project with `quillframe launch ../my-novel`; opening does not migrate, repair or reseed old development state. If you also use Claude Code or another coding agent, start that host from the Project directory; no repository hook or host-specific configuration is part of Quillframe correctness. The host runs the agent, while Quillframe retains novel and Canon authority.
+The host binds to loopback and prints a launch receipt. Create or reopen a Project from Studio; Core writes the exact native four-key manifest (`schema`, `id`, `title`, `language`) and seeds `CH001` with manuscript `DOC-CH001`. Opening never migrates, repairs, or reseeds an incompatible Project.
 
 The authoring/inspection shell can work without a model connection. When inference is needed, ordinary setup is deliberately small:
 
@@ -73,9 +70,9 @@ The token may be empty for an unauthenticated local model server. Provider/vendo
 <summary><strong>Run the Studio locally</strong></summary>
 
 ```bash
-corepack pnpm install --frozen-lockfile
-corepack pnpm --filter @quillframe/studio-app build
-quillframe launch ../my-novel
+pnpm install --frozen-lockfile
+pnpm --filter @quillframe/studio-app build
+target/debug/quillframe-host serve --core-root ../quillframe-state --dist studio/app/dist --port 0
 ```
 
 </details>
@@ -107,7 +104,7 @@ The boundary is intentional:
 - **Models own semantic fiction judgment.** They can reason about story, character, reader experience, relevance, and repair.
 - **Quillframe owns execution truth.** Deterministic code owns identity, permissions, fingerprints, routing, budgets, transactions, persistence, and reproducibility.
 - **Independent means independent.** A required independent semantic judgment must come from a genuinely separate invocation/session/worker and be bound to the exact artifact fingerprint; manager self-roleplay does not qualify.
-- **SQLite is canonical durable state, not a fallback cache.** The UI boundary is `Solid/Tauri → typed Bridge/API → Python Core → SQLite`.
+- **SQLite is canonical durable state, not a fallback cache.** The UI boundary is `Solid/Tauri → typed Bridge/API → Rust Core → SQLite`.
 
 The current Model Runtime is provider-neutral at the authority layer. Quillframe owns protocol/model discovery, capability evidence, eligibility, model selection, tool execution, checkpoints, and receipts. Model APIs are inference capability—not the agent-runtime authority.
 
@@ -135,7 +132,7 @@ Quillframe Studio is an authoring environment first—not a framework dashboard 
 **Current stack:**
 
 - Frontend / Studio — **SolidJS + TypeScript + Vite**
-- Core — **Python**
+- Core / Host / native filesystem — **Rust**
 - Persistence — **SQLite-native** with WAL, foreign keys, native schema fragments, backup/restore, and integrity checks
 - Documentation — **Astro + Starlight**
 - Desktop — **Tauri 2 thin host** over Host Bridge v11; packaged OS/runtime acceptance remains explicit
@@ -162,13 +159,14 @@ Explore the live [Studio](https://studio.quillframe.wei-dev.com/) or read the [S
 <summary><strong>Verification commands</strong></summary>
 
 ```bash
-python scripts/docs_quality.py
-python -m unittest discover -s tests -p 'test_quillframe_*.py' -v
-corepack pnpm install --frozen-lockfile
-corepack pnpm run quality
-corepack pnpm run typecheck
-corepack pnpm run test
-corepack pnpm run build
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+cargo test --workspace --all-targets --locked
+pnpm install --frozen-lockfile
+pnpm run quality
+pnpm run typecheck
+pnpm run test
+pnpm run build
 ```
 
 </details>
@@ -177,7 +175,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [Roadmap](ROADMAP.md), [Security](SECURI
 
 ## Status
 
-Quillframe is on the **1.0 prerelease line and actively developed**. Current `main` includes the embeddable Python façade, Model Runtime, Agent Runtime, fiction Core/authority contracts, SQLite persistence, typed Host Bridge, SolidJS Studio, product site, publication pipeline, and Starlight documentation. Normal CI is deterministic and does not silently call a configured paid/live Model API.
+Quillframe is on the **1.0 prerelease line and actively developed**. Current `main` includes the Rust Core, native filesystem boundary, Model Runtime, Corpus research, long-form production and revision, SQLite persistence, typed Host Bridge, SolidJS Studio, publication pipeline, product site, and Starlight documentation. Normal CI is deterministic and does not silently call a configured paid/live Model API.
 
 A fiction Project identifies itself only through the native four-key `quillframe.toml`, context with top-level `scope: "novel"`, manifest fingerprint, and `.quillframe/data` boundary. `CH001` is the initial chapter; later chapters use the same contract with real chapter relationships. Framework commit/bundle provenance is recorded independently by the host or release process; it is not Project authority or a consumer lock. This development contract does not certify a full-novel live-model run or cloud release readiness.
 

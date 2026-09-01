@@ -13,7 +13,7 @@ Quillframe Studio / host surface
   ↓
 typed Bridge / API
   ↓
-Python Quillframe Core
+Rust Quillframe Core
   ├─ fiction systems + Canon / Context
   ├─ Model Runtime + Agent Runtime
   ├─ Quality + semantic execution

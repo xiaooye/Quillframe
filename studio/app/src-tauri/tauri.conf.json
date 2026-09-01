@@ -28,7 +28,6 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
-    "externalBin": ["binaries/quillframe-core"]
+    "targets": "all"
   }
 }

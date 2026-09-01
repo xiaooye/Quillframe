@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_craft_registry_v1",
-  "version": "4",
+  "version": "5",
   "status": "candidate",
   "default_mode": "baseline",
   "base_card_id": "core",
@@ -12,7 +12,7 @@
     {
       "id": "core",
       "kind": "foundation",
-      "version": "4",
+      "version": "5",
       "title": {
         "en": "Serial immediacy, lived character voice and forward motion",
         "zh-CN": "网文章节的现场、人物与推进"
@@ -186,6 +186,13 @@
       "core": {
         "en": "history/v3/core.en.md",
         "zh-CN": "history/v3/core.zh-CN.md"
+      }
+    },
+    "4": {
+      "registry": "history/v4/registry.json",
+      "core": {
+        "en": "history/v4/core.en.md",
+        "zh-CN": "history/v4/core.zh-CN.md"
       }
     }
   },

@@ -17,7 +17,7 @@ Provider identity is diagnostic provenance, not runtime authority or a required 
 
 ## Durable state and authority
 
-Canonical durable product state is SQLite-native. The UI does not directly read or write SQLite; the intended boundary is SolidJS/Tauri host -> typed Bridge/API -> Python Core -> SQLite.
+Canonical durable product state is SQLite-native. The UI does not directly read or write SQLite; the boundary is SolidJS/Tauri host -> typed Bridge/API -> Rust Core -> SQLite.
 
 Keep these distinctions explicit:
 

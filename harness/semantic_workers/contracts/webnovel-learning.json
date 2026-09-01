@@ -1,0 +1,348 @@
+{
+  "schema": "quillframe_model_contract_registry_v1",
+  "version": "1",
+  "principle": "Models own web-novel interpretation, evidence gaps and convergence. Deterministic runtime owns identities, bounds, schema closure, fingerprints, permissions and source-free persistence.",
+  "contracts": {
+    "corpus.webnovel_observe": {
+      "kind": "corpus_analyze",
+      "purpose": "Observe transferable web-novel mechanisms in one ephemeral passage across a supplied domain/dimension hierarchy. Return Chinese, source-free claims bound only to opaque local span references.",
+      "forbidden_input_keys": ["full_text", "raw_text", "source_text", "source_title", "creator", "author", "local_path", "source_path", "work_title"],
+      "input_contract": {
+        "type": "object",
+        "required": ["range_id", "retrieval_hint", "passage", "passage_fingerprint", "paragraph_spans", "analysis_hierarchy", "content_profile"],
+        "properties": {
+          "range_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "retrieval_hint": {"enum": ["opening", "dialogue", "action", "interiority", "exposition", "environment", "body_appearance", "relationship", "transition", "ending"]},
+          "passage": {"type": "string", "minLength": 1, "maxLength": 3000},
+          "passage_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "paragraph_spans": {
+            "type": "array", "minItems": 1, "maxItems": 64,
+            "items": {
+              "type": "object", "required": ["span_ref", "start", "end"],
+              "properties": {
+                "span_ref": {"type": "string", "minLength": 1, "maxLength": 80},
+                "start": {"type": "integer", "minimum": 0},
+                "end": {"type": "integer", "minimum": 1}
+              },
+              "additionalProperties": false
+            }
+          },
+          "analysis_hierarchy": {
+            "type": "array", "minItems": 1, "maxItems": 6,
+            "items": {
+              "type": "object", "required": ["domain", "dimensions"],
+              "properties": {
+                "domain": {"enum": ["reader_contract", "plot_progression", "emotion_payoff", "character_relationship", "scene_delivery", "language_rhythm"]},
+                "dimensions": {"type": "array", "minItems": 1, "maxItems": 6, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 80}}
+              },
+              "additionalProperties": false
+            }
+          },
+          "content_profile": {"enum": ["general", "adult_explicit"]}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Treat retrieval_hint only as a candidate-retrieval hint, never as literary truth. Classify actual mechanisms from the passage.",
+        "Use the supplied hierarchy. Explain the causal or emotional chain, reader effect, applicability, avoid condition and failure boundary in natural Chinese.",
+        "Separate transferable mechanism from characters, plot facts, setting, named entities, signature phrases and author identity.",
+        "Use only supplied span_ref values as evidence. Never quote or closely paraphrase the passage, reconstruct the source, or emit imitation instructions.",
+        "A passage need not support every domain. Record uncertainty instead of inventing coverage."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "range_id", "observed_dimensions", "observations", "coverage", "uncertainties"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "range_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "observed_dimensions": {"type": "array", "maxItems": 26, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 80}},
+          "observations": {
+            "type": "array", "maxItems": 24,
+            "items": {
+              "type": "object",
+              "required": ["domain", "dimension", "mechanism_zh", "reader_effect_zh", "causal_chain_zh", "applies_when_zh", "avoid_when_zh", "failure_boundary_zh", "chapter_positions", "narrative_spans", "content_zone", "evidence_span_refs", "confidence"],
+              "properties": {
+                "domain": {"enum": ["reader_contract", "plot_progression", "emotion_payoff", "character_relationship", "scene_delivery", "language_rhythm"]},
+                "dimension": {"type": "string", "minLength": 1, "maxLength": 80},
+                "mechanism_zh": {"type": "string", "minLength": 1, "maxLength": 800},
+                "reader_effect_zh": {"type": "string", "minLength": 1, "maxLength": 800},
+                "causal_chain_zh": {"type": "array", "minItems": 2, "maxItems": 6, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+                "applies_when_zh": {"type": "array", "minItems": 1, "maxItems": 12, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+                "avoid_when_zh": {"type": "array", "minItems": 1, "maxItems": 12, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+                "failure_boundary_zh": {"type": "string", "minLength": 1, "maxLength": 800},
+                "chapter_positions": {"type": "array", "minItems": 1, "maxItems": 5, "uniqueItems": true, "items": {"enum": ["golden_opening", "early", "middle", "late", "resolution"]}},
+                "narrative_spans": {"type": "array", "minItems": 1, "maxItems": 6, "uniqueItems": true, "items": {"enum": ["paragraph", "scene", "chapter", "cross_chapter", "serial_loop", "whole_work"]}},
+                "content_zone": {"enum": ["general", "adult_explicit", "profile_neutral"]},
+                "evidence_span_refs": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 80}},
+                "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+              },
+              "additionalProperties": false
+            }
+          },
+          "coverage": {
+            "type": "object", "required": ["dimensions_observed", "dimensions_uncertain"],
+            "properties": {
+              "dimensions_observed": {"type": "array", "maxItems": 26, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 80}},
+              "dimensions_uncertain": {"type": "array", "maxItems": 26, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 80}}
+            },
+            "additionalProperties": false
+          },
+          "uncertainties": {"type": "array", "maxItems": 24, "items": {"type": "string", "minLength": 1, "maxLength": 600}}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "ephemeral_webnovel_observation"},
+      "independent_gate": false
+    },
+    "learning.webnovel_work_synthesize": {
+      "kind": "corpus_analyze",
+      "purpose": "Synthesize one anonymous work's source-free web-novel mechanisms and request only the minimum next evidence needed to resolve explicit dimension or narrative-span gaps.",
+      "forbidden_input_keys": ["passage", "excerpt", "full_text", "raw_text", "source_text", "source_title", "creator", "author", "local_path", "source_path", "work_title"],
+      "input_contract": {
+        "type": "object",
+        "required": ["public_work_id", "analysis_round", "active_dimensions", "window_observations", "content_profile"],
+        "properties": {
+          "public_work_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "analysis_round": {"type": "integer", "minimum": 1, "maximum": 4},
+          "active_dimensions": {"type": "array", "minItems": 1, "maxItems": 26, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 80}},
+          "window_observations": {"type": "array", "minItems": 1, "maxItems": 24, "items": {"type": "object"}},
+          "content_profile": {"enum": ["general", "adult_explicit"]}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Separate recurring mechanisms from local variants, genre coincidences and counterexamples.",
+        "Do not require every dimension from every work. Request new evidence only for a named uncertainty that could change a claim.",
+        "Choose retrieval hints to find evidence; do not treat them as semantic labels.",
+        "Remain source-free and do not reconstruct characters, plot, setting, identity or prose."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "public_work_id", "stable_patterns", "counterexamples", "coverage_gaps", "saturation", "uncertainties"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "public_work_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "stable_patterns": {"type": "array", "maxItems": 64, "items": {"type": "object"}},
+          "counterexamples": {"type": "array", "maxItems": 64, "items": {"type": "object"}},
+          "coverage_gaps": {
+            "type": "array", "maxItems": 12,
+            "items": {
+              "type": "object", "required": ["dimension", "narrative_spans", "retrieval_hints", "question"],
+              "properties": {
+                "dimension": {"type": "string", "minLength": 1, "maxLength": 80},
+                "narrative_spans": {"type": "array", "minItems": 1, "maxItems": 6, "uniqueItems": true, "items": {"enum": ["paragraph", "scene", "chapter", "cross_chapter", "serial_loop", "whole_work"]}},
+                "retrieval_hints": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": {"enum": ["opening", "dialogue", "action", "interiority", "exposition", "environment", "body_appearance", "relationship", "transition", "ending"]}},
+                "question": {"type": "string", "minLength": 1, "maxLength": 800}
+              },
+              "additionalProperties": false
+            }
+          },
+          "saturation": {
+            "type": "object", "required": ["state", "reason"],
+            "properties": {
+              "state": {"enum": ["continue", "saturated", "insufficient_available_evidence"]},
+              "reason": {"type": "string", "minLength": 1, "maxLength": 800}
+            },
+            "additionalProperties": false
+          },
+          "uncertainties": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1, "maxLength": 600}}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "derived_webnovel_work_profile"},
+      "independent_gate": false
+    },
+    "learning.webnovel_dimension_synthesize": {
+      "kind": "corpus_analyze",
+      "purpose": "Synthesize one activated web-novel dimension from a bounded discovery cohort into conditional Chinese mechanism claims with disjoint cross-work support and counterexamples.",
+      "forbidden_input_keys": ["passage", "excerpt", "full_text", "raw_text", "source_text", "source_title", "creator", "author", "local_path", "source_path", "work_title"],
+      "input_contract": {
+        "type": "object",
+        "required": ["domain", "dimension", "batch_id", "content_profile", "discovery_work_profiles"],
+        "properties": {
+          "domain": {"enum": ["reader_contract", "plot_progression", "emotion_payoff", "character_relationship", "scene_delivery", "language_rhythm"]},
+          "dimension": {"type": "string", "minLength": 1, "maxLength": 80},
+          "batch_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "content_profile": {"enum": ["general", "adult_explicit"]},
+          "discovery_work_profiles": {"type": "array", "minItems": 2, "maxItems": 16, "items": {"type": "object"}}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Keep distinct mechanisms separate when evidence clusters differ; never average the corpus into one voice or quality score.",
+        "Each claim requires at least two supplied supporting work IDs and one disjoint supplied counterexample work ID.",
+        "Write the mechanism, reader effect, causal chain and boundaries in natural Chinese.",
+        "Do not emit source prose, identity, plot, named entities, author imitation or deterministic generation quotas."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "domain", "dimension", "claims", "contested_questions"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "domain": {"type": "string", "minLength": 1, "maxLength": 80},
+          "dimension": {"type": "string", "minLength": 1, "maxLength": 80},
+          "claims": {"type": "array", "maxItems": 24, "items": {"$ref": "#/$defs/claim"}},
+          "contested_questions": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1, "maxLength": 800}}
+        },
+        "$defs": {
+          "claim": {
+            "type": "object",
+            "required": ["mechanism_zh", "reader_effect_zh", "causal_chain_zh", "applies_when_zh", "avoid_when_zh", "failure_boundary_zh", "chapter_positions", "narrative_spans", "content_zones", "supporting_work_ids", "counterexample_work_ids", "confidence"],
+            "properties": {
+              "mechanism_zh": {"type": "string", "minLength": 1, "maxLength": 800},
+              "reader_effect_zh": {"type": "string", "minLength": 1, "maxLength": 800},
+              "causal_chain_zh": {"type": "array", "minItems": 2, "maxItems": 6, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+              "applies_when_zh": {"type": "array", "minItems": 1, "maxItems": 12, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+              "avoid_when_zh": {"type": "array", "minItems": 1, "maxItems": 12, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+              "failure_boundary_zh": {"type": "string", "minLength": 1, "maxLength": 800},
+              "chapter_positions": {"type": "array", "minItems": 1, "maxItems": 5, "uniqueItems": true, "items": {"enum": ["golden_opening", "early", "middle", "late", "resolution"]}},
+              "narrative_spans": {"type": "array", "minItems": 1, "maxItems": 6, "uniqueItems": true, "items": {"enum": ["paragraph", "scene", "chapter", "cross_chapter", "serial_loop", "whole_work"]}},
+              "content_zones": {"type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true, "items": {"enum": ["general", "adult_explicit", "profile_neutral"]}},
+              "supporting_work_ids": {"type": "array", "minItems": 2, "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+              "counterexample_work_ids": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+              "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "webnovel_dimension_claim_candidates"},
+      "independent_gate": false
+    },
+    "learning.webnovel_dimension_reconcile": {
+      "kind": "corpus_analyze",
+      "purpose": "Reconcile one web-novel dimension's bounded batch claims into deduplicated, conflict-aware mechanisms and choose the minimum next anonymous evidence needed before held-out verification.",
+      "forbidden_input_keys": ["passage", "excerpt", "full_text", "raw_text", "source_text", "source_title", "creator", "author", "local_path", "source_path", "work_title", "holdout_work_profiles"],
+      "input_contract": {
+        "type": "object",
+        "required": ["domain", "dimension", "reconciliation_id", "content_profile", "batch_syntheses", "eligible_discovery_work_ids"],
+        "properties": {
+          "domain": {"enum": ["reader_contract", "plot_progression", "emotion_payoff", "character_relationship", "scene_delivery", "language_rhythm"]},
+          "dimension": {"type": "string", "minLength": 1, "maxLength": 80},
+          "reconciliation_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "content_profile": {"enum": ["general", "adult_explicit"]},
+          "batch_syntheses": {"type": "array", "minItems": 1, "maxItems": 64, "items": {"type": "object"}},
+          "eligible_discovery_work_ids": {"type": "array", "maxItems": 120, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Deduplicate semantic equivalents, reconcile contradictions rather than voting by support count, and retain distinct conditional mechanisms.",
+        "Every retained claim needs at least two supporting opaque IDs and one disjoint counterexample ID from supplied claims.",
+        "Use continue only when a named gap can be resolved by a minimum bounded request; otherwise choose converged or insufficient_evidence.",
+        "This result remains source-free candidate evidence and grants no promotion authority."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "domain", "dimension", "reconciliation_id", "claims", "resolved_conflicts", "unresolved_questions", "convergence", "next_evidence_requests"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "domain": {"type": "string", "minLength": 1, "maxLength": 80},
+          "dimension": {"type": "string", "minLength": 1, "maxLength": 80},
+          "reconciliation_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "claims": {"type": "array", "maxItems": 48, "items": {"$ref": "#/$defs/claim"}},
+          "resolved_conflicts": {"type": "array", "maxItems": 64, "items": {"type": "string", "minLength": 1, "maxLength": 800}},
+          "unresolved_questions": {"type": "array", "maxItems": 64, "items": {"type": "string", "minLength": 1, "maxLength": 800}},
+          "convergence": {
+            "type": "object", "required": ["state", "rationale", "remaining_gaps"],
+            "properties": {
+              "state": {"enum": ["continue", "converged", "insufficient_evidence"]},
+              "rationale": {"type": "string", "minLength": 1, "maxLength": 1200},
+              "remaining_gaps": {"type": "array", "maxItems": 16, "items": {"type": "string", "minLength": 1, "maxLength": 500}}
+            },
+            "additionalProperties": false
+          },
+          "next_evidence_requests": {
+            "type": "array", "maxItems": 12,
+            "items": {
+              "type": "object", "required": ["request_id", "dimension", "public_work_ids", "narrative_spans", "retrieval_hints", "question"],
+              "properties": {
+                "request_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                "dimension": {"type": "string", "minLength": 1, "maxLength": 80},
+                "public_work_ids": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+                "narrative_spans": {"type": "array", "minItems": 1, "maxItems": 6, "uniqueItems": true, "items": {"enum": ["paragraph", "scene", "chapter", "cross_chapter", "serial_loop", "whole_work"]}},
+                "retrieval_hints": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": {"enum": ["opening", "dialogue", "action", "interiority", "exposition", "environment", "body_appearance", "relationship", "transition", "ending"]}},
+                "question": {"type": "string", "minLength": 1, "maxLength": 800}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "$defs": {
+          "claim": {
+            "type": "object",
+            "required": ["mechanism_zh", "reader_effect_zh", "causal_chain_zh", "applies_when_zh", "avoid_when_zh", "failure_boundary_zh", "chapter_positions", "narrative_spans", "content_zones", "supporting_work_ids", "counterexample_work_ids", "confidence"],
+            "properties": {
+              "mechanism_zh": {"type": "string", "minLength": 1, "maxLength": 800},
+              "reader_effect_zh": {"type": "string", "minLength": 1, "maxLength": 800},
+              "causal_chain_zh": {"type": "array", "minItems": 2, "maxItems": 6, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+              "applies_when_zh": {"type": "array", "minItems": 1, "maxItems": 12, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+              "avoid_when_zh": {"type": "array", "minItems": 1, "maxItems": 12, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+              "failure_boundary_zh": {"type": "string", "minLength": 1, "maxLength": 800},
+              "chapter_positions": {"type": "array", "minItems": 1, "maxItems": 5, "uniqueItems": true, "items": {"enum": ["golden_opening", "early", "middle", "late", "resolution"]}},
+              "narrative_spans": {"type": "array", "minItems": 1, "maxItems": 6, "uniqueItems": true, "items": {"enum": ["paragraph", "scene", "chapter", "cross_chapter", "serial_loop", "whole_work"]}},
+              "content_zones": {"type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true, "items": {"enum": ["general", "adult_explicit", "profile_neutral"]}},
+              "supporting_work_ids": {"type": "array", "minItems": 2, "maxItems": 128, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+              "counterexample_work_ids": {"type": "array", "minItems": 1, "maxItems": 128, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+              "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "reconciled_webnovel_claim_candidates"},
+      "independent_gate": false
+    },
+    "learning.webnovel_claim_verify": {
+      "kind": "external_review",
+      "purpose": "Verify one reconciled source-free web-novel mechanism against held-out anonymous work profiles and return promote, narrow, revise, reject, or insufficient-evidence evidence without claiming independence or promotion authority.",
+      "forbidden_input_keys": ["passage", "excerpt", "full_text", "raw_text", "source_text", "source_title", "creator", "author", "local_path", "source_path", "work_title"],
+      "input_contract": {
+        "type": "object",
+        "required": ["claim_id", "domain", "dimension", "content_profile", "candidate_claim", "holdout_work_profiles"],
+        "properties": {
+          "claim_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "domain": {"enum": ["reader_contract", "plot_progression", "emotion_payoff", "character_relationship", "scene_delivery", "language_rhythm"]},
+          "dimension": {"type": "string", "minLength": 1, "maxLength": 80},
+          "content_profile": {"enum": ["general", "adult_explicit"]},
+          "candidate_claim": {"type": "object"},
+          "holdout_work_profiles": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"type": "object"}}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Test whether the conditional mechanism replicates on held-out works and whether contrary forms can create the same reader effect.",
+        "Check topic, plot, character, setting, named-entity, source-identity and signature-phrase entanglement.",
+        "Use only supplied holdout IDs and keep support and counterexample sets disjoint.",
+        "This is held-out semantic evidence, not an independent gate or Framework promotion authority."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "claim_id", "verdict", "verified_mechanism_zh", "verified_boundary_zh", "supporting_holdout_work_ids", "counterexample_holdout_work_ids", "content_disentanglement", "report_zh"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "claim_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "verdict": {"enum": ["promote", "narrow", "revise", "reject", "insufficient_evidence"]},
+          "verified_mechanism_zh": {"type": "string", "minLength": 1, "maxLength": 1000},
+          "verified_boundary_zh": {"type": "string", "minLength": 1, "maxLength": 1000},
+          "supporting_holdout_work_ids": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+          "counterexample_holdout_work_ids": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+          "content_disentanglement": {
+            "type": "object", "required": ["passed", "risks"],
+            "properties": {
+              "passed": {"type": "boolean"},
+              "risks": {"type": "array", "maxItems": 16, "items": {"type": "string", "minLength": 1, "maxLength": 500}}
+            },
+            "additionalProperties": false
+          },
+          "report_zh": {"type": "string", "minLength": 1, "maxLength": 1600}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {"canon_write": false, "framework_behavior_write": false, "durable_user_taste_write": false, "allowed_result_scope": "heldout_webnovel_claim_verification"},
+      "independent_gate": false
+    }
+  }
+}

@@ -1,5 +1,12 @@
 # Quillframe Changelog
 
+## Unreleased · web-novel Corpus analysis v2
+
+- Replaced the current flat ten-axis Corpus dispatch contract with a six-domain, 26-dimension web-novel hierarchy covering reader contract, plot progression, emotion/payoff, character/relationship, scene delivery, and Chinese language rhythm.
+- Added closed v2 observation, cross-work candidate, source-free mechanism catalog, evidence-request, and one-to-four-card Writer projection contracts. Raw anchors and source identity remain forbidden.
+- Registered five v2 semantic contracts and retired the five v1 style-axis contracts from current dispatch. Completed V5 artifacts remain historical and cannot resume or support v2 promotion.
+- The v2 append-only runner, public atlas, rebuilt candidate, and live literary A/B remain pending; no quality uplift is claimed by this structural change.
+
 ## Unreleased · 1.0.0-dev.0 constrained simulation responses
 
 - Character action and scene resolution use an explicit native JSON shape containing only the original contract's required fields. Semantic findings and repair routes remain model judgments; original contracts and gates are unchanged.

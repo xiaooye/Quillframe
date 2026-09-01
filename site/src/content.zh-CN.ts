@@ -56,7 +56,7 @@ export const zhCN = {
       eyebrow: "Studio",
       title: "先是创作工作台，再是运行检查器。",
       lede: "Writer Mode 从书桌、正文、计划、故事、审查、研究、学习和出版出发；只有需要追溯证据时，Inspector Mode 才展开会话、运行、上下文、模型执行与诊断。",
-      bullets: ["SolidJS + TypeScript + Vite", "Tauri 2 轻量桌面宿主", "Borderless Kawaii Editorial", "通过类型化 Host Bridge 访问 Python Core"],
+      bullets: ["SolidJS + TypeScript + Vite", "Tauri 2 轻量桌面宿主", "Borderless Kawaii Editorial", "通过类型化 Host Bridge 访问 Rust Core"],
       cta: "查看 Studio",
     },
     publication: {
@@ -94,7 +94,7 @@ export const zhCN = {
     release: {
       eyebrow: "版本状态",
       title: "1.0.0-dev.0 是当前 clean-break 验收主线。",
-      lede: "Quillframe 1.0 development 把公共 Demo、本地 Studio、Hosted BFF、Python Core、native SQLite schema、Host Bridge v11 与任务型 Docs 统一为一个产品。真实 hosted 与 semantic acceptance 证据尚未完成，因此仍是 pre-release。",
+      lede: "Quillframe 1.0 development 把公共站点、本地 Studio、Hosted BFF、Rust Core、native SQLite schema、Host Bridge v11 与任务型 Docs 统一为一个产品。真实 hosted 与 semantic acceptance 证据尚未完成，因此仍是 pre-release。",
       cta: "查看版本记录",
     },
     final: {

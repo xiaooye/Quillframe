@@ -16,7 +16,7 @@ Dependency direction is one-way: Project to framework. Project content never bec
 
 Semantic contracts package bounded context, rubric, permissions, output shape, subject identity, and a semantic fingerprint. Models own interpretation. The deterministic runtime validates exact contract identity, provenance, fingerprint binding, permissions, typed results, and consume-once behavior.
 
-Telemetry can describe observable form; it cannot stand in for semantic judgment. A manager's self-review can provide non-independent evidence; it cannot satisfy an independent gate.
+Mechanical metadata can describe execution facts; it cannot stand in for semantic literary judgment. A manager's self-review can provide non-independent evidence; it cannot satisfy an independent gate.
 
 ## Authority ladder
 

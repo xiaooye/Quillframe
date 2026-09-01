@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_craft_sources_v1",
-  "observed_at": "2026-08-28",
+  "observed_at": "2026-08-31",
   "evidence_class": "methodology_not_quality_validation",
   "external_code_imported": false,
   "external_skills_installed": false,
@@ -28,21 +28,31 @@
     {
       "id": "oh-story",
       "repository": "https://github.com/zenstory-ai/oh-story-claudecode",
-      "commit": "70c294b20ce89440e70edb766b0446d3057bc077",
+      "commit": "5de060f9a47e7c4781c81edb320436b772e2955e",
       "license_observed": "MIT",
       "paths": [
         "skills/story-long-write/references/writing-craft.md",
-        "skills/story-long-write/references/genre-prose-cards.md"
+        "skills/story-long-write/references/genre-prose-cards.md",
+        "skills/story-deslop/SKILL.md",
+        "skills/story-deslop/references/anti-ai-writing.md"
       ],
       "adapt": [
         "outline_is_not_prose_shape",
         "non_default_bodily_emotion",
-        "bounded_genre_card_recall"
+        "bounded_genre_card_recall",
+        "continuous_same_moment_narrative_units",
+        "natural_chinese_connective_tissue",
+        "dialogue_attached_to_speaker_and_living_scene",
+        "functional_setting_expression_and_side_reaction"
       ],
       "reject": [
         "fixed_opening_event_count",
         "fixed_prop_recurrences",
-        "universal_close_viewpoint"
+        "universal_close_viewpoint",
+        "banned_word_or_phrase_lists",
+        "sentence_paragraph_dialogue_or_description_quotas",
+        "scripted_ai_scores_and_post_hoc_humanizer",
+        "forced_gestures_or_imperfections_as_humanity"
       ]
     },
     {

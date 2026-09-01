@@ -18,7 +18,7 @@ A repair preservation comparison distinguishes four dimensions: target outcome, 
 
 ## Incumbent and challenger
 
-`quality_evolution.py` keeps exact content fingerprints for the incumbent and challenger. Registered `quality.compare` owns the semantic winner judgment. The deterministic ledger verifies the exact pair, validates the objective envelope, consumes the result once, and updates the incumbent or no-gain/plateau state.
+`quality_evolution.py` keeps exact content fingerprints for the incumbent and challenger. Registered `quality.compare` owns the semantic winner judgment. The deterministic ledger verifies the exact pair, validates the objective envelope, consumes the result once, and updates the incumbent only when the semantic result selects the challenger. It never stops revision from a mechanical streak; completion is explicit.
 
 Absolute scores alone do not decide keep/discard.
 
@@ -42,4 +42,4 @@ Candidate Lineage can bind an opaque acceptance evidence reference to one exact 
 
 <img src="assets/concepts/independent-semantic-review.en.svg" alt="Independent review requires a separate reviewer invocation and exact candidate fingerprint binding" width="100%" />
 
-Manager self-review is not independent review. Telemetry is not semantic judgment. A valid semantic rejection is a result, not infrastructure failure, and must route back to the owning repair mechanism rather than trigger reviewer shopping.
+Manager self-review is not independent review. Mechanical metadata is not semantic judgment. A valid semantic rejection is a result, not infrastructure failure, and must route back to the owning repair mechanism rather than trigger reviewer shopping.

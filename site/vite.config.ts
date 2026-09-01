@@ -6,9 +6,6 @@ const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
 
 export default defineConfig({
   plugins: [solid()],
-  optimizeDeps: {
-    exclude: ["pyodide"],
-  },
   server: {
     fs: {
       allow: [repositoryRoot],

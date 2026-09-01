@@ -218,7 +218,7 @@ feedback.observed
 
 Automatic intake 默认所有 activation/write authority 为 false。它不会自动修改 Project Profile、durable user taste、General Craft、Framework behavior 或 Canon。
 
-同一个 event retry 使用 stable evidence identity；真正不同的 user turns 可以提供独立 evidence，由模型决定 strengthen/contest/supersede/split。Contradiction 是一等 semantic operation，不由 Python 的字符串/embedding similarity 决定。
+同一个 event retry 使用 stable evidence identity；真正不同的 user turns 可以提供独立 evidence，由模型决定 strengthen/contest/supersede/split。Contradiction 是一等 semantic operation，不由确定性 Rust 脚手架的字符串／embedding similarity 决定。
 
 Rejected output 只可保存 ref/fingerprint + negative meaning，不把 rejected prose 当 positive exemplar，也不反向注入 Writer pre-draft context。
 

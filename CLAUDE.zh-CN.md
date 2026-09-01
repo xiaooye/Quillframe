@@ -30,7 +30,7 @@ Quillframe 是 AI-native，但不是“全靠 prompt”。
 
 通过 [`harness/semantic_workers/model_contract_catalog.json`](harness/semantic_workers/model_contract_catalog.json) 解析当前任务所需的最小 semantic pack。文学与语义理解归模型；确定性代码负责权威、权限、可见性、指纹、持久化、硬预算、阶段隔离、事务和类型验证。
 
-不要重新制造已经删除的 Python“文学 critic 引擎”，也不要用 heuristic scorer 假装替代真正的语义判断。
+不要重新制造已经删除的脚本式“文学评判引擎”，也不要用启发式计分器假装替代真正的语义判断。
 
 ## 04 · 上下文与视角边界
 

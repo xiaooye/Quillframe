@@ -1,800 +1,144 @@
 version: 1.0.0-dev.0
 name: quillframe
-product_name: Quillframe Adaptive Fiction Framework
-architecture: generic-fiction-os-ai-native-contract-first-capability-aware-adaptive-learning
+product_name: Quillframe
+architecture: rust-native-ultralong-webnovel-production
 entry: SKILL.md
 
-scope:
-  project_agnostic: true
-  built_in_novel_or_canon: false
-  dependency_direction: project-to-framework-only
-  supported_project_contract: quillframe_project_v1_0
-  project_resolution: project_resolution.py
-  project_launch: quillframe/launch.py
+platforms:
+  supported: [windows, linux]
+  filesystem_identity: native-handle-bound
+  desktop_shell: tauri-2-direct-rust-core
 
-fundamentals:
-  story_system:
-    en: core/STORY_SYSTEM.en.md
-    zh_cn: core/STORY_SYSTEM.zh-CN.md
-  canon_state:
-    en: core/CANON_STATE.en.md
-    zh_cn: core/CANON_STATE.zh-CN.md
-  character_relationship:
-    en: core/CHARACTER_SYSTEM.en.md
-    zh_cn: core/CHARACTER_SYSTEM.zh-CN.md
-  surface:
-    en: surface/FUNDAMENTALS.en.md
-    zh_cn: surface/FUNDAMENTALS.zh-CN.md
-    mandatory_default: true
-  reader_engagement:
-    en: surface/READER_ENGAGEMENT.en.md
-    zh_cn: surface/READER_ENGAGEMENT.zh-CN.md
-    profile_weighted: true
+ownership:
+  core_runtime: native/quillframe-core
+  filesystem_primitives: native/quillframe-native
+  local_host: native/quillframe-host
+  secrets: native/quillframe-secrets
+  project_store: sqlite-strict-schema
+  studio_ui: solidjs-typescript
+  ui_tooling_only: node-pnpm
 
-craft_guidance:
-  en: surface/craft/README.en.md
-  zh_cn: surface/craft/README.zh-CN.md
-  registry: surface/craft/registry.json
-  sources: surface/craft/sources.json
-  history: surface/craft/history
-  loader: production_runtime/craft_guidance.py
-  snapshot_schema: quillframe_craft_snapshot_v1
-  current_registry_version: "4"
-  status: candidate
-  default_mode: baseline
-  opt_in_mode: outline_driven
-  composite_opt_in_mode: outline_plus_style_contract
-  composite_semantics: craft_v4_direct_surface_foundation_plus_run_scoped_source_free_corpus
-  corpus_style_card_limit: 8
-  native_evaluation_runner: evals/native_style_runner.py
-  author_review:
-    en: evals/CRAFT_CHAPTER_REVIEW.en.md
-    zh_cn: evals/CRAFT_CHAPTER_REVIEW.zh-CN.md
-    helper: evals/craft_chapter_review.py
-    mode: sequential_single_chapter_absolute
-    full_production_runtime_required: true
-    author_feedback_before_next_iteration: true
-    pairwise_comparison: false
-  selection_contract: scene.realization_project
-  selection_contract_version: "10"
-  writer_pack_schema: quillframe_direct_writer_pack_v1
-  prose_generation_stages: [surface_realization]
-  intermediate_raw_draft_prose: forbidden
-  judgment_authority: false
-  diagnostics_writer_visible: false
+project_contract:
+  manifest_schema: quillframe_project_v1_0
+  manifest_keys: [project_id, title, language, schema]
+  hierarchy: [book, volume, unit, chapter, scene]
+  target_length: ultralong_over_5000000_chinese_characters
+  durability_test_policy: real_multi_chapter_acceptance_without_synthetic_5000000_character_run
 
-harness:
-  manager: harness/HARNESS_AGENT.md
-  orchestration: harness/ORCHESTRATION_PROTOCOL.md
-  session_runtime: harness/session_runtime/SESSION_RUNTIME.md
-  session_schema: harness/session_runtime/session_schema.json
-  session_tool: harness/session_runtime/session_runtime.py
-  runtime_routing: harness/session_runtime/RUNTIME_ROUTING.md
-  runtime_registry: harness/session_runtime/runtime_registry.json
-  runtime_capabilities: harness/runtime_capabilities.py
-  runtime_capability_docs:
-    en: harness/session_runtime/RUNTIME_CAPABILITIES.en.md
-    zh_cn: harness/session_runtime/RUNTIME_CAPABILITIES.zh-CN.md
-  runtime_query_tool: harness/control_plane/runtime_query.py
-  runtime_query_schema: quillframe_runtime_query_v1
-  runtime_sessions_projection_schema: quillframe_runtime_sessions_projection_v1
-  runtime_session_projection_schema: quillframe_runtime_session_projection_v1
-  runtime_events_projection_schema: quillframe_runtime_events_projection_v1
-  runtime_handoff_projection_schema: quillframe_runtime_handoff_projection_v1
-  resume_preflight_tool: harness/session_runtime/resume_preflight.py
-  resume_preflight_schema: quillframe_session_resume_preflight_v1
-  resume_command_tool: harness/session_runtime/resume_command.py
-  resume_command_schema: harness/session_runtime/resume_command_schema.json
-  resume_command_schema_id: quillframe_session_resume_command_v1
-  runtime_command_authorization_tool: harness/session_runtime/runtime_command_authorization.py
-  runtime_command_authorization_schema: harness/session_runtime/runtime_command_authorization_schema.json
-  runtime_command_authorization_schema_id: quillframe_runtime_command_authorization_v1
-  runtime_command_executor_tool: harness/session_runtime/runtime_command_executor.py
-  runtime_command_receipt_schema: harness/session_runtime/runtime_command_receipt_schema.json
-  runtime_command_receipt_schema_id: quillframe_runtime_command_receipt_v1
-  runtime_command_execution_result_schema: harness/session_runtime/runtime_command_execution_result_schema.json
-  runtime_command_execution_result_schema_id: quillframe_runtime_command_execution_result_v1
-  runtime_command_receipt_projection_schema: quillframe_runtime_command_receipt_projection_v1
-  run_receipt_tool: harness/control_plane/run_receipt.py
-  run_receipt_schema: quillframe_run_receipt_v1
-  run_receipts_projection_schema: quillframe_run_receipts_projection_v1
-  context_inspector: harness/context_inspector.py
-  context_assembly: harness/context_assembly.py
-  memory_tiers: harness/memory_tiers.py
-  memory_bank: harness/memory_bank.py
-  scenario_fork: harness/scenario_fork.py
-  planning_horizon: harness/planning_horizon.py
-  planning_horizon_schema: harness/planning_horizon.schema.json
-  settlement_runtime: harness/settlement_runtime.py
-  property_write_policy: harness/property_write_policy.py
-  property_write_policy_schema: harness/property_write_policy.schema.json
-  propagation_debt: harness/propagation_debt.py
-  propagation_debt_schema: harness/propagation_debt.schema.json
-  author_steering: harness/control_plane/author_steering.py
-  author_steering_schema: harness/control_plane/author_steering.schema.json
-  write_intent_guard: harness/control_plane/write_intent_guard.py
-  control_plane: harness/control_plane/CONTROL_PLANE.md
-  control_plane_tool: harness/control_plane/control_plane.py
-  control_plane_event_schema: harness/control_plane/event_schema.json
-  control_plane_handoff_schema: harness/control_plane/handoff_schema.json
-  control_plane_mcp_stdio: harness/control_plane/mcp_stdio.py
-  semantic_protocol: harness/semantic_workers/SEMANTIC_WORKER_PROTOCOL.md
-  semantic_execution: harness/semantic_workers/SEMANTIC_EXECUTION_RUNTIME.md
-  semantic_router: harness/semantic_workers/semantic_worker_router.py
-  semantic_model_contract_catalog: harness/semantic_workers/model_contract_catalog.json
-  semantic_contract_packs: harness/semantic_workers/contracts
-  semantic_runner: harness/semantic_workers/semantic_worker_runner.py
-  semantic_model_runtime_adapter: harness/semantic_workers/adapters/model_runtime_adapter.py
-  semantic_local_adapter: harness/semantic_workers/adapters/local_agent_adapter.py
-  semantic_peer_relay: harness/semantic_workers/peer_chat_relay.py
-
-library:
-  package: quillframe
-  build_metadata: pyproject.toml
-  public_facade: quillframe.api.Quillframe
-  import_example: from quillframe import Quillframe
-  agent_runtime: agent_runtime/runtime.py
-  model_runtime: model_runtime/runtime.py
-  tool_runtime: agent_runtime/tools.py
-  project_source_tree_duplicated_for_packaging: false
-
-model_runtime:
-  package: model_runtime
-  endpoint_contract: model_runtime/endpoint.py
-  snapshot_schema: model_runtime/model_service_snapshot.schema.json
-  persistence: model_runtime/persistence.py
-  protocols: [openai_chat_completions, openai_responses, anthropic_messages]
-  provider_identity_required: false
-  user_setup_inputs: [api_endpoint, access_token]
-  protocol_discovery_owner: quillframe
-  model_discovery_owner: quillframe
-  capability_evidence_owner: quillframe
-  model_selection_owner: quillframe
-  access_token_durable_storage: forbidden
-  credential_reference_only_in_durable_state: true
-  normal_ci_live_model_execution: forbidden
-  live_model_probe: tests/live_model_runtime.py
-
-agent_runtime:
-  package: agent_runtime
-  job_schema: agent_runtime/agent_job.schema.json
-  result_schema: agent_runtime/agent_result.schema.json
-  runner: agent_runtime/runner.py
-  execution_hooks: agent_runtime/hooks.py
-  tool_runtime: agent_runtime/tools.py
-  model_tool_loop_owner: quillframe
-  side_effect_checkpoint_required: true
-  side_effect_post_receipt_required: true
-  side_effect_without_checkpoint_state: checkpoint_failed
-  side_effect_receipt_unknown_state: side_effect_unconfirmed
-  agent_result_grants_authority: false
-  agent_result_grants_canon_authority: false
-  agent_result_grants_framework_write_authority: false
-
-quality:
-  finding_contract: quality/findings.py
-  production_readiness: quality/production_readiness.py
-  production_release: quality/production_release.py
-  prose_telemetry: quality/prose_telemetry.py
-  quality_evolution: quality/quality_evolution.py
-  reader_expectation_ledger: quality/reader_expectation.py
-  state_graph: quality/state_graph.py
-  taxonomy_registry: quality/taxonomy.json
-  taxonomy_tool: quality/quality_taxonomy.py
-  repair_policy: quality/repair_policy.py
-  quality_evolution_schema: quillframe_quality_evolution_v2
-  reader_expectation_schema: quillframe_reader_expectation_v2
-  context_inspector_schema: quillframe_context_inspector_v3
-  context_assembly_schema: quillframe_context_assembly_v2
-  memory_tiers_schema: quillframe_memory_tiers_v4
-  memory_bank_schema: quillframe_memory_bank_v1
-  finding_schema: quillframe_quality_finding_v1
-  production_readiness_schema: quillframe_production_readiness_v1
-  production_release_schema: quillframe_production_release_v1
-  prose_telemetry_schema: quillframe_prose_telemetry_v2
-  write_intent_guard_schema: quillframe_write_intent_guard_v1
-  state_graph_schema: quillframe_state_graph_v1
-  taxonomy_schema: quillframe_quality_taxonomy_v1
-  repair_policy_schema: quillframe_repair_policy_v3
-  semantic_contracts:
-    reader_reaction: reader.reaction
-    reader_engagement_audit: reader.engagement_audit
-    reader_compare: reader.compare
-    character_integrity: character.integrity
-    revision_diagnosis: revision.diagnose
-    semantic_rule_audit: quality.semantic_rule_audit
-    production_review: quality.production_review
-    narrative_world: narrative.world
-    reader_expectations: reader.expectations
-    memory_consolidation: memory.consolidate
-    preference_interpret: learning.preference_interpret
-    realization_project: scene.realization_project
-    editor_repair_spec: editor.repair_spec
-  semantic_intelligence_owner: model
-  deterministic_code_owner: [authority, permission, fingerprint, persistence, transaction, routing, hard_budget, stage_isolation, typed_validation, release_role_binding, contradiction_guard]
-  reader_persona_basis: reading-behavior
-  reader_diagnostics_are_mandatory_independent_gate: false
-  registered_reader_engagement_release_contract_required: true
-  registered_independent_release_contract_required_when_enabled: true
-  production_release_ad_hoc_eval_judge_allowed: false
-  production_reader_contract: reader.engagement_audit
-  production_independent_contract: quality.production_review
-  editor_selects_repair_generation_mode: true
-  repair_depth_judged_by_runtime: false
-  fresh_realization_hides_rejected_prose: true
-  pairwise_order_swap_supported: true
-  absolute_score_alone_decides_keep_discard: false
-  quality_evolution_result_consume_once: true
-  quality_evolution_plateau_stopping: true
-  context_overlay_can_mutate_canon: false
-  memory_bank_can_mutate_protected_canon_reference: false
-  protected_memory_edit_becomes_proposal: true
-  derived_memory_authority: false
-  state_graph_authority: false
-  scenario_branch_authority: false
-  reader_expectation_authority: false
-  durable_semantic_scalar_policy: forbidden_without_calibration_and_consumer_contract
-
-settlement:
-  runtime: harness/settlement_runtime.py
-  runtime_schema: quillframe_settlement_runtime_v1
-  transaction_schema: quillframe_settlement_transaction_v1
-  projection_receipt_schema: quillframe_projection_receipt_v1
-  semantic_inference: forbidden
-  explicit_acceptance_receipt_required: true
-  checkpoint_before_write_required: true
-  explicit_write_authorization_required: true
-  exact_before_after_intent_required: true
-  before_state_compare_and_swap: required
-  authoritative_postcondition_check: required
-  required_projection_receipts_bind_transaction_fingerprint: true
-  required_projection_failure_state: settlement_incomplete
-  projection_retry_after_failure: supported
-  completed_projection_replay_is_immutable: true
-  complete_only_after_required_projections: true
-
-learning:
-  architecture:
-    en: docs/adaptive-learning.en.md
-    zh_cn: docs/adaptive-learning.zh-CN.md
-  durable_store: learning/learning_store.py
-  durable_cycle: learning/learning_cycle.py
-  semantic_work_packager: learning/learning_eval.py
-  promotion_gate: learning/promotion_gate.py
-  author_model: learning/author_model.py
-  author_model_schema: quillframe_author_model_v1
-  feedback_capture_schema: quillframe_feedback_capture_v1
-  author_model_projection_schema: quillframe_author_model_projection_v2
-  feedback_intake: learning/feedback_intake.py
-  feedback_intake_schema: learning/feedback_intake.schema.json
-  feedback_intake_schema_id: quillframe_feedback_intake_v1
-  feedback_intake_projection_schema: quillframe_feedback_intake_projection_v1
-  feedback_query: learning/feedback_query.py
-  feedback_query_side_effect_free: true
-  feedback_transport_event: feedback.observed
-  feedback_semantic_contract: learning.preference_interpret
-  feedback_semantic_independence_required: false
-  feedback_auto_capture_candidate: true
-  feedback_capture_requires_learn_mode: false
-  feedback_learning_consumer_scoped: true
-  feedback_missing_semantic_state: awaiting_semantic
-  feedback_same_event_retry_counts_as_new_evidence: false
-  feedback_distinct_user_turn_may_strengthen_existing_hypothesis: true
-  feedback_hypothesis_reconciliation_owner: model
-  feedback_auto_project_profile_write: false
-  feedback_auto_activation: standing_user_taste_policy_only
-  feedback_auto_activation_without_standing_policy: false
-  feedback_auto_framework_write: false
-  feedback_auto_canon_write: false
-  user_taste_service: learning/user_taste.py
-  user_taste_policy_schema: quillframe_user_taste_auto_activation_policy_v1
-  user_taste_snapshot_schema: quillframe_user_taste_snapshot_v1
-  user_taste_writer_projection_schema: quillframe_writer_user_taste_v1
-  user_taste_activation_receipt_schema: quillframe_user_taste_activation_receipt_v1
-  user_taste_standing_policy_default: disabled
-  user_taste_standing_policy_source_kinds: [corpus, feedback, user_edit]
-  user_taste_standing_policy_revocable: true
-  user_taste_policy_compare_and_swap: required_when_expected_version_supplied
-  user_taste_auto_activation_requires: [standing_policy, exact_candidate_binding, semantic_review, independent_eval, contradiction_review]
-  user_taste_current_request_precedence: true
-  user_taste_per_run_semantic_selection: zero_to_n
-  user_taste_all_active_preferences_auto_injected: false
-  user_taste_writer_visibility: [mechanism, applies_when, avoid_when, hypothesis_id, version]
-  user_taste_reader_or_reviewer_visibility: forbidden
-  user_taste_source_identity_in_writer_projection: forbidden
-  user_taste_pause_and_withdraw_supported: true
-  general_craft_promotion: manual_only
-  state_domains:
-    - feedback_intake
-    - preference_evidence
-    - preference_hypotheses
-    - corpus_gaps
-    - learning_candidates
-    - promotion_log
-    - learning_cycles
-    - learning_cycle_artifacts
-    - learning_cycle_receipts
-  cycle_graph:
-    - feedback_observation_or_existing_evidence
-    - semantic_capture_or_skip
-    - evidence_or_hypothesis
-    - corpus_gap
-    - discovery_plan
-    - verified_discovery
-    - semantic_analysis
-    - eval_evidence
-    - promotion_candidate
-    - activation_or_promotion_gate
-  scopes: [one_off, project, user_taste, general_craft]
-  model_inference_alone_can_promote_user_taste: false
-  general_craft_requires_counterexample_and_eval: true
-  general_craft_requires_cross_work_evidence: true
-  promotion_gate_grants_write_authority: false
-  author_model_write_authority_alone_can_activate_user_taste: false
-  author_model_requires_promotion_prerequisite_for_user_taste: true
-  learning_result_consume_once: true
-  personal_learning_data_committed_by_default: false
+production:
+  task_modes: [DRAFT, REVISE]
+  pipeline:
+    - context_query_plan
+    - context_greenlight
+    - context_freeze
+    - corpus_greenlight
+    - preference_greenlight
+    - character_simulation
+    - scene_resolution
+    - surface_realization
+    - reader_engagement
+    - continuity_rule_audit
+    - candidate_self_audit
+    - repair_comparison
+    - independent_semantic_gate
+    - author_acceptance
+    - settlement
+    - publication
+  recovery: explicit_authorized_snapshot_materialization_without_semantic_inference
+  raw_intermediate_draft_visible: false
+  generation_source_controls_voice_and_prose: true
+  script_literary_scoring: forbidden
+  model_usage_user_cap_required: false
+  provider_technical_limits_observed: true
 
 corpus:
-  overview:
-    en: corpus/README.en.md
-    zh_cn: corpus/README.zh-CN.md
-  policy:
-    en: corpus/CORPUS_POLICY.en.md
-    zh_cn: corpus/CORPUS_POLICY.zh-CN.md
-  ingest:
-    en: corpus/CORPUS_INGEST_PROTOCOL.en.md
-    zh_cn: corpus/CORPUS_INGEST_PROTOCOL.zh-CN.md
-  scout: corpus/corpus_scout.py
-  discovery_runtime: corpus/discovery_runtime.py
-  discovery_request_schema: quillframe_corpus_discovery_request_v2
-  discovery_result_schema: quillframe_corpus_discovery_results_v1
-  rights_gate: corpus/rights_gate.py
-  benchmark_registry: corpus/benchmarks/mechanisms.json
-  local_library: corpus/library.py
-  study_runner: corpus/study_runner.py
-  legacy_fixed_window_protocol: quillframe_corpus_three_window_benchmark_v1
-  study_semantic_contracts: [corpus.range_observe, learning.work_synthesize, learning.benchmark_synthesize]
-  study_semantic_range_calls: 360
-  study_research_axes: [scene_entry, causal_progression, dialogue_voice, interiority_distance, information_timing, paragraph_rhythm, relationship_movement, chapter_forward_pull]
-  study_semantic_results_are_candidates: true
-  study_candidate_auto_activation: false
-  study_candidate_auto_promotion: false
-  style_learning:
-    protocol_id: quillframe_corpus_style_learning_v1
-    protocol_version: "1"
-    append_only_runner: corpus/style_study_runner.py
-    sampler: corpus/style_sampling.py
-    contract_compiler: corpus/style_contract.py
-    same_study_version_reused: STUDY-GENERAL-QUALITY-REBUILD-V5
-    successor_study_version_created: false
-    source_pool:
-      exact_count: 120
-      semantics: addressable_available_pool
-      confirmation_binds: [declared_rights, scope, profile, membership, proposal_fingerprint]
-      per_member_literary_review_required_for_confirmation: false
-      full_pool_exposure_required_for_confirmation: false
-      all_members_required_for_style_completion: false
-    source_count_is_quality_threshold: false
-    cpu_benchmark_is_confirmation_gate: false
-    memory_benchmark_is_confirmation_gate: false
-    dynamic_work_pool_scheduling:
-      target: model_selects_next_work_and_passage_until_cross_work_convergence
-      implementation_status: implemented_source_free_reconcile_activation_ledger
-    ai_native_responsibility_target: [scene_function_classification, style_axis_classification, evidence_gap_analysis, next_evidence_request, cross_work_convergence]
-    deterministic_runtime_responsibility: [source_identity, source_version_binding, bounded_materialization, hygiene, budgets, receipts, schema_validation, leakage_checks]
-    evidence_scope_routes:
-      language_mismatch: narrow_language_specific_claims
-      incomplete_or_serial: local_scene_or_prose_evidence_without_unsupported_whole_work_claims
-      restart_or_concatenation: boundary_aware_windows_or_narrower_claims
-      selected_window_hygiene_failure: reject_whole_window_and_request_replacement
-      invalid_rights_or_source_identity: block_relevant_source_evidence
-    source_prose_lifetime: ephemeral_semantic_call_only
-    txt_sampling_default: bounded_incremental_stream
-    large_txt_sampling: bounded_incremental_stream
-    large_epub_sampling: fail_closed
-    candidate_window_hygiene: reject_host_distribution_boilerplate_without_rewriting
-    candidate_window_hygiene_scope: corpus_library_fixed_policy
-    semantic_contracts: [corpus.style_observe, learning.style_work_synthesize, learning.style_axis_synthesize, learning.style_axis_reconcile, learning.style_claim_verify]
-    scene_functions: [opening, dialogue, action, interiority, exposition, environment, body_appearance, relationship, transition, ending]
-    style_axes: [prose_voice, syntax_rhythm, lexical_register, psychic_distance, descriptive_attention, body_appearance, imagery, dialogue_voice, interiority_summary, information_flow]
-    max_adaptive_rounds_per_work: 4
-    max_windows_per_round: 6
-    max_cross_work_axis_batch: 16
-    cross_work_pooling: dynamic_source_free_cohort
-    dynamic_work_cohort: implemented
-    seed_discovery_work_count: 8
-    holdout_cohort_work_count: 8
-    deterministic_discovery_holdout_split: true
-    stop_criteria: [functional_coverage, semantic_saturation, cross_work_counterexamples, heldout_replication, causal_ab_uplift, non_leakage]
-    source_free_style_contract: required
-    named_author_profile_or_vector: forbidden
-    raw_prose_rag: forbidden
-    source_novel_lora_or_sft: forbidden
-    body_or_appearance_implies_adult_profile: false
-    local_leakage_layers: [exact_ngram, nfkc_normalized_ngram, shingle_jaccard, minhash]
-    external_semantic_leakage_review: required
-    writer_projection_evidence_identity: forbidden
-    blind_reader_style_treatment_visibility: forbidden
-    candidate_promotion: manual_exact_artifact_binding_only
-    baseline_conditions: [baseline, current_craft_v4, corpus_style_candidate]
-    holdout_and_leave_one_work_out_regression: required
-    public_atlas_builder: corpus/style_publication.py
-    public_atlas_schema: corpus/general/style_atlas.schema.json
-    public_atlas_preview_schema: corpus/general/style_atlas_preview.schema.json
-    public_atlas_registry: corpus/general/style_registry.json
-    public_atlas_registry_schema: corpus/general/style_atlas_registry.schema.json
-    public_atlas_release_receipt_schema: corpus/general/style_atlas_release_receipt.schema.json
-    public_atlas_transition_receipt_schema: corpus/general/style_registry_transition_receipt.schema.json
-    public_atlas_trust_policy: corpus/general/style_publication_trust_policy.json
-    public_atlas_trust_policy_schema: corpus/general/style_publication_trust_policy.schema.json
-    public_atlas_trust_policy_status: unconfigured
-    public_preview_authority: false
-    raw_release_helper: fail_closed
-    trusted_publisher: StyleAtlasPublisher
-    trusted_candidate_loader: corpus/style_publication_adapter.py
-    trusted_completion_receipt_lookup: required
-    trusted_attestation_roles: [provenance, semantic_leakage, blind_ab, promotion, manual_approval]
-    trusted_attestation_role_secret_reuse: forbidden
-    trusted_publisher_policy_match: required
-    release_receipt_content_addressed: true
-    transition_receipt_content_addressed: true
-    registry_revision_event_chain_replay: required
-    registry_load_reverifies_release_receipts: true
-    registry_load_reverifies_transition_receipts: true
-    caller_boolean_or_self_hash_authority: forbidden
-    rights_or_provenance_review: required
-    registry_exact_base_revision_binding: required
-    registry_active_pointer: required
-    registry_release_states: [active, superseded, rolled_back, deprecated, contested]
-    registry_transition_manual_confirmation: required
-    public_atlas_gate_receipts_embedded: false
-  local_library_source_prose_persisted: false
-  public_general_root: corpus/general
-  public_general_registry: corpus/general/registry.json
-  public_general_registry_schema: corpus/general/registry.schema.json
-  public_work_schema: corpus/general/public_work.schema.json
-  public_manifest_schema: corpus/general/public_manifest.schema.json
-  public_release_profile:
-    protocol_id: quillframe_corpus_three_window_benchmark_v1
-    applies_to_style_learning: false
-    distinct_logical_works: 120
-    editions_per_work: 1
-    windows_per_work: 3
-    window_scopes: [opening, middle, closing]
-    max_unicode_chars_per_window: 4000
-    exact_selection_confirmation: required
-    raw_window_materialization: ephemeral
-    raw_source_storage: local_user_files_only
-    public_work_identity: randomized
-    source_titles_creators_paths_prose_quotes_summaries: forbidden
-    preview_validation_and_exact_fingerprint_confirmation: required
-  content_profile_partitions: [general, adult_explicit]
-  content_profile_selection: explicit_user_choice_at_checklist_confirmation
-  content_profile_inference_from_source_text: forbidden
-  study_profile_cardinality: exactly_one
-  study_profile_immutable_after_confirmation: true
-  cross_content_profile_aggregation: forbidden
-  adult_explicit_default_writer_injection: forbidden
-  public_general_license: inherits_repository_LICENSE
-  rights_classes: [redistributable, analysis_only, unknown]
-  discovery_is_not_ingestion: true
-  discovery_requires_proven_host_capability: true
-  source_tool_provenance_required: true
-  full_modern_copyright_mirroring_default: forbidden
-  named_author_imitation_profile: forbidden
+  schema: persistence/schema/corpus/001_initial.sql
+  private_database: corpus.sqlite
+  source_storage: user_files_only
+  scan:
+    formats: [utf8_txt]
+    maximum_works: 500
+    maximum_depth: 8
+    maximum_bytes_per_work: 134217728
+    links_and_reparse_points: forbidden
+  analyze_stages:
+    - boundary_index
+    - golden_three
+    - chapter_extraction
+    - aggregate_mechanisms
+    - story_entities
+    - report
+    - style_profile
+  golden_three_pause: required
+  continuation_authorization: exact_checkpoint_cas
+  model_prompt_persisted: false
+  writer_boundary: source_free_projection_only
+  active_writer_pack_limit: 4
 
-publication:
-  compiler: publication/compiler.py
-  ir_schema: publication/publication_ir.schema.json
-  ir_schema_id: quillframe_publication_ir_v1
-  profiles: [clean_text, web_reflow, print_book, epub3]
-  accepted_text_mutation: forbidden
-  deterministic_internal_validation: required
-  epub_spec_target: W3C-EPUB-3.3
-  epub_release_external_conformance_check: required
-  publication_output_grants_canon_authority: false
+storage:
+  global_schema: persistence/schema/global
+  project_schema: persistence/schema/project
+  corpus_schema: persistence/schema/corpus
+  journal_mode: wal
+  synchronous: full
+  schema_drift: fail_closed
+  publication:
+    formats: [md, txt]
+    accepted_single_source: supported
+    settled_ordered_collection: supported
+    publish_mode: durable_stage_handle_bound_noreplace
+    artifact_identity_revalidation: required
 
-evals:
-  overview:
-    en: evals/README.en.md
-    zh_cn: evals/README.zh-CN.md
-  manifest: evals/eval_manifest.json
-  runner: evals/run_evals.py
-  blind_queue_builder: evals/build_judge_queue.py
-  ai_native_ablation_manifest: evals/ai_native_ablation_manifest.json
-  feedback_learning_ablation_manifest: evals/feedback_learning_ablation_manifest.json
-  feedback_learning_ablation_tool: evals/feedback_learning_ablation.py
-  feedback_learning_ablation_contract: quality.ablation_compare
-  feedback_learning_ablation_requires_independent_model: true
-  semantic_acceptance_schema: evals/semantic_acceptance.schema.json
-  semantic_acceptance_baseline: evals/baselines/semantic-8.0-dev.1.json
-  semantic_acceptance_validator: evals/validate_semantic_acceptance.py
-  reviewed_baseline_is_model_output: false
-  reviewed_baseline_fingerprint_match_required: true
-  semantic_missing_state: PENDING_MODEL
-  hidden_expected_in_reviewer_queue: forbidden
+model_runtime:
+  protocols: [openai_chat_completions, openai_responses, anthropic_messages]
+  secrets: os_credential_store_only
+  endpoint_policy: https_or_explicit_loopback_http
+  dns_rebinding_policy: resolved_address_pinned
+  stage_outcome: confirmed_or_unconfirmed_never_blind_retry
+
+bridge:
+  contract: studio/host_bridge_contract.json
+  version: 11
+  browser_direct_store_access: false
+  generic_mutation_dispatch: false
+  implemented_groups:
+    - project_and_story
+    - typed_planning
+    - model_services
+    - author_production
+    - document_revision
+    - candidate_review_and_revision
+    - settlement
+    - publication
+    - corpus_analysis_and_pack_activation
+    - context_compiler_and_dependency_invalidation
+    - learning_feedback_review_and_preference_activation
+    - story_snapshot_restore
+
+quality:
   normal_ci_live_model_execution: forbidden
-
-project_engineering:
-  contract:
-    en: docs/project-contract.en.md
-    zh_cn: docs/project-contract.zh-CN.md
-  resolution: project_resolution.py
-  launch: quillframe/launch.py
-  manifest: quillframe.toml
-  data_root: .quillframe/data
-  optional_property_write_policy_path_key: property_write_policy
-  property_write_policy_absent_behavior: policy_required
-  change_classes: [micro_content, chapter_unit, structural_feature, canon_revision, release]
-  structural_change_flow: [spec, plan, tasks, implementation, verification, acceptance]
-  deterministic_project_tests: required
-  framework_bundle:
-    builder: release/build_framework_bundle.py
-    docs:
-      en: release/FRAMEWORK_BUNDLE.en.md
-      zh_cn: release/FRAMEWORK_BUNDLE.zh-CN.md
-    format: deterministic-posix-tar
-    fingerprint: sha256-exact-bundle-bytes
-    content_manifest: BUNDLE_CONTENT_MANIFEST.json
-    metadata_excluded_from_fingerprint_input: true
-
-session_runtime:
-  identity_model: resource-session-run-checkpoint
-  chat_session_support: required
-  durable_store: sqlite-reference
-  public_query_boundary: harness/control_plane/runtime_query.py
-  public_queries_are_side_effect_free: true
-  resume_preflight: harness/session_runtime/resume_preflight.py
-  resume_preflight_schema: quillframe_session_resume_preflight_v1
-  resume_preflight_is_side_effect_free: true
-  resume_preflight_public_operation: session.resume.preflight
-  resume_preflight_ready_grants_runtime_control: false
-  ordinary_resume_requires_latest_checkpoint: true
-  older_checkpoint_requires_replay_or_fork_contract: true
-  resume_command: harness/session_runtime/resume_command.py
-  resume_command_schema: quillframe_session_resume_command_v1
-  resume_command_exposed: true
-  runtime_command_authorization: harness/session_runtime/runtime_command_authorization.py
-  runtime_command_authorization_schema: quillframe_runtime_command_authorization_v1
-  runtime_command_executor_tool: harness/session_runtime/runtime_command_executor.py
-  runtime_command_executor_exposed: true
-  runtime_command_receipt_schema: quillframe_runtime_command_receipt_v1
-  runtime_command_execution_result_schema: quillframe_runtime_command_execution_result_v1
-  runtime_command_receipt_projection_schema: quillframe_runtime_command_receipt_projection_v1
-  session_resume_mutation_exposed: true
-  session_resume_mutation_scope: runtime_session_state_only
-  session_resume_public_surface: local_app_only
-  session_resume_requires_fresh_preflight: true
-  session_resume_requires_explicit_authorization: true
-  session_resume_requires_exact_before_state_cas: true
-  session_resume_requires_idempotent_receipt: true
-  session_resume_model_execution: false
-  session_resume_project_write: false
-  session_resume_canon_write: false
-  session_resume_framework_write: false
-  session_resume_settlement: false
-  resume_preflight_requires_host_binding_for_required_capabilities: true
-  provider_session_identifiers_exposed: false
-  persistent_session_does_not_grant_authority: true
-  reviewer_default: fresh-per-fingerprint
-  resume_revalidates_project_manifest: true
-  resume_reresolves_required_capabilities: true
-  author_steering_transport_event: feedback.observed
-  author_steering_payload_schema: quillframe_author_steering_request_v1
-  author_steering_safe_point_schema: quillframe_author_steering_safe_point_v1
-  author_steering_decision_schema: quillframe_author_steering_decision_v1
-  author_steering_receipt_schema: quillframe_author_steering_receipt_v1
-  author_steering_source_kinds: [user, authorized_human]
-  author_steering_requires_safe_point: true
-  author_steering_consume_once: true
-  author_steering_resume_lineage_revalidation: true
-  author_steering_consequential_write_interruptible: false
-  author_steering_followup_auto_execute: false
-  author_steering_model_execution: false
-  feedback_learning_transport_event: feedback.observed
-  feedback_learning_payloads: [quillframe_author_steering_request_v1, quillframe_feedback_observation_v1]
-  feedback_learning_source_kinds: [user, authorized_human]
-  feedback_learning_consumer_scoped: true
-  feedback_learning_pending_is_resumable: true
-  feedback_learning_resume_revalidates_event_and_semantic_fingerprint: true
-  feedback_learning_model_execution_required_in_normal_ci: false
-
-runtime_capabilities:
-  schema: quillframe_host_capabilities_v1
-  undeclared_is_unavailable: true
-  provider_name_is_not_capability_proof: true
-  network_primitive_is_not_remote_authorization: true
-  secrets_embedded: false
-  constraints: [permission, availability, user_interaction, model_execution, usage_class]
-  common_capabilities: [filesystem_read, filesystem_write, subprocess, git_cli, github_cli, codex_cli, claude_cli, web_search, github_search, user_files, file_library, mcp_client, mcp_server, model_api, semantic_model, peer_chat_relay, human_reviewer, network_http]
-
-control_plane:
-  schema: quillframe_control_plane_v1
-  event_schema: quillframe_event_v1
-  handoff_schema: quillframe_handoff_v1
-  public_query_schema: quillframe_runtime_query_v1
-  run_receipt_schema: quillframe_run_receipt_v1
-  runtime_command_receipt_schema: quillframe_runtime_command_receipt_v1
-  event_idempotency: required
-  runtime_command_idempotency: required
-  runtime_command_before_state_compare_and_swap: required
-  author_steering_transport_event: feedback.observed
-  author_steering_typed_payload_required: true
-  author_steering_generic_feedback_auto_routes: false
-  author_steering_consumption: exactly-once-session-scoped
-  feedback_learning_transport_event: feedback.observed
-  feedback_learning_consumption: exactly-once-logical-consumer-scoped
-  feedback_event_multi_consumer_fanout: true
-  steering_consumption_can_starve_learning: false
-  learning_consumption_can_starve_steering: false
-  handoff_claim: transactional-bounded-lease
-  result_consumption: exactly-once-logical-receipt
-  canon_authority: false
-  framework_promotion_authority: false
-  default_local_db: .quillframe/runtime.db
-  write_intent_guard: harness/control_plane/write_intent_guard.py
-  write_intent_guard_schema: quillframe_write_intent_guard_v1
-  write_intent_requires_exact_resource_action_target: true
-  write_intent_requires_exact_before_state: true
-  write_intent_does_not_grant_authority: true
-  mcp:
-    protocol_version: 2026-07-28
-    local_transport: stdio
-    remote_transport: streamable-http
-    canon_write_tools_exposed: false
-
-runtime_transports: [current_chat, peer_chat, codex_cli, claude_code, model_api, control_plane_mcp, github_actions, remote_mcp_worker, human_reviewer]
-
-semantic:
-  model_contract_catalog: harness/semantic_workers/model_contract_catalog.json
-  contract_pack_root: harness/semantic_workers/contracts
-  loading_policy: progressive_disclosure
-  exact_contract_id_resolution: deterministic_runtime
-  aggregate_duplicate_registry: forbidden
-  semantic_intelligence_owner: model
-  deterministic_runtime_does_literary_judgment: false
-  fingerprint_payload: [kind, subject_id, input, rubric, output_contract]
-  execution_lineage_excluded_from_fingerprint: true
-  lineage_fields: [source_session_id, worker_session_id, handoff_id, attempt_id]
-  hidden_gold: forbidden
-  manager_self_review_independent: false
-  semantic_reject_is_transport_failure: false
-  result_consume_once: true
-  typed_output_validation: generic-contract-subset
-  learning_kinds: [corpus_analyze, preference_distill, eval_judge]
-  diagnostic_kinds: [artifact_audit, external_review]
-
-quality_layering:
-  order: [framework_fundamentals, genre_platform_profile, project_profile, user_taste_profile, current_request]
-  project_may_silently_disable_framework_fundamentals: false
-  explicit_profile_sensitive_exceptions_supported: true
-
-bilingual_docs:
-  languages: [en, zh-CN]
-  human_facing_pair_required: true
-  machine_schema_single_source: true
-  mermaid_diagrams: preferred
-
-workflows:
-  deterministic_ci: .github/workflows/quillframe-ci.yml
-  reusable_contracts: .github/workflows/quillframe-contracts.yml
-  feedback_learning: .github/workflows/quillframe-feedback-learning.yml
-  semantic_contract_packs: .github/workflows/quillframe-semantic-contract-packs.yml
-  quality_gate_hardening: .github/workflows/quillframe-quality-gate-hardening.yml
-  framework_bundle: .github/workflows/quillframe-release-bundle.yml
-  typed_event_router: .github/workflows/quillframe-event-router.yml
-  live_semantic_optional: .github/workflows/quillframe-semantic-live.yml
-  live_model_probe: tests/live_model_runtime.py
-  weekly_maintenance: .github/workflows/quillframe-weekly-maintenance.yml
-  state_integrity_p0: .github/workflows/quillframe-state-integrity-p0.yml
-  author_steering: .github/workflows/quillframe-author-steering.yml
-  planning_horizon: .github/workflows/quillframe-planning-horizon.yml
-  planning_horizon_semantic: .github/workflows/quillframe-planning-horizon-semantic.yml
-  adaptive_production: .github/workflows/quillframe-adaptive-production.yml
-  adaptive_production_semantic: .github/workflows/quillframe-adaptive-production-semantic.yml
-  peer_chat:
-    reusable_workflow: .github/workflows/quillframe-chat-semantic-bridge.yml
-    composite_action: .github/actions/project-peer-semantic/action.yml
-    bridge_runtime: .github/actions/project-peer-semantic/bridge.py
-    issue_owner: consuming-project-repository
-    framework_issue_listener: forbidden
-    host_action_exact_commit_binding: required
-    job_provenance_project_repo_binding: required
-    job_provenance_framework_commit_binding: required
-  normal_workflows_may_spend_model_usage: false
-  live_semantic_requires_explicit_dispatch_and_secret: true
-  weekly_maintenance_model_execution: false
-  weekly_maintenance_web_execution_without_declared_capability: false
-  weekly_maintenance_auto_promotion: false
-
-normal_ci:
-  model_execution: forbidden
-  required: [py_compile, repository-hygiene, project-resolution-self-test, project-launch-self-test, runtime-capabilities-self-test, runtime-query-self-test, resume-preflight-self-test, resume-command-self-test, runtime-command-authorization-self-test, runtime-command-executor-self-test, context-inspector-self-test, context-assembly-self-test, memory-tiers-self-test, memory-bank-self-test, scenario-fork-self-test, planning-horizon-self-test, property-write-policy-self-test, propagation-debt-self-test, state-integrity-cross-contract-self-test, author-steering-self-test, feedback-intake-self-test, feedback-learning-ablation-self-test, write-intent-guard-self-test, settlement-runtime-self-test, quality-finding-self-test, quality-taxonomy-self-test, repair-policy-self-test, production-readiness-self-test, production-release-self-test, prose-telemetry-self-test, reader-expectation-self-test, quality-evolution-self-test, state-graph-self-test, semantic-router-self-test, semantic-contract-catalog-self-test, semantic-reference-integrity-self-test, registered-release-role-contract-self-test, learning-store-self-test, learning-cycle-self-test, learning-eval-self-test, promotion-gate-self-test, author-model-self-test, corpus-scout-self-test, corpus-discovery-runtime-self-test, corpus-rights-gate-self-test, framework-bundle-self-test, publication-compiler-self-test, deterministic-double-bundle-build, generic-eval-deterministic-release, generic-eval-blind-queue, semantic-acceptance-baseline-self-test, session-self-test, control-plane-self-test, mcp-self-test, local-agent-adapter-self-test, model-runtime-self-test, agent-runtime-self-test, quillframe-library-wheel-import, project-hosted-peer-bridge-ownership]
-
-scheduled_maintenance:
-  model_execution: forbidden
-  web_execution_without_declared_capability: forbidden
-  auto_promotion: forbidden
-  may_plan_discovery: true
-  may_report_missing_capabilities: true
-  may_advance_deterministic_learning_state: true
+  commands:
+    - cargo fmt --all -- --check
+    - cargo check --workspace --all-targets --locked
+    - cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+    - cargo test --workspace --all-targets --locked
+    - corepack pnpm run quality
+    - corepack pnpm run typecheck
+    - corepack pnpm run test
+    - corepack pnpm run build
+  tauri_manifest: studio/app/src-tauri/Cargo.toml
+  acceptance:
+    - native_windows_storage_and_publication
+    - native_linux_storage_and_publication
+    - corpus_golden_three_pause_and_resume
+    - source_free_pack_to_writer_pack
+    - real_multi_chapter_draft_review_revise_accept_settle_publish
+    - studio_direct_rust_core
+    - corrupt_projection_rejected_then_snapshot_restored
 
 write_boundary:
-  connector_event_grants_canon_authority: false
-  webhook_event_grants_canon_authority: false
-  schedule_grants_canon_authority: false
   semantic_result_grants_canon_authority: false
-  semantic_model_contract_result_grants_canon_authority: false
   corpus_result_grants_canon_authority: false
-  learning_hypothesis_grants_canon_authority: false
-  feedback_intake_result_grants_canon_authority: false
-  feedback_intake_result_grants_project_profile_write: false
-  feedback_intake_result_grants_framework_write: false
-  feedback_intake_result_grants_durable_user_taste_write: false
-  author_model_result_grants_canon_authority: false
-  author_model_result_grants_framework_write: false
-  author_model_result_grants_durable_user_taste_write: false
-  context_overlay_grants_canon_authority: false
-  context_assembly_result_grants_canon_authority: false
-  context_assembly_result_grants_project_write_authority: false
-  memory_bank_grants_canon_authority: false
-  reader_expectation_ledger_grants_canon_authority: false
-  scenario_branch_grants_canon_authority: false
-  state_graph_result_grants_canon_authority: false
-  quality_evolution_result_grants_canon_authority: false
-  production_release_result_grants_canon_authority: false
-  production_release_result_replaces_semantic_readiness: false
-  prose_telemetry_grants_literary_verdict: false
-  property_write_policy_grants_canon_authority: false
-  property_write_policy_grants_framework_write: false
-  property_write_policy_resolves_write_route_only: true
-  propagation_debt_grants_canon_authority: false
-  propagation_debt_grants_framework_write: false
-  propagation_debt_can_auto_repair: false
-  propagation_debt_requires_explicit_dependency_evidence: true
-  author_steering_request_grants_canon_authority: false
-  author_steering_decision_grants_canon_authority: false
-  author_steering_grants_project_write_authority: false
-  author_steering_grants_framework_write_authority: false
-  author_steering_grants_settlement_authority: false
-  author_steering_followup_ops_auto_execute: false
-  author_steering_consequential_write_interruptible: false
-  write_intent_guard_grants_write_authority: false
-  planning_horizon_result_grants_canon_authority: false
-  planning_horizon_result_grants_project_write_authority: false
-  planning_horizon_result_grants_framework_write_authority: false
-  planning_horizon_result_grants_settlement_authority: false
-  planning_horizon_transition_mutates_active_plan: false
-  planning_rebalance_frontier_auto_executes_reconcile: false
-  planning_rebalance_frontier_auto_creates_propagation_debt: false
-  promotion_gate_result_grants_framework_write: false
-  runtime_session_resume_grants_project_write_authority: false
-  runtime_session_resume_grants_canon_authority: false
-  runtime_session_resume_grants_framework_write_authority: false
-  runtime_session_resume_grants_settlement_authority: false
-  runtime_session_resume_requires_explicit_authorization: true
-  runtime_session_resume_requires_exact_before_state_cas: true
-  runtime_session_resume_requires_durable_receipt: true
-  agent_result_grants_project_write_authority: false
-  agent_result_grants_canon_authority: false
-  agent_result_grants_framework_write_authority: false
-  agent_tool_receipt_grants_authority: false
-  canon_write_requires_project_acceptance_and_settlement: true
-  settlement_before_state_mismatch_blocks_all_writes: true
-  settlement_complete_requires_required_projection_receipts: true
-  settlement_projection_receipts_bind_transaction_fingerprint: true
-
-semantic_context_runtime_v1:
-  runtime: harness/context_runtime.py
-  persistence: persistence/context_repository.py
-  schema_fragment: persistence/schema/project/002_semantic_context_runtime.sql
-  semantic_contracts: [context.profile_derive, context.stage_select]
-  pipeline: [eligibility_gate, semantic_profiles, semantic_decision, stage_greenlights, budget_packing, context_freeze]
-  eligibility_precedes_relevance: true
-  context_freeze_fingerprint_bound: true
-  post_freeze_untracked_db_fetch: forbidden
-  inspector_projection: quillframe_context_inspector_projection_v4
-  private_chain_of_thought_projection: false
-  authority: false
-  host_neutral: true
+  acceptance_is_settlement: false
+  settlement_requires_exact_before_state: true
+  publication_grants_canon_authority: false

@@ -14,10 +14,11 @@ const MAX_NONCE = 128;
 const CLAIM_KEYS = ["body_sha256", "expires_at", "issued_at", "key_id", "method", "nonce", "path", "project_id", "schema", "scope", "session_id", "workspace_id"] as const;
 
 const PROJECT_REQUIRED = new Set([
-  "project.create", "project.open", "project.inspect", "project.search", "project.backup",
+  "project.create", "project.open", "project.inspect", "project.search", "project.backup", "project.story.restore_latest_snapshot",
   "document.create", "document.open", "document.revisions.list", "document.revision.save", "document.revision.compare",
   "author.run.start", "author.run.status", "author.run.resume", "author.run.cancel", "author.run.execute",
   "author.run.independent.submit", "author.run.independent.dispatch.prepare", "author.run.context.refresh",
+  "author.run.billing.reconcile", "author.run.build-migration.apply", "author.run.build-migration.preview", "author.run.build-migration.regression",
   "model.route.preview", "candidate.accept", "candidate.reject", "candidate.revision.request",
   "settlement.apply", "settlement.preflight", "feedback.observe", "publication.preview", "publication.build",
   "inspector.sessions.list", "inspector.runs.list", "inspector.checkpoints.list", "inspector.context.list",
@@ -27,11 +28,12 @@ const PROJECT_REQUIRED = new Set([
   "reader.expectations.inspect", "reader.expectations.apply", "publication.artifact.get", "publication.collection.build",
   "learning.feedback.observe", "learning.feedback.get", "learning.feedback.list", "learning.feedback.execute", "learning.feedback.resume",
   "learning.preference.list", "learning.preference.get", "learning.preference.review", "learning.preference.activate", "learning.preference.deactivate",
+  "corpus.pack.activate",
 ]);
 const HOSTED_CORPUS = new Set([
   "corpus.selection.propose", "corpus.selection.refresh", "corpus.selection.confirm",
   "corpus.study.start", "corpus.study.status", "corpus.study.resume", "corpus.study.cancel",
-  "corpus.public.preview", "corpus.public.validate", "corpus.public.release", "corpus.public.list", "corpus.public.get",
+  "corpus.pack.preview", "corpus.public.validate", "corpus.public.release", "corpus.public.list", "corpus.public.get",
 ]);
 const HOSTED_USER_TASTE = new Set([
   "learning.auto_activation_policy.get", "learning.auto_activation_policy.set",
@@ -146,7 +148,7 @@ function serializeCanonical(value: unknown): string {
   if (value && typeof value === "object") {
     const record = value as Record<string, unknown>;
     // Serializing an intermediate object would reorder integer-style keys.
-    // Emit keys explicitly to match Python's sort_keys=True wire contract.
+    // Emit keys explicitly to match the canonical Bridge wire contract.
     return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${serializeCanonical(record[key])}`).join(",")}}`;
   }
   const result = JSON.stringify(value);

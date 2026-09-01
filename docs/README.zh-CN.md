@@ -14,7 +14,7 @@ Quillframe 文档先建立心智模型，再进入契约与参考资料。只要
 
 ## Model Runtime 与 Agent Runtime
 
-[Model Runtime](model-runtime.zh-CN.md)解释普通用户只需要的 `API Endpoint + Access Token` 连接面，以及模型/协议发现、能力证据、密钥处理和推理传输；[Agent Runtime](agent-runtime.zh-CN.md)解释 optional embedded AgentJob/Result 循环、thin native-host adapter、工具权限、checkpoint、receipt 与可嵌入的 `quillframe` Python library。
+[Model Runtime](model-runtime.zh-CN.md)解释普通用户只需要的 `API Endpoint + Access Token` 连接面，以及模型/协议发现、能力证据、密钥处理和推理传输；[Agent Runtime](agent-runtime.zh-CN.md)解释 optional AgentJob/Result 循环、Rust host adapter、工具权限、checkpoint 与 Host Bridge v11 receipt。
 
 Provider/vendor identity 最多只是诊断 metadata。宿主运行通用 Agent execution；Quillframe 管理 runtime contract、Context、小说 authority 与 Project state。
 
@@ -24,7 +24,7 @@ Provider/vendor identity 最多只是诊断 metadata。宿主运行通用 Agent 
 
 ## 质量
 
-[质量保障](quality-assurance.zh-CN.md)解释发布真相与独立评审前资格检查；[质量演进](quality-evolution.zh-CN.md)解释基准稿与挑战稿、目标保持、回退保护和停止条件；[评测参考](../evals/README.zh-CN.md)区分确定性评测和语义评测。
+[质量保障](quality-assurance.zh-CN.md)解释发布真相与独立评审前资格检查；[质量演进](quality-evolution.zh-CN.md)解释基准稿与挑战稿、目标保持、回退保护和显式完成；[评测参考](../evals/README.zh-CN.md)区分确定性评测和语义评测。
 
 ## 正典与状态落定
 

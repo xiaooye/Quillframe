@@ -52,7 +52,7 @@ test("production inspector normalizes title and language before fingerprint whil
   assert.notEqual(badId.status, "coherent");
 });
 
-test("production inspector applies Python text semantics to schema and rejects blank identity fields", async () => {
+test("production inspector applies canonical text semantics to schema and rejects blank identity fields", async () => {
   const padded = manifest.replace('schema = "quillframe_project_v1_0"', 'schema = " quillframe_project_v1_0 "');
   const result = await contract.inspectProjectFiles([file("root/quillframe.toml", padded)]);
   assert.equal(result.status, "coherent");

@@ -127,7 +127,7 @@ export default function Agents() {
           <code>agent-skills/quillframe/SKILL.md</code>
           <div class="nf-agent-facts">
             <span><strong>{t("agents.readOnly")}</strong><small>authority=false</small></span>
-            <span><strong>Python 3.11+</strong><small>QUILLFRAME_ROOT</small></span>
+            <span><strong>Rust 1.88+</strong><small>QUILLFRAME_ROOT</small></span>
           </div>
         </section>
 
@@ -151,7 +151,7 @@ export default function Agents() {
         >
           <header><span class="nf-card-label">03</span><h2>{t("agents.bridgeTitle")}</h2></header>
           <p>{t("agents.bridgeBody")}</p>
-          <code>python scripts/quillframe_bridge.py describe</code>
+          <code>cargo run -p quillframe-host -- invoke bridge.describe</code>
           <div class="nf-chip-row">
             <span class="wui-badge wui-badge--success">Host Bridge v11</span>
             <span class="wui-badge wui-badge--outline">MCP-ready boundary</span>

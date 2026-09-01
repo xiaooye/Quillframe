@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_model_contract_catalog_v1",
-  "version": "19",
+  "version": "20",
   "loading_policy": "progressive_disclosure",
   "principle": "Keep the catalog small. The manager/model chooses the smallest relevant semantic capability from metadata; deterministic runtime resolves an exact contract id to exactly one pack and enforces execution boundaries without keyword-routing literary meaning.",
   "packs": [
@@ -35,7 +35,7 @@
     {
       "id": "learning",
       "path": "contracts/learning.json",
-      "description": "Rights-safe craft and model-classified prose-style observation, scene-aware per-work synthesis, bounded axis claim discovery and source-free dynamic-cohort reconciliation, held-out semantic verification, eight-dimension anonymous prose review plus independent leakage and public-abstraction provenance gates, and run-scoped user-taste relevance selection without automatic promotion authority.",
+      "description": "Rights-safe general craft research, anonymous prose review, independent leakage and public-abstraction provenance gates, and run-scoped user-taste relevance selection without automatic promotion authority. Historical flat style-axis contracts are not current dispatch entries.",
       "contracts": [
         "learning.mechanism_analyze",
         "learning.promotion_review",
@@ -53,7 +53,27 @@
         "learning.prose_semantic_leakage",
         "learning.preference_select"
       ],
-      "load_when": "The task must analyze learning evidence, classify or synthesize anonymous prose-style operations, reconcile bounded axis claims while selecting the next minimum eligible opaque work cohort, verify a style claim on held-out profiles, compare frozen anonymous prose samples, inspect a candidate for semantic leakage against anonymous references, review fingerprint-only provenance for a public abstraction, decide whether a preference/craft hypothesis is semantically supported at a proposed scope, independently evaluate a learned mechanism, or select relevant active user-taste guidance for one frozen run."
+      "retired_contracts": [
+        "corpus.style_observe",
+        "learning.style_work_synthesize",
+        "learning.style_axis_synthesize",
+        "learning.style_axis_reconcile",
+        "learning.style_claim_verify"
+      ],
+      "load_when": "The task must analyze general learning evidence, compare frozen anonymous prose samples, inspect a candidate for semantic leakage against anonymous references, review fingerprint-only provenance for a public abstraction, decide whether a preference/craft hypothesis is semantically supported at a proposed scope, independently evaluate a learned mechanism, or select relevant active user-taste guidance for one frozen run."
+    },
+    {
+      "id": "webnovel-learning",
+      "path": "contracts/webnovel-learning.json",
+      "description": "Chinese web-novel Corpus observation, per-work synthesis, demand-driven dimension discovery and reconciliation, and held-out claim verification across reader contract, plot progression, emotion/payoff, character/relationship, scene delivery, and language rhythm.",
+      "contracts": [
+        "corpus.webnovel_observe",
+        "learning.webnovel_work_synthesize",
+        "learning.webnovel_dimension_synthesize",
+        "learning.webnovel_dimension_reconcile",
+        "learning.webnovel_claim_verify"
+      ],
+      "load_when": "The task must learn source-free Chinese web-novel mechanisms from anonymous Corpus evidence, request the minimum missing narrative evidence, reconcile one activated dimension, or verify a mechanism against held-out works."
     },
     {
       "id": "context-research",

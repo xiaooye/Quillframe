@@ -36,28 +36,25 @@
 
 ## 快速开始
 
-**环境要求：** Python 3.11+。只有 Web / Studio surface 需要 Node.js 24 与 pnpm 10.33.0。
+**环境要求：** Rust 1.88+。只有界面、站点和文档构建需要 Node.js 24 与 pnpm 10.33.0。
 
-从干净的 Quillframe 源码工作区安装框架，并检查本地运行环境：
+从干净的 Quillframe 源码工作区构建原生宿主与 Studio：
 
 ```bash
 git clone https://github.com/xiaooye/Quillframe.git
 cd Quillframe
-python -m pip install -e .
-quillframe doctor
+cargo build -p quillframe-host --locked
+pnpm install --frozen-lockfile
+pnpm --filter @quillframe/studio-app build
 ```
 
-在通用 Framework 仓库**之外**创建小说 Project，并用唯一的 native 命令打开 local-first Studio：
+小说项目应放在通用框架仓库**之外**，再通过 Rust 宿主启动本地优先的 Studio：
 
 ```bash
-quillframe launch ../my-novel \
-  --new \
-  --id MY-NOVEL \
-  --title "My Novel" \
-  --language zh-CN
+target/debug/quillframe-host serve --core-root ../quillframe-state --dist studio/app/dist --port 0
 ```
 
-该命令为整部小说创建精确的原生四键 manifest（`schema`、`id`、`title`、`language`），在项目上下文顶层输出 `scope: "novel"`，并创建初始章节 `CH001` 和正文文档 `DOC-CH001`。运行状态保存在 `.quillframe/data`，Studio 仅绑定本机回环地址。已有项目可用 `quillframe launch ../my-novel` 重新打开；打开时不会自动迁移、修复或补建旧开发状态。如果同时使用 Claude Code 或其他编程代理，请从项目目录启动该宿主；Quillframe 的正确性不依赖仓库 hook 或宿主专用配置。宿主运行 Agent，小说与正典权威仍归 Quillframe。
+宿主只绑定本机回环地址，并打印启动回执。随后可在 Studio 中创建或重新打开项目；Core 会写入精确的原生四键清单（`schema`、`id`、`title`、`language`），并创建初始章节 `CH001` 与正文文档 `DOC-CH001`。打开不兼容项目时会直接拒绝，不会静默迁移、修复或补建。
 
 基础写作与检查 shell 不需要先连接模型。真正需要 inference 时，普通设置刻意只保留两个输入：
 
@@ -72,9 +69,9 @@ Access Token
 <summary><strong>在本地运行 Studio</strong></summary>
 
 ```bash
-corepack pnpm install --frozen-lockfile
-corepack pnpm --filter @quillframe/studio-app build
-quillframe launch ../my-novel
+pnpm install --frozen-lockfile
+pnpm --filter @quillframe/studio-app build
+target/debug/quillframe-host serve --core-root ../quillframe-state --dist studio/app/dist --port 0
 ```
 
 </details>
@@ -106,7 +103,7 @@ Quillframe 的通用系统覆盖 **Story · Character · Relationship · Canon �
 - **模型负责小说语义判断。** 故事、人物、读者体验、相关性与修复方式由模型判断。
 - **Quillframe 负责执行事实。** 确定性代码负责身份、权限、fingerprint、routing、hard budget、transaction、persistence 与 reproducibility。
 - **独立就必须真的独立。** 需要独立语义判断时，结果必须来自真正不同的 invocation / session / worker，并绑定 exact artifact fingerprint；Manager 自己角色扮演不算。
-- **SQLite 是 canonical durable state，不是 fallback cache。** UI 边界是 `Solid/Tauri → typed Bridge/API → Python Core → SQLite`。
+- **SQLite 是规范的持久状态，不是备用缓存。** 界面边界是 `Solid/Tauri → 类型化 Bridge/API → Rust Core → SQLite`。
 
 当前 Model Runtime 在 authority 层保持 provider-neutral。宿主负责通用模型与工具执行；Quillframe 在自己的边界内校验小说契约、能力证据、eligibility、checkpoint、receipt 与 exact artifact binding。Model API 只是 inference capability，不拥有故事或 Settlement authority。
 
@@ -134,7 +131,7 @@ Quillframe Studio 首先是创作环境，而不是 Framework dashboard。日常
 **当前技术栈：**
 
 - Frontend / Studio — **SolidJS + TypeScript + Vite**
-- Core — **Python**
+- 核心、宿主与原生文件系统边界 —— **Rust**
 - Persistence — **SQLite-native**，包含 WAL、foreign keys、native schema fragment、backup / restore 与 integrity checks
 - Documentation — **Astro + Starlight**
 - Desktop —— 基于 Host Bridge v11 的 **Tauri 2 thin host**；packaged OS/runtime 验收保持显式
@@ -161,13 +158,14 @@ Quillframe Studio 首先是创作环境，而不是 Framework dashboard。日常
 <summary><strong>验证命令</strong></summary>
 
 ```bash
-python scripts/docs_quality.py
-python -m unittest discover -s tests -p 'test_quillframe_*.py' -v
-corepack pnpm install --frozen-lockfile
-corepack pnpm run quality
-corepack pnpm run typecheck
-corepack pnpm run test
-corepack pnpm run build
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+cargo test --workspace --all-targets --locked
+pnpm install --frozen-lockfile
+pnpm run quality
+pnpm run typecheck
+pnpm run test
+pnpm run build
 ```
 
 </details>
@@ -176,7 +174,7 @@ corepack pnpm run build
 
 ## 当前状态
 
-Quillframe 正处于 **1.0 预发布持续开发阶段**。当前 `main` 已包含 embeddable Python façade、Model Runtime、Agent Runtime、小说 Core / authority contract、SQLite persistence、typed Host Bridge、SolidJS Studio、产品网站、publication pipeline 与 Starlight 文档。Normal CI 使用确定性执行，不会悄悄调用配置好的付费 / 在线 Model API。
+Quillframe 正处于 **1.0 预发布持续开发阶段**。当前 `main` 已包含 Rust 核心、原生文件系统边界、模型运行时、语料研究、长篇生产与修订、SQLite 持久化、类型化 Host Bridge、SolidJS Studio、出版链路、产品网站与 Starlight 文档。普通 CI 使用确定性执行，不会悄悄调用已配置的付费或在线模型接口。
 
 小说项目通过原生四键 `quillframe.toml`、顶层含 `scope: "novel"` 的上下文、manifest fingerprint 与 `.quillframe/data` 边界标识自身。`CH001` 是初始章节，后续章节沿用同一契约，并验证真实章节关系。Framework commit / bundle provenance 由宿主或发布流程独立记录，不是项目权威或项目锁定契约。这份开发契约不代表整本小说的真实模型运行或云端发布已经验收通过。
 

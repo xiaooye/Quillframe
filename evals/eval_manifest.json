@@ -38,8 +38,6 @@
     {"file": "cases/character_embodiment_accept.json"},
     {"file": "cases/ablation_reader_unprimed_reject.json"},
     {"file": "cases/ablation_reader_primed_reject.json"},
-    {"file": "cases/ablation_telemetry_clean_accept.json"},
-    {"file": "cases/ablation_telemetry_anchored_accept.json"},
     {"file": "cases/ablation_rule_holistic_accept.json"},
     {"file": "cases/ablation_rule_decomposed_accept.json"}
   ]

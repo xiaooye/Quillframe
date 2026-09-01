@@ -1,0 +1,33 @@
+[workspace]
+resolver = "2"
+members = [
+  "native/quillframe-native",
+  "native/quillframe-core",
+  "native/quillframe-host",
+  "native/quillframe-secrets",
+]
+exclude = ["studio/app/src-tauri"]
+
+[workspace.package]
+version = "1.0.0-dev.0"
+edition = "2021"
+rust-version = "1.88"
+license = "Proprietary"
+
+[workspace.dependencies]
+axum = "=0.8.4"
+base64 = "=0.22.1"
+fs2 = "=0.4.3"
+quillframe-native = { path = "native/quillframe-native" }
+quillframe-core = { path = "native/quillframe-core" }
+reqwest = { version = "=0.12.24", default-features = false, features = ["json", "rustls-tls"] }
+rusqlite = { version = "=0.37.0", features = ["bundled"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.145"
+sha2 = "=0.11.0"
+thiserror = "=2.0.16"
+tokio = { version = "=1.47.1", features = ["fs", "macros", "net", "rt-multi-thread", "signal"] }
+toml = "=0.9.5"
+tower = "=0.5.2"
+url = "=2.5.8"
+uuid = { version = "=1.26.0", features = ["v4", "serde"] }

@@ -8,26 +8,23 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "dev": "corepack pnpm content && vite",
-    "build": "corepack pnpm content && tsc --noEmit && vite build && corepack pnpm docs:build && node scripts/finalize-service-worker.mjs",
+    "dev": "pnpm content && vite",
+    "build": "pnpm content && tsc --noEmit && vite build && pnpm docs:build && node scripts/finalize-service-worker.mjs",
     "preview": "vite preview",
     "browser:smoke": "node scripts/browser-smoke.mjs",
-    "test": "node --experimental-strip-types --test scripts/browser-core-sync.test.mjs scripts/worker-retry.test.mjs scripts/service-worker.test.mjs scripts/project-inspector-native.test.mjs scripts/project-inspector-quality.test.mjs scripts/ui-hardcut-a11y.test.mjs scripts/tool-workbench-quality.test.mjs scripts/browser-acceptance-t605.test.mjs scripts/cloudflare-deploy-contract.test.mjs",
-    "quality": "corepack pnpm content && corepack pnpm docs:content && node scripts/quality.mjs && node scripts/project-inspector-quality.mjs && node scripts/agent-integration-quality.mjs && node scripts/product-hardening-quality.mjs && node scripts/publication-playground-quality.mjs && corepack pnpm baseline:quality && node scripts/github-readme-render-ci.mjs",
+    "test": "node --experimental-strip-types --test scripts/worker-retry.test.mjs scripts/service-worker.test.mjs scripts/project-inspector-native.test.mjs scripts/project-inspector-quality.test.mjs scripts/ui-hardcut-a11y.test.mjs scripts/tool-workbench-quality.test.mjs scripts/cloudflare-deploy-contract.test.mjs",
+    "quality": "pnpm content && pnpm docs:content && node scripts/quality.mjs && node scripts/project-inspector-quality.mjs && node scripts/agent-integration-quality.mjs && node scripts/product-hardening-quality.mjs && node scripts/publication-playground-quality.mjs && pnpm baseline:quality && node scripts/github-readme-render-ci.mjs",
     "baseline:quality": "node scripts/atelier-quality.mjs && node scripts/product-shell-quality.mjs && node scripts/architecture-explorer-quality.mjs && node scripts/css-architecture-quality.mjs && node scripts/surface-audit-quality.mjs && node scripts/docs-platform-quality.mjs && node scripts/ui-consistency-quality.mjs && node scripts/tool-workbench-quality.mjs && node scripts/dead-surface-quality.mjs",
-    "dev:docs": "corepack pnpm docs:content && astro dev --root docs-site",
-    "docs:build": "corepack pnpm docs:content && astro build --root docs-site && node scripts/verify-starlight-build.mjs",
+    "dev:docs": "pnpm docs:content && astro dev --root docs-site",
+    "docs:build": "pnpm docs:content && astro build --root docs-site && node scripts/verify-starlight-build.mjs",
     "test:worker-retry": "node --experimental-strip-types scripts/worker-retry.test.mjs",
     "test:service-worker": "node --experimental-strip-types scripts/service-worker.test.mjs",
     "test:project-inspector": "node --experimental-strip-types scripts/project-inspector-native.test.mjs && node --test scripts/project-inspector-quality.test.mjs",
     "content": "node scripts/sync-weiui.mjs && node scripts/build-content.mjs",
-    "docs:content": "node scripts/build-starlight-content.mjs",
-    "test:browser-acceptance-t605": "node --test scripts/browser-acceptance-t605.test.mjs",
-    "browser:acceptance:t605": "node scripts/browser-acceptance-t605.mjs"
+    "docs:content": "node scripts/build-starlight-content.mjs"
   },
   "dependencies": {
     "@solidjs/router": "1.0.0",
-    "pyodide": "314.0.4",
     "solid-js": "1.9.15"
   },
   "devDependencies": {

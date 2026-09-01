@@ -9,23 +9,23 @@ SolidJS Studio
 → TauriTransport
 → invoke("bridge_invoke", { request })
 → thin Rust host
-   ├─ packaged quillframe-core Python sidecar
+   ├─ directly linked quillframe-core Rust crate
    └─ OS keyring
 → Host Bridge v11
-→ Python Core + project-local SQLite
+→ Rust Core + project-local SQLite
 ```
 
-Rust owns process lifecycle, IPC framing, window integration, secret-store calls, and output redaction. It does not duplicate Python workflow, Context, Candidate, Settlement, model-routing, or persistence semantics.
+The Rust Core owns workflow, Context, Candidate, Settlement, model routing, publication recovery, and persistence semantics. Tauri remains a presentation and IPC host; there is no sidecar runtime.
 
 ## Secret boundary
 
-The access token enters only the Tauri IPC request. Rust allocates a `keyring:qf:*` reference and writes the secret to the OS keyring before invoking Core. The sidecar receives a request envelope and already committed references, returns only a Bridge result plus secret actions, and never persists plaintext in SQLite. Failed or unconsumed allocations are deleted. stdout, stderr, and returned errors are scrubbed against known secret values.
+The access token enters only the Tauri IPC request. Rust allocates a `keyring:qf:*` reference and writes the secret to the OS keyring before invoking Core. Core receives only committed references and never persists plaintext in SQLite. Failed or unconsumed allocations are deleted; returned errors are scrubbed against known secret values.
 
 ## Acceptance gate
 
 A desktop artifact remains unreleased until an actual packaged build proves:
 
-- Host Bridge v11 round-trip through the bundled sidecar;
+- Host Bridge v11 round-trip through the directly linked Rust Core;
 - create/open/write/review/publish operations after restart;
 - OS keyring set/get/delete and reference recovery after restart;
 - no secret in SQLite, browser storage, process logs, bridge results, or exports;

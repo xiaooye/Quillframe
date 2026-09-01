@@ -10,7 +10,7 @@ Quillframe 1.0 把 runtime identity、capability 与 authority 明确分开。Pr
 quillframe launch [PROJECT]
 ```
 
-Local 模式把 Studio 绑定到 loopback Python Core 与项目本地 SQLite。Cloud 模式只启动显式认证流程，不会因为 launch 就上传项目。仓库 Hook 与 host 专属 bootstrap 命令不参与产品正确性。
+Local 模式把 Studio 直接绑定到 Rust Core 与项目本地 SQLite；可选 Rust host 可为浏览器 surface 暴露同一套 loopback Bridge。Cloud 模式只启动显式认证流程，不会因为 launch 就上传项目。仓库 Hook 与 host 专属 bootstrap 命令不参与产品正确性。
 
 ## Identity
 

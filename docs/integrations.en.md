@@ -10,7 +10,7 @@ The author-facing entry is:
 quillframe launch [PROJECT]
 ```
 
-Local mode binds the Studio to a loopback Python Core and project-local SQLite. Cloud mode starts an explicit authentication flow and does not upload a project as a side effect of launch. Repository hooks and host-specific bootstrap commands are not part of product correctness.
+Local mode binds the Studio directly to the Rust Core and project-local SQLite. The optional Rust host may expose the same Bridge on loopback for a browser surface. Cloud mode starts an explicit authentication flow and does not upload a project as a side effect of launch. Repository hooks and host-specific bootstrap commands are not part of product correctness.
 
 ## Identity
 

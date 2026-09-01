@@ -10,7 +10,7 @@
 
 **视觉配比：** `70% 专业技术 / 30% 二次元编辑感`。
 
-本文解释面向人的设计契约。机器权威分别位于 [`brand/tokens.json`](brand/tokens.json)、[`brand/weiui.integration.json`](brand/weiui.integration.json)、[`brand/story-loom.weiui.css`](brand/story-loom.weiui.css) 与 [`../scripts/design_system_quality.py`](../scripts/design_system_quality.py)。文档的真实渲染与审查要求继续由 [`../docs/DOCUMENTATION_QA.zh-CN.md`](../docs/DOCUMENTATION_QA.zh-CN.md) 负责。
+本文解释面向人的设计契约。机器权威分别位于 [`brand/tokens.json`](brand/tokens.json)、[`brand/weiui.integration.json`](brand/weiui.integration.json)、[`brand/story-loom.weiui.css`](brand/story-loom.weiui.css) 与[产品站质量门](../site/scripts/quality.mjs)。文档的真实渲染与审查要求继续由 [`../docs/DOCUMENTATION_QA.zh-CN.md`](../docs/DOCUMENTATION_QA.zh-CN.md) 负责。
 
 > **权威边界 ✦** Story Loom 可以表达产品 domain、authority label、execution status、provenance、focus、hierarchy 与 interaction state，但它永远不会创造 Canon、semantic truth、production readiness 或 workflow authority。
 
@@ -108,7 +108,7 @@ Phase 2C product code 已确定为 **SolidJS + TypeScript + Vite + `@solidjs/rou
 
 ### 已由机器强制执行的 app invariants
 
-[`../scripts/design_system_quality.py`](../scripts/design_system_quality.py) 至少检查：
+产品站质量门至少检查：
 
 - exact WeiUI pin 与 provenance；
 - SolidJS/TypeScript/Vite product-stack contract；
@@ -230,7 +230,7 @@ Mermaid 继续作为技术文档中可检查的 source chart。
 - root `data-doc-tier="A"`、非空 `<title>` / `<desc>`、system-font fallbacks only；
 - meaningful image 有 alt text；SVG 失效时附近 prose 仍能保留核心语义。
 
-接入前运行 `python scripts/docs_quality.py` 并真实查看 render。**生成出来不等于审过；XML 合法不等于视觉正确。**
+接入前运行 `pnpm --filter @quillframe/product-site quality` 并真实查看渲染结果。**生成出来不等于审过；XML 合法不等于视觉正确。**
 
 ---
 

@@ -7,6 +7,24 @@ import { invokeBridge, operationError } from "../bridge";
 import { AuthorityLabel, CoreRequirementNotice } from "../authoring/AuthoringUI";
 import { parsePlanInspection, parsePlanSave, type PlanItem, type ReaderIntent } from "../authoring/contracts";
 
+const planTemplate = (target: string) => target === "book"
+  ? JSON.stringify({ reader_promise: "", protagonist_agency: "", central_conflict: "", progression: [], endgame_reserve: [], anti_exhaustion_limits: [] }, null, 2)
+  : JSON.stringify({ scenes: [{ scene_id: "SC001", ordinal: 1, viewpoint: "", location: "", entry_state: "", objective: "", opposition: "", turn: "", exit_state: "", emotion_target: "", reader_effect: "" }] }, null, 2);
+
+function typedPlanBody(target: string, content: string, readerIntent: ReaderIntent): Record<string, unknown> {
+  let parsed: unknown;
+  try { parsed = JSON.parse(content); } catch { throw new Error("plan_structure_must_be_valid_json"); }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("plan_structure_must_be_an_object");
+  if (target === "book") return { kind: "book", body: parsed };
+  const required = ["reader_question", "visible_reward", "character_choice", "cost", "net_change", "next_chapter_pull"] as const;
+  if (required.some((key) => !readerIntent[key]?.trim())) throw new Error("chapter_reader_intent_is_incomplete");
+  return { kind: "chapter", body: { reader_contract: {
+    reader_question: readerIntent.reader_question, visible_reward: readerIntent.visible_reward,
+    character_choice: readerIntent.character_choice, cost: readerIntent.cost, net_change: readerIntent.net_change,
+    next_pull: readerIntent.next_chapter_pull,
+  }, scenes: (parsed as { scenes?: unknown }).scenes } };
+}
+
 export default function Plan() {
   const { locale } = useI18n();
   const studio = useStudio();
@@ -47,7 +65,7 @@ export default function Plan() {
       const plans = parsePlanInspection(result.data, projectId, targetRef).items;
       if (plans.filter((item) => item.status === "active").length > 1) throw new Error("plan_active_binding_ambiguous");
       const plan = plans.find((item) => item.status === "active") ?? [...plans].sort((left, right) => right.version - left.version)[0];
-      setSaved(plan); setTitle(plan?.title ?? targetTitle()); setContent(plan?.content ?? "");
+      setSaved(plan); setTitle(plan?.title ?? targetTitle()); setContent(plan?.content ?? planTemplate(targetRef));
       setReaderIntent({ ...plan?.reader_intent }); setExpectationRefs(plan?.expectation_refs?.join("\n") ?? "");
       setBinding({ project_id: projectId, target_ref: targetRef });
     } catch (cause) { if (current()) setError(cause instanceof Error ? cause.message : String(cause)); }
@@ -56,6 +74,8 @@ export default function Plan() {
 
   const save = async () => {
     if (!bound() || saving() || !dirty() || !title().trim() || !operations().includes("plan.save")) return;
+    let typedBody: Record<string, unknown>;
+    try { typedBody = typedPlanBody(target(), content(), readerIntent()); } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); return; }
     const expected = { project_id: studio.projectId(), target_ref: target(), title: title().trim(), content: content(), expected_version: saved()?.version ?? 0,
       reader_intent: { ...readerIntent() }, expectation_refs: expectationRefs().split(/\s+/u).filter(Boolean) };
     const requestVersion = editVersion; const requestGeneration = generation;
@@ -64,7 +84,7 @@ export default function Plan() {
     if (!saveIntent || saveIntent.request !== serialized) saveIntent = { request: serialized, idempotency_key: `studio-plan-${crypto.randomUUID()}` };
     setSaving(true); setError(undefined);
     try {
-      const result = await invokeBridge("plan.save", { ...expected, idempotency_key: saveIntent.idempotency_key, user_authorized: true });
+      const result = await invokeBridge("plan.save", { ...expected, typed_body: typedBody, idempotency_key: saveIntent.idempotency_key, user_authorized: true });
       if (!current()) return;
       if (result.status !== "ok" || !result.data) throw new Error(operationError(result));
       const plan = parsePlanSave(result.data, expected);
@@ -114,7 +134,7 @@ export default function Plan() {
             <div class="qf-section-head"><h2>{targetTitle()}</h2><AuthorityLabel value="active_plan ≠ Canon" /></div>
             <CoreRequirementNotice operation="plan.inspect" /><CoreRequirementNotice operation="plan.save" compact />
             <label class="nf-field-label"><span>{zh() ? "计划标题" : "Plan title"}</span><input class="wui-input" value={title()} disabled={!bound() || loading()} onInput={(event) => { setTitle(event.currentTarget.value); edit(); }} /></label>
-            <label class="nf-field-label"><span>{zh() ? "计划原文" : "Plan text"}</span><textarea class="wui-input qf-plan-text" value={content()} disabled={!bound() || loading()} onInput={(event) => { setContent(event.currentTarget.value); edit(); }} placeholder={zh() ? "写下作者意图、章节任务与希望保留的阅读乐趣……" : "Describe your intent, chapter work and the reading pleasure to preserve…"} /></label>
+            <label class="nf-field-label"><span>{zh() ? "结构化计划（JSON）" : "Structured plan (JSON)"}</span><textarea class="wui-input qf-plan-text nf-mono" value={content()} disabled={!bound() || loading()} onInput={(event) => { setContent(event.currentTarget.value); edit(); }} placeholder={planTemplate(target())} /></label>
             <fieldset class="qf-reader-intent"><legend>{zh() ? "阅读意图 · 作者填写，可留空" : "Reader intent · optional author input"}</legend><div class="qf-intent-fields"><For each={intentFields}>{(field) => <label class="nf-field-label"><span>{zh() ? field.zh : field.en}</span><textarea class="wui-input" rows={2} value={readerIntent()[field.key] ?? ""} disabled={!bound() || loading()} onInput={(event) => { const text = event.currentTarget.value; setReaderIntent((current) => ({ ...current, [field.key]: text })); edit(); }} /></label>}</For></div></fieldset>
             <label class="nf-field-label"><span>{zh() ? "关联的期待记录 ID（每行一个）" : "Linked expectation IDs (one per line)"}</span><textarea class="wui-input nf-mono" rows={2} value={expectationRefs()} disabled={!bound() || loading()} onInput={(event) => { setExpectationRefs(event.currentTarget.value); edit(); }} /></label>
             <div class="qf-inline-actions"><button class="wui-button wui-button--solid" type="button" disabled={!bound() || saving() || !dirty() || !title().trim() || !operations().includes("plan.save")} onClick={() => void save()}>{saving() ? (zh() ? "保存中…" : "Saving…") : (zh() ? "保存计划" : "Save plan")}</button><button class="wui-button wui-button--ghost" type="button" disabled={saving() || loading()} onClick={() => { if (discardConfirmed()) void load(); }}>{zh() ? "重新读取" : "Reload"}</button><span role="status" aria-live="polite">{loading() ? (zh() ? "读取中…" : "Loading…") : dirty() ? (zh() ? "有未保存修改" : "Unsaved edits") : saved() ? `${zh() ? "已保存版本" : "Saved version"} ${saved()!.version}` : (zh() ? "尚未保存计划" : "No saved plan yet")}</span></div>

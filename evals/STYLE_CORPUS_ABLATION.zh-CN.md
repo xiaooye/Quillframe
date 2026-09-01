@@ -1,13 +1,13 @@
 # 语料文风三臂消融评测
 
-这套评测要回答的是：在无指导基线和当前第四版写作方法之外，引入一份不含来源信息的语料候选指导，是否会改变实际阅读体验。它不负责生成正文，不自行判定文学赢家，也不会启用学习结果或授予发布权限。实现位于 [`style_corpus_ablation.py`](style_corpus_ablation.py)；仓库内的 [`fixtures/style_corpus_ablation_synthetic.json`](fixtures/style_corpus_ablation_synthetic.json) 只是一套明确标注为测试专用的原创合成材料。
+这套评测要回答的是：在无指导基线和当前第五版写作方法之外，引入一份不含来源信息的语料候选指导，是否会改变实际阅读体验。它不负责生成正文，不自行判定文学赢家，也不会启用学习结果或授予发布权限。实现位于 [`style_corpus_ablation.py`](style_corpus_ablation.py)；仓库内的 [`fixtures/style_corpus_ablation_synthetic.json`](fixtures/style_corpus_ablation_synthetic.json) 只是一套明确标注为测试专用的原创合成材料。
 
 ## 冻结三臂条件
 
 每个 case 只定义一份任务、一份上下文和一份随机性设置，而且三者都位于实验臂之上。评测器会分别计算三者的指纹，再计算整体生成绑定指纹。随后，三份外部提供的正文被绑定为：
 
 - `baseline`：不注入写作方法的正文；
-- `current_craft_v4`：使用当前冻结的第四版写作方法；
+- `current_craft_v5`：使用当前冻结的第五版写作方法；
 - `corpus_candidate`：使用一份去来源化的语料候选投影。
 
 候选正文指纹直接取精确 UTF-8 字节的 SHA-256；写作方法指纹取完整绑定对象规范化 JSON 的 SHA-256。换行符、正文、writer projection、证据成员或任何已绑定字段发生变化，prepared plan 都会失效。

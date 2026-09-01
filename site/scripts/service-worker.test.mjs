@@ -261,10 +261,16 @@ test("D2 finalizer rejects symlink required shells and duplicate/missing literal
   await fs.writeFile(path.join(dir, "docs/index.html"), "cn");
   const outside = path.join(dir, "outside.html");
   await fs.writeFile(outside, "en");
-  await fs.symlink(outside, path.join(dir, "docs/en/index.html"));
-  await assert.rejects(finalizeServiceWorker({ distDir: dir }), /required shell/);
-
-  await fs.rm(path.join(dir, "docs/en/index.html"));
+  const linked = await fs.symlink(outside, path.join(dir, "docs/en/index.html"))
+    .then(() => true)
+    .catch((error) => {
+      if (process.platform === "win32" && ["EPERM", "EACCES"].includes(error?.code)) return false;
+      throw error;
+    });
+  if (linked) {
+    await assert.rejects(finalizeServiceWorker({ distDir: dir }), /required shell/);
+    await fs.rm(path.join(dir, "docs/en/index.html"));
+  }
   await fs.writeFile(path.join(dir, "docs/en/index.html"), "en");
   await fs.writeFile(path.join(dir, "sw.js"), "quillframe-site-__QF_SITE_CACHE_VERSION__ quillframe-site-__QF_SITE_CACHE_VERSION__");
   await assert.rejects(finalizeServiceWorker({ distDir: dir }), /placeholder/);

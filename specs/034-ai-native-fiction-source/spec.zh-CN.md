@@ -168,7 +168,7 @@ Coordinator 重启后必须接管 durable wake 和 ready node，不得重派 con
 - 正则或词频产生的 human-likeness 分数；
 - 能覆盖失败作者硬目标的平均分。
 
-可选 telemetry 只能位于生产决策路径之外，并明确标作非权威。
+Framework 不再提供正文质量 telemetry。机械执行元数据只能服务于 Core 不变量，不能被解释为文学证据。
 
 DRAFT 与 REVISE 可生成结构化数据、证据和模型请求；不得为语义质量工作生成一次性 Python、PowerShell、Shell 或其他程序。
 

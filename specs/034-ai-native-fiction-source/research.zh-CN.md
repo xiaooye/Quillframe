@@ -99,7 +99,7 @@ G-Eval 明确指出 LLM 评审可能偏爱 LLM 生成文本。Personalized evalu
 - 一份已经返回的 Writer 结果被事后 token 预算检查作废；
 - coordinator 活跃时，模型阶段间几乎没有空档；主要墙钟空档在模型执行之外。
 
-证据不能证明英文计数器或 prose telemetry 决定了本次发布。当前 prose telemetry 是可选诊断，生产 runtime 没有 import。曾有 run-specific helper scripts，但文件内容已不可得，不能把其中是否含文学计数器写成已证事实。
+证据不能证明英文计数器或 prose telemetry 决定了本次发布。失败审计当时，该 telemetry 模块只是可选工具且生产 runtime 没有 import；后续 AI-native 收口已把它从 Framework 完全删除。曾有 run-specific helper scripts，但文件内容已不可得，不能把其中是否含文学计数器写成已证事实。
 
 拒绝的过度推断：
 

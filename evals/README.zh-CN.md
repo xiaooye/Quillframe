@@ -72,7 +72,7 @@ Blind queue 先通过 Harness semantic router 变成 typed semantic jobs，再�
 
 ## 语料行文文风消融
 
-使用[三臂语料文风协议](STYLE_CORPUS_ABLATION.zh-CN.md)，在冻结的留出小说任务上比较无指导基线、当前技法 v4 与 **Craft V4 + 精确无来源 Corpus 候选**。Corpus 是注册 Craft 的 run-scoped 补充，不是替代品；V4 foundation 始终保留，Corpus 最多投射四条当前场景适用机制。每一对都会用密封处理标签、交换显示顺序重复评审；leave-one-work-out 和场景功能留出防止被评作品家族为自己的候选提供证据。盲读分维彼此独立，语义泄漏另设独立门槛。合成夹具只验证机械流程，绝不能冒充真实质量证据。
+使用[三臂语料文风协议](STYLE_CORPUS_ABLATION.zh-CN.md)，在冻结的留出小说任务上比较无指导基线、当前技法 v5 与 **Craft V5 + 精确无来源 Corpus 候选**。Corpus 是注册 Craft 的 run-scoped 补充，不是替代品；V5 foundation 始终保留，Corpus 最多投射四条当前场景适用机制。每一对都会用密封处理标签、交换显示顺序重复评审；leave-one-work-out 和场景功能留出防止被评作品家族为自己的候选提供证据。盲读分维彼此独立，语义泄漏另设独立门槛。合成夹具只验证机械流程，绝不能冒充真实质量证据。
 
 ## Paired AI-native Ablations
 

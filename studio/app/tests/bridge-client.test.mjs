@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import test from "node:test";
@@ -313,7 +312,7 @@ test("Bridge fingerprint verification redacts credentials but binds every other 
   await assert.rejects(() => bridge.assertEnvelope(result, request.surface, { ...request, args: { ...request.args, endpoint: "https://other.invalid/v1" } }), /request fingerprint/);
 });
 
-test("frontend verification accepts the SQLite-independent Python Bridge envelope contract", async () => {
+test("frontend verification accepts the canonical Rust Bridge envelope contract", async () => {
   const request = {
     schema: "quillframe_host_bridge_request_v11",
     bridge_version: "11",
@@ -327,28 +326,7 @@ test("frontend verification accepts the SQLite-independent Python Bridge envelop
     },
     authority: false,
   };
-  const repoRoot = new URL("../../../", import.meta.url);
-  const output = execFileSync("python", ["-c", `
-import builtins
-import json
-import sys
-
-real_import = builtins.__import__
-def without_sqlite(name, *args, **kwargs):
-    if name == "_sqlite3":
-        raise ModuleNotFoundError("Cloudflare Python does not provide _sqlite3")
-    return real_import(name, *args, **kwargs)
-builtins.__import__ = without_sqlite
-
-from studio.host_bridge_protocol import result
-request = json.load(sys.stdin)
-print(json.dumps(result(request, "ok", data={"project_id": "novel"}), ensure_ascii=False))
-`], {
-    cwd: repoRoot,
-    input: JSON.stringify(request),
-    encoding: "utf8",
-  });
-  const result = JSON.parse(output);
+  const result = await resultFor(request, { data: { project_id: "novel", runtime: "rust_core" } });
   await assert.doesNotReject(() => bridge.assertEnvelope(result, request.surface, request));
   assert.equal(JSON.stringify(result).includes("CROSS-LANGUAGE-SECRET"), false);
 });

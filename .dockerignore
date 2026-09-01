@@ -2,7 +2,6 @@
 .github
 .venv
 **/__pycache__
-**/*.py[cod]
 **/.astro
 **/coverage
 **/dist

@@ -48,7 +48,7 @@
     "context_refresh_requires_fresh_run": true,
     "production_checkpoint_manuscript_private_from_all_surfaces": true,
     "hosted_web_local_corpus_paths": false,
-    "corpus_selection_limit_maximum": 120,
+    "corpus_selection_limit_maximum": 24,
     "corpus_selection_profiles": [
       "general",
       "adult_explicit"
@@ -142,6 +142,18 @@
         "local_app"
       ]
     },
+    "project.story.restore_latest_snapshot": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "expected_revision",
+        "user_authorized"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app"
+      ]
+    },
     "document.create": {
       "kind": "command",
       "required_args": [
@@ -186,6 +198,7 @@
       "required_args": [
         "project_id",
         "task_mode",
+        "target_ref",
         "payload"
       ]
     },
@@ -402,29 +415,6 @@
       "kind": "external_query",
       "required_args": [
         "service_id"
-      ],
-      "allowed_surfaces": [
-        "cli",
-        "local_app",
-        "hosted_web"
-      ]
-    },
-    "model.service.fiction.confirm": {
-      "kind": "authority_command",
-      "required_args": [
-        "confirmation"
-      ],
-      "allowed_surfaces": [
-        "cli",
-        "local_app",
-        "hosted_web"
-      ]
-    },
-    "model.service.fiction.revoke": {
-      "kind": "authority_command",
-      "required_args": [
-        "service_id",
-        "model_id"
       ],
       "allowed_surfaces": [
         "cli",
@@ -811,7 +801,7 @@
         "hosted_web"
       ]
     },
-    "corpus.public.preview": {
+    "corpus.pack.preview": {
       "kind": "query",
       "required_args": [
         "study_id"
@@ -862,6 +852,21 @@
         "cli",
         "local_app",
         "hosted_web"
+      ]
+    },
+    "corpus.pack.activate": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "study_id",
+        "applicability",
+        "expected_version",
+        "idempotency_key",
+        "user_authorized"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app"
       ]
     },
     "learning.auto_activation_policy.get": {

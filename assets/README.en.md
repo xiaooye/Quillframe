@@ -28,7 +28,7 @@ assets/
     └── home-fit.en.svg / .zh-CN.svg
 ```
 
-Machine integration QA lives at [`../scripts/design_system_quality.py`](../scripts/design_system_quality.py) and is enforced by the Story Loom design-system workflow.
+Machine integration QA lives in the [product-site quality gate](../site/scripts/quality.mjs) and is enforced by the Story Loom workflow.
 
 ---
 
@@ -99,7 +99,7 @@ The full product boundary lives in [`../studio/PRODUCT_ARCHITECTURE.en.md`](../s
 Run:
 
 ```bash
-python scripts/design_system_quality.py
+pnpm --filter @quillframe/product-site quality
 ```
 
 The checker verifies, among other things:
@@ -130,7 +130,7 @@ This deterministic gate validates machine-checkable design contracts. It does no
 
 They are presentation assets. Maintained Markdown/contracts remain the semantic source of truth.
 
-Tier-A SVGs still require real 820px + narrow render inspection, visible-copy review, bilingual parity, and `python scripts/docs_quality.py` before integration.
+Tier-A SVGs still require real 820px + narrow render inspection, visible-copy review, bilingual parity, and `pnpm --filter @quillframe/product-site quality` before integration.
 
 ---
 

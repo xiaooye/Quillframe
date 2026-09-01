@@ -74,6 +74,15 @@
     },
     {
       "pack_id": "quality",
+      "version": "9",
+      "path": "quality.v9.json",
+      "original_registry_path": "contracts/quality.json",
+      "source_commit": "da127209a1412b3a731584d88fdfc7811aee5af2",
+      "source_state": "working_tree_snapshot_immediately_before_quality_v10_scene_legibility_contract",
+      "sha256": "85ba26ccf25eb17700f934ef92ebda840da20bd9e2e1c8da9ba8d34d65910348"
+    },
+    {
+      "pack_id": "quality",
       "version": "8",
       "path": "quality.v8.json",
       "original_registry_path": "contracts/quality.json",

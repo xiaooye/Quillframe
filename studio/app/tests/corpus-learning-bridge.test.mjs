@@ -56,7 +56,7 @@ test("Bridge contract exposes the complete typed Corpus and user-taste surface",
   for (const operation of [
     "corpus.collection.scan", "corpus.selection.propose", "corpus.selection.confirm",
     "corpus.study.start", "corpus.study.status", "corpus.study.resume", "corpus.study.cancel",
-    "corpus.public.preview", "corpus.public.validate", "corpus.public.release", "corpus.public.list", "corpus.public.get",
+    "corpus.pack.preview", "corpus.pack.activate",
     "learning.auto_activation_policy.get", "learning.auto_activation_policy.set",
     "learning.user_taste.list", "learning.user_taste.get", "learning.user_taste.pause", "learning.user_taste.withdraw",
   ]) assert.ok(contract.operations[operation], operation);
@@ -67,22 +67,17 @@ test("Bridge contract exposes the complete typed Corpus and user-taste surface",
   assert.equal(contract.invariants.corpus_selection_propose_requires_one_of_collection_or_study, true);
   assert.equal(contract.invariants.corpus_eligibility_details_private_aggregate_counts_only, true);
   assert.equal(contract.invariants.corpus_private_labels_local_only, true);
-  assert.equal(contract.invariants.corpus_selection_limit_maximum, 120);
-  assert.equal(contract.invariants.corpus_style_publication_requires_explicit_protocol, true);
-  assert.equal(contract.invariants.corpus_style_preview_never_implies_release, true);
-  assert.equal(contract.invariants.corpus_style_release_requires_trusted_receipts, true);
-  assert.equal(contract.invariants.corpus_style_registry_path_host_owned, true);
+  assert.equal(contract.invariants.corpus_selection_limit_maximum, 24);
 });
 
 test("Research and Learning consume only typed Host Bridge operations for the new flows", () => {
-  for (const operation of ["corpus.collection.scan", "corpus.selection.propose", "corpus.selection.confirm", "corpus.study.status", "corpus.public.preview", "corpus.public.validate", "corpus.public.list", "corpus.public.get"]) {
+  for (const operation of ["corpus.collection.scan", "corpus.selection.propose", "corpus.selection.confirm", "corpus.study.status", "corpus.pack.preview", "corpus.pack.activate"]) {
     assert.match(research, new RegExp(operation.replaceAll(".", "\\.")));
   }
-  assert.doesNotMatch(research, /corpus\.public\.release/);
+  assert.doesNotMatch(research, /corpus\.public\./);
   assert.match(research, /quillframe_corpus_style_learning_v1/);
-  assert.match(research, /stylePreviewToken/);
-  assert.match(research, /Preview token \(manual review only\)/);
-  assert.match(research, /Studio never manufactures PASS/);
+  assert.match(research, /source-free Writer Pack/);
+  assert.match(research, /user_authorized: true/);
   assert.match(research, /studio\.surface\(\) === "local_app"/);
   assert.match(research, /profile: requestedProfile/);
   assert.match(research, /profile: proposal\.profile/);
@@ -115,7 +110,7 @@ test("Research and Learning consume only typed Host Bridge operations for the ne
   assert.match(research, /adult_explicit/);
   assert.doesNotMatch(research, /relative_locator/);
   assert.doesNotMatch(research, /localStorage|sessionStorage|indexedDB/);
-  assert.match(research, /Studio never displays or publishes full novel text/);
+  assert.match(research, /Studio never displays novel prose; Writer receives only source-free mechanism projections/);
   for (const operation of ["learning.auto_activation_policy.get", "learning.auto_activation_policy.set", "learning.user_taste.list", "learning.user_taste.pause", "learning.user_taste.withdraw"]) {
     assert.match(learning, new RegExp(operation.replaceAll(".", "\\.")));
   }

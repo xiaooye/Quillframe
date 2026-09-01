@@ -57,13 +57,6 @@ Global SQLite owns `model_services`, `discovered_models` and `model_capability_e
 
 ## Deterministic CI and live probes
 
-Normal CI uses `MockTransport` and never executes a live model. Live compatibility is explicit opt-in:
-
-```bash
-QUILLFRAME_LIVE_MODEL_TEST=1 \
-QUILLFRAME_LIVE_MODEL_ENDPOINT=https://.../v1 \
-QUILLFRAME_LIVE_MODEL_TOKEN=... \
-python tests/live_model_runtime.py
-```
+Normal CI uses a local mock HTTP provider and never executes a live model. Live compatibility is explicit opt-in through Host Bridge v11: register the endpoint with `model.service.add`, store the credential through the OS secret store, then call `model.service.test`. The Rust Core records the exact endpoint, protocol, model catalog and result receipt.
 
 A successful live probe is timestamped endpoint/model-bound evidence, not permanent capability truth.

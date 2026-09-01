@@ -210,7 +210,7 @@ The consumers are independent. Steering consumption never starves Learning; Lear
 
 Automatic intake always keeps activation/write authority false. It does not auto-edit Project Profile, activate durable user taste, promote General Craft, mutate Framework behavior, or write Canon.
 
-Same-event retry uses stable evidence identity. Distinct user turns may supply independent evidence; the model decides whether to strengthen, contest, supersede or split a supplied hypothesis. Python does not infer semantic merge from string/embedding similarity.
+Same-event retry uses stable evidence identity. Distinct user turns may supply independent evidence; the model decides whether to strengthen, contest, supersede or split a supplied hypothesis. Deterministic Rust scaffolding does not infer semantic merge from string or embedding similarity.
 
 Rejected output stores only bounded refs/fingerprint plus negative meaning; rejected prose is not a positive exemplar and is not fed into Writer pre-draft context.
 

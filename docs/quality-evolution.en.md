@@ -24,4 +24,4 @@ Repair-induced objective regression records collateral harm when the intended de
 
 ## Stopping
 
-No-gain comparisons increment plateau state. A challenger that wins becomes the new incumbent. Repeated non-gain can stop revision rather than creating infinite rewrite churn. The stop rule is execution policy; it does not convert an unreviewed artifact into an accepted one.
+A challenger selected by the registered semantic comparison becomes the new incumbent. An incumbent win or tie leaves the run active and records only the bound comparison evidence. No deterministic streak, score or counter stops revision; the model or author decides the next semantic action, and the runtime ends only through explicit completion.

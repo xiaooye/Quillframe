@@ -10,6 +10,8 @@ Keep interiority attached to the object at hand and the next choice. A character
 
 Prefer clear, concrete, speakable prose. Use nouns and verbs that alter the situation, and connect space, objects, time and bodily response to the current task. Sentence length and paragraph boundaries follow action, speaker and shifts of attention, not a mobile-reading quota. Keep a comparison only when this character would make it now and it is more exact than direct wording; do not gild ordinary actions line by line. Serial readability comes from legible causality, timely information and purposeful people, not a page of short sentences, topical slang or fixed gratification beats.
 
+Combine action, observation, speech and response from the same moment into natural narrative units instead of a run of telegraphic fragments. Preserve the connective tissue needed to identify subjects, references, objects and causes. Subtext may be inferred, but speaker ownership, physical position and the live task should not be guessed. Bring in setting, expression, body and bystander response when they change attention, pressure, relationship, interpretation or consequence. Do not scatter taskless micro-gestures or force every emotion into an action; a low-intensity feeling may be stated directly when that is the natural form.
+
 By the end of a chapter, leave a traceable change: a resource gained or lost, information that changes a judgment, a new debt in a relationship, or an altered position, promise, risk or next task. A chapter may deliver a satisfying local return or leave a concrete consequence unresolved. It need not manufacture a cliffhanger, and it should not follow events with a summary of what they mean.
 
 ## Direct scene realization
@@ -18,18 +20,12 @@ Write the candidate once from the current Scene Realization Contract, selected c
 
 ## Original miniature
 
-“Two hundred more and I'm out.”
+The damp patch had already crossed half the kitchen ceiling. Zhou caught one cold drop in his palm and pressed the wet fingertip to the repair clause. “Two hundred more and I'm out. This gets fixed tonight.”
 
-The landlord slipped the key into his pocket. “Three people are waiting behind you.”
+The landlord did not look at the lease. He slipped the key into his pocket and said three people were waiting outside. When Zhou turned, the woman holding a child was shifting the weight to her other shoulder; the man nearest the stairs had his phone out, ready to call the agent. The corridor was narrow. Nobody hurried them, but the landlord's leverage filled the doorway.
 
-Zhou glanced back. There were three: one scrolling another building's rental chat, one holding a child, and one already heading for the stairs.
+Zhou pushed the lease back and cleared a place for a signature. “Fine. Raise it. Put tonight's repair in writing.” The landlord said tomorrow was the earliest, his hand still in his pocket. Someone outside laughed, and the child echoed it. The landlord glared at the doorway. Zhou did not smile. He uncapped the pen and set it directly under the spreading stain.
 
-He opened the lease to the leak-repair clause and pushed it across. “Fine. Raise it. Fix the kitchen ceiling tonight and put that in writing.”
+“Then the rent goes up tomorrow too,” he said.
 
-“Tomorrow.”
-
-“Then I raise it tomorrow too.”
-
-Someone outside laughed. The landlord looked up, glared at the doorway and finally uncapped his pen.
-
-Every line pursues an outcome, while the waiting renters and repair clause change the bargaining options. The miniature demonstrates scene pressure and character tactics, not a requirement that every chapter use rent, banter or one-line paragraphs.
+The dialogue remains attached to the leak, lease, key, waiting renters and live action. Speaker and space stay legible while bystander response makes the bargaining pressure visible. The miniature demonstrates a continuous scene and character tactics, not a requirement that every chapter use rent or banter.

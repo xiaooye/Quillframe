@@ -39,7 +39,7 @@ Together these results verify:
 5. exact current objectives in Writer, self-audit and independent review;
 6. fresh realization for systemic contamination and exact edit windows for isolated defects;
 7. conjunctive hard-objective readiness: `not_met` or `uncertain` cannot be averaged into PASS;
-8. optional prose telemetry is not imported by production decisions, and current schemas expose no English-count, banned-word, length, ratio, AIGC or aggregate literary-score gate;
+8. prose-quality telemetry is absent, and current schemas expose no English-count, banned-word, length, ratio, AIGC or aggregate literary-score gate;
 9. a valid returned response remains confirmed after soft cost or elapsed-budget crossing, with missing billing reconciled separately;
 10. exact node checkpoints, durable wakes and billing receipts prevent duplicate dispatch and charge after restart;
 11. model protocol, identity and version fingerprint are captured before dispatch and revalidated on resume;

@@ -28,7 +28,7 @@ assets/
     └── home-fit.en.svg / .zh-CN.svg
 ```
 
-Machine integration QA 位于 [`../scripts/design_system_quality.py`](../scripts/design_system_quality.py)，并由 Story Loom design-system workflow 强制执行。
+机器集成检查位于[产品站质量门](../site/scripts/quality.mjs)，并由 Story Loom 工作流强制执行。
 
 ---
 
@@ -99,7 +99,7 @@ WeiUI 在 Phase 2C 中是 zero-JavaScript styling/token foundation，**不是** 
 运行：
 
 ```bash
-python scripts/design_system_quality.py
+pnpm --filter @quillframe/product-site quality
 ```
 
 Checker 会验证：
@@ -130,7 +130,7 @@ Checker 会验证：
 
 它们只是 presentation assets；真正可维护的 Markdown/contracts 仍然拥有语义权威。
 
-Tier-A SVG 继续要求真实 820px + narrow render inspection、visible-copy review、bilingual parity，以及接入前运行 `python scripts/docs_quality.py`。
+A 级 SVG 继续要求真实 820px 与窄屏渲染检查、可见文案复核、双语一致性，以及接入前运行 `pnpm --filter @quillframe/product-site quality`。
 
 ---
 

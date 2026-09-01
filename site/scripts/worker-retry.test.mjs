@@ -177,7 +177,7 @@ test("D1-09 Quick Demo receipt validator enforces CH001 truth boundaries", () =>
   const valid = {
     schema: "quillframe_ch001_quick_demo_receipt_v1",
     chapter_id: "CH001",
-    deterministic_core: { executed: true, modules: ["production_runtime.workflow"], packet_fingerprint: "sha256:x", workflow_fingerprint: "sha256:y", stage: "started" },
+    deterministic_core: { executed: false, modules: ["native/quillframe-core"], packet_fingerprint: "sha256:x", workflow_fingerprint: "sha256:y", stage: "started" },
     semantic_evidence: { source: "recorded_fixture", live_model_called: false, summary: "ok", findings: [] },
     live_model_called: false, uploads: 0, canon_mutated: false, authority: false,
   };
@@ -276,14 +276,14 @@ test("D1 loading owner survives an old deferred continuation after B begins", as
 test("D1-09 every Quick Demo truth field mutation is rejected", () => {
   const valid = {
     schema: "quillframe_ch001_quick_demo_receipt_v1", chapter_id: "CH001",
-    deterministic_core: { executed: true, modules: ["workflow"], packet_fingerprint: "packet", workflow_fingerprint: "workflow", stage: "started" },
+    deterministic_core: { executed: false, modules: ["native/quillframe-core"], packet_fingerprint: "packet", workflow_fingerprint: "workflow", stage: "started" },
     semantic_evidence: { source: "recorded_fixture", live_model_called: false, summary: "ok", findings: [{ code: "C", severity: "info", owner: "qf" }] },
     live_model_called: false, uploads: 0, canon_mutated: false, authority: false,
   };
   const mutations = [
     ["schema", "wrong"], ["chapter_id", "CH002"], ["live_model_called", true], ["uploads", 1],
     ["canon_mutated", true], ["authority", true],
-    ["deterministic_core", { ...valid.deterministic_core, executed: false }],
+    ["deterministic_core", { ...valid.deterministic_core, executed: true }],
     ["deterministic_core", { ...valid.deterministic_core, modules: [1] }],
     ["deterministic_core", { ...valid.deterministic_core, packet_fingerprint: 1 }],
     ["deterministic_core", { ...valid.deterministic_core, workflow_fingerprint: 1 }],

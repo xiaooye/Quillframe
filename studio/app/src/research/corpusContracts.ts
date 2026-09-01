@@ -116,7 +116,7 @@ export function parseCorpusSelection(value: unknown, options: { allowPrivateLabe
   const proposal = firstText(projection, ["proposal_fingerprint", "proposal_hash", "selection_fingerprint", "fingerprint"]);
   const source = firstArray(projection, ["items", "works", "selection", "selected_works"]);
   if (!study || profile !== "general" && profile !== "adult_explicit"
-    || !proposal || !fingerprint(proposal) || source.length !== 120) {
+    || !proposal || !fingerprint(proposal) || source.length < 1 || source.length > 500) {
     throw new Error("corpus_selection_projection_invalid");
   }
   const items = source.map((raw): CorpusSelectionItem => {
@@ -224,7 +224,7 @@ const pathLikeValue = /^(?:[A-Za-z]:[\\/]|\\\\|\/(?:Users|home|tmp|var|private|e
 /** Keep Corpus views metadata-only even if a future Core projection grows. */
 export function corpusMetadataView(value: unknown, depth = 0): unknown {
   if (depth > 6) return "<nested metadata omitted>";
-  if (Array.isArray(value)) return value.slice(0, 120).map((item) => corpusMetadataView(item, depth + 1));
+  if (Array.isArray(value)) return value.slice(0, 500).map((item) => corpusMetadataView(item, depth + 1));
   if (typeof value === "string" && pathLikeValue.test(value)) return "<not displayed in Studio>";
   if (!record(value)) return value;
   return Object.fromEntries(Object.entries(value).map(([key, child]) => [

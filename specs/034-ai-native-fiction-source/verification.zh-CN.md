@@ -39,7 +39,7 @@
 5. 当前作者目标原样进入 Writer、self-audit 和独立审稿；
 6. 系统性污染走 fresh realization，孤立错误只暴露精确编辑窗口；
 7. 硬目标使用合取门，`not_met` 或 `uncertain` 不能被平均成 PASS；
-8. optional prose telemetry 不被生产决策模块导入，当前 schema 不暴露英文计数、禁词、长度、比例、AIGC 或聚合文学分数门；
+8. prose-quality telemetry 已不存在，当前 schema 不暴露英文计数、禁词、长度、比例、AIGC 或聚合文学分数门；
 9. 有效返回在软费用或时间预算越界后仍保持 confirmed，缺失计费另行对账；
 10. 精确节点 checkpoint、durable wake 与 billing receipt 防止重启后重复派发和重复计费；
 11. 模型 protocol、身份与版本指纹在派发前捕获，并在恢复时重新验证；

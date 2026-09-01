@@ -14,7 +14,7 @@ Begin with [Why Quillframe](why-quillframe.en.md) and [Architecture](architectur
 
 ## Model and Agent Runtime
 
-[Model Runtime](model-runtime.en.md) explains the ordinary `API Endpoint + Access Token` connection surface, model/protocol discovery, capability evidence, secret handling, and inference transport. [Agent Runtime](agent-runtime.en.md) explains the optional embedded AgentJob/Result loop, thin native-host adapters, tool permissions, checkpoints, receipts, and the embeddable `quillframe` Python library.
+[Model Runtime](model-runtime.en.md) explains the ordinary `API Endpoint + Access Token` connection surface, model/protocol discovery, capability evidence, secret handling, and inference transport. [Agent Runtime](agent-runtime.en.md) explains the optional AgentJob/Result loop, Rust host adapters, tool permissions, checkpoints, and receipts exposed through Host Bridge v11.
 
 Provider/vendor identity is diagnostic metadata at most. Hosts run generic agent execution; Quillframe governs runtime contracts, Context, novel authority, and Project state.
 
@@ -24,7 +24,7 @@ Provider/vendor identity is diagnostic metadata at most. Hosts run generic agent
 
 ## Quality
 
-[Quality Assurance](quality-assurance.en.md) explains release truth and pre-independent qualification. [Quality Evolution](quality-evolution.en.md) covers incumbent/challenger comparison, objective preservation, regression protection, and stopping behavior. [Eval Reference](../evals/README.en.md) describes deterministic and semantic evaluation boundaries.
+[Quality Assurance](quality-assurance.en.md) explains release truth and pre-independent qualification. [Quality Evolution](quality-evolution.en.md) covers incumbent/challenger comparison, objective preservation, regression protection, and explicit completion. [Eval Reference](../evals/README.en.md) describes deterministic and semantic evaluation boundaries.
 
 ## Canon & Settlement
 
