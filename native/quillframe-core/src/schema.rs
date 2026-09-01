@@ -30,7 +30,7 @@ macro_rules! fragment {
     };
 }
 
-const PROJECT_FRAGMENTS: [SchemaFragment; 23] = [
+const PROJECT_FRAGMENTS: [SchemaFragment; 24] = [
     fragment!(1, "001_initial.sql"),
     fragment!(2, "002_semantic_context_runtime.sql"),
     fragment!(3, "003_native_independent_review.sql"),
@@ -54,6 +54,7 @@ const PROJECT_FRAGMENTS: [SchemaFragment; 23] = [
     fragment!(21, "021_hierarchical_plan_bindings.sql"),
     fragment!(22, "022_story_commit_log.sql"),
     fragment!(23, "023_learning_activation.sql"),
+    fragment!(24, "024_ai_native_longform_planning.sql"),
 ];
 
 pub fn apply_fresh_project_schema(connection: &mut Connection, applied_at: &str) -> CoreResult<()> {
@@ -97,6 +98,7 @@ pub fn apply_fresh_project_schema(connection: &mut Connection, applied_at: &str)
 pub fn validate_current_project_schema(connection: &Connection) -> CoreResult<()> {
     validate_identity(connection)?;
     validate_ledger(connection)?;
+    validate_planning_contract(connection)?;
 
     let expected = Connection::open_in_memory().map_err(storage_error)?;
     expected
@@ -205,6 +207,25 @@ fn validate_ledger(connection: &Connection) -> CoreResult<()> {
     Ok(())
 }
 
+fn validate_planning_contract(connection: &Connection) -> CoreResult<()> {
+    let mut statement = connection
+        .prepare("SELECT singleton,release FROM planning_contract_identity ORDER BY singleton")
+        .map_err(storage_error)?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((row.get::<_, u32>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(storage_error)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(storage_error)?;
+    if rows != [(1, "ai-native-longform-v2".into())] {
+        return Err(CoreError::Storage(
+            "SQLite planning contract identity must be exactly ai-native-longform-v2".into(),
+        ));
+    }
+    Ok(())
+}
+
 fn schema_objects(
     connection: &Connection,
 ) -> CoreResult<BTreeMap<String, (String, String, String)>> {
@@ -258,7 +279,15 @@ mod tests {
                 row.get(0)
             })
             .unwrap();
-        assert_eq!(count, 23);
+        assert_eq!(count, 24);
+        let planning_release: String = connection
+            .query_row(
+                "SELECT release FROM planning_contract_identity WHERE singleton=1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(planning_release, "ai-native-longform-v2");
         validate_current_project_schema(&connection).unwrap();
     }
 
@@ -268,7 +297,7 @@ mod tests {
         apply_fresh_project_schema(&mut connection, "2026-08-31T00:00:00Z").unwrap();
         connection
             .execute(
-                "UPDATE schema_fragments SET checksum='sha256:bad' WHERE version=23",
+                "UPDATE schema_fragments SET checksum='sha256:bad' WHERE version=24",
                 [],
             )
             .unwrap();
@@ -276,8 +305,8 @@ mod tests {
 
         connection
             .execute(
-                "UPDATE schema_fragments SET checksum=?1 WHERE version=23",
-                [fragment_checksum(PROJECT_FRAGMENTS[22])],
+                "UPDATE schema_fragments SET checksum=?1 WHERE version=24",
+                [fragment_checksum(PROJECT_FRAGMENTS[23])],
             )
             .unwrap();
         connection
@@ -304,8 +333,29 @@ mod tests {
         let mut connection = Connection::open_in_memory().unwrap();
         apply_fresh_project_schema(&mut connection, "2026-08-31T00:00:00Z").unwrap();
         connection
-            .execute("DELETE FROM schema_fragments WHERE version=23", [])
+            .execute("DELETE FROM schema_fragments WHERE version=24", [])
             .unwrap();
         assert!(validate_current_project_schema(&connection).is_err());
+    }
+
+    #[test]
+    fn planning_contract_marker_fails_closed_when_missing_or_tampered() {
+        let mut missing = Connection::open_in_memory().unwrap();
+        apply_fresh_project_schema(&mut missing, "2026-08-31T00:00:00Z").unwrap();
+        missing
+            .execute("DELETE FROM planning_contract_identity", [])
+            .unwrap();
+        assert!(validate_current_project_schema(&missing).is_err());
+
+        let mut tampered = Connection::open_in_memory().unwrap();
+        apply_fresh_project_schema(&mut tampered, "2026-08-31T00:00:00Z").unwrap();
+        tampered
+            .execute_batch(
+                "PRAGMA ignore_check_constraints=ON; \
+                 UPDATE planning_contract_identity SET release='unexpected-release'; \
+                 PRAGMA ignore_check_constraints=OFF;",
+            )
+            .unwrap();
+        assert!(validate_current_project_schema(&tampered).is_err());
     }
 }

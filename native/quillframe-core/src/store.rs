@@ -15,10 +15,10 @@ use crate::{
     ContextQueryPlan, ContextSelectionProposal, ContextStage, ContextTier, CoreError, CoreResult,
     CorpusProgress, ExpectationDeltaAction, FrozenPlanLayer, HierarchicalPlanLock, ModelResult,
     NarrativeEntityKind, PlanProposal, ProductionRelease, ProductionRequest, ProductionTaskMode,
-    ProjectContext, ProjectManifest, ReviewReport, RevisionRequest, SceneWritingBrief,
-    SettlementAuthorization, SettlementPreflight, SourceFreeCorpusPack, StageCall, StageCallState,
-    StageJob, StoryEvent, StoryGraph, StoryKind, StoryNode, StoryStateSnapshot, TrackingState,
-    WriterContinuityEntry, WriterPack,
+    ProjectContext, ProjectManifest, ReviewReport, RevisionRequest, SettlementAuthorization,
+    SettlementPreflight, SourceFreeCorpusPack, StageCall, StageCallState, StageJob, StoryEvent,
+    StoryGraph, StoryKind, StoryNode, StoryStateSnapshot, TrackingState, WriterContinuityEntry,
+    WriterPack,
 };
 
 pub struct NativeProject {
@@ -1489,31 +1489,14 @@ impl ProjectDatabase {
         }
         let freeze = context.freeze(ContextStage::Writer, 16, 12 * 1024)?;
         let corpus_packs = Vec::new();
-        let scenes = chapter_plan
-            .scenes
-            .iter()
-            .map(|scene| SceneWritingBrief {
-                scene_id: scene.scene_id.clone(),
-                ordinal: scene.ordinal,
-                viewpoint: scene.viewpoint.clone(),
-                location: scene.location.clone(),
-                entry_state: scene.entry_state.clone(),
-                objective: scene.objective.clone(),
-                opposition: scene.opposition.clone(),
-                turn: scene.turn.clone(),
-                exit_state: scene.exit_state.clone(),
-                emotion_target: scene.emotion_target.clone(),
-                reader_effect: scene.reader_effect.clone(),
-            })
-            .collect();
         let pressure = format!(
             "读者问题：{}；可见回报：{}；选择：{}；代价：{}；净变化：{}；章末拉力：{}",
-            chapter_plan.reader_contract.reader_question,
-            chapter_plan.reader_contract.visible_reward,
-            chapter_plan.reader_contract.character_choice,
-            chapter_plan.reader_contract.cost,
-            chapter_plan.reader_contract.net_change,
-            chapter_plan.reader_contract.next_pull
+            chapter_plan.contract.reader_contract.reader_question,
+            chapter_plan.contract.reader_contract.visible_reward,
+            chapter_plan.contract.reader_contract.character_choice,
+            chapter_plan.contract.reader_contract.cost,
+            chapter_plan.contract.reader_contract.net_change,
+            chapter_plan.contract.reader_contract.next_pull
         );
         let pack = WriterPack::freeze(
             chapter_id,
@@ -1521,7 +1504,6 @@ impl ProjectDatabase {
             freeze.fingerprint,
             tracking.fingerprint,
             pressure,
-            scenes,
             continuity_context,
             corpus_packs,
         )?;
@@ -5291,7 +5273,7 @@ mod tests {
                 row.get(0)
             })
             .unwrap();
-        assert_eq!(rows, 22);
+        assert_eq!(rows, 23);
         drop(directory);
         std::fs::remove_dir_all(root).unwrap();
     }
@@ -5314,42 +5296,54 @@ mod tests {
                 node_id: "CH001".into(),
                 expected_active_version: 0,
                 body: crate::PlanBody::Chapter(crate::ChapterPlan {
-                    reader_contract: crate::ReaderContract {
-                        reader_question: "他会救人还是独自逃走？".into(),
-                        visible_reward: "找到维修井".into(),
-                        character_choice: "返身救人".into(),
-                        cost: "身份暴露".into(),
-                        net_change: "同伴获救，追兵锁定主角".into(),
-                        next_pull: "出口已被封锁".into(),
-                    },
-                    constraint_lock: crate::ChapterConstraintLock {
-                        length: crate::LengthBand {
-                            min: 2800,
-                            max: 3800,
-                            unit: crate::LengthUnit::ChineseCharacters,
-                        },
-                        must_happen: vec![crate::ConstraintClause {
-                            id: "rescue".into(),
-                            statement: "主角返身救人".into(),
-                        }],
-                        must_not_happen: vec![],
-                        exact_time_anchors: vec![],
-                        stop_point: "出口已被封锁时停笔".into(),
-                        end_debt: "出口已被封锁".into(),
-                    },
-                    scenes: vec![crate::SceneObjective {
-                        scene_id: "SC001".into(),
-                        ordinal: 1,
+                    contract: crate::ChapterContract {
+                        chapter_function: "用有代价的选择建立人物与关系".into(),
                         viewpoint: "主角".into(),
-                        location: "废弃车站".into(),
                         entry_state: "与同伴失散".into(),
-                        objective: "找到同伴".into(),
-                        opposition: "追兵封路".into(),
-                        turn: "发现维修井".into(),
-                        exit_state: "救人成功但身份暴露".into(),
-                        emotion_target: "压迫转热血".into(),
-                        reader_effect: "认可选择并担心代价".into(),
-                    }],
+                        intended_exit_state: "同伴获救但身份暴露".into(),
+                        reader_contract: crate::ReaderContract {
+                            reader_question: "他会救人还是独自逃走？".into(),
+                            visible_reward: "找到维修井".into(),
+                            character_choice: "返身救人".into(),
+                            cost: "身份暴露".into(),
+                            net_change: "同伴获救，追兵锁定主角".into(),
+                            next_pull: "出口已被封锁".into(),
+                        },
+                        constraint_lock: crate::ChapterConstraintLock {
+                            length: crate::LengthBand {
+                                min: 2800,
+                                max: 3800,
+                                unit: crate::LengthUnit::ChineseCharacters,
+                            },
+                            must_happen: vec![crate::ConstraintClause {
+                                id: "rescue".into(),
+                                statement: "主角返身救人".into(),
+                            }],
+                            must_not_happen: vec![],
+                            exact_time_anchors: vec![],
+                            stop_point: "出口已被封锁时停笔".into(),
+                            end_debt: "出口已被封锁".into(),
+                        },
+                    },
+                    scene_script: crate::SceneScript {
+                        scenes: vec![crate::SceneObjective {
+                            scene_id: "SC001".into(),
+                            ordinal: 1,
+                            viewpoint: "主角".into(),
+                            location: "废弃车站".into(),
+                            entry_state: "与同伴失散".into(),
+                            objective: "找到同伴".into(),
+                            opposition: "追兵封路".into(),
+                            turn: "发现维修井".into(),
+                            choice: "返身救人".into(),
+                            consequence: "同伴获救但身份暴露".into(),
+                            value_shift: "关系从猜疑转为初步互信".into(),
+                            information_change: "确认维修井可通向出口".into(),
+                            exit_state: "救人成功但身份暴露".into(),
+                            emotion_target: "压迫转热血".into(),
+                            reader_effect: "认可选择并担心代价".into(),
+                        }],
+                    },
                 }),
                 assumptions: vec![],
                 open_questions: vec![],
@@ -5373,8 +5367,16 @@ mod tests {
         let pack = store
             .freeze_writer_pack_for_chapter("CH001", "2026-08-31T00:00:02Z")
             .unwrap();
+        let pack_fingerprint = pack.fingerprint.clone();
         pack.validate().unwrap();
         assert_eq!(pack.scenes.len(), 1);
+        assert_eq!(pack.plan_lock.book_plan().unwrap().character_arcs.len(), 2);
+        assert_eq!(
+            pack.plan_lock.book_plan().unwrap().relationship_arcs.len(),
+            1
+        );
+        assert_eq!(pack.scenes[0].choice, "返身救人");
+        assert_eq!(pack.scenes[0].value_shift, "关系从猜疑转为初步互信");
         assert!(pack.reader_pressure.contains("章末"));
 
         let tracking = crate::TrackingState::empty("BOOK").unwrap();
@@ -5387,6 +5389,8 @@ mod tests {
         );
         drop(store);
         let mut reopened = ProjectDatabase::open_strict(&database, &manifest).unwrap();
+        let reloaded_pack = reopened.load_writer_pack(&pack_fingerprint).unwrap();
+        assert_eq!(reloaded_pack, pack);
         assert_eq!(
             reopened
                 .load_tracking_state("BOOK")
@@ -5562,19 +5566,6 @@ mod tests {
             format!("sha256:{}", "3".repeat(64)),
             &tracking_fingerprint,
             "chapter pull",
-            vec![crate::SceneWritingBrief {
-                scene_id: "SC001".into(),
-                ordinal: 1,
-                viewpoint: "lead".into(),
-                location: "station".into(),
-                entry_state: "separated".into(),
-                objective: "escape".into(),
-                opposition: "pursuit".into(),
-                turn: "door".into(),
-                exit_state: "rerouted".into(),
-                emotion_target: "pressure".into(),
-                reader_effect: "pull".into(),
-            }],
             vec![],
             vec![],
         )

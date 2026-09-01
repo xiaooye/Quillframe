@@ -18,6 +18,10 @@ pub struct SceneWritingBrief {
     pub objective: String,
     pub opposition: String,
     pub turn: String,
+    pub choice: String,
+    pub consequence: String,
+    pub value_shift: String,
+    pub information_change: String,
     pub exit_state: String,
     pub emotion_target: String,
     pub reader_effect: String,
@@ -55,7 +59,6 @@ impl WriterPack {
         context_freeze_fingerprint: impl Into<String>,
         tracking_fingerprint: impl Into<String>,
         reader_pressure: impl Into<String>,
-        scenes: Vec<SceneWritingBrief>,
         continuity_context: Vec<WriterContinuityEntry>,
         corpus_mechanisms: Vec<WriterCorpusProjection>,
     ) -> CoreResult<Self> {
@@ -72,6 +75,31 @@ impl WriterPack {
                 "Writer Pack accepts at most twelve settled continuity entries".into(),
             ));
         }
+        plan_lock.validate()?;
+        let chapter_id = chapter_id.into();
+        let chapter_plan = plan_lock.chapter_plan(&chapter_id)?;
+        let scenes = chapter_plan
+            .scene_script
+            .scenes
+            .iter()
+            .map(|scene| SceneWritingBrief {
+                scene_id: scene.scene_id.clone(),
+                ordinal: scene.ordinal,
+                viewpoint: scene.viewpoint.clone(),
+                location: scene.location.clone(),
+                entry_state: scene.entry_state.clone(),
+                objective: scene.objective.clone(),
+                opposition: scene.opposition.clone(),
+                turn: scene.turn.clone(),
+                choice: scene.choice.clone(),
+                consequence: scene.consequence.clone(),
+                value_shift: scene.value_shift.clone(),
+                information_change: scene.information_change.clone(),
+                exit_state: scene.exit_state.clone(),
+                emotion_target: scene.emotion_target.clone(),
+                reader_effect: scene.reader_effect.clone(),
+            })
+            .collect::<Vec<_>>();
         if scenes.is_empty() {
             return Err(CoreError::InvalidPlan(
                 "Writer Pack requires ordered scene briefs".into(),
@@ -87,6 +115,10 @@ impl WriterPack {
                     &scene.objective,
                     &scene.opposition,
                     &scene.turn,
+                    &scene.choice,
+                    &scene.consequence,
+                    &scene.value_shift,
+                    &scene.information_change,
                     &scene.exit_state,
                     &scene.emotion_target,
                     &scene.reader_effect,
@@ -99,28 +131,13 @@ impl WriterPack {
                 ));
             }
         }
-        plan_lock.validate()?;
-        let chapter_id = chapter_id.into();
-        let chapter_plan = plan_lock.chapter_plan(&chapter_id)?;
         let active_plan_fingerprint = plan_lock
             .layers
             .last()
             .map(|layer| layer.proposal_fingerprint.clone())
             .ok_or_else(|| CoreError::InvalidPlan("Writer Pack plan lock is empty".into()))?;
-        if scenes.len() != chapter_plan.scenes.len()
-            || scenes
-                .iter()
-                .zip(&chapter_plan.scenes)
-                .any(|(brief, planned)| {
-                    brief.scene_id != planned.scene_id || brief.ordinal != planned.ordinal
-                })
-        {
-            return Err(CoreError::InvalidPlan(
-                "Writer Pack scene briefs do not match the frozen chapter plan".into(),
-            ));
-        }
         let mut value = Self {
-            schema: "quillframe_writer_pack_v3".into(),
+            schema: "quillframe_writer_pack_v4".into(),
             chapter_id,
             plan_lock,
             active_plan_fingerprint,
@@ -177,9 +194,33 @@ impl WriterPack {
         let chapter_layer = self.plan_lock.layers.last().ok_or_else(|| {
             CoreError::ContextBoundary("Writer Pack plan lock has no chapter layer".into())
         })?;
-        if self.schema != "quillframe_writer_pack_v3"
+        let chapter_plan = self.plan_lock.chapter_plan(&self.chapter_id)?;
+        let planned_scenes = chapter_plan
+            .scene_script
+            .scenes
+            .iter()
+            .map(|scene| SceneWritingBrief {
+                scene_id: scene.scene_id.clone(),
+                ordinal: scene.ordinal,
+                viewpoint: scene.viewpoint.clone(),
+                location: scene.location.clone(),
+                entry_state: scene.entry_state.clone(),
+                objective: scene.objective.clone(),
+                opposition: scene.opposition.clone(),
+                turn: scene.turn.clone(),
+                choice: scene.choice.clone(),
+                consequence: scene.consequence.clone(),
+                value_shift: scene.value_shift.clone(),
+                information_change: scene.information_change.clone(),
+                exit_state: scene.exit_state.clone(),
+                emotion_target: scene.emotion_target.clone(),
+                reader_effect: scene.reader_effect.clone(),
+            })
+            .collect::<Vec<_>>();
+        if self.schema != "quillframe_writer_pack_v4"
             || chapter_layer.target.node_id != self.chapter_id
             || chapter_layer.proposal_fingerprint != self.active_plan_fingerprint
+            || self.scenes != planned_scenes
             || !self.private_state_absent
             || self.fingerprint != self.compute_fingerprint()?
         {
@@ -638,19 +679,6 @@ mod tests {
             fp(),
             fp(),
             "读者需要看到主角主动选择并承担代价",
-            vec![SceneWritingBrief {
-                scene_id: "SC001".into(),
-                ordinal: 1,
-                viewpoint: "主角".into(),
-                location: "废弃车站".into(),
-                entry_state: "与同伴失散".into(),
-                objective: "救出同伴".into(),
-                opposition: "出口被封".into(),
-                turn: "发现维修井".into(),
-                exit_state: "同伴获救，身份暴露".into(),
-                emotion_target: "压迫转热血".into(),
-                reader_effect: "认可角色选择并担心代价".into(),
-            }],
             vec![],
             vec![],
         )
@@ -696,5 +724,13 @@ mod tests {
         );
         pipeline.record_draft(revision).unwrap();
         assert_eq!(pipeline.state, ProductionState::Drafted);
+    }
+
+    #[test]
+    fn writer_pack_rejects_scene_content_that_differs_from_frozen_script() {
+        let mut pack = pack();
+        pack.scenes[0].choice = "same id and ordinal, different creative instruction".into();
+        pack.fingerprint = pack.compute_fingerprint().unwrap();
+        assert!(pack.validate().is_err());
     }
 }

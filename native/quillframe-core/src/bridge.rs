@@ -644,17 +644,67 @@ impl HostBridgeRuntime {
                 CoreError::InvalidPlan(format!("expectation refs are invalid: {error}"))
             })?
             .unwrap_or_default();
+        let body_value = request
+            .args
+            .get("typed_body")
+            .cloned()
+            .unwrap_or_else(|| serde_json::from_str::<Value>(content).unwrap_or(Value::Null));
+        let body: PlanBody = serde_json::from_value(body_value).map_err(|error| {
+            CoreError::InvalidPlan(format!("typed plan body is invalid: {error}"))
+        })?;
+        let assumptions = request
+            .args
+            .get("assumptions")
+            .cloned()
+            .map(serde_json::from_value::<Vec<String>>)
+            .transpose()
+            .map_err(|error| {
+                CoreError::InvalidPlan(format!("plan assumptions are invalid: {error}"))
+            })?
+            .unwrap_or_default();
+        let open_questions = request
+            .args
+            .get("open_questions")
+            .cloned()
+            .map(serde_json::from_value::<Vec<String>>)
+            .transpose()
+            .map_err(|error| {
+                CoreError::InvalidPlan(format!("plan open questions are invalid: {error}"))
+            })?
+            .unwrap_or_default();
+        let mut dependency_fingerprints = request
+            .args
+            .get("dependency_fingerprints")
+            .cloned()
+            .map(serde_json::from_value::<BTreeMap<String, String>>)
+            .transpose()
+            .map_err(|error| {
+                CoreError::InvalidPlan(format!("plan dependencies are invalid: {error}"))
+            })?
+            .unwrap_or_default();
         let mut project = self.open_registered(project_id)?;
         if let Some(existing)=project.database.connection().query_row(
-            "SELECT v.target_ref,v.title,v.content,v.reader_intent_json,v.expectation_refs_json,a.active_version,v.proposal_id \
+            "SELECT v.target_ref,v.title,v.content,v.reader_intent_json,v.expectation_refs_json,a.active_version,v.proposal_id, \
+                    p.plan_json,a.status,p.status \
              FROM plan_activations a JOIN plan_editor_views v ON v.proposal_id=a.proposal_id \
+             JOIN plans p ON p.plan_id=a.proposal_id \
              WHERE json_extract(a.authorization_json,'$.idempotency_key')=?1",
             [idempotency_key],|row|Ok((row.get::<_,String>(0)?,row.get::<_,String>(1)?,row.get::<_,String>(2)?,
-                row.get::<_,String>(3)?,row.get::<_,String>(4)?,row.get::<_,u64>(5)?,row.get::<_,String>(6)?))
+                row.get::<_,String>(3)?,row.get::<_,String>(4)?,row.get::<_,u64>(5)?,row.get::<_,String>(6)?,
+                row.get::<_,String>(7)?,row.get::<_,String>(8)?,row.get::<_,String>(9)?))
         ).optional().map_err(storage)? {
             let expected_reader=serde_json::to_string(&reader_intent).map_err(|error|CoreError::Serialization(error.to_string()))?;
             let expected_refs=serde_json::to_string(&expectation_refs).map_err(|error|CoreError::Serialization(error.to_string()))?;
-            if existing.0!=canonical_target || existing.1!=title || existing.2!=content || existing.3!=expected_reader || existing.4!=expected_refs {
+            let persisted: PlanProposal=serde_json::from_str(&existing.7)
+                .map_err(|error|CoreError::Serialization(error.to_string()))?;
+            persisted.validate_fingerprint()?;
+            if existing.8!="active" || existing.9!="active" {
+                return Err(CoreError::AuthorityConflict("plan idempotency activation is no longer current".into()));
+            }
+            if existing.0!=canonical_target || existing.1!=title || existing.2!=content || existing.3!=expected_reader || existing.4!=expected_refs
+                || persisted.target.reference!=canonical_target || persisted.body!=body
+                || persisted.assumptions!=assumptions || persisted.open_questions!=open_questions
+                || dependency_fingerprints.iter().any(|(reference,fingerprint)| persisted.dependency_fingerprints.get(reference)!=Some(fingerprint)) {
                 return Err(CoreError::AuthorityConflict("plan idempotency key binds different content".into()));
             }
             return Ok(json!({"schema":"quillframe_plan_save_result_v1","project_id":project_id,"plan_id":existing.6,
@@ -675,24 +725,6 @@ impl HostBridgeRuntime {
                 "Studio plan target must be book, volume, unit or chapter".into(),
             ));
         };
-        let body_value = request
-            .args
-            .get("typed_body")
-            .cloned()
-            .unwrap_or_else(|| serde_json::from_str::<Value>(content).unwrap_or(Value::Null));
-        let body: PlanBody = serde_json::from_value(body_value).map_err(|error| {
-            CoreError::InvalidPlan(format!("typed plan body is invalid: {error}"))
-        })?;
-        let mut dependency_fingerprints = request
-            .args
-            .get("dependency_fingerprints")
-            .cloned()
-            .map(serde_json::from_value::<BTreeMap<String, String>>)
-            .transpose()
-            .map_err(|error| {
-                CoreError::InvalidPlan(format!("plan dependencies are invalid: {error}"))
-            })?
-            .unwrap_or_default();
         for (reference, fingerprint) in project.database.active_ancestor_fingerprints(&node_id)? {
             if dependency_fingerprints
                 .insert(reference.clone(), fingerprint.clone())
@@ -710,26 +742,8 @@ impl HostBridgeRuntime {
                 node_id,
                 expected_active_version: expected_version,
                 body,
-                assumptions: request
-                    .args
-                    .get("assumptions")
-                    .cloned()
-                    .map(serde_json::from_value)
-                    .transpose()
-                    .map_err(|error| {
-                        CoreError::InvalidPlan(format!("plan assumptions are invalid: {error}"))
-                    })?
-                    .unwrap_or_default(),
-                open_questions: request
-                    .args
-                    .get("open_questions")
-                    .cloned()
-                    .map(serde_json::from_value)
-                    .transpose()
-                    .map_err(|error| {
-                        CoreError::InvalidPlan(format!("plan open questions are invalid: {error}"))
-                    })?
-                    .unwrap_or_default(),
+                assumptions,
+                open_questions,
                 dependency_fingerprints,
             },
         )?;
@@ -1467,7 +1481,7 @@ impl HostBridgeRuntime {
                 "scene_resolution",
                 "scene_resolver",
                 json!({"scene_briefs":pack.scenes,"character_actions":character_output,"writer_context":writer_context,"corpus_mechanisms":selected_corpus,"selected_preferences":selected_preferences,
-                    "contract":"Return JSON only: {scenes:[{scene_id,action_sequence:[string],turn,exit_state}]}. Resolve causal actions into each ordered scene without prose."}),
+                    "contract":"Return JSON only: {scenes:[{scene_id,action_sequence:[string],turn,exit_state}]}. Resolve causal actions into each ordered scene without prose. Preserve the frozen choice, consequence, value shift and information change; do not replace the chapter or scene contract."}),
                 4_000,
                 0.35,
             )
@@ -1506,7 +1520,7 @@ impl HostBridgeRuntime {
                         "repair_source":repair_spec.as_ref().and_then(|value|if value.0.generation_mode==RepairGenerationMode::LocalOrBoundedRepair {
                             repair_material.as_ref().map(|material|json!({"manuscript":material.manuscript,"fingerprint":material.source_receipt}))}else{None}),
                         "instruction":production.intent.instruction,
-                        "contract":"Return JSON only: {manuscript:string}. Write only this scene as natural Chinese web-novel prose, without a chapter title or process explanation. Begin from the frozen entry state, preserve causal actions and spatial continuity, realize the required turn, and end exactly in the frozen exit state. The prior_scene_tail is continuity evidence, not text to repeat."
+                        "contract":"Return JSON only: {manuscript:string}. Write only this scene as natural Chinese web-novel prose, without a chapter title or process explanation. Begin from the frozen entry state, preserve causal actions and spatial continuity, realize the required turn, choice, consequence, value shift and information change, and end exactly in the frozen exit state. The prior_scene_tail is continuity evidence, not text to repeat."
                     }),
                     8_000,
                     0.9,
@@ -3462,7 +3476,23 @@ mod tests {
     fn save_ancestor_plans(runtime: &HostBridgeRuntime) {
         let plans = [
             json!({"target_ref":"book","title":"全书设计","idempotency_key":"plan-book",
-                "typed_body":{"kind":"book","body":{"reader_promise":"主角以主动选择改变困局",
+                "typed_body":{"kind":"book","body":{"foundation":{
+                    "target_readers":"喜欢主动型主角与高压逃亡的读者","genre_promise":"在封锁追捕中持续破局",
+                    "core_emotion":"压迫中的主动反击与互信建立","progression_fantasy":"从逃亡者成长为规则改写者",
+                    "payoff_cadence":"每个剧情单元兑现一次主动选择的收益","premise":"被追捕者保护同伴并追查幕后契约",
+                    "intended_end_state":"主角公开契约真相并夺回选择权","differentiators":["逃亡与调查同步推进"],
+                    "non_negotiables":["主角保有关键选择与结算权"]},
+                    "character_arcs":[{"character_id":"CHAR-LEAD","display_name":"主角","narrative_role":"主动破局者",
+                        "external_want":"带同伴逃出封锁","internal_need":"学会承担信任的风险","pressure":"追捕与内部背叛",
+                        "agency":"关键转向来自主角选择","initial_state":"只相信独自逃生","intended_change":"建立同盟共同破局",
+                        "turning_points":["返身救人"]},{"character_id":"CHAR-ALLY","display_name":"同伴","narrative_role":"盟友与信任压力",
+                        "external_want":"活着穿过封锁","internal_need":"确认主角值得信任","pressure":"被追兵隔离",
+                        "agency":"以是否交付线索改变局势","initial_state":"对主角保持戒备","intended_change":"与主角形成互信",
+                        "turning_points":["救援后交出线索"]}],
+                    "relationship_arcs":[{"relationship_id":"REL-LEAD-ALLY","participant_ids":["CHAR-LEAD","CHAR-ALLY"],
+                        "initial_state":"彼此戒备","pressure":"救援会暴露身份","intended_change":"共同承担代价的互信",
+                        "turning_points":["主角返身救人"]}],
+                    "reader_promise":"主角以主动选择改变困局",
                     "protagonist_agency":"每次升级来自行动与代价","central_conflict":"追查真相与守护同伴冲突",
                     "progression":["从逃亡者成长为破局者"],"endgame_reserve":["幕后契约真相"],
                     "anti_exhaustion_limits":["不提前透支终局真相"]}}}),
@@ -3666,18 +3696,22 @@ mod tests {
             json!({
                 "project_id":"BOOK","target_ref":format!("chapter:{chapter_id}"),
                 "title":format!("Chapter {ordinal} Plan"),"content":"{}","expected_version":0,
-                "typed_body":{"kind":"chapter","body":{"reader_contract":{
-                    "reader_question":"Can the lead escape?","visible_reward":"See through the ambush",
-                    "character_choice":"Enter danger deliberately","cost":"Expose the route",
-                    "net_change":"The pursuers lock onto the lead","next_pull":"Why did the dead person appear?"},
+                "typed_body":{"kind":"chapter","body":{"contract":{
+                    "chapter_function":"Force an agency-defining choice that changes the relationship and pursuit",
+                    "viewpoint":"lead","entry_state":"wounded and pursued","intended_exit_state":"forced to reroute",
+                    "reader_contract":{"reader_question":"Can the lead escape?","visible_reward":"See through the ambush",
+                        "character_choice":"Enter danger deliberately","cost":"Expose the route",
+                        "net_change":"The pursuers lock onto the lead","next_pull":"Why did the dead person appear?"},
                     "constraint_lock":{"length":{"min":2800,"max":3800,"unit":"chinese_characters"},
                         "must_happen":[{"id":"dead-person","statement":"The dead person appears after the lead chooses to enter danger"}],
                         "must_not_happen":[],"exact_time_anchors":[],"stop_point":"Stop when the dead person appears",
-                        "end_debt":"Why did the dead person appear?"},
-                    "scenes":[{"scene_id":"SC001","ordinal":1,"viewpoint":"lead","location":"rain alley",
+                        "end_debt":"Why did the dead person appear?"}},
+                    "scene_script":{"scenes":[{"scene_id":"SC001","ordinal":1,"viewpoint":"lead","location":"rain alley",
                         "entry_state":"wounded and pursued","objective":"reach the contact","opposition":"blocked route",
-                        "turn":"the dead person appears","exit_state":"forced to reroute","emotion_target":"pressure to doubt",
-                        "reader_effect":"respect the choice and question the dead person"}]}},
+                        "turn":"the dead person appears","choice":"enter danger instead of abandoning the contact",
+                        "consequence":"the route is exposed and pursuit tightens","value_shift":"control shifts from escape to confrontation",
+                        "information_change":"the supposedly dead person is alive","exit_state":"forced to reroute","emotion_target":"pressure to doubt",
+                        "reader_effect":"respect the choice and question the dead person"}]}}},
                 "reader_intent":{"reader_question":"Can the lead escape?","visible_reward":"See through the ambush",
                     "character_choice":"Enter danger deliberately","cost":"Expose the route",
                     "net_change":"The pursuers lock onto the lead","next_chapter_pull":"Why did the dead person appear?"},
@@ -3979,6 +4013,50 @@ mod tests {
         std::fs::remove_dir_all(root).unwrap();
     }
 
+    #[test]
+    fn plan_save_idempotency_key_binds_the_exact_typed_body() {
+        let root = root();
+        let runtime = HostBridgeRuntime::open(&root).unwrap();
+        let created = runtime.invoke_value(request(
+            "project.create",
+            json!({"project_id":"BOOK","title":"长篇"}),
+        ));
+        assert_eq!(created["status"], "ok", "{created}");
+        save_ancestor_plans(&runtime);
+
+        let plan_json: String = runtime
+            .open_registered("BOOK")
+            .unwrap()
+            .database
+            .connection()
+            .query_row(
+                "SELECT p.plan_json FROM plans p JOIN plan_activations a ON a.proposal_id=p.plan_id \
+                 WHERE a.target_ref='book:BOOK' AND a.status='active'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let persisted: PlanProposal = serde_json::from_str(&plan_json).unwrap();
+        let mut changed_body = serde_json::to_value(persisted.body).unwrap();
+        *changed_body
+            .pointer_mut("/body/foundation/premise")
+            .unwrap() = json!("相同幂等键下被替换的全书前提");
+
+        let replay = runtime.invoke_value(request(
+            "plan.save",
+            json!({"project_id":"BOOK","target_ref":"book","title":"全书设计","content":"{}",
+                "expected_version":0,"typed_body":changed_body,"reader_intent":{},"expectation_refs":[],
+                "idempotency_key":"plan-book","user_authorized":true}),
+        ));
+        assert_eq!(replay["status"], "failed", "{replay}");
+        assert!(replay["error"]["message"]
+            .as_str()
+            .is_some_and(|message| message.contains("idempotency key binds different content")));
+
+        drop(runtime);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
     #[tokio::test]
     async fn studio_plan_to_released_candidate_runs_entirely_through_rust() {
         let root = root();
@@ -3995,14 +4073,18 @@ mod tests {
         save_ancestor_plans(&runtime);
         let plan=runtime.invoke_value(request("plan.save",json!({
             "project_id":"BOOK","target_ref":"chapter:CH001","title":"第一章计划","content":"{\"scenes\":[]}","expected_version":0,
-            "typed_body":{"kind":"chapter","body":{"reader_contract":{"reader_question":"他能否脱身？","visible_reward":"识破伏击",
-                "character_choice":"主动进入险地","cost":"暴露行踪","net_change":"追兵锁定目标","next_pull":"死者为何现身"},
+            "typed_body":{"kind":"chapter","body":{"contract":{"chapter_function":"以有代价的主动选择建立人物并转入悬疑",
+                "viewpoint":"沈砚","entry_state":"负伤被追","intended_exit_state":"被迫改道",
+                "reader_contract":{"reader_question":"他能否脱身？","visible_reward":"识破伏击",
+                    "character_choice":"主动进入险地","cost":"暴露行踪","net_change":"追兵锁定目标","next_pull":"死者为何现身"},
                 "constraint_lock":{"length":{"min":2800,"max":3800,"unit":"chinese_characters"},
                     "must_happen":[{"id":"dead-person","statement":"主角主动入险后死者现身"}],"must_not_happen":[],
-                    "exact_time_anchors":[],"stop_point":"死者现身时停笔","end_debt":"死者为何现身"},
-                "scenes":[{"scene_id":"SC001","ordinal":1,"viewpoint":"沈砚","location":"雨巷","entry_state":"负伤被追",
-                    "objective":"抵达接头点","opposition":"追兵封路","turn":"死者现身","exit_state":"被迫改道",
-                    "emotion_target":"压迫转惊疑","reader_effect":"认可选择并追问死者身份"}]}},
+                    "exact_time_anchors":[],"stop_point":"死者现身时停笔","end_debt":"死者为何现身"}},
+                "scene_script":{"scenes":[{"scene_id":"SC001","ordinal":1,"viewpoint":"沈砚","location":"雨巷","entry_state":"负伤被追",
+                    "objective":"抵达接头点","opposition":"追兵封路","turn":"死者现身","choice":"主动进入险地而非抛弃接头人",
+                    "consequence":"行踪暴露且追捕收紧","value_shift":"控制感从逃脱转为被迫面对真相",
+                    "information_change":"本应死亡的人仍然活着","exit_state":"被迫改道",
+                    "emotion_target":"压迫转惊疑","reader_effect":"认可选择并追问死者身份"}]}}},
             "reader_intent":{"reader_question":"他能否脱身？","visible_reward":"识破伏击","character_choice":"主动进入险地",
                 "cost":"暴露行踪","net_change":"追兵锁定目标","next_chapter_pull":"死者为何现身"},
             "expectation_refs":[],"idempotency_key":"plan-1","user_authorized":true

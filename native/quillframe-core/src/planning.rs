@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -82,7 +82,50 @@ impl ReaderContract {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
+pub struct StoryFoundation {
+    pub target_readers: String,
+    pub genre_promise: String,
+    pub core_emotion: String,
+    pub progression_fantasy: String,
+    pub payoff_cadence: String,
+    pub premise: String,
+    pub intended_end_state: String,
+    pub differentiators: Vec<String>,
+    pub non_negotiables: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct CharacterArcPlan {
+    pub character_id: String,
+    pub display_name: String,
+    pub narrative_role: String,
+    pub external_want: String,
+    pub internal_need: String,
+    pub pressure: String,
+    pub agency: String,
+    pub initial_state: String,
+    pub intended_change: String,
+    pub turning_points: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RelationshipArcPlan {
+    pub relationship_id: String,
+    pub participant_ids: Vec<String>,
+    pub initial_state: String,
+    pub pressure: String,
+    pub intended_change: String,
+    pub turning_points: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct BookPlan {
+    pub foundation: StoryFoundation,
+    pub character_arcs: Vec<CharacterArcPlan>,
+    pub relationship_arcs: Vec<RelationshipArcPlan>,
     pub reader_promise: String,
     pub protagonist_agency: String,
     pub central_conflict: String,
@@ -126,6 +169,10 @@ pub struct SceneObjective {
     pub objective: String,
     pub opposition: String,
     pub turn: String,
+    pub choice: String,
+    pub consequence: String,
+    pub value_shift: String,
+    pub information_change: String,
     pub exit_state: String,
     pub emotion_target: String,
     pub reader_effect: String,
@@ -198,8 +245,24 @@ impl ChapterConstraintLock {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ChapterPlan {
+    pub contract: ChapterContract,
+    pub scene_script: SceneScript,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ChapterContract {
+    pub chapter_function: String,
+    pub viewpoint: String,
+    pub entry_state: String,
+    pub intended_exit_state: String,
     pub reader_contract: ReaderContract,
     pub constraint_lock: ChapterConstraintLock,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SceneScript {
     pub scenes: Vec<SceneObjective>,
 }
 
@@ -224,11 +287,67 @@ impl PlanBody {
 
     fn validate(&self) -> CoreResult<()> {
         match self {
-            Self::Book(value) => require_texts([
-                &value.reader_promise,
-                &value.protagonist_agency,
-                &value.central_conflict,
-            ]),
+            Self::Book(value) => {
+                require_texts([
+                    &value.foundation.target_readers,
+                    &value.foundation.genre_promise,
+                    &value.foundation.core_emotion,
+                    &value.foundation.progression_fantasy,
+                    &value.foundation.payoff_cadence,
+                    &value.foundation.premise,
+                    &value.foundation.intended_end_state,
+                    &value.reader_promise,
+                    &value.protagonist_agency,
+                    &value.central_conflict,
+                ])?;
+                if value.character_arcs.is_empty() {
+                    return Err(CoreError::InvalidPlan(
+                        "book plan requires at least one character arc".into(),
+                    ));
+                }
+                let mut character_ids = std::collections::BTreeSet::new();
+                for character in &value.character_arcs {
+                    require_texts([
+                        &character.character_id,
+                        &character.display_name,
+                        &character.narrative_role,
+                        &character.external_want,
+                        &character.internal_need,
+                        &character.pressure,
+                        &character.agency,
+                        &character.initial_state,
+                        &character.intended_change,
+                    ])?;
+                    if !character_ids.insert(character.character_id.as_str()) {
+                        return Err(CoreError::InvalidPlan(
+                            "book plan character ids must be unique".into(),
+                        ));
+                    }
+                }
+                let mut relationship_ids = std::collections::BTreeSet::new();
+                for relationship in &value.relationship_arcs {
+                    require_texts([
+                        &relationship.relationship_id,
+                        &relationship.initial_state,
+                        &relationship.pressure,
+                        &relationship.intended_change,
+                    ])?;
+                    if !relationship_ids.insert(relationship.relationship_id.as_str())
+                        || relationship.participant_ids.len() != 2
+                        || relationship.participant_ids[0] == relationship.participant_ids[1]
+                        || relationship
+                            .participant_ids
+                            .iter()
+                            .any(|id| !character_ids.contains(id.as_str()))
+                    {
+                        return Err(CoreError::InvalidPlan(
+                            "relationship arcs require a unique id and two known participants"
+                                .into(),
+                        ));
+                    }
+                }
+                Ok(())
+            }
             Self::Volume(value) => require_texts([
                 &value.volume_promise,
                 &value.net_situation_change,
@@ -239,15 +358,25 @@ impl PlanBody {
                 require_texts([&value.loop_question, &value.release, &value.aftermath])
             }
             Self::Chapter(value) => {
-                value.reader_contract.validate()?;
-                value.constraint_lock.validate(&value.reader_contract)?;
-                if value.scenes.is_empty() {
+                require_texts([
+                    &value.contract.chapter_function,
+                    &value.contract.viewpoint,
+                    &value.contract.entry_state,
+                    &value.contract.intended_exit_state,
+                ])?;
+                value.contract.reader_contract.validate()?;
+                value
+                    .contract
+                    .constraint_lock
+                    .validate(&value.contract.reader_contract)?;
+                if value.scene_script.scenes.is_empty() {
                     return Err(CoreError::InvalidPlan(
                         "chapter plan requires at least one scene objective".into(),
                     ));
                 }
                 let mut expected = 1;
-                for scene in &value.scenes {
+                let mut scene_ids = BTreeSet::new();
+                for scene in &value.scene_script.scenes {
                     if scene.ordinal != expected {
                         return Err(CoreError::InvalidPlan(
                             "scene objectives must use contiguous ordinals".into(),
@@ -261,10 +390,19 @@ impl PlanBody {
                         &scene.objective,
                         &scene.opposition,
                         &scene.turn,
+                        &scene.choice,
+                        &scene.consequence,
+                        &scene.value_shift,
+                        &scene.information_change,
                         &scene.exit_state,
                         &scene.emotion_target,
                         &scene.reader_effect,
                     ])?;
+                    if !scene_ids.insert(scene.scene_id.as_str()) {
+                        return Err(CoreError::InvalidPlan(
+                            "scene objectives require unique scene ids".into(),
+                        ));
+                    }
                     expected += 1;
                 }
                 Ok(())
@@ -323,7 +461,7 @@ pub struct HierarchicalPlanLock {
 impl HierarchicalPlanLock {
     pub fn freeze(layers: Vec<FrozenPlanLayer>) -> CoreResult<Self> {
         let mut value = Self {
-            schema: "quillframe_hierarchical_plan_lock_v1".into(),
+            schema: "quillframe_hierarchical_plan_lock_v2".into(),
             layers,
             fingerprint: String::new(),
         };
@@ -360,8 +498,32 @@ impl HierarchicalPlanLock {
         }
     }
 
+    pub fn book_plan(&self) -> CoreResult<&BookPlan> {
+        self.validate()?;
+        match &self.layers[0].body {
+            PlanBody::Book(plan) => Ok(plan),
+            _ => unreachable!("validated plan lock starts with a book"),
+        }
+    }
+
+    pub fn volume_plan(&self) -> CoreResult<&VolumePlan> {
+        self.validate()?;
+        match &self.layers[1].body {
+            PlanBody::Volume(plan) => Ok(plan),
+            _ => unreachable!("validated plan lock contains a volume second"),
+        }
+    }
+
+    pub fn unit_plan(&self) -> CoreResult<&UnitPlan> {
+        self.validate()?;
+        match &self.layers[2].body {
+            PlanBody::Unit(plan) => Ok(plan),
+            _ => unreachable!("validated plan lock contains a unit third"),
+        }
+    }
+
     fn validate_fields(&self) -> CoreResult<()> {
-        if self.schema != "quillframe_hierarchical_plan_lock_v1" || self.layers.len() != 4 {
+        if self.schema != "quillframe_hierarchical_plan_lock_v2" || self.layers.len() != 4 {
             return Err(CoreError::InvalidPlan(
                 "hierarchical plan lock requires exactly book, volume, unit and chapter".into(),
             ));
@@ -475,7 +637,7 @@ impl PlanProposal {
             }
         }
         let mut value = Self {
-            schema: "quillframe_typed_plan_proposal_v1".into(),
+            schema: "quillframe_typed_plan_proposal_v2".into(),
             id: Uuid::new_v4(),
             mode,
             target,
@@ -702,6 +864,51 @@ pub(crate) fn fixture_hierarchical_plan_lock() -> HierarchicalPlanLock {
             node_id: "BOOK".into(),
             expected_active_version: 0,
             body: PlanBody::Book(BookPlan {
+                foundation: StoryFoundation {
+                    target_readers: "喜欢主动型主角与高压逃亡的读者".into(),
+                    genre_promise: "在封锁追捕中持续破局".into(),
+                    core_emotion: "压迫中的主动反击与互信建立".into(),
+                    progression_fantasy: "从逃亡者成长为规则的改写者".into(),
+                    payoff_cadence: "每个剧情单元至少兑现一次主动选择的收益".into(),
+                    premise: "一名被追捕者为保护同伴反向追查幕后契约".into(),
+                    intended_end_state: "主角公开契约真相并夺回选择权".into(),
+                    differentiators: vec!["逃亡与调查同步推进".into()],
+                    non_negotiables: vec!["主角保有关键选择与结算权".into()],
+                },
+                character_arcs: vec![
+                    CharacterArcPlan {
+                        character_id: "CHAR-PROTAGONIST".into(),
+                        display_name: "主角".into(),
+                        narrative_role: "主动破局者".into(),
+                        external_want: "带同伴逃出封锁".into(),
+                        internal_need: "学会承担信任带来的风险".into(),
+                        pressure: "追捕与内部背叛".into(),
+                        agency: "关键转向必须来自其选择".into(),
+                        initial_state: "只相信独自逃生".into(),
+                        intended_change: "能够建立同盟并共同破局".into(),
+                        turning_points: vec!["返身救人".into()],
+                    },
+                    CharacterArcPlan {
+                        character_id: "CHAR-COMPANION".into(),
+                        display_name: "同伴".into(),
+                        narrative_role: "信任压力与盟友".into(),
+                        external_want: "活着穿过封锁".into(),
+                        internal_need: "确认主角是否值得信任".into(),
+                        pressure: "被追兵隔离".into(),
+                        agency: "以是否交付线索改变局势".into(),
+                        initial_state: "对主角保持戒备".into(),
+                        intended_change: "与主角形成互信".into(),
+                        turning_points: vec!["在救援后交出线索".into()],
+                    },
+                ],
+                relationship_arcs: vec![RelationshipArcPlan {
+                    relationship_id: "REL-PROTAGONIST-COMPANION".into(),
+                    participant_ids: vec!["CHAR-PROTAGONIST".into(), "CHAR-COMPANION".into()],
+                    initial_state: "互相利用且彼此戒备".into(),
+                    pressure: "救援会暴露主角身份".into(),
+                    intended_change: "形成能够共同承担代价的互信".into(),
+                    turning_points: vec!["主角返身救人".into()],
+                }],
                 reader_promise: "主角以主动选择改变困局".into(),
                 protagonist_agency: "每次升级来自行动与代价".into(),
                 central_conflict: "追查真相与守护同伴冲突".into(),
@@ -793,42 +1000,54 @@ pub(crate) fn fixture_hierarchical_plan_lock() -> HierarchicalPlanLock {
 #[cfg(test)]
 fn chapter_body_fixture() -> PlanBody {
     PlanBody::Chapter(ChapterPlan {
-        reader_contract: ReaderContract {
-            reader_question: "他能否脱身？".into(),
-            visible_reward: "发现出口".into(),
-            character_choice: "返回救人".into(),
-            cost: "暴露身份".into(),
-            net_change: "同伴获救，追兵锁定他".into(),
-            next_pull: "追兵先一步封住出口".into(),
-        },
-        constraint_lock: ChapterConstraintLock {
-            length: LengthBand {
-                min: 2800,
-                max: 3800,
-                unit: LengthUnit::ChineseCharacters,
-            },
-            must_happen: vec![ConstraintClause {
-                id: "rescue".into(),
-                statement: "主角必须返身救出同伴".into(),
-            }],
-            must_not_happen: vec![],
-            exact_time_anchors: vec![],
-            stop_point: "追兵先一步封住出口时停笔".into(),
-            end_debt: "追兵先一步封住出口".into(),
-        },
-        scenes: vec![SceneObjective {
-            scene_id: "SC001".into(),
-            ordinal: 1,
+        contract: ChapterContract {
+            chapter_function: "让主角以有代价的选择赢得同伴信任".into(),
             viewpoint: "主角".into(),
-            location: "废弃车站".into(),
-            entry_state: "被追兵分隔".into(),
-            objective: "找到同伴".into(),
-            opposition: "出口被封".into(),
-            turn: "主角发现维修井".into(),
-            exit_state: "救出同伴但身份暴露".into(),
-            emotion_target: "先压迫，再因主动返身救人释放热血".into(),
-            reader_effect: "担心代价，同时认可主角选择".into(),
-        }],
+            entry_state: "主角与同伴被追兵分隔".into(),
+            intended_exit_state: "同伴获救，但主角身份暴露".into(),
+            reader_contract: ReaderContract {
+                reader_question: "他能否脱身？".into(),
+                visible_reward: "发现出口".into(),
+                character_choice: "返回救人".into(),
+                cost: "暴露身份".into(),
+                net_change: "同伴获救，追兵锁定他".into(),
+                next_pull: "追兵先一步封住出口".into(),
+            },
+            constraint_lock: ChapterConstraintLock {
+                length: LengthBand {
+                    min: 2800,
+                    max: 3800,
+                    unit: LengthUnit::ChineseCharacters,
+                },
+                must_happen: vec![ConstraintClause {
+                    id: "rescue".into(),
+                    statement: "主角必须返身救出同伴".into(),
+                }],
+                must_not_happen: vec![],
+                exact_time_anchors: vec![],
+                stop_point: "追兵先一步封住出口时停笔".into(),
+                end_debt: "追兵先一步封住出口".into(),
+            },
+        },
+        scene_script: SceneScript {
+            scenes: vec![SceneObjective {
+                scene_id: "SC001".into(),
+                ordinal: 1,
+                viewpoint: "主角".into(),
+                location: "废弃车站".into(),
+                entry_state: "被追兵分隔".into(),
+                objective: "找到同伴".into(),
+                opposition: "出口被封".into(),
+                turn: "主角发现维修井".into(),
+                choice: "放弃独自逃生并返回救人".into(),
+                consequence: "同伴获救，但追兵锁定主角身份".into(),
+                value_shift: "关系从戒备转向初步互信".into(),
+                information_change: "主角确认维修井可通向外侧".into(),
+                exit_state: "救出同伴但身份暴露".into(),
+                emotion_target: "先压迫，再因主动返身救人释放热血".into(),
+                reader_effect: "担心代价，同时认可主角选择".into(),
+            }],
+        },
     })
 }
 
@@ -902,11 +1121,35 @@ mod tests {
     }
 
     #[test]
+    fn chapter_scene_script_rejects_duplicate_scene_ids() {
+        let graph = StoryGraph::bootstrap("第一章").unwrap();
+        let mut body = chapter_body();
+        if let PlanBody::Chapter(chapter) = &mut body {
+            let mut duplicate = chapter.scene_script.scenes[0].clone();
+            duplicate.ordinal = 2;
+            chapter.scene_script.scenes.push(duplicate);
+        }
+        assert!(PlanProposal::create(
+            &graph,
+            PlanProposalInput {
+                mode: PlanMode::PlanChapter,
+                node_id: "CH001".into(),
+                expected_active_version: 0,
+                body,
+                assumptions: vec![],
+                open_questions: vec![],
+                dependency_fingerprints: BTreeMap::new(),
+            },
+        )
+        .is_err());
+    }
+
+    #[test]
     fn chapter_constraint_lock_rejects_drift_and_plan_lock_requires_four_layers() {
         let graph = StoryGraph::bootstrap("第一章").unwrap();
         let mut body = chapter_body();
         if let PlanBody::Chapter(chapter) = &mut body {
-            chapter.constraint_lock.end_debt = "另一个章尾承诺".into();
+            chapter.contract.constraint_lock.end_debt = "另一个章尾承诺".into();
         }
         assert!(PlanProposal::create(
             &graph,
@@ -925,5 +1168,44 @@ mod tests {
         let mut lock = fixture_hierarchical_plan_lock();
         lock.layers.remove(1);
         assert!(lock.validate().is_err());
+    }
+
+    #[test]
+    fn book_foundation_arcs_and_scene_causality_are_fingerprint_bound() {
+        let lock = fixture_hierarchical_plan_lock();
+        assert_eq!(lock.book_plan().unwrap().character_arcs.len(), 2);
+        assert_eq!(lock.volume_plan().unwrap().relationship_movements.len(), 1);
+        assert_eq!(lock.unit_plan().unwrap().rewards.len(), 1);
+        assert_eq!(
+            lock.chapter_plan("CH001")
+                .unwrap()
+                .scene_script
+                .scenes
+                .len(),
+            1
+        );
+
+        let mut book = lock.book_plan().unwrap().clone();
+        book.character_arcs[1].character_id = book.character_arcs[0].character_id.clone();
+        assert!(PlanBody::Book(book).validate().is_err());
+
+        let graph = StoryGraph::bootstrap("第一章").unwrap();
+        let mut proposal = PlanProposal::create(
+            &graph,
+            PlanProposalInput {
+                mode: PlanMode::PlanChapter,
+                node_id: "CH001".into(),
+                expected_active_version: 0,
+                body: chapter_body(),
+                assumptions: vec![],
+                open_questions: vec![],
+                dependency_fingerprints: BTreeMap::new(),
+            },
+        )
+        .unwrap();
+        if let PlanBody::Chapter(chapter) = &mut proposal.body {
+            chapter.scene_script.scenes[0].value_shift = "篡改后的价值变化".into();
+        }
+        assert!(proposal.validate_fingerprint().is_err());
     }
 }

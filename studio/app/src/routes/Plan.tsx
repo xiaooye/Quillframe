@@ -8,8 +8,15 @@ import { AuthorityLabel, CoreRequirementNotice } from "../authoring/AuthoringUI"
 import { parsePlanInspection, parsePlanSave, type PlanItem, type ReaderIntent } from "../authoring/contracts";
 
 const planTemplate = (target: string) => target === "book"
-  ? JSON.stringify({ reader_promise: "", protagonist_agency: "", central_conflict: "", progression: [], endgame_reserve: [], anti_exhaustion_limits: [] }, null, 2)
-  : JSON.stringify({ scenes: [{ scene_id: "SC001", ordinal: 1, viewpoint: "", location: "", entry_state: "", objective: "", opposition: "", turn: "", exit_state: "", emotion_target: "", reader_effect: "" }] }, null, 2);
+  ? JSON.stringify({
+    foundation: { target_readers: "", genre_promise: "", core_emotion: "", progression_fantasy: "", payoff_cadence: "", premise: "", intended_end_state: "", differentiators: [], non_negotiables: [] },
+    character_arcs: [], relationship_arcs: [], reader_promise: "", protagonist_agency: "", central_conflict: "", progression: [], endgame_reserve: [], anti_exhaustion_limits: [],
+  }, null, 2)
+  : JSON.stringify({
+    chapter_function: "", viewpoint: "", entry_state: "", intended_exit_state: "",
+    constraint_lock: { length: { min: 2800, max: 3800, unit: "chinese_characters" }, must_happen: [], must_not_happen: [], exact_time_anchors: [], stop_point: "", end_debt: "" },
+    scene_script: { scenes: [{ scene_id: "SC001", ordinal: 1, viewpoint: "", location: "", entry_state: "", objective: "", opposition: "", turn: "", choice: "", consequence: "", value_shift: "", information_change: "", exit_state: "", emotion_target: "", reader_effect: "" }] },
+  }, null, 2);
 
 function typedPlanBody(target: string, content: string, readerIntent: ReaderIntent): Record<string, unknown> {
   let parsed: unknown;
@@ -18,11 +25,16 @@ function typedPlanBody(target: string, content: string, readerIntent: ReaderInte
   if (target === "book") return { kind: "book", body: parsed };
   const required = ["reader_question", "visible_reward", "character_choice", "cost", "net_change", "next_chapter_pull"] as const;
   if (required.some((key) => !readerIntent[key]?.trim())) throw new Error("chapter_reader_intent_is_incomplete");
-  return { kind: "chapter", body: { reader_contract: {
-    reader_question: readerIntent.reader_question, visible_reward: readerIntent.visible_reward,
-    character_choice: readerIntent.character_choice, cost: readerIntent.cost, net_change: readerIntent.net_change,
-    next_pull: readerIntent.next_chapter_pull,
-  }, scenes: (parsed as { scenes?: unknown }).scenes } };
+  const chapter = parsed as Record<string, unknown>;
+  return { kind: "chapter", body: { contract: {
+    chapter_function: chapter.chapter_function, viewpoint: chapter.viewpoint, entry_state: chapter.entry_state,
+    intended_exit_state: chapter.intended_exit_state, constraint_lock: chapter.constraint_lock,
+    reader_contract: {
+      reader_question: readerIntent.reader_question, visible_reward: readerIntent.visible_reward,
+      character_choice: readerIntent.character_choice, cost: readerIntent.cost, net_change: readerIntent.net_change,
+      next_pull: readerIntent.next_chapter_pull,
+    },
+  }, scene_script: chapter.scene_script } };
 }
 
 export default function Plan() {

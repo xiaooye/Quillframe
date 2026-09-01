@@ -25,6 +25,16 @@ project_contract:
   target_length: ultralong_over_5000000_chinese_characters
   durability_test_policy: real_multi_chapter_acceptance_without_synthetic_5000000_character_run
 
+planning:
+  contract: ai-native-longform-v2
+  hierarchy_source: fingerprint_bound_active_plan_chain
+  book_assets: [story_foundation, character_arcs, relationship_arcs]
+  chapter_assets: [chapter_contract, scene_script]
+  scene_brief_source: frozen_scene_script_only
+  distant_plan_policy: coarse_until_rolling_refinement
+  literary_judgment_owner: model
+  deterministic_boundary_owner: rust_core
+
 production:
   task_modes: [DRAFT, REVISE]
   pipeline:

@@ -63,9 +63,10 @@ pub use model::{
     ProtocolFamily, SecretStore, ServiceEndpoint,
 };
 pub use planning::{
-    ActivePlan, AuthorActivation, BookPlan, ChapterConstraintLock, ChapterPlan, ConstraintClause,
-    FrozenPlanLayer, HierarchicalPlanLock, LengthBand, LengthUnit, PlanBody, PlanLedger, PlanMode,
-    PlanProposal, PlanProposalInput, PlanStatus, PlanTarget, ReaderContract, SceneObjective,
+    ActivePlan, AuthorActivation, BookPlan, ChapterConstraintLock, ChapterContract, ChapterPlan,
+    CharacterArcPlan, ConstraintClause, FrozenPlanLayer, HierarchicalPlanLock, LengthBand,
+    LengthUnit, PlanBody, PlanLedger, PlanMode, PlanProposal, PlanProposalInput, PlanStatus,
+    PlanTarget, ReaderContract, RelationshipArcPlan, SceneObjective, SceneScript, StoryFoundation,
     UnitPlan, VolumePlan,
 };
 pub use production::{
