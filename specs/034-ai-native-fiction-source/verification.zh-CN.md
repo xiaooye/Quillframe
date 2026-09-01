@@ -65,4 +65,4 @@
 
 真实小说调用前，授权包必须列出精确模型与调用图、匿名作者决策规则，并明确每个正面样本的权利或声明完全无正文样本。已执行的授权包为 source-free，且作者不设置 token 或 provider 费用上限：不使用 Author Voice Sheet、正文锚点或 accepted prose tail。用户把范围缩到同场景严格两次 Writer 调用，不调用模型 Reviewer。
 
-授权包已执行，当前等待作者匿名选择。状态只能是 `engineering_verified / canary_awaiting_author_decision`，不能是 `literary_success`。
+授权包已执行并记录作者决定：treatment 相对更好，但两份都被否决。状态只能是 `engineering_verified / canary_failed_author_rejection`，不能是 `literary_success`。

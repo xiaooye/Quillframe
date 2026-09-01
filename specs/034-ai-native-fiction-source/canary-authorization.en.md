@@ -1,6 +1,6 @@
 # Chinese fiction canary authorization packet
 
-2026-08-31 · one source-free A/B authorized and dispatched · author decision pending.
+2026-08-31 · one source-free A/B completed · treatment preferred but both arms rejected.
 
 ## Purpose and source-free AI boundary
 
@@ -42,3 +42,5 @@ This plan ingests no third-party prose and requires no user prose sample, so the
 The user explicitly authorized one sample A/B on 2026-08-31. Exactly two Writer calls completed; the first checkpoint was reused after relay validation stopped, so it was not dispatched twice. The two outputs contain 3,720 and 2,560 Chinese characters in blind order. Recorded usage totals 27,936 input tokens, 6,894 output tokens and 1,393 reasoning-output tokens. No provider monetary-price receipt was exposed.
 
 Both Codex CLI 0.151 calls returned exit code 0, one exact final message and usage, but also emitted sanitized error-type lifecycle items that the v3 relay preserved as `forbidden_cli_item` / `invalid_cli_item`. The blind prose is available for author review; clean transport validation is not claimed. No Reviewer or further model call was made.
+
+The author preferred blind arm B, which the sealed mapping identifies as the AI-native treatment, but explicitly rejected both candidates. Both relied too heavily on short sentences, short paragraphs and unattributed dialogue; neither supplied enough scene continuity, speaker identification, expression, embodied reaction or lateral character evidence. The result is `treatment_preferred_but_both_rejected`, not an acceptance or literary success. No additional model call or Framework promotion is authorized by this decision.

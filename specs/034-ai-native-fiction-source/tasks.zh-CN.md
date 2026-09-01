@@ -47,6 +47,7 @@
 - [x] 用户明确要求启动一组 source-free A/B；不要求 token 或 provider 费用上限。
 - [x] 当前 canary 已明确为 source-free，不使用正面声线样本；未来声线学习 canary 必须另走权利门。
 - [x] 同场景中文 arms 严格只生成两份，并以随机匿名顺序交给作者，不调用模型 Reviewer。
+- [x] 已记录作者决定：B／treatment 相对更好，但两份都因叙事脱水与对白归属不清被否决。
 - [ ] 作者接受至少一个 canary arm。
 
 这些真实调用项保持 pending，不能由工程完成暗示。

@@ -1,6 +1,6 @@
 # 中文小说 Canary 授权单
 
-2026-08-31 · 已授权并派发一组 source-free A/B · 等待作者选择。
+2026-08-31 · 一组 source-free A/B 已完成 · treatment 相对更好，但两份都被作者否决。
 
 ## 目的与纯 AI 素材边界
 
@@ -42,3 +42,5 @@ Canary 只回答一个小问题：相对普通 Writer 基线，新的近生成�
 用户已于 2026-08-31 明确授权一个 sample 的 A/B。两次 Writer 调用均已完成；第一次 relay 校验停止后复用了 checkpoint，没有重复派发。匿名顺序中的两份输出分别为 3,720 与 2,560 个中文字符。实际记录合计为 27,936 input tokens、6,894 output tokens 与 1,393 reasoning-output tokens；provider 没有暴露货币价格回执。
 
 两次 Codex CLI 0.151 调用都以退出码 0 返回一份精确 final message 与 usage，但同时产生了经脱敏保存的 error-type lifecycle items，v3 relay 将其记录为 `forbidden_cli_item` / `invalid_cli_item`。正文可以交给作者盲评，但不能声称 transport validation 完全干净。没有运行 Reviewer 或任何额外模型调用。
+
+作者更偏好匿名 B；密封映射表明 B 是 AI-native treatment，但作者明确否决两份候选。两份正文都过度依赖短句、短段和缺少归属的对白，没有提供足够的场景连续性、说话人定位、神态、身体反应和侧面人物证据。结果记为 `treatment_preferred_but_both_rejected`，不是接受或文学成功；本次决定不授权额外模型调用或 Framework 提升。

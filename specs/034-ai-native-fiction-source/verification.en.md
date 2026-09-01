@@ -65,4 +65,4 @@ Historical runs remain frozen and readable. Project-open may apply only ordered,
 
 Before live fiction calls, the authorization packet must name the exact model and call graph, the anonymous author decision rule, and either the rights of every positive sample or an exact source-free declaration. The executed packet was source-free and had no author-set token or provider-cost ceiling: it used no Author Voice Sheet, prose anchor or accepted prose tail. The user narrowed it to exactly two same-scene Writer calls and no model Reviewer.
 
-The packet is now executed and awaiting the author's anonymous A/B decision. Status is `engineering_verified / canary_awaiting_author_decision`, never `literary_success`.
+The packet is executed and the author decision is recorded: treatment was relatively preferred, but both arms were rejected. Status is `engineering_verified / canary_failed_author_rejection`, never `literary_success`.
