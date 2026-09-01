@@ -141,6 +141,22 @@ Corpus Scout 与 discovery runtime 可以准备和规范化 candidate evidence�
 
 Bounded analysis 可以同时减少 context 浪费、模仿压力、source leakage 和 confirmation bias。
 
+旧版 `quillframe_corpus_three_window_benchmark_v1` 匿名公开通用语料库会机械地冻结和限制这个“最小充分范围”：
+
+- 由用户确认精确 120 部不同逻辑作品的清单；
+- 每部作品只绑定一个带指纹的版本；
+- 每部作品恰好读取开篇、中段、收束三个窗口；
+- 每个窗口最多 4,000 个 Unicode 字符；
+- 原文只临时物化，不进入持久账本或公开发布包。
+
+这是旧版统计发布范围合同，不代表三个片段足以完整刻画一部作品，也不是文风学习协议。来源漂移或被移除以后，依赖它的逐作品证据和聚合证据必须失效。
+
+旧版提案路径使用私有元数据去重版本家族，并把身份不明、偏短或元数据冲突项目送入本地关注路由。这类诊断不建立文学质量，也不是 Style Atlas 的通用排除规则。对文风学习而言，权利无效或来源身份未解析只阻断受影响的来源证据；语言不一致会缩窄语言专属结论；不完整或连载材料可以支持局部行文／场景结论，但不能支持未经证实的整部作品结论；重启或拼接信号要求使用边界感知窗口或更窄结论。用户确认所声明的权利与范围、唯一研究配置（`general` 或 `adult_explicit`）、精确 120 部来源池成员和 proposal fingerprint。跨配置混合仍被禁止。
+
+三个固定窗口的上限定义的是旧版统计发布，不是行文文风学习深度。在 `quillframe_corpus_style_learning_v1` 目标中，精确 120 部作品构成可寻址证据池，不是任务队列或逐本文学检查表。场景／文风分类、证据缺口、下一份最小充分样本和跨作品收敛由 AI 负责；Python 运行器只负责来源身份／版本绑定、最小有界物化、清洁、预算与回执，模式和泄漏关卡继续作为确定性发布控制，而不是文学判断。每次原文调用仍然只临时物化片段。全池暴露、CPU／内存基准和更多样本都不会自动形成完成或发布权限。登记契约与合成运行器测试现已证明动态激活所请求证据、如实保留未使用池成员，并可在池未耗尽时提前收敛。这项工程结果不等于 V5 已运行或已经学会文风，也不表示盲测、独立泄漏复核或发布已经通过。
+
+内容配置与文风维度彼此正交。身材、解剖、服饰和外貌——包括单独出现的“巨乳”——都是正当 `body_appearance` 观察，不足以成为成人配置的信号。只有真实上下文建立的露骨内容证据才进入独立治理。
+
 ---
 
 ## 07 · Generalization 必须主动找反例
@@ -242,14 +258,14 @@ Derived evidence 必须保持足够可追踪，才能完成这类 dependency rep
 
 ## 12 · Autonomous Behavior Boundary
 
-Corpus automation 可以：
+AI 研究规划器可以：
 
-- 检测 evidence gap；
-- 准备 discovery request；
-- 规范化真实返回的 source metadata；
-- 执行 deterministic rights / storage check；
-- 把 bounded evidence 打包给 semantic analysis；
-- 记录 missing capability 或 blocked rights state。
+- 从有界证据判断场景功能与行文文风轴；
+- 发现不确定性、矛盾和跨作品证据缺口；
+- 请求下一份最小充分来源／窗口；
+- 提出更窄的证据范围与跨作品收敛状态。
+
+确定性运行时可以规范化真实返回的来源元数据、绑定身份与版本、执行已声明权利／存储边界、只物化所请求的有界证据、运行清洁／泄漏／模式检查，并记录预算和回执。确定性关键词、标点或分值启发式不得变成文学分类、缺口分析或收敛权威。
 
 它不能：
 
@@ -260,13 +276,32 @@ Corpus automation 可以：
 
 ---
 
-## 13 · 相关契约
+## 13 · 匿名公开发布边界
+
+公开发布包是无原文投影，不是把私有账本稍微删减后的副本。封闭模式只允许随机标识、数值指标、八个维度的受控写作特征、跨作品机制标签、适用边界、反例状态、失败模式和完整性指纹。
+
+路径、文件名、书名、创作者、原文、引文、近似复述、可以还原来源的摘要、人物、设定和任意扩展字段都被禁止。发布前还必须把候选公开字符串与私有来源身份、采样原文进行泄漏比对；只通过模式校验并不充分。
+
+发布候选必须先产生精确预览令牌与清单指纹，调用方再次确认两者以后才允许发布。预览、验证报告、空登记表或语义结果都不等于发布。旧版统计登记表在固定 120 部协议通过全部门槛以前保持为空；Style Atlas 候选走独立的无来源、证据充分路径，不会因为处理完 120 部就获得权限。合成契约／运行器证据只证明动态调度与提前停止机制，不提供真实 V5、文风学习、盲测、独立泄漏复核或发布证据。
+
+---
+
+## 14 · 许可证与法律边界
+
+`corpus/general/` 中由仓库权利人拥有的公开派生制品，继承仓库的 [Quillframe 专有源码可见许可证](../LICENSE)。公开仓库可见性不等于采用宽松数据许可，也不会为第三方来源重新授权。
+
+抽象、匿名和非商业目的都是风险控制措施，不会自动形成法律结论。权利门验证已声明元数据与存储目的；发布验证器执行仓库的封闭模式和泄漏政策。当公开权利仍有疑问时，两者都不能代替针对具体来源的法律审查。
+
+---
+
+## 15 · 相关契约
 
 - [语料智能](README.zh-CN.md)：端到端 evidence pipeline。
 - [Corpus Ingest Protocol](CORPUS_INGEST_PROTOCOL.zh-CN.md)：bounded ingestion mechanics。
 - [`rights_gate.py`](rights_gate.py)：deterministic declared-rights / storage validator。
 - [`discovery_runtime.py`](discovery_runtime.py)：typed discovery runtime。
 - [Corpus Benchmarks](benchmarks/README.zh-CN.md)：cross-work mechanism evidence。
+- [匿名公开通用语料库](general/README.zh-CN.md)：发布模式、空登记表和许可证边界。
 - [自适应学习](../docs/adaptive-learning.zh-CN.md)：learning scope 与 hypothesis。
 
 **好的 Corpus 系统会保存足够的证据让分析、审计和 rollback 成立，但绝不会让“拥有来源”变成绕过 rights、authority 或 craft reasoning 的捷径。**

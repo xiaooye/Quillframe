@@ -17,6 +17,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+try:
+    from .author_objective_gate import validate_objective_assessments
+except ImportError:  # Direct script execution.
+    from author_objective_gate import validate_objective_assessments
+
 ROOT = Path(__file__).resolve().parents[1]
 SEM = ROOT / "harness" / "semantic_workers"
 
@@ -145,7 +150,10 @@ def _semantic_gate(raw: Any, *, gate: str, candidate: str, subject_id: str,
 
     blockers: list[dict[str, Any]] = []
     dimensions: dict[str, str] | None = None
+    objective_summary: dict[str, Any] | None = None
     if gate == "self_audit":
+        if "author_objectives" in payload:
+            objective_summary = validate_objective_assessments(payload.get("author_objectives"), judgment)
         raw_dimensions = judgment.get("dimensions")
         if not isinstance(raw_dimensions, dict):
             raise ValueError("self_audit dimensions must be object")
@@ -183,7 +191,7 @@ def _semantic_gate(raw: Any, *, gate: str, candidate: str, subject_id: str,
         if derived == "fail" and not blockers:
             raise ValueError("self_audit fail requires at least one blocking finding")
 
-    return {
+    gate_result = {
         "gate": gate,
         "status": derived,
         "contract_id": expected,
@@ -193,6 +201,13 @@ def _semantic_gate(raw: Any, *, gate: str, candidate: str, subject_id: str,
         "blocking_findings": blockers,
         "dimensions": dimensions,
     }
+    if objective_summary is not None:
+        gate_result.update({
+            "author_objective_status": objective_summary["status"],
+            "author_objectives_fingerprint": objective_summary["objectives_fingerprint"],
+            "objective_assessments": objective_summary["assessments"],
+        })
+    return gate_result
 
 
 def _continuity_gate(raw: Any, *, candidate: str) -> dict[str, Any]:
@@ -358,6 +373,12 @@ def _evaluate(payload: Any, *, binding_validator: JobBindingValidator) -> dict[s
         },
         "model_execution": False,
     }
+    if "author_objective_status" in self_audit:
+        receipt.update({
+            "author_objective_status": self_audit["author_objective_status"],
+            "author_objectives_fingerprint": self_audit["author_objectives_fingerprint"],
+            "objective_assessments": self_audit["objective_assessments"],
+        })
     receipt["receipt_fingerprint"] = _fp(_receipt_payload(receipt))
     return receipt
 
@@ -424,6 +445,15 @@ def validate_qualification_receipt(
             errors.append("qualification failed_gates contradict gate statuses")
         if blockers != by_gate["self_audit"].get("blocking_findings", []):
             errors.append("qualification blocking_findings contradict self_audit")
+        if "author_objective_status" in by_gate["self_audit"]:
+            if receipt.get("author_objective_status") != by_gate["self_audit"].get("author_objective_status"):
+                errors.append("qualification author_objective_status contradicts self_audit")
+            if receipt.get("author_objectives_fingerprint") != by_gate["self_audit"].get("author_objectives_fingerprint"):
+                errors.append("qualification author_objectives_fingerprint contradicts self_audit")
+            if receipt.get("objective_assessments") != by_gate["self_audit"].get("objective_assessments"):
+                errors.append("qualification objective_assessments contradict self_audit")
+        elif any(field in receipt for field in ("author_objective_status", "author_objectives_fingerprint", "objective_assessments")):
+            errors.append("qualification adds author-objective fields absent from its self-audit binding")
         for name in ("reader_engagement", "continuity", "repair_preservation"):
             if receipt.get(name + "_status") != by_gate[name].get("status"):
                 errors.append(f"qualification {name}_status contradicts gate")
@@ -433,6 +463,8 @@ def validate_qualification_receipt(
     for field in ("surface_audit_status", "regression_audit_status", "character_or_ownership_status", "natural_realization_status", "cluster_audit_status", "reader_engagement_status", "continuity_status", "repair_preservation_status"):
         if receipt.get(field) not in {"pass", "fail", "pending", "insufficient_evidence", "not_applicable"}:
             errors.append(f"qualification {field} invalid")
+    if "author_objective_status" in receipt and receipt.get("author_objective_status") not in {"pass", "fail", "pending"}:
+        errors.append("qualification author_objective_status invalid")
     if receipt.get("repair_target_status") not in {"improved","unchanged","worse","insufficient_evidence","not_applicable"}: errors.append("qualification repair_target_status invalid")
     if receipt.get("objective_preservation_status") not in {"preserved","degraded","materially_degraded","insufficient_evidence","not_applicable"}: errors.append("qualification objective_preservation_status invalid")
     if receipt.get("repair_reader_value") not in {"improved","unchanged","degraded","insufficient_evidence","not_applicable"}: errors.append("qualification repair_reader_value invalid")

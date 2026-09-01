@@ -40,11 +40,22 @@ PROJECT_REQUIRED = {
     "learning.feedback.observe", "learning.feedback.get", "learning.feedback.list", "learning.feedback.execute", "learning.feedback.resume",
     "learning.preference.list", "learning.preference.get", "learning.preference.review", "learning.preference.activate", "learning.preference.deactivate",
 }
+HOSTED_CORPUS = {
+    "corpus.selection.propose", "corpus.selection.refresh", "corpus.selection.confirm",
+    "corpus.study.start", "corpus.study.status", "corpus.study.resume", "corpus.study.cancel",
+    "corpus.public.preview", "corpus.public.validate", "corpus.public.release",
+    "corpus.public.list", "corpus.public.get",
+}
+HOSTED_USER_TASTE = {
+    "learning.auto_activation_policy.get", "learning.auto_activation_policy.set",
+    "learning.user_taste.list", "learning.user_taste.get", "learning.user_taste.pause",
+    "learning.user_taste.withdraw",
+}
 PROJECT_NULL = {
     "bridge.describe", "database.doctor", "project.list", "author.run.events", "model.service.add",
     "model.service.list", "model.service.get", "model.service.discover", "model.service.test",
     "model.service.token.replace", "model.service.token.remove", "model.service.delete", "model.capabilities",
-}
+} | HOSTED_CORPUS | HOSTED_USER_TASTE
 _nonce_lock = threading.Lock()
 _nonce_records: dict[str, tuple[str, str, str | None, int, int]] = {}
 _active_clock: Callable[[], int] = lambda: int(time.time() * 1000)

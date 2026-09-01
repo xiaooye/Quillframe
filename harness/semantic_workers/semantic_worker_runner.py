@@ -12,8 +12,17 @@ import argparse, json, os, re, shlex, shutil, subprocess, sys
 from pathlib import Path
 from typing import Any
 
-from peer_chat_relay import validate_packet, validate_peer_result
-from semantic_worker_router import load_json, validate_dispatchable_job, validate_result, worker_job_view
+try:  # Package import used by Core/CLI adapters.
+    from .peer_chat_relay import validate_packet, validate_peer_result
+    from .semantic_worker_router import (
+        load_json,
+        validate_dispatchable_job,
+        validate_result,
+        worker_job_view,
+    )
+except ImportError:  # Direct script execution keeps the historical entrypoint.
+    from peer_chat_relay import validate_packet, validate_peer_result
+    from semantic_worker_router import load_json, validate_dispatchable_job, validate_result, worker_job_view
 
 
 _SAFE_REFERENCE_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,159}\Z")
@@ -62,7 +71,7 @@ def model_api_command() -> tuple[str | None, str | None]:
     return shlex.join([sys.executable, str(adapter)]), "model_api"
 
 
-def local_command(*, packet_only: bool = False) -> tuple[str | None, str | None]:
+def local_command(*, packet_only: bool = False, timeout: int | None = None) -> tuple[str | None, str | None]:
     if os.getenv("QUILLFRAME_DISABLE_LOCAL_AGENT_AUTO", "").lower() in {"1", "true", "yes"}:
         return None, None
     requested = os.getenv("QUILLFRAME_LOCAL_AGENT_PROVIDER", "auto").strip().lower() or "auto"
@@ -80,23 +89,30 @@ def local_command(*, packet_only: bool = False) -> tuple[str | None, str | None]
     adapter = Path(__file__).resolve().parent / "adapters" / "local_agent_adapter.py"
     if not adapter.exists():
         return None, None
-    args = [sys.executable, str(adapter), "--provider", selected]
+    args = [sys.executable, "-X", "utf8", str(adapter), "--provider", selected]
     if packet_only:
         args.append("--packet-only")
+    if timeout is not None:
+        if isinstance(timeout, bool) or not isinstance(timeout, int) or timeout < 1:
+            return None, None
+        # Leave a small outer-process grace period so the adapter can return a
+        # typed provider_timeout instead of being killed by this runner first.
+        inner_timeout = max(1, timeout - min(5, max(0, timeout - 1)))
+        args.extend(("--timeout", str(inner_timeout)))
     return shlex.join(args), f"local_{selected}_cli"
 
 
-def resolve(explicit: str | None, *, packet_only: bool = False) -> tuple[str | None, str | None]:
+def resolve(explicit: str | None, *, packet_only: bool = False, timeout: int | None = None) -> tuple[str | None, str | None]:
     if explicit:
         return explicit, "cli"
     if os.getenv("QUILLFRAME_SEMANTIC_WORKER_CMD"):
         return os.environ["QUILLFRAME_SEMANTIC_WORKER_CMD"], "environment"
     if packet_only:
-        return local_command(packet_only=True)
+        return local_command(packet_only=True, timeout=timeout)
     cmd, src = model_api_command()
     if cmd:
         return cmd, src
-    cmd, src = local_command()
+    cmd, src = local_command(timeout=timeout)
     if cmd:
         return cmd, src
     return None, None
@@ -133,6 +149,8 @@ def invoke(job: dict[str, Any], cmd: str, timeout: int, *, source: str | None = 
             argv,
             input=json.dumps(worker_job_view(job), ensure_ascii=False),
             text=True,
+            encoding="utf-8",
+            errors="strict",
             capture_output=True,
             timeout=timeout,
             check=False,
@@ -333,7 +351,7 @@ def main(argv: list[str] | None = None) -> int:
     c = sub.add_parser("capabilities"); c.add_argument("--adapter-command")
     r = sub.add_parser("run"); r.add_argument("--jobs", required=True); r.add_argument("--output"); r.add_argument("--adapter-command"); r.add_argument("--timeout", type=int, default=180); r.add_argument("--require-complete", action="store_true")
     f = sub.add_parser("run-frozen-packet"); f.add_argument("--packet"); f.add_argument("--output"); f.add_argument("--adapter-command"); f.add_argument("--timeout", type=int, default=180)
-    args = p.parse_args(argv); packet_only = args.cmd == "run-frozen-packet"; cmd, src = resolve(getattr(args, "adapter_command", None), packet_only=packet_only)
+    args = p.parse_args(argv); packet_only = args.cmd == "run-frozen-packet"; cmd, src = resolve(getattr(args, "adapter_command", None), packet_only=packet_only, timeout=getattr(args, "timeout", None))
     if args.cmd == "capabilities":
         dump(capabilities(cmd, src)); return 0
     if packet_only:

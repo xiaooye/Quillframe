@@ -1,0 +1,619 @@
+{
+  "schema": "quillframe_model_contract_registry_v1",
+  "version": "9",
+  "principle": "Production-loop semantic artifacts stay thin. Models decide whether feedback is learnable, interpret causal scene state, preserve current objectives and choose repair strategy; machines consume only the small fields needed for authority-safe persistence or routing. Private character state may drive semantic decisions but is not prose payload, rejected repair trajectories do not become the fresh Writer objective, and this pack does not duplicate the Blind Reader.",
+  "contracts": {
+    "learning.preference_interpret": {
+      "kind": "artifact_audit",
+      "purpose": "Judge whether a bounded user/authorized-human feedback candidate contains learnable evidence; when it does, interpret the narrowest evidence-backed preference/repair hypothesis and relationship to existing hypotheses without granting durable preference authority.",
+      "forbidden_input_keys": [
+        "user_biography",
+        "private_profile",
+        "hidden_memory",
+        "framework_promotion_target",
+        "expected_scope",
+        "expected_capture_decision",
+        "whole_conversation"
+      ],
+      "input_contract": {
+        "type": "object",
+        "required": [
+          "feedback_ref",
+          "feedback_text",
+          "current_task"
+        ],
+        "properties": {
+          "feedback_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "feedback_text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 12000
+          },
+          "current_task": {
+            "type": "object"
+          },
+          "target": {
+            "type": "object"
+          },
+          "project_profile": {
+            "type": "object"
+          },
+          "active_author_model": {
+            "type": "object"
+          },
+          "hypothesis_index": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "maxItems": 64
+          },
+          "candidate_excerpt": {
+            "type": "string",
+            "maxLength": 12000
+          }
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "First decide whether the supplied turn actually contains semantic feedback about an existing output, behavior, workflow, preference or correction. Operational commands, acknowledgements, ordinary factual questions and silence are not learning evidence merely because they are user messages.",
+        "Return capture_decision=skip when the evidence is too weak or non-evaluative. A skip must not invent scope, mechanism, preference statement or hypothesis relation.",
+        "For capture, treat the user's supplied feedback as primary evidence. Separate the immediately binding current instruction from any future learning candidate and choose the narrowest plausible scope: one_off before project before user_taste before general_craft unless the words support broader scope.",
+        "A user's universal claim does not by itself establish General Craft. It may be recorded as evidence/candidate only; General Craft promotion remains a separate research/counterexample/eval/authority process.",
+        "Compare only against the supplied compact hypothesis_index. Semantically choose create, strengthen, contest, supersede or split; do not merge because wording is superficially similar and do not manufacture a target ID.",
+        "A plain acceptance is low signal. Use reasoned_acceptance only when the user's acceptance identifies a meaningful reason/mechanism or comparison; Canon acceptance authority is outside this contract.",
+        "For rejection, preserve the rejection mechanism and target reference/fingerprint but do not treat rejected prose as a positive exemplar.",
+        "Preserve applicability, exceptions, uncertainty and temporal/context boundaries. This result is evidence only and grants no Project Profile, user-taste, Framework or Canon write authority."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": [
+          "capture_decision",
+          "skip_reason",
+          "confidence"
+        ],
+        "properties": {
+          "capture_decision": {
+            "enum": [
+              "capture",
+              "skip"
+            ]
+          },
+          "skip_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scope_candidate": {
+            "enum": [
+              "one_off",
+              "project",
+              "user_taste",
+              "general_craft"
+            ]
+          },
+          "dimension": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mechanism": {
+            "type": "string",
+            "minLength": 1
+          },
+          "statement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "observed_problem": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "polarity": {
+            "enum": [
+              "positive",
+              "negative",
+              "mixed"
+            ]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "evidence_source": {
+            "enum": [
+              "explicit_rule",
+              "user_edit",
+              "rejection",
+              "reasoned_acceptance",
+              "comparison",
+              "repeated_pattern",
+              "correction",
+              "human_review"
+            ]
+          },
+          "desired_behavior": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "avoid_behavior": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "exceptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "applicability": {
+            "type": "object"
+          },
+          "hypothesis_action": {
+            "enum": [
+              "create",
+              "strengthen",
+              "contest",
+              "supersede",
+              "split"
+            ]
+          },
+          "target_hypothesis_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contradicts_hypothesis_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "preference_observation_proposal"
+      },
+      "independent_gate": false
+    },
+    "scene.realization_project": {
+      "kind": "artifact_audit",
+      "purpose": "Convert private character/action evidence and resolved scene trajectory into compact writer-safe causal constraints that preserve consequential choices and observable reactions without prescribing paragraph form, serializing Character Sheets or replacing them with a Realization Sheet. When explicitly supplied, use current planning evidence to select a compact set of optional craft methods; this private selection does not change the resolved story or its writer-safe projection.",
+      "input_contract": {
+        "type": "object",
+        "required": [
+          "scene_id",
+          "resolved_trajectory",
+          "character_action_evidence",
+          "pov_boundary"
+        ],
+        "properties": {
+          "scene_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "resolved_trajectory": {
+            "type": "object"
+          },
+          "character_action_evidence": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pov_boundary": {
+            "type": "object"
+          },
+          "relationship_context": {
+            "type": "object"
+          },
+          "task_context": {
+            "type": "object"
+          },
+          "project_profile": {
+            "type": "object"
+          },
+          "craft_catalog": {
+            "type": "object",
+            "required": [
+              "snapshot_fingerprint",
+              "language",
+              "base_card_id",
+              "cards"
+            ],
+            "properties": {
+              "snapshot_fingerprint": {
+                "type": "string",
+                "minLength": 71,
+                "maxLength": 71
+              },
+              "language": {
+                "enum": [
+                  "en",
+                  "zh-CN"
+                ]
+              },
+              "base_card_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "cards": {
+                "type": "array",
+                "maxItems": 63,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "card_id",
+                    "title",
+                    "selection_hint",
+                    "utf8_bytes"
+                  ],
+                  "properties": {
+                    "card_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "title": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "selection_hint": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "utf8_bytes": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 64000
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "planning_context": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "source_ref",
+                "source_fingerprint",
+                "authority",
+                "kind",
+                "content"
+              ],
+              "properties": {
+                "source_ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source_fingerprint": {
+                  "type": "string",
+                  "minLength": 71,
+                  "maxLength": 71
+                },
+                "authority": {
+                  "enum": [
+                    "active_plan"
+                  ]
+                },
+                "kind": {
+                  "enum": [
+                    "plan",
+                    "story_node"
+                  ]
+                },
+                "content": {
+                  "type": "object"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Use private character state as causal evidence only. Do not dump goals, fears, role responsibilities, knowledge inventories or strategy rationale into writer-facing prose instructions. Respect pov_boundary: unrevealed knowledge or another character's hidden motive must not become narrator knowledge or dialogue exposition.",
+        "Return the smallest interaction/event trace that preserves the resolved causal constraints: consequential choices, immediate tactics, observable reactions, resulting options and costs, and uncertainty that remains alive. Preserve an immediate aim or interpretation only when writer-eligible under the supplied POV; retain its observable effects without leaking a private explanation.",
+        "Do not flatten distinct participants into required lines or replace a character's response with a state-update label. Retain listener-specific action, refusal, evasion, changing attention or relational response when supported by the resolved evidence. Mark unresolved meaning as uncertain rather than inventing a feeling, a reaction, a cost or a new event to enliven the trace.",
+        "The event trace is a causal constraint, not a paragraph template or an instruction to report every step at equal weight. The Writer may compress routine, combine connected actions, and dwell on a meaningful choice or response while preserving causality, state and POV. Do not prescribe quotas of beats, dialogue, gestures, emotion or paragraph length.",
+        "Do not draft final dialogue or narration. Do not force every private field to have a corresponding writer-facing field, and do not require a new conflict or a dramatic turn when the supported scene instead offers quiet, procedural or contemplative value.",
+        "Explicit complete speech is valid when the speech act or situation genuinely requires completeness. Preserve that reason in the natural-language trace when material.",
+        "If the resolved trajectory is already sufficient for a capable Writer, keep the projection compact rather than inventing additional schema detail.",
+        "If craft_catalog is absent, return craft_selection=[] and do not infer or invent methods. If present, select only registered method card_id values from this exact frozen catalog. The common foundation is supplied automatically. Normally, multiple complementary methods or no additional methods are valid; however, when catalog selection_hint JSON declares route_class=run_scoped_corpus_style and a composite_requirement, that frozen one-run group requirement is mandatory: select at least one and at most eight such Corpus cards across the whole craft_selection. More than eight or zero is invalid. Do not fill any other quota, select the whole catalog by default, or classify the scene from genre keywords.",
+        "Choose applicability from the actual current task, resolved scene and supplied planning_context: overall outline, chapter outline and scene details may express different functions. Favor the current supported scene function within higher-level constraints; use a compact set that earns its context cost. Plans are intentions, never Canon facts or authority to rewrite the resolved trajectory.",
+        "For each selection give a short applicability reason, not chain-of-thought, and cite one or more exact source_refs from planning_context, task:request or scene:resolved. Do not cite unavailable, superseded or private-character references. With no planning sources, use only task:request and scene:resolved; choosing no extra method remains valid.",
+        "Keep craft_selection and its reasons separate from interaction_trace and writer_context. Do not put card IDs, selection reasons, hidden planning goals or predictions of reader effects into the writer-safe projection. This is guidance routing, not a quality verdict, writing assignment template or permission to imitate a named author."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": [
+          "confidence",
+          "scene_id",
+          "interaction_trace",
+          "writer_context",
+          "craft_selection"
+        ],
+        "properties": {
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "scene_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "interaction_trace": {
+            "type": "string",
+            "minLength": 1
+          },
+          "writer_context": {
+            "type": "string",
+            "minLength": 1
+          },
+          "observable_event_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "unresolved_pressures": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "craft_selection": {
+            "type": "array",
+            "maxItems": 63,
+            "items": {
+              "type": "object",
+              "required": [
+                "card_id",
+                "source_refs",
+                "reason"
+              ],
+              "properties": {
+                "card_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "source_refs": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 800
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "writer_safe_realization_projection"
+      },
+      "independent_gate": false
+    },
+    "editor.repair_spec": {
+      "kind": "artifact_audit",
+      "purpose": "Editor integrates bounded Reader/rule findings, authorized story evidence and the current objective envelope, then emits a FIX+PRESERVE repair specification and chooses local repair versus fresh reconstructed realization. Python enforces the chosen information boundary but does not infer literary repair depth.",
+      "input_contract": {
+        "type": "object",
+        "required": [
+          "candidate_fingerprint",
+          "reader_assessment",
+          "objective_envelope"
+        ],
+        "properties": {
+          "candidate_fingerprint": {
+            "type": "string",
+            "minLength": 71,
+            "maxLength": 71
+          },
+          "candidate_text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reader_assessment": {
+            "type": "object"
+          },
+          "semantic_rule_assessment": {
+            "type": "object"
+          },
+          "current_repair_goal": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "project_profile": {
+            "type": "object"
+          },
+          "author_model_projection": {
+            "type": "object"
+          },
+          "authorized_story_evidence": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "objective_envelope": {
+            "type": "object",
+            "required": [
+              "fingerprint",
+              "objective_items",
+              "must_preserve"
+            ],
+            "properties": {
+              "fingerprint": {
+                "type": "string",
+                "minLength": 71,
+                "maxLength": 71
+              },
+              "objective_items": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object"
+                }
+              },
+              "must_preserve": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "supersedes_fingerprint": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "change_authority_ref": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Integrate evidence before prescribing repair. The repair target and the higher-order objective are separate: removing a defect is not success if required story/reader/character value is materially damaged.",
+        "For SAFE-BUT-FLAT concerns, distinguish a realized reading-value failure from factual correctness or a pre-draft promise. Inspect the supplied candidate and evidence for outline-step reporting, missing character-owned choices or reactions, interchangeable speaking strategies, or costs that never bind; repair the owning scene, character, reader-pressure or realization mechanism rather than merely removing adjectives or adding hype.",
+        "Return a FIX statement for the owning failure mechanism and a compact PRESERVE list grounded in the supplied objective envelope. Preserve function, reader question/pressure/reward, character or relationship energy, humor/charm, payoff and forward pull only when they are actually required by current evidence.",
+        "Choose repair depth and generation mode semantically. Do not map a Reader label, HF code, owner, scope, paragraph count, repair-cycle count or metric to a predetermined local/fresh decision table.",
+        "Choose fresh_realization when rejected realization or accumulated critique is likely to anchor the Writer, or when objective regression/contextual inertia/oscillation makes patch continuation unsafe. A fresh realization reconstructs current authoritative state; it does not append the full rejection trajectory.",
+        "For fresh_realization, fix and preserve must express abstract current objectives or state constraints. Do not quote rejected sentences, prescribe concrete surface patches, or reconstruct rejected prose in those fields; they are the only repair directives passed to the fresh Writer.",
+        "Do not solve objective regression by weakening valid Surface/Canon/character constraints. Search for a candidate that satisfies both the repair target and the preserved objective.",
+        "Preserve earned quiet, procedural pleasure and restraint. Do not cure flatness with quotas of events, dialogue, emotion, gestures, jokes, obstacles or cliffhangers; the repair must supply the missing function under the current profile without inventing unauthorized story facts.",
+        "For material subjective changes, require incumbent/challenger comparison. Do not assume revision is improvement, and do not require wording or beat-order preservation when a major fresh realization keeps the intended functions.",
+        "Do not perform the rewrite, mutate Canon, activate Author Model preferences or expose private chain-of-thought."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": [
+          "confidence",
+          "repair_owner",
+          "generation_mode",
+          "fix",
+          "repair_plan",
+          "preserve",
+          "comparison_required"
+        ],
+        "properties": {
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "repair_owner": {
+            "enum": [
+              "story",
+              "plan",
+              "scene",
+              "character",
+              "reader_pressure",
+              "surface",
+              "continuity",
+              "context",
+              "research",
+              "runtime",
+              "human"
+            ]
+          },
+          "generation_mode": {
+            "enum": [
+              "local_or_bounded_repair",
+              "fresh_realization"
+            ]
+          },
+          "repair_plan": {
+            "type": "string",
+            "minLength": 1
+          },
+          "preserve": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "comparison_required": {
+            "type": "boolean"
+          },
+          "invalidate_artifact_classes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fix": {
+            "type": "string",
+            "minLength": 1
+          },
+          "context_strategy_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "repair_specification"
+      },
+      "independent_gate": false
+    }
+  }
+}

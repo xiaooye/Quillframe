@@ -119,9 +119,9 @@ Quillframe 的通用系统覆盖 **Story · Character · Relationship · Canon �
   <img src="docs/assets/architecture/production-graph.zh-CN.svg" alt="Quillframe 长篇小说生产生命周期" width="100%" />
 </picture>
 
-DRAFT / REVISE 会经过受限 Context、Story / Canon 预检、场景与人物模拟、Reader Pressure、事件优先起草、表层实现、candidate qualification、需要时的独立评审、repair / challenger generation、读者投入度、连续性与用户可见门槛。
+DRAFT / REVISE 会经过受限 Context、Story / Canon 预检、人物私有行动推演与场景解析、Scene Realization Contract 和模型组合的 Writer 上下文、Reader Pressure、单次 direct Surface Writer、候选指纹冻结、Reader Engagement、连续性、逐项目标资格门、必要时的修订比较、独立评审与用户可见门槛。
 
-**Raw Draft 是内部产物。Review 不等于 Accepted；Accepted 不等于 Settled。**
+**直接生成的候选在发布前仍是内部产物。Review 不等于 Accepted；Accepted 不等于 Settled。**
 
 `stored ≠ injected` · `Plan ≠ Canon` · `Review ≠ Accepted` · `Accepted ≠ Settled` · `autosave ≠ Accepted` · `revision ≠ Canon` · `Corpus ≠ Canon` · `persistence ≠ authority`
 

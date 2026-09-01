@@ -4,6 +4,8 @@
 
 Surface Fundamentals ask whether prose is malformed, mechanically AI-like, causally thin, or falsely polished. Reader Engagement asks the positive question: **what makes a reader want to continue, feel rewarded, care about the people, update their mental model, and experience meaningful movement?**
 
+For optional generation methods, see the [outline-driven craft candidate library](craft/README.en.md). It supports realization; it does not replace this post-generation assessment or establish quality by selecting a card.
+
 > **Boundary ✦** Reader Engagement is a generic quality model. It is not a single score, not a mandate for constant maximum tension, and not a substitute for genre/platform/project taste. Profiles change weighting and thresholds; they do not erase the dimensions.
 
 ## 01 · Quality floor and positive quality are different

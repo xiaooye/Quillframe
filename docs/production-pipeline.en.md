@@ -12,7 +12,7 @@ The active plan for the exact target chapter and its owning book are bound task 
 
 ## 2. Simulate before prose
 
-Story/Canon preflight, scene simulation, private character state, character action proposals, scene action resolution, and Reader Pressure establish causes, agendas, knowledge boundaries, pressure, reward, and forward pull before surface realization.
+Story/Canon preflight, private character enactment, character action proposals and scene action resolution establish causes, agendas, knowledge boundaries, pressure and changing choices. A registered model then projects only a Scene Realization Contract, current author objectives, a short Director Note and the IDs of the minimum eligible Writer context; private deliberation stays on the causal side. Reader Pressure runs on that writer-safe projection before prose.
 
 Preflight checks whether the exact target has the required materials and whether proposed work conflicts with established facts or explicit hard constraints. Original fiction may start with empty Canon. Non-authoritative source descriptors do not prohibit the dispatched worker from making an internal proposal, and `db_fetch_performed=false` does not invalidate supplied frozen content. Neither permits fresh lookups, changes actual execution evidence or grants write authority. Missing required material and real contradictions still fail; continuity later checks the candidate rather than treating its pending acceptance as a defect. Rejected runs retain their original judgments and require a fresh run after a framework repair.
 
@@ -26,7 +26,7 @@ This is a limited transport profile, not support for arbitrary JSON Schema or ev
 
 ## 3. Generate an internal candidate
 
-Event-first Raw Draft material is private. Surface realization turns the simulated event structure into prose. The candidate is then frozen and fingerprinted. Raw Draft is never the user-visible artifact.
+One direct Surface Writer realizes prose from the compact Writer pack. There is no complete intermediate prose draft for a second model to rewrite. The resulting candidate is immediately frozen and fingerprinted, and remains private until the exact release gate.
 
 ## 4. Qualify before spending independent review
 
@@ -46,7 +46,7 @@ Studio offers **Repair this version** only when Core can verify a stopped `faile
 
 `author.run.execute` can use `inherit_repair_request=true` for that bound run. Core supplies the original instruction, reader grip and rule material; registration also inherits the exact selected author preferences. Callers cannot replace them or submit a passing comparison. Ordinary `DRAFT` execution still requires its execution inputs explicitly. Changed objectives, stale source context, missing candidate evidence, and transport failures need their own resolution; this entry does not convert them into prose repairs.
 
-The registered `editor.repair_spec` receives the failed candidate and bounded diagnosis. Its objective envelope copies the explicit request and frozen active plans, without deriving goals from rejected prose. The model selects the repair owner, generation mode, FIX and PRESERVE. A fresh Writer receives current story material and those constraints, without incumbent prose or the full critique trajectory; a bounded repair also receives the exact incumbent. All production mechanisms execute again under the new run's journal and budget.
+The registered `editor.repair_spec` receives the failed candidate and bounded diagnosis. Its objective envelope copies the explicit request and frozen active plans, without deriving goals from rejected prose. The model selects the repair owner, generation mode, FIX and PRESERVE. A fresh Writer receives current story material and those constraints, without incumbent prose or the full critique trajectory; a bounded repair receives only exact fingerprint-bound edit windows. All production mechanisms execute again under the new run's journal and budget.
 
 After generation, registered `quality.compare` receives both candidates' exact text and verified SHA-256 fingerprints. Its target-improvement and objective-preservation judgments feed the existing qualification gate. Lineage retains the original comparison ancestry; fresh regeneration has no prose parent. A regression or inconclusive comparison cannot release text. The current entry accepts a failed `REVISE` as a later source only if its actual comparison passed and selected that challenger, and its parent evidence remains intact. A losing repair is preserved as diagnostic evidence but cannot replace the incumbent or serve as the next baseline through this entry. Blind Reader and independent review receive only their allowed fresh-candidate inputs. Repair never accepts, settles or publishes the chapter automatically.
 

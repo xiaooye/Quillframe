@@ -10,7 +10,7 @@ PROTOCOLS = {"openai_chat_completions", "openai_responses", "anthropic_messages"
 CAPABILITY_STATES = {"verified", "detected", "manually_configured", "unavailable", "unknown"}
 CAPABILITIES = {
     "text", "streaming", "tool_calling", "parallel_tool_calling", "structured_output",
-    "json_schema", "vision", "reasoning_control", "context_window",
+    "json_schema", "vision", "reasoning_control", "context_window", "fiction_writing",
 }
 
 
@@ -103,6 +103,21 @@ class DiscoveredModel:
             auth_style=str(value["auth_style"]) if value.get("auth_style") is not None else None,
             metadata=dict(value.get("metadata") or {}), capabilities=capabilities,
         )
+
+
+def model_version_fingerprint(service_id: str, model: DiscoveredModel) -> str:
+    """Fingerprint the provider-visible model identity, not hidden model weights."""
+    metadata = {
+        key: value for key, value in model.metadata.items()
+        if key not in {"quillframe_fiction_audition"}
+    }
+    return fingerprint({
+        "service_id": service_id,
+        "model_id": model.model_id,
+        "display_name": model.display_name or model.model_id,
+        "protocol": model.protocol,
+        "provider_metadata": metadata,
+    })
 
 
 @dataclass

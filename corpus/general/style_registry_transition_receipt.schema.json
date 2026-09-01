@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.local/schemas/style-registry-transition-receipt-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "transition", "manual_approval_attestation", "receipt_fingerprint"],
+  "properties": {
+    "schema": {"const": "quillframe_style_registry_transition_receipt_v1"},
+    "transition": {"$ref": "#/$defs/transition"},
+    "manual_approval_attestation": {"$ref": "#/$defs/manualAttestation"},
+    "receipt_fingerprint": {"$ref": "#/$defs/fingerprint"}
+  },
+  "$defs": {
+    "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "transition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "action", "target_atlas_fingerprint", "environment", "registry_path_fingerprint", "base_registry_fingerprint", "base_registry_revision"],
+      "properties": {
+        "schema": {"const": "quillframe_style_registry_transition_v1"},
+        "action": {"enum": ["activate_rollback", "deprecate", "contest"]},
+        "target_atlas_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "environment": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$"},
+        "registry_path_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "base_registry_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "base_registry_revision": {"type": "integer", "minimum": 0}
+      }
+    },
+    "manualAttestation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "role", "key_id", "payload", "signature"],
+      "properties": {
+        "schema": {"const": "quillframe_style_publication_attestation_v1"},
+        "role": {"const": "manual_approval"},
+        "key_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$"},
+        "payload": {"$ref": "#/$defs/transition"},
+        "signature": {"type": "string", "pattern": "^hmac-sha256:[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

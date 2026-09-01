@@ -17,6 +17,116 @@ from .contracts import ProductionRunError
 LINEAGE_SCHEMA = "quillframe_production_repair_lineage_v1"
 
 
+def author_direction_evidence(
+    instruction: str, repair: dict[str, Any] | None = None
+) -> list[dict[str, Any]]:
+    """Expose exact chronological author directions for model-owned projection."""
+
+    if repair is None:
+        return [{
+            "source_ref": "current-production-request",
+            "chronology": 0,
+            "statement": instruction,
+        }]
+    envelope = repair["objective_envelope"]
+    directions = [
+        item for item in envelope["objective_items"]
+        if item.get("category") == "user_direction"
+    ]
+    return [
+        {
+            "source_ref": item["source_refs"][0],
+            "chronology": index,
+            "statement": item["statement"],
+        }
+        for index, item in enumerate(directions)
+    ]
+
+
+def materialize_author_objectives(
+    evidence: list[dict[str, Any]], projected_items: Any
+) -> dict[str, Any]:
+    """Bind the composer's semantic projection to exact author evidence."""
+
+    if not isinstance(evidence, list) or not evidence:
+        raise ProductionRunError("author_objectives_invalid", "author direction evidence is missing")
+    if not isinstance(projected_items, list) or not projected_items:
+        raise ProductionRunError("author_objectives_invalid", "author objective projection is missing")
+    available = {item["source_ref"] for item in evidence}
+    seen: set[str] = set()
+    items: list[dict[str, Any]] = []
+    for item in projected_items:
+        if not isinstance(item, dict) or set(item) != {
+            "objective_id", "statement", "source_refs", "hard"
+        }:
+            raise ProductionRunError("author_objectives_invalid", "author objective fields changed")
+        objective_id = item.get("objective_id")
+        refs = item.get("source_refs")
+        if (
+            not isinstance(objective_id, str)
+            or not objective_id.strip()
+            or objective_id in seen
+            or not isinstance(item.get("statement"), str)
+            or not item["statement"].strip()
+            or item.get("hard") is not True
+            or not isinstance(refs, list)
+            or not refs
+            or len(refs) != len(set(refs))
+            or any(ref not in available for ref in refs)
+        ):
+            raise ProductionRunError(
+                "author_objectives_invalid",
+                "author objective does not bind exact current direction evidence",
+            )
+        seen.add(objective_id)
+        items.append(deepcopy(item))
+    value = {
+        "schema": "quillframe_current_author_objectives_v1",
+        "items": items,
+        "source_fingerprint": fingerprint(evidence),
+        "priority": "current_explicit_author_direction",
+        "authority": False,
+    }
+    value["objectives_fingerprint"] = fingerprint(value)
+    return value
+
+
+def author_objective_projection(
+    instruction: str, repair: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Project current explicit author directions without plans or critique."""
+    if repair is None:
+        items = [{
+            "objective_id": "OBJ-CURRENT-REQUEST",
+            "statement": instruction,
+            "source_refs": ["current-production-request"],
+            "hard": True,
+        }]
+        source_fingerprint = fingerprint({"instruction": instruction})
+    else:
+        envelope = repair["objective_envelope"]
+        items = [
+            {
+                "objective_id": item["id"],
+                "statement": item["statement"],
+                "source_refs": deepcopy(item["source_refs"]),
+                "hard": True,
+            }
+            for item in envelope["objective_items"]
+            if item.get("category") == "user_direction"
+        ]
+        source_fingerprint = envelope["fingerprint"]
+    value = {
+        "schema": "quillframe_current_author_objectives_v1",
+        "items": items,
+        "source_fingerprint": source_fingerprint,
+        "priority": "current_explicit_author_direction",
+        "authority": False,
+    }
+    value["objectives_fingerprint"] = fingerprint(value)
+    return value
+
+
 def _candidate_id(run_id: str) -> str:
     return "diagnostic:" + run_id
 
@@ -183,12 +293,21 @@ def editor_payload(source: dict[str, Any], envelope: dict[str, Any], frozen_stor
 
 def generation_plan(editor_binding: dict[str, Any], envelope: dict[str, Any], *, source_kind: str | None = None) -> dict[str, Any]:
     judgment = editor_binding["result"]["judgment"]
-    policy = evaluate_repair_policy({"repair_owner": judgment["repair_owner"], "generation_mode": judgment["generation_mode"],
+    targets = deepcopy(judgment["targets"])
+    candidate_text = editor_binding["job"]["input"]["payload"]["candidate_text"]
+    for target in targets:
+        if target["evidence_quote"] not in candidate_text:
+            raise ProductionRunError("repair_target_invalid", "repair evidence quote is not in the exact source candidate")
+        window = target.get("edit_window_quote")
+        if isinstance(window, str) and window not in candidate_text:
+            raise ProductionRunError("repair_target_invalid", "bounded edit window is not in the exact source candidate")
+    policy = evaluate_repair_policy({"repair_owner": judgment["repair_owner"], "revision_route": judgment["revision_route"],
+                                     "targets": targets, "generation_mode": judgment["generation_mode"],
                                      "candidate_rejected": source_kind != "author_revision",
                                      "author_revision_requested": source_kind == "author_revision"})
     # Do not forward reports, evidence quotes, context-strategy explanations, or
     # the complete critique trajectory to a fresh Writer.
-    plan = {key: deepcopy(judgment[key]) for key in ("fix", "preserve")}
+    plan = {key: deepcopy(judgment[key]) for key in ("fix", "preserve", "targets")}
     if policy["generation_mode"] == "local_or_bounded_repair":
         plan["repair_plan"] = judgment["repair_plan"]
     return {"policy": policy, "objective_envelope": envelope, "editor_fix_and_preserve_plan": plan,
@@ -196,23 +315,88 @@ def generation_plan(editor_binding: dict[str, Any], envelope: dict[str, Any], *,
 
 
 def generation_instruction(instruction: str, repair: dict[str, Any]) -> str:
+    # The full objective envelope is already present in the writer context.
+    # Repeating it in the instruction can add tens of thousands of input
+    # tokens on a REVISE run without giving the Writer any new authority.
+    instruction_constraints = {
+        "revision_route": repair["policy"]["revision_route"],
+        "generation_mode": repair["policy"]["generation_mode"],
+        "objective_envelope_fingerprint": repair["objective_envelope"]["fingerprint"],
+        "fix": repair["editor_fix_and_preserve_plan"]["fix"],
+        "preserve": repair["editor_fix_and_preserve_plan"]["preserve"],
+    }
     return instruction + (
-        "\nThis is a REVISE run. Apply the Editor-selected owning repair and preserve the exact authorized objectives. "
-        "All scene/action reconstructions remain non-Canon proposals. For local repair, do not replace the incumbent's "
-        "working story merely because a reconstruction proposes an alternative. Return only this stage's normal output. "
-        "Repair constraints: " + canonical_json({key: repair[key] for key in ("policy", "objective_envelope", "editor_fix_and_preserve_plan")})
+        "\nREVISE: apply the model-selected route and preserve the bound author objectives. "
+        "Return only this stage's normal output. Constraints: " + canonical_json(instruction_constraints)
     )
 
 
-def writer_context(source: dict[str, Any], repair: dict[str, Any], frozen_stage: dict[str, Any]) -> dict[str, Any]:
-    result = deepcopy(repair)
-    result["authority_constraints"] = deepcopy(source["source_request"]["rule_material"])
-    if repair["policy"]["generation_mode"] == "fresh_realization":
-        result["reconstructed_current_story_state"] = deepcopy(frozen_stage)
-    else:
-        result["bounded_repair_evidence"] = {
-            "candidate_fingerprint": source["candidate_fingerprint"], "candidate_text": source["candidate_text"],
+def _authority_constraint_bindings(source: dict[str, Any]) -> list[dict[str, Any]]:
+    """Bind frozen rule material without repeating every full document to Writer."""
+    bindings = []
+    for item in source["source_request"]["rule_material"]:
+        statement = item.get("statement") if isinstance(item, dict) else None
+        if not isinstance(statement, str) or not statement:
+            raise ProductionRunError(
+                "repair_authority_constraint_invalid",
+                "repair source rule material requires a non-empty statement",
+            )
+        binding = {
+            key: deepcopy(item[key])
+            for key in ("id", "authority", "exceptions")
+            if key in item
         }
+        binding.update({
+            "statement_fingerprint": fingerprint_text(statement),
+            "statement_utf8_bytes": len(statement.encode("utf-8")),
+        })
+        bindings.append(binding)
+    return bindings
+
+
+def writer_context(
+    source: dict[str, Any], repair: dict[str, Any], frozen_stage: dict[str, Any],
+) -> dict[str, Any]:
+    policy = repair["policy"]
+    result = {
+        "schema": "quillframe_writer_repair_context_v1",
+        "repair_owner": policy["repair_owner"],
+        "revision_route": policy["revision_route"],
+        "generation_mode": policy["generation_mode"],
+        "objective_envelope_fingerprint": repair["objective_envelope"]["fingerprint"],
+        "editor_binding_fingerprint": repair["editor_binding_fingerprint"],
+        "authority": False,
+    }
+    # Generic framework documents and active plans have already been consumed
+    # by the frozen source, Editor, objective envelope, stage guidance and later
+    # semantic gates. Keep their exact identities auditable, but do not resend
+    # the same full documents to both prose stages.
+    result["authority_constraint_bindings"] = _authority_constraint_bindings(source)
+    if policy["generation_mode"] == "fresh_realization":
+        result["reconstructed_current_story_state"] = {
+            "source": "scene_realization_contract",
+            "context_bundle_fingerprint": frozen_stage["context_bundle_fingerprint"],
+            "freeze_fingerprint": frozen_stage["freeze_fingerprint"],
+        }
+        result["fresh_context_exclusions"] = list(policy["excluded_writer_context_classes"])
+    else:
+        windows = [
+            {
+                "target_id": target["target_id"],
+                "scene_ref": target.get("scene_ref"),
+                "evidence_quote": target["evidence_quote"],
+                "edit_window_quote": target["edit_window_quote"],
+                "edit_window_fingerprint": fingerprint_text(target["edit_window_quote"]),
+            }
+            for target in policy["targets"]
+            if target["route"] == "local_edit"
+        ]
+        evidence = {
+            "candidate_fingerprint": source["candidate_fingerprint"],
+            "bounded_edit_windows": windows,
+            "full_candidate_visible": False,
+        }
+        result["bounded_repair_evidence"] = evidence
     return result
 
 

@@ -29,7 +29,9 @@ include = [
   "harness*",
   "quality*",
   "learning*",
+  "corpus*",
   "studio*",
+  "surface*",
 ]
 namespaces = true
 
@@ -40,6 +42,8 @@ persistence = ["schema/**/*.sql"]
 harness = ["**/*.json"]
 quality = ["*.json"]
 learning = ["*.json"]
+corpus = ["**/*.json", "**/*.md", "**/*.sql", "**/*.yaml", "**/*.yml"]
+surface = ["craft/*.json", "craft/*.md", "craft/cards/*.md", "craft/history/**/*.json", "craft/history/**/*.md"]
 studio = [
   "*.json",
   "app/dist/*",

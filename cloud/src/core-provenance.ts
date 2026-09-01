@@ -28,13 +28,26 @@ const PROJECT_REQUIRED = new Set([
   "learning.feedback.observe", "learning.feedback.get", "learning.feedback.list", "learning.feedback.execute", "learning.feedback.resume",
   "learning.preference.list", "learning.preference.get", "learning.preference.review", "learning.preference.activate", "learning.preference.deactivate",
 ]);
+const HOSTED_CORPUS = new Set([
+  "corpus.selection.propose", "corpus.selection.refresh", "corpus.selection.confirm",
+  "corpus.study.start", "corpus.study.status", "corpus.study.resume", "corpus.study.cancel",
+  "corpus.public.preview", "corpus.public.validate", "corpus.public.release", "corpus.public.list", "corpus.public.get",
+]);
+const HOSTED_USER_TASTE = new Set([
+  "learning.auto_activation_policy.get", "learning.auto_activation_policy.set",
+  "learning.user_taste.list", "learning.user_taste.get", "learning.user_taste.pause", "learning.user_taste.withdraw",
+]);
 const PROJECT_NULL = new Set([
   "bridge.describe", "database.doctor", "project.list", "author.run.events", "model.service.add",
   "model.service.list", "model.service.get", "model.service.discover", "model.service.test",
   "model.service.token.replace", "model.service.token.remove", "model.service.delete", "model.capabilities",
+  ...HOSTED_CORPUS,
+  ...HOSTED_USER_TASTE,
 ]);
 export const PROJECT_REQUIRED_OPERATIONS = [...PROJECT_REQUIRED].sort();
 export const PROJECT_NULL_OPERATIONS = [...PROJECT_NULL].sort();
+export const HOSTED_CORPUS_OPERATIONS = [...HOSTED_CORPUS].sort();
+export const HOSTED_USER_TASTE_OPERATIONS = [...HOSTED_USER_TASTE].sort();
 
 export class CoreProofError extends Error {
   constructor(public readonly code: string, message = "core provenance validation failed") { super(message); }
@@ -217,8 +230,28 @@ export function validateBridgeRequest(value: unknown): { operation: string; args
   if (!request.args || typeof request.args !== "object" || Array.isArray(request.args)) fail("bridge_request_invalid"); return { operation: request.operation, args: request.args as Record<string, unknown> };
 }
 
+const LOCAL_PATH_VALUE = /^(?:[A-Za-z]:[\\/]|\\\\|\/(?:Users|home|tmp|var|private|etc)(?:\/|$))/i;
+
+function containsLocalPath(value: unknown, seen = new WeakSet<object>()): boolean {
+  if (typeof value === "string") return LOCAL_PATH_VALUE.test(value);
+  if (!value || typeof value !== "object") return false;
+  if (seen.has(value)) return false;
+  seen.add(value);
+  for (const key of Object.keys(value)) {
+    const normalized = key.toLowerCase();
+    if (normalized === "path" || normalized.endsWith("_path") || normalized.includes("local_path")) return true;
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (descriptor && "value" in descriptor && containsLocalPath(descriptor.value, seen)) return true;
+  }
+  return false;
+}
+
 export function deriveProofProjectId(operation: string, request: Record<string, unknown>): string | null {
   const args = request.args; if (!args || typeof args !== "object" || Array.isArray(args)) fail("proof_project_invalid"); const record = args as Record<string, unknown>;
+  if (operation.startsWith("corpus.")) {
+    if (!HOSTED_CORPUS.has(operation)) fail("proof_operation_invalid");
+    if (containsLocalPath(record)) fail("proof_local_path_forbidden");
+  }
   if (PROJECT_REQUIRED.has(operation)) { if (!nativeProjectId(record.project_id)) fail("proof_project_invalid"); return record.project_id; }
   if (PROJECT_NULL.has(operation)) { if (Object.prototype.hasOwnProperty.call(record, "project_id")) fail("proof_project_invalid"); return null; }
   fail("proof_operation_invalid");

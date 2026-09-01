@@ -1,0 +1,3 @@
+# Historical registries are byte-hashed evidence on every host.
+harness/semantic_workers/contracts/history/*.json text eol=lf -whitespace
+surface/craft/history/** text eol=lf -whitespace

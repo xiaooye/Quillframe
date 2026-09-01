@@ -11,6 +11,8 @@ from pathlib import Path
 import sys
 import unittest
 
+from harness.context_runtime import fingerprint
+
 
 ROOT = Path(__file__).resolve().parents[1]
 for path in (ROOT / "harness" / "semantic_workers", ROOT / "evals"):
@@ -48,8 +50,25 @@ def contract_for(contract_id):
     return registry, registry["contracts"][contract_id]
 
 
-def review_payload():
-    return {
+def author_objectives():
+    value = {
+        "schema": "quillframe_current_author_objectives_v1",
+        "items": [{
+            "objective_id": "OBJ-CONTRACT-FIXTURE",
+            "statement": "Preserve the bounded synthetic candidate.",
+            "source_refs": ["fixture:author-direction"],
+            "hard": True,
+        }],
+        "source_fingerprint": fingerprint("fixture:author-direction"),
+        "priority": "current_explicit_author_direction",
+        "authority": False,
+    }
+    value["objectives_fingerprint"] = fingerprint(value)
+    return value
+
+
+def review_payload(contract_id):
+    value = {
         "candidate_fingerprint": CANDIDATE_FP,
         "candidate_text": CANDIDATE_TEXT,
         "reader_visible_context": [{
@@ -58,6 +77,9 @@ def review_payload():
         }],
         **READING_POSITION,
     }
+    if contract_id == "quality.production_review":
+        value["author_objectives"] = author_objectives()
+    return value
 
 
 def pressure_payload():
@@ -70,6 +92,16 @@ def pressure_payload():
 
 
 def realization_payload():
+    inventory = {
+        "required_context_ids": ["character:fixture"],
+        "items": [{
+            "context_id": "character:fixture",
+            "category": "present_character",
+            "source_fingerprint": fingerprint("character:fixture"),
+            "selection_view": {"character_id": "CHAR-CONTRACT-FIXTURE"},
+        }],
+    }
+    inventory["inventory_fingerprint"] = fingerprint(inventory)
     return {
         "scene_id": "SCENE-CONTRACT-FIXTURE",
         "resolved_trajectory": {"events": [{
@@ -81,6 +113,12 @@ def realization_payload():
             "private_goal": "Synthetic private evidence for projection only.",
         }],
         "pov_boundary": {"visible_event_refs": ["fixture:choice"]},
+        "author_direction_evidence": [{
+            "source_ref": "fixture:author-direction",
+            "chronology": 1,
+            "statement": "Preserve the bounded synthetic candidate.",
+        }],
+        "writer_context_inventory": inventory,
     }
 
 
@@ -93,7 +131,7 @@ class ProseQualityContractTests(unittest.TestCase):
         return make_contract_job(
             contract_id,
             SUBJECT,
-            review_payload() if payload is None else payload,
+            review_payload(contract_id) if payload is None else payload,
             source_session_id="SES-CONTRACT-FIXTURE",
             qualification_receipt=self.qualification,
         )
@@ -104,7 +142,7 @@ class ProseQualityContractTests(unittest.TestCase):
                 registry, contract = contract_for(contract_id)
                 job = self.review_job(contract_id)
                 self.assertEqual([], validate_registered_job(job))
-                self.assertEqual("8", registry["version"])
+                self.assertEqual("9", registry["version"])
                 self.assertEqual(registry["version"], job["input"]["model_contract_version"])
                 self.assertEqual(contract["purpose"], job["input"]["purpose"])
                 self.assertEqual(contract["rubric"], job["rubric"])
@@ -130,21 +168,30 @@ class ProseQualityContractTests(unittest.TestCase):
                     self.assertIn(boundary, rubric)
 
     def test_existing_review_inputs_remain_valid_without_optional_positioning(self):
-        payload = {"candidate_fingerprint": CANDIDATE_FP, "candidate_text": CANDIDATE_TEXT}
         for contract_id in REVIEW_CONTRACTS:
             with self.subTest(contract_id=contract_id):
                 _, contract = contract_for(contract_id)
-                self.assertEqual({"candidate_fingerprint", "candidate_text"},
-                                 set(contract["input_contract"]["required"]))
+                payload = {"candidate_fingerprint": CANDIDATE_FP, "candidate_text": CANDIDATE_TEXT}
+                required = {"candidate_fingerprint", "candidate_text"}
+                if contract_id == "quality.production_review":
+                    payload["author_objectives"] = author_objectives()
+                    required.add("author_objectives")
+                self.assertEqual(required, set(contract["input_contract"]["required"]))
                 self.assertEqual([], validate_registered_job(self.review_job(contract_id, payload)))
 
     def test_review_result_shape_does_not_encode_a_predetermined_verdict(self):
         for contract_id in REVIEW_CONTRACTS:
             _, contract = contract_for(contract_id)
             schema = contract["output_contract"]
-            self.assertEqual({"confidence", "result", "report", "evidence_refs"}, set(schema["required"]))
-            self.assertEqual(["pass", "fail"], schema["properties"]["result"]["enum"])
-            for verdict in ("pass", "fail"):
+            required = {"confidence", "result", "report", "evidence_refs"}
+            if contract_id == "quality.production_review":
+                required.add("objective_assessments")
+            self.assertEqual(required, set(schema["required"]))
+            verdicts = ["pass", "fail"]
+            if contract_id == "quality.production_review":
+                verdicts.append("insufficient_evidence")
+            self.assertEqual(verdicts, schema["properties"]["result"]["enum"])
+            for verdict in verdicts:
                 with self.subTest(contract_id=contract_id, verdict=verdict):
                     report = {
                         "confidence": 0.5,
@@ -152,6 +199,17 @@ class ProseQualityContractTests(unittest.TestCase):
                         "report": "Synthetic structural result; no model judgment executed.",
                         "evidence_refs": ["fixture:paragraph-1"],
                     }
+                    if contract_id == "quality.production_review":
+                        report["objective_assessments"] = [{
+                            "objective_id": "OBJ-CONTRACT-FIXTURE",
+                            "status": "met" if verdict == "pass" else (
+                                "not_met" if verdict == "fail" else "uncertain"
+                            ),
+                            "evidence_refs": ["fixture:paragraph-1"],
+                            "impact_scope": "whole_candidate",
+                            "repair_route": "no_change" if verdict == "pass" else "fresh_realization",
+                            "report": "Synthetic objective-bound evidence.",
+                        }]
                     self.assertEqual([], validate_typed_value(report, schema))
                     report["literary_score"] = 100
                     self.assertTrue(validate_typed_value(report, schema))
@@ -182,7 +240,7 @@ class ProseQualityContractTests(unittest.TestCase):
         for contract_id in REVIEW_CONTRACTS:
             for key in blocked_keys:
                 with self.subTest(contract_id=contract_id, key=key):
-                    payload = review_payload()
+                    payload = review_payload(contract_id)
                     payload["reader_visible_context"][0]["metadata"] = {
                         "nested": [{key: "Synthetic forbidden stage evidence."}],
                     }
@@ -190,13 +248,13 @@ class ProseQualityContractTests(unittest.TestCase):
                         self.review_job(contract_id, payload)
 
     def test_forbidden_field_names_are_not_banned_words_in_manuscript_text(self):
-        payload = review_payload()
-        payload["candidate_text"] = "A fictional speaker mentions a prior judgment and an expected reward."
-        payload["candidate_fingerprint"] = "sha256:" + hashlib.sha256(
-            payload["candidate_text"].encode("utf-8")
-        ).hexdigest()
         for contract_id in REVIEW_CONTRACTS:
             with self.subTest(contract_id=contract_id):
+                payload = review_payload(contract_id)
+                payload["candidate_text"] = "A fictional speaker mentions a prior judgment and an expected reward."
+                payload["candidate_fingerprint"] = "sha256:" + hashlib.sha256(
+                    payload["candidate_text"].encode("utf-8")
+                ).hexdigest()
                 _, contract = contract_for(contract_id)
                 self.assertEqual([], validate_contract_input(contract_id, contract, payload))
 
@@ -205,7 +263,7 @@ class ProseQualityContractTests(unittest.TestCase):
         self.assertIn("dispatch_proof", job)
         visible = worker_job_view(job)
         self.assertNotIn("dispatch_proof", visible)
-        self.assertEqual(review_payload(), visible["input"]["payload"])
+        self.assertEqual(review_payload("quality.production_review"), visible["input"]["payload"])
         self.assertNotIn("qualification_receipt", visible["input"]["payload"])
 
     def test_registered_rubric_tampering_and_version_relabeling_are_not_new_jobs(self):
@@ -282,26 +340,39 @@ class ProseQualityContractTests(unittest.TestCase):
     def test_realization_projection_keeps_causal_and_private_boundaries_in_thin_strings(self):
         registry, contract = contract_for("scene.realization_project")
         job = make_contract_job("scene.realization_project", SUBJECT, realization_payload())
-        self.assertEqual("6", registry["version"])
+        self.assertEqual("10", registry["version"])
         self.assertEqual([], validate_registered_job(job))
         rubric = " ".join(job["rubric"])
         for boundary in (
-            "Respect pov_boundary", "observable reactions", "writer-eligible",
-            "listener-specific", "not a paragraph template", "compress routine",
-            "Mark unresolved meaning as uncertain", "Do not prescribe quotas",
+            "Respect pov_boundary", "observable effects", "minimum sufficient set",
+            "listener-specific", "not a paragraph template", "Select only context_id",
+            "Mark unresolved meaning as uncertain", "Do not prescribe themes",
             "Explicit complete speech is valid",
         ):
             self.assertIn(boundary, rubric)
         schema = contract["output_contract"]
-        self.assertEqual({"confidence", "scene_id", "interaction_trace", "writer_context"},
-                         set(schema["required"]))
-        for field in ("interaction_trace", "writer_context"):
-            self.assertEqual("string", schema["properties"][field]["type"])
+        self.assertEqual({"confidence", "scene_id", "scene_contract", "selected_context_ids",
+                          "director_note", "author_objective_items", "craft_selection"}, set(schema["required"]))
         projection = {
             "confidence": 0.5,
             "scene_id": "SCENE-CONTRACT-FIXTURE",
-            "interaction_trace": "Synthetic observable action and response.",
-            "writer_context": "Synthetic causal constraints, not a paragraph outline.",
+            "scene_contract": {
+                "pov_now": {"visible": ["An invitation is unanswered."], "known": [], "misunderstood": []},
+                "opening_choices": ["Answer or leave."],
+                "enacted_strategies": [{"character_ref": "CHAR-CONTRACT-FIXTURE",
+                    "selected_action": "Leave the invitation unanswered.",
+                    "observable_effect": "The other participant loses an immediate answer."}],
+                "counterforces": ["Silence preserves uncertainty."],
+                "option_cost_or_relationship_changes": ["The invitation becomes harder to accept later."],
+                "required_fact_outcomes": ["No answer is given."],
+                "protected_subtext_or_information_gaps": ["The reason remains unstated."],
+                "ending_constraint": "The invitation remains open but time-limited.",
+                "concrete_friction": "The unanswered invitation.",
+            },
+            "selected_context_ids": ["character:fixture"],
+            "director_note": "Keep the reason inferable from the unanswered invitation.",
+            "author_objective_items": author_objectives()["items"],
+            "craft_selection": [],
         }
         self.assertEqual([], validate_typed_value(projection, schema))
         projection["private_character_state"] = {"secret": "Synthetic private field."}

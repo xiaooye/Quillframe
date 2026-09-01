@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ipaddress
+import hashlib
 import json
 import socket
 import time
@@ -10,7 +11,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 from urllib.parse import urlsplit
 
-from .deadlines import DEADLINE_HEADER, validate_request_timeout
+from .deadlines import DEADLINE_HEADER, REQUEST_KEY_HEADER, validate_request_timeout
 
 
 class TransportError(RuntimeError):
@@ -37,6 +38,7 @@ class ModelTransport(Protocol):
         auth_style: str,
         body: dict[str, Any] | None = None,
         timeout: float = 30.0,
+        request_key: str | None = None,
     ) -> TransportResponse: ...
 
 
@@ -120,6 +122,7 @@ class UrllibTransport:
         auth_style: str,
         body: dict[str, Any] | None = None,
         timeout: float = 30.0,
+        request_key: str | None = None,
     ) -> TransportResponse:
         try:
             timeout = validate_request_timeout(timeout)
@@ -148,6 +151,10 @@ class UrllibTransport:
         loopback_post = method.upper() == "POST" and _literal_loopback(url)
         if loopback_post:
             headers[DEADLINE_HEADER] = str(deadline_unix_ms)
+            if request_key is not None:
+                if not isinstance(request_key, str) or not request_key.strip():
+                    raise TransportError("invalid_request_key", "model request key must be a non-empty string")
+                headers[REQUEST_KEY_HEADER] = hashlib.sha256(request_key.encode("utf-8")).hexdigest()
         request = urllib.request.Request(url, data=data, method=method.upper(), headers=headers)
         try:
             try:
@@ -176,8 +183,10 @@ class MockTransport:
         self.routes = routes
         self.requests: list[dict[str, Any]] = []
 
-    def request_json(self, method: str, url: str, *, token: str, auth_style: str, body: dict[str, Any] | None = None, timeout: float = 30.0) -> TransportResponse:
-        self.requests.append({"method": method.upper(), "url": url, "auth_style": auth_style, "body": body, "token_present": bool(token)})
+    def request_json(self, method: str, url: str, *, token: str, auth_style: str, body: dict[str, Any] | None = None,
+                     timeout: float = 30.0, request_key: str | None = None) -> TransportResponse:
+        self.requests.append({"method": method.upper(), "url": url, "auth_style": auth_style, "body": body,
+                              "token_present": bool(token), "request_key_present": request_key is not None})
         key = (method.upper(), url, auth_style)
         if key not in self.routes:
             return TransportResponse(404, {}, {"error": "fixture route missing"}, "")

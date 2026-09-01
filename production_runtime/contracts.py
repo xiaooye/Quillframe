@@ -23,7 +23,6 @@ MECHANISM_CONTEXT_STAGE: dict[str, str] = {
     "scene_simulation": "scene_simulation",
     "character_simulation": "character_simulation",
     "reader_pressure": "reader_pressure",
-    "event_first_raw_draft": "draft",
     "surface_realization": "surface_realization",
     "reader_engagement": "reader_engagement",
     "continuity": "continuity",

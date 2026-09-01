@@ -591,13 +591,18 @@ class ChatHostRelayDeadlineTests(unittest.TestCase):
                 self.assertEqual(status, 200)
                 self.assertEqual(len(packets), 1)
                 packet = packets[0]
-                self.assertEqual(packet["schema"], "quillframe_chat_host_relay_v2")
+                self.assertEqual(packet["schema"], "quillframe_chat_host_relay_v3")
                 self.assertEqual(packet["request"], self.body)
-                self.assertEqual(packet["timeout_seconds"], expected)
-                self.assertEqual(packet["deadline_at_unix"], packet["created_at_unix"] + expected)
+                narrowed = expected - chat_host_relay.PACKET_HANDOFF_MARGIN_SECONDS
+                self.assertAlmostEqual(packet["timeout_seconds"], narrowed, places=6)
+                self.assertAlmostEqual(
+                    packet["deadline_at_unix"], packet["created_at_unix"] + narrowed, places=6,
+                )
                 self.assertEqual(packet["server_timeout_seconds"], cap)
                 self.assertEqual(packet["caller_deadline_unix_ms"], deadline)
-                self.assertEqual(chat_host_relay.validate_packet_deadline(packet)["timeout_seconds"], expected)
+                self.assertAlmostEqual(
+                    chat_host_relay.validate_packet_deadline(packet)["timeout_seconds"], narrowed, places=6,
+                )
 
     def test_relay_rejects_invalid_or_expired_headers_without_packet(self):
         future = str(int((self.clock.wall + 180) * 1000))
@@ -612,10 +617,89 @@ class ChatHostRelayDeadlineTests(unittest.TestCase):
         self.assertEqual(list(self.queue.iterdir()), [])
 
     def test_relay_rejects_invalid_server_cap(self):
-        for cap in (False, True, 0, -1, 590.001, float("nan"), float("inf"), "170", 10 ** 400):
+        for cap in (False, True, 0, -1, chat_host_relay.MAX_RELAY_TIMEOUT_SECONDS + 0.001,
+                    float("nan"), float("inf"), "170", 10 ** 400):
             with self.subTest(cap=cap), self.assertRaises(ValueError):
                 chat_host_relay.handler(self.queue, cap)
         self.assertEqual(list(self.queue.iterdir()), [])
+
+    def test_idempotent_client_wait_returns_pending_then_collects_one_exact_request(self):
+        request_key = "a" * 64
+
+        def invoke(body, key=request_key):
+            relay_class = chat_host_relay.handler(self.queue, 170, 0.2)
+            relay = object.__new__(relay_class)
+            relay.path = "/v1/chat/completions"
+            relay.headers = Message()
+            raw = json.dumps(body).encode("utf-8")
+            relay.headers["Content-Length"] = str(len(raw))
+            relay.headers[chat_host_relay.REQUEST_KEY_HEADER] = key
+            relay.rfile = Mock()
+            relay.rfile.read.return_value = raw
+            relay.connection = Mock()
+            relay._json = Mock()
+            with patch.object(chat_host_relay.time, "time", side_effect=lambda: self.clock.wall), \
+                    patch.object(chat_host_relay.time, "monotonic", side_effect=lambda: self.clock.monotonic), \
+                    patch.object(chat_host_relay.time, "sleep", side_effect=self.clock.advance):
+                relay.do_POST()
+            return relay._json.call_args.args
+
+        status, pending = invoke(self.body)
+        self.assertEqual(202, status)
+        self.assertEqual("model_pending", pending["status"])
+        request_id = "req_" + request_key[:32]
+        self.assertEqual(request_id, pending["request_id"])
+        requests = list(self.queue.glob("*.request.json"))
+        self.assertEqual([request_id + ".request.json"], [path.name for path in requests])
+        packet = json.loads(requests[0].read_text(encoding="utf-8"))
+        self.assertEqual(request_key, packet["request_key_fingerprint"])
+        self.assertTrue(packet["durable_pending"])
+        self.assertEqual(self.body, packet["request"])
+
+        (self.queue / f"{request_id}.response.json").write_text(json.dumps({
+            "schema": chat_host_relay.SCHEMA, "request_id": request_id,
+            "content": '{"status":"pass"}',
+        }), encoding="utf-8")
+        self.clock.advance(171)
+        status, response = invoke(self.body)
+        self.assertEqual(200, status)
+        self.assertEqual(request_id, response["id"])
+        self.assertEqual(1, len(list(self.queue.glob("*.request.json"))))
+
+        status, conflict = invoke({"messages": [{"role": "user", "content": "changed"}]})
+        self.assertEqual(409, status)
+        self.assertEqual("model_request_idempotency_conflict", conflict["error"])
+        self.assertEqual(1, len(list(self.queue.glob("*.request.json"))))
+
+        terminal_key = "b" * 64
+        status, pending = invoke(self.body, terminal_key)
+        self.assertEqual(202, status)
+        terminal_id = "req_" + terminal_key[:32]
+        terminal_request = self.queue / f"{terminal_id}.request.json"
+        worker_state = self.queue / "worker-state" / f"{terminal_id}.json"
+        worker_state.parent.mkdir()
+        worker_state.write_text(json.dumps({
+            "schema": "quillframe_codex_cli_worker_state_v1",
+            "request_id": terminal_id, "run_id": "RUN-FIXTURE", "pid": 42,
+            "state": "failed", "request_sha256": hashlib.sha256(terminal_request.read_bytes()).hexdigest(),
+            "failure_codes": ["cli_nonzero_exit"], "authority": False,
+        }), encoding="utf-8")
+        status, failed = invoke(self.body, terminal_key)
+        self.assertEqual(502, status)
+        self.assertEqual("model_failed", failed["status"])
+        self.assertEqual("model_worker_failed", failed["failure_code"])
+
+        race_key = "c" * 64
+        original_publish = chat_host_relay._exclusive_json
+
+        def publish_then_lose(path, payload, **kwargs):
+            original_publish(path, payload, **kwargs)
+            raise FileExistsError("synthetic simultaneous publisher")
+
+        with patch.object(chat_host_relay, "_exclusive_json", side_effect=publish_then_lose):
+            status, raced = invoke(self.body, race_key)
+        self.assertEqual(202, status)
+        self.assertEqual("req_" + race_key[:32], raced["request_id"])
 
     def test_relay_preparation_and_response_read_cannot_extend_deadline(self):
         for stage in ("body", "response"):
@@ -640,16 +724,20 @@ class ChatHostRelayDeadlineTests(unittest.TestCase):
             self.assertEqual(status, 200)
             packet = packets[0]
             self.assertEqual(packet["created_at_unix"], original_created)
-            self.assertEqual(packet["timeout_seconds"], 111)
-            self.assertEqual(packet["deadline_at_unix"], original_created + 111)
+            self.assertAlmostEqual(packet["timeout_seconds"], 110.99, places=6)
+            self.assertAlmostEqual(packet["deadline_at_unix"], original_created + 110.99, places=6)
             self.assertEqual(packet["request"], self.body)
             rid = packet["request_id"]
             # This fixture's immediate HTTP response is removed only from its
             # isolated temp directory so the real CLI admission can inspect it.
             (self.queue / f"{rid}.response.json").unlink()
             admitted = driver._admit(self.queue / f"{rid}.request.json")
-            self.assertEqual(admitted[0]["request_deadline_monotonic"] - self.clock.monotonic, 110)
-            self.assertEqual(admitted[0]["worker_deadline_monotonic"] - self.clock.monotonic, 105)
+            self.assertAlmostEqual(
+                admitted[0]["request_deadline_monotonic"] - self.clock.monotonic, 109.99, places=6,
+            )
+            self.assertAlmostEqual(
+                admitted[0]["worker_deadline_monotonic"] - self.clock.monotonic, 104.99, places=6,
+            )
             spawn.assert_not_called()
 
     def test_packet_deadline_allows_only_consistent_narrowing(self):
@@ -761,15 +849,19 @@ class CodexCliRelayTests(unittest.TestCase):
             {"role": "user", "content": "Message values stay intact.\r\nUnicode: \u4e2d\u6587"},
         ]
 
-    def packet(self, *, request_id=None, created=None, server_timeout=170, caller_deadline=None, **request_fields):
+    def packet(self, *, request_id=None, created=None, server_timeout=170, caller_deadline=None,
+               durable=False, **request_fields):
         request_id = request_id or "req_" + "b" * 32
         path = self.queue / f"{request_id}.request.json"
-        path.write_bytes(codex_cli_relay.json_bytes({
+        packet = {
             "schema": chat_host_relay.SCHEMA, "request_id": request_id,
             **chat_host_relay.deadline_fields(time.time() if created is None else created, server_timeout, caller_deadline),
             "request": {"messages": self.messages, **request_fields}, "manager_transport": True,
             "independent_review_evidence": False, "authority": False,
-        }))
+        }
+        if durable:
+            packet.update(durable_pending=True, request_key_fingerprint="d" * 64)
+        path.write_bytes(codex_cli_relay.json_bytes(packet))
         return path
 
     def response_format(self, schema=None):
@@ -855,7 +947,8 @@ class CodexCliRelayTests(unittest.TestCase):
         self.assertEqual(observed["env"]["CODEX_HOME"], "fixture-auth-home")
         self.assertTrue({"CODEX_THREAD_ID", "OPENAI_API_KEY", "UNRELATED_PROJECT_SECRET"}.isdisjoint(observed["env"]))
         command = observed["command"]
-        self.assertTrue({"--json", "--ephemeral", "--ignore-user-config", "read-only", "skip_host_skill_discovery"}.issubset(command))
+        self.assertTrue({"--json", "--ephemeral", "--ignore-user-config", "read-only",
+                         "skip_host_skill_discovery", "fast_mode"}.issubset(command))
         self.assertTrue({"resume", "fork", "--ignore-rules", "--dangerously-bypass-approvals-and-sandbox"}.isdisjoint(command))
         self.assertIn("project_doc_max_bytes=0", command)
         self.assertIn("unbounded_connection_retries", command)
@@ -882,6 +975,12 @@ class CodexCliRelayTests(unittest.TestCase):
         self.assertEqual(json.loads(response_bytes)["usage"], self.events()[-1]["usage"])
         self.assertEqual(rows[-2]["usage"], self.events()[-1]["usage"])
         self.assertEqual(rows[-1]["response_file_sha256"], hashlib.sha256(response_bytes).hexdigest())
+        worker_state = json.loads((
+            self.queue / "worker-state" / f"{result['request_id']}.json"
+        ).read_text(encoding="utf-8"))
+        self.assertEqual("completed", worker_state["state"])
+        self.assertEqual(result["request_sha256"], worker_state["request_sha256"])
+        self.assertEqual([], worker_state["failure_codes"])
         evidence = (self.queue / result["events_file"]).read_bytes()
         ledger = (self.queue / "calls.jsonl").read_bytes()
         self.assertEqual(result["events_sha256"], hashlib.sha256(evidence).hexdigest())
@@ -1122,7 +1221,7 @@ class CodexCliRelayTests(unittest.TestCase):
             (replace(self.config, round_limit=True), "invalid_round_limit"),
             (replace(self.config, round_limit=96.0), "invalid_round_limit"),
             (replace(self.config, round_limit="96"), "invalid_round_limit"),
-            (replace(self.config, worker_seconds=571), "worker_timeout"),
+            (replace(self.config, worker_seconds=codex_cli_relay.MAX_WORKER_TIMEOUT_SECONDS + 1), "worker_timeout"),
             (replace(self.config, worker_seconds=True), "worker_timeout"),
             (replace(self.config, worker_seconds="150"), "worker_timeout"),
             (replace(self.config, worker_seconds=float("nan")), "worker_timeout"),
@@ -1302,6 +1401,11 @@ class CodexCliRelayTests(unittest.TestCase):
         self.assertEqual(observed["spawn_count"], 1)
         observed["process"].kill.assert_called_once()
         self.assertFalse(list(self.queue.glob("*.response.json")))
+        worker_state = json.loads((
+            self.queue / "worker-state" / f"{result['request_id']}.json"
+        ).read_text(encoding="utf-8"))
+        self.assertEqual("failed", worker_state["state"])
+        self.assertIn("cli_timeout", worker_state["failure_codes"])
 
     def test_cli_worker_timeout_uses_original_request_deadline(self):
         driver = codex_cli_relay.RelayDriver(self.config)
@@ -1327,7 +1431,7 @@ class CodexCliRelayTests(unittest.TestCase):
                 frozen = json.loads(packet.read_bytes())
                 rows = codex_cli_relay.read_ledger(self.queue)[-3:]
                 for row in rows:
-                    self.assertEqual(row["schema"], "quillframe_codex_cli_relay_v2")
+                    self.assertEqual(row["schema"], "quillframe_codex_cli_relay_v3")
                     self.assertEqual(row["request_deadline_at_unix"], frozen["deadline_at_unix"])
                     self.assertEqual(row["request_timeout_seconds"], frozen["timeout_seconds"])
                     self.assertEqual(row["server_timeout_seconds"], frozen["server_timeout_seconds"])
@@ -1335,6 +1439,21 @@ class CodexCliRelayTests(unittest.TestCase):
                     self.assertEqual(row["worker_deadline_monotonic"], row["admitted_at_monotonic"] + expected)
                     self.assertEqual(row["deadline_clock_scope"], "driver_process")
                     self.assertEqual(row["worker_limit_seconds"], worker_limit)
+
+    def test_cli_keyed_durable_worker_has_no_arbitrary_process_timeout(self):
+        clock = FixtureClock()
+        with clock.patched():
+            driver = codex_cli_relay.RelayDriver(replace(self.config, worker_seconds=None))
+            packet = self.packet(durable=True)
+            result, observed = self.run_mock(
+                driver=driver, packet=packet,
+                on_communicate=lambda: clock.advance(171, wall_seconds=171),
+            )
+        self.assertEqual("submitted", result["status"])
+        self.assertNotIn("timeout", observed["process"].communicate.call_args.kwargs)
+        self.assertTrue(result["durable_pending"])
+        self.assertIsNone(result["worker_deadline_monotonic"])
+        self.assertTrue(list(self.queue.glob("*.response.json")))
 
     def test_cli_worker_timeout_flag_keeps_default_and_accepts_only_bounded_values(self):
         argv = ["serve", "--queue", str(self.queue), "--cli-binary", "fixture-codex", "--run-id", "RUN-FIXTURE",
@@ -1344,8 +1463,9 @@ class CodexCliRelayTests(unittest.TestCase):
             driver.config.validate()
             return {"status": "idle_stopped"}
 
-        for flags, code, value in (([], 0, 150), (["--worker-seconds", "570"], 0, 570),
-                                   (["--worker-seconds", "571"], 1, 571)):
+        invalid = int(codex_cli_relay.MAX_WORKER_TIMEOUT_SECONDS) + 1
+        for flags, code, value in (([], 0, None), (["--worker-seconds", "570"], 0, 570),
+                                   (["--worker-seconds", str(invalid)], 1, invalid)):
             with self.subTest(flags=flags), patch.object(codex_cli_relay.RelayDriver, "serve", autospec=True, side_effect=serve_without_model) as serve, \
                     patch.object(codex_cli_relay.subprocess, "Popen") as spawn, patch("builtins.print"):
                 self.assertEqual(codex_cli_relay.main(argv + flags), code)
@@ -1356,7 +1476,8 @@ class CodexCliRelayTests(unittest.TestCase):
         mutations = [
             {"schema": "quillframe_chat_host_relay_v1"}, {"timeout_seconds": None},
             {"timeout_seconds": True}, {"timeout_seconds": "170"}, {"timeout_seconds": float("nan")},
-            {"deadline_at_unix": float("inf")}, {"server_timeout_seconds": 591},
+            {"deadline_at_unix": float("inf")},
+            {"server_timeout_seconds": chat_host_relay.MAX_RELAY_TIMEOUT_SECONDS + 1},
             {"server_timeout_seconds": True}, {"server_timeout_seconds": -1},
             {"caller_deadline_unix_ms": "2000000180000"}, {"caller_deadline_unix_ms": True},
             {"caller_deadline_unix_ms": 2000000000000}, {"created_at_unix": True},

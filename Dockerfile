@@ -7,6 +7,8 @@ COPY quillframe /tmp/quillframe-build/quillframe
 COPY studio /tmp/quillframe-build/studio
 COPY persistence /tmp/quillframe-build/persistence
 COPY production_runtime /tmp/quillframe-build/production_runtime
+COPY corpus /tmp/quillframe-build/corpus
+COPY surface /tmp/quillframe-build/surface
 COPY publication /tmp/quillframe-build/publication
 COPY quality /tmp/quillframe-build/quality
 COPY learning /tmp/quillframe-build/learning

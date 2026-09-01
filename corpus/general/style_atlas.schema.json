@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.local/schemas/public-general-style-atlas-v1.json",
+  "title": "Quillframe source-free public General Style Atlas v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "analysis_protocol_version", "content_zone", "attribution_mode", "style_artifact_fingerprint", "craft_artifact_fingerprint", "style_contract_fingerprint", "craft_candidates", "atlas_fingerprint"],
+  "properties": {
+    "schema": {"const": "quillframe_public_general_style_atlas_v1"},
+    "analysis_protocol_version": {"const": "1"},
+    "content_zone": {"const": "general"},
+    "attribution_mode": {"const": "source_free"},
+    "style_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"},
+    "craft_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"},
+    "style_contract_fingerprint": {"$ref": "#/$defs/fingerprint"},
+    "craft_candidates": {"type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/craft"}},
+    "atlas_fingerprint": {"$ref": "#/$defs/fingerprint"}
+  },
+  "$defs": {
+    "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "shortText": {"type": "string", "minLength": 1, "maxLength": 600, "pattern": "^\\S(?:[\\s\\S]*\\S)?$"},
+    "conditions": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"$ref": "#/$defs/shortText"}},
+    "craft": {
+      "type": "object", "additionalProperties": false,
+      "required": ["axis", "operation", "effect", "applies_when", "avoid_when", "failure_boundary", "content_zone", "confidence_ppm"],
+      "properties": {
+        "axis": {"enum": ["prose_voice", "syntax_rhythm", "lexical_register", "psychic_distance", "descriptive_attention", "body_appearance", "imagery", "dialogue_voice", "interiority_summary", "information_flow"]},
+        "operation": {"$ref": "#/$defs/shortText"}, "effect": {"$ref": "#/$defs/shortText"},
+        "applies_when": {"$ref": "#/$defs/conditions"}, "avoid_when": {"$ref": "#/$defs/conditions"},
+        "failure_boundary": {"$ref": "#/$defs/shortText"}, "content_zone": {"const": "general"},
+        "confidence_ppm": {"type": "integer", "minimum": 0, "maximum": 1000000}
+      }
+    }
+  }
+}

@@ -9,7 +9,8 @@ from copy import deepcopy
 from pathlib import Path
 from unittest.mock import patch
 
-from model_runtime import EndpointPolicy, MemorySecretStore, MockTransport, ModelRuntime, ModelRuntimeError, TransportError, TransportResponse, normalize_endpoint
+from model_runtime import CapabilityEvidence, EndpointPolicy, MemorySecretStore, MockTransport, ModelRuntime, ModelRuntimeError, TransportError, TransportResponse, normalize_endpoint
+from model_runtime.contracts import model_version_fingerprint, now_iso
 from model_runtime.manager import ModelServiceManager
 from model_runtime.protocols import AnthropicMessagesCodec, OpenAIChatCodec, OpenAIResponsesCodec
 from model_runtime.structured_output import required_only_output_schema, validate_output_schema, validate_structured_text
@@ -236,7 +237,7 @@ class ModelRuntimeTests(unittest.TestCase):
         for post in posts:
             self.assertEqual(posts[0]["body"], post["body"])
             self.assertEqual(history, post["body"]["messages"])
-        for invalid in (True, False, 0, -1, 600.001, 10 ** 1000, float("nan"), float("inf"), None, "600", []):
+        for invalid in (True, False, 0, -1, 86400.001, 10 ** 1000, float("nan"), float("inf"), None, "86400", []):
             with self.subTest(timeout=invalid), self.assertRaises(ModelRuntimeError) as error:
                 runtime.invoke(service.service_id, "m", history, [], timeout_seconds=invalid)
             self.assertEqual("invalid_request_timeout", error.exception.code)
@@ -253,6 +254,49 @@ class ModelRuntimeTests(unittest.TestCase):
         self.assertEqual("request_deadline_exceeded", error.exception.code)
         request.assert_called_once()
         self.assertEqual(600.0, request.call_args.kwargs["timeout"])
+
+    def test_durable_relay_pending_is_typed_and_keeps_the_request_key(self):
+        endpoint = "http://localhost:8765/v1"
+        transport = MockTransport({
+            ("GET", endpoint + "/models", "none"): response(200, {
+                "data": [{"id": "m", "protocol": "openai_chat_completions"}],
+            }),
+            ("POST", endpoint + "/chat/completions", "none"): response(202, {
+                "status": "model_pending", "request_id": "req_" + "a" * 32,
+            }),
+        })
+        runtime = ModelRuntime(MemorySecretStore(), transport)
+        service = runtime.connect(endpoint, "")
+        with self.assertRaises(ModelRuntimeError) as caught:
+            runtime.invoke(
+                service.service_id, "m", [{"role": "user", "content": "fixture"}], [],
+                request_key="RUN:STAGE:model:1",
+            )
+        self.assertEqual("model_pending", caught.exception.code)
+        self.assertEqual("req_" + "a" * 32, caught.exception.detail["request_id"])
+        request = [item for item in transport.requests if item["method"] == "POST"][0]
+        self.assertTrue(request["request_key_present"])
+
+    def test_durable_relay_terminal_worker_failure_is_typed(self):
+        endpoint = "http://localhost:8765/v1"
+        transport = MockTransport({
+            ("GET", endpoint + "/models", "none"): response(200, {
+                "data": [{"id": "m", "protocol": "openai_chat_completions"}],
+            }),
+            ("POST", endpoint + "/chat/completions", "none"): response(502, {
+                "status": "model_failed", "request_id": "req_" + "c" * 32,
+                "failure_code": "model_worker_failed",
+            }),
+        })
+        runtime = ModelRuntime(MemorySecretStore(), transport)
+        service = runtime.connect(endpoint, "")
+        with self.assertRaises(ModelRuntimeError) as caught:
+            runtime.invoke(
+                service.service_id, "m", [{"role": "user", "content": "fixture"}], [],
+                request_key="RUN:STAGE:model:1",
+            )
+        self.assertEqual("model_worker_failed", caught.exception.code)
+        self.assertEqual("req_" + "c" * 32, caught.exception.detail["request_id"])
 
     def test_native_schema_is_explicit_in_both_openai_protocols(self):
         history = [{"role": "user", "content": "Return the bounded judgment."}]
@@ -298,6 +342,44 @@ class ModelRuntimeTests(unittest.TestCase):
         with self.assertRaises(ModelRuntimeError) as error:
             runtime.invoke(service.service_id, "m", [], [], output_schema=OUTPUT_SCHEMA)
         self.assertEqual("model_protocol_unresolved", error.exception.code)
+        self.assertEqual(["GET"], [request["method"] for request in transport.requests])
+
+    def test_unresolved_protocol_is_not_eligible_without_an_explicit_probe(self):
+        endpoint = "https://api.example.test/v1"
+        transport = MockTransport({
+            ("GET", endpoint + "/models", "bearer"): response(200, {"data": [{"id": "m"}]})
+        })
+        runtime = ModelRuntime(MemorySecretStore(), transport)
+        snapshot = runtime.connect(endpoint, "t")
+        snapshot.models[0].capabilities["text"] = CapabilityEvidence(
+            "text", "verified", "verified", now_iso()
+        )
+        with self.assertRaises(ModelRuntimeError) as error:
+            runtime.select_model(snapshot.service_id, {"text"}, allow_probe=False)
+        self.assertEqual("no_eligible_model", error.exception.code)
+        self.assertEqual(["GET"], [request["method"] for request in transport.requests])
+
+    def test_fingerprint_bound_invoke_rejects_a_changed_selected_descriptor(self):
+        endpoint = "https://api.example.test/v1"
+        transport = MockTransport({
+            ("GET", endpoint + "/models", "bearer"): response(
+                200, {"data": [{"id": "m", "protocol": "openai_chat_completions"}]}
+            )
+        })
+        runtime = ModelRuntime(MemorySecretStore(), transport)
+        snapshot = runtime.connect(endpoint, "t")
+        selected = snapshot.models[0]
+        expected = model_version_fingerprint(snapshot.service_id, selected)
+        selected.metadata["provider_revision"] = "changed-after-selection"
+        with self.assertRaises(ModelRuntimeError) as error:
+            runtime.invoke(
+                snapshot.service_id,
+                selected.model_id,
+                [{"role": "user", "content": "must not dispatch"}],
+                [],
+                expected_model_version_fingerprint=expected,
+            )
+        self.assertEqual("model_selection_changed", error.exception.code)
         self.assertEqual(["GET"], [request["method"] for request in transport.requests])
 
     def test_protocol_normalization_keeps_refusal_distinct_from_valid_json(self):
@@ -512,13 +594,19 @@ class ModelRuntimeTests(unittest.TestCase):
         tools = ToolRuntime(host_capabilities={"test_tool"})
         tools.register(ToolSpec("echo", "echo", {"type": "object", "additionalProperties": False, "required": ["value"], "properties": {"value": {"type": "string"}}}, lambda args: {"value": args["value"]}, "test_tool"))
         runner = AgentRunner(runtime, tools)
-        job = AgentJob("job", "session", "run", "SYSTEM-IMPROVE", "coding_planner", service.service_id, "Use echo once and finish.", tool_grants={"echo"}, required_model_capabilities={"text", "tool_calling"}, budgets=AgentBudget(max_steps=6, max_model_requests=6, max_tool_calls=4, max_parallel_tool_calls=2, max_output_tokens_per_request=128, max_total_tokens=1000, max_elapsed_ms=30000))
+        job = AgentJob("job", "session", "run", "SYSTEM-IMPROVE", "coding_planner", service.service_id, "Use echo once and finish.", tool_grants={"echo"}, required_model_capabilities={"text", "tool_calling"}, budgets=AgentBudget(max_steps=6, max_model_requests=6, max_tool_calls=4, max_parallel_tool_calls=2, model_context_limit=1000, max_output_tokens=128, run_cost_budget=1000, max_elapsed_ms=30000))
         result = runner.run(job)
         self.assertEqual(result.status, "completed")
         self.assertEqual(result.final_text, "done")
         self.assertEqual(result.tool_calls, 1)
         self.assertEqual(result.tool_receipts[0]["tool"], "echo")
-        self.assertEqual(result.usage, {"input_tokens": 22, "output_tokens": 8})
+        self.assertEqual(22, result.usage["input_tokens"])
+        self.assertEqual(8, result.usage["output_tokens"])
+        self.assertNotIn("cost_micros", result.usage)
+        billing = result.usage["billing_receipt"]
+        self.assertEqual("reconciliation_required", billing["status"])
+        self.assertEqual(2, billing["model_requests"])
+        self.assertTrue(billing["receipt_fingerprint"].startswith("sha256:"))
         self.assertFalse(result.to_dict()["authority"])
 
     def test_pre_1_0_global_state_is_rejected_instead_of_migrated(self):

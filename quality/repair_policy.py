@@ -13,12 +13,14 @@ import json
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "quillframe_repair_policy_v3"
+SCHEMA = "quillframe_repair_policy_v4"
 OWNERS = {
     "story", "plan", "scene", "character", "reader_pressure", "surface",
     "continuity", "context", "research", "runtime", "human",
 }
 GENERATION_MODES = {"local_or_bounded_repair", "fresh_realization"}
+REVISION_ROUTES = {"isolated_defect", "scene_causality_failure", "voice_contamination", "mixed"}
+TARGET_ROUTES = {"local_edit", "scene_realization", "fresh_realization"}
 
 
 def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
@@ -38,6 +40,52 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("author_revision_requested must be boolean")
     if generation_mode == "fresh_realization" and not (candidate_rejected or author_revision_requested):
         raise ValueError("fresh_realization requires rejection or an authorized revision request")
+    revision_route = payload.get("revision_route")
+    if revision_route not in REVISION_ROUTES:
+        raise ValueError("revision_route must be model-selected isolated|scene|voice|mixed")
+    targets = payload.get("targets")
+    if not isinstance(targets, list) or not targets:
+        raise ValueError("targets must be a non-empty array")
+    target_ids = []
+    target_routes = []
+    for target in targets:
+        if not isinstance(target, dict):
+            raise ValueError("repair target must be an object")
+        target_id = target.get("target_id")
+        route = target.get("route")
+        if not isinstance(target_id, str) or not target_id or route not in TARGET_ROUTES:
+            raise ValueError("repair target identity/route is invalid")
+        target_ids.append(target_id)
+        target_routes.append(route)
+        evidence_quote = target.get("evidence_quote")
+        if not isinstance(evidence_quote, str) or not evidence_quote:
+            raise ValueError("repair target requires exact evidence_quote")
+        window = target.get("edit_window_quote")
+        if route == "local_edit":
+            if not isinstance(window, str) or not window or evidence_quote not in window:
+                raise ValueError("local repair target requires an edit window containing its evidence")
+        elif window is not None:
+            raise ValueError("scene/fresh repair target cannot expose an incumbent edit window")
+    if len(target_ids) != len(set(target_ids)):
+        raise ValueError("repair target identities must be unique")
+    if revision_route == "isolated_defect" and (
+        generation_mode != "local_or_bounded_repair" or set(target_routes) != {"local_edit"}
+    ):
+        raise ValueError("isolated_defect requires only bounded local targets")
+    if revision_route == "voice_contamination" and (
+        generation_mode != "fresh_realization" or "fresh_realization" not in target_routes
+    ):
+        raise ValueError("voice_contamination requires fresh realization")
+    if revision_route == "scene_causality_failure" and (
+        generation_mode != "fresh_realization" or "local_edit" in target_routes
+    ):
+        raise ValueError("scene causality failure requires scene/fresh realization")
+    if revision_route == "mixed" and len(set(target_routes)) < 2:
+        raise ValueError("mixed revision requires at least two target routes")
+    if generation_mode == "local_or_bounded_repair" and set(target_routes) != {"local_edit"}:
+        raise ValueError("bounded generation cannot carry scene/fresh targets")
+    if generation_mode == "fresh_realization" and set(target_routes) == {"local_edit"}:
+        raise ValueError("fresh generation requires at least one scene/fresh target")
 
     fresh = generation_mode == "fresh_realization"
     excluded = []
@@ -51,6 +99,8 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema": SCHEMA,
         "repair_owner": owner,
+        "revision_route": revision_route,
+        "targets": targets,
         "generation_mode": generation_mode,
         "candidate_rejected": candidate_rejected,
         "author_revision_requested": author_revision_requested,
@@ -75,20 +125,24 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def self_test() -> dict[str, Any]:
-    scene_local = evaluate({"repair_owner": "scene", "generation_mode": "local_or_bounded_repair", "candidate_rejected": True})
-    surface_fresh = evaluate({"repair_owner": "surface", "generation_mode": "fresh_realization", "candidate_rejected": True})
-    same_owner_fresh = evaluate({"repair_owner": "scene", "generation_mode": "fresh_realization", "candidate_rejected": True})
-    same_owner_local = evaluate({"repair_owner": "scene", "generation_mode": "local_or_bounded_repair", "candidate_rejected": True})
-    requested = evaluate({"repair_owner": "scene", "generation_mode": "fresh_realization", "candidate_rejected": False,
+    local = [{"target_id": "T1", "route": "local_edit", "scene_ref": "S1",
+              "evidence_quote": "bad", "edit_window_quote": "bounded bad window"}]
+    fresh = [{"target_id": "T1", "route": "fresh_realization", "scene_ref": "S1",
+              "evidence_quote": "bad", "edit_window_quote": None}]
+    scene_local = evaluate({"repair_owner": "scene", "revision_route": "isolated_defect", "targets": local, "generation_mode": "local_or_bounded_repair", "candidate_rejected": True})
+    surface_fresh = evaluate({"repair_owner": "surface", "revision_route": "voice_contamination", "targets": fresh, "generation_mode": "fresh_realization", "candidate_rejected": True})
+    same_owner_fresh = evaluate({"repair_owner": "scene", "revision_route": "scene_causality_failure", "targets": [{**fresh[0], "route": "scene_realization"}], "generation_mode": "fresh_realization", "candidate_rejected": True})
+    same_owner_local = evaluate({"repair_owner": "scene", "revision_route": "isolated_defect", "targets": local, "generation_mode": "local_or_bounded_repair", "candidate_rejected": True})
+    requested = evaluate({"repair_owner": "scene", "revision_route": "scene_causality_failure", "targets": [{**fresh[0], "route": "scene_realization"}], "generation_mode": "fresh_realization", "candidate_rejected": False,
                           "author_revision_requested": True})
     invalid_fresh_accepted = False
     try:
-        evaluate({"repair_owner": "scene", "generation_mode": "fresh_realization", "candidate_rejected": False})
+        evaluate({"repair_owner": "scene", "revision_route": "voice_contamination", "targets": fresh, "generation_mode": "fresh_realization", "candidate_rejected": False})
     except ValueError:
         invalid_fresh_accepted = True
     missing_semantic_choice = False
     try:
-        evaluate({"repair_owner": "scene", "candidate_rejected": True})
+        evaluate({"repair_owner": "scene", "revision_route": "isolated_defect", "targets": local, "candidate_rejected": True})
     except ValueError:
         missing_semantic_choice = True
 

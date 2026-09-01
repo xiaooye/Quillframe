@@ -53,7 +53,7 @@ TOOLS: list[dict[str, Any]] = [
     {
         "name": "quillframe_author_run_start",
         "title": "Start bounded author run",
-        "description": "Register one explicitly named Quillframe task mode. The host/model must still execute and satisfy all gates; raw draft remains private.",
+        "description": "Register one explicitly named Quillframe task mode. The host/model must still execute and satisfy all gates; direct candidate prose remains private until release.",
         "inputSchema": {"type": "object", "properties": {"project_id": {"type": "string", "minLength": 1}, "task_mode": {"type": "string", "minLength": 1}, "target_ref": {"type": ["string", "null"]}, "payload": {"type": "object"}, "session_id": {"type": ["string", "null"]}, "idempotency_key": {"type": ["string", "null"]}}, "required": ["project_id", "task_mode", "payload"], "additionalProperties": False},
         "_meta": {"surface_class": "novelist_facing", "mapped_operation": "author.run.start", "authority": False},
     },

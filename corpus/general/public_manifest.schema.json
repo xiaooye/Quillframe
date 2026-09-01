@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.local/schemas/public-corpus-manifest-v1.json",
+  "title": "Quillframe anonymous public corpus manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "public_study_id",
+    "profile",
+    "study_state",
+    "work_count",
+    "checklist_hash",
+    "aggregate_metrics",
+    "aggregate_mechanisms",
+    "works",
+    "preview_token",
+    "manifest_fingerprint"
+  ],
+  "properties": {
+    "schema": {"const": "quillframe_public_corpus_manifest_v1"},
+    "public_study_id": {"type": "string", "pattern": "^PS-[0-9a-f]{32}$"},
+    "profile": {"enum": ["general", "adult_explicit"]},
+    "study_state": {"const": "complete"},
+    "work_count": {"const": 120},
+    "checklist_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "aggregate_metrics": {"$ref": "#/$defs/aggregates"},
+    "aggregate_mechanisms": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {"$ref": "#/$defs/mechanism"}
+    },
+    "works": {
+      "type": "array",
+      "minItems": 120,
+      "maxItems": 120,
+      "items": {"$ref": "public_work.schema.json"}
+    },
+    "preview_token": {"type": "string", "pattern": "^preview-[0-9a-f]{64}$"},
+    "manifest_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "metricSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimum", "maximum", "mean"],
+      "properties": {
+        "minimum": {"type": "number", "minimum": 0},
+        "maximum": {"type": "number", "minimum": 0},
+        "mean": {"type": "number", "minimum": 0}
+      }
+    },
+    "aggregates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sampled_chars",
+        "paragraph_count",
+        "sentence_count",
+        "mean_sentence_chars_milli",
+        "dialogue_char_ratio_ppm",
+        "unique_char_ratio_ppm",
+        "punctuation_ratio_ppm"
+      ],
+      "properties": {
+        "sampled_chars": {"$ref": "#/$defs/metricSummary"},
+        "paragraph_count": {"$ref": "#/$defs/metricSummary"},
+        "sentence_count": {"$ref": "#/$defs/metricSummary"},
+        "mean_sentence_chars_milli": {"$ref": "#/$defs/metricSummary"},
+        "dialogue_char_ratio_ppm": {"$ref": "#/$defs/metricSummary"},
+        "unique_char_ratio_ppm": {"$ref": "#/$defs/metricSummary"},
+        "punctuation_ratio_ppm": {"$ref": "#/$defs/metricSummary"}
+      }
+    },
+    "mechanism": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "axis",
+        "mechanism_label",
+        "support_count",
+        "prevalence_ppm",
+        "mean_confidence_ppm",
+        "applicability_boundary",
+        "counterexample",
+        "failure_mode"
+      ],
+      "properties": {
+        "axis": {"enum": ["sentence", "scene", "chapter", "pacing", "dialogue", "pov", "tension", "sensory"]},
+        "mechanism_label": {
+          "enum": [
+            "clipped", "balanced", "extended", "fragmented", "sustained",
+            "low_segmentation", "moderate_segmentation", "high_segmentation",
+            "brisk", "mixed", "deliberate", "sparse", "dialogue_forward",
+            "unresolved", "low_signal", "variable_signal", "high_signal"
+          ]
+        },
+        "support_count": {"type": "integer", "minimum": 1, "maximum": 120},
+        "prevalence_ppm": {"type": "integer", "minimum": 0, "maximum": 1000000},
+        "mean_confidence_ppm": {"type": "integer", "minimum": 0, "maximum": 1000000},
+        "applicability_boundary": {"const": "anonymous_three_window_sample"},
+        "counterexample": {
+          "enum": [
+            "non_dominant_profiles_present",
+            "axis_evidence_unresolved",
+            "no_observed_counterexample_in_sample"
+          ]
+        },
+        "failure_mode": {"const": "descriptive_not_prescriptive"}
+      }
+    }
+  }
+}

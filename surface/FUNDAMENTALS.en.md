@@ -43,15 +43,17 @@ Surface work begins **after** scene/story/character simulation has created somet
 A typical interface is:
 
 ```text
-bounded context + scene/character simulation
-→ event-first Raw Draft
-→ Surface Realization
-→ deterministic / semantic surface checks
-→ local rewrite or upstream regeneration
-→ Reader Engagement / continuity / independent gates
+bounded context + private character enactment
+→ Scene Realization Contract + model-composed Writer context
+→ Reader Pressure
+→ one direct Surface Writer
+→ candidate fingerprint freeze
+→ Reader Engagement / continuity / objective-bound semantic review
+→ bounded local edit or upstream / fresh realization when required
+→ independent and user-visible gates
 ```
 
-Raw Draft is internal. Regression bad examples belong to post-generation checking and must not prime the first draft.
+Rejected prose, reviewer analysis and private deliberation do not prime a fresh Writer. Deterministic checks verify only schema, provenance, fingerprints and context boundaries; models and the author own literary judgment.
 
 Surface repair must respect ownership:
 

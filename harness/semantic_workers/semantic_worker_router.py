@@ -29,6 +29,13 @@ def find_named_keys(v:Any,names:set[str],path:str="$")->list[str]:
     return out
 def find_forbidden_keys(v:Any,path:str="$")->list[str]:return find_named_keys(v,FORBIDDEN_BLIND_KEYS,path)
 def _type(v:Any,t:str)->bool:return {"object":isinstance(v,dict),"array":isinstance(v,list),"string":isinstance(v,str),"boolean":isinstance(v,bool),"number":isinstance(v,(int,float)) and not isinstance(v,bool),"integer":isinstance(v,int) and not isinstance(v,bool),"null":v is None}.get(t,True)
+def _json_equal(left:Any,right:Any)->bool:
+    if isinstance(left,bool) or isinstance(right,bool):return isinstance(left,bool) and isinstance(right,bool) and left==right
+    if isinstance(left,(int,float)) and isinstance(right,(int,float)):return left==right
+    if type(left) is not type(right):return False
+    if isinstance(left,list):return len(left)==len(right) and all(_json_equal(a,b) for a,b in zip(left,right))
+    if isinstance(left,dict):return set(left)==set(right) and all(_json_equal(left[k],right[k]) for k in left)
+    return left==right
 def validate_typed_value(v:Any,s:Any,path:str="$")->list[str]:
     if not isinstance(s,dict) or not s:return []
     e=[]
@@ -54,6 +61,7 @@ def validate_typed_value(v:Any,s:Any,path:str="$")->list[str]:
     elif isinstance(v,list):
         if isinstance(s.get("minItems"),int) and len(v)<s["minItems"]:e.append(f"{path}: fewer than minItems")
         if isinstance(s.get("maxItems"),int) and len(v)>s["maxItems"]:e.append(f"{path}: more than maxItems")
+        if s.get("uniqueItems") is True and any(_json_equal(item,earlier) for i,item in enumerate(v) for earlier in v[:i]):e.append(f"{path}: duplicate items violate uniqueItems")
         if isinstance(s.get("items"),dict):
             for i,x in enumerate(v):e+=validate_typed_value(x,s["items"],f"{path}[{i}]")
     elif isinstance(v,str):
@@ -313,7 +321,7 @@ def make_contract_job(cid:str,subject_id:str,input_payload:dict[str,Any],*,regis
     if not isinstance(c,dict):raise ValueError(f"contract {cid} not in registry")
     input_errors=validate_contract_input(cid,c,input_payload)
     if input_errors:raise ValueError("; ".join(input_errors))
-    job={"job_id":job_id or "SEM-CONTRACT-"+hashlib.sha256(f"{cid}:{subject_id}".encode()).hexdigest()[:16],"kind":c["kind"],"subject_id":subject_id,"created_at":datetime.now(timezone.utc).isoformat(),"input_fingerprint":"","input":{"model_contract_id":cid,"model_contract_version":r.get("version"),"purpose":c.get("purpose"),"payload":input_payload,**({"default_personas":c["default_personas"]} if isinstance(c.get("default_personas"),dict) else {})},"rubric":list(c["rubric"]),"output_contract":c["output_contract"],"permissions":dict(c["permissions"]),"provenance":{"source":"model_contract_pack","registry_schema":r["schema"],"registry_version":r.get("version"),"registry_path":str(registry_path.relative_to(HERE)) if registry_path.is_relative_to(HERE) else str(registry_path),"pack_id":pack_id,"model_contract_id":cid,"input_contract_validated":bool(c.get("input_contract")),"independent_gate":bool(c.get("independent_gate",False))},"execution":{"source_session_id":source_session_id,"worker_session_id":None,"handoff_id":handoff_id,"attempt_id":None}}
+    job={"job_id":job_id or "SEM-CONTRACT-"+hashlib.sha256(f"{cid}:{subject_id}".encode()).hexdigest()[:16],"kind":c["kind"],"subject_id":subject_id,"created_at":datetime.now(timezone.utc).isoformat(),"input_fingerprint":"","input":{"model_contract_id":cid,"model_contract_version":r.get("version"),"purpose":c.get("purpose"),"payload":input_payload,**({"default_personas":c["default_personas"]} if isinstance(c.get("default_personas"),dict) else {})},"rubric":list(c["rubric"]),"output_contract":c["output_contract"],"permissions":dict(c["permissions"]),"provenance":{"source":"model_contract_pack","registry_schema":r["schema"],"registry_version":r.get("version"),"registry_path":registry_path.relative_to(HERE).as_posix() if registry_path.is_relative_to(HERE) else str(registry_path),"pack_id":pack_id,"model_contract_id":cid,"input_contract_validated":bool(c.get("input_contract")),"independent_gate":bool(c.get("independent_gate",False))},"execution":{"source_session_id":source_session_id,"worker_session_id":None,"handoff_id":handoff_id,"attempt_id":None}}
     job["input_fingerprint"]=fingerprint_for(job)
     if cid=="quality.production_review":
         if qualification_receipt is None:raise ValueError("quality.production_review requires pre-independent qualification receipt")

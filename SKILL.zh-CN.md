@@ -99,9 +99,9 @@ Contract packs：
 
 通用生产图：
 
-`Context Freeze → Story/Canon Preflight → Scene Simulation → Character Simulation → Reader Pressure → Event-first Raw Draft → Surface Realization → 生成后 lint/regression/semantic diagnosis → 回 owning layer 修复 → Reader Engagement → Continuity → User-visible Gate`
+`Context Freeze → Story/Canon Preflight → 人物私有行动推演 → Scene Resolution → Scene Realization Contract + 模型组合的 Writer Pack → Reader Pressure → direct Surface Writer → 冻结候选指纹 → Reader Engagement → Continuity → 逐项目标自检与资格门 → 必要时回 owning layer 修订/比较 → 独立评审 → User-visible Gate`
 
-Raw Draft 只在内部存在。Regression 坏例与 hidden expected label 不得进入 first-pass generation。
+被否决正文、Reviewer 分析、人物私有推演与 hidden expected label 不得进入 fresh Writer pack。局部修订只能收到精确指纹绑定的编辑窗口。确定性检查只验证 schema、provenance 与边界；文学判断仍属于模型和作者。
 
 **Production visibility 必须 fail closed。** 在 `DRAFT` / `REVISE` 中，读过这些合同不等于执行了 Quillframe。Host 必须调用经过验证的 Quillframe production runtime，且只有 exact fingerprint-bound production release 才能提供用户可见 manuscript。若 runtime、模型执行、required independent review 或 release evidence 不可用，必须返回 typed pending/blocked 状态，禁止用 host 自己写的正文补齐缺失机制。Ephemeral agent sandbox 可以 materialize deterministic Framework bundle，但执行前必须验证 exact commit/bundle fingerprint；其中的 SQLite 只是 runtime materialization，不是第二套 Canon authority。
 

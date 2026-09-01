@@ -3,12 +3,100 @@
   "purpose": "immutable_historical_evidence_and_explicit_eval_baselines_only",
   "entries": [
     {
+      "pack_id": "learning",
+      "version": "5",
+      "path": "learning.v5.json",
+      "original_registry_path": "contracts/learning.json",
+      "source_commit": "22a9b21dc93099882f87ce546c3ed8abb31abd76",
+      "source_state": "working_tree_snapshot_immediately_before_learning_v6_axis_reconciliation_contract",
+      "sha256": "7da26103fd8ddc49b502d69689d9bb22fb228909710c72ea8404e8d172a4ae74"
+    },
+    {
+      "pack_id": "learning",
+      "version": "4",
+      "path": "learning.v4.json",
+      "original_registry_path": "contracts/learning.json",
+      "source_commit": "22a9b21dc93099882f87ce546c3ed8abb31abd76",
+      "source_state": "working_tree_snapshot_immediately_before_learning_v5_nine_dimension_blind_prose_contract",
+      "sha256": "de9a59da59189960acbdb73685b6354bd90c509a4f95b3242a83962135410c05"
+    },
+    {
+      "pack_id": "learning",
+      "version": "3",
+      "path": "learning.v3.json",
+      "original_registry_path": "contracts/learning.json",
+      "source_commit": "22a9b21dc93099882f87ce546c3ed8abb31abd76",
+      "source_state": "working_tree_snapshot_immediately_before_learning_v4_style_contracts",
+      "sha256": "3898fbaf658b0d0d1270264287573e3bb3493f9568af46c7c9aacbab4e26b4df"
+    },
+    {
+      "pack_id": "learning",
+      "version": "2",
+      "path": "learning.v2.json",
+      "original_registry_path": "contracts/learning.json",
+      "source_commit": "22a9b21dc93099882f87ce546c3ed8abb31abd76",
+      "sha256": "1a4fe7c9a55109c7460b099dc94620e5dc53854b22864093af8b2917b2f45d05"
+    },
+    {
+      "pack_id": "production-loop",
+      "version": "9",
+      "path": "production-loop.v9.json",
+      "original_registry_path": "contracts/production-loop.json",
+      "source_commit": "22a9b21dc93099882f87ce546c3ed8abb31abd76",
+      "source_state": "working_tree_snapshot_immediately_before_production_loop_v10_ai_native_direct_writer_contract",
+      "sha256": "c6becbcb62aea0d17134bef62bb21f990b07f6720cac95958eaa1634849a70d1"
+    },
+    {
+      "pack_id": "production-loop",
+      "version": "8",
+      "path": "production-loop.v8.json",
+      "original_registry_path": "contracts/production-loop.json",
+      "source_commit": "22a9b21dc93099882f87ce546c3ed8abb31abd76",
+      "source_state": "working_tree_snapshot_immediately_before_production_loop_v9_eight_card_review_bound",
+      "sha256": "9aa7b5fa290e6c77abe24cb00077bd857b09a571141ff5396323fe2077f7c14a"
+    },
+    {
+      "pack_id": "production-loop",
+      "version": "7",
+      "path": "production-loop.v7.json",
+      "original_registry_path": "contracts/production-loop.json",
+      "source_commit": "22a9b21dc93099882f87ce546c3ed8abb31abd76",
+      "source_state": "working_tree_snapshot_immediately_before_production_loop_v8_composite_selection_bound",
+      "sha256": "2111b8ee8d8c5b182f9c49fdc947db98969611d4798c53c6015df1034e362b55"
+    },
+    {
+      "pack_id": "production-loop",
+      "version": "6",
+      "path": "production-loop.v6.json",
+      "original_registry_path": "contracts/production-loop.json",
+      "source_commit": "22a9b21dc93099882f87ce546c3ed8abb31abd76",
+      "sha256": "7cc95473ec177ac7b76033ab9a61b9bfd57a7072b30d5cbf98022a660550635e"
+    },
+    {
+      "pack_id": "quality",
+      "version": "8",
+      "path": "quality.v8.json",
+      "original_registry_path": "contracts/quality.json",
+      "source_commit": "22a9b21dc93099882f87ce546c3ed8abb31abd76",
+      "source_state": "working_tree_snapshot_immediately_before_quality_v9_author_objective_contract",
+      "sha256": "252467344a8d1e0d58cc9eb635e140de16f13ccffc8c3bdf7d4482a1c36bfaaa"
+    },
+    {
       "pack_id": "quality",
       "version": "7",
       "path": "quality.v7.json",
       "original_registry_path": "contracts/quality.json",
       "source_commit": "54c64c07fa2bd18c102fabae264a9797a9a4e100",
       "sha256": "7a8f5cce2671f0c19806694a27a4111a7f3734fee1573aaa4ea53665b3f624c7"
+    },
+    {
+      "pack_id": "story-simulation",
+      "version": "5",
+      "path": "story-simulation.v5.json",
+      "original_registry_path": "contracts/story-simulation.json",
+      "source_commit": "22a9b21dc93099882f87ce546c3ed8abb31abd76",
+      "source_state": "working_tree_snapshot_immediately_before_story_simulation_v6_private_character_enactment_contract",
+      "sha256": "40bc589bcc93a7b4e5382e613571bfcbf93a831217d49aa88b0b7671d69c2a5d"
     }
   ]
 }

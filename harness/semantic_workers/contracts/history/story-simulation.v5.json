@@ -1,0 +1,206 @@
+{
+  "schema": "quillframe_model_contract_registry_v1",
+  "version": "5",
+  "principle": "Character and scene causality are semantic simulation work. Private character state may justify a separate semantic role, but schemas stay thin: deterministic runtime binds identity, visibility, story-time eligibility, provenance and evidence references; models decide motivation, action, causal collision and dramatic usefulness.",
+  "contracts": {
+    "character.action_propose": {
+      "kind": "artifact_audit",
+      "purpose": "Simulate what one important character is likely to try next from bounded private state and authorized perspective evidence. Character state is causal evidence, not prose payload or a field-by-field serialization obligation.",
+      "forbidden_input_keys": [
+        "narrator_omniscience",
+        "reader_only_knowledge",
+        "research_only_knowledge",
+        "future_plan",
+        "planned_outcome",
+        "other_character_private_knowledge",
+        "writer_reasoning"
+      ],
+      "input_contract": {
+        "type": "object",
+        "required": ["character_id", "current_story_order", "active_agenda", "perceived_state", "immediate_situation", "perspective_memory"],
+        "properties": {
+          "character_id": {"type": "string", "minLength": 1},
+          "current_story_order": {"type": "integer", "minimum": 0},
+          "active_agenda": {"type": "string", "minLength": 1},
+          "perceived_state": {"type": "object"},
+          "immediate_situation": {
+            "type": "object",
+            "properties": {
+              "observables": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["observable_id", "observation", "source_ref", "available_from_story_order"],
+                  "properties": {
+                    "observable_id": {"type": "string", "minLength": 1},
+                    "observation": {"type": "string", "minLength": 1},
+                    "source_ref": {"type": "string", "minLength": 1},
+                    "available_from_story_order": {"type": "integer", "minimum": 0}
+                  },
+                  "additionalProperties": true
+                }
+              }
+            },
+            "additionalProperties": true
+          },
+          "perspective_memory": {
+            "type": "object",
+            "properties": {
+              "episodic_visible_events": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["event_id", "source_ref", "available_from_story_order"],
+                  "properties": {
+                    "event_id": {"type": "string", "minLength": 1},
+                    "source_ref": {"type": "string", "minLength": 1},
+                    "available_from_story_order": {"type": "integer", "minimum": 0}
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "visibility_tagged_facts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["fact_id", "claim", "source_ref", "available_from_story_order"],
+                  "properties": {
+                    "fact_id": {"type": "string", "minLength": 1},
+                    "claim": {"type": "string", "minLength": 1},
+                    "source_ref": {"type": "string", "minLength": 1},
+                    "available_from_story_order": {"type": "integer", "minimum": 0},
+                    "epistemic_status": {"type": "string"},
+                    "acquisition_mode": {"type": "string"}
+                  },
+                  "additionalProperties": true
+                }
+              },
+              "situation_patterns": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["pattern_id", "evidence_ref", "available_from_story_order"],
+                  "properties": {
+                    "pattern_id": {"type": "string", "minLength": 1},
+                    "evidence_ref": {"type": "string", "minLength": 1},
+                    "available_from_story_order": {"type": "integer", "minimum": 0}
+                  },
+                  "additionalProperties": true
+                }
+              }
+            },
+            "additionalProperties": true
+          },
+          "relationship_state": {"type": "object"},
+          "task_state": {"type": "object"},
+          "location": {"type": "object"},
+          "constraints": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Use only supplied character-visible state and evidence whose available_from_story_order is not later than current_story_order. Do not give the character narrator, reader, research, future-plan or other-character knowledge.",
+        "Treat beliefs, goals, fears, assumptions, relationships, memories and labels as semantic evidence, not mandatory slots that must each appear in the decision. Reason about plausible inference rather than applying a field-equality story engine.",
+        "Start from the character's current private agenda and immediate situation, not from what would make an outline convenient. Preserve independent agency, including resistance, misunderstanding, delay, concealment or side objectives when causally supported.",
+        "Prefer concrete actions or tactics that can create observable consequences. Character consistency does not mean predictability, and a contradicted or uncertain fact may still matter as something the character believes, fears, doubts or reacts against.",
+        "Cite the supplied evidence actually used. The runtime may verify that cited references exist and are temporally eligible; it must not decide whether that evidence semantically justifies the action.",
+        "Keep the answer compact. Do not serialize a Character Sheet into a proposal record and do not draft final dialogue or narration."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "character_id", "active_agenda", "proposals"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "character_id": {"type": "string", "minLength": 1},
+          "active_agenda": {"type": "string", "minLength": 1},
+          "report": {"type": "string"},
+          "proposals": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["action", "knowledge_basis"],
+              "properties": {
+                "action": {"type": "string", "minLength": 1},
+                "knowledge_basis": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["evidence_id", "use"],
+                    "properties": {
+                      "evidence_id": {"type": "string", "minLength": 1},
+                      "use": {"enum": ["supports", "challenges", "uncertainty"]}
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "tactic": {"type": "string"},
+                "why_now": {"type": "string"},
+                "expected_resistance": {"type": "string"},
+                "risk_or_cost": {"type": "string"},
+                "relationship_effect": {"type": "string"},
+                "motive_basis": {"type": "string"},
+                "location_or_task_effect": {"type": "string"},
+                "uncertainty": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "character_action_proposal"
+      },
+      "independent_gate": false
+    },
+    "scene.resolve_actions": {
+      "kind": "artifact_audit",
+      "purpose": "Resolve competing character actions against the bounded scene/world situation and return a compact causal interaction trace. This is simulation evidence, not an outline mutation, Realization Sheet or Canon.",
+      "rubric": [
+        "Treat supplied character proposals as competing agendas, not instructions that must all succeed.",
+        "Each character_action_evidence.bounded_input is the actual bounded input used for that action judgment, with its input and result fingerprints. Use its eligible observations and memories to understand causal premises and knowledge acquisition, not merely the evidence IDs in the action. An input marked input_is_proposed_cast remains a proposed initial state, never accepted Canon. This private evidence must not be serialized into final narration.",
+        "Resolve collisions through the supplied world state, timing, information asymmetry, relationships, resources and consequences rather than narrator fiat.",
+        "For authorized original DRAFT/REVISE work, develop observable consequences from the proposed starting circumstances and fill unspecified connecting details when compatible with all supplied hard bounds and accepted facts. Distinguish new fiction proposals from claims about existing Canon. Do not invent a contradiction or change established evidence to achieve a desired beat; later choices need visible triggers and plausible acquisition of any new knowledge, not forced success of the plan.",
+        "Preserve active-plan hard bounds when supplied, but route impossible or newly contradicted assumptions back to the appropriate semantic owner instead of smoothing them over.",
+        "Use repair_routes only for owner repairs that block the next writing stage, such as incompatible evidence or a necessary premise that cannot be resolved within the supplied hard bounds. A nonempty repair_routes stops this production run. Ordinary unanswered questions, deliberate suspense and consequences left open belong in unresolved_pressures and do not by themselves require repair. Empty repair_routes is not a required verdict: keep genuine blockers even when the plan asks for an outcome.",
+        "Prefer events that change options, commitments, information, relationships, danger, leverage or cost. Reader pressure should emerge from causal interaction rather than a mandatory beat checklist.",
+        "Return the minimum causal interaction trace a capable Writer or Planner needs. Do not force every collision, pressure, reward and state change into a separate JSON slot, and do not write final prose."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "interaction_trace", "observable_trajectory", "unresolved_pressures", "repair_routes"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "interaction_trace": {"type": "string", "minLength": 1},
+          "observable_trajectory": {"type": "string", "minLength": 1},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}},
+          "unresolved_pressures": {"type": "array", "items": {"type": "string"}},
+          "repair_routes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["owner", "reason"],
+              "properties": {
+                "owner": {"enum": ["story", "plan", "scene", "character", "reader", "continuity", "research", "context", "runtime", "human"]},
+                "reason": {"type": "string", "minLength": 1}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "scene_simulation_proposal"
+      },
+      "independent_gate": false
+    }
+  }
+}

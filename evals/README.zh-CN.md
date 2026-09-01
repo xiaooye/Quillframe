@@ -62,6 +62,18 @@ Blind queue 先通过 Harness semantic router 变成 typed semantic jobs，再�
 
 这个 envelope 是 deterministic provenance，本身不是 semantic evidence。历史 run 如果当时没有 execution identity，不会被追溯伪造；有 identity 也不会把 deterministic CI 自动变成 semantic quality claim。
 
+## 作者单篇连续审阅
+
+当目标是让作者直接判断一套创作指导写出来“像不像目标网文”，可以使用[单篇章节审阅协议](CRAFT_CHAPTER_REVIEW.zh-CN.md)。每轮只展示一篇通过完整生产发布边界的新章节；下一轮必须等待作者反馈，退回后还必须更换候选快照。该流程记录绝对读感，不强迫作者在两个失败版本里选相对优者，也不替代正式的跨作品 General Craft 推广证据。
+
+## 原生章节评测运行器
+
+`native_style_runner.py` 只编排 Core 已创建的原生 DRAFT/REVISE run，并且只能从 `production_runtime` 公共包导入受保护的 `ProductionRunExecutor`。它不得调用 provider、adapter、`AgentJob`、Codex 或 subprocess，也不接受现成正文。运行未通过完整生产图与独立 release boundary 时只返回无正文状态；完成后正文仍只能由 `CoreOperations.candidate_visible_get()` 读取。运行器没有接受、结算、发布或 Framework 提升权限。
+
+## 语料行文文风消融
+
+使用[三臂语料文风协议](STYLE_CORPUS_ABLATION.zh-CN.md)，在冻结的留出小说任务上比较无指导基线、当前技法 v4 与 **Craft V4 + 精确无来源 Corpus 候选**。Corpus 是注册 Craft 的 run-scoped 补充，不是替代品；V4 foundation 始终保留，Corpus 最多投射四条当前场景适用机制。每一对都会用密封处理标签、交换显示顺序重复评审；leave-one-work-out 和场景功能留出防止被评作品家族为自己的候选提供证据。盲读分维彼此独立，语义泄漏另设独立门槛。合成夹具只验证机械流程，绝不能冒充真实质量证据。
+
 ## Paired AI-native Ablations
 
 `ai_native_ablation_manifest.json` 的 simplification 决策使用注册的独立 `quality.ablation_compare` contract，而不是 manager 自填 semantic verdict。Reviewer 只接收匿名 A/B condition result、exact input/result fingerprint 与 neutral observation criteria；看不到 `simpler_arm`、incumbent/challenger role、removal intent 或 hidden expected label。

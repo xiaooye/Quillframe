@@ -48,7 +48,7 @@ Provider/vendor identity 最多只是诊断 metadata。宿主运行通用 Agent 
 
 ## 语料库与研究
 
-语料库是证据，不是正典；研究结论也不会自动变成人物知识。应同时遵守[语料库概览](../corpus/README.zh-CN.md)、[摄取协议](../corpus/CORPUS_INGEST_PROTOCOL.zh-CN.md)与项目自己的知识边界。
+语料库是证据，不是正典；研究结论也不会自动变成人物知识。应同时遵守[语料库概览](../corpus/README.zh-CN.md)、[摄取协议](../corpus/CORPUS_INGEST_PROTOCOL.zh-CN.md)、[匿名公开语料发布边界](../corpus/general/README.zh-CN.md)与项目自己的知识边界。持久化的[行文文风研究记录](../specs/031-corpus-style-learning/research.zh-CN.md)保存了一手来源复核与采用／改造／拒绝决策；配套[规格](../specs/031-corpus-style-learning/spec.zh-CN.md)定义感知场景的学习、Writer 隔离和证据门槛。
 
 ## 项目集成
 

@@ -20,7 +20,7 @@ WORKFLOW_STAGES = (
     "character_intent",
     "event_plan",
     "context_freeze",
-    "raw_draft",
+    "surface_writer",
     "deterministic_checks",
     "critics",
     "local_repair",
@@ -528,12 +528,19 @@ class NovelWorkflowEngine:
             raise WorkflowError("workflow_snapshot_invalid", "snapshot fingerprint mismatch")
         if snapshot.get("authority") is not False:
             raise WorkflowError("workflow_snapshot_invalid", "snapshot must be non-authoritative")
+        # Version-one snapshots created before the direct-Surface-Writer
+        # migration may still be parked at the retired ``raw_draft`` stage.
+        # Preserve their signed event history while moving only the live
+        # cursor to the semantically equivalent direct-writer stage.
+        restored_stage = snapshot.get("stage")
+        if restored_stage == "raw_draft":
+            restored_stage = "surface_writer"
         return cls(
             project_id=snapshot.get("project_id"),
             run_id=snapshot.get("run_id"),
             chapter_id=snapshot.get("chapter_id"),
             author_profile=snapshot.get("author_profile"),
-            stage=snapshot.get("stage"),
+            stage=restored_stage,
             status=snapshot.get("status"),
             events=snapshot.get("events") or [],
             idempotency=snapshot.get("idempotency") or {},

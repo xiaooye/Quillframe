@@ -1,6 +1,6 @@
 # Adaptive Learning
 
-Quillframe learning begins automatically when meaningful feedback arrives, but nothing about automatic intake grants automatic promotion.
+Quillframe can learn from feedback and rights-bounded corpus research without turning either into silent global behavior. Automatic intake creates evidence; a revocable standing policy can authorize a qualified private preference to activate; General Craft still requires a separate manual framework promotion.
 
 <img src="assets/concepts/automatic-learning-intake.en.svg" alt="Learning intake from automatic feedback capture through interpretation and scoped hypothesis to governed validation and promotion" width="100%" />
 
@@ -20,9 +20,33 @@ Evidence always takes the narrowest scope it actually supports.
 
 ## Governed promotion
 
-Automatic intake defaults all protected write permissions to false. It does not automatically edit Project Profile, activate durable user taste, promote General Craft, modify framework source, or write Canon.
+Automatic intake defaults all protected write permissions to false. It does not edit Project Profile, promote General Craft, modify framework source, or write Canon.
 
-Durable activation requires evidence, contradiction review, relevant eval evidence, provenance, and whatever authority the target scope requires. General Craft has the highest bar: cross-work evidence, a counterexample/profile boundary, capability and regression evaluation, version/rollback, green deterministic CI, and explicit engineering authority.
+Durable activation requires evidence, exact candidate binding, semantic review, an independent evaluation and a passed contradiction review. A model result alone cannot activate itself.
+
+## Revocable standing user-taste policy
+
+The host-owned `quillframe_user_taste_auto_activation_policy_v1` policy is disabled by default. A user may enable it for an explicit subset of `corpus`, `feedback`, and `user_edit` sources. Enabling records an authorization reference and policy version; updating or disabling the policy is versioned, and individual preferences can be paused or withdrawn.
+
+When the policy is enabled, a candidate activates only after all user-taste gates pass. An unresolved contradiction, an unbound review, a failed independent evaluation, a stale version, or an unauthorized source blocks activation. The standing policy grants no Framework or Canon write authority.
+
+At the beginning of each production run, Quillframe freezes the eligible active preference inventory. A semantic selector chooses zero or more preferences that are relevant to the exact request and scene. The current request has priority over user taste, and user taste has priority over an older Project preference when they conflict. “Active” therefore means eligible for selection, not mandatory prompt injection.
+
+The context-composition model sees only eligible abstract mechanisms, applicability boundaries, hypothesis identifiers and versions. It sees no corpus prose, titles, creators, paths, quotations, close paraphrases or evidence payloads. Only explicitly selected entries enter the one direct Surface Writer pack; Blind Reader and independent reviewers do not receive the preference projection.
+
+Content-zone preferences remain partitioned. In particular, `adult_explicit` preferences apply only when the current task explicitly enters that content zone; they are not mixed into the ordinary profile.
+
+## General Craft stays manual
+
+General Craft has the highest bar: multiple cross-work references, counterexamples, a profile boundary, capability and regression evaluation, provenance, version/rollback evidence, green deterministic CI and explicit engineering authority. Even a promotable result remains a candidate until a human-authorized `SYSTEM-IMPROVE` change updates the framework.
+
+Corpus prose-style learning follows that manual path. The exact 120-work V5 membership is an addressable source pool: human confirmation binds declared rights and scope, profile, complete membership and proposal fingerprint, but is not a per-work literary review. Full-pool exposure and CPU/memory benchmarks are diagnostics rather than confirmation or quality gates.
+
+The AI-native contract gives AI responsibility for scene/style classification, evidence gaps, the next minimum-sufficient sample and cross-work convergence. The Python runner is limited to identity/version binding, minimum bounded materialization, hygiene, budgets and receipts; schema and leakage gates remain deterministic release controls rather than literary judgment. Language mismatch narrows language-specific claims; incomplete/serial evidence supports local prose/scene claims but not unsupported whole-work claims; restart/concatenation requires boundary-aware windows or narrower claims; hygiene rejects and replaces only the selected contaminated window. Registered-contract and synthetic-runner tests now demonstrate dynamic cohort activation from `next_evidence_requests`, requested scene-function retrieval, truthful `available_unanalysed` members and early convergence without exhausting the pool. This is engineering evidence only: V5 has not been confirmed or run, Quillframe has not thereby learned a style, and live blind evaluation, independent leakage review and publication remain unsatisfied. A source-free `StyleContract` then compiles conditional craft operations rather than an author imitation profile.
+
+An exact candidate pack changes production only through explicit opt-in. A semantic selector may choose zero to four relevant cards for Writer stages; the current user request and frozen project authority take precedence. Blind Reader and independent reviewers receive neither the cards nor treatment labels. Baseline, current craft v4 and corpus candidate are evaluated as three anonymous arms with order swaps, leave-one-work-out isolation and a separate semantic-leakage review. No aggregate score or model verdict can promote the pack by itself.
+
+Body and appearance language remains an ordinary style dimension. An isolated anatomy or figure-description term such as `巨乳` is not an adult-content signal; only actual contextual evidence of explicit content enters the separately governed content zone.
 
 ## Rejected output
 
@@ -30,4 +54,6 @@ A rejected artifact can become negative regression evidence by reference/fingerp
 
 ## Research and Corpus
 
-Learning may create a Corpus gap and search for rights-safe contrast evidence. Discovery is not ingestion; ingestion is not preference; analysis is not promotion; Corpus is not Canon.
+Learning may create a Corpus gap and search for rights-safe contrast evidence. The anonymous public corpus and the private user-taste store are separate projections of the same bounded analysis: public output contains only closed-schema, source-free derivatives; private preferences remain host-owned and are not committed by default.
+
+Discovery is not ingestion; ingestion is not preference; analysis is not promotion; Corpus is not Canon. Abstracting a source does not by itself establish a legal right to publish the result, so the release path still requires declared rights, provenance and a leakage review.

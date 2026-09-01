@@ -99,9 +99,9 @@ Read:
 
 Generic production graph:
 
-`Context Freeze → Story/Canon Preflight → Scene Simulation → Character Simulation → Reader Pressure → Event-first Raw Draft → Surface Realization → post-generation lint/regression/semantic diagnosis → owning-layer repair → Reader Engagement → Continuity → User-visible Gate`
+`Context Freeze → Story/Canon Preflight → private Character Enactment → Scene Resolution → Scene Realization Contract + model-composed Writer Pack → Reader Pressure → direct Surface Writer → freeze candidate fingerprint → Reader Engagement → Continuity → objective-bound self-audit/qualification → owning-layer repair/comparison when needed → independent review → User-visible Gate`
 
-Raw Draft is internal. Regression bad examples and hidden expected labels stay out of first-pass generation.
+Rejected prose, reviewer analysis, private character deliberation and hidden expected labels stay out of a fresh Writer pack. A bounded local repair may receive only its exact fingerprint-bound edit windows. Deterministic checks verify schema, provenance and boundaries; literary judgment remains with models and the author.
 
 **Production visibility is fail-closed.** In `DRAFT` / `REVISE`, reading these contracts is not execution. The host must invoke a verified Quillframe production runtime and may surface manuscript text only from an exact fingerprint-bound production release. If runtime, model execution, required independent review, or release evidence is unavailable, report the typed pending/blocked state and do not replace the missing mechanism with host-authored prose. Ephemeral agent sandboxes may materialize a deterministic Framework bundle and verify its exact commit/bundle fingerprint before execution; their SQLite state is runtime materialization, not a second Canon authority.
 

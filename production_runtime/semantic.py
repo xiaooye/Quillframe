@@ -9,6 +9,7 @@ from typing import Any
 
 from agent_runtime import AgentBudget, AgentJob, AgentResult
 from harness.context_runtime import canonical_json, fingerprint
+from model_runtime.deadlines import DURABLE_REQUEST_TIMEOUT_MS
 from model_runtime.structured_output import required_only_output_schema, validate_output_schema, validate_structured_text
 
 from .contracts import ProductionRunError, assert_secret_free, parse_json_object, validate_bundle_integrity
@@ -43,6 +44,7 @@ from semantic_worker_router import (  # noqa: E402
 from quality.candidate_qualification import evaluate as evaluate_qualification  # noqa: E402
 from quality.candidate_qualification import evaluate_recorded as evaluate_recorded_qualification  # noqa: E402
 from quality.candidate_qualification import validate_qualification_receipt  # noqa: E402
+from quality.author_objective_gate import validate_author_objectives, validate_objective_assessments  # noqa: E402
 from quality.production_readiness import evaluate as evaluate_production_readiness  # noqa: E402
 from quality.production_release import aggregate as aggregate_production_release  # noqa: E402
 from quality.reader_expectation import FINAL as FINAL_EXPECTATION_STATUSES, STATUSES as EXPECTATION_STATUSES  # noqa: E402
@@ -115,9 +117,16 @@ class RegisteredSemanticExecutor:
     deliberately reserved for the external independent handoff path below.
     """
 
-    def __init__(self, agent_runtime: AgentRuntimeLike, *, invoke: Callable[[AgentJob], AgentResult] | None = None) -> None:
+    def __init__(
+        self,
+        agent_runtime: AgentRuntimeLike,
+        *,
+        invoke: Callable[[AgentJob], AgentResult] | None = None,
+        confirm_validation: Callable[[AgentJob, dict[str, Any]], None] | None = None,
+    ) -> None:
         self.agent_runtime = agent_runtime
         self.invoke = invoke or agent_runtime.run
+        self.confirm_validation = confirm_validation
 
     def execute(
         self,
@@ -194,7 +203,9 @@ class RegisteredSemanticExecutor:
         # Explicitly reviewed transport profiles, not inferred from prompt text.
         # The full registered contracts, versions and historical bindings remain
         # unchanged. Only newly dispatched AgentJobs carry this narrower shape.
-        if contract_id in {"character.action_propose", "scene.resolve_actions"}:
+        if contract_id in {
+            "character.action_propose", "scene.resolve_actions", "quality.candidate_self_audit",
+        }:
             try:
                 output_schema = required_only_output_schema(semantic_job["output_contract"])
                 if contract_id == "character.action_propose":
@@ -271,9 +282,11 @@ class RegisteredSemanticExecutor:
                 max_model_requests=1,
                 max_tool_calls=1,
                 max_parallel_tool_calls=1,
-                max_output_tokens_per_request=max_output_tokens,
-                max_total_tokens=64_000,
-                max_elapsed_ms=180_000,
+                model_context_limit=200_000,
+                max_output_tokens=max_output_tokens,
+                run_cost_budget=10_000_000,
+                max_elapsed_ms=DURABLE_REQUEST_TIMEOUT_MS,
+                max_model_request_ms=DURABLE_REQUEST_TIMEOUT_MS,
             ),
             idempotency_key=f"{run['run_id']}:registered:{contract_id}:{semantic_job['input_fingerprint']}",
             output_schema=output_schema,
@@ -292,6 +305,11 @@ class RegisteredSemanticExecutor:
                 raise ProductionRunError("semantic_output_invalid", f"{contract_id}: {exc}") from exc
         else:
             judgment = parse_json_object(result.final_text, label=contract_id)
+        if contract_id == "quality.candidate_self_audit":
+            try:
+                validate_objective_assessments(semantic_job["input"]["payload"].get("author_objectives"), judgment)
+            except ValueError as exc:
+                raise ProductionRunError("semantic_output_invalid", f"{contract_id}: {exc}") from exc
         semantic_result = {
             "job_id": semantic_job["job_id"],
             "subject_id": semantic_job["subject_id"],
@@ -303,6 +321,7 @@ class RegisteredSemanticExecutor:
                 "model_or_reviewer": result.model_id,
                 "model_service_id": result.model_service_id,
                 "protocol": result.protocol,
+                "model_version_fingerprint": result.model_version_fingerprint,
                 "agent_job_id": agent_job.job_id,
                 "agent_input_fingerprint": agent_job.input_fingerprint,
             },
@@ -317,13 +336,44 @@ class RegisteredSemanticExecutor:
         result_errors = validate_result(semantic_job, semantic_result)
         if result_errors:
             raise ProductionRunError("semantic_output_invalid", "; ".join(result_errors))
-        return {
+        if contract_id == "character.action_propose":
+            strategies = judgment.get("proposals")
+            selected = judgment.get("selected_strategy_id")
+            strategy_ids = [
+                item.get("strategy_id") for item in strategies
+                if isinstance(item, dict)
+            ] if isinstance(strategies, list) else []
+            if (
+                len(strategy_ids) != len(set(strategy_ids))
+                or selected not in strategy_ids
+            ):
+                raise ProductionRunError(
+                    "semantic_output_invalid",
+                    "character strategy identities must be unique and selected_strategy_id must reference one proposal",
+                )
+            for strategy in strategies:
+                rejection = strategy.get("rejection_reason")
+                if strategy.get("strategy_id") == selected:
+                    if rejection not in {None, ""}:
+                        raise ProductionRunError(
+                            "semantic_output_invalid",
+                            "the selected character strategy cannot carry a rejection reason",
+                        )
+                elif not isinstance(rejection, str) or not rejection.strip():
+                    raise ProductionRunError(
+                        "semantic_output_invalid",
+                        "every unselected character strategy requires a rejection reason",
+                    )
+        binding = {
             "contract_id": contract_id,
             "job": semantic_job,
             "result": semantic_result,
             "binding_fingerprint": fingerprint({"job": semantic_job, "result": semantic_result}),
             "authority": False,
         }
+        if self.confirm_validation is not None:
+            self.confirm_validation(agent_job, binding)
+        return binding
 
 
 CHARACTER_EVIDENCE_FIELDS = (
@@ -484,7 +534,7 @@ def writer_safe_projection(binding: dict[str, Any], *, scene_id: str) -> dict[st
     # Whitelist the registered output. Neither the private job nor action input
     # nor an entire character sheet is a Writer artifact.
     projection = {key: deepcopy(result[key]) for key in (
-        "scene_id", "interaction_trace", "writer_context", "observable_event_refs", "unresolved_pressures"
+        "scene_id", "scene_contract", "selected_context_ids", "director_note"
     ) if key in result}
     projection["source_binding_fingerprint"] = binding["binding_fingerprint"]
     projection["projection_fingerprint"] = fingerprint(projection)
@@ -682,6 +732,7 @@ def prepare_independent_review(
     subject_id: str,
     candidate_fingerprint: str,
     candidate_text: str,
+    author_objectives: dict[str, Any],
     reader_visible_context: list[dict[str, Any]],
     reader_grip: str,
     qualification_receipt: dict[str, Any],
@@ -702,9 +753,14 @@ def prepare_independent_review(
             "independent_provenance_required",
             "independent review dispatch requires project_id/project_repo/framework_repo/framework_commit provenance",
         )
+    try:
+        author_objectives = validate_author_objectives(author_objectives)
+    except ValueError as exc:
+        raise ProductionRunError("author_objectives_invalid", str(exc)) from exc
     payload = {
         "candidate_fingerprint": candidate_fingerprint,
         "candidate_text": candidate_text,
+        "author_objectives": author_objectives,
         "reader_visible_context": reader_visible_context,
         "reader_grip": reader_grip,
     }
@@ -747,6 +803,7 @@ def prepare_independent_review(
         "peer_packet_bytes": packet_bytes,
         "reader_grip": reader_grip,
         "reader_visible_context": reader_visible_context,
+        "author_objectives": author_objectives,
         "authority": False,
     }
 
@@ -785,6 +842,13 @@ def validate_independent_submission(
     for key in ("job_id", "subject_id", "kind", "input_fingerprint"):
         if stored_job.get(key) != packet_job.get(key):
             raise ProductionRunError("independent_job_mismatch", f"peer packet changed independent job binding: {key}")
+    try:
+        validate_objective_assessments(
+            stored_job.get("input", {}).get("payload", {}).get("author_objectives"),
+            result.get("judgment"),
+        )
+    except ValueError as exc:
+        raise ProductionRunError("independent_result_invalid", str(exc)) from exc
     return {
         "job": stored_job,
         "result": result,

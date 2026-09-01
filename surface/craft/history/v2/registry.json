@@ -1,0 +1,179 @@
+{
+  "schema": "quillframe_craft_registry_v1",
+  "version": "2",
+  "status": "candidate",
+  "default_mode": "baseline",
+  "base_card_id": "core",
+  "languages": [
+    "en",
+    "zh-CN"
+  ],
+  "cards": [
+    {
+      "id": "core",
+      "kind": "foundation",
+      "version": "2",
+      "title": {
+        "en": "Narrative attention, distance and restraint",
+        "zh-CN": "叙事注意力、距离与克制"
+      },
+      "selection_hint": {
+        "en": "The common foundation for viewpoint, narrative time, non-redundant interiority, natural units and restrained Surface work.",
+        "zh-CN": "共同基础：在授权视角内选择详略，避免重复解释、伪碎句和润色阶段擅加意义。"
+      },
+      "writer_paths": {
+        "en": "cards/core.en.md",
+        "zh-CN": "cards/core.zh-CN.md"
+      },
+      "source_ids": [
+        "handbook",
+        "oh-story",
+        "humanize-chinese",
+        "novel-craft",
+        "web-novel-guidance",
+        "ai-novel-skills"
+      ]
+    },
+    {
+      "id": "confrontation",
+      "kind": "method",
+      "version": "1",
+      "title": {
+        "en": "Progression and confrontation",
+        "zh-CN": "升级与对抗"
+      },
+      "selection_hint": {
+        "en": "A test, contest or confrontation must make capability, resistance and its consequences perceptible.",
+        "zh-CN": "本场要让能力、阻力、反制或胜负后果变得可感，而不只是宣布升级。"
+      },
+      "writer_paths": {
+        "en": "cards/confrontation.en.md",
+        "zh-CN": "cards/confrontation.zh-CN.md"
+      },
+      "source_ids": [
+        "openwrite",
+        "handbook"
+      ]
+    },
+    {
+      "id": "relationship",
+      "kind": "method",
+      "version": "1",
+      "title": {
+        "en": "Relationship and emotional movement",
+        "zh-CN": "关系与情绪"
+      },
+      "selection_hint": {
+        "en": "A conversation, decision or aftermath changes how people understand and approach one another.",
+        "zh-CN": "对话、选择或余波改变人物怎样理解彼此，以及能怎样亲近、拒绝或求助。"
+      },
+      "writer_paths": {
+        "en": "cards/relationship.en.md",
+        "zh-CN": "cards/relationship.zh-CN.md"
+      },
+      "source_ids": [
+        "studio",
+        "handbook",
+        "webnovel-skills"
+      ]
+    },
+    {
+      "id": "mystery",
+      "kind": "method",
+      "version": "1",
+      "title": {
+        "en": "Information, uncertainty and revelation",
+        "zh-CN": "信息、疑问与揭示"
+      },
+      "selection_hint": {
+        "en": "Discovery or changing interpretations, rather than force alone, drives the current scene.",
+        "zh-CN": "发现与解释的变化推动当前场景，需要组织线索、误判和揭示。"
+      },
+      "writer_paths": {
+        "en": "cards/mystery.en.md",
+        "zh-CN": "cards/mystery.zh-CN.md"
+      },
+      "source_ids": [
+        "handbook",
+        "openwrite"
+      ]
+    },
+    {
+      "id": "everyday",
+      "kind": "method",
+      "version": "1",
+      "title": {
+        "en": "Everyday life and professional pleasure",
+        "zh-CN": "日常与职业体验"
+      },
+      "selection_hint": {
+        "en": "Routine, expertise, companionship, work or recovery is itself part of the chapter's promise.",
+        "zh-CN": "日常、手艺、陪伴、工作或休整本身就是本章值得体验的部分。"
+      },
+      "writer_paths": {
+        "en": "cards/everyday.en.md",
+        "zh-CN": "cards/everyday.zh-CN.md"
+      },
+      "source_ids": [
+        "studio",
+        "openwrite",
+        "handbook"
+      ]
+    },
+    {
+      "id": "comedy",
+      "kind": "method",
+      "version": "1",
+      "title": {
+        "en": "Comedy and lightness",
+        "zh-CN": "喜剧与轻松感"
+      },
+      "selection_hint": {
+        "en": "An incongruity, running variation or human response can supply the scene's intended lightness.",
+        "zh-CN": "预期错位、重复变体或人物回应能够承载本场需要的轻松感。"
+      },
+      "writer_paths": {
+        "en": "cards/comedy.en.md",
+        "zh-CN": "cards/comedy.zh-CN.md"
+      },
+      "source_ids": [
+        "handbook"
+      ]
+    },
+    {
+      "id": "wonder",
+      "kind": "method",
+      "version": "1",
+      "title": {
+        "en": "Worldbuilding and wonder",
+        "zh-CN": "设定与奇观"
+      },
+      "selection_hint": {
+        "en": "An unfamiliar place, scale, custom or rule should become a felt experience rather than a catalog.",
+        "zh-CN": "陌生地点、尺度、习俗或规则需要成为体验，而不只是设定清单。"
+      },
+      "writer_paths": {
+        "en": "cards/wonder.en.md",
+        "zh-CN": "cards/wonder.zh-CN.md"
+      },
+      "source_ids": [
+        "handbook",
+        "oh-story"
+      ]
+    }
+  ],
+  "diagnostics": {
+    "en": "diagnostics.en.md",
+    "zh-CN": "diagnostics.zh-CN.md"
+  },
+  "history": {
+    "1": {
+      "registry": "history/v1/registry.json",
+      "core": {
+        "en": "history/v1/core.en.md",
+        "zh-CN": "history/v1/core.zh-CN.md"
+      }
+    }
+  },
+  "sources": "sources.json"
+}

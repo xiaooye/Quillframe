@@ -1,7 +1,7 @@
 {
   "schema": "quillframe_model_contract_registry_v1",
-  "version": "6",
-  "principle": "Production-loop semantic artifacts stay thin. Models decide whether feedback is learnable, interpret causal scene state, preserve current objectives and choose repair strategy; machines consume only the small fields needed for authority-safe persistence or routing. Private character state may drive semantic decisions but is not prose payload, rejected repair trajectories do not become the fresh Writer objective, and this pack does not duplicate the Blind Reader.",
+  "version": "10",
+  "principle": "Production-loop semantic artifacts stay thin. Models decide whether feedback is learnable, compile author-confirmed voice evidence, interpret causal scene state, select the minimum Writer context, preserve current objectives and choose repair strategy; machines consume only the small fields needed for authority-safe persistence or routing. Private character deliberation and rejected prose are never fresh Writer payload.",
   "contracts": {
     "learning.preference_interpret": {
       "kind": "artifact_audit",
@@ -191,16 +191,177 @@
       },
       "independent_gate": false
     },
+    "learning.author_voice_compile": {
+      "kind": "artifact_audit",
+      "purpose": "Compile a bounded Author Voice Sheet from exact author-confirmed, rights-eligible evidence. The result is a candidate only: it cannot activate itself, grant rights, imitate a living author or convert rejected model prose into positive evidence.",
+      "forbidden_input_keys": [
+        "living_author_target",
+        "named_author_imitation",
+        "rejected_candidate",
+        "model_generated_positive_example",
+        "unknown_rights_source",
+        "whole_conversation"
+      ],
+      "input_contract": {
+        "type": "object",
+        "required": [
+          "scope",
+          "sources"
+        ],
+        "properties": {
+          "scope": {
+            "enum": [
+              "project",
+              "user"
+            ]
+          },
+          "sources": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "items": {
+              "type": "object",
+              "required": [
+                "source_id",
+                "source_kind",
+                "content_text",
+                "content_fingerprint",
+                "rights_binding",
+                "author_confirmed"
+              ],
+              "properties": {
+                "source_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source_kind": {
+                  "enum": [
+                    "user_authored_prose",
+                    "author_edited_approved_prose",
+                    "explicit_author_feedback",
+                    "explicitly_authorized_prose"
+                  ]
+                },
+                "content_text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20000
+                },
+                "content_fingerprint": {
+                  "type": "string",
+                  "minLength": 71,
+                  "maxLength": 71
+                },
+                "rights_binding": {
+                  "type": "object"
+                },
+                "author_confirmed": {
+                  "const": true
+                },
+                "applicability": {
+                  "type": "object"
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Infer a compact voice hypothesis only from the supplied author-confirmed evidence. Do not count words, sentence lengths, punctuation or English tokens as a style verdict.",
+        "Describe attention, information release, relationship-specific dialogue, humor under pressure and emotional enactment as usable mechanisms with applicability boundaries, not as a named-author identity or imitation target.",
+        "Treat explicit feedback as evidence for a mechanism but never as a positive prose anchor. Select at most four prose sources whose function is genuinely useful; zero is valid when the evidence does not support a positive anchor.",
+        "Do not erase contradictions. Put unresolved or sample-limited claims in uncertainties and narrow applicability accordingly.",
+        "Return exact source IDs and fingerprints. This candidate grants no activation, Framework, Canon, rights or durable-write authority."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": [
+          "confidence",
+          "fields",
+          "source_ids",
+          "source_fingerprints",
+          "anchor_source_ids",
+          "uncertainties"
+        ],
+        "properties": {
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "fields": {
+            "type": "object",
+            "required": [
+              "narrative_distance_and_pov_attention",
+              "syntax_and_paragraph_rhythm",
+              "information_release",
+              "dialogue_and_relationship_differences",
+              "humor_under_pressure",
+              "emotion_through_action_judgment_and_cost",
+              "reader_inference",
+              "language_switching_and_terminology",
+              "applicability_boundaries"
+            ],
+            "properties": {
+              "narrative_distance_and_pov_attention": {"type": "string", "minLength": 1, "maxLength": 4000},
+              "syntax_and_paragraph_rhythm": {"type": "string", "minLength": 1, "maxLength": 4000},
+              "information_release": {"type": "string", "minLength": 1, "maxLength": 4000},
+              "dialogue_and_relationship_differences": {"type": "string", "minLength": 1, "maxLength": 4000},
+              "humor_under_pressure": {"type": "string", "minLength": 1, "maxLength": 4000},
+              "emotion_through_action_judgment_and_cost": {"type": "string", "minLength": 1, "maxLength": 4000},
+              "reader_inference": {"type": "string", "minLength": 1, "maxLength": 4000},
+              "language_switching_and_terminology": {"type": "string", "minLength": 1, "maxLength": 4000},
+              "applicability_boundaries": {"type": "string", "minLength": 1, "maxLength": 4000}
+            },
+            "additionalProperties": false
+          },
+          "source_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "source_fingerprints": {
+            "type": "object"
+          },
+          "anchor_source_ids": {
+            "type": "array",
+            "maxItems": 4,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "uncertainties": {
+            "type": "array",
+            "maxItems": 32,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "author_voice_sheet_candidate"
+      },
+      "independent_gate": false
+    },
     "scene.realization_project": {
       "kind": "artifact_audit",
-      "purpose": "Convert private character/action evidence and resolved scene trajectory into compact writer-safe causal constraints that preserve consequential choices and observable reactions without prescribing paragraph form, serializing Character Sheets or replacing them with a Realization Sheet.",
+      "purpose": "Convert private character/action evidence and resolved scene trajectory into a compact Scene Realization Contract, select the minimum sufficient eligible Writer context, and write one short Director Note without prescribing paragraph form or serializing private character deliberation.",
       "input_contract": {
         "type": "object",
         "required": [
           "scene_id",
           "resolved_trajectory",
           "character_action_evidence",
-          "pov_boundary"
+          "pov_boundary",
+          "author_direction_evidence",
+          "writer_context_inventory"
         ],
         "properties": {
           "scene_id": {
@@ -227,26 +388,207 @@
           },
           "project_profile": {
             "type": "object"
+          },
+          "author_direction_evidence": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "items": {
+              "type": "object",
+              "required": [
+                "source_ref",
+                "chronology",
+                "statement"
+              ],
+              "properties": {
+                "source_ref": {"type": "string", "minLength": 1},
+                "chronology": {"type": "integer", "minimum": 0},
+                "statement": {"type": "string", "minLength": 1}
+              },
+              "additionalProperties": false
+            }
+          },
+          "writer_context_inventory": {
+            "type": "object",
+            "required": [
+              "inventory_fingerprint",
+              "required_context_ids",
+              "items"
+            ],
+            "properties": {
+              "inventory_fingerprint": {
+                "type": "string",
+                "minLength": 71,
+                "maxLength": 71
+              },
+              "required_context_ids": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {"type": "string", "minLength": 1}
+              },
+              "items": {
+                "type": "array",
+                "maxItems": 96,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "context_id",
+                    "category",
+                    "source_fingerprint",
+                    "selection_view"
+                  ],
+                  "properties": {
+                    "context_id": {"type": "string", "minLength": 1},
+                    "category": {
+                      "enum": [
+                        "author_voice_sheet",
+                        "positive_voice_anchor",
+                        "selected_author_preference",
+                        "user_taste_mechanism",
+                        "present_character",
+                        "relationship",
+                        "world_fact",
+                        "location",
+                        "accepted_prose_tail"
+                      ]
+                    },
+                    "source_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71},
+                    "selection_view": {"type": "object"}
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "craft_catalog": {
+            "type": "object",
+            "required": [
+              "snapshot_fingerprint",
+              "language",
+              "base_card_id",
+              "cards"
+            ],
+            "properties": {
+              "snapshot_fingerprint": {
+                "type": "string",
+                "minLength": 71,
+                "maxLength": 71
+              },
+              "language": {
+                "enum": [
+                  "en",
+                  "zh-CN"
+                ]
+              },
+              "base_card_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "cards": {
+                "type": "array",
+                "maxItems": 63,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "card_id",
+                    "title",
+                    "selection_hint",
+                    "utf8_bytes"
+                  ],
+                  "properties": {
+                    "card_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "title": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "selection_hint": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "utf8_bytes": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 64000
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "planning_context": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "source_ref",
+                "source_fingerprint",
+                "authority",
+                "kind",
+                "content"
+              ],
+              "properties": {
+                "source_ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source_fingerprint": {
+                  "type": "string",
+                  "minLength": 71,
+                  "maxLength": 71
+                },
+                "authority": {
+                  "enum": [
+                    "active_plan"
+                  ]
+                },
+                "kind": {
+                  "enum": [
+                    "plan",
+                    "story_node"
+                  ]
+                },
+                "content": {
+                  "type": "object"
+                }
+              },
+              "additionalProperties": false
+            }
           }
         },
         "additionalProperties": false
       },
       "rubric": [
-        "Use private character state as causal evidence only. Do not dump goals, fears, role responsibilities, knowledge inventories or strategy rationale into writer-facing prose instructions. Respect pov_boundary: unrevealed knowledge or another character's hidden motive must not become narrator knowledge or dialogue exposition.",
-        "Return the smallest interaction/event trace that preserves the resolved causal constraints: consequential choices, immediate tactics, observable reactions, resulting options and costs, and uncertainty that remains alive. Preserve an immediate aim or interpretation only when writer-eligible under the supplied POV; retain its observable effects without leaking a private explanation.",
+        "Use private character state as causal evidence only. Do not dump goals, fears, role responsibilities, knowledge inventories, rejected strategies or strategy rationale into the Scene Realization Contract. Respect pov_boundary: unrevealed knowledge or another character's hidden motive must not become narrator knowledge or dialogue exposition.",
+        "Return the smallest causal contract that preserves consequential choices, selected tactics, counterforce, observable effects, disappearing options or rising costs, required facts, protected information gaps, concrete friction and the new ending constraint.",
         "Do not flatten distinct participants into required lines or replace a character's response with a state-update label. Retain listener-specific action, refusal, evasion, changing attention or relational response when supported by the resolved evidence. Mark unresolved meaning as uncertain rather than inventing a feeling, a reaction, a cost or a new event to enliven the trace.",
-        "The event trace is a causal constraint, not a paragraph template or an instruction to report every step at equal weight. The Writer may compress routine, combine connected actions, and dwell on a meaningful choice or response while preserving causality, state and POV. Do not prescribe quotas of beats, dialogue, gestures, emotion or paragraph length.",
+        "The scene contract is a causal constraint, not a paragraph template or an instruction to report every step at equal weight. Do not prescribe themes, aphorisms, final dialogue, imagery, beats, gestures, emotion, sensory detail, humor or paragraph quotas.",
         "Do not draft final dialogue or narration. Do not force every private field to have a corresponding writer-facing field, and do not require a new conflict or a dramatic turn when the supported scene instead offers quiet, procedural or contemplative value.",
         "Explicit complete speech is valid when the speech act or situation genuinely requires completeness. Preserve that reason in the natural-language trace when material.",
-        "If the resolved trajectory is already sufficient for a capable Writer, keep the projection compact rather than inventing additional schema detail."
+        "Select only context_id values from the exact writer_context_inventory. Every required_context_ids entry is an author preference explicitly selected for this run and must remain in selected_context_ids; this is author authority, not an invitation to infer more preferences. For all other items choose the minimum sufficient set for this scene; relevance is semantic, but every selected item must earn its context cost. Do not select unrelated future facts, absent characters or a whole inventory by default.",
+        "Write one short positive Director Note close to generation. It may direct attention, subtext, relationship pressure, natural language use and restraint, but it must not repeat the full contract, explain private motives, quote a rejection, list statistical risks or become a second long prompt.",
+        "Project the exact current author goals from author_direction_evidence into separate author_objective_items. Later evidence supersedes earlier evidence only on actual conflict; otherwise preserve compatible earlier directions. Do not average goals, soften an explicit current goal, infer a goal from rejected prose, or collapse independently falsifiable goals into one overall fluency objective. Each item must cite only supplied source_ref values.",
+        "If craft_catalog is absent, return craft_selection=[] and do not infer or invent methods. If present, select only registered method card_id values from this exact frozen catalog. The common foundation is supplied automatically. Normally, multiple complementary methods or no additional methods are valid; however, when catalog selection_hint JSON declares route_class=run_scoped_corpus_style and a composite_requirement, that frozen one-run group requirement is mandatory: select at least one and at most eight such Corpus cards across the whole craft_selection. More than eight or zero is invalid. Do not fill any other quota, select the whole catalog by default, or classify the scene from genre keywords.",
+        "Choose applicability from the actual current task, resolved scene and supplied planning_context: overall outline, chapter outline and scene details may express different functions. Favor the current supported scene function within higher-level constraints; use a compact set that earns its context cost. Plans are intentions, never Canon facts or authority to rewrite the resolved trajectory.",
+        "For each selection give a short applicability reason, not chain-of-thought, and cite one or more exact source_refs from planning_context, task:request or scene:resolved. Do not cite unavailable, superseded or private-character references. With no planning sources, use only task:request and scene:resolved; choosing no extra method remains valid.",
+        "Keep craft_selection and its reasons separate from interaction_trace and writer_context. Do not put card IDs, selection reasons, hidden planning goals or predictions of reader effects into the writer-safe projection. This is guidance routing, not a quality verdict, writing assignment template or permission to imitate a named author."
       ],
       "output_contract": {
         "type": "object",
         "required": [
           "confidence",
           "scene_id",
-          "interaction_trace",
-          "writer_context"
+          "scene_contract",
+          "selected_context_ids",
+          "director_note",
+          "author_objective_items",
+          "craft_selection"
         ],
         "properties": {
           "confidence": {
@@ -258,24 +600,121 @@
             "type": "string",
             "minLength": 1
           },
-          "interaction_trace": {
-            "type": "string",
-            "minLength": 1
+          "scene_contract": {
+            "type": "object",
+            "required": [
+              "pov_now",
+              "opening_choices",
+              "enacted_strategies",
+              "counterforces",
+              "option_cost_or_relationship_changes",
+              "required_fact_outcomes",
+              "protected_subtext_or_information_gaps",
+              "ending_constraint",
+              "concrete_friction"
+            ],
+            "properties": {
+              "pov_now": {
+                "type": "object",
+                "required": ["visible", "known", "misunderstood"],
+                "properties": {
+                  "visible": {"type": "array", "items": {"type": "string"}},
+                  "known": {"type": "array", "items": {"type": "string"}},
+                  "misunderstood": {"type": "array", "items": {"type": "string"}}
+                },
+                "additionalProperties": false
+              },
+              "opening_choices": {"type": "array", "items": {"type": "string"}},
+              "enacted_strategies": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["character_ref", "selected_action", "observable_effect"],
+                  "properties": {
+                    "character_ref": {"type": "string", "minLength": 1},
+                    "selected_action": {"type": "string", "minLength": 1},
+                    "observable_effect": {"type": "string", "minLength": 1}
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "counterforces": {"type": "array", "items": {"type": "string"}},
+              "option_cost_or_relationship_changes": {"type": "array", "items": {"type": "string"}},
+              "required_fact_outcomes": {"type": "array", "items": {"type": "string"}},
+              "protected_subtext_or_information_gaps": {"type": "array", "items": {"type": "string"}},
+              "ending_constraint": {"type": "string", "minLength": 1},
+              "concrete_friction": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": false
           },
-          "writer_context": {
-            "type": "string",
-            "minLength": 1
-          },
-          "observable_event_refs": {
+          "selected_context_ids": {
             "type": "array",
+            "maxItems": 24,
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "director_note": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1200
+          },
+          "author_objective_items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
             "items": {
-              "type": "string"
+              "type": "object",
+              "required": [
+                "objective_id",
+                "statement",
+                "source_refs",
+                "hard"
+              ],
+              "properties": {
+                "objective_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                "statement": {"type": "string", "minLength": 1, "maxLength": 4000},
+                "source_refs": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {"type": "string", "minLength": 1}
+                },
+                "hard": {"const": true}
+              },
+              "additionalProperties": false
             }
           },
-          "unresolved_pressures": {
+          "craft_selection": {
             "type": "array",
+            "maxItems": 63,
             "items": {
-              "type": "string"
+              "type": "object",
+              "required": [
+                "card_id",
+                "source_refs",
+                "reason"
+              ],
+              "properties": {
+                "card_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "source_refs": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 800
+                }
+              },
+              "additionalProperties": false
             }
           }
         },
@@ -384,6 +823,7 @@
         "For SAFE-BUT-FLAT concerns, distinguish a realized reading-value failure from factual correctness or a pre-draft promise. Inspect the supplied candidate and evidence for outline-step reporting, missing character-owned choices or reactions, interchangeable speaking strategies, or costs that never bind; repair the owning scene, character, reader-pressure or realization mechanism rather than merely removing adjectives or adding hype.",
         "Return a FIX statement for the owning failure mechanism and a compact PRESERVE list grounded in the supplied objective envelope. Preserve function, reader question/pressure/reward, character or relationship energy, humor/charm, payoff and forward pull only when they are actually required by current evidence.",
         "Choose repair depth and generation mode semantically. Do not map a Reader label, HF code, owner, scope, paragraph count, repair-cycle count or metric to a predetermined local/fresh decision table.",
+        "Classify the defect as isolated_defect, scene_causality_failure, voice_contamination or mixed. Bind every target to exact candidate evidence and choose local_edit, scene_realization or fresh_realization for that target. Systemic voice, explanation, language or character-interchangeability contamination should not be preserved merely because minimum change sounds safer.",
         "Choose fresh_realization when rejected realization or accumulated critique is likely to anchor the Writer, or when objective regression/contextual inertia/oscillation makes patch continuation unsafe. A fresh realization reconstructs current authoritative state; it does not append the full rejection trajectory.",
         "For fresh_realization, fix and preserve must express abstract current objectives or state constraints. Do not quote rejected sentences, prescribe concrete surface patches, or reconstruct rejected prose in those fields; they are the only repair directives passed to the fresh Writer.",
         "Do not solve objective regression by weakening valid Surface/Canon/character constraints. Search for a candidate that satisfies both the repair target and the preserved objective.",
@@ -396,10 +836,12 @@
         "required": [
           "confidence",
           "repair_owner",
+          "revision_route",
           "generation_mode",
           "fix",
           "repair_plan",
           "preserve",
+          "targets",
           "comparison_required"
         ],
         "properties": {
@@ -428,6 +870,43 @@
               "local_or_bounded_repair",
               "fresh_realization"
             ]
+          },
+          "revision_route": {
+            "enum": [
+              "isolated_defect",
+              "scene_causality_failure",
+              "voice_contamination",
+              "mixed"
+            ]
+          },
+          "targets": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "items": {
+              "type": "object",
+              "required": [
+                "target_id",
+                "route",
+                "scene_ref",
+                "evidence_quote",
+                "edit_window_quote"
+              ],
+              "properties": {
+                "target_id": {"type": "string", "minLength": 1},
+                "route": {
+                  "enum": [
+                    "local_edit",
+                    "scene_realization",
+                    "fresh_realization"
+                  ]
+                },
+                "scene_ref": {"type": ["string", "null"]},
+                "evidence_quote": {"type": "string", "minLength": 1},
+                "edit_window_quote": {"type": ["string", "null"]}
+              },
+              "additionalProperties": false
+            }
           },
           "repair_plan": {
             "type": "string",

@@ -9,6 +9,7 @@ from agent_runtime import AgentBudget, AgentJob, AgentResult
 from harness.context_runtime import STAGES, build_candidate_pool, canonical_json, derive_semantic_profile, fingerprint, freeze_context, pack_budget, validate_context_decision, validate_freeze
 from persistence.context_repository import ContextRepository
 from persistence.quillframe_sqlite import QuillframeStore, now_iso
+from model_runtime.deadlines import DURABLE_REQUEST_TIMEOUT_MS
 
 from .contracts import MECHANISM_CONTEXT_STAGE, PRODUCTION_BUNDLE_SCHEMA, PRODUCTION_STATUS_SCHEMA, ProductionRunError, assert_secret_free, parse_json_object, validate_bundle_integrity
 from .sources import AgentRuntimeLike, CONTEXT_STAGE_IDS, ProjectContextSourceLoader, _json
@@ -123,15 +124,22 @@ class ProductionContextRuntime:
                    context: list[dict[str, Any]], model_preference: str | None, suffix: str,
                    max_output_tokens: int = 4096) -> tuple[AgentJob, AgentResult]:
         assert_secret_free(context, label=f"{runtime_role} context")
+        stable_id = fingerprint({
+            "run_id": run["run_id"], "role": runtime_role,
+            "context": context, "instruction": instruction,
+        })[7:31]
         job = AgentJob(
-            job_id=f"job_{run['run_id']}_{suffix}_{uuid.uuid4().hex[:10]}",
+            job_id=f"job_{run['run_id']}_{stable_id}",
             session_id=str(run.get("session_id") or f"session:{run['run_id']}"), run_id=str(run["run_id"]),
             task_mode=str(run["task_mode"]), runtime_role=runtime_role, service_id=service_id,
             instruction=instruction, context=context, model_preference=model_preference,
             required_model_capabilities={"text"}, authority={},
             budgets=AgentBudget(max_steps=4, max_model_requests=4, max_tool_calls=1, max_parallel_tool_calls=1,
-                                max_output_tokens_per_request=max_output_tokens, max_total_tokens=64_000, max_elapsed_ms=180_000),
-            idempotency_key=f"{run['run_id']}:{suffix}",
+                                model_context_limit=200_000, max_output_tokens=max_output_tokens,
+                                run_cost_budget=10_000_000,
+                                max_elapsed_ms=DURABLE_REQUEST_TIMEOUT_MS,
+                                max_model_request_ms=DURABLE_REQUEST_TIMEOUT_MS),
+            idempotency_key=f"{run['run_id']}:{suffix}:{stable_id}",
         )
         return job, self.agent_runtime.run(job)
 
@@ -140,7 +148,7 @@ class ProductionContextRuntime:
         if len(pending) > MAX_PROFILE_JOBS:
             raise ProductionRunError("semantic_profile_batch_too_large", f"{len(pending)} semantic profiles require derivation; bounded maximum is {MAX_PROFILE_JOBS}")
         allowed_stages = sorted(STAGES)
-        for index, item in enumerate(pending):
+        for item in pending:
             instruction = (
                 "Derive one Quillframe Semantic Context Profile. Return only JSON with fields: description (string), "
                 "trigger_when (string), estimated_tokens (non-negative integer), semantic_tags (string array), "
@@ -148,7 +156,12 @@ class ProductionContextRuntime:
                 "do not assign authority, Canon status, lifecycle, acceptance, or settlement."
             )
             packet = {"source_object_id": item["object_id"], "source_object_type": item["object_type"], "source_fingerprint": item["source_fingerprint"], "model_view": item["model_view"], "allowed_stage_ids": allowed_stages}
-            job, result = self._agent_job(run=run, service_id=service_id, runtime_role="context_profile_deriver", instruction=instruction, context=[packet], model_preference=model_preference, suffix=f"profile-{index}", max_output_tokens=1200)
+            job, result = self._agent_job(
+                run=run, service_id=service_id, runtime_role="context_profile_deriver",
+                instruction=instruction, context=[packet], model_preference=model_preference,
+                suffix=f"profile:{item['object_id']}:{item['source_fingerprint']}",
+                max_output_tokens=1200,
+            )
             if result.status != "completed":
                 raise ProductionRunError("semantic_pending", "semantic profile derivation did not complete", detail={"object_id": item["object_id"], "agent_status": result.status, "errors": result.errors})
             metadata = parse_json_object(result.final_text, label="context profile derivation")
@@ -163,16 +176,34 @@ class ProductionContextRuntime:
 
     def prepare_context(self, project_id: str, run_id: str, *, service_id: str, instruction: str,
                         model_preference: str | None = None, stage_budgets: dict[str, int] | None = None,
-                        refresh_reason: str | None = None) -> dict[str, Any]:
+                        refresh_reason: str | None = None,
+                        inherited_selection_bundle: dict[str, Any] | None = None) -> dict[str, Any]:
         run = self._run_row(project_id, run_id)
         if run["task_mode"] not in {"DRAFT", "REVISE"}:
             raise ProductionRunError("production_mode_unsupported", "author.run.execute currently owns the DRAFT/REVISE production graph; other task modes remain separate semantic contracts")
         stage_budgets = dict(stage_budgets or {})
         previous = self._latest_bundle(project_id, run_id)
         target = run["target_context"]
+        if inherited_selection_bundle is not None:
+            if run["task_mode"] != "REVISE":
+                raise ProductionRunError("context_reuse_requires_revise", "only REVISE may reuse a frozen parent selection")
+            validate_bundle_integrity(inherited_selection_bundle)
         items = self._load_sources(project_id, target)
         self._ensure_profiles(run, project_id, items, service_id=service_id, model_preference=model_preference)
         source_fps, source_states, source_universe_fp = self.loader.state_projection(items)
+        current_profile_fingerprints = {
+            str(item["profile"]["profile_id"]): str(item["profile"]["profile_fingerprint"])
+            for item in items
+            if isinstance(item.get("profile"), dict)
+            and item["profile"].get("profile_id")
+            and item["profile"].get("profile_fingerprint")
+        }
+        inherited_source_matches = (
+            inherited_selection_bundle is not None
+            and inherited_selection_bundle.get("source_universe_fingerprint") == source_universe_fp
+            and inherited_selection_bundle.get("freeze", {}).get("profile_fingerprints")
+                == dict(sorted(current_profile_fingerprints.items()))
+        )
         pools: list[dict[str, Any]] = []
         pinned_greenlights: dict[str, dict[str, Any]] = {}
         greenlights: list[dict[str, Any]] = []
@@ -197,7 +228,45 @@ class ProductionContextRuntime:
             hard_budget = pinned_greenlight["hard_budget"]
             pinned_ids = set(pinned_greenlight["pinned_profile_ids"])
             optional = [row for row in pool["eligible"] if row["profile_id"] not in pinned_ids]
-            if optional:
+            inherited_greenlight = None
+            if inherited_selection_bundle is not None:
+                inherited_greenlight = inherited_selection_bundle["freeze"]["stage_greenlights"].get(stage_id)
+                if not isinstance(inherited_greenlight, dict):
+                    raise ProductionRunError("context_reuse_invalid", f"parent selection is missing stage {stage_id}")
+                if inherited_greenlight.get("hard_budget") != hard_budget:
+                    raise ProductionRunError("context_reuse_budget_changed", f"stage budget changed for {stage_id}")
+            optional_by_profile = {row["profile_id"]: row for row in optional}
+            inherited_optional = (
+                [row for row in inherited_greenlight.get("selected", []) if not row.get("pinned")]
+                if inherited_greenlight is not None else []
+            )
+            reuse_matches = (
+                inherited_greenlight is not None
+                # Candidate-universe fingerprints intentionally bind run_id,
+                # so a parent and child can never compare them directly.
+                # The source-universe plus every profile fingerprint is the
+                # exact cross-run projection of the same eligible material.
+                and inherited_source_matches
+                and all(
+                    (current := optional_by_profile.get(prior.get("profile_id"))) is not None
+                    and current.get("object_id") == prior.get("object_id")
+                    and current.get("source_fingerprint") == prior.get("source_fingerprint")
+                    and current.get("profile_fingerprint") == prior.get("profile_fingerprint")
+                    for prior in inherited_optional
+                )
+            )
+            if optional and reuse_matches:
+                selections = [{key: prior[key] for key in (
+                    "profile_id", "stage_id", "priority", "reason_code", "reason", "required_for_grounding"
+                )} for prior in inherited_optional]
+                decision_payload = {"selections": selections}
+                selector = {
+                    "kind": "author_revision_checkpoint_reuse", "model_invoked": False,
+                    "source_run_id": inherited_selection_bundle["run_id"],
+                    "source_bundle_fingerprint": inherited_selection_bundle["bundle_fingerprint"],
+                    "source_selection_fingerprint": inherited_greenlight["selection_fingerprint"],
+                }
+            elif optional:
                 selector_packet = {"run_id": run_id, "stage_id": stage_id, "candidate_universe_fingerprint": pool["candidate_universe_fingerprint"],
                                    "eligible": optional, "required_inputs": pinned_greenlight["pinned_inputs"],
                                    "hard_budget": hard_budget, "remaining_budget": hard_budget - pinned_greenlight["estimated_tokens"], "instruction": instruction}
@@ -209,11 +278,24 @@ class ProductionContextRuntime:
                     "\"reason_code\":short_string,\"reason\":short_string,\"required_for_grounding\":boolean}]}. "
                     "Never invent IDs, never return excluded objects, never grant authority, and never expose chain-of-thought."
                 )
-                job, result = self._agent_job(run=run, service_id=service_id, runtime_role="context_selector", instruction=selector_instruction, context=[selector_packet], model_preference=model_preference, suffix=f"selector-{index}", max_output_tokens=2400)
+                job, result = self._agent_job(
+                    run=run, service_id=service_id, runtime_role="context_selector",
+                    instruction=selector_instruction, context=[selector_packet],
+                    model_preference=model_preference, suffix=f"selector:{stage_id}",
+                    max_output_tokens=2400,
+                )
                 if result.status != "completed":
                     raise ProductionRunError("semantic_pending", "Context Decision Agent did not complete", detail={"stage_id": stage_id, "agent_status": result.status, "errors": result.errors})
                 decision_payload = parse_json_object(result.final_text, label=f"context selector {stage_id}")
                 selector = {"kind": "agent_runtime", "job_id": job.job_id, "input_fingerprint": job.input_fingerprint, "model_service_id": result.model_service_id, "model_id": result.model_id, "protocol": result.protocol}
+            elif inherited_greenlight is not None and reuse_matches:
+                decision_payload = {"selections": []}
+                selector = {
+                    "kind": "author_revision_checkpoint_reuse", "model_invoked": False,
+                    "source_run_id": inherited_selection_bundle["run_id"],
+                    "source_bundle_fingerprint": inherited_selection_bundle["bundle_fingerprint"],
+                    "source_selection_fingerprint": inherited_greenlight["selection_fingerprint"],
+                }
             else:
                 decision_payload = {"selections": []}
                 selector = {"kind": "deterministic_no_optional_candidates", "model_invoked": False}

@@ -16,11 +16,30 @@ def response(status: int, body: dict | list | None) -> TransportResponse:
 
 
 class FailingTransport:
-    def request_json(self, method, url, *, token, auth_style, body=None, timeout=30.0):  # noqa: ANN001
+    def request_json(self, method, url, *, token, auth_style, body=None, timeout=30.0,
+                     request_key=None):  # noqa: ANN001
         raise TransportError("network_request_failed", "fixture network failure")
 
 
 class ModelServiceFacadeTests(unittest.TestCase):
+    def test_only_the_exact_loopback_chat_relay_is_durable_request_keyed(self):
+        endpoint = "http://127.0.0.1:8765/v1"
+        routes = {
+            ("GET", endpoint + "/models", "none"): response(200, {"data": [{
+                "id": "quillframe-chat-host-relay", "protocol": "openai_chat_completions",
+            }]}),
+        }
+        with tempfile.TemporaryDirectory() as td:
+            runtime = QuillframeAgentRuntime(
+                secret_store=MemorySecretStore(), transport=MockTransport(routes),
+                store=QuillframeStore(Path(td)),
+            )
+            service_id = ModelServiceFacade(runtime).connect(endpoint, "")["service_id"]
+            self.assertTrue(runtime.supports_durable_model_request(
+                service_id, "quillframe-chat-host-relay",
+            ))
+            self.assertFalse(runtime.supports_durable_model_request(service_id, "another-model"))
+
     def test_endpoint_token_discovery_probe_and_capabilities_are_secret_safe(self):
         endpoint = "https://api.example.test/v1"
         routes = {

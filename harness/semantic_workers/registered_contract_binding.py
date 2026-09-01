@@ -100,7 +100,7 @@ def _validate_binding(job: dict[str, Any], *, registry: dict[str, Any], registry
     if not isinstance(provenance, dict):
         errors.append("registered contract provenance must be object")
         return errors
-    expected_registry_path = str(registry_path.relative_to(HERE)) if registry_path.is_relative_to(HERE) else str(registry_path)
+    expected_registry_path = registry_path.relative_to(HERE).as_posix() if registry_path.is_relative_to(HERE) else str(registry_path)
     expected_provenance = {
         "source": "model_contract_pack",
         "registry_schema": registry.get("schema"),

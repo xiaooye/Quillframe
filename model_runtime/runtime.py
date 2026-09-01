@@ -3,9 +3,13 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from .contracts import CapabilityEvidence, DiscoveredModel, ModelServiceSnapshot, ModelTurn, now_iso
+from .contracts import (
+    CapabilityEvidence, DiscoveredModel, ModelServiceSnapshot, ModelTurn,
+    model_version_fingerprint, now_iso,
+)
 from .deadlines import DEFAULT_REQUEST_TIMEOUT_SECONDS, validate_request_timeout
 from .endpoint import EndpointPolicy, normalize_endpoint
+from .fiction_audition import selected_identity, validate_confirmation
 from .protocols import CODECS
 from .secrets import SecretStore
 from .transport import ModelTransport, TransportError, TransportResponse, UrllibTransport
@@ -75,9 +79,14 @@ class ModelRuntime:
         )
         self._snapshots: dict[str, ModelServiceSnapshot] = {}
 
-    def _request_json(self, method: str, url: str, *, token: str, auth_style: str, body: dict[str, Any] | None = None, timeout: float) -> TransportResponse:
+    def _request_json(self, method: str, url: str, *, token: str, auth_style: str,
+                      body: dict[str, Any] | None = None, timeout: float,
+                      request_key: str | None = None) -> TransportResponse:
         try:
-            return self.transport.request_json(method, url, token=token, auth_style=auth_style, body=body, timeout=timeout)
+            return self.transport.request_json(
+                method, url, token=token, auth_style=auth_style, body=body,
+                timeout=timeout, request_key=request_key,
+            )
         except TransportError as exc:
             raise ModelRuntimeError(exc.code, str(exc)) from exc
 
@@ -142,8 +151,44 @@ class ModelRuntime:
         """Hydrate verified durable Model Service metadata without re-probing or exposing secrets."""
         snapshot = value if isinstance(value, ModelServiceSnapshot) else ModelServiceSnapshot.from_dict(value)
         normalize_endpoint(snapshot.endpoint, self.endpoint_policy)
+        for model in snapshot.models:
+            if "fiction_writing" in model.capabilities and not self._fiction_receipt_valid(
+                snapshot.service_id, model
+            ):
+                model.capabilities.pop("fiction_writing", None)
+                model.metadata.pop("quillframe_fiction_audition", None)
+        snapshot.snapshot_fingerprint = ""
+        snapshot.__post_init__()
         self._snapshots[snapshot.service_id] = snapshot
         return snapshot
+
+    @staticmethod
+    def _fiction_receipt_valid(service_id: str, model: DiscoveredModel) -> bool:
+        if (
+            not model.protocol
+            or model.capability_state("text") != "verified"
+            or model.capability_state("fiction_writing") != "verified"
+        ):
+            return False
+        evidence = model.capabilities.get("fiction_writing")
+        receipt = model.metadata.get("quillframe_fiction_audition")
+        try:
+            validated = validate_confirmation(receipt)
+            selected_service, selected_model, selected_version = selected_identity(validated)
+        except (KeyError, TypeError, ValueError):
+            return False
+        return (
+            selected_service == service_id
+            and selected_model == model.model_id
+            and selected_version == model_version_fingerprint(service_id, model)
+            and evidence is not None
+            and evidence.evidence_ref == validated["confirmation_fingerprint"]
+        )
+
+    def _model_meets(self, service_id: str, model: DiscoveredModel, requirements: set[str]) -> bool:
+        if not model.protocol or not all(model.capability_state(req) == "verified" for req in requirements):
+            return False
+        return "fiction_writing" not in requirements or self._fiction_receipt_valid(service_id, model)
 
     def disconnect(self, service_id: str) -> None:
         snapshot = self._snapshots.pop(service_id, None)
@@ -238,7 +283,7 @@ class ModelRuntime:
         if preference:
             ordered.sort(key=lambda m: 0 if m.model_id == preference else 1)
         for model in ordered:
-            if all(model.capability_state(req) == "verified" for req in requirements):
+            if self._model_meets(service_id, model, requirements):
                 return model
         if allow_probe:
             for model in ordered:
@@ -246,11 +291,14 @@ class ModelRuntime:
                     self.probe_model(service_id, model.model_id, verify_tools="tool_calling" in requirements)
                 except ModelRuntimeError:
                     continue
-                if all(model.capability_state(req) == "verified" for req in requirements):
+                if self._model_meets(service_id, model, requirements):
                     return model
         raise ModelRuntimeError("no_eligible_model", "No discovered model has verified evidence for the required capabilities", detail={"requirements": sorted(requirements), "models": [m.model_id for m in ordered]})
 
-    def invoke(self, service_id: str, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], *, max_output_tokens: int = 2048, timeout_seconds: float = DEFAULT_REQUEST_TIMEOUT_SECONDS, output_schema: dict[str, Any] | None = None) -> ModelTurn:
+    def invoke(self, service_id: str, model_id: str, history: list[dict[str, Any]], tools: list[dict[str, Any]], *,
+               max_output_tokens: int = 2048, timeout_seconds: float = DEFAULT_REQUEST_TIMEOUT_SECONDS,
+               output_schema: dict[str, Any] | None = None, request_key: str | None = None,
+               expected_model_version_fingerprint: str | None = None) -> ModelTurn:
         try:
             timeout_seconds = validate_request_timeout(timeout_seconds)
         except ValueError as exc:
@@ -259,24 +307,60 @@ class ModelRuntime:
         model = next((m for m in snapshot.models if m.model_id == model_id), None)
         if not model:
             raise ModelRuntimeError("unknown_model", model_id)
+        if (
+            expected_model_version_fingerprint is not None
+            and model_version_fingerprint(service_id, model) != expected_model_version_fingerprint
+        ):
+            raise ModelRuntimeError(
+                "model_selection_changed",
+                "selected model descriptor changed before dispatch",
+            )
         if not model.protocol:
+            if expected_model_version_fingerprint is not None:
+                raise ModelRuntimeError(
+                    "model_protocol_unresolved",
+                    "a fingerprint-bound request cannot implicitly probe an unresolved protocol",
+                )
             if output_schema is not None:
                 raise ModelRuntimeError("model_protocol_unresolved", "native output_schema requires an already resolved protocol; no implicit probe")
             model = self.probe_model(service_id, model_id, verify_tools=bool(tools))
-        codec = CODECS[model.protocol]
+        selected_model_id = model.model_id
+        selected_protocol = model.protocol
+        codec = CODECS[selected_protocol]
         token = self._token(snapshot)
         layout = normalize_endpoint(snapshot.endpoint, self.endpoint_policy)
         try:
             if output_schema is not None and tools:
                 raise ValueError("native output_schema is supported only for tool-free requests")
-            body = codec.request_body(model.model_id, history, tools, max_output_tokens, **({"output_schema": output_schema} if output_schema is not None else {}))
+            body = codec.request_body(selected_model_id, history, tools, max_output_tokens, **({"output_schema": output_schema} if output_schema is not None else {}))
         except (ValueError, TypeError, RecursionError) as exc:
             raise ModelRuntimeError("model_output_schema_unsupported", str(exc)) from exc
         auth_style = model.auth_style or snapshot.auth_style or codec.auth_style
-        response = self._request_json("POST", layout.url_for(codec.surface), token=token, auth_style=auth_style, body=body, timeout=float(timeout_seconds))
+        response = self._request_json(
+            "POST", layout.url_for(codec.surface), token=token, auth_style=auth_style,
+            body=body, timeout=float(timeout_seconds), request_key=request_key,
+        )
+        if (response.status == 202 and isinstance(response.body, dict)
+                and response.body.get("status") == "model_pending"
+                and isinstance(response.body.get("request_id"), str)):
+            raise ModelRuntimeError(
+                "model_pending", "model worker is still running",
+                detail={"request_id": response.body["request_id"], "automatic_retry": False},
+            )
+        if (isinstance(response.body, dict)
+                and response.body.get("status") == "model_failed"
+                and isinstance(response.body.get("request_id"), str)):
+            raise ModelRuntimeError(
+                "model_worker_failed", "durable model worker reached a terminal failure",
+                detail={
+                    "request_id": response.body["request_id"],
+                    "failure_code": response.body.get("failure_code"),
+                    "automatic_retry": False,
+                },
+            )
         if not (200 <= response.status < 300) or not isinstance(response.body, dict):
             raise ModelRuntimeError("model_request_failed", f"model request failed with HTTP {response.status}")
         try:
-            return codec.normalize(model.model_id, response.body)
+            return codec.normalize(selected_model_id, response.body)
         except (ValueError, TypeError, KeyError) as exc:
             raise ModelRuntimeError("model_response_invalid", str(exc)) from exc

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import tempfile
@@ -8,11 +9,67 @@ from pathlib import Path
 from unittest.mock import patch
 
 from quillframe import cli
-from quillframe.launch import LaunchError, launch_project, resolve_project_root
+from quillframe.launch import (
+    LaunchError,
+    _assert_manifest_guard_current,
+    _open_manifest_guard,
+    launch_project,
+    resolve_project_root,
+)
 from project_resolution import resolve_contract
 
 
 class LaunchTests(unittest.TestCase):
+    def test_manifest_descriptor_read_has_windows_fallback(self):
+        with tempfile.TemporaryDirectory(prefix="qf-launch-fd-") as td:
+            path = Path(td) / "quillframe.toml"
+            payload = b'schema = "quillframe_project_v1_0"\r\nid = "novel"\r\n'
+            path.write_bytes(payload)
+            expected = "sha256:" + hashlib.sha256(payload).hexdigest()
+            guard = None
+            try:
+                with patch.object(os, "pread", None, create=True):
+                    guard = _open_manifest_guard(Path(td), expected)
+                    _assert_manifest_guard_current(guard)
+            finally:
+                if guard is not None:
+                    os.close(guard.fd)
+
+    def test_launch_keeps_user_corpus_outside_project_data_root(self):
+        with tempfile.TemporaryDirectory(prefix="qf-launch-corpus-") as td, patch.dict(
+            os.environ,
+            {
+                "QUILLFRAME_DATA_DIR": str(Path(td) / "user-data"),
+                "QUILLFRAME_LAUNCH_STATE": str(Path(td) / "launch-state.json"),
+            },
+        ):
+            os.environ.pop("QUILLFRAME_CORPUS_DIR", None)
+            root = Path(td) / "novel"
+            launched = launch_project(
+                project=root,
+                new=True,
+                profile="local",
+                project_id="novel",
+                title="Novel",
+                language="en",
+                port=0,
+                no_browser=True,
+                serve=False,
+            )
+            self.assertEqual(
+                Path(os.environ["QUILLFRAME_DATA_DIR"]),
+                root / ".quillframe" / "data",
+            )
+            self.assertEqual(
+                Path(os.environ["QUILLFRAME_CORPUS_DIR"]),
+                Path(td) / "user-data" / "corpus",
+            )
+            launched.close()
+            self.assertEqual(
+                Path(os.environ["QUILLFRAME_DATA_DIR"]), Path(td) / "user-data"
+            )
+            self.assertNotIn("QUILLFRAME_CORPUS_DIR", os.environ)
+
     def test_new_local_project_is_project_local_and_receipt_is_secret_free(self):
         with tempfile.TemporaryDirectory(prefix="qf-launch-") as td:
             root = Path(td) / "novel"

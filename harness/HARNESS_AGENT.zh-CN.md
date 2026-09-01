@@ -96,26 +96,24 @@ authority/session bootstrap
 → private character state
 → character.action_propose
 → scene.resolve_actions
-→ compact writer-safe realization
+→ Scene Realization Contract + 模型选择的最小 Writer 上下文 + Director Note/当前作者目标
 → Reader Pressure
-→ event-first Raw Draft
-→ Surface realization
+→ 单次 direct Surface Writer
 → freeze candidate fingerprint
 → Blind Reader (`reader.engagement_audit`)
-→ Semantic Rule Auditor when required (`quality.semantic_rule_audit`)
-→ Editor repair spec (`editor.repair_spec`)
-→ repair / challenger comparison as warranted
 → continuity/state checks
+→ 逐项目标自检与 candidate qualification
+→ 必要时的 Editor 修订路由与 repair/challenger comparison
 → required independent semantic gate
 → user-visible Review Draft
 ```
 
 必须保留这些边界：
 
-- Raw Draft 是内部产物；
-- regression bad examples 在 Raw Draft/candidate freeze 前不得进入 Writer context；
+- 直接生成的候选正文在精确 release gate 前是内部产物；
+- 被否决正文、Reviewer 分析与私有规划不得进入 fresh Writer pack；bounded local repair 只能收到精确编辑窗口；
 - private character state 是 causal evidence，不是 Writer exposition payload；
-- Surface clean 只是地板，不是 production readiness；
+- direct Surface result 不等于 production readiness；
 - Blind Reader 不是 hard-rule checklist executor；
 - Rule Auditor 获得 Reader 不该看到的 authoritative rule material；
 - Editor 语义上选择 repair owner 与 generation mode；

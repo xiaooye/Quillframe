@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.local/schemas/public-corpus-work-v1.json",
+  "title": "Quillframe anonymous public corpus work v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "public_work_id",
+    "profile",
+    "study_ordinal",
+    "source_version",
+    "metrics",
+    "craft_profile",
+    "record_fingerprint"
+  ],
+  "properties": {
+    "schema": {"const": "quillframe_public_corpus_work_v1"},
+    "public_work_id": {"type": "string", "pattern": "^PW-[0-9a-f]{32}$"},
+    "profile": {"enum": ["general", "adult_explicit"]},
+    "study_ordinal": {"type": "integer", "minimum": 1, "maximum": 120},
+    "source_version": {"type": "integer", "minimum": 1},
+    "metrics": {"$ref": "#/$defs/metrics"},
+    "craft_profile": {"$ref": "#/$defs/craftProfile"},
+    "record_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "nonNegativeMetric": {"type": "number", "minimum": 0, "maximum": 100000000},
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sampled_chars",
+        "paragraph_count",
+        "sentence_count",
+        "mean_sentence_chars_milli",
+        "dialogue_char_ratio_ppm",
+        "unique_char_ratio_ppm",
+        "punctuation_ratio_ppm"
+      ],
+      "properties": {
+        "sampled_chars": {"$ref": "#/$defs/nonNegativeMetric"},
+        "paragraph_count": {"$ref": "#/$defs/nonNegativeMetric"},
+        "sentence_count": {"$ref": "#/$defs/nonNegativeMetric"},
+        "mean_sentence_chars_milli": {"$ref": "#/$defs/nonNegativeMetric"},
+        "dialogue_char_ratio_ppm": {"$ref": "#/$defs/nonNegativeMetric"},
+        "unique_char_ratio_ppm": {"$ref": "#/$defs/nonNegativeMetric"},
+        "punctuation_ratio_ppm": {"$ref": "#/$defs/nonNegativeMetric"}
+      }
+    },
+    "axis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "signal_ppm", "confidence_ppm"],
+      "properties": {
+        "label": {"type": "string"},
+        "signal_ppm": {"type": "integer", "minimum": 0, "maximum": 1000000},
+        "confidence_ppm": {"type": "integer", "minimum": 0, "maximum": 1000000}
+      }
+    },
+    "craftProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sentence", "scene", "chapter", "pacing", "dialogue", "pov", "tension", "sensory"],
+      "properties": {
+        "sentence": {"allOf": [{"$ref": "#/$defs/axis"}, {"properties": {"label": {"enum": ["clipped", "balanced", "extended"]}}}]},
+        "scene": {"allOf": [{"$ref": "#/$defs/axis"}, {"properties": {"label": {"enum": ["fragmented", "balanced", "sustained"]}}}]},
+        "chapter": {"allOf": [{"$ref": "#/$defs/axis"}, {"properties": {"label": {"enum": ["low_segmentation", "moderate_segmentation", "high_segmentation"]}}}]},
+        "pacing": {"allOf": [{"$ref": "#/$defs/axis"}, {"properties": {"label": {"enum": ["brisk", "mixed", "deliberate"]}}}]},
+        "dialogue": {"allOf": [{"$ref": "#/$defs/axis"}, {"properties": {"label": {"enum": ["sparse", "mixed", "dialogue_forward"]}}}]},
+        "pov": {"allOf": [{"$ref": "#/$defs/axis"}, {"properties": {"label": {"const": "unresolved"}}}]},
+        "tension": {"allOf": [{"$ref": "#/$defs/axis"}, {"properties": {"label": {"enum": ["low_signal", "variable_signal", "high_signal"]}}}]},
+        "sensory": {"allOf": [{"$ref": "#/$defs/axis"}, {"properties": {"label": {"const": "unresolved"}}}]}
+      }
+    }
+  }
+}

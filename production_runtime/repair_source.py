@@ -111,6 +111,41 @@ def _call_for_role(calls, role: str):
     return found[0]
 
 
+def _validated_derived_surface(conn, calls, raw_surface: dict[str, Any], text: str) -> dict[str, Any]:  # noqa: ANN001
+    """Verify Core's checkpointed bounded-edit materialization, not model prose claims."""
+
+    found = [(row, result) for row, _job, result in calls if row["runtime_role"] == "surface_realization"]
+    if len(found) != 1:
+        _reject("repair source requires one exact Surface Writer call")
+    row, _result = found[0]
+    checkpoint_row = conn.execute(
+        "SELECT state_json,artifact_fingerprint FROM checkpoints WHERE checkpoint_id=? "
+        "AND run_id=? AND checkpoint_kind='production_node_checkpoint'",
+        ("node:" + row["call_id"], row["run_id"]),
+    ).fetchone()
+    if checkpoint_row is None:
+        _reject("repair source Surface Writer checkpoint is missing")
+    checkpoint = _object(checkpoint_row["state_json"], "Surface Writer node checkpoint")
+    supplied = checkpoint.get("checkpoint_fingerprint")
+    if (
+        supplied != fingerprint({key: value for key, value in checkpoint.items() if key != "checkpoint_fingerprint"})
+        or checkpoint_row["artifact_fingerprint"] != supplied
+        or checkpoint.get("input_fingerprint") != row["input_fingerprint"]
+        or checkpoint.get("output_fingerprint") != row["result_fingerprint"]
+    ):
+        _reject("repair source Surface Writer checkpoint binding changed")
+    derived = {**raw_surface, "text": text, "artifact_fingerprint": fingerprint_text(text)}
+    validation = checkpoint.get("validation_receipt")
+    if (
+        not isinstance(validation, dict)
+        or validation.get("status") != "semantic_validation_confirmed"
+        or validation.get("validation_kind") != "production_stage:surface_realization"
+        or validation.get("validation_fingerprint") != fingerprint(derived)
+    ):
+        _reject("repair source bounded Writer materialization is not checkpoint-confirmed")
+    return derived
+
+
 def _registered_call(job, result, *, role: str, calls, recorded: bool = False) -> None:
     if not isinstance(job, dict) or not isinstance(result, dict):
         _reject("repair source registered job/result are missing")
@@ -123,10 +158,11 @@ def _registered_call(job, result, *, role: str, calls, recorded: bool = False) -
     expected_worker = {
         "provider": "quillframe_model_service", "model_or_reviewer": agent_result.get("model_id"),
         "model_service_id": agent_result.get("model_service_id"), "protocol": agent_result.get("protocol"),
+        "model_version_fingerprint": agent_result.get("model_version_fingerprint"),
         "agent_job_id": agent_job.get("job_id"), "agent_input_fingerprint": agent_job.get("input_fingerprint"),
     }
     if result.get("worker") != expected_worker or result.get("judgment") != parse_json_object(agent_result.get("final_text"), label="repair source confirmed judgment"):
-        _reject("repair source registered result differs from its confirmed response")
+        _reject(f"repair source {role} registered result differs from its confirmed response")
     if result.get("proposals") != [] or result.get("errors") != [] or result.get("execution") != {
         "source_session_id": job.get("execution", {}).get("source_session_id"),
         "handoff_id": job.get("execution", {}).get("handoff_id"),
@@ -146,7 +182,72 @@ def _registered_binding(binding: Any, *, contract_id: str, role: str, calls, can
         _reject("repair source registered gate does not bind the exact candidate")
 
 
-def _context_and_continuity(conn, run, state, target, calls) -> tuple[str, str]:
+def _confirmed_prefix_evidence(conn, run, request, state) -> dict[str, Any] | None:  # noqa: ANN001
+    target, _target_fp = _author_request(conn, run)
+    reference = (target.get("payload") or {}).get("confirmed_prefix_source")
+    if reference is None:
+        return None
+    from .confirmed_prefix import (
+        REUSE_SCHEMA,
+        load_confirmed_prefix,
+        logical_journal_fingerprint,
+    )
+
+    frozen, private = load_confirmed_prefix(conn, run["run_id"], target=target)
+    if request.get("confirmed_prefix_fingerprint") != frozen["prefix_fingerprint"]:
+        _reject("repair source execution lost its confirmed prefix binding")
+    rows = conn.execute(
+        "SELECT state_json,artifact_fingerprint FROM checkpoints WHERE run_id=? "
+        "AND checkpoint_kind='production_confirmed_prefix_reuse' ORDER BY rowid",
+        (run["run_id"],),
+    ).fetchall()
+    if len(rows) != 1:
+        _reject("repair source requires one confirmed prefix reuse checkpoint")
+    reuse = _object(rows[0]["state_json"], "confirmed prefix reuse")
+    expected_reuse = fingerprint({key: value for key, value in reuse.items() if key != "reuse_fingerprint"})
+    if (reuse.get("schema") != REUSE_SCHEMA
+            or reuse.get("run_id") != run["run_id"]
+            or reuse.get("source_prefix_fingerprint") != frozen["prefix_fingerprint"]
+            or reuse.get("candidate_fingerprint") != state.get("candidate_fingerprint")
+            or reuse.get("current_context_bundle_fingerprint") != state.get("context_bundle_fingerprint")
+            or reuse.get("current_freeze_fingerprint") != state.get("freeze_fingerprint")
+            or reuse.get("reuse_fingerprint") != expected_reuse
+            or rows[0]["artifact_fingerprint"] != expected_reuse):
+        _reject("repair source confirmed prefix reuse changed")
+    reuse_receipts = []
+    for row in conn.execute(
+        "SELECT payload_json FROM receipts WHERE run_id=? AND receipt_kind='production_stage' ORDER BY rowid",
+        (run["run_id"],),
+    ):
+        receipt = _object(row["payload_json"], "confirmed prefix reuse receipt")
+        if receipt.get("evidence_kind") == "confirmed_prefix_reuse":
+            reuse_receipts.append(receipt)
+    if ([item.get("mechanism") for item in reuse_receipts]
+            != ["surface_realization", "reader_engagement", "continuity"]
+            or [item.get("stage_result_fingerprint") for item in reuse_receipts]
+            != reuse.get("stage_reuse_receipt_fingerprints")):
+        _reject("repair source confirmed prefix stage receipts changed")
+    for receipt in reuse_receipts:
+        expected = fingerprint({key: value for key, value in receipt.items() if key != "stage_result_fingerprint"})
+        if (receipt.get("stage_result_fingerprint") != expected
+                or receipt.get("confirmed_prefix_fingerprint") != frozen["prefix_fingerprint"]
+                or receipt.get("source_run_id") != frozen["source_run_id"]
+                or receipt.get("current_run_model_invoked") is not False
+                or receipt.get("source_model_invocation_referenced") is not True):
+            _reject("repair source confirmed prefix receipt binding changed")
+    return {
+        "frozen": frozen,
+        "private": private,
+        "reuse": reuse,
+        "reuse_receipts": reuse_receipts,
+        "logical_journal_fingerprint": lambda native: logical_journal_fingerprint(
+            native, frozen, reuse_receipts,
+        ),
+    }
+
+
+def _context_and_continuity(conn, run, state, target, calls, *,
+                            confirmed_prefix: dict[str, Any] | None = None) -> tuple[str, str]:
     row = conn.execute(
         "SELECT state_json,artifact_fingerprint FROM checkpoints WHERE run_id=? AND checkpoint_kind='production_context_bundle' ORDER BY created_at DESC,rowid DESC LIMIT 1",
         (run["run_id"],),
@@ -179,7 +280,19 @@ def _context_and_continuity(conn, run, state, target, calls) -> tuple[str, str]:
         _reject("repair source requires its exact continuity receipt")
     receipt = receipts[0]
     receipt_fp = fingerprint({key: value for key, value in receipt.items() if key != "stage_result_fingerprint"})
-    job, result = _call_for_role(calls, "continuity")
+    if confirmed_prefix is None:
+        job, result = _call_for_role(calls, "continuity")
+    else:
+        source_call = confirmed_prefix["private"]["calls"][3]
+        source_row, job, result = source_call
+        if (receipt.get("evidence_kind") != "confirmed_prefix_reuse"
+                or receipt.get("confirmed_prefix_fingerprint")
+                    != confirmed_prefix["frozen"]["prefix_fingerprint"]
+                or receipt.get("source_call_id") != source_row["call_id"]
+                or receipt.get("source_result_fingerprint") != source_row["result_fingerprint"]
+                or receipt.get("source_stage_result_fingerprint")
+                    != confirmed_prefix["private"]["stage_receipts"]["continuity"]["stage_result_fingerprint"]):
+            _reject("repair source continuity reuse reference changed")
     if receipt.get("stage_result_fingerprint") != receipt_fp or state.get("continuity_receipt_fingerprint") != receipt_fp or receipt.get("agent_input_fingerprint") != job.get("input_fingerprint") or receipt.get("judgment", {}).get("status") != "pass" or parse_json_object(result.get("final_text"), label="source continuity").get("status") != "pass":
         _reject("repair source continuity evidence is inconsistent")
     if receipt.get("context_bundle_fingerprint") != state["context_bundle_fingerprint"] or receipt.get("freeze_fingerprint") != state["freeze_fingerprint"]:
@@ -235,17 +348,33 @@ def freeze_repair_source(conn, *, source_ref: Any, target: dict[str, Any], _seen
         _reject("repair source candidate bytes or fingerprint changed")
     if conn.execute("SELECT 1 FROM candidates WHERE run_id=? LIMIT 1", (run["run_id"],)).fetchone():
         _reject("repair source must remain an internal candidate")
-    calls, journal_fp = _confirmed_calls(conn, run, request)
-    _, surface_result = _call_for_role(calls, "surface_realization")
+    calls, native_journal_fp = _confirmed_calls(conn, run, request)
+    confirmed_prefix = _confirmed_prefix_evidence(conn, run, request, state)
+    prefix_calls = confirmed_prefix["private"]["calls"] if confirmed_prefix else calls
+    journal_fp = (
+        confirmed_prefix["logical_journal_fingerprint"](native_journal_fp)
+        if confirmed_prefix else native_journal_fp
+    )
+    _, surface_result = _call_for_role(prefix_calls, "surface_realization")
     surface = parse_json_object(surface_result.get("final_text"), label="source surface realization")
+    if surface.get("status") == "pass" and surface.get("text") != text and run["task_mode"] == "REVISE":
+        surface = _validated_derived_surface(conn, prefix_calls, surface, text)
     if surface.get("status") != "pass" or surface.get("text") != text:
         _reject("repair source prose differs from its confirmed surface response")
-    for key, contract_id, role in (
-        ("reader_binding", "reader.engagement_audit", "registered_reader_engagement"),
-        ("self_audit_binding", "quality.candidate_self_audit", "registered_candidate_self_audit"),
-    ):
-        _registered_binding(state.get(key), contract_id=contract_id, role=role, calls=calls, candidate=candidate, text=text, subject=exact_target["document_id"], recorded=_recorded)
-    context_fp, continuity_fp = _context_and_continuity(conn, run, state, source_target, calls)
+    _registered_binding(
+        state.get("reader_binding"), contract_id="reader.engagement_audit",
+        role="registered_reader_engagement", calls=prefix_calls, candidate=candidate,
+        text=text, subject=exact_target["document_id"],
+        recorded=(_recorded or confirmed_prefix is not None),
+    )
+    _registered_binding(
+        state.get("self_audit_binding"), contract_id="quality.candidate_self_audit",
+        role="registered_candidate_self_audit", calls=calls, candidate=candidate,
+        text=text, subject=exact_target["document_id"], recorded=_recorded,
+    )
+    context_fp, continuity_fp = _context_and_continuity(
+        conn, run, state, source_target, calls, confirmed_prefix=confirmed_prefix,
+    )
     qualification = state.get("qualification_receipt")
     if validate_qualification_receipt(qualification, candidate_fingerprint=candidate, subject_id=exact_target["document_id"], require_qualified=False) or qualification.get("qualification_status") != "repair_required":
         _reject("repair source is not a valid repair_required qualification")

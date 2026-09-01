@@ -27,7 +27,14 @@ from production_runtime.context import ProductionContextRuntime
 from production_runtime.reading_positioning import (
     DECLARATION_SCHEMA, READER_FIELDS, build_reading_positioning, reading_positioning_fields,
 )
+from learning.promotion_gate import (
+    SCHEMA as PROMOTION_SCHEMA,
+    _eval_binding as promotion_eval_binding,
+    _semantic_binding as promotion_semantic_binding,
+)
+from learning.user_taste import UserTasteService
 from production_runtime.workflow_service import NovelWorkflowService
+from production_runtime.writer_context import build_inventory as build_writer_inventory
 
 ROOT = Path(__file__).resolve().parents[1]
 SEMANTIC_ROOT = ROOT / "harness" / "semantic_workers"
@@ -57,6 +64,29 @@ PUBLIC_MANUSCRIPT_KEYS = {"peer_packet", "peer_packet_bytes", "candidate_text"}
 PRE_RELEASE_MANUSCRIPT = "Review prose ready for the user-visible gate."
 
 
+def fixture_billing_usage() -> dict:
+    receipt = {
+        "schema": "quillframe_model_cost_receipt_v1",
+        "status": "provider_confirmed",
+        "model_requests": 1,
+        "cost_micros": 0,
+        "request_receipts": [{
+            "request_ordinal": 1,
+            "response_id_fingerprint": fingerprint("fixture-response"),
+            "usage_fingerprint": fingerprint({"fixture": "usage"}),
+            "cost_reported": True,
+            "cost_micros": 0,
+        }],
+    }
+    receipt["receipt_fingerprint"] = fingerprint(receipt)
+    return {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cost_micros": 0,
+        "billing_receipt": receipt,
+    }
+
+
 def assert_public_execution_safe(case: unittest.TestCase, value: object) -> None:
     def visit(node: object) -> None:
         if isinstance(node, dict):
@@ -70,15 +100,16 @@ def assert_public_execution_safe(case: unittest.TestCase, value: object) -> None
     visit(value)
     serialized = json.dumps(value, ensure_ascii=False)
     case.assertNotIn(PRE_RELEASE_MANUSCRIPT, serialized)
-    case.assertNotIn("INTERNAL RAW DRAFT", serialized)
 
 
 class FakeAgentRuntime:
     """Deterministic contract fixture; explicitly not live-provider acceptance."""
 
-    def __init__(self, *, reject_mechanism: str | None = None, invalid_selector: bool = False) -> None:
+    def __init__(self, *, reject_mechanism: str | None = None, invalid_selector: bool = False,
+                 malformed_narrative_once: bool = False) -> None:
         self.reject_mechanism = reject_mechanism
         self.invalid_selector = invalid_selector
+        self.malformed_narrative_once = malformed_narrative_once
         self.calls: list[AgentJob] = []
 
     def run(self, job: AgentJob, *, cancellation=None) -> AgentResult:  # noqa: ANN001
@@ -125,7 +156,17 @@ class FakeAgentRuntime:
         elif role == "registered_character_action":
             source = job.context[0]["registered_semantic_job"]["input"]["payload"]
             payload = {"confidence": 1.0, "character_id": source["character_id"], "active_agenda": source["active_agenda"],
-                       "proposals": [{"action": "A requests the disputed document.", "knowledge_basis": []}]}
+                       "private_state": {"current_belief": "The document is being withheld.",
+                                         "current_misperception": "Delay has no cost.", "desired_gain": "Obtain the document.",
+                                         "feared_loss": "Lose the chance to ask.", "expectations_of_others": []},
+                       "proposals": [
+                           {"strategy_id": "REQUEST", "action": "A requests the disputed document.",
+                            "gain": "The document may be released.", "risk_or_cost": "The clerk may refuse.",
+                            "rejection_reason": None, "knowledge_basis": []},
+                           {"strategy_id": "WAIT", "action": "A waits for the clerk to volunteer it.",
+                            "gain": "Avoid direct conflict.", "risk_or_cost": "The meeting may end.",
+                            "rejection_reason": "Waiting surrenders the only current opening.", "knowledge_basis": []},
+                       ], "selected_strategy_id": "REQUEST", "relationship_specific_interaction": []}
         elif role == "registered_scene_resolution":
             payload = {"confidence": 1.0, "interaction_trace": "A requests the document; the clerk delays.",
                        "observable_trajectory": "The unanswered request remains on the desk.",
@@ -134,9 +175,42 @@ class FakeAgentRuntime:
         elif role == "registered_scene_projection":
             source = job.context[0]["registered_semantic_job"]["input"]["payload"]
             payload = {"confidence": 1.0, "scene_id": source["scene_id"],
-                       "interaction_trace": "A requests the document; the clerk delays.",
-                       "writer_context": "Show the refused request and its observable cost.",
-                       "observable_event_refs": [], "unresolved_pressures": ["The document is withheld."]}
+                       "scene_contract": {
+                           "pov_now": {"visible": ["The request sits unanswered on the desk."],
+                                       "known": ["The document was requested."],
+                                       "misunderstood": ["The clerk's reason for delaying."]},
+                           "opening_choices": ["Press the request.", "Withdraw it."],
+                           "enacted_strategies": [{"character_ref": "A", "selected_action": "Request the document.",
+                                                   "observable_effect": "The clerk delays."}],
+                           "counterforces": ["The clerk controls access."],
+                           "option_cost_or_relationship_changes": ["Waiting now risks the meeting ending."],
+                           "required_fact_outcomes": ["The document remains withheld."],
+                           "protected_subtext_or_information_gaps": ["The clerk's motive remains unstated."],
+                           "ending_constraint": "The request now has a deadline.",
+                           "concrete_friction": "The disputed document remains under the clerk's hand.",
+                       },
+                       "selected_context_ids": [row["context_id"] for row in source["writer_context_inventory"]["items"]],
+                       "director_note": "Let the unanswered request and the clerk's delay carry the pressure.",
+                       "author_objective_items": [{
+                           "objective_id": f"OBJ-AUTHOR-{index + 1}",
+                           "statement": direction["statement"],
+                           "source_refs": [direction["source_ref"]],
+                           "hard": True,
+                       } for index, direction in enumerate(source["author_direction_evidence"])],
+                       "craft_selection": []}
+        elif role == "registered_user_taste_selection":
+            source = job.context[0]["registered_semantic_job"]["input"]["payload"]
+            payload = {
+                "confidence": 1.0,
+                "selected": [
+                    {
+                        "hypothesis_id": row["hypothesis_id"],
+                        "reason": "The mechanism is relevant to this exact request and resolved scene.",
+                    }
+                    for row in source["candidates"]
+                ],
+                "report": "Synthetic relevance selection for runtime-boundary testing.",
+            }
         elif role == "registered_reader_pressure":
             source = job.context[0]["registered_semantic_job"]["input"]["payload"]
             payload = {"confidence": 1.0, "status": "pass", "summary": "The refused request has a cost.",
@@ -145,7 +219,8 @@ class FakeAgentRuntime:
                        "proposed_net_change": "The request acquires a deadline.", "next_chapter_pull": "A decision remains."}
         elif role == "registered_reader_expectations":
             payload = {"confidence": 1.0, "expectation_updates": []}
-        elif role == "registered_narrative_state":
+        elif role in {"registered_narrative_state", "registered_narrative_state_format_repair",
+                      "registered_narrative_state_evidence_repair"}:
             payload = {"confidence": 1.0, "changes": []}
         elif role == "registered_reader_engagement":
             payload = {
@@ -157,6 +232,7 @@ class FakeAgentRuntime:
                 "evidence_refs": ["candidate:synthetic"],
             }
         elif role == "registered_candidate_self_audit":
+            source = job.context[0]["registered_semantic_job"]["input"]["payload"]
             payload = {
                 "confidence": 1.0,
                 "result": "pass",
@@ -170,13 +246,11 @@ class FakeAgentRuntime:
                 },
                 "findings": [],
                 "evidence_refs": ["candidate:synthetic"],
-            }
-        elif role == "event_first_raw_draft":
-            payload = {
-                "status": "fail" if self.reject_mechanism == role else "pass",
-                "text": "INTERNAL RAW DRAFT",
-                "summary": "event-first draft",
-                "findings": [],
+                "objective_assessments": [{
+                    "objective_id": objective["objective_id"], "status": "met",
+                    "evidence_refs": ["candidate:synthetic"], "impact_scope": "whole_candidate",
+                    "repair_route": "no_change", "report": "Synthetic objective-bound fixture evidence.",
+                } for objective in source["author_objectives"]["items"]],
             }
         elif role == "surface_realization":
             payload = {
@@ -201,10 +275,36 @@ class FakeAgentRuntime:
             model_id="fixture-model",
             protocol="fixture_protocol",
             input_fingerprint=job.input_fingerprint,
-            final_text=json.dumps(payload),
+            final_text=(
+                '{"confidence":1,"changes":['
+                if role == "registered_narrative_state" and self.malformed_narrative_once
+                else json.dumps(payload)
+            ),
             steps=1,
             model_requests=1,
+            usage=fixture_billing_usage(),
         )
+
+
+class EmptyUserTasteFixtureRuntime(FakeAgentRuntime):
+    """Let the scene composer select no eligible user-taste mechanism."""
+
+    def run(self, job: AgentJob, *, cancellation=None) -> AgentResult:  # noqa: ANN001
+        result = super().run(job, cancellation=cancellation)
+        if job.runtime_role == "registered_scene_projection":
+            source = job.context[0]["registered_semantic_job"]["input"]["payload"]
+            excluded = {
+                row["context_id"] for row in source["writer_context_inventory"]["items"]
+                if row["category"] == "user_taste_mechanism"
+            }
+            judgment = json.loads(result.final_text)
+            result = replace(
+                result,
+                final_text=json.dumps({**judgment, "selected_context_ids": [
+                    context_id for context_id in judgment["selected_context_ids"] if context_id not in excluded
+                ]}),
+            )
+        return result
 
 
 REPAIRED_FIXTURE_TEXT = "Repaired synthetic candidate with the original objective intact."
@@ -237,9 +337,19 @@ class RepairFixtureRuntime(FakeAgentRuntime):
                                           "ownership_assessment": "pass", "natural_realization_assessment": "fail",
                                           "evidence_refs": ["candidate:synthetic"]}]})
         elif job.runtime_role == "registered_repair_editor":
-            payload = {"confidence": 1.0, "repair_owner": "continuity", "generation_mode": self.generation_mode,
+            fresh = self.generation_mode == "fresh_realization"
+            source_candidate = job.context[0]["registered_semantic_job"]["input"]["payload"]["candidate_text"]
+            payload = {"confidence": 1.0, "repair_owner": "surface", "generation_mode": self.generation_mode,
+                       "revision_route": "voice_contamination" if fresh else "isolated_defect",
                        "fix": "Resolve the synthetic continuity defect.", "preserve": ["The explicit author objective."],
-                       "repair_plan": "PRIVATE EDITOR TRAJECTORY", "comparison_required": True}
+                       "repair_plan": "PRIVATE EDITOR TRAJECTORY", "comparison_required": True,
+                       "targets": [{
+                           "target_id": "TARGET-SYNTHETIC",
+                           "route": "fresh_realization" if fresh else "local_edit",
+                           "scene_ref": "CH001",
+                           "evidence_quote": source_candidate[: min(24, len(source_candidate))],
+                           "edit_window_quote": None if fresh else source_candidate,
+                       }]}
         elif job.runtime_role == "registered_repair_comparison":
             regression = self.comparison_outcome == "objective_regression"
             payload = {"confidence": 1.0, "winner": "incumbent" if regression else "challenger", "reason": "Synthetic comparison.",
@@ -249,7 +359,13 @@ class RepairFixtureRuntime(FakeAgentRuntime):
                        "introduced_regressions": ["reader"] if regression else [], "regressed_dimensions": ["reader"] if regression else [],
                        "preserved_strengths": ["author objective"], "evidence": ["candidate:synthetic"]}
         elif job.runtime_role == "surface_realization" and job.task_mode == "REVISE":
-            payload["text"] = REPAIRED_FIXTURE_TEXT
+            if self.generation_mode == "fresh_realization":
+                payload["text"] = REPAIRED_FIXTURE_TEXT
+            else:
+                payload["edits"] = [{
+                    "target_id": "TARGET-SYNTHETIC",
+                    "replacement_text": REPAIRED_FIXTURE_TEXT,
+                }]
         return replace(result, final_text=json.dumps(payload))
 
 
@@ -370,6 +486,8 @@ def frozen_packet(store: QuillframeStore, run_id: str) -> dict:
 
 def peer_result(packet: dict, verdict: str = "pass") -> dict:
     job = packet["job"]
+    objectives = job["input"]["payload"]["author_objectives"]["items"]
+    objective_status = "uncertain" if verdict == "insufficient_evidence" else "met"
     return {
         "job_id": job["job_id"],
         "subject_id": job["subject_id"],
@@ -386,6 +504,12 @@ def peer_result(packet: dict, verdict: str = "pass") -> dict:
             "result": verdict,
             "report": f"Synthetic independent {verdict}.",
             "evidence_refs": ["candidate:synthetic"],
+            "objective_assessments": [{
+                "objective_id": objective["objective_id"], "status": objective_status,
+                "evidence_refs": ["candidate:synthetic"], "impact_scope": "whole_candidate",
+                "repair_route": "no_change" if objective_status == "met" else "fresh_realization",
+                "report": "Synthetic objective-bound independent evidence.",
+            } for objective in objectives],
         },
         "proposals": [],
         "errors": [],
@@ -416,6 +540,8 @@ def native_result(claim: dict, verdict: str = "pass") -> dict:
     packet = claim["peer_packet"]
     job = packet["job"]
     provider = claim["provider"]
+    objectives = job["input"]["payload"]["author_objectives"]["items"]
+    objective_status = "uncertain" if verdict == "insufficient_evidence" else "met"
     return {
         "job_id": job["job_id"],
         "subject_id": job["subject_id"],
@@ -432,6 +558,12 @@ def native_result(claim: dict, verdict: str = "pass") -> dict:
             "result": verdict,
             "report": f"Synthetic native independent {verdict}.",
             "evidence_refs": ["candidate:synthetic"],
+            "objective_assessments": [{
+                "objective_id": objective["objective_id"], "status": objective_status,
+                "evidence_refs": ["candidate:synthetic"], "impact_scope": "whole_candidate",
+                "repair_route": "no_change" if objective_status == "met" else "fresh_realization",
+                "report": "Synthetic objective-bound native evidence.",
+            } for objective in objectives],
         },
         "proposals": [],
         "errors": [],
@@ -491,6 +623,50 @@ class ProductionRuntimeTests(unittest.TestCase):
         )
         return run_id
 
+    def seed_active_user_taste(self, *, suffix: str = "RUNTIME") -> dict:
+        service = UserTasteService(self.store.root / "learning" / "author.sqlite")
+        policy = service.get_policy()
+        service.set_policy({
+            "enabled": True,
+            "expected_version": policy["policy_version"],
+            "source_kinds": ["corpus", "feedback", "user_edit"],
+            "authorization_ref": "user:standing-policy:production-runtime-test",
+        })
+        mechanism = "runtime_writer_only_causal_order_" + suffix.casefold()
+        evidence_refs = ["public-corpus:PS-RUNTIME:PW-" + suffix]
+        candidate_id = "UT-RUNTIME-" + suffix
+        promotion = {
+            "schema": PROMOTION_SCHEMA,
+            "candidate_id": candidate_id,
+            "scope": "user_taste",
+            "mechanism": mechanism,
+            "evidence": {
+                "evidence_refs": evidence_refs,
+                "contradiction_review": {"status": "pass"},
+            },
+        }
+        promotion["semantic_review_binding"] = promotion_semantic_binding(
+            candidate_id, "user_taste", mechanism, evidence_refs
+        )
+        promotion["independent_eval_binding"] = promotion_eval_binding(
+            candidate_id, "user_taste", mechanism, result="pass"
+        )
+        result = service.ingest_corpus_candidate({
+            "dimension": "causal_progression",
+            "statement": "Prefer a consequence-bearing action before optional explanation.",
+            "mechanism": mechanism,
+            "corpus_evidence_refs": evidence_refs,
+            "applicability": {
+                "applies_when": ["pressure_scene"],
+                "avoid_when": ["deliberate_reflective_pause"],
+            },
+            "artifact_ref": "public-corpus:PS-RUNTIME:aggregate-v1",
+            "artifact_fingerprint": "sha256:" + "6" * 64,
+            "promotion_candidate": promotion,
+        })
+        self.assertEqual(result["preference"]["state"], "active")
+        return result["preference"]
+
     def execute_to_handoff(self, runtime: ProductionRunExecutor, run_id: str) -> dict:
         return runtime.execute(
             "PROD",
@@ -513,6 +689,63 @@ class ProductionRuntimeTests(unittest.TestCase):
             independence_receipt=project_bridge_receipt(packet, result),
         )
 
+    def test_user_taste_is_selected_per_run_and_visible_only_to_writer_stages(self):
+        preference = self.seed_active_user_taste()
+        fake = FakeAgentRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        handoff = self.execute_to_handoff(runtime, run_id)
+
+        self.assertFalse(any(job.runtime_role == "registered_user_taste_selection" for job in fake.calls))
+        composer = next(job for job in fake.calls if job.runtime_role == "registered_scene_projection")
+        composer_payload = composer.context[0]["registered_semantic_job"]["input"]["payload"]
+        eligible = [row for row in composer_payload["writer_context_inventory"]["items"]
+                    if row["category"] == "user_taste_mechanism"]
+        self.assertEqual(1, len(eligible))
+        self.assertEqual(eligible[0]["selection_view"]["hypothesis_id"], preference["hypothesis_id"])
+        selector_json = json.dumps(eligible, ensure_ascii=False)
+        for forbidden in ("statement", "evidence_ids", "source_title", "source_path", "excerpt", "raw_text"):
+            self.assertNotIn(forbidden, selector_json)
+
+        writer = next(job for job in fake.calls if job.runtime_role == "surface_realization")
+        selected = writer.context[0]["writer_pack"]["selected_context"]
+        taste = next(row for row in selected if row["category"] == "user_taste_mechanism")
+        self.assertEqual(taste["value"]["mechanism"], preference["mechanism"])
+        self.assertNotIn("statement", json.dumps(taste, ensure_ascii=False))
+
+        for role in (
+            "registered_reader_pressure",
+            "registered_reader_engagement",
+            "registered_candidate_self_audit",
+        ):
+            reader_or_reviewer = next(job for job in fake.calls if job.runtime_role == role)
+            self.assertNotIn(
+                preference["mechanism"],
+                json.dumps(reader_or_reviewer.context, ensure_ascii=False),
+            )
+        self.assertNotIn(
+            preference["mechanism"],
+            json.dumps(frozen_packet(self.store, run_id), ensure_ascii=False),
+        )
+        self.assertEqual(handoff["status"], "awaiting_external")
+
+    def test_user_taste_semantic_selector_may_choose_zero_preferences(self):
+        preference = self.seed_active_user_taste(suffix="ZERO")
+        fake = EmptyUserTasteFixtureRuntime()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        handoff = self.execute_to_handoff(runtime, run_id)
+
+        self.assertEqual(handoff["status"], "awaiting_external")
+        self.assertFalse(any(job.runtime_role == "registered_user_taste_selection" for job in fake.calls))
+        writer = next(job for job in fake.calls if job.runtime_role == "surface_realization")
+        self.assertFalse(any(row["category"] == "user_taste_mechanism"
+                             for row in writer.context[0]["writer_pack"]["selected_context"]))
+        self.assertNotIn(
+            preference["mechanism"],
+            json.dumps(frozen_packet(self.store, run_id), ensure_ascii=False),
+        )
+
     def test_full_graph_uses_frozen_context_and_real_external_independent_boundary(self):
         fake = FakeAgentRuntime()
         runtime = ProductionRunExecutor(self.store, fake)
@@ -531,11 +764,22 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.assertIn("registered_candidate_self_audit", [job.runtime_role for job in fake.calls])
         target = runtime._target_context(runtime._latest_bundle("PROD", run_id))
         for job in fake.calls:
-            if job.runtime_role in {"story_canon_preflight", "event_first_raw_draft", "surface_realization", "continuity"}:
+            if job.runtime_role in {"story_canon_preflight", "continuity"}:
                 self.assertEqual(job.context[0]["target_context"], target)
                 self.assertFalse(job.context[0]["frozen_stage_context"]["authority"])
                 self.assertFalse(job.context[0]["frozen_stage_context"]["db_fetch_performed"])
                 self.assertEqual(job.authority, {})
+        writer = next(job for job in fake.calls if job.runtime_role == "surface_realization")
+        self.assertEqual(writer.context[0]["target_context"], target)
+        self.assertNotIn("frozen_stage_context", writer.context[0])
+        self.assertNotIn("upstream_artifacts", writer.context[0])
+        self.assertIn("writer_pack", writer.context[0])
+        writer_json = json.dumps(writer.context, ensure_ascii=False)
+        self.assertEqual(
+            {"present_character"},
+            {row["category"] for row in writer.context[0]["writer_pack"]["selected_context"]},
+        )
+        self.assertIn("reviewer_analysis", writer.context[0]["writer_pack"]["forbidden_context_confirmed_absent"])
         packet = frozen_packet(self.store, run_id)
         self.assertTrue(packet["return_binding"]["fresh_conversation_required"])
         self.assertTrue(packet["return_binding"]["same_project_writer_chat_forbidden"])
@@ -554,7 +798,6 @@ class ProductionRuntimeTests(unittest.TestCase):
             tuple(PRODUCTION_MECHANISMS),
             tuple(x for x in MANDATORY_PRODUCTION_MECHANISMS if x != "context_freeze"),
         )
-        self.assertNotIn("INTERNAL RAW DRAFT", json.dumps(completed))
         for receipt in completed["stage_receipts"]:
             self.assertIs(receipt["private_reasoning_exposed"], False)
             self.assertIs(receipt["raw_draft_visible"], False)
@@ -576,15 +819,15 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.assertNotIn("open_project", source)
         self.assertNotIn("self.store", source)
 
-    def test_only_complete_prose_jobs_receive_explicit_long_request_and_journal_deadlines(self):
+    def test_all_production_jobs_receive_explicit_durable_request_and_journal_deadlines(self):
         fake = FakeAgentRuntime()
         runtime = ProductionRunExecutor(self.store, fake)
         clock = ManualClock()
         runtime.stage_repository.clock = clock
         run_id = self.start()
         self.assertEqual("awaiting_external", self.execute_to_handoff(runtime, run_id)["status"])
-        writers = {"event_first_raw_draft", "surface_realization"}
-        self.assertEqual(2, sum(job.runtime_role in writers for job in fake.calls))
+        writers = {"surface_realization"}
+        self.assertEqual(1, sum(job.runtime_role in writers for job in fake.calls))
         with self.store.open_project("PROD") as conn:
             rows = {row["input_fingerprint"]: row for row in conn.execute(
                 "SELECT input_fingerprint,job_json,deadline_at_ms FROM production_stage_calls WHERE run_id=?", (run_id,),
@@ -594,30 +837,26 @@ class ProductionRuntimeTests(unittest.TestCase):
                 budget = job.budgets.to_dict()
                 row = rows[job.input_fingerprint]
                 self.assertEqual(budget, json.loads(row["job_json"])["budgets"])
+                self.assertEqual(86_400_000, budget["max_model_request_ms"])
+                self.assertEqual(86_400_000, budget["max_elapsed_ms"])
+                self.assertEqual(int(clock() * 1000) + 86_400_000, row["deadline_at_ms"])
+                self.assertEqual(1, budget["max_model_requests"])
+                self.assertEqual(1, budget["max_steps"])
+                self.assertEqual(200_000, budget["model_context_limit"])
+                self.assertEqual(10_000_000, budget["run_cost_budget"])
                 if job.runtime_role in writers:
-                    self.assertEqual(600_000, budget["max_model_request_ms"])
-                    self.assertEqual(600_000, budget["max_elapsed_ms"])
-                    self.assertEqual(int(clock() * 1000) + 600_000, row["deadline_at_ms"])
-                    self.assertEqual(1, budget["max_model_requests"])
-                    self.assertEqual(1, budget["max_steps"])
-                    self.assertEqual(64_000, budget["max_total_tokens"])
-                    self.assertEqual(7000, budget["max_output_tokens_per_request"])
+                    self.assertEqual(7000, budget["max_output_tokens"])
                     self.assertEqual(set(), job.tool_grants)
                     ordinary_budget = replace(job.budgets, max_model_request_ms=None, max_elapsed_ms=180_000)
                     self.assertNotEqual(job.input_fingerprint, replace(job, budgets=ordinary_budget).input_fingerprint)
                     self.assertEqual(runtime._stage_instruction(job.runtime_role, "draft chapter"), job.instruction)
-                else:
-                    self.assertIsNone(job.budgets.max_model_request_ms)
-                    self.assertNotIn("max_model_request_ms", budget)
-                    self.assertEqual(180_000, budget["max_elapsed_ms"])
-                    self.assertEqual(int(clock() * 1000) + 180_000, row["deadline_at_ms"])
         self.assertFalse(runtime.status("PROD", run_id)["execution_journal"]["active_executor"])
 
     def test_long_prose_transport_failure_is_immutable_and_not_retried(self):
         class TimedOutWriter(FakeAgentRuntime):
             def run(inner, job, *, cancellation=None):
                 result = super().run(job, cancellation=cancellation)
-                if job.runtime_role == "event_first_raw_draft":
+                if job.runtime_role == "surface_realization":
                     return replace(result, status="model_failed", final_text="",
                                    errors=[{"code": "model_request_failed", "message": "Synthetic HTTP timeout."}])
                 return result
@@ -631,51 +870,54 @@ class ProductionRuntimeTests(unittest.TestCase):
         with self.store.open_project("PROD") as conn:
             before = tuple(conn.execute(
                 "SELECT job_json,result_json,result_fingerprint FROM production_stage_calls "
-                "WHERE run_id=? AND runtime_role='event_first_raw_draft'", (run_id,),
+                "WHERE run_id=? AND runtime_role='surface_realization'", (run_id,),
             ).fetchone())
-        self.assertEqual(600_000, json.loads(before[0])["budgets"]["max_model_request_ms"])
+        self.assertEqual(86_400_000, json.loads(before[0])["budgets"]["max_model_request_ms"])
         self.assertEqual("model_failed", json.loads(before[1])["status"])
         calls = len(fake.calls)
         with self.assertRaises(ProductionRunError) as replay:
             runtime.resume_execution("PROD", run_id)
         self.assertEqual("semantic_pending", replay.exception.code)
         self.assertEqual(calls, len(fake.calls))
-        self.assertEqual(1, sum(job.runtime_role == "event_first_raw_draft" for job in fake.calls))
-        self.assertFalse(any(job.runtime_role == "surface_realization" for job in fake.calls))
+        self.assertEqual(1, sum(job.runtime_role == "surface_realization" for job in fake.calls))
+        self.assertFalse(any(job.runtime_role == "registered_reader_engagement" for job in fake.calls))
         with self.store.open_project("PROD") as conn:
             after = tuple(conn.execute(
                 "SELECT job_json,result_json,result_fingerprint FROM production_stage_calls "
-                "WHERE run_id=? AND runtime_role='event_first_raw_draft'", (run_id,),
+                "WHERE run_id=? AND runtime_role='surface_realization'", (run_id,),
             ).fetchone())
             self.assertEqual(before, after)
             self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0])
 
-    def test_long_prose_response_at_frozen_deadline_cannot_be_confirmed_or_retried(self):
+    def test_long_prose_response_at_frozen_deadline_is_confirmed_and_not_retried(self):
         clock = ManualClock()
 
         class LateWriter(FakeAgentRuntime):
             def run(inner, job, *, cancellation=None):
                 result = super().run(job, cancellation=cancellation)
-                if job.runtime_role == "event_first_raw_draft":
-                    clock.advance(600)
+                if job.runtime_role == "surface_realization":
+                    clock.advance(86_400)
                 return result
 
         fake = LateWriter()
         runtime = ProductionRunExecutor(self.store, fake)
         runtime.stage_repository.clock = clock
-        runtime.stage_repository.lease_seconds = 1000  # Isolate the stage deadline from lease expiry.
+        runtime.stage_repository.lease_seconds = 100_000  # Isolate the stage deadline from lease expiry.
         run_id = self.start()
         result = self.execute_to_handoff(runtime, run_id)
-        self.assertEqual("semantic_pending", result["status"])
+        self.assertEqual("awaiting_external", result["status"])
         calls = len(fake.calls)
         with self.store.open_project("PROD") as conn:
             row = conn.execute("SELECT state,error_code,result_json,result_fingerprint FROM production_stage_calls "
-                               "WHERE run_id=? AND runtime_role='event_first_raw_draft'", (run_id,)).fetchone()
-            self.assertEqual(("unconfirmed", "stage_deadline_exceeded", None, None), tuple(row))
+                               "WHERE run_id=? AND runtime_role='surface_realization'", (run_id,)).fetchone()
+            self.assertEqual("confirmed", row["state"])
+            self.assertIsNone(row["error_code"])
+            self.assertIsNotNone(row["result_json"])
+            self.assertIsNotNone(row["result_fingerprint"])
             self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0])
-        self.assertEqual("stage_result_confirmation", runtime.resume_execution("PROD", run_id)["awaiting"])
+        self.assertEqual("awaiting_external", runtime.resume_execution("PROD", run_id)["status"])
         self.assertEqual(calls, len(fake.calls))
-        self.assertFalse(any(job.runtime_role == "surface_realization" for job in fake.calls))
+        self.assertEqual(1, sum(job.runtime_role == "surface_realization" for job in fake.calls))
 
     def test_reading_positioning_reaches_actual_writer_pressure_reader_and_independent_jobs(self):
         fake = FakeAgentRuntime()
@@ -687,20 +929,16 @@ class ProductionRuntimeTests(unittest.TestCase):
             "genre_profile": READER_POSITIONING["genre_profile"],
             "platform_profile": READER_POSITIONING["platform_profile"],
         }
-        writers = [job for job in fake.calls if job.runtime_role in {"event_first_raw_draft", "surface_realization"}]
-        self.assertEqual(2, len(writers))
-        for writer in writers:
-            self.assertEqual(expected, writer.context[0]["reading_positioning"])
-            for guidance in (
-                "causal constraints, not the shape of the prose", "Choose narrative time deliberately",
-                "Within the authorized viewpoint", "relationship context and distinct voice",
-                "interchangeable bodily reactions", "There are no sentence-length",
-                "A quiet or procedural scene can be rewarding", "not a license to imitate a named author",
-            ):
-                self.assertIn(guidance, writer.instruction)
-            altered = deepcopy(writer.context)
-            altered[0]["reading_positioning"]["genre_profile"] = "另一个明确定位"
-            self.assertNotEqual(writer.input_fingerprint, replace(writer, context=altered).input_fingerprint)
+        writers = [job for job in fake.calls if job.runtime_role == "surface_realization"]
+        self.assertEqual(1, len(writers))
+        writer = writers[0]
+        self.assertIn("writer_pack", writer.context[0])
+        self.assertIn("scene_contract", writer.context[0]["writer_pack"])
+        self.assertIn("author_objectives", writer.context[0]["writer_pack"])
+        self.assertNotIn("frozen_stage_context", writer.context[0])
+        altered = deepcopy(writer.context)
+        altered[0]["writer_pack"]["director_note"] = "A different exact director note."
+        self.assertNotEqual(writer.input_fingerprint, replace(writer, context=altered).input_fingerprint)
         for role in ("registered_reader_pressure", "registered_reader_engagement"):
             job = next(job for job in fake.calls if job.runtime_role == role)
             payload = job.context[0]["registered_semantic_job"]["input"]["payload"]
@@ -742,14 +980,17 @@ class ProductionRuntimeTests(unittest.TestCase):
         runtime = ProductionRunExecutor(self.store, fake)
         run_id = self.start()
         self.execute_to_handoff(runtime, run_id)
-        writer = next(job for job in fake.calls if job.runtime_role == "event_first_raw_draft")
+        scene = next(job for job in fake.calls if job.runtime_role == "registered_scene_resolution")
+        writer = next(job for job in fake.calls if job.runtime_role == "surface_realization")
         pressure = next(job for job in fake.calls if job.runtime_role == "registered_reader_pressure")
+        self.assertIn("FUTURE PLAN SENTINEL", json.dumps(scene.context))
         for value in (writer.context, pressure.context):
             serialized = json.dumps(value)
-            self.assertIn("FUTURE PLAN SENTINEL", serialized)  # Authorized generation context is retained.
+            self.assertNotIn("FUTURE PLAN SENTINEL", serialized)
             self.assertNotIn("private knowledge", serialized)
-        self.assertEqual({"reader_grip": "very_high", "chapter_position": "reading_order=1"},
-                         writer.context[0]["reading_positioning"])
+        pressure_payload = pressure.context[0]["registered_semantic_job"]["input"]["payload"]
+        self.assertEqual("very_high", pressure_payload["reader_grip"])
+        self.assertEqual("reading_order=1", pressure_payload["chapter_position"])
         reader = next(job for job in fake.calls if job.runtime_role == "registered_reader_engagement")
         for value in (reader.context, frozen_packet(self.store, run_id)):
             serialized = json.dumps(value)
@@ -846,10 +1087,19 @@ class ProductionRuntimeTests(unittest.TestCase):
         context_runtime = ProductionContextRuntime(self.store, FakeAgentRuntime())
         bundle = context_runtime.prepare_context("PROD", self.start(), service_id="svc", instruction="draft")
         character = ProductionRunExecutor.materialize_stage_context(bundle, "character_simulation")
-        draft = ProductionRunExecutor.materialize_stage_context(bundle, "event_first_raw_draft")
+        scene = ProductionRunExecutor.materialize_stage_context(bundle, "scene_simulation")
         self.assertIn("character_knowledge", {row["domain"] for row in character["items"]})
         self.assertNotIn("research", {row["domain"] for row in character["items"]})
-        self.assertIn("research", {row["domain"] for row in draft["items"]})
+        self.assertIn("research", {row["domain"] for row in scene["items"]})
+        writer_inventory = build_writer_inventory(
+            scene,
+            character_action_evidence=[{"character_id": "CHAR-A"}],
+            author_model=None,
+        )
+        self.assertNotIn(
+            "research", {row["category"] for row in writer_inventory["items"]}
+        )
+        self.assertNotIn("external fact", json.dumps(writer_inventory))
         self.assertFalse(character["db_fetch_performed"])
 
     def test_invalid_selector_id_is_rejected_not_guessed(self):
@@ -1017,7 +1267,7 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.assertEqual(source["reader_binding"]["result"]["judgment"],
                          editor.context[0]["registered_semantic_job"]["input"]["payload"]["reader_assessment"])
         isolated = [job.to_dict() for job in calls if job.runtime_role in {
-            "event_first_raw_draft", "surface_realization", "registered_reader_engagement",
+            "surface_realization", "registered_reader_engagement",
         }]
         isolated.append(frozen_packet(self.store, run_id))
         for value in isolated:
@@ -1115,9 +1365,9 @@ class ProductionRuntimeTests(unittest.TestCase):
         expected = qualified["reading_positioning"]["reader_fields"]
         self.assertEqual(READER_POSITIONING["genre_profile"], expected["genre_profile"])
         calls = [job for job in fake.calls if job.run_id == run_id]
-        for role in ("event_first_raw_draft", "surface_realization"):
-            writer = next(job for job in calls if job.runtime_role == role)
-            self.assertEqual(expected, writer.context[0]["reading_positioning"])
+        writer = next(job for job in calls if job.runtime_role == "surface_realization")
+        self.assertIn("writer_pack", writer.context[0])
+        self.assertNotIn("reading_positioning", writer.context[0])
         reader = next(job for job in calls if job.runtime_role == "registered_reader_engagement")
         for payload in (reader.context[0]["registered_semantic_job"]["input"]["payload"],
                         frozen_packet(self.store, run_id)["job"]["input"]["payload"]):
@@ -1138,7 +1388,7 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.assertFalse(result["candidate_visible"])
         calls = [job for job in fake.calls if job.run_id == run_id]
         roles = [job.runtime_role for job in calls]
-        self.assertLess(roles.index("registered_repair_editor"), roles.index("event_first_raw_draft"))
+        self.assertLess(roles.index("registered_repair_editor"), roles.index("surface_realization"))
         self.assertLess(roles.index("surface_realization"), roles.index("registered_repair_comparison"))
         comparison = next(job for job in calls if job.runtime_role == "registered_repair_comparison").context[0]["registered_semantic_job"]["input"]["payload"]
         self.assertEqual(comparison["incumbent"]["text"], PRE_RELEASE_MANUSCRIPT)
@@ -1167,7 +1417,8 @@ class ProductionRuntimeTests(unittest.TestCase):
         fake, runtime, source_id, run_id = self.repair_fixture(generation_mode="fresh_realization")
         result = runtime.execute("PROD", run_id, service_id="svc", inherit_repair_request=True)
         self.assertEqual(result["status"], "awaiting_external")
-        writers = [job for job in fake.calls if job.run_id == run_id and job.runtime_role in {"event_first_raw_draft", "surface_realization"}]
+        writers = [job for job in fake.calls if job.run_id == run_id and job.runtime_role == "surface_realization"]
+        self.assertEqual(1, len(writers))
         for writer in writers:
             serialized = json.dumps(writer.to_dict())
             for excluded in (PRE_RELEASE_MANUSCRIPT, "PRIVATE SYNTHETIC DIAGNOSIS", "PRIVATE EDITOR TRAJECTORY", "bounded_repair_evidence"):
@@ -1287,7 +1538,7 @@ class ProductionRuntimeTests(unittest.TestCase):
         original = runtime._persist_stage_receipt
 
         def fail_once(project_id, current_run, receipt, **kwargs):
-            if receipt["mechanism"] == "event_first_raw_draft":
+            if receipt["mechanism"] == "surface_realization":
                 raise OSError("synthetic process failure after confirmed model response")
             return original(project_id, current_run, receipt, **kwargs)
 
@@ -1298,7 +1549,7 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.assertEqual(resumed["status"], "awaiting_external")
         inputs = [job.input_fingerprint for job in fake.calls]
         self.assertEqual(len(inputs), len(set(inputs)))
-        self.assertEqual(sum(job.runtime_role == "event_first_raw_draft" for job in fake.calls), 1)
+        self.assertEqual(sum(job.runtime_role == "surface_realization" for job in fake.calls), 1)
         journal = runtime.status("PROD", run_id)["execution_journal"]
         self.assertEqual(journal["confirmed_call_count"], len(fake.calls))
         self.assertEqual(journal["unconfirmed_call_ids"], [])
@@ -1307,7 +1558,7 @@ class ProductionRuntimeTests(unittest.TestCase):
     def test_unknown_model_outcome_is_not_automatically_retried(self):
         class LostResponse(FakeAgentRuntime):
             def run(self, job, *, cancellation=None):
-                if job.runtime_role == "event_first_raw_draft":
+                if job.runtime_role == "surface_realization":
                     self.calls.append(job)
                     raise OSError("synthetic disconnected model response")
                 return super().run(job, cancellation=cancellation)
@@ -1325,13 +1576,236 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.assertEqual(len(resumed["execution_journal"]["unconfirmed_call_ids"]), 1)
         assert_public_execution_safe(self, resumed)
 
+    def test_pending_worker_is_polled_with_the_same_charged_stage_intent(self):
+        class SlowWriter(FakeAgentRuntime):
+            def __init__(inner):
+                super().__init__()
+                inner.pending_returned = False
+
+            @staticmethod
+            def supports_durable_model_request(_service_id, _model_preference=None):
+                return True
+
+            def run(inner, job, *, cancellation=None):
+                result = super().run(job, cancellation=cancellation)
+                if job.runtime_role == "surface_realization" and not inner.pending_returned:
+                    inner.pending_returned = True
+                    return replace(
+                        result, status="model_pending", final_text="",
+                        errors=[{"code": "model_pending", "detail": {"request_id": "req_" + "a" * 32}}],
+                    )
+                return result
+
+        fake = SlowWriter()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        first = self.execute_to_handoff(runtime, run_id)
+        self.assertEqual("semantic_pending", first["status"])
+        self.assertEqual("same_model_request", first["awaiting"])
+        self.assertTrue(first["same_request_poll_only"])
+        pending = first["execution_journal"]["pending_call_ids"]
+        self.assertEqual(1, len(pending))
+        self.assertEqual([], first["execution_journal"]["hard_unconfirmed_call_ids"])
+        with self.store.open_project("PROD") as conn:
+            before = dict(conn.execute(
+                "SELECT call_id,input_fingerprint,state,error_code FROM production_stage_calls "
+                "WHERE run_id=? AND runtime_role='surface_realization'", (run_id,),
+            ).fetchone())
+        self.assertEqual("dispatched", before["state"])
+        self.assertEqual("model_pending", before["error_code"])
+
+        # The original stage/waiter horizon may pass while the keyed worker is
+        # still alive. It remains the same pollable intent; expiry cannot mint
+        # another call or reject its eventual exact result.
+        with self.store.open_project("PROD") as conn:
+            conn.execute(
+                "UPDATE production_stage_calls SET deadline_at_ms=1 WHERE call_id=?",
+                (before["call_id"],),
+            )
+            conn.commit()
+        expired_projection = runtime.status("PROD", run_id)["execution_journal"]
+        self.assertEqual([before["call_id"]], expired_projection["pending_call_ids"])
+        self.assertEqual([], expired_projection["hard_unconfirmed_call_ids"])
+
+        resumed = runtime.resume_execution("PROD", run_id)
+        self.assertEqual("awaiting_external", resumed["status"])
+        with self.store.open_project("PROD") as conn:
+            after = dict(conn.execute(
+                "SELECT call_id,input_fingerprint,state,error_code FROM production_stage_calls "
+                "WHERE run_id=? AND runtime_role='surface_realization'", (run_id,),
+            ).fetchone())
+            self.assertEqual(1, conn.execute(
+                "SELECT COUNT(*) FROM production_stage_calls WHERE run_id=? AND runtime_role='surface_realization'",
+                (run_id,),
+            ).fetchone()[0])
+        self.assertEqual(before["call_id"], after["call_id"])
+        self.assertEqual(before["input_fingerprint"], after["input_fingerprint"])
+        self.assertEqual("confirmed", after["state"])
+        self.assertIsNone(after["error_code"])
+        writer_polls = [job for job in fake.calls if job.runtime_role == "surface_realization"]
+        self.assertEqual(2, len(writer_polls))
+        self.assertEqual(1, len({job.input_fingerprint for job in writer_polls}))
+
+    def test_non_durable_model_pending_never_reinvokes_provider(self):
+        class NonDurablePending(FakeAgentRuntime):
+            def __init__(inner):
+                super().__init__()
+                inner.pending_returned = False
+
+            def run(inner, job, *, cancellation=None):
+                result = super().run(job, cancellation=cancellation)
+                if not inner.pending_returned:
+                    inner.pending_returned = True
+                    return replace(
+                        result,
+                        status="model_pending",
+                        final_text="",
+                        errors=[{"code": "model_pending", "detail": {
+                            "request_id": "req_" + "c" * 32,
+                        }}],
+                    )
+                return result
+
+        fake = NonDurablePending()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        first = self.execute_to_handoff(runtime, run_id)
+        self.assertEqual("semantic_pending", first["status"])
+        self.assertEqual("stage_result_confirmation", first["awaiting"])
+        self.assertFalse(first["same_request_poll_only"])
+        self.assertEqual(1, len(first["execution_journal"]["hard_unconfirmed_call_ids"]))
+        self.assertEqual(1, len(fake.calls))
+
+        resumed = runtime.resume_execution("PROD", run_id)
+        self.assertEqual("semantic_pending", resumed["status"])
+        self.assertEqual("stage_result_confirmation", resumed["awaiting"])
+        self.assertEqual(1, len(fake.calls), "resume must not invoke a non-durable pending request again")
+        with self.store.open_project("PROD") as conn:
+            row = conn.execute(
+                "SELECT state,error_code FROM production_stage_calls WHERE run_id=?",
+                (run_id,),
+            ).fetchone()
+        self.assertEqual("unconfirmed", row["state"])
+        self.assertEqual("non_durable_model_pending", row["error_code"])
+
+    def test_pending_context_profile_keeps_identity_after_prior_profiles_are_saved(self):
+        class SlowSecondProfile(FakeAgentRuntime):
+            def __init__(inner):
+                super().__init__()
+                inner.profile_count = 0
+                inner.pending_returned = False
+                inner.pending_object_id = None
+
+            @staticmethod
+            def supports_durable_model_request(_service_id, _model_preference=None):
+                return True
+
+            def run(inner, job, *, cancellation=None):
+                result = super().run(job, cancellation=cancellation)
+                if job.runtime_role == "context_profile_deriver":
+                    inner.profile_count += 1
+                    if inner.profile_count == 2 and not inner.pending_returned:
+                        inner.pending_returned = True
+                        inner.pending_object_id = job.context[0]["source_object_id"]
+                        return replace(
+                            result, status="model_pending", final_text="",
+                            errors=[{"code": "model_pending", "detail": {
+                                "request_id": "req_" + "b" * 32,
+                            }}],
+                        )
+                return result
+
+        fake = SlowSecondProfile()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        first = self.execute_to_handoff(runtime, run_id)
+        self.assertEqual("same_model_request", first["awaiting"])
+        resumed = runtime.resume_execution("PROD", run_id)
+        self.assertEqual("awaiting_external", resumed["status"])
+        polls = [
+            job for job in fake.calls
+            if job.runtime_role == "context_profile_deriver"
+            and job.context[0]["source_object_id"] == fake.pending_object_id
+        ]
+        self.assertEqual(2, len(polls))
+        self.assertEqual(1, len({job.input_fingerprint for job in polls}))
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual(1, conn.execute(
+                "SELECT COUNT(*) FROM production_stage_calls WHERE run_id=? AND stage_key=?",
+                (run_id, "context_profile:" + fake.pending_object_id),
+            ).fetchone()[0])
+
+    def test_keyed_intent_survives_a_crash_before_the_first_pending_response(self):
+        class CrashBeforeResponse(FakeAgentRuntime):
+            def __init__(inner):
+                super().__init__()
+                inner.crashed = False
+
+            @staticmethod
+            def supports_durable_model_request(_service_id, _model_preference=None):
+                return True
+
+            def run(inner, job, *, cancellation=None):
+                if not inner.crashed:
+                    inner.crashed = True
+                    inner.calls.append(job)
+                    raise OSError("synthetic process interruption after keyed dispatch")
+                return super().run(job, cancellation=cancellation)
+
+        fake = CrashBeforeResponse()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        first = self.execute_to_handoff(runtime, run_id)
+        self.assertEqual("same_model_request", first["awaiting"])
+        self.assertEqual(1, len(first["execution_journal"]["pending_call_ids"]))
+        resumed = runtime.resume_execution("PROD", run_id)
+        self.assertEqual("awaiting_external", resumed["status"])
+        first_jobs = fake.calls[:2]
+        self.assertEqual(2, len(first_jobs))
+        self.assertEqual(first_jobs[0].input_fingerprint, first_jobs[1].input_fingerprint)
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual(1, conn.execute(
+                "SELECT COUNT(*) FROM production_stage_calls WHERE run_id=? AND stage_key=?",
+                (run_id, "context_profile:" + first_jobs[0].context[0]["source_object_id"]),
+            ).fetchone()[0])
+
+    def test_ambiguous_keyed_poll_failure_stays_pending_until_exact_result(self):
+        class NetworkBlink(FakeAgentRuntime):
+            def __init__(inner):
+                super().__init__()
+                inner.blinked = False
+
+            @staticmethod
+            def supports_durable_model_request(_service_id, _model_preference=None):
+                return True
+
+            def run(inner, job, *, cancellation=None):
+                result = super().run(job, cancellation=cancellation)
+                if not inner.blinked:
+                    inner.blinked = True
+                    return replace(
+                        result, status="model_failed", final_text="",
+                        errors=[{"code": "network_request_failed", "message": "synthetic blink"}],
+                    )
+                return result
+
+        fake = NetworkBlink()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        first = self.execute_to_handoff(runtime, run_id)
+        self.assertEqual("same_model_request", first["awaiting"])
+        self.assertEqual([], first["execution_journal"]["hard_unconfirmed_call_ids"])
+        resumed = runtime.resume_execution("PROD", run_id)
+        self.assertEqual("awaiting_external", resumed["status"])
+        self.assertEqual(fake.calls[0].input_fingerprint, fake.calls[1].input_fingerprint)
+
     def test_cancelled_run_rejects_a_late_model_response(self):
         run_id = self.start()
 
         class CancelDuringCall(FakeAgentRuntime):
             def run(inner, job, *, cancellation=None):
                 result = super().run(job, cancellation=cancellation)
-                if job.runtime_role == "event_first_raw_draft":
+                if job.runtime_role == "surface_realization":
                     runtime.cancel_execution("PROD", run_id, user_authorized=True)
                 return result
 
@@ -1340,10 +1814,10 @@ class ProductionRuntimeTests(unittest.TestCase):
         result = self.execute_to_handoff(runtime, run_id)
         self.assertEqual(result["status"], "cancelled")
         journal = runtime.status("PROD", run_id)["execution_journal"]
-        raw = [row for row in journal["calls"] if row["runtime_role"] == "event_first_raw_draft"]
-        self.assertEqual([row["state"] for row in raw], ["cancelled"])
-        self.assertTrue(all(row["result_fingerprint"] is None for row in raw))
-        self.assertFalse(any(job.runtime_role == "surface_realization" for job in fake.calls))
+        writer = [row for row in journal["calls"] if row["runtime_role"] == "surface_realization"]
+        self.assertEqual([row["state"] for row in writer], ["cancelled"])
+        self.assertTrue(all(row["result_fingerprint"] is None for row in writer))
+        self.assertFalse(any(job.runtime_role == "registered_reader_engagement" for job in fake.calls))
         with self.store.open_project("PROD") as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0], 0)
 
@@ -1388,18 +1862,20 @@ class ProductionRuntimeTests(unittest.TestCase):
                 "SELECT payload_json FROM receipts WHERE run_id=? AND receipt_kind='production_stage'", (run_id,))]
         character_receipt = next(row for row in receipts if row["mechanism"] == "character_simulation")
         self.assertEqual(character_receipt["registered_contracts"][0]["result_fingerprint"], scene_evidence[0]["result_fingerprint"])
-        draft = next(job for job in fake.calls if job.runtime_role == "event_first_raw_draft")
+        writer = next(job for job in fake.calls if job.runtime_role == "surface_realization")
         action_text = json.dumps(action.context)
-        draft_text = json.dumps(draft.context)
+        writer_text = json.dumps(writer.context)
         self.assertIn("private knowledge", action_text)
         self.assertIn("private knowledge", json.dumps(scene_evidence))
-        for role in ("registered_reader_pressure", "event_first_raw_draft", "surface_realization", "registered_reader_engagement"):
+        for role in ("registered_reader_pressure", "surface_realization", "registered_reader_engagement"):
             context_text = json.dumps(next(job for job in fake.calls if job.runtime_role == role).context)
             self.assertNotIn("bounded_input", context_text)
             self.assertNotIn("private knowledge", context_text)
             self.assertNotIn("protect the deal", context_text)
-        self.assertIn("writer_projection", draft_text)
-        self.assertIn("expected_reward", draft_text)
+        self.assertIn("scene_contract", writer_text)
+        self.assertIn("director_note", writer_text)
+        self.assertNotIn("writer_projection", writer_text)
+        self.assertNotIn("expected_reward", writer_text)
         reader = next(job for job in fake.calls if job.runtime_role == "registered_reader_engagement")
         self.assertNotIn("frozen_stage_context", json.dumps(reader.context))
         self.assertNotIn("protect the deal", json.dumps(reader.context))
@@ -1425,7 +1901,7 @@ class ProductionRuntimeTests(unittest.TestCase):
         self.assertFalse(evidence["authority"])
         self.assertIn("fixture:firsthand-witness", json.dumps(evidence))
         self.assertNotIn("UNAVAILABLE FUTURE OBSERVATION", json.dumps(scene.context))
-        for role in ("event_first_raw_draft", "surface_realization", "registered_reader_engagement"):
+        for role in ("surface_realization", "registered_reader_engagement"):
             context_text = json.dumps(next(job for job in fake.calls if job.runtime_role == role).context)
             self.assertNotIn("PRIVATE INITIAL MEMORY", context_text)
             self.assertNotIn("fixture:firsthand-witness", context_text)
@@ -1469,7 +1945,7 @@ class ProductionRuntimeTests(unittest.TestCase):
         roles = [job.runtime_role for job in fake.calls]
         self.assertEqual("registered_scene_resolution", roles[-1])
         self.assertNotIn("registered_scene_projection", roles)
-        self.assertNotIn("event_first_raw_draft", roles)
+        self.assertNotIn("surface_realization", roles)
         scene = fake.calls[-1].context[0]["registered_semantic_job"]["input"]["payload"]
         self.assertEqual(refusal, scene["character_action_evidence"][0]["judgment"]["proposals"][0]["action"])
         self.assertIn("The record changes hands", json.dumps(scene["frozen_scene_context"]))
@@ -1513,7 +1989,7 @@ class ProductionRuntimeTests(unittest.TestCase):
             self.assertEqual(1, conn.execute("SELECT COUNT(*) FROM runtime_events WHERE run_id=? AND event_kind='production_stage_failed'", (run_id,)).fetchone()[0])
 
     def test_noncanonical_stage_status_cannot_advance_or_release(self):
-        for mechanism, malformed_status in (("story_canon_preflight", "FAIL"), ("event_first_raw_draft", " fail "),
+        for mechanism, malformed_status in (("story_canon_preflight", "FAIL"),
                                              ("surface_realization", "PASS"), ("continuity", ["fail"])):
             with self.subTest(mechanism=mechanism, status=malformed_status):
                 class InvalidStatus(FakeAgentRuntime):
@@ -1558,6 +2034,81 @@ class ProductionRuntimeTests(unittest.TestCase):
                     stored = json.loads(conn.execute("SELECT result_json FROM production_stage_calls WHERE run_id=? AND runtime_role=?", (run_id, mechanism)).fetchone()[0])
                     self.assertEqual("fail", json.loads(stored["final_text"])["status"])
                     self.assertEqual(0, conn.execute("SELECT COUNT(*) FROM candidates WHERE run_id=?", (run_id,)).fetchone()[0])
+
+    def test_malformed_narrative_json_gets_one_fresh_journaled_reconstruction(self):
+        fake = FakeAgentRuntime(malformed_narrative_once=True)
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        result = self.execute_to_handoff(runtime, run_id)
+        self.assertEqual("awaiting_external", result["status"])
+        self.assertEqual(
+            ["registered_narrative_state", "registered_narrative_state_format_repair"],
+            [job.runtime_role for job in fake.calls if job.runtime_role.startswith("registered_narrative_state")],
+        )
+        with self.store.open_project("PROD") as conn:
+            keys = [row[0] for row in conn.execute(
+                "SELECT stage_key FROM production_stage_calls WHERE run_id=? AND stage_key LIKE 'registered:narrative.world:%' ORDER BY created_at",
+                (run_id,),
+            )]
+        self.assertEqual(2, len(keys))
+        self.assertNotEqual(keys[0], keys[1])
+
+    def test_narrative_evidence_mismatch_gets_one_fresh_journaled_reconstruction(self):
+        class BadNarrativeEvidence(FinalStateFixtureRuntime):
+            def run(inner, job, *, cancellation=None):
+                result = super().run(job, cancellation=cancellation)
+                if job.runtime_role == "registered_narrative_state":
+                    judgment = json.loads(result.final_text)
+                    for change in judgment["changes"]:
+                        change["evidence_quote"] = "not present in the candidate"
+                    result.final_text = json.dumps(judgment)
+                return result
+
+        fake = BadNarrativeEvidence()
+        runtime = ProductionRunExecutor(self.store, fake)
+        run_id = self.start()
+        result = self.execute_to_handoff(runtime, run_id)
+        self.assertEqual("awaiting_external", result["status"])
+        self.assertEqual(1, sum(
+            job.runtime_role == "registered_narrative_state_evidence_repair"
+            for job in fake.calls
+        ))
+
+    def test_twice_unsupported_narrative_evidence_omits_authority_free_proposal(self):
+        class AlwaysBadNarrativeEvidence(FinalStateFixtureRuntime):
+            def run(inner, job, *, cancellation=None):
+                result = super().run(job, cancellation=cancellation)
+                if job.runtime_role in {
+                    "registered_narrative_state", "registered_narrative_state_evidence_repair",
+                }:
+                    judgment = json.loads(result.final_text)
+                    if not judgment["changes"]:
+                        judgment["changes"] = [{
+                            "entity_type": "world", "entity_ref": "local:unsupported",
+                            "fields": {"entity_type": "fixture", "name": "Unsupported", "truth": {}},
+                            "evidence_quote": "not present in the candidate",
+                        }]
+                    else:
+                        for change in judgment["changes"]:
+                            change["evidence_quote"] = "not present in the candidate"
+                    result.final_text = json.dumps(judgment)
+                return result
+
+        runtime = ProductionRunExecutor(self.store, AlwaysBadNarrativeEvidence())
+        run_id = self.start()
+        result = self.execute_to_handoff(runtime, run_id)
+        self.assertEqual("awaiting_external", result["status"])
+        with self.store.open_project("PROD") as conn:
+            self.assertEqual(0, conn.execute(
+                "SELECT COUNT(*) FROM checkpoints WHERE run_id=? AND checkpoint_kind='production_narrative_proposal'",
+                (run_id,),
+            ).fetchone()[0])
+            event = json.loads(conn.execute(
+                "SELECT payload_json FROM runtime_events WHERE run_id=? AND event_kind='production_narrative_proposal_omitted'",
+                (run_id,),
+            ).fetchone()[0])
+        self.assertEqual("unsupported_exact_candidate_quote_after_fresh_reconstruction", event["reason"])
+        self.assertFalse(event["authority"])
 
     def test_narrative_source_metadata_cannot_be_copied_into_replacement_fields(self):
         from production_runtime.semantic import narrative_field_contracts
@@ -1800,7 +2351,7 @@ class ProductionRuntimeTests(unittest.TestCase):
         run_id = self.start(selected_preference_ids=["PREF-SELECTED"])
         self.seed_preference("PREF-UNSELECTED", statement="UNSELECTED SECRET PREFERENCE")
         self.assertEqual("awaiting_external", self.execute_to_handoff(runtime, run_id)["status"])
-        writer = next(job for job in fake.calls if job.runtime_role == "event_first_raw_draft")
+        writer = next(job for job in fake.calls if job.runtime_role == "surface_realization")
         self.assertIn("Selected fixture preference.", json.dumps(writer.context))
         self.assertNotIn("UNSELECTED SECRET PREFERENCE", json.dumps(writer.context))
         self.assertNotIn("PREF-UNSELECTED", json.dumps(writer.context))

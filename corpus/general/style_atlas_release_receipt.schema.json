@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.local/schemas/style-atlas-release-receipt-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "completion_receipt_fingerprint", "atlas_fingerprint", "preview_fingerprint", "preview_token", "style_artifact_fingerprint", "craft_artifact_fingerprint", "gate_claims", "gate_attestations", "manual_approval_challenge", "manual_approval_attestation", "receipt_fingerprint"],
+  "properties": {
+    "schema": {"const": "quillframe_style_atlas_release_receipt_v1"},
+    "completion_receipt_fingerprint": {"$ref": "#/$defs/fingerprint"},
+    "atlas_fingerprint": {"$ref": "#/$defs/fingerprint"},
+    "preview_fingerprint": {"$ref": "#/$defs/fingerprint"},
+    "preview_token": {"$ref": "#/$defs/previewToken"},
+    "style_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"},
+    "craft_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"},
+    "gate_claims": {
+      "type": "object", "additionalProperties": false,
+      "required": ["provenance", "semantic_leakage", "blind_ab", "promotion"],
+      "properties": {
+        "provenance": {"$ref": "#/$defs/provenanceClaim"},
+        "semantic_leakage": {"$ref": "#/$defs/semanticClaim"},
+        "blind_ab": {"$ref": "#/$defs/blindClaim"},
+        "promotion": {"$ref": "#/$defs/promotionClaim"}
+      }
+    },
+    "gate_attestations": {
+      "type": "object", "additionalProperties": false,
+      "required": ["provenance", "semantic_leakage", "blind_ab", "promotion"],
+      "properties": {
+        "provenance": {"$ref": "#/$defs/provenanceAttestation"},
+        "semantic_leakage": {"$ref": "#/$defs/semanticAttestation"},
+        "blind_ab": {"$ref": "#/$defs/blindAttestation"},
+        "promotion": {"$ref": "#/$defs/promotionAttestation"}
+      }
+    },
+    "manual_approval_challenge": {"$ref": "#/$defs/challenge"},
+    "manual_approval_attestation": {"$ref": "#/$defs/manualAttestation"},
+    "receipt_fingerprint": {"$ref": "#/$defs/fingerprint"}
+  },
+  "$defs": {
+    "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "previewToken": {"type": "string", "pattern": "^style-preview-[0-9a-f]{64}$"},
+    "keyId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$"},
+    "signature": {"type": "string", "pattern": "^hmac-sha256:[0-9a-f]{64}$"},
+    "claimBase": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "gate_role", "status", "completion_receipt_fingerprint", "candidate_bundle_fingerprint", "style_artifact_fingerprint", "craft_artifact_fingerprint", "gate_fingerprint", "identity_policy_fingerprint", "registered_contract", "authority_scope", "legal_safety_claim"],
+      "properties": {
+        "schema": {"const": "quillframe_style_release_gate_claim_v1"},
+        "gate_role": {"enum": ["provenance", "semantic_leakage", "blind_ab", "promotion"]},
+        "status": {"enum": ["pass", "promotable"]},
+        "completion_receipt_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "candidate_bundle_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "style_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "craft_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "gate_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "identity_policy_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "registered_contract": {"enum": ["corpus.provenance.public_abstraction", "learning.prose_semantic_leakage", "learning.blind_prose_pair", "learning.promotion_gate.evaluate"]},
+        "authority_scope": {"const": "evidence_only"},
+        "legal_safety_claim": {"const": false}
+      }
+    },
+    "provenanceClaim": {"allOf": [{"$ref": "#/$defs/claimBase"}, {"type": "object", "properties": {"gate_role": {"const": "provenance"}, "status": {"const": "pass"}, "registered_contract": {"const": "corpus.provenance.public_abstraction"}}}]},
+    "semanticClaim": {"allOf": [{"$ref": "#/$defs/claimBase"}, {"type": "object", "properties": {"gate_role": {"const": "semantic_leakage"}, "status": {"const": "pass"}, "registered_contract": {"const": "learning.prose_semantic_leakage"}}}]},
+    "blindClaim": {"allOf": [{"$ref": "#/$defs/claimBase"}, {"type": "object", "properties": {"gate_role": {"const": "blind_ab"}, "status": {"const": "pass"}, "registered_contract": {"const": "learning.blind_prose_pair"}}}]},
+    "promotionClaim": {"allOf": [{"$ref": "#/$defs/claimBase"}, {"type": "object", "properties": {"gate_role": {"const": "promotion"}, "status": {"const": "promotable"}, "registered_contract": {"const": "learning.promotion_gate.evaluate"}}}]},
+    "attestationBase": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "role", "key_id", "payload", "signature"],
+      "properties": {
+        "schema": {"const": "quillframe_style_publication_attestation_v1"},
+        "role": {"enum": ["provenance", "semantic_leakage", "blind_ab", "promotion"]},
+        "key_id": {"$ref": "#/$defs/keyId"},
+        "payload": {"oneOf": [{"$ref": "#/$defs/provenanceClaim"}, {"$ref": "#/$defs/semanticClaim"}, {"$ref": "#/$defs/blindClaim"}, {"$ref": "#/$defs/promotionClaim"}]},
+        "signature": {"$ref": "#/$defs/signature"}
+      }
+    },
+    "provenanceAttestation": {"allOf": [{"$ref": "#/$defs/attestationBase"}, {"type": "object", "properties": {"role": {"const": "provenance"}, "payload": {"$ref": "#/$defs/provenanceClaim"}}}]},
+    "semanticAttestation": {"allOf": [{"$ref": "#/$defs/attestationBase"}, {"type": "object", "properties": {"role": {"const": "semantic_leakage"}, "payload": {"$ref": "#/$defs/semanticClaim"}}}]},
+    "blindAttestation": {"allOf": [{"$ref": "#/$defs/attestationBase"}, {"type": "object", "properties": {"role": {"const": "blind_ab"}, "payload": {"$ref": "#/$defs/blindClaim"}}}]},
+    "promotionAttestation": {"allOf": [{"$ref": "#/$defs/attestationBase"}, {"type": "object", "properties": {"role": {"const": "promotion"}, "payload": {"$ref": "#/$defs/promotionClaim"}}}]},
+    "challenge": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "status", "preview_token", "preview_fingerprint", "atlas_fingerprint", "style_artifact_fingerprint", "craft_artifact_fingerprint", "promotion_gate_fingerprint", "target_commit", "environment", "registry_path_fingerprint", "base_registry_fingerprint", "base_registry_revision"],
+      "properties": {
+        "schema": {"const": "quillframe_style_atlas_release_challenge_v1"},
+        "status": {"const": "confirm_exact_preview"},
+        "preview_token": {"$ref": "#/$defs/previewToken"},
+        "preview_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "atlas_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "style_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "craft_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "promotion_gate_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "target_commit": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+        "environment": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$"},
+        "registry_path_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "base_registry_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "base_registry_revision": {"type": "integer", "minimum": 0}
+      }
+    },
+    "manualAttestation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "role", "key_id", "payload", "signature"],
+      "properties": {
+        "schema": {"const": "quillframe_style_publication_attestation_v1"},
+        "role": {"const": "manual_approval"},
+        "key_id": {"$ref": "#/$defs/keyId"},
+        "payload": {"$ref": "#/$defs/challenge"},
+        "signature": {"$ref": "#/$defs/signature"}
+      }
+    }
+  }
+}

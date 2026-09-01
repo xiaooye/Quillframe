@@ -31,6 +31,38 @@ fundamentals:
     zh_cn: surface/READER_ENGAGEMENT.zh-CN.md
     profile_weighted: true
 
+craft_guidance:
+  en: surface/craft/README.en.md
+  zh_cn: surface/craft/README.zh-CN.md
+  registry: surface/craft/registry.json
+  sources: surface/craft/sources.json
+  history: surface/craft/history
+  loader: production_runtime/craft_guidance.py
+  snapshot_schema: quillframe_craft_snapshot_v1
+  current_registry_version: "4"
+  status: candidate
+  default_mode: baseline
+  opt_in_mode: outline_driven
+  composite_opt_in_mode: outline_plus_style_contract
+  composite_semantics: craft_v4_direct_surface_foundation_plus_run_scoped_source_free_corpus
+  corpus_style_card_limit: 8
+  native_evaluation_runner: evals/native_style_runner.py
+  author_review:
+    en: evals/CRAFT_CHAPTER_REVIEW.en.md
+    zh_cn: evals/CRAFT_CHAPTER_REVIEW.zh-CN.md
+    helper: evals/craft_chapter_review.py
+    mode: sequential_single_chapter_absolute
+    full_production_runtime_required: true
+    author_feedback_before_next_iteration: true
+    pairwise_comparison: false
+  selection_contract: scene.realization_project
+  selection_contract_version: "10"
+  writer_pack_schema: quillframe_direct_writer_pack_v1
+  prose_generation_stages: [surface_realization]
+  intermediate_raw_draft_prose: forbidden
+  judgment_authority: false
+  diagnostics_writer_visible: false
+
 harness:
   manager: harness/HARNESS_AGENT.md
   orchestration: harness/ORCHESTRATION_PROTOCOL.md
@@ -250,9 +282,28 @@ learning:
   feedback_distinct_user_turn_may_strengthen_existing_hypothesis: true
   feedback_hypothesis_reconciliation_owner: model
   feedback_auto_project_profile_write: false
-  feedback_auto_activation: false
+  feedback_auto_activation: standing_user_taste_policy_only
+  feedback_auto_activation_without_standing_policy: false
   feedback_auto_framework_write: false
   feedback_auto_canon_write: false
+  user_taste_service: learning/user_taste.py
+  user_taste_policy_schema: quillframe_user_taste_auto_activation_policy_v1
+  user_taste_snapshot_schema: quillframe_user_taste_snapshot_v1
+  user_taste_writer_projection_schema: quillframe_writer_user_taste_v1
+  user_taste_activation_receipt_schema: quillframe_user_taste_activation_receipt_v1
+  user_taste_standing_policy_default: disabled
+  user_taste_standing_policy_source_kinds: [corpus, feedback, user_edit]
+  user_taste_standing_policy_revocable: true
+  user_taste_policy_compare_and_swap: required_when_expected_version_supplied
+  user_taste_auto_activation_requires: [standing_policy, exact_candidate_binding, semantic_review, independent_eval, contradiction_review]
+  user_taste_current_request_precedence: true
+  user_taste_per_run_semantic_selection: zero_to_n
+  user_taste_all_active_preferences_auto_injected: false
+  user_taste_writer_visibility: [mechanism, applies_when, avoid_when, hypothesis_id, version]
+  user_taste_reader_or_reviewer_visibility: forbidden
+  user_taste_source_identity_in_writer_projection: forbidden
+  user_taste_pause_and_withdraw_supported: true
+  general_craft_promotion: manual_only
   state_domains:
     - feedback_intake
     - preference_evidence
@@ -300,6 +351,132 @@ corpus:
   discovery_result_schema: quillframe_corpus_discovery_results_v1
   rights_gate: corpus/rights_gate.py
   benchmark_registry: corpus/benchmarks/mechanisms.json
+  local_library: corpus/library.py
+  study_runner: corpus/study_runner.py
+  legacy_fixed_window_protocol: quillframe_corpus_three_window_benchmark_v1
+  study_semantic_contracts: [corpus.range_observe, learning.work_synthesize, learning.benchmark_synthesize]
+  study_semantic_range_calls: 360
+  study_research_axes: [scene_entry, causal_progression, dialogue_voice, interiority_distance, information_timing, paragraph_rhythm, relationship_movement, chapter_forward_pull]
+  study_semantic_results_are_candidates: true
+  study_candidate_auto_activation: false
+  study_candidate_auto_promotion: false
+  style_learning:
+    protocol_id: quillframe_corpus_style_learning_v1
+    protocol_version: "1"
+    append_only_runner: corpus/style_study_runner.py
+    sampler: corpus/style_sampling.py
+    contract_compiler: corpus/style_contract.py
+    same_study_version_reused: STUDY-GENERAL-QUALITY-REBUILD-V5
+    successor_study_version_created: false
+    source_pool:
+      exact_count: 120
+      semantics: addressable_available_pool
+      confirmation_binds: [declared_rights, scope, profile, membership, proposal_fingerprint]
+      per_member_literary_review_required_for_confirmation: false
+      full_pool_exposure_required_for_confirmation: false
+      all_members_required_for_style_completion: false
+    source_count_is_quality_threshold: false
+    cpu_benchmark_is_confirmation_gate: false
+    memory_benchmark_is_confirmation_gate: false
+    dynamic_work_pool_scheduling:
+      target: model_selects_next_work_and_passage_until_cross_work_convergence
+      implementation_status: implemented_source_free_reconcile_activation_ledger
+    ai_native_responsibility_target: [scene_function_classification, style_axis_classification, evidence_gap_analysis, next_evidence_request, cross_work_convergence]
+    deterministic_runtime_responsibility: [source_identity, source_version_binding, bounded_materialization, hygiene, budgets, receipts, schema_validation, leakage_checks]
+    evidence_scope_routes:
+      language_mismatch: narrow_language_specific_claims
+      incomplete_or_serial: local_scene_or_prose_evidence_without_unsupported_whole_work_claims
+      restart_or_concatenation: boundary_aware_windows_or_narrower_claims
+      selected_window_hygiene_failure: reject_whole_window_and_request_replacement
+      invalid_rights_or_source_identity: block_relevant_source_evidence
+    source_prose_lifetime: ephemeral_semantic_call_only
+    txt_sampling_default: bounded_incremental_stream
+    large_txt_sampling: bounded_incremental_stream
+    large_epub_sampling: fail_closed
+    candidate_window_hygiene: reject_host_distribution_boilerplate_without_rewriting
+    candidate_window_hygiene_scope: corpus_library_fixed_policy
+    semantic_contracts: [corpus.style_observe, learning.style_work_synthesize, learning.style_axis_synthesize, learning.style_axis_reconcile, learning.style_claim_verify]
+    scene_functions: [opening, dialogue, action, interiority, exposition, environment, body_appearance, relationship, transition, ending]
+    style_axes: [prose_voice, syntax_rhythm, lexical_register, psychic_distance, descriptive_attention, body_appearance, imagery, dialogue_voice, interiority_summary, information_flow]
+    max_adaptive_rounds_per_work: 4
+    max_windows_per_round: 6
+    max_cross_work_axis_batch: 16
+    cross_work_pooling: dynamic_source_free_cohort
+    dynamic_work_cohort: implemented
+    seed_discovery_work_count: 8
+    holdout_cohort_work_count: 8
+    deterministic_discovery_holdout_split: true
+    stop_criteria: [functional_coverage, semantic_saturation, cross_work_counterexamples, heldout_replication, causal_ab_uplift, non_leakage]
+    source_free_style_contract: required
+    named_author_profile_or_vector: forbidden
+    raw_prose_rag: forbidden
+    source_novel_lora_or_sft: forbidden
+    body_or_appearance_implies_adult_profile: false
+    local_leakage_layers: [exact_ngram, nfkc_normalized_ngram, shingle_jaccard, minhash]
+    external_semantic_leakage_review: required
+    writer_projection_evidence_identity: forbidden
+    blind_reader_style_treatment_visibility: forbidden
+    candidate_promotion: manual_exact_artifact_binding_only
+    baseline_conditions: [baseline, current_craft_v4, corpus_style_candidate]
+    holdout_and_leave_one_work_out_regression: required
+    public_atlas_builder: corpus/style_publication.py
+    public_atlas_schema: corpus/general/style_atlas.schema.json
+    public_atlas_preview_schema: corpus/general/style_atlas_preview.schema.json
+    public_atlas_registry: corpus/general/style_registry.json
+    public_atlas_registry_schema: corpus/general/style_atlas_registry.schema.json
+    public_atlas_release_receipt_schema: corpus/general/style_atlas_release_receipt.schema.json
+    public_atlas_transition_receipt_schema: corpus/general/style_registry_transition_receipt.schema.json
+    public_atlas_trust_policy: corpus/general/style_publication_trust_policy.json
+    public_atlas_trust_policy_schema: corpus/general/style_publication_trust_policy.schema.json
+    public_atlas_trust_policy_status: unconfigured
+    public_preview_authority: false
+    raw_release_helper: fail_closed
+    trusted_publisher: StyleAtlasPublisher
+    trusted_candidate_loader: corpus/style_publication_adapter.py
+    trusted_completion_receipt_lookup: required
+    trusted_attestation_roles: [provenance, semantic_leakage, blind_ab, promotion, manual_approval]
+    trusted_attestation_role_secret_reuse: forbidden
+    trusted_publisher_policy_match: required
+    release_receipt_content_addressed: true
+    transition_receipt_content_addressed: true
+    registry_revision_event_chain_replay: required
+    registry_load_reverifies_release_receipts: true
+    registry_load_reverifies_transition_receipts: true
+    caller_boolean_or_self_hash_authority: forbidden
+    rights_or_provenance_review: required
+    registry_exact_base_revision_binding: required
+    registry_active_pointer: required
+    registry_release_states: [active, superseded, rolled_back, deprecated, contested]
+    registry_transition_manual_confirmation: required
+    public_atlas_gate_receipts_embedded: false
+  local_library_source_prose_persisted: false
+  public_general_root: corpus/general
+  public_general_registry: corpus/general/registry.json
+  public_general_registry_schema: corpus/general/registry.schema.json
+  public_work_schema: corpus/general/public_work.schema.json
+  public_manifest_schema: corpus/general/public_manifest.schema.json
+  public_release_profile:
+    protocol_id: quillframe_corpus_three_window_benchmark_v1
+    applies_to_style_learning: false
+    distinct_logical_works: 120
+    editions_per_work: 1
+    windows_per_work: 3
+    window_scopes: [opening, middle, closing]
+    max_unicode_chars_per_window: 4000
+    exact_selection_confirmation: required
+    raw_window_materialization: ephemeral
+    raw_source_storage: local_user_files_only
+    public_work_identity: randomized
+    source_titles_creators_paths_prose_quotes_summaries: forbidden
+    preview_validation_and_exact_fingerprint_confirmation: required
+  content_profile_partitions: [general, adult_explicit]
+  content_profile_selection: explicit_user_choice_at_checklist_confirmation
+  content_profile_inference_from_source_text: forbidden
+  study_profile_cardinality: exactly_one
+  study_profile_immutable_after_confirmation: true
+  cross_content_profile_aggregation: forbidden
+  adult_explicit_default_writer_injection: forbidden
+  public_general_license: inherits_repository_LICENSE
   rights_classes: [redistributable, analysis_only, unknown]
   discovery_is_not_ingestion: true
   discovery_requires_proven_host_capability: true

@@ -95,6 +95,27 @@ Do not read or persist an entire work merely because the host can reach it.
 
 Question-bounded ranges reduce copyright exposure, context cost, source leakage and imitation pressure.
 
+### Legacy version-1 statistical General Corpus limits
+
+The repository publication profile is stricter than the general ingest protocol:
+
+```yaml
+distinct_logical_works: 120
+editions_per_work: 1
+windows_per_work: 3
+window_scopes: [opening, middle, closing]
+max_unicode_chars_per_window: 4000
+raw_materialization: ephemeral
+```
+
+The user confirms the exact 120-work pool before analysis begins. Confirmation binds the declared rights and scope, profile, complete membership and proposal fingerprint; a membership checkbox is not a literary review and does not require eventual use of every work. File duplicates and alternate editions cannot fill multiple slots. Durable range jobs record only opaque range IDs, offsets, source/passage/job fingerprints and the rubric; the actual passage is reopened and fingerprint-checked for one bounded call, then discarded.
+
+The legacy ingest proposal uses private metadata to group high-confidence serial, corrected and completed snapshots into one candidate family and chooses one representative edition; uncertain matches are never merged automatically. For style learning, unresolved identity or invalid rights blocks the affected source evidence. Short/incomplete, serial, language-mismatch and restart/concatenation signals are evidence-scope routes rather than literary quarantine: they narrow language or whole-work claims and require boundary-aware windows. XML parsing may continue only after stripping one syntactically bounded `DOCTYPE` with no entity declaration or internal subset; entity declarations, internal subsets, malformed declarations and multiple doctypes remain rejected.
+
+The user explicitly chooses `general` or `adult_explicit` while confirming the checklist. Proposal eligibility uses only private metadata to partition strong adult signals and does not infer the profile from source prose; a title with no matching signal remains a provisional `general` candidate for human review. One study has exactly one immutable profile, and every observation and aggregate remains bound to it. An `adult_explicit` study cannot contribute to the general aggregate or ordinary Writer guidance unless a later request explicitly selects that content zone.
+
+The three-window profile is the legacy statistical-publication contract. In the prose-style-learning target, the exact pool is available evidence: AI owns scene/style classification, gap analysis, the next bounded evidence request and cross-work convergence. The Python runner owns only identity/version binding, minimum bounded materialization, hygiene, budgets and receipts; schema and leakage gates remain deterministic release controls, and no keyword, punctuation or score heuristic decides literature. Source count, full-pool exposure and CPU/memory diagnostics never substitute for saturation, held-out replication, blind evaluation or leakage review. Registered-contract and synthetic-runner tests now demonstrate dynamic activation of requested work/scene-function evidence and early convergence while untouched works remain available and unanalysed. That proof is not a real V5 run, learned style, blind/leakage qualification or publication. Body and appearance terms, including the isolated term `巨乳`, remain ordinary General Craft evidence unless actual context establishes explicit content.
+
 ---
 
 ## 05 · Separate source material from observation
@@ -220,6 +241,8 @@ Modern copyrighted source text, hidden expected labels and regression bad exampl
 
 A Corpus item being stored does not imply `draft` visibility.
 
+The same analysis may create a private user-taste candidate. Even then, the Writer receives only a later source-free mechanism/applicability projection after the standing policy, semantic review, independent evaluation and contradiction gates pass. A per-run selector may choose zero items. Blind Reader and independent reviewer inputs remain free of both corpus and user-taste guidance.
+
 ---
 
 ## 11 · Storage by rights class
@@ -284,13 +307,26 @@ A queue is not retrieval. A schema is not analysis. A model result is not promot
 
 ---
 
-## 14 · Related contracts
+## 14 · Public release and repository registry
+
+For the legacy three-window statistical protocol, the publisher builds a closed-schema preview only after all 120 works are complete. The public bundle may contain only randomized work IDs, numeric derivatives, controlled eight-axis profiles, controlled cross-work mechanisms and boundaries, and fingerprints. Source prose, quotations, close paraphrases, source-reconstructive summaries, names, titles, creators, paths, characters, settings and arbitrary extension fields are rejected.
+
+Style Atlas publication follows a separate source-free, evidence-sufficient path and does not require mechanically processing all 120 works. Synthetic contract/runner tests now establish the dynamic work-pool and early-stop engineering path; they do not establish a real V5 run, learned style, blind evaluation, independent leakage review or publication authority.
+
+Validation must include structural checks and private-source overlap checks. Release then requires exact confirmation of the preview token and manifest fingerprint. Until that happens, [`general/registry.json`](general/registry.json) stays empty and must not imply that any research result exists.
+
+Repository-owned derived releases inherit the repository [license](../LICENSE). This protocol does not conclude that abstraction or non-commercial intent makes publication lawful; source-specific rights review remains the operator's responsibility.
+
+---
+
+## 15 · Related contracts
 
 - [Corpus Policy](CORPUS_POLICY.en.md) — normative rights/evidence boundary.
 - [Corpus Intelligence](README.en.md) — complete research/learning flow.
 - [`rights_gate.py`](rights_gate.py) — declared-rights/storage-intent validator.
 - [`discovery_runtime.py`](discovery_runtime.py) — discovery request/result lifecycle.
 - [`harness/semantic_workers/contracts/learning.json`](../harness/semantic_workers/contracts/learning.json) — bounded mechanism-analysis/eval contracts.
+- [Anonymous Public General Corpus](general/README.en.md) — release schemas, current registry state and license boundary.
 - [Adaptive Learning](../docs/adaptive-learning.en.md) — downstream hypothesis/eval lifecycle.
 
 **Ingest only what the declared question needs and the established rights permit; derive the rest as traceable evidence.**

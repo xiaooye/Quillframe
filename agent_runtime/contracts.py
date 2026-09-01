@@ -31,20 +31,23 @@ class AgentBudget:
     max_model_requests: int = 24
     max_tool_calls: int = 64
     max_parallel_tool_calls: int = 8
-    max_output_tokens_per_request: int = 4096
-    max_total_tokens: int = 200_000
+    model_context_limit: int = 200_000
+    max_output_tokens: int = 4096
+    run_cost_budget: int = 10_000_000
     max_elapsed_ms: int = 15 * 60 * 1000
     max_model_request_ms: int | None = None
 
     def __post_init__(self) -> None:
         for name, value in self.to_dict().items():
-            if not isinstance(value, int) or value <= 0:
+            if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
                 raise ValueError(f"{name} must be a positive integer")
         if self.max_model_request_ms is not None and (
             isinstance(self.max_model_request_ms, bool)
             or self.max_model_request_ms > int(MAX_REQUEST_TIMEOUT_SECONDS * 1000)
         ):
-            raise ValueError("max_model_request_ms must be a positive integer at most 600000")
+            raise ValueError(
+                f"max_model_request_ms must be a positive integer at most {int(MAX_REQUEST_TIMEOUT_SECONDS * 1000)}"
+            )
 
     def to_dict(self) -> dict[str, int]:
         value = {
@@ -52,8 +55,9 @@ class AgentBudget:
             "max_model_requests": self.max_model_requests,
             "max_tool_calls": self.max_tool_calls,
             "max_parallel_tool_calls": self.max_parallel_tool_calls,
-            "max_output_tokens_per_request": self.max_output_tokens_per_request,
-            "max_total_tokens": self.max_total_tokens,
+            "model_context_limit": self.model_context_limit,
+            "max_output_tokens": self.max_output_tokens,
+            "run_cost_budget": self.run_cost_budget,
             "max_elapsed_ms": self.max_elapsed_ms,
         }
         # Omitting an unset request limit preserves historical job fingerprints.
@@ -133,6 +137,8 @@ class AgentResult:
     model_id: str
     protocol: str
     input_fingerprint: str
+    model_version_fingerprint: str | None = None
+    model_version_identity_strength: str | None = None
     final_text: str = ""
     steps: int = 0
     model_requests: int = 0
@@ -142,7 +148,7 @@ class AgentResult:
     errors: list[dict[str, Any] | str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        allowed = {"completed", "cancelled", "budget_exhausted", "model_failed", "tool_failed", "checkpoint_failed", "side_effect_unconfirmed"}
+        allowed = {"completed", "cancelled", "budget_exhausted", "model_pending", "model_failed", "tool_failed", "checkpoint_failed", "side_effect_unconfirmed"}
         if self.status not in allowed:
             raise ValueError(f"invalid AgentResult status: {self.status}")
         secret_paths = _secret_paths(self.to_dict())
@@ -150,7 +156,7 @@ class AgentResult:
             raise ValueError("AgentResult contains forbidden secret-bearing fields: " + ", ".join(secret_paths))
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        value = {
             "schema": "quillframe_agent_result_v1",
             "job_id": self.job_id,
             "session_id": self.session_id,
@@ -171,6 +177,11 @@ class AgentResult:
             "canon_authority": False,
             "framework_write_authority": False,
         }
+        if self.model_version_fingerprint is not None:
+            value["model_version_fingerprint"] = self.model_version_fingerprint
+        if self.model_version_identity_strength is not None:
+            value["model_version_identity_strength"] = self.model_version_identity_strength
+        return value
 
 
 def job_fingerprint_payload(value: dict[str, Any]) -> str:

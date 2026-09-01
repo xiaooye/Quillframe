@@ -44,15 +44,17 @@ Surface 只能在故事、场景与人物模拟已经造出“值得实现的东
 一个典型接口是：
 
 ```text
-受限上下文 + 场景 / 人物模拟
-→ 事件优先 Raw Draft
-→ Surface Realization
-→ 确定性 / 语义 Surface 检查
-→ 局部改写或上游重生
-→ Reader Engagement / 连续性 / 独立门槛
+受限上下文 + 人物私有行动推演
+→ Scene Realization Contract + 模型组合的 Writer 上下文
+→ Reader Pressure
+→ 单次 direct Surface Writer
+→ 候选指纹冻结
+→ Reader Engagement / 连续性 / 逐项目标语义审查
+→ 必要时 bounded 局部修改或上游 / fresh realization
+→ 独立评审与用户可见门槛
 ```
 
-Raw Draft 只在内部使用。Regression 坏例只能进入生成后检查，不能在首轮正文前给 writer 做负面 priming。
+被否决正文、Reviewer 分析和人物私有推演不得给 fresh Writer 做负面 priming。确定性检查只验证 schema、provenance、指纹和上下文边界；文学判断属于模型和作者。
 
 Surface 修复必须尊重问题归属：
 

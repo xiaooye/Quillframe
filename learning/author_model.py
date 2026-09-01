@@ -362,7 +362,48 @@ def capture_feedback(store: LearningStore, request: Any) -> dict[str, Any]:
     # Evidence and all hypothesis effects form one Learning-domain transaction.
     # Runtime consumption is separately recoverable and is not part of this DB.
     with store.transaction() as conn:
-        return _capture_feedback(LearningStore(store.db_path, connection=conn), request)
+        result = _capture_feedback(LearningStore(store.db_path, connection=conn), request)
+    # A standing policy is user authority, but still cannot bypass the bound
+    # semantic promotion, personalized eval or contradiction gates. Attempt the
+    # transition only after the evidence transaction commits so its receipt and
+    # CAS update form one separate recoverable Learning transaction.
+    if result.get("scope") == "user_taste" and result.get("hypothesis_state") == "candidate":
+        from learning.user_taste import UserTasteService
+        service = UserTasteService(store.db_path)
+        policy = service.get_policy()
+        interpretation = request.get("interpretation") if isinstance(request, dict) else None
+        evidence_source = interpretation.get("evidence_source") if isinstance(interpretation, dict) else None
+        source_kind = "user_edit" if evidence_source == "user_edit" else "feedback"
+        candidate = (request.get("activation") or {}).get("user_taste_promotion_candidate") if isinstance(request, dict) else None
+        if policy["enabled"] and source_kind in policy["source_kinds"]:
+            if not isinstance(candidate, dict):
+                result["auto_activation"] = {
+                    "status": "blocked", "reason": "bound user_taste promotion candidate required",
+                    "policy_version": policy["policy_version"], "authority": False,
+                }
+            else:
+                try:
+                    activated = service.activate(
+                        hypothesis_id=result["hypothesis_id"], expected_version=result["hypothesis_version"],
+                        candidate=candidate, source_kind=source_kind,
+                    )
+                except ValueError as exc:
+                    result["auto_activation"] = {
+                        "status": "blocked", "reason": str(exc),
+                        "policy_version": policy["policy_version"], "authority": False,
+                    }
+                else:
+                    result["hypothesis_state"] = activated["preference"]["state"]
+                    result["hypothesis_version"] = activated["preference"]["version"]
+                    result["active_for_future_production"] = True
+                    result["auto_activation"] = {
+                        "status": "activated", "receipt": activated["receipt"], "authority": False,
+                    }
+        else:
+            result["auto_activation"] = {
+                "status": "not_authorized", "policy_version": policy["policy_version"], "authority": False,
+            }
+    return result
 
 
 def _capture_feedback(store: LearningStore, request: Any) -> dict[str, Any]:
@@ -517,6 +558,7 @@ def project_author_model(store: LearningStore, *, project_id: str | None, explic
 
 def self_test(path: Path | None = None) -> dict[str, Any]:
     from learning.promotion_gate import _semantic_binding as _promotion_semantic_binding
+    from learning.promotion_gate import _eval_binding as _promotion_eval_binding
     db = path or Path(tempfile.gettempdir()) / "quillframe-author-model-selftest.db"
     for p in (db, Path(str(db) + "-wal"), Path(str(db) + "-shm")):
         if p.exists(): p.unlink()
@@ -567,8 +609,9 @@ def self_test(path: Path | None = None) -> dict[str, Any]:
     }})
 
     promotion_refs = ["review:gate", "EVAL:gate"]
-    candidate = {"schema": PROMOTION_CANDIDATE_SCHEMA, "candidate_id": "UT-GOOD", "scope": "user_taste", "mechanism": "low narrator commentary", "evidence": {"evidence_refs": promotion_refs}}
+    candidate = {"schema": PROMOTION_CANDIDATE_SCHEMA, "candidate_id": "UT-GOOD", "scope": "user_taste", "mechanism": "low narrator commentary", "evidence": {"evidence_refs": promotion_refs, "contradiction_review": {"status": "pass"}}}
     candidate["semantic_review_binding"] = _promotion_semantic_binding("UT-GOOD", "user_taste", "low narrator commentary", promotion_refs)
+    candidate["independent_eval_binding"] = _promotion_eval_binding("UT-GOOD", "user_taste", "low narrator commentary")
     gated = capture_feedback(store, {**base, "feedback_ref": "review:gate", "evidence_id": "PE-GATE", "activation": {
         "project_preference_write_authorized": False, "durable_user_taste_write_authorized": True, "user_taste_promotion_candidate": candidate,
     }, "interpretation": {

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.local/schemas/public-general-style-registry-v1.json",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema", "registry_version", "revision", "status", "atlas_schema", "active_atlas_fingerprint", "parent_registry_fingerprint", "releases", "events", "registry_fingerprint"],
+  "properties": {
+    "schema": {"const": "quillframe_public_general_style_registry_v1"}, "registry_version": {"const": 1},
+    "revision": {"type": "integer", "minimum": 0}, "status": {"enum": ["awaiting_first_validated_release", "active"]},
+    "atlas_schema": {"const": "quillframe_public_general_style_atlas_v1"},
+    "active_atlas_fingerprint": {"oneOf": [{"$ref": "#/$defs/fingerprint"}, {"type": "null"}]},
+    "parent_registry_fingerprint": {"oneOf": [{"$ref": "#/$defs/fingerprint"}, {"type": "null"}]},
+    "releases": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/release"}},
+    "events": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/event"}},
+    "registry_fingerprint": {"$ref": "#/$defs/fingerprint"}
+  },
+  "$defs": {
+    "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "event": {"type": "object", "additionalProperties": false,
+      "required": ["revision", "kind", "receipt_fingerprint"],
+      "properties": {"revision": {"type": "integer", "minimum": 1}, "kind": {"enum": ["release", "transition"]}, "receipt_fingerprint": {"$ref": "#/$defs/fingerprint"}}
+    },
+    "release": {"type": "object", "additionalProperties": false,
+      "required": ["atlas_fingerprint", "preview_fingerprint", "style_artifact_fingerprint", "craft_artifact_fingerprint", "analysis_protocol_version", "content_zone", "preview_token", "semantic_leakage_status", "blind_ab_status", "promotion_status", "manual_approval_status", "state", "release_receipt_fingerprint", "base_registry_fingerprint", "base_registry_revision"],
+      "properties": {
+        "atlas_fingerprint": {"$ref": "#/$defs/fingerprint"}, "preview_fingerprint": {"$ref": "#/$defs/fingerprint"}, "style_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"}, "craft_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"},
+        "analysis_protocol_version": {"const": "1"}, "content_zone": {"const": "general"}, "preview_token": {"type": "string", "pattern": "^style-preview-[0-9a-f]{64}$"},
+        "semantic_leakage_status": {"const": "pass"}, "blind_ab_status": {"const": "pass"}, "promotion_status": {"const": "promotable"}, "manual_approval_status": {"const": "confirmed_exact_preview"},
+        "state": {"enum": ["active", "superseded", "rolled_back", "deprecated", "contested"]}, "release_receipt_fingerprint": {"$ref": "#/$defs/fingerprint"}, "base_registry_fingerprint": {"$ref": "#/$defs/fingerprint"}, "base_registry_revision": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

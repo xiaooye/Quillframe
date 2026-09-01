@@ -204,7 +204,7 @@ export const AppShell: ParentComponent = (props) => {
       reader_pressure: ["检查读者期待", "Inspect reader expectations"],
       reader_engagement: ["读者视角审阅", "Review reader engagement"],
       continuity: ["核对连续性", "Check continuity"],
-      event_first_raw_draft: ["生成内部草稿", "Generate internal draft"],
+      event_first_raw_draft: ["旧版内部草稿（已退役）", "Legacy internal draft (retired)"],
       surface_realization: ["形成正文表达", "Realize manuscript prose"],
       registered_reader_engagement: ["读者视角审阅", "Review reader engagement"],
       registered_candidate_self_audit: ["检查候选稿", "Audit candidate draft"],

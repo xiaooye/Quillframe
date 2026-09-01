@@ -1,0 +1,12 @@
+{
+  "schema": "quillframe_public_general_style_registry_v1",
+  "registry_version": 1,
+  "revision": 0,
+  "status": "awaiting_first_validated_release",
+  "atlas_schema": "quillframe_public_general_style_atlas_v1",
+  "active_atlas_fingerprint": null,
+  "parent_registry_fingerprint": null,
+  "releases": [],
+  "events": [],
+  "registry_fingerprint": "sha256:284b2725707b75b92393e302eb480138e13898fcff08ed5b97f688a015794f44"
+}

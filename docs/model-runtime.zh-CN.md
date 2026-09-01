@@ -49,11 +49,15 @@ Remote endpoint 默认要求 HTTPS；URL userinfo/query/fragment 被拒绝。Dir
 
 ## 请求截止时间
 
-推理请求默认时限为 180 秒，可显式指定最多 600 秒的有限正数。传输准备消耗同一请求的时间额度；过期请求不得派发，迟到响应不得接受。这不会加入重试，也不会放宽外层 Agent 与生产 journal 的截止时间。
+普通推理请求默认时限为 180 秒；可显式指定最多 86,400 秒的有限正数。这个更大的值只约束准入与单次 HTTP 交互，不是已经启动的 durable worker 寿命。传输准备消耗同一额度，因此已过期请求不能开始新的派发。
 
-只有向字面回环地址或 `localhost` 发起的 POST 才携带 `X-Quillframe-Deadline-Unix-Ms`。它表示本次 HTTP 请求预算，时间原点不等同于更早的 journal 起点。远端提供商的请求头以及模型消息和请求体语义保持不变。版本 2 的本地 relay 将有效到期时间冻结到 packet；发布前若单调时钟剩余额度更短，只能据此收窄到期时间。CLI 按该时间执行并预留发布余量。默认调用方、relay、worker 时限仍为 180/170/150 秒；长正文可显式配置 600/590/570 秒。即使 worker 扩大了上限，短请求仍受调用方截止时间限制。这些属于宿主执行设置，不增加作者首次连接模型时的输入项。
+只有向字面回环地址或 `localhost` 发起的 POST 才携带 `X-Quillframe-Deadline-Unix-Ms`。生产 AgentJob 还携带 SHA-256 形式的 `X-Quillframe-Model-Request-Key`。远端提供商的 header、模型消息和请求 body 语义保持不变。
 
-直接 HTTP 传输会拒绝过期派发和迟到结果，但不提供操作系统级看门狗，不能主动打断阻塞中的 DNS 查询或持续缓慢读取的 socket。CLI 子进程另有终止截止时间；Core 仍会拒绝超过阶段期限的结果。单调时钟证据只在各自进程内有效，无法重建 packet 发布到另一进程准入之间的墙钟变化；本实现不承诺共享的跨进程时钟，上游请求仍独立检查并拒绝迟到结果。
+v3 本地 relay 为 keyed 请求冻结一个不可变 packet，只做很短的交互等待。如果精确 worker 仍在运行，就返回 `202 model_pending`；重复发送完全相同的请求只轮询该 packet，不会再次派发。同 key 但 body 改变会触发幂等冲突。生产 journal 会在 transport 派发前把请求标记为 pollable，所以首个 `202` 前客户端崩溃也不能授权第二次调用。
+
+初始 packet deadline 仍限制解析、队列准备和启动前准入。一旦 keyed worker 已有启动证据，API 慢不再形成任意进程超时：CLI 入口默认不设 worker 寿命上限，持续发布心跳并记录显式终态；操作者仍可配置有限紧急上限。普通无 key／library 调用继续保持有限边界。
+
+HTTP waiter 结束不是模型失败，轮询也不增加模型调用。相同请求的精确终态输出可以在原 waiter 时间窗之后消费。已确认取消、终态 worker failure、身份／字节变化、无效输出或语义拒绝仍然阻断。心跳丢失或陈旧属于未知状态，绝不授权重试。详见 [durable pending 契约](../specs/032-durable-model-pending/spec.zh-CN.md)；规格 027 继续作为 v2 同步 packet 的历史记录。
 
 ## Persistence
 

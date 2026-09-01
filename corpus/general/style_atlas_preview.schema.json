@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.local/schemas/public-general-style-atlas-preview-v1.json",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema", "atlas", "release_gates", "preview_token", "preview_fingerprint"],
+  "properties": {
+    "schema": {"const": "quillframe_public_general_style_atlas_preview_v1"},
+    "atlas": {"$ref": "https://quillframe.local/schemas/public-general-style-atlas-v1.json"},
+    "release_gates": {
+      "type": "object", "additionalProperties": false,
+      "required": ["local_leakage", "semantic_leakage", "blind_ab", "promotion", "manual_approval"],
+      "properties": {
+        "local_leakage": {"type": "object", "additionalProperties": false, "required": ["status", "summary_fingerprint"], "properties": {"status": {"enum": ["pass", "blocked", "not_performed"]}, "summary_fingerprint": {"$ref": "#/$defs/fingerprint"}}},
+        "semantic_leakage": {"$ref": "#/$defs/semanticGate"}, "blind_ab": {"$ref": "#/$defs/semanticGate"}, "promotion": {"$ref": "#/$defs/promotionGate"},
+        "manual_approval": {"type": "object", "additionalProperties": false, "required": ["status"], "properties": {"status": {"const": "external_exact_preview_confirmation_required"}}}
+      }
+    },
+    "preview_token": {"type": "string", "pattern": "^style-preview-[0-9a-f]{64}$"},
+    "preview_fingerprint": {"$ref": "#/$defs/fingerprint"}
+  },
+  "$defs": {
+    "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "semanticGate": {"oneOf": [
+      {"type": "object", "additionalProperties": false, "required": ["status", "style_artifact_fingerprint", "craft_artifact_fingerprint", "gate_fingerprint"], "properties": {"status": {"const": "pending"}, "style_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"}, "craft_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"}, "gate_fingerprint": {"type": "null"}}},
+      {"type": "object", "additionalProperties": false, "required": ["status", "style_artifact_fingerprint", "craft_artifact_fingerprint", "gate_fingerprint"], "properties": {"status": {"enum": ["pass", "fail"]}, "style_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"}, "craft_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"}, "gate_fingerprint": {"$ref": "#/$defs/fingerprint"}}}
+    ]},
+    "promotionGate": {"oneOf": [
+      {"type": "object", "additionalProperties": false, "required": ["status", "style_artifact_fingerprint", "craft_artifact_fingerprint", "gate_fingerprint"], "properties": {"status": {"const": "pending"}, "style_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"}, "craft_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"}, "gate_fingerprint": {"type": "null"}}},
+      {"type": "object", "additionalProperties": false, "required": ["status", "style_artifact_fingerprint", "craft_artifact_fingerprint", "gate_fingerprint"], "properties": {"status": {"enum": ["promotable", "blocked"]}, "style_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"}, "craft_artifact_fingerprint": {"$ref": "#/$defs/fingerprint"}, "gate_fingerprint": {"$ref": "#/$defs/fingerprint"}}}
+    ]}
+  }
+}

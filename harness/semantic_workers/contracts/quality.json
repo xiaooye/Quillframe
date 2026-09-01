@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_model_contract_registry_v1",
-  "version": "8",
+  "version": "9",
   "principle": "Literary and narrative judgment belongs to model-readable contracts. Deterministic runtime binds exact contracts, candidates, provenance, permissions and execution identity; it does not reinterpret literary findings. Manager self-audit, Blind Reader, Semantic Rule Auditor and independent production review are distinct roles with distinct information boundaries.",
   "contracts": {
     "reader.reaction": {
@@ -422,7 +422,8 @@
         "required": [
           "candidate_fingerprint",
           "candidate_text",
-          "rule_material"
+          "rule_material",
+          "author_objectives"
         ],
         "properties": {
           "candidate_fingerprint": {
@@ -433,6 +434,80 @@
           "candidate_text": {
             "type": "string",
             "minLength": 1
+          },
+          "author_objectives": {
+            "type": "object",
+            "required": [
+              "schema",
+              "items",
+              "source_fingerprint",
+              "priority",
+              "authority",
+              "objectives_fingerprint"
+            ],
+            "properties": {
+              "schema": {
+                "enum": [
+                  "quillframe_current_author_objectives_v1"
+                ]
+              },
+              "items": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "objective_id",
+                    "statement",
+                    "source_refs",
+                    "hard"
+                  ],
+                  "properties": {
+                    "objective_id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "statement": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "source_refs": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "hard": {
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "source_fingerprint": {
+                "type": "string",
+                "minLength": 71,
+                "maxLength": 71
+              },
+              "priority": {
+                "enum": [
+                  "current_explicit_author_direction"
+                ]
+              },
+              "authority": {
+                "enum": [
+                  false
+                ]
+              },
+              "objectives_fingerprint": {
+                "type": "string",
+                "minLength": 71,
+                "maxLength": 71
+              }
+            },
+            "additionalProperties": false
           },
           "rule_material": {
             "type": "array",
@@ -511,6 +586,9 @@
         "A fail result requires at least one dimension marked fail and at least one evidence-supported finding with blocking=true. Report the actual defect and owning repair layer; never invent a finding or change the verdict merely to satisfy the format.",
         "An insufficient_evidence result requires at least one dimension marked insufficient_evidence. Describe the missing evidence instead of treating uncertainty as pass or fabricating a blocking defect.",
         "When supplied regression_evidence identifies an already-known mechanism, explicitly check whether the current candidate repeats that mechanism. A known recurrence that remains material is a quality-loop escape risk, not a new preference discovery; judge applicability semantically and do not ban literal phrases.",
+        "Assess every supplied current author objective separately. For each exact objective_id return met, not_met or uncertain with locatable prose evidence, impact scope and the model-recommended repair route; do not substitute general fluency, completeness or an average score for an unmet objective.",
+        "A hard objective marked not_met makes the overall result fail. If no hard objective is not_met but any hard objective is uncertain, return insufficient_evidence. Only met hard objectives are compatible with pass.",
+        "For applicable current objectives, inspect natural Chinese and situated English use, explanation that repeats already observable evidence, character choices that could be swapped between people, relationship-specific dialogue, humor arising from character and pressure, and factual continuity. These are semantic questions, never word, sentence, paragraph, dialogue or AIGC counts.",
         "This audit is manager/internal evidence only: independent=false. It may block dispatch and guide repair but cannot satisfy the independent production-review requirement or grant Canon/Framework/taste authority."
       ],
       "output_contract": {
@@ -521,7 +599,8 @@
           "report",
           "dimensions",
           "findings",
-          "evidence_refs"
+          "evidence_refs",
+          "objective_assessments"
         ],
         "properties": {
           "confidence": {
@@ -642,6 +721,64 @@
             "items": {
               "type": "string",
               "minLength": 1
+            }
+          },
+          "objective_assessments": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "objective_id",
+                "status",
+                "evidence_refs",
+                "impact_scope",
+                "repair_route",
+                "report"
+              ],
+              "properties": {
+                "objective_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "enum": [
+                    "met",
+                    "not_met",
+                    "uncertain"
+                  ]
+                },
+                "evidence_refs": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "impact_scope": {
+                  "enum": [
+                    "sentence",
+                    "paragraph",
+                    "scene",
+                    "chapter",
+                    "whole_candidate"
+                  ]
+                },
+                "repair_route": {
+                  "enum": [
+                    "no_change",
+                    "local_edit",
+                    "scene_realization",
+                    "fresh_realization"
+                  ]
+                },
+                "report": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
             }
           },
           "evidence_requests": {
@@ -940,7 +1077,8 @@
         "type": "object",
         "required": [
           "candidate_fingerprint",
-          "candidate_text"
+          "candidate_text",
+          "author_objectives"
         ],
         "properties": {
           "candidate_fingerprint": {
@@ -951,6 +1089,80 @@
           "candidate_text": {
             "type": "string",
             "minLength": 1
+          },
+          "author_objectives": {
+            "type": "object",
+            "required": [
+              "schema",
+              "items",
+              "source_fingerprint",
+              "priority",
+              "authority",
+              "objectives_fingerprint"
+            ],
+            "properties": {
+              "schema": {
+                "enum": [
+                  "quillframe_current_author_objectives_v1"
+                ]
+              },
+              "items": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "objective_id",
+                    "statement",
+                    "source_refs",
+                    "hard"
+                  ],
+                  "properties": {
+                    "objective_id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "statement": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "source_refs": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "hard": {
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "source_fingerprint": {
+                "type": "string",
+                "minLength": 71,
+                "maxLength": 71
+              },
+              "priority": {
+                "enum": [
+                  "current_explicit_author_direction"
+                ]
+              },
+              "authority": {
+                "enum": [
+                  false
+                ]
+              },
+              "objectives_fingerprint": {
+                "type": "string",
+                "minLength": 71,
+                "maxLength": 71
+              }
+            },
+            "additionalProperties": false
           },
           "reader_visible_context": {
             "type": "array",
@@ -985,7 +1197,10 @@
         "Support material strengths, concerns and the readiness conclusion with locatable evidence from the actual candidate in report and evidence_refs, using supplied references or clear paragraph/scene locations and a brief quotation or specific paraphrase where useful. Locate an inert stretch when relevant rather than asserting that the prose is flat without evidence; do not invent passages or treat intended effects as observed ones.",
         "Quiet daily life, specialized procedure and restrained narration can pass through their own earned pleasure, specificity or movement. Do not impose quotas of events, dialogue, emotion, body reactions, rewards, conflict or cliffhangers, and do not turn a stylistic preference or sentence length into a production defect.",
         "Do not reconstruct hidden creator intent, private character state, prior judgments or future payoff. Do not verify a manager-authored checklist, earlier Reader verdict or qualification receipt. Reader Pressure is a pre-draft prediction; its pass status and source references cannot prove that the final prose realizes a reward or a cost.",
-        "Report material production defects in natural semantic language. Named diagnostic vocabulary may help explain a finding but is not the judgment itself. Select pass/fail after the independent reading report; a pass requires evidenced positive reading value and no material readiness defect found within this review's scope.",
+        "Report material production defects in natural semantic language. Named diagnostic vocabulary may help explain a finding but is not the judgment itself. Select pass/fail/insufficient_evidence after the independent reading report; a pass requires evidenced positive reading value and no material readiness defect found within this review's scope.",
+        "Independently assess every supplied current author objective by exact objective_id. Return met, not_met or uncertain with locatable evidence, impact scope and an appropriate repair route. Do not let holistic fluency, completeness, logic or any average score erase an unmet explicit objective.",
+        "A hard objective marked not_met makes the overall result fail. If no hard objective is not_met but any hard objective is uncertain, return insufficient_evidence. Only met hard objectives are compatible with pass. This is objective-specific evidence, not reconstruction of hidden creator intent.",
+        "Where applicable, judge natural Chinese and situated English use, explanation that repeats observable evidence, low-replaceability character choices, relationship-specific dialogue, humor arising from character and pressure, and factual continuity semantically. Never use word, sentence, paragraph, dialogue or AIGC counts as the judgment.",
         "This bounded independent judgment is not measured reader retention and grants no Canon, Settlement or write authority."
       ],
       "output_contract": {
@@ -994,7 +1209,8 @@
           "confidence",
           "result",
           "report",
-          "evidence_refs"
+          "evidence_refs",
+          "objective_assessments"
         ],
         "properties": {
           "confidence": {
@@ -1005,7 +1221,8 @@
           "result": {
             "enum": [
               "pass",
-              "fail"
+              "fail",
+              "insufficient_evidence"
             ]
           },
           "report": {
@@ -1016,6 +1233,64 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "objective_assessments": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "objective_id",
+                "status",
+                "evidence_refs",
+                "impact_scope",
+                "repair_route",
+                "report"
+              ],
+              "properties": {
+                "objective_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "enum": [
+                    "met",
+                    "not_met",
+                    "uncertain"
+                  ]
+                },
+                "evidence_refs": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "impact_scope": {
+                  "enum": [
+                    "sentence",
+                    "paragraph",
+                    "scene",
+                    "chapter",
+                    "whole_candidate"
+                  ]
+                },
+                "repair_route": {
+                  "enum": [
+                    "no_change",
+                    "local_edit",
+                    "scene_realization",
+                    "fresh_realization"
+                  ]
+                },
+                "report": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
             }
           }
         },

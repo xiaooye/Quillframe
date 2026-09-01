@@ -55,7 +55,7 @@ CHARACTER_CONTEXT_FIELDS = ("identity", "agenda", "knowledge_boundary", "current
 
 MANDATORY_PRODUCTION_MECHANISMS = (
     "context_freeze", "story_canon_preflight", "scene_simulation",
-    "character_simulation", "reader_pressure", "event_first_raw_draft",
+    "character_simulation", "reader_pressure",
     "surface_realization", "reader_engagement", "continuity",
     "independent_semantic_gate", "user_visible_gate",
 )

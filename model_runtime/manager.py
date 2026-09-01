@@ -3,8 +3,11 @@ from __future__ import annotations
 import json
 from typing import Any, Protocol
 
-from .contracts import ModelServiceSnapshot
+from .contracts import (
+    CapabilityEvidence, ModelServiceSnapshot, model_version_fingerprint, now_iso,
+)
 from .endpoint import normalize_endpoint
+from .fiction_audition import selected_identity, validate_confirmation
 from .runtime import ModelRuntime
 from .secrets import SecretStore
 
@@ -110,4 +113,62 @@ class ModelServiceManager:
         return self.repository.list_services()
 
     def get(self, service_id: str) -> dict[str, Any]:
+        return self.repository.get_service(service_id)
+
+    def confirm_fiction_writing(self, confirmation: dict[str, Any]) -> dict[str, Any]:
+        receipt = validate_confirmation(confirmation)
+        service_id, model_id, selected_version = selected_identity(receipt)
+        snapshots: dict[str, ModelServiceSnapshot] = {}
+        for candidate in receipt["plan"]["candidate_models"]:
+            candidate_service = candidate["service_id"]
+            snapshot = snapshots.get(candidate_service)
+            if snapshot is None:
+                try:
+                    snapshot = self.runtime.snapshot(candidate_service)
+                except Exception:
+                    snapshot = self.hydrate(candidate_service)
+                snapshots[candidate_service] = snapshot
+            current_model = next(
+                (item for item in snapshot.models if item.model_id == candidate["model_id"]),
+                None,
+            )
+            if current_model is None:
+                raise ValueError("fiction audition candidate is not in the current Model Service snapshot")
+            if (
+                not current_model.protocol
+                or current_model.capability_state("text") != "verified"
+            ):
+                raise ValueError(
+                    "fiction audition candidates require resolved protocol and verified text capability"
+                )
+            if model_version_fingerprint(candidate_service, current_model) != candidate["model_version_fingerprint"]:
+                raise ValueError("fiction audition candidate version no longer matches the current snapshot")
+        snapshot = snapshots[service_id]
+        model = next((item for item in snapshot.models if item.model_id == model_id), None)
+        if model is None or model_version_fingerprint(service_id, model) != selected_version:
+            raise ValueError("selected fiction audition model version no longer matches")
+        model.metadata["quillframe_fiction_audition"] = receipt
+        model.capabilities["fiction_writing"] = CapabilityEvidence(
+            "fiction_writing", "verified", "manual_override", now_iso(),
+            detail="Author selected this provider-visible model version in a blinded fiction audition.",
+            evidence_ref=receipt["confirmation_fingerprint"],
+        )
+        snapshot.snapshot_fingerprint = ""
+        snapshot.__post_init__()
+        self.repository.save_snapshot(snapshot)
+        return self.repository.get_service(service_id)
+
+    def revoke_fiction_writing(self, service_id: str, model_id: str) -> dict[str, Any]:
+        try:
+            snapshot = self.runtime.snapshot(service_id)
+        except Exception:
+            snapshot = self.hydrate(service_id)
+        model = next((item for item in snapshot.models if item.model_id == model_id), None)
+        if model is None:
+            raise ValueError("fiction model is not in the current Model Service snapshot")
+        model.capabilities.pop("fiction_writing", None)
+        model.metadata.pop("quillframe_fiction_audition", None)
+        snapshot.snapshot_fingerprint = ""
+        snapshot.__post_init__()
+        self.repository.save_snapshot(snapshot)
         return self.repository.get_service(service_id)

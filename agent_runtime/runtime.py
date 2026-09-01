@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlsplit
 
 from model_runtime import EndpointPolicy, ModelRuntime, ModelRuntimeError, ModelTransport, SecretStore
 from model_runtime.manager import ModelServiceManager
@@ -72,6 +73,24 @@ class QuillframeAgentRuntime:
         ]
         return {"schema": "quillframe_model_service_list_v1", "items": items, "authority": False}
 
+    def supports_durable_model_request(
+        self, service_id: str, model_preference: str | None = None,
+    ) -> bool:
+        """Report the exact loopback relay path that consumes request keys."""
+        try:
+            snapshot = self.model_runtime.snapshot(service_id)
+            host = (urlsplit(snapshot.endpoint).hostname or "").lower()
+        except (ModelRuntimeError, ValueError):
+            return False
+        if host not in {"127.0.0.1", "::1", "localhost"}:
+            return False
+        models = [
+            model for model in snapshot.models
+            if model.model_id == "quillframe-chat-host-relay"
+            and model.protocol == "openai_chat_completions"
+        ]
+        return bool(models) and model_preference in {None, "quillframe-chat-host-relay"}
+
     def get_model_service(self, service_id: str) -> dict[str, Any]:
         if self.services is not None:
             return self._projection(self.services.get(service_id))
@@ -107,6 +126,16 @@ class QuillframeAgentRuntime:
         else:
             self.model_runtime.disconnect(service_id)
         return {"schema": "quillframe_model_service_delete_result_v1", "service_id": service_id, "deleted": True, "authority": False}
+
+    def confirm_fiction_writing(self, confirmation: dict[str, Any]) -> dict[str, Any]:
+        if self.services is None:
+            raise RuntimeError("fiction audition confirmation requires durable Model Service storage")
+        return self._projection(self.services.confirm_fiction_writing(confirmation))
+
+    def revoke_fiction_writing(self, service_id: str, model_id: str) -> dict[str, Any]:
+        if self.services is None:
+            raise RuntimeError("fiction capability revocation requires durable Model Service storage")
+        return self._projection(self.services.revoke_fiction_writing(service_id, model_id))
 
     def register_tool(self, spec: ToolSpec) -> None:
         self.tool_runtime.register(spec)

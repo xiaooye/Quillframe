@@ -1,0 +1,222 @@
+{
+  "schema": "quillframe_craft_sources_v1",
+  "observed_at": "2026-08-28",
+  "evidence_class": "methodology_not_quality_validation",
+  "external_code_imported": false,
+  "external_skills_installed": false,
+  "original_examples": "Quillframe-authored illustrative microfiction, not consumer-project material or human-validated gold.",
+  "sources": [
+    {
+      "id": "handbook",
+      "repository": "https://github.com/miserylee/webnovel-handbook",
+      "commit": "700b2a718c9d3c79f946b35abc7b037088532bac",
+      "license_observed": "MIT",
+      "paths": [
+        "docs/advanced-craft/93-scene-summary-exposition-show-tell-selection.md",
+        "docs/storycraft/27-comedy-gags-lightness.md",
+        "docs/storycraft/28-worldbuilding-setting-exposition.md"
+      ],
+      "adapt": [
+        "narrative_mode_choices",
+        "scene_specific_method_routing"
+      ],
+      "reject": [
+        "fixed_counts_as_universal_quality",
+        "mandatory_plot_change_for_every_detail"
+      ]
+    },
+    {
+      "id": "oh-story",
+      "repository": "https://github.com/zenstory-ai/oh-story-claudecode",
+      "commit": "70c294b20ce89440e70edb766b0446d3057bc077",
+      "license_observed": "MIT",
+      "paths": [
+        "skills/story-long-write/references/writing-craft.md",
+        "skills/story-long-write/references/genre-prose-cards.md"
+      ],
+      "adapt": [
+        "outline_is_not_prose_shape",
+        "non_default_bodily_emotion",
+        "bounded_genre_card_recall"
+      ],
+      "reject": [
+        "fixed_opening_event_count",
+        "fixed_prop_recurrences",
+        "universal_close_viewpoint"
+      ]
+    },
+    {
+      "id": "studio",
+      "repository": "https://github.com/Xiaoyangy/novel-studio",
+      "commit": "9da2ff15552e0881f4c832a1fec97291a5b8e5a1",
+      "license_observed": "Apache-2.0",
+      "paths": [
+        "assets/references/emotional-narrative-craft.md"
+      ],
+      "adapt": [
+        "emotional_residue",
+        "identity_and_relationship_in_dialogue"
+      ],
+      "reject": [
+        "fixed_physiology_action_speech_order"
+      ]
+    },
+    {
+      "id": "openwrite",
+      "repository": "https://github.com/LiPu-jpg/Openwrite",
+      "commit": "20500493c10a211fdf2560e69558da1c39eab3b4",
+      "license_observed": "Apache-2.0",
+      "paths": [
+        "craft/scene_craft.md"
+      ],
+      "adapt": [
+        "scene_function_variants",
+        "professional_and_quiet_scene_value"
+      ],
+      "reject": [
+        "fixed_exposition_paragraph_limit",
+        "mandatory_scene_sequence"
+      ]
+    },
+    {
+      "id": "webnovel-skills",
+      "repository": "https://github.com/tance-mang/chinese-webnovel-skills",
+      "commit": "ecf552f6930e769d8bbf17818ad3d5a864a7a70b",
+      "license_observed": "MIT",
+      "paths": [
+        "skills/dialogue/SKILL.md"
+      ],
+      "adapt": [
+        "task_scoped_guidance",
+        "speaker_specific_language"
+      ],
+      "reject": [
+        "short_speech_is_always_better",
+        "quotas_for_quotable_lines",
+        "gestures_as_default_emotion_replacement"
+      ]
+    },
+    {
+      "id": "humanize-chinese",
+      "repository": "https://github.com/fy-agent/humanize-chinese-writing",
+      "commit": "e284777b055717e029478623f6be6c1940ebfd2c",
+      "license_observed": "PolyForm-Noncommercial-1.0.0",
+      "rights_class": "analysis_only",
+      "paths": [
+        "SKILL.md"
+      ],
+      "adapt": [
+        "contextual_mismatch_as_ai_style",
+        "selective_organization_instead_of_complete_explanation",
+        "clustered_findings_before_word_level_edits"
+      ],
+      "reject": [
+        "nonfiction_lexical_patterns_as_fiction_blacklist",
+        "random_imperfection_as_human_voice"
+      ]
+    },
+    {
+      "id": "novel-craft",
+      "repository": "https://github.com/chaserr/novel-craft",
+      "commit": "355e0d6be08ca767548b2d83fdcac6b483f1a206",
+      "license_observed": "MIT",
+      "paths": [
+        "skills/zh-novel-polish/SKILL.md"
+      ],
+      "adapt": [
+        "remove_redundant_gloss_after_scene_evidence",
+        "preserve_established_author_voice_during_polish",
+        "separate_post_generation_diagnosis_from_drafting"
+      ],
+      "reject": [
+        "character_count_and_particle_quotas",
+        "fixed_chapter_ending_quota",
+        "mandatory_action_as_emotion_replacement",
+        "fixed_paragraph_length"
+      ]
+    },
+    {
+      "id": "web-novel-guidance",
+      "repository": "https://github.com/HZ-KMNO/web-novel-writing-guidance-skill",
+      "commit": "24dd6d40099c97c3120dc37942e8dc99263c0259",
+      "license_observed": "MIT",
+      "paths": [
+        "SKILL.md"
+      ],
+      "adapt": [
+        "complete_natural_chinese_units",
+        "repair_scene_causality_before_sentence_polish",
+        "spoken_language_must_belong_to_the_situation"
+      ],
+      "reject": [
+        "consumer_specific_case_rules",
+        "local_private_path_dependencies",
+        "mandatory_conflict_or_hook_in_every_chapter"
+      ]
+    },
+    {
+      "id": "ai-novel-skills",
+      "repository": "https://github.com/imerzzhu/ai-novel-writing-skills",
+      "commit": "0986c4882137d7d350700f3d13617ebec9889dd1",
+      "license_observed": "MIT",
+      "paths": [
+        "skills/webnovel-write/SKILL.md",
+        "skills/webnovel-polish/SKILL.md"
+      ],
+      "adapt": [
+        "separate_drafting_review_polish_stages"
+      ],
+      "reject": [
+        "short_sentences_as_a_genre_identity",
+        "two_to_three_line_paragraph_target",
+        "fixed_emotional_three_step_progression",
+        "fixed_post_payoff_summary_length",
+        "action_tags_as_default_dialogue_repair"
+      ]
+    },
+    {
+      "id": "novel-writing-skill",
+      "repository": "https://github.com/wgwtest/novel-writing",
+      "commit": "b6382cf7ff29caa83830646432d8010ca96120f5",
+      "license_observed": "MIT",
+      "paths": [
+        "novel-writing/references/dialogue-and-behavior.md",
+        "novel-writing/references/scene-causality-and-agency.md",
+        "novel-writing/references/style-fidelity.md"
+      ],
+      "adapt": [
+        "dialogue_as_behavior_under_pressure",
+        "reaction_must_change_the_next_beat",
+        "scene_roles_and_causal_spine_as_diagnostic_scaffold",
+        "preserve_style_bearing_material_during_revision"
+      ],
+      "reject": [
+        "decorative_gesture_density_as_quality",
+        "procedure_motion_as_a_substitute_for_human_pressure",
+        "causal_scaffold_as_a_mandatory_scene_formula"
+      ]
+    },
+    {
+      "id": "novel-style-skills",
+      "repository": "https://github.com/xianzl/novel-style-skills",
+      "commit": "649308e305d1cda1ce4b1f9154115981e9240713",
+      "license_observed": "MIT",
+      "paths": [
+        "novel-use/SKILL.md",
+        "forge-novel-style/SKILL.md",
+        "forge-novel-style/references/novel_style_schema.md"
+      ],
+      "adapt": [
+        "structured_mechanism_profile_as_intermediate_artifact",
+        "story_engine_before_surface_style",
+        "separate_distillation_runtime_use_and_evaluation"
+      ],
+      "reject": [
+        "named_author_profiles_as_runtime_targets",
+        "percentage_fusion_of_author_identities",
+        "source_passages_or_signature_cadence_in_writer_context",
+        "fixed_story_engine_checklist_as_universal_scene_formula"
+      ]
+    }
+  ]
+}

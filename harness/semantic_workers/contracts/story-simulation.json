@@ -1,11 +1,11 @@
 {
   "schema": "quillframe_model_contract_registry_v1",
-  "version": "5",
-  "principle": "Character and scene causality are semantic simulation work. Private character state may justify a separate semantic role, but schemas stay thin: deterministic runtime binds identity, visibility, story-time eligibility, provenance and evidence references; models decide motivation, action, causal collision and dramatic usefulness.",
+  "version": "6",
+  "principle": "Character and scene causality are semantic simulation work. Models turn bounded private state into beliefs, misperceptions, viable strategies and a selected action before scene collision. Deterministic runtime binds identity, visibility, story-time eligibility, provenance and evidence references; private deliberation never becomes Writer prose payload.",
   "contracts": {
     "character.action_propose": {
       "kind": "artifact_audit",
-      "purpose": "Simulate what one important character is likely to try next from bounded private state and authorized perspective evidence. Character state is causal evidence, not prose payload or a field-by-field serialization obligation.",
+      "purpose": "Privately enact what one important character believes, misreads, wants, fears and may try next; compare two or three viable strategies and select one from bounded perspective evidence. This deliberation is causal evidence, not prose payload.",
       "forbidden_input_keys": [
         "narrator_omniscience",
         "reader_only_knowledge",
@@ -100,28 +100,56 @@
       },
       "rubric": [
         "Use only supplied character-visible state and evidence whose available_from_story_order is not later than current_story_order. Do not give the character narrator, reader, research, future-plan or other-character knowledge.",
-        "Treat beliefs, goals, fears, assumptions, relationships, memories and labels as semantic evidence, not mandatory slots that must each appear in the decision. Reason about plausible inference rather than applying a field-equality story engine.",
+        "State the character's current belief, material misperception, desired gain, feared loss and expectations of other present people. Ground them in supplied evidence and keep uncertainty explicit; do not invent a hidden fact to fill a slot.",
         "Start from the character's current private agenda and immediate situation, not from what would make an outline convenient. Preserve independent agency, including resistance, misunderstanding, delay, concealment or side objectives when causally supported.",
-        "Prefer concrete actions or tactics that can create observable consequences. Character consistency does not mean predictability, and a contradicted or uncertain fact may still matter as something the character believes, fears, doubts or reacts against.",
+        "Offer exactly two or three genuinely viable strategies. For each, identify the gain, risk or cost and why it is rejected when not selected. Select one strategy and state how its action constrains or changes other people. Character consistency does not mean predictability.",
+        "Describe relationship-specific interaction tactics: how this character may speak, evade, test, concede or change the subject with the actual people present. Do not draft final dialogue.",
         "Cite the supplied evidence actually used. The runtime may verify that cited references exist and are temporally eligible; it must not decide whether that evidence semantically justifies the action.",
-        "Keep the answer compact. Do not serialize a Character Sheet into a proposal record and do not draft final dialogue or narration."
+        "Keep the answer compact. Do not serialize a Character Sheet into the record, expose chain-of-thought, or draft final dialogue or narration."
       ],
       "output_contract": {
         "type": "object",
-        "required": ["confidence", "character_id", "active_agenda", "proposals"],
+        "required": ["confidence", "character_id", "active_agenda", "private_state", "proposals", "selected_strategy_id", "relationship_specific_interaction"],
         "properties": {
           "confidence": {"type": "number", "minimum": 0, "maximum": 1},
           "character_id": {"type": "string", "minLength": 1},
           "active_agenda": {"type": "string", "minLength": 1},
+          "private_state": {
+            "type": "object",
+            "required": ["current_belief", "current_misperception", "desired_gain", "feared_loss", "expectations_of_others"],
+            "properties": {
+              "current_belief": {"type": "string", "minLength": 1},
+              "current_misperception": {"type": "string", "minLength": 1},
+              "desired_gain": {"type": "string", "minLength": 1},
+              "feared_loss": {"type": "string", "minLength": 1},
+              "expectations_of_others": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["character_ref", "expectation"],
+                  "properties": {
+                    "character_ref": {"type": "string", "minLength": 1},
+                    "expectation": {"type": "string", "minLength": 1}
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
           "report": {"type": "string"},
           "proposals": {
             "type": "array",
-            "minItems": 1,
+            "minItems": 2,
+            "maxItems": 3,
             "items": {
               "type": "object",
-              "required": ["action", "knowledge_basis"],
+              "required": ["strategy_id", "action", "gain", "risk_or_cost", "rejection_reason", "knowledge_basis"],
               "properties": {
+                "strategy_id": {"type": "string", "minLength": 1},
                 "action": {"type": "string", "minLength": 1},
+                "gain": {"type": "string", "minLength": 1},
+                "rejection_reason": {"type": ["string", "null"]},
                 "knowledge_basis": {
                   "type": "array",
                   "items": {
@@ -142,6 +170,22 @@
                 "motive_basis": {"type": "string"},
                 "location_or_task_effect": {"type": "string"},
                 "uncertainty": {"type": "string"}
+              },
+              "additionalProperties": false
+            }
+          },
+          "selected_strategy_id": {"type": "string", "minLength": 1},
+          "relationship_specific_interaction": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["character_ref", "tactic", "observable_move"],
+              "properties": {
+                "character_ref": {"type": "string", "minLength": 1},
+                "tactic": {
+                  "enum": ["speak", "evade", "test", "concede", "redirect", "withhold"]
+                },
+                "observable_move": {"type": "string", "minLength": 1}
               },
               "additionalProperties": false
             }

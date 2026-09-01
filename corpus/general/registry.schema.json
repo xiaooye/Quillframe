@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.local/schemas/public-corpus-registry-v1.json",
+  "title": "Quillframe public general corpus repository registry v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "registry_version",
+    "status",
+    "license_file",
+    "release_schema",
+    "releases"
+  ],
+  "properties": {
+    "schema": {"const": "quillframe_public_corpus_registry_v1"},
+    "registry_version": {"const": 1},
+    "status": {
+      "enum": ["awaiting_first_validated_release", "active"]
+    },
+    "license_file": {"const": "LICENSE"},
+    "release_schema": {
+      "const": "quillframe_public_corpus_manifest_v1"
+    },
+    "releases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "public_study_id",
+          "profile",
+          "work_count",
+          "manifest_path",
+          "manifest_fingerprint"
+        ],
+        "properties": {
+          "public_study_id": {
+            "type": "string",
+            "pattern": "^PS-[0-9a-f]{32}$"
+          },
+          "profile": {"enum": ["general", "adult_explicit"]},
+          "work_count": {"const": 120},
+          "manifest_path": {
+            "type": "string",
+            "pattern": "^corpus/general/PS-[0-9a-f]{32}/manifest\\.json$"
+          },
+          "manifest_fingerprint": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"status": {"const": "awaiting_first_validated_release"}}
+      },
+      "then": {
+        "properties": {"releases": {"maxItems": 0}}
+      }
+    },
+    {
+      "if": {
+        "properties": {"status": {"const": "active"}}
+      },
+      "then": {
+        "properties": {"releases": {"minItems": 1}}
+      }
+    }
+  ]
+}

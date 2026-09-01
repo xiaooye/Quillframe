@@ -29,6 +29,7 @@ from peer_chat_relay import validate_peer_result  # noqa: E402
 from registered_contract_binding import validate_registered_job  # noqa: E402
 from semantic_worker_router import make_contract_job, validate_result  # noqa: E402
 from candidate_qualification import validate_qualification_receipt  # noqa: E402
+from author_objective_gate import validate_objective_assessments  # noqa: E402
 
 SCHEMA = "quillframe_production_readiness_v1"
 CATEGORIES = {"surface", "reader_engagement", "continuity", "semantic_rules", "semantic_independent"}
@@ -164,9 +165,12 @@ def _registered_semantic_gate(raw: dict[str, Any], *, category: str, candidate_f
     if not isinstance(judgment, dict):
         raise ValueError(f"{category}.semantic judgment required")
     semantic_result = judgment.get("result")
-    if category == "semantic_rules":
+    objective_summary: dict[str, Any] | None = None
+    if category == "semantic_independent" and "author_objectives" in payload:
+        objective_summary = validate_objective_assessments(payload.get("author_objectives"), judgment)
+    if category in {"semantic_rules", "semantic_independent"}:
         if semantic_result not in {"pass", "fail", "insufficient_evidence"}:
-            raise ValueError("semantic_rules judgment.result must be pass|fail|insufficient_evidence")
+            raise ValueError(f"{category} judgment.result must be pass|fail|insufficient_evidence")
         derived_status = "pending" if semantic_result == "insufficient_evidence" else semantic_result
     else:
         if semantic_result not in {"pass", "fail"}:
@@ -178,7 +182,7 @@ def _registered_semantic_gate(raw: dict[str, Any], *, category: str, candidate_f
         raise ValueError(f"{category}.status contradicts registered semantic result")
 
     worker = result.get("worker") if isinstance(result.get("worker"), dict) else {}
-    return {
+    gate_result = {
         "category": category,
         "status": derived_status,
         "candidate_fingerprint": candidate_fingerprint,
@@ -197,6 +201,13 @@ def _registered_semantic_gate(raw: dict[str, Any], *, category: str, candidate_f
         },
         "semantic_content_reinterpreted_by_runtime": False,
     }
+    if objective_summary is not None:
+        gate_result.update({
+            "author_objective_status": objective_summary["status"],
+            "author_objectives_fingerprint": objective_summary["objectives_fingerprint"],
+            "objective_assessments": objective_summary["assessments"],
+        })
+    return gate_result
 
 
 def _plain_gate(raw: dict[str, Any], *, category: str, candidate_fingerprint: str) -> dict[str, Any]:

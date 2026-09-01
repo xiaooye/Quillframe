@@ -10,7 +10,6 @@ from __future__ import annotations
 import hashlib
 import ctypes
 import errno
-import fcntl
 import json
 import os
 import re
@@ -25,6 +24,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator
+
+try:  # POSIX-only; native restore already fails closed on unsupported hosts.
+    import fcntl
+except ImportError:  # pragma: no cover - exercised by the Windows import test
+    fcntl = None  # type: ignore[assignment]
 
 from project_resolution import validate_project_id
 
@@ -1212,6 +1216,90 @@ def _validate_current_schema(
             )
 
 
+def _validated_schema_prefix(
+    conn: sqlite3.Connection,
+    scope: str,
+    fragments: list[_SchemaFragment],
+) -> int:
+    """Return the exact installed fragment prefix, rejecting gaps and drift."""
+
+    try:
+        rows = conn.execute(
+            "SELECT scope,version,name,checksum,applied_at FROM schema_fragments "
+            "ORDER BY scope,version"
+        ).fetchall()
+    except sqlite3.DatabaseError as exc:
+        raise SchemaContractError(f"unable to read schema fragment ledger: {exc}") from exc
+    if not rows or len(rows) > len(fragments):
+        _raise_schema_contract("schema_fragments ledger is not a supported release prefix")
+    for index, row in enumerate(rows):
+        fragment = fragments[index]
+        if (
+            tuple(row[:3]) != (scope, fragment.version, fragment.name)
+            or not isinstance(row[4], str)
+            or not row[4].strip()
+        ):
+            _raise_schema_contract("schema_fragments ledger is not a continuous release prefix")
+        if row[3] != fragment.checksum:
+            raise SchemaChecksumError(
+                f"{scope} schema fragment {fragment.name} checksum mismatch: "
+                f"{row[3]} != {fragment.checksum}"
+            )
+    _validate_current_schema(conn, scope, fragments[: len(rows)])
+    return len(rows)
+
+
+def _apply_schema_upgrade(
+    conn: sqlite3.Connection,
+    fragments: list[_SchemaFragment],
+    scope: str,
+) -> list[dict[str, Any]]:
+    """Atomically append missing, checksum-known schema fragments."""
+
+    if conn.in_transaction:
+        raise SchemaContractError("schema upgrade requires an idle SQLite connection")
+    applied: list[dict[str, Any]] = []
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        applied = _append_schema_fragments_locked(conn, fragments, scope)
+        conn.commit()
+    except Exception:
+        if conn.in_transaction:
+            conn.rollback()
+        raise
+    return applied
+
+
+def _append_schema_fragments_locked(
+    conn: sqlite3.Connection,
+    fragments: list[_SchemaFragment],
+    scope: str,
+) -> list[dict[str, Any]]:
+    """Append a verified release suffix inside the caller's write transaction."""
+
+    if not conn.in_transaction:
+        raise SchemaContractError("locked schema upgrade requires a write transaction")
+    prefix = _validated_schema_prefix(conn, scope, fragments)
+    stamp = now_iso()
+    applied: list[dict[str, Any]] = []
+    for fragment in fragments[prefix:]:
+        for statement in _statements(fragment.sql):
+            conn.execute(statement)
+        conn.execute(
+            "INSERT INTO schema_fragments(scope,version,name,checksum,applied_at) "
+            "VALUES(?,?,?,?,?)",
+            (scope, fragment.version, fragment.name, fragment.checksum, stamp),
+        )
+        applied.append({
+            "scope": scope,
+            "version": fragment.version,
+            "name": fragment.name,
+            "checksum": fragment.checksum,
+        })
+    _validate_current_schema(conn, scope, fragments)
+    return applied
+
+
 def _assert_fresh_or_current_schema(conn: sqlite3.Connection, scope: str) -> bool:
     objects = _schema_object_map(conn)
     if not objects:
@@ -1257,8 +1345,7 @@ def apply_schema(conn: sqlite3.Connection, scope: str) -> list[dict[str, Any]]:
     fragments = _schema_fragments(scope)
     if _assert_fresh_or_current_schema(conn, scope):
         return _apply_fresh_schema(conn, fragments, scope)
-    _validate_current_schema(conn, scope, fragments)
-    return []
+    return _apply_schema_upgrade(conn, fragments, scope)
 
 
 def _validate_project_chapter_rows(conn: sqlite3.Connection) -> None:
@@ -1322,9 +1409,9 @@ def _validate_project_database_file(path: Path, project_id: str, scope: str) -> 
             if not objects or "quillframe_schema_identity" not in objects:
                 raise BundleSchemaError("project.sqlite is not an existing native 1.0 database")
             try:
-                apply_schema(conn, "project")
+                _validated_schema_prefix(conn, "project", _schema_fragments("project"))
             except SchemaContractError as exc:
-                raise BundleSchemaError(f"project schema is not exact: {exc}") from exc
+                raise BundleSchemaError(f"project schema is not a known exact release: {exc}") from exc
             except (sqlite3.DatabaseError, ValueError) as exc:
                 raise BundleDatabaseError(f"project schema could not be validated: {exc}") from exc
             for pragma in ("quick_check", "integrity_check"):
@@ -1705,11 +1792,12 @@ class QuillframeStore:
         *,
         database_fd: int | None = None,
     ) -> sqlite3.Connection:
-        """Begin an identity-checked write transaction without schema application.
+        """Begin an identity-checked write transaction and known-prefix upgrade.
 
         The returned connection remains inside ``BEGIN IMMEDIATE`` so callers
         can perform the first Project business writes on this same locked
-        connection. Existing state is never passed through ``apply_schema``.
+        connection. An exact older 1.0 release prefix is upgraded only after
+        the manifest identity is proven, and rolls back with the transaction.
         """
         if self.read_only:
             raise ValueError("strict existing Project open requires a writable store")
@@ -1723,6 +1811,23 @@ class QuillframeStore:
         conn = _connect_existing_fd(database_fd)
         try:
             conn.execute("BEGIN IMMEDIATE")
+            schema_rows = conn.execute(
+                "SELECT scope,release FROM quillframe_schema_identity"
+            ).fetchall()
+            identity_rows = conn.execute(
+                "SELECT project_id,title,language,project_schema_version FROM project_identity"
+            ).fetchall()
+            if len(schema_rows) != 1 or tuple(schema_rows[0]) != ("project", SCHEMA_RELEASE):
+                raise ProjectStateError(
+                    f"SQLite schema identity must be exactly project:{SCHEMA_RELEASE}"
+                )
+            if len(identity_rows) != 1:
+                raise ProjectStateError("SQLite project_identity must contain exactly one row")
+            if tuple(identity_rows[0]) != (project_id, title, language, SCHEMA_VERSION):
+                raise ProjectIdentityMismatchError(
+                    "SQLite project_identity does not match the Project manifest"
+                )
+            _append_schema_fragments_locked(conn, _schema_fragments("project"), "project")
             self.assert_existing_project_identity(conn, project_id, title, language)
             return conn
         except Exception:
@@ -2406,7 +2511,7 @@ class QuillframeStore:
     @staticmethod
     def _restore_open_lock(projects_fd: int, project_id: str) -> int:
         nofollow = getattr(os, "O_NOFOLLOW", 0)
-        if not nofollow:
+        if not nofollow or fcntl is None:
             raise RestoreIncompleteError(
                 _public_restore_error_message("restore_native_unavailable"),
                 code="restore_native_unavailable",
@@ -2435,7 +2540,8 @@ class QuillframeStore:
         if lock_fd is None:
             return
         try:
-            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            if fcntl is not None:
+                fcntl.flock(lock_fd, fcntl.LOCK_UN)
         finally:
             os.close(lock_fd)
 

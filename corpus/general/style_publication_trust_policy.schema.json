@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quillframe.local/schemas/style-publication-trust-policy-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "policy_version", "status", "roles", "policy_fingerprint"],
+  "properties": {
+    "schema": {"const": "quillframe_style_publication_trust_policy_v1"},
+    "policy_version": {"const": 1},
+    "status": {"enum": ["unconfigured", "active"]},
+    "roles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provenance", "semantic_leakage", "blind_ab", "promotion", "manual_approval"],
+      "properties": {
+        "provenance": {"$ref": "#/$defs/role"},
+        "semantic_leakage": {"$ref": "#/$defs/role"},
+        "blind_ab": {"$ref": "#/$defs/role"},
+        "promotion": {"$ref": "#/$defs/role"},
+        "manual_approval": {"$ref": "#/$defs/role"}
+      }
+    },
+    "policy_fingerprint": {"$ref": "#/$defs/fingerprint"}
+  },
+  "$defs": {
+    "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key_id", "secret_fingerprint"],
+      "properties": {
+        "key_id": {"oneOf": [{"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,79}$"}, {"type": "null"}]},
+        "secret_fingerprint": {"oneOf": [{"$ref": "#/$defs/fingerprint"}, {"type": "null"}]}
+      }
+    }
+  }
+}

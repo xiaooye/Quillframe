@@ -1,0 +1,188 @@
+{
+  "schema": "quillframe_style_corpus_ablation_suite_v1",
+  "suite_version": "synthetic-2",
+  "repeat_count": 2,
+  "provenance": {
+    "evidence_class": "synthetic_test",
+    "authorship": "original_synthetic_assistant_authored",
+    "derived_from_external_prose": false,
+    "derived_from_consumer": false,
+    "human_quality_validated": false,
+    "model_quality_validated": false
+  },
+  "work_universe": ["WORK-A", "WORK-B", "WORK-C"],
+  "scene_function_universe": ["dialogue", "action", "body_appearance"],
+  "reading_criteria": [
+    "content_fidelity：正文是否履行任务、事实与视角边界",
+    "causal_movement：动作、反应与信息是否持续改变下一步条件",
+    "target_mechanism：当前 scene function 所需机制是否真正生效",
+    "naturalness：叙述、动作和对话是否自然且不过度显露方法",
+    "readability：空间、指代、句段与信息负荷是否清楚易读",
+    "engagement：场景压力、好奇或情感牵引是否支持继续阅读",
+    "diversity：表达与结构是否有合乎语境的变化而非机械重复",
+    "originality：读感是否新鲜而非套用陈词；这不替代独立泄漏检查"
+  ],
+  "reference_samples": [
+    {
+      "work_id": "WORK-A",
+      "text": "雨棚边缘滴着水。守门人把旧车票夹进册页，只说末班车早已改道。女孩没有追问，她看见站牌背面新钉的箭头，便提起箱子走向另一条街。"
+    },
+    {
+      "work_id": "WORK-B",
+      "text": "钟声落下时，院墙上的影子刚好分成两截。送信人松开缰绳，让马自己去饮水；他先摸了摸封蜡，再把信塞到最底层的粮袋下面。"
+    },
+    {
+      "work_id": "WORK-C",
+      "text": "早餐铺只剩一张空桌。老板把写错的价牌翻过去，用粉笔补上一行小字。排队的人群向前挪了半步，又同时停住，等巷口那辆迟到的货车。"
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "CASE-DIALOGUE",
+      "heldout_work_id": "WORK-A",
+      "scene_function": "dialogue",
+      "task": "写一段两名旧友在停电餐馆里谈判的中文小说正文；让真实诉求逐步显露，但不要解释谈判技巧。",
+      "context": {
+        "content_profile": "general",
+        "chapter_position": "middle",
+        "pov": "limited",
+        "required_facts": ["一人需要钥匙", "另一人需要对方留下"]
+      },
+      "randomness": {
+        "seed": "SYN-DIALOGUE-17",
+        "temperature_ppm": 420000,
+        "top_p_ppm": 910000
+      },
+      "arms": {
+        "baseline": {
+          "text": "灯灭后，餐馆里只剩窗外的车灯一遍遍扫过桌面。林乔说她来拿钥匙。周衡把钥匙压在杯底，说门已经换过锁。她笑了一下，问他为什么还把旧钥匙带在身上。周衡没有回答，只把另一只杯子推到她面前。",
+          "craft_binding": {
+            "contract": "unguided",
+            "version": "1"
+          }
+        },
+        "current_craft_v4": {
+          "text": "车灯掠过餐馆时，周衡的手从杯沿挪到钥匙上。\n\n“给我。”林乔说。\n\n“锁换了。”\n\n“那你攥着它做什么？”\n\n下一束光照亮他空着的对面座位。他把椅子往外拉了半寸：“先坐。电来之前，总得有人陪我把这顿饭吃完。”",
+          "craft_binding": {
+            "contract": "current_craft",
+            "version": "4",
+            "cards": ["core-v4"]
+          }
+        },
+        "corpus_candidate": {
+          "text": "停电把餐馆切成一块安静的黑。\n\n“钥匙。”林乔摊开手。\n\n周衡把金属轻轻碰在杯壁上，却没有递过去：“你明早走？”\n\n“这和钥匙没关系。”\n\n“有。”他听见她的指甲刮过桌面，声音很短，“门能开，人也能回来。”\n\n林乔收回手。下一辆车的光经过时，她坐进了对面的椅子。",
+          "craft_binding": {
+            "contract": "source_free_corpus_candidate",
+            "version": "1",
+            "evidence_work_ids": ["WORK-B", "WORK-C"],
+            "excluded_work_id": "WORK-A",
+            "training_scene_functions": ["action", "body_appearance"],
+            "excluded_scene_function": "dialogue",
+            "writer_projection": {
+              "operations": ["让言外诉求借动作和答非所问逐步显形"],
+              "failure_boundary": "不要把所有潜台词都改成省略句"
+            }
+          }
+        }
+      }
+    },
+    {
+      "case_id": "CASE-ACTION",
+      "heldout_work_id": "WORK-B",
+      "scene_function": "action",
+      "task": "写一段维修工在倾斜的观景塔里救出受困孩子的中文小说正文；保持空间因果清楚，并保留一次计划受阻。",
+      "context": {
+        "content_profile": "general",
+        "chapter_position": "climax",
+        "pov": "limited",
+        "required_facts": ["楼梯正在断裂", "安全绳只够一人先下"]
+      },
+      "randomness": {
+        "seed": "SYN-ACTION-29",
+        "temperature_ppm": 420000,
+        "top_p_ppm": 910000
+      },
+      "arms": {
+        "baseline": {
+          "text": "塔身又倾了一下，维修工抓住扶手，朝平台上的孩子爬去。他系好安全绳，正要带孩子下降，楼梯忽然断开。两人被困在上层，他只好寻找别的路线，最后看见检修梯还能通向外侧。",
+          "craft_binding": {
+            "contract": "unguided",
+            "version": "1"
+          }
+        },
+        "current_craft_v4": {
+          "text": "第三段楼梯往下塌时，秦师傅扑到平台边，扳手从口袋里飞了出去。孩子缩在信号箱后面。\n\n他扣住安全绳，先把挂钩别上孩子的腰带。绳子绷直，却只垂到断口上方。原定路线没了。\n\n塔身继续向湖面倾斜。秦师傅抬头，看见外墙检修梯正被风吹得撞响护栏。",
+          "craft_binding": {
+            "contract": "current_craft",
+            "version": "4",
+            "cards": ["core-v4"]
+          }
+        },
+        "corpus_candidate": {
+          "text": "脚下的钢阶先是弹了一下，随后整段向塔心折去。秦师傅抱住立柱，等震动过去才抬眼：孩子在上层平台，安全绳却只剩六米。\n\n“先送你下去。”他把挂钩推过去。\n\n孩子刚扣好，断梯又滑落半层，把出口封死。秦师傅没有拉绳。他沿着绷紧的钢索看向外墙，那里有一扇维护窗；每次塔身左倾，窗框就会碰到检修梯。下一次碰撞前，他们有四秒。",
+          "craft_binding": {
+            "contract": "source_free_corpus_candidate",
+            "version": "1",
+            "evidence_work_ids": ["WORK-A", "WORK-C"],
+            "excluded_work_id": "WORK-B",
+            "training_scene_functions": ["dialogue", "body_appearance"],
+            "excluded_scene_function": "action",
+            "writer_projection": {
+              "operations": ["让每个动作改变下一步可用条件"],
+              "failure_boundary": "不能用连续短句替代空间关系"
+            }
+          }
+        }
+      }
+    },
+    {
+      "case_id": "CASE-BODY",
+      "heldout_work_id": "WORK-C",
+      "scene_function": "body_appearance",
+      "task": "写一段女主角在服装店试穿礼服并判断陌生搭档是否可靠的中文小说正文；身体和外貌细节要进入视角判断与关系变化。",
+      "context": {
+        "content_profile": "general",
+        "chapter_position": "early",
+        "pov": "limited",
+        "required_facts": ["礼服胸围不合", "搭档主动调整遮挡位置"]
+      },
+      "randomness": {
+        "seed": "SYN-BODY-43",
+        "temperature_ppm": 420000,
+        "top_p_ppm": 910000
+      },
+      "arms": {
+        "baseline": {
+          "text": "镜中的礼服很漂亮，却不适合她的巨乳身材，胸口绷得太紧。陌生搭档站在旁边，看起来高大英俊。他发现她不自在，便移到门边挡住店员的视线。她觉得这个人也许比想象中可靠。",
+          "craft_binding": {
+            "contract": "unguided",
+            "version": "1"
+          }
+        },
+        "current_craft_v4": {
+          "text": "礼服拉链停在肩胛下方，镜里那道银线把她的腰收得利落，也把巨乳处的布料拉出两道危险的褶。她正要叫店员，门帘先被一只手按住。\n\n新搭档没有看镜子。他侧身站到灯下，用自己的肩背挡住外面的人：“别动，我让他们拿大一码。”\n\n她原本扣在胸前的手，慢慢松开了一根手指。",
+          "craft_binding": {
+            "contract": "current_craft",
+            "version": "4",
+            "cards": ["core-v4"]
+          }
+        },
+        "corpus_candidate": {
+          "text": "拉链只上到一半，礼服已经把她的巨乳托得过分醒目。许妍先看见的却是镜角那道缝：门帘没合严，店员正往里张望。\n\n陌生搭档顺着她的视线转身，没有评价她的身材，也没有假装没看见。他把衣架横到门帘前，又退到她能看清双手的位置：“我守门。你决定换不换。”\n\n镜里，他宽肩形成的遮挡恰好停在边界外。许妍把备用钥匙从包底挪到了外袋。",
+          "craft_binding": {
+            "contract": "source_free_corpus_candidate",
+            "version": "1",
+            "evidence_work_ids": ["WORK-A", "WORK-B"],
+            "excluded_work_id": "WORK-C",
+            "training_scene_functions": ["dialogue", "action"],
+            "excluded_scene_function": "body_appearance",
+            "writer_projection": {
+              "operations": ["让身体细节沿视角注意顺序承担关系判断"],
+              "failure_boundary": "不要因解剖词汇自动切换内容分区"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

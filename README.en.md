@@ -119,9 +119,9 @@ Read the deeper contracts: [Architecture](docs/architecture.en.md) · [Model Run
   <img src="docs/assets/architecture/production-graph.en.svg" alt="Quillframe long-form fiction production lifecycle" width="100%" />
 </picture>
 
-DRAFT / REVISE runs through bounded Context, Story/Canon preflight, scene and character simulation, reader pressure, event-first drafting, surface realization, candidate qualification, independent review when required, repair/challenger generation, reader engagement, continuity, and a user-visible gate.
+DRAFT / REVISE runs through bounded Context, Story/Canon preflight, private character enactment and scene resolution, a Scene Realization Contract with model-composed Writer context, Reader Pressure, one direct Surface Writer, candidate fingerprint freeze, Reader Engagement, Continuity, objective-bound qualification, repair/comparison when needed, independent review, and a user-visible gate.
 
-**Raw Draft is internal. Review is not Accepted. Accepted is not Settled.**
+**The direct candidate remains internal until release. Review is not Accepted. Accepted is not Settled.**
 
 `stored ≠ injected` · `Plan ≠ Canon` · `Review ≠ Accepted` · `Accepted ≠ Settled` · `autosave ≠ Accepted` · `revision ≠ Canon` · `Corpus ≠ Canon` · `persistence ≠ authority`
 

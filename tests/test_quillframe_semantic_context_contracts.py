@@ -14,6 +14,7 @@ from unittest.mock import Mock, patch
 from agent_runtime import AgentResult, AgentRunner, ToolRuntime
 from harness.context_runtime import fingerprint
 from model_runtime import ModelTurn
+from model_runtime.deadlines import DURABLE_REQUEST_TIMEOUT_MS
 from model_runtime.structured_output import validate_structured_text
 from persistence.quillframe_sqlite import fingerprint_text
 from production_runtime.contracts import ProductionRunError
@@ -60,11 +61,23 @@ class SemanticContextContractTests(unittest.TestCase):
         job = make_contract_job("character.action_propose", payload["character_id"], payload,
                                 source_session_id="SES-ECHO-FIXTURE", handoff_id="HANDOFF-ECHO-FIXTURE")
         judgment = {"confidence": 0.8, "character_id": payload["character_id"], "active_agenda": agenda,
-                    "proposals": [{"action": action, "knowledge_basis": [{"evidence_id": "OBS-CURRENT", "use": "uncertainty"}]}],
+                    "private_state": {"current_belief": "The record is withheld.", "current_misperception": "Waiting is harmless.",
+                                      "desired_gain": "Obtain the record.", "feared_loss": "Lose access.", "expectations_of_others": []},
+                    "proposals": [
+                        {"strategy_id": "STRATEGY-WAIT", "action": action, "gain": "Preserve access.",
+                         "risk_or_cost": "The record may disappear.", "rejection_reason": None,
+                         "knowledge_basis": [{"evidence_id": "OBS-CURRENT", "use": "uncertainty"}]},
+                        {"strategy_id": "STRATEGY-PRESS", "action": "Press for the key now.", "gain": "Gain the record quickly.",
+                         "risk_or_cost": "Trigger refusal.", "rejection_reason": "The closed drawer provides too little leverage.",
+                         "knowledge_basis": [{"evidence_id": "FACT-OWN", "use": "challenges"}]},
+                    ],
+                    "selected_strategy_id": "STRATEGY-WAIT", "relationship_specific_interaction": [],
                     **(echo_changes or {})}
         raw = " \n" + json.dumps(judgment, ensure_ascii=False, indent=2) + "\n"
         model = SimpleNamespace(
-            select_model=Mock(return_value=SimpleNamespace(model_id="fixture-model", protocol="openai_chat_completions")),
+            select_model=Mock(return_value=SimpleNamespace(
+                model_id="fixture-model", display_name=None, protocol="openai_chat_completions", metadata={}
+            )),
             invoke=Mock(return_value=ModelTurn("openai_chat_completions", "fixture-model", text=raw, finish_reason="stop")),
         )
         calls, results = [], []
@@ -200,8 +213,15 @@ class SemanticContextContractTests(unittest.TestCase):
             calls.append(job)
             source = job.context[0]["registered_semantic_job"]["input"]["payload"]
             judgment = {"confidence": 1.0, "character_id": source["character_id"], "active_agenda": source["active_agenda"],
-                        "proposals": [{"action": "Request the key.", "knowledge_basis": [
-                            {"evidence_id": evidence_id, "use": "supports"} for evidence_id in job.context[0]["eligible_evidence_ids"]]}]}
+                        "private_state": {"current_belief": "The key may be available.", "current_misperception": "A request has no cost.",
+                                          "desired_gain": "Open the drawer.", "feared_loss": "Lose the record.", "expectations_of_others": []},
+                        "proposals": [
+                            {"strategy_id": "REQUEST", "action": "Request the key.", "gain": "Open the drawer.",
+                             "risk_or_cost": "Expose the search.", "rejection_reason": None, "knowledge_basis": [
+                                {"evidence_id": evidence_id, "use": "supports"} for evidence_id in job.context[0]["eligible_evidence_ids"]]},
+                            {"strategy_id": "WAIT", "action": "Wait for access.", "gain": "Avoid notice.",
+                             "risk_or_cost": "Lose time.", "rejection_reason": "Delay threatens the active agenda.", "knowledge_basis": []},
+                        ], "selected_strategy_id": "REQUEST", "relationship_specific_interaction": []}
             return AgentResult(job_id=job.job_id, session_id=job.session_id, run_id=job.run_id, status="completed",
                                input_fingerprint=job.input_fingerprint, model_service_id=job.service_id, model_id="fixture", protocol="fixture",
                                final_text=json.dumps(judgment), steps=1, model_requests=1)
@@ -215,7 +235,8 @@ class SemanticContextContractTests(unittest.TestCase):
         self.assertEqual(worker_job_view(job), calls[0].context[0]["registered_semantic_job"])
         schema = calls[0].output_schema
         self.assertEqual(set(job["output_contract"]["required"]), set(schema["properties"]))
-        self.assertEqual({"action", "knowledge_basis"}, set(schema["properties"]["proposals"]["items"]["properties"]))
+        self.assertEqual(set(job["output_contract"]["properties"]["proposals"]["items"]["required"]),
+                         set(schema["properties"]["proposals"]["items"]["properties"]))
         self.assertIn("free-text action", calls[0].instruction)
         self.assertEqual(binding["result"]["judgment"], validate_structured_text(json.dumps(binding["result"]["judgment"]), schema))
         self.assertEqual(original, frozen)
@@ -270,9 +291,16 @@ class SemanticContextContractTests(unittest.TestCase):
             with self.subTest(evidence_ids=evidence_ids):
                 def invoke(job):
                     judgment = {"confidence": 1.0, "character_id": payload["character_id"], "active_agenda": payload["active_agenda"],
-                                "proposals": [{"action": "Request the key.", "knowledge_basis": [
-                                    {"evidence_id": evidence_id, "use": "supports" if index == 0 else "uncertainty"}
-                                    for index, evidence_id in enumerate(evidence_ids)]}]}
+                                "private_state": {"current_belief": "The key may be available.", "current_misperception": "A request is safe.",
+                                                  "desired_gain": "Open the drawer.", "feared_loss": "Lose the record.", "expectations_of_others": []},
+                                "proposals": [
+                                    {"strategy_id": "REQUEST", "action": "Request the key.", "gain": "Open the drawer.",
+                                     "risk_or_cost": "Expose the search.", "rejection_reason": None, "knowledge_basis": [
+                                        {"evidence_id": evidence_id, "use": "supports" if index == 0 else "uncertainty"}
+                                        for index, evidence_id in enumerate(evidence_ids)]},
+                                    {"strategy_id": "WAIT", "action": "Wait.", "gain": "Avoid notice.",
+                                     "risk_or_cost": "Lose time.", "rejection_reason": "Delay threatens the agenda.", "knowledge_basis": []},
+                                ], "selected_strategy_id": "REQUEST", "relationship_specific_interaction": []}
                     return AgentResult(job_id=job.job_id, session_id=job.session_id, run_id=job.run_id, status="completed",
                                        input_fingerprint=job.input_fingerprint, model_service_id=job.service_id, model_id="fixture", protocol="fixture",
                                        final_text=json.dumps(judgment), steps=1, model_requests=1)
@@ -352,7 +380,9 @@ class SemanticContextContractTests(unittest.TestCase):
         judgment = {"confidence": 0.8, "expectation_updates": list(updates)}
         raw = " \n" + json.dumps(judgment, ensure_ascii=False, indent=2) + "\n" + suffix
         model = SimpleNamespace(
-            select_model=Mock(return_value=SimpleNamespace(model_id="fixture-model", protocol="openai_chat_completions")),
+            select_model=Mock(return_value=SimpleNamespace(
+                model_id="fixture-model", display_name=None, protocol="openai_chat_completions", metadata={}
+            )),
             invoke=Mock(return_value=ModelTurn("openai_chat_completions", "fixture-model", text=raw, finish_reason="stop")),
         )
         calls, results = [], []
@@ -575,13 +605,24 @@ class SemanticContextContractTests(unittest.TestCase):
         self.assertEqual("agent_" + job["job_id"], calls[0].job_id)
         self.assertEqual(1, calls[0].budgets.max_model_requests)
 
-    def test_registered_self_audit_real_runner_accepts_40k_and_enforces_64k_total_usage(self):
+    def test_registered_self_audit_preserves_valid_response_regardless_of_observed_usage(self):
         candidate = "A bounded synthetic passage."
+        author_objectives = {
+            "schema": "quillframe_current_author_objectives_v1",
+            "items": [{"objective_id": "OBJ-FIXTURE", "statement": "Keep the passage bounded.",
+                       "source_refs": ["fixture:request"], "hard": True}],
+            "source_fingerprint": fingerprint({"instruction": "Keep the passage bounded."}),
+            "priority": "current_explicit_author_direction", "authority": False,
+        }
+        author_objectives["objectives_fingerprint"] = fingerprint(author_objectives)
         judgment = {
             "confidence": 1.0, "result": "pass", "report": "Synthetic self-audit result.",
             "dimensions": {name: "pass" for name in (
                 "surface", "regression", "character_or_ownership", "natural_realization", "cluster")},
             "findings": [], "evidence_refs": ["candidate:" + fingerprint_text(candidate)],
+            "objective_assessments": [{"objective_id": "OBJ-FIXTURE", "status": "met",
+                "evidence_refs": ["candidate:paragraph-1"], "impact_scope": "whole_candidate",
+                "repair_route": "no_change", "report": "The exact candidate is bounded."}],
         }
         args = {
             "run": {"run_id": "RUN-TOKEN-BUDGET", "session_id": "SES-TOKEN-BUDGET", "task_mode": "DRAFT"},
@@ -589,12 +630,15 @@ class SemanticContextContractTests(unittest.TestCase):
             "subject_id": "DOC-TOKEN-BUDGET", "model_preference": None,
             "runtime_role": "registered_candidate_self_audit",
             "payload": {"candidate_text": candidate, "candidate_fingerprint": fingerprint_text(candidate),
-                        "rule_material": [{"id": "RULE-FIXTURE", "authority": "framework", "statement": "A bounded synthetic rule."}]},
+                        "rule_material": [{"id": "RULE-FIXTURE", "authority": "framework", "statement": "A bounded synthetic rule."}],
+                        "author_objectives": author_objectives},
         }
         for total_tokens in (40_000, 64_000, 64_001):
             with self.subTest(total_tokens=total_tokens):
                 model = SimpleNamespace(
-                    select_model=Mock(return_value=SimpleNamespace(model_id="fixture-model", protocol="openai_chat_completions")),
+                    select_model=Mock(return_value=SimpleNamespace(
+                        model_id="fixture-model", display_name=None, protocol="openai_chat_completions", metadata={}
+                    )),
                     invoke=Mock(return_value=ModelTurn("openai_chat_completions", "fixture-model",
                         text=json.dumps(judgment), finish_reason="stop",
                         usage={"input_tokens": total_tokens - 2_000, "output_tokens": 2_000})),
@@ -602,24 +646,18 @@ class SemanticContextContractTests(unittest.TestCase):
                 invoke = Mock(wraps=AgentRunner(model, ToolRuntime()).run)
                 executor = RegisteredSemanticExecutor(SimpleNamespace(run=invoke))
                 with patch("agent_runtime.runner.time.monotonic", return_value=100.0):
-                    if total_tokens <= 64_000:
-                        binding = executor.execute(**args)
-                        self.assertEqual(judgment, binding["result"]["judgment"])
-                        self.assertEqual([], validate_result(binding["job"], binding["result"]))
-                    else:
-                        with self.assertRaises(ProductionRunError) as error:
-                            executor.execute(**args)
-                        self.assertEqual("semantic_pending", error.exception.code)
-                        self.assertEqual("budget_exhausted", error.exception.detail["agent_status"])
-                        self.assertEqual("token_budget_exhausted_after_response", error.exception.detail["errors"][0]["code"])
+                    binding = executor.execute(**args)
+                    self.assertEqual(judgment, binding["result"]["judgment"])
+                    self.assertEqual([], validate_result(binding["job"], binding["result"]))
                 self.assertEqual(1, invoke.call_count)
                 self.assertEqual(1, model.invoke.call_count)
                 actual_job = invoke.call_args.args[0]
                 self.assertEqual(1, actual_job.budgets.max_model_requests)
                 self.assertEqual(1, actual_job.budgets.max_steps)
-                self.assertEqual(180_000, actual_job.budgets.max_elapsed_ms)
+                self.assertEqual(DURABLE_REQUEST_TIMEOUT_MS, actual_job.budgets.max_elapsed_ms)
                 self.assertEqual(4200, model.invoke.call_args.kwargs["max_output_tokens"])
-                self.assertEqual(180.0, model.invoke.call_args.kwargs["timeout_seconds"])
+                self.assertEqual(DURABLE_REQUEST_TIMEOUT_MS / 1000.0, model.invoke.call_args.kwargs["timeout_seconds"])
+                self.assertIsNotNone(model.invoke.call_args.kwargs["output_schema"])
                 self.assertEqual([], model.invoke.call_args.args[3])
 
     def test_prepared_execution_rejects_modified_registered_rubric_before_invocation(self):
@@ -745,9 +783,12 @@ class RepairContractBindingTests(unittest.TestCase):
             "candidate_fingerprint": compare["incumbent"]["content_fingerprint"], "candidate_text": compare["incumbent"]["text"],
             "reader_assessment": {}, "objective_envelope": compare["repair_context"]["objective_envelope"],
         })
-        judgment = {"confidence": 1.0, "repair_owner": "reader_pressure", "generation_mode": "fresh_realization",
+        judgment = {"confidence": 1.0, "repair_owner": "reader_pressure", "revision_route": "voice_contamination",
+                    "generation_mode": "fresh_realization",
                     "fix": "Advance the active question.", "repair_plan": "Reconstruct the current situation.",
-                    "preserve": ["The active question."], "comparison_required": True}
+                    "preserve": ["The active question."], "targets": [{"target_id": "TARGET-1",
+                        "route": "fresh_realization", "scene_ref": None, "evidence_quote": "合成旧稿。",
+                        "edit_window_quote": None}], "comparison_required": True}
         result = {**{key: job[key] for key in ("job_id", "subject_id", "kind", "input_fingerprint")},
                   "status": "completed", "worker": {"provider": "self_test", "model_or_reviewer": "fixture"},
                   "judgment": judgment, "proposals": [], "errors": []}

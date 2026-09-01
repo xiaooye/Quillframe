@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import json
 import hashlib
+import os
 import re
 import uuid
 from pathlib import Path
 from typing import Any
 
 from persistence.quillframe_sqlite import QuillframeStore, canonical_json, fingerprint_text, now_iso
-from publication.recovery import PublicationRecovery, PublicationRecoveryError
 
 AUTHOR_RUN_MODES = {
     "DESIGN-BOOK", "DESIGN-VOLUME", "PLAN-UNIT", "PLAN-CHAPTER",
@@ -36,6 +36,8 @@ AUTHORIZATION_KEYS = set(AUTHORIZATION_KEY_ORDER)
 REVISION_REQUEST_KEYS = {"instruction", "source"}
 MAX_SAFE_SCALAR_LENGTH = 512
 MAX_SAFE_OBJECT_LENGTH = 4096
+CORPUS_LEGACY_ANALYSIS_PROTOCOL_ID = "quillframe_corpus_three_window_benchmark_v1"
+CORPUS_STYLE_ANALYSIS_PROTOCOL_ID = "quillframe_corpus_style_learning_v1"
 _CREDENTIAL_KEY_RE = re.compile(
     r"(?:access|refresh)[_-]?token|\btoken\b|api[_-]?key|apikey|password|passwd|secret|credential|authorization|private[_-]?key|bearer|basic|oauth|cookie|session[_-]?token",
     re.IGNORECASE,
@@ -137,6 +139,934 @@ class CoreOperations:
     def learning(self):
         from quillframe.project_learning import ProjectLearningOperations
         return ProjectLearningOperations(self.store, self.project_learning())
+
+    def _publication_recovery(self):
+        """Keep POSIX-only publication helpers off the Windows Core import path."""
+
+        try:
+            from publication.recovery import PublicationRecovery, PublicationRecoveryError
+        except (ImportError, ModuleNotFoundError) as exc:
+            raise OperationError(
+                "publication_unavailable",
+                "native publication recovery is unavailable on this host",
+            ) from exc
+        return PublicationRecovery(self.store), PublicationRecoveryError
+
+    def corpus_library(
+        self,
+        *,
+        db_path: str | Path | None = None,
+        public_root: str | Path | None = None,
+    ):
+        """Resolve the optional Corpus library without making Core import it eagerly."""
+
+        try:
+            from corpus.library import CorpusLibrary
+        except (ImportError, ModuleNotFoundError) as exc:
+            raise OperationError(
+                "corpus_unavailable",
+                "the Corpus library is not available in this Framework installation",
+            ) from exc
+        if db_path is not None:
+            database = Path(db_path).expanduser().resolve()
+        else:
+            configured_corpus_dir = os.environ.get("QUILLFRAME_CORPUS_DIR")
+            corpus_dir = (
+                Path(configured_corpus_dir).expanduser().resolve()
+                if configured_corpus_dir
+                else self.store.root / "corpus"
+            )
+            database = corpus_dir / "corpus.sqlite"
+        publication_root = Path(public_root).expanduser().resolve() if public_root is not None else None
+        return CorpusLibrary(database, public_root=publication_root)
+
+    def corpus_study_runner(
+        self,
+        *,
+        db_path: str | Path | None = None,
+        public_root: str | Path | None = None,
+        analysis_protocol_id: str = "quillframe_corpus_three_window_benchmark_v1",
+    ):
+        """Resolve an explicit analysis protocol in the Corpus SQLite ledger."""
+
+        library = self.corpus_library(db_path=db_path, public_root=public_root)
+        try:
+            if analysis_protocol_id == "quillframe_corpus_style_learning_v1":
+                from corpus.style_study_runner import StyleStudyRunner as Runner
+            elif analysis_protocol_id == "quillframe_corpus_three_window_benchmark_v1":
+                from corpus.study_runner import StudyRunner as Runner
+            else:
+                raise OperationError(
+                    "corpus_analysis_protocol_invalid",
+                    "analysis_protocol_id is not a registered Corpus protocol",
+                )
+        except (ImportError, ModuleNotFoundError) as exc:
+            raise OperationError(
+                "corpus_study_runner_unavailable",
+                "the Corpus semantic study runner is not available in this Framework installation",
+            ) from exc
+        return library, Runner(library.db_path, library)
+
+    def corpus_scan_collection(self, *args: Any, db_path: str | Path | None = None,
+                               public_root: str | Path | None = None, **kwargs: Any) -> dict[str, Any]:
+        return self.corpus_library(db_path=db_path, public_root=public_root).scan_collection(*args, **kwargs)
+
+    def corpus_propose_selection(self, *args: Any, db_path: str | Path | None = None,
+                                 public_root: str | Path | None = None, **kwargs: Any) -> dict[str, Any]:
+        return self.corpus_library(db_path=db_path, public_root=public_root).propose_selection(*args, **kwargs)
+
+    def corpus_refresh_selection(self, *args: Any, db_path: str | Path | None = None,
+                                 public_root: str | Path | None = None, **kwargs: Any) -> dict[str, Any]:
+        return self.corpus_library(db_path=db_path, public_root=public_root).refresh_proposed_selection(*args, **kwargs)
+
+    def corpus_confirm_selection(self, *args: Any, db_path: str | Path | None = None,
+                                 public_root: str | Path | None = None, **kwargs: Any) -> dict[str, Any]:
+        return self.corpus_library(db_path=db_path, public_root=public_root).confirm_selection(*args, **kwargs)
+
+    def corpus_selection_private_preview(
+        self,
+        *args: Any,
+        db_path: str | Path | None = None,
+        public_root: str | Path | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Local-only exact checklist labels; never expose as a hosted operation."""
+
+        return self.corpus_library(
+            db_path=db_path, public_root=public_root
+        ).selection_private_preview(*args, **kwargs)
+
+    @staticmethod
+    def _corpus_study_projection(
+        operation: str,
+        study: dict[str, Any],
+        runner: dict[str, Any] | None,
+        *,
+        performed: bool,
+        semantic_execution_performed: bool,
+    ) -> dict[str, Any]:
+        runner_state = runner.get("status") if isinstance(runner, dict) else None
+        status = {
+            "prepared": "awaiting_semantic",
+            "running": "awaiting_semantic",
+            "completed": "complete",
+        }.get(str(runner_state), str(runner_state or study.get("status") or "unknown"))
+        analysis_protocol_id = (
+            runner.get("analysis_protocol_id")
+            if isinstance(runner, dict) and runner.get("analysis_protocol_id")
+            else CORPUS_LEGACY_ANALYSIS_PROTOCOL_ID
+        )
+        dynamic_style_progress = (
+            analysis_protocol_id == CORPUS_STYLE_ANALYSIS_PROTOCOL_ID
+            and isinstance(runner, dict)
+            and "cohort_states" in runner
+        )
+        if dynamic_style_progress:
+            cohort_states = runner["cohort_states"]
+            cohort_keys = {"available_unanalysed", "activated", "analysed"}
+            if not isinstance(cohort_states, dict) or set(cohort_states) != cohort_keys:
+                raise OperationError(
+                    "corpus_runner_progress_invalid",
+                    "style runner cohort_states must be a closed verified count mapping",
+                )
+
+            def verified_count(value: Any, field: str) -> int:
+                if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                    raise OperationError(
+                        "corpus_runner_progress_invalid",
+                        f"style runner {field} must be a verified non-negative integer",
+                    )
+                return value
+
+            compatibility_work_count = verified_count(
+                runner.get("work_count"), "work_count"
+            )
+            available_pool_count = verified_count(
+                cohort_states["available_unanalysed"],
+                "cohort_states.available_unanalysed",
+            )
+            activated_count = verified_count(
+                cohort_states["activated"], "cohort_states.activated"
+            )
+            analysed_count = verified_count(
+                cohort_states["analysed"], "cohort_states.analysed"
+            )
+            semantic_attempts = verified_count(
+                runner.get("semantic_attempts"), "semantic_attempts"
+            )
+            if (
+                available_pool_count + activated_count + analysed_count
+                != compatibility_work_count
+            ):
+                raise OperationError(
+                    "corpus_runner_progress_invalid",
+                    "style runner cohort counts must partition work_count exactly",
+                )
+            progress = {
+                # Compatibility aliases remain counts, never an evidence or
+                # convergence claim.
+                "completed": analysed_count,
+                "total": compatibility_work_count,
+                "compatibility_work_count": compatibility_work_count,
+                "available_pool_count": available_pool_count,
+                "activated_count": activated_count,
+                "analysed_count": analysed_count,
+                "semantic_attempts": semantic_attempts,
+            }
+        else:
+            work_states = runner.get("work_states", {}) if isinstance(runner, dict) else {}
+            completed = (
+                int(work_states.get("complete", 0))
+                if isinstance(work_states, dict)
+                else 0
+            )
+            total = (
+                int(runner.get("work_count", 0))
+                if isinstance(runner, dict)
+                else int(study.get("work_count", 0))
+            )
+            progress = {"completed": completed, "total": total}
+        return {
+            "schema": "quillframe_corpus_study_operation_v1",
+            "operation": operation,
+            "status": status,
+            "performed": performed,
+            "semantic_execution_performed": semantic_execution_performed,
+            "semantic_execution_required": status not in {"complete", "cancelled"},
+            "study_id": study.get("study_id"),
+            "public_study_id": study.get("public_study_id"),
+            "profile": study.get("profile"),
+            "progress": progress,
+            "study": study,
+            "runner": runner,
+            "raw_passage_persisted": False,
+            "authority_granted": False,
+            "canon_authority": False,
+            "framework_write_authority": False,
+            "analysis_protocol_id": analysis_protocol_id,
+        }
+
+    def corpus_study_status(
+        self,
+        study_id: str,
+        *,
+        db_path: str | Path | None = None,
+        public_root: str | Path | None = None,
+        include_works: bool = True,
+        analysis_protocol_id: str = "quillframe_corpus_three_window_benchmark_v1",
+    ) -> dict[str, Any]:
+        library = self.corpus_library(db_path=db_path, public_root=public_root)
+        study = library.study_status(study_id, include_works=include_works)
+        try:
+            if analysis_protocol_id == "quillframe_corpus_style_learning_v1":
+                from corpus.style_study_runner import StyleStudyRunner as Runner
+            elif analysis_protocol_id == "quillframe_corpus_three_window_benchmark_v1":
+                from corpus.study_runner import StudyRunner as Runner
+            else:
+                raise OperationError(
+                    "corpus_analysis_protocol_invalid",
+                    "analysis_protocol_id is not a registered Corpus protocol",
+                )
+        except (ImportError, ModuleNotFoundError):
+            return study
+        runner = Runner.inspect_for_study(library.db_path, study["study_id"])
+        if runner is None:
+            return study
+        return self._corpus_study_projection(
+            "status",
+            study,
+            runner,
+            performed=False,
+            semantic_execution_performed=False,
+        )
+
+    def corpus_start_study(
+        self,
+        study_id: str,
+        *,
+        db_path: str | Path | None = None,
+        public_root: str | Path | None = None,
+        run_id: str | None = None,
+        research_axes: Any = None,
+        run_semantic: Any = None,
+        max_jobs: int | None = None,
+        analysis_protocol_id: str = "quillframe_corpus_three_window_benchmark_v1",
+        semantic_config: Any = None,
+    ) -> dict[str, Any]:
+        library, runner_service = self.corpus_study_runner(
+            db_path=db_path, public_root=public_root,
+            analysis_protocol_id=analysis_protocol_id,
+        )
+        prepare_kwargs: dict[str, Any] = {}
+        if run_id is not None:
+            prepare_kwargs[
+                "style_run_id" if analysis_protocol_id == "quillframe_corpus_style_learning_v1" else "run_id"
+            ] = run_id
+        if research_axes is not None and analysis_protocol_id == "quillframe_corpus_three_window_benchmark_v1":
+            prepare_kwargs["research_axes"] = research_axes
+        elif research_axes is not None:
+            raise OperationError(
+                "corpus_analysis_protocol_args_invalid",
+                "research_axes belongs to the legacy three-window protocol",
+            )
+        if semantic_config is not None:
+            if analysis_protocol_id != "quillframe_corpus_style_learning_v1":
+                raise OperationError(
+                    "corpus_analysis_protocol_args_invalid",
+                    "semantic_config belongs to the style-learning protocol",
+                )
+            prepare_kwargs["semantic_config"] = semantic_config
+        runner = runner_service.prepare(study_id, **prepare_kwargs)
+        semantic_performed = False
+        if run_semantic is not None and runner.get("status") not in {"failed", "completed", "cancelled"}:
+            semantic_performed = True
+            runner = runner_service.execute(
+                runner.get("style_run_id") or runner["run_id"], run_semantic, max_jobs=max_jobs
+            )
+        study = library.study_status(study_id, include_works=False)
+        return self._corpus_study_projection(
+            "start",
+            study,
+            runner,
+            performed=True,
+            semantic_execution_performed=semantic_performed,
+        )
+
+    def corpus_resume_study(
+        self,
+        study_id: str,
+        *,
+        db_path: str | Path | None = None,
+        public_root: str | Path | None = None,
+        run_id: str | None = None,
+        run_semantic: Any = None,
+        max_jobs: int | None = None,
+        analysis_protocol_id: str = "quillframe_corpus_three_window_benchmark_v1",
+        semantic_config: Any = None,
+    ) -> dict[str, Any]:
+        library, runner_service = self.corpus_study_runner(
+            db_path=db_path, public_root=public_root,
+            analysis_protocol_id=analysis_protocol_id,
+        )
+        canonical_study_id = library.study_status(
+            study_id, include_works=False
+        )["study_id"]
+        runner = (
+            runner_service.status(run_id)
+            if run_id
+            else runner_service.status_for_study(canonical_study_id)
+        )
+        if semantic_config is not None and analysis_protocol_id != "quillframe_corpus_style_learning_v1":
+            raise OperationError(
+                "corpus_analysis_protocol_args_invalid",
+                "semantic_config belongs to the style-learning protocol",
+            )
+        if runner is None:
+            prepare_kwargs = (
+                {"style_run_id": run_id}
+                if analysis_protocol_id == "quillframe_corpus_style_learning_v1" and run_id is not None
+                else ({"run_id": run_id} if run_id is not None else {})
+            )
+            if semantic_config is not None:
+                prepare_kwargs["semantic_config"] = semantic_config
+            runner = runner_service.prepare(canonical_study_id, **prepare_kwargs)
+        elif runner.get("study_id") != canonical_study_id:
+            raise OperationError("corpus_run_binding_mismatch", "run_id does not belong to study_id")
+        elif semantic_config is not None:
+            try:
+                semantic_config_fingerprint = "sha256:" + hashlib.sha256(
+                    json.dumps(
+                        semantic_config, ensure_ascii=False, sort_keys=True,
+                        separators=(",", ":"), allow_nan=False,
+                    ).encode("utf-8")
+                ).hexdigest()
+            except (TypeError, ValueError) as exc:
+                raise OperationError(
+                    "corpus_semantic_config_invalid", "semantic_config must be canonical JSON"
+                ) from exc
+            if runner.get("semantic_config_fingerprint") != semantic_config_fingerprint:
+                raise OperationError(
+                    "corpus_semantic_config_mismatch",
+                    "resume must use the exact semantic executor configuration frozen at prepare",
+                )
+        semantic_performed = False
+        if run_semantic is not None and runner.get("status") not in {"completed", "cancelled"}:
+            semantic_performed = True
+            if runner.get("status") == "failed":
+                runner = runner_service.resume(
+                    runner.get("style_run_id") or runner["run_id"], run_semantic, max_jobs=max_jobs
+                )
+            else:
+                runner = runner_service.execute(
+                    runner.get("style_run_id") or runner["run_id"], run_semantic, max_jobs=max_jobs
+                )
+        study = library.study_status(canonical_study_id, include_works=False)
+        return self._corpus_study_projection(
+            "resume",
+            study,
+            runner,
+            performed=True,
+            semantic_execution_performed=semantic_performed,
+        )
+
+    def corpus_cancel_study(
+        self,
+        study_id: str,
+        *,
+        db_path: str | Path | None = None,
+        public_root: str | Path | None = None,
+        run_id: str | None = None,
+        analysis_protocol_id: str = "quillframe_corpus_three_window_benchmark_v1",
+    ) -> dict[str, Any]:
+        library = self.corpus_library(db_path=db_path, public_root=public_root)
+        canonical_study_id = library.study_status(
+            study_id, include_works=False
+        )["study_id"]
+        try:
+            if analysis_protocol_id == "quillframe_corpus_style_learning_v1":
+                from corpus.style_study_runner import StyleStudyRunner as Runner
+            elif analysis_protocol_id == "quillframe_corpus_three_window_benchmark_v1":
+                from corpus.study_runner import StudyRunner as Runner
+            else:
+                raise OperationError(
+                    "corpus_analysis_protocol_invalid",
+                    "analysis_protocol_id is not a registered Corpus protocol",
+                )
+        except (ImportError, ModuleNotFoundError):
+            Runner = None
+        runner = (
+            Runner.inspect_for_study(library.db_path, canonical_study_id)
+            if Runner is not None
+            else None
+        )
+        if run_id is not None and runner is not None and (
+            runner.get("style_run_id") or runner.get("run_id")
+        ) != run_id:
+            raise OperationError("corpus_run_binding_mismatch", "run_id does not belong to study_id")
+        if runner is not None:
+            _library, runner_service = self.corpus_study_runner(
+                db_path=db_path, public_root=public_root,
+                analysis_protocol_id=analysis_protocol_id,
+            )
+            runner = runner_service.cancel(runner.get("style_run_id") or runner["run_id"])
+        else:
+            if analysis_protocol_id == "quillframe_corpus_style_learning_v1":
+                raise OperationError(
+                    "corpus_style_run_not_found",
+                    "no style-analysis run exists to cancel; the V5 selection was left unchanged",
+                )
+            library.cancel_study(canonical_study_id)
+        study = library.study_status(canonical_study_id, include_works=False)
+        return self._corpus_study_projection(
+            "cancel",
+            study,
+            runner,
+            performed=True,
+            semantic_execution_performed=False,
+        )
+
+    @staticmethod
+    def _corpus_style_publication_module():
+        try:
+            from corpus import style_publication
+        except (ImportError, ModuleNotFoundError) as exc:
+            raise OperationError(
+                "corpus_style_publication_unavailable",
+                "the source-free Style Atlas publication boundary is unavailable",
+            ) from exc
+        return style_publication
+
+    @staticmethod
+    def _corpus_style_registry_path(library: Any) -> Path:
+        """Return the only registry path accepted by the style-publication adapter."""
+
+        public_root = Path(library.public_root).expanduser().resolve()
+        registry = public_root / "style_registry.json"
+        if (
+            registry.parent.resolve() != public_root
+            or registry.name != "style_registry.json"
+            or registry.is_symlink()
+        ):
+            raise OperationError(
+                "style_registry_path_invalid",
+                "the Style Atlas registry must be public_root/style_registry.json",
+            )
+        return registry
+
+    def _corpus_completed_style_candidate(
+        self,
+        study_id: str,
+        *,
+        db_path: str | Path | None = None,
+        public_root: str | Path | None = None,
+    ) -> tuple[Any, dict[str, Any], dict[str, Any]]:
+        """Resolve the latest run only when its completion receipt and bundle are present."""
+
+        library, runner = self.corpus_study_runner(
+            db_path=db_path,
+            public_root=public_root,
+            analysis_protocol_id=CORPUS_STYLE_ANALYSIS_PROTOCOL_ID,
+        )
+        canonical_study_id = library.study_status(study_id, include_works=False)["study_id"]
+        try:
+            material = runner.trusted_publication_material_for_study(canonical_study_id)
+        except ValueError as exc:
+            raise OperationError(
+                getattr(exc, "code", "corpus_style_publication_material_invalid"),
+                "no trusted completed Style Atlas candidate is available for this study",
+            ) from exc
+        bundle = material.get("candidate_bundle") if isinstance(material, dict) else None
+        if not isinstance(bundle, dict):
+            raise OperationError(
+                "corpus_style_publication_material_invalid",
+                "the trusted style publication loader returned no candidate",
+            )
+        return library, material, bundle
+
+    @staticmethod
+    def _load_style_registry(publication: Any, registry_path: Path) -> dict[str, Any]:
+        try:
+            if registry_path.is_symlink() or not registry_path.is_file():
+                raise OperationError(
+                    "style_registry_not_found",
+                    "the public Style Atlas registry does not exist",
+                )
+            if registry_path.stat().st_size > int(publication.MAX_ATLAS_BYTES):
+                raise OperationError("style_registry_size_limit", "the Style Atlas registry is too large")
+            registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        except OperationError:
+            raise
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise OperationError("style_registry_read_failed", "the Style Atlas registry is unreadable") from exc
+        if not isinstance(registry, dict):
+            raise OperationError("style_registry_invalid", "the Style Atlas registry is invalid")
+        errors = publication.validate_style_registry(registry)
+        if errors:
+            raise OperationError("style_registry_invalid", "the Style Atlas registry is invalid", detail=errors)
+        return registry
+
+    @staticmethod
+    def _load_registered_style_atlas(
+        publication: Any,
+        registry_path: Path,
+        release: dict[str, Any],
+    ) -> dict[str, Any]:
+        atlas_fingerprint = release.get("atlas_fingerprint")
+        try:
+            filename = publication.atlas_filename(atlas_fingerprint)
+        except ValueError as exc:
+            raise OperationError("style_registry_invalid", "the registry contains an invalid atlas identity") from exc
+        root = registry_path.parent.resolve()
+        atlas_entry = root / filename
+        atlas_path = atlas_entry.resolve()
+        if (
+            atlas_entry.is_symlink()
+            or atlas_path != atlas_entry
+            or atlas_path.parent != root
+            or not atlas_path.is_file()
+        ):
+            raise OperationError("released_style_atlas_missing", "a registered Style Atlas is missing")
+        try:
+            if atlas_path.stat().st_size > int(publication.MAX_ATLAS_BYTES):
+                raise OperationError("style_atlas_size_limit", "the registered Style Atlas is too large")
+            atlas = json.loads(atlas_path.read_text(encoding="utf-8"))
+        except OperationError:
+            raise
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise OperationError("released_style_atlas_read_failed", "the registered Style Atlas is unreadable") from exc
+        if not isinstance(atlas, dict):
+            raise OperationError("released_style_atlas_invalid", "the registered Style Atlas is invalid")
+        errors = publication.validate_style_atlas(atlas)
+        registry_binding_errors = [
+            f"registry_{key}_binding_mismatch"
+            for key in (
+                "style_artifact_fingerprint",
+                "craft_artifact_fingerprint",
+                "analysis_protocol_version",
+                "content_zone",
+            )
+            if release.get(key) != atlas.get(key)
+        ]
+        if errors or registry_binding_errors or atlas.get("atlas_fingerprint") != atlas_fingerprint:
+            raise OperationError(
+                "released_style_atlas_invalid",
+                "the registered Style Atlas failed exact validation",
+                detail=sorted([*errors, *registry_binding_errors]),
+            )
+        CoreOperations._load_registered_style_release_receipt(
+            publication, registry_path, release, atlas
+        )
+        return atlas
+
+    @staticmethod
+    def _load_registered_style_release_receipt(
+        publication: Any,
+        registry_path: Path,
+        release: dict[str, Any],
+        atlas: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Verify the content-addressed public receipt without claiming HMAC trust."""
+
+        receipt_fingerprint = release.get("release_receipt_fingerprint")
+        filename_builder = getattr(publication, "release_receipt_filename", None)
+        receipt_validator = getattr(publication, "validate_style_release_receipt", None)
+        if not callable(filename_builder) or not callable(receipt_validator):
+            raise OperationError(
+                "style_release_receipt_validator_unavailable",
+                "the registered Style Atlas receipt validator is unavailable",
+            )
+        try:
+            filename = filename_builder(receipt_fingerprint)
+        except ValueError as exc:
+            raise OperationError(
+                "style_registry_invalid", "the registry contains an invalid release receipt identity"
+            ) from exc
+        root = registry_path.parent.resolve()
+        receipt_entry = root / filename
+        receipt_path = receipt_entry.resolve()
+        if (
+            receipt_entry.is_symlink()
+            or receipt_path != receipt_entry
+            or receipt_path.parent != root
+            or not receipt_path.is_file()
+        ):
+            raise OperationError(
+                "released_style_receipt_missing", "a registered Style Atlas receipt is missing"
+            )
+        try:
+            size_limit = int(getattr(publication, "MAX_PRIVATE_BYTES", publication.MAX_ATLAS_BYTES))
+            if receipt_path.stat().st_size > size_limit:
+                raise OperationError(
+                    "style_release_receipt_size_limit", "the registered Style Atlas receipt is too large"
+                )
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        except OperationError:
+            raise
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise OperationError(
+                "released_style_receipt_read_failed", "the registered Style Atlas receipt is unreadable"
+            ) from exc
+        if not isinstance(receipt, dict):
+            raise OperationError(
+                "released_style_receipt_invalid", "the registered Style Atlas receipt is invalid"
+            )
+        errors = receipt_validator(receipt)
+        binding_errors = [
+            f"receipt_{receipt_key}_binding_mismatch"
+            for receipt_key, release_key in (
+                ("atlas_fingerprint", "atlas_fingerprint"),
+                ("preview_fingerprint", "preview_fingerprint"),
+                ("preview_token", "preview_token"),
+                ("style_artifact_fingerprint", "style_artifact_fingerprint"),
+                ("craft_artifact_fingerprint", "craft_artifact_fingerprint"),
+            )
+            if receipt.get(receipt_key) != release.get(release_key)
+        ]
+        for key in ("atlas_fingerprint", "style_artifact_fingerprint", "craft_artifact_fingerprint"):
+            if receipt.get(key) != atlas.get(key):
+                binding_errors.append(f"receipt_atlas_{key}_binding_mismatch")
+        if (
+            errors
+            or binding_errors
+            or receipt.get("receipt_fingerprint") != receipt_fingerprint
+        ):
+            raise OperationError(
+                "released_style_receipt_invalid",
+                "the registered Style Atlas receipt failed exact validation",
+                detail=sorted([*errors, *binding_errors]),
+            )
+        return receipt
+
+    def corpus_preview_public(
+        self,
+        *args: Any,
+        db_path: str | Path | None = None,
+        public_root: str | Path | None = None,
+        analysis_protocol_id: str = CORPUS_LEGACY_ANALYSIS_PROTOCOL_ID,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        if analysis_protocol_id != CORPUS_STYLE_ANALYSIS_PROTOCOL_ID:
+            if analysis_protocol_id != CORPUS_LEGACY_ANALYSIS_PROTOCOL_ID:
+                raise OperationError(
+                    "corpus_analysis_protocol_invalid",
+                    "analysis_protocol_id is not a registered Corpus protocol",
+                )
+            return self.corpus_library(
+                db_path=db_path, public_root=public_root
+            ).preview_public(*args, **kwargs)
+        if len(args) != 1 or not isinstance(args[0], str) or not args[0].strip():
+            raise OperationError("corpus_style_study_id_required", "style preview requires one study_id")
+        _library, material, bundle = self._corpus_completed_style_candidate(
+            args[0], db_path=db_path, public_root=public_root
+        )
+        allowed = {"semantic_leakage", "blind_ab", "promotion_gate", "promotion_candidate"}
+        if set(kwargs) - allowed:
+            raise OperationError(
+                "corpus_style_preview_args_invalid",
+                "style preview received unsupported arguments",
+            )
+        publication = self._corpus_style_publication_module()
+        identity_terms = material.get("forbidden_identity_terms")
+        if not isinstance(identity_terms, list) or not identity_terms:
+            raise OperationError(
+                "corpus_style_identity_policy_incomplete",
+                "style preview requires the complete private source-identity policy",
+            )
+        return publication.build_style_atlas_preview(
+            bundle, forbidden_identity_terms=identity_terms, **kwargs
+        )
+
+    def corpus_validate_public(
+        self,
+        *args: Any,
+        db_path: str | Path | None = None,
+        public_root: str | Path | None = None,
+        analysis_protocol_id: str = CORPUS_LEGACY_ANALYSIS_PROTOCOL_ID,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        if analysis_protocol_id != CORPUS_STYLE_ANALYSIS_PROTOCOL_ID:
+            if analysis_protocol_id != CORPUS_LEGACY_ANALYSIS_PROTOCOL_ID:
+                raise OperationError(
+                    "corpus_analysis_protocol_invalid",
+                    "analysis_protocol_id is not a registered Corpus protocol",
+                )
+            return self.corpus_library(
+                db_path=db_path, public_root=public_root
+            ).validate_public(*args, **kwargs)
+        if len(args) != 1 or not isinstance(args[0], dict) or kwargs:
+            raise OperationError("corpus_style_validation_args_invalid", "style validation requires one atlas bundle")
+        publication = self._corpus_style_publication_module()
+        errors = publication.validate_style_atlas(args[0])
+        return {
+            "schema": "quillframe_public_general_style_atlas_validation_v1",
+            "analysis_protocol_id": CORPUS_STYLE_ANALYSIS_PROTOCOL_ID,
+            "atlas_fingerprint": args[0].get("atlas_fingerprint"),
+            "status": "valid" if not errors else "invalid",
+            "valid": not errors,
+            "errors": errors,
+            "performed": True,
+            "authority": False,
+        }
+
+    def corpus_release_public(self, *args: Any, db_path: str | Path | None = None,
+                              public_root: str | Path | None = None,
+                              analysis_protocol_id: str = CORPUS_LEGACY_ANALYSIS_PROTOCOL_ID,
+                              **kwargs: Any) -> dict[str, Any]:
+        if analysis_protocol_id == CORPUS_STYLE_ANALYSIS_PROTOCOL_ID:
+            raise OperationError(
+                "corpus_style_release_trusted_receipts_required",
+                "Style Atlas release requires trusted, exact gate receipts",
+            )
+        if analysis_protocol_id != CORPUS_LEGACY_ANALYSIS_PROTOCOL_ID:
+            raise OperationError(
+                "corpus_analysis_protocol_invalid",
+                "analysis_protocol_id is not a registered Corpus protocol",
+            )
+        if not str(kwargs.get("preview_token") or "").strip() or not str(
+            kwargs.get("manifest_fingerprint") or ""
+        ).strip():
+            raise OperationError(
+                "corpus_release_confirmation_required",
+                "public release requires the exact preview token and manifest fingerprint",
+            )
+        return self.corpus_library(db_path=db_path, public_root=public_root).release_public(*args, **kwargs)
+
+    def corpus_list_public(
+        self,
+        *args: Any,
+        db_path: str | Path | None = None,
+        public_root: str | Path | None = None,
+        analysis_protocol_id: str = CORPUS_LEGACY_ANALYSIS_PROTOCOL_ID,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        if analysis_protocol_id != CORPUS_STYLE_ANALYSIS_PROTOCOL_ID:
+            if analysis_protocol_id != CORPUS_LEGACY_ANALYSIS_PROTOCOL_ID:
+                raise OperationError(
+                    "corpus_analysis_protocol_invalid",
+                    "analysis_protocol_id is not a registered Corpus protocol",
+                )
+            return self.corpus_library(
+                db_path=db_path, public_root=public_root
+            ).list_public(*args, **kwargs)
+        if args or kwargs:
+            raise OperationError("corpus_style_list_args_invalid", "style list accepts no lookup arguments")
+        library = self.corpus_library(db_path=db_path, public_root=public_root)
+        publication = self._corpus_style_publication_module()
+        registry_path = self._corpus_style_registry_path(library)
+        registry = self._load_style_registry(publication, registry_path)
+        items = []
+        for raw_release in registry["releases"]:
+            release = dict(raw_release)
+            self._load_registered_style_atlas(publication, registry_path, release)
+            items.append({**release, "authority": False})
+        return {
+            "schema": "quillframe_public_general_style_index_v1",
+            "analysis_protocol_id": CORPUS_STYLE_ANALYSIS_PROTOCOL_ID,
+            "registry_fingerprint": registry["registry_fingerprint"],
+            "count": len(items),
+            "items": items,
+            "authority": False,
+        }
+
+    def corpus_get_public(
+        self,
+        *args: Any,
+        db_path: str | Path | None = None,
+        public_root: str | Path | None = None,
+        analysis_protocol_id: str = CORPUS_LEGACY_ANALYSIS_PROTOCOL_ID,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        if analysis_protocol_id != CORPUS_STYLE_ANALYSIS_PROTOCOL_ID:
+            if analysis_protocol_id != CORPUS_LEGACY_ANALYSIS_PROTOCOL_ID:
+                raise OperationError(
+                    "corpus_analysis_protocol_invalid",
+                    "analysis_protocol_id is not a registered Corpus protocol",
+                )
+            return self.corpus_library(
+                db_path=db_path, public_root=public_root
+            ).get_public(*args, **kwargs)
+        if len(args) != 1 or not isinstance(args[0], str) or kwargs:
+            raise OperationError(
+                "corpus_style_atlas_identifier_required",
+                "style lookup requires one atlas_fingerprint",
+            )
+        publication = self._corpus_style_publication_module()
+        try:
+            publication.atlas_filename(args[0])
+        except ValueError as exc:
+            raise OperationError(
+                "corpus_style_atlas_identifier_invalid",
+                "style lookup requires an exact atlas fingerprint",
+            ) from exc
+        library = self.corpus_library(db_path=db_path, public_root=public_root)
+        registry_path = self._corpus_style_registry_path(library)
+        registry = self._load_style_registry(publication, registry_path)
+        matching = [
+            dict(item) for item in registry["releases"]
+            if item.get("atlas_fingerprint") == args[0]
+        ]
+        if len(matching) != 1:
+            raise OperationError("public_style_atlas_not_found", "the Style Atlas is not registered")
+        atlas = self._load_registered_style_atlas(publication, registry_path, matching[0])
+        return {**atlas, "authority": False}
+
+    def user_taste_service(self, *, db_path: str | Path | None = None):
+        """Resolve durable user-taste policy through its host-owned learning DB."""
+
+        try:
+            from learning.user_taste import UserTasteService
+        except (ImportError, ModuleNotFoundError) as exc:
+            raise OperationError(
+                "user_taste_unavailable",
+                "the user-taste service is not available in this Framework installation",
+            ) from exc
+        database = (
+            Path(db_path).expanduser().resolve()
+            if db_path is not None
+            else self.store.root / "learning" / "author.sqlite"
+        )
+        return UserTasteService(database)
+
+    def author_voice_service(self, *, db_path: str | Path | None = None):
+        """Resolve explicit Author Voice assets through the host-owned learning DB."""
+
+        try:
+            from learning.author_voice import AuthorVoiceService
+        except (ImportError, ModuleNotFoundError) as exc:
+            raise OperationError(
+                "author_voice_unavailable",
+                "the Author Voice service is not available in this Framework installation",
+            ) from exc
+        database = (
+            Path(db_path).expanduser().resolve()
+            if db_path is not None
+            else self.store.root / "learning" / "author.sqlite"
+        )
+        return AuthorVoiceService(database)
+
+    def author_voice_register_source(
+        self, payload: dict[str, Any], *, db_path: str | Path | None = None
+    ) -> dict[str, Any]:
+        return self.author_voice_service(db_path=db_path).register_source(payload)
+
+    def author_voice_create_candidate(
+        self, payload: dict[str, Any], *, db_path: str | Path | None = None
+    ) -> dict[str, Any]:
+        return self.author_voice_service(db_path=db_path).create_candidate(payload)
+
+    def author_voice_activate(
+        self,
+        sheet_id: str,
+        *,
+        expected_version: int,
+        expected_sheet_fingerprint: str,
+        confirmation_ref: str,
+        db_path: str | Path | None = None,
+    ) -> dict[str, Any]:
+        return self.author_voice_service(db_path=db_path).activate(
+            sheet_id,
+            expected_version=expected_version,
+            expected_sheet_fingerprint=expected_sheet_fingerprint,
+            confirmation_ref=confirmation_ref,
+        )
+
+    def author_voice_snapshot(
+        self,
+        *,
+        project_id: str | None = None,
+        db_path: str | Path | None = None,
+    ) -> dict[str, Any]:
+        from learning.author_voice import AuthorVoiceService
+
+        database = (
+            Path(db_path).expanduser().resolve()
+            if db_path is not None
+            else self.store.root / "learning" / "author.sqlite"
+        )
+        return AuthorVoiceService.snapshot_readonly(database, project_id=project_id)
+
+    def user_taste_get_policy(self, *, db_path: str | Path | None = None) -> dict[str, Any]:
+        return self.user_taste_service(db_path=db_path).get_policy()
+
+    def user_taste_set_policy(self, payload: dict[str, Any], *,
+                              db_path: str | Path | None = None) -> dict[str, Any]:
+        return self.user_taste_service(db_path=db_path).set_policy(payload)
+
+    def user_taste_list_preferences(self, *, state: str | None = None,
+                                    db_path: str | Path | None = None) -> list[dict[str, Any]]:
+        return self.user_taste_service(db_path=db_path).list_preferences(state=state)
+
+    def user_taste_get_preference(self, preference_id: str, *,
+                                  db_path: str | Path | None = None) -> dict[str, Any]:
+        return self.user_taste_service(db_path=db_path).get_preference(preference_id)
+
+    def user_taste_pause_preference(
+        self,
+        preference_id: str,
+        *,
+        expected_version: int,
+        reason: str,
+        db_path: str | Path | None = None,
+    ) -> dict[str, Any]:
+        return self.user_taste_service(db_path=db_path).pause(
+            hypothesis_id=preference_id,
+            expected_version=expected_version,
+            reason=reason,
+        )
+
+    def user_taste_withdraw_preference(
+        self,
+        preference_id: str,
+        *,
+        expected_version: int,
+        reason: str,
+        db_path: str | Path | None = None,
+    ) -> dict[str, Any]:
+        return self.user_taste_service(db_path=db_path).withdraw(
+            hypothesis_id=preference_id,
+            expected_version=expected_version,
+            reason=reason,
+        )
 
     def chapter_list(self, project_id: str) -> dict[str, Any]:
         return self.novel().chapter_list(project_id)
@@ -534,6 +1464,8 @@ class CoreOperations:
         payload: dict[str, Any],
         session_id: str | None = None,
         idempotency_key: str | None = None,
+        recovery_authorized_by: str | None = None,
+        recovery_authorization: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if task_mode not in AUTHOR_RUN_MODES:
             raise OperationError("unsupported_task_mode", "author.run.start requires one supported author task mode")
@@ -548,6 +1480,17 @@ class CoreOperations:
                 raise OperationError(exc.code, str(exc), detail=exc.detail) from exc
         if "repair_source" in payload and task_mode != "REVISE":
             raise OperationError("repair_source_requires_revise", "only REVISE may bind an internal repair source")
+        recovery_reference = payload.get("confirmed_prefix_source")
+        if recovery_reference is not None and task_mode != "REVISE":
+            raise OperationError(
+                "confirmed_prefix_requires_revise",
+                "only REVISE may bind a confirmed production prefix",
+            )
+        if recovery_reference is not None and "repair_source" not in payload:
+            raise OperationError(
+                "repair_source_required",
+                "confirmed prefix recovery requires the same Core-frozen repair source",
+            )
         if "repair_source" in payload and {
             "candidate_text", "candidate_fingerprint", "reader_binding", "self_audit_binding",
             "reader_assessment", "semantic_rule_assessment", "qualification_receipt",
@@ -566,6 +1509,31 @@ class CoreOperations:
                 idempotency_key,
                 error_factory=lambda: OperationError("invalid_args", "idempotency key is invalid"),
             )
+        recovery_actor = None
+        safe_recovery_authorization = None
+        if recovery_reference is not None:
+            from production_runtime.confirmed_prefix import validate_reference
+            from production_runtime.contracts import ProductionRunError
+
+            try:
+                validate_reference(recovery_reference)
+            except ProductionRunError as exc:
+                raise OperationError(exc.code, str(exc), detail=exc.detail) from exc
+            recovery_actor, idempotency_key = self._validate_write_identity(
+                authorized_by=recovery_authorized_by,
+                idempotency_key=idempotency_key,
+            )
+            safe_recovery_authorization = self._validate_authorization(recovery_authorization)
+            if safe_recovery_authorization.get("intent") != "confirmed_prefix_recovery":
+                raise OperationError(
+                    "invalid_authorization",
+                    "confirmed prefix recovery requires the exact confirmed_prefix_recovery intent",
+                )
+        elif recovery_authorized_by is not None or recovery_authorization is not None:
+            raise OperationError(
+                "invalid_authorization",
+                "recovery authorization is valid only with confirmed_prefix_source",
+            )
         if session_id is not None:
             session_id = self._safe_scalar(
                 session_id,
@@ -579,6 +1547,9 @@ class CoreOperations:
             "payload": payload,
         }
         request["session_id"] = session_id
+        if recovery_reference is not None:
+            request["recovery_authorized_by"] = recovery_actor
+            request["recovery_authorization"] = safe_recovery_authorization
         request_fp = fingerprint_text(canonical_json(request))
         with self.store.open_project(project_id) as conn:
             try:
@@ -639,6 +1610,35 @@ class CoreOperations:
                         raise OperationError("unknown_session", "session_id does not exist")
                 run_id = "run_" + uuid.uuid4().hex
                 stamp = now_iso()
+                confirmed_prefix = None
+                recovery_receipt = None
+                if recovery_reference is not None:
+                    from production_runtime.confirmed_prefix import freeze_confirmed_prefix
+                    from production_runtime.contracts import ProductionRunError
+
+                    recovery_receipt = {
+                        "schema": "quillframe_confirmed_prefix_recovery_authorization_v1",
+                        "run_id": run_id,
+                        "source_run_id": recovery_reference["source_run_id"],
+                        "prefix_fingerprint": recovery_reference["expected_prefix_fingerprint"],
+                        "request_fingerprint": request_fp,
+                        "authorized_by": recovery_actor,
+                        "user_action": safe_recovery_authorization,
+                        "authority": False,
+                    }
+                    recovery_receipt["receipt_fingerprint"] = fingerprint_text(
+                        canonical_json(recovery_receipt)
+                    )
+                    try:
+                        confirmed_prefix = freeze_confirmed_prefix(
+                            conn,
+                            reference=recovery_reference,
+                            target=target,
+                            repair_source=repair_source,
+                            authorization_receipt_fingerprint=recovery_receipt["receipt_fingerprint"],
+                        )
+                    except ProductionRunError as exc:
+                        raise OperationError(exc.code, str(exc), detail=exc.detail) from exc
                 if session_id is None:
                     # Bootstrap only after replay resolution, in the same
                     # transaction as the run. The request fingerprint remains
@@ -664,6 +1664,29 @@ class CoreOperations:
                         "INSERT INTO checkpoints(checkpoint_id,run_id,checkpoint_kind,state_json,artifact_fingerprint,created_at) VALUES(?,?,'production_repair_source',?,?,?)",
                         ("repair-source:" + run_id, run_id, canonical_json(repair_source), repair_source["source_fingerprint"], stamp),
                     )
+                if confirmed_prefix is not None:
+                    conn.execute(
+                        "INSERT INTO checkpoints(checkpoint_id,run_id,checkpoint_kind,state_json,artifact_fingerprint,created_at) "
+                        "VALUES(?,?,'production_confirmed_prefix_source',?,?,?)",
+                        (
+                            "confirmed-prefix-source:" + run_id,
+                            run_id,
+                            canonical_json(confirmed_prefix),
+                            confirmed_prefix["checkpoint_fingerprint"],
+                            stamp,
+                        ),
+                    )
+                    conn.execute(
+                        "INSERT INTO receipts(receipt_id,run_id,receipt_kind,idempotency_key,payload_json,created_at) "
+                        "VALUES(?,?,'confirmed_prefix_recovery_authorization',?,?,?)",
+                        (
+                            "rcpt_" + uuid.uuid4().hex,
+                            run_id,
+                            "confirmed-prefix-authorization:" + run_id,
+                            canonical_json(recovery_receipt),
+                            stamp,
+                        ),
+                    )
                 if task_mode in {"DRAFT", "REVISE"}:
                     bind_prior_dependencies(conn, target, run_id)
                 event_id = "evt_" + uuid.uuid4().hex
@@ -688,6 +1711,9 @@ class CoreOperations:
                     "settlement_authority": False,
                     "message": "Run is durably registered; a semantic worker must execute the exact task contract before a gated candidate/result can appear.",
                 }
+                if confirmed_prefix is not None:
+                    result["confirmed_prefix_fingerprint"] = confirmed_prefix["prefix_fingerprint"]
+                    result["recovery_authorization_receipt_fingerprint"] = recovery_receipt["receipt_fingerprint"]
                 result = json.loads(canonical_json(result))
                 conn.execute(
                     "INSERT INTO receipts(receipt_id,run_id,receipt_kind,idempotency_key,payload_json,created_at) VALUES(?,?,?,?,?,?)",
@@ -1069,9 +2095,10 @@ class CoreOperations:
     def publication_build(self, project_id: str, acceptance_id: str, fmt: str = "md") -> dict[str, Any]:
         if fmt not in {"md", "txt"}:
             raise OperationError("unsupported_export_format", "Quillframe 1.0 supports only md and txt publication exports")
+        recovery, recovery_error = self._publication_recovery()
         try:
-            return PublicationRecovery(self.store).build(project_id, acceptance_id, fmt)
-        except PublicationRecoveryError as exc:
+            return recovery.build(project_id, acceptance_id, fmt)
+        except recovery_error as exc:
             raise OperationError(exc.code, exc.message) from exc
 
     def publication_recover(
@@ -1081,21 +2108,24 @@ class CoreOperations:
         build_id: str | None = None,
         limit: int = 32,
     ) -> dict[str, Any]:
+        recovery, recovery_error = self._publication_recovery()
         try:
-            return PublicationRecovery(self.store).recover(project_id, build_id=build_id, limit=limit)
-        except PublicationRecoveryError as exc:
+            return recovery.recover(project_id, build_id=build_id, limit=limit)
+        except recovery_error as exc:
             raise OperationError(exc.code, exc.message) from exc
 
     def publication_artifact_get(self, project_id: str, *, build_id: str) -> dict[str, Any]:
+        recovery, recovery_error = self._publication_recovery()
         try:
-            return PublicationRecovery(self.store).artifact(project_id, build_id)
-        except PublicationRecoveryError as exc:
+            return recovery.artifact(project_id, build_id)
+        except recovery_error as exc:
             raise OperationError(exc.code, exc.message) from exc
 
     def publication_collection_build(self, project_id: str, *, acceptance_ids: list[str], fmt: str = 'md',
                                      idempotency_key: str, user_authorized: bool) -> dict[str, Any]:
+        recovery, recovery_error = self._publication_recovery()
         try:
-            return PublicationRecovery(self.store).build_collection(project_id, acceptance_ids, fmt,
+            return recovery.build_collection(project_id, acceptance_ids, fmt,
                 idempotency_key=idempotency_key, user_authorized=user_authorized)
-        except PublicationRecoveryError as exc:
+        except recovery_error as exc:
             raise OperationError(exc.code, exc.message) from exc

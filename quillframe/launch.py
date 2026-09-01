@@ -358,10 +358,40 @@ def _assert_context_current(root: Path, expected: dict[str, Any]) -> dict[str, A
     return current
 
 
+def _read_descriptor_from_start(fd: int, size: int) -> bytes:
+    """Read a dedicated launch descriptor without relying on POSIX ``pread``.
+
+    Windows does not expose ``os.pread``.  Manifest guards own their descriptor
+    exclusively, so resetting its offset is equivalent here while preserving
+    the same exact-byte fingerprint check on every supported host.
+    """
+
+    if size < 0:
+        raise OSError("invalid descriptor size")
+    pread = getattr(os, "pread", None)
+    if callable(pread):
+        return pread(fd, size, 0)
+    os.lseek(fd, 0, os.SEEK_SET)
+    chunks: list[bytes] = []
+    remaining = size
+    while remaining:
+        chunk = os.read(fd, min(remaining, 1024 * 1024))
+        if not chunk:
+            break
+        chunks.append(chunk)
+        remaining -= len(chunk)
+    return b"".join(chunks)
+
+
 def _open_manifest_guard(root: Path, expected_fingerprint: str | None = None) -> _ManifestGuard:
     path = root / "quillframe.toml"
     close_on_exec = getattr(os, "O_CLOEXEC", 0)
-    flags = os.O_RDONLY | (close_on_exec if isinstance(close_on_exec, int) else 0)
+    binary = getattr(os, "O_BINARY", 0)
+    flags = (
+        os.O_RDONLY
+        | (close_on_exec if isinstance(close_on_exec, int) else 0)
+        | (binary if isinstance(binary, int) else 0)
+    )
     nofollow = getattr(os, "O_NOFOLLOW", None)
     if nofollow is not None:
         flags |= nofollow
@@ -373,7 +403,7 @@ def _open_manifest_guard(root: Path, expected_fingerprint: str | None = None) ->
         token = _fstat_token(fd)
         if not stat.S_ISREG(os.fstat(fd).st_mode) or not _path_has_token(path, token):
             raise LaunchError("project_manifest_changed", "Project manifest changed during guarded open")
-        payload = os.pread(fd, os.fstat(fd).st_size, 0)
+        payload = _read_descriptor_from_start(fd, os.fstat(fd).st_size)
         raw_fingerprint = _fingerprint_bytes(payload)
         if expected_fingerprint is not None and raw_fingerprint != expected_fingerprint:
             raise LaunchError("project_manifest_changed", "Project manifest changed during guarded open")
@@ -390,7 +420,7 @@ def _assert_manifest_guard_current(guard: _ManifestGuard) -> None:
     try:
         if _fstat_token(guard.fd) != guard.token or not _path_has_token(guard.path, guard.token):
             raise LaunchError("project_manifest_changed", "Project manifest changed during launch")
-        payload = os.pread(guard.fd, os.fstat(guard.fd).st_size, 0)
+        payload = _read_descriptor_from_start(guard.fd, os.fstat(guard.fd).st_size)
     except LaunchError:
         raise
     except OSError as exc:
@@ -746,6 +776,7 @@ class LaunchedProduct:
     receipt: dict[str, Any]
     server: StudioServer | None
     _previous_data_dir: str | None
+    _previous_corpus_dir: str | None
 
     def serve_forever(self) -> None:
         if self.server is None:
@@ -763,6 +794,10 @@ class LaunchedProduct:
             os.environ.pop("QUILLFRAME_DATA_DIR", None)
         else:
             os.environ["QUILLFRAME_DATA_DIR"] = self._previous_data_dir
+        if self._previous_corpus_dir is None:
+            os.environ.pop("QUILLFRAME_CORPUS_DIR", None)
+        else:
+            os.environ["QUILLFRAME_CORPUS_DIR"] = self._previous_corpus_dir
 
 
 def launch_project(
@@ -786,6 +821,7 @@ def launch_project(
     interactive = os.isatty(0) if interactive is None else interactive
     start = (project or Path.cwd()).expanduser().resolve()
     previous_data_dir = os.environ.get("QUILLFRAME_DATA_DIR")
+    previous_corpus_dir = os.environ.get("QUILLFRAME_CORPUS_DIR")
     server: StudioServer | None = None
     browser_opened = False
     created: _CreatedProject | None = None
@@ -839,6 +875,13 @@ def launch_project(
         )
         core_initialized = True
         os.environ["QUILLFRAME_DATA_DIR"] = str(data)
+        if previous_corpus_dir is None:
+            user_data_root = (
+                Path(previous_data_dir).expanduser().resolve()
+                if previous_data_dir
+                else (Path.home() / ".quillframe").resolve()
+            )
+            os.environ["QUILLFRAME_CORPUS_DIR"] = str(user_data_root / "corpus")
         manifest = context["manifest"]
         if profile == "local":
             app_dist = (dist or DEFAULT_DIST).expanduser().resolve()
@@ -869,7 +912,12 @@ def launch_project(
             "authority": False,
         }
         _record_last_project(root)
-        return LaunchedProduct(receipt=receipt, server=server, _previous_data_dir=previous_data_dir)
+        return LaunchedProduct(
+            receipt=receipt,
+            server=server,
+            _previous_data_dir=previous_data_dir,
+            _previous_corpus_dir=previous_corpus_dir,
+        )
     except Exception:
         if server is not None:
             server.server_close()
@@ -877,6 +925,10 @@ def launch_project(
             os.environ.pop("QUILLFRAME_DATA_DIR", None)
         else:
             os.environ["QUILLFRAME_DATA_DIR"] = previous_data_dir
+        if previous_corpus_dir is None:
+            os.environ.pop("QUILLFRAME_CORPUS_DIR", None)
+        else:
+            os.environ["QUILLFRAME_CORPUS_DIR"] = previous_corpus_dir
         raise
     finally:
         if manifest_guard is not None:

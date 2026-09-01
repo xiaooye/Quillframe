@@ -114,9 +114,17 @@ def freeze_author_revision_source(conn, *, reference: dict[str, str], target: di
             or state.get("subject_id") != exact_target["document_id"]
             or checkpoint["artifact_fingerprint"] != candidate_fp or state.get("authority") is not False):
         source._reject("author revision checkpoint differs from the released candidate")
-    calls, journal_fp = source._confirmed_calls(conn, run, request)
-    _, surface_response = source._call_for_role(calls, "surface_realization")
+    calls, native_journal_fp = source._confirmed_calls(conn, run, request)
+    confirmed_prefix = source._confirmed_prefix_evidence(conn, run, request, state)
+    prefix_calls = confirmed_prefix["private"]["calls"] if confirmed_prefix else calls
+    journal_fp = (
+        confirmed_prefix["logical_journal_fingerprint"](native_journal_fp)
+        if confirmed_prefix else native_journal_fp
+    )
+    _, surface_response = source._call_for_role(prefix_calls, "surface_realization")
     surface = parse_json_object(surface_response.get("final_text"), label="released surface realization")
+    if surface.get("status") == "pass" and surface.get("text") != text and run["task_mode"] == "REVISE":
+        surface = source._validated_derived_surface(conn, prefix_calls, surface, text)
     if surface.get("status") != "pass" or surface.get("text") != text:
         source._reject("author revision prose differs from its actual model response")
     qualification = state.get("qualification_receipt")
@@ -125,18 +133,22 @@ def freeze_author_revision_source(conn, *, reference: dict[str, str], target: di
             or release.get("pre_independent_qualification_fingerprint") != qualification.get("receipt_fingerprint")):
         source._reject("author revision original qualification does not bind the release")
     gates = {gate["gate"]: gate for gate in qualification["gates"]}
-    for key, gate, contract_id, role in (
-        ("reader_binding", "reader_engagement", "reader.engagement_audit", "registered_reader_engagement"),
-        ("self_audit_binding", "self_audit", "quality.candidate_self_audit", "registered_candidate_self_audit"),
+    for key, gate, contract_id, role, evidence_calls in (
+        ("reader_binding", "reader_engagement", "reader.engagement_audit",
+         "registered_reader_engagement", prefix_calls),
+        ("self_audit_binding", "self_audit", "quality.candidate_self_audit",
+         "registered_candidate_self_audit", calls),
     ):
         binding = state.get(key)
-        source._registered_binding(binding, contract_id=contract_id, role=role, calls=calls,
+        source._registered_binding(binding, contract_id=contract_id, role=role, calls=evidence_calls,
                                    candidate=candidate_fp, text=text, subject=exact_target["document_id"], recorded=True)
         if (gates[gate].get("job_fingerprint") != binding["job"]["input_fingerprint"]
                 or gates[gate].get("result_fingerprint") != fingerprint(binding["result"])
                 or binding["result"]["judgment"].get("result") != "pass"):
             source._reject("author revision historical qualification binding changed")
-    context_fp, continuity_fp = source._context_and_continuity(conn, run, state, source_target, calls)
+    context_fp, continuity_fp = source._context_and_continuity(
+        conn, run, state, source_target, calls, confirmed_prefix=confirmed_prefix,
+    )
     if gates["continuity"].get("receipt_fingerprint") != continuity_fp:
         source._reject("author revision historical continuity binding changed")
     preservation = state.get("repair_preservation")

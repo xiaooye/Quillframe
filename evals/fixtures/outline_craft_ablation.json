@@ -1,0 +1,181 @@
+{
+  "schema": "quillframe_outline_craft_suite_v1",
+  "suite_version": "1",
+  "provenance": {
+    "authorship": "original_synthetic_assistant_authored",
+    "derived_from_consumer": false,
+    "derived_from_external_prose": false,
+    "human_quality_validated": false,
+    "market_evidence": false
+  },
+  "generation_request": "根据所给材料写一场完整、原创、可独立阅读的中文小说正文，约1200—1600字。保留事实、结果和视角边界，详略由当前场景决定。这是合成评测样稿，不是实际项目稿件；不要把写作指导或评测说明写进小说。",
+  "cases": [
+    {
+      "case_id": "heldout-01",
+      "coverage_hypothesis": [
+        "confrontation",
+        "mystery"
+      ],
+      "reader_context": {
+        "genre_profile": "架空成长冒险",
+        "platform_profile": "中文网络连载，未指定商业平台",
+        "chapter_position": "训练篇中段，可独立阅读的一场试炼",
+        "reader_grip": "high"
+      },
+      "planning": {
+        "overall_outline": "岑禾从只会加大灵力的学徒，成长为能辨认环境规则的巡钟人。成长既有能力变化，也有对抗中的选择。",
+        "chapter_outline": "本章完成首次夺钟试炼。岑禾不以力量压过封辙，而是运用刚学会的回声辨位，获胜后仍承认正面对抗不足。",
+        "scene_details": "封辙守住明梯，岑禾听见废井传来迟半拍的回声，发现旧钟绳连着侧台。她判断可借绳摆到侧台，但必须舍弃左臂护盾以空出施术。封辙察觉后截断回程，她敲响钟，落到规定的缓冲网内，手臂被震麻。双方都没有违规。"
+      },
+      "writer_safe_facts": [
+        "回声辨位能辨认空腔，不能穿透实体读心。",
+        "试炼只以敲钟为胜，缓冲网保证不发生致命坠落。",
+        "封辙力量占优且能观察岑禾的外在行动，但其内心不可直述。",
+        "结尾岑禾赢得试炼，手臂暂时麻木；封辙仍擅长正面战斗。"
+      ],
+      "pov_boundary": {
+        "viewpoint": "第三人称，贴近岑禾；保留她的判断和不确定性。",
+        "private_state_may_not_be_serialized": true
+      }
+    },
+    {
+      "case_id": "heldout-02",
+      "coverage_hypothesis": [
+        "relationship",
+        "everyday"
+      ],
+      "reader_context": {
+        "genre_profile": "当代家庭与关系",
+        "platform_profile": "中文网络连载，允许日常与克制表达",
+        "chapter_position": "姐妹重逢后的晚饭",
+        "reader_grip": "low"
+      },
+      "planning": {
+        "overall_outline": "余枫与余遥长期隔着照料家庭的责任看待彼此。故事关注她们如何重新商量分工，而不是一次谈话消除所有旧怨。",
+        "chapter_outline": "妹妹回城后第一次留在姐姐的小店吃晚饭。她提出以后每周替一个夜班，姐姐不再以客人的方式招待她。",
+        "scene_details": "余遥发现给自己留的菜仍不放葱，随口说下周三能来。余枫先理解成探望，继续算账；听见妹妹要学关店后，才把写着班次的便签推过去。她要求星期三不能临时取消。妹妹写下自己的名字。两人没有拥抱，也不总结和解，饭菜有些凉。"
+      },
+      "writer_safe_facts": [
+        "余遥去年多次临时取消探望，余枫没有当面发作。",
+        "妹妹本次确有稳定的周三空档，但不能承诺每天照料。",
+        "姐姐保留她不吃葱的习惯，不代表旧有不满已消失。",
+        "本场确定一次每周值班的试行安排，不改变店铺归属。"
+      ],
+      "pov_boundary": {
+        "viewpoint": "以余遥为主要视角；姐姐的心意只由言语与可见行为判断。",
+        "private_state_may_not_be_serialized": true
+      }
+    },
+    {
+      "case_id": "heldout-03",
+      "coverage_hypothesis": [
+        "mystery"
+      ],
+      "reader_context": {
+        "genre_profile": "日常悬疑",
+        "platform_profile": "中文网络连载，公平披露当前可见证据",
+        "chapter_position": "调查刚开始，结尾保留可检验疑问",
+        "reader_grip": "high"
+      },
+      "planning": {
+        "overall_outline": "程照调查小型博物馆的夜间展柜移动。每次推断都需分清观察、推测与验证，不能靠突然出现的幕后知情者解决。",
+        "chapter_outline": "值班记录称闭馆后无人进入，但当天出售的入馆票里夹着一张旧版圆孔票。程照先怀疑登记失误，后来缩小下一步核查范围。",
+        "scene_details": "程照与管理员把票根按顺序摊开。旧票恰好夹在两张同批次方孔票之间，却没有相同的折痕。管理员说明旧打孔钳三天前送修，并出示交接单。程照想到有人可能把旧票混入回收盒，但也承认整理时混票尚不能排除。她要求先查看回收盒搬运记录；此时不能指出是谁动过展柜。"
+      },
+      "writer_safe_facts": [
+        "方孔票来自当天新钳，旧版票为圆孔。",
+        "现有交接单真实，但只证明送修，不证明谁都拿不到旧票。",
+        "票根折痕区别可由程照看见；不得新增血迹、指纹或监控答案。",
+        "结尾仅决定核查回收盒搬运记录，嫌疑人和作案方式未定。"
+      ],
+      "pov_boundary": {
+        "viewpoint": "第三人称，读者获得程照本场已经注意到的观察；推测保留不确定性。",
+        "private_state_may_not_be_serialized": true
+      }
+    },
+    {
+      "case_id": "heldout-04",
+      "coverage_hypothesis": [
+        "everyday",
+        "relationship"
+      ],
+      "reader_context": {
+        "genre_profile": "当代职业日常",
+        "platform_profile": "中文网络连载，手艺与陪伴可以独立成立",
+        "chapter_position": "一次普通修理的午后",
+        "reader_grip": "low"
+      },
+      "planning": {
+        "overall_outline": "叶梧在社区修理铺学习把物品和使用者一起考虑。她不必在每次工作中证明天才，师徒关系也不靠训斥维系。",
+        "chapter_outline": "给常来听地方戏的老人修旧收音机。机器不需换新，声音恢复即可；叶梧开始注意客户实际上怎么听。",
+        "scene_details": "叶梧先把旋钮转得很快，凌师请她在台间停一停，两人分清一直存在的底噪和转动才出现的沙响。处理完接触问题后，老人仍说声音不对。叶梧发现他习惯偏离电台一点，听较软的音色；她把原来磨亮的位置对回去。老人跟着唱了半句，没有夸大奖赏，师傅把下一台待检机让给她。"
+      },
+      "writer_safe_facts": [
+        "这是虚构的日常修理片段，不提供接电拆机操作教程。",
+        "机器接触问题被正常处理，不引出假零件骗局或危险事故。",
+        "老人听音习惯来自旋钮磨损位置及本人确认，不可读心。",
+        "叶梧得到的是一次继续实践的机会，不是突然晋升。"
+      ],
+      "pov_boundary": {
+        "viewpoint": "第三人称，可温和概述修理过程，主要跟随叶梧的注意力。",
+        "private_state_may_not_be_serialized": true
+      }
+    },
+    {
+      "case_id": "heldout-05",
+      "coverage_hypothesis": [
+        "comedy",
+        "relationship"
+      ],
+      "reader_context": {
+        "genre_profile": "架空轻喜剧",
+        "platform_profile": "中文网络连载，笑意来自人物与情境",
+        "chapter_position": "公会典礼开始前的一场插曲",
+        "reader_grip": "medium"
+      },
+      "planning": {
+        "overall_outline": "一座接纳多种体型居民的城镇，制度总比生活慢半拍。人物认真解决问题，不以谁突然变笨作笑点。",
+        "chapter_outline": "负责入场的苗穗要让巨人客人按时参加授勋，表格却只给座位号留两位。她与客人建立一点默契。",
+        "scene_details": "巨人的票是横跨三排的席位，苗穗试填号，发现写不下。主管坚持只能录一个座位。巨人认真问能否算站票，又担心挡住后排。苗穗最后将他登记为临时观礼台的持票者，号码用台号；巨人确认自己不是需要被搬走的设备。主管仍认真盖章，典礼铃声响起，他们都按时进场。"
+      },
+      "writer_safe_facts": [
+        "巨人有正常理解力且在意别人视线，不伤人或破坏建筑。",
+        "苗穗有权登记临时观礼台，但无权取消典礼或羞辱主管。",
+        "问题通过一个合规登记办法解决，不出现魔法篡改系统。",
+        "本场轻松收束，无须末尾危险钩子或强行网络热梗。"
+      ],
+      "pov_boundary": {
+        "viewpoint": "第三人称外部叙述，可有轻微叙述幽默；不直述主管隐藏动机。",
+        "private_state_may_not_be_serialized": true
+      }
+    },
+    {
+      "case_id": "heldout-06",
+      "coverage_hypothesis": [
+        "wonder",
+        "everyday"
+      ],
+      "reader_context": {
+        "genre_profile": "幻想旅行与城市生活",
+        "platform_profile": "中文网络连载，允许奇观、说明与安静体验",
+        "chapter_position": "第一次进入地下藏潮馆",
+        "reader_grip": "medium"
+      },
+      "planning": {
+        "overall_outline": "旅行者沈汀逐步认识一座靠地下潮汐校时的城。规则不仅是谜题，也塑造普通居民的时间感。",
+        "chapter_outline": "沈汀在藏潮馆等待一封按潮时投递的信，第一次理解街上为什么没有整点报时。",
+        "scene_details": "她沿干燥的阶梯下行，见到横过大厅的透明水层，倒影浮在人头顶。馆员解释每层水保存不同一日的潮位，送信的小舟依当日潮线进入凹槽。沈汀把取信牌递过去，等候时看见保洁员用长柄擦拭下层水留下的盐边。小舟靠岸，信封完好。她坐下来拆信；信的内容不在本场揭示。"
+      },
+      "writer_safe_facts": [
+        "水层由此地固有的架空规则维持，人的触碰不会引发灾难。",
+        "读者可通过空间、日常使用和必要说明了解藏潮馆，不必列全历史。",
+        "信按正常流程送达，没有追杀、诅咒或忽然改变世界的真相。",
+        "结尾拆信但不写信中内容，保持安静的继续阅读空间。"
+      ],
+      "pov_boundary": {
+        "viewpoint": "第三人称，跟随沈汀的首次体验，允许馆员作完整解释。",
+        "private_state_may_not_be_serialized": true
+      }
+    }
+  ]
+}

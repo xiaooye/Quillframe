@@ -8,6 +8,7 @@ from .contracts import (
     ProductionRunError,
 )
 from .guarded_runtime import ProductionRunExecutor
+from .coordinator import ProductionCoordinator
 from .sources import ProjectContextSourceLoader
 from .workflow import WORKFLOW_STAGES, NovelWorkflowEngine, WorkflowError, validate_chapter_id
 from .types import (
@@ -29,6 +30,7 @@ __all__ = [
     "PRODUCTION_STATUS_SCHEMA",
     "ProductionRunError",
     "ProductionRunExecutor",
+    "ProductionCoordinator",
     "ProjectContextSourceLoader",
     "validate_chapter_id",
     "WORKFLOW_STAGES",

@@ -8,9 +8,9 @@ Quillframe is a novel-contract kernel, not a general-purpose agent harness. Code
 
 Preference can only reorder already-eligible models. It cannot create capability, independence, or authority.
 
-An optional `budgets.max_model_request_ms` sets an explicit single-request time limit from 1 to 600,000 milliseconds. It is omitted from serialization when absent, preserving ordinary job fingerprints and the 180-second default. A request always receives the smaller of its configured limit and the job's remaining elapsed budget. Explicit timing is part of the input fingerprint, not a new permission or model-call allowance.
+An optional `budgets.max_model_request_ms` sets an explicit single-HTTP/admission limit from 1 to 86,400,000 milliseconds. It is omitted when absent, preserving ordinary job fingerprints and the 180-second default. Explicit timing is part of the input fingerprint, not a new permission or model-call allowance.
 
-Production's raw-draft and surface-realization jobs explicitly allow up to 600 seconds for their one request and overall stage. Other production jobs keep their existing limits. These bounds do not alter prose requirements or AI review judgments; a failed or late result remains blocking. See the [deadline contract](../specs/027-bounded-model-deadlines/spec.en.md).
+Production jobs use the durable loopback route. Their stable idempotency key is derived from the frozen job and model-call ordinal. A short HTTP waiter may return typed `model_pending`; the run then resumes only the same request. Polling cannot create another journal row or charge, and an elapsed waiter deadline cannot reject exact output from an already-launched keyed worker. Terminal worker failure, cancellation, invalid output, or semantic rejection remains blocking. See the [durable pending contract](../specs/032-durable-model-pending/spec.en.md); the [bounded deadline contract](../specs/027-bounded-model-deadlines/spec.en.md) remains the historical v2 synchronous boundary.
 
 ## Embedded/reference loop
 

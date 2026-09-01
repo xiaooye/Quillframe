@@ -77,6 +77,50 @@ class PersistenceSchemaC1Tests(unittest.TestCase):
             self.assertIn("model_services", {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")})
             conn.close()
 
+    def test_exact_v10_project_upgrades_atomically_and_preserves_rows(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "project.sqlite"
+            conn = self._fresh_project(path)
+            conn.execute(
+                "INSERT INTO project_identity(project_id,title,language,project_schema_version,created_at,updated_at) "
+                "VALUES('LEGACY10','Legacy project','zh-CN',1,'before','before')"
+            )
+            for statement in (
+                "DROP TABLE production_execution_request_versions",
+                "DROP TABLE production_build_migrations",
+                "DROP TABLE production_verified_regression_receipts",
+                "DROP TRIGGER production_billing_receipt_update_binding",
+                "DROP TRIGGER production_billing_receipt_insert_binding",
+                "DROP INDEX idx_production_billing_run",
+                "DROP TABLE production_billing_receipts",
+                "DROP INDEX idx_runtime_events_run_kind_id",
+                "DELETE FROM schema_fragments WHERE scope='project' AND version > 10",
+            ):
+                conn.execute(statement)
+            conn.commit()
+            conn.close()
+
+            # This is an on-disk v10 database, not a mocked ledger. Opening it
+            # under the current release must append 11..13 in one transaction.
+            conn = self._connect(path)
+            applied = apply_schema(conn, "project")
+            self.assertEqual([11, 12, 13], [row["version"] for row in applied])
+            self.assertEqual(
+                ("LEGACY10", "Legacy project", "zh-CN", 1, "before", "before"),
+                tuple(conn.execute("SELECT * FROM project_identity").fetchone()),
+            )
+            self.assertEqual(
+                list(range(1, 14)),
+                [row[0] for row in conn.execute(
+                    "SELECT version FROM schema_fragments WHERE scope='project' ORDER BY version"
+                )],
+            )
+            self.assertIsNotNone(conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='trigger' "
+                "AND name='production_billing_receipt_insert_binding'"
+            ).fetchone())
+            conn.close()
+
     def test_existing_missing_ledger_is_rejected_without_repair_or_state_change(self):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "global.sqlite"

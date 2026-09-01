@@ -48,7 +48,7 @@ Provider/vendor identity is diagnostic metadata at most. Hosts run generic agent
 
 ## Corpus & research
 
-Corpus is evidence, not Canon. Research truth is not automatic character knowledge. Use the [Corpus overview](../corpus/README.en.md), [ingest protocol](../corpus/CORPUS_INGEST_PROTOCOL.en.md), and Project-side research/knowledge boundaries together.
+Corpus is evidence, not Canon. Research truth is not automatic character knowledge. Use the [Corpus overview](../corpus/README.en.md), [ingest protocol](../corpus/CORPUS_INGEST_PROTOCOL.en.md), [anonymous public-corpus release boundary](../corpus/general/README.en.md), and Project-side research/knowledge boundaries together. The durable [prose-style research record](../specs/031-corpus-style-learning/research.en.md) preserves the primary-source review and adopt/adapt/reject decisions; its paired [specification](../specs/031-corpus-style-learning/spec.en.md) defines scene-aware learning, Writer isolation and evidence gates.
 
 ## Project integration
 

@@ -17,6 +17,7 @@ from harness.semantic_workers.peer_chat_relay import validate_peer_result
 from harness.semantic_workers.registered_contract_binding import validate_recorded_registered_job
 from harness.semantic_workers.semantic_worker_router import worker_job_view
 from persistence.quillframe_sqlite import canonical_json, fingerprint_text
+from quality.author_objective_gate import validate_objective_assessments
 from quality.candidate_qualification import validate_qualification_receipt
 
 from .contracts import PRODUCTION_EXECUTION_SCHEMA, PRODUCTION_STAGE_RESULT_SCHEMA, ProductionRunError, assert_secret_free
@@ -67,6 +68,7 @@ def _handoff(conn, run, state, project_id):
     if handoff.get("schema") != "quillframe_independent_review_handoff_v1" or handoff.get("authority") is not False:
         _reject("recorded independent handoff schema or authority changed")
     for key in ("subject_id", "candidate_fingerprint", "qualification_receipt", "reader_binding", "reader_grip",
+                "author_objectives",
                 "reader_visible_context", "continuity_receipt_fingerprint", "context_bundle_fingerprint", "freeze_fingerprint", "document_id"):
         if handoff.get(key) != state.get(key):
             _reject("recorded independent handoff changed its qualified candidate")
@@ -90,6 +92,15 @@ def _handoff(conn, run, state, project_id):
         "reader_visible_context": state["reader_visible_context"], "reader_grip": state["reader_grip"],
         **{key: reader_payload[key] for key in ("genre_profile", "platform_profile", "chapter_position") if key in reader_payload},
     }
+    objective_presence = (
+        "author_objectives" in state,
+        "author_objectives" in handoff,
+        "author_objectives" in job["input"]["payload"],
+    )
+    if len(set(objective_presence)) != 1:
+        _reject("recorded independent objective binding is only partially present")
+    if objective_presence[0]:
+        expected_payload["author_objectives"] = state["author_objectives"]
     if job["input"]["payload"] != expected_payload:
         _reject("recorded independent review did not read the exact frozen prose and positioning")
     visible = worker_job_view(job)
@@ -217,7 +228,7 @@ def _independence_summary(receipt):
 
 def _semantic_summary(category, job, result, independence=None):
     provenance, worker = job["provenance"], result["worker"]
-    return {
+    value = {
         "category": category, "status": "pass", "candidate_fingerprint": job["input"]["payload"]["candidate_fingerprint"], "evidence_refs": [],
         "semantic_contract": {
             "model_contract_id": job["input"]["model_contract_id"], **{key: provenance[key] for key in ("registry_schema", "registry_version", "pack_id")},
@@ -225,6 +236,20 @@ def _semantic_summary(category, job, result, independence=None):
             "worker_provider": worker.get("provider"), "model_or_reviewer": worker.get("model_or_reviewer"), "independence": independence,
         }, "semantic_content_reinterpreted_by_runtime": False,
     }
+    if category == "semantic_independent" and "author_objectives" in job["input"]["payload"]:
+        try:
+            objective_summary = validate_objective_assessments(
+                job["input"]["payload"]["author_objectives"],
+                result["judgment"],
+            )
+        except ValueError as exc:
+            _reject("recorded independent objective evidence is invalid")
+        value.update({
+            "author_objective_status": objective_summary["status"],
+            "author_objectives_fingerprint": objective_summary["objectives_fingerprint"],
+            "objective_assessments": objective_summary["assessments"],
+        })
+    return value
 
 
 def _readiness(readiness, *, state, handoff, result, receipt):

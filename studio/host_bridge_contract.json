@@ -46,7 +46,22 @@
     "model_reader_feedback_is_advisory_only": true,
     "settled_state_requires_preflight_confirmation": true,
     "context_refresh_requires_fresh_run": true,
-    "production_checkpoint_manuscript_private_from_all_surfaces": true
+    "production_checkpoint_manuscript_private_from_all_surfaces": true,
+    "hosted_web_local_corpus_paths": false,
+    "corpus_selection_limit_maximum": 120,
+    "corpus_selection_profiles": [
+      "general",
+      "adult_explicit"
+    ],
+    "corpus_private_labels_local_only": true,
+    "corpus_selection_propose_requires_one_of_collection_or_study": true,
+    "corpus_eligibility_details_private_aggregate_counts_only": true,
+    "corpus_public_release_grants_authority": false,
+    "corpus_style_publication_requires_explicit_protocol": true,
+    "corpus_style_preview_never_implies_release": true,
+    "corpus_style_release_requires_trusted_receipts": true,
+    "corpus_style_registry_path_host_owned": true,
+    "user_taste_auto_activation_is_explicit_policy": true
   },
   "native_independent_review": {
     "provider_ids": [
@@ -235,6 +250,65 @@
         "hosted_web"
       ]
     },
+    "author.run.billing.reconcile": {
+      "kind": "authority_command",
+      "required_args": [
+        "project_id",
+        "run_id",
+        "call_id",
+        "expected_result_fingerprint",
+        "cost_micros",
+        "evidence_ref",
+        "evidence_fingerprint",
+        "user_authorized"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "author.run.build-migration.preview": {
+      "kind": "query",
+      "required_args": [
+        "project_id",
+        "run_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "author.run.build-migration.regression": {
+      "kind": "authority_command",
+      "required_args": [
+        "project_id",
+        "run_id",
+        "user_authorized"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "author.run.build-migration.apply": {
+      "kind": "authority_command",
+      "required_args": [
+        "project_id",
+        "run_id",
+        "expected_request_fingerprint",
+        "regression_receipt_id",
+        "authorization_ref",
+        "user_authorized"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
     "author.run.independent.submit": {
       "kind": "external_handoff_result",
       "required_args": [
@@ -328,6 +402,29 @@
       "kind": "external_query",
       "required_args": [
         "service_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "model.service.fiction.confirm": {
+      "kind": "authority_command",
+      "required_args": [
+        "confirmation"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "model.service.fiction.revoke": {
+      "kind": "authority_command",
+      "required_args": [
+        "service_id",
+        "model_id"
       ],
       "allowed_surfaces": [
         "cli",
@@ -620,6 +717,217 @@
       "kind": "query",
       "required_args": [
         "project_id"
+      ]
+    },
+    "corpus.collection.scan": {
+      "kind": "command",
+      "required_args": [
+        "collection_path"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app"
+      ]
+    },
+    "corpus.selection.propose": {
+      "kind": "command",
+      "required_args": [
+        "profile"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "corpus.selection.confirm": {
+      "kind": "command",
+      "required_args": [
+        "study_id",
+        "work_ids",
+        "proposal_fingerprint",
+        "profile"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "corpus.selection.refresh": {
+      "kind": "command",
+      "required_args": [
+        "study_id",
+        "profile",
+        "expected_proposal_hash"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "corpus.study.start": {
+      "kind": "command",
+      "required_args": [
+        "study_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "corpus.study.status": {
+      "kind": "query",
+      "required_args": [
+        "study_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "corpus.study.resume": {
+      "kind": "command",
+      "required_args": [
+        "study_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "corpus.study.cancel": {
+      "kind": "command",
+      "required_args": [
+        "study_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "corpus.public.preview": {
+      "kind": "query",
+      "required_args": [
+        "study_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "corpus.public.validate": {
+      "kind": "query",
+      "required_args": [],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "corpus.public.release": {
+      "kind": "command",
+      "required_args": [
+        "study_id",
+        "corpus_version",
+        "expected_preview_fingerprint"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "corpus.public.list": {
+      "kind": "query",
+      "required_args": [],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "corpus.public.get": {
+      "kind": "query",
+      "required_args": [
+        "corpus_version"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "learning.auto_activation_policy.get": {
+      "kind": "query",
+      "required_args": [],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "learning.auto_activation_policy.set": {
+      "kind": "authority_command",
+      "required_args": [
+        "payload"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "learning.user_taste.list": {
+      "kind": "query",
+      "required_args": [],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "learning.user_taste.get": {
+      "kind": "query",
+      "required_args": [
+        "hypothesis_id"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "learning.user_taste.pause": {
+      "kind": "authority_command",
+      "required_args": [
+        "hypothesis_id",
+        "expected_version",
+        "reason"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "learning.user_taste.withdraw": {
+      "kind": "authority_command",
+      "required_args": [
+        "hypothesis_id",
+        "expected_version",
+        "reason"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
       ]
     },
     "chapter.create": {

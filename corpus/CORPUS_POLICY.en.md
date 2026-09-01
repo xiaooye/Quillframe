@@ -141,6 +141,22 @@ Select the **minimum sufficient range/evidence** required to answer the question
 
 Bounded analysis reduces context waste, imitation pressure, accidental source leakage and confirmation bias.
 
+For the legacy `quillframe_corpus_three_window_benchmark_v1` anonymous public General Corpus, “minimum sufficient” is mechanically capped and frozen:
+
+- exactly 120 distinct logical works in a user-confirmed checklist;
+- one fingerprint-bound edition per work;
+- exactly three windows per work (`opening`, `middle`, `closing`);
+- at most 4,000 Unicode characters per window;
+- ephemeral raw materialization, with no source prose in the durable ledger or public bundle.
+
+This sampling profile is a legacy statistical release contract, not evidence that three passages fully represent a work and not the style-learning protocol. Source drift or removal invalidates dependent work and aggregate evidence.
+
+The legacy proposal path uses private metadata to deduplicate edition families and route unidentified, short or metadata-conflicted items for local attention. That diagnostic never establishes literary quality and is not a universal Style Atlas exclusion rule. For style learning, invalid rights or unresolved source identity blocks only the affected source evidence; language mismatch narrows language-specific claims; incomplete or serial material may support local prose/scene claims but not unsupported whole-work claims; restart or concatenation signals require boundary-aware windows or narrower claims. The user confirms the declared rights and scope, one study profile (`general` or `adult_explicit`), the exact 120-work pool membership and proposal fingerprint. Profile mixing remains forbidden.
+
+That three-window cap defines the legacy statistical release, not the depth of prose-style learning. In the `quillframe_corpus_style_learning_v1` target, the exact 120 works form an addressable evidence pool, not a queue or a per-work literary checklist. AI owns scene/style classification, evidence gaps, the next minimum-sufficient sample and cross-work convergence. The Python runner owns only identity/version binding, minimum bounded materialization, hygiene, budgets and receipts; schema and leakage gates remain deterministic release controls rather than literary judgment. Each raw passage remains an ephemeral call payload. Full-pool exposure, CPU/memory benchmarks and larger sample counts provide no automatic completion or publication authority. Registered-contract and synthetic-runner tests now demonstrate dynamic activation of requested evidence, truthful unused pool members and early convergence before the pool is exhausted. That engineering result does not mean V5 ran, a style was learned, blind evaluation or independent leakage review passed, or publication was authorized.
+
+Content profile and style dimension are orthogonal. Body shape, anatomy, clothing and appearance—including an isolated term such as `巨乳`—remain legitimate `body_appearance` observations and are not a sufficient adult-profile signal. Only actual contextual evidence of explicit content is separately governed.
+
 ---
 
 ## 07 · Counterexamples are required for generalization
@@ -242,14 +258,14 @@ Derived evidence must remain traceable enough for this dependency repair to be p
 
 ## 12 · Autonomous behavior boundary
 
-Corpus automation may:
+The AI research planner may:
 
-- detect an evidence gap;
-- prepare a discovery request;
-- normalize real returned source metadata;
-- run deterministic rights/storage checks;
-- package bounded evidence for semantic analysis;
-- record missing capability or blocked rights state.
+- classify scene function and prose-style axes from bounded evidence;
+- identify uncertainty, contradiction and cross-work evidence gaps;
+- request the next minimum-sufficient source/window;
+- propose narrower evidence scopes and a cross-work convergence state.
+
+The deterministic runtime may normalize returned source metadata, bind identity and version, enforce declared rights/storage boundaries, materialize only the requested bounded evidence, apply hygiene/leakage/schema checks, and record budgets and receipts. Deterministic keyword, punctuation or score heuristics must not become literary classification, gap analysis or convergence authority.
 
 It may not:
 
@@ -260,13 +276,32 @@ It may not:
 
 ---
 
-## 13 · Related contracts
+## 13 · Anonymous public release boundary
+
+The public release is a source-free projection, not a less-private copy of the ledger. Its closed schemas may contain randomized IDs, numeric metrics, controlled eight-axis craft profiles, cross-work mechanism labels, applicability boundaries, counterexample states, failure modes and integrity fingerprints.
+
+They prohibit source paths, filenames, titles, creators, prose, quotations, close paraphrases, source-reconstructive summaries, characters, settings and arbitrary extension fields. A leakage check must compare candidate public strings with private source identities and sampled prose before release. Passing the schema alone is not sufficient.
+
+A release candidate must first produce an exact preview token and manifest fingerprint. Publication requires the caller to confirm both exact values; a preview, validation report, empty registry or semantic result does not publish anything. The legacy statistical registry remains empty until its fixed 120-work protocol passes every gate. A Style Atlas candidate follows its separate source-free, evidence-sufficient path and does not gain authority from processing all 120. Synthetic contract/runner evidence establishes the dynamic scheduling and early-stop mechanism only; it supplies none of the live V5, learned-style, blind-evaluation, independent-leakage-review or publication evidence.
+
+---
+
+## 14 · License and legal boundary
+
+Repository-owned public derivatives under `corpus/general/` inherit the repository's [Quillframe Proprietary Source-Available License](../LICENSE). Public repository visibility is not a permissive data license and does not relicense any third-party source material.
+
+Abstraction, anonymization and non-commercial intent are risk controls, not automatic legal conclusions. The rights gate validates declared metadata and storage intent; the publication validator enforces the repository's closed-schema and leakage policy. Neither substitutes for source-specific legal review when publication rights are uncertain.
+
+---
+
+## 15 · Related contracts
 
 - [Corpus Intelligence](README.en.md) — end-to-end evidence pipeline.
 - [Corpus Ingest Protocol](CORPUS_INGEST_PROTOCOL.en.md) — bounded ingestion mechanics.
 - [`rights_gate.py`](rights_gate.py) — deterministic declared-rights/storage validator.
 - [`discovery_runtime.py`](discovery_runtime.py) — typed discovery runtime.
 - [Corpus Benchmarks](benchmarks/README.en.md) — cross-work mechanism evidence.
+- [Anonymous Public General Corpus](general/README.en.md) — release schemas, empty registry and license boundary.
 - [Adaptive Learning](../docs/adaptive-learning.en.md) — learning scopes and hypotheses.
 
 **A useful Corpus system remembers enough to support evidence and rollback, but never so much that source possession becomes a shortcut around rights, authority, or craft reasoning.**

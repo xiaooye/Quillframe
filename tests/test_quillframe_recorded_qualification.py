@@ -52,13 +52,20 @@ def recorded_binding(binding):
     """Fabricate the exact historical definition, never a production receipt."""
     old = deepcopy(binding)
     current = old["job"]
+    payload = deepcopy(current["input"]["payload"])
+    if current["input"]["model_contract_id"] == "quality.candidate_self_audit":
+        payload.pop("author_objectives", None)
+        old["result"]["judgment"].pop("objective_assessments", None)
     job = make_contract_job(
-        current["input"]["model_contract_id"], current["subject_id"], current["input"]["payload"],
+        current["input"]["model_contract_id"], current["subject_id"], payload,
         registry_path=ARCHIVE, source_session_id="SES-CI-MANAGER",
     )
     # The archived file is trusted by the reader. The historical job itself
     # records the original catalog location, not the archive's new location.
-    job["provenance"].update({"pack_id": "quality", "registry_path": str(Path("contracts") / "quality.json")})
+    job["provenance"].update({
+        "pack_id": "quality",
+        "registry_path": (Path("contracts") / "quality.json").as_posix(),
+    })
     old["job"] = job
     rebind(old)
     return old
@@ -69,6 +76,12 @@ def current_payload(*, audit_fails=False):
         "confidence": 1.0, "result": "fail" if audit_fails else "pass", "report": "Synthetic recorded audit.",
         "dimensions": {key: "pass" for key in ("surface", "regression", "character_or_ownership", "natural_realization", "cluster")},
         "findings": [], "evidence_refs": ["synthetic:qualification"],
+        "objective_assessments": [{
+            "objective_id": "OBJ-CI", "status": "not_met" if audit_fails else "met",
+            "evidence_refs": ["synthetic:qualification"], "impact_scope": "whole_candidate",
+            "repair_route": "fresh_realization" if audit_fails else "no_change",
+            "report": "Synthetic objective-bound qualification evidence.",
+        }],
     }
     if audit_fails:
         audit["dimensions"]["surface"] = "fail"
@@ -99,9 +112,14 @@ def with_recorded_quality(payload):
 
 
 def expected_recorded_receipt(current, recorded):
-    """Only job/result identities change; historical judgments stay identical."""
+    """Historical v7 stays exact and does not acquire current objective fields."""
     expected = qualification.evaluate(current)
+    for key in ("author_objective_status", "author_objectives_fingerprint", "objective_assessments"):
+        expected.pop(key, None)
     for gate in expected["gates"]:
+        if gate["gate"] == "self_audit":
+            for key in ("author_objective_status", "author_objectives_fingerprint", "objective_assessments"):
+                gate.pop(key, None)
         binding = recorded.get(gate["gate"], {}).get("semantic_binding")
         if binding:
             gate["job_fingerprint"] = binding["job"]["input_fingerprint"]

@@ -23,6 +23,8 @@ from learning.feedback_intake import FeedbackIntakeStore, apply_semantic_result,
 from learning.feedback_query import _projection as intake_projection
 from learning.learning_store import LearningStore, canonical_json, digest, now_iso
 from learning.promotion_gate import SCHEMA as PROMOTION_SCHEMA, evaluate as evaluate_promotion
+from learning.user_taste import UserTasteService
+from learning.author_voice import AuthorVoiceService
 
 SCHEMA = "quillframe_project_learning_v1"
 PREFERENCE_SCHEMA = "quillframe_project_preference_v1"
@@ -523,11 +525,15 @@ class ProjectLearning:
 
     def project_context(self, *, project_id: str, explicit_intent: list[dict[str, Any]] | None = None, selected_hypothesis_ids: list[str] | None = None) -> dict[str, Any]:
         selected = selected_hypothesis_ids or []
+        taste_snapshot = UserTasteService.snapshot_readonly(self.learning_db)
+        voice_snapshot = AuthorVoiceService.snapshot_readonly(
+            self.learning_db, project_id=project_id
+        )
         with self._read() as conn:
             if not self._has_table(conn, "preference_hypotheses"):
                 if selected:
                     raise ValueError("selected preference is not active for this Project")
-                projection = {"schema": "quillframe_author_model_projection_v2", "project_id": project_id, "priority_order": ["current_explicit_request", "selected_project_active"], "explicit_intent": explicit_intent or [], "available_active_hypothesis_ids": [], "active_preference_index": [], "selected_hypothesis_ids": [], "active_preferences": [], "all_active_preferences_auto_included": False, "candidate_hypotheses_included": False, **_NO_AUTHORITY}
+                projection = {"schema": "quillframe_author_model_projection_v2", "project_id": project_id, "priority_order": ["current_explicit_request", "selected_user_taste_active", "selected_project_active"], "explicit_intent": explicit_intent or [], "available_active_hypothesis_ids": [], "active_preference_index": [], "selected_hypothesis_ids": [], "active_preferences": [], "user_taste_snapshot": taste_snapshot, "user_taste_selection_mode": "semantic_per_run" if taste_snapshot["policy"]["enabled"] else "disabled", "author_voice_snapshot": voice_snapshot, "author_voice_status": voice_snapshot["status"], "all_active_preferences_auto_included": False, "candidate_hypotheses_included": False, **_NO_AUTHORITY}
                 projection["projection_fingerprint"] = digest(projection)
                 return projection
             for hypothesis_id in selected:
@@ -537,6 +543,10 @@ class ProjectLearning:
             projection = project_author_model(LearningStore(self.learning_db, connection=conn), project_id=project_id, explicit_intent=explicit_intent, selected_hypothesis_ids=selected)
         projection["active_preference_index"] = [item for item in projection["active_preference_index"] if item["scope"] == "project" and item["project_id"] == project_id]
         projection["available_active_hypothesis_ids"] = [item["hypothesis_id"] for item in projection["active_preference_index"]]
-        projection["priority_order"] = ["current_explicit_request", "selected_project_active"]
+        projection["priority_order"] = ["current_explicit_request", "selected_user_taste_active", "selected_project_active"]
+        projection["user_taste_snapshot"] = taste_snapshot
+        projection["user_taste_selection_mode"] = "semantic_per_run" if taste_snapshot["policy"]["enabled"] else "disabled"
+        projection["author_voice_snapshot"] = voice_snapshot
+        projection["author_voice_status"] = voice_snapshot["status"]
         projection["projection_fingerprint"] = digest(projection)
         return projection

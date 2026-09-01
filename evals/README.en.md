@@ -62,6 +62,18 @@ Every live semantic run also emits `semantic-live-execution-identity.json` **bef
 
 This envelope is deterministic provenance, not semantic evidence by itself. Historical runs without it are not retroactively assigned identities, and its presence does not convert CI into a semantic quality claim.
 
+## Sequential author review of one chapter
+
+When the purpose is to let an author judge whether craft guidance produces the intended web-fiction reading experience, use the [one-chapter review protocol](CRAFT_CHAPTER_REVIEW.en.md). Each iteration exposes one fresh chapter through the full production-release boundary, waits for bound author feedback, and requires a changed candidate snapshot after return or rejection. It captures an absolute reading response without forcing a relative choice between two failures, and it does not replace cross-work evidence required for General Craft promotion.
+
+## Native chapter evaluation runner
+
+`native_style_runner.py` only orchestrates a Core-created native DRAFT/REVISE run and may import the guarded `ProductionRunExecutor` only from the public `production_runtime` package. It cannot call a provider, adapter, `AgentJob`, Codex, subprocess, or accept prewritten prose. Until the complete production graph and independent release boundary finish, it returns text-free status only; after completion, prose is still read exclusively through `CoreOperations.candidate_visible_get()`. The runner has no acceptance, settlement, publication, or Framework-promotion authority.
+
+## Corpus prose-style ablation
+
+Use the [three-arm corpus style protocol](STYLE_CORPUS_ABLATION.en.md) to compare an unguided baseline, current craft v4, and **Craft V4 plus one exact source-free Corpus candidate** on frozen held-out fiction tasks. Corpus is a run-scoped supplement to registered Craft, not a replacement: the V4 foundation remains present and at most four scene-relevant Corpus mechanisms reach Writer. Every pair repeats with swapped display order and sealed treatment labels; leave-one-work-out and scene-function holdout prevent the evaluated source family from contributing to its own candidate. Blind reading dimensions remain separate, and semantic leakage is a distinct independent gate. Synthetic fixtures validate mechanics only and can never become live quality evidence.
+
 ## Paired AI-native ablations
 
 Simplification decisions declared in `ai_native_ablation_manifest.json` use the registered independent `quality.ablation_compare` contract rather than manager-supplied semantic verdict fields. The reviewer receives only anonymous A/B condition results, exact input/result fingerprints, and neutral observation criteria. It does not receive `simpler_arm`, incumbent/challenger role names, removal intent, or hidden expected labels.

@@ -41,11 +41,15 @@ Remote endpoints require HTTPS by default. URL userinfo/query/fragment are rejec
 
 ## Request deadlines
 
-Inference defaults to a 180-second request timeout and accepts an explicit finite positive value up to 600 seconds. Transport preparation consumes that same request allowance; an expired request is not dispatched, and a late response is not accepted. This does not add retries or relax the enclosing Agent and production-journal deadlines.
+Ordinary inference defaults to a 180-second request timeout. An explicit finite value may be set up to 86,400 seconds; that larger bound is an admission and single-HTTP-interaction safety envelope, not the lifetime of an already launched durable worker. Transport preparation consumes the same allowance, so an expired request cannot begin a new dispatch.
 
-Only POST requests to a literal loopback address or `localhost` carry `X-Quillframe-Deadline-Unix-Ms`. It represents the HTTP request budget, not the earlier journal time origin. Remote-provider headers and model message/body semantics remain unchanged. The version-2 local relay freezes the effective expiry in its packet, narrowing it before publication when its remaining monotonic allowance is shorter; the CLI uses that expiry with a publication reserve. Default caller/relay/worker limits remain 180/170/150 seconds. Explicit long-generation configuration can use 600/590/570 seconds; a short caller deadline still limits an expanded worker configuration. These are host execution settings, not additional author onboarding inputs.
+Only POST requests to a literal loopback address or `localhost` carry `X-Quillframe-Deadline-Unix-Ms`. A production AgentJob also carries a SHA-256 `X-Quillframe-Model-Request-Key`. Remote-provider headers and model message/body semantics remain unchanged.
 
-The direct HTTP transport rejects expired dispatch and late results; it is not an operating-system watchdog for a blocked DNS lookup or a slowly progressing socket read. The CLI subprocess has its own termination deadline, and Core still refuses results that miss the stage deadline. Monotonic evidence is process-local: it cannot reconstruct a wall-clock change between packet publication and another process's admission. No shared cross-process clock guarantee is claimed; the upstream request retains its own late-result check.
+The v3 local relay freezes one immutable keyed packet and waits only briefly for an interactive response. If the exact worker is still running it returns `202 model_pending`; repeating the identical request polls that packet instead of dispatching again. A changed body with the same key is an idempotency conflict. The production journal marks the request pollable before transport dispatch, so a client crash before the first `202` cannot authorize a second call.
+
+The initial packet deadline still bounds parsing, queue preparation, and pre-launch admission. After a keyed worker has launch evidence, API slowness does not impose an arbitrary process timeout: the CLI entry point defaults to no worker lifetime limit, publishes heartbeats, and records an explicit terminal state. Operators may set a finite emergency worker limit. Ordinary unkeyed/library calls retain bounded behavior.
+
+An ended HTTP waiter is not a model failure and polling does not consume another model call. Exact terminal output may be consumed after the original waiter horizon. Confirmed cancellation, terminal worker failure, changed identity/bytes, invalid output, or semantic rejection remains blocking. A missing or stale heartbeat is unknown state and never permission to retry. See the [durable pending contract](../specs/032-durable-model-pending/spec.en.md); specification 027 remains historical for v2 synchronous packets.
 
 ## Persistence
 

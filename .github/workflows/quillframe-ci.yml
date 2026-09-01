@@ -117,10 +117,16 @@ jobs:
           cd /tmp
           PYTHONPATH=/tmp/quillframe-install python - <<'PY'
           from importlib.resources import files
+          import json
 
+          from corpus.style_publication import (
+              validate_style_publication_trust_policy,
+              validate_style_registry,
+          )
           import quillframe.cli
           import quillframe.cloud_core
           import production_runtime.semantic
+          from production_runtime.craft_guidance import freeze_craft_library
           from quillframe.cli import main
           from harness.semantic_workers.semantic_worker_router import resolve_contract_registry
 
@@ -131,6 +137,41 @@ jobs:
           assert files("studio").joinpath("app/dist/.well-known/quillframe-studio-footprint.json").is_file()
           assert files("studio").joinpath("app/dist/.well-known/quillframe-host.json").is_file()
           assert files("studio").joinpath("app/dist/.well-known/security.txt").is_file()
+          for resource in (
+              "general/style_atlas.schema.json",
+              "general/style_atlas_preview.schema.json",
+              "general/style_atlas_registry.schema.json",
+              "general/style_atlas_release_receipt.schema.json",
+              "general/style_registry_transition_receipt.schema.json",
+              "general/style_publication_trust_policy.schema.json",
+              "general/style_publication_trust_policy.json",
+              "general/style_registry.json",
+          ):
+              assert files("corpus").joinpath(resource).is_file()
+          style_registry = json.loads(
+              files("corpus").joinpath("general/style_registry.json").read_text(encoding="utf-8")
+          )
+          assert validate_style_registry(style_registry) == []
+          assert style_registry["status"] == "awaiting_first_validated_release"
+          trust_policy = json.loads(
+              files("corpus").joinpath(
+                  "general/style_publication_trust_policy.json"
+              ).read_text(encoding="utf-8")
+          )
+          assert validate_style_publication_trust_policy(trust_policy) == []
+          assert trust_policy["status"] == "unconfigured"
+          assert files("surface").joinpath("craft/history/v1/registry.json").is_file()
+          assert files("surface").joinpath("craft/history/v1/core.en.md").is_file()
+          assert files("surface").joinpath("craft/history/v1/core.zh-CN.md").is_file()
+          assert files("surface").joinpath("craft/history/v2/registry.json").is_file()
+          assert files("surface").joinpath("craft/history/v2/core.en.md").is_file()
+          assert files("surface").joinpath("craft/history/v2/core.zh-CN.md").is_file()
+          for language in ("en", "zh-CN"):
+              craft = freeze_craft_library("outline_driven", language=language)
+              assert len(craft["cards"]) == 7
+              assert craft["base_card_id"] == "core"
+              assert craft["registry_version"] == "4"
+          assert freeze_craft_library()["cards"] == []
           try:
               main(["--help"])
           except SystemExit as exc:

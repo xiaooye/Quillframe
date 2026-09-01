@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 from unittest.mock import patch
 
-from model_runtime.deadlines import DEADLINE_HEADER
+from model_runtime.deadlines import DEADLINE_HEADER, REQUEST_KEY_HEADER
 from model_runtime.transport import TransportError, UrllibTransport
 
 
@@ -175,7 +175,7 @@ class TransportDeadlineTests(unittest.TestCase):
                         self.assertLessEqual(wire_deadline / 1000.0 - clock.wall, opened.call_args.kwargs["timeout"])
 
     def test_invalid_timeout_is_rejected_before_dns_or_dispatch(self):
-        for value in (True, False, 0, -1, 600.001, 10 ** 1000, float("nan"), float("inf"), None, "600", []):
+        for value in (True, False, 0, -1, 86400.001, 10 ** 1000, float("nan"), float("inf"), None, "86400", []):
             with self.subTest(timeout=value):
                 transport = UrllibTransport()
                 with patch("model_runtime.transport.socket.getaddrinfo") as dns, patch.object(transport._opener, "open") as opened:
@@ -184,6 +184,28 @@ class TransportDeadlineTests(unittest.TestCase):
                 self.assertEqual("invalid_request_timeout", error.exception.code)
                 dns.assert_not_called()
                 opened.assert_not_called()
+
+    def test_request_key_is_hashed_only_for_literal_loopback_posts(self):
+        key = "private-run-and-stage-id"
+        expected = __import__("hashlib").sha256(key.encode("utf-8")).hexdigest()
+        for method, url, address, present in (
+            ("POST", "http://localhost:8765/v1/chat/completions", "127.0.0.1", True),
+            ("GET", "http://localhost:8765/v1/models", "127.0.0.1", False),
+            ("POST", "https://api.example.test/v1/chat/completions", "93.184.216.34", False),
+        ):
+            with self.subTest(method=method, url=url):
+                transport = UrllibTransport()
+                with frozen_clock(Clock()), \
+                        patch("model_runtime.transport.socket.getaddrinfo", return_value=dns_answer(address)), \
+                        patch.object(transport._opener, "open", return_value=Response()) as opened:
+                    transport.request_json(
+                        method, url, token="", auth_style="none", body={"messages": []},
+                        timeout=180, request_key=key,
+                    )
+                headers = {name.lower(): value for name, value in opened.call_args.args[0].header_items()}
+                self.assertEqual(present, REQUEST_KEY_HEADER.lower() in headers)
+                if present:
+                    self.assertEqual(expected, headers[REQUEST_KEY_HEADER.lower()])
 
     def test_late_response_is_closed_and_never_returned_as_success(self):
         clock = Clock()

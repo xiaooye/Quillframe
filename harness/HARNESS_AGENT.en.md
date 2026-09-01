@@ -96,26 +96,24 @@ authority/session bootstrap
 → private character state
 → character.action_propose
 → scene.resolve_actions
-→ compact writer-safe realization
+→ Scene Realization Contract + model-selected minimum Writer context + Director Note/current author objectives
 → Reader Pressure
-→ event-first Raw Draft
-→ Surface realization
+→ one direct Surface Writer
 → freeze candidate fingerprint
 → Blind Reader (`reader.engagement_audit`)
-→ Semantic Rule Auditor when required (`quality.semantic_rule_audit`)
-→ Editor repair spec (`editor.repair_spec`)
-→ repair / challenger comparison as warranted
 → continuity/state checks
+→ objective-by-objective self-audit and candidate qualification
+→ Editor repair routing and repair/challenger comparison as warranted
 → required independent semantic gate
 → user-visible Review Draft
 ```
 
 Important boundaries:
 
-- Raw Draft is internal.
-- Regression bad examples remain post-generation until Raw Draft/candidate freeze.
+- Direct candidate prose is internal until the exact release gate.
+- Rejected prose, reviewer analysis and private planning never enter a fresh Writer pack; bounded local repair receives only exact edit windows.
 - Private character state is causal evidence, not Writer exposition payload.
-- Surface-clean prose is a floor, not production readiness.
+- A direct Surface result is not production readiness.
 - Blind Reader is not a hard-rule checklist executor.
 - Rule Auditor sees authoritative rules Reader should not see.
 - Editor chooses repair owner and generation mode semantically.

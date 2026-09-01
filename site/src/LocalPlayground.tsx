@@ -20,11 +20,11 @@ type Props = { locale: Locale };
 const presets: Record<PlaygroundMode, TracePreset> = {
   DRAFT: {
     mode: "DRAFT",
-    purposeZh: "从冻结上下文进入场景模拟、人物行动与 event-first raw draft 之前的执行预览。",
-    purposeEn: "Preview the path from frozen context into scene simulation, character action, and event-first raw drafting.",
+    purposeZh: "从冻结上下文进入人物行动、场景合同与 direct Surface Writer 派发边界之前的执行预览。",
+    purposeEn: "Preview the path from frozen context through character enactment and a Scene Realization Contract to the direct Surface Writer dispatch boundary.",
     context: ["accepted canon", "active plan", "character knowledge", "scene pressure", "selected prose profile"],
-    contracts: ["context.select", "character.action_propose", "scene.resolve_actions"],
-    execution: ["Context Freeze", "Story / Canon Preflight", "Scene Simulation", "Character Simulation", "Raw Draft boundary"],
+    contracts: ["context.select", "character.action_propose", "scene.resolve_actions", "scene.realization_project"],
+    execution: ["Context Freeze", "Story / Canon Preflight", "Character Enactment", "Scene Resolution", "Writer Pack boundary"],
     evidence: ["source-bound context", "character knowledge bounds", "causal action proposals", "scene resolution trace"],
     resultZh: "准备一个受边界约束的 DRAFT 运行输入；不会在这个浏览器 demo 中生成或接受正文。",
     resultEn: "Prepare a bounded DRAFT run input; this browser demo does not generate or accept manuscript prose.",

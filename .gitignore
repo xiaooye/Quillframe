@@ -5,6 +5,16 @@ __pycache__/
 *.sqlite
 *.sqlite3
 *.db
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+*.db-wal
+*.db-shm
+*.epub
+*.mobi
+*.azw
+*.azw3
 *.egg-info/
 /build/
 /dist/
@@ -27,3 +37,8 @@ site/docs-site/.astro/
 site/docs-site/node_modules/
 site/docs-site/public/repo-assets/
 site/docs-site/src/content/docs/
+
+# Local research clones and generated review deliverables are not Framework source.
+/tmp/
+/deliverables/
+/NUL

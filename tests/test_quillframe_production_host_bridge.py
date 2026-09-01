@@ -7,6 +7,25 @@ from studio import host_bridge, host_bridge_protocol
 
 
 class ProductionHostBridgeTests(unittest.TestCase):
+    def test_craft_mode_is_optional_and_forwarded_without_inferred_selection(self):
+        request = {"schema": host_bridge.REQUEST_SCHEMA, "bridge_version": host_bridge.BRIDGE_VERSION,
+                   "request_id": "craft-mode", "operation": "author.run.execute", "surface": "local_app",
+                   "authority": False, "args": {
+                       "project_id": "P", "run_id": "R", "service_id": "S", "instruction": "Draft a scene.",
+                       "reader_grip": "medium", "rule_material": [{"id": "synthetic-fixture"}],
+                   }}
+        for mode in (None, "baseline", "outline_driven"):
+            args = dict(request["args"])
+            if mode is not None:
+                args["craft_guidance_mode"] = mode
+            with self.subTest(mode=mode), patch.object(host_bridge, "production_runtime") as factory:
+                factory.return_value.execute.return_value = {"status": "awaiting_external", "authority": False}
+                response = host_bridge.invoke({**request, "args": args})
+                self.assertEqual("ok", response["status"])
+                forwarded = factory.return_value.execute.call_args.kwargs
+                self.assertEqual(mode, forwarded["craft_guidance_mode"])
+                self.assertNotIn("craft_selection", forwarded)
+
     def test_repair_execute_inherits_only_core_frozen_inputs_and_rejects_caller_comparison(self):
         request = {"schema": host_bridge.REQUEST_SCHEMA, "bridge_version": host_bridge.BRIDGE_VERSION, "request_id": "studio-repair",
                    "operation": "author.run.execute", "surface": "local_app", "args": {
@@ -39,6 +58,10 @@ class ProductionHostBridgeTests(unittest.TestCase):
             "author.run.cancel",
             "author.run.events",
             "author.run.context.refresh",
+            "author.run.billing.reconcile",
+            "author.run.build-migration.preview",
+            "author.run.build-migration.regression",
+            "author.run.build-migration.apply",
             "author.run.independent.submit",
             "author.run.independent.dispatch.prepare",
             "model.service.add",
@@ -65,6 +88,10 @@ class ProductionHostBridgeTests(unittest.TestCase):
                 "run_id",
                 "service_id",
             ],
+        )
+        self.assertIn(
+            "regression_receipt_id",
+            contract["operations"]["author.run.build-migration.apply"]["required_args"],
         )
         self.assertFalse(contract["invariants"]["independent_review_project_peer_receipt_required"])
         self.assertTrue(contract["invariants"]["independent_review_receipt_required"])

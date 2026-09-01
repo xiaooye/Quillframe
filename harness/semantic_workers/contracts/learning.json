@@ -1,6 +1,6 @@
 {
   "schema": "quillframe_model_contract_registry_v1",
-  "version": "2",
+  "version": "6",
   "principle": "Adaptive-learning interpretation and evidence sufficiency belong to models; deterministic runtime binds evidence, exact semantic receipts, promotion authority, version/rollback/CI and durable-write permissions. A semantic PASS never grants its own write authority.",
   "contracts": {
     "learning.mechanism_analyze": {
@@ -44,6 +44,8 @@
           "candidate_id": {"type": "string", "minLength": 1},
           "scope": {"enum": ["project", "user_taste", "general_craft"]},
           "mechanism": {"type": "string", "minLength": 1},
+          "candidate_artifact_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71, "pattern": "^sha256:[0-9a-f]{64}$"},
+          "craft_pack_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71, "pattern": "^sha256:[0-9a-f]{64}$"},
           "statement": {"type": "string"},
           "evidence_refs": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
           "evidence_summary": {"type": "array", "items": {"type": "object"}},
@@ -84,6 +86,24 @@
     "learning.evaluate": {
       "kind": "eval_judge",
       "purpose": "Evaluate a proposed learned mechanism against the supplied bounded test fixture and profile boundary without seeing hidden expected labels.",
+      "input_contract": {
+        "type": "object",
+        "required": ["mechanism", "fixture"],
+        "properties": {
+          "candidate_id": {"type": "string", "minLength": 1},
+          "scope": {"enum": ["project", "user_taste", "general_craft"]},
+          "learning_scope": {"enum": ["one_off", "project", "user_taste", "general_craft"]},
+          "hypothesis_id": {"type": ["string", "null"]},
+          "mechanism": {"type": ["string", "null"]},
+          "profile_boundary": {"type": "object"},
+          "fixture": {"oneOf": [{"type": "object"}, {"type": "string", "minLength": 1}]},
+          "evaluation_purpose": {"type": ["string", "null"]},
+          "evaluation_criteria": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "candidate_artifact_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71, "pattern": "^sha256:[0-9a-f]{64}$"},
+          "craft_pack_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71, "pattern": "^sha256:[0-9a-f]{64}$"}
+        },
+        "additionalProperties": false
+      },
       "rubric": [
         "Apply only the evaluation purpose and criteria supplied in the payload.",
         "Judge whether the proposed mechanism works for this fixture without turning a profile-sensitive preference into a universal hard rule.",
@@ -108,6 +128,873 @@
         "allowed_result_scope": "learning_eval_observation"
       },
       "independent_gate": true
+    },
+    "corpus.provenance.public_abstraction": {
+      "kind": "external_review",
+      "purpose": "Independently review whether fingerprint-bound completion, candidate, identity-policy and provenance evidence supports the declared public-abstraction release target. Return evidence only; this is not copyright clearance, legal advice or release authority.",
+      "forbidden_input_keys": ["title", "source_title", "work_title", "creator", "author", "local_path", "source_path", "file_path", "filepath", "filename", "quote", "excerpt", "passage", "prose", "text", "source_text", "raw_text", "full_text", "url", "uri"],
+      "input_contract": {
+        "type": "object",
+        "required": ["completion_fingerprint", "candidate_fingerprint", "identity_policy_fingerprint", "provenance_fingerprint", "declared_rights_class", "declared_rights_basis", "source_dependency_current", "release_target"],
+        "properties": {
+          "completion_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71, "pattern": "^sha256:[0-9a-f]{64}$"},
+          "candidate_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71, "pattern": "^sha256:[0-9a-f]{64}$"},
+          "identity_policy_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71, "pattern": "^sha256:[0-9a-f]{64}$"},
+          "provenance_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71, "pattern": "^sha256:[0-9a-f]{64}$"},
+          "declared_rights_class": {"enum": ["redistributable", "analysis_only", "unknown"]},
+          "declared_rights_basis": {"type": "string", "minLength": 1, "maxLength": 1000},
+          "source_dependency_current": {"type": "boolean"},
+          "release_target": {"enum": ["public_general_style_atlas"]}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Review only the supplied fingerprints and declarations. Do not ask for, infer or reconstruct titles, paths, source identity or prose.",
+        "Check whether the declared rights class and bounded rights basis are compatible with public abstraction, whether the source dependency is current, and whether the identity policy and provenance bindings are present for the stated release target.",
+        "Use blocked when a supplied declaration establishes an incompatible or stale dependency. Use insufficient_evidence when the declarations or fingerprint bindings do not support a reliable conclusion; never manufacture missing legal or provenance facts.",
+        "A pass means only that this bounded evidence review found no declared abstraction blocker. It is evidence_only, not copyright clearance, legal safety, release approval or permission to write any durable state.",
+        "Findings must be bounded, use the declared binding categories, contain no source text or identity, and avoid legal conclusions beyond the supplied rights declaration."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "status", "findings", "report", "authority_scope", "legal_safety_claim"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "status": {"enum": ["pass", "blocked", "insufficient_evidence"]},
+          "findings": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "object",
+              "required": ["binding", "severity", "observation"],
+              "properties": {
+                "binding": {"enum": ["completion", "candidate", "identity_policy", "provenance", "rights", "source_dependency", "release_target"]},
+                "severity": {"enum": ["information", "warning", "blocking", "unclear"]},
+                "observation": {"type": "string", "minLength": 1, "maxLength": 800}
+              },
+              "additionalProperties": false
+            }
+          },
+          "report": {"type": "string", "minLength": 1, "maxLength": 1600},
+          "authority_scope": {"enum": ["evidence_only"]},
+          "legal_safety_claim": {"enum": [false]}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "evidence_only"
+      },
+      "independent_gate": true
+    },
+    "corpus.range_observe": {
+      "kind": "corpus_analyze",
+      "purpose": "Observe transferable craft mechanisms in one ephemeral, bounded fiction passage. The passage may be present only for this invocation; output must contain abstract observations and opaque references, never quotations or source identity.",
+      "forbidden_input_keys": ["full_text", "source_title", "creator", "author", "local_path", "source_path"],
+      "input_contract": {
+        "type": "object",
+        "required": ["range_id", "window_role", "passage", "research_axes", "passage_fingerprint"],
+        "properties": {
+          "range_id": {"type": "string", "minLength": 1},
+          "window_role": {"enum": ["opening", "representative_middle", "chapter_ending"]},
+          "passage": {"type": "string", "minLength": 1, "maxLength": 4000},
+          "passage_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "research_axes": {
+            "type": "array", "minItems": 1, "uniqueItems": true,
+            "items": {"enum": ["scene_entry", "causal_progression", "dialogue_voice", "interiority_distance", "information_timing", "paragraph_rhythm", "relationship_movement", "chapter_forward_pull"]}
+          }
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Describe observable, transferable mechanisms at sentence_or_paragraph, scene or chapter level. Never quote, closely paraphrase, identify or imitate the source or author.",
+        "For each mechanism state its effect, enabling conditions, a failure or legitimate counterexample boundary, and calibrated confidence. Do not convert counts, sentence lengths or beat patterns into generation quotas.",
+        "Treat summary, complete professional speech, interiority and metaphor as potentially legitimate. Diagnose their function in this passage instead of applying a blacklist.",
+        "Information-through-action, identity-constrained dialogue, embodied presence, causal consequence and forward pull are research questions, not expected labels. Return contrary evidence when present."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "range_id", "observations", "counterexamples", "uncertainties"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "range_id": {"type": "string", "minLength": 1},
+          "observations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["level", "axis", "mechanism", "observed_effect", "conditions", "failure_boundary", "confidence"],
+              "properties": {
+                "level": {"enum": ["sentence_or_paragraph", "scene", "chapter"]},
+                "axis": {"enum": ["scene_entry", "causal_progression", "dialogue_voice", "interiority_distance", "information_timing", "paragraph_rhythm", "relationship_movement", "chapter_forward_pull"]},
+                "mechanism": {"type": "string", "minLength": 1},
+                "observed_effect": {"type": "string", "minLength": 1},
+                "conditions": {"type": "array", "items": {"type": "string"}},
+                "failure_boundary": {"type": "string", "minLength": 1},
+                "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+              },
+              "additionalProperties": false
+            }
+          },
+          "counterexamples": {"type": "array", "items": {"type": "string"}},
+          "uncertainties": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "ephemeral_range_observation"
+      },
+      "independent_gate": false
+    },
+    "learning.work_synthesize": {
+      "kind": "corpus_analyze",
+      "purpose": "Synthesize three already-derived window observations for one opaque logical work without receiving source prose or source identity.",
+      "forbidden_input_keys": ["passage", "excerpt", "full_text", "raw_text", "source_text", "source_title", "creator", "author", "local_path", "source_path"],
+      "input_contract": {
+        "type": "object",
+        "required": ["public_work_id", "window_observations", "research_axes"],
+        "properties": {
+          "public_work_id": {"type": "string", "minLength": 1},
+          "window_observations": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "object"}},
+          "research_axes": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Synthesize only supported abstract mechanisms and preserve differences among opening, middle and ending windows.",
+        "Do not invent source facts, names, plot summaries, phrases or author identity. Preserve counterexamples, uncertainty and profile-sensitive boundaries.",
+        "Return coarse, transferable observations rather than exact stylistic measurements or generation quotas."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "public_work_id", "mechanisms", "counterexamples", "profile_boundaries", "uncertainties"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "public_work_id": {"type": "string", "minLength": 1},
+          "mechanisms": {"type": "array", "items": {"type": "object"}},
+          "counterexamples": {"type": "array", "items": {"type": "object"}},
+          "profile_boundaries": {"type": "array", "items": {"type": "object"}},
+          "uncertainties": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "derived_work_observation"
+      },
+      "independent_gate": false
+    },
+    "learning.benchmark_synthesize": {
+      "kind": "corpus_analyze",
+      "purpose": "Synthesize anonymous, derived work observations into falsifiable cross-work general-craft benchmarks with explicit counterexamples and profile boundaries.",
+      "forbidden_input_keys": ["passage", "excerpt", "full_text", "raw_text", "source_text", "source_title", "creator", "author", "local_path", "source_path", "content_fingerprint"],
+      "input_contract": {
+        "type": "object",
+        "required": ["corpus_version", "work_observations", "research_axes"],
+        "properties": {
+          "corpus_version": {"type": "string", "minLength": 1},
+          "work_observations": {"type": "array", "minItems": 2, "items": {"type": "object"}},
+          "research_axes": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Each proposed benchmark must cite multiple distinct opaque work IDs, at least one counterexample work ID, and a meaningful profile/applicability boundary.",
+        "Separate common mechanism from surface coincidence. Do not create named-author profiles, signature fingerprints, phrase libraries, exact beat quotas or a single quality score.",
+        "A benchmark is evidence for later evaluation, not framework guidance or promotion authority. Return contested or narrow results when evidence does not generalize."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "benchmarks", "contested_questions"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "benchmarks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["mechanism", "problem", "positive_pattern", "failure_boundary", "profiles", "supporting_work_ids", "counterexample_work_ids", "writer_guidance"],
+              "properties": {
+                "mechanism": {"type": "string", "minLength": 1},
+                "problem": {"type": "string", "minLength": 1},
+                "positive_pattern": {"type": "string", "minLength": 1},
+                "failure_boundary": {"type": "string", "minLength": 1},
+                "profiles": {"type": "array", "items": {"type": "string"}},
+                "supporting_work_ids": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string"}},
+                "counterexample_work_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+                "writer_guidance": {"type": "string", "minLength": 1}
+              },
+              "additionalProperties": false
+            }
+          },
+          "contested_questions": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "cross_work_benchmark_candidates"
+      },
+      "independent_gate": false
+    },
+    "corpus.style_observe": {
+      "kind": "corpus_analyze",
+      "purpose": "Observe transferable prose-style operations in one ephemeral, scene-aware passage. Return only source-free claims bound to opaque local span references; never quote, closely paraphrase, identify or imitate the source.",
+      "forbidden_input_keys": ["full_text", "raw_text", "source_text", "source_title", "creator", "author", "local_path", "source_path", "work_title"],
+      "input_contract": {
+        "type": "object",
+        "required": ["style_range_id", "retrieval_scene_function_hint", "passage", "passage_fingerprint", "paragraph_spans", "style_axes", "content_profile"],
+        "properties": {
+          "style_range_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "retrieval_scene_function_hint": {"enum": ["opening", "dialogue", "action", "interiority", "exposition", "environment", "body_appearance", "relationship", "transition", "ending"]},
+          "passage": {"type": "string", "minLength": 1, "maxLength": 3000},
+          "passage_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "paragraph_spans": {
+            "type": "array", "minItems": 1, "maxItems": 64,
+            "items": {
+              "type": "object",
+              "required": ["span_ref", "start", "end"],
+              "properties": {
+                "span_ref": {"type": "string", "minLength": 1, "maxLength": 80},
+                "start": {"type": "integer", "minimum": 0},
+                "end": {"type": "integer", "minimum": 1}
+              },
+              "additionalProperties": false
+            }
+          },
+          "style_axes": {
+            "type": "array", "minItems": 1, "maxItems": 10, "uniqueItems": true,
+            "items": {"enum": ["prose_voice", "syntax_rhythm", "lexical_register", "psychic_distance", "descriptive_attention", "body_appearance", "imagery", "dialogue_voice", "interiority_summary", "information_flow"]}
+          },
+          "content_profile": {"enum": ["general", "adult_explicit"]}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Treat retrieval_scene_function_hint only as a passage-retrieval hint. Classify the actual observed scene function or functions from the passage and return them explicitly; the hint is never semantic truth.",
+        "Treat style as several interacting, scene-conditioned operations rather than an author identity, a single score or an average sentence-length target.",
+        "For every observation name the operation, its observable effect, when it helps, when it should be avoided, a legitimate failure or counterexample boundary, and only supplied local span_ref evidence.",
+        "Separate style from story content, named entities, setting facts and signature phrases. A claim that depends on those features must be returned as uncertainty rather than a transferable mechanism.",
+        "Body, appearance, clothing and anatomical specificity are legitimate descriptive-attention evidence. Do not classify a passage as adult merely because such description exists; content_profile is already frozen by the caller.",
+        "Never quote or closely paraphrase the passage. Do not emit source names, plot summaries, character facts, generation quotas, imitation instructions or private reasoning."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "style_range_id", "observed_scene_functions", "observations", "counterexamples", "coverage", "uncertainties"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "style_range_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "observed_scene_functions": {"type": "array", "minItems": 1, "maxItems": 10, "uniqueItems": true, "items": {"enum": ["opening", "dialogue", "action", "interiority", "exposition", "environment", "body_appearance", "relationship", "transition", "ending"]}},
+          "observations": {
+            "type": "array", "maxItems": 32,
+            "items": {
+              "type": "object",
+              "required": ["axis", "level", "operation", "observed_effect", "applies_when", "avoid_when", "failure_boundary", "content_zone", "evidence_span_refs", "confidence"],
+              "properties": {
+                "axis": {"enum": ["prose_voice", "syntax_rhythm", "lexical_register", "psychic_distance", "descriptive_attention", "body_appearance", "imagery", "dialogue_voice", "interiority_summary", "information_flow"]},
+                "level": {"enum": ["sentence", "paragraph", "scene", "chapter"]},
+                "operation": {"type": "string", "minLength": 1, "maxLength": 800},
+                "observed_effect": {"type": "string", "minLength": 1, "maxLength": 800},
+                "applies_when": {"type": "array", "minItems": 1, "maxItems": 12, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+                "avoid_when": {"type": "array", "minItems": 1, "maxItems": 12, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+                "failure_boundary": {"type": "string", "minLength": 1, "maxLength": 800},
+                "content_zone": {"enum": ["general", "adult_explicit", "profile_neutral"]},
+                "evidence_span_refs": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 80}},
+                "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+              },
+              "additionalProperties": false
+            }
+          },
+          "counterexamples": {"type": "array", "maxItems": 24, "items": {"type": "string", "minLength": 1, "maxLength": 600}},
+          "coverage": {
+            "type": "object",
+            "required": ["axes_observed"],
+            "properties": {
+              "axes_observed": {"type": "array", "maxItems": 10, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 80}}
+            },
+            "additionalProperties": false
+          },
+          "uncertainties": {"type": "array", "maxItems": 24, "items": {"type": "string", "minLength": 1, "maxLength": 600}}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "ephemeral_style_observation"
+      },
+      "independent_gate": false
+    },
+    "learning.style_work_synthesize": {
+      "kind": "corpus_analyze",
+      "purpose": "Infer stable style operations, local variants, counterexamples and unresolved coverage for one opaque work from already-derived scene-aware observations, without source prose or identity.",
+      "forbidden_input_keys": ["passage", "excerpt", "full_text", "raw_text", "source_text", "source_title", "creator", "author", "local_path", "source_path", "work_title"],
+      "input_contract": {
+        "type": "object",
+        "required": ["public_work_id", "analysis_round", "style_axes", "observed_scene_functions", "window_observations", "content_profile"],
+        "properties": {
+          "public_work_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "analysis_round": {"type": "integer", "minimum": 1, "maximum": 4},
+          "style_axes": {"type": "array", "minItems": 1, "maxItems": 10, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 80}},
+          "observed_scene_functions": {"type": "array", "minItems": 1, "maxItems": 10, "uniqueItems": true, "items": {"enum": ["opening", "dialogue", "action", "interiority", "exposition", "environment", "body_appearance", "relationship", "transition", "ending"]}},
+          "window_observations": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"type": "object"}},
+          "content_profile": {"enum": ["general", "adult_explicit"]}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Distinguish a stable recurring operation from a local scene variant, a genre/content coincidence and a legitimate counterexample.",
+        "Use only opaque range/span/work references supplied by the caller. Never reconstruct source prose, identity, plot, named entities or signature phrases.",
+        "Request another scene function only when it could materially resolve an explicit uncertainty. No fixed sample count proves saturation.",
+        "Body and appearance mechanisms remain ordinary descriptive-attention evidence; do not infer or change the frozen content profile."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "public_work_id", "stable_patterns", "local_variants", "counterexamples", "coverage_gaps", "saturation", "uncertainties"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "public_work_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "stable_patterns": {"type": "array", "maxItems": 64, "items": {"type": "object"}},
+          "local_variants": {"type": "array", "maxItems": 64, "items": {"type": "object"}},
+          "counterexamples": {"type": "array", "maxItems": 64, "items": {"type": "object"}},
+          "coverage_gaps": {"type": "array", "maxItems": 10, "uniqueItems": true, "items": {"enum": ["opening", "dialogue", "action", "interiority", "exposition", "environment", "body_appearance", "relationship", "transition", "ending"]}},
+          "saturation": {
+            "type": "object",
+            "required": ["state", "reason"],
+            "properties": {
+              "state": {"enum": ["continue", "saturated", "insufficient_available_evidence"]},
+              "reason": {"type": "string", "minLength": 1, "maxLength": 800}
+            },
+            "additionalProperties": false
+          },
+          "uncertainties": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1, "maxLength": 600}}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "derived_style_work_profile"
+      },
+      "independent_gate": false
+    },
+    "learning.style_axis_synthesize": {
+      "kind": "corpus_analyze",
+      "purpose": "Synthesize one style axis from a bounded discovery batch of anonymous work profiles into falsifiable, source-free candidate claims without averaging distinct styles into one voice.",
+      "forbidden_input_keys": ["passage", "excerpt", "full_text", "raw_text", "source_text", "source_title", "creator", "author", "local_path", "source_path", "work_title"],
+      "input_contract": {
+        "type": "object",
+        "required": ["axis", "batch_id", "content_profile", "discovery_work_profiles"],
+        "properties": {
+          "axis": {"enum": ["prose_voice", "syntax_rhythm", "lexical_register", "psychic_distance", "descriptive_attention", "body_appearance", "imagery", "dialogue_voice", "interiority_summary", "information_flow"]},
+          "batch_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "content_profile": {"enum": ["general", "adult_explicit"]},
+          "discovery_work_profiles": {"type": "array", "minItems": 2, "maxItems": 16, "items": {"type": "object"}}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Produce several conditional mechanisms when evidence clusters differ; never collapse the corpus into a single preferred voice or quality score.",
+        "Each claim must cite at least two supplied opaque work IDs and at least one supplied counterexample work ID that is disjoint from its supporting IDs. If the supplied profiles cannot support that 2+1 disjoint binding, omit the claim and record the unresolved issue in contested_questions. Treat support count as evidence coverage, not semantic truth.",
+        "Separate style from characters, setting, topic, plot and author identity. Do not emit quotes, signature phrases, named-author instructions or generation quotas.",
+        "Return narrow or contested claims when applicability differs by scene function, point of view, genre/profile or desired reader effect."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "axis", "claims", "contested_questions"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "axis": {"type": "string", "minLength": 1, "maxLength": 80},
+          "claims": {
+            "type": "array", "maxItems": 32,
+            "items": {
+              "type": "object",
+              "required": ["operation", "desired_effect", "applies_when", "avoid_when", "failure_boundary", "scene_functions", "content_zones", "supporting_work_ids", "counterexample_work_ids", "confidence"],
+              "properties": {
+                "operation": {"type": "string", "minLength": 1, "maxLength": 1000},
+                "desired_effect": {"type": "string", "minLength": 1, "maxLength": 800},
+                "applies_when": {"type": "array", "minItems": 1, "maxItems": 12, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+                "avoid_when": {"type": "array", "minItems": 1, "maxItems": 12, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+                "failure_boundary": {"type": "string", "minLength": 1, "maxLength": 800},
+                "scene_functions": {"type": "array", "minItems": 1, "maxItems": 10, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 80}},
+                "content_zones": {"type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true, "items": {"enum": ["general", "adult_explicit", "profile_neutral"]}},
+                "supporting_work_ids": {"type": "array", "minItems": 2, "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+                "counterexample_work_ids": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+                "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+              },
+              "additionalProperties": false
+            }
+          },
+          "contested_questions": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1, "maxLength": 800}}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "style_claim_candidates"
+      },
+      "independent_gate": false
+    },
+    "learning.style_axis_reconcile": {
+      "kind": "corpus_analyze",
+      "purpose": "Reconcile all bounded batch claims for one style axis into deduplicated, conflict-aware and narrowly bounded source-free claims before held-out semantic verification.",
+      "forbidden_input_keys": ["passage", "excerpt", "full_text", "raw_text", "source_text", "source_title", "creator", "author", "local_path", "source_path", "work_title", "discovery_work_profiles", "holdout_work_profiles"],
+      "input_contract": {
+        "type": "object",
+        "required": ["axis", "reconciliation_id", "content_profile", "batch_syntheses", "eligible_discovery_work_ids"],
+        "properties": {
+          "axis": {"enum": ["prose_voice", "syntax_rhythm", "lexical_register", "psychic_distance", "descriptive_attention", "body_appearance", "imagery", "dialogue_voice", "interiority_summary", "information_flow"]},
+          "reconciliation_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "content_profile": {"enum": ["general", "adult_explicit"]},
+          "eligible_discovery_work_ids": {"type": "array", "maxItems": 120, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+          "batch_syntheses": {
+            "type": "array", "minItems": 1, "maxItems": 64,
+            "items": {
+              "type": "object",
+              "required": ["batch_id", "claims", "contested_questions"],
+              "properties": {
+                "batch_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                "claims": {"type": "array", "maxItems": 32, "items": {"type": "object"}},
+                "contested_questions": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1, "maxLength": 800}}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Use only the supplied batch claims, contested questions and opaque IDs. Never reconstruct or request source prose, work identity, plot, named entities or author identity.",
+        "Deduplicate semantically equivalent claims, reconcile contradictions instead of voting by support count, and retain multiple conditional mechanisms when the evidence supports distinct operations.",
+        "Narrow applies_when, avoid_when, scene functions, content zones or failure boundaries when batches disagree. Drop a claim when its supplied opaque support and counterexample IDs cannot sustain a falsifiable boundary.",
+        "Every output claim must use only opaque work IDs present in the supplied claims, cite at least two supporting IDs and one disjoint counterexample ID, and remain source-free. This synthesis is not an independent gate or promotion authority.",
+        "Report convergence semantically. If another slice could resolve a named gap, choose only the minimum necessary opaque IDs from eligible_discovery_work_ids and pair each with actual scene-function retrieval hints in bounded next_evidence_requests. Use insufficient_evidence when the available pool cannot support a reliable claim; converged authorizes early discovery stop but never promotion."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "axis", "reconciliation_id", "claims", "resolved_conflicts", "unresolved_questions", "convergence", "next_evidence_requests"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "axis": {"type": "string", "minLength": 1, "maxLength": 80},
+          "reconciliation_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "claims": {
+            "type": "array", "maxItems": 64,
+            "items": {
+              "type": "object",
+              "required": ["operation", "desired_effect", "applies_when", "avoid_when", "failure_boundary", "scene_functions", "content_zones", "supporting_work_ids", "counterexample_work_ids", "confidence"],
+              "properties": {
+                "operation": {"type": "string", "minLength": 1, "maxLength": 1000},
+                "desired_effect": {"type": "string", "minLength": 1, "maxLength": 800},
+                "applies_when": {"type": "array", "minItems": 1, "maxItems": 12, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+                "avoid_when": {"type": "array", "minItems": 1, "maxItems": 12, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
+                "failure_boundary": {"type": "string", "minLength": 1, "maxLength": 800},
+                "scene_functions": {"type": "array", "minItems": 1, "maxItems": 10, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 80}},
+                "content_zones": {"type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true, "items": {"enum": ["general", "adult_explicit", "profile_neutral"]}},
+                "supporting_work_ids": {"type": "array", "minItems": 2, "maxItems": 128, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+                "counterexample_work_ids": {"type": "array", "minItems": 1, "maxItems": 128, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+                "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+              },
+              "additionalProperties": false
+            }
+          },
+          "resolved_conflicts": {"type": "array", "maxItems": 64, "items": {"type": "string", "minLength": 1, "maxLength": 800}},
+          "unresolved_questions": {"type": "array", "maxItems": 64, "items": {"type": "string", "minLength": 1, "maxLength": 800}},
+          "convergence": {
+            "type": "object",
+            "required": ["state", "rationale", "remaining_gaps"],
+            "properties": {
+              "state": {"enum": ["continue", "converged", "insufficient_evidence"]},
+              "rationale": {"type": "string", "minLength": 1, "maxLength": 1200},
+              "remaining_gaps": {"type": "array", "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 500}}
+            },
+            "additionalProperties": false
+          },
+          "next_evidence_requests": {
+            "type": "array", "maxItems": 16,
+            "items": {
+              "type": "object",
+              "required": ["request_id", "axis", "public_work_ids", "scene_functions", "question"],
+              "properties": {
+                "request_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                "axis": {"enum": ["prose_voice", "syntax_rhythm", "lexical_register", "psychic_distance", "descriptive_attention", "body_appearance", "imagery", "dialogue_voice", "interiority_summary", "information_flow"]},
+                "public_work_ids": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+                "scene_functions": {"type": "array", "minItems": 1, "maxItems": 10, "uniqueItems": true, "items": {"enum": ["opening", "dialogue", "action", "interiority", "exposition", "environment", "body_appearance", "relationship", "transition", "ending"]}},
+                "question": {"type": "string", "minLength": 1, "maxLength": 800}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "reconciled_style_claim_candidates"
+      },
+      "independent_gate": false
+    },
+    "learning.style_claim_verify": {
+      "kind": "external_review",
+      "purpose": "Perform held-out semantic verification of one reconciled, source-free style claim against anonymous work profiles and return promote, narrow, revise, reject or insufficient-evidence evidence without claiming reviewer independence.",
+      "forbidden_input_keys": ["passage", "excerpt", "full_text", "raw_text", "source_text", "source_title", "creator", "author", "local_path", "source_path", "work_title"],
+      "input_contract": {
+        "type": "object",
+        "required": ["claim_id", "axis", "content_profile", "candidate_claim", "holdout_work_profiles"],
+        "properties": {
+          "claim_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "axis": {"type": "string", "minLength": 1, "maxLength": 80},
+          "content_profile": {"enum": ["general", "adult_explicit"]},
+          "candidate_claim": {"type": "object"},
+          "holdout_work_profiles": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"type": "object"}}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Test whether the same conditional operation remains supported on held-out works and whether contrary surface forms can achieve the same effect.",
+        "Check for topic, character, setting, named-entity, source-identity or signature-phrase entanglement. Entangled claims must be revised, narrowed or rejected.",
+        "A valid body or appearance mechanism is ordinary descriptive craft; do not infer adult status or reject it from vocabulary alone.",
+        "Return only support and counterexample IDs supplied in the held-out profiles, and keep those two ID sets disjoint. When one held-out work contains mixed evidence, narrow or revise the boundary instead of placing the same ID in both sets. This is held-out semantic evidence, not an independent gate or Framework promotion authority; later blind A/B and leakage reviews own independent candidate evaluation."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "claim_id", "verdict", "verified_operation", "verified_boundary", "supporting_holdout_work_ids", "counterexample_holdout_work_ids", "content_disentanglement", "report"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "claim_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "verdict": {"enum": ["promote", "narrow", "revise", "reject", "insufficient_evidence"]},
+          "verified_operation": {"type": "string", "minLength": 1, "maxLength": 1000},
+          "verified_boundary": {"type": "string", "minLength": 1, "maxLength": 1000},
+          "supporting_holdout_work_ids": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+          "counterexample_holdout_work_ids": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+          "content_disentanglement": {
+            "type": "object",
+            "required": ["passed", "risks"],
+            "properties": {
+              "passed": {"type": "boolean"},
+              "risks": {"type": "array", "maxItems": 16, "items": {"type": "string", "minLength": 1, "maxLength": 500}}
+            },
+            "additionalProperties": false
+          },
+          "report": {"type": "string", "minLength": 1, "maxLength": 1600}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "heldout_style_claim_verification"
+      },
+      "independent_gate": false
+    },
+    "learning.blind_prose_pair": {
+      "kind": "external_review",
+      "purpose": "Read two anonymous prose samples produced for the same frozen task and context. Preserve one anonymous pair preference and separate observations on eight declared dimensions without a total score, weighted score, automatic winner, production-method guess or activation authority; semantic leakage remains a ninth, independent gate.",
+      "forbidden_input_keys": ["arm", "arm_label", "treatment", "treatment_label", "style", "style_label", "source", "source_id", "source_label", "author", "creator", "title", "candidate_fingerprint", "craft_fingerprint", "baseline", "current_craft_v3", "corpus_candidate", "expected", "expected_verdict", "gold", "gold_label"],
+      "input_contract": {
+        "type": "object",
+        "required": ["comparison_id", "evaluation_task", "evaluation_context", "scene_function", "sample_a", "sample_b", "criteria"],
+        "properties": {
+          "comparison_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "evaluation_task": {"type": "string", "minLength": 1, "maxLength": 5000},
+          "evaluation_context": {"type": "object"},
+          "scene_function": {"enum": ["opening", "dialogue", "action", "interiority", "exposition", "environment", "body_appearance", "relationship", "transition", "ending"]},
+          "sample_a": {
+            "type": "object",
+            "required": ["sample_id", "text"],
+            "properties": {
+              "sample_id": {"enum": ["A"]},
+              "text": {"type": "string", "minLength": 1, "maxLength": 50000}
+            },
+            "additionalProperties": false
+          },
+          "sample_b": {
+            "type": "object",
+            "required": ["sample_id", "text"],
+            "properties": {
+              "sample_id": {"enum": ["B"]},
+              "text": {"type": "string", "minLength": 1, "maxLength": 50000}
+            },
+            "additionalProperties": false
+          },
+          "criteria": {"type": "array", "minItems": 1, "maxItems": 12, "items": {"type": "string", "minLength": 1, "maxLength": 500}}
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Treat A and B as anonymous prose. Do not guess their system, condition, evidence, author, intended winner or production method.",
+        "Judge all eight Blind Reader dimensions separately: content fidelity, causal movement, target mechanism, naturalness, readability, engagement, diversity and originality. Semantic leakage is a ninth, separate independent gate and is not inferred here.",
+        "Body and appearance description, including anatomical specificity, is ordinary descriptive evidence. Do not infer an adult category, defect or preferred answer from vocabulary alone.",
+        "For every dimension use A or B only for a material comparative advantage; use tie when neither has an advantage and unclear when the supplied prose cannot support a reliable comparison. Record the separate pair preference as A, B, tie, both_bad or insufficient_evidence; never calculate it from dimension leanings.",
+        "Diversity means context-appropriate expressive and structural range, not demographic inference or distance from a named source. Originality is perceived freshness, not a semantic-leakage clearance; leakage remains a separate independent gate.",
+        "Keep each observation bounded and concrete without reproducing long phrases. Confidence describes review reliability, not literary quality. This evidence grants no release, promotion, Canon, taste or Framework authority."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "comparison_id", "preference", "dimensions", "blindness_concerns", "report"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "comparison_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "preference": {"enum": ["a", "b", "tie", "both_bad", "insufficient_evidence"]},
+          "dimensions": {
+            "type": "object",
+            "required": ["content_fidelity", "causal_movement", "target_mechanism", "naturalness", "readability", "engagement", "diversity", "originality"],
+            "properties": {
+              "content_fidelity": {
+                "type": "object",
+                "required": ["leaning", "observation"],
+                "properties": {
+                  "leaning": {"enum": ["a", "b", "tie", "unclear"]},
+                  "observation": {"type": "string", "minLength": 1, "maxLength": 800}
+                },
+                "additionalProperties": false
+              },
+              "causal_movement": {
+                "type": "object",
+                "required": ["leaning", "observation"],
+                "properties": {
+                  "leaning": {"enum": ["a", "b", "tie", "unclear"]},
+                  "observation": {"type": "string", "minLength": 1, "maxLength": 800}
+                },
+                "additionalProperties": false
+              },
+              "target_mechanism": {
+                "type": "object",
+                "required": ["leaning", "observation"],
+                "properties": {
+                  "leaning": {"enum": ["a", "b", "tie", "unclear"]},
+                  "observation": {"type": "string", "minLength": 1, "maxLength": 800}
+                },
+                "additionalProperties": false
+              },
+              "naturalness": {
+                "type": "object",
+                "required": ["leaning", "observation"],
+                "properties": {
+                  "leaning": {"enum": ["a", "b", "tie", "unclear"]},
+                  "observation": {"type": "string", "minLength": 1, "maxLength": 800}
+                },
+                "additionalProperties": false
+              },
+              "readability": {
+                "type": "object",
+                "required": ["leaning", "observation"],
+                "properties": {
+                  "leaning": {"enum": ["a", "b", "tie", "unclear"]},
+                  "observation": {"type": "string", "minLength": 1, "maxLength": 800}
+                },
+                "additionalProperties": false
+              },
+              "engagement": {
+                "type": "object",
+                "required": ["leaning", "observation"],
+                "properties": {
+                  "leaning": {"enum": ["a", "b", "tie", "unclear"]},
+                  "observation": {"type": "string", "minLength": 1, "maxLength": 800}
+                },
+                "additionalProperties": false
+              },
+              "diversity": {
+                "type": "object",
+                "required": ["leaning", "observation"],
+                "properties": {
+                  "leaning": {"enum": ["a", "b", "tie", "unclear"]},
+                  "observation": {"type": "string", "minLength": 1, "maxLength": 800}
+                },
+                "additionalProperties": false
+              },
+              "originality": {
+                "type": "object",
+                "required": ["leaning", "observation"],
+                "properties": {
+                  "leaning": {"enum": ["a", "b", "tie", "unclear"]},
+                  "observation": {"type": "string", "minLength": 1, "maxLength": 800}
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "blindness_concerns": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          },
+          "report": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1600
+          }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "anonymous_prose_pair_observation"
+      },
+      "independent_gate": true
+    },
+    "learning.prose_semantic_leakage": {
+      "kind": "external_review",
+      "purpose": "Independently inspect one generated prose sample against bounded anonymous reference samples for semantic, structural or phrase-level imitation risk beyond deterministic overlap checks. Return evidence only, never release authority.",
+      "forbidden_input_keys": ["source_title", "work_title", "creator", "author", "local_path", "source_path", "file_path", "expected", "expected_verdict", "gold", "gold_label", "release_authorized", "promotion_authorized"],
+      "input_contract": {
+        "type": "object",
+        "required": ["review_id", "sample", "reference_samples"],
+        "properties": {
+          "review_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "sample": {
+            "type": "object",
+            "required": ["text", "text_fingerprint"],
+            "properties": {
+              "text": {"type": "string", "minLength": 1, "maxLength": 50000},
+              "text_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71, "pattern": "^sha256:[0-9a-f]{64}$"}
+            },
+            "additionalProperties": false
+          },
+          "reference_samples": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "items": {
+              "type": "object",
+              "required": ["reference_id", "text", "text_fingerprint"],
+              "properties": {
+                "reference_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                "text": {"type": "string", "minLength": 1, "maxLength": 50000},
+                "text_fingerprint": {"type": "string", "minLength": 71, "maxLength": 71, "pattern": "^sha256:[0-9a-f]{64}$"}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "Inspect semantic organization, distinctive image or action sequences, unusually close phrasing, and compound similarities that deterministic n-gram checks can miss.",
+        "Common genre material, ordinary syntax and isolated generic words are not leakage by themselves. Body or appearance vocabulary must not be treated as adult classification or imitation evidence without a concrete similarity pattern.",
+        "Use only supplied opaque reference IDs. Do not identify, name, reconstruct, quote at length or speculate about any author or work.",
+        "Return blocked only for a material, explainable resemblance risk; return insufficient_evidence when the bounded samples do not support a reliable conclusion.",
+        "A clear result is evidence, not permission. Local and semantic checks remain separate from release, promotion and Framework authority."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "review_id", "status", "findings", "report"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "review_id": {"type": "string", "minLength": 1, "maxLength": 160},
+          "status": {"enum": ["clear", "blocked", "insufficient_evidence"]},
+          "findings": {
+            "type": "array",
+            "maxItems": 32,
+            "items": {
+              "type": "object",
+              "required": ["reference_id", "risk", "reason"],
+              "properties": {
+                "reference_id": {"type": "string", "minLength": 1, "maxLength": 160},
+                "risk": {"enum": ["none", "low", "material", "unclear"]},
+                "reason": {"type": "string", "minLength": 1, "maxLength": 800}
+              },
+              "additionalProperties": false
+            }
+          },
+          "report": {"type": "string", "minLength": 1, "maxLength": 1600}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "prose_semantic_leakage_observation"
+      },
+      "independent_gate": true
+    },
+    "learning.preference_select": {
+      "kind": "artifact_audit",
+      "purpose": "Select zero or more active, standing-policy-authorized user-taste mechanisms that are genuinely relevant to the current request and resolved scene. Selection is private routing, not activation or writing authority.",
+      "forbidden_input_keys": ["source_title", "creator", "author", "local_path", "source_path", "excerpt", "raw_text", "source_text", "evidence_ids"],
+      "input_contract": {
+        "type": "object",
+        "required": ["request", "scene_context", "policy_fingerprint", "candidate_fingerprint", "candidates"],
+        "properties": {
+          "request": {"type": "string", "minLength": 1},
+          "scene_context": {"type": "object"},
+          "policy_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "candidate_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "candidates": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "required": ["hypothesis_id", "dimension", "mechanism", "applicability", "version"],
+              "properties": {
+                "hypothesis_id": {"type": "string", "minLength": 1},
+                "dimension": {"type": "string", "minLength": 1},
+                "mechanism": {"type": "string", "minLength": 1},
+                "applicability": {"type": "object"},
+                "version": {"type": "integer", "minimum": 1}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "rubric": [
+        "The current explicit request is highest priority. Select a preference only when it helps this exact request and resolved scene; a valid empty selection is better than irrelevant guidance.",
+        "Use applicability and exception boundaries. Do not select all candidates by default, fill a quota, infer a genre from keywords alone, or turn a preference into a universal rule.",
+        "Choose only supplied hypothesis_id values. Give a concise applicability reason, not private chain-of-thought, source attribution, an author comparison or a predicted quality score.",
+        "Do not rewrite, activate, deactivate or broaden any preference. The frozen policy and deterministic runtime own eligibility, versions and authority."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": ["confidence", "selected", "report"],
+        "properties": {
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "selected": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "required": ["hypothesis_id", "reason"],
+              "properties": {
+                "hypothesis_id": {"type": "string", "minLength": 1},
+                "reason": {"type": "string", "minLength": 1, "maxLength": 800}
+              },
+              "additionalProperties": false
+            }
+          },
+          "report": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "user_taste_relevance_selection"
+      },
+      "independent_gate": false
     }
   }
 }

@@ -3,6 +3,10 @@ packages:
   - studio/app
   - cloud
 
+allowBuilds:
+  esbuild: set this to true or false
+  workerd: set this to true or false
+
 catalog:
   "@solidjs/router": 1.0.0
   solid-js: 1.9.15

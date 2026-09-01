@@ -14,7 +14,7 @@ from harness.semantic_workers.semantic_worker_router import validate_typed_value
 from model_runtime import CapabilityEvidence, DiscoveredModel, ModelRuntimeError, ModelTurn, ToolCall, TransportError, UrllibTransport
 from model_runtime.contracts import now_iso
 from model_runtime.transport import _NoRedirect
-from model_runtime.contracts import fingerprint
+from model_runtime.contracts import fingerprint, model_version_fingerprint
 
 
 class FakeModelRuntime:
@@ -22,6 +22,7 @@ class FakeModelRuntime:
         self.turns = list(turns)
         self.timeouts = []
         self.output_schemas = []
+        self.request_keys = []
         self.selection_probe_flags = []
         stamp = now_iso()
         self.model = DiscoveredModel(
@@ -37,9 +38,12 @@ class FakeModelRuntime:
         self.selection_probe_flags.append(allow_probe)
         return self.model
 
-    def invoke(self, service_id, model_id, history, tools, *, max_output_tokens=2048, timeout_seconds=180.0, output_schema=None):  # noqa: ANN001
+    def invoke(self, service_id, model_id, history, tools, *, max_output_tokens=2048,
+               timeout_seconds=180.0, output_schema=None, request_key=None,
+               expected_model_version_fingerprint=None):  # noqa: ANN001
         self.timeouts.append(timeout_seconds)
         self.output_schemas.append(output_schema)
+        self.request_keys.append(request_key)
         if not self.turns:
             raise AssertionError("fixture model invoked too many times")
         return self.turns.pop(0)
@@ -80,7 +84,7 @@ class SideEffectCheckpointTests(unittest.TestCase):
             tool_grants={"fixture.write"},
             required_model_capabilities={"text", "tool_calling"},
             authority={"filesystem_write": True},
-            budgets=AgentBudget(max_steps=4, max_model_requests=4, max_tool_calls=2, max_parallel_tool_calls=1, max_output_tokens_per_request=64, max_total_tokens=1000, max_elapsed_ms=30000),
+            budgets=AgentBudget(max_steps=4, max_model_requests=4, max_tool_calls=2, max_parallel_tool_calls=1, model_context_limit=1000, max_output_tokens=64, run_cost_budget=1000, max_elapsed_ms=30000),
             idempotency_key="JOB-GUARD-IDEM",
         )
 
@@ -133,8 +137,8 @@ class SideEffectCheckpointTests(unittest.TestCase):
             "tool_grants": ["fixture.write"], "model_preference": None,
             "required_model_capabilities": ["text", "tool_calling"], "authority": {"filesystem_write": True},
             "budgets": {"max_steps": 4, "max_model_requests": 4, "max_tool_calls": 2,
-                        "max_parallel_tool_calls": 1, "max_output_tokens_per_request": 64,
-                        "max_total_tokens": 1000, "max_elapsed_ms": 30000},
+                        "max_parallel_tool_calls": 1, "model_context_limit": 1000,
+                        "max_output_tokens": 64, "run_cost_budget": 1000, "max_elapsed_ms": 30000},
             "idempotency_key": "JOB-GUARD-IDEM",
         }
         self.assertEqual(expected, legacy.to_dict(include_fingerprint=False))
@@ -154,12 +158,12 @@ class SideEffectCheckpointTests(unittest.TestCase):
         self.assertNotIn("max_model_request_ms", schema["properties"]["budgets"]["required"])
         legacy = self._job()
         self.assertEqual([], validate_typed_value(legacy.to_dict(include_fingerprint=False), schema))
-        for value in (1, 180000, 600000):
+        for value in (1, 180000, 600000, 86400000):
             with self.subTest(value=value):
                 job = replace(legacy, budgets=replace(legacy.budgets, max_model_request_ms=value))
                 self.assertEqual([], validate_typed_value(job.to_dict(include_fingerprint=False), schema))
                 self.assertEqual(value, job.budgets.to_dict()["max_model_request_ms"])
-        for value in (True, False, 0, -1, 600001, 10 ** 1000, 1.0, "600000", float("nan"), float("inf"), [], {}):
+        for value in (True, False, 0, -1, 86400001, 10 ** 1000, 1.0, "86400000", float("nan"), float("inf"), [], {}):
             with self.subTest(value=value):
                 with self.assertRaises(ValueError):
                     replace(legacy.budgets, max_model_request_ms=value)
@@ -193,7 +197,7 @@ class SideEffectCheckpointTests(unittest.TestCase):
                     original_history = history
                 self.assertEqual(original_history, history)
 
-    def test_extended_request_still_discards_late_or_cancelled_output_and_enforces_tokens(self):
+    def test_extended_request_preserves_valid_late_or_over_budget_output_but_honors_cancellation(self):
         from agent_runtime.runner import CancellationToken
         for failure in ("elapsed", "cancelled", "tokens"):
             with self.subTest(failure=failure):
@@ -213,13 +217,14 @@ class SideEffectCheckpointTests(unittest.TestCase):
                 with patch.object(model, "invoke", side_effect=invoke), \
                         patch("agent_runtime.runner.time.monotonic", side_effect=[100.0, 101.0, 700.0 if failure == "elapsed" else 102.0]):
                     result = AgentRunner(model, ToolRuntime()).run(job, cancellation=cancellation)
-                self.assertEqual("cancelled" if failure == "cancelled" else "budget_exhausted", result.status)
+                self.assertEqual("cancelled" if failure == "cancelled" else "completed", result.status)
                 self.assertEqual([599.0], model.timeouts)
                 self.assertEqual(1, result.model_requests)
-                if failure != "tokens":
+                if failure == "cancelled":
                     self.assertEqual("", result.final_text)
                 else:
-                    self.assertEqual("token_budget_exhausted_after_response", result.errors[0]["code"])
+                    self.assertEqual("bounded result", result.final_text)
+                    self.assertEqual([], result.errors)
 
     def test_extended_request_failure_is_charged_once_without_retry(self):
         job = self._job()
@@ -233,6 +238,25 @@ class SideEffectCheckpointTests(unittest.TestCase):
         self.assertEqual("request_deadline_exceeded", result.errors[0]["code"])
         self.assertEqual(1, result.model_requests)
         invoke.assert_called_once()
+
+    def test_pending_model_result_preserves_stable_request_identity_for_polling(self):
+        job = replace(
+            self._job(), tool_grants=set(), required_model_capabilities={"text"},
+            budgets=replace(self._job().budgets, max_model_requests=1),
+        )
+        model = FakeModelRuntime([])
+        with patch.object(
+            model, "invoke",
+            side_effect=ModelRuntimeError(
+                "model_pending", "still running",
+                detail={"request_id": "req_" + "a" * 32, "automatic_retry": False},
+            ),
+        ) as invoke:
+            result = AgentRunner(model, ToolRuntime()).run(job)
+        self.assertEqual("model_pending", result.status)
+        self.assertEqual("model_pending", result.errors[0]["code"])
+        self.assertEqual("JOB-GUARD-IDEM:model:1", invoke.call_args.kwargs["request_key"])
+        self.assertEqual(1, result.model_requests)
 
     def test_extended_deadline_does_not_increase_the_model_call_budget(self):
         job = self._job()
@@ -264,6 +288,72 @@ class SideEffectCheckpointTests(unittest.TestCase):
         self.assertEqual([False], model.selection_probe_flags)
         self.assertEqual(1, result.model_requests)
 
+    def test_durable_unstructured_job_never_allows_an_unjournaled_capability_probe(self):
+        job = replace(
+            self._job(),
+            tool_grants=set(),
+            required_model_capabilities={"text"},
+            output_schema=None,
+        )
+        model = FakeModelRuntime([
+            ModelTurn("openai_chat_completions", "fixture-model", text="durable result")
+        ])
+        result = AgentRunner(model, ToolRuntime()).run(job)
+        self.assertEqual("completed", result.status)
+        self.assertEqual([False], model.selection_probe_flags)
+        self.assertEqual(["JOB-GUARD-IDEM:model:1"], model.request_keys)
+        self.assertEqual(1, result.model_requests)
+
+    def test_unresolved_selected_protocol_fails_before_any_model_request(self):
+        job = replace(
+            self._job(),
+            tool_grants=set(),
+            required_model_capabilities={"text"},
+        )
+        model = FakeModelRuntime([
+            ModelTurn("openai_chat_completions", "fixture-model", text="must not run")
+        ])
+        model.model.protocol = None
+        result = AgentRunner(model, ToolRuntime()).run(job)
+        self.assertEqual("model_failed", result.status)
+        self.assertEqual("model_protocol_unresolved", result.errors[0]["code"])
+        self.assertEqual(0, result.model_requests)
+        self.assertEqual([], model.request_keys)
+        self.assertEqual([False], model.selection_probe_flags)
+
+    def test_result_keeps_the_exact_pre_dispatch_model_descriptor_identity(self):
+        job = replace(
+            self._job(),
+            tool_grants=set(),
+            required_model_capabilities={"text"},
+        )
+        model = FakeModelRuntime([
+            ModelTurn("openai_chat_completions", "fixture-model", text="bound result")
+        ])
+        expected = model_version_fingerprint(job.service_id, model.model)
+        original = model.invoke
+
+        def invoke(*args, **kwargs):  # noqa: ANN002, ANN003
+            # Simulate a concurrent discovery refresh/removal after selection.
+            # The returned result must remain bound to what was selected.
+            model.model.metadata["provider_revision"] = "changed-after-dispatch"
+            model.model.model_id = "changed-model-after-dispatch"
+            return original(*args, **kwargs)
+
+        with patch.object(model, "invoke", side_effect=invoke):
+            result = AgentRunner(model, ToolRuntime()).run(job)
+        self.assertEqual("completed", result.status)
+        self.assertEqual("fixture-model", result.model_id)
+        self.assertEqual(expected, result.model_version_fingerprint)
+        self.assertEqual(
+            "selected_model_descriptor",
+            result.model_version_identity_strength,
+        )
+        self.assertNotEqual(
+            model_version_fingerprint(job.service_id, model.model),
+            result.model_version_fingerprint,
+        )
+
     def test_invalid_truncated_or_refused_schema_output_is_preserved_without_retry(self):
         schema = {"type": "object", "properties": {"verdict": {"type": "string"}}, "required": ["verdict"], "additionalProperties": False}
         job = replace(self._job(), tool_grants=set(), required_model_capabilities={"text"}, output_schema=schema)
@@ -278,13 +368,13 @@ class SideEffectCheckpointTests(unittest.TestCase):
                 self.assertEqual(1, result.model_requests)
                 self.assertEqual(1, len(model.output_schemas))
 
-    def test_model_request_deadline_uses_remaining_job_budget_and_discards_late_output(self):
+    def test_model_request_deadline_uses_remaining_job_budget_and_preserves_late_output(self):
         model = FakeModelRuntime([ModelTurn('openai_chat_completions', 'fixture-model', text='late private result')])
         with patch('agent_runtime.runner.time.monotonic', side_effect=[100.0, 101.0, 131.0]):
             result = AgentRunner(model, ToolRuntime()).run(self._job())
         self.assertEqual(model.timeouts, [29.0])
-        self.assertEqual(result.status, 'budget_exhausted')
-        self.assertEqual(result.final_text, '')
+        self.assertEqual(result.status, 'completed')
+        self.assertEqual(result.final_text, 'late private result')
         self.assertEqual(result.model_requests, 1)
 
     def test_cancel_during_model_call_does_not_release_returned_text(self):

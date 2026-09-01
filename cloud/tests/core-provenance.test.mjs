@@ -10,6 +10,8 @@ import {
   signCoreProof,
   verifyCoreProof,
   CoreProofError,
+  HOSTED_CORPUS_OPERATIONS,
+  HOSTED_USER_TASTE_OPERATIONS,
   PROJECT_REQUIRED_OPERATIONS,
   PROJECT_NULL_OPERATIONS,
 } from "../dist/core-provenance.js";
@@ -118,6 +120,29 @@ test("operation matrix derives project binding without a sentinel", () => {
   assert.throws(() => deriveProofProjectId("project.restore", { ...baseRequest, operation: "project.restore", args: { bundle_path: "x" } }), CoreProofError);
 });
 
+test("hosted corpus capability allowlist excludes scans and rejects local paths recursively", () => {
+  const request = (operation, args) => ({ ...baseRequest, operation, args });
+  assert.equal(deriveProofProjectId("corpus.selection.propose", request("corpus.selection.propose", { collection_id: "collection_1", profile: "general" })), null);
+  assert.equal(deriveProofProjectId("corpus.selection.propose", request("corpus.selection.propose", { study_id: "study_1", profile: "general" })), null);
+  assert.equal(deriveProofProjectId("corpus.study.status", request("corpus.study.status", { study_id: "study_1" })), null);
+  assert.throws(
+    () => deriveProofProjectId("corpus.collection.scan", request("corpus.collection.scan", { collection_path: "C:\\novels" })),
+    (error) => error instanceof CoreProofError && error.code === "proof_operation_invalid",
+  );
+  assert.throws(
+    () => deriveProofProjectId("corpus.selection.propose", request("corpus.selection.propose", { collection_id: "collection_1", profile: "general", rights: { local_path: "C:\\novels" } })),
+    (error) => error instanceof CoreProofError && error.code === "proof_local_path_forbidden",
+  );
+  assert.throws(
+    () => deriveProofProjectId("corpus.public.validate", request("corpus.public.validate", { bundle: { source_path: "/tmp/private" } })),
+    (error) => error instanceof CoreProofError && error.code === "proof_local_path_forbidden",
+  );
+  assert.throws(
+    () => deriveProofProjectId("corpus.public.validate", request("corpus.public.validate", { bundle: { location: "C:\\private\\manifest.json" } })),
+    (error) => error instanceof CoreProofError && error.code === "proof_local_path_forbidden",
+  );
+});
+
 test("operation matrix matches the Host Bridge v11 contract", () => {
   const contract = JSON.parse(fs.readFileSync(new URL("../../studio/host_bridge_contract.json", import.meta.url), "utf8"));
   const required = Object.entries(contract.operations).filter(([, metadata]) => metadata.required_args?.includes("project_id")).map(([name]) => name).sort();
@@ -125,4 +150,13 @@ test("operation matrix matches the Host Bridge v11 contract", () => {
   assert.deepEqual(PROJECT_REQUIRED_OPERATIONS, required);
   assert.deepEqual(PROJECT_NULL_OPERATIONS, nullScoped);
   assert.equal(PROJECT_NULL_OPERATIONS.includes("project.restore"), false);
+  const hostedCorpus = Object.entries(contract.operations).filter(([name, metadata]) => name.startsWith("corpus.") && metadata.allowed_surfaces?.includes("hosted_web")).map(([name]) => name).sort();
+  const hostedUserTaste = Object.entries(contract.operations).filter(([name, metadata]) => (name.startsWith("learning.user_taste.") || name.startsWith("learning.auto_activation_policy.")) && metadata.allowed_surfaces?.includes("hosted_web")).map(([name]) => name).sort();
+  assert.deepEqual(HOSTED_CORPUS_OPERATIONS, hostedCorpus);
+  assert.deepEqual(HOSTED_USER_TASTE_OPERATIONS, hostedUserTaste);
+  assert.equal(HOSTED_CORPUS_OPERATIONS.includes("corpus.collection.scan"), false);
+  assert.equal(HOSTED_CORPUS_OPERATIONS.includes("corpus.selection.private_preview"), false);
+  assert.equal(Object.hasOwn(contract.operations, "corpus.selection.private_preview"), false);
+  assert.deepEqual(contract.operations["corpus.selection.propose"].required_args, ["profile"]);
+  assert.equal(contract.invariants.corpus_selection_propose_requires_one_of_collection_or_study, true);
 });

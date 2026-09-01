@@ -54,16 +54,14 @@ authority/session bootstrap
 → Character Private State
 → Character Action / Tactic Simulation
 → Scene Collision / World Resolution
-→ compact Writer-safe Realization Projection
+→ Scene Realization Contract + 模型选择的最小 Writer 上下文 + Director Note/当前作者目标
 → Reader Pressure
-→ Event-first Raw Draft
-→ Surface Realization
+→ 单次 direct Surface Writer
 → freeze exact candidate fingerprint
 → Blind Reader (`reader.engagement_audit`)
-→ Semantic Rule Auditor when required (`quality.semantic_rule_audit`)
-→ Editor Repair Spec (`editor.repair_spec`)
-→ repair / fresh realization / incumbent-challenger comparison as warranted
 → Continuity / state audit
+→ 逐项目标自检与 candidate qualification
+→ 必要时的 Editor Repair Spec + bounded repair / fresh realization / incumbent-challenger comparison
 → required independent semantic gate
 → User-visible Gate
 ```

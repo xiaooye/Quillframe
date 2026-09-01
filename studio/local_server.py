@@ -42,6 +42,11 @@ class StudioServer(ThreadingHTTPServer):
         self.dist = dist.resolve()
         self.token = token
         self.verbose = verbose
+        # One desktop Studio process owns one local Core command lane.  HTTP
+        # asset delivery may stay threaded, but concurrent Bridge handlers can
+        # otherwise race CorpusLibrary initialization/WAL negotiation before
+        # Core has reached its own transaction boundary.
+        self.bridge_lock = threading.RLock()
 
 
 class StudioHandler(BaseHTTPRequestHandler):
@@ -161,7 +166,8 @@ class StudioHandler(BaseHTTPRequestHandler):
         if not isinstance(request, dict):
             self._transport_error(HTTPStatus.BAD_REQUEST, "invalid_request", "Bridge request root must be an object")
             return
-        result = invoke(request)
+        with self.server.bridge_lock:
+            result = invoke(request)
         self._json(HTTPStatus.OK, result)
 
     def do_OPTIONS(self) -> None:  # noqa: N802
@@ -251,6 +257,7 @@ def main() -> int:
         return 0 if result["status"] == "pass" else 1
 
     server = create_server(Path(args.dist), port=args.port, verbose=args.verbose)
+    host_bridge.start_production_coordinator(interval_seconds=5.0)
     print(json.dumps({
         "schema": SERVER_SCHEMA,
         "status": "serving",
@@ -264,6 +271,7 @@ def main() -> int:
     except KeyboardInterrupt:
         pass
     finally:
+        host_bridge.stop_production_coordinator()
         server.server_close()
     return 0
 

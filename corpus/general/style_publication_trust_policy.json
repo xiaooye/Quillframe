@@ -1,0 +1,13 @@
+{
+  "schema": "quillframe_style_publication_trust_policy_v1",
+  "policy_version": 1,
+  "status": "unconfigured",
+  "roles": {
+    "provenance": {"key_id": null, "secret_fingerprint": null},
+    "semantic_leakage": {"key_id": null, "secret_fingerprint": null},
+    "blind_ab": {"key_id": null, "secret_fingerprint": null},
+    "promotion": {"key_id": null, "secret_fingerprint": null},
+    "manual_approval": {"key_id": null, "secret_fingerprint": null}
+  },
+  "policy_fingerprint": "sha256:6085474d389dc547c98c906f67f66281389fd36b0b4590454c31a6dd3a23f214"
+}

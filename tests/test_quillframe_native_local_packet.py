@@ -14,7 +14,7 @@ if str(ROOT / "harness" / "semantic_workers") not in sys.path:
 
 from peer_chat_relay import build as build_packet
 from peer_chat_relay import validate_peer_result
-from semantic_worker_router import make_contract_job
+from semantic_worker_router import make_contract_job, validate_typed_value
 
 
 def frozen_bytes() -> bytes:
@@ -38,14 +38,148 @@ def frozen_bytes() -> bytes:
 
 
 class NativeLocalPacketTests(unittest.TestCase):
+    def test_codex_schema_projection_removes_only_transport_unsupported_uniqueness(self):
+        import harness.semantic_workers.adapters.local_agent_adapter as adapter
+
+        contract = {
+            "type": "object",
+            "required": ["items", "nested", "open"],
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "uniqueItems": True,
+                    "items": {"type": "string", "minLength": 1},
+                },
+                "nested": {
+                    "type": "object",
+                    "required": ["values"],
+                    "properties": {
+                        "values": {
+                            "type": "array",
+                            "uniqueItems": True,
+                            "items": {"type": "number", "minimum": 0},
+                        }
+                    },
+                    "additionalProperties": False,
+                },
+                "open": {"type": "array", "items": {"type": "object"}},
+            },
+            "additionalProperties": False,
+        }
+        frozen = json.loads(json.dumps(contract))
+
+        projected = adapter.codex_output_schema(contract)
+
+        self.assertEqual(contract, frozen)
+        self.assertNotIn("uniqueItems", projected["properties"]["items"])
+        self.assertNotIn("uniqueItems", projected["properties"]["nested"]["properties"]["values"])
+        self.assertEqual(1, projected["properties"]["items"]["minItems"])
+        self.assertEqual(3, projected["properties"]["items"]["maxItems"])
+        self.assertEqual(0, projected["properties"]["nested"]["properties"]["values"]["items"]["minimum"])
+        open_item = projected["properties"]["open"]["items"]
+        self.assertEqual(["source_free_analysis"], open_item["required"])
+        self.assertFalse(open_item["additionalProperties"])
+        projected_value = {
+            "items": ["one"],
+            "nested": {"values": [1]},
+            "open": [{"source_free_analysis": "A bounded mechanism."}],
+        }
+        self.assertEqual([], validate_typed_value(projected_value, contract))
+
+    def test_original_contract_still_enforces_unique_items_after_transport_projection(self):
+        schema = {"type": "array", "uniqueItems": True, "items": {"type": ["number", "boolean"]}}
+        self.assertEqual([], validate_typed_value([1, 2], schema))
+        self.assertTrue(any("uniqueItems" in error for error in validate_typed_value([1, 1.0], schema)))
+        self.assertEqual([], validate_typed_value([1, True], schema))
+
+    def test_codex_style_axis_schema_binds_dynamic_ids_but_keeps_semantic_labels_open(self):
+        import harness.semantic_workers.adapters.local_agent_adapter as adapter
+
+        allowed = ["PUBLIC-WORK-A", "PUBLIC-WORK-B", "PUBLIC-WORK-C"]
+        job = make_contract_job(
+            "learning.style_axis_synthesize",
+            "AXIS-PROSE-VOICE",
+            {
+                "axis": "prose_voice",
+                "batch_id": "BATCH-1",
+                "content_profile": "general",
+                "discovery_work_profiles": [
+                    {
+                        "public_work_id": work_id,
+                        "profile": {"source_free_analysis": "Synthetic profile"},
+                    }
+                    for work_id in allowed
+                ],
+            },
+        )
+        frozen_job = json.loads(json.dumps(job))
+
+        schema = adapter.codex_job_output_schema(job)
+        properties = schema["properties"]
+        claim_properties = properties["claims"]["items"]["properties"]
+
+        self.assertEqual(["prose_voice"], properties["axis"]["enum"])
+        self.assertEqual(
+            allowed,
+            claim_properties["supporting_work_ids"]["items"]["enum"],
+        )
+        self.assertEqual(
+            allowed,
+            claim_properties["counterexample_work_ids"]["items"]["enum"],
+        )
+        self.assertNotIn("enum", claim_properties["scene_functions"]["items"])
+        self.assertEqual(frozen_job, job)
+
+    def test_codex_axis_reconcile_schema_separates_evidence_and_retrieval_ids(self):
+        import harness.semantic_workers.adapters.local_agent_adapter as adapter
+
+        evidence_ids = ["PUBLIC-WORK-A", "PUBLIC-WORK-B", "PUBLIC-WORK-C"]
+        eligible_ids = ["PUBLIC-WORK-D", "PUBLIC-WORK-E"]
+        job = make_contract_job(
+            "learning.style_axis_reconcile",
+            "AXIS-PROSE-VOICE-RECONCILE",
+            {
+                "axis": "prose_voice",
+                "reconciliation_id": "RECONCILE-1",
+                "content_profile": "general",
+                "batch_syntheses": [
+                    {
+                        "batch_id": "BATCH-1",
+                        "claims": [
+                            {
+                                "supporting_work_ids": evidence_ids[:2],
+                                "counterexample_work_ids": evidence_ids[2:],
+                            }
+                        ],
+                        "contested_questions": [],
+                    }
+                ],
+                "eligible_discovery_work_ids": eligible_ids,
+            },
+        )
+
+        schema = adapter.codex_job_output_schema(job)
+        properties = schema["properties"]
+        claim_properties = properties["claims"]["items"]["properties"]
+        request_properties = properties["next_evidence_requests"]["items"][
+            "properties"
+        ]
+
+        self.assertEqual(evidence_ids, claim_properties["supporting_work_ids"]["items"]["enum"])
+        self.assertEqual(evidence_ids, claim_properties["counterexample_work_ids"]["items"]["enum"])
+        self.assertEqual(eligible_ids, request_properties["public_work_ids"]["items"]["enum"])
+        self.assertEqual(["prose_voice"], request_properties["axis"]["enum"])
+
     def test_packet_execute_passes_exact_bytes_and_project_free_cwd(self):
         import harness.semantic_workers.adapters.local_agent_adapter as adapter
 
         packet = frozen_bytes()
         calls: list[dict] = []
 
-        def fake_run(argv, *, input, text, capture_output, cwd, timeout, check):
-            calls.append({"argv": argv, "input": input, "text": text, "cwd": cwd, "timeout": timeout, "check": check})
+        def fake_run(argv, *, input, text, capture_output, cwd, env, timeout, check):
+            calls.append({"argv": argv, "input": input, "text": text, "cwd": cwd, "env": env, "timeout": timeout, "check": check})
             output = Path(argv[argv.index("--output-last-message") + 1])
             output.write_text('{"result":"pass","confidence":0.9}', encoding="utf-8")
             return type("Proc", (), {"returncode": 0, "stderr": "", "stdout": ""})()
@@ -59,7 +193,37 @@ class NativeLocalPacketTests(unittest.TestCase):
         self.assertFalse((Path(calls[0]["cwd"]) / "quillframe.toml").exists())
         self.assertIn("--ephemeral", calls[0]["argv"])
         self.assertIn("--sandbox", calls[0]["argv"])
+        self.assertIn("--ignore-user-config", calls[0]["argv"])
+        self.assertIn("--ignore-rules", calls[0]["argv"])
         self.assertEqual(adapter.frozen_packet_run_reference(packet), json.loads(packet)["relay_nonce"])
+
+    def test_codex_child_environment_excludes_parent_secrets(self):
+        import harness.semantic_workers.adapters.local_agent_adapter as adapter
+
+        with patch.dict(
+            adapter.os.environ,
+            {"PATH": "bounded-path", "CODEX_HOME": "bounded-home", "OPENAI_API_KEY": "private"},
+            clear=True,
+        ):
+            child = adapter.child_environment()
+        self.assertEqual("bounded-path", child["PATH"])
+        self.assertEqual("bounded-home", child["CODEX_HOME"])
+        self.assertNotIn("OPENAI_API_KEY", child)
+
+    def test_codex_model_and_reasoning_are_explicitly_recorded(self):
+        import harness.semantic_workers.adapters.local_agent_adapter as adapter
+
+        with patch.dict(
+            adapter.os.environ,
+            {"QUILLFRAME_CODEX_MODEL": "gpt-test", "QUILLFRAME_CODEX_REASONING_EFFORT": "ultra"},
+            clear=True,
+        ), patch.object(adapter, "exe", return_value="codex"):
+            command = adapter.codex_command(Path("schema.json"), Path("out.json"))
+            label = adapter.configured_model("codex")
+        self.assertIn("--model", command)
+        self.assertEqual("gpt-test", command[command.index("--model") + 1])
+        self.assertIn('model_reasoning_effort="ultra"', command)
+        self.assertEqual("gpt-test@ultra", label)
 
     def test_packet_result_binds_both_worker_and_execution_to_frozen_nonce(self):
         import harness.semantic_workers.adapters.local_agent_adapter as adapter
@@ -334,10 +498,12 @@ class NativeLocalPacketTests(unittest.TestCase):
         from harness.semantic_workers import semantic_worker_runner as runner
 
         with patch.object(runner.shutil, "which", side_effect=lambda name: "/usr/bin/codex" if name == "codex" else None):
-            command, source = runner.local_command(packet_only=True)
+            command, source = runner.local_command(packet_only=True, timeout=600)
         self.assertIsNotNone(command)
         self.assertEqual(source, "local_codex_cli")
         self.assertNotIn("native_subagent", source)
+        self.assertIn("-X utf8", command)
+        self.assertIn("--timeout 595", command)
 
     def test_tampered_or_malformed_packet_is_infrastructure_failure_without_invocation(self):
         import harness.semantic_workers.adapters.local_agent_adapter as adapter

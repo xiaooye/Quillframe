@@ -1,0 +1,8 @@
+{
+  "schema": "quillframe_public_corpus_registry_v1",
+  "registry_version": 1,
+  "status": "awaiting_first_validated_release",
+  "license_file": "LICENSE",
+  "release_schema": "quillframe_public_corpus_manifest_v1",
+  "releases": []
+}

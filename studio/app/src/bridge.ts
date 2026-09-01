@@ -544,6 +544,33 @@ export function normalizeBridgeDescription(raw: RawBridgeDescription): BridgeCap
   };
 }
 
+const localPathValue = /^(?:[A-Za-z]:[\\/]|\\\\|\/(?:Users|home|tmp|var|private|etc)(?:\/|$))/i;
+
+function containsLocalPathKey(value: unknown, ancestors = new Set<object>()): boolean {
+  if (typeof value === "string") return localPathValue.test(value);
+  if (!value || typeof value !== "object" || ancestors.has(value)) return false;
+  ancestors.add(value);
+  try {
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    for (const [key, descriptor] of Object.entries(descriptors)) {
+      if (!("value" in descriptor) || !descriptor.enumerable) continue;
+      const normalized = key.toLowerCase().replaceAll("-", "_");
+      if (normalized === "path" || normalized.endsWith("_path") || normalized.includes("local_path")) return true;
+      if (containsLocalPathKey(descriptor.value, ancestors)) return true;
+    }
+    return false;
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
+/** Browser surfaces may reference Core-owned corpus IDs, never workstation paths. */
+export function assertBridgeSurfaceArgs(surface: CoreSurface, operation: string, args: Record<string, unknown>): void {
+  if (surface === "hosted_web" && operation.startsWith("corpus.") && containsLocalPathKey(args)) {
+    throw new Error("Hosted Core cannot access a local corpus path");
+  }
+}
+
 export class BridgeClient {
   constructor(readonly transport: BridgeTransport) {}
 
@@ -556,6 +583,7 @@ export class BridgeClient {
   }
 
   async invoke<T = unknown>(operation: string, args: Record<string, unknown> = {}): Promise<BridgeResult<T>> {
+    assertBridgeSurfaceArgs(this.transport.requestSurface, operation, args);
     const request: BridgeRequest = {
       schema: REQUEST_SCHEMA,
       bridge_version: BRIDGE_VERSION,

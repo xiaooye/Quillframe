@@ -76,3 +76,10 @@ class ModelServiceFacade:
             "canon_authority": False,
             "settlement_authority": False,
         }
+
+    def confirm_fiction_writing(self, confirmation: dict[str, Any]) -> dict[str, Any]:
+        """Persist an explicit author-blind-audition result; never runs a model."""
+        return self.runtime.confirm_fiction_writing(confirmation)
+
+    def revoke_fiction_writing(self, service_id: str, model_id: str) -> dict[str, Any]:
+        return self.runtime.revoke_fiction_writing(service_id, model_id)
