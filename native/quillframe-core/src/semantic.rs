@@ -405,14 +405,31 @@ pub(crate) fn parse_surface_realization_value(
     expected_scene_id: &str,
 ) -> CoreResult<SurfaceRealization> {
     if let Some(object) = value.as_object_mut() {
-        for alias in ["answer", "raw_content"] {
-            if let Some(redundant) = object.remove(alias) {
-                let empty_provider_field = redundant.is_null() || redundant.as_str() == Some("");
-                if !empty_provider_field && object.get("manuscript") != Some(&redundant) {
-                    return Err(CoreError::InvalidProject(format!(
-                        "surface response {alias} alias differs from manuscript"
-                    )));
-                }
+        if let Some(redundant) = object.remove("raw_content") {
+            let empty_provider_field = redundant.is_null() || redundant.as_str() == Some("");
+            if !empty_provider_field && object.get("manuscript") != Some(&redundant) {
+                return Err(invalid(
+                    "surface response raw_content alias differs from manuscript",
+                ));
+            }
+        }
+        if let Some(answer) = object.remove("answer") {
+            let empty_provider_field = answer.is_null() || answer.as_str() == Some("");
+            let exact_alias = object.get("manuscript") == Some(&answer);
+            let bounded_status_note = object
+                .get("manuscript")
+                .and_then(Value::as_str)
+                .zip(answer.as_str())
+                .is_some_and(|(manuscript, note)| {
+                    manuscript.len() >= 512
+                        && !note.contains(['\n', '\r'])
+                        && note.len() <= 256
+                        && note.len().saturating_mul(8) < manuscript.len()
+                });
+            if !empty_provider_field && !exact_alias && !bounded_status_note {
+                return Err(invalid(
+                    "surface response answer differs from manuscript and is not a bounded status note",
+                ));
             }
         }
         for (field, expected) in [
@@ -1030,6 +1047,23 @@ mod tests {
             .manuscript,
             "正文"
         );
+        let long_manuscript = "场景正文".repeat(160);
+        assert_eq!(
+            parse_surface_realization_value(
+                serde_json::json!({"manuscript":long_manuscript,"answer":"SC001 prose completed."}),
+                "CH001",
+                "SC001",
+            )
+            .unwrap()
+            .manuscript,
+            long_manuscript
+        );
+        assert!(parse_surface_realization_value(
+            serde_json::json!({"manuscript":"正文","answer":"另一稿"}),
+            "CH001",
+            "SC001",
+        )
+        .is_err());
         assert!(parse_surface_realization_value(
             serde_json::json!({"manuscript":"正文","scene_id":"OTHER"}),
             "CH001",
