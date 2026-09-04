@@ -2007,53 +2007,84 @@ impl HostBridgeRuntime {
             let project = self.open_registered(project_id)?;
             project.database.active_writer_corpus_candidates()?
         };
-        let corpus_greenlight = self
-            .execute_model_stage(
+        let (corpus_selection, corpus_greenlight) = if corpus_candidates.is_empty() {
+            let selection = WriterCorpusSelection {
+                selected_pack_fingerprints: Vec::new(),
+            };
+            let receipt = self.confirm_empty_selection_stage(
                 project_id,
                 run_id,
-                &service,
-                model,
                 "corpus_greenlight",
-                "corpus_greenlight_selector",
-                json!({
-                    "chapter_id":pack.chapter_id,
-                    "chapter_plan":pack.plan_lock.chapter_plan(&pack.chapter_id)?,
-                    "writer_context":writer_context,
-                    "candidate_packs":corpus_candidates,
-                    "contract":"Return JSON only: {selected_pack_fingerprints:[string]}. Select zero to four exact active source-free corpus packs whose narrative mechanisms materially help this chapter. Use only exact source_free_pack_fingerprint values from candidate_packs. Select none when no mechanism fits; never select by source identity or phrase similarity."
-                }),
-                1_500,
-                0.05,
-            )
-            .await?;
-        let corpus_selection: WriterCorpusSelection = strict_model_json(&corpus_greenlight)?;
+                "empty_corpus_candidate_set",
+                &selection,
+            )?;
+            (selection, receipt)
+        } else {
+            let receipt = self
+                .execute_model_stage(
+                    project_id,
+                    run_id,
+                    &service,
+                    model,
+                    "corpus_greenlight",
+                    "corpus_greenlight_selector",
+                    json!({
+                        "chapter_id":pack.chapter_id,
+                        "chapter_plan":pack.plan_lock.chapter_plan(&pack.chapter_id)?,
+                        "writer_context":writer_context,
+                        "candidate_packs":corpus_candidates,
+                        "contract":"Return JSON only: {selected_pack_fingerprints:[string]}. Select zero to four exact active source-free corpus packs whose narrative mechanisms materially help this chapter. Use only exact source_free_pack_fingerprint values from candidate_packs. Select none when no mechanism fits; never select by source identity or phrase similarity."
+                    }),
+                    1_500,
+                    0.05,
+                )
+                .await?;
+            let selection: WriterCorpusSelection = strict_model_json(&receipt)?;
+            (selection, receipt)
+        };
         let selected_corpus = corpus_selection.project(&corpus_candidates)?;
         let preference_candidates = {
             let project = self.open_registered(project_id)?;
             project.database.active_writer_preference_candidates()?
         };
-        let preference_greenlight = self
-            .execute_model_stage(
+        let (preference_selection, preference_greenlight) = if preference_candidates.is_empty()
+            && production.intent.selected_preference_ids.is_empty()
+        {
+            let selection = WriterPreferenceSelection {
+                selected_hypothesis_ids: Vec::new(),
+            };
+            let receipt = self.confirm_empty_selection_stage(
                 project_id,
                 run_id,
-                &service,
-                model,
                 "preference_greenlight",
-                "preference_greenlight_selector",
-                json!({
-                    "chapter_id":pack.chapter_id,
-                    "chapter_plan":pack.plan_lock.chapter_plan(&pack.chapter_id)?,
-                    "current_author_direction":production.intent.instruction,
-                    "explicitly_requested_ids":production.intent.selected_preference_ids,
-                    "candidate_preferences":preference_candidates,
-                    "contract":"Return JSON only: {selected_hypothesis_ids:[string]}. Select zero to twelve exact active preference hypotheses relevant to this chapter. Include every explicitly_requested_id, use only ids from candidate_preferences, and let the current author direction outrank any older preference."
-                }),
-                1_500,
-                0.05,
-            )
-            .await?;
-        let preference_selection: WriterPreferenceSelection =
-            strict_model_json(&preference_greenlight)?;
+                "empty_preference_candidate_set",
+                &selection,
+            )?;
+            (selection, receipt)
+        } else {
+            let receipt = self
+                .execute_model_stage(
+                    project_id,
+                    run_id,
+                    &service,
+                    model,
+                    "preference_greenlight",
+                    "preference_greenlight_selector",
+                    json!({
+                        "chapter_id":pack.chapter_id,
+                        "chapter_plan":pack.plan_lock.chapter_plan(&pack.chapter_id)?,
+                        "current_author_direction":production.intent.instruction,
+                        "explicitly_requested_ids":production.intent.selected_preference_ids,
+                        "candidate_preferences":preference_candidates,
+                        "contract":"Return JSON only: {selected_hypothesis_ids:[string]}. Select zero to twelve exact active preference hypotheses relevant to this chapter. Include every explicitly_requested_id, use only ids from candidate_preferences, and let the current author direction outrank any older preference."
+                    }),
+                    1_500,
+                    0.05,
+                )
+                .await?;
+            let selection: WriterPreferenceSelection = strict_model_json(&receipt)?;
+            (selection, receipt)
+        };
         let selected_preferences = preference_selection.project(
             &preference_candidates,
             &production.intent.selected_preference_ids,
@@ -2987,6 +3018,59 @@ impl HostBridgeRuntime {
                 Err(error)
             }
         }
+    }
+
+    fn confirm_empty_selection_stage<T: Serialize>(
+        &self,
+        project_id: &str,
+        run_id: &str,
+        stage_key: &str,
+        reason: &str,
+        artifact: &T,
+    ) -> CoreResult<ModelResult> {
+        let content = serde_json::to_string(artifact)
+            .map_err(|error| CoreError::Serialization(error.to_string()))?;
+        let artifact_fingerprint = sha256_fingerprint(content.as_bytes());
+        let request_id = format!("empty-{stage_key}-{}", &artifact_fingerprint[7..23]);
+        let model_request = ModelRequest {
+            request_id: request_id.clone(),
+            model: "deterministic-empty-selection-v1".into(),
+            system: "Quillframe deterministic empty candidate-set projection".into(),
+            user: content.clone(),
+            temperature: Some(0.0),
+            max_output_tokens: None,
+            absolute_deadline_ms: 1,
+        };
+        let job = StageJob::freeze(
+            stage_key,
+            "deterministic_empty_selector",
+            model_request,
+            artifact_fingerprint.clone(),
+        )?;
+        let result = ModelResult::record(
+            request_id,
+            "quillframe-deterministic",
+            "deterministic-empty-selection-v1",
+            content,
+            None,
+            ModelUsage {
+                input_tokens: Some(0),
+                output_tokens: Some(0),
+                total_tokens: Some(0),
+                cost_micros: Some(0),
+            },
+        )?;
+        let mut project = self.open_registered(project_id)?;
+        project.database.confirm_derived_stage(
+            run_id,
+            &job,
+            &result,
+            reason,
+            &json!({"candidate_count":0,"semantic_selection_required":false}),
+            &artifact_fingerprint,
+            &timestamp(),
+        )?;
+        Ok(result)
     }
 
     fn confirm_derived_surface_stage(
