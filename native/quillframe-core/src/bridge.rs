@@ -2261,6 +2261,30 @@ impl HostBridgeRuntime {
             spec.verify_bounded_output(&material.manuscript, &surface_output.manuscript)?;
         }
         let candidate_fingerprint = sha256_fingerprint(surface_output.manuscript.as_bytes());
+        let chapter_length = &pack
+            .plan_lock
+            .chapter_plan(&pack.chapter_id)?
+            .contract
+            .constraint_lock
+            .length;
+        let actual_length = measured_prose_length(&surface_output.manuscript, chapter_length.unit);
+        if actual_length < chapter_length.min {
+            let length_gate = self.confirm_chapter_length_failure_stage(
+                project_id,
+                run_id,
+                &candidate_fingerprint,
+                actual_length,
+                chapter_length.min,
+                chapter_length.unit,
+            )?;
+            return self.failed_gate_projection(
+                project_id,
+                run_id,
+                &candidate_fingerprint,
+                "chapter_length_gate",
+                &length_gate.fingerprint,
+            );
+        }
         let surface_audit = self
             .execute_model_stage(
                 project_id,
@@ -2967,7 +2991,6 @@ impl HostBridgeRuntime {
                 "fresh realization requires at least one scene".into(),
             ));
         }
-        let chapter_length = &chapter_plan.contract.constraint_lock.length;
         let director_receipts = BTreeMap::from([
             ("character_simulation".into(), character.fingerprint.clone()),
             (
@@ -3050,11 +3073,6 @@ impl HostBridgeRuntime {
             scene_manuscripts.push(scene_manuscript);
         }
         let manuscript = scene_manuscripts.join("\n\n");
-        if measured_prose_length(&manuscript, chapter_length.unit) < chapter_length.min {
-            return Err(CoreError::InvalidProject(
-                "assembled manuscript is shorter than the frozen chapter minimum".into(),
-            ));
-        }
         Ok((manuscript, scene_receipts))
     }
 
@@ -3202,6 +3220,70 @@ impl HostBridgeRuntime {
             &result,
             reason,
             &json!({"candidate_count":0,"semantic_selection_required":false}),
+            &artifact_fingerprint,
+            &timestamp(),
+        )?;
+        Ok(result)
+    }
+
+    fn confirm_chapter_length_failure_stage(
+        &self,
+        project_id: &str,
+        run_id: &str,
+        candidate_fingerprint: &str,
+        actual: u32,
+        minimum: u32,
+        unit: LengthUnit,
+    ) -> CoreResult<ModelResult> {
+        let artifact = json!({
+            "decision":"revise",
+            "candidate_fingerprint":candidate_fingerprint,
+            "actual":actual,
+            "minimum":minimum,
+            "unit":unit,
+            "issue":"assembled manuscript is shorter than the frozen chapter minimum",
+            "repair_scope":"chapter_or_plan",
+            "semantic_inference":false
+        });
+        let content = serde_json::to_string(&artifact)
+            .map_err(|error| CoreError::Serialization(error.to_string()))?;
+        let artifact_fingerprint = sha256_fingerprint(content.as_bytes());
+        let request_id = format!("length-gate-{}", &artifact_fingerprint[7..23]);
+        let model_request = ModelRequest {
+            request_id: request_id.clone(),
+            model: "deterministic-chapter-length-v1".into(),
+            system: "Quillframe deterministic assembled-chapter length gate".into(),
+            user: content.clone(),
+            temperature: Some(0.0),
+            max_output_tokens: None,
+            absolute_deadline_ms: 1,
+        };
+        let job = StageJob::freeze(
+            "chapter_length_gate",
+            "deterministic_chapter_length_gate",
+            model_request,
+            artifact_fingerprint.clone(),
+        )?;
+        let result = ModelResult::record(
+            request_id,
+            "quillframe-deterministic",
+            "deterministic-chapter-length-v1",
+            content,
+            None,
+            ModelUsage {
+                input_tokens: Some(0),
+                output_tokens: Some(0),
+                total_tokens: Some(0),
+                cost_micros: Some(0),
+            },
+        )?;
+        let mut project = self.open_registered(project_id)?;
+        project.database.confirm_derived_stage(
+            run_id,
+            &job,
+            &result,
+            "chapter_minimum_not_met",
+            &artifact,
             &artifact_fingerprint,
             &timestamp(),
         )?;
