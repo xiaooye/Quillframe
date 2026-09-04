@@ -405,11 +405,13 @@ pub(crate) fn parse_surface_realization_value(
     expected_scene_id: &str,
 ) -> CoreResult<SurfaceRealization> {
     if let Some(object) = value.as_object_mut() {
-        if let Some(answer) = object.remove("answer") {
-            if object.get("manuscript") != Some(&answer) {
-                return Err(invalid(
-                    "surface response answer alias differs from manuscript",
-                ));
+        for alias in ["answer", "raw_content"] {
+            if let Some(redundant) = object.remove(alias) {
+                if object.get("manuscript") != Some(&redundant) {
+                    return Err(CoreError::InvalidProject(format!(
+                        "surface response {alias} alias differs from manuscript"
+                    )));
+                }
             }
         }
         for (field, expected) in [
@@ -972,6 +974,7 @@ mod tests {
             serde_json::json!({
                 "manuscript":"正文",
                 "answer":"正文",
+                "raw_content":"正文",
                 "chapter_id":"CH001",
                 "scene_id":"SC001",
                 "chin_context":{"language":"zh-CN"}
