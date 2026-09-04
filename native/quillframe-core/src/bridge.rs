@@ -5200,7 +5200,8 @@ fn strict_model_json<T: for<'de> Deserialize<'de>>(result: &ModelResult) -> Core
             if trailing.is_empty()
                 || (trailing.len() <= 1_024
                     && !trailing.chars().any(|character| {
-                        matches!(character, '{' | '[' | '\0') || character.is_control()
+                        matches!(character, '{' | '[' | '\0')
+                            || character.is_control() && !matches!(character, '\n' | '\r' | '\t')
                     }))
             {
                 Ok(value)
@@ -5665,7 +5666,7 @@ mod tests {
             "REQ-PROVIDER-SUFFIX",
             "SERVICE",
             "MODEL",
-            "{\"queries\":[\"three\"],\"required_references\":[]}\n``provider compatibility note`",
+            "{\"queries\":[\"three\"],\"required_references\":[]}\n``\t</div>\n\t</body>\n</html>",
             None,
             ModelUsage {
                 input_tokens: None,
