@@ -1957,11 +1957,18 @@ impl HostBridgeRuntime {
                             .get("stage_result_fingerprint")
                             .and_then(Value::as_str),
                     ) {
+                        let mechanism_prefix = format!("{mechanism}_");
                         let gate_result = project
                             .database
-                            .production_stage_call(&binding.source_run_id, mechanism)?
+                            .production_stage_calls(&binding.source_run_id)?
+                            .into_iter()
                             .filter(|call| call.state == StageCallState::Confirmed)
-                            .and_then(|call| call.result)
+                            .filter(|call| {
+                                call.job.stage_key == mechanism
+                                    || call.job.stage_key.starts_with(&mechanism_prefix)
+                            })
+                            .filter_map(|call| call.result)
+                            .find(|result| result.fingerprint == expected_fingerprint)
                             .ok_or_else(|| {
                                 CoreError::AuthorityConflict(
                                     "repair diagnosis artifact is unavailable".into(),
