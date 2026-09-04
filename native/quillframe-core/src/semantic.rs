@@ -407,7 +407,8 @@ pub(crate) fn parse_surface_realization_value(
     if let Some(object) = value.as_object_mut() {
         for alias in ["answer", "raw_content"] {
             if let Some(redundant) = object.remove(alias) {
-                if object.get("manuscript") != Some(&redundant) {
+                let empty_provider_field = redundant.is_null() || redundant.as_str() == Some("");
+                if !empty_provider_field && object.get("manuscript") != Some(&redundant) {
                     return Err(CoreError::InvalidProject(format!(
                         "surface response {alias} alias differs from manuscript"
                     )));
@@ -984,6 +985,16 @@ mod tests {
         )
         .unwrap();
         assert_eq!(surface.manuscript, "正文");
+        assert_eq!(
+            parse_surface_realization_value(
+                serde_json::json!({"manuscript":"正文","answer":""}),
+                "CH001",
+                "SC001",
+            )
+            .unwrap()
+            .manuscript,
+            "正文"
+        );
         assert!(parse_surface_realization_value(
             serde_json::json!({"manuscript":"正文","scene_id":"OTHER"}),
             "CH001",
