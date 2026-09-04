@@ -3115,6 +3115,16 @@ impl ProjectDatabase {
                     )
                     .map_err(storage_error)?
                 }
+            } else if release_key == "surface_hard_rule_audit" {
+                transaction
+                    .query_row(
+                        "SELECT COUNT(*) FROM production_stage_calls WHERE run_id=?1 AND state='confirmed' \
+                         AND result_fingerprint=?2 AND stage_key IN ('surface_hard_rule_audit', \
+                         'surface_hard_rule_audit_contract_repair')",
+                        params![run_id, expected],
+                        |row| row.get(0),
+                    )
+                    .map_err(storage_error)?
             } else if release_key == "settlement_tracking_projection" {
                 transaction
                     .query_row(

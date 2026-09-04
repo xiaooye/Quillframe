@@ -154,9 +154,10 @@ fn stage_guidance(stage_key: &str) -> Option<&'static str> {
     }
     match stage_key {
         "surface_realization" | "bounded_repair_surface" => Some(SURFACE_NATURALNESS),
-        "surface_hard_rule_audit" | "candidate_self_audit" | "independent_semantic_gate" => {
-            Some(PROSE_REVIEW_GUIDANCE)
-        }
+        "surface_hard_rule_audit"
+        | "surface_hard_rule_audit_contract_repair"
+        | "candidate_self_audit"
+        | "independent_semantic_gate" => Some(PROSE_REVIEW_GUIDANCE),
         "repair_editor" | "repair_comparison" => Some(REPAIR_GUIDANCE),
         "character_simulation" | "scene_resolution" => Some(CAUSAL_GUIDANCE),
         _ => None,

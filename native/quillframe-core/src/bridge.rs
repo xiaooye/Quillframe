@@ -2285,7 +2285,7 @@ impl HostBridgeRuntime {
                 &length_gate.fingerprint,
             );
         }
-        let surface_audit = self
+        let mut surface_audit = self
             .execute_model_stage(
                 project_id,
                 run_id,
@@ -2310,13 +2310,53 @@ impl HostBridgeRuntime {
                 0.05,
             )
             .await?;
-        let surface_audit_output: SurfaceHardRuleAudit = strict_model_json(&surface_audit)?;
-        surface_audit_output.validate_against(
-            &surface_output.manuscript,
-            &candidate_fingerprint,
-            &guidance_snapshot.fingerprint,
-            &guidance_snapshot.surface_fundamentals_fingerprint,
-        )?;
+        let mut surface_audit_output: SurfaceHardRuleAudit = strict_model_json(&surface_audit)?;
+        if surface_audit_output
+            .validate_against(
+                &surface_output.manuscript,
+                &candidate_fingerprint,
+                &guidance_snapshot.fingerprint,
+                &guidance_snapshot.surface_fundamentals_fingerprint,
+            )
+            .is_err()
+        {
+            let judgment_fingerprint = surface_audit_judgment_fingerprint(&surface_audit_output)?;
+            let repaired = self
+                .execute_model_stage(
+                    project_id,
+                    run_id,
+                    &service,
+                    model,
+                    "surface_hard_rule_audit_contract_repair",
+                    "surface_rule_auditor",
+                    json!({
+                        "candidate_fingerprint":candidate_fingerprint,
+                        "guidance_snapshot_fingerprint":guidance_snapshot.fingerprint,
+                        "rule_set_fingerprint":guidance_snapshot.surface_fundamentals_fingerprint,
+                        "manuscript":surface_output.manuscript,
+                        "invalid_audit":surface_audit_output,
+                        "judgment_fingerprint":judgment_fingerprint,
+                        "contract":"Return the same Surface audit JSON with the same identities, decision, ordered rule IDs, statuses, reports and repair scopes. Change only evidence_excerpt values so every pass/fail value is one non-empty exact contiguous substring copied byte-for-byte from manuscript; do not abbreviate with ellipses, normalize words or alter any judgment. not_applicable and insufficient_evidence keep null evidence. Return JSON only."
+                    }),
+                    10_000,
+                    0.0,
+                )
+                .await?;
+            let repaired_output: SurfaceHardRuleAudit = strict_model_json(&repaired)?;
+            if surface_audit_judgment_fingerprint(&repaired_output)? != judgment_fingerprint {
+                return Err(CoreError::AuthorityConflict(
+                    "Surface audit contract repair changed semantic judgments".into(),
+                ));
+            }
+            repaired_output.validate_against(
+                &surface_output.manuscript,
+                &candidate_fingerprint,
+                &guidance_snapshot.fingerprint,
+                &guidance_snapshot.surface_fundamentals_fingerprint,
+            )?;
+            surface_audit = repaired;
+            surface_audit_output = repaired_output;
+        }
         if !surface_audit_output.passed() {
             return self.failed_gate_projection(
                 project_id,
@@ -3761,9 +3801,18 @@ impl HostBridgeRuntime {
         ).map_err(storage)).transpose()?;
         let calls = project.database.production_stage_calls(&run_id)?;
         let receipt = |stage: &str| -> CoreResult<Value> {
+            let effective_stage = if stage == "surface_hard_rule_audit"
+                && calls.iter().any(|call| {
+                    call.job.stage_key == "surface_hard_rule_audit_contract_repair"
+                        && call.result.is_some()
+                }) {
+                "surface_hard_rule_audit_contract_repair"
+            } else {
+                stage
+            };
             let Some(result) = calls
                 .iter()
-                .find(|call| call.job.stage_key == stage)
+                .find(|call| call.job.stage_key == effective_stage)
                 .and_then(|call| call.result.as_ref())
             else {
                 return Ok(json!({"stage_key":stage,"status":"missing"}));
@@ -4871,6 +4920,23 @@ fn public_error_envelope(status: &str, internal: &Value) -> Value {
     json!({"code":code,"mutation_performed":false})
 }
 
+fn surface_audit_judgment_fingerprint(audit: &SurfaceHardRuleAudit) -> CoreResult<String> {
+    serde_json::to_vec(&json!({
+        "candidate_fingerprint":audit.candidate_fingerprint,
+        "guidance_snapshot_fingerprint":audit.guidance_snapshot_fingerprint,
+        "rule_set_fingerprint":audit.rule_set_fingerprint,
+        "decision":audit.decision,
+        "assessments":audit.assessments.iter().map(|assessment|json!({
+            "rule_id":assessment.rule_id,
+            "status":assessment.status,
+            "report":assessment.report,
+            "repair_scope":assessment.repair_scope
+        })).collect::<Vec<_>>()
+    }))
+    .map(sha256_fingerprint)
+    .map_err(|error| CoreError::Serialization(error.to_string()))
+}
+
 fn framework_build_fingerprint() -> String {
     sha256_fingerprint(
         format!(
@@ -5318,7 +5384,7 @@ fn semantic_system(stage_key: &str) -> &'static str {
         "repair_editor" => "You are Quillframe's repair editor. Convert exact failed evidence into FIX + PRESERVE constraints without writing prose. Return only the requested JSON artifact.",
         "bounded_repair_surface" => "You are Quillframe's bounded repair Surface Writer. Return only exact replacement windows requested by the repair specification.",
         "surface_realization" => "You are Quillframe's direct Chinese web-novel Surface Writer. Produce the chapter once from the frozen material and return only the requested JSON artifact.",
-        "surface_hard_rule_audit" => "You are Quillframe's whole-candidate Surface rule auditor. Apply the complete frozen rule set with profile-sensitive exceptions, report exact evidence and return only the requested typed audit.",
+        "surface_hard_rule_audit" | "surface_hard_rule_audit_contract_repair" => "You are Quillframe's whole-candidate Surface rule auditor. Apply the complete frozen rule set with profile-sensitive exceptions, report exact evidence and return only the requested typed audit.",
         "reader_engagement" => "You are a blind web-novel reader. Judge lived reading experience without rule checklists and return only the requested JSON artifact.",
         "continuity_rule_audit" => "You are Quillframe's continuity and rule auditor. Return only exact, evidence-bound JSON findings.",
         "candidate_self_audit" => "You are Quillframe's objective-bound candidate qualifier. Return only the requested JSON gate result.",
@@ -5763,6 +5829,38 @@ mod tests {
                 &bounded_repair_spec()
             )
             .is_err());
+    }
+
+    #[test]
+    fn surface_audit_contract_repair_cannot_change_judgments() {
+        let audit = SurfaceHardRuleAudit {
+            candidate_fingerprint: format!("sha256:{}", "a".repeat(64)),
+            guidance_snapshot_fingerprint: format!("sha256:{}", "b".repeat(64)),
+            rule_set_fingerprint: format!("sha256:{}", "c".repeat(64)),
+            decision: SurfaceAuditDecision::Accept,
+            assessments: crate::expected_rule_ids()
+                .into_iter()
+                .map(|rule_id| crate::SurfaceRuleAssessment {
+                    rule_id,
+                    status: crate::SurfaceRuleStatus::Pass,
+                    evidence_excerpt: Some("缩写证据".into()),
+                    report: "判断保持".into(),
+                    repair_scope: None,
+                })
+                .collect(),
+        };
+        let original = surface_audit_judgment_fingerprint(&audit).unwrap();
+        let mut evidence_only = audit.clone();
+        evidence_only.assessments[0].evidence_excerpt = Some("逐字证据".into());
+        assert_eq!(
+            surface_audit_judgment_fingerprint(&evidence_only).unwrap(),
+            original
+        );
+        evidence_only.assessments[0].report = "判断已改变".into();
+        assert_ne!(
+            surface_audit_judgment_fingerprint(&evidence_only).unwrap(),
+            original
+        );
     }
 
     #[test]
