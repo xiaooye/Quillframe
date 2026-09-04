@@ -2889,7 +2889,7 @@ impl HostBridgeRuntime {
                     0.9,
                 )
                 .await?;
-            let scene_surface: SurfaceRealization = strict_model_json(&scene_result)?;
+            let scene_surface = parse_surface_model_json(&scene_result)?;
             scene_surface.validate()?;
             let scene_manuscript = scene_surface.manuscript.trim().to_string();
             if measured_prose_length(&scene_manuscript, chapter_length.unit) < scene_length_min {
@@ -4801,6 +4801,25 @@ fn strict_model_json<T: for<'de> Deserialize<'de>>(result: &ModelResult) -> Core
     }
 }
 
+fn parse_surface_model_json(result: &ModelResult) -> CoreResult<SurfaceRealization> {
+    let mut value: Value = strict_model_json(result)?;
+    if let Some(object) = value.as_object_mut() {
+        if let Some(answer) = object.remove("answer") {
+            if object.get("manuscript") != Some(&answer) {
+                return Err(CoreError::InvalidProject(
+                    "surface response answer alias differs from manuscript".into(),
+                ));
+            }
+        }
+    }
+    serde_json::from_value(value).map_err(|error| {
+        CoreError::InvalidProject(format!(
+            "surface stage returned invalid typed JSON for {}: {error}",
+            result.request_id
+        ))
+    })
+}
+
 fn parse_tracking_projection(result: &ModelResult) -> CoreResult<ChapterTrackingProposal> {
     let output: ChapterTrackingProposal = strict_model_json(result)?;
     output.validate()?;
@@ -5098,6 +5117,42 @@ mod tests {
         )
         .unwrap();
         assert!(strict_model_json::<ContextQueryPlan>(&second_json_value).is_err());
+
+        let duplicate_surface_alias = ModelResult::record(
+            "REQ-SURFACE-ALIAS",
+            "SERVICE",
+            "MODEL",
+            "{\"manuscript\":\"正文\",\"answer\":\"正文\"}",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            parse_surface_model_json(&duplicate_surface_alias)
+                .unwrap()
+                .manuscript,
+            "正文"
+        );
+        let changed_surface_alias = ModelResult::record(
+            "REQ-SURFACE-ALIAS-CHANGED",
+            "SERVICE",
+            "MODEL",
+            "{\"manuscript\":\"正文\",\"answer\":\"另一稿\"}",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        assert!(parse_surface_model_json(&changed_surface_alias).is_err());
 
         let prose_wrapped = ModelResult::record(
             "REQ-PROSE",
