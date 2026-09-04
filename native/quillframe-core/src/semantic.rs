@@ -501,17 +501,28 @@ impl SurfaceHardRuleAudit {
                 return Err(invalid("surface audit assessment report is empty"));
             }
             match assessment.status {
-                SurfaceRuleStatus::Pass | SurfaceRuleStatus::Fail => {
+                SurfaceRuleStatus::Pass => {
+                    if assessment
+                        .evidence_excerpt
+                        .as_deref()
+                        .is_some_and(|evidence| {
+                            evidence.trim().is_empty() || !manuscript.contains(evidence)
+                        })
+                    {
+                        return Err(invalid(
+                            "surface audit pass evidence is not exact candidate text",
+                        ));
+                    }
+                }
+                SurfaceRuleStatus::Fail => {
                     let evidence = assessment
                         .evidence_excerpt
                         .as_deref()
                         .filter(|value| !value.trim().is_empty())
-                        .ok_or_else(|| {
-                            invalid("surface audit pass/fail requires exact evidence")
-                        })?;
+                        .ok_or_else(|| invalid("surface audit failure requires exact evidence"))?;
                     if !manuscript.contains(evidence) {
                         return Err(invalid(
-                            "surface audit evidence is absent from the exact candidate",
+                            "surface audit failure evidence is absent from the exact candidate",
                         ));
                     }
                 }
@@ -560,6 +571,21 @@ impl SurfaceHardRuleAudit {
             ));
         }
         Ok(())
+    }
+
+    pub fn normalize_pass_evidence(&mut self, manuscript: &str) {
+        for assessment in &mut self.assessments {
+            if assessment.status == SurfaceRuleStatus::Pass
+                && assessment
+                    .evidence_excerpt
+                    .as_deref()
+                    .is_some_and(|evidence| {
+                        evidence.trim().is_empty() || !manuscript.contains(evidence)
+                    })
+            {
+                assessment.evidence_excerpt = None;
+            }
+        }
     }
 
     pub fn passed(&self) -> bool {
@@ -954,6 +980,13 @@ mod tests {
         let guidance = format!("sha256:{}", "b".repeat(64));
         let rules = format!("sha256:{}", "c".repeat(64));
         surface_audit(SurfaceRuleStatus::Pass, SurfaceAuditDecision::Accept)
+            .validate_against("正文证据", &candidate, &guidance, &rules)
+            .unwrap();
+        let mut normalized = surface_audit(SurfaceRuleStatus::Pass, SurfaceAuditDecision::Accept);
+        normalized.assessments[0].evidence_excerpt = Some("缩写但不精确".into());
+        normalized.normalize_pass_evidence("正文证据");
+        assert_eq!(normalized.assessments[0].evidence_excerpt, None);
+        normalized
             .validate_against("正文证据", &candidate, &guidance, &rules)
             .unwrap();
 

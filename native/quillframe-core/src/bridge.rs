@@ -2305,13 +2305,14 @@ impl HostBridgeRuntime {
                     "project_guidance":guidance_snapshot.audit_project_projection(),
                     "author_profile":production.intent.author_profile,
                     "rule_material":production.intent.rule_material,
-                    "contract":"Return JSON only: {candidate_fingerprint:string,guidance_snapshot_fingerprint:string,rule_set_fingerprint:string,decision:'accept'|'revise'|'insufficient_evidence',assessments:[{rule_id:'HF-01'..'HF-30',status:'pass'|'fail'|'not_applicable'|'insufficient_evidence',evidence_excerpt:string|null,report:string,repair_scope:'local'|'block'|'scene'|'chapter'|null}]}. Return exactly thirty assessments in HF-01 through HF-30 order. Audit the whole exact candidate, including repeated mechanisms that become failures only as a cluster. A pass or fail must quote a non-empty exact candidate excerpt. A fail must select the smallest repair scope that can remove the complete mechanism; use scene/chapter rather than local when defects cluster. not_applicable and insufficient_evidence use null evidence and must explain why. Any fail requires revise; otherwise any insufficient item requires insufficient_evidence; only complete pass/not_applicable coverage may accept. Do not rewrite prose, use lexical counts as verdicts, reveal private reasoning, or defer to another reviewer."
+                    "contract":"Return JSON only: {candidate_fingerprint:string,guidance_snapshot_fingerprint:string,rule_set_fingerprint:string,decision:'accept'|'revise'|'insufficient_evidence',assessments:[{rule_id:'HF-01'..'HF-30',status:'pass'|'fail'|'not_applicable'|'insufficient_evidence',evidence_excerpt:string|null,report:string,repair_scope:'local'|'block'|'scene'|'chapter'|null}]}. Return exactly thirty assessments in HF-01 through HF-30 order. Audit the whole exact candidate, including repeated mechanisms that become failures only as a cluster. A fail must quote a non-empty exact candidate excerpt. A pass may use null evidence; when it cites text, that excerpt must be exact. A fail must select the smallest repair scope that can remove the complete mechanism; use scene/chapter rather than local when defects cluster. not_applicable and insufficient_evidence use null evidence and must explain why. Any fail requires revise; otherwise any insufficient item requires insufficient_evidence; only complete pass/not_applicable coverage may accept. Do not rewrite prose, use lexical counts as verdicts, reveal private reasoning, or defer to another reviewer."
                 }),
                 10_000,
                 0.05,
             )
             .await?;
         let mut surface_audit_output: SurfaceHardRuleAudit = strict_model_json(&surface_audit)?;
+        surface_audit_output.normalize_pass_evidence(&surface_output.manuscript);
         if surface_audit_output
             .validate_against(
                 &surface_output.manuscript,
@@ -2343,7 +2344,8 @@ impl HostBridgeRuntime {
                     0.0,
                 )
                 .await?;
-            let repaired_output: SurfaceHardRuleAudit = strict_model_json(&repaired)?;
+            let mut repaired_output: SurfaceHardRuleAudit = strict_model_json(&repaired)?;
+            repaired_output.normalize_pass_evidence(&surface_output.manuscript);
             if surface_audit_judgment_fingerprint(&repaired_output)? != judgment_fingerprint {
                 return Err(CoreError::AuthorityConflict(
                     "Surface audit contract repair changed semantic judgments".into(),
