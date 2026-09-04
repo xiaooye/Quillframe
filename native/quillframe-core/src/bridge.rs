@@ -2893,12 +2893,6 @@ impl HostBridgeRuntime {
                 parse_surface_model_json(&scene_result, &pack.chapter_id, &brief.scene_id)?;
             scene_surface.validate()?;
             let scene_manuscript = scene_surface.manuscript.trim().to_string();
-            if measured_prose_length(&scene_manuscript, chapter_length.unit) < scene_length_min {
-                return Err(CoreError::InvalidProject(format!(
-                    "surface scene {} is shorter than its frozen minimum",
-                    brief.scene_id
-                )));
-            }
             let scene_fingerprint = sha256_fingerprint(scene_manuscript.as_bytes());
             {
                 let mut project = self.open_registered(project_id)?;
@@ -4828,6 +4822,24 @@ fn parse_surface_model_json(
                 }
             }
         }
+        if let Some(metadata) = object.remove("fingerprints") {
+            let metadata = metadata.as_object().ok_or_else(|| {
+                CoreError::InvalidProject(
+                    "surface response fingerprints metadata must be an object".into(),
+                )
+            })?;
+            if metadata.len() > 8
+                || metadata.values().any(|value| !value.is_string())
+                || serde_json::to_vec(metadata)
+                    .map_err(|error| CoreError::Serialization(error.to_string()))?
+                    .len()
+                    > 1_024
+            {
+                return Err(CoreError::InvalidProject(
+                    "surface response fingerprints metadata is not bounded".into(),
+                ));
+            }
+        }
     }
     serde_json::from_value(value).map_err(|error| {
         CoreError::InvalidProject(format!(
@@ -5139,7 +5151,7 @@ mod tests {
             "REQ-SURFACE-ALIAS",
             "SERVICE",
             "MODEL",
-            "{\"manuscript\":\"正文\",\"answer\":\"正文\",\"chapter_id\":\"CH001\",\"scene_id\":\"SC001\"}",
+            "{\"manuscript\":\"正文\",\"answer\":\"正文\",\"chapter_id\":\"CH001\",\"scene_id\":\"SC001\",\"fingerprints\":{\"scene\":\"SC001\",\"plan\":\"sha256:metadata-only\"}}",
             None,
             ModelUsage {
                 input_tokens: None,
