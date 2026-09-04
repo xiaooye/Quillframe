@@ -4864,7 +4864,76 @@ fn bounded_surface_metadata(value: &Value) -> bool {
 }
 
 fn parse_tracking_projection(result: &ModelResult) -> CoreResult<ChapterTrackingProposal> {
-    let output: ChapterTrackingProposal = strict_model_json(result)?;
+    let mut value: Value = strict_model_json(result)?;
+    let snapshot_ids = value
+        .get("character_snapshot_updates")
+        .and_then(Value::as_array)
+        .map(|values| {
+            values
+                .iter()
+                .map(|value| {
+                    value.as_str().map(str::to_owned).ok_or_else(|| {
+                        CoreError::InvalidProject(
+                            "character snapshot id list must contain strings".into(),
+                        )
+                    })
+                })
+                .collect::<CoreResult<Vec<_>>>()
+        })
+        .transpose()?;
+    if let Some(snapshot_ids) = snapshot_ids {
+        let deltas = value
+            .get("entity_deltas")
+            .and_then(Value::as_array)
+            .ok_or_else(|| {
+                CoreError::InvalidProject(
+                    "character snapshot id list requires entity deltas".into(),
+                )
+            })?;
+        let mut snapshots = Map::new();
+        for character_id in snapshot_ids {
+            if snapshots.contains_key(&character_id) {
+                return Err(CoreError::InvalidProject(
+                    "character snapshot id list contains duplicates".into(),
+                ));
+            }
+            let state = deltas
+                .iter()
+                .find(|delta| {
+                    delta.get("entity_kind").and_then(Value::as_str) == Some("character")
+                        && delta.get("entity_id").and_then(Value::as_str)
+                            == Some(character_id.as_str())
+                })
+                .and_then(|delta| delta.get("state"))
+                .ok_or_else(|| {
+                    CoreError::InvalidProject(
+                        "character snapshot id has no matching character state delta".into(),
+                    )
+                })?;
+            snapshots.insert(
+                character_id,
+                Value::String(
+                    serde_json::to_string(state)
+                        .map_err(|error| CoreError::Serialization(error.to_string()))?,
+                ),
+            );
+        }
+        value
+            .as_object_mut()
+            .ok_or_else(|| {
+                CoreError::InvalidProject("tracking projection is not an object".into())
+            })?
+            .insert(
+                "character_snapshot_updates".into(),
+                Value::Object(snapshots),
+            );
+    }
+    let output: ChapterTrackingProposal = serde_json::from_value(value).map_err(|error| {
+        CoreError::InvalidProject(format!(
+            "tracking stage returned invalid typed JSON for {}: {error}",
+            result.request_id
+        ))
+    })?;
     output.validate()?;
     Ok(output)
 }
@@ -5212,6 +5281,35 @@ mod tests {
         )
         .unwrap();
         assert!(parse_surface_model_json(&wrong_scene_identity, "CH001", "SC001").is_err());
+
+        let tracking_id_list = ModelResult::record(
+            "REQ-TRACKING-ID-LIST",
+            "SERVICE",
+            "MODEL",
+            serde_json::to_string(&json!({
+                "net_change":"状态改变","open_expectations":[],"paid_expectations":[],
+                "relationship_changes":[],"state_changes":[],"next_pull":"下一步",
+                "character_snapshot_updates":["CHAR-1"],
+                "entity_deltas":[{"entity_kind":"character","entity_id":"CHAR-1",
+                    "display_name":"人物","state":{"location":"门口"},"evidence_excerpt":"人物到了门口"}],
+                "relationship_deltas":[],"knowledge_deltas":[],"timeline_deltas":[],
+                "expectation_deltas":[]
+            }))
+            .unwrap(),
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        let normalized = parse_tracking_projection(&tracking_id_list).unwrap();
+        assert_eq!(
+            normalized.character_snapshot_updates.get("CHAR-1"),
+            Some(&"{\"location\":\"门口\"}".to_string())
+        );
 
         let prose_wrapped = ModelResult::record(
             "REQ-PROSE",
