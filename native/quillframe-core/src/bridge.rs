@@ -4822,23 +4822,24 @@ fn parse_surface_model_json(
                 }
             }
         }
-        if let Some(metadata) = object.remove("fingerprints") {
-            let metadata = metadata.as_object().ok_or_else(|| {
-                CoreError::InvalidProject(
-                    "surface response fingerprints metadata must be an object".into(),
-                )
-            })?;
+        let metadata = object
+            .iter()
+            .filter(|(key, _)| key.as_str() != "manuscript")
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect::<Map<_, _>>();
+        if !metadata.is_empty() {
             if metadata.len() > 8
-                || metadata.values().any(|value| !value.is_string())
-                || serde_json::to_vec(metadata)
+                || !metadata.values().all(bounded_surface_metadata)
+                || serde_json::to_vec(&metadata)
                     .map_err(|error| CoreError::Serialization(error.to_string()))?
                     .len()
-                    > 1_024
+                    > 2_048
             {
                 return Err(CoreError::InvalidProject(
-                    "surface response fingerprints metadata is not bounded".into(),
+                    "surface response metadata is not bounded".into(),
                 ));
             }
+            object.retain(|key, _| key == "manuscript");
         }
     }
     serde_json::from_value(value).map_err(|error| {
@@ -4847,6 +4848,19 @@ fn parse_surface_model_json(
             result.request_id
         ))
     })
+}
+
+fn bounded_surface_metadata(value: &Value) -> bool {
+    match value {
+        Value::Null | Value::Bool(_) | Value::Number(_) => true,
+        Value::String(value) => value.len() <= 512,
+        Value::Array(values) => values.len() <= 16 && values.iter().all(bounded_surface_metadata),
+        Value::Object(values) => {
+            values.len() <= 16
+                && values.keys().all(|key| key.len() <= 64)
+                && values.values().all(bounded_surface_metadata)
+        }
+    }
 }
 
 fn parse_tracking_projection(result: &ModelResult) -> CoreResult<ChapterTrackingProposal> {
