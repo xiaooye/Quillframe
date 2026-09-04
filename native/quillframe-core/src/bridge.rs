@@ -2889,7 +2889,8 @@ impl HostBridgeRuntime {
                     0.9,
                 )
                 .await?;
-            let scene_surface = parse_surface_model_json(&scene_result)?;
+            let scene_surface =
+                parse_surface_model_json(&scene_result, &pack.chapter_id, &brief.scene_id)?;
             scene_surface.validate()?;
             let scene_manuscript = scene_surface.manuscript.trim().to_string();
             if measured_prose_length(&scene_manuscript, chapter_length.unit) < scene_length_min {
@@ -4801,7 +4802,11 @@ fn strict_model_json<T: for<'de> Deserialize<'de>>(result: &ModelResult) -> Core
     }
 }
 
-fn parse_surface_model_json(result: &ModelResult) -> CoreResult<SurfaceRealization> {
+fn parse_surface_model_json(
+    result: &ModelResult,
+    expected_chapter_id: &str,
+    expected_scene_id: &str,
+) -> CoreResult<SurfaceRealization> {
     let mut value: Value = strict_model_json(result)?;
     if let Some(object) = value.as_object_mut() {
         if let Some(answer) = object.remove("answer") {
@@ -4809,6 +4814,18 @@ fn parse_surface_model_json(result: &ModelResult) -> CoreResult<SurfaceRealizati
                 return Err(CoreError::InvalidProject(
                     "surface response answer alias differs from manuscript".into(),
                 ));
+            }
+        }
+        for (field, expected) in [
+            ("chapter_id", expected_chapter_id),
+            ("scene_id", expected_scene_id),
+        ] {
+            if let Some(identity) = object.remove(field) {
+                if identity.as_str() != Some(expected) {
+                    return Err(CoreError::InvalidProject(format!(
+                        "surface response {field} differs from the frozen scene"
+                    )));
+                }
             }
         }
     }
@@ -5122,7 +5139,7 @@ mod tests {
             "REQ-SURFACE-ALIAS",
             "SERVICE",
             "MODEL",
-            "{\"manuscript\":\"正文\",\"answer\":\"正文\"}",
+            "{\"manuscript\":\"正文\",\"answer\":\"正文\",\"chapter_id\":\"CH001\",\"scene_id\":\"SC001\"}",
             None,
             ModelUsage {
                 input_tokens: None,
@@ -5133,7 +5150,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            parse_surface_model_json(&duplicate_surface_alias)
+            parse_surface_model_json(&duplicate_surface_alias, "CH001", "SC001")
                 .unwrap()
                 .manuscript,
             "正文"
@@ -5152,7 +5169,23 @@ mod tests {
             },
         )
         .unwrap();
-        assert!(parse_surface_model_json(&changed_surface_alias).is_err());
+        assert!(parse_surface_model_json(&changed_surface_alias, "CH001", "SC001").is_err());
+
+        let wrong_scene_identity = ModelResult::record(
+            "REQ-SURFACE-IDENTITY-CHANGED",
+            "SERVICE",
+            "MODEL",
+            "{\"manuscript\":\"正文\",\"chapter_id\":\"CH001\",\"scene_id\":\"SC999\"}",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        assert!(parse_surface_model_json(&wrong_scene_identity, "CH001", "SC001").is_err());
 
         let prose_wrapped = ModelResult::record(
             "REQ-PROSE",
