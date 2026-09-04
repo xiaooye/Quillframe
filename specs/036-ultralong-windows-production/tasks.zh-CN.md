@@ -16,4 +16,5 @@
 - [x] 持久化 typed 叙事账本、哈希链 story events、最近四份完整校验快照、严格重启验真，以及不含语义推断的显式授权快照物化恢复。
 - [x] 让 Tauri 直连 Rust Core；Node／pnpm 只作为 Studio 构建工具。
 - [x] 建立 Windows／Linux Core 与 Tauri CI 矩阵，以及全仓 Python 零残留门。
-- [ ] 运行真实连续章节文学 canary；在作者确认前文学质量保持 pending，确定性 CI 不满足这一关。
+- [x] 运行修复后的真实连续章节文学 Canary：CH002 的证据后总结与抽象解释被 Surface／Continuity 门实际阻断，证明新门不再空放行。
+- [ ] 文学质量仍保持 pending：CH001 虽通过内部 Surface 门，但作者侧复核仍发现责任对白过度完整、身体信号重复与急救流程播报；不得据此接受正文或宣称审稿召回率已校准。

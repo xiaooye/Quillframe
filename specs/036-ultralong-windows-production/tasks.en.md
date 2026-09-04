@@ -16,4 +16,5 @@
 - [x] Persist typed narrative ledgers, hash-chained story events, the latest four fully verified snapshots, strict restart verification, and explicit authorized snapshot materialization without semantic inference.
 - [x] Link Tauri directly to Rust Core; keep Node/pnpm only as Studio build tooling.
 - [x] Add Windows/Linux Core and Tauri CI matrices plus the repository-wide Python-zero gate.
-- [ ] Run a live sequential literary canary and keep literary quality pending until author confirmation; deterministic CI does not satisfy this gate.
+- [x] Run the post-fix live sequential literary canary: the Surface/Continuity gates actually blocked CH002's evidence-after-explanation and abstract-summary defects, proving the new gate no longer accepts an empty checklist path.
+- [ ] Literary quality remains pending: CH001 passed the internal Surface gate, but author-side review still found over-complete responsibility dialogue, repeated body signals, and broadcast emergency procedure. Do not accept the prose or claim calibrated review recall.
