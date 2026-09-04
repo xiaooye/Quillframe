@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 use crate::{
     fingerprint::sha256_fingerprint, CoreError, CoreResult, FindingCategory, ReviewFinding,
@@ -362,6 +362,69 @@ impl SurfaceRealization {
     }
 }
 
+pub(crate) fn parse_surface_realization_value(
+    mut value: Value,
+    expected_chapter_id: &str,
+    expected_scene_id: &str,
+) -> CoreResult<SurfaceRealization> {
+    if let Some(object) = value.as_object_mut() {
+        if let Some(answer) = object.remove("answer") {
+            if object.get("manuscript") != Some(&answer) {
+                return Err(invalid(
+                    "surface response answer alias differs from manuscript",
+                ));
+            }
+        }
+        for (field, expected) in [
+            ("chapter_id", expected_chapter_id),
+            ("scene_id", expected_scene_id),
+        ] {
+            if let Some(identity) = object.remove(field) {
+                if identity.as_str() != Some(expected) {
+                    return Err(CoreError::InvalidProject(format!(
+                        "surface response {field} differs from the frozen scene"
+                    )));
+                }
+            }
+        }
+        let metadata = object
+            .iter()
+            .filter(|(key, _)| key.as_str() != "manuscript")
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect::<Map<_, _>>();
+        if !metadata.is_empty() {
+            if metadata.len() > 8
+                || !metadata.values().all(bounded_surface_metadata)
+                || serde_json::to_vec(&metadata)
+                    .map_err(|error| CoreError::Serialization(error.to_string()))?
+                    .len()
+                    > 2_048
+            {
+                return Err(invalid("surface response metadata is not bounded"));
+            }
+            object.retain(|key, _| key == "manuscript");
+        }
+    }
+    serde_json::from_value(value).map_err(|error| {
+        CoreError::InvalidProject(format!(
+            "surface stage returned invalid typed JSON: {error}"
+        ))
+    })
+}
+
+fn bounded_surface_metadata(value: &Value) -> bool {
+    match value {
+        Value::Null | Value::Bool(_) | Value::Number(_) => true,
+        Value::String(value) => value.len() <= 512,
+        Value::Array(values) => values.len() <= 16 && values.iter().all(bounded_surface_metadata),
+        Value::Object(values) => {
+            values.len() <= 16
+                && values.keys().all(|key| key.len() <= 64)
+                && values.values().all(bounded_surface_metadata)
+        }
+    }
+}
+
 impl ChapterTrackingProposal {
     pub fn validate(&self) -> CoreResult<()> {
         let list_values = [
@@ -709,6 +772,29 @@ mod tests {
         };
 
         assert!(resolution.validate().is_err());
+    }
+
+    #[test]
+    fn persisted_surface_envelope_reuses_live_normalization() {
+        let surface = parse_surface_realization_value(
+            serde_json::json!({
+                "manuscript":"正文",
+                "answer":"正文",
+                "chapter_id":"CH001",
+                "scene_id":"SC001",
+                "chin_context":{"language":"zh-CN"}
+            }),
+            "CH001",
+            "SC001",
+        )
+        .unwrap();
+        assert_eq!(surface.manuscript, "正文");
+        assert!(parse_surface_realization_value(
+            serde_json::json!({"manuscript":"正文","scene_id":"OTHER"}),
+            "CH001",
+            "SC001",
+        )
+        .is_err());
     }
 
     #[test]

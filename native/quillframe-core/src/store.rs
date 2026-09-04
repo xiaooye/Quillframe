@@ -4280,10 +4280,15 @@ impl ProjectDatabase {
                 receipts.insert(stage_key.into(), result.fingerprint.clone());
             }
             let mut scene_manuscripts = Vec::with_capacity(expected_scene_keys.len());
-            for stage_key in &expected_scene_keys {
+            for (stage_key, scene_brief) in expected_scene_keys.iter().zip(&pack.scenes) {
                 let result = confirmed_stage_result(&calls, stage_key)?;
-                let scene: SurfaceRealization = serde_json::from_str(&result.content)
+                let value = serde_json::from_str(&result.content)
                     .map_err(|error| CoreError::Serialization(error.to_string()))?;
+                let scene = crate::semantic::parse_surface_realization_value(
+                    value,
+                    &pack.chapter_id,
+                    &scene_brief.scene_id,
+                )?;
                 scene.validate()?;
                 scene_manuscripts.push(scene.manuscript.trim().to_string());
                 receipts.insert(stage_key.clone(), result.fingerprint.clone());

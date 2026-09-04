@@ -4801,66 +4801,11 @@ fn parse_surface_model_json(
     expected_chapter_id: &str,
     expected_scene_id: &str,
 ) -> CoreResult<SurfaceRealization> {
-    let mut value: Value = strict_model_json(result)?;
-    if let Some(object) = value.as_object_mut() {
-        if let Some(answer) = object.remove("answer") {
-            if object.get("manuscript") != Some(&answer) {
-                return Err(CoreError::InvalidProject(
-                    "surface response answer alias differs from manuscript".into(),
-                ));
-            }
-        }
-        for (field, expected) in [
-            ("chapter_id", expected_chapter_id),
-            ("scene_id", expected_scene_id),
-        ] {
-            if let Some(identity) = object.remove(field) {
-                if identity.as_str() != Some(expected) {
-                    return Err(CoreError::InvalidProject(format!(
-                        "surface response {field} differs from the frozen scene"
-                    )));
-                }
-            }
-        }
-        let metadata = object
-            .iter()
-            .filter(|(key, _)| key.as_str() != "manuscript")
-            .map(|(key, value)| (key.clone(), value.clone()))
-            .collect::<Map<_, _>>();
-        if !metadata.is_empty() {
-            if metadata.len() > 8
-                || !metadata.values().all(bounded_surface_metadata)
-                || serde_json::to_vec(&metadata)
-                    .map_err(|error| CoreError::Serialization(error.to_string()))?
-                    .len()
-                    > 2_048
-            {
-                return Err(CoreError::InvalidProject(
-                    "surface response metadata is not bounded".into(),
-                ));
-            }
-            object.retain(|key, _| key == "manuscript");
-        }
-    }
-    serde_json::from_value(value).map_err(|error| {
-        CoreError::InvalidProject(format!(
-            "surface stage returned invalid typed JSON for {}: {error}",
-            result.request_id
-        ))
-    })
-}
-
-fn bounded_surface_metadata(value: &Value) -> bool {
-    match value {
-        Value::Null | Value::Bool(_) | Value::Number(_) => true,
-        Value::String(value) => value.len() <= 512,
-        Value::Array(values) => values.len() <= 16 && values.iter().all(bounded_surface_metadata),
-        Value::Object(values) => {
-            values.len() <= 16
-                && values.keys().all(|key| key.len() <= 64)
-                && values.values().all(bounded_surface_metadata)
-        }
-    }
+    crate::semantic::parse_surface_realization_value(
+        strict_model_json(result)?,
+        expected_chapter_id,
+        expected_scene_id,
+    )
 }
 
 fn parse_tracking_projection(result: &ModelResult) -> CoreResult<ChapterTrackingProposal> {
