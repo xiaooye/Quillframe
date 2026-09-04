@@ -183,8 +183,7 @@ impl ContextManifest {
 
 impl ContextQueryPlan {
     pub fn validate(&self) -> CoreResult<()> {
-        if self.queries.is_empty()
-            || self.queries.len() > 6
+        if self.queries.len() > 6
             || self
                 .queries
                 .iter()
@@ -288,6 +287,16 @@ mod tests {
             .unwrap();
         assert_eq!(frozen.entries.len(), 32);
         assert!(frozen.total_bytes <= 4 * 1024);
+    }
+
+    #[test]
+    fn bounded_query_plan_allows_no_archive_lookup() {
+        ContextQueryPlan {
+            queries: Vec::new(),
+            required_references: Vec::new(),
+        }
+        .validate()
+        .unwrap();
     }
 
     #[test]

@@ -1946,7 +1946,7 @@ impl HostBridgeRuntime {
                     "plan_lock":pack.plan_lock,
                     "recent_settled_context":pack.continuity_context,
                     "instruction":production.intent.instruction,
-                    "contract":"Return JSON only: {queries:[string],required_references:[string]}. Produce one to six short semantic evidence queries for facts, character knowledge, relationships, promises or old scenes needed by this exact chapter. Do not answer the queries. required_references may name only exact references visible in the supplied context; otherwise leave it empty."
+                    "contract":"Return JSON only: {queries:[string],required_references:[string]}. Produce zero to six short semantic evidence queries for facts, character knowledge, relationships, promises or old scenes needed by this exact chapter. Return an empty queries array when the frozen plan and exact repair evidence are sufficient and no archive lookup is needed. Do not answer the queries. required_references may name only exact references visible in the supplied context; otherwise leave it empty."
                 }),
                 1_500,
                 0.1,
