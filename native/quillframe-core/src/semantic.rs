@@ -751,9 +751,11 @@ impl RepairSpec {
             if self
                 .targets
                 .iter()
-                .any(|target| !source.contains(&target.source_excerpt))
+                .any(|target| target.source_excerpt != "fresh-realization-whole-candidate")
             {
-                return Err(invalid("repair target excerpt is absent"));
+                return Err(invalid(
+                    "fresh realization cannot carry incumbent prose windows",
+                ));
             }
             return Ok(());
         }
@@ -1037,26 +1039,33 @@ mod tests {
     }
 
     #[test]
-    fn fresh_realization_accepts_grounded_targets_in_diagnostic_order() {
+    fn fresh_realization_accepts_non_prose_targets_in_diagnostic_order() {
         let spec = repair_spec(
             RepairGenerationMode::FreshRealization,
-            &["later excerpt", "earlier excerpt"],
+            &[
+                "fresh-realization-whole-candidate",
+                "fresh-realization-whole-candidate",
+            ],
         );
 
-        spec.validate_against_source("earlier excerpt then later excerpt")
+        spec.validate_against_source("incumbent prose is not required")
             .unwrap();
     }
 
     #[test]
-    fn fresh_realization_rejects_an_ungrounded_target() {
-        let spec = repair_spec(
+    fn fresh_realization_requires_non_prose_target_sentinels() {
+        let mut spec = repair_spec(
             RepairGenerationMode::FreshRealization,
             &["present excerpt", "missing excerpt"],
         );
-
         assert!(spec
             .validate_against_source("present excerpt only")
             .is_err());
+        for target in &mut spec.targets {
+            target.source_excerpt = "fresh-realization-whole-candidate".into();
+        }
+        spec.validate_against_source("incumbent prose stays outside the fresh Writer")
+            .unwrap();
     }
 
     #[test]

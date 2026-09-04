@@ -2187,7 +2187,7 @@ impl HostBridgeRuntime {
                     "production_guidance":guidance_snapshot.writer_projection(),
                     "contract":"Return JSON only: {repair_owner:'prose_writer',generation_mode:'local_or_bounded_repair'|'fresh_realization',objective_envelope:string,targets:[{location,source_excerpt,fix,preserve:[string]}],invalidation_boundary:[string],comparison_required:true}. Cover every diagnosis finding or failed rule assessment. For bounded repair, every source_excerpt must be an exact, ordered excerpt from the incumbent and the listed excerpts must be sufficient to fix every finding while all other bytes remain protected. Choose fresh_realization when any finding is manuscript-wide, concerns total length or structure, crosses protected windows, or cannot be fully repaired inside exact excerpts. Convert all findings into exact FIX + PRESERVE constraints."}),
                 6_000,0.2).await?;
-            let mut spec: RepairSpec = strict_model_json(&result)?;
+            let mut spec = parse_repair_spec(&result)?;
             normalize_bounded_repair_target_order(&mut spec, &material.manuscript)?;
             spec.validate_against_source(&material.manuscript)?;
             Some((spec, result))
@@ -5252,6 +5252,33 @@ fn parse_raw_surface_prose(result: &ModelResult) -> CoreResult<SurfaceRealizatio
     Ok(output)
 }
 
+fn parse_repair_spec(result: &ModelResult) -> CoreResult<RepairSpec> {
+    let mut value: Value = strict_model_json(result)?;
+    if value.get("generation_mode").and_then(Value::as_str) == Some("fresh_realization") {
+        let targets = value
+            .get_mut("targets")
+            .and_then(Value::as_array_mut)
+            .ok_or_else(|| CoreError::InvalidProject("fresh repair targets are missing".into()))?;
+        for target in targets {
+            target
+                .as_object_mut()
+                .ok_or_else(|| {
+                    CoreError::InvalidProject("fresh repair target is not an object".into())
+                })?
+                .insert(
+                    "source_excerpt".into(),
+                    Value::String("fresh-realization-whole-candidate".into()),
+                );
+        }
+    }
+    serde_json::from_value(value).map_err(|error| {
+        CoreError::InvalidProject(format!(
+            "repair editor returned invalid typed JSON for {}: {error}",
+            result.request_id
+        ))
+    })
+}
+
 fn parse_surface_audit(
     result: &ModelResult,
     expected_judgment_fingerprint: Option<&str>,
@@ -5770,6 +5797,32 @@ mod tests {
             "\"action_note\":\"semantic content\"",
         );
         assert!(parse_character_simulation(&nonempty_note).is_err());
+
+        let fresh_repair_null_excerpt = ModelResult::record(
+            "REQ-FRESH-REPAIR-NULL",
+            "SERVICE",
+            "MODEL",
+            serde_json::to_string(&json!({
+                "repair_owner":"prose_writer","generation_mode":"fresh_realization",
+                "objective_envelope":"重新实现整章","targets":[{"location":"整章",
+                    "source_excerpt":null,"fix":"重新实现","preserve":["故事事实"]}],
+                "invalidation_boundary":["旧正文"],"comparison_required":true
+            }))
+            .unwrap(),
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        let fresh_spec = parse_repair_spec(&fresh_repair_null_excerpt).unwrap();
+        assert_eq!(
+            fresh_spec.targets[0].source_excerpt,
+            "fresh-realization-whole-candidate"
+        );
 
         let tracking_id_list = ModelResult::record(
             "REQ-TRACKING-ID-LIST",
