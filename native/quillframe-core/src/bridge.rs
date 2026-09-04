@@ -4750,6 +4750,17 @@ fn strict_model_json<T: for<'de> Deserialize<'de>>(result: &ModelResult) -> Core
             )));
         }
         inner
+    } else if matches!(trimmed.as_bytes().first(), Some(b'{') | Some(b'[')) {
+        let removed_ticks = trimmed
+            .bytes()
+            .rev()
+            .take_while(|byte| *byte == b'`')
+            .count();
+        if (1..=3).contains(&removed_ticks) {
+            trimmed[..trimmed.len() - removed_ticks].trim_end()
+        } else {
+            trimmed
+        }
     } else {
         trimmed
     };
@@ -5008,6 +5019,23 @@ mod tests {
         .unwrap();
         let parsed: ContextQueryPlan = strict_model_json(&fenced).unwrap();
         assert_eq!(parsed.queries, vec!["one"]);
+
+        let trailing_fence_fragment = ModelResult::record(
+            "REQ-TRAILING-FENCE",
+            "SERVICE",
+            "MODEL",
+            "{\"queries\":[\"two\"],\"required_references\":[]}\n``",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        let parsed: ContextQueryPlan = strict_model_json(&trailing_fence_fragment).unwrap();
+        assert_eq!(parsed.queries, vec!["two"]);
 
         let prose_wrapped = ModelResult::record(
             "REQ-PROSE",
