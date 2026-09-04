@@ -488,7 +488,7 @@ fn api_operation_url(endpoint: &Url, operation: &str) -> CoreResult<Url> {
 }
 
 fn openai_chat_request_body(request: &ModelRequest) -> Value {
-    json!({
+    let mut body = json!({
         "model":request.model,
         "messages":[
             {"role":"system","content":request.system},
@@ -498,7 +498,16 @@ fn openai_chat_request_body(request: &ModelRequest) -> Value {
         "max_tokens":request.max_output_tokens,
         "response_format":{"type":"json_object"},
         "stream":true
-    })
+    });
+    if matches!(
+        request.model.to_ascii_lowercase().as_str(),
+        "glm-5.3" | "glm-5.3-flash"
+    ) {
+        let object = body.as_object_mut().expect("chat request is an object");
+        object.insert("thinking".into(), json!({"type":"enabled"}));
+        object.insert("reasoning_effort".into(), json!("low"));
+    }
+    body
 }
 
 fn validate_request(request: &ModelRequest) -> CoreResult<()> {
@@ -813,6 +822,13 @@ mod tests {
         assert_eq!(body.pointer("/messages/0/role"), Some(&json!("system")));
         assert_eq!(body.pointer("/messages/1/role"), Some(&json!("user")));
         assert_eq!(body.get("stream"), Some(&json!(true)));
+        assert!(body.get("reasoning_effort").is_none());
+
+        let mut glm = request();
+        glm.model = "glm-5.3-flash".into();
+        let glm_body = openai_chat_request_body(&glm);
+        assert_eq!(glm_body.get("reasoning_effort"), Some(&json!("low")));
+        assert_eq!(glm_body.pointer("/thinking/type"), Some(&json!("enabled")));
     }
 
     #[test]
