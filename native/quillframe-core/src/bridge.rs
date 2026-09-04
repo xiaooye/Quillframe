@@ -4737,7 +4737,23 @@ fn model_service_projection(record: &ModelServiceRecord) -> Value {
 }
 
 fn strict_model_json<T: for<'de> Deserialize<'de>>(result: &ModelResult) -> CoreResult<T> {
-    serde_json::from_str(&result.content).map_err(|error| {
+    let trimmed = result.content.trim();
+    let payload = if let Some(inner) = trimmed
+        .strip_prefix("```json")
+        .and_then(|value| value.strip_suffix("```"))
+    {
+        let inner = inner.trim();
+        if inner.contains("```") {
+            return Err(CoreError::InvalidProject(format!(
+                "semantic stage returned nested JSON fences for {}",
+                result.request_id
+            )));
+        }
+        inner
+    } else {
+        trimmed
+    };
+    serde_json::from_str(payload).map_err(|error| {
         CoreError::InvalidProject(format!(
             "semantic stage returned invalid typed JSON for {}: {error}",
             result.request_id
@@ -4972,6 +4988,42 @@ mod tests {
             invalidation_boundary: vec!["only both target windows".into()],
             comparison_required: true,
         }
+    }
+
+    #[test]
+    fn strict_model_json_accepts_only_a_single_outer_json_fence() {
+        let fenced = ModelResult::record(
+            "REQ-FENCED",
+            "SERVICE",
+            "MODEL",
+            "```json\n{\"queries\":[\"one\"],\"required_references\":[]}\n```",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        let parsed: ContextQueryPlan = strict_model_json(&fenced).unwrap();
+        assert_eq!(parsed.queries, vec!["one"]);
+
+        let prose_wrapped = ModelResult::record(
+            "REQ-PROSE",
+            "SERVICE",
+            "MODEL",
+            "Here is JSON:\n```json\n{\"queries\":[\"one\"],\"required_references\":[]}\n```",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        assert!(strict_model_json::<ContextQueryPlan>(&prose_wrapped).is_err());
     }
 
     #[test]

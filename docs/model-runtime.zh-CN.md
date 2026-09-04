@@ -35,6 +35,8 @@ Protocol 是 wire codec，不是 Provider identity。同一 endpoint 的不同 m
 
 Endpoint 可以是主机根路径，也可以明确停在 `v1`、`v4`、`v4.1` 等版本段。Core 只在末段不是版本标识时补入默认 `v1`；明确版本段会原样保留，再追加 `models`、`chat/completions`、`responses` 或 `messages`，避免静默改写 Provider 的 API 基址。
 
+Quillframe 当前的 OpenAI Chat 生产调用全部要求结构化 JSON，因此请求体显式发送 `response_format: {"type":"json_object"}`。系统仍验证返回的精确 Rust 类型；只声明 JSON 模式不会授予语义正确性或权威。
+
 `GET /models` 只证明模型发现；它不证明 tools、vision、structured output 或 context window。
 
 Capability evidence 保留状态、provenance、timestamp、service/model/protocol binding。Model/vendor 名字永远不是 capability proof。

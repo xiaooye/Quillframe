@@ -255,10 +255,9 @@ impl<'a> ModelRuntime<'a> {
             None => String::new(),
         };
         let mut builder = match service.protocol_family {
-            ProtocolFamily::OpenaiChatCompletions => client.post(api_operation_url(&endpoint,"chat/completions")?).json(&json!({
-                "model":request.model,"messages":[{"role":"system","content":request.system},{"role":"user","content":request.user}],
-                "temperature":request.temperature,"max_tokens":request.max_output_tokens
-            })),
+            ProtocolFamily::OpenaiChatCompletions => client
+                .post(api_operation_url(&endpoint,"chat/completions")?)
+                .json(&openai_chat_request_body(request)),
             ProtocolFamily::OpenaiResponses => client.post(api_operation_url(&endpoint,"responses")?).json(&json!({
                 "model":request.model,"instructions":request.system,"input":request.user,"temperature":request.temperature,
                 "max_output_tokens":request.max_output_tokens,"store":false
@@ -479,6 +478,19 @@ fn api_operation_url(endpoint: &Url, operation: &str) -> CoreResult<Url> {
         .map_err(|_| runtime("invalid model API endpoint base"))
 }
 
+fn openai_chat_request_body(request: &ModelRequest) -> Value {
+    json!({
+        "model":request.model,
+        "messages":[
+            {"role":"system","content":request.system},
+            {"role":"user","content":request.user}
+        ],
+        "temperature":request.temperature,
+        "max_tokens":request.max_output_tokens,
+        "response_format":{"type":"json_object"}
+    })
+}
+
 fn validate_request(request: &ModelRequest) -> CoreResult<()> {
     if request.request_id.trim().is_empty()
         || request.model.trim().is_empty()
@@ -689,6 +701,17 @@ mod tests {
             .as_str(),
             "https://api.example.test/tenant/v4.1/responses"
         );
+    }
+
+    #[test]
+    fn openai_chat_semantic_requests_require_json_object_output() {
+        let body = openai_chat_request_body(&request());
+        assert_eq!(
+            body.pointer("/response_format/type"),
+            Some(&json!("json_object"))
+        );
+        assert_eq!(body.pointer("/messages/0/role"), Some(&json!("system")));
+        assert_eq!(body.pointer("/messages/1/role"), Some(&json!("user")));
     }
 
     fn request() -> ModelRequest {
