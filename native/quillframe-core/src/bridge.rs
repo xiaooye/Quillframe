@@ -2960,7 +2960,7 @@ impl HostBridgeRuntime {
                 0.4,
             )
             .await?;
-        let character_output: CharacterSimulation = strict_model_json(&character)?;
+        let character_output = parse_character_simulation(&character)?;
         character_output.validate_against(&pack.scenes)?;
         let scene_resolution = self
             .execute_model_stage(
@@ -5131,6 +5131,30 @@ fn parse_raw_surface_prose(result: &ModelResult) -> CoreResult<SurfaceRealizatio
     Ok(output)
 }
 
+fn parse_character_simulation(result: &ModelResult) -> CoreResult<CharacterSimulation> {
+    let mut value: Value = strict_model_json(result)?;
+    if let Some(actions) = value.get_mut("actions").and_then(Value::as_array_mut) {
+        for action in actions {
+            let object = action.as_object_mut().ok_or_else(|| {
+                CoreError::InvalidProject("character action must be a JSON object".into())
+            })?;
+            if let Some(note) = object.remove("action_note") {
+                if !matches!(note, Value::Null) && note.as_str() != Some("") {
+                    return Err(CoreError::InvalidProject(
+                        "non-empty character action_note is not a redundant provider field".into(),
+                    ));
+                }
+            }
+        }
+    }
+    serde_json::from_value(value).map_err(|error| {
+        CoreError::InvalidProject(format!(
+            "character simulation returned invalid typed JSON for {}: {error}",
+            result.request_id
+        ))
+    })
+}
+
 fn parse_tracking_projection(result: &ModelResult) -> CoreResult<ChapterTrackingProposal> {
     let mut value: Value = strict_model_json(result)?;
     let snapshot_ids = value
@@ -5570,6 +5594,38 @@ mod tests {
         )
         .unwrap();
         assert!(parse_surface_model_json(&wrong_scene_identity, "CH001", "SC001").is_err());
+
+        let character_empty_note = ModelResult::record(
+            "REQ-CHARACTER-EMPTY-NOTE",
+            "SERVICE",
+            "MODEL",
+            serde_json::to_string(&json!({"actions":[{
+                "scene_id":"SC001","character":"CHAR-1","action":"行动",
+                "motive_pressure":"压力","observable_consequence":"后果","action_note":""
+            }]}))
+            .unwrap(),
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            parse_character_simulation(&character_empty_note)
+                .unwrap()
+                .actions
+                .len(),
+            1
+        );
+        let mut nonempty_note = character_empty_note.clone();
+        nonempty_note.content = nonempty_note.content.replace(
+            "\"action_note\":\"\"",
+            "\"action_note\":\"semantic content\"",
+        );
+        assert!(parse_character_simulation(&nonempty_note).is_err());
 
         let tracking_id_list = ModelResult::record(
             "REQ-TRACKING-ID-LIST",
