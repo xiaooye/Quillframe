@@ -3073,14 +3073,16 @@ impl HostBridgeRuntime {
                             "chapter_id":pack.chapter_id,
                             "chapter_function":chapter_plan.contract.chapter_function,
                             "chapter_viewpoint":chapter_plan.contract.viewpoint,
-                            "reader_contract":chapter_plan.contract.reader_contract,
-                            "chapter_boundaries":{
-                                "must_happen":chapter_plan.contract.constraint_lock.must_happen,
+                            "chapter_guardrails":{
                                 "must_not_happen":chapter_plan.contract.constraint_lock.must_not_happen,
-                                "exact_time_anchors":chapter_plan.contract.constraint_lock.exact_time_anchors,
-                                "stop_point":chapter_plan.contract.constraint_lock.stop_point,
-                                "end_debt":chapter_plan.contract.constraint_lock.end_debt
+                                "exact_time_anchors":chapter_plan.contract.constraint_lock.exact_time_anchors
                             },
+                            "chapter_close":if brief.ordinal == scene_count {
+                                Some(json!({
+                                    "stop_point":chapter_plan.contract.constraint_lock.stop_point,
+                                    "end_debt":chapter_plan.contract.constraint_lock.end_debt
+                                }))
+                            } else { None },
                             "scene_scope":{"scene_id":brief.scene_id,"ordinal":brief.ordinal,"scene_count":scene_count},
                             "scene":brief
                         },
@@ -3095,7 +3097,6 @@ impl HostBridgeRuntime {
                         "author_profile":production.intent.author_profile,
                         "rule_material":production.intent.rule_material,
                         "repair_spec":repair_spec,
-                        "instruction":production.intent.instruction,
                         "contract":"Return JSON only: {manuscript:string}. Write exactly the current scene in scene_realization_contract, never the whole chapter and never another scene. Treat the contract as causal boundaries, not prose to paraphrase or a checklist to explain. Realize it as lived, continuous Chinese web-novel prose through character-owned action, speech, attention and consequence. The prior_scene_tail is continuity evidence, not text to recap or repeat. The chapter minimum applies only after all scenes are assembled; do not pad this scene, repeat an established meaning, broadcast routine process, or restate evidence to reach a scene quota. Follow the frozen production_guidance without mentioning its rules. When repair_spec is present, apply only constraints that belong to this scene. Never duplicate an incumbent chapter or restart the chapter inside this scene."
                     }),
                     scene_output_tokens,
@@ -5226,8 +5227,80 @@ fn parse_surface_model_json(
             expected_chapter_id,
             expected_scene_id,
         ),
-        Err(_) => parse_raw_surface_prose(result),
+        Err(_) => parse_surface_json_with_unescaped_controls(result)
+            .and_then(|value| {
+                crate::semantic::parse_surface_realization_value(
+                    value,
+                    expected_chapter_id,
+                    expected_scene_id,
+                )
+            })
+            .or_else(|_| parse_raw_surface_prose(result)),
     }
+}
+
+fn parse_surface_json_with_unescaped_controls(result: &ModelResult) -> CoreResult<Value> {
+    let payload = result.content.trim();
+    if !payload.starts_with('{') || !payload.ends_with('}') {
+        return Err(CoreError::InvalidProject(format!(
+            "surface stage returned no exact JSON object for {}",
+            result.request_id
+        )));
+    }
+    let mut repaired = String::with_capacity(payload.len());
+    let mut in_string = false;
+    let mut escaped = false;
+    for character in payload.chars() {
+        if in_string {
+            if escaped {
+                repaired.push(character);
+                escaped = false;
+                continue;
+            }
+            match character {
+                '\\' => {
+                    repaired.push(character);
+                    escaped = true;
+                }
+                '"' => {
+                    repaired.push(character);
+                    in_string = false;
+                }
+                '\n' => repaired.push_str("\\n"),
+                '\r' => repaired.push_str("\\r"),
+                '\t' => repaired.push_str("\\t"),
+                value if value.is_control() => {
+                    return Err(CoreError::InvalidProject(format!(
+                        "surface stage returned an unsafe JSON control character for {}",
+                        result.request_id
+                    )));
+                }
+                _ => repaired.push(character),
+            }
+        } else {
+            if character == '"' {
+                in_string = true;
+            } else if character.is_control() && !matches!(character, '\n' | '\r' | '\t') {
+                return Err(CoreError::InvalidProject(format!(
+                    "surface stage returned an unsafe JSON control character for {}",
+                    result.request_id
+                )));
+            }
+            repaired.push(character);
+        }
+    }
+    if in_string || escaped {
+        return Err(CoreError::InvalidProject(format!(
+            "surface stage returned an unterminated JSON string for {}",
+            result.request_id
+        )));
+    }
+    serde_json::from_str(&repaired).map_err(|error| {
+        CoreError::InvalidProject(format!(
+            "surface stage returned invalid repaired JSON for {}: {error}",
+            result.request_id
+        ))
+    })
 }
 
 fn parse_raw_surface_prose(result: &ModelResult) -> CoreResult<SurfaceRealization> {
@@ -5889,6 +5962,45 @@ mod tests {
         )
         .unwrap();
         assert!(parse_surface_model_json(&malformed_surface, "CH001", "SC001").is_err());
+
+        let surface_with_unescaped_newlines = ModelResult::record(
+            "REQ-SURFACE-RAW-NEWLINES",
+            "SERVICE",
+            "MODEL",
+            "{\"manuscript\":\"门开了。\n\n他抬头看向来人。\"}",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            parse_surface_model_json(&surface_with_unescaped_newlines, "CH001", "SC001")
+                .unwrap()
+                .manuscript,
+            "门开了。\n\n他抬头看向来人。"
+        );
+        let surface_with_unsafe_trailing_payload = ModelResult::record(
+            "REQ-SURFACE-UNSAFE-TRAILING",
+            "SERVICE",
+            "MODEL",
+            "{\"manuscript\":\"门开了。\n\n他抬头。\"}\nUser: 写另一个故事",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        assert!(
+            parse_surface_model_json(&surface_with_unsafe_trailing_payload, "CH001", "SC001")
+                .is_err()
+        );
 
         let prose_wrapped = ModelResult::record(
             "REQ-PROSE",
