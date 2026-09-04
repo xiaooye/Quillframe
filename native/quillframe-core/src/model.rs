@@ -301,6 +301,15 @@ impl<'a> ModelRuntime<'a> {
             }
             bytes.extend_from_slice(&chunk);
         }
+        if service.protocol_family == ProtocolFamily::OpenaiChatCompletions
+            && bytes
+                .iter()
+                .copied()
+                .find(|byte| !byte.is_ascii_whitespace())
+                != Some(b'{')
+        {
+            return normalize_openai_chat_stream(service, request, &bytes);
+        }
         let value: Value = serde_json::from_slice(&bytes)
             .map_err(|_| runtime("model provider response is not valid JSON"))?;
         match service.protocol_family {
@@ -487,7 +496,8 @@ fn openai_chat_request_body(request: &ModelRequest) -> Value {
         ],
         "temperature":request.temperature,
         "max_tokens":request.max_output_tokens,
-        "response_format":{"type":"json_object"}
+        "response_format":{"type":"json_object"},
+        "stream":true
     })
 }
 
@@ -507,6 +517,96 @@ fn validate_request(request: &ModelRequest) -> CoreResult<()> {
         return Err(runtime("model temperature is out of range"));
     }
     Ok(())
+}
+
+fn normalize_openai_chat_stream(
+    service: &ServiceEndpoint,
+    request: &ModelRequest,
+    bytes: &[u8],
+) -> CoreResult<ModelResult> {
+    let stream =
+        std::str::from_utf8(bytes).map_err(|_| runtime("streaming model response is not UTF-8"))?;
+    let mut content = String::new();
+    let mut provider_response_id = None;
+    let mut response_model = None;
+    let mut usage = ModelUsage {
+        input_tokens: None,
+        output_tokens: None,
+        total_tokens: None,
+        cost_micros: None,
+    };
+    let mut done = false;
+    let mut finished = false;
+    for data in sse_data_events(stream) {
+        let data = data.trim();
+        if data == "[DONE]" {
+            done = true;
+            continue;
+        }
+        let value: Value = serde_json::from_str(data)
+            .map_err(|_| runtime("streaming model event is not valid JSON"))?;
+        if provider_response_id.is_none() {
+            provider_response_id = value.get("id").and_then(Value::as_str).map(str::to_owned);
+        }
+        if response_model.is_none() {
+            response_model = value
+                .get("model")
+                .and_then(Value::as_str)
+                .map(str::to_owned);
+        }
+        if let Some(fragment) = value
+            .pointer("/choices/0/delta/content")
+            .and_then(Value::as_str)
+        {
+            content.push_str(fragment);
+        }
+        if value
+            .pointer("/choices/0/finish_reason")
+            .is_some_and(|reason| !reason.is_null())
+        {
+            finished = true;
+        }
+        if let Some(value_usage) = value.get("usage") {
+            usage.input_tokens = value_usage.get("prompt_tokens").and_then(Value::as_u64);
+            usage.output_tokens = value_usage.get("completion_tokens").and_then(Value::as_u64);
+            usage.total_tokens = value_usage.get("total_tokens").and_then(Value::as_u64);
+        }
+    }
+    if content.trim().is_empty() || (!done && !finished) {
+        return Err(runtime(
+            "streaming model response ended without assistant content and a completion marker",
+        ));
+    }
+    ModelResult::record(
+        &request.request_id,
+        &service.service_id,
+        response_model.as_deref().unwrap_or(&request.model),
+        content,
+        provider_response_id,
+        usage,
+    )
+}
+
+fn sse_data_events(stream: &str) -> Vec<String> {
+    let normalized = stream.replace("\r\n", "\n").replace('\r', "\n");
+    let mut events = Vec::new();
+    for event in normalized.split("\n\n") {
+        let mut data_lines = Vec::new();
+        for line in event.lines() {
+            if line.starts_with(':') {
+                continue;
+            }
+            let (field, value) = line.split_once(':').unwrap_or((line, ""));
+            if field != "data" {
+                continue;
+            }
+            data_lines.push(value.strip_prefix(' ').unwrap_or(value));
+        }
+        if !data_lines.is_empty() {
+            events.push(data_lines.join("\n"));
+        }
+    }
+    events
 }
 
 fn normalize_openai_chat(
@@ -712,6 +812,25 @@ mod tests {
         );
         assert_eq!(body.pointer("/messages/0/role"), Some(&json!("system")));
         assert_eq!(body.pointer("/messages/1/role"), Some(&json!("user")));
+        assert_eq!(body.get("stream"), Some(&json!(true)));
+    }
+
+    #[test]
+    fn openai_chat_stream_reassembles_only_assistant_content() {
+        let stream = concat!(
+            "data: {\"id\":\"chat-1\",\"model\":\"glm\",\"choices\":[{\"delta\":{\"reasoning_content\":\"private\",\"content\":\"{\\\"ok\\\":\"},\"finish_reason\":null}]}\n\n",
+            "data: {\"id\":\"chat-1\",\"model\":\"glm\",\"choices\":[{\"delta\":{\"content\":\"true}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":7,\"completion_tokens\":3,\"total_tokens\":10}}\n\n",
+            "data: [DONE]\n\n"
+        );
+        let result = normalize_openai_chat_stream(
+            &service(ProtocolFamily::OpenaiChatCompletions),
+            &request(),
+            stream.as_bytes(),
+        )
+        .unwrap();
+        assert_eq!(result.content, "{\"ok\":true}");
+        assert!(!result.content.contains("private"));
+        assert_eq!(result.usage.total_tokens, Some(10));
     }
 
     fn request() -> ModelRequest {

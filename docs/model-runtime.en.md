@@ -29,7 +29,7 @@ Current wire protocol families are OpenAI Chat Completions, OpenAI Responses and
 
 An endpoint may be a host root or may end in an explicit API version segment such as `v1`, `v4`, or `v4.1`. Core adds the default `v1` only when the final segment is not already versioned; otherwise it preserves that base before appending `models`, `chat/completions`, `responses`, or `messages`.
 
-All current Quillframe OpenAI Chat production calls require structured JSON, so the request body explicitly sends `response_format: {"type":"json_object"}`. Core still validates the exact Rust result type; JSON mode grants neither semantic correctness nor authority.
+All current Quillframe OpenAI Chat production calls require structured JSON, so the request body explicitly sends `response_format: {"type":"json_object"}` and uses standard SSE streaming until a finish reason or `[DONE]`. Core assembles only `delta.content`; `reasoning_content` never enters the result. Core still validates the exact Rust result type, and neither JSON nor streaming mode grants semantic correctness or authority.
 
 Model listing proves model discovery only. It does not prove tools, vision, structured output or context window. Capability evidence retains state, provenance, timestamp and service/model/protocol binding. Model/vendor names never prove capability.
 
