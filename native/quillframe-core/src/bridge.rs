@@ -2817,7 +2817,7 @@ impl HostBridgeRuntime {
                     "writer_context":writer_context,
                     "contract":"Return JSON only: {scenes:[{scene_id,action_sequence:[string],turn,exit_state}]}. Resolve causal actions into each ordered scene without prose. Preserve the frozen choice, consequence, value shift, information change and approved relationship boundaries; do not replace the chapter or scene contract or expose private reasoning."
                 }),
-                3_000,
+                8_000,
                 0.35,
             )
             .await?;
@@ -2850,7 +2850,7 @@ impl HostBridgeRuntime {
             let scene_output_tokens = scene_length_min
                 .saturating_mul(2)
                 .saturating_add(800)
-                .clamp(2_000, 16_000);
+                .clamp(8_000, 16_000);
             let stage_key = format!("surface_scene_{:04}_{}", brief.ordinal, brief.scene_id);
             let director_note = DirectorNote::freeze(
                 &pack.chapter_id,
@@ -6333,7 +6333,14 @@ mod tests {
                 upstream_request.absolute_deadline_ms,
                 PRODUCTION_MODEL_DEADLINE_MS
             );
-            assert_eq!(upstream_request.max_output_tokens, Some(3_000));
+            assert_eq!(
+                upstream_request.max_output_tokens,
+                Some(if stage_key == "character_simulation" {
+                    3_000
+                } else {
+                    8_000
+                })
+            );
         }
         let fresh_surface_request = &failed_calls
             .iter()
