@@ -5077,7 +5077,7 @@ fn strict_model_json<T: for<'de> Deserialize<'de>>(result: &ModelResult) -> Core
                 })?;
             let trailing = payload[stream.byte_offset()..].trim();
             if trailing.is_empty()
-                || (trailing.len() <= 512
+                || (trailing.len() <= 1_024
                     && !trailing.chars().any(|character| {
                         matches!(character, '{' | '[' | '\0') || character.is_control()
                     }))
@@ -5482,6 +5482,26 @@ mod tests {
         .unwrap();
         let parsed: ContextQueryPlan = strict_model_json(&bounded_provider_suffix).unwrap();
         assert_eq!(parsed.queries, vec!["three"]);
+
+        let long_bounded_suffix = ModelResult::record(
+            "REQ-LONG-PROVIDER-SUFFIX",
+            "SERVICE",
+            "MODEL",
+            format!(
+                "{{\"queries\":[\"four\"],\"required_references\":[]}}\n{}",
+                "x".repeat(700)
+            ),
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        let parsed: ContextQueryPlan = strict_model_json(&long_bounded_suffix).unwrap();
+        assert_eq!(parsed.queries, vec!["four"]);
 
         let second_json_value = ModelResult::record(
             "REQ-SECOND-JSON",
