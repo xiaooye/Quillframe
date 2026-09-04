@@ -15,6 +15,7 @@ pub mod execution;
 mod fingerprint;
 pub mod global_schema;
 pub mod global_store;
+pub mod guidance;
 pub mod learning;
 pub mod model;
 pub mod planning;
@@ -55,6 +56,10 @@ pub use execution::{
 };
 pub use global_schema::{apply_fresh_global_schema, validate_current_global_schema};
 pub use global_store::{GlobalDatabase, ModelServiceRecord, RegisteredProject};
+pub use guidance::{
+    expected_rule_ids, framework_guidance_fingerprint, FrozenGuidanceSource,
+    ProductionGuidanceSnapshot, ProjectGuidanceInput,
+};
 pub use learning::{
     FeedbackCaptureDecision, FeedbackInterpretation, PreferenceReviewDecision,
     PreferenceReviewResult, WriterPreferenceProjection, WriterPreferenceSelection,
@@ -89,7 +94,9 @@ pub use semantic::{
     DirectorNote, ExpectationDeltaAction, NarrativeEntityDelta, NarrativeEntityKind,
     ReaderExpectationDelta, RelationshipStateDelta, RepairComparison, RepairComparisonOutcome,
     RepairGenerationMode, RepairSpec, RepairTarget, ResolvedScene, SceneResolution,
-    SemanticFinding, SemanticGate, SemanticGateDecision, SurfaceRealization, TimelineEventDelta,
+    SemanticFinding, SemanticGate, SemanticGateDecision, SurfaceAuditDecision,
+    SurfaceHardRuleAudit, SurfaceRealization, SurfaceRuleAssessment, SurfaceRuleStatus,
+    TimelineEventDelta,
 };
 pub use setup::{
     ArcMilestoneSeed, BookSetupApprovalReceipt, BookSetupArtifact, BookSetupProposalReceipt,

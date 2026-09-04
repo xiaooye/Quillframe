@@ -48,6 +48,7 @@ production:
     - character_simulation
     - scene_resolution
     - surface_realization
+    - surface_hard_rule_audit
     - reader_engagement
     - continuity_rule_audit
     - candidate_self_audit
@@ -60,7 +61,9 @@ production:
   snapshot_retention: latest_four_verified_full_checkpoints
   settlement_event_policy: compact_typed_delta_without_cumulative_tracking_copy
   raw_intermediate_draft_visible: false
-  generation_source_controls_voice_and_prose: true
+  generation_source_controls_voice_and_prose: fingerprint_bound_guidance_snapshot
+  surface_rule_coverage: exact_hf_01_through_hf_30_model_audit
+  per_scene_minimum_length: forbidden
   script_literary_scoring: forbidden
   model_usage_user_cap_required: false
   provider_technical_limits_observed: true
@@ -148,6 +151,7 @@ quality:
     - corpus_golden_three_pause_and_resume
     - source_free_pack_to_writer_pack
     - real_multi_chapter_draft_review_revise_accept_settle_publish
+    - exact_surface_rule_audit_before_user_visible_release
     - studio_direct_rust_core
     - corrupt_projection_rejected_then_snapshot_restored
 

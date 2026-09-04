@@ -308,7 +308,7 @@ impl ProductionRelease {
         released_at: impl Into<String>,
     ) -> CoreResult<Self> {
         let mut value = Self {
-            schema: "quillframe_production_release_v1".into(),
+            schema: "quillframe_production_release_v2".into(),
             release_id: format!("release-{}", uuid::Uuid::new_v4()),
             candidate_id: candidate_id.into(),
             candidate_fingerprint: candidate_fingerprint.into(),
@@ -336,8 +336,10 @@ impl ProductionRelease {
     }
 
     fn validate_fields(&self) -> CoreResult<()> {
-        if self.schema != "quillframe_production_release_v1"
-            || self.release_id.trim().is_empty()
+        if !matches!(
+            self.schema.as_str(),
+            "quillframe_production_release_v1" | "quillframe_production_release_v2"
+        ) || self.release_id.trim().is_empty()
             || self.candidate_id.trim().is_empty()
             || self.released_at.trim().is_empty()
         {
@@ -377,6 +379,17 @@ impl ProductionRelease {
                     CoreError::AuthorityConflict(format!(
                         "production release lacks {required_stage} evidence"
                     ))
+                })?;
+            require_fingerprint(fingerprint)?;
+        }
+        if self.schema == "quillframe_production_release_v2" {
+            let fingerprint = self
+                .stage_receipt_fingerprints
+                .get("surface_hard_rule_audit")
+                .ok_or_else(|| {
+                    CoreError::AuthorityConflict(
+                        "production release lacks surface_hard_rule_audit evidence".into(),
+                    )
                 })?;
             require_fingerprint(fingerprint)?;
         }
@@ -689,6 +702,53 @@ mod tests {
             vec![],
         )
         .unwrap()
+    }
+
+    fn release_receipts() -> BTreeMap<String, String> {
+        [
+            "context_query_plan",
+            "context_greenlight",
+            "context_freeze",
+            "corpus_greenlight",
+            "preference_greenlight",
+            "reader_engagement",
+            "character_simulation",
+            "scene_resolution",
+            "surface_scene_0001_SC001",
+            "surface_realization",
+            "continuity",
+            "candidate_self_audit",
+            "independent_semantic_gate",
+            "settlement_tracking_projection",
+            "settlement_tracking_audit",
+            "user_visible_gate",
+        ]
+        .into_iter()
+        .map(|stage| (stage.into(), fp()))
+        .collect()
+    }
+
+    #[test]
+    fn release_v2_requires_surface_rule_audit_and_v1_remains_readable() {
+        let receipts = release_receipts();
+        assert!(
+            ProductionRelease::create("C1", fp(), fp(), fp(), fp(), receipts.clone(), "T0")
+                .is_err()
+        );
+
+        let mut complete = receipts.clone();
+        complete.insert("surface_hard_rule_audit".into(), fp());
+        let current =
+            ProductionRelease::create("C1", fp(), fp(), fp(), fp(), complete, "T0").unwrap();
+        assert_eq!(current.schema, "quillframe_production_release_v2");
+
+        let mut legacy = current;
+        legacy.schema = "quillframe_production_release_v1".into();
+        legacy
+            .stage_receipt_fingerprints
+            .remove("surface_hard_rule_audit");
+        legacy.fingerprint = legacy.compute_fingerprint().unwrap();
+        legacy.validate().unwrap();
     }
 
     #[test]

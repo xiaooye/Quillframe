@@ -16,7 +16,7 @@ Expose book/volume/unit/chapter/scene nodes, four typed plan envelopes, and the 
 
 ## Phase 4 · Draft and revision closure
 
-Drive recoverable scene-by-scene production from ordered chapter scenes. Route Reader Pressure, the full ancestor-plan lock, the approved Setup's private character/relationship decision projection, and semantic Context Freeze only to their owning stages. Character simulation and scene resolution remain model-owned; the Surface Writer receives only a fingerprint-bound Director Note without private reasoning. Deterministically enforce per-scene and whole-chapter minimum length, persist checkpoints/logs in data, and orchestrate independent-rejection repair sources, owner-layer invalidation, and Continuity-only summaries in service.
+Drive recoverable scene-by-scene production from ordered chapter scenes. Route Reader Pressure, the full ancestor-plan lock, the approved Setup's private character/relationship decision projection, and semantic Context Freeze only to their owning stages. Character simulation and scene resolution remain model-owned. Surface Writer receives one Scene Realization Contract, a fingerprint-bound Director Note without private reasoning, and the positive projection of frozen production guidance—never duplicate plans or a mechanical per-scene minimum. Deterministically enforce only the assembled chapter minimum and run an evidence-bound `HF-01..HF-30` Surface semantic audit before Reader. Persist checkpoints/logs in data, then orchestrate rejection repair sources, stable rule merging, owner-layer invalidation, and Continuity-only summaries in service.
 
 ## Phase 5 · Corpus v2 execution and staged loading
 

@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -54,6 +54,43 @@ pub struct DirectorNote {
 #[serde(deny_unknown_fields)]
 pub struct SurfaceRealization {
     pub manuscript: String,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SurfaceRuleStatus {
+    Pass,
+    Fail,
+    NotApplicable,
+    InsufficientEvidence,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfaceRuleAssessment {
+    pub rule_id: String,
+    pub status: SurfaceRuleStatus,
+    pub evidence_excerpt: Option<String>,
+    pub report: String,
+    pub repair_scope: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SurfaceAuditDecision {
+    Accept,
+    Revise,
+    InsufficientEvidence,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SurfaceHardRuleAudit {
+    pub candidate_fingerprint: String,
+    pub guidance_snapshot_fingerprint: String,
+    pub rule_set_fingerprint: String,
+    pub decision: SurfaceAuditDecision,
+    pub assessments: Vec<SurfaceRuleAssessment>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -425,6 +462,108 @@ fn bounded_surface_metadata(value: &Value) -> bool {
     }
 }
 
+impl SurfaceHardRuleAudit {
+    pub fn validate_against(
+        &self,
+        manuscript: &str,
+        candidate_fingerprint: &str,
+        guidance_snapshot_fingerprint: &str,
+        rule_set_fingerprint: &str,
+    ) -> CoreResult<()> {
+        if sha256_fingerprint(manuscript.as_bytes()) != candidate_fingerprint
+            || self.candidate_fingerprint != candidate_fingerprint
+            || self.guidance_snapshot_fingerprint != guidance_snapshot_fingerprint
+            || self.rule_set_fingerprint != rule_set_fingerprint
+            || !canonical_fingerprint(&self.candidate_fingerprint)
+            || !canonical_fingerprint(&self.guidance_snapshot_fingerprint)
+            || !canonical_fingerprint(&self.rule_set_fingerprint)
+        {
+            return Err(CoreError::AuthorityConflict(
+                "surface audit identity differs from its frozen candidate or rules".into(),
+            ));
+        }
+        let expected = crate::guidance::expected_rule_ids();
+        let actual = self
+            .assessments
+            .iter()
+            .map(|assessment| assessment.rule_id.clone())
+            .collect::<Vec<_>>();
+        if actual != expected || actual.iter().collect::<BTreeSet<_>>().len() != expected.len() {
+            return Err(invalid(
+                "surface audit must cover HF-01 through HF-30 exactly once and in order",
+            ));
+        }
+        for assessment in &self.assessments {
+            if assessment.report.trim().is_empty() {
+                return Err(invalid("surface audit assessment report is empty"));
+            }
+            match assessment.status {
+                SurfaceRuleStatus::Pass | SurfaceRuleStatus::Fail => {
+                    let evidence = assessment
+                        .evidence_excerpt
+                        .as_deref()
+                        .filter(|value| !value.trim().is_empty())
+                        .ok_or_else(|| {
+                            invalid("surface audit pass/fail requires exact evidence")
+                        })?;
+                    if !manuscript.contains(evidence) {
+                        return Err(invalid(
+                            "surface audit evidence is absent from the exact candidate",
+                        ));
+                    }
+                }
+                SurfaceRuleStatus::NotApplicable | SurfaceRuleStatus::InsufficientEvidence => {
+                    if assessment.evidence_excerpt.is_some() {
+                        return Err(invalid(
+                            "not-applicable or insufficient surface assessment cannot claim evidence",
+                        ));
+                    }
+                }
+            }
+            if assessment.status == SurfaceRuleStatus::Fail {
+                if !assessment
+                    .repair_scope
+                    .as_deref()
+                    .is_some_and(|scope| matches!(scope, "local" | "block" | "scene" | "chapter"))
+                {
+                    return Err(invalid(
+                        "failed surface assessment requires a bounded repair scope",
+                    ));
+                }
+            } else if assessment.repair_scope.is_some() {
+                return Err(invalid(
+                    "only failed surface assessments may select a repair scope",
+                ));
+            }
+        }
+        let has_fail = self
+            .assessments
+            .iter()
+            .any(|assessment| assessment.status == SurfaceRuleStatus::Fail);
+        let has_insufficient = self
+            .assessments
+            .iter()
+            .any(|assessment| assessment.status == SurfaceRuleStatus::InsufficientEvidence);
+        let expected_decision = if has_fail {
+            SurfaceAuditDecision::Revise
+        } else if has_insufficient {
+            SurfaceAuditDecision::InsufficientEvidence
+        } else {
+            SurfaceAuditDecision::Accept
+        };
+        if self.decision != expected_decision {
+            return Err(invalid(
+                "surface audit decision disagrees with its rule assessments",
+            ));
+        }
+        Ok(())
+    }
+
+    pub fn passed(&self) -> bool {
+        self.decision == SurfaceAuditDecision::Accept
+    }
+}
+
 impl ChapterTrackingProposal {
     pub fn validate(&self) -> CoreResult<()> {
         let list_values = [
@@ -706,6 +845,12 @@ fn valid_director_text(value: &str, maximum_bytes: usize) -> bool {
         .any(|marker| lower.contains(marker))
 }
 
+fn canonical_fingerprint(value: &str) -> bool {
+    value.len() == 71
+        && value.starts_with("sha256:")
+        && value[7..].bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
 fn invalid(message: &str) -> CoreError {
     CoreError::InvalidProject(message.into())
 }
@@ -772,6 +917,53 @@ mod tests {
         };
 
         assert!(resolution.validate().is_err());
+    }
+
+    fn surface_audit(
+        status: SurfaceRuleStatus,
+        decision: SurfaceAuditDecision,
+    ) -> SurfaceHardRuleAudit {
+        SurfaceHardRuleAudit {
+            candidate_fingerprint: sha256_fingerprint("正文证据".as_bytes()),
+            guidance_snapshot_fingerprint: format!("sha256:{}", "b".repeat(64)),
+            rule_set_fingerprint: format!("sha256:{}", "c".repeat(64)),
+            decision,
+            assessments: crate::guidance::expected_rule_ids()
+                .into_iter()
+                .map(|rule_id| SurfaceRuleAssessment {
+                    rule_id,
+                    status,
+                    evidence_excerpt: matches!(
+                        status,
+                        SurfaceRuleStatus::Pass | SurfaceRuleStatus::Fail
+                    )
+                    .then(|| "证据".into()),
+                    report: "已检查完整候选中的该机制".into(),
+                    repair_scope: (status == SurfaceRuleStatus::Fail).then(|| "scene".into()),
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn surface_audit_requires_complete_evidence_bound_coverage() {
+        let candidate = sha256_fingerprint("正文证据".as_bytes());
+        let guidance = format!("sha256:{}", "b".repeat(64));
+        let rules = format!("sha256:{}", "c".repeat(64));
+        surface_audit(SurfaceRuleStatus::Pass, SurfaceAuditDecision::Accept)
+            .validate_against("正文证据", &candidate, &guidance, &rules)
+            .unwrap();
+
+        let mut missing = surface_audit(SurfaceRuleStatus::Pass, SurfaceAuditDecision::Accept);
+        missing.assessments.pop();
+        assert!(missing
+            .validate_against("正文证据", &candidate, &guidance, &rules)
+            .is_err());
+
+        let wrong_decision = surface_audit(SurfaceRuleStatus::Fail, SurfaceAuditDecision::Accept);
+        assert!(wrong_decision
+            .validate_against("正文证据", &candidate, &guidance, &rules)
+            .is_err());
     }
 
     #[test]

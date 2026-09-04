@@ -100,6 +100,7 @@ authority/session bootstrap
 → Reader Pressure
 → 单次 direct Surface Writer
 → freeze candidate fingerprint
+→ 完整 `HF-01..HF-30` Surface 语义审计
 → Blind Reader (`reader.engagement_audit`)
 → continuity/state checks
 → 逐项目标自检与 candidate qualification
@@ -114,8 +115,9 @@ authority/session bootstrap
 - 被否决正文、Reviewer 分析与私有规划不得进入 fresh Writer pack；bounded local repair 只能收到精确编辑窗口；
 - private character state 是 causal evidence，不是 Writer exposition payload；
 - direct Surface result 不等于 production readiness；
-- Blind Reader 不是 hard-rule checklist executor；
-- Rule Auditor 获得 Reader 不该看到的 authoritative rule material；
+- Writer 只收到生产指导快照的正向投影，不收到用于判错的完整 HF 检查表；
+- Blind Reader 不是 hard-rule checklist executor，也不接收 Reader Pressure、计划或预期答案；
+- Rule Auditor 获得 Reader 不该看到的完整 `HF-01..HF-30`、项目指导与登记语义 rubric，并为每条规则返回绑定正文证据的唯一 assessment；
 - Editor 语义上选择 repair owner 与 generation mode；
 - `repair_policy.py` 只执行所选 mode 对 writer-context 的信息边界；
 - material candidate change 会使旧 fingerprint-bound review result 失效；

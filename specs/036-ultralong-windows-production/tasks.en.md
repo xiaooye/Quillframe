@@ -7,7 +7,9 @@
 - [x] Pass native Windows filesystem, locking, atomic publication, Project create/open, and strict-schema tests.
 - [x] Implement the book/volume/unit/chapter/scene hierarchy, idempotent volume/unit/chapter creation, exact four-level plan activation with ancestor fingerprint binding, and one manuscript document per chapter.
 - [x] Add an explicitly author-approved Book Setup lifecycle that binds the book plan, character/relationship decision models, pressure-bearing world seeds, fixed ending, complete volume spines, cross-volume arcs, climax chain, and rolling-plan policy.
-- [x] Run DRAFT/REVISE scene by scene with model-owned character simulation, causal scene resolution, a bounded Director Note that excludes private reasoning, prose generation, hard minimum-length validation, reader/continuity/self/independent review, repair, acceptance, settlement, and publication.
+- [x] Run DRAFT/REVISE scene by scene with model-owned character simulation, causal scene resolution, a bounded Director Note that excludes private reasoning, prose generation, assembled-chapter hard minimum validation, reader/continuity/self/independent review, repair, acceptance, settlement, and publication.
+- [x] Freeze Framework/project production guidance and expose only its positive projection to Surface Writer; remove duplicate plans and per-scene minimum quotas, then require an evidence-bound `HF-01..HF-30` Surface audit and release receipt.
+- [x] Merge source and local REVISE rules by stable identity, and rerun the complete Surface audit on every revised candidate.
 - [x] Compile semantic long-range context through model query/greenlight selection, bounded Rust freezing, and dependency invalidation.
 - [x] Complete Corpus staged analysis, Golden Three pause, model-declared saturation, source-free projection, and per-chapter 0–4 pack selection.
 - [x] Complete feedback capture, independent semantic preference review, explicit CAS activation, and per-chapter preference selection.

@@ -84,11 +84,13 @@ book
 
 章节运行消费当前章、祖先节点的 active plan 和被语义选择的稀疏长期状态。目标选择必须正确匹配 `book`、`volume:<id>`、`unit:<id>`、`chapter:<id>`，不能把裸节点 ID 与 typed target 混用。
 
-一个章节按多个有序场景生产。Character Simulation 与 Scene Resolution 对每个场景维持人物行动所有权和因果闭合；Writer 可以一次实现一个场景或一组连续场景，但最终候选正文只有一个冻结指纹。
+一个章节按多个有序场景生产。Character Simulation 与 Scene Resolution 对每个场景维持人物行动所有权和因果闭合；Writer 可以一次实现一个场景或一组连续场景，但最终候选正文只有一个冻结指纹。Surface Writer 只接收单一 Scene Realization Contract，不得同时重复完整计划锁、章节计划与独立场景 brief；章节最低篇幅只在组装后检查，不得机械平分成逐场最低配额。
 
-Reader Pressure 被压缩为 Writer 可用的 brief，并进入 Writer Pack 指纹。它为空时允许自然章节，不强迫每章制造悬念。Blind Reader、独立 reviewer 和用户可见正文都看不到该 brief 或其 treatment 身份。
+每个新运行必须冻结生产指导快照，绑定 Framework 正向 Writer 指导、完整 `HF-01..HF-30`、登记的语义审计 rubric，以及从已批准 Setup 的行文／声口／文风／校准来源经原生句柄物化且内容指纹一致的项目指导；调用者也可显式提交同一批准来源的精确字节。Writer 只读取正向投影；专用 Surface Auditor 必须对三十条规则逐项返回 evidence-bound assessment。缺项、重复、未知规则、证据不足或确认失败均不得释放正文；确定性代码不以词表或句长统计代替语义判断。
 
-独立审查拒绝必须生成只供下一次 REVISE 的内部 repair source。新 Writer 不得直接看到旧 Writer 的推理、Reviewer 链或被拒正文；Editor 根据责任层决定失效范围。修订还必须向 Continuity 提供后续已接受章节的依赖摘要，若产生破坏则在结算前输出 downstream impact 与 propagation debt，不自动修改后文 Canon。
+Reader Pressure 被压缩为 Writer 可用的 brief，并进入 Writer Pack 指纹。它为空时允许自然章节，不强迫每章制造悬念。Blind Reader 只收到正文与 reader-visible 定位，看不到该 brief、计划、规则、预期答案或 treatment 身份。独立 reviewer 和用户可见正文也不接收 Writer 私有指导。
+
+独立审查或 Surface 审计拒绝必须生成只供下一次 REVISE 的内部 repair source。新 Writer 不得直接看到旧 Writer 的推理、Reviewer 链或被拒正文；Editor 根据责任层决定失效范围。REVISE 必须继承来源运行的生产指导快照，并按稳定规则身份合并当前局部要求，不能用一条窄修规则替换原始 Framework／项目／请求约束。任何修订后的完整候选都重新执行 Surface 审计。修订还必须向 Continuity 提供后续已接受章节的依赖摘要，若产生破坏则在结算前输出 downstream impact 与 propagation debt，不自动修改后文 Canon。
 
 ## 07 · Corpus v2 分层消费
 

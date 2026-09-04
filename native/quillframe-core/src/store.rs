@@ -2469,22 +2469,7 @@ impl ProjectDatabase {
         })?;
         tracking.validate()?;
         let mut manifest = ContextManifest::default();
-        let plan_lock = self.active_plan_chain_for_chapter(chapter_id)?;
-        let plan_json = serde_json::to_string(&plan_lock)
-            .map_err(|error| CoreError::Serialization(error.to_string()))?;
-        manifest.select(ContextEntry {
-            reference: format!("plan-chain:{chapter_id}"),
-            tier: ContextTier::SettledLedger,
-            fingerprint: plan_lock.fingerprint,
-            summary: plan_json.clone(),
-            byte_size: plan_json.len(),
-            source_chapter_id: None,
-            source_head_fingerprint: None,
-            allowed_stages: writer_context_stages(),
-            contains_manuscript_body: false,
-            contains_private_state: false,
-            contains_corpus_identity: false,
-        })?;
+        self.active_plan_chain_for_chapter(chapter_id)?.validate()?;
 
         let mut records = tracking.chapters.values().collect::<Vec<_>>();
         records.sort_by_key(|record| std::cmp::Reverse(record.reading_order));
@@ -3095,6 +3080,7 @@ impl ProjectDatabase {
             ("character_simulation", "character_simulation"),
             ("scene_resolution", "scene_resolution"),
             ("surface_realization", "surface_realization"),
+            ("surface_hard_rule_audit", "surface_hard_rule_audit"),
             ("reader_engagement", "reader_engagement"),
             ("continuity", "continuity_rule_audit"),
             ("candidate_self_audit", "candidate_self_audit"),
@@ -6498,6 +6484,7 @@ mod tests {
             ("scene_resolution".into(), receipt.clone()),
             ("surface_scene_0001_SC001".into(), receipt.clone()),
             ("surface_realization".into(), receipt.clone()),
+            ("surface_hard_rule_audit".into(), receipt.clone()),
             ("continuity".into(), receipt.clone()),
             ("candidate_self_audit".into(), receipt.clone()),
             ("independent_semantic_gate".into(), receipt.clone()),
@@ -6967,6 +6954,7 @@ mod tests {
                 }],
                 selected_preference_ids: vec![],
                 repair_source: None,
+                guidance_snapshot: None,
             },
             &writer_pack_fingerprint,
             format!("sha256:{}", "4".repeat(64)),
@@ -7228,6 +7216,7 @@ mod tests {
                     source_checkpoint_id: checkpoint_id.into(),
                     expected_candidate_fingerprint: candidate_fingerprint.clone(),
                 }),
+                guidance_snapshot: None,
             },
             format!("sha256:{}", "2".repeat(64)),
             format!("sha256:{}", "3".repeat(64)),
@@ -7305,6 +7294,7 @@ mod tests {
             }],
             selected_preference_ids: vec![],
             repair_source,
+            guidance_snapshot: None,
         };
         let base = crate::ProductionRequest::freeze(
             "RUN-BASE",

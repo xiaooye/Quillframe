@@ -66,6 +66,8 @@ Surface repair must respect ownership:
 
 Do not “fix” surface safety by deleting all energy, humor, surprise, mystery, or rhetorical pleasure.
 
+Current Rust-native production freezes this complete document, its rule-ID set, the registered semantic rubric, and project guidance into a production-guidance snapshot. Writer receives positive realization guidance rather than this negative checklist. After candidate freeze, a dedicated Surface Auditor must return exactly one manuscript-evidence-bound assessment for each rule in `HF-01..HF-30` order. Deterministic Core validates coverage, fingerprints, evidence references, and decision consistency; it does not infer literary failure from word lists or sentence counts. Missing, duplicate or unknown rules, insufficient evidence, and confirmed failures all block user-visible release.
+
 ## 04 · Rhythm and segmentation failures
 
 These mechanisms catch prose that simulates pace or cinematic importance through typography and shot selection rather than story movement.

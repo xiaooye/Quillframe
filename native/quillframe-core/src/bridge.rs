@@ -14,13 +14,15 @@ use crate::{
     ContextSelectionProposal, ContextStage, CoreError, CoreResult, CorpusDatabase, DirectorNote,
     FeedbackInterpretation, GlobalDatabase, LengthUnit, ModelRequest, ModelResult, ModelRuntime,
     ModelServiceRecord, ModelUsage, NativeProject, PlanBody, PlanMode, PlanProposal,
-    PlanProposalInput, PreferenceReviewResult, ProductionIntent, ProductionRelease,
-    ProductionRequest, ProductionTaskMode, ProjectManifest, PromptAssembly, ProtocolFamily,
-    RegisteredProject, RepairBinding, RepairComparison, RepairGenerationMode, RepairSpec,
-    ReviewMode, ReviewReport, ReviewReportInput, RevisionRequest, SceneResolution, SecretStore,
-    SemanticGate, SemanticGateDecision, ServiceEndpoint, SettlementAuthorization, StageCallState,
-    StageJob, StoryKind, SurfaceRealization, WriterCorpusProjection, WriterCorpusSelection,
-    WriterPack, WriterPreferenceProjection, WriterPreferenceSelection,
+    PlanProposalInput, PreferenceReviewResult, ProductionGuidanceSnapshot, ProductionIntent,
+    ProductionRelease, ProductionRequest, ProductionTaskMode, ProjectGuidanceInput,
+    ProjectManifest, PromptAssembly, ProtocolFamily, RegisteredProject, RepairBinding,
+    RepairComparison, RepairGenerationMode, RepairSpec, ReviewMode, ReviewReport,
+    ReviewReportInput, RevisionRequest, SceneResolution, SecretStore, SemanticGate,
+    SemanticGateDecision, ServiceEndpoint, SettlementAuthorization, StageCallState, StageJob,
+    StoryKind, SurfaceAuditDecision, SurfaceHardRuleAudit, SurfaceRealization,
+    WriterCorpusProjection, WriterCorpusSelection, WriterPack, WriterPreferenceProjection,
+    WriterPreferenceSelection,
 };
 
 fn project_registry_projection(registered: &RegisteredProject) -> CoreResult<Value> {
@@ -1536,12 +1538,26 @@ impl HostBridgeRuntime {
                     vec![]
                 } else {
                     vec![BoundRuleMaterial {
-                        id: "current-request".into(),
+                        id: if task_mode == ProductionTaskMode::Revise {
+                            "current-repair-request".into()
+                        } else {
+                            "current-request".into()
+                        },
                         authority: "current_request".into(),
                         statement: instruction.clone(),
                     }]
                 }
             });
+        let guidance_inputs_provided = payload.contains_key("guidance_sources");
+        let guidance_inputs = payload
+            .get("guidance_sources")
+            .cloned()
+            .map(serde_json::from_value::<Vec<ProjectGuidanceInput>>)
+            .transpose()
+            .map_err(|error| {
+                CoreError::InvalidProject(format!("project guidance sources are invalid: {error}"))
+            })?
+            .unwrap_or_default();
         let mut selected_preference_ids = payload
             .get("selected_preference_ids")
             .cloned()
@@ -1578,6 +1594,7 @@ impl HostBridgeRuntime {
                 ));
             }
         }
+        let mut inherited_guidance = None;
         if task_mode == ProductionTaskMode::Revise {
             let binding = repair_source.as_ref().ok_or_else(|| {
                 CoreError::AuthorityConflict(
@@ -1591,11 +1608,9 @@ impl HostBridgeRuntime {
                 document_id,
             )?;
             if instruction.is_empty() {
-                instruction = source.intent.instruction;
+                instruction = source.intent.instruction.clone();
             }
-            if rule_material.is_empty() {
-                rule_material = source.intent.rule_material;
-            }
+            rule_material = merge_rule_material(source.intent.rule_material, rule_material)?;
             if selected_preference_ids.is_empty() {
                 selected_preference_ids = source.intent.selected_preference_ids;
             }
@@ -1605,10 +1620,52 @@ impl HostBridgeRuntime {
             if !payload.contains_key("author_profile") {
                 author_profile = source.intent.author_profile;
             }
+            inherited_guidance = source.intent.guidance_snapshot;
         }
         let pack = project
             .database
             .freeze_writer_pack_for_chapter(&chapter_id, &timestamp())?;
+        let book_plan_fingerprint = pack
+            .plan_lock
+            .layers
+            .first()
+            .map(|layer| layer.proposal_fingerprint.as_str())
+            .ok_or_else(|| CoreError::InvalidPlan("Writer Pack has no book plan layer".into()))?;
+        let setup = project.database.load_approved_book_setup_snapshot(
+            project_id,
+            &pack.book_setup_fingerprint,
+            book_plan_fingerprint,
+        )?;
+        let guidance_snapshot = if let Some(snapshot) = inherited_guidance {
+            snapshot.validate()?;
+            if guidance_inputs_provided {
+                let requested = ProductionGuidanceSnapshot::freeze(
+                    &project.context.manifest.language,
+                    guidance_inputs,
+                    &setup.source_evidence_refs,
+                )?;
+                if requested != snapshot {
+                    return Err(CoreError::AuthorityConflict(
+                        "REVISE cannot replace or remove its inherited production guidance".into(),
+                    ));
+                }
+            }
+            snapshot
+        } else {
+            let inputs = if guidance_inputs_provided {
+                guidance_inputs
+            } else {
+                crate::guidance::materialize_approved_guidance_inputs(
+                    &setup.source_evidence_refs,
+                    &project.context.project_root,
+                )?
+            };
+            ProductionGuidanceSnapshot::freeze(
+                &project.context.manifest.language,
+                inputs,
+                &setup.source_evidence_refs,
+            )?
+        };
         let run_id = format!("run-{}", uuid::Uuid::new_v4());
         let model_call_budget = payload
             .get("model_call_budget")
@@ -1627,9 +1684,10 @@ impl HostBridgeRuntime {
                 rule_material,
                 selected_preference_ids,
                 repair_source,
+                guidance_snapshot: Some(guidance_snapshot.clone()),
             },
             &pack.fingerprint,
-            sha256_fingerprint(CONTRACT.as_bytes()),
+            framework_build_fingerprint(),
             payload
                 .get("route_policy")
                 .and_then(Value::as_str)
@@ -1643,7 +1701,8 @@ impl HostBridgeRuntime {
             "schema":"quillframe_author_run_start_result_v1","project_id":project_id,"run_id":run_id,"status":"ready",
             "task_mode":task_mode_text,"target_ref":production.target_ref,"request_fingerprint":production.fingerprint,
             "writer_pack_fingerprint":pack.fingerprint,"context_freeze_fingerprint":pack.context_freeze_fingerprint,
-            "tracking_fingerprint":pack.tracking_fingerprint,"raw_draft_visible":false,"candidate_visible":false,
+            "tracking_fingerprint":pack.tracking_fingerprint,"guidance_snapshot_fingerprint":guidance_snapshot.fingerprint,
+            "raw_draft_visible":false,"candidate_visible":false,
             "canon_authority":false,"settlement_authority":false,"message":"Production request frozen; no draft is visible before semantic gates complete.",
             "workflow":{"status":"ready","stage":"writer_pack_frozen","cursor":0,"authority":false},"authority":false
         }))
@@ -1913,8 +1972,7 @@ impl HostBridgeRuntime {
                                 "repair diagnosis fingerprint changed".into(),
                             ));
                         }
-                        let findings: Value = serde_json::from_str(&gate_result.content)
-                            .map_err(|error| CoreError::Serialization(error.to_string()))?;
+                        let findings: Value = strict_model_json(&gate_result)?;
                         json!({
                             "checkpoint":checkpoint_diagnosis,
                             "findings_artifact":findings
@@ -1933,6 +1991,18 @@ impl HostBridgeRuntime {
                 };
             (production, pack, tracking, repair_material)
         };
+        let guidance_snapshot = production
+            .intent
+            .guidance_snapshot
+            .as_ref()
+            .ok_or_else(|| {
+                CoreError::AuthorityConflict(
+                    "production run has no frozen Surface guidance snapshot; create a replacement run"
+                        .into(),
+                )
+            })?
+            .clone();
+        guidance_snapshot.validate()?;
         let context_query = self
             .execute_model_stage(
                 project_id,
@@ -1960,26 +2030,40 @@ impl HostBridgeRuntime {
                 .database
                 .writer_context_candidate_pool(&pack.chapter_id, &query_plan)?
         };
-        let context_greenlight = self
-            .execute_model_stage(
+        let (context_selection, context_greenlight) = if context_candidates.is_empty() {
+            let selection = ContextSelectionProposal {
+                selected_references: Vec::new(),
+            };
+            let receipt = self.confirm_empty_selection_stage(
                 project_id,
                 run_id,
-                &service,
-                model,
                 "context_greenlight",
-                "context_greenlight_selector",
-                json!({
-                    "chapter_id":pack.chapter_id,
-                    "plan_lock":pack.plan_lock,
-                    "query_plan":query_plan,
-                    "candidate_pool":context_candidates,
-                    "contract":"Return JSON only: {selected_references:[string]}. Select one to twenty-four exact candidate references that materially constrain character choice, causality, continuity, reader promises or this chapter's scene execution. Use only exact references from candidate_pool; do not rank by recency alone and do not rewrite evidence."
-                }),
-                2_000,
-                0.05,
-            )
-            .await?;
-        let context_selection: ContextSelectionProposal = strict_model_json(&context_greenlight)?;
+                "empty_context_candidate_set",
+                &selection,
+            )?;
+            (selection, receipt)
+        } else {
+            let receipt = self
+                .execute_model_stage(
+                    project_id,
+                    run_id,
+                    &service,
+                    model,
+                    "context_greenlight",
+                    "context_greenlight_selector",
+                    json!({
+                        "chapter_id":pack.chapter_id,
+                        "query_plan":query_plan,
+                        "candidate_pool":context_candidates,
+                        "contract":"Return JSON only: {selected_references:[string]}. Select one to twenty-four exact candidate references that materially constrain character choice, causality, continuity, reader promises or this chapter's scene execution. Use only exact references from candidate_pool; do not rank by recency alone and do not rewrite evidence."
+                    }),
+                    2_000,
+                    0.05,
+                )
+                .await?;
+            let selection: ContextSelectionProposal = strict_model_json(&receipt)?;
+            (selection, receipt)
+        };
         context_selection.validate_against(&context_candidates)?;
         let mut context_manifest = ContextManifest::default();
         for entry in &context_candidates {
@@ -2093,7 +2177,8 @@ impl HostBridgeRuntime {
             let result=self.execute_model_stage(project_id,run_id,&service,model,"repair_editor","repair_editor",
                 json!({"failed_candidate":{"manuscript":material.manuscript,"fingerprint":material.source_receipt},
                     "diagnosis":material.diagnosis,"instruction":production.intent.instruction,"writer_pack":pack,
-                    "contract":"Return JSON only: {repair_owner:'prose_writer',generation_mode:'local_or_bounded_repair'|'fresh_realization',objective_envelope:string,targets:[{location,source_excerpt,fix,preserve:[string]}],invalidation_boundary:[string],comparison_required:true}. Cover every diagnosis finding. For bounded repair, every source_excerpt must be an exact, ordered excerpt from the incumbent and the listed excerpts must be sufficient to fix every finding while all other bytes remain protected. Choose fresh_realization when any finding is manuscript-wide, concerns total length or structure, crosses protected windows, or cannot be fully repaired inside exact excerpts. Convert all findings into exact FIX + PRESERVE constraints."}),
+                    "production_guidance":guidance_snapshot.writer_projection(),
+                    "contract":"Return JSON only: {repair_owner:'prose_writer',generation_mode:'local_or_bounded_repair'|'fresh_realization',objective_envelope:string,targets:[{location,source_excerpt,fix,preserve:[string]}],invalidation_boundary:[string],comparison_required:true}. Cover every diagnosis finding or failed rule assessment. For bounded repair, every source_excerpt must be an exact, ordered excerpt from the incumbent and the listed excerpts must be sufficient to fix every finding while all other bytes remain protected. Choose fresh_realization when any finding is manuscript-wide, concerns total length or structure, crosses protected windows, or cannot be fully repaired inside exact excerpts. Convert all findings into exact FIX + PRESERVE constraints."}),
                 6_000,0.2).await?;
             let spec: RepairSpec = strict_model_json(&result)?;
             spec.validate_against_source(&material.manuscript)?;
@@ -2118,6 +2203,7 @@ impl HostBridgeRuntime {
                             "repair_spec":spec,
                             "chapter_plan":pack.plan_lock.chapter_plan(&pack.chapter_id)?,
                             "author_profile":production.intent.author_profile,
+                            "production_guidance":guidance_snapshot.writer_projection(),
                             "selected_preferences":selected_preferences,
                             "instruction":production.intent.instruction,
                             "contract":"Return JSON only: {replacements:[{source_excerpt:string,replacement:string}]}. Return exactly one replacement for each repair_spec target, in the same order. Copy each source_excerpt byte-for-byte from the target identity. Write only the replacement prose for that exact window; replacement may be an empty string only when the specified fix is exact deletion of redundant material. Do not return the full manuscript, change protected text, add a chapter title, or explain the edit."
@@ -2175,6 +2261,47 @@ impl HostBridgeRuntime {
             spec.verify_bounded_output(&material.manuscript, &surface_output.manuscript)?;
         }
         let candidate_fingerprint = sha256_fingerprint(surface_output.manuscript.as_bytes());
+        let surface_audit = self
+            .execute_model_stage(
+                project_id,
+                run_id,
+                &service,
+                model,
+                "surface_hard_rule_audit",
+                "surface_rule_auditor",
+                json!({
+                    "candidate_fingerprint":candidate_fingerprint,
+                    "guidance_snapshot_fingerprint":guidance_snapshot.fingerprint,
+                    "rule_set_fingerprint":guidance_snapshot.surface_fundamentals_fingerprint,
+                    "manuscript":surface_output.manuscript,
+                    "surface_fundamentals":guidance_snapshot.surface_fundamentals,
+                    "semantic_rubric":guidance_snapshot.surface_audit_rubric,
+                    "semantic_rubric_fingerprint":guidance_snapshot.surface_audit_rubric_fingerprint,
+                    "project_guidance":guidance_snapshot.audit_project_projection(),
+                    "author_profile":production.intent.author_profile,
+                    "rule_material":production.intent.rule_material,
+                    "contract":"Return JSON only: {candidate_fingerprint:string,guidance_snapshot_fingerprint:string,rule_set_fingerprint:string,decision:'accept'|'revise'|'insufficient_evidence',assessments:[{rule_id:'HF-01'..'HF-30',status:'pass'|'fail'|'not_applicable'|'insufficient_evidence',evidence_excerpt:string|null,report:string,repair_scope:'local'|'block'|'scene'|'chapter'|null}]}. Return exactly thirty assessments in HF-01 through HF-30 order. Audit the whole exact candidate, including repeated mechanisms that become failures only as a cluster. A pass or fail must quote a non-empty exact candidate excerpt. A fail must select the smallest repair scope that can remove the complete mechanism; use scene/chapter rather than local when defects cluster. not_applicable and insufficient_evidence use null evidence and must explain why. Any fail requires revise; otherwise any insufficient item requires insufficient_evidence; only complete pass/not_applicable coverage may accept. Do not rewrite prose, use lexical counts as verdicts, reveal private reasoning, or defer to another reviewer."
+                }),
+                10_000,
+                0.05,
+            )
+            .await?;
+        let surface_audit_output: SurfaceHardRuleAudit = strict_model_json(&surface_audit)?;
+        surface_audit_output.validate_against(
+            &surface_output.manuscript,
+            &candidate_fingerprint,
+            &guidance_snapshot.fingerprint,
+            &guidance_snapshot.surface_fundamentals_fingerprint,
+        )?;
+        if !surface_audit_output.passed() {
+            return self.failed_gate_projection(
+                project_id,
+                run_id,
+                &candidate_fingerprint,
+                "surface_hard_rule_audit",
+                &surface_audit.fingerprint,
+            );
+        }
 
         let reader = self
             .execute_model_stage(
@@ -2184,8 +2311,9 @@ impl HostBridgeRuntime {
                 model,
                 "reader_engagement",
                 "blind_reader",
-                json!({"manuscript":surface_output.manuscript,"reader_pressure":pack.reader_pressure,
-                    "contract":semantic_gate_contract("Judge only lived reader engagement, payoff, emotional continuity and next-chapter pull. Do not inspect rules or other reviews.")}),
+                json!({"manuscript":surface_output.manuscript,"chapter_id":pack.chapter_id,
+                    "reader_grip":production.intent.reader_grip,
+                    "contract":semantic_gate_contract("Judge only the lived reading experience, payoff, emotional continuity and next-chapter pull available in the manuscript. Do not inspect rules, plans, expected answers or other reviews.")}),
                 4_000,
                 0.25,
             )
@@ -2237,7 +2365,9 @@ impl HostBridgeRuntime {
                 "candidate_qualifier",
                 json!({"manuscript":surface_output.manuscript,"writer_pack":pack,"writer_context":writer_context,
                     "instruction":production.intent.instruction,"reader_grip":production.intent.reader_grip,
-                    "contract":semantic_gate_contract("Judge objective-by-objective fulfillment, character choice/cost, scene turns, emotion targets and web-novel chapter pull.")}),
+                    "production_guidance":guidance_snapshot.writer_projection(),
+                    "surface_audit_fingerprint":surface_audit.fingerprint,
+                    "contract":semantic_gate_contract("Judge objective-by-objective fulfillment, character choice/cost, scene turns, emotion targets and web-novel chapter pull. Confirm that the candidate remains compatible with the frozen production guidance, but do not replace the dedicated Surface audit or repeat its checklist.")}),
                 5_000,
                 0.25,
             )
@@ -2610,6 +2740,8 @@ impl HostBridgeRuntime {
         let user_visible_receipt = sha256_fingerprint(
             serde_json::to_vec(&json!({
                 "candidate_fingerprint":candidate_fingerprint,"review_report_fingerprint":report.fingerprint,
+                "guidance_snapshot":guidance_snapshot.fingerprint,
+                "surface_hard_rule_audit":surface_audit.fingerprint,
                 "reader":reader.fingerprint,"continuity":continuity.fingerprint,
                 "self_audit":self_audit.fingerprint,"independent":independent.fingerprint,
                 "repair_editor":repair_spec.as_ref().map(|value|&value.1.fingerprint),
@@ -2646,6 +2778,10 @@ impl HostBridgeRuntime {
                 preference_greenlight.fingerprint.clone(),
             ),
             ("surface_realization".into(), surface.fingerprint.clone()),
+            (
+                "surface_hard_rule_audit".into(),
+                surface_audit.fingerprint.clone(),
+            ),
             ("reader_engagement".into(), reader.fingerprint.clone()),
             ("continuity".into(), continuity.fingerprint.clone()),
             (
@@ -2832,8 +2968,6 @@ impl HostBridgeRuntime {
             ));
         }
         let chapter_length = &chapter_plan.contract.constraint_lock.length;
-        let base_scene_length = chapter_length.min / scene_count;
-        let scene_length_remainder = chapter_length.min % scene_count;
         let director_receipts = BTreeMap::from([
             ("character_simulation".into(), character.fingerprint.clone()),
             (
@@ -2844,13 +2978,8 @@ impl HostBridgeRuntime {
         let mut scene_receipts = director_receipts.clone();
         let mut scene_manuscripts = Vec::with_capacity(pack.scenes.len());
         let mut prior_scene_tail: Option<String> = None;
-        for (index, (brief, resolved)) in pack.scenes.iter().zip(&scene_output.scenes).enumerate() {
-            let scene_length_min =
-                base_scene_length + u32::from((index as u32) < scene_length_remainder);
-            let scene_output_tokens = scene_length_min
-                .saturating_mul(2)
-                .saturating_add(800)
-                .clamp(8_000, 16_000);
+        for (brief, resolved) in pack.scenes.iter().zip(&scene_output.scenes) {
+            let scene_output_tokens = 16_000;
             let stage_key = format!("surface_scene_{:04}_{}", brief.ordinal, brief.scene_id);
             let director_note = DirectorNote::freeze(
                 &pack.chapter_id,
@@ -2866,24 +2995,35 @@ impl HostBridgeRuntime {
                     &stage_key,
                     "surface_writer",
                     json!({
-                        "chapter_id":pack.chapter_id,
-                        "plan_lock":pack.plan_lock,
-                        "chapter_plan":chapter_plan,
-                        "scene_scope":{"scene_id":brief.scene_id,"ordinal":brief.ordinal,"scene_count":scene_count},
-                        "scene_length_budget":{"target_min":scene_length_min,"unit":chapter_length.unit},
-                        "scene_brief":brief,
+                        "scene_realization_contract":{
+                            "schema":"quillframe_scene_realization_contract_v1",
+                            "chapter_id":pack.chapter_id,
+                            "chapter_function":chapter_plan.contract.chapter_function,
+                            "chapter_viewpoint":chapter_plan.contract.viewpoint,
+                            "reader_contract":chapter_plan.contract.reader_contract,
+                            "chapter_boundaries":{
+                                "must_happen":chapter_plan.contract.constraint_lock.must_happen,
+                                "must_not_happen":chapter_plan.contract.constraint_lock.must_not_happen,
+                                "exact_time_anchors":chapter_plan.contract.constraint_lock.exact_time_anchors,
+                                "stop_point":chapter_plan.contract.constraint_lock.stop_point,
+                                "end_debt":chapter_plan.contract.constraint_lock.end_debt
+                            },
+                            "scene_scope":{"scene_id":brief.scene_id,"ordinal":brief.ordinal,"scene_count":scene_count},
+                            "scene":brief
+                        },
                         "director_note":director_note,
                         "prior_scene_tail":prior_scene_tail,
                         "continuity_context":pack.continuity_context,
                         "writer_context":writer_context,
                         "corpus_mechanisms":selected_corpus,
                         "selected_preferences":selected_preferences,
+                        "production_guidance":production.intent.guidance_snapshot.as_ref().map(ProductionGuidanceSnapshot::writer_projection),
                         "reader_grip":production.intent.reader_grip,
                         "author_profile":production.intent.author_profile,
                         "rule_material":production.intent.rule_material,
                         "repair_spec":repair_spec,
                         "instruction":production.intent.instruction,
-                        "contract":"Return JSON only: {manuscript:string}. The manuscript must contain exactly the one current scene identified by scene_scope, never the whole chapter and never any other scene. director_note is a fingerprint-bound, source-free causal directive distilled by private upstream passes; execute its visible action sequence, turn and exit state without reproducing, expanding or discussing private reasoning. Write natural Chinese web-novel prose without a chapter title or process explanation. Begin from this scene's frozen entry state, preserve causal actions and spatial continuity, realize only its required turn, choice, consequence, value shift and information change, and end exactly in this scene's frozen exit state. The prior_scene_tail is continuity evidence, not text to repeat. Meet or exceed scene_length_budget.target_min; there is no prose-length maximum. When repair_spec is present, apply only FIX/PRESERVE constraints that touch this scene; constraints belonging to another scene remain that scene writer's responsibility. Never duplicate an incumbent chapter or restart the chapter inside this scene."
+                        "contract":"Return JSON only: {manuscript:string}. Write exactly the current scene in scene_realization_contract, never the whole chapter and never another scene. Treat the contract as causal boundaries, not prose to paraphrase or a checklist to explain. Realize it as lived, continuous Chinese web-novel prose through character-owned action, speech, attention and consequence. The prior_scene_tail is continuity evidence, not text to recap or repeat. The chapter minimum applies only after all scenes are assembled; do not pad this scene, repeat an established meaning, broadcast routine process, or restate evidence to reach a scene quota. Follow the frozen production_guidance without mentioning its rules. When repair_spec is present, apply only constraints that belong to this scene. Never duplicate an incumbent chapter or restart the chapter inside this scene."
                     }),
                     scene_output_tokens,
                     0.9,
@@ -3538,11 +3678,52 @@ impl HostBridgeRuntime {
                 "provenance":serde_json::from_str::<Value>(&provenance).unwrap_or_else(|_|json!({}))}))}
         ).map_err(storage)).transpose()?;
         let calls = project.database.production_stage_calls(&run_id)?;
-        let receipt = |stage: &str| {
-            calls.iter().find(|call| call.job.stage_key==stage).and_then(|call|call.result.as_ref())
-            .map(|result|json!({"stage_key":stage,"result_fingerprint":result.fingerprint,
-                "judgment":{"artifact_fingerprint":candidate_fingerprint,"status":"PASS","evidence_refs":[]}}))
-            .unwrap_or_else(||json!({"stage_key":stage,"status":"missing"}))
+        let receipt = |stage: &str| -> CoreResult<Value> {
+            let Some(result) = calls
+                .iter()
+                .find(|call| call.job.stage_key == stage)
+                .and_then(|call| call.result.as_ref())
+            else {
+                return Ok(json!({"stage_key":stage,"status":"missing"}));
+            };
+            if stage == "character_simulation" {
+                return Ok(
+                    json!({"stage_key":stage,"result_fingerprint":result.fingerprint,
+                    "judgment":{"artifact_fingerprint":candidate_fingerprint,"status":"CONFIRMED","evidence_refs":[]}}),
+                );
+            }
+            if stage == "surface_hard_rule_audit" {
+                let audit: SurfaceHardRuleAudit = strict_model_json(result)?;
+                let status = match audit.decision {
+                    SurfaceAuditDecision::Accept => "PASS",
+                    SurfaceAuditDecision::Revise => "FAIL",
+                    SurfaceAuditDecision::InsufficientEvidence => "INSUFFICIENT_EVIDENCE",
+                };
+                let evidence_refs = audit
+                    .assessments
+                    .iter()
+                    .filter_map(|assessment| assessment.evidence_excerpt.clone())
+                    .collect::<Vec<_>>();
+                return Ok(
+                    json!({"stage_key":stage,"result_fingerprint":result.fingerprint,
+                    "judgment":{"artifact_fingerprint":audit.candidate_fingerprint,"status":status,
+                        "evidence_refs":evidence_refs,"assessments":audit.assessments,
+                        "guidance_snapshot_fingerprint":audit.guidance_snapshot_fingerprint,
+                        "rule_set_fingerprint":audit.rule_set_fingerprint}}),
+                );
+            }
+            let gate: SemanticGate = strict_model_json(result)?;
+            let status = if gate.decision == SemanticGateDecision::Accept {
+                "PASS"
+            } else {
+                "FAIL"
+            };
+            Ok(
+                json!({"stage_key":stage,"result_fingerprint":result.fingerprint,
+                "judgment":{"artifact_fingerprint":candidate_fingerprint,"status":status,
+                    "evidence_refs":gate.findings.iter().map(|finding|finding.evidence.clone()).collect::<Vec<_>>(),
+                    "findings":gate.findings}}),
+            )
         };
         let revision_request = project.database.connection().query_row(
             "SELECT request_id,request_fingerprint,requested_by,reason,state,created_at \
@@ -3580,8 +3761,9 @@ impl HostBridgeRuntime {
         Ok(
             json!({"schema":"quillframe_candidate_review_projection_v1","project_id":project_id,
             "candidate":candidate,"candidate_revision":candidate_revision,"incumbent_revision":incumbent_revision,"diff":null,
-            "evidence":{"reader":receipt("reader_engagement"),"character":receipt("character_simulation"),
-                "continuity":receipt("continuity_rule_audit"),"independent":receipt("independent_semantic_gate"),
+            "evidence":{"reader":receipt("reader_engagement")?,"character":receipt("character_simulation")?,
+                "surface_rules":receipt("surface_hard_rule_audit")?,
+                "continuity":receipt("continuity_rule_audit")?,"independent":receipt("independent_semantic_gate")?,
                 "production_readiness":readiness,"user_visible_gate":{"status":"PASS"}},
             "revision_request":revision_request,"persisted_status":persisted_status,"private_reasoning_exposed":false,
             "authority":false,"canon_authority":false,"settlement_authority":false}),
@@ -4607,6 +4789,39 @@ fn public_error_envelope(status: &str, internal: &Value) -> Value {
     json!({"code":code,"mutation_performed":false})
 }
 
+fn framework_build_fingerprint() -> String {
+    sha256_fingerprint(
+        format!(
+            "{}:{}",
+            sha256_fingerprint(CONTRACT.as_bytes()),
+            crate::guidance::framework_guidance_fingerprint()
+        )
+        .as_bytes(),
+    )
+}
+
+fn merge_rule_material(
+    source: Vec<BoundRuleMaterial>,
+    current: Vec<BoundRuleMaterial>,
+) -> CoreResult<Vec<BoundRuleMaterial>> {
+    let mut merged = Vec::with_capacity(source.len().saturating_add(current.len()));
+    let mut identities = BTreeMap::<(String, String), String>::new();
+    for rule in source.into_iter().chain(current) {
+        let identity = (rule.authority.clone(), rule.id.clone());
+        if let Some(statement) = identities.get(&identity) {
+            if statement != &rule.statement {
+                return Err(CoreError::AuthorityConflict(
+                    "REVISE rule identity binds different statements".into(),
+                ));
+            }
+            continue;
+        }
+        identities.insert(identity, rule.statement.clone());
+        merged.push(rule);
+    }
+    Ok(merged)
+}
+
 fn string_arg<'a>(request: &'a BridgeRequest, name: &str) -> CoreResult<&'a str> {
     request
         .args
@@ -4971,6 +5186,7 @@ fn semantic_system(stage_key: &str) -> &'static str {
         "repair_editor" => "You are Quillframe's repair editor. Convert exact failed evidence into FIX + PRESERVE constraints without writing prose. Return only the requested JSON artifact.",
         "bounded_repair_surface" => "You are Quillframe's bounded repair Surface Writer. Return only exact replacement windows requested by the repair specification.",
         "surface_realization" => "You are Quillframe's direct Chinese web-novel Surface Writer. Produce the chapter once from the frozen material and return only the requested JSON artifact.",
+        "surface_hard_rule_audit" => "You are Quillframe's whole-candidate Surface rule auditor. Apply the complete frozen rule set with profile-sensitive exceptions, report exact evidence and return only the requested typed audit.",
         "reader_engagement" => "You are a blind web-novel reader. Judge lived reading experience without rule checklists and return only the requested JSON artifact.",
         "continuity_rule_audit" => "You are Quillframe's continuity and rule auditor. Return only exact, evidence-bound JSON findings.",
         "candidate_self_audit" => "You are Quillframe's objective-bound candidate qualifier. Return only the requested JSON gate result.",
@@ -5330,6 +5546,30 @@ mod tests {
     }
 
     #[test]
+    fn revise_rule_material_merges_instead_of_replacing_source_rules() {
+        let source = vec![BoundRuleMaterial {
+            id: "project-prose".into(),
+            authority: "approved_project".into(),
+            statement: "保留完整项目行文约束".into(),
+        }];
+        let current = vec![BoundRuleMaterial {
+            id: "repair-1".into(),
+            authority: "current_request".into(),
+            statement: "只修当前缺陷".into(),
+        }];
+        let merged = merge_rule_material(source.clone(), current).unwrap();
+        assert_eq!(merged.len(), 2);
+        assert_eq!(merged[0], source[0]);
+
+        let conflicting = vec![BoundRuleMaterial {
+            id: "project-prose".into(),
+            authority: "approved_project".into(),
+            statement: "偷偷替换项目规则".into(),
+        }];
+        assert!(merge_rule_material(source, conflicting).is_err());
+    }
+
+    #[test]
     fn bounded_repair_patch_allows_exact_redundancy_deletion() {
         let patch = BoundedRepairPatch {
             replacements: vec![
@@ -5547,6 +5787,31 @@ mod tests {
                                             .map(str::to_string)
                                     })
                             });
+                        let surface_audit_identity = serde_json::from_str::<Value>(user)
+                            .ok()
+                            .and_then(|assembly| {
+                                assembly
+                                    .get("blocks")?
+                                    .as_array()?
+                                    .iter()
+                                    .find_map(|block| {
+                                        let content = block.get("content")?;
+                                        Some((
+                                            content
+                                                .get("candidate_fingerprint")?
+                                                .as_str()?
+                                                .to_string(),
+                                            content
+                                                .get("guidance_snapshot_fingerprint")?
+                                                .as_str()?
+                                                .to_string(),
+                                            content
+                                                .get("rule_set_fingerprint")?
+                                                .as_str()?
+                                                .to_string(),
+                                        ))
+                                    })
+                            });
                         let content = if system.contains("semantic context query planner") {
                             json!({"queries":["rain pursuit unexpected return"],"required_references":[]})
                         } else if system.contains("context greenlight selector") {
@@ -5590,6 +5855,23 @@ mod tests {
                                     "description":"主角改道后看见本该死去的人","evidence_excerpt":"门后"}],
                                 "expectation_deltas":[{"expectation_id":"EXP-DEAD-IDENTITY","kind":"mystery","action":"open",
                                     "description":"死者为何现身","evidence_excerpt":"本该死去的人"}]})
+                        } else if system.contains("Surface rule auditor") {
+                            let (
+                                candidate_fingerprint,
+                                guidance_snapshot_fingerprint,
+                                rule_set_fingerprint,
+                            ) = surface_audit_identity.unwrap();
+                            json!({
+                                "candidate_fingerprint":candidate_fingerprint,
+                                "guidance_snapshot_fingerprint":guidance_snapshot_fingerprint,
+                                "rule_set_fingerprint":rule_set_fingerprint,
+                                "decision":"accept",
+                                "assessments":(1..=30).map(|index|json!({
+                                    "rule_id":format!("HF-{index:02}"),"status":"pass",
+                                    "evidence_excerpt":"雨","report":"The exact candidate was checked for this mechanism without a material violation.",
+                                    "repair_scope":null
+                                })).collect::<Vec<_>>()
+                            })
                         } else if system.contains("bounded repair Surface Writer")
                             && first_repair_excerpt.is_some()
                         {
@@ -6485,7 +6767,9 @@ mod tests {
             assert!(!upstream_request.user.contains("selected_preferences"));
             assert!(!upstream_request.user.contains(hypothesis_id));
             assert!(upstream_request.user.contains("private_"));
-            assert!(upstream_request.user.contains("CHAR-LEAD"));
+            if stage_key == "character_simulation" {
+                assert!(upstream_request.user.contains("CHAR-LEAD"));
+            }
             assert_eq!(
                 upstream_request.absolute_deadline_ms,
                 PRODUCTION_MODEL_DEADLINE_MS
@@ -6508,6 +6792,16 @@ mod tests {
         assert!(fresh_surface_request.user.contains("selected_preferences"));
         assert!(fresh_surface_request.user.contains(hypothesis_id));
         assert!(fresh_surface_request.user.contains("director_note"));
+        assert!(fresh_surface_request
+            .user
+            .contains("scene_realization_contract"));
+        assert!(fresh_surface_request.user.contains("production_guidance"));
+        assert!(fresh_surface_request.user.contains("行动—回应—后果"));
+        assert!(!fresh_surface_request.user.contains("\"plan_lock\""));
+        assert!(!fresh_surface_request.user.contains("\"chapter_plan\""));
+        assert!(!fresh_surface_request
+            .user
+            .contains("\"scene_length_budget\""));
         assert!(!fresh_surface_request.user.contains("resolved_scene"));
         assert!(!fresh_surface_request
             .user
@@ -6515,7 +6809,36 @@ mod tests {
         assert!(!fresh_surface_request
             .user
             .contains("relationship_decision_models"));
+        let surface_audit_request = &failed_calls
+            .iter()
+            .find(|call| call.job.stage_key == "surface_hard_rule_audit")
+            .unwrap()
+            .job
+            .model_request;
+        assert!(surface_audit_request.user.contains("HF-01"));
+        assert!(surface_audit_request.user.contains("HF-30"));
+        assert!(!surface_audit_request.user.contains("source_uri"));
+        assert!(!surface_audit_request.user.contains("source_revision"));
+        assert!(!surface_audit_request.user.contains("source_kind"));
+        let reader_request = &failed_calls
+            .iter()
+            .find(|call| call.job.stage_key == "reader_engagement")
+            .unwrap()
+            .job
+            .model_request;
+        assert!(!reader_request.user.contains("reader_pressure"));
+        assert!(!reader_request.user.contains("HF-30"));
+        assert!(!reader_request.user.contains("production_guidance"));
         let repair_source = failed["data"]["repair_source"].clone();
+        let source_guidance = runtime
+            .open_registered("BOOK")
+            .unwrap()
+            .database
+            .load_production_request(failed_run)
+            .unwrap()
+            .intent
+            .guidance_snapshot
+            .unwrap();
         let revised_started=runtime.invoke_value(request("author.run.start",json!({"project_id":"BOOK","task_mode":"REVISE",
             "target_ref":"DOC-CH001","payload":{"chapter_id":"CH001","instruction":"修复因果链并保留人物主动性",
                 "reader_grip":"high","author_profile":"balanced","repair_source":repair_source},
@@ -6525,6 +6848,17 @@ mod tests {
             .pointer("/data/run_id")
             .and_then(Value::as_str)
             .unwrap();
+        let revised_request = runtime
+            .open_registered("BOOK")
+            .unwrap()
+            .database
+            .load_production_request(revised_run)
+            .unwrap();
+        assert_eq!(revised_request.intent.rule_material.len(), 2);
+        assert_eq!(
+            revised_request.intent.guidance_snapshot.as_ref(),
+            Some(&source_guidance)
+        );
         let revised = runtime
             .invoke_value_async(request(
                 "author.run.execute",

@@ -200,6 +200,7 @@ export interface AuthorRunStartResult {
   target_ref: string | null;
   status: "awaiting_semantic" | string;
   request_fingerprint: string;
+  guidance_snapshot_fingerprint?: string;
   raw_draft_visible: false;
   candidate_visible: false;
   authority: false;
@@ -463,6 +464,7 @@ export interface CandidateReviewProjection {
   evidence: {
     reader: Record<string, unknown>;
     character: Record<string, unknown>;
+    surface_rules: Record<string, unknown>;
     continuity: Record<string, unknown>;
     independent: Record<string, unknown>;
     production_readiness: Record<string, unknown> | null;

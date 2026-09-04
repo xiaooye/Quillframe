@@ -6,7 +6,7 @@
 
 ## 基础层与可组合方法
 
-启用后，每次写作都包含[网文章节的现场、人物与推进](cards/core.zh-CN.md)基础层。AI 在已有的场景投影调用中，可以按当前需要组合：
+当前 Rust-native DRAFT／REVISE 每次写作都把[网文章节的现场、人物与推进](cards/core.zh-CN.md)基础层冻结进生产指导快照，并只把这份正向指导投影给 Writer。以下专项卡仍是登记候选；当前 native 运行时尚未提供专项卡选择，不得把文档中的历史 `outline_driven` 设计当成已启用能力：
 
 - [升级与对抗](cards/confrontation.zh-CN.md)。
 - [关系与情绪](cards/relationship.zh-CN.md)。
@@ -19,17 +19,13 @@
 
 ## 启用、冻结与回退
 
-调用 `ProductionRunExecutor.execute` 时传入 `craft_guidance_mode="outline_driven"`，或在 `author.run.execute` 中传入同名字段，即可显式启用。新建 DRAFT 时省略该字段，保持 `baseline`；REVISE 省略或保持原模式时，继承来源运行的完整快照。在新运行中明确选择不同模式，才冻结该模式的资源；这不授权修改修订任务的原有故事目标。
+基础层是当前 native 生产的 Framework 默认指导，不再依赖 `craft_guidance_mode`。Core 会通过原生句柄物化已批准 Book Setup 中明确标注为行文／声口／文风／校准且指纹一致的项目指导；`author.run.start` 也可以显式提交同一批准来源的精确正文。Core 把它们与基础层、完整 Surface Fundamentals 和登记审计 rubric 一起冻结，恢复只读取快照，不重新读取磁盘。
 
-当一次明确授权的运行需要让注册 Craft V4 与 source-free Corpus 候选合作时，使用 `outline_plus_style_contract` 并提供本次运行的候选 pack。组合快照始终保留 V4 `core`，再由同一个注册场景投影从登记 methods 与 Corpus 机制中选择适用项；Corpus 最多四条。候选 pack 只冻结进该次不可变请求，不修改默认模式、registry、Framework promotion 或 publication 状态。
+`outline_driven`、`outline_plus_style_contract`、`ProductionRunExecutor` 与 `craft_selection` 属于历史 Python 方案和候选规格，不是当前 Rust Bridge 能力。专项卡只有在后续 native 合同、权限、快照与评测完整落地后才能重新开放；未知字段不会成为启用证明。
 
-运行时在派发模型前，把方法目录身份和正向卡片全文冻结进不可变执行请求。已有的 `scene.realization_project` 调用只增加目录简介和当前已选中的计划依据。模型返回的 `craft_selection` 必须引用准确的来源标识。Python 只校验身份、哈希与权限，不判断文学适用性。
+直接 Surface Writer 随单一 Scene Realization Contract 收到基础层和已批准项目指导。完整 HF 诊断规则只交给生成后的 Surface Auditor，避免 Writer 围着负面检查表防守；Blind Reader 和独立评审也不接收方法投影或私有计划。修订继承来源快照，不能用局部修订要求替换基础层。第一、二版历史资源继续只用于核对旧证据，不能当作当前派发权限。
 
-直接 Surface Writer 随 Scene Realization Contract 收到基础层和选中正文。选卡理由、计划引用、未选中的卡片、诊断示例、评测隐藏标签不进入这份创作投影；Blind Reader 和独立评审不接收方法投影、选卡结果或私有计划。系统不再先生成完整中间正文供后续清洗；原有发布关卡不变。
-
-恢复运行使用原快照，即使磁盘资源已经更新；同次执行不能替换模式。第一、二版登记和基础层分别逐字节保存在 `history/v1/` 与 `history/v2/`，只用于核对旧证据；旧运行仍以自身冻结快照为准，历史文件不能当作当前派发权限。早于快照机制的历史执行需要新建运行。回退时，在新运行中指定 `baseline`。候选方法不能自行变成默认规则。
-
-源码、Python 安装包和完整框架包均携带同一份资源目录，不维护第二份副本。
+源码与完整框架包均携带同一份资源目录，不维护第二份副本。
 
 ## 来源与证据边界
 

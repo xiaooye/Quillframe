@@ -42,6 +42,8 @@ test("Review consumes exact evidence and keeps lifecycle operations separate", (
   assert.match(review, /candidate\.accept/);
   assert.match(review, /candidate\.reject/);
   assert.match(review, /candidate\.revision\.request/);
+  assert.match(review, /evidence\.surface_rules/);
+  assert.match(review, /quillframe_production_release_v2/);
   assert.match(review, /Accepted ✓/);
   assert.match(review, /Settlement unconfirmed/);
   assert.match(review, /accepted=\{acceptance\(\) \? "true" : detail\(\)\.candidate\.persisted_status === "accepted" \? "unknown" : "false"\}/);

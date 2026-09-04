@@ -150,8 +150,11 @@ impl ContextManifest {
         max_bytes: usize,
     ) -> CoreResult<ContextFreeze> {
         if selected_references.is_empty() {
+            if self.entries.is_empty() {
+                return self.freeze(stage, max_items, max_bytes);
+            }
             return Err(CoreError::ContextBoundary(
-                "semantic context selection is empty".into(),
+                "semantic context selection is empty for a non-empty candidate set".into(),
             ));
         }
         let mut selected = BTreeSet::new();
@@ -215,9 +218,12 @@ impl ContextQueryPlan {
 
 impl ContextSelectionProposal {
     pub fn validate_against(&self, candidates: &[ContextEntry]) -> CoreResult<()> {
-        if self.selected_references.is_empty() || self.selected_references.len() > 24 {
+        if self.selected_references.len() > 24
+            || self.selected_references.is_empty() != candidates.is_empty()
+        {
             return Err(CoreError::ContextBoundary(
-                "context greenlight must select one to twenty-four references".into(),
+                "context greenlight must select zero references only for an empty candidate set, otherwise one to twenty-four"
+                    .into(),
             ));
         }
         let universe = candidates
@@ -297,6 +303,14 @@ mod tests {
         }
         .validate()
         .unwrap();
+        let selection = ContextSelectionProposal {
+            selected_references: Vec::new(),
+        };
+        selection.validate_against(&[]).unwrap();
+        let frozen = ContextManifest::default()
+            .freeze_selected(ContextStage::Writer, &[], 24, 32 * 1024)
+            .unwrap();
+        assert!(frozen.entries.is_empty());
     }
 
     #[test]

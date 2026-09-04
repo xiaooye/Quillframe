@@ -99,9 +99,9 @@ Contract packs：
 
 通用生产图：
 
-`Context Freeze → Story/Canon Preflight → 人物私有行动推演 → Scene Resolution → Scene Realization Contract + 模型组合的 Writer Pack → Reader Pressure → direct Surface Writer → 冻结候选指纹 → Reader Engagement → Continuity → 逐项目标自检与资格门 → 必要时回 owning layer 修订/比较 → 独立评审 → User-visible Gate`
+`Context Freeze → Story/Canon Preflight → 人物私有行动推演 → Scene Resolution → Scene Realization Contract + 模型组合的 Writer Pack → Reader Pressure → direct Surface Writer → 冻结候选指纹 → 完整 Surface Fundamentals 语义审计 → Reader Engagement → Continuity → 逐项目标自检与资格门 → 必要时回 owning layer 修订/比较 → 独立评审 → User-visible Gate`
 
-被否决正文、Reviewer 分析、人物私有推演与 hidden expected label 不得进入 fresh Writer pack。局部修订只能收到精确指纹绑定的编辑窗口。确定性检查只验证 schema、provenance 与边界；文学判断仍属于模型和作者。
+被否决正文、Reviewer 分析、人物私有推演与 hidden expected label 不得进入 fresh Writer pack。每个新运行把 Framework 的 Writer 正向指导、完整 Surface Fundamentals、从已批准行文来源原生物化或显式提交且指纹一致的项目指导，以及登记的语义审计合同冻结成一个生产指导快照；Writer 只读取正向投影，Surface Auditor 必须逐项覆盖 `HF-01..HF-30`。局部修订只能收到精确指纹绑定的编辑窗口，但不得替换来源运行的通用／项目规则，修订后仍须全篇重审。确定性检查只验证规则覆盖、schema、provenance 与边界；文学判断仍属于模型和作者。
 
 **Production visibility 必须 fail closed。** 在 `DRAFT` / `REVISE` 中，读过这些合同不等于执行了 Quillframe。Host 必须调用经过验证的 Quillframe production runtime，且只有 exact fingerprint-bound production release 才能提供用户可见 manuscript。若 runtime、模型执行、required independent review 或 release evidence 不可用，必须返回 typed pending/blocked 状态，禁止用 host 自己写的正文补齐缺失机制。Ephemeral agent sandbox 可以 materialize deterministic Framework bundle，但执行前必须验证 exact commit/bundle fingerprint；其中的 SQLite 只是 runtime materialization，不是第二套 Canon authority。
 

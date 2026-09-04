@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{fingerprint::sha256_fingerprint, CoreError, CoreResult, ModelRequest, ModelResult};
+use crate::{
+    fingerprint::sha256_fingerprint, CoreError, CoreResult, ModelRequest, ModelResult,
+    ProductionGuidanceSnapshot,
+};
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "SCREAMING-KEBAB-CASE")]
@@ -34,6 +37,8 @@ pub struct ProductionIntent {
     pub rule_material: Vec<BoundRuleMaterial>,
     pub selected_preference_ids: Vec<String>,
     pub repair_source: Option<RepairBinding>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub guidance_snapshot: Option<ProductionGuidanceSnapshot>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -96,6 +101,11 @@ impl ProductionRequest {
             ));
         }
         if self.intent.instruction.trim().is_empty()
+            || self
+                .intent
+                .guidance_snapshot
+                .as_ref()
+                .is_some_and(|snapshot| snapshot.validate().is_err())
             || !matches!(
                 self.intent.reader_grip.as_str(),
                 "low" | "medium" | "high" | "very_high"

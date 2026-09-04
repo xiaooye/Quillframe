@@ -1444,8 +1444,7 @@ pub(crate) mod tests {
                 source_kind: "author_brief".into(),
                 source_uri: "project:briefs/opening.md".into(),
                 source_revision: "commit:0123456789abcdef".into(),
-                content_fingerprint:
-                    "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into(),
+                content_fingerprint: sha256_fingerprint("测试项目行文规则".as_bytes()),
                 role: "Primary setup evidence".into(),
             }],
             fingerprint: String::new(),

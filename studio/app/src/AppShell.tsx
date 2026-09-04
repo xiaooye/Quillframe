@@ -206,6 +206,8 @@ export const AppShell: ParentComponent = (props) => {
       continuity: ["核对连续性", "Check continuity"],
       event_first_raw_draft: ["旧版内部草稿（已退役）", "Legacy internal draft (retired)"],
       surface_realization: ["形成正文表达", "Realize manuscript prose"],
+      surface_hard_rule_audit: ["核对正文表层硬规则", "Audit manuscript Surface rules"],
+      surface_rule_auditor: ["核对正文表层硬规则", "Audit manuscript Surface rules"],
       registered_reader_engagement: ["读者视角审阅", "Review reader engagement"],
       registered_candidate_self_audit: ["检查候选稿", "Audit candidate draft"],
       registered_repair_editor: ["制定修订与保留方案", "Plan repair and preservation"],

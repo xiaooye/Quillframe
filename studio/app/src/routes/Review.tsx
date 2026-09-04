@@ -151,7 +151,8 @@ export default function Review() {
           || body.candidate_id !== candidateId || body.candidate_fingerprint !== detail.candidate.candidate_fingerprint
           || body.document_id !== detail.candidate.document_id || body.revision_id !== detail.candidate_revision.revision_id
           || body.content_access !== "production_release_only" || typeof body.content !== "string"
-          || body.production_release?.schema !== "quillframe_production_release_v1" || body.production_release.ready_for_user_visible_review !== true
+          || !["quillframe_production_release_v1", "quillframe_production_release_v2"].includes(String(body.production_release?.schema))
+          || body.production_release.ready_for_user_visible_review !== true
           || body.production_release.candidate_fingerprint !== detail.candidate.candidate_fingerprint
           || body.private_reasoning_exposed !== false || body.authority !== false || body.canon_authority !== false) {
           throw new Error("review_visible_candidate_binding_invalid");
@@ -412,6 +413,7 @@ export default function Review() {
                 <details><summary>{zh() ? "查看审查来源与精确回执" : "Inspect review provenance and exact receipts"}</summary><div class="qf-review-evidence-grid">
                   <article><strong>Reader</strong><pre><code>{JSON.stringify(detail().evidence.reader, null, 2)}</code></pre></article>
                   <article><strong>Character</strong><pre><code>{JSON.stringify(detail().evidence.character, null, 2)}</code></pre></article>
+                  <article><strong>Surface Rules</strong><pre><code>{JSON.stringify(detail().evidence.surface_rules, null, 2)}</code></pre></article>
                   <article><strong>Continuity</strong><pre><code>{JSON.stringify(detail().evidence.continuity, null, 2)}</code></pre></article>
                   <article><strong>Independent</strong><pre><code>{JSON.stringify(detail().evidence.independent, null, 2)}</code></pre></article>
                 </div></details>

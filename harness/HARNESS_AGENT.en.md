@@ -100,6 +100,7 @@ authority/session bootstrap
 → Reader Pressure
 → one direct Surface Writer
 → freeze candidate fingerprint
+→ complete `HF-01..HF-30` Surface semantic audit
 → Blind Reader (`reader.engagement_audit`)
 → continuity/state checks
 → objective-by-objective self-audit and candidate qualification
@@ -114,8 +115,9 @@ Important boundaries:
 - Rejected prose, reviewer analysis and private planning never enter a fresh Writer pack; bounded local repair receives only exact edit windows.
 - Private character state is causal evidence, not Writer exposition payload.
 - A direct Surface result is not production readiness.
-- Blind Reader is not a hard-rule checklist executor.
-- Rule Auditor sees authoritative rules Reader should not see.
+- Writer receives only the positive projection of the frozen production-guidance snapshot, not the diagnostic HF checklist.
+- Blind Reader is not a hard-rule checklist executor and receives no Reader Pressure, plan, or expected answer.
+- Rule Auditor sees the complete `HF-01..HF-30`, project guidance, and registered semantic rubric that Reader must not see, then returns one exact-evidence assessment per rule.
 - Editor chooses repair owner and generation mode semantically.
 - `repair_policy.py` only enforces the resulting writer-context boundary.
 - Any material candidate change invalidates stale fingerprint-bound review results.

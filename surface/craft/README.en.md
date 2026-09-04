@@ -6,7 +6,7 @@ The current registry is version 5. Version 4 removed the active Raw Draft-to-Sur
 
 ## Foundation and composable methods
 
-Every enabled run includes [serial immediacy, lived character voice and forward motion](cards/core.en.md). In the existing scene projection call, the model may choose a small combination of:
+Every current Rust-native DRAFT/REVISE run freezes [serial immediacy, lived character voice and forward motion](cards/core.en.md) into its production-guidance snapshot and exposes only this positive projection to Writer. The specialized cards below remain registered candidates; current native execution does not provide their selector, so historical `outline_driven` documentation is not evidence that they are active:
 
 - [Progression and confrontation](cards/confrontation.en.md).
 - [Relationship and emotional movement](cards/relationship.en.md).
@@ -19,17 +19,13 @@ A quiet professional scene can also carry relationship movement or wonder. Metho
 
 ## Execution and rollback
 
-Pass `craft_guidance_mode="outline_driven"` to `ProductionRunExecutor.execute`, or the same field to `author.run.execute`, to opt in. Omission on a new DRAFT keeps `baseline`. REVISE inherits the source's exact snapshot when the mode is omitted or unchanged; explicitly choosing a different mode on a new run freezes that mode. This does not authorize changing the repair's story objective.
+The foundation is now default Framework guidance for native production and no longer depends on `craft_guidance_mode`. Core materializes approved Book Setup sources explicitly designated as prose/voice/style/calibration guidance through native handles and verifies their content fingerprints; `author.run.start` may also submit the exact approved bytes. Core freezes those texts with the foundation, complete Surface Fundamentals, and registered audit rubric; resume reads only the snapshot and never rereads source files.
 
-When an explicitly authorized run needs registered Craft V4 and a source-free Corpus candidate to cooperate, use `outline_plus_style_contract` with that run's candidate pack. The composite snapshot always retains the V4 `core`; the same registered scene projection may then select applicable registered methods and Corpus mechanisms, with no more than four Corpus cards reaching Writer. The candidate pack is frozen only into that immutable request and does not change the default mode, registry, Framework promotion, or publication state.
+`outline_driven`, `outline_plus_style_contract`, `ProductionRunExecutor`, and `craft_selection` belong to the historical Python design and candidate specifications, not the current Rust Bridge. Specialized cards may return only after a native contract, permission model, snapshot path, and evaluation path exist. Unknown payload fields do not prove activation.
 
-The runtime freezes the registry identity and full positive card texts into the immutable execution request before dispatch. The existing `scene.realization_project` call receives only catalog descriptions and current, already selected planning evidence. Its `craft_selection` cites exact source references. Python validates identities, hashes and permissions; it does not decide applicability.
+The direct Surface Writer receives the foundation and approved project guidance with one Scene Realization Contract. The complete diagnostic HF rules go only to the post-generation Surface Auditor, preventing Writer from defensively writing around a negative checklist. Blind Reader and independent review receive neither the guidance projection nor private planning. REVISE inherits the source snapshot and cannot replace the foundation with a local repair direction. Historical version-1 and version-2 resources remain evidence only, never current dispatch authority.
 
-The direct Surface Writer receives the foundation and selected texts with the Scene Realization Contract. Selection reasons, planning-source citations, unselected cards, diagnostics and hidden evaluation labels are excluded from that projection. Blind Reader and independent review receive no craft projection, selection or private planning material. No complete intermediary prose is generated for later cleanup; ordinary release gates still apply.
-
-Resume uses the frozen snapshot, even after resource files change. A mode change on the same execution is rejected. The version-1 and version-2 registries and foundations remain byte-exact under `history/v1/` and `history/v2/` for evidence checks only. Old runs continue to use their own frozen snapshots, and history is never current dispatch authority. Executions predating snapshots require a fresh run. To roll back, use `baseline` on a new run. Candidate methods cannot enable themselves.
-
-The source tree, Python wheel and full framework bundle all carry this single resource directory. There is no second hand-maintained copy.
+The source tree and full framework bundle carry this single resource directory. There is no second hand-maintained copy.
 
 ## Evidence and boundaries
 

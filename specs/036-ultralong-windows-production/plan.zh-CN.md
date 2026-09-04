@@ -16,7 +16,7 @@
 
 ## 阶段 4 · 章节生产与修订闭环
 
-让 PLAN-CHAPTER 的有序 scenes 驱动可恢复的逐场景生产；把 Reader Pressure brief、完整祖先计划锁、已批准 Setup 的私有人物／关系决策投影与语义 Context Freeze 接入正确阶段。人物模拟与场景解析仍由模型负责，Surface Writer 只接收指纹绑定且不含私有推理的 Director Note。运行时确定性校验逐场与全章最小篇幅；data 层持久化 checkpoint/log，service 层编排独立审查拒绝后的 repair source、责任层失效图和只供 Continuity 使用的后续依赖摘要。
+让 PLAN-CHAPTER 的有序 scenes 驱动可恢复的逐场景生产；把 Reader Pressure brief、完整祖先计划锁、已批准 Setup 的私有人物／关系决策投影与语义 Context Freeze 接入各自阶段。人物模拟与场景解析仍由模型负责；Surface Writer 只接收单一 Scene Realization Contract、指纹绑定且不含私有推理的 Director Note，以及冻结生产指导的正向投影，不再收到重复计划或机械逐场最低篇幅。运行时只确定性校验组装后的全章最小篇幅，并在 Reader 前执行覆盖 `HF-01..HF-30` 的 evidence-bound Surface 语义审计；data 层持久化 checkpoint/log，service 层编排拒绝后的 repair source、规则合并、责任层失效图和只供 Continuity 使用的后续依赖摘要。
 
 ## 阶段 5 · Corpus v2 运行与分层加载
 

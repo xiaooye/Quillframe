@@ -26,19 +26,23 @@ This is a limited transport profile, not support for arbitrary JSON Schema or ev
 
 ## 3. Generate an internal candidate
 
-One direct Surface Writer realizes prose from the compact Writer pack. There is no complete intermediate prose draft for a second model to rewrite. The resulting candidate is immediately frozen and fingerprinted, and remains private until the exact release gate.
+Each new run first freezes a production-guidance snapshot: the Framework's positive Writer foundation, complete Surface Fundamentals, the registered semantic-audit rubric, and project prose/voice/style/calibration guidance materialized through native handles from approved Book Setup sources with matching content fingerprints, or explicitly supplied as the exact approved bytes. Writer receives only the positive foundation and project guidance, not the diagnostic HF checklist, and execution never rereads source files after the snapshot freezes.
+
+Surface Writer realizes each scene from one Scene Realization Contract, a Director Note, and sparse context. The contract no longer repeats the complete plan lock, chapter plan, and standalone scene brief, and it does not divide the chapter minimum into per-scene quotas. The chapter minimum is checked only after assembly; insufficient story capacity fails the chapter rather than padding individual scenes.
+
+There is no complete intermediate prose draft for a second model to clean up. The resulting candidate is immediately fingerprinted and remains private until the exact release gate.
 
 ## 4. Qualify before spending independent review
 
-`quality/candidate_qualification.py` expects registered non-independent semantic evidence for candidate self-audit and reader engagement, plus continuity evidence. A repair-cycle candidate also needs a `quality.compare` preservation check against its objective envelope.
+A dedicated Surface Rule Auditor receives the complete `HF-01..HF-30`, project guidance, and registered rubric. It must return exactly one ordered assessment for every rule. `PASS` and `FAIL` cite exact candidate evidence; missing, duplicate or unknown rules, insufficient evidence, and confirmed failures all block release. Rust validates coverage, identity, evidence references and decision consistency without replacing literary judgment with word lists or sentence counts.
 
-The result is one of `awaiting_semantic`, `repair_required`, or `qualified_for_independent`. Qualification is not independent review and cannot replace it.
+Blind Reader receives only manuscript text, chapter identity, and public reading intensity—not Reader Pressure, plans, rules, or expected answers. Continuity, self-audit and independent review follow. A repair-cycle candidate also needs preservation comparison against its objective envelope. Qualification is not independent review and cannot replace author judgment.
 
 ## 5. Repair the owning mechanism
 
 Local surface defects can receive local rewrite. A surface cluster can require scene realization again. SAFE-BUT-FLAT returns to Reader Pressure and Scene Simulation. Character failure returns to Character Simulation. Story/plan failure returns upstream. Context failure returns to Context/Memory.
 
-Every repair cycle follows FIX + PRESERVE. A successful local repair that damages the objective envelope, reader value, or relationship energy is not a successful overall repair.
+Every repair cycle follows FIX + PRESERVE. New repair rules merge by stable identity with the source run's Framework, project, and request rules; one local instruction cannot replace the inherited baseline. A successful local repair that fails the complete Surface audit or damages the objective envelope, reader value, or relationship energy is not a successful overall repair. Clustered defects route to block, scene, or chapter regeneration rather than being hidden by sentence-level edits.
 
 ### Repair an internal qualification failure
 
