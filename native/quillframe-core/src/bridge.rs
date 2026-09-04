@@ -2954,7 +2954,7 @@ impl HostBridgeRuntime {
                     "writer_context":writer_context,
                     "instruction":production.intent.instruction,
                     "author_profile":production.intent.author_profile,
-                    "contract":"Return JSON only: {actions:[{scene_id,character,action,motive_pressure,observable_consequence}]}. Use the approved character and relationship decision models as private causal evidence. Respect knowledge boundaries, non-negotiables, relationship tactics and pressure responses. Propose causal observable actions; do not write manuscript prose or expose private reasoning."
+                    "contract":"Return JSON only: {actions:[{scene_id,character,action,motive_pressure,observable_consequence}]}. Use the approved character and relationship decision models as private causal evidence. Respect knowledge boundaries, non-negotiables, relationship tactics and pressure responses. Propose causal observable actions; do not write manuscript prose or expose private reasoning. Inside string values, paraphrase quoted phrases without quotation marks so every JSON string remains unambiguous."
                 }),
                 3_000,
                 0.4,
@@ -2975,7 +2975,7 @@ impl HostBridgeRuntime {
                     "character_actions":character_output,
                     "private_relationship_models":setup_simulation.relationship_decision_models,
                     "writer_context":writer_context,
-                    "contract":"Return JSON only: {scenes:[{scene_id,action_sequence:[string],turn,exit_state}]}. Resolve causal actions into each ordered scene without prose. Preserve the frozen choice, consequence, value shift, information change and approved relationship boundaries; do not replace the chapter or scene contract or expose private reasoning."
+                    "contract":"Return JSON only: {scenes:[{scene_id,action_sequence:[string],turn,exit_state}]}. Resolve causal actions into each ordered scene without prose. Preserve the frozen choice, consequence, value shift, information change and approved relationship boundaries; do not replace the chapter or scene contract or expose private reasoning. Inside string values, paraphrase quoted phrases without quotation marks so every JSON string remains unambiguous."
                 }),
                 8_000,
                 0.35,
