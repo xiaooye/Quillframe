@@ -2318,7 +2318,7 @@ impl HostBridgeRuntime {
                 0.05,
             )
             .await?;
-        let mut surface_audit_output: SurfaceHardRuleAudit = strict_model_json(&surface_audit)?;
+        let mut surface_audit_output = parse_surface_audit(&surface_audit, None)?;
         surface_audit_output.normalize_pass_evidence(&surface_output.manuscript);
         if surface_audit_output
             .validate_against(
@@ -2351,7 +2351,7 @@ impl HostBridgeRuntime {
                     0.0,
                 )
                 .await?;
-            let mut repaired_output: SurfaceHardRuleAudit = strict_model_json(&repaired)?;
+            let mut repaired_output = parse_surface_audit(&repaired, Some(&judgment_fingerprint))?;
             repaired_output.normalize_pass_evidence(&surface_output.manuscript);
             if surface_audit_judgment_fingerprint(&repaired_output)? != judgment_fingerprint {
                 return Err(CoreError::AuthorityConflict(
@@ -3834,7 +3834,24 @@ impl HostBridgeRuntime {
                 );
             }
             if stage == "surface_hard_rule_audit" {
-                let audit: SurfaceHardRuleAudit = strict_model_json(result)?;
+                let expected_judgment_fingerprint =
+                    if effective_stage == "surface_hard_rule_audit_contract_repair" {
+                        let base = calls
+                            .iter()
+                            .find(|call| call.job.stage_key == "surface_hard_rule_audit")
+                            .and_then(|call| call.result.as_ref())
+                            .ok_or_else(|| {
+                                CoreError::AuthorityConflict(
+                                    "Surface audit repair has no base judgment".into(),
+                                )
+                            })?;
+                        Some(surface_audit_judgment_fingerprint(&parse_surface_audit(
+                            base, None,
+                        )?)?)
+                    } else {
+                        None
+                    };
+                let audit = parse_surface_audit(result, expected_judgment_fingerprint.as_deref())?;
                 let status = match audit.decision {
                     SurfaceAuditDecision::Accept => "PASS",
                     SurfaceAuditDecision::Revise => "FAIL",
@@ -5233,6 +5250,29 @@ fn parse_raw_surface_prose(result: &ModelResult) -> CoreResult<SurfaceRealizatio
     };
     output.validate()?;
     Ok(output)
+}
+
+fn parse_surface_audit(
+    result: &ModelResult,
+    expected_judgment_fingerprint: Option<&str>,
+) -> CoreResult<SurfaceHardRuleAudit> {
+    let mut value: Value = strict_model_json(result)?;
+    if let Some(echo) = value
+        .as_object_mut()
+        .and_then(|object| object.remove("judgment_fingerprint"))
+    {
+        if echo.as_str() != expected_judgment_fingerprint {
+            return Err(CoreError::AuthorityConflict(
+                "Surface audit judgment fingerprint echo changed".into(),
+            ));
+        }
+    }
+    serde_json::from_value(value).map_err(|error| {
+        CoreError::InvalidProject(format!(
+            "surface audit returned invalid typed JSON for {}: {error}",
+            result.request_id
+        ))
+    })
 }
 
 fn parse_character_simulation(result: &ModelResult) -> CoreResult<CharacterSimulation> {
