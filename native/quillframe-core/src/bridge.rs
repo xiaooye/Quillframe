@@ -49,6 +49,7 @@ fn project_registry_projection(registered: &RegisteredProject) -> CoreResult<Val
 }
 
 const CONTRACT: &str = include_str!("../../../studio/host_bridge_contract.json");
+const PRODUCTION_MODEL_DEADLINE_MS: u64 = 180_000;
 const IMPLEMENTED_OPERATIONS: &[&str] = &[
     "bridge.describe",
     "database.doctor",
@@ -2764,7 +2765,7 @@ impl HostBridgeRuntime {
                     "author_profile":production.intent.author_profile,
                     "contract":"Return JSON only: {actions:[{scene_id,character,action,motive_pressure,observable_consequence}]}. Use the approved character and relationship decision models as private causal evidence. Respect knowledge boundaries, non-negotiables, relationship tactics and pressure responses. Propose causal observable actions; do not write manuscript prose or expose private reasoning."
                 }),
-                5_000,
+                3_000,
                 0.4,
             )
             .await?;
@@ -2785,7 +2786,7 @@ impl HostBridgeRuntime {
                     "writer_context":writer_context,
                     "contract":"Return JSON only: {scenes:[{scene_id,action_sequence:[string],turn,exit_state}]}. Resolve causal actions into each ordered scene without prose. Preserve the frozen choice, consequence, value shift, information change and approved relationship boundaries; do not replace the chapter or scene contract or expose private reasoning."
                 }),
-                5_000,
+                3_000,
                 0.35,
             )
             .await?;
@@ -2935,7 +2936,7 @@ impl HostBridgeRuntime {
             user: assembly.user_text()?,
             temperature: Some(temperature),
             max_output_tokens: Some(max_output_tokens),
-            absolute_deadline_ms: 120_000,
+            absolute_deadline_ms: PRODUCTION_MODEL_DEADLINE_MS,
         };
         let job = StageJob::freeze(
             stage_key,
@@ -2949,7 +2950,7 @@ impl HostBridgeRuntime {
                 run_id,
                 &job,
                 &format!("executor-{}", uuid::Uuid::new_v4()),
-                unix_millis().saturating_add(120_000),
+                unix_millis().saturating_add(PRODUCTION_MODEL_DEADLINE_MS),
                 &timestamp(),
             )?
         };
@@ -6102,6 +6103,11 @@ mod tests {
             assert!(!upstream_request.user.contains(hypothesis_id));
             assert!(upstream_request.user.contains("private_"));
             assert!(upstream_request.user.contains("CHAR-LEAD"));
+            assert_eq!(
+                upstream_request.absolute_deadline_ms,
+                PRODUCTION_MODEL_DEADLINE_MS
+            );
+            assert_eq!(upstream_request.max_output_tokens, Some(3_000));
         }
         let fresh_surface_request = &failed_calls
             .iter()
