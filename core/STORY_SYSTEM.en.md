@@ -80,7 +80,7 @@ A useful book design can answer:
 - What relationship/world/end-state promises must eventually be paid?
 - What is intentionally out of scope?
 
-The book design is directional. It is not a chapter-by-chapter prophecy.
+Book design fixes the ending, every volume spine, cross-volume plot/relationship/character arcs, and the climax chain. It is not a chapter-by-chapter prophecy. Chapter count, scene order, local obstacles, dialogue, and realization are elaborated by the rolling plan; changing the approved macro spine requires a new fingerprint and explicit author approval.
 
 ## 04 · VOLUME contract
 
@@ -245,14 +245,15 @@ Do not plan a thousand chapters at one resolution.
 A useful default gradient is:
 
 ```text
-BOOK / intended end-state        explicit but broad
-next VOLUME + active ARCS        detailed
+BOOK / fixed ending and arcs     explicit and locked
+all VOLUME spines and climaxes   explicit and locked
+current VOLUME + active ARCS     detailed
 next UNIT                         production-ready
 next 1–3 CHAPTERS                 scene-ready
 farther chapters                  sparse directional placeholders
 ```
 
-The exact horizon is profile- and project-sensitive. The invariant is that **planning detail should increase near execution and remain revisable farther away**.
+The exact horizon is profile- and project-sensitive. The invariant is that **what happens, why it happens, and its irreversible macro consequence are fixed at Setup; detail increases near execution to decide how it happens**. Distant chapter realization remains revisable, but the approved ending, volume plots, arc terminal states, and climax chain do not silently move.
 
 When Accepted Canon changes an upstream assumption, dependent future plans are re-evaluated instead of being preserved merely because they were expensive to generate.
 
@@ -325,7 +326,7 @@ Route failures to the mechanism that owns them:
 - scene depends on impossible character knowledge → Character Simulation / information ownership;
 - future plan conflicts with Accepted state → invalidate or re-plan the future;
 - scene card over-scripts prose → reduce to constraints, agendas, state, and pivots;
-- distant outline becomes brittle → lower far-future resolution rather than defending it.
+- distant chapter realization becomes brittle → lower unit/chapter/scene resolution while preserving the approved ending and causal volume spine.
 
 Do not use prose revision to hide a planning failure.
 

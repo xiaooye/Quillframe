@@ -246,9 +246,21 @@ export default function Review() {
       });
       if (result.status !== "ok" || !result.data) throw new Error(operationError(result));
       if (!currentAction(detail, generation)) return;
-      setAcceptance(parseReviewAcceptanceResult(result.data, detail));
+      const accepted = parseReviewAcceptanceResult(result.data, detail);
+      setAcceptance(accepted);
+      setReview({
+        ...detail,
+        candidate: {
+          ...detail.candidate,
+          status: "accepted",
+          persisted_status: "accepted",
+          effective_status: "accepted",
+        },
+      });
+      setRows((current) => current.map((row) => row.candidate_id === detail.candidate.candidate_id
+        ? { ...row, status: "accepted" }
+        : row));
       resetAcceptanceIntent();
-      await load();
     } catch (cause) { if (currentAction(detail, generation)) setError(messageFor(cause)); }
     finally { if (currentAction(detail, generation)) setLoading(false); }
   };

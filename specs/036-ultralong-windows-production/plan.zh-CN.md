@@ -12,11 +12,11 @@
 
 ## 阶段 3 · 层级与规划运行时
 
-在 domain 层开放 book/volume/unit/chapter/scene 的节点与四种 typed plan envelope；在 data 层实现 proposal、精确作者激活、祖先依赖 CAS、supersede 和冻结证据；在 service 层让规划模式拥有真实 semantic job 与恢复回执。
+在 domain 层开放 book/volume/unit/chapter/scene 的节点、四种 typed plan envelope 与完整 Book Setup；在 data 层实现 setup proposal、精确作者批准、全书计划绑定、祖先依赖 CAS、supersede 和冻结证据，并保证每章只有一个正文文档；在 service 层让规划模式拥有真实 semantic job 与恢复回执。
 
 ## 阶段 4 · 章节生产与修订闭环
 
-让 PLAN-CHAPTER 的有序 scenes 驱动可恢复的逐场景生产；把 Reader Pressure brief、完整祖先计划锁与语义 Context Freeze 接入 Writer Pack；在 data 层持久化 checkpoint/log，在 service 层编排独立审查拒绝后的 repair source、责任层失效图和只供 Continuity 使用的后续依赖摘要。
+让 PLAN-CHAPTER 的有序 scenes 驱动可恢复的逐场景生产；把 Reader Pressure brief、完整祖先计划锁、已批准 Setup 的私有人物／关系决策投影与语义 Context Freeze 接入正确阶段。人物模拟与场景解析仍由模型负责，Surface Writer 只接收指纹绑定且不含私有推理的 Director Note。运行时确定性校验逐场与全章最小篇幅；data 层持久化 checkpoint/log，service 层编排独立审查拒绝后的 repair source、责任层失效图和只供 Continuity 使用的后续依赖摘要。
 
 ## 阶段 5 · Corpus v2 运行与分层加载
 
@@ -24,7 +24,7 @@
 
 ## 阶段 6 · 长期学习、生命周期与账本
 
-桥接带原因的 reject/revision feedback，强化独立 promotion receipt，修正 settled/superseded 投影并汇总内部、独立评审和 Corpus 研究成本状态。
+桥接带原因的 reject/revision feedback，强化独立 promotion receipt，以紧凑 typed delta 落定叙事状态，保留最近四份完整校验快照，并汇总内部、独立评审和 Corpus 研究成本状态。
 
 ## 阶段 7 · Studio 直连与 Python 移除
 

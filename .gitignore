@@ -19,6 +19,7 @@ __pycache__/
 /build/
 /dist/
 /target/
+/target-studio-*/
 node_modules/
 cloud/dist/
 .env
@@ -38,7 +39,8 @@ site/docs-site/node_modules/
 site/docs-site/public/repo-assets/
 site/docs-site/src/content/docs/
 
-# Local research clones and generated review deliverables are not Framework source.
+# Local research clones, fetched API payloads, and generated review/build deliverables are not Framework source.
 /tmp/
 /deliverables/
+/github-result-*.json
 /NUL

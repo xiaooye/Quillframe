@@ -333,12 +333,21 @@ export const AppShell: ParentComponent = (props) => {
       const services = await invokeBridge<ModelServiceListProjection>("model.service.list");
       if (!current()) return;
       if (services.status !== "ok" || !services.data) throw new Error(operationError(services));
-      const service = connectedModelService(services.data.items);
-      if (!service?.service_id) throw new Error(zh() ? "没有已启用且已连接的 Model Service。请先到 AI 与模型连接服务；无需认证的本地服务可留空 Access Token。" : "No enabled, connected Model Service is available. Connect one in AI & Models; local services without authentication may leave Access Token empty.");
+      const selectedModel = studio.selectedModel();
+      const service = selectedModel
+        ? services.data.items.find((item) => item.service_id === selectedModel.serviceId
+          && (item.enabled === true || item.enabled === 1)
+          && item.discovery_state === "connected"
+          && item.models?.some((model) => model.model_id === selectedModel.modelId))
+        : connectedModelService(services.data.items);
+      if (!service?.service_id) throw new Error(selectedModel
+        ? (zh() ? "所选模型已不可用；请到 AI 与模型重新选择。" : "The selected model is no longer available; choose another model in AI & Models.")
+        : (zh() ? "没有已启用且已连接的 Model Service。请先到 AI 与模型连接服务；无需认证的本地服务可留空 Access Token。" : "No enabled, connected Model Service is available. Connect one in AI & Models; local services without authentication may leave Access Token empty."));
       const response = await invokeBridge<ProductionExecutionProjection>("author.run.execute", {
         project_id: projectId,
         run_id: runId,
         service_id: service.service_id,
+        ...(selectedModel ? { model_id: selectedModel.modelId } : {}),
         document_id: chapter.document_id,
         ...(status.data.task_mode === "REVISE" ? { inherit_repair_request: true } : {
           instruction: requestedInstruction,

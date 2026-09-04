@@ -11,14 +11,15 @@ use rusqlite::{
 
 use crate::{
     apply_fresh_project_schema, validate_current_project_schema, AcceptanceDecision, AnalyzeStage,
-    AuthorActivation, CandidateArtifact, ContextEntry, ContextFreeze, ContextManifest,
-    ContextQueryPlan, ContextSelectionProposal, ContextStage, ContextTier, CoreError, CoreResult,
-    CorpusProgress, ExpectationDeltaAction, FrozenPlanLayer, HierarchicalPlanLock, ModelResult,
+    AuthorActivation, BookSetupApprovalReceipt, BookSetupArtifact, BookSetupProposalReceipt,
+    CandidateArtifact, ContextEntry, ContextFreeze, ContextManifest, ContextQueryPlan,
+    ContextSelectionProposal, ContextStage, ContextTier, CoreError, CoreResult, CorpusProgress,
+    ExpectationDeltaAction, FrozenPlanLayer, HierarchicalPlanLock, ModelResult,
     NarrativeEntityKind, PlanProposal, ProductionRelease, ProductionRequest, ProductionTaskMode,
     ProjectContext, ProjectManifest, ReviewReport, RevisionRequest, SettlementAuthorization,
     SettlementPreflight, SourceFreeCorpusPack, StageCall, StageCallState, StageJob, StoryEvent,
-    StoryGraph, StoryKind, StoryNode, StoryStateSnapshot, TrackingState, WriterContinuityEntry,
-    WriterPack,
+    StoryGraph, StoryKind, StoryNode, StoryStateSnapshot, SurfaceRealization, TrackingState,
+    WriterContinuityEntry, WriterPack,
 };
 
 pub struct NativeProject {
@@ -95,6 +96,17 @@ pub struct ChapterCreationReceipt {
     pub chapter_id: String,
     pub document_id: String,
     pub unit_id: String,
+    pub ordinal: u32,
+    pub title: String,
+    pub request_fingerprint: String,
+    pub replayed: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StoryNodeCreationReceipt {
+    pub node_id: String,
+    pub parent_id: String,
+    pub kind: StoryKind,
     pub ordinal: u32,
     pub title: String,
     pub request_fingerprint: String,
@@ -472,6 +484,179 @@ impl ProjectDatabase {
         })
     }
 
+    pub fn create_story_container(
+        &mut self,
+        project_id: &str,
+        kind: StoryKind,
+        requested_parent_id: Option<&str>,
+        title: &str,
+        idempotency_key: &str,
+        created_at: &str,
+    ) -> CoreResult<StoryNodeCreationReceipt> {
+        require_timestamp(created_at)?;
+        let (kind_name, parent_kind, id_prefix, default_parent_query) = match kind {
+            StoryKind::Volume => (
+                "volume",
+                "book",
+                "VOL",
+                "SELECT node_id FROM story_nodes WHERE kind='book' LIMIT 1",
+            ),
+            StoryKind::Unit => (
+                "unit",
+                "volume",
+                "UNIT",
+                "SELECT node_id FROM story_nodes WHERE kind='volume' ORDER BY ordinal DESC,node_id DESC LIMIT 1",
+            ),
+            _ => {
+                return Err(CoreError::InvalidHierarchy(
+                    "story container creation only supports volume or unit".into(),
+                ))
+            }
+        };
+        if title.trim().is_empty() || title != title.trim() {
+            return Err(CoreError::InvalidHierarchy(format!(
+                "{kind_name} title must be non-empty and trimmed"
+            )));
+        }
+        require_idempotency_key(idempotency_key)?;
+        let transaction = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .map_err(storage_error)?;
+        let stored_project: String = transaction
+            .query_row("SELECT project_id FROM project_identity", [], |row| {
+                row.get(0)
+            })
+            .map_err(storage_error)?;
+        if stored_project != project_id {
+            return Err(CoreError::AuthorityConflict(
+                "story container project binding does not match the database".into(),
+            ));
+        }
+
+        let existing: Option<(String, String)> = transaction
+            .query_row(
+                "SELECT receipt_kind,payload_json FROM receipts WHERE idempotency_key=?1",
+                [idempotency_key],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()
+            .map_err(storage_error)?;
+        if let Some((receipt_kind, payload)) = existing {
+            if receipt_kind != "story_container_created" {
+                return Err(CoreError::AuthorityConflict(
+                    "story container idempotency key is already bound to another operation".into(),
+                ));
+            }
+            let value: serde_json::Value = serde_json::from_str(&payload)
+                .map_err(|error| CoreError::Storage(error.to_string()))?;
+            let stored_kind = value["kind"].as_str().unwrap_or_default();
+            let stored_parent = value["parent_id"].as_str().unwrap_or_default();
+            let stored_title = value["title"].as_str().unwrap_or_default();
+            let stored_project_id = value["project_id"].as_str().unwrap_or_default();
+            let expected_parent = requested_parent_id.unwrap_or(stored_parent);
+            let expected_fingerprint =
+                story_container_request_fingerprint(project_id, kind_name, expected_parent, title)?;
+            if stored_project_id != project_id
+                || stored_kind != kind_name
+                || stored_parent != expected_parent
+                || stored_title != title
+                || value["request_fingerprint"].as_str() != Some(expected_fingerprint.as_str())
+            {
+                return Err(CoreError::AuthorityConflict(
+                    "story container idempotency key is bound to different input".into(),
+                ));
+            }
+            let ordinal = u32::try_from(value["ordinal"].as_u64().unwrap_or_default())
+                .map_err(|_| CoreError::Storage("story container ordinal overflow".into()))?;
+            transaction.commit().map_err(storage_error)?;
+            return Ok(StoryNodeCreationReceipt {
+                node_id: value["node_id"].as_str().unwrap_or_default().into(),
+                parent_id: stored_parent.into(),
+                kind,
+                ordinal,
+                title: stored_title.into(),
+                request_fingerprint: expected_fingerprint,
+                replayed: true,
+            });
+        }
+
+        let parent_id = if let Some(parent_id) = requested_parent_id {
+            let stored_kind: Option<String> = transaction
+                .query_row(
+                    "SELECT kind FROM story_nodes WHERE node_id=?1",
+                    [parent_id],
+                    |row| row.get(0),
+                )
+                .optional()
+                .map_err(storage_error)?;
+            if stored_kind.as_deref() != Some(parent_kind) {
+                return Err(CoreError::InvalidHierarchy(format!(
+                    "{kind_name} parent must be an existing {parent_kind}"
+                )));
+            }
+            parent_id.to_owned()
+        } else {
+            transaction
+                .query_row(default_parent_query, [], |row| row.get::<_, String>(0))
+                .map_err(storage_error)?
+        };
+        let prefix_len = id_prefix.len() + 1;
+        let next_id: u32 = transaction
+            .query_row(
+                &format!(
+                    "SELECT COALESCE(MAX(CASE WHEN node_id GLOB '{id_prefix}[0-9]*' THEN CAST(SUBSTR(node_id,{prefix_len}) AS INTEGER) END),0)+1 FROM story_nodes WHERE kind=?1"
+                ),
+                [kind_name],
+                |row| row.get(0),
+            )
+            .map_err(storage_error)?;
+        let ordinal: u32 = transaction
+            .query_row(
+                "SELECT COALESCE(MAX(ordinal),0)+1 FROM story_nodes WHERE parent_id=?1 AND kind=?2",
+                params![parent_id, kind_name],
+                |row| row.get(0),
+            )
+            .map_err(storage_error)?;
+        let node_id = format!("{id_prefix}{next_id:03}");
+        let request_fingerprint =
+            story_container_request_fingerprint(project_id, kind_name, &parent_id, title)?;
+        transaction
+            .execute(
+                "INSERT INTO story_nodes(node_id,parent_id,kind,ordinal,title,metadata_json) VALUES(?1,?2,?3,?4,?5,'{}')",
+                params![node_id, parent_id, kind_name, ordinal, title],
+            )
+            .map_err(storage_error)?;
+        let payload = serde_json::to_string(&serde_json::json!({
+            "schema":"quillframe_story_container_create_receipt_v1",
+            "project_id":project_id,
+            "kind":kind_name,
+            "node_id":node_id,
+            "parent_id":parent_id,
+            "ordinal":ordinal,
+            "title":title,
+            "request_fingerprint":request_fingerprint,
+        }))
+        .map_err(|error| CoreError::Serialization(error.to_string()))?;
+        transaction
+            .execute(
+                "INSERT INTO receipts(receipt_id,receipt_kind,idempotency_key,payload_json,created_at) VALUES(?1,'story_container_created',?2,?3,?4)",
+                params![format!("receipt-{}", uuid::Uuid::new_v4()), idempotency_key, payload, created_at],
+            )
+            .map_err(storage_error)?;
+        validate_novel_topology(&transaction)?;
+        transaction.commit().map_err(storage_error)?;
+        Ok(StoryNodeCreationReceipt {
+            node_id,
+            parent_id,
+            kind,
+            ordinal,
+            title: title.into(),
+            request_fingerprint,
+            replayed: false,
+        })
+    }
+
     pub fn connection_mut(&mut self) -> &mut Connection {
         &mut self.connection
     }
@@ -803,6 +988,497 @@ impl ProjectDatabase {
             .map_err(storage_error)?;
         transaction.commit().map_err(storage_error)?;
         Ok(active_version)
+    }
+
+    pub fn propose_book_setup(
+        &mut self,
+        artifact: &BookSetupArtifact,
+        expected_setup_version: u64,
+        idempotency_key: &str,
+        created_at: &str,
+    ) -> CoreResult<BookSetupProposalReceipt> {
+        artifact.validate()?;
+        require_timestamp(created_at)?;
+        require_idempotency_key(idempotency_key)?;
+        let request_fingerprint = crate::fingerprint::sha256_fingerprint(
+            serde_json::to_vec(&serde_json::json!({
+                "project_id": artifact.project_id,
+                "expected_setup_version": expected_setup_version,
+                "setup_fingerprint": artifact.fingerprint
+            }))
+            .map_err(|error| CoreError::Serialization(error.to_string()))?,
+        );
+        let setup_json = serde_json::to_string(artifact)
+            .map_err(|error| CoreError::Serialization(error.to_string()))?;
+        let transaction = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .map_err(storage_error)?;
+        let stored_project: String = transaction
+            .query_row("SELECT project_id FROM project_identity", [], |row| {
+                row.get(0)
+            })
+            .map_err(storage_error)?;
+        if stored_project != artifact.project_id {
+            return Err(CoreError::AuthorityConflict(
+                "book setup project binding does not match the database".into(),
+            ));
+        }
+        if let Some((setup_id, stored_request, setup_fingerprint, expected_book_plan_version)) =
+            transaction
+                .query_row(
+                    "SELECT setup_id,request_fingerprint,setup_fingerprint,expected_book_plan_version \
+                     FROM book_setup_proposals WHERE idempotency_key=?1",
+                    [idempotency_key],
+                    |row| {
+                        Ok((
+                            row.get::<_, String>(0)?,
+                            row.get::<_, String>(1)?,
+                            row.get::<_, String>(2)?,
+                            row.get::<_, u64>(3)?,
+                        ))
+                    },
+                )
+                .optional()
+                .map_err(storage_error)?
+        {
+            if stored_request != request_fingerprint || setup_fingerprint != artifact.fingerprint {
+                return Err(CoreError::AuthorityConflict(
+                    "book setup idempotency key binds different input".into(),
+                ));
+            }
+            return Ok(BookSetupProposalReceipt {
+                setup_id,
+                expected_setup_version,
+                expected_book_plan_version,
+                setup_fingerprint,
+                request_fingerprint,
+                replayed: true,
+            });
+        }
+        let current_setup_version = transaction
+            .query_row(
+                "SELECT version FROM book_setup_heads WHERE project_id=?1",
+                [&artifact.project_id],
+                |row| row.get::<_, u64>(0),
+            )
+            .optional()
+            .map_err(storage_error)?
+            .unwrap_or(0);
+        if current_setup_version != expected_setup_version {
+            return Err(CoreError::AuthorityConflict(
+                "book setup version changed".into(),
+            ));
+        }
+        let expected_book_plan_version = transaction
+            .query_row(
+                "SELECT active_version FROM plan_activations \
+                 WHERE target_ref='book:BOOK' AND status='active'",
+                [],
+                |row| row.get::<_, u64>(0),
+            )
+            .optional()
+            .map_err(storage_error)?
+            .unwrap_or(0);
+        let setup_id = format!("setup-{}", uuid::Uuid::new_v4().simple());
+        transaction
+            .execute(
+                "INSERT INTO book_setup_proposals( \
+                 setup_id,project_id,expected_setup_version,expected_book_plan_version,status, \
+                 setup_json,setup_fingerprint,request_fingerprint,idempotency_key,created_at \
+                 ) VALUES(?1,?2,?3,?4,'proposal_ready',?5,?6,?7,?8,?9)",
+                params![
+                    setup_id,
+                    artifact.project_id,
+                    expected_setup_version,
+                    expected_book_plan_version,
+                    setup_json,
+                    artifact.fingerprint,
+                    request_fingerprint,
+                    idempotency_key,
+                    created_at
+                ],
+            )
+            .map_err(storage_error)?;
+        transaction.commit().map_err(storage_error)?;
+        Ok(BookSetupProposalReceipt {
+            setup_id,
+            expected_setup_version,
+            expected_book_plan_version,
+            setup_fingerprint: artifact.fingerprint.clone(),
+            request_fingerprint,
+            replayed: false,
+        })
+    }
+
+    pub fn load_book_setup_proposal(
+        &self,
+        setup_id: &str,
+    ) -> CoreResult<(BookSetupArtifact, u64, u64, String, String)> {
+        let (payload, expected_setup_version, expected_book_plan_version, status, created_at): (
+            String,
+            u64,
+            u64,
+            String,
+            String,
+        ) = self
+            .connection
+            .query_row(
+                "SELECT setup_json,expected_setup_version,expected_book_plan_version,status,created_at \
+                 FROM book_setup_proposals WHERE setup_id=?1",
+                [setup_id],
+                |row| {
+                    Ok((
+                        row.get(0)?,
+                        row.get(1)?,
+                        row.get(2)?,
+                        row.get(3)?,
+                        row.get(4)?,
+                    ))
+                },
+            )
+            .map_err(storage_error)?;
+        let artifact: BookSetupArtifact = serde_json::from_str(&payload)
+            .map_err(|error| CoreError::Storage(error.to_string()))?;
+        artifact.validate()?;
+        Ok((
+            artifact,
+            expected_setup_version,
+            expected_book_plan_version,
+            status,
+            created_at,
+        ))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn approve_book_setup(
+        &mut self,
+        setup_id: &str,
+        expected_setup_version: u64,
+        book_plan_id: &str,
+        book_plan_fingerprint: &str,
+        authorized_by: &str,
+        idempotency_key: &str,
+        created_at: &str,
+    ) -> CoreResult<BookSetupApprovalReceipt> {
+        require_timestamp(created_at)?;
+        require_idempotency_key(idempotency_key)?;
+        if authorized_by.trim().is_empty() || authorized_by != authorized_by.trim() {
+            return Err(CoreError::AuthorityConflict(
+                "book setup approver must be non-empty and trimmed".into(),
+            ));
+        }
+        let transaction = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .map_err(storage_error)?;
+        if let Some((stored_setup_id, version, setup_fingerprint, stored_plan_id, stored_plan_fingerprint, approval_fingerprint, stored_author)) = transaction
+            .query_row(
+                "SELECT a.setup_id,h.version,h.setup_fingerprint,a.book_plan_id,a.book_plan_fingerprint,a.approval_fingerprint,a.authorized_by \
+                 FROM book_setup_approvals a JOIN book_setup_heads h ON h.setup_id=a.setup_id \
+                 WHERE a.idempotency_key=?1",
+                [idempotency_key],
+                |row| Ok((row.get::<_,String>(0)?,row.get::<_,u64>(1)?,row.get::<_,String>(2)?,
+                    row.get::<_,String>(3)?,row.get::<_,String>(4)?,row.get::<_,String>(5)?,row.get::<_,String>(6)?)),
+            )
+            .optional()
+            .map_err(storage_error)?
+        {
+            if stored_setup_id != setup_id
+                || stored_plan_id != book_plan_id
+                || stored_plan_fingerprint != book_plan_fingerprint
+                || stored_author != authorized_by
+                || version != expected_setup_version + 1
+            {
+                return Err(CoreError::AuthorityConflict(
+                    "book setup approval idempotency key binds different input".into(),
+                ));
+            }
+            return Ok(BookSetupApprovalReceipt {
+                setup_id: stored_setup_id,
+                version,
+                setup_fingerprint,
+                book_plan_id: stored_plan_id,
+                book_plan_fingerprint: stored_plan_fingerprint,
+                approval_fingerprint,
+                replayed: true,
+            });
+        }
+        let (project_id, proposal_version, setup_json, setup_fingerprint, status): (
+            String,
+            u64,
+            String,
+            String,
+            String,
+        ) = transaction
+            .query_row(
+                "SELECT project_id,expected_setup_version,setup_json,setup_fingerprint,status \
+                 FROM book_setup_proposals WHERE setup_id=?1",
+                [setup_id],
+                |row| {
+                    Ok((
+                        row.get(0)?,
+                        row.get(1)?,
+                        row.get(2)?,
+                        row.get(3)?,
+                        row.get(4)?,
+                    ))
+                },
+            )
+            .map_err(storage_error)?;
+        if proposal_version != expected_setup_version || status != "proposal_ready" {
+            return Err(CoreError::AuthorityConflict(
+                "book setup proposal is stale or no longer approvable".into(),
+            ));
+        }
+        let current_setup_version = transaction
+            .query_row(
+                "SELECT version FROM book_setup_heads WHERE project_id=?1",
+                [&project_id],
+                |row| row.get::<_, u64>(0),
+            )
+            .optional()
+            .map_err(storage_error)?
+            .unwrap_or(0);
+        if current_setup_version != expected_setup_version {
+            return Err(CoreError::AuthorityConflict(
+                "book setup head changed before approval".into(),
+            ));
+        }
+        let (active_plan_id, active_plan_fingerprint): (String, String) = transaction
+            .query_row(
+                "SELECT proposal_id,proposal_fingerprint FROM plan_activations \
+                 WHERE target_ref='book:BOOK' AND status='active'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .map_err(storage_error)?;
+        if active_plan_id != book_plan_id || active_plan_fingerprint != book_plan_fingerprint {
+            return Err(CoreError::AuthorityConflict(
+                "book setup approval must bind the current active book plan".into(),
+            ));
+        }
+        let artifact: BookSetupArtifact = serde_json::from_str(&setup_json)
+            .map_err(|error| CoreError::Storage(error.to_string()))?;
+        artifact.validate()?;
+        let version = expected_setup_version
+            .checked_add(1)
+            .ok_or_else(|| CoreError::AuthorityConflict("book setup version overflowed".into()))?;
+        let approval_json = serde_json::json!({
+            "schema":"quillframe_book_setup_approval_v1",
+            "setup_id":setup_id,
+            "project_id":project_id,
+            "expected_setup_version":expected_setup_version,
+            "setup_fingerprint":setup_fingerprint,
+            "book_plan_id":book_plan_id,
+            "book_plan_fingerprint":book_plan_fingerprint,
+            "authorized_by":authorized_by,
+            "idempotency_key":idempotency_key,
+            "created_at":created_at
+        });
+        let approval_fingerprint = crate::fingerprint::sha256_fingerprint(
+            serde_json::to_vec(&approval_json)
+                .map_err(|error| CoreError::Serialization(error.to_string()))?,
+        );
+        let approval_id = format!("setup-approval-{}", uuid::Uuid::new_v4().simple());
+        transaction
+            .execute(
+                "UPDATE book_setup_proposals SET status='superseded' \
+                 WHERE project_id=?1 AND status='approved'",
+                [&project_id],
+            )
+            .map_err(storage_error)?;
+        transaction
+            .execute(
+                "UPDATE book_setup_proposals SET status='approved' WHERE setup_id=?1",
+                [setup_id],
+            )
+            .map_err(storage_error)?;
+        transaction
+            .execute(
+                "INSERT INTO book_setup_approvals( \
+                 approval_id,setup_id,project_id,expected_setup_version,book_plan_id, \
+                 book_plan_fingerprint,authorized_by,approval_json,approval_fingerprint, \
+                 idempotency_key,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)",
+                params![
+                    approval_id,
+                    setup_id,
+                    project_id,
+                    expected_setup_version,
+                    book_plan_id,
+                    book_plan_fingerprint,
+                    authorized_by,
+                    serde_json::to_string(&approval_json)
+                        .map_err(|error| CoreError::Serialization(error.to_string()))?,
+                    approval_fingerprint,
+                    idempotency_key,
+                    created_at
+                ],
+            )
+            .map_err(storage_error)?;
+        transaction
+            .execute(
+                "INSERT INTO book_setup_heads( \
+                 project_id,setup_id,version,status,setup_fingerprint,book_plan_id, \
+                 book_plan_fingerprint,approval_fingerprint,updated_at \
+                 ) VALUES(?1,?2,?3,'ready',?4,?5,?6,?7,?8) \
+                 ON CONFLICT(project_id) DO UPDATE SET setup_id=excluded.setup_id,version=excluded.version, \
+                 status='ready',setup_fingerprint=excluded.setup_fingerprint,book_plan_id=excluded.book_plan_id, \
+                 book_plan_fingerprint=excluded.book_plan_fingerprint,approval_fingerprint=excluded.approval_fingerprint, \
+                 updated_at=excluded.updated_at",
+                params![
+                    project_id,
+                    setup_id,
+                    version,
+                    setup_fingerprint,
+                    book_plan_id,
+                    book_plan_fingerprint,
+                    approval_fingerprint,
+                    created_at
+                ],
+            )
+            .map_err(storage_error)?;
+        for (node_id, title) in [
+            ("VOL001", artifact.structure.first_volume_title.as_str()),
+            ("UNIT001", artifact.structure.first_unit_title.as_str()),
+            ("CH001", artifact.structure.first_chapter_title.as_str()),
+        ] {
+            transaction
+                .execute(
+                    "UPDATE story_nodes SET title=?2 WHERE node_id=?1",
+                    params![node_id, title],
+                )
+                .map_err(storage_error)?;
+        }
+        transaction
+            .execute(
+                "UPDATE documents SET title=?1 WHERE document_id='DOC-CH001'",
+                [&artifact.structure.first_chapter_title],
+            )
+            .map_err(storage_error)?;
+        transaction
+            .execute(
+                "UPDATE search_index SET title=?1 WHERE entity_type='document' AND entity_id='DOC-CH001'",
+                [&artifact.structure.first_chapter_title],
+            )
+            .map_err(storage_error)?;
+        validate_novel_topology(&transaction)?;
+        transaction.commit().map_err(storage_error)?;
+        Ok(BookSetupApprovalReceipt {
+            setup_id: setup_id.into(),
+            version,
+            setup_fingerprint,
+            book_plan_id: book_plan_id.into(),
+            book_plan_fingerprint: book_plan_fingerprint.into(),
+            approval_fingerprint,
+            replayed: false,
+        })
+    }
+
+    pub fn require_book_setup_ready(&self, project_id: &str) -> CoreResult<()> {
+        let binding = self
+            .connection
+            .query_row(
+                "SELECT h.setup_fingerprint,h.book_plan_id,h.book_plan_fingerprint, \
+                        p.setup_fingerprint,a.proposal_id,a.proposal_fingerprint \
+                 FROM book_setup_heads h \
+                 JOIN book_setup_proposals p ON p.setup_id=h.setup_id AND p.status='approved' \
+                 JOIN plan_activations a ON a.target_ref='book:BOOK' AND a.status='active' \
+                 WHERE h.project_id=?1 AND h.status='ready'",
+                [project_id],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, String>(2)?,
+                        row.get::<_, String>(3)?,
+                        row.get::<_, String>(4)?,
+                        row.get::<_, String>(5)?,
+                    ))
+                },
+            )
+            .optional()
+            .map_err(storage_error)?;
+        match binding {
+            Some((setup_fp, plan_id, plan_fp, proposal_setup_fp, active_id, active_fp))
+                if setup_fp == proposal_setup_fp
+                    && plan_id == active_id
+                    && plan_fp == active_fp =>
+            {
+                Ok(())
+            }
+            _ => Err(CoreError::AuthorityConflict(
+                "book setup is not author-approved and bound to the active book plan".into(),
+            )),
+        }
+    }
+
+    pub fn load_ready_book_setup_for_plan(
+        &self,
+        project_id: &str,
+        book_plan_fingerprint: &str,
+    ) -> CoreResult<BookSetupArtifact> {
+        let setup_fingerprint = self
+            .connection
+            .query_row(
+                "SELECT h.setup_fingerprint FROM book_setup_heads h \
+                 JOIN book_setup_proposals p ON p.setup_id=h.setup_id AND p.status='approved' \
+                 JOIN plan_activations a ON a.target_ref='book:BOOK' AND a.status='active' \
+                 WHERE h.project_id=?1 AND h.status='ready' \
+                   AND h.book_plan_fingerprint=?2 \
+                   AND h.book_plan_id=a.proposal_id \
+                   AND h.book_plan_fingerprint=a.proposal_fingerprint \
+                   AND h.setup_fingerprint=p.setup_fingerprint",
+                params![project_id, book_plan_fingerprint],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(storage_error)?
+            .ok_or_else(|| {
+                CoreError::AuthorityConflict(
+                    "book setup is not ready for the frozen active book plan".into(),
+                )
+            })?;
+        self.load_approved_book_setup_snapshot(
+            project_id,
+            &setup_fingerprint,
+            book_plan_fingerprint,
+        )
+    }
+
+    pub fn load_approved_book_setup_snapshot(
+        &self,
+        project_id: &str,
+        setup_fingerprint: &str,
+        book_plan_fingerprint: &str,
+    ) -> CoreResult<BookSetupArtifact> {
+        let payload = self
+            .connection
+            .query_row(
+                "SELECT p.setup_json FROM book_setup_proposals p \
+                 JOIN book_setup_approvals a ON a.setup_id=p.setup_id \
+                 WHERE p.project_id=?1 AND p.setup_fingerprint=?2 \
+                   AND a.book_plan_fingerprint=?3 \
+                 ORDER BY a.created_at DESC LIMIT 1",
+                params![project_id, setup_fingerprint, book_plan_fingerprint],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(storage_error)?
+            .ok_or_else(|| {
+                CoreError::AuthorityConflict(
+                    "frozen Writer Pack references an unapproved Book Setup snapshot".into(),
+                )
+            })?;
+        let artifact: BookSetupArtifact = serde_json::from_str(&payload)
+            .map_err(|error| CoreError::Storage(error.to_string()))?;
+        artifact.validate()?;
+        if artifact.project_id != project_id || artifact.fingerprint != setup_fingerprint {
+            return Err(CoreError::AuthorityConflict(
+                "Book Setup snapshot identity differs from its approval binding".into(),
+            ));
+        }
+        Ok(artifact)
     }
 
     pub fn load_tracking_state(&self, project_id: &str) -> CoreResult<Option<TrackingState>> {
@@ -1420,6 +2096,13 @@ impl ProjectDatabase {
                 row.get(0)
             })
             .map_err(storage_error)?;
+        let book_plan_fingerprint = plan_lock
+            .layers
+            .first()
+            .map(|layer| layer.proposal_fingerprint.as_str())
+            .ok_or_else(|| CoreError::InvalidPlan("Writer Pack plan lock is empty".into()))?;
+        let approved_setup =
+            self.load_ready_book_setup_for_plan(&project_id, book_plan_fingerprint)?;
         let tracking = self.load_tracking_state(&project_id)?.ok_or_else(|| {
             CoreError::AuthorityConflict("tracking authority is unavailable".into())
         })?;
@@ -1501,6 +2184,7 @@ impl ProjectDatabase {
         let pack = WriterPack::freeze(
             chapter_id,
             plan_lock,
+            approved_setup.fingerprint,
             freeze.fingerprint,
             tracking.fingerprint,
             pressure,
@@ -1610,75 +2294,13 @@ impl ProjectDatabase {
         created_at: &str,
     ) -> CoreResult<(String, bool)> {
         require_timestamp(created_at)?;
-        let object = event.as_object().ok_or_else(|| {
-            CoreError::InvalidProject("learning feedback must be an object".into())
-        })?;
-        let required = |name: &str| {
-            object
-                .get(name)
-                .and_then(serde_json::Value::as_str)
-                .filter(|value| !value.trim().is_empty())
-                .ok_or_else(|| {
-                    CoreError::InvalidProject(format!("learning feedback {name} is required"))
-                })
-        };
-        let event_id = required("event_id")?;
-        let feedback_text = required("feedback_text")?;
-        let evidence_kind = required("evidence_kind")?;
-        let candidate_id = required("candidate_id")?;
-        let candidate_fingerprint = required("candidate_fingerprint")?;
-        let document_id = required("document_id")?;
-        let run_id = required("run_id")?;
-        let source_type = required("source_type")?;
-        let source_id = required("source_id")?;
-        require_sha256(candidate_fingerprint)?;
-        let payload_fingerprint = crate::fingerprint::sha256_fingerprint(
-            serde_json::to_vec(event)
-                .map_err(|error| CoreError::Serialization(error.to_string()))?,
-        );
         let transaction = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .map_err(storage_error)?;
-        if let Some(existing) = transaction
-            .query_row(
-                "SELECT payload_fingerprint FROM learning_feedback_events WHERE event_id=?1",
-                [event_id],
-                |row| row.get::<_, String>(0),
-            )
-            .optional()
-            .map_err(storage_error)?
-        {
-            if existing == payload_fingerprint {
-                return Ok((event_id.into(), true));
-            }
-            return Err(CoreError::AuthorityConflict(
-                "learning feedback event id binds different evidence".into(),
-            ));
-        }
-        let binding: u32 = transaction.query_row(
-            "SELECT COUNT(*) FROM candidates WHERE candidate_id=?1 AND content_fingerprint=?2 AND document_id=?3 AND run_id=?4",
-            params![candidate_id,candidate_fingerprint,document_id,run_id],|row|row.get(0)
-        ).map_err(storage_error)?;
-        if binding != 1 {
-            return Err(CoreError::AuthorityConflict(
-                "learning feedback does not bind an exact production candidate".into(),
-            ));
-        }
-        transaction.execute(
-            "INSERT INTO learning_feedback_events(event_id,feedback_text,evidence_kind,candidate_id,candidate_fingerprint,document_id,run_id,source_type,source_id,payload_fingerprint,status,version,created_at,updated_at) \
-             VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,'captured',1,?11,?11)",
-            params![event_id,feedback_text,evidence_kind,candidate_id,candidate_fingerprint,document_id,run_id,
-                source_type,source_id,payload_fingerprint,created_at]
-        ).map_err(storage_error)?;
-        transaction.execute(
-            "INSERT INTO learning_evidence(evidence_id,evidence_kind,source_ref,payload_json,state,promotion_eligible,created_at) \
-             VALUES(?1,?2,?3,?4,'awaiting_semantic',0,?5)",
-            params![format!("learning-evidence-{event_id}"),evidence_kind,format!("{source_type}:{source_id}"),
-                serde_json::to_string(event).map_err(|error|CoreError::Serialization(error.to_string()))?,created_at]
-        ).map_err(storage_error)?;
+        let result = insert_learning_feedback(&transaction, event, created_at)?;
         transaction.commit().map_err(storage_error)?;
-        Ok((event_id.into(), false))
+        Ok(result)
     }
 
     pub fn learning_feedback(&self, event_id: Option<&str>) -> CoreResult<Vec<serde_json::Value>> {
@@ -1942,7 +2564,7 @@ impl ProjectDatabase {
                 })?;
             }
         }
-        Ok(manifest.entries().iter().take(48).cloned().collect())
+        Ok(manifest.entries().iter().take(128).cloned().collect())
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -2092,7 +2714,10 @@ impl ProjectDatabase {
     fn active_ledger_context_rows(&self) -> CoreResult<Vec<(String, String)>> {
         let mut rows = Vec::new();
         let mut statement = self.connection.prepare(
-            "SELECT character_id,name,state_json FROM characters ORDER BY updated_at DESC,character_id LIMIT 12",
+            "SELECT c.character_id,c.name,c.state_json FROM characters c \
+             LEFT JOIN narrative_state_sources s ON s.entity_type='character' AND s.entity_id=c.character_id \
+             WHERE s.entity_id IS NULL OR s.state='current' \
+             ORDER BY c.updated_at DESC,c.character_id LIMIT 12",
         ).map_err(storage_error)?;
         for row in statement
             .query_map([], |row| {
@@ -2109,8 +2734,10 @@ impl ProjectDatabase {
         }
         drop(statement);
         let mut statement = self.connection.prepare(
-            "SELECT expectation_id,kind,description,status FROM expectations WHERE status IN ('open','partial') \
-             ORDER BY last_touched_order DESC,expectation_id LIMIT 16",
+            "SELECT e.expectation_id,e.kind,e.description,e.status FROM expectations e \
+             LEFT JOIN narrative_state_sources s ON s.entity_type='expectation' AND s.entity_id=e.expectation_id \
+             WHERE e.status IN ('open','partial') AND (s.entity_id IS NULL OR s.state='current') \
+             ORDER BY e.last_touched_order DESC,e.expectation_id LIMIT 16",
         ).map_err(storage_error)?;
         for row in statement
             .query_map([], |row| {
@@ -2131,8 +2758,10 @@ impl ProjectDatabase {
         }
         drop(statement);
         let mut statement = self.connection.prepare(
-            "SELECT event_id,title,description FROM timeline_events WHERE authority_class='accepted' \
-             ORDER BY story_order DESC,event_id LIMIT 12",
+            "SELECT t.event_id,t.title,t.description FROM timeline_events t \
+             LEFT JOIN narrative_state_sources s ON s.entity_type='timeline' AND s.entity_id=t.event_id \
+             WHERE t.authority_class='accepted' AND (s.entity_id IS NULL OR s.state='current') \
+             ORDER BY t.story_order DESC,t.event_id LIMIT 12",
         ).map_err(storage_error)?;
         for row in statement
             .query_map([], |row| {
@@ -2148,6 +2777,103 @@ impl ProjectDatabase {
             rows.push((
                 format!("ledger:timeline:{id}"),
                 format!("{title}: {}", description.unwrap_or_default()),
+            ));
+        }
+        drop(statement);
+        let mut statement = self.connection.prepare(
+            "SELECT r.relationship_id,r.participant_a,r.participant_b,r.relationship_type,r.state_json \
+             FROM relationships r LEFT JOIN narrative_state_sources s \
+             ON s.entity_type='relationship' AND s.entity_id=r.relationship_id \
+             WHERE s.entity_id IS NULL OR s.state='current' \
+             ORDER BY r.updated_at DESC,r.relationship_id LIMIT 16",
+        ).map_err(storage_error)?;
+        for row in statement
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                ))
+            })
+            .map_err(storage_error)?
+        {
+            let (id, a, b, kind, state) = row.map_err(storage_error)?;
+            rows.push((
+                format!("ledger:relationship:{id}"),
+                format!("{a}<->{b}/{kind}: {state}"),
+            ));
+        }
+        drop(statement);
+        let mut statement = self.connection.prepare(
+            "SELECT w.entity_id,w.entity_type,w.name,w.truth_json FROM world_entities w \
+             LEFT JOIN narrative_state_sources s ON s.entity_type='world' AND s.entity_id=w.entity_id \
+             WHERE s.entity_id IS NULL OR s.state='current' \
+             ORDER BY w.updated_at DESC,w.entity_id LIMIT 16",
+        ).map_err(storage_error)?;
+        for row in statement
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                ))
+            })
+            .map_err(storage_error)?
+        {
+            let (id, kind, name, state) = row.map_err(storage_error)?;
+            rows.push((
+                format!("ledger:world:{id}"),
+                format!("{kind}/{name}: {state}"),
+            ));
+        }
+        drop(statement);
+        let mut statement = self.connection.prepare(
+            "SELECT k.knowledge_id,k.character_id,k.fact_json,k.available_from_story_order,k.confidence \
+             FROM character_knowledge k LEFT JOIN narrative_state_sources s \
+             ON s.entity_type='knowledge' AND s.entity_id=k.knowledge_id \
+             WHERE s.entity_id IS NULL OR s.state='current' \
+             ORDER BY k.available_from_story_order DESC,k.knowledge_id LIMIT 24",
+        ).map_err(storage_error)?;
+        for row in statement
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, u32>(3)?,
+                    row.get::<_, String>(4)?,
+                ))
+            })
+            .map_err(storage_error)?
+        {
+            let (id, character, fact, order, confidence) = row.map_err(storage_error)?;
+            rows.push((
+                format!("ledger:knowledge:{id}"),
+                format!("{character}@{order}/{confidence}: {fact}"),
+            ));
+        }
+        drop(statement);
+        let mut statement = self.connection.prepare(
+            "SELECT state_key,value_json,authority_class,evidence_ref FROM canon_state ORDER BY updated_at DESC,state_key LIMIT 24",
+        ).map_err(storage_error)?;
+        for row in statement
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                ))
+            })
+            .map_err(storage_error)?
+        {
+            let (key, value, authority, evidence) = row.map_err(storage_error)?;
+            rows.push((
+                format!("ledger:canon:{key}"),
+                format!("{authority}/{evidence}: {value}"),
             ));
         }
         Ok(rows)
@@ -2286,6 +3012,15 @@ impl ProjectDatabase {
                 "candidate, review and production release are not exactly bound".into(),
             ));
         }
+        let preflight_request = self.load_production_request(run_id)?;
+        let bounded_evidence = if release
+            .stage_receipt_fingerprints
+            .contains_key("bounded_repair_surface")
+        {
+            Some(self.resolve_bounded_repair_evidence(&preflight_request)?)
+        } else {
+            None
+        };
         let transaction = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
@@ -2312,7 +3047,8 @@ impl ProjectDatabase {
         let request: ProductionRequest = serde_json::from_str(&request_json)
             .map_err(|error| CoreError::Storage(error.to_string()))?;
         request.validate()?;
-        if !matches!(status.as_str(), "executing" | "awaiting_release")
+        if request.fingerprint != preflight_request.fingerprint
+            || !matches!(status.as_str(), "executing" | "awaiting_release")
             || request.target_ref != document_id
             || request.writer_pack_fingerprint != candidate.writer_pack_fingerprint
             || request.task_mode != task_mode
@@ -2332,6 +3068,24 @@ impl ProjectDatabase {
             return Err(CoreError::AuthorityConflict(
                 "release tracking freeze changed".into(),
             ));
+        }
+        if let Some((_, evidence_receipts)) = &bounded_evidence {
+            let released_inherited_evidence = release
+                .stage_receipt_fingerprints
+                .iter()
+                .filter(|(stage_key, _)| {
+                    matches!(
+                        stage_key.as_str(),
+                        "character_simulation" | "scene_resolution"
+                    ) || stage_key.starts_with("surface_scene_")
+                })
+                .map(|(stage_key, fingerprint)| (stage_key.clone(), fingerprint.clone()))
+                .collect::<BTreeMap<_, _>>();
+            if &released_inherited_evidence != evidence_receipts {
+                return Err(CoreError::AuthorityConflict(
+                    "bounded release inherited evidence changed".into(),
+                ));
+            }
         }
         for (release_key, stage_key) in [
             ("context_query_plan", "context_query_plan"),
@@ -2357,15 +3111,57 @@ impl ProjectDatabase {
                 .ok_or_else(|| {
                     CoreError::AuthorityConflict("release stage receipt is missing".into())
                 })?;
-            let actual = transaction
-                .query_row(
-                    "SELECT result_fingerprint FROM production_stage_calls \
-                     WHERE run_id=?1 AND stage_key=?2 AND state='confirmed'",
-                    params![run_id, stage_key],
-                    |row| row.get::<_, String>(0),
-                )
-                .map_err(storage_error)?;
-            if &actual != expected {
+            let receipt_count: u32 = if matches!(
+                release_key,
+                "character_simulation" | "scene_resolution"
+            ) && bounded_evidence.is_some()
+            {
+                let (evidence_run_id, evidence_receipts) = bounded_evidence.as_ref().unwrap();
+                if evidence_receipts.get(release_key) != Some(expected) {
+                    0
+                } else {
+                    transaction
+                        .query_row(
+                        "SELECT COUNT(*) FROM production_stage_calls WHERE run_id=?1 AND stage_key=?2 \
+                         AND state='confirmed' AND result_fingerprint=?3",
+                        params![evidence_run_id, stage_key, expected],
+                        |row| row.get(0),
+                    )
+                    .map_err(storage_error)?
+                }
+            } else if release_key == "settlement_tracking_projection" {
+                transaction
+                    .query_row(
+                        "SELECT COUNT(*) FROM production_stage_calls WHERE run_id=?1 AND state='confirmed' \
+                         AND result_fingerprint=?2 AND stage_key IN ('settlement_tracking_projection', \
+                         'settlement_tracking_projection_schema_repair','settlement_tracking_projection_semantic_repair', \
+                         'settlement_tracking_projection_audit_repair','settlement_tracking_projection_audit_repair_2', \
+                         'settlement_tracking_projection_audit_repair_3')",
+                        params![run_id, expected],
+                        |row| row.get(0),
+                    )
+                    .map_err(storage_error)?
+            } else if release_key == "settlement_tracking_audit" {
+                transaction
+                    .query_row(
+                         "SELECT COUNT(*) FROM production_stage_calls WHERE run_id=?1 AND state='confirmed' \
+                          AND result_fingerprint=?2 AND stage_key IN ('settlement_tracking_audit','settlement_tracking_audit_repair', \
+                          'settlement_tracking_audit_repair_2','settlement_tracking_audit_repair_3')",
+                        params![run_id, expected],
+                        |row| row.get(0),
+                    )
+                    .map_err(storage_error)?
+            } else {
+                transaction
+                    .query_row(
+                        "SELECT COUNT(*) FROM production_stage_calls WHERE run_id=?1 AND stage_key=?2 \
+                         AND state='confirmed' AND result_fingerprint=?3",
+                        params![run_id, stage_key, expected],
+                        |row| row.get(0),
+                    )
+                    .map_err(storage_error)?
+            };
+            if receipt_count != 1 {
                 return Err(CoreError::AuthorityConflict(format!(
                     "release {release_key} receipt does not belong to this run"
                 )));
@@ -2397,15 +3193,26 @@ impl ProjectDatabase {
             ));
         }
         for (stage_key, expected) in scene_receipts {
-            let actual = transaction
-                .query_row(
-                    "SELECT result_fingerprint FROM production_stage_calls \
-                     WHERE run_id=?1 AND stage_key=?2 AND state='confirmed'",
-                    params![run_id, stage_key],
-                    |row| row.get::<_, String>(0),
-                )
-                .map_err(storage_error)?;
-            if &actual != expected {
+            let evidence_run_id = bounded_evidence
+                .as_ref()
+                .map(|(origin_run_id, _)| origin_run_id.as_str())
+                .unwrap_or(run_id);
+            let receipt_count: u32 = if bounded_evidence
+                .as_ref()
+                .is_some_and(|(_, receipts)| receipts.get(stage_key) != Some(expected))
+            {
+                0
+            } else {
+                transaction
+                    .query_row(
+                        "SELECT COUNT(*) FROM production_stage_calls WHERE run_id=?1 AND stage_key=?2 \
+                         AND state='confirmed' AND result_fingerprint=?3",
+                        params![evidence_run_id, stage_key, expected],
+                        |row| row.get(0),
+                    )
+                    .map_err(storage_error)?
+            };
+            if receipt_count != 1 {
                 return Err(CoreError::AuthorityConflict(format!(
                     "release {stage_key} receipt does not belong to this run"
                 )));
@@ -2708,11 +3515,11 @@ impl ProjectDatabase {
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .map_err(storage_error)?;
-        let (run_id, state, job_json): (String, String, String) = transaction
+        let (run_id, state, job_json, error_code): (String, String, String, Option<String>) = transaction
             .query_row(
-                "SELECT run_id,state,job_json FROM production_stage_calls WHERE call_id=?1",
+                "SELECT run_id,state,job_json,error_code FROM production_stage_calls WHERE call_id=?1",
                 [call_id],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
             )
             .map_err(storage_error)?;
         if state == "confirmed" {
@@ -2730,7 +3537,10 @@ impl ProjectDatabase {
                 "confirmed stage result changed".into(),
             ));
         }
-        if state != "dispatched" {
+        if state != "dispatched"
+            && !(state == "unconfirmed"
+                && error_code.as_deref() == Some("model_transport_unconfirmed"))
+        {
             return Err(CoreError::AuthorityConflict(
                 "only dispatched stages can be confirmed".into(),
             ));
@@ -2915,7 +3725,11 @@ impl ProjectDatabase {
                 "unconfirmed stage requires an error code".into(),
             ));
         }
-        let changed=self.connection.execute("UPDATE production_stage_calls SET state='unconfirmed',error_code=?2,updated_at=?3 WHERE call_id=?1 AND state='dispatched'",params![call_id,error_code,updated_at]).map_err(storage_error)?;
+        let changed=self.connection.execute(
+            "UPDATE production_stage_calls SET state='unconfirmed',error_code=?2,updated_at=?3 \
+             WHERE call_id=?1 AND (state='dispatched' OR (state='unconfirmed' AND error_code=?2))",
+            params![call_id,error_code,updated_at]
+        ).map_err(storage_error)?;
         if changed != 1 {
             return Err(CoreError::AuthorityConflict(
                 "stage is not dispatch-pending".into(),
@@ -3045,7 +3859,7 @@ impl ProjectDatabase {
     }
 
     pub fn production_stage_calls(&self, run_id: &str) -> CoreResult<Vec<StageCall>> {
-        let mut statement=self.connection.prepare("SELECT call_id,job_json,owner_token,state,deadline_at_ms,result_json,error_code FROM production_stage_calls WHERE run_id=?1 ORDER BY created_at,call_id").map_err(storage_error)?;
+        let mut statement=self.connection.prepare("SELECT call_id,job_json,owner_token,state,deadline_at_ms,result_json,result_fingerprint,error_code FROM production_stage_calls WHERE run_id=?1 ORDER BY created_at,call_id").map_err(storage_error)?;
         let rows = statement
             .query_map([run_id], |row| {
                 let job_json: String = row.get(1)?;
@@ -3058,6 +3872,7 @@ impl ProjectDatabase {
                     row.get::<_, u64>(4)?,
                     result_json,
                     row.get::<_, Option<String>>(6)?,
+                    row.get::<_, Option<String>>(7)?,
                 ))
             })
             .map_err(storage_error)?
@@ -3072,13 +3887,36 @@ impl ProjectDatabase {
                     state,
                     deadline_at_ms,
                     result_json,
+                    result_fingerprint,
                     error_code,
                 )| {
+                    let job: StageJob = serde_json::from_str(&job_json)
+                        .map_err(|error| CoreError::Storage(error.to_string()))?;
+                    job.validate()?;
+                    let result: Option<ModelResult> = result_json
+                        .map(|json| {
+                            serde_json::from_str(&json)
+                                .map_err(|error| CoreError::Storage(error.to_string()))
+                        })
+                        .transpose()?;
+                    if let Some(result) = &result {
+                        result.validate()?;
+                        if result_fingerprint.as_deref() != Some(result.fingerprint.as_str())
+                            || result.request_id != job.model_request.request_id
+                        {
+                            return Err(CoreError::AuthorityConflict(
+                                "persisted stage result binding changed".into(),
+                            ));
+                        }
+                    } else if result_fingerprint.is_some() {
+                        return Err(CoreError::AuthorityConflict(
+                            "persisted stage result fingerprint has no artifact".into(),
+                        ));
+                    }
                     Ok(StageCall {
                         call_id,
                         run_id: run_id.into(),
-                        job: serde_json::from_str(&job_json)
-                            .map_err(|error| CoreError::Storage(error.to_string()))?,
+                        job,
                         owner_token,
                         state: match state.as_str() {
                             "confirmed" => StageCallState::Confirmed,
@@ -3087,12 +3925,7 @@ impl ProjectDatabase {
                             _ => StageCallState::Dispatched,
                         },
                         deadline_at_ms,
-                        result: result_json
-                            .map(|json| {
-                                serde_json::from_str(&json)
-                                    .map_err(|error| CoreError::Storage(error.to_string()))
-                            })
-                            .transpose()?,
+                        result,
                         error_code,
                     })
                 },
@@ -3222,7 +4055,8 @@ impl ProjectDatabase {
                 CoreError::AuthorityConflict("failed REVISE run lost its repair source".into())
             })?;
             let source_state:String=self.connection.query_row(
-                "SELECT state_json FROM checkpoints WHERE checkpoint_id=?1 AND run_id=?2 AND checkpoint_kind='failed_candidate_repair_source'",
+                "SELECT state_json FROM checkpoints WHERE checkpoint_id=?1 AND run_id=?2 \
+                 AND checkpoint_kind IN ('failed_candidate_repair_source','author_revision_repair_source')",
                 params![binding.source_checkpoint_id,binding.source_run_id],|row|row.get(0)
             ).map_err(storage_error)?;
             let value: serde_json::Value = serde_json::from_str(&source_state)
@@ -3343,35 +4177,229 @@ impl ProjectDatabase {
         Ok(source)
     }
 
+    pub fn validated_repair_lineage_run_ids(
+        &self,
+        request: &ProductionRequest,
+    ) -> CoreResult<Vec<String>> {
+        request.validate()?;
+        let mut lineage = Vec::new();
+        let mut seen = BTreeSet::from([request.run_id.clone()]);
+        let mut current = request.clone();
+        while let Some(binding) = current.intent.repair_source.as_ref() {
+            if !seen.insert(binding.source_run_id.clone()) {
+                return Err(CoreError::AuthorityConflict(
+                    "repair source lineage contains a cycle".into(),
+                ));
+            }
+            let source = self.validate_repair_source(
+                &binding.source_run_id,
+                &binding.source_checkpoint_id,
+                &binding.expected_candidate_fingerprint,
+                &request.target_ref,
+            )?;
+            lineage.push(binding.source_run_id.clone());
+            current = source;
+        }
+        Ok(lineage)
+    }
+
+    pub fn resolve_bounded_repair_evidence(
+        &self,
+        request: &ProductionRequest,
+    ) -> CoreResult<(String, BTreeMap<String, String>)> {
+        const MAX_REPAIR_LINEAGE_DEPTH: usize = 128;
+        request.validate()?;
+        let pack = self.load_writer_pack(&request.writer_pack_fingerprint)?;
+        let expected_scene_keys = pack
+            .scenes
+            .iter()
+            .map(|scene| format!("surface_scene_{:04}_{}", scene.ordinal, scene.scene_id))
+            .collect::<Vec<_>>();
+        let mut seen = BTreeSet::from([request.run_id.clone()]);
+        let mut current = request.clone();
+        for _ in 0..MAX_REPAIR_LINEAGE_DEPTH {
+            let binding = current.intent.repair_source.as_ref().ok_or_else(|| {
+                CoreError::AuthorityConflict(
+                    "bounded repair lineage ended before a fresh realization".into(),
+                )
+            })?;
+            if !seen.insert(binding.source_run_id.clone()) {
+                return Err(CoreError::AuthorityConflict(
+                    "repair source lineage contains a cycle".into(),
+                ));
+            }
+            let source = self.validate_repair_source(
+                &binding.source_run_id,
+                &binding.source_checkpoint_id,
+                &binding.expected_candidate_fingerprint,
+                &request.target_ref,
+            )?;
+            if source.writer_pack_fingerprint != request.writer_pack_fingerprint {
+                return Err(CoreError::AuthorityConflict(
+                    "bounded repair lineage changed its Writer Pack".into(),
+                ));
+            }
+            let calls = self.production_stage_calls(&source.run_id)?;
+            let surface = confirmed_stage_result(&calls, "surface_realization")?;
+            let surface_output: SurfaceRealization = serde_json::from_str(&surface.content)
+                .map_err(|error| CoreError::Serialization(error.to_string()))?;
+            surface_output.validate()?;
+            if crate::fingerprint::sha256_fingerprint(surface_output.manuscript.as_bytes())
+                != binding.expected_candidate_fingerprint
+            {
+                return Err(CoreError::AuthorityConflict(
+                    "repair lineage surface does not bind its candidate".into(),
+                ));
+            }
+            if let Some(bounded) = calls
+                .iter()
+                .find(|call| call.job.stage_key == "bounded_repair_surface")
+            {
+                if bounded.state != StageCallState::Confirmed || bounded.result.is_none() {
+                    return Err(CoreError::AuthorityConflict(
+                        "bounded repair lineage has unconfirmed repair evidence".into(),
+                    ));
+                }
+                current = source;
+                continue;
+            }
+
+            let actual_scene_keys = calls
+                .iter()
+                .filter(|call| call.job.stage_key.starts_with("surface_scene_"))
+                .map(|call| call.job.stage_key.clone())
+                .collect::<Vec<_>>();
+            if actual_scene_keys != expected_scene_keys {
+                return Err(CoreError::AuthorityConflict(
+                    "fresh repair origin scene evidence does not match its Writer Pack".into(),
+                ));
+            }
+            let mut receipts = BTreeMap::new();
+            for stage_key in ["character_simulation", "scene_resolution"] {
+                let result = confirmed_stage_result(&calls, stage_key)?;
+                receipts.insert(stage_key.into(), result.fingerprint.clone());
+            }
+            let mut scene_manuscripts = Vec::with_capacity(expected_scene_keys.len());
+            for stage_key in &expected_scene_keys {
+                let result = confirmed_stage_result(&calls, stage_key)?;
+                let scene: SurfaceRealization = serde_json::from_str(&result.content)
+                    .map_err(|error| CoreError::Serialization(error.to_string()))?;
+                scene.validate()?;
+                scene_manuscripts.push(scene.manuscript.trim().to_string());
+                receipts.insert(stage_key.clone(), result.fingerprint.clone());
+            }
+            if scene_manuscripts.join("\n\n") != surface_output.manuscript {
+                return Err(CoreError::AuthorityConflict(
+                    "fresh repair origin surface assembly changed".into(),
+                ));
+            }
+            let manifest: serde_json::Value = serde_json::from_str(
+                &calls
+                    .iter()
+                    .find(|call| call.job.stage_key == "surface_realization")
+                    .ok_or_else(|| {
+                        CoreError::AuthorityConflict(
+                            "fresh repair origin has no surface assembly".into(),
+                        )
+                    })?
+                    .job
+                    .model_request
+                    .user,
+            )
+            .map_err(|error| CoreError::Serialization(error.to_string()))?;
+            let manifest_receipts: BTreeMap<String, String> = serde_json::from_value(
+                manifest.get("scene_receipts").cloned().ok_or_else(|| {
+                    CoreError::AuthorityConflict(
+                        "fresh repair origin assembly lost scene receipts".into(),
+                    )
+                })?,
+            )
+            .map_err(|error| CoreError::Serialization(error.to_string()))?;
+            if manifest.get("schema").and_then(serde_json::Value::as_str)
+                != Some("quillframe_surface_assembly_v1")
+                || manifest
+                    .get("separator")
+                    .and_then(serde_json::Value::as_str)
+                    != Some("\\n\\n")
+            {
+                return Err(CoreError::AuthorityConflict(
+                    "fresh repair origin assembly manifest identity changed".into(),
+                ));
+            }
+            if manifest
+                .get("manuscript_fingerprint")
+                .and_then(serde_json::Value::as_str)
+                != Some(binding.expected_candidate_fingerprint.as_str())
+            {
+                return Err(CoreError::AuthorityConflict(
+                    "fresh repair origin assembly manuscript fingerprint changed".into(),
+                ));
+            }
+            if manifest_receipts != receipts {
+                return Err(CoreError::AuthorityConflict(
+                    "fresh repair origin assembly receipts changed".into(),
+                ));
+            }
+            return Ok((source.run_id, receipts));
+        }
+        Err(CoreError::AuthorityConflict(
+            "repair source lineage exceeds the supported depth".into(),
+        ))
+    }
+
     pub fn request_candidate_revision(
         &mut self,
         request: &RevisionRequest,
-    ) -> CoreResult<(String, String)> {
+    ) -> CoreResult<(String, String, String, bool)> {
         request.validate()?;
         let transaction = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
             .map_err(storage_error)?;
-        if let Some((id, fingerprint)) = transaction
+        if let Some((id,candidate_id,candidate_fingerprint,requested_by,reason)) = transaction
             .query_row(
-                "SELECT request_id,request_fingerprint FROM candidate_revision_requests \
+                "SELECT request_id,candidate_id,candidate_fingerprint,requested_by,reason FROM candidate_revision_requests \
                  WHERE idempotency_key=?1",
                 [&request.idempotency_key],
-                |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+                |row| Ok((row.get::<_,String>(0)?,row.get::<_,String>(1)?,row.get::<_,String>(2)?,
+                    row.get::<_,String>(3)?,row.get::<_,String>(4)?)),
             )
             .optional()
             .map_err(storage_error)?
         {
-            if fingerprint == request.fingerprint {
-                return Ok((id.clone(), format!("checkpoint-author-revision-{id}")));
+            if candidate_id == request.candidate_id
+                && candidate_fingerprint == request.candidate_fingerprint
+                && requested_by == request.requested_by
+                && reason == request.reason
+            {
+                let (document_id,run_id):(String,String)=transaction.query_row(
+                    "SELECT document_id,run_id FROM candidates WHERE candidate_id=?1 AND content_fingerprint=?2",
+                    params![candidate_id,candidate_fingerprint],|row|Ok((row.get(0)?,row.get(1)?))
+                ).map_err(storage_error)?;
+                let event_id = format!("feedback-revision-{id}");
+                let event = serde_json::json!({
+                    "event_id":&event_id,"feedback_text":reason,"evidence_kind":"author_revision",
+                    "candidate_id":candidate_id,"candidate_fingerprint":candidate_fingerprint,
+                    "document_id":document_id,"run_id":run_id,
+                    "source_type":"candidate_revision_request","source_id":&id
+                });
+                let (_, feedback_replayed) =
+                    insert_learning_feedback(&transaction, &event, &request.created_at)?;
+                transaction.commit().map_err(storage_error)?;
+                return Ok((
+                    id.clone(),
+                    format!("checkpoint-author-revision-{id}"),
+                    event_id,
+                    feedback_replayed,
+                ));
             }
             return Err(CoreError::AuthorityConflict(
                 "revision idempotency key binds a different request".into(),
             ));
         }
-        let (status, fingerprint, run_id, lineage_json) = transaction
+        let (status, fingerprint, run_id, document_id, lineage_json) = transaction
             .query_row(
-                "SELECT c.status,c.content_fingerprint,c.run_id,l.lineage_json FROM candidates c \
+                "SELECT c.status,c.content_fingerprint,c.run_id,c.document_id,l.lineage_json FROM candidates c \
                  JOIN candidate_lineage l ON l.candidate_id=c.candidate_id WHERE c.candidate_id=?1",
                 [&request.candidate_id],
                 |row| {
@@ -3380,6 +4408,7 @@ impl ProjectDatabase {
                         row.get::<_, String>(1)?,
                         row.get::<_, String>(2)?,
                         row.get::<_, String>(3)?,
+                        row.get::<_, String>(4)?,
                     ))
                 },
             )
@@ -3432,8 +4461,22 @@ impl ProjectDatabase {
              VALUES(?1,?2,'author_revision_repair_source',?3,?4,?5)",
             params![checkpoint_id,run_id,checkpoint_state,request.candidate_fingerprint,request.created_at]
         ).map_err(storage_error)?;
+        let feedback_event_id = format!("feedback-revision-{request_id}");
+        let feedback_event = serde_json::json!({
+            "event_id":&feedback_event_id,"feedback_text":request.reason,
+            "evidence_kind":"author_revision","candidate_id":request.candidate_id,
+            "candidate_fingerprint":request.candidate_fingerprint,"document_id":document_id,
+            "run_id":run_id,"source_type":"candidate_revision_request","source_id":&request_id
+        });
+        let (_, feedback_replayed) =
+            insert_learning_feedback(&transaction, &feedback_event, &request.created_at)?;
         transaction.commit().map_err(storage_error)?;
-        Ok((request_id, checkpoint_id))
+        Ok((
+            request_id,
+            checkpoint_id,
+            feedback_event_id,
+            feedback_replayed,
+        ))
     }
 
     pub fn accept_candidate(&mut self, decision: &AcceptanceDecision) -> CoreResult<String> {
@@ -3673,7 +4716,15 @@ impl ProjectDatabase {
         let (tracking_result_json, tracking_result_fingerprint): (String, String) = transaction
             .query_row(
                 "SELECT result_json,result_fingerprint FROM production_stage_calls \
-                 WHERE run_id=?1 AND stage_key='settlement_tracking_projection' AND state='confirmed'",
+                 WHERE run_id=?1 AND state='confirmed' AND stage_key IN \
+                 ('settlement_tracking_projection','settlement_tracking_projection_schema_repair', \
+                  'settlement_tracking_projection_semantic_repair','settlement_tracking_projection_audit_repair', \
+                  'settlement_tracking_projection_audit_repair_2','settlement_tracking_projection_audit_repair_3') \
+                  ORDER BY CASE stage_key WHEN 'settlement_tracking_projection_audit_repair_3' THEN 0 \
+                  WHEN 'settlement_tracking_projection_audit_repair_2' THEN 1 \
+                  WHEN 'settlement_tracking_projection_audit_repair' THEN 2 \
+                  WHEN 'settlement_tracking_projection_semantic_repair' THEN 3 \
+                  WHEN 'settlement_tracking_projection_schema_repair' THEN 4 ELSE 5 END LIMIT 1",
                 [production_run_id],
                 |row| Ok((row.get(0)?, row.get(1)?)),
             )
@@ -3800,6 +4851,27 @@ impl ProjectDatabase {
         })?;
         let mut next_tracking = tracking_ledger.current().clone();
         let mut newly_invalidated = BTreeSet::new();
+        let prior_candidate_fingerprint = transaction
+            .query_row(
+                "SELECT value_json FROM canon_state WHERE state_key=?1",
+                [&preflight.target_ref],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(storage_error)?
+            .map(|payload| {
+                serde_json::from_str::<serde_json::Value>(&payload)
+                    .map_err(|error| CoreError::Storage(error.to_string()))?
+                    .get("content_fingerprint")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_owned)
+                    .ok_or_else(|| {
+                        CoreError::Storage(
+                            "existing chapter Canon head lacks its candidate fingerprint".into(),
+                        )
+                    })
+            })
+            .transpose()?;
         let state_value = serde_json::json!({
             "acceptance_id": preflight.acceptance_id,
             "candidate_id": preflight.candidate_id,
@@ -3919,10 +4991,12 @@ impl ProjectDatabase {
                  AND state IN ('proposed','applied')",
                 params![chapter_id,preflight.before_fingerprint,authorization.created_at],
             ).map_err(storage_error)?;
-            transaction.execute(
-                "UPDATE narrative_state_sources SET state='stale',updated_at=?3 WHERE chapter_id=?1 AND source_fingerprint=?2 AND state='current'",
-                params![chapter_id,preflight.before_fingerprint,authorization.created_at],
-            ).map_err(storage_error)?;
+            if let Some(prior_candidate_fingerprint) = prior_candidate_fingerprint.as_deref() {
+                transaction.execute(
+                    "UPDATE narrative_state_sources SET state='stale',updated_at=?3 WHERE chapter_id=?1 AND source_fingerprint=?2 AND state='current'",
+                    params![chapter_id,prior_candidate_fingerprint,authorization.created_at],
+                ).map_err(storage_error)?;
+            }
         }
         if !newly_invalidated.is_empty() {
             let version = next_tracking.version;
@@ -3973,7 +5047,7 @@ impl ProjectDatabase {
             &chapter_id,
             "chapter_settled",
             serde_json::json!({
-                "schema":"quillframe_chapter_settled_event_v2",
+                "schema":"quillframe_chapter_settled_event_v3",
                 "settlement_id": settlement_id,
                 "acceptance_id": preflight.acceptance_id,
                 "candidate_id": preflight.candidate_id,
@@ -3986,7 +5060,6 @@ impl ProjectDatabase {
                 "canon_after":state_value,
                 "canon_head_fingerprint":after_head_fingerprint,
                 "tracking_proposal":tracking_proposal,
-                "tracking_after":next_tracking,
             }),
             &authorization.created_at,
         )?;
@@ -4172,6 +5245,15 @@ fn apply_narrative_deltas(
                     delta.description,acceptance_id,created_at],
             )
             .map_err(storage_error)?;
+        upsert_narrative_source(
+            transaction,
+            "expectation",
+            &delta.expectation_id,
+            chapter_id,
+            acceptance_id,
+            source_fingerprint,
+            created_at,
+        )?;
     }
     Ok(())
 }
@@ -4338,6 +5420,14 @@ fn create_story_snapshot(
             "project head changed before snapshot attachment".into(),
         ));
     }
+    transaction
+        .execute(
+            "DELETE FROM story_state_snapshots WHERE project_id=?1 AND snapshot_id NOT IN (\
+             SELECT snapshot_id FROM story_state_snapshots WHERE project_id=?1 \
+             ORDER BY through_event_seq DESC LIMIT 4)",
+            [project_id],
+        )
+        .map_err(storage_error)?;
     Ok(snapshot_id)
 }
 
@@ -4990,6 +6080,76 @@ fn parse_story_kind(value: &str) -> CoreResult<StoryKind> {
     }
 }
 
+fn insert_learning_feedback(
+    transaction: &Transaction<'_>,
+    event: &serde_json::Value,
+    created_at: &str,
+) -> CoreResult<(String, bool)> {
+    let object = event
+        .as_object()
+        .ok_or_else(|| CoreError::InvalidProject("learning feedback must be an object".into()))?;
+    let required = |name: &str| {
+        object
+            .get(name)
+            .and_then(serde_json::Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+            .ok_or_else(|| {
+                CoreError::InvalidProject(format!("learning feedback {name} is required"))
+            })
+    };
+    let event_id = required("event_id")?;
+    let feedback_text = required("feedback_text")?;
+    let evidence_kind = required("evidence_kind")?;
+    let candidate_id = required("candidate_id")?;
+    let candidate_fingerprint = required("candidate_fingerprint")?;
+    let document_id = required("document_id")?;
+    let run_id = required("run_id")?;
+    let source_type = required("source_type")?;
+    let source_id = required("source_id")?;
+    require_sha256(candidate_fingerprint)?;
+    let payload_fingerprint = crate::fingerprint::sha256_fingerprint(
+        serde_json::to_vec(event).map_err(|error| CoreError::Serialization(error.to_string()))?,
+    );
+    if let Some(existing) = transaction
+        .query_row(
+            "SELECT payload_fingerprint FROM learning_feedback_events WHERE event_id=?1",
+            [event_id],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(storage_error)?
+    {
+        if existing == payload_fingerprint {
+            return Ok((event_id.into(), true));
+        }
+        return Err(CoreError::AuthorityConflict(
+            "learning feedback event id binds different evidence".into(),
+        ));
+    }
+    let binding: u32 = transaction.query_row(
+        "SELECT COUNT(*) FROM candidates WHERE candidate_id=?1 AND content_fingerprint=?2 AND document_id=?3 AND run_id=?4",
+        params![candidate_id,candidate_fingerprint,document_id,run_id],|row|row.get(0)
+    ).map_err(storage_error)?;
+    if binding != 1 {
+        return Err(CoreError::AuthorityConflict(
+            "learning feedback does not bind an exact production candidate".into(),
+        ));
+    }
+    transaction.execute(
+        "INSERT INTO learning_feedback_events(event_id,feedback_text,evidence_kind,candidate_id,candidate_fingerprint,document_id,run_id,source_type,source_id,payload_fingerprint,status,version,created_at,updated_at) \
+         VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,'captured',1,?11,?11)",
+        params![event_id,feedback_text,evidence_kind,candidate_id,candidate_fingerprint,document_id,run_id,
+            source_type,source_id,payload_fingerprint,created_at]
+    ).map_err(storage_error)?;
+    transaction.execute(
+        "INSERT INTO learning_evidence(evidence_id,evidence_kind,source_ref,payload_json,state,promotion_eligible,created_at) \
+         VALUES(?1,?2,?3,?4,'awaiting_semantic',0,?5)",
+        params![format!("learning-evidence-{event_id}"),evidence_kind,format!("{source_type}:{source_id}"),
+            serde_json::to_string(event).map_err(|error|CoreError::Serialization(error.to_string()))?,created_at]
+    ).map_err(storage_error)?;
+    Ok((event_id.into(), false))
+}
+
 fn require_timestamp(value: &str) -> CoreResult<()> {
     if value.trim().is_empty() || value != value.trim() {
         return Err(CoreError::Storage(
@@ -4997,6 +6157,31 @@ fn require_timestamp(value: &str) -> CoreResult<()> {
         ));
     }
     Ok(())
+}
+
+fn require_idempotency_key(value: &str) -> CoreResult<()> {
+    if value.trim().is_empty() || value != value.trim() {
+        return Err(CoreError::AuthorityConflict(
+            "idempotency key must be non-empty and trimmed".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn story_container_request_fingerprint(
+    project_id: &str,
+    kind: &str,
+    parent_id: &str,
+    title: &str,
+) -> CoreResult<String> {
+    serde_json::to_vec(&serde_json::json!({
+        "project_id":project_id,
+        "kind":kind,
+        "parent_id":parent_id,
+        "title":title,
+    }))
+    .map(crate::fingerprint::sha256_fingerprint)
+    .map_err(|error| CoreError::Serialization(error.to_string()))
 }
 
 fn require_sha256(value: &str) -> CoreResult<()> {
@@ -5078,6 +6263,26 @@ fn evidence_window(content: &str, query: &str, maximum: usize) -> String {
     content_chars[start..end].iter().collect()
 }
 
+fn confirmed_stage_result<'a>(
+    calls: &'a [StageCall],
+    stage_key: &str,
+) -> CoreResult<&'a ModelResult> {
+    let matching = calls
+        .iter()
+        .filter(|call| call.job.stage_key == stage_key)
+        .collect::<Vec<_>>();
+    if matching.len() != 1 || matching[0].state != StageCallState::Confirmed {
+        return Err(CoreError::AuthorityConflict(format!(
+            "repair evidence stage {stage_key} is not uniquely confirmed"
+        )));
+    }
+    matching[0].result.as_ref().ok_or_else(|| {
+        CoreError::AuthorityConflict(format!(
+            "confirmed repair evidence stage {stage_key} has no result"
+        ))
+    })
+}
+
 fn storage_error(error: rusqlite::Error) -> CoreError {
     CoreError::Storage(error.to_string())
 }
@@ -5151,12 +6356,116 @@ mod tests {
             )
             .unwrap();
             store.activate_plan(&authorization).unwrap();
+            if index == 0 {
+                let book_plan = match &proposal.body {
+                    crate::PlanBody::Book(book_plan) => book_plan.clone(),
+                    _ => unreachable!(),
+                };
+                let mut setup = fixture_book_setup(book_plan);
+                setup.seal().unwrap();
+                let setup_receipt = store
+                    .propose_book_setup(&setup, 0, "setup-prefix", "T0")
+                    .unwrap();
+                store
+                    .approve_book_setup(
+                        &setup_receipt.setup_id,
+                        0,
+                        &proposal.id.to_string(),
+                        &proposal.fingerprint,
+                        "author:test",
+                        "approve-setup-prefix",
+                        "T0",
+                    )
+                    .unwrap();
+            }
             dependencies.insert(
                 proposal.target.reference.clone(),
                 proposal.fingerprint.clone(),
             );
         }
         dependencies
+    }
+
+    fn fixture_book_setup(book_plan: crate::BookPlan) -> crate::BookSetupArtifact {
+        let character_bibles = book_plan
+            .character_arcs
+            .iter()
+            .map(|arc| crate::CharacterBible {
+                character_id: arc.character_id.clone(),
+                display_name: arc.display_name.clone(),
+                story_function: arc.narrative_role.clone(),
+                external_want: arc.external_want.clone(),
+                private_need: arc.internal_need.clone(),
+                fear_or_shame: format!("害怕{}", arc.pressure),
+                false_belief: "只要不依赖别人就不会付出代价".into(),
+                values: vec!["选择权".into()],
+                public_mask: "把担心藏在不耐烦后面".into(),
+                default_strategy: "先试探，再决定是否合作".into(),
+                pressure_leak: "越着急越会挑对方话里的漏洞".into(),
+                defense_or_humor: "用挤兑躲开软话".into(),
+                voice: crate::CharacterVoiceProfile {
+                    baseline: "短句，先反问再给答案".into(),
+                    with_intimates: "损人但会补一句实际安排".into(),
+                    with_authority: "表面配合，暗中追问边界".into(),
+                    under_pressure: "省略主语，命令和讥讽混在一起".into(),
+                    avoids_saying: vec!["直接承认害怕".into()],
+                },
+                knowledge_boundaries: vec!["不知道幕后契约全貌".into()],
+                non_negotiables: vec![arc.agency.clone()],
+            })
+            .collect();
+        let relationship_bibles = book_plan
+            .relationship_arcs
+            .iter()
+            .map(|arc| crate::RelationshipBible {
+                relationship_id: arc.relationship_id.clone(),
+                participant_ids: arc.participant_ids.clone(),
+                shared_history: arc.initial_state.clone(),
+                current_surface: "嘴上互不相让，行动上暂时合作".into(),
+                hidden_debt: arc.pressure.clone(),
+                power_balance: "线索与行动力分属两人".into(),
+                forbidden_topic: "谁先抛弃过谁".into(),
+                default_pattern: "一个挤兑，一个回避，然后用行动收场".into(),
+                participant_tactics: arc
+                    .participant_ids
+                    .iter()
+                    .map(|id| (id.clone(), "先试探对方会不会承担代价".into()))
+                    .collect(),
+            })
+            .collect();
+        crate::BookSetupArtifact {
+            schema: crate::BOOK_SETUP_SCHEMA.into(),
+            project_id: "BOOK".into(),
+            book_id: "BOOK".into(),
+            book_plan,
+            character_bibles,
+            relationship_bibles,
+            world_seeds: vec![crate::WorldSeed {
+                seed_id: "WORLD-BLOCKADE".into(),
+                topic: "封锁区".into(),
+                rule: "公开通道受追兵监控".into(),
+                narrative_pressure: "角色必须在速度、隐蔽和互信之间取舍".into(),
+                unknowns: vec!["维修井是否已被发现".into()],
+            }],
+            structure: crate::BookStructureSeed {
+                first_volume_title: "封锁区".into(),
+                first_unit_title: "穿过封锁".into(),
+                first_chapter_title: "返身".into(),
+                rolling_outline_chapters: 12,
+                minimum_total_characters: Some(1_000_000),
+                long_form: None,
+            },
+            source_evidence_refs: vec![crate::BookSetupSourceEvidence {
+                source_id: "SOURCE-BRIEF".into(),
+                source_kind: "author_brief".into(),
+                source_uri: "project:briefs/opening.md".into(),
+                source_revision: "commit:0123456789abcdef".into(),
+                content_fingerprint:
+                    "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into(),
+                role: "Primary setup evidence".into(),
+            }],
+            fingerprint: String::new(),
+        }
     }
 
     fn save_release(
@@ -5254,6 +6563,71 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "explicit ultralong metadata durability profile"]
+    fn ultralong_hierarchy_survives_more_than_one_thousand_chapters() {
+        let root = temp_root("ultralong-hierarchy");
+        let manifest = ProjectManifest::new("BOOK", "超长篇", "zh-CN").unwrap();
+        let mut project = NativeProject::create(&root, manifest, "2026-09-01T00:00:00Z").unwrap();
+        for volume_index in 2..=31 {
+            let volume = project
+                .database
+                .create_story_container(
+                    "BOOK",
+                    StoryKind::Volume,
+                    Some("BOOK"),
+                    &format!("第{volume_index}卷"),
+                    &format!("durability-volume-{volume_index}"),
+                    "2026-09-01T00:00:00Z",
+                )
+                .unwrap();
+            for unit_index in 1..=6 {
+                let unit = project
+                    .database
+                    .create_story_container(
+                        "BOOK",
+                        StoryKind::Unit,
+                        Some(&volume.node_id),
+                        &format!("第{volume_index}卷第{unit_index}单元"),
+                        &format!("durability-unit-{volume_index}-{unit_index}"),
+                        "2026-09-01T00:00:00Z",
+                    )
+                    .unwrap();
+                for chapter_index in 1..=6 {
+                    project
+                        .database
+                        .create_chapter(
+                            "BOOK",
+                            Some(&unit.node_id),
+                            &format!("第{volume_index}-{unit_index}-{chapter_index}章"),
+                            &format!(
+                                "durability-chapter-{volume_index}-{unit_index}-{chapter_index}"
+                            ),
+                            "2026-09-01T00:00:00Z",
+                        )
+                        .unwrap();
+                }
+            }
+        }
+        let chapter_count: u32 = project
+            .database
+            .connection()
+            .query_row(
+                "SELECT COUNT(*) FROM story_nodes WHERE kind='chapter'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(chapter_count, 1_081);
+        assert!(project.database.load_story_graph().is_ok());
+        drop(project);
+
+        let reopened = NativeProject::open(&root).unwrap();
+        assert_eq!(reopened.database.load_story_graph().unwrap().len(), 1_294);
+        drop(reopened);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn strict_open_never_repairs_schema_drift() {
         let root = temp_root("drift");
         let directory = guard_directory(&root.join("projects").join("BOOK"), true).unwrap();
@@ -5263,7 +6637,7 @@ mod tests {
             ProjectDatabase::create_reserved(&database, &manifest, "2026-08-31T00:00:00Z").unwrap();
         created
             .connection()
-            .execute("DELETE FROM schema_fragments WHERE version=23", [])
+            .execute("DELETE FROM schema_fragments WHERE version=25", [])
             .unwrap();
         drop(created);
         assert!(ProjectDatabase::open_strict(&database, &manifest).is_err());
@@ -5273,7 +6647,7 @@ mod tests {
                 row.get(0)
             })
             .unwrap();
-        assert_eq!(rows, 23);
+        assert_eq!(rows, 24);
         drop(directory);
         std::fs::remove_dir_all(root).unwrap();
     }
@@ -5312,7 +6686,7 @@ mod tests {
                         constraint_lock: crate::ChapterConstraintLock {
                             length: crate::LengthBand {
                                 min: 2800,
-                                max: 3800,
+                                max: Some(3800),
                                 unit: crate::LengthUnit::ChineseCharacters,
                             },
                             must_happen: vec![crate::ConstraintClause {
@@ -5563,6 +6937,7 @@ mod tests {
         let writer_pack = crate::WriterPack::freeze(
             "CH001",
             plan_lock,
+            format!("sha256:{}", "5".repeat(64)),
             format!("sha256:{}", "3".repeat(64)),
             &tracking_fingerprint,
             "chapter pull",
@@ -5658,6 +7033,9 @@ mod tests {
         store
             .mark_stage_unconfirmed(&unknown_call, "transport_unknown", "T5")
             .unwrap();
+        store
+            .mark_stage_unconfirmed(&unknown_call, "transport_unknown", "T5")
+            .unwrap();
         assert_eq!(
             store
                 .cancel_production("RUN1", 0, "cancel-run-1", "T6")
@@ -5678,6 +7056,331 @@ mod tests {
         assert_eq!(calls[0].result.as_ref().unwrap().usage.cost_micros, None);
         assert_eq!(calls[1].state, crate::StageCallState::Cancelled);
         drop(reopened);
+        drop(directory);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn revision_request_atomically_captures_reusable_learning_evidence() {
+        let root = temp_root("revision-learning-intake");
+        let directory = guard_directory(&root.join("projects").join("BOOK"), true).unwrap();
+        let database = directory.path().join("project.sqlite");
+        let manifest = ProjectManifest::new("BOOK", "Long Book", "zh-CN").unwrap();
+        let mut store = ProjectDatabase::create_reserved(&database, &manifest, "T0").unwrap();
+        let manuscript = "候选正文";
+        let candidate_fingerprint = crate::fingerprint::sha256_fingerprint(manuscript.as_bytes());
+        let writer_pack_fingerprint = format!("sha256:{}", "a".repeat(64));
+        let lineage = crate::CandidateArtifact {
+            schema: "quillframe_candidate_artifact_v1".into(),
+            candidate_id: "C1".into(),
+            chapter_id: "CH001".into(),
+            writer_pack_fingerprint,
+            parent_candidate_fingerprint: None,
+            revision: 1,
+            manuscript: manuscript.into(),
+            fingerprint: candidate_fingerprint.clone(),
+        };
+        lineage.validate().unwrap();
+        store.connection.execute(
+            "INSERT INTO runs(run_id,task_mode,target_ref,status,request_fingerprint,created_at,updated_at) \
+             VALUES('RUN1','DRAFT','DOC-CH001','review',?1,'T1','T1')",
+            [format!("sha256:{}", "b".repeat(64))],
+        ).unwrap();
+        store.connection.execute(
+            "INSERT INTO document_revisions(revision_id,document_id,content,content_fingerprint,created_at,source,authority_class) \
+             VALUES('REV1','DOC-CH001',?1,?2,'T1','writer','review')",
+            params![manuscript,candidate_fingerprint],
+        ).unwrap();
+        store.connection.execute(
+            "INSERT INTO candidates(candidate_id,document_id,revision_id,run_id,task_mode,candidate_kind,status,content_fingerprint,user_visible_gate,created_at) \
+             VALUES('C1','DOC-CH001','REV1','RUN1','DRAFT','draft','review_draft',?1,'PASS','T1')",
+            [&candidate_fingerprint],
+        ).unwrap();
+        store
+            .connection
+            .execute(
+                "INSERT INTO candidate_lineage(candidate_id,lineage_json) VALUES('C1',?1)",
+                [serde_json::to_string(&lineage).unwrap()],
+            )
+            .unwrap();
+
+        let request = crate::RevisionRequest::create(
+            "C1",
+            &candidate_fingerprint,
+            "author:local",
+            "对白允许关系性闲话、打岔和答非所问，不要句句解释设定。",
+            "revise-c1",
+            "T2",
+        )
+        .unwrap();
+        let first = store.request_candidate_revision(&request).unwrap();
+        assert!(!first.3);
+        assert_eq!(first.2, format!("feedback-revision-{}", first.0));
+        for (table, expected) in [
+            ("candidate_revision_requests", 1_u32),
+            ("checkpoints", 1),
+            ("learning_feedback_events", 1),
+            ("learning_evidence", 1),
+        ] {
+            let count: u32 = store
+                .connection
+                .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| {
+                    row.get(0)
+                })
+                .unwrap();
+            assert_eq!(count, expected, "unexpected {table} count");
+        }
+        let (feedback_text, source_type, source_id, state): (String, String, String, String) = store
+            .connection
+            .query_row(
+                "SELECT f.feedback_text,f.source_type,f.source_id,e.state FROM learning_feedback_events f \
+                 JOIN learning_evidence e ON e.evidence_id='learning-evidence-'||f.event_id WHERE f.event_id=?1",
+                [&first.2],
+                |row| Ok((row.get(0)?,row.get(1)?,row.get(2)?,row.get(3)?)),
+            )
+            .unwrap();
+        assert_eq!(feedback_text, request.reason);
+        assert_eq!(source_type, "candidate_revision_request");
+        assert_eq!(source_id, first.0);
+        assert_eq!(state, "awaiting_semantic");
+
+        let replay = crate::RevisionRequest::create(
+            "C1",
+            &candidate_fingerprint,
+            "author:local",
+            &request.reason,
+            "revise-c1",
+            "T3",
+        )
+        .unwrap();
+        let replayed = store.request_candidate_revision(&replay).unwrap();
+        assert_eq!(replayed.0, first.0);
+        assert_eq!(replayed.2, first.2);
+        assert!(replayed.3);
+        let feedback_count: u32 = store
+            .connection
+            .query_row("SELECT COUNT(*) FROM learning_feedback_events", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(feedback_count, 1);
+
+        let conflicting = crate::RevisionRequest::create(
+            "C1",
+            &candidate_fingerprint,
+            "author:local",
+            "换成另一条要求",
+            "revise-c1",
+            "T4",
+        )
+        .unwrap();
+        assert!(store.request_candidate_revision(&conflicting).is_err());
+        drop(store);
+        drop(directory);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn failed_gate_from_author_requested_revision_preserves_revision_lineage() {
+        let root = temp_root("author-revision-failed-gate");
+        let directory = guard_directory(&root.join("projects").join("BOOK"), true).unwrap();
+        let database = directory.path().join("project.sqlite");
+        let manifest = ProjectManifest::new("BOOK", "Long Book", "zh-CN").unwrap();
+        let mut store = ProjectDatabase::create_reserved(&database, &manifest, "T0").unwrap();
+        let candidate_fingerprint = format!("sha256:{}", "7".repeat(64));
+        let stage_fingerprint = format!("sha256:{}", "8".repeat(64));
+        let checkpoint_id = "CHECKPOINT-AUTHOR-REVISION";
+        store.connection.execute(
+            "INSERT INTO runs(run_id,task_mode,target_ref,status,request_fingerprint,created_at,updated_at) \
+             VALUES('RUN-SOURCE','DRAFT','DOC-CH001','review',?1,'T1','T1')",
+            [format!("sha256:{}", "1".repeat(64))],
+        ).unwrap();
+        store.connection.execute(
+            "INSERT INTO checkpoints(checkpoint_id,run_id,checkpoint_kind,state_json,artifact_fingerprint,created_at) \
+             VALUES(?1,'RUN-SOURCE','author_revision_repair_source',?2,?3,'T2')",
+            params![
+                checkpoint_id,
+                serde_json::to_string(&serde_json::json!({"revision":4})).unwrap(),
+                candidate_fingerprint
+            ],
+        ).unwrap();
+        let production = crate::ProductionRequest::freeze(
+            "RUN-REVISE",
+            crate::ProductionTaskMode::Revise,
+            "DOC-CH001",
+            crate::ProductionIntent {
+                instruction: "revise the released candidate".into(),
+                reader_grip: "high".into(),
+                author_profile: "balanced".into(),
+                rule_material: vec![crate::BoundRuleMaterial {
+                    id: "request".into(),
+                    authority: "current_request".into(),
+                    statement: "revise the released candidate".into(),
+                }],
+                selected_preference_ids: vec![],
+                repair_source: Some(crate::RepairBinding {
+                    source_run_id: "RUN-SOURCE".into(),
+                    source_checkpoint_id: checkpoint_id.into(),
+                    expected_candidate_fingerprint: candidate_fingerprint.clone(),
+                }),
+            },
+            format!("sha256:{}", "2".repeat(64)),
+            format!("sha256:{}", "3".repeat(64)),
+            "role_capability_route",
+            None,
+        )
+        .unwrap();
+        let production_json = serde_json::to_string(&production).unwrap();
+        store.connection.execute(
+            "INSERT INTO runs(run_id,task_mode,target_ref,status,request_fingerprint,created_at,updated_at) \
+             VALUES(?1,'REVISE','DOC-CH001','executing',?2,'T3','T3')",
+            params![production.run_id, production.fingerprint],
+        ).unwrap();
+        store.connection.execute(
+            "INSERT INTO production_executions(run_id,request_fingerprint,request_json,created_at,updated_at) \
+             VALUES(?1,?2,?3,'T3','T3')",
+            params![production.run_id, production.fingerprint, production_json],
+        ).unwrap();
+
+        let failed_checkpoint = store
+            .record_failed_gate(
+                &production.run_id,
+                &candidate_fingerprint,
+                "continuity_rule_audit",
+                &stage_fingerprint,
+                "T4",
+            )
+            .unwrap();
+        let (kind, state): (String, String) = store
+            .connection
+            .query_row(
+                "SELECT checkpoint_kind,state_json FROM checkpoints WHERE checkpoint_id=?1",
+                [failed_checkpoint],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(kind, "failed_candidate_repair_source");
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&state).unwrap()["revision"],
+            5
+        );
+        let status: String = store
+            .connection
+            .query_row(
+                "SELECT status FROM runs WHERE run_id=?1",
+                [&production.run_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(status, "failed_gate");
+        drop(store);
+        drop(directory);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn repair_lineage_walks_multiple_failed_bounded_sources() {
+        let root = temp_root("repair-lineage");
+        let directory = guard_directory(&root.join("projects").join("BOOK"), true).unwrap();
+        let database = directory.path().join("project.sqlite");
+        let manifest = ProjectManifest::new("BOOK", "Long Book", "zh-CN").unwrap();
+        let store = ProjectDatabase::create_reserved(&database, &manifest, "T0").unwrap();
+        let candidate_a = format!("sha256:{}", "a".repeat(64));
+        let candidate_b = format!("sha256:{}", "b".repeat(64));
+        let writer_pack = format!("sha256:{}", "c".repeat(64));
+        let framework = format!("sha256:{}", "d".repeat(64));
+        let intent = |repair_source| crate::ProductionIntent {
+            instruction: "repair exact candidate".into(),
+            reader_grip: "high".into(),
+            author_profile: "balanced".into(),
+            rule_material: vec![crate::BoundRuleMaterial {
+                id: "request".into(),
+                authority: "current_request".into(),
+                statement: "repair exact candidate".into(),
+            }],
+            selected_preference_ids: vec![],
+            repair_source,
+        };
+        let base = crate::ProductionRequest::freeze(
+            "RUN-BASE",
+            crate::ProductionTaskMode::Draft,
+            "DOC-CH001",
+            intent(None),
+            &writer_pack,
+            &framework,
+            "role_capability_route",
+            None,
+        )
+        .unwrap();
+        let middle = crate::ProductionRequest::freeze(
+            "RUN-MIDDLE",
+            crate::ProductionTaskMode::Revise,
+            "DOC-CH001",
+            intent(Some(crate::RepairBinding {
+                source_run_id: base.run_id.clone(),
+                source_checkpoint_id: "CHECKPOINT-BASE".into(),
+                expected_candidate_fingerprint: candidate_a.clone(),
+            })),
+            &writer_pack,
+            &framework,
+            "role_capability_route",
+            None,
+        )
+        .unwrap();
+        let current = crate::ProductionRequest::freeze(
+            "RUN-CURRENT",
+            crate::ProductionTaskMode::Revise,
+            "DOC-CH001",
+            intent(Some(crate::RepairBinding {
+                source_run_id: middle.run_id.clone(),
+                source_checkpoint_id: "CHECKPOINT-MIDDLE".into(),
+                expected_candidate_fingerprint: candidate_b.clone(),
+            })),
+            &writer_pack,
+            &framework,
+            "role_capability_route",
+            None,
+        )
+        .unwrap();
+        for (request, status) in [
+            (&base, "failed_gate"),
+            (&middle, "failed_gate"),
+            (&current, "executing"),
+        ] {
+            store.connection.execute(
+                "INSERT INTO runs(run_id,task_mode,target_ref,status,request_fingerprint,created_at,updated_at) \
+                 VALUES(?1,?2,'DOC-CH001',?3,?4,'T1','T1')",
+                params![
+                    request.run_id,
+                    match request.task_mode {
+                        crate::ProductionTaskMode::Draft => "DRAFT",
+                        crate::ProductionTaskMode::Revise => "REVISE",
+                    },
+                    status,
+                    request.fingerprint
+                ],
+            ).unwrap();
+            store.connection.execute(
+                "INSERT INTO production_executions(run_id,request_fingerprint,request_json,created_at,updated_at) \
+                 VALUES(?1,?2,?3,'T1','T1')",
+                params![request.run_id,request.fingerprint,serde_json::to_string(request).unwrap()],
+            ).unwrap();
+        }
+        for (checkpoint_id, run_id, candidate, revision) in [
+            ("CHECKPOINT-BASE", "RUN-BASE", &candidate_a, 1),
+            ("CHECKPOINT-MIDDLE", "RUN-MIDDLE", &candidate_b, 2),
+        ] {
+            store.connection.execute(
+                "INSERT INTO checkpoints(checkpoint_id,run_id,checkpoint_kind,state_json,artifact_fingerprint,created_at) \
+                 VALUES(?1,?2,'failed_candidate_repair_source',?3,?4,'T2')",
+                params![checkpoint_id,run_id,serde_json::json!({"revision":revision}).to_string(),candidate],
+            ).unwrap();
+        }
+        assert_eq!(
+            store.validated_repair_lineage_run_ids(&current).unwrap(),
+            vec!["RUN-MIDDLE".to_string(), "RUN-BASE".to_string()]
+        );
+        drop(store);
         drop(directory);
         std::fs::remove_dir_all(root).unwrap();
     }

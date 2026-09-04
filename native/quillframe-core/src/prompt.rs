@@ -3,7 +3,7 @@ use serde_json::{json, Map, Value};
 
 use crate::{fingerprint::sha256_fingerprint, CoreError, CoreResult};
 
-const GLOBAL_FICTION_FOUNDATION: &str = "Quillframe prompt foundation: obey only the frozen project material supplied for this call; never invent canon or claim authority; stay inside the named stage; never reveal private chain-of-thought; return only the requested artifact in the requested language and format.";
+const GLOBAL_FICTION_FOUNDATION: &str = "Quillframe prompt foundation: obey only the frozen project material supplied for this call; never invent canon or claim authority; stay inside the named stage; never reveal private chain-of-thought; return only the requested artifact in the requested language and format. Chapter-length policy has a hard minimum only and no prose-length maximum: never reject, compress, or rewrite a manuscript for exceeding a legacy maximum or target band.";
 
 const SURFACE_NATURALNESS: &str = "Chinese web-novel prose guidance: preserve every approved plot function and causal anchor, but realize them through character choices, observable action, consequence, embodied dialogue, spatial continuity, and scene-specific reactions. Let sentence rhythm follow the dramatic beat and retain natural connective tissue. Do not add omniscient explanation, redundant stacks of action/feeling/body description, formulaic symmetry, thematic uplift, or a summary ending. Do not optimize mechanical sentence-length, dialogue-ratio, banned-word, or detector targets. End on live action, dialogue, discovery, or unresolved consequence when the frozen plan calls for chapter pull.";
 
@@ -42,6 +42,7 @@ impl PromptAssembly {
             Value::Object(value) => value,
             other => Map::from_iter([("input".into(), other)]),
         };
+        strip_legacy_length_upper_bounds(&mut context);
         let author_direction = context.remove("instruction");
         let final_contract = context.remove("contract").ok_or_else(|| {
             CoreError::InvalidProject(format!(
@@ -117,12 +118,42 @@ impl PromptAssembly {
     }
 }
 
+fn strip_legacy_length_upper_bounds(context: &mut Map<String, Value>) {
+    fn scrub(map: &mut Map<String, Value>) {
+        if let Some(Value::Object(constraint_lock)) = map.get_mut("constraint_lock") {
+            if let Some(Value::Object(length)) = constraint_lock.get_mut("length") {
+                length.remove("max");
+            }
+        }
+        if let Some(Value::Object(scene_budget)) = map.get_mut("scene_length_budget") {
+            scene_budget.remove("target_max");
+        }
+        for child in map.values_mut() {
+            visit(child);
+        }
+    }
+
+    fn visit(value: &mut Value) {
+        match value {
+            Value::Object(map) => scrub(map),
+            Value::Array(values) => {
+                for child in values {
+                    visit(child);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    scrub(context);
+}
+
 fn stage_guidance(stage_key: &str) -> Option<&'static str> {
     if stage_key.starts_with("surface_scene_") {
         return Some(SURFACE_NATURALNESS);
     }
     match stage_key {
-        "surface_realization" => Some(SURFACE_NATURALNESS),
+        "surface_realization" | "bounded_repair_surface" => Some(SURFACE_NATURALNESS),
         "candidate_self_audit" | "independent_semantic_gate" => Some(PROSE_REVIEW_GUIDANCE),
         "repair_editor" | "repair_comparison" => Some(REPAIR_GUIDANCE),
         "character_simulation" | "scene_resolution" => Some(CAUSAL_GUIDANCE),
@@ -166,12 +197,55 @@ mod tests {
         )
         .unwrap();
         assert!(writer.system_text().contains("embodied dialogue"));
+        assert!(writer.system_text().contains("hard minimum only"));
         assert_eq!(writer.blocks.last().unwrap().id, "final_output_contract");
         assert_eq!(
             writer.blocks[writer.blocks.len() - 2].id,
             "current_author_direction"
         );
         assert!(writer.user_text().unwrap().contains("writer_pack"));
+
+        let repair_writer = PromptAssembly::build(
+            "bounded_repair_surface",
+            "bounded repair Surface Writer",
+            json!({"repair_spec":{"id":"repair"},"contract":"JSON patch windows"}),
+        )
+        .unwrap();
+        assert!(repair_writer.system_text().contains("embodied dialogue"));
+
+        let legacy_length = PromptAssembly::build(
+            "surface_scene_0001_SC001",
+            "Surface Writer",
+            json!({
+                "chapter_plan":{"contract":{"constraint_lock":{"length":{
+                    "min":3200,"max":4200,"unit":"chinese_characters"
+                }}}},
+                "scene_length_budget":{"target_min":1600,"target_max":2100,"unit":"chinese_characters"},
+                "world_fact":{"length":{"min":2,"max":7,"unit":"meters"}},
+                "contract":"JSON manuscript"
+            }),
+        )
+        .unwrap();
+        let frozen_context = &legacy_length
+            .blocks
+            .iter()
+            .find(|block| block.id == "frozen_dynamic_context")
+            .unwrap()
+            .content;
+        assert_eq!(
+            frozen_context.pointer("/scene_length_budget/target_min"),
+            Some(&json!(1600))
+        );
+        assert!(frozen_context
+            .pointer("/scene_length_budget/target_max")
+            .is_none());
+        assert!(frozen_context
+            .pointer("/chapter_plan/contract/constraint_lock/length/max")
+            .is_none());
+        assert_eq!(
+            frozen_context.pointer("/world_fact/length/max"),
+            Some(&json!(7))
+        );
 
         let analyzer = PromptAssembly::build(
             "corpus_story_entities",

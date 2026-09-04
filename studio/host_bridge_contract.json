@@ -154,6 +154,42 @@
         "local_app"
       ]
     },
+    "book.setup.inspect": {
+      "kind": "query",
+      "required_args": [
+        "project_id"
+      ]
+    },
+    "book.setup.propose": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "expected_version",
+        "typed_setup",
+        "idempotency_key"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "book.setup.approve": {
+      "kind": "authority_command",
+      "required_args": [
+        "project_id",
+        "setup_id",
+        "expected_version",
+        "authorized_by",
+        "idempotency_key",
+        "user_authorized"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
     "document.create": {
       "kind": "command",
       "required_args": [
@@ -486,6 +522,7 @@
         "acceptance_id",
         "target_ref",
         "expected_before_fingerprint",
+        "expected_preflight_fingerprint",
         "idempotency_key",
         "user_authorized"
       ],
@@ -493,9 +530,6 @@
         "cli",
         "local_app",
         "hosted_web"
-      ],
-      "optional_args": [
-        "expected_preflight_fingerprint"
       ]
     },
     "feedback.observe": {
@@ -928,6 +962,34 @@
         "hypothesis_id",
         "expected_version",
         "reason"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "volume.create": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "title",
+        "idempotency_key",
+        "user_authorized"
+      ],
+      "allowed_surfaces": [
+        "cli",
+        "local_app",
+        "hosted_web"
+      ]
+    },
+    "unit.create": {
+      "kind": "command",
+      "required_args": [
+        "project_id",
+        "title",
+        "idempotency_key",
+        "user_authorized"
       ],
       "allowed_surfaces": [
         "cli",

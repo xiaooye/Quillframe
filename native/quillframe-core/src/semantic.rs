@@ -3,7 +3,10 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{CoreError, CoreResult, FindingCategory, ReviewFinding, SceneWritingBrief, Severity};
+use crate::{
+    fingerprint::sha256_fingerprint, CoreError, CoreResult, FindingCategory, ReviewFinding,
+    SceneWritingBrief, Severity,
+};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -34,6 +37,17 @@ pub struct ResolvedScene {
 #[serde(deny_unknown_fields)]
 pub struct SceneResolution {
     pub scenes: Vec<ResolvedScene>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct DirectorNote {
+    pub schema: String,
+    pub chapter_id: String,
+    pub scene: ResolvedScene,
+    pub source_receipts: BTreeMap<String, String>,
+    pub private_reasoning_exposed: bool,
+    pub fingerprint: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -241,18 +255,20 @@ impl CharacterSimulation {
 impl SceneResolution {
     pub fn validate(&self) -> CoreResult<()> {
         if self.scenes.is_empty()
+            || self.scenes.len() > 64
             || self.scenes.iter().any(|scene| {
-                scene.scene_id.trim().is_empty()
+                !valid_director_text(&scene.scene_id, 256)
                     || scene.action_sequence.is_empty()
+                    || scene.action_sequence.len() > 32
                     || scene
                         .action_sequence
                         .iter()
-                        .any(|action| action.trim().is_empty())
-                    || scene.turn.trim().is_empty()
-                    || scene.exit_state.trim().is_empty()
+                        .any(|action| !valid_director_text(action, 2_048))
+                    || !valid_director_text(&scene.turn, 2_048)
+                    || !valid_director_text(&scene.exit_state, 2_048)
             })
         {
-            return Err(invalid("scene resolution is incomplete"));
+            return Err(invalid("scene resolution is incomplete or unsafe"));
         }
         Ok(())
     }
@@ -274,6 +290,66 @@ impl SceneResolution {
             ));
         }
         Ok(())
+    }
+}
+
+impl DirectorNote {
+    pub fn freeze(
+        chapter_id: impl Into<String>,
+        scene: ResolvedScene,
+        source_receipts: BTreeMap<String, String>,
+    ) -> CoreResult<Self> {
+        let mut value = Self {
+            schema: "quillframe_director_note_v1".into(),
+            chapter_id: chapter_id.into(),
+            scene,
+            source_receipts,
+            private_reasoning_exposed: false,
+            fingerprint: String::new(),
+        };
+        value.validate_fields()?;
+        value.fingerprint = value.expected_fingerprint()?;
+        Ok(value)
+    }
+
+    pub fn validate(&self) -> CoreResult<()> {
+        self.validate_fields()?;
+        if self.fingerprint != self.expected_fingerprint()? {
+            return Err(invalid("director note fingerprint changed"));
+        }
+        Ok(())
+    }
+
+    fn validate_fields(&self) -> CoreResult<()> {
+        let resolution = SceneResolution {
+            scenes: vec![self.scene.clone()],
+        };
+        resolution.validate()?;
+        if self.schema != "quillframe_director_note_v1"
+            || !valid_director_text(&self.chapter_id, 256)
+            || self.private_reasoning_exposed
+            || self.source_receipts.len() != 2
+            || !self.source_receipts.contains_key("character_simulation")
+            || !self.source_receipts.contains_key("scene_resolution")
+            || self.source_receipts.values().any(|value| {
+                value.len() != 71
+                    || !value.starts_with("sha256:")
+                    || !value[7..].bytes().all(|byte| byte.is_ascii_hexdigit())
+            })
+        {
+            return Err(invalid(
+                "director note is incomplete or exposes private reasoning",
+            ));
+        }
+        Ok(())
+    }
+
+    fn expected_fingerprint(&self) -> CoreResult<String> {
+        let mut projection = self.clone();
+        projection.fingerprint.clear();
+        serde_json::to_vec(&projection)
+            .map(sha256_fingerprint)
+            .map_err(|error| CoreError::Serialization(error.to_string()))
     }
 }
 
@@ -440,6 +516,16 @@ impl RepairSpec {
 
     pub fn validate_against_source(&self, source: &str) -> CoreResult<()> {
         self.validate()?;
+        if self.generation_mode == RepairGenerationMode::FreshRealization {
+            if self
+                .targets
+                .iter()
+                .any(|target| !source.contains(&target.source_excerpt))
+            {
+                return Err(invalid("repair target excerpt is absent"));
+            }
+            return Ok(());
+        }
         let mut cursor = 0usize;
         for target in &self.targets {
             let relative = source[cursor..]
@@ -546,6 +632,117 @@ impl SemanticGate {
     }
 }
 
+fn valid_director_text(value: &str, maximum_bytes: usize) -> bool {
+    let trimmed = value.trim();
+    if trimmed.is_empty() || value.len() > maximum_bytes {
+        return false;
+    }
+    let lower = value.to_ascii_lowercase();
+    !["<think", "</think", "<analysis", "</analysis"]
+        .iter()
+        .any(|marker| lower.contains(marker))
+}
+
 fn invalid(message: &str) -> CoreError {
     CoreError::InvalidProject(message.into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn repair_spec(mode: RepairGenerationMode, excerpts: &[&str]) -> RepairSpec {
+        RepairSpec {
+            repair_owner: "prose_writer".into(),
+            generation_mode: mode,
+            objective_envelope: "repair the requested prose defect".into(),
+            targets: excerpts
+                .iter()
+                .enumerate()
+                .map(|(index, excerpt)| RepairTarget {
+                    location: format!("target-{index}"),
+                    source_excerpt: (*excerpt).into(),
+                    fix: "improve the prose".into(),
+                    preserve: vec!["story facts".into()],
+                })
+                .collect(),
+            invalidation_boundary: vec!["story facts".into()],
+            comparison_required: true,
+        }
+    }
+
+    #[test]
+    fn director_note_binds_structured_scene_and_private_receipts() {
+        let scene = ResolvedScene {
+            scene_id: "SC001".into(),
+            action_sequence: vec!["陈承先查空衣架，再问最后经手的人".into()],
+            turn: "父亲指出他漏算了熟客临时改号".into(),
+            exit_state: "父子合并线索，锁定四十二号去向".into(),
+        };
+        let receipts = BTreeMap::from([
+            (
+                "character_simulation".into(),
+                format!("sha256:{}", "1".repeat(64)),
+            ),
+            (
+                "scene_resolution".into(),
+                format!("sha256:{}", "2".repeat(64)),
+            ),
+        ]);
+
+        let note = DirectorNote::freeze("CH002", scene, receipts).unwrap();
+
+        note.validate().unwrap();
+        assert!(!note.private_reasoning_exposed);
+        assert!(note.fingerprint.starts_with("sha256:"));
+    }
+
+    #[test]
+    fn director_artifacts_reject_private_reasoning_wrappers() {
+        let resolution = SceneResolution {
+            scenes: vec![ResolvedScene {
+                scene_id: "SC001".into(),
+                action_sequence: vec!["<think>hidden deliberation</think>".into()],
+                turn: "turn".into(),
+                exit_state: "exit".into(),
+            }],
+        };
+
+        assert!(resolution.validate().is_err());
+    }
+
+    #[test]
+    fn fresh_realization_accepts_grounded_targets_in_diagnostic_order() {
+        let spec = repair_spec(
+            RepairGenerationMode::FreshRealization,
+            &["later excerpt", "earlier excerpt"],
+        );
+
+        spec.validate_against_source("earlier excerpt then later excerpt")
+            .unwrap();
+    }
+
+    #[test]
+    fn fresh_realization_rejects_an_ungrounded_target() {
+        let spec = repair_spec(
+            RepairGenerationMode::FreshRealization,
+            &["present excerpt", "missing excerpt"],
+        );
+
+        assert!(spec
+            .validate_against_source("present excerpt only")
+            .is_err());
+    }
+
+    #[test]
+    fn bounded_repair_still_requires_source_order() {
+        let spec = repair_spec(
+            RepairGenerationMode::LocalOrBoundedRepair,
+            &["later excerpt", "earlier excerpt"],
+        );
+
+        assert!(spec
+            .validate_against_source("earlier excerpt then later excerpt")
+            .is_err());
+    }
 }

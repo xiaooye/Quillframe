@@ -1,9 +1,18 @@
 {
   "schema": "quillframe_model_contract_catalog_v1",
-  "version": "20",
+  "version": "21",
   "loading_policy": "progressive_disclosure",
   "principle": "Keep the catalog small. The manager/model chooses the smallest relevant semantic capability from metadata; deterministic runtime resolves an exact contract id to exactly one pack and enforces execution boundaries without keyword-routing literary meaning.",
   "packs": [
+    {
+      "id": "book-setup",
+      "path": "contracts/book-setup.json",
+      "description": "Proposal-only initial book design: story foundation, character and relationship engines, fixed full-book ending, complete volume spines, cross-volume arcs and climaxes, sparse world seeds, rolling chapter seed and typed ultralong capacity architecture.",
+      "contracts": [
+        "book.setup_design"
+      ],
+      "load_when": "A new project needs its author-approved preproduction foundation before volume, unit, chapter or manuscript production."
+    },
     {
       "id": "quality",
       "path": "contracts/quality.json",

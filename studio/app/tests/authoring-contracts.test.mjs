@@ -253,7 +253,7 @@ test("Review validates a direct acceptance receipt and the exact preflight befor
 test("Review treats a bound incomplete settlement as an unsuccessful attempt, never a recovered success", () => {
   const review = reviewFixture();
   const acceptance = acceptanceFixture(review);
-  const incomplete = { schema: "quillframe_settlement_result_v1", settlement_id: "settle_incomplete", status: "settlement_incomplete", target_ref: "chapter:CH001", expected_before_fingerprint: "absent", actual_before_fingerprint: `sha256:${"d".repeat(64)}`, canon_mutated: false };
+  const incomplete = { schema: "quillframe_settlement_result_v1", settlement_id: null, status: "settlement_incomplete", target_ref: "chapter:CH001", expected_before_fingerprint: "absent", actual_before_fingerprint: `sha256:${"d".repeat(64)}`, canon_mutated: false };
   assert.deepEqual(contracts.parseReviewSettlementResult(incomplete, review, acceptance, "chapter:CH001", "absent"), incomplete);
   assert.throws(() => contracts.parseReviewSettlementResult(incomplete, review, acceptance, "chapter:CH001"), /review_settlement/);
   assert.throws(() => contracts.parseReviewSettlementResult({ ...incomplete, canon_mutated: true }, review, acceptance, "chapter:CH001", "absent"), /review_settlement/);

@@ -25,6 +25,7 @@ pub mod publication;
 pub mod review;
 pub mod schema;
 pub mod semantic;
+pub mod setup;
 pub mod store;
 pub mod story;
 pub mod tracking;
@@ -85,10 +86,19 @@ pub use review::{
 pub use schema::{apply_fresh_project_schema, validate_current_project_schema};
 pub use semantic::{
     ChapterTrackingProposal, CharacterAction, CharacterKnowledgeDelta, CharacterSimulation,
-    ExpectationDeltaAction, NarrativeEntityDelta, NarrativeEntityKind, ReaderExpectationDelta,
-    RelationshipStateDelta, RepairComparison, RepairComparisonOutcome, RepairGenerationMode,
-    RepairSpec, RepairTarget, ResolvedScene, SceneResolution, SemanticFinding, SemanticGate,
-    SemanticGateDecision, SurfaceRealization, TimelineEventDelta,
+    DirectorNote, ExpectationDeltaAction, NarrativeEntityDelta, NarrativeEntityKind,
+    ReaderExpectationDelta, RelationshipStateDelta, RepairComparison, RepairComparisonOutcome,
+    RepairGenerationMode, RepairSpec, RepairTarget, ResolvedScene, SceneResolution,
+    SemanticFinding, SemanticGate, SemanticGateDecision, SurfaceRealization, TimelineEventDelta,
+};
+pub use setup::{
+    ArcMilestoneSeed, BookSetupApprovalReceipt, BookSetupArtifact, BookSetupProposalReceipt,
+    BookSetupSimulationProjection, BookSetupSourceEvidence, BookStructureSeed, CastEvolutionPolicy,
+    CharacterBible, CharacterCharmArcSeed, CharacterCharmBeatSeed, CharacterVoiceProfile,
+    ClimaxSeed, FixedEndingSeed, LongFormArchitecture, MacroCanonPolicy, MacroPartSeed,
+    NarrativeArcKind, NarrativeArcSeed, ProgressionLadderSeed, RelationshipBible,
+    RollingOutlinePolicy, SelectiveContextPolicy, VolumeBlueprintSeed, VolumeTurnSeed, WorldSeed,
+    BOOK_SETUP_SCHEMA,
 };
 pub use store::{NativeProject, ProjectDatabase};
 pub use story::{StoryGraph, StoryKind, StoryNode};

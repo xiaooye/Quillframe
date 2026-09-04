@@ -41,6 +41,7 @@ pub struct WriterPack {
     pub chapter_id: String,
     pub plan_lock: HierarchicalPlanLock,
     pub active_plan_fingerprint: String,
+    pub book_setup_fingerprint: String,
     pub context_freeze_fingerprint: String,
     pub tracking_fingerprint: String,
     pub reader_pressure: String,
@@ -56,6 +57,7 @@ impl WriterPack {
     pub fn freeze(
         chapter_id: impl Into<String>,
         plan_lock: HierarchicalPlanLock,
+        book_setup_fingerprint: impl Into<String>,
         context_freeze_fingerprint: impl Into<String>,
         tracking_fingerprint: impl Into<String>,
         reader_pressure: impl Into<String>,
@@ -137,10 +139,11 @@ impl WriterPack {
             .map(|layer| layer.proposal_fingerprint.clone())
             .ok_or_else(|| CoreError::InvalidPlan("Writer Pack plan lock is empty".into()))?;
         let mut value = Self {
-            schema: "quillframe_writer_pack_v4".into(),
+            schema: "quillframe_writer_pack_v5".into(),
             chapter_id,
             plan_lock,
             active_plan_fingerprint,
+            book_setup_fingerprint: book_setup_fingerprint.into(),
             context_freeze_fingerprint: context_freeze_fingerprint.into(),
             tracking_fingerprint: tracking_fingerprint.into(),
             reader_pressure: reader_pressure.into(),
@@ -152,6 +155,7 @@ impl WriterPack {
         };
         for fingerprint in [
             &value.active_plan_fingerprint,
+            &value.book_setup_fingerprint,
             &value.context_freeze_fingerprint,
             &value.tracking_fingerprint,
         ] {
@@ -217,9 +221,10 @@ impl WriterPack {
                 reader_effect: scene.reader_effect.clone(),
             })
             .collect::<Vec<_>>();
-        if self.schema != "quillframe_writer_pack_v4"
+        if self.schema != "quillframe_writer_pack_v5"
             || chapter_layer.target.node_id != self.chapter_id
             || chapter_layer.proposal_fingerprint != self.active_plan_fingerprint
+            || require_fingerprint(&self.book_setup_fingerprint).is_err()
             || self.scenes != planned_scenes
             || !self.private_state_absent
             || self.fingerprint != self.compute_fingerprint()?
@@ -676,6 +681,7 @@ mod tests {
         WriterPack::freeze(
             "CH001",
             crate::planning::fixture_hierarchical_plan_lock(),
+            fp(),
             fp(),
             fp(),
             "读者需要看到主角主动选择并承担代价",

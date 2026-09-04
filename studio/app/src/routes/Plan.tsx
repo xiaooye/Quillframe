@@ -10,7 +10,7 @@ import { parsePlanInspection, parsePlanSave, type PlanItem, type ReaderIntent } 
 const planTemplate = (target: string) => target === "book"
   ? JSON.stringify({
     foundation: { target_readers: "", genre_promise: "", core_emotion: "", progression_fantasy: "", payoff_cadence: "", premise: "", intended_end_state: "", differentiators: [], non_negotiables: [] },
-    character_arcs: [], relationship_arcs: [], reader_promise: "", protagonist_agency: "", central_conflict: "", progression: [], endgame_reserve: [], anti_exhaustion_limits: [],
+    character_arcs: [], relationship_arcs: [], reader_promise: "", protagonist_agency: "", central_conflict: "", progression: [], fixed_ending_outcomes: [], anti_exhaustion_limits: [],
   }, null, 2)
   : JSON.stringify({
     chapter_function: "", viewpoint: "", entry_state: "", intended_exit_state: "",
@@ -137,7 +137,7 @@ export default function Plan() {
             <label class="nf-field-label"><span>{zh() ? "计划范围" : "Plan target"}</span><select class="wui-input" value={target()} disabled={saving()} onChange={(event) => { chooseTarget(event.currentTarget.value); event.currentTarget.value = target(); }}><option value="book">{zh() ? "全书" : "Whole novel"}</option><For each={studio.chapters()}>{(chapter) => <option value={`chapter:${chapter.chapter_id}`}>{chapter.title} · {chapter.chapter_id}</option>}</For></select></label>
             <h2>{target() === "book" ? (zh() ? "这本书的阅读乐趣" : "The pleasure this novel promises") : (zh() ? "这一章的阅读任务" : "This chapter's reader promise")}</h2>
             <Show when={target() === "book"} fallback={<ul class="qf-craft-prompts"><li>{zh() ? "读者眼下最关心什么？" : "What does the reader most want to know now?"}</li><li>{zh() ? "人物主动选择了什么，付出什么代价？" : "What does the character choose, and what does it cost?"}</li><li>{zh() ? "本章提供什么情绪或信息回报？" : "What emotional or informational payoff arrives here?"}</li><li>{zh() ? "局面发生什么实际变化？" : "What actually changes by the end?"}</li><li>{zh() ? "哪些期待得到推进，什么牵引下一章？" : "Which expectations advance, and what draws the reader onward?"}</li></ul>}>
-              <ul class="qf-craft-prompts"><li>{zh() ? "目标读者与主要阅读乐趣" : "Intended readers and their central reading pleasure"}</li><li>{zh() ? "主角欲望、人物魅力与核心冲突" : "Protagonist desire, appeal and central conflict"}</li><li>{zh() ? "题材、平台、文风与篇幅意图" : "Genre, platform, voice and intended length"}</li><li>{zh() ? "近期具体推进，远期可调整方向" : "Concrete near-term movement, flexible long-term direction"}</li></ul>
+              <ul class="qf-craft-prompts"><li>{zh() ? "目标读者与主要阅读乐趣" : "Intended readers and their central reading pleasure"}</li><li>{zh() ? "主角欲望、人物魅力与核心冲突" : "Protagonist desire, appeal and central conflict"}</li><li>{zh() ? "题材、平台、文风与篇幅意图" : "Genre, platform, voice and intended length"}</li><li>{zh() ? "全书终局与分卷主轴固定，章节实现滚动细化" : "Fix the ending and every volume spine; elaborate chapter realization on a rolling horizon"}</li></ul>
             </Show>
             <p class="qf-inspector-boundary">{zh() ? "这些是写作提示，不是每章必须打卡的公式。平静的章节也可以提供重要回报。" : "These are prompts, not a required formula for every chapter. A quiet chapter can deliver an important payoff."}</p>
             <a class="wui-button wui-button--ghost" href="/story">{zh() ? "查看故事事实与期待" : "Open story facts and expectations"}</a>

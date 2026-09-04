@@ -50,6 +50,10 @@ test("Review consumes exact evidence and keeps lifecycle operations separate", (
   assert.match(review, /settlement\.apply/);
   assert.match(review, /parseReviewSettlementPreflight/);
   assert.match(review, /expected_before_fingerprint: verifiedPreflight\.expected_before_fingerprint/);
+  const acceptFlow = review.slice(review.indexOf("const accept ="), review.indexOf("const reject ="));
+  assert.match(acceptFlow, /setAcceptance\(accepted\)/);
+  assert.match(acceptFlow, /persisted_status: "accepted"/);
+  assert.doesNotMatch(acceptFlow, /await load\(\)/);
 });
 
 test("Review restores Core receipts and blocks settlement without a proven chapter association", () => {
@@ -188,6 +192,9 @@ test("AI & Models remains endpoint-plus-token and token is never persisted by Se
   assert.match(settings, /model\.service\.add/);
   assert.match(settings, /model\.service\.list/);
   assert.match(settings, /type="password"/);
+  assert.match(settings, /Production model/);
+  assert.match(settings, /studio\.setSelectedModel/);
+  assert.match(settings, /Automatic selection \(Core default\)/);
   assert.doesNotMatch(settings, /(?:localStorage|sessionStorage)\.(?:setItem|getItem|removeItem|clear)\s*\(/);
   assert.doesNotMatch(settings, /indexedDB\.(?:open|deleteDatabase)\s*\(/);
 });

@@ -1,0 +1,123 @@
+{
+  "schema": "quillframe_model_contract_registry_v1",
+  "version": "1",
+  "principle": "Book setup is a proposal-only preproduction design pass. It builds operational story, character, relationship, world and rolling-structure assets without writing manuscript prose or granting Canon authority.",
+  "contracts": {
+    "book.setup_design": {
+      "kind": "artifact_proposal",
+      "purpose": "Turn an author brief and selected research/corpus mechanisms into a complete typed BookSetupArtifact for author approval before any chapter production.",
+      "rubric": [
+        "Design a durable reader promise, premise, central conflict, progression and concrete fixed ending outcomes before local chapter planning. An ending question, alternative, theme label or empty future slot is not an ending.",
+        "Represent each core character as a decision engine: want, private need, false belief, fear or shame, values, mask, strategies, pressure leakage, defense or humor and relationship-sensitive voice. Do not return adjective-only profiles.",
+        "Represent each core relationship through shared history, hidden debt, power balance, forbidden topics and participant-specific tactics.",
+        "Keep world seeds sparse and pressure-bearing. Record rules and open unknowns instead of encyclopedic filler.",
+        "Create the first unit and chapter identity plus a 1-30 chapter rolling-outline horizon. Do not prewrite dialogue, scene prose or a five-million-character chapter list.",
+        "At five million characters or above, lock the full book and every volume from opening to ending: explicit volume plots and irreversible exits, cross-volume plot/relationship/romance/character arcs, one climax per volume, a concrete fixed ending, and visible character-charm proof beats. Empty volume slots or protected ending alternatives are invalid.",
+        "The rolling horizon may elaborate unit, chapter and scene execution only. Changing the approved book ending, volume spine, arc terminal states or climax chain requires a new setup fingerprint and explicit author approval.",
+        "Also prove scale with explicit per-volume capacity, multiple progression ladders, a three-zone rolling policy, cast evolution, repetition dimensions and selective evidence context. A numeric target alone is invalid.",
+        "minimum_total_characters is a scale intent and lower bound when supplied; never invent a maximum length.",
+        "The artifact is authority=false until an explicit book.setup.approve receipt binds it to the active DESIGN-BOOK plan."
+      ],
+      "output_contract": {
+        "type": "object",
+        "required": [
+          "schema",
+          "project_id",
+          "book_id",
+          "book_plan",
+          "character_bibles",
+          "relationship_bibles",
+          "world_seeds",
+          "structure",
+          "source_evidence_refs"
+        ],
+        "properties": {
+          "schema": { "const": "quillframe_book_setup_v1" },
+          "project_id": { "type": "string", "minLength": 1 },
+          "book_id": { "const": "BOOK" },
+          "book_plan": { "type": "object" },
+          "character_bibles": { "type": "array", "minItems": 1, "items": { "type": "object" } },
+          "relationship_bibles": { "type": "array", "items": { "type": "object" } },
+          "world_seeds": { "type": "array", "minItems": 1, "items": { "type": "object" } },
+          "source_evidence_refs": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Exact author briefs, project files or research inputs used to derive this proposal. Every entry is revision- and SHA-256-bound; this is evidence provenance, not Canon authority.",
+            "items": {
+              "type": "object",
+              "required": ["source_id", "source_kind", "source_uri", "source_revision", "content_fingerprint", "role"],
+              "properties": {
+                "source_id": { "type": "string", "minLength": 1 },
+                "source_kind": { "type": "string", "minLength": 1 },
+                "source_uri": { "type": "string", "minLength": 1 },
+                "source_revision": { "type": "string", "minLength": 1 },
+                "content_fingerprint": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+                "role": { "type": "string", "minLength": 1 }
+              },
+              "additionalProperties": false
+            }
+          },
+          "structure": {
+            "type": "object",
+            "required": [
+              "first_volume_title",
+              "first_unit_title",
+              "first_chapter_title",
+              "rolling_outline_chapters"
+            ],
+            "properties": {
+              "first_volume_title": { "type": "string", "minLength": 1 },
+              "first_unit_title": { "type": "string", "minLength": 1 },
+              "first_chapter_title": { "type": "string", "minLength": 1 },
+              "rolling_outline_chapters": { "type": "integer", "minimum": 1, "maximum": 30 },
+              "minimum_total_characters": { "type": ["integer", "null"], "minimum": 1 },
+              "long_form": {
+                "type": ["object", "null"],
+                "description": "Required by Core when minimum_total_characters is at least 5,000,000. Locks the full-book and per-volume story spine while leaving chapter and scene realization to rolling planning.",
+                "properties": {
+                  "macro_parts": { "type": "array", "minItems": 2, "items": { "type": "object" } },
+                  "volumes": { "type": "array", "minItems": 2, "items": { "type": "object" } },
+                  "narrative_arcs": { "type": "array", "minItems": 3, "items": { "type": "object" } },
+                  "climax_chain": { "type": "array", "minItems": 2, "items": { "type": "object" } },
+                  "fixed_ending": { "type": "object" },
+                  "character_charm_arcs": { "type": "array", "minItems": 1, "items": { "type": "object" } },
+                  "progression_ladders": { "type": "array", "minItems": 2, "items": { "type": "object" } },
+                  "rolling_outline_policy": { "type": "object" },
+                  "cast_evolution_policy": { "type": "object" },
+                  "repetition_dimensions": { "type": "array", "minItems": 8, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+                  "selective_context_policy": { "type": "object" },
+                  "macro_canon_policy": { "type": "object" }
+                },
+                "required": [
+                  "macro_parts",
+                  "volumes",
+                  "narrative_arcs",
+                  "climax_chain",
+                  "fixed_ending",
+                  "character_charm_arcs",
+                  "progression_ladders",
+                  "rolling_outline_policy",
+                  "cast_evolution_policy",
+                  "repetition_dimensions",
+                  "selective_context_policy",
+                  "macro_canon_policy"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "fingerprint": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "permissions": {
+        "canon_write": false,
+        "framework_behavior_write": false,
+        "durable_user_taste_write": false,
+        "allowed_result_scope": "book_setup_proposal"
+      },
+      "independent_gate": false
+    }
+  }
+}

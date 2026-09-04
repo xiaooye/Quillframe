@@ -29,6 +29,9 @@ test("every Studio author run binds the selected Core chapter, document and prof
   assert.doesNotMatch(shell, /chapter_id: "CH001"/);
   assert.match(shell, /selected_preference_ids: selectedPreferenceIds/);
   assert.match(shell, /author_profile: authorProfile\(\)/);
+  assert.match(shell, /const selectedModel = studio\.selectedModel\(\)/);
+  assert.match(shell, /model_id: selectedModel\.modelId/);
+  assert.match(shell, /model\.model_id === selectedModel\.modelId/);
   assert.match(shell, /createSignal<"guided" \| "expert">\("guided"\)/);
   assert.match(shell, /author\.run\.events/);
   assert.match(shell, /author\.run\.resume/);

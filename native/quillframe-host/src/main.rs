@@ -52,6 +52,49 @@ async fn run() -> Result<(), String> {
             println!("{}", runtime.invoke_value_async(value).await);
             Ok(())
         }
+        "invoke-file" => {
+            let root = required_option(&rest, "--core-root")?;
+            let request_path = required_option(&rest, "--request-file")?;
+            let runtime = HostBridgeRuntime::open_with_secret_store(root, Arc::new(OsSecretStore))
+                .map_err(|error| error.to_string())?;
+            let request = std::fs::read_to_string(request_path)
+                .map_err(|error| format!("request file read failed: {error}"))?;
+            let value = serde_json::from_str(&request).map_err(|error| error.to_string())?;
+            println!("{}", runtime.invoke_value_async(value).await);
+            Ok(())
+        }
+        "book-setup-propose-file" => {
+            let root = required_option(&rest, "--core-root")?;
+            let project_id = required_option(&rest, "--project-id")?;
+            let expected_version = required_option(&rest, "--expected-version")?
+                .parse::<u64>()
+                .map_err(|error| format!("invalid expected version: {error}"))?;
+            let setup_path = required_option(&rest, "--setup-file")?;
+            let idempotency_key = required_option(&rest, "--idempotency-key")?;
+            let typed_setup = serde_json::from_str::<serde_json::Value>(
+                &std::fs::read_to_string(setup_path)
+                    .map_err(|error| format!("setup file read failed: {error}"))?,
+            )
+            .map_err(|error| format!("setup file is not valid JSON: {error}"))?;
+            let runtime = HostBridgeRuntime::open_with_secret_store(root, Arc::new(OsSecretStore))
+                .map_err(|error| error.to_string())?;
+            let request = json!({
+                "schema":"quillframe_host_bridge_request_v11",
+                "bridge_version":"11",
+                "request_id":format!("book-setup-propose-file-{}", uuid::Uuid::new_v4()),
+                "operation":"book.setup.propose",
+                "surface":"cli",
+                "args":{
+                    "project_id":project_id,
+                    "expected_version":expected_version,
+                    "typed_setup":typed_setup,
+                    "idempotency_key":idempotency_key,
+                },
+                "authority":false,
+            });
+            println!("{}", runtime.invoke_value_async(request).await);
+            Ok(())
+        }
         "stdio" => {
             let root = required_option(&rest, "--core-root")?;
             let runtime = HostBridgeRuntime::open_with_secret_store(root, Arc::new(OsSecretStore))
@@ -69,8 +112,7 @@ async fn run() -> Result<(), String> {
         }
         "serve" => serve(rest).await,
         _ => Err(
-            "usage: quillframe-host <invoke|stdio|serve> --core-root PATH [--request JSON|--dist PATH --port PORT --token TOKEN]"
-                .into(),
+            "usage: quillframe-host <invoke|invoke-file|book-setup-propose-file|stdio|serve> [options]".into(),
         ),
     }
 }

@@ -30,7 +30,7 @@ macro_rules! fragment {
     };
 }
 
-const PROJECT_FRAGMENTS: [SchemaFragment; 24] = [
+const PROJECT_FRAGMENTS: [SchemaFragment; 25] = [
     fragment!(1, "001_initial.sql"),
     fragment!(2, "002_semantic_context_runtime.sql"),
     fragment!(3, "003_native_independent_review.sql"),
@@ -55,6 +55,7 @@ const PROJECT_FRAGMENTS: [SchemaFragment; 24] = [
     fragment!(22, "022_story_commit_log.sql"),
     fragment!(23, "023_learning_activation.sql"),
     fragment!(24, "024_ai_native_longform_planning.sql"),
+    fragment!(25, "025_book_setup.sql"),
 ];
 
 pub fn apply_fresh_project_schema(connection: &mut Connection, applied_at: &str) -> CoreResult<()> {
@@ -279,7 +280,7 @@ mod tests {
                 row.get(0)
             })
             .unwrap();
-        assert_eq!(count, 24);
+        assert_eq!(count, 25);
         let planning_release: String = connection
             .query_row(
                 "SELECT release FROM planning_contract_identity WHERE singleton=1",
@@ -297,7 +298,7 @@ mod tests {
         apply_fresh_project_schema(&mut connection, "2026-08-31T00:00:00Z").unwrap();
         connection
             .execute(
-                "UPDATE schema_fragments SET checksum='sha256:bad' WHERE version=24",
+                "UPDATE schema_fragments SET checksum='sha256:bad' WHERE version=25",
                 [],
             )
             .unwrap();
@@ -305,8 +306,8 @@ mod tests {
 
         connection
             .execute(
-                "UPDATE schema_fragments SET checksum=?1 WHERE version=24",
-                [fragment_checksum(PROJECT_FRAGMENTS[23])],
+                "UPDATE schema_fragments SET checksum=?1 WHERE version=25",
+                [fragment_checksum(PROJECT_FRAGMENTS[24])],
             )
             .unwrap();
         connection
@@ -333,7 +334,7 @@ mod tests {
         let mut connection = Connection::open_in_memory().unwrap();
         apply_fresh_project_schema(&mut connection, "2026-08-31T00:00:00Z").unwrap();
         connection
-            .execute("DELETE FROM schema_fragments WHERE version=24", [])
+            .execute("DELETE FROM schema_fragments WHERE version=25", [])
             .unwrap();
         assert!(validate_current_project_schema(&connection).is_err());
     }

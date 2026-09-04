@@ -959,12 +959,14 @@ export function parseReviewSettlementResult(
 ): SettlementResult {
   parseReviewAcceptanceResult(acceptance, review);
   const invalid = () => new Error("review_settlement_binding_invalid");
-  if (!reviewRecord(value) || value.schema !== "quillframe_settlement_result_v1" || !canonicalText(value.settlement_id)
+  if (!reviewRecord(value) || value.schema !== "quillframe_settlement_result_v1"
     || !/^chapter:[^\s\0]+$/.test(target) || value.target_ref !== target) throw invalid();
   if (value.status === "settlement_incomplete") {
-    if (!beforeFingerprint(expectedBefore) || value.expected_before_fingerprint !== expectedBefore
+    if (value.settlement_id !== null || !beforeFingerprint(expectedBefore)
+      || value.expected_before_fingerprint !== expectedBefore
       || !beforeFingerprint(value.actual_before_fingerprint) || value.canon_mutated !== false) throw invalid();
   } else if (value.status === "settled") {
+    if (!canonicalText(value.settlement_id)) throw invalid();
     const after = reviewRecord(value.state_delta) ? value.state_delta.after : undefined;
     if (value.canon_mutated !== true || !beforeFingerprint(value.before_fingerprint) || !fingerprint(value.after_fingerprint)
       || expectedBefore !== undefined && value.before_fingerprint !== expectedBefore || !reviewRecord(after)

@@ -1,4 +1,4 @@
-import { For, Show, createMemo, createSignal, onMount } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import { A } from "@solidjs/router";
 import { PageIntro } from "../components";
 import { HostedAccountButton } from "../HostedSessionBoundary";
@@ -49,6 +49,24 @@ export default function Settings() {
   const [message, setMessage] = createSignal<string>();
   const [error, setError] = createSignal<string>();
   const operations = createMemo(() => studio.bridgeCapabilities()?.operations ?? []);
+  const selectedModelValue = createMemo(() => {
+    const selected = studio.selectedModel();
+    return selected ? JSON.stringify([selected.serviceId, selected.modelId]) : "";
+  });
+  const selectModel = (value: string) => {
+    if (!value) {
+      studio.setSelectedModel("", "");
+      return;
+    }
+    try {
+      const selected: unknown = JSON.parse(value);
+      if (!Array.isArray(selected) || selected.length !== 2 || selected.some((item) => typeof item !== "string" || !item.trim())) throw new Error("invalid model selection");
+      studio.setSelectedModel(selected[0], selected[1]);
+    } catch {
+      studio.setSelectedModel("", "");
+      setError(zh() ? "模型选择无效，请重新选择。" : "The model selection is invalid; choose again.");
+    }
+  };
 
   const refreshServices = async () => {
     if (!operations().includes("model.service.list")) return;
@@ -56,7 +74,13 @@ export default function Settings() {
     try {
       const result = await invokeBridge<ModelServiceListProjection>("model.service.list");
       if (result.status !== "ok" || !result.data) throw new Error(operationError(result));
-      setServices(result.data.items ?? []);
+      const items = result.data.items ?? [];
+      setServices(items);
+      const selected = studio.selectedModel();
+      if (selected && !items.some((service) => service.service_id === selected.serviceId
+        && (service.enabled === true || service.enabled === 1)
+        && service.discovery_state === "connected"
+        && service.models?.some((model) => model.model_id === selected.modelId))) studio.setSelectedModel("", "");
     } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
   };
 
@@ -97,7 +121,11 @@ export default function Settings() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
   };
 
-  onMount(() => { if (studio.bridgeAvailable()) void refreshServices(); });
+  createEffect(() => {
+    if (studio.bridgeAvailable() && operations().includes("model.service.list")) {
+      void refreshServices();
+    }
+  });
 
   return (
     <section class="nf-page qf-settings-page">
@@ -110,7 +138,7 @@ export default function Settings() {
 
           <Show when={section() === "models"}><div class="qf-model-workspace">
             <section class="qf-editorial-sheet qf-model-connect">
-              <span class="nf-eyebrow">MODEL SERVICE</span><h2>Endpoint + Access Token</h2><p>{zh() ? "普通用户只连接服务。协议、模型与 capability discovery 由 Quillframe Core 负责。" : "Ordinary users connect a service only. Quillframe Core owns protocol, model and capability discovery."}</p>
+              <span class="nf-eyebrow">MODEL SERVICE</span><h2>Endpoint + Access Token</h2><p>{zh() ? "此表单按 OpenAI 兼容协议连接服务；Core 负责端点校验、模型目录发现与凭据隔离。其他协议由宿主级配置接入。" : "This form connects an OpenAI-compatible service. Core validates the endpoint, discovers its model catalog, and isolates credentials; other protocols require host-level configuration."}</p>
               <div class="nf-model-connect-form">
                 <div class="qf-model-connect-fields">
                   <label class="nf-field-label"><span>{text().endpoint}</span><input class="wui-input nf-mono" inputmode="url" autocomplete="url" value={endpoint()} onInput={(event) => setEndpoint(event.currentTarget.value)} placeholder="https://api.example.com/v1" /></label>
@@ -126,7 +154,15 @@ export default function Settings() {
               <div class="qf-model-service-list"><For each={services()}>{(service) => <article><div><strong>{service.endpoint ?? service.service_id ?? "Model Service"}</strong><span class="qf-capability-state">{observedState(service)}</span></div><p>{service.credential_present ? (zh() ? "Credential present · 明文不可见" : "Credential present · value hidden") : (zh() ? "无 credential evidence" : "No credential evidence")}</p><div class="qf-model-chip-list"><For each={service.models ?? []}>{(model) => <span>{model.display_name ?? model.model_id ?? "model"}</span>}</For></div><Show when={service.service_id}><div class="qf-inline-actions"><button class="wui-button wui-button--outline" type="button" disabled={!operations().includes("model.service.discover")} onClick={() => void discover(service.service_id!)}>Discover</button><button class="wui-button wui-button--outline" type="button" disabled={!operations().includes("model.service.test")} onClick={() => void testService(service.service_id!)}>Probe</button></div></Show></article>}</For><Show when={!services().length}><p>{zh() ? "尚未连接 Model Service。" : "No Model Service is connected yet."}</p></Show></div>
             </section>
 
-            <section class="qf-editorial-sheet"><span class="nf-eyebrow">MODEL SELECTION</span><h2>{zh() ? "自动选择" : "Automatic selection"}</h2><div class="qf-default-model-row"><div><strong>{text().autoTitle}</strong><p>{zh() ? "默认使用 Core eligibility/capability evidence；Studio 不靠 vendor 名猜能力。" : "Core eligibility/capability evidence is the default; Studio never guesses capability from a vendor name."}</p></div><span class="wui-badge wui-badge--outline">DEFAULT</span></div></section>
+            <section class="qf-editorial-sheet"><span class="nf-eyebrow">MODEL SELECTION</span><h2>{zh() ? "模型选择" : "Model selection"}</h2>
+              <label class="nf-field-label"><span>{zh() ? "生产模型" : "Production model"}</span><select class="wui-input nf-mono" value={selectedModelValue()} onChange={(event) => selectModel(event.currentTarget.value)}>
+                <option value="">{zh() ? "自动选择（Core 默认）" : "Automatic selection (Core default)"}</option>
+                <For each={services().filter((service) => service.service_id && (service.enabled === true || service.enabled === 1) && service.discovery_state === "connected" && service.models?.length)}>{(service) => <optgroup label={service.endpoint ?? service.service_id}>
+                  <For each={(service.models ?? []).filter((model) => model.model_id)}>{(model) => <option value={JSON.stringify([service.service_id!, model.model_id!])}>{model.display_name ?? model.model_id}</option>}</For>
+                </optgroup>}</For>
+              </select><small>{zh() ? "选择会作为显式 model_id 发送给 Core；Core 仍会核验该模型属于已发现目录。这里只保存服务与模型标识，不保存 Token。" : "The selection is sent to Core as an explicit model_id, and Core still verifies it against the discovered catalog. Only service/model identifiers are stored here, never the token."}</small></label>
+              <div class="qf-default-model-row"><div><strong>{studio.selectedModel()?.modelId ?? text().autoTitle}</strong><p>{zh() ? "留空时使用已连接服务目录中的 Core 默认模型；如服务公开了多种模型，请显式选择用于正文生产的模型。" : "When left automatic, Core uses the connected catalog's default model. If the service exposes several model types, explicitly choose the model intended for prose production."}</p></div><span class="wui-badge wui-badge--outline">{studio.selectedModel() ? "EXPLICIT" : "DEFAULT"}</span></div>
+            </section>
           </div></Show>
 
           <Show when={section() === "appearance"}><section class="qf-editorial-sheet"><span class="nf-eyebrow">APPEARANCE</span><h2>{zh() ? "外观" : "Appearance"}</h2><p>{zh() ? "主题继续服从 Story Loom 的 warm ivory / dark roles；语言必须支持中英文扩张。" : "Theme follows Story Loom warm-ivory / dark roles; layout must tolerate Chinese and English expansion."}</p><button class="wui-button wui-button--outline" type="button" onClick={() => setLocale(locale() === "zh-CN" ? "en-US" : "zh-CN")}>{locale() === "zh-CN" ? "English" : "中文"}</button></section></Show>

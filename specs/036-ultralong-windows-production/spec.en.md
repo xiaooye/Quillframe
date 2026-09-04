@@ -61,12 +61,14 @@ Deleting referenced nodes is outside this specification. Reordering requires exp
 
 Each planning mode owns a closed typed envelope:
 
-- `DESIGN-BOOK`: reader promise, protagonist agency, central conflict, progression, endgame reserve, and anti-exhaustion limits;
+- `DESIGN-BOOK`: reader promise, protagonist agency, central conflict, progression, concrete fixed ending, complete volume plots, cross-volume plot/relationship/character arcs, climax chain, and no-silent-rewrite limits;
 - `DESIGN-VOLUME`: volume promise, net situation change, opposition, relationship movement, climax, and inherited debt;
 - `PLAN-UNIT`: a closable loop, emotional setup–release–aftermath, rewards, delay costs, foreshadowing, and callbacks;
 - `PLAN-CHAPTER`: reader question, visible reward, character choice and cost, net change, next pull, and ordered scene objectives.
 
 Model output is first persisted as a fingerprint-bound proposal. Only explicit author activation of the exact proposal/version makes it active. Activation atomically supersedes the prior active plan for the same target. Proposals, drafts, and reviews never grant themselves planning authority.
+
+A new project must also pass the separate Book Setup lifecycle: `not_started → proposal_ready → author_approved_ready`. Setup binds the book plan, character/relationship decision models, pressure-bearing world seeds, initial volume/unit/chapter identity, rolling-plan policy, and fingerprinted source evidence into one artifact. At five million characters or above it additionally requires a fixed ending, complete volume plots, cross-volume arcs, a per-volume climax chain, visible character-charm proof beats, and explicit capacity architecture. Approval binds the exact active `DESIGN-BOOK` plan. An interruption between plan activation and the Setup head must be reported as incomplete and recoverable only through the same request, never as a no-write failure.
 
 ## 06 · Production and revision closure
 

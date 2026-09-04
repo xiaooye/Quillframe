@@ -1,5 +1,14 @@
 # Quillframe Changelog
 
+## Unreleased · 1.0.0-dev.0 ultra-long book setup and production closure
+
+- Added a source-fingerprint-bound Book Setup proposal/author-approval lifecycle. Projects targeting at least five million characters must provide a fixed ending, complete volume plots, cross-volume arcs, one climax per volume, character-charm proof beats, progression ladders, rolling-plan policy, and explicit capacity evidence. Character, relationship, and world assets gain no authority before approval.
+- Added idempotent Host Bridge creation for volumes, units, and chapters, with a database invariant of one manuscript document per chapter. Setup approval binds the exact active `DESIGN-BOOK` plan; interrupted approval resumes only the same request and reports partial completion truthfully.
+- Restored model-owned semantic Context selection, character simulation, and scene resolution for DRAFT/REVISE. Approved character/relationship decision models enter only private pre-prose stages; the Surface Writer receives a bounded, fingerprint-bound Director Note without private reasoning. Per-scene and whole-chapter minimum length are checked deterministically before release, with no prose maximum.
+- Narrative settlement continues through compact typed deltas and retains only the latest four fully verified snapshots. Production release, author acceptance, and settlement replay the same receipt after response loss; Studio can restore acceptance/settlement state and explicitly choose a production model from an enabled discovered catalog. Automatic mode is described honestly as Core's catalog default.
+- Added Project schema fragment 025. This development clean break does not migrate existing databases. Stop runtimes and restore parent commit `638afcf24e6bfc27e26c4906186b2175f02b5bb1` to roll back; Projects created with fragment 025 must be recreated rather than opened by the older Core.
+- Deterministic gates prove contracts, transactions, isolation, and recovery only. A live sequential literary canary, genuinely independent review evidence, and author confirmation remain pending.
+
 ## Unreleased · web-novel Corpus analysis v2
 
 - Replaced the current flat ten-axis Corpus dispatch contract with a six-domain, 26-dimension web-novel hierarchy covering reader contract, plot progression, emotion/payoff, character/relationship, scene delivery, and Chinese language rhythm.

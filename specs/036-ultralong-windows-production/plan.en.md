@@ -12,11 +12,11 @@ Create the Rust workspace and a directly linked Core crate that owns the platfor
 
 ## Phase 3 · Hierarchy and planning runtime
 
-Expose book/volume/unit/chapter/scene nodes and four typed plan envelopes in domain; implement proposal persistence, exact author activation, ancestor-dependency CAS, supersession, and freeze evidence in data; give planning modes real resumable semantic jobs in service.
+Expose book/volume/unit/chapter/scene nodes, four typed plan envelopes, and the complete Book Setup in domain. In data, implement setup proposals, exact author approval, book-plan binding, ancestor-dependency CAS, supersession, freeze evidence, and one manuscript document per chapter. Give planning modes real resumable semantic jobs in service.
 
 ## Phase 4 · Draft and revision closure
 
-Drive recoverable scene-by-scene production from ordered chapter scenes; bind Reader Pressure, the full ancestor-plan lock, and semantic Context Freeze into the Writer Pack; persist checkpoints/logs in data and orchestrate independent-rejection repair sources, owner-layer invalidation, and Continuity-only summaries in service.
+Drive recoverable scene-by-scene production from ordered chapter scenes. Route Reader Pressure, the full ancestor-plan lock, the approved Setup's private character/relationship decision projection, and semantic Context Freeze only to their owning stages. Character simulation and scene resolution remain model-owned; the Surface Writer receives only a fingerprint-bound Director Note without private reasoning. Deterministically enforce per-scene and whole-chapter minimum length, persist checkpoints/logs in data, and orchestrate independent-rejection repair sources, owner-layer invalidation, and Continuity-only summaries in service.
 
 ## Phase 5 · Corpus v2 execution and staged loading
 
@@ -24,7 +24,7 @@ Complete the append-resumable research runner, public atlas, publication registr
 
 ## Phase 6 · Long-range learning, lifecycle, and ledger
 
-Bridge reasoned rejection/revision feedback, strengthen independent promotion receipts, correct settled/superseded projections, and aggregate internal, independent-review, and Corpus research cost states.
+Bridge reasoned rejection/revision feedback, strengthen independent promotion receipts, settle narrative state through compact typed deltas, retain the latest four fully verified snapshots, and aggregate internal, independent-review, and Corpus research cost states.
 
 ## Phase 7 · Direct Studio integration and Python removal
 

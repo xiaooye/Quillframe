@@ -130,7 +130,10 @@ pub struct BookPlan {
     pub protagonist_agency: String,
     pub central_conflict: String,
     pub progression: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub endgame_reserve: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub fixed_ending_outcomes: Vec<String>,
     pub anti_exhaustion_limits: Vec<String>,
 }
 
@@ -189,7 +192,8 @@ pub enum LengthUnit {
 #[serde(deny_unknown_fields)]
 pub struct LengthBand {
     pub min: u32,
-    pub max: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max: Option<u32>,
     pub unit: LengthUnit,
 }
 
@@ -213,9 +217,9 @@ pub struct ChapterConstraintLock {
 
 impl ChapterConstraintLock {
     fn validate(&self, reader_contract: &ReaderContract) -> CoreResult<()> {
-        if self.length.min == 0 || self.length.min > self.length.max {
+        if self.length.min == 0 {
             return Err(CoreError::InvalidPlan(
-                "chapter length band must be positive and ordered".into(),
+                "chapter minimum length must be positive".into(),
             ));
         }
         require_texts([&self.stop_point, &self.end_debt])?;
@@ -285,7 +289,7 @@ impl PlanBody {
         }
     }
 
-    fn validate(&self) -> CoreResult<()> {
+    pub(crate) fn validate(&self) -> CoreResult<()> {
         match self {
             Self::Book(value) => {
                 require_texts([
@@ -305,6 +309,18 @@ impl PlanBody {
                         "book plan requires at least one character arc".into(),
                     ));
                 }
+                if value.fixed_ending_outcomes.is_empty() && value.endgame_reserve.is_empty() {
+                    return Err(CoreError::InvalidPlan(
+                        "book plan requires concrete ending outcomes (legacy endgame_reserve is accepted only for existing plans)"
+                            .into(),
+                    ));
+                }
+                require_texts(
+                    value
+                        .fixed_ending_outcomes
+                        .iter()
+                        .chain(value.endgame_reserve.iter()),
+                )?;
                 let mut character_ids = std::collections::BTreeSet::new();
                 for character in &value.character_arcs {
                     require_texts([
@@ -914,6 +930,7 @@ pub(crate) fn fixture_hierarchical_plan_lock() -> HierarchicalPlanLock {
                 central_conflict: "追查真相与守护同伴冲突".into(),
                 progression: vec!["从逃亡者成长为破局者".into()],
                 endgame_reserve: vec!["幕后契约真相".into()],
+                fixed_ending_outcomes: Vec::new(),
                 anti_exhaustion_limits: vec!["不提前透支终局真相".into()],
             }),
             assumptions: vec![],
@@ -1016,7 +1033,7 @@ fn chapter_body_fixture() -> PlanBody {
             constraint_lock: ChapterConstraintLock {
                 length: LengthBand {
                     min: 2800,
-                    max: 3800,
+                    max: Some(3800),
                     unit: LengthUnit::ChineseCharacters,
                 },
                 must_happen: vec![ConstraintClause {
@@ -1168,6 +1185,25 @@ mod tests {
         let mut lock = fixture_hierarchical_plan_lock();
         lock.layers.remove(1);
         assert!(lock.validate().is_err());
+    }
+
+    #[test]
+    fn chapter_length_requires_only_a_minimum() {
+        let mut value = serde_json::to_value(chapter_body()).unwrap();
+        value
+            .pointer_mut("/body/contract/constraint_lock/length")
+            .and_then(serde_json::Value::as_object_mut)
+            .unwrap()
+            .remove("max");
+        let body: PlanBody = serde_json::from_value(value).unwrap();
+        body.validate().unwrap();
+
+        if let PlanBody::Chapter(chapter) = body {
+            assert_eq!(chapter.contract.constraint_lock.length.min, 2800);
+            assert_eq!(chapter.contract.constraint_lock.length.max, None);
+        } else {
+            panic!("fixture must remain a chapter plan");
+        }
     }
 
     #[test]

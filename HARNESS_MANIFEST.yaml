@@ -27,11 +27,13 @@ project_contract:
 
 planning:
   contract: ai-native-longform-v2
+  setup_lifecycle: [not_started, proposal_ready, author_approved_ready]
+  setup_authority: explicit_author_approval_bound_to_active_design_book
   hierarchy_source: fingerprint_bound_active_plan_chain
-  book_assets: [story_foundation, character_arcs, relationship_arcs]
+  book_assets: [story_foundation, character_arcs, character_bibles, relationship_arcs, relationship_bibles, world_seeds, fixed_ending, complete_volume_spines, cross_volume_arcs, climax_chain, character_charm_arcs, rolling_structure_seed, ultralong_capacity_architecture]
   chapter_assets: [chapter_contract, scene_script]
   scene_brief_source: frozen_scene_script_only
-  distant_plan_policy: coarse_until_rolling_refinement
+  distant_plan_policy: fixed_book_volume_spines_and_ending_with_rolling_chapter_elaboration
   literary_judgment_owner: model
   deterministic_boundary_owner: rust_core
 
@@ -54,7 +56,9 @@ production:
     - author_acceptance
     - settlement
     - publication
-  recovery: explicit_authorized_snapshot_materialization_without_semantic_inference
+  recovery: explicit_authorized_latest_snapshot_materialization_without_semantic_inference
+  snapshot_retention: latest_four_verified_full_checkpoints
+  settlement_event_policy: compact_typed_delta_without_cumulative_tracking_copy
   raw_intermediate_draft_visible: false
   generation_source_controls_voice_and_prose: true
   script_literary_scoring: forbidden
@@ -113,6 +117,7 @@ bridge:
   generic_mutation_dispatch: false
   implemented_groups:
     - project_and_story
+    - dynamic_volume_unit_chapter_hierarchy
     - typed_planning
     - model_services
     - author_production

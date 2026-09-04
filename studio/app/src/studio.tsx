@@ -30,6 +30,8 @@ interface StudioValue {
   inspectProject: (projectId?: string) => Promise<void>;
   lastRunId: () => string;
   setLastRunId: (runId: string) => void;
+  selectedModel: () => { serviceId: string; modelId: string } | undefined;
+  setSelectedModel: (serviceId: string, modelId: string) => void;
   chapters: () => ChapterItem[];
   chapterId: () => string;
   selectedChapter: () => ChapterItem | undefined;
@@ -48,6 +50,8 @@ interface StudioValue {
 const StudioContext = createContext<StudioValue>();
 const LAST_PROJECT_KEY = "quillframe.ui.lastProjectId";
 const LAST_RUN_KEY = "quillframe.ui.lastRunId";
+const MODEL_SERVICE_KEY = "quillframe.ui.modelServiceId";
+const MODEL_ID_KEY = "quillframe.ui.modelId";
 
 function stored(key: string): string {
   return typeof localStorage === "undefined" ? "" : localStorage.getItem(key) ?? "";
@@ -65,6 +69,8 @@ export const StudioProvider: ParentComponent = (props) => {
   const [projectLoading, setProjectLoading] = createSignal(false);
   const [projectError, setProjectError] = createSignal<string>();
   const [lastRunId, setLastRunIdSignal] = createSignal("");
+  const [selectedModelServiceId, setSelectedModelServiceId] = createSignal(stored(MODEL_SERVICE_KEY));
+  const [selectedModelId, setSelectedModelId] = createSignal(stored(MODEL_ID_KEY));
   const [chapters, setChapters] = createSignal<ChapterItem[]>([]);
   const [chapterId, setChapterIdSignal] = createSignal("");
   const [chapterError, setChapterError] = createSignal<string>();
@@ -99,6 +105,28 @@ export const StudioProvider: ParentComponent = (props) => {
     if (typeof localStorage !== "undefined") {
       if (next) localStorage.setItem(`${LAST_RUN_KEY}:${projectId()}:${chapterId()}`, next);
       else localStorage.removeItem(`${LAST_RUN_KEY}:${projectId()}:${chapterId()}`);
+    }
+  };
+
+  const selectedModel = () => {
+    const serviceId = selectedModelServiceId();
+    const modelId = selectedModelId();
+    return serviceId && modelId ? { serviceId, modelId } : undefined;
+  };
+
+  const setSelectedModel = (serviceId: string, modelId: string) => {
+    const nextServiceId = serviceId.trim();
+    const nextModelId = modelId.trim();
+    setSelectedModelServiceId(nextServiceId);
+    setSelectedModelId(nextModelId);
+    if (typeof localStorage !== "undefined") {
+      if (nextServiceId && nextModelId) {
+        localStorage.setItem(MODEL_SERVICE_KEY, nextServiceId);
+        localStorage.setItem(MODEL_ID_KEY, nextModelId);
+      } else {
+        localStorage.removeItem(MODEL_SERVICE_KEY);
+        localStorage.removeItem(MODEL_ID_KEY);
+      }
     }
   };
 
@@ -223,6 +251,8 @@ export const StudioProvider: ParentComponent = (props) => {
     inspectProject,
     lastRunId,
     setLastRunId,
+    selectedModel,
+    setSelectedModel,
     chapters,
     chapterId,
     selectedChapter: () => chapters().find((chapter) => chapter.chapter_id === chapterId()),
