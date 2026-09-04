@@ -5098,11 +5098,37 @@ fn parse_surface_model_json(
     expected_chapter_id: &str,
     expected_scene_id: &str,
 ) -> CoreResult<SurfaceRealization> {
-    crate::semantic::parse_surface_realization_value(
-        strict_model_json(result)?,
-        expected_chapter_id,
-        expected_scene_id,
-    )
+    match strict_model_json(result) {
+        Ok(value) => crate::semantic::parse_surface_realization_value(
+            value,
+            expected_chapter_id,
+            expected_scene_id,
+        ),
+        Err(_) => parse_raw_surface_prose(result),
+    }
+}
+
+fn parse_raw_surface_prose(result: &ModelResult) -> CoreResult<SurfaceRealization> {
+    let manuscript = result.content.trim();
+    if manuscript.is_empty()
+        || manuscript.len() > 512 * 1024
+        || manuscript.starts_with(['{', '[', '`'])
+        || manuscript.contains("\\n")
+        || manuscript.contains("\\\"")
+        || manuscript.chars().any(|character| {
+            character == '\0' || character.is_control() && !matches!(character, '\n' | '\r' | '\t')
+        })
+    {
+        return Err(CoreError::InvalidProject(format!(
+            "surface stage returned neither typed JSON nor bounded raw prose for {}",
+            result.request_id
+        )));
+    }
+    let output = SurfaceRealization {
+        manuscript: manuscript.into(),
+    };
+    output.validate()?;
+    Ok(output)
 }
 
 fn parse_tracking_projection(result: &ModelResult) -> CoreResult<ChapterTrackingProposal> {
@@ -5553,6 +5579,42 @@ mod tests {
             normalized.character_snapshot_updates.get("CHAR-1"),
             Some(&"{\"location\":\"门口\"}".to_string())
         );
+
+        let raw_surface = ModelResult::record(
+            "REQ-RAW-SURFACE",
+            "SERVICE",
+            "MODEL",
+            "门开了。\n\n他抬头看向来人。",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            parse_surface_model_json(&raw_surface, "CH001", "SC001")
+                .unwrap()
+                .manuscript,
+            "门开了。\n\n他抬头看向来人。"
+        );
+        let malformed_surface = ModelResult::record(
+            "REQ-MALFORMED-RAW-SURFACE",
+            "SERVICE",
+            "MODEL",
+            "门开了。\\n\\\"他来了。\\\"\"}",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        assert!(parse_surface_model_json(&malformed_surface, "CH001", "SC001").is_err());
 
         let prose_wrapped = ModelResult::record(
             "REQ-PROSE",
