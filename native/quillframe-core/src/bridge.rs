@@ -4764,12 +4764,41 @@ fn strict_model_json<T: for<'de> Deserialize<'de>>(result: &ModelResult) -> Core
     } else {
         trimmed
     };
-    serde_json::from_str(payload).map_err(|error| {
-        CoreError::InvalidProject(format!(
-            "semantic stage returned invalid typed JSON for {}: {error}",
-            result.request_id
-        ))
-    })
+    match serde_json::from_str(payload) {
+        Ok(value) => Ok(value),
+        Err(exact_error) => {
+            let mut stream = serde_json::Deserializer::from_str(payload).into_iter::<T>();
+            let value = stream
+                .next()
+                .transpose()
+                .map_err(|_| {
+                    CoreError::InvalidProject(format!(
+                        "semantic stage returned invalid typed JSON for {}: {exact_error}",
+                        result.request_id
+                    ))
+                })?
+                .ok_or_else(|| {
+                    CoreError::InvalidProject(format!(
+                        "semantic stage returned no typed JSON for {}",
+                        result.request_id
+                    ))
+                })?;
+            let trailing = payload[stream.byte_offset()..].trim();
+            if trailing.is_empty()
+                || (trailing.len() <= 512
+                    && !trailing.chars().any(|character| {
+                        matches!(character, '{' | '[' | '\0') || character.is_control()
+                    }))
+            {
+                Ok(value)
+            } else {
+                Err(CoreError::InvalidProject(format!(
+                    "semantic stage returned an unsafe trailing payload for {}",
+                    result.request_id
+                )))
+            }
+        }
+    }
 }
 
 fn parse_tracking_projection(result: &ModelResult) -> CoreResult<ChapterTrackingProposal> {
@@ -5036,6 +5065,39 @@ mod tests {
         .unwrap();
         let parsed: ContextQueryPlan = strict_model_json(&trailing_fence_fragment).unwrap();
         assert_eq!(parsed.queries, vec!["two"]);
+
+        let bounded_provider_suffix = ModelResult::record(
+            "REQ-PROVIDER-SUFFIX",
+            "SERVICE",
+            "MODEL",
+            "{\"queries\":[\"three\"],\"required_references\":[]}\n``provider compatibility note`",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        let parsed: ContextQueryPlan = strict_model_json(&bounded_provider_suffix).unwrap();
+        assert_eq!(parsed.queries, vec!["three"]);
+
+        let second_json_value = ModelResult::record(
+            "REQ-SECOND-JSON",
+            "SERVICE",
+            "MODEL",
+            "{\"queries\":[\"one\"],\"required_references\":[]} {\"unexpected\":true}",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        assert!(strict_model_json::<ContextQueryPlan>(&second_json_value).is_err());
 
         let prose_wrapped = ModelResult::record(
             "REQ-PROSE",
