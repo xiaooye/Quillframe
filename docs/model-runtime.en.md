@@ -27,6 +27,8 @@ endpoint normalization / network policy
 
 Current wire protocol families are OpenAI Chat Completions, OpenAI Responses and Anthropic Messages. Protocol is a wire codec, not provider identity; different models behind one endpoint may bind to different protocols.
 
+An endpoint may be a host root or may end in an explicit API version segment such as `v1`, `v4`, or `v4.1`. Core adds the default `v1` only when the final segment is not already versioned; otherwise it preserves that base before appending `models`, `chat/completions`, `responses`, or `messages`.
+
 Model listing proves model discovery only. It does not prove tools, vision, structured output or context window. Capability evidence retains state, provenance, timestamp and service/model/protocol binding. Model/vendor names never prove capability.
 
 ## Secrets

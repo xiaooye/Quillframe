@@ -255,15 +255,15 @@ impl<'a> ModelRuntime<'a> {
             None => String::new(),
         };
         let mut builder = match service.protocol_family {
-            ProtocolFamily::OpenaiChatCompletions => client.post(endpoint.join("v1/chat/completions").map_err(|_|runtime("invalid OpenAI endpoint base"))?).json(&json!({
+            ProtocolFamily::OpenaiChatCompletions => client.post(api_operation_url(&endpoint,"chat/completions")?).json(&json!({
                 "model":request.model,"messages":[{"role":"system","content":request.system},{"role":"user","content":request.user}],
                 "temperature":request.temperature,"max_tokens":request.max_output_tokens
             })),
-            ProtocolFamily::OpenaiResponses => client.post(endpoint.join("v1/responses").map_err(|_|runtime("invalid OpenAI endpoint base"))?).json(&json!({
+            ProtocolFamily::OpenaiResponses => client.post(api_operation_url(&endpoint,"responses")?).json(&json!({
                 "model":request.model,"instructions":request.system,"input":request.user,"temperature":request.temperature,
                 "max_output_tokens":request.max_output_tokens,"store":false
             })),
-            ProtocolFamily::AnthropicMessages => client.post(endpoint.join("v1/messages").map_err(|_|runtime("invalid Anthropic endpoint base"))?)
+            ProtocolFamily::AnthropicMessages => client.post(api_operation_url(&endpoint,"messages")?)
                 .header("anthropic-version","2023-06-01").json(&json!({"model":request.model,"system":request.system,
                     "messages":[{"role":"user","content":request.user}],"temperature":request.temperature,
                     "max_tokens":request.max_output_tokens.unwrap_or(4096)})),
@@ -321,9 +321,7 @@ impl<'a> ModelRuntime<'a> {
                 .ok_or_else(|| runtime("credential reference is unavailable"))?,
             None => String::new(),
         };
-        let url = endpoint
-            .join("v1/models")
-            .map_err(|_| runtime("invalid model discovery endpoint base"))?;
+        let url = api_operation_url(&endpoint, "models")?;
         let mut builder = client.get(url);
         if service.protocol_family == ProtocolFamily::AnthropicMessages {
             builder = builder.header("anthropic-version", "2023-06-01");
@@ -452,6 +450,33 @@ fn ipv6_unique_local(ip: Ipv6Addr) -> bool {
 }
 fn ipv6_link_local(ip: Ipv6Addr) -> bool {
     ip.octets()[0] == 0xfe && ip.octets()[1] & 0xc0 == 0x80
+}
+
+fn api_operation_url(endpoint: &Url, operation: &str) -> CoreResult<Url> {
+    let mut base = endpoint.clone();
+    if !base.path().ends_with('/') {
+        let mut path = base.path().to_owned();
+        path.push('/');
+        base.set_path(&path);
+    }
+    let final_segment = endpoint
+        .path_segments()
+        .and_then(|segments| segments.filter(|segment| !segment.is_empty()).next_back());
+    let has_version_base = final_segment.is_some_and(|segment| {
+        let mut characters = segment.chars();
+        characters.next() == Some('v')
+            && characters
+                .next()
+                .is_some_and(|value| value.is_ascii_digit())
+            && characters.all(|value| value.is_ascii_digit() || value == '.')
+    });
+    let relative = if has_version_base {
+        operation.to_owned()
+    } else {
+        format!("v1/{operation}")
+    };
+    base.join(&relative)
+        .map_err(|_| runtime("invalid model API endpoint base"))
 }
 
 fn validate_request(request: &ModelRequest) -> CoreResult<()> {
@@ -627,6 +652,43 @@ mod tests {
         assert!(!allowed_address("::1".parse().unwrap(), false));
         assert!(allowed_address("127.0.0.1".parse().unwrap(), true));
         assert!(allowed_address("1.1.1.1".parse().unwrap(), false));
+    }
+
+    #[test]
+    fn api_operations_preserve_an_explicit_versioned_base() {
+        assert_eq!(
+            api_operation_url(&Url::parse("https://api.example.test").unwrap(), "models")
+                .unwrap()
+                .as_str(),
+            "https://api.example.test/v1/models"
+        );
+        assert_eq!(
+            api_operation_url(
+                &Url::parse("https://api.example.test/v1").unwrap(),
+                "chat/completions"
+            )
+            .unwrap()
+            .as_str(),
+            "https://api.example.test/v1/chat/completions"
+        );
+        assert_eq!(
+            api_operation_url(
+                &Url::parse("https://api.example.test/api/coding/paas/v4").unwrap(),
+                "models"
+            )
+            .unwrap()
+            .as_str(),
+            "https://api.example.test/api/coding/paas/v4/models"
+        );
+        assert_eq!(
+            api_operation_url(
+                &Url::parse("https://api.example.test/tenant/v4.1").unwrap(),
+                "responses"
+            )
+            .unwrap()
+            .as_str(),
+            "https://api.example.test/tenant/v4.1/responses"
+        );
     }
 
     fn request() -> ModelRequest {

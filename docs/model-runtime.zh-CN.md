@@ -33,6 +33,8 @@ Endpoint normalization / network policy
 
 Protocol 是 wire codec，不是 Provider identity。同一 endpoint 的不同 model 可以绑定不同 protocol。
 
+Endpoint 可以是主机根路径，也可以明确停在 `v1`、`v4`、`v4.1` 等版本段。Core 只在末段不是版本标识时补入默认 `v1`；明确版本段会原样保留，再追加 `models`、`chat/completions`、`responses` 或 `messages`，避免静默改写 Provider 的 API 基址。
+
 `GET /models` 只证明模型发现；它不证明 tools、vision、structured output 或 context window。
 
 Capability evidence 保留状态、provenance、timestamp、service/model/protocol binding。Model/vendor 名字永远不是 capability proof。
