@@ -2180,7 +2180,8 @@ impl HostBridgeRuntime {
                     "production_guidance":guidance_snapshot.writer_projection(),
                     "contract":"Return JSON only: {repair_owner:'prose_writer',generation_mode:'local_or_bounded_repair'|'fresh_realization',objective_envelope:string,targets:[{location,source_excerpt,fix,preserve:[string]}],invalidation_boundary:[string],comparison_required:true}. Cover every diagnosis finding or failed rule assessment. For bounded repair, every source_excerpt must be an exact, ordered excerpt from the incumbent and the listed excerpts must be sufficient to fix every finding while all other bytes remain protected. Choose fresh_realization when any finding is manuscript-wide, concerns total length or structure, crosses protected windows, or cannot be fully repaired inside exact excerpts. Convert all findings into exact FIX + PRESERVE constraints."}),
                 6_000,0.2).await?;
-            let spec: RepairSpec = strict_model_json(&result)?;
+            let mut spec: RepairSpec = strict_model_json(&result)?;
+            normalize_bounded_repair_target_order(&mut spec, &material.manuscript)?;
             spec.validate_against_source(&material.manuscript)?;
             Some((spec, result))
         } else {
@@ -4948,6 +4949,34 @@ fn framework_build_fingerprint() -> String {
     )
 }
 
+fn normalize_bounded_repair_target_order(spec: &mut RepairSpec, source: &str) -> CoreResult<()> {
+    if spec.generation_mode != RepairGenerationMode::LocalOrBoundedRepair {
+        return Ok(());
+    }
+    let mut targets = spec
+        .targets
+        .drain(..)
+        .map(|target| {
+            let mut matches = source.match_indices(&target.source_excerpt);
+            let position = matches
+                .next()
+                .map(|(position, _)| position)
+                .ok_or_else(|| {
+                    CoreError::InvalidProject("repair target excerpt is absent".into())
+                })?;
+            if matches.next().is_some() {
+                return Err(CoreError::InvalidProject(
+                    "bounded repair target excerpt is ambiguous".into(),
+                ));
+            }
+            Ok((position, target))
+        })
+        .collect::<CoreResult<Vec<_>>>()?;
+    targets.sort_by_key(|(position, _)| *position);
+    spec.targets = targets.into_iter().map(|(_, target)| target).collect();
+    Ok(())
+}
+
 fn merge_rule_material(
     source: Vec<BoundRuleMaterial>,
     current: Vec<BoundRuleMaterial>,
@@ -5885,6 +5914,22 @@ mod tests {
             statement: "偷偷替换项目规则".into(),
         }];
         assert!(merge_rule_material(source, conflicting).is_err());
+    }
+
+    #[test]
+    fn bounded_repair_targets_normalize_to_source_order_only_when_unique() {
+        let source = "prefix bad-one protected-middle bad-two suffix";
+        let mut spec = bounded_repair_spec();
+        spec.targets.reverse();
+        normalize_bounded_repair_target_order(&mut spec, source).unwrap();
+        assert_eq!(spec.targets[0].source_excerpt, "bad-one");
+        spec.validate_against_source(source).unwrap();
+
+        let mut ambiguous = bounded_repair_spec();
+        assert!(
+            normalize_bounded_repair_target_order(&mut ambiguous, "bad-one bad-one bad-two")
+                .is_err()
+        );
     }
 
     #[test]
