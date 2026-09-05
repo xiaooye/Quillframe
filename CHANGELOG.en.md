@@ -1,5 +1,12 @@
 # Quillframe Changelog
 
+## Unreleased · Exact evidence for independent review
+
+- Independent review retains the existing `findings[].evidence` shape, but every citation must now be a contiguous substring of the exact candidate, preserving punctuation, whitespace, and line breaks. Any mismatch raises a contract error and blocks release; Core never drops findings, changes the verdict, or automatically switches reviewers. A valid semantic rejection still enters `failed_gate`.
+- Revision execution also revalidates citations from historical independent-review diagnoses against the source manuscript before the first model call. Original results and rejection records remain unchanged. Other semantic gates retain their existing evidence contracts; this check proves citation presence, not literary correctness.
+- Deterministic regressions cover exact Chinese/multiline citations, altered punctuation and invented quotes, valid rejection, confirmed-result replay without new calls, and rejection of invalid historical diagnoses before revision inference. Live-model verification and author confirmation remain pending.
+- JSON shapes and database schemas are unchanged. The independent-review prompt has a new input fingerprint, so historical calls must not be silently replaced or rerun. Existing releases are not retroactively upgraded to claim this evidence. To roll back, stop runtimes and restore baseline `46f82a730cdba68450d5b8985d2c998766dba8b7`, retaining private audit evidence.
+
 ## Unreleased · 1.0.0-dev.0 ultra-long book setup and production closure
 
 - Added a source-fingerprint-bound Book Setup proposal/author-approval lifecycle. Projects targeting at least five million characters must provide a fixed ending, complete volume plots, cross-volume arcs, one climax per volume, character-charm proof beats, progression ladders, rolling-plan policy, and explicit capacity evidence. Character, relationship, and world assets gain no authority before approval.

@@ -864,6 +864,22 @@ impl SemanticGate {
         Ok(())
     }
 
+    /// Validate citation presence, not whether the cited text supports the judgment.
+    /// Never normalize or discard an unsupported finding to manufacture acceptance.
+    pub fn validate_against(&self, manuscript: &str) -> CoreResult<()> {
+        self.validate()?;
+        if self
+            .findings
+            .iter()
+            .any(|finding| !manuscript.contains(&finding.evidence))
+        {
+            return Err(invalid(
+                "semantic gate evidence is absent from the exact candidate",
+            ));
+        }
+        Ok(())
+    }
+
     pub fn review_findings(&self, reviewer_role: &str) -> Vec<ReviewFinding> {
         self.findings
             .iter()
@@ -906,6 +922,58 @@ fn invalid(message: &str) -> CoreError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn semantic_gate_requires_exact_unchanged_candidate_evidence() {
+        let manuscript = "门响了。\n她说：‘请进。’";
+        let gate = SemanticGate {
+            decision: SemanticGateDecision::Revise,
+            findings: vec![SemanticFinding {
+                finding_id: "F1".into(),
+                severity: Severity::S2,
+                category: FindingCategory::Prose,
+                location: "opening".into(),
+                evidence: "门响了。\n她说：‘请进。’".into(),
+                issue: "The response lacks an observable cause.".into(),
+                fix_direction: "Clarify the cause without changing the speaker.".into(),
+            }],
+        };
+        gate.validate_against(manuscript).unwrap();
+        assert!(gate.validate_against("different candidate").is_err());
+        for evidence in [
+            "invented quote",
+            "门响了。\r\n她说：‘请进。’",
+            "门响了。\n她说：‘请进！’",
+            " 门响了。",
+            "门响了……请进。",
+            "",
+            " \n\t",
+        ] {
+            let mut invalid = gate.clone();
+            invalid.findings[0].evidence = evidence.into();
+            let before = invalid.clone();
+            assert!(invalid.validate_against(manuscript).is_err());
+            assert_eq!(invalid, before);
+        }
+        let mut mixed = gate.clone();
+        let mut unsupported = mixed.findings[0].clone();
+        unsupported.finding_id = "F2".into();
+        unsupported.evidence = "invented quote".into();
+        mixed.findings.push(unsupported);
+        assert!(mixed.validate_against(manuscript).is_err());
+
+        let accepted = SemanticGate {
+            decision: SemanticGateDecision::Accept,
+            findings: vec![],
+        };
+        accepted.validate_against(manuscript).unwrap();
+        let mut contradictory = gate;
+        contradictory.decision = SemanticGateDecision::Accept;
+        assert!(contradictory.validate_against(manuscript).is_err());
+        contradictory.decision = SemanticGateDecision::Revise;
+        contradictory.findings.clear();
+        assert!(contradictory.validate_against(manuscript).is_err());
+    }
 
     fn repair_spec(mode: RepairGenerationMode, excerpts: &[&str]) -> RepairSpec {
         RepairSpec {

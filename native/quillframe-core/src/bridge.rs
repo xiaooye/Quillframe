@@ -2003,6 +2003,9 @@ impl HostBridgeRuntime {
                                 "repair diagnosis fingerprint changed".into(),
                             ));
                         }
+                        if mechanism == "independent_semantic_gate" {
+                            parse_independent_gate(&gate_result, &source.manuscript)?;
+                        }
                         let findings: Value = strict_model_json(&gate_result)?;
                         json!({
                             "checkpoint":checkpoint_diagnosis,
@@ -2789,13 +2792,12 @@ impl HostBridgeRuntime {
                 "independent_reviewer",
                 json!({"manuscript":surface_output.manuscript,"reader_contract":pack.reader_pressure,
                     "scene_briefs":pack.scenes,"instruction":production.intent.instruction,
-                    "contract":semantic_gate_contract("Independently judge release readiness from this exact candidate and objectives. You have no other reviewer outputs. Reject any material causal, character, continuity, prose or reader-payoff defect.")}),
+                    "contract":independent_gate_contract()}),
                 6_000,
                 0.15,
             )
             .await?;
-        let independent_gate: SemanticGate = strict_model_json(&independent)?;
-        independent_gate.validate()?;
+        let independent_gate = parse_independent_gate(&independent, &surface_output.manuscript)?;
         if independent_gate.decision == SemanticGateDecision::Revise {
             return self.failed_gate_projection(
                 project_id,
@@ -5641,6 +5643,22 @@ fn approved_book_setup_horizon(
     }))
 }
 
+fn parse_independent_gate(result: &ModelResult, manuscript: &str) -> CoreResult<SemanticGate> {
+    let gate: SemanticGate = strict_model_json(result)?;
+    gate.validate_against(manuscript)?;
+    Ok(gate)
+}
+
+fn independent_gate_contract() -> Value {
+    let mut contract = semantic_gate_contract(
+        "Independently judge release readiness from this exact candidate and objectives. You have no other reviewer outputs. Reject any material causal, character, continuity, prose or reader-payoff defect.",
+    );
+    contract["evidence_policy"] = json!(
+        "Each finding.evidence must be a non-empty exact contiguous substring copied from the supplied manuscript, preserving punctuation, whitespace and line breaks. Do not paraphrase, insert ellipses or quote text from another candidate. For an omission or whole-scene issue, cite the exact affected passage and explain the missing requirement in issue. Citation presence is not proof that the judgment is correct. Unsupported findings invalidate the review; they are never silently removed or converted into acceptance."
+    );
+    contract
+}
+
 fn semantic_gate_contract(instruction: &str) -> Value {
     json!({
         "instruction":instruction,
@@ -6706,6 +6724,19 @@ mod tests {
                             } else {
                                 json!({"manuscript":format!("雨砸在门板上。沈砚推门出去，鞋底的血刚落进积水，巷口便亮起三盏灯。\n\n“他在这里。”{filler}\n\n沈砚没回头。他踢翻竹筐，借着满街滚动的青梨撞开侧门——门后，却站着本该死去的人。")})
                             }
+                        } else if system.contains("fresh independent fiction reviewer")
+                            && (user.contains("independent-invalid-evidence-fixture")
+                                || user.contains("independent-valid-rejection-fixture"))
+                        {
+                            let evidence = if user.contains("independent-invalid-evidence-fixture")
+                            {
+                                "This quotation is absent from the manuscript."
+                            } else {
+                                "雨砸在门板上。"
+                            };
+                            json!({"decision":"revise","findings":[{"finding_id":"independent-1","severity":"s2",
+                                "category":"prose","location":"opening","evidence":evidence,
+                                "issue":"The opening needs a clearer response.","fix_direction":"Clarify the response."}]})
                         } else if system.contains("blind web-novel reader")
                             && user.contains("REPAIR_SOURCE_MARKER")
                         {
@@ -7695,6 +7726,127 @@ mod tests {
             .collect::<BTreeSet<_>>();
         assert!(stages.contains("repair_editor"));
         assert!(stages.contains("repair_comparison"));
+        for (instruction, valid_evidence) in [
+            ("independent-invalid-evidence-fixture", false),
+            ("independent-valid-rejection-fixture", true),
+        ] {
+            let started = runtime.invoke_value(request(
+                "author.run.start",
+                json!({"project_id":"BOOK","task_mode":"DRAFT","target_ref":"DOC-CH001",
+                    "payload":{"instruction":instruction},"idempotency_key":instruction}),
+            ));
+            assert_eq!(started["status"], "ok", "{started}");
+            let run_id = started["data"]["run_id"].as_str().unwrap();
+            let execute_request = request(
+                "author.run.execute",
+                json!({"project_id":"BOOK","run_id":run_id,"service_id":service_id}),
+            );
+            let executed = runtime.invoke_value_async(execute_request.clone()).await;
+            if valid_evidence {
+                assert_eq!(executed["status"], "ok", "{executed}");
+                assert_eq!(executed["data"]["status"], "failed_gate");
+            } else {
+                assert_eq!(executed["status"], "failed", "{executed}");
+                assert_eq!(executed["error"]["code"], "core_contract_failed");
+            }
+            let status = runtime.invoke_value(request(
+                "author.run.status",
+                json!({"project_id":"BOOK","run_id":run_id}),
+            ));
+            assert_eq!(status["data"]["candidate_visible"], false);
+            assert_eq!(status["data"]["raw_draft_visible"], false);
+            let calls = runtime
+                .open_registered("BOOK")
+                .unwrap()
+                .database
+                .production_stage_calls(run_id)
+                .unwrap();
+            let independent_calls = calls
+                .iter()
+                .filter(|call| call.job.stage_key == "independent_semantic_gate")
+                .collect::<Vec<_>>();
+            assert_eq!(independent_calls.len(), 1);
+            let independent = independent_calls[0];
+            assert_eq!(independent.state, StageCallState::Confirmed);
+            assert!(independent
+                .job
+                .model_request
+                .user
+                .contains("evidence_policy"));
+            let stored_gate: SemanticGate =
+                strict_model_json(independent.result.as_ref().unwrap()).unwrap();
+            assert_eq!(stored_gate.decision, SemanticGateDecision::Revise);
+            assert_eq!(stored_gate.findings.len(), 1);
+            if !valid_evidence {
+                assert!(status["data"]["repair_source"].is_null());
+                let replay = runtime.invoke_value_async(execute_request).await;
+                assert_eq!(replay["status"], "failed", "{replay}");
+                let project = runtime.open_registered("BOOK").unwrap();
+                assert_eq!(
+                    project.database.production_stage_calls(run_id).unwrap(),
+                    calls
+                );
+                let released: u64 = project
+                    .database
+                    .connection()
+                    .query_row(
+                        "SELECT COUNT(*) FROM candidates WHERE run_id=?1",
+                        [run_id],
+                        |row| row.get(0),
+                    )
+                    .unwrap();
+                assert_eq!(released, 0);
+                drop(project);
+
+                // Simulate an immutable legacy rejection recorded before exact-evidence validation.
+                let surface: SurfaceRealization = strict_model_json(
+                    calls
+                        .iter()
+                        .find(|call| call.job.stage_key == "surface_realization")
+                        .unwrap()
+                        .result
+                        .as_ref()
+                        .unwrap(),
+                )
+                .unwrap();
+                let candidate_fingerprint = sha256_fingerprint(surface.manuscript.as_bytes());
+                let checkpoint_id = runtime
+                    .open_registered("BOOK")
+                    .unwrap()
+                    .database
+                    .record_failed_gate(
+                        run_id,
+                        &candidate_fingerprint,
+                        "independent_semantic_gate",
+                        &independent.result.as_ref().unwrap().fingerprint,
+                        &timestamp(),
+                    )
+                    .unwrap();
+                let repair_started = runtime.invoke_value(request(
+                    "author.run.start",
+                    json!({"project_id":"BOOK","task_mode":"REVISE","target_ref":"DOC-CH001",
+                        "payload":{"repair_source":{"source_run_id":run_id,"source_checkpoint_id":checkpoint_id,
+                            "expected_candidate_fingerprint":candidate_fingerprint}},
+                        "idempotency_key":"legacy-invalid-independent-repair"}),
+                ));
+                assert_eq!(repair_started["status"], "ok", "{repair_started}");
+                let repair_run = repair_started["data"]["run_id"].as_str().unwrap();
+                let blocked = runtime
+                    .invoke_value_async(request(
+                        "author.run.execute",
+                        json!({"project_id":"BOOK","run_id":repair_run,"service_id":service_id}),
+                    ))
+                    .await;
+                assert_eq!(blocked["status"], "failed", "{blocked}");
+                assert!(runtime
+                    .open_registered("BOOK")
+                    .unwrap()
+                    .database
+                    .production_stage_calls(repair_run)
+                    .unwrap()
+                    .is_empty());
+            }
+        }
         server.abort();
         drop(runtime);
         std::fs::remove_dir_all(root).unwrap();
