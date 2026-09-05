@@ -168,14 +168,38 @@ impl BoundedRepairPatch {
                 "bounded repair replacement count is invalid".into(),
             ));
         }
-        let mut output = String::with_capacity(source.len());
-        let mut cursor = 0usize;
-        for (target, replacement) in spec.targets.iter().zip(&self.replacements) {
-            if replacement.source_excerpt != target.source_excerpt {
+        let mut replacements = BTreeMap::new();
+        for replacement in &self.replacements {
+            if replacements
+                .insert(replacement.source_excerpt.as_str(), replacement)
+                .is_some()
+            {
                 return Err(CoreError::InvalidProject(
-                    "bounded repair replacement identity is invalid".into(),
+                    "bounded repair replacement identities must be unique".into(),
                 ));
             }
+        }
+        let ordered = spec
+            .targets
+            .iter()
+            .map(|target| {
+                replacements
+                    .remove(target.source_excerpt.as_str())
+                    .ok_or_else(|| {
+                        CoreError::InvalidProject(
+                            "bounded repair replacement identity is invalid".into(),
+                        )
+                    })
+            })
+            .collect::<CoreResult<Vec<_>>>()?;
+        if !replacements.is_empty() {
+            return Err(CoreError::InvalidProject(
+                "bounded repair replacement identity is invalid".into(),
+            ));
+        }
+        let mut output = String::with_capacity(source.len());
+        let mut cursor = 0usize;
+        for (target, replacement) in spec.targets.iter().zip(ordered) {
             let relative = source[cursor..]
                 .find(&target.source_excerpt)
                 .ok_or_else(|| {
@@ -3095,7 +3119,6 @@ impl HostBridgeRuntime {
                         "production_guidance":production.intent.guidance_snapshot.as_ref().map(ProductionGuidanceSnapshot::writer_projection),
                         "reader_grip":production.intent.reader_grip,
                         "author_profile":production.intent.author_profile,
-                        "rule_material":production.intent.rule_material,
                         "repair_spec":repair_spec,
                         "contract":"Return JSON only: {manuscript:string}. Write exactly the current scene in scene_realization_contract, never the whole chapter and never another scene. Treat the contract as causal boundaries, not prose to paraphrase or a checklist to explain. Realize it as lived, continuous Chinese web-novel prose through character-owned action, speech, attention and consequence. The prior_scene_tail is continuity evidence, not text to recap or repeat. The chapter minimum applies only after all scenes are assembled; do not pad this scene, repeat an established meaning, broadcast routine process, or restate evidence to reach a scene quota. Follow the frozen production_guidance without mentioning its rules. When repair_spec is present, apply only constraints that belong to this scene. Never duplicate an incumbent chapter or restart the chapter inside this scene."
                     }),
@@ -5199,7 +5222,7 @@ fn strict_model_json<T: for<'de> Deserialize<'de>>(result: &ModelResult) -> Core
                 })?;
             let trailing = payload[stream.byte_offset()..].trim();
             if trailing.is_empty()
-                || (trailing.len() <= 1_024
+                || (trailing.len() <= 2_048
                     && !trailing.chars().any(|character| {
                         matches!(character, '{' | '[' | '\0')
                             || character.is_control() && !matches!(character, '\n' | '\r' | '\t')
@@ -5228,6 +5251,7 @@ fn parse_surface_model_json(
             expected_scene_id,
         ),
         Err(_) => parse_surface_json_with_unescaped_controls(result)
+            .or_else(|_| parse_surface_duplicate_prefix_json(result))
             .and_then(|value| {
                 crate::semantic::parse_surface_realization_value(
                     value,
@@ -5237,6 +5261,51 @@ fn parse_surface_model_json(
             })
             .or_else(|_| parse_raw_surface_prose(result)),
     }
+}
+
+fn parse_surface_duplicate_prefix_json(result: &ModelResult) -> CoreResult<Value> {
+    let payload = result.content.trim();
+    let object_start = ["\n{", "\n`{", "\n``{", "\n```{"]
+        .iter()
+        .filter_map(|marker| payload.rfind(marker).map(|index| index + marker.len() - 1))
+        .max()
+        .ok_or_else(|| {
+            CoreError::InvalidProject(format!(
+                "surface stage returned no trailing JSON object for {}",
+                result.request_id
+            ))
+        })?;
+    let prose_prefix = payload[..object_start].trim();
+    let prose = prose_prefix.trim_end_matches('`').trim_end();
+    let json_payload = payload[object_start..].trim();
+    if prose.is_empty() || prose.starts_with(['{', '[', '`']) {
+        return Err(CoreError::InvalidProject(format!(
+            "surface stage returned an invalid duplicate prose prefix for {}",
+            result.request_id
+        )));
+    }
+    let value: Value = serde_json::from_str(json_payload).map_err(|error| {
+        CoreError::InvalidProject(format!(
+            "surface stage returned invalid trailing JSON for {}: {error}",
+            result.request_id
+        ))
+    })?;
+    let manuscript = value
+        .get("manuscript")
+        .and_then(Value::as_str)
+        .ok_or_else(|| {
+            CoreError::InvalidProject(format!(
+                "surface stage trailing JSON omitted manuscript for {}",
+                result.request_id
+            ))
+        })?;
+    if manuscript != prose {
+        return Err(CoreError::InvalidProject(format!(
+            "surface stage prose prefix differs from trailing JSON for {}",
+            result.request_id
+        )));
+    }
+    Ok(value)
 }
 
 fn parse_surface_json_with_unescaped_controls(result: &ModelResult) -> CoreResult<Value> {
@@ -5308,6 +5377,8 @@ fn parse_raw_surface_prose(result: &ModelResult) -> CoreResult<SurfaceRealizatio
     if manuscript.is_empty()
         || manuscript.len() > 512 * 1024
         || manuscript.starts_with(['{', '[', '`'])
+        || manuscript.contains("\n{")
+        || manuscript.contains("\n[")
         || manuscript.contains("\\n")
         || manuscript.contains("\\\"")
         || manuscript.chars().any(|character| {
@@ -5327,7 +5398,30 @@ fn parse_raw_surface_prose(result: &ModelResult) -> CoreResult<SurfaceRealizatio
 }
 
 fn parse_repair_spec(result: &ModelResult) -> CoreResult<RepairSpec> {
-    let mut value: Value = strict_model_json(result)?;
+    let mut value: Value = strict_model_json(result).or_else(|_| {
+        let payload = result.content.trim();
+        if !payload.starts_with('{') || !payload.ends_with('}') {
+            return Err(CoreError::InvalidProject(format!(
+                "repair stage returned no exact JSON object for {}",
+                result.request_id
+            )));
+        }
+        let repaired = payload
+            .replace("\"objective_envelope:\"", "\"objective_envelope\":\"")
+            .replace(",invalidation_boundary:[", ",\"invalidation_boundary\":[");
+        if repaired == payload {
+            return Err(CoreError::InvalidProject(format!(
+                "repair stage returned no recognized bounded JSON syntax repair for {}",
+                result.request_id
+            )));
+        }
+        serde_json::from_str(&repaired).map_err(|error| {
+            CoreError::InvalidProject(format!(
+                "repair stage returned invalid repaired JSON for {}: {error}",
+                result.request_id
+            ))
+        })
+    })?;
     if value.get("generation_mode").and_then(Value::as_str) == Some("fresh_realization") {
         let targets = value
             .get_mut("targets")
@@ -5345,12 +5439,25 @@ fn parse_repair_spec(result: &ModelResult) -> CoreResult<RepairSpec> {
                 );
         }
     }
-    serde_json::from_value(value).map_err(|error| {
+    let mut spec: RepairSpec = serde_json::from_value(value).map_err(|error| {
         CoreError::InvalidProject(format!(
             "repair editor returned invalid typed JSON for {}: {error}",
             result.request_id
         ))
-    })
+    })?;
+    let mut retained = Vec::with_capacity(spec.targets.len());
+    for target in spec.targets {
+        if target.fix.trim_start().starts_with("无需修改") {
+            spec.invalidation_boundary.push(format!(
+                "no-op finding preserved without a repair target: {}",
+                target.location
+            ));
+        } else {
+            retained.push(target);
+        }
+    }
+    spec.targets = retained;
+    Ok(spec)
 }
 
 fn parse_surface_audit(
@@ -5366,6 +5473,20 @@ fn parse_surface_audit(
             return Err(CoreError::AuthorityConflict(
                 "Surface audit judgment fingerprint echo changed".into(),
             ));
+        }
+    }
+    if let Some(assessments) = value
+        .as_object_mut()
+        .and_then(|object| object.get_mut("assessments"))
+        .and_then(Value::as_array_mut)
+    {
+        for assessment in assessments {
+            let Some(object) = assessment.as_object_mut() else {
+                continue;
+            };
+            if object.get("status").and_then(Value::as_str) != Some("fail") {
+                object.insert("repair_scope".into(), Value::Null);
+            }
         }
     }
     serde_json::from_value(value).map_err(|error| {
@@ -5897,6 +6018,47 @@ mod tests {
             fresh_spec.targets[0].source_excerpt,
             "fresh-realization-whole-candidate"
         );
+        let repair_with_known_key_syntax_damage = ModelResult::record(
+            "REQ-REPAIR-KNOWN-KEY-SYNTAX",
+            "SERVICE",
+            "MODEL",
+            "{\"repair_owner\":\"prose_writer\",\"generation_mode\":\"local_or_bounded_repair\",\"objective_envelope:\"删除一句\",\"targets\":[{\"location\":\"结尾\",\"source_excerpt\":\"坏句\",\"fix\":\"删除\",\"preserve\":[\"其余正文\"]}],invalidation_boundary:[\"仅坏句\"],\"comparison_required\":true}",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        let repaired_spec = parse_repair_spec(&repair_with_known_key_syntax_damage).unwrap();
+        assert_eq!(repaired_spec.objective_envelope, "删除一句");
+        assert_eq!(repaired_spec.targets[0].source_excerpt, "坏句");
+        let repair_with_explicit_noop = ModelResult::record(
+            "REQ-REPAIR-EXPLICIT-NOOP",
+            "SERVICE",
+            "MODEL",
+            serde_json::to_string(&json!({
+                "repair_owner":"prose_writer","generation_mode":"local_or_bounded_repair",
+                "objective_envelope":"只改坏句","targets":[
+                    {"location":"正文","source_excerpt":"坏句","fix":"删除","preserve":["其余"]},
+                    {"location":"日期","source_excerpt":"正确日期","fix":"无需修改：日期已经正确","preserve":["日期"]}
+                ],"invalidation_boundary":["其余正文"],"comparison_required":true
+            }))
+            .unwrap(),
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        let no_op_spec = parse_repair_spec(&repair_with_explicit_noop).unwrap();
+        assert_eq!(no_op_spec.targets.len(), 1);
+        assert!(no_op_spec.invalidation_boundary[1].contains("no-op finding"));
 
         let tracking_id_list = ModelResult::record(
             "REQ-TRACKING-ID-LIST",
@@ -6001,6 +6163,43 @@ mod tests {
             parse_surface_model_json(&surface_with_unsafe_trailing_payload, "CH001", "SC001")
                 .is_err()
         );
+        let duplicate_prefix_surface = ModelResult::record(
+            "REQ-SURFACE-DUPLICATE-PREFIX",
+            "SERVICE",
+            "MODEL",
+            "门开了。\n\n他抬头看向来人。\n``{\"manuscript\":\"门开了。\\n\\n他抬头看向来人。\"}",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            parse_surface_model_json(&duplicate_prefix_surface, "CH001", "SC001")
+                .unwrap()
+                .manuscript,
+            "门开了。\n\n他抬头看向来人。"
+        );
+        let changed_duplicate_prefix_surface = ModelResult::record(
+            "REQ-SURFACE-CHANGED-DUPLICATE-PREFIX",
+            "SERVICE",
+            "MODEL",
+            "门开了。\n{\"manuscript\":\"门关了。\"}",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        assert!(
+            parse_surface_model_json(&changed_duplicate_prefix_surface, "CH001", "SC001").is_err()
+        );
 
         let prose_wrapped = ModelResult::record(
             "REQ-PROSE",
@@ -6036,8 +6235,15 @@ mod tests {
         };
 
         let output = patch.apply(source, &bounded_repair_spec()).unwrap();
+        let reversed_patch = BoundedRepairPatch {
+            replacements: patch.replacements.into_iter().rev().collect(),
+        };
+        let reversed_output = reversed_patch
+            .apply(source, &bounded_repair_spec())
+            .unwrap();
 
         assert_eq!(output, "prefix fixed-one protected-middle fixed-two suffix");
+        assert_eq!(reversed_output, output);
     }
 
     #[test]
@@ -6105,6 +6311,28 @@ mod tests {
             surface_audit_judgment_fingerprint(&evidence_only).unwrap(),
             original
         );
+
+        let mut provider_value = serde_json::to_value(&audit).unwrap();
+        provider_value["assessments"][0]["repair_scope"] = json!("local");
+        let provider_result = ModelResult::record(
+            "REQ-SURFACE-PASS-SCOPE",
+            "SERVICE",
+            "MODEL",
+            serde_json::to_string(&provider_value).unwrap(),
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        assert!(parse_surface_audit(&provider_result, None)
+            .unwrap()
+            .assessments[0]
+            .repair_scope
+            .is_none());
     }
 
     #[test]
@@ -6405,7 +6633,12 @@ mod tests {
                         } else if system.contains("character-action") {
                             json!({"actions":[{"scene_id":"SC001","character":"主角","action":"推开门走入雨夜","motive_pressure":"必须赶在追兵前抵达","observable_consequence":"留下带血脚印"}]})
                         } else if system.contains("causal scene resolver") {
-                            json!({"scenes":[{"scene_id":"SC001","action_sequence":["主角推门","追兵看见脚印"],"turn":"门外早有伏兵","exit_state":"主角被迫改道"}]})
+                            let action_sequence = if user.contains("force repair") {
+                                vec!["force repair", "追兵看见脚印"]
+                            } else {
+                                vec!["主角推门", "追兵看见脚印"]
+                            };
+                            json!({"scenes":[{"scene_id":"SC001","action_sequence":action_sequence,"turn":"门外早有伏兵","exit_state":"主角被迫改道"}]})
                         } else if system.contains("repair editor") {
                             let source_excerpt = if user.contains("“他在这里。”") {
                                 "“他在这里。”"
@@ -6464,7 +6697,7 @@ mod tests {
                             }]})
                         } else if system.contains("Surface Writer") {
                             let filler = "雨声压着脚步，沈砚沿墙确认出口与追兵的位置。".repeat(160);
-                            if user.contains("force repair")
+                            if user.contains("\"selected_preferences\":[{")
                                 && user.contains("\"repair_spec\":null")
                             {
                                 json!({"manuscript":format!("REPAIR_SOURCE_MARKER 雨夜里，行动与反应断开了。{filler}")})
