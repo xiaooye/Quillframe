@@ -5206,6 +5206,11 @@ fn strict_model_json<T: for<'de> Deserialize<'de>>(result: &ModelResult) -> Core
     match serde_json::from_str(payload) {
         Ok(value) => Ok(value),
         Err(exact_error) => {
+            if let Some(completed) = complete_trailing_json_containers(payload) {
+                if let Ok(value) = serde_json::from_str(&completed) {
+                    return Ok(value);
+                }
+            }
             let mut stream = serde_json::Deserializer::from_str(payload).into_iter::<T>();
             let value = stream
                 .next()
@@ -5239,6 +5244,55 @@ fn strict_model_json<T: for<'de> Deserialize<'de>>(result: &ModelResult) -> Core
             }
         }
     }
+}
+
+fn complete_trailing_json_containers(payload: &str) -> Option<String> {
+    if !matches!(payload.as_bytes().first(), Some(b'{') | Some(b'[')) {
+        return None;
+    }
+    let mut stack = Vec::new();
+    let mut in_string = false;
+    let mut escaped = false;
+    for character in payload.chars() {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if character == '\\' {
+                escaped = true;
+            } else if character == '"' {
+                in_string = false;
+            } else if character.is_control() && !matches!(character, '\n' | '\r' | '\t') {
+                return None;
+            }
+            continue;
+        }
+        match character {
+            '"' => in_string = true,
+            '{' | '[' => stack.push(character),
+            '}' => {
+                if stack.pop() != Some('{') {
+                    return None;
+                }
+            }
+            ']' => {
+                if stack.pop() != Some('[') {
+                    return None;
+                }
+            }
+            value if value.is_control() && !matches!(value, '\n' | '\r' | '\t') => {
+                return None;
+            }
+            _ => {}
+        }
+    }
+    if in_string || escaped || stack.is_empty() || stack.len() > 2 {
+        return None;
+    }
+    let mut completed = payload.to_owned();
+    for opening in stack.into_iter().rev() {
+        completed.push(if opening == '{' { '}' } else { ']' });
+    }
+    Some(completed)
 }
 
 fn parse_surface_model_json(
@@ -5365,6 +5419,10 @@ fn parse_surface_json_with_unescaped_controls(result: &ModelResult) -> CoreResul
             "surface stage returned an unterminated JSON string for {}",
             result.request_id
         )));
+    }
+    if repaired.ends_with(",\"\"}") {
+        repaired.truncate(repaired.len() - 4);
+        repaired.push('}');
     }
     serde_json::from_str(&repaired).map_err(|error| {
         CoreError::InvalidProject(format!(
@@ -5911,6 +5969,38 @@ mod tests {
         let parsed: ContextQueryPlan = strict_model_json(&long_bounded_suffix).unwrap();
         assert_eq!(parsed.queries, vec!["four"]);
 
+        let missing_outer_closers = ModelResult::record(
+            "REQ-MISSING-OUTER-CLOSERS",
+            "SERVICE",
+            "MODEL",
+            "{\"items\":[{\"value\":1}",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        let completed: Value = strict_model_json(&missing_outer_closers).unwrap();
+        assert_eq!(completed["items"][0]["value"], 1);
+        let truncated_string = ModelResult::record(
+            "REQ-TRUNCATED-STRING",
+            "SERVICE",
+            "MODEL",
+            "{\"items\":[{\"value\":\"unfinished",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        assert!(strict_model_json::<Value>(&truncated_string).is_err());
+
         let second_json_value = ModelResult::record(
             "REQ-SECOND-JSON",
             "SERVICE",
@@ -6162,6 +6252,26 @@ mod tests {
                 .unwrap()
                 .manuscript,
             "门开了。\n\n他抬头看向来人。"
+        );
+        let surface_with_empty_positional_tail = ModelResult::record(
+            "REQ-SURFACE-EMPTY-POSITIONAL-TAIL",
+            "SERVICE",
+            "MODEL",
+            "{\"manuscript\":\"门开了。\",\"\"}",
+            None,
+            ModelUsage {
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+                cost_micros: None,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            parse_surface_model_json(&surface_with_empty_positional_tail, "CH001", "SC001")
+                .unwrap()
+                .manuscript,
+            "门开了。"
         );
         let surface_with_unsafe_trailing_payload = ModelResult::record(
             "REQ-SURFACE-UNSAFE-TRAILING",
